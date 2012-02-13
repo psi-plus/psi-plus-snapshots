@@ -1,0 +1,166 @@
+Required
+  XML Encryption
+  groupchat should log presence changes
+  gcuserview: proper sorting of contacts based on status / alphabetical (like ContactView)
+  server info:
+    show server version in tooltip
+    ssl information dialog (show cert and maybe connection info)
+  local contact settings:
+    checkboxes for accepting various things: messages; files; URLs; chats \
+      [each has a checkbox option: only from my contact list, or... only from this GROUP on my contact list]
+    be alerted when the contact changes status or comes online (etc)
+    option: ignore headline messages (die MSN)
+    annotations (notes about the user)
+    log history or not
+  activity log window
+    high level logging of connection status, presence changes, messages
+    timestamps
+    "find" feature
+  Richtext messages
+  revamp history system: ability to restore entire chats, show in normal order, not reverse
+  "properties" dialog (could be last entry in cvlist context) for setting groups and subscription, etc. \
+    it could also show client time / version
+  file downloading
+    nice dialog
+    after file received, there should be the options: "Open" and "Open folder"
+    put each received file into a folder for the contact (optional)
+    if a specific directory is chosen, the dialog should have a history of the most recent download \
+      folders (10 maybe?)
+  Advanced Alerts (sound, popups, etc)
+  Ignore list
+  plugin system
+
+Important
+  'find' feature for chatdlg
+  checkbox to keep eventdlg open (both send and recv).  for send, it should reset the content after sending.
+  statussetdlg should automatically click ok in 10 seconds (unless you press a key)
+  ability to flag which accounts are affected by the mass status change button (should be in account context menu)
+  cv: group headings should have a better design than just a rectangle (gradient?)
+  add "Go to Website" and x:oob in presence
+  ability to do various iq requests to arbitrary jids:  version, time, info
+  multi-monitor support: windows should pop up on the same display as the main window?
+  merge all contacts into one column, rather than dividing by account
+  consolidated contacts
+  send contacts
+  save/load contacts (hint: use QCheckListItem for dialogs)
+    exporting
+      dialog for selecting contacts to export to file
+      write to file
+    importing
+      import a list from file
+      dialog for selecting contacts to import
+      tell the server about the new contacts
+      check for dups
+  offline animation (door slam)
+  chathistorydlg
+    a nice window to display chat history
+    maybe a menubar with some features like "save to file" ?
+    show/hide times
+    show/hide/rename other person (for privacy)
+  floating contacts (controlled by cvlist?)
+  full message archive dialog (tree/explorer view for choosing contacts on left, display area on the right).
+  Update all (mass user info check)
+  Detecting network connection status.  option to auto-connect when network is available.
+  startup argument to select profile
+  ability to execute a shell command on event
+  option to display (in realtime) the cvlist as 'flat', ie without groups
+  voice chat
+  option to launch on startup (platform dependent, good luck)
+  different color choices for different group types
+  transport-specific roster icons
+  deal with presence errors when subscribing
+  command line args?  psi.exe --psi-data dir
+  have separate status presets depending on the status type
+
+Extra
+  ability to flag a contact or group to always be shown even if they would not be (due to visibility toggles)
+  allow eventdlg and chatdlg inputs to drag / drop URLs (in both directions)
+  translation packs for the Qt library itself??
+  check to see if app is already running when launched.  if it is, then:
+    ask if they really want to open it again
+    if they say yes, then disable auto-open for profiles
+  save presence changes to history?
+  win32: docking (all optional)
+    grapple to edge of screen, like ICQ for windows
+    auto hide: after a certain period of inactivity, "slide" the window off the screen
+    auto hide delay: time to wait before sliding off
+  right-click in chat/eventdlg should have options to paste your current URL or IP address
+  KDE-enhanced mode
+  "previous" button in the eventdlg?
+  Autoresponses?  (with general and customized texts)
+  auto close chat windows that are not in focus after so many minutes of inactivity
+  The Main Window's Icon should change when new messages arrive, just like the dock icon does.
+  Ability to filter messages based on words (maybe even shell command filters)
+  Ability to compose messages and send at a later specific date (or when you or the recipient go online)
+  option to autohide main roster window after a set period of time
+  supporting BOLD and ITALIC in jabber msges by using * and / like you do in newsgroups ..
+  Licq supports replacing some %<letter>s with information on the sender of the
+    message and other things. (There's a list below) IT supports these in
+    OnEvent, auto responses (check status), and utilities
+    For example: sound player "~/scripts/say", on message "%a has just sent you an I.C.Q. message"
+      %a - user alias
+      %e - email
+      %f - first name
+      %h - phone number
+      %i - user ip
+      %l - last name
+      %m - # pending messages
+      %n - full name
+      %o - last seen online
+      %O - online since
+      %p - user port
+      %s - full status
+      %S - abbreviated status
+      %u - uin
+      %w - webpage
+  Ability to specify an arbitrary time for chatdlgs to stay active (x minutes/hours/days)
+  "small mode" - put mainwin buttons (and toolbuttons) into the cvlist right-click
+  option to have sounds not play when XA (but still play when Away)
+  option to have mainwin/dock status follow a specific account rather than "best choice"
+  option to show status message in parenthesis to the right of the contact (like yahoo)
+  ability to "auto-reconnect" to a transport?
+  cv: let the user choose how the list is sorted
+  group ideas:
+    option: sort or not
+    choose order of groups and contacts with drag and drop
+    save order on the server
+    support empty groups that get removed on signoff
+  Have a way of marking some people as 'important' contacts, so they will always trigger sound
+  psuedo-chat support like Mirabilis ICQ / Licq (ie, split window, but still used like normal messages)
+  friendlier infodlg.  get rid of those lame tabs
+  cvlist sorting options
+    sort by group, online/offline split
+    sort by group, online/offline together
+    sort by group and by status
+    sort by group and alphanumerically
+    sort by status without groups
+    sort alphanumerically without groups
+      sort by online/offline
+      straight alphanumerical sort
+  cvlist select multiple?
+  right-clicking on status button should bring up a list of accounts, each with submenus that would set \
+    the status of the chosen account.
+  option to have psi remember your password for the running session
+  Remember last status when psi quits (even if improperly shut down).  restore this status when psi is run again?
+  if you get a msg from someone in a closed group, it should not expand the whole group
+  "diskless" mode
+
+Bugs
+  connection timeouts are reported as "connection refused" (qt)
+  slowdown when receiving a chat message?  or a problem with QTextEdit debug messages?
+
+Miscellaneous
+  properly sort cvlist accounts if one of them gets renamed
+  class Options: cpp'ify (reset, toXml, fromXml)
+  convert some of the preferences into their own classes (or lists), like fonts, colors, sounds, etc
+  'find' function in historydlg should show the found result in the center of 50 results, rather than the top
+  Check for libqssl without needing a restart?
+  replies should only close a window that it is associated with (use QGuardedPtr?)
+  don't allow send/recv of blank messages (all content is whitespace or empty)
+  allow blank password entry
+  don't prompt for password until actually connected.  reprompt if wrong??
+  proper dialog button order depending on platform
+  when entering a text string into "Server to browse", any whitespace before or after is not trimmed.  lots of \
+    fields like this should have some sort of auto-trim.
+  when opening a new chat window of a contact with pending events, the presence is logged to the chat window \
+    before the messages are, which have an earlier timestamp (looks weird)

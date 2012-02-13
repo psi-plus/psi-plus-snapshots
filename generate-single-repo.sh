@@ -9,9 +9,8 @@
 export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
 export MAIN_DIR="${PSIPLUS_DIR}/.."
 
-OLD_VER="0.15.5193"
-#OLD_VER=$(git tag -l | tail -n1)
-if [ -z "${OLD_VER}" ]; then echo "Something broken..."; exit 1; fi
+OLD_VER=$(git tag -l | tail -n1)
+#if [ -z "${OLD_VER}" ]; then echo "Something broken..."; exit 1; fi
 OLD_REVISION=$(echo ${OLD_VER} | sed -e "s/^[0-9]\+\.[0-9]\+\.\([0-9]\+\)$/\1/")
 
 MOD=psi
@@ -147,8 +146,6 @@ rm -r src/libpsi/tools/idle/win32/
 echo "Trash was removed."
 echo;
 
-
-exit 0
 
 COMMENT="Sources were synced with upstream. Current version is ${NEW_VER}"
 git add .  || exit 1
