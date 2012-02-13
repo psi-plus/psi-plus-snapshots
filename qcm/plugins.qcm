@@ -1,0 +1,32 @@
+/*
+-----BEGIN QCMOD-----
+name: Psi Plugin support
+-----END QCMOD-----
+*/
+
+//----------------------------------------------------------------------------
+// qc_plugins
+//----------------------------------------------------------------------------
+class qc_plugins : public ConfObj
+{
+public:
+	qc_plugins(Conf *c) : ConfObj(c) {}
+	QString name() const { return "Psi Plugin support"; }
+	QString shortname() const { return "plugins"; }
+	bool exec()
+	{
+		conf->addDefine("PSI_PLUGINS");
+		
+		// Finish
+		conf->addExtra("CONFIG += psi_plugins");                              
+
+		qWarning("");
+		qWarning("");
+		qWarning("        !!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!");
+		qWarning("        PLUGIN SUPPORT IS STILL UNFINISHED !!!");
+		qWarning("        THE PLUGIN INTERFACE /WILL/ CHANGE !!!");
+		qWarning("        USE AT YOUR OWN RISK !!!");
+
+		return true;
+	}
+};

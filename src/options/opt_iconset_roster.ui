@@ -1,0 +1,378 @@
+<ui version="4.0" >
+ <class>IconsetRoster</class>
+ <widget class="QWidget" name="IconsetRoster" >
+  <property name="geometry" >
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>375</width>
+    <height>341</height>
+   </rect>
+  </property>
+  <property name="windowTitle" >
+   <string>IconsetRosterUI</string>
+  </property>
+  <layout class="QGridLayout" >
+   <property name="margin" >
+    <number>9</number>
+   </property>
+   <property name="spacing" >
+    <number>6</number>
+   </property>
+   <item row="0" column="0" >
+    <widget class="QTabWidget" name="tabWidget3" >
+     <property name="currentIndex" >
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tab_default" >
+      <attribute name="title" >
+       <string>Default</string>
+      </attribute>
+      <layout class="QGridLayout" >
+       <property name="margin" >
+        <number>8</number>
+       </property>
+       <property name="spacing" >
+        <number>6</number>
+       </property>
+       <item row="0" column="0" colspan="2" >
+        <widget class="QLabel" name="textLabel3_2" >
+         <property name="text" >
+          <string>Default roster iconset:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1" >
+        <widget class="IconButton" name="pb_defRosterDetails" >
+         <property name="text" >
+          <string>&amp;Show details</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" >
+        <spacer>
+         <property name="orientation" >
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType" >
+          <enum>QSizePolicy::Expanding</enum>
+         </property>
+         <property name="sizeHint" >
+          <size>
+           <width>151</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="1" column="0" colspan="2" >
+        <widget class="IconsetSelect" name="iss_defRoster" />
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_services" >
+      <attribute name="title" >
+       <string>Services</string>
+      </attribute>
+      <layout class="QGridLayout" >
+       <property name="margin" >
+        <number>9</number>
+       </property>
+       <property name="spacing" >
+        <number>6</number>
+       </property>
+       <item row="0" column="0" >
+        <widget class="QCheckBox" name="ck_useTransportIconsForContacts" >
+         <property name="text" >
+          <string>Use transport specific icons for contacts</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" >
+        <layout class="QHBoxLayout" >
+         <property name="margin" >
+          <number>0</number>
+         </property>
+         <property name="spacing" >
+          <number>6</number>
+         </property>
+         <item>
+          <widget class="QTreeWidget" name="tw_isServices" >
+           <property name="sizePolicy" >
+            <sizepolicy>
+             <hsizetype>4</hsizetype>
+             <vsizetype>7</vsizetype>
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="editTriggers" >
+            <set>QAbstractItemView::NoEditTriggers</set>
+           </property>
+           <property name="rootIsDecorated" >
+            <bool>false</bool>
+           </property>
+           <property name="allColumnsShowFocus" >
+            <bool>true</bool>
+           </property>
+           <property name="columnCount" >
+            <number>2</number>
+           </property>
+           <column>
+            <property name="text" >
+             <string>Service</string>
+            </property>
+           </column>
+           <column>
+            <property name="text" >
+             <string>Iconset</string>
+            </property>
+           </column>
+          </widget>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" >
+           <property name="margin" >
+            <number>0</number>
+           </property>
+           <property name="spacing" >
+            <number>6</number>
+           </property>
+           <item>
+            <widget class="IconsetSelect" name="iss_servicesRoster" >
+             <property name="sizePolicy" >
+              <sizepolicy>
+               <hsizetype>1</hsizetype>
+               <vsizetype>7</vsizetype>
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" >
+             <property name="margin" >
+              <number>0</number>
+             </property>
+             <property name="spacing" >
+              <number>6</number>
+             </property>
+             <item>
+              <spacer>
+               <property name="orientation" >
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType" >
+                <enum>QSizePolicy::Expanding</enum>
+               </property>
+               <property name="sizeHint" >
+                <size>
+                 <width>41</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="IconButton" name="pb_servicesDetails" >
+               <property name="text" >
+                <string>&amp;Show details</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0" >
+        <widget class="QLabel" name="textLabel4" >
+         <property name="text" >
+          <string>Service iconsets:</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_custom" >
+      <attribute name="title" >
+       <string>Custom</string>
+      </attribute>
+      <layout class="QGridLayout" >
+       <property name="margin" >
+        <number>8</number>
+       </property>
+       <property name="spacing" >
+        <number>6</number>
+       </property>
+       <item row="1" column="1" >
+        <layout class="QGridLayout" >
+         <property name="margin" >
+          <number>0</number>
+         </property>
+         <property name="spacing" >
+          <number>6</number>
+         </property>
+         <item row="4" column="0" >
+          <spacer>
+           <property name="orientation" >
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeType" >
+            <enum>QSizePolicy::Expanding</enum>
+           </property>
+           <property name="sizeHint" >
+            <size>
+             <width>91</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item row="2" column="0" colspan="2" >
+          <widget class="QLabel" name="textLabel8" >
+           <property name="text" >
+            <string>Iconset:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0" colspan="2" >
+          <widget class="QLabel" name="textLabel7" >
+           <property name="text" >
+            <string>Regular expression:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0" colspan="2" >
+          <widget class="IconsetSelect" name="iss_customRoster" />
+         </item>
+         <item row="1" column="0" colspan="2" >
+          <widget class="QLineEdit" name="le_customRoster" />
+         </item>
+         <item row="4" column="1" >
+          <widget class="IconButton" name="pb_customRosterDetails" >
+           <property name="text" >
+            <string>&amp;Show details</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0" >
+        <layout class="QGridLayout" >
+         <property name="margin" >
+          <number>0</number>
+         </property>
+         <property name="spacing" >
+          <number>6</number>
+         </property>
+         <item row="1" column="0" >
+          <widget class="IconButton" name="pb_customRosterAdd" >
+           <property name="text" >
+            <string>&amp;Add</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1" >
+          <widget class="IconButton" name="pb_customRosterDelete" >
+           <property name="text" >
+            <string>&amp;Delete</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0" colspan="2" >
+          <widget class="QTreeWidget" name="tw_customRoster" >
+           <property name="editTriggers" >
+            <set>QAbstractItemView::NoEditTriggers</set>
+           </property>
+           <property name="rootIsDecorated" >
+            <bool>false</bool>
+           </property>
+           <property name="allColumnsShowFocus" >
+            <bool>true</bool>
+           </property>
+           <column>
+            <property name="text" >
+             <string>RegExp</string>
+            </property>
+           </column>
+           <column>
+            <property name="text" >
+             <string>Iconset</string>
+            </property>
+           </column>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="0" column="0" colspan="2" >
+        <widget class="QLabel" name="textLabel6" >
+         <property name="text" >
+          <string>Custom iconsets:</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+      <widget class="QSplitter" name="splitter" >
+       <property name="geometry" >
+        <rect>
+         <x>195</x>
+         <y>250</y>
+         <width>189</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="orientation" >
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+      <widget class="QWidget" native="1" name="widget1" >
+       <property name="geometry" >
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>100</width>
+         <height>30</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QWidget" native="1" name="widget2" >
+       <property name="geometry" >
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>100</width>
+         <height>30</height>
+        </rect>
+       </property>
+      </widget>
+     </widget>
+    </widget>
+   </item>
+   <item row="1" column="0" >
+    <widget class="QProgressBar" name="progress" >
+     <property name="orientation" >
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <layoutdefault spacing="6" margin="11" />
+ <customwidgets>
+  <customwidget>
+   <class>IconsetSelect</class>
+   <extends>QListWidget</extends>
+   <header>iconsetselect.h</header>
+  </customwidget>
+  <customwidget>
+   <class>IconButton</class>
+   <extends>QPushButton</extends>
+   <header>iconbutton.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

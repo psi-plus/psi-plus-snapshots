@@ -1,0 +1,14 @@
+<!DOCTYPE psi>
+<psi version="defaults" >
+	<options comment="Client options">
+		<ui comment="User interface options">
+			<systemtray comment="Options related to the system tray">
+				<enable type="bool">true</enable>
+				<use-double-click type="bool">true</use-double-click>
+			</systemtray>
+			<spell-check comment="Options related to the spell checker">
+				<enabled comment="Whether the spell checker is enabled" type="bool">false</enabled>
+			</spell-check>
+		</ui>
+	</options>
+</psi>

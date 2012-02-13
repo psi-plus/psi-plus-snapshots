@@ -9,9 +9,7 @@
 export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
 export MAIN_DIR="${PSIPLUS_DIR}/.."
 
-OLD_VER="0.15.5193"
-#OLD_VER=$(git tag -l | tail -n1)
-if [ -z "${OLD_VER}" ]; then echo "Something broken..."; exit 1; fi
+OLD_VER=$(git tag -l | tail -n1)
 OLD_REVISION=$(echo ${OLD_VER} | sed -e "s/^[0-9]\+\.[0-9]\+\.\([0-9]\+\)$/\1/")
 
 MOD=psi
@@ -111,7 +109,7 @@ echo;
 
 cat "${MAIN_DIR}/main/patches"/*.diff | \
     patch -d "${PSIPLUS_DIR}" -p1 2>&1 > \
-    "${MAIN_DIR}/applying-patches.log" || exit 1
+    "${MAIN_DIR}/applying-patches_${NEW_VER}.log" || exit 1
 sed "s/\(.xxx\)/.${rev}/" -i \
     "${PSIPLUS_DIR}/src/applicationinfo.cpp" || exit 1
 echo "Patches from psi-dev project were applied."
@@ -148,12 +146,11 @@ echo "Trash was removed."
 echo;
 
 
-exit 0
-
 COMMENT="Sources were synced with upstream. Current version is ${NEW_VER}"
 git add .  || exit 1
 git add -u || exit 1
-git cm -a -m "${COMMENT}" || exit 1
+git cm -a -m "${COMMENT}" 2>&1 > \
+    "${MAIN_DIR}/git-commit_${NEW_VER}.log" || exit 1
 git tag "${NEW_VER}" || exit 1
 echo "Git tag was created."
 
