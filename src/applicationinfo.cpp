@@ -34,9 +34,9 @@
 
 #define PROG_NAME "Psi+"
 #ifdef WEBKIT
-#define PROG_VERSION "0.15.5196-webkit" " (" __DATE__ ")" //CVS Builds are dated
+#define PROG_VERSION "0.15.5201-webkit" " (" __DATE__ ")" //CVS Builds are dated
 #else
-#define PROG_VERSION "0.15.5196" " (" __DATE__ ")" //CVS Builds are dated
+#define PROG_VERSION "0.15.5201" " (" __DATE__ ")" //CVS Builds are dated
 #endif
 //#define PROG_VERSION "0.15";
 #define PROG_CAPS_NODE "http://psi-dev.googlecode.com/caps"
