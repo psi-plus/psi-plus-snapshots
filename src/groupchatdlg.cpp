@@ -98,7 +98,7 @@
 #include <windows.h>
 #endif
 
-#include "psipopup.h"
+#include "popupmanager.h"
 #include "psievent.h"
 
 #define MCMDMUC		"http://psi-im.org/ids/mcmd#mucmain"
@@ -1733,14 +1733,12 @@ void GCMainDlg::message(const Message &_m)
 	}
 	else if(account()->status().type() != Status::DND) {
 		if(alert || (PsiOptions::instance()->getOption("options.ui.notifications.sounds.notify-every-muc-message").toBool() && !m.spooled() && !from.isEmpty()) )
-			account()->playSound(PsiAccount::eChat2);
+			account()->playSound(PsiAccount::eGroupChat);
 		if(alert || (PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.notify-every-muc-message").toBool() && !m.spooled() && !from.isEmpty()) )
 			if (!m.spooled() && !isActiveTab() && !m.from().resource().isEmpty()) {
-				PsiPopup *popup = new PsiPopup(PsiPopup::AlertGcHighlight, account());
 				XMPP::Jid jid = m.from().withDomain("");
-				const UserListItem u;
 				const MessageEvent *e = new MessageEvent(m, account());
-				popup->setData(jid, m.from().resource(), &u, (PsiEvent *)e);
+				PopupManager::doPopup(account(), PsiPopup::AlertGcHighlight, jid, m.from().resource(), 0, (PsiEvent *)e);
 			}
 	}
 

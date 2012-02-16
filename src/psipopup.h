@@ -41,9 +41,6 @@ class PsiPopup : public QObject
 {
 	Q_OBJECT
 public:
-	PsiPopup(const PsiIcon *titleIcon, QString titleText, PsiAccount *acc);
-	~PsiPopup();
-
 	enum PopupType {
 		AlertNone = 0,
 
@@ -59,23 +56,29 @@ public:
 		AlertAvCall,
 		AlertGcHighlight
 	};
+
+	PsiPopup(const PsiIcon *titleIcon, const QString& titleText, PsiAccount *acc);
 	PsiPopup(PopupType type, PsiAccount *acc);
 
-	void setData(const QPixmap *avatar, const PsiIcon *icon, QString text);
+	~PsiPopup();
+
 	void setData(const Jid &, const Resource &, const UserListItem * = 0, const PsiEvent * = 0);
+	void setData(const QPixmap *avatar, const PsiIcon *icon, const QString& text);
 
 	void setJid(const Jid &j);
 
 	void show();
+	static void deleteAll();
 
+	static int timeout(PopupType type);
+	static QString title(PopupType type, bool *doAlertIcon, PsiIcon **icon);
+	static QString clipText(const QString& text);
+
+private:
 	QString id() const;
 	FancyPopup *popup();
 
-	static void deleteAll();
-
-public:
 	class Private;
-private:
 	Private *d;
 	friend class Private;
 };

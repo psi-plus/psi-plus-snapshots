@@ -1,6 +1,6 @@
 /*
- * popupdurationsmanager.h - XMPP Ping server
- * Copyright (C) 2011  Khryukin Evgeny
+ * popupmanager.h
+ * Copyright (C) 2011-2012  Khryukin Evgeny
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,32 +18,49 @@
  *
  */
 
-#ifndef POPUPDURATIONSMANAGER_H
-#define POPUPDURATIONSMANAGER_H
+#ifndef POPUPMANAGER_H
+#define POPUPMANAGER_H
+
+#include "psipopup.h"
 
 #include <QStringList>
 #include <QPair>
 #include <QHash>
 
-class PopupDurationsManager
+class PsiAccount;
+
+class PopupManager
 {
 public:
-	PopupDurationsManager();
-	~PopupDurationsManager() {};
+	PopupManager();
+	~PopupManager() {}
+
+	enum NotificationsType {
+		Default = 0,
+		Growl = 1,
+		DBus = 2
+	};
 
 	void registerOption(const QString& name, int initValue = 5, const QString& path = QString());
 	void unregisterOption(const QString& name);
 	void setValue(const QString& name, int value);
 	int value(const QString& name) const;
 	const QString optionPath(const QString& name) const;
-	//const QStringList otionsPathList() const;
 	const QStringList optionsNamesList() const;
-	//void saveOptions() const;
+
+	static QList< NotificationsType > availableTypes();
+	static NotificationsType currentType();
+	static QString nameByType(NotificationsType type);
+
+	static void doPopup(PsiAccount* account, PsiPopup::PopupType type, const Jid& j, const Resource& r, UserListItem* u = 0, PsiEvent* e = 0);
+	static void doPopup(PsiAccount *account, const Jid &j, const PsiIcon *titleIcon, const QString& titleText,
+			    const QPixmap *avatar, const PsiIcon *icon, const QString& text);
 
 private:
 	typedef QPair<QString, int> OptionValue;
-	QHash<QString, OptionValue> options_; // unsorted list
-	QStringList optionsNames_; // list sorted by time
+	QHash<QString, OptionValue> options_;
+
+	static QList< NotificationsType > availableTypes_;
 };
 
 #endif

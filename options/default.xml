@@ -426,6 +426,7 @@ QLineEdit#le_status_text {
 			</look>
 			<notifications>
 				<alert-style type="QString">animate</alert-style>
+				<type type="int">0</type>
 				<bounce-dock type="QString">forever</bounce-dock>
 				<send-receipts type="bool" >true</send-receipts>
 				<request-receipts type="bool" >true</request-receipts>
@@ -450,6 +451,8 @@ QLineEdit#le_status_text {
 					<maximum-text-length type="int">300</maximum-text-length>
 					<maximum-status-length type="int">-1</maximum-status-length>
 					<avatar-size type="int">48</avatar-size>
+					<suppress-while-away type="bool">false</suppress-while-away>
+					<suppress-while-dnd type="bool">true</suppress-while-dnd>
 					<status>
 						<offline type="bool">true</offline>
 						<online type="bool">true</online>
@@ -462,6 +465,7 @@ QLineEdit#le_status_text {
 				</popup-dialogs>
 				<sounds>
 					<chat-message type="QString">sound/chat2.wav</chat-message>
+					<groupchat-message type="QString">sound/chat2.wav</groupchat-message>
 					<completed-file-transfer type="QString">sound/ft_complete.wav</completed-file-transfer>
 					<contact-offline type="QString">sound/offline.wav</contact-offline>
 					<contact-online type="QString">sound/online.wav</contact-online>

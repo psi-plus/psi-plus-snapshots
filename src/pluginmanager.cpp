@@ -28,10 +28,9 @@
 #include "iqnamespacefilter.h"
 #include "eventfilter.h"
 #include "optionaccessor.h"
-#include "psipopup.h"
 #include "avatars.h"
 #include "psiiconset.h"
-#include "popupdurationsmanager.h"
+#include "popupmanager.h"
 
 
 //TODO(mck)
@@ -662,45 +661,40 @@ bool PluginManager::setTune(int account, const QString& jid, const QString& tune
 
 void PluginManager::initPopup(const QString& text, const QString& title, const QString& icon)
 {
-	PsiIcon ico = IconsetFactory::icon(icon);
-	PsiPopup *popup = new PsiPopup(&ico, title, 0);
-	popup->setData(0, 0, text);
+	const PsiIcon* ico = IconsetFactory::iconPtr(icon);
+	PopupManager::doPopup(0, Jid(), ico, title, 0, 0, text);
 }
 
 void PluginManager::initPopupForJid(int account, const QString &jid, const QString &text, const QString &title, const QString &icon)
 {
 	XMPP::Jid j(jid);
-	PsiIcon ico = IconsetFactory::icon(icon);
-	PsiPopup *popup;
+	const PsiIcon* ico = IconsetFactory::iconPtr(icon);
 	if (account < accountIds_.size()) {
 		PsiAccount * pa = accountIds_.key(account);
 		if(pa) {
-			popup = new PsiPopup(&ico, title, pa);
-			popup->setJid(j);
 			UserListItem *i = pa->findFirstRelevant(j);
 			PsiIcon *statusIco = PsiIconset::instance()->statusPtr(i);
 			const QPixmap pix = pa->avatarFactory()->getAvatar(j);
-			popup->setData(&pix, statusIco, text);
+			PopupManager::doPopup(pa, j, ico, title, &pix, statusIco, text);
 			return;
 		}
 	}
-	popup = new PsiPopup(&ico, title, 0);
-	popup->setData(0, 0, text);
+	PopupManager::doPopup(0, Jid(), ico, title, 0, 0, text);
 }
 
 void PluginManager::registerOption(const QString& name, int initValue, const QString& path)
 {
-	psi_->popupDurationsManager()->registerOption(name, initValue, path);
+	psi_->popupManager()->registerOption(name, initValue, path);
 }
 
 int PluginManager::popupDuration(const QString& name) const
 {
-	return psi_->popupDurationsManager()->value(name);
+	return psi_->popupManager()->value(name);
 }
 
 void PluginManager::setPopupDuration(const QString& name, int value)
 {
-	psi_->popupDurationsManager()->setValue(name, value);
+	psi_->popupManager()->setValue(name, value);
 }
 
 void PluginManager::addAccountMenu(QMenu *menu, PsiAccount* account)

@@ -66,9 +66,9 @@ public:
 	Private(PsiPopup *p);
 	~Private();
 
-	void init(const PsiIcon *titleIcon, QString titleText, PsiAccount *_acc, PopupType type);
-	QString clipText(QString);
-	QBoxLayout *createContactInfo(const QPixmap *avatar, const PsiIcon *icon, QString text);
+	void init(const PsiIcon *titleIcon, const QString& titleText, PsiAccount *_acc, PopupType type);
+	static QString clipText(QString);
+	QBoxLayout *createContactInfo(const QPixmap *avatar, const PsiIcon *icon, const QString& text);
 
 private slots:
 	void popupDestroyed();
@@ -110,15 +110,12 @@ PsiPopup::Private::~Private()
 	popup = 0;
 }
 
-void PsiPopup::Private::init(const PsiIcon *_titleIcon, QString titleText, PsiAccount *acc, PopupType type)
+void PsiPopup::Private::init(const PsiIcon *_titleIcon, const QString& titleText, PsiAccount *acc, PopupType type)
 {
 	psi = 0;
 	if(acc) psi = acc->psi();
 	account = acc;
 	display = true;
-
-	if ( !PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.enabled").toBool() )
-		return;
 
 	if ( !psiPopupList )
 		psiPopupList = new QList<PsiPopup *>();
@@ -135,24 +132,7 @@ void PsiPopup::Private::init(const PsiIcon *_titleIcon, QString titleText, PsiAc
 	else
 		titleIcon = new PsiIcon(*_titleIcon);
 
-//	FancyPopup::setHideTimeout( PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.duration").toInt() );
-	switch(type)
-	{
-		case AlertMessage:
-			FancyPopup::setHideTimeout( PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.message").toInt() );
-			break;
-		case AlertChat:
-		case AlertHeadline:
-		case AlertGcHighlight:
-			FancyPopup::setHideTimeout( PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.chat").toInt() );
-			break;
-		case AlertFile:
-			FancyPopup::setHideTimeout( PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.file").toInt() );
-			break;
-		default:
-			FancyPopup::setHideTimeout( PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.status").toInt() );
-			break;
-	}
+	FancyPopup::setHideTimeout(psiPopup->timeout(type));
 	FancyPopup::setBorderColor( ColorOpt::instance()->color("options.ui.look.colors.passive-popup.border") );
 
 	popup = new FancyPopup(titleText, titleIcon, lastPopup, false);
@@ -197,10 +177,11 @@ void PsiPopup::Private::eventDestroyed()
 
 QString PsiPopup::Private::clipText(QString text)
 {
-	if ( PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-text-length").toInt() > 0 ) {
+	int len = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-text-length").toInt();
+	if (len > 0) {
 		// richtext will give us trouble here
-		if ( ((int)text.length()) > PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-text-length").toInt() ) {
-			text = text.left( PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-text-length").toInt() );
+		if (((int)text.length()) > len) {
+			text = text.left(len);
 
 			// delete last unclosed tag
 			/*if ( text.find("</") > text.find(">") ) {
@@ -215,7 +196,7 @@ QString PsiPopup::Private::clipText(QString text)
 	return text;
 }
 
-QBoxLayout *PsiPopup::Private::createContactInfo(const QPixmap *avatar, const PsiIcon *icon, QString text)
+QBoxLayout *PsiPopup::Private::createContactInfo(const QPixmap *avatar, const PsiIcon *icon, const QString& text)
 {
 	QHBoxLayout *dataBox = new QHBoxLayout();
 
@@ -255,7 +236,7 @@ QBoxLayout *PsiPopup::Private::createContactInfo(const QPixmap *avatar, const Ps
 // PsiPopup
 //----------------------------------------------------------------------------
 
-PsiPopup::PsiPopup(const PsiIcon *titleIcon, QString titleText, PsiAccount *acc)
+PsiPopup::PsiPopup(const PsiIcon *titleIcon, const QString& titleText, PsiAccount *acc)
 {
 	d = new Private(this);
 	d->init(titleIcon, titleText, acc, AlertNone);
@@ -275,59 +256,100 @@ PsiPopup::PsiPopup(PopupType type, PsiAccount *acc)
 	QString text = "Psi: ";
 	bool doAlertIcon = false;
 
+	text += title(type, &doAlertIcon, &icon);
+
+	d->init(icon, text, acc, doAlertIcon ? type : AlertNone);
+}
+
+QString PsiPopup::title(PopupType type, bool *doAlertIcon, PsiIcon **icon)
+{
+	QString text;
+
 	switch(type) {
 	case AlertOnline:
-		text += PsiPopup::tr("Contact online");
-		icon = (PsiIcon *)IconsetFactory::iconPtr("status/online");
+		text = PsiPopup::tr("Contact online");
+		*icon = (PsiIcon *)IconsetFactory::iconPtr("status/online");
+		*doAlertIcon = false;
 		break;
 	case AlertOffline:
-		text += PsiPopup::tr("Contact offline");
-		icon = (PsiIcon *)IconsetFactory::iconPtr("status/offline");
+		text = PsiPopup::tr("Contact offline");
+		*icon = (PsiIcon *)IconsetFactory::iconPtr("status/offline");
+		*doAlertIcon = false;
 		break;
 	case AlertStatusChange:
-		text += PsiPopup::tr("Status change");
-		icon = (PsiIcon *)IconsetFactory::iconPtr("status/online");
+		text = PsiPopup::tr("Status change");
+		*icon = (PsiIcon *)IconsetFactory::iconPtr("status/online");
+		*doAlertIcon = false;
 		break;
 	case AlertMessage:
-		text += PsiPopup::tr("Incoming message");
-		icon = (PsiIcon *)IconsetFactory::iconPtr("psi/message");
-		doAlertIcon = true;
+		text = PsiPopup::tr("Incoming message");
+		*icon = (PsiIcon *)IconsetFactory::iconPtr("psi/message");
+		*doAlertIcon = true;
 		break;
 	case AlertComposing:
-		text += PsiPopup::tr("Typing notify");
-		icon = (PsiIcon *)IconsetFactory::iconPtr("psi/typing");
-		doAlertIcon = false;
+		text = PsiPopup::tr("Typing notify");
+		*icon = (PsiIcon *)IconsetFactory::iconPtr("psi/typing");
+		*doAlertIcon = false;
 		break;
 	case AlertChat:
-		text += PsiPopup::tr("Incoming chat message");
-		icon= (PsiIcon *)IconsetFactory::iconPtr("psi/chat");
-		doAlertIcon = true;
+		text = PsiPopup::tr("Incoming chat message");
+		*icon = (PsiIcon *)IconsetFactory::iconPtr("psi/chat");
+		*doAlertIcon = true;
 		break;
 	case AlertHeadline:
-		text += PsiPopup::tr("Headline");
-		icon= (PsiIcon *)IconsetFactory::iconPtr("psi/headline");
-		doAlertIcon = true;
+		text = PsiPopup::tr("Headline");
+		*icon = (PsiIcon *)IconsetFactory::iconPtr("psi/headline");
+		*doAlertIcon = true;
 		break;
 	case AlertFile:
-		text += PsiPopup::tr("Incoming file");
-		icon= (PsiIcon *)IconsetFactory::iconPtr("psi/file");
-		doAlertIcon = true;
+		text = PsiPopup::tr("Incoming file");
+		*icon = (PsiIcon *)IconsetFactory::iconPtr("psi/file");
+		*doAlertIcon = true;
 		break;
 	case AlertAvCall:
-		text += PsiPopup::tr("Incoming call");
-		icon= (PsiIcon *)IconsetFactory::iconPtr("psi/call");
-		doAlertIcon = true;
+		text = PsiPopup::tr("Incoming call");
+		*icon = (PsiIcon *)IconsetFactory::iconPtr("psi/call");
+		*doAlertIcon = true;
 		break;
 	case AlertGcHighlight:
-		text += PsiPopup::tr("Groupchat highlight");
-		icon = (PsiIcon *)IconsetFactory::iconPtr("psi/headline");
-		doAlertIcon = true;
+		text = PsiPopup::tr("Groupchat highlight");
+		*icon = (PsiIcon *)IconsetFactory::iconPtr("psi/headline");
+		*doAlertIcon = true;
 		break;
 	default:
 		break;
 	}
 
-	d->init(icon, text, acc, doAlertIcon ? type : AlertNone);
+	return text;
+}
+
+QString PsiPopup::clipText(const QString &text)
+{
+	return PsiPopup::Private::clipText(text);
+}
+
+int PsiPopup::timeout(PopupType type)
+{
+	int ret = 5000;
+	switch(type)
+	{
+		case AlertMessage:
+			ret = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.message").toInt();
+			break;
+		case AlertChat:
+		case AlertHeadline:
+		case AlertGcHighlight:
+			ret = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.chat").toInt();
+			break;
+		case AlertFile:
+			ret = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.file").toInt();
+			break;
+		default:
+			ret = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.status").toInt();
+			break;
+	}
+
+	return ret;
 }
 
 void PsiPopup::setJid(const Jid &j)
@@ -335,7 +357,7 @@ void PsiPopup::setJid(const Jid &j)
 	d->jid = j;
 }
 
-void PsiPopup::setData(const QPixmap *avatar, const PsiIcon *icon, QString text)
+void PsiPopup::setData(const QPixmap *avatar, const PsiIcon *icon, const QString& text)
 {
 	if ( !d->popup ) {
 		deleteLater();
@@ -368,18 +390,19 @@ void PsiPopup::setData(const Jid &j, const Resource &r, const UserListItem *u, c
 		connect(event, SIGNAL(destroyed()), d, SLOT(eventDestroyed()));
 
 	PsiIcon *icon = PsiIconset::instance()->statusPtr(j, r.status());
-	QString text;
 
 	QString jid = j.full();
-	if ( PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-jid-length").toInt() > 0 && ((int)jid.length()) > PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-jid-length").toInt() )
-		jid = jid.left( PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-jid-length").toInt() ) + "...";
+	int jidLen = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-jid-length").toInt();
+	if (jidLen > 0 && ((int)jid.length()) > jidLen)
+		jid = jid.left(jidLen) + "...";
 
 	QString status;
-	if ( PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-status-length").toInt() != 0 )
+	int len = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-status-length").toInt();
+	if (len != 0)
 		status = r.status().status();
-	if ( PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-status-length").toInt() > 0 )
-		if ( ((int)status.length()) > PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-status-length").toInt() )
-			status = status.left ( PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-status-length").toInt() ) + "...";
+	if (len > 0)
+		if ( ((int)status.length()) > len )
+			status = status.left (len) + "...";
 
 	QString name;
 	if ( u && !u->name().isEmpty() ) {
@@ -393,7 +416,7 @@ void PsiPopup::setData(const Jid &j, const Resource &r, const UserListItem *u, c
 	}
 		
 	if (!name.isEmpty()) {
-		if ( !PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-jid-length").toInt() )
+		if (!jidLen)
 			name = "<nobr>" + Qt::escape(name) + "</nobr>";
 		else
 			name = "<nobr>" + Qt::escape(name) + " &lt;" + Qt::escape(jid) + "&gt;" + "</nobr>";
@@ -424,8 +447,8 @@ void PsiPopup::setData(const Jid &j, const Resource &r, const UserListItem *u, c
 	}
 	QPixmap avatar = d->account->avatarFactory()->getAvatar(jid);
 	// show popup
-	if ( d->popupType != AlertComposing && d->popupType != AlertHeadline && (d->popupType != AlertFile || !PsiOptions::instance()->getOption("options.ui.file-transfer.auto-popup").toBool()) ) {
-
+	if ( d->popupType != AlertComposing && d->popupType != AlertHeadline && (d->popupType != AlertFile || !PsiOptions::instance()->getOption("options.ui.file-transfer.auto-popup").toBool()) )
+	{
 		if ((event && event->type() == PsiEvent::Message) && (PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.showMessage").toBool())) {
 			const Message *jmessage = &((MessageEvent *)event)->message();
 			QString message;
@@ -438,8 +461,6 @@ void PsiPopup::setData(const Jid &j, const Resource &r, const UserListItem *u, c
 				contactText += "<br/><font size=\"+1\">" + message + "</font>";
 			}
 		}
-
-
                 setData(&avatar, icon, contactText);
 	}
 	else if ( d->popupType == AlertComposing ) {
@@ -477,6 +498,9 @@ void PsiPopup::setData(const Jid &j, const Resource &r, const UserListItem *u, c
 
 		d->popup->addLayout( vbox );
 		show();
+	}
+	else {
+		deleteLater();
 	}
 }
 

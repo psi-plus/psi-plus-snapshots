@@ -121,7 +121,6 @@
 #include "qwextend.h"
 #include "geolocationdlg.h"
 //#include "physicallocation.h"
-#include "psipopup.h"
 #include "translationmanager.h"
 #include "irisprotocol/iris_discoinfoquerier.h"
 #include "iconwidget.h"
@@ -152,6 +151,7 @@
 #include "bookmarkmanagedlg.h"
 #include "accountloginpassword.h"
 #include "alertmanager.h"
+#include "popupmanager.h"
 
 #include "psimedia/psimedia.h"
 #include "avcall/avcall.h"
@@ -162,10 +162,6 @@
 #endif
 
 #include <QtCrypto>
-
-#if defined(Q_WS_MAC) && defined(HAVE_GROWL)
-#include "psigrowlnotifier.h"
-#endif
 
 #include "bsocket.h"
 /*#ifdef Q_WS_WIN
@@ -536,6 +532,27 @@ private:
 
 public:
 	bool noPopup(ActivationType activationType) const
+	{
+		if (activationType == FromXml || !doPopups_)
+			return true;
+
+		if (lastManualStatus().isAvailable()) {
+			if (lastManualStatus().type() == XMPP::Status::DND &&
+			    PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.suppress-while-dnd").toBool())
+			{
+				return true;
+			}
+			if ((lastManualStatus().type() == XMPP::Status::Away || lastManualStatus().type() == XMPP::Status::XA) &&
+			    PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.suppress-while-away").toBool())
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	bool noPopupDialogs(ActivationType activationType) const
 	{
 		if (activationType == FromXml || !doPopups_)
 			return true;
@@ -2538,14 +2555,10 @@ void PsiAccount::client_resourceAvailable(const Jid &j, const Resource &r)
 	if(doSound)
 		playSound(eOnline);
 
-#if !defined(Q_WS_MAC) || !defined(HAVE_GROWL)
 	// Do the popup test earlier (to avoid needless JID lookups)
 	if ((popupType == PopupOnline && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.online").toBool()) || (popupType == PopupStatusChange && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.other-changes").toBool())) {
-#endif
 		if(notifyOnlineOk && doPopup && !d->blockTransportPopupList->find(j, popupType == PopupOnline) && !d->noPopup(IncomingStanza)) {
-			QString name;
 			UserListItem *u = findFirstRelevant(j);
-
 			PsiPopup::PopupType pt = PsiPopup::AlertNone;
 			if ( popupType == PopupOnline )
 				pt = PsiPopup::AlertOnline;
@@ -2553,19 +2566,13 @@ void PsiAccount::client_resourceAvailable(const Jid &j, const Resource &r)
 				pt = PsiPopup::AlertStatusChange;
 
 			if ((popupType == PopupOnline && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.online").toBool()) || (popupType == PopupStatusChange && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.other-changes").toBool())) {
-				PsiPopup *popup = new PsiPopup(pt, this);
-				popup->setData(j, r, u);
+				PopupManager::doPopup(this, pt, j, r, u);
 			}
-#if defined(Q_WS_MAC) && defined(HAVE_GROWL)
-			PsiGrowlNotifier::instance()->popup(this, pt, j, r, u);
-#endif
 		}
 		else if ( !notifyOnlineOk ) {
 			d->userCounter++;
 		}
-#if !defined(Q_WS_MAC) || !defined(HAVE_GROWL)
 	}
-#endif
 
 	// Update entity capabilities.
 	// This has to happen after the userlist item has been created.
@@ -2642,21 +2649,14 @@ void PsiAccount::client_resourceUnavailable(const Jid &j, const Resource &r)
 	if(doSound)
 		playSound(eOffline);
 
-#if !defined(Q_WS_MAC) || !defined(HAVE_GROWL)
 	// Do the popup test earlier (to avoid needless JID lookups)
-	if (PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.offline").toBool())
-#endif
-	if(doPopup && !d->blockTransportPopupList->find(j) && !d->noPopup(IncomingStanza)) {
-		QString name;
+	if(PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.offline").toBool() &&
+	   doPopup && !d->blockTransportPopupList->find(j) && !d->noPopup(IncomingStanza)) {
 		UserListItem *u = findFirstRelevant(j);
 
 		if (PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.offline").toBool()) {
-			PsiPopup *popup = new PsiPopup(PsiPopup::AlertOffline, this);
-			popup->setData(j, r, u);
+			PopupManager::doPopup(this, PsiPopup::AlertOffline, j, r, u);
 		}
-#if defined(Q_WS_MAC) && defined(HAVE_GROWL)
-		PsiGrowlNotifier::instance()->popup(this, PsiPopup::AlertOffline, j, r, u);
-#endif
 	}
 }
 
@@ -3192,6 +3192,9 @@ void PsiAccount::playSound(PsiAccount::SoundType _onevent)
 		break;
 	case eChat2:
 		str = PsiOptions::instance()->getOption("options.ui.notifications.sounds.chat-message").toString();
+		break;
+	case eGroupChat:
+		str = PsiOptions::instance()->getOption("options.ui.notifications.sounds.groupchat-message").toString();
 		break;
 	case eHeadline:
 		str = PsiOptions::instance()->getOption("options.ui.notifications.sounds.incoming-headline").toString();
@@ -5236,19 +5239,15 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 #ifdef PSI_PLUGINS
 			if(e->type() != PsiEvent::Plugin) {
 #endif
-				PsiPopup *popup = new PsiPopup(popupType, this);
-				popup->setData(j, r, u, e);
+				PopupManager::doPopup(this, popupType, j, r, u, e);
 #ifdef PSI_PLUGINS
-			}
-			else {
-				PsiPopup *popup = new PsiPopup(popupType, this);
-				popup->setData(0,0, e->description());
+ 			}
+ 			else {
+				PopupManager::doPopup(this, j, IconsetFactory::iconPtr("psi/headline"), tr("Headline"), 0, 0, e->description());
 			}
 #endif
 		}
-#if defined(Q_WS_MAC) && defined(HAVE_GROWL)
-		PsiGrowlNotifier::instance()->popup(this, popupType, j, r, u, e);
-#endif
+
 		emit startBounce();
 	}
 
@@ -5402,7 +5401,7 @@ void PsiAccount::queueEvent(PsiEvent* e, ActivationType activationType)
 
 	// FIXME: We shouldn't be doing this kind of stuff here, because this
 	// function is named *queue*Event() not deleteThisMessageSometimes()
-	if (!d->noPopup(activationType)) {
+	if (!d->noPopupDialogs(activationType)) {
 		bool doPopup = false;
 
 		// Check to see if we need to popup
@@ -6332,6 +6331,7 @@ void PsiAccount::invokeGCMessage(const Jid &j)
 	u->setInList(false);
 	u->setName(j.resource());
 	u->setPrivate(true);
+	u->setAvatarFactory(avatarFactory());
 
 	// make a resource so the contact appears online
 	UserResource ur;
@@ -6358,7 +6358,6 @@ void PsiAccount::invokeGCChat(const Jid &j)
 	u->setInList(false);
 	u->setName(j.resource());
 	u->setPrivate(true);
-	u->setAvatarFactory(avatarFactory());
 
 	// make a resource so the contact appears online
 	UserResource ur;

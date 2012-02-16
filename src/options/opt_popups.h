@@ -24,7 +24,7 @@
 #include "optionstab.h"
 
 class PsiCon;
-class PopupDurationsManager;
+class PopupManager;
 
 class OptionsTabPopups : public OptionsTab
 {
@@ -36,14 +36,14 @@ public:
 	void applyOptions();
 	void restoreOptions();
 
-	virtual bool stretchable() const { return true; };
+	virtual bool stretchable() const { return true; }
 
 public slots:
 	virtual void setData(PsiCon *psi, QWidget *);
 
 private:
 	QWidget *w;
-	PopupDurationsManager* popup_;
+	PopupManager* popup_;
 };
 
 #endif

@@ -56,7 +56,7 @@ class TuneController;
 class PsiContactList;
 class TabManager;
 class ContactUpdatesManager;
-class PopupDurationsManager;
+class PopupManager;
 
 namespace OpenPGP {
 	class Engine;
@@ -128,7 +128,7 @@ public:
 	bool haveAutoUpdater() const;
 	void updateStatusPresets();
 
-	PopupDurationsManager* popupDurationsManager() const;
+	PopupManager* popupManager() const;
 
 signals:
 	void quit(int);

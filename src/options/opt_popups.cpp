@@ -19,12 +19,13 @@
  */
 
 //#include <QHBoxLayout>
+#include <QRadioButton>
 
 #include "opt_popups.h"
 #include "ui_opt_popups.h"
 #include "psioptions.h"
 #include "psicon.h"
-#include "popupdurationsmanager.h"
+#include "popupmanager.h"
 
 class OptPopupsUI : public QWidget, public Ui::OptPopups
 {
@@ -88,6 +89,14 @@ void OptionsTabPopups::applyOptions()
 			}
 		}
 	}
+
+	foreach(QObject* obj, d->gb_type->children()) {
+		QRadioButton *rb = dynamic_cast<QRadioButton*>(obj);
+		if(rb && rb->isChecked()) {
+			o->setOption("options.ui.notifications.type", rb->property("type"));
+			break;
+		}
+	}
 }
 
 void OptionsTabPopups::restoreOptions()
@@ -132,10 +141,27 @@ void OptionsTabPopups::restoreOptions()
 		vBox->addLayout(l);
 	}
 	d->sa_durations->setWidget(areaWidget);
+
+	delete d->gb_type->layout();
+	qDeleteAll(d->gb_type->children());
+	QHBoxLayout *l = new QHBoxLayout(d->gb_type);
+
+	foreach(PopupManager::NotificationsType type_, PopupManager::availableTypes()) {
+		QRadioButton* rb = new QRadioButton(PopupManager::nameByType(type_));
+		rb->setProperty("type", type_);
+		d->gb_type->layout()->addWidget(rb);
+		l->addWidget(rb);
+		if(PopupManager::currentType() == type_)
+			rb->setChecked(true);
+	}
+
+	if(l->count() == 1)
+		d->gb_type->setVisible(false);
+
 	emit connectDataChanged(w);
 }
 
 void OptionsTabPopups::setData(PsiCon *psi, QWidget *)
 {
-	popup_ = psi->popupDurationsManager();
+	popup_ = psi->popupManager();
 }

@@ -1,6 +1,6 @@
 /*
- * psigrowlnotifier.h: Psi's interface to Growl
- * Copyright (C) 2005  Remko Troncon
+ * psidbusnotifier.h: Psi's interface to org.freedesktop.Notify
+ * Copyright (C) 2012  Khryukin Evgeny
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -23,49 +23,41 @@
  *
  */
 
-#ifndef PSIGROWLNOTIFIER_H
-#define PSIGROWLNOTIFIER_H
-
-#include <QObject>
+#ifndef PSIDBUSNOTIFIER_H
+#define PSIDBUSNOTIFIER_H
 
 #include "psipopup.h"
+#include "xmpp/jid/jid.h"
 
-class GrowlNotifier;
 class PsiAccount;
+class PsiEvent;
+class QDBusPendingCallWatcher;
+class QTimer;
 
-class NotificationContext;
-
-/**
- * An interface for Psi to Growl.
- * This class uses GrowlNotifier to interface with Growl.
- * There is at most 1 PsiGrowlNotifier per Psi session (Singleton). This 
- * notifier can be retrieved using instance().
- *
- * \see GrowlNotifier
- */
-class PsiGrowlNotifier : public QObject
+class PsiDBusNotifier : public QObject
 {
 	Q_OBJECT
 
 public:
-	static PsiGrowlNotifier* instance();
+	PsiDBusNotifier();
+	~PsiDBusNotifier();
+	static bool isAvailable();
 	void popup(PsiAccount* account, PsiPopup::PopupType type, const Jid& j, const Resource& r, const UserListItem* = 0, PsiEvent* = 0);
-	void popup(PsiAccount *account, const Jid &j, const PsiIcon *titleIcon, const QString& titleText, const QString& text);
-
-public slots:
-	void notificationClicked(void*);
-	void notificationTimedOut(void*);
+	void popup(PsiAccount *account, const Jid &j, const PsiIcon *titleIcon, const QString& titleText,
+				    const QPixmap *avatar, const PsiIcon *icon, const QString& text);
 
 private slots:
-	void cleanup();
+	void popupClosed(uint id, uint reason);
+	void eventDestroyed();
+	void asyncCallFinished(QDBusPendingCallWatcher*);
+	void readyToDie();
 
 private:
-	PsiGrowlNotifier();
-	void tryDeleteContext(NotificationContext* context);
-
-	static PsiGrowlNotifier* instance_;
-	GrowlNotifier* gn_;
-	QList<NotificationContext*> contexts_;
+	Jid jid_;
+	uint id_;
+	PsiAccount *account_;
+	PsiEvent *event_;
+	QTimer *lifeTimer_;
 };
 
 #endif

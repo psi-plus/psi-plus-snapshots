@@ -81,11 +81,6 @@ echo "OLD_VER = ${OLD_VER}"
 echo "NEW_VER = ${NEW_VER}"
 echo;
 
-if [ "${NEW_VER}" = "${OLD_VER}" ]; then
-    echo "Updating is not required.";
-    exit 0;
-fi
-
 cd "${PSIPLUS_DIR}"
 echo "Updating is started."
 echo;
@@ -110,8 +105,6 @@ echo;
 cat "${MAIN_DIR}/main/patches"/*.diff | \
     patch -d "${PSIPLUS_DIR}" -p1 2>&1 > \
     "${MAIN_DIR}/applying-patches_${NEW_VER}.log" || exit 1
-sed "s/\(.xxx\)/.${rev}/" -i \
-    "${PSIPLUS_DIR}/src/applicationinfo.cpp" || exit 1
 echo "Patches from psi-dev project were applied."
 echo;
 
@@ -146,11 +139,72 @@ echo "Trash was removed."
 echo;
 
 
-COMMENT="Sources were synced with upstream. Current version is ${NEW_VER}"
 git add .  || exit 1
 git add -u || exit 1
-git cm -a -m "${COMMENT}" 2>&1 > \
+
+
+COMMENT=""
+STATUS="$(git status)"
+
+TEST_ALL=$(echo "${STATUS}" | grep "#	" |
+             grep -v " generate-single-repo.sh" | \
+             grep -v " README" | \
+             wc -l)
+TEST_SRC=$(echo "${STATUS}" | grep " src/" | wc -l)
+TEST_IRIS=$(echo "${STATUS}" | grep " iris/" | wc -l)
+TEST_LIBPSI=$(echo "${STATUS}" | grep " src/libpsi/" | wc -l)
+TEST_PLUGINS=$(echo "${STATUS}" | grep " src/plugins/" | wc -l)
+
+echo "TEST_ALL = ${TEST_ALL}"
+echo "TEST_IRIS = ${TEST_IRIS}"
+echo "TEST_LIBPSI = ${TEST_LIBPSI}"
+echo "TEST_PLUGINS = ${TEST_PLUGINS}"
+echo "TEST_SRC = ${TEST_SRC}"
+echo;
+
+
+if [ "${TEST_ALL}" -eq 0 ]; then
+    echo "Updating is not required.";
+    exit 0;
+fi
+
+if [ "${NEW_VER}" == "${OLD_VER}" ]; then
+    COMMENT+="Sources were synced with upstream:\n"
+    if [ "${TEST_SRC}" -gt "$((${TEST_LIBPSI}+${TEST_PLUGINS}+0))" ]; then
+        COMMENT+="Psi was updated.\n"
+    fi
+else
+    COMMENT+="Current version is ${NEW_VER}:\n"
+    if [ "${TEST_SRC}" -gt "$((${TEST_LIBPSI}+${TEST_PLUGINS}+0))" ]; then
+        COMMENT+="Psi+ was updated.\n"
+    fi
+fi
+
+if [ "${TEST_IRIS}" -gt 0 ]; then
+    COMMENT+="Iris was updated.\n"
+fi
+
+if [ "${TEST_LIBPSI}" -gt 0 ]; then
+    COMMENT+="Libpsi was updated.\n"
+fi
+
+if [ "${TEST_PLUGINS}" -eq 1 ]; then
+    COMMENT+="One plugin was updated.\n"
+elif [ "${TEST_PLUGINS}" -gt 1 ]; then
+    COMMENT+="Plugins were updated.\n"
+fi
+
+
+echo -e "${COMMENT}"
+
+sed "s/\(.xxx\)/.${rev}/" -i \
+    "${PSIPLUS_DIR}/src/applicationinfo.cpp" || exit 1
+git cm -a -m "$(echo -e ${COMMENT})" 2>&1 > \
     "${MAIN_DIR}/git-commit_${NEW_VER}.log" || exit 1
-git tag "${NEW_VER}" || exit 1
-echo "Git tag was created."
+
+if [ "${NEW_VER}" != "${OLD_VER}" ]; then
+    git tag "${NEW_VER}" || exit 1
+    echo "Git tag was created."
+    echo;
+fi
 

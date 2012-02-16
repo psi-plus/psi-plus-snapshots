@@ -110,7 +110,7 @@
 #include "avcall/calldlg.h"
 #include "alertmanager.h"
 #include "bosskey.h"
-#include "popupdurationsmanager.h"
+#include "popupmanager.h"
 
 #include "AutoUpdater/AutoUpdater.h"
 #ifdef HAVE_SPARKLE
@@ -223,7 +223,7 @@ public:
 		, quitting(false)
 		, alertManager(parent)
 		, bossKey(0)
-		, popupDurationsManager(0)
+		, popupManager(0)
 	{
 		psi = parent;
 	}
@@ -305,7 +305,7 @@ public:
 	AutoUpdater *autoUpdater;
 	AlertManager alertManager;
 	BossKey *bossKey;
-	PopupDurationsManager * popupDurationsManager;
+	PopupManager * popupManager;
 };
 
 //----------------------------------------------------------------------------
@@ -351,7 +351,7 @@ PsiCon::~PsiCon()
 	delete d->edb;
 	delete d->defaultMenuBar;
 	delete d->tabManager;
-	delete d->popupDurationsManager;
+	delete d->popupManager;
 	delete d;
 }
 
@@ -556,17 +556,17 @@ bool PsiCon::init()
 	d->idle.start();
 
 	//PopupDurationsManager
-	d->popupDurationsManager = new PopupDurationsManager();
-	d->popupDurationsManager->registerOption(tr("Status"),
+	d->popupManager = new PopupManager();
+	d->popupManager->registerOption(tr("Status"),
 						 PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.status").toInt()/1000,
 						 "options.ui.notifications.passive-popups.delays.status");
-	d->popupDurationsManager->registerOption(tr("Message"),
+	d->popupManager->registerOption(tr("Message"),
 						 PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.message").toInt()/1000,
 						 "options.ui.notifications.passive-popups.delays.message");
-	d->popupDurationsManager->registerOption(tr("File"),
+	d->popupManager->registerOption(tr("File"),
 						 PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.file").toInt()/1000,
 						 "options.ui.notifications.passive-popups.delays.file");
-	d->popupDurationsManager->registerOption(tr("Chat"),
+	d->popupManager->registerOption(tr("Chat"),
 						 PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.chat").toInt()/1000,
 						 "options.ui.notifications.passive-popups.delays.chat");
 
@@ -825,9 +825,9 @@ FileTransDlg *PsiCon::ftdlg() const
 #endif
 }
 
-PopupDurationsManager* PsiCon::popupDurationsManager() const
+PopupManager* PsiCon::popupManager() const
 {
-	return d->popupDurationsManager;
+	return d->popupManager;
 }
 
 TabManager *PsiCon::tabManager() const

@@ -166,7 +166,7 @@ HEADERS += \
 	$$PWD/alerticon.h \
 	$$PWD/alertable.h \
 	$$PWD/psipopup.h \
-	$$PWD/popupdurationsmanager.h \
+	$$PWD/popupmanager.h \
 	$$PWD/psiapplication.h \
 	$$PWD/filecache.h \
 	$$PWD/avatars.h \
@@ -312,7 +312,7 @@ SOURCES += \
 	$$PWD/alerticon.cpp \
 	$$PWD/alertable.cpp \
 	$$PWD/psipopup.cpp \
-	$$PWD/popupdurationsmanager.cpp \
+	$$PWD/popupmanager.cpp \
 	$$PWD/psiapplication.cpp \
 	$$PWD/filecache.cpp \
 	$$PWD/avatars.cpp \
@@ -635,9 +635,11 @@ psi_plugins {
 }
 
 dbus {
-	HEADERS += 	$$PWD/dbus.h
+	HEADERS += 	$$PWD/dbus.h \
+			$$PWD/psidbusnotifier.h
 	SOURCES += 	$$PWD/dbus.cpp
-	SOURCES += $$PWD/activeprofiles_dbus.cpp
+	SOURCES +=	$$PWD/activeprofiles_dbus.cpp \
+			$$PWD/psidbusnotifier.cpp
 	DEFINES += USE_DBUS
 	CONFIG += qdbus
 }

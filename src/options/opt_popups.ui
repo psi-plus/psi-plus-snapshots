@@ -25,6 +25,13 @@
     </widget>
    </item>
    <item>
+    <widget class="QGroupBox" name="gb_type">
+     <property name="title">
+      <string>Notifications type</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="autoFillBackground">
       <bool>false</bool>
@@ -391,6 +398,22 @@
     <hint type="destinationlabel">
      <x>303</x>
      <y>273</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ck_popupOn</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>gb_type</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>303</x>
+     <y>19</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>303</x>
+     <y>50</y>
     </hint>
    </hints>
   </connection>

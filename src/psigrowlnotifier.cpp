@@ -33,6 +33,7 @@
 #include "psigrowlnotifier.h"
 #include "psievent.h"
 #include "userlist.h"
+#include "psioptions.h"
 
 /**
  * A class representing the notification context, which will be passed to
@@ -111,23 +112,38 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, cons
 	QString name;
 	QString title, desc, contact;
 	QString statusTxt = status2txt(makeSTATUS(r.status()));
-	QString statusMsg = r.status().status();
-	QPixmap icon = account->avatarFactory()->getAvatar(jid.bare());
+	QString statusMsg;
+	int len = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-status-length").toInt();
+	if (len != 0)
+		statusMsg = r.status().status();
+	if (len > 0)
+		if (((int)statusMsg.length()) > len)
+			statusMsg = statusMsg.left(len) + "...";
+	QPixmap icon;
+	if(account)
+		icon = account->avatarFactory()->getAvatar(jid.bare());
+
 	if (uli) {
 		contact = uli->name();
 	}
-	else if (event->type() == PsiEvent::Auth) {
+	else if (event && event->type() == PsiEvent::Auth) {
 		contact = ((AuthEvent*) event)->nick();
 	}
-	else if (event->type() == PsiEvent::Message) {
+	else if (event && event->type() == PsiEvent::Message) {
 		contact = ((MessageEvent*) event)->nick();
 	}
 
 	if (contact.isEmpty())
 		contact = jid.bare();
 
+	int jidLen = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-jid-length").toInt();
+	if (jidLen > 0 && ((int)contact.length()) > jidLen)
+		contact = contact.left(jidLen) + "...";
+
 	// Default value for the title
 	title = contact;
+
+	bool showMessage = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.showMessage").toBool();
 
 	switch(type) {
 		case PsiPopup::AlertOnline:
@@ -148,18 +164,28 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, cons
 			desc = statusMsg;
 			//icon = PsiIconset::instance()->statusPQString(jid, r.status());
 			break;
+		case PsiPopup::AlertComposing:
+			name = QObject::tr("Typing notify");
+			title = QString("%1%2").arg(contact).arg(QObject::tr(" is typing..."));
+			desc = "";
+			//icon = (PsiIcon *)IconsetFactory::iconPtr("psi/typing");
+			break;
 		case PsiPopup::AlertMessage: {
 			name = QObject::tr("Incoming Message");
 			title = QObject::tr("%1 says:").arg(contact);
-			const Message* jmessage = &((MessageEvent *)event)->message();
-			desc = jmessage->body();
+			if(showMessage) {
+				const Message* jmessage = &((MessageEvent *)event)->message();
+				desc = jmessage->body();
+			}
 			//icon = IconsetFactory::iconPQString("psi/message");
 			break;
 		}
 		case PsiPopup::AlertChat: {
 			name = QObject::tr("Incoming Message");
-			const Message* jmessage = &((MessageEvent *)event)->message();
-			desc = jmessage->body();
+			if(showMessage) {
+				const Message* jmessage = &((MessageEvent *)event)->message();
+				desc = jmessage->body();
+			}
 			//icon = IconsetFactory::iconPQString("psi/start-chat");
 			break;
 		}
@@ -168,7 +194,9 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, cons
 			const Message* jmessage = &((MessageEvent *)event)->message();
 			if ( !jmessage->subject().isEmpty())
 				title = jmessage->subject();
-			desc = jmessage->body();
+			if(showMessage) {
+				desc = jmessage->body();
+			}
 			//icon = IconsetFactory::iconPQString("psi/headline");
 			break;
 		}
@@ -181,9 +209,20 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, cons
 			break;
 	}
 
+	if(!desc.isEmpty()) {
+		desc = PsiPopup::clipText(desc);
+	}
+
 	// Notify Growl
 	NotificationContext* context = new NotificationContext(account, jid);
 	gn_->notify(name, title, desc, icon, false, this, SLOT(notificationClicked(void*)), SLOT(notificationTimedOut(void*)), context);
+}
+
+void PsiGrowlNotifier::popup(PsiAccount *account, const Jid &jid, const PsiIcon *titleIcon, const QString &titleText, const QString &text)
+{
+	// Notify Growl
+	NotificationContext* context = new NotificationContext(account, jid);
+	gn_->notify(titleText, QString(), text, titleIcon->pixmap(), false, this, SLOT(notificationClicked(void*)), SLOT(notificationTimedOut(void*)), context);
 }
 
 void PsiGrowlNotifier::cleanup()
@@ -210,7 +249,8 @@ void PsiGrowlNotifier::tryDeleteContext(NotificationContext* context)
 void PsiGrowlNotifier::notificationClicked(void* c)
 {
 	NotificationContext* context = (NotificationContext*) c;
-	context->account()->actionDefault(context->jid());
+	if(context->account())
+		context->account()->actionDefault(context->jid());
 	//delete context;
 	tryDeleteContext(context);
 }
