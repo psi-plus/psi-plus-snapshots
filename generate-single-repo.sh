@@ -105,6 +105,8 @@ echo;
 cat "${MAIN_DIR}/main/patches"/*.diff | \
     patch -d "${PSIPLUS_DIR}" -p1 2>&1 > \
     "${MAIN_DIR}/applying-patches_${NEW_VER}.log" || exit 1
+sed "s/\(.xxx\)/.${rev}/" -i \
+    "${PSIPLUS_DIR}/src/applicationinfo.cpp" || exit 1
 echo "Patches from psi-dev project were applied."
 echo;
 
@@ -147,6 +149,7 @@ COMMENT=""
 STATUS="$(git status)"
 
 TEST_ALL=$(echo "${STATUS}" | grep "#	" |
+             grep -v " src/applicationinfo.cpp" | \
              grep -v " generate-single-repo.sh" | \
              grep -v " README" | \
              wc -l)
@@ -197,8 +200,6 @@ fi
 
 echo -e "${COMMENT}"
 
-sed "s/\(.xxx\)/.${rev}/" -i \
-    "${PSIPLUS_DIR}/src/applicationinfo.cpp" || exit 1
 git cm -a -m "$(echo -e ${COMMENT})" 2>&1 > \
     "${MAIN_DIR}/git-commit_${NEW_VER}.log" || exit 1
 
