@@ -21,6 +21,8 @@
 #include "popupmanager.h"
 
 #include "psioptions.h"
+#include "psiaccount.h"
+#include "psicon.h"
 
 #if defined(Q_WS_MAC) && defined(HAVE_GROWL)
 #include "psigrowlnotifier.h"
@@ -33,7 +35,8 @@
 
 static const int defaultTimeout = 5;
 
-PopupManager::PopupManager()
+PopupManager::PopupManager(PsiCon *psi)
+	: psi_(psi)
 {
 }
 
@@ -88,9 +91,31 @@ const QStringList PopupManager::optionsNamesList() const
 	return options_.keys();
 }
 
-void PopupManager::doPopup(PsiAccount *account, PsiPopup::PopupType pType, const Jid &j, const Resource &r, UserListItem *u, PsiEvent *e)
+bool PopupManager::noPopup(PsiAccount *account) const
 {
-	if ( !PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.enabled").toBool() )
+	if(account) {
+		if(account->noPopup())
+			return true;
+	}
+	else {
+		Status::Type type = psi_->currentStatusType();
+		if((type == Status::DND && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.suppress-while-dnd").toBool())
+			|| ( (type == Status::Away || type == Status::XA) &&
+			     PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.suppress-while-away").toBool() ))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void PopupManager::doPopup(PsiAccount *account, PsiPopup::PopupType pType, const Jid &j, const Resource &r,
+			   UserListItem *u, PsiEvent *e, bool checkNoPopup)
+{
+	if (!PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.enabled").toBool())
+		return;
+
+	if(checkNoPopup && noPopup(account))
 		return;
 
 	NotificationsType type = currentType();
@@ -112,12 +137,15 @@ void PopupManager::doPopup(PsiAccount *account, PsiPopup::PopupType pType, const
 }
 
 void PopupManager::doPopup(PsiAccount *account, const Jid &j, const PsiIcon *titleIcon, const QString &titleText,
-			   const QPixmap *avatar, const PsiIcon *icon, const QString &text)
+			   const QPixmap *avatar, const PsiIcon *icon, const QString &text, bool checkNoPopup)
 {
 	Q_UNUSED(avatar)
 	Q_UNUSED(icon)
 
-	if ( !PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.enabled").toBool() )
+	if (!PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.enabled").toBool())
+		return;
+
+	if(checkNoPopup && noPopup(account))
 		return;
 
 	NotificationsType type = currentType();

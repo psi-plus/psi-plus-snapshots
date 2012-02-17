@@ -28,11 +28,12 @@
 #include <QHash>
 
 class PsiAccount;
+class PsiCon;
 
 class PopupManager
 {
 public:
-	PopupManager();
+	PopupManager(PsiCon* psi);
 	~PopupManager() {}
 
 	enum NotificationsType {
@@ -52,11 +53,16 @@ public:
 	static NotificationsType currentType();
 	static QString nameByType(NotificationsType type);
 
-	static void doPopup(PsiAccount* account, PsiPopup::PopupType type, const Jid& j, const Resource& r, UserListItem* u = 0, PsiEvent* e = 0);
-	static void doPopup(PsiAccount *account, const Jid &j, const PsiIcon *titleIcon, const QString& titleText,
-			    const QPixmap *avatar, const PsiIcon *icon, const QString& text);
+	void doPopup(PsiAccount* account, PsiPopup::PopupType type, const Jid& j, const Resource& r,
+			    UserListItem* u = 0, PsiEvent* e = 0, bool checkNoPopup = true);
+	void doPopup(PsiAccount *account, const Jid &j, const PsiIcon *titleIcon, const QString& titleText,
+			    const QPixmap *avatar, const PsiIcon *icon, const QString& text, bool checkNoPopup = true);
 
 private:
+	bool noPopup(PsiAccount *account) const;
+
+private:
+	PsiCon* psi_;
 	typedef QPair<QString, int> OptionValue;
 	QHash<QString, OptionValue> options_;
 

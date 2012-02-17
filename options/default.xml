@@ -453,6 +453,9 @@ QLineEdit#le_status_text {
 					<avatar-size type="int">48</avatar-size>
 					<suppress-while-away type="bool">false</suppress-while-away>
 					<suppress-while-dnd type="bool">true</suppress-while-dnd>
+					<dbus>
+						<transient-hint type="bool">false</transient-hint>
+					</dbus>
 					<status>
 						<offline type="bool">true</offline>
 						<online type="bool">true</online>

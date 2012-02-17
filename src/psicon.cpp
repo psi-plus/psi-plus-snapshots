@@ -556,7 +556,7 @@ bool PsiCon::init()
 	d->idle.start();
 
 	//PopupDurationsManager
-	d->popupManager = new PopupManager();
+	d->popupManager = new PopupManager(this);
 	d->popupManager->registerOption(tr("Status"),
 						 PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.status").toInt()/1000,
 						 "options.ui.notifications.passive-popups.delays.status");

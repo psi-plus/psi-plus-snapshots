@@ -1731,15 +1731,17 @@ void GCMainDlg::message(const Message &_m)
 		if(!m.spooled())
 			account()->playSound(PsiAccount::eSend);
 	}
-	else if(account()->status().type() != Status::DND) {
+	else {
 		if(alert || (PsiOptions::instance()->getOption("options.ui.notifications.sounds.notify-every-muc-message").toBool() && !m.spooled() && !from.isEmpty()) )
 			account()->playSound(PsiAccount::eGroupChat);
-		if(alert || (PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.notify-every-muc-message").toBool() && !m.spooled() && !from.isEmpty()) )
+
+		if(alert || (PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.notify-every-muc-message").toBool() && !m.spooled() && !from.isEmpty()) ) {
 			if (!m.spooled() && !isActiveTab() && !m.from().resource().isEmpty()) {
 				XMPP::Jid jid = m.from().withDomain("");
 				const MessageEvent *e = new MessageEvent(m, account());
-				PopupManager::doPopup(account(), PsiPopup::AlertGcHighlight, jid, m.from().resource(), 0, (PsiEvent *)e);
+				account()->psi()->popupManager()->doPopup(account(), PsiPopup::AlertGcHighlight, jid, m.from().resource(), 0, (PsiEvent *)e);
 			}
+		}
 	}
 
 	if(from.isEmpty())

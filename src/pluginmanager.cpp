@@ -662,7 +662,7 @@ bool PluginManager::setTune(int account, const QString& jid, const QString& tune
 void PluginManager::initPopup(const QString& text, const QString& title, const QString& icon)
 {
 	const PsiIcon* ico = IconsetFactory::iconPtr(icon);
-	PopupManager::doPopup(0, Jid(), ico, title, 0, 0, text);
+	psi_->popupManager()->doPopup(0, Jid(), ico, title, 0, 0, text);
 }
 
 void PluginManager::initPopupForJid(int account, const QString &jid, const QString &text, const QString &title, const QString &icon)
@@ -675,11 +675,11 @@ void PluginManager::initPopupForJid(int account, const QString &jid, const QStri
 			UserListItem *i = pa->findFirstRelevant(j);
 			PsiIcon *statusIco = PsiIconset::instance()->statusPtr(i);
 			const QPixmap pix = pa->avatarFactory()->getAvatar(j);
-			PopupManager::doPopup(pa, j, ico, title, &pix, statusIco, text);
+			psi_->popupManager()->doPopup(pa, j, ico, title, &pix, statusIco, text);
 			return;
 		}
 	}
-	PopupManager::doPopup(0, Jid(), ico, title, 0, 0, text);
+	psi_->popupManager()->doPopup(0, Jid(), ico, title, 0, 0, text);
 }
 
 void PluginManager::registerOption(const QString& name, int initValue, const QString& path)
