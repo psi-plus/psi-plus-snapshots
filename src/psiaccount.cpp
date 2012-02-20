@@ -2559,11 +2559,11 @@ void PsiAccount::client_resourceAvailable(const Jid &j, const Resource &r)
 	if ((popupType == PopupOnline && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.online").toBool()) || (popupType == PopupStatusChange && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.other-changes").toBool())) {
 		if(notifyOnlineOk && doPopup && !d->blockTransportPopupList->find(j, popupType == PopupOnline) && !d->noPopup(IncomingStanza)) {
 			UserListItem *u = findFirstRelevant(j);
-			PsiPopup::PopupType pt = PsiPopup::AlertNone;
+			PopupManager::PopupType pt = PopupManager::AlertNone;
 			if ( popupType == PopupOnline )
-				pt = PsiPopup::AlertOnline;
+				pt = PopupManager::AlertOnline;
 			else if ( popupType == PopupStatusChange )
-				pt = PsiPopup::AlertStatusChange;
+				pt = PopupManager::AlertStatusChange;
 
 			if ((popupType == PopupOnline && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.online").toBool()) || (popupType == PopupStatusChange && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.other-changes").toBool())) {
 				psi()->popupManager()->doPopup(this, pt, j, r, u, false);
@@ -2655,7 +2655,7 @@ void PsiAccount::client_resourceUnavailable(const Jid &j, const Resource &r)
 		UserListItem *u = findFirstRelevant(j);
 
 		if (PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.offline").toBool()) {
-			psi()->popupManager()->doPopup(this, PsiPopup::AlertOffline, j, r, u, false);
+			psi()->popupManager()->doPopup(this, PopupManager::AlertOffline, j, r, u, false);
 		}
 	}
 }
@@ -4956,7 +4956,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 
 	bool doPopup    = false;
 	bool putToQueue = true;
-	PsiPopup::PopupType popupType = PsiPopup::AlertNone;
+	PopupManager::PopupType popupType = PopupManager::AlertNone;
 	SoundType soundType = eNone;
 
 	// find someone to accept the event
@@ -5059,7 +5059,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 			if(m.chatState() == StateComposing) {
 				doPopup = true;
 				putToQueue = false;
-				popupType = PsiPopup::AlertComposing;
+				popupType = PopupManager::AlertComposing;
 			}
 			else {
 				delete e;
@@ -5119,18 +5119,18 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 
 			if (putToQueue) {
 				doPopup = true;
-				popupType = PsiPopup::AlertChat;
+				popupType = PopupManager::AlertChat;
 			}
 		} // /chat
 		else if (m.type() == "headline") {
 			soundType = eHeadline;
 			doPopup = true;
-			popupType = PsiPopup::AlertHeadline;
+			popupType = PopupManager::AlertHeadline;
 		} // /headline
 		else if (m.type().isEmpty()) {
 			soundType = eMessage;
 			doPopup = true;
-			popupType = PsiPopup::AlertMessage;
+			popupType = PopupManager::AlertMessage;
 		} // /""
 		else {
 			soundType = eSystem;
@@ -5147,12 +5147,12 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 	else if(e->type() == PsiEvent::File) {
 		soundType = eIncomingFT;
 		doPopup = true;
-		popupType = PsiPopup::AlertFile;
+		popupType = PopupManager::AlertFile;
 	}
 	else if(e->type() == PsiEvent::AvCallType) {
 		soundType = eIncomingFT;
 		doPopup = true;
-		popupType = PsiPopup::AlertAvCall;
+		popupType = PopupManager::AlertAvCall;
 	}
 	else if(e->type() == PsiEvent::RosterExchange) {
 		RosterExchangeEvent* re = (RosterExchangeEvent*) e;
@@ -5219,7 +5219,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 	else if (e->type() == PsiEvent::Plugin) {
 		soundType = eSystem;
 		doPopup = true;
-		popupType = PsiPopup::AlertHeadline;
+		popupType = PopupManager::AlertHeadline;
 	}
 #endif
 	else {
@@ -5234,12 +5234,12 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 			r = *(u->priority());
 		}
 
-		if ((popupType == PsiPopup::AlertChat      && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-chat").toBool())     ||
-		    (popupType == PsiPopup::AlertMessage   && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-message").toBool())  ||
-		    (popupType == PsiPopup::AlertHeadline  && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-headline").toBool()) ||
-		    (popupType == PsiPopup::AlertFile      && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-file-transfer").toBool()) ||
-		    (popupType == PsiPopup::AlertAvCall    && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-message").toBool()) ||
-		    (popupType == PsiPopup::AlertComposing && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.composing").toBool()))
+		if ((popupType == PopupManager::AlertChat      && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-chat").toBool())     ||
+		    (popupType == PopupManager::AlertMessage   && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-message").toBool())  ||
+		    (popupType == PopupManager::AlertHeadline  && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-headline").toBool()) ||
+		    (popupType == PopupManager::AlertFile      && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-file-transfer").toBool()) ||
+		    (popupType == PopupManager::AlertAvCall    && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-message").toBool()) ||
+		    (popupType == PopupManager::AlertComposing && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.composing").toBool()))
 		{
 #ifdef PSI_PLUGINS
 			if(e->type() != PsiEvent::Plugin) {
@@ -5248,7 +5248,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 #ifdef PSI_PLUGINS
  			}
  			else {
-				psi()->popupManager()->doPopup(this, j, IconsetFactory::iconPtr("psi/headline"), tr("Headline"), 0, 0, e->description(), false);
+				psi()->popupManager()->doPopup(this, j, IconsetFactory::iconPtr("psi/headline"), tr("Headline"), 0, 0, e->description(), false, popupType);
 			}
 #endif
 		}

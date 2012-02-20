@@ -435,6 +435,7 @@ QLineEdit#le_status_text {
 						<chat type="int">5000</chat>
 						<file type="int">5000</file>
 						<message type="int">5000</message>
+						<gc-message type="int">5000</gc-message>
 						<status type="int">2000</status>
 					</delays>
 					<enabled type="bool">false</enabled>

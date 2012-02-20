@@ -21,44 +21,16 @@
 #ifndef PSIPOPUP_H
 #define PSIPOPUP_H
 
-#include <QObject>
-
-class QPixmap;
-class PsiCon;
-class PsiAccount;
-class UserListItem;
 class FancyPopup;
-class PsiIcon;
-class PsiEvent;
-namespace XMPP {
-	class Jid;
-	class Resource;
-}
-using namespace XMPP;
 
+#include "popupmanager.h"
 
 class PsiPopup : public QObject
 {
 	Q_OBJECT
 public:
-	enum PopupType {
-		AlertNone = 0,
-
-		AlertOnline,
-		AlertOffline,
-		AlertStatusChange,
-
-		AlertMessage,
-		AlertComposing,
-		AlertChat,
-		AlertHeadline,
-		AlertFile,
-		AlertAvCall,
-		AlertGcHighlight
-	};
-
-	PsiPopup(const PsiIcon *titleIcon, const QString& titleText, PsiAccount *acc);
-	PsiPopup(PopupType type, PsiAccount *acc);
+	PsiPopup(PopupManager* manager, const PsiIcon *titleIcon, const QString& titleText, PsiAccount *acc, PopupManager::PopupType type);
+	PsiPopup(PopupManager* manager, PopupManager::PopupType type, PsiAccount *acc);
 
 	~PsiPopup();
 
@@ -70,14 +42,13 @@ public:
 	void show();
 	static void deleteAll();
 
-	static int timeout(PopupType type);
-	static QString title(PopupType type, bool *doAlertIcon, PsiIcon **icon);
-	static QString clipText(const QString& text);
+	static QString title(PopupManager::PopupType type, bool *doAlertIcon, PsiIcon **icon);
 
 private:
 	QString id() const;
 	FancyPopup *popup();
 
+	PopupManager* pm_;
 	class Private;
 	Private *d;
 	friend class Private;

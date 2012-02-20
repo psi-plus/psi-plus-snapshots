@@ -107,7 +107,7 @@ PsiGrowlNotifier* PsiGrowlNotifier::instance()
  * \param uli The originating userlist item. Can be NULL.
  * \param event The originating event. Can be NULL.
  */
-void PsiGrowlNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, const Jid& jid, const Resource& r, const UserListItem* uli, PsiEvent* event)
+void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, const Jid& jid, const Resource& r, const UserListItem* uli, PsiEvent* event)
 {
 	QString name;
 	QString title, desc, contact;
@@ -146,31 +146,31 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, cons
 	bool showMessage = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.showMessage").toBool();
 
 	switch(type) {
-		case PsiPopup::AlertOnline:
+		case PopupManager::AlertOnline:
 			name = QObject::tr("Contact becomes Available");
 			title = QString("%1 (%2)").arg(contact).arg(statusTxt);
 			desc = statusMsg;
 			//icon = PsiIconset::instance()->statusPQString(jid, r.status());
 			break;
-		case PsiPopup::AlertOffline:
+		case PopupManager::AlertOffline:
 			name = QObject::tr("Contact becomes Unavailable");
 			title = QString("%1 (%2)").arg(contact).arg(statusTxt);
 			desc = statusMsg;
 			//icon = PsiIconset::instance()->statusPQString(jid, r.status());
 			break;
-		case PsiPopup::AlertStatusChange:
+		case PopupManager::AlertStatusChange:
 			name = QObject::tr("Contact changes Status");
 			title = QString("%1 (%2)").arg(contact).arg(statusTxt);
 			desc = statusMsg;
 			//icon = PsiIconset::instance()->statusPQString(jid, r.status());
 			break;
-		case PsiPopup::AlertComposing:
+		case PopupManager::AlertComposing:
 			name = QObject::tr("Typing notify");
 			title = QString("%1%2").arg(contact).arg(QObject::tr(" is typing..."));
-			desc = "";
+			desc = QObject::tr("[Typing notify]");
 			//icon = (PsiIcon *)IconsetFactory::iconPtr("psi/typing");
 			break;
-		case PsiPopup::AlertMessage: {
+		case PopupManager::AlertMessage: {
 			name = QObject::tr("Incoming Message");
 			title = QObject::tr("%1 says:").arg(contact);
 			if(showMessage) {
@@ -180,7 +180,7 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, cons
 			//icon = IconsetFactory::iconPQString("psi/message");
 			break;
 		}
-		case PsiPopup::AlertChat: {
+		case PopupManager::AlertChat: {
 			name = QObject::tr("Incoming Message");
 			if(showMessage) {
 				const Message* jmessage = &((MessageEvent *)event)->message();
@@ -189,7 +189,7 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, cons
 			//icon = IconsetFactory::iconPQString("psi/start-chat");
 			break;
 		}
-		case PsiPopup::AlertHeadline: {
+		case PopupManager::AlertHeadline: {
 			name = QObject::tr("Incoming Headline");
 			const Message* jmessage = &((MessageEvent *)event)->message();
 			if ( !jmessage->subject().isEmpty())
@@ -200,17 +200,21 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, cons
 			//icon = IconsetFactory::iconPQString("psi/headline");
 			break;
 		}
-		case PsiPopup::AlertFile:
+		case PopupManager::AlertFile:
 			name = QObject::tr("Incoming File");
 			desc = QObject::tr("[Incoming File]");
 			//icon = IconsetFactory::iconPQString("psi/file");
 			break;
+		case PopupManager::AlertGcHighlight:
+			name = QObject::tr("Groupchat highlight");
+			desc = QObject::tr("[Groupchat highlight]");
+			break;
 		default:
 			break;
-	}
+		}
 
 	if(!desc.isEmpty()) {
-		desc = PsiPopup::clipText(desc);
+		desc = PopupManager::clipText(desc);
 	}
 
 	// Notify Growl

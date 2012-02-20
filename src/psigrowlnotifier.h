@@ -26,14 +26,12 @@
 #ifndef PSIGROWLNOTIFIER_H
 #define PSIGROWLNOTIFIER_H
 
-#include <QObject>
-
-#include "psipopup.h"
+#include "popupmanager.h"
 
 class GrowlNotifier;
-class PsiAccount;
-
 class NotificationContext;
+
+using namespace XMPP;
 
 /**
  * An interface for Psi to Growl.
@@ -49,7 +47,7 @@ class PsiGrowlNotifier : public QObject
 
 public:
 	static PsiGrowlNotifier* instance();
-	void popup(PsiAccount* account, PsiPopup::PopupType type, const Jid& j, const Resource& r, const UserListItem* = 0, PsiEvent* = 0);
+	void popup(PsiAccount* account, PopupManager::PopupType type, const Jid& j, const Resource& r, const UserListItem* = 0, PsiEvent* = 0);
 	void popup(PsiAccount *account, const Jid &j, const PsiIcon *titleIcon, const QString& titleText, const QString& text);
 
 public slots:

@@ -160,6 +160,14 @@ public:
 	bool setMood(int account, const QString& Jid, QDomElement xml);
 	bool setTune(int account, const QString& Jid, QString tune);
 
+	//PopupAccessingHost
+	void initPopup(const QString& text, const QString& title, const QString& icon, int type);
+	void initPopupForJid(int account, const QString& jid, const QString& text, const QString& title, const QString& icon, int type);
+	int registerOption(const QString& name, int initValue = 5, const QString& path = QString());
+	int popupDuration(const QString& name);
+	void setPopupDuration(const QString& name, int value);
+	void unregisterOption(const QString& name);
+
 	void addToolBarButton(QObject* parent, QWidget* toolbar, int account, const QString& contact);
 	void addGCToolBarButton(QObject* parent, QWidget* toolbar, int account, const QString& contact);
 
@@ -202,12 +210,6 @@ private:
 
 	QList< QVariantHash > accMenu_;
 	QList< QVariantHash > contactMenu_;
-
-	void initPopup(const QString& text, const QString& title, const QString& icon);
-	void initPopupForJid(int account, const QString& jid, const QString& text, const QString& title, const QString& icon);
-	void registerOption(const QString& name, int initValue = 5, const QString& path = QString());
-	int popupDuration(const QString& name);
-	void setPopupDuration(const QString& name, int value);
 
 	bool loadPlugin(QObject* pluginObject);
 

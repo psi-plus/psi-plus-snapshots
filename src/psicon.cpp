@@ -557,18 +557,6 @@ bool PsiCon::init()
 
 	//PopupDurationsManager
 	d->popupManager = new PopupManager(this);
-	d->popupManager->registerOption(tr("Status"),
-						 PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.status").toInt()/1000,
-						 "options.ui.notifications.passive-popups.delays.status");
-	d->popupManager->registerOption(tr("Message"),
-						 PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.message").toInt()/1000,
-						 "options.ui.notifications.passive-popups.delays.message");
-	d->popupManager->registerOption(tr("File"),
-						 PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.file").toInt()/1000,
-						 "options.ui.notifications.passive-popups.delays.file");
-	d->popupManager->registerOption(tr("Chat"),
-						 PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.chat").toInt()/1000,
-						 "options.ui.notifications.passive-popups.delays.chat");
 
 	// S5B
 	d->s5bServer = new S5BServer;

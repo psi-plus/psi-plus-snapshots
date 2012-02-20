@@ -1055,19 +1055,24 @@ void PluginHost::addGCToolBarButton(QObject* parent, QWidget* toolbar, int accou
 	}
 }
 
-void PluginHost::initPopup(const QString& text, const QString& title, const QString& icon)
+void PluginHost::initPopup(const QString& text, const QString& title, const QString& icon, int type)
 {
-	manager_->initPopup(text, title, icon);
+	manager_->initPopup(text, title, icon, type);
 }
 
-void PluginHost::initPopupForJid(int account, const QString &jid, const QString &text, const QString &title, const QString &icon)
+void PluginHost::initPopupForJid(int account, const QString &jid, const QString &text, const QString &title, const QString &icon, int type)
 {
-	manager_->initPopupForJid(account, jid, text, title, icon);
+	manager_->initPopupForJid(account, jid, text, title, icon, type);
 }
 
-void PluginHost::registerOption(const QString& name, int initValue, const QString& path)
+int PluginHost::registerOption(const QString& name, int initValue, const QString& path)
 {
-	manager_->registerOption(name, initValue, path);
+	return manager_->registerOption(name, initValue, path);
+}
+
+void PluginHost::unregisterOption(const QString &name)
+{
+	manager_->unregisterOption(name);
 }
 
 int PluginHost::popupDuration(const QString& name)

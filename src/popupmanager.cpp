@@ -23,6 +23,9 @@
 #include "psioptions.h"
 #include "psiaccount.h"
 #include "psicon.h"
+#include "psipopup.h"
+
+#include "xmpp/jid/jid.h"
 
 #if defined(Q_WS_MAC) && defined(HAVE_GROWL)
 #include "psigrowlnotifier.h"
@@ -35,60 +38,123 @@
 
 static const int defaultTimeout = 5;
 
-PopupManager::PopupManager(PsiCon *psi)
-	: psi_(psi)
+struct OptionValue
 {
-}
-
-void PopupManager::registerOption(const QString& name, int initValue, const QString& path)
-{
-	if(options_.keys().contains(name)) {
-		return;
+	OptionValue(const QString& name, const QString& path, int value, int _id = 0)
+		: optionName(name)
+		, optionPath(path)
+		, optionValue(value)
+		, id(_id)
+	{
 	}
 
-	OptionValue ov(path, initValue);
-	options_[name] = ov;
+	QString optionName;
+	QString optionPath;
+	int optionValue; //value in secconds
+	int id;
+
+	bool operator==(const OptionValue& other)
+	{
+		return optionName == other.optionName;
+	}
+};
+
+class PopupManager::Private
+{
+
+public:
+	Private()
+		: psi_(0)
+		, lastCustomType_(PopupManager::AlertCustom)
+	{
+	}
+
+	PsiCon* psi_;
+	int lastCustomType_;
+	QList<OptionValue> options_;
+};
+
+PopupManager::PopupManager(PsiCon *psi)
+{
+	d = new Private;
+	d->psi_ = psi;
+
+	QList<OptionValue> initList;
+	initList << OptionValue(QObject::tr("Status"), "options.ui.notifications.passive-popups.delays.status",
+			PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.status").toInt()/1000, AlertOnline)
+	<< OptionValue(QObject::tr("Headline"),  "options.ui.notifications.passive-popups.delays.message",
+			PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.message").toInt()/1000, AlertHeadline)
+	<< OptionValue(QObject::tr("File"), "options.ui.notifications.passive-popups.delays.file",
+			PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.file").toInt()/1000, AlertFile)
+	<< OptionValue(QObject::tr("Chat Message"), "options.ui.notifications.passive-popups.delays.chat",
+			PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.chat").toInt()/1000, AlertChat)
+	<< OptionValue(QObject::tr("Groupchat Message"),  "options.ui.notifications.passive-popups.delays.gc-message",
+			PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.gc-message").toInt()/1000, AlertGcHighlight);
+
+	d->options_ += initList;
+}
+
+PopupManager::~PopupManager()
+{
+	delete d;
+}
+
+int PopupManager::registerOption(const QString& name, int initValue, const QString& path)
+{	
+	foreach(const OptionValue& v, d->options_) {
+		if(v.optionName == name)
+			return v.id;
+	}
+
+	OptionValue ov(name, path, initValue, ++d->lastCustomType_);
+	d->options_.append(ov);
+
+	return ov.id;
 }
 
 void PopupManager::unregisterOption(const QString &name)
 {
-	options_.remove(name);
+	OptionValue ov(name, "", 0, 0);
+	d->options_.removeAll(ov);
 }
 
 void PopupManager::setValue(const QString& name, int value)
-{
-	if(!options_.keys().contains(name)) {
-		return;
+{	
+	QList<OptionValue>::iterator i = d->options_.begin();
+	for(; i != d->options_.end(); ++i) {
+		if((*i).optionName == name) {
+			(*i).optionValue = value;
+		}
 	}
-
-	OptionValue ov = options_.value(name);
-	ov.second = value;
-	options_[name] = ov;
 }
 
 int PopupManager::value(const QString& name) const
 {
-	if(!options_.keys().contains(name)) {
-		return defaultTimeout;
+	foreach(const OptionValue& v, d->options_) {
+		if(v.optionName == name)
+			return v.optionValue;
 	}
 
-	OptionValue ov = options_.value(name);
-	return ov.second;
+	return defaultTimeout;
 }
 
 const QString PopupManager::optionPath(const QString& name) const
-{
-	if(!options_.keys().contains(name)) {
-		return QString();
+{	
+	foreach(const OptionValue& v, d->options_) {
+		if(v.optionName == name)
+			return v.optionPath;
 	}
 
-	OptionValue ov = options_.value(name);
-	return ov.first;
+	return QString();
 }
 
 const QStringList PopupManager::optionsNamesList() const
 {
-	return options_.keys();
+	QStringList ret;
+	foreach(const OptionValue& v, d->options_)
+		ret.append(v.optionName);
+
+	return ret;
 }
 
 bool PopupManager::noPopup(PsiAccount *account) const
@@ -98,18 +164,18 @@ bool PopupManager::noPopup(PsiAccount *account) const
 			return true;
 	}
 	else {
-		Status::Type type = psi_->currentStatusType();
+		Status::Type type = d->psi_->currentStatusType();
 		if((type == Status::DND && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.suppress-while-dnd").toBool())
 			|| ( (type == Status::Away || type == Status::XA) &&
 			     PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.suppress-while-away").toBool() ))
-		{
+			{
 			return true;
 		}
 	}
 	return false;
 }
 
-void PopupManager::doPopup(PsiAccount *account, PsiPopup::PopupType pType, const Jid &j, const Resource &r,
+void PopupManager::doPopup(PsiAccount *account, PopupType pType, const Jid &j, const Resource &r,
 			   UserListItem *u, PsiEvent *e, bool checkNoPopup)
 {
 	if (!PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.enabled").toBool())
@@ -120,7 +186,7 @@ void PopupManager::doPopup(PsiAccount *account, PsiPopup::PopupType pType, const
 
 	NotificationsType type = currentType();
 	if(type == Default) {
-		PsiPopup *popup = new PsiPopup(pType, account);
+		PsiPopup *popup = new PsiPopup(this, pType, account);
 		popup->setData(j, r, u, e);
 	}
 #if defined(Q_WS_MAC) && defined(HAVE_GROWL)
@@ -130,14 +196,14 @@ void PopupManager::doPopup(PsiAccount *account, PsiPopup::PopupType pType, const
 #endif
 #ifdef USE_DBUS
 	else if(type == DBus) {
-		PsiDBusNotifier *db = new PsiDBusNotifier;
+		PsiDBusNotifier *db = new PsiDBusNotifier(this);
 		db->popup(account, pType, j, r, u, e);
 	}
 #endif
 }
 
 void PopupManager::doPopup(PsiAccount *account, const Jid &j, const PsiIcon *titleIcon, const QString &titleText,
-			   const QPixmap *avatar, const PsiIcon *icon, const QString &text, bool checkNoPopup)
+			   const QPixmap *avatar, const PsiIcon *icon, const QString &text, bool checkNoPopup, PopupType pType)
 {
 	Q_UNUSED(avatar)
 	Q_UNUSED(icon)
@@ -150,7 +216,7 @@ void PopupManager::doPopup(PsiAccount *account, const Jid &j, const PsiIcon *tit
 
 	NotificationsType type = currentType();
 	if(type == Default) {
-		PsiPopup *popup = new PsiPopup(titleIcon, titleText, account);
+		PsiPopup *popup = new PsiPopup(this, titleIcon, titleText, account, pType);
 		popup->setJid(j);
 		popup->setData(avatar, icon, text);
 	}
@@ -161,8 +227,8 @@ void PopupManager::doPopup(PsiAccount *account, const Jid &j, const PsiIcon *tit
 #endif
 #ifdef USE_DBUS
 	else if(type == DBus) {
-		PsiDBusNotifier *db = new PsiDBusNotifier;
-		db->popup(account, j, titleIcon, titleText, avatar, icon, text);
+		PsiDBusNotifier *db = new PsiDBusNotifier(this);
+		db->popup(account, j, titleIcon, titleText, avatar, icon, text, pType);
 	}
 #endif
 }
@@ -210,6 +276,41 @@ QString PopupManager::nameByType(NotificationsType type)
 	}
 
 	return ret;
+}
+
+QString PopupManager::clipText(QString text)
+{
+	int len = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-text-length").toInt();
+	if (len > 0) {
+		// richtext will give us trouble here
+		if (((int)text.length()) > len) {
+			text = text.left(len);
+
+			// delete last unclosed tag
+			/*if ( text.find("</") > text.find(">") ) {
+
+				text = text.left( text.find("</") );
+			}*/
+
+			text += "...";
+		}
+	}
+
+	return text;
+}
+
+int PopupManager::timeout(PopupType type) const
+{
+	if(type == AlertMessage || type == AlertAvCall)
+		type = AlertChat;
+	else if(type == AlertOffline || type == AlertStatusChange || type == AlertNone || type == AlertComposing)
+		type = AlertOnline;
+
+	foreach(const OptionValue& v, d->options_)
+		if(v.id == type)
+			return v.optionValue*1000;
+
+	return defaultTimeout*1000;
 }
 
 QList< PopupManager::NotificationsType > PopupManager::availableTypes_ = QList< NotificationsType >();

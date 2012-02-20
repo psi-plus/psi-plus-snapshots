@@ -659,13 +659,13 @@ bool PluginManager::setTune(int account, const QString& jid, const QString& tune
 	return true;
 }
 
-void PluginManager::initPopup(const QString& text, const QString& title, const QString& icon)
+void PluginManager::initPopup(const QString& text, const QString& title, const QString& icon, int type)
 {
 	const PsiIcon* ico = IconsetFactory::iconPtr(icon);
-	psi_->popupManager()->doPopup(0, Jid(), ico, title, 0, 0, text);
+	psi_->popupManager()->doPopup(0, Jid(), ico, title, 0, 0, text, true, (PopupManager::PopupType)type);
 }
 
-void PluginManager::initPopupForJid(int account, const QString &jid, const QString &text, const QString &title, const QString &icon)
+void PluginManager::initPopupForJid(int account, const QString &jid, const QString &text, const QString &title, const QString &icon, int type)
 {
 	XMPP::Jid j(jid);
 	const PsiIcon* ico = IconsetFactory::iconPtr(icon);
@@ -675,16 +675,21 @@ void PluginManager::initPopupForJid(int account, const QString &jid, const QStri
 			UserListItem *i = pa->findFirstRelevant(j);
 			PsiIcon *statusIco = PsiIconset::instance()->statusPtr(i);
 			const QPixmap pix = pa->avatarFactory()->getAvatar(j);
-			psi_->popupManager()->doPopup(pa, j, ico, title, &pix, statusIco, text);
+			psi_->popupManager()->doPopup(pa, j, ico, title, &pix, statusIco, text, true, (PopupManager::PopupType)type);
 			return;
 		}
 	}
-	psi_->popupManager()->doPopup(0, Jid(), ico, title, 0, 0, text);
+	psi_->popupManager()->doPopup(0, Jid(), ico, title, 0, 0, text, true, (PopupManager::PopupType)type);
 }
 
-void PluginManager::registerOption(const QString& name, int initValue, const QString& path)
+int PluginManager::registerOption(const QString& name, int initValue, const QString& path)
 {
-	psi_->popupManager()->registerOption(name, initValue, path);
+	return psi_->popupManager()->registerOption(name, initValue, path);
+}
+
+void PluginManager::unregisterOption(const QString &name)
+{
+	psi_->popupManager()->unregisterOption(name);
 }
 
 int PluginManager::popupDuration(const QString& name) const

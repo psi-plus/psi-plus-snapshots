@@ -100,8 +100,9 @@ static QDBusMessage createMessage(const QString& method)
 }
 
 
-PsiDBusNotifier::PsiDBusNotifier()
+PsiDBusNotifier::PsiDBusNotifier(PopupManager *manager)
 	: QObject(QCoreApplication::instance())
+	, pm_(manager)
 	, id_(0)
 	, account_(0)
 	, event_(0)
@@ -128,7 +129,7 @@ bool PsiDBusNotifier::isAvailable()
 	return ret;
 }
 
-void PsiDBusNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, const Jid& jid, const Resource& r, const UserListItem* uli, PsiEvent* event)
+void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, const Jid& jid, const Resource& r, const UserListItem* uli, PsiEvent* event)
 {
 	account_ = account;
 	jid_ = jid;
@@ -171,8 +172,8 @@ void PsiDBusNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, const
 
 	QVariantMap hints;
 	if(PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.dbus.transient-hint").toBool() ||
-	   type == PsiPopup::AlertComposing || type == PsiPopup::AlertOffline ||
-	   type == PsiPopup::AlertOnline || type == PsiPopup::AlertStatusChange || type == PsiPopup::AlertNone)
+	   type == PopupManager::AlertComposing || type == PopupManager::AlertOffline ||
+	   type == PopupManager::AlertOnline || type == PopupManager::AlertStatusChange || type == PopupManager::AlertNone)
 	{
 		hints.insert("transient", QVariant(true));
 	}
@@ -200,23 +201,23 @@ void PsiDBusNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, const
 	bool showMessage = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.showMessage").toBool();
 
 	switch(type) {
-	case PsiPopup::AlertOnline:
+	case PopupManager::AlertOnline:
 		text = QString("%1 (%2)").arg(contact).arg(statusTxt);
 		desc = statusMsg;
 		break;
-	case PsiPopup::AlertOffline:
+	case PopupManager::AlertOffline:
 		text = QString("%1 (%2)").arg(contact).arg(statusTxt);
 		desc = statusMsg;
 		break;
-	case PsiPopup::AlertStatusChange:
+	case PopupManager::AlertStatusChange:
 		text = QString("%1 (%2)").arg(contact).arg(statusTxt);
 		desc = statusMsg;
 		break;
-	case PsiPopup::AlertComposing:
+	case PopupManager::AlertComposing:
 		text = QString("%1%2").arg(contact).arg(QObject::tr(" is typing..."));
 		desc = "";
 		break;
-	case PsiPopup::AlertMessage: {
+	case PopupManager::AlertMessage: {
 			text = QObject::tr("%1 says:").arg(contact);
 			if(showMessage) {
 				const Message* jmessage = &((MessageEvent *)event)->message();
@@ -224,14 +225,14 @@ void PsiDBusNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, const
 			}
 			break;
 		}
-	case PsiPopup::AlertChat: {
+	case PopupManager::AlertChat: {
 			if(showMessage) {
 				const Message* jmessage = &((MessageEvent *)event)->message();
 				desc = jmessage->body();
 			}
 			break;
 		}
-	case PsiPopup::AlertHeadline: {
+	case PopupManager::AlertHeadline: {
 			if(showMessage) {
 				const Message* jmessage = &((MessageEvent *)event)->message();
 				if ( !jmessage->subject().isEmpty())
@@ -240,7 +241,7 @@ void PsiDBusNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, const
 			}
 			break;
 		}
-	case PsiPopup::AlertFile:
+	case PopupManager::AlertFile:
 		desc = QObject::tr("[Incoming File]");
 		break;
 	default:
@@ -248,11 +249,11 @@ void PsiDBusNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, const
 	}
 
 	if(!desc.isEmpty()) {
-		desc = PsiPopup::clipText(desc);
+		desc = PopupManager::clipText(desc);
 		text += "\n" + desc;
 	}
 
-	int lifeTime = PsiPopup::timeout(type);
+	int lifeTime = pm_->timeout(type);
 	QDBusMessage m = createMessage("Notify");
 	QVariantList args;
 	args << QString(ApplicationInfo::name());
@@ -276,7 +277,7 @@ void PsiDBusNotifier::popup(PsiAccount* account, PsiPopup::PopupType type, const
 }
 
 void PsiDBusNotifier::popup(PsiAccount *account, const Jid &jid, const PsiIcon *titleIcon, const QString &titleText,
-			    const QPixmap *avatar, const PsiIcon */*icon*/, const QString &text)
+			    const QPixmap *avatar, const PsiIcon */*icon*/, const QString &text, PopupManager::PopupType type)
 {
 	account_ = account;
 	jid_ = jid;
@@ -292,7 +293,7 @@ void PsiDBusNotifier::popup(PsiAccount *account, const Jid &jid, const PsiIcon *
 		hints.insert("icon_data", QVariant(iiibiiay::id, &i));
 	}
 
-	int lifeTime = PsiPopup::timeout(PsiPopup::AlertStatusChange);
+	int lifeTime = pm_->timeout(type);
 	QDBusMessage m = createMessage("Notify");
 	QVariantList args;
 	args << QString(ApplicationInfo::name());

@@ -130,9 +130,10 @@ private:
 	bool setMood(int account, const QString& Jid, QDomElement xml);
 	bool setTune(int account, const QString& Jid, const QString& tune);
 
-	void initPopup(const QString& text, const QString& title, const QString& icon);
-	void initPopupForJid(int account, const QString& jid, const QString& text, const QString& title, const QString& icon);
-	void registerOption(const QString& name, int initValue = 5, const QString& path = QString());
+	void initPopup(const QString& text, const QString& title, const QString& icon, int type);
+	void initPopupForJid(int account, const QString& jid, const QString& text, const QString& title, const QString& icon, int tipe);
+	int registerOption(const QString& name, int initValue = 5, const QString& path = QString());
+	void unregisterOption(const QString& name);
 	int popupDuration(const QString& name) const;
 	void setPopupDuration(const QString& name, int value);
 
