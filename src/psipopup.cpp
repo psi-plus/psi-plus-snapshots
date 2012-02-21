@@ -237,9 +237,8 @@ PsiPopup::PsiPopup(PopupManager* manager, PopupManager::PopupType type, PsiAccou
 
 	d->popupType = type;
 	PsiIcon *icon = 0;
-	QString text = "Psi: ";
 
-	text += title(type, &d->doAlertIcon, &icon);
+	QString text = title(type, &d->doAlertIcon, &icon);
 
 	d->init(icon, text, acc, type);
 }
@@ -302,6 +301,8 @@ QString PsiPopup::title(PopupManager::PopupType type, bool *doAlertIcon, PsiIcon
 	default:
 		break;
 	}
+
+	text = QString("%1: %2").arg(QApplication::applicationName(), text);
 
 	return text;
 }

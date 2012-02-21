@@ -149,7 +149,7 @@ void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, c
 	bool doAlert = false;
 	PsiIcon* ico = 0;
 
-	if (uli) {
+	if (uli && !uli->name().isEmpty()) {
 		contact = uli->name();
 	}
 	else if (event && event->type() == PsiEvent::Auth) {
@@ -159,14 +159,17 @@ void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, c
 		contact = ((MessageEvent*) event)->nick();
 	}
 
-	if (contact.isEmpty())
-		contact = jid.bare();
-
+	QString j = jid.full();
 	int jidLen = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-jid-length").toInt();
-	if (jidLen > 0 && ((int)contact.length()) > jidLen)
-		contact = contact.left(jidLen) + "...";
+	if (jidLen > 0 && ((int)j.length()) > jidLen)
+		j = j.left(jidLen) + "...";
 
-	text = contact;
+	if(contact.isEmpty()) {
+		contact = j;
+	}
+	else {
+		contact = QString("%1<%2>").arg(contact, j);
+	}
 
 	title = PsiPopup::title(type, &doAlert, &ico);
 
@@ -217,7 +220,10 @@ void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, c
 		text = QString("%1%2").arg(contact).arg(QObject::tr(" is typing..."));
 		desc = "";
 		break;
-	case PopupManager::AlertMessage: {
+	case PopupManager::AlertMessage:
+	case PopupManager::AlertChat:
+	case PopupManager::AlertGcHighlight:
+		{
 			text = QObject::tr("%1 says:").arg(contact);
 			if(showMessage) {
 				const Message* jmessage = &((MessageEvent *)event)->message();
@@ -225,14 +231,8 @@ void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, c
 			}
 			break;
 		}
-	case PopupManager::AlertChat: {
-			if(showMessage) {
-				const Message* jmessage = &((MessageEvent *)event)->message();
-				desc = jmessage->body();
-			}
-			break;
-		}
 	case PopupManager::AlertHeadline: {
+			text = QObject::tr("Headline from %1").arg(contact);
 			if(showMessage) {
 				const Message* jmessage = &((MessageEvent *)event)->message();
 				if ( !jmessage->subject().isEmpty())
@@ -242,7 +242,10 @@ void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, c
 			break;
 		}
 	case PopupManager::AlertFile:
-		desc = QObject::tr("[Incoming File]");
+		text = QObject::tr("Incoming file from %1").arg(contact);
+		break;
+	case PopupManager::AlertAvCall:
+		text = QObject::tr("Incoming call from %1").arg(contact);
 		break;
 	default:
 		break;
@@ -318,12 +321,18 @@ void PsiDBusNotifier::popup(PsiAccount *account, const Jid &jid, const PsiIcon *
 
 void PsiDBusNotifier::asyncCallFinished(QDBusPendingCallWatcher *watcher)
 {
-	QDBusPendingReply<uint> repl(*watcher);
-	if(repl.value() == 0) {
+	QDBusMessage m = watcher->reply();
+	if(m.type() == QDBusMessage::InvalidMessage || m.arguments().isEmpty()) {
+		readyToDie();
+		return;
+	}
+
+	QVariant repl = m.arguments().first();
+	if(repl.type() != QVariant::UInt || repl.toUInt() == 0) {
 		readyToDie();
 	}
 	else {
-		id_ = repl.value();
+		id_ = repl.toUInt();
 	}
 }
 
