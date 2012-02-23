@@ -138,12 +138,14 @@ StatusSetDlg::StatusSetDlg(PsiAccount *pa, const Status &s, bool withPriority)
 void StatusSetDlg::setJid(const Jid &j)
 {
 	d->j = j;
+	setWindowTitle(CAP(tr("Set Status for %1").arg(j.full())));
 	d->setStatusMode = setStatusForJid;
 }
 
 void StatusSetDlg::setJidList(const QList<XMPP::Jid> &jl)
 {
 	d->jl = jl;
+	setWindowTitle(CAP(tr("Set Status for group")));
 	d->setStatusMode = setStatusForJidList;
 }
 

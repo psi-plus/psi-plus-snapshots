@@ -420,6 +420,23 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>ck_asAway</tabstop>
+  <tabstop>sb_asAway</tabstop>
+  <tabstop>le_asPriority</tabstop>
+  <tabstop>ck_asXa</tabstop>
+  <tabstop>sb_asXa</tabstop>
+  <tabstop>le_asXaPriority</tabstop>
+  <tabstop>ck_asOffline</tabstop>
+  <tabstop>sb_asOffline</tabstop>
+  <tabstop>te_asMessage</tabstop>
+  <tabstop>sb_dpOnline</tabstop>
+  <tabstop>sb_dpChat</tabstop>
+  <tabstop>sb_dpAway</tabstop>
+  <tabstop>sb_dpXa</tabstop>
+  <tabstop>sb_dpDnd</tabstop>
+  <tabstop>sb_dpInvisible</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

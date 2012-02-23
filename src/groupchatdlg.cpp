@@ -1739,7 +1739,9 @@ void GCMainDlg::message(const Message &_m)
 			if (!m.spooled() && !isActiveTab() && !m.from().resource().isEmpty()) {
 				XMPP::Jid jid = m.from()/*.withDomain("")*/;
 				MessageEvent *e = new MessageEvent(m, account());
-				account()->psi()->popupManager()->doPopup(account(), PopupManager::AlertGcHighlight, jid, m.from().resource(), 0, (PsiEvent *)e);
+				UserListItem i;
+				i.setPrivate(true);
+				account()->psi()->popupManager()->doPopup(account(), PopupManager::AlertGcHighlight, jid, m.from().resource(), &i, (PsiEvent *)e);
 				e->deleteLater();
 			}
 		}

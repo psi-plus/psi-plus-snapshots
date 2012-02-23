@@ -43,8 +43,8 @@ class NotificationContext
 {
 public:
 	NotificationContext(PsiAccount* a, Jid j) : account_(a), jid_(j), deleteCount_(0) { }
-	PsiAccount* account() { return account_; }
-	Jid jid() { return jid_; }
+	PsiAccount* account() const { return account_; }
+	Jid jid() const { return jid_; }
 
 private:
 	PsiAccount* account_;
@@ -120,8 +120,12 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, 
 		if (((int)statusMsg.length()) > len)
 			statusMsg = statusMsg.left(len) + "...";
 	QPixmap icon;
-	if(account)
-		icon = account->avatarFactory()->getAvatar(jid.bare());
+	if(account) {
+		if(uli && uli->isPrivate())
+			icon = account->avatarFactory()->getMucAvatar(jid);
+		else
+			icon = account->avatarFactory()->getAvatar(jid);
+	}
 
 	if (uli) {
 		contact = uli->name();
@@ -176,7 +180,8 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, 
 			if(showMessage) {
 				const Message* jmessage = &((MessageEvent *)event)->message();
 				desc = jmessage->body();
-			}
+			} else
+				desc = QObject::tr("[Incoming Message]");
 			//icon = IconsetFactory::iconPQString("psi/message");
 			break;
 		}
@@ -185,7 +190,8 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, 
 			if(showMessage) {
 				const Message* jmessage = &((MessageEvent *)event)->message();
 				desc = jmessage->body();
-			}
+			} else
+				desc = QObject::tr("[Incoming Message]");
 			//icon = IconsetFactory::iconPQString("psi/start-chat");
 			break;
 		}
@@ -196,7 +202,8 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, 
 				title = jmessage->subject();
 			if(showMessage) {
 				desc = jmessage->body();
-			}
+			} else
+				desc = QObject::tr("[Incoming Headline]");
 			//icon = IconsetFactory::iconPQString("psi/headline");
 			break;
 		}
@@ -205,9 +212,18 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, 
 			desc = QObject::tr("[Incoming File]");
 			//icon = IconsetFactory::iconPQString("psi/file");
 			break;
-		case PopupManager::AlertGcHighlight:
+		case PopupManager::AlertGcHighlight: {
 			name = QObject::tr("Groupchat highlight");
-			desc = QObject::tr("[Groupchat highlight]");
+			if(showMessage) {
+				const Message* jmessage = &((MessageEvent *)event)->message();
+				desc = jmessage->body();
+			} else
+				desc = QObject::tr("[Groupchat highlight]");
+			break;
+		}
+		case PopupManager::AlertAvCall:
+			name = QObject::tr("Incoming Call");
+			desc = QObject::tr("[Incoming Call]");
 			break;
 		default:
 			break;
@@ -226,7 +242,8 @@ void PsiGrowlNotifier::popup(PsiAccount *account, const Jid &jid, const PsiIcon 
 {
 	// Notify Growl
 	NotificationContext* context = new NotificationContext(account, jid);
-	gn_->notify(titleText, QString(), text, titleIcon->pixmap(), false, this, SLOT(notificationClicked(void*)), SLOT(notificationTimedOut(void*)), context);
+	gn_->notify(titleText, QString("[%1]").arg(titleText), text,
+		    titleIcon->pixmap(), false, this, SLOT(notificationClicked(void*)), SLOT(notificationTimedOut(void*)), context);
 }
 
 void PsiGrowlNotifier::cleanup()

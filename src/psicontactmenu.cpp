@@ -485,7 +485,7 @@ public:
 			menu_->addAction(mucLeaveAction_);
 			menu_->addSeparator();
 			menu_->addAction(customStatusAction_);
-			menu_->addAction(blockAction_);
+			//menu_->addAction(blockAction_);
 		}
 #endif
 	}
