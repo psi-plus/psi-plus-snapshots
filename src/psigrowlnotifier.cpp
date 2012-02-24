@@ -34,6 +34,7 @@
 #include "psievent.h"
 #include "userlist.h"
 #include "psioptions.h"
+#include "textutil.h"
 
 /**
  * A class representing the notification context, which will be passed to
@@ -69,16 +70,19 @@ PsiGrowlNotifier::PsiGrowlNotifier() : QObject(QCoreApplication::instance())
 	nots << QObject::tr("Incoming Message");
 	nots << QObject::tr("Incoming Headline");
 	nots << QObject::tr("Incoming File");
+	nots << QObject::tr("Typing notify");
+	nots << QObject::tr("Groupchat highlight");
+	nots << QObject::tr("Incoming Call");
 
-	// Initialize default notifications
-	QStringList defaults;
-	defaults << QObject::tr("Contact becomes Available");
-	defaults << QObject::tr("Incoming Message");
-	defaults << QObject::tr("Incoming Headline");
-	defaults << QObject::tr("Incoming File");
+//	Initialize default notifications
+//	QStringList defaults;
+//	defaults << QObject::tr("Contact becomes Available");
+//	defaults << QObject::tr("Incoming Message");
+//	defaults << QObject::tr("Incoming Headline");
+//	defaults << QObject::tr("Incoming File");
 
 	// Register with Growl
-	gn_ = new GrowlNotifier(nots, defaults, "Psi");
+	gn_ = new GrowlNotifier(nots, nots, QCoreApplication::applicationName());
 }
 
 
@@ -242,7 +246,7 @@ void PsiGrowlNotifier::popup(PsiAccount *account, const Jid &jid, const PsiIcon 
 {
 	// Notify Growl
 	NotificationContext* context = new NotificationContext(account, jid);
-	gn_->notify(titleText, QString("[%1]").arg(titleText), text,
+	gn_->notify("Incoming Headline", titleText, TextUtil::rich2plain(text),
 		    titleIcon->pixmap(), false, this, SLOT(notificationClicked(void*)), SLOT(notificationTimedOut(void*)), context);
 }
 

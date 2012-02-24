@@ -302,9 +302,7 @@ QString PsiPopup::title(PopupManager::PopupType type, bool *doAlertIcon, PsiIcon
 		break;
 	}
 
-	text = QString("%1: %2").arg(QApplication::applicationName(), text);
-
-	return text;
+	return CAP(text);
 }
 
 void PsiPopup::setJid(const Jid &j)

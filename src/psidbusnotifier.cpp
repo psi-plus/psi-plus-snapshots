@@ -43,6 +43,7 @@
 #include "psipopup.h"
 #include "psioptions.h"
 #include "psicon.h"
+#include "textutil.h"
 
 
 static int minLifeTime = 5000;
@@ -307,7 +308,7 @@ void PsiDBusNotifier::popup(PsiAccount *account, const Jid &jid, const PsiIcon *
 	args << QVariant(QVariant::UInt);
 	args << QVariant("");
 	args << QString(titleText);
-	args << QString(text);
+	args << QString(TextUtil::rich2plain(text));
 	args << QStringList();
 	args << hints;
 	args << lifeTime;
