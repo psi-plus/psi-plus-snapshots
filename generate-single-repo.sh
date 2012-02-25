@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2012-02-13
+# Updated: 2012-02-25
 # Version: N/A
 
 export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
@@ -171,7 +171,7 @@ if [ "${TEST_ALL}" -eq 0 ]; then
     exit 0;
 fi
 
-if [ "${NEW_VER}" == "${OLD_VER}" ]; then
+if [ "${NEW_VER}" = "${OLD_VER}" ]; then
     COMMENT+="Sources were synced with upstream:\n"
     if [ "${TEST_SRC}" -gt "$((${TEST_LIBPSI}+${TEST_PLUGINS}+0))" ]; then
         COMMENT+="Psi was updated.\n"
@@ -207,5 +207,10 @@ if [ "${NEW_VER}" != "${OLD_VER}" ]; then
     git tag "${NEW_VER}" || exit 1
     echo "Git tag was created."
     echo;
+fi
+
+if [ "${1}" = "push" ]; then
+    git push
+    git push --tags
 fi
 
