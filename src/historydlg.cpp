@@ -345,12 +345,10 @@ void HistoryDlg::exportHistory()
 		}
 
 		const EDBResult r = h->result();
-		if(r.count() <= 0) {
-			break;
-		}
+		int cnt = r.count();
 
 		// events are in forward order
-		for(int i = 0; i < r.count(); ++i) {
+		for(int i = 0; i < cnt; ++i) {
 			EDBItemPtr item = r.value(i);
 			id = item->nextId();
 			PsiEvent *e = item->event();
@@ -384,9 +382,10 @@ void HistoryDlg::exportHistory()
 
 			stream << txt << endl;
 		}
+		delete h;
 
 		// done!
-		if(id.isEmpty()) {
+		if(cnt == 0 || id.isEmpty()) {
 			break;
 		}
 	}
@@ -430,6 +429,7 @@ void HistoryDlg::edb_finished()
 				d->id_begin = it->id();
 				d->id_prev = it->prevId();
 				displayResult(r, EDB::Forward);
+				setButtons();
 			}
 			else if (d->reqType == TypeEarliest || d->reqType == TypeNext || d->reqType == TypeDate)
 			{
@@ -443,6 +443,7 @@ void HistoryDlg::edb_finished()
 				d->id_begin = it->id();
 				d->id_prev = it->prevId();
 				displayResult(r, EDB::Backward);
+				setButtons();
 			}
 			else if (d->reqType == TypeFindOldest)
 			{
@@ -450,28 +451,30 @@ void HistoryDlg::edb_finished()
 				if (str.isEmpty())
 				{
 					getLatest();
-					return;
 				}
-				d->reqType = TypeFind;
-				d->findStr = str;
-				EDBItemPtr ei = r.first();
-				startRequest();
-				getEDBHandle()->find(str, d->jid, ei->id(), EDB::Forward);
+				else
+				{
+					d->reqType = TypeFind;
+					d->findStr = str;
+					EDBItemPtr ei = r.first();
+					startRequest();
+					getEDBHandle()->find(str, d->jid, ei->id(), EDB::Forward);
+					setButtons();
+				}
 			}
 			else if (d->reqType == TypeFind)
 			{
 				displayResult(r, EDB::Forward);
 				highlightBlocks(ui_.searchField->text());
-				return;
 			}
 
-			setButtons();
 		}
 		else
 		{
 			ui_.msgLog->clear();
 		}
 	}
+	delete h;
 }
 
 void HistoryDlg::setButtons()
