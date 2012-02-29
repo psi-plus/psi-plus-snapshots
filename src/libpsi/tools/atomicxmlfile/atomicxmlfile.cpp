@@ -61,16 +61,21 @@ QString AtomicXmlFile::backupFileName() const
 bool AtomicXmlFile::saveDocument(const QDomDocument& doc, QString fileName) const
 {
 	QFile file(fileName);
-	if (!file.open(QIODevice::WriteOnly)) {
+	if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
 		return false;
 	}
 
-	QTextStream text;
-	text.setDevice(&file);
-	text.setCodec("UTF-8");
-	text << doc.toString();
+	QTextStream *text = new QTextStream(&file);
+	text->setCodec("UTF-8");
+	*text << doc.toString();
+	delete text;
 
-	return file.error() == QFile::NoError;
+	bool res = (file.error() == QFile::NoError);
+	if (res)
+		res = file.flush();
+	file.close();
+
+	return res;
 }
 
 bool AtomicXmlFile::loadDocument(QDomDocument* doc, QString fileName) const
