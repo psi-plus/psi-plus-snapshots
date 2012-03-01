@@ -1151,7 +1151,7 @@ void PsiCon::setGlobalStatus(const Status &s, bool withPriority, bool isManualSt
 
 	// globally set each account which is logged in
 	foreach(PsiAccount* account, d->contactList->enabledAccounts())
-		if (allOffline || account->isActive())
+		if ((allOffline || account->isActive()) && (!account->userAccount().ignore_global_actions || s.type() == Status::Offline))
 			account->setStatus(s, withPriority, isManualStatus);
 
 	emit statusMessageChanged(s.status());

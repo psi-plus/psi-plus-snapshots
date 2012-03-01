@@ -500,7 +500,7 @@ void PsiContactListViewDelegate::optionChanged(const QString& option)
 		font_ = new QFont();
 		font_->fromString(PsiOptions::instance()->getOption(contactListFontOptionPath).toString());
 		fontMetrics_ = new QFontMetrics(*font_);
-		rowHeight = qMax(font_->pointSize()*2, statusIconSize_+2);
+		rowHeight = qMax(fontMetrics_->height()+2, statusIconSize_+2);
 		contactList()->viewport()->update();
 	}
 	else if (option == contactListBackgroundOptionPath) {
@@ -570,7 +570,7 @@ void PsiContactListViewDelegate::optionChanged(const QString& option)
 void PsiContactListViewDelegate::rosterIconsSizeChanged(int size)
 {
 	statusIconSize_ = size;
-	rowHeight = qMax(font_->pointSize()*2, statusIconSize_+2);
+	rowHeight = qMax(fontMetrics_->height()+2, statusIconSize_+2);
 	contactList()->viewport()->update();
 }
 

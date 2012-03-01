@@ -3167,6 +3167,9 @@ void PsiAccount::publishTune(const Tune& tune)
 
 void PsiAccount::secondsIdle(int seconds)
 {
+	if (userAccount().ignore_global_actions)
+		return;
+
 	d->lastIdle = seconds;
 	int minutes = seconds / 60;
 
@@ -4064,6 +4067,11 @@ void PsiAccount::actionExecuteCommandSpecific(const Jid& j, const QString& node)
 	else {
 		AHCommandDlg::executeCommand(d->client,j,node);
 	}
+}
+
+void PsiAccount::actionSetBlock(bool blocked)
+{
+	d->acc.ignore_global_actions = blocked;
 }
 
 void PsiAccount::actionSetMood()
