@@ -164,6 +164,10 @@ Q_IMPORT_PLUGIN(itunesplugin)
 Q_IMPORT_PLUGIN(winampplugin)
 #endif
 
+#ifdef TC_AIMP
+Q_IMPORT_PLUGIN(aimpplugin)
+#endif
+
 #ifdef TC_PSIFILE
 Q_IMPORT_PLUGIN(psifileplugin)
 #endif

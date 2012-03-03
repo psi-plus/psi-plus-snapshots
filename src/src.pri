@@ -29,7 +29,7 @@ pep {
 	DEFINES += USE_PEP
 	CONFIG += tc_psifile
 	mac { CONFIG += tc_itunes }
-	windows { CONFIG += tc_winamp }
+	windows { CONFIG += tc_aimp tc_winamp }
 	unix:dbus:!mac { CONFIG += tc_mpris }
 }
 include($$PWD/tools/tunecontroller/tunecontroller.pri)

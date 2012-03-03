@@ -1,6 +1,6 @@
 /*
- * pollingtunecontroller.h
- * Copyright (C) 2006  Remko Troncon
+ * aimptunecontroller.h
+ * Copyright (C) 2012 Vitaly Tonkacheyev
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -14,37 +14,38 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
 
-#ifndef POLLINGTUNECONTROLLER_H
-#define POLLINGTUNECONTROLLER_H
+#ifndef AIMPTUNECONTROLLER_H
+#define AIMPTUNECONTROLLER_H
 
-#include <QTimer>
-
+#include "pollingtunecontroller.h"
 #include "tune.h"
-#include "tunecontroller.h"
+#include "windows.h"
 
-class PollingTuneController : public TuneController
+class AIMPTuneController : public PollingTuneController
 {
 	Q_OBJECT
 
-private:
-	static const int DefaultInterval = 10000;
-	QTimer _timer;
 public:
-	PollingTuneController();
-	inline bool isPolling() const { return _timer.isActive(); }
-	inline void startPoll() { _timer.start(DefaultInterval); }
-	inline void stopPoll() { _timer.stop(); }
-	inline void setInterval(const int &interval) { _timer.setInterval(interval); }
+	AIMPTuneController();
+	Tune currentTune() const;
 
 protected slots:
-	virtual void check();
+	void check();
 
 private:
-	Tune _prevTune;
+	Tune getTune() const;
+	HWND findAimp() const;
+	int getAimpStatus(const HWND &aimp) const;
+	void sendTune(const Tune &tune);
+	void clearTune();
+
+private:
+	Tune _currentTune;
+	bool _tuneSent;
 };
 
 #endif

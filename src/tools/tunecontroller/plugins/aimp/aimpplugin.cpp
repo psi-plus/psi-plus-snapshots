@@ -1,6 +1,6 @@
 /*
- * itunesplugin.cpp
- * Copyright (C) 2006  Remko Troncon
+ * aimpplugin.cpp
+ * Copyright (C) 2012 Vitaly Tonkacheyev
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
 
@@ -26,12 +26,14 @@
 #include <QObject>
 #include <QString>
 
-#include "itunestunecontroller.h"
+#include "aimptunecontroller.h"
 #include "tunecontrollerplugin.h"
 
-class ITunesPlugin : public QObject, public TuneControllerPlugin
+class AIMPPlugin : public QObject, public TuneControllerPlugin
 {
+
 	Q_OBJECT
+
 	Q_INTERFACES(TuneControllerPlugin)
 
 public:
@@ -39,16 +41,16 @@ public:
 	virtual TuneController* createController();
 };
 
-Q_EXPORT_PLUGIN2(itunesplugin, ITunesPlugin);
+Q_EXPORT_PLUGIN2(aimpplugin, AIMPPlugin);
 
-QString ITunesPlugin::name()
+QString AIMPPlugin::name()
 {
-	return "iTunes";
+	return "AIMP3";
 }
 
-TuneController* ITunesPlugin::createController() 
+TuneController* AIMPPlugin::createController()
 {
-	return new ITunesController();
+	return new AIMPTuneController();
 }
 
-#include "itunesplugin.moc"
+#include "aimpplugin.moc"

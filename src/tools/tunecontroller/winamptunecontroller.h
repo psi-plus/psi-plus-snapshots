@@ -1,5 +1,5 @@
 /*
- * itunesplugin.cpp
+ * winampcontroller.h
  * Copyright (C) 2006  Remko Troncon
  *
  * This program is free software; you can redistribute it and/or
@@ -18,37 +18,30 @@
  *
  */
 
-#ifndef QT_STATICPLUGIN
-#define QT_STATICPLUGIN
-#endif
+#ifndef WINAMPTUNECONTROLLER_H
+#define WINAMPTUNECONTROLLER_H
 
-#include <QtCore>
-#include <QObject>
-#include <QString>
+#include "pollingtunecontroller.h"
 
-#include "itunestunecontroller.h"
-#include "tunecontrollerplugin.h"
+#include <windows.h>
+#include <QPair>
 
-class ITunesPlugin : public QObject, public TuneControllerPlugin
+class WinAmpController : public PollingTuneController
 {
 	Q_OBJECT
-	Q_INTERFACES(TuneControllerPlugin)
-
 public:
-	virtual QString name();
-	virtual TuneController* createController();
+	WinAmpController();
+	virtual Tune currentTune() const;
+
+protected:
+	QPair<bool, QString> getTrackTitle(const HWND &waWnd) const;
+protected slots:
+	void check();
+
+private:
+	Tune prev_tune_;
+	int norminterval_, antiscrollinterval_;
+	int antiscrollcounter_;
 };
 
-Q_EXPORT_PLUGIN2(itunesplugin, ITunesPlugin);
-
-QString ITunesPlugin::name()
-{
-	return "iTunes";
-}
-
-TuneController* ITunesPlugin::createController() 
-{
-	return new ITunesController();
-}
-
-#include "itunesplugin.moc"
+#endif
