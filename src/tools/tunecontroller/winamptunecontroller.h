@@ -33,10 +33,13 @@ public:
 	WinAmpController();
 	virtual Tune currentTune() const;
 
-protected:
-	QPair<bool, QString> getTrackTitle(const HWND &waWnd) const;
 protected slots:
 	void check();
+
+private:
+	bool getData(const HANDLE& hProcess, const HWND& hWnd, const wchar_t *filename, const wchar_t *metadata, wchar_t *wresult);
+	Tune getTune(const HWND &hWnd);
+	QPair<bool, QString> getTrackTitle(const HWND &waWnd) const;
 
 private:
 	Tune prev_tune_;
