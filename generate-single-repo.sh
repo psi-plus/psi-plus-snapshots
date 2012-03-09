@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
