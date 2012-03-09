@@ -169,7 +169,7 @@ void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, c
 		contact = j;
 	}
 	else {
-		contact = QString("%1<%2>").arg(contact, j);
+		contact = QString("%1(%2)").arg(contact, j);
 	}
 
 	title = PsiPopup::title(type, &doAlert, &ico);
