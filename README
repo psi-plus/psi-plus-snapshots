@@ -2,8 +2,9 @@ This is fork of the Psi+ project: http://code.google.com/p/psi-dev/
 
 Here is the list of main changes:
 1) Source tree was aggregated from 5 independent git repositories:
-   psi, iris, libpsi, main (psi-dev patches), plugins (from psi-dev project).
-2) All patches from psi-dev project were applied.
+   psi, iris, libpsi, main (Psi+ patches), plugins (from Psi+ project).
+2) All patches from Psi+ project were applied.
+   (Except patches from dev/ subdirectory)
 3) Trash was removed. (MS Windows binary files and non-free icons)
 4) OTR-plugin is enabled by default.
 
