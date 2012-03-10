@@ -81,6 +81,7 @@
 #include "accountscombobox.h"
 #include "tabdlg.h"
 #include "chatdlg.h"
+#include "spellchecker/aspellchecker.h"
 #ifdef WEBKIT
 #include "avatars.h"
 #include "chatviewthemeprovider.h"
@@ -709,6 +710,9 @@ bool PsiCon::init()
 	optionChanged(tuneControllerFilterOptionPath);
 	optionChanged(tuneUrlFilterOptionPath);
 #endif
+
+	//init spellchecker
+	optionChanged("options.ui.spell-check.langs");
 
 	return result;
 }
@@ -1394,6 +1398,14 @@ void PsiCon::optionChanged(const QString& option)
 		QString css = PsiOptions::instance()->getOption(option).toString();
 		if (!css.isEmpty())
 			d->iconSelect->setStyleSheet(css);
+		return;
+	}
+
+	if (option == "options.ui.spell-check.langs") {
+		QStringList langs = PsiOptions::instance()->getOption(option).toString().split(QRegExp("\\s+"), QString::SkipEmptyParts);
+		if(langs.isEmpty())
+			langs = SpellChecker::instance()->getAllLanguages();
+		SpellChecker::instance()->setActiveLanguages(langs);
 		return;
 	}
 

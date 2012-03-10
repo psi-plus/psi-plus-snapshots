@@ -41,6 +41,9 @@ public:
 	virtual bool isCorrect(const QString&);
 	virtual bool add(const QString&);
 
+	virtual void setActiveLanguages(const QList<QString>& ) {}
+	virtual QList<QString> getAllLanguages() const { return QList<QString>(); }
+
 protected:
 	SpellChecker();
 	virtual ~SpellChecker();

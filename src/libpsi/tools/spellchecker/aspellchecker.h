@@ -46,9 +46,17 @@ public:
 	virtual bool available() const;
 	virtual bool writable() const;
 
+	virtual void setActiveLanguages(const QList<QString>& langs);
+	virtual QList<QString> getAllLanguages() const;
+
+private:
+	void clearSpellers();
+
 private:
 	AspellConfig* config_;
-	AspellSpeller* speller_;
+
+	typedef QList<AspellSpeller*> ASpellers;
+	ASpellers spellers_;
 };
 
 #endif
