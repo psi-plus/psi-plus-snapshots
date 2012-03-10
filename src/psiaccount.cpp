@@ -2566,7 +2566,7 @@ void PsiAccount::client_resourceAvailable(const Jid &j, const Resource &r)
 				pt = PopupManager::AlertStatusChange;
 
 			if ((popupType == PopupOnline && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.online").toBool()) || (popupType == PopupStatusChange && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.other-changes").toBool())) {
-				psi()->popupManager()->doPopup(this, pt, j, r, u, false);
+				psi()->popupManager()->doPopup(this, pt, j, r, u, 0, false);
 			}
 		}
 		else if ( !notifyOnlineOk ) {
@@ -2655,7 +2655,7 @@ void PsiAccount::client_resourceUnavailable(const Jid &j, const Resource &r)
 		UserListItem *u = findFirstRelevant(j);
 
 		if (PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.offline").toBool()) {
-			psi()->popupManager()->doPopup(this, PopupManager::AlertOffline, j, r, u, false);
+			psi()->popupManager()->doPopup(this, PopupManager::AlertOffline, j, r, u, 0, false);
 		}
 	}
 }
