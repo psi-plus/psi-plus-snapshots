@@ -25,6 +25,7 @@ GrepShortcutKeyDialog::GrepShortcutKeyDialog()
 	: QDialog()
 	, gotKey(false)
 {
+	setAttribute(Qt::WA_DeleteOnClose);
 	ui_.setupUi(this);
 	displayPressedKeys(QKeySequence());
 }
@@ -36,6 +37,7 @@ void GrepShortcutKeyDialog::show()
 {
 	QDialog::show();
 	grabKeyboard();
+	setFocus();
 }
 
 /**
