@@ -43,7 +43,6 @@ class ContactListAccountMenu::Private : public QObject
 
 	QPointer<ContactListAccountGroup> account;
 	AccountStatusMenu* statusMenu_;
-	QAction* blockAction_;
 	QAction* moodAction_;
 	QAction* activityAction_;
 	QAction* geolocationAction_;
@@ -101,11 +100,6 @@ public:
 		geolocationAction_ = new IconAction(tr("GeoLocation"), this, "system/geolocation");
 		connect(geolocationAction_, SIGNAL(triggered()), SLOT(setGeolocation()));
 
-		blockAction_ = new IconAction(tr("Ignore global actions"), this, "psi/cryptoYes");
-		blockAction_->setCheckable(true);
-		blockAction_->setToolTip(tr("Ignore all global actions for this account. For example, autostatus, mood, activity etc."));
-		connect(blockAction_, SIGNAL(triggered(bool)), SLOT(setBlock(bool)));
-
 		setAvatarAction_ = new QAction(tr("Set Avatar"), this);
 		connect(setAvatarAction_, SIGNAL(triggered()), SLOT(setAvatar()));
 
@@ -158,8 +152,6 @@ public:
 		menu->addAction(moodAction_);
 		menu->addAction(activityAction_);
 		menu->addAction(geolocationAction_);
-		menu->addAction(blockAction_);
-		menu->addSeparator();
 		avatarMenu_ = menu->addMenu(IconsetFactory::icon("psi/vCard").icon(), tr("Avatar"));
 		avatarMenu_->addAction(setAvatarAction_);
 		avatarMenu_->addAction(unsetAvatarAction_);
@@ -204,7 +196,6 @@ private slots:
 		if (!account)
 			return;
 
-		blockAction_->setChecked(account->account()->userAccount().ignore_global_actions);
 		statusMenu_->statusChanged(account->account()->status());
 #ifndef USE_PEP
 		moodAction_->setVisible(false);
@@ -266,14 +257,6 @@ private slots:
 			return;
 
 		account->account()->changeStatus(static_cast<int>(statusType), forceDialog);
-	}
-
-	void setBlock(bool block)
-	{
-		if (!account)
-			return;
-
-		account->account()->actionSetBlock(block);
 	}
 
 	void setMood()

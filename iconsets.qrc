@@ -140,6 +140,8 @@
 		<file>iconsets/system/default/psiplus/text.png</file>
 		<file>iconsets/system/default/psiplus/undo.png</file>
 		<file>iconsets/system/default/psiplus/print.png</file>
+		<file>iconsets/system/default/psiplus/autojid.png</file>
+		<file>iconsets/system/default/psiplus/ignore_global_actions.png</file>
 		<file>iconsets/system/default/whiteboarding/whiteboard.png</file>
 		<file>iconsets/system/default/whiteboarding/save.png</file>
 		<file>iconsets/system/default/whiteboarding/select.png</file>
@@ -199,6 +201,5 @@
 		<file>iconsets/emoticons/default/unhappy.png</file>
 		<file>iconsets/emoticons/default/wink.png</file>
 		<file>iconsets/emoticons/default/yes.png</file>
-		<file>iconsets/system/default/psiplus/autojid.png</file>
 	</qresource>
 </RCC>

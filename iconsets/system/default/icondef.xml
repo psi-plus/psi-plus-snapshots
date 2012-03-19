@@ -720,6 +720,11 @@
 		<x xmlns='name'>psi/autojid</x>
 		<object mime='image/png'>psiplus/autojid.png</object>
 	</icon>
+
+	<icon>
+		<x xmlns='name'>psi/ignore_global_actions</x>
+		<object mime='image/png'>psiplus/ignore_global_actions.png</object>
+	</icon>
 	<!-- End psi Plus icons -->
 		
 	<!-- Icons for screenshot-plugin -->
