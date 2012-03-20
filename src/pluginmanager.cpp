@@ -490,7 +490,7 @@ QString PluginManager::getStatusMessage(int account) const
 
 static inline const QString getProxyId(PsiAccount* pa)
 {
-	return pa->userAccount().proxyID;
+	return pa->accountOptions().proxyID;
 }
 
 QString PluginManager::proxyHost(int account) const

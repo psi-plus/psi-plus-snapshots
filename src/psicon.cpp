@@ -1155,7 +1155,7 @@ void PsiCon::setGlobalStatus(const Status &s, bool withPriority, bool isManualSt
 
 	// globally set each account which is logged in
 	foreach(PsiAccount* account, d->contactList->enabledAccounts())
-		if ((allOffline || account->isActive()) && (!account->userAccount().ignore_global_actions || s.type() == Status::Offline))
+		if ((allOffline || account->isActive()) && (!account->accountOptions().ignore_global_actions || s.type() == Status::Offline))
 			account->setStatus(s, withPriority, isManualStatus);
 
 	emit statusMessageChanged(s.status());
@@ -1835,9 +1835,9 @@ void PsiCon::doWakeup()
 	foreach(PsiAccount* account, d->contactList->enabledAccounts()) {
 		if (account->userAccount().opt_connectAfterSleep) {
 			// Should we do this when the network comes up ?
-			if (account->userAccount().opt_autoSameStatus) {
-				Status s = account->userAccount().lastStatus;
-				account->setStatus(s, account->userAccount().lastStatusWithPriority, true);
+			if (account->accountOptions().opt_autoSameStatus) {
+				Status s = account->accountOptions().lastStatus;
+				account->setStatus(s, account->accountOptions().lastStatusWithPriority, true);
 				emit statusMessageChanged(s.status());
 			}
 			else {

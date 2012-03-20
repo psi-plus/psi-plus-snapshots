@@ -37,7 +37,7 @@ void AccountStatusMenu::addIgnoreGlobalActions()
 {
 	QAction *blockAction = new IconAction(tr("Ignore global actions"), this, "psi/ignore_global_actions");
 	blockAction->setCheckable(true);
-	blockAction->setChecked(account->userAccount().ignore_global_actions);
+	blockAction->setChecked(account->accountOptions().ignore_global_actions);
 	blockAction->setToolTip(tr("Ignore all global actions for this account. For example, autostatus, mood, activity etc."));
 	connect(blockAction, SIGNAL(triggered(bool)), account, SLOT(actionSetBlock(bool)));
 	addSeparator();
