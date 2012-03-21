@@ -70,6 +70,7 @@ private:
 	bool statusSingle_;
 	mutable QHash<QModelIndex, bool> alertingIndexes_;
 	int statusIconSize_;
+	bool enableGroups_, slimGroup_, outlinedGroup_, allClients_;
 };
 
 #endif

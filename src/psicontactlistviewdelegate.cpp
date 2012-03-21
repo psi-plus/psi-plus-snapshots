@@ -47,6 +47,10 @@ static const QString showStatusIconsPath = "options.ui.contactlist.show-status-i
 static const QString statusIconsOverAvatarsPath = "options.ui.contactlist.status-icon-over-avatar";
 static const QString statusSingleOptionPath = "options.ui.contactlist.status-messages.single-line";
 static const QString statusIconsetOptionPath = "options.iconsets.status";
+static const QString allClientsOptionPath = "options.ui.contactlist.show-all-client-icons";
+static const QString slimGroupsOptionPath = "options.ui.look.contactlist.use-slim-group-headings";
+static const QString enableGroupsOptionPath = "options.ui.contactlist.enable-groups";
+static const QString outlinedGroupsOptionPath = "options.ui.look.contactlist.use-outlined-group-headings";
 
 PsiContactListViewDelegate::PsiContactListViewDelegate(ContactListView* parent)
 	: ContactListViewDelegate(parent)
@@ -77,6 +81,10 @@ PsiContactListViewDelegate::PsiContactListViewDelegate(ContactListView* parent)
 	optionChanged(showStatusIconsPath);
 	optionChanged(statusIconsOverAvatarsPath);
 	optionChanged(statusSingleOptionPath);
+	optionChanged(allClientsOptionPath);
+	optionChanged(slimGroupsOptionPath);
+	optionChanged(enableGroupsOptionPath);
+	optionChanged(outlinedGroupsOptionPath);
 }
 
 PsiContactListViewDelegate::~PsiContactListViewDelegate()
@@ -191,7 +199,7 @@ void PsiContactListViewDelegate::drawContact(QPainter* painter, const QStyleOpti
 		int size = avatarSize_;
 		avatarRect.setSize(QSize(size,size));
 		if(avatarAtLeft_) {
-			avatarRect.translate(PsiOptions::instance()->getOption("options.ui.contactlist.enable-groups").toBool() ? -5:-1, 1);
+			avatarRect.translate(enableGroups_ ? -5:-1, 1);
 			r.setLeft(avatarRect.right() + 3);
 		}
 		else {
@@ -298,14 +306,14 @@ void PsiContactListViewDelegate::drawContact(QPainter* painter, const QStyleOpti
 	QList<int> rightWidths;
 	if(!isMuc) {
 	if (showClientIcons_) {
-		bool showAllClients = PsiOptions::instance()->getOption("options.ui.contactlist.show-all-client-icons").toBool();
 		const QList<QPixmap> pixList = this->clientPixmap(index);
 
 		for (QList<QPixmap>::ConstIterator it = pixList.begin(); it != pixList.end(); ++it) {
 			const QPixmap &pix = *it;
 			rightPixs.push_back(pix);
 			rightWidths.push_back(pix.width());
-			if(!showAllClients) break;
+			if(!allClients_)
+				break;
 		}
 	}
 
@@ -385,10 +393,9 @@ void PsiContactListViewDelegate::drawGroup(QPainter* painter, const QStyleOption
 	o.font = *font_;
 	o.fontMetrics = *fontMetrics_;
 	QPalette palette = o.palette;
-	bool b = PsiOptions::instance()->getOption("options.ui.look.contactlist.use-slim-group-headings").toBool();
 	QColor background = ColorOpt::instance()->color("options.ui.look.colors.contactlist.grouping.header-background");
 	QColor foreground = ColorOpt::instance()->color("options.ui.look.colors.contactlist.grouping.header-foreground");
-	if (!b)
+	if (!slimGroup_)
 		palette.setColor(QPalette::Base, background);
 	palette.setColor(QPalette::Text, foreground);
 	o.palette = palette;
@@ -396,7 +403,7 @@ void PsiContactListViewDelegate::drawGroup(QPainter* painter, const QStyleOption
 	drawBackground(painter, o, index);
 
 	QRect r = option.rect;
-	if (!b && PsiOptions::instance()->getOption("options.ui.look.contactlist.use-outlined-group-headings").toBool()) {
+	if (!slimGroup_ && outlinedGroup_) {
 		painter->setPen(QPen(foreground));
 		QRect gr(r);
 		gr.setLeft(contactList()->x());
@@ -417,7 +424,7 @@ void PsiContactListViewDelegate::drawGroup(QPainter* painter, const QStyleOption
 	QString text = index.data(Qt::ToolTipRole).toString();
 	drawText(painter, o, r, text, index);
 
-	if(b && !(option.state & QStyle::State_Selected)) {
+	if(slimGroup_ && !(option.state & QStyle::State_Selected)) {
 		int h = r.y() + (r.height() / 2);
 		int x = r.left() + fontMetrics_->width(text) + 1;
 		painter->setPen(QPen(background,2));
@@ -439,7 +446,7 @@ void PsiContactListViewDelegate::drawAccount(QPainter* painter, const QStyleOpti
 	drawBackground(painter, o, index);
 
 	QRect r = option.rect;
-	if (PsiOptions::instance()->getOption("options.ui.look.contactlist.use-outlined-group-headings").toBool()) {
+	if (outlinedGroup_) {
 		painter->setPen(QPen(foreground));
 		painter->drawRect(r);
 	}
@@ -563,6 +570,22 @@ void PsiContactListViewDelegate::optionChanged(const QString& option)
 	}
 	else if(option == statusSingleOptionPath) {
 		statusSingle_ = !PsiOptions::instance()->getOption(statusSingleOptionPath).toBool();
+		contactList()->viewport()->update();
+	}
+	else if(option == allClientsOptionPath) {
+		allClients_= PsiOptions::instance()->getOption(allClientsOptionPath).toBool();
+		contactList()->viewport()->update();
+	}
+	else if(option == slimGroupsOptionPath) {
+		slimGroup_ = PsiOptions::instance()->getOption(slimGroupsOptionPath).toBool();
+		contactList()->viewport()->update();
+	}
+	else if(option == enableGroupsOptionPath) {
+		enableGroups_ = PsiOptions::instance()->getOption(enableGroupsOptionPath).toBool();
+		contactList()->viewport()->update();
+	}
+	else if(option == outlinedGroupsOptionPath) {
+		outlinedGroup_ = PsiOptions::instance()->getOption(outlinedGroupsOptionPath).toBool();
 		contactList()->viewport()->update();
 	}
 }

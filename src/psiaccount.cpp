@@ -395,7 +395,6 @@ public:
 		, selfContact(0)
 		, psi(0)
 		, account(parent)
-		, options(0)
 		, client(0)
 		, eventQueue(0)
 		, xmlConsole(0)
@@ -443,7 +442,6 @@ public:
 	PsiSelfContact* selfContact;
 	PsiCon *psi;
 	PsiAccount *account;
-	PsiOptions *options;
 	Client *client;
 	UserAccount acc;
 	Jid jid, nextJid;
@@ -1086,7 +1084,6 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, CapsRegis
 	d->contactList = parent;
 	d->tabManager = tabManager;
 	d->psi = parent->psi();
-	d->options = PsiOptions::instance();
 	d->client = 0;
 	d->userCounter = 0;
 	d->avatarFactory = 0;
@@ -1340,7 +1337,7 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, CapsRegis
 	}
 
 	// Extended presence
-	if (d->options->getOption("options.extended-presence.notify").toBool()) {
+	if (PsiOptions::instance()->getOption("options.extended-presence.notify").toBool()) {
 		QStringList pepNodes;
 		pepNodes += "http://jabber.org/protocol/mood+notify";
 		pepNodes += "http://jabber.org/protocol/activity+notify";
@@ -1808,7 +1805,7 @@ void PsiAccount::forceDisconnect(bool fast, const XMPP::Status &s)
 
 	if(loggedIn()) {
 		// Extended Presence
-		if (d->options->getOption("options.extended-presence.tune.publish").toBool() && !d->lastTune.isNull())
+		if (PsiOptions::instance()->getOption("options.extended-presence.tune.publish").toBool() && !d->lastTune.isNull())
 			publishTune(Tune());
 
 		d->client->removeExtension("ep");
@@ -2376,7 +2373,7 @@ void PsiAccount::setPEPAvailable(bool b)
 	}
 
 	// Publish current tune information
-	if (b && d->psi->tuneManager() && d->options->getOption("options.extended-presence.tune.publish").toBool()) {
+	if (b && d->psi->tuneManager() && PsiOptions::instance()->getOption("options.extended-presence.tune.publish").toBool()) {
 		Tune current = d->psi->tuneManager()->currentTune();
 		if (!current.isNull())
 			publishTune(current);
@@ -2809,11 +2806,12 @@ void PsiAccount::processIncomingMessage(const Message &_m)
 		m.setType("chat");
 	}
 	else if (m.type() != "headline" && m.invite().isEmpty() && m.mucInvites().isEmpty()) {
-		if (PsiOptions::instance()->getOption("options.messages.force-incoming-message-type").toString() == "message")
+		const QString type = PsiOptions::instance()->getOption("options.messages.force-incoming-message-type").toString();
+		if (type == "message")
 			m.setType("");
-		else if (PsiOptions::instance()->getOption("options.messages.force-incoming-message-type").toString() == "chat")
+		else if (type == "chat")
 			m.setType("chat");
-		else if (PsiOptions::instance()->getOption("options.messages.force-incoming-message-type").toString() == "current-open") {
+		else if (type == "current-open") {
 			c = NULL;
 			foreach (ChatDlg *cl, findChatDialogs(m.from(), false)) {
 				if (cl->autoSelectContact() || cl->jid().resource().isEmpty() || m.from().resource() == cl->jid().resource()) {
@@ -3142,7 +3140,7 @@ void PsiAccount::tuneStopped()
 
 void PsiAccount::tunePlaying(const Tune& tune)
 {
-	if (loggedIn() && d->options->getOption("options.extended-presence.tune.publish").toBool()) {
+	if (loggedIn() && PsiOptions::instance()->getOption("options.extended-presence.tune.publish").toBool()) {
 		publishTune(tune);
 	}
 }
@@ -4960,6 +4958,7 @@ void PsiAccount::createNewPluginEvent(const QString &jid, const QString &descr, 
 // handle an incoming event
 void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 {
+	PsiOptions *o = PsiOptions::instance();
 	if (e && activationType != FromXml) {
 		setEnabled();
 	}
@@ -5059,7 +5058,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 
 		// Pass message events to chat window
 		if ((m.containsEvents() || m.chatState() != StateNone) && m.body().isEmpty()) {
-			if (PsiOptions::instance()->getOption("options.messages.send-composing-events").toBool()) {
+			if (o->getOption("options.messages.send-composing-events").toBool()) {
 				ChatDlg *c = findChatDialogEx(e->from());
 				if (c) {
 					c->setJid(e->from());
@@ -5077,7 +5076,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 			}
 		}
 		else if (m.messageReceipt() == ReceiptReceived) {
-			if (PsiOptions::instance()->getOption("options.ui.notifications.request-receipts").toBool()) {
+			if (o->getOption("options.ui.notifications.request-receipts").toBool()) {
 				foreach (ChatDlg *c, findChatDialogs(e->from(), false)) {
 					if (c->autoSelectContact()  || c->jid().resource().isEmpty() || e->from().resource() == c->jid().resource()) {
 						if (c->autoSelectContact())
@@ -5108,7 +5107,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 #endif
 				c->incomingMessage(m);
 				soundType = eChat2;
-				if((PsiOptions::instance()->getOption("options.ui.chat.alert-for-already-open-chats").toBool() && !c->isActiveTab())
+				if((o->getOption("options.ui.chat.alert-for-already-open-chats").toBool() && !c->isActiveTab())
 					|| (c->isTabbed() && c->getManagingTabDlg()->isHidden()) ) {
 					// to alert the chat also, we put it in the queue
 					me->setSentToChatWindow(true);
@@ -5116,7 +5115,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 				else {
 					putToQueue = false;
 #ifdef YAPSI
-					if (!d->noPopup(activationType) && PsiOptions::instance()->getOption("options.ui.chat.auto-popup").toBool()) {
+					if (!d->noPopup(activationType) && o->getOption("options.ui.chat.auto-popup").toBool()) {
 						openChat(e->from(), activationType);
 					}
 #endif
@@ -5197,7 +5196,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 			}
 			else if (userListItem && userListItem->inList()) {
 #else
-			if(PsiOptions::instance()->getOption("options.subscriptions.automatically-allow-authorization").toBool()) {
+			if(o->getOption("options.subscriptions.automatically-allow-authorization").toBool()) {
 #endif
 				// Check if we want to request auth as well
 				UserListItem *u = d->userList.find(ae->from());
@@ -5211,7 +5210,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 			}
 		}
 		else if(ae->authType() == "subscribed") {
-			if(!PsiOptions::instance()->getOption("options.ui.notifications.successful-subscription").toBool())
+			if(!o->getOption("options.ui.notifications.successful-subscription").toBool())
 				putToQueue = false;
 		}
 		else if(ae->authType() == "unsubscribe") {
@@ -5244,12 +5243,12 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 			r = *(u->priority());
 		}
 
-		if ((popupType == PopupManager::AlertChat      && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-chat").toBool())     ||
-		    (popupType == PopupManager::AlertMessage   && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-message").toBool())  ||
-		    (popupType == PopupManager::AlertHeadline  && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-headline").toBool()) ||
-		    (popupType == PopupManager::AlertFile      && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-file-transfer").toBool()) ||
-		    (popupType == PopupManager::AlertAvCall    && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.incoming-message").toBool()) ||
-		    (popupType == PopupManager::AlertComposing && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.composing").toBool()))
+		if ((popupType == PopupManager::AlertChat      && o->getOption("options.ui.notifications.passive-popups.incoming-chat").toBool())     ||
+		    (popupType == PopupManager::AlertMessage   && o->getOption("options.ui.notifications.passive-popups.incoming-message").toBool())  ||
+		    (popupType == PopupManager::AlertHeadline  && o->getOption("options.ui.notifications.passive-popups.incoming-headline").toBool()) ||
+		    (popupType == PopupManager::AlertFile      && o->getOption("options.ui.notifications.passive-popups.incoming-file-transfer").toBool()) ||
+		    (popupType == PopupManager::AlertAvCall    && o->getOption("options.ui.notifications.passive-popups.incoming-message").toBool()) ||
+		    (popupType == PopupManager::AlertComposing && o->getOption("options.ui.notifications.passive-popups.composing").toBool()))
 		{
 #ifdef PSI_PLUGINS
 			if(e->type() != PsiEvent::Plugin) {
@@ -5726,7 +5725,7 @@ bool PsiAccount::groupChatJoin(const QString &host, const QString &room, const Q
 	else {
 		Status s = d->loginStatus;
 		s.setXSigned("");
-		return d->client->groupChatJoin(host, room, nick, pass, d->options->getOption("options.muc.context.maxchars").toInt(),d->options->getOption("options.muc.context.maxstanzas").toInt(),d->options->getOption("options.muc.context.seconds").toInt(),s);
+		return d->client->groupChatJoin(host, room, nick, pass, PsiOptions::instance()->getOption("options.muc.context.maxchars").toInt(),PsiOptions::instance()->getOption("options.muc.context.maxstanzas").toInt(),PsiOptions::instance()->getOption("options.muc.context.seconds").toInt(),s);
 	}
 }
 
@@ -6252,11 +6251,12 @@ void PsiAccount::processEncryptedMessageDone()
 
 void PsiAccount::optionsUpdate()
 {
+	PsiOptions *o = PsiOptions::instance();
 	profileUpdateEntry(d->self);
 
 	// Tune
 #ifdef USE_PEP // Tune cleaning not working. It's implemented in psicon.cpp in PsiCon::optionChanged
-	bool publish = d->options->getOption("options.extended-presence.tune.publish").toBool();
+	bool publish = o->getOption("options.extended-presence.tune.publish").toBool();
 	if (!d->lastTune.isNull() && !publish) {
 		publishTune(Tune());
 	}
@@ -6268,27 +6268,27 @@ void PsiAccount::optionsUpdate()
 #endif
 
 	// Chat states
-	setSendChatState(PsiOptions::instance()->getOption("options.messages.send-composing-events").toBool());
+	setSendChatState(o->getOption("options.messages.send-composing-events").toBool());
 
 	//Receipts
-	setReceipts(PsiOptions::instance()->getOption("options.ui.notifications.send-receipts").toBool()); //FIXME second presence?
+	setReceipts(o->getOption("options.ui.notifications.send-receipts").toBool()); //FIXME second presence?
 
 	// Remote Controlling
-	setRCEnabled(PsiOptions::instance()->getOption("options.external-control.adhoc-remote-control.enable").toBool());
+	setRCEnabled(o->getOption("options.external-control.adhoc-remote-control.enable").toBool());
 
 	// Roster item exchange
-	d->rosterItemExchangeTask->setIgnoreNonRoster(PsiOptions::instance()->getOption("options.messages.ignore-non-roster-contacts").toBool());
+	d->rosterItemExchangeTask->setIgnoreNonRoster(o->getOption("options.messages.ignore-non-roster-contacts").toBool());
 
 	// Caps manager
-	d->capsManager->setEnabled(PsiOptions::instance()->getOption("options.service-discovery.enable-entity-capabilities").toBool());
+	d->capsManager->setEnabled(o->getOption("options.service-discovery.enable-entity-capabilities").toBool());
 
-	d->useOffline = PsiOptions::instance()->getOption("options.status.auto-away.use-offline").toBool();
-	d->useNotAvailable = PsiOptions::instance()->getOption("options.status.auto-away.use-not-availible").toBool();
-	d->useAway = PsiOptions::instance()->getOption("options.status.auto-away.use-away").toBool();
-	d->offlineAfter = PsiOptions::instance()->getOption("options.status.auto-away.offline-after").toInt();
-	d->notAvailableAfter = PsiOptions::instance()->getOption("options.status.auto-away.not-availible-after").toInt();
-	d->awayAfter = PsiOptions::instance()->getOption("options.status.auto-away.away-after").toInt();
-	d->menuXA = PsiOptions::instance()->getOption("options.ui.menu.status.xa").toBool();
+	d->useOffline = o->getOption("options.status.auto-away.use-offline").toBool();
+	d->useNotAvailable = o->getOption("options.status.auto-away.use-not-availible").toBool();
+	d->useAway = o->getOption("options.status.auto-away.use-away").toBool();
+	d->offlineAfter = o->getOption("options.status.auto-away.offline-after").toInt();
+	d->notAvailableAfter = o->getOption("options.status.auto-away.not-availible-after").toInt();
+	d->awayAfter = o->getOption("options.status.auto-away.away-after").toInt();
+	d->menuXA = o->getOption("options.ui.menu.status.xa").toBool();
 }
 
 

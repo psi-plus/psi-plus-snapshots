@@ -171,7 +171,6 @@ private:
 
 	void contextMenuEvent(QContextMenuEvent *);
 
-	PsiOptions* options_;
 	QDateTime lastMsgTime_;
 
 	void setMargins();

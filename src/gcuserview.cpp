@@ -60,25 +60,26 @@ public:
 
 	void updateSettings()
 	{
+		PsiOptions *o = PsiOptions::instance();
 		colorForeground_ = ColorOpt::instance()->color("options.ui.look.colors.contactlist.grouping.header-foreground");
 		colorBackground_ = ColorOpt::instance()->color("options.ui.look.colors.contactlist.grouping.header-background");
-		colorModerator_ = PsiOptions::instance()->getOption("options.ui.look.colors.muc.role-moderator").value<QColor>();
-		colorParticipant_ = PsiOptions::instance()->getOption("options.ui.look.colors.muc.role-participant").value<QColor>();
-		colorVisitor_ = PsiOptions::instance()->getOption("options.ui.look.colors.muc.role-visitor").value<QColor>();
-		colorNoRole_ = PsiOptions::instance()->getOption("options.ui.look.colors.muc.role-norole").value<QColor>();
-		showGroups_ = PsiOptions::instance()->getOption("options.ui.muc.userlist.show-groups").toBool();
-		slimGroups_ = PsiOptions::instance()->getOption("options.ui.muc.userlist.use-slim-group-headings").toBool();
-		nickColoring_ = PsiOptions::instance()->getOption("options.ui.muc.userlist.nick-coloring").toBool();
-		showClients_ = PsiOptions::instance()->getOption("options.ui.muc.userlist.show-client-icons").toBool();
-		showAffiliations_ = PsiOptions::instance()->getOption("options.ui.muc.userlist.show-affiliation-icons").toBool();
-		showStatusIcons_ = PsiOptions::instance()->getOption("options.ui.muc.userlist.show-status-icons").toBool();
-		showAvatar_ = PsiOptions::instance()->getOption("options.ui.muc.userlist.avatars.show").toBool();
-		avatarSize_ = PsiOptions::instance()->getOption("options.ui.muc.userlist.avatars.size").toInt();
-		avatarAtLeft_ = PsiOptions::instance()->getOption("options.ui.muc.userlist.avatars.avatars-at-left").toBool();
-		avatarRadius_ = PsiOptions::instance()->getOption("options.ui.muc.userlist.avatars.radius").toInt();
+		colorModerator_ = o->getOption("options.ui.look.colors.muc.role-moderator").value<QColor>();
+		colorParticipant_ = o->getOption("options.ui.look.colors.muc.role-participant").value<QColor>();
+		colorVisitor_ = o->getOption("options.ui.look.colors.muc.role-visitor").value<QColor>();
+		colorNoRole_ = o->getOption("options.ui.look.colors.muc.role-norole").value<QColor>();
+		showGroups_ = o->getOption("options.ui.muc.userlist.show-groups").toBool();
+		slimGroups_ = o->getOption("options.ui.muc.userlist.use-slim-group-headings").toBool();
+		nickColoring_ = o->getOption("options.ui.muc.userlist.nick-coloring").toBool();
+		showClients_ = o->getOption("options.ui.muc.userlist.show-client-icons").toBool();
+		showAffiliations_ = o->getOption("options.ui.muc.userlist.show-affiliation-icons").toBool();
+		showStatusIcons_ = o->getOption("options.ui.muc.userlist.show-status-icons").toBool();
+		showAvatar_ = o->getOption("options.ui.muc.userlist.avatars.show").toBool();
+		avatarSize_ = o->getOption("options.ui.muc.userlist.avatars.size").toInt();
+		avatarAtLeft_ = o->getOption("options.ui.muc.userlist.avatars.avatars-at-left").toBool();
+		avatarRadius_ = o->getOption("options.ui.muc.userlist.avatars.radius").toInt();
 
 		QFont font;
-		font.fromString(PsiOptions::instance()->getOption("options.ui.look.font.contactlist").toString());
+		font.fromString(o->getOption("options.ui.look.font.contactlist").toString());
 		fontHeight_ = QFontMetrics(font).height()+2;
 	}
 
