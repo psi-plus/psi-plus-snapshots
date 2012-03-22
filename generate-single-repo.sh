@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2012-02-25
+# Updated: 2012-03-22
 # Version: N/A
 
 export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
@@ -128,7 +128,8 @@ echo "ChangeLog from psi-dev project was copied."
 echo;
 
 mkdir -p "${PSIPLUS_DIR}/lang/ru"
-rsync -a "${MAIN_DIR}/psi-plus-ru/" "${PSIPLUS_DIR}/lang/ru/" || exit 1
+rsync -a "${MAIN_DIR}/psi-plus-ru/" "${PSIPLUS_DIR}/lang/ru/" \
+    --exclude=".git*" || exit 1
 echo "Russian translation for Psi+ project was copied."
 echo;
 
