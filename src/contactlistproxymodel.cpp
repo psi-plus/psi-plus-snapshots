@@ -84,7 +84,7 @@ bool ContactListProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex& s
 
 	switch (ContactListModel::indexType(index)) {
 	case ContactListModel::ContactType: {
-		PsiContact* psiContact = dynamic_cast<PsiContact*>(item);
+		PsiContact* psiContact = static_cast<PsiContact*>(item);
 
 		if (psiContact->isSelf()) {
 			return showSelf();
@@ -115,7 +115,7 @@ bool ContactListProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex& s
 				if (specialGroupType == ContactListGroup::SpecialType_Transports)
 					return showTransports();
 			}
-			ContactListGroup* group = dynamic_cast<ContactListGroup*>(item);
+			ContactListGroup* group = static_cast<ContactListGroup*>(item);
 			if (group->haveAlwaysVisibleContacts()) {
 				return true;
 			}

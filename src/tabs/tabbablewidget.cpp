@@ -52,7 +52,7 @@ TabbableWidget::TabbableWidget(const Jid &jid, PsiAccount *pa, TabManager *tabMa
 		TabbableWidget::templateMenu->setStyleSheet(PsiOptions::instance()->getOption("options.ui.chat.css").toString());
 	}
 	++TabbableWidget::chatsCount;
-	QTimer::singleShot(0, this, SLOT(ensureTabbedCorrectly()));
+	//QTimer::singleShot(0, this, SLOT(ensureTabbedCorrectly()));
 }
 
 void TabbableWidget::ensureTabbedCorrectly()

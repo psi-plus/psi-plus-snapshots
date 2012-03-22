@@ -5793,12 +5793,12 @@ void PsiAccount::client_groupChatJoined(const Jid &j)
 	w->joined();
 
 	openGroupChat(j, UserAction, r);
-	if(r == MUCJoinDlg::MucAutoJoin && PsiOptions::instance()->getOption("options.ui.muc.hide-on-autojoin").toBool()) {
-		m = findDialog<GCMainDlg*>(Jid(j.bare()));
-		if(m) {
-			QTimer::singleShot(0, m, SLOT(hideTab()));
-		}
-	}
+//	if(r == MUCJoinDlg::MucAutoJoin && PsiOptions::instance()->getOption("options.ui.muc.hide-on-autojoin").toBool()) {
+//		m = findDialog<GCMainDlg*>(Jid(j.bare()));
+//		if(m) {
+//			QTimer::singleShot(0, m, SLOT(hideTab()));
+//		}
+//	}
 
 #endif
 }
