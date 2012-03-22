@@ -138,6 +138,7 @@ rm configure.exe
 rm -r win32/
 rm -r src/libpsi/tools/zip/minizip/win32/
 rm -r src/libpsi/tools/idle/win32/
+rm "iconsets/clients/default/FP_Freeware License.txt"
 echo "Trash was removed."
 echo;
 
