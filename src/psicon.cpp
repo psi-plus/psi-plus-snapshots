@@ -1430,9 +1430,9 @@ void PsiCon::optionChanged(const QString& option)
 void PsiCon::slotApplyOptions()
 {
 	PsiIconset::instance()->reloadRoster();
+	PsiOptions *o = PsiOptions::instance();
 
 #ifndef Q_WS_MAC
-	PsiOptions *o = PsiOptions::instance();
 	if (!o->getOption("options.ui.contactlist.show-menubar").toBool()) {
 		// check if all toolbars are disabled
 		bool toolbarsVisible = false;
