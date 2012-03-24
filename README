@@ -1,4 +1,5 @@
-This is fork of the Psi+ project: http://code.google.com/p/psi-dev/
+This is the special repository with snapshots for the Psi+ project:
+  http://code.google.com/p/psi-dev/
 
 Here is the list of main changes:
 1) Source tree was aggregated from 5 independent git repositories:

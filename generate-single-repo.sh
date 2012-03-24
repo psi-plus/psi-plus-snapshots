@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2012-03-22
+# Updated: 2012-03-24
 # Version: N/A
 
 export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
@@ -51,19 +51,6 @@ else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
     git clone --depth 1 git://github.com/psi-plus/${MOD}.git || exit 1
-    echo;
-fi
-
-MOD=psi-plus-ru
-if [ -d "${MAIN_DIR}/${MOD}" ]; then
-    echo "Updating ${MAIN_DIR}/${MOD}"
-    cd "${MAIN_DIR}/${MOD}"
-    git pull --all || exit 1
-    echo;
-else
-    echo "Creating ${MAIN_DIR}/${MOD}"
-    cd "${MAIN_DIR}"
-    git clone --depth 1 git://github.com/ivan101/psi-plus-ru.git || exit 1
     echo;
 fi
 
@@ -125,12 +112,6 @@ echo;
 
 cp "${MAIN_DIR}/main/changelog.txt" "${PSIPLUS_DIR}/ChangeLog" || exit 1
 echo "ChangeLog from psi-dev project was copied."
-echo;
-
-mkdir -p "${PSIPLUS_DIR}/lang/ru"
-rsync -a "${MAIN_DIR}/psi-plus-ru/" "${PSIPLUS_DIR}/lang/ru/" \
-    --exclude=".git*" || exit 1
-echo "Russian translation for Psi+ project was copied."
 echo;
 
 
