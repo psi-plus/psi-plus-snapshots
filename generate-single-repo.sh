@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2012-03-24
+# Updated: 2012-03-26
 # Version: N/A
 
 export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
@@ -106,7 +106,8 @@ mv  "${PSIPLUS_DIR}/src/plugins/dev/otrplugin" \
 echo "Plugins from psi-dev project were copied."
 echo;
 
-rsync -a "${MAIN_DIR}/main/iconsets/" "${PSIPLUS_DIR}/iconsets/" || exit 1
+rsync -a "${MAIN_DIR}/main/iconsets/system/" "${PSIPLUS_DIR}/iconsets/system/" || exit 1
+rsync -a "${MAIN_DIR}/main/iconsets/roster/" "${PSIPLUS_DIR}/iconsets/roster/" || exit 1
 echo "Iconsets from psi-dev project were copied."
 echo;
 
