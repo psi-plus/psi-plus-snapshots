@@ -2,8 +2,13 @@ This is the special repository with snapshots for the Psi+ project:
   http://code.google.com/p/psi-dev/
 
 Here is the list of main changes:
-1) Source tree was aggregated from 5 independent git repositories:
-   psi, iris, libpsi, main (Psi+ patches), plugins (from Psi+ project).
+1) Source tree was aggregated from 6 independent git repositories:
+   - psi (original Psi project)
+   - iris (from original Psi project)
+   - libpsi (from original Psi project)
+   - main (patches and icons from Psi+ project)
+   - plugins (plugins from Psi+ project)
+   - resources (sounds and icons from Psi+ project)
 2) All patches from Psi+ project were applied.
    (Except patches from dev/ subdirectory)
 3) Trash was removed. (MS Windows binary files and non-free icons)

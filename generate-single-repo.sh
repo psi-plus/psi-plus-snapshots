@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2012-03-26
+# Updated: 2012-03-27
 # Version: N/A
 
 export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
@@ -42,6 +42,19 @@ else
 fi
 
 MOD=plugins
+if [ -d "${MAIN_DIR}/${MOD}" ]; then
+    echo "Updating ${MAIN_DIR}/${MOD}"
+    cd "${MAIN_DIR}/${MOD}"
+    git pull --all || exit 1
+    echo;
+else
+    echo "Creating ${MAIN_DIR}/${MOD}"
+    cd "${MAIN_DIR}"
+    git clone --depth 1 git://github.com/psi-plus/${MOD}.git || exit 1
+    echo;
+fi
+
+MOD=resources
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
@@ -94,7 +107,7 @@ cat "${MAIN_DIR}/main/patches"/*.diff | \
     "${MAIN_DIR}/applying-patches_${NEW_VER}.log" || exit 1
 sed "s/\(.xxx\)/.${rev}/" -i \
     "${PSIPLUS_DIR}/src/applicationinfo.cpp" || exit 1
-echo "Patches from psi-dev project were applied."
+echo "Patches from Psi+ project were applied."
 echo;
 
 rsync -a "${MAIN_DIR}/plugins" "${PSIPLUS_DIR}/src/" \
@@ -103,16 +116,29 @@ mv  "${PSIPLUS_DIR}/src/plugins/dev/otrplugin" \
     "${PSIPLUS_DIR}/src/plugins/generic" || exit 1
 # mv  "${PSIPLUS_DIR}/src/plugins/unix"/* \
 #     "${PSIPLUS_DIR}/src/plugins/generic" || exit 1
-echo "Plugins from psi-dev project were copied."
+echo "Plugins from Psi+ project were copied."
 echo;
 
 rsync -a "${MAIN_DIR}/main/iconsets/system/" "${PSIPLUS_DIR}/iconsets/system/" || exit 1
 rsync -a "${MAIN_DIR}/main/iconsets/roster/" "${PSIPLUS_DIR}/iconsets/roster/" || exit 1
-echo "Iconsets from psi-dev project were copied."
+echo "Iconsets from Psi+ project were copied."
+echo;
+
+rsync -a "${MAIN_DIR}/resources/sound/" "${PSIPLUS_DIR}/sound/" || exit 1
+echo "Sound files from Psi+ project were copied."
+echo;
+
+mkdir -p "${PSIPLUS_DIR}/skins/"
+rsync -a "${MAIN_DIR}/resources/skins/" "${PSIPLUS_DIR}/skins/" || exit 1
+echo "Skins from Psi+ project were copied."
+echo;
+
+rsync -a "${MAIN_DIR}/resources/themes/" "${PSIPLUS_DIR}/themes/" || exit 1
+echo "Themes from Psi+ project were copied."
 echo;
 
 cp "${MAIN_DIR}/main/changelog.txt" "${PSIPLUS_DIR}/ChangeLog" || exit 1
-echo "ChangeLog from psi-dev project was copied."
+echo "ChangeLog from Psi+ project was copied."
 echo;
 
 
