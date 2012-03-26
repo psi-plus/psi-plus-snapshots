@@ -1,0 +1,259 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <style type="text/css" media="screen,print">
+
+/* скролл-бар*/
+body::-webkit-scrollbar {
+  width:15px;
+  height:15px;}
+
+/* скролл-бар, кнопки перемотки*/
+body::-webkit-scrollbar-button {
+  display: block;
+  width: 15px;
+  height: 15px;}
+
+/* скролл-бар, вверху стрелка вверх*/
+body::-webkit-scrollbar-button:decrement:start {
+	background-color: #012F2F;
+	background-image: url(images/ScrollBarArrowUp.png);
+	border: 1px outset #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* скролл-бар, вверху стрелка вниз*/
+body::-webkit-scrollbar-button:increment:start {
+height: 0px;}
+
+/* скролл-бар, внизу стрелка вверх*/
+body::-webkit-scrollbar-button:decrement:end {
+	background-color: #031C19;
+	background-image: url(images/ScrollBarArrowUp.png);
+	border: 1px outset #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* скролл-бар, внизу стрелка вниз*/
+body::-webkit-scrollbar-button:increment:end {
+	background-color: #031C19;
+	background-image: url(images/ScrollBarArrowDown.png);
+	border: 1px outset #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* скролл-бар, ползунок*/
+body::-webkit-scrollbar-thumb {
+	background-color: #072A2C;
+
+	border: 1px outset #3C7896;
+	border-radius: 2px;}
+
+/* скролл-бар, подложка*/
+body::-webkit-scrollbar-track-piece {
+	margin-top: 1px;
+	margin-bottom: 1px;
+	background-color: #012123;
+	border: 1px inset #3C7896;
+	border-radius: 2px;}
+
+body {
+	background: url('images/ChatLog.png') bottom right no-repeat fixed; /* фоновый рисунок чата */
+	background-color: #001415; /* цвет фона чата */
+	margin: 0;
+	width: 100%;
+	height: 100%;
+	border: 0px;
+	padding: 0 0 2px 0;
+	text-shadow: 1px 1px 3px #101010;}
+
+body > div {
+	margin:0px 3px 0px 3px;
+	line-height:1.4em;
+	word-wrap:break-word !important;
+	white-space: pre-wrap !important;
+	overflow:hidden;}
+
+body > div img {
+	vertical-align: bottom;}
+
+body > div > img:first-child {
+	vertical-align: text-bottom;}
+
+.msg { /* обычные сообщения */
+	color: #32C8C3;}
+
+.style_time { /* стиль времени */
+	font-weight: normal;}
+
+.style_nick { /* стиль ника */
+	font-weight: normal;}
+
+.alert {  /* хайлайт */
+	font-weight: bold;
+	color: #9BDCC3;}
+
+.separator { /* разделитель в конференциях */
+	height: 6px;
+	background: url('images/HR.png');
+	border: 0px;}
+
+.sent {}
+
+.received {}
+
+.infmsg { /* информационные сообщения: тема, статусы... */ }
+
+.usertext {}
+
+.nicklink {
+	text-decoration:none;
+	color:inherit;}
+
+  </style>
+
+</head>
+
+<body>
+
+<script type="text/javascript">
+try {
+
+window[chatServer.jsNamespace()].theme = function() {
+	var nicks = {};
+	var nickNumber = 0;
+	var chat = window[chatServer.jsNamespace()];
+	
+	var cssBody = chat.util.findStyleSheet(document.styleSheets[0], "body").style;
+	var cssSentMsg = chat.util.findStyleSheet(document.styleSheets[0], ".sent").style;
+	var cssReceivedMsg = chat.util.findStyleSheet(document.styleSheets[0], ".received").style;
+	var cssInfMsg = chat.util.findStyleSheet(document.styleSheets[0], ".infmsg").style;
+	var cssUserText = chat.util.findStyleSheet(document.styleSheets[0], ".usertext").style;
+	var cssChatSays = chat.util.findStyleSheet(document.styleSheets[0], ".msg>span:first").style;
+	var useMessageIcons, messageIconsSize = 0;
+	
+	var applyPsiSettings = function() {
+		chat.util.updateObject(cssBody, eval("["+shared.session.getFont()+"][0]"));
+		cssBody.color = shared.server.getPaletteColor("Text");
+		cssSentMsg.color = shared.psiOption("options.ui.look.colors.messages.sent");
+		cssReceivedMsg.color = shared.psiOption("options.ui.look.colors.messages.received");
+		cssInfMsg.color = shared.psiOption("options.ui.look.colors.messages.informational");
+		cssUserText.color = shared.psiOption("options.ui.look.colors.messages.usertext");
+		useMessageIcons = shared.psiOption("options.ui.chat.use-message-icons");
+		if (shared.psiOption("options.ui.chat.scaled-message-icons")) {
+			var d = document.createElement("div");
+			d.style.position = "absolute";
+			d.style.top = "-1000;";
+			d.style.visibility = "hidden";
+			d.style.height = "1em";
+			shared.chatElement.appendChild(d);
+			messageIconsSize = parseInt(document.defaultView.getComputedStyle(d, null).height);
+			shared.chatElement.removeChild(d);
+		}
+	}
+	
+	var shared = chat.adapter.initSession();
+	shared.initTheme({
+		chatElement : document.body,
+		scroller : new chat.WindowScroller(true),
+		templates : {
+			message: shared.isMuc?
+				"<div class='msg'>%icon%<span style='color:%nickcolor%'>[%time%] %sender%</span> %message%</div>"
+				: "<div class='msg'>%icon%<span class='%sentrec%'>[%time%] %sender%</span> %message%</div>",
+			messageNC: shared.isMuc?
+				"<div style='color:%nickcolor%'>%icon%[%time%] %sender% %message%</div>"
+				: "<div class='%sentrec%'>%icon%[%time%] %sender% %message%</div>",
+			receivedMessage: shared.isMuc?
+				"<div class='msg'>%icon%<span style='color:%nickcolor%'>[%time%] %sender%</span> %alertedmessage%</div>"
+				: null,
+			spooledMessage: "<div class='infmsg'>%icon%[%time%] %sender% %message%</div>",
+			sys: "<div class='infmsg'>%icon%%message%</div>",
+			sysMessage: "<div class='infmsg'>%icon%[%time%] *** %message%</div>",
+			sysMessageUT: "<div class='infmsg'>%icon%[%time%] *** %message%: <span class='usertext'>%usertext%</span></div>",
+			lastMsgDate: "<div class='infmsg'>%icon%*** %date%</div>",
+			subject: shared.isMuc?
+				"<div class='infmsg'>%icon%[%time%] %message%<div class='usertext'><b>%usertext%</b></div></div>"
+				: "<div class='infmsg'>%icon%<b>*** %usertext%</b></div>",
+			trackbar: '<hr class=\'separator\' />'
+		},
+		dateFormat : "hh:mm:ss",
+		proxy : function() { //optional
+			if (shared.cdata.type == "settings") {
+				applyPsiSettings();
+				return false;
+			} else if (shared.cdata.type == "receipt") {
+				var img = document.getElementById("receipt"+shared.cdata.id);
+				if (img) {
+					var sizeUri = messageIconsSize?"?w="+messageIconsSize+"&h="+messageIconsSize:"";
+					img.src = "icon:psi/notification_chat_delivery_ok"+sizeUri;
+				}
+			}
+			if (shared.cdata.mtype == "message") {
+				var template = shared.cdata.emote && shared.templates.messageNC ||
+					(shared.cdata.spooled && shared.templates.message || null);
+				if (template) {
+					shared.appendHtml(template.toString(), shared.cdata.local?true:null);
+					return false;
+				}
+			}
+		},
+		varHandlers : {
+			sender : function() {
+				var nick = chat.util.escapeHtml(shared.cdata.sender);
+				nick = shared.cdata.mtype == "message" && shared.isMuc?
+					'<a href="addnick://psi/'+encodeURIComponent(shared.cdata.sender)+
+					'" class="nicklink">'+nick+'</a>' : nick;
+				return shared.cdata.emote?"*"+nick:"&lt;"+nick+"&gt;";
+			},
+			alertedmessage : function() {
+				return shared.cdata.alert?"<span class='alert'>"+
+					shared.cdata.message+"</span>":shared.cdata.message;
+			},
+			sentrec : function() {return shared.cdata.spooled?"infmsg":
+				(shared.cdata.local?"sent":"received");},
+			nickcolor : function() {
+				return shared.session.mucNickColor(shared.cdata.sender, shared.cdata.local);
+			},
+			icon : function() {
+				var icon = "";
+				if (useMessageIcons) {
+					switch (shared.cdata.mtype) {
+						case "message":
+							icon = shared.cdata.local?(shared.cdata.awaitingReceipt?
+								"psi/notification_chat_send":"psi/notification_chat_delivery_ok")
+								: "psi/notification_chat_receive";
+							break;
+						case "system":
+						case "subject":
+						case "urls":
+							icon = "psi/notification_chat_info";
+							break;
+						case "lastDate":
+							icon = "psi/notification_chat_time";
+							break;
+					}
+					var sizeStyle = messageIconsSize?" style='width:"+messageIconsSize+"px; height:"+messageIconsSize+"px'":"";
+					var sizeUri = messageIconsSize?"?w="+messageIconsSize+"&h="+messageIconsSize:"";
+					var id = shared.cdata.awaitingReceipt?" id='receipt"+shared.cdata.id+"'":"";
+					icon = icon?"<img src='icon:"+icon+sizeUri+"'"+sizeStyle+id+" />":"";
+				}
+				return icon;
+ 			}
+		}
+	});
+	
+	applyPsiSettings();
+	
+	shared.session.signalInited();
+	
+	return {
+		
+	};
+}()
+
+} catch(e) {
+	 document.body.innerHTML = "Theme initialization failed: " + e
+}
+</script>
+</body>
+</html>

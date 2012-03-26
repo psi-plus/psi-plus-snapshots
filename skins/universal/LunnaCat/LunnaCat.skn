@@ -1,0 +1,1350 @@
+<skin version="1.1_(2011-06-11)" path="D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1" author="majik" name="LunnaCat">
+    <options>
+        <options.ui.look.colors.chat.link-color type="QColor">#2f9fff</options.ui.look.colors.chat.link-color>
+        <options.ui.look.colors.chat.mailto-color type="QColor">#2d9bff</options.ui.look.colors.chat.mailto-color>
+        <options.ui.look.colors.contactlist.background type="QColor">#0a373c</options.ui.look.colors.contactlist.background>
+        <options.ui.look.colors.contactlist.grouping.header-background type="QColor">#0a373c</options.ui.look.colors.contactlist.grouping.header-background>
+        <options.ui.look.colors.contactlist.grouping.header-foreground type="QColor">#14a0b4</options.ui.look.colors.contactlist.grouping.header-foreground>
+        <options.ui.look.colors.contactlist.profile.header-background type="QColor">#0f646e</options.ui.look.colors.contactlist.profile.header-background>
+        <options.ui.look.colors.contactlist.profile.header-foreground type="QColor">#4be1e1</options.ui.look.colors.contactlist.profile.header-foreground>
+        <options.ui.look.colors.contactlist.status.away type="QColor">#32a5b9</options.ui.look.colors.contactlist.status.away>
+        <options.ui.look.colors.contactlist.status.do-not-disturb type="QColor">#328296</options.ui.look.colors.contactlist.status.do-not-disturb>
+        <options.ui.look.colors.contactlist.status.offline type="QColor">#001e1e</options.ui.look.colors.contactlist.status.offline>
+        <options.ui.look.colors.contactlist.status.online type="QColor">#4bd7ff</options.ui.look.colors.contactlist.status.online>
+        <options.ui.look.colors.contactlist.status-messages type="QColor">#3c7896</options.ui.look.colors.contactlist.status-messages>
+        <options.ui.look.colors.messages.highlighting type="QColor">#9bdcc3</options.ui.look.colors.messages.highlighting>
+        <options.ui.look.colors.messages.informational type="QColor">#006e6e</options.ui.look.colors.messages.informational>
+        <options.ui.look.colors.messages.received type="QColor">#009bff</options.ui.look.colors.messages.received>
+        <options.ui.look.colors.messages.sent type="QColor">#00d200</options.ui.look.colors.messages.sent>
+        <options.ui.look.colors.messages.usertext type="QColor">#37eb73</options.ui.look.colors.messages.usertext>
+        <options.ui.look.colors.muc.role-moderator type="QColor">#4bd7ff</options.ui.look.colors.muc.role-moderator>
+        <options.ui.look.colors.muc.role-norole type="QColor">#ff0004</options.ui.look.colors.muc.role-norole>
+        <options.ui.look.colors.muc.role-participant type="QColor">#32a5b9</options.ui.look.colors.muc.role-participant>
+        <options.ui.look.colors.muc.role-visitor type="QColor">#001e1e</options.ui.look.colors.muc.role-visitor>
+        <options.ui.look.colors.passive-popup.border type="QColor">#0a373c</options.ui.look.colors.passive-popup.border>
+        <options.ui.look.colors.tooltip.background type="QColor">#37aabe</options.ui.look.colors.tooltip.background>
+        <options.ui.look.colors.tooltip.text type="QColor">#0e2e35</options.ui.look.colors.tooltip.text>
+        <options.ui.look.contactlist.status-change-animation.color1 type="QColor">#001e1e</options.ui.look.contactlist.status-change-animation.color1>
+        <options.ui.look.contactlist.status-change-animation.color2 type="QColor">#969696</options.ui.look.contactlist.status-change-animation.color2>
+        <options.ui.contactlist.disable-scrollbar type="bool">true</options.ui.contactlist.disable-scrollbar>
+        <options.ui.contactlist.avatars.avatars-at-left type="bool">true</options.ui.contactlist.avatars.avatars-at-left>
+        <options.ui.contactlist.avatars.radius type="int">5</options.ui.contactlist.avatars.radius>
+        <options.ui.contactlist.avatars.show type="bool">true</options.ui.contactlist.avatars.show>
+        <options.ui.contactlist.avatars.size type="int">32</options.ui.contactlist.avatars.size>
+        <options.ui.contactlist.avatars.use-default-avatar type="bool">true</options.ui.contactlist.avatars.use-default-avatar>
+        <options.ui.contactlist.show-client-icons type="bool">true</options.ui.contactlist.show-client-icons>
+        <options.ui.chat.css type="QString">TabDlg {
+	background-color: #000000;}
+
+/* общий фрейм */
+QFrame {
+	color: #32C8C3;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/ChatTopFrame.png) right bottom;
+	background-color: argb(182,200,80,0);
+	border: 0px;
+	padding: 0px;}
+
+/* кнопки в шапке окна в режиме без декора */
+QToolButton#hideButton {
+	width: 16px;
+	height: 16px;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/MinimizeButton.png) center no-repeat;
+	icon-size: 0px;
+	border: 0px;}
+
+QToolButton#hideButton:hover {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/MinimizeButtonHover.png) center no-repeat;}
+
+QToolButton#hideButton:pressed {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/MinimizeButtonPressed.png) center no-repeat;}
+
+QToolButton#maximizeButton {
+	width: 16px;
+	height: 16px;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/MaximizeButton.png) center no-repeat;
+	icon-size: 0px;
+	border: 0px;}
+
+QToolButton#maximizeButton:hover {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/MaximizeButtonHover.png) center no-repeat;}
+
+QToolButton#maximizeButton:pressed {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/MaximizeButtonPressed.png) center no-repeat;}
+
+QToolButton#closeButton {
+	width: 16px;
+	height: 16px;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/CloseButton.png) center no-repeat;
+	icon-size: 0px;
+	border: 0px;}
+
+QToolButton#closeButton:hover {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/CloseButtonHover.png) center no-repeat;}
+
+QToolButton#closeButton:pressed {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/CloseButtonPressed.png) center no-repeat;}
+
+/* верхний фрейм */
+QFrame#topFrame {
+	margin: 0px;
+	margin-bottom: 2px;
+	border: 0px;}
+
+/* кнопка топика */
+QPushButton#pb_topic {
+	margin: 0px;
+	height: 16px;
+	color: #4BD7FF;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.55 #1A474C, stop: 1 #4BD7FF);
+	font-weight: bold;
+	border: 1px solid #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+QPushButton#pb_topic:hover {
+	color: #DBD7DF;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #8BF7FF, stop: 0.55 #0F97AC, stop: 1 #8BF7FF);}
+
+QPushButton#pb_topic:pressed {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.55 #1A474C, stop: 1 #4BD7FF);}
+
+/* диалог топика */
+QWidget#pte_topic {
+	color: #32C8C3;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-color: #001E1F;
+	border: 1px inset #3C7896;
+	border-radius: 3px;}
+
+/* иконка статуса */
+QLabel#lb_status {
+	border: 0px;
+	background: argb(182,200,80,0);}
+
+/* топик / джид */
+ActionLineEdit#le_topic,#le_jid {
+	color: #4BD7FF;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.28 argb(188,255,120,40), stop: 0.8 argb(188,255,120,40), stop: 1 #4BD7FF);
+	font-weight: bold;
+	border: 1px solid #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* джид - ниспадающее меню */
+QComboBox::drop-down#le_jid {
+	height: 20px;
+	border-left: 1px solid #2D9BB8;
+	background-color: argb(188,255,120,50);}
+
+QComboBox::down-arrow#le_jid {
+	width: 9px;
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/ScrollBarArrowDown.png);}
+
+QComboBox#le_jid QAbstractItemView {
+	color: #4BD7FF;
+	selection-background-color: argb(188,255,120,50);
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png);
+	background-color: argb(182,200,80,40);
+show-decoration-selected: 0;
+	border: 1px outset #3C7896;}
+
+QComboBox::focus#le_jid QAbstractItemView {
+	border-color: red;
+	border: 1px;}
+
+/* диалоговое окно букмарок */
+QDialog {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-color: argb(182,200,80,0);}
+
+QDialog>QFrame {
+	color: #4BD7FF;
+	background: argb(182,200,80,0);}
+
+QDialog>QLineEdit {
+	color: #4BD7FF;
+	background: argb(182,200,80,40);
+	border: 1px inset #3C7896;
+	border-radius: 3px;}
+
+QDialog>QCheckBox {
+	background: argb(182,200,80,0);}
+
+/* иконка клиента */
+QLabel#lb_client {
+	border: 0px;
+	background: argb(182,200,80,0);}
+
+/* счётчик символов */
+QLabel#lb_count {
+	color: #4BD7FF;
+	background: argb(182,200,80,0);
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.28 argb(188,255,120,40), stop: 0.8 argb(188,255,120,40), stop: 1 #4BD7FF);
+	font-weight: bold;
+	border: 1px solid #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* имя аккаунта */
+QLabel#lb_ident {
+	color: #0A373C;
+	background: argb(188,255,120,0);
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #0A373C, stop: 0.18 #4BD7FF, stop: 0.9 #4BD7FF, stop: 1 #0A373C);
+	font-weight: bold;
+	border: 1px solid #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* чатлог */
+QFrame#log {
+	margin: 0px;
+	color: #32C8C3;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/ChatLog.png) no-repeat right bottom;
+	background-attachment: fixed;
+	background-color: #001415;
+	border: 1px inset #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* ростер конференции */
+QFrame#lv_users {
+	border: 1px inset #3C7896;
+	border-radius: 3px;
+	padding: 2px;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) left top;
+	background-color: #0A373C;
+	selection-color: #CFFFFF;
+	selection-background-color: argb(188,255,120,70);}
+
+/* нижний фрейм */
+QFrame#bottomFrame {
+	margin: 0px;
+	border: 0px;}
+
+/* поле ввода команд */
+QWidget#mini_prompt {
+	margin-top: -8px;
+	margin-left: 1px;
+	margin-right: -5px;
+	color: #32C8C3;
+	background: argb(182,200,80,0);}
+
+/* строка ввода */
+QWidget#bottomFrame>QWidget>QTextEdit {
+	margin: 0px;
+	color: #32C8C3;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/ChatEdit.png) right bottom;
+	background-attachment: fixed;
+	background-color: argb(182,200,80,0);
+	border: 1px inset #3C7896;
+	border-radius: 3px;}
+
+/* кнопка отправки сообщения */
+QPushButton#pb_send {
+	margin: 0px;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.1 #0A374C,  stop: 0.9 #0A374C, stop: 1 #4BD7FF);
+	border: 1px outset #3C7896;
+	border-radius: 3px;}
+
+QPushButton#pb_send:hover {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.12 #0A375C,  stop: 0.88 #0A375C, stop: 1 #4BD7FF);}
+
+QPushButton#pb_send:hover:pressed {
+	background-color:  qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #00171C, stop: 0.1 #2BB7DF, stop: 0.9 #2BB7DF, stop: 1 #00171C);}
+
+/* аватар */
+QLabel#avatar {
+	margin: 0px;
+	background: argb(182,200,80,0);}
+
+/* централ-бар */
+QToolBar {
+	margin: 1px;
+	border: 0px solid #121212;
+	background: argb(182,200,80,0);}
+
+/* кнопки централ-бара и прочие */
+QToolButton {
+	margin-left: 1px;
+	margin-right: 1px;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.36 #1A475C, stop: 0.7 #1A479C,stop: 1 #4BD7FF);
+	border: 1px outset #3C7896;
+	border-radius: 3px;
+	padding: 1px;}
+
+QToolButton:hover {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.5 #2A678C, stop: 1 #4BD7FF);}
+
+QToolButton:pressed {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.36 #1A475C, stop: 0.7 #1A479C, stop: 1 #4BD7FF);}
+
+QToolButton:checked {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #0B87BF, stop: 0.36 argb(188,255,120,60), stop: 0.7 argb(188,255,120,60), stop: 1 #0B87BF);
+	border: 1px solid qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 argb(188,255,120,255), stop: 0.36 #1A475C, stop: 0.7 #1A479C, stop: 1 argb(188,255,120,255));}
+
+QToolButton::menu-indicator {
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Dot.png);}
+
+/* горизонтальный сплиттер */
+QSplitter::handle:vertical {
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/SplitterH.png);}
+
+QSplitter::handle:vertical:hover {
+	background: qlineargradient(x0: 1, y0: 0, x2: 1, y2: 0, stop: 0 argb(182,200,80,0), stop: 0.5 argb(182,200,80,100), stop: 1 argb(182,200,80,0));
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/SplitterHH.png);}
+
+QSplitter::handle:vertical:pressed {
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/SplitterHP.png);}
+
+/* вертикальный сплиттер */
+QSplitter::handle:horizontal {
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/SplitterV.png);}
+
+QSplitter::handle:horizontal:hover {
+	background: qlineargradient(x0: 0, y0: 0, x2: 0, y2: 1, stop: 0 argb(182,200,80,0), stop: 0.5 argb(182,200,80,100), stop: 1 argb(182,200,80,0));
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/SplitterVH.png);}
+
+QSplitter::handle:horizontal:pressed {
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/SplitterVP.png);}
+
+/* таб-бар */
+PsiTabBar {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/TabBar.png) right top;
+	background-color: #0A1A2A;
+	alignment: center;}
+
+/* таб-бар - основной цвет шрифта */
+TabDlg {
+	color: #4BD7FF;}
+
+QTabBar::tab {
+	margin-left: 1px;
+	margin-right: 1px;
+	margin-bottom: 3px;
+	height: 20px;
+	font-size: 12px;
+	background: argb(182,200,80,0);
+	border: 1px outset #2C6886;
+	border-radius: 3px;
+	padding-left: 4px;
+	padding-right: 4px;}
+
+QTabBar::tab:selected {
+	font: bold;
+	background: qlineargradient(x0: 1, y1: 0, x2: 1, y2: 0, stop: 0 argb(182,200,80,0), stop: 0.5 argb(182,200,80,180), stop: 1 argb(182,200,80,0));}
+
+QTabBar::tab:hover {
+	background: qlineargradient(x0: 1, y1: 0, x2: 1, y2: 0, stop: 0 argb(182,200,80,0), stop: 0.5 argb(182,200,80,255), stop: 1 argb(182,200,80,0));}
+
+QTabBar::close-button {
+	icon-size: 0px;
+	margin-top: 0px;
+	margin-bottom: 4px;
+	margin-right: 0px;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/TabCloseButton.png) center no-repeat;
+	border: 0px;}
+
+QTabBar::close-button:selected { }
+
+QTabBar::close-button:hover {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/TabCloseButtonHover.png) center no-repeat;}
+
+QTabBar::close-button:pressed {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/TabCloseButtonPressed.png) center no-repeat;}
+
+/* окно настроек конференции - табы, рамка, кнопки, список джидов */
+QWidget#MUCConfig QTabBar::tab {
+	color: #4BD7FF;
+	margin-bottom: 3px;
+	width: 100%;
+	background: argb(182,200,80,0);
+	border: 1px outset #2C6886;
+	border-radius: 3px;}
+
+QWidget#MUCConfig QTabBar::tab:selected {
+	font: bold;
+	background: qlineargradient(x0: 1, y1: 0, x2: 1, y2: 0, stop: 0 argb(182,200,80,0), stop: 0.5 argb(182,200,80,180), stop: 1 argb(182,200,80,0));}
+
+QWidget#MUCConfig QTabBar::tab:hover {
+	background: qlineargradient(x0: 1, y1: 0, x2: 1, y2: 0, stop: 0 argb(182,200,80,0), stop: 0.5 argb(182,200,80,255), stop: 1 argb(182,200,80,0));}
+
+QWidget#MUCConfig>QWidget {
+	color: #4BD7FF;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-color: #3C7896;}
+
+QWidget#MUCConfig>QPushButton {
+	color: black;
+	height: 25px;
+	background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.6 #2A678C, stop: 1 #4BD7FF);
+	border: 1px outset #3C7896;
+	border-radius: 3px;
+	padding-left: 8px;
+	padding-right: 8px;}
+
+QWidget#MUCConfig>QPushButton:hover {
+	background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #8BF7FF, stop: 0.6 #0F97AC, stop: 1 #8BF7FF);}
+
+QWidget#MUCConfig>QPushButton:pressed {
+	background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.6 #2A678C, stop: 1 #4BD7FF);
+	border: 1px inset #3C7896;}
+
+QFrame#tv_affiliations {
+	color: #32C8C3;
+	background: argb(182,200,80,0);
+	selection-background-color: #207085;
+	border: 1px inset #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+QTreeView::branch:has-siblings:adjoins-item {
+	border-image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/BranchMore.png);}
+
+QTreeView::branch:!has-children:!has-siblings:adjoins-item {
+	border-image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/BranchEnd.png);}
+
+/* окно настроек конференции - фильтр */
+QLabel#label	{
+	color: #4BD7FF;
+	background: argb(182,200,80,0);}
+
+QLineEdit#le_filter {
+	color: #4BD7FF;
+	background: argb(182,200,80,40);
+	border: 1px inset #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* окно настроек конференции - получение настроек */
+QFrame#lb_general_message {
+	color:yellow;
+	font-size: 18px;
+	background-color: argb(188,255,120,40);}
+
+/* окно настроек конференции - настройки, внешний и внутренний фрейм */
+QWidget#tab_general QWidget {
+	background: argb(188,255,120,0);}
+
+/* окно настроек конференции - настройки, внутренний фрейм */
+QStackedWidget#sw_general {
+	border: 1px inset #3C7896;
+	border-radius: 3px;
+	padding: 1px;}
+
+/* окно настроек конференции - кнопка уничтожения конференции */
+QWidget#tab_general QPushButton#pb_destroy {
+	background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.6 #2A678C, stop: 1 #4BD7FF);
+	border: 1px outset #3C7896;
+	border-radius: 3px;
+	padding-left: 8px;
+	padding-right: 8px;}
+
+QWidget#tab_general QPushButton#pb_destroy:hover {
+	font-weight: bold;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #8BF7FF, stop: 0.3 #FF0000, stop: 0.8 #FF0000, stop: 1 #8BF7FF);}
+
+QWidget#tab_general QPushButton#pb_destroy:pressed {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #8BF7FF, stop: 0.1 #FF0000, stop: 0.9 #FF0000, stop: 1 #8BF7FF);}
+
+/* окно настроек конференции - настройки, названия опций */
+QWidget#tab_general QLabel {
+	background: argb(188,255,120,0);}
+
+/* окно настроек конференции - настройки, поля ввода */
+QWidget#tab_general QLineEdit {
+	color: #4BD7FF;
+	background: argb(182,200,80,40);
+	border: 1px inset #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* окно настроек конференции - настройки, ниспадающие меню */
+QWidget#tab_general QComboBox {
+	color: #4BD7FF;
+	background: argb(182,200,80,40);
+	border: 1px outset #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+QWidget#tab_general QComboBox::drop-down {
+	height: 20px;
+	border-left: 1px solid #2D9BB8;
+	background-color: argb(188,255,120,50);}
+
+QWidget#tab_general QComboBox::down-arrow {
+	width: 9px;
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/ScrollBarArrowDown.png);}
+
+QWidget#tab_general QComboBox QAbstractItemView {
+	color: #4BD7FF;
+	selection-background-color: argb(188,255,120,70);
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-color: argb(182,200,80,40);
+	border: 1px outset #3C7896;}
+
+/* скролл-бары */
+QScrollBar:vertical {
+	margin: 16px 2px 16px 2px;
+	background-color: argb(182,200,80,10);
+	width: 18px;}
+
+QScrollBar:horizontal {
+	margin: 1px 16px 1px 16px;
+	background-color: argb(182,200,80,10);
+	height: 18px;}
+
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+	border: 1px outset #3C7896;
+	border-radius: 2px;}
+
+/* скролл-бар, верхняя стрелка*/
+QScrollBar::sub-line:vertical {
+	margin-left: 1px;
+	margin-right: 1px;
+	height: 9px;
+	background-color: argb(182,200,80,40);
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/ScrollBarArrowUp.png);
+	border: 1px outset #3C7896;
+	subcontrol-position: top;
+	subcontrol-origin: margin;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* скролл-бар, нижняя стрелка*/
+QScrollBar::add-line:vertical {
+	margin-left: 1px;
+	margin-right: 1px;
+	height: 9px;
+	background-color: argb(182,200,80,40);
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/ScrollBarArrowDown.png);
+	border: 1px outset #3C7896;
+	subcontrol-position: bottom;
+	subcontrol-origin: margin;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* скролл-бар, левая стрелка*/
+QScrollBar::sub-line:horizontal {
+	margin-top: 1px;
+	margin-bottom: 1px;
+	width: 9px;
+	background-color: argb(182,200,80,40);
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/ScrollBarArrowLeft.png);
+	border: 1px solid #3C7896;
+	subcontrol-position: left;
+	subcontrol-origin: margin;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* скролл-бар, правая стрелка*/
+QScrollBar::add-line:horizontal {
+	margin-top: 1px;
+	margin-bottom: 1px;
+	width: 9px;
+	background-color: argb(182,200,80,40);
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/ScrollBarArrowRight.png);
+	border: 1px solid #3C7896;
+	subcontrol-position: right;
+	subcontrol-origin: margin;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* скролл-бар, стрелки при наведении мышкой */
+QScrollBar::sub-line:vertical:hover, QScrollBar::sub-line:horizontal:hover {
+	background-color: argb(182,200,80,100);}
+
+QScrollBar::add-line:vertical:hover, QScrollBar::add-line:horizontal:hover {
+	background-color: argb(182,200,80,100);}
+
+/* скролл-бар - подложка */
+QScrollBar::sub-page:vertical, QScrollBar::add-page:vertical, QScrollBar::sub-page:horizontal, QScrollBar::add-page:horizontal  {
+	background-color: argb(182,200,80,0);
+	border: 1px solid #012929;}
+
+/* скролл-бар в ростере конференции
+Q3ListView>QScrollBar:vertical {
+	width: 0px;} */
+
+/* всплывающие подсказки */
+QToolTip {
+	color: #4BD7FF;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-color: #001E1F;
+	border: 1px solid #0A373C;}
+
+/* диалоги предупреждения очистки чата и закрытия при непрочитанном сообщении */
+QMessageBox {
+	color: #4BD7FF;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-color: argb(182,200,80,0);}
+
+/* кнопки диалоговых окон */
+QPushButton {
+	color: black;
+	height: 25px;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.6 #2A678C, stop: 1 #4BD7FF);
+	border: 1px outset #3C7896;
+	border-radius: 3px;
+	padding-left: 8px;
+	padding-right: 8px;}
+
+QPushButton:hover {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #8BF7FF, stop: 0.6 #0F97AC, stop: 1 #8BF7FF);}
+
+QPushButton:pressed {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.6 #2A678C, stop: 1 #4BD7FF);
+	border: 1px inset #3C7896;}
+
+/* чекбоксы */
+QCheckBox::indicator:checked {
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/RadioButton.png);}
+
+QCheckBox::indicator:checked:hover {
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/RadioButtonHover.png);}
+
+QCheckBox::indicator:unchecked {
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/RadioButtonUnchecked.png);}
+
+QCheckBox::indicator:unchecked:hover {
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/RadioButtonUncheckedHover.png);}
+
+/* панель поиска */
+TypeAheadFindBar {
+	margin: 0px;
+	padding: 2px;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/TabBar.png) right top;
+	border: 1px outset #3C7896;
+	border-radius: 3px;}
+
+TypeAheadFindBar>QLineEdit {
+	margin-left: 1px;
+	margin-right: 1px;
+	color: #4BD7FF;
+	background: argb(182,200,80,40);
+	border: 1px inset #3C7896;
+	border-radius: 3px;}
+
+TypeAheadFindBar>QCheckBox {
+	margin-left: 3px;
+	color: #4BD7FF;
+	background: argb(182,200,80,0);}
+
+TypeAheadFindBar>QToolButton, TypeAheadFindBar>QToolButton:hover  {
+	color: #4BD7FF;
+	background-color: argb(182,200,80,0);
+	border: 0px;}
+
+/* редактор причин кик'и'бана */
+MUCReasonsEditor>QWidget {
+	color: #4BD7FF;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-color: argb(182,200,80,0);}
+
+QLineEdit#txtReason {
+	color: #4BD7FF;
+	background: argb(182,200,80,0);
+	border: 1px inset #3C7896;
+	border-radius: 3px;}
+
+QListWidget#lstReasons {
+	background: argb(182,200,80,0);
+	selection-background-color: #207085;
+	border: 1px inset #3C7896;
+	border-radius: 3px;}
+
+MUCReasonsEditor>QPushButton#btnOk, MUCReasonsEditor>QPushButton#btnCancel {
+	color: black;
+	height: 25px;
+	background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.6 #2A678C, stop: 1 #4BD7FF);
+	border: 1px outset #3C7896;
+	border-radius: 3px;
+	padding-left: 8px;
+	padding-right: 8px;}
+
+MUCReasonsEditor>QPushButton:hover#btnOk, MUCReasonsEditor>QPushButton:hover#btnCancel {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #8BF7FF, stop: 0.6 #0F97AC, stop: 1 #8BF7FF);}
+
+MUCReasonsEditor>QPushButton:pressed#btnOk, MUCReasonsEditor>QPushButton:pressed#btnCancel {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.6 #2A678C, stop: 1 #4BD7FF);
+	border: 1px inset #3C7896;}
+
+/* редактор шаблонов быстрой вставки/отправки */
+SendButtonTemplatesEditor>QWidget {
+	color: #4BD7FF;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-color: argb(182,200,80,0);}
+
+QLineEdit#txtTemplate {
+	color: #4BD7FF;
+	background: argb(182,200,80,0);
+	border: 1px inset #3C7896;
+	border-radius: 3px;}
+
+QListWidget#lstTemplates {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-attachment: fixed;
+	background-color: argb(182,200,80,0);
+	selection-background-color: #207085;
+	border: 1px inset #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+SendButtonTemplatesEditor>QPushButton#btnOk, SendButtonTemplatesEditor>QPushButton#btnCancel {
+	color: black;
+	height: 25px;
+	background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.6 #2A678C, stop: 1 #4BD7FF);
+	border: 1px outset #3C7896;
+	border-radius: 3px;
+	padding-left: 8px;
+	padding-right: 8px;}
+
+SendButtonTemplatesEditor>QPushButton:hover#btnOk, SendButtonTemplatesEditor>QPushButton:hover#btnCancel {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #8BF7FF, stop: 0.6 #0F97AC, stop: 1 #8BF7FF);}
+
+SendButtonTemplatesEditor>QPushButton:pressed#btnOk, SendButtonTemplatesEditor>QPushButton:pressed#btnCancel {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.6 #2A678C, stop: 1 #4BD7FF);
+	border: 1px inset #3C7896;}
+
+/* меню */
+QMenu {
+	margin: 1px;
+	color: #4BD7FF;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-color: argb(188,255,120,0);
+	border: 1px outset #3C7896;
+	border-radius: 3px;
+	padding: 1px;}
+
+QMenu::disabled, QMenu::item:disabled:selected {
+	color: #3C7896;}
+
+QMenu::item {
+	padding: 2px 24px 2px 24px;
+	border: 1px solid transparent;}
+
+QMenu::item:selected {
+	color: #CFFFFF;
+	background-color: argb(188,255,120,70);}
+
+QMenu::icon {
+	background: argb(188,255,120,0);
+	border: 1px solid argb(188,255,120,0);
+	border-radius: 2px;
+	padding: 1px;}
+
+QMenu::icon:selected {
+	background: argb(188,255,120,0);
+	border: 1px solid argb(188,255,120,0);
+	border-radius: 2px;}
+
+QMenu::icon:selected:disabled {
+	background: argb(188,255,120,0);
+	border: 1px solid argb(188,255,120,0);
+	border-radius: 2px;}
+
+QMenu::icon:checked {
+	background: #012B2A;
+	border: 1px inset #207085;}
+
+QMenu::indicator:checked {
+	margin-left: 2px;
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/RadioButton.png);}
+
+QMenu::indicator:unchecked {
+	margin-left: 2px;
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/RadioButtonUnchecked.png);}
+
+QMenu::separator {
+	background-color: #3C7896;
+	height: 1px;}
+
+/* меню смайлов - подложка */
+IconSelectPopup {
+	margin: 0px;
+	color: #4BD7FF;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-color: argb(188,255,120,0);
+	border: 1px outset #3C7896;}
+
+/* меню смайлов - иконки */
+IconSelectButton {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.5 #2A678C, stop: 1 #4BD7FF);}
+
+/* общий фрейм - заголовок окна с кастомной декорацией */
+QFrame#headerFrame {
+	margin-top: 4px;
+	margin-left: 4px;
+	margin-right: 4px;
+	color: #4BD7FF;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-color: argb(188,255,120,0);
+	border: 1px outset #3C7896;
+	border-radius: 3px;
+	height: 10px;
+	padding: 1px;}
+
+QToolButton#hideButton {
+	height: 10px;
+	margin-top: 2px;
+	margin-bottom: 2px;}
+
+QToolButton#maximizeButton {
+	height: 10px;
+	margin-top: 2px;
+	margin-bottom: 2px;}
+
+QToolButton#closeButton {
+	height: 10px;
+	margin-right: 2px;
+	margin-top: 2px;
+	margin-bottom: 2px;}</options.ui.chat.css>
+        <options.ui.look.contactlist.use-outlined-group-headings type="bool">false</options.ui.look.contactlist.use-outlined-group-headings>
+        <options.ui.look.contactlist.use-slim-group-headings type="bool">true</options.ui.look.contactlist.use-slim-group-headings>
+        <options.ui.contactlist.toolbars-state type=""></options.ui.contactlist.toolbars-state>
+        <options.ui.contactlist.toolbars.m0.actions type="QStringList">
+            <item>menu_add_contact</item>
+            <item>spacer</item>
+            <item>menu_account_setup</item>
+            <item>spacer</item>
+            <item>menu_disco</item>
+            <item>spacer</item>
+            <item>menu_xml_console</item>
+            <item>spacer</item>
+            <item>menu_change_profile</item>
+            <item>spacer</item>
+            <item>view_groups</item>
+            <item>spacer</item>
+            <item>help_about</item>
+        </options.ui.contactlist.toolbars.m0.actions>
+        <options.ui.contactlist.toolbars.m0.dock.nl type="bool">true</options.ui.contactlist.toolbars.m0.dock.nl>
+        <options.ui.contactlist.toolbars.m0.dock.position type="int">2</options.ui.contactlist.toolbars.m0.dock.position>
+        <options.ui.contactlist.toolbars.m0.key type="QString">{fd4f2bcc-c40c-4bad-9a0a-6ce0a6620145}</options.ui.contactlist.toolbars.m0.key>
+        <options.ui.contactlist.toolbars.m0.locked type="bool">true</options.ui.contactlist.toolbars.m0.locked>
+        <options.ui.contactlist.toolbars.m0.name type="QString">LunnaCat Advanced Panel</options.ui.contactlist.toolbars.m0.name>
+        <options.ui.contactlist.toolbars.m0.visible type="bool">false</options.ui.contactlist.toolbars.m0.visible>
+        <options.ui.contactlist.toolbars.m1.actions type="QStringList">
+            <item>event_notifier</item>
+        </options.ui.contactlist.toolbars.m1.actions>
+        <options.ui.contactlist.toolbars.m1.dock.nl type="bool">true</options.ui.contactlist.toolbars.m1.dock.nl>
+        <options.ui.contactlist.toolbars.m1.dock.position type="int">2</options.ui.contactlist.toolbars.m1.dock.position>
+        <options.ui.contactlist.toolbars.m1.key type="QString">{52669374-eefe-4f4e-8104-f2765ace3073}</options.ui.contactlist.toolbars.m1.key>
+        <options.ui.contactlist.toolbars.m1.locked type="bool">true</options.ui.contactlist.toolbars.m1.locked>
+        <options.ui.contactlist.toolbars.m1.name type="QString">LunnaCat Notify Panel</options.ui.contactlist.toolbars.m1.name>
+        <options.ui.contactlist.toolbars.m1.visible type="bool">true</options.ui.contactlist.toolbars.m1.visible>
+        <options.ui.contactlist.toolbars.m2.actions type="QStringList">
+            <item>button_options</item>
+            <item>menu_options</item>
+            <item>button_status</item>
+            <item>menu_join_groupchat</item>
+            <item>show_offline</item>
+        </options.ui.contactlist.toolbars.m2.actions>
+        <options.ui.contactlist.toolbars.m2.dock.nl type="bool">true</options.ui.contactlist.toolbars.m2.dock.nl>
+        <options.ui.contactlist.toolbars.m2.dock.position type="int">2</options.ui.contactlist.toolbars.m2.dock.position>
+        <options.ui.contactlist.toolbars.m2.key type="QString">{3b7d4a97-0ff3-4118-9eb7-aa664bfd9b9c}</options.ui.contactlist.toolbars.m2.key>
+        <options.ui.contactlist.toolbars.m2.locked type="bool">true</options.ui.contactlist.toolbars.m2.locked>
+        <options.ui.contactlist.toolbars.m2.name type="QString">LunnaCat General Panel</options.ui.contactlist.toolbars.m2.name>
+        <options.ui.contactlist.toolbars.m2.visible type="bool">true</options.ui.contactlist.toolbars.m2.visible>
+        <options.ui.contactlist.toolbars.m3.actions type=""></options.ui.contactlist.toolbars.m3.actions>
+        <options.ui.contactlist.toolbars.m3.dock.nl type=""></options.ui.contactlist.toolbars.m3.dock.nl>
+        <options.ui.contactlist.toolbars.m3.dock.position type=""></options.ui.contactlist.toolbars.m3.dock.position>
+        <options.ui.contactlist.toolbars.m3.key type=""></options.ui.contactlist.toolbars.m3.key>
+        <options.ui.contactlist.toolbars.m3.locked type=""></options.ui.contactlist.toolbars.m3.locked>
+        <options.ui.contactlist.toolbars.m3.name type=""></options.ui.contactlist.toolbars.m3.name>
+        <options.ui.contactlist.toolbars.m3.visible type=""></options.ui.contactlist.toolbars.m3.visible>
+        <options.ui.save.toolbars-state type="QByteArray">AAAA/wAAAAD9AAAAAAAAAMEAAAKKAAAABAAAAAQAAAAIAAAACPwAAAAaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAACAAAAAAAAAAIAAAAAAAAAAgAAAAEAAABsAG0AYQBpAG4AdwBpAG4ALQB0AG8AbwBsAGIAYQByAC0AewBmAGQANABmADIAYgBjAGMALQBjADQAMABjAC0ANABiAGEAZAAtADkAYQAwAGEALQA2AGMAZQAwAGEANgA2ADIAMAAxADQANQB9AAAAAAD/////AAAAAAAAAAAAAAADAAAAAAAAAAMAAAAAAAAAAwAAAAAAAAADAAAAAAAAAAMAAAAAAAAAAwAAAAAAAAADAAAAAAAAAAMAAAAAAAAAAwAAAAAAAAADAAAAAAAAAAMAAAABAAAAbABtAGEAaQBuAHcAaQBuAC0AdABvAG8AbABiAGEAcgAtAHsAMwBiADcAZAA0AGEAOQA3AC0AMABmAGYAMwAtADQAMQAxADgALQA5AGUAYgA3AC0AYQBhADYANgA0AGIAZgBkADkAYgA5AGMAfQEAAAAA/////wAAAAAAAAAAAAAAAwAAAAAAAAADAAAAAAAAAAMAAAAAAAAAAwAAAAAAAAADAAAAAQAAAGwAbQBhAGkAbgB3AGkAbgAtAHQAbwBvAGwAYgBhAHIALQB7ADUAMgA2ADYAOQAzADcANAAtAGUAZQBmAGUALQA0AGYANABlAC0AOAAxADAANAAtAGYAMgA3ADYANQBhAGMAZQAzADAANwAzAH0AAAAAAP////8AAAAAAAAAAA==</options.ui.save.toolbars-state>
+        <options.ui.tabs.grouping type="QString">CM</options.ui.tabs.grouping>
+        <options.iconsets.clients type="QString">fingerprint.jisp</options.iconsets.clients>
+        <options.iconsets.custom-status type=""></options.iconsets.custom-status>
+        <options.iconsets.status type="QString">stafex_psi_mod.jisp</options.iconsets.status>
+        <options.iconsets.system type="QString">lunnacat.jisp</options.iconsets.system>
+        <options.ui.chat.avatars.show type="bool">true</options.ui.chat.avatars.show>
+        <options.ui.chat.avatars.size type="int">80</options.ui.chat.avatars.size>
+        <options.ui.chat.central-toolbar type="bool">true</options.ui.chat.central-toolbar>
+        <options.ui.chat.disable-paste-send type="bool">true</options.ui.chat.disable-paste-send>
+        <options.ui.chat.use-expanding-line-edit type="bool">false</options.ui.chat.use-expanding-line-edit>
+        <options.ui.chat.use-message-icons type="bool">true</options.ui.chat.use-message-icons>
+        <options.ui.contactlist.css type="QString">/* всё окно */
+QMainWindow {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Roster.png) left top;
+	background-color: argb(188,255,120,0);}
+
+/* frame of avatar - general settings */
+/* фрейм с аватаром - общие настройки */
+RosterAvatarFrame * {
+	border: 1px outset #3C7896;
+	border-radius: 3px;}
+
+/* frame of avatar - avatar */
+/* фрейм с аватаром - аватар */
+QLabel#lb_avatar {
+	margin-left: 1px;
+	margin-right: -1px;
+	margin-bottom: 0px;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 argb(188,255,120,0), stop: 0.15 argb(188,255,120,80), stop: 0.5 argb(188,255,120,0) stop: 0.5 argb(188,255,120,0), stop: 0.85 argb(188,255,120,80), stop: 0.96 argb(188,255,120,0));
+	border-top-right-radius: 0px;
+	border-bottom-right-radius: 0px;}
+
+/* frame of avatar - nick */
+/* фрейм с аватаром - ник */
+QLabel#lb_nick {
+	margin-top: 1px;
+	margin-left: -1px;
+	margin-right: 0px;
+	margin-bottom: 0px;
+	font-size: 13px;
+	font-weight: bold;
+	color: #4BD7FF;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 argb(188,255,120,0), stop: 0.25 argb(188,255,120,80), stop: 1 argb(188,255,120,0));
+	border-radius: 0px;
+	border-right: 0px;
+	border-bottom: 0px;}
+
+/* frame of avatar - buttons of PEP and status */
+/* фрейм с аватаром - кнопки PEP и статуса */
+QToolButton#tb_mood, #tb_activity {
+	margin-top: 0px;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 argb(188,255,120,0), stop: 0.25 argb(188,255,120,80), stop: 1 argb(188,255,120,0));
+	width: 21px;
+	margin-bottom: -1px;
+	min-height: 27px;
+	border: 1px outset #3C7896;}
+
+QToolButton#tb_mood {
+	margin-left: 0px;
+	margin-right: 0px;
+	border-radius: 0px;
+	border-left: 0px;
+	border-right: 0px;}
+
+QToolButton#tb_activity {
+	margin-left: -1px;
+	border-left: 0px;
+	border-radius: 0px;
+	border-top-right-radius: 3px;}
+
+QToolButton#tb_status {
+	margin: -1px;
+	margin-bottom: 1px;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 argb(188,255,120,0), stop: 0.75 argb(188,255,120,80), stop: 1 argb(188,255,120,0));
+	border-radius: 0px;
+	width: 100%;
+	height: 100%;}
+
+QToolButton#tb_mood:hover, #tb_activity:hover {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 argb(188,255,120,0), stop: 0.25 argb(188,255,120,150), stop: 1 argb(188,255,120,0));}
+
+QToolButton#tb_status:hover {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 argb(188,255,120,0), stop: 0.75 argb(188,255,120,150), stop: 1 argb(188,255,120,0));}
+
+QToolButton#tb_mood:pressed, #tb_activity:pressed {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 argb(188,255,120,0), stop: 0.25 argb(188,255,120,250), stop: 1 argb(188,255,120,0));}
+
+QToolButton#tb_status:pressed {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 argb(188,255,120,0), stop: 0.75 argb(188,255,120,250), stop: 1 argb(188,255,120,0));}
+
+/* frame of avatar - button of status, arrow */
+/* фрейм с аватаром - кнопка статуса, стрелка */
+QToolButton#tb_status::menu-indicator {
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Dot.png);}
+
+/* frame of avatar - field of status message */
+/* фрейм с аватаром - строка статусного сообщения */
+QLineEdit#le_status_text {
+	margin-left: 0px;
+	margin-right: 1px;
+	margin-top: -1px;
+	margin-bottom: 0px;
+	font-size: 13px;
+	font-style: italic;
+	color: #5AB4E1;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 argb(188,255,120,0), stop: 0.75 argb(188,255,120,80), stop: 1 argb(188,255,120,0));
+	border-left: 0px;
+	border-radius: 0px;
+	border-bottom-right-radius: 3px;
+	min-height: 21px;}
+
+QLineEdit#le_status_text:hover {
+	color: #5BE7FF;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 argb(188,255,120,0), stop: 0.75 argb(188,255,120,150), stop: 1 argb(188,255,120,0));}
+
+/* фрейм с контактами - внешний */
+QStackedWidget {
+	margin-top: 1px;
+	margin-left: 1px;
+	margin-right: 1px;
+	background-color: #0A373C;
+	border: 1px inset #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* фрейм с контактами - внутренний */
+ContactListView {
+	background-color: #0A373C;
+	border: 0px;}
+
+/* фрейм с контактами - отфильтрованный */
+PsiFilteredContactListView {  }
+
+/* пропущенные события */
+MLabel {
+	margin-left: 1px;
+	margin-right: 1px;
+	color: #4BD7FF;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.28 argb(188,255,120,40), stop: 0.8 argb(188,255,120,40), stop: 1 #4BD7FF);
+	border: 1px solid #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* тул-бары ( вариант QToolBar) */
+PsiToolBar {
+	margin: 3px;
+	border: 0px;}
+
+/* кнопки на тул-барах */
+QToolButton {
+	margin: 1px;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.36 #1A475C, stop: 0.7 #1A479C,stop: 1 #4BD7FF);
+	border: 1px outset #3C7896;
+	border-radius: 3px;
+	padding: 1px;}
+
+QToolButton:hover {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.5 #2A678C, stop: 1 #4BD7FF);}
+
+QToolButton:pressed {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.36 #1A475C, stop: 0.7 #1A479C,stop: 1 #4BD7FF);}
+
+QToolButton:checked {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #0B87BF, stop: 0.36 argb(188,255,120,60), stop: 0.7 argb(188,255,120,60), stop: 1 #0B87BF);
+	border: 1px solid qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 argb(188,255,120,255), stop: 0.36 #1A475C, stop: 0.7 #1A479C, stop: 1 argb(188,255,120,255));}
+
+/* кнопка статусов */
+PopupActionButton {
+	margin-left: 1px;
+	margin-right: 1px;
+	min-width: 41px;
+	max-height: 41px;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.6 #2A678C, stop: 1 #4BD7FF);
+	border: 1px outset #3C7896;
+	border-radius: 3px;
+	padding: -10px;}
+
+PopupActionButton::menu-indicator {
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Dot.png);}
+
+PopupActionButton:hover {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #8BF7FF, stop: 0.6 #0F97AC, stop: 1 #8BF7FF);}
+
+PopupActionButton:hover:pressed {
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.6 #2A678C, stop: 1 #4BD7FF);}
+
+/* всплывающие подсказки */
+QToolTip {
+	color: #4BD7FF;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-color: #001E1F;
+	border: 1px solid #0A373C;}
+
+/* скролл-бары */
+QScrollBar:vertical {
+	margin: 16px 2px 16px 2px;
+	background-color: argb(182,200,80,10);
+	width: 18px;}
+
+QScrollBar:horizontal {
+	margin: 1px 16px 1px 16px;
+	background-color: argb(182,200,80,10);
+	height: 18px;}
+
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+	border: 1px outset #3C7896;
+	border-radius: 2px;}
+
+/* скролл-бар, верхняя стрелка*/
+QScrollBar::sub-line:vertical {
+	margin-left: 1px;
+	margin-right: 1px;
+	height: 9px;
+	background-color: argb(182,200,80,40);
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/ScrollBarArrowUp.png);
+	border: 1px outset #3C7896;
+	subcontrol-position: top;
+	subcontrol-origin: margin;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* скролл-бар, нижняя стрелка*/
+QScrollBar::add-line:vertical {
+	margin-left: 1px;
+	margin-right: 1px;
+	height: 9px;
+	background-color: argb(182,200,80,40);
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/ScrollBarArrowDown.png);
+	border: 1px outset #3C7896;
+	subcontrol-position: bottom;
+	subcontrol-origin: margin;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* скролл-бар, левая стрелка*/
+QScrollBar::sub-line:horizontal {
+	margin-top: 1px;
+	margin-bottom: 1px;
+	width: 9px;
+	background-color: argb(182,200,80,40);
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/ScrollBarArrowLeft.png);
+	border: 1px solid #3C7896;
+	subcontrol-position: left;
+	subcontrol-origin: margin;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* скролл-бар, правая стрелка*/
+QScrollBar::add-line:horizontal {
+	margin-top: 1px;
+	margin-bottom: 1px;
+	width: 9px;
+	background-color: argb(182,200,80,40);
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/ScrollBarArrowRight.png);
+	border: 1px solid #3C7896;
+	subcontrol-position: right;
+	subcontrol-origin: margin;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* скролл-бар, стрелки при наведении мышкой */
+QScrollBar::sub-line:vertical:hover, QScrollBar::sub-line:horizontal:hover {
+	background-color: argb(182,200,80,100);}
+
+QScrollBar::add-line:vertical:hover, QScrollBar::add-line:horizontal:hover {
+	background-color: argb(182,200,80,100);}
+
+/* скролл-бар - подложка */
+QScrollBar::sub-page:vertical, QScrollBar::add-page:vertical, QScrollBar::sub-page:horizontal, QScrollBar::add-page:horizontal  {
+	background-color: argb(182,200,80,0);
+	border: 1px solid #012929;}
+
+/* выделенный элемент ростера */
+QTreeView {
+	selection-color: #CFFFFF;
+	selection-background-color: #207085;}
+
+/* меню
+ContactListItemMenu {  } */
+
+/* индикатор меню */
+QToolButton::menu-indicator {
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Dot.png);}
+
+/* переименование контакта */
+QLineEdit {
+	color: #4BD7FF;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.12 #001D20, stop: 0.9 #001D20, stop: 1 #4BD7FF);
+	selection-background-color: #678DB2;
+	border: 1px solid #3C7896;
+	border-radius: 3px;
+	padding: 2px;}
+
+/* фильтр */
+QStackedWidget>QWidget>QLineEdit {
+	color: #4BD7FF;
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #4BD7FF, stop: 0.28 #001D20, stop: 0.8 #001D20, stop: 1 #4BD7FF);}
+
+/* меню */
+QMenu {
+	margin: 1px;
+	color: #4BD7FF;
+	selection-color: red;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-color: argb(188,255,120,0);
+	border: 1px solid #3C7896;
+	border-radius: 3px;
+	padding: 1px;}
+
+QMenu::disabled, QMenu::item:disabled:selected {
+	color: #3C7896;}
+
+QMenu::item {
+	padding: 2px 24px 2px 24px;
+	border: 1px solid transparent;}
+
+QMenu::item:selected {
+	color: #CFFFFF;
+	background-color: argb(188,255,120,70);}
+
+QMenu::icon {
+	background: argb(188,255,120,0);
+	border: 1px solid argb(188,255,120,0);
+	border-radius: 2px;
+	padding: 1px;}
+
+QMenu::icon:selected {
+	background: argb(188,255,120,0);
+	border: 1px solid argb(188,255,120,0);
+	border-radius: 2px;}
+
+QMenu::icon:selected:disabled {
+	background: argb(188,255,120,0);
+	border: 1px solid argb(188,255,120,0);
+	border-radius: 2px;}
+
+QMenu::icon:checked {
+	background: #012B2A;
+	border: 1px inset #207085;}
+
+QMenu::indicator:checked {
+	margin-left: 2px;
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/RadioButton.png);}
+
+QMenu::indicator:unchecked {
+	margin-left: 2px;
+	image: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/RadioButtonUnchecked.png);}
+
+QMenu::separator {
+	background-color: #3C7896;
+	height: 1px;}
+</options.ui.contactlist.css>
+        <options.ui.contactlist.enable-groups type="bool">true</options.ui.contactlist.enable-groups>
+        <options.ui.contactlist.show-activity-icons type="bool">true</options.ui.contactlist.show-activity-icons>
+        <options.ui.contactlist.show-all-client-icons type="bool">false</options.ui.contactlist.show-all-client-icons>
+        <options.ui.contactlist.show-client-icons type="bool">true</options.ui.contactlist.show-client-icons>
+        <options.ui.contactlist.show-geolocation-icons type="bool">false</options.ui.contactlist.show-geolocation-icons>
+        <options.ui.contactlist.show-group-counts type="bool">true</options.ui.contactlist.show-group-counts>
+        <options.ui.contactlist.show-menubar type="bool">false</options.ui.contactlist.show-menubar>
+        <options.ui.contactlist.show-mood-icons type="bool">true</options.ui.contactlist.show-mood-icons>
+        <options.ui.contactlist.show-status-icons type="bool">false</options.ui.contactlist.show-status-icons>
+        <options.ui.contactlist.show-tune-icons type="bool">true</options.ui.contactlist.show-tune-icons>
+        <options.ui.contactlist.status-icon-over-avatar type="bool">true</options.ui.contactlist.status-icon-over-avatar>
+        <options.ui.contactlist.status-messages.show type="bool">true</options.ui.contactlist.status-messages.show>
+        <options.ui.contactlist.status-messages.single-line type="bool">false</options.ui.contactlist.status-messages.single-line>
+        <options.ui.contactlist.tooltip.avatar type="bool">true</options.ui.contactlist.tooltip.avatar>
+        <options.ui.contactlist.tooltip.client-version type="bool">true</options.ui.contactlist.tooltip.client-version>
+        <options.ui.contactlist.tooltip.css type="QString">/* всплывающие подсказки */
+QFrame {
+	color: #4BD7FF;
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	background-color: argb(188,255,120,0);
+	border: 1px solid #004060;
+	padding-bottom: -2px;
+	padding-right: -2px;}</options.ui.contactlist.tooltip.css>
+        <options.ui.contactlist.tooltip.geolocation type="bool">true</options.ui.contactlist.tooltip.geolocation>
+        <options.ui.contactlist.tooltip.last-status type="bool">true</options.ui.contactlist.tooltip.last-status>
+        <options.ui.contactlist.tooltip.pgp type="bool">true</options.ui.contactlist.tooltip.pgp>
+        <options.ui.contactlist.use-status-change-animation type="bool">true</options.ui.contactlist.use-status-change-animation>
+        <options.ui.contactlist.use-transport-icons type="bool">true</options.ui.contactlist.use-transport-icons>
+        <options.ui.mac.use-brushed-metal-windows type="bool">true</options.ui.mac.use-brushed-metal-windows>
+        <options.ui.muc.colored-history type="bool">true</options.ui.muc.colored-history>
+        <options.ui.save.splitter-state type="QByteArray">AAAA/wAAAAAAAAABAAAA4gEAAAAGAQAAAAE=</options.ui.save.splitter-state>
+        <options.ui.save.tabs-geometry type="QSize">
+            <width>862</width>
+            <height>742</height>
+        </options.ui.save.tabs-geometry>
+        <options.ui.tabs.show-tab-buttons type="bool">false</options.ui.tabs.show-tab-buttons>
+        <options.ui.tabs.show-tab-close-buttons type="bool">true</options.ui.tabs.show-tab-close-buttons>
+        <options.ui.tabs.use-tabs type="bool">true</options.ui.tabs.use-tabs>
+        <options.ui.contactlist.show.self-contact type="bool">true</options.ui.contactlist.show.self-contact>
+        <options.ui.notifications.passive-popups.css type="QString">/* Фрейм в целом */
+QWidget {
+	color: #4BD7FF;}
+
+QFrame#Frame {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/Tooltip.png) right top;
+	border: 1px outset #3C7896;
+	border-radius: 3px;}
+
+/* Фрейм слева от иконки */
+QLabel#lb_top1 {
+	background: argb(188,255,120,0);
+	border: 0px;}
+
+/* Иконка */
+IconLabel#lb_icon {
+	background: argb(188,255,120,0);
+	border: 0px;}
+
+/* Заголовок */
+QLabel#lb_title {
+	color: #4BD7FF;
+	background: argb(188,255,120,0);
+	border: 0px;}
+
+/* Фрейм с кнопкой */
+QFrame#closeFrame {
+	background: argb(188,255,120,0);
+	border: 0px;}
+
+/* Кнопка */
+QToolButton#closeButton {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/TabCloseButton.png) center no-repeat;
+	icon-size: 0px;
+	border: 0px;}
+
+QToolButton#closeButton:hover {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/TabCloseButtonHover.png) center no-repeat;}
+
+QToolButton#closeButton:pressed {
+	background: url(D:/!Bakup/Portable/Psi/Psi+/skins/LunnaCat_1.1/TabCloseButtonPressed.png) center no-repeat;}
+
+/* Фрейм слева от аватара */
+QLabel#lb_mid1 {
+	background: argb(188,255,120,0);
+	border: 0px;}
+
+/* Фрейм справа от аватара */
+QLabel#lb_mid2 {
+	background: argb(188,255,120,0);
+	border: 0px;}
+
+/* Нижний фрейм */
+QLabel#lb_bottom1 {
+	max-height: 0px;
+	background: argb(188,255,120,0);
+	border: 0px;}</options.ui.notifications.passive-popups.css>
+        <options.ui.contactlist.show-roster-avatar-frame type="bool">true</options.ui.contactlist.show-roster-avatar-frame>
+        <options.ui.tabs.show-tab-icons type="bool">true</options.ui.tabs.show-tab-icons>
+        <options.ui.muc.show-client-icons type="bool">true</options.ui.muc.show-client-icons>
+        <options.ui.contactlist.roster-at-left-when-all-in-one-window type="bool">false</options.ui.contactlist.roster-at-left-when-all-in-one-window>
+        <options.ui.tabs.put-tabs-at-bottom type="bool">true</options.ui.tabs.put-tabs-at-bottom>
+        <options.ui.look.colors.muc.nick-colors type="QStringList">
+            <item>#D22A21</item>
+            <item>#D23818</item>
+            <item>#B84CD2</item>
+            <item>#A904D2</item>
+            <item>#804A18</item>
+            <item>#477C94</item>
+            <item>#0050D2</item>
+            <item>#2C5AD2</item>
+            <item>#0070D2</item>
+            <item>#2484D2</item>
+            <item>#05aa96</item>
+            <item>#3AD220</item>
+            <item>#00D246</item>
+            <item>#70CE04</item>
+            <item>#6AD204</item>
+            <item>#16B903</item>
+            <item>#05d219</item>
+            <item>#D2D234</item>
+            <item>#989719</item>
+            <item>#c89614</item>
+        </options.ui.look.colors.muc.nick-colors>
+        <options.ui.disable-send-button type="bool">false</options.ui.disable-send-button>
+        <options.ui.muc.roster-nick-coloring type="bool">false</options.ui.muc.roster-nick-coloring>
+        <options.ui.contactlist.roster-avatar-frame.avatar.size type="int">56</options.ui.contactlist.roster-avatar-frame.avatar.size>
+        <options.ui.contactlist.roster-avatar-frame.avatar.margin type="int">0</options.ui.contactlist.roster-avatar-frame.avatar.margin>
+        <options.ui.chat.use-small-chats type="bool">false</options.ui.chat.use-small-chats>
+        <options.iconsets.affiliations type="QString">planets-affiliations.jisp</options.iconsets.affiliations>
+        <options.ui.chat.scaled-message-icons type="bool">false</options.ui.chat.scaled-message-icons>
+        <options.ui.chat.theme type="QString">psi/LunnaCat_Classic_1.1</options.ui.chat.theme>
+        <options.ui.message.show-character-count type="bool">true</options.ui.message.show-character-count>
+        <options.ui.muc.show-affiliation-icons type="bool">true</options.ui.muc.show-affiliation-icons>
+        <options.ui.muc.show-groups type="bool">true</options.ui.muc.show-groups>
+        <options.ui.muc.use-hash-nick-coloring type="bool">false</options.ui.muc.use-hash-nick-coloring>
+        <options.ui.muc.use-highlighting type="bool">true</options.ui.muc.use-highlighting>
+        <options.ui.muc.use-nick-coloring type="bool">true</options.ui.muc.use-nick-coloring>
+        <options.ui.decorate-windows type="bool">false</options.ui.decorate-windows>
+        <options.ui.look.colors.chat.composing-color type="QColor">#9fffff</options.ui.look.colors.chat.composing-color>
+        <options.ui.look.colors.chat.unread-message-color type="QColor">#00d246</options.ui.look.colors.chat.unread-message-color>
+        <options.ui.look.colors.contactlist.status-change-animation1 type="QColor">#b5e5e5</options.ui.look.colors.contactlist.status-change-animation1>
+        <options.ui.look.colors.contactlist.status-change-animation2 type="QColor">#3c7896</options.ui.look.colors.contactlist.status-change-animation2>
+    </options>
+</skin>
