@@ -23,7 +23,6 @@ public:
 private:
 	QWidget *w;
 	QWidget *pluginWidget;
-	bool state_;
 	QPointer<QDialog> infoDialog;
 	Ui::PluginInfoDialog ui_;
 
@@ -31,7 +30,7 @@ private slots:
 	void listPlugins();
 	void pluginSelected(int index);
 	void showPluginInfo();
-	//void loadToggled(int state);
+	void loadToggled(bool state);
 };
 
 #endif

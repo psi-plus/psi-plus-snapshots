@@ -46,7 +46,7 @@ class PluginHost: public QObject, public StanzaSendingHost, public IqFilteringHo
 	Q_OBJECT
 	Q_INTERFACES(StanzaSendingHost IqFilteringHost OptionAccessingHost ShortcutAccessingHost IconFactoryAccessingHost
 		ActiveTabAccessingHost ApplicationInfoAccessingHost AccountInfoAccessingHost PopupAccessingHost ContactStateAccessingHost
-		PsiAccountControllingHost EventCreatingHost ContactInfoAccessingHost SoundAccessingHost);
+		PsiAccountControllingHost EventCreatingHost ContactInfoAccessingHost SoundAccessingHost)
 
 public:
 	PluginHost(PluginManager* manager, const QString& pluginFile);

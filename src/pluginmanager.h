@@ -42,7 +42,6 @@ public:
 	void addAccount(PsiAccount* account, XMPP::Client* client);
 
 	void loadEnabledPlugins();
-	void loadUnloadPlugin(QString plugin, bool load);
 	bool unloadAllPlugins();
 
 	QString pathToPlugin(const QString& plugin) const;

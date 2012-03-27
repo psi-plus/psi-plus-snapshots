@@ -93,8 +93,8 @@ void Idle::start()
 		d->idleSince = QDateTime::currentDateTime();
 	}
 
-	// poll every minute (use a lower value if you need more accuracy)
-	d->checkTimer.start(60000);
+	// poll every second (use a lower value if you need more accuracy)
+	d->checkTimer.start(1000);
 }
 
 void Idle::stop()

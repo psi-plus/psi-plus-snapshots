@@ -175,21 +175,27 @@ QWidget* PluginHost::optionsWidget() const
  */
 bool PluginHost::load()
 {
-  	qDebug() << "Loading Plugin " << file_;
+#ifndef PLUGINS_NO_DEBUG
+	qDebug() << "Loading Plugin " << file_;
+#endif
 	if (plugin_) {
-		qWarning() << QString("Plugin %1 was already loaded.").arg(file_);
+#ifndef PLUGINS_NO_DEBUG
+		qDebug() << QString("Plugin %1 was already loaded.").arg(file_);
+#endif
 	}
 	else {
 		if (!loader_) {
 			loader_ = new QPluginLoader(file_);
 		}
-	
+
 		QObject* plugin = loader_->instance();
 		if (!loader_->isLoaded()) {
 			delete loader_;
 		}
 		else if (plugin) {
+#ifndef PLUGINS_NO_DEBUG
 			qDebug("Trying to load plugin");
+#endif
 			//Check it's the right sort of plugin
 			PsiPlugin* psiPlugin = qobject_cast<PsiPlugin*>(plugin);
 			if (psiPlugin) {
@@ -234,14 +240,16 @@ bool PluginHost::load()
 bool PluginHost::unload()
 {
 	if (plugin_ && disable()) {
-		qWarning("Try to unload plugin %s", qPrintable(name_));
+#ifndef PLUGINS_NO_DEBUG
+		qDebug("Try to unload plugin %s", qPrintable(name_));
+#endif
 		if (!loader_) {
 			qWarning("Plugin %s's loader wasn't found when trying to unload", qPrintable(name_));
 			return false;
 		}
-		else if (loader_->unload()) {	
-	  		//if we're done with the plugin completely and it's unloaded
-	  		// we can delete the loader;	
+		else if (loader_->unload()) {
+			//if we're done with the plugin completely and it's unloaded
+			// we can delete the loader;
 			delete plugin_;
 			delete loader_;
 			plugin_ = 0;
@@ -279,96 +287,132 @@ bool PluginHost::enable()
 {
 	if (!enabled_ && load()) {
 		if (!connected_) {
+#ifndef PLUGINS_NO_DEBUG
 			qDebug() << "connecting plugin " << name_;
-	
+#endif
+
 			StanzaSender* s = qobject_cast<StanzaSender*>(plugin_);
 			if (s) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("connecting stanza sender");
+#endif
 				s->setStanzaSendingHost(this);
 			}
 
 			IqFilter* f = qobject_cast<IqFilter*>(plugin_);
 			if (f) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("connecting iq filter");
+#endif
 				f->setIqFilteringHost(this);
 			}
 
 			OptionAccessor* o = qobject_cast<OptionAccessor*>(plugin_);
 			if (o) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("connecting option accessor");
+#endif
 				o->setOptionAccessingHost(this);
 			}
 
 			ShortcutAccessor* sa = qobject_cast<ShortcutAccessor*>(plugin_);
 			if (sa) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("connecting shortcut accessor");
+#endif
 				sa->setShortcutAccessingHost(this);
 			}
 			PopupAccessor* pa = qobject_cast<PopupAccessor*>(plugin_);
 			if (pa) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("connecting popup accessor");
+#endif
 				pa->setPopupAccessingHost(this);
 			}
 			
 			IconFactoryAccessor* ia = qobject_cast<IconFactoryAccessor*>(plugin_);
 			if (ia) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("connecting iconfactory accessor");
+#endif
 				ia->setIconFactoryAccessingHost(this);
 			}
 			ActiveTabAccessor* ta = qobject_cast<ActiveTabAccessor*>(plugin_);
 			if (ta) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("connecting activetab accessor");
+#endif
 				ta->setActiveTabAccessingHost(this);
 			}
 			ApplicationInfoAccessor* aia = qobject_cast<ApplicationInfoAccessor*>(plugin_);
 			if (aia) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("connecting applicationinfo accessor");
+#endif
 				aia->setApplicationInfoAccessingHost(this);
 			}
 			AccountInfoAccessor* ai = qobject_cast<AccountInfoAccessor*>(plugin_);
 			if (ai) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("connecting accountinfo accessor");
+#endif
 				ai->setAccountInfoAccessingHost(this);
 			}
 			ToolbarIconAccessor *tia = qobject_cast<ToolbarIconAccessor*>(plugin_);
 			if (tia) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("load toolbaricon param");
+#endif
 				buttons_ = tia->getButtonParam();
 			}
 			GCToolbarIconAccessor *gtia = qobject_cast<GCToolbarIconAccessor*>(plugin_);
 			if (gtia) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("load gctoolbaricon param");
+#endif
 				gcbuttons_ = gtia->getGCButtonParam();
 			}
 			MenuAccessor *ma = qobject_cast<MenuAccessor*>(plugin_);
 			if (ma) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("load menu actions param");
+#endif
 				accMenu_ = ma->getAccountMenuParam();
 				contactMenu_ = ma->getContactMenuParam();
 			}
 			ContactStateAccessor *csa = qobject_cast<ContactStateAccessor*>(plugin_);
 			if (csa) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("connecting contactstate accessor");
+#endif
 				csa->setContactStateAccessingHost(this);
 			}
 			PsiAccountController *pac = qobject_cast<PsiAccountController*>(plugin_);
 			if (pac) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("connectint psiaccount controller");
+#endif
 				pac->setPsiAccountControllingHost(this);
 			}
 			EventCreator *ecr = qobject_cast<EventCreator*>(plugin_);
 			if (ecr) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("connectint event creator");
+#endif
 				ecr->setEventCreatingHost(this);
 			}
 			ContactInfoAccessor *cia = qobject_cast<ContactInfoAccessor*>(plugin_);
 			if (cia) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("connecting contactinfo accessor");
+#endif
 				cia->setContactInfoAccessingHost(this);
 			}
 			SoundAccessor *soa = qobject_cast<SoundAccessor*>(plugin_);
 			if(soa) {
+#ifndef PLUGINS_NO_DEBUG
 				qDebug("connecting sound accessor");
+#endif
 				soa->setSoundAccessingHost(this);
 			}
 
@@ -646,7 +690,9 @@ QString PluginHost::escape(const QString &str)
 void PluginHost::addIqNamespaceFilter(const QString &ns, IqNamespaceFilter *filter)
 {
 	if (iqNsFilters_.values(ns).contains(filter)) {
-		qWarning("pluginmanager: blocked attempt to register the same filter again");
+#ifndef PLUGINS_NO_DEBUG
+		qDebug("pluginmanager: blocked attempt to register the same filter again");
+#endif
 	} else {
 		iqNsFilters_.insert(ns, filter);
 	}
@@ -671,9 +717,13 @@ void PluginHost::addIqNamespaceFilter(const QString &ns, IqNamespaceFilter *filt
  */
 void PluginHost::addIqNamespaceFilter(const QRegExp &ns, IqNamespaceFilter *filter)
 {
+#ifndef PLUGINS_NO_DEBUG
 	qDebug("add nsx");
+#endif
 	if (iqNsxFilters_.values(ns).contains(filter)) {
-		qWarning("pluginmanager: blocked attempt to register the same filter again");
+#ifndef PLUGINS_NO_DEBUG
+		qDebug("pluginmanager: blocked attempt to register the same filter again");
+#endif
 	} else {
 		iqNsxFilters_.insert(ns, filter);
 	}

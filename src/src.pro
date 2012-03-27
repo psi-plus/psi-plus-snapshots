@@ -166,3 +166,7 @@ mac {
 	RC_FILE = ../mac/application.icns
 	QMAKE_POST_LINK = cp -R ../certs ../iconsets ../sound `dirname $(TARGET)`/../Resources ; echo "APPLpsi " > `dirname $(TARGET)`/../PkgInfo
 }
+
+release {
+        DEFINES += PLUGINS_NO_DEBUG
+}

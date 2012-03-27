@@ -44,16 +44,12 @@ QWidget *OptionsTabPlugins::widget()
 	OptPluginsUI *d = (OptPluginsUI *)w;
 
 	d->pb_info->setIcon(QIcon(IconsetFactory::iconPixmap("psi/info")));
+	d->cb_loadPlugin->setProperty("isOption", false);
 
 	listPlugins();
 
-	
-	/*d->ck_messageevents->setWhatsThis(
-		tr("Enables the sending and requesting of message events such as "
-		"'Contact is Typing', ..."));*/
-
 	connect(d->cb_plugins,SIGNAL(currentIndexChanged(int)),SLOT(pluginSelected(int)));
-	//connect(d->cb_loadPlugin,SIGNAL(stateChanged(int)),SLOT(loadToggled(int)));
+	connect(d->cb_loadPlugin,SIGNAL(toggled(bool)),SLOT(loadToggled(bool)));
 	connect(d->pb_info, SIGNAL(clicked()), SLOT(showPluginInfo()));
 	
 	return w;
@@ -66,13 +62,7 @@ void OptionsTabPlugins::applyOptions()
 
 	OptPluginsUI *d = (OptPluginsUI *)w;
 	QString pluginName=d->cb_plugins->currentText();
-	bool value=d->cb_loadPlugin->isChecked();
-	if(value != state_) {
-		PluginManager::instance()->loadUnloadPlugin(d->cb_plugins->currentText(), value);
-		pluginSelected(0);
-	}
-
-	if(state_)
+	if(d->cb_loadPlugin->isChecked())
 		PluginManager::instance()->applyOptions( pluginName );
 }
 
@@ -81,8 +71,9 @@ void OptionsTabPlugins::restoreOptions()
 	if ( !w )
 		return;
 
-	if(state_) {
-		OptPluginsUI *d = (OptPluginsUI *)w;
+	OptPluginsUI *d = (OptPluginsUI *)w;
+
+	if(d->cb_loadPlugin->isChecked()) {
 		QString pluginName=d->cb_plugins->currentText();
 		PluginManager::instance()->restoreOptions( pluginName );
 	}
@@ -107,15 +98,14 @@ void OptionsTabPlugins::listPlugins()
 	
 	QStringList plugins = pm->availablePlugins();
 	plugins.sort();
-	foreach (QString plugin, plugins){
+	foreach (const QString& plugin, plugins){
 		d->cb_plugins->addItem(plugin);
 	}
 	pluginSelected(0);
 }
 
-/*void OptionsTabPlugins::loadToggled(int state)
+void OptionsTabPlugins::loadToggled(bool state)
 {
-	Q_UNUSED(state);
 	if ( !w )
 		return;
 	
@@ -123,10 +113,11 @@ void OptionsTabPlugins::listPlugins()
 	
 	QString option=QString("%1.%2")
 		.arg(PluginManager::loadOptionPrefix)
-		.arg(PluginManager::instance()->shortName(d->cb_plugins->currentText()));
-	bool value=d->cb_loadPlugin->isChecked(); 
-	PsiOptions::instance()->setOption(option, value);
-}*/
+		.arg(PluginManager::instance()->shortName(d->cb_plugins->currentText())); 
+	PsiOptions::instance()->setOption(option, state);
+
+	pluginSelected(0);
+}
 
 void OptionsTabPlugins::pluginSelected(int index)
 {
@@ -152,9 +143,10 @@ void OptionsTabPlugins::pluginSelected(int index)
 			.arg(PluginManager::loadOptionPrefix)
 			.arg(PluginManager::instance()->shortName(pluginName));
 		d->cb_loadPlugin->setChecked(PsiOptions::instance()->getOption(option, false).toBool());
-		state_ = d->cb_loadPlugin->isChecked();
 		pluginOptions->setParent(d);
-		qWarning("Showing Plugin options");
+#ifndef PLUGINS_NO_DEBUG
+		qDebug("Showing Plugin options");
+#endif
 		d->vboxLayout1->addWidget(pluginOptions);
 		emit connectDataChanged(w);
 		//d->pluginOptions->show();

@@ -110,7 +110,9 @@ QList<PluginHost*> PluginManager::updatePluginsList()
 		foreach (QString file, dir.entryList(QDir::Files)) {
 			file = dir.absoluteFilePath(file);
 			if (QLibrary::isLibrary(file)) {
-				qWarning("Found plugin: %s", qPrintable(file));
+#ifndef PLUGINS_NO_DEBUG
+				qDebug("Found plugin: %s", qPrintable(file));
+#endif
 				if (!pluginByFile_.contains(file)) {
 					PluginHost* host = new PluginHost(this, file);
 					if (host->isValid() && !hosts_.contains(host->name())) {
@@ -129,7 +131,9 @@ QList<PluginHost*> PluginManager::updatePluginsList()
 						}
 					}
 				} else {
-					qWarning("Which we already knew about");
+#ifndef PLUGINS_NO_DEBUG
+					qDebug("Which we already knew about");
+#endif
 				}
 			}
 		}
@@ -164,7 +168,9 @@ void PluginManager::accountDestroyed()
  */
 void PluginManager::loadEnabledPlugins()
 {
+#ifndef PLUGINS_NO_DEBUG
 	qDebug("Loading enabled plugins");
+#endif
 	foreach (PluginHost* plugin, pluginsByPriority_) {
 		loadPluginIfEnabled(plugin);
 	}
@@ -173,25 +179,16 @@ void PluginManager::loadEnabledPlugins()
 void PluginManager::loadPluginIfEnabled(PluginHost *plugin)
 {
 	const QString option = QString("%1.%2").arg(loadOptionPrefix).arg(plugin->shortName());
-	if (PsiOptions::instance()->getOption(option).toBool()) {
-		qWarning("Plugin %s is enabled in config: loading", qPrintable(plugin->shortName()));
-		plugin->enable();
+	QVariant load = PsiOptions::instance()->getOption(option);
+	if(!load.isValid()) {
+		PsiOptions::instance()->setOption(option, false);
+		load = QVariant(false);
 	}
-}
-
-void PluginManager::loadUnloadPlugin(QString pluginName, bool load)
-{
-	if (hosts_.contains(pluginName)) {
-		PluginHost* plugin = hosts_[pluginName];
-		QString option = QString("%1.%2").arg(loadOptionPrefix).arg(plugin->shortName());
-		PsiOptions::instance()->setOption(option, QVariant(load));
- 		if(load) {            
-			plugin->enable();
-		} else {
-			if(optionsWidget_)
-				delete optionsWidget_;
-			plugin->unload();
-		}
+	if (load.toBool()) {
+#ifndef PLUGINS_NO_DEBUG
+		qDebug("Plugin %s is enabled in config: loading", qPrintable(plugin->shortName()));
+#endif
+		plugin->enable();
 	}
 }
 
@@ -202,12 +199,20 @@ void PluginManager::loadUnloadPlugin(QString pluginName, bool load)
  */
 void PluginManager::optionChanged(const QString& option)
 {
-	//QString("%1.%2").arg(loadOptionPrefix).arg(shortNames_[plugin]);
-
-	//TODO(mck): implement this... for now, enabling/disabling requires psi restart
-
+	bool pluginOpt = option.startsWith(loadOptionPrefix);
+	const QString shortName = option.split(".").last();
 	foreach (PluginHost* plugin, pluginByFile_.values()) {
 		plugin->optionChanged(option);
+		if(pluginOpt && plugin->shortName() == shortName) {
+			if(PsiOptions::instance()->getOption(option).toBool()) {
+				plugin->enable();
+			}
+			else {
+				if(optionsWidget_)
+					delete optionsWidget_;
+				plugin->unload();
+			}
+		}
 	}
 }
 
@@ -216,7 +221,9 @@ void PluginManager::optionChanged(const QString& option)
  */ 
 void PluginManager::loadAllPlugins()
 {
+#ifndef PLUGINS_NO_DEBUG
 	qDebug("Loading all plugins");
+#endif
   	//Any static (compiled in) plugins we happen to have
 	/*foreach( QObject* plugin, QPluginLoader::staticInstances() ) {
 		loadPlugin( plugin );
@@ -236,7 +243,9 @@ void PluginManager::loadAllPlugins()
  */ 
 bool PluginManager::unloadAllPlugins()
 {
+#ifndef PLUGINS_NO_DEBUG
 	qDebug("Unloading all plugins");
+#endif
 	bool ok = true;
 	foreach (PluginHost* plugin, hosts_.values()) {
 		if (!plugin->unload()) {
@@ -310,7 +319,9 @@ QWidget* PluginManager::optionsWidget(const QString& plugin)
 	}
 
 	if(!optionsWidget_) {
+#ifndef PLUGINS_NO_DEBUG
 		qWarning("Attempting to get options for %s which doesn't exist", qPrintable(plugin));
+#endif
 		optionsWidget_ = new QLabel(tr("This plugin has no user configurable options"));
 	}
 	return optionsWidget_;
