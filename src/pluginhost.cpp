@@ -1234,6 +1234,11 @@ void PluginHost::setStatus(int account, const QString& status, const QString& st
 	manager_->setStatus(account, status, statusMessage);
 }
 
+bool PluginHost::appendSysMsg(int account, const QString& jid, const QString& message)
+{
+	return manager_->appendSysMsg(account, jid, message);
+}
+
 void PluginHost::createNewEvent(int account, const QString& jid, const QString& descr, QObject *receiver, const char* slot)
 {
 	manager_->createNewEvent(account, jid, descr, receiver, slot);

@@ -32,6 +32,8 @@
 #include "psiiconset.h"
 #include "popupmanager.h"
 
+#include "chatdlg.h"
+
 
 //TODO(mck)
 // - use native separators when displaying file path
@@ -807,6 +809,26 @@ void PluginManager::setStatus(int account, const QString& status, const QString&
 		}
 	}
 }
+
+bool PluginManager::appendSysMsg(int account, const QString& jid, const QString& message)
+{
+	if(account < accountIds_.size()) {
+		PsiAccount *acc = accountIds_.key(account);
+		if(acc) {
+			XMPP::Jid j (jid);
+			ChatDlg *chatDlg = acc->findChatDialogEx(j);
+			if(!chatDlg) {
+				chatDlg = acc->findChatDialog(j, false);
+			}
+			if(chatDlg) {
+				chatDlg->appendSysMsg(message);
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 
 void PluginManager::createNewEvent(int account, const QString &jid, const QString &descr, QObject *receiver, const char *slot)
 {

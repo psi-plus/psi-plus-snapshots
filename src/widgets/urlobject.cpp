@@ -20,7 +20,6 @@
 
 #include "urlobject.h"
 #include "psioptions.h"
-#include "psiiconset.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -70,12 +69,10 @@ public:
 
 		tr = qApp->translate("URLLabel", "Send message to");
 		act_send_message = new IconAction(tr, "psi/message", tr, 0, this);
-		((PsiIcon*)act_send_message->psiIcon())->removeAnim();
 		connectXmppAction(act_send_message, "message");
 		
 		tr = qApp->translate("URLLabel", "Chat with");
 		act_chat = new IconAction(tr, "psi/chat", tr, 0, this);
-		((PsiIcon*)act_chat->psiIcon())->removeAnim();
 		connectXmppAction(act_chat, "message;type=chat");
 
 		tr = qApp->translate("URLLabel", "Join groupchat");
