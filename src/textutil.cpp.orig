@@ -150,7 +150,7 @@ QString TextUtil::rich2plain(const QString &in)
 				out += '\n';
 			
 			// handle output of Qt::convertFromPlainText() correctly
-			if((tagName == "p" || tagName == "/p" || tagName == "div") && out.length() > 0)
+			if((tagName == "p" || tagName == "/p") && out.length() > 0)
 				out += '\n';
 		}
 		// entity?
@@ -422,8 +422,7 @@ QString TextUtil::linkify(const QString &in)
 			href = Qt::escape(href);
 			href = linkify_htmlsafe(href);
 			//printf("link: [%s], href=[%s]\n", link.latin1(), href.latin1());
-			QColor lcolor=PsiOptions::instance()->getOption("options.ui.look.colors.chat.link-color").toString();
-			linked = QString("<a href=\"%1\" style=\"color:"+lcolor.name()+"\">").arg(href) + Qt::escape(link) + "</a>" + Qt::escape(pre.mid(cutoff));
+			linked = QString("<a href=\"%1\">").arg(href) + Qt::escape(link) + "</a>" + Qt::escape(pre.mid(cutoff));
 			out.replace(x1, len, linked);
 			n = x1 + linked.length() - 1;
 		}
@@ -456,8 +455,7 @@ QString TextUtil::linkify(const QString &in)
 
 			href += link;
 			//printf("link: [%s], href=[%s]\n", link.latin1(), href.latin1());
-			QColor mcolor=PsiOptions::instance()->getOption("options.ui.look.colors.chat.mailto-color").toString();
-			linked = QString("<a href=\"%1\" style=\"color:"+mcolor.name()+"\">").arg(href) + link + "</a>";
+			linked = QString("<a href=\"%1\">").arg(href) + link + "</a>";
 			out.replace(x1, len, linked);
 			n = x1 + linked.length() - 1;
 		}
@@ -542,15 +540,6 @@ QString TextUtil::emoticonify(const QString &in)
 	return out;
 }
 
-QString TextUtil::img2title(const QString &in)
-{
-	QString ret = in;
-	QRegExp rxq("<img[^>]+title\\s*=\\s*'([^']+)'[^>]*>"),  rxdq("<img[^>]+title\\s*=\\s*\"([^\"]+)\"[^>]*>");
-	ret.replace(rxq, "\\1");
-	ret.replace(rxdq, "\\1");
-	return ret;
-}
-
 QString TextUtil::legacyFormat(const QString& in)
 {
 
@@ -567,4 +556,39 @@ QString TextUtil::legacyFormat(const QString& in)
 	out=out.replace(QRegExp("(^|\\s|>)\\/(\\S+)\\/(<|\\s|$)"),"\\1<i>/\\2/</i>\\3");
 
 	return out;
+}
+
+/**
+ * Creates linkified and optionally emoticonified and legacy-formatted rich text.
+ * \a text, text to modify (either plain or rich, depending on \a isHtml
+ * \a isEmote, if true, remove "/me " part
+ * \a isHtml, if false, \a text is first converted to rich text.
+ */
+QString TextUtil::prepareMessageText(const QString& text, bool isEmote, bool isHtml)
+{
+	static const QString me_cmd = "/me ";
+
+	QString txt = text;
+
+	if (isHtml) {
+		if (isEmote) {
+			int cmd = txt.indexOf(me_cmd);
+			txt = txt.remove(cmd, me_cmd.length());
+		}
+	}
+	else {
+		if (isEmote) {
+			txt = txt.mid(me_cmd.length());
+		}
+
+		txt = TextUtil::plain2rich(txt);
+		txt = TextUtil::linkify(txt);
+	}
+
+	if (PsiOptions::instance()->getOption("options.ui.emoticons.use-emoticons").toBool())
+		txt = TextUtil::emoticonify(txt);
+	if (PsiOptions::instance()->getOption("options.ui.chat.legacy-formatting").toBool())
+		txt = TextUtil::legacyFormat(txt);
+
+	return txt;
 }
