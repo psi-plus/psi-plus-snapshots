@@ -618,7 +618,6 @@ void Client::send(const QDomElement &x)
 		return;
 	}
 
-	emit stanzaElementOutgoing(e);
 	QString out = s.toString();
 	debug(QString("Client: outgoing: [\n%1]\n").arg(out));
 	emit xmlOutgoing(out);

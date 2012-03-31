@@ -42,6 +42,7 @@ public:
 	PsiDBusNotifier(PopupManager* manager);
 	~PsiDBusNotifier();
 	static bool isAvailable();
+	static QStringList capabilities();
 	void popup(PsiAccount* account, PopupManager::PopupType type, const Jid& j, const Resource& r, const UserListItem* = 0, PsiEvent* = 0);
 	void popup(PsiAccount *account, const Jid &j, const PsiIcon *titleIcon, const QString& titleText,
 				    const QPixmap *avatar, const PsiIcon *icon, const QString& text, PopupManager::PopupType type);
@@ -53,12 +54,16 @@ private slots:
 	void readyToDie();
 
 private:
+	static bool checkServer();
+
+private:
 	PopupManager* pm_;
 	Jid jid_;
 	uint id_;
 	PsiAccount *account_;
 	PsiEvent *event_;
 	QTimer *lifeTimer_;
+	static QStringList caps_;
 };
 
 #endif

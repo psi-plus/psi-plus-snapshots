@@ -46,7 +46,8 @@
 #include "textutil.h"
 
 
-static int minLifeTime = 5000;
+static const int minLifeTime = 5000;
+static const QString markupCaps = "body-markup";
 
 class iiibiiay
 {
@@ -73,7 +74,7 @@ public:
 	int channels;
 	QByteArray image;
 };
-Q_DECLARE_METATYPE(iiibiiay);
+Q_DECLARE_METATYPE(iiibiiay)
 
 const int iiibiiay::id(qDBusRegisterMetaType<iiibiiay>());
 
@@ -123,11 +124,34 @@ PsiDBusNotifier::~PsiDBusNotifier()
 
 bool PsiDBusNotifier::isAvailable()
 {
-	static bool ret = QDBusInterface("org.freedesktop.Notifications",
-					   "/org/freedesktop/Notifications",
-					   "org.freedesktop.Notifications",
-					   QDBusConnection::sessionBus()).isValid();
+	static bool ret = checkServer();
 	return ret;
+}
+
+bool PsiDBusNotifier::checkServer()
+{
+	QDBusInterface i("org.freedesktop.Notifications",
+			"/org/freedesktop/Notifications",
+			"org.freedesktop.Notifications",
+			QDBusConnection::sessionBus());
+	if(!i.isValid())
+		return false;
+
+	//We'll need caps in the future
+	QDBusMessage m = createMessage("GetCapabilities");
+	QDBusMessage ret = QDBusConnection::sessionBus().call(m);
+	if(ret.type() != QDBusMessage::InvalidMessage && !ret.arguments().isEmpty()) {
+		QVariant v = ret.arguments().first();
+		if(v.type() == QVariant::StringList)
+			caps_ = v.toStringList();
+	}
+
+	return true;
+}
+
+QStringList PsiDBusNotifier::capabilities()
+{
+	return caps_;
 }
 
 void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, const Jid& jid, const Resource& r, const UserListItem* uli, PsiEvent* event)
@@ -262,6 +286,9 @@ void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, c
 	}
 
 	int lifeTime = pm_->timeout(type);
+	bool bodyMarkup = capabilities().contains(markupCaps);
+	text = TextUtil::rich2plain(text);
+	text = bodyMarkup ? TextUtil::escape(text) : text;
 	QDBusMessage m = createMessage("Notify");
 	QVariantList args;
 	args << QString(ApplicationInfo::name());
@@ -302,13 +329,16 @@ void PsiDBusNotifier::popup(PsiAccount *account, const Jid &jid, const PsiIcon *
 	}
 
 	int lifeTime = pm_->timeout(type);
+	bool bodyMarkup = capabilities().contains(markupCaps);
+	QString plainText = TextUtil::rich2plain(text);
+	plainText = bodyMarkup ? TextUtil::escape(plainText) : plainText;
 	QDBusMessage m = createMessage("Notify");
 	QVariantList args;
 	args << QString(ApplicationInfo::name());
 	args << QVariant(QVariant::UInt);
 	args << QVariant("");
 	args << QString(titleText);
-	args << QString(TextUtil::rich2plain(text));
+	args << QString(plainText);
 	args << QStringList();
 	args << hints;
 	args << lifeTime;
@@ -380,3 +410,5 @@ void PsiDBusNotifier::readyToDie()
 
 	deleteLater();
 }
+
+QStringList PsiDBusNotifier::caps_ = QStringList();
