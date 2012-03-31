@@ -336,7 +336,7 @@ public:
 			QDomElement query = doc()->createElement("query");
 			query.setAttribute("xmlns", ns);
 			iq.appendChild(query);
-			query.setAttribute("seconds", pa_->idle());
+			query.setAttribute("seconds", pa_->psi()->idle());
 
 			send(iq);
 			return true;
@@ -530,9 +530,6 @@ public:
 
 	QList<PsiContact*> contacts;
 	int onlineContactsCount;
-
-	bool useOffline, useNotAvailable, useAway, menuXA;
-	int offlineAfter, notAvailableAfter, awayAfter;
 
 private:
 	bool doPopups_;
@@ -919,13 +916,6 @@ public slots:
 	}
 
 public:
-	enum AutoAway {
-		AutoAway_None = 0,
-		AutoAway_Away,
-		AutoAway_XA,
-		AutoAway_Offline
-	};
-
 	void setAutoAway(AutoAway autoAway)
 	{
 		if (!account->isAvailable())
@@ -1168,6 +1158,8 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, CapsRegis
 	d->client->setFileTransferEnabled(false);
 #endif
 
+	setSendChatState(PsiOptions::instance()->getOption("options.messages.send-composing-events").toBool());
+	setReceipts(PsiOptions::instance()->getOption("options.ui.notifications.send-receipts").toBool());
 
 	//connect(d->client, SIGNAL(connected()), SLOT(client_connected()));
 	//connect(d->client, SIGNAL(handshaken()), SLOT(client_handshaken()));
@@ -1201,6 +1193,7 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, CapsRegis
 
 	// Caps manager
 	d->capsManager = new CapsManager(d->client->jid(), capsRegistry, new IrisProtocol::DiscoInfoQuerier(d->client));
+	d->capsManager->setEnabled(PsiOptions::instance()->getOption("options.service-discovery.enable-entity-capabilities").toBool());
 
 	// Roster item exchange task
 	d->rosterItemExchangeTask = new RosterItemExchangeTask(d->client->rootTask());
@@ -1256,6 +1249,7 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, CapsRegis
 	d->rcSetOptionsServer = 0;
 	d->rcForwardServer = 0;
 	d->rcLeaveMucServer =0;
+	setRCEnabled(PsiOptions::instance()->getOption("options.external-control.adhoc-remote-control.enable").toBool());
 
 	//Idle server
 	if(PsiOptions::instance()->getOption("options.service-discovery.last-activity").toBool()) {
@@ -1367,9 +1361,6 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, CapsRegis
 	d->contactList->link(this);
 
 	d->updateContacts(); //update always visible contacts state
-
-	//init some settings
-	optionsUpdate();
 }
 
 PsiAccount::~PsiAccount()
@@ -1664,11 +1655,6 @@ const Jid & PsiAccount::jid() const
 QString PsiAccount::nameWithJid() const
 {
 	return (name() + " (" + JIDUtil::toString(jid(),true) + ')');
-}
-
-int PsiAccount::idle() const
-{
-	return d->lastIdle;
 }
 
 void PsiAccount::autoLogin()
@@ -3178,22 +3164,9 @@ void PsiAccount::publishTune(const Tune& tune)
 	d->pepManager->publish("http://jabber.org/protocol/tune",PubSubItem("current",t));
 }
 
-void PsiAccount::secondsIdle(int seconds)
+void PsiAccount::setAutoAwayStatus(AutoAway status)
 {
-	if (d->acc.ignore_global_actions)
-		return;
-
-	d->lastIdle = seconds;
-	int minutes = seconds / 60;
-
-	if(d->useOffline && d->offlineAfter > 0 && minutes >= d->offlineAfter)
-		d->setAutoAway(Private::AutoAway_Offline);
-	else if(d->useNotAvailable && d->menuXA && d->notAvailableAfter > 0 && minutes >= d->notAvailableAfter)
-		d->setAutoAway(Private::AutoAway_XA);
-	else if(d->useAway && d->awayAfter > 0 && minutes >= d->awayAfter)
-		d->setAutoAway(Private::AutoAway_Away);
-	else
-		d->setAutoAway(Private::AutoAway_None);
+	d->setAutoAway(status);
 }
 
 void PsiAccount::playSound(PsiAccount::SoundType _onevent)
@@ -6294,14 +6267,6 @@ void PsiAccount::optionsUpdate()
 
 	// Caps manager
 	d->capsManager->setEnabled(o->getOption("options.service-discovery.enable-entity-capabilities").toBool());
-
-	d->useOffline = o->getOption("options.status.auto-away.use-offline").toBool();
-	d->useNotAvailable = o->getOption("options.status.auto-away.use-not-availible").toBool();
-	d->useAway = o->getOption("options.status.auto-away.use-away").toBool();
-	d->offlineAfter = o->getOption("options.status.auto-away.offline-after").toInt();
-	d->notAvailableAfter = o->getOption("options.status.auto-away.not-availible-after").toInt();
-	d->awayAfter = o->getOption("options.status.auto-away.away-after").toInt();
-	d->menuXA = o->getOption("options.ui.menu.status.xa").toBool();
 }
 
 
@@ -6367,7 +6332,6 @@ void PsiAccount::invokeGCMessage(const Jid &j)
 	u->setInList(false);
 	u->setName(j.resource());
 	u->setPrivate(true);
-	u->setAvatarFactory(avatarFactory());
 
 	// make a resource so the contact appears online
 	UserResource ur;
@@ -6394,6 +6358,7 @@ void PsiAccount::invokeGCChat(const Jid &j)
 	u->setInList(false);
 	u->setName(j.resource());
 	u->setPrivate(true);
+	u->setAvatarFactory(avatarFactory());
 
 	// make a resource so the contact appears online
 	UserResource ur;

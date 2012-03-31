@@ -126,8 +126,6 @@ public:
 	const Jid & jid() const;
 	QString nameWithJid() const;
 
-	int idle() const;
-
 	XMPP::Client *client() const;
 	virtual ContactProfile *contactProfile() const;
 	EventQueue *eventQueue() const;
@@ -142,6 +140,16 @@ public:
 	int defaultPriority(const XMPP::Status &);
 	void setStatusDirect(const XMPP::Status &, bool withPriority = false);
 	void setStatusActual(const XMPP::Status &);
+
+	enum AutoAway {
+		AutoAway_None = 0,
+		AutoAway_Away,
+		AutoAway_XA,
+		AutoAway_Offline
+	};
+
+	void setAutoAwayStatus(AutoAway status);
+
 	bool noPopup() const;
 	bool loggedIn() const;
 	void setNick(const QString &);
@@ -303,7 +311,6 @@ public slots:
 
 	void incomingVoiceCall(const Jid&);
 	
-	void secondsIdle(int);
 	void openNextEvent(ActivationType activationType);
 	int forwardPendingEvents(const Jid &jid);
 	void autoLogin();
