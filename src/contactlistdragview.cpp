@@ -252,6 +252,7 @@ void ContactListDragView::setModel(QAbstractItemModel* newModel)
 		disconnect(model(), SIGNAL(modelAboutToBeReset()), this, SLOT(modelChanged()));
 		disconnect(model(), SIGNAL(layoutAboutToBeChanged()), this, SLOT(modelChanged()));
 		disconnect(model(), SIGNAL(layoutChanged()), this, SLOT(doItemsLayout()));
+		disconnect(model(), SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(closeCurrentEditor()));
 	}
 
 	// it's critical that we hook on signals prior to selectionModel,
@@ -265,6 +266,8 @@ void ContactListDragView::setModel(QAbstractItemModel* newModel)
 		// invalidating proxy model, and we want tree state to be up to date in order
 		// to avoid weird impossible crashes
 		connect(newModel, SIGNAL(layoutChanged()), this, SLOT(doItemsLayout()));
+
+		connect(newModel, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(closeCurrentEditor()));
 	}
 
 	ContactListView::setModel(newModel);
@@ -650,6 +653,11 @@ void ContactListDragView::removeSelection()
 	QMimeData* mimeData = selection();
 	emit removeSelection(mimeData);
 	delete mimeData;
+}
+
+void ContactListDragView::closeCurrentEditor()
+{
+	closeEditor(currentEditor(), QAbstractItemDelegate::NoHint);
 }
 
 bool ContactListDragView::extendedSelectionAllowed() const

@@ -49,7 +49,7 @@ QWidget *OptionsTabPlugins::widget()
 	listPlugins();
 
 	connect(d->cb_plugins,SIGNAL(currentIndexChanged(int)),SLOT(pluginSelected(int)));
-	connect(d->cb_loadPlugin,SIGNAL(toggled(bool)),SLOT(loadToggled(bool)));
+	connect(d->cb_loadPlugin,SIGNAL(clicked(bool)),SLOT(loadToggled(bool)));
 	connect(d->pb_info, SIGNAL(clicked()), SLOT(showPluginInfo()));
 	
 	return w;

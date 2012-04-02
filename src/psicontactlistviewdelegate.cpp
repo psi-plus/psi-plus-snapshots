@@ -31,6 +31,8 @@
 #include "avatars.h"
 
 static const QString contactListFontOptionPath = "options.ui.look.font.contactlist";
+static const QString slimGroupsOptionPath = "options.ui.look.contactlist.use-slim-group-headings";
+static const QString outlinedGroupsOptionPath = "options.ui.look.contactlist.use-outlined-group-headings";
 static const QString contactListBackgroundOptionPath = "options.ui.look.colors.contactlist.background";
 static const QString showStatusMessagesOptionPath = "options.ui.contactlist.status-messages.show";
 static const QString showClientIconsPath = "options.ui.contactlist.show-client-icons";
@@ -48,9 +50,7 @@ static const QString statusIconsOverAvatarsPath = "options.ui.contactlist.status
 static const QString statusSingleOptionPath = "options.ui.contactlist.status-messages.single-line";
 static const QString statusIconsetOptionPath = "options.iconsets.status";
 static const QString allClientsOptionPath = "options.ui.contactlist.show-all-client-icons";
-static const QString slimGroupsOptionPath = "options.ui.look.contactlist.use-slim-group-headings";
 static const QString enableGroupsOptionPath = "options.ui.contactlist.enable-groups";
-static const QString outlinedGroupsOptionPath = "options.ui.look.contactlist.use-outlined-group-headings";
 
 PsiContactListViewDelegate::PsiContactListViewDelegate(ContactListView* parent)
 	: ContactListViewDelegate(parent)
@@ -65,6 +65,8 @@ PsiContactListViewDelegate::PsiContactListViewDelegate(ContactListView* parent)
 	connect(PsiOptions::instance(), SIGNAL(optionChanged(const QString&)), SLOT(optionChanged(const QString&)));
 	connect(PsiIconset::instance(), SIGNAL(rosterIconsSizeChanged(int)), SLOT(rosterIconsSizeChanged(int)));
 	statusIconSize_ = PsiIconset::instance()->roster.value(PsiOptions::instance()->getOption(statusIconsetOptionPath).toString())->iconSize();
+	optionChanged(slimGroupsOptionPath);
+	optionChanged(outlinedGroupsOptionPath);
 	optionChanged(contactListFontOptionPath);
 	optionChanged(contactListBackgroundOptionPath);
 	optionChanged(showStatusMessagesOptionPath);
@@ -82,9 +84,7 @@ PsiContactListViewDelegate::PsiContactListViewDelegate(ContactListView* parent)
 	optionChanged(statusIconsOverAvatarsPath);
 	optionChanged(statusSingleOptionPath);
 	optionChanged(allClientsOptionPath);
-	optionChanged(slimGroupsOptionPath);
 	optionChanged(enableGroupsOptionPath);
-	optionChanged(outlinedGroupsOptionPath);
 }
 
 PsiContactListViewDelegate::~PsiContactListViewDelegate()
@@ -572,20 +572,20 @@ void PsiContactListViewDelegate::optionChanged(const QString& option)
 		statusSingle_ = !PsiOptions::instance()->getOption(statusSingleOptionPath).toBool();
 		contactList()->viewport()->update();
 	}
-	else if(option == allClientsOptionPath) {
-		allClients_= PsiOptions::instance()->getOption(allClientsOptionPath).toBool();
-		contactList()->viewport()->update();
-	}
 	else if(option == slimGroupsOptionPath) {
 		slimGroup_ = PsiOptions::instance()->getOption(slimGroupsOptionPath).toBool();
 		contactList()->viewport()->update();
 	}
-	else if(option == enableGroupsOptionPath) {
-		enableGroups_ = PsiOptions::instance()->getOption(enableGroupsOptionPath).toBool();
-		contactList()->viewport()->update();
-	}
 	else if(option == outlinedGroupsOptionPath) {
 		outlinedGroup_ = PsiOptions::instance()->getOption(outlinedGroupsOptionPath).toBool();
+		contactList()->viewport()->update();
+	}
+	else if(option == allClientsOptionPath) {
+		allClients_= PsiOptions::instance()->getOption(allClientsOptionPath).toBool();
+		contactList()->viewport()->update();
+	}
+	else if(option == enableGroupsOptionPath) {
+		enableGroups_ = PsiOptions::instance()->getOption(enableGroupsOptionPath).toBool();
 		contactList()->viewport()->update();
 	}
 }

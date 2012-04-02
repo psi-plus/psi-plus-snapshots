@@ -127,6 +127,7 @@ private slots:
 	void updateCursorMouseHover(const QModelIndex&);
 	void updateCursorMouseHover();
 	void removeSelection();
+	void closeCurrentEditor();
 
 private:
 	QMimeData* backedUpSelection_;

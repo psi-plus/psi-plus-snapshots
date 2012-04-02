@@ -64,13 +64,13 @@ private:
 	QTimer* alertTimer_;
 	QFont* font_;
 	QFontMetrics* fontMetrics_;
-	bool showStatusMessages_, showClientIcons_, showMoodIcons_, showActivityIcons_, showGeolocIcons_, showTuneIcons_;
+	bool showStatusMessages_, slimGroup_, outlinedGroup_, showClientIcons_, showMoodIcons_, showActivityIcons_, showGeolocIcons_, showTuneIcons_;
 	bool showAvatars_, useDefaultAvatar_, avatarAtLeft_, showStatusIcons_, statusIconsOverAvatars_;
 	int avatarSize_, avatarRadius_, rowHeight;
 	bool statusSingle_;
 	mutable QHash<QModelIndex, bool> alertingIndexes_;
 	int statusIconSize_;
-	bool enableGroups_, slimGroup_, outlinedGroup_, allClients_;
+	bool enableGroups_, allClients_;
 };
 
 #endif
