@@ -10,7 +10,7 @@ Here is the list of main changes:
    - plugins (plugins from Psi+ project)
    - resources (sounds and icons from Psi+ project)
 2) All patches from Psi+ project were applied.
-   (Except patches from dev/ subdirectory)
+   (Except patches from dev/ and mac/ subdirectories)
 3) Trash was removed. (MS Windows binary files and non-free icons)
 4) OTR-plugin is enabled by default.
 
