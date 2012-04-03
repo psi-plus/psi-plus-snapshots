@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Psi+ Import Wizard</string>
+   <string>Import Wizard</string>
   </property>
   <property name="windowIcon">
    <iconset>
@@ -108,9 +108,7 @@ p, li { white-space: pre-wrap; }
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources>
-  <include location="../iconsets.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>bxOkCancel</sender>

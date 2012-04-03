@@ -7,7 +7,6 @@ include($$PWD/privacy/privacy.pri)
 include($$PWD/capabilities/capabilities.pri)
 include($$PWD/tabs/tabs.pri)
 include($$PWD/Certificates/Certificates.pri)
-include($$PWD/contactmanager/contactmanager.pri)
 
 # tools
 # include($$PWD/tools/trayicon/trayicon.pri)
@@ -29,7 +28,7 @@ pep {
 	DEFINES += USE_PEP
 	CONFIG += tc_psifile
 	mac { CONFIG += tc_itunes }
-	windows { CONFIG += tc_aimp tc_winamp }
+	windows { CONFIG += tc_winamp }
 	unix:dbus:!mac { CONFIG += tc_mpris }
 }
 include($$PWD/tools/tunecontroller/tunecontroller.pri)
@@ -115,11 +114,6 @@ HEADERS += \
 	$$PWD/psievent.h \
 	$$PWD/xmlconsole.h \
 	$$PWD/psiiconset.h \
-	$$PWD/psithememanager.h \
-	$$PWD/psithememodel.h \
-	$$PWD/psithemeviewdelegate.h \
-	$$PWD/psithemeprovider.h \
-	$$PWD/theme.cpp \
 	$$PWD/applicationinfo.h \
 	$$PWD/pgptransaction.h \
 	$$PWD/userlist.h \
@@ -136,15 +130,10 @@ HEADERS += \
 	$$PWD/accountregdlg.h \
 	$$PWD/accountmodifydlg.h \
 	$$PWD/changepwdlg.h \
-	$$PWD/htmltextcontroller.h \
 	$$PWD/msgmle.h \
-	$$PWD/chatviewcommon.h \
-	$$PWD/chatview.h \
-	$$PWD/messageview.h \
 	$$PWD/statusdlg.h \
 	$$PWD/statuscombobox.h \
 	$$PWD/eventdlg.h \
-	$$PWD/activecontactsmenu.h \
 	$$PWD/chatdlg.h \
 	$$PWD/psichatdlg.h \
 	$$PWD/chatsplitter.h \
@@ -167,7 +156,6 @@ HEADERS += \
 	$$PWD/alerticon.h \
 	$$PWD/alertable.h \
 	$$PWD/psipopup.h \
-	$$PWD/popupmanager.h \
 	$$PWD/psiapplication.h \
 	$$PWD/filecache.h \
 	$$PWD/avatars.h \
@@ -177,8 +165,6 @@ HEADERS += \
 	$$PWD/xdata_widget.h \
 	$$PWD/statuspreset.h \
 	$$PWD/lastactivitytask.h \
-	$$PWD/entitytimetask.h \
-	$$PWD/timeserver.h \
 	$$PWD/bobfilecache.h \
 	$$PWD/mucmanager.h \
 	$$PWD/mucconfigdlg.h \
@@ -190,9 +176,6 @@ HEADERS += \
 	$$PWD/mood.h \
 	$$PWD/moodcatalog.h \
 	$$PWD/mooddlg.h \
-	$$PWD/activity.h \
-	$$PWD/activitycatalog.h \
-	$$PWD/activitydlg.h \
 	$$PWD/geolocation.h \
 	$$PWD/physicallocation.h \
 	$$PWD/urlbookmark.h \
@@ -201,7 +184,6 @@ HEADERS += \
 	$$PWD/pepmanager.h \
 	$$PWD/pubsubsubscription.h \
 	$$PWD/rc.h \
-	$$PWD/passdialog.h \
 	$$PWD/psihttpauthrequest.h \
 	$$PWD/httpauthmanager.h \
 	$$PWD/ahcommand.h \
@@ -225,11 +207,7 @@ HEADERS += \
 	$$PWD/bookmarkmanagedlg.h \
 	$$PWD/vcardphotodlg.h \
 	$$PWD/psicli.h \
-	$$PWD/coloropt.h \
-	$$PWD/geolocationdlg.h \
-	$$PWD/rosteravatarframe.h \
-	$$PWD/sendbuttonmenu.h
-
+	$$PWD/coloropt.h
 
 
 HEADERS += tabcompletion.h
@@ -262,11 +240,6 @@ SOURCES += \
 	$$PWD/psievent.cpp \
 	$$PWD/xmlconsole.cpp \
 	$$PWD/psiiconset.cpp \
-	$$PWD/psithememanager.cpp \
-	$$PWD/psithememodel.cpp \
-	$$PWD/psithemeviewdelegate.cpp \
-	$$PWD/psithemeprovider.cpp \
-	$$PWD/theme.cpp \
 	$$PWD/applicationinfo.cpp \
 	$$PWD/pgptransaction.cpp \
 	$$PWD/serverinfomanager.cpp \
@@ -284,14 +257,10 @@ SOURCES += \
 	$$PWD/accountregdlg.cpp \
 	$$PWD/accountmodifydlg.cpp \
 	$$PWD/changepwdlg.cpp \
-	$$PWD/htmltextcontroller.cpp \
 	$$PWD/msgmle.cpp \
-	$$PWD/chatviewcommon.cpp \
-	$$PWD/messageview.cpp \
 	$$PWD/statusdlg.cpp \
 	$$PWD/statuscombobox.cpp \
 	$$PWD/eventdlg.cpp \
-	$$PWD/activecontactsmenu.cpp \
 	$$PWD/chatdlg.cpp \
 	$$PWD/psichatdlg.cpp \
 	$$PWD/chatsplitter.cpp \
@@ -313,7 +282,6 @@ SOURCES += \
 	$$PWD/alerticon.cpp \
 	$$PWD/alertable.cpp \
 	$$PWD/psipopup.cpp \
-	$$PWD/popupmanager.cpp \
 	$$PWD/psiapplication.cpp \
 	$$PWD/filecache.cpp \
 	$$PWD/avatars.cpp \
@@ -321,8 +289,6 @@ SOURCES += \
 	$$PWD/psiactionlist.cpp \
 	$$PWD/xdata_widget.cpp \
 	$$PWD/lastactivitytask.cpp \
-	$$PWD/entitytimetask.cpp \
-	$$PWD/timeserver.cpp \
 	$$PWD/bobfilecache.cpp \
 	$$PWD/statuspreset.cpp \
 	$$PWD/mucmanager.cpp \
@@ -335,9 +301,6 @@ SOURCES += \
 	$$PWD/mood.cpp \
 	$$PWD/moodcatalog.cpp \
 	$$PWD/mooddlg.cpp \
-	$$PWD/activity.cpp \
-	$$PWD/activitycatalog.cpp \
-	$$PWD/activitydlg.cpp \
 	$$PWD/geolocation.cpp \
 	$$PWD/physicallocation.cpp \
 	$$PWD/urlbookmark.cpp \
@@ -346,7 +309,6 @@ SOURCES += \
 	$$PWD/pepmanager.cpp \
 	$$PWD/pubsubsubscription.cpp \
 	$$PWD/rc.cpp \
-	$$PWD/passdialog.cpp \
 	$$PWD/httpauthmanager.cpp \
 	$$PWD/ahcommand.cpp \
 	$$PWD/pongserver.cpp \
@@ -368,15 +330,7 @@ SOURCES += \
 	$$PWD/accountlabel.cpp \
 	$$PWD/bookmarkmanagedlg.cpp \
 	$$PWD/vcardphotodlg.cpp \
-	$$PWD/coloropt.cpp \
-	$$PWD/geolocationdlg.cpp \
-	$$PWD/rosteravatarframe.cpp \
-	$$PWD/sendbuttonmenu.cpp
-
-unix:!macx:!haiku {
-	HEADERS += $$PWD/x11windowsystem.h
-	SOURCES += $$PWD/x11windowsystem.cpp
-}
+	$$PWD/coloropt.cpp
 
 CONFIG += filetransfer
 filetransfer {
@@ -399,19 +353,16 @@ groupchat {
 	HEADERS += \
 		$$PWD/groupchatdlg.h \
 		$$PWD/gcuserview.h \
-		$$PWD/mucjoindlg.h \
-		$$PWD/groupchattopicdlg.h
+		$$PWD/mucjoindlg.h
 
 	SOURCES += \
 		$$PWD/groupchatdlg.cpp \
 		$$PWD/gcuserview.cpp \
-		$$PWD/mucjoindlg.cpp \
-		$$PWD/groupchattopicdlg.cpp
+		$$PWD/mucjoindlg.cpp
 
 	FORMS += \
 		$$PWD/groupchatdlg.ui \
-		$$PWD/mucjoin.ui \
-		$$PWD/groupchattopicdlg.ui
+		$$PWD/mucjoin.ui
 }
 
 whiteboarding {
@@ -494,8 +445,6 @@ newcontactlist {
 		$$PWD/contactlistitemproxy.h \
 		$$PWD/contactupdatesmanager.h \
 		$$PWD/statusmenu.h \
-		$$PWD/globalstatusmenu.h \
-		$$PWD/accountstatusmenu.h \
 		$$PWD/psirosterwidget.h \
 		$$PWD/psifilteredcontactlistview.h
 
@@ -526,8 +475,6 @@ newcontactlist {
 		$$PWD/contactlistitemproxy.cpp \
 		$$PWD/contactupdatesmanager.cpp \
 		$$PWD/statusmenu.cpp \
-		$$PWD/globalstatusmenu.cpp \
-		$$PWD/accountstatusmenu.cpp \
 		$$PWD/psirosterwidget.cpp \
 		$$PWD/psifilteredcontactlistview.cpp
 
@@ -606,15 +553,11 @@ FORMS += \
 	$$PWD/disco.ui \
 	$$PWD/tip.ui \
 	$$PWD/mood.ui \
-	$$PWD/activity.ui \
 	$$PWD/voicecall.ui \
 	$$PWD/chatdlg.ui \
 	$$PWD/bookmarkmanage.ui \
 	$$PWD/ahcommanddlg.ui \
-	$$PWD/ahcformdlg.ui \
-	$$PWD/geolocation.ui \
-	$$PWD/rosteravatarframe.ui \
-	$$PWD/sendbuttontemplateseditor.ui
+	$$PWD/ahcformdlg.ui
 
 # options dialog
 include($$PWD/options/options.pri)
@@ -635,11 +578,9 @@ psi_plugins {
 }
 
 dbus {
-	HEADERS += 	$$PWD/dbus.h \
-			$$PWD/psidbusnotifier.h
+	HEADERS += 	$$PWD/dbus.h
 	SOURCES += 	$$PWD/dbus.cpp
-	SOURCES +=	$$PWD/activeprofiles_dbus.cpp \
-			$$PWD/psidbusnotifier.cpp
+	SOURCES += $$PWD/activeprofiles_dbus.cpp
 	DEFINES += USE_DBUS
 	CONFIG += qdbus
 }
@@ -652,31 +593,6 @@ win32:!dbus {
 
 unix:!dbus {
 	SOURCES += $$PWD/activeprofiles_stub.cpp
-}
-
-webkit {
-	HEADERS += 	$$PWD/chatview_webkit.h \
-			$$PWD/networkaccessmanager.h \
-			$$PWD/bytearrayreply.h \
-			$$PWD/webview.h \
-			$$PWD/psiwkavatarhandler.h \
-			$$PWD/jsutil.h \
-			$$PWD/chatviewtheme.h \
-			$$PWD/chatviewthemeprovider.h
-	SOURCES += 	$$PWD/chatview_webkit.cpp \
-			$$PWD/networkaccessmanager.cpp \
-			$$PWD/bytearrayreply.cpp \
-			$$PWD/webview.cpp \
-			$$PWD/psiwkavatarhandler.cpp \
-			$$PWD/jsutil.cpp \
-			$$PWD/chatviewtheme.cpp \
-			$$PWD/chatviewthemeprovider.cpp
-	DEFINES += WEBKIT
-	QT += webkit
-}
-else {
-	HEADERS += 	$$PWD/chatview_te.h
-	SOURCES += 	$$PWD/chatview_te.cpp
 }
 
 mac {

@@ -173,8 +173,7 @@ private:
 //----------------------------------------------------------------------------
 
 PsiApplication::PsiApplication(int &argc, char **argv, bool GUIenabled)
-:	QApplication(argc, argv, GUIenabled),
-	portableBase_(0)
+:	QApplication(argc, argv, GUIenabled)
 {
 	init(GUIenabled);
 }
@@ -327,14 +326,4 @@ void PsiApplication::commitData(QSessionManager& manager)
 {
 	Q_UNUSED(manager);
 	emit forceSavePreferences();
-}
-
-void PsiApplication::setPortableBase(const QString &base)
-{
-	portableBase_ = new QString(base);
-}
-
-QString PsiApplication::portableBase() const
-{
-	return portableBase_?*portableBase_:QString();
 }

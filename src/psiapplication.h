@@ -46,9 +46,6 @@ public:
 	// reimplemented
 	void commitData(QSessionManager& manager);
 
-	void setPortableBase(const QString &base);
-	QString portableBase() const;
-
 signals:
 	void forceSavePreferences();
 	void dockActivated();
@@ -57,7 +54,6 @@ signals:
 
 private:
 	void init(bool GUIenabled);
-	QString *portableBase_;
 };
 
 #endif

@@ -512,6 +512,12 @@ QVariant ContactListModel::contactData(const PsiContact* contact, int role) cons
 	else if (role == AlertPictureRole) {
 		return QVariant(contact->alertPicture());
 	}
+	else if (role == IsAnimRole) {
+		return QVariant(contact->isAnimated());
+	}
+	else if (role == PhaseRole) {
+		return QVariant(false);
+	}
 	else if (role == MoodRole) {
 		if(contact->userListItem().mood().isNull())
 			return QVariant();
@@ -552,12 +558,6 @@ QVariant ContactListModel::contactData(const PsiContact* contact, int role) cons
 	}
 	else if (role == BlockRole) {
 		return QVariant(contact->isBlocked());
-	}
-	else if (role == IsAnimRole) {
-		return QVariant(contact->isAnimated());
-	}
-	else if (role == PhaseRole) {
-		return QVariant(false);
 	}
 	else if (role == IsSecureRole) {
 		return QVariant(contact->userListItem().isSecure());

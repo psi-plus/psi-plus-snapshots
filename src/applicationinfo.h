@@ -28,13 +28,13 @@ public:
 	static QString homeDir(HomedirType type);
 	static QString resourcesDir();
 	static QString libDir();
-	static QString profilesDir(HomedirType type);
+	static QString profilesDir(ApplicationInfo::HomedirType);
+	static QString currentProfileDir(HomedirType type);
 	static QString makeSubhomePath(const QString &, HomedirType type);
 	static QString makeSubprofilePath(const QString &, HomedirType type);
 	static QString historyDir();
 	static QString vCardDir();
 	static QString bobDir();
-	static QString currentProfileDir(HomedirType type);
 	static QStringList getCertificateStoreDirs();
 	static QString getCertificateStoreSaveDir();
 	static QStringList dataDirs();

@@ -471,21 +471,14 @@ int main(int argc, char *argv[])
 	// it must be initialized first in order for ApplicationInfo::resourcesDir() to work
 	PsiApplication app(argc, argv);
 	QApplication::setApplicationName(ApplicationInfo::name());
+	QApplication::addLibraryPath(ApplicationInfo::resourcesDir());
+	QApplication::addLibraryPath(ApplicationInfo::homeDir(ApplicationInfo::DataLocation));
+	QApplication::setQuitOnLastWindowClosed(false);
 
 	//Fix encoding after QApplication initialization
 	for(QMap<QString, QString>::iterator i = cmdline.begin(); i != cmdline.end(); ++i) {
 		*i = (*i).toAscii().constData();
 	}
-
-#if defined(Q_WS_WIN)
-	QFileInfo fi(argv[0]);
-	if (fi.baseName().toLower().indexOf("portable") != -1) {
-		app.setPortableBase(fi.absolutePath());
-	}
-#endif
-	QApplication::addLibraryPath(ApplicationInfo::resourcesDir());
-	QApplication::addLibraryPath(ApplicationInfo::homeDir(ApplicationInfo::DataLocation));
-	QApplication::setQuitOnLastWindowClosed(false);
 
 #ifdef Q_WS_MAC
 	QDir dir(QApplication::applicationDirPath());

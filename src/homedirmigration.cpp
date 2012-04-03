@@ -187,7 +187,7 @@ protected:
 
 				QString destFileName = dstDirName + "/" + files[i];
 				if (!QFile::copy(oldHomeDir_.path() + srcFileName, destFileName)) {
-					qFatal("Critical error while importing Psi/Psi+ profile");
+					qFatal("Critical error while importing old profile");
 					return false;
 				}
 			}
@@ -239,7 +239,9 @@ bool HomeDirMigration::checkOldHomeDir()
 		oldHomeDir_.setPath(base + "/.psi");
 	}
 #elif defined Q_WS_WIN
-	QString base = ((PsiApplication *)qApp)->portableBase();
+	QString base = QFileInfo(QCoreApplication::applicationFilePath()).fileName()
+			.toLower().indexOf("portable") == -1?
+				"" : QCoreApplication::applicationDirPath();
 	if (base.isEmpty()) {
 		// Windows 9x
 		if(QDir::homePath() == QDir::rootPath()) {

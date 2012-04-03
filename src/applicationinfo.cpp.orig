@@ -22,7 +22,6 @@
 
 #include "psiapplication.h"
 #include "applicationinfo.h"
-#include "systeminfo.h"
 #include "profiles.h"
 #include "homedirmigration.h"
 #include "activeprofiles.h"
@@ -35,15 +34,11 @@
 // place (like an external file loaded through the resources system)
 // Should also be overridable through an optional file.
 
-#define PROG_NAME "Psi+"
-#ifdef WEBKIT
-#define PROG_VERSION "0.15.5299-webkit" " (" __DATE__ ")" //CVS Builds are dated
-#else
-#define PROG_VERSION "0.15.5299" " (" __DATE__ ")" //CVS Builds are dated
-#endif
+#define PROG_NAME "Psi"
+#define PROG_VERSION "0.15-dev" " (" __DATE__ ")" //CVS Builds are dated
 //#define PROG_VERSION "0.15";
-#define PROG_CAPS_NODE "http://psi-dev.googlecode.com/caps"
-#define PROG_CAPS_VERSION "0.15"
+#define PROG_CAPS_NODE "http://psi-im.org/caps"
+#define PROG_CAPS_VERSION "caps-b75d8d2b25"
 #define PROG_IPC_NAME "org.psi-im.Psi"	// must not contain '\\' character on Windows
 #define PROG_OPTIONS_NS "http://psi-im.org/options"
 #define PROG_STORAGE_NS "http://psi-im.org/storage"
@@ -78,11 +73,6 @@ QString ApplicationInfo::capsNode()
 QString ApplicationInfo::capsVersion()
 {
 	return PROG_CAPS_VERSION;
-}
-
-QString ApplicationInfo::osName()
-{
-	return SystemInfo::instance()->os();
 }
 
 QString ApplicationInfo::IPCName()
@@ -123,17 +113,6 @@ QStringList ApplicationInfo::dataDirs()
 	const static QStringList dirs = QStringList() << ":" << "." << homeDir(DataLocation)
 												  << resourcesDir();
 	return  dirs;
-}
-
-QStringList ApplicationInfo::pluginDirs()
-{
-	QStringList l;
-	l += resourcesDir() + "/plugins";
-	l += homeDir(ApplicationInfo::DataLocation) + "/plugins";
-#if defined(Q_OS_UNIX)
-	l += libDir() + "/plugins";
-#endif
-	return l;
 }
 
 QString ApplicationInfo::getCertificateStoreSaveDir()
@@ -360,29 +339,4 @@ QString ApplicationInfo::profilesDir(ApplicationInfo::HomedirType type)
 QString ApplicationInfo::currentProfileDir(ApplicationInfo::HomedirType type)
 {
 	return pathToProfile(activeProfile, type);
-}
-
-QString ApplicationInfo::desktopFile()
-{
-	QString dFile;
-	const QString execFileName = QFileInfo(qApp->applicationFilePath()).fileName();
-	const QString desktopFile = QString("/usr/share/applications/%1.desktop").arg(execFileName);
-	QFile f(desktopFile);
-	if(f.open(QIODevice::ReadOnly)) {
-		dFile = QString::fromUtf8(f.readAll());
-	}
-	else {
-		dFile = "[Desktop Entry]\n";
-		dFile += "Version=1.0\n";
-		dFile += "Type=Application\n";
-		dFile += QString("Name=%1\n").arg(name());
-		dFile += "GenericName=Jabber Client\n";
-		dFile += "Comment=Communicate over the Jabber network\n";
-		dFile += QString("Icon=%1\n").arg(execFileName);
-		dFile += QString("Exec=%1\n").arg(execFileName);
-		dFile += "Terminal=false\n";
-		dFile += "Categories=Network;InstantMessaging;Qt;";
-	}
-
-	return dFile;
 }
