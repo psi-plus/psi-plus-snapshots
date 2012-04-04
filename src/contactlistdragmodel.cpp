@@ -486,7 +486,6 @@ void ContactListDragModel::performContactOperations(const ContactListModelOperat
 		foreach(ContactListModelOperationList::Operation op, contactOperation.operations) {
 			if (operations.action() == ContactListModelOperationList::Move) {
 				groups.removeAll(op.groupFrom);
-
 				ContactListGroup* group = groupCache()->findGroup(op.groupFrom);
 				if (group && groupContactCount.contains(group)) {
 					groupContactCount[group] -= 1;
@@ -631,7 +630,8 @@ QString ContactListDragModel::sourceOperationsForContactGroup(const QString& gro
 	if (specialGroup) {
 		return specialGroup->sourceOperationsForSpecialGroupContact(contact);
 	}
-	return processContactSetGroupName(groupName);
+	return groupName;
+	//return processContactSetGroupName(groupName);
 }
 
 QString ContactListDragModel::destinationOperationsForContactGroup(const QString& groupName, PsiContact* contact) const
