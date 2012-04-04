@@ -100,24 +100,18 @@ void ContactListDragView::addContextMenuAction(QAction* action)
 
 void ContactListDragView::setItemDelegate(QAbstractItemDelegate* delegate)
 {
-	if (delegate == itemDelegate())
+	QAbstractItemDelegate *oldDelegate = itemDelegate();
+	if (delegate == oldDelegate)
 		return;
-	if (itemDelegate()) {
-		disconnect(itemDelegate(), SIGNAL(commitData(QWidget*)), this, SLOT(finishedEditing()));
-		disconnect(itemDelegate(), SIGNAL(closeEditor(QWidget*)), this, SLOT(finishedEditing()));
-	}
 	if (delegate) {
 		connect(delegate, SIGNAL(commitData(QWidget*)), this, SLOT(finishedEditing()));
-		connect(itemDelegate(), SIGNAL(closeEditor(QWidget*)), this, SLOT(finishedEditing()));
+		connect(delegate, SIGNAL(closeEditor(QWidget*)), this, SLOT(finishedEditing()));
 	}
 	ContactListView::setItemDelegate(delegate);
+	if (oldDelegate)
+		delete oldDelegate;
 	modelChanged();
 	doItemsLayout();
-}
-
-void ContactListDragView::startedEditing()
-{
-	editing = true;
 }
 
 void ContactListDragView::finishedEditing()
@@ -128,7 +122,7 @@ void ContactListDragView::finishedEditing()
 bool ContactListDragView::edit(const QModelIndex &index, EditTrigger trigger, QEvent *event)
 {
 	if (ContactListView::edit(index, trigger, event)) {
-		startedEditing();
+		editing = true;
 		return true;
 	}
 	return false;
