@@ -1440,8 +1440,15 @@ void PsiCon::optionChanged(const QString& option)
 
 	if (option == "options.ui.spell-check.langs") {
 		QStringList langs = PsiOptions::instance()->getOption(option).toString().split(QRegExp("\\s+"), QString::SkipEmptyParts);
-		if(langs.isEmpty())
+		if(langs.isEmpty()) {
 			langs = SpellChecker::instance()->getAllLanguages();
+			QString lang_env = getenv("LANG");
+			if(!lang_env.isEmpty()) {
+				lang_env = lang_env.split("_").first();
+				if(langs.contains(lang_env, Qt::CaseInsensitive))
+					langs = QStringList(lang_env);
+			}
+		}
 		SpellChecker::instance()->setActiveLanguages(langs);
 		return;
 	}

@@ -37,9 +37,9 @@
 
 #define PROG_NAME "Psi+"
 #ifdef WEBKIT
-#define PROG_VERSION "0.15.5299-webkit" " (" __DATE__ ")" //CVS Builds are dated
+#define PROG_VERSION "0.15.5306-webkit" " (" __DATE__ ")" //CVS Builds are dated
 #else
-#define PROG_VERSION "0.15.5299" " (" __DATE__ ")" //CVS Builds are dated
+#define PROG_VERSION "0.15.5306" " (" __DATE__ ")" //CVS Builds are dated
 #endif
 //#define PROG_VERSION "0.15";
 #define PROG_CAPS_NODE "http://psi-dev.googlecode.com/caps"
@@ -223,8 +223,8 @@ QString ApplicationInfo::homeDir(ApplicationInfo::HomedirType type)
 						"" : QCoreApplication::applicationDirPath();
 			if (base.isEmpty()) {
 				wchar_t path[MAX_PATH];
-				if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, path)) {
-					configDir_ = QString::fromWCharArray(path) + "/" + name();
+				if (SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, path) == S_OK) {
+					configDir_ = QString::fromWCharArray(path) + "\\" + name();
 				} else {
 					configDir_ = QDir::homePath() + "/" + name();
 				}

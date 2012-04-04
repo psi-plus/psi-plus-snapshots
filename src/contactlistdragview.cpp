@@ -53,6 +53,7 @@ ContactListDragView::ContactListDragView(QWidget* parent)
 	, pressedIndex_(0)
 	, pressedIndexWasSelected_(false)
 	, viewportMenu_(0)
+	, editing(false)
 {
 	removeAction_ = new IconAction("", "psi/remove", QString(), ShortcutManager::instance()->shortcuts("contactlist.delete"), this, "act_remove");
 	connect(removeAction_, SIGNAL(triggered()), SLOT(removeSelection()));
@@ -101,9 +102,36 @@ void ContactListDragView::setItemDelegate(QAbstractItemDelegate* delegate)
 {
 	if (delegate == itemDelegate())
 		return;
+	if (itemDelegate()) {
+		disconnect(itemDelegate(), SIGNAL(commitData(QWidget*)), this, SLOT(finishedEditing()));
+		disconnect(itemDelegate(), SIGNAL(closeEditor(QWidget*)), this, SLOT(finishedEditing()));
+	}
+	if (delegate) {
+		connect(delegate, SIGNAL(commitData(QWidget*)), this, SLOT(finishedEditing()));
+		connect(itemDelegate(), SIGNAL(closeEditor(QWidget*)), this, SLOT(finishedEditing()));
+	}
 	ContactListView::setItemDelegate(delegate);
 	modelChanged();
 	doItemsLayout();
+}
+
+void ContactListDragView::startedEditing()
+{
+	editing = true;
+}
+
+void ContactListDragView::finishedEditing()
+{
+	editing = false;
+}
+
+bool ContactListDragView::edit(const QModelIndex &index, EditTrigger trigger, QEvent *event)
+{
+	if (ContactListView::edit(index, trigger, event)) {
+		startedEditing();
+		return true;
+	}
+	return false;
 }
 
 void ContactListDragView::leaveEvent(QEvent* e)
@@ -252,7 +280,6 @@ void ContactListDragView::setModel(QAbstractItemModel* newModel)
 		disconnect(model(), SIGNAL(modelAboutToBeReset()), this, SLOT(modelChanged()));
 		disconnect(model(), SIGNAL(layoutAboutToBeChanged()), this, SLOT(modelChanged()));
 		disconnect(model(), SIGNAL(layoutChanged()), this, SLOT(doItemsLayout()));
-		disconnect(model(), SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(closeCurrentEditor()));
 	}
 
 	// it's critical that we hook on signals prior to selectionModel,
@@ -266,8 +293,6 @@ void ContactListDragView::setModel(QAbstractItemModel* newModel)
 		// invalidating proxy model, and we want tree state to be up to date in order
 		// to avoid weird impossible crashes
 		connect(newModel, SIGNAL(layoutChanged()), this, SLOT(doItemsLayout()));
-
-		connect(newModel, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(closeCurrentEditor()));
 	}
 
 	ContactListView::setModel(newModel);
@@ -655,11 +680,6 @@ void ContactListDragView::removeSelection()
 	delete mimeData;
 }
 
-void ContactListDragView::closeCurrentEditor()
-{
-	closeEditor(currentEditor(), QAbstractItemDelegate::NoHint);
-}
-
 bool ContactListDragView::extendedSelectionAllowed() const
 {
 	return selectedIndexes().count() > 1 || keyboardModifiers_ != 0;
@@ -796,7 +816,7 @@ void ContactListDragView::modelChanged()
 	if (!dirty_) {
 		setUpdatesEnabled(false);
 		backedUpVerticalScrollBarValue_ = verticalScrollBar()->value();
-		if (currentEditor()) {
+		if (currentEditor() && editing) {
 			backedUpEditorValue_ = currentEditor()->text();
 			closeEditor(currentEditor(), QAbstractItemDelegate::NoHint);
 			setEditingIndex(currentIndex(), true);
