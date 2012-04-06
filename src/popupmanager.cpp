@@ -239,7 +239,8 @@ QList< PopupManager::NotificationsType > PopupManager::availableTypes()
 	if(availableTypes_.isEmpty()) {
 		availableTypes_ << Default;
 #if defined(Q_WS_MAC) && defined(HAVE_GROWL)
-		availableTypes_ << Growl;
+		if(PsiGrowlNotifier::isAvailable())
+			availableTypes_ << Growl;
 #endif
 #ifdef USE_DBUS
 		if(PsiDBusNotifier::isAvailable())

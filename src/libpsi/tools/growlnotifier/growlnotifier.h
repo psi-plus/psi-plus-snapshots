@@ -2,6 +2,7 @@
  * growlnotifier.h - A simple Qt interface to Growl
  *
  * Copyright (C) 2005  Remko Troncon
+ *               2012  Khryukin Evgeny
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -27,11 +28,7 @@
 #ifndef GROWLNOTIFIER_H
 #define GROWLNOTIFIER_H
 
-#include <CoreFoundation/CoreFoundation.h>
-#include <Growl/Growl.h>
-
 #include <QPixmap>
-#include <QString>
 #include <QStringList>
 
 class GrowlNotifierSignaler;
@@ -42,21 +39,23 @@ class GrowlNotifierSignaler;
 class GrowlNotifier
 {
 public:
-	GrowlNotifier(
-		const QStringList& notifications, 
-		const QStringList& default_notifications,
-		const QString& app_name = "");
+	GrowlNotifier(  const QStringList& notifications,
+			const QStringList& default_notifications,
+			const QString& app_name = "");
+
+	virtual ~GrowlNotifier();
 	
-	void notify(const QString& name, const QString& title, 
-		const QString& description, const QPixmap& icon = QPixmap(), 
-		bool sticky = false, const QObject* receiver = 0, 
-		const char* clicked_slot = 0, const char* timeout_slot = 0,
-		void* context = 0);
+	void notify(const QString& name, const QString& title,
+		    const QString& description, const QPixmap& icon = QPixmap(),
+		    bool sticky = false, const QObject* receiver = 0,
+		    const char* clicked_slot = 0, const char* timeout_slot = 0,
+		    void* context = 0);
+
+	static bool isRunning();
 
 private:
-	struct Growl_Delegate delegate_;
-	
-	GrowlNotifierSignaler* signaler_;
+	class Private;
+	Private* d;
 };
 
 #endif

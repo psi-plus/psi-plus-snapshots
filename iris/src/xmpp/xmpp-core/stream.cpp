@@ -648,7 +648,7 @@ void ClientStream::ss_readyRead()
 	QByteArray a = d->ss->read();
 
 #ifdef XMPP_DEBUG
-	fprintf(stderr, "ClientStream: recv: %d [%s]\n", a.size(), a.data());
+	qDebug("ClientStream: recv: %d [%s]\n", a.size(), a.data());
 #endif
 
 	if(d->mode == Client)
@@ -657,7 +657,7 @@ void ClientStream::ss_readyRead()
 		d->srv.addIncomingData(a);
 	if(d->notify & CoreProtocol::NRecv) {
 #ifdef XMPP_DEBUG
-		printf("We needed data, so let's process it\n");
+		qDebug("We needed data, so let's process it\n");
 #endif
 		processNext();
 	}
@@ -672,7 +672,7 @@ void ClientStream::ss_bytesWritten(int bytes)
 
 	if(d->notify & CoreProtocol::NSend) {
 #ifdef XMPP_DEBUG
-		printf("We were waiting for data to be written, so let's process\n");
+		qDebug("We were waiting for data to be written, so let's process\n");
 #endif
 		processNext();
 	}
@@ -732,7 +732,8 @@ void ClientStream::sasl_nextStep(const QByteArray &stepData)
 void ClientStream::sasl_needParams(const QCA::SASL::Params& p) 
 {
 #ifdef XMPP_DEBUG
-	printf("need params: %d,%d,%d,%d\n", p.user, p.authzid, p.pass, p.realm);
+	qDebug("need params: needUsername: %d, canSendAuthzid: %d, needPassword: %d, canSendRealm: %d\n",
+		   p.needUsername()?1:0, p.canSendAuthzid()? 1:0, p.needPassword()? 1:0, p.canSendRealm()? 1:0);
 #endif
 	/*if(p.authzid && !p.user) {
 		d->sasl->setAuthzid(d->jid.bare());
@@ -749,7 +750,7 @@ void ClientStream::sasl_needParams(const QCA::SASL::Params& p)
 void ClientStream::sasl_authCheck(const QString &user, const QString &)
 {
 //#ifdef XMPP_DEBUG
-//	printf("authcheck: [%s], [%s]\n", user.latin1(), authzid.latin1());
+//	qDebug("authcheck: [%s], [%s]\n", user.latin1(), authzid.latin1());
 //#endif
 	QString u = user;
 	int n = u.indexOf('@');
@@ -762,7 +763,7 @@ void ClientStream::sasl_authCheck(const QString &user, const QString &)
 void ClientStream::sasl_authenticated()
 {
 #ifdef XMPP_DEBUG
-	printf("sasl authed!!\n");
+	qDebug("sasl authed!!\n");
 #endif
 	d->sasl_ssf = d->sasl->ssf();
 
@@ -775,7 +776,7 @@ void ClientStream::sasl_authenticated()
 void ClientStream::sasl_error()
 {
 #ifdef XMPP_DEBUG
-	printf("sasl error: %d\n", d->sasl->authCondition());
+	qDebug("sasl error: %d\n", d->sasl->authCondition());
 #endif
 	// has to be auth error
 	int x = convertedSASLCond();
@@ -788,15 +789,15 @@ void ClientStream::sasl_error()
 void ClientStream::srvProcessNext()
 {
 	while(1) {
-		printf("Processing step...\n");
+		qDebug("Processing step...\n");
 		if(!d->srv.processStep()) {
 			int need = d->srv.need;
 			if(need == CoreProtocol::NNotify) {
 				d->notify = d->srv.notify;
 				if(d->notify & CoreProtocol::NSend)
-					printf("More data needs to be written to process next step\n");
+					qDebug("More data needs to be written to process next step\n");
 				if(d->notify & CoreProtocol::NRecv)
-					printf("More data is needed to process next step\n");
+					qDebug("More data is needed to process next step\n");
 			}
 			else if(need == CoreProtocol::NSASLMechs) {
 				if(!d->sasl) {
@@ -821,21 +822,21 @@ void ClientStream::srvProcessNext()
 				continue;
 			}
 			else if(need == CoreProtocol::NStartTLS) {
-				printf("Need StartTLS\n");
+				qDebug("Need StartTLS\n");
 				//if(!d->tls->startServer()) {
 				d->tls->startServer();
 				QByteArray a = d->srv.spare;
 				d->ss->startTLSServer(d->tls, a);
 			}
 			else if(need == CoreProtocol::NSASLFirst) {
-				printf("Need SASL First Step\n");
+				qDebug("Need SASL First Step\n");
 				QByteArray a = d->srv.saslStep();
 				d->sasl->putServerFirstStep(d->srv.saslMech(), a);
 			}
 			else if(need == CoreProtocol::NSASLNext) {
-				printf("Need SASL Next Step\n");
+				qDebug("Need SASL Next Step\n");
 				QByteArray a = d->srv.saslStep();
-				printf("[%s]\n", a.data());
+				qDebug("[%s]\n", a.data());
 				d->sasl->putStep(a);
 			}
 			else if(need == CoreProtocol::NSASLLayer) {
@@ -850,10 +851,10 @@ void ClientStream::srvProcessNext()
 		d->notify = 0;
 
 		int event = d->srv.event;
-		printf("event: %d\n", event);
+		qDebug("event: %d\n", event);
 		switch(event) {
 			case CoreProtocol::EError: {
-				printf("Error! Code=%d\n", d->srv.errorCode);
+				qDebug("Error! Code=%d\n", d->srv.errorCode);
 				reset();
 				error(ErrProtocol);
 				//handleError();
@@ -861,12 +862,12 @@ void ClientStream::srvProcessNext()
 			}
 			case CoreProtocol::ESend: {
 				QByteArray a = d->srv.takeOutgoingData();
-				printf("Need Send: {%s}\n", a.data());
+				qDebug("Need Send: {%s}\n", a.data());
 				d->ss->write(a);
 				break;
 			}
 			case CoreProtocol::ERecvOpen: {
-				printf("Break (RecvOpen)\n");
+				qDebug("Break (RecvOpen)\n");
 
 				// calculate key
 				QByteArray str = QCA::Hash("sha1").hashToString("secret").toUtf8();
@@ -885,7 +886,7 @@ void ClientStream::srvProcessNext()
 				break;
 			}
 			case CoreProtocol::ESASLSuccess: {
-				printf("Break SASL Success\n");
+				qDebug("Break SASL Success\n");
 				disconnect(d->sasl, SIGNAL(error()), this, SLOT(sasl_error()));
 				QByteArray a = d->srv.spare;
 				d->ss->setLayerSASL(d->sasl, a);
@@ -893,7 +894,7 @@ void ClientStream::srvProcessNext()
 			}
 			case CoreProtocol::EPeerClosed: {
 				// TODO: this isn' an error
-				printf("peer closed\n");
+				qDebug("peer closed\n");
 				reset();
 				error(ErrProtocol);
 				return;
@@ -922,7 +923,7 @@ void ClientStream::processNext()
 
 	while(1) {
 #ifdef XMPP_DEBUG
-		printf("Processing step...\n");
+		qDebug("Processing step...\n");
 #endif
 		bool ok = d->client.processStep();
 		// deal with send/received items
@@ -965,7 +966,7 @@ void ClientStream::processNext()
 		switch(event) {
 			case CoreProtocol::EError: {
 #ifdef XMPP_DEBUG
-				printf("Error! Code=%d\n", d->client.errorCode);
+				qDebug("Error! Code=%d\n", d->client.errorCode);
 #endif
 				handleError();
 				return;
@@ -973,14 +974,14 @@ void ClientStream::processNext()
 			case CoreProtocol::ESend: {
 				QByteArray a = d->client.takeOutgoingData();
 #ifdef XMPP_DEBUG
-				printf("Need Send: {%s}\n", a.data());
+				qDebug("Need Send: {%s}\n", a.data());
 #endif
 				d->ss->write(a);
 				break;
 			}
 			case CoreProtocol::ERecvOpen: {
 #ifdef XMPP_DEBUG
-				printf("Break (RecvOpen)\n");
+				qDebug("Break (RecvOpen)\n");
 #endif
 
 #ifdef XMPP_TEST
@@ -1000,7 +1001,7 @@ void ClientStream::processNext()
 			}
 			case CoreProtocol::EFeatures: {
 #ifdef XMPP_DEBUG
-				printf("Break (Features)\n");
+				qDebug("Break (Features)\n");
 #endif
 				if(!d->tls_warned && !d->using_tls && !d->client.features.tls_supported) {
 					d->tls_warned = true;
@@ -1012,13 +1013,13 @@ void ClientStream::processNext()
 			}
 			case CoreProtocol::ESASLSuccess: {
 #ifdef XMPP_DEBUG
-				printf("Break SASL Success\n");
+				qDebug("Break SASL Success\n");
 #endif
 				break;
 			}
 			case CoreProtocol::EReady: {
 #ifdef XMPP_DEBUG
-				printf("Done!\n");
+				qDebug("Done!\n");
 #endif
 				// grab the JID, in case it changed
 				d->jid = d->client.jid();
@@ -1031,7 +1032,7 @@ void ClientStream::processNext()
 			}
 			case CoreProtocol::EPeerClosed: {
 #ifdef XMPP_DEBUG
-				printf("DocumentClosed\n");
+				qDebug("DocumentClosed\n");
 #endif
 				reset();
 				connectionClosed();
@@ -1039,7 +1040,7 @@ void ClientStream::processNext()
 			}
 			case CoreProtocol::EStanzaReady: {
 #ifdef XMPP_DEBUG
-				printf("StanzaReady\n");
+				qDebug("StanzaReady\n");
 #endif
 				// store the stanza for now, announce after processing all events
 				Stanza s = createStanza(d->client.recvStanza());
@@ -1050,7 +1051,7 @@ void ClientStream::processNext()
 			}
 			case CoreProtocol::EStanzaSent: {
 #ifdef XMPP_DEBUG
-				printf("StanzasSent\n");
+				qDebug("StanzasSent\n");
 #endif
 				stanzaWritten();
 				if(!self)
@@ -1059,7 +1060,7 @@ void ClientStream::processNext()
 			}
 			case CoreProtocol::EClosed: {
 #ifdef XMPP_DEBUG
-				printf("Closed\n");
+				qDebug("Closed\n");
 #endif
 				reset();
 				delayedCloseFinished();
@@ -1076,9 +1077,9 @@ bool ClientStream::handleNeed()
 		d->notify = d->client.notify;
 #ifdef XMPP_DEBUG
 		if(d->notify & CoreProtocol::NSend)
-			printf("More data needs to be written to process next step\n");
+			qDebug("More data needs to be written to process next step\n");
 		if(d->notify & CoreProtocol::NRecv)
-			printf("More data is needed to process next step\n");
+			qDebug("More data is needed to process next step\n");
 #endif
 		return false;
 	}
@@ -1087,7 +1088,7 @@ bool ClientStream::handleNeed()
 	switch(need) {
 		case CoreProtocol::NStartTLS: {
 #ifdef XMPP_DEBUG
-			printf("Need StartTLS\n");
+			qDebug("Need StartTLS\n");
 #endif
 			d->using_tls = true;
 			d->ss->startTLSClient(d->tlsHandler, d->server, d->client.spare);
@@ -1095,14 +1096,14 @@ bool ClientStream::handleNeed()
 		}
 		case CoreProtocol::NCompress: {
 #ifdef XMPP_DEBUG
-			printf("Need compress\n");
+			qDebug("Need compress\n");
 #endif
 			d->ss->setLayerCompress(d->client.spare);
 			return true;
 		}
 		case CoreProtocol::NSASLFirst: {
 #ifdef XMPP_DEBUG
-			printf("Need SASL First Step\n");
+			qDebug("Need SASL First Step\n");
 #endif
 
 			// ensure simplesasl provider is installed
@@ -1159,7 +1160,7 @@ bool ClientStream::handleNeed()
 		}
 		case CoreProtocol::NSASLNext: {
 #ifdef XMPP_DEBUG
-			printf("Need SASL Next Step\n");
+			qDebug("Need SASL Next Step\n");
 #endif
 			QByteArray a = d->client.saslStep();
 			d->sasl->putStep(a);
@@ -1179,7 +1180,7 @@ bool ClientStream::handleNeed()
 		}
 		case CoreProtocol::NPassword: {
 #ifdef XMPP_DEBUG
-			printf("Need Password\n");
+			qDebug("Need Password\n");
 #endif
 			d->state = NeedParams;
 			needAuthParams(false, true, false);
@@ -1210,7 +1211,7 @@ void ClientStream::doNoop()
 {
 	if(d->state == Active) {
 #ifdef XMPP_DEBUG
-		printf("doPing\n");
+		qDebug("doPing\n");
 #endif
 		d->client.sendWhitespace();
 		processNext();
@@ -1221,7 +1222,7 @@ void ClientStream::writeDirect(const QString &s)
 {
 	if(d->state == Active) {
 #ifdef XMPP_DEBUG
-		printf("writeDirect\n");
+		qDebug("writeDirect\n");
 #endif
 		d->client.sendDirect(s);
 		processNext();

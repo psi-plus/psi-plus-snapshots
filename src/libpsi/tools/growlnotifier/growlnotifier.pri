@@ -1,5 +1,5 @@
 DEPENDPATH  += $$PWD
 
 HEADERS += $$PWD/growlnotifier.h
-SOURCES += $$PWD/growlnotifier.cpp
-QMAKE_LFLAGS += -framework Growl -framework CoreFoundation
+OBJECTIVE_SOURCES  += $$PWD/growlnotifier.mm
+QMAKE_LFLAGS += -framework Growl -framework Cocoa

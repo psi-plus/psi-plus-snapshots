@@ -287,4 +287,9 @@ void PsiGrowlNotifier::notificationTimedOut(void* c)
 	tryDeleteContext(context);
 }
 
+bool  PsiGrowlNotifier::isAvailable()
+{
+	return GrowlNotifier::isRunning();
+}
+
 PsiGrowlNotifier* PsiGrowlNotifier::instance_ = 0;

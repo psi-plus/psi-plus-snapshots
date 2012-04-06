@@ -13,6 +13,7 @@
 			</chat>
 		</shortcuts>
 		<ui comment="User interface options">
+			<disable-send-button type="bool">true</disable-send-button>
 			<look>
 				<font>
 					<chat type="QString">Lucida Grande,11,-1,5,50,0,0,0,0,0</chat>

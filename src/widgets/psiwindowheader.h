@@ -47,7 +47,7 @@ private:
 	bool maximized;
 	QRect oldSize;
 	QSize defaultSize;
-	void mouseEnterEvent(int mouse_x, int mouse_y, QRect geom);
+	void mouseEnterEvent(const int mouse_x, const int mouse_y, const QRect &geom);
 
 private slots:
 	void hidePressed();

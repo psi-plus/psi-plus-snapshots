@@ -47,6 +47,7 @@ class PsiGrowlNotifier : public QObject
 
 public:
 	static PsiGrowlNotifier* instance();
+	static bool isAvailable();
 	void popup(PsiAccount* account, PopupManager::PopupType type, const Jid& j, const Resource& r, const UserListItem* = 0, PsiEvent* = 0);
 	void popup(PsiAccount *account, const Jid &j, const PsiIcon *titleIcon, const QString& titleText, const QString& text);
 
