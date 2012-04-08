@@ -72,7 +72,7 @@ AboutDlg::AboutDlg(QWidget* parent)
 			   tr("Active project members are presents below:"));
 	psiplus += details(QString::fromUtf8("zet"),
 			   "vladimir.shelukhin@gmail.com", "", "",
-			   tr("Founder, Patcher and MS Windows x86 Packager"));
+			   tr("Founder, Patcher and MS Windows Packager"));
 	psiplus += details(QString::fromUtf8("rion"),
 			   "rion4ik@gmail.com", "", "",
 			   tr("Founder and Lead Patcher"));
@@ -81,7 +81,7 @@ AboutDlg::AboutDlg(QWidget* parent)
 			   tr("Founder, Designer and Patcher"));
 	psiplus += details(QString::fromUtf8("Dealer_WeARE"),
 			   "", "", "",
-			   tr("Patcher and Plugins Writer"));
+			   tr("Lead Patcher and Plugins Writer"));
 	psiplus += details(QString::fromUtf8("tux-den"),
 			   "", "", "",
 			   tr("Designer and Patcher"));
@@ -90,10 +90,10 @@ AboutDlg::AboutDlg(QWidget* parent)
 			   tr("Patcher, Plugins Writer and Fedora Packager"));
 	psiplus += details(QString::fromUtf8("KukuRuzo"),
 			   "", "", "",
-			   tr("Patcher"));
+			   tr("Patcher and Plugins Writer"));
 	psiplus += details(QString::fromUtf8("ivan1986"),
 			   "", "", "",
-			   tr("Ubuntu Packager and Patcher"));
+			   tr("Patcher and Ubuntu Packager"));
 	psiplus += details(QString::fromUtf8("nexor (aka zerkalica)"),
 			   "", "", "",
 			   tr("Ubuntu Packager"));
@@ -112,7 +112,7 @@ AboutDlg::AboutDlg(QWidget* parent)
 	psiplus += details(QString::fromUtf8("liuch"),
 			   "", "", "",
 			   tr("Patcher and Plugins Writer"));
-	psiplus += details(QString::fromUtf8("sz"),
+	psiplus += details(QString::fromUtf8("Nirdosh"),
 			   "", "", "",
 			   tr("OpenSUSE Packager"));
 	ui_.te_psiplus->setText( psiplus );
