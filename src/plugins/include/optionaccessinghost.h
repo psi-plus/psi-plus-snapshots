@@ -1,8 +1,8 @@
 #ifndef OPTIONACCESSINGHOST_H
 #define OPTIONACCESSINGHOST_H
 
-#include <QDomElement>
-#include <QVariant>
+class QString;
+class QVariant;
 
 class OptionAccessingHost
 {

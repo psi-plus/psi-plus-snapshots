@@ -1,7 +1,8 @@
 #ifndef ICONFACTORYACCESSINGHOST_H
 #define ICONFACTORYACCESSINGHOST_H
 
-#include <QByteArray>
+class QByteArray;
+class QString;
 
 class IconFactoryAccessingHost
 {

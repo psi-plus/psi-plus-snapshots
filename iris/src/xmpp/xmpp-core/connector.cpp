@@ -425,7 +425,7 @@ int AdvancedConnector::errorCode() const
 void AdvancedConnector::do_resolve()
 {
 #ifdef XMPP_DEBUG
-	qDebug("resolving [%s]\n", qPrintable(d->host));
+	qDebug("resolving [%s]", qPrintable(d->host));
 #endif
 	d->dns.start(d->host.toLatin1());
 }
@@ -434,22 +434,22 @@ void AdvancedConnector::dns_resultsReady(const QList<QHostAddress> &results)
 {
 	if(results.isEmpty()) {
 #ifdef XMPP_DEBUG
-		qDebug("dns1\n");
+		qDebug("dns1");
 #endif
 		// using proxy?  then try the unresolved host through the proxy
 		if(d->proxy.type() != Proxy::None) {
 #ifdef XMPP_DEBUG
-			qDebug("dns1.1\n");
+			qDebug("dns1.1");
 #endif
 			do_connect();
 		}
 		else if(d->using_srv) {
 #ifdef XMPP_DEBUG
-			qDebug("dns1.2\n");
+			qDebug("dns1.2");
 #endif
 			if(d->servers.isEmpty()) {
 #ifdef XMPP_DEBUG
-				qDebug("dns1.2.1\n");
+				qDebug("dns1.2.1");
 #endif
 				cleanup();
 				d->errorCode = ErrConnectionRefused;
@@ -457,7 +457,7 @@ void AdvancedConnector::dns_resultsReady(const QList<QHostAddress> &results)
 			}
 			else {
 #ifdef XMPP_DEBUG
-				qDebug("dns1.2.2\n");
+				qDebug("dns1.2.2");
 #endif
 				tryNextSrv();
 				return;
@@ -465,7 +465,7 @@ void AdvancedConnector::dns_resultsReady(const QList<QHostAddress> &results)
 		}
 		else {
 #ifdef XMPP_DEBUG
-			qDebug("dns1.3\n");
+			qDebug("dns1.3");
 #endif
 			if(!d->hostsToTry.isEmpty())
 			{
@@ -481,7 +481,7 @@ void AdvancedConnector::dns_resultsReady(const QList<QHostAddress> &results)
 	}
 	else {
 #ifdef XMPP_DEBUG
-		qDebug("dns2\n");
+		qDebug("dns2");
 #endif
 		d->addrList = results;
 		d->connectHost = d->host;
@@ -504,12 +504,12 @@ void AdvancedConnector::do_connect()
 		d->host = d->curAddr.toString();
 
 #ifdef XMPP_DEBUG
-	qDebug("trying %s:%d\n", qPrintable(d->host), d->port);
+	qDebug("trying %s:%d", qPrintable(d->host), d->port);
 #endif
 	int t = d->proxy.type();
 	if(t == Proxy::None) {
 #ifdef XMPP_DEBUG
-		qDebug("do_connect1\n");
+		qDebug("do_connect1");
 #endif
 		BSocket *s = new BSocket;
 		d->bs = s;
@@ -522,7 +522,7 @@ void AdvancedConnector::do_connect()
 	}
 	else if(t == Proxy::HttpConnect) {
 #ifdef XMPP_DEBUG
-		qDebug("do_connect2\n");
+		qDebug("do_connect2");
 #endif
 		HttpConnect *s = new HttpConnect;
 		d->bs = s;
@@ -534,7 +534,7 @@ void AdvancedConnector::do_connect()
 	}
 	else if(t == Proxy::Socks) {
 #ifdef XMPP_DEBUG
-		qDebug("do_connect3\n");
+		qDebug("do_connect3");
 #endif
 		SocksClient *s = new SocksClient;
 		d->bs = s;
@@ -549,7 +549,7 @@ void AdvancedConnector::do_connect()
 void AdvancedConnector::tryNextSrv()
 {
 #ifdef XMPP_DEBUG
-	qDebug("trying next srv\n");
+	qDebug("trying next srv");
 #endif
 	Q_ASSERT(!d->servers.isEmpty());
 	d->host = d->servers.first().name;
@@ -562,7 +562,7 @@ void AdvancedConnector::srv_done()
 {
 	QPointer<QObject> self = this;
 #ifdef XMPP_DEBUG
-	qDebug("srv_done1\n");
+	qDebug("srv_done1");
 #endif
 	d->servers = d->srv.servers();
 	if(d->servers.isEmpty()) {
@@ -571,14 +571,14 @@ void AdvancedConnector::srv_done()
 			return;
 
 #ifdef XMPP_DEBUG
-		qDebug("srv_done1.1\n");
+		qDebug("srv_done1.1");
 #endif
 		// fall back to A record
 		d->using_srv = false;
 		d->host = d->server;
 		if(d->opt_probe) {
 #ifdef XMPP_DEBUG
-			qDebug("srv_done1.1.1\n");
+			qDebug("srv_done1.1.1");
 #endif
 			d->probe_mode = 0;
 			d->port = 5223;
@@ -586,7 +586,7 @@ void AdvancedConnector::srv_done()
 		}
 		else {
 #ifdef XMPP_DEBUG
-			qDebug("srv_done1.1.2\n");
+			qDebug("srv_done1.1.2");
 #endif
 			d->probe_mode = 1;
 			d->port = 5222;
@@ -636,7 +636,7 @@ void AdvancedConnector::bs_error(int x)
 	int t = d->proxy.type();
 
 #ifdef XMPP_DEBUG
-	qDebug("bse1\n");
+	qDebug("bse1");
 #endif
 
 	// figure out the error
@@ -710,13 +710,13 @@ void AdvancedConnector::bs_error(int x)
 
 	if(d->using_srv && !d->servers.isEmpty()) {
 #ifdef XMPP_DEBUG
-		qDebug("bse1.1\n");
+		qDebug("bse1.1");
 #endif
 		tryNextSrv();
 	}
 	else if(!d->using_srv && d->opt_probe && d->probe_mode == 0) {
 #ifdef XMPP_DEBUG
-		qDebug("bse1.2\n");
+		qDebug("bse1.2");
 #endif
 		d->probe_mode = 1;
 		d->port = 5222;
@@ -725,7 +725,7 @@ void AdvancedConnector::bs_error(int x)
 	}
 	else {
 #ifdef XMPP_DEBUG
-		qDebug("bse1.3\n");
+		qDebug("bse1.3");
 #endif
 		// try next address, if any
 		if(!d->addrList.isEmpty()) {

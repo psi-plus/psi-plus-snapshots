@@ -1,7 +1,8 @@
 #ifndef ACTIVETABACCESSINGHOST_H
 #define ACTIVETABACCESSINGHOST_H
 
-#include <QTextEdit>
+class QString;
+class QTextEdit;
 
 class ActiveTabAccessingHost
 {

@@ -1,7 +1,8 @@
 #ifndef SHORTCUTACCESSINGHOST_H
 #define SHORTCUTACCESSINGHOST_H
 
-#include <QKeySequence>
+class QObject;
+class QKeySequence;
 
 class ShortcutAccessingHost
 {

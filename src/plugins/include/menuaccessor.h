@@ -4,6 +4,10 @@
 #include <QList>
 #include <QVariantHash>
 
+class QObject;
+class QAction;
+class QString;
+
 class MenuAccessor
 {
 public:

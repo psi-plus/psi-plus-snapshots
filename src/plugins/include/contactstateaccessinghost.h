@@ -1,6 +1,9 @@
 #ifndef CONTACTSTATEACCESSINGHOST_H
 #define CONTACTSTATEACCESSINGHOST_H
 
+class QDomElement;
+class QString;
+
 class ContactStateAccessingHost
 {
 public:

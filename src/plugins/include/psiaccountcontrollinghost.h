@@ -1,6 +1,7 @@
 #ifndef PSIACCOUNTCONTROLLINGHOST_H
 #define PSIACCOUNTCONTROLLINGHOST_H
 
+class QString;
 
 class PsiAccountControllingHost
 {

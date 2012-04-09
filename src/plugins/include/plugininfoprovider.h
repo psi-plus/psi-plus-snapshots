@@ -1,6 +1,8 @@
 #ifndef PLUGININFOPROVIDER_H
 #define PLUGININFOPROVIDER_H
 
+class QString;
+
 class PluginInfoProvider
 {
 public:

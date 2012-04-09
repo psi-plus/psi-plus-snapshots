@@ -1,6 +1,13 @@
 #ifndef TOOLBARICONACCESSOR_H
 #define TOOLBARICONACCESSOR_H
 
+#include <QList>
+#include <QVariantHash>
+
+class QObject;
+class QAction;
+class QString;
+
 class ToolbarIconAccessor
 {
 public:

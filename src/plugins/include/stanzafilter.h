@@ -1,7 +1,7 @@
 #ifndef STANZAFILTER_H
 #define STANZAFILTER_H
 
-#include <QDomElement>
+class QDomElement;
 
 class StanzaFilter
 {

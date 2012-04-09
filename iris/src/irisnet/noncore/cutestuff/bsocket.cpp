@@ -135,6 +135,9 @@ BSocket::~BSocket()
 
 void BSocket::reset(bool clear)
 {
+#ifdef BS_DEBUG
+	qDebug("BSocket::reset(%s)", clear?"true":"false");
+#endif
 	if(d->qsock) {
 		delete d->qsock_relay;
 		d->qsock_relay = 0;
@@ -149,7 +152,7 @@ void BSocket::reset(bool clear)
 		//}
 
 		//d->sd.deleteLater(d->qsock);
-    d->qsock->deleteLater();
+		d->qsock->deleteLater();
 		d->qsock = 0;
 	}
 	else {
@@ -259,7 +262,7 @@ void BSocket::write(const QByteArray &a)
 		return;
 #ifdef BS_DEBUG
 	QString s = QString::fromUtf8(a);
-	fprintf(stderr, "BSocket: writing [%d]: {%s}\n", a.size(), s.latin1());
+	qDebug("BSocket: writing [%d]: {%s}", a.size(), qPrintable(s));
 #endif
 	d->qsock->write(a.data(), a.size());
 }
@@ -279,7 +282,7 @@ QByteArray BSocket::read(int bytes)
 
 #ifdef BS_DEBUG
 	QString s = QString::fromUtf8(block);
-	fprintf(stderr, "BSocket: read [%d]: {%s}\n", block.size(), s.latin1());
+	qDebug("BSocket: read [%d]: {%s}", block.size(), qPrintable(s));
 #endif
 	return block;
 }
@@ -335,7 +338,7 @@ void BSocket::srv_done()
 {
 	if(d->srv.failed()) {
 #ifdef BS_DEBUG
-		fprintf(stderr, "BSocket: Error resolving hostname.\n");
+		qDebug("BSocket: Error resolving hostname.");
 #endif
 		error(ErrHostNotFound);
 		return;
@@ -359,7 +362,7 @@ void BSocket::ndns_done()
 	}
 	else {
 #ifdef BS_DEBUG
-		fprintf(stderr, "BSocket: Error resolving hostname.\n");
+		qDebug("BSocket: Error resolving hostname.");
 #endif
 		error(ErrHostNotFound);
 	}
@@ -368,7 +371,7 @@ void BSocket::ndns_done()
 void BSocket::do_connect()
 {
 #ifdef BS_DEBUG
-	fprintf(stderr, "BSocket: Connecting to %s:%d\n", d->host.latin1(), d->port);
+	qDebug("BSocket: Connecting to %s:%d", qPrintable(d->host), d->port);
 #endif
 	ensureSocket();
 	if(!d->addr.isNull())
@@ -386,7 +389,7 @@ void BSocket::qs_connected()
 {
 	d->state = Connected;
 #ifdef BS_DEBUG
-	fprintf(stderr, "BSocket: Connected.\n");
+	qDebug("BSocket: Connected.");
 #endif
 	//SafeDeleteLock s(&d->sd);
 	connected();
@@ -397,7 +400,7 @@ void BSocket::qs_closed()
 	if(d->state == Closing)
 	{
 #ifdef BS_DEBUG
-		fprintf(stderr, "BSocket: Delayed Close Finished.\n");
+		qDebug("BSocket: Delayed Close Finished.");
 #endif
 		//SafeDeleteLock s(&d->sd);
 		reset();
@@ -415,7 +418,7 @@ void BSocket::qs_bytesWritten(qint64 x64)
 {
 	int x = x64;
 #ifdef BS_DEBUG
-	fprintf(stderr, "BSocket: BytesWritten [%d].\n", x);
+	qDebug("BSocket: BytesWritten [%d].", x);
 #endif
 	//SafeDeleteLock s(&d->sd);
 	bytesWritten(x);
@@ -425,7 +428,7 @@ void BSocket::qs_error(QAbstractSocket::SocketError x)
 {
 	if(x == QTcpSocket::RemoteHostClosedError) {
 #ifdef BS_DEBUG
-		fprintf(stderr, "BSocket: Connection Closed.\n");
+		qDebug("BSocket: Connection Closed.");
 #endif
 		//SafeDeleteLock s(&d->sd);
 		reset();
@@ -434,7 +437,7 @@ void BSocket::qs_error(QAbstractSocket::SocketError x)
 	}
 
 #ifdef BS_DEBUG
-	fprintf(stderr, "BSocket: Error.\n");
+	qDebug("BSocket: Error.");
 #endif
 	//SafeDeleteLock s(&d->sd);
 

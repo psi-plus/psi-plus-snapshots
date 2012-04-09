@@ -8,6 +8,15 @@
 #include <QPluginLoader>
 #include <QWidget>
 #include <QSplitter>
+#include <QAction>
+#include <QByteArray>
+#include <QDomElement>
+#include <QKeySequence>
+#include <QObject>
+#include <QRegExp>
+#include <QString>
+#include <QStringList>
+#include <QTextEdit>
 //#include "xmpp_message.h"
 #include "psioptions.h"
 #include "psiaccount.h"

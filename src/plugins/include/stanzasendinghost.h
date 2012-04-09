@@ -1,8 +1,8 @@
 #ifndef STANZASENDINGHOST_H
 #define STANZASENDINGHOST_H
 
-#include <QDomElement>
-#include <QString>
+class QDomElement;
+class QString;
 
 class StanzaSendingHost
 {

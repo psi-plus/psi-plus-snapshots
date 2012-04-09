@@ -1,6 +1,8 @@
 #ifndef APPLICATIONINFOACCESSINGHOST_H
 #define APPLICATIONINFOACCESSINGHOST_H
 
+class QString;
+
 struct Proxy {
 	QString type;
 	QString host;

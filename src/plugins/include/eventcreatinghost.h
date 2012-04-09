@@ -1,7 +1,8 @@
 #ifndef EVENTCREATINGHOST_H
 #define EVENTCREATINGHOST_H
 
-#include <QObject>
+class QObject;
+class QString;
 
 class EventCreatingHost
 {

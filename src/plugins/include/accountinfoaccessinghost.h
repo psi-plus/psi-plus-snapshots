@@ -1,6 +1,8 @@
 #ifndef ACCOUNTINFOACCESSINGHOST_H
 #define ACCOUNTINFOACCESSINGHOST_H
 
+class QString;
+class QStringList;
 
 class AccountInfoAccessingHost
 {

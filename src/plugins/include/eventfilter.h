@@ -1,7 +1,8 @@
 #ifndef EVENTFILTER_H
 #define EVENTFILTER_H
 
-#include <QDomElement>
+class QDomElement;
+class QString;
 
 class EventFilter
 {

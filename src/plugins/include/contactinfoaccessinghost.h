@@ -1,6 +1,8 @@
 #ifndef CONTACTINFOACCESSINGHOST_H
 #define CONTACTINFOACCESSINGHOST_H
 
+class QString;
+class QStringList;
 
 class ContactInfoAccessingHost
 {
