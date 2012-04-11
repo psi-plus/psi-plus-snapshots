@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2012-03-27
+# Updated: 2012-04-11
 # Version: N/A
 
 export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
@@ -110,12 +110,16 @@ sed "s/\(.xxx\)/.${rev}/" -i \
 echo "Patches from Psi+ project were applied."
 echo;
 
+mkdir -p "${PSIPLUS_DIR}/src/patches"
+rsync -a "${MAIN_DIR}/main/patches/dev" "${PSIPLUS_DIR}/src/patches/" || exit 1
+rsync -a "${MAIN_DIR}/main/patches/mac" "${PSIPLUS_DIR}/src/patches/" || exit 1
+echo "Extra patches from Psi+ project were copied."
+echo;
+
 rsync -a "${MAIN_DIR}/plugins" "${PSIPLUS_DIR}/src/" \
     --exclude=".git*" || exit 1
 mv  "${PSIPLUS_DIR}/src/plugins/dev/otrplugin" \
     "${PSIPLUS_DIR}/src/plugins/generic" || exit 1
-# mv  "${PSIPLUS_DIR}/src/plugins/unix"/* \
-#     "${PSIPLUS_DIR}/src/plugins/generic" || exit 1
 echo "Plugins from Psi+ project were copied."
 echo;
 
@@ -166,11 +170,13 @@ TEST_SRC=$(echo "${STATUS}" | grep " src/" | wc -l)
 TEST_IRIS=$(echo "${STATUS}" | grep " iris/" | wc -l)
 TEST_LIBPSI=$(echo "${STATUS}" | grep " src/libpsi/" | wc -l)
 TEST_PLUGINS=$(echo "${STATUS}" | grep " src/plugins/" | wc -l)
+TEST_PATCHES=$(echo "${STATUS}" | grep " src/patches/" | wc -l)
 
 echo "TEST_ALL = ${TEST_ALL}"
 echo "TEST_IRIS = ${TEST_IRIS}"
 echo "TEST_LIBPSI = ${TEST_LIBPSI}"
 echo "TEST_PLUGINS = ${TEST_PLUGINS}"
+echo "TEST_PATCHES = ${TEST_PATCHES}"
 echo "TEST_SRC = ${TEST_SRC}"
 echo;
 
@@ -206,6 +212,9 @@ elif [ "${TEST_PLUGINS}" -gt 1 ]; then
     COMMENT+="Plugins were updated.\n"
 fi
 
+if [ "${TEST_PATCHES}" -gt 0 ]; then
+    COMMENT+="Extra patches were updated.\n"
+fi
 
 echo -e "${COMMENT}"
 
