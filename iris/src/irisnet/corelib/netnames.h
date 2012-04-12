@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2006,2008  Justin Karneges
+ * Copyright (C) 2009-2010  Dennis Schridde
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,6 +24,9 @@
 
 #include <QtCore>
 #include <QtNetwork>
+
+#include <limits>
+
 #include "irisnetglobal.h"
 
 namespace XMPP {
@@ -131,6 +135,11 @@ public:
 	   \brief Assigns \a from to this object and returns a reference to this object
 	*/
 	NameRecord & operator=(const NameRecord &from);
+
+	/**
+	   \brief Compares \a other with this object
+	*/
+	bool operator==(const NameRecord &other);
 
 	/**
 	   \brief Returns true if this record object is null, otherwise returns false
@@ -296,6 +305,7 @@ private:
 IRISNET_EXPORT QDebug operator<<(QDebug, XMPP::NameRecord::Type);
 IRISNET_EXPORT QDebug operator<<(QDebug, const XMPP::NameRecord &);
 
+
 class IRISNET_EXPORT ServiceInstance
 {
 public:
@@ -319,11 +329,14 @@ private:
 };
 
 /**
-   \brief Performs a DNS lookup
+   \brief Represents a DNS query/lookup
 
    NameResolver performs an asynchronous DNS lookup for a given domain name and record type.  Call start() to begin.  The resultsReady() signal is emitted on success, otherwise error() is emitted.  To cancel a lookup, call stop().
 
    Each NameResolver object can only perform one DNS lookup at a time.  If start() is called while a lookup is already in progress, then the existing lookup is stopped before starting the new lookup.
+
+   Each NameResolver object should be used for just one DNS query and then be deleted.
+   Otherwise ambiguity might arise when receiving multiple answers to future queries.
 
    For example, here is how to obtain the IPv4 addresses of a domain name:
 \code
@@ -461,6 +474,39 @@ private:
 
 IRISNET_EXPORT QDebug operator<<(QDebug, XMPP::NameResolver::Error);
 
+
+class IRISNET_EXPORT WeightedNameRecordList
+{
+	friend QDebug operator<<(QDebug, const WeightedNameRecordList&);
+
+public:
+	WeightedNameRecordList();
+	WeightedNameRecordList(const QList<NameRecord> &list);
+	~WeightedNameRecordList();
+	bool empty() const; //!< Returns true if the list contains no items; otherwise returns false.
+	NameRecord takeNext(); //!< Removes the next host to try from the list and returns it.
+
+	void clear(); //!< Removes all items from the list.
+	void append(const WeightedNameRecordList&);
+	void append(const QList<NameRecord>&);
+	void append(const NameRecord&);
+	void append(const QString &hostname, quint16 port);
+
+	WeightedNameRecordList& operator<<(const WeightedNameRecordList&);
+	WeightedNameRecordList& operator<<(const QList<NameRecord>&);
+	WeightedNameRecordList& operator<<(const NameRecord&);
+
+private:
+	typedef QMultiMap<int /* weight */, NameRecord> WeightedNameRecordPriorityGroup;
+	typedef QMap<int /* priority */, WeightedNameRecordPriorityGroup> WNRL;
+
+	WNRL priorityGroups;
+	WNRL::iterator currentPriorityGroup;
+};
+
+QDebug operator<<(QDebug, const XMPP::WeightedNameRecordList&);
+
+
 class IRISNET_EXPORT ServiceBrowser : public QObject
 {
 	Q_OBJECT
@@ -491,32 +537,104 @@ private:
 	friend class NameManager;
 };
 
+
+/*! DNS resolver with DNS-SD/mDNS and recursive lookup support */
+/*
+Flow:
+1) SRV query for server
+	: answer = host[]
+	: failure -> (9)
+	2) Primary query for host[i] (usually AAAA)
+		: answer = address[]
+		: failure -> (5)
+		3) Connect to address[j]
+			: connect -> FINISHED
+			: failure -> j++, (3)
+		4) address[] empty -> (5)
+	5) Fallback query for host[i] (usually A)
+		: answer = address[]
+		: failure -> i++, (2)
+		6) Connect to address[j]
+		: connect -> FINISHED
+		: failure -> j++, (6)
+		7) address[] empty -> i++, (2)
+	8) host[] empty -> (9)
+9) Try servername directly
+*/
 class IRISNET_EXPORT ServiceResolver : public QObject
 {
 	Q_OBJECT
 public:
-	enum Error
-	{
-		ErrorGeneric,
-		ErrorTimeout,
-		ErrorNoLocal
+	/*! Error codes for (SRV) lookups */
+	enum Error {
+		ServiceNotFound, //!< There is no service with the specified parameters
+		NoHostLeft, //!< we did all we could, none of the found host seemed to suffice the users needs
+		ErrorGeneric, ErrorTimeout, ErrorNoLocal // Stuff that netnames_jdns.cpp needs ...
 	};
+	/*! Order of lookup / IP protocols to try */
+	enum Protocol { IPv6_IPv4, IPv4_IPv6, IPv6, IPv4 };
 
+	/*!
+	 * Create a new ServiceResolver.
+	 * This resolver can be used for multiple lookups in a row, but not concurrently!
+	 */
 	ServiceResolver(QObject *parent = 0);
 	~ServiceResolver();
 
-	void startFromInstance(const QByteArray &name);
-	void startFromDomain(const QString &domain, const QString &type);
-	void startFromPlain(const QString &host, int port); // non-SRV
+	Protocol protocol() const; //!< IP protocol to use, defaults to IPv6_IPv4
+	void setProtocol(Protocol); //!< Set IP protocol to use, \sa protocol
+
+	/*!
+	 * Start a DNS-SD lookup
+	 * \param name Instance to lookup
+	 */
+	void start(const QByteArray &name);
+	/*!
+	 * Start a lookup for host directly
+	 * Behaves like a NameResolver with IP protocol fallback
+	 * \param host Hostname to lookup
+	 * \param port Port to signal via resultReady (for convenience)
+	 */
+	void start(const QString &host, quint16 port);
+	/*!
+	 * Start an indirect (SRV) lookup for the service
+	 * \param service Service type, like "ssh" or "ftp"
+	 * \param transport IP transport, like "tcp" or "udp"
+	 * \param domain Domainname to lookup
+	 * \param port Specify a valid port number to make ServiceResolver fallback to domain:port
+	 */
+	void start(const QString &service, const QString &transport, const QString &domain, int port = std::numeric_limits<int>::max());
+
+	/*! Announce the next resolved host, \sa resultReady */
 	void tryNext();
+	/*! Stop the current lookup */
 	void stop();
 
 signals:
-	void resultsReady(const QHostAddress &address, int port);
-	void finished();
-	void error(); // SRV lookup failed
+	/*!
+	 * The lookup succeeded
+	 * \param address Resolved IP address
+	 * \param port Port the service resides on
+	 */
+	void resultReady(const QHostAddress &address, quint16 port);
+	/*! The lookup failed */
+	void error(XMPP::ServiceResolver::Error);
+
+private slots:
+	void handle_srv_ready(const QList<XMPP::NameRecord>&);
+	void handle_srv_error(XMPP::NameResolver::Error);
+	void handle_host_ready(const QList<XMPP::NameRecord>&);
+	void handle_host_error(XMPP::NameResolver::Error);
+	void handle_host_fallback_error(XMPP::NameResolver::Error);
 
 private:
+	void clear_resolvers();
+	void cleanup_resolver(XMPP::NameResolver*);
+	bool check_protocol_fallback();
+	bool lookup_host_fallback();
+	bool try_next_host();
+	void try_next_srv();
+
 	class Private;
 	friend class Private;
 	Private *d;

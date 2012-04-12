@@ -227,8 +227,12 @@ private slots:
 		if(null_dump && list[0].type() == NameRecord::Null)
 		{
 			QByteArray buf = list[0].rawData();
-			if(fwrite(buf.data(), buf.size(), 1, stdout) < 1)
+			if(fwrite(buf.data(), buf.size(), 1, stdout) != static_cast<size_t>(buf.size()))
 			{
+				/* FIXME:
+				 C89/Unix allows fwrite() to return without having written everything.
+				 The application should retry in that case.
+				*/
 				fprintf(stderr, "Error: unable to write raw record to stdout\n");
 				emit quit();
 				return;

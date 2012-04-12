@@ -141,7 +141,6 @@ namespace XMPP
 
 		void setProxy(const Proxy &proxy);
 		void setOptHostPort(const QString &host, quint16 port);
-		void setOptHostsPort(const QStringList &hosts, quint16 port);
 		void setOptProbe(bool);
 		void setOptSSL(bool);
 
@@ -162,9 +161,6 @@ namespace XMPP
 		void httpSyncFinished();
 
 	private slots:
-		void dns_resultsReady(const QList<QHostAddress> &results);
-		void dns_error(XMPP::AddressResolver::Error e);
-		void srv_done();
 		void bs_connected();
 		void bs_error(int);
 		void http_syncStarted();
@@ -176,9 +172,6 @@ namespace XMPP
 		Private *d;
 
 		void cleanup();
-		void do_resolve();
-		void do_connect();
-		void tryNextSrv();
 	};
 
 	class TLSHandler : public QObject
