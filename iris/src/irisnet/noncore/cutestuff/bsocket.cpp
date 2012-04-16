@@ -102,11 +102,13 @@ class BSocket::Private
 public:
 	Private()
 	{
+		isSrv = false;
 		qsock = 0;
 		qsock_relay = 0;
 		resolver = 0;
 	}
 
+	bool isSrv;
 	QTcpSocket *qsock;
 	QTcpSocketSignalRelay *qsock_relay;
 	int state;
@@ -276,7 +278,7 @@ void BSocket::handle_dns_ready(const QHostAddress &address, quint16 port)
 #ifdef BS_DEBUG
 	BSDEBUG << "a:" << address << "p:" << port;
 #endif
-
+	d->isSrv = d->resolver->hasPendingSrv(); // if has no then its fallback or SRV is not used at all
 	connectToHost(address, port);
 }
 
@@ -284,6 +286,8 @@ void BSocket::handle_dns_ready(const QHostAddress &address, quint16 port)
 void BSocket::handle_dns_error(XMPP::ServiceResolver::Error e) {
 #ifdef BS_DEBUG
 	BSDEBUG << "e:" << e;
+#else
+	Q_UNUSED(e)
 #endif
 
 	emit error(ErrHostNotFound);
@@ -293,6 +297,8 @@ void BSocket::handle_dns_error(XMPP::ServiceResolver::Error e) {
 void BSocket::handle_connect_error(QAbstractSocket::SocketError e) {
 #ifdef BS_DEBUG
 	BSDEBUG << "d->r:" << d->resolver;
+#else
+	Q_UNUSED(e)
 #endif
 
 	/* try the next host for this service */
@@ -319,6 +325,11 @@ void BSocket::setSocket(int s)
 int BSocket::state() const
 {
 	return d->state;
+}
+
+bool BSocket::isPeerFromSrv() const
+{
+	return d->isSrv;
 }
 
 bool BSocket::isOpen() const

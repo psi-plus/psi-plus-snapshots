@@ -31,11 +31,11 @@
 
 #include "xmpp.h"
 
-#include <qpointer.h>
-#include <qca.h>
+#include <QPointer>
 #include <QList>
 #include <QUrl>
 #include <QTimer>
+#include <qca.h>
 #include <libidn/idna.h>
 
 #include "bsocket.h"
@@ -381,6 +381,8 @@ void AdvancedConnector::connectToServer(const QString &server)
 			d->port = d->opt_port;
 			s->connectToHost(d->host, d->port);
 			return;
+		} else if (d->opt_ssl != Never) {
+			d->port = XMPP_LEGACY_PORT;
 		}
 
 		s->connectToHost(XMPP_CLIENT_SRV, XMPP_CLIENT_TRANSPORT, d->host, d->port);
@@ -424,8 +426,10 @@ void AdvancedConnector::bs_connected()
 		setPeerAddress(h, p);
 	}
 
+	bool ssl_disabled = d->proxy.type() == Proxy::None &&
+			(static_cast<BSocket*>(d->bs)->isPeerFromSrv() || d->port == XMPP_DEFAULT_PORT);
 	// only allow ssl override if proxy==poll or host:port or when probing legacy ssl port
-	if(d->proxy.type() == Proxy::HttpPoll || d->opt_ssl != Never)
+	if((d->proxy.type() == Proxy::HttpPoll || d->opt_ssl != Never) && !ssl_disabled)
 		setUseSSL(true);
 
 	d->mode = Connected;

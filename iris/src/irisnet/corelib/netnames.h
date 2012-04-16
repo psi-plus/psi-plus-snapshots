@@ -483,7 +483,7 @@ public:
 	WeightedNameRecordList();
 	WeightedNameRecordList(const QList<NameRecord> &list);
 	~WeightedNameRecordList();
-	bool empty() const; //!< Returns true if the list contains no items; otherwise returns false.
+	bool isEmpty() const; //!< Returns true if the list contains no items; otherwise returns false.
 	NameRecord takeNext(); //!< Removes the next host to try from the list and returns it.
 
 	void clear(); //!< Removes all items from the list.
@@ -609,6 +609,8 @@ public:
 	void tryNext();
 	/*! Stop the current lookup */
 	void stop();
+
+	bool hasPendingSrv() const;
 
 signals:
 	/*!

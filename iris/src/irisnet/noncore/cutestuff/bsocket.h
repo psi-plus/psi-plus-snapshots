@@ -57,6 +57,7 @@ public:
 	int socket() const;
 	void setSocket(int);
 	int state() const;
+	bool isPeerFromSrv() const;
 
 	// from ByteStream
 	bool isOpen() const;

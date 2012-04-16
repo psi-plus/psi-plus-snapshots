@@ -516,7 +516,7 @@ WeightedNameRecordList::WeightedNameRecordList(const QList<XMPP::NameRecord> &li
 WeightedNameRecordList::~WeightedNameRecordList() {
 }
 
-bool WeightedNameRecordList::empty() const {
+bool WeightedNameRecordList::isEmpty() const {
 	return currentPriorityGroup == priorityGroups.end();
 }
 
@@ -564,6 +564,9 @@ XMPP::NameRecord WeightedNameRecordList::takeNext() {
 
 	/* Delete the entry from list, to prevent it from being tried multiple times */
 	currentPriorityGroup->remove(it->weight(), *it);
+	if (currentPriorityGroup->isEmpty()) {
+		priorityGroups.erase(currentPriorityGroup++);
+	}
 
 	return result;
 }
@@ -617,7 +620,7 @@ void WeightedNameRecordList::append(const XMPP::NameRecord &record) {
 
 void WeightedNameRecordList::append(const QString &hostname, quint16 port) {
 	NameRecord record(hostname.toLocal8Bit(), std::numeric_limits<int>::max());
-	record.setSrv(hostname.toLocal8Bit(), port, std::numeric_limits<int>::max(), std::numeric_limits<int>::max());
+	record.setSrv(hostname.toLocal8Bit(), port, std::numeric_limits<int>::max(), 0);
 
 	append(record);
 
@@ -1244,6 +1247,8 @@ void ServiceResolver::handle_srv_error(XMPP::NameResolver::Error e)
 {
 #ifdef NETNAMES_DEBUG
 	NNDEBUG << "e:" << e;
+#else
+	Q_UNUSED(e)
 #endif
 
 	/* cleanup resolver */
@@ -1290,6 +1295,8 @@ void ServiceResolver::handle_host_fallback_error(XMPP::NameResolver::Error e)
 {
 #ifdef NETNAMES_DEBUG
 	NNDEBUG << "e:" << e;
+#else
+	Q_UNUSED(e)
 #endif
 
 	/* cleanup resolver */
@@ -1360,7 +1367,7 @@ void ServiceResolver::try_next_srv()
 #endif
 
 	/* if there are still hosts we did not try */
-	if (!d->srvList.empty()) {
+	if (!d->srvList.isEmpty()) {
 		XMPP::NameRecord record(d->srvList.takeNext());
 		/* lookup host by name and specify port for later use */
 		start(record.name(), record.port());
@@ -1383,6 +1390,11 @@ void ServiceResolver::tryNext() {
 
 void ServiceResolver::stop() {
 	clear_resolvers();
+}
+
+bool ServiceResolver::hasPendingSrv() const
+{
+	return !d->srvList.isEmpty();
 }
 
 
