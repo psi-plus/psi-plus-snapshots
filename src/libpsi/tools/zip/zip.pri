@@ -11,11 +11,6 @@ psi-minizip {
 
 DEPENDPATH  += $$PWD
 
-psi-winzlib {
-	INCLUDEPATH += $$PWD/minizip/win32
-	DEPENDPATH  += $$PWD/minizip/win32
-	LIBS += $$PWD/minizip/win32/libz.a
-}
 mac {
 	QMAKE_LFLAGS += -lz
 }
