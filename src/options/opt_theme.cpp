@@ -34,8 +34,8 @@ OptionsTabAppearanceThemes::OptionsTabAppearanceThemes(QObject *parent)
 OptionsTabAppearanceTheme::OptionsTabAppearanceTheme(QObject *parent,
 													PsiThemeProvider *provider_)
 	: OptionsTab(parent, provider_->type(), "",
-				 tr(qPrintable(provider_->optionsName())),
-				 tr(qPrintable(provider_->optionsDescription())))
+				 provider_->optionsName(),
+				 provider_->optionsDescription())
 	, w(0)
 	, provider(provider_)
 {
