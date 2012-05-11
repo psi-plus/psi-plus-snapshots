@@ -14,14 +14,16 @@
 
 PsiTrayIcon::PsiTrayIcon(const QString &tip, QMenu *popup, QObject *parent)
 	: QObject(parent)
+	, icon_(NULL)
+	, trayicon_(new QSystemTrayIcon())
 {
-	icon_ = NULL;
-	trayicon_ = NULL;
-	trayicon_ = new QSystemTrayIcon();
+
 	trayicon_->setContextMenu(popup);
 	setToolTip(tip);
 	connect(trayicon_,SIGNAL(activated(QSystemTrayIcon::ActivationReason)),SLOT(trayicon_activated(QSystemTrayIcon::ActivationReason)));
 	trayicon_->installEventFilter(this);
+
+	iconsetChanged(PsiOptions::instance()->getOption("options.iconsets.status").toString());
 }
 
 PsiTrayIcon::~PsiTrayIcon()
@@ -37,7 +39,11 @@ void PsiTrayIcon::setContextMenu(QMenu* menu)
 
 void PsiTrayIcon::setToolTip(const QString &str)
 {
+#ifndef Q_WS_X11
 	trayicon_->setToolTip(str);
+#else
+	Q_UNUSED(str)
+#endif
 }
 
 void PsiTrayIcon::setIcon(const PsiIcon *icon, bool alert)
@@ -78,6 +84,11 @@ bool PsiTrayIcon::isAnimating() const
 bool PsiTrayIcon::isWMDock()
 {
 	return false;
+}
+
+void PsiTrayIcon::iconsetChanged(const QString &iconset)
+{
+	iconset_ = iconset;
 }
 
 void PsiTrayIcon::show()
@@ -181,7 +192,7 @@ void PsiTrayIcon::animate()
 	if ( !icon_ )
 		return;
 
-	QString cachedName = "PsiTray/" + PsiOptions::instance()->getOption("options.iconsets.status").toString() + "/" + icon_->name() + "/" + QString::number( icon_->frameNumber() );
+	QString cachedName = "PsiTray/" + iconset_ + "/" + icon_->name() + "/" + QString::number( icon_->frameNumber() );
 
 	QPixmap p;
 	if ( !QPixmapCache::find(cachedName, p) ) {
@@ -193,9 +204,9 @@ void PsiTrayIcon::animate()
 
 bool PsiTrayIcon::eventFilter(QObject *obj, QEvent *event)
 {
-	if(event->type() == QEvent::ToolTip) {
+	if(obj == trayicon_ && event->type() == QEvent::ToolTip) {
 		doToolTip(obj, ((QHelpEvent*)event)->globalPos());
 		return true;
 	}
-	return false;
+	return QObject::eventFilter(obj, event);
 }
