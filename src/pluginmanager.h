@@ -20,6 +20,8 @@ class PsiPlugin;
 class PluginHost;
 class PsiCon;
 
+#define PLUGINS_NO_DEBUG
+
 namespace XMPP {
 	class Client;
 }

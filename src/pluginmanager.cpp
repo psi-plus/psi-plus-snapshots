@@ -107,7 +107,7 @@ QList<PluginHost*> PluginManager::updatePluginsList()
 {
 	QList<PluginHost*> newPlugins;
 
-	foreach (QString d, pluginDirs()) {
+	foreach (const QString& d, pluginDirs()) {
 		QDir dir(d);
 		foreach (QString file, dir.entryList(QDir::Files)) {
 			file = dir.absoluteFilePath(file);

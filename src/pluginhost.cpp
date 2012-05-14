@@ -195,11 +195,13 @@ bool PluginHost::load()
 	else {
 		if (!loader_) {
 			loader_ = new QPluginLoader(file_);
+			//loader_->setLoadHints(QLibrary::ResolveAllSymbolsHint);
 		}
 
 		QObject* plugin = loader_->instance();
 		if (!loader_->isLoaded()) {
 			delete loader_;
+			loader_ = 0;
 		}
 		else if (plugin) {
 #ifndef PLUGINS_NO_DEBUG
@@ -228,6 +230,7 @@ bool PluginHost::load()
 					loader_->unload();
 				}
 				delete loader_;
+				loader_ = 0;
 				valid_ = false;
 			}
 		}
