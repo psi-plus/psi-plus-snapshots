@@ -105,7 +105,7 @@ AboutDlg::AboutDlg(QWidget* parent)
 			   tr("Patcher and Russian localization"));
 	psiplus += details(QString::fromUtf8("Z_God"),
 			   "", "", "",
-			   tr("Psimedia Patcher and English localization"));
+			   tr("Psimedia Patcher and Wiki English localization"));
 	psiplus += details(QString::fromUtf8("buharev.v.p"),
 			   "", "", "",
 			   tr("Mac OS X Packager"));
