@@ -1,14 +1,21 @@
 CONFIG += release
 include(../../psiplugin.pri)
 
-SOURCES +=  http.cpp\
+SOURCES += \
             juickplugin.cpp \
-    juickjidlist.cpp
+    juickjidlist.cpp \
+    juickparser.cpp \
+    juickdownloader.cpp
 
-HEADERS += http.h \
-    juickjidlist.h
+HEADERS += \
+    juickjidlist.h \
+    juickparser.h \
+    juickdownloader.h \
+    defines.h \
+    juickplugin.h
 
-QT += network
+QT += network webkit
 
 FORMS += \
-    juickjidlist.ui
+    juickjidlist.ui \
+    settings.ui
