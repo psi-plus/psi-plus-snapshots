@@ -5590,7 +5590,7 @@ void PsiAccount::processChatsHelper(const Jid& j, bool removeEvents)
 
 	// extract the chats
 	QList<PsiEvent*> chatList;
-	bool compareResources = true;
+	bool compareResources = !c->autoSelectContact();
 #ifdef YAPSI
 	compareResources = false;
 #endif
