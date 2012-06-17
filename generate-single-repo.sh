@@ -24,6 +24,7 @@ else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
     git clone --depth 1 git://github.com/psi-im/${MOD}.git || exit 1
+    cd "${MAIN_DIR}/${MOD}"
     git submodule init || exit 1
     git submodule update || exit 1
     echo;
