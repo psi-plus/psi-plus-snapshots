@@ -51,10 +51,10 @@
 
 using namespace XMPP;
 
-const int XMPP_DEFAULT_PORT = 5222;
-const int XMPP_LEGACY_PORT = 5223;
-const QString XMPP_CLIENT_SRV = "xmpp-client";
-const QString XMPP_CLIENT_TRANSPORT = "tcp";
+static const int XMPP_DEFAULT_PORT = 5222;
+static const int XMPP_LEGACY_PORT = 5223;
+static const char* XMPP_CLIENT_SRV = "xmpp-client";
+static const char* XMPP_CLIENT_TRANSPORT = "tcp";
 
 
 //----------------------------------------------------------------------------
