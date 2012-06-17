@@ -96,6 +96,9 @@ find . -depth -type d -empty -exec rmdir {} \;
 echo "Directory is cleaned."
 echo;
 
+if !([ -e "${PSIPLUS_DIR}/README" ]); then
+    wget -4 -c "https://raw.github.com/tehnick/psi-plus/master/README" || touch README
+fi
 
 mv "${PSIPLUS_DIR}/README" "${MAIN_DIR}/README" || exit 1
 rsync -a "${MAIN_DIR}/psi/" "${PSIPLUS_DIR}/" \
