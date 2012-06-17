@@ -3,12 +3,13 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2012-04-11
+# Updated: 2012-06-17
 # Version: N/A
 
 export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
 export MAIN_DIR="${PSIPLUS_DIR}/.."
 
+cd "${PSIPLUS_DIR}" || exit 1
 OLD_VER=$(git tag -l | tail -n1)
 OLD_REVISION=$(echo ${OLD_VER} | sed -e "s/^[0-9]\+\.[0-9]\+\.\([0-9]\+\)$/\1/")
 
