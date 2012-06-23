@@ -60,7 +60,10 @@ bool TimeServer::take(const QDomElement &e)
 		QTime t = QTime(0, 0).addSecs(qAbs(off)*60);
 		QString tzo = (off < 0 ? "-" : "+") + t.toString("HH:mm");
 		time.appendChild(textTag(doc(), "tzo", tzo));
-		time.appendChild(textTag(doc(), "utc", local.toUTC().toString(Qt::ISODate) + "Z"));
+		QString localTimeStr = local.toUTC().toString(Qt::ISODate);
+		if (!localTimeStr.endsWith("Z"))
+			localTimeStr.append("Z");
+		time.appendChild(textTag(doc(), "utc", localTimeStr));
 
 		send(iq);
 		return true;

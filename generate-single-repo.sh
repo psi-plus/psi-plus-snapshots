@@ -153,7 +153,7 @@ echo;
 
 rm configure.exe
 rm -r win32/
-rm -r src/libpsi/tools/zip/minizip/win32/
+#rm -r src/libpsi/tools/zip/minizip/win32/
 rm -r src/libpsi/tools/idle/win32/
 echo "Trash was removed."
 echo;
