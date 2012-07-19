@@ -60,10 +60,9 @@ public:
 			return false;
 		}
 
-		if (QFile::exists(backupFileName()))
-			QFile::remove(backupFileName());
-
 		if (QFile::exists(fileName_)) {
+			if (QFile::exists(backupFileName()))
+				QFile::remove(backupFileName());
 			if (!QFile::rename(fileName_, backupFileName())) {
 				qWarning("AtomicXmlFile::saveDocument(): Unable to rename '%s' to '%s'.",
 				         qPrintable(fileName_), qPrintable(backupFileName()));
@@ -90,6 +89,10 @@ public:
 		foreach(QString fileName, loadCandidateList()) {
 			if (loadDocument(reader, fileName)) {
 				return true;
+			}
+			if (QFile::exists(fileName)) {
+				// The file exists, but it is incorrect. Remove it. Otherwise, enter the backup.
+				QFile::remove(fileName);
 			}
 		}
 
