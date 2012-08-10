@@ -41,6 +41,7 @@ use_crash {
 }
 
 # AutoUpdater
+win32:CONFIG += QuickDirtyChecker
 include($$PWD/AutoUpdater/AutoUpdater.pri)
 
 # qca

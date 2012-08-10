@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2012-06-17
+# Updated: 2012-08-10
 # Version: N/A
 
 export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
@@ -110,8 +110,7 @@ echo;
 cat "${MAIN_DIR}/main/patches"/*.diff | \
     patch -d "${PSIPLUS_DIR}" -p1 2>&1 > \
     "${MAIN_DIR}/applying-patches_${NEW_VER}.log" || exit 1
-sed "s/\(.xxx\)/.${rev}/" -i \
-    "${PSIPLUS_DIR}/src/applicationinfo.cpp" || exit 1
+echo "${NEW_VER} (@@DATE@@)" > version || exit 1
 echo "Patches from Psi+ project were applied."
 echo;
 
@@ -222,6 +221,9 @@ if [ "${TEST_PATCHES}" -gt 0 ]; then
 fi
 
 echo -e "${COMMENT}"
+
+
+exit 0
 
 git cm -a -m "$(echo -e ${COMMENT})" 2>&1 > \
     "${MAIN_DIR}/git-commit_${NEW_VER}.log" || exit 1

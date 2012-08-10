@@ -36,11 +36,8 @@
 // Should also be overridable through an optional file.
 
 #define PROG_NAME "Psi+"
-#ifdef WEBKIT
-#define PROG_VERSION "0.15.5340-webkit" " (" __DATE__ ")" //CVS Builds are dated
-#else
-#define PROG_VERSION "0.15.5340" " (" __DATE__ ")" //CVS Builds are dated
-#endif
+#define PROG_VERSION PSI_VERSION
+//#define PROG_VERSION "0.15-dev" " (" __DATE__ ")" //CVS Builds are dated
 //#define PROG_VERSION "0.15";
 #define PROG_CAPS_NODE "http://psi-dev.googlecode.com/caps"
 #define PROG_CAPS_VERSION "0.15"
