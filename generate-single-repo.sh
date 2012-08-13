@@ -222,9 +222,6 @@ fi
 
 echo -e "${COMMENT}"
 
-
-exit 0
-
 git cm -a -m "$(echo -e ${COMMENT})" 2>&1 > \
     "${MAIN_DIR}/git-commit_${NEW_VER}.log" || exit 1
 

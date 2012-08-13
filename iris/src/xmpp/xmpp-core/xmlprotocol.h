@@ -1,5 +1,5 @@
 /*
- * xmlprotocol.h - state machine for 'jabber-like' protocols
+ * xmlprotocol.h - state machine for 'xmpp-like' protocols
  * Copyright (C) 2004  Justin Karneges
  *
  * This library is free software; you can redistribute it and/or

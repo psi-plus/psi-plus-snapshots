@@ -150,13 +150,6 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="ck_autoSameStatus">
-            <property name="text">
-             <string>Restore last status</string>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="QCheckBox" name="ck_reconn">
             <property name="text">
              <string>Automatically reconnect if disconnected</string>
@@ -798,16 +791,26 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <widget class="QCheckBox" name="ck_automatic_resource">
+         <property name="text">
+          <string>Use hostname as resource</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <property name="spacing">
+          <number>6</number>
+         </property>
+         <property name="margin">
+          <number>0</number>
+         </property>
          <item>
           <widget class="QLabel" name="lb_resource">
            <property name="text">
             <string>Resource:</string>
            </property>
           </widget>
-         </item>
-         <item>
-          <widget class="QComboBox" name="cb_resource"/>
          </item>
          <item>
           <widget class="QLineEdit" name="le_resource">
@@ -819,45 +822,32 @@
            </property>
           </widget>
          </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout">
-         <property name="spacing">
-          <number>6</number>
-         </property>
-         <property name="margin">
-          <number>0</number>
-         </property>
          <item>
           <widget class="QLabel" name="lb_priority">
            <property name="text">
-            <string>Default priority:</string>
+            <string>Priority:</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QComboBox" name="cb_priority"/>
-         </item>
-         <item>
-          <widget class="QSpinBox" name="sb_priority">
+          <widget class="QLineEdit" name="le_priority">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="minimumSize">
             <size>
-             <width>60</width>
+             <width>56</width>
              <height>0</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
-             <width>60</width>
-             <height>16777215</height>
+             <width>56</width>
+             <height>32767</height>
             </size>
-           </property>
-           <property name="minimum">
-            <number>-128</number>
-           </property>
-           <property name="maximum">
-            <number>127</number>
            </property>
           </widget>
          </item>
@@ -1117,6 +1107,9 @@
   <tabstop>cb_plain</tabstop>
   <tabstop>ck_req_mutual</tabstop>
   <tabstop>cb_security_level</tabstop>
+  <tabstop>ck_automatic_resource</tabstop>
+  <tabstop>le_resource</tabstop>
+  <tabstop>le_priority</tabstop>
   <tabstop>le_dtProxy</tabstop>
   <tabstop>le_stunHost</tabstop>
   <tabstop>le_stunPort</tabstop>

@@ -289,7 +289,7 @@ XMPP::VCard::Gender PsiContact::gender() const
 #endif
 
 /**
- * Returns contact's Jabber ID.
+ * Returns contact's XMPP address.
  */
 XMPP::Jid PsiContact::jid() const
 {

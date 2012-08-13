@@ -32,8 +32,8 @@ License
 Description
 -----------
 
-  Iris is a comprehensive library for working with the XMPP/Jabber protocol.
-  It complies with the XMPP RFCs and many XEPs.
+  Iris is a comprehensive library for working with the XMPP protocol. It
+  complies with the XMPP RFCs and many XEPs.
 
   In addition to XMPP, Iris also offers access to many other protocols and
   concepts, including DNS, DNS-SD, connection and transport abstraction, HTTP,

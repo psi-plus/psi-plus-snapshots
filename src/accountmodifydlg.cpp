@@ -121,7 +121,6 @@ void AccountModifyDlg::init()
 	le_host->setText(acc.host);
 	le_port->setText(QString::number(acc.port));
 	ck_req_mutual->setChecked(acc.req_mutual_auth);
-	ck_legacy_ssl_probe->setChecked(acc.legacy_ssl_probe);
 
 	connect(cb_resource, SIGNAL(currentIndexChanged(int)), SLOT(resourceCbChanged(int)));
 	connect(cb_priority, SIGNAL(currentIndexChanged(int)), SLOT(priorityCbChanged(int)));
@@ -211,7 +210,7 @@ void AccountModifyDlg::init()
 	cb_plain->setWhatsThis(
 		tr("Normally, Psi logs in using the <i>digest</i> authentication "
 		"method.  Check this box to force a plain text login "
-		"to the Jabber server. Use this option only if you have "
+		"to the XMPP server. Use this option only if you have "
 		"problems connecting with the normal login procedure, as it "
 		"makes your connection potentially vulnerable to "
 		"attacks."));
@@ -238,36 +237,36 @@ void AccountModifyDlg::init()
 		"up all the time."));
 	cb_ssl->setWhatsThis(
 		tr("Check this option to use an encrypted SSL connection to "
-		"the Jabber server.  You may use this option if your "
-		"server supports it and if you have the necessary QCA-OpenSSL "
+		"the XMPP server.  You may use this option if your "
+		"server supports it and if you have the necessary qca-ossl "
 		"plugin installed.  For more information, check the "
 		"Psi homepage."));
 	ck_compress->setWhatsThis(
 		tr("Check this option to use a compressed connection to "
-		"the Jabber server, if the server supports it."));
+		"the XMPP server, if the server supports it."));
 	ck_host->setWhatsThis(
-		tr("Use this option for manual configuration of your Jabber host "
+		tr("Use this option for manual configuration of your XMPP host "
 		"if it is not the same as the host you are connecting to.  This option is mostly useful "
 		"if you have some sort of proxy route on your "
 		"local machine (i.e. you connect to localhost), but your "
 		"account is registered on an external server."));
 	le_resource->setWhatsThis(
-		tr("You can have multiple clients connected to the Jabber server "
+		tr("You can have multiple clients connected to the XMPP server "
 		"with your single account.  Each login is distinguished by a \"resource\" "
 		"name, which you can specify in this field."));
 	ck_custom_auth->setWhatsThis(
 		tr("This option sets the user (and realm) you want to "
-			"authenticate as. This overrides the Jabber ID you are logging in "
+			"authenticate as. This overrides the XMPP address you are logging in "
 			"as."));
 	sb_priority->setWhatsThis(
-		tr("<p>You can have multiple clients connected to the Jabber "
+		tr("<p>You can have multiple clients connected to the XMPP "
 		"server with your single account.  In such a situation, "
 		"the client with the highest priority (that is specified in "
 		"this field) will be the one that will receive "
 		"all incoming events.</p>"
 		"<p>For example, if you have a permanent connection "
 		"to the Internet at your work location, and have a dial-up at home, "
-		"you can have your Jabber client permanently running at work "
+		"you can have your XMPP client permanently running at work "
 		"with a low priority, and you can still use the same account "
 		"from home, using a client with higher priority to "
 		"temporary \"disable\" the lower priority client at work.</p>"));
@@ -306,9 +305,6 @@ void AccountModifyDlg::init()
 	if (!PsiOptions::instance()->getOption("options.ui.account.keepalive").toBool()) 
 		ck_keepAlive->hide();
 	
-	if (!PsiOptions::instance()->getOption("options.ui.account.legacy-ssl-probe").toBool()) 
-		ck_legacy_ssl_probe->hide();
-
 	if (!PsiOptions::instance()->getOption("options.ui.account.security.show").toBool()) {
 		lb_plain->hide();
 		cb_plain->hide();
@@ -317,7 +313,7 @@ void AccountModifyDlg::init()
 		cb_security_level->hide();
 	}
 
-	if (!PsiOptions::instance()->getOption("options.ui.account.security.show").toBool() && !PsiOptions::instance()->getOption("options.ui.account.legacy-ssl-probe").toBool() && !PsiOptions::instance()->getOption("options.ui.account.keepalive").toBool() && !PsiOptions::instance()->getOption("options.ui.account.manual-host").toBool() && !PsiOptions::instance()->getOption("options.ui.account.proxy.show").toBool()) {
+	if (!PsiOptions::instance()->getOption("options.ui.account.security.show").toBool() && !PsiOptions::instance()->getOption("options.ui.account.keepalive").toBool() && !PsiOptions::instance()->getOption("options.ui.account.manual-host").toBool() && !PsiOptions::instance()->getOption("options.ui.account.proxy.show").toBool()) {
 		tab_main->removeTab(tab_main->indexOf(tab_connection));
 	}
 	
@@ -429,8 +425,6 @@ void AccountModifyDlg::hostToggled(bool on)
 	lb_host->setEnabled(on);
 	le_port->setEnabled(on);
 	lb_port->setEnabled(on);
-	ck_legacy_ssl_probe->setEnabled(!on);
-	ck_legacy_ssl_probe->setChecked(on ? false : acc.legacy_ssl_probe);
 	if (!on && cb_ssl->currentIndex() == cb_ssl->findData(UserAccount::SSL_Legacy)) {
 		cb_ssl->setCurrentIndex(cb_ssl->findData(UserAccount::SSL_Auto));
 	}
@@ -491,7 +485,7 @@ void AccountModifyDlg::save()
 			QMessageBox::information(this, tr("Error"), tr("<i>Username</i> is invalid."));
 		}
 		else {
-			QMessageBox::information(this, tr("Error"), tr("<i>Jabber ID</i> must be specified in the format <i>user@host</i>."));
+			QMessageBox::information(this, tr("Error"), tr("<i>XMPP Address</i> must be specified in the format <i>user@host</i>."));
 		}
 		return;
 	}
@@ -525,8 +519,6 @@ void AccountModifyDlg::save()
 	acc.port = le_port->text().toInt();
 
 	acc.req_mutual_auth = ck_req_mutual->isChecked();
-	if (!ck_host->isChecked())
-		acc.legacy_ssl_probe = ck_legacy_ssl_probe->isChecked();
 	acc.security_level = cb_security_level->itemData(cb_security_level->currentIndex()).toInt();
 
 	acc.opt_automatic_resource = (cb_resource->currentIndex() == 1);
@@ -592,7 +584,7 @@ void AccountModifyDlg::addBlockClicked()
 		return;
 
 	bool ok;
-	QString input = QInputDialog::getText(NULL, tr("Block contact"), tr("Enter the Jabber ID of the contact to block:"), QLineEdit::Normal, "", &ok);
+	QString input = QInputDialog::getText(NULL, tr("Block contact"), tr("Enter the XMPP Address of the contact to block:"), QLineEdit::Normal, "", &ok);
 	Jid jid(input);
 	if (ok && !jid.isEmpty()) {
 		privacyModel.list().insertItem(0,PrivacyListItem::blockItem(jid.full()));

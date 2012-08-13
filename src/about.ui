@@ -103,7 +103,7 @@
           </sizepolicy>
          </property>
          <property name="text" >
-          <string>A cross-platform Jabber client designed for the Jabber power user.&lt;br>
+          <string>A cross-platform XMPP client designed for the power user.&lt;br>
 &lt;br>
 Copyright © 2001-2012 The Psi Team.&lt;br>
 </string>

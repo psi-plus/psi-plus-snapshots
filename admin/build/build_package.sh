@@ -72,11 +72,11 @@ build_package_psi() {
 		mqtdir=`get_msys_path $qtdir`
 
 		cd $psi_base
-		PATH=$mqtdir/bin:$PATH ./configure.exe --qtdir=$qtdir --release --disable-bundled-qca --with-qca=$deps_base/$qca_win_dir/$target_arch --with-zlib-inc=$deps_base/$zlib_win_dir/$target_arch/include --with-zlib-lib=$deps_base/$zlib_win_dir/$target_arch/lib --with-aspell-inc=$deps_base/$aspell_win_dir/$target_arch/include --with-aspell-lib=$deps_base/$aspell_win_dir/$target_arch/lib
+		PATH=$mqtdir/bin:$PATH ./configure.exe --qtdir=$qtdir --release --with-qca-inc=$deps_base/$qca_win_dir/$target_arch/include --with-qca-lib=$deps_base/$qca_win_dir/$target_arch/lib --with-zlib-inc=$deps_base/$zlib_win_dir/$target_arch/include --with-zlib-lib=$deps_base/$zlib_win_dir/$target_arch/lib --with-aspell-inc=$deps_base/$aspell_win_dir/$target_arch/include --with-aspell-lib=$deps_base/$aspell_win_dir/$target_arch/lib
 		mingw32-make
 
 		mkdir -p $arch_prefix
-		cp src/release/psi.exe $arch_prefix/Psi.exe
+		cp psi.exe $arch_prefix/Psi.exe
 		cp $mqtdir/bin/QtCore4.dll $arch_prefix
 		cp $mqtdir/bin/QtNetwork4.dll $arch_prefix
 		cp $mqtdir/bin/QtXml4.dll $arch_prefix
@@ -106,6 +106,7 @@ build_package_psi() {
 			cp /mingw/bin/libgcc_s_dw2-1.dll $arch_prefix
 			cp /mingw/bin/libstdc++-6.dll $arch_prefix
 			cp /mingw/bin/mingwm10.dll $arch_prefix
+			cp /mingw/bin/pthreadGC2.dll $arch_prefix
 		fi
 		cp -a certs $arch_prefix
 		cp -a iconsets $arch_prefix
@@ -118,10 +119,7 @@ build_package_psi() {
 	else
 		cd $psi_base
 		export DYLD_FRAMEWORK_PATH=$QTDIR/lib:$deps_base/$qca_mac_dir/lib:$deps_base/$growl_dir/Framework
-		./configure --disable-bundled-qca --with-qca=$deps_base/$qca_mac_dir
-		cat $patchdir/mac_universal.pri >> conf.pri
-		echo "LIBS += -F$deps_base/$growl_dir/Framework -framework Growl" >> conf.pri
-		$QTDIR/bin/qmake psi.pro
+		./configure --with-qca-inc=$deps_base/$qca_mac_dir/include --with-qca-lib=$deps_base/$qca_mac_dir/lib --with-growl=$deps_base/$growl_dir/Framework --enable-universal
 		make
 	fi
 }

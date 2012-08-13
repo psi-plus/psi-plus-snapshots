@@ -1,5 +1,5 @@
 /*
- * jid.cpp - class for verifying and manipulating Jabber IDs
+ * jid.cpp - class for verifying and manipulating XMPP addresses
  * Copyright (C) 2003  Justin Karneges
  *
  * This library is free software; you can redistribute it and/or

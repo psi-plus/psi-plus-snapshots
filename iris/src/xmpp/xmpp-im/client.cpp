@@ -22,9 +22,9 @@
 #include "safedelete.h"
 
 //! \class XMPP::Client client.h
-//! \brief Communicates with the Jabber network.  Start here.
+//! \brief Communicates with the XMPP network.  Start here.
 //!
-//!  Client controls an active Jabber connection.  It allows you to connect,
+//!  Client controls an active XMPP connection.  It allows you to connect,
 //!  authenticate, manipulate the roster, and send / receive messages and
 //!  presence.  It is the centerpiece of this library, and all Tasks must pass
 //!  through it.
@@ -41,7 +41,7 @@
 //!
 //!  \code
 //!  #include "client.h"
-//!  using namespace Jabber;
+//!  using namespace XMPP;
 //!
 //!  ...
 //!

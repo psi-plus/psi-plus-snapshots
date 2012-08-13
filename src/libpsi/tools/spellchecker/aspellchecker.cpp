@@ -38,8 +38,8 @@ ASpellChecker::ASpellChecker()
 	aspell_config_replace(config_, "encoding", "utf-8");
 #ifdef Q_WS_WIN
 	aspell_config_replace(config_, "conf-dir", QDir::homePath().toLocal8Bit().data());
-	aspell_config_replace(config_, "data-dir", QString("%1/aspell/data").arg(QCoreApplication::applicationDirPath()).toLocal8Bit().data());
-	aspell_config_replace(config_, "dict-dir", QString("%1/aspell/dict").arg(QCoreApplication::applicationDirPath()).toLocal8Bit().data());
+	aspell_config_replace(config_, "data-dir", QString("%1/aspell").arg(QCoreApplication::applicationDirPath()).toLocal8Bit().data());
+	aspell_config_replace(config_, "dict-dir", QString("%1/aspell").arg(QCoreApplication::applicationDirPath()).toLocal8Bit().data());
 #endif
 	setActiveLanguages(getAllLanguages());
 }
