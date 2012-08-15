@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2012-08-10
+# Updated: 2012-08-15
 # Version: N/A
 
 export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
@@ -74,6 +74,7 @@ cd "${MAIN_DIR}/${MOD}"
 
 rev=$((`git describe --tags | sed -e "s/^.*-\([0-9]\+\)-.*$/\1/"`+5000))
 if [ "${LAST_REVISION}" = "5000" ]; then exit 1; fi
+LAST_REVISION_DATE=$((git log -n1 --date=short --pretty=format:"%ad"))
 
 CUR_VER="0.15"
 LAST_REVISION=${rev}
@@ -110,7 +111,7 @@ echo;
 cat "${MAIN_DIR}/main/patches"/*.diff | \
     patch -d "${PSIPLUS_DIR}" -p1 2>&1 > \
     "${MAIN_DIR}/applying-patches_${NEW_VER}.log" || exit 1
-echo "${NEW_VER} (@@DATE@@)" > version || exit 1
+echo "${NEW_VER} (${LAST_REVISION_DATE})" > version || exit 1
 echo "Patches from Psi+ project were applied."
 echo;
 
