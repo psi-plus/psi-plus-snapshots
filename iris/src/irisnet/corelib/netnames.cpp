@@ -762,6 +762,25 @@ public:
 
 	void resolve_cleanup(NameResolver::Private *np)
 	{
+		// clean up any sub instances
+
+		QList<int> sub_instances_to_remove;
+		QHashIterator<int, int> it(res_sub_instances);
+		while(it.hasNext())
+		{
+			it.next();
+			if(it.value() == np->id)
+				sub_instances_to_remove += it.key();
+		}
+
+		foreach(int res_sub_id, sub_instances_to_remove)
+		{
+			res_sub_instances.remove(res_sub_id);
+			p_local->resolve_stop(res_sub_id);
+		}
+
+		// clean up primary instance
+
 		res_instances.remove(np->id);
 		NameResolver *q = np->q;
 		delete q->d;
