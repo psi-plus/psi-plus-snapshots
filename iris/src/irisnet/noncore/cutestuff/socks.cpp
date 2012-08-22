@@ -281,24 +281,15 @@ static QByteArray sp_set_request(const QHostAddress &addr, unsigned short port, 
 	}
 	else {
 		a[at++] = 0x04;
-		quint8 a6[16];
-		QStringList s6 = addr.toString().split(':');
-		int at = 0;
-		quint16 c;
-		bool ok;
-		for(QStringList::ConstIterator it = s6.begin(); it != s6.end(); ++it) {
-			c = (*it).toInt(&ok, 16);
-			a6[at++] = (c >> 8);
-			a6[at++] = c & 0xff;
-		}
+		Q_IPV6ADDR ip6 = addr.toIPv6Address();
 		a.resize(at+16);
-		memcpy(a.data() + at, a6, 16);
-		at += 16;
+		for(int i = 0; i < 16; ++i)
+			a[at++] = ip6[i];
 	}
 
 	// port
 	a.resize(at+2);
-	unsigned short p = htons(port);
+	quint16 p = htons(port);
 	memcpy(a.data() + at, &p, 2);
 
 	return a;
