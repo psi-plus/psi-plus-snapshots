@@ -264,9 +264,7 @@ void PsiContactListView::contactAlert(const QModelIndex& realIndex)
 
 	bool alerting = index.data(ContactListModel::IsAlertingRole).toBool();
 	if (alerting && PsiOptions::instance()->getOption("options.ui.contactlist.ensure-contact-visible-on-event").toBool()) {
-		QMetaObject::invokeMethod(this, "ensureVisible",
-					  Qt::QueuedConnection,
-					  Q_ARG(const QModelIndex&, index));
+		ensureVisible(index);
 	}
 }
 

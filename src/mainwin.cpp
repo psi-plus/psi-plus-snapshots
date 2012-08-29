@@ -511,9 +511,9 @@ MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
 
 	mainMenuBar()->addMenu(viewMenu);
 	d->getAction("show_offline")->addTo(viewMenu);
-	/*if (PsiOptions::instance()->getOption("options.ui.menu.view.show-away").toBool()) {
-		d->getAction("show_away")->addTo(viewMenu);
-	}*/
+	// if (PsiOptions::instance()->getOption("options.ui.menu.view.show-away").toBool()) {
+	// 	d->getAction("show_away")->addTo(viewMenu);
+	// }
 	d->getAction("show_hidden")->addTo(viewMenu);
 	d->getAction("show_agents")->addTo(viewMenu);
 	d->getAction("show_self")->addTo(viewMenu);
