@@ -192,16 +192,6 @@
      </item>
     </layout>
    </item>
-   <item>
-    <widget class="QCheckBox" name="ck_growl" >
-     <property name="text" >
-      <string>Enable Growl notifications</string>
-     </property>
-     <property name="checked" >
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
   </layout>
  </widget>
  <layoutdefault spacing="6" margin="11" />
@@ -217,7 +207,6 @@
   <tabstop>ck_notifyAuth</tabstop>
   <tabstop>cb_bounce</tabstop>
   <tabstop>cb_animation</tabstop>
-  <tabstop>ck_growl</tabstop>
  </tabstops>
  <resources/>
 </ui>

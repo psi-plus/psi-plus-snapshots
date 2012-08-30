@@ -79,11 +79,6 @@ QWidget *OptionsTabEvents::widget()
 	d->cb_bounce->hide();
 	d->lb_bounce->hide();
 #endif
-
-#if !defined(Q_WS_MAC) || !defined(HAVE_GROWL)
-	d->ck_growl->hide();
-#endif
-
 /*
 	list_alerts.insert(0,d->rb_aSolid);
 	list_alerts.insert(1,d->rb_aBlink);
@@ -110,7 +105,6 @@ void OptionsTabEvents::applyOptions()
 	PsiOptions::instance()->setOption("options.subscriptions.automatically-allow-authorization", d->ck_autoAuth->isChecked());
 	PsiOptions::instance()->setOption("options.ui.notifications.successful-subscription", d->ck_notifyAuth->isChecked());
 	PsiOptions::instance()->setOption("options.ui.notifications.bounce-dock", d->cb_bounce->itemData( d->cb_bounce->currentIndex()));
-	PsiOptions::instance()->setOption("options.ui.notifications.enable-growl", d->ck_growl->isChecked());
 }
 
 void OptionsTabEvents::restoreOptions()
@@ -130,5 +124,4 @@ void OptionsTabEvents::restoreOptions()
 	d->ck_autoAuth->setChecked( PsiOptions::instance()->getOption("options.subscriptions.automatically-allow-authorization").toBool() );
 	d->ck_notifyAuth->setChecked( PsiOptions::instance()->getOption("options.ui.notifications.successful-subscription").toBool() );
 	d->cb_bounce->setCurrentIndex( d->cb_bounce->findData(PsiOptions::instance()->getOption("options.ui.notifications.bounce-dock").toString()) );
-	d->ck_growl->setChecked( PsiOptions::instance()->getOption("options.ui.notifications.enable-growl").toBool() );
 }

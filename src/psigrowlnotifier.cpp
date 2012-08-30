@@ -113,10 +113,6 @@ PsiGrowlNotifier* PsiGrowlNotifier::instance()
  */
 void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, const Jid& jid, const Resource& r, const UserListItem* uli, PsiEvent* event)
 {
-	// if growl is explicitly disabled from within psi then don't send
-	if(!PsiOptions::instance()->getOption("options.ui.notifications.enable-growl").toBool())
-		return;
-
 	QString name;
 	QString title, desc, contact;
 	QString statusTxt = status2txt(makeSTATUS(r.status()));
