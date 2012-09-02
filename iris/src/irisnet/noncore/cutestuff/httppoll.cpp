@@ -137,6 +137,8 @@ void HttpPoll::connectToHost(const QString &proxyHost, int proxyPort, const QStr
 {
 	reset(true);
 
+	bool useSsl = false;
+	d->port = 80;
 	// using proxy?
 	if(!proxyHost.isEmpty()) {
 		d->host = proxyHost;
@@ -149,8 +151,10 @@ void HttpPoll::connectToHost(const QString &proxyHost, int proxyPort, const QStr
 		d->host = u.host();
 		if(u.port() != -1)
 			d->port = u.port();
-		else
-			d->port = 80;
+		else if (u.scheme() == "https") {
+			d->port = 443;
+			useSsl = true;
+		}
 		d->url = u.path() + "?" + u.encodedQuery();
 		d->use_proxy = false;
 	}
@@ -172,6 +176,7 @@ void HttpPoll::connectToHost(const QString &proxyHost, int proxyPort, const QStr
 		return;
 
 	d->state = 1;
+	d->http.setUseSsl(useSsl);
 	d->http.setAuth(d->user, d->pass);
 	d->http.post(d->host, d->port, d->url, makePacket("0", key, "", QByteArray()), d->use_proxy);
 }
@@ -439,13 +444,16 @@ public:
 	}
 
 	BSocket sock;
+	QHostAddress lastAddress;
 	QByteArray postdata, recvBuf, body;
 	QString url;
 	QString user, pass;
 	bool inHeader;
 	QStringList headerLines;
 	bool asProxy;
+	bool useSsl;
 	QString host;
+	QCA::TLS *tls;
 };
 
 HttpProxyPost::HttpProxyPost(QObject *parent)
@@ -463,6 +471,11 @@ HttpProxyPost::~HttpProxyPost()
 {
 	reset(true);
 	delete d;
+}
+
+void HttpProxyPost::setUseSsl(bool state)
+{
+	d->useSsl = state;
 }
 
 void HttpProxyPost::reset(bool clear)
@@ -501,7 +514,13 @@ void HttpProxyPost::post(const QString &proxyHost, int proxyPort, const QString 
 	else
 		fprintf(stderr, ", auth {%s,%s}\n", d->user.latin1(), d->pass.latin1());
 #endif
-	d->sock.connectToHost(proxyHost, proxyPort);
+	if (d->sock.state() != QAbstractSocket::ConnectingState) { // in case of http/1.1 it may be connected
+		if (d->lastAddress.isNull()) {
+			d->sock.connectToHost(proxyHost, proxyPort);
+		} else {
+			d->sock.connectToHost(d->lastAddress, proxyPort);
+		}
+	}
 }
 
 void HttpProxyPost::stop()
@@ -533,6 +552,15 @@ void HttpProxyPost::sock_connected()
 #ifdef PROX_DEBUG
 	fprintf(stderr, "HttpProxyPost: Connected\n");
 #endif
+	if(d->useSsl) {
+		d->tls = new QCA::TLS(this);
+		connect(d->tls, SIGNAL(readyRead()), SLOT(tls_readyRead()));
+		connect(d->tls, SIGNAL(readyReadOutgoing()), SLOT(tls_readyReadOutgoing()));
+		connect(d->tls, SIGNAL(error()), SLOT(tls_error()));
+		d->tls->startClient();
+	}
+
+	d->lastAddress = d->sock.peerAddress();
 	d->inHeader = true;
 	d->headerLines.clear();
 
@@ -540,7 +568,7 @@ void HttpProxyPost::sock_connected()
 
 	// connected, now send the request
 	QString s;
-	s += QString("POST ") + d->url + " HTTP/1.0\r\n";
+	s += QString("POST ") + d->url + " HTTP/1.1\r\n";
 	if(d->asProxy) {
 		if(!d->user.isEmpty()) {
 			QString str = d->user + ':' + d->pass;
@@ -570,9 +598,38 @@ void HttpProxyPost::sock_connectionClosed()
 	result();
 }
 
+void HttpProxyPost::tls_readyRead()
+{
+	//printf("tls_readyRead\n");
+	processData(d->tls->read());
+}
+
+void HttpProxyPost::tls_readyReadOutgoing()
+{
+	//printf("tls_readyReadOutgoing\n");
+	d->sock.write(d->tls->readOutgoing());
+}
+
+void HttpProxyPost::tls_error()
+{
+#ifdef PROX_DEBUG
+	fprintf(stderr, "HttpProxyGetStream: ssl error: %d\n", d->tls->errorCode());
+#endif
+	reset(true);
+	error(ErrConnectionRefused); // FIXME: bogus error
+}
+
 void HttpProxyPost::sock_readyRead()
 {
 	QByteArray block = d->sock.read();
+	if(d->useSsl)
+		d->tls->writeIncoming(block);
+	else
+		processData(block);
+}
+
+void HttpProxyPost::processData(const QByteArray &block)
+{
 	ByteStream::appendArray(&d->recvBuf, block);
 
 	if(d->inHeader) {

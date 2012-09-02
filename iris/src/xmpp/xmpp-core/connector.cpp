@@ -429,7 +429,7 @@ void AdvancedConnector::bs_connected()
 	bool ssl_disabled = d->proxy.type() == Proxy::None &&
 			(static_cast<BSocket*>(d->bs)->isPeerFromSrv() || d->port == XMPP_DEFAULT_PORT);
 	// only allow ssl override if proxy==poll or host:port or when probing legacy ssl port
-	if((d->proxy.type() == Proxy::HttpPoll || d->opt_ssl != Never) && !ssl_disabled)
+	if(d->proxy.type() != Proxy::HttpPoll  && d->opt_ssl != Never && !ssl_disabled)
 		setUseSSL(true);
 
 	d->mode = Connected;

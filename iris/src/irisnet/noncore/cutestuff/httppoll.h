@@ -75,6 +75,7 @@ public:
 	HttpProxyPost(QObject *parent=0);
 	~HttpProxyPost();
 
+	void setUseSsl(bool state);
 	void setAuth(const QString &user, const QString &pass="");
 	bool isActive() const;
 	void post(const QString &proxyHost, int proxyPort, const QString &url, const QByteArray &data, bool asProxy=true);
@@ -91,12 +92,16 @@ private slots:
 	void sock_connectionClosed();
 	void sock_readyRead();
 	void sock_error(int);
+	void tls_readyRead();
+	void tls_readyReadOutgoing();
+	void tls_error();
 
 private:
 	class Private;
 	Private *d;
 
 	void reset(bool clear=false);
+	void processData(const QByteArray &block);
 };
 
 class HttpProxyGetStream : public QObject
