@@ -1853,6 +1853,10 @@ void PsiAccount::disconnect()
 		cleanupStream();
 
 		emit disconnected();
+		isDisconnecting = false;
+
+		if(d->loginStatus.isAvailable())
+			login();
 	}
 }
 
@@ -2963,6 +2967,12 @@ void PsiAccount::setStatus(const Status &_s,  bool withPriority, bool isManualSt
 	d->loginWithPriority = withPriority;
 
 	if(s.isAvailable()) {
+		// if we are in the process of disconnecting, then do nothing.
+		//   the desired status will be noted in loginStatus for
+		//   reconnect
+		if(isDisconnecting)
+			return;
+
 		// if client is not active then attempt to login
 		if(!isActive()) {
 			if (!d->acc.opt_pass) {
@@ -6343,6 +6353,7 @@ void PsiAccount::invokeGCMessage(const Jid &j)
 	u->setInList(false);
 	u->setName(j.resource());
 	u->setPrivate(true);
+	u->setAvatarFactory(avatarFactory());
 
 	// make a resource so the contact appears online
 	UserResource ur;
@@ -6369,7 +6380,6 @@ void PsiAccount::invokeGCChat(const Jid &j)
 	u->setInList(false);
 	u->setName(j.resource());
 	u->setPrivate(true);
-	u->setAvatarFactory(avatarFactory());
 
 	// make a resource so the contact appears online
 	UserResource ur;

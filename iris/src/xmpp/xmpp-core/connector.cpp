@@ -361,6 +361,11 @@ void AdvancedConnector::connectToServer(const QString &server)
 		connect(s, SIGNAL(connected()), SLOT(bs_connected()));
 		connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
 
+		if(!d->opt_host.isEmpty()) {
+			d->host = d->opt_host;
+			d->port = d->opt_port;
+		}
+
 		if(!d->proxy.user().isEmpty())
 			s->setAuth(d->proxy.user(), d->proxy.pass());
 

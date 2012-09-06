@@ -439,8 +439,14 @@ class HttpProxyPost::Private
 {
 public:
 	Private(HttpProxyPost *_q) :
-		sock(_q)
+		sock(_q),
+		tls(0)
 	{
+	}
+
+	~Private()
+	{
+		delete tls;
 	}
 
 	BSocket sock;
@@ -584,11 +590,19 @@ void HttpProxyPost::sock_connected()
 	s += QString("Content-Length: ") + QString::number(d->postdata.size()) + "\r\n";
 	s += "\r\n";
 
-	// write request
-	d->sock.write(s.toUtf8());
+	if(d->useSsl) {
+		// write request
+		d->tls->write(s.toUtf8());
 
-	// write postdata
-	d->sock.write(d->postdata);
+		// write postdata
+		d->tls->write(d->postdata);
+	} else {
+		// write request
+		d->sock.write(s.toUtf8());
+
+		// write postdata
+		d->sock.write(d->postdata);
+	}
 }
 
 void HttpProxyPost::sock_connectionClosed()
