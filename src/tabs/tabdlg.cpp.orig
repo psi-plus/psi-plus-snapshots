@@ -160,24 +160,13 @@ TabDlg::TabDlg(TabManager* tabManager, const QString& geometryOption, TabDlgDele
 	connect(tabWidget_, SIGNAL(tabContextMenu(int, QPoint, QContextMenuEvent*)), SLOT(showTabMenu(int, QPoint, QContextMenuEvent*)));
 	connect(tabWidget_, SIGNAL(closeButtonClicked()), SLOT(closeCurrentTab()));
 	connect(tabWidget_, SIGNAL(currentChanged(QWidget*)), SLOT(tabSelected(QWidget*)));
-	connect(tabWidget_, SIGNAL(tabCloseRequested(int)), SLOT(tabCloseRequested(int)));
 
 	if(delegate_)
 		delegate_->tabWidgetCreated(this, tabWidget_);
 
 	QVBoxLayout *vert1 = new QVBoxLayout(this);
-	//Add windowheader widget if window not decorated
-	if (!PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool()
-		&& !PsiOptions::instance()->getOption("options.ui.tabs.grouping").toString().contains('A')) {
-		winHeader_ = new PsiWindowHeader(this);
-		vert1->addWidget(winHeader_);
-		vert1->setSpacing(0);
-		vert1->setMargin(0);
-	} else {
-		vert1->setMargin(1);
-	}
+	vert1->setMargin(1);
 	vert1->addWidget(tabWidget_);
-
 
 	setAcceptDrops(true);
 
@@ -196,9 +185,7 @@ TabDlg::TabDlg(TabManager* tabManager, const QString& geometryOption, TabDlgDele
 
 	setShortcuts();
 
-	if(!PsiOptions::instance()->getOption("options.ui.tabs.grouping").toString().contains('A'))
-		setGeometryOptionPath(geometryOption);
-	setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
+	setGeometryOptionPath(geometryOption);
 }
 
 TabDlg::~TabDlg()
@@ -268,7 +255,6 @@ void TabDlg::showTabMenu(int tab, QPoint pos, QContextMenuEvent * event)
 
 	if (tab != -1) {
 		QAction *d = 0;
-		QAction *h = tabMenu_->addAction(tr("Hide Tab"));
 		if(userManagement_) {
 			d = tabMenu_->addAction(tr("Detach Tab"));
 		}
@@ -297,9 +283,6 @@ void TabDlg::showTabMenu(int tab, QPoint pos, QContextMenuEvent * event)
 		else if (act == d) {
 			detachTab(getTab(tab));
 		}
-		else if(act == h) {
-			hideTab(getTab(tab));
-		}
 		else {
 			TabDlg* target = sentTos[act];
 			if (target)
@@ -311,8 +294,6 @@ void TabDlg::showTabMenu(int tab, QPoint pos, QContextMenuEvent * event)
 void TabDlg::tab_aboutToShowMenu(QMenu *menu)
 {
 	menu->addSeparator();
-	menu->addAction(tr("Hide Current Tab"), this, SLOT(hideCurrentTab()));
-	menu->addAction(tr("Hide All Tabs"), this, SLOT(hideAllTab()));
 	menu->addAction(tr("Detach Current Tab"), this, SLOT(detachCurrentTab()));
 	menu->addAction(tr("Close Current Tab"), this, SLOT(closeCurrentTab()));
 
@@ -382,11 +363,6 @@ void TabDlg::setLooks()
 		tabWidget_->setTabPosition(QTabWidget::South);
 
 	setWindowOpacity(double(qMax(MINIMUM_OPACITY,PsiOptions::instance()->getOption("options.ui.chat.opacity").toInt()))/100);
-
-	const QString css = PsiOptions::instance()->getOption("options.ui.chat.css").toString();
-	if (!css.isEmpty()) {
-		setStyleSheet(css);
-	}
 }
 
 void TabDlg::tabSelected(QWidget* _selected)
@@ -394,12 +370,12 @@ void TabDlg::tabSelected(QWidget* _selected)
 	// _selected could be null when TabDlg is closing and deleting all its tabs
 	TabbableWidget* selected = _selected ? qobject_cast<TabbableWidget*>(_selected) : 0;
 	if (!selectedTab_.isNull()) {
-		QCoreApplication::postEvent(selectedTab_, new QEvent(QEvent::ActivationChange));
+		selectedTab_->deactivated();
 	}
 
 	selectedTab_ = selected;
 	if (selected) {
-		QCoreApplication::postEvent(selected, new QEvent(QEvent::ActivationChange));
+		selected->activated();
 	}
 
 	updateCaption();
@@ -419,11 +395,10 @@ void TabDlg::addTab(TabbableWidget* tab)
 {
 	setUpdatesEnabled(false);
 	tabs_.append(tab);
-	tabWidget_->addTab(tab, captionForTab(tab), tab->icon());
+	tabWidget_->addTab(tab, captionForTab(tab));
 
 	connect(tab, SIGNAL(invalidateTabInfo()), SLOT(updateTab()));
 	connect(tab, SIGNAL(updateFlashState()), SLOT(updateFlashState()));
-	connect(tab, SIGNAL(vSplitterMoved(int,int)), SLOT(updateVSplitters(int,int)));
 
 	updateTab(tab);
 	setUpdatesEnabled(true);
@@ -435,22 +410,6 @@ void TabDlg::showTabWithoutActivation()
 	showWithoutActivation();
 }
 
-void TabDlg::hideCurrentTab()
-{
-	hideTab(static_cast<TabbableWidget*>(tabWidget_->currentPage()));
-}
-
-void TabDlg::hideTab(TabbableWidget* tab)
-{
-	closeTab(tab, false);
-}
-
-void TabDlg::hideAllTab()
-{
-	foreach(TabbableWidget* tab, tabs_)
-		hideTab(tab);
-}
-
 void TabDlg::detachCurrentTab()
 {
 	detachTab(static_cast<TabbableWidget*>(tabWidget_->currentPage()));
@@ -458,20 +417,12 @@ void TabDlg::detachCurrentTab()
 
 void TabDlg::mouseDoubleClickTab(QWidget* widget)
 {
-	const QString act = PsiOptions::instance()->getOption("options.ui.tabs.mouse-doubleclick-action").toString();
-	if(act == "hide")
-		hideTab(static_cast<TabbableWidget*>(widget));
-	else if(act == "close")
-		closeTab(static_cast<TabbableWidget*>(widget));
-	else if(act == "detach" && userManagement_)
+	if(userManagement_)
 		detachTab(static_cast<TabbableWidget*>(widget));
 }
 
 void TabDlg::mouseMiddleClickTab(QWidget* widget) {
-	if(PsiOptions::instance()->getOption("options.ui.tabs.mouse-middle-button").toString() == "close")
-		closeTab(static_cast<TabbableWidget*>(widget));
-	else
-		hideTab(static_cast<TabbableWidget*>(widget));
+	closeTab(static_cast<TabbableWidget*>(widget));
 }
 
 void TabDlg::detachTab(TabbableWidget* tab)
@@ -491,7 +442,6 @@ void TabDlg::removeTabWithNoChecks(TabbableWidget *tab)
 {
 	disconnect(tab, SIGNAL(invalidateTabInfo()), this, SLOT(updateTab()));
 	disconnect(tab, SIGNAL(updateFlashState()), this, SLOT(updateFlashState()));
-	disconnect(tab, SIGNAL(vSplitterMoved(int,int)), this, SLOT(updateVSplitters(int,int)));
 
 	tabs_.removeAll(tab);
 	tabWidget_->removePage(tab);
@@ -514,7 +464,6 @@ void TabDlg::closeTab(TabbableWidget* chat, bool doclose)
 	chat->hide();
 	removeTabWithNoChecks(chat);
 	chat->setParent(0);
-	QCoreApplication::postEvent(chat, new QEvent(QEvent::ActivationChange));
 	if (tabWidget_->count() > 0) {
 		updateCaption();
 	}
@@ -535,12 +484,8 @@ void TabDlg::selectTab(TabbableWidget* chat)
 
 void TabDlg::checkHasChats()
 {
-	if (tabWidget_->count() > 0 || this != window())
+	if (tabWidget_->count() > 0)
 		return;
-	if (tabs_.count() > 0) {
-		hide();
-		return;
-	}
 	deleteLater();
 }
 
@@ -552,10 +497,7 @@ void TabDlg::activated()
 
 QString TabDlg::desiredCaption() const
 {
-	QString cap = PsiOptions::instance()->getOption("options.ui.chat.caption").toString();
-	if(!cap.isEmpty()) {
-		return cap;
-	}
+	QString cap = "";
 	uint pending = 0;
 	foreach(TabbableWidget* tab, tabs_) {
 		pending += tab->unreadMessageCount();
@@ -596,13 +538,8 @@ void TabDlg::closeEvent(QCloseEvent* closeEvent)
 			return;
 		}
 	}
-	if(PsiOptions::instance()->getOption("options.ui.chat.hide-when-closing").toBool()) {
-		hide();
-	}
-	else {
-		foreach(TabbableWidget* tab, tabs_) {
-			closeTab(tab);
-		}
+	foreach(TabbableWidget* tab, tabs_) {
+		closeTab(tab);
 	}
 }
 
@@ -651,25 +588,14 @@ void TabDlg::updateTab(TabbableWidget* chat)
 	tabWidget_->setTabText(chat, captionForTab(chat));
 	//now set text colour based upon whether there are new messages/composing etc
 
-	TabbableWidget::State state = chat->state();
-	if (state == TabbableWidget::StateComposing) {
-		tabWidget_->setTabTextColor(chat, PsiOptions::instance()->getOption("options.ui.look.colors.chat.composing-color").value<QColor>());
-		tabWidget_->setTabIcon(chat, IconsetFactory::iconPtr("psi/typing")->icon());
+	if (chat->state() == TabbableWidget::StateComposing) {
+		tabWidget_->setTabTextColor(chat, Qt::darkGreen);
+	}
+	else if (chat->unreadMessageCount()) {
+		tabWidget_->setTabTextColor(chat, Qt::red);
 	}
 	else {
-		if (state == TabbableWidget::StateHighlighted) {
-			tabWidget_->setTabTextColor(chat, PsiOptions::instance()->getOption("options.ui.look.colors.chat.unread-message-color").value<QColor>());
-		}
-		else {
-			tabWidget_->setTabTextColor(chat, palette().color(QPalette::Text));
-		}
-
-		if(chat->unreadMessageCount()) {
-			tabWidget_->setTabIcon(chat, IconsetFactory::iconPtr("psi/chat")->icon());
-		}
-		else {
-			tabWidget_->setTabIcon(chat, chat->icon());
-		}
+		tabWidget_->setTabTextColor(chat, palette().windowText().color());
 	}
 	updateCaption();
 }
@@ -848,7 +774,7 @@ void TabDlg::setUserManagementEnabled(bool enabled)
 	}
 
 	userManagement_ = enabled;
-	tabWidget_->setTabButtonsShown(PsiOptions::instance()->getOption("options.ui.tabs.show-tab-buttons").toBool());
+	tabWidget_->setTabButtonsShown(enabled);
 	tabWidget_->setDragsEnabled(enabled);
 }
 
@@ -882,41 +808,4 @@ void TabDlg::setSimplifiedCaptionEnabled(bool enabled)
 
 	simplifiedCaption_ = enabled;
 	updateCaption();
-}
-
-/**
-  * the slot is invoked, when small close button is clicked on a tab
-  * dont close tabs, that are not active.
-  * \param tab number requested to close
-  */
-void TabDlg::tabCloseRequested(int i)
-{
-	if (tabWidget_->currentPageIndex() == i)
-		closeTab(static_cast<TabbableWidget*>(tabWidget_->page(i)));
-	else {
-		if (PsiOptions::instance()->getOption("options.ui.tabs.can-close-inactive-tab").toBool())
-			closeTab(static_cast<TabbableWidget*>(tabWidget_->page(i)));
-		else
-			selectTab(static_cast<TabbableWidget*>(tabWidget_->page(i)));
-	}
-}
-
-TabbableWidget* TabDlg::getCurrentTab() const
-{
-	return dynamic_cast<TabbableWidget*>(tabWidget_->currentPage());
-}
-
-/**
- * Set the icon of the tab.
- */
-void TabDlg::setTabIcon(QWidget *widget,const QIcon &icon)
-{
-	tabWidget_->setTabIcon(widget, icon);
-}
-
-void TabDlg::updateVSplitters(int log, int chat)
-{
-	foreach(TabbableWidget *w, tabs_) {
-		w->setVSplitterPosition(log, chat);
-	}
 }
