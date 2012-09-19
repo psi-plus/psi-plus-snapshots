@@ -38,7 +38,7 @@ public:
 	inline bool isPolling() const { return _timer.isActive(); }
 	inline void startPoll() { _timer.start(DefaultInterval); }
 	inline void stopPoll() { _timer.stop(); }
-	inline void setInterval(const int &interval) { _timer.setInterval(interval); }
+	inline void setInterval(int interval) { _timer.setInterval(interval); }
 
 protected slots:
 	virtual void check();

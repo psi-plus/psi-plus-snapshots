@@ -43,9 +43,8 @@ private:
 	QPair<bool, QString> getTrackTitle(const HWND &waWnd) const;
 
 private:
-	Tune prev_tune_;
-	int norminterval_, antiscrollinterval_;
-	int antiscrollcounter_;
+	Tune prevTune_;
+	int antiscrollCounter_;
 };
 
 #endif

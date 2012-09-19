@@ -38,6 +38,8 @@
 #define TAGSIZE 100
 #define FILENAMESIZE 512
 
+static const int NormInterval = 3000;
+static const int AntiscrollInterval = 100;
 const wchar_t *ALBUM_KEY = L"album";
 const wchar_t *ARTIST_KEY = L"artist";
 const wchar_t *TITLE_KEY = L"title";
@@ -53,12 +55,10 @@ const wchar_t *TITLE_KEY = L"title";
  */
 WinAmpController::WinAmpController()
 : PollingTuneController(),
-  norminterval_(3000),
-  antiscrollinterval_(100),
-  antiscrollcounter_(0)
+  antiscrollCounter_(0)
 {
 	startPoll();
-	setInterval(norminterval_);
+	setInterval(NormInterval);
 }
 
 template <typename char_type> const size_t length (const char_type * begin)
@@ -78,10 +78,8 @@ void WinAmpController::check()
 	if (winamp && SendMessage(winamp, WM_WA_IPC, 0, IPC_ISPLAYING) == 1) {
 		tune = getTune(winamp);
 	}
-	if (prev_tune_ != tune) {
-		prev_tune_ = tune;
-	}
-	setInterval(norminterval_);
+	prevTune_ = tune;
+	setInterval(NormInterval);
 	PollingTuneController::check();
 }
 
@@ -140,15 +138,15 @@ Tune WinAmpController::getTune(const HWND &hWnd)
 			QPair<bool, QString> trackpair(getTrackTitle(hWnd));
 			if (!trackpair.first) {
 				// getTrackTitle wants us to retry in a few ms...
-				int interval = antiscrollinterval_;
-				if (++antiscrollcounter_ > 10) {
-					antiscrollcounter_ = 0;
-					interval = norminterval_;
+				int interval = AntiscrollInterval;
+				if (++antiscrollCounter_ > 10) {
+					antiscrollCounter_ = 0;
+					interval = NormInterval;
 				}
 				setInterval(interval);
 				return Tune();
 			}
-			antiscrollcounter_ = 0;
+			antiscrollCounter_ = 0;
 			tune.setName(trackpair.second);
 			tune.setURL(trackpair.second);
 			tune.setTrack(QString::number(position + 1));
@@ -269,5 +267,5 @@ bool WinAmpController::getData(const HANDLE& hProcess, const HWND& hWnd, const w
 
 Tune WinAmpController::currentTune() const
 {
-	return prev_tune_;
+	return prevTune_;
 }

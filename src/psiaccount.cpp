@@ -2261,6 +2261,7 @@ void PsiAccount::cs_error(int err)
 
 	// Auto-Reconnect?
 	if(d->acc.opt_reconn && reconn && !badPass) {
+		isDisconnecting = false;
 		d->startReconnect();
 		return;
 	}
@@ -2268,7 +2269,8 @@ void PsiAccount::cs_error(int err)
 	v_isActive = false;
 	d->loginStatus = Status(Status::Offline);
 	stateChanged();
-	disconnected();
+	emit disconnected();
+	isDisconnecting = false;
 
 	//If a password failure, prompt for correct password
 	if (badPass) {
