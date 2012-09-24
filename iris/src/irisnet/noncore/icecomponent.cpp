@@ -20,6 +20,7 @@
 
 #include "icecomponent.h"
 
+#include <stdlib.h>
 #include <QUdpSocket>
 #include <QtCrypto>
 #include "objectsession.h"
@@ -527,6 +528,8 @@ private:
 		}
 
 		Q_ASSERT(atLeastOne);
+		if(!atLeastOne)
+			abort();
 
 		lt->stun_started = true;
 		lt->sock->stunStart();

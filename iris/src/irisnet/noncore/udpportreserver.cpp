@@ -20,6 +20,7 @@
 
 #include "udpportreserver.h"
 
+#include <stdlib.h>
 #include <QUdpSocket>
 
 namespace XMPP {
@@ -86,6 +87,8 @@ public:
 		}
 
 		Q_ASSERT(!lendingAny);
+		if(lendingAny)
+			abort();
 
 		foreach(const Item &i, items)
 		{
