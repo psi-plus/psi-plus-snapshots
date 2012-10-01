@@ -289,7 +289,7 @@ void PsiGrowlNotifier::notificationTimedOut(void* c)
 
 bool  PsiGrowlNotifier::isAvailable()
 {
-	return GrowlNotifier::isRunning();
+	return true; //GrowlNotifier::isRunning();
 }
 
 PsiGrowlNotifier* PsiGrowlNotifier::instance_ = 0;
