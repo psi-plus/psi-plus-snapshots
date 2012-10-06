@@ -70,16 +70,16 @@ public:
 		psiGenerateFile("mac/Info.plist.in", "mac/Info.plist", vars);
 
 #ifndef Q_OS_WIN
-		conf->addExtra(QString("PSI_LIBDIR=%1/psi-plus").arg(conf->getenv("LIBDIR")));
-		conf->addExtra(QString("PSI_DATADIR=%1/psi-plus").arg(conf->getenv("DATADIR")));
+		conf->addExtra(QString("PSI_LIBDIR=%1/psi").arg(conf->getenv("LIBDIR")));
+		conf->addExtra(QString("PSI_DATADIR=%1/psi").arg(conf->getenv("DATADIR")));
 #endif
 
 		QFile file("src/config.h");
 		if ( file.open(QIODevice::WriteOnly | QIODevice::Text) ) {
 			QTextStream stream( &file );
 #ifndef Q_OS_WIN
-			stream << "#define PSI_LIBDIR \"" << conf->getenv("LIBDIR") << "/psi-plus\"" << endl;
-			stream << "#define PSI_DATADIR \"" << conf->getenv("DATADIR") << "/psi-plus\"" << endl;
+			stream << "#define PSI_LIBDIR \"" << conf->getenv("LIBDIR") << "/psi\"" << endl;
+			stream << "#define PSI_DATADIR \"" << conf->getenv("DATADIR") << "/psi\"" << endl;
 #endif
 			stream << "#define PSI_VERSION \"" << version << "\"" << endl;
 		}
