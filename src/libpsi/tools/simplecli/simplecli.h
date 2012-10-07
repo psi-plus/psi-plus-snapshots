@@ -27,20 +27,22 @@
 class SimpleCli : public QObject
 {
 public:
-	void defineSwitch(const QString& name, const QString& help = QString());
-	void defineParam(const QString& name, const QString& valueHelp = QString("ARG"), const QString& help = QString());
+	void defineSwitch(const QByteArray& name, const QString& help = QString());
+	void defineParam(const QByteArray &name, const QString& valueHelp = QString("ARG"), const QString& help = QString());
 
-	void defineAlias(const QString& alias, const QString& originalName);
+	void defineAlias(const QByteArray &alias, const QByteArray &originalName);
 
-	QMap<QString, QString> parse(int argc, char* argv[], const QStringList& terminalArgs = QStringList(), int* safeArgc = 0);
+	QHash<QByteArray, QByteArray> parse(int argc, char* argv[],
+									   const QList<QByteArray> &terminalArgs = QList<QByteArray>(),
+									   int* safeArgc = 0);
 
 	QString optionsHelp(int textWidth);
 	static QString wrap(QString text, int width, int margin = 0, int firstMargin = -1);
 
 private:
 	struct Arg {
-		QString name;
-		QStringList aliases;
+		QByteArray name;
+		QList<QByteArray> aliases;
 		QChar shortName;
 
 		bool needsValue;
@@ -49,14 +51,14 @@ private:
 		QString valueHelp;
 
 
-		Arg(const QString& argName, const QString& argValueHelp, const QString& argHelp, bool argNeedsValue)
+		Arg(const QByteArray& argName, const QString& argValueHelp, const QString& argHelp, bool argNeedsValue)
 				: name(argName), needsValue(argNeedsValue), help(argHelp), valueHelp(argValueHelp) {}
 
 		Arg() : needsValue(false) {}	// needed only by QMap
 	};
 
-	QMap<QString, Arg> argdefs;
-	QMap<QString, QString> aliases;
+	QMap<QByteArray, Arg> argdefs;
+	QMap<QByteArray, QByteArray> aliases;
 };
 
 #endif

@@ -37,7 +37,7 @@
 /**
   * \brief Define a switch (option that does not have a value)
   */
-void SimpleCli::defineSwitch(const QString& name, const QString& help)
+void SimpleCli::defineSwitch(const QByteArray& name, const QString& help)
 {
 	argdefs[name] = Arg(name, "", help, false);
 	aliases[name] = name;
@@ -46,7 +46,7 @@ void SimpleCli::defineSwitch(const QString& name, const QString& help)
 /**
   * \brief Define a parameter (option that requires a value)
   */
-void SimpleCli::defineParam(const QString& name, const QString& valueHelp, const QString& help)
+void SimpleCli::defineParam(const QByteArray& name, const QString& valueHelp, const QString& help)
 {
 	argdefs[name] = Arg(name, valueHelp, help, true);
 	aliases[name] = name;
@@ -56,7 +56,7 @@ void SimpleCli::defineParam(const QString& name, const QString& valueHelp, const
   * \brief Add alias for already existing option.
   * \a alias will be mapped to \a originalName in parse() result.
   */
-void SimpleCli::defineAlias(const QString& alias, const QString& originalName)
+void SimpleCli::defineAlias(const QByteArray& alias, const QByteArray& originalName)
 {
 	if (!argdefs.contains(originalName)) {
 		qDebug("CLI: cannot add alias '%s' because name '%s' does not exist", qPrintable(alias), qPrintable(originalName));
@@ -81,7 +81,7 @@ void SimpleCli::defineAlias(const QString& alias, const QString& originalName)
   *
   * Use \a terminalArgs if you want need to stop parsing after certain options for security reasons, etc.
   */
-QMap<QString, QString> SimpleCli::parse(int argc, char* argv[], const QStringList& terminalArgs, int* safeArgc)
+QHash<QByteArray, QByteArray> SimpleCli::parse(int argc, char* argv[], const QList<QByteArray>& terminalArgs, int* safeArgc)
 {
 #ifdef Q_WS_WIN
 	const bool winmode = true;
@@ -89,16 +89,15 @@ QMap<QString, QString> SimpleCli::parse(int argc, char* argv[], const QStringLis
 	const bool winmode = false;
 #endif
 
-	QMap<QString, QString> map;
+	QHash<QByteArray, QByteArray> map;
 	int safe = 1;
 	int n = 1;
 	for (; n < argc; ++n) {
-		QString str = QString::fromLocal8Bit(argv[n]);
-		QString left, right;
+		QByteArray str = QByteArray(argv[n]);
+		QByteArray left, right;
 		int sep = str.indexOf('=');
 		if (sep == -1) {
 			left = str;
-			right = QString::null;
 		} else {
 			left = str.mid(0, sep);
 			right = str.mid(sep + 1);
@@ -117,7 +116,7 @@ QMap<QString, QString> SimpleCli::parse(int argc, char* argv[], const QStringLis
 			right = str;
 		}
 
-		QString name, value;
+		QByteArray name, value;
 		if (unnamedArgument) {
 			value = left;
 		} else {
@@ -126,7 +125,7 @@ QMap<QString, QString> SimpleCli::parse(int argc, char* argv[], const QStringLis
 			if (aliases.contains(name)) {
 				name = argdefs[aliases[name]].name;
 				if (argdefs[name].needsValue && value.isNull() && n + 1 < argc) {
-					value = QString::fromLocal8Bit(argv[++n]);
+					value = QByteArray(argv[++n]);
 				}
 			}
 
