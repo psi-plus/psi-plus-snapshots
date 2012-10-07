@@ -531,11 +531,6 @@ int main(int argc, char *argv[])
 	QApplication::addLibraryPath(ApplicationInfo::homeDir(ApplicationInfo::DataLocation));
 	QApplication::setQuitOnLastWindowClosed(false);
 
-	//Fix encoding after QApplication initialization
-	for(QMap<QString, QString>::iterator i = cmdline.begin(); i != cmdline.end(); ++i) {
-		*i = (*i).toAscii().constData();
-	}
-
 #ifdef Q_WS_MAC
 	QDir dir(QApplication::applicationDirPath());
 	dir.cdUp();
