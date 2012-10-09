@@ -25,6 +25,8 @@
 #include "chatviewcommon.h"
 #include "psioptions.h"
 
+static const QString rgbBlack = "#000000";
+
 void ChatViewCommon::setLooks(QWidget *w)
 {
 	QPalette pal = w->palette(); // copy widget's palette to non const QPalette
@@ -65,42 +67,27 @@ QString ChatViewCommon::getMucNickColor(const QString &nick, bool isSelf, QStrin
 		: validList;
 
 	if(!PsiOptions::instance()->getOption("options.ui.muc.use-nick-coloring").toBool()) {
-		return "#000000";
+		return rgbBlack;
 	} else {
 		if (PsiOptions::instance()->getOption("options.ui.muc.use-hash-nick-coloring").toBool()) {
 			/* Hash-driven colors */
-			unsigned char hash[4];
-			unsigned char prev_hash[4];
-			QByteArray cnick = nickwoun.toUtf8();
-			unsigned nicklen, i, *h = reinterpret_cast<unsigned *>(hash);
-			nicklen = cnick.length();
-			*h = 12345;
-			memcpy(prev_hash, hash, sizeof(hash));
-			for (i = 0; i < nicklen; i++) {
-				*h *= cnick[i];
-				if(hash[0] || hash[1] || hash[2]) {
-					memcpy(prev_hash, hash, sizeof(hash));
-				} else {
-					*h = 12345;
-					memcpy(prev_hash, hash, sizeof(hash));
-				}
-			}
-			/* I hope, nobody will use this on big-endian 64bit CPUs */
-			QColor precolor;
-			QString color;
-			color.sprintf("#%02hhX%02hhX%02hhX", prev_hash[0], prev_hash[1], prev_hash[2]);
-			precolor.setNamedColor(QString(color));
+			Q_ASSERT(nickwoun.size());
+			QByteArray ba = nickwoun.toUtf8();
+			while (ba.size() < 4) { ba += ba; }
+			quint32 num = *(quint32*)ba.left(3).toHex().constData();
+			num ^= num << 4;
+			QColor precolor = QColor(QString("#") + QByteArray::fromRawData((const char*)&num, 3).toHex().constData());
 			if ( precolor.saturation() < 150 ){
-			    precolor.setHsv( precolor.hue(), 250, precolor.value());
+				precolor.setHsv( precolor.hue(), 250, precolor.value());
 			}
 			if ( precolor.value() > 210 ) {
-			    precolor.setHsv( precolor.hue(), precolor.saturation() , 210);
+				precolor.setHsv( precolor.hue(), precolor.saturation() , 210);
 			}
 			return precolor.name();
 		} else {
 			/* Colors from list */
 			if (nickColors.empty()) {
-				return "#000000";
+				return rgbBlack;
 			}
 			if(sender == -1 || nickColors.size() == 1) {
 				return nickColors[nickColors.size()-1];
