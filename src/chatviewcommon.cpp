@@ -25,8 +25,6 @@
 #include "chatviewcommon.h"
 #include "psioptions.h"
 
-static const QString rgbBlack = "#000000";
-
 void ChatViewCommon::setLooks(QWidget *w)
 {
 	QPalette pal = w->palette(); // copy widget's palette to non const QPalette
@@ -46,6 +44,7 @@ bool ChatViewCommon::updateLastMsgTime(QDateTime t)
 
 QString ChatViewCommon::getMucNickColor(const QString &nick, bool isSelf, QStringList validList)
 {
+	const char* rgbBlack = "#000000";
 	QString nickwoun = nick; // nick without underscores
 	nickwoun.replace(QRegExp("^_*"), "");
 	nickwoun.replace(QRegExp("_*$"), "");
