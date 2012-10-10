@@ -3,11 +3,14 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2012-08-15
+# Updated: 2012-10-11
 # Version: N/A
 
 export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
 export MAIN_DIR="${PSIPLUS_DIR}/.."
+
+# Test Internet connection:
+host github.com > /dev/null || exit 1
 
 cd "${PSIPLUS_DIR}" || exit 1
 OLD_VER=$(git tag -l | tail -n1)
