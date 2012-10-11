@@ -75,11 +75,11 @@ fi
 MOD=main
 cd "${MAIN_DIR}/${MOD}"
 
-rev=$((`git describe --tags | sed -e "s/^.*-\([0-9]\+\)-.*$/\1/"`+5000))
+rev=$(git describe --tags | sed -e "s/^.*-\([0-9]\+\)-.*$/\1/")
 if [ "${LAST_REVISION}" = "5000" ]; then exit 1; fi
 LAST_REVISION_DATE=$(git log -n1 --date=short --pretty=format:"%ad")
 
-CUR_VER="0.15"
+CUR_VER="0.16"
 LAST_REVISION=${rev}
 NEW_VER="${CUR_VER}.${LAST_REVISION}"
 
