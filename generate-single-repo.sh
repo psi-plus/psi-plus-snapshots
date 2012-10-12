@@ -3,10 +3,15 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2012-10-11
+# Updated: 2012-10-12
 # Version: N/A
 
-export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
+if [[ ${0} =~ ^/.+$ ]]; then
+    export PSIPLUS_DIR="$(dirname ${0})"
+else
+    export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
+fi
+
 export MAIN_DIR="${PSIPLUS_DIR}/.."
 
 # Test Internet connection:
