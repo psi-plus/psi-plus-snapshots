@@ -32,6 +32,7 @@
 #include <QDBusReply>
 #include <QCoreApplication>
 #include <QImage>
+#include <QTimer>
 
 #include "psidbusnotifier.h"
 #include "psiaccount.h"

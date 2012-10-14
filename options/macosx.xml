@@ -10,6 +10,9 @@
 					<passive-popup type="QString">Sans Serif,9,-1,5,50,0,0,0,0,0</passive-popup>
 				</font>
 			</look>
+			<notifications>
+				<type type="int">1</type>
+			</notifications>
 		</ui>
 		<shortcuts comment="Shortcuts">
 			<contactlist comment="Shortcuts in the contactlist">
@@ -32,9 +35,6 @@
 					<passive-popup type="QString">Lucida Grande,9,-1,5,50,0,0,0,0,0</passive-popup>
 				</font>
 			</look>
-			<notifications>
-				<type type="int">1</type>
-			</notifications>
 		</ui>
 	</options>
 </psi>

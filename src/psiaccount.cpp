@@ -5064,6 +5064,19 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 			delete e;
 			return;
 		}
+		else if (m.messageReceipt() == ReceiptReceived) {
+			if (o->getOption("options.ui.notifications.request-receipts").toBool()) {
+				foreach (ChatDlg *c, findChatDialogs(e->from(), false)) {
+					if (c->autoSelectContact()  || c->jid().resource().isEmpty() || e->from().resource() == c->jid().resource()) {
+						if (c->autoSelectContact())
+							c->setJid(e->from());
+						c->incomingMessage(m);
+					}
+				}
+			}
+			delete e;
+			return;
+		}
 
 		// Pass message events to chat window
 		if ((m.containsEvents() || m.chatState() != StateNone) && m.body().isEmpty()) {
@@ -5083,19 +5096,6 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 				delete e;
 				return;
 			}
-		}
-		else if (m.messageReceipt() == ReceiptReceived) {
-			if (o->getOption("options.ui.notifications.request-receipts").toBool()) {
-				foreach (ChatDlg *c, findChatDialogs(e->from(), false)) {
-					if (c->autoSelectContact()  || c->jid().resource().isEmpty() || e->from().resource() == c->jid().resource()) {
-						if (c->autoSelectContact())
-							c->setJid(e->from());
-						c->incomingMessage(m);
-					}
-				}
-			}
-			delete e;
-			return;
 		}
 
 		// pass chat messages directly to a chat window if possible (and deal with sound)

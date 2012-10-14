@@ -52,7 +52,7 @@
 #include "psiiconset.h"
 #include "jidutil.h"
 #include "psioptions.h"
-#include "psitextview.h"
+#include "msgmle.h"
 #include "accountscombobox.h"
 #include "common.h"
 #include "xmpp_htmlelement.h"
@@ -524,7 +524,7 @@ public:
 	IconButton *pb_next;
 	IconButton *pb_close, *pb_quote, *pb_deny, *pb_send, *pb_reply, *pb_chat, *pb_auth, *pb_http_confirm, *pb_http_deny;
 	IconButton *pb_form_submit, *pb_form_cancel;
-	PsiTextView *mle;
+	ChatView *mle;
 	AttachView *attachView;
 	QTimer *whois;
 	QString lastWhois;
@@ -850,8 +850,8 @@ void EventDlg::init()
 	}
 
 	// text area
-	d->mle = new PsiTextView(this);
-	//d->mle->setDialog(this);
+	d->mle = new ChatView(this);
+	d->mle->setDialog(this);
 	d->mle->setReadOnly(false);
 	d->mle->setUndoRedoEnabled(true);
 	d->mle->setMinimumHeight(50);
@@ -895,7 +895,7 @@ void EventDlg::init()
 	d->w_http_id->hide();
 
 	// data form
-	d->xdata = new XDataWidget(this, d->pa->client(), d->jid);
+	d->xdata = new XDataWidget(this);
 	d->xdata_form = new QWidget(this);
 	QVBoxLayout *vb_xdata = new QVBoxLayout(d->xdata_form);
 	d->xdata_instruction = new QLabel(d->xdata_form);
@@ -1413,8 +1413,6 @@ void EventDlg::keyPressEvent(QKeyEvent *e)
 		close();
 	else if(ShortcutManager::instance()->shortcuts("message.send").contains(key))
 		doSend();
-	else if(ShortcutManager::instance()->shortcuts("common.hide").contains(key))
-		hide();
 	else
 		e->ignore();
 }
@@ -1898,7 +1896,7 @@ void EventDlg::updateEvent(PsiEvent *e)
 				setWindowTitle( form.title() );
 			
 			//show data form
-			d->xdata->setForm( form, false );
+			d->xdata->setFields( form.fields() );
 			d->xdata_form->show();
 			
 			//set instructions

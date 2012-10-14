@@ -426,11 +426,11 @@ QLineEdit#le_status_text {
 				<css type="QString" />
 			</look>
 			<notifications>
+				<send-receipts type="bool" >true</send-receipts>
+				<request-receipts type="bool" >true</request-receipts>
 				<alert-style type="QString">animate</alert-style>
 				<type type="int">0</type>
 				<bounce-dock type="QString">forever</bounce-dock>
-				<send-receipts type="bool" >true</send-receipts>
-				<request-receipts type="bool" >true</request-receipts>
 				<passive-popups>
 					<delays>
 						<chat type="int">5000</chat>
@@ -440,9 +440,9 @@ QLineEdit#le_status_text {
 						<status type="int">2000</status>
 					</delays>
 					<enabled type="bool">false</enabled>
+					<css type="QString"></css>
 					<top-to-bottom type="bool">false</top-to-bottom>
 					<at-left-corner type="bool">false</at-left-corner>
-					<css type="QString"></css>
 					<incoming-chat type="bool">true</incoming-chat>
 					<composing type="bool">true</composing>
 					<incoming-file-transfer type="bool">true</incoming-file-transfer>

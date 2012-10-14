@@ -48,8 +48,8 @@ HEADERS += \
 	$$PWD/actionlineedit.h \
 	$$PWD/typeaheadfind.h
 
-FORMS += psiwindowheader.ui \
-	$$PWD/fancypopup.ui
+FORMS += $$PWD/fancypopup.ui \
+	$$PWD/psiwindowheader.ui
 
 # to remove dependency on iconset and stuff
 #DEFINES += WIDGET_PLUGIN
