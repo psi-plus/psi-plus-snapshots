@@ -246,7 +246,7 @@ void PsiGrowlNotifier::popup(PsiAccount *account, PopupManager::PopupType/* type
 			     const QPixmap */*avatar*/, const PsiIcon */*icon*/, const QString &text)
 {
 	// Notify Growl
-	NotificationContext* context = new NotificationContext(account, jid);
+	NotificationContext* context = new NotificationContext(account, j);
 	gn_->notify(QObject::tr("Incoming Headline"), titleText, TextUtil::rich2plain(text),
 		    titleIcon->pixmap(), false, this, SLOT(notificationClicked(void*)), SLOT(notificationTimedOut(void*)), context);
 }
