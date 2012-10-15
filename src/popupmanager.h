@@ -36,8 +36,10 @@ namespace XMPP {
 }
 using namespace XMPP;
 
-class PopupManager
+class PopupManager : public QObject
 {
+	Q_OBJECT
+
 public:
 	PopupManager(PsiCon* psi);
 	~PopupManager();
@@ -75,17 +77,15 @@ public:
 	static QList< NotificationsType > availableTypes();
 	static NotificationsType currentType();
 	static QString nameByType(NotificationsType type);
-	static QString clipText(QString text);
 
 	void doPopup(PsiAccount* account, PopupType type, const Jid& j, const Resource& r,
 			    UserListItem* u = 0, PsiEvent* e = 0, bool checkNoPopup = true);
 	void doPopup(PsiAccount *account, const Jid &j, const PsiIcon *titleIcon, const QString& titleText,
 			    const QPixmap *avatar, const PsiIcon *icon, const QString& text, bool checkNoPopup = true, PopupType type = AlertNone);
 
-	int timeout(PopupType type) const;
-
 private:
 	bool noPopup(PsiAccount *account) const;
+	int timeout(PopupType type) const;
 
 private:
 	class Private;

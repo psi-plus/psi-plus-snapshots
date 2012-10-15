@@ -19,12 +19,10 @@
  */
 
 #include "popupmanager.h"
-
 #include "psioptions.h"
 #include "psiaccount.h"
 #include "psicon.h"
 #include "psipopup.h"
-
 #include "xmpp/jid/jid.h"
 
 #if defined(Q_WS_MAC) && defined(HAVE_GROWL)
@@ -96,6 +94,7 @@ PopupManager::PopupManager(PsiCon *psi)
 
 PopupManager::~PopupManager()
 {
+	PsiPopup::deleteAll();
 	delete d;
 }
 
@@ -185,29 +184,29 @@ void PopupManager::doPopup(PsiAccount *account, PopupType pType, const Jid &j, c
 		return;
 
 	NotificationsType type = currentType();
+	PsiPopupInterface *popup = 0;
 	if(type == Default) {
-		PsiPopup *popup = new PsiPopup(this, pType, account);
-		popup->setData(j, r, u, e);
+		popup = new PsiPopup(this);
 	}
 #if defined(Q_WS_MAC) && defined(HAVE_GROWL)
 	else if(type == Growl) {
-		PsiGrowlNotifier::instance()->popup(account, pType, j, r, u, e);
+		popup = PsiGrowlNotifier::instance();
 	}
 #endif
 #ifdef USE_DBUS
 	else if(type == DBus) {
-		PsiDBusNotifier *db = new PsiDBusNotifier(this);
-		db->popup(account, pType, j, r, u, e);
+		popup = new PsiDBusNotifier(this);
 	}
 #endif
+	if(popup) {
+		popup->setDuration(timeout(pType));
+		popup->popup(account, pType, j, r, u, e);
+	}
 }
 
 void PopupManager::doPopup(PsiAccount *account, const Jid &j, const PsiIcon *titleIcon, const QString &titleText,
 			   const QPixmap *avatar, const PsiIcon *icon, const QString &text, bool checkNoPopup, PopupType pType)
 {
-	Q_UNUSED(avatar)
-	Q_UNUSED(icon)
-
 	if (!PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.enabled").toBool())
 		return;
 
@@ -215,22 +214,24 @@ void PopupManager::doPopup(PsiAccount *account, const Jid &j, const PsiIcon *tit
 		return;
 
 	NotificationsType type = currentType();
+	PsiPopupInterface *popup = 0;
 	if(type == Default) {
-		PsiPopup *popup = new PsiPopup(this, titleIcon, titleText, account, pType);
-		popup->setJid(j);
-		popup->setData(avatar, icon, text);
+		popup = new PsiPopup(this);
 	}
 #if defined(Q_WS_MAC) && defined(HAVE_GROWL)
 	else if(type == Growl) {
-		PsiGrowlNotifier::instance()->popup(account, j, titleIcon, titleText, text);
+		popup = PsiGrowlNotifier::instance();
 	}
 #endif
 #ifdef USE_DBUS
 	else if(type == DBus) {
-		PsiDBusNotifier *db = new PsiDBusNotifier(this);
-		db->popup(account, j, titleIcon, titleText, avatar, icon, text, pType);
+		popup = new PsiDBusNotifier(this);
 	}
 #endif
+	if(popup) {
+		popup->setDuration(timeout(pType));
+		popup->popup(account, pType, j, titleIcon, titleText, avatar, icon, text);
+	}
 }
 
 
@@ -277,27 +278,6 @@ QString PopupManager::nameByType(NotificationsType type)
 	}
 
 	return ret;
-}
-
-QString PopupManager::clipText(QString text)
-{
-	int len = PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.maximum-text-length").toInt();
-	if (len > 0) {
-		// richtext will give us trouble here
-		if (((int)text.length()) > len) {
-			text = text.left(len);
-
-			// delete last unclosed tag
-			/*if ( text.find("</") > text.find(">") ) {
-
-				text = text.left( text.find("</") );
-			}*/
-
-			text += "...";
-		}
-	}
-
-	return text;
 }
 
 int PopupManager::timeout(PopupType type) const

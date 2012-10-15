@@ -26,26 +26,24 @@
 #ifndef PSIDBUSNOTIFIER_H
 #define PSIDBUSNOTIFIER_H
 
-#include "popupmanager.h"
+#include "psipopupinterface.h"
 #include "xmpp/jid/jid.h"
 
 class QDBusPendingCallWatcher;
 class QTimer;
 
-using namespace XMPP;
-
-class PsiDBusNotifier : public QObject
+class PsiDBusNotifier : public QObject, public PsiPopupInterface
 {
 	Q_OBJECT
 
 public:
-	PsiDBusNotifier(PopupManager* manager);
+	PsiDBusNotifier(QObject* parent = 0);
 	~PsiDBusNotifier();
 	static bool isAvailable();
-	static QStringList capabilities();
-	void popup(PsiAccount* account, PopupManager::PopupType type, const Jid& j, const Resource& r, const UserListItem* = 0, PsiEvent* = 0);
-	void popup(PsiAccount *account, const Jid &j, const PsiIcon *titleIcon, const QString& titleText,
-				    const QPixmap *avatar, const PsiIcon *icon, const QString& text, PopupManager::PopupType type);
+
+	virtual void popup(PsiAccount *account, PopupManager::PopupType type, const Jid& j, const Resource& r, const UserListItem* = 0, PsiEvent* = 0);
+	virtual void popup(PsiAccount* account, PopupManager::PopupType type, const Jid& j, const PsiIcon* titleIcon, const QString& titleText,
+			   const QPixmap* avatar, const PsiIcon* icon, const QString& text);
 
 private slots:
 	void popupClosed(uint id, uint reason);
@@ -55,9 +53,9 @@ private slots:
 
 private:
 	static bool checkServer();
+	static QStringList capabilities();
 
 private:
-	PopupManager* pm_;
 	Jid jid_;
 	uint id_;
 	PsiAccount *account_;

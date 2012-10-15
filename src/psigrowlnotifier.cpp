@@ -234,7 +234,7 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, 
 		}
 
 	if(!desc.isEmpty()) {
-		desc = PopupManager::clipText(desc);
+		desc = clipText(desc);
 	}
 
 	// Notify Growl
@@ -242,7 +242,8 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, 
 	gn_->notify(name, title, desc, icon, false, this, SLOT(notificationClicked(void*)), SLOT(notificationTimedOut(void*)), context);
 }
 
-void PsiGrowlNotifier::popup(PsiAccount *account, const Jid &jid, const PsiIcon *titleIcon, const QString &titleText, const QString &text)
+void PsiGrowlNotifier::popup(PsiAccount *account, PopupManager::PopupType/* type*/, const Jid &j, const PsiIcon *titleIcon, const QString &titleText,
+			     const QPixmap */*avatar*/, const PsiIcon */*icon*/, const QString &text)
 {
 	// Notify Growl
 	NotificationContext* context = new NotificationContext(account, jid);

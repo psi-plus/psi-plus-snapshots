@@ -21,14 +21,9 @@
 #include "fancypopup.h"
 #include "ui_fancypopup.h"
 
-//#include <QPixmap>
 #include <QApplication>
-//#include <QLabel>
-//#include <QLayout>
 #include <QTimer>
-//#include <QPainter>
 #include <QList>
-//#include <QToolButton>
 #include <QStyle>
 #include <QDesktopWidget>
 #include <QMouseEvent>

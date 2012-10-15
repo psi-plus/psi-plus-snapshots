@@ -21,34 +21,32 @@
 #ifndef PSIPOPUP_H
 #define PSIPOPUP_H
 
+#include "psipopupinterface.h"
+
 class FancyPopup;
 
-#include "popupmanager.h"
-
-class PsiPopup : public QObject
+class PsiPopup : public QObject, public PsiPopupInterface
 {
 	Q_OBJECT
 public:
-	PsiPopup(PopupManager* manager, const PsiIcon *titleIcon, const QString& titleText, PsiAccount *acc, PopupManager::PopupType type);
-	PsiPopup(PopupManager* manager, PopupManager::PopupType type, PsiAccount *acc);
-
+	PsiPopup(QObject* parent = 0);
 	~PsiPopup();
 
-	void setData(const Jid &, const Resource &, const UserListItem * = 0, const PsiEvent * = 0);
-	void setData(const QPixmap *avatar, const PsiIcon *icon, const QString& text);
+	virtual void popup(PsiAccount* account, enum PopupManager::PopupType type, const Jid& j, const Resource& r, const UserListItem* = 0, PsiEvent* = 0);
+	virtual void popup(PsiAccount* account, enum PopupManager::PopupType type, const Jid& j, const PsiIcon* titleIcon, const QString& titleText,
+		   const QPixmap* avatar, const PsiIcon* icon, const QString& text);
 
-	void setJid(const Jid &j);
-
-	void show();
 	static void deleteAll();
 
-	static QString title(PopupManager::PopupType type, bool *doAlertIcon, PsiIcon **icon);
+private:
+	void setData(const Jid &, const Resource &, const UserListItem * = 0, const PsiEvent * = 0);
+	void setData(const QPixmap *avatar, const PsiIcon *icon, const QString& text);
+	void setJid(const Jid &j);
+	QString id() const;
+	FancyPopup *popup() const;
+	void show();
 
 private:
-	QString id() const;
-	FancyPopup *popup();
-
-	PopupManager* pm_;
 	class Private;
 	Private *d;
 	friend class Private;

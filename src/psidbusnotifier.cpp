@@ -30,7 +30,6 @@
 #include <QDBusArgument>
 #include <QDBusMetaType>
 #include <QDBusReply>
-#include <QCoreApplication>
 #include <QImage>
 #include <QTimer>
 
@@ -40,8 +39,6 @@
 #include "common.h"
 #include "avatars.h"
 #include "userlist.h"
-#include "applicationinfo.h"
-#include "psipopup.h"
 #include "psioptions.h"
 #include "psicon.h"
 #include "textutil.h"
@@ -103,9 +100,8 @@ static QDBusMessage createMessage(const QString& method)
 }
 
 
-PsiDBusNotifier::PsiDBusNotifier(PopupManager *manager)
-	: QObject(QCoreApplication::instance())
-	, pm_(manager)
+PsiDBusNotifier::PsiDBusNotifier(QObject *parent)
+	: QObject(parent)
 	, id_(0)
 	, account_(0)
 	, event_(0)
@@ -197,7 +193,7 @@ void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, c
 		contact = QString("%1(%2)").arg(contact, j);
 	}
 
-	title = PsiPopup::title(type, &doAlert, &ico);
+	title = this->title(type, &doAlert, &ico);
 
 	QVariantMap hints;
 	if(PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.dbus.transient-hint").toBool() ||
@@ -282,11 +278,11 @@ void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, c
 	}
 
 	if(!desc.isEmpty()) {
-		desc = PopupManager::clipText(desc);
+		desc = clipText(desc);
 		text += "\n" + desc;
 	}
 
-	int lifeTime = pm_->timeout(type);
+	int lifeTime = duration();
 	bool bodyMarkup = capabilities().contains(markupCaps);
 	text = TextUtil::rich2plain(text);
 	text = bodyMarkup ? TextUtil::escape(text) : text;
@@ -312,11 +308,11 @@ void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, c
 		lifeTimer_->start(lifeTime);
 }
 
-void PsiDBusNotifier::popup(PsiAccount *account, const Jid &jid, const PsiIcon *titleIcon, const QString &titleText,
-			    const QPixmap *avatar, const PsiIcon */*icon*/, const QString &text, PopupManager::PopupType type)
+void PsiDBusNotifier::popup(PsiAccount *account, PopupManager::PopupType /*type*/, const Jid &j, const PsiIcon *titleIcon, const QString &titleText,
+			    const QPixmap *avatar, const PsiIcon */*icon*/, const QString &text)
 {
 	account_ = account;
-	jid_ = jid;
+	jid_ = j;
 
 	QVariantMap hints;
 	if(PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.dbus.transient-hint").toBool()) {
@@ -329,7 +325,7 @@ void PsiDBusNotifier::popup(PsiAccount *account, const Jid &jid, const PsiIcon *
 		hints.insert("icon_data", QVariant(iiibiiay::id, &i));
 	}
 
-	int lifeTime = pm_->timeout(type);
+	int lifeTime = duration();
 	bool bodyMarkup = capabilities().contains(markupCaps);
 	QString plainText = TextUtil::rich2plain(text);
 	plainText = bodyMarkup ? TextUtil::escape(plainText) : plainText;

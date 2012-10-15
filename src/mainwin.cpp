@@ -61,7 +61,6 @@
 #include "psitoolbar.h"
 #include "aboutdlg.h"
 #include "psitoolbar.h"
-#include "psipopup.h"
 #include "psioptions.h"
 #include "tipdlg.h"
 #include "mucjoindlg.h"
@@ -581,8 +580,6 @@ MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
 
 MainWin::~MainWin()
 {
-	PsiPopup::deleteAll();
-
 	if(d->tray) {
 		delete d->tray;
 		d->tray = 0;

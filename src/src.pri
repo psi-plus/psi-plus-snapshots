@@ -146,6 +146,7 @@ HEADERS += \
 	$$PWD/alertable.h \
 	$$PWD/psipopup.h \
 	$$PWD/popupmanager.h \
+	$$PWD/psipopupinterface.h \
 	$$PWD/psiapplication.h \
 	$$PWD/filecache.h \
 	$$PWD/avatars.h \
@@ -292,6 +293,7 @@ SOURCES += \
 	$$PWD/alertable.cpp \
 	$$PWD/psipopup.cpp \
 	$$PWD/popupmanager.cpp \
+	$$PWD/psipopupinterface.cpp \
 	$$PWD/psiapplication.cpp \
 	$$PWD/filecache.cpp \
 	$$PWD/avatars.cpp \
