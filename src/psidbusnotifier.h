@@ -26,6 +26,10 @@
 #ifndef PSIDBUSNOTIFIER_H
 #define PSIDBUSNOTIFIER_H
 
+#ifndef QT_STATICPLUGIN
+#define QT_STATICPLUGIN
+#endif
+
 #include "psipopupinterface.h"
 #include "xmpp/jid/jid.h"
 
@@ -62,6 +66,17 @@ private:
 	PsiEvent *event_;
 	QTimer *lifeTimer_;
 	static QStringList caps_;
+};
+
+class PsiDBusNotifierPlugin : public QObject, public PsiPopupPluginInterface
+{
+	Q_OBJECT
+	Q_INTERFACES(PsiPopupPluginInterface)
+
+public:
+	virtual QString name() const { return "DBus"; }
+	virtual PsiPopupInterface* popup(QObject* p) { return new PsiDBusNotifier(p); }
+	virtual bool isAvailable() { return PsiDBusNotifier::isAvailable(); }
 };
 
 #endif

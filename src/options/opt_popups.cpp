@@ -93,7 +93,7 @@ void OptionsTabPopups::applyOptions()
 	foreach(QObject* obj, d->gb_type->children()) {
 		QRadioButton *rb = dynamic_cast<QRadioButton*>(obj);
 		if(rb && rb->isChecked()) {
-			o->setOption("options.ui.notifications.type", rb->property("type"));
+			o->setOption("options.ui.notifications.typename", rb->text());
 			break;
 		}
 	}
@@ -146,12 +146,11 @@ void OptionsTabPopups::restoreOptions()
 	qDeleteAll(d->gb_type->children());
 	QHBoxLayout *l = new QHBoxLayout(d->gb_type);
 
-	foreach(PopupManager::NotificationsType type_, PopupManager::availableTypes()) {
-		QRadioButton* rb = new QRadioButton(PopupManager::nameByType(type_));
-		rb->setProperty("type", type_);
+	foreach(QString type_, popup_->availableTypes()) {
+		QRadioButton* rb = new QRadioButton(type_);
 		d->gb_type->layout()->addWidget(rb);
 		l->addWidget(rb);
-		if(PopupManager::currentType() == type_)
+		if(popup_->currentType() == type_)
 			rb->setChecked(true);
 	}
 

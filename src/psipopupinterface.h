@@ -23,13 +23,27 @@
 
 #include "popupmanager.h"
 
+class PsiPopupInterface;
+
+class PsiPopupPluginInterface
+{
+public:
+	virtual QString name() const = 0;
+	virtual bool isAvailable() const { return true; }
+	virtual PsiPopupInterface* popup(QObject* ) = 0;
+};
+
+Q_DECLARE_INTERFACE(PsiPopupPluginInterface, "psi-im.org.PsiPopupInterface/0.1")
+
+
 class PsiPopupInterface
 {
 public:
-	void setDuration(int d) { duration_ = d; }
 	virtual void popup(PsiAccount* account, PopupManager::PopupType type, const Jid& j, const Resource& r, const UserListItem* = 0, PsiEvent* = 0) = 0;
 	virtual void popup(PsiAccount* account, PopupManager::PopupType type, const Jid& j, const PsiIcon* titleIcon, const QString& titleText,
 				    const QPixmap* avatar, const PsiIcon* icon, const QString& text) = 0;
+
+	void setDuration(int d) { duration_ = d; }
 
 protected:
 	static QString clipText(QString text);

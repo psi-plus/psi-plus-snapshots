@@ -32,6 +32,7 @@
 #include <QDBusReply>
 #include <QImage>
 #include <QTimer>
+#include <QtPlugin>
 
 #include "psidbusnotifier.h"
 #include "psiaccount.h"
@@ -409,3 +410,5 @@ void PsiDBusNotifier::readyToDie()
 }
 
 QStringList PsiDBusNotifier::caps_ = QStringList();
+
+Q_EXPORT_PLUGIN2(psidbusnotifier, PsiDBusNotifierPlugin)

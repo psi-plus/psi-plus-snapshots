@@ -21,6 +21,10 @@
 #ifndef PSIPOPUP_H
 #define PSIPOPUP_H
 
+#ifndef QT_STATICPLUGIN
+#define QT_STATICPLUGIN
+#endif
+
 #include "psipopupinterface.h"
 
 class FancyPopup;
@@ -28,12 +32,13 @@ class FancyPopup;
 class PsiPopup : public QObject, public PsiPopupInterface
 {
 	Q_OBJECT
+
 public:
 	PsiPopup(QObject* parent = 0);
 	~PsiPopup();
 
-	virtual void popup(PsiAccount* account, enum PopupManager::PopupType type, const Jid& j, const Resource& r, const UserListItem* = 0, PsiEvent* = 0);
-	virtual void popup(PsiAccount* account, enum PopupManager::PopupType type, const Jid& j, const PsiIcon* titleIcon, const QString& titleText,
+	virtual void popup(PsiAccount* account, PopupManager::PopupType type, const Jid& j, const Resource& r, const UserListItem* = 0, PsiEvent* = 0);
+	virtual void popup(PsiAccount* account, PopupManager::PopupType type, const Jid& j, const PsiIcon* titleIcon, const QString& titleText,
 		   const QPixmap* avatar, const PsiIcon* icon, const QString& text);
 
 	static void deleteAll();
@@ -50,6 +55,17 @@ private:
 	class Private;
 	Private *d;
 	friend class Private;
+};
+
+class PsiPopupPlugin : public QObject, public PsiPopupPluginInterface
+{
+	Q_OBJECT
+	Q_INTERFACES(PsiPopupPluginInterface)
+
+public:
+	virtual ~PsiPopupPlugin() { PsiPopup::deleteAll(); }
+	virtual QString name() const { return "Classic"; }
+	virtual PsiPopupInterface* popup(QObject* p) { return new PsiPopup(p); }
 };
 
 #endif

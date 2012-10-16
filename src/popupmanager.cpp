@@ -22,19 +22,15 @@
 #include "psioptions.h"
 #include "psiaccount.h"
 #include "psicon.h"
-#include "psipopup.h"
+#include "psipopupinterface.h"
 #include "xmpp/jid/jid.h"
 
-#if defined(Q_WS_MAC) && defined(HAVE_GROWL)
-#include "psigrowlnotifier.h"
-#endif
-
-#ifdef USE_DBUS
-#include "psidbusnotifier.h"
-#endif
+#include <QPluginLoader>
+#include <QtPlugin>
 
 
 static const int defaultTimeout = 5;
+static const QString defaultType = "Classic";
 
 struct OptionValue
 {
@@ -67,9 +63,56 @@ public:
 	{
 	}
 
+	PsiPopupInterface* popup(const QString& name)
+	{
+		PsiPopupInterface* ppi = 0;
+		PsiPopupPluginInterface *plugin = 0;
+		if(popups_.keys().contains(name)) {
+			plugin = popups_.value(name);
+		}
+		if(plugin) {
+			ppi = plugin->popup(psi_);
+		}
+
+		return ppi;
+	}
+
+	bool noPopup(PsiAccount *account) const
+	{
+		if(account) {
+			if(account->noPopup())
+				return true;
+		}
+		else {
+			Status::Type type = psi_->currentStatusType();
+			if((type == Status::DND && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.suppress-while-dnd").toBool())
+				|| ( (type == Status::Away || type == Status::XA) &&
+				     PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.suppress-while-away").toBool() ))
+				{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	int timeout(PopupType type) const
+	{
+		if(type == AlertMessage || type == AlertAvCall)
+			type = AlertChat;
+		else if(type == AlertOffline || type == AlertStatusChange || type == AlertNone || type == AlertComposing)
+			type = AlertOnline;
+
+		foreach(const OptionValue& v, options_)
+			if(v.id == type)
+				return v.optionValue*1000;
+
+		return defaultTimeout*1000;
+	}
+
 	PsiCon* psi_;
 	int lastCustomType_;
 	QList<OptionValue> options_;
+	QMap<QString, PsiPopupPluginInterface*> popups_;
 };
 
 PopupManager::PopupManager(PsiCon *psi)
@@ -90,11 +133,17 @@ PopupManager::PopupManager(PsiCon *psi)
 			PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.delays.gc-message").toInt()/1000, AlertGcHighlight);
 
 	d->options_ += initList;
+
+	foreach(QObject* plugin, QPluginLoader::staticInstances()) {
+		PsiPopupPluginInterface* ppi = qobject_cast<PsiPopupPluginInterface*>(plugin);
+		if(ppi && ppi->isAvailable()) {
+			d->popups_.insert(ppi->name(), ppi);
+		}
+	}
 }
 
 PopupManager::~PopupManager()
 {
-	PsiPopup::deleteAll();
 	delete d;
 }
 
@@ -156,50 +205,18 @@ const QStringList PopupManager::optionsNamesList() const
 	return ret;
 }
 
-bool PopupManager::noPopup(PsiAccount *account) const
-{
-	if(account) {
-		if(account->noPopup())
-			return true;
-	}
-	else {
-		Status::Type type = d->psi_->currentStatusType();
-		if((type == Status::DND && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.suppress-while-dnd").toBool())
-			|| ( (type == Status::Away || type == Status::XA) &&
-			     PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.suppress-while-away").toBool() ))
-			{
-			return true;
-		}
-	}
-	return false;
-}
-
 void PopupManager::doPopup(PsiAccount *account, PopupType pType, const Jid &j, const Resource &r,
 			   UserListItem *u, PsiEvent *e, bool checkNoPopup)
 {
 	if (!PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.enabled").toBool())
 		return;
 
-	if(checkNoPopup && noPopup(account))
+	if(checkNoPopup && d->noPopup(account))
 		return;
 
-	NotificationsType type = currentType();
-	PsiPopupInterface *popup = 0;
-	if(type == Default) {
-		popup = new PsiPopup(this);
-	}
-#if defined(Q_WS_MAC) && defined(HAVE_GROWL)
-	else if(type == Growl) {
-		popup = PsiGrowlNotifier::instance();
-	}
-#endif
-#ifdef USE_DBUS
-	else if(type == DBus) {
-		popup = new PsiDBusNotifier(this);
-	}
-#endif
+	PsiPopupInterface *popup = d->popup(currentType());
 	if(popup) {
-		popup->setDuration(timeout(pType));
+		popup->setDuration(d->timeout(pType));
 		popup->popup(account, pType, j, r, u, e);
 	}
 }
@@ -210,88 +227,38 @@ void PopupManager::doPopup(PsiAccount *account, const Jid &j, const PsiIcon *tit
 	if (!PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.enabled").toBool())
 		return;
 
-	if(checkNoPopup && noPopup(account))
+	if(checkNoPopup && d->noPopup(account))
 		return;
 
-	NotificationsType type = currentType();
-	PsiPopupInterface *popup = 0;
-	if(type == Default) {
-		popup = new PsiPopup(this);
-	}
-#if defined(Q_WS_MAC) && defined(HAVE_GROWL)
-	else if(type == Growl) {
-		popup = PsiGrowlNotifier::instance();
-	}
-#endif
-#ifdef USE_DBUS
-	else if(type == DBus) {
-		popup = new PsiDBusNotifier(this);
-	}
-#endif
+	PsiPopupInterface *popup = d->popup(currentType());
 	if(popup) {
-		popup->setDuration(timeout(pType));
+		popup->setDuration(d->timeout(pType));
 		popup->popup(account, pType, j, titleIcon, titleText, avatar, icon, text);
 	}
 }
 
 
-QList< PopupManager::NotificationsType > PopupManager::availableTypes()
+QStringList PopupManager::availableTypes() const
 {
-	if(availableTypes_.isEmpty()) {
-		availableTypes_ << Default;
-#if defined(Q_WS_MAC) && defined(HAVE_GROWL)
-		if(PsiGrowlNotifier::isAvailable())
-			availableTypes_ << Growl;
-#endif
-#ifdef USE_DBUS
-		if(PsiDBusNotifier::isAvailable())
-			availableTypes_ << DBus;
-#endif
-	}
-	return availableTypes_;
+	return d->popups_.keys();
 }
 
-PopupManager::NotificationsType PopupManager::currentType()
+QString PopupManager::currentType() const
 {
-	NotificationsType type = (NotificationsType)PsiOptions::instance()->getOption("options.ui.notifications.type").toInt();
+	const QString type = PsiOptions::instance()->getOption("options.ui.notifications.typename").toString();
 	if(availableTypes().contains(type))
 		return type;
 
-	return Default;
+	return defaultType;
 }
 
-QString PopupManager::nameByType(NotificationsType type)
-{
-	QString ret;
-	switch(type) {
-	case Default:
-		ret = QObject::tr("Classic");
-		break;
-	case Growl:
-		ret = QObject::tr("Growl");
-		break;
-	case DBus:
-		ret = QObject::tr("DBus");
-		break;
-	default:
-		break;
-	}
 
-	return ret;
-}
+Q_IMPORT_PLUGIN(psipopup)
 
-int PopupManager::timeout(PopupType type) const
-{
-	if(type == AlertMessage || type == AlertAvCall)
-		type = AlertChat;
-	else if(type == AlertOffline || type == AlertStatusChange || type == AlertNone || type == AlertComposing)
-		type = AlertOnline;
+#if defined(Q_WS_MAC) && defined(HAVE_GROWL)
+Q_IMPORT_PLUGIN(psigrowlnotifier)
+#endif
 
-	foreach(const OptionValue& v, d->options_)
-		if(v.id == type)
-			return v.optionValue*1000;
-
-	return defaultTimeout*1000;
-}
-
-QList< PopupManager::NotificationsType > PopupManager::availableTypes_ = QList< NotificationsType >();
+#ifdef USE_DBUS
+Q_IMPORT_PLUGIN(psidbusnotifier)
+#endif

@@ -11,7 +11,7 @@
 				</font>
 			</look>
 			<notifications>
-				<type type="int">1</type>
+				<typename type="QString">Growl</type>
 			</notifications>
 		</ui>
 		<shortcuts comment="Shortcuts">

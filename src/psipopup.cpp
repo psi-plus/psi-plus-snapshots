@@ -41,6 +41,7 @@
 #include <QBoxLayout>
 #include <QList>
 #include <QTextDocument>
+#include <QtPlugin>
 
 /**
  * Limits number of popups that could be displayed 
@@ -453,3 +454,5 @@ void PsiPopup::deleteAll()
 }
 
 #include "psipopup.moc"
+
+Q_EXPORT_PLUGIN2(psipopup, PsiPopupPlugin)

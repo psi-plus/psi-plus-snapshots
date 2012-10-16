@@ -26,6 +26,8 @@
 #include <QPixmap>
 #include <QStringList>
 #include <QCoreApplication>
+#include <QtPlugin>
+
 #include "common.h"
 #include "psiaccount.h"
 #include "avatars.h"
@@ -294,3 +296,5 @@ bool  PsiGrowlNotifier::isAvailable()
 }
 
 PsiGrowlNotifier* PsiGrowlNotifier::instance_ = 0;
+
+Q_EXPORT_PLUGIN2(psigrowlnotifier, PsiGrowlNotifierPlugin)
