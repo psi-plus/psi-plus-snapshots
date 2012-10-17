@@ -59,7 +59,8 @@ void SimpleCli::defineParam(const QByteArray& name, const QString& valueHelp, co
 void SimpleCli::defineAlias(const QByteArray& alias, const QByteArray& originalName)
 {
 	if (!argdefs.contains(originalName)) {
-		qDebug("CLI: cannot add alias '%s' because name '%s' does not exist", qPrintable(alias), qPrintable(originalName));
+		qDebug("CLI: cannot add alias '%s' because name '%s' does not exist",
+			   alias.constData(), originalName.constData());
 		return;
 	}
 	argdefs[originalName].aliases.append(alias);
@@ -132,7 +133,8 @@ QHash<QByteArray, QByteArray> SimpleCli::parse(int argc, char* argv[], const QLi
 		}
 
 		if (map.contains(name)) {
-			qDebug("CLI: Ignoring next value ('%s') for '%s' arg.", qPrintable(value), qPrintable(name));
+			qDebug("CLI: Ignoring next value ('%s') for '%s' arg.",
+				   value.constData(), name.constData());
 		} else {
 			map[name] = value;
 		}
