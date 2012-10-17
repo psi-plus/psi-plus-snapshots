@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2012-10-12
+# Updated: 2012-10-17
 # Version: N/A
 
 if [[ ${0} =~ ^/.+$ ]]; then
@@ -18,7 +18,7 @@ export MAIN_DIR="${PSIPLUS_DIR}/.."
 host github.com > /dev/null || exit 1
 
 cd "${PSIPLUS_DIR}" || exit 1
-OLD_VER=$(git tag -l | tail -n1)
+OLD_VER=$(git tag -l | sort -V | tail -n1)
 OLD_REVISION=$(echo ${OLD_VER} | sed -e "s/^[0-9]\+\.[0-9]\+\.\([0-9]\+\)$/\1/")
 
 MOD=psi
