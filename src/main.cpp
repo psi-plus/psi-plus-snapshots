@@ -360,7 +360,7 @@ static QByteArray encodeUri(const QByteArray &in)
 	return out;
 }
 
-static QByteArray decodeUri(const QByteArray &in)
+static QString decodeUri(const QString &in)
 {
 	// note that the input is an 8-bit text encoding which is then escaped,
 	//   and the result is a latin1-compatible string.  to decode this, we
@@ -368,17 +368,17 @@ static QByteArray decodeUri(const QByteArray &in)
 	//   into unicode
 
 	QByteArray dec;
-	for(int n = 0; n < in.size(); ++n) {
-		if(in.at(n) == '\\') {
-			if(n + 1 < in.size()) {
+	for(int n = 0; n < in.length(); ++n) {
+		if(in[n] == '\\') {
+			if(n + 1 < in.length()) {
 				++n;
-				if(in.at(n) == '\\') {
+				if(in[n] == '\\') {
 					dec += '\\';
 				}
-				else if(in.at(n) == 'x') {
-					if(n + 2 < in.size()) {
+				else if(in[n] == 'x') {
+					if(n + 2 < in.length()) {
 						++n;
-						QByteArray xs = in.mid(n, 2);
+						QString xs = in.mid(n, 2);
 						++n;
 						bool ok = false;
 						int x = xs.toInt(&ok, 16);
@@ -391,10 +391,10 @@ static QByteArray decodeUri(const QByteArray &in)
 			}
 		}
 		else
-			dec += in.at(n);
+			dec += in[n].toLatin1();
 	}
 
-	return dec;
+	return QString::fromLocal8Bit(dec);
 }
 
 // NOTE: this function is called without qapp existing
@@ -556,22 +556,22 @@ int main(int argc, char *argv[])
 
 	//dtcp_port = 8000;
 
-#ifdef URI_RESTART
-	if (cmdline.contains("encuri")) {
-		cmdline["uri"] = decodeUri(cmdline["encuri"]);
-		cmdline.remove("encuri");
-	}
-#endif
-
 	// now when QApplication created and text codecs initiaized we can convert
 	// command line arguments to strings
 	QHash<QString,QString> cmdlines;
 	QHashIterator<QByteArray,QByteArray> clIt(cmdline);
 	while (clIt.hasNext()) {
 		clIt.next();
+#ifdef URI_RESTART
+		if (clIt.key() == "encuri") {
+			cmdlines.insert("uri", decodeUri(QString::fromLatin1(clIt.value())));
+			continue;
+		}
+#endif
 		cmdlines.insert(QString::fromLocal8Bit(clIt.key().constData()),
 						QString::fromLocal8Bit(clIt.value().constData()));
 	}
+
 	PsiMain *psi = new PsiMain(cmdlines);
 	// check if we want to remote-control other psi instance
 	if (psi->useActiveInstance()) {
