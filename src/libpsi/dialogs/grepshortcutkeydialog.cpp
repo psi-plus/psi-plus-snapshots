@@ -27,6 +27,7 @@ GrepShortcutKeyDialog::GrepShortcutKeyDialog()
 {
 	setAttribute(Qt::WA_DeleteOnClose);
 	ui_.setupUi(this);
+	setWindowTitle(tr("Press shortcut"));
 	displayPressedKeys(QKeySequence());
 }
 
