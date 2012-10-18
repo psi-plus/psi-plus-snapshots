@@ -53,9 +53,6 @@ public:
 
 	enum {
 		Message,
-#ifdef WHITEBOARDING
-		Sxe,
-#endif
 		Auth,
 		PGP,
 		File,
@@ -63,10 +60,6 @@ public:
 		//Status
 		HttpAuth,
 		AvCallType
-#ifdef PSI_PLUGINS
-		,Plugin
-#endif
-
 	};
 	virtual int type() const = 0;
 
@@ -110,31 +103,6 @@ private:
 	int v_id;
 #endif
 };
-
-
-#ifdef PSI_PLUGINS
-class PluginEvent : public PsiEvent
-{
-	Q_OBJECT
-public:
-	PluginEvent(const QString& jid, const QString& descr, PsiAccount *acc);
-	~PluginEvent();
-
-	int type() const;
-	XMPP::Jid from() const;
-	virtual void setFrom(const XMPP::Jid &j);
-	virtual QString description() const;
-	void activate();
-
-signals:
-	void activated(QString);
-
-private:
-	XMPP::Jid from_;
-	QString descr_;
-};
-#endif
-
 
 // normal, chat, error, headline, etc
 class MessageEvent : public PsiEvent
@@ -205,26 +173,6 @@ private:
 	QString v_nick;
 	QString v_at;
 };
-
-#ifdef WHITEBOARDING
-class SxeEvent : public MessageEvent
-{
-	Q_OBJECT
-public:
-	SxeEvent(int id, PsiAccount *acc)
-		: MessageEvent(acc), id_(id) {}
-	SxeEvent(const SxeEvent &from)
-		: MessageEvent(from), id_(from.id()) {}
-	~SxeEvent() {}
-	int type() const { return Sxe; }
-//	XMPP::Jid from() const { return jid(); }
-//	void setFrom(const XMPP::Jid &) {  }
-	int id() const { return id_; }
-
-private:
-	int id_;
-};
-#endif
 
 // request pgp passphrase
 class PGPEvent : public PsiEvent

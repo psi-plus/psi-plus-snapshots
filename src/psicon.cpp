@@ -112,6 +112,9 @@
 #include "alertmanager.h"
 #include "bosskey.h"
 #include "popupmanager.h"
+#ifdef WHITEBOARDING
+#include "whiteboarding/wbmanager.h"
+#endif
 
 #include "AutoUpdater/AutoUpdater.h"
 #ifdef HAVE_SPARKLE
@@ -1783,6 +1786,16 @@ void PsiCon::processEvent(PsiEvent *e, ActivationType activationType)
 		// as the event could be deleted just above, we're using cached account and from values
 		account->openChat(from, activationType);
 	}
+#ifdef WHITEBOARDING
+	else if (e->type() == PsiEvent::Sxe) {
+		e->account()->eventQueue()->dequeue(e);
+		e->account()->queueChanged();
+		e->account()->cpUpdate(*u);
+		e->account()->wbManager()->requestActivated(((SxeEvent*)e)->id());
+		delete e;
+		return;
+	}
+#endif
 	else {
 		// search for an already opened eventdlg
 		EventDlg *w = e->account()->findDialog<EventDlg*>(u->jid());

@@ -1215,6 +1215,7 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, CapsRegis
  	d->sxeManager = new SxeManager(d->client, this);
 	 // Initialize Whiteboard manager
 	d->wbManager = new WbManager(d->client, this, d->sxeManager);
+	connect(d->wbManager, SIGNAL(wbRequest(Jid,int)),SLOT(wbRequest(Jid,int)));
 #endif
 
 	// Avatars
@@ -1548,7 +1549,12 @@ VoiceCaller* PsiAccount::voiceCaller() const
 {
 	return d->voiceCaller;
 }
-
+#ifdef WHITEBOARDING
+WbManager* PsiAccount::wbManager() const
+{
+	return d->wbManager;
+}
+#endif
 PrivacyManager* PsiAccount::privacyManager() const
 {
 	return d->privacyManager;
@@ -2726,6 +2732,19 @@ void PsiAccount::client_messageReceived(const Message &m)
 
 	processIncomingMessage(_m);
 }
+
+#ifdef WHITEBOARDING
+void PsiAccount::wbRequest(const Jid &j, int id)
+{
+	SxeEvent *se = new SxeEvent(id, this);
+	XMPP::Message m;
+	m.setSubject(tr("Whiteboard invitation"));
+	m.setFrom(j);
+	se->setFrom(j);
+	se->setMessage(m);
+	handleEvent(se, IncomingStanza);
+}
+#endif
 
 /**
  * Handles the passed Message \param m. Also message's type could be modified
@@ -5162,6 +5181,13 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 	else if(e->type() == PsiEvent::HttpAuth) {
 		soundType = eSystem;
 	}
+#ifdef WHITEBOARDING
+	else if(e->type() == PsiEvent::Sxe) {
+		soundType = eHeadline;
+		doPopup = true;
+		popupType = PopupManager::AlertHeadline;
+	}
+#endif
 	else if(e->type() == PsiEvent::File) {
 		soundType = eIncomingFT;
 		doPopup = true;
