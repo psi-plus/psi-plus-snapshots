@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2012-10-17
+# Updated: 2012-10-25
 # Version: N/A
 
 if [[ ${0} =~ ^/.+$ ]]; then
@@ -81,7 +81,7 @@ MOD=main
 cd "${MAIN_DIR}/${MOD}"
 
 rev=$(git describe --tags | sed -e "s/^.*-\([0-9]\+\)-.*$/\1/")
-if [ "${LAST_REVISION}" = "5000" ]; then exit 1; fi
+if [ "${rev}" = "$(git describe --tags)" ]; then rev="0"; fi
 LAST_REVISION_DATE=$(git log -n1 --date=short --pretty=format:"%ad")
 
 CUR_VER="0.16"
