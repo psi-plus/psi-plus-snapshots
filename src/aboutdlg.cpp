@@ -86,8 +86,8 @@ AboutDlg::AboutDlg(QWidget* parent)
 			   "", "maj@jabber.ru", "",
 			   tr("Founder, Designer and Patcher"));
 	psiplus += details(QString::fromUtf8("Dealer_WeARE"),
-			   "", "", "",
-			   tr("Lead Patcher and Plugins Writer"));
+			   "wadealer@gmail.com", "", "",
+			   tr("Lead Patcher and Plugins Writer; Mac OS X Packager"));
 	psiplus += details(QString::fromUtf8("tux-den"),
 			   "", "", "",
 			   tr("Designer and Patcher"));
@@ -112,15 +112,15 @@ AboutDlg::AboutDlg(QWidget* parent)
 	psiplus += details(QString::fromUtf8("Z_God"),
 			   "", "", "",
 			   tr("Psimedia Patcher and Wiki English localization"));
-	psiplus += details(QString::fromUtf8("buharev.v.p"),
-			   "", "", "",
-			   tr("Mac OS X Packager"));
 	psiplus += details(QString::fromUtf8("liuch"),
 			   "", "", "",
 			   tr("Patcher and Plugins Writer"));
 	psiplus += details(QString::fromUtf8("Nirdosh"),
 			   "", "", "",
 			   tr("OpenSUSE Packager"));
+	psiplus += details(QString::fromUtf8("tehnick"),
+			  "", "", "",
+			  tr("Language coordinator"));
 	ui_.te_psiplus->setText( psiplus );
 
 	// fill in Thanks To tab...
