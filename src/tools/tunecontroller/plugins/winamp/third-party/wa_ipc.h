@@ -27,7 +27,7 @@
 
 #include <windows.h>
 #include <stddef.h>
-#if (_MSC_VER <= 1200)
+#ifndef _WIN64
 typedef int intptr_t;
 #endif
 

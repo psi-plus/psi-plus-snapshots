@@ -93,7 +93,7 @@ Tune WinAmpController::getTune(const HWND &hWnd)
 		DWORD processId;
 		GetWindowThreadProcessId(hWnd, &processId);
 		LPCVOID address = (LPCVOID) SendMessage(hWnd, WM_WA_IPC, position, IPC_GETPLAYLISTFILEW);
-		if ((uint)address > 1) {
+		if ((quintptr)address > 1) {
 			wchar_t fileNameW[FILENAMESIZE];
 			HANDLE hP = OpenProcess(PROCESS_ALL_ACCESS, 0, processId);
 			ReadProcessMemory(hP, address, fileNameW, FILENAMESIZE, 0);

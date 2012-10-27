@@ -73,7 +73,7 @@ Tune AIMPTuneController::getTune() const
 	HANDLE aFile=OpenFileMapping(FILE_MAP_READ, TRUE, AIMP_REMOTE_CLASS);
 	TAIMPFileInfo *aInfo=(TAIMPFileInfo *)MapViewOfFile(aFile, FILE_MAP_READ, 0, 0, AIMPRemoteAccessMapFileSize);
 	if (aInfo != NULL) {
-		wchar_t *str = (wchar_t *)((DWORD)aInfo+ aInfo->StructSize);
+		wchar_t *str = (wchar_t *)((char*)aInfo + aInfo->StructSize);
 		QString album = QString::fromWCharArray(str, aInfo->AlbumLength);
 		str += aInfo->AlbumLength;
 		QString artist = QString::fromWCharArray(str, aInfo->ArtistLength);
@@ -81,8 +81,8 @@ Tune AIMPTuneController::getTune() const
 		QString url = QString::fromWCharArray(str, aInfo->FileNameLength);
 		str += aInfo->FileNameLength + aInfo->GenreLength;
 		QString title = QString::fromWCharArray(str, aInfo->TitleLength);
-		DWORD trackNumber = aInfo->TrackNumber;
-		DWORD time = aInfo->Duration;
+		unsigned long trackNumber = aInfo->TrackNumber;
+		unsigned long time = aInfo->Duration;
 		Tune tune = Tune();
 		if (!url.isEmpty()) {
 			if (!title.isEmpty()) {
