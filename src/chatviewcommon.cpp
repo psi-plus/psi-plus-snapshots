@@ -71,17 +71,11 @@ QString ChatViewCommon::getMucNickColor(const QString &nick, bool isSelf, QStrin
 		if (PsiOptions::instance()->getOption("options.ui.muc.use-hash-nick-coloring").toBool()) {
 			/* Hash-driven colors */
 			Q_ASSERT(nickwoun.size());
-			QByteArray ba = nickwoun.toUtf8();
-			while (ba.size() < 4) { ba += ba; }
-			quint32 num = *(quint32*)ba.left(3).toHex().constData();
-			num ^= num << 4;
-			QColor precolor = QColor(QString("#") + QByteArray::fromRawData((const char*)&num, 3).toHex().constData());
-			if ( precolor.saturation() < 150 ){
-				precolor.setHsv( precolor.hue(), 250, precolor.value());
-			}
-			if ( precolor.value() > 210 ) {
-				precolor.setHsv( precolor.hue(), precolor.saturation() , 210);
-			}
+			quint32 num = qHash(nickwoun);
+			int s = ((char*)&num)[2];
+			int v = ((char*)&num)[3];
+			QColor precolor = QColor::fromHsv((num >> 6) % 360,
+					s < 150? 250 : s, v > 210? 210 : v < 100? 150 : v);
 			return precolor.name();
 		} else {
 			/* Colors from list */
