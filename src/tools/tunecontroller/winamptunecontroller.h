@@ -1,7 +1,6 @@
 /*
  * winamptunecontroller.h
- * Copyright (C) 2006  Remko Troncon,
- * 2012  Vitaly Tonkacheyev
+ * Copyright (C) 2006  Remko Troncon
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -27,20 +26,19 @@
 #include <windows.h>
 #include <QPair>
 
-class WinAmpController : public PollingTuneController
+class WinAmpTuneController : public PollingTuneController
 {
 	Q_OBJECT
 public:
-	WinAmpController();
+	WinAmpTuneController();
 	virtual Tune currentTune() const;
+
+private:
+	Tune getTune(const HWND &hWnd);
+	QPair<bool, QString> getTrackTitle(const HWND &waWnd) const;
 
 protected slots:
 	void check();
-
-private:
-	bool getData(const HANDLE& hProcess, const HWND& hWnd, const wchar_t *filename, const wchar_t *metadata, wchar_t *wresult);
-	Tune getTune(const HWND &hWnd);
-	QPair<bool, QString> getTrackTitle(const HWND &waWnd) const;
 
 private:
 	Tune prevTune_;

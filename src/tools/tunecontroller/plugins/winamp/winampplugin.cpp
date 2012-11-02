@@ -28,7 +28,7 @@ QString WinAmpPlugin::name()
 
 TuneController* WinAmpPlugin::createController() 
 {
-	return new WinAmpController();
+	return new WinAmpTuneController();
 }
 
 Q_EXPORT_PLUGIN2(winampplugin, WinAmpPlugin);

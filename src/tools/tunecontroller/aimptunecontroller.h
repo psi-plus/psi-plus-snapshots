@@ -25,12 +25,12 @@
 #include "tune.h"
 #include "windows.h"
 
-class AIMPTuneController : public PollingTuneController
+class AimpTuneController : public PollingTuneController
 {
 	Q_OBJECT
 
 public:
-	AIMPTuneController();
+	AimpTuneController();
 	Tune currentTune() const;
 
 protected slots:

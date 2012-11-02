@@ -23,7 +23,7 @@
 #include "plugins/aimp/third-party/AIMPSDKRemote.h"
 
 /**
- * \class AIMPTuneController
+ * \class AimpTuneController
  * \brief A controller class for AIMP3 player.
  */
 
@@ -31,19 +31,19 @@ static const int PLAYING = 2;
 static const int STOPPED = 0;
 static const WCHAR* AIMP_REMOTE_CLASS = (WCHAR *)L"AIMP2_RemoteInfo";
 
-AIMPTuneController::AIMPTuneController()
+AimpTuneController::AimpTuneController()
 : PollingTuneController(),
   _tuneSent(false)
 {
 	startPoll();
 }
 
-HWND AIMPTuneController::findAimp() const
+HWND AimpTuneController::findAimp() const
 {
 	return FindWindow(AIMP_REMOTE_CLASS, AIMP_REMOTE_CLASS);
 }
 
-int AIMPTuneController::getAimpStatus(const HWND &aimp) const
+int AimpTuneController::getAimpStatus(const HWND &aimp) const
 {
 	if (aimp) {
 		return (int)SendMessage(aimp, WM_AIMP_PROPERTY, AIMP_RA_PROPERTY_PLAYER_STATE | AIMP_RA_PROPVALUE_GET, 0);
@@ -51,7 +51,7 @@ int AIMPTuneController::getAimpStatus(const HWND &aimp) const
 	return STOPPED;
 }
 
-void AIMPTuneController::check()
+void AimpTuneController::check()
 {
 	HWND aimp = findAimp();
 	if (getAimpStatus(aimp) == PLAYING) {
@@ -63,12 +63,12 @@ void AIMPTuneController::check()
 	PollingTuneController::check();
 }
 
-Tune AIMPTuneController::currentTune() const
+Tune AimpTuneController::currentTune() const
 {
 	return _currentTune;
 }
 
-Tune AIMPTuneController::getTune() const
+Tune AimpTuneController::getTune() const
 {
 	HANDLE aFile=OpenFileMapping(FILE_MAP_READ, TRUE, AIMP_REMOTE_CLASS);
 	TAIMPFileInfo *aInfo=(TAIMPFileInfo *)MapViewOfFile(aFile, FILE_MAP_READ, 0, 0, AIMPRemoteAccessMapFileSize);
@@ -121,7 +121,7 @@ Tune AIMPTuneController::getTune() const
 	return Tune();
 }
 
-void AIMPTuneController::sendTune(const Tune &tune)
+void AimpTuneController::sendTune(const Tune &tune)
 {
 	if (tune != _currentTune && !tune.isNull()) {
 		_currentTune = tune;
@@ -129,7 +129,7 @@ void AIMPTuneController::sendTune(const Tune &tune)
 	}
 }
 
-void AIMPTuneController::clearTune()
+void AimpTuneController::clearTune()
 {
 	if (_tuneSent) {
 		_currentTune = Tune();
