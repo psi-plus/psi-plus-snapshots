@@ -50,7 +50,7 @@ QString AIMPPlugin::name()
 
 TuneController* AIMPPlugin::createController()
 {
-	return new AIMPTuneController();
+    return new AimpTuneController();
 }
 
 #include "aimpplugin.moc"
