@@ -856,13 +856,16 @@ QString UserListItem::makeBareTip(bool trim, bool doLinkify) const
 			QString hr;
 			if (!mucItem)
 				hr = "<hr/>";
+			str += hr + "<div style='white-space:pre'>";
 
 			PsiIcon *statusIcon = PsiIconset::instance()->statusPtr(jid(), makeSTATUS(r.status()));
-			QByteArray imageArray;
-			QBuffer buff(&imageArray);
-			statusIcon->image().save(&buff, "png");
-			QString imgBase64(QUrl::toPercentEncoding(imageArray.toBase64()));
-			str += hr + QString("<div style='white-space:pre'><img src=\"data:image/png;base64,%1\" alt=\"img\"/>").arg(imgBase64);
+			if (statusIcon) {
+				QByteArray imageArray;
+				QBuffer buff(&imageArray);
+				statusIcon->image().save(&buff, "png");
+				QString imgBase64(QUrl::toPercentEncoding(imageArray.toBase64()));
+				str += QString("<img src=\"data:image/png;base64,%1\" alt=\"img\"/>").arg(imgBase64);
+			}
 
 			str += QString(" <b>%1</b> ").arg(Qt::escape(name)) + QString("(%1)").arg(r.priority());
 			if (!r.status().mucItem().jid().isEmpty())
