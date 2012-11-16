@@ -55,7 +55,10 @@ void ContactListNestedGroup::addContact(PsiContact* contact, QStringList contact
 	if (canContainSpecialGroups()) {
 		ContactListGroup* group = specialGroupFor(contact);
 		if (group) {
-			group->addContact(contact, contactGroups);
+			if (!contact->isAgent())
+				group->addContact(contact, contactGroups);
+			else
+				group->addContact(contact, QStringList() << QString());
 			return;
 		}
 	}
@@ -113,6 +116,9 @@ void ContactListNestedGroup::contactUpdated(PsiContact* contact)
 
 void ContactListNestedGroup::contactGroupsChanged(PsiContact* contact, QStringList contactGroups)
 {
+	if (contact->isAgent())
+		return;
+
 	bool restrictContactAdd = false;
 	if (canContainSpecialGroups()) {
 		ContactListGroup* specialGroup = specialGroupFor(contact);
