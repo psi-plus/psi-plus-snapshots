@@ -68,7 +68,7 @@ private:
 	int rowHeight_;
 	bool showStatusMessages_, slimGroup_, outlinedGroup_, showClientIcons_, showMoodIcons_, showActivityIcons_, showGeolocIcons_, showTuneIcons_;
 	bool showAvatars_, useDefaultAvatar_, avatarAtLeft_, showStatusIcons_, statusIconsOverAvatars_;
-	int avatarSize_, avatarRadius_,;
+	int avatarSize_, avatarRadius_;
 	mutable QHash<QModelIndex, bool> alertingIndexes_;
 	int statusIconSize_;
 	bool enableGroups_, allClients_;
