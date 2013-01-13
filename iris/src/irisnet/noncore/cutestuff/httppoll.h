@@ -23,6 +23,8 @@
 
 #include "bytestream.h"
 
+class QUrl;
+
 // CS_NAMESPACE_BEGIN
 
 class HttpPoll : public ByteStream
@@ -34,8 +36,8 @@ public:
 	~HttpPoll();
 
 	void setAuth(const QString &user, const QString &pass="");
-	void connectToUrl(const QString &url);
-	void connectToHost(const QString &proxyHost, int proxyPort, const QString &url);
+	void connectToUrl(const QUrl &url);
+	void connectToHost(const QString &proxyHost, int proxyPort, const QUrl &url);
 
 	int pollInterval() const;
 	void setPollInterval(int seconds);
@@ -78,7 +80,7 @@ public:
 	void setUseSsl(bool state);
 	void setAuth(const QString &user, const QString &pass="");
 	bool isActive() const;
-	void post(const QString &proxyHost, int proxyPort, const QString &url, const QByteArray &data, bool asProxy=true);
+	void post(const QString &proxyHost, int proxyPort, const QUrl &url, const QByteArray &data, bool asProxy=true);
 	void stop();
 	QByteArray body() const;
 	QString getHeader(const QString &) const;

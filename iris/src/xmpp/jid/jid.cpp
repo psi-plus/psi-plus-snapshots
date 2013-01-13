@@ -41,9 +41,9 @@ class StringPrepCache : public QObject
 public:
 	static bool nameprep(const QString &in, int maxbytes, QString& out)
 	{
-		if (in.isEmpty()) {
+		if (in.trimmed().isEmpty()) {
 			out = QString();
-			return true;
+			return false; // empty names or just spaces are disallowed (rfc5892+rfc6122)
 		}
 
 		StringPrepCache *that = get_instance();
@@ -326,7 +326,10 @@ void Jid::set(const QString &s)
 void Jid::set(const QString &domain, const QString &node, const QString &resource)
 {
 	QString norm_domain, norm_node, norm_resource;
-	if(!validDomain(domain, norm_domain) || !validNode(node, norm_node) || !validResource(resource, norm_resource)) {
+	if(!validDomain(domain, norm_domain) ||
+			!validNode(node, norm_node) ||
+			!validResource(resource, norm_resource))
+	{
 		reset();
 		return;
 	}

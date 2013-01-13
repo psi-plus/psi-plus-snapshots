@@ -677,4 +677,8 @@ private:
 
 }
 
+
+Q_DECLARE_METATYPE(XMPP::NameResolver::Error)
+
+
 #endif

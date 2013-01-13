@@ -17,10 +17,10 @@
 
 #include "ui_opt_application.h"
 
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 	static const QString regString = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 #endif
-#ifdef Q_WS_X11
+#ifdef HAVE_X11
 	static const QString psiAutoStart = "/.config/autostart/psi-plus.desktop";
 #endif
 
@@ -66,7 +66,7 @@ QWidget *OptionsTabApplication::widget()
 		tr("Prevents Psi from taking up a slot on the taskbar and makes the main "
 		"window use a small titlebar."));
 
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	d->gb_docklet->hide();
 	d->ck_auto_load->hide();
 #endif
@@ -137,7 +137,7 @@ void OptionsTabApplication::applyOptions()
 	s.setValue("last_lang", itemData);
 
 	//Auto-load
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 	QSettings set(regString, QSettings::NativeFormat);
 	if(d->ck_auto_load->isChecked()) {
 		set.setValue(ApplicationInfo::name(), QDir::toNativeSeparators(qApp->applicationFilePath()));
@@ -146,7 +146,7 @@ void OptionsTabApplication::applyOptions()
 		set.remove(ApplicationInfo::name());
 	} 
 #endif
-#ifdef Q_WS_X11
+#ifdef HAVE_X11
 	QDir home = QDir::home();
 	if (!home.exists(".config/autostart")) {
 		home.mkpath(".config/autostart");
@@ -198,12 +198,12 @@ void OptionsTabApplication::restoreOptions()
 		d->cb_lang->setCurrentIndex( d->cb_lang->findText(vList.get(curLang)) );
 
 	//Auto-load
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 	QSettings set(regString, QSettings::NativeFormat);
 	const QString path = set.value(ApplicationInfo::name()).toString();
 	d->ck_auto_load->setChecked( (path == QDir::toNativeSeparators(qApp->applicationFilePath())) );
 #endif
-#ifdef Q_WS_X11
+#ifdef HAVE_X11
 	QFile desktop(QDir::homePath() + psiAutoStart);
 	if (desktop.open(QIODevice::ReadOnly)
 		&& QString(desktop.readAll()).contains(QRegExp("\\bhidden\\s*=\\s*false", Qt::CaseInsensitive)))

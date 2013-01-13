@@ -28,14 +28,13 @@
 #include <QPushButton>
 #include <QToolBar>
 #include <QMessageBox>
-#include <QColorGroup>
 #include <QSplitter>
 #include <QTimer>
 #include <QToolButton>
 #include <QInputDialog>
 #include <QPointer>
 #include <QAction>
-#include <QObject>
+#include <QMimeData>
 #include <QCursor>
 #include <QCloseEvent>
 #include <QEvent>
@@ -47,7 +46,7 @@
 #include <QVBoxLayout>
 #include <QContextMenuEvent>
 #include <QTextCursor>
-#include <QTextDocument> // for Qt::escape()
+#include <QTextDocument> // for TextUtil::escape()
 #include <QToolTip>
 #include <QScrollBar>
 #include <QCheckBox>
@@ -94,7 +93,7 @@
 
 #include "tabcompletion.h"
 
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 #include <windows.h>
 #endif
 
@@ -201,7 +200,7 @@ public:
 		dlg = d;
 		nickSeparator = ":";
 		nonAnonymous = false;
-		
+
 		trackBar = false;
 		mCmdManager.registerProvider(this);
 	}
@@ -491,7 +490,7 @@ join <channel>{,<channel>} [pass{,<pass>}
 	virtual void mCmdSiteDestroyed() {
 	}
 
-public:		
+public:
 	void doTrackBar()
 	{
 		trackBar = false;
@@ -510,7 +509,7 @@ public slots:
 			return;
 
 		QTextCursor cursor(mle()->textCursor());
-	
+
 		mle()->setUpdatesEnabled(false);
 		cursor.beginEditBlock();
 
@@ -541,7 +540,7 @@ public:
 	bool eventFilter( QObject *obj, QEvent *ev ) {
 		if (te_log()->handleCopyEvent(obj, ev, mle()))
 			return true;
-	
+
 		if ( obj == mle() && ev->type() == QEvent::KeyPress ) {
 			QKeyEvent *e = (QKeyEvent *)ev;
 
@@ -549,7 +548,7 @@ public:
 				tabCompletion.tryComplete();
 				return true;
 			}
-			
+
 			tabCompletion.reset();
 			return false;
 		}
@@ -613,7 +612,7 @@ public:
 		}
 
 		QStringList mCmdList_;
-		
+
 		// FIXME where to move this?
 		QString nickSeparator; // equals ":"
 	};
@@ -673,7 +672,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 
 	setAcceptDrops(true);
 
-#ifndef Q_WS_MAC
+#ifndef Q_OS_MAC
 	setWindowIcon(IconsetFactory::icon("psi/start-chat").icon());
 #endif
 
@@ -708,7 +707,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 */
 	ui_.tb_emoticons->setIcon(IconsetFactory::icon("psi/smile").icon());
 
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	// seems its useless hack
 	//connect(ui_.log, SIGNAL(selectionChanged()), SLOT(logSelectionChanged()));
 #endif
@@ -731,7 +730,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 
 	d->act_find = new IconAction(tr("Find"), "psi/search", tr("&Find"), 0, this, "", true);
 	connect(d->act_find, SIGNAL(triggered()), d->typeahead, SLOT(toggleVisibility()));
-	
+
 	d->act_configure = new IconAction(tr("Configure Room"), "psi/configure-room", tr("&Configure Room"), 0, this);
 	connect(d->act_configure, SIGNAL(triggered()), SLOT(configureRoom()));
 
@@ -1040,11 +1039,11 @@ void GCMainDlg::activated()
 void GCMainDlg::mucInfoDialog(const QString& title, const QString& message, const Jid& actor, const QString& reason)
 {
 	QString m = message;
-	
+
 	if (!actor.isEmpty())
 		m += tr(" by %1").arg(actor.full());
 	m += ".";
-	
+
 	if (!reason.isEmpty())
 		m += tr("\nReason: %1").arg(reason);
 
@@ -1057,7 +1056,7 @@ void GCMainDlg::mucInfoDialog(const QString& title, const QString& message, cons
 
 void GCMainDlg::logSelectionChanged()
 {
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	// A hack to only give the message log focus when text is selected
 // seems its already useless. at least copy works w/o this hack
 //	if (ui_.log->textCursor().hasSelection())
@@ -1109,7 +1108,7 @@ void GCMainDlg::unsetConnecting()
 	d->connecting = false;
 }
 
-void GCMainDlg::action_error(MUCManager::Action, int, const QString& err) 
+void GCMainDlg::action_error(MUCManager::Action, int, const QString& err)
 {
 	appendSysMsg(err, false);
 }
@@ -1157,7 +1156,7 @@ void GCMainDlg::mle_returnPressed()
 
 	if(str.toLower().startsWith("/nick ")) {
 		QString nick = str.mid(6).trimmed();
-    XMPP::Jid newJid = jid().withResource(nick);
+	XMPP::Jid newJid = jid().withResource(nick);
 		if (!nick.isEmpty() && newJid.isValid()) {
 			d->prev_self = d->self;
 			d->self = newJid.resource();
@@ -1351,7 +1350,7 @@ void GCMainDlg::dragEnterEvent(QDragEnterEvent *e)
 void GCMainDlg::dropEvent(QDropEvent *e)
 {
 	Jid jid(e->mimeData()->text());
-	if (jid.isValid() && !ui_.lv_users->hasJid(jid)) {
+	if (jid.isValid() && !jid.node().isEmpty() && !ui_.lv_users->hasJid(jid)) {
 		Message m;
 		m.setTo(this->jid());
 		m.addMUCInvite(MUCInvite(jid));
@@ -1458,7 +1457,7 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
 		}
 		d->act_configure->setEnabled(s.mucItem().affiliation() >= MUCItem::Member);
 	}
-	
+
 	PsiOptions *options_ = PsiOptions::instance();
 
 	if(s.isAvailable()) {
@@ -1546,7 +1545,7 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
 		ui_.lv_users->updateEntry(nick, s);
 		if(!nick.isEmpty())
 			avatarUpdated(jidForNick(nick));
-	} 
+	}
 	else {
 		// Unavailable
 		if (s.hasMUCDestroy()) {
@@ -1634,7 +1633,7 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
 		}
 		ui_.lv_users->removeEntry(nick);
 	}
-	
+
 	if (!s.capsNode().isEmpty()) {
 		Jid caps_jid(s.mucItem().jid().isEmpty() || !d->nonAnonymous ? Jid(jid()).withResource(nick) : s.mucItem().jid());
 		account()->capsManager()->updateCaps(caps_jid,s.capsNode(),s.capsVersion(),s.capsExt());
@@ -1801,7 +1800,6 @@ void GCMainDlg::appendSysMsg(const MessageView &mv)
 		d->doTrackBar();
 
 	ui_.log->dispatchMessage(mv);
-
 	if(mv.isAlert())
 		doAlert();
 }
@@ -1827,7 +1825,6 @@ void GCMainDlg::appendMessage(const Message &m, bool alert)
 	if (d->trackBar && !mv.isLocal() && !mv.isSpooled()) {
 		d->doTrackBar();
 	}
-
 	ui_.log->dispatchMessage(mv);
 
 	// if we're not active, notify the user by changing the title
@@ -1920,7 +1917,7 @@ void GCMainDlg::setLooks()
 	setWindowOpacity(double(qMax(MINIMUM_OPACITY,PsiOptions::instance()->getOption("options.ui.chat.opacity").toInt()))/100);
 
 	// update the widget icon
-#ifndef Q_WS_MAC
+#ifndef Q_OS_MAC
 	setWindowIcon(IconsetFactory::icon("psi/start-chat").icon());
 #endif
 

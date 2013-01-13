@@ -20,26 +20,26 @@
 
 /*
   Notes:
-    - For Non-SASL auth (JEP-0078), username and resource fields are required.
+	- For Non-SASL auth (JEP-0078), username and resource fields are required.
 
   TODO:
-    - sasl needParams is totally jacked?  PLAIN requires authzid, etc
-    - server error handling
-      - reply with protocol errors if the client send something wrong
-      - don't necessarily disconnect on protocol error.  prepare for more.
-    - server function
-      - deal with stream 'to' attribute dynamically
-      - flag tls/sasl/binding support dynamically (have the ability to specify extra stream:features)
-      - inform the caller about the user authentication information
-      - sasl security settings
-      - resource-binding interaction
-      - timeouts
-    - allow exchanges of non-standard stanzas
-    - send </stream:stream> even if we close prematurely?
-    - ensure ClientStream and child classes are fully deletable after signals
-    - xml:lang in root (<stream>) element
-    - sasl external
-    - sasl anonymous
+	- sasl needParams is totally jacked?  PLAIN requires authzid, etc
+	- server error handling
+	  - reply with protocol errors if the client send something wrong
+	  - don't necessarily disconnect on protocol error.  prepare for more.
+	- server function
+	  - deal with stream 'to' attribute dynamically
+	  - flag tls/sasl/binding support dynamically (have the ability to specify extra stream:features)
+	  - inform the caller about the user authentication information
+	  - sasl security settings
+	  - resource-binding interaction
+	  - timeouts
+	- allow exchanges of non-standard stanzas
+	- send </stream:stream> even if we close prematurely?
+	- ensure ClientStream and child classes are fully deletable after signals
+	- xml:lang in root (<stream>) element
+	- sasl external
+	- sasl anonymous
 */
 
 #include "xmpp.h"
@@ -262,11 +262,11 @@ ClientStream::ClientStream(const QString &host, const QString &defRealm, ByteStr
 	connect(d->bs, SIGNAL(delayedCloseFinished()), SLOT(bs_delayedCloseFinished()));
 	connect(d->bs, SIGNAL(error(int)), SLOT(bs_error(int)));
 
-	QByteArray spare = d->bs->read();
+	QByteArray spare = d->bs->readAll();
 
 	d->ss = new SecureStream(d->bs);
 	connect(d->ss, SIGNAL(readyRead()), SLOT(ss_readyRead()));
-	connect(d->ss, SIGNAL(bytesWritten(int)), SLOT(ss_bytesWritten(int)));
+	connect(d->ss, SIGNAL(bytesWritten(qint64)), SLOT(ss_bytesWritten(qint64)));
 	connect(d->ss, SIGNAL(tlsHandshaken()), SLOT(ss_tlsHandshaken()));
 	connect(d->ss, SIGNAL(tlsClosed()), SLOT(ss_tlsClosed()));
 	connect(d->ss, SIGNAL(error(int)), SLOT(ss_error(int)));
@@ -479,7 +479,7 @@ void ClientStream::setLocalAddr(const QHostAddress &addr, quint16 port)
 	d->localPort = port;
 }
 
-void ClientStream::setCompress(bool compress) 
+void ClientStream::setCompress(bool compress)
 {
 	d->doCompress = compress;
 }
@@ -579,11 +579,11 @@ void ClientStream::cr_connected()
 	connect(d->bs, SIGNAL(connectionClosed()), SLOT(bs_connectionClosed()));
 	connect(d->bs, SIGNAL(delayedCloseFinished()), SLOT(bs_delayedCloseFinished()));
 
-	QByteArray spare = d->bs->read();
+	QByteArray spare = d->bs->readAll();
 
 	d->ss = new SecureStream(d->bs);
 	connect(d->ss, SIGNAL(readyRead()), SLOT(ss_readyRead()));
-	connect(d->ss, SIGNAL(bytesWritten(int)), SLOT(ss_bytesWritten(int)));
+	connect(d->ss, SIGNAL(bytesWritten(qint64)), SLOT(ss_bytesWritten(qint64)));
 	connect(d->ss, SIGNAL(tlsHandshaken()), SLOT(ss_tlsHandshaken()));
 	connect(d->ss, SIGNAL(tlsClosed()), SLOT(ss_tlsClosed()));
 	connect(d->ss, SIGNAL(error(int)), SLOT(ss_error(int)));
@@ -645,7 +645,7 @@ void ClientStream::bs_error(int)
 
 void ClientStream::ss_readyRead()
 {
-	QByteArray a = d->ss->read();
+	QByteArray a = d->ss->readAll();
 
 #ifdef XMPP_DEBUG
 	qDebug("ClientStream: recv: %d [%s]\n", a.size(), a.data());
@@ -663,7 +663,7 @@ void ClientStream::ss_readyRead()
 	}
 }
 
-void ClientStream::ss_bytesWritten(int bytes)
+void ClientStream::ss_bytesWritten(qint64 bytes)
 {
 	if(d->mode == Client)
 		d->client.outgoingDataWritten(bytes);
@@ -729,7 +729,7 @@ void ClientStream::sasl_nextStep(const QByteArray &stepData)
 	processNext();
 }
 
-void ClientStream::sasl_needParams(const QCA::SASL::Params& p) 
+void ClientStream::sasl_needParams(const QCA::SASL::Params& p)
 {
 #ifdef XMPP_DEBUG
 	qDebug("need params: needUsername: %d, canSendAuthzid: %d, needPassword: %d, canSendRealm: %d\n",
@@ -1258,7 +1258,6 @@ void ClientStream::handleError()
 			case CoreProtocol::ImproperAddressing: { break; } // should NOT happen (we aren't a server)
 			case CoreProtocol::InternalServerError: { strErr = InternalServerError;  break; }
 			case CoreProtocol::InvalidFrom: { strErr = InvalidFrom; break; }
-			case CoreProtocol::InvalidId: { break; } // should NOT happen (clients don't specify id)
 			case CoreProtocol::InvalidNamespace: { break; } // should NOT happen (we set the right ns)
 			case CoreProtocol::InvalidXml: { strErr = InvalidXml; break; } // shouldn't happen either, but just in case ...
 			case CoreProtocol::StreamNotAuthorized: { break; } // should NOT happen (we're not stupid)
@@ -1272,7 +1271,7 @@ void ClientStream::handleError()
 			case CoreProtocol::UnsupportedEncoding: { break; } // should NOT happen (we send good encoding)
 			case CoreProtocol::UnsupportedStanzaType: { break; } // should NOT happen (we're not stupid)
 			case CoreProtocol::UnsupportedVersion: { connErr = UnsupportedVersion; break; }
-			case CoreProtocol::XmlNotWellFormed: { strErr = InvalidXml; break; } // group with this one
+			case CoreProtocol::NotWellFormed: { strErr = InvalidXml; break; } // group with this one
 			default: { break; }
 		}
 

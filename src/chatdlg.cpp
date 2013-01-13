@@ -45,8 +45,9 @@
 #include <QResizeEvent>
 #include <QMenu>
 #include <QDragEnterEvent>
-#include <QTextDocument> // for Qt::escape()
+#include <QTextDocument> // for TextUtil::escape()
 #include <QScrollBar>
+#include <QMimeData>
 
 #include "psiaccount.h"
 #include "userlist.h"
@@ -77,7 +78,7 @@
 #include "chatview.h"
 #include "urlobject.h"
 
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 #include <windows.h>
 #endif
 
@@ -328,7 +329,7 @@ void ChatDlg::showEvent(QShowEvent *)
 
 void ChatDlg::logSelectionChanged()
 {
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	// A hack to only give the message log focus when text is selected
 // seems its already useless. at least copy works w/o this hack
 //	if (chatView()->textCursor().hasSelection()) {
@@ -557,7 +558,7 @@ void ChatDlg::setLooks()
 	updateContact(jid(), false);
 
 	// update the widget icon
-#ifndef Q_WS_MAC
+#ifndef Q_OS_MAC
 	setWindowIcon(IconsetFactory::icon("psi/start-chat").icon());
 #endif
 
@@ -901,7 +902,7 @@ void ChatDlg::appendMessage(const Message &m, bool local)
 	if (!m.subject().isEmpty()) {
 		chatView()->dispatchMessage(MessageView::subjectMessage(m.subject()));
 	}
-
+ 
 	MessageView mv(MessageView::Message);
 	if (m.containsHTML() && PsiOptions::instance()->getOption("options.html.chat.render").toBool() && !m.html().text().isEmpty()) {
 		mv.setHtml(m.html().toString("span"));
@@ -924,7 +925,7 @@ void ChatDlg::appendMessage(const Message &m, bool local)
 			urlsMap.insert(u.url(), u.desc());
 		}
 		chatView()->dispatchMessage(MessageView::urlsMessage(urlsMap));
-	}
+ 	}
 
 	// if we're not active, notify the user by changing the title
 	if (!isActiveTab()) {
@@ -1039,7 +1040,7 @@ void ChatDlg::setContactChatState(ChatState state)
 {
 	contactChatState_ = state;
 	if (state == XMPP::StateGone) {
-		appendSysMsg(tr("%1 ended the conversation").arg(Qt::escape(dispNick_)));
+		appendSysMsg(tr("%1 ended the conversation").arg(TextUtil::escape(dispNick_)));
 	}
 	else {
 		// Activate ourselves

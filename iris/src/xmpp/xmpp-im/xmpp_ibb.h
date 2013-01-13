@@ -75,8 +75,8 @@ namespace XMPP
 		bool isOpen() const;
 		void write(const QByteArray &);
 		QByteArray read(int bytes=0);
-		int bytesAvailable() const;
-		int bytesToWrite() const;
+		qint64 bytesAvailable() const;
+		qint64 bytesToWrite() const;
 
 	signals:
 		void connected();

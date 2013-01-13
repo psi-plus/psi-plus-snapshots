@@ -89,8 +89,8 @@ namespace XMPP
 		bool isOpen() const;
 		void write(const QByteArray &);
 		QByteArray read(int bytes=0);
-		int bytesAvailable() const;
-		int bytesToWrite() const;
+		qint64 bytesAvailable() const;
+		qint64 bytesToWrite() const;
 
 		void writeDatagram(const S5BDatagram &);
 		S5BDatagram readDatagram();
@@ -113,7 +113,7 @@ namespace XMPP
 		void sc_connectionClosed();
 		void sc_delayedCloseFinished();
 		void sc_readyRead();
-		void sc_bytesWritten(int);
+		void sc_bytesWritten(qint64);
 		void sc_error(int);
 
 		void su_packetReady(const QByteArray &buf);

@@ -82,7 +82,7 @@ protected:
 	void leaveEvent(QEvent *e);
 	void keyPressEvent(QKeyEvent *);
 	QMenuBar* mainMenuBar() const;
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 	bool winEvent(MSG *, long *);
 #endif
 	void mousePressEvent(QMouseEvent *e);

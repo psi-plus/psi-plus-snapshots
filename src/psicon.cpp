@@ -123,7 +123,7 @@
 #	include "AutoUpdater/QDChecker.h"
 #endif
 
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 #include "mac_dock/mac_dock.h"
 #endif
 
@@ -267,7 +267,7 @@ public:
 		accountTree.setOption("order", order);
 		QFile accountsFile(pathToProfile(activeProfile, ApplicationInfo::ConfigLocation) + "/accounts.xml");
 		accountTree.saveOptions(accountsFile.fileName(), "accounts", ApplicationInfo::optionsNS(), ApplicationInfo::version());;
-		
+
 	}
 
 private slots:
@@ -420,16 +420,16 @@ bool PsiCon::init()
 		&& !QFile::exists(backupfile)) {
 		QFile::copy(optionsFile(), backupfile);
 	}
-	
+
 	// advanced widget
 	GAdvancedWidget::setStickEnabled( false ); //until this is bugless
 	GAdvancedWidget::setStickToWindows( false ); //again
 	GAdvancedWidget::setStickAt( 5 );
-	
+
 	PsiRichText::setAllowedImageDirs(QStringList()
 									 << ApplicationInfo::resourcesDir()
 									 << ApplicationInfo::homeDir(ApplicationInfo::CacheLocation));
-	
+
 	// To allow us to upgrade from old hardcoded options gracefully, be careful about the order here
 	PsiOptions *options=PsiOptions::instance();
 	//load the system-wide defaults, if they exist
@@ -443,10 +443,10 @@ bool PsiCon::init()
 			qWarning("ERROR: Failed to new profile default options");
 		}
 	}
-	
+
 	// load the old profile
 	d->optionsMigration.fromFile(pathToProfileConfig(activeProfile));
-	
+
 	//load the new profile
 	options->load(optionsFile());
 	//Save every time an option is changed
@@ -455,7 +455,7 @@ bool PsiCon::init()
 	//just set a dummy option to trigger saving
 	options->setOption("trigger-save",false);
 	options->setOption("trigger-save",true);
-	
+
 	// do some late migration work
 	d->optionsMigration.lateMigration();
 
@@ -471,9 +471,9 @@ bool PsiCon::init()
 	if ( common_smallFontSize < minimumFontSize )
 		common_smallFontSize = minimumFontSize;
 	FancyLabel::setSmallFontSize( common_smallFontSize );
-	
+
 	QFile accountsFile(pathToProfile(activeProfile, ApplicationInfo::ConfigLocation) + "/accounts.xml");
-	bool accountMigration = false;	
+	bool accountMigration = false;
 	if (!accountsFile.exists()) {
 		accountMigration = true;
 		int idx = 0;
@@ -490,9 +490,9 @@ bool PsiCon::init()
 	proxy->init(&d->accountTree);
 	if (accountMigration) proxy->migrateItemList(d->optionsMigration.proxyMigration);
 	connect(proxy, SIGNAL(settingsChanged()), SLOT(proxy_settingsChanged()));
-	
+
 	connect(options, SIGNAL(optionChanged(const QString&)), SLOT(optionChanged(const QString&)));
-	
+
 
 	contactUpdatesManager_ = new ContactUpdatesManager(this);
 
@@ -542,7 +542,7 @@ bool PsiCon::init()
 		d->actionList = new PsiActionList( this );
 
 	PsiConObject* psiConObject = new PsiConObject(this);
-		
+
 	Anim::setMainThread(QThread::currentThread());
 
 	// setup the main window
@@ -613,38 +613,38 @@ bool PsiCon::init()
 
 	registerCaps(ApplicationInfo::capsVersion(), QStringList()
 #ifdef FILETRANSFER
-	             << "http://jabber.org/protocol/bytestreams"
-	             << "http://jabber.org/protocol/ibb"
-	             << "http://jabber.org/protocol/si"
-	             << "http://jabber.org/protocol/si/profile/file-transfer"
+				 << "http://jabber.org/protocol/bytestreams"
+				 << "http://jabber.org/protocol/ibb"
+				 << "http://jabber.org/protocol/si"
+				 << "http://jabber.org/protocol/si/profile/file-transfer"
 #endif
-	             << "http://jabber.org/protocol/disco#info"
-	             << "http://jabber.org/protocol/commands"
-	             << "http://jabber.org/protocol/rosterx"
+				 << "http://jabber.org/protocol/disco#info"
+				 << "http://jabber.org/protocol/commands"
+				 << "http://jabber.org/protocol/rosterx"
 #ifdef GROUPCHAT
-	             << "http://jabber.org/protocol/muc"
+				 << "http://jabber.org/protocol/muc"
 #endif
-	             << "jabber:x:data"
-	            );
+				 << "jabber:x:data"
+				);
 
 	registerCaps("ep", QStringList()
-	             << "http://jabber.org/protocol/mood"
-	             << "http://jabber.org/protocol/activity"
-	             << "http://jabber.org/protocol/tune"
-		  // << "http://jabber.org/protocol/physloc"
-	             << "http://jabber.org/protocol/geoloc"
-	             << "urn:xmpp:avatar:data"
-	             << "urn:xmpp:avatar:metadata"
-	            );
+				 << "http://jabber.org/protocol/mood"
+				 << "http://jabber.org/protocol/activity"
+				 << "http://jabber.org/protocol/tune"
+				// << "http://jabber.org/protocol/physloc"
+				 << "http://jabber.org/protocol/geoloc"
+				 << "urn:xmpp:avatar:data"
+				 << "urn:xmpp:avatar:metadata"
+				);
 
 	registerCaps("ep-notify-2", QStringList()
-	             << "http://jabber.org/protocol/mood+notify"
-	             << "http://jabber.org/protocol/activity+notify"
-	             << "http://jabber.org/protocol/tune+notify"
-                //  << "http://jabber.org/protocol/physloc+notify"
-	             << "http://jabber.org/protocol/geoloc+notify"
-	             << "urn:xmpp:avatar:metadata+notify"
-	            );
+				 << "http://jabber.org/protocol/mood+notify"
+				 << "http://jabber.org/protocol/activity+notify"
+				 << "http://jabber.org/protocol/tune+notify"
+				// << "http://jabber.org/protocol/physloc+notify"
+				 << "http://jabber.org/protocol/geoloc+notify"
+				 << "urn:xmpp:avatar:metadata+notify"
+				);
 
 	registerCaps("html", QStringList("http://jabber.org/protocol/xhtml-im"));
 	registerCaps("cs", QStringList("http://jabber.org/protocol/chatstates"));
@@ -672,7 +672,7 @@ bool PsiCon::init()
 				}
 			}
 		}
-		
+
 		// Disable accounts if necessary, and overwrite locked properties
 		bool single = options->getOption("options.ui.account.single").toBool();
 		QString domain = options->getOption("options.account.domain").toString();
@@ -698,11 +698,12 @@ bool PsiCon::init()
 				}
 			}
 		}
-		
+
 		d->contactList->loadAccounts(accs);
-	}	
-	
+	}
+
 	checkAccountsEmpty();
+
 	// try autologin if needed
 	foreach(PsiAccount* account, d->contactList->accounts()) {
 		account->autoLogin();
@@ -765,9 +766,9 @@ void PsiCon::registerCaps(const QString& ext, const QStringList& features)
 	identities += identity;
 
 	d->capsRegistry->registerCaps(CapsSpec(ApplicationInfo::capsNode(),
-	                                       ApplicationInfo::capsVersion(), ext),
-	                              identities,
-	                              Features(features));
+										   ApplicationInfo::capsVersion(), ext),
+								  identities,
+								  Features(features));
 }
 
 void PsiCon::deinit()
@@ -938,7 +939,7 @@ void PsiCon::doNewBlankMessage()
 	w->show();
 }
 
-// FIXME: smells fishy. Refactor! Probably create a common class for all dialogs and 
+// FIXME: smells fishy. Refactor! Probably create a common class for all dialogs and
 // call optionsUpdate() automatically.
 EventDlg *PsiCon::createEventDlg(const QString &to, PsiAccount *pa)
 {
@@ -1121,12 +1122,12 @@ XMPP::Status::Type PsiCon::currentStatusType() const
 		return XMPP::Status::Offline;
 	return d->mainwin->statusType();
 #else
-	bool active = false;
+	//bool active = false;
 	bool loggedIn = false;
 	XMPP::Status::Type state = XMPP::Status::Online;
 	foreach(PsiAccount* account, d->contactList->enabledAccounts()) {
-		if(account->isActive())
-			active = true;
+//		if(account->isActive())
+//			active = true;
 		if(account->loggedIn()) {
 			loggedIn = true;
 			state = account->status().type();
@@ -1301,7 +1302,11 @@ void PsiCon::checkAccountsEmpty()
 void PsiCon::openUri(const QString &uri)
 {
 	QUrl url;
+#ifdef HAVE_QT5
+	url.setUrl(uri, QUrl::StrictMode);
+#else
 	url.setEncodedUrl(uri.toLatin1());
+#endif
 	openUri(url);
 }
 
@@ -1405,7 +1410,7 @@ void PsiCon::doStatusPresets()
 
 void PsiCon::optionChanged(const QString& option)
 {
-	bool notifyRestart = true;
+	//bool notifyRestart = true;
 
 	// Global shortcuts
 	setShortcuts();
@@ -1427,7 +1432,7 @@ void PsiCon::optionChanged(const QString& option)
 		option == "options.ui.tabs.grouping" || 
 		option == "options.ui.tabs.show-tab-buttons") {
 		QMessageBox::information(0, tr("Information"), tr("Some of the options you changed will only have full effect upon restart."));
-		notifyRestart = false;
+		//notifyRestart = false;
 	}
 
 	// update s5b
@@ -1477,7 +1482,7 @@ void PsiCon::slotApplyOptions()
 	PsiIconset::instance()->reloadRoster();
 	PsiOptions *o = PsiOptions::instance();
 
-#ifndef Q_WS_MAC
+#ifndef Q_OS_MAC
 	if (!o->getOption("options.ui.contactlist.show-menubar").toBool()) {
 		// check if all toolbars are disabled
 		bool toolbarsVisible = false;
@@ -1525,7 +1530,7 @@ void PsiCon::queueChanged()
 	if(pa)
 		nextAnim = PsiIconset::instance()->event2icon(pa->eventQueue()->peekNext());
 
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	{
 		// Update the event count
 		MacDock::overlay(nextAmount ? QString::number(nextAmount) : QString());
@@ -1541,7 +1546,7 @@ void PsiCon::queueChanged()
 
 void PsiCon::startBounce()
 {
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	QString bounce = PsiOptions::instance()->getOption("options.ui.notifications.bounce-dock").toString();
 	if (bounce != "never") {
 		MacDock::startBounce();
@@ -1607,7 +1612,7 @@ void PsiCon::recentGCAdd(const QString &str)
 	while(recentList.count() > max) {
 		recentList.takeLast();
 	}
-	
+
 	PsiOptions::instance()->setOption("options.muc.recent-joins.jids", recentList);
 }
 
@@ -1634,7 +1639,7 @@ void PsiCon::recentBrowseAdd(const QString &str)
 	while(recentList.count() > 10) {
 		recentList.takeLast();
 	}
-	
+
 	PsiOptions::instance()->setOption("options.ui.service-discovery.recent-jids", recentList);
 }
 
@@ -1747,7 +1752,7 @@ void PsiCon::processEvent(PsiEvent *e, ActivationType activationType)
 		bool emptyForm = m.getForm().fields().empty();
 		// FIXME: Refactor this, PsiAccount and PsiEvent out
 		if ((m.type() == "chat" && emptyForm)
-		    || !EventDlg::messagingEnabled()) {
+			|| !EventDlg::messagingEnabled()) {
 			isChat = true;
 			sentToChatWindow = me->sentToChatWindow();
 		}

@@ -279,7 +279,7 @@ public:
 		connect(bs, SIGNAL(connectionClosed()), SLOT(bs_connectionClosed()));
 		connect(bs, SIGNAL(delayedCloseFinished()), SLOT(bs_delayedCloseFinished()));
 		connect(bs, SIGNAL(readyRead()), SLOT(bs_readyRead()));
-		connect(bs, SIGNAL(bytesWritten(int)), SLOT(bs_bytesWritten(int)));
+		connect(bs, SIGNAL(bytesWritten(qint64)), SLOT(bs_bytesWritten(qint64)));
 	}
 
 	void do_close()
@@ -752,7 +752,7 @@ private slots:
 
 	void bs_readyRead()
 	{
-		QByteArray buf = bs->read();
+		QByteArray buf = bs->readAll();
 
 		if(tls)
 			tls->writeIncoming(buf);
@@ -760,7 +760,7 @@ private slots:
 			processStream(buf);
 	}
 
-	void bs_bytesWritten(int written)
+	void bs_bytesWritten(qint64 written)
 	{
 		if(tls)
 		{

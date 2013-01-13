@@ -3,7 +3,7 @@
 #include <QtDebug>
 #include <QObject>
 #include <QIODevice>
-#include <zlib.h>
+#include "zlib.h"
 
 #include "common.h"
 

@@ -3,7 +3,7 @@
 #include <QtDebug>
 #include <QObject>
 #include <QIODevice>
-#include <zlib.h>
+#include "zlib.h"
 
 #include "xmpp/zlib/common.h"
 
@@ -11,7 +11,7 @@ ZLibDecompressor::ZLibDecompressor(QIODevice* device) : device_(device)
 {
 	zlib_stream_ = (z_stream*) malloc(sizeof(z_stream));
 	initZStream(zlib_stream_);
-	int result = inflateInit(zlib_stream_);
+	int result = inflateInit2(zlib_stream_, 15 + 32);
 	Q_ASSERT(result == Z_OK);
 	Q_UNUSED(result);
 	connect(device, SIGNAL(aboutToClose()), this, SLOT(flush()));
@@ -38,12 +38,12 @@ void ZLibDecompressor::flush()
 	flushed_ = true;
 }
 
-int ZLibDecompressor::write(const QByteArray& input)
+qint64 ZLibDecompressor::write(const QByteArray& input)
 {
 	return write(input,false);
 }
 
-int ZLibDecompressor::write(const QByteArray& input, bool flush)
+qint64 ZLibDecompressor::write(const QByteArray& input, bool flush)
 {
 	int result;
 	zlib_stream_->avail_in = input.size();

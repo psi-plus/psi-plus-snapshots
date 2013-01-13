@@ -86,7 +86,6 @@ namespace XMPP
 			ImproperAddressing,
 			InternalServerError,
 			InvalidFrom,
-			InvalidId,
 			InvalidNamespace,
 			InvalidXml,
 			StreamNotAuthorized,
@@ -100,7 +99,7 @@ namespace XMPP
 			UnsupportedEncoding,
 			UnsupportedStanzaType,
 			UnsupportedVersion,
-			XmlNotWellFormed
+			NotWellFormed
 		};
 		enum BindCond {
 			BindBadRequest,

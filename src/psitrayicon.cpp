@@ -39,7 +39,7 @@ void PsiTrayIcon::setContextMenu(QMenu* menu)
 
 void PsiTrayIcon::setToolTip(const QString &str)
 {
-#ifndef Q_WS_X11
+#ifndef HAVE_X11
 	trayicon_->setToolTip(str);
 #else
 	Q_UNUSED(str)
@@ -124,7 +124,7 @@ QPixmap PsiTrayIcon::makeIcon()
 	if ( !icon_ )
 		return QPixmap();
 
-#ifdef Q_WS_X11
+#ifdef HAVE_X11
 	// on X11, the KDE dock is 22x22.  let's make our icon_ "seem" bigger.
 	QImage real(22,22,QImage::Format_ARGB32);
 	QImage in = icon_->image();
@@ -175,7 +175,7 @@ QPixmap PsiTrayIcon::makeIcon()
 
 void PsiTrayIcon::trayicon_activated(QSystemTrayIcon::ActivationReason reason)
 {
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	Q_UNUSED(reason)
 #else
 	if (reason == QSystemTrayIcon::Trigger)

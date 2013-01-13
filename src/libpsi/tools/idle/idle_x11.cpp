@@ -31,11 +31,12 @@ int IdlePlatform::secondsIdle() { return 0; }
 
 #include <QApplication>
 #include <QDesktopWidget>
-#include <QX11Info>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/extensions/scrnsaver.h>
+
+#include "x11info.h"
 
 static XErrorHandler old_handler = 0;
 extern "C" int xerrhandler(Display* dpy, XErrorEvent* err)
@@ -79,7 +80,7 @@ bool IdlePlatform::init()
 	old_handler = XSetErrorHandler(xerrhandler);
 
 	int event_base, error_base;
-	if(XScreenSaverQueryExtension(QX11Info::display(), &event_base, &error_base)) {
+	if(XScreenSaverQueryExtension(X11Info::display(), &event_base, &error_base)) {
 		d->ss_info = XScreenSaverAllocInfo();
 		return true;
 	}
@@ -90,7 +91,7 @@ int IdlePlatform::secondsIdle()
 {
 	if(!d->ss_info)
 		return 0;
-	if(!XScreenSaverQueryInfo(QX11Info::display(), QX11Info::appRootWindow(), d->ss_info))
+	if(!XScreenSaverQueryInfo(X11Info::display(), X11Info::appRootWindow(), d->ss_info))
 		return 0;
 	return d->ss_info->idle / 1000;
 }

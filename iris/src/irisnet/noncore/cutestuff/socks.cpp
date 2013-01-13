@@ -20,11 +20,11 @@
 
 #include "socks.h"
 
-#include <qhostaddress.h>
-#include <qstringlist.h>
-#include <qtimer.h>
-#include <qpointer.h>
-#include <qsocketnotifier.h>
+#include <QHostAddress>
+#include <QStringList>
+#include <QTimer>
+#include <QPointer>
+#include <QSocketNotifier>
 #include <QByteArray>
 
 #ifdef Q_OS_UNIX
@@ -150,19 +150,19 @@ struct SPCS_VERSION
 	QByteArray methodList;
 };
 
-static int spc_get_version(QByteArray *from, SPCS_VERSION *s)
+static int spc_get_version(QByteArray &from, SPCS_VERSION *s)
 {
-	if(from->size() < 1)
+	if(from.size() < 1)
 		return 0;
-	if(from->at(0) != 0x05) // only SOCKS5 supported
+	if(from.at(0) != 0x05) // only SOCKS5 supported
 		return -1;
-	if(from->size() < 2)
+	if(from.size() < 2)
 		return 0;
-	unsigned char mlen = from->at(1);
+	unsigned char mlen = from.at(1);
 	int num = mlen;
 	if(num > 16) // who the heck has over 16 auth methods??
 		return -1;
-	if(from->size() < 2 + num)
+	if(from.size() < 2 + num)
 		return 0;
 	QByteArray a = ByteStream::takeArray(from, 2+num);
 	s->version = a[0];
@@ -177,9 +177,9 @@ struct SPSS_VERSION
 	unsigned char method;
 };
 
-static int sps_get_version(QByteArray *from, SPSS_VERSION *s)
+static int sps_get_version(QByteArray &from, SPSS_VERSION *s)
 {
-	if(from->size() < 2)
+	if(from.size() < 2)
 		return 0;
 	QByteArray a = ByteStream::takeArray(from, 2);
 	s->version = a[0];
@@ -220,20 +220,20 @@ struct SPCS_AUTHUSERNAME
 	QString user, pass;
 };
 
-static int spc_get_authUsername(QByteArray *from, SPCS_AUTHUSERNAME *s)
+static int spc_get_authUsername(QByteArray &from, SPCS_AUTHUSERNAME *s)
 {
-	if(from->size() < 1)
+	if(from.size() < 1)
 		return 0;
-	unsigned char ver = from->at(0);
+	unsigned char ver = from.at(0);
 	if(ver != 0x01)
 		return -1;
-	if(from->size() < 2)
+	if(from.size() < 2)
 		return 0;
-	unsigned char ulen = from->at(1);
-	if((int)from->size() < ulen + 3)
+	unsigned char ulen = from.at(1);
+	if((int)from.size() < ulen + 3)
 		return 0;
-	unsigned char plen = from->at(ulen+2);
-	if((int)from->size() < ulen + plen + 3)
+	unsigned char plen = from.at(ulen+2);
+	if((int)from.size() < ulen + plen + 3)
 		return 0;
 	QByteArray a = ByteStream::takeArray(from, ulen + plen + 3);
 
@@ -253,9 +253,9 @@ struct SPSS_AUTHUSERNAME
 	bool success;
 };
 
-static int sps_get_authUsername(QByteArray *from, SPSS_AUTHUSERNAME *s)
+static int sps_get_authUsername(QByteArray &from, SPSS_AUTHUSERNAME *s)
 {
-	if(from->size() < 2)
+	if(from.size() < 2)
 		return 0;
 	QByteArray a = ByteStream::takeArray(from, 2);
 	s->version = a[0];
@@ -339,48 +339,48 @@ struct SPS_CONNREQ
 	quint16 port;
 };
 
-static int sp_get_request(QByteArray *from, SPS_CONNREQ *s)
+static int sp_get_request(QByteArray &from, SPS_CONNREQ *s)
 {
 	int full_len = 4;
-	if((int)from->size() < full_len)
+	if((int)from.size() < full_len)
 		return 0;
 
 	QString host;
 	QHostAddress addr;
-	unsigned char atype = from->at(3);
+	unsigned char atype = from.at(3);
 
 	if(atype == 0x01) {
 		full_len += 4;
-		if((int)from->size() < full_len)
+		if((int)from.size() < full_len)
 			return 0;
 		quint32 ip4;
-		memcpy(&ip4, from->data() + 4, 4);
+		memcpy(&ip4, from.data() + 4, 4);
 		addr.setAddress(ntohl(ip4));
 	}
 	else if(atype == 0x03) {
 		++full_len;
-		if((int)from->size() < full_len)
+		if((int)from.size() < full_len)
 			return 0;
-		unsigned char host_len = from->at(4);
+		unsigned char host_len = from.at(4);
 		full_len += host_len;
-		if((int)from->size() < full_len)
+		if((int)from.size() < full_len)
 			return 0;
 		QByteArray cs;
 		cs.resize(host_len);
-		memcpy(cs.data(), from->data() + 5, host_len);
+		memcpy(cs.data(), from.data() + 5, host_len);
 		host = QString::fromLatin1(cs);
 	}
 	else if(atype == 0x04) {
 		full_len += 16;
-		if((int)from->size() < full_len)
+		if((int)from.size() < full_len)
 			return 0;
 		quint8 a6[16];
-		memcpy(a6, from->data() + 4, 16);
+		memcpy(a6, from.data() + 4, 16);
 		addr.setAddress(a6);
 	}
 
 	full_len += 2;
-	if((int)from->size() < full_len)
+	if((int)from.size() < full_len)
 		return 0;
 
 	QByteArray a = ByteStream::takeArray(from, full_len);
@@ -456,7 +456,7 @@ void SocksClient::init()
 	connect(&d->sock, SIGNAL(connectionClosed()), SLOT(sock_connectionClosed()));
 	connect(&d->sock, SIGNAL(delayedCloseFinished()), SLOT(sock_delayedCloseFinished()));
 	connect(&d->sock, SIGNAL(readyRead()), SLOT(sock_readyRead()));
-	connect(&d->sock, SIGNAL(bytesWritten(int)), SLOT(sock_bytesWritten(int)));
+	connect(&d->sock, SIGNAL(bytesWritten(qint64)), SLOT(sock_bytesWritten(qint64)));
 	connect(&d->sock, SIGNAL(error(int)), SLOT(sock_error(int)));
 
 	reset(true);
@@ -548,12 +548,12 @@ QByteArray SocksClient::read(int bytes)
 	return ByteStream::read(bytes);
 }
 
-int SocksClient::bytesAvailable() const
+qint64 SocksClient::bytesAvailable() const
 {
 	return ByteStream::bytesAvailable();
 }
 
-int SocksClient::bytesToWrite() const
+qint64 SocksClient::bytesToWrite() const
 {
 	if(d->active)
 		return d->sock.bytesToWrite();
@@ -578,7 +578,7 @@ void SocksClient::sock_connectionClosed()
 		connectionClosed();
 	}
 	else {
-		error(ErrProxyNeg);
+		setError(ErrProxyNeg);
 	}
 }
 
@@ -592,7 +592,7 @@ void SocksClient::sock_delayedCloseFinished()
 
 void SocksClient::sock_readyRead()
 {
-	QByteArray block = d->sock.read();
+	QByteArray block = d->sock.readAll();
 
 	if(!d->active) {
 		if(d->incoming)
@@ -617,14 +617,14 @@ void SocksClient::processOutgoing(const QByteArray &block)
 		fprintf(stderr, "%02X ", (unsigned char)block[n]);
 	fprintf(stderr, " } \n");
 #endif
-	ByteStream::appendArray(&d->recvBuf, block);
+	d->recvBuf += block;
 
 	if(d->step == StepVersion) {
 		SPSS_VERSION s;
-		int r = sps_get_version(&d->recvBuf, &s);
+		int r = sps_get_version(d->recvBuf, &s);
 		if(r == -1) {
 			reset(true);
-			error(ErrProxyNeg);
+			setError(ErrProxyNeg);
 			return;
 		}
 		else if(r == 1) {
@@ -633,7 +633,7 @@ void SocksClient::processOutgoing(const QByteArray &block)
 				fprintf(stderr, "SocksClient: Method selection failed\n");
 #endif
 				reset(true);
-				error(ErrProxyNeg);
+				setError(ErrProxyNeg);
 				return;
 			}
 
@@ -651,7 +651,7 @@ void SocksClient::processOutgoing(const QByteArray &block)
 				fprintf(stderr, "SocksClient: Server wants to use unknown method '%02x'\n", s.method);
 #endif
 				reset(true);
-				error(ErrProxyNeg);
+				setError(ErrProxyNeg);
 				return;
 			}
 
@@ -671,21 +671,21 @@ void SocksClient::processOutgoing(const QByteArray &block)
 	if(d->step == StepAuth) {
 		if(d->authMethod == AuthUsername) {
 			SPSS_AUTHUSERNAME s;
-			int r = sps_get_authUsername(&d->recvBuf, &s);
+			int r = sps_get_authUsername(d->recvBuf, &s);
 			if(r == -1) {
 				reset(true);
-				error(ErrProxyNeg);
+				setError(ErrProxyNeg);
 				return;
 			}
 			else if(r == 1) {
 				if(s.version != 0x01) {
 					reset(true);
-					error(ErrProxyNeg);
+					setError(ErrProxyNeg);
 					return;
 				}
 				if(!s.success) {
 					reset(true);
-					error(ErrProxyAuth);
+					setError(ErrProxyAuth);
 					return;
 				}
 
@@ -695,10 +695,10 @@ void SocksClient::processOutgoing(const QByteArray &block)
 	}
 	else if(d->step == StepRequest) {
 		SPS_CONNREQ s;
-		int r = sp_get_request(&d->recvBuf, &s);
+		int r = sp_get_request(d->recvBuf, &s);
 		if(r == -1) {
 			reset(true);
-			error(ErrProxyNeg);
+			setError(ErrProxyNeg);
 			return;
 		}
 		else if(r == 1) {
@@ -708,11 +708,11 @@ void SocksClient::processOutgoing(const QByteArray &block)
 #endif
 				reset(true);
 				if(s.cmd == RET_UNREACHABLE)
-					error(ErrHostNotFound);
+					setError(ErrHostNotFound);
 				else if(s.cmd == RET_CONNREFUSED)
-					error(ErrConnectionRefused);
+					setError(ErrConnectionRefused);
 				else
-					error(ErrProxyNeg);
+					setError(ErrProxyNeg);
 				return;
 			}
 
@@ -758,7 +758,7 @@ void SocksClient::do_request()
 	writeData(buf);
 }
 
-void SocksClient::sock_bytesWritten(int x)
+void SocksClient::sock_bytesWritten(qint64 x)
 {
 	int bytes = x;
 	if(d->pending >= bytes) {
@@ -777,16 +777,16 @@ void SocksClient::sock_error(int x)
 {
 	if(d->active) {
 		reset();
-		error(ErrRead);
+		setError(ErrRead);
 	}
 	else {
 		reset(true);
 		if(x == BSocket::ErrHostNotFound)
-			error(ErrProxyConnect);
+			setError(ErrProxyConnect);
 		else if(x == BSocket::ErrConnectionRefused)
-			error(ErrProxyConnect);
+			setError(ErrProxyConnect);
 		else if(x == BSocket::ErrRead)
-			error(ErrProxyNeg);
+			setError(ErrProxyNeg);
 	}
 }
 
@@ -806,7 +806,7 @@ void SocksClient::processIncoming(const QByteArray &block)
 		fprintf(stderr, "%02X ", (unsigned char)block[n]);
 	fprintf(stderr, " } \n");
 #endif
-	ByteStream::appendArray(&d->recvBuf, block);
+	d->recvBuf += block;
 
 	if(!d->waiting)
 		continueIncoming();
@@ -819,16 +819,16 @@ void SocksClient::continueIncoming()
 
 	if(d->step == StepVersion) {
 		SPCS_VERSION s;
-		int r = spc_get_version(&d->recvBuf, &s);
+		int r = spc_get_version(d->recvBuf, &s);
 		if(r == -1) {
 			reset(true);
-			error(ErrProxyNeg);
+			setError(ErrProxyNeg);
 			return;
 		}
 		else if(r == 1) {
 			if(s.version != 0x05) {
 				reset(true);
-				error(ErrProxyNeg);
+				setError(ErrProxyNeg);
 				return;
 			}
 
@@ -846,10 +846,10 @@ void SocksClient::continueIncoming()
 	}
 	else if(d->step == StepAuth) {
 		SPCS_AUTHUSERNAME s;
-		int r = spc_get_authUsername(&d->recvBuf, &s);
+		int r = spc_get_authUsername(d->recvBuf, &s);
 		if(r == -1) {
 			reset(true);
-			error(ErrProxyNeg);
+			setError(ErrProxyNeg);
 			return;
 		}
 		else if(r == 1) {
@@ -859,10 +859,10 @@ void SocksClient::continueIncoming()
 	}
 	else if(d->step == StepRequest) {
 		SPS_CONNREQ s;
-		int r = sp_get_request(&d->recvBuf, &s);
+		int r = sp_get_request(d->recvBuf, &s);
 		if(r == -1) {
 			reset(true);
-			error(ErrProxyNeg);
+			setError(ErrProxyNeg);
 			return;
 		}
 		else if(r == 1) {

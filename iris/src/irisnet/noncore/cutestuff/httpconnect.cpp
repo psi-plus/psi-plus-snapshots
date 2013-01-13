@@ -20,10 +20,11 @@
 
 #include "httpconnect.h"
 
-#include <qstringlist.h>
+#include <QStringList>
 #include <QByteArray>
-#include "bsocket.h"
 #include <QtCrypto>
+
+#include "bsocket.h"
 
 //#define PROX_DEBUG
 
@@ -64,7 +65,7 @@ static QString extractLine(QByteArray *buf, bool *found)
 	}
 	else {
 		// Found newline
-		QString s = QString::fromAscii(buf->left(index));
+		QString s = QString::fromLatin1(buf->left(index));
 		buf->remove(0, index + 2);
 
 		if (found)
@@ -124,7 +125,7 @@ HttpConnect::HttpConnect(QObject *parent)
 	connect(&d->sock, SIGNAL(connectionClosed()), SLOT(sock_connectionClosed()));
 	connect(&d->sock, SIGNAL(delayedCloseFinished()), SLOT(sock_delayedCloseFinished()));
 	connect(&d->sock, SIGNAL(readyRead()), SLOT(sock_readyRead()));
-	connect(&d->sock, SIGNAL(bytesWritten(int)), SLOT(sock_bytesWritten(int)));
+	connect(&d->sock, SIGNAL(bytesWritten(qint64)), SLOT(sock_bytesWritten(qint64)));
 	connect(&d->sock, SIGNAL(error(int)), SLOT(sock_error(int)));
 
 	reset(true);
@@ -195,12 +196,7 @@ QByteArray HttpConnect::read(int bytes)
 	return ByteStream::read(bytes);
 }
 
-int HttpConnect::bytesAvailable() const
-{
-	return ByteStream::bytesAvailable();
-}
-
-int HttpConnect::bytesToWrite() const
+qint64 HttpConnect::bytesToWrite() const
 {
 	if(d->active)
 		return d->sock.bytesToWrite();
@@ -241,7 +237,7 @@ void HttpConnect::sock_connectionClosed()
 		connectionClosed();
 	}
 	else {
-		error(ErrProxyNeg);
+		setError(ErrProxyNeg);
 	}
 }
 
@@ -255,10 +251,10 @@ void HttpConnect::sock_delayedCloseFinished()
 
 void HttpConnect::sock_readyRead()
 {
-	QByteArray block = d->sock.read();
+	QByteArray block = d->sock.readAll();
 
 	if(!d->active) {
-		ByteStream::appendArray(&d->recvBuf, block);
+		d->recvBuf += block;
 
 		if(d->inHeader) {
 			// grab available lines
@@ -287,7 +283,7 @@ void HttpConnect::sock_readyRead()
 					fprintf(stderr, "HttpConnect: invalid header!\n");
 #endif
 					reset(true);
-					error(ErrProxyNeg);
+					setError(ErrProxyNeg);
 					return;
 				}
 				else {
@@ -340,7 +336,7 @@ void HttpConnect::sock_readyRead()
 					fprintf(stderr, "HttpConnect: << Error >> [%s]\n", qPrintable(errStr));
 #endif
 					reset(true);
-					error(err);
+					setError(err);
 					return;
 				}
 			}
@@ -353,7 +349,7 @@ void HttpConnect::sock_readyRead()
 	}
 }
 
-void HttpConnect::sock_bytesWritten(int x)
+void HttpConnect::sock_bytesWritten(qint64 x)
 {
 	if(d->toWrite > 0) {
 		int size = x;
@@ -371,16 +367,16 @@ void HttpConnect::sock_error(int x)
 {
 	if(d->active) {
 		reset();
-		error(ErrRead);
+		setError(ErrRead);
 	}
 	else {
 		reset(true);
 		if(x == BSocket::ErrHostNotFound)
-			error(ErrProxyConnect);
+			setError(ErrProxyConnect);
 		else if(x == BSocket::ErrConnectionRefused)
-			error(ErrProxyConnect);
+			setError(ErrProxyConnect);
 		else if(x == BSocket::ErrRead)
-			error(ErrProxyNeg);
+			setError(ErrProxyNeg);
 	}
 }
 

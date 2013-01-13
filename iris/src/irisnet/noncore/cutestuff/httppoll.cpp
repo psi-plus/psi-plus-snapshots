@@ -69,7 +69,7 @@ public:
 	QString host;
 	int port;
 	QString user, pass;
-	QString url;
+	QUrl url;
 	bool use_proxy;
 
 	QByteArray out;
@@ -128,12 +128,12 @@ void HttpPoll::setAuth(const QString &user, const QString &pass)
 	d->pass = pass;
 }
 
-void HttpPoll::connectToUrl(const QString &url)
+void HttpPoll::connectToUrl(const QUrl &url)
 {
 	connectToHost("", 0, url);
 }
 
-void HttpPoll::connectToHost(const QString &proxyHost, int proxyPort, const QString &url)
+void HttpPoll::connectToHost(const QString &proxyHost, int proxyPort, const QUrl &url)
 {
 	reset(true);
 
@@ -147,15 +147,18 @@ void HttpPoll::connectToHost(const QString &proxyHost, int proxyPort, const QStr
 		d->use_proxy = true;
 	}
 	else {
-		QUrl u = url;
-		d->host = u.host();
-		if(u.port() != -1)
-			d->port = u.port();
-		else if (u.scheme() == "https") {
+		d->host = url.host();
+		if(url.port() != -1)
+			d->port = url.port();
+		else if (url.scheme() == "https") {
 			d->port = 443;
 			useSsl = true;
 		}
-		d->url = u.path() + "?" + u.encodedQuery();
+#if QT_VERSION < 0x050000
+		d->url = url.path() + "?" + url.encodedQuery();
+#else
+		d->url.setUrl(url.path() + "?" + url.query(QUrl::FullyEncoded), QUrl::StrictMode);
+#endif
 		d->use_proxy = false;
 	}
 
@@ -243,7 +246,7 @@ void HttpPoll::http_result()
 	int n = cookie.indexOf("ID=");
 	if(n == -1) {
 		reset();
-		error(ErrRead);
+		setError(ErrRead);
 		return;
 	}
 	n += 3;
@@ -263,7 +266,7 @@ void HttpPoll::http_result()
 		}
 		else {
 			reset();
-			error(ErrRead);
+			setError(ErrRead);
 			return;
 		}
 	}
@@ -320,17 +323,17 @@ void HttpPoll::http_error(int x)
 {
 	reset();
 	if(x == HttpProxyPost::ErrConnectionRefused)
-		error(ErrConnectionRefused);
+		setError(ErrConnectionRefused);
 	else if(x == HttpProxyPost::ErrHostNotFound)
-		error(ErrHostNotFound);
+		setError(ErrHostNotFound);
 	else if(x == HttpProxyPost::ErrSocket)
-		error(ErrRead);
+		setError(ErrRead);
 	else if(x == HttpProxyPost::ErrProxyConnect)
-		error(ErrProxyConnect);
+		setError(ErrProxyConnect);
 	else if(x == HttpProxyPost::ErrProxyNeg)
-		error(ErrProxyNeg);
+		setError(ErrProxyNeg);
 	else if(x == HttpProxyPost::ErrProxyAuth)
-		error(ErrProxyAuth);
+		setError(ErrProxyAuth);
 }
 
 int HttpPoll::tryWrite()
@@ -452,7 +455,7 @@ public:
 	BSocket sock;
 	QHostAddress lastAddress;
 	QByteArray postdata, recvBuf, body;
-	QString url;
+	QUrl url;
 	QString user, pass;
 	bool inHeader;
 	QStringList headerLines;
@@ -504,7 +507,7 @@ bool HttpProxyPost::isActive() const
 	return (d->sock.state() == BSocket::Idle ? false: true);
 }
 
-void HttpProxyPost::post(const QString &proxyHost, int proxyPort, const QString &url, const QByteArray &data, bool asProxy)
+void HttpProxyPost::post(const QString &proxyHost, int proxyPort, const QUrl &url, const QByteArray &data, bool asProxy)
 {
 	reset(true);
 
@@ -573,32 +576,32 @@ void HttpProxyPost::sock_connected()
 	QUrl u = d->url;
 
 	// connected, now send the request
-	QString s;
-	s += QString("POST ") + d->url + " HTTP/1.1\r\n";
+	QByteArray s;
+	s += QByteArray("POST ") + d->url.toEncoded() + " HTTP/1.1\r\n";
 	if(d->asProxy) {
 		if(!d->user.isEmpty()) {
-			QString str = d->user + ':' + d->pass;
-			s += QString("Proxy-Authorization: Basic ") + QCA::Base64().encodeString(str) + "\r\n";
+			QByteArray str = d->user.toUtf8() + ':' + d->pass.toUtf8();
+			s += QByteArray("Proxy-Authorization: Basic ") + str.toBase64() + "\r\n";
 		}
 		s += "Pragma: no-cache\r\n";
-		s += QString("Host: ") + u.host() + "\r\n";
+		s += QByteArray("Host: ") + u.host() + "\r\n";
 	}
 	else {
-		s += QString("Host: ") + d->host + "\r\n";
+		s += QByteArray("Host: ") + d->host + "\r\n";
 	}
 	s += "Content-Type: application/x-www-form-urlencoded\r\n";
-	s += QString("Content-Length: ") + QString::number(d->postdata.size()) + "\r\n";
+	s += QByteArray("Content-Length: ") + QByteArray::number(d->postdata.size()) + "\r\n";
 	s += "\r\n";
 
 	if(d->useSsl) {
 		// write request
-		d->tls->write(s.toUtf8());
+		d->tls->write(s);
 
 		// write postdata
 		d->tls->write(d->postdata);
 	} else {
 		// write request
-		d->sock.write(s.toUtf8());
+		d->sock.write(s);
 
 		// write postdata
 		d->sock.write(d->postdata);
@@ -635,7 +638,7 @@ void HttpProxyPost::tls_error()
 
 void HttpProxyPost::sock_readyRead()
 {
-	QByteArray block = d->sock.read();
+	QByteArray block = d->sock.readAll();
 	if(d->useSsl)
 		d->tls->writeIncoming(block);
 	else
@@ -644,7 +647,7 @@ void HttpProxyPost::sock_readyRead()
 
 void HttpProxyPost::processData(const QByteArray &block)
 {
-	ByteStream::appendArray(&d->recvBuf, block);
+	d->recvBuf += block;
 
 	if(d->inHeader) {
 		// grab available lines
@@ -899,7 +902,7 @@ void HttpProxyGetStream::sock_connectionClosed()
 
 void HttpProxyGetStream::sock_readyRead()
 {
-	QByteArray block = d->sock.read();
+	QByteArray block = d->sock.readAll();
 
 	if(d->use_ssl)
 		d->tls->writeIncoming(block);
@@ -915,7 +918,7 @@ void HttpProxyGetStream::processData(const QByteArray &block)
 		return;
 	}
 
-	ByteStream::appendArray(&d->recvBuf, block);
+	d->recvBuf += block;
 
 	if(d->inHeader) {
 		// grab available lines

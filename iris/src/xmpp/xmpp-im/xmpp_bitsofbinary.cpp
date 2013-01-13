@@ -22,6 +22,7 @@
 #include "xmpp_client.h"
 #include "xmpp_tasks.h"
 #include <QCryptographicHash>
+#include <QFile>
 
 using namespace XMPP;
 

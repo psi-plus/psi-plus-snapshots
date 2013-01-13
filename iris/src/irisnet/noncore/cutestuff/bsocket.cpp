@@ -186,6 +186,7 @@ void BSocket::reset(bool clear)
 	d->host = "";
 	d->address = QHostAddress();
 	d->port = 0;
+	setOpenMode(QIODevice::NotOpen);
 }
 
 void BSocket::ensureSocket()
@@ -356,36 +357,36 @@ void BSocket::close()
 	}
 }
 
-void BSocket::write(const QByteArray &a)
+qint64 BSocket::writeData(const char *data, qint64 maxSize)
 {
 	if(d->state != Connected)
-		return;
+		return 0;
 #ifdef BS_DEBUG_EXTRA
-	BSDEBUG << "- [" << a.size() << "]: {" << a << "}";
+	BSDEBUG << "- [" << maxSize << "]: {" << QByteArray::fromRawData(data, maxSize) << "}";
 #endif
-	d->qsock->write(a.data(), a.size());
+	return d->qsock->write(data, maxSize);
 }
 
-QByteArray BSocket::read(int bytes)
+qint64 BSocket::readData(char *data, qint64 maxSize)
 {
-	QByteArray block;
+	quint64 readSize;
 	if(d->qsock) {
-		int max = bytesAvailable();
-		if(bytes <= 0 || bytes > max)
-			bytes = max;
-		block.resize(bytes);
-		d->qsock->read(block.data(), block.size());
+	   int max = bytesAvailable();
+	   if(maxSize <= 0 || maxSize > max) {
+			maxSize = max;
+		}
+		readSize = d->qsock->read(data, maxSize);
+	} else {
+		readSize = ByteStream::readData(data, maxSize);
 	}
-	else
-		block = ByteStream::read(bytes);
 
 #ifdef BS_DEBUG_EXTRA
-	BSDEBUG << "- [" << block.size() << "]: {" << block << "}";
+	BSDEBUG << "- [" << readSize << "]: {" << QByteArray::fromRawData(data, readSize) << "}";
 #endif
-	return block;
+	return readSize;
 }
 
-int BSocket::bytesAvailable() const
+qint64 BSocket::bytesAvailable() const
 {
 	if(d->qsock)
 		return d->qsock->bytesAvailable();
@@ -393,7 +394,7 @@ int BSocket::bytesAvailable() const
 		return ByteStream::bytesAvailable();
 }
 
-int BSocket::bytesToWrite() const
+qint64 BSocket::bytesToWrite() const
 {
 	if(!d->qsock)
 		return 0;
@@ -439,6 +440,7 @@ void BSocket::qs_hostFound()
 
 void BSocket::qs_connected()
 {
+	setOpenMode(QIODevice::ReadWrite);
 	d->state = Connected;
 #ifdef BS_DEBUG
 	BSDEBUG << "Connected";

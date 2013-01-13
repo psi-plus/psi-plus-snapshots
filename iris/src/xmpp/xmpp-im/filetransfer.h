@@ -30,7 +30,7 @@ namespace XMPP
 	class BytestreamManager;
 	struct FTRequest;
 
-	/*class AbstractFileTransfer 
+	/*class AbstractFileTransfer
 	{
 		public:
 			// Receive
@@ -77,7 +77,7 @@ namespace XMPP
 		void accepted(); // indicates BSConnection has started
 		void connected();
 		void readyRead(const QByteArray &a);
-		void bytesWritten(int);
+		void bytesWritten(qint64);
 		void error(int);
 
 	private slots:
@@ -85,7 +85,7 @@ namespace XMPP
 		void stream_connected();
 		void stream_connectionClosed();
 		void stream_readyRead();
-		void stream_bytesWritten(int);
+		void stream_bytesWritten(qint64);
 		void stream_error(int);
 		void doAccept();
 		void reset();

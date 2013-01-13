@@ -95,6 +95,7 @@ AccountRemoveDlg::AccountRemoveDlg(const UserAccount &acc, QWidget *parent)
 :QDialog(parent)
 {
 	setupUi(this);
+	setWindowIcon(IconsetFactory::icon("psi/account").icon());
 	setModal(false);
 #if QT_VERSION >= 0x040500
 	setWindowFlags(Qt::Dialog | Qt::WindowTitleHint | Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint | Qt::CustomizeWindowHint);
@@ -322,11 +323,8 @@ AccountManageDlg::AccountManageDlg(PsiCon *_psi)
 :QDialog(0)
 {
 	setupUi(this);
-	setWindowIcon(IconsetFactory::icon("psi/account").icon());
 	setModal(false);
-#if QT_VERSION >= 0x040500
 	setWindowFlags(Qt::Dialog | Qt::WindowTitleHint | Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint | Qt::CustomizeWindowHint);
-#endif
 	psi = _psi;
 	psi->dialogRegister(this);
 
@@ -346,8 +344,11 @@ AccountManageDlg::AccountManageDlg(PsiCon *_psi)
 	connect(lv_accs, SIGNAL(orderChanged(QList<PsiAccount*>)), psi, SLOT(setAccountsOrder(QList<PsiAccount*>)));
 	connect(psi, SIGNAL(accountAdded(PsiAccount *)), SLOT(accountAdded(PsiAccount *)));
 	connect(psi, SIGNAL(accountRemoved(PsiAccount *)), SLOT(accountRemoved(PsiAccount *)));
-
+#ifdef HAVE_QT5
+	lv_accs->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+#else
 	lv_accs->header()->setResizeMode(QHeaderView::ResizeToContents);
+#endif
 	lv_accs->setDragDropMode(QAbstractItemView::InternalMove);
 	lv_accs->setDragDropOverwriteMode(false);
 	lv_accs->setSortingEnabled(true);

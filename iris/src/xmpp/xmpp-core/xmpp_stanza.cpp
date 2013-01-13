@@ -203,7 +203,6 @@ Stanza::Error::Private::ErrorCondEntry Stanza::Error::Private::errorCondTable[] 
 	{ "not-acceptable",          NotAcceptable },
 	{ "not-allowed",             NotAllowed },
 	{ "not-authorized",          NotAuthorized },
-	{ "payment-required",        PaymentRequired },
 	{ "recipient-unavailable",   RecipientUnavailable },
 	{ "redirect",                Redirect },
 	{ "registration-required",   RegistrationRequired },
@@ -230,7 +229,6 @@ Stanza::Error::Private::ErrorCodeEntry Stanza::Error::Private::errorCodeTable[] 
 	{ NotAcceptable,         Modify, 406 },
 	{ NotAllowed,            Cancel, 405 },
 	{ NotAuthorized,         Auth,   401 },
-	{ PaymentRequired,       Auth,   402 },
 	{ RecipientUnavailable,  Wait,   404 },
 	{ Redirect,              Modify, 302 },	// temporary
 	{ RegistrationRequired,  Auth,   407 },
@@ -257,7 +255,6 @@ Stanza::Error::Private::ErrorDescEntry Stanza::Error::Private::errorDescriptions
 	{ NotAcceptable,         QT_TR_NOOP("Not acceptable"),          QT_TR_NOOP("The recipient or server understands the request but is refusing to process it because it does not meet criteria defined by the recipient or server (e.g., a local policy regarding acceptable words in messages).") },
 	{ NotAllowed,            QT_TR_NOOP("Not allowed"),             QT_TR_NOOP("The recipient or server does not allow any entity to perform the action.") },
 	{ NotAuthorized,         QT_TR_NOOP("Not authorized"),          QT_TR_NOOP("The sender must provide proper credentials before being allowed to perform the action, or has provided improper credentials.") },
-	{ PaymentRequired,       QT_TR_NOOP("Payment required"),        QT_TR_NOOP("The requesting entity is not authorized to access the requested service because payment is required.") },
 	{ RecipientUnavailable,  QT_TR_NOOP("Recipient unavailable"),   QT_TR_NOOP("The intended recipient is temporarily unavailable.") },
 	{ Redirect,              QT_TR_NOOP("Redirect"),                QT_TR_NOOP("The recipient or server is redirecting requests for this information to another entity, usually temporarily.") },
 	{ RegistrationRequired,  QT_TR_NOOP("Registration required"),   QT_TR_NOOP("The requesting entity is not authorized to access the requested service because registration is required.") },

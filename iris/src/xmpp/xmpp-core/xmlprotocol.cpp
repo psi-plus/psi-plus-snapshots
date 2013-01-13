@@ -18,14 +18,12 @@
  *
  */
 
-#include "xmlprotocol.h"
-
-#include "bytestream.h"
-//Added by qt3to4:
 #include <QList>
 #include <QTextStream>
 #include <QByteArray>
-#include <QApplication>
+
+#include "xmlprotocol.h"
+#include "bytestream.h"
 
 using namespace XMPP;
 
@@ -545,7 +543,7 @@ int XmlProtocol::internalWriteData(const QByteArray &a, TrackItem::Type t, int i
 	i.size = a.size();
 	trackQueue += i;
 
-	ByteStream::appendArray(&outData, a);
+	outData += a;
 	return a.size();
 }
 

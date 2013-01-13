@@ -23,36 +23,37 @@
 
 #include <QObject>
 #include <QByteArray>
+#include <QIODevice>
 
 // CS_NAMESPACE_BEGIN
 
 // CS_EXPORT_BEGIN
-class ByteStream : public QObject
+class ByteStream : public QIODevice
 {
 	Q_OBJECT
 public:
-	enum Error { ErrRead, ErrWrite, ErrCustom = 10 };
+	enum Error { ErrOk, ErrRead, ErrWrite, ErrCustom = 10 };
 	ByteStream(QObject *parent=0);
-	virtual ~ByteStream()=0;
+	~ByteStream()=0;
 
-	virtual bool isOpen() const;
-	virtual void close();
-	virtual void write(const QByteArray &);
-	virtual QByteArray read(int bytes=0);
-	virtual int bytesAvailable() const;
-	virtual int bytesToWrite() const;
+	qint64 bytesAvailable() const;
+	qint64 bytesToWrite() const;
 
-	static void appendArray(QByteArray *a, const QByteArray &b);
-	static QByteArray takeArray(QByteArray *from, int size=0, bool del=true);
+	static QByteArray takeArray(QByteArray &from, int size=0, bool del=true);
+
+	int errorCode() const;
+	QString &errorText() const;
 
 signals:
 	void connectionClosed();
 	void delayedCloseFinished();
-	void readyRead();
-	void bytesWritten(int);
 	void error(int);
 
 protected:
+	qint64 writeData(const char *data, qint64 maxSize);
+	qint64 readData(char *data, qint64 maxSize);
+
+	void setError(int code = ErrOk, const QString &text = QString());
 	void clearReadBuffer();
 	void clearWriteBuffer();
 	void appendRead(const QByteArray &);

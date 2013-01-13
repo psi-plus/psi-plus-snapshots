@@ -62,10 +62,10 @@ public:
 	// from ByteStream
 	bool isOpen() const;
 	void close();
-	void write(const QByteArray &);
-	QByteArray read(int bytes=0);
-	int bytesAvailable() const;
-	int bytesToWrite() const;
+	qint64 writeData(const char *data, qint64 maxSize);
+	qint64 readData(char *data, qint64 maxSize);
+	qint64 bytesAvailable() const;
+	qint64 bytesToWrite() const;
 
 	// local
 	QHostAddress address() const;

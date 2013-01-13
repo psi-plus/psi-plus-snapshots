@@ -11,16 +11,16 @@ mac {
 	contains(DEFINES, HAVE_GROWL) {
 		include($$PWD/growlnotifier/growlnotifier.pri)
 	}
-	
+
 	# Mac dock
 	include($$PWD/mac_dock/mac_dock.pri)
 }
 
 HEADERS += \
 	$$PWD/maybe.h \
-	$$PWD/priorityvalidator.h \
-	$$PWD/iodeviceopener.h
+	$$PWD/iodeviceopener.h \
+	$$PWD/x11info.h
 
 SOURCES += \
-	$$PWD/priorityvalidator.cpp \
-	$$PWD/iodeviceopener.cpp
+	$$PWD/iodeviceopener.cpp \
+	$$PWD/x11info.cpp

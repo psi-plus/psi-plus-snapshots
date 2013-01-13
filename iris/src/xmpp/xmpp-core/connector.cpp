@@ -144,7 +144,7 @@ quint16 AdvancedConnector::Proxy::port() const
 	return v_port;
 }
 
-QString AdvancedConnector::Proxy::url() const
+QUrl AdvancedConnector::Proxy::url() const
 {
 	return v_url;
 }
@@ -171,7 +171,7 @@ void AdvancedConnector::Proxy::setHttpConnect(const QString &host, quint16 port)
 	v_port = port;
 }
 
-void AdvancedConnector::Proxy::setHttpPoll(const QString &host, quint16 port, const QString &url)
+void AdvancedConnector::Proxy::setHttpPoll(const QString &host, quint16 port, const QUrl &url)
 {
 	t = HttpPoll;
 	v_host = host;

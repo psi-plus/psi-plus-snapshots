@@ -134,7 +134,7 @@ void WebView::mouseReleaseEvent ( QMouseEvent * event )
 {
 	QWebView::mouseReleaseEvent(event);
 	possibleDragging = false;
-#ifdef Q_WS_X11
+#ifdef HAVE_X11
 	if (!page()->selectedText().isEmpty()) {
 		convertClipboardHtmlImages(QClipboard::Selection);
 	}

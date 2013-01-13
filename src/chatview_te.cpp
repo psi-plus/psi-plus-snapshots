@@ -57,7 +57,7 @@ ChatView::ChatView(QWidget *parent)
 	setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	setLooks(this);
 
-#ifndef Q_WS_X11	// linux has this feature built-in
+#ifndef HAVE_X11	// linux has this feature built-in
 	connect(this, SIGNAL(selectionChanged()), SLOT(autoCopy()));
 	connect(this, SIGNAL(cursorPositionChanged()), SLOT(autoCopy()));
 #endif
@@ -186,7 +186,7 @@ void ChatView::keyPressEvent(QKeyEvent *e)
 {
 /*	if(e->key() == Qt::Key_Escape)
 		e->ignore();
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	else if(e->key() == Qt::Key_W && e->modifiers() & Qt::ControlModifier)
 		e->ignore();
 	else
@@ -347,7 +347,7 @@ void ChatView::renderMucMessage(const MessageView &mv)
 		nickcolor = getMucNickColor(mv.nick(), mv.isLocal());
 	}
 	QString nick = QString("<a href=\"addnick://psi/") + QUrl::toPercentEncoding(mv.nick()) +
-				   "\" style=\"color: "+nickcolor+"; text-decoration: none; \">"+Qt::escape(mv.nick())+"</a>";
+				   "\" style=\"color: "+nickcolor+"; text-decoration: none; \">"+TextUtil::escape(mv.nick())+"</a>";
 
 	if(mv.isEmote()) {
 		appendText(icon + QString("<font color=\"%1\">").arg(nickcolor) + QString("[%1]").arg(timestr) + QString(" *%1 ").arg(nick) + alerttagso + mv.formattedText() + alerttagsc + "</font>");
@@ -380,13 +380,13 @@ void ChatView::renderMessage(const MessageView &mv)
 			: isEncryptionEnabled_ ? "icon:log_icon_send_pgp" : "icon:log_icon_send")
 		: isEncryptionEnabled_ ? "icon:log_icon_receive_pgp" : "icon:log_icon_receive")) : "";
 	if (mv.isEmote()) {
-		appendText(icon + QString("<span style=\"color: %1\">").arg(color) + QString("[%1]").arg(timestr) + QString(" *%1 ").arg(Qt::escape(mv.nick())) + mv.formattedText() + "</span>");
+		appendText(icon + QString("<span style=\"color: %1\">").arg(color) + QString("[%1]").arg(timestr) + QString(" *%1 ").arg(TextUtil::escape(mv.nick())) + mv.formattedText() + "</span>");
 	} else {
 		if (PsiOptions::instance()->getOption("options.ui.chat.use-chat-says-style").toBool()) {
-			appendText(icon + QString("<span style=\"color: %1\">").arg(color) + QString("[%1] ").arg(timestr) + tr("%1 says:").arg(Qt::escape(mv.nick())) + "</span><br>" + mv.formattedText());
+			appendText(icon + QString("<span style=\"color: %1\">").arg(color) + QString("[%1] ").arg(timestr) + tr("%1 says:").arg(TextUtil::escape(mv.nick())) + "</span><br>" + mv.formattedText());
 		}
 		else {
-			appendText(icon + QString("<span style=\"color: %1\">").arg(color) + QString("[%1] &lt;").arg(timestr) + Qt::escape(mv.nick()) + QString("&gt;</span> ") + mv.formattedText());
+			appendText(icon + QString("<span style=\"color: %1\">").arg(color) + QString("[%1] &lt;").arg(timestr) + TextUtil::escape(mv.nick()) + QString("&gt;</span> ") + mv.formattedText());
 		}
 	}
 
@@ -432,7 +432,7 @@ void ChatView::renderUrls(const MessageView &mv)
 {
 	QMap<QString, QString> urls = mv.urls();
 	foreach (const QString &key, urls.keys()) {
-		appendText(QString("<b>") + tr("URL:") + "</b> " + QString("%1").arg(TextUtil::linkify(Qt::escape(key))));
+		appendText(QString("<b>") + tr("URL:") + "</b> " + QString("%1").arg(TextUtil::linkify(TextUtil::escape(key))));
 		if (!urls.value(key).isEmpty()) {
 			appendText(QString("<b>") + tr("Desc:") + "</b> " + QString("%1").arg(urls.value(key)));
 		}

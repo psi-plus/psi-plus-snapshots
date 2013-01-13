@@ -141,7 +141,7 @@ public slots:
 			dlg_->appendSysMsg("No version information available.");
 			return;
 		}
-		dlg_->appendSysMsg(Qt::escape(QString("Version response: N: %2 V: %3 OS: %4")
+		dlg_->appendSysMsg(TextUtil::escape(QString("Version response: N: %2 V: %3 OS: %4")
 			.arg(version->name(), version->version(), version->os())));
 	};
 
@@ -159,7 +159,7 @@ public slots:
 				.arg(idle->time().toString()));
 		} else {
 			dlg_->appendSysMsg(QString("Last activity at %1 (%2)")
-				.arg(idle->time().toString(), Qt::escape(idle->status())));
+				.arg(idle->time().toString(), TextUtil::escape(idle->status())));
 		}
 	}
 
@@ -235,7 +235,7 @@ void PsiChatDlg::initUi()
 	connect(ui_.mle, SIGNAL(textEditCreated(QTextEdit*)), SLOT(chatEditCreated()));
 	chatEditCreated();
 
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	connect(chatView(), SIGNAL(selectionChanged()), SLOT(logSelectionChanged()));
 #endif
 
@@ -553,7 +553,7 @@ void PsiChatDlg::activated()
 			winHeader_->setVisible(!border);
 		setWindowBorder(border);
 		setMargins();
-#if defined(Q_WS_MAC) || defined(Q_WS_HAIKU)
+#if defined(Q_OS_MAC) || defined(Q_WS_HAIKU)
 		//
 #else
 		bringToFront(true);
@@ -786,9 +786,8 @@ void PsiChatDlg::updatePGP()
 	checkPGPAutostart();
 
 	ui_.tb_pgp->setVisible(account()->hasPGP() &&
-	                       !smallChat_ &&
-	                       !PsiOptions::instance()->getOption("options.ui.chat.central-toolbar").toBool());
-
+						   !smallChat_ &&
+						   !PsiOptions::instance()->getOption("options.ui.chat.central-toolbar").toBool());
 	ui_.log->setEncryptionEnabled(isEncryptionEnabled());
 }
 
@@ -925,7 +924,7 @@ void PsiChatDlg::doSend() {
 	if (mCmdSite_.isActive()) {
 		QString str = chatEdit()->toPlainText();
 		if (!mCmdManager_.processCommand(str)) {
-			appendSysMsg(tr("Error: Can not parse command: ") + Qt::escape(str));
+			appendSysMsg(tr("Error: Can not parse command: ") + TextUtil::escape(str));
 		}
 	} else {
 		ChatDlg::doSend();

@@ -122,7 +122,7 @@ private slots:
 	void proxy_result(bool b);
 	void proxy_finished();
 	void sc_readyRead();
-	void sc_bytesWritten(int);
+	void sc_bytesWritten(qint64);
 	void sc_error(int);
 
 private:
@@ -346,7 +346,7 @@ QByteArray S5BConnection::read(int bytes)
 		return QByteArray();
 }
 
-int S5BConnection::bytesAvailable() const
+qint64 S5BConnection::bytesAvailable() const
 {
 	if(d->sc)
 		return d->sc->bytesAvailable();
@@ -354,7 +354,7 @@ int S5BConnection::bytesAvailable() const
 		return 0;
 }
 
-int S5BConnection::bytesToWrite() const
+qint64 S5BConnection::bytesToWrite() const
 {
 	if(d->state == Active)
 		return d->sc->bytesToWrite();
@@ -406,7 +406,7 @@ void S5BConnection::man_clientReady(SocksClient *sc, SocksUDP *sc_udp)
 	connect(d->sc, SIGNAL(connectionClosed()), SLOT(sc_connectionClosed()));
 	connect(d->sc, SIGNAL(delayedCloseFinished()), SLOT(sc_delayedCloseFinished()));
 	connect(d->sc, SIGNAL(readyRead()), SLOT(sc_readyRead()));
-	connect(d->sc, SIGNAL(bytesWritten(int)), SLOT(sc_bytesWritten(int)));
+	connect(d->sc, SIGNAL(bytesWritten(qint64)), SLOT(sc_bytesWritten(qint64)));
 	connect(d->sc, SIGNAL(error(int)), SLOT(sc_error(int)));
 
 	if(sc_udp) {
@@ -458,13 +458,13 @@ void S5BConnection::man_failed(int x)
 {
 	reset(true);
 	if(x == S5BManager::Item::ErrRefused)
-		error(ErrRefused);
+		setError(ErrRefused);
 	if(x == S5BManager::Item::ErrConnect)
-		error(ErrConnect);
+		setError(ErrConnect);
 	if(x == S5BManager::Item::ErrWrongHost)
-		error(ErrConnect);
+		setError(ErrConnect);
 	if(x == S5BManager::Item::ErrProxy)
-		error(ErrProxy);
+		setError(ErrProxy);
 }
 
 void S5BConnection::sc_connectionClosed()
@@ -485,7 +485,7 @@ void S5BConnection::sc_connectionClosed()
 void S5BConnection::sc_delayedCloseFinished()
 {
 	// echo
-	delayedCloseFinished();
+	emit delayedCloseFinished();
 }
 
 void S5BConnection::sc_readyRead()
@@ -501,7 +501,7 @@ void S5BConnection::sc_readyRead()
 	readyRead();
 }
 
-void S5BConnection::sc_bytesWritten(int x)
+void S5BConnection::sc_bytesWritten(qint64 x)
 {
 	// echo
 	bytesWritten(x);
@@ -510,7 +510,7 @@ void S5BConnection::sc_bytesWritten(int x)
 void S5BConnection::sc_error(int)
 {
 	reset();
-	error(ErrSocket);
+	setError(ErrSocket);
 }
 
 void S5BConnection::su_packetReady(const QByteArray &buf)
@@ -1308,7 +1308,7 @@ void S5BManager::Item::setIncomingClient(SocksClient *sc)
 #endif
 
 	connect(sc, SIGNAL(readyRead()), SLOT(sc_readyRead()));
-	connect(sc, SIGNAL(bytesWritten(int)), SLOT(sc_bytesWritten(int)));
+	connect(sc, SIGNAL(bytesWritten(qint64)), SLOT(sc_bytesWritten(qint64)));
 	connect(sc, SIGNAL(error(int)), SLOT(sc_error(int)));
 
 	client = sc;
@@ -1443,7 +1443,7 @@ void S5BManager::Item::conn_result(bool b)
 #endif
 
 		connect(sc, SIGNAL(readyRead()), SLOT(sc_readyRead()));
-		connect(sc, SIGNAL(bytesWritten(int)), SLOT(sc_bytesWritten(int)));
+		connect(sc, SIGNAL(bytesWritten(qint64)), SLOT(sc_bytesWritten(qint64)));
 		connect(sc, SIGNAL(error(int)), SLOT(sc_error(int)));
 
 		m->doSuccess(peer, in_id, h.jid());
@@ -1494,7 +1494,7 @@ void S5BManager::Item::proxy_result(bool b)
 		proxy_conn = 0;
 
 		connect(sc, SIGNAL(readyRead()), SLOT(sc_readyRead()));
-		connect(sc, SIGNAL(bytesWritten(int)), SLOT(sc_bytesWritten(int)));
+		connect(sc, SIGNAL(bytesWritten(qint64)), SLOT(sc_bytesWritten(qint64)));
 		connect(sc, SIGNAL(error(int)), SLOT(sc_error(int)));
 
 		client = sc;
@@ -1549,7 +1549,7 @@ void S5BManager::Item::sc_readyRead()
 		checkForActivation();
 }
 
-void S5BManager::Item::sc_bytesWritten(int)
+void S5BManager::Item::sc_bytesWritten(qint64)
 {
 #ifdef S5B_DEBUG
 	qDebug("sc_bytesWritten\n");

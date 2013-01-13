@@ -57,7 +57,7 @@ public:
 	// reimplemented
 	bool isOpen() const;
 	void write(const QByteArray &);
-	int bytesToWrite() const;
+	qint64 bytesToWrite() const;
 
 signals:
 	void tlsHandshaken();
@@ -65,7 +65,7 @@ signals:
 
 private slots:
 	void bs_readyRead();
-	void bs_bytesWritten(int);
+	void bs_bytesWritten(qint64);
 
 	void layer_tlsHandshaken();
 	void layer_tlsClosed(const QByteArray &);

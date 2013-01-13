@@ -33,7 +33,7 @@ namespace XMPP
 	class BSConnection : public ByteStream
 	{
 	public:
-		enum Error { ErrRefused, ErrConnect, ErrProxy, ErrSocket };
+		enum Error { ErrRefused = ErrCustom, ErrConnect, ErrProxy, ErrSocket };
 		enum State { Idle, Requesting, Connecting, WaitingForAccept, Active };
 
 		BSConnection(QObject *parent = 0) : ByteStream(parent) {}

@@ -97,7 +97,7 @@ QDateTime stamp2TS(const QString &ts)
 	int sec   = ts.mid(15,2).toInt();
 
 	QDate xd;
-	xd.setYMD(year, month, day);
+	xd.setDate(year, month, day);
 	if(!xd.isValid())
 		return QDateTime();
 
@@ -483,7 +483,7 @@ QDomElement stringListToXml(QDomDocument &doc, const QString &name, const QStrin
 
 void readEntry(const QDomElement &e, const QString &name, QString *v)
 {
-	bool found = FALSE;
+	bool found = false;
 	QDomElement tag = findSubTag(e, name, &found);
 	if(!found)
 		return;
@@ -492,7 +492,7 @@ void readEntry(const QDomElement &e, const QString &name, QString *v)
 
 void readNumEntry(const QDomElement &e, const QString &name, int *v)
 {
-	bool found = FALSE;
+	bool found = false;
 	QDomElement tag = findSubTag(e, name, &found);
 	if(!found)
 		return;
@@ -501,16 +501,16 @@ void readNumEntry(const QDomElement &e, const QString &name, int *v)
 
 void readBoolEntry(const QDomElement &e, const QString &name, bool *v)
 {
-	bool found = FALSE;
+	bool found = false;
 	QDomElement tag = findSubTag(e, name, &found);
 	if(!found)
 		return;
-	*v = (tagContent(tag) == "true") ? TRUE: FALSE;
+	*v = (tagContent(tag) == "true") ? true: false;
 }
 
 void readSizeEntry(const QDomElement &e, const QString &name, QSize *v)
 {
-	bool found = FALSE;
+	bool found = false;
 	QDomElement tag = findSubTag(e, name, &found);
 	if(!found)
 		return;
@@ -525,7 +525,7 @@ void readSizeEntry(const QDomElement &e, const QString &name, QSize *v)
 
 void readRectEntry(const QDomElement &e, const QString &name, QRect *v)
 {
-	bool found = FALSE;
+	bool found = false;
 	QDomElement tag = findSubTag(e, name, &found);
 	if(!found)
 		return;
@@ -542,7 +542,7 @@ void readRectEntry(const QDomElement &e, const QString &name, QRect *v)
 
 void readColorEntry(const QDomElement &e, const QString &name, QColor *v)
 {
-	bool found = FALSE;
+	bool found = false;
 	QDomElement tag = findSubTag(e, name, &found);
 	if(!found)
 		return;
@@ -578,7 +578,7 @@ void readBoolAttribute(QDomElement e, const QString &name, bool *v)
 {
 	if(e.hasAttribute(name)) {
 		QString s = e.attribute(name);
-		*v = (s == "true") ? TRUE: FALSE;
+		*v = (s == "true") ? true: false;
 	}
 }
 

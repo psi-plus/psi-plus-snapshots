@@ -84,7 +84,7 @@ void SimpleCli::defineAlias(const QByteArray& alias, const QByteArray& originalN
   */
 QHash<QByteArray, QByteArray> SimpleCli::parse(int argc, char* argv[], const QList<QByteArray>& terminalArgs, int* safeArgc)
 {
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 	const bool winmode = true;
 #else
 	const bool winmode = false;

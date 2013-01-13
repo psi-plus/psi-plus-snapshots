@@ -115,7 +115,7 @@ int ToolTipPosition::getScreenNumber() const
 
 QRect ToolTipPosition::screenRect() const
 {
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	return QApplication::desktop()->availableGeometry(getScreenNumber());
 #else
 	return QApplication::desktop()->screenGeometry(getScreenNumber());
@@ -128,7 +128,7 @@ QPoint ToolTipPosition::calculateTipPosition(const QWidget* label) const
 
 	QPoint p = pos;
 	p += QPoint(2,
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 	              24
 #else
 	              16

@@ -159,7 +159,7 @@ void OptionsTabStatusGeneral::restoreOptions()
 		sp.filterStatus();
 
 		presets[name.toString()] = sp;
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 		QListWidgetItem* item = new QListWidgetItem(sp.name(), d->lw_presets);
 #else
 		QListWidgetItem* item = new QListWidgetItem(PsiIconset::instance()->status(sp.status()).icon(), sp.name(), d->lw_presets);
@@ -246,7 +246,7 @@ void OptionsTabStatusGeneral::saveStatusPreset()
 		presets.remove(oldName);
 		item->setText(sp.name());
 	}
-#ifndef Q_WS_MAC
+#ifndef Q_OS_MAC
 	item->setIcon(PsiIconset::instance()->status(sp.status()).icon());
 #endif
 	presets[sp.name()] = sp;

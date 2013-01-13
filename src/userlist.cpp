@@ -22,7 +22,7 @@
 #include <QPixmap>
 #include <QList>
 #include <QtCrypto>
-#include <QTextDocument> // for Qt::escape()
+#include <QTextDocument> // for TextUtil::escape()
 #include <QBuffer>
 #include <QUrl>
 
@@ -752,7 +752,7 @@ QString UserListItem::makeTip(bool trim, bool doLinkify) const
 QString UserListItem::makeBareTip(bool trim, bool doLinkify) const
 {
 	// NOTE: If you add something to the tooltip,
-	// you most probably want to wrap it with Qt::escape()
+	// you most probably want to wrap it with TextUtil::escape()
 
 	QString str;
 	int s = PsiIconset::instance()->system().iconSize();
@@ -780,7 +780,7 @@ QString UserListItem::makeBareTip(bool trim, bool doLinkify) const
 	str += "<td>";
 
 	if (useAvatar) {
-		str += QString("<icon name=\"avatars/%1\">").arg(isPrivate() ? Qt::escape(jid().full()) : jid().bare());
+		str += QString("<icon name=\"avatars/%1\">").arg(isPrivate() ? TextUtil::escape(jid().full()) : jid().bare());
 		str += "</td><td width=\"10\"></td>";
 		str += "<td>";
 	}
@@ -788,9 +788,9 @@ QString UserListItem::makeBareTip(bool trim, bool doLinkify) const
 	QString nick = JIDUtil::nickOrJid(name(), jid().full());
 	if (!mucItem) {
 		if(jid().full() != nick)
-			str += QString("<div style='white-space:pre'>%1 &lt;%2&gt;</div>").arg(Qt::escape(nick)).arg(Qt::escape(JIDUtil::toString(jid(),true)));
+			str += QString("<div style='white-space:pre'>%1 &lt;%2&gt;</div>").arg(TextUtil::escape(nick)).arg(TextUtil::escape(JIDUtil::toString(jid(),true)));
 		else
-			str += QString("<div style='white-space:pre'>%1</div>").arg(Qt::escape(nick));
+			str += QString("<div style='white-space:pre'>%1</div>").arg(TextUtil::escape(nick));
 	}
 
 	// subscription
@@ -804,7 +804,7 @@ QString UserListItem::makeBareTip(bool trim, bool doLinkify) const
 	if (!mood().isNull()) {
 		str += QString("<div style='white-space:pre'><%1=\"mood/%2\"> ").arg(imgTag).arg(mood().typeValue()) + QObject::tr("Mood") + ": " + mood().typeText();
 		if (!mood().text().isEmpty())
-			str += QString(" (") + Qt::escape(mood().text()) + QString(")");
+			str += QString(" (") + TextUtil::escape(mood().text()) + QString(")");
 		str += "</div>";
 	}
 
@@ -819,22 +819,22 @@ QString UserListItem::makeBareTip(bool trim, bool doLinkify) const
 			str += QString(" - ") + activity().specificTypeText();
 		}
 		if (!activity().text().isEmpty())
-			str += QString(" (") + Qt::escape(activity().text()) + QString(")");
+			str += QString(" (") + TextUtil::escape(activity().text()) + QString(")");
 		str += "</div>";
 	}
 
 	// User Tune
 	if (!tune().isEmpty())
-		str += QString("<div style='white-space:pre'><%1=\"%2\"> ").arg(imgTag).arg("psi/notification_roster_tune") + QObject::tr("Listening to") + ": " + Qt::escape(tune()) + "</div>";
+		str += QString("<div style='white-space:pre'><%1=\"%2\"> ").arg(imgTag).arg("psi/notification_roster_tune") + QObject::tr("Listening to") + ": " + TextUtil::escape(tune()) + "</div>";
 
 	// User Physical Location
 	//if (!physicalLocation().isNull())
-	//	str += QString("<div style='white-space:pre'>") + QObject::tr("Location") + ": " + Qt::escape(physicalLocation().toString()) + "</div>";
+	//	str += QString("<div style='white-space:pre'>") + QObject::tr("Location") + ": " + TextUtil::escape(physicalLocation().toString()) + "</div>";
 
 	// User Geolocation
 	if (!geoLocation().isNull() && PsiOptions::instance()->getOption("options.ui.contactlist.tooltip.geolocation").toBool())
 		str += QString("<div style='white-space:pre'><table cellspacing=\"0\"><tr><td><%1=\"%2\"> </td><td><div>%3</div></td></tr></table></div>") \
-		.arg(imgTag).arg("system/geolocation").arg(Qt::escape(geoLocation().toString().trimmed()));
+		.arg(imgTag).arg("system/geolocation").arg(TextUtil::escape(geoLocation().toString().trimmed()));
 
 	// resources
 	if(!userResourceList().isEmpty()) {
@@ -867,9 +867,9 @@ QString UserListItem::makeBareTip(bool trim, bool doLinkify) const
 				str += QString("<img src=\"data:image/png;base64,%1\" alt=\"img\"/>").arg(imgBase64);
 			}
 
-			str += QString(" <b>%1</b> ").arg(Qt::escape(name)) + QString("(%1)").arg(r.priority());
+			str += QString(" <b>%1</b> ").arg(TextUtil::escape(name)) + QString("(%1)").arg(r.priority());
 			if (!r.status().mucItem().jid().isEmpty())
-				str += QString(" &lt;%1&gt;").arg(Qt::escape(JIDUtil::toString(r.status().mucItem().jid(),true)));
+				str += QString(" &lt;%1&gt;").arg(TextUtil::escape(JIDUtil::toString(r.status().mucItem().jid(),true)));
 			str += secstr + "</div>";
 
 			if(!r.publicKeyID().isEmpty() && PsiOptions::instance()->getOption("options.ui.contactlist.tooltip.pgp").toBool()) {
@@ -898,9 +898,10 @@ QString UserListItem::makeBareTip(bool trim, bool doLinkify) const
 				QString ver = r.versionString();
 				if(trim)
 					ver = dot_truncate(ver, 80);
-				ver = Qt::escape(ver);
+				ver = TextUtil::escape(ver);
 				str += QString("<div class='layer1'><%1=\"%2\"> ").arg(imgTag).arg("clients/" + findClient(r.clientName().toLower())) + QObject::tr("Using") + QString(": %3").arg(ver) + "</div>";
 			}
+
 
 			// Entity Time
 			if (r.timezoneOffset().hasValue()) {
@@ -966,7 +967,7 @@ QString UserListItem::makeBareTip(bool trim, bool doLinkify) const
 		// presence error
 		if(!v_perr.isEmpty()) {
 			QStringList err = v_perr.split('\n');
-			str += QString("<div style='white-space:pre'>") + QObject::tr("Presence Error") + QString(": %1").arg(Qt::escape(err[0])) + "</div>";
+			str += QString("<div style='white-space:pre'>") + QObject::tr("Presence Error") + QString(": %1").arg(TextUtil::escape(err[0])) + "</div>";
 			err.pop_front();
 			foreach (QString line, err)
 				str += "<div>" + Qt::escape(line) + "</div>";

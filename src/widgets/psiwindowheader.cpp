@@ -32,7 +32,7 @@ PsiWindowHeader::PsiWindowHeader(QWidget *p)
 {
 	parent_ = p->window();
 	ui_.setupUi(this);
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	ui_.horiz->insertWidget(0, ui_.closeButton);
 	ui_.horiz->insertWidget(1, ui_.hideButton);
 	ui_.horiz->insertWidget(2, ui_.maximizeButton);

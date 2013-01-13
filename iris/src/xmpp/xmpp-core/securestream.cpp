@@ -20,10 +20,10 @@
 
 /*
   Note: SecureStream depends on the underlying security layers to signal
-    plain-to-encrypted results immediately (as opposed to waiting for the
-    event loop) so that the user cannot add/remove security layers during
-    this conversion moment.  QCA::TLS and QCA::SASL behave as expected,
-    but future layers might not.
+	plain-to-encrypted results immediately (as opposed to waiting for the
+	event loop) so that the user cannot add/remove security layers during
+	this conversion moment.  QCA::TLS and QCA::SASL behave as expected,
+	but future layers might not.
 */
 
 #include "securestream.h"
@@ -149,7 +149,7 @@ public:
 		connect(p.sasl, SIGNAL(readyReadOutgoing()), SLOT(sasl_readyReadOutgoing()));
 		connect(p.sasl, SIGNAL(error()), SLOT(sasl_error()));
 	}
-	
+
 	SecureLayer(CompressionHandler *t)
 	{
 		t->setParent(this); // automatically clean up CompressionHandler when SecureLayer is destroyed
@@ -288,7 +288,7 @@ private slots:
 	{
 		error(p.sasl->errorCode());
 	}
-	
+
 	void compressionHandler_readyRead()
 	{
 		QByteArray a = p.compressionHandler->read();
@@ -373,7 +373,7 @@ public:
 		}
 		return false;
 	}
-	
+
 	bool haveCompress() const
 	{
 		foreach(SecureLayer *s, layers) {
@@ -391,11 +391,12 @@ SecureStream::SecureStream(ByteStream *s)
 
 	d->bs = s;
 	connect(d->bs, SIGNAL(readyRead()), SLOT(bs_readyRead()));
-	connect(d->bs, SIGNAL(bytesWritten(int)), SLOT(bs_bytesWritten(int)));
+	connect(d->bs, SIGNAL(bytesWritten(qint64)), SLOT(bs_bytesWritten(qint64)));
 
 	d->pending = 0;
 	d->active = true;
 	d->topInProgress = false;
+	setOpenMode(QIODevice::ReadWrite);
 }
 
 SecureStream::~SecureStream()
@@ -531,14 +532,14 @@ void SecureStream::write(const QByteArray &a)
 	}
 }
 
-int SecureStream::bytesToWrite() const
+qint64 SecureStream::bytesToWrite() const
 {
 	return d->pending;
 }
 
 void SecureStream::bs_readyRead()
 {
-	QByteArray a = d->bs->read();
+	QByteArray a = d->bs->readAll();
 
 	// send to the first layer
 	if (!d->layers.isEmpty()) {
@@ -550,7 +551,7 @@ void SecureStream::bs_readyRead()
 	}
 }
 
-void SecureStream::bs_bytesWritten(int bytes)
+void SecureStream::bs_bytesWritten(qint64 bytes)
 {
 	foreach(SecureLayer *s, d->layers) {
 		bytes = s->finished(bytes);
@@ -570,6 +571,7 @@ void SecureStream::layer_tlsHandshaken()
 
 void SecureStream::layer_tlsClosed(const QByteArray &)
 {
+	setOpenMode(QIODevice::NotOpen);
 	d->active = false;
 	while (!d->layers.isEmpty()) {
 		delete d->layers.takeFirst();
@@ -624,17 +626,18 @@ void SecureStream::layer_error(int x)
 	SecureLayer *s = (SecureLayer *)sender();
 	int type = s->type;
 	d->errorCode = x;
+	setOpenMode(QIODevice::NotOpen);
 	d->active = false;
 	while (!d->layers.isEmpty()) {
 		delete d->layers.takeFirst();
 	}
 	if(type == SecureLayer::TLS)
-		error(ErrTLS);
+		setError(ErrTLS);
 	else if(type == SecureLayer::SASL)
-		error(ErrSASL);
+		setError(ErrSASL);
 #ifdef USE_TLSHANDLER
 	else if(type == SecureLayer::TLSH)
-		error(ErrTLS);
+		setError(ErrTLS);
 #endif
 }
 
@@ -660,5 +663,5 @@ void SecureStream::incomingData(const QByteArray &a)
 {
 	appendRead(a);
 	if(bytesAvailable())
-		readyRead();
+		emit readyRead();
 }

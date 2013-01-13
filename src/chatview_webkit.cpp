@@ -151,7 +151,7 @@ ChatView::ChatView(QWidget *parent)
 	setFrameStyle(QFrame::StyledPanel | QFrame::Sunken);
 	setLooks(webView);
 
-#ifndef Q_WS_X11	// linux has this feature built-in
+#ifndef HAVE_X11	// linux has this feature built-in
 	connect( PsiOptions::instance(), SIGNAL(optionChanged(QString)), SLOT(psiOptionChanged(QString)) ); //needed only for save autocopy state atm
 	psiOptionChanged("options.ui.automatically-copy-selected-text"); // init autocopy connection
 #endif

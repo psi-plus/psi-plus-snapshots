@@ -213,12 +213,12 @@ QByteArray IBBConnection::read(int)
 	return a;
 }
 
-int IBBConnection::bytesAvailable() const
+qint64 IBBConnection::bytesAvailable() const
 {
 	return d->recvBuf.size();
 }
 
-int IBBConnection::bytesToWrite() const
+qint64 IBBConnection::bytesToWrite() const
 {
 	return d->sendBuf.size();
 }
@@ -295,11 +295,11 @@ void IBBConnection::ibb_finished()
 			qDebug("IBBConnection[%d]: %s refused.", d->id, qPrintable(d->peer.full()));
 #endif
 			reset(true);
-			error(ErrRequest);
+			setError(ErrRequest);
 		}
 		else {
 			reset(true);
-			error(ErrData);
+			setError(ErrData);
 		}
 	}
 }

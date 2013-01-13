@@ -116,7 +116,6 @@ BasicProtocol::StreamCondEntry BasicProtocol::streamCondTable[] =
 	{ "improper-addressing",      ImproperAddressing },
 	{ "internal-server-error",    InternalServerError },
 	{ "invalid-from",             InvalidFrom },
-	{ "invalid-id",               InvalidId },
 	{ "invalid-namespace",        InvalidNamespace },
 	{ "invalid-xml",              InvalidXml },
 	{ "not-authorized",           StreamNotAuthorized },
@@ -130,7 +129,7 @@ BasicProtocol::StreamCondEntry BasicProtocol::streamCondTable[] =
 	{ "unsupported-encoding",     UnsupportedEncoding },
 	{ "unsupported-stanza-type",  UnsupportedStanzaType },
 	{ "unsupported-version",      UnsupportedVersion },
-	{ "xml-not-well-formed",      XmlNotWellFormed },
+	{ "not-well-formed",          NotWellFormed },
 	{ 0, 0 },
 };
 
@@ -480,7 +479,7 @@ void BasicProtocol::handleDocOpen(const Parser::Event &pe)
 bool BasicProtocol::handleError()
 {
 	if(isIncoming())
-		return errorAndClose(XmlNotWellFormed);
+		return errorAndClose(NotWellFormed);
 	else
 		return error(ErrParse);
 }

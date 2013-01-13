@@ -15,13 +15,13 @@ public:
 	ZLibDecompressor(QIODevice* device);
 	~ZLibDecompressor();
 
-	int write(const QByteArray&);
+	qint64 write(const QByteArray&);
 
 protected slots:
 	void flush();
 
 protected:
-	int write(const QByteArray&, bool flush);
+	qint64 write(const QByteArray&, bool flush);
 
 private:
 	QIODevice* device_;

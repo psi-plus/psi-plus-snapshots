@@ -22,12 +22,12 @@
 #define XMPP_H
 
 #include <QPair>
-#include <qobject.h>
-#include <qstring.h>
-#include <qhostaddress.h>
-#include <qstring.h>
-#include <qxml.h>
-#include <qdom.h>
+#include <QUrl>
+#include <QObject>
+#include <QString>
+#include <QHostAddress>
+#include <QString>
+#include <QDomDocument>
 
 #include "addressresolver.h"
 #include "xmpp/jid/jid.h"
@@ -120,20 +120,21 @@ namespace XMPP
 			int type() const;
 			QString host() const;
 			quint16 port() const;
-			QString url() const;
+			QUrl url() const;
 			QString user() const;
 			QString pass() const;
 			int pollInterval() const;
 
 			void setHttpConnect(const QString &host, quint16 port);
-			void setHttpPoll(const QString &host, quint16 port, const QString &url);
+			void setHttpPoll(const QString &host, quint16 port, const QUrl &url);
 			void setSocks(const QString &host, quint16 port);
 			void setUserPass(const QString &user, const QString &pass);
 			void setPollInterval(int secs);
 
 		private:
 			int t;
-			QString v_host, v_url;
+			QUrl v_url;
+			QString v_host;
 			quint16 v_port;
 			QString v_user, v_pass;
 			int v_poll;

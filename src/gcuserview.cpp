@@ -24,6 +24,7 @@
 #include <QPainter>
 #include <QMouseEvent>
 #include <QItemDelegate>
+#include <QMimeData>
 #include <QMenu>
 
 #include "capsmanager.h"
@@ -316,7 +317,7 @@ void GCUserViewItem::setIcon(const QPixmap &icon)
 }
 
 bool GCUserViewItem::operator<(const QTreeWidgetItem& it) const
-{	
+{
 	GCUserViewItem *item = (GCUserViewItem*)(&it);
 	if(PsiOptions::instance()->getOption("options.ui.muc.userlist.contact-sort-style").toString() == "status") {
 		int rank = rankStatus(s.type()) - rankStatus(item->s.type());
@@ -761,8 +762,8 @@ void GCUserView::mousePressEvent(QMouseEvent *event)
 	if (!item || !item->parent() || !gcDlg_)
 		return;
 	if (event->button() == Qt::MidButton ||
-	    (event->button() == Qt::LeftButton &&
-	    qApp->keyboardModifiers() == Qt::ShiftModifier))
+		(event->button() == Qt::LeftButton &&
+		qApp->keyboardModifiers() == Qt::ShiftModifier))
 	{
 		emit insertNick(item->text(0));
 	}

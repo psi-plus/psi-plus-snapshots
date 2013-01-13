@@ -258,7 +258,7 @@ void FileTransfer::ft_finished()
 			}
 			connect(d->c, SIGNAL(connected()), SLOT(stream_connected()));
 			connect(d->c, SIGNAL(connectionClosed()), SLOT(stream_connectionClosed()));
-			connect(d->c, SIGNAL(bytesWritten(int)), SLOT(stream_bytesWritten(int)));
+			connect(d->c, SIGNAL(bytesWritten(qint64)), SLOT(stream_bytesWritten(qint64)));
 			connect(d->c, SIGNAL(error(int)), SLOT(stream_error(int)));
 
 			d->c->connectToJid(d->peer, d->id);
@@ -309,7 +309,7 @@ void FileTransfer::stream_connectionClosed()
 
 void FileTransfer::stream_readyRead()
 {
-	QByteArray a = d->c->read();
+	QByteArray a = d->c->readAll();
 	qlonglong need = d->length - d->sent;
 	if((qlonglong)a.size() > need)
 		a.resize((uint)need);
@@ -319,7 +319,7 @@ void FileTransfer::stream_readyRead()
 	readyRead(a);
 }
 
-void FileTransfer::stream_bytesWritten(int x)
+void FileTransfer::stream_bytesWritten(qint64 x)
 {
 	d->sent += x;
 	if(d->sent == d->length)

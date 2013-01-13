@@ -33,13 +33,12 @@
 #include <QKeyEvent>
 #include <QEvent>
 #include <QVBoxLayout>
-#include <QMenu>
-#include <QMenuItem>
 #include <QSplitter>
+#include <QMenu>
 #include <QtAlgorithms>
 #include <QShortcut>
 
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 #include <windows.h>
 #endif
 
@@ -48,6 +47,7 @@
 #include "common.h"
 #include "showtextdlg.h"
 #include "psicon.h"
+#include "textutil.h"
 #ifndef NEWCONTACTLIST
 #include "contactview.h"
 #endif
@@ -84,7 +84,7 @@
 #include "rosteravatarframe.h"
 #include "avatars.h"
 
-#ifdef Q_WS_X11
+#ifdef HAVE_X11
 #include <x11windowsystem.h>
 #endif
 
@@ -150,7 +150,7 @@ public:
 	bool isHide;
 
 
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 	DWORD deactivationTickCount;
 #endif
 
@@ -193,10 +193,10 @@ MainWin::Private::Private(PsiCon* _psi, MainWin* _mainWin) : splitter(0), mainTa
 
 	statusMapper = new QSignalMapper(mainWin);
 	mainWin->connect(statusMapper, SIGNAL(mapped(int)), mainWin, SLOT(activatedStatusAction(int)));
-  
+
 	filterActive = false;
 	prefilterShowOffline = false;
-	prefilterShowAway = false;  
+	prefilterShowAway = false;
 
 	char* squishStr = getenv("SQUISH_ENABLED");
 	squishEnabled = squishStr != 0;
@@ -294,16 +294,16 @@ void MainWin::Private::updateMenu(QStringList actions, QMenu* menu)
 // MainWin
 //----------------------------------------------------------------------------
 
-//#ifdef Q_WS_X11
+//#ifdef HAVE_X11
 //#define TOOLW_FLAGS WStyle_Customize
 //#else
 //#define TOOLW_FLAGS ((Qt::WFlags) 0)
 //#endif
 
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 #define TOOLW_FLAGS (Qt::WindowMinimizeButtonHint)
 #else
-#define TOOLW_FLAGS ((Qt::WFlags) 0)
+#define TOOLW_FLAGS ((Qt::WindowFlags) 0)
 #endif
 
 const QString toolbarsStateOptionPath = "options.ui.save.toolbars-state";
@@ -379,7 +379,7 @@ MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
 #endif
 
 	int layoutMargin = 2;
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	layoutMargin = 0;
 #ifndef NEWCONTACTLIST
 	cvlist->setFrameShape(QFrame::NoFrame);
@@ -440,7 +440,7 @@ MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
 	//add contact view
 #ifndef NEWCONTACTLIST
 	d->vb_roster->addWidget(cvlist);
-# ifdef Q_WS_MAC
+# ifdef Q_OS_MAC
 	// Disable the empty vertical scrollbar:
 	// it's here because of weird code in q3scrollview.cpp
 	// Q3ScrollView::updateScrollBars() around line 877
@@ -458,7 +458,7 @@ MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
 	connect(d->statusMenu, SIGNAL(statusPresetDialogForced(const QString &)), d->psi, SLOT(showStatusDialog(const QString &)));
 	d->optionsMenu = new QMenu(tr("General"), this);
 	d->optionsMenu->setObjectName("optionsMenu");
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	d->trayMenu = d->statusMenu;
 	extern void qt_mac_set_dock_menu(QMenu *);
 	qt_mac_set_dock_menu(d->statusMenu);
@@ -482,14 +482,14 @@ MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
 	updateCaption();
 
 	d->registerActions();
-	
+
 	connect(d->psi->contactList(), SIGNAL(accountFeaturesChanged()), SLOT(accountFeaturesChanged()));
 	accountFeaturesChanged();
 
 	decorateButton(STATUS_OFFLINE);
 
 	// Mac-only menus
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	QMenu* mainMenu = new QMenu(tr("Menu"), this);
 	mainMenu->setObjectName("macMainMenu");
 	mainMenuBar()->addMenu(mainMenu);
@@ -520,7 +520,7 @@ MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
 	d->getAction("show_statusmsg")->addTo(viewMenu);
 
 	// Mac-only menus
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	d->toolsMenu = new QMenu(tr("Tools"), this);
 	mainMenuBar()->addMenu(d->toolsMenu);
 	connect(d->toolsMenu, SIGNAL(aboutToShow()), SLOT(buildToolsMenu()));
@@ -548,7 +548,7 @@ MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
 	if (!PsiOptions::instance()->getOption("options.ui.contactlist.show-menubar").toBool())  {
 		mainMenuBar()->hide();
 	}
-	//else 
+	//else
 	//	mainMenuBar()->show();
 #endif
 	d->optionsButton->setMenu( d->optionsMenu );
@@ -565,9 +565,8 @@ MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
 	connect(psi, SIGNAL(emitOptionsUpdate()), SLOT(optionsUpdate()));
 	optionsUpdate();
 
-        /*QShortcut *sp_ss = new QShortcut(QKeySequence(tr("Ctrl+Shift+N")), this);
-        connect(sp_ss, SIGNAL(triggered()), SLOT(avcallConfig()));*/
-
+		/*QShortcut *sp_ss = new QShortcut(QKeySequence(tr("Ctrl+Shift+N")), this);
+		connect(sp_ss, SIGNAL(triggered()), SLOT(avcallConfig()));*/
 	optionChanged("options.ui.contactlist.css");
 
 	connect(d->hideTimer, SIGNAL(timeout()), SLOT(hideTimerTimeout()));
@@ -806,7 +805,7 @@ void MainWin::setWindowOpts(bool _onTop, bool _asTool)
 	d->onTop = _onTop;
 	d->asTool = _asTool;
 
-	Qt::WFlags flags = windowFlags();
+	Qt::WindowFlags flags = windowFlags();
 	if(d->onTop) {
 		flags |= Qt::WindowStaysOnTopHint;
 	}
@@ -819,6 +818,7 @@ void MainWin::setWindowOpts(bool _onTop, bool _asTool)
 	else {
 		flags &= ~Qt::Tool;
 	}
+
 	setWindowFlags(flags);
 	show();
 }
@@ -836,7 +836,7 @@ void MainWin::setUseDock(bool use)
 
 	Q_ASSERT(!d->tray);
 	if (use) {
-		d->tray = new PsiTrayIcon("Psi", d->trayMenu);
+		d->tray = new PsiTrayIcon(ApplicationInfo::name(), d->trayMenu);
 		connect(d->tray, SIGNAL(clicked(const QPoint &, int)), SLOT(trayClicked(const QPoint &, int)));
 		connect(d->tray, SIGNAL(doubleClicked(const QPoint &)), SLOT(trayDoubleClicked()));
 		d->tray->setIcon(PsiIconset::instance()->statusPtr(STATUS_OFFLINE));
@@ -871,7 +871,7 @@ void MainWin::activatedStatusAction(int id)
 
 QMenuBar* MainWin::mainMenuBar() const
 {
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	if (!d->squishEnabled) {
 		return psiCon()->defaultMenuBar();
 	}
@@ -959,18 +959,18 @@ void MainWin::buildOptionsMenu()
 
 	QStringList actions;
 	actions << "help_readme"
-	        << "help_tip"
-	        << "separator"
-	        << "help_online_help"
-	        << "help_online_wiki"
-	        << "help_online_home"
-	        << "help_online_forum"
-	        << "help_psi_muc"
-	        << "help_report_bug"
-	        << "diagnostics"
-	        << "separator"
-	        << "help_about"
-	        << "help_about_qt";
+			<< "help_tip"
+			<< "separator"
+			<< "help_online_help"
+			<< "help_online_wiki"
+			<< "help_online_home"
+			<< "help_online_forum"
+			<< "help_psi_muc"
+			<< "help_report_bug"
+			<< "diagnostics"
+			<< "separator"
+			<< "help_about"
+			<< "help_about_qt";
 
 	if(AvCallManager::isSupported())
 		actions << "help_about_psimedia";
@@ -991,10 +991,10 @@ void MainWin::buildMainMenu()
 	}
 	actions << "menu_disco"
 #ifdef GROUPCHAT
-	        << "menu_join_groupchat"
+			<< "menu_join_groupchat"
 #endif
-	        << "separator"
-	        << "menu_account_setup";
+			<< "separator"
+			<< "menu_account_setup";
 	if (PsiOptions::instance()->getOption("options.ui.menu.main.change-profile").toBool()) {
 		actions << "menu_change_profile";
 	}
@@ -1007,12 +1007,12 @@ void MainWin::buildToolsMenu()
 {
 	QStringList actions;
 	actions << "menu_file_transfer"
-	        << "separator"
-	        << "menu_xml_console";
-	
+			<< "separator"
+			<< "menu_xml_console";
+
 	d->updateMenu(actions, d->toolsMenu);
 }
-	
+
 void MainWin::buildGeneralMenu(QMenu* menu)
 {
 	// options menu
@@ -1023,11 +1023,11 @@ void MainWin::buildGeneralMenu(QMenu* menu)
 	}
 	actions << "menu_disco"
 #ifdef GROUPCHAT
-	        << "menu_join_groupchat"
+			<< "menu_join_groupchat"
 #endif
-	        << "menu_account_setup"
-	        << "menu_options"
-	        << "menu_file_transfer";
+			<< "menu_account_setup"
+			<< "menu_options"
+			<< "menu_file_transfer";
 	if (PsiOptions::instance()->getOption("options.ui.menu.main.change-profile").toBool()) {
 		actions << "menu_change_profile";
 	}
@@ -1060,7 +1060,7 @@ void MainWin::actOnlineHomeActivated ()
 
 void MainWin::actOnlineForumActivated ()
 {
-    DesktopUtil::openUrl("http://forum.psi-plus.com");
+	DesktopUtil::openUrl("http://forum.psi-plus.com");
 }
 
 void MainWin::actJoinPsiMUCActivated()
@@ -1273,7 +1273,7 @@ void MainWin::activatedAccOption(PsiAccount* pa, int x)
 
 void MainWin::buildTrayMenu()
 {
-#ifndef Q_WS_MAC
+#ifndef Q_OS_MAC
 	d->trayMenu->clear();
 
 	if(d->nextAmount > 0) {
@@ -1289,7 +1289,7 @@ void MainWin::buildTrayMenu()
 	}
 	d->optionsButton->addTo(d->trayMenu);
 	d->trayMenu->addMenu(d->statusMenu);
-	
+
 	d->trayMenu->addSeparator();
 	// TODO!
 	d->getAction("menu_quit")->addTo(d->trayMenu);
@@ -1304,7 +1304,7 @@ void MainWin::setTrayToolTip()
 	QString s = ApplicationInfo::name();
 	QString str = "<qt>";
 	QString imgTag = "icon name";
-	str += QString("<div style='white-space:pre'><b>%1</b></div>").arg(Qt::escape(ApplicationInfo::name()));
+	str += QString("<div style='white-space:pre'><b>%1</b></div>").arg(TextUtil::escape(ApplicationInfo::name()));
 	QString Tip = "";
 	QString TipPlain = "";
 	QString Events = "";
@@ -1325,12 +1325,12 @@ void MainWin::setTrayToolTip()
  			istr = "status/chat";
 		else if(status == STATUS_INVISIBLE)
 			istr = "status/invisible";
-		Tip += QString("<div style='white-space:pre'>") + QString("<%1=\"%2\"> ").arg(imgTag).arg(istr) + QString("<b>%1</b>").arg(Qt::escape(pa->name())) + "</div>";
+		Tip += QString("<div style='white-space:pre'>") + QString("<%1=\"%2\"> ").arg(imgTag).arg(istr) + QString("<b>%1</b>").arg(TextUtil::escape(pa->name())) + "</div>";
 		TipPlain += "\n" + pa->name() + " (" + stat.typeString() + ")";
 		QString text = stat.status();		
 		if(!text.isEmpty()) {
 			text = clipStatus(text, 40, 1);
-			Tip += QString("<div style='white-space:pre'>%1: %2</div>").arg(tr("Status Message")).arg(Qt::escape(text));
+			Tip += QString("<div style='white-space:pre'>%1: %2</div>").arg(tr("Status Message")).arg(TextUtil::escape(text));
 		}
 
 		PsiEvent *e = 0;
@@ -1352,19 +1352,19 @@ void MainWin::setTrayToolTip()
 				}
 			}
 			if(!from.isEmpty()) {
-				Events += QString("<div style='white-space:pre'>%1</div>").arg(Qt::escape(from));
+				Events += QString("<div style='white-space:pre'>%1</div>").arg(TextUtil::escape(from));
 				EventsPlain += "\n" + from;
 			}
 		}
 	}
 
 	if(!Tip.isEmpty()) {
-		str += QString("<div style='white-space:pre'><u><b>%1</b></u></div>").arg(Qt::escape(tr("Active accounts:"))) + Tip;
+		str += QString("<div style='white-space:pre'><u><b>%1</b></u></div>").arg(TextUtil::escape(tr("Active accounts:"))) + Tip;
 		s += tr("\nActive accounts:") + TipPlain;
 	}
 
 	if(!Events.isEmpty()) {
-		str += QString("<div style='white-space:pre'><u><b>%1</b></u></div>").arg(Qt::escape(tr("Incoming event(s) from:"))) + Events;
+		str += QString("<div style='white-space:pre'><u><b>%1</b></u></div>").arg(TextUtil::escape(tr("Incoming event(s) from:"))) + Events;
 		s += tr("\nIncoming event(s) from:") + EventsPlain;
 	}
 
@@ -1438,7 +1438,7 @@ void MainWin::tryCloseProgram()
 
 void MainWin::closeEvent(QCloseEvent* e)
 {
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	trayHide();
 	e->accept();
 #else
@@ -1460,7 +1460,7 @@ void MainWin::closeEvent(QCloseEvent* e)
 
 void MainWin::changeEvent(QEvent *event)
 {
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 	if (event->type() == QEvent::ActivationChange
 		&& PsiOptions::instance()->getOption("options.ui.systemtray.enable").toBool()
 		&& PsiOptions::instance()->getOption("options.ui.contactlist.raise-inactive").toBool()) {
@@ -1487,7 +1487,7 @@ void MainWin::changeEvent(QEvent *event)
 
 void MainWin::keyPressEvent(QKeyEvent* e)
 {
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	bool allowed = true;
 #else
 	bool allowed = d->tray ? true: false;
@@ -1505,7 +1505,7 @@ void MainWin::keyPressEvent(QKeyEvent* e)
 		closekey = true;
 #endif
 	}
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	else if(e->key() == Qt::Key_W && e->modifiers() & Qt::ControlModifier) {
 		closekey = true;
 	}
@@ -1544,7 +1544,7 @@ bool MainWin::eventFilter(QObject *o, QEvent *e)
 	return false;
 }
 
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 #include <windows.h>
 bool MainWin::winEvent(MSG* msg, long* result)
 {
@@ -1586,7 +1586,7 @@ void MainWin::optionsUpdate()
 	d->lastStatus = -2;
 	decorateButton(status);
 
-#ifndef Q_WS_MAC
+#ifndef Q_OS_MAC
 	if (!PsiOptions::instance()->getOption("options.ui.contactlist.show-menubar").toBool()) {
 		mainMenuBar()->hide();
 	}
@@ -1598,7 +1598,7 @@ void MainWin::optionsUpdate()
 	setWindowOpacity(double(qMax(MINIMUM_OPACITY,PsiOptions::instance()->getOption("options.ui.contactlist.opacity").toInt()))/100);
 
 	buildStatusMenu();
-	
+
 	updateTray();
 }
 
@@ -1607,7 +1607,7 @@ void MainWin::toggleVisible(bool fromTray)
 	if (PsiOptions::instance()->getOption("options.ui.contactlist.raise-inactive").toBool())
 	{
 		bool hidden = false;
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 		if (fromTray) {
 			int timeout = 300;
 			if (PsiOptions::instance()->getOption("options.ui.systemtray.use-double-click").toBool())
@@ -1617,7 +1617,7 @@ void MainWin::toggleVisible(bool fromTray)
 		else {
 			hidden = isHidden() || !isActiveWindow();
 		}
-#elif defined(Q_WS_X11)
+#elif defined(HAVE_X11)
 		Q_UNUSED(fromTray);
 		hidden = isHidden() || X11WindowSystem::instance()->isWindowObscured(this, PsiOptions::instance()->getOption("options.ui.contactlist.always-on-top").toBool());
 #else
@@ -1635,12 +1635,11 @@ void MainWin::toggleVisible(bool fromTray)
 		isHidden() ? trayShow() : trayHide();
 }
 
-void MainWin::setTrayToolTip(const Status&, bool, bool)
+void MainWin::setTrayToolTip(const Status& status, bool, bool)
 {
 	if (!d->tray) {
 		return;
 	}
-
 	setTrayToolTip();
 }
 
@@ -1741,7 +1740,7 @@ void MainWin::updateTray()
 	else {
 		d->tray->setIcon(PsiIconset::instance()->statusPtr(d->lastStatus));
 	}
-	
+
 	buildTrayMenu();
 	d->tray->setContextMenu(d->trayMenu);
 
@@ -1829,7 +1828,7 @@ void MainWin::dockActivated()
 /**
  * Called when the cancel is clicked or the search becomes empty.
  * Cancels the search.
- */ 
+ */
 void MainWin::searchClearClicked()
 {
 	d->searchWidget->setVisible(false);
@@ -1840,15 +1839,15 @@ void MainWin::searchClearClicked()
 	if (d->filterActive)
 	{
 		d->getAction("show_offline")->setChecked(d->prefilterShowOffline);
-		d->getAction("show_away")->setChecked(d->prefilterShowAway);  
+		d->getAction("show_away")->setChecked(d->prefilterShowAway);
 	}
-	d->filterActive=false;  
+	d->filterActive=false;
 }
 
 /**
  * Called when the contactview has a keypress.
  * Starts the search/filter process
- */ 
+ */
 void MainWin::searchTextStarted(QString const& text)
 {
 	d->searchWidget->setVisible(true);
@@ -1860,7 +1859,7 @@ void MainWin::searchTextStarted(QString const& text)
 /**
  * Called when the search input is changed.
  * Updates the search.
- */ 
+ */
 void MainWin::searchTextEntered(QString const& text)
 {
 	if (!d->filterActive)
@@ -1880,7 +1879,7 @@ void MainWin::searchTextEntered(QString const& text)
 	}
 }
 
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 void MainWin::setWindowIcon(const QPixmap&)
 {
 }
@@ -1892,7 +1891,7 @@ void MainWin::setWindowIcon(const QPixmap& p)
 #endif
 
 #if 0
-#if defined(Q_WS_WIN)
+#if defined(Q_OS_WIN)
 #include <windows.h>
 void MainWin::showNoFocus()
 {

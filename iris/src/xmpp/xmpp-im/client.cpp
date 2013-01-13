@@ -98,7 +98,7 @@
 
 using namespace Jabber;*/
 
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 #define vsnprintf _vsnprintf
 #endif
 
@@ -618,7 +618,6 @@ void Client::send(const QDomElement &x)
 		return;
 	}
 
-	emit stanzaElementOutgoing(e);
 	QString out = s.toString();
 	debug(QString("Client: outgoing: [\n%1]\n").arg(out));
 	emit xmlOutgoing(out);

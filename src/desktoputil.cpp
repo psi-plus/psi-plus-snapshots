@@ -28,7 +28,7 @@
 #include <QSysInfo>
 #include <QSet>
 
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 #include <windows.h>
 
 QString defaultBrowser()
@@ -46,7 +46,7 @@ static QSet<QString> handlers;
 
 static bool doOpenUrl(const QUrl& url)
 {
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN
 	if (!handlers.contains(url.scheme())) {
 		// on Vista it always returns iexplore.exe as default browser
 		bool oldStyleDefaultBrowserInfo = QSysInfo::WindowsVersion < QSysInfo::WV_VISTA;
@@ -85,9 +85,7 @@ static bool doOpenUrl(const QUrl& url)
 bool DesktopUtil::openUrl(const QString& url)
 {
 	if (url.startsWith("addnick://")) return true;
-
-	QByteArray ascii = url.toUtf8();
-
+	QByteArray ascii = url.toLatin1();
 	if (ascii == url)
 		return doOpenUrl(QUrl::fromEncoded(ascii));
 	else

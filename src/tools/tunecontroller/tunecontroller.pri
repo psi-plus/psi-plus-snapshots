@@ -1,4 +1,4 @@
-INCLUDEPATH += $$PWD 
+INCLUDEPATH += $$PWD
 DEPENDPATH += $$PWD
 
 HEADERS += \
@@ -8,7 +8,7 @@ HEADERS += \
 	$$PWD/filetunecontroller.h \
 	$$PWD/tunecontrollerplugin.h \
 	$$PWD/tunecontrollermanager.h \
-	$$PWD/tunecontrollerinterface.h 
+	$$PWD/tunecontrollerinterface.h
 
 
 
@@ -25,10 +25,10 @@ tc_itunes {
 		INCLUDEPATH += $$ITUNES_PLUGIN_PATH
 
 		HEADERS += \
-			$$PWD/itunestunecontroller.h 
-			
+			$$PWD/itunescontroller.h
+
 		SOURCES += \
-			$$PWD/itunestunecontroller.cpp \
+			$$PWD/itunescontroller.cpp \
 			$$ITUNES_PLUGIN_PATH/itunesplugin.cpp
 
 		QMAKE_LFLAGS += -framework CoreFoundation
@@ -42,13 +42,13 @@ tc_winamp {
 	INCLUDEPATH += $$WINAMP_PLUGIN_PATH
 
 	HEADERS += \
-		$$PWD/winamptunecontroller.h \
-		$$WINAMP_PLUGIN_PATH/winampplugin.h 
-		
+		$$PWD/winampcontroller.h \
+		$$WINAMP_PLUGIN_PATH/winampplugin.h
+
 	SOURCES += \
-		$$PWD/winamptunecontroller.cpp \
+		$$PWD/winampcontroller.cpp \
 		$$WINAMP_PLUGIN_PATH/winampplugin.cpp
-	
+
 	LIBS += -lUser32
 }
 

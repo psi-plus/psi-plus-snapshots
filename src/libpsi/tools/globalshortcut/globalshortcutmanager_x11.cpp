@@ -22,13 +22,14 @@
 #include "globalshortcuttrigger.h"
 
 #include <QWidget>
-#include <QX11Info>
 #include <QKeyEvent>
 #include <QCoreApplication>
 
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
+
+#include "x11info.h"
 
 #ifdef KeyPress
 // defined by X11 headers
@@ -42,7 +43,7 @@ class X11KeyTrigger
 public:
 	virtual ~X11KeyTrigger() {}
 	virtual void activate() = 0;
-	virtual bool isAccepted(int qkey) const = 0;
+	virtual bool isAccepted(const QKeySequence &qkey) const = 0;
 };
 
 class X11KeyTriggerManager : public QObject
@@ -76,19 +77,24 @@ protected:
 	bool eventFilter(QObject* o, QEvent* e)
 	{
 		if(e->type() == QEvent::KeyPress) {
-			QKeyEvent* k = static_cast<QKeyEvent*>(e);
-			int qkey = k->key();
-			if (k->modifiers() & Qt::ShiftModifier)
-				qkey |= Qt::SHIFT;
-			if (k->modifiers() & Qt::ControlModifier)
-				qkey |= Qt::CTRL;
-			if (k->modifiers() & Qt::AltModifier)
-				qkey |= Qt::ALT;
-			if (k->modifiers() & Qt::MetaModifier)
-				qkey |= Qt::META;
+			QKeyEvent* ke = static_cast<QKeyEvent*>(e);
+			int keys[5] = {0,0,0,0,0};
+			int n = 0;
+			int qkey = ke->key();
+			keys[n++] = qkey;
+			if (ke->modifiers() & Qt::ShiftModifier)
+				keys[n++] = Qt::SHIFT;
+			if (ke->modifiers() & Qt::ControlModifier)
+				keys[n++] = Qt::CTRL;
+			if (ke->modifiers() & Qt::AltModifier)
+				keys[n++] = Qt::ALT;
+			if (ke->modifiers() & Qt::MetaModifier)
+				keys[n++] = Qt::META;
+
+			QKeySequence ks(keys[0], keys[1], keys[2], keys[3]);
 
 			foreach(X11KeyTrigger* trigger, triggers_) {
-				if (trigger->isAccepted(qkey)) {
+				if (trigger->isAccepted(ks)) {
 					trigger->activate();
 					return true;
 				}
@@ -129,14 +135,14 @@ private:
 		if (haveMods)
 			return;
 
-		Display* appDpy = QX11Info::display();
+		Display* appDpy = X11Info::display();
 		XModifierKeymap* map = XGetModifierMapping(appDpy);
 		if (map) {
 			// XKeycodeToKeysym helper code adapeted from xmodmap
 			int min_keycode, max_keycode, keysyms_per_keycode = 1;
 			XDisplayKeycodes (appDpy, &min_keycode, &max_keycode);
 			XFree(XGetKeyboardMapping (appDpy, min_keycode, (max_keycode - min_keycode + 1), &keysyms_per_keycode));
-			
+
 			int i, maskIndex = 0, mapIndex = 0;
 			for (maskIndex = 0; maskIndex < 8; maskIndex++) {
 				for (i = 0; i < map->max_keypermod; i++) {
@@ -146,7 +152,7 @@ private:
 						do {
 							sym = XKeycodeToKeysym(appDpy, map->modifiermap[mapIndex], symIndex);
 							symIndex++;
- 						} while ( !sym && symIndex < keysyms_per_keycode);
+						} while ( !sym && symIndex < keysyms_per_keycode);
 						if (alt_mask == 0 && (sym == XK_Alt_L || sym == XK_Alt_R)) {
 							alt_mask = 1 << maskIndex;
 						}
@@ -191,23 +197,35 @@ private:
 public:
 	static bool convertKeySequence(const QKeySequence& ks, unsigned int* _mod, Qt_XK_Keygroup* _kg)
 	{
-		int code = ks;
-		ensureModifiers();
-
-		unsigned int mod = 0;
-		if (code & Qt::META)
-			mod |= meta_mask;
-		if (code & Qt::SHIFT)
-			mod |= ShiftMask;
-		if (code & Qt::CTRL)
-			mod |= ControlMask;
-		if (code & Qt::ALT)
-			mod |= alt_mask;
-
+		int code = 0;
 		Qt_XK_Keygroup kg;
 		kg.num = 0;
 		kg.sym[0] = 0;
-		code &= ~Qt::KeyboardModifierMask;
+
+		ensureModifiers();
+
+		unsigned int mod = 0;
+		for (int i = 0; i < ks.count(); i++) {
+			switch (ks[i]) {
+			case Qt::META:
+				mod |= meta_mask;
+				break;
+			case Qt::SHIFT:
+				mod |= ShiftMask;
+				break;
+			case Qt::CTRL:
+				mod |= ControlMask;
+				break;
+			case Qt::ALT:
+				mod |= alt_mask;
+				break;
+			case Qt::GroupSwitchModifier:
+			default:
+				if (ks[i] & ~Qt::KeyboardModifierMask) {
+					code = ks[i] & ~Qt::KeyboardModifierMask;
+				}
+			}
+		}
 
 		bool found = false;
 		for (int n = 0; qt_xk_table[n].key != Qt::Key_unknown; ++n) {
@@ -256,7 +274,7 @@ class GlobalShortcutManager::KeyTrigger::Impl : public X11KeyTrigger
 {
 private:
 	KeyTrigger* trigger_;
-	int qkey_;
+	QKeySequence qkey_;
 
 	struct GrabbedKey {
 		int code;
@@ -274,7 +292,7 @@ private:
 
 	void bind(int keysym, unsigned int mod)
 	{
-		int code = XKeysymToKeycode(QX11Info::display(), keysym);
+		int code = XKeysymToKeycode(X11Info::display(), keysym);
 
 		// don't grab keys with empty code (because it means just the modifier key)
 		if (keysym && !code)
@@ -282,15 +300,15 @@ private:
 
 		failed = false;
 		XErrorHandler savedErrorHandler = XSetErrorHandler(XGrabErrorHandler);
-		WId w = QX11Info::appRootWindow();
+		WId w = X11Info::appRootWindow();
 		foreach(long mask_mod, X11KeyTriggerManager::ignModifiersList()) {
-			XGrabKey(QX11Info::display(), code, mod | mask_mod, w, False, GrabModeAsync, GrabModeAsync);
+			XGrabKey(X11Info::display(), code, mod | mask_mod, w, False, GrabModeAsync, GrabModeAsync);
 			GrabbedKey grabbedKey;
 			grabbedKey.code = code;
 			grabbedKey.mod  = mod | mask_mod;
 			grabbedKeys_ << grabbedKey;
 		}
-		XSync(QX11Info::display(), False);
+		XSync(X11Info::display(), False);
 		XSetErrorHandler(savedErrorHandler);
 	}
 
@@ -319,7 +337,7 @@ public:
 		X11KeyTriggerManager::instance()->removeTrigger(this);
 
 		foreach(GrabbedKey key, grabbedKeys_)
-			XUngrabKey(QX11Info::display(), key.code, key.mod, QX11Info::appRootWindow());
+			XUngrabKey(X11Info::display(), key.code, key.mod, X11Info::appRootWindow());
 	}
 
 	void activate()
@@ -327,7 +345,7 @@ public:
 		emit trigger_->triggered();
 	}
 
-	bool isAccepted(int qkey) const
+	bool isAccepted(const QKeySequence &qkey) const
 	{
 		return qkey_ == qkey;
 	}

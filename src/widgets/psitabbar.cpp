@@ -22,8 +22,12 @@
 #include "psitabwidget.h"
 #include <QMouseEvent>
 #include <QApplication>
+#include <QDrag>
+#include <QMimeData>
 #include <QPainter>
+
 #include "psioptions.h"
+
 /**
  * Constructor
  */
@@ -74,7 +78,7 @@ int PsiTabBar::findTabUnder(const QPoint &pos) {
 		}
 	}
 	return -1;
-} 
+}
 
 void PsiTabBar::mousePressEvent(QMouseEvent *event) {
 	QTabBar::mousePressEvent(event);
@@ -169,7 +173,7 @@ void PsiTabBar::wheelEvent(QWheelEvent *event) {
 
 	setCurrentIndex(newIndex);
 
-	event->accept();	
+	event->accept();
 }
 
 /*

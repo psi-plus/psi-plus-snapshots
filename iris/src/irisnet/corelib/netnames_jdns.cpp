@@ -26,7 +26,7 @@
 //#define JDNS_DEBUG
 
 Q_DECLARE_METATYPE(XMPP::NameRecord)
-Q_DECLARE_METATYPE(XMPP::NameResolver::Error)
+//Q_DECLARE_METATYPE(XMPP::NameResolver::Error)
 Q_DECLARE_METATYPE(XMPP::ServiceBrowser::Error)
 Q_DECLARE_METATYPE(XMPP::ServiceResolver::Error)
 Q_DECLARE_METATYPE(XMPP::ServiceLocalPublisher::Error)
@@ -2716,7 +2716,7 @@ public:
 
 IrisNetProvider *irisnet_createJDnsProvider()
 {
-        return new JDnsProvider;
+		return new JDnsProvider;
 }
 
 }

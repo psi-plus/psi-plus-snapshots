@@ -45,7 +45,7 @@ QWidget *OptionsTabRoster::widget()
 		tr("Shows the menubar in the application window."));
 
 	connect(d->ck_showClientIcons, SIGNAL(toggled(bool)), d->cb_showAllClientIcons, SLOT(setEnabled(bool)));
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
 	d->ck_alwaysOnTop->hide();
 	d->ck_showMenubar->hide();
 #endif

@@ -48,7 +48,7 @@ AccountModifyDlg::AccountModifyDlg(PsiCon *_psi, QWidget *parent)
 AccountModifyDlg::AccountModifyDlg(PsiAccount *_pa, QWidget *parent)
 :QDialog(parent)
 {
-  	setupUi(this);
+	setupUi(this);
 	setModal(false);
 	setAttribute(Qt::WA_DeleteOnClose);
 	pa = _pa;
@@ -57,14 +57,14 @@ AccountModifyDlg::AccountModifyDlg(PsiAccount *_pa, QWidget *parent)
 	init();
 }
 
-void AccountModifyDlg::init() 
+void AccountModifyDlg::init()
 {
 	//connect(pa->psi(), SIGNAL(pgpToggled(bool)), SLOT(pgpToggled(bool)));
 	if (pa)
 		pa->dialogRegister(this);
 
 	setWindowTitle(CAP(windowTitle()));
-#ifndef Q_WS_MAC
+#ifndef Q_OS_MAC
 	setWindowIcon(IconsetFactory::icon("psi/account").icon());
 #endif
 #if QT_VERSION >= 0x040500
@@ -108,12 +108,12 @@ void AccountModifyDlg::init()
 	cb_ssl->addItem(tr("Legacy SSL"), UserAccount::SSL_Legacy);
 	cb_ssl->setCurrentIndex(cb_ssl->findData(acc.ssl));
 	connect(cb_ssl, SIGNAL(activated(int)), SLOT(sslActivated(int)));
-	
+
 	cb_plain->addItem(tr("Always"),ClientStream::AllowPlain);
 	cb_plain->addItem(tr("Over encrypted connection"), ClientStream::AllowPlainOverTLS);
 	cb_plain->addItem(tr("Never"), ClientStream::NoAllowPlain);
 	cb_plain->setCurrentIndex(cb_plain->findData(acc.allow_plain));
-	
+
 	if (acc.opt_pass)
 		le_pass->setText(acc.pass);
 
@@ -142,7 +142,7 @@ void AccountModifyDlg::init()
 	ck_custom_auth->setChecked(acc.customAuth);
 	le_authid->setText(acc.authid);
 	le_realm->setText(acc.realm);
-		
+
 	ck_compress->setChecked(acc.opt_compress);
 	ck_auto->setChecked(acc.opt_auto);
 	ck_reconn->setChecked(acc.opt_reconn);
@@ -276,19 +276,19 @@ void AccountModifyDlg::init()
 		le_name->hide();
 		lb_name->hide();
 	}
-	
+
 	if (!PsiOptions::instance()->getOption("options.account.domain").toString().isEmpty()) {
 		lb_example->hide();
 		lb_jid->setText(tr("Username:"));
 	}
-	
+
 	if (!PsiOptions::instance()->getOption("options.pgp.enable").toBool()) {
 		gb_pgp->hide();
 	}
-	
-	if (!PsiOptions::instance()->getOption("options.ui.account.privacy.show").toBool()) 
+
+	if (!PsiOptions::instance()->getOption("options.ui.account.privacy.show").toBool())
 		tab_main->removeTab(tab_main->indexOf(tab_privacy));
-	
+
 	if (!PsiOptions::instance()->getOption("options.ui.account.proxy.show").toBool()) {
 		lb_proxy->hide();
 		pc->hide();
@@ -301,10 +301,10 @@ void AccountModifyDlg::init()
 		lb_port->hide();
 		le_port->hide();
 	}
-	
-	if (!PsiOptions::instance()->getOption("options.ui.account.keepalive").toBool()) 
+
+	if (!PsiOptions::instance()->getOption("options.ui.account.keepalive").toBool())
 		ck_keepAlive->hide();
-	
+
 	if (!PsiOptions::instance()->getOption("options.ui.account.security.show").toBool()) {
 		lb_plain->hide();
 		cb_plain->hide();
@@ -316,13 +316,13 @@ void AccountModifyDlg::init()
 	if (!PsiOptions::instance()->getOption("options.ui.account.security.show").toBool() && !PsiOptions::instance()->getOption("options.ui.account.keepalive").toBool() && !PsiOptions::instance()->getOption("options.ui.account.manual-host").toBool() && !PsiOptions::instance()->getOption("options.ui.account.proxy.show").toBool()) {
 		tab_main->removeTab(tab_main->indexOf(tab_connection));
 	}
-	
+
 	if (!PsiOptions::instance()->getOption("options.ui.account.resource").toBool()) {
 		cb_resource->hide();
 		lb_resource->hide();
 		le_resource->hide();
 	}
-	
+
 	if (!PsiOptions::instance()->getOption("options.ui.account.custom-authid").toBool()) {
 		ck_custom_auth->hide();
 		lb_authid->hide();
@@ -330,13 +330,13 @@ void AccountModifyDlg::init()
 		lb_realm->hide();
 		le_realm->hide();
 	}
-	
+
 	if (!PsiOptions::instance()->getOption("options.ui.account.priority").toBool()) {
 		lb_priority->hide();
 		cb_priority->hide();
 		sb_priority->hide();
 	}
-	
+
 	if (!PsiOptions::instance()->getOption("options.ui.account.data-proxy").toBool()) {
 		lb_dtProxy->hide();
 		le_dtProxy->hide();
@@ -345,7 +345,7 @@ void AccountModifyDlg::init()
 	if (!PsiOptions::instance()->getOption("options.ui.account.resource").toBool() && !PsiOptions::instance()->getOption("options.ui.account.priority").toBool() && !PsiOptions::instance()->getOption("options.ui.account.data-proxy").toBool()) {
 		tab_main->removeTab(tab_main->indexOf(tab_misc));
 	}
-	
+
 	resize(minimumSizeHint());
 }
 
@@ -553,8 +553,8 @@ void AccountModifyDlg::save()
 
 		if (pa->isActive()) {
 			QMessageBox messageBox(QMessageBox::Information, tr("Warning"),
-			                       tr("This account is currently active, so certain changes may not take effect until the next login."),
-			                       QMessageBox::NoButton, this);
+								   tr("This account is currently active, so certain changes may not take effect until the next login."),
+								   QMessageBox::NoButton, this);
 			QPushButton* cancel = messageBox.addButton(tr("Reconnect &Later"), QMessageBox::RejectRole);
 			QPushButton* reconnect = messageBox.addButton(tr("Reconnect &Now"), QMessageBox::AcceptRole);
 			messageBox.setDefaultButton(reconnect);
@@ -589,8 +589,7 @@ void AccountModifyDlg::addBlockClicked()
 	QString input = QInputDialog::getText(NULL, tr("Block contact"), tr("Enter the XMPP Address of the contact to block:"), QLineEdit::Normal, "", &ok);
 	Jid jid(input);
 	if (ok && !jid.isEmpty()) {
-		privacyModel.list().insertItem(0,PrivacyListItem::blockItem(jid.full()));
-		privacyModel.reset();
+		privacyModel.insertItem(0, PrivacyListItem::blockItem(jid.full()));
 		pa->privacyManager()->changeList(privacyModel.list());
 	}
 }

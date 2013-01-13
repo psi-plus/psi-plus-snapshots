@@ -66,7 +66,7 @@ MessageView MessageView::urlsMessage(const QMap<QString, QString> &urls)
 MessageView MessageView::subjectMessage(const QString &subject, const QString &prefix)
 {
 	MessageView mv(Subject);
-	mv._text = Qt::escape(prefix);
+	mv._text = TextUtil::escape(prefix);
 	mv._userText = subject;
 	return mv;
 }

@@ -1,5 +1,5 @@
 /*
- * avatars.cpp 
+ * avatars.cpp
  * Copyright (C) 2006  Remko Troncon
  *
  * This program is free software; you can redistribute it and/or
@@ -174,7 +174,7 @@ protected:
 	virtual const QString& hash() const { return hash_; }
 	virtual void requestAvatar() { }
 	virtual void avatarUpdated() { }
-	
+
 	virtual bool isCached(const QString& hash);
 	virtual void loadFromCache(const QString& hash);
 	virtual void saveToCache(const QByteArray& data);
@@ -241,7 +241,7 @@ public:
 	PEPAvatar(AvatarFactory* factory, const Jid& jid)
 		: CachedAvatar(factory), jid_(jid)
 	{ };
-	
+
 	void setData(const QString& h, const QString& data) {
 		if (h == hash()) {
 			QByteArray ba = Base64().stringToArray(data).toByteArray();
@@ -253,11 +253,11 @@ public:
 				}
 				emit avatarChanged(jid_);
 			}
-			else 
+			else
 				qWarning("PEPAvatar::setData(): Received data is empty. Bad encoding ?");
 		}
 	}
-	
+
 signals:
 	void avatarChanged(const Jid&);
 
@@ -266,7 +266,7 @@ protected:
 		factory()->account()->pepManager()->get(jid_,PEP_AVATAR_DATA_NS,hash());
 	}
 
-	void avatarUpdated() 
+	void avatarUpdated()
 		{ emit avatarChanged(jid_); }
 
 private:
@@ -294,7 +294,7 @@ public slots:
 
 protected:
 	void requestAvatar();
-	void avatarUpdated() 
+	void avatarUpdated()
 		{ emit avatarChanged(jid_); }
 
 protected:
@@ -390,7 +390,7 @@ private:
 
 VCardStaticAvatar::VCardStaticAvatar(AvatarFactory* factory, const Jid& j)
 	: Avatar(factory), jid_(j.bare())
-{ 
+{
 	const VCard* vcard = VCardFactory::instance()->vcard(jid_);
 	if (vcard && !vcard->photo().isEmpty())
 		setImage(vcard->photo());
@@ -601,7 +601,7 @@ Avatar* AvatarFactory::retrieveAvatar(const Jid& jid)
 	//printf("Trying file avatar\n");
 	if (!file_avatars_[jid.bare()]->isEmpty())
 		return file_avatars_[jid.bare()];
-	
+
 	//printf("PEP avatar\n");
 	if (pep_avatars_.contains(jid.bare()) && !pep_avatars_[jid.bare()]->isEmpty()) {
 		return pep_avatars_[jid.bare()];
@@ -612,7 +612,7 @@ Avatar* AvatarFactory::retrieveAvatar(const Jid& jid)
 	if (vcard_avatars_.contains(jid.bare()) && !vcard_avatars_[jid.bare()]->isEmpty()) {
 		return vcard_avatars_[jid.bare()];
 	}
-	
+
 	// Try finding a static vcard avatar
 	//printf("Static VCard avatar\n");
 	if (!vcard_static_avatars_.contains(jid.bare())) {
@@ -633,7 +633,7 @@ void AvatarFactory::setSelfAvatar(const QString& fileName)
 		QFile avatar_file(fileName);
 		if (!avatar_file.open(QIODevice::ReadOnly))
 			return;
-		
+
 		QByteArray avatar_data = scaleAvatar(avatar_file.readAll());
 		QImage avatar_image = QImage::fromData(avatar_data);
 		if(!avatar_image.isNull()) {
@@ -794,7 +794,7 @@ void AvatarFactory::itemPublished(const Jid& jid, const QString& n, const PubSub
 		else {
 			pep_avatars_[jid.bare()]->updateHash(item.id());
 		}
-	}	
+	}
 }
 
 void AvatarFactory::publish_success(const QString& n, const PubSubItem& item)
@@ -807,7 +807,7 @@ void AvatarFactory::publish_success(const QString& n, const PubSubItem& item)
 		meta_el.setAttribute("xmlns",PEP_AVATAR_METADATA_NS);
 		QDomElement info_el = doc->createElement("info");
 		info_el.setAttribute("id",selfAvatarHash_);
-		info_el.setAttribute("bytes",avatar_image.numBytes());
+		info_el.setAttribute("bytes",avatar_image.byteCount());
 		info_el.setAttribute("height",avatar_image.height());
 		info_el.setAttribute("width",avatar_image.width());
 		info_el.setAttribute("type",image2type(selfAvatarData_));
