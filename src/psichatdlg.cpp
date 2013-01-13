@@ -27,6 +27,7 @@
 #include "psiiconset.h"
 #include "iconwidget.h"
 #include "fancylabel.h"
+#include "textutil.h"
 #include "msgmle.h"
 #include "messageview.h"
 #include "iconselect.h"

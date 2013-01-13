@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013  Il'inykh Sergey (rion)
+ * priorityvalidator.h - XMPP priority validator
+ * Copyright (C) 2010 Dmitriy.trt
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -13,33 +14,21 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
 
-#ifndef X11INFO_H
-#define X11INFO_H
+#ifndef PRIORITYVALIDATOR_H
+#define PRIORITYVALIDATOR_H
 
-typedef struct _XDisplay Display;
-#ifdef HAVE_QT5
-typedef struct xcb_connection_t xcb_connection_t;
-#endif
+#include <QValidator>
 
-class X11Info
+class PriorityValidator : public QValidator
 {
-	static Display *_display;
-#ifdef HAVE_QT5
-	static xcb_connection_t *_xcb;
-#endif
-	static int _xcbPreferredScreen;
-
+      Q_OBJECT
 public:
-	static Display* display();
-	static unsigned long appRootWindow(int screen = -1);
-#ifdef HAVE_QT5
-	static xcb_connection_t* xcbConnection();
-	static inline int xcbPreferredScreen() { return _xcbPreferredScreen; }
-#endif
+      PriorityValidator(QObject* parent = 0) : QValidator(parent) { };
+      virtual State validate(QString &input, int &pos) const;
 };
 
-#endif // X11INFO_H
+#endif // PRIORITYVALIDATOR_H

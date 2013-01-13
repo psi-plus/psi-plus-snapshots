@@ -71,6 +71,8 @@ namespace XMPP
 		int mucHistoryMaxStanzas() const;
 		int mucHistorySeconds() const;
 
+		static Type txt2type(const QString& stat);
+
 		void setPriority(int);
 		void setType(Type);
 		void setType(QString);

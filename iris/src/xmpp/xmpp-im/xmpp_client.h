@@ -149,6 +149,7 @@ namespace XMPP
 		void debugText(const QString &);
 		void xmlIncoming(const QString &);
 		void xmlOutgoing(const QString &);
+		void stanzaElementOutgoing(QDomElement &);
 		void groupChatJoined(const Jid &);
 		void groupChatLeft(const Jid &);
 		void groupChatPresence(const Jid &, const Status &);
