@@ -77,24 +77,19 @@ protected:
 	bool eventFilter(QObject* o, QEvent* e)
 	{
 		if(e->type() == QEvent::KeyPress) {
-			QKeyEvent* ke = static_cast<QKeyEvent*>(e);
-			int keys[5] = {0,0,0,0,0};
-			int n = 0;
-			int qkey = ke->key();
-			keys[n++] = qkey;
-			if (ke->modifiers() & Qt::ShiftModifier)
-				keys[n++] = Qt::SHIFT;
-			if (ke->modifiers() & Qt::ControlModifier)
-				keys[n++] = Qt::CTRL;
-			if (ke->modifiers() & Qt::AltModifier)
-				keys[n++] = Qt::ALT;
-			if (ke->modifiers() & Qt::MetaModifier)
-				keys[n++] = Qt::META;
-
-			QKeySequence ks(keys[0], keys[1], keys[2], keys[3]);
+		   QKeyEvent* k = static_cast<QKeyEvent*>(e);
+		   int qkey = k->key();
+		   if (k->modifiers() & Qt::ShiftModifier)
+				   qkey |= Qt::SHIFT;
+		   if (k->modifiers() & Qt::ControlModifier)
+				   qkey |= Qt::CTRL;
+		   if (k->modifiers() & Qt::AltModifier)
+				   qkey |= Qt::ALT;
+		   if (k->modifiers() & Qt::MetaModifier)
+				   qkey |= Qt::META;
 
 			foreach(X11KeyTrigger* trigger, triggers_) {
-				if (trigger->isAccepted(ks)) {
+				if (trigger->isAccepted(QKeySequence(qkey))) {
 					trigger->activate();
 					return true;
 				}
@@ -197,7 +192,7 @@ private:
 public:
 	static bool convertKeySequence(const QKeySequence& ks, unsigned int* _mod, Qt_XK_Keygroup* _kg)
 	{
-		int code = 0;
+		int code = ks[0];
 		Qt_XK_Keygroup kg;
 		kg.num = 0;
 		kg.sym[0] = 0;
@@ -205,27 +200,16 @@ public:
 		ensureModifiers();
 
 		unsigned int mod = 0;
-		for (int i = 0; i < ks.count(); i++) {
-			switch (ks[i]) {
-			case Qt::META:
-				mod |= meta_mask;
-				break;
-			case Qt::SHIFT:
-				mod |= ShiftMask;
-				break;
-			case Qt::CTRL:
-				mod |= ControlMask;
-				break;
-			case Qt::ALT:
-				mod |= alt_mask;
-				break;
-			case Qt::GroupSwitchModifier:
-			default:
-				if (ks[i] & ~Qt::KeyboardModifierMask) {
-					code = ks[i] & ~Qt::KeyboardModifierMask;
-				}
-			}
-		}
+		if (code & Qt::META)
+			   mod |= meta_mask;
+		if (code & Qt::SHIFT)
+			   mod |= ShiftMask;
+		if (code & Qt::CTRL)
+			   mod |= ControlMask;
+		if (code & Qt::ALT)
+			   mod |= alt_mask;
+
+		code &= ~Qt::KeyboardModifierMask;
 
 		bool found = false;
 		for (int n = 0; qt_xk_table[n].key != Qt::Key_unknown; ++n) {
