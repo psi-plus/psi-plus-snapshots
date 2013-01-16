@@ -119,8 +119,8 @@ AboutDlg::AboutDlg(QWidget* parent)
 			   "", "", "",
 			   tr("OpenSUSE Packager"));
 	psiplus += details(QString::fromUtf8("tehnick"),
-			  "", "", "",
-			  tr("Language coordinator"));
+			  "tehnick-8@mail.ru", "", "",
+			  tr("Language coordinator; Debian Packager"));
 	ui_.te_psiplus->setText( psiplus );
 
 	// fill in Thanks To tab...
