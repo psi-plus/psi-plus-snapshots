@@ -84,7 +84,7 @@ rev=$(git describe --tags | sed -e "s/^.*-\([0-9]\+\)-.*$/\1/")
 if [ "${rev}" = "$(git describe --tags)" ]; then rev="0"; fi
 REVISION_DATE_LIST="$(cd ${MAIN_DIR}/psi  && git log -n1 --date=short --pretty=format:'%ad')
                     $(cd ${MAIN_DIR}/main && git log -n1 --date=short --pretty=format:'%ad')"
-LAST_REVISION_DATE="$(echo \"${REVISION_DATE_LIST}\" | sort -r | head -n1)"
+LAST_REVISION_DATE=$(echo "${REVISION_DATE_LIST}" | sort -r | head -n1)
 
 CUR_VER="0.16"
 LAST_REVISION=${rev}
