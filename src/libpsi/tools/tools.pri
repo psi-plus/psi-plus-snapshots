@@ -19,10 +19,13 @@ mac {
 HEADERS += \
 	$$PWD/maybe.h \
 	$$PWD/priorityvalidator.h \
-	$$PWD/iodeviceopener.h \
-	$$PWD/x11info.h
+	$$PWD/iodeviceopener.h
 
 SOURCES += \
 	$$PWD/priorityvalidator.cpp \
-	$$PWD/iodeviceopener.cpp \
-	$$PWD/x11info.cpp
+	$$PWD/iodeviceopener.cpp
+
+unix:!mac {
+	HEADERS += $$PWD/x11info.h
+	SOURCES += $$PWD/x11info.cpp
+}

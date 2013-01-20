@@ -42,11 +42,11 @@ tc_winamp {
 	INCLUDEPATH += $$WINAMP_PLUGIN_PATH
 
 	HEADERS += \
-		$$PWD/winampcontroller.h \
+		$$PWD/winamptunecontroller.h \
 		$$WINAMP_PLUGIN_PATH/winampplugin.h
 
 	SOURCES += \
-		$$PWD/winampcontroller.cpp \
+		$$PWD/winamptunecontroller.cpp \
 		$$WINAMP_PLUGIN_PATH/winampplugin.cpp
 
 	LIBS += -lUser32
