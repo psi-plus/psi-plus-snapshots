@@ -60,7 +60,6 @@ private slots:
 	QString makeContactName(const QString &name, const Jid &jid) const;
 	void doSwitchJidMode();
 	void actActiveContacts();
-	void actPgpToggled();
 
 private:
 	void initToolBar();
@@ -75,7 +74,6 @@ private:
 	void updateAvatar();
 	void optionsUpdate();
 	void updatePGP();
-	void checkPGPAutostart();
 	void setPGPEnabled(bool enabled);
 	void activated();
 	void setLooks();
@@ -122,8 +120,6 @@ private:
 
 	int logHeight;
 	int chateditHeight;
-
-	bool autoPGP_;
 
 private:
 	bool tabmode;
