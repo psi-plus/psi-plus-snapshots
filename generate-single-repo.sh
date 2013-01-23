@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2013-01-20
+# Updated: 2013-01-23
 # Version: N/A
 
 if [[ ${0} =~ ^/.+$ ]]; then
@@ -202,7 +202,7 @@ if [ "${TEST_ALL}" -eq 0 ]; then
 fi
 
 if [ "${NEW_VER}" = "${OLD_VER}" ]; then
-    COMMENT+="Sources were synced with upstream:\n"
+    COMMENT+="Sources were sync with upstream:\n"
     if [ "${TEST_SRC}" -gt "$((${TEST_LIBPSI}+${TEST_PLUGINS}+0))" ]; then
         COMMENT+="Psi was updated.\n"
     fi
