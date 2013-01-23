@@ -25,10 +25,10 @@ tc_itunes {
 		INCLUDEPATH += $$ITUNES_PLUGIN_PATH
 
 		HEADERS += \
-			$$PWD/itunescontroller.h
+			$$PWD/itunestunecontroller.h
 
 		SOURCES += \
-			$$PWD/itunescontroller.cpp \
+			$$PWD/itunestunecontroller.cpp \
 			$$ITUNES_PLUGIN_PATH/itunesplugin.cpp
 
 		QMAKE_LFLAGS += -framework CoreFoundation
