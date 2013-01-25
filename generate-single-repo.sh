@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2013-01-23
+# Updated: 2013-01-24
 # Version: N/A
 
 if [[ ${0} =~ ^/.+$ ]]; then
