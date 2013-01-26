@@ -642,7 +642,7 @@ void PsiChatDlg::updateJidWidget(const QList<UserListItem*> &ul, int status, boo
 					setJid(new_auto_jid);
 					if (old_jid != new_auto_jid) {
 						if (autoSelectContact_ && (status != XMPP::Status::Offline || !new_auto_jid.resource().isEmpty())) {
-							appendSysMsg(tr("Contact has been switched: %1").arg(JIDUtil::toString(new_auto_jid, true)));
+							appendSysMsg(tr("Contact has been switched: %1").arg(TextUtil::escape(JIDUtil::toString(new_auto_jid, true))));
 						}
 					}
 				}
