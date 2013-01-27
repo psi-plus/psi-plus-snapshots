@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2013-01-24
+# Updated: 2013-01-27
 # Version: N/A
 
 if [[ ${0} =~ ^/.+$ ]]; then
@@ -121,7 +121,7 @@ echo;
 cat "${MAIN_DIR}/main/patches"/*.diff | \
     patch -d "${PSIPLUS_DIR}" -p1 2>&1 > \
     "${MAIN_DIR}/applying-patches_${NEW_VER}.log" || exit 1
-echo "${NEW_VER} (${LAST_REVISION_DATE})" > version || exit 1
+echo "${NEW_VER} ($(echo ${LAST_REVISION_DATE}))" > version || exit 1
 echo "Patches from Psi+ project were applied."
 echo;
 
