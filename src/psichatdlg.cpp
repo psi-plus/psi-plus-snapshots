@@ -19,6 +19,7 @@
 #include <QMessageBox>
 #include <QDebug>
 #include <QTimer>
+#include <QClipboard>
 
 #include "psicon.h"
 #include "psiaccount.h"
@@ -204,6 +205,11 @@ void PsiChatDlg::initUi()
 	ui_.setupUi(this);
 
 	le_autojid = new ActionLineEdit(ui_.le_jid);
+
+	QAction *act_copy_user_jid = new QAction(tr("Copy user JID"), this);
+	le_autojid->addAction(act_copy_user_jid);
+	connect(act_copy_user_jid, SIGNAL(triggered()), SLOT(copyUserJid()));
+
 	ui_.le_jid->setLineEdit(le_autojid);
 	ui_.le_jid->lineEdit()->setReadOnly(true);
 	if (autoSelectContact_) {
@@ -424,6 +430,11 @@ void PsiChatDlg::updateContactAdding(PsiContact* c)
 			act_add_contact->setVisible(true);
 		}
 	}
+}
+
+void PsiChatDlg::copyUserJid()
+{
+	QApplication::clipboard()->setText(jid().bare());
 }
 
 void PsiChatDlg::updateContactAdding(const Jid &j)

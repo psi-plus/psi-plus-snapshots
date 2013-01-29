@@ -47,6 +47,7 @@ private slots:
 	void updateCountVisibility();
 	void updateContactAdding(PsiContact* c = 0);
 	void updateContactAdding(const Jid &j);
+	void copyUserJid();
 
 	// reimplemented
 	void chatEditCreated();
