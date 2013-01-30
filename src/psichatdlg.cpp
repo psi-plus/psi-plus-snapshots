@@ -205,11 +205,6 @@ void PsiChatDlg::initUi()
 	ui_.setupUi(this);
 
 	le_autojid = new ActionLineEdit(ui_.le_jid);
-
-	QAction *act_copy_user_jid = new QAction(tr("Copy user JID"), this);
-	le_autojid->addAction(act_copy_user_jid);
-	connect(act_copy_user_jid, SIGNAL(triggered()), SLOT(copyUserJid()));
-
 	ui_.le_jid->setLineEdit(le_autojid);
 	ui_.le_jid->lineEdit()->setReadOnly(true);
 	if (autoSelectContact_) {
@@ -228,6 +223,10 @@ void PsiChatDlg::initUi()
 		updateAutojidIcon();
 		connect(act_autojid, SIGNAL(triggered()), SLOT(doSwitchJidMode()));
 		le_autojid->addAction(act_autojid);
+
+		QAction *act_copy_user_jid = new QAction(tr("Copy user JID"), this);
+		le_autojid->addAction(act_copy_user_jid);
+		connect(act_copy_user_jid, SIGNAL(triggered()), SLOT(copyUserJid()));
 	}
 
 	ui_.lb_ident->setAccount(account());

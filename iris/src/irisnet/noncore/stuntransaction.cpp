@@ -591,6 +591,7 @@ StunTransactionPool::StunTransactionPool(StunTransaction::Mode mode, QObject *pa
 
 StunTransactionPool::~StunTransactionPool()
 {
+	qDeleteAll(d->transactions); // will clear d->transactions automagically
 	delete d;
 }
 
