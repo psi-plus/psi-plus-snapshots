@@ -606,7 +606,7 @@ void ClientStream::cr_connected()
 	d->client.doBinding = d->doBinding;*/
 
 	QPointer<QObject> self = this;
-	connected();
+	emit connected();
 	if(!self)
 		return;
 
@@ -941,9 +941,9 @@ void ClientStream::processNext()
 			else
 				str = d->client.elementToString(i.elem);
 			if(i.isSent)
-				outgoingXml(str);
+				emit outgoingXml(str);
 			else
-				incomingXml(str);
+				emit incomingXml(str);
 		}
 
 		if(!ok) {

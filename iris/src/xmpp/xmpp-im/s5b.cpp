@@ -492,7 +492,7 @@ void S5BConnection::sc_readyRead()
 {
 	if(d->mode == Datagram) {
 		// throw the data away
-		d->sc->read();
+		d->sc->readAll();
 		return;
 	}
 

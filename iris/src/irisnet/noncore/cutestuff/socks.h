@@ -79,8 +79,6 @@ public:
 	// from ByteStream
 	bool isOpen() const;
 	void close();
-	void write(const QByteArray &);
-	QByteArray read(int bytes=0);
 	qint64 bytesAvailable() const;
 	qint64 bytesToWrite() const;
 
@@ -92,6 +90,10 @@ public:
 	QString udpAddress() const;
 	quint16 udpPort() const;
 	SocksUDP *createUDP(const QString &host, int port, const QHostAddress &routeAddr, int routePort);
+
+protected:
+	qint64 writeData(const char *data, qint64 maxSize);
+	qint64 readData(char *data, qint64 maxSize);
 
 signals:
 	// outgoing

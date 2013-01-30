@@ -124,14 +124,18 @@ void SocksUDP::sd_activated()
 // SPSS = socks packet server struct
 
 // Version
-static QByteArray spc_set_version()
+static QByteArray spc_set_version(bool hasCreds)
 {
 	QByteArray ver;
-	ver.resize(4);
+	ver.resize(hasCreds? 4 : 3);
 	ver[0] = 0x05; // socks version 5
-	ver[1] = 0x02; // number of methods
 	ver[2] = 0x00; // no-auth
-	ver[3] = 0x02; // username
+	if (hasCreds) {
+		ver[1] = 0x02; // number of methods
+		ver[3] = 0x02; // username
+	} else {
+		ver[1] = 0x01; // number of methods
+	}
 	return ver;
 }
 
@@ -537,15 +541,16 @@ void SocksClient::writeData(const QByteArray &buf)
 	d->sock.write(buf);
 }
 
-void SocksClient::write(const QByteArray &buf)
+qint64 SocksClient::writeData(const char *data, qint64 maxSize)
 {
 	if(d->active && !d->udp)
-		d->sock.write(buf);
+		return d->sock.write(data, maxSize);
+	return 0;
 }
 
-QByteArray SocksClient::read(int bytes)
+qint64 SocksClient::readData(char *data, qint64 maxSize)
 {
-	return ByteStream::read(bytes);
+	return ByteStream::readData(data, maxSize);
 }
 
 qint64 SocksClient::bytesAvailable() const
@@ -568,7 +573,7 @@ void SocksClient::sock_connected()
 #endif
 
 	d->step = StepVersion;
-	writeData(spc_set_version());
+	writeData(spc_set_version(!d->user.isEmpty())); // fixme requirement for auth should set outside
 }
 
 void SocksClient::sock_connectionClosed()
@@ -730,7 +735,8 @@ void SocksClient::processOutgoing(const QByteArray &block)
 			d->active = true;
 
 			QPointer<QObject> self = this;
-			connected();
+			setOpenMode(QIODevice::ReadWrite);
+			emit connected();
 			if(!self)
 				return;
 
