@@ -56,6 +56,8 @@ private slots:
 	void detailsVCard();
 	void detailsChangePW();
 
+	void removeStunHost();
+
 	void save();
 
 	//void pgpToggled(bool);
@@ -83,7 +85,7 @@ private:
 	ProxyChooser *pc;
 	QCA::PGPKey key;
 	UserAccount acc;
-	
+
 	// Privacy
  	PrivacyListModel privacyModel;
  	PrivacyListBlockedModel privacyBlockedModel;
