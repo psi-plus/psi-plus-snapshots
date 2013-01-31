@@ -164,7 +164,7 @@ void AccountModifyDlg::init()
 	cb_stunHost->addItem(tr("<don't use>"));
 	cb_stunHost->addItems(acc.stunHosts);
 	if (acc.stunHost.isEmpty()) {
-		cb_stunHost->setCurrentIndex(1);
+		cb_stunHost->setCurrentIndex(0);
 	}
 	else {
 		cb_stunHost->setCurrentIndex(cb_stunHost->findText(acc.stunHost));
@@ -569,7 +569,7 @@ void AccountModifyDlg::save()
 	acc.opt_keepAlive = ck_keepAlive->isChecked();
 	acc.ibbOnly = ck_ibbOnly->isChecked();
 	acc.dtProxy = le_dtProxy->text();
-	acc.stunHost = cb_stunHost->currentText().trimmed();
+	acc.stunHost = cb_stunHost->currentIndex() ? cb_stunHost->currentText().trimmed() : "";
 	acc.stunHosts.clear();
 	// first item is no host
 	for (int i = 1; i < cb_stunHost->count(); i++) {
