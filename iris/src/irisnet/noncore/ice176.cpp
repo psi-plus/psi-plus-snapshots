@@ -248,7 +248,11 @@ public:
 		foreach(const Component &c, components)
 			delete c.ic;
 
-		for(int n = 0; n < checkList.pairs.count(); ++n)
+		// no need to delete pools and bindings since pools already deleted here
+		// by QObject destructor as children of this(Ice176::Private) object.
+		// Bindings deleted too as children of pool
+		// should be reviewed by Justin =)
+		/*for(int n = 0; n < checkList.pairs.count(); ++n)
 		{
 			StunBinding *binding = checkList.pairs[n].binding;
 			StunTransactionPool *pool = checkList.pairs[n].pool;
@@ -261,7 +265,7 @@ public:
 				pool->setParent(0);
 				pool->deleteLater();
 			}
-		}
+		}*/
 	}
 
 	void reset()
