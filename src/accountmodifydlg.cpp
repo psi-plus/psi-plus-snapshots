@@ -164,7 +164,7 @@ void AccountModifyDlg::init()
 	cb_stunHost->addItem(tr("<don't use>"));
 	cb_stunHost->addItems(acc.stunHosts);
 	if (acc.stunHost.isEmpty()) {
-		cb_stunHost->setCurrentIndex(0);
+		cb_stunHost->setCurrentIndex(1);
 	}
 	else {
 		cb_stunHost->setCurrentIndex(cb_stunHost->findText(acc.stunHost));

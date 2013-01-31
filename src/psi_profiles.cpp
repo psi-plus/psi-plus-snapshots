@@ -331,8 +331,11 @@ void UserAccount::fromOptions(OptionsTree *o, QString base)
 
 	if (allSetOptions.contains(base + ".stun-hosts")) {
 		stunHosts = o->getOption(base + ".stun-hosts").toStringList();
+		if (allSetOptions.contains(base + ".stun-host")) {
+			stunHost = o->getOption(base + ".stun-host").toString();
+		}
 	}
-	if (allSetOptions.contains(base + ".stun-host")) {
+	else if (!o->getOption(base + ".stun-host").toString().isEmpty()) {
 		stunHost = o->getOption(base + ".stun-host").toString();
 	}
 	if (allSetOptions.contains(base + ".stun-username")) {
