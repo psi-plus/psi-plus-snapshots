@@ -19,7 +19,6 @@
  */
 
 #include <QTimer>
-#include <QTextDocument> // for Qt::escape()
 
 #include "psicontactlistmodel.h"
 
@@ -58,10 +57,8 @@ QVariant PsiContactListModel::contactData(const PsiContact* contact, int role) c
 
 QVariant PsiContactListModel::contactGroupData(const ContactListGroup* group, int role) const
 {
-	if (role == DisplayGroupRole || role == Qt::ToolTipRole) {
+	if (role == Qt::ToolTipRole) {
 		QString text = itemData(group, Qt::DisplayRole).toString();
-		if (role == Qt::ToolTipRole)
-			text = Qt::escape(text);
 		text += QString(" (%1/%2)")
 		        .arg(itemData(group, ContactListModel::OnlineContactsRole).toInt())
 		        .arg(itemData(group, ContactListModel::TotalContactsRole).toInt());
