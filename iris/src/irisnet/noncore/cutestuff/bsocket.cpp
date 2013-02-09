@@ -137,6 +137,8 @@ BSocket::BSocket(QObject *parent)
 BSocket::~BSocket()
 {
 	reset(true);
+	if (d->resolver)
+		delete d->resolver;
 	delete d;
 }
 

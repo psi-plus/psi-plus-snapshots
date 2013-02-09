@@ -1382,6 +1382,8 @@ PsiAccount::~PsiAccount()
 {
 	logout(true, loggedOutStatus());
 
+	setRCEnabled(false);
+
 	emit accountDestroyed();
 	// nuke all related dialogs
 	deleteAllDialogs();
@@ -1417,6 +1419,9 @@ PsiAccount::~PsiAccount()
 	delete d->avatarFactory;
 
 	delete d->blockTransportPopupList;
+
+	while(!d->userList.isEmpty())
+		delete d->userList.takeFirst();
 
 	d->contactList->unlink(this);
 	delete d;
