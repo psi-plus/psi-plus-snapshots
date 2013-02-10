@@ -211,8 +211,7 @@ ObjectSessionWatcher::ObjectSessionWatcher(ObjectSession *sess)
 ObjectSessionWatcher::~ObjectSessionWatcher()
 {
 	if(d->sess)
-		while (!d->sess->d->watchers.isEmpty())
-			delete d->sess->d->watchers.takeFirst();
+		d->sess->d->watchers.removeAll(d);
 	delete d;
 }
 
