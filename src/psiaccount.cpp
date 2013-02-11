@@ -440,6 +440,7 @@ public:
 		, xmlRingbufWrite(0)
 		, onlineContactsCount(0)
 		, doPopups_(true)
+		, reconnectingOnce(false)
 		, reconnectTimeoutTimer_(0)
 		, reconnectData_(-1)
 		, reconnectInfrequently_(false)
