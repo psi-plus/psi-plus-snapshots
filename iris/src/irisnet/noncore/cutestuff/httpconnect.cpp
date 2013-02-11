@@ -146,6 +146,7 @@ void HttpConnect::reset(bool clear)
 		d->recvBuf.resize(0);
 	}
 	d->active = false;
+	setOpenMode(QIODevice::NotOpen);
 }
 
 void HttpConnect::setAuth(const QString &user, const QString &pass)
@@ -173,11 +174,6 @@ void HttpConnect::connectToHost(const QString &proxyHost, int proxyPort, const Q
 	d->sock.connectToHost(d->host, d->port);
 }
 
-bool HttpConnect::isOpen() const
-{
-	return d->active;
-}
-
 void HttpConnect::close()
 {
 	d->sock.close();
@@ -185,15 +181,11 @@ void HttpConnect::close()
 		reset();
 }
 
-void HttpConnect::write(const QByteArray &buf)
+qint64 HttpConnect::writeData(const char *data, qint64 maxSize)
 {
 	if(d->active)
-		d->sock.write(buf);
-}
-
-QByteArray HttpConnect::read(int bytes)
-{
-	return ByteStream::read(bytes);
+		return d->sock.write(data, maxSize);
+	return 0;
 }
 
 qint64 HttpConnect::bytesToWrite() const
@@ -299,6 +291,7 @@ void HttpConnect::sock_readyRead()
 					fprintf(stderr, "HttpConnect: << Success >>\n");
 #endif
 					d->active = true;
+					setOpenMode(QIODevice::ReadWrite);
 					connected();
 
 					if(!d->recvBuf.isEmpty()) {
