@@ -385,9 +385,8 @@ public:
 
 	void deleteLayers()
 	{
-		while (!layers.isEmpty()) {
-			delete layers.takeFirst();
-		}
+		qDeleteAll(layers);
+		layers.clear();
 	}
 };
 

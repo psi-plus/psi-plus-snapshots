@@ -148,6 +148,8 @@ public:
 		callTrigger->disconnect(this);
 		callTrigger->setParent(0);
 		callTrigger->deleteLater();
+		qDeleteAll(pendingCalls);
+		pendingCalls.clear();
 	}
 
 	void addPendingCall(MethodCall *call)
@@ -240,6 +242,7 @@ void ObjectSession::reset()
 	d->invalidateWatchers();
 	if(d->callTrigger->isActive())
 		d->callTrigger->stop();
+	qDeleteAll(d->pendingCalls);
 	d->pendingCalls.clear();
 }
 

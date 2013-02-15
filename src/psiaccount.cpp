@@ -1421,8 +1421,8 @@ PsiAccount::~PsiAccount()
 
 	delete d->blockTransportPopupList;
 
-	while(!d->userList.isEmpty())
-		delete d->userList.takeFirst();
+	qDeleteAll(d->userList);
+	d->userList.clear();
 
 	d->contactList->unlink(this);
 	delete d;
