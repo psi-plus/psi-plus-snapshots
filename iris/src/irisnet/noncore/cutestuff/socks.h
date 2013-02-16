@@ -77,7 +77,6 @@ public:
 	void grantUDPAssociate(const QString &relayHost, int relayPort);
 
 	// from ByteStream
-	bool isOpen() const;
 	void close();
 	qint64 bytesAvailable() const;
 	qint64 bytesToWrite() const;

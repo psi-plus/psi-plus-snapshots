@@ -420,7 +420,6 @@ public:
 	int real_port;
 
 	QByteArray recvBuf;
-	bool active;
 	int step;
 	int authMethod;
 	bool incoming, waiting;
@@ -479,10 +478,10 @@ void SocksClient::reset(bool clear)
 	if(clear)
 		clearReadBuffer();
 	d->recvBuf.resize(0);
-	d->active = false;
 	d->waiting = false;
 	d->udp = false;
 	d->pending = 0;
+	setOpenMode(QIODevice::NotOpen);
 }
 
 bool SocksClient::isIncoming() const
@@ -516,11 +515,6 @@ void SocksClient::connectToHost(const QString &proxyHost, int proxyPort, const Q
 	d->sock.connectToHost(d->host, d->port);
 }
 
-bool SocksClient::isOpen() const
-{
-	return d->active;
-}
-
 void SocksClient::close()
 {
 	d->sock.close();
@@ -543,7 +537,7 @@ void SocksClient::writeData(const QByteArray &buf)
 
 qint64 SocksClient::writeData(const char *data, qint64 maxSize)
 {
-	if(d->active && !d->udp)
+	if(isOpen() && !d->udp)
 		return d->sock.write(data, maxSize);
 	return 0;
 }
@@ -560,7 +554,7 @@ qint64 SocksClient::bytesAvailable() const
 
 qint64 SocksClient::bytesToWrite() const
 {
-	if(d->active)
+	if(isOpen())
 		return d->sock.bytesToWrite();
 	else
 		return 0;
@@ -578,9 +572,9 @@ void SocksClient::sock_connected()
 
 void SocksClient::sock_connectionClosed()
 {
-	if(d->active) {
+	if(isOpen()) {
 		reset();
-		connectionClosed();
+		emit connectionClosed();
 	}
 	else {
 		setError(ErrProxyNeg);
@@ -589,7 +583,7 @@ void SocksClient::sock_connectionClosed()
 
 void SocksClient::sock_delayedCloseFinished()
 {
-	if(d->active) {
+	if(isOpen()) {
 		reset();
 		delayedCloseFinished();
 	}
@@ -599,7 +593,7 @@ void SocksClient::sock_readyRead()
 {
 	QByteArray block = d->sock.readAll();
 
-	if(!d->active) {
+	if(!isOpen()) {
 		if(d->incoming)
 			processIncoming(block);
 		else
@@ -732,7 +726,7 @@ void SocksClient::processOutgoing(const QByteArray &block)
 				d->udpPort = s.port;
 			}
 
-			d->active = true;
+			setOpenMode(QIODevice::ReadWrite);
 
 			QPointer<QObject> self = this;
 			setOpenMode(QIODevice::ReadWrite);
@@ -781,7 +775,7 @@ void SocksClient::sock_bytesWritten(qint64 x)
 
 void SocksClient::sock_error(int x)
 {
-	if(d->active) {
+	if(isOpen()) {
 		reset();
 		setError(ErrRead);
 	}
@@ -950,7 +944,7 @@ void SocksClient::grantConnect()
 	// response
 	d->waiting = false;
 	writeData(sp_set_request(d->rhost, d->rport, RET_SUCCESS));
-	d->active = true;
+	setOpenMode(QIODevice::ReadWrite);
 #ifdef PROX_DEBUG
 	fprintf(stderr, "SocksClient: server << Success >>\n");
 #endif
@@ -971,7 +965,7 @@ void SocksClient::grantUDPAssociate(const QString &relayHost, int relayPort)
 	d->waiting = false;
 	writeData(sp_set_request(relayHost, relayPort, RET_SUCCESS));
 	d->udp = true;
-	d->active = true;
+	setOpenMode(QIODevice::ReadWrite);
 #ifdef PROX_DEBUG
 	fprintf(stderr, "SocksClient: server << Success >>\n");
 #endif

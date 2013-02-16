@@ -233,6 +233,7 @@ void S5BConnection::reset(bool clear)
 		}
 	}
 	d->state = Idle;
+	setOpenMode(QIODevice::NotOpen);
 	d->peer = Jid();
 	d->sid = QString();
 	d->remote = false;
@@ -415,6 +416,7 @@ void S5BConnection::man_clientReady(SocksClient *sc, SocksUDP *sc_udp)
 	}
 
 	d->state = Active;
+	setOpenMode(QIODevice::ReadWrite);
 #ifdef S5B_DEBUG
 	qDebug("S5BConnection[%d]: %s [%s] <<< success >>>\n", d->id, qPrintable(d->peer.full()), qPrintable(d->sid));
 #endif
@@ -422,7 +424,7 @@ void S5BConnection::man_clientReady(SocksClient *sc, SocksUDP *sc_udp)
 	// bytes already in the stream?
 	if(d->sc->bytesAvailable()) {
 #ifdef S5B_DEBUG
-		qDebug("Stream has %d bytes in it.\n", d->sc->bytesAvailable());
+		qDebug("Stream has %d bytes in it.\n", (int)d->sc->bytesAvailable());
 #endif
 		d->notifyRead = true;
 	}
