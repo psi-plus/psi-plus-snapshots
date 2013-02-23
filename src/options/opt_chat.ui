@@ -48,7 +48,6 @@
     </widget>
    </item>
    <item>
-   <item>
     <widget class="QCheckBox" name="ck_smallChats" >
      <property name="text" >
       <string>Open chats in compact mode</string>
