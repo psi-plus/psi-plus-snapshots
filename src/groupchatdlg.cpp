@@ -1084,7 +1084,7 @@ void GCMainDlg::updateBookmarkIcon()
 	if (bm->isAvailable()) {
 		QString text;
 		if (bm->isBookmarked(jid())) {
-			text = tr("Edit bookmark");
+			text = tr("Edit Bookmark");
 			d->act_bookmark->setPsiIcon("psi/bookmark_remove");
 		} else {
 			text = tr("Add to bookmarks");

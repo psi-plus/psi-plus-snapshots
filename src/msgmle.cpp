@@ -223,7 +223,7 @@ void ChatEdit::initActions()
 	connect(act_showMessageLast, SIGNAL(triggered()), SLOT(showHistoryMessageLast()));
 
 	QClipboard *clipboard = QApplication::clipboard();
-	actPasteAsQuote_ = new QAction(tr("Paste As Quotation"), this);
+	actPasteAsQuote_ = new QAction(tr("Paste as Quotation"), this);
 	actPasteAsQuote_->setEnabled(!clipboard->text().isEmpty());
 	addAction(actPasteAsQuote_);
 	connect(actPasteAsQuote_, SIGNAL(triggered()), SLOT(pasteAsQuote()));
