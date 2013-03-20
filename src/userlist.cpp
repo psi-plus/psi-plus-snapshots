@@ -389,6 +389,8 @@ QString UserListItem::findClient(QString name) const
 		res = "coccinella";
 	else if(name.startsWith("dictbot"))
 		res = "dictbot";
+	else if(name.startsWith("Digsby Client"))
+		res = "digsby";
 	else if(name.startsWith("ekg2"))
 		res = "ekg2";
 	else if(name.startsWith("emess"))
