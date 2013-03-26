@@ -741,7 +741,7 @@ void ContactListDragView::mousePressEvent(QMouseEvent* e)
 	}
 	ContactListView::mousePressEvent(e);
     
-	if (activateItemsOnSingleClick()) {
+	if (activateItemsOnSingleClick() && e->button() == Qt::LeftButton) {
 		ContactListView::mouseDoubleClickEvent(e);
 	}
 }
