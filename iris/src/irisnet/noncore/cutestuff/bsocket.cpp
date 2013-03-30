@@ -322,6 +322,7 @@ void BSocket::setSocket(int s)
 	reset(true);
 	ensureSocket();
 	d->state = Connected;
+	setOpenMode(QIODevice::ReadWrite);
 	d->qsock->setSocketDescriptor(s);
 }
 

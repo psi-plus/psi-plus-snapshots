@@ -171,6 +171,7 @@ void FileTransfer::writeFileData(const QByteArray &a)
 	}
 	else
 		block = a;
+	qDebug("Conn is open: %s", d->c->isOpen()? "yes" : "no");
 	d->c->write(block);
 }
 

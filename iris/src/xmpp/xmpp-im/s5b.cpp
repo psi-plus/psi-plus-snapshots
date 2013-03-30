@@ -40,7 +40,7 @@
 
 static const char *S5B_NS = "http://jabber.org/protocol/bytestreams";
 
-//#define S5B_DEBUG
+#define S5B_DEBUG
 
 namespace XMPP {
 
@@ -325,26 +325,19 @@ int S5BConnection::state() const
 	return d->state;
 }
 
-bool S5BConnection::isOpen() const
-{
-	if(d->state == Active)
-		return true;
-	else
-		return false;
-}
-
-void S5BConnection::write(const QByteArray &buf)
+qint64 S5BConnection::writeData(const char *data, qint64 maxSize)
 {
 	if(d->state == Active && d->mode == Stream)
-		d->sc->write(buf);
+		return d->sc->write(data, maxSize);
+	return 0;
 }
 
-QByteArray S5BConnection::read(int bytes)
+qint64 S5BConnection::readData(char *data, qint64 maxSize)
 {
 	if(d->sc)
-		return d->sc->read(bytes);
+		return d->sc->read(data, maxSize);
 	else
-		return QByteArray();
+		return 0;
 }
 
 qint64 S5BConnection::bytesAvailable() const
@@ -437,7 +430,7 @@ void S5BConnection::man_clientReady(SocksClient *sc, SocksUDP *sc_udp)
 	}
 	if(d->notifyRead || d->notifyClose)
 		QTimer::singleShot(0, this, SLOT(doPending()));
-	connected();
+	emit connected();
 }
 
 void S5BConnection::doPending()
@@ -500,7 +493,7 @@ void S5BConnection::sc_readyRead()
 
 	d->notifyRead = false;
 	// echo
-	readyRead();
+	emit readyRead();
 }
 
 void S5BConnection::sc_bytesWritten(qint64 x)
@@ -1612,10 +1605,7 @@ void S5BManager::Item::tryActivation()
 			qDebug("sending extra CR\n");
 #endif
 			// must send [CR] to activate target streamhost
-			QByteArray a;
-			a.resize(1);
-			a[0] = '\r';
-			client->write(a);
+			client->write("\r", 1);
 		}
 	}
 }
@@ -1645,9 +1635,9 @@ void S5BManager::Item::checkForActivation()
 #endif
 				if(sc->bytesAvailable() >= 1) {
 					clientList.removeAll(sc);
-					QByteArray a = sc->read(1);
-					if(a[0] != '\r') {
-						delete sc;
+					char c;
+					if(!sc->getChar(&c) || c != '\r') {
+						delete sc; // FIXME breaks S5BManager::Item destructor?
 						return;
 					}
 					ok = true;
@@ -1745,7 +1735,7 @@ void S5BManager::Item::finished()
 #ifdef S5B_DEBUG
 	qDebug("S5BManager::Item %s [%s] linked successfully\n", qPrintable(peer.full()), qPrintable(sid));
 #endif
-	connected();
+	emit connected();
 }
 
 //----------------------------------------------------------------------------
@@ -1945,7 +1935,7 @@ void S5BConnector::item_result(bool b)
 #ifdef S5B_DEBUG
 		qDebug("S5BConnector: complete! [%p]\n", this);
 #endif
-		result(true);
+		emit result(true);
 	}
 	else {
 		d->itemList.removeAll(i);
@@ -1955,7 +1945,7 @@ void S5BConnector::item_result(bool b)
 #ifdef S5B_DEBUG
 			qDebug("S5BConnector: failed! [%p]\n", this);
 #endif
-			result(false);
+			emit result(false);
 		}
 	}
 }

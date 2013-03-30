@@ -62,8 +62,7 @@ public:
 	// from ByteStream
 	bool isOpen() const;
 	void close();
-	qint64 writeData(const char *data, qint64 maxSize);
-	qint64 readData(char *data, qint64 maxSize);
+
 	qint64 bytesAvailable() const;
 	qint64 bytesToWrite() const;
 
@@ -74,6 +73,10 @@ public:
 	// remote
 	QHostAddress peerAddress() const;
 	quint16 peerPort() const;
+
+protected:
+	qint64 writeData(const char *data, qint64 maxSize);
+	qint64 readData(char *data, qint64 maxSize);
 
 signals:
 	void hostFound();

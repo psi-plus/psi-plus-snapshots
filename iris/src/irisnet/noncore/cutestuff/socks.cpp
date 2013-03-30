@@ -481,7 +481,11 @@ void SocksClient::reset(bool clear)
 	d->waiting = false;
 	d->udp = false;
 	d->pending = 0;
-	setOpenMode(QIODevice::NotOpen);
+	if (bytesAvailable()) {
+		setOpenMode(QIODevice::ReadOnly);
+	} else {
+		setOpenMode(QIODevice::NotOpen);
+	}
 }
 
 bool SocksClient::isIncoming() const
@@ -544,7 +548,11 @@ qint64 SocksClient::writeData(const char *data, qint64 maxSize)
 
 qint64 SocksClient::readData(char *data, qint64 maxSize)
 {
-	return ByteStream::readData(data, maxSize);
+	qint64 ret = ByteStream::readData(data, maxSize);
+	if (d->sock.state() != BSocket::Connected && !bytesAvailable()) {
+		setOpenMode(QIODevice::NotOpen);
+	}
+	return ret;
 }
 
 qint64 SocksClient::bytesAvailable() const
@@ -593,6 +601,8 @@ void SocksClient::sock_readyRead()
 {
 	QByteArray block = d->sock.readAll();
 
+	//qDebug() << this << "::sock_readyRead " << block.size() << " bytes." <<
+	//			"udp=" << d->udp << openMode();
 	if(!isOpen()) {
 		if(d->incoming)
 			processIncoming(block);
@@ -602,7 +612,7 @@ void SocksClient::sock_readyRead()
 	else {
 		if(!d->udp) {
 			appendRead(block);
-			readyRead();
+			emit readyRead();
 		}
 	}
 }
@@ -841,7 +851,7 @@ void SocksClient::continueIncoming()
 					methods |= AuthUsername;
 			}
 			d->waiting = true;
-			incomingMethods(methods);
+			emit incomingMethods(methods);
 		}
 	}
 	else if(d->step == StepAuth) {
