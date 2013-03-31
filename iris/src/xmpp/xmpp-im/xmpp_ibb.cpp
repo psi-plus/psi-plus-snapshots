@@ -53,7 +53,7 @@ public:
 	QString stanza;
 
 	int blockSize;
-	QByteArray recvBuf, sendBuf;
+	//QByteArray recvBuf, sendBuf;
 	bool closePending, closing;
 
 	int id; // connection id
@@ -86,14 +86,15 @@ void IBBConnection::reset(bool clear)
 	delete d->j;
 	d->j = 0;
 
-	d->sendBuf.clear();
+	clearWriteBuffer();
 	if(clear)
-		d->recvBuf.clear();
+		clearReadBuffer();
+	setOpenMode(clear || !bytesAvailable()? QIODevice::NotOpen : QIODevice::ReadOnly);
 }
 
 IBBConnection::~IBBConnection()
 {
-	d->sendBuf.clear(); // drop buffer to make closing procedure fast
+	clearWriteBuffer(); // drop buffer to make closing procedure fast
 	close();
 
 	--num_conn;
@@ -135,6 +136,7 @@ void IBBConnection::accept()
 
 	d->m->doAccept(this, d->iq_id);
 	d->state = Active;
+	setOpenMode(QIODevice::ReadWrite);
 	d->m->link(this);
 
 	emit connected(); // to be compatible with S5B
@@ -196,31 +198,16 @@ bool IBBConnection::isOpen() const
 		return false;
 }
 
-void IBBConnection::write(const QByteArray &a)
+qint64 IBBConnection::writeData(const char *data, qint64 maxSize)
 {
-	if(d->state != Active || d->closePending || d->closing)
-		return;
+	if(d->state != Active || d->closePending || d->closing) {
+		setErrorString("read only");
+		return 0;
+	}
 
-	d->sendBuf += a;
+	ByteStream::appendWrite(QByteArray::fromRawData(data, maxSize));
 	trySend();
-}
-
-QByteArray IBBConnection::read(int)
-{
-	// TODO: obey argument
-	QByteArray a = d->recvBuf;
-	d->recvBuf.resize(0);
-	return a;
-}
-
-qint64 IBBConnection::bytesAvailable() const
-{
-	return d->recvBuf.size();
-}
-
-qint64 IBBConnection::bytesToWrite() const
-{
-	return d->sendBuf.size();
+	return maxSize;
 }
 
 void IBBConnection::waitForAccept(const Jid &peer, const QString &iq_id,
@@ -250,9 +237,9 @@ void IBBConnection::takeIncomingData(const IBBData &ibbData)
 		return;
 	}
 	d->seq++;
-	d->recvBuf += ibbData.data;
+	appendRead(ibbData.data);
 
-	readyRead();
+	emit readyRead();
 }
 
 void IBBConnection::setRemoteClosed()
@@ -274,6 +261,7 @@ void IBBConnection::ibb_finished()
 				   qPrintable(d->peer.full()), qPrintable(d->sid));
 #endif
 			d->state = Active;
+			setOpenMode(QIODevice::ReadWrite);
 			d->m->link(this);
 			emit connected();
 		}
@@ -283,10 +271,10 @@ void IBBConnection::ibb_finished()
 				emit delayedCloseFinished();
 			}
 
-			if(!d->sendBuf.isEmpty() || d->closePending)
+			if(bytesToWrite() || d->closePending)
 				QTimer::singleShot(IBB_PACKET_DELAY, this, SLOT(trySend()));
 
-			bytesWritten(j->bytesWritten()); // will delete this connection if no bytes left.
+			emit bytesWritten(j->bytesWritten()); // will delete this connection if no bytes left.
 		}
 	}
 	else {
@@ -310,8 +298,7 @@ void IBBConnection::trySend()
 	if(d->j)
 		return;
 
-	QByteArray a = d->sendBuf.left(d->blockSize); // IBB_PACKET_SIZE
-	d->sendBuf.remove(0, a.size());
+	QByteArray a = takeWrite(d->blockSize);
 
 	if(a.isEmpty()) {
 		if (!d->closePending)
@@ -325,7 +312,7 @@ void IBBConnection::trySend()
 	else {
 #ifdef IBB_DEBUG
 		qDebug("IBBConnection[%d]: sending [%d] bytes (%d bytes left)",
-			   d->id, a.size(), d->sendBuf.size());
+			   d->id, a.size(), bytesToWrite());
 #endif
 	}
 

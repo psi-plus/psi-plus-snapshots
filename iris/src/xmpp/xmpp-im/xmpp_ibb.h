@@ -73,10 +73,9 @@ namespace XMPP
 		BytestreamManager* manager() const;
 
 		bool isOpen() const;
-		void write(const QByteArray &);
-		QByteArray read(int bytes=0);
-		qint64 bytesAvailable() const;
-		qint64 bytesToWrite() const;
+
+	protected:
+		qint64 writeData(const char *data, qint64 maxSize);
 
 	signals:
 		void connected();
