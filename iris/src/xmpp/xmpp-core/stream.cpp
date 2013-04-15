@@ -433,6 +433,20 @@ void ClientStream::continueAfterParams()
 	}
 }
 
+void ClientStream::setSCRAMStoredSaltedHash(const QString &s) {
+	QCA::SASLContext *context = (QCA::SASLContext *)(d->sasl->context());
+	if (context) {
+		context->setProperty("scram-salted-password-base64", s);
+	}
+}
+
+const QString ClientStream::getSCRAMStoredSaltedHash() {
+	QCA::SASLContext *context = (QCA::SASLContext *)(d->sasl->context());
+	if (context) {
+		return context->property("scram-salted-password-base64").toString();
+	}
+}
+
 void ClientStream::setResourceBinding(bool b)
 {
 	d->doBinding = b;

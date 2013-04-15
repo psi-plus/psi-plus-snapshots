@@ -5,6 +5,9 @@
 # standalone checker for the module.
 #
 
+
+CONFIG += crypto
+
 include($$PWD/qttestutil/qttestutil.pri)
 include($$PWD/../common.pri)
 

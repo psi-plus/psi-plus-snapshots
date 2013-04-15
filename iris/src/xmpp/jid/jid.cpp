@@ -22,8 +22,6 @@
 #include "xmpp/jid/jid.h"
 
 #include <QCoreApplication>
-#include <QByteArray>
-#include <QHash>
 #include <libidn/stringprep.h>
 
 #ifndef NO_IRISNET
@@ -36,10 +34,9 @@ using namespace XMPP;
 //----------------------------------------------------------------------------
 // StringPrepCache
 //----------------------------------------------------------------------------
-class StringPrepCache : public QObject
-{
-public:
-	static bool nameprep(const QString &in, int maxbytes, QString& out)
+	StringPrepCache *StringPrepCache::instance = 0;
+
+	bool StringPrepCache::nameprep(const QString &in, int maxbytes, QString& out)
 	{
 		if (in.trimmed().isEmpty()) {
 			out = QString();
@@ -71,7 +68,7 @@ public:
 		return true;
 	}
 
-	static bool nodeprep(const QString &in, int maxbytes, QString& out)
+	bool StringPrepCache::nodeprep(const QString &in, int maxbytes, QString& out)
 	{
 		if(in.isEmpty()) {
       out = QString();
@@ -102,7 +99,7 @@ public:
 		return true;
 	}
 
-	static bool resourceprep(const QString &in, int maxbytes, QString& out)
+	bool StringPrepCache::resourceprep(const QString &in, int maxbytes, QString& out)
 	{
 		if(in.isEmpty()) {
       out = QString();
@@ -133,39 +130,44 @@ public:
 		return true;
 	}
 
-	static void cleanup()
+	bool StringPrepCache::saslprep(const QString &in, int maxbytes, QString& out)
+	{
+		if(in.isEmpty()) {
+	  out = QString();
+			return true;
+		}
+
+		StringPrepCache *that = get_instance();
+
+		Result *r = that->saslprep_table[in];
+		if(r) {
+			if(!r->norm) {
+				return false;
+			}
+			out = *(r->norm);
+			return true;
+		}
+
+		QByteArray cs = in.toUtf8();
+		cs.resize(maxbytes);
+		if(stringprep(cs.data(), maxbytes, (Stringprep_profile_flags)0, stringprep_saslprep) != 0) {
+			that->saslprep_table.insert(in, new Result);
+			return false;
+		}
+
+		QString norm = QString::fromUtf8(cs);
+		that->saslprep_table.insert(in, new Result(norm));
+		out = norm;
+		return true;
+	}
+
+	void StringPrepCache::cleanup()
 	{
 		delete instance;
 		instance = 0;
 	}
 
-private:
-	class Result
-	{
-	public:
-		QString *norm;
-
-		Result() : norm(0)
-		{
-		}
-
-		Result(const QString &s) : norm(new QString(s))
-		{
-		}
-
-		~Result()
-		{
-			delete norm;
-		}
-	};
-
-	QHash<QString,Result*> nameprep_table;
-	QHash<QString,Result*> nodeprep_table;
-	QHash<QString,Result*> resourceprep_table;
-
-	static StringPrepCache *instance;
-
-	static StringPrepCache *get_instance()
+	StringPrepCache *StringPrepCache::get_instance()
 	{
 		if(!instance)
 		{
@@ -177,11 +179,12 @@ private:
 		return instance;
 	}
 
-	StringPrepCache()
+	StringPrepCache::StringPrepCache()
+		: QObject(QCoreApplication::instance())
 	{
 	}
 
-	~StringPrepCache()
+	StringPrepCache::~StringPrepCache()
 	{
 		foreach(Result* r, nameprep_table) {
 			delete r;
@@ -195,10 +198,11 @@ private:
 			delete r;
 		}
 		resourceprep_table.clear();
+		foreach(Result* r, saslprep_table) {
+			delete r;
+		}
+		saslprep_table.clear();
 	}
-};
-
-StringPrepCache *StringPrepCache::instance = 0;
 
 //----------------------------------------------------------------------------
 // Jid

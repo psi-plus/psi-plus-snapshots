@@ -175,6 +175,8 @@ void AccountModifyDlg::init()
 	connect(ck_ibbOnly, SIGNAL(toggled(bool)), SLOT(ibbOnlyToggled(bool)));
 	ibbOnlyToggled(acc.ibbOnly);
 
+	ck_scram_salted_password->setChecked(acc.storeSaltedHashedPassword);
+
 	key = acc.pgpSecretKey;
 	updateUserID();
 	PGPUtil::instance().clearPGPAvailableCache();
@@ -580,6 +582,8 @@ void AccountModifyDlg::save()
 	}
 	acc.stunUser = le_stunUser->text();
 	acc.stunPass = le_stunPass->text();
+
+	acc.storeSaltedHashedPassword = ck_scram_salted_password->isChecked();
 
 	acc.pgpSecretKey = key;
 

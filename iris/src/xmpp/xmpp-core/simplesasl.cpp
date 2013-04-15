@@ -20,6 +20,7 @@
 
 #include "simplesasl.h"
 
+#include <QObject>
 #include <qhostaddress.h>
 #include <qstringlist.h>
 #include <QList>
@@ -31,11 +32,15 @@
 
 #include "xmpp/sasl/plainmessage.h"
 #include "xmpp/sasl/digestmd5response.h"
+#include "xmpp/sasl/scramsha1response.h"
+#include "xmpp/sasl/scramsha1message.h"
+#include "xmpp/sasl/scramsha1signature.h"
 #include "xmpp/base/randrandomnumbergenerator.h"
 
 namespace XMPP {
 class SimpleSASLContext : public QCA::SASLContext
 {
+	Q_OBJECT
 public:
 		class ParamsMutable
 		{
@@ -79,6 +84,10 @@ public:
 	QCA::SASL::AuthCondition authCondition_;
 	QByteArray result_to_net_, result_to_app_;
 	int encoded_;
+
+	// scram specific stuff
+	QByteArray client_first_message;
+	QCA::SecureArray server_signature;
 
 	SimpleSASLContext(QCA::Provider* p) : QCA::SASLContext(p)
 	{
@@ -135,6 +144,10 @@ public:
 
 		mechanism_ = QString();
 		foreach(QString mech, mechlist) {
+			if (mech == "SCRAM-SHA-1") {
+				mechanism_ = "SCRAM-SHA-1";
+				break;
+			}
 			if (mech == "DIGEST-MD5") {
 				mechanism_ = "DIGEST-MD5";
 				break;
@@ -172,7 +185,7 @@ public:
 			out_mech = mechanism_;
 			
 			// PLAIN 
-			if (out_mech == "PLAIN") {
+			if (out_mech == "PLAIN" or out_mech == "SCRAM-SHA-1") {
 				// First, check if we have everything
 				if(need.user || need.pass) {
 					qWarning("simplesasl.cpp: Did not receive necessary auth parameters");
@@ -187,45 +200,107 @@ public:
 					result_ = Params;
 					goto ready;
 				}
+			}
+			if (out_mech == "PLAIN") {
 				out_buf = PLAINMessage(authz, user, pass.toByteArray()).getValue();
+			} else if (out_mech == "SCRAM-SHA-1") {
+				// send client-first-message
+				SCRAMSHA1Message msg(authz, user, QByteArray(0, ' '), RandRandomNumberGenerator());
+				if (msg.isValid()) {
+					out_buf = msg.getValue();
+					client_first_message = out_buf;
+				} else {
+					qWarning("simplesasl.cpp: SASLprep failed.");
+					result_ = Error;
+					goto ready;
+				}
 			}
 			++step;
 			if (out_mech == "PLAIN")
 				result_ = Success;
 			else
 				result_ = Continue;
-		}
-		else if(step == 1) {
+		} else if(step == 1) {
 			Q_ASSERT(out_mech != "PLAIN");
+			if (out_mech == "DIGEST-MD5") {
+				// if we still need params, then the app has failed us!
+				if(need.user || need.authzid || need.pass || need.realm) {
+					qWarning("simplesasl.cpp: Did not receive necessary auth parameters");
+					result_ = Error;
+					goto ready;
+				}
 
-			// if we still need params, then the app has failed us!
-			if(need.user || need.authzid || need.pass || need.realm) {
-				qWarning("simplesasl.cpp: Did not receive necessary auth parameters");
-				result_ = Error;
-				goto ready;
-			}
+				// see if some params are needed
+				if(!have.user)
+					need.user = true;
+				//if(!have.authzid)
+				//	need.authzid = true;
+				if(!have.pass)
+					need.pass = true;
+				if(need.user || need.authzid || need.pass) {
+					result_ = Params;
+					goto ready;
+				}
 
-			// see if some params are needed
-			if(!have.user)
-				need.user = true;
-			//if(!have.authzid)
-			//	need.authzid = true;
-			if(!have.pass)
-				need.pass = true;
-			if(need.user || need.authzid || need.pass) {
-				result_ = Params;
-				goto ready;
+				DIGESTMD5Response response(in_buf, service, host, realm, user, authz, pass.toByteArray(), RandRandomNumberGenerator());
+				if (!response.isValid()) {
+					authCondition_ = QCA::SASL::BadProtocol;
+					result_ = Error;
+					goto ready;
+				}
+				out_buf = response.getValue();
+				++step;
+				result_ = Continue;
+			} else if (out_mech == "SCRAM-SHA-1") {
+				// if we still need params, then the app has failed us!
+				if(need.user || need.pass) {
+					qWarning("simplesasl.cpp: Did not receive necessary auth parameters");
+					result_ = Error;
+					goto ready;
+				}
+				
+				// see if some params are needed
+				if(!have.user)
+					need.user = true;
+				//if(!have.authzid)
+				//	need.authzid = true;
+				if(!have.pass)
+					need.pass = true;
+				if(need.user || need.pass) {
+					result_ = Params;
+					goto ready;
+				}
+				// parse server-first-message, send client-final-message
+				QVariant prop = property("scram-salted-password-base64");
+				QString salted_password_base64;
+				if (prop.isValid()) {
+					salted_password_base64 = prop.toString();
+				}
+				SCRAMSHA1Response response(in_buf, pass.toByteArray(), client_first_message, salted_password_base64, RandRandomNumberGenerator());
+				if (!response.isValid()) {
+					authCondition_ = QCA::SASL::BadProtocol;
+					result_ = Error;
+					goto ready;
+				}
+				setProperty("scram-salted-password-base64", QVariant(response.getSaltedPassword()));
+				server_signature = response.getServerSignature();
+				out_buf = response.getValue();
+				++step;
+				result_ = Continue;
 			}
-
-			DIGESTMD5Response response(in_buf, service, host, realm, user, authz, pass.toByteArray(), RandRandomNumberGenerator());
-			if (!response.isValid()) {
-				authCondition_ = QCA::SASL::BadProtocol;
-				result_ = Error;
-				goto ready;
+		} else if (step == 2) {
+			// verify the server's response on success, for SCRAM-SHA-1
+			if (out_mech == "SCRAM-SHA-1") {
+				SCRAMSHA1Signature sig(in_buf, server_signature);
+				if (sig.isValid()) {
+					result_ = Success;
+				} else {
+					qWarning() << "ServerSignature doesn't match the one we've calculated.";
+					authCondition_ = QCA::SASL::AuthFail;
+					result_ = Error;
+					goto ready;
+				}
 			}
-			out_buf = response.getValue();
-			++step;
-			result_ = Continue;
 		}
 		/*else if (step == 2) {
 			//Commenting this out is Justin's fix for updated QCA.
@@ -390,3 +465,5 @@ QCA::Provider *createProviderSimpleSASL()
 }
 
 }
+
+#include "simplesasl.moc"

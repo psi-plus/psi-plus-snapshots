@@ -1035,7 +1035,6 @@ public slots:
 	{
 		reconnectData_++;
 		Q_ASSERT(::reconnectData().count());
-		Q_ASSERT(reconnectData >= 0);
 		reconnectData_ = qMax(0, qMin(reconnectData_, ::reconnectData().count() - 1));
 		ReconnectData data = ::reconnectData()[reconnectData_];
 
@@ -1955,9 +1954,10 @@ void PsiAccount::cs_needAuthParams(bool user, bool pass, bool realm)
 	else if (d->acc.customAuth && !d->acc.authid.isEmpty())
 		qWarning("Custom authentication user not used");
 
-	if(pass)
+	if(pass) {
 		d->stream->setPassword(d->acc.pass);
-
+		if (d->acc.storeSaltedHashedPassword) d->stream->setSCRAMStoredSaltedHash(d->acc.scramSaltedHashPassword);
+	}
 	if (realm) {
 		if (d->acc.customAuth && !d->acc.realm.isEmpty()) {
 			d->stream->setRealm(d->acc.realm);
@@ -1979,6 +1979,11 @@ void PsiAccount::cs_authenticated()
 	if (d->conn.isNull() || d->stream.isNull()) {
 		cs_error(RECONNECT_TIMEOUT_ERROR);
 		return;
+	}
+
+	if (d->acc.storeSaltedHashedPassword) {
+		d->acc.scramSaltedHashPassword = d->stream->getSCRAMStoredSaltedHash();
+		d->acc.pass = "";
 	}
 
 	//printf("PsiAccount: [%s] authenticated\n", name().latin1());

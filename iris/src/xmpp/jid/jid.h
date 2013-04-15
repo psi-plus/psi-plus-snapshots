@@ -23,6 +23,9 @@
 
 #include <QString>
 
+#include <QByteArray>
+#include <QHash>
+
 #ifdef IRIS_XMPP_JID_DEPRECATED
 #define IRIS_XMPP_JID_DECL_DEPRECATED Q_DECL_DEPRECATED
 #else
@@ -31,6 +34,47 @@
 
 namespace XMPP 
 {
+	class StringPrepCache : public QObject
+	{
+	public:
+		static bool nameprep(const QString &in, int maxbytes, QString& out);
+		static bool nodeprep(const QString &in, int maxbytes, QString& out);
+		static bool resourceprep(const QString &in, int maxbytes, QString& out);
+		static bool saslprep(const QString &in, int maxbytes, QString& out);
+
+		static void cleanup();
+	private:
+		class Result
+		{
+		public:
+			QString *norm;
+
+			Result() : norm(0)
+			{
+			}
+
+			Result(const QString &s) : norm(new QString(s))
+			{
+			}
+
+			~Result()
+			{
+				delete norm;
+			}
+		};
+
+		QHash<QString,Result*> nameprep_table;
+		QHash<QString,Result*> nodeprep_table;
+		QHash<QString,Result*> resourceprep_table;
+		QHash<QString,Result*> saslprep_table;
+
+		static StringPrepCache *instance;
+		static StringPrepCache *get_instance();
+
+		StringPrepCache();
+		~StringPrepCache();
+	};
+
 	class Jid
 	{
 	public:

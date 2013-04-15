@@ -953,10 +953,3 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-
-#ifdef QCA_STATIC
-#include <QtPlugin>
-#ifdef HAVE_OPENSSL
-Q_IMPORT_PLUGIN(qca_openssl)
-#endif
-#endif
