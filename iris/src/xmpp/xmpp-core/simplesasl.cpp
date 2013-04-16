@@ -288,18 +288,16 @@ public:
 				++step;
 				result_ = Continue;
 			}
-		} else if (step == 2) {
+		} else if (step == 2 && out_mech == "SCRAM-SHA-1") {
 			// verify the server's response on success, for SCRAM-SHA-1
-			if (out_mech == "SCRAM-SHA-1") {
-				SCRAMSHA1Signature sig(in_buf, server_signature);
-				if (sig.isValid()) {
-					result_ = Success;
-				} else {
-					qWarning() << "ServerSignature doesn't match the one we've calculated.";
-					authCondition_ = QCA::SASL::AuthFail;
-					result_ = Error;
-					goto ready;
-				}
+			SCRAMSHA1Signature sig(in_buf, server_signature);
+			if (sig.isValid()) {
+				result_ = Success;
+			} else {
+				qWarning() << "ServerSignature doesn't match the one we've calculated.";
+				authCondition_ = QCA::SASL::AuthFail;
+				result_ = Error;
+				goto ready;
 			}
 		}
 		/*else if (step == 2) {
