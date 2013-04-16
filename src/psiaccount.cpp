@@ -3023,7 +3023,7 @@ void PsiAccount::setStatus(const Status &_s,  bool withPriority, bool isManualSt
 
 		// if client is not active then attempt to login
 		if(!isActive()) {
-			if (!d->acc.opt_pass) {
+			if (!d->acc.opt_pass && !d->acc.storeSaltedHashedPassword) {
 				passwordPrompt();
 			}
 			else
