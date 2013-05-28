@@ -33,4 +33,8 @@ windows {
 		LIBS -= -lqca
 		LIBS += -lqca
 	}
+	contains(LIBS, -lqcad) {
+		LIBS -= -lqcad
+		LIBS += -lqcad
+	}
 }
