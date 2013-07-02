@@ -753,7 +753,7 @@ static jdns_dnsparams_t *dnsparams_get_unixsys()
 		return params;
 
 	// nameservers - ipv6
-	for(n = 0; n < MAXNS && n < RESVAR._u._ext.nscount; ++n)
+	for(n = 0; n < MAXNS && n < RESVAR._u._ext.nscount6; ++n)
 	{
 		jdns_address_t *addr;
 		struct sockaddr_in6 *sa6;

@@ -34,7 +34,7 @@ using namespace XMPP;
 //----------------------------------------------------------------------------
 // StringPrepCache
 //----------------------------------------------------------------------------
-	StringPrepCache *StringPrepCache::instance = 0;
+	QScopedPointer<StringPrepCache> StringPrepCache::_instance;
 
 	bool StringPrepCache::nameprep(const QString &in, int maxbytes, QString& out)
 	{
@@ -43,7 +43,7 @@ using namespace XMPP;
 			return false; // empty names or just spaces are disallowed (rfc5892+rfc6122)
 		}
 
-		StringPrepCache *that = get_instance();
+		StringPrepCache *that = instance();
 
 		Result *r = that->nameprep_table[in];
 		if (r) {
@@ -75,7 +75,7 @@ using namespace XMPP;
 			return true;
 		}
 
-		StringPrepCache *that = get_instance();
+		StringPrepCache *that = instance();
 
 		Result *r = that->nodeprep_table[in];
 		if(r) {
@@ -106,7 +106,7 @@ using namespace XMPP;
 			return true;
 		}
 
-		StringPrepCache *that = get_instance();
+		StringPrepCache *that = instance();
 
 		Result *r = that->resourceprep_table[in];
 		if(r) {
@@ -137,7 +137,7 @@ using namespace XMPP;
 			return true;
 		}
 
-		StringPrepCache *that = get_instance();
+		StringPrepCache *that = instance();
 
 		Result *r = that->saslprep_table[in];
 		if(r) {
@@ -163,24 +163,22 @@ using namespace XMPP;
 
 	void StringPrepCache::cleanup()
 	{
-		delete instance;
-		instance = 0;
+		_instance.reset(0);
 	}
 
-	StringPrepCache *StringPrepCache::get_instance()
+	StringPrepCache *StringPrepCache::instance()
 	{
-		if(!instance)
+		if(!_instance)
 		{
-			instance = new StringPrepCache;
+			_instance.reset(new StringPrepCache);
 #ifndef NO_IRISNET
 			irisNetAddPostRoutine(cleanup);
 #endif
 		}
-		return instance;
+		return _instance.data();
 	}
 
 	StringPrepCache::StringPrepCache()
-		: QObject(QCoreApplication::instance())
 	{
 	}
 
