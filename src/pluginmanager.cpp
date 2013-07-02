@@ -609,6 +609,11 @@ QString PluginManager::getName(int account) const
 	return nm;
 }
 
+int PluginManager::findOnlineAccountForContact(const QString &jid) const
+{
+	return -1; // TODO implement
+}
+
 bool PluginManager::setActivity(int account, const QString& jid, QDomElement xml)
 {
 	if (account >= accountIds_.size())

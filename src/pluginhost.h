@@ -143,6 +143,7 @@ public:
 	QString getId(int account);
 	QString getName(int account);
 	QStringList getRoster(int account);
+	int findOnlineAccountForContact(const QString &jid) const;
 
 	//ContactInfoAccessingHost
 	bool isSelf(int account, const QString& jid);

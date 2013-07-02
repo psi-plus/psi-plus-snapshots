@@ -1065,6 +1065,11 @@ QString PluginHost::getName(int account)
 	return manager_->getName(account);
 }
 
+int PluginHost::findOnlineAccountForContact(const QString &jid) const
+{
+	return manager_->findOnlineAccountForContact(jid);
+}
+
 bool PluginHost::setActivity(int account, const QString& Jid, QDomElement xml)
 {
 	return manager_->setActivity(account, Jid, xml);
