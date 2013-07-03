@@ -611,7 +611,14 @@ QString PluginManager::getName(int account) const
 
 int PluginManager::findOnlineAccountForContact(const QString &jid) const
 {
-	return -1; // TODO implement
+	Jid j(jid);
+	QHash<PsiAccount*, int>::const_iterator it = accountIds_.constBegin();
+	for ( ; it != accountIds_.end(); it++) {
+		if (it.key()->isAvailable() && it.key()->findContact(j)) {
+			return it.value();
+		}
+	}
+	return -1;
 }
 
 bool PluginManager::setActivity(int account, const QString& jid, QDomElement xml)
