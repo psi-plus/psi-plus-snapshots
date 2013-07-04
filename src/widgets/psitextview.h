@@ -71,6 +71,7 @@ protected:
 	class Private;
 private:
 	Private *d;
+	bool isSelectedBlock();
 };
 
 #endif

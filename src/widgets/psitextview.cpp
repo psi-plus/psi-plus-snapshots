@@ -50,7 +50,6 @@ public:
 
 	QString anchorOnMousePress;
 	bool hadSelectionOnMousePress;
-	bool rightClickSelection;
 
 	QString fragmentToPlainText(const QTextFragment &fragment);
 	QString blockToPlainText(const QTextBlock &block);
@@ -105,17 +104,28 @@ QMenu* PsiTextView::createStandardContextMenu(const QPoint &position)
 		menu = URLObject::getInstance()->createPopupMenu(anc);
 	}
 	else {
-		if (d->rightClickSelection || !textCursor().hasSelection()) { // only if no selection we select text block
+		if (isSelectedBlock() || !textCursor().hasSelection()) { // only if no selection we select text block
 			int begin = textcursor.block().position();
 			int end = begin + textcursor.block().length() - 1;
 			textcursor.setPosition(begin);
 			textcursor.setPosition(end, QTextCursor::KeepAnchor);
 			setTextCursor(textcursor);
-			d->rightClickSelection = true;
 		}
 		menu = QTextEdit::createStandardContextMenu();
 	}
 	return menu;
+}
+
+bool PsiTextView::isSelectedBlock()
+{
+	if (textCursor().hasSelection()) {
+		const QTextCursor &cursor = textCursor();
+		const QTextBlock  &block  = cursor.block();
+		int start = cursor.selectionStart();
+		if (block.position() == start && block.length() == cursor.selectionEnd() - start + 1)
+			return true;
+	}
+	return false;
 }
 
 /**
@@ -253,11 +263,9 @@ void PsiTextView::mouseReleaseEvent(QMouseEvent *e)
 {
 	QTextEdit::mouseReleaseEvent(e);
 
-	if (!(e->button() & Qt::LeftButton)) {
+	if (!(e->button() & Qt::LeftButton))
 		return;
-	}
 
-	d->rightClickSelection = false;
 	const QString anchor = anchorAt(e->pos());
 
 	if (anchor.isEmpty())
