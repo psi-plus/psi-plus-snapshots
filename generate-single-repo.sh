@@ -3,8 +3,10 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2013-01-27
+# Updated: 2013-07-09
 # Version: N/A
+
+set -e
 
 if [[ ${0} =~ ^/.+$ ]]; then
     export PSIPLUS_DIR="$(dirname ${0})"
@@ -15,9 +17,9 @@ fi
 export MAIN_DIR="${PSIPLUS_DIR}/.."
 
 # Test Internet connection:
-host github.com > /dev/null || exit 1
+host github.com > /dev/null
 
-cd "${PSIPLUS_DIR}" || exit 1
+cd "${PSIPLUS_DIR}"
 OLD_VER=$(git tag -l | sort -V | tail -n1)
 OLD_REVISION=$(echo ${OLD_VER} | sed -e "s/^[0-9]\+\.[0-9]\+\.\([0-9]\+\)$/\1/")
 
@@ -25,16 +27,16 @@ MOD=psi
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
-    git pull --all || exit 1
-    git submodule update || exit 1
+    git pull --all
+    git submodule update
     echo;
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
-    git clone --depth 1 git://github.com/psi-im/${MOD}.git || exit 1
+    git clone --depth 1 git://github.com/psi-im/${MOD}.git
     cd "${MAIN_DIR}/${MOD}"
-    git submodule init || exit 1
-    git submodule update || exit 1
+    git submodule init
+    git submodule update
     echo;
 fi
 
@@ -42,12 +44,12 @@ MOD=main
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
-    git pull --all || exit 1
+    git pull --all
     echo;
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
-    git clone git://github.com/psi-plus/${MOD}.git || exit 1
+    git clone git://github.com/psi-plus/${MOD}.git
     echo;
 fi
 
@@ -55,12 +57,12 @@ MOD=plugins
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
-    git pull --all || exit 1
+    git pull --all
     echo;
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
-    git clone --depth 1 git://github.com/psi-plus/${MOD}.git || exit 1
+    git clone --depth 1 git://github.com/psi-plus/${MOD}.git
     echo;
 fi
 
@@ -68,12 +70,12 @@ MOD=resources
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
-    git pull --all || exit 1
+    git pull --all
     echo;
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
-    git clone --depth 1 git://github.com/psi-plus/${MOD}.git || exit 1
+    git clone --depth 1 git://github.com/psi-plus/${MOD}.git
     echo;
 fi
 
@@ -107,70 +109,70 @@ find . -depth -type d -empty -exec rmdir {} \;
 echo "Directory is cleaned."
 echo;
 
-if !([ -e "${PSIPLUS_DIR}/README" ]); then
+if [ ! -e "${PSIPLUS_DIR}/README" ]; then
     wget -4 -c "https://raw.github.com/tehnick/psi-plus/master/README" || touch README
 fi
 
-mv "${PSIPLUS_DIR}/README" "${MAIN_DIR}/README" || exit 1
+mv "${PSIPLUS_DIR}/README" "${MAIN_DIR}/README"
 rsync -a "${MAIN_DIR}/psi/" "${PSIPLUS_DIR}/" \
-    --exclude=".git*" || exit 1
-mv "${MAIN_DIR}/README" "${PSIPLUS_DIR}/README" || exit 1
+    --exclude=".git*"
+mv "${MAIN_DIR}/README" "${PSIPLUS_DIR}/README"
 echo "Files from psi project were copied."
 echo;
 
 cat "${MAIN_DIR}/main/patches"/*.diff | \
     patch -d "${PSIPLUS_DIR}" -p1 2>&1 > \
-    "${MAIN_DIR}/applying-patches_${NEW_VER}.log" || exit 1
-echo "${NEW_VER} ($(echo ${LAST_REVISION_DATE}))" > version || exit 1
+    "${MAIN_DIR}/applying-patches_${NEW_VER}.log"
+echo "${NEW_VER} ($(echo ${LAST_REVISION_DATE}))" > version
 echo "Patches from Psi+ project were applied."
 echo;
 
 mkdir -p "${PSIPLUS_DIR}/src/patches"
-rsync -a "${MAIN_DIR}/main/patches/dev" "${PSIPLUS_DIR}/src/patches/" || exit 1
-rsync -a "${MAIN_DIR}/main/patches/mac" "${PSIPLUS_DIR}/src/patches/" || exit 1
+rsync -a "${MAIN_DIR}/main/patches/dev" "${PSIPLUS_DIR}/src/patches/"
+rsync -a "${MAIN_DIR}/main/patches/mac" "${PSIPLUS_DIR}/src/patches/"
 echo "Extra patches from Psi+ project were copied."
 echo;
 
 rsync -a "${MAIN_DIR}/plugins" "${PSIPLUS_DIR}/src/" \
-    --exclude=".git*" || exit 1
+    --exclude=".git*"
 mv  "${PSIPLUS_DIR}/src/plugins/dev/otrplugin" \
-    "${PSIPLUS_DIR}/src/plugins/generic" || exit 1
+    "${PSIPLUS_DIR}/src/plugins/generic"
 echo "Plugins from Psi+ project were copied."
 echo;
 
-rsync -a "${MAIN_DIR}/main/iconsets/system/" "${PSIPLUS_DIR}/iconsets/system/" || exit 1
-rsync -a "${MAIN_DIR}/main/iconsets/roster/" "${PSIPLUS_DIR}/iconsets/roster/" || exit 1
+rsync -a "${MAIN_DIR}/main/iconsets/system/" "${PSIPLUS_DIR}/iconsets/system/"
+rsync -a "${MAIN_DIR}/main/iconsets/roster/" "${PSIPLUS_DIR}/iconsets/roster/"
+rsync -a "${MAIN_DIR}/main/iconsets/affiliations/" "${PSIPLUS_DIR}/iconsets/affiliations/"
 echo "Iconsets from Psi+ project were copied."
 echo;
 
-rsync -a "${MAIN_DIR}/resources/sound/" "${PSIPLUS_DIR}/sound/" || exit 1
+rsync -a "${MAIN_DIR}/resources/sound/" "${PSIPLUS_DIR}/sound/"
 echo "Sound files from Psi+ project were copied."
 echo;
 
 mkdir -p "${PSIPLUS_DIR}/skins/"
-rsync -a "${MAIN_DIR}/resources/skins/" "${PSIPLUS_DIR}/skins/" || exit 1
+rsync -a "${MAIN_DIR}/resources/skins/" "${PSIPLUS_DIR}/skins/"
 echo "Skins from Psi+ project were copied."
 echo;
 
-rsync -a "${MAIN_DIR}/resources/themes/" "${PSIPLUS_DIR}/themes/" || exit 1
+rsync -a "${MAIN_DIR}/resources/themes/" "${PSIPLUS_DIR}/themes/"
 echo "Themes from Psi+ project were copied."
 echo;
 
-cp "${MAIN_DIR}/main/changelog.txt" "${PSIPLUS_DIR}/ChangeLog" || exit 1
+cp "${MAIN_DIR}/main/changelog.txt" "${PSIPLUS_DIR}/ChangeLog"
 echo "ChangeLog from Psi+ project was copied."
 echo;
 
 
 rm configure.exe
 rm -r win32/
-#rm -r src/libpsi/tools/zip/minizip/win32/
 rm -r src/libpsi/tools/idle/win32/
 echo "Trash was removed."
 echo;
 
 
-git add .  || exit 1
-git add -u || exit 1
+# Update repo and make analysis
+git add -A
 
 
 COMMENT=""
@@ -234,10 +236,10 @@ fi
 echo -e "${COMMENT}"
 
 git cm -a -m "$(echo -e ${COMMENT})" 2>&1 > \
-    "${MAIN_DIR}/git-commit_${NEW_VER}.log" || exit 1
+    "${MAIN_DIR}/git-commit_${NEW_VER}.log"
 
 if [ "${NEW_VER}" != "${OLD_VER}" ]; then
-    git tag "${NEW_VER}" || exit 1
+    git tag "${NEW_VER}"
     echo "Git tag was created."
     echo;
 fi
