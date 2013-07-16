@@ -347,7 +347,7 @@ QString UserListItem::findClient(QString name) const
 	QString res;
 	if(name.startsWith("adium"))
 		res = "adium";
-	else if(name.startsWith("google talk user account"))
+	else if(name.startsWith("google talk user account") || name.contains("android.com"))
 		res = "android";
 	else if(name.startsWith("aqq"))
 		res = "aqq";
