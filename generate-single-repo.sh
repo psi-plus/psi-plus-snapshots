@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2013-07-09
+# Updated: 2013-07-19
 # Version: N/A
 
 set -e
@@ -135,8 +135,6 @@ echo;
 
 rsync -a "${MAIN_DIR}/plugins" "${PSIPLUS_DIR}/src/" \
     --exclude=".git*"
-mv  "${PSIPLUS_DIR}/src/plugins/dev/otrplugin" \
-    "${PSIPLUS_DIR}/src/plugins/generic"
 echo "Plugins from Psi+ project were copied."
 echo;
 
