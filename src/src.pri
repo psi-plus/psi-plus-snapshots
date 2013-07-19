@@ -190,7 +190,6 @@ HEADERS += \
 	$$PWD/psihttpauthrequest.h \
 	$$PWD/httpauthmanager.h \
 	$$PWD/ahcommand.h \
-	$$PWD/pongserver.h \
 	$$PWD/ahcommandserver.h \
 	$$PWD/ahcommanddlg.h \
 	$$PWD/ahcformdlg.h \
@@ -335,7 +334,6 @@ SOURCES += \
 	$$PWD/passdialog.cpp \
 	$$PWD/httpauthmanager.cpp \
 	$$PWD/ahcommand.cpp \
-	$$PWD/pongserver.cpp \
 	$$PWD/ahcommandserver.cpp \
 	$$PWD/ahcommanddlg.cpp \
 	$$PWD/ahcformdlg.cpp \
