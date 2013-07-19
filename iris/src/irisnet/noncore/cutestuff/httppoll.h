@@ -35,6 +35,8 @@ public:
 	HttpPoll(QObject *parent=0);
 	~HttpPoll();
 
+	virtual QAbstractSocket* abstractSocket() const;
+
 	void setAuth(const QString &user, const QString &pass="");
 	void connectToUrl(const QUrl &url);
 	void connectToHost(const QString &proxyHost, int proxyPort, const QUrl &url);
@@ -63,7 +65,7 @@ private:
 	class Private;
 	Private *d;
 
-	void reset(bool clear=false);
+	void resetConnection(bool clear=false);
 	QByteArray makePacket(const QString &ident, const QString &key, const QString &newkey, const QByteArray &block);
 	void resetKey();
 	const QString & getKey(bool *);
@@ -76,6 +78,8 @@ public:
 	enum Error { ErrConnectionRefused, ErrHostNotFound, ErrSocket, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
 	HttpProxyPost(QObject *parent=0);
 	~HttpProxyPost();
+
+	QAbstractSocket* abstractSocket() const;
 
 	void setUseSsl(bool state);
 	void setAuth(const QString &user, const QString &pass="");
@@ -102,7 +106,7 @@ private:
 	class Private;
 	Private *d;
 
-	void reset(bool clear=false);
+	void resetConnection(bool clear=false);
 	void processData(const QByteArray &block);
 };
 
@@ -141,7 +145,7 @@ private:
 	class Private;
 	Private *d;
 
-	void reset(bool clear=false);
+	void resetConnection(bool clear=false);
 	void processData(const QByteArray &block);
 };
 

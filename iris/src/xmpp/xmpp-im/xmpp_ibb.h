@@ -88,7 +88,7 @@ namespace XMPP
 		class Private;
 		Private *d;
 
-		void reset(bool clear=false);
+		void resetConnection(bool clear=false);
 
 		friend class IBBManager;
 		void waitForAccept(const Jid &peer, const QString &iq_id,

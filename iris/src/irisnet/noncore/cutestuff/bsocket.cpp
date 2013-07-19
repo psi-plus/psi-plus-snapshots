@@ -131,12 +131,12 @@ BSocket::BSocket(QObject *parent)
 :ByteStream(parent)
 {
 	d = new Private;
-	reset();
+	resetConnection();
 }
 
 BSocket::~BSocket()
 {
-	reset(true);
+	resetConnection(true);
 	if (d->resolver)
 		delete d->resolver;
 	delete d;
@@ -156,7 +156,7 @@ void BSocket::recreate_resolver() {
 	d->resolver = new XMPP::ServiceResolver;
 }
 
-void BSocket::reset(bool clear)
+void BSocket::resetConnection(bool clear)
 {
 #ifdef BS_DEBUG
 	BSDEBUG << clear;
@@ -215,7 +215,7 @@ void BSocket::connectToHost(const QHostAddress &address, quint16 port)
 	BSDEBUG << "a:" << address << "p:" << port;
 #endif
 
-	reset(true);
+	resetConnection(true);
 	d->address = address;
 	d->port = port;
 	d->state = Connecting;
@@ -231,7 +231,7 @@ void BSocket::connectToHost(const QString &host, quint16 port, QAbstractSocket::
 	BSDEBUG << "h:" << host << "p:" << port << "pr:" << protocol;
 #endif
 
-	reset(true);
+	resetConnection(true);
 	d->host = host;
 	d->port = port;
 	d->state = HostLookup;
@@ -263,7 +263,7 @@ void BSocket::connectToHost(const QString &service, const QString &transport, co
 	BSDEBUG << "s:" << service << "t:" << transport << "d:" << domain;
 #endif
 
-	reset(true);
+	resetConnection(true);
 	d->domain = domain;
 	d->state = HostLookup;
 
@@ -309,6 +309,11 @@ void BSocket::handle_connect_error(QAbstractSocket::SocketError e) {
 	d->resolver->tryNext();
 }
 
+QAbstractSocket* BSocket::abstractSocket() const
+{
+	return d->qsock;
+}
+
 int BSocket::socket() const
 {
 	if(d->qsock)
@@ -319,7 +324,7 @@ int BSocket::socket() const
 
 void BSocket::setSocket(int s)
 {
-	reset(true);
+	resetConnection(true);
 	ensureSocket();
 	d->state = Connected;
 	setOpenMode(QIODevice::ReadWrite);
@@ -353,10 +358,10 @@ void BSocket::close()
 		d->qsock->close();
 		d->state = Closing;
 		if(d->qsock->bytesToWrite() == 0)
-			reset();
+			resetConnection();
 	}
 	else {
-		reset();
+		resetConnection();
 	}
 }
 
@@ -460,7 +465,7 @@ void BSocket::qs_closed()
 		BSDEBUG << "Delayed Close Finished";
 #endif
 		//SafeDeleteLock s(&d->sd);
-		reset();
+		resetConnection();
 		emit delayedCloseFinished();
 	}
 }
@@ -495,7 +500,7 @@ void BSocket::qs_error(QAbstractSocket::SocketError x)
 		BSDEBUG << "Connection Closed";
 #endif
 		//SafeDeleteLock s(&d->sd);
-		reset();
+		resetConnection();
 		emit connectionClosed();
 		return;
 	}
@@ -505,7 +510,7 @@ void BSocket::qs_error(QAbstractSocket::SocketError x)
 #endif
 	//SafeDeleteLock s(&d->sd);
 
-	reset();
+	resetConnection();
 	if(x == QTcpSocket::ConnectionRefusedError)
 		emit error(ErrConnectionRefused);
 	else if(x == QTcpSocket::HostNotFoundError)

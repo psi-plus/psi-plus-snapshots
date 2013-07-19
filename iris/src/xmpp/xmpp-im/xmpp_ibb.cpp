@@ -66,7 +66,7 @@ IBBConnection::IBBConnection(IBBManager *m)
 	d->m = m;
 	d->j = 0;
 	d->blockSize = IBB_PACKET_SIZE;
-	reset();
+	resetConnection();
 
 	++num_conn;
 	d->id = id_conn++;
@@ -75,7 +75,7 @@ IBBConnection::IBBConnection(IBBManager *m)
 #endif
 }
 
-void IBBConnection::reset(bool clear)
+void IBBConnection::resetConnection(bool clear)
 {
 	d->m->unlink(this);
 	d->state = Idle;
@@ -108,7 +108,7 @@ IBBConnection::~IBBConnection()
 void IBBConnection::connectToJid(const Jid &peer, const QString &sid)
 {
 	close();
-	reset(true);
+	resetConnection(true);
 
 	d->state = Requesting;
 	d->peer = peer;
@@ -149,7 +149,7 @@ void IBBConnection::close()
 
 	if(d->state == WaitingForAccept) {
 		d->m->doReject(this, d->iq_id, Stanza::Error::Forbidden, "Rejected");
-		reset();
+		resetConnection();
 		return;
 	}
 
@@ -167,7 +167,7 @@ void IBBConnection::close()
 		}
 	}
 
-	reset();
+	resetConnection();
 }
 
 int IBBConnection::state() const
@@ -215,7 +215,7 @@ void IBBConnection::waitForAccept(const Jid &peer, const QString &iq_id,
 								  const QString &stanza)
 {
 	close();
-	reset(true);
+	resetConnection(true);
 
 	d->state = WaitingForAccept;
 	d->peer = peer;
@@ -244,7 +244,7 @@ void IBBConnection::takeIncomingData(const IBBData &ibbData)
 
 void IBBConnection::setRemoteClosed()
 {
-	reset();
+	resetConnection();
 	emit connectionClosed();
 }
 
@@ -267,7 +267,7 @@ void IBBConnection::ibb_finished()
 		}
 		else {
 			if(d->closing) {
-				reset();
+				resetConnection();
 				emit delayedCloseFinished();
 			}
 
@@ -282,11 +282,11 @@ void IBBConnection::ibb_finished()
 #ifdef IBB_DEBUG
 			qDebug("IBBConnection[%d]: %s refused.", d->id, qPrintable(d->peer.full()));
 #endif
-			reset(true);
+			resetConnection(true);
 			setError(ErrRequest);
 		}
 		else {
-			reset(true);
+			resetConnection(true);
 			setError(ErrData);
 		}
 	}

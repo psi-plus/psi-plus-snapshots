@@ -123,7 +123,7 @@ namespace XMPP
 		class Private;
 		Private *d;
 
-		void reset(bool clear=false);
+		void resetConnection(bool clear=false);
 		void handleUDP(const QByteArray &buf);
 		void sendUDP(const QByteArray &buf);
 
@@ -211,7 +211,7 @@ namespace XMPP
 		S5BConnector(QObject *parent=0);
 		~S5BConnector();
 
-		void reset();
+		void resetConnection();
 		void start(const Jid &self, const StreamHostList &hosts, const QString &key, bool udp, int timeout);
 		SocksClient *takeClient();
 		SocksUDP *takeUDP();

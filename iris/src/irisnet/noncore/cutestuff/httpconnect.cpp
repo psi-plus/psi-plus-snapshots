@@ -128,16 +128,16 @@ HttpConnect::HttpConnect(QObject *parent)
 	connect(&d->sock, SIGNAL(bytesWritten(qint64)), SLOT(sock_bytesWritten(qint64)));
 	connect(&d->sock, SIGNAL(error(int)), SLOT(sock_error(int)));
 
-	reset(true);
+	resetConnection(true);
 }
 
 HttpConnect::~HttpConnect()
 {
-	reset(true);
+	resetConnection(true);
 	delete d;
 }
 
-void HttpConnect::reset(bool clear)
+void HttpConnect::resetConnection(bool clear)
 {
 	if(d->sock.state() != BSocket::Idle)
 		d->sock.close();
@@ -157,7 +157,7 @@ void HttpConnect::setAuth(const QString &user, const QString &pass)
 
 void HttpConnect::connectToHost(const QString &proxyHost, int proxyPort, const QString &host, int port)
 {
-	reset(true);
+	resetConnection(true);
 
 	d->host = proxyHost;
 	d->port = proxyPort;
@@ -178,7 +178,7 @@ void HttpConnect::close()
 {
 	d->sock.close();
 	if(d->sock.bytesToWrite() == 0)
-		reset();
+		resetConnection();
 }
 
 qint64 HttpConnect::writeData(const char *data, qint64 maxSize)
@@ -225,7 +225,7 @@ void HttpConnect::sock_connected()
 void HttpConnect::sock_connectionClosed()
 {
 	if(d->active) {
-		reset();
+		resetConnection();
 		connectionClosed();
 	}
 	else {
@@ -236,7 +236,7 @@ void HttpConnect::sock_connectionClosed()
 void HttpConnect::sock_delayedCloseFinished()
 {
 	if(d->active) {
-		reset();
+		resetConnection();
 		delayedCloseFinished();
 	}
 }
@@ -274,7 +274,7 @@ void HttpConnect::sock_readyRead()
 #ifdef PROX_DEBUG
 					fprintf(stderr, "HttpConnect: invalid header!\n");
 #endif
-					reset(true);
+					resetConnection(true);
 					setError(ErrProxyNeg);
 					return;
 				}
@@ -328,7 +328,7 @@ void HttpConnect::sock_readyRead()
 #ifdef PROX_DEBUG
 					fprintf(stderr, "HttpConnect: << Error >> [%s]\n", qPrintable(errStr));
 #endif
-					reset(true);
+					resetConnection(true);
 					setError(err);
 					return;
 				}
@@ -359,11 +359,11 @@ void HttpConnect::sock_bytesWritten(qint64 x)
 void HttpConnect::sock_error(int x)
 {
 	if(d->active) {
-		reset();
+		resetConnection();
 		setError(ErrRead);
 	}
 	else {
-		reset(true);
+		resetConnection(true);
 		if(x == BSocket::ErrHostNotFound)
 			setError(ErrProxyConnect);
 		else if(x == BSocket::ErrConnectionRefused)

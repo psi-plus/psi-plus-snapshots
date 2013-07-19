@@ -447,6 +447,14 @@ namespace XMPP
 		class Private;
 		Private *d;
 	};
+
+	class JT_PongServer : public Task
+	{
+		Q_OBJECT
+	public:
+		JT_PongServer(Task *);
+		bool take(const QDomElement &);
+	};
 }
 
 #endif

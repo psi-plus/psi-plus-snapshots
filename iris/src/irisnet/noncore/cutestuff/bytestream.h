@@ -25,6 +25,7 @@
 #include <QByteArray>
 #include <QIODevice>
 
+class QAbstractSocket;
 // CS_NAMESPACE_BEGIN
 
 // CS_EXPORT_BEGIN
@@ -43,6 +44,8 @@ public:
 
 	int errorCode() const;
 	QString &errorText() const;
+
+	virtual QAbstractSocket* abstractSocket() const { return 0; }
 
 signals:
 	void connectionClosed();

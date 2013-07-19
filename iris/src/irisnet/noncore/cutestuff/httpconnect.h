@@ -57,7 +57,7 @@ private:
 	class Private;
 	Private *d;
 
-	void reset(bool clear=false);
+	void resetConnection(bool clear=false);
 };
 
 // CS_NAMESPACE_END

@@ -830,7 +830,7 @@ void ChatDlg::incomingMessage(const Message &m)
 			setContactChatState(m.chatState());
 		}
 		if (m.messageReceipt() == ReceiptReceived) {
-			chatView()->markReceived(m.id());
+			chatView()->markReceived(m.messageReceiptId());
 		}
 	}
 	else {

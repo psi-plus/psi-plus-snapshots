@@ -106,6 +106,8 @@ namespace XMPP {
 		// XEP-0184
 		MessageReceipt messageReceipt() const;
 		void setMessageReceipt(MessageReceipt);
+		QString messageReceiptId() const;
+		void setMessageReceiptId(const QString &s);
 
 		// JEP-0027
 		QString xencrypted() const;

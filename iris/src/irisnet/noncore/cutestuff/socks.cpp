@@ -462,16 +462,21 @@ void SocksClient::init()
 	connect(&d->sock, SIGNAL(bytesWritten(qint64)), SLOT(sock_bytesWritten(qint64)));
 	connect(&d->sock, SIGNAL(error(int)), SLOT(sock_error(int)));
 
-	reset(true);
+	resetConnection(true);
 }
 
 SocksClient::~SocksClient()
 {
-	reset(true);
+	resetConnection(true);
 	delete d;
 }
 
-void SocksClient::reset(bool clear)
+QAbstractSocket* SocksClient::abstractSocket() const
+{
+	return d->sock.abstractSocket();
+}
+
+void SocksClient::resetConnection(bool clear)
 {
 	if(d->sock.state() != BSocket::Idle)
 		d->sock.close();
@@ -501,7 +506,7 @@ void SocksClient::setAuth(const QString &user, const QString &pass)
 
 void SocksClient::connectToHost(const QString &proxyHost, int proxyPort, const QString &host, int port, bool udpMode)
 {
-	reset(true);
+	resetConnection(true);
 
 	d->host = proxyHost;
 	d->port = proxyPort;
@@ -523,7 +528,7 @@ void SocksClient::close()
 {
 	d->sock.close();
 	if(d->sock.bytesToWrite() == 0)
-		reset();
+		resetConnection();
 }
 
 void SocksClient::writeData(const QByteArray &buf)
@@ -581,7 +586,7 @@ void SocksClient::sock_connected()
 void SocksClient::sock_connectionClosed()
 {
 	if(isOpen()) {
-		reset();
+		resetConnection();
 		emit connectionClosed();
 	}
 	else {
@@ -592,7 +597,7 @@ void SocksClient::sock_connectionClosed()
 void SocksClient::sock_delayedCloseFinished()
 {
 	if(isOpen()) {
-		reset();
+		resetConnection();
 		delayedCloseFinished();
 	}
 }
@@ -632,7 +637,7 @@ void SocksClient::processOutgoing(const QByteArray &block)
 		SPSS_VERSION s;
 		int r = sps_get_version(d->recvBuf, &s);
 		if(r == -1) {
-			reset(true);
+			resetConnection(true);
 			setError(ErrProxyNeg);
 			return;
 		}
@@ -641,7 +646,7 @@ void SocksClient::processOutgoing(const QByteArray &block)
 #ifdef PROX_DEBUG
 				fprintf(stderr, "SocksClient: Method selection failed\n");
 #endif
-				reset(true);
+				resetConnection(true);
 				setError(ErrProxyNeg);
 				return;
 			}
@@ -659,7 +664,7 @@ void SocksClient::processOutgoing(const QByteArray &block)
 #ifdef PROX_DEBUG
 				fprintf(stderr, "SocksClient: Server wants to use unknown method '%02x'\n", s.method);
 #endif
-				reset(true);
+				resetConnection(true);
 				setError(ErrProxyNeg);
 				return;
 			}
@@ -682,18 +687,18 @@ void SocksClient::processOutgoing(const QByteArray &block)
 			SPSS_AUTHUSERNAME s;
 			int r = sps_get_authUsername(d->recvBuf, &s);
 			if(r == -1) {
-				reset(true);
+				resetConnection(true);
 				setError(ErrProxyNeg);
 				return;
 			}
 			else if(r == 1) {
 				if(s.version != 0x01) {
-					reset(true);
+					resetConnection(true);
 					setError(ErrProxyNeg);
 					return;
 				}
 				if(!s.success) {
-					reset(true);
+					resetConnection(true);
 					setError(ErrProxyAuth);
 					return;
 				}
@@ -706,7 +711,7 @@ void SocksClient::processOutgoing(const QByteArray &block)
 		SPS_CONNREQ s;
 		int r = sp_get_request(d->recvBuf, &s);
 		if(r == -1) {
-			reset(true);
+			resetConnection(true);
 			setError(ErrProxyNeg);
 			return;
 		}
@@ -715,7 +720,7 @@ void SocksClient::processOutgoing(const QByteArray &block)
 #ifdef PROX_DEBUG
 				fprintf(stderr, "SocksClient: client << Error >> [%02x]\n", s.cmd);
 #endif
-				reset(true);
+				resetConnection(true);
 				if(s.cmd == RET_UNREACHABLE)
 					setError(ErrHostNotFound);
 				else if(s.cmd == RET_CONNREFUSED)
@@ -786,11 +791,11 @@ void SocksClient::sock_bytesWritten(qint64 x)
 void SocksClient::sock_error(int x)
 {
 	if(isOpen()) {
-		reset();
+		resetConnection();
 		setError(ErrRead);
 	}
 	else {
-		reset(true);
+		resetConnection(true);
 		if(x == BSocket::ErrHostNotFound)
 			setError(ErrProxyConnect);
 		else if(x == BSocket::ErrConnectionRefused)
@@ -831,13 +836,13 @@ void SocksClient::continueIncoming()
 		SPCS_VERSION s;
 		int r = spc_get_version(d->recvBuf, &s);
 		if(r == -1) {
-			reset(true);
+			resetConnection(true);
 			setError(ErrProxyNeg);
 			return;
 		}
 		else if(r == 1) {
 			if(s.version != 0x05) {
-				reset(true);
+				resetConnection(true);
 				setError(ErrProxyNeg);
 				return;
 			}
@@ -858,7 +863,7 @@ void SocksClient::continueIncoming()
 		SPCS_AUTHUSERNAME s;
 		int r = spc_get_authUsername(d->recvBuf, &s);
 		if(r == -1) {
-			reset(true);
+			resetConnection(true);
 			setError(ErrProxyNeg);
 			return;
 		}
@@ -871,7 +876,7 @@ void SocksClient::continueIncoming()
 		SPS_CONNREQ s;
 		int r = sp_get_request(d->recvBuf, &s);
 		if(r == -1) {
-			reset(true);
+			resetConnection(true);
 			setError(ErrProxyNeg);
 			return;
 		}
@@ -929,7 +934,7 @@ void SocksClient::authGrant(bool b)
 	d->waiting = false;
 	writeData(sps_set_authUsername(b));
 	if(!b) {
-		reset(true);
+		resetConnection(true);
 		return;
 	}
 	continueIncoming();
@@ -943,7 +948,7 @@ void SocksClient::requestDeny()
 	// response
 	d->waiting = false;
 	writeData(sp_set_request(d->rhost, d->rport, RET_UNREACHABLE));
-	reset(true);
+	resetConnection(true);
 }
 
 void SocksClient::grantConnect()

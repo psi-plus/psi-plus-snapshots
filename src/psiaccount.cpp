@@ -1217,9 +1217,6 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, CapsRegis
 	d->serverInfoManager = new ServerInfoManager(d->client);
 	connect(d->serverInfoManager,SIGNAL(featuresChanged()),SLOT(serverFeaturesChanged()));
 
-	// XMPP Ping
-	new PongServer(d->client->rootTask());
-
 	// Initialize PubSub stuff
 	d->pepManager = new PEPManager(d->client, d->serverInfoManager);
 	connect(d->pepManager,SIGNAL(itemPublished(const Jid&, const QString&, const PubSubItem&)),SLOT(itemPublished(const Jid&, const QString&, const PubSubItem&)));
@@ -2897,7 +2894,7 @@ void PsiAccount::processIncomingMessage(const Message &_m)
 		UserListItem *u;
 		if(j.compare(d->self.jid(), false) || groupchats().contains(j.bare()) || (!d->loginStatus.isInvisible() && (u = d->userList.find(j)) && (u->subscription().type() == Subscription::To || u->subscription().type() == Subscription::Both))) {
 			Message tm(m.from());
-			tm.setId(m.id());
+			tm.setMessageReceiptId(m.id());
 			tm.setMessageReceipt(ReceiptReceived);
 			dj_sendMessage(tm, false);
 		}

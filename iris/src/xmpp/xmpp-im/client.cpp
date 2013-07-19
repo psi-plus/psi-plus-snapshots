@@ -225,6 +225,7 @@ void Client::start(const QString &host, const QString &user, const QString &pass
 	connect(pr, SIGNAL(roster(const Roster &)), SLOT(prRoster(const Roster &)));
 
 	new JT_ServInfo(rootTask());
+	new JT_PongServer(rootTask());
 
 	d->active = true;
 }

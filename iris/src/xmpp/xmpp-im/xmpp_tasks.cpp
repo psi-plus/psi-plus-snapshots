@@ -1498,6 +1498,10 @@ bool JT_ServInfo::take(const QDomElement &e)
 			feature.setAttribute("var", "urn:xmpp:bob");
 			query.appendChild(feature);
 
+			feature = doc()->createElement("feature");
+			feature.setAttribute("var", "urn:xmpp:ping");
+			query.appendChild(feature);
+
 			// Client-specific features
 			QStringList clientFeatures = client()->features().list();
 			for (QStringList::ConstIterator i = clientFeatures.begin(); i != clientFeatures.end(); ++i) {
@@ -2064,4 +2068,33 @@ bool JT_BitsOfBinary::take(const QDomElement &x)
 BoBData JT_BitsOfBinary::data()
 {
 	return d->data;
+}
+
+//----------------------------------------------------------------------------
+// JT_PongServer
+//----------------------------------------------------------------------------
+/**
+ * \class JT_PongServer
+ * \brief Answers XMPP Pings
+ */
+
+JT_PongServer::JT_PongServer(Task *parent)
+:Task(parent)
+{
+
+}
+
+bool JT_PongServer::take(const QDomElement &e)
+{
+	if (e.tagName() != "iq" || e.attribute("type") != "get")
+		return false;
+
+	bool found = false;
+	QDomElement ping = findSubTag(e, "ping", &found);
+	if (found && ping.attribute("xmlns") == "urn:xmpp:ping") {
+		QDomElement iq = createIQ(doc(), "result", e.attribute("from"), e.attribute("id"));
+		send(iq);
+		return true;
+	}
+	return false;
 }

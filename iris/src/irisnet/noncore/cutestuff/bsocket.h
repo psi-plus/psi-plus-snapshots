@@ -54,6 +54,7 @@ public:
 	void connectToHost(const QString &host, quint16 port, QAbstractSocket::NetworkLayerProtocol protocol = QAbstractSocket::UnknownNetworkLayerProtocol);
 	/*! Connect to the hosts for the specified service */
 	void connectToHost(const QString &service, const QString &transport, const QString &domain, quint16 port = std::numeric_limits<int>::max());
+	virtual QAbstractSocket* abstractSocket() const;
 	int socket() const;
 	void setSocket(int);
 	int state() const;
@@ -98,7 +99,7 @@ private:
 	class Private;
 	Private *d;
 
-	void reset(bool clear=false);
+	void resetConnection(bool clear=false);
 	void ensureSocket();
 	void recreate_resolver();
 	bool check_protocol_fallback();

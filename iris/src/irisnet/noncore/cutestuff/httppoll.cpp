@@ -99,17 +99,22 @@ HttpPoll::HttpPoll(QObject *parent)
 	connect(&d->http, SIGNAL(result()), SLOT(http_result()));
 	connect(&d->http, SIGNAL(error(int)), SLOT(http_error(int)));
 
-	reset(true);
+	resetConnection(true);
 }
 
 HttpPoll::~HttpPoll()
 {
-	reset(true);
+	resetConnection(true);
 	delete d->t;
 	delete d;
 }
 
-void HttpPoll::reset(bool clear)
+QAbstractSocket* HttpPoll::abstractSocket() const
+{
+	return d->http.abstractSocket();
+}
+
+void HttpPoll::resetConnection(bool clear)
 {
 	if(d->http.isActive())
 		d->http.stop();
@@ -135,7 +140,7 @@ void HttpPoll::connectToUrl(const QUrl &url)
 
 void HttpPoll::connectToHost(const QString &proxyHost, int proxyPort, const QUrl &url)
 {
-	reset(true);
+	resetConnection(true);
 
 	bool useSsl = false;
 	d->port = 80;
@@ -227,7 +232,7 @@ void HttpPoll::close()
 		return;
 
 	if(bytesToWrite() == 0)
-		reset();
+		resetConnection();
 	else
 		d->closing = true;
 }
@@ -245,7 +250,7 @@ void HttpPoll::http_result()
 	QString cookie = d->http.getHeader("Set-Cookie");
 	int n = cookie.indexOf("ID=");
 	if(n == -1) {
-		reset();
+		resetConnection();
 		setError(ErrRead);
 		return;
 	}
@@ -260,12 +265,12 @@ void HttpPoll::http_result()
 	// session error?
 	if(id.right(2) == ":0") {
 		if(id == "0:0" && d->state == 2) {
-			reset();
+			resetConnection();
 			connectionClosed();
 			return;
 		}
 		else {
-			reset();
+			resetConnection();
 			setError(ErrRead);
 			return;
 		}
@@ -312,7 +317,7 @@ void HttpPoll::http_result()
 	}
 	else {
 		if(d->closing) {
-			reset();
+			resetConnection();
 			delayedCloseFinished();
 			return;
 		}
@@ -321,7 +326,7 @@ void HttpPoll::http_result()
 
 void HttpPoll::http_error(int x)
 {
-	reset();
+	resetConnection();
 	if(x == HttpProxyPost::ErrConnectionRefused)
 		setError(ErrConnectionRefused);
 	else if(x == HttpProxyPost::ErrHostNotFound)
@@ -473,12 +478,12 @@ HttpProxyPost::HttpProxyPost(QObject *parent)
 	connect(&d->sock, SIGNAL(connectionClosed()), SLOT(sock_connectionClosed()));
 	connect(&d->sock, SIGNAL(readyRead()), SLOT(sock_readyRead()));
 	connect(&d->sock, SIGNAL(error(int)), SLOT(sock_error(int)));
-	reset(true);
+	resetConnection(true);
 }
 
 HttpProxyPost::~HttpProxyPost()
 {
-	reset(true);
+	resetConnection(true);
 	delete d;
 }
 
@@ -487,7 +492,12 @@ void HttpProxyPost::setUseSsl(bool state)
 	d->useSsl = state;
 }
 
-void HttpProxyPost::reset(bool clear)
+QAbstractSocket* HttpProxyPost::abstractSocket() const
+{
+	return d->sock.abstractSocket();
+}
+
+void HttpProxyPost::resetConnection(bool clear)
 {
 	if(d->sock.state() != BSocket::Idle)
 		d->sock.close();
@@ -509,7 +519,7 @@ bool HttpProxyPost::isActive() const
 
 void HttpProxyPost::post(const QString &proxyHost, int proxyPort, const QUrl &url, const QByteArray &data, bool asProxy)
 {
-	reset(true);
+	resetConnection(true);
 
 	d->host = proxyHost;
 	d->url = url;
@@ -534,7 +544,7 @@ void HttpProxyPost::post(const QString &proxyHost, int proxyPort, const QUrl &ur
 
 void HttpProxyPost::stop()
 {
-	reset();
+	resetConnection();
 }
 
 QByteArray HttpProxyPost::body() const
@@ -611,7 +621,7 @@ void HttpProxyPost::sock_connected()
 void HttpProxyPost::sock_connectionClosed()
 {
 	d->body = d->recvBuf;
-	reset();
+	resetConnection();
 	result();
 }
 
@@ -632,7 +642,7 @@ void HttpProxyPost::tls_error()
 #ifdef PROX_DEBUG
 	fprintf(stderr, "HttpProxyGetStream: ssl error: %d\n", d->tls->errorCode());
 #endif
-	reset(true);
+	resetConnection(true);
 	error(ErrConnectionRefused); // FIXME: bogus error
 }
 
@@ -675,7 +685,7 @@ void HttpProxyPost::processData(const QByteArray &block)
 #ifdef PROX_DEBUG
 				fprintf(stderr, "HttpProxyPost: invalid header!\n");
 #endif
-				reset(true);
+				resetConnection(true);
 				error(ErrProxyNeg);
 				return;
 			}
@@ -719,7 +729,7 @@ void HttpProxyPost::processData(const QByteArray &block)
 #ifdef PROX_DEBUG
 				fprintf(stderr, "HttpProxyPost: << Error >> [%s]\n", errStr.latin1());
 #endif
-				reset(true);
+				resetConnection(true);
 				error(err);
 				return;
 			}
@@ -732,7 +742,7 @@ void HttpProxyPost::sock_error(int x)
 #ifdef PROX_DEBUG
 	fprintf(stderr, "HttpProxyPost: socket error: %d\n", x);
 #endif
-	reset(true);
+	resetConnection(true);
 	if(x == BSocket::ErrHostNotFound)
 		error(ErrProxyConnect);
 	else if(x == BSocket::ErrConnectionRefused)
@@ -775,16 +785,16 @@ HttpProxyGetStream::HttpProxyGetStream(QObject *parent)
 	connect(&d->sock, SIGNAL(connectionClosed()), SLOT(sock_connectionClosed()));
 	connect(&d->sock, SIGNAL(readyRead()), SLOT(sock_readyRead()));
 	connect(&d->sock, SIGNAL(error(int)), SLOT(sock_error(int)));
-	reset(true);
+	resetConnection(true);
 }
 
 HttpProxyGetStream::~HttpProxyGetStream()
 {
-	reset(true);
+	resetConnection(true);
 	delete d;
 }
 
-void HttpProxyGetStream::reset(bool /*clear*/)
+void HttpProxyGetStream::resetConnection(bool /*clear*/)
 {
 	if(d->tls) {
 		delete d->tls;
@@ -811,7 +821,7 @@ bool HttpProxyGetStream::isActive() const
 
 void HttpProxyGetStream::get(const QString &proxyHost, int proxyPort, const QString &url, bool ssl, bool asProxy)
 {
-	reset(true);
+	resetConnection(true);
 
 	d->host = proxyHost;
 	d->url = url;
@@ -830,7 +840,7 @@ void HttpProxyGetStream::get(const QString &proxyHost, int proxyPort, const QStr
 
 void HttpProxyGetStream::stop()
 {
-	reset();
+	resetConnection();
 }
 
 QString HttpProxyGetStream::getHeader(const QString &var) const
@@ -896,7 +906,7 @@ void HttpProxyGetStream::sock_connected()
 void HttpProxyGetStream::sock_connectionClosed()
 {
 	//d->body = d->recvBuf;
-	reset();
+	resetConnection();
 	emit finished();
 }
 
@@ -948,7 +958,7 @@ void HttpProxyGetStream::processData(const QByteArray &block)
 #ifdef PROX_DEBUG
 				fprintf(stderr, "HttpProxyGetStream: invalid header!\n");
 #endif
-				reset(true);
+				resetConnection(true);
 				error(ErrProxyNeg);
 				return;
 			}
@@ -1002,7 +1012,7 @@ void HttpProxyGetStream::processData(const QByteArray &block)
 #ifdef PROX_DEBUG
 				fprintf(stderr, "HttpProxyGetStream: << Error >> [%s]\n", errStr.latin1());
 #endif
-				reset(true);
+				resetConnection(true);
 				error(err);
 				return;
 			}
@@ -1021,7 +1031,7 @@ void HttpProxyGetStream::sock_error(int x)
 #ifdef PROX_DEBUG
 	fprintf(stderr, "HttpProxyGetStream: socket error: %d\n", x);
 #endif
-	reset(true);
+	resetConnection(true);
 	if(x == BSocket::ErrHostNotFound)
 		error(ErrProxyConnect);
 	else if(x == BSocket::ErrConnectionRefused)
@@ -1047,7 +1057,7 @@ void HttpProxyGetStream::tls_error()
 #ifdef PROX_DEBUG
 	fprintf(stderr, "HttpProxyGetStream: ssl error: %d\n", d->tls->errorCode());
 #endif
-	reset(true);
+	resetConnection(true);
 	error(ErrConnectionRefused); // FIXME: bogus error
 }
 
