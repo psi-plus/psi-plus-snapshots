@@ -12,9 +12,8 @@ Here is the list of main changes:
 2) All patches from Psi+ project were applied.
    (Except patches from dev/ and mac/ subdirectories)
 3) Trash was removed. (MS Windows binary files and non-free icons)
-4) OTR-plugin is enabled by default.
 
-More detail see in file generate-single-repo.sh
+More details see in file generate-single-repo.sh
 
 Current address: https://github.com/tehnick/psi-plus
 
