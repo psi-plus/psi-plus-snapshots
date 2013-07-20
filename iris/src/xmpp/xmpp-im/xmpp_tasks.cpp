@@ -101,7 +101,7 @@ JT_Session::JT_Session(Task *parent) : Task(parent)
 {
 }
 
-void JT_Session::onGo() 
+void JT_Session::onGo()
 {
 	QDomElement iq = createIQ(doc(), "set", "", id());
 	QDomElement session = doc()->createElement("session");
@@ -110,7 +110,7 @@ void JT_Session::onGo()
 	send(iq);
 }
 
-bool JT_Session::take(const QDomElement& x) 
+bool JT_Session::take(const QDomElement& x)
 {
 	if(!iqVerify(x, "", id()))
 		return false;
@@ -425,8 +425,8 @@ void JT_Roster::onGo()
 		QDomElement query = doc()->createElement("query");
 		query.setAttribute("xmlns", "jabber:iq:roster");
 		iq.appendChild(query);
-		for(QList<QDomElement>::ConstIterator it = d->itemList.begin(); it != d->itemList.end(); ++it)
-			query.appendChild(*it);
+		foreach (const QDomElement& it, d->itemList)
+			query.appendChild(it);
 		send(iq);
 	}
 }
@@ -443,8 +443,8 @@ QString JT_Roster::toString() const
 
 	QDomElement i = doc()->createElement("request");
 	i.setAttribute("type", "JT_Roster");
-	for(QList<QDomElement>::ConstIterator it = d->itemList.begin(); it != d->itemList.end(); ++it)
-		i.appendChild(*it);
+	foreach (const QDomElement& it, d->itemList)
+		i.appendChild(it);
 	return lineEncode(Stream::xmlToString(i));
 	return "";
 }
@@ -587,7 +587,7 @@ void JT_Presence::pres(const Status &s)
 			c.setAttribute("xmlns","http://jabber.org/protocol/caps");
 			c.setAttribute("node",s.capsNode());
 			c.setAttribute("ver",s.capsVersion());
-			if (!s.capsExt().isEmpty()) 
+			if (!s.capsExt().isEmpty())
 				c.setAttribute("ext",s.capsExt());
 			tag.appendChild(c);
 		}
@@ -775,9 +775,9 @@ bool JT_PushPresence::take(const QDomElement &e)
 				if(muc_e.isNull())
 					continue;
 
-				if (muc_e.tagName() == "item") 
+				if (muc_e.tagName() == "item")
 					p.setMUCItem(MUCItem(muc_e));
-				else if (muc_e.tagName() == "status") 
+				else if (muc_e.tagName() == "status")
 					p.addMUCStatus(muc_e.attribute("code").toInt());
 				else if (muc_e.tagName() == "destroy")
 					p.setMUCDestroy(MUCDestroy(muc_e));
@@ -1446,7 +1446,7 @@ bool JT_ServInfo::take(const QDomElement &e)
 		QDomElement q = findSubTag(e, "query", &found);
 		if(found) // NOTE: Should always be true, since a NS was found above
 			node = q.attribute("node");
-		
+
 		QDomElement iq = createIQ(doc(), "result", e.attribute("from"), e.attribute("id"));
 		QDomElement query = doc()->createElement("query");
 		query.setAttribute("xmlns", "http://jabber.org/protocol/disco#info");
@@ -1489,7 +1489,7 @@ bool JT_ServInfo::take(const QDomElement &e)
 			feature = doc()->createElement("feature");
 			feature.setAttribute("var", "http://jabber.org/protocol/si/profile/file-transfer");
 			query.appendChild(feature);
-			
+
 			feature = doc()->createElement("feature");
 			feature.setAttribute("var", "http://jabber.org/protocol/disco#info");
 			query.appendChild(feature);
@@ -1504,15 +1504,15 @@ bool JT_ServInfo::take(const QDomElement &e)
 
 			// Client-specific features
 			QStringList clientFeatures = client()->features().list();
-			for (QStringList::ConstIterator i = clientFeatures.begin(); i != clientFeatures.end(); ++i) {
+			foreach (const QString & i, clientFeatures) {
 				feature = doc()->createElement("feature");
-				feature.setAttribute("var", *i);
+				feature.setAttribute("var", i);
 				query.appendChild(feature);
 			}
 
 			if (node.isEmpty()) {
 				// Extended features
-				QStringList exts = client()->extensions();
+				const QStringList exts = client()->extensions();
 				for (QStringList::ConstIterator i = exts.begin(); i != exts.end(); ++i) {
 					const QStringList& l = client()->extension(*i).list();
 					for ( QStringList::ConstIterator j = l.begin(); j != l.end(); ++j ) {
@@ -1540,19 +1540,19 @@ bool JT_ServInfo::take(const QDomElement &e)
 		else {
 			invalid_node = true;
 		}
-		
+
 		if (!invalid_node) {
 			send(iq);
 		}
 		else {
 			// Create error reply
 			QDomElement error_reply = createIQ(doc(), "result", e.attribute("from"), e.attribute("id"));
-			
+
 			// Copy children
 			for (QDomNode n = e.firstChild(); !n.isNull(); n = n.nextSibling()) {
 				error_reply.appendChild(n.cloneNode());
 			}
-			
+
 			// Add error
 			QDomElement error = doc()->createElement("error");
 			error.setAttribute("type","cancel");

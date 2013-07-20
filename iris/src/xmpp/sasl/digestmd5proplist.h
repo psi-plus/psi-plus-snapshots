@@ -35,12 +35,12 @@ namespace XMPP {
 			DIGESTMD5PropList();
 
 			void set(const QByteArray &var, const QByteArray &val);
-			QByteArray get(const QByteArray &var);
+			QByteArray get(const QByteArray &var) const;
 			QByteArray toString() const;
 			bool fromString(const QByteArray &str);
-		
+
 		private:
-			int varCount(const QByteArray &var);
+			int varCount(const QByteArray &var) const;
 	};
 }
 

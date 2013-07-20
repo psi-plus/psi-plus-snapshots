@@ -110,6 +110,8 @@ namespace XMPP {
 		void setMessageReceiptId(const QString &s);
 
 		// JEP-0027
+		QString xsigned() const;
+		void setXSigned(const QString &s);
 		QString xencrypted() const;
 		void setXEncrypted(const QString &s);
 		

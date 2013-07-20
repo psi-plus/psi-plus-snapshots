@@ -603,9 +603,9 @@ int Parser::Event::type() const
 
 QString Parser::Event::nsprefix(const QString &s) const
 {
-	QStringList::ConstIterator it = d->nsnames.begin();
-	QStringList::ConstIterator it2 = d->nsvalues.begin();
-	for(; it != d->nsnames.end(); ++it) {
+	QStringList::ConstIterator it = d->nsnames.constBegin();
+	QStringList::ConstIterator it2 = d->nsvalues.constBegin();
+	for(; it != d->nsnames.constEnd(); ++it) {
 		if((*it) == s)
 			return (*it2);
 		++it2;

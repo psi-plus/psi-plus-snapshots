@@ -184,19 +184,19 @@ QDomElement Address::toXml(Stanza& s) const
 		case Bcc:
 			e.setAttribute("type", "bcc");
 			break;
-		case ReplyTo: 
+		case ReplyTo:
 			e.setAttribute("type", "replyto");
 			break;
-		case ReplyRoom: 
+		case ReplyRoom:
 			e.setAttribute("type", "replyroom");
 			break;
-		case NoReply: 
+		case NoReply:
 			e.setAttribute("type", "noreply");
 			break;
 		case OriginalFrom:
 			e.setAttribute("type", "ofrom");
 			break;
-		case OriginalTo: 
+		case OriginalTo:
 			e.setAttribute("type", "oto");
 			break;
 		case Unknown:
@@ -491,7 +491,7 @@ void MUCItem::fromXml(const QDomElement& e)
 
 	jid_ = Jid(e.attribute("jid"));
 	nick_ = e.attribute("nick");
-	
+
 	// Affiliation
 	if (e.attribute("affiliation") == "owner") {
 		affiliation_ = Owner;
@@ -508,7 +508,7 @@ void MUCItem::fromXml(const QDomElement& e)
 	else if (e.attribute("affiliation") == "none") {
 		affiliation_ = NoAffiliation;
 	}
-	
+
 	// Role
 	if (e.attribute("role") == "moderator") {
 		role_ = Moderator;
@@ -522,15 +522,15 @@ void MUCItem::fromXml(const QDomElement& e)
 	else if (e.attribute("role") == "none") {
 		role_ = NoRole;
 	}
-	
+
 	for(QDomNode n = e.firstChild(); !n.isNull(); n = n.nextSibling()) {
 		QDomElement i = n.toElement();
 		if(i.isNull())
 			continue;
 
-		if (i.tagName() == "actor") 
+		if (i.tagName() == "actor")
 			actor_ = Jid(i.attribute("jid"));
-		else if (i.tagName() == "reason") 
+		else if (i.tagName() == "reason")
 			reason_ = i.text();
 	}
 }
@@ -538,16 +538,16 @@ void MUCItem::fromXml(const QDomElement& e)
 QDomElement MUCItem::toXml(QDomDocument& d)
 {
 	QDomElement e = d.createElement("item");
-	
+
 	if (!nick_.isEmpty())
 		e.setAttribute("nick",nick_);
 
 	if (!jid_.isEmpty())
 		e.setAttribute("jid",jid_.full());
-	
+
 	if (!reason_.isEmpty())
 		e.appendChild(textTag(&d,"reason",reason_));
-	
+
 	switch (affiliation_) {
 		case NoAffiliation:
 			e.setAttribute("affiliation","none");
@@ -583,7 +583,7 @@ QDomElement MUCItem::toXml(QDomDocument& d)
 		default:
 			break;
 	}
-	
+
 	return e;
 }
 
@@ -653,7 +653,7 @@ void MUCInvite::fromXml(const QDomElement& e)
 {
 	if (e.tagName() != "invite")
 		return;
-	
+
 	from_ = e.attribute("from");
 	to_ = e.attribute("to");
 	for(QDomNode n = e.firstChild(); !n.isNull(); n = n.nextSibling()) {
@@ -662,8 +662,8 @@ void MUCInvite::fromXml(const QDomElement& e)
 			continue;
 
 		if (i.tagName() == "continue")
-		   cont_ = true;	
-		else if (i.tagName() == "reason") 
+		   cont_ = true;
+		else if (i.tagName() == "reason")
 			reason_ = i.text();
 	}
 }
@@ -699,7 +699,7 @@ MUCDecline::MUCDecline()
 {
 }
 
-MUCDecline::MUCDecline(const QDomElement& e) 
+MUCDecline::MUCDecline(const QDomElement& e)
 {
 	fromXml(e);
 }
@@ -738,7 +738,7 @@ void MUCDecline::fromXml(const QDomElement& e)
 {
 	if (e.tagName() != "decline")
 		return;
-	
+
 	from_ = e.attribute("from");
 	to_ = e.attribute("to");
 	for(QDomNode n = e.firstChild(); !n.isNull(); n = n.nextSibling()) {
@@ -746,7 +746,7 @@ void MUCDecline::fromXml(const QDomElement& e)
 		if(i.isNull())
 			continue;
 
-		if (i.tagName() == "reason") 
+		if (i.tagName() == "reason")
 			reason_ = i.text();
 	}
 }
@@ -779,7 +779,7 @@ MUCDestroy::MUCDestroy()
 {
 }
 
-MUCDestroy::MUCDestroy(const QDomElement& e) 
+MUCDestroy::MUCDestroy(const QDomElement& e)
 {
 	fromXml(e);
 }
@@ -808,14 +808,14 @@ void MUCDestroy::fromXml(const QDomElement& e)
 {
 	if (e.tagName() != "destroy")
 		return;
-	
+
 	jid_ = e.attribute("jid");
 	for(QDomNode n = e.firstChild(); !n.isNull(); n = n.nextSibling()) {
 		QDomElement i = n.toElement();
 		if(i.isNull())
 			continue;
 
-		if (i.tagName() == "reason") 
+		if (i.tagName() == "reason")
 			reason_ = i.text();
 	}
 }
@@ -835,7 +835,7 @@ QDomElement MUCDestroy::toXml(QDomDocument& d) const
 //----------------------------------------------------------------------------
 // HTMLElement
 //----------------------------------------------------------------------------
-HTMLElement::HTMLElement() 
+HTMLElement::HTMLElement()
 {
 }
 
@@ -944,7 +944,7 @@ public:
 	QList<PubSubItem> pubsubItems;
 	QList<PubSubRetraction> pubsubRetractions;
 	QString eventId;
-	QString xencrypted, invite;
+	QString xsigned, xencrypted, invite;
 	ChatState chatState;
 	MessageReceipt messageReceipt;
 	QString messageReceiptId;
@@ -955,7 +955,7 @@ public:
 	QMap<QString,HTMLElement> htmlElements;
  	QDomElement sxe;
 	QList<BoBData> bobDataList;
-	
+
 	QList<int> mucStatuses;
 	QList<MUCInvite> mucInvites;
 	MUCDecline mucDecline;
@@ -967,7 +967,7 @@ public:
 //! \brief Constructs Message with given Jid information.
 //!
 //! This function will construct a Message container.
-//! \param to - specify reciver (default: empty string)
+//! \param to - specify receiver (default: empty string)
 Message::Message(const Jid &to)
 {
 	d = new Private;
@@ -1295,7 +1295,7 @@ bool Message::containsEvent(MsgEvent e) const
 void Message::addEvent(MsgEvent e)
 {
 	if (!d->eventList.contains(e)) {
-		if (e == CancelEvent || containsEvent(CancelEvent)) 
+		if (e == CancelEvent || containsEvent(CancelEvent))
 			d->eventList.clear(); // Reset list
 		d->eventList += e;
 	}
@@ -1329,6 +1329,16 @@ QString Message::messageReceiptId() const
 void Message::setMessageReceiptId(const QString &s)
 {
 	d->messageReceiptId = s;
+}
+
+QString Message::xsigned() const
+{
+	return d->xsigned;
+}
+
+void Message::setXSigned(const QString &s)
+{
+	d->xsigned = s;
 }
 
 QString Message::xencrypted() const
@@ -1376,7 +1386,7 @@ const QString& Message::mucPassword() const
 	return d->mucPassword;
 }
 
-void Message::setMUCPassword(const QString& p) 
+void Message::setMUCPassword(const QString& p)
 {
 	d->mucPassword = p;
 }
@@ -1477,7 +1487,7 @@ Stanza Message::toStanza(Stream *stream) const
 		s.setLang(d->lang);
 
 	StringMap::ConstIterator it;
-	for(it = d->subject.begin(); it != d->subject.end(); ++it) {
+	for (it = d->subject.constBegin(); it != d->subject.constEnd(); ++it) {
 		const QString &str = (*it);
 		if(!str.isNull()) {
 			QDomElement e = s.createTextElement(s.baseNS(), "subject", str);
@@ -1486,7 +1496,7 @@ Stanza Message::toStanza(Stream *stream) const
 			s.appendChild(e);
 		}
 	}
-	for(it = d->body.begin(); it != d->body.end(); ++it) {
+	for (it = d->body.constBegin(); it != d->body.constEnd(); ++it) {
 		const QString &str = (*it);
 		if(!str.isEmpty()) {
 			QDomElement e = s.createTextElement(s.baseNS(), "body", str);
@@ -1525,11 +1535,11 @@ Stanza Message::toStanza(Stream *stream) const
 	}
 
 	// urls
-	for(QList<Url>::ConstIterator uit = d->urlList.begin(); uit != d->urlList.end(); ++uit) {
+	foreach (const Url& uit, d->urlList) {
 		QDomElement x = s.createElement("jabber:x:oob", "x");
-		x.appendChild(s.createTextElement("jabber:x:oob", "url", (*uit).url()));
-		if(!(*uit).desc().isEmpty())
-			x.appendChild(s.createTextElement("jabber:x:oob", "desc", (*uit).desc()));
+		x.appendChild(s.createTextElement("jabber:x:oob", "url", uit.url()));
+		if (!uit.desc().isEmpty())
+			x.appendChild(s.createTextElement("jabber:x:oob", "desc", uit.desc()));
 		s.appendChild(x);
 	}
 
@@ -1544,8 +1554,8 @@ Stanza Message::toStanza(Stream *stream) const
 				x.appendChild(s.createTextElement("jabber:x:event","id",d->eventId));
 		}
 
-		for(QList<MsgEvent>::ConstIterator ev = d->eventList.begin(); ev != d->eventList.end(); ++ev) {
-			switch (*ev) {
+		foreach (const MsgEvent& ev, d->eventList) {
+			switch (ev) {
 				case OfflineEvent:
 					x.appendChild(s.createElement("jabber:x:event", "offline"));
 					break;
@@ -1555,7 +1565,7 @@ Stanza Message::toStanza(Stream *stream) const
 				case DisplayedEvent:
 					x.appendChild(s.createElement("jabber:x:event", "displayed"));
 					break;
-				case ComposingEvent: 
+				case ComposingEvent:
 					x.appendChild(s.createElement("jabber:x:event", "composing"));
 					break;
 				case CancelEvent:
@@ -1564,7 +1574,7 @@ Stanza Message::toStanza(Stream *stream) const
 			}
 		}
 		s.appendChild(x);
-	} 
+	}
 
 	// chat state
 	QString chatStateNS = "http://jabber.org/protocol/chatstates";
@@ -1585,7 +1595,7 @@ Stanza Message::toStanza(Stream *stream) const
 			case StateGone:
 				s.appendChild(s.createElement(chatStateNS, "gone"));
 				break;
-			default: 
+			default:
 				break;
 		}
 	}
@@ -1606,10 +1616,14 @@ Stanza Message::toStanza(Stream *stream) const
 					s.appendChild(elem);
 				}
 				break;
-			default: 
+			default:
 				break;
 		}
 	}
+
+	// xsigned
+	if(!d->xsigned.isEmpty())
+		s.appendChild(s.createTextElement("jabber:x:signed", "x", d->xsigned));
 
 	// xencrypted
 	if(!d->xencrypted.isEmpty())
@@ -1623,7 +1637,7 @@ Stanza Message::toStanza(Stream *stream) const
 		}
 		s.appendChild(as);
 	}
-	
+
 	// roster item exchange
 	if (!d->rosterExchangeItems.isEmpty()) {
 		QDomElement rx = s.createElement("http://jabber.org/protocol/rosterx","x");
@@ -1809,7 +1823,7 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 		}
 	}
 	if (!stamp.isNull()) {
-		if (useTimeZoneOffset) {			
+		if (useTimeZoneOffset) {
 			d->timeStamp = stamp.addSecs(timeZoneOffset * 3600);
 		} else {
 			stamp.setTimeSpec(Qt::UTC);
@@ -1832,7 +1846,7 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 		u.setDesc(t.elementsByTagName("desc").item(0).toElement().text());
 		d->urlList += u;
 	}
-	
+
     // events
 	d->eventList.clear();
 	nl = childElementsByTagNameNS(root, "jabber:x:event", "x");
@@ -1885,13 +1899,20 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 		d->messageReceiptId = t.attribute("id");
 	}
 
+	// xsigned
+	t = childElementsByTagNameNS(root, "jabber:x:signed", "x").item(0).toElement();
+	if(!t.isNull())
+		d->xsigned = t.text();
+	else
+		d->xsigned = QString();
+
 	// xencrypted
 	t = childElementsByTagNameNS(root, "jabber:x:encrypted", "x").item(0).toElement();
 	if(!t.isNull())
 		d->xencrypted = t.text();
 	else
 		d->xencrypted = QString();
-		
+
 	// addresses
 	d->addressList.clear();
 	nl = childElementsByTagNameNS(root, "http://jabber.org/protocol/address", "addresses");
@@ -1902,7 +1923,7 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 			d->addressList += Address(nl.item(n).toElement());
 		}
 	}
-	
+
 	// roster item exchange
 	d->rosterExchangeItems.clear();
 	nl = childElementsByTagNameNS(root, "http://jabber.org/protocol/rosterx", "x");
@@ -1922,7 +1943,7 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 		d->invite = t.attribute("jid");
 	else
 		d->invite = QString();
-	
+
 	// nick
 	t = childElementsByTagNameNS(root, "http://jabber.org/protocol/nick", "nick").item(0).toElement();
 	if(!t.isNull())
@@ -2096,7 +2117,7 @@ QDomElement HttpAuthRequest::toXml(QDomDocument &doc) const
 	e = doc.createElementNS("http://jabber.org/protocol/http-auth", "confirm");
 	e.setAttribute("xmlns", "http://jabber.org/protocol/http-auth");
 
-	if(hasId_) 
+	if(hasId_)
 		e.setAttribute("id", id_);
 	e.setAttribute("method", method_);
 	e.setAttribute("url", url_);
@@ -2328,7 +2349,7 @@ void Status::setCapsExt(const QString & _capsExt)
 	v_capsExt = _capsExt;
 }
 
-void Status::setMUC() 
+void Status::setMUC()
 {
 	v_isMUC = true;
 }
@@ -3065,36 +3086,36 @@ void SearchResult::setEmail(const QString &email)
 	v_email = email;
 }
 
-PubSubItem::PubSubItem() 
+PubSubItem::PubSubItem()
 {
 }
 
-PubSubItem::PubSubItem(const QString& id, const QDomElement& payload) : id_(id), payload_(payload) 
-{ 
-}
-
-const QString& PubSubItem::id() const 
-{ 
-	return id_; 
-}
-
-const QDomElement& PubSubItem::payload() const 
-{ 
-	return payload_; 
-}
-
-
-PubSubRetraction::PubSubRetraction() 
+PubSubItem::PubSubItem(const QString& id, const QDomElement& payload) : id_(id), payload_(payload)
 {
 }
 
-PubSubRetraction::PubSubRetraction(const QString& id) : id_(id) 
-{ 
+const QString& PubSubItem::id() const
+{
+	return id_;
 }
 
-const QString& PubSubRetraction::id() const 
-{ 
-	return id_; 
+const QDomElement& PubSubItem::payload() const
+{
+	return payload_;
+}
+
+
+PubSubRetraction::PubSubRetraction()
+{
+}
+
+PubSubRetraction::PubSubRetraction(const QString& id) : id_(id)
+{
+}
+
+const QString& PubSubRetraction::id() const
+{
+	return id_;
 }
 
 

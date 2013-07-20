@@ -941,8 +941,7 @@ void ClientStream::processNext()
 #endif
 		bool ok = d->client.processStep();
 		// deal with send/received items
-		for(QList<XmlProtocol::TransferItem>::ConstIterator it = d->client.transferItemList.begin(); it != d->client.transferItemList.end(); ++it) {
-			const XmlProtocol::TransferItem &i = *it;
+		foreach (const XmlProtocol::TransferItem &i, d->client.transferItemList) {
 			if(i.isExternal)
 				continue;
 			QString str;

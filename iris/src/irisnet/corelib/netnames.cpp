@@ -517,7 +517,7 @@ WeightedNameRecordList::~WeightedNameRecordList() {
 }
 
 bool WeightedNameRecordList::isEmpty() const {
-	return currentPriorityGroup == priorityGroups.end();
+	return currentPriorityGroup == const_cast<WeightedNameRecordList *>(this)->priorityGroups.end();
 }
 
 XMPP::NameRecord WeightedNameRecordList::takeNext() {
@@ -648,7 +648,7 @@ QDebug operator<<(QDebug dbg, const XMPP::WeightedNameRecordList &list) {
 	dbg.nospace() << "XMPP::WeightedNameRecordList(\n";
 
 	/* operator(QDebug, QMap const&) has a bug which makes it crash when trying to print the dereferenced end() iterator */
-	if (list.currentPriorityGroup != list.priorityGroups.end()) {
+	if (!list.isEmpty()) {
 		dbg.nospace() << "current=" << *list.currentPriorityGroup << endl;
 	}
 

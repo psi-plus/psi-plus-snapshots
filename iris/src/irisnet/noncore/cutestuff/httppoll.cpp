@@ -554,8 +554,7 @@ QByteArray HttpProxyPost::body() const
 
 QString HttpProxyPost::getHeader(const QString &var) const
 {
-	for(QStringList::ConstIterator it = d->headerLines.begin(); it != d->headerLines.end(); ++it) {
-		const QString &s = *it;
+	foreach (const QString &s, d->headerLines) {
 		int n = s.indexOf(": ");
 		if(n == -1)
 			continue;
@@ -692,8 +691,8 @@ void HttpProxyPost::processData(const QByteArray &block)
 			else {
 #ifdef PROX_DEBUG
 				fprintf(stderr, "HttpProxyPost: header proto=[%s] code=[%d] msg=[%s]\n", proto.latin1(), code, msg.latin1());
-				for(QStringList::ConstIterator it = d->headerLines.begin(); it != d->headerLines.end(); ++it)
-					fprintf(stderr, "HttpProxyPost: * [%s]\n", (*it).latin1());
+				foreach (const QString &s, d->headerLines)
+					fprintf(stderr, "HttpProxyPost: * [%s]\n", qPrintable(s));
 #endif
 			}
 
@@ -845,8 +844,7 @@ void HttpProxyGetStream::stop()
 
 QString HttpProxyGetStream::getHeader(const QString &var) const
 {
-	for(QStringList::ConstIterator it = d->headerLines.begin(); it != d->headerLines.end(); ++it) {
-		const QString &s = *it;
+	foreach (const QString &s, d->headerLines) {
 		int n = s.indexOf(": ");
 		if(n == -1)
 			continue;
@@ -965,8 +963,8 @@ void HttpProxyGetStream::processData(const QByteArray &block)
 			else {
 #ifdef PROX_DEBUG
 				fprintf(stderr, "HttpProxyGetStream: header proto=[%s] code=[%d] msg=[%s]\n", proto.latin1(), code, msg.latin1());
-				for(QStringList::ConstIterator it = d->headerLines.begin(); it != d->headerLines.end(); ++it)
-					fprintf(stderr, "HttpProxyGetStream: * [%s]\n", (*it).latin1());
+				foreach (const QString &s, d->headerLines)
+					fprintf(stderr, "HttpProxyGetStream: * [%s]\n", qPrintable(s));
 #endif
 			}
 

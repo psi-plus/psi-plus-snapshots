@@ -398,7 +398,7 @@ QDomElement BasicProtocol::docElement()
 	QDomElement e = doc.createElementNS(NS_ETHERX, "stream:stream");
 
 	QString defns = defaultNamespace();
-	QStringList list = extraNamespaces();
+	const QStringList list = extraNamespaces();
 
 	// HACK: using attributes seems to be the only way to get additional namespaces in here
 	if(!defns.isEmpty())
@@ -1062,7 +1062,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 		// Should we go further ?
 		if (!doAuth)
 			return loginComplete();
-		
+
 		// Deal with compression
 		if (doCompress && !compress_started && features.compress_supported && features.compression_mechs.contains("zlib")) {
 			QDomElement e = doc.createElementNS(NS_COMPRESS_PROTOCOL, "compress");
@@ -1082,8 +1082,8 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 				//event = EError;
 				//errorCode = ErrProtocol;
 				//return true;
-				
-				// Fall back on auth for non-compliant servers 
+
+				// Fall back on auth for non-compliant servers
 				step = HandleAuthGet;
 				old = true;
 				return true;
@@ -1266,9 +1266,9 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 		}
 		else {
 			QDomElement mechs = doc.createElementNS(NS_SASL, "mechanisms");
-			for(QStringList::ConstIterator it = sasl_mechlist.begin(); it != sasl_mechlist.end(); ++it) {
+			foreach (const QString & it, sasl_mechlist) {
 				QDomElement m = doc.createElement("mechanism");
-				m.appendChild(doc.createTextNode(*it));
+				m.appendChild(doc.createTextNode(it));
 				mechs.appendChild(m);
 			}
 			f.appendChild(mechs);

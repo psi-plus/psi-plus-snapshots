@@ -340,8 +340,7 @@ void Client::groupChatSetStatus(const QString &host, const QString &room, const 
 {
 	Jid jid(room + "@" + host);
 	bool found = false;
-	for(QList<GroupChat>::ConstIterator it = d->groupChatList.begin(); it != d->groupChatList.end(); it++) {
-		const GroupChat &i = *it;
+	foreach (const GroupChat &i, d->groupChatList) {
 		if(i.j.compare(jid, false)) {
 			found = true;
 			jid = i.j;
@@ -585,7 +584,7 @@ void Client::distribute(const QDomElement &x)
 		for (QDomNode n = x.firstChild(); !n.isNull(); n = n.nextSibling()) {
 			reply.appendChild(n.cloneNode());
 		}
-		
+
 		// Add error
 		QDomElement error = doc()->createElement("error");
 		error.setAttribute("type","cancel");

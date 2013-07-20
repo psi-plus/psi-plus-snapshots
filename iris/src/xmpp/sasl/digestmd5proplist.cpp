@@ -21,7 +21,7 @@
 
 namespace XMPP {
 
-DIGESTMD5PropList::DIGESTMD5PropList() : QList<DIGESTMD5Prop>() 
+DIGESTMD5PropList::DIGESTMD5PropList() : QList<DIGESTMD5Prop>()
 {
 }
 
@@ -32,7 +32,7 @@ void DIGESTMD5PropList::set(const QByteArray &var, const QByteArray &val) {
 	append(p);
 }
 
-QByteArray DIGESTMD5PropList::get(const QByteArray &var)
+QByteArray DIGESTMD5PropList::get(const QByteArray &var) const
 {
 	for(ConstIterator it = begin(); it != end(); ++it) {
 		if((*it).var == var)
@@ -50,7 +50,7 @@ QByteArray DIGESTMD5PropList::toString() const
 			str += ',';
 		if ((*it).var == "realm" || (*it).var == "nonce" || (*it).var == "username" || (*it).var == "cnonce" || (*it).var == "digest-uri" || (*it).var == "authzid")
 			str += (*it).var + "=\"" + (*it).val + '\"';
-		else 
+		else
 			str += (*it).var + "=" + (*it).val;
 		first = false;
 	}
@@ -120,7 +120,7 @@ bool DIGESTMD5PropList::fromString(const QByteArray &str)
 	return true;
 }
 
-int DIGESTMD5PropList::varCount(const QByteArray &var)
+int DIGESTMD5PropList::varCount(const QByteArray &var) const
 {
 	int n = 0;
 	for(ConstIterator it = begin(); it != end(); ++it) {
