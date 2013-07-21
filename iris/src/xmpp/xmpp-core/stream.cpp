@@ -445,6 +445,7 @@ const QString ClientStream::getSCRAMStoredSaltedHash() {
 	if (context) {
 		return context->property("scram-salted-password-base64").toString();
 	}
+	return QString();
 }
 
 void ClientStream::setResourceBinding(bool b)

@@ -40,8 +40,6 @@
 
 static const char *S5B_NS = "http://jabber.org/protocol/bytestreams";
 
-#define S5B_DEBUG
-
 namespace XMPP {
 
 static QString makeKey(const QString &sid, const Jid &requester, const Jid &target)

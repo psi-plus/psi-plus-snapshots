@@ -593,10 +593,10 @@ void HttpProxyPost::sock_connected()
 			s += QByteArray("Proxy-Authorization: Basic ") + str.toBase64() + "\r\n";
 		}
 		s += "Pragma: no-cache\r\n";
-		s += QByteArray("Host: ") + u.host() + "\r\n";
+		s += QByteArray("Host: ") + u.host().toUtf8() + "\r\n";
 	}
 	else {
-		s += QByteArray("Host: ") + d->host + "\r\n";
+		s += QByteArray("Host: ") + d->host.toUtf8() + "\r\n";
 	}
 	s += "Content-Type: application/x-www-form-urlencoded\r\n";
 	s += QByteArray("Content-Length: ") + QByteArray::number(d->postdata.size()) + "\r\n";
