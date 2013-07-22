@@ -47,7 +47,7 @@ static QString makeKey(const QString &sid, const Jid &requester, const Jid &targ
 #ifdef S5B_DEBUG
 	qDebug("makeKey: sid=%s requester=%s target=%s %s", qPrintable(sid),
 		   qPrintable(requester.full()), qPrintable(target.full()),
-		   qPrintable(QCA::Hash("sha1").hashToString((sid + requester.full() + target.full()).toUtf8())));
+		   qPrintable(QCA::Hash("sha1").hashToString(QString(sid + requester.full() + target.full()).toUtf8())));
 #endif
 	QString str = sid + requester.full() + target.full();
 	return QCA::Hash("sha1").hashToString(str.toUtf8());

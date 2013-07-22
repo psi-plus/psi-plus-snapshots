@@ -1,8 +1,5 @@
 QT *= network
 
-# libidn
-#LIBS += -lidn
-
 include(../../jdns/jdns.pri)
 INCLUDEPATH += $$PWD/../../jdns
 

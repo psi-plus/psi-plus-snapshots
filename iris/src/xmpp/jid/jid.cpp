@@ -22,7 +22,7 @@
 #include "xmpp/jid/jid.h"
 
 #include <QCoreApplication>
-#include <libidn/stringprep.h>
+#include <stringprep.h>
 
 #ifndef NO_IRISNET
 #include "irisnetglobal_p.h"

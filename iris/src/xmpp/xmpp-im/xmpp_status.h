@@ -57,6 +57,7 @@ namespace XMPP
 		const QString & songTitle() const;
 		const QString & capsNode() const;
 		const QString & capsVersion() const;
+		const QString & capsHashAlgorithm() const;
 		const QString & capsExt() const;
 		
 		bool isMUC() const;
@@ -85,6 +86,7 @@ namespace XMPP
 		void setError(int, const QString &);
 		void setCapsNode(const QString&);
 		void setCapsVersion(const QString&);
+		void setCapsHashAlgorithm(const QString&);
 		void setCapsExt(const QString&);
 		
 		void setMUC();
@@ -118,7 +120,7 @@ namespace XMPP
 		QString v_xsigned;
 		// gabber song extension
 		QString v_songTitle;
-		QString v_capsNode, v_capsVersion, v_capsExt;
+		QString v_capsNode, v_capsVersion, v_capsHashAlgorithm, v_capsExt;
 		QList<BoBData> v_bobDataList;
 
 		// MUC

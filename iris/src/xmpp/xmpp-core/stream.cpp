@@ -886,8 +886,8 @@ void ClientStream::srvProcessNext()
 
 				// calculate key
 				QByteArray str = QCA::Hash("sha1").hashToString("secret").toUtf8();
-				str = QCA::Hash("sha1").hashToString(str + "im.pyxa.org").toUtf8();
-				str = QCA::Hash("sha1").hashToString(str + d->srv.id.toUtf8()).toUtf8();
+				str = QCA::Hash("sha1").hashToString(QByteArray(str + "im.pyxa.org")).toUtf8();
+				str = QCA::Hash("sha1").hashToString(QByteArray(str + d->srv.id.toUtf8())).toUtf8();
 				d->srv.setDialbackKey(str);
 
 				//d->srv.setDialbackKey("3c5d721ea2fcc45b163a11420e4e358f87e3142a");

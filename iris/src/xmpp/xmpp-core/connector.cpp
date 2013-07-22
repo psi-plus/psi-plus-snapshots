@@ -36,7 +36,6 @@
 #include <QUrl>
 #include <QTimer>
 #include <qca.h>
-#include <libidn/idna.h>
 
 #include "bsocket.h"
 #include "httpconnect.h"

@@ -2344,6 +2344,11 @@ void Status::setCapsVersion(const QString & _capsVersion)
 	v_capsVersion = _capsVersion;
 }
 
+void Status::setCapsHashAlgorithm(const QString & _capsHashAlgorithm)
+{
+	v_capsHashAlgorithm = _capsHashAlgorithm;
+}
+
 void Status::setCapsExt(const QString & _capsExt)
 {
 	v_capsExt = _capsExt;
@@ -2496,6 +2501,11 @@ const QString & Status::capsNode() const
 const QString & Status::capsVersion() const
 {
 	return v_capsVersion;
+}
+
+const QString & Status::capsHashAlgorithm() const
+{
+	return v_capsHashAlgorithm;
 }
 
 const QString & Status::capsExt() const

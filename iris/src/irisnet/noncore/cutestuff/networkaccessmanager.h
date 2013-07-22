@@ -33,6 +33,7 @@ class ByteStream;
 class NetworkSchemeHandler
 {
 public:
+	virtual ~NetworkSchemeHandler() { }
 	virtual QNetworkReply* createRequest(QNetworkAccessManager::Operation op,
 										 const QNetworkRequest & req,
 										 QIODevice * outgoingData = 0) = 0;

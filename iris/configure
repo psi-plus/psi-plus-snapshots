@@ -31,6 +31,8 @@ Project options:
   --disable-tests             Don't build examples and unittests.
 
 Dependency options:
+  --with-idn-inc=[path]     Path to libidn include files
+  --with-idn-lib=[path]     Path to libidn library or framework files
   --with-qca=[path]         Specify path to QCA tree, mainly for building
                             against an uninstalled QCA.
   --with-zlib-inc=[path]    Path to zlib include files
@@ -191,6 +193,16 @@ while [ $# -gt 0 ]; do
 			shift
 			;;
 
+		--with-idn-inc=*)
+			QC_WITH_IDN_INC=$optarg
+			shift
+			;;
+
+		--with-idn-lib=*)
+			QC_WITH_IDN_LIB=$optarg
+			shift
+			;;
+
 		--with-qca=*)
 			QC_WITH_QCA=$optarg
 			shift
@@ -232,6 +244,8 @@ echo QC_FRAMEWORK=$QC_FRAMEWORK
 echo QC_UNIVERSAL=$QC_UNIVERSAL
 echo QC_MAC_SDK=$QC_MAC_SDK
 echo QC_DISABLE_TESTS=$QC_DISABLE_TESTS
+echo QC_WITH_IDN_INC=$QC_WITH_IDN_INC
+echo QC_WITH_IDN_LIB=$QC_WITH_IDN_LIB
 echo QC_WITH_QCA=$QC_WITH_QCA
 echo QC_WITH_ZLIB_INC=$QC_WITH_ZLIB_INC
 echo QC_WITH_ZLIB_LIB=$QC_WITH_ZLIB_LIB
@@ -243,10 +257,11 @@ printf "Verifying Qt 4 build environment ... "
 # run qmake -v and check version
 qmake_check_v4() {
 	if [ -x "$1" ]; then
-		if echo `$1 -v 2>&1` | grep "Qt version 4\." >/dev/null 2>&1; then
-			return 0
-		elif [ "$QC_VERBOSE" = "Y" ]; then
-			echo "Warning: $1 not for Qt 4"
+       local v=`$1 -query QT_VERSION 2>&1`
+       vmaj="${v%%.*}"
+       case "${v}" in ?.?.?) [ "$vmaj" = 4 -o "$vmaj" = 5 ] && return 0 ;; esac
+		if [ "$QC_VERBOSE" = "Y" ]; then
+			echo "Warning: $1 not for Qt 4 or 5"
 		fi
 	fi
 	return 1
@@ -257,7 +272,7 @@ if [ "$QC_VERBOSE" = "Y" ]; then
 fi
 
 qm=""
-names="qmake-qt4 qmake4 qmake"
+names="qmake-qt5 qmake5 qmake-qt4 qmake4 qmake"
 
 # qt4 check: --qtdir
 if [ -z "$qm" ] && [ ! -z "$EX_QTDIR" ]; then
@@ -638,6 +653,63 @@ public:
 		return true;
 	}
 };
+#line 1 "idn.qcm"
+/*
+-----BEGIN QCMOD-----
+name: libidn
+arg: with-idn-inc=[path],Path to libidn include files
+arg: with-idn-lib=[path],Path to libidn library or framework files
+-----END QCMOD-----
+*/
+
+//----------------------------------------------------------------------------
+// qc_idn
+//----------------------------------------------------------------------------
+class qc_idn : public ConfObj
+{
+public:
+	qc_idn(Conf *c) : ConfObj(c) {}
+	QString name() const { return "LibIDN"; }
+	QString shortname() const { return "libidn"; }
+	bool exec()
+	{
+		QString idn_incdir, idn_libdir;
+		idn_incdir = conf->getenv("QC_WITH_IDN_INC");
+		idn_libdir = conf->getenv("QC_WITH_IDN_LIB");
+
+		if (!idn_incdir.isEmpty() || !idn_libdir.isEmpty()) { // prefer this if given
+			if ((!idn_incdir.isEmpty() && conf->checkHeader(idn_incdir, "stringprep.h")) ||
+			    (idn_incdir.isEmpty() && conf->findHeader("stringprep.h", QStringList(), &idn_incdir))) {
+				conf->addIncludePath(idn_incdir);
+			} else {
+				printf("Headers not found!\n");
+				return false;
+			}
+
+			if((!idn_libdir.isEmpty() && conf->checkLibrary(idn_libdir, "idn")) ||
+			   (idn_libdir.isEmpty() && conf->findLibrary("idn", &idn_libdir))) {
+				conf->addLib(idn_libdir.isEmpty()? "-lidn" : QString("-L%1 -lidn").arg(idn_libdir));
+			} else {
+				printf("Libraries not found!\n");
+				return false;
+			}
+			return true;
+		}
+
+		QStringList incs;
+		QString version, libs, other;
+		if(conf->findPkgConfig("libidn", VersionAny, QString::null, &version, &incs, &libs, &other))
+		{
+			for(int n = 0; n < incs.count(); ++n)
+				conf->addIncludePath(incs[n]);
+			if(!libs.isEmpty())
+				conf->addLib(libs);
+			return true;
+		}
+
+		return false;
+	}
+};
 #line 1 "qca.qcm"
 /*
 -----BEGIN QCMOD-----
@@ -924,6 +996,9 @@ cat >$1/modules_new.cpp <<EOT
     o = new qc_universal(conf);
     o->required = true;
     o->disabled = false;
+    o = new qc_idn(conf);
+    o->required = true;
+    o->disabled = false;
     o = new qc_qca(conf);
     o->required = true;
     o->disabled = false;
@@ -1082,7 +1157,16 @@ QStringList qc_pathlist()
 	QStringList list;
 	QString path = qc_getenv("PATH");
 	if(!path.isEmpty())
+	{
+#ifdef Q_OS_WIN
+		list = path.split(';', QString::SkipEmptyParts);
+#else
 		list = path.split(':', QString::SkipEmptyParts);
+#endif
+	}
+#ifdef Q_OS_WIN
+	list.prepend(".");
+#endif
 	return list;
 }
 
@@ -1098,61 +1182,93 @@ QString qc_findprogram(const QString &prog)
 			out = fi.filePath();
 			break;
 		}
+
+#ifdef Q_OS_WIN
+		// on windows, be sure to look for .exe
+		if(prog.right(4).toLower() != ".exe")
+		{
+			fi = QFileInfo(list[n] + '/' + prog + ".exe");
+			if(fi.exists() && fi.isExecutable())
+			{
+				out = fi.filePath();
+				break;
+			}
+		}
+#endif
 	}
 	return out;
 }
 
 QString qc_findself(const QString &argv0)
 {
+#ifdef Q_OS_WIN
+	if(argv0.contains('\\\\'))
+#else
 	if(argv0.contains('/'))
+#endif
 		return argv0;
 	else
 		return qc_findprogram(argv0);
 }
 
-int qc_runcommand(const QString &command, QByteArray *out, bool showOutput)
+int qc_run_program_or_command(const QString &prog, const QStringList &args, const QString &command, QByteArray *out, bool showOutput)
 {
-	QString fullcmd = command;
-	if(!showOutput)
-		fullcmd += " 2>/dev/null";
-	FILE *f = popen(fullcmd.toLatin1().data(), "r");
-	if(!f)
-		return -1;
 	if(out)
 		out->clear();
-	while(1)
-	{
-		char c = (char)fgetc(f);
-		if(feof(f))
-			break;
-		if(out)
-			out->append(c);
-		if(showOutput)
-			fputc(c, stdout);
-	}
-	int ret = pclose(f);
-	if(ret == -1)
+
+	QProcess process;
+	process.setReadChannel(QProcess::StandardOutput);
+
+	if(!prog.isEmpty())
+		process.start(prog, args);
+	else if(!command.isEmpty())
+		process.start(command);
+	else
 		return -1;
-	return ret;
+
+	if(!process.waitForStarted(-1))
+		return -1;
+
+	QByteArray buf;
+
+	while(process.waitForReadyRead(-1))
+	{
+		buf = process.readAllStandardOutput();
+		if(out)
+			out->append(buf);
+		if(showOutput)
+			fprintf(stdout, "%s", buf.data());
+
+		buf = process.readAllStandardError();
+		if(showOutput)
+			fprintf(stderr, "%s", buf.data());
+	}
+
+	buf = process.readAllStandardError();
+	if(showOutput)
+		fprintf(stderr, "%s", buf.data());
+
+	// calling waitForReadyRead will cause the process to eventually be
+	//   marked as finished, so we should not need to separately call
+	//   waitForFinished. however, we will do it anyway just to be safe.
+	//   we won't check the return value since false could still mean
+	//   success (if the process had already been marked as finished).
+	process.waitForFinished(-1);
+
+	if(process.exitStatus() != QProcess::NormalExit)
+		return -1;
+
+	return process.exitCode();
+}
+
+int qc_runcommand(const QString &command, QByteArray *out, bool showOutput)
+{
+	return qc_run_program_or_command(QString(), QStringList(), command, out, showOutput);
 }
 
 int qc_runprogram(const QString &prog, const QStringList &args, QByteArray *out, bool showOutput)
 {
-	QString fullcmd = prog;
-	QString argstr = args.join(" ");
-	if(!argstr.isEmpty())
-		fullcmd += QString(" ") + argstr;
-	return qc_runcommand(fullcmd, out, showOutput);
-
-	// TODO: use QProcess once it is fixed
-	/*
-	QProcess process;
-	if(showOutput)
-		process.setReadChannelMode(ForwardedChannels);
-	process.start(prog, args);
-	process.waitForFinished(-1);
-	return process.exitCode();
-	*/
+	return qc_run_program_or_command(prog, args, QString(), out, showOutput);
 }
 
 bool qc_removedir(const QString &dirPath)
@@ -1417,7 +1533,12 @@ int Conf::doCommand(const QString &prog, const QStringList &args, QByteArray *ou
 
 bool Conf::doCompileAndLink(const QString &filedata, const QStringList &incs, const QString &libs, const QString &proextra, int *retcode)
 {
+#ifdef Q_OS_WIN
+	QDir tmp("qconftemp");
+#else
 	QDir tmp(".qconftemp");
+#endif
+
 	if(!tmp.mkdir("atest"))
 	{
 		debug("unable to create atest dir");
@@ -1450,6 +1571,7 @@ bool Conf::doCompileAndLink(const QString &filedata, const QStringList &incs, co
 	QString pro = QString(
 		"CONFIG  += console\n"
 		"CONFIG  -= qt app_bundle\n"
+		"DESTDIR  = \$\$PWD\n"
 		"SOURCES += atest.cpp\n");
 	QString inc = incs.join(" ");
 	if(!inc.isEmpty())
@@ -1486,7 +1608,13 @@ bool Conf::doCompileAndLink(const QString &filedata, const QStringList &incs, co
 		{
 			ok = true;
 			if(retcode)
-				*retcode = doCommand(QString("./") + out, QStringList());
+			{
+				QString runatest = out;
+#ifdef Q_OS_UNIX
+				runatest.prepend("./");
+#endif
+				*retcode = doCommand(runatest, QStringList());
+			}
 		}
 		r = doCommand(maketool, QStringList() << "distclean");
 		if(r != 0)
@@ -1763,8 +1891,8 @@ void Conf::addExtra(const QString &str)
 int main()
 {
 	Conf *conf = new Conf;
-	ConfObj *o;
-	o = 0;
+	ConfObj *o = 0;
+	Q_UNUSED(o);
 #ifdef HAVE_MODULES
 # include"modules_new.cpp"
 #endif
@@ -1887,6 +2015,7 @@ CONFIG  += console
 CONFIG  -= app_bundle
 QT      -= gui
 TARGET   = conf
+DESTDIR  = \$\$PWD
 
 HEADERS += conf4.h
 SOURCES += conf4.cpp
@@ -1909,6 +2038,8 @@ export QC_FRAMEWORK
 export QC_UNIVERSAL
 export QC_MAC_SDK
 export QC_DISABLE_TESTS
+export QC_WITH_IDN_INC
+export QC_WITH_IDN_LIB
 export QC_WITH_QCA
 export QC_WITH_ZLIB_INC
 export QC_WITH_ZLIB_LIB
