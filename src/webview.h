@@ -70,7 +70,6 @@ public:
 	/** Evaluates JavaScript code */
 	void evaluateJS(const QString &scriptSource = "");
 
-	QString selectedHtml();
 	QString selectedText();
 	bool isLoading() { return isLoading_; }
 

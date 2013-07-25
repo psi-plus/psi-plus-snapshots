@@ -23,6 +23,7 @@
 #include <QMimeData>
 #include <QApplication>
 #include <QStyle>
+#include <QDebug>
 
 #include "webview.h"
 #include "urlobject.h"
@@ -135,7 +136,7 @@ void WebView::mouseReleaseEvent ( QMouseEvent * event )
 	QWebView::mouseReleaseEvent(event);
 	possibleDragging = false;
 #ifdef HAVE_X11
-	if (!page()->selectedText().isEmpty()) {
+	if (!page()->selectedHtml().isEmpty()) {
 		convertClipboardHtmlImages(QClipboard::Selection);
 	}
 #endif
@@ -155,7 +156,7 @@ void WebView::mouseMoveEvent(QMouseEvent *event)
 	QDrag *drag = new QDrag(this);
 	QMimeData *mimeData = new QMimeData;
 
-	QString html = selectedHtml();
+	QString html = TextUtil::img2title(selectedHtml());
 	mimeData->setHtml(html);
 	mimeData->setText(TextUtil::rich2plain(html));
 
@@ -166,13 +167,11 @@ void WebView::mouseMoveEvent(QMouseEvent *event)
 void WebView::convertClipboardHtmlImages(QClipboard::Mode mode)
 {
 	QClipboard *cb = QApplication::clipboard();
-	//qDebug("text selection before: %s", qPrintable(cb->text(mode)));
-	QString html = TextUtil::img2title(cb->mimeData(mode)->html());
+	QString html = TextUtil::img2title(selectedHtml());
 	QMimeData *data = new QMimeData;
 	data->setHtml(html);
-	data->setText(TextUtil::rich2plain(html));
+	data->setText(TextUtil::rich2plain(html, false));
 	cb->setMimeData(data, mode);
-	//qDebug("selection: %s", qPrintable(cb->mimeData(mode)->text()));
 }
 
 void WebView::evaluateJS(const QString &scriptSource)
@@ -181,26 +180,9 @@ void WebView::evaluateJS(const QString &scriptSource)
 	page()->mainFrame()->evaluateJavaScript(scriptSource);
 }
 
-QString WebView::selectedHtml()
-{
-	// WARNING: selectedHtml must be implemented in qt-4.8 and
-	// this ugly hack will become useless
-	QClipboard *clipboard = QApplication::clipboard();
-	QMimeData *originalData = new QMimeData;
-	foreach (QString format, clipboard->mimeData(QClipboard::Clipboard)->formats()) {
-		originalData->setData(format, clipboard->mimeData(QClipboard::Clipboard)->data(format));
-	}
-	copySelected();
-
-	QString html = clipboard->mimeData()->html();
-	clipboard->setMimeData(originalData);
-
-	return html;
-}
-
 QString WebView::selectedText()
 {
-	return TextUtil::rich2plain(selectedHtml());
+	return TextUtil::rich2plain(TextUtil::img2title(selectedHtml()));
 }
 
 void WebView::copySelected()

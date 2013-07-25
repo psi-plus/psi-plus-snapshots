@@ -36,6 +36,7 @@ class NetworkAccessManager;
 
 class NAMSchemeHandler {
 public:
+	virtual ~NAMSchemeHandler() {}
 	virtual QByteArray data(const QUrl &) const = 0;
 };
 

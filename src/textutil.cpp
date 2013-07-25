@@ -113,7 +113,7 @@ QString TextUtil::plain2rich(const QString &plain)
 	return "<span style='white-space: pre-wrap'>" + rich + "</span>";
 }
 
-QString TextUtil::rich2plain(const QString &in)
+QString TextUtil::rich2plain(const QString &in, bool collapseSpaces)
 {
 	QString out;
 
@@ -167,7 +167,7 @@ QString TextUtil::rich2plain(const QString &in)
 			if(in[i] == QChar::Nbsp)
 				out += ' ';
 			else if(in[i] != '\n') {
-				if(i == 0 || out.length() == 0)
+				if(!collapseSpaces || i == 0 || out.length() == 0)
 					out += ' ';
 				else {
 					QChar last = out.at(out.length()-1);

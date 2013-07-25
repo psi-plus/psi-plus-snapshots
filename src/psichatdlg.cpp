@@ -242,7 +242,7 @@ void PsiChatDlg::initUi()
 	chatEditCreated();
 
 #ifdef Q_OS_MAC
-	connect(chatView(), SIGNAL(selectionChanged()), SLOT(logSelectionChanged()));
+	//connect(chatView(), SIGNAL(selectionChanged()), SLOT(logSelectionChanged()));
 #endif
 
 	initToolButtons();
