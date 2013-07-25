@@ -409,7 +409,7 @@ void PsiChatDlg::updateIdentityVisibility()
 	else {
 		ui_.lb_ident->setVisible(false);
 	}
-	
+
 	if (PsiOptions::instance()->getOption("options.ui.disable-send-button").toBool()) {
 		ui_.pb_send->hide();
 	}
@@ -715,7 +715,7 @@ void PsiChatDlg::contactUpdated(UserListItem* u, int status, const QString& stat
 
 	if (u) {
 		UserResourceList srl = u->userResourceList();
-		if(!srl.isEmpty()) {			
+		if(!srl.isEmpty()) {
 			UserResource r;
 			if(!jid().resource().isEmpty()) {
 				QString res = jid().resource();

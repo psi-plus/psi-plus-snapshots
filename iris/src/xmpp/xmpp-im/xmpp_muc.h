@@ -60,10 +60,10 @@ namespace XMPP
 		QString nick_;
 		Jid jid_, actor_;
 		Affiliation affiliation_;
-		Role role_;	
+		Role role_;
 		QString reason_;
 	};
-	
+
 	class MUCInvite
 	{
 	public:
@@ -84,13 +84,13 @@ namespace XMPP
 		void fromXml(const QDomElement&);
 		QDomElement toXml(QDomDocument&) const;
 		bool isNull() const;
-		
+
 	private:
 		Jid to_, from_;
 		QString reason_, password_;
 		bool cont_;
 	};
-	
+
 	class MUCDecline
 	{
 	public:
@@ -108,12 +108,12 @@ namespace XMPP
 		void fromXml(const QDomElement&);
 		QDomElement toXml(QDomDocument&) const;
 		bool isNull() const;
-		
+
 	private:
 		Jid to_, from_;
 		QString reason_;
 	};
-	
+
 	class MUCDestroy
 	{
 	public:
@@ -127,7 +127,7 @@ namespace XMPP
 
 		void fromXml(const QDomElement&);
 		QDomElement toXml(QDomDocument&) const;
-		
+
 	private:
 		Jid jid_;
 		QString reason_;

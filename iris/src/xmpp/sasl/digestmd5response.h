@@ -30,23 +30,23 @@ namespace XMPP {
 	{
 		public:
 			DIGESTMD5Response(
-					const QByteArray& challenge, 
-					const QString& service, 
-					const QString& host, 
-					const QString& realm, 
-					const QString& user, 
-					const QString& authz,  
+					const QByteArray& challenge,
+					const QString& service,
+					const QString& host,
+					const QString& realm,
+					const QString& user,
+					const QString& authz,
 					const QByteArray& password,
 					const RandomNumberGenerator& rand);
 
-			const QByteArray& getValue() const { 
+			const QByteArray& getValue() const {
 				return value_;
 			}
 
-			bool isValid() const { 
+			bool isValid() const {
 				return isValid_;
 			}
-		
+
 		private:
 			bool isValid_;
 			QByteArray value_;

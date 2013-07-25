@@ -13,7 +13,7 @@ Sparkle {
 
 	OBJECTIVE_SOURCES += \
 		$$PWD/SparkleAutoUpdater.mm
-	
+
 	LIBS += -framework Sparkle
 }
 

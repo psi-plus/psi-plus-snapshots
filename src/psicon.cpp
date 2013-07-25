@@ -1428,8 +1428,8 @@ void PsiCon::optionChanged(const QString& option)
 		alertIconUpdateAlertStyle();
 	}
 
-	if (option == "options.ui.tabs.use-tabs" || 
-		option == "options.ui.tabs.grouping" || 
+	if (option == "options.ui.tabs.use-tabs" ||
+		option == "options.ui.tabs.grouping" ||
 		option == "options.ui.tabs.show-tab-buttons") {
 		QMessageBox::information(0, tr("Information"), tr("Some of the options you changed will only have full effect upon restart."));
 		//notifyRestart = false;

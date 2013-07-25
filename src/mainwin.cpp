@@ -1327,7 +1327,7 @@ void MainWin::setTrayToolTip()
 			istr = "status/invisible";
 		Tip += QString("<div style='white-space:pre'>") + QString("<%1=\"%2\"> ").arg(imgTag).arg(istr) + QString("<b>%1</b>").arg(TextUtil::escape(pa->name())) + "</div>";
 		TipPlain += "\n" + pa->name() + " (" + stat.typeString() + ")";
-		QString text = stat.status();		
+		QString text = stat.status();
 		if(!text.isEmpty()) {
 			text = clipStatus(text, 40, 1);
 			Tip += QString("<div style='white-space:pre'>%1: %2</div>").arg(tr("Status Message")).arg(TextUtil::escape(text));

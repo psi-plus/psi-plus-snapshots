@@ -183,7 +183,7 @@ void FancyPopup::Private::initContents(QString title, const PsiIcon *icon, bool 
 	backgroundPalette.setBrush(QPalette::Background, QBrush(backgroundColor));
 	QPixmap back(1, 1);
 	back.fill(backgroundColor);
-	
+
 	ui_.setupUi(popup);
 	ui_.lb_bottom1->setPalette(backgroundPalette);
 	ui_.lb_icon->setPalette(backgroundPalette);
@@ -231,7 +231,7 @@ bool FancyPopup::Private::eventFilter(QObject *o, QEvent *e)
 // FancyPopup
 //----------------------------------------------------------------------------
 
-static const QFlags<Qt::WindowType> 
+static const QFlags<Qt::WindowType>
 POPUP_FLAGS = Qt::ToolTip | Qt::WindowStaysOnTopHint; // | Qt::X11BypassWindowManagerHint | Qt::FramelessWindowHint;
 
 FancyPopup::FancyPopup(QString title, const PsiIcon *icon, FancyPopup *prev, bool copyIcon)

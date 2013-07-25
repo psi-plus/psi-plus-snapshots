@@ -16,7 +16,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
  */
- 
+
 #include <QObject>
 #include <QDebug>
 
@@ -50,7 +50,7 @@ static bool privacyListItemForJid(const PrivacyListItem& item, const Jid& jid)
 using namespace XMPP;
 
 // -----------------------------------------------------------------------------
-// 
+//
 class PrivacyListListener : public Task
 {
 	Q_OBJECT
@@ -58,11 +58,11 @@ class PrivacyListListener : public Task
 public:
 	PrivacyListListener(Task* parent) : Task(parent) {
 	}
-	
+
 	bool take(const QDomElement &e) {
 		if(e.tagName() != "iq" || e.attribute("type") != "set")
 			return false;
-		
+
 		QString ns = queryNS(e);
 		if (ns == PRIVACY_NS) {
 			QDomElement listTag = findSubTag(queryTag(e), "list", 0);
@@ -95,17 +95,17 @@ private:
 	QString default_, active_;
 
 public:
-	GetPrivacyListsTask(Task* parent) : Task(parent) { 
+	GetPrivacyListsTask(Task* parent) : Task(parent) {
 		iq_ = createIQ(doc(), "get", "", id());
 		QDomElement query = doc()->createElement("query");
 		query.setAttribute("xmlns",PRIVACY_NS);
-		iq_.appendChild(query);	
+		iq_.appendChild(query);
 	}
 
 	void onGo() {
 		send(iq_);
 	}
-	
+
 	bool take(const QDomElement &x) {
 		if(!iqVerify(x, "", id()))
 			return false;
@@ -113,18 +113,18 @@ public:
 		//qDebug("privacy.cpp: Got reply for privacy lists.");
 		if (x.attribute("type") == "result") {
 			QDomElement tag, q = queryTag(x);
-			
+
 			for (QDomNode n = q.firstChild(); !n.isNull(); n = n.nextSibling()) {
 				QDomElement e = n.toElement();
-				if (e.tagName() == "active") 
+				if (e.tagName() == "active")
 					active_ = e.attribute("name");
 				else if (e.tagName() == "default")
 					default_ = e.attribute("name");
-				else if (e.tagName() == "list") 
+				else if (e.tagName() == "list")
 					lists_.append(e.attribute("name"));
 				else
 					qWarning("privacy.cpp: Unknown tag in privacy lists.");
-				
+
 			}
 			setSuccess();
 		}
@@ -134,11 +134,11 @@ public:
 		return true;
 	}
 
-	const QStringList& lists() { 
-		return lists_; 
+	const QStringList& lists() {
+		return lists_;
 	}
 
-	const QString& defaultList() { 
+	const QString& defaultList() {
 		return default_;
 	}
 
@@ -158,14 +158,14 @@ private:
 	QString value_;
 
 public:
-	SetPrivacyListsTask(Task* parent) : Task(parent), changeDefault_(false), changeActive_(false), changeList_(false), list_("") { 
+	SetPrivacyListsTask(Task* parent) : Task(parent), changeDefault_(false), changeActive_(false), changeList_(false), list_("") {
 	}
 
 	void onGo() {
 		QDomElement iq_ = createIQ(doc(), "set", "", id());
 		QDomElement query = doc()->createElement("query");
 		query.setAttribute("xmlns",PRIVACY_NS);
-		iq_.appendChild(query);	
+		iq_.appendChild(query);
 
 		QDomElement e;
 		if (changeDefault_) {
@@ -177,7 +177,7 @@ public:
 		else if (changeActive_) {
 			//qDebug("privacy.cpp: Changing active privacy list.");
 			e = doc()->createElement("active");
-			if (!value_.isEmpty()) 
+			if (!value_.isEmpty())
 				e.setAttribute("name",value_);
 		}
 		else if (changeList_) {
@@ -188,7 +188,7 @@ public:
 			qWarning("privacy.cpp: Empty active/default list change request.");
 			return;
 		}
-		
+
 		query.appendChild(e);
 		send(iq_);
 	}
@@ -199,14 +199,14 @@ public:
 		changeActive_ = true;
 		changeList_ = false;
 	}
-	
+
 	void setDefault(const QString& d) {
 		value_ = d;
 		changeDefault_ = true;
 		changeActive_ = false;
 		changeList_ = true;
 	}
-	
+
 	void setList(const PrivacyList& list) {
 		//qDebug() << "setList: " << list.toString();
 		list_ = list;
@@ -244,11 +244,11 @@ private:
 	PrivacyList list_;
 
 public:
-	GetPrivacyListTask(Task* parent, const QString& name) : Task(parent), name_(name), list_(PrivacyList("")) { 
+	GetPrivacyListTask(Task* parent, const QString& name) : Task(parent), name_(name), list_(PrivacyList("")) {
 		iq_ = createIQ(doc(), "get", "", id());
 		QDomElement query = doc()->createElement("query");
 		query.setAttribute("xmlns",PRIVACY_NS);
-		iq_.appendChild(query);	
+		iq_.appendChild(query);
 		QDomElement list = doc()->createElement("list");
 		list.setAttribute("name",name);
 		query.appendChild(list);
@@ -258,7 +258,7 @@ public:
 		//qDebug() << "privacy.cpp: Requesting privacy list %1." << name_;
 		send(iq_);
 	}
-	
+
 	bool take(const QDomElement &x) {
 		if(!iqVerify(x, "", id()))
 			return false;
@@ -282,8 +282,8 @@ public:
 		return true;
 	}
 
-	const PrivacyList& list() { 
-		return list_; 
+	const PrivacyList& list() {
+		return list_;
 	}
 };
 
@@ -354,7 +354,7 @@ void PsiPrivacyManager::block_getDefaultList_success(const PrivacyList& l_)
 	disconnect(this,SIGNAL(defaultListAvailable(const PrivacyList&)),this,SLOT(block_getDefault_success(const PrivacyList&)));
 	disconnect(this,SIGNAL(defaultListError()),this,SLOT(block_getDefault_error()));
 	block_waiting_ = false;
-	while (!block_targets_.isEmpty()) 
+	while (!block_targets_.isEmpty())
 		l.insertItem(0,PrivacyListItem::blockItem(block_targets_.takeFirst()));
 	changeList(l);
 }
@@ -378,7 +378,7 @@ void PsiPrivacyManager::getDefault_listsReceived(const QString& defaultList, con
 {
 	disconnect(this,SIGNAL(listsReceived(const QString&, const QString&, const QStringList&)),this,SLOT(getDefault_listsReceived(const QString&, const QString&, const QStringList&)));
 	disconnect(this,SIGNAL(listsError()),this,SLOT(getDefault_listsError()));
-	
+
 	getDefault_default_ = defaultList;
 	if (!defaultList.isEmpty()) {
 		getDefault_waiting_ = true;
@@ -487,14 +487,14 @@ void PsiPrivacyManager::changeList_finished()
 	}
 }
 
-void PsiPrivacyManager::receiveLists() 
+void PsiPrivacyManager::receiveLists()
 {
 	GetPrivacyListsTask *t = (GetPrivacyListsTask*)sender();
 	if (!t) {
 		qWarning("privacy.cpp:receiveLists(): Unexpected sender.");
 		return;
 	}
-	
+
 	if (t->success()) {
 		emit listsReceived(t->defaultList(),t->activeList(),t->lists());
 	}
@@ -504,14 +504,14 @@ void PsiPrivacyManager::receiveLists()
 	}
 }
 
-void PsiPrivacyManager::receiveList() 
+void PsiPrivacyManager::receiveList()
 {
 	GetPrivacyListTask *t = (GetPrivacyListTask*)sender();
 	if (!t) {
 		qWarning("privacy.cpp:receiveList(): Unexpected sender.");
 		return;
 	}
-	
+
 	if (t->success()) {
 		emit listReceived(t->list());
 	}
@@ -639,7 +639,7 @@ void PsiPrivacyManager::newChangeActiveList_error()
 }
 
 void PsiPrivacyManager::createBlockedList()
-{	
+{
 	PrivacyList list(blockedListName_);
 	PrivacyListItem allowAll;
 	allowAll.setType(PrivacyListItem::FallthroughType);

@@ -24,7 +24,7 @@
 
 #include "activity.h"
 #include "activitycatalog.h"
-		
+
 ActivityCatalog::Entry::Entry()
 {
 	type_ = Activity::Unknown;
@@ -214,5 +214,5 @@ const QList<ActivityCatalog::Entry>& ActivityCatalog::entries() const
 {
 	return entries_;
 }
-	
+
 ActivityCatalog* ActivityCatalog::instance_ = 0;

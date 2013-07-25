@@ -314,7 +314,7 @@ QDomElement XData::Field::toXml(QDomDocument *doc, bool submitForm) const
 
 	if ( !_value.isEmpty() ) {
 		QStringList::ConstIterator it = _value.begin();
-		for ( ; it != _value.end(); ++it) 
+		for ( ; it != _value.end(); ++it)
 			f.appendChild( textTag(doc, "value", *it) );
 	}
 

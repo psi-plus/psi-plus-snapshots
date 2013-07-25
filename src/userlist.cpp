@@ -777,7 +777,7 @@ QString UserListItem::makeBareTip(bool trim, bool doLinkify) const
 	{
 		useAvatar = true;
 	}
-	
+
 	str += "<table cellspacing=\"3\"><tr>";
 	str += "<td>";
 
@@ -953,7 +953,7 @@ QString UserListItem::makeBareTip(bool trim, bool doLinkify) const
 					s = TextUtil::emoticonify(s);
 				if( !doLinkify && PsiOptions::instance()->getOption("options.ui.chat.legacy-formatting").toBool() )
 					s = TextUtil::legacyFormat(s);
-				
+
 				str += QString("<div class='layer2'><table cellspacing=\"0\"><tr><td><%1=\"%2\"> </td><td><div><u>%3</u>: %4</div></td></tr></table></div>") \
 				.arg(imgTag).arg("psi/action_templates_edit").arg(head).arg(s);
 			}

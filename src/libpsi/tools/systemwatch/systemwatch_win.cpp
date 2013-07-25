@@ -73,7 +73,7 @@ public:
 
 
 
-WinSystemWatch::WinSystemWatch() 
+WinSystemWatch::WinSystemWatch()
 {
 	d = new MessageWindow(this);
 }

@@ -75,14 +75,14 @@ void mdnsd_in(mdnsd d, const jdns_packet_t *m, const jdns_response_t *resp, cons
 // outgoing messge to be delivered to host, returns >0 if one was returned and m/ip/port set
 int mdnsd_out(mdnsd d, jdns_packet_t **m, jdns_address_t **addr, unsigned short int *port);
 //
-// returns the max wait-time until mdnsd_out() needs to be called again 
+// returns the max wait-time until mdnsd_out() needs to be called again
 struct mytimeval *mdnsd_sleep(mdnsd d);
 //
 ////////////
 
 ///////////
 // Q/A functions
-// 
+//
 // register a new query
 //   answer(record, arg) is called whenever one is found/changes/expires (immediate or anytime after, mdnsda valid until ->ttl==0)
 //   either answer returns -1, or another mdnsd_query with a NULL answer will remove/unregister this query
@@ -101,7 +101,7 @@ mdnsda mdnsd_list(mdnsd d, char *host, int type, mdnsda last);
 //   conflict(arg) called at any point when one is detected and unable to recover
 //   after the first data is set_*(), any future changes effectively expire the old one and attempt to create a new unique record
 mdnsdr mdnsd_unique(mdnsd d, char *host, int type, long int ttl, void (*pubresult)(int result, char *host, int type, void *arg), void *arg);
-// 
+//
 // create a new shared record
 mdnsdr mdnsd_shared(mdnsd d, char *host, int type, long int ttl);
 //

@@ -58,7 +58,7 @@ const QString& Mood::text() const
 	return text_;
 }
 
-bool Mood::isNull() const 
+bool Mood::isNull() const
 {
 	return type_ == Unknown && text().isEmpty();
 }

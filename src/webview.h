@@ -54,11 +54,11 @@ class IconHandler : public NAMSchemeHandler
  * Extended QWebView.
  *
  * It's used in EventView and HTMLChatView.
- * Provides evaluateJavaScript escaping and secure NetworkManager with icon:// URL 
- * support and \<img\> whitelisting. 
+ * Provides evaluateJavaScript escaping and secure NetworkManager with icon:// URL
+ * support and \<img\> whitelisting.
  *
- * Better name for it would be: PsiWebView, but it's used in HTMLChatView which is 
- * Psi-unaware.  
+ * Better name for it would be: PsiWebView, but it's used in HTMLChatView which is
+ * Psi-unaware.
  */
 class WebView : public QWebView {
 

@@ -694,7 +694,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 
 	connect(ui_.log, SIGNAL(showNM(QString)), this, SLOT(showNM(QString)));
 	connect(URLObject::getInstance(), SIGNAL(openURL(QString)), SLOT(openURL(QString)));
-	
+
 	connect(ui_.pb_topic, SIGNAL(clicked()), SLOT(openTopic()));
 	PsiToolTip::install(ui_.le_topic);
 
@@ -2220,7 +2220,7 @@ void GCMainDlg::sendTemp(const QString &templText)
 	}
 }
 
- 
+
 
 void GCMainDlg::resizeEvent(QResizeEvent *e)
 {

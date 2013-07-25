@@ -37,7 +37,7 @@ public:
 		StateStrikeOut = 64
 	};
 
-	HTMLTextController(QTextEdit *parent);	
+	HTMLTextController(QTextEdit *parent);
 	void doMenu();
 	void setFont(const QFont &);
 	void setCssString(const QString& css) { cssString_ = css; };

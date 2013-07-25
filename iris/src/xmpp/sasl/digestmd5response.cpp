@@ -45,7 +45,7 @@ DIGESTMD5Response::DIGESTMD5Response(const QByteArray& challenge, const QString&
 	QByteArray a;
 	a.resize(32);
 	for(int n = 0; n < (int)a.size(); ++n) {
-		a[n] = (char) rand.generateNumberBetween(0, 255); 
+		a[n] = (char) rand.generateNumberBetween(0, 255);
 	}
 	QByteArray cnonce = Base64::encode(a).toLatin1();
 

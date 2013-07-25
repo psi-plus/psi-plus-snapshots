@@ -361,7 +361,7 @@ bool QCATLSHandler::certMatchesHostname()
 
 	if (matchesHostName(peerCert.primary(), d->host))
 		return true;
-	
+
 	Jid host(d->host);
 
 	foreach( const QString &idOnXmppAddr, peerCert.primary().subjectInfo().values(QCA::XMPP) ) {

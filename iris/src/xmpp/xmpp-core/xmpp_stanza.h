@@ -26,7 +26,7 @@
 
 class QDomDocument;
 
-namespace XMPP 
+namespace XMPP
 {
 	class Jid;
 	class Stream;

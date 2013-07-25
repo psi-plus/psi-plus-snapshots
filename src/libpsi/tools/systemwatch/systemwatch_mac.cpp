@@ -42,7 +42,7 @@ void sleepCallBack(void* systemWatch, io_service_t, natural_t messageType, void 
 {
 	//printf("messageType %08lx, arg %08lx\n",
 	//  (long unsigned int)messageType, (long unsigned int)messageArgument);
-	
+
 	MacSystemWatch* macSystemWatch = static_cast<MacSystemWatch*>(systemWatch);
 	switch (messageType) {
 		case kIOMessageSystemWillSleep:
@@ -50,7 +50,7 @@ void sleepCallBack(void* systemWatch, io_service_t, natural_t messageType, void 
 			macSystemWatch->emitSleep();
 			IOAllowPowerChange(root_port, (long)messageArgument);
 			break;
-			
+
 		case kIOMessageCanSystemSleep:
 			// Idle time sleep
 
@@ -61,7 +61,7 @@ void sleepCallBack(void* systemWatch, io_service_t, natural_t messageType, void 
 			macSystemWatch->emitIdleSleep();
 			IOAllowPowerChange(root_port, (long)messageArgument);
 			break;
-			
+
 		case kIOMessageSystemHasPoweredOn:
 			// Wakeup
 			macSystemWatch->emitWakeup();

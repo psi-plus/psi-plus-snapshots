@@ -29,21 +29,21 @@
  * Example: Returns the division of numer and denom if it is an integer
  * \code
  * Maybe<int> integer_divide(int numer, int denom) {
- *     if (numer % denom == 0) 
+ *     if (numer % denom == 0)
  *         return Maybe<int>(numer / denom);
  *     else
  *         return Maybe<int>();
  * }
  * \endcode
  */
-template<class T> class Maybe 
+template<class T> class Maybe
 {
 public:
 	/**
 	 * \brief Constructs a Maybe container with no value.
 	 */
 	Maybe() : hasValue_(false) {}
-	
+
 	/**
 	 * \brief Constructs a Maybe container with a value.
 	 */
@@ -53,7 +53,7 @@ public:
 	 * \brief Checks whether this container has a value.
 	 */
 	bool hasValue() const { return hasValue_; }
-	
+
 	/**
 	 * \brief Returns the value of the container.
 	 */

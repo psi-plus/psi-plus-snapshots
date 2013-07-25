@@ -208,7 +208,7 @@ public:
 			if ( s == "1" || s == "true" || s == "yes" )
 				checked = true;
 		}
-		
+
 		QHBoxLayout *layout = new QHBoxLayout;
 		QSpacerItem *spacerItem = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
@@ -219,7 +219,7 @@ public:
 		QLabel *label = new QLabel(labelText(""), parent);
 		layout->addWidget(label);
 		layout->addSpacerItem(spacerItem);
-		
+
 		grid->addLayout(layout, row, 0);
 
 		QLabel *req = new QLabel(reqText(), parent);
@@ -303,7 +303,7 @@ public:
 		if ( f.value().count() )
 			text = f.value().first();
 		QVBoxLayout *layout = new QVBoxLayout;
-		
+
 		QLabel *label = new QLabel(labelText(), parent);
 		label->setWordWrap(true);
 		layout->addWidget(label);
@@ -311,9 +311,9 @@ public:
 		edit = new QLineEdit(parent);
 		edit->setText(text);
 		layout->addWidget(edit);
-		
+
 		grid->addLayout(layout, row, 0);
-		
+
 		QLabel *req = new QLabel(reqText(), parent);
 		grid->addWidget(req, row, 1);
 
@@ -370,7 +370,7 @@ public:
 	: XDataField(f, ((XDataWidget *)parent)->client())
 	{
 		QHBoxLayout *layout = new QHBoxLayout;
-		
+
 		int row = grid->rowCount();
 		QLabel *label = new QLabel(labelText(), parent);
 		label->setWordWrap(true);
@@ -379,7 +379,7 @@ public:
 		combo = new QComboBox(parent);
 		layout->addWidget(combo);
 		combo->setInsertPolicy(QComboBox::NoInsert);
-		
+
 		grid->addLayout(layout, row, 0);
 
 		QString sel;
@@ -513,7 +513,7 @@ public:
 	{
 		int row = grid->rowCount();
 		QHBoxLayout *layout = new QHBoxLayout;
-		
+
 		QLabel *label = new QLabel(labelText(), parent);
 		label->setWordWrap(true);
 		layout->addWidget(label);

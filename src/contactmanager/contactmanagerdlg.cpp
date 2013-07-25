@@ -299,7 +299,7 @@ void ContactManagerDlg::importRoster()
 			}
 			labelContent.append(QString("%1 (%2)").arg(jid).arg(nicks[jid]));
 		}
-		
+
 		QMessageBox confirmDlg(
 				QMessageBox::Question,tr("Confirm contacts importing"),
 				tr("Do you really want to import these contacts?"), QMessageBox::Cancel | QMessageBox::Yes);

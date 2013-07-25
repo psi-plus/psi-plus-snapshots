@@ -129,7 +129,7 @@ public:
 	QString findClient(QString name) const;
 	const Activity& activity() const;
 	QString pending() const;
-	
+
 	void setJid(const XMPP::Jid &);
 	void setInList(bool);
 	void setLastAvailable(const QDateTime &);
@@ -158,7 +158,7 @@ public:
 
 	const QString & publicKeyID() const;
 	void setPublicKeyID(const QString &);
-	
+
 private:
 	int lastmsgtype, v_pending, v_hPending;
 	bool v_inList;

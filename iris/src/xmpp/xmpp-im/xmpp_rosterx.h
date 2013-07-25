@@ -39,7 +39,7 @@ namespace XMPP
 
 		RosterExchangeItem(const Jid& jid, const QString& name = "", const QStringList& groups = QStringList(), Action = Add);
 		RosterExchangeItem(const QDomElement&);
-		
+
 		const Jid& jid() const;
 		Action action() const;
 		const QString& name() const;
@@ -53,7 +53,7 @@ namespace XMPP
 
 		QDomElement toXml(Stanza&) const;
 		void fromXml(const QDomElement&);
-		
+
 	private:
 		Jid jid_;
 		QString name_;

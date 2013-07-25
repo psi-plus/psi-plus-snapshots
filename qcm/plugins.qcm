@@ -16,9 +16,9 @@ public:
 	bool exec()
 	{
 		conf->addDefine("PSI_PLUGINS");
-		
+
 		// Finish
-		conf->addExtra("CONFIG += psi_plugins");                              
+		conf->addExtra("CONFIG += psi_plugins");
 
 		qWarning("");
 		qWarning("");

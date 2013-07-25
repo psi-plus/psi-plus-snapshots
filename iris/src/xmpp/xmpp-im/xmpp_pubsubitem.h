@@ -25,7 +25,7 @@
 
 namespace XMPP
 {
-	class PubSubItem 
+	class PubSubItem
 	{
 	public:
 		PubSubItem();

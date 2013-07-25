@@ -369,7 +369,7 @@ IBBManager::IBBManager(Client *parent)
 {
 	d = new Private;
 	d->client = parent;
-	
+
 	d->ibb = new JT_IBB(d->client->rootTask(), true);
 	connect(d->ibb,
 			SIGNAL(incomingRequest(const Jid &, const QString &,

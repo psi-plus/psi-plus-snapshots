@@ -51,7 +51,7 @@ QWidget *OptionsTabPlugins::widget()
 	connect(d->cb_plugins,SIGNAL(currentIndexChanged(int)),SLOT(pluginSelected(int)));
 	connect(d->cb_loadPlugin,SIGNAL(clicked(bool)),SLOT(loadToggled(bool)));
 	connect(d->pb_info, SIGNAL(clicked()), SLOT(showPluginInfo()));
-	
+
 	return w;
 }
 
@@ -93,9 +93,9 @@ void OptionsTabPlugins::listPlugins()
 	OptPluginsUI *d = (OptPluginsUI *)w;
 
 	d->cb_plugins->clear();
-	
+
 	PluginManager *pm=PluginManager::instance();
-	
+
 	QStringList plugins = pm->availablePlugins();
 	plugins.sort();
 	foreach (const QString& plugin, plugins){
@@ -108,12 +108,12 @@ void OptionsTabPlugins::loadToggled(bool state)
 {
 	if ( !w )
 		return;
-	
+
 	OptPluginsUI *d = (OptPluginsUI *)w;
-	
+
 	QString option=QString("%1.%2")
 		.arg(PluginManager::loadOptionPrefix)
-		.arg(PluginManager::instance()->shortName(d->cb_plugins->currentText())); 
+		.arg(PluginManager::instance()->shortName(d->cb_plugins->currentText()));
 	PsiOptions::instance()->setOption(option, state);
 
 	pluginSelected(0);
@@ -124,7 +124,7 @@ void OptionsTabPlugins::pluginSelected(int index)
 	Q_UNUSED(index);
   	if ( !w )
 		return;
-	
+
 	OptPluginsUI *d = (OptPluginsUI *)w;
 	d->le_location->setText(tr("No plugin selected."));
 	d->cb_loadPlugin->setEnabled(false);

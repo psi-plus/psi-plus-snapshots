@@ -26,7 +26,7 @@
 #include <QByteArray>
 #include <QHash>
 
-namespace XMPP 
+namespace XMPP
 {
 	class StringPrepCache
 	{

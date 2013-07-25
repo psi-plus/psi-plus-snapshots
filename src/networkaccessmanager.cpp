@@ -72,7 +72,7 @@ QNetworkReply * NetworkAccessManager::createRequest(Operation op, const QNetwork
 
 void NetworkAccessManager::callFinished() {
     QNetworkReply *reply = qobject_cast<QNetworkReply *>(sender());
-    
+
     if (reply) {
         emit finished(reply);
     }

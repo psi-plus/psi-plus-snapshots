@@ -31,7 +31,7 @@
 
 PassDialog::PassDialog(const QString& jid, QWidget *parent)
 	: QDialog(parent)
-{    
+{
 	setWindowTitle(tr("Wrong Account Password"));
 
 	QVBoxLayout *mainLayout = new QVBoxLayout(this);

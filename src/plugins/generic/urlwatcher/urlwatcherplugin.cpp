@@ -79,7 +79,7 @@ URLWatcherPlugin::URLWatcherPlugin()
 	viewerText_->setObjectName(QString::fromUtf8("text"));
 	viewerText_->setReadOnly(true);
 
-	
+
 
 	label = new QLabel(viewer_);
 	label->setObjectName(QString::fromUtf8("label"));
@@ -371,6 +371,6 @@ bool URLWatcherPlugin::processMessage(int account, const QString& fromJid, const
 	}
 
 	return false;
-}	
+}
 
 #include "urlwatcherplugin.moc"

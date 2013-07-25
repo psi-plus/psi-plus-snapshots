@@ -106,7 +106,7 @@ class IODeviceOpenerTest : public QObject
 			public:
 				UnopenableBuffer() : QBuffer() { }
 
-				bool open(QIODevice::OpenMode) { return false; } 
+				bool open(QIODevice::OpenMode) { return false; }
 		};
 };
 

@@ -15,12 +15,12 @@ window[chatServer.jsNamespace()] = function() {
 				er.style.cssText = "background-color:red;color:white;border:1px solid black;padding:1em;margin:1em;font-weight:bold";
 				er.innerHTML = chat.util.escapeHtml(text).replace(/\n/, "<br/>");
 			},
-			
+
 			// just for debug
 			escapeHtml : function(html) {
 				return html.split("&").join("&amp;").split( "<").join("&lt;").split(">").join("&gt;");
 			},
-			
+
 			// just for debug
 			props : function(e, rec) {
 				var ret='';
@@ -49,7 +49,7 @@ window[chatServer.jsNamespace()] = function() {
 				}
 				return ret;
 			},
-			
+
 			// replaces <icon name="icon_name" text="icon_text" />
 			// with <img src="icon://psi/icon_name" title="icon_text" />
 			icon2img : function (obj) {
@@ -72,13 +72,13 @@ window[chatServer.jsNamespace()] = function() {
 					}
 				}
 			},
-			
+
 			updateObject : function(object, update) {
 				for (var i in update) {
 					object[i] = update[i]
 				}
 			},
-			
+
 			findStyleSheet : function (sheet, selector) {
 				for (var i=0; i<sheet.cssRules.length; i++) {
 					if (sheet.cssRules[i].selectorText == selector)
@@ -86,19 +86,19 @@ window[chatServer.jsNamespace()] = function() {
 				}
 				return false;
 			},
-			
+
 			appendHtml : function(dest, html) {
 				htmlSource.innerHTML = html;
 				chat.util.replaceIcons(htmlSource);
 				while (htmlSource.firstChild) dest.appendChild(htmlSource.firstChild);
 			},
-			
+
 			siblingHtml : function(dest, html) {
 				htmlSource.innerHTML = html;
 				chat.util.replaceIcons(htmlSource);
 				while (htmlSource.firstChild) dest.parentNode.insertBefore(htmlSource.firstChild, dest);
 			},
-			
+
 			ensureDeleted : function(id) {
 				if (id) {
 					var el = document.getElementById(id);
@@ -107,7 +107,7 @@ window[chatServer.jsNamespace()] = function() {
 					}
 				}
 			},
-			
+
 			loadXML : function(path, allowEmpty) {
 				allowEmpty = allowEmpty || false;
 				text = server.getFileContents(path);
@@ -122,7 +122,7 @@ window[chatServer.jsNamespace()] = function() {
 				}
 			}
 		},
-		
+
 		WindowScroller : function(animate) {
 			var o=this, state, timerId
 			var ignoreNextScroll = false;
@@ -156,14 +156,14 @@ window[chatServer.jsNamespace()] = function() {
 					timerId = null;
 				}
 			}
-			
+
 			//timeout to be sure content rerendered correctly
 			window.addEventListener("resize", function() {setTimeout(function(){
 				if (o.atBottom) { //immediatelly scroll to bottom if we wish it
 					window.scrollTo(0, document.height - window.innerHeight);
 				}
 			}, 0);}, false);
-			
+
 			//let's consider scroll may happen only by user action
 			window.addEventListener("scroll", function(){
 				if (ignoreNextScroll) {
@@ -173,7 +173,7 @@ window[chatServer.jsNamespace()] = function() {
 				stopAnimation();
 				o.atBottom = document.height == (window.innerHeight+window.pageYOffset);
 			}, false);
-			
+
 			//EXTERNAL API
 			// checks current state of scroll and wish and activates necessary actions
 			o.invalidate = function() {
@@ -181,7 +181,7 @@ window[chatServer.jsNamespace()] = function() {
 					startAnimation();
 				}
 			}
-			
+
 			o.force = function() {
 				o.atBottom = true;
 				o.invalidate();

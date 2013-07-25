@@ -13,8 +13,8 @@ CONFIG += pep
 #CONFIG += psi_plugins
 DEFINES += QT_STATICPLUGIN
 
-# Import several very useful Makefile targets 
-# as well as set up default directories for 
+# Import several very useful Makefile targets
+# as well as set up default directories for
 # generated files
 include(../qa/valgrind/valgrind.pri)
 include(../qa/oldtest/unittest.pri)

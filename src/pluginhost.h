@@ -111,12 +111,12 @@ public:
 	// IconFacrotyAccessingHost
 	QIcon getIcon(const QString& name);
 	void addIcon(const QString& name, const QByteArray& icon);
-	
+
 	//ActiveTabHost
 	QTextEdit* getEditBox();
 	QString getJid();
 	QString getYourJid();
-	
+
 	//ApplicationInfoAccessingHost
 	Proxy getProxyFor(const QString &obj);
 	QString appName();

@@ -133,12 +133,12 @@ public:
 			capable = true;
 		allow_plain = flags & QCA::SASL::AllowPlain;
 	}
-	
+
 	virtual void setup(const QString& _service, const QString& _host, const QCA::SASLContext::HostPort*, const QCA::SASLContext::HostPort*, const QString&, int) {
 		service = _service;
 		host = _host;
 	}
-	
+
 	virtual void startClient(const QStringList &mechlist, bool allowClientSendFirst) {
 		Q_UNUSED(allowClientSendFirst);
 
@@ -152,7 +152,7 @@ public:
 				mechanism_ = "DIGEST-MD5";
 				break;
 			}
-			if (mech == "PLAIN" && allow_plain) 
+			if (mech == "PLAIN" && allow_plain)
 				mechanism_ = "PLAIN";
 		}
 
@@ -161,7 +161,7 @@ public:
 			authCondition_ = QCA::SASL::NoMechanism;
 			if (!capable)
 				qWarning("simplesasl.cpp: Not enough capabilities");
-			if (mechanism_.isEmpty()) 
+			if (mechanism_.isEmpty())
 				qWarning("simplesasl.cpp: No mechanism available");
 			QMetaObject::invokeMethod(this, "resultsReady", Qt::QueuedConnection);
 			return;
@@ -180,11 +180,11 @@ public:
 
 	virtual void tryAgain() {
 		// All exits of the method must emit the ready signal
-		// so all exits go through a goto ready; 
+		// so all exits go through a goto ready;
 		if(step == 0) {
 			out_mech = mechanism_;
-			
-			// PLAIN 
+
+			// PLAIN
 			if (out_mech == "PLAIN" or out_mech == "SCRAM-SHA-1") {
 				// First, check if we have everything
 				if(need.user || need.pass) {
@@ -258,7 +258,7 @@ public:
 					result_ = Error;
 					goto ready;
 				}
-				
+
 				// see if some params are needed
 				if(!have.user)
 					need.user = true;
@@ -336,27 +336,27 @@ ready:
 	virtual QStringList mechlist() const {
 		return QStringList();
 	}
-	
+
 	virtual QString mech() const {
 		return out_mech;
 	}
-	
+
 	virtual bool haveClientInit() const {
 		return out_mech == "PLAIN";
 	}
-	
+
 	virtual QByteArray stepData() const {
 		return out_buf;
 	}
-	
+
 	virtual QByteArray to_net() {
 		return result_to_net_;
 	}
-	
+
 	virtual int encoded() const {
 		return encoded_;
 	}
-	
+
 	virtual QByteArray to_app() {
 		return result_to_app_;
 	}
@@ -372,7 +372,7 @@ ready:
 	virtual QCA::SASL::Params clientParams() const {
 		return QCA::SASL::Params(need.user, need.authzid, need.pass, need.realm);
 	}
-	
+
 	virtual void setClientParams(const QString *_user, const QString *_authzid, const QCA::SecureArray *_pass, const QString *_realm) {
 		if(_user) {
 			user = *_user;
@@ -415,7 +415,7 @@ ready:
 		// TODO: Copy all the members
 		return s;
 	}
-	
+
 	virtual void startServer(const QString &, bool) {
 		result_ =  QCA::SASLContext::Error;
 		QMetaObject::invokeMethod(this, "resultsReady", Qt::QueuedConnection);

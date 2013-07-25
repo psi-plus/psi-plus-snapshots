@@ -42,7 +42,7 @@ public:
 	{
 		if (!instance)
 			instance = new PsiToolTipHandler();
-			
+
 		return instance;
 	}
 

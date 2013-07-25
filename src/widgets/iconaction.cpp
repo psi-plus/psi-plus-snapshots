@@ -64,7 +64,7 @@ public:
 		action->setIconVisibleInMenu(false);
 #endif
 	}
-		
+
 	~Private()
 	{
 #ifndef WIDGET_PLUGIN
@@ -74,7 +74,7 @@ public:
 		}
 #endif
 	}
-		
+
 	void init(const QString &objectName, const QString &statusTip, QKeySequence shortcut, bool checkable) {
 		action->setObjectName(objectName);
 		action->setStatusTip(statusTip);

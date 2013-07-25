@@ -30,10 +30,10 @@ namespace XMPP {
 		public:
 			SCRAMSHA1Signature(const QByteArray &server_final_message, const QCA::SecureArray &server_signature_should);
 
-			bool isValid() const { 
+			bool isValid() const {
 				return isValid_;
 			}
-		
+
 		private:
 			bool isValid_;
 	};

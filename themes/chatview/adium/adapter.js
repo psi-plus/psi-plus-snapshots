@@ -7,7 +7,7 @@ window[chatServer.jsNamespace()].adapter = {
 		var resources = ["Template.html", "FileTransferRequest.html",
 		"Footer.html", "Header.html", "Status.html", "Topic.html", "Content.html",
 		"Incoming/Content.html", "Incoming/NextContent.html",
-		"Incoming/Context.html", "Incoming/NextContext.html", 
+		"Incoming/Context.html", "Incoming/NextContext.html",
 		"Outgoing/Content.html", "Outgoing/NextContent.html",
 		"Outgoing/Context.html", "Outgoing/NextContext.html"];
 		for (var i=0; i<resources.length; i++) {
@@ -100,12 +100,12 @@ window[chatServer.jsNamespace()].util.updateObject(window[chatServer.jsNamespace
 	var dateFormat = "hh:mm";
 	var cdata;
 	var proxyEl = document.createElement("div");
-	
+
 	function TemplateVar(name, param) {
 		this.name = name;
 		this.param = param
 	}
-	
+
 	TemplateVar.prototype = {
 		toString : function() {
 			//chat.console("DEBUG: TemplateVar.prototype.toString " + session);
@@ -127,7 +127,7 @@ window[chatServer.jsNamespace()].util.updateObject(window[chatServer.jsNamespace
 			return d || "";
 		}
 	}
-	
+
 	function TemplateTimeVar(name, param) {
 		this.name = name;
 		if (param) {
@@ -141,18 +141,18 @@ window[chatServer.jsNamespace()].util.updateObject(window[chatServer.jsNamespace
 			this.format = dateFormat
 		}
 	}
-	
+
 	TemplateTimeVar.prototype.toString = function() {
 		//chat.console("DEBUG: TemplateTimeVar.prototype.toString");
 		return cdata[this.name] instanceof Date?
-			server.formatDate(cdata[this.name], this.format) : 
+			server.formatDate(cdata[this.name], this.format) :
 			(cdata[this.name] ? cdata[this.name] : "");
 	}
 
 	function Template(raw) {
 		var splitted = raw.split(/(%[\w]+(?:\{[\w:%]+\})?%)/), i;
 		this.parts = [];
-		
+
 		for (i = 0; i < splitted.length; i++) {
 			var m = splitted[i].match(/%([\w]+)(?:\{([\w:%]+)\})?%/);
 			if (m) {
@@ -164,7 +164,7 @@ window[chatServer.jsNamespace()].util.updateObject(window[chatServer.jsNamespace
 			}
 		}
 	}
-	
+
 	Template.prototype.toString = function(data) {
 		//chat.console("prepare Template.prototype.toString1");
 		cdata = data || cdata;
@@ -174,21 +174,21 @@ window[chatServer.jsNamespace()].util.updateObject(window[chatServer.jsNamespace
 		//chat.console("prepare Template.prototype.toString2");
 		return proxyEl.innerHTML;
 	}
-	
+
 	// Template variable constructors
 	var tvConstructors = {
 		time : TemplateTimeVar,
 		timeOpened : TemplateTimeVar
 	}
-	
+
 	function psiOption(name) {
 		return eval("[" + server.psiOption(name) + "][0]")
 	}
-	
+
 	return {
 		getHtml : function() {
 			session = window.chatSession; // global session because Template needs it
-			
+
 			//chat.console("prepare html");
 			var html = server.cache("html");
 			//chat.console("cached Template.html: " + html);
@@ -232,7 +232,7 @@ window[chatServer.jsNamespace()].util.updateObject(window[chatServer.jsNamespace
 					html = html.replace(/<head>/i, '<head><style type="text/css" media="screen,print">' +
 						"body { background-color:#"+ip.DefaultBackgroundColor+" }</style>");
 			}
-			
+
 			var styles = [];
 			if (ip.DefaultFontFamily) {
 				styles.push("font-family:"+ip.DefaultFontFamily);
@@ -240,7 +240,7 @@ window[chatServer.jsNamespace()].util.updateObject(window[chatServer.jsNamespace
 			if (ip.DefaultFontSize) {
 				styles.push("font-size:"+ip.DefaultFontSize+"pt");
 			}
-			
+
 			html = html.replace("==bodyBackground==", styles.join(";"));
 			//chat.console("prepare html: " + html);
 			return html
@@ -255,7 +255,7 @@ window[chatServer.jsNamespace()].util.updateObject(window[chatServer.jsNamespace
 			var ip = server.cache("Info.plist");
 			var prevGrouppingData = null;
 			var groupping = !(ip.DisableCombineConsecutive == true);
-			
+
 			chat.adapter.receiveObject = function(data) {
 				cdata = data;
 				try {
@@ -273,7 +273,7 @@ window[chatServer.jsNamespace()].util.updateObject(window[chatServer.jsNamespace
 									(prevGrouppingData.userid == cdata.userid) &&
 									(prevGrouppingData.emote == cdata.emote) &&
 									(prevGrouppingData.local == cdata.local));
-									
+
 								if (data.nextOfGroup) {
 									template = data.local?templates.outgoingNextContent:templates.incomingNextContent;
 								} else {
@@ -332,12 +332,12 @@ window[chatServer.jsNamespace()].util.updateObject(window[chatServer.jsNamespace
 					chat.util.showCriticalError("APPEND ERROR: " + e + " \nline: " + e.line)
 				}
 			};
-			
+
 			var t = {};
 			var templates = {}
 			var tcList = ["Status.html", "Content.html",
 				"Incoming/Content.html", "Incoming/NextContent.html",
-				"Incoming/Context.html", "Incoming/NextContext.html", 
+				"Incoming/Context.html", "Incoming/NextContext.html",
 				"Outgoing/Content.html", "Outgoing/NextContent.html",
 				"Outgoing/Context.html", "Outgoing/NextContext.html"];
 			var i

@@ -99,7 +99,7 @@ void StatusPreset::setPriority(const QString& priority)
 		clearPriority();
 }
 
-void StatusPreset::clearPriority() 
+void StatusPreset::clearPriority()
 {
 	priority_ = Maybe<int>();
 }
@@ -111,7 +111,7 @@ QDomElement StatusPreset::toXml(QDomDocument& doc) const
 	preset.appendChild(text);
 
 	preset.setAttribute("name",name());
-	if (priority_.hasValue()) 
+	if (priority_.hasValue())
 		preset.setAttribute("priority", priority_.value());
 	preset.setAttribute("status", XMPP::Status(status()).typeString());
 	return preset;

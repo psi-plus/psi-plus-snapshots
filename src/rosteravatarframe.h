@@ -31,7 +31,7 @@ class RosterAvatarFrame : public QFrame
 	public:
 		RosterAvatarFrame(QWidget *parent);
 		void setAvatar(const QPixmap &avatar);
-		void setStatusIcon(const QIcon &ico);                
+		void setStatusIcon(const QIcon &ico);
 		void setNick(const QString &nick);
 		void setStatusMenu(QMenu *menu);
 

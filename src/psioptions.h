@@ -61,6 +61,6 @@ private:
 	QTimer *autoSaveTimer_;
 	static PsiOptions* instance_;
 	static PsiOptions* defaults_;
-}; 
+};
 
 #endif /* _PSIOPTIONS_H_ */

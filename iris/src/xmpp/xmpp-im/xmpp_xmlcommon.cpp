@@ -211,8 +211,8 @@ XDomNodeList childElementsByTagNameNS(const QDomElement &e, const QString &nsURI
 
 /**
  * \brief create a new IQ stanza
- * \param doc 
- * \param type 
+ * \param doc
+ * \param type
  * \param to destination jid
  * \param id stanza id
  * \return the created stanza
@@ -326,7 +326,7 @@ QDomElement addCorrectNS(const QDomElement &e)
 		n = n.parentNode();
 	QString ns;
 	if(n.isNull() || !n.toElement().hasAttribute("xmlns")){
-		if (n.toElement().namespaceURI () == ""){		
+		if (n.toElement().namespaceURI () == ""){
 			ns = "jabber:client";
 		} else {
 			ns = n.toElement().namespaceURI();

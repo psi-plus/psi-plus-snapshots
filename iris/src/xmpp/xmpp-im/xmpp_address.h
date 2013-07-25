@@ -42,7 +42,7 @@ namespace XMPP
 		const QString& desc() const;
 		bool delivered() const;
 		Type type() const;
-		
+
 		QDomElement toXml(Stanza&) const;
 		void fromXml(const QDomElement& t);
 
@@ -62,5 +62,5 @@ namespace XMPP
 
 	typedef QList<Address> AddressList;
 };
-	
+
 #endif

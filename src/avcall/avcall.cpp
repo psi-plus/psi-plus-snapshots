@@ -635,7 +635,7 @@ private slots:
 			sess = manager->rtpManager->createOutgoing();
 			setup_sess();
 		}
-		
+
 		if(transmitAudio && !rtp.localAudioPayloadInfo().isEmpty())
 		{
 			QList<JingleRtpPayloadType> pis;
@@ -661,7 +661,7 @@ private slots:
 		}
 		else
 			transmitVideo = false;
-		
+
 		if(transmitAudio && transmitVideo)
 			mode = AvCall::Both;
 		else if(transmitAudio && !transmitVideo)

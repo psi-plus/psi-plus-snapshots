@@ -10,7 +10,7 @@ CompressionHandler::CompressionHandler()
 {
 	outgoing_buffer_.open(QIODevice::ReadWrite);
 	compressor_ = new ZLibCompressor(&outgoing_buffer_);
-	
+
 	incoming_buffer_.open(QIODevice::ReadWrite);
 	decompressor_ = new ZLibDecompressor(&incoming_buffer_);
 }
@@ -26,7 +26,7 @@ void CompressionHandler::writeIncoming(const QByteArray& a)
 	//qDebug("CompressionHandler::writeIncoming");
 	//qDebug() << QString("Incoming %1 bytes").arg(a.size());
 	errorCode_ = decompressor_->write(a);
-	if (!errorCode_) 
+	if (!errorCode_)
 		QTimer::singleShot(0, this, SIGNAL(readyRead()));
 	else
 		QTimer::singleShot(0, this, SIGNAL(error()));
@@ -51,7 +51,7 @@ QByteArray CompressionHandler::read()
 	return b;
 }
 
-QByteArray CompressionHandler::readOutgoing(int* i) 
+QByteArray CompressionHandler::readOutgoing(int* i)
 {
 	//qDebug("CompressionHandler::readOutgoing");
 	//qDebug() << QString("Outgoing %1 bytes").arg(outgoing_buffer_.size());

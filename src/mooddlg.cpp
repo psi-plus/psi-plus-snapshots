@@ -38,7 +38,7 @@ MoodDlg::MoodDlg(QList<PsiAccount*> list)
 	setModal(false);
 
 	connect(ui_.pb_cancel, SIGNAL(clicked()), SLOT(close()));
-	connect(ui_.pb_ok, SIGNAL(clicked()), SLOT(setMood()));	
+	connect(ui_.pb_ok, SIGNAL(clicked()), SLOT(setMood()));
 
 	ui_.cb_type->addItem(tr("<unset>"));
 	PsiAccount *pa = pa_.first();

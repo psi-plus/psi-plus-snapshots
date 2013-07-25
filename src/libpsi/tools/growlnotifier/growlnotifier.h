@@ -44,7 +44,7 @@ public:
 			const QString& app_name = "");
 
 	virtual ~GrowlNotifier();
-	
+
 	void notify(const QString& name, const QString& title,
 		    const QString& description, const QPixmap& icon = QPixmap(),
 		    bool sticky = false, const QObject* receiver = 0,

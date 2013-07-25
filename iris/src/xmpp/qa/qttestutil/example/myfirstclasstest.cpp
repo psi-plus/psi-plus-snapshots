@@ -6,7 +6,7 @@
 class MyFirstClassTest : public QObject
 {
      Q_OBJECT
-	
+
 	private slots:
 		void initTestCase() {
 		}

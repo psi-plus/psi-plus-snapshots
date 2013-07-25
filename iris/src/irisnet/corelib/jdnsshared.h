@@ -466,7 +466,7 @@ public:
 
 	   This operation primarily exists for Multicast mode, so that any published records have a chance to be unpublished.  If the JDnsShared object is simply deleted without performing a shutdown, then published records will linger on the network until their TTLs expire.
 
-	   When shutdown is complete, the shutdownFinished() signal will be emitted. 
+	   When shutdown is complete, the shutdownFinished() signal will be emitted.
 	*/
 	void shutdown();
 

@@ -121,7 +121,7 @@ void PsiTabWidget::setTabTextColor( QWidget* tab, const QColor& color) {
 /**
  * Returns the specified widget.
  * \param index Widget to return.
- * \return Specified widget. 
+ * \return Specified widget.
  */
 QWidget *PsiTabWidget::widget(int index) {
 	return widgets_[index];
@@ -140,7 +140,7 @@ void PsiTabWidget::mouseMiddleClickTab(int tab) {
  */
 int PsiTabWidget::count() {
 	return tabBar_->count();
-} 
+}
 
 /**
  * Returns the widget of the current page
@@ -190,7 +190,7 @@ void PsiTabWidget::setLooks()
 	if (!css.isEmpty()) {
 		setStyleSheet(css);
 	}
-} 
+}
 
 /**
  * Selects the page for the specified widget.
@@ -202,8 +202,8 @@ void PsiTabWidget::showPage(QWidget* widget) {
 			tabBar_->setCurrentIndex(i);
 		}
 	}
-	
-} 
+
+}
 
 /**
  * Selects the page for the specified widget (internal helper).
@@ -243,7 +243,7 @@ int PsiTabWidget::getIndex(QWidget* widget) {
 		}
 	}
 	return -1;
-} 
+}
 
 /**
  * Set the text of the tab.
@@ -254,7 +254,7 @@ void PsiTabWidget::setTabText(QWidget* widget, const QString& label) {
 		return;
 	}
 	tabBar_->setTabText(index, label);
-} 
+}
 
 /**
  * Set the icon of the tab.
@@ -320,7 +320,7 @@ void PsiTabWidget::menu_triggered(QAction *act) {
 	int idx = act->data().toInt();
 	if (idx <= 0 || idx > tabBar_->count()) {
 		// out of range
-		// emit signal? 
+		// emit signal?
 	} else {
 		setCurrentPage(idx-1);
 	}

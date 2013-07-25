@@ -71,7 +71,7 @@ public:
 
 	static const QString loadOptionPrefix;
 	static const QString pluginOptionPrefix;
-	
+
 private:
 	PluginManager();
 	PsiCon *psi_;
@@ -95,7 +95,7 @@ private:
 	//sorted by priority
 	QList<PluginHost*> pluginsByPriority_;
 
-	
+
 	QList<QCA::DirWatch*> dirWatchers_;
 
 	// Options widget provides by plugin on opt_plugins
@@ -146,7 +146,7 @@ private:
 	void createNewEvent(int account, const QString& jid, const QString& descr, QObject *receiver, const char* slot);
 
 	friend class PluginHost;
-	
+
 private slots:
 	void dirsChanged();
 	void optionChanged(const QString& option);

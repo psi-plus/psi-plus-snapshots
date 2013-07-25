@@ -48,19 +48,19 @@ public:
 			QString value_;
 			QString text_;
 	};
-	
+
 	static ActivityCatalog* instance();
 
 	Entry findEntryByType(Activity::Type) const;
 	Entry findEntryByType(Activity::SpecificType) const;
 	Entry findEntryByValue(const QString&) const;
 	Entry findEntryByText(const QString& text) const;
-	
+
 	const QList<Entry>& entries() const;
-	
+
 private:
 	ActivityCatalog();
-	
+
 	QList<Entry> entries_;
 	static ActivityCatalog* instance_;
 

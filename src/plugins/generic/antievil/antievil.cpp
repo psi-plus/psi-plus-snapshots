@@ -98,10 +98,10 @@ public:
 		Q_UNUSED(stanza)
 		return false;
 	}
-	
+
 
 	//-- StanzaSender ----------------------------------------
-	
+
 	virtual void setStanzaSendingHost(StanzaSendingHost *host)
 	{
 		stanzaSender = host;

@@ -1,5 +1,5 @@
 try {
-	
+
 window[chatServer.jsNamespace()].adapter = {
 	loadTheme : function() {
         chatServer.setHtml(chatServer.getFileContents("index.html"));
@@ -24,15 +24,15 @@ window[chatServer.jsNamespace()].adapter = {
 			prevGrouppingData : null,
 			groupping : false,
 			chatElement : null,
-		
+
 			TemplateVar : function(name) {
 				this.name = name;
 			},
-		
+
 			Template : function(raw) {
 				var splitted = raw.split('%'), i;
 				this.parts = [];
-				
+
 				for (i = 0; i < splitted.length; i++) {
 					if (/^[a-zA-Z]+$/.test(splitted[i])) {
 						this.parts.push(new shared.TemplateVar(splitted[i]));
@@ -43,15 +43,15 @@ window[chatServer.jsNamespace()].adapter = {
 					}
 				}
 			},
-			
+
 			psiOption : function(name) {
 				return eval("[" + shared.server.psiOption(name) + "][0]")
 			},
-			
+
 			colorOption : function(name) {
 				return eval("[" + shared.server.colorOption(name) + "][0]")
 			},
-			
+
 			appendHtml : function(html, scroll, nextEl) { //scroll[true|false|auto/other]
 				if (typeof(scroll) == 'boolean') {
 					shared.scroller.atBottom = scroll;
@@ -63,14 +63,14 @@ window[chatServer.jsNamespace()].adapter = {
 				}
 				shared.scroller.invalidate();
 			},
-			
+
 			stopGroupping : function() {
 				if (shared.prevGrouppingData) {
 					shared.prevGrouppingData.nextEl.parentNode.removeChild(shared.prevGrouppingData.nextEl)
 					shared.prevGrouppingData = null;
 				}
 			},
-			
+
 			initTheme : function(config) {
 				if (inited) {
 					chat.util.showCriticalError("Theme should not be inited twice. Something wrong with theme.")
@@ -117,14 +117,14 @@ window[chatServer.jsNamespace()].adapter = {
 				return shared.cdata.nextOfGroup;
 			}
 		};
-        
+
         // internationalization
         function tr(text)
         {
             // TODO translate
             return text;
         }
-        
+
         // accepts some templater object and object with 2 optional methods: "pre" and "post(text)"
         function proxyTemplate(template, handlers)
         {
@@ -135,7 +135,7 @@ window[chatServer.jsNamespace()].adapter = {
                 return result;
             }}
         }
-		
+
 		shared.TemplateVar.prototype = {
 			toString : function() {
 				if (shared.varHandlers[this.name]) {
@@ -160,12 +160,12 @@ window[chatServer.jsNamespace()].adapter = {
 				return d || "";
 			}
 		}
-		
+
 		shared.Template.prototype.toString = function() {
 			return this.parts.join("");
 		}
-		
-		
+
+
 		chat.adapter.receiveObject = function(data) {
 			shared.cdata = data;
 			if (!inited) {
@@ -243,13 +243,13 @@ window[chatServer.jsNamespace()].adapter = {
 				chat.util.showCriticalError("APPEND ERROR: " + e + " \nline: " + e.line)
 			}
 		};
-	
+
 		chat.adapter.initSession = null;
 		chat.adapter.loadTheme = null;
 		window.chatServer = null;
 		window.chatSession = null;
 		return shared;
-	
+
 	}
 }
 

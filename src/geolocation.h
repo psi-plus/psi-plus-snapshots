@@ -36,7 +36,7 @@ class GeoLocation
 public:
 	GeoLocation();
 	GeoLocation(const QDomElement&);
-	
+
 	const Maybe<float>& alt() const;
 	const Maybe<float>& bearing() const;
 	const Maybe<float>& error() const;
@@ -79,10 +79,10 @@ public:
 
 	QDomElement toXml(QDomDocument&);
 	QString toString() const;
-	
+
 	bool operator==(const GeoLocation&) const;
 	bool operator!=(const GeoLocation&) const;
-	
+
 protected:
 	void fromXml(const QDomElement&);
 

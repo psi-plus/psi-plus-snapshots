@@ -37,7 +37,7 @@ QDomElement GeoLocation::toXml(QDomDocument& doc)
 {
 	QDomElement geoloc = doc.createElement(PEP_GEOLOC_TN);
 	geoloc.setAttribute("xmlns", PEP_GEOLOC_NS);
-	
+
 	if (alt_.hasValue()) {
 		QDomElement e = doc.createElement("alt");
 		e.appendChild(doc.createTextNode(QString::number(alt_.value())));
@@ -137,7 +137,7 @@ void GeoLocation::fromXml(const QDomElement& e)
 		if (m.isNull()) {
 			continue;
 		}
-		if (m.tagName() == "alt") 
+		if (m.tagName() == "alt")
 			alt_ = Maybe<float>(m.text().toFloat());
 		else if (m.tagName() == "bearing")
 			bearing_ = Maybe<float>(m.text().toFloat());
@@ -293,7 +293,7 @@ const QString& GeoLocation::text() const
 	return text_;
 }
 
-bool GeoLocation::isNull() const 
+bool GeoLocation::isNull() const
 {
 	return !lat_.hasValue() && !lon_.hasValue() && !alt_.hasValue() && !bearing_.hasValue() && !error_.hasValue() && country_.isNull() && region_.isNull() && locality_.isNull()
 		&& area_.isNull() && street_.isNull() && building_.isNull() && floor_.isNull() && room_.isNull() && postalcode_.isNull() && text_.isNull() && description_.isNull() && datum_.isNull();

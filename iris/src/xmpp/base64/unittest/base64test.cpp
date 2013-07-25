@@ -28,7 +28,7 @@ using namespace XMPP;
 class Base64Test : public QObject
 {
      Q_OBJECT
-	
+
 	private slots:
 		void testEncode() {
 			QString result = Base64::encode("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890");

@@ -25,11 +25,11 @@
 class QObject;
 
 namespace QtTestUtil {
-	
+
 	/**
 	 * A registry of QtTest test classes.
-	 * All test classes registered with QTTESTUTIL_REGISTER_TEST add 
-	 * themselves to this registry. All registered tests can then be run at 
+	 * All test classes registered with QTTESTUTIL_REGISTER_TEST add
+	 * themselves to this registry. All registered tests can then be run at
 	 * once using runTests().
 	 */
 	class TestRegistry
@@ -41,8 +41,8 @@ namespace QtTestUtil {
 			static TestRegistry* getInstance();
 
 			/**
-			 * Register a QtTest test. 
-			 * This method is called  by QTTESTUTIL_REGISTER_TEST, and you should 
+			 * Register a QtTest test.
+			 * This method is called  by QTTESTUTIL_REGISTER_TEST, and you should
 			 * not use this method directly.
 			 */
 			void registerTest(QObject*);
@@ -54,7 +54,7 @@ namespace QtTestUtil {
 
 		private:
 			TestRegistry() {}
-		
+
 		private:
 			QList<QObject*> tests_;
 	};

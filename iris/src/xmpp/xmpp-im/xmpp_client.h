@@ -116,7 +116,7 @@ namespace XMPP
 		void removeExtension(const QString& ext);
 		const Features& extension(const QString& ext) const;
 		QStringList extensions() const;
-		
+
 		S5BManager *s5bManager() const;
 		IBBManager *ibbManager() const;
 		BoBManager *bobManager() const;

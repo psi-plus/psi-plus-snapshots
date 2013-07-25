@@ -148,7 +148,7 @@ PopupManager::~PopupManager()
 }
 
 int PopupManager::registerOption(const QString& name, int initValue, const QString& path)
-{	
+{
 	foreach(const OptionValue& v, d->options_) {
 		if(v.optionName == name)
 			return v.id;
@@ -167,7 +167,7 @@ void PopupManager::unregisterOption(const QString &name)
 }
 
 void PopupManager::setValue(const QString& name, int value)
-{	
+{
 	QList<OptionValue>::iterator i = d->options_.begin();
 	for(; i != d->options_.end(); ++i) {
 		if((*i).optionName == name) {
@@ -187,7 +187,7 @@ int PopupManager::value(const QString& name) const
 }
 
 const QString PopupManager::optionPath(const QString& name) const
-{	
+{
 	foreach(const OptionValue& v, d->options_) {
 		if(v.optionName == name)
 			return v.optionPath;

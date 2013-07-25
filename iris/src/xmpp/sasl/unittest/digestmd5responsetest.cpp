@@ -68,11 +68,11 @@ class DIGESTMD5ResponseTest : public QObject
 				"nc=00000001,"
 				"digest-uri=\"xmpp/jabber.example.com\","
 				"qop=auth,response=564b1c1cc16d97b019f18b14c979964b,charset=utf-8");
-			
+
 			QVERIFY(response.isValid());
 			QCOMPARE(response.getValue(), expectedValue);
 		}
-	
+
 	private:
 		QCA::Initializer initializer;
 };

@@ -223,7 +223,7 @@ void StatusSetDlg::init()
 	connect(pb1, SIGNAL(clicked()), SLOT(doButton()));
 	connect(pb2, SIGNAL(clicked()), SLOT(cancel()));
 	d->te->setFocus();
-	
+
 	ShortcutManager::connect("common.close", this, SLOT(close()));
 	ShortcutManager::connect("status.set", this, SLOT(doButton()));
 
@@ -256,17 +256,17 @@ void StatusSetDlg::doButton()
 					QLineEdit::Normal, text, &ok);
 			if (!ok)
 				return;
-			
+
 			// Check preset name
 			if (text.isEmpty()) {
-				QMessageBox::information(this, tr("Error"), 
+				QMessageBox::information(this, tr("Error"),
 					tr("Can't create a blank preset!"));
 			}
 			else if(PsiOptions::instance()->mapKeyList("options.status.presets").contains(text)) {
-				QMessageBox::information(this, tr("Error"), 
+				QMessageBox::information(this, tr("Error"),
 					tr("You already have a preset with that name!"));
 			}
-			else 
+			else
 				break;
 		}
 		// Store preset
@@ -274,13 +274,13 @@ void StatusSetDlg::doButton()
  		if (!d->le_priority->text().isEmpty()) {
 			sp.setPriority(d->le_priority->text().toInt());
 		}
-		
+
 		sp.toOptions(PsiOptions::instance());
 		PsiOptions::instance()->mapPut("options.status.presets", text);
 
 		//PsiCon will emit signal to refresh presets in all status menus
 		(d->psi ? d->psi : d->pa->psi())->updateStatusPresets();
-	} 
+	}
 
 	// Set status
 	int type = d->cb_type->status();
@@ -322,7 +322,7 @@ void StatusSetDlg::chooseStatusPreset(int x)
 {
 	if(x < 1)
 		return;
-	
+
 	QString base = PsiOptions::instance()->mapLookup("options.status.presets", d->cb_preset->itemText(x));
 	d->te->setText(PsiOptions::instance()->getOption(base+".message").toString());
 	if (PsiOptions::instance()->getOption(base+".force-priority").toBool()) {

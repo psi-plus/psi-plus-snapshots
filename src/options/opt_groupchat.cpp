@@ -107,7 +107,7 @@ void OptionsTabGroupchat::restoreOptions()
 	d->lw_highlightWords->addItems( PsiOptions::instance()->getOption("options.ui.muc.highlight-words").toStringList() );
 	d->lw_nickColors->clear();
 
-	
+
 	foreach(QString col, PsiOptions::instance()->getOption("options.ui.look.colors.muc.nick-colors").toStringList()) {
 		addNickColor(col);
 	}

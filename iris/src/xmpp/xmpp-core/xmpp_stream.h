@@ -29,7 +29,7 @@
 
 class QDomDocument;
 
-namespace XMPP 
+namespace XMPP
 {
 	class Stream : public QObject
 	{

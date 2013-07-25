@@ -32,7 +32,7 @@ class QDomDocument;
 class Activity
 {
 public:
-	enum Type { 
+	enum Type {
 		Unknown,
 		DoingChores, Drinking, Eating, Exercising, Grooming,
 		HavingAppointment, Inactive, Relaxing, Talking, Traveling,
@@ -89,7 +89,7 @@ public:
 
 protected:
 	void fromXml(const QDomElement&);
-	
+
 private:
 	Type type_;
 	SpecificType specificType_;

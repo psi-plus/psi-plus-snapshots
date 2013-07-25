@@ -46,7 +46,7 @@ class SCRAMSHA1MessageTest : public QObject
 			QVERIFY(msg2.isValid());
 			QCOMPARE(msg2.getValue(), msg2_good);
 		}
-	
+
 	private:
 		QCA::Initializer initializer;
 };

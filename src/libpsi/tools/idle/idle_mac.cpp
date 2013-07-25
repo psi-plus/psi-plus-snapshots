@@ -28,14 +28,14 @@ static OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef *bundlePt
 	FSRef   frameworksFolderRef;
 	CFURLRef baseURL;
 	CFURLRef bundleURL;
- 
+
 	if ( bundlePtr == nil ) return( -1 );
- 
+
 	*bundlePtr = nil;
- 
+
 	baseURL = nil;
 	bundleURL = nil;
- 
+
 	err = FSFindFolder(kOnAppropriateDisk, kFrameworksFolderType, true, &frameworksFolderRef);
 	if (err == noErr) {
 		baseURL = CFURLCreateFromFSRef(kCFAllocatorSystemDefault, &frameworksFolderRef);
@@ -68,10 +68,10 @@ static OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef *bundlePt
 	}
 	if (bundleURL != nil) {
 		CFRelease(bundleURL);
-	} 
+	}
 	if (baseURL != nil) {
 		CFRelease(baseURL);
-	} 
+	}
 
 	return err;
 }
@@ -139,7 +139,7 @@ bool IdlePlatform::init() {
 	if (LoadFrameworkBundle( CFSTR("Carbon.framework"), &carbonBundle ) != noErr) {
 		return false;
 	}
- 
+
 	// Load the Mach-O function pointers for the routine we will be using.
 	InstallEventLoopIdleTimerPtr myInstallEventLoopIdleTimer = (InstallEventLoopIdleTimerPtr)CFBundleGetFunctionPointerForName(carbonBundle, CFSTR("InstallEventLoopIdleTimer"));
 	if (myInstallEventLoopIdleTimer == 0) {

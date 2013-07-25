@@ -71,7 +71,7 @@ int main( int argc, char **argv )
     w.show();
     return a.exec();
 }
-	
+
 void DockTestWidget::do_overlay()
 {
 	MacDock::overlay(text->text());

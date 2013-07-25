@@ -26,7 +26,7 @@
 namespace XMPP
 {
 
-	class PubSubRetraction 
+	class PubSubRetraction
 	{
 	public:
 		PubSubRetraction();

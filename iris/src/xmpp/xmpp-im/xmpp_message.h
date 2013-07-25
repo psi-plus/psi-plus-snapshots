@@ -102,7 +102,7 @@ namespace XMPP {
 		// JEP-0085
 		ChatState chatState() const;
 		void setChatState(ChatState);
- 
+
 		// XEP-0184
 		MessageReceipt messageReceipt() const;
 		void setMessageReceipt(MessageReceipt);
@@ -114,7 +114,7 @@ namespace XMPP {
 		void setXSigned(const QString &s);
 		QString xencrypted() const;
 		void setXEncrypted(const QString &s);
-		
+
 		// JEP-0033
 		AddressList addresses() const;
 		AddressList findAddresses(Address::Type t) const;
@@ -174,7 +174,7 @@ namespace XMPP {
 		bool fromStanza(const Stanza &s, int tzoffset);
 		bool fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOffset);
 
-	private:		
+	private:
 		class Private;
 		Private *d;
 	};

@@ -75,7 +75,7 @@ GrowlTestWidget::GrowlTestWidget(QWidget *parent) : QWidget(parent)
 	//sticky = new QCheckBox(this);
 	//sticky->setTristate();
 	//layout->addWidget(sticky,2,1);
-	
+
     QPushButton *notification1 = new QPushButton( "Notification 1", this );
 	connect(notification1, SIGNAL(clicked()), SLOT(do_notification1()));
 	layout->addWidget(notification1,3,0);
@@ -83,7 +83,7 @@ GrowlTestWidget::GrowlTestWidget(QWidget *parent) : QWidget(parent)
 	QPushButton *notification2 = new QPushButton( "Notification 2", this );
 	connect(notification2, SIGNAL(clicked()), SLOT(do_notification2()));
 	layout->addWidget(notification2,3,1);
-	
+
 	// Initialize GrowlNotifier
 	QStringList nots, defaults;
 	nots << "Notification 1" << "Notification 2";
@@ -98,7 +98,7 @@ int main( int argc, char **argv )
     w.show();
     return a.exec();
 }
-	
+
 void GrowlTestWidget::do_notification1()
 {
 	//if (sticky->state() != QButton::NoChange) {

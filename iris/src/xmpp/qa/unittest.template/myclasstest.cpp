@@ -25,7 +25,7 @@
 class MyClassTest : public QObject
 {
      Q_OBJECT
-	
+
 	private slots:
 		void initTestCase() {
 		}

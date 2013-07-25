@@ -9,7 +9,7 @@ SpellHighlighter::SpellHighlighter(QTextDocument* d) : QSyntaxHighlighter(d)
 
 void SpellHighlighter::highlightBlock(const QString& text)
 {
-	// Underline 
+	// Underline
 	QTextCharFormat tcf;
 	tcf.setUnderlineColor(QColor(255,0,0));
 	if(qVersionInt() >= 0x040400 && qVersionInt() < 0x040402) {

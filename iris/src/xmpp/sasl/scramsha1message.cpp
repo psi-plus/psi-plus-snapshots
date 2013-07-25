@@ -58,11 +58,11 @@ SCRAMSHA1Message::SCRAMSHA1Message(const QString& authzid, const QString& authci
 		QByteArray a;
 		a.resize(32);
 		for(int n = 0; n < (int)a.size(); ++n) {
-			a[n] = (char) rand.generateNumberBetween(0, 255); 
+			a[n] = (char) rand.generateNumberBetween(0, 255);
 		}
 		clientnonce = Base64::encode(a).toLatin1();
 	} else clientnonce = cnonce;
-	
+
 	QTextStream(&result) << "n,";
 	if (authzid.size() > 0) {
 		QTextStream(&result) << authzid.toUtf8();

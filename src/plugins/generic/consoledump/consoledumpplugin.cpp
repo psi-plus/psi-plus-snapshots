@@ -108,6 +108,6 @@ bool ConsoleDumpPlugin::processMessage(int account, const QString& fromJid, cons
 	}
 
 	return false;	// don't stop processing
-}	
+}
 
 #include "consoledumpplugin.moc"

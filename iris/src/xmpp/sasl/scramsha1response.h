@@ -37,7 +37,7 @@ namespace XMPP {
 					const QString &salted_password_base64,
 					const RandomNumberGenerator& rand);
 
-			const QByteArray& getValue() const { 
+			const QByteArray& getValue() const {
 				return value_;
 			}
 
@@ -47,10 +47,10 @@ namespace XMPP {
 
 			const QString getSaltedPassword();
 
-			bool isValid() const { 
+			bool isValid() const {
 				return isValid_;
 			}
-		
+
 		private:
 			bool isValid_;
 			QByteArray value_;

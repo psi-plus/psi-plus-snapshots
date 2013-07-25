@@ -1,7 +1,7 @@
 /*
 	NDKeyboardLayout.h
 
-	Created by Nathan Day on 01.18.10 under a MIT-style license. 
+	Created by Nathan Day on 01.18.10 under a MIT-style license.
 	Copyright (c) 2010 Nathan Day
 
 	Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -93,7 +93,7 @@ NSUInteger NDCarbonModifierFlagsForCocoaModifierFlags( NSUInteger modifierFlags 
 
 /*!
 	@method stringForCharacter:modifierFlags:
-	@abstract Get a string for display purposes. 
+	@abstract Get a string for display purposes.
 	@discussion <tt>stringForCharacter:modifierFlags:</tt> returns a string that can be displayed to the user, For example command-z would produce &#x2318;Z, shift-T would produce &#x21E7;T.
 	@param character The unmodified character on the keyboard.
 	@param modifierFlags Modifier flags <tt>NSControlKeyMask</tt>, <tt>NSAlternateKeyMask</tt>, <tt>NSShiftKeyMask</tt>, <tt>NSCommandKeyMask</tt> and <tt>NSNumericPadKeyMask</tt>.
@@ -101,7 +101,7 @@ NSUInteger NDCarbonModifierFlagsForCocoaModifierFlags( NSUInteger modifierFlags 
 - (NSString*)stringForCharacter:(unichar)character modifierFlags:(UInt32)modifierFlags;
 /*!
 	@method stringForKeyCode:modifierFlags:
-	@abstract Get a string for display purposes. 
+	@abstract Get a string for display purposes.
 	@discussion <tt>stringForKeyCode:modifierFlags:</tt> returns a string that can be displayed to the user. This method is called by <tt>stringForCharacter::modifierFlags</tt> and is problem more useful most of the time.
 	@param keyCode A value specifying the virtual key code that is to be translated. For ADB keyboards, virtual key codes are in the range from 0 to 127.
 	@param modifierFlags Modifier flags <tt>NSControlKeyMask</tt>, <tt>NSAlternateKeyMask</tt>, <tt>NSShiftKeyMask</tt>, <tt>NSCommandKeyMask</tt> and <tt>NSNumericPadKeyMask</tt>.
@@ -118,7 +118,7 @@ NSUInteger NDCarbonModifierFlagsForCocoaModifierFlags( NSUInteger modifierFlags 
 /*!
 	@method keyCodeForCharacter:numericPad:
 	@abstract Get the key code for a given key character.
-	@discussion The character pass in must  be the unshifter character for the key, for example to get the key code for the '?' on keyboards where you type shift-/ to get '?' you should pass in the character '/" 
+	@discussion The character pass in must  be the unshifter character for the key, for example to get the key code for the '?' on keyboards where you type shift-/ to get '?' you should pass in the character '/"
 	@param character The unmodified character on the keyboard.
 	@param numericPad For the keycode of a key on the keypad where the same character is also on the main keyboard this flag needs to be <tt>YES</tt>.
  */

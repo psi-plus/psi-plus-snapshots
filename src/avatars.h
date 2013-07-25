@@ -70,7 +70,7 @@ public:
 
 	void newMucItem(const Jid& fullJid, const Status& s);
 	QPixmap getMucAvatar(const Jid& jid);
-	
+
 	static QString getManualDir();
 	static QString getCacheDir();
 	static int maxAvatarSize();
@@ -120,7 +120,7 @@ public:
 
 protected:
 	AvatarFactory* factory() const;
-	virtual const QPixmap& pixmap() const 
+	virtual const QPixmap& pixmap() const
 		{ return pixmap_; }
 
 	virtual void setImage(const QImage&);

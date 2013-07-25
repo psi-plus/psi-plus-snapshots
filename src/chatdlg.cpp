@@ -902,7 +902,7 @@ void ChatDlg::appendMessage(const Message &m, bool local)
 	if (!m.subject().isEmpty()) {
 		chatView()->dispatchMessage(MessageView::subjectMessage(m.subject()));
 	}
- 
+
 	MessageView mv(MessageView::Message);
 	if (m.containsHTML() && PsiOptions::instance()->getOption("options.html.chat.render").toBool() && !m.html().text().isEmpty()) {
 		mv.setHtml(m.html().toString("span"));

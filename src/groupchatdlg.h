@@ -107,7 +107,7 @@ public slots:
 
 	void optionsUpdate();
 	void vcard(const QString& str);
-	
+
 private slots:
 	void showNM(const QString&);
 	void openURL(const QString&);

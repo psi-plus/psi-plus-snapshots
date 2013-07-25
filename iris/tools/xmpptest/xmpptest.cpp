@@ -438,7 +438,7 @@ private slots:
 		stream->setSSFRange(sb_ssfmin->value(), sb_ssfmax->value());
 		//stream->setOldOnly(true);
 		stream->setCompress(true);
-		
+
 		gb_server->setEnabled(false);
 		pb_go->setText(tr("&Disconnect"));
 		pb_go->setFocus();

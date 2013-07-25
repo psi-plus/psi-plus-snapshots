@@ -577,7 +577,7 @@ QPixmap AvatarFactory::getMucAvatar(const Jid& _jid)
 		av = muc_vcard_avatars_[jid.full()];
 	}
 
-	QPixmap pm = (av ? av->getPixmap() : QPixmap());	
+	QPixmap pm = (av ? av->getPixmap() : QPixmap());
 	pm = ensureSquareAvatar(pm);
 
 	// Update iconset

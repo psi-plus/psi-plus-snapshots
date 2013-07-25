@@ -28,7 +28,7 @@
 #include "xmpp_muc.h"
 #include "xmpp_bitsofbinary.h"
 
-namespace XMPP 
+namespace XMPP
 {
 	class Status
 	{
@@ -59,7 +59,7 @@ namespace XMPP
 		const QString & capsVersion() const;
 		const QString & capsHashAlgorithm() const;
 		const QString & capsExt() const;
-		
+
 		bool isMUC() const;
 		bool hasMUCItem() const;
 		const MUCItem & mucItem() const;
@@ -88,7 +88,7 @@ namespace XMPP
 		void setCapsVersion(const QString&);
 		void setCapsHashAlgorithm(const QString&);
 		void setCapsExt(const QString&);
-		
+
 		void setMUC();
 		void setMUCItem(const MUCItem&);
 		void setMUCDestroy(const MUCDestroy&);

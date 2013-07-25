@@ -17,7 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  *
  */
- 
+
 #include <QDomElement>
 #include <QString>
 #include <QStringList>
@@ -27,8 +27,8 @@
 
 #define ORDER_INCREMENT 10
 
-PrivacyList::PrivacyList(const QString& name, const QList<PrivacyListItem>& items) : name_(name), items_(items) 
-{ 
+PrivacyList::PrivacyList(const QString& name, const QList<PrivacyListItem>& items) : name_(name), items_(items)
+{
 	qSort(items_);
 };
 
@@ -37,16 +37,16 @@ PrivacyList::PrivacyList(const QDomElement& e)
 	fromXml(e);
 }
 
-void PrivacyList::updateItem(int index, const PrivacyListItem& item) 
+void PrivacyList::updateItem(int index, const PrivacyListItem& item)
 {
 	unsigned int order = items_[index].order();
 	items_[index] = item;
 	items_[index].setOrder(order);
 }
 
-void PrivacyList::insertItem(int index, const PrivacyListItem& item) 
-{ 
-	items_.insert(index,item); 
+void PrivacyList::insertItem(int index, const PrivacyListItem& item)
+{
+	items_.insert(index,item);
 
 	reNumber();
 }
@@ -57,7 +57,7 @@ void PrivacyList::appendItem(const PrivacyListItem& item)
 }
 
 
-void PrivacyList::reNumber() 
+void PrivacyList::reNumber()
 {
 	unsigned int order = 100;
 	for (int i = 0; i < items_.size(); ++i) {
@@ -113,7 +113,7 @@ bool PrivacyList::onlyBlockItems() const
 			fallThrough = true;
 		}
 		else if ((*it).isBlock()) {
-			if (fallThrough) 
+			if (fallThrough)
 				allBlocked = false;
 		}
 		else {
@@ -126,8 +126,8 @@ bool PrivacyList::onlyBlockItems() const
 QDomElement PrivacyList::toXml(QDomDocument& doc) const
 {
 	QDomElement list = doc.createElement("list");
-	list.setAttribute("name",name()); 
-	
+	list.setAttribute("name",name());
+
 	for (QList<PrivacyListItem>::ConstIterator it = items_.begin() ; it != items_.end(); it++) {
 		list.appendChild((*it).toXml(doc));
 	}

@@ -171,7 +171,7 @@ namespace XMPP
 		class Private;
 		Private *d;
 	};
-	
+
 	class JT_Session : public Task
 	{
 	public:
@@ -248,7 +248,7 @@ namespace XMPP
 
 		const Jid & jid() const;
 		const VCard  & vcard() const;
-		
+
 		void onGo();
 		bool take(const QDomElement &x);
 
@@ -390,15 +390,15 @@ namespace XMPP
 	public:
 		JT_DiscoItems(Task *);
 		~JT_DiscoItems();
-	
+
 		void get(const Jid &, const QString &node = QString::null);
 		void get(const DiscoItem &);
-	
+
 		const DiscoList &items() const;
-	
+
 		void onGo();
 		bool take(const QDomElement &);
-	
+
 	private:
 		class Private;
 		Private *d;
@@ -410,12 +410,12 @@ namespace XMPP
 	public:
 		JT_DiscoPublish(Task *);
 		~JT_DiscoPublish();
-	
+
 		void set(const Jid &, const DiscoList &);
-	
+
 		void onGo();
 		bool take(const QDomElement &);
-	
+
 	private:
 		class Private;
 		Private *d;

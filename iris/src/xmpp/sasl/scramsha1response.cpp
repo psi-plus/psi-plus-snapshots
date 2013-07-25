@@ -47,7 +47,7 @@ namespace XMPP {
 		QString clientservernonce = pattern.cap(1);
 		QString salt = pattern.cap(2);
 		QString icount = pattern.cap(3);
-		
+
 		size_t dkLen;
 
 		QCA::Hash shaHash("sha1");
@@ -55,7 +55,7 @@ namespace XMPP {
 		dkLen = shaHash.final().size();
 
 		QCA::PBKDF2 hi("sha1");
-		
+
 		QByteArray password;
 
 		// SaltedPassword  := Hi(Normalize(password), salt, i)

@@ -269,7 +269,7 @@ bool PluginHost::unload()
 			delete iconset_;
 			iconset_ = 0;
 			connected_ = false;
-		}	  	
+		}
 	}
 	return plugin_ == 0;
 }
@@ -341,7 +341,7 @@ bool PluginHost::enable()
 #endif
 				pa->setPopupAccessingHost(this);
 			}
-			
+
 			IconFactoryAccessor* ia = qobject_cast<IconFactoryAccessor*>(plugin_);
 			if (ia) {
 #ifndef PLUGINS_NO_DEBUG
@@ -434,7 +434,7 @@ bool PluginHost::enable()
 		enabled_ = qobject_cast<PsiPlugin*>(plugin_)->enable();
 	}
 
-	return enabled_;	
+	return enabled_;
 }
 
 /**
@@ -484,7 +484,7 @@ bool PluginHost::incomingXml(int account, const QDomElement &e)
 	StanzaFilter* sf = qobject_cast<StanzaFilter*>(plugin_);
 	if (sf && sf->incomingStanza(account, e)) {
 		handled = true;
-	} 
+	}
 	// try iq filters
 	else if (e.tagName() == "iq") {
 		// get iq namespace
@@ -518,7 +518,7 @@ bool PluginHost::incomingXml(int account, const QDomElement &e)
 					break;
 				}
 			}
-		
+
 			// regex filters
 			QMapIterator<QRegExp, IqNamespaceFilter*> i(iqNsxFilters_);
 			while (!handled && i.hasNext()) {
@@ -552,7 +552,7 @@ bool PluginHost::outgoingXml(int account, QDomElement &e)
  * this will call its processEvent() handler.
  * Handler may then modify the event and may cause the event to be
  * silently discarded.
- * 
+ *
  * \param account Identifier of the PsiAccount responsible
  * \param e Event XML
  * \return Continue processing the event; true if the stanza should be silently discarded.
@@ -575,7 +575,7 @@ bool PluginHost::processEvent(int account, QDomElement& e)
  * Handler may then modify the event and may cause the event to be
  * silently discarded.
  * TODO: modification doesn't work
- * 
+ *
  * \param account Identifier of the PsiAccount responsible
  * \param jidFrom Jid of message sender
  * \param body Message body
@@ -614,10 +614,10 @@ void PluginHost::logout(int account)
 
 /**
  * \brief Sends a stanza from the specified account.
- * 
+ *
  * \param account Identifier of the PsiAccount responsible
  * \param stanza The stanza to be sent
- */ 
+ */
 void PluginHost::sendStanza(int account, const QDomElement& stanza)
 {
 	QTextStream stream;
@@ -628,10 +628,10 @@ void PluginHost::sendStanza(int account, const QDomElement& stanza)
 
 /**
  * \brief Sends a stanza from the specified account.
- * 
+ *
  * \param account Identifier of the PsiAccount responsible
  * \param stanza The stanza to be sent.
- */ 
+ */
 void PluginHost::sendStanza(int account, const QString& stanza)
 {
 	manager_->sendXml(account, stanza);
@@ -639,14 +639,14 @@ void PluginHost::sendStanza(int account, const QString& stanza)
 
 /**
  * \brief Sends a message from the specified account.
- * 
+ *
  * \param account Identifier of the PsiAccount responsible
  * \param to Jid of message addressee
  * \param body Message body
  * \param subject Message type
  * \param type Message type (XMPP message type)
  * \param stanza The stanza to be sent.
- */ 
+ */
 void PluginHost::sendMessage(int account, const QString& to, const QString& body, const QString& subject, const QString& type)
 {
 	//XMPP::Message m;
@@ -666,7 +666,7 @@ void PluginHost::sendMessage(int account, const QString& to, const QString& body
 
 /**
  * \brief Returns a unique stanza id in given account XMPP stream.
- * 
+ *
  * \param account Identifier of the PsiAccount responsible
  * \return Unique stanza id, or empty string if account id is invalid.
  */
@@ -770,7 +770,7 @@ void PluginHost::removeIqNamespaceFilter(const QRegExp &ns, IqNamespaceFilter *f
  * \brief Sets an option (local to the plugin)
  * The options will be automatically prefixed by the plugin manager, so
  * there is no need to uniquely name the options. In the same way as the
- * main options system, a hierachy is available by dot-delimiting the 
+ * main options system, a hierachy is available by dot-delimiting the
  * levels ( e.g. "emoticons.show"). Use this and not setGlobalOption
  * in almost every case.
  * \param  option Option to set
@@ -792,7 +792,7 @@ void PluginHost::setPluginOption( const QString& option, const QVariant& value)
  * \brief Gets an option (local to the plugin)
  * The options will be automatically prefixed by the plugin manager, so
  * there is no need to uniquely name the options. In the same way as the
- * main options system, a hierachy is available by dot-delimiting the 
+ * main options system, a hierachy is available by dot-delimiting the
  * levels ( e.g. "emoticons.show"). Use this and not getGlobalOption
  * in almost every case.
  * \param  option Option to set
@@ -817,7 +817,7 @@ void PluginHost::setGlobalOption(const QString& option, const QVariant& value)
 {
 	PsiOptions::instance()->setOption(option, value);
 }
-	
+
 /**
  * \brief Gets a global option (not local to the plugin)
  * The options will be passed unaltered by the plugin manager, so

@@ -40,7 +40,7 @@ using namespace XMPP;
 /**
  * An interface for Psi to Growl.
  * This class uses GrowlNotifier to interface with Growl.
- * There is at most 1 PsiGrowlNotifier per Psi session (Singleton). This 
+ * There is at most 1 PsiGrowlNotifier per Psi session (Singleton). This
  * notifier can be retrieved using instance().
  *
  * \see GrowlNotifier

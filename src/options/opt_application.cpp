@@ -88,7 +88,7 @@ QWidget *OptionsTabApplication::widget()
 	return w;
 }
 
-void OptionsTabApplication::setHaveAutoUpdater(bool b) 
+void OptionsTabApplication::setHaveAutoUpdater(bool b)
 {
 	haveAutoUpdater_ = b;
 }
@@ -105,7 +105,7 @@ void OptionsTabApplication::applyOptions()
 
 	// Auto-update
 	PsiOptions::instance()->setOption("options.auto-update.check-on-startup", d->ck_autoUpdate->isChecked());
-	
+
 	// docklet
 	PsiOptions::instance()->setOption("options.ui.systemtray.enable", d->ck_docklet->isChecked());
 	PsiOptions::instance()->setOption("options.ui.systemtray.use-double-click", d->ck_dockDCstyle->isChecked());
@@ -144,7 +144,7 @@ void OptionsTabApplication::applyOptions()
 	}
 	else {
 		set.remove(ApplicationInfo::name());
-	} 
+	}
 #endif
 #ifdef HAVE_X11
 	QDir home = QDir::home();

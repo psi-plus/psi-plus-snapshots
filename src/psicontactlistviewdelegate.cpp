@@ -236,7 +236,7 @@ void PsiContactListViewDelegate::drawContact(QPainter* painter, const QStyleOpti
 			statusRect.setSize(statusPixmap.size());
 			r.setLeft(statusRect.right() + 3);
 		}
-		painter->drawPixmap(statusRect.topLeft(), statusPixmap);		
+		painter->drawPixmap(statusRect.topLeft(), statusPixmap);
 	} else
 		r.setLeft(r.left() + 3);
 

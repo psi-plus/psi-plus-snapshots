@@ -1,7 +1,7 @@
 #
 # Declares all common settings/includes for a unittest module.
 #
-# Include this file from your module's unittest project file to create a 
+# Include this file from your module's unittest project file to create a
 # standalone checker for the module.
 #
 

@@ -152,7 +152,7 @@ private slots:
 
 	bool showDockMenu(const QPoint &);
 	void dockActivated();
-	
+
 	void searchClearClicked();
 	void searchTextEntered(QString const &text);
 	void searchTextStarted(QString const &text);

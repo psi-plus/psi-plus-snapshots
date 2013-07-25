@@ -105,7 +105,7 @@ public:
 
 		actionMucShow_ = new IconAction(tr("Show All"), this, "psi/action_muc_show");
 		connect(actionMucShow_, SIGNAL(triggered()), SLOT(mucShow()));
-		
+
 		actionMucLeave_ = new IconAction(tr("Leave All"), this, "psi/action_muc_leave");
 		connect(actionMucLeave_, SIGNAL(triggered()), SLOT(mucLeave()));
 
@@ -151,7 +151,7 @@ private slots:
 			return;
 
 		sendMessageAction_->setVisible(PsiOptions::instance()->getOption("options.ui.message.enabled").toBool());
-		sendMessageAction_->setEnabled(group->contacts().first()->account()->isAvailable());                
+		sendMessageAction_->setEnabled(group->contacts().first()->account()->isAvailable());
 		actionCustomStatus_->setEnabled(group->contacts().first()->account()->isAvailable());
 		if(authMenu_)
 			authMenu_->setEnabled(group->contacts().first()->account()->isAvailable());

@@ -25,7 +25,7 @@ signals:
 	void readyReadOutgoing();
 	void error();
 
-private: 
+private:
 	ZLibCompressor* compressor_;
 	ZLibDecompressor* decompressor_;
 	QBuffer outgoing_buffer_, incoming_buffer_;

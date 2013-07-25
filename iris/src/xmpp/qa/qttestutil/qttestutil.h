@@ -26,7 +26,7 @@
  * A macro to register a test class.
  *
  * This macro will create a static variable which registers the
- * testclass with the TestRegistry, and creates an instance of the 
+ * testclass with the TestRegistry, and creates an instance of the
  * test class.
  *
  * Execute this macro in the body of your unit test's .cpp file, e.g.

@@ -19,7 +19,7 @@ public:
 OptionsTabRoster::OptionsTabRoster(QObject *parent)
 	: OptionsTab(parent, "roster", "", tr("Roster"), tr("Roster window options"), "psi/roster_icon")
 	, w(0)
-{	
+{
 }
 
 OptionsTabRoster::~OptionsTabRoster()

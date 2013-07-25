@@ -105,7 +105,7 @@ private:
 	bool loadActivity();
 	bool loadClients();
 	bool loadAffiliations();
-	
+
 };
 
 QString status2name(int s);

@@ -28,7 +28,7 @@ using namespace XMPP;
 
 
 MUCAffiliationsModel::MUCAffiliationsModel() : QStandardItemModel(Unknown,2)
-{ 
+{
 	QFont font;
 	font.setBold(true);
 	QVariant font_variant = qVariantFromValue(font);
@@ -186,7 +186,7 @@ QString MUCAffiliationsModel::affiliationlistindexToString(AffiliationListIndex 
 	return QString();
 }
 
-QModelIndex MUCAffiliationsModel::affiliationListIndex(MUCItem::Affiliation a) 
+QModelIndex MUCAffiliationsModel::affiliationListIndex(MUCItem::Affiliation a)
 {
 	AffiliationListIndex i = affiliationToIndex(a);
 	if (i == Unknown) {
@@ -198,13 +198,13 @@ QModelIndex MUCAffiliationsModel::affiliationListIndex(MUCItem::Affiliation a)
 
 MUCAffiliationsModel::AffiliationListIndex MUCAffiliationsModel::affiliationToIndex(MUCItem::Affiliation a)
 {
-	if (a == MUCItem::Member) 
+	if (a == MUCItem::Member)
 		return Members;
-	else if (a == MUCItem::Admin) 
+	else if (a == MUCItem::Admin)
 		return Admins;
-	else if (a == MUCItem::Owner) 
+	else if (a == MUCItem::Owner)
 		return Owners;
-	else if (a == MUCItem::Outcast) 
+	else if (a == MUCItem::Outcast)
 		return Outcast;
 	else
 		return Unknown;
@@ -255,7 +255,7 @@ QList<MUCItem> MUCAffiliationsModel::changes() const
 			if (!items_.contains(item)) {
 				items_delta += item;
 			}
-			else 
+			else
 				items_old.removeAll(item);
 		}
 	}
@@ -275,7 +275,7 @@ QList<MUCItem> MUCAffiliationsModel::changes() const
 			items_delta += item;
 		}
 	}
-	
+
 	return items_delta;
 }
 

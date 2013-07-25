@@ -101,7 +101,7 @@ public:
 				l->setFont(font);
 			}
 		}
-		
+
 		setObjectName(name);
 		setModal(modal);
 	}
@@ -110,20 +110,20 @@ public:
 	{
 		psi->dialogUnregister(this);
 	}
-	
+
 	void setIconset( const Iconset &is ) {
 		setWindowTitle(windowTitle().arg(is.name()));
-		
+
 		lb_name->setText(is.name());
 		lb_version->setText(is.version());
-		
+
 		if ( is.description().isEmpty() ) {
 			lb_desc->hide();
 			lb_desc2->hide();
 		}
 		else
 			lb_desc->setText(is.description());
-		
+
 		if ( !is.homeUrl().isEmpty() ) {
 			lb_home->setTitle(is.homeUrl());
 			lb_home->setUrl(is.homeUrl());
@@ -132,16 +132,16 @@ public:
 			lb_home->hide();
 			lb_home2->hide();
 		}
-			
+
 		if ( is.creation().isEmpty() ) {
 			lb_date->hide();
 			lb_date2->hide();
 		}
 		else {
-			QDate date = QDate::fromString(is.creation(), Qt::ISODate);	
+			QDate date = QDate::fromString(is.creation(), Qt::ISODate);
 			lb_date->setText(date.toString(Qt::LocalDate));
 		}
-		
+
 		if ( is.authors().count() == 0 ) {
 			ptv_authors->hide();
 			lb_authors->hide();
@@ -156,9 +156,9 @@ public:
 			}
 			ptv_authors->setText( "<qt><nobr>" + authors + "</nobr></qt>" );
 		}
-		
+
 		isd_iconset->setIconset(is);
-		
+
 		resize(sizeHint());
 	}
 
@@ -1315,7 +1315,7 @@ QWidget *OptionsTabIconsetRoster::widget()
 	addService("weather", tr("Weather"));
 	addService("xmpp", "XMPP");
 	addService("yahoo", "Yahoo!");
-	
+
 	d->tw_isServices->resizeColumnToContents(0);
 
 	connect(d->pb_defRosterDetails, SIGNAL(clicked()), SLOT(defaultDetails()));

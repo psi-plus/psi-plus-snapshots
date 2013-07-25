@@ -51,7 +51,7 @@ class SCRAMSHA1ResponseTest : public QObject
 				QFAIL("hmac(sha1) not supported in QCA.");
 			}
 		}
-	
+
 	private:
 		QCA::Initializer initializer;
 };

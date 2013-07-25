@@ -30,7 +30,7 @@
  *
  * Example:
  *		void foo(QIODevice* device) {
- *			IODeviceOpener opener(device, QIODevice::ReadOnly); 
+ *			IODeviceOpener opener(device, QIODevice::ReadOnly);
  *			if (!opener.isOpen()) {
  *				qDebug() << "Error opening QIODevice";
  *				return;

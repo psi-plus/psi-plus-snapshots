@@ -27,11 +27,11 @@ namespace QtTestUtil {
 	/**
 	 * A wrapper class around a test to manage registration and static
 	 * creation of an instance of the test class.
-	 * This class is used by QTTESTUTIL_REGISTER_TEST(), and you should not 
+	 * This class is used by QTTESTUTIL_REGISTER_TEST(), and you should not
 	 * use this class directly.
 	 */
 	template<typename TestClass>
-	class TestRegistration 
+	class TestRegistration
 	{
 		public:
 			TestRegistration() {
@@ -42,7 +42,7 @@ namespace QtTestUtil {
 			~TestRegistration() {
 				delete test_;
 			}
-		
+
 		private:
 			TestClass* test_;
 	};

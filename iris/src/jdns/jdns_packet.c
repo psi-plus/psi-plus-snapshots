@@ -63,7 +63,7 @@ static void short2net(unsigned short int i, unsigned char **bufp)
 	*(*bufp + 1) = (unsigned char)i;
 	i >>= 8;
 	**bufp = (unsigned char)i;
-	*bufp += 2;    
+	*bufp += 2;
 }
 
 static void long2net(unsigned long int l, unsigned char **bufp)

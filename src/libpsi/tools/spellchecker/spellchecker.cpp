@@ -36,7 +36,7 @@
 #include "aspellchecker.h"
 #endif
 
-SpellChecker* SpellChecker::instance() 
+SpellChecker* SpellChecker::instance()
 {
 	if (!instance_) {
 #ifdef Q_OS_MAC
