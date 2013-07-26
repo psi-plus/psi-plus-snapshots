@@ -24,6 +24,8 @@
 #include <QObject>
 #include <QHash>
 #include <QSharedDataPointer>
+#include <QFile>
+
 #include "xmpp/jid/jid.h"
 
 namespace XMPP
@@ -85,11 +87,11 @@ namespace XMPP
 		void setCache(BoBCache*);
 
 		BoBData bobData(const QString &);
-		BoBData makeBoBData(const QByteArray &data, const QString &type,
+		// file data, mime type, max age in seconds
+		BoBData append(const QByteArray &data, const QString &type,
 							unsigned int maxAge = 0);
-		QString addLocalFile(const QString &filename,
+		QString append(QFile &file,
 							 const QString &type = "application/octet-stream");
-
 		void append(const BoBData &);
 
 	private:

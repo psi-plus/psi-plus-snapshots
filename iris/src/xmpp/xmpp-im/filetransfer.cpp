@@ -61,6 +61,7 @@ public:
 	bool rangeSupported;
 	qlonglong rangeOffset, rangeLength, length;
 	QString streamType;
+	FTThumbnail thumbnail;
 	bool needStream;
 	QString id, iq_id;
 	BSConnection *c;
@@ -129,7 +130,8 @@ void FileTransfer::setProxy(const Jid &proxy)
 	d->proxy = proxy;
 }
 
-void FileTransfer::sendFile(const Jid &to, const QString &fname, qlonglong size, const QString &desc)
+void FileTransfer::sendFile(const Jid &to, const QString &fname, qlonglong size,
+							const QString &desc, const FTThumbnail &thumb)
 {
 	d->state = Requesting;
 	d->peer = to;
@@ -141,7 +143,7 @@ void FileTransfer::sendFile(const Jid &to, const QString &fname, qlonglong size,
 
 	d->ft = new JT_FT(d->m->client()->rootTask());
 	connect(d->ft, SIGNAL(finished()), SLOT(ft_finished()));
-	d->ft->request(to, d->id, fname, size, desc, d->m->streamPriority() );
+	d->ft->request(to, d->id, fname, size, desc, d->m->streamPriority(), thumb);
 	d->ft->go(true);
 }
 
@@ -172,6 +174,11 @@ void FileTransfer::writeFileData(const QByteArray &a)
 	else
 		block = a;
 	d->c->write(block);
+}
+
+const FTThumbnail &FileTransfer::thumbnail() const
+{
+	return d->thumbnail;
 }
 
 Jid FileTransfer::peer() const
@@ -349,6 +356,7 @@ void FileTransfer::man_waitForAccept(const FTRequest &req, const QString &stream
 	d->desc = req.desc;
 	d->rangeSupported = req.rangeSupported;
 	d->streamType = streamType;
+	d->thumbnail = req.thumbnail;
 }
 
 void FileTransfer::doAccept()
@@ -550,7 +558,8 @@ JT_FT::~JT_FT()
 }
 
 void JT_FT::request(const Jid &to, const QString &_id, const QString &fname,
-					qlonglong size, const QString &desc, const QStringList &streamTypes)
+					qlonglong size, const QString &desc,
+					const QStringList &streamTypes, const FTThumbnail &thumb)
 {
 	QDomElement iq;
 	d->to = to;
@@ -571,6 +580,20 @@ void JT_FT::request(const Jid &to, const QString &_id, const QString &fname,
 	}
 	QDomElement range = doc()->createElement("range");
 	file.appendChild(range);
+
+	if (!thumb.data.isEmpty()) {
+		BoBData data = client()->bobManager()->append(thumb.data, thumb.mimeType);
+		QDomElement thel = doc()->createElement("thumbnail");
+		thel.setAttribute("xmlns", "urn:xmpp:thumbs:0");
+		thel.setAttribute("cid", data.cid());
+		thel.setAttribute("mime-type", thumb.mimeType);
+		if (thumb.width && thumb.height) {
+			thel.setAttribute("width", thumb.width);
+			thel.setAttribute("height", thumb.height);
+		}
+		file.appendChild(thel);
+	}
+
 	si.appendChild(file);
 
 	QDomElement feature = doc()->createElement("feature");
@@ -826,6 +849,15 @@ bool JT_PushFT::take(const QDomElement &e)
 		}
 	}
 
+	FTThumbnail thumb;
+	QDomElement thel = file.elementsByTagName("thumbnail").item(0).toElement();
+	if(!thel.isNull() && thel.attribute("xmlns") == QLatin1String("urn:xmpp:thumbs:0")) {
+		thumb.data = thel.attribute("cid").toUtf8();
+		thumb.mimeType = thel.attribute("mime-type");
+		thumb.width = thel.attribute("width").toUInt();
+		thumb.height = thel.attribute("height").toUInt();
+	}
+
 	FTRequest r;
 	r.from = from;
 	r.iq_id = e.attribute("id");
@@ -835,6 +867,7 @@ bool JT_PushFT::take(const QDomElement &e)
 	r.desc = desc;
 	r.rangeSupported = rangeSupported;
 	r.streamTypes = streamTypes;
+	r.thumbnail = thumb;
 
 	emit incoming(r);
 	return true;

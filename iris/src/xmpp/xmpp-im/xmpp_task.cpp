@@ -213,7 +213,7 @@ void Task::done()
 		d->deleteme = true;
 
 	d->insig = true;
-	finished();
+	emit finished();
 	d->insig = false;
 
 	if(d->deleteme)

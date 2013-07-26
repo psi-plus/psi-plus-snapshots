@@ -176,7 +176,7 @@ BoBData BoBManager::bobData(const QString &cid)
 	return bd;
 }
 
-BoBData BoBManager::makeBoBData(const QByteArray &data, const QString &type,
+BoBData BoBManager::append(const QByteArray &data, const QString &type,
 								unsigned int maxAge)
 {
 	BoBData b;
@@ -191,14 +191,17 @@ BoBData BoBManager::makeBoBData(const QByteArray &data, const QString &type,
 	return b;
 }
 
-QString BoBManager::addLocalFile(const QString &filename, const QString &type)
+QString BoBManager::append(QFile &file, const QString &type)
 {
-	QFile file(filename);
-	if (file.open(QIODevice::ReadOnly)) {
+	bool isOpen = file.isOpen();
+	if (isOpen || file.open(QIODevice::ReadOnly)) {
 		QString cid = QString("sha1+%1@bob.xmpp.org").arg(
 			QString(QCryptographicHash::hash(file.readAll(),
 											QCryptographicHash::Sha1).toHex()));
-		_localFiles[cid] = QPair<QString,QString>(filename, type);
+		_localFiles[cid] = QPair<QString,QString>(file.fileName(), type);
+		if (!isOpen) {
+			file.close();
+		}
 		return cid;
 	}
 	return QString();
