@@ -1897,6 +1897,8 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 	if(!t.isNull()) {
 		d->messageReceipt = ReceiptReceived;
 		d->messageReceiptId = t.attribute("id");
+		if (d->messageReceiptId.isEmpty())
+			d->messageReceiptId = id();
 	}
 
 	// xsigned
