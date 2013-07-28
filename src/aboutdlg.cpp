@@ -83,7 +83,7 @@ AboutDlg::AboutDlg(QWidget* parent)
 			   "rion4ik@gmail.com", "", "",
 			   tr("Founder and Lead Patcher"));
 	psiplus += details(QString::fromUtf8("majik"),
-			   "", "maj@jabber.ru", "",
+			   "maksim.maj@gmail.com", "", "",
 			   tr("Founder, Designer and Patcher"));
 	psiplus += details(QString::fromUtf8("Dealer_WeARE"),
 			   "wadealer@gmail.com", "", "",
