@@ -84,4 +84,3 @@ QWidget *PsiThemeViewDelegate::createEditor(QWidget */*parent*/,
 {
 	return 0;
 }
-

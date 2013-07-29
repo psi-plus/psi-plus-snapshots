@@ -925,7 +925,7 @@ void ChatDlg::appendMessage(const Message &m, bool local)
 			urlsMap.insert(u.url(), u.desc());
 		}
 		chatView()->dispatchMessage(MessageView::urlsMessage(urlsMap));
- 	}
+	}
 
 	// if we're not active, notify the user by changing the title
 	if (!isActiveTab()) {
