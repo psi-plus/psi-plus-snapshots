@@ -569,6 +569,8 @@ QString UserListItem::findClient(QString name) const
 		res = "yabber";
 	else if(name.startsWith("yaonline"))
 		res = "yaonlinesymbian";
+	else if(name.startsWith("xabber"))
+		res = "xabber";
 	else res = "unknown";
 
 return res;
