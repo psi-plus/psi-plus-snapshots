@@ -445,6 +445,8 @@ QString UserListItem::findClient(QString name) const
 		res = "jbother";
 	else if(name.startsWith("pjc"))
 		res = "jubo";
+	else if(name.startsWith("jtalk"))
+		res = "jtalk";
 	else if(name.startsWith("juick"))
 		res = "juick";
 	else if(name.startsWith("kadu"))
