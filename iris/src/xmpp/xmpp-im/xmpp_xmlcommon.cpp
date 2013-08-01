@@ -159,34 +159,6 @@ QString tagContent(const QDomElement &e)
 
 
 /**
- * \brief find an direct child element by name
- * \param e parent element
- * \param name name of element to find
- * \param found (optional/out) found?
- * \return the element (or a null QDomElemnt if not found)
- */
-QDomElement findSubTag(const QDomElement &e, const QString &name, bool *found)
-{
-	if(found)
-		*found = false;
-
-	for(QDomNode n = e.firstChild(); !n.isNull(); n = n.nextSibling()) {
-		QDomElement i = n.toElement();
-		if(i.isNull())
-			continue;
-		if(i.tagName() == name) {
-			if(found)
-				*found = true;
-			return i;
-		}
-	}
-
-	QDomElement tmp;
-	return tmp;
-}
-
-
-/**
  * \brief obtain direct child elements of a certain kind.  unlike
  *        elementsByTagNameNS, this function does not descend beyond the first
  *        level of children.
@@ -235,36 +207,12 @@ QDomElement createIQ(QDomDocument *doc, const QString &type, const QString &to, 
 */
 QDomElement queryTag(const QDomElement &e)
 {
-	bool found;
-	QDomElement q = findSubTag(e, "query", &found);
-	return q;
+	return e.firstChildElement("query");
 }
 
 QString queryNS(const QDomElement &e)
 {
-	bool found;
-	QDomElement q = findSubTag(e, "query", &found);
-	if(found)
-		return q.attribute("xmlns");
-
-	return "";
-}
-
-QDomElement queryTag(const QDomElement &e, const QString &element)
-{
-	bool found;
-	QDomElement q = findSubTag(e, element, &found);
-	return q;
-}
-
-QString queryNS(const QDomElement &e, const QString &element)
-{
-	bool found;
-	QDomElement q = findSubTag(e, element, &found);
-	if(found)
-		return q.attribute("xmlns");
-
-	return "";
+	return e.firstChildElement("query").attribute("xmlns");
 }
 
 /**
@@ -290,9 +238,8 @@ QString queryNS(const QDomElement &e, const QString &element)
 
 void getErrorFromElement(const QDomElement &e, const QString &baseNS, int *code, QString *str)
 {
-	bool found;
-	QDomElement tag = findSubTag(e, "error", &found);
-	if(!found)
+	QDomElement tag = e.firstChildElement("error");
+	if(tag.isNull())
 		return;
 
 	XMPP::Stanza::Error err;
@@ -374,16 +321,13 @@ QDomElement emptyTag(QDomDocument *doc, const QString &name)
 
 bool hasSubTag(const QDomElement &e, const QString &name)
 {
-	bool found;
-	findSubTag(e, name, &found);
-	return found;
+	return !e.firstChildElement(name).isNull();
 }
 
 QString subTagText(const QDomElement &e, const QString &name)
 {
-	bool found;
-	QDomElement i = findSubTag(e, name, &found);
-	if ( found )
+	QDomElement i = e.firstChildElement(name);
+	if ( !i.isNull() )
 		return i.text();
 	return QString::null;
 }
@@ -483,36 +427,32 @@ QDomElement stringListToXml(QDomDocument &doc, const QString &name, const QStrin
 
 void readEntry(const QDomElement &e, const QString &name, QString *v)
 {
-	bool found = false;
-	QDomElement tag = findSubTag(e, name, &found);
-	if(!found)
+	QDomElement tag = e.firstChildElement(name);
+	if(tag.isNull())
 		return;
 	*v = tagContent(tag);
 }
 
 void readNumEntry(const QDomElement &e, const QString &name, int *v)
 {
-	bool found = false;
-	QDomElement tag = findSubTag(e, name, &found);
-	if(!found)
+	QDomElement tag = e.firstChildElement(name);
+	if(tag.isNull())
 		return;
 	*v = tagContent(tag).toInt();
 }
 
 void readBoolEntry(const QDomElement &e, const QString &name, bool *v)
 {
-	bool found = false;
-	QDomElement tag = findSubTag(e, name, &found);
-	if(!found)
+	QDomElement tag = e.firstChildElement(name);
+	if(tag.isNull())
 		return;
 	*v = (tagContent(tag) == "true") ? true: false;
 }
 
 void readSizeEntry(const QDomElement &e, const QString &name, QSize *v)
 {
-	bool found = false;
-	QDomElement tag = findSubTag(e, name, &found);
-	if(!found)
+	QDomElement tag = e.firstChildElement(name);
+	if(tag.isNull())
 		return;
 	QStringList list = tagContent(tag).split(',');
 	if(list.count() != 2)
@@ -525,9 +465,8 @@ void readSizeEntry(const QDomElement &e, const QString &name, QSize *v)
 
 void readRectEntry(const QDomElement &e, const QString &name, QRect *v)
 {
-	bool found = false;
-	QDomElement tag = findSubTag(e, name, &found);
-	if(!found)
+	QDomElement tag = e.firstChildElement(name);
+	if(tag.isNull())
 		return;
 	QStringList list = tagContent(tag).split(',');
 	if(list.count() != 4)
@@ -542,9 +481,8 @@ void readRectEntry(const QDomElement &e, const QString &name, QRect *v)
 
 void readColorEntry(const QDomElement &e, const QString &name, QColor *v)
 {
-	bool found = false;
-	QDomElement tag = findSubTag(e, name, &found);
-	if(!found)
+	QDomElement tag = e.firstChildElement(name);
+	if(tag.isNull())
 		return;
 	QColor c;
 	c.setNamedColor(tagContent(tag));
@@ -554,9 +492,8 @@ void readColorEntry(const QDomElement &e, const QString &name, QColor *v)
 
 void xmlToStringList(const QDomElement &e, const QString &name, QStringList *v)
 {
-	bool found = false;
-	QDomElement tag = findSubTag(e, name, &found);
-	if(!found)
+	QDomElement tag = e.firstChildElement(name);
+	if(tag.isNull())
 		return;
 	QStringList list;
 	for(QDomNode n = tag.firstChild(); !n.isNull(); n = n.nextSibling()) {

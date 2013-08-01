@@ -34,16 +34,6 @@
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="ck_sendComposingEvents">
-     <property name="whatsThis">
-      <string>Disables the sending of message events such as &quot;Contact is Typing...&quot;</string>
-     </property>
-     <property name="text">
-      <string>Do not send composing events</string>
-     </property>
-    </widget>
-   </item>
-   <item>
     <widget class="QCheckBox" name="ck_requestReceipts" >
      <property name="text" >
       <string>Request receipts</string>
@@ -54,6 +44,16 @@
     <widget class="QCheckBox" name="ck_sendReceipts" >
      <property name="text" >
       <string>Send receipts</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="ck_sendComposingEvents">
+     <property name="whatsThis">
+      <string>Disables the sending of message events such as &quot;Contact is Typing...&quot;</string>
+     </property>
+     <property name="text">
+      <string>Do not send composing events</string>
      </property>
     </widget>
    </item>

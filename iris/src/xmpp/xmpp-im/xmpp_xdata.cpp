@@ -221,11 +221,8 @@ void XData::Field::fromXml(const QDomElement &e)
 			_desc = i.text().trimmed();
 		else if ( tag == "option" ) {
 			Option o;
-			bool found;
 			o.label = i.attribute("label");
-
-			QDomElement e = findSubTag( i, "value", &found );
-			o.value = ( found ? e.text() : QString("") );
+			o.value = subTagText(i, "value");
 			_options.append(o);
 		}
 		else if ( tag == "value" ) {
@@ -498,15 +495,7 @@ void XData::fromXml(const QDomElement &e)
 					continue;
 
 				if ( ii.tagName() == "field" ) {
-					QString name = ii.attribute("var");
-					QString value;
-
-					bool found;
-					QDomElement e = findSubTag( ii, "value", &found );
-					if ( found )
-						value = e.text();
-
-					item[name] = value;
+					item.insert(ii.attribute("var"), subTagText(ii, "value"));
 				}
 			}
 

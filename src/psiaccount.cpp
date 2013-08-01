@@ -340,7 +340,7 @@ public:
 		if (e.tagName() != "iq" || e.attribute("type") != "get")
 			return false;
 
-		const QString ns = queryNS(e, "query");
+		const QString ns = queryNS(e);
 		if (ns == "jabber:iq:last") {
 			QDomElement iq = createIQ(doc(), "result", e.attribute("from"), e.attribute("id"));
 			QDomElement query = doc()->createElement("query");
@@ -3705,14 +3705,13 @@ void PsiAccount::itemPublished(const Jid& j, const QString& n, const PubSubItem&
 		QDomElement element = item.payload();
 		QDomElement e;
 		QString tune;
-		bool found;
 
-		e = findSubTag(element, "artist", &found);
-		if (found)
+		e = element.firstChildElement("artist");
+		if (!e.isNull())
 			tune += e.text() + " - ";
 
-		e = findSubTag(element, "title", &found);
-		if (found)
+		e = element.firstChildElement("title");
+		if (!e.isNull())
 			tune += e.text();
 
 		foreach(UserListItem* u, findRelevant(j)) {

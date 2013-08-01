@@ -590,25 +590,24 @@ bool JT_IBB::take(const QDomElement &e)
 		if(e.tagName() != "iq" || e.attribute("type") != "set")
 			return false;
 
-		bool found;
 		QString id = e.attribute("id");
 		QString from = e.attribute("from");
-		QDomElement openEl = findSubTag(e, "open", &found);
-		if (found && openEl.attribute("xmlns") == IBB_NS) {
+		QDomElement openEl = e.firstChildElement("open");
+		if (!openEl.isNull() && openEl.attribute("xmlns") == IBB_NS) {
 			emit incomingRequest(Jid(from), id,
 							openEl.attribute("sid"),
 							openEl.attribute("block-size").toInt(),
 							openEl.attribute("stanza"));
 			return true;
 		}
-		QDomElement dataEl = findSubTag(e, "data", &found);
-		if (found && dataEl.attribute("xmlns") == IBB_NS) {
+		QDomElement dataEl = e.firstChildElement("data");
+		if (!dataEl.isNull() && dataEl.attribute("xmlns") == IBB_NS) {
 			IBBData data;
 			emit incomingData(Jid(from), id, data.fromXml(dataEl), Stanza::IQ);
 			return true;
 		}
-		QDomElement closeEl = findSubTag(e, "close", &found);
-		if (found && closeEl.attribute("xmlns") == IBB_NS) {
+		QDomElement closeEl = e.firstChildElement("close");
+		if (!closeEl.isNull() && closeEl.attribute("xmlns") == IBB_NS) {
 			emit closeRequest(Jid(from), id, closeEl.attribute("sid"));
 			return true;
 		}

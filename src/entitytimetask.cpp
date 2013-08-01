@@ -86,14 +86,13 @@ bool EntityTimeTask::take(const QDomElement &x)
 		return false;
 
 	if (x.attribute("type") == "result") {
-		bool found = false;
-		QDomElement q = queryTag(x, "time");
+		QDomElement q = x.firstChildElement("time");
 		QDomElement tag;
-		tag = findSubTag(q, "utc", &found);
-		if (found)
+		tag = q.firstChildElement("utc");
+		if (!tag.isNull())
 			utc_ = tagContent(tag);
-		tag = findSubTag(q, "tzo", &found);
-		if (found) {
+		tag = q.firstChildElement("tzo");
+		if (!tag.isNull()) {
 			tzoString_ = tagContent(tag);
 			tzo_ = stringToOffset(tzoString_);
 		}

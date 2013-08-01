@@ -784,11 +784,9 @@ void AvatarFactory::itemPublished(const Jid& jid, const QString& n, const PubSub
 			connect(pep_avatars_[jid.bare()],SIGNAL(avatarChanged(const Jid&)),this, SLOT(updateAvatar(const Jid&)));
 		}
 		// check for the deprecated <stop/> child element
-		QDomElement e;
-		bool found;
-		e = findSubTag(item.payload(), "stop", &found);
+		QDomElement e = item.payload().firstChildElement("stop");
 		// if there's a <stop/> element or the <metadata/> element is empty, remove user's avatar
-		if (found || !item.payload().hasChildNodes()) {
+		if (!e.isNull()) {
 			pep_avatars_[jid.bare()]->updateHash("");
 		}
 		else {

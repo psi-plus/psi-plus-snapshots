@@ -13,6 +13,7 @@
 #include <QSysInfo>
 #include <QProcess>
 #include <QTextStream>
+#include <QByteArray>
 
 #if defined(HAVE_X11) || defined(Q_OS_MAC)
 #include <time.h>
@@ -176,14 +177,13 @@ SystemInfo::SystemInfo() : QObject(QCoreApplication::instance())
 	time(&x);
 	char str[256];
 	char fmt[32];
+	int size;
 	strcpy(fmt, "%z");
-	strftime(str, 256, fmt, localtime(&x));
-	if(strcmp(fmt, str)) {
-		QString s = str;
-		if(s.at(0) == '+')
-			s.remove(0,1);
-		s.truncate(s.length()-2);
-		timezone_offset_ = s.toInt() * 60;	// FIX-ME: should really read the offset in minutes
+	size = strftime(str, 256, fmt, localtime(&x));
+	if(size && strncmp(fmt, str, size)) {
+		timezone_offset_ = QByteArray::fromRawData(str + 1, 2).toInt() * 60 + QByteArray::fromRawData(str + 3, 2).toInt();
+		if(str[0] == '-')
+			timezone_offset_ = -timezone_offset_;
 	}
 	strcpy(fmt, "%Z");
 	strftime(str, 256, fmt, localtime(&x));

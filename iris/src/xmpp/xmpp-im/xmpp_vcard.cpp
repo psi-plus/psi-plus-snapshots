@@ -533,7 +533,6 @@ bool VCard::fromXml(const QDomElement &q)
 
 		QString tag = i.tagName().toUpper();
 
-		bool found;
 		QDomElement e;
 
 		if ( tag == "VERSION" )
@@ -667,8 +666,8 @@ bool VCard::fromXml(const QDomElement &q)
 			d->logoURI = subTagText(i, "EXTVAL");
 		}
 		else if ( tag == "AGENT" ) {
-			e = findSubTag(i, "VCARD", &found);
-			if ( found ) {
+			e = i.firstChildElement("VCARD");
+			if ( !e.isNull() ) {
 				VCard a;
 				if ( a.fromXml(e) ) {
 					if ( !d->agent )
@@ -732,16 +731,16 @@ bool VCard::fromXml(const QDomElement &q)
 		}
 		else if ( tag == "KEY" ) {
 			// TODO: Justin, please check out this code
-			e = findSubTag(i, "TYPE", &found);
+			e = i.firstChildElement("TYPE");
 			QString type = "text/plain";
-			if ( found )
+			if ( !e.isNull() )
 				type = e.text().trimmed();
 
-			e = findSubTag(i, "CRED", &found );
-			if ( !found )
-				e = findSubTag(i, "BINVAL", &found); // case for very clever clients ;-)
+			e = i.firstChildElement("CRED");
+			if ( e.isNull() )
+				e = i.firstChildElement("BINVAL"); // case for very clever clients ;-)
 
-			if ( found )
+			if ( !e.isNull() )
 				d->key = e.text().toUtf8(); // FIXME
 		}
 	}

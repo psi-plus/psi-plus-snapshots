@@ -47,8 +47,7 @@ bool TimeServer::take(const QDomElement &e)
 	if (e.tagName() != "iq" || e.attribute("type") != "get")
 		return false;
 
-	QString ns = queryNS(e, "time");
-	QString ns_deprecated = queryNS(e);
+	QString ns = e.firstChildElement("time").attribute("xmlns");
 	if (ns == "urn:xmpp:time") {
 		QDomElement iq = createIQ(doc(), "result", e.attribute("from"), e.attribute("id"));
 		QDomElement time = doc()->createElement("time");
@@ -64,21 +63,6 @@ bool TimeServer::take(const QDomElement &e)
 		if (!localTimeStr.endsWith("Z"))
 			localTimeStr.append("Z");
 		time.appendChild(textTag(doc(), "utc", localTimeStr));
-
-		send(iq);
-		return true;
-	}
-	else if (ns_deprecated == "jabber:iq:time") {
-		QDomElement iq = createIQ(doc(), "result", e.attribute("from"), e.attribute("id"));
-		QDomElement query = doc()->createElement("query");
-		query.setAttribute("xmlns", "jabber:iq:time");
-		iq.appendChild(query);
-
-		QDateTime local = QDateTime::currentDateTime();
-		QString str = SystemInfo::instance()->timezoneString();
-		query.appendChild(textTag(doc(), "utc", TS2stamp(local.toUTC())));
-		query.appendChild(textTag(doc(), "tz", str));
-		query.appendChild(textTag(doc(), "display", QString("%1 %2").arg(local.toString()).arg(str)));
 
 		send(iq);
 		return true;

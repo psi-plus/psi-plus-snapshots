@@ -65,7 +65,7 @@ public:
 
 		QString ns = queryNS(e);
 		if (ns == PRIVACY_NS) {
-			QDomElement listTag = findSubTag(queryTag(e), "list", 0);
+			QDomElement listTag = queryTag(e).firstChildElement("list");
 			if (!listTag.isNull()) {
 				emit privacyListChanged(listTag.attribute("name"));
 			}
@@ -266,9 +266,8 @@ public:
 		//qDebug() << QString("privacy.cpp: Got privacy list %1 reply.").arg(name_);
 		if (x.attribute("type") == "result") {
 			QDomElement q = queryTag(x);
-			bool found;
-			QDomElement listTag = findSubTag(q,"list",&found);
-			if (found) {
+			QDomElement listTag = q.firstChildElement("list");
+			if (!listTag.isNull()) {
 				list_ = PrivacyList(listTag);
 			}
 			else {
