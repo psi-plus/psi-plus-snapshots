@@ -44,6 +44,7 @@ QWidget *OptionsTabPlugins::widget()
 	OptPluginsUI *d = (OptPluginsUI *)w;
 
 	d->pb_info->setIcon(QIcon(IconsetFactory::iconPixmap("psi/info")));
+	d->cb_plugins->setMaxVisibleItems(50);
 	d->cb_loadPlugin->setProperty("isOption", false);
 
 	listPlugins();
