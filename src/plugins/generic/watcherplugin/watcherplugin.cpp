@@ -20,6 +20,7 @@
 
 #include <QFileDialog>
 #include <QDomElement>
+#include <QHash>
 
 #include "view.h"
 #include "model.h"
@@ -47,60 +48,72 @@
 #include "accountinfoaccessor.h"
 #include "soundaccessinghost.h"
 #include "soundaccessor.h"
+#include "toolbariconaccessor.h"
 
-
-#define constVersion "0.4.1"
+#define constVersion "0.4.3"
 
 #define constSoundFile "sndfl"
 #define constInterval "intrvl"
 #define constCount "count"
 #define constSndFiles "sndfiles"
 #define constJids "jids"
+#define constEnabledJids "enjids"
 #define constWatchedItems "watcheditem"
 #define constDisableSnd "dsblsnd"
 #define constDisablePopupDnd "dsblpopupdnd"
+#define constShowOnToolbar "showontoolbar"
+#define constShowInContext "showincontext"
 
 #define POPUP_OPTION_NAME "Watcher Plugin"
 
 
 class Watcher : public QObject, public PsiPlugin, public PopupAccessor, public MenuAccessor, public PluginInfoProvider,
-public OptionAccessor, public StanzaFilter, public IconFactoryAccessor, public ApplicationInfoAccessor,
-public ActiveTabAccessor, public ContactInfoAccessor, public AccountInfoAccessor, public SoundAccessor
+				public OptionAccessor, public StanzaFilter, public IconFactoryAccessor, public ApplicationInfoAccessor,
+				public ActiveTabAccessor, public ContactInfoAccessor, public AccountInfoAccessor, public SoundAccessor,
+				public ToolbarIconAccessor
 {
-        Q_OBJECT
+	Q_OBJECT
+#ifdef HAVE_QT5
+	Q_PLUGIN_METADATA(IID "com.psi-plus.Watcher")
+#endif
 	Q_INTERFACES(PsiPlugin PopupAccessor OptionAccessor StanzaFilter IconFactoryAccessor AccountInfoAccessor
-		     PluginInfoProvider MenuAccessor ApplicationInfoAccessor ActiveTabAccessor ContactInfoAccessor
-		     SoundAccessor)
+				 PluginInfoProvider MenuAccessor ApplicationInfoAccessor ActiveTabAccessor ContactInfoAccessor
+				 SoundAccessor ToolbarIconAccessor)
 public:
 	Watcher();
-        virtual QString name() const;
-        virtual QString shortName() const;
-        virtual QString version() const;
-        virtual QWidget* options();
-        virtual bool enable();
-        virtual bool disable();
-        virtual void optionChanged(const QString& option);
-        virtual void applyOptions();
-        virtual void restoreOptions();
-        virtual void setPopupAccessingHost(PopupAccessingHost* host);
-        virtual void setOptionAccessingHost(OptionAccessingHost* host);
-        virtual bool incomingStanza(int account, const QDomElement& xml);
+	virtual QString name() const;
+	virtual QString shortName() const;
+	virtual QString version() const;
+	virtual QWidget* options();
+	virtual bool enable();
+	virtual bool disable();
+	virtual void optionChanged(const QString& option);
+	virtual void applyOptions();
+	virtual void restoreOptions();
+	virtual void setPopupAccessingHost(PopupAccessingHost* host);
+	virtual void setOptionAccessingHost(OptionAccessingHost* host);
+	virtual bool incomingStanza(int account, const QDomElement& xml);
 	virtual bool outgoingStanza(int account, QDomElement& xml);
-        virtual void setIconFactoryAccessingHost(IconFactoryAccessingHost* host);
+	virtual void setIconFactoryAccessingHost(IconFactoryAccessingHost* host);
 	QList < QVariantHash > getAccountMenuParam();
 	QList < QVariantHash > getContactMenuParam();
 	virtual QAction* getContactAction(QObject* , int , const QString& );
 	virtual QAction* getAccountAction(QObject* , int ) { return 0; }
-        virtual void setApplicationInfoAccessingHost(ApplicationInfoAccessingHost* host);
+	virtual void setApplicationInfoAccessingHost(ApplicationInfoAccessingHost* host);
 	virtual QString pluginInfo();
 	virtual void setActiveTabAccessingHost(ActiveTabAccessingHost* host);
 	virtual void setContactInfoAccessingHost(ContactInfoAccessingHost* host);
 	virtual void setAccountInfoAccessingHost(AccountInfoAccessingHost* host);
 	virtual void setSoundAccessingHost(SoundAccessingHost* host);
 
+	QList<QVariantHash> getButtonParam() { return QList<QVariantHash>(); }
+	QAction* getAction(QObject *parent, int account, const QString &contact);
+
+	QAction* createAction(QObject *parent, const QString &contact);
+
 private:
-        OptionAccessingHost *psiOptions;
-        PopupAccessingHost* popup;
+	OptionAccessingHost *psiOptions;
+	PopupAccessingHost* popup;
 	IconFactoryAccessingHost* icoHost;
 	ApplicationInfoAccessingHost* appInfoHost;
 	ActiveTabAccessingHost* activeTab;
@@ -118,17 +131,19 @@ private:
 	bool disableSnd;
 	bool disablePopupDnd;
 	int popupId;
+	QHash<QString, QAction*> actions_;
+	bool showOnToolbar_;
+	bool showInContext_;
 
 	bool checkWatchedItem(const QString& from, const QString& body, WatchedItem *wi);
 
 private slots:
-        void checkSound(QModelIndex index = QModelIndex());
-        void getSound(QModelIndex index = QModelIndex());
-        void addLine();
-        void delSelected();
-        void Hack();
-        void onOptionsClose();
-	void addJidFromMenu(bool);
+	void checkSound(QModelIndex index = QModelIndex());
+	void getSound(QModelIndex index = QModelIndex());
+	void addLine();
+	void delSelected();
+	void Hack();
+	void onOptionsClose();
 	void playSound(const QString& soundFile);
 	void showPopup(int account, const QString& jid, QString text);
 
@@ -138,9 +153,13 @@ private slots:
 	void addNewItem(const QString& settings);
 	void editCurrentItem(const QString& setting);
 	void timeOut();
+	void actionActivated();
+	void removeFromActions(QObject *object);
 };
 
+#ifndef HAVE_QT5
 Q_EXPORT_PLUGIN(Watcher)
+#endif
 
 Watcher::Watcher()
 	: psiOptions(0)
@@ -153,7 +172,7 @@ Watcher::Watcher()
 	, sound_(0)
 	, enabled(false)
 	, soundFile("sound/watcher.wav")
-	//, Interval(2)
+//, Interval(2)
 	, model_(0)
 	, isSndEnable(false)
 	, disableSnd(true)
@@ -163,15 +182,15 @@ Watcher::Watcher()
 }
 
 QString Watcher::name() const {
-        return "Watcher Plugin";
+	return "Watcher Plugin";
 }
 
 QString Watcher::shortName() const {
-        return "watcher";
+	return "watcher";
 }
 
 QString Watcher::version() const {
-        return constVersion;
+	return constVersion;
 }
 
 bool Watcher::enable() {
@@ -186,9 +205,15 @@ bool Watcher::enable() {
 
 		QStringList jids = psiOptions->getPluginOption(constJids, QVariant(QStringList())).toStringList();
 		QStringList soundFiles = psiOptions->getPluginOption(constSndFiles, QVariant(QStringList())).toStringList();
+		QStringList enabledJids = psiOptions->getPluginOption(constEnabledJids, QVariant(QStringList())).toStringList();
+		if (enabledJids.isEmpty()) {
+			for (int i = 0; i < jids.size(); i++) {
+				enabledJids << "true";
+			}
+		}
 
 		if(!model_) {
-			model_ = new Model(jids, soundFiles, this);
+			model_ = new Model(jids, soundFiles, enabledJids, this);
 			connect(model_, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(Hack()));
 		}
 
@@ -205,6 +230,20 @@ bool Watcher::enable() {
 			else
 				wi->setText(tr("Empty item"));
 		}
+
+		QStringList files;
+		files << "watcher_on" << "watcher";
+		foreach (QString filename, files) {
+
+			QFile file(":/icons/" + filename + ".png");
+			file.open(QIODevice::ReadOnly);
+			QByteArray image = file.readAll();
+			icoHost->addIcon("watcher/" + filename, image);
+			file.close();
+		}
+
+		showOnToolbar_ = psiOptions->getPluginOption(constShowOnToolbar, QVariant(true)).toBool();
+		showInContext_ = psiOptions->getPluginOption(constShowInContext, QVariant(true)).toBool();
 	}
 
 	return enabled;
@@ -215,15 +254,17 @@ bool Watcher::disable() {
 	model_ = 0;
 
 	qDeleteAll(items_);
+	qDeleteAll(actions_);
 	items_.clear();
+	actions_.clear();
 
 	popup->unregisterOption(POPUP_OPTION_NAME);
 	enabled = false;
-        return true;
+	return true;
 }
 
 QWidget* Watcher::options() {
-        if (!enabled) {
+	if (!enabled) {
 		return 0;
 	}
 	optionsWid = new QWidget();
@@ -244,6 +285,9 @@ QWidget* Watcher::options() {
 
 	ui_.tableView->setModel(model_);
 	ui_.tableView->init(icoHost);
+
+	ui_.cb_showOnToolbar->setChecked(showOnToolbar_);
+	ui_.cb_showInContext->setChecked(showInContext_);
 
 	connect(ui_.tableView, SIGNAL(checkSound(QModelIndex)), this, SLOT(checkSound(QModelIndex)));
 	connect(ui_.tableView, SIGNAL(getSound(QModelIndex)), this, SLOT(getSound(QModelIndex)));
@@ -266,7 +310,7 @@ void Watcher::addLine() {
 }
 
 void Watcher::delSelected() {
-	model_->deleteSelected();
+	ui_.tableView->deleteSelected();
 	Hack(); //activate apply button
 }
 
@@ -284,11 +328,12 @@ void Watcher::applyOptions() {
 	psiOptions->setPluginOption(constDisablePopupDnd, QVariant(disablePopupDnd));
 
 	model_->apply();
+	psiOptions->setPluginOption(constEnabledJids, QVariant(model_->getEnabledJids()));
 	psiOptions->setPluginOption(constJids, QVariant(model_->getWatchedJids()));
 	psiOptions->setPluginOption(constSndFiles, QVariant(model_->getSounds()));
 
 	foreach(WatchedItem *wi, items_)
-		delete(wi);
+	delete(wi);
 	items_.clear();
 	QStringList l;
 	for(int i = 0; i < ui_.listWidget->count(); i++) {
@@ -298,7 +343,14 @@ void Watcher::applyOptions() {
 			l.push_back(wi->settingsString());
 		}
 	}
+
 	psiOptions->setPluginOption(constWatchedItems, QVariant(l));
+
+	showOnToolbar_ = ui_.cb_showOnToolbar->isChecked();
+	showInContext_ = ui_.cb_showInContext->isChecked();
+
+	psiOptions->setPluginOption(constShowOnToolbar, QVariant(showOnToolbar_));
+	psiOptions->setPluginOption(constShowInContext, QVariant(showInContext_));
 }
 
 void Watcher::restoreOptions() {
@@ -323,11 +375,13 @@ bool Watcher::incomingStanza(int acc, const QDomElement &stanza) {
 				return false;
 
 			bool find = false;
-			if(model_->getWatchedJids().contains(from, Qt::CaseInsensitive))
+			if(model_->getWatchedJids().contains(from, Qt::CaseInsensitive) &&
+			   model_->getEnabledJids().at(model_->indexByJid(from)) == "true")
 				find = true;
 			else {
 				from = from.split("/").takeFirst();
-				if(model_->getWatchedJids().contains(from, Qt::CaseInsensitive))
+				if(model_->getWatchedJids().contains(from, Qt::CaseInsensitive)&&
+				   model_->getEnabledJids().at(model_->indexByJid(from)) == "true")
 					find = true;
 			}
 			if(find) {
@@ -357,9 +411,9 @@ bool Watcher::incomingStanza(int acc, const QDomElement &stanza) {
 						from = " [" + from + "]";
 					text = nick + from + tr(" change status to ") + status;
 					QMetaObject::invokeMethod(this, "showPopup", Qt::QueuedConnection,
-								  Q_ARG(int, acc),
-								  Q_ARG(const QString&, bare),
-								  Q_ARG(QString, text));
+											  Q_ARG(int, acc),
+											  Q_ARG(const QString&, bare),
+											  Q_ARG(QString, text));
 				}
 			}
 		}
@@ -466,6 +520,65 @@ void Watcher::setSoundAccessingHost(SoundAccessingHost *host) {
 	sound_ = host;
 }
 
+QAction* Watcher::createAction(QObject *parent, const QString &contact)
+{
+	QStringList jids = model_->getWatchedJids();
+	QAction *action;
+	if (jids.contains(contact, Qt::CaseInsensitive) && model_->jidEnabled(contact)) {
+		action = new QAction(QIcon(":/icons/watcher_on.png"), tr("Don't watch for JID"), parent);
+		action->setProperty("watch", true);
+	}
+	else {
+		action = new QAction(QIcon(":/icons/watcher.png"), tr("Watch for JID"), parent);
+		action->setProperty("watch", false);
+	}
+
+	action->setProperty("jid", contact);
+	connect(action, SIGNAL(triggered()), SLOT(actionActivated()));
+
+	return action;
+}
+
+QAction* Watcher::getAction(QObject *parent, int /*account*/, const QString &contact)
+{
+	if (!enabled || !showOnToolbar_) {
+		return 0;
+	}
+
+	if (!actions_.contains(contact)) {
+		QAction *action = createAction(parent, contact);
+		connect(action, SIGNAL(destroyed(QObject*)), SLOT(removeFromActions(QObject*)));
+		actions_[contact] = action;
+	}
+	return actions_[contact];
+}
+
+void Watcher::actionActivated()
+{
+	QAction *action = qobject_cast<QAction*>(sender());
+	if (action->property("watch").toBool()) {
+		action->setProperty("watch", false);
+		action->setIcon(QIcon(":/icons/watcher.png"));
+		action->setText(tr("Watch for JID"));
+		model_->setJidEnabled(action->property("jid").toString(), false);
+	}
+	else {
+		action->setProperty("watch", true);
+		action->setIcon(QIcon(":/icons/watcher_on.png"));
+		action->setText(tr("Don't watch for JID"));
+		model_->setJidEnabled(action->property("jid").toString(), true);
+	}
+	model_->apply();
+	psiOptions->setPluginOption(constEnabledJids, QVariant(model_->getEnabledJids()));
+	psiOptions->setPluginOption(constJids, QVariant(model_->getWatchedJids()));
+	psiOptions->setPluginOption(constSndFiles, QVariant(model_->getSounds()));
+}
+
+void Watcher::removeFromActions(QObject *object)
+{
+	actions_.remove(actions_.key(qobject_cast<QAction*>(object)));
+}
+
 void Watcher::playSound(const QString& f) {
 	sound_->playSound(f);
 }
@@ -473,16 +586,16 @@ void Watcher::playSound(const QString& f) {
 void Watcher::getSound(QModelIndex index) {
 	if(ui_.tb_open->isDown()) {
 		QString fileName = QFileDialog::getOpenFileName(0,tr("Choose a sound file"),
-								psiOptions->getPluginOption(constLastFile, QVariant("")).toString(),
-								tr("Sound (*.wav)"));
+														psiOptions->getPluginOption(constLastFile, QVariant("")).toString(),
+														tr("Sound (*.wav)"));
 		if(fileName.isEmpty()) return;
 		QFileInfo fi(fileName);
 		psiOptions->setPluginOption(constLastFile, QVariant(fi.absolutePath()));
 		ui_.le_sound->setText(fileName);
 	} else {
 		QString fileName = QFileDialog::getOpenFileName(0,tr("Choose a sound file"),
-								psiOptions->getPluginOption(constLastFile, QVariant("")).toString(),
-								tr("Sound (*.wav)"));
+														psiOptions->getPluginOption(constLastFile, QVariant("")).toString(),
+														tr("Sound (*.wav)"));
 		if(fileName.isEmpty()) return;
 		QFileInfo fi(fileName);
 		psiOptions->setPluginOption(constLastFile, QVariant(fi.absolutePath()));
@@ -515,7 +628,9 @@ void Watcher::showPopup(int account, const QString& jid, QString text) {
 }
 
 void Watcher::Hack() {
-	ui_.cb_hack->toggle();
+	if (!optionsWid.isNull()) {
+		ui_.cb_hack->toggle();
+	}
 }
 
 void Watcher::onOptionsClose() {
@@ -531,30 +646,11 @@ QList < QVariantHash > Watcher::getContactMenuParam() {
 }
 
 QAction* Watcher::getContactAction(QObject *p, int /*account*/, const QString &jid) {
-	if(!enabled)
+	if (!enabled || !showInContext_) {
 		return 0;
+	}
 
-	QAction *act = new QAction(icoHost->getIcon("psi/search"), tr("Watch for JID"), p);
-	act->setCheckable(true);
-	act->setChecked(model_->getWatchedJids().contains(jid));
-	act->setProperty("jid", jid);
-	connect(act, SIGNAL(triggered(bool)), SLOT(addJidFromMenu(bool)));
-	return act;
-}
-
-void Watcher::addJidFromMenu(bool check) {
-	if(!enabled)
-		return;
-
-	const QString jid = sender()->property("jid").toString();
-
-	if(check)
-		model_->addRow(jid);
-	else
-		model_->deleteRow(jid);
-
-	psiOptions->setPluginOption(constJids, QVariant(model_->getWatchedJids()));
-	psiOptions->setPluginOption(constSndFiles, QVariant(model_->getSounds()));
+	return createAction(p, jid);
 }
 
 void Watcher::addItemAct() {
@@ -594,7 +690,7 @@ void Watcher::editItemAct() {
 		EditItemDlg *eid = new EditItemDlg(icoHost, psiOptions, optionsWid);
 		eid->init(wi->settingsString());
 		connect(eid, SIGNAL(testSound(QString)), this, SLOT(playSound(QString)));
-		connect(eid, SIGNAL(dlgAccepted(QString)), this, SLOT(editCurrentItem(QString)));		
+		connect(eid, SIGNAL(dlgAccepted(QString)), this, SLOT(editCurrentItem(QString)));
 		eid->show();
 	}
 }
@@ -614,16 +710,15 @@ void Watcher::editCurrentItem(const QString& settings) {
 }
 
 QString Watcher::pluginInfo() {
-	return tr("Author: ") +  "Dealer_WeARE\n"
-			+ tr("Email: ") + "wadealer@gmail.com\n\n"
-			+ trUtf8("This plugin is designed to monitor the status of specific roster contacts, as well as for substitution of standard sounds of incoming messages.\n"
-				 "On the first tab set up a list of contacts for the status of which is monitored. When the status of such contacts changes a popup window will be shown"
-				 " and when the status changes to online a custom sound can be played."
-				 "On the second tab is configured list of items, the messages are being monitored. Each element can contain a regular expression"
-				 " to check for matches with JID, from which the message arrives, a list of regular expressions to check for matches with the text"
-				 " of an incoming message, the path to sound file which will be played in case of coincidence, as well as the setting, whether the sound"
-				 " is played always, even if the global sounds off. ");
+	return tr("Author: ") +	 "Dealer_WeARE\n"
+	+ tr("Email: ") + "wadealer@gmail.com\n\n"
+	+ trUtf8("This plugin is designed to monitor the status of specific roster contacts, as well as for substitution of standard sounds of incoming messages.\n"
+			 "On the first tab set up a list of contacts for the status of which is monitored. When the status of such contacts changes a popup window will be shown"
+			 " and when the status changes to online a custom sound can be played."
+			 "On the second tab is configured list of items, the messages are being monitored. Each element can contain a regular expression"
+			 " to check for matches with JID, from which the message arrives, a list of regular expressions to check for matches with the text"
+			 " of an incoming message, the path to sound file which will be played in case of coincidence, as well as the setting, whether the sound"
+			 " is played always, even if the global sounds off. ");
 }
 
 #include "watcherplugin.moc"
-

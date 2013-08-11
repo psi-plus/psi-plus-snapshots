@@ -124,7 +124,6 @@
 		<x xmlns='name'>psi/groupOpen</x>
 		<object mime='image/png'>groupopen.png</object>
 	</icon>
-
 	<icon>
 		<x xmlns='name'>psi/typing</x>
 		<object mime='image/png'>typing.png</object>
