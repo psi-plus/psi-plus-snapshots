@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2013-07-19
+# Updated: 2013-08-11
 # Version: N/A
 
 set -e
@@ -139,7 +139,6 @@ echo "Plugins from Psi+ project were copied."
 echo;
 
 rsync -a "${MAIN_DIR}/main/iconsets/system/" "${PSIPLUS_DIR}/iconsets/system/"
-rsync -a "${MAIN_DIR}/main/iconsets/roster/" "${PSIPLUS_DIR}/iconsets/roster/"
 rsync -a "${MAIN_DIR}/main/iconsets/affiliations/" "${PSIPLUS_DIR}/iconsets/affiliations/"
 echo "Iconsets from Psi+ project were copied."
 echo;
