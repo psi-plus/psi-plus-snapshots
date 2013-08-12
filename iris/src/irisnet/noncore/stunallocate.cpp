@@ -162,8 +162,8 @@ private:
 	{
 		Q_ASSERT(!trans);
 		trans = new StunTransaction(this);
-		connect(trans, SIGNAL(createMessage(const QByteArray &)), SLOT(trans_createMessage(const QByteArray &)));
-		connect(trans, SIGNAL(finished(const XMPP::StunMessage &)), SLOT(trans_finished(const XMPP::StunMessage &)));
+		connect(trans, SIGNAL(createMessage(QByteArray)), SLOT(trans_createMessage(QByteArray)));
+		connect(trans, SIGNAL(finished(XMPP::StunMessage)), SLOT(trans_finished(XMPP::StunMessage)));
 		connect(trans, SIGNAL(error(XMPP::StunTransaction::Error)), SLOT(trans_error(XMPP::StunTransaction::Error)));
 		trans->start(pool, stunAddr, stunPort);
 	}
@@ -353,8 +353,8 @@ private:
 	{
 		Q_ASSERT(!trans);
 		trans = new StunTransaction(this);
-		connect(trans, SIGNAL(createMessage(const QByteArray &)), SLOT(trans_createMessage(const QByteArray &)));
-		connect(trans, SIGNAL(finished(const XMPP::StunMessage &)), SLOT(trans_finished(const XMPP::StunMessage &)));
+		connect(trans, SIGNAL(createMessage(QByteArray)), SLOT(trans_createMessage(QByteArray)));
+		connect(trans, SIGNAL(finished(XMPP::StunMessage)), SLOT(trans_finished(XMPP::StunMessage)));
 		connect(trans, SIGNAL(error(XMPP::StunTransaction::Error)), SLOT(trans_error(XMPP::StunTransaction::Error)));
 		trans->start(pool, stunAddr, stunPort);
 	}
@@ -627,7 +627,7 @@ public:
 			{
 				StunAllocatePermission *perm = new StunAllocatePermission(pool, newPerms[n]);
 				connect(perm, SIGNAL(ready()), SLOT(perm_ready()));
-				connect(perm, SIGNAL(error(XMPP::StunAllocatePermission::Error, const QString &)), SLOT(perm_error(XMPP::StunAllocatePermission::Error, const QString &)));
+				connect(perm, SIGNAL(error(XMPP::StunAllocatePermission::Error,QString)), SLOT(perm_error(XMPP::StunAllocatePermission::Error,QString)));
 				perms += perm;
 				perm->start(stunAddr, stunPort);
 			}
@@ -722,7 +722,7 @@ public:
 
 					StunAllocateChannel *channel = new StunAllocateChannel(pool, channelId, newChannels[n].address, newChannels[n].port);
 					connect(channel, SIGNAL(ready()), SLOT(channel_ready()));
-					connect(channel, SIGNAL(error(XMPP::StunAllocateChannel::Error, const QString &)), SLOT(channel_error(XMPP::StunAllocateChannel::Error, const QString &)));
+					connect(channel, SIGNAL(error(XMPP::StunAllocateChannel::Error,QString)), SLOT(channel_error(XMPP::StunAllocateChannel::Error,QString)));
 					channels += channel;
 
 					if(channelId != -1)
@@ -816,8 +816,8 @@ private:
 	{
 		Q_ASSERT(!trans);
 		trans = new StunTransaction(this);
-		connect(trans, SIGNAL(createMessage(const QByteArray &)), SLOT(trans_createMessage(const QByteArray &)));
-		connect(trans, SIGNAL(finished(const XMPP::StunMessage &)), SLOT(trans_finished(const XMPP::StunMessage &)));
+		connect(trans, SIGNAL(createMessage(QByteArray)), SLOT(trans_createMessage(QByteArray)));
+		connect(trans, SIGNAL(finished(XMPP::StunMessage)), SLOT(trans_finished(XMPP::StunMessage)));
 		connect(trans, SIGNAL(error(XMPP::StunTransaction::Error)), SLOT(trans_error(XMPP::StunTransaction::Error)));
 		trans->start(pool, stunAddr, stunPort);
 	}

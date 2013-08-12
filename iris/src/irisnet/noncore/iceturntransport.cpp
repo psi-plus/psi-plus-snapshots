@@ -55,9 +55,9 @@ public:
 		connect(&turn, SIGNAL(retrying()), SLOT(turn_retrying()));
 		connect(&turn, SIGNAL(activated()), SLOT(turn_activated()));
 		connect(&turn, SIGNAL(readyRead()), SLOT(turn_readyRead()));
-		connect(&turn, SIGNAL(packetsWritten(int, const QHostAddress &, int)), SLOT(turn_packetsWritten(int, const QHostAddress &, int)));
+		connect(&turn, SIGNAL(packetsWritten(int,QHostAddress,int)), SLOT(turn_packetsWritten(int,QHostAddress,int)));
 		connect(&turn, SIGNAL(error(XMPP::TurnClient::Error)), SLOT(turn_error(XMPP::TurnClient::Error)));
-		connect(&turn, SIGNAL(debugLine(const QString &)), SLOT(turn_debugLine(const QString &)));
+		connect(&turn, SIGNAL(debugLine(QString)), SLOT(turn_debugLine(QString)));
 	}
 
 	void start()

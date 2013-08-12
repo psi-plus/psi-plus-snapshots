@@ -333,11 +333,11 @@ public:
 			c.id = n + 1;
 			c.ic = new IceComponent(c.id, this);
 			c.ic->setDebugLevel(IceComponent::DL_Info);
-			connect(c.ic, SIGNAL(candidateAdded(const XMPP::IceComponent::Candidate &)), SLOT(ic_candidateAdded(const XMPP::IceComponent::Candidate &)));
-			connect(c.ic, SIGNAL(candidateRemoved(const XMPP::IceComponent::Candidate &)), SLOT(ic_candidateRemoved(const XMPP::IceComponent::Candidate &)));
+			connect(c.ic, SIGNAL(candidateAdded(XMPP::IceComponent::Candidate)), SLOT(ic_candidateAdded(XMPP::IceComponent::Candidate)));
+			connect(c.ic, SIGNAL(candidateRemoved(XMPP::IceComponent::Candidate)), SLOT(ic_candidateRemoved(XMPP::IceComponent::Candidate)));
 			connect(c.ic, SIGNAL(localFinished()), SLOT(ic_localFinished()));
 			connect(c.ic, SIGNAL(stopped()), SLOT(ic_stopped()));
-			connect(c.ic, SIGNAL(debugLine(const QString &)), SLOT(ic_debugLine(const QString &)));
+			connect(c.ic, SIGNAL(debugLine(QString)), SLOT(ic_debugLine(QString)));
 
 			c.ic->setClientSoftwareNameAndVersion("Iris");
 			c.ic->setProxy(proxy);
@@ -533,7 +533,7 @@ public:
 			Component &c = components[findComponent(lc.info.componentId)];
 
 			pair.pool = new StunTransactionPool(StunTransaction::Udp, this);
-			connect(pair.pool, SIGNAL(outgoingMessage(const QByteArray &, const QHostAddress &, int)), SLOT(pool_outgoingMessage(const QByteArray &, const QHostAddress &, int)));
+			connect(pair.pool, SIGNAL(outgoingMessage(QByteArray,QHostAddress,int)), SLOT(pool_outgoingMessage(QByteArray,QHostAddress,int)));
 			//pair.pool->setUsername(peerUser + ':' + localUser);
 			//pair.pool->setPassword(peerPass.toUtf8());
 
@@ -709,7 +709,7 @@ private slots:
 		if(!iceTransports.contains(cc.iceTransport))
 		{
 			connect(cc.iceTransport, SIGNAL(readyRead(int)), SLOT(it_readyRead(int)));
-			connect(cc.iceTransport, SIGNAL(datagramsWritten(int, int, const QHostAddress &, int)), SLOT(it_datagramsWritten(int, int, const QHostAddress &, int)));
+			connect(cc.iceTransport, SIGNAL(datagramsWritten(int,int,QHostAddress,int)), SLOT(it_datagramsWritten(int,int,QHostAddress,int)));
 
 			iceTransports += cc.iceTransport;
 		}

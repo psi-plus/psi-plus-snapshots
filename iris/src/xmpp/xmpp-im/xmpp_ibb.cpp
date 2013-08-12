@@ -372,17 +372,14 @@ IBBManager::IBBManager(Client *parent)
 
 	d->ibb = new JT_IBB(d->client->rootTask(), true);
 	connect(d->ibb,
-			SIGNAL(incomingRequest(const Jid &, const QString &,
-								   const QString &, int, const QString &)),
-			SLOT(ibb_incomingRequest(const Jid &, const QString &,
-									 const QString &, int,
-									 const QString &)));
+			SIGNAL(incomingRequest(Jid,QString,QString,int,QString)),
+			SLOT(ibb_incomingRequest(Jid,QString,QString,int,QString)));
 	connect(d->ibb,
-			SIGNAL(incomingData(const Jid &, const QString &, const IBBData &, Stanza::Kind)),
-			SLOT(takeIncomingData(const Jid &, const QString &, const IBBData &, Stanza::Kind)));
+			SIGNAL(incomingData(Jid,QString,IBBData,Stanza::Kind)),
+			SLOT(takeIncomingData(Jid,QString,IBBData,Stanza::Kind)));
 	connect(d->ibb,
-			SIGNAL(closeRequest(const Jid &, const QString &, const QString &)),
-			SLOT(ibb_closeRequest(const Jid &, const QString &, const QString &)));
+			SIGNAL(closeRequest(Jid,QString,QString)),
+			SLOT(ibb_closeRequest(Jid,QString,QString)));
 }
 
 IBBManager::~IBBManager()

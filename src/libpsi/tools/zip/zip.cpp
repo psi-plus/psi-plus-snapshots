@@ -32,11 +32,12 @@
 class UnZipPrivate
 {
 public:
-	UnZipPrivate() {}
+	UnZipPrivate() : caseSensitive(UnZip::CS_Default) {}
 
 	QString name;
 	unzFile uf;
 	QStringList listing;
+	UnZip::CaseSensitivity caseSensitive;
 };
 
 UnZip::UnZip(const QString &name)
@@ -50,6 +51,11 @@ UnZip::~UnZip()
 {
 	close();
 	delete d;
+}
+
+void UnZip::setCaseSensitivity(CaseSensitivity state)
+{
+	d->caseSensitive = state;
 }
 
 void UnZip::setName(const QString &name)
@@ -119,7 +125,7 @@ bool UnZip::getList()
 
 bool UnZip::readFile(const QString &fname, QByteArray *buf, int max)
 {
-	int err = unzLocateFile(d->uf, QFile::encodeName(fname).data(), 0);
+	int err = unzLocateFile(d->uf, QFile::encodeName(fname).data(), d->caseSensitive);
 	if(err != UNZ_OK)
 		return false;
 

@@ -245,10 +245,10 @@ public:
 	AppleProvider() :
 		dns(this)
 	{
-		connect(&dns, SIGNAL(queryResult(int, const QDnsSd::QueryResult &)), SLOT(dns_queryResult(int, const QDnsSd::QueryResult &)));
-		connect(&dns, SIGNAL(browseResult(int, const QDnsSd::BrowseResult &)), SLOT(dns_browseResult(int, const QDnsSd::BrowseResult &)));
-		connect(&dns, SIGNAL(resolveResult(int, const QDnsSd::ResolveResult &)), SLOT(dns_resolveResult(int, const QDnsSd::ResolveResult &)));
-		connect(&dns, SIGNAL(regResult(int, const QDnsSd::RegResult &)), SLOT(dns_regResult(int, const QDnsSd::RegResult &)));
+		connect(&dns, SIGNAL(queryResult(int,QDnsSd::QueryResult)), SLOT(dns_queryResult(int,QDnsSd::QueryResult)));
+		connect(&dns, SIGNAL(browseResult(int,QDnsSd::BrowseResult)), SLOT(dns_browseResult(int,QDnsSd::BrowseResult)));
+		connect(&dns, SIGNAL(resolveResult(int,QDnsSd::ResolveResult)), SLOT(dns_resolveResult(int,QDnsSd::ResolveResult)));
+		connect(&dns, SIGNAL(regResult(int,QDnsSd::RegResult)), SLOT(dns_regResult(int,QDnsSd::RegResult)));
 	}
 
 	virtual XMPP::NameProvider *createNameProviderInternet();
@@ -344,7 +344,7 @@ public:
 		global(_global),
 		browse_id(-1)
 	{
-		connect(this, SIGNAL(unavailable_p(const XMPP::ServiceInstance &)), SIGNAL(unavailable(const XMPP::ServiceInstance &)));
+		connect(this, SIGNAL(unavailable_p(XMPP::ServiceInstance)), SIGNAL(unavailable(XMPP::ServiceInstance)));
 	}
 
 	~AppleBrowse()
@@ -493,13 +493,13 @@ public:
 		activeA(false),
 		waitTimer(this)
 	{
-		connect(&nameResolverAaaa, SIGNAL(resultsReady(const QList<XMPP::NameRecord> &)),
-			SLOT(nameAaaa_resultsReady(const QList<XMPP::NameRecord> &)));
+		connect(&nameResolverAaaa, SIGNAL(resultsReady(QList<XMPP::NameRecord>)),
+			SLOT(nameAaaa_resultsReady(QList<XMPP::NameRecord>)));
 		connect(&nameResolverAaaa, SIGNAL(error(XMPP::NameResolver::Error)),
 			SLOT(nameAaaa_error(XMPP::NameResolver::Error)));
 
-		connect(&nameResolverA, SIGNAL(resultsReady(const QList<XMPP::NameRecord> &)),
-			SLOT(nameA_resultsReady(const QList<XMPP::NameRecord> &)));
+		connect(&nameResolverA, SIGNAL(resultsReady(QList<XMPP::NameRecord>)),
+			SLOT(nameA_resultsReady(QList<XMPP::NameRecord>)));
 		connect(&nameResolverA, SIGNAL(error(XMPP::NameResolver::Error)),
 			SLOT(nameA_error(XMPP::NameResolver::Error)));
 
@@ -798,8 +798,8 @@ public:
 		Browse *b = new Browse(this);
 		b->id = idManager.reserveId();
 		b->browse = new AppleBrowse(global, this);
-		connect(b->browse, SIGNAL(available(const XMPP::ServiceInstance &)), SLOT(browse_available(const XMPP::ServiceInstance &)));
-		connect(b->browse, SIGNAL(unavailable(const XMPP::ServiceInstance &)), SLOT(browse_unavailable(const XMPP::ServiceInstance &)));
+		connect(b->browse, SIGNAL(available(XMPP::ServiceInstance)), SLOT(browse_available(XMPP::ServiceInstance)));
+		connect(b->browse, SIGNAL(unavailable(XMPP::ServiceInstance)), SLOT(browse_unavailable(XMPP::ServiceInstance)));
 		connect(b->browse, SIGNAL(error()), SLOT(browse_error()));
 		browseList += b;
 		b->browse->browse(type, domain);
@@ -829,7 +829,7 @@ public:
 		Resolve *r = new Resolve(this);
 		r->id = idManager.reserveId();
 		r->resolve = new AppleBrowseLookup(global, this);
-		connect(r->resolve, SIGNAL(finished(const QList<QHostAddress> &)), SLOT(resolve_finished(const QList<QHostAddress> &)));
+		connect(r->resolve, SIGNAL(finished(QList<QHostAddress>)), SLOT(resolve_finished(QList<QHostAddress>)));
 		connect(r->resolve, SIGNAL(error()), SLOT(resolve_error()));
 		resolveList += r;
 		r->resolve->resolve(parts[0], parts[1], parts[2]);

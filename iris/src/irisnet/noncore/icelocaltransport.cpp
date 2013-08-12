@@ -300,9 +300,9 @@ public:
 
 		pool = new StunTransactionPool(StunTransaction::Udp, this);
 		pool->setDebugLevel((StunTransactionPool::DebugLevel)debugLevel);
-		connect(pool, SIGNAL(outgoingMessage(const QByteArray &, const QHostAddress &, int)), SLOT(pool_outgoingMessage(const QByteArray &, const QHostAddress &, int)));
+		connect(pool, SIGNAL(outgoingMessage(QByteArray,QHostAddress,int)), SLOT(pool_outgoingMessage(QByteArray,QHostAddress,int)));
 		connect(pool, SIGNAL(needAuthParams()), SLOT(pool_needAuthParams()));
-		connect(pool, SIGNAL(debugLine(const QString &)), SLOT(pool_debugLine(const QString &)));
+		connect(pool, SIGNAL(debugLine(QString)), SLOT(pool_debugLine(QString)));
 
 		pool->setLongTermAuthEnabled(true);
 		if(!stunUser.isEmpty())
@@ -333,10 +333,10 @@ public:
 		connect(turn, SIGNAL(tlsHandshaken()), SLOT(turn_tlsHandshaken()));
 		connect(turn, SIGNAL(closed()), SLOT(turn_closed()));
 		connect(turn, SIGNAL(activated()), SLOT(turn_activated()));
-		connect(turn, SIGNAL(packetsWritten(int, const QHostAddress &, int)), SLOT(turn_packetsWritten(int, const QHostAddress &, int)));
+		connect(turn, SIGNAL(packetsWritten(int,QHostAddress,int)), SLOT(turn_packetsWritten(int,QHostAddress,int)));
 		connect(turn, SIGNAL(error(XMPP::TurnClient::Error)), SLOT(turn_error(XMPP::TurnClient::Error)));
-		connect(turn, SIGNAL(outgoingDatagram(const QByteArray &)), SLOT(turn_outgoingDatagram(const QByteArray &)));
-		connect(turn, SIGNAL(debugLine(const QString &)), SLOT(turn_debugLine(const QString &)));
+		connect(turn, SIGNAL(outgoingDatagram(QByteArray)), SLOT(turn_outgoingDatagram(QByteArray)));
+		connect(turn, SIGNAL(debugLine(QString)), SLOT(turn_debugLine(QString)));
 
 		turn->setClientSoftwareNameAndVersion(clientSoftware);
 

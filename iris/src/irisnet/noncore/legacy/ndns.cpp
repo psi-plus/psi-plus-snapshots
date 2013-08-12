@@ -67,7 +67,7 @@ NDns::NDns(QObject *parent)
 {
 	busy = false;
 
-	connect(&dns, SIGNAL(resultsReady(const QList<XMPP::NameRecord> &)), SLOT(dns_resultsReady(const QList<XMPP::NameRecord> &)));
+	connect(&dns, SIGNAL(resultsReady(QList<XMPP::NameRecord>)), SLOT(dns_resultsReady(QList<XMPP::NameRecord>)));
 	connect(&dns, SIGNAL(error(XMPP::NameResolver::Error)), SLOT(dns_error(XMPP::NameResolver::Error)));
 }
 

@@ -393,7 +393,7 @@ FileTransferManager::FileTransferManager(Client *client)
 	}
 
 	d->pft = new JT_PushFT(d->client->rootTask());
-	connect(d->pft, SIGNAL(incoming(const FTRequest &)), SLOT(pft_incoming(const FTRequest &)));
+	connect(d->pft, SIGNAL(incoming(FTRequest)), SLOT(pft_incoming(FTRequest)));
 }
 
 FileTransferManager::~FileTransferManager()

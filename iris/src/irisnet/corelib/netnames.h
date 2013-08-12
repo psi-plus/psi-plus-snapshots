@@ -345,8 +345,8 @@ NameResolver *resolver;
 void do_lookup()
 {
 	resolver = new NameResolver;
-	connect(resolver, SIGNAL(resultsReady(const QList<XMPP::NameRecord> &)),
-		SLOT(dns_resultsReady(const QList<XMPP::NameRecord> &)));
+	connect(resolver, SIGNAL(resultsReady(QList<XMPP::NameRecord>)),
+		SLOT(dns_resultsReady(QList<XMPP::NameRecord>)));
 	connect(resolver, SIGNAL(error(XMPP::NameResolver::Error)),
 		SLOT(dns_error(XMPP::NameResolver::Error)));
 

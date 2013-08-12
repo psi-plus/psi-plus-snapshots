@@ -328,7 +328,7 @@ public:
 			mul = new JDnsShared(JDnsShared::Multicast, this);
 			mul->setDebug(&db, "M");
 
-			connect(&netman, SIGNAL(interfaceAvailable(const QString &)), SLOT(iface_available(const QString &)));
+			connect(&netman, SIGNAL(interfaceAvailable(QString)), SLOT(iface_available(QString)));
 
 			// get the current network interfaces.  this initial
 			//   fetching should not trigger any calls to
@@ -2261,8 +2261,8 @@ public:
 		}
 
 		BrowseItem *i = new BrowseItem(id, new JDnsBrowse(global->mul, this));
-		connect(i->browse, SIGNAL(available(const QByteArray &)), SLOT(jb_available(const QByteArray &)));
-		connect(i->browse, SIGNAL(unavailable(const QByteArray &)), SLOT(jb_unavailable(const QByteArray &)));
+		connect(i->browse, SIGNAL(available(QByteArray)), SLOT(jb_available(QByteArray)));
+		connect(i->browse, SIGNAL(unavailable(QByteArray)), SLOT(jb_unavailable(QByteArray)));
 		browseItemList.insert(i);
 		i->browse->start(type);
 		return i->id;
@@ -2335,7 +2335,7 @@ public:
 		if(!pub_addresses)
 		{
 			pub_addresses = new JDnsPublishAddresses(global->mul, this);
-			connect(pub_addresses, SIGNAL(hostName(const QByteArray &)), SLOT(pub_addresses_hostName(const QByteArray &)));
+			connect(pub_addresses, SIGNAL(hostName(QByteArray)), SLOT(pub_addresses_hostName(QByteArray)));
 			pub_addresses->setUseIPv6(global->haveMulticast6());
 			pub_addresses->setUseIPv4(global->haveMulticast4());
 			pub_addresses->start();

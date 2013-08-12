@@ -170,8 +170,8 @@ public:
 		connect(p.tlsHandler, SIGNAL(success()), SLOT(tlsHandler_success()));
 		connect(p.tlsHandler, SIGNAL(fail()), SLOT(tlsHandler_fail()));
 		connect(p.tlsHandler, SIGNAL(closed()), SLOT(tlsHandler_closed()));
-		connect(p.tlsHandler, SIGNAL(readyRead(const QByteArray &)), SLOT(tlsHandler_readyRead(const QByteArray &)));
-		connect(p.tlsHandler, SIGNAL(readyReadOutgoing(const QByteArray &, int)), SLOT(tlsHandler_readyReadOutgoing(const QByteArray &, int)));
+		connect(p.tlsHandler, SIGNAL(readyRead(QByteArray)), SLOT(tlsHandler_readyRead(QByteArray)));
+		connect(p.tlsHandler, SIGNAL(readyReadOutgoing(QByteArray,int)), SLOT(tlsHandler_readyReadOutgoing(QByteArray,int)));
 	}
 #endif
 
@@ -414,9 +414,9 @@ SecureStream::~SecureStream()
 void SecureStream::linkLayer(QObject *s)
 {
 	connect(s, SIGNAL(tlsHandshaken()), SLOT(layer_tlsHandshaken()));
-	connect(s, SIGNAL(tlsClosed(const QByteArray &)), SLOT(layer_tlsClosed(const QByteArray &)));
-	connect(s, SIGNAL(readyRead(const QByteArray &)), SLOT(layer_readyRead(const QByteArray &)));
-	connect(s, SIGNAL(needWrite(const QByteArray &)), SLOT(layer_needWrite(const QByteArray &)));
+	connect(s, SIGNAL(tlsClosed(QByteArray)), SLOT(layer_tlsClosed(QByteArray)));
+	connect(s, SIGNAL(readyRead(QByteArray)), SLOT(layer_readyRead(QByteArray)));
+	connect(s, SIGNAL(needWrite(QByteArray)), SLOT(layer_needWrite(QByteArray)));
 	connect(s, SIGNAL(error(int)), SLOT(layer_error(int)));
 }
 

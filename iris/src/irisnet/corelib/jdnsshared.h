@@ -39,8 +39,8 @@ class JDnsSharedDebugPrivate;
 
 \code
 JDnsSharedDebug *db = new JDnsSharedDebug;
-connect(db, SIGNAL(debugLinesReady(const QStringList &)),
-	SLOT(db_debugLinesReady(const QStringList &)));
+connect(db, SIGNAL(debugLinesReady(QStringList)),
+	SLOT(db_debugLinesReady(QStringList)));
 
 JDnsShared *jdnsShared1 = new JDnsShared(JDnsShared::UnicastInternet);
 jdnsShared1->setDebug(db, "U");

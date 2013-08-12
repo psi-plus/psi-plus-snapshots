@@ -96,9 +96,9 @@ public:
 
 	App()
 	{
-		connect(&jdns, SIGNAL(resultsReady(int, const QJDns::Response &)), SLOT(jdns_resultsReady(int, const QJDns::Response &)));
+		connect(&jdns, SIGNAL(resultsReady(int,QJDns::Response)), SLOT(jdns_resultsReady(int,QJDns::Response)));
 		connect(&jdns, SIGNAL(published(int)), SLOT(jdns_published(int)));
-		connect(&jdns, SIGNAL(error(int, QJDns::Error)), SLOT(jdns_error(int, QJDns::Error)));
+		connect(&jdns, SIGNAL(error(int,QJDns::Error)), SLOT(jdns_error(int,QJDns::Error)));
 		connect(&jdns, SIGNAL(shutdownFinished()), SLOT(jdns_shutdownFinished()));
 		connect(&jdns, SIGNAL(debugLinesReady()), SLOT(jdns_debugLinesReady()));
 	}

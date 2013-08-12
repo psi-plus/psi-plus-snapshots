@@ -27,9 +27,17 @@ class QStringList;
 class UnZip
 {
 public:
+	enum CaseSensitivity
+	{
+		CS_Default = 0, // system default
+		CS_Sensitive = 1,
+		CS_Insensitive = 2
+	};
+
 	UnZip(const QString &fname="");
 	~UnZip();
 
+	void setCaseSensitivity(CaseSensitivity state = CS_Default);
 	void setName(const QString &);
 	const QString & name() const;
 

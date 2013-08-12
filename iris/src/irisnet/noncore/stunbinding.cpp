@@ -73,8 +73,8 @@ public:
 		stunPort = _port;
 
 		trans = new StunTransaction(this);
-		connect(trans, SIGNAL(createMessage(const QByteArray &)), SLOT(trans_createMessage(const QByteArray &)));
-		connect(trans, SIGNAL(finished(const XMPP::StunMessage &)), SLOT(trans_finished(const XMPP::StunMessage &)));
+		connect(trans, SIGNAL(createMessage(QByteArray)), SLOT(trans_createMessage(QByteArray)));
+		connect(trans, SIGNAL(finished(XMPP::StunMessage)), SLOT(trans_finished(XMPP::StunMessage)));
 		connect(trans, SIGNAL(error(XMPP::StunTransaction::Error)), SLOT(trans_error(XMPP::StunTransaction::Error)));
 
 		if(!stuser.isEmpty())

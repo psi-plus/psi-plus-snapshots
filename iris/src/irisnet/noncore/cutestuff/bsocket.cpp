@@ -251,7 +251,7 @@ void BSocket::connectToHost(const QString &host, quint16 port, QAbstractSocket::
 			break;
 	}
 
-	connect(d->resolver, SIGNAL(resultReady(const QHostAddress&, quint16)), this, SLOT(handle_dns_ready(const QHostAddress&, quint16)));
+	connect(d->resolver, SIGNAL(resultReady(QHostAddress,quint16)), this, SLOT(handle_dns_ready(QHostAddress,quint16)));
 	connect(d->resolver, SIGNAL(error(XMPP::ServiceResolver::Error)), this, SLOT(handle_dns_error(XMPP::ServiceResolver::Error)));
 	d->resolver->start(host, port);
 }
@@ -270,7 +270,7 @@ void BSocket::connectToHost(const QString &service, const QString &transport, co
 	/* cleanup resolver for the new query */
 	recreate_resolver();
 
-	connect(d->resolver, SIGNAL(resultReady(const QHostAddress&, quint16)), this, SLOT(handle_dns_ready(const QHostAddress&, quint16)));
+	connect(d->resolver, SIGNAL(resultReady(QHostAddress,quint16)), this, SLOT(handle_dns_ready(QHostAddress,quint16)));
 	connect(d->resolver, SIGNAL(error(XMPP::ServiceResolver::Error)), this, SLOT(handle_dns_error(XMPP::ServiceResolver::Error)));
 	d->resolver->start(service, transport, domain, port);
 }

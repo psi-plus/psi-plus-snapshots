@@ -221,7 +221,7 @@ public:
 				connect(lt->sock, SIGNAL(stopped()), SLOT(lt_stopped()));
 				connect(lt->sock, SIGNAL(addressesChanged()), SLOT(lt_addressesChanged()));
 				connect(lt->sock, SIGNAL(error(int)), SLOT(lt_error(int)));
-				connect(lt->sock, SIGNAL(debugLine(const QString &)), SLOT(lt_debugLine(const QString &)));
+				connect(lt->sock, SIGNAL(debugLine(QString)), SLOT(lt_debugLine(QString)));
 				localLeap += lt;
 
 				lt->sock->start(qsock);
@@ -303,7 +303,7 @@ public:
 				connect(lt->sock, SIGNAL(stopped()), SLOT(lt_stopped()));
 				connect(lt->sock, SIGNAL(addressesChanged()), SLOT(lt_addressesChanged()));
 				connect(lt->sock, SIGNAL(error(int)), SLOT(lt_error(int)));
-				connect(lt->sock, SIGNAL(debugLine(const QString &)), SLOT(lt_debugLine(const QString &)));
+				connect(lt->sock, SIGNAL(debugLine(QString)), SLOT(lt_debugLine(QString)));
 				localStun += lt;
 
 				lt->sock->setClientSoftwareNameAndVersion(clientSoftware);
@@ -328,7 +328,7 @@ public:
 			connect(tt, SIGNAL(started()), SLOT(tt_started()));
 			connect(tt, SIGNAL(stopped()), SLOT(tt_stopped()));
 			connect(tt, SIGNAL(error(int)), SLOT(tt_error(int)));
-			connect(tt, SIGNAL(debugLine(const QString &)), SLOT(tt_debugLine(const QString &)));
+			connect(tt, SIGNAL(debugLine(QString)), SLOT(tt_debugLine(QString)));
 			tt->setClientSoftwareNameAndVersion(clientSoftware);
 			tt->setProxy(proxy);
 			tt->setUsername(config.stunRelayTcpUser);

@@ -817,8 +817,8 @@ void ClientStream::srvProcessNext()
 			else if(need == CoreProtocol::NSASLMechs) {
 				if(!d->sasl) {
 					d->sasl = new QCA::SASL;
-					connect(d->sasl, SIGNAL(authCheck(const QString &, const QString &)), SLOT(sasl_authCheck(const QString &, const QString &)));
-					connect(d->sasl, SIGNAL(nextStep(const QByteArray &)), SLOT(sasl_nextStep(const QByteArray &)));
+					connect(d->sasl, SIGNAL(authCheck(QString,QString)), SLOT(sasl_authCheck(QString,QString)));
+					connect(d->sasl, SIGNAL(nextStep(QByteArray)), SLOT(sasl_nextStep(QByteArray)));
 					connect(d->sasl, SIGNAL(authenticated()), SLOT(sasl_authenticated()));
 					connect(d->sasl, SIGNAL(error()), SLOT(sasl_error()));
 
@@ -1135,9 +1135,9 @@ bool ClientStream::handleNeed()
 			}
 
 			d->sasl = new QCA::SASL();
-			connect(d->sasl, SIGNAL(clientStarted(bool,const QByteArray&)), SLOT(sasl_clientFirstStep(bool, const QByteArray&)));
-			connect(d->sasl, SIGNAL(nextStep(const QByteArray &)), SLOT(sasl_nextStep(const QByteArray &)));
-			connect(d->sasl, SIGNAL(needParams(const QCA::SASL::Params&)), SLOT(sasl_needParams(const QCA::SASL::Params&)));
+			connect(d->sasl, SIGNAL(clientStarted(bool,QByteArray)), SLOT(sasl_clientFirstStep(bool,QByteArray)));
+			connect(d->sasl, SIGNAL(nextStep(QByteArray)), SLOT(sasl_nextStep(QByteArray)));
+			connect(d->sasl, SIGNAL(needParams(QCA::SASL::Params)), SLOT(sasl_needParams(QCA::SASL::Params)));
 			connect(d->sasl, SIGNAL(authenticated()), SLOT(sasl_authenticated()));
 			connect(d->sasl, SIGNAL(error()), SLOT(sasl_error()));
 

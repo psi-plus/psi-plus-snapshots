@@ -131,10 +131,10 @@ public:
 	App()
 	{
 		dns = new QDnsSd(this);
-		connect(dns, SIGNAL(queryResult(int, const QDnsSd::QueryResult &)), SLOT(dns_queryResult(int, const QDnsSd::QueryResult &)));
-		connect(dns, SIGNAL(browseResult(int, const QDnsSd::BrowseResult &)), SLOT(dns_browseResult(int, const QDnsSd::BrowseResult &)));
-		connect(dns, SIGNAL(resolveResult(int, const QDnsSd::ResolveResult &)), SLOT(dns_resolveResult(int, const QDnsSd::ResolveResult &)));
-		connect(dns, SIGNAL(regResult(int, const QDnsSd::RegResult &)), SLOT(dns_regResult(int, const QDnsSd::RegResult &)));
+		connect(dns, SIGNAL(queryResult(int,QDnsSd::QueryResult)), SLOT(dns_queryResult(int,QDnsSd::QueryResult)));
+		connect(dns, SIGNAL(browseResult(int,QDnsSd::BrowseResult)), SLOT(dns_browseResult(int,QDnsSd::BrowseResult)));
+		connect(dns, SIGNAL(resolveResult(int,QDnsSd::ResolveResult)), SLOT(dns_resolveResult(int,QDnsSd::ResolveResult)));
+		connect(dns, SIGNAL(regResult(int,QDnsSd::RegResult)), SLOT(dns_regResult(int,QDnsSd::RegResult)));
 	}
 
 public slots:

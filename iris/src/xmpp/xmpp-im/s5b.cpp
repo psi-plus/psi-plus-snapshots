@@ -403,7 +403,7 @@ void S5BConnection::man_clientReady(SocksClient *sc, SocksUDP *sc_udp)
 
 	if(sc_udp) {
 		d->su = sc_udp;
-		connect(d->su, SIGNAL(packetReady(const QByteArray &)), SLOT(su_packetReady(const QByteArray &)));
+		connect(d->su, SIGNAL(packetReady(QByteArray)), SLOT(su_packetReady(QByteArray)));
 	}
 
 	d->state = Active;
@@ -590,9 +590,9 @@ S5BManager::S5BManager(Client *parent)
 	d->serv = 0;
 
 	d->ps = new JT_PushS5B(d->client->rootTask());
-	connect(d->ps, SIGNAL(incoming(const S5BRequest &)), SLOT(ps_incoming(const S5BRequest &)));
-	connect(d->ps, SIGNAL(incomingUDPSuccess(const Jid &, const QString &)), SLOT(ps_incomingUDPSuccess(const Jid &, const QString &)));
-	connect(d->ps, SIGNAL(incomingActivate(const Jid &, const QString &, const Jid &)), SLOT(ps_incomingActivate(const Jid &, const QString &, const Jid &)));
+	connect(d->ps, SIGNAL(incoming(S5BRequest)), SLOT(ps_incoming(S5BRequest)));
+	connect(d->ps, SIGNAL(incomingUDPSuccess(Jid,QString)), SLOT(ps_incomingUDPSuccess(Jid,QString)));
+	connect(d->ps, SIGNAL(incomingActivate(Jid,QString,Jid)), SLOT(ps_incomingActivate(Jid,QString,Jid)));
 }
 
 S5BManager::~S5BManager()
@@ -1000,7 +1000,7 @@ void S5BManager::entryContinue(Entry *e)
 	e->i->proxy = e->proxyInfo;
 
 	connect(e->i, SIGNAL(accepted()), SLOT(item_accepted()));
-	connect(e->i, SIGNAL(tryingHosts(const StreamHostList &)), SLOT(item_tryingHosts(const StreamHostList &)));
+	connect(e->i, SIGNAL(tryingHosts(StreamHostList)), SLOT(item_tryingHosts(StreamHostList)));
 	connect(e->i, SIGNAL(proxyConnect()), SLOT(item_proxyConnect()));
 	connect(e->i, SIGNAL(waitingForActivation()), SLOT(item_waitingForActivation()));
 	connect(e->i, SIGNAL(connected()), SLOT(item_connected()));
@@ -1983,7 +1983,7 @@ public:
 	{
 		client = c;
 		connect(client, SIGNAL(incomingMethods(int)), SLOT(sc_incomingMethods(int)));
-		connect(client, SIGNAL(incomingConnectRequest(const QString &, int)), SLOT(sc_incomingConnectRequest(const QString &, int)));
+		connect(client, SIGNAL(incomingConnectRequest(QString,int)), SLOT(sc_incomingConnectRequest(QString,int)));
 		connect(client, SIGNAL(error(int)), SLOT(sc_error(int)));
 
 		connect(&expire, SIGNAL(timeout()), SLOT(doError()));
@@ -2051,7 +2051,7 @@ S5BServer::S5BServer(QObject *parent)
 {
 	d = new Private;
 	connect(&d->serv, SIGNAL(incomingReady()), SLOT(ss_incomingReady()));
-	connect(&d->serv, SIGNAL(incomingUDP(const QString &, int, const QHostAddress &, int, const QByteArray &)), SLOT(ss_incomingUDP(const QString &, int, const QHostAddress &, int, const QByteArray &)));
+	connect(&d->serv, SIGNAL(incomingUDP(QString,int,QHostAddress,int,QByteArray)), SLOT(ss_incomingUDP(QString,int,QHostAddress,int,QByteArray)));
 }
 
 S5BServer::~S5BServer()
