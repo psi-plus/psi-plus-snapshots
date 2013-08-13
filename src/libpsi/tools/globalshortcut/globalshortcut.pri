@@ -9,7 +9,7 @@ win32: {
 	SOURCES += $$PWD/globalshortcutmanager_win.cpp
 }
 mac: {
-	QMAKE_OBJECTIVE_CFLAGS += -std=gnu99
+	*g++*:QMAKE_OBJECTIVE_CFLAGS += -std=gnu99
 	SOURCES += \
 		$$PWD/globalshortcutmanager_mac.mm \
 		$$PWD/NDKeyboardLayout.m
