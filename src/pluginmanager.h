@@ -68,6 +68,7 @@ public:
 
 	QString pluginInfo(const QString& plugin) const;
 	bool hasInfoProvider(const QString& plugin) const;
+	QIcon icon(const QString& plugin) const;
 
 	static const QString loadOptionPrefix;
 	static const QString pluginOptionPrefix;

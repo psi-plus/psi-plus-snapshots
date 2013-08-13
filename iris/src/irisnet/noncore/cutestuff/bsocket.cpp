@@ -377,10 +377,13 @@ qint64 BSocket::writeData(const char *data, qint64 maxSize)
 
 qint64 BSocket::readData(char *data, qint64 maxSize)
 {
+	if(!maxSize) {
+		return 0;
+	}
 	quint64 readSize;
 	if(d->qsock) {
-	   int max = bytesAvailable();
-	   if(maxSize <= 0 || maxSize > max) {
+		int max = bytesAvailable();
+		if(maxSize <= 0 || maxSize > max) {
 			maxSize = max;
 		}
 		readSize = d->qsock->read(data, maxSize);

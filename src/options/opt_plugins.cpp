@@ -100,7 +100,7 @@ void OptionsTabPlugins::listPlugins()
 	QStringList plugins = pm->availablePlugins();
 	plugins.sort();
 	foreach (const QString& plugin, plugins){
-		d->cb_plugins->addItem(plugin);
+		d->cb_plugins->addItem(pm->icon(plugin), plugin);
 	}
 	pluginSelected(0);
 }

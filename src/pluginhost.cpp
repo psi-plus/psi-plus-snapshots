@@ -155,6 +155,16 @@ int PluginHost::priority() const
 }
 
 /**
+ * \brief Returns plugin icon.
+ *
+ * Data is available also when plugin is not loaded.
+ */
+const QIcon& PluginHost::icon() const
+{
+	return icon_;
+}
+
+/**
  * \brief Returns plugin options widget.
  *
  * Always returns null if plugin is not currently loaded.
@@ -218,6 +228,10 @@ bool PluginHost::load()
 				shortName_ = psiPlugin->shortName();
 				version_ = psiPlugin->version();
 				priority_ = psiPlugin->priority();
+				icon_ = QIcon(psiPlugin->icon());
+				// FIXME No icon if plugin disabled.
+				// I don't know how but this workaround works.
+				icon_.availableSizes();
 				PluginInfoProvider *pip = qobject_cast<PluginInfoProvider*>(plugin_);
 				if (pip) {
 					hasInfo_ = true;

@@ -61,6 +61,7 @@ public:
 	const QString& shortName() const;
 	const QString& version() const;
 	int priority() const;
+	const QIcon& icon() const;
 
 	// loading
 	bool load();
@@ -197,6 +198,7 @@ private:
 	QString shortName_;
 	QString version_;
 	int priority_;
+	QIcon icon_;
 	QPluginLoader* loader_;
 	Iconset* iconset_;
 

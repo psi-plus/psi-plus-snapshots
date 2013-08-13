@@ -759,6 +759,16 @@ QString PluginManager::pluginInfo(const QString& plugin) const
 	return info;
 }
 
+QIcon PluginManager::icon(const QString& plugin) const
+{
+	QIcon icon;
+	if (hosts_.contains(plugin)) {
+		icon = hosts_[plugin]->icon();
+	}
+
+	return icon;
+}
+
 /**
  * Tells the plugin manager about an XMPP::Client and the owning PsiAccount
  */
