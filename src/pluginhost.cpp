@@ -229,9 +229,6 @@ bool PluginHost::load()
 				version_ = psiPlugin->version();
 				priority_ = psiPlugin->priority();
 				icon_ = QIcon(psiPlugin->icon());
-				// FIXME No icon if plugin disabled.
-				// I don't know how but this workaround works.
-				icon_.availableSizes();
 				PluginInfoProvider *pip = qobject_cast<PluginInfoProvider*>(plugin_);
 				if (pip) {
 					hasInfo_ = true;

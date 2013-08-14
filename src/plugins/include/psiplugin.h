@@ -111,7 +111,7 @@ public:
 	virtual void applyOptions() = 0;
 	virtual void restoreOptions() = 0;
 
-	virtual QIcon icon() const = 0;
+	virtual QPixmap icon() const = 0;
 };
 
 Q_DECLARE_INTERFACE(PsiPlugin, "org.psi-im.PsiPlugin/0.4");
