@@ -1109,8 +1109,10 @@ void PluginHost::addToolBarButton(QObject* parent, QWidget* toolbar, int account
 			}
 		}
 		QAction *act = ta->getAction(parent, account, contact);
-		if(act)
+		if(act) {
+			act->setObjectName(shortName_);
 			toolbar->addAction(act);
+		}
 	}
 }
 

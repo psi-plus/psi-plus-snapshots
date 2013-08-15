@@ -46,6 +46,7 @@ public:
 	void loadEnabledPlugins();
 	bool unloadAllPlugins();
 
+	bool isEnabled(const QString& plugin) const;
 	QString pathToPlugin(const QString& plugin) const;
 	QString shortName(const QString& plugin) const;
 	QString version(const QString& plugin) const;

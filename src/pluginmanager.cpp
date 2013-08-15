@@ -257,6 +257,15 @@ bool PluginManager::unloadAllPlugins()
 	return ok;
 }
 
+bool PluginManager::isEnabled(const QString& plugin) const
+{
+	bool enabled = false;
+	if (hosts_.contains(plugin)) {
+		enabled = hosts_[plugin]->isEnabled();
+	}
+	return enabled;
+}
+
 /**
  * Find the file which provides the named plugin. If the named plugin is not
  * known, an empty string is provided.

@@ -100,7 +100,12 @@ void OptionsTabPlugins::listPlugins()
 	QStringList plugins = pm->availablePlugins();
 	plugins.sort();
 	foreach (const QString& plugin, plugins){
-		d->cb_plugins->addItem(pm->icon(plugin), plugin);
+		QIcon icon = pm->icon(plugin);
+
+		if (!pm->isEnabled(plugin)) {
+			icon = QIcon(icon.pixmap(icon.availableSizes().at(0), QIcon::Disabled));
+		}
+		d->cb_plugins->addItem(icon, plugin);
 	}
 	pluginSelected(0);
 }
@@ -112,12 +117,23 @@ void OptionsTabPlugins::loadToggled(bool state)
 
 	OptPluginsUI *d = (OptPluginsUI *)w;
 
+	PluginManager *pm = PluginManager::instance();
+	QString name = d->cb_plugins->currentText();
+
 	QString option=QString("%1.%2")
 		.arg(PluginManager::loadOptionPrefix)
-		.arg(PluginManager::instance()->shortName(d->cb_plugins->currentText()));
+		.arg(pm->shortName(name));
 	PsiOptions::instance()->setOption(option, state);
 
 	pluginSelected(0);
+
+	QIcon icon = pm->icon(name);
+	if (!pm->isEnabled(name)) {
+		icon = QIcon(icon.pixmap(icon.availableSizes().at(0), QIcon::Disabled));
+	}
+
+	d->cb_plugins->setItemIcon(d->cb_plugins->currentIndex(), icon);
+
 }
 
 void OptionsTabPlugins::pluginSelected(int index)
