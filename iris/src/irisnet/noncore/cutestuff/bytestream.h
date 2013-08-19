@@ -37,6 +37,7 @@ public:
 	ByteStream(QObject *parent=0);
 	~ByteStream()=0;
 
+	bool isSequential() const { return true; }
 	qint64 bytesAvailable() const;
 	qint64 bytesToWrite() const;
 
