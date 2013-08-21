@@ -18,7 +18,16 @@
  *
  */
 
-#include <QtGui>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+#include <QTableWidgetItem>
+#include <QTableWidget>
+#include <QLineEdit>
+#include <QCheckBox>
+#include <QHeaderView>
+#include <QPushButton>
+#include <QTextEdit>
+#include <QLabel>
 #include <QApplication>
 #include <QMap>
 #include <QAction>
@@ -30,84 +39,92 @@
 #include "activetabaccessor.h"
 #include "activetabaccessinghost.h"
 #include "plugininfoprovider.h"
-#include "toolbariconaccessor.h"
-#include "gctoolbariconaccessor.h"
+#include "chattabaccessor.h"
 
 #define constOld "oldsymbol"
 #define constNew "newsymbol"
 #define constShortCut "shortcut"
 #define constNotTranslate "nottranslate"
-#define constVersion "0.4.4"
+#define constVersion "0.4.5"
 
 static const QString mucData = "groupchat";
 static const QString chatData = "chat";
 
-class TranslatePlugin : public QObject, public PsiPlugin, public OptionAccessor, public ShortcutAccessor, public ActiveTabAccessor, public PluginInfoProvider
-		, public ToolbarIconAccessor, public GCToolbarIconAccessor
+class TranslatePlugin : public QObject
+					  , public PsiPlugin
+					  , public OptionAccessor
+					  , public ShortcutAccessor
+					  , public ActiveTabAccessor
+					  , public PluginInfoProvider
+					  , public ChatTabAccessor
 {
-        Q_OBJECT
-	Q_INTERFACES(PsiPlugin OptionAccessor ShortcutAccessor ActiveTabAccessor PluginInfoProvider ToolbarIconAccessor GCToolbarIconAccessor)
+	Q_OBJECT
+#ifdef HAVE_QT5
+	Q_PLUGIN_METADATA(IID "com.psi-plus.TranslatePlugin")
+#endif
+	Q_INTERFACES(PsiPlugin OptionAccessor ShortcutAccessor ActiveTabAccessor PluginInfoProvider ChatTabAccessor)
 
 public:
 	TranslatePlugin();
-        virtual QString name() const;
-        virtual QString shortName() const;
-        virtual QString version() const;
-        virtual QWidget* options();
-        virtual bool enable();
-        virtual bool disable();
+	virtual QString name() const;
+	virtual QString shortName() const;
+	virtual QString version() const;
+	virtual QWidget* options();
+	virtual bool enable();
+	virtual bool disable();
 
-        virtual void applyOptions();
-        virtual void restoreOptions();
+	virtual void applyOptions();
+	virtual void restoreOptions();
 
-        // OptionAccessor
-        virtual void setOptionAccessingHost(OptionAccessingHost* host);
-        virtual void optionChanged(const QString& option);
+	// OptionAccessor
+	virtual void setOptionAccessingHost(OptionAccessingHost* host);
+	virtual void optionChanged(const QString& option);
 
 	// ShortcutsAccessor
 	virtual void setShortcutAccessingHost(ShortcutAccessingHost* host);
 	virtual void setShortcuts();
-        //ActiveTabAccessor
-        virtual void setActiveTabAccessingHost(ActiveTabAccessingHost* host);
-	//Toolbars
-	virtual QList < QVariantHash > getButtonParam() { return QList < QVariantHash >(); }
-	virtual QAction* getAction(QObject* parent, int account, const QString& contact);
-
-	virtual QList < QVariantHash > getGCButtonParam() { return QList < QVariantHash >(); }
-	virtual QAction* getGCAction(QObject* parent, int account, const QString& contact);
+	//ActiveTabAccessor
+	virtual void setActiveTabAccessingHost(ActiveTabAccessingHost* host);
+	//Tabs
+	virtual void setupChatTab(QWidget* tab, int account, const QString& contact);
+	virtual void setupGCTab(QWidget* tab, int account, const QString& contact);
 
 	virtual QString pluginInfo();
 	virtual QPixmap icon() const;
 
 private slots:
-        void trans();
-        void addToMap();
-        void del();
-        void grep();
-        void onNewShortcutKey(QKeySequence);
-        void changeItem(int,int);
-        void storeItem(QTableWidgetItem*);
-        void restoreMap();
+	void trans();
+	void addToMap();
+	void del();
+	void grep();
+	void onNewShortcutKey(QKeySequence);
+	void changeItem(int,int);
+	void storeItem(QTableWidgetItem*);
+	void restoreMap();
 	void hack();
 	void actionDestroyed(QObject* obj);
+
 private:
-        bool enabled_;
-        bool notTranslate;
+	void setupTab(QWidget* tab, const QString& data);
+	bool enabled_;
+	bool notTranslate;
 	QMap<QString,QString> map;
 	QMap<QString,QString> mapBakup;
-        QTableWidget * table;
-        QLineEdit *shortCutWidget;
-        OptionAccessingHost* psiOptions;
+	QTableWidget * table;
+	QLineEdit *shortCutWidget;
+	OptionAccessingHost* psiOptions;
 	ShortcutAccessingHost* psiShortcuts;
-        ActiveTabAccessingHost* activeTab;
-        QString shortCut;
-        QCheckBox *check_button;
-        QString storage;
+	ActiveTabAccessingHost* activeTab;
+	QString shortCut;
+	QCheckBox *check_button;
+	QString storage;
 	QPointer<QWidget> options_;
 	QList<QAction *> actions_;
 };
 
+#ifndef HAVE_QT5
 Q_EXPORT_PLUGIN(TranslatePlugin);
+#endif
 
 TranslatePlugin::TranslatePlugin()
 	: enabled_(false)
@@ -200,24 +217,24 @@ TranslatePlugin::TranslatePlugin()
 
 QString TranslatePlugin::name() const
 {
-        return "Translate Plugin";
+	return "Translate Plugin";
 }
 
 QString TranslatePlugin::shortName() const
 {
-        return "Translate";
+	return "Translate";
 }
 
 QString TranslatePlugin::version() const
 {
-        return constVersion;
+	return constVersion;
 }
 
 QWidget* TranslatePlugin::options()
 {
-        if (!enabled_) {
-                return 0;
-        }
+	if (!enabled_) {
+		return 0;
+	}
 	options_ = new QWidget();
 	table = new QTableWidget(options_);
 	table->setColumnCount(2);
@@ -283,11 +300,11 @@ QWidget* TranslatePlugin::options()
 
 bool TranslatePlugin::enable()
 {
-        enabled_ = true;
+	enabled_ = true;
 
 	shortCut = psiOptions->getPluginOption(constShortCut, shortCut).toString();
 	notTranslate = psiOptions->getPluginOption(constNotTranslate, notTranslate).toBool();
-//	psiShortcuts->connectShortcut(QKeySequence(shortCut),this, SLOT(trans()));
+	//	psiShortcuts->connectShortcut(QKeySequence(shortCut),this, SLOT(trans()));
 
 	foreach(QAction* act, actions_) {
 		act->setShortcut(QKeySequence(shortCut));
@@ -295,24 +312,24 @@ bool TranslatePlugin::enable()
 
 	QStringList oldList = psiOptions->getPluginOption(constOld, QStringList(map.keys())).toStringList();
 	QStringList newList = psiOptions->getPluginOption(constNew, QStringList(map.values())).toStringList();
-        int iterator = 0;
+	int iterator = 0;
 	map.clear();
 	foreach(const QString& symbol, oldList){
 		map.insert(symbol, newList.at(iterator++));
 	}
 
-        return true;
+	return true;
 }
 
 bool TranslatePlugin::disable()
 {
-        enabled_ = false;
+	enabled_ = false;
 	foreach(QAction* act, actions_) {
 		act->disconnect(this, SLOT(trans()));
 	}
 
-//	psiShortcuts->disconnectShortcut(QKeySequence(shortCut),this, SLOT(trans()));
-        return true;
+	//	psiShortcuts->disconnectShortcut(QKeySequence(shortCut),this, SLOT(trans()));
+	return true;
 }
 
 void TranslatePlugin::trans()
@@ -413,24 +430,24 @@ void TranslatePlugin::addToMap()
 
 void TranslatePlugin::setOptionAccessingHost(OptionAccessingHost* host)
 {
-        psiOptions = host;
+	psiOptions = host;
 }
 
 void TranslatePlugin::optionChanged(const QString& option)
 {
-        Q_UNUSED(option);
+	Q_UNUSED(option);
 }
 
 void TranslatePlugin::setShortcutAccessingHost(ShortcutAccessingHost* host)
 {
-        psiShortcuts = host;
+	psiShortcuts = host;
 }
 
 void TranslatePlugin::setShortcuts()
 {
-//	if (enabled_) {
-//		psiShortcuts->connectShortcut(QKeySequence(shortCut), this, SLOT(trans()));
-//	}
+	//	if (enabled_) {
+	//		psiShortcuts->connectShortcut(QKeySequence(shortCut), this, SLOT(trans()));
+	//	}
 }
 
 void TranslatePlugin::applyOptions()
@@ -438,25 +455,25 @@ void TranslatePlugin::applyOptions()
 	if (!options_)
 		return;
 
-//	psiShortcuts->disconnectShortcut(QKeySequence(shortCut), this, SLOT(trans()));
+	//	psiShortcuts->disconnectShortcut(QKeySequence(shortCut), this, SLOT(trans()));
 	shortCut = shortCutWidget->text();
 	psiOptions->setPluginOption(constShortCut, shortCut);
 	foreach(QAction* act, actions_) {
 		act->setShortcut(QKeySequence(shortCut));
 	}
 
-//	psiShortcuts->connectShortcut(QKeySequence(shortCut), this, SLOT(trans()));
+	//	psiShortcuts->connectShortcut(QKeySequence(shortCut), this, SLOT(trans()));
 
 	notTranslate = check_button->isChecked();
 	psiOptions->setPluginOption(constNotTranslate, notTranslate);
 
 	map.clear();
-        int count = table->rowCount();
+	int count = table->rowCount();
 	for (int row = 0 ; row < count; row++) {
 		if (!table->item(row,0)->text().isEmpty() && !table->item(row,1)->text().isEmpty()) {
 			map.insert(table->item(row,0)->text().left(1),table->item(row,1)->text());
 		}
-        }
+	}
 
 	psiOptions->setPluginOption(constOld, QStringList(map.keys()));
 	psiOptions->setPluginOption(constNew, QStringList(map.values()));
@@ -542,30 +559,26 @@ void TranslatePlugin::hack()
 	check_button->toggle();
 }
 
-QAction* TranslatePlugin::getAction(QObject* parent, int /*account*/, const QString& /*contact*/)
+void TranslatePlugin::setupTab(QWidget* tab, const QString& data)
 {
-	QAction* act = new QAction(parent);
-	((QWidget*)parent)->addAction(act);
-	act->setData(chatData);
+	QAction* act = new QAction(tab);
+	tab->addAction(act);
+	act->setData(data);
 	act->setShortcut(QKeySequence(shortCut));
 	act->setShortcutContext(Qt::WindowShortcut);
 	connect(act, SIGNAL(triggered()), SLOT(trans()));
 	connect(act, SIGNAL(destroyed(QObject*)), SLOT(actionDestroyed(QObject*)));
 	actions_.append(act);
-	return 0; //we dont want this action will be visible
 }
 
-QAction* TranslatePlugin::getGCAction(QObject* parent, int /*account*/, const QString& /*contact*/)
+void TranslatePlugin::setupChatTab(QWidget* tab, int /*account*/, const QString& /*contact*/)
 {
-	QAction* act = new QAction(parent);
-	((QWidget*)parent)->addAction(act);
-	act->setData(mucData);
-	act->setShortcut(QKeySequence(shortCut));
-	act->setShortcutContext(Qt::WindowShortcut);
-	connect(act, SIGNAL(triggered()), SLOT(trans()));
-	connect(act, SIGNAL(destroyed(QObject*)), SLOT(actionDestroyed(QObject*)));
-	actions_.append(act);
-	return 0; //we dont want this action will be visible
+	setupTab(tab, chatData);
+}
+
+void TranslatePlugin::setupGCTab(QWidget* tab, int /*account*/, const QString& /*contact*/)
+{
+	setupTab(tab, mucData);
 }
 
 void TranslatePlugin::actionDestroyed(QObject *obj)
@@ -576,8 +589,8 @@ void TranslatePlugin::actionDestroyed(QObject *obj)
 
 QString TranslatePlugin::pluginInfo()
 {
-	return tr("Author: ") +  "VampiRUS\n\n"
-			+ trUtf8("This plugin allows you to convert selected text into another language.\n");
+	return tr("Author: ") +	 "VampiRUS\n\n"
+	       + trUtf8("This plugin allows you to convert selected text into another language.\n");
 }
 
 QPixmap TranslatePlugin::icon() const
