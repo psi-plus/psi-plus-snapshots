@@ -176,6 +176,12 @@ public:
 	void addAccountMenu(QMenu *menu, int account);
 	void addContactMenu(QMenu *menu, int account, const QString& jid);
 
+	//ChatTabAccessor
+	void setupChatTab(QWidget* tab, int account, const QString& contact);
+
+	// GCTabAccessor
+	void setupGCTab(QWidget* tab, int account, const QString& contact);
+
 	void applyOptions();
 	void restoreOptions();
 

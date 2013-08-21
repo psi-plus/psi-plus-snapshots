@@ -752,6 +752,22 @@ void PluginManager::addContactMenu(QMenu* menu, PsiAccount *account, QString jid
 	}
 }
 
+void PluginManager::setupChatTab(QWidget *tab, PsiAccount *account, const QString& contact)
+{
+	int i = accountIds_.value(account);
+	foreach (PluginHost* host, pluginsByPriority_) {
+		host->setupChatTab(tab, i, contact);
+	}
+}
+
+void PluginManager::setupGCTab(QWidget *tab, PsiAccount *account, const QString& contact)
+{
+	int i = accountIds_.value(account);
+	foreach (PluginHost* host, pluginsByPriority_) {
+		host->setupGCTab(tab, i, contact);
+	}
+}
+
 bool PluginManager::hasInfoProvider(const QString& plugin) const
 {
 	if (hosts_.contains(plugin))

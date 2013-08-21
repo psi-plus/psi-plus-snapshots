@@ -67,6 +67,9 @@ public:
 	void addAccountMenu(QMenu *menu, PsiAccount* account);
 	void addContactMenu(QMenu *menu, PsiAccount* account, QString jid);
 
+	void setupChatTab(QWidget *tab, PsiAccount* account, const QString& contact);
+	void setupGCTab(QWidget *tab, PsiAccount* account, const QString& contact);
+
 	QString pluginInfo(const QString& plugin) const;
 	bool hasInfoProvider(const QString& plugin) const;
 	QIcon icon(const QString& plugin) const;

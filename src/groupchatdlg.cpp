@@ -84,7 +84,9 @@
 #include "mucreasonseditor.h"
 #include "mcmdmanager.h"
 #include "lastactivitytask.h"
+#ifdef PSI_PLUGINS
 #include "pluginmanager.h"
+#endif
 #include "psirichtext.h"
 #include "psiwindowheader.h"
 #include "avatars.h"
@@ -874,6 +876,10 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 	connect(ui_.log->textWidget(), SIGNAL(quote(const QString &)), ui_.mle->chatEdit(), SLOT(insertAsQuote(const QString &)));
 
 	connect(pa->avatarFactory(), SIGNAL(avatarChanged(Jid)), SLOT(avatarUpdated(Jid)));
+
+#ifdef PSI_PLUGINS
+	PluginManager::instance()->setupGCTab(this, account(), jid().full());
+#endif
 }
 
 void GCMainDlg::vcard(const QString& _str)

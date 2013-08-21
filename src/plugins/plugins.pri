@@ -36,4 +36,5 @@ HEADERS += \
 	$$PWD/include/contactinfoaccessor.h \
 	$$PWD/include/contactinfoaccessinghost.h \
 	$$PWD/include/soundaccessor.h \
-	$$PWD/include/soundaccessinghost.h
+	$$PWD/include/soundaccessinghost.h \
+	$$PWD/include/chattabaccessor.h

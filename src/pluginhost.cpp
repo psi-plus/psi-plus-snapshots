@@ -51,6 +51,7 @@
 #include "contactinfoaccessor.h"
 #include "soundaccessor.h"
 #include "textutil.h"
+#include "chattabaccessor.h"
 
 /**
  * \brief Constructs a host/wrapper for a plugin.
@@ -1201,6 +1202,22 @@ void PluginHost::addContactMenu(QMenu *menu, int account, const QString& jid)
 		QAction *act = ma->getContactAction(menu, account, jid);
 		if(act)
 			menu->addAction(act);
+	}
+}
+
+void PluginHost::setupChatTab(QWidget* tab, int account, const QString& contact)
+{
+	ChatTabAccessor *cta = qobject_cast<ChatTabAccessor*>(plugin_);
+	if(cta) {
+		cta->setupChatTab(tab, account, contact);
+	}
+}
+
+void PluginHost::setupGCTab(QWidget* tab, int account, const QString& contact)
+{
+	ChatTabAccessor *cta = qobject_cast<ChatTabAccessor*>(plugin_);
+	if(cta) {
+		cta->setupGCTab(tab, account, contact);
 	}
 }
 

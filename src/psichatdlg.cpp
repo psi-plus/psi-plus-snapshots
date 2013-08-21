@@ -48,8 +48,9 @@
 #include "xmpp_tasks.h"
 #include "lastactivitytask.h"
 #include "avcall/avcall.h"
+#ifdef PSI_PLUGINS
 #include "pluginmanager.h"
-
+#endif
 
 #define MCMDCHAT		"http://psi-im.org/ids/mcmd#chatmain"
 
@@ -296,6 +297,10 @@ void PsiChatDlg::initUi()
 	setMargins();
 
 	connect(ui_.log->textWidget(), SIGNAL(quote(const QString &)), ui_.mle->chatEdit(), SLOT(insertAsQuote(const QString &)));
+
+#ifdef PSI_PLUGINS
+	PluginManager::instance()->setupChatTab(this, account(), jid().full());
+#endif
 }
 
 void PsiChatDlg::verticalSplitterMoved(int, int)
