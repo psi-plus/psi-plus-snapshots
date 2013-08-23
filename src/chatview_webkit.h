@@ -60,12 +60,14 @@ public:
 
 	void dispatchMessage(const MessageView &m);
 
-	void scrollUp();
-	void scrollDown();
 	void clear();
 	void doTrackBar();
 	bool internalFind(QString str, bool startFromBeginning = false);
 	WebView * textWidget();
+
+public slots:
+	void scrollUp();
+	void scrollDown();
 
 	void setEncryptionEnabled(bool enabled);
 
