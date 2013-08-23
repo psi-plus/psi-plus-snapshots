@@ -58,6 +58,9 @@ class ClientSwitcherPlugin: public QObject, public PsiPlugin, public OptionAcces
 
 {
 	Q_OBJECT
+#ifdef HAVE_QT5
+	Q_PLUGIN_METADATA(IID "com.psi-plus.ClientSwitcherPlugin")
+#endif
 	Q_INTERFACES(PsiPlugin OptionAccessor StanzaSender StanzaFilter PluginInfoProvider PopupAccessor ApplicationInfoAccessor AccountInfoAccessor PsiAccountController ContactInfoAccessor IconFactoryAccessor)
 
 public:
@@ -81,7 +84,7 @@ public:
 	virtual bool incomingStanza(int, const QDomElement&);
 	virtual bool outgoingStanza(int, QDomElement&);
 	// EventFilter
-        virtual QString pluginInfo();
+	virtual QString pluginInfo();
 	// PopupAccessor
 	virtual void setPopupAccessingHost(PopupAccessingHost*);
 	// ApplicationInfoAccessor
@@ -103,10 +106,10 @@ private:
 	struct ClientStruct {
 		QString name;
 		QString version;
-                QString caps_node;
-                QString caps_version;
+		QString caps_node;
+		QString caps_version;
 	};
-        Ui::OptionsWidget ui_options;
+	Ui::OptionsWidget ui_options;
 	StanzaSendingHost* sender_;
 	OptionAccessingHost* psiOptions;
 	PopupAccessingHost* psiPopup;
