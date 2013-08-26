@@ -1105,7 +1105,7 @@ void PluginHost::addToolBarButton(QObject* parent, QWidget* toolbar, int account
 				QVariantHash param = buttons_.at(i);
 				QString th = param.value("tooltip").value<QString>();
 				IconAction *button = new IconAction(th, param.value("icon").value<QString>(), th, 0, parent);
-				connect(button, SIGNAL(triggered()),param.value("reciver").value<QObject *>(), param.value("slot").value<QString>().toAscii());
+				connect(button, SIGNAL(triggered()),param.value("reciver").value<QObject *>(), param.value("slot").value<QString>().toLatin1());
 				toolbar->addAction(button);
 			}
 		}
@@ -1126,7 +1126,7 @@ void PluginHost::addGCToolBarButton(QObject* parent, QWidget* toolbar, int accou
 				QVariantHash param = gcbuttons_.at(i);
 				QString th = param.value("tooltip").value<QString>();
 				IconAction *button = new IconAction(th, param.value("icon").value<QString>(), th, 0, parent);
-				connect(button, SIGNAL(triggered()),param.value("reciver").value<QObject *>(), param.value("slot").value<QString>().toAscii());
+				connect(button, SIGNAL(triggered()),param.value("reciver").value<QObject *>(), param.value("slot").value<QString>().toLatin1());
 				toolbar->addAction(button);
 			}
 		}
@@ -1175,7 +1175,7 @@ void PluginHost::addAccountMenu(QMenu *menu, int account)
 				QVariantHash param = accMenu_.at(i);
 				IconAction *act = new IconAction(param.value("name").value<QString>(), menu, param.value("icon").value<QString>());
 				act->setProperty("account", QVariant(account));
-				connect(act, SIGNAL(triggered()), param.value("reciver").value<QObject *>(), param.value("slot").value<QString>().toAscii());
+				connect(act, SIGNAL(triggered()), param.value("reciver").value<QObject *>(), param.value("slot").value<QString>().toLatin1());
 				menu->addAction(act);
 			}
 		}
@@ -1195,7 +1195,7 @@ void PluginHost::addContactMenu(QMenu *menu, int account, const QString& jid)
 				IconAction *act = new IconAction(param.value("name").value<QString>(), menu, param.value("icon").value<QString>());
 				act->setProperty("account", QVariant(account));
 				act->setProperty("jid", QVariant(jid));
-				connect(act, SIGNAL(triggered()), param.value("reciver").value<QObject *>(), param.value("slot").value<QString>().toAscii());
+				connect(act, SIGNAL(triggered()), param.value("reciver").value<QObject *>(), param.value("slot").value<QString>().toLatin1());
 				menu->addAction(act);
 			}
 		}

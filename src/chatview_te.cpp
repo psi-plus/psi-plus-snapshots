@@ -136,7 +136,7 @@ void ChatView::clear()
 
 void ChatView::contextMenuEvent(QContextMenuEvent *e)
 {
-	const QUrl anc = QUrl::fromEncoded(anchorAt(e->pos()).toAscii());
+	const QUrl anc = QUrl::fromEncoded(anchorAt(e->pos()).toLatin1());
 
 	if ( anc.scheme() == "addnick" ) {
 		showNM(anc.path().mid(1));

@@ -61,7 +61,11 @@ QVariant PsiContactListModel::contactGroupData(const ContactListGroup* group, in
 	if (role == DisplayGroupRole || role == Qt::ToolTipRole) {
 		QString text = itemData(group, Qt::DisplayRole).toString();
 		if (role == Qt::ToolTipRole)
+#ifdef HAVE_QT5
+			text = text.toHtmlEscaped();
+#else
 			text = Qt::escape(text);
+#endif
 		text += QString(" (%1/%2)")
 		        .arg(itemData(group, ContactListModel::OnlineContactsRole).toInt())
 		        .arg(itemData(group, ContactListModel::TotalContactsRole).toInt());

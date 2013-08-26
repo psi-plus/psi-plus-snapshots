@@ -625,7 +625,7 @@ public:
 void GCMainDlg::openURL(const QString& url)
 {
 	if (url.startsWith("addnick://") && isActiveTab()) {
-		const QString nick = QUrl::fromPercentEncoding(url.mid(14).toAscii());
+		const QString nick = QUrl::fromPercentEncoding(url.mid(14).toLatin1());
 		if (ui_.mle->chatEdit()->toPlainText().length() == 0) {
 			ui_.mle->chatEdit()->insertPlainText(nick + QString(": "));
 		}

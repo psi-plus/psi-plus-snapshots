@@ -48,6 +48,7 @@ ContactManagerModel::ContactManagerModel(QObject * parent, PsiAccount *pa) :
 
 void ContactManagerModel::reloadUsers()
 {
+	beginResetModel();
 	clear();
 	UserList *ul = pa_->userList();
 	foreach (UserListItem *u, *ul) {
@@ -55,7 +56,7 @@ void ContactManagerModel::reloadUsers()
 			addContact(u);
 		}
 	}
-	reset();
+	endResetModel();
 }
 
 void ContactManagerModel::clear()
