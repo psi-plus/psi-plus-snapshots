@@ -27,9 +27,9 @@ MUCAffiliationsView::MUCAffiliationsView(QWidget* parent) : QTreeView(parent)
 {
 	setRootIsDecorated(false);
 #ifdef HAVE_QT5
-	header()->setResizeMode(QHeaderView::ResizeToContents);
-#else
 	header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+#else
+	header()->setResizeMode(QHeaderView::ResizeToContents);;
 #endif
 	setItemsExpandable(false);
 	setItemsExpandable(false);
