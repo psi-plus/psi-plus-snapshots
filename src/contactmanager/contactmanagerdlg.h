@@ -22,7 +22,7 @@
 #define CONTACTMANAGERDLG_H
 #include "ui_contactmanagerdlg.h"
 
-#include <QtGui/QDialog>
+#include <QDialog>
 #include "contactmanagermodel.h"
 class PsiAccount;
 

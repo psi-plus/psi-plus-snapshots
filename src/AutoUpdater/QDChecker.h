@@ -7,7 +7,7 @@
 #ifndef QDCHECKER_H
 #define QDCHECKER_H
 
-#include <QtCore/QObject>
+#include <QObject>
 class QWidget;
 class QUrl;
 class QNetworkAccessManager;

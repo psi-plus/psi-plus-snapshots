@@ -7,12 +7,12 @@
 #include "QDChecker.h"
 #include "ui_QDChangeLog.h"
 
-#include <QtCore/QUrl>
-#include <QtGui/QDesktopServices>
-#include <QtNetwork/QNetworkAccessManager>
-#include <QtNetwork/QNetworkRequest>
-#include <QtNetwork/QNetworkReply>
-#include <QtNetwork/QNetworkProxy>
+#include <QUrl>
+#include <QDesktopServices>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QNetworkProxy>
 
 #include "psioptions.h"
 #include "proxy.h"
