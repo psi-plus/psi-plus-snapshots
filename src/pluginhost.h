@@ -171,7 +171,10 @@ public:
 	void unregisterOption(const QString& name);
 
 	void addToolBarButton(QObject* parent, QWidget* toolbar, int account, const QString& contact);
+	bool hasToolBarButton();
+
 	void addGCToolBarButton(QObject* parent, QWidget* toolbar, int account, const QString& contact);
+	bool hasGCToolBarButton();
 
 	void addAccountMenu(QMenu *menu, int account);
 	void addContactMenu(QMenu *menu, int account, const QString& jid);
@@ -207,6 +210,8 @@ private:
 	QIcon icon_;
 	QPluginLoader* loader_;
 	Iconset* iconset_;
+	bool hasToolBarButton_;
+	bool hasGCToolBarButton_;
 
 	bool valid_;
 	bool connected_;

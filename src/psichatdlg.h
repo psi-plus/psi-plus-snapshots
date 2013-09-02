@@ -11,7 +11,7 @@
 #include "typeaheadfind.h"
 #include "psiwindowheader.h"
 #include "widgets/actionlineedit.h"
-
+#include "actionlist.h"
 
 class IconAction;
 class PsiContact;
@@ -47,6 +47,7 @@ private slots:
 	void updateCountVisibility();
 	void updateContactAdding(PsiContact* c = 0);
 	void updateContactAdding(const Jid &j);
+	void updateToolbuttons();
 	void copyUserJid();
 
 	// reimplemented
@@ -93,20 +94,8 @@ private:
 
 	QMenu* pm_settings_;
 
-	IconAction* act_clear_;
-	IconAction* act_history_;
-	IconAction* act_info_;
-	IconAction* act_pgp_;
-	IconAction* act_icon_;
-	IconAction* act_file_;
-	IconAction* act_compact_;
-	IconAction* act_voice_;
+	ActionList* actions_;
 	TypeAheadFindBar *typeahead;
-	IconAction* act_find;
-	IconAction* act_ps_;
-	IconAction* act_templates_;
-	IconAction* act_html_text;
-	IconAction* act_add_contact;
 	QAction *act_mini_cmd_, *act_minimize_;
 
 	ActionLineEdit *le_autojid;

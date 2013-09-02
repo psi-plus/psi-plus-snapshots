@@ -296,6 +296,18 @@ QString PluginManager::shortName(const QString& plugin) const
 	return name;
 }
 
+QString PluginManager::nameByShortName(const QString& shortName) const
+{
+	QString name;
+	foreach (PluginHost* host, pluginsByPriority_) {
+		if (host->shortName() == shortName) {
+			name = host->name();
+			break;
+		}
+	}
+	return name;
+}
+
 QString PluginManager::version(const QString& plugin) const
 {
 	QString name;
@@ -830,20 +842,33 @@ void PluginManager::restoreOptions(const QString& plugin)
 	}
 }
 
-void PluginManager::addToolBarButton(QObject* parent, QWidget* toolbar, PsiAccount* account, const QString& contact)
+void PluginManager::addToolBarButton(QObject* parent, QWidget* toolbar, PsiAccount* account, const QString& contact, const QString& plugin)
 {
-
 	foreach (PluginHost* host, pluginsByPriority_) {
-		host->addToolBarButton(parent,toolbar, accountIds_[account], contact);
+		if (plugin.isEmpty() || (host->name() == plugin)) {
+			host->addToolBarButton(parent,toolbar, accountIds_[account], contact);
+		}
 	}
 }
 
-void PluginManager::addGCToolBarButton(QObject* parent, QWidget* toolbar, PsiAccount* account, const QString& contact)
+bool PluginManager::hasToolBarButton(const QString& plugin) const
+{
+	return hosts_[plugin]->hasToolBarButton();
+}
+
+void PluginManager::addGCToolBarButton(QObject* parent, QWidget* toolbar, PsiAccount* account, const QString& contact, const QString& plugin)
 {
 
 	foreach (PluginHost* host, pluginsByPriority_) {
-		host->addGCToolBarButton(parent,toolbar, accountIds_[account], contact);
+		if (plugin.isEmpty() || (host->name() == plugin)) {
+			host->addGCToolBarButton(parent,toolbar, accountIds_[account], contact);
+		}
 	}
+}
+
+bool PluginManager::hasGCToolBarButton(const QString& plugin) const
+{
+	return hosts_[plugin]->hasGCToolBarButton();
 }
 
 void PluginManager::setStatus(int account, const QString& status, const QString& statusMessage)

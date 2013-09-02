@@ -230,6 +230,8 @@ bool PluginHost::load()
 				version_ = psiPlugin->version();
 				priority_ = psiPlugin->priority();
 				icon_ = QIcon(psiPlugin->icon());
+				hasToolBarButton_ = qobject_cast<ToolbarIconAccessor*>(plugin_) ? true : false;
+				hasGCToolBarButton_ = qobject_cast<GCToolbarIconAccessor*>(plugin_) ? true : false;
 				PluginInfoProvider *pip = qobject_cast<PluginInfoProvider*>(plugin_);
 				if (pip) {
 					hasInfo_ = true;
@@ -1117,6 +1119,11 @@ void PluginHost::addToolBarButton(QObject* parent, QWidget* toolbar, int account
 	}
 }
 
+bool PluginHost::hasToolBarButton()
+{
+	return hasToolBarButton_;
+}
+
 void PluginHost::addGCToolBarButton(QObject* parent, QWidget* toolbar, int account, const QString& contact)
 {
 	GCToolbarIconAccessor *ta = qobject_cast<GCToolbarIconAccessor*>(plugin_);
@@ -1134,6 +1141,11 @@ void PluginHost::addGCToolBarButton(QObject* parent, QWidget* toolbar, int accou
 		if(act)
 			toolbar->addAction(act);
 	}
+}
+
+bool PluginHost::hasGCToolBarButton()
+{
+	return hasGCToolBarButton_;
 }
 
 void PluginHost::initPopup(const QString& text, const QString& title, const QString& icon, int type)

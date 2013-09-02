@@ -31,9 +31,10 @@
 #include "statuspreset.h"
 #include "psitoolbar.h"
 #include "common.h"
-
+#ifdef PSI_PLUGINS
+#include "pluginmanager.h"
+#endif
 using namespace XMPP;
-
 
 // ----------------------------------------------------------------------------
 
@@ -183,6 +184,30 @@ bool PsiOptions::newProfile()
 	            ).toOptions(this);
 
 	{
+		QStringList pluginsKeys;
+#ifdef PSI_PLUGINS
+		PluginManager *pm = PluginManager::instance();
+		QStringList plugins = pm->availablePlugins();
+		foreach (const QString &plugin, plugins) {
+			pluginsKeys << pm->shortName(plugin) + "-plugin";
+		}
+#endif
+		ToolbarPrefs chatToolbar;
+		chatToolbar.on = false;
+		chatToolbar.name = "Chat Toolbar";
+		chatToolbar.keys << "chat_clear"  << "chat_find" << "chat_html_text" << "chat_add_contact";
+		chatToolbar.keys += pluginsKeys;
+		chatToolbar.keys << "spacer" << "chat_icon" << "chat_templates" << "chat_ps" << "chat_file"
+						 << "chat_pgp" << "chat_info" << "chat_history" << "chat_voice"
+						 << "chat_active_contacts";
+
+		ToolbarPrefs groupchatToolbar;
+		groupchatToolbar.on = false;
+		groupchatToolbar.name = "Groupchat Toolbar";
+		groupchatToolbar.keys << "gchat_clear"  << "gchat_find" << "gchat_html_text" << "gchat_configure";
+		groupchatToolbar.keys += pluginsKeys;
+		groupchatToolbar.keys << "spacer" << "gchat_icon" << "gchat_templates" << "gchat_ps" ;
+
 		ToolbarPrefs buttons;
 		buttons.name = tr("Buttons");
 #ifndef Q_OS_MAC
@@ -203,7 +228,9 @@ bool PsiOptions::newProfile()
 		eventNotifier.dock = Qt3Dock_Bottom;
 
 		QList<ToolbarPrefs> toolbars;
-		toolbars << buttons
+		toolbars << chatToolbar
+		         << groupchatToolbar
+				 << buttons
 		         << showContacts
 		         << eventNotifier;
 		foreach(ToolbarPrefs tb, toolbars) {
@@ -372,4 +399,3 @@ void PsiOptions::resetOption(const QString &name)
 
 PsiOptions* PsiOptions::instance_ = NULL;
 PsiOptions* PsiOptions::defaults_ = NULL;
-

@@ -49,6 +49,7 @@ public:
 	bool isEnabled(const QString& plugin) const;
 	QString pathToPlugin(const QString& plugin) const;
 	QString shortName(const QString& plugin) const;
+	QString nameByShortName(const QString& shortName) const;
 	QString version(const QString& plugin) const;
 	QWidget* optionsWidget(const QString& plugin);
 
@@ -62,8 +63,10 @@ public:
 
 	void applyOptions(const QString& plugin);
 	void restoreOptions(const QString& plugin);
-	void addToolBarButton(QObject* parent, QWidget* toolbar, PsiAccount* account, const QString& contact);
-	void addGCToolBarButton(QObject* parent, QWidget* toolbar, PsiAccount* account, const QString& contact);
+	void addToolBarButton(QObject* parent, QWidget* toolbar, PsiAccount* account, const QString& contact, const QString& plugin = "");
+	bool hasToolBarButton(const QString& plugin) const;
+	void addGCToolBarButton(QObject* parent, QWidget* toolbar, PsiAccount* account, const QString& contact, const QString& plugin = "");
+	bool hasGCToolBarButton(const QString& plugin) const;
 	void addAccountMenu(QMenu *menu, PsiAccount* account);
 	void addContactMenu(QMenu *menu, PsiAccount* account, QString jid);
 

@@ -54,6 +54,7 @@
 #include <QFormLayout>
 #include <QClipboard>
 
+#include "psiactionlist.h"
 #include "psicon.h"
 #include "psiaccount.h"
 #include "capsmanager.h"
@@ -204,7 +205,13 @@ public:
 
 		trackBar = false;
 		mCmdManager.registerProvider(this);
+		actions = new ActionList("", 0, false);
 	}
+
+	~Private() {
+		delete actions;
+	}
+
 
 	GCMainDlg *dlg;
 	int state;
@@ -213,7 +220,8 @@ public:
 	QString password;
 	QString topic;
 	bool nonAnonymous;		 // got status code 100 ?
-	IconAction *act_find, *act_clear, *act_icon, *act_configure, *act_ps, *act_templates, *act_bookmark, *act_html_text;
+	ActionList *actions;
+	IconAction *act_bookmark;
 	QAction *act_copy_muc_jid;
 	TypeAheadFindBar *typeahead;
 //#ifdef WHITEBOARDING
@@ -681,8 +689,9 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 	ui_.lb_ident->setAccount(account());
 	ui_.lb_ident->setShowJid(false);
 	ui_.log->setSessionData(true, jid().full(), jid().full()); //FIXME change conference name
-	d->tabmode = PsiOptions::instance()->getOption("options.ui.tabs.use-tabs").toBool();
-	setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
+	PsiOptions *options = PsiOptions::instance();
+	d->tabmode = options->getOption("options.ui.tabs.use-tabs").toBool();
+	setWindowBorder(options->getOption("options.ui.decorate-windows").toBool());
 	if (!d->tabmode && !isBorder()) {
 		d->winHeader_ = new PsiWindowHeader(this);
 		ui_.vboxLayout1->insertWidget(0, d->winHeader_);
@@ -714,7 +723,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 #endif
 
 	ui_.lv_users->setMainDlg(this);
-	if ( PsiOptions::instance()->getOption("options.ui.contactlist.disable-scrollbar").toBool() ) {
+	if (options->getOption("options.ui.contactlist.disable-scrollbar").toBool() ) {
 		ui_.lv_users->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	}
 	connect(ui_.lv_users, SIGNAL(action(const QString &, const Status &, int)), SLOT(lv_action(const QString &, const Status &, int)));
@@ -726,27 +735,53 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 	hb3a->addWidget( d->typeahead );
 	ui_.vboxLayout1->addLayout(hb3a);
 
-	d->act_clear = new IconAction (tr("Clear Chat Window"), "psi/clearChat", tr("Clear Chat Window"), 0, this);
-	connect( d->act_clear, SIGNAL(triggered()), SLOT(doClearButton()));
+	ActionList* actList = account()->psi()->actionList()->actionLists(PsiActionList::Actions_Groupchat).at(0);
+	foreach (const QString &name, actList->actions()) {
+		IconAction *action = actList->action(name)->copy();
+		action->setParent(this);
+		d->actions->addAction(name, action);
 
-	d->act_find = new IconAction(tr("Find"), "psi/search", tr("&Find"), 0, this, "", true);
-	connect(d->act_find, SIGNAL(triggered()), d->typeahead, SLOT(toggleVisibility()));
+		if (name == "gchat_clear") {
+			connect(action, SIGNAL(triggered()), SLOT(doClearButton()));
+		}
+		else if (name == "gchat_find") {
+			// typeahead find
+			connect(action, SIGNAL(triggered()), d->typeahead, SLOT(toggleVisibility()));
+		// -- typeahead
+		}
+		else if (name == "gchat_configure") {
+			connect(action, SIGNAL(triggered()), SLOT(configureRoom()));
+		}
+		else if (name == "gchat_html_text") {
+			connect(action, SIGNAL(triggered()), d->mle(), SLOT(doHTMLTextMenu()));
+		}
+		else if (name == "gchat_icon") {
+			connect(account()->psi()->iconSelectPopup(), SIGNAL(textSelected(QString)), d, SLOT(addEmoticon(QString)));
+			action->setMenu(pa->psi()->iconSelectPopup());
+			ui_.tb_emoticons->setMenu(pa->psi()->iconSelectPopup());
+		}
+		else if (name == "gchat_info") {
+			connect(action, SIGNAL(triggered()), SLOT(doInfo()));
+		}
+		else if (name == "gchat_ps") {
+			connect(action, SIGNAL(triggered()), SLOT(doPasteAndSend()));
+		}
+		else if (name == "gchat_templates") {
+			action->setMenu(getTemplateMenu());
+		}
+	}
 
-	d->act_configure = new IconAction(tr("Configure Room"), "psi/configure-room", tr("&Configure Room"), 0, this);
-	connect(d->act_configure, SIGNAL(triggered()), SLOT(configureRoom()));
-
-	d->act_html_text = new IconAction(tr("Set Text Format"), "psi/text", tr("Set Text Format"), 0, this);
-	connect(d->act_html_text, SIGNAL(triggered()), d->mle(), SLOT(doHTMLTextMenu()));
+	actList = account()->psi()->actionList()->actionLists(PsiActionList::Actions_Common).at(0);
+	foreach (const QString &name, actList->actions()) {
+		IconAction *action = actList->action(name)->copy();
+		action->setParent(this);
+		d->actions->addAction(name, action);
+	}
 
 //#ifdef WHITEBOARDING
 //	d->act_whiteboard = new IconAction(tr("Open a Whiteboard"), "psi/whiteboard", tr("Open a &Whiteboard"), 0, this);
 //	connect(d->act_whiteboard, SIGNAL(triggered()), SLOT(openWhiteboard()));
 //#endif
-
-	connect(pa->psi()->iconSelectPopup(), SIGNAL(textSelected(QString)), d, SLOT(addEmoticon(QString)));
-	d->act_icon = new IconAction( tr( "Select Icon" ), "psi/smile", tr( "Select Icon" ), 0, this );
-	d->act_icon->setMenu( pa->psi()->iconSelectPopup() );
-	ui_.tb_emoticons->setMenu(pa->psi()->iconSelectPopup());
 
 	d->act_nick = new QAction(this);
 	d->act_nick->setText(tr("Change Nickname..."));
@@ -761,17 +796,11 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 	connect(d->act_minimize, SIGNAL(triggered()), SLOT(doMinimize()));
 	addAction(d->act_minimize);
 
-	d->act_ps = new IconAction(tr("Paste and Send"), "psi/action_paste_and_send", tr("Paste and Send"), 0, this);
-	connect(d->act_ps, SIGNAL(triggered()), SLOT(doPasteAndSend()));
-
-	d->act_templates = new IconAction(tr("Templates"), "psi/action_templates", tr("Templates"), 0, this);
-	d->act_templates->setMenu(getTemplateMenu());
-
 	d->act_bookmark = new IconAction(this);
 	connect(d->act_bookmark, SIGNAL(triggered()), SLOT(doBookmark()));
 	ui_.le_topic->addAction(d->act_bookmark);
 
-	d->act_copy_muc_jid = new QAction(tr("Copy MUC JID"), this);
+	d->act_copy_muc_jid = new QAction(tr("Copy Groupchat JID"), this);
 	connect(d->act_copy_muc_jid, SIGNAL(triggered()), SLOT(copyMucJid()));
 	ui_.le_topic->addAction(d->act_copy_muc_jid);
 
@@ -786,23 +815,10 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 
 	int s = PsiIconset::instance()->system().iconSize();
 	ui_.toolbar->setIconSize(QSize(s,s));
-	ui_.toolbar->addAction(d->act_clear);
-	ui_.toolbar->addAction(d->act_find);
-	ui_.toolbar->addAction(d->act_configure);
-	ui_.toolbar->addAction(d->act_html_text);
+
 //#ifdef WHITEBOARDING
 //	ui_.toolbar->addAction(d->act_whiteboard);
 //#endif
-#ifdef PSI_PLUGINS
-	PluginManager::instance()->addGCToolBarButton(this, ui_.toolbar, account(), jid().full());
-#endif
-	ui_.toolbar->addWidget(new StretchWidget(ui_.toolbar));
-	ui_.toolbar->addAction(d->act_icon);
-	((QToolButton *)ui_.toolbar->widgetForAction(d->act_icon))->setPopupMode(QToolButton::InstantPopup);
-	ui_.toolbar->addAction(d->act_templates);
-	((QToolButton *)ui_.toolbar->widgetForAction(d->act_templates))->setPopupMode(QToolButton::InstantPopup);
-	if (!PsiOptions::instance()->getOption("options.ui.chat.disable-paste-send").toBool())
-		ui_.toolbar->addAction(d->act_ps);
 	ui_.toolbar->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
 
 	// Common actions
@@ -840,10 +856,10 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 	connect(ui_.vsplitter, SIGNAL(splitterMoved(int,int)), this, SLOT(verticalSplitterMoved(int,int)));
 
 	// resize the horizontal splitter
-	d->logSize = PsiOptions::instance()->getOption("options.ui.muc.log-width").toInt();
-	d->rosterSize = PsiOptions::instance()->getOption("options.ui.muc.roster-width").toInt();
+	d->logSize = options->getOption("options.ui.muc.log-width").toInt();
+	d->rosterSize = options->getOption("options.ui.muc.roster-width").toInt();
 	QList<int> list;
-	bool leftRoster = PsiOptions::instance()->getOption("options.ui.muc.roster-at-left").toBool();
+	bool leftRoster = options->getOption("options.ui.muc.roster-at-left").toBool();
 	if(leftRoster)
 		list << d->rosterSize << d->logSize;
 	else
@@ -855,8 +871,8 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 		ui_.hsplitter->insertWidget(0, ui_.lv_users);  // Swap widgets
 
 	// resize the vertical splitter
-	d->logHeight = PsiOptions::instance()->getOption("options.ui.chat.log-height").toInt();
-	d->chateditHeight = PsiOptions::instance()->getOption("options.ui.chat.chatedit-height").toInt();
+	d->logHeight = options->getOption("options.ui.chat.log-height").toInt();
+	d->chateditHeight = options->getOption("options.ui.chat.chatedit-height").toInt();
 	setVSplitterPosition(d->logHeight, d->chateditHeight);
 
 	X11WM_CLASS("groupchat");
@@ -868,6 +884,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 	connect(d->mucManager, SIGNAL(action_success(MUCManager::Action)), ui_.lv_users, SLOT(update()));
 
 	setLooks();
+	setToolbuttons();
 	setShortcuts();
 	invalidateTab();
 	setConnecting();
@@ -982,8 +999,9 @@ void GCMainDlg::ensureTabbedCorrectly()
 
 void GCMainDlg::setShortcuts()
 {
-	d->act_clear->setShortcuts(ShortcutManager::instance()->shortcuts("chat.clear"));
-	d->act_find->setShortcuts(ShortcutManager::instance()->shortcuts("chat.find"));
+
+	d->actions->action("gchat_clear")->setShortcuts(ShortcutManager::instance()->shortcuts("chat.clear"));
+	d->actions->action("gchat_find")->setShortcuts(ShortcutManager::instance()->shortcuts("chat.find"));
 	d->act_send->setShortcuts(ShortcutManager::instance()->shortcuts("chat.send"));
 	if (!isTabbed()) {
 		d->act_close->setShortcuts(ShortcutManager::instance()->shortcuts("common.close"));
@@ -1460,7 +1478,7 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
 		if (d->configDlg) {
 			d->configDlg->setRoleAffiliation(s.mucItem().role(),s.mucItem().affiliation());
 		}
-		d->act_configure->setEnabled(s.mucItem().affiliation() >= MUCItem::Member);
+		d->actions->action("gchat_configure")->setEnabled(s.mucItem().affiliation() >= MUCItem::Member);
 	}
 
 	PsiOptions *options_ = PsiOptions::instance();
@@ -1901,7 +1919,7 @@ void GCMainDlg::setLooks()
 	f.fromString(PsiOptions::instance()->getOption("options.ui.look.font.contactlist").toString());
 	ui_.lv_users->setFont(f);
 
-	if (PsiOptions::instance()->getOption("options.ui.chat.central-toolbar").toBool()) {
+	if (PsiOptions::instance()->getOption("options.ui.contactlist.toolbars.m1.visible").toBool()) {
 		ui_.toolbar->show();
 		ui_.tb_actions->hide();
 		ui_.tb_emoticons->hide();
@@ -1929,6 +1947,36 @@ void GCMainDlg::setLooks()
 	ui_.lv_users->setLooks();
 }
 
+void GCMainDlg::setToolbuttons()
+{
+	ui_.toolbar->clear();
+	PsiOptions *options = PsiOptions::instance();
+	QStringList actionsNames = options->getOption("options.ui.contactlist.toolbars.m1.actions").toStringList();
+	foreach (const QString &actionName, actionsNames) {
+#ifdef PSI_PLUGINS
+		if (actionName.endsWith("-plugin")) {
+			QString name = PluginManager::instance()->nameByShortName(actionName.mid(0, actionName.length() - 7));
+			PluginManager::instance()->addGCToolBarButton(this, ui_.toolbar, account(), jid().full(), name);
+			continue;
+		}
+#endif
+
+		// Hack. separator action can be added only once.
+		if (actionName == "separator") {
+			ui_.toolbar->addSeparator();
+			continue;
+		}
+
+		IconAction *action = d->actions->action(actionName);
+		if (action) {
+			action->addTo(ui_.toolbar);
+			if (actionName == "gchat_icon" || actionName == "gchat_templates") {
+				((QToolButton *)ui_.toolbar->widgetForAction(action))->setPopupMode(QToolButton::InstantPopup);
+			}
+		}
+	}
+}
+
 void GCMainDlg::optionsUpdate()
 {
 	/*QMimeSourceFactory *m = ui_.log->mimeSourceFactory();
@@ -1936,6 +1984,7 @@ void GCMainDlg::optionsUpdate()
 	delete m;*/
 
 	setLooks();
+	setToolbuttons();
 	setShortcuts();
 	d->typeahead->optionsUpdate();
 	// update status icons
@@ -2061,21 +2110,20 @@ void GCMainDlg::buildMenu()
 	// Dialog menu
 	d->pm_settings->clear();
 
-	d->act_clear->addTo( d->pm_settings );
-	d->act_configure->addTo( d->pm_settings );
+	d->actions->action("gchat_clear")->addTo( d->pm_settings );
+	d->actions->action("gchat_configure")->addTo( d->pm_settings );
 //#ifdef WHITEBOARDING
 //	d->act_whiteboard->addTo( d->pm_settings );
 //#endif
 	d->pm_settings->addSeparator();
 
-	d->pm_settings->addAction(d->act_icon);
-	d->pm_settings->addAction(d->act_templates);
-	if (!PsiOptions::instance()->getOption("options.ui.chat.disable-paste-send").toBool())
-		d->pm_settings->addAction(d->act_ps);
+	d->pm_settings->addAction(d->actions->action("gchat_icon"));
+	d->pm_settings->addAction(d->actions->action("gchat_templates"));
+	d->pm_settings->addAction(d->actions->action("gchat_ps"));
 	d->pm_settings->addAction(d->act_nick);
 	d->pm_settings->addAction(d->act_bookmark);
 #ifdef PSI_PLUGINS
-	if(!PsiOptions::instance()->getOption("options.ui.chat.central-toolbar").toBool()) {
+	if(!PsiOptions::instance()->getOption("options.ui.contactlist.toolbars.m1.visible").toBool()) {
 		d->pm_settings->addSeparator();
 		PluginManager::instance()->addGCToolBarButton(this, d->pm_settings, account(), jid().full());
 	}
@@ -2133,7 +2181,7 @@ void GCMainDlg::doPasteAndSend()
 	if(TabbableWidget::isActiveTab()) {
 		d->mle()->paste();
 		mle_returnPressed();
-		d->act_ps->setEnabled(false);
+		d->actions->action("gchat_ps")->setEnabled(false);
 		QTimer::singleShot(2000, this, SLOT(psButtonEnabled()));
 	}
 }
@@ -2211,7 +2259,7 @@ void GCMainDlg::doRemoveBookmark()
 
 void GCMainDlg::psButtonEnabled()
 {
-	d->act_ps->setEnabled(true);
+	d->actions->action("gchat_ps")->setEnabled(true);
 }
 
 void GCMainDlg::sendTemp(const QString &templText)

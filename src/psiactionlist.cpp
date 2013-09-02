@@ -28,6 +28,9 @@
 
 #include "iconset.h"
 #include "psioptions.h"
+#ifdef PSI_PLUGINS
+#include "pluginmanager.h"
+#endif
 
 #include "mainwin_p.h"
 
@@ -58,6 +61,8 @@ private:
 	void createMessage();
 	void createChat();
 	void createGroupchat();
+
+	void addPluginsActions(ActionsType type);
 
 	struct ActionNames {
 		const char *name;
@@ -443,10 +448,94 @@ void PsiActionList::Private::createMessage()
 
 void PsiActionList::Private::createChat()
 {
+	{
+		IconAction *actClear = new IconAction(tr("Clear Chat Window"), "psi/clearChat", tr("Clear Chat Window"), 0, this);
+		IconAction *actFind = new IconAction(tr("Find"), "psi/search", tr("&Find"), 0, this, "", true);
+		IconAction *actHtmlText = new IconAction(tr("Set Text Format"), "psi/text", tr("Set Text Format"), 0, this);
+		IconAction *actAddContact = new IconAction(tr("Add Contact To Roster"), "psi/addContact", tr("Add Contact"), 0, this);
+		IconAction *actIcon = new IconAction(tr("Select Icon"), "psi/smile", tr("Select Icon"), 0, this);
+		IconAction *actVoice = new IconAction(tr("Voice Call"), "psi/avcall", tr("Voice Call"), 0, this);
+		IconAction *actFile = new IconAction(tr("Send File"), "psi/upload", tr("Send File"), 0, this);
+		IconAction *actPgp = new IconAction(tr("Toggle Encryption"), "psi/cryptoYes", tr("Toggle Encryption"), 0, this, 0, true);
+		IconAction *actInfo = new IconAction(tr("User Info"), "psi/vCard", tr("User Info"), 0, this);
+		IconAction *actHistory = new IconAction(tr("Message History"), "psi/history", tr("Message History"), 0, this);
+		IconAction *actCompact = new IconAction(tr("Toggle Compact/Full Size"), "psi/compact", tr("Toggle Compact/Full Size"), 0, this);
+		IconAction *actPs = new IconAction(tr("Paste and Send"), "psi/action_paste_and_send", tr("Paste and Send"), 0, this);
+		IconAction *actTemplates = new IconAction(tr("Templates"), "psi/action_templates", tr("Templates"), 0, this);
+		IconAction *actActiveContacts = new IconAction (tr("Active contacts"), "psi/jabber", tr("Active contacts"), 0, this);
+
+		ActionNames actions[] = {
+			{ "chat_clear",  actClear  },
+			{ "chat_find", actFind   },
+			{ "chat_html_text", actHtmlText   },
+			{ "chat_add_contact", actAddContact   },
+			{ "chat_icon", actIcon   },
+			{ "chat_voice", actVoice   },
+			{ "chat_file", actFile   },
+			{ "chat_pgp", actPgp   },
+			{ "chat_info", actInfo   },
+			{ "chat_history", actHistory   },
+			{ "chat_compact", actCompact   },
+			{ "chat_ps", actPs   },
+			{ "chat_templates", actTemplates   },
+			{ "chat_active_contacts", actActiveContacts   },
+			{ "", 0 }
+		};
+
+		createActionList(tr("Chat Core"), Actions_Chat, actions);
+	}
+
+	addPluginsActions(Actions_Chat);
 }
 
 void PsiActionList::Private::createGroupchat()
 {
+	{
+		IconAction *actClear = new IconAction(tr("Clear Chat Window"), "psi/clearChat", tr("Clear Chat Window"), 0, this);
+		IconAction *actFind = new IconAction(tr("Find"), "psi/search", tr("&Find"), 0, this, "", true);
+		IconAction *actHtmlText = new IconAction(tr("Set Text Format"), "psi/text", tr("Set Text Format"), 0, this);
+		IconAction *actConfigure = new IconAction(tr("Configure Room"), "psi/configure-room", tr("Configure Room"), 0, this);
+		IconAction *actIcon = new IconAction(tr("Select Icon"), "psi/smile", tr("Select Icon"), 0, this);
+		IconAction *actPs = new IconAction(tr("Paste and Send"), "psi/action_paste_and_send", tr("Paste and Send"), 0, this);
+		IconAction *actTemplates = new IconAction(tr("Templates"), "psi/action_templates", tr("Templates"), 0, this);
+
+		ActionNames actions[] = {
+			{ "gchat_clear",  actClear  },
+			{ "gchat_find", actFind   },
+			{ "gchat_html_text", actHtmlText   },
+			{ "gchat_configure", actConfigure   },
+			{ "gchat_icon", actIcon   },
+			{ "gchat_ps", actPs   },
+			{ "gchat_templates", actTemplates   },
+			{ "", 0 }
+		};
+
+		createActionList(tr("Groupchat Core"), Actions_Groupchat, actions);
+	}
+
+	addPluginsActions(Actions_Groupchat);
+}
+
+void PsiActionList::Private::addPluginsActions(ActionsType type)
+{
+#ifdef PSI_PLUGINS
+	PluginManager *pm = PluginManager::instance();
+	QStringList plugins = pm->availablePlugins();
+	ActionList *actions = new ActionList(tr("Plugins"), type, false);
+	foreach (const QString &plugin, plugins) {
+		if ((type == Actions_Chat      && !pm->hasToolBarButton(plugin)) ||
+			(type == Actions_Groupchat && !pm->hasGCToolBarButton(plugin))) {
+
+			continue;
+		}
+
+		qDebug() << plugin;
+		IconAction *action = new IconAction(plugin, "", plugin, 0, this);
+		action->setIcon(pm->icon(plugin));
+		actions->addAction(pm->shortName(plugin) + "-plugin", action);
+	}
+	list->addList(actions);
+#endif
 }
 
 void PsiActionList::Private::optionsChanged()
