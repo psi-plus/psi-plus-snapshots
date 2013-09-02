@@ -40,7 +40,7 @@
 #include "plugininfoprovider.h"
 
 
-#define constVersion "0.3.8"
+#define constVersion "0.3.9"
 
 class ExtToolButton : public QToolButton
 {
@@ -92,13 +92,11 @@ private:
 
 	//Chats-----
 	// QCheckBox *htmlRender;
-	QCheckBox *centralToolbar;
 	QCheckBox *confirmClearing;
 	QCheckBox *messageIcons;
 	//QCheckBox *altnSwitch;
 	QCheckBox *showAvatar;
 	QSpinBox *avatarSize;
-	QCheckBox *disablePastSend;
 	QCheckBox *sayMode;
 	QCheckBox *disableSend;
 	QCheckBox *auto_capitalize;
@@ -276,7 +274,7 @@ QWidget* ExtendedOptions::options()
 	QVBoxLayout *tab7Layout = new QVBoxLayout(tab7);
 	QVBoxLayout *tab8Layout = new QVBoxLayout(tab8);
 	tabs->addTab(tab1, tr("Chat"));
-	tabs->addTab(tab2, tr("Conference"));
+	tabs->addTab(tab2, tr("Groupchat"));
 	tabs->addTab(tab5, tr("Tabs"));
 	tabs->addTab(tab3, tr("Roster"));
 	tabs->addTab(tab4, tr("Menu"));
@@ -289,7 +287,6 @@ QWidget* ExtendedOptions::options()
 
 	//Chats-----
 	//	htmlRender = new QCheckBox(tr("Enable HTML rendering in chat window"));
-	centralToolbar = new QCheckBox(tr("Enable central toolbar"));
 	confirmClearing = new QCheckBox(tr("Ask for confirmation before clearing chat window"));
 	messageIcons = new QCheckBox(tr("Enable icons in chat"));
 	scaledIcons = new QCheckBox(tr("Scaled message icons"));
@@ -297,7 +294,6 @@ QWidget* ExtendedOptions::options()
 	/* altnSwitch = new QCheckBox(tr("Switch tabs with \"ALT+(1-9)\""));
 	   altnSwitch->setChecked(psiOptions->getGlobalOption("options.ui.tabs.alt-n-switch").toBool());*/
 	showAvatar = new QCheckBox(tr("Show Avatar"));
-	disablePastSend = new QCheckBox(tr("Disable \"Paste and Send\" button"));
 	sayMode = new QCheckBox(tr("Enable \"Says style\""));
 	disableSend = new QCheckBox(tr("Hide \"Send\" button"));
 
@@ -325,12 +321,10 @@ QWidget* ExtendedOptions::options()
 	tab1Layout->addWidget(new QLabel(tr("Chat window caption:")));
 	tab1Layout->addWidget(chat_caption);
 	// tab1Layout->addWidget(htmlRender);
-	tab1Layout->addWidget(centralToolbar);
 	tab1Layout->addWidget(confirmClearing);
 	tab1Layout->addWidget(messageIcons);
 	tab1Layout->addWidget(scaledIcons);
 	//tab1Layout->addWidget(altnSwitch);
-	tab1Layout->addWidget(disablePastSend);
 	tab1Layout->addWidget(disableSend);
 	tab1Layout->addWidget(sayMode);
 	tab1Layout->addWidget(showAvatar);
@@ -361,9 +355,9 @@ QWidget* ExtendedOptions::options()
 	status_with_priority = new QCheckBox(tr("Show status with priority"));
 	showRole = new QCheckBox(tr("Show roles and affiliations changes"));
 	showStatus = new QCheckBox(tr("Show status changes"));
-	skipAutojoin = new QCheckBox(tr("Enable autojoin for bookmarked conferences"));
-	hideAutoJoin = new QCheckBox(tr("Hide conference on auto-join"));
-	mucHtml = new QCheckBox(tr("Enable HTML rendering in MUC chat window"));
+	skipAutojoin = new QCheckBox(tr("Enable autojoin for bookmarked groupchats"));
+	hideAutoJoin = new QCheckBox(tr("Hide groupchat on auto-join"));
+	mucHtml = new QCheckBox(tr("Enable HTML rendering in groupchat chat window"));
 
 	muc_leave_status_message = new QLineEdit;
 	accept_defaults = new QCheckBox(tr("Automatically accept the default room configuration"));
@@ -386,14 +380,14 @@ QWidget* ExtendedOptions::options()
 	mucGeneralLayout->addWidget(status_with_priority);
 	mucGeneralLayout->addWidget(skipAutojoin);
 	mucGeneralLayout->addWidget(hideAutoJoin);
-	mucGeneralLayout->addWidget(new QLabel(tr("Disable autojoin to folowing conferences:\n(specify JIDs)")));
+	mucGeneralLayout->addWidget(new QLabel(tr("Disable autojoin to folowing groupchats:\n(specify JIDs)")));
 	mucGeneralLayout->addWidget(bookmarksListSkip);
-	mucGeneralLayout->addWidget(new QLabel(tr("MUC leave status message:")));
+	mucGeneralLayout->addWidget(new QLabel(tr("Groupchat leave status message:")));
 	mucGeneralLayout->addWidget(muc_leave_status_message);
 	mucGeneralLayout->addStretch();
 
 
-	leftMucRoster = new QCheckBox(tr("Place MUC roster at left"));
+	leftMucRoster = new QCheckBox(tr("Place groupchat roster at left"));
 	showGroups = new QCheckBox(tr("Show groups"));
 	use_slim_group_headings = new QCheckBox(tr("Use slim group heading"));
 	show_status_icons = new QCheckBox(tr("Show status icons"));
@@ -553,7 +547,7 @@ QWidget* ExtendedOptions::options()
 	nrcLayout->addStretch();
 	nrcLayout->addWidget(noroleColor);
 
-	groupMucRoster = new QGroupBox(tr("MUC roster coloring:"));
+	groupMucRoster = new QGroupBox(tr("Groupchat roster coloring:"));
 	groupMucRoster->setCheckable(true);
 	QVBoxLayout *mucRosterLay = new QVBoxLayout(groupMucRoster);
 	mucRosterLay->addLayout(modcLayout);
@@ -689,7 +683,7 @@ QWidget* ExtendedOptions::options()
 	account_single = new QCheckBox(tr("Enable \"Single Account\" mode"));
 	xml_console_enable_at_login = new QCheckBox(tr("Enable XML-console on login"));
 	lastActivity = new QCheckBox(tr("Enable last activity server"));
-	sndMucNotify = new QCheckBox(tr("Enable sound notifications for every MUC message"));
+	sndMucNotify = new QCheckBox(tr("Enable sound notifications for every groupchat message"));
 	popupsSuppressDnd = new QCheckBox(tr("Disable popup notifications if status is DND"));
 	popupsSuppressAway = new QCheckBox(tr("Disable popup notifications if status is Away"));
 
@@ -725,13 +719,11 @@ void ExtendedOptions::applyOptions()
 
 	//Chats-----
 	//psiOptions->setGlobalOption("options.html.chat.render",QVariant(htmlRender->isChecked()));
-	psiOptions->setGlobalOption("options.ui.chat.central-toolbar",QVariant(centralToolbar->isChecked()));
 	psiOptions->setGlobalOption("options.ui.chat.warn-before-clear",QVariant(confirmClearing->isChecked()));
 	psiOptions->setGlobalOption("options.ui.chat.use-message-icons",QVariant(messageIcons->isChecked()));
 	psiOptions->setGlobalOption("options.ui.chat.scaled-message-icons",QVariant(scaledIcons->isChecked()));
 	//psiOptions->setGlobalOption("options.ui.tabs.alt-n-switch",QVariant(altnSwitch->isChecked()));
 	psiOptions->setGlobalOption("options.ui.chat.avatars.show",QVariant(showAvatar->isChecked()));
-	psiOptions->setGlobalOption("options.ui.chat.disable-paste-send",QVariant(disablePastSend->isChecked()));
 	psiOptions->setGlobalOption("options.ui.chat.use-chat-says-style",QVariant(sayMode->isChecked()));
 	psiOptions->setGlobalOption("options.ui.chat.avatars.size", QVariant(avatarSize->value()));
 	psiOptions->setGlobalOption("options.ui.disable-send-button",QVariant(disableSend->isChecked()));
@@ -855,14 +847,12 @@ void ExtendedOptions::restoreOptions()
 
 	//Chats-----
 	// htmlRender->setChecked(psiOptions->getGlobalOption("options.html.chat.render").toBool());
-	centralToolbar->setChecked(psiOptions->getGlobalOption("options.ui.chat.central-toolbar").toBool());
 	confirmClearing->setChecked(psiOptions->getGlobalOption("options.ui.chat.warn-before-clear").toBool());
 	messageIcons->setChecked(psiOptions->getGlobalOption("options.ui.chat.use-message-icons").toBool());
 	scaledIcons->setChecked(psiOptions->getGlobalOption("options.ui.chat.scaled-message-icons").toBool());
 	// altnSwitch->setChecked(psiOptions->getGlobalOption("options.ui.tabs.alt-n-switch").toBool());
 	showAvatar->setChecked(psiOptions->getGlobalOption("options.ui.chat.avatars.show").toBool());
 	avatarSize->setValue(psiOptions->getGlobalOption("options.ui.chat.avatars.size").toInt());
-	disablePastSend->setChecked(psiOptions->getGlobalOption("options.ui.chat.disable-paste-send").toBool());
 	sayMode->setChecked(psiOptions->getGlobalOption("options.ui.chat.use-chat-says-style").toBool());
 	disableSend->setChecked(psiOptions->getGlobalOption("options.ui.disable-send-button").toBool());
 
@@ -1053,8 +1043,8 @@ void ExtendedOptions::saveFile(const QString& text)
 void ExtendedOptions::hack()
 {
 	//Enable "Apply" button
-	centralToolbar->toggle();
-	centralToolbar->toggle();
+	confirmClearing->toggle();
+	confirmClearing->toggle();
 }
 
 QString ExtendedOptions::profileDir()
