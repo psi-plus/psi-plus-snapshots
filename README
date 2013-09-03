@@ -1,26 +1,26 @@
-This is the special repository with snapshots for the Psi+ project:
+This is a special repository with snapshots for Psi+ project:
   http://code.google.com/p/psi-dev/
 
-Here is the list of main changes:
-1) Source tree was aggregated from 6 independent git repositories:
+Here is a list of main changes:
+1) Source tree is aggregated from 6 independent git repositories:
    - psi (original Psi project)
    - iris (from original Psi project)
    - libpsi (from original Psi project)
    - main (patches and icons from Psi+ project)
    - plugins (plugins from Psi+ project)
    - resources (sounds and icons from Psi+ project)
-2) All patches from Psi+ project were applied.
+2) All patches from Psi+ project are applied.
    (Except patches from dev/ and mac/ subdirectories)
-3) Trash was removed. (MS Windows binary files and non-free icons)
+3) Trash is removed. (MS Windows binary files and non-free icons)
 
 More details see in file generate-single-repo.sh
 
 Current address: https://github.com/tehnick/psi-plus
 
-Here is the list of advanteges of this repo:
+Here is a list of advantages of this repository:
 * Sources has been updated regularly from Psi and Psi+ projects.
 * There is no non-free content in the source tree.
-* There is transparent system of version numbering:
+* There is a transparent system of version numbering:
   - You don't need to calculate current version using magic hacks,
     just look to available git tags.
   - You could download any previous version if you need.
@@ -36,9 +36,8 @@ Use Debian criteria of free content in this case:
   http://www.debian.org/social_contract#guidelines
   http://en.wikipedia.org/wiki/Debian_Free_Software_Guidelines
 
-If you find bugs or problems in the program you may contact Psi+
-developers here:
+If you find bugs or problems in the program you may report about them here:
   http://code.google.com/p/psi-dev/wiki/issues?tm=3
   http://code.google.com/p/psi-dev/issues/list
 
-There is no additional patches in this repo: all bugs come from upstream.
+There are no additional patches in this repo: all bugs come from upstream.
