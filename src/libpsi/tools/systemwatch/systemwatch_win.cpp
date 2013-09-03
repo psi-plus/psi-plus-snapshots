@@ -22,6 +22,9 @@
 
 #include <QWidget>
 #include <windows.h>
+#ifdef HAVE_QT5
+# include <QAbstractNativeEventFilter>
+#endif
 
 // workaround for the very old MinGW version bundled with Qt
 #ifndef PBT_APMSUSPEND
@@ -51,6 +54,24 @@
 // WinSystemWatch
 // -----------------------------------------------------------------------------
 
+#ifdef HAVE_QT5
+class WinSystemWatch::EventFilter : public QAbstractNativeEventFilter
+{
+    WinSystemWatch *syswatch;
+
+public:
+    EventFilter(WinSystemWatch *parent) : syswatch(parent) {}
+
+    virtual bool nativeEventFilter(const QByteArray &eventType, void *m, long *result) Q_DECL_OVERRIDE
+    {
+        if (eventType == "windows_generic_MSG") {
+            return syswatch->processWinEvent(static_cast<MSG*>(m), result);
+        }
+        return false;
+    }
+};
+#else
+
 class WinSystemWatch::MessageWindow : public QWidget
 {
 public:
@@ -70,12 +91,16 @@ public:
 
 	WinSystemWatch *syswatch;
 };
-
+#endif
 
 
 WinSystemWatch::WinSystemWatch()
 {
+#ifdef HAVE_QT5
+    d = new EventFilter(this);
+#else
 	d = new MessageWindow(this);
+#endif
 }
 
 WinSystemWatch::~WinSystemWatch()

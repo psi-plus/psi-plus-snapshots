@@ -22,22 +22,45 @@
 #include "globalshortcuttrigger.h"
 
 #include <QWidget>
-
 #include <windows.h>
+#ifdef HAVE_QT5
+# include <QAbstractNativeEventFilter>
+#endif
 
 class GlobalShortcutManager::KeyTrigger::Impl : public QWidget
 {
+#ifdef HAVE_QT5
+	class WinEventFilter : public QAbstractNativeEventFilter
+	{
+		GlobalShortcutManager::KeyTrigger::Impl *impl;
+
+	public:
+		WinEventFilter(GlobalShortcutManager::KeyTrigger::Impl *parent) : impl(parent) {}
+
+		virtual bool nativeEventFilter(const QByteArray &eventType, void *m, long *result) Q_DECL_OVERRIDE
+		{
+			if (eventType == "windows_generic_MSG") {
+				return impl->winEvent(static_cast<MSG*>(m), result);
+			}
+			return false;
+		}
+	};
+#endif
+
 public:
 	/**
 	 * Constructor registers the hotkey.
 	 */
-	Impl(GlobalShortcutManager::KeyTrigger* t, const QKeySequence& ks)
-		: trigger_(t)
-		, id_(0)
+	Impl(GlobalShortcutManager::KeyTrigger* t, const QKeySequence& ks) :
+#ifdef HAVE_QT5
+		filter(new WinEventFilter(this)),
+#endif
+		trigger_(t),
+		id_(0)
 	{
 		UINT mod, key;
 		if (convertKeySequence(ks, &mod, &key))
-			if (RegisterHotKey(winId(), nextId, mod, key))
+			if (RegisterHotKey((HWND)winId(), nextId, mod, key))
 				id_ = nextId++;
 	}
 
@@ -46,8 +69,11 @@ public:
 	 */
 	~Impl()
 	{
+#ifdef HAVE_QT5
+		delete filter;
+#endif
 		if (id_)
-			UnregisterHotKey(winId(), id_);
+			UnregisterHotKey((HWND)winId(), id_);
 	}
 
 	/**
@@ -59,10 +85,17 @@ public:
 			emit trigger_->triggered();
 			return true;
 		}
+#ifdef HAVE_QT5
+		return false;
+#else
 		return QWidget::winEvent(m, result);
+#endif
 	}
 
 private:
+#ifdef HAVE_QT5
+	WinEventFilter *filter;
+#endif
 	KeyTrigger* trigger_;
 	WPARAM id_;
 	static WPARAM nextId;
@@ -77,7 +110,7 @@ private:
 
 	static bool convertKeySequence(const QKeySequence& ks, UINT* mod_, UINT* key_)
 	{
-		int code = ks;
+		int code = ks[0];
 
 		UINT mod = 0;
 		if (code & Qt::META)

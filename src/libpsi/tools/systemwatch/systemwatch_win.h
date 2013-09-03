@@ -12,8 +12,13 @@ public:
 	~WinSystemWatch();
 
 private:
+#ifdef HAVE_QT5
+    class EventFilter;
+    EventFilter *d;
+#else
 	class MessageWindow;
 	MessageWindow *d;
+#endif
 	bool processWinEvent(MSG *m, long* result);
 };
 
