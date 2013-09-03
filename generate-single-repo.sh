@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2013-08-11
+# Updated: 2013-09-03
 # Version: N/A
 
 set -e
@@ -162,6 +162,7 @@ echo;
 
 
 rm configure.exe
+rm iris/configure.exe
 rm -r win32/
 rm -r src/libpsi/tools/idle/win32/
 echo "Trash was removed."
