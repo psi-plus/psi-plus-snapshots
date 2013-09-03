@@ -122,7 +122,6 @@
 				<warn-before-clear type="bool">true</warn-before-clear>
 				<css type="QString" />
 				<only-paste-template type="bool">false</only-paste-template>
-				<disable-paste-send type="bool">false</disable-paste-send>
 				<hide-when-closing type="bool">false</hide-when-closing>
 				<status-with-priority comment="Show priority with status change" type="bool">false</status-with-priority>
 				<log-height type="int">325</log-height>

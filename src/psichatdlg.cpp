@@ -912,8 +912,7 @@ void PsiChatDlg::buildMenu()
 
 	pm_settings_->addAction(actions_->action("chat_icon_"));
 	pm_settings_->addAction(actions_->action("chat_templates"));
-	if (!PsiOptions::instance()->getOption("options.ui.chat.disable-paste-send").toBool())
-		pm_settings_->addAction(actions_->action("chat_ps"));
+	pm_settings_->addAction(actions_->action("chat_ps"));
 	pm_settings_->addAction(actions_->action("chat_file"));
 	if (AvCallManager::isSupported()) {
 		pm_settings_->addAction(actions_->action("chat_voice"));
