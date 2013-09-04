@@ -635,7 +635,7 @@ int PluginManager::findOnlineAccountForContact(const QString &jid) const
 	Jid j(jid);
 	QHash<PsiAccount*, int>::const_iterator it = accountIds_.constBegin();
 	for ( ; it != accountIds_.end(); it++) {
-		if (it.key()->isAvailable() && it.key()->findContact(j)) {
+		if (it.key() && it.key()->isAvailable() && it.key()->findContact(j)) {
 			return it.value();
 		}
 	}

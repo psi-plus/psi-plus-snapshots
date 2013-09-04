@@ -172,7 +172,6 @@ private:
 
 	void contextMenuEvent(QContextMenuEvent *);
 
-	QDateTime lastMsgTime_;
 
 	void setMargins();
 	inline XMPP::Jid jidForNick(const QString &nick) const;
