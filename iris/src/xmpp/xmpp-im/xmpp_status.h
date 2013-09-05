@@ -71,6 +71,7 @@ namespace XMPP
 		int mucHistoryMaxChars() const;
 		int mucHistoryMaxStanzas() const;
 		int mucHistorySeconds() const;
+		const QDateTime & mucHistorySince() const;
 
 		static Type txt2type(const QString& stat);
 
@@ -94,7 +95,7 @@ namespace XMPP
 		void setMUCDestroy(const MUCDestroy&);
 		void addMUCStatus(int);
 		void setMUCPassword(const QString&);
-		void setMUCHistory(int maxchars, int maxstanzas, int seconds);
+		void setMUCHistory(int maxchars, int maxstanzas, int seconds, const QDateTime &since);
 
 		void setXSigned(const QString &);
 		void setSongTitle(const QString &);
@@ -130,6 +131,7 @@ namespace XMPP
 		QList<int> v_mucStatuses;
 		QString v_mucPassword;
 		int v_mucHistoryMaxChars, v_mucHistoryMaxStanzas, v_mucHistorySeconds;
+		QDateTime v_mucHistorySince;
 
 		int ecode;
 		QString estr;

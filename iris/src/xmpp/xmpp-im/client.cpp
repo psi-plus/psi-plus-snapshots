@@ -300,7 +300,7 @@ void Client::groupChatChangeNick(const QString &host, const QString &room, const
 	}
 }
 
-bool Client::groupChatJoin(const QString &host, const QString &room, const QString &nick, const QString& password, int maxchars, int maxstanzas, int seconds, const Status& _s)
+bool Client::groupChatJoin(const QString &host, const QString &room, const QString &nick, const QString& password, int maxchars, int maxstanzas, int seconds, const QDateTime &since, const Status& _s)
 {
 	Jid jid(room + "@" + host + "/" + nick);
 	for(QList<GroupChat>::Iterator it = d->groupChatList.begin(); it != d->groupChatList.end();) {
@@ -326,7 +326,7 @@ bool Client::groupChatJoin(const QString &host, const QString &room, const QStri
 	JT_Presence *j = new JT_Presence(rootTask());
 	Status s = _s;
 	s.setMUC();
-	s.setMUCHistory(maxchars,maxstanzas,seconds);
+	s.setMUCHistory(maxchars, maxstanzas, seconds, since);
 	if (!password.isEmpty()) {
 		s.setMUCPassword(password);
 	}

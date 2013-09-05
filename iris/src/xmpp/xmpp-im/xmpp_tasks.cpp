@@ -608,6 +608,8 @@ void JT_Presence::pres(const Status &s)
 					h.setAttribute("maxstanzas",s.mucHistoryMaxStanzas());
 				if (s.mucHistorySeconds() >= 0)
 					h.setAttribute("seconds",s.mucHistorySeconds());
+				if (!s.mucHistorySince().isNull())
+					h.setAttribute("since", s.mucHistorySince().toUTC().addSecs(1).toString(Qt::ISODate));
 				m.appendChild(h);
 			}
 			tag.appendChild(m);

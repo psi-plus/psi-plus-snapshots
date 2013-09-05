@@ -2373,11 +2373,12 @@ void Status::setMUCDestroy(const MUCDestroy& i)
 	v_mucDestroy = i;
 }
 
-void Status::setMUCHistory(int maxchars, int maxstanzas, int seconds)
+void Status::setMUCHistory(int maxchars, int maxstanzas, int seconds, const QDateTime &since)
 {
 	v_mucHistoryMaxChars = maxchars;
 	v_mucHistoryMaxStanzas = maxstanzas;
 	v_mucHistorySeconds = seconds;
+	v_mucHistorySince = since;
 }
 
 
@@ -2557,7 +2558,7 @@ const QString& Status::mucPassword() const
 
 bool Status::hasMUCHistory() const
 {
-	return v_mucHistoryMaxChars >= 0 || v_mucHistoryMaxStanzas >= 0 || v_mucHistorySeconds >= 0;
+	return v_mucHistoryMaxChars >= 0 || v_mucHistoryMaxStanzas >= 0 || v_mucHistorySeconds >= 0 || !v_mucHistorySince.isNull();
 }
 
 int Status::mucHistoryMaxChars() const
@@ -2573,6 +2574,11 @@ int Status::mucHistoryMaxStanzas() const
 int Status::mucHistorySeconds() const
 {
 	return v_mucHistorySeconds;
+}
+
+const QDateTime & Status::mucHistorySince() const
+{
+	return v_mucHistorySince;
 }
 
 void Status::setMUCPassword(const QString& i)
