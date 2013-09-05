@@ -1362,7 +1362,7 @@ bool OptionsMigration::fromFile(const QString &fname)
 void OptionsMigration::lateMigration()
 {
 	// Add default chat and groupchat toolbars
-	if (PsiOptions::instance()->getOption("options.ui.contactlist.toolbars.m0.name").toString() != "Chat Toolbar") {
+	if (PsiOptions::instance()->getOption("options.ui.contactlist.toolbars.m0.name").toString() != "Chat") {
 		QStringList pluginsKeys;
 #ifdef PSI_PLUGINS
 		PluginManager *pm = PluginManager::instance();
@@ -1374,7 +1374,7 @@ void OptionsMigration::lateMigration()
 		ToolbarPrefs chatToolbar;
 		chatToolbar.on = PsiOptions::instance()->getOption("options.ui.chat.central-toolbar").toBool();
 		PsiOptions::instance()->removeOption("options.ui.chat.central-toolbar");
-		chatToolbar.name = "Chat Toolbar";
+		chatToolbar.name = "Chat";
 		chatToolbar.keys << "chat_clear"  << "chat_find" << "chat_html_text" << "chat_add_contact";
 		chatToolbar.keys += pluginsKeys;
 		chatToolbar.keys << "spacer" << "chat_icon" << "chat_templates" << "chat_ps" << "chat_file"
@@ -1388,7 +1388,7 @@ void OptionsMigration::lateMigration()
 		ToolbarPrefs groupchatToolbar;
 		groupchatToolbar.on = chatToolbar.on;
 
-		groupchatToolbar.name = "Groupchat Toolbar";
+		groupchatToolbar.name = "Groupchat";
 		groupchatToolbar.keys << "gchat_clear"  << "gchat_find" << "gchat_html_text" << "gchat_configure";
 		groupchatToolbar.keys += pluginsKeys;
 		groupchatToolbar.keys << "spacer" << "gchat_icon" << "gchat_templates" << "gchat_ps" ;

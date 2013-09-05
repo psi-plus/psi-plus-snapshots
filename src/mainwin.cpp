@@ -903,7 +903,7 @@ void MainWin::buildToolbars()
 	bool allInOne = options->getOption("options.ui.tabs.grouping").toString().contains('A');
 	foreach(const QString &base, options->getChildOptionNames("options.ui.contactlist.toolbars", true, true)) {
 		QString toolbarName = options->getOption(base + ".name").toString();
-		if (toolbarName == "Chat Toolbar" || toolbarName == "Groupchat Toolbar") {
+		if (toolbarName == "Chat" || toolbarName == "Groupchat") {
 			continue;
 		}
 

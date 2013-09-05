@@ -223,8 +223,8 @@ void OptionsTabToolbars::restoreOptions()
 	QStringList toolbarBases;
 	toolbarBases = o->getChildOptionNames("options.ui.contactlist.toolbars", true, true);
 
-	QString chatToolbarName = tr("Chat Toolbar");
-	QString groupchatToolbarName = tr("Groupchat Toolbar");
+	QString chatToolbarName = tr("Chat");
+	QString groupchatToolbarName = tr("Groupchat");
 
 	foreach(QString base, toolbarBases) {
 		ToolbarPrefs tb;
@@ -240,10 +240,10 @@ void OptionsTabToolbars::restoreOptions()
 		tb.keys = o->getOption(base + ".actions").toStringList();
 
 		p->toolbars[base] = tb;
-		if (tb.name == "Chat Toolbar") {
+		if (tb.name == "Chat") {
 			d->cb_toolbars->addItem(chatToolbarName, base);
 		}
-		else if (tb.name == "Groupchat Toolbar") {
+		else if (tb.name == "Groupchat") {
 			d->cb_toolbars->addItem(groupchatToolbarName, base);
 		}
 		else {
