@@ -41,7 +41,9 @@ public:
 	virtual TuneController* createController();
 };
 
+#ifndef HAVE_QT5
 Q_EXPORT_PLUGIN2(aimpplugin, AIMPPlugin);
+#endif
 
 QString AIMPPlugin::name()
 {
