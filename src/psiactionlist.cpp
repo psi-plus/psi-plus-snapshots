@@ -482,7 +482,7 @@ void PsiActionList::Private::createChat()
 			{ "", 0 }
 		};
 
-		createActionList(tr("Chat Core"), Actions_Chat, actions);
+		createActionList(tr("Chat basic buttons"), Actions_Chat, actions);
 	}
 
 	addPluginsActions(Actions_Chat);
@@ -510,7 +510,7 @@ void PsiActionList::Private::createGroupchat()
 			{ "", 0 }
 		};
 
-		createActionList(tr("Groupchat Core"), Actions_Groupchat, actions);
+		createActionList(tr("Groupchat basic buttons"), Actions_Groupchat, actions);
 	}
 
 	addPluginsActions(Actions_Groupchat);
