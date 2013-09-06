@@ -391,9 +391,11 @@ void OptionsTabToolbars::toolbarSelectionChanged(int item)
 	ToolbarPrefs tb;
 	tb = p->toolbars[base];
 
-	d->le_toolbarName->setText(tb.name);
+	if (item > 1) {
+		d->le_toolbarName->setText(tb.name);
+		d->ck_toolbarLocked->setChecked(tb.locked || !moveable);
+	}
 	d->ck_toolbarOn->setChecked(tb.on);
-	d->ck_toolbarLocked->setChecked(tb.locked || !moveable);
 	// d->ck_toolbarStretch->setChecked(tb.stretchable);
 
 	{
@@ -599,9 +601,11 @@ void OptionsTabToolbars::toolbarDataChanged()
 	tb = p->toolbars[base];
 
 	tb.dirty = true;
-	tb.name = d->le_toolbarName->text();
+	if (n > 1) {
+		tb.name = d->le_toolbarName->text();
+		tb.locked = d->ck_toolbarLocked->isChecked();
+	}
 	tb.on = d->ck_toolbarOn->isChecked();
-	tb.locked = d->ck_toolbarLocked->isChecked();
 	// tb.stretchable = d->ck_toolbarStretch->isChecked();
 
 	p->toolbars[base] = tb;
