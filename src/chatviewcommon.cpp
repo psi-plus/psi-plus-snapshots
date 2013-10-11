@@ -21,6 +21,7 @@
 #include <QWidget>
 #include <QColor>
 #include <QRegExp>
+#include <QApplication>
 
 #include "chatviewcommon.h"
 #include "psioptions.h"
@@ -71,13 +72,21 @@ QString ChatViewCommon::getMucNickColor(const QString &nick, bool isSelf, QStrin
 		if (PsiOptions::instance()->getOption("options.ui.muc.use-hash-nick-coloring").toBool()) {
 			/* Hash-driven colors */
 			Q_ASSERT(nickwoun.size());
-			quint32 num = qHash(nickwoun);
-			int s = ((char*)&num)[2];
-			int v = ((char*)&num)[3];
-			//num = (num ^ (num >> 16)) & 0xffff;
-			//num ^= (num >> 9);
-			QColor precolor = QColor::fromHsv(num % 360,
-					s < 150? 250 : s, v > 210? 210 : v < 100? 150 : v);
+			quint32 hash = qHash(nickwoun); // main hash
+			quint32 num = hash + nickwoun.size(); // additional hash which differs from main hash
+			QColor bg = QApplication::palette().color(QPalette::Base); // background color
+			int bgH = bg.hue() >= 0? bg.hue() : 60; // 60 == yellow
+			int bgV = bg.lightness() >= 0? bg.lightness() : 255; // 255 == white
+			int bgA = bg.alpha() >= 0? bg.alpha() : 255; // 255 == fully opaque color
+			int t = 300*(hash%30); // scale to 0-300 range with limited palette
+			int h = bgH + t + 30 ; // do not use colors close to background color
+			while (h > 359) h -= 360; // use only 0-359 range
+			int v = bgV > 127?
+						25  + 25*(num%4): // for bright themes
+						230 - 25*(num%4); // for dark themes
+			int a = bgA; // use the same transparency as in background color
+			int s = 255; // use only clear colors
+			QColor precolor = QColor::fromHsv(h, s, v, a);
 			return precolor.name();
 		} else {
 			/* Colors from list */
