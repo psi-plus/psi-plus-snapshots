@@ -18,9 +18,12 @@
  *
  */
 
+#include <QApplication>
 #include <QWidget>
 #include <QColor>
 #include <QRegExp>
+
+#include <math.h>
 
 #include "chatviewcommon.h"
 #include "psioptions.h"
@@ -72,11 +75,10 @@ QString ChatViewCommon::getMucNickColor(const QString &nick, bool isSelf, QStrin
 			/* Hash-driven colors */
 			Q_ASSERT(nickwoun.size());
 			quint32 hash = qHash(nickwoun); // almost unique hash
-			int h = 45*(hash%8); // scale to 0-359 range with limited palette
-			int s = 255; // use only clear colors
-			int v = nickwoun.size() %2? 170 : 255; // use bright colors
-			int a = 255; // 255 == fully opaque color
-			QColor precolor = QColor::fromHsv(h, s, v, a);
+			if (_palette.isEmpty()) {
+				generatePalette();
+			}
+			const QColor &precolor = _palette.at(hash % _palette.size());
 			return precolor.name();
 		} else {
 			/* Colors from list */
@@ -92,3 +94,44 @@ QString ChatViewCommon::getMucNickColor(const QString &nick, bool isSelf, QStrin
 		}
 	}
 }
+
+void ChatViewCommon::generatePalette()
+{
+	QColor bg = qApp->palette().color(QPalette::Base); // background color
+	QList<QColor> result;
+	QColor color;
+	for (int k = 0; k < 10 ; ++k) {
+		color = QColor::fromHsv(36*k, 255, 255);
+		if (compatibleColors(color, bg)) {
+			result << color;
+		}
+		color = QColor::fromHsv(36*k, 255, 170);
+		if (compatibleColors(color, bg)) {
+			result << color;
+		}
+	}
+	_palette = result;
+}
+
+bool ChatViewCommon::compatibleColors(const QColor &c1, const QColor &c2)
+{
+	int dR = c1.red()-c2.red();
+	int dG = c1.green()-c2.green();
+	int dB = c1.blue()-c2.blue();
+
+	double dV = abs(c1.value()-c2.value());
+	double dC = sqrt(0.2126*dR*dR + 0.7152*dG*dG + 0.0722*dB*dB);
+
+	if (dC < 80. && dV > 100) {
+		return false;
+	}
+	else if (dC < 110. && dV <= 100 && dV > 10) {
+		return false;
+	}
+	else if (dC < 125. && dV <= 10) {
+		return false;
+	}
+
+	return true;
+}
+
