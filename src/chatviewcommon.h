@@ -36,6 +36,7 @@ public:
 	bool updateLastMsgTime(QDateTime t);
 	QString getMucNickColor(const QString &, bool,
 							QStringList validList = QStringList());
+	QList<QColor> getPalette();
 
 protected:
 	QDateTime _lastMsgTime;
