@@ -214,8 +214,9 @@ private slots:
 		bookmarksMenu_->addAction(doGroupChatAction_);
 		bookmarksMenu_->addSeparator();
 		bookmarksMenu_->addAction(bookmarksManageAction_);
+		bookmarksMenu_->setEnabled(true);
 		if (account->account()->bookmarkManager()->isAvailable()) {
-			bookmarksMenu_->setEnabled(true);
+			bookmarksManageAction_->setEnabled(true);
 			bookmarksMenu_->addSeparator();
 			foreach(ConferenceBookmark c, account->account()->bookmarkManager()->conferences()) {
 				QAction* joinAction = new QAction(QString(tr("Join %1")).arg(c.name()), this);
@@ -226,7 +227,7 @@ private slots:
 			}
 		}
 		else {
-			bookmarksMenu_->setEnabled(false);
+			bookmarksManageAction_->setEnabled(false);
 		}
 
 		newMessageAction_->setVisible(PsiOptions::instance()->getOption("options.ui.message.enabled").toBool());
