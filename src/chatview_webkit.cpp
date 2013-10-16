@@ -106,9 +106,13 @@ public slots:
 			case QFont::Black: weight = "900"; break;
 		}
 
+		// In typography 1 point (also called PostScript point)
+		// is 1/72 of an inch
+		const float postScriptPoint = 1 / 72.;
+
 		// Workaround.  WebKit works only with 96dpi
 		// Need to convert point size to pixel size
-		int pixelSize = f.pointSize() * qApp->desktop()->logicalDpiX() / 72.;
+		int pixelSize = f.pointSize() * qApp->desktop()->logicalDpiX() * postScriptPoint;
 
 		return QString("{fontFamily:'%1',fontSize:'%2px',fontStyle:'%3',fontVariant:'%4',fontWeight:'%5'}")
 						 .arg(f.family())
