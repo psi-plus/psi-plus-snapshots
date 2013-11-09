@@ -40,20 +40,21 @@ void PsiTipLabel::init(const QString& text)
 	setBackgroundRole(QPalette::ToolTipBase);
 	setPalette(QToolTip::palette());
 
-	QPalette palette(QToolTip::palette());
 	enableColoring_ = PsiOptions::instance()->getOption("options.ui.look.colors.tooltip.enable").toBool();
 	if(enableColoring_){
-		QString textColor(PsiOptions::instance()->getOption("options.ui.look.colors.tooltip.text").toString());
-		QString baseColor(PsiOptions::instance()->getOption("options.ui.look.colors.tooltip.background").toString());
-		if(textColor == baseColor) { //options values are not set
-			palette.setColor(QPalette::WindowText, palette.color(QPalette::ToolTipText));
-			palette.setColor(QPalette::Window, palette.color(QPalette::ToolTipBase));
+		QColor textColor(PsiOptions::instance()->getOption("options.ui.look.colors.tooltip.text").toString());
+		QColor baseColor(PsiOptions::instance()->getOption("options.ui.look.colors.tooltip.background").toString());
+		if(textColor.isValid() && baseColor.isValid() && textColor != baseColor) { //looks fine
+			QPalette palette(QToolTip::palette());
+			palette.setColor(QPalette::ToolTipText, textColor);
+			palette.setColor(QPalette::ToolTipBase, baseColor);
+			palette.setColor(QPalette::WindowText, textColor);
+			palette.setColor(QPalette::Window, baseColor);
+			setPalette(palette);
 		} else {
-			palette.setColor(QPalette::WindowText, QColor(textColor));
-			palette.setColor(QPalette::Window, QColor(baseColor));
+			enableColoring_ = false;
 		}
 	}
-	setPalette(palette);
 	const QString css = PsiOptions::instance()->getOption("options.ui.contactlist.tooltip.css").toString();
 	if (!css.isEmpty()) {
 		setStyleSheet(css);
