@@ -236,9 +236,9 @@ echo -e "${COMMENT}"
 git cm -a -m "$(echo -e ${COMMENT})" 2>&1 > \
     "${MAIN_DIR}/git-commit_${NEW_VER}.log"
 
-if [ "${NEW_VER}" != "${OLD_VER}" ]; then
+if [ "$(echo -e "${NEW_VER}\\n${OLD_VER}" | sort -V | tail -n1)" = "${NEW_VER}" ]; then
     git tag "${NEW_VER}"
-    echo "Git tag was created."
+    echo "Git tag ${NEW_VER} was created."
     echo;
 fi
 
