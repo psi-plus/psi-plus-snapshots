@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2013-09-03
+# Updated: 2014-01-06
 # Version: N/A
 
 set -e
@@ -176,7 +176,7 @@ git add -A
 COMMENT=""
 STATUS="$(git status)"
 
-TEST_ALL=$(echo "${STATUS}" | grep "#	" |
+TEST_ALL=$(echo "${STATUS}" | grep "   " |
              grep -v " src/applicationinfo.cpp" | \
              grep -v " generate-single-repo.sh" | \
              grep -v " README" | \
