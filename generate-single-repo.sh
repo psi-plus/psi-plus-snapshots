@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2014-01-06
+# Updated: 2014-01-09
 # Version: N/A
 
 set -e
@@ -91,6 +91,12 @@ LAST_REVISION_DATE=$(echo "${REVISION_DATE_LIST}" | sort -r | head -n1)
 CUR_VER="0.16"
 LAST_REVISION=${rev}
 NEW_VER="${CUR_VER}.${LAST_REVISION}"
+
+# Fix NEW_VER if manually created tag exists
+if [ "$(echo -e "${NEW_VER}\\n${OLD_VER}" | sort -V | tail -n1)" != "${NEW_VER}" ]; then
+    NEW_VER="${OLD_VER}"
+    EXTRA_TAG="true"
+fi
 
 echo "OLD_VER = ${OLD_VER}"
 echo "NEW_VER = ${NEW_VER}"
@@ -202,7 +208,11 @@ if [ "${TEST_ALL}" -eq 0 ]; then
 fi
 
 if [ "${NEW_VER}" = "${OLD_VER}" ]; then
-    COMMENT+="Sources were sync with upstream:\n"
+    if [ -z "${EXTRA_TAG}" ]; then
+        COMMENT+="Sources were sync with upstream:\n"
+    else
+        COMMENT+="Psi+ was updated:\n"
+    fi
     if [ "${TEST_SRC}" -gt "$((${TEST_LIBPSI}+${TEST_PLUGINS}+0))" ]; then
         COMMENT+="Psi was updated.\n"
     fi
@@ -236,7 +246,7 @@ echo -e "${COMMENT}"
 git cm -a -m "$(echo -e ${COMMENT})" 2>&1 > \
     "${MAIN_DIR}/git-commit_${NEW_VER}.log"
 
-if [ "$(echo -e "${NEW_VER}\\n${OLD_VER}" | sort -V | tail -n1)" = "${NEW_VER}" ]; then
+if [ "${NEW_VER}" != "${OLD_VER}" ]; then
     git tag "${NEW_VER}"
     echo "Git tag ${NEW_VER} was created."
     echo;
