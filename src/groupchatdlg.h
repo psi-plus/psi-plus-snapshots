@@ -88,6 +88,7 @@ public:
 
 protected:
 	void setShortcuts();
+	QWidget *logTextWidget();
 
 	// reimplemented
 	void resizeEvent(QResizeEvent *e);
