@@ -44,6 +44,7 @@ Dependency options:
   --with-aspell-inc=[path]    Path to Aspell include files
   --with-aspell-lib=[path]    Path to Aspell library files
   --disable-enchant           Disable use of enchant
+  --enable-plugins            Enable use of Psi Plugin support
 
 EOT
 }
@@ -270,6 +271,11 @@ while [ $# -gt 0 ]; do
 			shift
 			;;
 
+		--enable-plugins)
+			QC_ENABLE_plugins="Y"
+			shift
+			;;
+
 		--verbose)
 			QC_VERBOSE="Y"
 			shift
@@ -314,6 +320,7 @@ echo QC_DISABLE_aspell=$QC_DISABLE_aspell
 echo QC_WITH_ASPELL_INC=$QC_WITH_ASPELL_INC
 echo QC_WITH_ASPELL_LIB=$QC_WITH_ASPELL_LIB
 echo QC_DISABLE_enchant=$QC_DISABLE_enchant
+echo QC_ENABLE_plugins=$QC_ENABLE_plugins
 echo
 fi
 
@@ -1479,6 +1486,39 @@ public:
 			return "no";
 	}
 };
+#line 1 "plugins.qcm"
+/*
+-----BEGIN QCMOD-----
+name: Psi Plugin support
+-----END QCMOD-----
+*/
+
+//----------------------------------------------------------------------------
+// qc_plugins
+//----------------------------------------------------------------------------
+class qc_plugins : public ConfObj
+{
+public:
+	qc_plugins(Conf *c) : ConfObj(c) {}
+	QString name() const { return "Psi Plugin support"; }
+	QString shortname() const { return "plugins"; }
+	bool exec()
+	{
+		conf->addDefine("PSI_PLUGINS");
+
+		// Finish
+		conf->addExtra("CONFIG += psi_plugins");
+
+		qWarning("");
+		qWarning("");
+		qWarning("        !!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!");
+		qWarning("        PLUGIN SUPPORT IS STILL UNFINISHED !!!");
+		qWarning("        THE PLUGIN INTERFACE /WILL/ CHANGE !!!");
+		qWarning("        USE AT YOUR OWN RISK !!!");
+
+		return true;
+	}
+};
 #line 1 "conf.qcm"
 /*
 -----BEGIN QCMOD-----
@@ -1552,16 +1592,16 @@ public:
 		psiGenerateFile("mac/Info.plist.in", "mac/Info.plist", vars);
 
 #ifndef Q_OS_WIN
-		conf->addExtra(QString("PSI_LIBDIR=%1/psi").arg(conf->getenv("LIBDIR")));
-		conf->addExtra(QString("PSI_DATADIR=%1/psi").arg(conf->getenv("DATADIR")));
+		conf->addExtra(QString("PSI_LIBDIR=%1/psi-plus").arg(conf->getenv("LIBDIR")));
+		conf->addExtra(QString("PSI_DATADIR=%1/psi-plus").arg(conf->getenv("DATADIR")));
 #endif
 
 		QFile file("src/config.h");
 		if ( file.open(QIODevice::WriteOnly | QIODevice::Text) ) {
 			QTextStream stream( &file );
 #ifndef Q_OS_WIN
-			stream << "#define PSI_LIBDIR \"" << conf->getenv("LIBDIR") << "/psi\"" << endl;
-			stream << "#define PSI_DATADIR \"" << conf->getenv("DATADIR") << "/psi\"" << endl;
+			stream << "#define PSI_LIBDIR \"" << conf->getenv("LIBDIR") << "/psi-plus\"" << endl;
+			stream << "#define PSI_DATADIR \"" << conf->getenv("DATADIR") << "/psi-plus\"" << endl;
 #endif
 			stream << "#define PSI_VERSION \"" << version << "\"" << endl;
 		}
@@ -1728,6 +1768,9 @@ cat >$1/modules_new.cpp <<EOT
     o = new qc_spell(conf);
     o->required = true;
     o->disabled = false;
+    o = new qc_plugins(conf);
+    o->required = false;
+    o->disabled = true;
     o = new qc_conf(conf);
     o->required = true;
     o->disabled = false;
@@ -2778,6 +2821,7 @@ export QC_DISABLE_aspell
 export QC_WITH_ASPELL_INC
 export QC_WITH_ASPELL_LIB
 export QC_DISABLE_enchant
+export QC_ENABLE_plugins
 export QC_VERBOSE
 rm -rf .qconftemp
 (
