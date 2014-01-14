@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2014-01-09
+# Updated: 2014-01-14
 # Version: N/A
 
 set -e
@@ -109,19 +109,28 @@ echo;
 find . -type f | \
     grep -v "^\./\.git" | \
     grep -v "^\./generate-single-repo.sh" | \
+    grep -v "^\./configure" | \
     grep -v "^\./README" | \
     while read var; do rm "$var"; done
 find . -depth -type d -empty -exec rmdir {} \;
 echo "Directory is cleaned."
 echo;
 
-if [ ! -e "${PSIPLUS_DIR}/README" ]; then
-    wget -4 -c "https://raw.github.com/tehnick/psi-plus/master/README" || touch README
+if [ ! -e "${PSIPLUS_DIR}/configure" ]; then
+    wget -c "https://raw.github.com/tehnick/psi-plus/master/configure" || touch configure
 fi
 
+if [ ! -e "${PSIPLUS_DIR}/README" ]; then
+    wget -c "https://raw.github.com/tehnick/psi-plus/master/README" || touch README
+fi
+
+mv "${PSIPLUS_DIR}/configure" "${MAIN_DIR}/configure"
 mv "${PSIPLUS_DIR}/README" "${MAIN_DIR}/README"
 rsync -a "${MAIN_DIR}/psi/" "${PSIPLUS_DIR}/" \
-    --exclude=".git*"
+    --exclude=".git*" \
+    --exclude="^configure" \
+    --exclude="^README"
+mv "${MAIN_DIR}/configure" "${PSIPLUS_DIR}/configure"
 mv "${MAIN_DIR}/README" "${PSIPLUS_DIR}/README"
 echo "Files from psi project were copied."
 echo;
@@ -185,6 +194,7 @@ STATUS="$(git status)"
 TEST_ALL=$(echo "${STATUS}" | grep "   " |
              grep -v " src/applicationinfo.cpp" | \
              grep -v " generate-single-repo.sh" | \
+             grep -v " configure" | \
              grep -v " README" | \
              wc -l)
 TEST_SRC=$(echo "${STATUS}" | grep " src/" | wc -l)
