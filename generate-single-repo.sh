@@ -126,7 +126,7 @@ fi
 
 mv "${PSIPLUS_DIR}/configure" "${MAIN_DIR}/configure"
 mv "${PSIPLUS_DIR}/README" "${MAIN_DIR}/README"
-rsync -a --del "${MAIN_DIR}/psi/" "${PSIPLUS_DIR}/" \
+rsync -a "${MAIN_DIR}/psi/" "${PSIPLUS_DIR}/" \
     --exclude=".git*" \
     --exclude="^configure" \
     --exclude="^README"
