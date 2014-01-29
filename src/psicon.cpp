@@ -81,6 +81,9 @@
 #include "accountscombobox.h"
 #include "tabdlg.h"
 #include "chatdlg.h"
+#ifdef GROUPCHAT
+#include "groupchatdlg.h"
+#endif
 #include "spellchecker/aspellchecker.h"
 #ifdef WEBKIT
 #include "avatars.h"
@@ -1745,17 +1748,29 @@ void PsiCon::processEvent(PsiEvent *e, ActivationType activationType)
 	}
 
 	bool isChat = false;
+#ifdef GROUPCHAT
+	bool isMuc = false;
+#endif
 	bool sentToChatWindow = false;
 	if ( e->type() == PsiEvent::Message ) {
 		MessageEvent *me = (MessageEvent *)e;
 		const Message &m = me->message();
-		bool emptyForm = m.getForm().fields().empty();
-		// FIXME: Refactor this, PsiAccount and PsiEvent out
-		if ((m.type() == "chat" && emptyForm)
-			|| !EventDlg::messagingEnabled()) {
-			isChat = true;
-			sentToChatWindow = me->sentToChatWindow();
+#ifdef GROUPCHAT
+		if (m.type() == "groupchat") {
+			isMuc = true;
 		}
+		else {
+#endif
+			bool emptyForm = m.getForm().fields().empty();
+			// FIXME: Refactor this, PsiAccount and PsiEvent out
+			if ((m.type() == "chat" && emptyForm)
+					|| !EventDlg::messagingEnabled()) {
+				isChat = true;
+				sentToChatWindow = me->sentToChatWindow();
+			}
+#ifdef GROUPCHAT
+		}
+#endif
 	}
 
 	if (e->type() == PsiEvent::Auth && !EventDlg::messagingEnabled()) {
@@ -1802,6 +1817,17 @@ void PsiCon::processEvent(PsiEvent *e, ActivationType activationType)
 	}
 #endif
 	else {
+#ifdef GROUPCHAT
+		if (isMuc) {
+			PsiAccount *account = e->account();
+			GCMainDlg *c = account->findDialog<GCMainDlg*>(e->from());
+			if (c) {
+				c->ensureTabbedCorrectly();
+				c->bringToFront(true);
+				return;
+			}
+		}
+#endif
 		// search for an already opened eventdlg
 		EventDlg *w = e->account()->findDialog<EventDlg*>(u->jid());
 

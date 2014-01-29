@@ -2789,9 +2789,9 @@ void PsiAccount::processIncomingMessage(const Message &_m)
 
 #ifdef GROUPCHAT
 	if(_m.type() == "groupchat") {
-		GCMainDlg *w = findDialog<GCMainDlg*>(Jid(_m.from().bare()));
-		if(w)
-			w->message(_m);
+		MessageEvent *me = new MessageEvent(_m, this);
+		me->setOriginLocal(false);
+		handleEvent(me, IncomingStanza);
 		return;
 	}
 #endif
@@ -5082,7 +5082,19 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 				!(e->type() == PsiEvent::Message &&
 				  ((MessageEvent *)e)->message().body().isEmpty()))
 			{
-				logEvent(e->from(), e);
+#ifdef GROUPCHAT
+				bool isMuc = false;
+				if(e->type() == PsiEvent::Message) {
+					MessageEvent *me = (MessageEvent *)e;
+					if (me->message().type() == "groupchat")
+						isMuc = true;
+				}
+				if (!isMuc) {
+#endif
+					logEvent(e->from(), e);
+#ifdef GROUPCHAT
+				}
+#endif
 			}
 		}
 	}
@@ -5190,6 +5202,18 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 			doPopup = true;
 			popupType = PopupManager::AlertHeadline;
 		} // /headline
+#ifdef GROUPCHAT
+		else if (m.type() == "groupchat") {
+			putToQueue = false;
+			GCMainDlg *c = findDialog<GCMainDlg*>(e->from());
+			if (c) {
+				c->message(m);
+				if (!c->isActiveTab() && c->isLastMessageAlert()
+					&& o->getOption("options.ui.muc.allow-highlight-events").toBool())
+					putToQueue = true;
+			}
+		} // /groupchat
+#endif
 		else if (m.type().isEmpty()) {
 			soundType = eMessage;
 			doPopup = true;
@@ -5629,11 +5653,18 @@ void PsiAccount::processReadNext(const UserListItem &u)
 		return;
 
 	bool isChat = false;
+#ifdef GROUPCHAT
+	bool isMuc = false;
+#endif
 	if(e->type() == PsiEvent::Message) {
 		MessageEvent *me = (MessageEvent *)e;
 		const Message &m = me->message();
 		if(m.type() == "chat" && m.getForm().fields().empty())
 			isChat = true;
+#ifdef GROUPCHAT
+		else if (m.type() == "groupchat")
+			isMuc = true;
+#endif
 	}
 
 	// if it's a chat message, just open the chat window.  there is no need to do
@@ -5643,6 +5674,17 @@ void PsiAccount::processReadNext(const UserListItem &u)
 		openChat(e->from(), UserAction);
 		return;
 	}
+
+#ifdef GROUPCHAT
+	if (isMuc) {
+		GCMainDlg *c = findDialog<GCMainDlg*>(e->from());
+		if (c)
+		{
+			c->bringToFront(true);
+			return;
+		}
+	}
+#endif
 
 	// remove from queue
 	e = d->eventQueue->dequeue(u.jid());
@@ -5747,6 +5789,19 @@ void PsiAccount::chatMessagesRead(const Jid &j)
 //	}
 }
 
+#ifdef GROUPCHAT
+void PsiAccount::groupChatMessagesRead(const Jid &j)
+{
+	d->eventQueue->clear(j);
+
+	QList<UserListItem*> ul = findRelevant(j);
+	if(!ul.isEmpty()) {
+		UserListItem *u = ul.first();
+		cpUpdate(*u);
+	}
+}
+#endif
+
 void PsiAccount::logEvent(const Jid &j, PsiEvent *e)
 {
 	if (!d->acc.opt_log)
@@ -5769,6 +5824,7 @@ void PsiAccount::openGroupChat(const Jid &j, ActivationType activationType, MUCJ
 	GCMainDlg *w = new GCMainDlg(this, j, d->tabManager);
 	w->setPassword(d->client->groupChatPassword(j.domain(), j.node()));
 	connect(w, SIGNAL(aSend(const Message &)), SLOT(dj_sendMessage(const Message &)));
+	connect(w, SIGNAL(messagesRead(const Jid &)), SLOT(groupChatMessagesRead(const Jid &)));
 	connect(d->psi, SIGNAL(emitOptionsUpdate()), w, SLOT(optionsUpdate()));
 	if(reason != MUCJoinDlg::MucAutoJoin || !PsiOptions::instance()->getOption("options.ui.muc.hide-on-autojoin").toBool()) {
 		w->ensureTabbedCorrectly();

@@ -284,6 +284,10 @@ int MessageEvent::type() const
 
 Jid MessageEvent::from() const
 {
+#ifdef GROUPCHAT
+	if (v_m.type() == "groupchat")
+		return v_m.from().bare();
+#endif
 	return v_m.from();
 }
 
@@ -1102,7 +1106,11 @@ void EventQueue::printContent() const
 void EventQueue::clear()
 {
 	while(!list_.isEmpty())
-		delete list_.takeFirst();
+	{
+		EventItem *i = list_.takeFirst();
+		delete i->event();
+		delete i;
+	}
 
 	emit queueChanged();
 }
@@ -1121,6 +1129,7 @@ void EventQueue::clear(const Jid &j, bool compareRes)
 				GlobalEventQueue::instance()->dequeue(ei);
 			}
 			it = list_.erase(it);
+			delete e;
 			delete ei;
 			changed = true;
 		}

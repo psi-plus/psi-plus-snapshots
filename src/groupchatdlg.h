@@ -76,6 +76,7 @@ public:
 	const QString& nick() const;
 	const QString& topic() const;
 	const QDateTime& lastMsgTime() const;
+	bool isLastMessageAlert() const;
 
 	bool isInactive() const;
 	void reactivate();
@@ -100,6 +101,7 @@ protected:
 
 signals:
 	void aSend(const Message &);
+	void messagesRead(const Jid &);
 
 public slots:
 	// reimplemented
