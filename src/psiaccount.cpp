@@ -5082,19 +5082,17 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 				!(e->type() == PsiEvent::Message &&
 				  ((MessageEvent *)e)->message().body().isEmpty()))
 			{
-#ifdef GROUPCHAT
 				bool isMuc = false;
+#ifdef GROUPCHAT
 				if(e->type() == PsiEvent::Message) {
 					MessageEvent *me = (MessageEvent *)e;
 					if (me->message().type() == "groupchat")
 						isMuc = true;
 				}
+#endif
 				if (!isMuc) {
-#endif
 					logEvent(e->from(), e);
-#ifdef GROUPCHAT
 				}
-#endif
 			}
 		}
 	}
@@ -5136,7 +5134,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 		}
 
 		// Pass message events to chat window
-		if ((m.containsEvents() || m.chatState() != StateNone) && m.body().isEmpty()) {
+		if ((m.containsEvents() || m.chatState() != StateNone) && m.body().isEmpty() && m.type() != "groupchat") {
 			if (o->getOption("options.messages.send-composing-events").toBool()) {
 				ChatDlg *c = findChatDialogEx(e->from());
 				if (c) {

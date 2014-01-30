@@ -648,7 +648,7 @@ PsiIcon *PsiIconset::event2icon(PsiEvent *e)
 		const Message &m = me->message();
 		if(m.type() == "headline")
 			icon = "psi/headline";
-		else if(m.type() == "chat")
+		else if(m.type() == "chat" || m.type() == "groupchat")
 			icon = "psi/chat";
 		else if(m.type() == "error")
 			icon = "psi/system";
