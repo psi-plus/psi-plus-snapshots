@@ -48,9 +48,9 @@ static const QString useDefaultAvatarPath = "options.ui.contactlist.avatars.use-
 static const QString avatarAtLeftOptionPath = "options.ui.contactlist.avatars.avatars-at-left";
 static const QString showStatusIconsPath = "options.ui.contactlist.show-status-icons";
 static const QString statusIconsOverAvatarsPath = "options.ui.contactlist.status-icon-over-avatar";
-static const QString statusIconsetOptionPath = "options.iconsets.status";
 static const QString allClientsOptionPath = "options.ui.contactlist.show-all-client-icons";
 static const QString enableGroupsOptionPath = "options.ui.contactlist.enable-groups";
+static const QString statusIconsetOptionPath = "options.iconsets.status";
 
 PsiContactListViewDelegate::PsiContactListViewDelegate(ContactListView* parent)
 	: ContactListViewDelegate(parent)
@@ -307,6 +307,7 @@ void PsiContactListViewDelegate::drawContact(QPainter* painter, const QStyleOpti
 	QList<int> rightWidths;
 	if(!isMuc) {
 	if (showClientIcons_) {
+		bool showAllClients = PsiOptions::instance()->getOption("options.ui.contactlist.show-all-client-icons").toBool();
 		const QList<QPixmap> pixList = this->clientPixmap(index);
 
 		for (QList<QPixmap>::ConstIterator it = pixList.begin(); it != pixList.end(); ++it) {
@@ -569,6 +570,14 @@ void PsiContactListViewDelegate::optionChanged(const QString& option)
 		statusIconsOverAvatars_ = PsiOptions::instance()->getOption(statusIconsOverAvatarsPath).toBool();
 		contactList()->viewport()->update();
 	}
+	else if(option == allClientsOptionPath) {
+		allClients_= PsiOptions::instance()->getOption(allClientsOptionPath).toBool();
+		contactList()->viewport()->update();
+	}
+	else if(option == enableGroupsOptionPath) {
+		enableGroups_ = PsiOptions::instance()->getOption(enableGroupsOptionPath).toBool();
+		contactList()->viewport()->update();
+	}
 	else if(option == slimGroupsOptionPath) {
 		slimGroup_ = PsiOptions::instance()->getOption(slimGroupsOptionPath).toBool();
 		contactList()->viewport()->update();
@@ -579,14 +588,6 @@ void PsiContactListViewDelegate::optionChanged(const QString& option)
 	}
 	else if(option == statusSingleOptionPath) {
 		statusSingle_ = !PsiOptions::instance()->getOption(statusSingleOptionPath).toBool();
-		contactList()->viewport()->update();
-	}
-	else if(option == allClientsOptionPath) {
-		allClients_= PsiOptions::instance()->getOption(allClientsOptionPath).toBool();
-		contactList()->viewport()->update();
-	}
-	else if(option == enableGroupsOptionPath) {
-		enableGroups_ = PsiOptions::instance()->getOption(enableGroupsOptionPath).toBool();
 		contactList()->viewport()->update();
 	}
 }

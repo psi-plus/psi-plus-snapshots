@@ -176,9 +176,10 @@ private:
 
 	void contextMenuEvent(QContextMenuEvent *);
 
-
 	void setMargins();
+
 	inline XMPP::Jid jidForNick(const QString &nick) const;
+
 };
 
 class GCFindDlg : public QDialog

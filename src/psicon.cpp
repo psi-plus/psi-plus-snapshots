@@ -508,7 +508,7 @@ bool PsiCon::init()
 #elif defined(USE_QDCHECKER)
 	d->autoUpdater = new QDChecker();
 #endif
-	if (options->getOption("options.auto-update.check-on-startup").toBool() && d->autoUpdater)
+	if (PsiOptions::instance()->getOption("options.auto-update.check-on-startup").toBool() && d->autoUpdater)
 		d->autoUpdater->checkForUpdates();
 
 	d->iconSelect = new IconSelectPopup(0);
