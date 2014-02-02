@@ -5203,13 +5203,17 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 #ifdef GROUPCHAT
 		else if (m.type() == "groupchat") {
 			putToQueue = false;
-			GCMainDlg *c = findDialog<GCMainDlg*>(e->from());
-			if (c) {
-				c->message(m);
-				if (!c->isActiveTab() && c->isLastMessageAlert()
-					&& o->getOption("options.ui.muc.allow-highlight-events").toBool())
-					putToQueue = true;
+			bool allowMucEvents = o->getOption("options.ui.muc.allow-highlight-events").toBool();
+			if (activationType != FromXml) {
+				GCMainDlg *c = findDialog<GCMainDlg*>(e->from());
+				if (c) {
+					c->message(m);
+					if (!c->isActiveTab() && c->isLastMessageAlert() && !m.spooled() && allowMucEvents)
+						putToQueue = true;
+				}
 			}
+			else if (allowMucEvents)
+				putToQueue = true;
 		} // /groupchat
 #endif
 		else if (m.type().isEmpty()) {
