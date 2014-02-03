@@ -1829,10 +1829,12 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 			stamp.setTimeSpec(Qt::UTC);
 			d->timeStamp = stamp.toLocalTime();
 		}
+		d->timeStampSend = true;
 		d->spooled = true;
 	}
 	else {
 		d->timeStamp = QDateTime::currentDateTime();
+		d->timeStampSend = false;
 		d->spooled = false;
 	}
 

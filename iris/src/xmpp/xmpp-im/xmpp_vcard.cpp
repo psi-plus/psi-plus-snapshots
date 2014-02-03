@@ -549,7 +549,7 @@ bool VCard::fromXml(const QDomElement &q)
 		else if ( tag == "NICKNAME" )
 			d->nickName = i.text().trimmed();
 		else if ( tag == "PHOTO" ) {
-			d->photo = QCA::Base64().stringToArray(subTagText(i, "BINVAL").replace("\n","")).toByteArray();
+			d->photo = QCA::Base64().stringToArray(subTagText(i, "BINVAL").replace(QRegExp("[\r\n]+"),"")).toByteArray();
 			d->photoURI = subTagText(i, "EXTVAL");
 		}
 		else if ( tag == "BDAY" )
