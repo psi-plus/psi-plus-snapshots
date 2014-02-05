@@ -7,7 +7,6 @@
 #include "psitrayicon.h"
 #include "iconset.h"
 #include "alerticon.h"
-#include "psioptions.h"
 
 // TODO: remove the QPoint parameter from the signals when we finally move
 // to the new system.
@@ -16,20 +15,21 @@ PsiTrayIcon::PsiTrayIcon(const QString &tip, QMenu *popup, QObject *parent)
 	: QObject(parent)
 	, icon_(NULL)
 	, trayicon_(new QSystemTrayIcon())
-{
-
+{	
 	trayicon_->setContextMenu(popup);
 	setToolTip(tip);
 	connect(trayicon_,SIGNAL(activated(QSystemTrayIcon::ActivationReason)),SLOT(trayicon_activated(QSystemTrayIcon::ActivationReason)));
 	trayicon_->installEventFilter(this);
-
-	iconsetChanged(PsiOptions::instance()->getOption("options.iconsets.status").toString());
 }
 
 PsiTrayIcon::~PsiTrayIcon()
 {
 	delete trayicon_;
-	delete icon_;
+	//delete icon_;
+	if ( icon_ ) {
+		icon_->disconnect();
+		icon_->stop();
+	}
 }
 
 void PsiTrayIcon::setContextMenu(QMenu* menu)
@@ -46,27 +46,31 @@ void PsiTrayIcon::setToolTip(const QString &str)
 #endif
 }
 
-void PsiTrayIcon::setIcon(const PsiIcon *icon, bool alert)
+void PsiTrayIcon::setIcon(const PsiIcon *icon, bool /*alert*/)
 {
 	if ( icon_ ) {
-		disconnect(icon_, 0, this, 0 );
+		icon_->disconnect();
 		icon_->stop();
 
-		delete icon_;
-		icon_ = 0;
+//		delete icon_;
+//		icon_ = 0;
 	}
 
+	icon_ = (PsiIcon*)icon;
 	if ( icon ) {
-		if ( !alert )
-			icon_ = new PsiIcon(*icon);
-		else
-			icon_ = new AlertIcon(icon);
-
 		connect(icon_, SIGNAL(pixmapChanged()), SLOT(animate()));
 		icon_->activated();
+
+//		if ( !alert )
+//			icon_ = new PsiIcon(*icon);
+//		else
+//			icon_ = new AlertIcon(icon);
+
+//		connect(icon_, SIGNAL(pixmapChanged()), SLOT(animate()));
+//		icon_->activated();
 	}
-	else
-		icon_ = new PsiIcon();
+	//else
+		//icon_ = new PsiIcon();
 
 	animate();
 }
@@ -84,11 +88,6 @@ bool PsiTrayIcon::isAnimating() const
 bool PsiTrayIcon::isWMDock()
 {
 	return false;
-}
-
-void PsiTrayIcon::iconsetChanged(const QString &iconset)
-{
-	iconset_ = iconset;
 }
 
 void PsiTrayIcon::show()
@@ -192,7 +191,8 @@ void PsiTrayIcon::animate()
 	if ( !icon_ )
 		return;
 
-	QString cachedName = "PsiTray/" + iconset_ + "/" + icon_->name() + "/" + QString::number( icon_->frameNumber() );
+	QString cachedName = "PsiTray/" + icon_->name() + "/" + QString::number(quintptr(icon_)) + "/"
+			+ QString::number( icon_->frameNumber() );
 
 	QPixmap p;
 	if ( !QPixmapCache::find(cachedName, p) ) {

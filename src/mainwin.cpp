@@ -1787,8 +1787,6 @@ void MainWin::updateTray()
 
 	buildTrayMenu();
 	d->tray->setContextMenu(d->trayMenu);
-
-	d->tray->iconsetChanged(PsiOptions::instance()->getOption("options.iconsets.status").toString());
 }
 
 void MainWin::doRecvNextEvent()

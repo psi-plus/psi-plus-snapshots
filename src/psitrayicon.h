@@ -25,8 +25,6 @@ public:
 
 	bool isWMDock();
 
-	void iconsetChanged(const QString& iconset);
-
 signals:
 	void clicked(const QPoint &, int);
 	void doubleClicked(const QPoint &);
@@ -49,7 +47,6 @@ protected:
 private:
 	PsiIcon* icon_;
 	QSystemTrayIcon* trayicon_;
-	QString iconset_;
 };
 
 

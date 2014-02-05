@@ -43,7 +43,7 @@ ContactListGroup::ContactListGroup(ContactListModel* model, ContactListGroup* pa
 	, parent_(parent)
 	, updateOnlineContactsTimer_(0)
 	, haveOnlineContacts_(false)
-	, haveAlwaysVisibleContacts_(false)
+	, shouldBeVisible_(false)
 	, onlineContactsCount_(0)
 	, totalContactsCount_(0)
 {
@@ -346,9 +346,9 @@ void ContactListGroup::setHidden(bool hidden)
 	model_->updatedGroupVisibility(this);
 }
 
-bool ContactListGroup::haveAlwaysVisibleContacts() const
+bool ContactListGroup::shouldBeVisible() const
 {
-	return haveAlwaysVisibleContacts_;
+	return shouldBeVisible_;
 }
 
 int ContactListGroup::onlineContactsCount() const
@@ -373,7 +373,7 @@ void ContactListGroup::updateOnlineContactsFlag()
 		return;
 
 	bool haveOnlineContacts = false;
-	bool haveAlwaysVisibleContacts = false;
+	bool shouldBeVisible = false;
 	int onlineContactsCount = 0;
 	int totalContactsCount = 0;
 	foreach(ContactListItemProxy* item, items_) {
@@ -386,12 +386,15 @@ void ContactListGroup::updateOnlineContactsFlag()
 				++onlineContactsCount;
 				// break;
 			}
+			if (contact->alerting())
+				shouldBeVisible = true;
 			if (contact->isAlwaysVisible()) {
-				haveAlwaysVisibleContacts = true;
+				shouldBeVisible = true;
 			}
 		}
 		else if ((group = dynamic_cast<ContactListGroup*>(item->item()))) {
 			totalContactsCount += group->totalContactsCount();
+			shouldBeVisible = shouldBeVisible || group->shouldBeVisible();
 			if (group->haveOnlineContacts()) {
 				haveOnlineContacts = true;
 				onlineContactsCount += group->onlineContactsCount();
@@ -400,17 +403,15 @@ void ContactListGroup::updateOnlineContactsFlag()
 		}
 	}
 
-	if (haveOnlineContacts_ != haveOnlineContacts) {
+	if (haveOnlineContacts_ != haveOnlineContacts ||
+		shouldBeVisible != shouldBeVisible_)
+	{
 		haveOnlineContacts_ = haveOnlineContacts;
+		shouldBeVisible_ = shouldBeVisible;
 		if (parent()) {
 			parent()->updateOnlineContactsFlag();
 			model_->updatedGroupVisibility(this);
 		}
-	}
-
-	if (haveAlwaysVisibleContacts != haveAlwaysVisibleContacts_) {
-		haveAlwaysVisibleContacts_ = haveAlwaysVisibleContacts;
-		model_->updatedGroupVisibility(this);
 	}
 
 	if (onlineContactsCount != onlineContactsCount_ ||

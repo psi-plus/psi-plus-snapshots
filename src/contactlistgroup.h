@@ -52,7 +52,7 @@ public:
 
 	bool isFake() const;
 	bool haveOnlineContacts() const;
-	bool haveAlwaysVisibleContacts() const;
+	bool shouldBeVisible() const;
 	virtual int onlineContactsCount() const;
 	virtual int totalContactsCount() const;
 	int contactsCount() const;
@@ -125,7 +125,7 @@ private:
 	QVector<PsiContact*> contacts_;
 	QVector<ContactListItemProxy*> items_;
 	bool haveOnlineContacts_;
-	bool haveAlwaysVisibleContacts_;
+	bool shouldBeVisible_;
 	int onlineContactsCount_;
 	int totalContactsCount_;
 
