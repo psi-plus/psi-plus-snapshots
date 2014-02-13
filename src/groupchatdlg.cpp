@@ -2070,11 +2070,11 @@ void GCMainDlg::lv_action(const QString &nick, const Status &s, int x)
 		d->mucManager->ban(contact->s.mucItem().jid());
 	}
 	else if(x > 11 && x < 19) {
-		MUCReasonsEditor *editor = new MUCReasonsEditor(this);
+		MUCReasonsEditor editor(this);
 		QString reason;
-		if (editor->exec())
-			reason = editor->reason();
-		delete editor;
+		if (editor.exec())
+			reason = editor.reason();
+		else return;
 		GCUserViewItem *contact = (GCUserViewItem*) ui_.lv_users->findEntry(nick);
 		if (!contact)
 			return;
