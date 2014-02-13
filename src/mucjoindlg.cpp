@@ -213,6 +213,8 @@ void MUCJoinDlg::doJoin(MucJoinReason r)
 			gc->ensureTabbedCorrectly();
 		gc->bringToFront();
 		if (gc->isInactive()) {
+			if(gc->jid() != j)
+				gc->setJid(j);
 			gc->reactivate();
 		}
 		joined();

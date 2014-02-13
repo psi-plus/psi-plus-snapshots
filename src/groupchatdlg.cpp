@@ -1371,6 +1371,11 @@ void GCMainDlg::reactivate() {
 	goConn();
 }
 
+void GCMainDlg::setJid(const Jid &j)
+{
+	TabbableWidget::setJid(j);
+	d->self = d->prev_self = j.resource();
+}
 
 void GCMainDlg::goConn()
 {
