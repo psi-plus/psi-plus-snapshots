@@ -935,20 +935,25 @@ void PsiCon::doNewBlankMessage()
 	if(!account)
 		return;
 
-	EventDlg *w = createEventDlg("", account);
+	EventDlg *w = createMessageDlg("", account);
 	if (!w)
 		return;
 
 	w->show();
 }
 
-// FIXME: smells fishy. Refactor! Probably create a common class for all dialogs and
-// call optionsUpdate() automatically.
-EventDlg *PsiCon::createEventDlg(const QString &to, PsiAccount *pa)
+EventDlg *PsiCon::createMessageDlg(const QString &to, PsiAccount *pa)
 {
 	if (!EventDlg::messagingEnabled())
 		return 0;
 
+	return createEventDlg(to, pa);
+}
+
+// FIXME: smells fishy. Refactor! Probably create a common class for all dialogs and
+// call optionsUpdate() automatically.
+EventDlg *PsiCon::createEventDlg(const QString &to, PsiAccount *pa)
+{
 	EventDlg *w = new EventDlg(to, this, pa);
 	connect(this, SIGNAL(emitOptionsUpdate()), w, SLOT(optionsUpdate()));
 	return w;
@@ -1763,28 +1768,13 @@ void PsiCon::processEvent(PsiEvent *e, ActivationType activationType)
 #endif
 			bool emptyForm = m.getForm().fields().empty();
 			// FIXME: Refactor this, PsiAccount and PsiEvent out
-			if ((m.type() == "chat" && emptyForm)
-					|| !EventDlg::messagingEnabled()) {
+			if (m.type() == "chat" && emptyForm) {
 				isChat = true;
 				sentToChatWindow = me->sentToChatWindow();
 			}
 #ifdef GROUPCHAT
 		}
 #endif
-	}
-
-	if (e->type() == PsiEvent::Auth && !EventDlg::messagingEnabled()) {
-		if (static_cast<AuthEvent*>(e)->authType() == "subscribe") {
-#ifdef YAPSI
-			bringToFront(d->mainwin);
-			return;
-#else
-			e->account()->dj_addAuth(e->jid());
-#endif
-		}
-		e->account()->eventQueue()->dequeue(e);
-		delete e;
-		return;
 	}
 
 	if ( isChat ) {

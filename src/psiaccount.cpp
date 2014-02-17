@@ -2860,10 +2860,7 @@ void PsiAccount::processIncomingMessage(const Message &_m)
 	}
 
 	// change the type?
-	if (!EventDlg::messagingEnabled()) {
-		m.setType("chat");
-	}
-	else if (m.type() != "headline" && m.invite().isEmpty() && m.mucInvites().isEmpty()) {
+	if (m.type() != "headline" && m.invite().isEmpty() && m.mucInvites().isEmpty()) {
 		const QString type = PsiOptions::instance()->getOption("options.messages.force-incoming-message-type").toString();
 		if (type == "message")
 			m.setType("");
@@ -3863,7 +3860,7 @@ void PsiAccount::cpUpdate(const UserListItem &u, const QString &rname, bool from
 EventDlg *PsiAccount::ensureEventDlg(const Jid &j)
 {
 	EventDlg *w = findDialog<EventDlg*>(j);
-	if (!w && EventDlg::messagingEnabled())
+	if (!w)
 		w = new EventDlg(j, this, true);
 
 	if (w) {
@@ -4201,7 +4198,7 @@ void PsiAccount::actionRecvRosterExchange(const Jid& j, const RosterExchangeItem
 
 void PsiAccount::actionSendMessage(const Jid &j)
 {
-	EventDlg *w = d->psi->createEventDlg(j.full(), this);
+	EventDlg *w = d->psi->createMessageDlg(j.full(), this);
 	if (!w)
 		return;
 	w->show();
@@ -4219,7 +4216,7 @@ void PsiAccount::actionSendMessage(const QList<XMPP::Jid> &j)
 		str += (*it).full();
 	}
 
-	EventDlg *w = d->psi->createEventDlg(str, this);
+	EventDlg *w = d->psi->createMessageDlg(str, this);
 	if (!w)
 		return;
 	w->show();
@@ -4227,7 +4224,7 @@ void PsiAccount::actionSendMessage(const QList<XMPP::Jid> &j)
 
 void PsiAccount::actionSendUrl(const Jid &j)
 {
-	EventDlg *w = d->psi->createEventDlg(j.full(), this);
+	EventDlg *w = d->psi->createMessageDlg(j.full(), this);
 	if (!w)
 		return;
 	w->setUrlOnShow();
@@ -4752,7 +4749,7 @@ void PsiAccount::dj_sendMessage(const Message &m, bool log)
 
 void PsiAccount::dj_newMessage(const Jid &jid, const QString &body, const QString &subject, const QString &thread)
 {
-	EventDlg *w = d->psi->createEventDlg(jid.full(), this);
+	EventDlg *w = d->psi->createMessageDlg(jid.full(), this);
 	if (!w)
 		return;
 
@@ -5518,8 +5515,6 @@ void PsiAccount::queueEvent(PsiEvent* e, ActivationType activationType)
 		else if (e->type() == PsiEvent::File) {
 			doPopup = PsiOptions::instance()->getOption("options.ui.file-transfer.auto-popup").toBool();
 		}
-		else if (e->type() == PsiEvent::Auth && !EventDlg::messagingEnabled())
-			doPopup = false;
 #ifdef PSI_PLUGINS
 		else if (e->type() == PsiEvent::Plugin)
 			doPopup = false;

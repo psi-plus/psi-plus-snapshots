@@ -113,6 +113,7 @@ public:
 	const QStringList & recentNodeList() const;
 	void recentNodeAdd(const QString &);
 
+	EventDlg *createMessageDlg(const QString &, PsiAccount*);
 	EventDlg *createEventDlg(const QString &, PsiAccount*);
 	void updateContactGlobal(PsiAccount *, const Jid &);
 
