@@ -82,7 +82,7 @@ public:
 #endif
 	EDB *edb() const;
 	TuneControllerManager* tuneManager() const;
-	FileTransDlg *ftdlg() const;
+	FileTransDlg *ftdlg();
 	TabManager *tabManager() const;
 
 	AlertManager *alertManager() const;

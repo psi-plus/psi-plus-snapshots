@@ -582,10 +582,6 @@ bool PsiCon::init()
 		d->mainwin->show();
 	}
 
-#ifdef FILETRANSFER
-	d->ftwin = new FileTransDlg(this);
-#endif
-
 	connect(&d->idle, SIGNAL(secondsIdle(int)), SLOT(secondsIdle(int)));
 
 	//PopupDurationsManager
@@ -792,7 +788,10 @@ void PsiCon::deinit()
 	delete d->s5bServer;
 
 #ifdef FILETRANSFER
-	delete d->ftwin;
+	if (d->ftwin) {
+		delete d->ftwin;
+		d->ftwin = NULL;
+	}
 #endif
 
 	if(d->mainwin) {
@@ -843,9 +842,11 @@ EDB *PsiCon::edb() const
 	return d->edb;
 }
 
-FileTransDlg *PsiCon::ftdlg() const
+FileTransDlg *PsiCon::ftdlg()
 {
 #ifdef FILETRANSFER
+	if (!d->ftwin)
+		d->ftwin = new FileTransDlg(this);
 	return d->ftwin;
 #else
 	return 0;
@@ -1294,7 +1295,7 @@ void PsiCon::doOptions()
 void PsiCon::doFileTransDlg()
 {
 #ifdef FILETRANSFER
-	bringToFront(d->ftwin);
+	bringToFront(ftdlg());
 #endif
 }
 
