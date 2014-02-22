@@ -788,10 +788,8 @@ void PsiCon::deinit()
 	delete d->s5bServer;
 
 #ifdef FILETRANSFER
-	if (d->ftwin) {
-		delete d->ftwin;
-		d->ftwin = NULL;
-	}
+	delete d->ftwin;
+	d->ftwin = NULL;
 #endif
 
 	if(d->mainwin) {
