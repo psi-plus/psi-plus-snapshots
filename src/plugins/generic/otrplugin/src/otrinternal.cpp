@@ -138,10 +138,13 @@ QString OtrInternal::encryptMessage(const QString& account, const QString& conta
                                NULL, NULL);
     if (err)
     {
-        m_callback->notifyUser(psiotr::OTR_NOTIFY_ERROR,
-                               QObject::tr("Encrypting message to %1 "
-                                           "failed.\nThe message was not sent.")
-                                           .arg(contact));
+        if (!m_callback->displayOtrMessage(account, contact, message))
+        {
+            m_callback->notifyUser(psiotr::OTR_NOTIFY_ERROR,
+                                   QObject::tr("Encrypting message to %1 "
+                                               "failed.\nThe message was not sent.")
+                                               .arg(contact));
+        }
         return QString();
     }
 
@@ -411,7 +414,7 @@ QHash<QString, QString> OtrInternal::getPrivateKeys()
     for (privKey = m_userstate->privkey_root; privKey != NULL;
          privKey = privKey->next)
     {
-        char fingerprintBuf[45];
+        char fingerprintBuf[OTRL_PRIVKEY_FPRINT_HUMAN_LEN];
         char* success = otrl_privkey_fingerprint(m_userstate,
                                                  fingerprintBuf,
                                                  privKey->accountname,
@@ -774,7 +777,7 @@ void OtrInternal::generateKey(const QString& account)
 
 QString OtrInternal::humanFingerprint(const unsigned char* fingerprint)
 {
-    char fpHash[45];
+    char fpHash[OTRL_PRIVKEY_FPRINT_HUMAN_LEN];
     otrl_privkey_hash_to_human(fpHash, fingerprint);
     return QString(fpHash);
 }
@@ -834,14 +837,16 @@ void OtrInternal::create_privkey(const char* accountname,
 
     is_generating = true;
 
+    const char* keysfile = QFile::encodeName(m_keysFile).constData();
+
     QEventLoop loop;
     QFutureWatcher<gcry_error_t> watcher;
 
     QObject::connect(&watcher, SIGNAL(finished()), &loop, SLOT(quit()));
 
-    QFuture<unsigned int> future = QtConcurrent::run(otrl_privkey_generate,
+    QFuture<gcry_error_t> future = QtConcurrent::run(otrl_privkey_generate,
                                               m_userstate,
-                                              QFile::encodeName(m_keysFile).constData(),
+                                              keysfile,
                                               accountname,
                                               protocol);
     watcher.setFuture(future);
@@ -850,7 +855,7 @@ void OtrInternal::create_privkey(const char* accountname,
 
     is_generating = false;
 
-    char fingerprint[45];
+    char fingerprint[OTRL_PRIVKEY_FPRINT_HUMAN_LEN];
     if (otrl_privkey_fingerprint(m_userstate, fingerprint, accountname,
                                  protocol))
     {
@@ -988,27 +993,32 @@ void OtrInternal::notify(OtrlNotifyLevel level, const char* accountname,
                          const char* protocol, const char* username,
                          const char* title, const char* primary, const char* secondary)
 {
-    Q_UNUSED(accountname);
     Q_UNUSED(protocol);
-    Q_UNUSED(username);
     Q_UNUSED(title);
 
-    psiotr::OtrNotifyType type;
+    QString account = QString::fromUtf8(accountname);
+    QString contact = QString::fromUtf8(username);
+    QString message = QString(primary) + "\n" + QString(secondary);
 
-    if (level == OTRL_NOTIFY_ERROR )
+    if (!m_callback->displayOtrMessage(account, contact, message))
     {
-        type = psiotr::OTR_NOTIFY_ERROR;
-    }
-    else if (level == OTRL_NOTIFY_WARNING)
-    {
-        type = psiotr::OTR_NOTIFY_WARNING;
-    }
-    else
-    {
-        type = psiotr::OTR_NOTIFY_ERROR;
-    }
+        psiotr::OtrNotifyType type;
 
-    m_callback->notifyUser(type, QString(primary) + "\n" + QString(secondary));
+        if (level == OTRL_NOTIFY_ERROR )
+        {
+            type = psiotr::OTR_NOTIFY_ERROR;
+        }
+        else if (level == OTRL_NOTIFY_WARNING)
+        {
+            type = psiotr::OTR_NOTIFY_WARNING;
+        }
+        else
+        {
+            type = psiotr::OTR_NOTIFY_ERROR;
+        }
+
+        m_callback->notifyUser(type, message);
+    }
 }
 
 int OtrInternal::display_otr_message(const char* accountname,
