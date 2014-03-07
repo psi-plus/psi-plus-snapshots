@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2014-01-14
+# Updated: 2014-03-07
 # Version: N/A
 
 set -e
@@ -142,9 +142,9 @@ echo "${NEW_VER} ($(echo ${LAST_REVISION_DATE}))" > version
 echo "Patches from Psi+ project were applied."
 echo;
 
-mkdir -p "${PSIPLUS_DIR}/src/patches"
-rsync -a "${MAIN_DIR}/main/patches/dev" "${PSIPLUS_DIR}/src/patches/"
-rsync -a "${MAIN_DIR}/main/patches/mac" "${PSIPLUS_DIR}/src/patches/"
+mkdir -p "${PSIPLUS_DIR}/patches"
+rsync -a "${MAIN_DIR}/main/patches/dev" "${PSIPLUS_DIR}/patches/"
+rsync -a "${MAIN_DIR}/main/patches/mac" "${PSIPLUS_DIR}/patches/"
 echo "Extra patches from Psi+ project were copied."
 echo;
 
@@ -201,7 +201,7 @@ TEST_SRC=$(echo "${STATUS}" | grep " src/" | wc -l)
 TEST_IRIS=$(echo "${STATUS}" | grep " iris/" | wc -l)
 TEST_LIBPSI=$(echo "${STATUS}" | grep " src/libpsi/" | wc -l)
 TEST_PLUGINS=$(echo "${STATUS}" | grep " src/plugins/" | wc -l)
-TEST_PATCHES=$(echo "${STATUS}" | grep " src/patches/" | wc -l)
+TEST_PATCHES=$(echo "${STATUS}" | grep " patches/" | wc -l)
 
 echo "TEST_ALL = ${TEST_ALL}"
 echo "TEST_IRIS = ${TEST_IRIS}"
