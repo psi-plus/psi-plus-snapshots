@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2014-03-07
+# Updated: 2014-03-13
 # Version: N/A
 
 set -e
@@ -145,6 +145,7 @@ echo;
 mkdir -p "${PSIPLUS_DIR}/patches"
 rsync -a "${MAIN_DIR}/main/patches/dev" "${PSIPLUS_DIR}/patches/"
 rsync -a "${MAIN_DIR}/main/patches/mac" "${PSIPLUS_DIR}/patches/"
+rsync -a "${MAIN_DIR}/main/patches/haiku" "${PSIPLUS_DIR}/patches/"
 echo "Extra patches from Psi+ project were copied."
 echo;
 
