@@ -308,6 +308,7 @@ void PsiContactListViewDelegate::drawContact(QPainter* painter, const QStyleOpti
 	if(!isMuc) {
 	if (showClientIcons_) {
 		bool showAllClients = PsiOptions::instance()->getOption("options.ui.contactlist.show-all-client-icons").toBool();
+		Q_UNUSED(showAllClients);
 		const QList<QPixmap> pixList = this->clientPixmap(index);
 
 		for (QList<QPixmap>::ConstIterator it = pixList.begin(); it != pixList.end(); ++it) {

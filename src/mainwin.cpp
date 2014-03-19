@@ -1681,6 +1681,7 @@ void MainWin::toggleVisible(bool fromTray)
 
 void MainWin::setTrayToolTip(const Status& status, bool, bool)
 {
+	Q_UNUSED (status);
 	if (!d->tray) {
 		return;
 	}

@@ -130,6 +130,9 @@ void EnchantChecker::enchantDictDescribeFn(const char *const lang_tag,
 										   const char *const provider_file,
 										   void *user_data)
 {
+	Q_UNUSED(provider_name);
+	Q_UNUSED(provider_desc);
+	Q_UNUSED(provider_file);
 	EnchantChecker *enchantChecker = static_cast<EnchantChecker*>(user_data);
 
 	QString lang(lang_tag);
