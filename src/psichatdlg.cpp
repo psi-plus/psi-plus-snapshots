@@ -301,6 +301,8 @@ void PsiChatDlg::initUi()
 	setMargins();
 
 	connect(ui_.log->textWidget(), SIGNAL(quote(const QString &)), ui_.mle->chatEdit(), SLOT(insertAsQuote(const QString &)));
+ 
+	ui_.log->realTextWidget()->installEventFilter(this);
 
 #ifdef PSI_PLUGINS
 	PluginManager::instance()->setupChatTab(this, account(), jid().full());
@@ -999,15 +1001,22 @@ void PsiChatDlg::doMinimize()
 }
 
 bool PsiChatDlg::eventFilter( QObject *obj, QEvent *ev ) {
-	if ( obj == chatEdit() && ev->type() == QEvent::KeyPress ) {
-		QKeyEvent *e = (QKeyEvent *)ev;
+	if ( obj == chatEdit() ) {
+		if ( ev->type() == QEvent::KeyPress ) {
+			QKeyEvent *e = (QKeyEvent *)ev;
 
-		if ( e->key() == Qt::Key_Tab ) {
-			tabCompletion.tryComplete();
-			return true;
+			if ( e->key() == Qt::Key_Tab ) {
+				tabCompletion.tryComplete();
+				return true;
+			}
+
+			tabCompletion.reset();
 		}
+	}
 
-		tabCompletion.reset();
+	else if ( obj == ui_.log->realTextWidget() ) {
+		if ( ev->type() == QEvent::MouseButtonPress )
+			chatEdit()->setFocus();
 	}
 
 	return ChatDlg::eventFilter( obj, ev );

@@ -61,6 +61,7 @@ public:
 	void doTrackBar();
 	bool internalFind(QString str, bool startFromBeginning = false);
 	ChatView *textWidget();
+	QWidget *realTextWidget();
 
 public slots:
 	void scrollUp();

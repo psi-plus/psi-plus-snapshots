@@ -515,3 +515,11 @@ ChatView * ChatView::textWidget()
 {
 	return this;
 }
+
+QWidget *ChatView::realTextWidget()
+{
+	QWidget *child = childAt(frameRect().center());
+	if (child)
+		return child;
+	return this;
+}

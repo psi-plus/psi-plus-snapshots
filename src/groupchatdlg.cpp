@@ -549,7 +549,7 @@ public slots:
 public:
 
 	bool eventFilter( QObject *obj, QEvent *ev ) {
-		if (obj == te_log()->textWidget() || obj->parent() == te_log()->textWidget())
+		if (obj == te_log()->realTextWidget())
 		{
 			if (ev->type() == QEvent::MouseButtonPress)
 				mle()->setFocus();
@@ -888,7 +888,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 	X11WM_CLASS("groupchat");
 
 	ui_.mle->chatEdit()->setFocus();
-	logTextWidget()->installEventFilter(d);
+	ui_.log->realTextWidget()->installEventFilter(d);
 
 	// Connect signals from MUC manager
 	connect(d->mucManager,SIGNAL(action_error(MUCManager::Action, int, const QString&)), SLOT(action_error(MUCManager::Action, int, const QString&)));
@@ -1024,19 +1024,6 @@ void GCMainDlg::setShortcuts()
 	d->act_scrolldown->setShortcuts(ShortcutManager::instance()->shortcuts("common.scroll-down"));
 	d->act_mini_cmd->setShortcuts(ShortcutManager::instance()->shortcuts("chat.quick-command"));
 	d->act_minimize->setShortcuts(ShortcutManager::instance()->shortcuts("chat.minimize"));
-}
-
-QWidget *GCMainDlg::logTextWidget()
-{
-#ifdef WEBKIT
-	return ui_.log->textWidget();
-#else
-	ChatView *logWid = ui_.log->textWidget();
-	QWidget *child = logWid->childAt(logWid->frameRect().center());
-	if (child)
-		return child;
-	return logWid;
-#endif
 }
 
 void GCMainDlg::scrollUp()
