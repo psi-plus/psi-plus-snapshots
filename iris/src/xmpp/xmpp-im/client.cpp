@@ -879,12 +879,35 @@ void Client::prRoster(const Roster &r)
 	importRoster(r);
 }
 
-void Client::rosterRequest()
+void Client::rosterRequest(bool withGroupsDelimiter)
 {
 	if(!d->active)
 		return;
 
 	JT_Roster *r = new JT_Roster(rootTask());
+	if (withGroupsDelimiter) {
+		connect(r, SIGNAL(finished()), SLOT(slotRosterDelimiterRequestFinished()));
+		r->getGroupsDelimiter();
+	}
+	else {
+		connect(r, SIGNAL(finished()), SLOT(slotRosterRequestFinished()));
+		r->get();
+		d->roster.flagAllForDelete(); // mod_groups patch
+	}
+
+	r->go(true);
+}
+
+void Client::slotRosterDelimiterRequestFinished()
+{
+	JT_Roster *r = qobject_cast<JT_Roster*>(sender());
+	d->roster.setGroupsDelimiter(r->groupsDelimiter());
+
+	if (r->success()) {
+		emit rosterGroupsDelimiterRequestFinished(r->groupsDelimiter());
+	}
+
+	r = new JT_Roster(rootTask());
 	connect(r, SIGNAL(finished()), SLOT(slotRosterRequestFinished()));
 	r->get();
 	d->roster.flagAllForDelete(); // mod_groups patch
@@ -1244,13 +1267,35 @@ void LiveRosterItem::setFlagForDelete(bool b)
 //---------------------------------------------------------------------------
 // LiveRoster
 //---------------------------------------------------------------------------
+class LiveRoster::Private
+{
+public:
+	QString groupsDelimiter;
+};
+
 LiveRoster::LiveRoster()
-:QList<LiveRosterItem>()
+	: QList<LiveRosterItem>()
+	, d(new LiveRoster::Private)
 {
 }
 
 LiveRoster::~LiveRoster()
 {
+	delete d;
+}
+
+LiveRoster::LiveRoster(const LiveRoster &other)
+	: QList<LiveRosterItem>(other)
+	, d(new LiveRoster::Private)
+{
+	d->groupsDelimiter = other.d->groupsDelimiter;
+}
+
+LiveRoster &LiveRoster::operator=(const LiveRoster &other)
+{
+	QList<LiveRosterItem>::operator=(other);
+	d->groupsDelimiter = other.d->groupsDelimiter;
+	return *this;
 }
 
 void LiveRoster::flagAllForDelete()
@@ -1277,6 +1322,16 @@ LiveRoster::ConstIterator LiveRoster::find(const Jid &j, bool compareRes) const
 			break;
 	}
 	return it;
+}
+
+void LiveRoster::setGroupsDelimiter(const QString &groupsDelimiter)
+{
+	d->groupsDelimiter = groupsDelimiter;
+}
+
+QString LiveRoster::groupsDelimiter() const
+{
+	return d->groupsDelimiter;
 }
 
 }

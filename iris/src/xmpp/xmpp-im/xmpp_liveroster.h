@@ -34,9 +34,19 @@ namespace XMPP
 		LiveRoster();
 		~LiveRoster();
 
+		LiveRoster(const LiveRoster &other);
+		LiveRoster &operator=(const LiveRoster &other);
+
 		void flagAllForDelete();
 		LiveRoster::Iterator find(const Jid &, bool compareRes=true);
 		LiveRoster::ConstIterator find(const Jid &, bool compareRes=true) const;
+
+		void setGroupsDelimiter(const QString &groupsDelimiter);
+		QString groupsDelimiter() const;
+
+	private:
+		class Private;
+		Private *d;
 	};
 }
 
