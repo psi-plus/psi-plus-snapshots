@@ -68,22 +68,24 @@ void RosterAvatarFrame::drawAvatar()
 {
 	int avSize = PsiOptions::instance()->getOption("options.ui.contactlist.roster-avatar-frame.avatar.size").toInt();
 	QPixmap av = avatarPixmap;
-	int radius = PsiOptions::instance()->getOption("options.ui.contactlist.avatars.radius").toInt();
-	if(!radius)
-		av = av.scaled(avSize,avSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-	else {
-		avSize = qMax(avSize, radius*2);
-		av = av.scaled(avSize, avSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-		int w = av.width(), h = av.height();
-		QPainterPath pp;
-		pp.addRoundedRect(0, 0, w, h, radius, radius);
-		QPixmap avatar_icon = QPixmap(w, h);
-		avatar_icon.fill(QColor(0,0,0,0));
-		QPainter mp(&avatar_icon);
-		mp.setBackgroundMode(Qt::TransparentMode);
-		mp.setRenderHints(QPainter::Antialiasing, true);
-		mp.fillPath(pp, QBrush(av));
-		av = avatar_icon;
+	if(!av.isNull()) {
+		int radius = PsiOptions::instance()->getOption("options.ui.contactlist.avatars.radius").toInt();
+		if(!radius)
+			av = av.scaled(avSize,avSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+		else {
+			avSize = qMax(avSize, radius*2);
+			av = av.scaled(avSize, avSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+			int w = av.width(), h = av.height();
+			QPainterPath pp;
+			pp.addRoundedRect(0, 0, w, h, radius, radius);
+			QPixmap avatar_icon = QPixmap(w, h);
+			avatar_icon.fill(QColor(0,0,0,0));
+			QPainter mp(&avatar_icon);
+			mp.setBackgroundMode(Qt::TransparentMode);
+			mp.setRenderHints(QPainter::Antialiasing, true);
+			mp.fillPath(pp, QBrush(av));
+			av = avatar_icon;
+		}
 	}
 	ui_.lb_avatar->setPixmap(av);
 	ui_.lb_avatar->setFixedSize(avSize,avSize);
