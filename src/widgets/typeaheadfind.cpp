@@ -80,6 +80,8 @@ public:
 			wkOptions |= options & QTextDocument::FindBackward? QWebPage::FindBackward : (QWebPage::FindFlags)0;
 			wkOptions |= options & QTextDocument::FindCaseSensitively? QWebPage::FindCaseSensitively : (QWebPage::FindFlags)0;
 			return wv->findText(str, wkOptions);
+#else
+			Q_UNUSED(str);
 #endif
 		}
 		if (start != QTextCursor::NoMove) {
