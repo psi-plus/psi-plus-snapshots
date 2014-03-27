@@ -26,8 +26,8 @@
 #include "contactlistitemproxy.h"
 #include "contactlistspecialgroup.h"
 
-ContactListNestedGroup::ContactListNestedGroup(ContactListModel* model, ContactListGroup* parent, PsiAccount *account, QString name)
-	: ContactListGroup(model, parent, account)
+ContactListNestedGroup::ContactListNestedGroup(ContactListModel* model, ContactListGroup* parent, QString name)
+	: ContactListGroup(model, parent)
 {
 	quietSetName(name);
 }
@@ -82,8 +82,12 @@ void ContactListNestedGroup::addContact(PsiContact* contact, QStringList contact
 			ContactListGroup::addContact(contact, contactGroups);
 		}
 		else {
-			QStringList nestedGroups = toNestedGroups(groupName);
-
+			QStringList nestedGroups;
+#ifdef CONTACTLIST_NESTED_GROUPS
+			nestedGroups = groupName.split(groupDelimiter());
+#else
+			nestedGroups += groupName;
+#endif
 			if (!name().isEmpty()) {
 				QString firstPart = nestedGroups.takeFirst();
 				Q_ASSERT(firstPart == name());
@@ -93,13 +97,13 @@ void ContactListNestedGroup::addContact(PsiContact* contact, QStringList contact
 
 			ContactListGroup* group = findGroup(nestedGroups.first());
 			if (!group) {
-				group = new ContactListNestedGroup(model(), this, contact->account(), nestedGroups.first());
+				group = new ContactListNestedGroup(model(), this, nestedGroups.first());
 				addGroup(group);
 CL_DEBUG("ContactListNextedGroup(%x)::addContact: %s", this, qPrintable(group->fullName()));
 			}
 
 			QStringList moreGroups;
-			moreGroups << fromNestedGroups(nestedGroups);
+			moreGroups << nestedGroups.join(groupDelimiter());
 			group->addContact(contact, moreGroups);
 		}
 	}
@@ -168,8 +172,11 @@ void ContactListNestedGroup::contactGroupsChanged(PsiContact* contact, QStringLi
 		}
 
 		QStringList split;
-		split = toNestedGroups(group);
-
+#ifdef CONTACTLIST_NESTED_GROUPS
+		split = group.split(groupDelimiter());
+#else
+		split += group;
+#endif
 		if (!name().isEmpty()) {
 			QString firstPart = split.takeFirst();
 			// hmm, probably should continue as the data should be invalid
@@ -195,10 +202,14 @@ void ContactListNestedGroup::contactGroupsChanged(PsiContact* contact, QStringLi
 		QStringList mergedGroupNames;
 		foreach(QStringList i, splitGroupNames)
 			if (!i.isEmpty() && i.first() == split.first())
-				mergedGroupNames += fromNestedGroups(i);
+				mergedGroupNames += i.join(groupDelimiter());
 
 		foreach(QString i, mergedGroupNames) {
-			splitGroupNames.removeAll(toNestedGroups(i));
+#ifdef CONTACTLIST_NESTED_GROUPS
+			splitGroupNames.removeAll(i.split(groupDelimiter()));
+#else
+			splitGroupNames.removeAll(QStringList() << i);
+#endif
 		}
 
 		group->contactGroupsChanged(contact, mergedGroupNames);
@@ -238,7 +249,7 @@ CL_DEBUG("ContactListNextedGroup(%x)::contactGroupsChanged: removing empty group
 			fullGroupName << name();
 		fullGroupName += split;
 		QStringList tmp;
-		tmp << fromNestedGroups(fullGroupName);
+		tmp << fullGroupName.join(groupDelimiter());
 		addContact(contact, tmp);
 	}
 
@@ -258,14 +269,14 @@ CL_DEBUG("ContactListNextedGroup(%x)::contactGroupsChanged: removing empty group
 #else
 	QStringList newNestedGroups = fullName().isEmpty()
 	                              ? contactGroups
-	                              : contactGroups.filter(QRegExp(QString("^%1($|%2)").arg(fullName(), groupsDelimiter())));
+	                              : contactGroups.filter(QRegExp(QString("^%1($|%2)").arg(fullName(), groupDelimiter())));
 
 	QStringList directChildren;
 	foreach(QString nnGroup, newNestedGroups) {
-		QString unqualifiedName = nnGroup.mid(QString(fullName().isEmpty() ? "" : fullName() + groupsDelimiter()).length());
+		QString unqualifiedName = nnGroup.mid(QString(fullName().isEmpty() ? "" : fullName() + groupDelimiter()).length());
 		if (!unqualifiedName.isEmpty()) {
 			// direct children!
-			directChildren << QString(name().isEmpty() ? "" : name() + groupsDelimiter()) + unqualifiedName;
+			directChildren << QString(name().isEmpty() ? "" : name() + groupDelimiter()) + unqualifiedName;
 		}
 	}
 

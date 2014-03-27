@@ -21,32 +21,15 @@
 #include "contactlistitem.h"
 
 #include "psicontact.h"
-#include "psiaccount.h"
 
-class ContactListItem::Private
-{
-public:
-	Private();
-	bool editing;
-	PsiAccount *account;
-};
-
-ContactListItem::Private::Private()
-	: editing(false)
-	, account(0)
-{
-}
-
-ContactListItem::ContactListItem(PsiAccount *account, QObject* parent)
+ContactListItem::ContactListItem(QObject* parent)
 	: QObject(parent)
-	, d(new ContactListItem::Private)
+	, editing_(false)
 {
-	d->account = account;
 }
 
 ContactListItem::~ContactListItem()
 {
-	delete d;
 }
 
 bool ContactListItem::isEditable() const
@@ -107,20 +90,15 @@ QString ContactListItem::comparisonName() const
 
 bool ContactListItem::editing() const
 {
-	return d->editing;
+	return editing_;
 }
 
 void ContactListItem::setEditing(bool editing)
 {
-	d->editing = editing;
+	editing_ = editing;
 }
 
 const QString& ContactListItem::displayName() const
 {
 	return name();
-}
-
-PsiAccount *ContactListItem::account() const
-{
-	return d->account;
 }

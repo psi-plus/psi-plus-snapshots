@@ -305,8 +305,6 @@ void UserAccount::fromOptions(OptionsTree *o, QString base)
 		allow_plain = XMPP::ClientStream::NoAllowPlain;
 	}
 
-	roster.setGroupsDelimiter(o->getOption(base + ".roster-cache-groups-delimiter").toString());
-
 	QStringList rosterCache = o->getChildOptionNames(base + ".roster-cache", true, true);
 	foreach(QString rbase, rosterCache) {
 		RosterItem ri;
@@ -443,8 +441,6 @@ void UserAccount::toOptions(OptionsTree *o, QString base)
 		default:
 			qFatal("unknown allow_plain enum value in UserAccount::toOptions");
 	}
-
-	o->setOption(base + ".roster-cache-groups-delimiter", roster.groupsDelimiter());
 
 	int idx = 0;
 	foreach(RosterItem ri, roster) {

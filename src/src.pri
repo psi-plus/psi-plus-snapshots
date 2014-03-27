@@ -214,8 +214,7 @@ HEADERS += \
 	$$PWD/coloropt.h \
 	$$PWD/geolocationdlg.h \
 	$$PWD/rosteravatarframe.h \
-	$$PWD/sendbuttonmenu.h \
-	$$PWD/creategroupdlg.h
+	$$PWD/sendbuttonmenu.h
 
 
 
@@ -358,8 +357,7 @@ SOURCES += \
 	$$PWD/coloropt.cpp \
 	$$PWD/geolocationdlg.cpp \
 	$$PWD/rosteravatarframe.cpp \
-	$$PWD/sendbuttonmenu.cpp \
-	$$PWD/creategroupdlg.cpp
+	$$PWD/sendbuttonmenu.cpp
 
 unix:!macx:!haiku {
 	HEADERS += $$PWD/x11windowsystem.h
@@ -454,6 +452,7 @@ mac {
 CONFIG += newcontactlist
 newcontactlist {
 	DEFINES += NEWCONTACTLIST
+	# DEFINES += CONTACTLIST_NESTED_GROUPS
 	HEADERS += \
 		$$PWD/contactlistview.h \
 		$$PWD/contactlistdragview.h \
@@ -601,8 +600,7 @@ FORMS += \
 	$$PWD/ahcformdlg.ui \
 	$$PWD/geolocation.ui \
 	$$PWD/rosteravatarframe.ui \
-	$$PWD/sendbuttontemplateseditor.ui \
-	$$PWD/creategroup.ui
+	$$PWD/sendbuttontemplateseditor.ui
 
 # options dialog
 include($$PWD/options/options.pri)

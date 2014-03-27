@@ -27,7 +27,7 @@ class ContactListNestedGroup : public ContactListGroup
 {
 	Q_OBJECT
 public:
-	ContactListNestedGroup(ContactListModel* model, ContactListGroup* parent, PsiAccount *account, QString name);
+	ContactListNestedGroup(ContactListModel* model, ContactListGroup* parent, QString name);
 	~ContactListNestedGroup();
 
 	virtual bool canContainSpecialGroups() const;

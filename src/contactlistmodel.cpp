@@ -68,7 +68,6 @@ ContactListModel::ContactListModel(PsiContactList* contactList)
 	connect(updater_, SIGNAL(contactGroupsChanged(PsiContact*)), SLOT(contactGroupsChanged(PsiContact*)));
 	connect(updater_, SIGNAL(beginBulkContactUpdate()), SLOT(beginBulkUpdate()));
 	connect(updater_, SIGNAL(endBulkContactUpdate()), SLOT(endBulkUpdate()));
-	connect(updater_, SIGNAL(groupsDelimiterChanged()), SLOT(invalidateLayout()));
 	connect(contactList_, SIGNAL(destroying()), SLOT(destroyingContactList()));
 	connect(contactList_, SIGNAL(showOfflineChanged(bool)), SIGNAL(showOfflineChanged()));
 	connect(contactList_, SIGNAL(showHiddenChanged(bool)), SIGNAL(showHiddenChanged()));
@@ -119,9 +118,9 @@ ContactListGroup* ContactListModel::createRootGroup()
 		return new ContactListAccountGroup(this, 0, 0);
 
 	if (!groupsEnabled_)
-		return new ContactListGroup(this, 0, 0);
+		return new ContactListGroup(this, 0);
 
-	return new ContactListNestedGroup(this, 0, 0, QString());
+	return new ContactListNestedGroup(this, 0, QString());
 }
 
 bool ContactListModel::groupsEnabled() const
@@ -213,10 +212,6 @@ void ContactListModel::orderChanged()
 {
 	emit layoutAboutToBeChanged();
 	emit layoutChanged();
-}
-
-void ContactListModel::groupsDelimiterChanged()
-{
 }
 
 void ContactListModel::invalidateLayout()
@@ -855,7 +850,7 @@ PsiAccount* ContactListModel::account(const QModelIndex& index) const
 {
 	ContactListItemProxy* item = itemProxy(index);
 	if (item) {
-		ContactListItem *contact = item->item();
+		PsiContact* contact = dynamic_cast<PsiContact*>(item->item());
 		if (contact)
 			return contact->account();
 	}

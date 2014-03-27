@@ -1178,12 +1178,3 @@ UserListItem *UserList::find(const XMPP::Jid &j)
 	return 0;
 }
 
-void UserList::setGroupsDelimiter(const QString &groupsDelimiter)
-{
-	_groupsDelimiter = groupsDelimiter;
-}
-
-QString UserList::groupsDelimiter() const
-{
-	return _groupsDelimiter;
-}

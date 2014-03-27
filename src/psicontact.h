@@ -45,6 +45,7 @@ public:
 	PsiContact(const UserListItem& u, PsiAccount* account);
 	~PsiContact();
 
+	PsiAccount* account() const;
 	const UserListItem& userListItem() const;
 	const UserResourceList& userResourceList() const;
 	virtual void update(const UserListItem& u);
