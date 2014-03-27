@@ -63,8 +63,7 @@ class PsiContact::Private : public Alertable
 	Q_OBJECT
 public:
 	Private(PsiContact* contact)
-		: account_(0)
-		, statusTimer_(0)
+		: statusTimer_(0)
 		, isValid_(true)
 		, isAnimated_(false)
 		, isAlwaysVisible_(false)
@@ -100,7 +99,6 @@ public:
 	{
 	}
 
-	PsiAccount* account_;
 	QTimer* statusTimer_;
 	QTimer* animTimer_;
 	UserListItem u_;
@@ -140,7 +138,7 @@ public:
 #ifdef YAPSI
 		reconnecting_ = false;
 #endif
-		if (account_ && !account_->notifyOnline())
+		if (contact_->account() && !contact_->account()->notifyOnline())
 			oldStatus_ = status_;
 		else
 			statusTimer_->start();
@@ -164,12 +162,11 @@ private:
  * Creates new PsiContact.
  */
 PsiContact::PsiContact(const UserListItem& u, PsiAccount* account)
-	: ContactListItem(account)
+	: ContactListItem(account, account)
 {
 	d = new Private(this);
-	d->account_ = account;
-	if (d->account_) {
-		connect(d->account_->avatarFactory(), SIGNAL(avatarChanged(const Jid&)), SLOT(avatarChanged(const Jid&)));
+	if (account) {
+		connect(account->avatarFactory(), SIGNAL(avatarChanged(const Jid&)), SLOT(avatarChanged(const Jid&)));
 	}
 	connect(VCardFactory::instance(), SIGNAL(vcardChanged(const Jid&)), SLOT(vcardChanged(const Jid&)));
 	update(u);
@@ -178,10 +175,9 @@ PsiContact::PsiContact(const UserListItem& u, PsiAccount* account)
 }
 
 PsiContact::PsiContact()
-	: ContactListItem(0)
+	: ContactListItem(0, 0)
 {
 	d = new Private(this);
-	d->account_ = 0;
 }
 
 /**
@@ -192,14 +188,6 @@ PsiContact::~PsiContact()
 	d->isValid_ = false;
 	emit destroyed(this);
 	delete d;
-}
-
-/**
- * Returns account to which a contact belongs.
- */
-PsiAccount* PsiContact::account() const
-{
-	return d->account_;
 }
 
 /**

@@ -315,6 +315,7 @@ void PsiContactList::link(PsiAccount* account)
 	connect(account, SIGNAL(beginBulkContactUpdate()), this, SIGNAL(beginBulkContactUpdate()));
 	connect(account, SIGNAL(endBulkContactUpdate()), this, SIGNAL(endBulkContactUpdate()));
 	connect(account, SIGNAL(rosterRequestFinished()), this, SIGNAL(rosterRequestFinished()));
+	connect(account, SIGNAL(groupsDelimiterChanged()), this, SIGNAL(groupsDelimiterChanged()));
 	accounts_.append(account);
 	if (account->enabled())
 		addEnabledAccount(account);

@@ -99,6 +99,7 @@ signals:
 	void beginBulkContactUpdate();
 	void endBulkContactUpdate();
 	void rosterRequestFinished();
+	void groupsDelimiterChanged();
 
 	/**
 	 * This signal is emitted when account is loaded from disk or created

@@ -27,11 +27,12 @@
 #include "contactlistmodel.h"
 
 class ContactListItemMenu;
+class PsiAccount;
 
 class ContactListItem : public QObject
 {
 public:
-	ContactListItem(QObject* parent = 0);
+	ContactListItem(PsiAccount *account, QObject* parent = 0);
 	virtual ~ContactListItem();
 
 	virtual ContactListModel::Type type() const = 0;
@@ -58,8 +59,11 @@ public:
 	virtual bool editing() const;
 	virtual void setEditing(bool editing);
 
+	PsiAccount *account() const;
+
 private:
-	bool editing_;
+	class Private;
+	Private *d;
 };
 
 #endif

@@ -1,6 +1,6 @@
 /*
- * contactlistitemproxy.h - proxy item contact list item class
- * Copyright (C) 2008-2010  Yandex LLC (Michail Pishchagin)
+ * creategroupdlg.h
+ * Copyright (C) 20014  Ivan Romanov <drizt@land.ru>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,26 +18,29 @@
  *
  */
 
-#ifndef CONTACTLISTITEMPROXY_H
-#define CONTACTLISTITEMPROXY_H
+#ifndef CREATEGROUPDLG_H
+#define CREATEGROUPDLG_H
 
-#include <QObject>
+#include <QDialog>
 
-class ContactListItem;
-class ContactListGroup;
+class PsiContact;
 
-class ContactListItemProxy : public QObject
+class CreateGroupDlg : public QDialog
 {
-public:
-	ContactListItemProxy(ContactListGroup* parent, ContactListItem* item);
-	~ContactListItemProxy();
+	Q_OBJECT
 
-	ContactListItem *item() const;
-	ContactListGroup *parent() const;
+public:
+	CreateGroupDlg(PsiContact *contact, QWidget *parent = 0);
+	~CreateGroupDlg();
+
+public slots:
+	void accept();
+	void checkGroupName();
+	void addGroup();
 
 private:
 	class Private;
 	Private *d;
 };
 
-#endif
+#endif // CREATEGROUPDLG_H

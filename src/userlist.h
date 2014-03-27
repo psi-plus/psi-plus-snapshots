@@ -187,6 +187,12 @@ public:
 	~UserList();
 
 	UserListItem *find(const XMPP::Jid &);
+
+	void setGroupsDelimiter(const QString &groupsDelimiter);
+	QString groupsDelimiter() const;
+
+private:
+	QString _groupsDelimiter;
 };
 
 #endif

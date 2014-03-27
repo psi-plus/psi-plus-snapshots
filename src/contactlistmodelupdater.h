@@ -51,6 +51,7 @@ signals:
 	void contactAnim(PsiContact*);
 	void contactUpdated(PsiContact*);
 	void contactGroupsChanged(PsiContact*);
+	void groupsDelimiterChanged();
 
 	void beginBulkContactUpdate();
 	void endBulkContactUpdate();

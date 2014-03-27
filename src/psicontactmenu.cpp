@@ -51,6 +51,7 @@
 #endif
 
 #include "groupchatdlg.h"
+#include "creategroupdlg.h"
 
 //----------------------------------------------------------------------------
 // GroupMenu
@@ -131,23 +132,8 @@ private slots:
 
 	void createNewGroup()
 	{
-		while (contact_) {
-			bool ok = false;
-			QString newgroup = QInputDialog::getText(0, tr("Create New Group"),
-			                   tr("Enter the new group name:"),
-			                   QLineEdit::Normal,
-			                   QString::null,
-			                   &ok, 0);
-			if (!ok)
-				break;
-			if (newgroup.isEmpty())
-				continue;
-
-			if (!contact_->userListItem().groups().contains(newgroup)) {
-				emit groupActivated(newgroup);
-				break;
-			}
-		}
+		CreateGroupDlg dlg(contact_);
+		dlg.exec();
 	}
 };
 
