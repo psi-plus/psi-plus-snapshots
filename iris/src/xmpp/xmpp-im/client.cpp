@@ -903,9 +903,7 @@ void Client::slotRosterDelimiterRequestFinished()
 	JT_Roster *r = qobject_cast<JT_Roster*>(sender());
 	d->roster.setGroupsDelimiter(r->groupsDelimiter());
 
-	if (r->success()) {
-		emit rosterGroupsDelimiterRequestFinished(r->groupsDelimiter());
-	}
+	emit rosterGroupsDelimiterRequestFinished(r->groupsDelimiter());
 
 	r = new JT_Roster(rootTask());
 	connect(r, SIGNAL(finished()), SLOT(slotRosterRequestFinished()));
