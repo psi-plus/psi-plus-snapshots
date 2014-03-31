@@ -529,7 +529,6 @@ void PsiActionList::Private::addPluginsActions(ActionsType type)
 			continue;
 		}
 
-		qDebug() << plugin;
 		IconAction *action = new IconAction(plugin, "", plugin, 0, this);
 		action->setIcon(pm->icon(plugin));
 		actions->addAction(pm->shortName(plugin) + "-plugin", action);
