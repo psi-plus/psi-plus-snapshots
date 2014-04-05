@@ -96,7 +96,7 @@
 			</message>
 			<chat comment="Chat dialog options">
 				<theme comment="The theme used for chat messages rendering" type="QString">psi/classic</theme>
-				<central-toolbar comment="Have a central toolbar" type="bool">false</central-toolbar>
+				<central-toolbar comment="Have a central toolbar" type="bool">true</central-toolbar>
 				<size comment="Remembered window size" type="QSize">
 				</size><!-- will be invalid when converted to QSize so we can detect first load -->
 				<opacity comment="Opacity percentage of chat dialogs" type="int">100</opacity>

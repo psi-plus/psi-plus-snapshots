@@ -193,7 +193,7 @@ bool PsiOptions::newProfile()
 		}
 #endif
 		ToolbarPrefs chatToolbar;
-		chatToolbar.on = false;
+		chatToolbar.on = true;
 		chatToolbar.name = "Chat";
 		chatToolbar.keys << "chat_clear"  << "chat_find" << "chat_html_text" << "chat_add_contact";
 		chatToolbar.keys += pluginsKeys;
@@ -202,7 +202,7 @@ bool PsiOptions::newProfile()
 						 << "chat_active_contacts";
 
 		ToolbarPrefs groupchatToolbar;
-		groupchatToolbar.on = false;
+		groupchatToolbar.on = true;
 		groupchatToolbar.name = "Groupchat";
 		groupchatToolbar.keys << "gchat_clear"  << "gchat_find" << "gchat_html_text" << "gchat_configure";
 		groupchatToolbar.keys += pluginsKeys;
