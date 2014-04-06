@@ -37,6 +37,7 @@ namespace XMPP {
 
 	SCRAMSHA1Response::SCRAMSHA1Response(const QByteArray& server_first_message, const QByteArray& password_in, const QByteArray& client_first_message, const QString &salted_password_base64, const RandomNumberGenerator& rand)
 {
+	Q_UNUSED(rand);
 	QString pass_in(password_in);
 	QString pass_out;
 

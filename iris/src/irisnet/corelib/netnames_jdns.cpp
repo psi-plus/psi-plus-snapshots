@@ -20,7 +20,7 @@
 #include "irisnetplugin.h"
 
 #include "objectsession.h"
-#include "jdnsshared.h"
+#include "qjdnsshared.h"
 #include "netinterface.h"
 
 //#define JDNS_DEBUG
@@ -237,8 +237,8 @@ class JDnsGlobal : public QObject
 	Q_OBJECT
 
 public:
-	JDnsSharedDebug db;
-	JDnsShared *uni_net, *uni_local, *mul;
+	QJDnsSharedDebug db;
+	QJDnsShared *uni_net, *uni_local, *mul;
 	QHostAddress mul_addr4, mul_addr6;
 	NetInterfaceManager netman;
 	QList<NetInterface*> ifaces;
@@ -272,7 +272,7 @@ public:
 
 		qDeleteAll(ifaces);
 
-		QList<JDnsShared*> list;
+		QList<QJDnsShared*> list;
 		if(uni_net)
 			list += uni_net;
 		if(uni_local)
@@ -281,17 +281,17 @@ public:
 			list += mul;
 
 		// calls shutdown on the list, waits for shutdownFinished, deletes
-		JDnsShared::waitForShutdown(list);
+		QJDnsShared::waitForShutdown(list);
 
 		// get final debug
 		jdns_debugReady();
 	}
 
-	JDnsShared *ensure_uni_net()
+	QJDnsShared *ensure_uni_net()
 	{
 		if(!uni_net)
 		{
-			uni_net = new JDnsShared(JDnsShared::UnicastInternet, this);
+			uni_net = new QJDnsShared(QJDnsShared::UnicastInternet, this);
 			uni_net->setDebug(&db, "U");
 			bool ok4 = uni_net->addInterface(QHostAddress::Any);
 			bool ok6 = uni_net->addInterface(QHostAddress::AnyIPv6);
@@ -304,11 +304,11 @@ public:
 		return uni_net;
 	}
 
-	JDnsShared *ensure_uni_local()
+	QJDnsShared *ensure_uni_local()
 	{
 		if(!uni_local)
 		{
-			uni_local = new JDnsShared(JDnsShared::UnicastLocal, this);
+			uni_local = new QJDnsShared(QJDnsShared::UnicastLocal, this);
 			uni_local->setDebug(&db, "L");
 			bool ok4 = uni_local->addInterface(QHostAddress::Any);
 			bool ok6 = uni_local->addInterface(QHostAddress::AnyIPv6);
@@ -321,11 +321,11 @@ public:
 		return uni_local;
 	}
 
-	JDnsShared *ensure_mul()
+	QJDnsShared *ensure_mul()
 	{
 		if(!mul)
 		{
-			mul = new JDnsShared(JDnsShared::Multicast, this);
+			mul = new QJDnsShared(QJDnsShared::Multicast, this);
 			mul->setDebug(&db, "M");
 
 			connect(&netman, SIGNAL(interfaceAvailable(QString)), SLOT(iface_available(QString)));
@@ -453,7 +453,7 @@ public:
 	{
 	public:
 		int id;
-		JDnsSharedRequest *req;
+		QJDnsSharedRequest *req;
 		int type;
 		bool longLived;
 		ObjectSession sess;
@@ -517,7 +517,7 @@ public:
 		return 0;
 	}
 
-	Item *getItemByReq(JDnsSharedRequest *req)
+	Item *getItemByReq(QJDnsSharedRequest *req)
 	{
 		for(int n = 0; n < items.count(); ++n)
 		{
@@ -612,7 +612,7 @@ public:
 			// perform the query
 			Item *i = new Item(this);
 			i->id = idman.reserveId();
-			i->req = new JDnsSharedRequest(global->uni_net);
+			i->req = new QJDnsSharedRequest(global->uni_net);
 			connect(i->req, SIGNAL(resultsReady()), SLOT(req_resultsReady()));
 			i->type = qType;
 			i->longLived = false;
@@ -640,12 +640,12 @@ public:
 					return i->id;
 				}
 
-				i->req = new JDnsSharedRequest(global->mul);
+				i->req = new QJDnsSharedRequest(global->mul);
 				i->longLived = true;
 			}
 			else
 			{
-				i->req = new JDnsSharedRequest(global->uni_local);
+				i->req = new QJDnsSharedRequest(global->uni_local);
 				i->longLived = false;
 			}
 			connect(i->req, SIGNAL(resultsReady()), SLOT(req_resultsReady()));
@@ -690,7 +690,7 @@ public:
 private slots:
 	void req_resultsReady()
 	{
-		JDnsSharedRequest *req = (JDnsSharedRequest *)sender();
+		QJDnsSharedRequest *req = (QJDnsSharedRequest *)sender();
 		Item *i = getItemByReq(req);
 		Q_ASSERT(i);
 
@@ -735,12 +735,12 @@ private slots:
 		}
 		else
 		{
-			JDnsSharedRequest::Error e = req->error();
+			QJDnsSharedRequest::Error e = req->error();
 
 			error = NameResolver::ErrorGeneric;
-			if(e == JDnsSharedRequest::ErrorNXDomain)
+			if(e == QJDnsSharedRequest::ErrorNXDomain)
 				error = NameResolver::ErrorNoName;
-			else if(e == JDnsSharedRequest::ErrorTimeout)
+			else if(e == QJDnsSharedRequest::ErrorTimeout)
 				error = NameResolver::ErrorTimeout;
 			else // ErrorGeneric or ErrorNoNet
 				error = NameResolver::ErrorGeneric;
@@ -815,9 +815,9 @@ class JDnsBrowse : public QObject
 
 public:
 	QByteArray type, typeAndDomain;
-	JDnsSharedRequest req;
+	QJDnsSharedRequest req;
 
-	JDnsBrowse(JDnsShared *_jdns, QObject *parent = 0) :
+	JDnsBrowse(QJDnsShared *_jdns, QObject *parent = 0) :
 		QObject(parent),
 		req(_jdns, this)
 	{
@@ -902,9 +902,9 @@ public:
 		AddressFirstCome  = 2
 	};
 
-	JDnsSharedRequest reqtxt; // for TXT
-	JDnsSharedRequest req;    // for SRV/A
-	JDnsSharedRequest req6;   // for AAAA
+	QJDnsSharedRequest reqtxt; // for TXT
+	QJDnsSharedRequest req;    // for SRV/A
+	QJDnsSharedRequest req6;   // for AAAA
 	bool haveTxt;
 	SrvState srvState;
 	QTimer *opTimer;
@@ -916,7 +916,7 @@ public:
 	bool have4, have6;
 	QHostAddress addr4, addr6;
 
-	JDnsServiceResolve(JDnsShared *_jdns, QObject *parent = 0) :
+	JDnsServiceResolve(QJDnsShared *_jdns, QObject *parent = 0) :
 		QObject(parent),
 		reqtxt(_jdns, this),
 		req(_jdns, this),
@@ -953,7 +953,7 @@ public:
 
 signals:
 	void finished();
-	void error(JDnsSharedRequest::Error e);
+	void error(QJDnsSharedRequest::Error e);
 
 private:
 	void cleanup()
@@ -1079,7 +1079,7 @@ private slots:
 			//   out then we consider the whole job to have
 			//   failed.
 			cleanup();
-			emit error(JDnsSharedRequest::ErrorTimeout);
+			emit error(QJDnsSharedRequest::ErrorTimeout);
 		}
 		else if(srvState == AddressWait)
 		{
@@ -1110,7 +1110,7 @@ private slots:
 			if(!tryDone())
 			{
 				cleanup();
-				emit error(JDnsSharedRequest::ErrorTimeout);
+				emit error(QJDnsSharedRequest::ErrorTimeout);
 			}
 		}
 	}
@@ -1134,11 +1134,11 @@ public:
 
 	Type type;
 	QByteArray host;
-	JDnsSharedRequest pub_addr;
-	JDnsSharedRequest pub_ptr;
+	QJDnsSharedRequest pub_addr;
+	QJDnsSharedRequest pub_ptr;
 	bool success_;
 
-	JDnsPublishAddress(JDnsShared *_jdns, QObject *parent = 0) :
+	JDnsPublishAddress(QJDnsShared *_jdns, QObject *parent = 0) :
 		QObject(parent),
 		pub_addr(_jdns, this),
 		pub_ptr(_jdns, this)
@@ -1245,7 +1245,7 @@ public:
 	bool have6, have4;
 	ObjectSession sess;
 
-	JDnsPublishAddresses(JDnsShared *_jdns, QObject *parent = 0) :
+	JDnsPublishAddresses(QJDnsShared *_jdns, QObject *parent = 0) :
 		QObject(parent),
 		started(false),
 		use6(false),
@@ -1481,14 +1481,14 @@ public:
 
 signals:
 	void published();
-	void error(JDnsSharedRequest::Error e);
+	void error(QJDnsSharedRequest::Error e);
 
 private:
 	friend class JDnsPublish;
 
 	JDnsPublish *jdnsPub;
 	bool started;
-	JDnsSharedRequest pub;
+	QJDnsSharedRequest pub;
 	QJDns::Record rec;
 	bool have;
 	bool need_update;
@@ -1512,10 +1512,10 @@ class JDnsPublish : public QObject
 	Q_OBJECT
 
 public:
-	JDnsShared *jdns;
-	JDnsSharedRequest pub_srv;
-	JDnsSharedRequest pub_txt;
-	JDnsSharedRequest pub_ptr;
+	QJDnsShared *jdns;
+	QJDnsSharedRequest pub_srv;
+	QJDnsSharedRequest pub_txt;
+	QJDnsSharedRequest pub_ptr;
 
 	bool have_srv, have_txt, have_ptr;
 	bool need_update_txt;
@@ -1529,7 +1529,7 @@ public:
 
 	QSet<JDnsPublishExtra*> extraList;
 
-	JDnsPublish(JDnsShared *_jdns, QObject *parent = 0) :
+	JDnsPublish(QJDnsShared *_jdns, QObject *parent = 0) :
 		QObject(parent),
 		jdns(_jdns),
 		pub_srv(_jdns, this),
@@ -1622,7 +1622,7 @@ public slots:
 
 signals:
 	void published();
-	void error(JDnsSharedRequest::Error e);
+	void error(QJDnsSharedRequest::Error e);
 
 private:
 	friend class JDnsPublishExtra;
@@ -1779,7 +1779,7 @@ private slots:
 		}
 		else
 		{
-			JDnsSharedRequest::Error e = pub_srv.error();
+			QJDnsSharedRequest::Error e = pub_srv.error();
 			cleanup();
 			emit error(e);
 		}
@@ -1801,7 +1801,7 @@ private slots:
 		}
 		else
 		{
-			JDnsSharedRequest::Error e = pub_txt.error();
+			QJDnsSharedRequest::Error e = pub_txt.error();
 			cleanup();
 			emit error(e);
 		}
@@ -1816,7 +1816,7 @@ private slots:
 		}
 		else
 		{
-			JDnsSharedRequest::Error e = pub_ptr.error();
+			QJDnsSharedRequest::Error e = pub_ptr.error();
 			cleanup();
 			emit error(e);
 		}
@@ -1824,7 +1824,7 @@ private slots:
 
 	void pub_extra_ready()
 	{
-		JDnsSharedRequest *req = (JDnsSharedRequest *)sender();
+		QJDnsSharedRequest *req = (QJDnsSharedRequest *)sender();
 		JDnsPublishExtra *extra = 0;
 		foreach(JDnsPublishExtra *e, extraList)
 		{
@@ -1850,7 +1850,7 @@ private slots:
 		}
 		else
 		{
-			JDnsSharedRequest::Error e = extra->pub.error();
+			QJDnsSharedRequest::Error e = extra->pub.error();
 			cleanupExtra(extra);
 			emit extra->error(e);
 		}
@@ -2292,7 +2292,7 @@ public:
 
 		ResolveItem *i = new ResolveItem(id, new JDnsServiceResolve(global->mul, this));
 		connect(i->resolve, SIGNAL(finished()), SLOT(jr_finished()));
-		connect(i->resolve, SIGNAL(error(JDnsSharedRequest::Error)), SLOT(jr_error(JDnsSharedRequest::Error)));
+		connect(i->resolve, SIGNAL(error(QJDnsSharedRequest::Error)), SLOT(jr_error(QJDnsSharedRequest::Error)));
 		resolveItemList.insert(i);
 		i->resolve->start(name);
 		return i->id;
@@ -2346,7 +2346,7 @@ public:
 		//   defer the operation until a host is acquired.
 		PublishItem *i = new PublishItem(id, new JDnsPublish(global->mul, this));
 		connect(i->publish, SIGNAL(published()), SLOT(jp_published()));
-		connect(i->publish, SIGNAL(error(JDnsSharedRequest::Error)), SLOT(jp_error(JDnsSharedRequest::Error)));
+		connect(i->publish, SIGNAL(error(QJDnsSharedRequest::Error)), SLOT(jp_error(QJDnsSharedRequest::Error)));
 		publishItemList.insert(i);
 		i->publish->start(instance, type, localHost, port, attributes);
 		return i->id;
@@ -2401,7 +2401,7 @@ public:
 
 		PublishExtraItem *i = new PublishExtraItem(id, new JDnsPublishExtra(pi->publish));
 		connect(i->publish, SIGNAL(published()), SLOT(jpe_published()));
-		connect(i->publish, SIGNAL(error(JDnsSharedRequest::Error)), SLOT(jpe_error(JDnsSharedRequest::Error)));
+		connect(i->publish, SIGNAL(error(QJDnsSharedRequest::Error)), SLOT(jpe_error(QJDnsSharedRequest::Error)));
 		publishExtraItemList.insert(i);
 		i->publish->start(rec);
 		return i->id;
@@ -2562,14 +2562,14 @@ private slots:
 		emit resolve_resultsReady(id, results);
 	}
 
-	void jr_error(JDnsSharedRequest::Error e)
+	void jr_error(QJDnsSharedRequest::Error e)
 	{
 		JDnsServiceResolve *jr = (JDnsServiceResolve *)sender();
 		ResolveItem *i = resolveItemList.itemByResolve(jr);
 		Q_ASSERT(i);
 
 		ServiceResolver::Error err;
-		if(e == JDnsSharedRequest::ErrorTimeout)
+		if(e == QJDnsSharedRequest::ErrorTimeout)
 			err = ServiceResolver::ErrorTimeout;
 		else
 			err = ServiceResolver::ErrorGeneric;
@@ -2604,14 +2604,14 @@ private slots:
 		emit publish_published(i->id);
 	}
 
-	void jp_error(JDnsSharedRequest::Error e)
+	void jp_error(QJDnsSharedRequest::Error e)
 	{
 		JDnsPublish *jp = (JDnsPublish *)sender();
 		PublishItem *i = publishItemList.itemByPublish(jp);
 		Q_ASSERT(i);
 
 		ServiceLocalPublisher::Error err;
-		if(e == JDnsSharedRequest::ErrorConflict)
+		if(e == QJDnsSharedRequest::ErrorConflict)
 			err = ServiceLocalPublisher::ErrorConflict;
 		else
 			err = ServiceLocalPublisher::ErrorGeneric;
@@ -2641,14 +2641,14 @@ private slots:
 		emit publish_extra_published(i->id);
 	}
 
-	void jpe_error(JDnsSharedRequest::Error e)
+	void jpe_error(QJDnsSharedRequest::Error e)
 	{
 		JDnsPublishExtra *jp = (JDnsPublishExtra *)sender();
 		PublishExtraItem *i = publishExtraItemList.itemByPublish(jp);
 		Q_ASSERT(i);
 
 		ServiceLocalPublisher::Error err;
-		if(e == JDnsSharedRequest::ErrorConflict)
+		if(e == QJDnsSharedRequest::ErrorConflict)
 			err = ServiceLocalPublisher::ErrorConflict;
 		else
 			err = ServiceLocalPublisher::ErrorGeneric;

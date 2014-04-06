@@ -80,11 +80,15 @@ public:
 		QNetworkReply(nam),
 		bs(0)
 	{
-
+		Q_UNUSED(op);
+		Q_UNUSED(req);
+		Q_UNUSED(outgoingData);
 	}
 
 	qint64 readData(char *data, qint64 maxlen)
 	{
+		Q_UNUSED(data);
+		Q_UNUSED(maxlen);
 		return 0;
 	}
 
