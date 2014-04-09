@@ -115,9 +115,6 @@ AboutDlg::AboutDlg(QWidget* parent)
 	psiplus += details(QString::fromUtf8("liuch"),
 			   "", "", "",
 			   tr("Patcher and Plugins Writer"));
-	psiplus += details(QString::fromUtf8("Nirdosh"),
-			   "", "", "",
-			   tr("OpenSUSE Packager"));
 	psiplus += details(QString::fromUtf8("tehnick"),
 			  "tehnick-8@mail.ru", "", "",
 			  tr("Language coordinator; Debian Packager"));
