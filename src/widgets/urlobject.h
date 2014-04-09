@@ -47,7 +47,6 @@ public:
 
 signals:
 	void openURL(QString);
-	void vcardsig(QString);
 
 public:
 	class Private;

@@ -88,7 +88,7 @@ public:
 
 		tr = qApp->translate("URLLabel", "User Info");
 		act_info = new IconAction(tr, "psi/vCard", tr, 0, this);
-		connect(act_info, SIGNAL(triggered()), SLOT(vcard()));
+		connectXmppAction(act_info, "vcard");
 
 		connect(&xmppActionMapper, SIGNAL(mapped(const QString&)), SLOT(xmppAction(const QString&)));
 	}
@@ -133,10 +133,6 @@ public slots:
 
 	void popupCopy() {
 		popupCopy(link);
-	}
-
-	void vcard() {
-		emit urlObject->vcardsig(link);
 	}
 
 	void xmppAction(const QString& lnk, const QString& query) {

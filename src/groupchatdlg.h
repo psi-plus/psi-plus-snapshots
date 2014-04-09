@@ -110,7 +110,6 @@ public slots:
 	virtual void ensureTabbedCorrectly();
 
 	void optionsUpdate();
-	void vcard(const QString& str);
 
 private slots:
 	void showNM(const QString&);

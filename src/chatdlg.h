@@ -123,7 +123,6 @@ public slots:
 	void incomingMessage(const Message &);
 	virtual void updateAvatar() = 0;
 	void updateAvatar(const Jid&);
-	void vcard(const QString& str);
 
 protected slots:
 	void doInfo();

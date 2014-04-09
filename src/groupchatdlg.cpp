@@ -899,8 +899,6 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 	setShortcuts();
 	invalidateTab();
 	setConnecting();
-	connect(URLObject::getInstance(), SIGNAL(vcardsig(QString)), SLOT(vcard(QString)));
-
 	connect(ui_.log->textWidget(), SIGNAL(quote(const QString &)), ui_.mle->chatEdit(), SLOT(insertAsQuote(const QString &)));
 
 	connect(pa->avatarFactory(), SIGNAL(avatarChanged(Jid)), SLOT(avatarUpdated(Jid)));
@@ -908,14 +906,6 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 #ifdef PSI_PLUGINS
 	PluginManager::instance()->setupGCTab(this, account(), jid().full());
 #endif
-}
-
-void GCMainDlg::vcard(const QString& _str)
-{
-	QString str = _str;
-	str.remove(0, str.indexOf(":")+1);
-	XMPP::Jid jd(str);
-	account()->actionInfo(jd);
 }
 
 GCMainDlg::~GCMainDlg()

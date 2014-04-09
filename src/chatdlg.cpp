@@ -76,7 +76,6 @@
 #include "psirichtext.h"
 #include "messageview.h"
 #include "chatview.h"
-#include "urlobject.h"
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -122,17 +121,9 @@ ChatDlg::ChatDlg(const Jid& jid, PsiAccount* pa, TabManager* tabManager)
 	sendComposingEvents_ = false;
 	isComposing_ = false;
 	composingTimer_ = 0;
-	connect(URLObject::getInstance(), SIGNAL(vcardsig(QString)), SLOT(vcard(QString)));
 	updateRealJid();
 }
 
-void ChatDlg::vcard(const QString& string)
-{
-	QString str = string;
-	str.remove(0, str.indexOf(":")+1);
-	XMPP::Jid jd(str);
-	account()->actionInfo(jd);
-}
 void ChatDlg::init()
 {
 	initUi();
