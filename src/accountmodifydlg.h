@@ -57,6 +57,8 @@ private slots:
 	void detailsChangePW();
 
 	void removeStunHost();
+	void miscChangeGroupsDelimiter();
+	void miscDisableGroupsDelimiter();
 
 	void save();
 

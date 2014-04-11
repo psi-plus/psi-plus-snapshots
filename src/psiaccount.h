@@ -207,6 +207,8 @@ public:
 	void changePW();
 	void changeStatus(int, bool forceDialog = false);
 	void doDisco();
+	void changeGroupsDelimiter();
+	void disableGroupsDelimiter();
 
 	void showXmlConsole();
 	void openAddUserDlg();
@@ -306,6 +308,7 @@ signals:
 	void encryptedMessageSent(int, bool, int, const QString &);
 	void enabledChanged();
 	void startBounce();
+	void groupsDelimiterChanged();
 
 public slots:
 	void setStatus(const XMPP::Status &, bool withPriority = false, bool isManualStatus = false);
@@ -395,6 +398,7 @@ public slots:
 	void actionUnsetAvatar();
 	void actionQueryVersion(const Jid& j);
 	void featureActivated(QString feature, Jid jid, QString node);
+	void actionSetGroupsDelimiter(const QString &groupsDelimiter);
 
 	void actionAssignKey(const Jid &);
 	void actionUnassignKey(const Jid &);
@@ -414,6 +418,7 @@ private slots:
 	void cs_delayedCloseFinished();
 	void cs_warning(int);
 	void cs_error(int);
+	void client_rosterRequestGroupsDelimiterFinished(const QString &groupsDelimiter);
 	void client_rosterRequestFinished(bool, int, const QString &);
 	void resolveContactName();
 	void client_rosterItemAdded(const RosterItem &);

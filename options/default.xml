@@ -275,6 +275,7 @@ QLineEdit#le_status_text {
 						<margin type="int">0</margin>
 					</avatar>
 				</roster-avatar-frame>
+				<default-groups-delimiter comment="Default nested groups delimiter will be used if no delimiter on the server" type="QString">::</default-groups-delimiter>
 			</contactlist>
 			<menu comment="Options for the menu">
 				<account comment="Options for the account-specific menu">

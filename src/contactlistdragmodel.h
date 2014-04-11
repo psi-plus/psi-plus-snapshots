@@ -113,8 +113,6 @@ protected:
 	virtual QString getDropGroupName(const QModelIndex& parent) const;
 	virtual void contactOperationsPerformed(const ContactListModelOperationList& operations, OperationType operationType, const QHash<ContactListGroup*, int>& groupContactCount);
 
-	QString processContactSetGroupName(const QString& groupName) const;
-	QStringList processContactSetGroupNames(const QStringList& groups) const;
 	QStringList processContactGetGroupNames(PsiContact* contact) const;
 	QString sourceOperationsForContactGroup(const QString& groupName, PsiContact* contact) const;
 	QString destinationOperationsForContactGroup(const QString& groupName, PsiContact* contact) const;

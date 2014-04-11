@@ -23,7 +23,6 @@
  *
  */
 
-
 #include <QFileDialog>
 #include <QSet>
 #include <QInputDialog>
@@ -1107,6 +1106,8 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, CapsRegis
 	d->voiceCaller = 0;
 	d->blockTransportPopupList = new BlockTransportPopupList();
 
+	d->userList.setGroupsDelimiter(acc.roster.groupsDelimiter());
+
 	v_isActive = false;
 	isDisconnecting = false;
 	notifyOnlineOk = false;
@@ -1180,6 +1181,7 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, CapsRegis
 	//connect(d->client, SIGNAL(sslCertReady(const QSSLCert &)), SLOT(client_sslCertReady(const QSSLCert &)));
 	//connect(d->client, SIGNAL(closeFinished()), SLOT(client_closeFinished()));
 	//connect(d->client, SIGNAL(authFinished(bool, int, const QString &)), SLOT(client_authFinished(bool, int, const QString &)));
+	connect(d->client, SIGNAL(rosterGroupsDelimiterRequestFinished(const QString &)), SLOT(client_rosterRequestGroupsDelimiterFinished(const QString &)));
 	connect(d->client, SIGNAL(rosterRequestFinished(bool, int, const QString &)), SLOT(client_rosterRequestFinished(bool, int, const QString &)));
 	connect(d->client, SIGNAL(rosterItemAdded(const RosterItem &)), SLOT(client_rosterItemAdded(const RosterItem &)));
 	connect(d->client, SIGNAL(rosterItemAdded(const RosterItem &)), SLOT(client_rosterItemUpdated(const RosterItem &)));
@@ -1516,6 +1518,7 @@ const UserAccount & PsiAccount::userAccount() const
 	// save the roster and pgp key bindings
 	d->acc.roster.clear();
 	d->acc.keybind.clear();
+	d->acc.roster.setGroupsDelimiter(d->userList.groupsDelimiter());
 	foreach(UserListItem* u, d->userList) {
 		if(u->inList())
 			d->acc.roster += *u;
@@ -2331,6 +2334,24 @@ QString PsiAccount::currentConnectionError() const
 int PsiAccount::currentConnectionErrorCondition() const
 {
 	return d->currentConnectionErrorCondition;
+}
+
+void PsiAccount::client_rosterRequestGroupsDelimiterFinished(const QString &groupsDelimiter)
+{
+	if (!groupsDelimiter.isEmpty()) {
+		d->userList.setGroupsDelimiter(groupsDelimiter);
+	}
+	else {
+		QString defaultGroupsDelimiter = PsiOptions::instance()->getOption("options.ui.contactlist.default-groups-delimiter").toString();
+
+		// Not empty delimiter can be set in options before login. Need to reset it in any case.
+		d->userList.setGroupsDelimiter(defaultGroupsDelimiter);
+
+		// Prevent excessed iq
+		if (!defaultGroupsDelimiter.isEmpty()) {
+			actionSetGroupsDelimiter(defaultGroupsDelimiter);
+		}
+	}
 }
 
 void PsiAccount::client_rosterRequestFinished(bool success, int, const QString &)
@@ -3486,6 +3507,35 @@ void PsiAccount::doDisco()
 	actionDisco(d->jid.domain(), "");
 }
 
+void PsiAccount::changeGroupsDelimiter()
+{
+	if (!checkConnected()) {
+		return;
+	}
+
+	bool ok = false;
+	QString delimiter = d->account->userList()->groupsDelimiter();
+	delimiter = QInputDialog::getText(0,
+									  tr("Nested Groups Delimiter"),
+									  tr("Set a new delimiter of nested groups"),
+									  QLineEdit::Normal,
+									  delimiter,
+									  &ok);
+	if (!ok)
+		return;
+
+	actionSetGroupsDelimiter(delimiter);
+}
+
+void PsiAccount::disableGroupsDelimiter()
+{
+	if (!checkConnected()) {
+		return;
+	}
+
+	actionSetGroupsDelimiter("e");
+}
+
 void PsiAccount::actionDisco(const Jid &j, const QString &node)
 {
 	DiscoDlg *w = new DiscoDlg(this, j, node);
@@ -3522,6 +3572,18 @@ void PsiAccount::featureActivated(QString feature, Jid jid, QString node)
 	else if ( f.hasVersion() ) {
 		actionQueryVersion(jid);
 	}
+}
+
+void PsiAccount::actionSetGroupsDelimiter(const QString &groupsDelimiter)
+{
+	if (d->userList.groupsDelimiter() != groupsDelimiter) {
+		d->userList.setGroupsDelimiter(groupsDelimiter);
+		emit groupsDelimiterChanged();
+	}
+
+	JT_Roster *r = new JT_Roster(d->client->rootTask());
+	r->setGroupsDelimiter(groupsDelimiter);
+	r->go(true);
 }
 
 void PsiAccount::actionManageBookmarks()

@@ -42,6 +42,7 @@ ContactListModelUpdater::ContactListModelUpdater(PsiContactList* contactList, QO
 	connect(contactList_, SIGNAL(removedContact(PsiContact*)), SLOT(removeContact(PsiContact*)));
 	connect(contactList_, SIGNAL(beginBulkContactUpdate()), SLOT(beginBulkUpdate()));
 	connect(contactList_, SIGNAL(endBulkContactUpdate()), SLOT(endBulkUpdate()));
+	connect(contactList_, SIGNAL(groupsDelimiterChanged()), SIGNAL(groupsDelimiterChanged()));
 }
 
 ContactListModelUpdater::~ContactListModelUpdater()

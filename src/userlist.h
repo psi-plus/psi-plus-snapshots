@@ -187,6 +187,16 @@ public:
 	~UserList();
 
 	UserListItem *find(const XMPP::Jid &);
+
+	void setGroupsDelimiter(const QString &groupsDelimiter);
+	QString groupsDelimiter() const;
+
+	// If the delimiter is a single alphanumeric character (a-z, A-Z, 0-9) or empty
+	// the situation treats as if nesting were disabled
+	bool hasGroupsDelimiter() const;
+
+private:
+	QString _groupsDelimiter;
 };
 
 #endif

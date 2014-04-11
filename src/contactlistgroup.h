@@ -38,7 +38,7 @@ class ContactListGroup : public ContactListItem
 {
 	Q_OBJECT
 public:
-	ContactListGroup(ContactListModel* model, ContactListGroup* parent);
+	ContactListGroup(ContactListModel* model, ContactListGroup* parent, PsiAccount *account);
 	~ContactListGroup();
 
 	ContactListItemProxy* item(int index) const;
@@ -80,8 +80,13 @@ public:
 	virtual ContactListItemMenu* contextMenu(ContactListModel* model);
 	virtual bool compare(const ContactListItem* other) const;
 
-	static const QString& groupDelimiter();
-	static void setGroupDelimiter(const QString&);
+	bool hasGroupsDelimiter() const;
+	QString groupsDelimiter() const;
+
+	QStringList toNestedGroups(const QString &group) const;
+	QString fromNestedGroups(const QStringList &nestedGroups) const;
+
+	// static void setGroupsDelimiter(const QString&);
 	QString sanitizeGroupName(const QString&) const;
 	QStringList sanitizeGroupNames(const QStringList& names) const;
 
