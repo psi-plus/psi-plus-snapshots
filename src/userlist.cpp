@@ -369,7 +369,7 @@ QString UserListItem::findClient(QString name) const
 		res = "bluejabb";
 	else if(name.startsWith("[bombus]") || name.contains("avalon"))
 		res = "bombus-avalon";
-	else if(name.startsWith("java.util.Random"))
+	else if(name.startsWith("java.util.random"))
 		res = "bombus-avalon-old";
 	else if(name.startsWith("klub54.wen.ru") || name.startsWith("bombusklub") || name.startsWith("jabber.pdg.pl"))
 		res = "bombus-klub";
@@ -383,7 +383,7 @@ QString UserListItem::findClient(QString name) const
 		res = "bombuslime";
 	else if(name.startsWith("bombusmod"))
 		res = "bombusmod";
-	else if(name.startsWith("BombusMod.net.ru") || name.startsWith("ex-im.name"))
+	else if(name.startsWith("bombusmod.net.ru") || name.startsWith("ex-im.name"))
 		res = "bombusmod-old";
 	else if(name.startsWith("bombusng-md"))
 		res = "bombusng-md";
@@ -409,7 +409,7 @@ QString UserListItem::findClient(QString name) const
 		res = "coccinella";
 	else if(name.startsWith("dictbot"))
 		res = "dictbot";
-	else if(name.startsWith("Digsby Client"))
+	else if(name.startsWith("digsby client"))
 		res = "digsby";
 	else if(name.startsWith("ekg2"))
 		res = "ekg2";
@@ -587,7 +587,7 @@ QString UserListItem::findClient(QString name) const
 		res = "qip";
 	else if(name.startsWith("pda.qip.ru") || name.startsWith("qip pda"))
 		res = "qippda";
-	else if(name.startsWith("qip mobile") || (name.startsWith("qip.ru") && name.contains("QIP")))
+	else if(name.startsWith("qip mobile") || (name.startsWith("qip.ru") && name.contains("qip")))
 		res = "qipmobile";
 	else if(name.startsWith("qip infium") || name.startsWith("qip 2010") || name.startsWith("qip 2012") || name.startsWith("2010.qip.ru"))
 		res = "qipinfium";
@@ -653,7 +653,7 @@ QString UserListItem::findClient(QString name) const
 		res = "webclient";
 	else if(name.startsWith("weonlydo"))
 		res = "weonlydo";
-	else if(name.startsWith("weonlydo.com") && name.contains("XMPP"))
+	else if(name.startsWith("weonlydo.com") && name.contains("xmpp"))
 		res = "wod-xmpp";
 	else if(name.startsWith("wtw"))
 		res = "wtw";
