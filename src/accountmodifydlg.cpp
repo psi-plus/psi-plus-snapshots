@@ -227,7 +227,8 @@ void AccountModifyDlg::init()
 	// Misc
 	connect(pb_groupsdelimiter, SIGNAL(clicked()), SLOT(miscChangeGroupsDelimiter()));
 	connect(pb_disablegroupsdelimiter, SIGNAL(clicked()), SLOT(miscDisableGroupsDelimiter()));
-	le_groupsdelimiter->setText(pa->userList()->groupsDelimiter());
+	if (pa && pa->userList())
+		le_groupsdelimiter->setText(pa->userList()->groupsDelimiter());
 
 	// QWhatsThis helpers
 	cb_plain->setWhatsThis(
