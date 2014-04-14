@@ -20,7 +20,7 @@
 
 #include "httpstream.h"
 #include "bsocket.h"
-#include "../xmpp/zlib/zlibdecompressor.h"
+#include "../../xmpp/zlib/zlibdecompressor.h"
 
 
 

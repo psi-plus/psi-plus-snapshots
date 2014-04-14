@@ -25,4 +25,7 @@
  <dep type='extra'>
   <required/>
  </dep>
+ <dep type='qjdns'>
+  <required/>
+ </dep>
 </qconf>

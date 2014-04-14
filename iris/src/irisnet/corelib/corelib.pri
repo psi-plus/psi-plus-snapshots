@@ -1,7 +1,9 @@
 QT *= network
 
-include(../../jdns/jdns.pri)
-INCLUDEPATH += $$PWD/../../jdns
+iris-qjdns {
+	include(../../jdns/jdns.pri)
+	INCLUDEPATH += $$PWD/../../jdns
+}
 
 HEADERS += \
 	$$PWD/objectsession.h \
