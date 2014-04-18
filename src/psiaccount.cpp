@@ -1419,6 +1419,7 @@ PsiAccount::~PsiAccount()
 	qDeleteAll(d->userList);
 	d->userList.clear();
 	delete d->gcbank;
+	d->gcbank = 0;
 
 	d->contactList->unlink(this);
 	delete d;
@@ -3844,7 +3845,7 @@ QList<UserListItem*> PsiAccount::findRelevant(const Jid &j) const
 			} else {
 				// skip status changes from muc participants
 				// if the MUC somehow got into userList.
-				if (!j.resource().isEmpty() && d->gcbank->contains(j)) continue;
+				if (!j.resource().isEmpty() && client()->groupchatExist(j.bare())) continue;
 			}
 			list.append(u);
 		}
@@ -5927,6 +5928,8 @@ void PsiAccount::groupChatLeave(const QString &host, const QString &room)
 
 bool PsiAccount::isGCContact(const Jid &j) const
 {
+	if (!d->gcbank)
+		return false;
 	return d->gcbank->contains(j);
 }
 
