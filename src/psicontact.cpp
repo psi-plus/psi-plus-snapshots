@@ -167,6 +167,8 @@ PsiContact::PsiContact(const UserListItem& u, PsiAccount* account)
 	d = new Private(this);
 	if (account) {
 		connect(account->avatarFactory(), SIGNAL(avatarChanged(const Jid&)), SLOT(avatarChanged(const Jid&)));
+		if (account->isGCContact(u.jid()))
+			account->gcContactIncRef(u.jid());
 	}
 	connect(VCardFactory::instance(), SIGNAL(vcardChanged(const Jid&)), SLOT(vcardChanged(const Jid&)));
 	update(u);
@@ -185,6 +187,11 @@ PsiContact::PsiContact()
  */
 PsiContact::~PsiContact()
 {
+	if (account()) {
+		const Jid &j = userListItem().jid();
+		if (account()->isGCContact(j))
+			account()->gcContactDecRef(j);
+	}
 	d->isValid_ = false;
 	emit destroyed(this);
 	delete d;

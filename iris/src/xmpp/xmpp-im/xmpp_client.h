@@ -132,6 +132,8 @@ namespace XMPP
 		void groupChatLeave(const QString &host, const QString &room, const QString &statusStr = QString());
 		void groupChatLeaveAll(const QString &statusStr = QString());
 		QString groupChatNick(const QString &host, const QString &room) const;
+		bool groupchatExist(const Jid &j) const;
+		QStringList groupchats() const;
 
 	signals:
 		void activated();

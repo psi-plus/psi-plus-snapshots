@@ -25,6 +25,7 @@
 
 #include "xmpp_muc.h"
 #include "xmpp_jid.h"
+#include "xmpp_status.h"
 
 class QString;
 namespace XMPP {
@@ -122,6 +123,28 @@ protected slots:
 private:
 	XMPP::Client* client_;
 	Jid room_;
+};
+
+class MUCContactList
+{
+public:
+	MUCContactList();
+	~MUCContactList();
+	bool contains(const Jid &j) const;
+	void mucLeave(const Jid &j);
+	void incRef(const Jid &j);
+	void decRef(const Jid &j);
+	Status status(const Jid &j) const;
+	void setStatus(const Jid &j, Status s);
+	QList<Jid> jids() const;
+
+private:
+	struct MUCContact
+	{
+		Status status;
+		int refcount;
+	};
+	QHash<QString, MUCContact*> mclist;
 };
 
 #endif

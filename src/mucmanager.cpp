@@ -614,3 +614,98 @@ void MUCManager::destroy_finished()
 		emit destroy_error(t->statusCode(), t->statusString());
 	}
 }
+
+// -----------------------------------------------------------------------------
+
+MUCContactList::MUCContactList()
+{
+}
+
+MUCContactList::~MUCContactList()
+{
+	qDeleteAll(mclist);
+}
+
+bool MUCContactList::contains(const Jid &j) const
+{
+	if (j.resource().isEmpty())
+		return false;
+	return mclist.contains(j.full());
+}
+
+void MUCContactList::mucLeave(const Jid &j)
+{
+	QStringList keys_ = mclist.keys();
+	foreach (const QString &s, keys_) {
+		const Jid cj = Jid(s);
+		if (j.isEmpty() || j.compare(cj, false)) {
+			Status s = status(cj);
+			s.setType(Status::Offline);
+			setStatus(cj, s);
+		}
+	}
+}
+
+void MUCContactList::incRef(const Jid &j)
+{
+	if (j.resource().isEmpty())
+		return;
+
+	MUCContact *mc = mclist.value(j.full());
+	if (!mc) {
+		mc = new MUCContact;
+		mc->refcount = 1;
+		mc->status = Status();
+		mclist[j.full()] = mc;
+	}
+	else
+		++mc->refcount;
+}
+
+void MUCContactList::decRef(const Jid &j)
+{
+	if (j.resource().isEmpty())
+		return;
+
+	MUCContact *mc = mclist.value(j.full());
+	if (mc && --mc->refcount == 0) {
+			mclist.remove(j.full());
+			delete mc;
+	}
+}
+
+Status MUCContactList::status(const Jid &j) const
+{
+	MUCContact *mc = mclist.value(j.full());
+	if (mc)
+		return mc->status;
+	return Status();
+}
+
+void MUCContactList::setStatus(const Jid &j, Status s)
+{
+	MUCContact *mc = mclist.value(j.full());
+	if (mc) {
+		bool turn = (s.isAvailable() != mc->status.isAvailable());
+		mc->status = s;
+		if (turn) {
+			if (s.isAvailable())
+				incRef(j);
+			else
+				decRef(j);
+		}
+	}
+	else if (s.isAvailable()) {
+		incRef(j);
+		mclist.value(j.full())->status = s;
+	}
+}
+
+QList<Jid> MUCContactList::jids() const
+{
+	QList<Jid> jl;
+	foreach (const QString &s, mclist.keys()) {
+		jl.append(Jid(s));
+	}
+	return jl;
+}
