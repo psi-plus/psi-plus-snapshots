@@ -1418,8 +1418,13 @@ PsiAccount::~PsiAccount()
 
 	qDeleteAll(d->userList);
 	d->userList.clear();
+
+	foreach (PsiContact *pc, d->contacts) {
+		pc->disconnect();
+		delete pc;
+	}
+	d->contacts.clear();
 	delete d->gcbank;
-	d->gcbank = 0;
 
 	d->contactList->unlink(this);
 	delete d;
@@ -5928,8 +5933,6 @@ void PsiAccount::groupChatLeave(const QString &host, const QString &room)
 
 bool PsiAccount::isGCContact(const Jid &j) const
 {
-	if (!d->gcbank)
-		return false;
 	return d->gcbank->contains(j);
 }
 
