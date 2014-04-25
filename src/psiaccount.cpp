@@ -1419,6 +1419,7 @@ PsiAccount::~PsiAccount()
 	qDeleteAll(d->userList);
 	d->userList.clear();
 
+	delete d->selfContact;
 	foreach (PsiContact *pc, d->contacts) {
 		pc->disconnect();
 		delete pc;
