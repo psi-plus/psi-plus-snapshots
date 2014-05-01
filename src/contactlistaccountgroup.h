@@ -34,6 +34,7 @@ public:
 	ContactListAccountGroup(ContactListModel* model, ContactListGroup* parent, PsiAccount* account);
 	~ContactListAccountGroup();
 
+	PsiAccount* account() const;
 	ContactListAccountGroup* findAccount(PsiAccount* account) const;
 
 	// reimplemented
@@ -62,6 +63,7 @@ private slots:
 
 private:
 	bool isRoot_;
+	QPointer<PsiAccount> account_;
 	QList<ContactListAccountGroup*> accounts_;
 };
 

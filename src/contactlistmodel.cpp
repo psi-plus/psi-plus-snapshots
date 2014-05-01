@@ -68,7 +68,6 @@ ContactListModel::ContactListModel(PsiContactList* contactList)
 	connect(updater_, SIGNAL(contactGroupsChanged(PsiContact*)), SLOT(contactGroupsChanged(PsiContact*)));
 	connect(updater_, SIGNAL(beginBulkContactUpdate()), SLOT(beginBulkUpdate()));
 	connect(updater_, SIGNAL(endBulkContactUpdate()), SLOT(endBulkUpdate()));
-	connect(updater_, SIGNAL(groupsDelimiterChanged()), SLOT(invalidateLayout()));
 	connect(contactList_, SIGNAL(destroying()), SLOT(destroyingContactList()));
 	connect(contactList_, SIGNAL(showOfflineChanged(bool)), SIGNAL(showOfflineChanged()));
 	connect(contactList_, SIGNAL(showHiddenChanged(bool)), SIGNAL(showHiddenChanged()));
@@ -119,9 +118,9 @@ ContactListGroup* ContactListModel::createRootGroup()
 		return new ContactListAccountGroup(this, 0, 0);
 
 	if (!groupsEnabled_)
-		return new ContactListGroup(this, 0, 0);
+		return new ContactListGroup(this, 0);
 
-	return new ContactListNestedGroup(this, 0, 0, QString());
+	return new ContactListNestedGroup(this, 0, QString());
 }
 
 bool ContactListModel::groupsEnabled() const
@@ -646,22 +645,8 @@ bool ContactListModel::setData(const QModelIndex& index, const QVariant& data, i
 			//}
 		}
 		else if ((group = dynamic_cast<ContactListGroup*>(item->item()))) {
-			bool hasGroupsDelimiter = group->hasGroupsDelimiter();
-			QString groupsDelimiter = group->groupsDelimiter();
 			if (name.isEmpty()) {
 				QMessageBox::information(0, tr("Error"), tr("You can't set a blank group name."));
-				return false;
-			}
-			else if (hasGroupsDelimiter && name.startsWith(groupsDelimiter)) {
-				QMessageBox::information(0, tr("Error"), tr("You can't use delimiter in the begin of group name."));
-				return false;
-			}
-			else if (hasGroupsDelimiter && name.endsWith(groupsDelimiter)) {
-				QMessageBox::information(0, tr("Error"), tr("You can't use delimiter in the end of group name."));
-				return false;
-			}
-			else if (hasGroupsDelimiter && name.split(groupsDelimiter).contains("")) {
-				QMessageBox::information(0, tr("Error"), tr("You can't use repeating delimiter in the group name."));
 				return false;
 			}
 			// else {
@@ -865,7 +850,7 @@ PsiAccount* ContactListModel::account(const QModelIndex& index) const
 {
 	ContactListItemProxy* item = itemProxy(index);
 	if (item) {
-		ContactListItem *contact = item->item();
+		PsiContact* contact = dynamic_cast<PsiContact*>(item->item());
 		if (contact)
 			return contact->account();
 	}

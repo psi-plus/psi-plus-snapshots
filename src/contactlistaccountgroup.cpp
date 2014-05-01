@@ -30,13 +30,14 @@
 #include "contactlistgroupcache.h"
 
 ContactListAccountGroup::ContactListAccountGroup(ContactListModel* model, ContactListGroup* parent, PsiAccount* account)
-	: ContactListNestedGroup(model, parent, account, QString())
+	: ContactListNestedGroup(model, parent, QString())
 	, isRoot_(!account)
+	, account_(account)
 {
-	if (account) {
+	if (account_) {
 		model->groupCache()->addGroup(this);
-		connect(account, SIGNAL(destroyed(QObject*)), SLOT(accountUpdated()));
-		connect(account, SIGNAL(updatedAccount()), SLOT(accountUpdated()));
+		connect(account_, SIGNAL(destroyed(QObject*)), SLOT(accountUpdated()));
+		connect(account_, SIGNAL(updatedAccount()), SLOT(accountUpdated()));
 	}
 }
 
@@ -54,6 +55,11 @@ void ContactListAccountGroup::clearGroup()
 	accounts_.clear();
 
 	ContactListNestedGroup::clearGroup();
+}
+
+PsiAccount* ContactListAccountGroup::account() const
+{
+	return account_;
 }
 
 ContactListModel::Type ContactListAccountGroup::type() const
@@ -134,7 +140,7 @@ void ContactListAccountGroup::accountUpdated()
 
 	model()->updatedItem(root->findGroup(this));
 
-	if (!account() || !account()->enabled()) {
+	if (account_.isNull() || !account_->enabled()) {
 		clearGroup();
 		root->removeAccount(this);
 	}
@@ -142,8 +148,8 @@ void ContactListAccountGroup::accountUpdated()
 
 const QString& ContactListAccountGroup::displayName() const
 {
-	if (account()) {
-		return account()->name();
+	if (account_) {
+		return account_->name();
 	}
 
 	static QString emptyName;
@@ -157,8 +163,8 @@ QString ContactListAccountGroup::comparisonName() const
 
 QString ContactListAccountGroup::internalGroupName() const
 {
-	if (account()) {
-		return account()->id();
+	if (account_) {
+		return account_->id();
 	}
 
 	return QString();

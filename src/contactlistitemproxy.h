@@ -22,6 +22,7 @@
 #define CONTACTLISTITEMPROXY_H
 
 #include <QObject>
+#include <QPointer>
 
 class ContactListItem;
 class ContactListGroup;
@@ -32,12 +33,12 @@ public:
 	ContactListItemProxy(ContactListGroup* parent, ContactListItem* item);
 	~ContactListItemProxy();
 
-	ContactListItem *item() const;
-	ContactListGroup *parent() const;
+	ContactListItem* item() const { return item_; }
+	ContactListGroup* parent() const { return parent_; }
 
 private:
-	class Private;
-	Private *d;
+	QPointer<ContactListItem> item_;
+	QPointer<ContactListGroup> parent_;
 };
 
 #endif

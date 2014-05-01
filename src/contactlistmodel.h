@@ -27,14 +27,13 @@
 #include <QHash>
 #include <QPointer>
 
-#include "contactlistitemproxy.h"
-
 class PsiAccount;
 class PsiContact;
 class PsiContactList;
 class ContactListItem;
 class ContactListGroup;
 class ContactListAccountGroup;
+class ContactListItemProxy;
 class ContactListGroupState;
 class ContactListGroupCache;
 class ContactListModelUpdater;
@@ -117,6 +116,7 @@ public:
 
 	virtual PsiContactList* contactList() const;
 
+	void invalidateLayout();
 	ContactListItemProxy* modelIndexToItemProxy(const QModelIndex& index) const;
 	QModelIndex itemProxyToModelIndex(ContactListItemProxy* item) const;
 	QModelIndex itemProxyToModelIndex(ContactListItemProxy* item, int index) const;
@@ -195,7 +195,6 @@ signals:
 public slots:
 	void expanded(const QModelIndex&);
 	void collapsed(const QModelIndex&);
-	void invalidateLayout();
 
 protected slots:
 	void addContact(PsiContact*);

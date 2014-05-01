@@ -24,7 +24,7 @@
 #include <QStringList>
 
 ContactListSpecialGroup::ContactListSpecialGroup(ContactListModel* model, ContactListGroup* parent, ContactListGroup::SpecialType type)
-	: ContactListNestedGroup(model, parent, 0, QString())
+	: ContactListNestedGroup(model, parent, QString())
 	, specialType_(type)
 {
 	name_ = QString::fromUtf8("☣special_group_");

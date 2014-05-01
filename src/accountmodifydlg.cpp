@@ -35,7 +35,6 @@
 #include "psicontactlist.h"
 #include "iconaction.h"
 #include "actionlineedit.h"
-#include "userlist.h"
 
 AccountModifyDlg::AccountModifyDlg(PsiCon *_psi, QWidget *parent)
 :QDialog(parent)
@@ -223,12 +222,6 @@ void AccountModifyDlg::init()
 	// FIXME: Temporarily disabling blocking
 	pb_removeBlock->hide();
 	pb_addBlock->hide();
-
-	// Misc
-	connect(pb_groupsdelimiter, SIGNAL(clicked()), SLOT(miscChangeGroupsDelimiter()));
-	connect(pb_disablegroupsdelimiter, SIGNAL(clicked()), SLOT(miscDisableGroupsDelimiter()));
-	if (pa && pa->userList())
-		le_groupsdelimiter->setText(pa->userList()->groupsDelimiter());
 
 	// QWhatsThis helpers
 	cb_plain->setWhatsThis(
@@ -509,22 +502,6 @@ void AccountModifyDlg::removeStunHost()
 		cb_stunHost->removeItem(item);
 	}
 	cb_stunHost->setCurrentIndex(0);
-}
-
-void AccountModifyDlg::miscChangeGroupsDelimiter()
-{
-	if (pa) {
-		pa->changeGroupsDelimiter();
-		le_groupsdelimiter->setText(pa->userList()->groupsDelimiter());
-	}
-}
-
-void AccountModifyDlg::miscDisableGroupsDelimiter()
-{
-	if (pa) {
-		pa->disableGroupsDelimiter();
-		le_groupsdelimiter->setText(pa->userList()->groupsDelimiter());
-	}
 }
 
 void AccountModifyDlg::save()

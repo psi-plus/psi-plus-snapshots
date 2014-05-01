@@ -19,41 +19,19 @@
  */
 
 #include "contactlistitemproxy.h"
+
 #include "contactlistgroup.h"
 #include "contactlistmodel.h"
 
-#include <QPointer>
-
-class ContactListItemProxy::Private
-{
-public:
-	QPointer<ContactListItem> item;
-	QPointer<ContactListGroup> parent;
-};
-
 ContactListItemProxy::ContactListItemProxy(ContactListGroup* parent, ContactListItem* item)
-	: d(new ContactListItemProxy::Private)
+	: item_(item)
+	, parent_(parent)
 {
 	Q_ASSERT(item);
 	Q_ASSERT(parent);
-
-	d->item = item;
-	d->parent = parent;
-
 	parent->model()->contactListItemProxyCreated(this);
 }
 
 ContactListItemProxy::~ContactListItemProxy()
 {
-	delete d;
-}
-
-ContactListItem *ContactListItemProxy::item() const
-{
-	return d->item;
-}
-
-ContactListGroup *ContactListItemProxy::parent() const
-{
-	return d->parent;
 }

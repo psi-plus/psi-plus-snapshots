@@ -19,7 +19,6 @@
  */
 
 #include "contactlistgroupstate.h"
-#include "contactlistgroup.h"
 
 #include <QTimer>
 #include <QStringList>
@@ -29,8 +28,6 @@
 #include "contactlistgroup.h"
 #include "psioptions.h"
 #include "xmpp_xmlcommon.h"
-#include "psiaccount.h"
-#include "userlist.h"
 
 static const QString groupStateOptionPath = "options.main-window.contact-list.group-state.%1";
 
@@ -150,17 +147,8 @@ QStringList ContactListGroupState::groupNames(const ContactListModel* model, con
 	}
 
 	if (result.isEmpty()) {
-		ContactListItemProxy *itemProxy = model->modelIndexToItemProxy(parent);
-		if (itemProxy) {
-			ContactListGroup *groupItem = qobject_cast<ContactListGroup*>(itemProxy->item());
-			QString groupsDelimiter;
-			if (groupItem && groupItem->hasGroupsDelimiter()) {
-				groupsDelimiter = groupItem->groupsDelimiter();
-			}
-
-			for (int len = 1; len < parentName.count() + 1; ++len)
-				result += QStringList(parentName.mid(0, len)).join(groupsDelimiter);
-		}
+		for (int len = 1; len < parentName.count() + 1; ++len)
+			result += QStringList(parentName.mid(0, len)).join(ContactListGroup::groupDelimiter());
 	}
 
 	return result;
