@@ -407,26 +407,6 @@ QString Client::groupChatNick(const QString &host, const QString &room) const
 	return QString();
 }
 
-bool Client::groupchatExist(const Jid &j) const
-{
-	if (j.resource().isEmpty()) {
-		foreach (const GroupChat &gc, d->groupChatList) {
-			if (gc.j.compare(j, false))
-				return true;
-		}
-	}
-	return false;
-}
-
-QStringList Client::groupchats() const
-{
-	QStringList lst;
-	foreach (const GroupChat &gc, d->groupChatList)
-		//if (gc.status == GroupChat::Connected)
-			lst.append(gc.j.bare());
-	return lst;
-}
-
 /*void Client::start()
 {
 	if(d->stream->old()) {

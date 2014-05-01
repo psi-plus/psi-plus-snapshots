@@ -223,7 +223,8 @@ InfoDlg::InfoDlg(int type, const Jid &j, const VCard &vcard, PsiAccount *pa, QWi
 	}
 
 	// fake UserListItem used when displaying groupchat contact
-	if (pa->isGCContact(j)) {
+	GCContact *gcc = pa->findGCContact(j);
+	if (gcc) {
 		d->userListItem = new UserListItem(false);
 		d->userListItem->setJid(j);
 		d->userListItem->setName(j.resource());

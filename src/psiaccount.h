@@ -95,6 +95,9 @@ class QIcon;
 class WbManager;
 #endif
 
+// sick sick remove this someday please!
+struct GCContact;
+
 class AvCallManager;
 
 class PsiAccount : public QObject
@@ -257,10 +260,9 @@ public:
 
 	int sendMessageEncrypted(const Message &);
 
-	bool isGCContact(const Jid &j) const;
+	// sucks sucks sucks sucks sucks sucks sucks
+	GCContact *findGCContact(const Jid &j) const;
 	XMPP::Status gcContactStatus(const Jid &j);
-	void gcContactIncRef(const Jid &j);
-	void gcContactDecRef(const Jid &j);
 	QStringList groupchats() const;
 
 	void toggleSecurity(const Jid &, bool);

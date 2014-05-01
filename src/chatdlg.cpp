@@ -115,9 +115,6 @@ ChatDlg::ChatDlg(const Jid& jid, PsiAccount* pa, TabManager* tabManager)
 		}
 	}
 
-	if (account()->isGCContact(jid))
-		account()->gcContactIncRef(jid);
-
 	// Message events
 	contactChatState_ = XMPP::StateNone;
 	lastChatState_ = XMPP::StateNone;
@@ -167,8 +164,6 @@ void ChatDlg::init()
 
 ChatDlg::~ChatDlg()
 {
-	if (account()->isGCContact(jid()))
-		account()->gcContactDecRef(jid());
 	account()->dialogUnregister(this);
 }
 
@@ -447,11 +442,12 @@ void ChatDlg::ensureTabbedCorrectly()
 
 void ChatDlg::updateContact(const Jid &j, bool fromPresence)
 {
-	if (account()->client()->groupchatExist(j))
+	if (account()->groupchats().contains(j.full()))
 		return;
 	// if groupchat, only update if the resource matches
-	if (account()->isGCContact(j) && !jid().compare(j))
+	if (account()->findGCContact(j) && !jid().compare(j)) {
 		return;
+	}
 
 	if (jid().compare(j, false)) {
 		QList<UserListItem*> ul = account()->findRelevant(j);
