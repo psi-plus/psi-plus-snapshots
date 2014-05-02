@@ -88,15 +88,18 @@ AboutDlg::AboutDlg(QWidget* parent)
 	psiplus += details(QString::fromUtf8("Dealer_WeARE"),
 			   "wadealer@gmail.com", "", "",
 			   tr("Lead Patcher and Plugins Writer; Mac OS X Packager"));
-	psiplus += details(QString::fromUtf8("tux-den"),
+	psiplus += details(QString::fromUtf8("liuch"),
 			   "", "", "",
-			   tr("Designer and Patcher"));
-	psiplus += details(QString::fromUtf8("taurus"),
-			   "", "", "",
-			   tr("Patcher, Plugins Writer and Fedora Packager"));
+			   tr("Patcher and Plugins Writer"));
+	psiplus += details(QString::fromUtf8("tehnick"),
+			  "tehnick-8@mail.ru", "", "",
+			  tr("Language coordinator; Debian Packager"));
 	psiplus += details(QString::fromUtf8("KukuRuzo"),
 			   "", "", "",
 			   tr("Patcher and Plugins Writer"));
+	psiplus += details(QString::fromUtf8("taurus"),
+			   "", "", "",
+			   tr("Patcher, Plugins Writer and Fedora Packager"));
 	psiplus += details(QString::fromUtf8("ivan1986"),
 			   "", "", "",
 			   tr("Patcher and Ubuntu Packager"));
@@ -112,12 +115,6 @@ AboutDlg::AboutDlg(QWidget* parent)
 	psiplus += details(QString::fromUtf8("Z_God"),
 			   "", "", "",
 			   tr("Psimedia Patcher and Wiki English localization"));
-	psiplus += details(QString::fromUtf8("liuch"),
-			   "", "", "",
-			   tr("Patcher and Plugins Writer"));
-	psiplus += details(QString::fromUtf8("tehnick"),
-			  "tehnick-8@mail.ru", "", "",
-			  tr("Language coordinator; Debian Packager"));
 	ui_.te_psiplus->setText( psiplus );
 
 	// fill in Thanks To tab...
