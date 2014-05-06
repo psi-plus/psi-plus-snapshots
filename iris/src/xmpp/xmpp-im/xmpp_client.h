@@ -79,7 +79,7 @@ namespace XMPP
 		QString resource() const;
 		Jid jid() const;
 
-		void rosterRequest(bool withGroupsDelimiter = true);
+		void rosterRequest();
 		void sendMessage(const Message &);
 		void sendSubscription(const Jid &, const QString &, const QString& nick = QString());
 		void setPresence(const Status &);
@@ -137,7 +137,6 @@ namespace XMPP
 		void activated();
 		void disconnected();
 		//void authFinished(bool, int, const QString &);
-		void rosterGroupsDelimiterRequestFinished(const QString &);
 		void rosterRequestFinished(bool, int, const QString &);
 		void rosterItemAdded(const RosterItem &);
 		void rosterItemUpdated(const RosterItem &);
@@ -172,7 +171,6 @@ namespace XMPP
 		void streamIncomingXml(const QString &);
 		void streamOutgoingXml(const QString &);
 
-		void slotRosterDelimiterRequestFinished();
 		void slotRosterRequestFinished();
 
 		// basic daemons
