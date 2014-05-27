@@ -24,6 +24,8 @@
 #include "xmpp_client.h"
 #include "xmpp_xmlcommon.h"
 
+#define DEFAULT_TIMEOUT 300
+
 using namespace XMPP;
 
 class Task::TaskPrivate
@@ -38,6 +40,7 @@ public:
 	Client *client;
 	bool insig, deleteme, autoDelete;
 	bool done;
+	int timeout;
 };
 
 Task::Task(Task *parent)
@@ -72,6 +75,7 @@ void Task::init()
 	d->deleteme = false;
 	d->autoDelete = false;
 	d->done = false;
+	d->timeout = DEFAULT_TIMEOUT;
 }
 
 Task *Task::parent() const
@@ -109,6 +113,17 @@ const QString & Task::statusString() const
 	return d->statusString;
 }
 
+
+void Task::setTimeout(int seconds) const
+{
+	d->timeout = seconds;
+}
+
+int Task::timeout()
+{
+	return d->timeout;
+}
+
 void Task::go(bool autoDelete)
 {
 	d->autoDelete = autoDelete;
@@ -121,6 +136,9 @@ void Task::go(bool autoDelete)
 	}
 	else {
 		onGo();
+		if (d->timeout) {
+			QTimer::singleShot(d->timeout * 1000, this, SLOT(timeoutFinished()));
+		}
 	}
 }
 
@@ -166,6 +184,16 @@ void Task::onDisconnect()
 
 		// delay this so that tasks that react don't block the shutdown
 		QTimer::singleShot(0, this, SLOT(done()));
+	}
+}
+
+void Task::onTimeout()
+{
+	if(!d->done) {
+		d->success = false;
+		// d->statusCode = ErrTimeout;
+		d->statusString = tr("Request timed out");
+		done();
 	}
 }
 
@@ -223,6 +251,11 @@ void Task::done()
 void Task::clientDisconnected()
 {
 	onDisconnect();
+}
+
+void Task::timeoutFinished()
+{
+	onTimeout();
 }
 
 void Task::debug(const char *fmt, ...)

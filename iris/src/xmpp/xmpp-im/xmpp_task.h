@@ -49,6 +49,9 @@ namespace XMPP {
 		int statusCode() const;
 		const QString & statusString() const;
 
+		void setTimeout(int seconds) const;
+		int timeout();
+
 		void go(bool autoDelete=false);
 		virtual bool take(const QDomElement &);
 		void safeDelete();
@@ -59,6 +62,7 @@ namespace XMPP {
 	protected:
 		virtual void onGo();
 		virtual void onDisconnect();
+		virtual void onTimeout();
 		void send(const QDomElement &);
 		void setSuccess(int code=0, const QString &str="");
 		void setError(const QDomElement &);
@@ -69,6 +73,7 @@ namespace XMPP {
 
 	private slots:
 		void clientDisconnected();
+		void timeoutFinished();
 		void done();
 
 	private:

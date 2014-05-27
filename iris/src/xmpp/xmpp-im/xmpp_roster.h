@@ -36,11 +36,18 @@ namespace XMPP
 		Roster();
 		~Roster();
 
+		Roster(const Roster &other);
+		Roster &operator=(const Roster &other);
+
 		Roster::Iterator find(const Jid &);
 		Roster::ConstIterator find(const Jid &) const;
 
+		void setGroupsDelimiter(const QString &groupsDelimiter);
+		QString groupsDelimiter() const;
+
 	private:
-		class RosterPrivate *d;
+		class Private;
+		Private *d;
 	};
 }
 
