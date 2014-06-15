@@ -2796,10 +2796,6 @@ void PsiAccount::processIncomingMessage(const Message &_m)
 	}
 #endif
 
-	// only toggle if not an invite or body is not empty
-	if(_m.invite().isEmpty() && !_m.body().isEmpty() && _m.mucInvites().isEmpty() && _m.rosterExchangeItems().isEmpty())
-		toggleSecurity(_m.from(), _m.wasEncrypted());
-
 	UserListItem *u = findFirstRelevant(_m.from());
 	if(u) {
 		if(_m.type() == "chat") u->setLastMessageType(1);
@@ -2838,13 +2834,6 @@ void PsiAccount::processIncomingMessage(const Message &_m)
 	else
 		j = ul.first()->jid();
 
-	// Roster item exchange
-	if (!_m.rosterExchangeItems().isEmpty()) {
-		RosterExchangeEvent* ree = new RosterExchangeEvent(j,_m.rosterExchangeItems(), _m.body(), this);
-		handleEvent(ree, IncomingStanza);
-		return;
-	}
-
 	/*c = findChatDialog(j);
 	if(!c)
 		c = findChatDialog(m.from().full());*/
@@ -2858,41 +2847,54 @@ void PsiAccount::processIncomingMessage(const Message &_m)
 
 		m.setBody(msg + "\n------\n" + m.body());
 	}
+	else
+	{
+		// only toggle if not an invite or body is not empty
+		if(_m.invite().isEmpty() && !_m.body().isEmpty() && _m.mucInvites().isEmpty() && _m.rosterExchangeItems().isEmpty())
+			toggleSecurity(_m.from(), _m.wasEncrypted());
 
-	// change the type?
-	if (m.type() != "headline" && m.invite().isEmpty() && m.mucInvites().isEmpty()) {
-		const QString type = PsiOptions::instance()->getOption("options.messages.force-incoming-message-type").toString();
-		if (type == "message")
-			m.setType("");
-		else if (type == "chat")
-			m.setType("chat");
-		else if (type == "current-open") {
-			c = NULL;
-			foreach (ChatDlg *cl, findChatDialogs(m.from(), false)) {
-				if (cl->autoSelectContact() || cl->jid().resource().isEmpty() || m.from().resource() == cl->jid().resource()) {
-					c = cl;
-					break;
-				}
-			}
-			if (c != NULL && !c->isHidden())
-				m.setType("chat");
-			else
-				m.setType("");
+		// Roster item exchange
+		if (!_m.rosterExchangeItems().isEmpty()) {
+			RosterExchangeEvent* ree = new RosterExchangeEvent(j,_m.rosterExchangeItems(), _m.body(), this);
+			handleEvent(ree, IncomingStanza);
+			return;
 		}
-	}
 
-	// urls or subject on a chat message?  convert back to regular message
-	//if(m.type() == "chat" && (!m.urlList().isEmpty() || !m.subject().isEmpty()))
-	//	m.setType("");
+		// change the type?
+		if (m.type() != "headline" && m.invite().isEmpty() && m.mucInvites().isEmpty()) {
+			const QString type = PsiOptions::instance()->getOption("options.messages.force-incoming-message-type").toString();
+			if (type == "message")
+				m.setType("");
+			else if (type == "chat")
+				m.setType("chat");
+			else if (type == "current-open") {
+				c = NULL;
+				foreach (ChatDlg *cl, findChatDialogs(m.from(), false)) {
+					if (cl->autoSelectContact() || cl->jid().resource().isEmpty() || m.from().resource() == cl->jid().resource()) {
+						c = cl;
+						break;
+					}
+				}
+				if (c != NULL && !c->isHidden())
+					m.setType("chat");
+				else
+					m.setType("");
+			}
+		}
 
-	if( m.messageReceipt() == ReceiptRequest && !m.id().isEmpty() &&
-		PsiOptions::instance()->getOption("options.ui.notifications.send-receipts").toBool()) {
-		UserListItem *u;
-		if(j.compare(d->self.jid(), false) || groupchats().contains(j.bare()) || (!d->loginStatus.isInvisible() && (u = d->userList.find(j)) && (u->subscription().type() == Subscription::To || u->subscription().type() == Subscription::Both))) {
-			Message tm(m.from());
-			tm.setMessageReceiptId(m.id());
-			tm.setMessageReceipt(ReceiptReceived);
-			dj_sendMessage(tm, false);
+		// urls or subject on a chat message?  convert back to regular message
+		//if(m.type() == "chat" && (!m.urlList().isEmpty() || !m.subject().isEmpty()))
+		//	m.setType("");
+
+		if( m.messageReceipt() == ReceiptRequest && !m.id().isEmpty() &&
+			PsiOptions::instance()->getOption("options.ui.notifications.send-receipts").toBool()) {
+			UserListItem *u;
+			if(j.compare(d->self.jid(), false) || groupchats().contains(j.bare()) || (!d->loginStatus.isInvisible() && (u = d->userList.find(j)) && (u->subscription().type() == Subscription::To || u->subscription().type() == Subscription::Both))) {
+				Message tm(m.from());
+				tm.setMessageReceiptId(m.id());
+				tm.setMessageReceipt(ReceiptReceived);
+				dj_sendMessage(tm, false);
+			}
 		}
 	}
 
@@ -6199,10 +6201,6 @@ void PsiAccount::pgp_verifyFinished()
 			ur.setPublicKeyID(signer.key().pgpPublicKey().keyId());
 			ur.setPGPVerifyStatus(signer.identityResult());
 			ur.setSigTimestamp(signer.timestamp());
-
-			// if the key doesn't match the assigned key, unassign it
-			if(signer.key().pgpPublicKey().keyId() != u->publicKeyID())
-				u->setPublicKeyID("");
 		}
 		else {
 			ur.setPGPVerifyStatus(-1);
