@@ -51,7 +51,8 @@ namespace XMPP
 		};
 		enum Notify {
 			NSend = 0x01, // need to know if data has been written
-			NRecv = 0x02  // need incoming data
+			NRecv = 0x02,  // need incoming data
+			NTimeout = 0x04 // need to know when time passed
 		};
 
 		XmlProtocol();
@@ -68,7 +69,7 @@ namespace XMPP
 		bool processStep();
 
 		// set these before returning from a step
-		int need, event, errorCode, notify;
+		int need, event, errorCode, notify, timeout_sec;
 
 		inline bool isIncoming() const { return incoming; }
 		QString xmlEncoding() const;

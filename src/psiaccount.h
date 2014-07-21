@@ -476,6 +476,7 @@ private slots:
 	void processReadNext(const Jid &);
 	void queryVersionFinished();
 
+	void messageStanzasAcked(int n);
 protected:
 	bool validRosterExchangeItem(const RosterExchangeItem&);
 	QString localHostName();

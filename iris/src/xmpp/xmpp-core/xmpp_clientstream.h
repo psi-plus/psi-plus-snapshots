@@ -91,6 +91,18 @@ namespace XMPP
 			AllowPlainOverTLS
 		};
 
+		struct SMState {
+			QList<QPair<unsigned long, bool> > sm_receive_queue;
+			QList<QPair<QDomElement, bool> > sm_send_queue;
+			unsigned long sm_receive_count;
+			unsigned long sm_server_last_handled;
+			int sm_stanzas_notify;
+
+			bool sm_resumtion_supported;
+			QString sm_resumption_id;
+			QPair<QString,int> sm_resumption_location;
+		};
+
 		ClientStream(Connector *conn, TLSHandler *tlsHandler=0, QObject *parent=0);
 		ClientStream(const QString &host, const QString &defRealm, ByteStream *bs, QCA::TLS *tls=0, QObject *parent=0); // server
 		~ClientStream();
@@ -140,7 +152,7 @@ namespace XMPP
 		void close();
 		bool stanzaAvailable() const;
 		Stanza read();
-		void write(const Stanza &s);
+		void write(const Stanza &s, bool notify = false);
 
 		int errorCondition() const;
 		QString errorText() const;
@@ -149,6 +161,13 @@ namespace XMPP
 		// extra
 		void writeDirect(const QString &s);
 		void setNoopTime(int mills);
+
+		// session management stuff
+		bool isStreamManagementActive();
+		void ackLastMessageStanza();
+
+		SMState getSMState() const;
+		void setSMState(SMState state);
 
 		// barracuda extension
 		QStringList hosts() const;
@@ -161,6 +180,7 @@ namespace XMPP
 		void warning(int);
 		void incomingXml(const QString &s);
 		void outgoingXml(const QString &s);
+		void stanzasAcked(int);
 
 	public slots:
 		void continueAfterWarning();
@@ -185,6 +205,8 @@ namespace XMPP
 		void sasl_authCheck(const QString &user, const QString &authzid);
 		void sasl_authenticated();
 		void sasl_error();
+
+		void sm_timeout();
 
 		void doNoop();
 		void doReadyRead();

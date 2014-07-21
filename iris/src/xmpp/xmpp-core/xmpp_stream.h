@@ -58,7 +58,7 @@ namespace XMPP
 		virtual void close()=0;
 		virtual bool stanzaAvailable() const=0;
 		virtual Stanza read()=0;
-		virtual void write(const Stanza &s)=0;
+		virtual void write(const Stanza &s, bool notify = false)=0;
 
 		virtual int errorCondition() const=0;
 		virtual QString errorText() const=0;

@@ -233,6 +233,7 @@ public:
 
 	QList<Stanza*> in;
 
+	QTimer timeout_timer;
 	QTimer noopTimer;
 	int noop_time;
 };
@@ -281,12 +282,15 @@ ClientStream::ClientStream(const QString &host, const QString &defRealm, ByteStr
 	//d->state = Connecting;
 	//d->jid = Jid();
 	//d->server = QString();
+
+	connect(&(d->timeout_timer), SIGNAL(timeout()), SLOT(sm_timeout()));
 }
 
 ClientStream::~ClientStream()
 {
 	reset();
 	delete d;
+	//fprintf(stderr, "\tClientStream::~ClientStream\n");
 }
 
 void ClientStream::reset(bool all)
@@ -579,10 +583,10 @@ Stanza ClientStream::read()
 	}
 }
 
-void ClientStream::write(const Stanza &s)
+void ClientStream::write(const Stanza &s, bool notify)
 {
 	if(d->state == Active) {
-		d->client.sendStanza(s.element());
+		d->client.sendStanza(s.element(), notify);
 		processNext();
 	}
 }
@@ -960,6 +964,21 @@ void ClientStream::processNext()
 				emit incomingXml(str);
 		}
 
+#ifdef XMPP_DEBUG
+		qDebug("\tNOTIFY: %d\n", d->client.notify);
+#endif
+		if (d->client.notify & CoreProtocol::NTimeout ) {
+#ifdef XMPP_DEBUG
+			qDebug() << "Time = "<< d->client.timeout_sec;
+#endif
+			d->timeout_timer.setSingleShot(true);
+			d->timeout_timer.start(d->client.timeout_sec * 1000);
+			d->client.notify &= ~ CoreProtocol::NTimeout;
+#ifdef XMPP_DEBUG
+			qDebug() << "\tNTimeout received | Start timer";
+#endif
+		}
+
 		if(!ok) {
 			bool cont = handleNeed();
 
@@ -1057,9 +1076,12 @@ void ClientStream::processNext()
 				qDebug("StanzaReady\n");
 #endif
 				// store the stanza for now, announce after processing all events
+				// TODO: add a method to the stanza to mark them handled.
 				Stanza s = createStanza(d->client.recvStanza());
+				unsigned long sm_id = d->client.getNewSMId();
 				if(s.isNull())
 					break;
+				if (s.kind() == Stanza::Presence || s.kind() == Stanza::IQ) d->client.markStanzaHandled(sm_id);
 				d->in.append(new Stanza(s));
 				break;
 			}
@@ -1079,6 +1101,12 @@ void ClientStream::processNext()
 				reset();
 				delayedCloseFinished();
 				return;
+			}
+			case CoreProtocol::EAck: {
+#ifdef XMPP_DEBUG
+				qDebug() << "Received ack response: " << d->client.getNotableStanzasAcked();
+#endif
+				emit stanzasAcked(d->client.getNotableStanzasAcked());
 			}
 		}
 	}
@@ -1221,6 +1249,14 @@ int ClientStream::convertedSASLCond() const
 	return 0;
 }
 
+void ClientStream::sm_timeout() {
+#ifdef XMPP_DEBUG
+	printf("ClientStream::sm_timeout()\n");
+#endif
+	d->client.timeout_sec = 0;
+	processNext();
+}
+
 void ClientStream::doNoop()
 {
 	if(d->state == Active) {
@@ -1230,6 +1266,18 @@ void ClientStream::doNoop()
 		d->client.sendWhitespace();
 		processNext();
 	}
+}
+
+// SM stuff
+bool ClientStream::isStreamManagementActive() {
+	return d->client.isStreamManagementActive();
+}
+
+void ClientStream::ackLastMessageStanza() {
+	 d->client.markLastMessageStanzaAcked();
+#ifdef XMPP_DEBUG
+	 qDebug() << "StreamManagement: markLastMessageStanzaAcked";
+#endif
 }
 
 void ClientStream::writeDirect(const QString &s)
@@ -1364,6 +1412,15 @@ void ClientStream::handleError()
 		}
 	}
 }
+
+ClientStream::SMState ClientStream::getSMState() const {
+	return d->client.getSMState();
+}
+
+void ClientStream::setSMState(ClientStream::SMState state) {
+	d->client.setSMState(state);
+}
+
 
 QStringList ClientStream::hosts() const
 {

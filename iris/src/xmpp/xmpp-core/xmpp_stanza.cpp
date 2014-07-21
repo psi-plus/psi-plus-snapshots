@@ -22,6 +22,9 @@
 #include <QCoreApplication>
 #include "xmpp/jid/jid.h"
 #include "xmpp_stream.h"
+#include "xmpp_clientstream.h"
+
+#include <QDebug>
 
 using namespace XMPP;
 
@@ -648,4 +651,3 @@ void Stanza::clearError()
 	if(!errElem.isNull())
 		d->e.removeChild(errElem);
 }
-

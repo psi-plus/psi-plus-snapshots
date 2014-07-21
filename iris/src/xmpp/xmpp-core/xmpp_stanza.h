@@ -121,6 +121,9 @@ namespace XMPP
 		void setError(const Error &err);
 		void clearError();
 
+		void markHandled();
+		void setSMId(unsigned long id);
+
 	private:
 		friend class Stream;
 		Stanza(Stream *s, Kind k, const Jid &to, const QString &type, const QString &id);

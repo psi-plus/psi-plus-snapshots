@@ -21,9 +21,12 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-#include <qpair.h>
+#include <QObject>
 //Added by qt3to4:
 #include <QList>
+#include <QPair>
+#include <QTimer>
+
 #include "xmlprotocol.h"
 #include "xmpp.h"
 
@@ -40,6 +43,7 @@
 #define NS_COMPRESS_FEATURE "http://jabber.org/features/compress"
 #define NS_COMPRESS_PROTOCOL "http://jabber.org/protocol/compress"
 #define NS_HOSTS    "http://barracuda.com/xmppextensions/hosts"
+#define NS_STREAM_MANAGEMENT  "urn:xmpp:sm:3"
 
 namespace XMPP
 {
@@ -58,6 +62,7 @@ namespace XMPP
 
 		bool tls_supported, sasl_supported, bind_supported, compress_supported;
 		bool tls_required;
+		bool sm_supported;
 		QStringList sasl_mechs;
 		QStringList compression_mechs;
 		QStringList hosts;
@@ -123,6 +128,7 @@ namespace XMPP
 			EStanzaReady, // a stanza was received
 			EStanzaSent,  // a stanza was sent
 			EReady,       // stream is ready for stanza use
+			EAck,		  // received SM ack response from server
 			ECustom = XmlProtocol::ECustom+10
 		};
 		enum Error {
@@ -257,6 +263,10 @@ namespace XMPP
 		~CoreProtocol();
 
 		void reset();
+		void startTimer(int seconds);
+
+		// reimplemented to do SM
+		void sendStanza(const QDomElement &e, bool notify = false);
 
 		void startClientOut(const Jid &jid, bool oldOnly, bool tlsActive, bool doAuth, bool doCompression);
 		void startServerOut(const QString &to);
@@ -274,6 +284,16 @@ namespace XMPP
 		void setPassword(const QString &s);
 		void setFrom(const QString &s);
 		void setDialbackKey(const QString &s);
+
+		unsigned long getNewSMId();
+		void markStanzaHandled(unsigned long id);
+		void markLastMessageStanzaAcked();
+
+		bool isStreamManagementActive() const;
+		int getNotableStanzasAcked();
+
+		ClientStream::SMState getSMState() const;
+		void setSMState(ClientStream::SMState &state);
 
 		// input
 		QString user, host;
@@ -295,7 +315,6 @@ namespace XMPP
 			QString key, id;
 			bool ok;
 		};
-
 	private:
 		enum Step {
 			Start,
@@ -317,16 +336,28 @@ namespace XMPP
 			HandleAuthGet,      // send old-protocol auth-get
 			GetAuthGetResponse, // read auth-get response
 			HandleAuthSet,      // send old-protocol auth-set
-			GetAuthSetResponse  // read auth-set response
+			GetAuthSetResponse, // read auth-set response
+			GetSMResponse
 		};
 
 		QList<DBItem> dbrequests, dbpending, dbvalidated;
+
+		QList<QPair<unsigned long, bool> > sm_receive_queue;
+		QList<QPair<QDomElement, bool> > sm_send_queue;
+		unsigned long sm_receive_count;
+		QTime sm_ack_last_requested;
+		unsigned long sm_server_last_handled;
+		int sm_stanzas_notify;
+
+		bool sm_resumption_supported;
+		QString sm_resumption_id;
+		QPair<QString,int> sm_resumption_location;
 
 		bool server, dialback, dialback_verify;
 		int step;
 
 		bool digest;
-		bool tls_started, sasl_started, compress_started;
+		bool tls_started, sasl_started, compress_started, sm_started;
 
 		Jid jid_;
 		bool oldOnly;
@@ -342,9 +373,14 @@ namespace XMPP
 		bool loginComplete();
 
 		bool isValidStanza(const QDomElement &e) const;
+		bool streamManagementHandleStanza(const QDomElement &e);
 		bool grabPendingItem(const Jid &to, const Jid &from, int type, DBItem *item);
 		bool normalStep(const QDomElement &e);
 		bool dialbackStep(const QDomElement &e);
+
+		unsigned long getSMLastHandledId();
+		void requestSMAcknowlegement();
+		void processSMAcknowlegement(unsigned long last_handled);
 
 		// reimplemented
 		bool stepAdvancesParser() const;

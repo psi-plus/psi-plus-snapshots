@@ -6,7 +6,7 @@
 TEMPLATE = app
 TARGET   = psi-plus
 CONFIG  += qt thread x11
-DESTDIR  = $$PWD/..
+DESTDIR  = $$top_builddir
 
 #CONFIG += use_crash
 CONFIG += pep
@@ -21,7 +21,7 @@ include(../qa/oldtest/unittest.pri)
 
 # qconf
 
-include(../conf.pri)
+include($$top_builddir/conf.pri)
 
 unix {
 	# Target

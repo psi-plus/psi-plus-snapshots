@@ -113,7 +113,6 @@ const QString & Task::statusString() const
 	return d->statusString;
 }
 
-
 void Task::setTimeout(int seconds) const
 {
 	d->timeout = seconds;
@@ -197,9 +196,9 @@ void Task::onTimeout()
 	}
 }
 
-void Task::send(const QDomElement &x)
+void Task::send(const QDomElement &x, bool want_notify)
 {
-	client()->send(x);
+	client()->send(x, want_notify);
 }
 
 void Task::setSuccess(int code, const QString &str)

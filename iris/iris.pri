@@ -9,7 +9,8 @@ iris_bundle:{
 	include(src/xmpp/xmpp.pri)
 }
 else {
-	LIBS += -L$$IRIS_BASE/lib -liris
+	isEmpty(top_iris_builddir):top_iris_builddir = $$PWD
+	LIBS += -L$$top_iris_builddir/lib -liris
 }
 
 # qt < 4.4 doesn't enable link_prl by default.  we could just enable it,

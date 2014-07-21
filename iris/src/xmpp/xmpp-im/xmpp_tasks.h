@@ -189,13 +189,14 @@ namespace XMPP
 	{
 		Q_OBJECT
 	public:
-		JT_Message(Task *parent, const Message &);
+		JT_Message(Task *parent, const Message &, bool want_notify = false);
 		~JT_Message();
 
 		void onGo();
 
 	private:
 		Message m;
+		bool w_notify;
 
 		class Private;
 		Private *d;
