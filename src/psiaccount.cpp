@@ -1865,6 +1865,9 @@ void PsiAccount::forceDisconnect(bool fast, const XMPP::Status &s)
 		// send logout status
 		d->client->groupChatLeaveAll(PsiOptions::instance()->getOption("options.muc.leave-status-message").toString());
 		d->client->setPresence(s);
+
+		// we are not going to restore session if we a here?
+		d->stream->setSMState(ClientStream::SMState());
 	}
 
 	isDisconnecting = true;
