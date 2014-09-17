@@ -1036,7 +1036,7 @@ void CoreProtocol::requestSMAcknowlegement() {
 #ifdef SM_DEBUG
 	qDebug() << "Now I'd request acknowledgement from the server.";
 #endif
-	sendDirect(QString("<r xmlns='urn:xmpp:sm:2'/>"));
+	sendDirect(QString("<r xmlns='" NS_STREAM_MANAGEMENT "'/>"));
 	startTimer(20);
 }
 
@@ -1896,54 +1896,63 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 #ifdef SM_DEBUG
 		qWarning() << "HandleSM: step";
 #endif
-		if(e.namespaceURI() == NS_STREAM_MANAGEMENT && e.localName() == "enabled") {
+		if (e.namespaceURI() == NS_STREAM_MANAGEMENT) {
+			if (e.localName() == "enabled") {
 #ifdef SM_DEBUG
-			qWarning() << "Stream Management enabled";
+				qWarning() << "Stream Management enabled";
 #endif
-			sm_started = true;
-			if (e.attribute("resume", "false") == "true" || e.attribute("resume", "false") == "1") {
+				sm_started = true;
+				if (e.attribute("resume", "false") == "true" || e.attribute("resume", "false") == "1") {
 #ifdef SM_DEBUG
-				qDebug("\tResumption Supported");
+					qDebug("\tResumption Supported");
 #endif
-				sm_resumption_supported = true;
-				sm_resumption_id = e.attribute("id", "");
+					sm_resumption_supported = true;
+					sm_resumption_id = e.attribute("id", "");
 
-				if (!e.attribute("location").isEmpty()) {
-					int port_off = 0;
-					QStringRef sm_host;
-					int sm_port = -1;
-					QString location = e.attribute("location");
-					if (location[0] == '[') { // ipv6
-						port_off = location.indexOf(']');
-						if (port_off != -1) { // looks valid
-							sm_host = location.midRef(1, port_off - 1);
+					if (!e.attribute("location").isEmpty()) {
+						int port_off = 0;
+						QStringRef sm_host;
+						int sm_port = -1;
+						QString location = e.attribute("location");
+						if (location[0] == '[') { // ipv6
+							port_off = location.indexOf(']');
+							if (port_off != -1) { // looks valid
+								sm_host = location.midRef(1, port_off - 1);
+							}
+						}
+						if (port_off != -1) { // -1 means previous ipv6 parse failed
+							port_off = location.indexOf(':');
+							if (port_off != -1) {
+								sm_host = location.leftRef(port_off);
+								sm_port = location.mid(port_off + 1).toInt();
+							} else {
+								sm_host = location.midRef(0);
+							}
+						}
+						if (!sm_host.isEmpty() && sm_port) {
+							sm_resumption_location = QPair<QString,int>(sm_host.toString(), sm_port);
 						}
 					}
-					if (port_off != -1) { // -1 means previous ipv6 parse failed
-						port_off = location.indexOf(':');
-						if (port_off != -1) {
-							sm_host = location.leftRef(port_off);
-							sm_port = location.mid(port_off + 1).toInt();
-						} else {
-							sm_host = location.midRef(0);
-						}
-					}
-					if (!sm_host.isEmpty() && sm_port) {
-						sm_resumption_location = QPair<QString,int>(sm_host.toString(), sm_port);
-					}
+
+					startTimer(20);
+					event = EReady;
+					step = Done;
+					return true;
 				}
-
+			} else if (e.localName() == "resumed") {
+				processSMAcknowlegement(e.attribute("h").toULong());
 				startTimer(20);
 				event = EReady;
 				step = Done;
 				return true;
+			} else if (e.localName() == "failed") {
+				if (!sm_resumption_id.isEmpty()) { // tried to resume? ok, then try to just enable
+					sm_resumption_id.clear();
+					step = HandleFeatures;
+					event = EFeatures;
+					return true;
+				}
 			}
-		} else if (e.namespaceURI() == NS_STREAM_MANAGEMENT && e.localName() == "resumed") {
-			processSMAcknowlegement(e.attribute("h").toULong());
-			startTimer(20);
-			event = EReady;
-			step = Done;
-			return true;
 		}
 	}
 

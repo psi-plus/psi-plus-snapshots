@@ -224,7 +224,7 @@ void ChatEdit::initActions()
 
 	QClipboard *clipboard = QApplication::clipboard();
 	actPasteAsQuote_ = new QAction(tr("Paste as Quotation"), this);
-	actPasteAsQuote_->setEnabled(!clipboard->text().isEmpty());
+	actPasteAsQuote_->setEnabled(clipboard->mimeData()->hasText());
 	addAction(actPasteAsQuote_);
 	connect(actPasteAsQuote_, SIGNAL(triggered()), SLOT(pasteAsQuote()));
 	connect(clipboard, SIGNAL(dataChanged()), SLOT(changeActPasteAsQuoteState()));
@@ -452,12 +452,12 @@ void ChatEdit::showHistoryMessageNext()
 void ChatEdit::changeActPasteAsQuoteState()
 {
 	QClipboard *clipboard = QApplication::clipboard();
-	actPasteAsQuote_->setEnabled(!clipboard->text().isEmpty());
+	actPasteAsQuote_->setEnabled(clipboard->mimeData()->hasText());
 }
 
 void ChatEdit::pasteAsQuote()
 {
-	QString text = QApplication::clipboard()->text();
+	QString text = QApplication::clipboard()->mimeData()->text();
 	insertAsQuote(text);
 }
 

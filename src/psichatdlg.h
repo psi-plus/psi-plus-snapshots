@@ -90,6 +90,11 @@ private:
 	void updateAutojidIcon();
 	void setJidComboItem(int pos, const QString &text, const Jid &jid, const QString &icon_str);
 
+	int logHeight;
+	int chateditHeight;
+
+	bool autoPGP_;
+
 private:
 	Ui::ChatDlg ui_;
 
@@ -115,14 +120,7 @@ private:
 	QString last_contact_tooltip;
 	int unacked_messages;
 
-	static QMovie *throbber_movie;
-
-	int logHeight;
-	int chateditHeight;
-
-	bool autoPGP_;
-
-private:
+	static PsiIcon *throbber_icon;
 	bool tabmode;
 	QPointer <PsiWindowHeader> winHeader_;
 };

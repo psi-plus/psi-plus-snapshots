@@ -26,7 +26,6 @@
 
 #include "xmpp/base/randomnumbergenerator.h"
 #include "xmpp/jid/jid.h"
-#include "xmpp/base64/base64.h"
 
 namespace XMPP {
 
@@ -60,7 +59,7 @@ SCRAMSHA1Message::SCRAMSHA1Message(const QString& authzid, const QString& authci
 		for(int n = 0; n < (int)a.size(); ++n) {
 			a[n] = (char) rand.generateNumberBetween(0, 255);
 		}
-		clientnonce = Base64::encode(a).toLatin1();
+		clientnonce = a.toBase64();
 	} else clientnonce = cnonce;
 
 	QTextStream(&result) << "n,";

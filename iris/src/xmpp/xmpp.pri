@@ -13,7 +13,6 @@ else {
 }
 
 include($$IRIS_XMPP_BASE_MODULE)
-include($$IRIS_XMPP_BASE64_MODULE)
 include($$IRIS_XMPP_ZLIB_MODULE)
 include($$IRIS_XMPP_JID_MODULE)
 include($$IRIS_XMPP_SASL_MODULE)
