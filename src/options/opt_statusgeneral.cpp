@@ -217,7 +217,7 @@ void OptionsTabStatusGeneral::loadStatusPreset()
 	preset.filterStatus();
 	d->le_spName->setText(preset.name());
 	d->le_spName->home(false);
-	d->te_sp->setText(preset.message());
+	d->te_sp->setPlainText(preset.message());
 	if (preset.priority().hasValue())
 		d->le_sp_priority->setText(QString::number(preset.priority().value()));
 	else
