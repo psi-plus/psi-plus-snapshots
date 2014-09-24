@@ -141,7 +141,7 @@ void OptionsTabStatusAuto::restoreOptions()
 	d->ck_asAway->setChecked( o->getOption("options.status.auto-away.use-away").toBool() );
 	d->ck_asXa->setChecked( o->getOption("options.status.auto-away.use-not-availible").toBool() );
 	d->ck_asOffline->setChecked( o->getOption("options.status.auto-away.use-offline").toBool() );
-	d->te_asMessage->setText( o->getOption("options.status.auto-away.message").toString() );
+	d->te_asMessage->setPlainText( o->getOption("options.status.auto-away.message").toString() );
 	if (o->getOption("options.status.auto-away.force-priority").toBool()) {
 		d->le_asPriority->setText(QString::number(o->getOption("options.status.auto-away.priority").toInt()));
 	} else {
