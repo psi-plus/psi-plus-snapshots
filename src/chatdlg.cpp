@@ -203,7 +203,7 @@ void ChatDlg::initActions()
 }
 
 void ChatDlg::ackLastMessages(int a) {
-
+	Q_UNUSED(a);
 }
 
 
