@@ -391,7 +391,10 @@
          </layout>
         </item>
         <item>
-         <widget class="QTextEdit" name="te_sp">
+         <widget class="ChatEdit" name="te_sp">
+          <property name="acceptRichText">
+           <bool>false</bool>
+          </property>
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
             <horstretch>0</horstretch>
@@ -438,6 +441,11 @@ p, li { white-space: pre-wrap; }
    <class>StatusComboBox</class>
    <extends>QComboBox</extends>
    <header>statuscombobox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ChatEdit</class>
+   <extends>QTextEdit</extends>
+   <header>msgmle.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

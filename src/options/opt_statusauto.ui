@@ -148,7 +148,10 @@
        </widget>
       </item>
       <item>
-       <widget class="QTextEdit" name="te_asMessage">
+       <widget class="ChatEdit" name="te_asMessage">
+        <property name="acceptRichText">
+         <bool>false</bool>
+        </property>
         <property name="maximumSize">
          <size>
           <width>32767</width>
@@ -420,6 +423,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ChatEdit</class>
+   <extends>QTextEdit</extends>
+   <header>msgmle.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>ck_asAway</tabstop>
   <tabstop>sb_asAway</tabstop>
