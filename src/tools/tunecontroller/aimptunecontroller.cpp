@@ -19,8 +19,7 @@
  */
 
 #include "aimptunecontroller.h"
-#include "plugins/aimp/third-party/AIMPSDKCommon.h"
-#include "plugins/aimp/third-party/AIMPSDKRemote.h"
+#include "plugins/aimp/third-party/apiRemote.h"
 
 /**
  * \class AimpTuneController
@@ -71,9 +70,9 @@ Tune AimpTuneController::currentTune() const
 Tune AimpTuneController::getTune() const
 {
 	HANDLE aFile=OpenFileMapping(FILE_MAP_READ, TRUE, AIMP_REMOTE_CLASS);
-	TAIMPFileInfo *aInfo=(TAIMPFileInfo *)MapViewOfFile(aFile, FILE_MAP_READ, 0, 0, AIMPRemoteAccessMapFileSize);
+	PAIMPRemoteFileInfo aInfo = (PAIMPRemoteFileInfo)MapViewOfFile(aFile, FILE_MAP_READ, 0, 0, AIMPRemoteAccessMapFileSize);
 	if (aInfo != NULL) {
-		wchar_t *str = (wchar_t *)((char*)aInfo + aInfo->StructSize);
+		wchar_t *str = (wchar_t *)((char*)aInfo + sizeof(*aInfo));
 		QString album = QString::fromWCharArray(str, aInfo->AlbumLength);
 		str += aInfo->AlbumLength;
 		QString artist = QString::fromWCharArray(str, aInfo->ArtistLength);
