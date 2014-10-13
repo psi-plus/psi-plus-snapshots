@@ -21,12 +21,12 @@
 #ifndef _PSITABBAR_H_
 #define _PSITABBAR_H_
 
-#include <QTabBar>
+#include "tabbar.h"
 #include <QPoint>
 
 class PsiTabWidget;
 
-class PsiTabBar : public QTabBar
+class PsiTabBar : public TabBar
 {
 	Q_OBJECT
 

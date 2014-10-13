@@ -38,7 +38,10 @@ PsiTabWidget::PsiTabWidget(QWidget *parent)
 		: QWidget(parent) {
 	tabsPosition_ = QTabWidget::East; // impossible => uninitialised state
 	tabBar_ = new PsiTabBar(this);
-	tabBar_->setUsesScrollButtons(true);
+
+	bool multiRow = PsiOptions::instance()->getOption("options.ui.tabs.multi-rows", true).toBool();
+	tabBar_->setMultiRow(multiRow);
+	tabBar_->setUsesScrollButtons(!multiRow);
 	layout_ = new QVBoxLayout(this);
 	layout_->setMargin(0);
 	layout_->setSpacing(0);
@@ -55,19 +58,21 @@ PsiTabWidget::PsiTabWidget(QWidget *parent)
 	downButton_ = new QToolButton(this);
 	downButton_->setMinimumSize(3,3);
 	downButton_->setFixedWidth(buttonwidth);
-	downButton_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Minimum);
+	downButton_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 	menu_ = new QMenu(this);
 	downButton_->setMenu(menu_);
 	downButton_->setStyleSheet(" QToolButton::menu-indicator { image:none } ");
 	connect(menu_, SIGNAL(aboutToShow()), SLOT(menu_aboutToShow()));
 	connect(menu_, SIGNAL(triggered(QAction*)), SLOT(menu_triggered(QAction*)));
 	barLayout_->addWidget(downButton_);
+	barLayout_->setAlignment(downButton_, Qt::AlignBottom);
 
 	closeButton_ = new QToolButton(this);
 	closeButton_->setMinimumSize(3,3);
 	closeButton_->setFixedWidth(buttonwidth);
-	closeButton_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Minimum);
+	closeButton_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 	barLayout_->addWidget(closeButton_);
+	barLayout_->setAlignment(closeButton_, Qt::AlignBottom);
 	closeButton_->setText("x");
 	downButton_->setArrowType(Qt::DownArrow);
 	downButton_->setPopupMode(QToolButton::InstantPopup);
@@ -182,6 +187,7 @@ void PsiTabWidget::addTab(QWidget *widget, QString name, const QIcon &icon)
 		tabBar_->addTab(name);
 	setLooks();
 	showPage(currentPage());
+	tabBar_->layoutTabs();
 }
 
 void PsiTabWidget::setLooks()
@@ -189,6 +195,14 @@ void PsiTabWidget::setLooks()
 	const QString css = PsiOptions::instance()->getOption("options.ui.chat.css").toString();
 	if (!css.isEmpty()) {
 		setStyleSheet(css);
+	}
+}
+
+void PsiTabWidget::resizeEvent(QResizeEvent *event)
+{
+	QWidget::resizeEvent(event);
+	if (tabBar_->multiRow()) {
+		tabBar_->layoutTabs();
 	}
 }
 

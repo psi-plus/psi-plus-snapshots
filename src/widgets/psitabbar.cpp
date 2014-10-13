@@ -32,7 +32,7 @@
  * Constructor
  */
 PsiTabBar::PsiTabBar(PsiTabWidget *parent)
-		: QTabBar(parent)
+		: TabBar(parent)
 		, dragsEnabled_(true) {
 	//setAcceptDrops(true);
 
@@ -81,7 +81,7 @@ int PsiTabBar::findTabUnder(const QPoint &pos) {
 }
 
 void PsiTabBar::mousePressEvent(QMouseEvent *event) {
-	QTabBar::mousePressEvent(event);
+	TabBar::mousePressEvent(event);
 	event->accept();
 }
 
@@ -185,7 +185,7 @@ void PsiTabBar::setDragsEnabled(bool enabled) {
 
 void PsiTabBar::paintEvent(QPaintEvent *event)
 {
-	QTabBar::paintEvent(event);
+	TabBar::paintEvent(event);
 #if QT_VERSION < 0x040500
 	QPainter painter(this);
 	QPen pen(Qt::cyan);
