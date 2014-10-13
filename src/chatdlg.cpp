@@ -181,9 +181,8 @@ void ChatDlg::doTrackBar()
 
 void ChatDlg::initActions()
 {
-	act_send_ = new QAction(chatEdit());
-	act_send_->setShortcutContext(Qt::WidgetShortcut);
-	chatEdit()->addAction(act_send_);
+	act_send_ = new QAction(this);
+	addAction(act_send_);
 	connect(act_send_, SIGNAL(triggered()), SLOT(doSend()));
 
 	act_close_ = new QAction(this);
