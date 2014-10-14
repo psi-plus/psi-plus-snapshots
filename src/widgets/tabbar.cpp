@@ -318,6 +318,12 @@ void TabBar::setTabTextColor(int index, const QColor & color)
 	layoutTabs();
 }
 
+void TabBar::setTabIcon(int index, const QIcon &icon)
+{
+	QTabBar::setTabIcon(index, icon);
+	layoutTabs();
+}
+
 QRect TabBar::tabRect(int index) const
 {
 	if (d->multiRow) {

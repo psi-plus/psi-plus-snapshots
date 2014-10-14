@@ -40,8 +40,9 @@ public:
 	void setTabsClosable(bool b);
 	bool tabsClosable() const;
 	void setCurrentIndex(int index);
-	void setTabText(int index, const QString & text);
-	void setTabTextColor(int index, const QColor & color);
+	void setTabText(int index, const QString &text);
+	void setTabTextColor(int index, const QColor &color);
+	void setTabIcon(int index, const QIcon &icon);
 	QRect tabRect(int index) const;
 
 protected:
