@@ -32,6 +32,7 @@
 #include "xmpp_rosterx.h"
 #include "xmpp_status.h"
 #include "psiactions.h"
+#include "psievent.h"
 #include "mood.h"
 #include "activity.h"
 #include "geolocation.h"
@@ -59,7 +60,6 @@ class PsiCon;
 class PsiContact;
 class PsiContactList;
 class PsiAccount;
-class PsiEvent;
 class PsiHttpAuthRequest;
 class Tune;
 class BookmarkManager;
@@ -373,7 +373,7 @@ public slots:
 	void actionGroupAdd(const Jid &, const QString &);
 	void actionGroupRemove(const Jid &, const QString &);
 	void actionGroupsSet(const Jid &, const QStringList &);
-	void actionHistoryBox(PsiEvent *);
+	void actionHistoryBox(const PsiEvent::Ptr &e);
 	void actionRegister(const Jid &);
 	void actionUnregister(const Jid &);
 	void actionSearch(const Jid &);
@@ -495,12 +495,12 @@ protected:
 	virtual void profileClearAlert(const Jid& jid);
 
 private slots:
-	void eventFromXml(PsiEvent* e);
+	void eventFromXml(const PsiEvent::Ptr &e);
 	void simulateContactOffline(const XMPP::Jid& contact);
 	void newPgpPassPhase(const QString& id, const QString& pass);
 
 private:
-	void handleEvent(PsiEvent* e, ActivationType activationType);
+	void handleEvent(const PsiEvent::Ptr &e, ActivationType activationType);
 
 public:
 	QStringList groupList() const;
@@ -529,8 +529,8 @@ private:
 	void simulateRosterOffline();
 	void cpUpdate(const UserListItem &, const QString &rname="", bool fromPresence=false);
 	UserListItem* addUserListItem(const Jid& jid, const QString& nick="");
-	void logEvent(const Jid &, PsiEvent *);
-	void queueEvent(PsiEvent* e, ActivationType activationType);
+	void logEvent(const Jid &, const PsiEvent::Ptr &);
+	void queueEvent(const PsiEvent::Ptr &e, ActivationType activationType);
 	void openNextEvent(const UserListItem &, ActivationType activationType);
 	void updateReadNext(const Jid &);
 	ChatDlg *ensureChatDlg(const Jid &);

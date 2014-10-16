@@ -33,7 +33,6 @@ using namespace XMPP;
 
 class PsiCon;
 class PsiAccount;
-class PsiEvent;
 class ContactView;
 class AutoUpdater;
 class EventDlg;
@@ -120,9 +119,9 @@ public:
 	PsiActionList *actionList() const;
 
 	IconSelectPopup *iconSelectPopup() const;
-	bool filterEvent(const PsiAccount*, const PsiEvent*) const;
-	void processEvent(PsiEvent*, ActivationType activationType);
-	void removeEvent(PsiEvent* e);
+	bool filterEvent(const PsiAccount*, const PsiEvent::Ptr &) const;
+	void processEvent(const PsiEvent::Ptr &, ActivationType activationType);
+	void removeEvent(const PsiEvent::Ptr &e);
 
 	Status::Type currentStatusType() const;
 	QString currentStatusMessage() const;

@@ -1683,24 +1683,22 @@ IconSelectPopup *PsiCon::iconSelectPopup() const
 	return d->iconSelect;
 }
 
-bool PsiCon::filterEvent(const PsiAccount* acc, const PsiEvent* e) const
+bool PsiCon::filterEvent(const PsiAccount* acc, const PsiEvent::Ptr &e) const
 {
 	Q_UNUSED(acc);
 	Q_UNUSED(e);
 	return false;
 }
 
-void PsiCon::processEvent(PsiEvent *e, ActivationType activationType)
+void PsiCon::processEvent(const PsiEvent::Ptr &e, ActivationType activationType)
 {
 	if ( !e->account() ) {
-		delete e;
 		return;
 	}
 
 	if ( e->type() == PsiEvent::PGP ) {
 		e->account()->eventQueue()->dequeue(e);
 		e->account()->queueChanged();
-		delete e;
 		return;
 	}
 
@@ -1709,13 +1707,12 @@ void PsiCon::processEvent(PsiEvent *e, ActivationType activationType)
 		qWarning("SYSTEM MESSAGE: Bug #1. Contact the developers and tell them what you did to make this message appear. Thank you.");
 		e->account()->eventQueue()->dequeue(e);
 		e->account()->queueChanged();
-		delete e;
 		return;
 	}
 
 #ifdef FILETRANSFER
 	if( e->type() == PsiEvent::File ) {
-		FileEvent *fe = (FileEvent *)e;
+		FileEvent::Ptr fe = e.staticCast<FileEvent>();
 		FileTransfer *ft = fe->takeFileTransfer();
 		e->account()->eventQueue()->dequeue(e);
 		e->account()->queueChanged();
@@ -1724,13 +1721,12 @@ void PsiCon::processEvent(PsiEvent *e, ActivationType activationType)
 			FileRequestDlg *w = new FileRequestDlg(fe->timeStamp(), ft, e->account());
 			bringToFront(w);
 		}
-		delete e;
 		return;
 	}
 #endif
 
 	if(e->type() == PsiEvent::AvCallType) {
-		AvCallEvent *ae = (AvCallEvent *)e;
+		AvCallEvent::Ptr ae = e.staticCast<AvCallEvent>();
 		AvCall *sess = ae->takeAvCall();
 		e->account()->eventQueue()->dequeue(e);
 		e->account()->queueChanged();
@@ -1747,7 +1743,6 @@ void PsiCon::processEvent(PsiEvent *e, ActivationType activationType)
 				delete sess;
 			}
 		}
-		delete e;
 		return;
 	}
 
@@ -1757,7 +1752,7 @@ void PsiCon::processEvent(PsiEvent *e, ActivationType activationType)
 #endif
 	bool sentToChatWindow = false;
 	if ( e->type() == PsiEvent::Message ) {
-		MessageEvent *me = (MessageEvent *)e;
+		MessageEvent::Ptr me = e.staticCast<MessageEvent>();
 		const Message &m = me->message();
 #ifdef GROUPCHAT
 		if (m.type() == "groupchat") {
@@ -1800,8 +1795,7 @@ void PsiCon::processEvent(PsiEvent *e, ActivationType activationType)
 		e->account()->eventQueue()->dequeue(e);
 		e->account()->queueChanged();
 		e->account()->cpUpdate(*u);
-		e->account()->wbManager()->requestActivated(((SxeEvent*)e)->id());
-		delete e;
+		e->account()->wbManager()->requestActivated((e.staticCast<SxeEvent>())->id());
 		return;
 	}
 #endif
@@ -1833,7 +1827,7 @@ void PsiCon::processEvent(PsiEvent *e, ActivationType activationType)
 	}
 }
 
-void PsiCon::removeEvent(PsiEvent *e)
+void PsiCon::removeEvent(const PsiEvent::Ptr &e)
 {
 	PsiAccount* account = e->account();
 	if (!account)

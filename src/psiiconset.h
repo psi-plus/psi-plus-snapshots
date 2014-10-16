@@ -24,8 +24,8 @@
 #include <QMap>
 
 #include "iconset.h"
+#include "psievent.h"
 
-class PsiEvent;
 class UserListItem;
 namespace XMPP {
 	class Status;
@@ -52,7 +52,7 @@ public:
 	void stripFirstAnimFrame(Iconset *);
 	static void removeAnimation(Iconset *);
 
-	PsiIcon *event2icon(PsiEvent *);
+	PsiIcon *event2icon(const PsiEvent::Ptr &e);
 
 	// these two can possibly fail (and return 0)
 	PsiIcon *statusPtr(int);

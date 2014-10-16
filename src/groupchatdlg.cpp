@@ -1767,11 +1767,10 @@ void GCMainDlg::message(const Message &_m)
 		if(d->alert || (options->getOption("options.ui.notifications.passive-popups.notify-every-muc-message").toBool() && !m.spooled() && !from.isEmpty()) ) {
 			if (!m.spooled() && !isActiveTab() && !m.from().resource().isEmpty()) {
 				XMPP::Jid jid = m.from()/*.withDomain("")*/;
-				MessageEvent *e = new MessageEvent(m, account());
+				MessageEvent::Ptr e(new MessageEvent(m, account()));
 				UserListItem i;
 				i.setPrivate(true);
-				account()->psi()->popupManager()->doPopup(account(), PopupManager::AlertGcHighlight, jid, m.from().resource(), &i, (PsiEvent *)e);
-				e->deleteLater();
+				account()->psi()->popupManager()->doPopup(account(), PopupManager::AlertGcHighlight, jid, m.from().resource(), &i, e.staticCast<PsiEvent>());
 			}
 		}
 	}

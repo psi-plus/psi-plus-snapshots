@@ -781,7 +781,7 @@ PsiEvent *AvCallEvent::copy() const
 // EventItem
 //----------------------------------------------------------------------------
 
-EventItem::EventItem(PsiEvent *_e)
+EventItem::EventItem(const PsiEvent::Ptr &_e)
 {
 	e = _e;
 #ifdef YAPSI
@@ -801,7 +801,7 @@ EventItem::EventItem(PsiEvent *_e)
 
 EventItem::EventItem(const EventItem &from)
 {
-	e = from.e->copy();
+	e = from.e;
 	v_id = from.v_id;
 }
 
@@ -814,7 +814,7 @@ int EventItem::id() const
 	return v_id;
 }
 
-PsiEvent* EventItem::event() const
+PsiEvent::Ptr EventItem::event() const
 {
 	return e;
 }
@@ -874,8 +874,8 @@ EventQueue &EventQueue::operator= (const EventQueue &from)
 	account_ = from.account_;
 
 	foreach(EventItem *i, from.list_) {
-		PsiEvent *e = i->event();
-		enqueue( e->copy() );
+		PsiEvent::Ptr e = i->event();
+		enqueue( e );
 	}
 
 	return *this;
@@ -908,7 +908,7 @@ int EventQueue::count(const Jid &j, bool compareRes) const
 	return total;
 }
 
-void EventQueue::enqueue(PsiEvent *e)
+void EventQueue::enqueue(const PsiEvent::Ptr &e)
 {
 	EventItem *i = new EventItem(e);
 
@@ -935,7 +935,7 @@ void EventQueue::enqueue(PsiEvent *e)
 	emit queueChanged();
 }
 
-void EventQueue::dequeue(PsiEvent *e)
+void EventQueue::dequeue(const PsiEvent::Ptr &e)
 {
 	if ( !e )
 		return;
@@ -953,10 +953,10 @@ void EventQueue::dequeue(PsiEvent *e)
 	}
 }
 
-PsiEvent *EventQueue::dequeue(const Jid &j, bool compareRes)
+PsiEvent::Ptr EventQueue::dequeue(const Jid &j, bool compareRes)
 {
 	foreach(EventItem *i, list_) {
-		PsiEvent *e = i->event();
+		PsiEvent::Ptr e = i->event();
 		Jid j2(e->jid());
 		if(j.compare(j2, compareRes)) {
 			if (enabled_) {
@@ -969,31 +969,31 @@ PsiEvent *EventQueue::dequeue(const Jid &j, bool compareRes)
 		}
 	}
 
-	return 0;
+	return PsiEvent::Ptr();
 }
 
-PsiEvent *EventQueue::peek(const Jid &j, bool compareRes) const
+PsiEvent::Ptr EventQueue::peek(const Jid &j, bool compareRes) const
 {
 	foreach(EventItem *i, list_) {
-		PsiEvent *e = i->event();
+		PsiEvent::Ptr e = i->event();
 		Jid j2(e->jid());
 		if(j.compare(j2, compareRes)) {
 			return e;
 		}
 	}
 
-	return 0;
+	return PsiEvent::Ptr();
 }
 
-PsiEvent *EventQueue::dequeueNext()
+PsiEvent::Ptr EventQueue::dequeueNext()
 {
 	if (list_.isEmpty())
-		return 0;
+		return PsiEvent::Ptr();
 
 	EventItem *i = list_.first();
 	if(!i)
-		return 0;
-	PsiEvent *e = i->event();
+		return PsiEvent::Ptr();
+	PsiEvent::Ptr e = i->event();
 	if (enabled_) {
 		GlobalEventQueue::instance()->dequeue(i);
 	}
@@ -1003,29 +1003,29 @@ PsiEvent *EventQueue::dequeueNext()
 	return e;
 }
 
-PsiEvent *EventQueue::peekNext() const
+PsiEvent::Ptr EventQueue::peekNext() const
 {
 	if (list_.isEmpty())
-		return 0;
+		return PsiEvent::Ptr();
 
 	EventItem *i = list_.first();
 	if(!i)
-		return 0;
+		return PsiEvent::Ptr();
 	return i->event();
 }
 
-PsiEvent *EventQueue::peekFirstChat(const Jid &j, bool compareRes) const
+PsiEvent::Ptr EventQueue::peekFirstChat(const Jid &j, bool compareRes) const
 {
 	foreach(EventItem *i, list_) {
-		PsiEvent *e = i->event();
+		PsiEvent::Ptr e = i->event();
 		if(e->type() == PsiEvent::Message) {
-			MessageEvent *me = (MessageEvent *)e;
+			MessageEvent::Ptr me = e.staticCast<MessageEvent>();
 			if(j.compare(me->from(), compareRes) && me->message().type() == "chat")
 				return e;
 		}
 	}
 
-	return 0;
+	return PsiEvent::Ptr();
 }
 
 bool EventQueue::hasChats(const Jid &j, bool compareRes) const
@@ -1034,15 +1034,15 @@ bool EventQueue::hasChats(const Jid &j, bool compareRes) const
 }
 
 // this function extracts all chats from the queue, and returns a list of queue positions
-void EventQueue::extractChats(QList<PsiEvent*> *el, const Jid &j, bool compareRes, bool removeEvents)
+void EventQueue::extractChats(QList<PsiEvent::Ptr> *el, const Jid &j, bool compareRes, bool removeEvents)
 {
 	bool changed = false;
 
 	for(QList<EventItem*>::Iterator it = list_.begin(); it != list_.end();) {
-		PsiEvent *e = (*it)->event();
+		PsiEvent::Ptr e = (*it)->event();
 		bool extract = false;
 		if(e->type() == PsiEvent::Message) {
-			MessageEvent *me = (MessageEvent *)e;
+			MessageEvent::Ptr me = e.staticCast<MessageEvent>();
 			if(j.compare(me->from(), compareRes) && me->message().type() == "chat") { // FIXME: refactor-refactor-refactor
 				extract = true;
 			}
@@ -1071,12 +1071,12 @@ void EventQueue::extractChats(QList<PsiEvent*> *el, const Jid &j, bool compareRe
 }
 
 // this function extracts all messages from the queue, and returns a list of them
-void EventQueue::extractMessages(QList<PsiEvent*> *el)
+void EventQueue::extractMessages(QList<PsiEvent::Ptr> *el)
 {
 	bool changed = false;
 
 	for(QList<EventItem*>::Iterator it = list_.begin(); it != list_.end();) {
-		PsiEvent *e = (*it)->event();
+		PsiEvent::Ptr e = (*it)->event();
 		if(e->type() == PsiEvent::Message) {
 			el->append(e);
 			EventItem* ei = *it;
@@ -1098,7 +1098,7 @@ void EventQueue::extractMessages(QList<PsiEvent*> *el)
 void EventQueue::printContent() const
 {
 	foreach(EventItem *i, list_) {
-		PsiEvent *e = i->event();
+		PsiEvent::Ptr e = i->event();
 		printf("  %d: (%d) from=[%s] jid=[%s]\n", i->id(), e->type(), qPrintable(e->from().full()), qPrintable(e->jid().full()));
 	}
 }
@@ -1108,7 +1108,6 @@ void EventQueue::clear()
 	while(!list_.isEmpty())
 	{
 		EventItem *i = list_.takeFirst();
-		delete i->event();
 		delete i;
 	}
 
@@ -1121,7 +1120,7 @@ void EventQueue::clear(const Jid &j, bool compareRes)
 	bool changed = false;
 
 	for(QList<EventItem*>::Iterator it = list_.begin(); it != list_.end();) {
-		PsiEvent *e = (*it)->event();
+		PsiEvent::Ptr e = (*it)->event();
 		Jid j2(e->jid());
 		if(j.compare(j2, compareRes)) {
 			EventItem* ei = *it;
@@ -1129,7 +1128,6 @@ void EventQueue::clear(const Jid &j, bool compareRes)
 				GlobalEventQueue::instance()->dequeue(ei);
 			}
 			it = list_.erase(it);
-			delete e;
 			delete ei;
 			changed = true;
 		}
@@ -1176,20 +1174,20 @@ bool EventQueue::fromXml(const QDomElement *q)
 		if ( e.tagName() != "event" )
 			continue;
 
-		PsiEvent *event = 0;
+		PsiEvent::Ptr event;
 		QString eventType = e.attribute("type");
 		if ( eventType == "MessageEvent" ) {
-			event = new MessageEvent(0);
+			event = MessageEvent::Ptr(new MessageEvent(0));
 			if ( !event->fromXml(psi_, account_, &e) ) {
-				delete event;
-				event = 0;
+				//delete event;
+				event.clear();
 			}
 		}
 		else if ( eventType == "AuthEvent" ) {
-			event = new AuthEvent("", "", 0);
+			event = AuthEvent::Ptr(new AuthEvent("", "", 0));
 			if ( !event->fromXml(psi_, account_, &e) ) {
-				delete event;
-				event = 0;
+				//delete event;
+				event.clear();
 			}
 		}
 
@@ -1206,7 +1204,7 @@ QList<EventQueue::PsiEventId> EventQueue::eventsFor(const XMPP::Jid& jid, bool c
 
 	foreach(EventItem* i, list_) {
 		if (i->event()->from().compare(jid, compareRes))
-			result << QPair<int, PsiEvent*>(i->id(), i->event());
+			result << QPair<int, PsiEvent::Ptr>(i->id(), i->event());
 	}
 
 	return result;

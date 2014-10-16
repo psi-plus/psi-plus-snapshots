@@ -105,7 +105,6 @@ PsiDBusNotifier::PsiDBusNotifier(QObject *parent)
 	: QObject(parent)
 	, id_(0)
 	, account_(0)
-	, event_(0)
 	, lifeTimer_(new QTimer(this))
 {
 	QDBusConnection::sessionBus().connect("org.freedesktop.Notifications",
@@ -152,13 +151,12 @@ QStringList PsiDBusNotifier::capabilities()
 	return caps_;
 }
 
-void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, const Jid& jid, const Resource& r, const UserListItem* uli, PsiEvent* event)
+void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, const Jid& jid, const Resource& r, const UserListItem* uli, const PsiEvent::Ptr &event)
 {
 	account_ = account;
 	jid_ = jid;
 	if(event) {
 		event_ = event;
-		connect(event_, SIGNAL(destroyed()), SLOT(eventDestroyed()));
 	}
 
 	QString title, desc, contact, text, statusMsg;
@@ -176,10 +174,10 @@ void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, c
 		contact = uli->name();
 	}
 	else if (event && event->type() == PsiEvent::Auth) {
-		contact = ((AuthEvent*) event)->nick();
+		contact = event.staticCast<AuthEvent>()->nick();
 	}
 	else if (event && event->type() == PsiEvent::Message) {
-		contact = ((MessageEvent*) event)->nick();
+		contact = event.staticCast<MessageEvent>()->nick();
 	}
 
 	QString j = jid.full();
@@ -253,7 +251,7 @@ void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, c
 		{
 			text = QObject::tr("%1 says:").arg(contact);
 			if(showMessage) {
-				const Message* jmessage = &((MessageEvent *)event)->message();
+				const Message* jmessage = &event.staticCast<MessageEvent>()->message();
 				desc = jmessage->body();
 			}
 			break;
@@ -261,7 +259,7 @@ void PsiDBusNotifier::popup(PsiAccount* account, PopupManager::PopupType type, c
 	case PopupManager::AlertHeadline: {
 			text = QObject::tr("Headline from %1").arg(contact);
 			if(showMessage) {
-				const Message* jmessage = &((MessageEvent *)event)->message();
+				const Message* jmessage = &event.staticCast<MessageEvent>()->message();
 				if ( !jmessage->subject().isEmpty())
 					title = jmessage->subject();
 				desc = jmessage->body();
@@ -386,11 +384,6 @@ void PsiDBusNotifier::popupClosed(uint id, uint reason)
 	}
 }
 
-void PsiDBusNotifier::eventDestroyed()
-{
-	event_ = 0;
-}
-
 void PsiDBusNotifier::readyToDie()
 {
 	if(lifeTimer_->isActive()) {
@@ -401,11 +394,6 @@ void PsiDBusNotifier::readyToDie()
 						 "/org/freedesktop/Notifications",
 						 "org.freedesktop.Notifications",
 						 "NotificationClosed", this, SLOT(popupClosed(uint,uint)));
-
-	if(event_) {
-		disconnect(event_, SIGNAL(destroyed()), this, SLOT(eventDestroyed()));
-	}
-
 	deleteLater();
 }
 

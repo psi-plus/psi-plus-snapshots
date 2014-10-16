@@ -113,7 +113,7 @@ PsiGrowlNotifier* PsiGrowlNotifier::instance()
  * \param uli The originating userlist item. Can be NULL.
  * \param event The originating event. Can be NULL.
  */
-void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, const Jid& jid, const Resource& r, const UserListItem* uli, PsiEvent* event)
+void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, const Jid& jid, const Resource& r, const UserListItem* uli, const PsiEvent::Ptr &event)
 {
 	QString name;
 	QString title, desc, contact;
@@ -137,10 +137,10 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, 
 		contact = uli->name();
 	}
 	else if (event && event->type() == PsiEvent::Auth) {
-		contact = ((AuthEvent*) event)->nick();
+		contact = event.staticCast<AuthEvent>()->nick();
 	}
 	else if (event && event->type() == PsiEvent::Message) {
-		contact = ((MessageEvent*) event)->nick();
+		contact = event.staticCast<MessageEvent>()->nick();
 	}
 
 	if (contact.isEmpty())
@@ -184,7 +184,7 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, 
 			name = QObject::tr("Incoming Message");
 			title = QObject::tr("%1 says:").arg(contact);
 			if(showMessage) {
-				const Message* jmessage = &((MessageEvent *)event)->message();
+				const Message* jmessage = &event.staticCast<MessageEvent>()->message();
 				desc = jmessage->body();
 			} else
 				desc = QObject::tr("[Incoming Message]");
@@ -194,7 +194,7 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, 
 		case PopupManager::AlertChat: {
 			name = QObject::tr("Incoming Message");
 			if(showMessage) {
-				const Message* jmessage = &((MessageEvent *)event)->message();
+				const Message* jmessage = &event.staticCast<MessageEvent>()->message();
 				desc = jmessage->body();
 			} else
 				desc = QObject::tr("[Incoming Message]");
@@ -203,7 +203,7 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, 
 		}
 		case PopupManager::AlertHeadline: {
 			name = QObject::tr("Incoming Headline");
-			const Message* jmessage = &((MessageEvent *)event)->message();
+			const Message* jmessage = &event.staticCast<MessageEvent>()->message();
 			if ( !jmessage->subject().isEmpty())
 				title = jmessage->subject();
 			if(showMessage) {
@@ -221,7 +221,7 @@ void PsiGrowlNotifier::popup(PsiAccount* account, PopupManager::PopupType type, 
 		case PopupManager::AlertGcHighlight: {
 			name = QObject::tr("Groupchat highlight");
 			if(showMessage) {
-				const Message* jmessage = &((MessageEvent *)event)->message();
+				const Message* jmessage = &event.staticCast<MessageEvent>()->message();
 				desc = jmessage->body();
 			} else
 				desc = QObject::tr("[Groupchat highlight]");

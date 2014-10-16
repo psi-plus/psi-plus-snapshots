@@ -926,7 +926,7 @@ public slots:
 	void incoming_call()
 	{
 		AvCall *sess = avCallManager->takeIncoming();
-		AvCallEvent *ae = new AvCallEvent(sess->jid().full(), sess, account);
+		AvCallEvent::Ptr ae(new AvCallEvent(sess->jid().full(), sess, account));
 		ae->setTimeStamp(QDateTime::currentDateTime());
 		account->handleEvent(ae, IncomingStanza);
 	}
@@ -1126,7 +1126,7 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, CapsRegis
 	d->eventQueue = new EventQueue(this);
 	connect(d->eventQueue, SIGNAL(queueChanged()), SIGNAL(queueChanged()));
 	connect(d->eventQueue, SIGNAL(queueChanged()), d, SLOT(queueChanged()));
-	connect(d->eventQueue, SIGNAL(eventFromXml(PsiEvent *)), SLOT(eventFromXml(PsiEvent *)));
+	connect(d->eventQueue, SIGNAL(eventFromXml(PsiEvent::Ptr)), SLOT(eventFromXml(PsiEvent::Ptr)));
 	d->self = UserListItem(true);
 	d->self.setSubscription(Subscription::Both);
 	d->nickFromVCard = false;
@@ -2476,7 +2476,7 @@ void PsiAccount::bookmarksAvailabilityChanged()
 
 void PsiAccount::incomingHttpAuthRequest(const PsiHttpAuthRequest &req)
 {
-	HttpAuthEvent *e = new HttpAuthEvent(req, this);
+	HttpAuthEvent::Ptr e(new HttpAuthEvent(req, this));
 	handleEvent(e, IncomingStanza);
 }
 
@@ -2631,7 +2631,7 @@ void PsiAccount::client_resourceAvailable(const Jid &j, const Resource &r)
 				pt = PopupManager::AlertStatusChange;
 
 			if ((popupType == PopupOnline && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.online").toBool()) || (popupType == PopupStatusChange && PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.other-changes").toBool())) {
-				psi()->popupManager()->doPopup(this, pt, j, r, u, 0, false);
+				psi()->popupManager()->doPopup(this, pt, j, r, u, PsiEvent::Ptr(), false);
 			}
 		}
 		else if ( !notifyOnlineOk ) {
@@ -2720,7 +2720,7 @@ void PsiAccount::client_resourceUnavailable(const Jid &j, const Resource &r)
 		UserListItem *u = findFirstRelevant(j);
 
 		if (PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.status.offline").toBool()) {
-			psi()->popupManager()->doPopup(this, PopupManager::AlertOffline, j, r, u, 0, false);
+			psi()->popupManager()->doPopup(this, PopupManager::AlertOffline, j, r, u, PsiEvent::Ptr(), false);
 		}
 	}
 }
@@ -2785,7 +2785,7 @@ void PsiAccount::client_messageReceived(const Message &m)
 #ifdef WHITEBOARDING
 void PsiAccount::wbRequest(const Jid &j, int id)
 {
-	SxeEvent *se = new SxeEvent(id, this);
+	SxeEvent::Ptr se(new SxeEvent(id, this));
 	XMPP::Message m;
 	m.setSubject(tr("Whiteboard invitation"));
 	m.setFrom(j);
@@ -2815,7 +2815,7 @@ void PsiAccount::processIncomingMessage(const Message &_m)
 
 #ifdef GROUPCHAT
 	if(_m.type() == "groupchat") {
-		MessageEvent *me = new MessageEvent(_m, this);
+		MessageEvent::Ptr me(new MessageEvent(_m, this));
 		me->setOriginLocal(false);
 		handleEvent(me, IncomingStanza);
 		return;
@@ -2881,7 +2881,7 @@ void PsiAccount::processIncomingMessage(const Message &_m)
 
 		// Roster item exchange
 		if (!_m.rosterExchangeItems().isEmpty()) {
-			RosterExchangeEvent* ree = new RosterExchangeEvent(j,_m.rosterExchangeItems(), _m.body(), this);
+			RosterExchangeEvent::Ptr ree(new RosterExchangeEvent(j,_m.rosterExchangeItems(), _m.body(), this));
 			handleEvent(ree, IncomingStanza);
 			return;
 		}
@@ -2924,7 +2924,7 @@ void PsiAccount::processIncomingMessage(const Message &_m)
 		}
 	}
 
-	MessageEvent *me = new MessageEvent(m, this);
+	MessageEvent::Ptr me(new MessageEvent(m, this));
 	me->setOriginLocal(false);
 	handleEvent(me, IncomingStanza);
 }
@@ -2938,7 +2938,7 @@ void PsiAccount::client_subscription(const Jid &j, const QString &str, const QSt
 			simulateContactOffline(u);
 	}
 
-	AuthEvent *ae = new AuthEvent(j, str, this);
+	AuthEvent::Ptr ae(new AuthEvent(j, str, this));
 	ae->setTimeStamp(QDateTime::currentDateTime());
 	ae->setNick(nick);
 	handleEvent(ae, IncomingStanza);
@@ -2975,7 +2975,7 @@ void PsiAccount::client_incomingFileTransfer()
 	printf("  Name: [%s]\n", ft->fileName().latin1());
 	printf("  Size: %d bytes\n", ft->fileSize());*/
 
-	FileEvent *fe = new FileEvent(ft->peer().full(), ft, this);
+	FileEvent::Ptr fe(new FileEvent(ft->peer().full(), ft, this));
 	fe->setTimeStamp(QDateTime::currentDateTime());
 	handleEvent(fe, IncomingStanza);
 #endif
@@ -3866,7 +3866,7 @@ UserListItem *PsiAccount::find(const Jid &j) const
 
 void PsiAccount::cpUpdate(const UserListItem &u, const QString &rname, bool fromPresence)
 {
-	PsiEvent *e = d->eventQueue->peek(u.jid());
+	PsiEvent::Ptr e = d->eventQueue->peek(u.jid());
 
 	if(e) {
 		profileSetAlert(u.jid(), PsiIconset::instance()->event2icon(e));
@@ -4221,7 +4221,7 @@ void PsiAccount::actionRecvEvent(const Jid &j)
 
 void PsiAccount::actionRecvRosterExchange(const Jid& j, const RosterExchangeItems& items)
 {
-	handleEvent(new RosterExchangeEvent(j,items,"", this), IncomingStanza);
+	handleEvent(RosterExchangeEvent::Ptr(new RosterExchangeEvent(j,items,"", this)), IncomingStanza);
 }
 
 void PsiAccount::actionSendMessage(const Jid &j)
@@ -4305,7 +4305,7 @@ void PsiAccount::actionHistory(const Jid &j)
 	}
 }
 
-void PsiAccount::actionHistoryBox(PsiEvent *e)
+void PsiAccount::actionHistoryBox(const PsiEvent::Ptr &e)
 {
 	if (!EventDlg::messagingEnabled())
 		return;
@@ -4765,11 +4765,10 @@ void PsiAccount::dj_sendMessage(const Message &m, bool log)
 	// don't log groupchat, private messages, or encrypted messages
 	if(log) {
 		if(m.type() != "groupchat" && m.xencrypted().isEmpty() && !findGCContact(m.to())) {
-			MessageEvent *me = new MessageEvent(m, this);
+			MessageEvent::Ptr me(new MessageEvent(m, this));
 			me->setOriginLocal(true);
 			me->setTimeStamp(QDateTime::currentDateTime());
 			logEvent(m.to(), me);
-			delete me;
 		}
 	}
 
@@ -5006,18 +5005,18 @@ void PsiAccount::dj_rosterExchange(const RosterExchangeItems& items)
 	}
 }
 
-void PsiAccount::eventFromXml(PsiEvent* e)
+void PsiAccount::eventFromXml(const PsiEvent::Ptr &e)
 {
 	handleEvent(e, FromXml);
 }
 
-static bool messageListContainsEvent(const QList<PsiEvent*>& messageList, const MessageEvent* me)
+static bool messageListContainsEvent(const QList<PsiEvent::Ptr>& messageList, const MessageEvent::Ptr me)
 {
 	Q_ASSERT(me);
 #ifdef YAPSI
 	YaDateTime timeStamp = getYaDateTime(me);
-	foreach(const PsiEvent* event, messageList) {
-		const MessageEvent* me2 = dynamic_cast<const MessageEvent*>(event);
+	foreach(const PsiEvent::Ptr &event, messageList) {
+		const MessageEvent::Ptr me2 = event.dynamicCast<MessageEvent>();
 		if (!me2)
 			continue;
 
@@ -5041,14 +5040,14 @@ static bool messageListContainsEvent(const QList<PsiEvent*>& messageList, const 
 #ifdef PSI_PLUGINS
 void PsiAccount::createNewPluginEvent(const QString &jid, const QString &descr, QObject *receiver, const char *slot)
 {
-	PluginEvent *pe = new PluginEvent(jid, descr, this);
-	connect(pe, SIGNAL(activated(QString)), receiver, slot);
+	PluginEvent::Ptr pe(new PluginEvent(jid, descr, this));
+	connect(pe.data(), SIGNAL(activated(QString)), receiver, slot);
 	handleEvent(pe, IncomingStanza);
 }
 #endif
 
 // handle an incoming event
-void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
+void PsiAccount::handleEvent(const PsiEvent::Ptr &e, ActivationType activationType)
 {
 	PsiOptions *o = PsiOptions::instance();
 	if (e && activationType != FromXml) {
@@ -5095,7 +5094,6 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 	QDomDocument doc;
 	QDomElement eXml = e->toXml(&doc);
 	if (PluginManager::instance()->processEvent(this, eXml)) {
-		delete e;
 		return;
 	} else {
 		e->fromXml(psi(),this, &eXml);
@@ -5103,7 +5101,6 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 #endif
 
 	if (d->psi->filterEvent(this, e)) {
-		delete e;
 		return;
 	}
 
@@ -5118,12 +5115,12 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 			if (!found &&
 				!findGCContact(e->from()) &&
 				!(e->type() == PsiEvent::Message &&
-				  ((MessageEvent *)e)->message().body().isEmpty()))
+				 e.staticCast<MessageEvent>()->message().body().isEmpty()))
 			{
 				bool isMuc = false;
 #ifdef GROUPCHAT
 				if(e->type() == PsiEvent::Message) {
-					MessageEvent *me = (MessageEvent *)e;
+					MessageEvent::Ptr me = e.staticCast<MessageEvent>();
 					if (me->message().type() == "groupchat")
 						isMuc = true;
 				}
@@ -5136,7 +5133,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 	}
 
 	if(e->type() == PsiEvent::Message) {
-		MessageEvent *me = (MessageEvent *)e;
+		MessageEvent::Ptr me = e.staticCast<MessageEvent>();
 		const Message &m = me->message();
 
 #ifdef PSI_PLUGINS
@@ -5145,16 +5142,14 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 		//if ( !ul.isEmpty() )
 		//	ulItem=ul.first();
 		if (PluginManager::instance()->processMessage(this, e->from().full(), m.body(), m.subject())) {
-			delete e;
 			return;
 		}
 		//PluginManager::instance()->message(this,e->from(),ulItem,((MessageEvent*)e)->message().body());
 #endif
 
-		QList<PsiEvent*> chatList;
+		QList<PsiEvent::Ptr> chatList;
 		d->eventQueue->extractChats(&chatList, me->from(), false, false);
 		if (messageListContainsEvent(chatList, me)) {
-			delete e;
 			return;
 		}
 		else if (m.messageReceipt() == ReceiptReceived) {
@@ -5167,7 +5162,6 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 					}
 				}
 			}
-			delete e;
 			return;
 		}
 
@@ -5186,7 +5180,6 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 				popupType = PopupManager::AlertComposing;
 			}
 			else {
-				delete e;
 				return;
 			}
 		}
@@ -5288,14 +5281,13 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 		popupType = PopupManager::AlertAvCall;
 	}
 	else if(e->type() == PsiEvent::RosterExchange) {
-		RosterExchangeEvent* re = (RosterExchangeEvent*) e;
+		RosterExchangeEvent::Ptr re = e.staticCast<RosterExchangeEvent>();
 		RosterExchangeItems items;
 		foreach(RosterExchangeItem item, re->rosterExchangeItems()) {
 			if (validRosterExchangeItem(item))
 				items += item;
 		}
 		if (items.isEmpty()) {
-			delete e;
 			return;
 		}
 		re->setRosterExchangeItems(items);
@@ -5304,7 +5296,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 	else if (e->type() == PsiEvent::Auth) {
 		soundType = eSystem;
 
-		AuthEvent *ae = (AuthEvent *)e;
+		AuthEvent::Ptr ae = e.staticCast<AuthEvent>();
 		if(ae->authType() == "subscribe") {
 #ifdef YAPSI
 			UserListItem *userListItem = d->userList.find(ae->from());
@@ -5343,7 +5335,6 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 #ifdef YAPSI
 		if (!putToQueue) {
 			playSound(soundType);
-			delete e;
 			return;
 		}
 #endif
@@ -5390,7 +5381,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 
 #ifdef YAPSI
 	int id = -1;
-	PsiEvent* backupEvent = e->copy(); // FIXME: temporary workaround for braindead queueEvent
+	PsiEvent::Ptr backupEvent = e; // FIXME: temporary workaround for braindead queueEvent
 	if (putToQueue) {
 		QList<int> ids = GlobalEventQueue::instance()->ids();
 		int lastId = ids.isEmpty() ? -1 : ids.last();
@@ -5404,11 +5395,11 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 			id = lastId2;
 	}
 	else {
-		psi()->yaUnreadMessagesManager()->eventRead(e);
+		psi()->yaUnreadMessagesManager()->eventRead(e.data());
 	}
 
 	if (activationType != FromXml) {
-		PsiEvent* notificationEvent = id == -1 ? backupEvent : e;
+		PsiEvent::Ptr notificationEvent = id == -1 ? backupEvent : e;
 		bool shouldPlaySound = true;
 		if (notificationEvent) {
 			shouldPlaySound = !YaPopupNotification::notify(id, notificationEvent, soundType);
@@ -5418,10 +5409,7 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 				playSound(soundType);
 		}
 	}
-	delete backupEvent;
 
-	if (!putToQueue)
-		delete e;
 #else
 	if (soundType >= 0 && activationType != FromXml) {
 		playSound(soundType);
@@ -5429,8 +5417,6 @@ void PsiAccount::handleEvent(PsiEvent* e, ActivationType activationType)
 
 	if ( putToQueue )
 		queueEvent(e, activationType);
-	else
-		delete e;
 #endif
 }
 
@@ -5502,18 +5488,18 @@ void PsiAccount::addMucItem(const Jid& jid)
 }
 
 // put an event into the event queue, and update the related alerts
-void PsiAccount::queueEvent(PsiEvent* e, ActivationType activationType)
+void PsiAccount::queueEvent(const PsiEvent::Ptr &e, ActivationType activationType)
 {
 	// do we have roster item for this?
 	UserListItem *u = find(e->jid());
 	if(!u) {
 		QString nick;
 		if (e->type() == PsiEvent::Auth) {
-			AuthEvent* ae = (AuthEvent*) e;
+			AuthEvent::Ptr ae = e.staticCast<AuthEvent>();
 			nick = ae->nick();
 		}
 		else if (e->type() == PsiEvent::Message) {
-			MessageEvent* me = (MessageEvent*) e;
+			MessageEvent::Ptr me = e.staticCast<MessageEvent>();
 			if (me->message().type()  != "error")
 				nick = me->nick();
 		}
@@ -5543,7 +5529,7 @@ void PsiAccount::queueEvent(PsiEvent* e, ActivationType activationType)
 
 		// Check to see if we need to popup
 		if (e->type() == PsiEvent::Message) {
-			MessageEvent *me = (MessageEvent *)e;
+			MessageEvent::Ptr me = e.staticCast<MessageEvent>();
 			const Message &m = me->message();
 			if (m.type() == "chat")
 				doPopup = PsiOptions::instance()->getOption("options.ui.chat.auto-popup").toBool();
@@ -5578,12 +5564,12 @@ void PsiAccount::queueEvent(PsiEvent* e, ActivationType activationType)
 // take the next event from the queue and display it
 void PsiAccount::openNextEvent(const UserListItem& u, ActivationType activationType)
 {
-	PsiEvent *e = d->eventQueue->peek(u.jid());
+	PsiEvent::Ptr e = d->eventQueue->peek(u.jid());
 	if(!e)
 		return;
 #ifdef PSI_PLUGINS
 	if(e->type() == PsiEvent::Plugin) {
-		PluginEvent* pe = (PluginEvent*)e;
+		PluginEvent::Ptr pe = e.staticCast<PluginEvent>();
 		pe->activate();
 		eventQueue()->dequeue(e);
 		queueChanged();
@@ -5599,7 +5585,7 @@ void PsiAccount::openNextEvent(const UserListItem& u, ActivationType activationT
 
 void PsiAccount::openNextEvent(ActivationType activationType)
 {
-	PsiEvent *e = d->eventQueue->peekNext();
+	PsiEvent::Ptr e = d->eventQueue->peekNext();
 	if(!e)
 		return;
 
@@ -5620,10 +5606,10 @@ void PsiAccount::openNextEvent(ActivationType activationType)
 
 int PsiAccount::forwardPendingEvents(const Jid &jid)
 {
-	QList<PsiEvent*> chatList;
+	QList<PsiEvent::Ptr> chatList;
 	d->eventQueue->extractMessages(&chatList);
-	foreach(PsiEvent* e, chatList) {
-		MessageEvent *me = (MessageEvent *) e;
+	foreach(const PsiEvent::Ptr &e, chatList) {
+		MessageEvent::Ptr me = e.staticCast<MessageEvent>();
 		Message m = me->message();
 
 		AddressList oFrom = m.findAddresses(Address::OriginalFrom);
@@ -5642,7 +5628,6 @@ int PsiAccount::forwardPendingEvents(const Jid &jid)
 
 		// update the eventdlg
 		UserListItem *u = find(e->jid());
-		delete e;
 
 		// update the contact
 		if(u) {
@@ -5685,7 +5670,7 @@ void PsiAccount::processReadNext(const UserListItem &u)
 	}
 
 	// peek the event
-	PsiEvent *e = d->eventQueue->peek(u.jid());
+	PsiEvent::Ptr e = d->eventQueue->peek(u.jid());
 	if(!e)
 		return;
 
@@ -5694,7 +5679,7 @@ void PsiAccount::processReadNext(const UserListItem &u)
 	bool isMuc = false;
 #endif
 	if(e->type() == PsiEvent::Message) {
-		MessageEvent *me = (MessageEvent *)e;
+		MessageEvent::Ptr me = e.staticCast<MessageEvent>();
 		const Message &m = me->message();
 		if(m.type() == "chat" && m.getForm().fields().empty())
 			isChat = true;
@@ -5728,7 +5713,6 @@ void PsiAccount::processReadNext(const UserListItem &u)
 
 	// update the eventdlg
 	w->updateEvent(e);
-	delete e;
 
 	// update the contact
 	cpUpdate(u);
@@ -5751,7 +5735,7 @@ void PsiAccount::processChatsHelper(const Jid& j, bool removeEvents)
 	if(!c)
 		return;
 	// extract the chats
-	QList<PsiEvent*> chatList;
+	QList<PsiEvent::Ptr> chatList;
 	bool compareResources = !c->autoSelectContact();
 #ifdef YAPSI
 	compareResources = false;
@@ -5768,9 +5752,9 @@ void PsiAccount::processChatsHelper(const Jid& j, bool removeEvents)
 		// 15:15 *mblsha is Offline
 		// 15:10 <mblsha> hello!
 
-		foreach(PsiEvent *e, chatList) {
+		foreach(const PsiEvent::Ptr &e, chatList) {
 			if (e->type() == PsiEvent::Message) {
-				MessageEvent* me = static_cast<MessageEvent*>(e);
+				MessageEvent::Ptr me = e.staticCast<MessageEvent>();
 				const Message &m = me->message();
 
 				// process the message
@@ -5782,14 +5766,11 @@ void PsiAccount::processChatsHelper(const Jid& j, bool removeEvents)
 		}
 
 		if (removeEvents) {
-			while (!chatList.isEmpty()) {
-				PsiEvent* e = chatList.takeFirst();
 #ifdef YAPSI
-				psi()->yaUnreadMessagesManager()->eventRead(e);
-#endif
-				delete e;
+			while (!chatList.isEmpty()) {
+				psi()->yaUnreadMessagesManager()->eventRead(chatList.takeFirst().data());
 			}
-
+#endif
 			QList<UserListItem*> ul = findRelevant(j);
 			if(!ul.isEmpty()) {
 				UserListItem *u = ul.first();
@@ -5846,7 +5827,7 @@ void PsiAccount::groupChatMessagesRead(const Jid &j)
 }
 #endif
 
-void PsiAccount::logEvent(const Jid &j, PsiEvent *e)
+void PsiAccount::logEvent(const Jid &j, const PsiEvent::Ptr &e)
 {
 	if (!d->acc.opt_log)
 		return;
@@ -6305,11 +6286,10 @@ void PsiAccount::pgp_encryptFinished()
 		Message m = pt->message();
 		// log the message here, before we encrypt it
 		{
-			MessageEvent *me = new MessageEvent(m, this);
+			MessageEvent::Ptr me(new MessageEvent(m, this));
 			me->setOriginLocal(true);
 			me->setTimeStamp(QDateTime::currentDateTime());
 			logEvent(m.to(), me);
-			delete me;
 		}
 
 		Message mwrap;
