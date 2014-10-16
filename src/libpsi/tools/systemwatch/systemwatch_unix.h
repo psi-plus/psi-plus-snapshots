@@ -30,6 +30,7 @@ public:
 	UnixSystemWatch();
 
 private slots:
+	void prepareForSleep(bool beforeSleep);
 	void sleeping();
 	void resuming();
 };
