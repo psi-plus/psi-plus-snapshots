@@ -1770,7 +1770,7 @@ void GCMainDlg::message(const Message &_m)
 				MessageEvent::Ptr e(new MessageEvent(m, account()));
 				UserListItem i;
 				i.setPrivate(true);
-				account()->psi()->popupManager()->doPopup(account(), PopupManager::AlertGcHighlight, jid, m.from().resource(), &i, e.staticCast<PsiEvent>());
+				account()->psi()->popupManager()->doPopup(account(), PopupManager::AlertGcHighlight, jid, m.from().resource(), &i, e);
 			}
 		}
 	}
