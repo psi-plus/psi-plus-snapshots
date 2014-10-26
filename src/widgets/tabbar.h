@@ -44,6 +44,7 @@ public:
 	void setTabTextColor(int index, const QColor &color);
 	void setTabIcon(int index, const QIcon &icon);
 	QRect tabRect(int index) const;
+	QWidget *tabButton(int index, ButtonPosition position) const;
 
 protected:
 	// reimplemented

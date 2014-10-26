@@ -337,6 +337,16 @@ QRect TabBar::tabRect(int index) const
 	}
 }
 
+QWidget *TabBar::tabButton(int index, ButtonPosition position) const
+{
+	ButtonPosition closeButtonPos = static_cast<ButtonPosition>(style()->styleHint(QStyle::SH_TabBar_CloseButtonPosition, 0, this));
+	if (!d->multiRow || position != closeButtonPos)
+		return QTabBar::tabButton(index, position);
+
+	Q_ASSERT(index < d->closeButtons.size());
+	return index < d->closeButtons.size() ? d->closeButtons[index] : 0;
+}
+
 bool TabBar::multiRow() const
 {
 	return d->multiRow;
@@ -594,9 +604,9 @@ void CloseButton::paintEvent(QPaintEvent *)
 	if (isDown())
 		opt.state |= QStyle::State_Sunken;
 
-	if (const QTabBar *tb = qobject_cast<const QTabBar *>(parent())) {
+	if (const TabBar *tb = qobject_cast<const TabBar*>(parent())) {
 		int index = tb->currentIndex();
-		QTabBar::ButtonPosition position = (QTabBar::ButtonPosition)style()->styleHint(QStyle::SH_TabBar_CloseButtonPosition, 0, tb);
+		QTabBar::ButtonPosition position = static_cast<QTabBar::ButtonPosition>(style()->styleHint(QStyle::SH_TabBar_CloseButtonPosition, 0, tb));
 		if (tb->tabButton(index, position) == this)
 			opt.state |= QStyle::State_Selected;
 	}
