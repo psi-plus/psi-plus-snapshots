@@ -412,6 +412,40 @@ bool TabBar::tabsClosable() const
 	return d->tabsClosable;
 }
 
+// stealed from qtabbar_p.h
+static void initStyleBaseOption(QStyleOptionTabBarBaseV2 *optTabBase, QTabBar *tabbar, QSize size)
+{
+	QStyleOptionTab tabOverlap;
+	tabOverlap.shape = tabbar->shape();
+	int overlap = tabbar->style()->pixelMetric(QStyle::PM_TabBarBaseOverlap, &tabOverlap, tabbar);
+	QWidget *theParent = tabbar->parentWidget();
+	optTabBase->init(tabbar);
+	optTabBase->shape = tabbar->shape();
+	optTabBase->documentMode = tabbar->documentMode();
+	if (theParent && overlap > 0) {
+		QRect rect;
+		switch (tabOverlap.shape) {
+		case QTabBar::RoundedNorth:
+		case QTabBar::TriangularNorth:
+			rect.setRect(0, size.height()-overlap, size.width(), overlap);
+			break;
+		case QTabBar::RoundedSouth:
+		case QTabBar::TriangularSouth:
+			rect.setRect(0, 0, size.width(), overlap);
+			break;
+		case QTabBar::RoundedEast:
+		case QTabBar::TriangularEast:
+			rect.setRect(0, 0, overlap, size.height());
+			break;
+		case QTabBar::RoundedWest:
+		case QTabBar::TriangularWest:
+			rect.setRect(size.width() - overlap, 0, overlap, size.height());
+			break;
+		}
+		optTabBase->rect = rect;
+	}
+}
+
 void TabBar::paintEvent(QPaintEvent *event)
 {
 	// use own painting only for multi row mode
@@ -422,7 +456,20 @@ void TabBar::paintEvent(QPaintEvent *event)
 
 	QStylePainter p(this);
 	QList<QStyleOptionTabV3> tabs = d->hackedTabs;
+
 	int selected = currentIndex();
+	if (drawBase()) {
+		QStyleOptionTabBarBaseV2 optTabBase;
+		initStyleBaseOption(&optTabBase, this, size());
+
+		optTabBase.selectedTabRect = tabs[selected].rect;
+
+		for (int i = 0; i < tabs.size(); ++i)
+			optTabBase.tabBarRect |= tabs[i].rect;
+
+		p.drawPrimitive(QStyle::PE_FrameTabBarBase, optTabBase);
+	}
+
 	int rowHeight = tabs[selected].rect.height();
 
 	// There is some problems when tabs are painted not in first row.
