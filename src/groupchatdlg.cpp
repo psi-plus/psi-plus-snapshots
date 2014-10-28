@@ -732,7 +732,11 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 #endif
 
 	ui_.lv_users->setMainDlg(this);
+#warning "FIXME: In Qt5 setSupportedDragActions is obsoleted."
+#warning "QTreeWidget doesn't allow to use own model. So should be rewritten to QTreeView."
+#ifndef HAVE_QT5
 	ui_.lv_users->model()->setSupportedDragActions(Qt::CopyAction);
+#endif
 	if (options->getOption("options.ui.contactlist.disable-scrollbar").toBool() ) {
 		ui_.lv_users->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	}
