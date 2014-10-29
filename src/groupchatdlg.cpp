@@ -1691,7 +1691,7 @@ void GCMainDlg::avatarUpdated(const Jid &jid_)
 	}
 }
 
-void GCMainDlg::message(const Message &_m)
+void GCMainDlg::message(const Message &_m, const PsiEvent::Ptr &e)
 {
 	Message m = _m;
 	QString from = m.from().resource();
@@ -1771,7 +1771,6 @@ void GCMainDlg::message(const Message &_m)
 		if(d->alert || (options->getOption("options.ui.notifications.passive-popups.notify-every-muc-message").toBool() && !m.spooled() && !from.isEmpty()) ) {
 			if (!m.spooled() && !isActiveTab() && !m.from().resource().isEmpty()) {
 				XMPP::Jid jid = m.from()/*.withDomain("")*/;
-				MessageEvent::Ptr e(new MessageEvent(m, account()));
 				UserListItem i;
 				i.setPrivate(true);
 				account()->psi()->popupManager()->doPopup(account(), PopupManager::AlertGcHighlight, jid, m.from().resource(), &i, e);

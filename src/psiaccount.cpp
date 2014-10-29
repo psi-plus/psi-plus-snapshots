@@ -5237,7 +5237,7 @@ void PsiAccount::handleEvent(const PsiEvent::Ptr &e, ActivationType activationTy
 			if (activationType != FromXml) {
 				GCMainDlg *c = findDialog<GCMainDlg*>(e->from());
 				if (c) {
-					c->message(m);
+					c->message(m, e);
 					if (!c->isActiveTab() && c->isLastMessageAlert() && !m.spooled() && allowMucEvents)
 						putToQueue = true;
 				}
