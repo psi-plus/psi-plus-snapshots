@@ -164,6 +164,18 @@ void TabBar::Private::layoutTabs()
 			hackedTabs[j] = tab;
 		}
 
+#ifdef Q_OS_MAC
+		// Mac OS X puts tabs on center. We do too.
+		if (lastRow) {
+			int left = (barWidth - hackedTabs.at(i).rect.right() - 1) / 2;
+			if (left) {
+				for (int j = rowStart; j <= i; j++) {
+					hackedTabs[j].rect.moveLeft(hackedTabs.at(j).rect.left() + left);
+				}
+			}
+		}
+#endif
+
 		rowStart = i + 1;
 	}
 
