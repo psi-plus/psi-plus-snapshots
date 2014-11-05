@@ -42,7 +42,7 @@ public:
 		return "0.1";
 	}
 
-	virtual QWidget* options()
+	virtual QWidget* options() const
 	{
 		return 0;
 	}
@@ -92,13 +92,6 @@ public:
 		return blocked;
 	}
 
-	virtual bool incomingStanza(int account, QDomElement& stanza)
-	{
-		Q_UNUSED(account)
-		Q_UNUSED(stanza)
-		return false;
-	}
-
 
 	//-- StanzaSender ----------------------------------------
 
@@ -106,9 +99,6 @@ public:
 	{
 		stanzaSender = host;
 	}
-
-	virtual void applyOptions() {};
-	virtual void restoreOptions() {};
 
 
 private:

@@ -34,11 +34,9 @@ public:
 	virtual QString name() const;
 	virtual QString shortName() const;
 	virtual QString version() const;
-	virtual QWidget* options();
+	virtual QWidget* options() const;
 	virtual bool enable();
 	virtual bool disable();
-	virtual void applyOptions() {};
-	virtual void restoreOptions() {};
 };
 
 Q_EXPORT_PLUGIN(NullPlugin);
@@ -58,7 +56,7 @@ QString NullPlugin::version() const
 	return "0.1";
 }
 
-QWidget* NullPlugin::options()
+QWidget* NullPlugin::options() const
 {
 	return 0;
 }

@@ -39,11 +39,9 @@ public:
 	virtual QString name() const;
 	virtual QString shortName() const;
 	virtual QString version() const;
-	virtual QWidget* options();
+	virtual QWidget* options() const;
 	virtual bool enable();
 	virtual bool disable();
-	virtual void applyOptions() {};
-	virtual void restoreOptions() {};
 
     virtual bool processEvent(int account, const QDomElement& e);
 	virtual bool processMessage(int account, const QString& fromJid, const QString& body, const QString& subject) ;
@@ -74,7 +72,7 @@ QString ConsoleDumpPlugin::version() const
 	return "0.1";
 }
 
-QWidget* ConsoleDumpPlugin::options()
+QWidget* ConsoleDumpPlugin::options() const
 {
 	return 0;
 }

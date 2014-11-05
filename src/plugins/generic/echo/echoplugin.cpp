@@ -44,12 +44,12 @@ public:
 	virtual QString name() const;
 	virtual QString shortName() const;
 	virtual QString version() const;
-	virtual QWidget* options();
+	virtual QWidget* options() const;
 	virtual bool enable();
 	virtual bool disable();
 
 	// EventFilter
-	virtual bool processEvent(int account, const QDomElement& e);
+    virtual bool processEvent(int account, const QDomElement& e);
 	virtual bool processMessage(int account, const QString& fromJid, const QString& body, const QString& subject);
 
 	// StanzaSender
@@ -59,8 +59,7 @@ public:
 	virtual void setOptionAccessingHost(OptionAccessingHost* host);
 	virtual void optionChanged(const QString& option);
 
-	virtual void applyOptions();
-	virtual void restoreOptions();
+
 
 private:
 	bool enabled;
@@ -92,7 +91,7 @@ QString EchoPlugin::version() const
 	return "0.1";
 }
 
-QWidget* EchoPlugin::options()
+QWidget* EchoPlugin::options() const
 {
 	return 0;
 }
@@ -161,4 +160,6 @@ void EchoPlugin::optionChanged(const QString& option)
 {
 	Q_UNUSED(option);
 }
+
+
 #include "echoplugin.moc"
