@@ -2346,9 +2346,7 @@ GCFindDlg::GCFindDlg(const QString& str, QWidget* parent)
 	: QDialog(parent)
 {
 	setAttribute(Qt::WA_DeleteOnClose);
-#if QT_VERSION >= 0x040500
         setWindowFlags(Qt::Dialog | Qt::WindowTitleHint | Qt::WindowCloseButtonHint | Qt::CustomizeWindowHint);
-#endif
 	setWindowTitle(tr("Find"));
 	QVBoxLayout *vb = new QVBoxLayout(this);
 	vb->setMargin(4);

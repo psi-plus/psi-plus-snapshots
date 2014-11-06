@@ -40,9 +40,7 @@ ChangePasswordDlg::ChangePasswordDlg(PsiAccount *_pa, QWidget *parent)
 	: QDialog(parent)
 {
 	setAttribute(Qt::WA_DeleteOnClose, true);
-#if QT_VERSION >= 0x040500
 	setWindowFlags(Qt::Dialog | Qt::WindowTitleHint | Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint | Qt::CustomizeWindowHint);
-#endif
 	ui_.setupUi(this);
 
 	pa = _pa;

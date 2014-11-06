@@ -181,9 +181,7 @@ SearchDlg::SearchDlg(const Jid &jid, PsiAccount *pa)
 
 	setWindowTitle(windowTitle().arg(d->jid.full()));
 
-	#if QT_VERSION >= 0x040500
 	setWindowFlags(Qt::Dialog | Qt::WindowTitleHint | Qt::WindowMinimizeButtonHint | Qt::WindowMaximizeButtonHint | Qt::WindowCloseButtonHint | Qt::CustomizeWindowHint);
-	#endif
 	d->busy = busy;
 
 	d->gr_form = new QWidget(gb_search);

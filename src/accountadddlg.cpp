@@ -30,9 +30,7 @@ AccountAddDlg::AccountAddDlg(PsiCon *_psi, QWidget *parent)
 {
 	setupUi(this);
 	setModal(false);
-#if QT_VERSION >= 0x040500
 	setWindowFlags(Qt::Dialog | Qt::WindowTitleHint | Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint | Qt::CustomizeWindowHint);
-#endif
 	psi = _psi;
 	psi->dialogRegister(this);
 

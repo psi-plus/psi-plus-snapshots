@@ -13,9 +13,7 @@ ShowPhotoDlg::ShowPhotoDlg(QWidget *parent, QPixmap &pixmap)
 	: QDialog(parent), initSize(true)
 {
 	setAttribute(Qt::WA_DeleteOnClose);
-#if QT_VERSION >= 0x040500
 	setWindowFlags(Qt::Dialog | Qt::WindowTitleHint | Qt::WindowMinimizeButtonHint | Qt::WindowMaximizeButtonHint | Qt::WindowCloseButtonHint | Qt::CustomizeWindowHint);
-#endif
 	photoPixmap = pixmap;
 	setWindowTitle(QString(tr("Photo Preview: %1")).arg(parent->windowTitle()));
 

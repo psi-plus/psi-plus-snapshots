@@ -97,9 +97,7 @@ AccountRemoveDlg::AccountRemoveDlg(const UserAccount &acc, QWidget *parent)
 	setupUi(this);
 	setWindowIcon(IconsetFactory::icon("psi/account").icon());
 	setModal(false);
-#if QT_VERSION >= 0x040500
 	setWindowFlags(Qt::Dialog | Qt::WindowTitleHint | Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint | Qt::CustomizeWindowHint);
-#endif
 	d = new Private;
 	d->acc = acc;
 

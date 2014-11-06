@@ -133,9 +133,6 @@ PsiRosterWidget::PsiRosterWidget(QWidget* parent)
 	contactListPageView_ = new PsiContactListView(contactListPage_);
 	contactListPageView_->installEventFilter(this);
 	contactListPageView_->setObjectName("contactListView");
-	if ( PsiOptions::instance()->getOption(showScrollBarOptionPath).toBool() ) {
-		contactListPageView_->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-	}
 	contactListPageLayout->addWidget(contactListPageView_);
 
 	// filterPage_
@@ -179,6 +176,7 @@ void PsiRosterWidget::setContactList(PsiContactList* contactList)
 	optionChanged(showOfflineOptionPath);
 	optionChanged(contactSortStyleOptionPath);
 	optionChanged(allowAutoResizeOptionPath);
+	optionChanged(showScrollBarOptionPath);
 
 	contactListModel_ = new PsiContactListModel(contactList_);
 	contactListModel_->invalidateLayout();
@@ -242,8 +240,8 @@ void PsiRosterWidget::optionChanged(const QString& option)
 	}
 	else if (option == showScrollBarOptionPath) {
 		contactListPageView_->setVerticalScrollBarPolicy(
-			PsiOptions::instance()->getOption(showScrollBarOptionPath).toBool()?
-			Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
+			PsiOptions::instance()->getOption(showScrollBarOptionPath).toBool() ?
+			Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded );
 	}
 	else if (option == enableGroupsOptionPath) {
 		contactListModel_->setGroupsEnabled(PsiOptions::instance()->getOption(enableGroupsOptionPath).toBool());

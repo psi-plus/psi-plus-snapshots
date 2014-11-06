@@ -40,9 +40,7 @@ MUCJoinDlg::MUCJoinDlg(PsiCon* psi, PsiAccount* pa)
 	, nickAlreadyCompleted_(false)
 {
 	setAttribute(Qt::WA_DeleteOnClose);
-#if QT_VERSION >= 0x040500
 	setWindowFlags(Qt::Dialog | Qt::WindowTitleHint | Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint | Qt::CustomizeWindowHint);
-#endif
 	setModal(false);
 	ui_.setupUi(this);
 	setWindowIcon(IconsetFactory::icon("psi/groupChat").icon());
