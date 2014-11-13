@@ -601,7 +601,7 @@ QString UserListItem::findClient(QString name) const
 		res = "sameplace";
 	else if(name.startsWith("sapo messenger mac") || name.startsWith("messenger.sapo.pt"))
 		res = "sapo";
-	else if(name.startsWith("sawim.ru"))
+	else if(name.startsWith("sawim.ru") || name.startsWith("sawim ne"))
 		res = "sawim";
 	else if(name.startsWith("simpleapps.ru") && name.contains("security-bot"))
 		res = "security-bot";
