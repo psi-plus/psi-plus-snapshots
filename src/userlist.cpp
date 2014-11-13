@@ -349,8 +349,6 @@ QString UserListItem::findClient(QString name) const
 		res = "adium";
 	else if(name.startsWith("google talk user account") || name.contains("android.com"))
 		res = "android";
-	//else if(name.startsWith("simpleapps.ru")) <- simpleapps.ru used in other clients below
-	//	res = "antihack-bot";
 	else if(name.startsWith("aqq"))
 		res = "aqq";
 	else if(name.startsWith("asterisk"))
@@ -363,9 +361,7 @@ QString UserListItem::findClient(QString name) const
 		res = "beem";
 	else if(name.startsWith("bitlbee"))
 		res = "bitlbee";
-	else if((name.startsWith("simpleapps.ru") && name.contains("blacksmith")) || name.startsWith("blacksmith"))
-		res = "blacksmith-bot";
-	else if((name.startsWith("simpleapps.ru") && name.contains("vk4xmpp")) || name.startsWith("vk4xmpp"))
+	else if(name.startsWith("simpleapps.ru") || name.startsWith("vk4xmpp"))
 		res = "vk4xmpp";
 	else if(name.startsWith("bluejabb"))
 		res = "bluejabb";
@@ -609,8 +605,6 @@ QString UserListItem::findClient(QString name) const
 		res = "sapo";
 	else if(name.startsWith("sawim.ru") || name.startsWith("sawim ne"))
 		res = "sawim";
-	else if(name.startsWith("simpleapps.ru") && name.contains("security-bot"))
-		res = "security-bot";
 	else if(name.startsWith("siemens native jabber client"))
 		res = "siejc";
 	else if(name == "sim")
