@@ -407,8 +407,12 @@ QString UserListItem::findClient(QString name) const
 		res = "centerim";
 	else if(name.startsWith("chatopus.com"))
 		res = "chatopus";
+	else if(name.startsWith("chatsecure") || name.startsWith("gibberbot"))
+		res = "chatsecure";
 	else if(name.startsWith("coccinella"))
 		res = "coccinella";
+	else if(name.startsWith("conversations"))
+		res = "conversations";
 	else if(name.startsWith("dictbot"))
 		res = "dictbot";
 	else if(name.startsWith("digsby client"))
@@ -673,6 +677,8 @@ QString UserListItem::findClient(QString name) const
 		res = "yabber";
 	else if(name.startsWith("yaonline"))
 		res = "yaonlinesymbian";
+	else if(name.startsWith("yaxim"))
+		res = "yaxim";
 	else if(name.startsWith("xabber"))
 		res = "xabber";
 	else if(name.startsWith("xu-6.jabbrik.ru"))
