@@ -361,7 +361,7 @@ QString UserListItem::findClient(QString name) const
 		res = "beem";
 	else if(name.startsWith("bitlbee"))
 		res = "bitlbee";
-	else if(name.startsWith("simpleapps.ru") || name.startsWith("vk4xmpp"))
+	else if((name.startsWith("simpleapps.ru") && name.contains("vk4xmpp")) || name.startsWith("vk4xmpp"))
 		res = "vk4xmpp";
 	else if(name.startsWith("bluejabb"))
 		res = "bluejabb";
