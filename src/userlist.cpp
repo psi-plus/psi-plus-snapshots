@@ -491,7 +491,7 @@ QString UserListItem::findClient(QString name) const
 		res = "jappix";
 	else if(name.contains("japyt"))
 		res = "japyt";
-	else if(name.startsWith("jasmineicq.ru"))
+	else if(name.startsWith("jasmineicq.ru") || name.startsWith("jasmine im"))
 		res = "jasmine";
 	else if(name.startsWith("jimm.net.ru") && name.contains("android"))
 		res = "jimm-android";
