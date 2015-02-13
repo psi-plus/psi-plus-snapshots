@@ -158,7 +158,7 @@ void OptionsTabPlugins::showPluginInfo()
 		if(infoDialog)
 			delete(infoDialog);
 
-		infoDialog = new QDialog();
+		infoDialog = new QDialog(d);
 		ui_.setupUi(infoDialog);
 		QString name = d->tw_Plugins->currentItem()->text(C_NAME);
 		infoDialog->setWindowTitle(infoDialog->windowTitle() + " " + name);
@@ -187,14 +187,11 @@ void OptionsTabPlugins::settingsClicked()
 		if(settingsDialog)
 			delete(settingsDialog);
 
-		settingsDialog = new QDialog();
+		settingsDialog = new QDialog(d);
 		settsUi_.setupUi(settingsDialog);
 		settingsDialog->setWindowIcon(QIcon(IconsetFactory::iconPixmap("psi/logo_128")));
 		settingsDialog->setWindowTitle(tr("Settings of %1").arg(pluginName));
 		settsUi_.verticalLayout->insertWidget(0, pluginOptions);
-		settsUi_.buttonBox->addButton(QDialogButtonBox::Ok);
-		settsUi_.buttonBox->addButton(QDialogButtonBox::Apply);
-		settsUi_.buttonBox->addButton(QDialogButtonBox::Cancel);
 		connect(settsUi_.buttonBox, SIGNAL(accepted()), this, SLOT(onSettingsOk()));
 		connect(settsUi_.buttonBox, SIGNAL(clicked(QAbstractButton*)), this, SLOT(onSettingsClicked(QAbstractButton*)));
 		settingsDialog->adjustSize();
