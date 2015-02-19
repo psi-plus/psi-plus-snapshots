@@ -196,6 +196,7 @@ private slots:
 
 	//void addWidgetChangedSignal(QString widgetName, QCString signal);
 	void connectDataChanged(QWidget *);
+	void connectSignalsToWidget(QWidget *, QObject *, const char *);
 
 public:
 	OptionsDlg *dlg;
@@ -236,6 +237,9 @@ OptionsDlg::Private::Private(OptionsDlg *d, PsiCon *_psi)
 		//connect(opttab, SIGNAL(addWidgetChangedSignal(QString, QCString)), SLOT(addWidgetChangedSignal(QString, QCString)));
 		connect(opttab, SIGNAL(noDirty(bool)), SLOT(noDirtySlot(bool)));
 		connect(opttab, SIGNAL(connectDataChanged(QWidget *)), SLOT(connectDataChanged(QWidget *)));
+		connect(opttab,
+			SIGNAL(connectSignalsToWidget(QWidget*,QObject*,const char*)),
+			SLOT(connectSignalsToWidget(QWidget*,QObject*,const char*)));
 
 		if ( opttab->id().isEmpty() )
 			continue;
@@ -444,6 +448,11 @@ void OptionsDlg::Private::enableCommonWidgets(bool enable)
 
 void OptionsDlg::Private::connectDataChanged(QWidget *widget)
 {
+	connectSignalsToWidget(widget, this, SLOT(dataChanged()));
+}
+
+void OptionsDlg::Private::connectSignalsToWidget(QWidget *widget, QObject *object, const char *slot)
+{
 	foreach(QWidget* w, widget->findChildren<QWidget*>()) {
 		QVariant isOption = w->property("isOption");
 		if (isOption.isValid() && !isOption.toBool()) {
@@ -451,8 +460,8 @@ void OptionsDlg::Private::connectDataChanged(QWidget *widget)
 		}
 		QMap<QString, QByteArray>::Iterator it2 = changedMap.find( w->metaObject()->className() );
 		if ( it2 != changedMap.end() ) {
-			disconnect(w, changedMap[w->metaObject()->className()], this, SLOT(dataChanged()));
-			connect(w, changedMap[w->metaObject()->className()], SLOT(dataChanged()));
+			disconnect(w, changedMap[w->metaObject()->className()], object, slot);
+			connect(w, changedMap[w->metaObject()->className()], object, slot);
 		}
 	}
 }

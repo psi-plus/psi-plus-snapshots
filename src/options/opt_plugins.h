@@ -41,7 +41,7 @@ private slots:
 	void itemChanged(QTreeWidgetItem *item, int column);
 	void settingsClicked();
 	void onSettingsOk();
-	void onSettingsClicked(QAbstractButton* button);
+	void onDataChanged();
 };
 
 #endif

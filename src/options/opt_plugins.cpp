@@ -28,9 +28,9 @@ OptionsTabPlugins::OptionsTabPlugins(QObject *parent)
 
 OptionsTabPlugins::~OptionsTabPlugins()
 {
-	if(infoDialog)
+	if( infoDialog )
 		delete(infoDialog);
-	if(settingsDialog)
+	if( settingsDialog )
 		delete(settingsDialog);
 }
 
@@ -76,7 +76,7 @@ void OptionsTabPlugins::listPlugins()
 	QStringList plugins = pm->availablePlugins();
 	plugins.sort();
 	const QSize buttonSize = QSize(21,21);
-	foreach (const QString& plugin, plugins){
+	foreach ( const QString& plugin, plugins ){
 		QIcon icon = pm->icon(plugin);
 		bool enabled = pm->isEnabled(plugin);
 		const QString path = pm->pathToPlugin(plugin);
@@ -89,7 +89,7 @@ void OptionsTabPlugins::listPlugins()
 		item->setTextAlignment(C_VERSION, Qt::AlignHCenter);
 		item->setToolTip(C_NAME, toolTip);
 		item->setCheckState(C_NAME, state);
-		if (!enabled) {
+		if ( !enabled ) {
 			icon = QIcon(icon.pixmap(icon.availableSizes().at(0), QIcon::Disabled));
 		}
 		item->setIcon(C_NAME,icon);
@@ -112,7 +112,7 @@ void OptionsTabPlugins::listPlugins()
 		settsbutton->setEnabled(enabled);
 		d->tw_Plugins->setItemWidget(item, C_SETTS, settsbutton);
 	}
-	if (d->tw_Plugins->topLevelItemCount() > 0) {
+	if ( d->tw_Plugins->topLevelItemCount() > 0 ) {
 		d->tw_Plugins->header()->setResizeMode(C_NAME, QHeaderView::Stretch);
 		d->tw_Plugins->resizeColumnToContents(C_VERSION);
 		d->tw_Plugins->resizeColumnToContents(C_ABOUT);
@@ -139,7 +139,7 @@ void OptionsTabPlugins::itemChanged(QTreeWidgetItem *item, int column)
 	d->tw_Plugins->blockSignals(true); //Block signalls to change item elements
 	d->tw_Plugins->itemWidget(item, C_SETTS)->setEnabled(enabled);
 	QIcon icon = pm->icon(name);
-	if (!enabled) {
+	if ( !enabled ) {
 		icon = QIcon(icon.pixmap(icon.availableSizes().at(0), QIcon::Disabled));
 	}
 	item->setIcon(C_NAME, icon);
@@ -148,20 +148,20 @@ void OptionsTabPlugins::itemChanged(QTreeWidgetItem *item, int column)
 
 void OptionsTabPlugins::showPluginInfo()
 {
-	if ( !w )
+	if ( !w || !sender()->inherits("QToolButton") )
 		return;
 	OptPluginsUI *d = (OptPluginsUI *)w;
-	QToolButton *btn = qobject_cast<QToolButton*>(sender());
-	const QPoint coords = QPoint(btn->x(),btn->y());
+	QToolButton *btn = static_cast<QToolButton*>(sender());
+	const QPoint coords(btn->x(),btn->y());
 	d->tw_Plugins->setCurrentItem(d->tw_Plugins->itemAt(coords));
 	if ( d->tw_Plugins->selectedItems().size() > 0 ) {
-		if(infoDialog)
+		if( infoDialog )
 			delete(infoDialog);
 
 		infoDialog = new QDialog(d);
 		ui_.setupUi(infoDialog);
 		QString name = d->tw_Plugins->currentItem()->text(C_NAME);
-		infoDialog->setWindowTitle(infoDialog->windowTitle() + " " + name);
+		infoDialog->setWindowTitle(QString("%1 %2").arg(infoDialog->windowTitle()).arg(name));
 		infoDialog->setWindowIcon(QIcon(IconsetFactory::iconPixmap("psi/logo_128")));
 		ui_.te_info->setText(PluginManager::instance()->pluginInfo(name));
 		infoDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -171,12 +171,12 @@ void OptionsTabPlugins::showPluginInfo()
 
 void OptionsTabPlugins::settingsClicked()
 {
-	if ( !w )
+	if ( !w || !sender()->inherits("QToolButton") )
 		return;
 
 	OptPluginsUI *d = (OptPluginsUI *)w;
-	QToolButton *btn = qobject_cast<QToolButton*>(sender());
-	const QPoint coords = QPoint(btn->x(),btn->y());
+	QToolButton *btn = static_cast<QToolButton*>(sender());
+	const QPoint coords(btn->x(),btn->y());
 	d->tw_Plugins->setCurrentItem(d->tw_Plugins->itemAt(coords));
 	if ( d->tw_Plugins->selectedItems().size() > 0 ) {
 		QString pluginName = d->tw_Plugins->currentItem()->text(C_NAME);
@@ -184,7 +184,7 @@ void OptionsTabPlugins::settingsClicked()
 		PluginManager::instance()->restoreOptions( pluginName );
 		pluginOptions->setParent(d);
 
-		if(settingsDialog)
+		if( settingsDialog )
 			delete(settingsDialog);
 
 		settingsDialog = new QDialog(d);
@@ -192,8 +192,10 @@ void OptionsTabPlugins::settingsClicked()
 		settingsDialog->setWindowIcon(QIcon(IconsetFactory::iconPixmap("psi/logo_128")));
 		settingsDialog->setWindowTitle(tr("Settings of %1").arg(pluginName));
 		settsUi_.verticalLayout->insertWidget(0, pluginOptions);
-		connect(settsUi_.buttonBox, SIGNAL(accepted()), this, SLOT(onSettingsOk()));
-		connect(settsUi_.buttonBox, SIGNAL(clicked(QAbstractButton*)), this, SLOT(onSettingsClicked(QAbstractButton*)));
+		connectSignalsToWidget(pluginOptions, this, SLOT(onDataChanged()));
+		connect(settsUi_.buttonBox->button(QDialogButtonBox::Ok), SIGNAL(clicked()), this, SLOT(onSettingsOk()));
+		connect(settsUi_.buttonBox->button(QDialogButtonBox::Apply), SIGNAL(clicked()), this, SLOT(onSettingsOk()));
+		settsUi_.buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
 		settingsDialog->adjustSize();
 		settingsDialog->setAttribute(Qt::WA_DeleteOnClose);
 		settingsDialog->show();
@@ -205,14 +207,13 @@ void OptionsTabPlugins::onSettingsOk()
 	if ( !w )
 		return;
 	OptPluginsUI *d = (OptPluginsUI *)w;
-	if (d->tw_Plugins->currentItem()->isSelected()) {
+	if ( d->tw_Plugins->currentItem()->isSelected() ) {
 		PluginManager::instance()->applyOptions( d->tw_Plugins->currentItem()->text(C_NAME) );
 	}
+	settsUi_.buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
 }
 
-void OptionsTabPlugins::onSettingsClicked(QAbstractButton *button)
+void OptionsTabPlugins::onDataChanged()
 {
-	if (settsUi_.buttonBox->buttonRole(button) == QDialogButtonBox::ApplyRole) {
-		onSettingsOk();
-	}
+	settsUi_.buttonBox->button(QDialogButtonBox::Apply)->setEnabled(true);
 }
