@@ -179,7 +179,9 @@ void OptionsTabPlugins::settingsClicked()
 	const QPoint coords(btn->x(),btn->y());
 	d->tw_Plugins->setCurrentItem(d->tw_Plugins->itemAt(coords));
 	if ( d->tw_Plugins->selectedItems().size() > 0 ) {
-		QString pluginName = d->tw_Plugins->currentItem()->text(C_NAME);
+		const QString pluginName = d->tw_Plugins->currentItem()->text(C_NAME);
+		const QString shortName = PluginManager::instance()->shortName(pluginName);
+		const QString geometryOption = QString("plugins.options.%1.dialog-size").arg(shortName);
 		QWidget* pluginOptions = PluginManager::instance()->optionsWidget( pluginName );
 		PluginManager::instance()->restoreOptions( pluginName );
 		pluginOptions->setParent(d);
@@ -187,7 +189,7 @@ void OptionsTabPlugins::settingsClicked()
 		if( settingsDialog )
 			delete(settingsDialog);
 
-		settingsDialog = new QDialog(d);
+		settingsDialog = new AdvancedWidget<QDialog>(d);
 		settsUi_.setupUi(settingsDialog);
 		settingsDialog->setWindowIcon(QIcon(IconsetFactory::iconPixmap("psi/logo_128")));
 		settingsDialog->setWindowTitle(tr("Settings of %1").arg(pluginName));
@@ -196,7 +198,7 @@ void OptionsTabPlugins::settingsClicked()
 		connect(settsUi_.buttonBox->button(QDialogButtonBox::Ok), SIGNAL(clicked()), this, SLOT(onSettingsOk()));
 		connect(settsUi_.buttonBox->button(QDialogButtonBox::Apply), SIGNAL(clicked()), this, SLOT(onSettingsOk()));
 		settsUi_.buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
-		settingsDialog->adjustSize();
+		settingsDialog->setGeometryOptionPath(geometryOption);
 		settingsDialog->setAttribute(Qt::WA_DeleteOnClose);
 		settingsDialog->show();
 	}

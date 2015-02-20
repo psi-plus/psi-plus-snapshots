@@ -2,6 +2,7 @@
 #define OPT_PLUGINS_H
 
 #include "optionstab.h"
+#include "advwidget.h"
 #include "ui_plugininfodialog.h"
 #include "ui_pluginsettsdialog.h"
 #include <QPointer>
@@ -31,7 +32,7 @@ public:
 private:
 	QWidget *w;
 	QPointer<QDialog> infoDialog;
-	QPointer<QDialog> settingsDialog;
+	QPointer<AdvancedWidget<QDialog> > settingsDialog;
 	Ui::PluginInfoDialog ui_;
 	Ui::PluginSettingsDialog settsUi_;
 
