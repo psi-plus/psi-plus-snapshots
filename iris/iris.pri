@@ -1,7 +1,12 @@
 IRIS_BASE = $$PWD
 include(common.pri)
 
-CONFIG *= depend_prl
+greaterThan(QT_MAJOR_VERSION, 4) {
+	CONFIG *= fast_depend_prl
+}
+else {
+	CONFIG *= depend_prl
+}
 
 INCLUDEPATH += $$IRIS_BASE/include $$IRIS_BASE/include/iris $$IRIS_BASE/src
 
