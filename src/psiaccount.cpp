@@ -4322,12 +4322,12 @@ void PsiAccount::actionHistoryBox(const PsiEvent::Ptr &e)
 	w->show();
 }
 
-void PsiAccount::actionOpenChat(const Jid &j, const QString & body)
+ChatDlg* PsiAccount::actionOpenChat(const Jid &j)
 {
 	UserListItem *u = (findGCContact(j)) ? find(j) : find(j.bare());
 	if(!u) {
 		qWarning("[%s] not in userlist\n", qPrintable(j.full()));
-		return;
+		return 0;
 	}
 
 	// if 'j' is bare, we might want to switch to a specific resource
@@ -4356,9 +4356,9 @@ void PsiAccount::actionOpenChat(const Jid &j, const QString & body)
 	}
 
 	if(!res.isEmpty())
-		openChat(j.withResource(res), UserAction, body);
+		return openChat(j.withResource(res), UserAction);
 	else
-		openChat(j, UserAction, body);
+		return openChat(j, UserAction);
 }
 
 // unlike actionOpenChat(), this function will work on jids that aren't
@@ -4646,12 +4646,14 @@ void PsiAccount::openUri(const QUrl &uriToOpen)
 
 	// query
 #ifdef HAVE_QT5
-	QUrlQuery uri(uriToOpen.query(QUrl::FullyEncoded));
+	QUrlQuery uri;
+	uri.setQueryDelimiters('=', ';');
+	uri.setQuery(uriToOpen.query(QUrl::FullyEncoded));
 #else
 	QUrl uri(uriToOpen);	// got to copy, because setQueryDelimiters() is not const
+	uri.setQueryDelimiters('=', ';');
 #endif
 
-	uri.setQueryDelimiters('=', ';');
 	QString querytype = uri.queryItems().value(0).first;	// defaults to empty string
 
 	if (0) {
@@ -4673,7 +4675,10 @@ void PsiAccount::openUri(const QUrl &uriToOpen)
 			if (!find(entity.bare())) {
 				addUserListItem(entity);
 			}
-			actionOpenChat(entity, body);
+			ChatDlg *dlg = actionOpenChat(entity);
+			if (dlg && !body.isEmpty()) {
+				dlg->setInputText(body);
+			}
 		} else {
 			dj_newMessage(entity, body, subject, "");
 		}
@@ -5786,7 +5791,7 @@ void PsiAccount::processChats(const Jid &j)
 	processChatsHelper(j, true);
 }
 
-void PsiAccount::openChat(const Jid& j, ActivationType activationType, const QString& body)
+ChatDlg* PsiAccount::openChat(const Jid& j, ActivationType activationType)
 {
 	ChatDlg* chat = ensureChatDlg(j);
 	chat->ensureTabbedCorrectly();
@@ -5802,9 +5807,7 @@ void PsiAccount::openChat(const Jid& j, ActivationType activationType, const QSt
 			QTimer::singleShot(1000, dlg, SLOT(showTabWithoutActivation()));
 		}
 	}
-	if (!body.isEmpty()) {
-		chat->setText(body);
-	}
+	return chat;
 }
 
 void PsiAccount::chatMessagesRead(const Jid &j)

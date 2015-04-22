@@ -85,7 +85,7 @@ public:
 
 public:
 	PsiAccount* account() const;
-	void setText(const QString& );
+	void setInputText(const QString &text);
 	Jid realJid() const;
 	bool autoSelectContact() const {return autoSelectContact_;};
 	static UserStatus userStatusFor(const Jid& jid, QList<UserListItem*> ul, bool forceEmptyResource);

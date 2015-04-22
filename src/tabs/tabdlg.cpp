@@ -907,11 +907,6 @@ void TabDlg::tabCloseRequested(int i)
 	}
 }
 
-TabbableWidget* TabDlg::getCurrentTab() const
-{
-	return dynamic_cast<TabbableWidget*>(tabWidget_->currentPage());
-}
-
 /**
  * Set the icon of the tab.
  */
@@ -925,4 +920,9 @@ void TabDlg::updateVSplitters(int log, int chat)
 	foreach(TabbableWidget *w, tabs_) {
 		w->setVSplitterPosition(log, chat);
 	}
+}
+
+TabbableWidget* TabDlg::getCurrentTab() const
+{
+	return dynamic_cast<TabbableWidget*>(tabWidget_->currentPage());
 }

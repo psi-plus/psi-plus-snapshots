@@ -1064,12 +1064,6 @@ void ChatDlg::addEmoticon(QString text)
 	PsiRichText::addEmoticon(chatEdit(), text);
 }
 
-void ChatDlg::setText(const QString& text)
-{
-	chatEdit()->clear();
-	chatEdit()->insertHtml(text + ' ');
-}
-
 /**
  * Records that the user is composing
  */
@@ -1111,6 +1105,12 @@ void ChatDlg::resetComposing()
 PsiAccount* ChatDlg::account() const
 {
 	return TabbableWidget::account();
+}
+
+void ChatDlg::setInputText(const QString &text)
+{
+	chatEdit()->setPlainText(text);
+	chatEdit()->moveCursor(QTextCursor::End);
 }
 
 void ChatDlg::nicksChanged()

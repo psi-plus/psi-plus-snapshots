@@ -355,7 +355,7 @@ public slots:
 	void actionRename(const Jid &, const QString &);
 	void actionGroupRename(const QString &, const QString &);
 	void actionHistory(const Jid &);
-	void actionOpenChat(const Jid &,const QString & body = QString());
+	ChatDlg *actionOpenChat(const Jid &);
 	void actionOpenSavedChat(const Jid &);
 	void actionOpenChat2(const Jid &);
 	void actionOpenChatSpecific(const Jid &);
@@ -547,7 +547,7 @@ private:
 
 	void processChatsHelper(const Jid& jid, bool removeEvents);
 	void processChats(const Jid &);
-	void openChat(const Jid &, ActivationType activationType, const QString & body = QString());
+	ChatDlg *openChat(const Jid &, ActivationType activationType);
 	EventDlg *ensureEventDlg(const Jid &);
 	friend class PsiCon;
 

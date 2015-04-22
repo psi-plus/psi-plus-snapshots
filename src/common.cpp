@@ -399,32 +399,6 @@ void closeDialogs(QWidget *w)
 	}
 }
 
-TabbableWidget* findActiveTab()
-{
-	QWidget* chat = QApplication::activeWindow();
-	TabbableWidget* tw = 0;
-	if(chat) {
-		TabDlg* td = qobject_cast<TabDlg*>(chat);
-		if(td) {
-			tw = td->getCurrentTab();
-		}
-		else {
-			tw = qobject_cast<TabbableWidget*>(chat);
-			if (!tw) {
-				QList<TabDlg*> tmp = chat->findChildren<TabDlg*>(); // all-in-one
-				while(!tmp.isEmpty()) {
-					TabDlg* td = tmp.takeFirst();
-					tw = td->getCurrentTab();
-					if(tw) {
-						break;
-					}
-				}
-			}
-		}
-	}
-	return tw;
-}
-
 void reorderGridLayout(QGridLayout* layout, int maxCols)
 {
 	QList<QLayoutItem*> items;
@@ -452,6 +426,32 @@ void reorderGridLayout(QGridLayout* layout, int maxCols)
 			row++;
 		}
 	}
+}
+
+TabbableWidget* findActiveTab()
+{
+	QWidget* chat = QApplication::activeWindow();
+	TabbableWidget* tw = 0;
+	if(chat) {
+		TabDlg* td = qobject_cast<TabDlg*>(chat);
+		if(td) {
+			tw = td->getCurrentTab();
+		}
+		else {
+			tw = qobject_cast<TabbableWidget*>(chat);
+			if (!tw) {
+				QList<TabDlg*> tmp = chat->findChildren<TabDlg*>(); // all-in-one
+				while(!tmp.isEmpty()) {
+					TabDlg* td = tmp.takeFirst();
+					tw = td->getCurrentTab();
+					if(tw) {
+						break;
+					}
+				}
+			}
+		}
+	}
+	return tw;
 }
 
 #ifdef HAVE_X11
