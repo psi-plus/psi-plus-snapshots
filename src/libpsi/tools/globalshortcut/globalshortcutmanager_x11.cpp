@@ -29,7 +29,7 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 
-#include "x11info.h"
+#include <QX11Info>
 
 #ifdef KeyPress
 // defined by X11 headers
@@ -130,7 +130,7 @@ private:
 		if (haveMods)
 			return;
 
-		Display* appDpy = X11Info::display();
+		Display* appDpy = QX11Info::display();
 		XModifierKeymap* map = XGetModifierMapping(appDpy);
 		if (map) {
 			// XKeycodeToKeysym helper code adapeted from xmodmap
@@ -277,7 +277,7 @@ private:
 
 	void bind(int keysym, unsigned int mod)
 	{
-		int code = XKeysymToKeycode(X11Info::display(), keysym);
+		int code = XKeysymToKeycode(QX11Info::display(), keysym);
 
 		// don't grab keys with empty code (because it means just the modifier key)
 		if (keysym && !code)
@@ -285,15 +285,15 @@ private:
 
 		failed = false;
 		XErrorHandler savedErrorHandler = XSetErrorHandler(XGrabErrorHandler);
-		WId w = X11Info::appRootWindow();
+		WId w = QX11Info::appRootWindow();
 		foreach(long mask_mod, X11KeyTriggerManager::ignModifiersList()) {
-			XGrabKey(X11Info::display(), code, mod | mask_mod, w, False, GrabModeAsync, GrabModeAsync);
+			XGrabKey(QX11Info::display(), code, mod | mask_mod, w, False, GrabModeAsync, GrabModeAsync);
 			GrabbedKey grabbedKey;
 			grabbedKey.code = code;
 			grabbedKey.mod  = mod | mask_mod;
 			grabbedKeys_ << grabbedKey;
 		}
-		XSync(X11Info::display(), False);
+		XSync(QX11Info::display(), False);
 		XSetErrorHandler(savedErrorHandler);
 	}
 
@@ -322,7 +322,7 @@ public:
 		X11KeyTriggerManager::instance()->removeTrigger(this);
 
 		foreach(GrabbedKey key, grabbedKeys_)
-			XUngrabKey(X11Info::display(), key.code, key.mod, X11Info::appRootWindow());
+			XUngrabKey(QX11Info::display(), key.code, key.mod, QX11Info::appRootWindow());
 	}
 
 	void activate()
