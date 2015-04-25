@@ -1,6 +1,6 @@
 #include "x11windowsystem.h"
 
-#include "x11info.h"
+#include <QX11Info>
 #include <X11/Xlib.h>
 
 const long MAX_PROP_SIZE = 100000;
@@ -41,7 +41,7 @@ X11WindowSystem::X11WindowSystem()
 	while (i--)
 		atoms[i] = 0;
 
-	XInternAtoms(X11Info::display(), (char**)names, atomsCount, true, atoms);
+	XInternAtoms(QX11Info::display(), (char**)names, atomsCount, true, atoms);
 
 	i = atomsCount;
 	while (i--)
@@ -73,15 +73,15 @@ QRect X11WindowSystem::windowRect(Window win)
 	Window w_unused;
 	int x, y;
 	unsigned int w, h, junk;
-	XGetGeometry(X11Info::display(), win, &w_unused, &x, &y, &w, &h, &junk, &junk);
-	XTranslateCoordinates(X11Info::display(), win, X11Info::appRootWindow(), 0, 0, &x, &y, &w_unused);
+	XGetGeometry(QX11Info::display(), win, &w_unused, &x, &y, &w, &h, &junk, &junk);
+	XTranslateCoordinates(QX11Info::display(), win, QX11Info::appRootWindow(), 0, 0, &x, &y, &w_unused);
 
 	Atom type_ret;
 	int format_ret;
 	unsigned char *data_ret;
 	unsigned long nitems_ret, unused;
 	const Atom XA_CARDINAL = (Atom) 6;
-	if (net_frame_extents != None && XGetWindowProperty(X11Info::display(), win, net_frame_extents,
+	if (net_frame_extents != None && XGetWindowProperty(QX11Info::display(), win, net_frame_extents,
 														0l, 4l, False, XA_CARDINAL, &type_ret, &format_ret,
 														&nitems_ret, &unused, &data_ret) == Success)
 	{
@@ -111,7 +111,7 @@ bool X11WindowSystem::isWindowObscured(QWidget *widget, bool alwaysOnTop)
 			ignoredWindowStates.remove(net_wm_state_above);
 	}
 
-	//TODO Is it correct to use X11Info::appRootWindow() as root window?
+	//TODO Is it correct to use QX11Info::appRootWindow() as root window?
 	Q_ASSERT(widget);
 	QWidget* w = widget->window();
 	Window win = w->winId();
@@ -125,7 +125,7 @@ bool X11WindowSystem::isWindowObscured(QWidget *widget, bool alwaysOnTop)
 	if (net_client_list_stacking != None)
 	{
 		QRect winRect = windowRect(win);
-		if (XGetWindowProperty(X11Info::display(), X11Info::appRootWindow(), net_client_list_stacking,
+		if (XGetWindowProperty(QX11Info::display(), QX11Info::appRootWindow(), net_client_list_stacking,
 					   0, MAX_PROP_SIZE, False, XA_WINDOW, &type_ret,
 					   &format_ret, &nitems_ret, &unused, &data_ret) == Success) {
 			if (type_ret == XA_WINDOW && format_ret == 32) {
@@ -168,7 +168,7 @@ bool X11WindowSystem::windowHasOnlyTypes(Window win, const QSet<Atom> &allowedTy
 	unsigned char *data_ret;
 	unsigned long nitems_ret, unused;
 
-	if (net_wm_window_type != None && XGetWindowProperty(X11Info::display(), win, net_wm_window_type,
+	if (net_wm_window_type != None && XGetWindowProperty(QX11Info::display(), win, net_wm_window_type,
 														 0l, 2048l, False, XA_ATOM, &type_ret,
 														 &format_ret, &nitems_ret, &unused, &data_ret) == Success) {
 		if (type_ret == XA_ATOM && format_ret == 32 && nitems_ret > 0) {
@@ -197,7 +197,7 @@ bool X11WindowSystem::windowHasAnyOfStates(Window win, const QSet<Atom> &filtere
 	int format_ret;
 	unsigned char *data_ret;
 	unsigned long nitems_ret, unused;
-	if (net_wm_state != None && XGetWindowProperty(X11Info::display(), win, net_wm_state, 0l, 2048l,
+	if (net_wm_state != None && XGetWindowProperty(QX11Info::display(), win, net_wm_state, 0l, 2048l,
 												   False, XA_ATOM, &type_ret, &format_ret,
 												   &nitems_ret, &unused, &data_ret) == Success) {
 		if (type_ret == XA_ATOM && format_ret == 32 && nitems_ret > 0) {
