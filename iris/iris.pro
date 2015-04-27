@@ -1,8 +1,7 @@
 TEMPLATE = subdirs
 
 IRIS_BASE = $$PWD
-
-include(conf.pri)
+include($$top_iris_builddir/conf.pri)
 windows:include(conf_win.pri)
 
 include(common.pri)
