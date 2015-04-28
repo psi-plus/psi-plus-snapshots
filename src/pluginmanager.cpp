@@ -158,7 +158,7 @@ void PluginManager::dirsChanged()
 void PluginManager::accountDestroyed()
 {
 	PsiAccount* pa = static_cast<PsiAccount*>(sender());
-	const int index = accountIds_.value(pa);
+	const int index = accountIds_.value(pa, -1);
 	if(index != -1) {
 		accountIds_.insert(0, index);
 	}
