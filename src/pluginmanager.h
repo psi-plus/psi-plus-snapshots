@@ -30,6 +30,20 @@ namespace QCA {
 	class DirWatch;
 }
 
+class AccountIds
+{
+public:
+	int appendAccount(PsiAccount *acc);
+	void removeAccount(PsiAccount *acc);
+	void clear();
+	bool isValidRange(int id) const { return id_keys.contains(id); }
+	PsiAccount *account(int id) const;
+	int id(PsiAccount *acc) const;
+
+private:
+	QHash<PsiAccount *, int> acc_keys;
+	QHash<int, PsiAccount *> id_keys;
+};
 
 class PluginManager : public QObject
 {
@@ -94,7 +108,7 @@ private:
 	QVector<XMPP::Client*> clients_;
 
 	//account, account id
-	QHash<PsiAccount*, int> accountIds_;
+	AccountIds accountIds_;
 
 	//name, host
 	QMap<QString, PluginHost*> hosts_;
