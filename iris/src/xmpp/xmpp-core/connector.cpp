@@ -318,6 +318,13 @@ void AdvancedConnector::connectToServer(const QString &server)
 	}
 	d->port = XMPP_DEFAULT_PORT;
 
+	if (d->opt_ssl == Probe && (d->proxy.type() != Proxy::None || !d->opt_host.isEmpty())) {
+#ifdef XMPP_DEBUG
+		XDEBUG << "Don't probe ssl port because of incompatible params";
+#endif
+		d->opt_ssl = Never; // probe is possible only with direct connect
+	}
+
 	if(d->proxy.type() == Proxy::HttpPoll) {
 		HttpPoll *s = new HttpPoll;
 		d->bs = s;
@@ -380,12 +387,12 @@ void AdvancedConnector::connectToServer(const QString &server)
 		connect(s, SIGNAL(connected()), SLOT(bs_connected()));
 		connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
 
-		if(!d->opt_host.isEmpty()) {
+		if(!d->opt_host.isEmpty()) { /* if custom host:port */
 			d->host = d->opt_host;
 			d->port = d->opt_port;
 			s->connectToHost(d->host, d->port);
 			return;
-		} else if (d->opt_ssl != Never) {
+		} else if (d->opt_ssl != Never) { /* if ssl forced or should be probed */
 			d->port = XMPP_LEGACY_PORT;
 		}
 
@@ -430,11 +437,14 @@ void AdvancedConnector::bs_connected()
 		setPeerAddress(h, p);
 	}
 
-	bool ssl_disabled = d->proxy.type() == Proxy::None &&
-			(static_cast<BSocket*>(d->bs)->isPeerFromSrv() || d->port == XMPP_DEFAULT_PORT);
-	// only allow ssl override if proxy==poll or host:port or when probing legacy ssl port
-	if(d->proxy.type() != Proxy::HttpPoll  && d->opt_ssl != Never && !ssl_disabled)
+	// We won't use ssl with HttpPoll since it has ow tls handler enabled for https.
+	// The only variant for ssl is legacy port in probing or forced mde.
+	if(d->proxy.type() != Proxy::HttpPoll  && (d->opt_ssl == Force || (
+		d->opt_ssl == Probe && peerPort() == XMPP_LEGACY_PORT)))
+	{
+		// in case of Probe it's ok to check actual peer "port" since we are sure Proxy=None
 		setUseSSL(true);
+	}
 
 	d->mode = Connected;
 	emit connected();
@@ -531,7 +541,8 @@ void AdvancedConnector::bs_error(int x)
 #endif
 		BSocket *s = static_cast<BSocket*>(d->bs);
 		d->port = XMPP_DEFAULT_PORT;
-		s->connectToHost(XMPP_CLIENT_SRV, XMPP_CLIENT_TRANSPORT, d->host, d->port);
+		// at this moment we already tried everything from srv. so just try the host itself
+		s->connectToHost(d->host, d->port);
 	}
 	/* otherwise we have no fallbacks and must have failed to connect */
 	else {

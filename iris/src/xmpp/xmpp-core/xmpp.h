@@ -96,7 +96,7 @@ namespace XMPP
 		void setPeerAddress(const QHostAddress &addr, quint16 port);
 
 	private:
-		bool ssl;
+		bool ssl; // a flag to start ssl handshake immediately
 		bool haveaddr;
 		QHostAddress addr;
 		quint16 port;

@@ -58,7 +58,6 @@ public:
 	int socket() const;
 	void setSocket(int);
 	int state() const;
-	bool isPeerFromSrv() const;
 
 	// from ByteStream
 	bool isOpen() const;
@@ -84,27 +83,23 @@ signals:
 	void connected();
 
 private slots:
-	void qs_hostFound();
 	void qs_connected();
 	void qs_closed();
 	void qs_readyRead();
 	void qs_bytesWritten(qint64);
 	void qs_error(QAbstractSocket::SocketError);
 
-	void handle_dns_ready(const QHostAddress&, quint16);
-	void handle_dns_error(XMPP::ServiceResolver::Error e);
-	void handle_connect_error(QAbstractSocket::SocketError);
-
 private:
 	class Private;
 	Private *d;
 
 	void resetConnection(bool clear=false);
-	void ensureSocket();
+	void ensureConnector();
 	void recreate_resolver();
 	bool check_protocol_fallback();
 	void dns_srv_try_next();
 	bool connect_host_try_next();
+	void qs_connected_step2();
 };
 
 // CS_NAMESPACE_END

@@ -97,18 +97,306 @@ public slots:
 };
 
 
+class HappyEyeballsConnector : public QObject
+{
+	Q_OBJECT
+public:
+	enum State {
+		Failure,
+		Created,
+		Resolve,
+		Connecting,
+		Connected
+	};
+
+	struct SockData {
+		QTcpSocket *sock;
+		QTcpSocketSignalRelay *relay;
+		State state;
+		XMPP::ServiceResolver *resolver;
+	};
+
+	/*! source data */
+	QString service;
+	QString transport;
+	QString domain;
+	quint16 port;
+	QHostAddress address;
+	QAbstractSocket::NetworkLayerProtocol fallbackProtocol;
+
+	/*! runtime data */
+	QString lastError;
+	int lastIndex;
+	QList<SockData> sockets;
+	QTimer fallbackTimer;
+
+	HappyEyeballsConnector(QObject *parent) :
+		QObject(parent),
+		port(0)
+	{
+		fallbackProtocol = QAbstractSocket::IPv4Protocol;
+		fallbackTimer.setSingleShot(true);
+		fallbackTimer.setInterval(250); /* rfc recommends 150-250ms */
+		connect(&fallbackTimer, SIGNAL(timeout()), SLOT(startFallback()));
+	}
+
+	SockData& addSocket()
+	{
+		SockData sd;
+		sd.state = Created;
+		sd.sock = new QTcpSocket(this);
+		sd.sock->setReadBufferSize(READBUFSIZE);
+		sd.relay = new QTcpSocketSignalRelay(sd.sock, this);
+		sd.resolver = 0;
+		connect(sd.relay, SIGNAL(connected()), SLOT(qs_connected()));
+		connect(sd.relay, SIGNAL(error(QAbstractSocket::SocketError)), SLOT(qs_error(QAbstractSocket::SocketError)));
+		sockets.append(sd);
+		return sockets[sockets.count() - 1];
+	}
+
+	void cleanup()
+	{
+		for (int i = 0; i < sockets.count(); i++) {
+			abortSocket(sockets[i]);
+		}
+		fallbackTimer.stop();
+	}
+
+
+	void connectToHost(const QHostAddress &address, quint16 port)
+	{
+#ifdef BS_DEBUG
+		BSDEBUG << "a:" << address << "p:" << port;
+#endif
+		this->address = address;
+		SockData &sd = addSocket();
+		sd.state = Connecting;
+		sd.sock->connectToHost(address, port);
+	}
+
+	/* Connect to a host via the specified protocol, or the default protocols if not specified */
+	void connectToHost(const QString &host, quint16 port, QAbstractSocket::NetworkLayerProtocol protocol)
+	{
+#ifdef BS_DEBUG
+		BSDEBUG << "h:" << host << "p:" << port << "pr:" << protocol;
+#endif
+		this->domain = host;
+		this->port = port;
+		SockData &sd = addSocket();
+		sd.resolver = new XMPP::ServiceResolver;
+		initResolver(sd.resolver);
+		sd.resolver->setProtocol(protocol == QAbstractSocket::UnknownNetworkLayerProtocol?
+									 (fallbackProtocol == QAbstractSocket::IPv4Protocol? XMPP::ServiceResolver::IPv6 : XMPP::ServiceResolver::IPv4) :
+									 (protocol== QAbstractSocket::IPv4Protocol? XMPP::ServiceResolver::IPv4 : XMPP::ServiceResolver::IPv6));
+		if (protocol == QAbstractSocket::UnknownNetworkLayerProtocol) {
+			addSocket();
+			fallbackTimer.start();
+		}
+		sd.state = Resolve;
+		sd.resolver->start(domain, port);
+	}
+
+	void connectToHost(const QString &service, const QString &transport, const QString &domain, quint16 port)
+	{
+#ifdef BS_DEBUG
+		BSDEBUG << "s:" << service << "t:" << transport << "d:" << domain;
+#endif
+		this->service = service;
+		this->transport = transport;
+		this->domain = domain;
+		this->port = port;
+		SockData &sd = addSocket();
+		sd.resolver = new XMPP::ServiceResolver(this);
+		sd.resolver->setProtocol(XMPP::ServiceResolver::HappyEyeballs);
+		connect(sd.resolver, SIGNAL(srvReady()), SLOT(splitSrvResolvers()));
+		sd.state = Resolve;
+		sd.resolver->start(service, transport, domain, port);
+	}
+
+	SockData takeCurrent(QObject *parent)
+	{
+		SockData csd = sockets.takeAt(lastIndex);
+		lastIndex = -1;
+		disconnect(csd.relay);
+		csd.relay->setParent(parent);
+		csd.sock->setParent(parent);
+		delete csd.resolver; // FIME ensure it's accessible only from connected signal. we don't delete resolver from its slot
+		csd.resolver = 0;
+		return csd;
+	}
+
+private:
+	void abortSocket(SockData &sd)
+	{
+		sd.relay->disconnect(this);
+		if (sd.state >= Connecting) {
+			sd.sock->abort();
+		}
+		if (sd.resolver) {
+			sd.resolver->stop();
+			disconnect(sd.resolver);
+			sd.resolver->deleteLater(); // or just delete ?
+		}
+		delete sd.relay;
+		delete sd.sock;
+	}
+
+	void initResolver(XMPP::ServiceResolver *resolver)
+	{
+		resolver->setParent(this);
+		connect(resolver, SIGNAL(resultReady(QHostAddress,quint16)), this, SLOT(handleDnsReady(QHostAddress,quint16)));
+		connect(resolver, SIGNAL(error(XMPP::ServiceResolver::Error)), this, SLOT(handleDnsError(XMPP::ServiceResolver::Error)));
+	}
+
+	void setCurrentByResolver(XMPP::ServiceResolver *resolver)
+	{
+		for (int i = 0; i < sockets.count(); i++) {
+			if (sockets.at(i).resolver == resolver) {
+				lastIndex = i;
+				return;
+			}
+		}
+		lastIndex = -1;
+	}
+
+	void setCurrentByRelay(QTcpSocketSignalRelay *relay)
+	{
+		for (int i = 0; i < sockets.count(); i++) {
+			if (sockets.at(i).relay == relay) {
+				lastIndex = i;
+				return;
+			}
+		}
+		lastIndex = -1;
+	}
+
+private slots:
+	/*
+	Notice: most probably recipient should reparent socket and relay
+	*/
+	void qs_connected()
+	{
+#ifdef BS_DEBUG
+		BSDEBUG;
+#endif
+		setCurrentByRelay(static_cast<QTcpSocketSignalRelay*>(sender()));
+		for (int i = 0; i < sockets.count(); i++) {
+			if (i != lastIndex) {
+				abortSocket(sockets[i]);
+			} else {
+				disconnect(sockets[i].relay);
+				sockets[i].state = Connected;
+			}
+			emit connected();
+		}
+	}
+
+	void qs_error(QAbstractSocket::SocketError errorCode)
+	{
+		setCurrentByRelay(static_cast<QTcpSocketSignalRelay*>(sender()));
+		// TODO remember error code
+		lastError = sockets[lastIndex].sock->errorString();
+#ifdef BS_DEBUG
+		BSDEBUG << "error:" << lastError;
+#endif
+		if (sockets[lastIndex].resolver) {
+			sockets[lastIndex].sock->abort();
+			sockets[lastIndex].state = Resolve;
+			sockets[lastIndex].resolver->tryNext();
+		} else {
+			// it seems we connect by hostaddress. just one socket w/o resolver
+			emit error(errorCode);
+		}
+	}
+
+	void splitSrvResolvers()
+	{
+#ifdef BS_DEBUG
+		BSDEBUG << "splitting resolvers";
+#endif
+		setCurrentByResolver(static_cast<XMPP::ServiceResolver*>(sender()));
+		SockData &sdv4 = sockets[lastIndex];
+		SockData &sdv6 = addSocket();
+		XMPP::ServiceResolver::ProtoSplit ps = sdv4.resolver->happySplit();
+		initResolver(ps.ipv4);
+		initResolver(ps.ipv6);
+
+		disconnect(sdv4.resolver);
+		sdv4.resolver->deleteLater();
+
+		sdv4.resolver = ps.ipv4;
+		sdv4.state = Created;
+		sdv6.resolver = ps.ipv6;
+
+		if (fallbackProtocol == QAbstractSocket::IPv4Protocol) {
+			sdv6.state = Resolve;
+			sdv6.resolver->tryNext();
+		} else {
+			sdv4.state = Resolve;
+			sdv4.resolver->tryNext();
+		}
+		fallbackTimer.start();
+	}
+
+	/* host resolved, now try to connect to it */
+	void handleDnsReady(const QHostAddress &address, quint16 port)
+	{
+#ifdef BS_DEBUG
+		BSDEBUG << "a:" << address << "p:" << port;
+#endif
+		setCurrentByResolver(static_cast<XMPP::ServiceResolver*>(sender()));
+		sockets[lastIndex].state = Connecting;
+		sockets[lastIndex].sock->connectToHost(address, port);
+	}
+
+	/* resolver failed the dns lookup */
+	void handleDnsError(XMPP::ServiceResolver::Error e) {
+#ifdef BS_DEBUG
+		BSDEBUG << "e:" << e;
+#else
+		Q_UNUSED(e)
+#endif
+		if (!fallbackTimer.isActive()) {
+			emit error(QAbstractSocket::HostNotFoundError);
+		}
+	}
+
+	void startFallback()
+	{
+#ifdef BS_DEBUG
+		BSDEBUG;
+#endif
+		for(int i = 0; i < sockets.count(); i++) {
+			SockData &sd = sockets[i];
+			if (sd.state == Created) {
+				sd.state = Resolve;
+				if (sd.resolver) {
+					sd.resolver->tryNext();
+				} else {
+					sd.resolver = new XMPP::ServiceResolver;
+					initResolver(sd.resolver);
+					sd.resolver->setProtocol(fallbackProtocol == QAbstractSocket::IPv4Protocol?
+												 XMPP::ServiceResolver::IPv4 : XMPP::ServiceResolver::IPv6);
+					sd.resolver->start(domain, port);
+				}
+			}
+		}
+	}
+
+signals:
+	void connected();
+	void error(QAbstractSocket::SocketError);
+};
+
 class BSocket::Private
 {
 public:
 	Private()
 	{
-		isSrv = false;
 		qsock = 0;
 		qsock_relay = 0;
-		resolver = 0;
 	}
 
-	bool isSrv;
 	QTcpSocket *qsock;
 	QTcpSocketSignalRelay *qsock_relay;
 	int state;
@@ -120,11 +408,7 @@ public:
 
 	//SafeDelete sd;
 
-	/*!
-	 * Resolver used for lookups,
-	 * will be destroyed and recreated after each lookup
-	 */
-	XMPP::ServiceResolver *resolver;
+	QPointer<HappyEyeballsConnector> connector;
 };
 
 BSocket::BSocket(QObject *parent)
@@ -137,30 +421,19 @@ BSocket::BSocket(QObject *parent)
 BSocket::~BSocket()
 {
 	resetConnection(true);
-	if (d->resolver)
-		delete d->resolver;
 	delete d;
 }
 
-/*
-Recreate teh resolver,
-a safety measure in case the resolver behaves strange when doing multiple lookups in a row
-*/
-void BSocket::recreate_resolver() {
-	if (d->resolver) {
-		disconnect(d->resolver);
-		d->resolver->stop();
-		d->resolver->deleteLater();
-	}
-
-	d->resolver = new XMPP::ServiceResolver;
-}
 
 void BSocket::resetConnection(bool clear)
 {
 #ifdef BS_DEBUG
 	BSDEBUG << clear;
 #endif
+	if (d->connector) {
+		delete d->connector; // fixme: deleteLater?
+	}
+
 	if(d->qsock) {
 		delete d->qsock_relay;
 		d->qsock_relay = 0;
@@ -191,122 +464,48 @@ void BSocket::resetConnection(bool clear)
 	setOpenMode(QIODevice::NotOpen);
 }
 
-void BSocket::ensureSocket()
+void BSocket::ensureConnector()
 {
-	if(!d->qsock) {
-		d->qsock = new QTcpSocket(this);
-#if QT_VERSION >= 0x030200
-		d->qsock->setReadBufferSize(READBUFSIZE);
-#endif
-		d->qsock_relay = new QTcpSocketSignalRelay(d->qsock, this);
-		connect(d->qsock_relay, SIGNAL(hostFound()), SLOT(qs_hostFound()));
-		connect(d->qsock_relay, SIGNAL(connected()), SLOT(qs_connected()));
-		connect(d->qsock_relay, SIGNAL(disconnected()), SLOT(qs_closed()));
-		connect(d->qsock_relay, SIGNAL(readyRead()), SLOT(qs_readyRead()));
-		connect(d->qsock_relay, SIGNAL(bytesWritten(qint64)), SLOT(qs_bytesWritten(qint64)));
-		connect(d->qsock_relay, SIGNAL(error(QAbstractSocket::SocketError)), SLOT(qs_error(QAbstractSocket::SocketError)));
+	if(!d->connector) {
+		d->connector = new HappyEyeballsConnector(this);
+		connect(d->connector, SIGNAL(connected()), SLOT(qs_connected()));
+		connect(d->connector, SIGNAL(error(QAbstractSocket::SocketError)), SLOT(qs_error(QAbstractSocket::SocketError)));
 	}
 }
 
 /* Connect to an already resolved host */
 void BSocket::connectToHost(const QHostAddress &address, quint16 port)
 {
-#ifdef BS_DEBUG
-	BSDEBUG << "a:" << address << "p:" << port;
-#endif
-
 	resetConnection(true);
 	d->address = address;
 	d->port = port;
 	d->state = Connecting;
 
-	ensureSocket();
-	d->qsock->connectToHost(address, port);
+	ensureConnector();
+	d->connector->connectToHost(address, port);
 }
 
 /* Connect to a host via the specified protocol, or the default protocols if not specified */
 void BSocket::connectToHost(const QString &host, quint16 port, QAbstractSocket::NetworkLayerProtocol protocol)
 {
-#ifdef BS_DEBUG
-	BSDEBUG << "h:" << host << "p:" << port << "pr:" << protocol;
-#endif
-
 	resetConnection(true);
 	d->host = host;
 	d->port = port;
-	d->state = HostLookup;
+	d->state = Connecting;
 
-	/* cleanup resolver for the new query */
-	recreate_resolver();
-
-	switch (protocol) {
-		case QAbstractSocket::IPv6Protocol:
-			d->resolver->setProtocol(XMPP::ServiceResolver::IPv6);
-			break;
-		case QAbstractSocket::IPv4Protocol:
-			d->resolver->setProtocol(XMPP::ServiceResolver::IPv4);
-			break;
-		case QAbstractSocket::UnknownNetworkLayerProtocol:
-			/* use ServiceResolver's default in this case */
-			break;
-	}
-
-	connect(d->resolver, SIGNAL(resultReady(QHostAddress,quint16)), this, SLOT(handle_dns_ready(QHostAddress,quint16)));
-	connect(d->resolver, SIGNAL(error(XMPP::ServiceResolver::Error)), this, SLOT(handle_dns_error(XMPP::ServiceResolver::Error)));
-	d->resolver->start(host, port);
+	ensureConnector();
+	d->connector->connectToHost(host, port, protocol);
 }
 
 /* Connect to the hosts for the specified service */
 void BSocket::connectToHost(const QString &service, const QString &transport, const QString &domain, quint16 port)
 {
-#ifdef BS_DEBUG
-	BSDEBUG << "s:" << service << "t:" << transport << "d:" << domain;
-#endif
-
 	resetConnection(true);
 	d->domain = domain;
-	d->state = HostLookup;
+	d->state = Connecting;
 
-	/* cleanup resolver for the new query */
-	recreate_resolver();
-
-	connect(d->resolver, SIGNAL(resultReady(QHostAddress,quint16)), this, SLOT(handle_dns_ready(QHostAddress,quint16)));
-	connect(d->resolver, SIGNAL(error(XMPP::ServiceResolver::Error)), this, SLOT(handle_dns_error(XMPP::ServiceResolver::Error)));
-	d->resolver->start(service, transport, domain, port);
-}
-
-/* host resolved, now try to connect to it */
-void BSocket::handle_dns_ready(const QHostAddress &address, quint16 port)
-{
-#ifdef BS_DEBUG
-	BSDEBUG << "a:" << address << "p:" << port;
-#endif
-	d->isSrv = d->resolver->hasPendingSrv(); // if has no then its fallback or SRV is not used at all
-	connectToHost(address, port);
-}
-
-/* resolver failed the dns lookup */
-void BSocket::handle_dns_error(XMPP::ServiceResolver::Error e) {
-#ifdef BS_DEBUG
-	BSDEBUG << "e:" << e;
-#else
-	Q_UNUSED(e)
-#endif
-
-	emit error(ErrHostNotFound);
-}
-
-/* failed to connect to host */
-void BSocket::handle_connect_error(QAbstractSocket::SocketError e) {
-#ifdef BS_DEBUG
-	BSDEBUG << "d->r:" << d->resolver;
-#else
-	Q_UNUSED(e)
-#endif
-
-	/* try the next host for this service */
-	Q_ASSERT(d->resolver);
-	d->resolver->tryNext();
+	ensureConnector();
+	d->connector->connectToHost(service, transport, domain, port);
 }
 
 QAbstractSocket* BSocket::abstractSocket() const
@@ -325,20 +524,15 @@ int BSocket::socket() const
 void BSocket::setSocket(int s)
 {
 	resetConnection(true);
-	ensureSocket();
-	d->state = Connected;
-	setOpenMode(QIODevice::ReadWrite);
+	d->qsock = new QTcpSocket(this);
 	d->qsock->setSocketDescriptor(s);
+	d->qsock_relay = new QTcpSocketSignalRelay(d->qsock, this);
+	qs_connected_step2();
 }
 
 int BSocket::state() const
 {
 	return d->state;
-}
-
-bool BSocket::isPeerFromSrv() const
-{
-	return d->isSrv;
 }
 
 bool BSocket::isOpen() const
@@ -444,13 +638,22 @@ quint16 BSocket::peerPort() const
 		return 0;
 }
 
-void BSocket::qs_hostFound()
-{
-	//SafeDeleteLock s(&d->sd);
-}
-
 void BSocket::qs_connected()
 {
+	HappyEyeballsConnector::SockData sd = d->connector->takeCurrent(this);
+	d->qsock = sd.sock;
+	d->qsock_relay = sd.relay;
+	d->connector->deleteLater();
+	qs_connected_step2();
+}
+
+void BSocket::qs_connected_step2()
+{
+	connect(d->qsock_relay, SIGNAL(disconnected()), SLOT(qs_closed()));
+	connect(d->qsock_relay, SIGNAL(readyRead()), SLOT(qs_readyRead()));
+	connect(d->qsock_relay, SIGNAL(bytesWritten(qint64)), SLOT(qs_bytesWritten(qint64)));
+	connect(d->qsock_relay, SIGNAL(error(QAbstractSocket::SocketError)), SLOT(qs_error(QAbstractSocket::SocketError)));
+
 	setOpenMode(QIODevice::ReadWrite);
 	d->state = Connected;
 #ifdef BS_DEBUG
@@ -458,6 +661,10 @@ void BSocket::qs_connected()
 #endif
 	//SafeDeleteLock s(&d->sd);
 	emit connected();
+
+	if (d->qsock->bytesAvailable()) {
+		qs_readyRead();
+	}
 }
 
 void BSocket::qs_closed()
@@ -491,13 +698,6 @@ void BSocket::qs_bytesWritten(qint64 x64)
 
 void BSocket::qs_error(QAbstractSocket::SocketError x)
 {
-	/* arriving here from connectToHost() */
-	if (d->state == Connecting) {
-		/* We do our own special error handling in this case */
-		handle_connect_error(x);
-		return;
-	}
-
 	if(x == QTcpSocket::RemoteHostClosedError) {
 #ifdef BS_DEBUG
 		BSDEBUG << "Connection Closed";

@@ -482,6 +482,8 @@ class IRISNET_EXPORT WeightedNameRecordList
 public:
 	WeightedNameRecordList();
 	WeightedNameRecordList(const QList<NameRecord> &list);
+	WeightedNameRecordList(const WeightedNameRecordList &other);
+	WeightedNameRecordList& operator=(const WeightedNameRecordList &other);
 	~WeightedNameRecordList();
 	bool isEmpty() const; //!< Returns true if the list contains no items; otherwise returns false.
 	NameRecord takeNext(); //!< Removes the next host to try from the list and returns it.
@@ -565,6 +567,12 @@ class IRISNET_EXPORT ServiceResolver : public QObject
 {
 	Q_OBJECT
 public:
+	struct ProtoSplit
+	{
+		ServiceResolver *ipv4;
+		ServiceResolver *ipv6;
+	};
+
 	/*! Error codes for (SRV) lookups */
 	enum Error {
 		ServiceNotFound, //!< There is no service with the specified parameters
@@ -572,7 +580,7 @@ public:
 		ErrorGeneric, ErrorTimeout, ErrorNoLocal // Stuff that netnames_jdns.cpp needs ...
 	};
 	/*! Order of lookup / IP protocols to try */
-	enum Protocol { IPv6_IPv4, IPv4_IPv6, IPv6, IPv4 };
+	enum Protocol { IPv6_IPv4, IPv4_IPv6, HappyEyeballs, IPv6, IPv4 };
 
 	/*!
 	 * Create a new ServiceResolver.
@@ -609,8 +617,14 @@ public:
 	void tryNext();
 	/*! Stop the current lookup */
 	void stop();
-
+	/*! Check if we have more unreslved domain:port records */
 	bool hasPendingSrv() const;
+	/*!
+	 * Split resolver to IPv4 and IPv6 to use with HappyEyeballs connector.
+	 * The most appropriate to call this method is after srvReady() was emitted.
+	 * Returned resolvers are owned by current resolver
+	 */
+	ProtoSplit happySplit();
 
 signals:
 	/*!
@@ -621,6 +635,8 @@ signals:
 	void resultReady(const QHostAddress &address, quint16 port);
 	/*! The lookup failed */
 	void error(XMPP::ServiceResolver::Error);
+	/*! SRV domain:port records received. No IP yet. */
+	void srvReady();
 
 private slots:
 	void handle_srv_ready(const QList<XMPP::NameRecord>&);
