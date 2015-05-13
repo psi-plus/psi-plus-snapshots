@@ -186,8 +186,8 @@ public:
 		sd.resolver = new XMPP::ServiceResolver;
 		initResolver(sd.resolver);
 		sd.resolver->setProtocol(protocol == QAbstractSocket::UnknownNetworkLayerProtocol?
-									 (fallbackProtocol == QAbstractSocket::IPv4Protocol? XMPP::ServiceResolver::IPv6 : XMPP::ServiceResolver::IPv4) :
-									 (protocol== QAbstractSocket::IPv4Protocol? XMPP::ServiceResolver::IPv4 : XMPP::ServiceResolver::IPv6));
+			(fallbackProtocol == QAbstractSocket::IPv4Protocol? XMPP::ServiceResolver::IPv6 : XMPP::ServiceResolver::IPv4) :
+			(protocol== QAbstractSocket::IPv4Protocol? XMPP::ServiceResolver::IPv4 : XMPP::ServiceResolver::IPv6));
 		if (protocol == QAbstractSocket::UnknownNetworkLayerProtocol) {
 			addSocket();
 			fallbackTimer.start();
@@ -209,6 +209,8 @@ public:
 		sd.resolver = new XMPP::ServiceResolver(this);
 		sd.resolver->setProtocol(XMPP::ServiceResolver::HappyEyeballs);
 		connect(sd.resolver, SIGNAL(srvReady()), SLOT(splitSrvResolvers()));
+		// we don't care about special handling of fail. we have fallback host there anyway
+		connect(sd.resolver, SIGNAL(srvFailed()), SLOT(splitSrvResolvers()));
 		sd.state = Resolve;
 		sd.resolver->start(service, transport, domain, port);
 	}

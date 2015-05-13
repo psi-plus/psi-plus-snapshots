@@ -637,6 +637,7 @@ signals:
 	void error(XMPP::ServiceResolver::Error);
 	/*! SRV domain:port records received. No IP yet. */
 	void srvReady();
+	void srvFailed();
 
 private slots:
 	void handle_srv_ready(const QList<XMPP::NameRecord>&);

@@ -1293,7 +1293,10 @@ void ServiceResolver::handle_srv_error(XMPP::NameResolver::Error e)
 	cleanup_resolver(static_cast<XMPP::NameResolver*>(sender()));
 
 	/* srvList already contains a failsafe host, try that */
-	try_next_srv();
+	emit srvFailed();
+	if (d->requestedProtocol != HappyEyeballs) {
+		try_next_srv();
+	}
 }
 
 /* hosts resolved, now try to connect to them */
