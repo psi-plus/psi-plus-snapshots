@@ -1109,7 +1109,10 @@ PsiAccount* ChatDlg::account() const
 
 void ChatDlg::setInputText(const QString &text)
 {
-	chatEdit()->setPlainText(text);
+	// chatEdit()->setPlainText(text); because undo/redo history is reset when the function been called.
+	chatEdit()->selectAll();
+	chatEdit()->insertPlainText(text);
+
 	chatEdit()->moveCursor(QTextCursor::End);
 }
 
