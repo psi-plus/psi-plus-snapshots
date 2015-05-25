@@ -974,7 +974,7 @@ unsigned long CoreProtocol::getNewSMId() {
 	unsigned long sm_id = sm_receive_count;
 	sm_receive_queue.push_back(qMakePair(sm_id, false));
 	sm_receive_count++;
-	if (sm_receive_count == 4294967295) sm_receive_count = 0;
+	if (sm_receive_count == (unsigned long)-1) sm_receive_count = 0; /* why do we skip -1? */
 #ifdef SM_DEBUG
 	qWarning() << "Current SM id: " << sm_id;
 #endif
