@@ -293,7 +293,7 @@ while [ $# -gt 0 ]; do
 			shift
 			;;
 		--help) show_usage; exit ;;
-		*) show_usage; exit ;;
+		*) show_usage; exit 1;;
 	esac
 done
 
@@ -465,7 +465,7 @@ if [ "$defmakespec" = "macx-xcode" ]; then
 fi
 
 gen_files() {
-cat >$1/modules.cpp <<EOT
+cat >"$1/modules.cpp" <<EOT
 #line 1 "qt4.qcm"
 /*
 -----BEGIN QCMOD-----
@@ -481,6 +481,11 @@ public:
 	bool exec()
 	{
 		return(QT_VERSION >= 0x040700);
+	}
+
+	QString resultString() const
+	{
+		return QT_VERSION_STR;
 	}
 };
 #line 1 "buildmodeapp.qcm"
@@ -538,7 +543,7 @@ public:
 #ifndef Q_OS_MAC
 		if(opt_debug_and_release)
 		{
-			printf("\nError: The --debug-and-release option is for mac only.\n");
+			printf("\\nError: The --debug-and-release option is for mac only.\\n");
 			exit(1);
 		}
 #endif
@@ -556,7 +561,7 @@ public:
 			++x;
 		if(x > 1)
 		{
-			printf("\nError: Use only one of --release, --debug, or --debug-and-release.\n");
+			printf("\\nError: Use only one of --release, --debug, or --debug-and-release.\\n");
 			exit(1);
 		}
 
@@ -568,7 +573,7 @@ public:
 			++x;
 		if(x > 1)
 		{
-			printf("\nError: Use only one of --separate-debug-info or --no-separate-debug-info\n");
+			printf("\\nError: Use only one of --separate-debug-info or --no-separate-debug-info\\n");
 			exit(1);
 		}
 
@@ -616,12 +621,12 @@ public:
 		if(qc_buildmode_separate_debug_info)
 		{
 			opts += "separate_debug_info";
-			other += "*-g++*:QMAKE_CFLAGS += -g\n";
-			other += "*-g++*:QMAKE_CXXFLAGS += -g\n";
+			other += "*-g++*:QMAKE_CFLAGS += -g\\n";
+			other += "*-g++*:QMAKE_CXXFLAGS += -g\\n";
 		}
 
-		QString str = "CONFIG -= debug_and_release debug release\n";
-		str += QString("CONFIG += ") + opts.join(" ") + '\n';
+		QString str = "CONFIG -= debug_and_release debug release\\n";
+		str += QString("CONFIG += ") + opts.join(" ") + '\\n';
 		conf->addExtra(str);
 
 		if(!other.isEmpty())
@@ -659,7 +664,7 @@ public:
 			    (idn_incdir.isEmpty() && conf->findHeader("stringprep.h", QStringList(), &idn_incdir))) {
 				conf->addIncludePath(idn_incdir);
 			} else {
-				printf("Headers not found!\n");
+				printf("Headers not found!\\n");
 				return false;
 			}
 
@@ -667,7 +672,7 @@ public:
 			   (idn_libdir.isEmpty() && conf->findLibrary("idn", &idn_libdir))) {
 				conf->addLib(idn_libdir.isEmpty()? "-lidn" : QString("-L%1 -lidn").arg(idn_libdir));
 			} else {
-				printf("Libraries not found!\n");
+				printf("Libraries not found!\\n");
 				return false;
 			}
 			return true;
@@ -700,37 +705,46 @@ arg: with-qca-lib=[path],Path to QCA library or framework files
 static QString internal_crypto_prf(const QString &incdir, const QString &libdir, const QString &frameworkdir)
 {
 	QString out = QString(
-"QCA_INCDIR = %1\n"
-"QCA_LIBDIR = %2\n"
-"QMAKE_RPATHDIR = %2\n"
-"QCA_FRAMEWORKDIR = %3\n"
-"\n"
-"CONFIG *= qt\n"
-"\n"
-"LINKAGE =\n"
-"\n"
-"!isEmpty(QCA_FRAMEWORKDIR): {\n"
-"	framework_dir = \$\$QCA_FRAMEWORKDIR\n"
-"	exists(\$\$framework_dir/qca.framework) {\n"
-"		#QMAKE_FRAMEWORKPATH *= \$\$framework_dir\n"
-"		LIBS *= -F\$\$framework_dir\n"
-"		INCLUDEPATH += \$\$framework_dir/qca.framework/Headers\n"
-"		LINKAGE = -framework qca\n"
-"	}\n"
-"}\n"
-"\n"
-"# else, link normally\n"
-"isEmpty(LINKAGE) {\n"
-"	!isEmpty(QCA_INCDIR):INCLUDEPATH += \$\$QCA_INCDIR/QtCrypto\n"
-"	!isEmpty(QCA_LIBDIR):LIBS += -L\$\$QCA_LIBDIR\n"
-"	LINKAGE = -lqca\n"
-"	CONFIG(debug, debug|release) {\n"
-"		windows:LINKAGE = -lqcad\n"
-"		mac:LINKAGE = -lqca_debug\n"
-"	}\n"
-"}\n"
-"\n"
-"LIBS += \$\$LINKAGE\n"
+"QCA_INCDIR = %1\\n"
+"QCA_LIBDIR = %2\\n"
+"QMAKE_RPATHDIR = %2\\n"
+"QCA_FRAMEWORKDIR = %3\\n"
+"\\n"
+"CONFIG *= qt\\n"
+"\\n"
+"LINKAGE =\\n"
+"\\n"
+"!isEmpty(QCA_FRAMEWORKDIR): {\\n"
+"	framework_dir = \$\$QCA_FRAMEWORKDIR\\n"
+"	exists(\$\$framework_dir/qca.framework) {\\n"
+"		#QMAKE_FRAMEWORKPATH *= \$\$framework_dir\\n"
+"		LIBS *= -F\$\$framework_dir\\n"
+"		INCLUDEPATH += \$\$framework_dir/qca.framework/Headers\\n"
+"		LINKAGE = -framework qca\\n"
+"	}\\n"
+"}\\n"
+"\\n"
+"# else, link normally\\n"
+"isEmpty(LINKAGE) {\\n"
+"	!isEmpty(QCA_INCDIR):INCLUDEPATH += \$\$QCA_INCDIR/QtCrypto\\n"
+"	!isEmpty(QCA_LIBDIR):LIBS += -L\$\$QCA_LIBDIR\\n"
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+"	LINKAGE = -lqca-qt5\\n"
+#else
+"	LINKAGE = -lqca\\n"
+#endif
+"	CONFIG(debug, debug|release) {\\n"
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0) /* unchecked. real names may differ */
+"		windows:LINKAGE = -lqca-qt5d\\n"
+"		mac:LINKAGE = -lqca-qt5_debug\\n"
+#else
+"		windows:LINKAGE = -lqcad\\n"
+"		mac:LINKAGE = -lqca_debug\\n"
+#endif
+"	}\\n"
+"}\\n"
+"\\n"
+"LIBS += \$\$LINKAGE\\n"
 	).arg(incdir, libdir, frameworkdir);
 	return out;
 }
@@ -739,35 +753,35 @@ static QString internal_crypto_prf(const QString &incdir, const QString &libdir,
 static bool qca_try(Conf *conf, const QString &incdir, const QString &libdir, const QString &frameworkdir, bool release, bool debug, QString *_prf)
 {
 	QString proextra;
-	QString prf = internal_crypto_prf(incdir, libdir, frameworkdir);
+	QString prf = internal_crypto_prf(conf->escapePath(incdir), conf->escapePath(libdir), frameworkdir);
 	proextra =
-	"CONFIG += qt\n"
-	"CONFIG -= debug_and_release debug release\n"
-	"QT -= gui\n";
+	"CONFIG += qt\\n"
+	"CONFIG -= debug_and_release debug release\\n"
+	"QT -= gui\\n";
 	proextra += prf;
 
 	QString str =
-	"#include <QtCrypto>\n"
-	"\n"
-	"int main()\n"
-	"{\n"
-	"	unsigned long x = QCA_VERSION;\n"
-	"	if(x >= 0x020000 && x < 0x030000) return 0; else return 1;\n"
-	"}\n";
+	"#include <QtCrypto>\\n"
+	"\\n"
+	"int main()\\n"
+	"{\\n"
+	"	unsigned long x = QCA_VERSION;\\n"
+	"	if(x >= 0x020000 && x < 0x030000) return 0; else return 1;\\n"
+	"}\\n";
 
 	// test desired versions, potentially both release and debug
 
 	if(release)
 	{
 		int ret;
-		if(!conf->doCompileAndLink(str, QStringList(), QString(), proextra + "CONFIG += release\n", &ret) || ret != 0)
+		if(!conf->doCompileAndLink(str, QStringList(), QString(), proextra + "CONFIG += release\\n", &ret) || ret != 0)
 			return false;
 	}
 
 	if(debug)
 	{
 		int ret;
-		if(!conf->doCompileAndLink(str, QStringList(), QString(), proextra + "CONFIG += debug\n", &ret) || ret != 0)
+		if(!conf->doCompileAndLink(str, QStringList(), QString(), proextra + "CONFIG += debug\\n", &ret) || ret != 0)
 			return false;
 	}
 
@@ -826,14 +840,21 @@ public:
 
 		QStringList incs;
 		QString version, libs, other;
-		if(conf->findPkgConfig("qca2", VersionMin, "2.0.0", &version, &incs, &libs, &other))
-		{
-			for(int n = 0; n < incs.count(); ++n)
-				conf->addIncludePath(incs[n]);
-			if(!libs.isEmpty())
-				conf->addLib(libs);
-			return true;
-		}
+		QStringList pkgConfigNames;
+#if QT_VERSION >= 0x050000
+		pkgConfigNames << "qca2-qt5";
+#else
+		pkgConfigNames << "qca2 qca2-qt4";
+#endif
+		foreach (const QString &pcn, pkgConfigNames)
+			if(conf->findPkgConfig(pcn, VersionMin, "2.0.0", &version, &incs, &libs, &other))
+			{	
+				for(int n = 0; n < incs.count(); ++n)
+					conf->addIncludePath(incs[n]);
+				if(!libs.isEmpty())
+					conf->addLib(libs);
+				return true;
+			}
 
 		QStringList prefixes;
 		prefixes += "/usr";
@@ -888,8 +909,7 @@ public:
 				if(!conf->findHeader("zlib.h", QStringList(), &s))
 					return false;
 			}
-			incs.append(s.replace("\\\", "\\\\\\\"));
-
+			
 			s = conf->getenv("QC_WITH_ZLIB_LIB");
 			if(!s.isEmpty()) {
 				if(!conf->checkLibrary(s, "z"))
@@ -900,7 +920,7 @@ public:
 					return false;
 			}
 			if (!s.isEmpty()) {
-				libs = QString("-L%1 -lz").arg(s.replace("\\\", "\\\\\\\"));
+				libs = QString("-L%1 -lz").arg(s);
 			} else {
 				libs = s.isEmpty()? "-lz" : QString("-L%1 -lz").arg(s);
 			}
@@ -1025,13 +1045,13 @@ public:
 	bool exec()
 	{
 		QString str =
-			"int main()\n"
-			"{\n"
-			"    return 0;\n"
-			"}\n";
-		QString proextra = "CONFIG += x11\n";
+			"int main()\\n"
+			"{\\n"
+			"    return 0;\\n"
+			"}\\n";
+		QString proextra = "CONFIG += x11\\n";
 #if QT_VERSION >= 0x050000 && defined Q_OS_LINUX
-		proextra += "LIBS += -lxcb\n";
+		proextra += "LIBS += -lxcb\\n";
 #endif
 		return conf->doCompileAndLink(str, QStringList(), QString(), proextra, NULL);
 	}
@@ -1093,16 +1113,16 @@ public:
 		// test for "qdbus" feature
 
 		QString proextra =
-		"CONFIG += qt\n"
-		"QT -= gui\n";
-		"QT += dbus\n";
+		"CONFIG += qt\\n"
+		"QT -= gui\\n";
+		"QT += dbus\\n";
 
 		QString str =
-		"\n"
-		"int main()\n"
-		"{\n"
-		"	return 0;\n"
-		"}\n";
+		"\\n"
+		"int main()\\n"
+		"{\\n"
+		"	return 0;\\n"
+		"}\\n";
 
 		int ret;
 		if(!conf->doCompileAndLink(str, QStringList(), QString(), proextra, &ret))
@@ -1134,19 +1154,19 @@ public:
 	bool exec()
 	{
 		QString proextra =
-		"CONFIG += qt webkit\n"
+		"CONFIG += qt webkit\\n"
 #if QT_VERSION >= 0x050000
-		"QT += webkit webkitwidgets\n";
+		"QT += webkit webkitwidgets\\n";
 #else
-		"QT += webkit\n";
+		"QT += webkit\\n";
 #endif
 
 		QString str =
-		"\n"
-		"int main()\n"
-		"{\n"
-		"	return 0;\n"
-		"}\n";
+		"\\n"
+		"int main()\\n"
+		"{\\n"
+		"	return 0;\\n"
+		"}\\n";
 
 		int ret;
 		if(!conf->doCompileAndLink(str, QStringList(), QString(), proextra, &ret))
@@ -1183,10 +1203,10 @@ public:
 	bool checkFramework(const QString &path, const QString &name)
 	{
 		QString str =
-		"int main()\n"
-		"{\n"
-		"    return 0;\n"
-		"}\n";
+		"int main()\\n"
+		"{\\n"
+		"    return 0;\\n"
+		"}\\n";
 
 		QString extra;
 		if(!path.isEmpty())
@@ -1283,16 +1303,16 @@ public:
 		return false;
 #else
 		QString str =
-			"#include<X11/Xlib.h>\n"
-			"#include<X11/Xutil.h>\n"
-			"#include<X11/extensions/scrnsaver.h>\n"
-			"\n"
-			"int main()\n"
-			"{\n"
-			"    XScreenSaverQueryExtension(NULL, NULL, NULL);\n"
-			"    return 0;\n"
-			"}\n";
-		QString proextra = "CONFIG += x11\n";
+			"#include<X11/Xlib.h>\\n"
+			"#include<X11/Xutil.h>\\n"
+			"#include<X11/extensions/scrnsaver.h>\\n"
+			"\\n"
+			"int main()\\n"
+			"{\\n"
+			"    XScreenSaverQueryExtension(NULL, NULL, NULL);\\n"
+			"    return 0;\\n"
+			"}\\n";
+		QString proextra = "CONFIG += x11\\n";
 
 		if (!conf->doCompileAndLink(str, QStringList(), "-lXss", proextra, NULL)) {
 			if (!conf->doCompileAndLink(str, QStringList(), QString(), proextra, NULL)) {
@@ -1599,6 +1619,8 @@ name: Psi Configuration
 
 #include <QDateTime>
 
+static QString sourceDir;
+
 static bool psiGenerateFile(const QString &inFile, const QString &outFile, const QHash<QString,QString> &vars)
 {
 	QFile fin(inFile);
@@ -1630,7 +1652,7 @@ static QString psiGetVersion()
 	QString str;
 
 	{
-		QFile file("version");
+		QFile file(sourceDir + "/version");
 		if(file.open(QIODevice::ReadOnly | QIODevice::Text))
 		{
 			QTextStream ts(&file);
@@ -1656,25 +1678,35 @@ public:
 	QString checkString() const { return QString(); }
 	bool exec()
 	{
+		QFileInfo fi(qc_getenv("QC_COMMAND"));
+		sourceDir = fi.absolutePath();
+
 		QString version = psiGetVersion();
 		QHash<QString,QString> vars;
 		vars["VERSION"] = version;
-
-		psiGenerateFile("mac/Info.plist.in", "mac/Info.plist", vars);
+		
+		QDir::current().mkpath("mac");
+		psiGenerateFile(sourceDir + "/mac/Info.plist.in", "mac/Info.plist", vars);
+		
+		vars.clear();
+		vars["source_dir"] = sourceDir;
+		vars["build_dir"] = QDir::currentPath();
+		psiGenerateFile(sourceDir + "/.qmake.cache.in", ".qmake.cache", vars);
 
 #ifndef Q_OS_WIN
 		conf->addExtra(QString("PSI_LIBDIR=%1/psi-plus").arg(conf->getenv("LIBDIR")));
 		conf->addExtra(QString("PSI_DATADIR=%1/psi-plus").arg(conf->getenv("DATADIR")));
 #endif
 
+		QDir(".").mkdir("src");
 		QFile file("src/config.h");
 		if ( file.open(QIODevice::WriteOnly | QIODevice::Text) ) {
 			QTextStream stream( &file );
 #ifndef Q_OS_WIN
-			stream << "#define PSI_LIBDIR \"" << conf->getenv("LIBDIR") << "/psi-plus\"" << endl;
-			stream << "#define PSI_DATADIR \"" << conf->getenv("DATADIR") << "/psi-plus\"" << endl;
+			stream << "#define PSI_LIBDIR \\"" << conf->getenv("LIBDIR") << "/psi-plus\\"" << endl;
+			stream << "#define PSI_DATADIR \\"" << conf->getenv("DATADIR") << "/psi-plus\\"" << endl;
 #endif
-			stream << "#define PSI_VERSION \"" << version << "\"" << endl;
+			stream << "#define PSI_VERSION \\"" << version << "\\"" << endl;
 		}
 
 		conf->addDefine("HAVE_CONFIG");
@@ -1751,38 +1783,38 @@ public:
                 }
 
 		QString str;
-		str += "# qconf\n\n";
+		str += "# qconf\\n\\n";
 
 		QString var;
 		var = qc_getenv("PREFIX");
 		if(!var.isEmpty())
-			str += QString("PREFIX = %1\n").arg(var);
+			str += QString("PREFIX = %1\\n").arg(var);
 		var = qc_getenv("BINDIR");
 		if(!var.isEmpty())
-			str += QString("BINDIR = %1\n").arg(var);
+			str += QString("BINDIR = %1\\n").arg(var);
 		var = qc_getenv("INCDIR");
 		if(!var.isEmpty())
-			str += QString("INCDIR = %1\n").arg(var);
+			str += QString("INCDIR = %1\\n").arg(var);
 		var = qc_getenv("LIBDIR");
 		if(!var.isEmpty())
-			str += QString("LIBDIR = %1\n").arg(var);
+			str += QString("LIBDIR = %1\\n").arg(var);
 		var = qc_getenv("DATADIR");
 		if(!var.isEmpty())
-			str += QString("DATADIR = %1\n").arg(var);
-		str += '\n';
+			str += QString("DATADIR = %1\\n").arg(var);
+		str += '\\n';
 
 		if(qc_getenv("QC_STATIC") == "Y")
-			str += "CONFIG += staticlib\n";
+			str += "CONFIG += staticlib\\n";
 
 		if(!conf->DEFINES.isEmpty())
-			str += "DEFINES += " + conf->DEFINES + '\n';
+			str += "DEFINES += " + conf->DEFINES + '\\n';
 		if(!conf->INCLUDEPATH.isEmpty())
-			str += "INCLUDEPATH += " + conf->INCLUDEPATH + '\n';
+			str += "INCLUDEPATH += " + conf->escapedIncludes() + '\\n';
 		if(!conf->LIBS.isEmpty())
-			str += "LIBS += " + conf->LIBS + '\n';
+			str += "LIBS += " + conf->escapedLibs() + '\\n';
 		if(!conf->extra.isEmpty())
 			str += conf->extra;
-		str += '\n';
+		str += '\\n';
 
                 QByteArray cs = str.toLatin1();
                 f.write(cs);
@@ -1793,7 +1825,7 @@ public:
 };
 
 EOT
-cat >$1/modules_new.cpp <<EOT
+cat >"$1/modules_new.cpp" <<EOT
     o = new qc_qt4(conf);
     o->required = true;
     o->disabled = false;
@@ -1853,7 +1885,7 @@ cat >$1/modules_new.cpp <<EOT
     o->disabled = false;
 
 EOT
-cat >$1/conf4.h <<EOT
+cat >"$1/conf4.h" <<EOT
 /*
 Copyright (C) 2004-2008  Justin Karneges
 
@@ -1918,8 +1950,8 @@ public:
 	QString maketool;
 
 	QString DEFINES;
-	QString INCLUDEPATH;
-	QString LIBS;
+	QStringList INCLUDEPATH;
+	QStringList LIBS;
 	QString extra;
 
 	QList<ConfObj*> list;
@@ -1930,6 +1962,12 @@ public:
 
 	QString getenv(const QString &var);
 	QString qvar(const QString &s);
+	QString normalizePath(const QString &s) const;
+	QString escapeQmakeVar(const QString &s) const;
+	inline QString escapePath(const QString &s) /* prepare fs path for qmake file */
+	{ return escapeQmakeVar(normalizePath(s)); }
+	QString escapedIncludes() const;
+	QString escapedLibs() const;
 
 	bool exec();
 
@@ -1966,7 +2004,7 @@ private:
 #endif
 
 EOT
-cat >$1/conf4.cpp <<EOT
+cat >"$1/conf4.cpp" <<EOT
 /*
 Copyright (C) 2004-2008  Justin Karneges
 
@@ -2144,12 +2182,77 @@ bool qc_removedir(const QString &dirPath)
 	return true;
 }
 
+// simple command line arguemnts splitter able to understand quoted args.
+// the splitter removes quotes and unescapes symbols as well.
+QStringList qc_splitflags(const QString &flags)
+{
+	QStringList ret;
+	bool searchStart = true;
+	bool inQuotes = false;
+	bool escaped = false;
+	QChar quote, backslash = QLatin1Char('\\\\');
+	QString buf;
+	buf.reserve(PATH_MAX);
+	for (int i=0; i < flags.length(); i++) {
+		if (searchStart && flags[i].isSpace()) {
+			continue;
+		}
+		if (searchStart) {
+			searchStart = false;
+			buf.clear();
+		}
+		if (escaped) {
+			buf += flags[i];
+			escaped = false;
+			continue;
+		}
+		//buf += flags[i];
+		if (inQuotes) {
+			if (quote == QLatin1Char('\\'')) {
+				if (flags[i] == quote) {
+					inQuotes = false;
+					continue;
+				}
+			} else { // we are in double quoetes
+				if (flags[i] == backslash && i < flags.length() - 1 &&
+						(flags[i+1] == QLatin1Char('"') || flags[i+1] == backslash))
+				{
+					// if next symbol is one of in parentheses ("\\)
+					escaped = true;
+					continue;
+				}
+			}
+		} else {
+			if (flags[i].isSpace()) {
+				ret.append(buf);
+				searchStart = true;
+				buf.clear();
+				continue;
+#ifndef Q_OS_WIN /* on windows backslash is just a path separator */
+			} else if (flags[i] == backslash) {
+				escaped = true;
+				continue; // just add next symbol
+#endif
+			} else if (flags[i] == QLatin1Char('\\'') || flags[i] == QLatin1Char('"')) {
+				inQuotes = true;
+				quote = flags[i];
+				continue;
+			}
+		}
+		buf += flags[i];
+	}
+	if (buf.size()) {
+		ret.append(buf);
+	}
+	return ret;
+}
+
 void qc_splitcflags(const QString &cflags, QStringList *incs, QStringList *otherflags)
 {
 	incs->clear();
 	otherflags->clear();
 
-	QStringList cflagsList = cflags.split(" ");
+	QStringList cflagsList = qc_splitflags(cflags);
 	for(int n = 0; n < cflagsList.count(); ++n)
 	{
 		QString str = cflagsList[n];
@@ -2176,6 +2279,90 @@ QString qc_escapeArg(const QString &str)
 			out += str[n];
 	}
 	return out;
+}
+
+
+QString qc_trim_char(const QString &s, const QChar &ch)
+{
+	if (s.startsWith(ch) && s.endsWith(ch)) {
+		return s.mid(1, s.size() - 2);
+	}
+	return s;
+}
+
+// removes surrounding quotes, removes trailing slashes, converts to native separators.
+// accepts unescaped but possible quoted path
+QString qc_normalize_path(const QString &str)
+{
+	QString path = str.trimmed();
+	path = qc_trim_char(path, QLatin1Char('"'));
+	path = qc_trim_char(path, QLatin1Char('\\''));
+#ifdef Q_OS_WIN
+	QLatin1Char nativeSep('\\\\');
+	path.replace(QLatin1Char('/'), QLatin1Char('\\\\'));
+#else
+	QLatin1Char nativeSep('/');
+#endif
+	// trim trailing slashes
+	while (path.length() && path[path.length() - 1] == nativeSep) {
+		path.resize(path.length() - 1);
+	}
+	return path;
+}
+
+// escape filesystem path to be added to qmake pro/pri file.
+QString qc_escape_string_var(const QString &str)
+{
+	QString path = str;
+	path.replace(QLatin1Char('\\\\'), QLatin1String("\\\\\\\\"))
+			.replace(QLatin1Char('"'), QLatin1String("\\\\\\""));
+	if (path.indexOf(QLatin1Char(' ')) != -1) { // has spaces
+		return QLatin1Char('"') + path + QLatin1Char('"');
+	}
+	return path;
+}
+
+// escapes each path in incs and join into single string suiable for INCLUDEPATH var
+QString qc_prepare_includepath(const QStringList &incs)
+{
+	if (incs.empty()) {
+		return QString();
+	}
+	QStringList ret;
+	foreach (const QString &path, incs) {
+		ret.append(qc_escape_string_var(path));
+	}
+	return ret.join(QLatin1String(" "));
+}
+
+// escapes each path in libs and to make it suiable for LIBS var
+// notice, entries of libs are every single arg for linker.
+QString qc_prepare_libs(const QStringList &libs)
+{
+	if (libs.isEmpty()) {
+		return QString();
+	}
+	QSet<QString> pathSet;
+	QStringList paths;
+	QStringList ordered;
+	foreach (const QString &arg, libs) {
+		if (arg.startsWith(QLatin1String("-L"))) {
+			QString path = qc_escape_string_var(arg.mid(2));
+			if (!pathSet.contains(path)) {
+				pathSet.insert(path);
+				paths.append(path);
+			}
+		} else if (arg.startsWith(QLatin1String("-l"))) {
+			ordered.append(arg);
+		} else {
+			ordered.append(qc_escape_string_var(arg));
+		}
+	}
+	QString ret;
+	if (paths.size()) {
+		ret += (QLatin1String(" -L") + paths.join(QLatin1String(" -L")) + QLatin1Char(' '));
+	}
+	return ret + ordered.join(QLatin1String(" "));
 }
 
 //----------------------------------------------------------------------------
@@ -2240,7 +2427,7 @@ public:
 		if(!libs.isEmpty())
 			conf->addLib(libs);
 		//if(!other.isEmpty())
-		//	conf->addExtra(QString("QMAKE_CFLAGS += %1\n").arg(other));
+		//	conf->addExtra(QString("QMAKE_CFLAGS += %1\\n").arg(other));
 		return true;
 	}
 };
@@ -2279,9 +2466,9 @@ void Conf::debug(const QString &s)
 	if(debug_enabled)
 	{
 		if(first_debug)
-			printf("\n");
+			printf("\\n");
 		first_debug = false;
-		printf(" * %s\n", qPrintable(s));
+		printf(" * %s\\n", qPrintable(s));
 	}
 }
 
@@ -2325,14 +2512,14 @@ bool Conf::exec()
 		{
 			QString result = o->resultString();
 			if(!first_debug)
-				printf(" -> %s\n", result.toLatin1().data());
+				printf(" -> %s\\n", result.toLatin1().data());
 			else
-				printf(" %s\n", result.toLatin1().data());
+				printf(" %s\\n", result.toLatin1().data());
 		}
 
 		if(!ok && o->required)
 		{
-			printf("\nError: need %s!\n", o->name().toLatin1().data());
+			printf("\\nError: need %s!\\n", o->name().toLatin1().data());
 			return false;
 		}
 	}
@@ -2344,14 +2531,34 @@ QString Conf::qvar(const QString &s)
 	return vars.value(s);
 }
 
+QString Conf::normalizePath(const QString &s) const
+{
+	return qc_normalize_path(s);
+}
+
+QString Conf::escapeQmakeVar(const QString &s) const
+{
+	return qc_escape_string_var(s);
+}
+
+QString Conf::escapedIncludes() const
+{
+	return qc_prepare_includepath(INCLUDEPATH);
+}
+
+QString Conf::escapedLibs() const
+{
+	return qc_prepare_libs(LIBS);
+}
+
 QString Conf::expandIncludes(const QString &inc)
 {
-	return QString("-I") + inc;
+	return QLatin1String("-I") + inc;
 }
 
 QString Conf::expandLibs(const QString &lib)
 {
-	return QString("-L") + lib;
+	return QLatin1String("-L") + lib;
 }
 
 int Conf::doCommand(const QString &s, QByteArray *out)
@@ -2365,7 +2572,7 @@ int Conf::doCommand(const QString &s, QByteArray *out)
 int Conf::doCommand(const QString &prog, const QStringList &args, QByteArray *out)
 {
 	QString fullcmd = prog;
-	QString argstr = args.join(" ");
+	QString argstr = args.join(QLatin1String(" "));
 	if(!argstr.isEmpty())
 		fullcmd += QString(" ") + argstr;
 	debug(QString("[%1]").arg(fullcmd));
@@ -2381,10 +2588,14 @@ bool Conf::doCompileAndLink(const QString &filedata, const QStringList &incs, co
 #else
 	QDir tmp(".qconftemp");
 #endif
+	QStringList normalizedLibs;
+	foreach (const QString &l, qc_splitflags(libs)) {
+		normalizedLibs.append(qc_normalize_path(l));
+	}
 
 	if(!tmp.mkdir("atest"))
 	{
-		debug("unable to create atest dir");
+		debug(QString("unable to create atest dir: %1").arg(tmp.absoluteFilePath("atest")));
 		return false;
 	}
 	QDir dir(tmp.filePath("atest"));
@@ -2409,18 +2620,19 @@ bool Conf::doCompileAndLink(const QString &filedata, const QStringList &incs, co
 	}
 	f.close();
 
-	debug(QString("Wrote atest.cpp:\n%1").arg(filedata));
+	debug(QString("Wrote atest.cpp:\\n%1").arg(filedata));
 
 	QString pro = QString(
-		"CONFIG  += console\n"
-		"CONFIG  -= qt app_bundle\n"
-		"DESTDIR  = \$\$PWD\n"
-		"SOURCES += atest.cpp\n");
-	QString inc = incs.join(" ");
+		"CONFIG  += console\\n"
+		"CONFIG  -= qt app_bundle\\n"
+		"DESTDIR  = \$\$PWD\\n"
+		"SOURCES += atest.cpp\\n");
+	QString inc = qc_prepare_includepath(incs);
 	if(!inc.isEmpty())
-		pro += "INCLUDEPATH += " + inc + '\n';
-	if(!libs.isEmpty())
-		pro += "LIBS += " + libs + '\n';
+		pro += "INCLUDEPATH += " + inc + '\\n';
+	QString escaped_libs = qc_prepare_libs(normalizedLibs);
+	if(!escaped_libs.isEmpty())
+		pro += "LIBS += " + escaped_libs + '\\n';
 	pro += proextra;
 
 	fname = dir.filePath("atest.pro");
@@ -2437,7 +2649,7 @@ bool Conf::doCompileAndLink(const QString &filedata, const QStringList &incs, co
 	}
 	f.close();
 
-	debug(QString("Wrote atest.pro:\n%1").arg(pro));
+	debug(QString("Wrote atest.pro:\\n%1").arg(pro));
 
 	QString oldpath = QDir::currentPath();
 	QDir::setCurrent(dir.path());
@@ -2481,10 +2693,7 @@ bool Conf::doCompileAndLink(const QString &filedata, const QStringList &incs, co
 
 bool Conf::checkHeader(const QString &path, const QString &h)
 {
-	QFileInfo fi(path + '/' + h);
-	if(fi.exists())
-		return true;
-	return false;
+	return QDir(path).exists(h);
 }
 
 bool Conf::findHeader(const QString &h, const QStringList &ext, QString *inc)
@@ -2511,12 +2720,12 @@ bool Conf::findHeader(const QString &h, const QStringList &ext, QString *inc)
 bool Conf::checkLibrary(const QString &path, const QString &name)
 {
 	QString str =
-		//"#include <stdio.h>\n"
-		"int main()\n"
-		"{\n"
-		//"    printf(\"library checker running\\\\n\");\n"
-		"    return 0;\n"
-		"}\n";
+		//"#include <stdio.h>\\n"
+		"int main()\\n"
+		"{\\n"
+		//"    printf(\\"library checker running\\\\\\\\n\\");\\n"
+		"    return 0;\\n"
+		"}\\n";
 
 	QString libs;
 	if(!path.isEmpty())
@@ -2621,7 +2830,7 @@ bool Conf::findFooConfig(const QString &path, QString *version, QStringList *inc
 	*version = version_out;
 	*incs = incs_out;
 	*libs = libs_out;
-	*otherflags = otherflags_out.join(" ");
+	*otherflags = otherflags_out.join(QLatin1String(" "));
 	return true;
 }
 
@@ -2685,7 +2894,7 @@ bool Conf::findPkgConfig(const QString &name, VersionMode mode, const QString &r
 	*version = version_out;
 	*incs = incs_out;
 	*libs = libs_out;
-	*otherflags = otherflags_out.join(" ");
+	*otherflags = otherflags_out.join(QLatin1String(" "));
 	return true;
 }
 
@@ -2700,25 +2909,26 @@ void Conf::addDefine(const QString &str)
 
 void Conf::addLib(const QString &str)
 {
-	if(LIBS.isEmpty())
-		LIBS = str;
-	else
-		LIBS += QString(" ") + str;
+	QStringList libs = qc_splitflags(str);
+	foreach (const QString &lib, libs) {
+		if (lib.startsWith("-l")) {
+			LIBS.append(lib);
+		} else {
+			LIBS.append(qc_normalize_path(lib)); // we don't care about -L prefix since normalier does not touch it.
+		}
+	}
 	debug(QString("LIBS += %1").arg(str));
 }
 
 void Conf::addIncludePath(const QString &str)
 {
-	if(INCLUDEPATH.isEmpty())
-		INCLUDEPATH = str;
-	else
-		INCLUDEPATH += QString(" ") + str;
+	INCLUDEPATH.append(qc_normalize_path(str));
 	debug(QString("INCLUDEPATH += %1").arg(str));
 }
 
 void Conf::addExtra(const QString &str)
 {
-	extra += str + '\n';
+	extra += str + '\\n';
 	debug(QString("extra += %1").arg(str));
 }
 
@@ -2731,8 +2941,9 @@ void Conf::addExtra(const QString &str)
 # include"modules.cpp"
 #endif
 
-int main()
+int main(int argc, char ** argv)
 {
+	QCoreApplication app(argc, argv);
 	Conf *conf = new Conf;
 	ConfObj *o = 0;
 	Q_UNUSED(o);
@@ -2742,9 +2953,9 @@ int main()
 
 	conf->debug_enabled = (qc_getenv("QC_VERBOSE") == "Y") ? true: false;
 	if(conf->debug_enabled)
-		printf(" -> ok\n");
+		printf(" -> ok\\n");
 	else
-		printf("ok\n");
+		printf("ok\\n");
 
 	QString confCommand = qc_getenv("QC_COMMAND");
 	QString proName = qc_getenv("QC_PROFILE");
@@ -2753,12 +2964,12 @@ int main()
 	conf->maketool = qc_getenv("QC_MAKETOOL");
 
 	if(conf->debug_enabled)
-		printf("conf command: [%s]\n", qPrintable(confCommand));
+		printf("conf command: [%s]\\n", qPrintable(confCommand));
 
 	QString confPath = qc_findself(confCommand);
 	if(confPath.isEmpty())
 	{
-		printf("Error: cannot find myself; rerun with an absolute path\n");
+		printf("Error: cannot find myself; rerun with an absolute path\\n");
 		return 1;
 	}
 
@@ -2768,14 +2979,14 @@ int main()
 
 	if(conf->debug_enabled)
 	{
-		printf("conf path:    [%s]\n", qPrintable(confPath));
-		printf("srcdir:       [%s]\n", qPrintable(srcdir));
-		printf("builddir:     [%s]\n", qPrintable(builddir));
-		printf("profile:      [%s]\n", qPrintable(proPath));
-		printf("qmake path:   [%s]\n", qPrintable(conf->qmake_path));
-		printf("qmakespec:    [%s]\n", qPrintable(conf->qmakespec));
-		printf("make tool:    [%s]\n", qPrintable(conf->maketool));
-		printf("\n");
+		printf("conf path:    [%s]\\n", qPrintable(confPath));
+		printf("srcdir:       [%s]\\n", qPrintable(srcdir));
+		printf("builddir:     [%s]\\n", qPrintable(builddir));
+		printf("profile:      [%s]\\n", qPrintable(proPath));
+		printf("qmake path:   [%s]\\n", qPrintable(conf->qmake_path));
+		printf("qmakespec:    [%s]\\n", qPrintable(conf->qmakespec));
+		printf("make tool:    [%s]\\n", qPrintable(conf->maketool));
+		printf("\\n");
 	}
 
 	bool success = false;
@@ -2784,46 +2995,46 @@ int main()
 		QFile f("conf.pri");
 		if(!f.open(QFile::WriteOnly | QFile::Truncate))
 		{
-			printf("Error writing %s\n", qPrintable(f.fileName()));
+			printf("Error writing %s\\n", qPrintable(f.fileName()));
 			return 1;
 		}
 
 		QString str;
-		str += "# qconf\n\n";
+		str += "# qconf\\n\\n";
 
 		QString var;
 		var = qc_getenv("PREFIX");
 		if(!var.isEmpty())
-			str += QString("PREFIX = %1\n").arg(var);
+			str += QString("PREFIX = %1\\n").arg(var);
 		var = qc_getenv("BINDIR");
 		if(!var.isEmpty())
-			str += QString("BINDIR = %1\n").arg(var);
+			str += QString("BINDIR = %1\\n").arg(var);
 		var = qc_getenv("INCDIR");
 		if(!var.isEmpty())
-			str += QString("INCDIR = %1\n").arg(var);
+			str += QString("INCDIR = %1\\n").arg(var);
 		var = qc_getenv("LIBDIR");
 		if(!var.isEmpty())
-			str += QString("LIBDIR = %1\n").arg(var);
+			str += QString("LIBDIR = %1\\n").arg(var);
 		var = qc_getenv("DATADIR");
 		if(!var.isEmpty())
-			str += QString("DATADIR = %1\n").arg(var);
-		str += '\n';
+			str += QString("DATADIR = %1\\n").arg(var);
+		str += '\\n';
 
 		if(qc_getenv("QC_STATIC") == "Y")
-			str += "CONFIG += staticlib\n";
+			str += "CONFIG += staticlib\\n";
 
 		// TODO: don't need this?
-		//str += "QT_PATH_PLUGINS = " + QString(qInstallPathPlugins()) + '\n';
+		//str += "QT_PATH_PLUGINS = " + QString(qInstallPathPlugins()) + '\\n';
 
 		if(!conf->DEFINES.isEmpty())
-			str += "DEFINES += " + conf->DEFINES + '\n';
+			str += "DEFINES += " + conf->DEFINES + '\\n';
 		if(!conf->INCLUDEPATH.isEmpty())
-			str += "INCLUDEPATH += " + conf->INCLUDEPATH + '\n';
+			str += "INCLUDEPATH += " + qc_prepare_includepath(conf->INCLUDEPATH) + '\\n';
 		if(!conf->LIBS.isEmpty())
-			str += "LIBS += " + conf->LIBS + '\n';
+			str += "LIBS += " + qc_prepare_libs(conf->LIBS) + '\\n';
 		if(!conf->extra.isEmpty())
 			str += conf->extra;
-		str += '\n';
+		str += '\\n';
 
 		QByteArray cs = str.toLatin1();
 		f.write(cs);
@@ -2853,7 +3064,7 @@ int main()
 }
 
 EOT
-cat >$1/conf4.pro <<EOT
+cat >"$1/conf4.pro" <<EOT
 CONFIG  += console
 CONFIG  -= app_bundle
 QT      -= gui
@@ -2899,11 +3110,11 @@ export QC_WITH_ASPELL_LIB
 export QC_DISABLE_enchant
 export QC_ENABLE_plugins
 export QC_VERBOSE
-rm -rf .qconftemp
+rm -rf ".qconftemp"
 (
-	mkdir .qconftemp
-	gen_files .qconftemp
-	cd .qconftemp
+	mkdir ".qconftemp"
+	gen_files ".qconftemp"
+	cd ".qconftemp"
 	if [ ! -z "$qm_spec" ]; then
 		$qm -spec $qm_spec conf4.pro >/dev/null
 	else
@@ -2914,7 +3125,7 @@ rm -rf .qconftemp
 )
 
 if [ "$?" != "0" ]; then
-	rm -rf .qconftemp
+	rm -rf ".qconftemp"
 	if [ "$QC_VERBOSE" = "Y" ]; then
 		echo " -> fail"
 	else
@@ -2941,15 +3152,15 @@ QC_QMAKESPEC=$qm_spec
 export QC_QMAKESPEC
 QC_MAKETOOL=$MAKE
 export QC_MAKETOOL
-.qconftemp/conf
+".qconftemp/conf"
 ret="$?"
 if [ "$ret" = "1" ]; then
-	rm -rf .qconftemp
+	rm -rf ".qconftemp"
 	echo
 	exit 1;
 else
 	if [ "$ret" != "0" ]; then
-		rm -rf .qconftemp
+		rm -rf ".qconftemp"
 		if [ "$QC_VERBOSE" = "Y" ]; then
 			echo " -> fail"
 		else
@@ -2961,7 +3172,7 @@ else
 		exit 1;
 	fi
 fi
-rm -rf .qconftemp
+rm -rf ".qconftemp"
 
 echo
 echo "Good, your configure finished.  Now run $MAKE."
