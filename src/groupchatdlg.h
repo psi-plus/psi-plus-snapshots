@@ -130,6 +130,9 @@ private slots:
 	void lv_action(const QString &, const Status &, int);
 	void doClear();
 	void doClearButton();
+	void doBookmark();
+	void copyMucJid();
+	void doRemoveBookmark();
 	void buildMenu();
 	void logSelectionChanged();
 	void setConnecting();
@@ -144,9 +147,6 @@ private slots:
 	void sendButtonMenu();
 	void editTemplates();
 	void doPasteAndSend();
-	void doBookmark();
-	void copyMucJid();
-	void doRemoveBookmark();
 	void sendTemp(const QString &);
 	void psButtonEnabled();
 	void horizSplitterMoved();

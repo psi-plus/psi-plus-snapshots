@@ -97,6 +97,8 @@
         <file>iconsets/system/default/notification_chat_send.png</file>
         <file>iconsets/system/default/notification_chat_time.png</file>
         <file>iconsets/system/default/throbber.png</file>
+        <file>iconsets/system/default/bookmark_add.png</file>
+        <file>iconsets/system/default/bookmark_remove.png</file>
         <file>iconsets/system/default/theme_title_texture.png</file>
 	<file>iconsets/system/default/action_button_send.png</file>
         <file>iconsets/system/default/psiplus/activity.png</file>
@@ -114,8 +116,6 @@
         <file>iconsets/system/default/psiplus/action_vcard_save_as.png</file>
         <file>iconsets/system/default/psiplus/advanced.png</file>
         <file>iconsets/system/default/psiplus/avcall.png</file>
-        <file>iconsets/system/default/psiplus/bookmark_add.png</file>
-        <file>iconsets/system/default/psiplus/bookmark_remove.png</file>
         <file>iconsets/system/default/psiplus/bookmarks.png</file>
         <file>iconsets/system/default/psiplus/cm_check.png</file>
         <file>iconsets/system/default/psiplus/cm_export.png</file>
