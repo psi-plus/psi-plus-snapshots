@@ -365,7 +365,7 @@ private slots:
 		QStringList lines = db.readDebugLines();
 #ifdef JDNS_DEBUG
 		for(int n = 0; n < lines.count(); ++n)
-			printf("jdns: %s\n", qPrintable(lines[n]));
+			qDebug("jdns: %s\n", qPrintable(lines[n]));
 #else
 		Q_UNUSED(lines);
 #endif
