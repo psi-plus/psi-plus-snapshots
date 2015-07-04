@@ -21,6 +21,7 @@
 #ifndef SIMPLECLI_H
 #define SIMPLECLI_H
 
+#include <QObject>
 #include <QMap>
 #include <QStringList>
 
