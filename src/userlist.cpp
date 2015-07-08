@@ -521,7 +521,7 @@ QString UserListItem::findClient(QString name) const
 		res = "loudmouth";
 	else if(name.startsWith("kopete"))
 		res = "kopete";
-	else if(name.startsWith("magnet2.ru"))
+	else if(name.startsWith("magnet2.py"))
 		res = "magnet2-bot";
 	else if(name.startsWith("mail.google.com"))
 		res = "mail.google.com";
