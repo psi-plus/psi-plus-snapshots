@@ -59,7 +59,7 @@ void HunspellChecker::getDictPaths()
 		QSet<QString> dictPathSet;
 		QString pathFromEnv = QString::fromLocal8Bit(qgetenv("MYSPELL_DICT_DIR"));
 		if (!pathFromEnv.isEmpty())
-		dictPathSet << pathFromEnv;
+			dictPathSet << pathFromEnv;
 #if defined(Q_OS_WIN)
 		dictPathSet << QCoreApplication::applicationDirPath() + QLatin1String(stringify(DICTSUBDIR))
 			    << ApplicationInfo::homeDir(ApplicationInfo::DataLocation) + "/myspell/dicts";
@@ -81,13 +81,13 @@ bool HunspellChecker::scanDictPaths(const QString &language, QFileInfo &aff , QF
 	foreach (const QString &dictPath, dictPaths_) {
 		QDir dir(dictPath);
 		if (dir.exists()) {
-		QFileInfo affInfo(dir.filePath(language + QLatin1String(".aff")));
-		QFileInfo dicInfo(dir.filePath(language + QLatin1String(".dic")));
-		if (affInfo.isReadable() && dicInfo.isReadable()) {
-			aff = affInfo;
-			dic = dicInfo;
-			return true;
-		}
+			QFileInfo affInfo(dir.filePath(language + QLatin1String(".aff")));
+			QFileInfo dicInfo(dir.filePath(language + QLatin1String(".dic")));
+			if (affInfo.isReadable() && dicInfo.isReadable()) {
+				aff = affInfo;
+				dic = dicInfo;
+				return true;
+			}
 		}
 	}
 	return false;
@@ -99,13 +99,13 @@ void HunspellChecker::getSupportedLanguages()
 	foreach (const QString &dictPath, dictPaths_) {
 		QDir dir(dictPath);
 		if (!dir.exists()) {
-		continue;
+			continue;
 		}
 		foreach (const QFileInfo &fi, dir.entryInfoList(QStringList() << "*.dic", QDir::Files)) {
-		QLocale locale(fi.baseName());
-		if (locale != QLocale::c())  {
-			retHash.insert(locale.nativeLanguageName()+locale.nativeCountryName(), locale);
-		}
+			QLocale locale(fi.baseName());
+			if (locale != QLocale::c())  {
+				retHash.insert(locale.nativeLanguageName()+locale.nativeCountryName(), locale);
+			}
 		}
 	}
 	supportedLangs_ = retHash.values();
@@ -134,7 +134,7 @@ QList<QString> HunspellChecker::suggestions(const QString& word)
 		int sugNum = li.hunspell_->suggest(&result, li.codec->fromUnicode(word));
 		if (sugNum != 0) {
 			QStringList qtResult;
-			for(int i=0; i < sugNum; i++) {
+			for (int i=0; i < sugNum; i++) {
 				qtResult << li.codec->toUnicode(result[i]);
 			}
 			return qtResult;
@@ -154,7 +154,7 @@ bool HunspellChecker::isCorrect(const QString &word)
 }
 bool HunspellChecker::add(const QString& word)
 {
-	if(!word.isEmpty()) {
+	if (!word.isEmpty()) {
 		QString trimmed_word = word.trimmed();
 		foreach (const LangItem &li, languages_) {
 			if (li.hunspell_->add(li.codec->fromUnicode(trimmed_word)) != 0) {

@@ -31,7 +31,6 @@
 #include <QLocale>
 #include <QFileInfo>
 #include <QStringList>
-#include <QSharedPointer>
 #include "spellchecker.h"
 
 class Hunspell;
