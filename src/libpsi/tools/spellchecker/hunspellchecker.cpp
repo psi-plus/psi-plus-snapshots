@@ -129,18 +129,17 @@ void HunspellChecker::addLanguage(const QLocale &locale)
 
 QList<QString> HunspellChecker::suggestions(const QString& word)
 {
+	QStringList qtResult;
 	foreach (const LangItem &li, languages_) {
 		char **result;
 		int sugNum = li.hunspell_->suggest(&result, li.codec->fromUnicode(word));
 		if (sugNum != 0) {
-			QStringList qtResult;
 			for (int i=0; i < sugNum; i++) {
 				qtResult << li.codec->toUnicode(result[i]);
 			}
-			return qtResult;
 		}
 	}
-	return QList<QString>();
+	return qtResult;
 }
 
 bool HunspellChecker::isCorrect(const QString &word)
