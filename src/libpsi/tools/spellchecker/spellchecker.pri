@@ -17,3 +17,8 @@ mac {
 	HEADERS += $$PWD/enchantchecker.h
 	SOURCES += $$PWD/enchantchecker.cpp
 }
+
+!mac:contains(DEFINES, HAVE_HUNSPELL) {
+	HEADERS += $$PWD/hunspellchecker.h
+	SOURCES += $$PWD/hunspellchecker.cpp
+}

@@ -34,6 +34,8 @@
 #include "enchantchecker.h"
 #elif defined(HAVE_ASPELL)
 #include "aspellchecker.h"
+#elif defined(HAVE_HUNSPELL)
+#include "hunspellchecker.h"
 #endif
 
 SpellChecker* SpellChecker::instance()
@@ -45,6 +47,8 @@ SpellChecker* SpellChecker::instance()
 		instance_ = new EnchantChecker();
 #elif defined(HAVE_ASPELL)
 		instance_ = new ASpellChecker();
+#elif defined(HAVE_HUNSPELL)
+		instance_ = new HunspellChecker();
 #else
 		instance_ = new SpellChecker();
 #endif
