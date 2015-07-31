@@ -31,10 +31,13 @@
 #include <QLocale>
 #include <QFileInfo>
 #include <QStringList>
+#include <QSharedPointer>
 #include "spellchecker.h"
 
 class Hunspell;
 class QTextCodec;
+
+typedef QSharedPointer<Hunspell> HunspellPtr;
 
 class HunspellChecker : public SpellChecker
 {
@@ -54,7 +57,7 @@ private:
 		QString filename;
 	};
 	struct LangItem {
-		Hunspell *hunspell_;
+		HunspellPtr hunspell_;
 		DictInfo info;
 		QTextCodec *codec;
 	};

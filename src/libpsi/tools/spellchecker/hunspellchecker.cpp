@@ -117,8 +117,8 @@ void HunspellChecker::addLanguage(const QLocale &locale)
 	QFileInfo aff, dic;
 	if (scanDictPaths(language, aff, dic)) {
 		LangItem li;
-		li.hunspell_ = new Hunspell(aff.absoluteFilePath().toLocal8Bit(),
-					    dic.absoluteFilePath().toLocal8Bit());
+		li.hunspell_ = HunspellPtr(new Hunspell(aff.absoluteFilePath().toLocal8Bit(),
+							dic.absoluteFilePath().toLocal8Bit()));
 		li.codec = QTextCodec::codecForName(QByteArray(li.hunspell_->get_dic_encoding()));
 		li.info.language = locale.language();
 		li.info.country = locale.country();
@@ -133,11 +133,10 @@ QList<QString> HunspellChecker::suggestions(const QString& word)
 	foreach (const LangItem &li, languages_) {
 		char **result;
 		int sugNum = li.hunspell_->suggest(&result, li.codec->fromUnicode(word));
-		if (sugNum != 0) {
-			for (int i=0; i < sugNum; i++) {
-				qtResult << li.codec->toUnicode(result[i]);
-			}
+		for (int i=0; i < sugNum; i++) {
+			qtResult << li.codec->toUnicode(result[i]);
 		}
+		li.hunspell_->free_list(&result, sugNum);
 	}
 	return qtResult;
 }
@@ -166,7 +165,7 @@ bool HunspellChecker::add(const QString& word)
 bool HunspellChecker::available() const
 {
 	foreach (const LangItem &li, languages_) {
-		if (li.hunspell_ != NULL) {
+		if (li.hunspell_) {
 			return true;
 		}
 	}
