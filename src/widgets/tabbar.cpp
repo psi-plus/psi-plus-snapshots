@@ -474,7 +474,9 @@ void TabBar::paintEvent(QPaintEvent *event)
 		QStyleOptionTabBarBaseV2 optTabBase;
 		initStyleBaseOption(&optTabBase, this, size());
 
-		optTabBase.selectedTabRect = tabs[selected].rect;
+		if (selected >= 0) {
+			optTabBase.selectedTabRect = tabs[selected].rect;
+		}
 
 		for (int i = 0; i < tabs.size(); ++i)
 			optTabBase.tabBarRect |= tabs[i].rect;
@@ -482,7 +484,12 @@ void TabBar::paintEvent(QPaintEvent *event)
 		p.drawPrimitive(QStyle::PE_FrameTabBarBase, optTabBase);
 	}
 
-	int rowHeight = tabs[selected].rect.height();
+	int rowHeight = 0;
+	if (selected >= 0) {
+		rowHeight = tabs[selected].rect.height();
+	} else if (tabs.count()) {
+		rowHeight = tabs[0].rect.height();
+	}
 
 	// There is some problems when tabs are painted not in first row.
 	// Draw on a pixmap like a painting in the first row. Then move image
