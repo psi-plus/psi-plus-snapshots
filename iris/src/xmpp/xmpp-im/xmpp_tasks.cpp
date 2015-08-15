@@ -112,7 +112,11 @@ void JT_Session::onGo()
 
 bool JT_Session::take(const QDomElement& x)
 {
-	if(!iqVerify(x, "", id()))
+	QString from = x.attribute("from");
+	if (!from.endsWith("chat.facebook.com")) {
+		from.clear();
+	}
+	if(!iqVerify(x, from, id()))
 		return false;
 
 	if(x.attribute("type") == "result") {
