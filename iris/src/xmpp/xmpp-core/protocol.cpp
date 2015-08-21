@@ -937,7 +937,8 @@ bool CoreProtocol::doStep2(const QDomElement &e)
 bool CoreProtocol::isValidStanza(const QDomElement &e) const
 {
 	QString s = e.tagName();
-	if(e.namespaceURI() == (server ? NS_SERVER : NS_CLIENT) && (s == "message" || s == "presence" || s == "iq"))
+	Stanza::Kind kind = Stanza::kind(s);
+	if(e.namespaceURI() == (server ? NS_SERVER : NS_CLIENT) && (kind == Stanza::Message || kind == Stanza::Presence || kind == Stanza::IQ))
 		return true;
 	else
 		return false;

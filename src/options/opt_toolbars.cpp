@@ -238,7 +238,12 @@ void OptionsTabToolbars::restoreOptions()
 
 	foreach(QString base, sortedToolbarBases) {
 		ToolbarPrefs tb;
+
 		tb.id = o->getOption(base + ".key").toString();
+		if (tb.id.isEmpty()) {
+			tb.id = ToolbarPrefs().id;
+			qWarning("broken toolbar setting: %s", qPrintable(base));
+		}
 		tb.name = o->getOption(base + ".name").toString();
 		tb.on = o->getOption(base + ".visible").toBool();
 		tb.locked = o->getOption(base + ".locked").toBool();

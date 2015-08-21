@@ -434,11 +434,11 @@ class Stanza::Private
 public:
 	static int stringToKind(const QString &s)
 	{
-		if(s == "message")
+		if(s == QLatin1String("message"))
 			return Message;
-		else if(s == "presence")
+		else if(s == QLatin1String("presence"))
 			return Presence;
-		else if(s == "iq")
+		else if(s == QLatin1String("iq"))
 			return IQ;
 		else
 			return -1;
@@ -447,11 +447,11 @@ public:
 	static QString kindToString(Kind k)
 	{
 		if(k == Message)
-			return "message";
+			return QLatin1String("message");
 		else if(k == Presence)
-			return "presence";
+			return QLatin1String("presence");
 		else
-			return "iq";
+			return QLatin1String("iq");
 	}
 
 	Stream *s;
@@ -564,6 +564,11 @@ void Stanza::appendChild(const QDomElement &e)
 Stanza::Kind Stanza::kind() const
 {
 	return (Kind)Private::stringToKind(d->e.tagName());
+}
+
+Stanza::Kind Stanza::kind(const QString &tagName)
+{
+	return (Kind)Private::stringToKind(tagName);
 }
 
 void Stanza::setKind(Kind k)

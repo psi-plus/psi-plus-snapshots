@@ -103,6 +103,7 @@ namespace XMPP
 		void appendChild(const QDomElement &e);
 
 		Kind kind() const;
+		static Kind kind(const QString &tagName);
 		void setKind(Kind k);
 
 		Jid to() const;
