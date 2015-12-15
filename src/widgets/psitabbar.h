@@ -41,9 +41,6 @@ signals:
 	void mouseDoubleClickTab(int tab);
 	void mouseMiddleClickTab(int tab);
 	void tabDropped(int tab, PsiTabBar *source);
-#if QT_VERSION <= 0x040500
-	void tabMoved(int from, int to);
-#endif
 	// context menu on the blank space will have tab==-1
 	void contextMenu(QContextMenuEvent *event, int tab);
 

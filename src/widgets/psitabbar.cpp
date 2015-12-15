@@ -36,11 +36,9 @@ PsiTabBar::PsiTabBar(PsiTabWidget *parent)
 		, dragsEnabled_(true) {
 	//setAcceptDrops(true);
 
-#if QT_VERSION >= 0x040500
 	setMovable(true);
 	setTabsClosable(true);
 	setSelectionBehaviorOnRemove ( QTabBar::SelectPreviousTab );
-#endif
 	currTab=-1;
 }
 
@@ -93,29 +91,9 @@ void PsiTabBar::mouseReleaseEvent ( QMouseEvent * event )
 	}
 	QTabBar::mouseReleaseEvent(event);
 
-#if QT_VERSION >= 0x040500
 	if ((dragTab_ != -1) && (event->button() != Qt::MidButton)) {
 		this->setCurrentIndex(currentIndex());
 	}
-#else
-	if ((dragTab_ != currTab)&&(currTab!=-1)&&(dragTab_!=-1)) {
-		if (dragTab_ < currTab) {
-			this->insertTab(isOnTheLeft ? currTab : currTab+1, this->tabIcon(dragTab_), this->tabText(dragTab_));
-			this->removeTab(dragTab_);
-			emit tabMoved(dragTab_, isOnTheLeft ? currTab-1 : currTab);
-		}
-		else {
-			this->insertTab(isOnTheLeft ? currTab : currTab+1, this->tabIcon(dragTab_), this->tabText(dragTab_));
-			this->removeTab(dragTab_+1);
-			emit tabMoved(dragTab_, isOnTheLeft ? currTab : currTab+1);
-		}
-	}
-
-	dragTab_ = -1;
-	currTab = -1;
-	this->update();
-	event->accept();
-#endif
 };
 
 /*
@@ -134,22 +112,7 @@ void PsiTabBar::mouseMoveEvent(QMouseEvent *event) {
 		return;
 	}
 
-	if (dragTab_ != -1) {
-#if QT_VERSION < 0x040500
-	currTab = findTabUnder(event->pos());
-	this->update(this->tabRect(currTab));
-
-	if (tabRect(currTab).center().x() - event->pos().x() > 0)
-		isOnTheLeft = 1;
-	else
-		isOnTheLeft = 0;
-#endif
-	}
-#if QT_VERSION >= 0x040500
 	QTabBar::mouseMoveEvent(event);
-#else
-	event->accept();
-#endif
 }
 
 void PsiTabBar::contextMenuEvent(QContextMenuEvent *event) {
@@ -186,21 +149,6 @@ void PsiTabBar::setDragsEnabled(bool enabled) {
 void PsiTabBar::paintEvent(QPaintEvent *event)
 {
 	TabBar::paintEvent(event);
-#if QT_VERSION < 0x040500
-	QPainter painter(this);
-	QPen pen(Qt::cyan);
-	pen.setWidth(4);
-	pen.setStyle(Qt::SolidLine);
-	painter.setPen(pen);
-	if ( currTab != -1) {
-		if (isOnTheLeft)
-			painter.drawLine(tabRect(currTab).topLeft().x()+3, tabRect(currTab).topLeft().y(),
-			tabRect(currTab).bottomLeft().x()+3, tabRect(currTab ).bottomLeft().y());
-		else
-			painter.drawLine(tabRect(currTab).topRight().x(), tabRect(currTab).topRight().y(),
-			tabRect(currTab).bottomRight().x(), tabRect(currTab ).bottomRight().y());
-	}
-#endif
 };
 
 void PsiTabBar::resizeEvent(QResizeEvent * event)
