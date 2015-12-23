@@ -34,7 +34,7 @@
 #include <QCoreApplication>
 #include <QLocale>
 //#include <QDebug>
-#include <hunspell/hunspell.hxx>
+#include <hunspell.hxx>
 #ifdef Q_OS_WIN
 #include "applicationinfo.h"
 #endif
