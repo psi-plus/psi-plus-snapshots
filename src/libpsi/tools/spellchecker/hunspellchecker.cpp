@@ -70,7 +70,9 @@ void HunspellChecker::getDictPaths()
 		dictPathSet << QLatin1String("/usr/share/myspell")
 			    << QLatin1String("/usr/share/hunspell")
 			    << QLatin1String("/usr/local/share/myspell")
-			    << QLatin1String("/usr/local/share/hunspell");
+			    << QLatin1String("/usr/local/share/hunspell")
+			    << QString("%1/.local/share/myspell").arg(QDir::home().absolutePath())
+			    << QString("%1/.local/share/hunspell").arg(QDir::home().absolutePath());
 #endif
 		dictPaths_ = dictPathSet.toList();
 	}
