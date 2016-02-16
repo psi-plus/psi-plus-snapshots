@@ -185,6 +185,9 @@ public:
 	// GCTabAccessor
 	void setupGCTab(QWidget* tab, int account, const QString& contact);
 
+	bool appendingChatMessage(int account, const QString& contact,
+				  QString& body, QDomElement& html, bool local);
+
 	void applyOptions();
 	void restoreOptions();
 

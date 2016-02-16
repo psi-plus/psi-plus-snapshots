@@ -748,6 +748,19 @@ void PluginManager::setupGCTab(QWidget *tab, PsiAccount *account, const QString&
 	}
 }
 
+bool PluginManager::appendingChatMessage(PsiAccount *account, const QString &contact,
+					 QString &body, QDomElement &html, bool local)
+{
+	bool handled = false;
+	foreach (PluginHost* host, pluginsByPriority_) {
+		if (host->appendingChatMessage(accountIds_.id(account), contact, body, html, local)) {
+			handled = true;
+			break;
+		}
+	}
+	return handled;
+}
+
 bool PluginManager::hasInfoProvider(const QString& plugin) const
 {
 	if (hosts_.contains(plugin))

@@ -1233,6 +1233,16 @@ void PluginHost::setupGCTab(QWidget* tab, int account, const QString& contact)
 	}
 }
 
+bool PluginHost::appendingChatMessage(int account, const QString &contact,
+				      QString &body, QDomElement &html, bool local)
+{
+	ChatTabAccessor *cta = qobject_cast<ChatTabAccessor*>(plugin_);
+	if(cta) {
+		return cta->appendingChatMessage(account, contact, body, html, local);
+	}
+	return false;
+}
+
 bool PluginHost::isSelf(int account, const QString& jid)
 {
 	return manager_->isSelf(account, jid);

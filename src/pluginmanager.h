@@ -86,6 +86,8 @@ public:
 
 	void setupChatTab(QWidget *tab, PsiAccount* account, const QString& contact);
 	void setupGCTab(QWidget *tab, PsiAccount* account, const QString& contact);
+	bool appendingChatMessage(PsiAccount* account, const QString& contact,
+				  QString& body, QDomElement& html, bool local);
 
 	QString pluginInfo(const QString& plugin) const;
 	bool hasInfoProvider(const QString& plugin) const;
