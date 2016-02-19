@@ -34,7 +34,7 @@
 #include "td.h"
 #endif
 
-//#define SM_DEBUG
+//#define IRIS_SM_DEBUG
 
 using namespace XMPP;
 
@@ -661,12 +661,12 @@ void CoreProtocol::sendStanza(const QDomElement &e, bool notify) {
 		if (notify) qDebug() << "Want notification for stanza";
 #endif
 		sm_send_queue.push_back(qMakePair(e, notify));
-#ifdef SM_DEBUG
+#ifdef IRIS_SM_DEBUG
 		qDebug() << "sm_send_queue: ";
 #endif
 		for (QList<QPair<QDomElement, bool> >::iterator i = sm_send_queue.begin(); i != sm_send_queue.end(); ++i) {
 			QPair<QDomElement, bool> entry = *i;
-#ifdef SM_DEBUG
+#ifdef IRIS_SM_DEBUG
 			qDebug() << "\t" << entry.first.tagName() << " : " << entry.second;
 #endif
 		}
@@ -951,14 +951,14 @@ bool CoreProtocol::streamManagementHandleStanza(const QDomElement &e)
 		qulonglong last_handled_id = getSMLastHandledId();
 		QDomElement e = doc.createElementNS(NS_STREAM_MANAGEMENT, "a");
 		e.setAttribute("h", last_handled_id);
-#ifdef SM_DEBUG
+#ifdef IRIS_SM_DEBUG
 		qWarning() << "Stream Management: Sending acknowledgment with h=" << last_handled_id;
 #endif
 		send(e);
 		event = ESend;
 		return true;
 	} else if (s == "a") {
-#ifdef SM_DEBUG
+#ifdef IRIS_SM_DEBUG
 		qWarning() << "Received ack response from server";
 #endif
 		processSMAcknowlegement(e.attribute("h").toULong());
@@ -976,7 +976,7 @@ unsigned long CoreProtocol::getNewSMId() {
 	sm_receive_queue.push_back(qMakePair(sm_id, false));
 	sm_receive_count++;
 	if (sm_receive_count == (unsigned long)-1) sm_receive_count = 0; /* why do we skip -1? */
-#ifdef SM_DEBUG
+#ifdef IRIS_SM_DEBUG
 	qWarning() << "Current SM id: " << sm_id;
 #endif
 	return sm_id;
@@ -1006,19 +1006,19 @@ void CoreProtocol::markStanzaHandled(unsigned long id) {
 			return;
 		}
 	}
-#ifdef SM_DEBUG
+#ifdef IRIS_SM_DEBUG
 	qWarning() << "Stream Management: Higher level client marked unknown stanza handled!";
 #endif
 }
 
 void CoreProtocol::markLastMessageStanzaAcked() {
 	if (sm_receive_queue.isEmpty()) {
-#ifdef SM_DEBUG
+#ifdef IRIS_SM_DEBUG
 		qWarning() << "Stream Management: Higher level client marked unexistant stanza as acked.";
 #endif
 		return;
 	}
-#ifdef SM_DEBUG
+#ifdef IRIS_SM_DEBUG
 	qWarning() << "Previous list: " << sm_receive_queue;
 #endif
 	for(QList<QPair<unsigned long, bool> >::Iterator it = sm_receive_queue.begin(); it != sm_receive_queue.end(); ++it ) {
@@ -1034,7 +1034,7 @@ bool CoreProtocol::isStreamManagementActive() const {
 }
 
 void CoreProtocol::requestSMAcknowlegement() {
-#ifdef SM_DEBUG
+#ifdef IRIS_SM_DEBUG
 	qDebug() << "Now I'd request acknowledgement from the server.";
 #endif
 	sendDirect(QString("<r xmlns='" NS_STREAM_MANAGEMENT "'/>"));
@@ -1046,7 +1046,7 @@ int CoreProtocol::getNotableStanzasAcked() {
 }
 
 ClientStream::SMState CoreProtocol::getSMState() const {
-#ifdef SM_DEBUG
+#ifdef IRIS_SM_DEBUG
 	qDebug("\tCoreProtocol::getSMState()");
 #endif
 	ClientStream::SMState state;
@@ -1894,17 +1894,17 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 		}
 	}
 	else if(step == GetSMResponse) {
-#ifdef SM_DEBUG
+#ifdef IRIS_SM_DEBUG
 		qWarning() << "HandleSM: step";
 #endif
 		if (e.namespaceURI() == NS_STREAM_MANAGEMENT) {
 			if (e.localName() == "enabled") {
-#ifdef SM_DEBUG
+#ifdef IRIS_SM_DEBUG
 				qWarning() << "Stream Management enabled";
 #endif
 				sm_started = true;
 				if (e.attribute("resume", "false") == "true" || e.attribute("resume", "false") == "1") {
-#ifdef SM_DEBUG
+#ifdef IRIS_SM_DEBUG
 					qDebug("\tResumption Supported");
 #endif
 					sm_resumption_supported = true;

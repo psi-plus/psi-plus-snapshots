@@ -25,7 +25,6 @@
 
 
 #include <QFileDialog>
-#include <QSet>
 #include <QInputDialog>
 #include <QTimer>
 #include <QMessageBox>
@@ -2456,19 +2455,10 @@ void PsiAccount::bookmarksAvailabilityChanged()
 	}
 
 #ifdef GROUPCHAT
-	QSet<QString> joinSkip;
-	QFile file(pathToProfile(activeProfile, ApplicationInfo::ConfigLocation)+"/mucskipautojoin.txt");
-	if (file.exists() && file.open(QIODevice::ReadOnly)) {
-		QTextStream stream(&file);
-		while (!stream.atEnd()) {
-			joinSkip << stream.readLine().toUpper();
-		}
-	}
-
 	foreach(ConferenceBookmark c, d->bookmarkManager->conferences()) {
-		if (!findDialog<GCMainDlg*>(Jid(c.jid().bare())) && c.autoJoin()) {
-			if  (!joinSkip.contains(c.jid().full().toUpper()))
-				actionJoin(c, true, MUCJoinDlg::MucAutoJoin);
+		if (!findDialog<GCMainDlg*>(Jid(c.jid().bare())) &&
+				(c.autoJoin() == ConferenceBookmark::Always || c.autoJoin() == ConferenceBookmark::OnlyThisComputer)) {
+			actionJoin(c, true, MUCJoinDlg::MucAutoJoin);
 		}
 	}
 #endif
@@ -3565,7 +3555,7 @@ void PsiAccount::actionManageBookmarks()
 
 void PsiAccount::actionJoin(const Jid& mucJid, const QString& password)
 {
-	actionJoin(ConferenceBookmark(QString(), mucJid, false, QString(), password),
+	actionJoin(ConferenceBookmark(QString(), mucJid, ConferenceBookmark::Never, QString(), password),
 			   false);
 }
 
