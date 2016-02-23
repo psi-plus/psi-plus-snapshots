@@ -284,13 +284,13 @@ void PsiActionList::Private::createMainWin()
 		IconAction *actPublishTune = new IconAction (tr("Publish Tune"), "psi/publishTune", tr("Publish &Tune"), 0, this, 0, true);
 		actPublishTune->setWhatsThis (tr("Toggles whether the currently playing tune should be published or not"));
 
-		IconAction *actSetMood = new IconAction (tr("Set Mood"), "mood/", tr("Set Mood"), 0, this);
+		IconAction *actSetMood = new IconAction (tr("Set Mood"), "pep/mood", tr("Set Mood"), 0, this);
 		actSetMood->setWhatsThis (tr("Set Mood for all active accounts"));
 
-		IconAction *actSetActivity = new IconAction (tr("Set Activity"), "activities/other", tr("Set Activity"), 0, this);
+		IconAction *actSetActivity = new IconAction (tr("Set Activity"), "pep/activities", tr("Set Activity"), 0, this);
 		actSetActivity->setWhatsThis (tr("Set Activity for all active accounts"));
 
-		IconAction *actSetGeoloc = new IconAction (tr("Set Geolocation"), "system/geolocation", tr("Set Geolocation"), 0, this);
+		IconAction *actSetGeoloc = new IconAction (tr("Set Geolocation"), "pep/geolocation", tr("Set Geolocation"), 0, this);
 		actSetGeoloc->setWhatsThis (tr("Set Geolocation for all active accounts"));
 
 		ActionNames actions[] = {
@@ -460,8 +460,6 @@ void PsiActionList::Private::createChat()
 		IconAction *actInfo = new IconAction(tr("User Info"), "psi/vCard", tr("User Info"), 0, this);
 		IconAction *actHistory = new IconAction(tr("Message History"), "psi/history", tr("Message History"), 0, this);
 		IconAction *actCompact = new IconAction(tr("Toggle Compact/Full Size"), "psi/compact", tr("Toggle Compact/Full Size"), 0, this);
-		IconAction *actPs = new IconAction(tr("Paste and Send"), "psi/action_paste_and_send", tr("Paste and Send"), 0, this);
-		IconAction *actTemplates = new IconAction(tr("Templates"), "psi/action_templates", tr("Templates"), 0, this);
 		IconAction *actActiveContacts = new IconAction (tr("Active contacts"), "psi/jabber", tr("Active contacts"), 0, this);
 
 		ActionNames actions[] = {
@@ -476,8 +474,6 @@ void PsiActionList::Private::createChat()
 			{ "chat_info", actInfo   },
 			{ "chat_history", actHistory   },
 			{ "chat_compact", actCompact   },
-			{ "chat_ps", actPs   },
-			{ "chat_templates", actTemplates   },
 			{ "chat_active_contacts", actActiveContacts   },
 			{ "", 0 }
 		};
@@ -496,8 +492,6 @@ void PsiActionList::Private::createGroupchat()
 		IconAction *actHtmlText = new IconAction(tr("Set Text Format"), "psi/text", tr("Set Text Format"), 0, this);
 		IconAction *actConfigure = new IconAction(tr("Configure Room"), "psi/configure-room", tr("Configure Room"), 0, this);
 		IconAction *actIcon = new IconAction(tr("Select Icon"), "psi/smile", tr("Select Icon"), 0, this);
-		IconAction *actPs = new IconAction(tr("Paste and Send"), "psi/action_paste_and_send", tr("Paste and Send"), 0, this);
-		IconAction *actTemplates = new IconAction(tr("Templates"), "psi/action_templates", tr("Templates"), 0, this);
 
 		ActionNames actions[] = {
 			{ "gchat_clear",  actClear  },
@@ -505,8 +499,6 @@ void PsiActionList::Private::createGroupchat()
 			{ "gchat_html_text", actHtmlText   },
 			{ "gchat_configure", actConfigure   },
 			{ "gchat_icon", actIcon   },
-			{ "gchat_ps", actPs   },
-			{ "gchat_templates", actTemplates   },
 			{ "", 0 }
 		};
 

@@ -216,10 +216,12 @@ HEADERS += \
 	$$PWD/psicli.h \
 	$$PWD/coloropt.h \
 	$$PWD/geolocationdlg.h \
-	$$PWD/rosteravatarframe.h \
-	$$PWD/sendbuttonmenu.h
+	$$PWD/rosteravatarframe.h
 
-
+unix:!macx:!haiku {
+	HEADERS += $$PWD/x11windowsystem.h
+	SOURCES += $$PWD/x11windowsystem.cpp
+}
 
 HEADERS += tabcompletion.h
 SOURCES += tabcompletion.cpp
@@ -359,13 +361,7 @@ SOURCES += \
 	$$PWD/vcardphotodlg.cpp \
 	$$PWD/coloropt.cpp \
 	$$PWD/geolocationdlg.cpp \
-	$$PWD/rosteravatarframe.cpp \
-	$$PWD/sendbuttonmenu.cpp
-
-unix:!macx:!haiku {
-	HEADERS += $$PWD/x11windowsystem.h
-	SOURCES += $$PWD/x11windowsystem.cpp
-}
+	$$PWD/rosteravatarframe.cpp
 
 CONFIG += filetransfer
 filetransfer {
@@ -602,8 +598,7 @@ FORMS += \
 	$$PWD/ahcommanddlg.ui \
 	$$PWD/ahcformdlg.ui \
 	$$PWD/geolocation.ui \
-	$$PWD/rosteravatarframe.ui \
-	$$PWD/sendbuttontemplateseditor.ui
+	$$PWD/rosteravatarframe.ui
 
 # options dialog
 include($$PWD/options/options.pri)

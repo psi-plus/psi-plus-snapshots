@@ -323,9 +323,6 @@
            <property name="toolTip">
             <string>Send</string>
            </property>
-           <property name="contextMenuPolicy" >
-            <enum>Qt::CustomContextMenu</enum>
-           </property>
           </widget>
          </item>
          <item>

@@ -1446,6 +1446,7 @@ void PsiCon::optionChanged(const QString& option)
 	if (option == "options.p2p.bytestreams.listen-port") {
 		s5b_init();
 	}
+
 	if (option == "options.ui.chat.css") {
 		QString css = PsiOptions::instance()->getOption(option).toString();
 		if (!css.isEmpty())
@@ -1524,6 +1525,8 @@ void PsiCon::slotApplyOptions()
 	d->mainwin->setWindowOpts(o->getOption("options.ui.contactlist.always-on-top").toBool(), (o->getOption("options.ui.systemtray.enable").toBool() && o->getOption("options.contactlist.use-toolwindow").toBool()));
 	d->mainwin->setUseDock(o->getOption("options.ui.systemtray.enable").toBool());
 	d->mainwin->buildToolbars();
+	d->mainwin->setUseAvatarFrame(o->getOption("options.ui.contactlist.show-avatar-frame").toBool());
+	d->mainwin->reinitAutoHide();
 
 	// notify about options change
 	emit emitOptionsUpdate();

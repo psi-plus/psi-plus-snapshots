@@ -148,7 +148,7 @@ void UserAccount::reset()
 	opt_connectAfterSleep = false;
 	opt_autoSameStatus = true;
 	lastStatusWithPriority = false;
-	opt_ignoreSSLWarnings = true;
+	opt_ignoreSSLWarnings = false;
 
 	proxy_index = 0;
 	proxy_type = PROXY_NONE;
@@ -209,7 +209,7 @@ void UserAccount::fromOptions(OptionsTree *o, QString base)
 	req_mutual_auth = o->getOption(base + ".require-mutual-auth").toBool();
 	legacy_ssl_probe = o->getOption(base + ".legacy-ssl-probe").toBool();
 	opt_automatic_resource = o->getOption(base + ".automatic-resource").toBool();
-	priority_dep_on_status = o->getOption(base + ".priority-depends-on-status").toBool();
+	priority_dep_on_status = o->getOption(base + ".priority-depends-on-status", false).toBool();
 	ignore_global_actions = o->getOption(base + ".ignore-global-actions").toBool();
 	opt_log = o->getOption(base + ".log").toBool();
 	opt_reconn = o->getOption(base + ".reconn").toBool();
@@ -1377,7 +1377,7 @@ void OptionsMigration::lateMigration()
 		chatToolbar.name = "Chat";
 		chatToolbar.keys << "chat_clear"  << "chat_find" << "chat_html_text" << "chat_add_contact";
 		chatToolbar.keys += pluginsKeys;
-		chatToolbar.keys << "spacer" << "chat_icon" << "chat_templates" << "chat_ps" << "chat_file"
+		chatToolbar.keys << "spacer" << "chat_icon" << "chat_file"
 						 << "chat_pgp" << "chat_info" << "chat_history" << "chat_voice"
 						 << "chat_active_contacts";
 
@@ -1391,7 +1391,7 @@ void OptionsMigration::lateMigration()
 		groupchatToolbar.name = "Groupchat";
 		groupchatToolbar.keys << "gchat_clear"  << "gchat_find" << "gchat_html_text" << "gchat_configure";
 		groupchatToolbar.keys += pluginsKeys;
-		groupchatToolbar.keys << "spacer" << "gchat_icon" << "gchat_templates" << "gchat_ps" ;
+		groupchatToolbar.keys << "spacer" << "gchat_icon" ;
 
 		if (PsiOptions::instance()->getOption("options.ui.chat.disable-paste-send").toBool()) {
 			groupchatToolbar.keys.removeAt(groupchatToolbar.keys.indexOf("gchat_ps"));

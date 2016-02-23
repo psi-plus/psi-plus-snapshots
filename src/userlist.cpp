@@ -34,6 +34,7 @@
 #include "psioptions.h"
 #include "jidutil.h"
 #include "psiiconset.h"
+#include "common.h"
 
 using namespace XMPP;
 
@@ -344,344 +345,11 @@ QStringList UserListItem::clients() const
 
 QString UserListItem::findClient(QString name) const
 {
-	QString res;
-	if(name.startsWith("adium"))
-		res = "adium";
-	else if(name.startsWith("google talk user account") || name.contains("android.com"))
-		res = "android";
-	else if(name.startsWith("aqq"))
-		res = "aqq";
-	else if(name.startsWith("asterisk"))
-		res = "asterisk";
-	else if(name.startsWith("bayanicq") || name.startsWith("barobin.com"))
-		res = "bayanicq";
-	else if(name.startsWith("barracuda"))
-		res = "barracuda-im";
-	else if(name.startsWith("beem-project"))
-		res = "beem";
-	else if(name.startsWith("bitlbee"))
-		res = "bitlbee";
-	else if((name.startsWith("simpleapps.ru") && name.contains("vk4xmpp")) || name.startsWith("vk4xmpp"))
-		res = "vk4xmpp";
-	else if(name.startsWith("bluejabb"))
-		res = "bluejabb";
-	else if(name.startsWith("[bombus]") || name.contains("avalon"))
-		res = "bombus-avalon";
-	else if(name.startsWith("java.util.random"))
-		res = "bombus-avalon-old";
-	else if(name.startsWith("klub54.wen.ru") || name.startsWith("bombusklub") || name.startsWith("jabber.pdg.pl"))
-		res = "bombus-klub";
-	else if(name.startsWith("bombus-im.org") && name.contains("java"))
-		res = "bombus-old";
-	else if(name.startsWith("bombusmod-qd.wen.ru") || name.startsWith("bombusqd"))
-		res = "bombusqd";
-	else if(name.startsWith("bombusng-qd.googlecode.com"))
-		res = "bombusqd-ng";
-	else if(name.startsWith("bombus-im.org") && name.contains("android"))
-		res = "bombuslime";
-	else if(name.startsWith("bombusmod"))
-		res = "bombusmod";
-	else if(name.startsWith("bombusmod.net.ru") || name.startsWith("ex-im.name"))
-		res = "bombusmod-old";
-	else if(name.startsWith("bombusng-md"))
-		res = "bombusng-md";
-	else if(name.startsWith("bombus-ng"))
-		res = "bombusng";
-	else if(name.startsWith("bombus.pl"))
-		res = "bombuspl";
-	else if(name.startsWith("bombus+") || name.startsWith("voffk.org.ru"))
-		res = "bombusplus";
-	else if(name.startsWith("bombus-im.org") || name.startsWith("bombus"))
-		res = "bombus";
-	else if(name.startsWith("jame") || name.startsWith("jabrss") || name.startsWith("pako bot") || name.startsWith("fatal-bot") || name.startsWith("storm") || name.startsWith("sulci") || name.startsWith("sleekbot") || name.startsWith("sofserver") || name.startsWith("neutrina") || name.startsWith("yamaneko") || name.startsWith("talisman") || name.contains(QString::fromUtf8(QByteArray::fromHex("efbbbfd0b3d0bed0b2d0bdd0bed0b1d0bed182"))) || name.startsWith(QString::fromUtf8(QByteArray::fromHex("efbbbfcf84ceb1cebbceb9cf82cebcceb1ceb7"))))
-		res = "bot";
-	else if(name.startsWith("buddydroid"))
-		res = "buddydroid";
-	else if(name.startsWith("fin.jabber.ru"))
-		res = "capsula-bot";
-	else if(name.startsWith("centerim"))
-		res = "centerim";
-	else if(name.startsWith("chatopus.com"))
-		res = "chatopus";
-	else if(name.startsWith("chatsecure") || name.startsWith("gibberbot"))
-		res = "chatsecure";
-	else if(name.startsWith("coccinella"))
-		res = "coccinella";
-	else if(name.startsWith("conversations"))
-		res = "conversations";
-	else if(name.startsWith("dictbot"))
-		res = "dictbot";
-	else if(name.startsWith("digsby client"))
-		res = "digsby";
-	else if(name.startsWith("ekg2"))
-		res = "ekg2";
-	else if(name.startsWith("emess"))
-		res = "emess";
-	else if(name.startsWith("emess.eqx.su"))
-		res = "emess-old";
-	else if(name.startsWith("erlim.a7x-im.com"))
-		res = "erlim";
-	else if(name.startsWith("exodus"))
-		res = "exodus";
-	else if((name.startsWith("svn.posix.ru") && name.contains("fatal-bot")) || name.startsWith("fatal-"))
-		res = "fatal-bot";
-	else if(name.startsWith("hat.freize.org"))
-		res = "freize";
-	else if(name.startsWith("freomessenger.com"))
-		res = "freo";
-	else if(name.startsWith("freqbot"))
-		res = "freqbot";
-	else if(name.startsWith("google.com 1.0.0.66"))
-		res = "fring";
-	else if(name.startsWith("gaim"))
-		res = "gaim";
-	else if(name.startsWith("gajim"))
-		res = "gajim";
-	else if(name.startsWith("j-cool.ru"))
-		res = "gamebot";
-	else if(name.startsWith("weather2jabber") || name.contains("gismeteo.ru"))
-		res = "gismeteo";
-	else if(name.startsWith("gizmo"))
-		res = "gizmo";
-	else if(name.startsWith("camaya.net") && name.contains("gloox"))
-		res = "gloox";
-	else if(name.startsWith("glu.net"))
-		res = "glu";
-	else if(name.startsWith("gluxibot"))
-		res = "gluxibot";
-	else if(name.startsWith("google.com") && name.contains("client"))
-		res = "gtalk";
-	else if(name.startsWith("android.com") && name.contains("gtalk"))
-		res = "gtalk-android";
-	else if(name.startsWith("habahaba.im"))
-		res = "habahaba";
-	else if(name.startsWith("hipchat.com"))
-		res = "hipchat";
-	else if(name.startsWith("aspro.users.ru") && name.contains("historian-bot"))
-		res = "historian-bot";
-	else if(name.startsWith("ichat") || name.contains("apple.com"))
-		res = "ichat";
-	else if(name.startsWith("icq mobile"))
-		res = "icq-mobile";
-	else if(name.startsWith("imadering"))
-		res = "imadering";
-	else if(name.startsWith("imov"))
-		res = "imov";
-	else if(name.startsWith("imformer.ru"))
-		res = "imformer-bot";
-	else if(name.startsWith("isida"))
-		res = "isida-bot";
-	else if(name.startsWith("jabber.el"))
-		res = "jabber.el";
-	else if(name.startsWith("memegenerator.net") && name.contains("bolgenos-popov"))
-		res = "jabber-popov";
-	else if(name.contains("jabbim"))
-		res = "jabbim";
-	else if(name.startsWith("jabbin"))
-		res = "jabbin";
-	else if(name.startsWith("jabbroid"))
-		res = "jabbroid";
-	else if(name.startsWith("jabiru"))
-		res = "jabiru";
-	else if(name.startsWith("jajc") || name.startsWith("just another jabber client"))
-		res = "jajc";
-	else if(name.startsWith("qabber.ru") && name.contains("jame-bot"))
-		res = "jamebot";
-	else if(name.startsWith("jappix"))
-		res = "jappix";
-	else if(name.contains("japyt"))
-		res = "japyt";
-	else if(name.startsWith("jasmineicq.ru") || name.startsWith("jasmine im"))
-		res = "jasmine";
-	else if(name.startsWith("jimm.net.ru") && name.contains("android"))
-		res = "jimm-android";
-	else if(name.startsWith("jimm"))
-		res = "jimm-aspro";
-	else if(name.startsWith("jitsi.org"))
-		res = "jitsi";
-	else if(name.startsWith("jbot"))
-		res = "jbother";
-	else if(name.startsWith("pjc"))
-		res = "jubo";
-	else if(name.startsWith("jtalk"))
-		res = "jtalk";
-	else if(name.startsWith("juick"))
-		res = "juick";
-	else if(name.startsWith("kadu"))
-		res = "kadu";
-	else if(name.startsWith("bluendo") || name.startsWith("lampiro"))
-		res = "lampiro";
-	else if(name.startsWith("leechcraft"))
-		res = "leechcraft-azoth";
-	else if(name.startsWith("libpurple"))
-		res = "libpurple";
-	else if(name.startsWith("pidgin.im"))
-		res = "libpurple-old";
-	else if(name.startsWith("irssi-xmpp"))
-		res = "loudmouth";
-	else if(name.startsWith("kopete"))
-		res = "kopete";
-	else if(name.startsWith("magnet2.py"))
-		res = "magnet2-bot";
-	else if(name.startsWith("mail.google.com"))
-		res = "mail.google.com";
-	else if(name.startsWith("mrim") || name.startsWith("svn.xmpp.ru") || name.startsWith("none") || name.contains("mail.ru") || name.contains("list.ru") || name.contains("bk.ru") || name.contains("inbox.ru"))
-		res = "mailruagent";
-	else if(name.startsWith("mobileagent"))
-		res = "mailruagent.sis";
-	else if(name.startsWith("mobile mail agent"))
-		res = "mailruagent.mob";
-	else if(name.startsWith("tomclaw.com") && name.contains("mandarin_im"))
-		res = "mandarin";
-	else if(name.startsWith("mcabber"))
-		res = "mcabber";
-	else if(name.startsWith("mchat"))
-		res = "mchat";
-	else if(name.startsWith("meebo"))
-		res = "meebo";
-	else if(name.startsWith("code.google.com") && name.contains("qxmpp"))
-		res = "meegim";
-	else if(name.startsWith("megafonvolga.ru"))
-		res = "megafon";
-	else if(name.startsWith("miranda"))
-		res = "miranda";
-	else if(name.startsWith("nightly.miranda.im") || name.startsWith("miranda-ng.org"))
-		res = "miranda-ng";
-	else if(name.startsWith("hotcoffee"))
-		res = "mirandahotcoffee";
-	else if(name.startsWith("monal.im"))
-		res = "monal";
-	else if(name.startsWith("movamessenger"))
-		res = "movamessenger.sis";
-	else if(name.startsWith("msn") || name.startsWith("delx.net.au"))
-		res = "msnmessenger";
-	else if(name.startsWith("sleekxmpp.com") && name.contains("1.1.10"))
-		res = "nekbot";
-	else if(name.startsWith("nimbuzz"))
-		res = "nimbuzz";
-	else if(name.startsWith("omnipresence") || name.startsWith("home.gna.org"))
-		res = "omnipresence";
-	else if(name.startsWith("om"))
-		res = "om.beeonline.ru";
-	else if(name.startsWith("process-one.net"))
-		res = "oneteamiphone";
-	else if(name.startsWith("oneteam"))
-		res = "oneteam";
-	else if(name.startsWith("osiris"))
-		res = "osiris";
-	else if(name.startsWith("chat.ovi.com") || name.startsWith("chat.nokia.com") || name.startsWith("nokiachat") || name.startsWith("ovi contacts"))
-		res = "ovi-chat";
-	else if(name.startsWith("pandion"))
-		res = "pandion";
-	else if(name.startsWith("palringo"))
-		res = "palringo";
-	else if(name.startsWith("sleekxmpp.com"))
-		res = "poezio";
-	else if(name.startsWith("psi+") || name.startsWith("psi-dev"))
-		res = "psiplus";
-	else if(name.startsWith("psi"))
-		res = "psi";
-	else if(name.startsWith("pidgin") || name.startsWith(QString::fromUtf8(QByteArray::fromHex("d0bfd0b8d0b4d0b6d0b8d0bd"))))
-		res = "pidgin";
-	else if(name.startsWith("pyicqt.googlecode.com") || name.startsWith("icq transport"))
-		res = "pyicq-t";
-	else if(name.startsWith("qip.ru"))
-		res = "qip";
-	else if(name.startsWith("pda.qip.ru") || name.startsWith("qip pda"))
-		res = "qippda";
-	else if(name.startsWith("qip mobile") || (name.startsWith("qip.ru") && name.contains("qip")))
-		res = "qipmobile";
-	else if(name.startsWith("qip infium") || name.startsWith("qip 2010") || name.startsWith("qip 2012") || name.startsWith("2010.qip.ru"))
-		res = "qipinfium";
-	else if(name.startsWith("qutim"))
-		res = "qutim";
-	else if(name.startsWith("apps.radio-t.com"))
-		res = "radio-t";
-	else if(name.startsWith("code.matthewwild.co.uk") && name.contains("riddim"))
-		res = "riddim";
-	else if(name.startsWith("xmpp4moz") || name.startsWith("hyperstruct.net"))
-		res = "sameplace";
-	else if(name.startsWith("sapo messenger mac") || name.startsWith("messenger.sapo.pt"))
-		res = "sapo";
-	else if(name.startsWith("sawim.ru") || name.startsWith("sawim ne"))
-		res = "sawim";
-	else if(name.startsWith("siemens native jabber client"))
-		res = "siejc";
-	else if(name == "sim")
-		res = "sim";
-	else if(name.startsWith("sip-communicator") || name.startsWith("sip communicator") || name.startsWith("jitsi"))
-		res = "sip-communicator";
-	else if((name.startsWith("igniterealtime.org") && name.contains("smack")) || name.startsWith("smack"))
-		res = "smack-api";
-	else if(name.startsWith("snapi-bot.googlecode.com") || (name.startsWith("github.com") && name.contains("")))
-		res = "snapi-snup-bot";
-	else if(name.startsWith("sonicrevolution"))
-		res = "sonic-revolution";
-	else if(name.startsWith("spark im client"))
-		res = "spark";
-	else if(name.startsWith("spectrum") || name.startsWith("binarytransport"))
-		res = "spectrum";
-	else if(name.startsWith("swift"))
-		res = "swift";
-	else if((name.startsWith("jabber-net.ru") && name.contains("talisman-bot")) || name.startsWith("j-tmb.ru"))
-		res = "talisman-bot";
-	else if(name.startsWith("talkonaut") || name.startsWith("google.com 1.0.0.84"))
-		res = "talkonaut";
-	else if(name.startsWith("talkgadget.google.com"))
-		res = "talkgadget.google.com";
-	else if(name.startsWith("talk.google.com") || name.startsWith("google.com 1.0.0.104"))
-		res = "talk.google.com";
-	else if(name.startsWith("google.com"))
-		res = "google.com";
-	else if(name.startsWith("tkabber"))
-		res = "tkabber";
-	else if(name.startsWith("telepathy"))
-		res = "telepathy.freedesktop.org";
-	else if(name.startsWith("tigase.org"))
-		res = "tigase";
-	else if(name.startsWith("trillian"))
-		res = "trillian";
-	else if(name.startsWith("ultimate-bot.googlecode.com"))
-		res = "ultimate-bot";
-	else if(name.startsWith("jabbrik.ru") || name.startsWith("jabrvista.net.ru"))
-		res = "utah-bot";
-	else if(name.startsWith("palringo.com"))
-		res = "utalk";
-	else if(name.startsWith("jabber weather.com transport"))
-		res = "weather.com";
-	else if(name.startsWith("chat.jabbercity.ru") || name.startsWith("web-am31.dyndns-ip.com"))
-		res = "webclient";
-	else if(name.startsWith("weonlydo"))
-		res = "weonlydo";
-	else if(name.startsWith("weonlydo.com") && name.contains("xmpp"))
-		res = "wod-xmpp";
-	else if(name.startsWith("wtw"))
-		res = "wtw";
-	else if(name.contains("vacuum"))
-		res = "vacuum";
-	else if(name.startsWith("vk.com") || name.startsWith("pyvk-t") || name.contains("vkontakte"))
-		res = "vkontakte";
-	else if(name.startsWith(QString::fromUtf8(QByteArray::fromHex("d18f2ed0bed0bdd0bbd0b0d0b9d0bd"))) || name.startsWith("online.yandex.ru"))
-		res = "yaonline";
-	else if(name.startsWith("ya.online"))
-		res = "yaonlinej2me";
-	else if(name.startsWith("yandexmail"))
-		res = "yaonlinesymbian";
-	else if(name.startsWith("yabber instant messenger"))
-		res = "yabber";
-	else if(name.startsWith("yaonline"))
-		res = "yaonlinesymbian";
-	else if(name.startsWith("yaxim"))
-		res = "yaxim";
-	else if(name.startsWith("xabber"))
-		res = "xabber";
-	else if(name.startsWith("xu-6.jabbrik.ru"))
-		res = "xu6-bot";
-	else if(name.startsWith("botx.ir"))
-		res = "zeus-bot";
-	else res = "unknown";
-
-return res;
+	QString res = PsiIconset::instance()->caps2client(name);
+	if (res.isEmpty()) {
+		res = "unknown";
+	}
+	return res;
 }
 
 void UserListItem::setActivity(const Activity& activity)
@@ -881,18 +549,14 @@ QString UserListItem::makeBareTip(bool trim, bool doLinkify) const
 		mucItem = userResourceList()[0].status().hasMUCItem();
 	}
 
-	if (v_avatarFactory
-		&& (isPrivate() ? !v_avatarFactory->getMucAvatar(jid().full()).isNull() : !v_avatarFactory->getAvatar(jid().bare()).isNull())
-		&& PsiOptions::instance()->getOption("options.ui.contactlist.tooltip.avatar").toBool())
-	{
+	if (v_avatarFactory && !v_avatarFactory->getAvatar(jid().bare()).isNull() && PsiOptions::instance()->getOption("options.ui.contactlist.tooltip.avatar").toBool())
 		useAvatar = true;
-	}
 
 	str += "<table cellspacing=\"3\"><tr>";
 	str += "<td>";
 
 	if (useAvatar) {
-		str += QString("<icon name=\"avatars/%1\">").arg(isPrivate() ? TextUtil::escape(jid().full()) : jid().bare());
+		str += QString("<icon name=\"avatars/%1\">").arg(jid().bare());
 		str += "</td><td width=\"10\"></td>";
 		str += "<td>";
 	}
@@ -922,11 +586,8 @@ QString UserListItem::makeBareTip(bool trim, bool doLinkify) const
 
 	// User Activity
 	if (!activity().isNull()) {
-		QString act = activity().typeValue();
-		if (activity().specificType() != Activity::UnknownSpecific && activity().specificType() != Activity::Other && !activity().specificTypeValue().isEmpty()) {
-			act += "_" + activity().specificTypeValue();
-		}
-		str += QString("<div style='white-space:pre'><%1=\"activities/%2\"> ").arg(imgTag).arg(act) + QObject::tr("Activity") + ": " + activity().typeText();
+		str += QString("<div style='white-space:pre'><%1=\"%2\"> ").arg(imgTag).arg(activityIconName(activity())) + 
+			QObject::tr("Activity") + ": " + activity().typeText();
 		if (activity().specificType() != Activity::UnknownSpecific) {
 			str += QString(" - ") + activity().specificTypeText();
 		}

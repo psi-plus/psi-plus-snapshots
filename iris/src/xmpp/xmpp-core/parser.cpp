@@ -724,6 +724,11 @@ public:
 			in->pause(true);
 			reader->parse(in, true);
 			in->pause(false);
+		} else {
+			reader = 0;
+			handler = 0;
+			in = 0;
+			doc = 0;
 		}
 	}
 

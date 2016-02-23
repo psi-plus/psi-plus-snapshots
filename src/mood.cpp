@@ -65,7 +65,7 @@ bool Mood::isNull() const
 
 QDomElement Mood::toXml(QDomDocument& doc)
 {
-	QDomElement mood = doc.createElement(PEP_MOOD_TN);
+	QDomElement mood = doc.createElement("mood");
 	mood.setAttribute("xmlns", PEP_MOOD_NS);
 
 	if (!type() == Unknown) {
@@ -85,9 +85,9 @@ QDomElement Mood::toXml(QDomDocument& doc)
 
 void Mood::fromXml(const QDomElement& e)
 {
-	type_ = Mood::Unknown;
-
-	if (e.tagName() != PEP_MOOD_TN)
+	text_.clear();
+	type_ = Unknown;
+	if (e.tagName() != "mood")
 		return;
 
 	for(QDomNode n = e.firstChild(); !n.isNull(); n = n.nextSibling()) {

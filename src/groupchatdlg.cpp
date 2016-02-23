@@ -74,6 +74,7 @@
 #include "xmpp_tasks.h"
 #include "iconaction.h"
 #include "psitooltip.h"
+#include "avatars.h"
 #include "psioptions.h"
 #include "coloropt.h"
 #include "urlobject.h"
@@ -90,7 +91,6 @@
 #endif
 #include "psirichtext.h"
 #include "psiwindowheader.h"
-#include "avatars.h"
 
 #include "mcmdsimplesite.h"
 
@@ -223,14 +223,13 @@ public:
 	bool nonAnonymous;		 // got status code 100 ?
 	ActionList *actions;
 	IconAction *act_bookmark;
-	QAction *act_copy_muc_jid;
 	TypeAheadFindBar *typeahead;
 //#ifdef WHITEBOARDING
 //	IconAction *act_whiteboard;
 //#endif
 	QAction *act_send, *act_scrollup, *act_scrolldown, *act_close;
-
-	QAction *act_mini_cmd, *act_nick, *act_hide, *act_minimize;
+	QAction *act_mini_cmd, *act_nick, *act_hide, *act_copy_muc_jid;
+	QAction *act_minimize;
 
 	MCmdSimpleSite mCmdSite;
 	MCmdManager mCmdManager;
@@ -681,13 +680,6 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 
 	d->state = Private::Connected;
 
-	SendButtonTemplatesMenu* menu = getTemplateMenu();
-	if (menu) {
-		connect(menu, SIGNAL(doPasteAndSend()), this, SLOT(doPasteAndSend()));
-		connect(menu, SIGNAL(doEditTemplates()), this, SLOT(editTemplates()));
-		connect(menu, SIGNAL(doTemplateText(const QString &)), this, SLOT(sendTemp(const QString &)));
-	}
-
 	setAcceptDrops(true);
 
 #ifndef Q_OS_MAC
@@ -698,9 +690,8 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 	ui_.lb_ident->setAccount(account());
 	ui_.lb_ident->setShowJid(false);
 	ui_.log->setSessionData(true, jid().full(), jid().full()); //FIXME change conference name
-	PsiOptions *options = PsiOptions::instance();
-	d->tabmode = options->getOption("options.ui.tabs.use-tabs").toBool();
-	setWindowBorder(options->getOption("options.ui.decorate-windows").toBool());
+	d->tabmode = PsiOptions::instance()->getOption("options.ui.tabs.use-tabs").toBool();
+	setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
 	if (!d->tabmode && !isBorder()) {
 		d->winHeader_ = new PsiWindowHeader(this);
 		ui_.vboxLayout1->insertWidget(0, d->winHeader_);
@@ -737,7 +728,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 #ifndef HAVE_QT5
 	ui_.lv_users->model()->setSupportedDragActions(Qt::CopyAction);
 #endif
-	if (options->getOption("options.ui.contactlist.disable-scrollbar").toBool() ) {
+	if (PsiOptions::instance()->getOption("options.ui.contactlist.disable-scrollbar").toBool() ) {
 		ui_.lv_users->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	}
 	connect(ui_.lv_users, SIGNAL(action(const QString &, const Status &, int)), SLOT(lv_action(const QString &, const Status &, int)));
@@ -776,12 +767,6 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 		}
 		else if (name == "gchat_info") {
 			connect(action, SIGNAL(triggered()), SLOT(doInfo()));
-		}
-		else if (name == "gchat_ps") {
-			connect(action, SIGNAL(triggered()), SLOT(doPasteAndSend()));
-		}
-		else if (name == "gchat_templates") {
-			action->setMenu(getTemplateMenu());
 		}
 	}
 
@@ -842,7 +827,6 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 	connect(d->act_send,SIGNAL(triggered()), SLOT(mle_returnPressed()));
  	ui_.pb_send->setIcon(IconsetFactory::icon("psi/action_button_send").icon());
 	connect(ui_.pb_send, SIGNAL(clicked()), SLOT(mle_returnPressed()));
-	connect(ui_.pb_send, SIGNAL(customContextMenuRequested(const QPoint)), SLOT(sendButtonMenu()));
 	d->act_close = new QAction(this);
 	addAction(d->act_close);
 	connect(d->act_close,SIGNAL(triggered()), SLOT(close()));
@@ -871,10 +855,10 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 	connect(ui_.vsplitter, SIGNAL(splitterMoved(int,int)), this, SLOT(verticalSplitterMoved(int,int)));
 
 	// resize the horizontal splitter
-	d->logSize = options->getOption("options.ui.muc.log-width").toInt();
-	d->rosterSize = options->getOption("options.ui.muc.roster-width").toInt();
+	d->logSize = PsiOptions::instance()->getOption("options.ui.muc.log-width").toInt();
+	d->rosterSize = PsiOptions::instance()->getOption("options.ui.muc.roster-width").toInt();
 	QList<int> list;
-	bool leftRoster = options->getOption("options.ui.muc.roster-at-left").toBool();
+	bool leftRoster = PsiOptions::instance()->getOption("options.ui.muc.roster-at-left").toBool();
 	if(leftRoster)
 		list << d->rosterSize << d->logSize;
 	else
@@ -886,8 +870,8 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 		ui_.hsplitter->insertWidget(0, ui_.lv_users);  // Swap widgets
 
 	// resize the vertical splitter
-	d->logHeight = options->getOption("options.ui.chat.log-height").toInt();
-	d->chateditHeight = options->getOption("options.ui.chat.chatedit-height").toInt();
+	d->logHeight = PsiOptions::instance()->getOption("options.ui.chat.log-height").toInt();
+	d->chateditHeight = PsiOptions::instance()->getOption("options.ui.chat.chatedit-height").toInt();
 	setVSplitterPosition(d->logHeight, d->chateditHeight);
 
 	X11WM_CLASS("groupchat");
@@ -904,8 +888,8 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 	setShortcuts();
 	invalidateTab();
 	setConnecting();
-	connect(ui_.log->textWidget(), SIGNAL(quote(const QString &)), ui_.mle->chatEdit(), SLOT(insertAsQuote(const QString &)));
 
+	connect(ui_.log->textWidget(), SIGNAL(quote(const QString &)), ui_.mle->chatEdit(), SLOT(insertAsQuote(const QString &)));
 	connect(pa->avatarFactory(), SIGNAL(avatarChanged(Jid)), SLOT(avatarUpdated(Jid)));
 
 #ifdef PSI_PLUGINS
@@ -930,13 +914,6 @@ GCMainDlg::~GCMainDlg()
 	account()->dialogUnregister(this);
 	delete d->mucManager;
 	delete d;
-
-	SendButtonTemplatesMenu* menu = getTemplateMenu();
-	if (menu) {
-		disconnect(menu, SIGNAL(doPasteAndSend()), this, SLOT(doPasteAndSend()));
-		disconnect(menu, SIGNAL(doEditTemplates()), this, SLOT(editTemplates()));
-		disconnect(menu, SIGNAL(doTemplateText(const QString &)), this, SLOT(sendTemp(const QString &)));
-	}
 }
 
 void GCMainDlg::horizSplitterMoved()
@@ -2116,6 +2093,9 @@ void GCMainDlg::lv_action(const QString &nick, const Status &s, int x)
 	else if(x == 5) {
 		account()->actionVoice(jid().withResource(nick));
 	}
+	else if(x == 6) {
+		account()->actionExecuteCommandSpecific(jid().withResource(nick));
+	}
 	else if(x == 10) {
 		d->mucManager->kick(nick);
 	}
@@ -2189,9 +2169,6 @@ void GCMainDlg::lv_action(const QString &nick, const Status &s, int x)
 		}
 
 	}
-	else if(x == 50) {
-		account()->actionExecuteCommandSpecific(jid().withResource(nick));
-	}
 }
 
 void GCMainDlg::contextMenuEvent(QContextMenuEvent *)
@@ -2212,8 +2189,6 @@ void GCMainDlg::buildMenu()
 	d->pm_settings->addSeparator();
 
 	d->pm_settings->addAction(d->actions->action("gchat_icon"));
-	d->pm_settings->addAction(d->actions->action("gchat_templates"));
-	d->pm_settings->addAction(d->actions->action("gchat_ps"));
 	d->pm_settings->addAction(d->act_nick);
 	d->pm_settings->addAction(d->act_bookmark);
 #ifdef PSI_PLUGINS
@@ -2250,50 +2225,6 @@ int GCMainDlg::unreadMessageCount() const
 void GCMainDlg::setStatusTabIcon(int status)
 {
 	setTabIcon(PsiIconset::instance()->statusPtr(jid(), status)->icon());
-}
-
-void GCMainDlg::sendButtonMenu()
-{
-	SendButtonTemplatesMenu* menu = getTemplateMenu();
-	if (menu) {
-		menu->setParams(true);
-		menu->exec(QCursor::pos());
-		menu->setParams(false);
-		d->mle()->setFocus();
-	}
-}
-
-void GCMainDlg::editTemplates()
-{
-	if(TabbableWidget::isActiveTab()) {
-		showTemplateEditor();
-	}
-}
-
-void GCMainDlg::doPasteAndSend()
-{
-	if(TabbableWidget::isActiveTab()) {
-		d->mle()->paste();
-		mle_returnPressed();
-		d->actions->action("gchat_ps")->setEnabled(false);
-		QTimer::singleShot(2000, this, SLOT(psButtonEnabled()));
-	}
-}
-
-void GCMainDlg::psButtonEnabled()
-{
-	d->actions->action("gchat_ps")->setEnabled(true);
-}
-
-void GCMainDlg::sendTemp(const QString &templText)
-{
-	if(TabbableWidget::isActiveTab()) {
-		if (!templText.isEmpty()) {
-			d->mle()->textCursor().insertText(templText);
-			if (!PsiOptions::instance()->getOption("options.ui.chat.only-paste-template").toBool())
-				mle_returnPressed();
-		}
-	}
 }
 
 

@@ -79,6 +79,7 @@ public:
 	PsiIcon *statusPtr(UserListItem *);
 	PsiIcon status(UserListItem *);
 
+	QString caps2client(const QString &name);
 signals:
 	void emoticonsChanged();
 	void systemIconsSizeChanged(int);

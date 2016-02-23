@@ -31,14 +31,6 @@ public Q_SLOTS:
 	void raise();
 	void sleep();
 	void wake();
-
-	void setstatusonline(const QString &message);
-	void setstatusaway(const QString &message);
-	void setstatusffc(const QString &message);
-	void setstatusxa(const QString &message);
-	void setstatusdnd(const QString &message);
-	void setstatusoffline(const QString &message);
-
 /*Q_SIGNALS:
 	void psi_pong();
 */
@@ -82,41 +74,6 @@ void PsiConAdapter::wake()
 	psicon->doWakeup();
 }
 
-void PsiConAdapter::setstatusonline(const QString &message)
-{
-	Status s(Status::Online, message);
-	psicon->setGlobalStatus(s);
-}
-
-void PsiConAdapter::setstatusaway(const QString &message)
-{
-	Status s(Status::Away, message);
-	psicon->setGlobalStatus(s);
-}
-
-void PsiConAdapter::setstatusffc(const QString &message)
-{
-	Status s(Status::FFC, message);
-	psicon->setGlobalStatus(s);
-}
-
-void PsiConAdapter::setstatusxa(const QString &message)
-{
-	Status s(Status::XA, message);
-	psicon->setGlobalStatus(s);
-}
-
-void PsiConAdapter::setstatusdnd(const QString &message)
-{
-	Status s(Status::DND, message);
-	psicon->setGlobalStatus(s);
-}
-
-void PsiConAdapter::setstatusoffline(const QString &message)
-{
-	Status s(Status::Offline, message);
-	psicon->setGlobalStatus(s);
-}
 
 void addPsiConAdapter(PsiCon *psicon)
 {

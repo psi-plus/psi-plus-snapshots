@@ -60,7 +60,7 @@ void MoodDlg::setMood()
 	QString moodstr = ui_.cb_type->currentText();
 	foreach(PsiAccount *pa, pa_) {
 		if (moodstr == tr("<unset>")) {
-			pa->pepManager()->disable(PEP_MOOD_TN, PEP_MOOD_NS, "current");
+			pa->pepManager()->disable("mood", PEP_MOOD_NS, "current");
 		}
 		else {
 			Mood::Type type = MoodCatalog::instance()->findEntryByText(moodstr).type();

@@ -60,6 +60,8 @@ public:
 
 	void setWindowOpts(bool onTop, bool asTool);
 	void setUseDock(bool);
+	void setUseAvatarFrame(bool state);
+	void reinitAutoHide();
 
 	void buildToolbars();
 	PsiTrayIcon *psiTrayIcon();
@@ -164,12 +166,12 @@ private slots:
 
 	void doTrayToolTip(QObject *, QPoint);
 
-	void optionChanged(const QString&);
-
 	void nickChanged();
 	void avatarChanged();
 
 	void hideTimerTimeout();
+
+	void optionChanged(const QString&);
 
 public slots:
 	void setWindowIcon(const QPixmap&);

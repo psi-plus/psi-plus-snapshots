@@ -30,6 +30,7 @@
 #include <QFileInfo>
 #include <QCoreApplication>
 #include <QSet>
+#include <QTextStream>
 
 using namespace XMPP;
 
@@ -43,6 +44,7 @@ private:
 	PsiIconset *psi;
 public:
 	Iconset system, moods, clients, activities, affiliations;
+	QMap<QString, QString> caps2clients;
 	QString cur_system, cur_status, cur_moods, cur_clients, cur_activity, cur_affiliations;
 	QStringList cur_emoticons;
 	QMap<QString, QString> cur_service_status;
@@ -475,6 +477,40 @@ bool PsiIconset::loadClients()
 		d->loadIconset(&d->clients, &clients);
 		d->clients.addToFactory();
 
+		QStringList dirs = ApplicationInfo::dataDirs();
+		QMap<QString,QString> cm;
+		foreach (const QString &dataDir, dirs) {
+			QFile capsConv(dataDir + QLatin1String("/caps2client.txt"));
+			/* file format: <icon res name> <left part of cap1>,<left part of cap2>
+				next line the same.
+			*/
+			if (capsConv.open(QIODevice::ReadOnly)) {
+				QTextStream stream(&capsConv);
+
+				QString line;
+				while (!(line = stream.readLine()).isNull()) {
+					line = line.trimmed();
+					QString res = line.section(QLatin1Char(' '), 0, 0);
+					if (!res.length()) {
+						continue;
+					}
+					QString caps = line.mid(res.length());
+					foreach (const QString &c, caps.split(QLatin1Char(','), QString::SkipEmptyParts)) {
+						QString ct = c.trimmed();
+						if (ct.length()) {
+							cm.insert(ct, res);
+						}
+					}
+				}
+				/* insert end boundry element to make search implementation simple */
+				cm.insert(QLatin1String("~"), QLatin1String(""));
+				break;
+			}
+		}
+		if (cm.isEmpty()) {
+			qWarning("Failed to read caps2client.txt. Detection of clients' icons won't work properly");
+		}
+		d->caps2clients = cm;
 		d->cur_clients = cur_clients;
 	}
 
@@ -858,6 +894,18 @@ void PsiIconset::removeAnimation(Iconset *is)
 			it.next()->removeAnim(false);
 		}
 	}
+}
+
+QString PsiIconset::caps2client(const QString &name)
+{
+	QMap<QString, QString>::const_iterator it = d->caps2clients.lowerBound(name);
+	if (d->caps2clients.size()) {
+		if ((it != d->caps2clients.constEnd() && name.startsWith(it.key())) ||
+				(it != d->caps2clients.constBegin() && name.startsWith((--it).key()))) {
+			return it.value();
+		}
+	}
+	return QString();
 }
 
 PsiIconset* PsiIconset::instance()

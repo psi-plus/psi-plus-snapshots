@@ -135,6 +135,7 @@ public:
 	int tabsSize;
 	int rosterSize;
 	bool isLeftRoster;
+	bool isHide;
 
 	PopupAction* optionsButton, *statusButton;
 	IconActionGroup* statusGroup, *viewGroups;
@@ -150,15 +151,6 @@ public:
 	QWidget* searchWidget;
 
 	QTimer *hideTimer;
-	int hideTimerInterval; //interval in sec
-	bool useAutohide;
-	bool isHide;
-
-
-#ifdef Q_OS_WIN
-	DWORD deactivationTickCount;
-#endif
-
 	QSignalMapper* statusMapper;
 
 	PsiIcon* nextAnim;
@@ -174,6 +166,10 @@ public:
 	PsiRosterWidget* rosterWidget_;
 #endif
 
+#ifdef Q_OS_WIN
+	DWORD deactivationTickCount;
+#endif
+
 	void registerActions();
 	IconAction* getAction( QString name );
 	void updateMenu(QStringList actions, QMenu* menu);
@@ -185,7 +181,8 @@ public:
 	QPointer<GeoLocationDlg> geolocationDlg;
 };
 
-MainWin::Private::Private(PsiCon* _psi, MainWin* _mainWin) : splitter(0), mainTabs(0), viewToolBar(0), isLeftRoster(false), psi(_psi), mainWin(_mainWin)
+MainWin::Private::Private(PsiCon* _psi, MainWin* _mainWin) : splitter(0), mainTabs(0), viewToolBar(0),
+	isLeftRoster(false), psi(_psi), mainWin(_mainWin), hideTimer(0)
 {
 
 	statusGroup   = (IconActionGroup *)getAction("status_group");
@@ -205,13 +202,10 @@ MainWin::Private::Private(PsiCon* _psi, MainWin* _mainWin) : splitter(0), mainTa
 
 	char* squishStr = getenv("SQUISH_ENABLED");
 	squishEnabled = squishStr != 0;
-
-	hideTimer = new QTimer();
 }
 
 MainWin::Private::~Private()
 {
-	delete(hideTimer);
 }
 
 void MainWin::Private::registerActions()
@@ -358,7 +352,7 @@ MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
 		QList<int> sizes;
 		d->rosterSize = PsiOptions::instance()->getOption(rosterGeometryPath).toInt();
 		d->tabsSize = PsiOptions::instance()->getOption(tabsGeometryPath).toInt();
-		d->isLeftRoster = PsiOptions::instance()->getOption("options.ui.contactlist.roster-at-left-when-all-in-one-window").toBool();
+		d->isLeftRoster = PsiOptions::instance()->getOption("options.ui.contactlist.aio-left-roster").toBool();
 		if (d->isLeftRoster) {
 			d->splitter->addWidget(rosterBar);
 			d->splitter->addWidget(d->mainTabs);
@@ -436,7 +430,7 @@ MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
 	// create rosteravatarframe
 	d->rosterAvatar = new RosterAvatarFrame(this);
 	d->vb_roster->addWidget(d->rosterAvatar);
-	d->rosterAvatar->setVisible(PsiOptions::instance()->getOption("options.ui.contactlist.show-roster-avatar-frame").toBool());
+	d->rosterAvatar->setVisible(PsiOptions::instance()->getOption("options.ui.contactlist.show-avatar-frame").toBool());
 	connect(d->rosterAvatar, SIGNAL(statusMessageChanged(QString)), this, SIGNAL(statusMessageChanged(QString)));
 	connect(psiCon(), SIGNAL(statusMessageChanged(QString)), d->rosterAvatar, SLOT(setStatusMessage(QString)));
 	connect(d->rosterAvatar, SIGNAL(setMood()), this, SLOT(actSetMoodActivated()));
@@ -591,12 +585,10 @@ MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
 		connect(sp_ss, SIGNAL(triggered()), SLOT(avcallConfig()));*/
 	optionChanged("options.ui.contactlist.css");
 
-	connect(d->hideTimer, SIGNAL(timeout()), SLOT(hideTimerTimeout()));
-	d->hideTimerInterval = PsiOptions::instance()->getOption("options.contactlist.autohide-interval").toInt();
-	d->hideTimer->setInterval(d->hideTimerInterval*1000);
-	optionChanged("options.contactlist.use-autohide");
 	setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
 	setMouseTracking(!isBorder());
+
+	reinitAutoHide();
 }
 
 MainWin::~MainWin()
@@ -635,36 +627,11 @@ void MainWin::optionChanged(const QString& option)
 			setStyleSheet(css);
 		}
 	}
-	else if (option == "options.ui.contactlist.show-roster-avatar-frame") {
-		d->rosterAvatar->setVisible(PsiOptions::instance()->getOption("options.ui.contactlist.show-roster-avatar-frame").toBool());
-	}
-	else if (option == "options.contactlist.use-autohide") {
-		d->useAutohide = PsiOptions::instance()->getOption("options.contactlist.use-autohide").toBool();
-		if(d->useAutohide)
-			d->hideTimer->start();
-		else
-			d->hideTimer->stop();
-	}
-	else if (option == "options.contactlist.autohide-interval") {
-		d->hideTimerInterval = PsiOptions::instance()->getOption("options.contactlist.autohide-interval").toInt();
-		d->hideTimer->setInterval(d->hideTimerInterval*1000);
-		if(d->useAutohide)
-			d->hideTimer->start();
-	}
 	else if (option == "options.ui.decorate-windows") {
 		setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
 		setMouseTracking(!isBorder());
 		show();
 	}
-}
-
-void MainWin::hideTimerTimeout()
-{
-	d->hideTimer->stop();
-	if(d->tray)
-		trayHide();
-	else
-		setWindowState(Qt::WindowMinimized);
 }
 
 void MainWin::registerAction( IconAction* action )
@@ -813,6 +780,33 @@ void MainWin::registerAction( IconAction* action )
 	}
 }
 
+void MainWin::reinitAutoHide()
+{
+	int interval = PsiOptions::instance()->getOption("options.contactlist.autohide-interval").toInt();
+	if (interval) {
+		if (!d->hideTimer) {
+			d->hideTimer = new QTimer(this);
+			connect(d->hideTimer, SIGNAL(timeout()), SLOT(hideTimerTimeout()));
+		}
+		d->hideTimer->setInterval(interval*1000);
+		if (isVisible()) {
+			d->hideTimer->start();
+		}
+	} else {
+		delete d->hideTimer;
+		d->hideTimer = 0;
+	}
+}
+
+void MainWin::hideTimerTimeout()
+{
+	d->hideTimer->stop();
+	if(d->tray)
+		trayHide();
+	else
+		setWindowState(Qt::WindowMinimized);
+}
+
 PsiCon* MainWin::psiCon() const
 {
 	return d->psi;
@@ -869,6 +863,11 @@ void MainWin::setUseDock(bool use)
 
 		d->tray->show();
 	}
+}
+
+void MainWin::setUseAvatarFrame(bool state)
+{
+	d->rosterAvatar->setVisible(state);
 }
 
 void MainWin::buildStatusMenu()
@@ -1563,14 +1562,14 @@ void MainWin::keyPressEvent(QKeyEvent* e)
 
 void MainWin::enterEvent(QEvent *e)
 {
-	if(d->useAutohide)
+	if(d->hideTimer)
 		d->hideTimer->stop();
 	QMainWindow::enterEvent(e);
 }
 
 void MainWin::leaveEvent(QEvent *e)
 {
-	if(d->useAutohide)
+	if(d->hideTimer)
 		d->hideTimer->start();
 	QMainWindow::leaveEvent(e);
 }
@@ -1719,7 +1718,7 @@ void MainWin::trayDoubleClicked()
 void MainWin::trayShow()
 {
 	bringToFront(this);
-	if(d->useAutohide)
+	if(d->hideTimer)
 		d->hideTimer->start();
 }
 
@@ -2021,7 +2020,7 @@ void MainWin::showNoFocus()
 void MainWin::showNoFocus()
 {
 	bringToFront(this);
-	if(d->useAutohide)
+	if(d->hideTimer)
 		d->hideTimer->start();
 }
 

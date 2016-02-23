@@ -22,8 +22,8 @@
 #define MOOD_H
 
 #include <QString>
+#include <QMetaType>
 
-#define PEP_MOOD_TN "mood"
 #define PEP_MOOD_NS "http://jabber.org/protocol/mood"
 
 class QDomElement;
@@ -65,5 +65,7 @@ private:
 	Type type_;
 	QString text_;
 };
+
+Q_DECLARE_METATYPE(Mood)
 
 #endif

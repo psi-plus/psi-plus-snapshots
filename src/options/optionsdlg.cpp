@@ -89,8 +89,10 @@ public:
 			iconSize = icon.availableSizes().first();
 		else
 #endif
+		{
 			int s = PsiIconset::instance()->system().iconSize();
 			iconSize = QSize(s,s);
+		}
 		QRect iconRect = opt.rect;
 		QRect textRect = opt.rect;
 		iconRect.setWidth(iconSize.width());
@@ -156,8 +158,10 @@ public:
 			iconSize = icon.availableSizes().first();
 		else
 #endif
+		{
 			int s = PsiIconset::instance()->system().iconSize();
 			iconSize = QSize(s,s);
+		}
 
 		int width = iconSize.width();
 		width += 8;

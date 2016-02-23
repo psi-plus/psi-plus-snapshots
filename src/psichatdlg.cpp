@@ -18,7 +18,6 @@
 #include <QDragEnterEvent>
 #include <QMessageBox>
 #include <QDebug>
-#include <QTimer>
 #include <QClipboard>
 
 #include "psicon.h"
@@ -185,23 +184,6 @@ PsiChatDlg::PsiChatDlg(const Jid& jid, PsiAccount* pa, TabManager* tabManager)
 	mCmdManager_.registerProvider(new ChatDlgMCmdProvider(this));
 	tabmode = PsiOptions::instance()->getOption("options.ui.tabs.use-tabs").toBool();
 	setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
-	SendButtonTemplatesMenu* menu = getTemplateMenu();
-	if (menu) {
-		connect(menu, SIGNAL(doPasteAndSend()), this, SLOT(doPasteAndSend()));
-		connect(menu, SIGNAL(doEditTemplates()), this, SLOT(editTemplates()));
-		connect(menu, SIGNAL(doTemplateText(const QString &)), this, SLOT(sendTemp(const QString &)));
-	}
-}
-
-PsiChatDlg::~PsiChatDlg()
-{
-	SendButtonTemplatesMenu* menu = getTemplateMenu();
-	if (menu) {
-		disconnect(menu, SIGNAL(doPasteAndSend()), this, SLOT(doPasteAndSend()));
-		disconnect(menu, SIGNAL(doEditTemplates()), this, SLOT(editTemplates()));
-		disconnect(menu, SIGNAL(doTemplateText(const QString &)), this, SLOT(sendTemp(const QString &)));
-	}
-	delete actions_;
 }
 
 void PsiChatDlg::initUi()
@@ -279,7 +261,6 @@ void PsiChatDlg::initUi()
 	smallChat_ = PsiOptions::instance()->getOption("options.ui.chat.use-small-chats").toBool();
  	ui_.pb_send->setIcon(IconsetFactory::icon("psi/action_button_send").icon());
 	connect(ui_.pb_send, SIGNAL(clicked()), this, SLOT(doSend()));
-	connect(ui_.pb_send, SIGNAL(customContextMenuRequested(const QPoint)), SLOT(sendButtonMenu()));
 
 	act_mini_cmd_ = new QAction(this);
 	act_mini_cmd_->setText(tr("Input command..."));
@@ -290,21 +271,18 @@ void PsiChatDlg::initUi()
 		ui_.vboxLayout1->insertWidget(0, winHeader_);
 	}
 	setMargins();
-
 	connect(ui_.log->textWidget(), SIGNAL(quote(const QString &)), ui_.mle->chatEdit(), SLOT(insertAsQuote(const QString &)));
-	
-	ui_.log->realTextWidget()->installEventFilter(this);
 
-#ifdef PSI_PLUGINS
-	PluginManager::instance()->setupChatTab(this, account(), jid().full());
-#endif
-	
+	ui_.log->realTextWidget()->installEventFilter(this);
 	ui_.mini_prompt->hide();
 
 	if (throbber_icon == 0) {
 		throbber_icon = (PsiIcon *)IconsetFactory::iconPtr("psi/throbber");
 	}
 	unacked_messages = 0;
+#ifdef PSI_PLUGINS
+	PluginManager::instance()->setupChatTab(this, account(), jid().full());
+#endif
 }
 
 void PsiChatDlg::verticalSplitterMoved(int, int)
@@ -335,6 +313,7 @@ void PsiChatDlg::updateCountVisibility()
 	else {
 		ui_.lb_count->hide();
 	}
+	delete actions_;
 }
 
 void PsiChatDlg::setLooks()
@@ -384,7 +363,6 @@ void PsiChatDlg::setLooks()
 	updateIdentityVisibility();
 	updateCountVisibility();
 	updateContactAdding();
-	updateToolbuttons();
 
 	// toolbuttons
 	QIcon i;
@@ -475,7 +453,7 @@ void PsiChatDlg::updateToolbuttons()
 		IconAction *action = actions_->action(actionName);
 		if (action) {
 			action->addTo(ui_.toolbar);
-			if (actionName == "chat_icon" || actionName == "chat_templates") {
+			if (actionName == "chat_icon") {
 				((QToolButton *)ui_.toolbar->widgetForAction(action))->setPopupMode(QToolButton::InstantPopup);
 			}
 		}
@@ -499,8 +477,8 @@ void PsiChatDlg::initToolButtons()
 {
 // typeahead find
 	QHBoxLayout *hb3a = new QHBoxLayout();
-	typeahead = new TypeAheadFindBar(ui_.log->textWidget(), tr("Find toolbar"), 0);
-	hb3a->addWidget( typeahead );
+	typeahead_ = new TypeAheadFindBar(ui_.log->textWidget(), tr("Find toolbar"), 0);
+	hb3a->addWidget( typeahead_ );
 	ui_.vboxLayout1->addLayout(hb3a);
 // -- typeahead
 
@@ -509,13 +487,12 @@ void PsiChatDlg::initToolButtons()
 		IconAction *action = list->action(name)->copy();
 		action->setParent(this);
 		actions_->addAction(name, action);
-
 		if (name == "chat_clear") {
 			connect(action, SIGNAL(triggered()), SLOT(doClearButton()));
 		}
 		else if (name == "chat_find") {
 			// typeahead find
-			connect(action, SIGNAL(triggered()), typeahead, SLOT(toggleVisibility()));
+			connect(action, SIGNAL(triggered()), typeahead_, SLOT(toggleVisibility()));
 		// -- typeahead
 		}
 		else if (name == "chat_html_text") {
@@ -550,12 +527,6 @@ void PsiChatDlg::initToolButtons()
 		else if (name == "chat_compact") {
 			connect(action, SIGNAL(triggered()), SLOT(toggleSmallChat()));
 		}
-		else if (name == "chat_ps") {
-			connect(action, SIGNAL(triggered()), SLOT(doPasteAndSend()));
-		}
-		else if (name == "chat_templates") {
-			action->setMenu(getTemplateMenu());
-		}
 		else if (name == "chat_active_contacts") {
 			connect(action, SIGNAL(triggered()), SLOT(actActiveContacts()));
 		}
@@ -574,6 +545,7 @@ void PsiChatDlg::initToolBar()
 	ui_.toolbar->setWindowTitle(tr("Chat Toolbar"));
 	int s = PsiIconset::instance()->system().iconSize();
 	ui_.toolbar->setIconSize(QSize(s, s));
+
 	updateToolbuttons();
 }
 
@@ -837,7 +809,7 @@ void PsiChatDlg::optionsUpdate()
 
 	ChatDlg::optionsUpdate();
 // typeahead find bar
-	typeahead->optionsUpdate();
+	typeahead_->optionsUpdate();
 }
 
 void PsiChatDlg::updatePGP()
@@ -929,8 +901,6 @@ void PsiChatDlg::buildMenu()
 	pm_settings_->addSeparator();
 
 	pm_settings_->addAction(actions_->action("chat_icon_"));
-	pm_settings_->addAction(actions_->action("chat_templates"));
-	pm_settings_->addAction(actions_->action("chat_ps"));
 	pm_settings_->addAction(actions_->action("chat_file"));
 	if (AvCallManager::isSupported()) {
 		pm_settings_->addAction(actions_->action("chat_voice"));
@@ -985,6 +955,10 @@ void PsiChatDlg::chatEditCreated()
 	tabCompletion.setTextEdit(chatEdit());
 }
 
+void PsiChatDlg::doMinimize()
+{
+	window()->showMinimized();
+}
 
 void PsiChatDlg::doSend() {
 	tabCompletion.reset();
@@ -1027,11 +1001,6 @@ void PsiChatDlg::addContact()
 	account()->openAddUserDlg(j.withResource(""), name.isEmpty()?j.node():name, "");
 }
 
-void PsiChatDlg::doMinimize()
-{
-	window()->showMinimized();
-}
-
 bool PsiChatDlg::eventFilter( QObject *obj, QEvent *ev ) {
 	if ( obj == chatEdit() ) {
 		if ( ev->type() == QEvent::KeyPress ) {
@@ -1054,68 +1023,6 @@ bool PsiChatDlg::eventFilter( QObject *obj, QEvent *ev ) {
 	return ChatDlg::eventFilter( obj, ev );
 }
 
-void PsiChatDlg::sendButtonMenu()
-{
-	SendButtonTemplatesMenu* menu = getTemplateMenu();
-	if (menu) {
-		menu->setParams(true);
-		menu->exec(QCursor::pos());
-		menu->setParams(false);
-		chatEdit()->setFocus();
-	}
-}
-
-void PsiChatDlg::editTemplates()
-{
-	if(ChatDlg::isActiveTab()) {
-		showTemplateEditor();
-	}
-}
-
-void PsiChatDlg::doPasteAndSend()
-{
-	if(ChatDlg::isActiveTab()) {
-		chatEdit()->paste();
-		doSend();
-		actions_->action("chat_ps")->setEnabled(false);
-		QTimer::singleShot(2000, this, SLOT(psButtonEnabled()));
-	}
-}
-
-void PsiChatDlg::psButtonEnabled()
-{
-	actions_->action("chat_ps")->setEnabled(true);
-}
-
-void PsiChatDlg::sendTemp(const QString &templText)
-{
-	if(ChatDlg::isActiveTab()) {
-		if (!templText.isEmpty()) {
-			chatEdit()->textCursor().insertText(templText);
-			if (!PsiOptions::instance()->getOption("options.ui.chat.only-paste-template").toBool())
-				doSend();
-		}
-	}
-}
-
-void PsiChatDlg::setMargins()
-{
-	ui_.vboxLayout->setContentsMargins(0,0,0,0);
-	ui_.vboxLayout2->setContentsMargins(4,0,4,4);
-	if (!tabmode) {
-		ui_.hboxLayout->setContentsMargins(4,0,4,0);
-		if (!isBorder()) {
-			ui_.vboxLayout1->setContentsMargins(0,0,0,0);
-		}
-		else {
-			ui_.vboxLayout1->setContentsMargins(0,4,0,0);
-		}
-	}
-	else {
-		ui_.vboxLayout1->setContentsMargins(4,4,4,0);
-		ui_.hboxLayout->setContentsMargins(2,0,4,0);
-	}
-}
 
 QString PsiChatDlg::makeContactName(const QString &name, const Jid &jid) const
 {
@@ -1128,7 +1035,7 @@ QString PsiChatDlg::makeContactName(const QString &name, const Jid &jid) const
 	return name_;
 }
 
-void PsiChatDlg::contactChanged()
+void PsiChatDlg::contactChanged() /* current jid was chanegd in Jid combobox.TODO rename this func*/
 {
 	int curr_index = ui_.le_jid->currentIndex();
 	Jid jid_(ui_.le_jid->itemData(curr_index).toString());
@@ -1186,6 +1093,25 @@ void PsiChatDlg::doSwitchJidMode()
 		updateJidWidget(ul, userStatus.statusType, true);
 		userStatus = userStatusFor(jid(), ul, false);
 		contactUpdated(userStatus.userListItem, userStatus.statusType, userStatus.status);
+	}
+}
+
+void PsiChatDlg::setMargins()
+{
+	ui_.vboxLayout->setContentsMargins(0,0,0,0);
+	ui_.vboxLayout2->setContentsMargins(4,0,4,4);
+	if (!tabmode) {
+		ui_.hboxLayout->setContentsMargins(4,0,4,0);
+		if (!isBorder()) {
+			ui_.vboxLayout1->setContentsMargins(0,0,0,0);
+		}
+		else {
+			ui_.vboxLayout1->setContentsMargins(0,4,0,0);
+		}
+	}
+	else {
+		ui_.vboxLayout1->setContentsMargins(4,4,4,0);
+		ui_.hboxLayout->setContentsMargins(2,0,4,0);
 	}
 }
 

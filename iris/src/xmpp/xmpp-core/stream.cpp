@@ -925,7 +925,8 @@ void ClientStream::srvProcessNext()
 void ClientStream::doReadyRead()
 {
 	//QGuardedPtr<QObject> self = this;
-	readyRead();
+	if (isActive())
+		emit readyRead();
 	//if(!self)
 	//	return;
 	//d->in_rrsig = false;

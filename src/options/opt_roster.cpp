@@ -65,8 +65,7 @@ void OptionsTabRoster::applyOptions()
 	PsiOptions::instance()->setOption("options.ui.contactlist.use-left-click", d->ck_useleft->isChecked());
 	PsiOptions::instance()->setOption("options.ui.contactlist.show-menubar", d->ck_showMenubar->isChecked());
 	PsiOptions::instance()->setOption("options.ui.contactlist.disable-scrollbar", d->ck_disableScrollbar->isChecked());
-	PsiOptions::instance()->setOption("options.ui.contactlist.show-roster-avatar-frame", d->ck_roster_avatar->isChecked());
-	PsiOptions::instance()->setOption("options.contactlist.use-autohide", d->cb_autohide->isChecked());
+	PsiOptions::instance()->setOption("options.ui.contactlist.show-avatar-frame", d->ck_roster_avatar->isChecked());
 	PsiOptions::instance()->setOption("options.contactlist.autohide-interval", d->sb_hideInterval->value());
 
 	//enabled icons
@@ -96,10 +95,8 @@ void OptionsTabRoster::restoreOptions()
 	d->ck_useleft->setVisible(false);
 	d->ck_showMenubar->setChecked( PsiOptions::instance()->getOption("options.ui.contactlist.show-menubar").toBool() );
 	d->ck_disableScrollbar->setChecked( PsiOptions::instance()->getOption("options.ui.contactlist.disable-scrollbar").toBool() );
-	d->ck_roster_avatar->setChecked( PsiOptions::instance()->getOption("options.ui.contactlist.show-roster-avatar-frame").toBool() );
-	d->cb_autohide->setChecked( PsiOptions::instance()->getOption("options.contactlist.use-autohide").toBool() );
+	d->ck_roster_avatar->setChecked( PsiOptions::instance()->getOption("options.ui.contactlist.show-avatar-frame").toBool() );
 	d->sb_hideInterval->setValue( PsiOptions::instance()->getOption("options.contactlist.autohide-interval").toInt() );
-	d->sb_hideInterval->setEnabled(d->cb_autohide->isChecked());
 
 	//enabled icons
 	d->ck_showAvatarIcons->setChecked( PsiOptions::instance()->getOption("options.ui.contactlist.avatars.show").toBool() );

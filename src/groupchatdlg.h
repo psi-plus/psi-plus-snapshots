@@ -144,17 +144,10 @@ private slots:
 	void openWhiteboard();
 #endif
 	void chatEditCreated();
-	void sendButtonMenu();
-	void editTemplates();
-	void doPasteAndSend();
-	void sendTemp(const QString &);
-	void psButtonEnabled();
 	void horizSplitterMoved();
 	void verticalSplitterMoved(int, int);
 	void doMinimize();
 	void avatarUpdated(const Jid& jid);
-
-
 
 public:
 	class Private;
@@ -176,9 +169,9 @@ private:
 
 	void contextMenuEvent(QContextMenuEvent *);
 
-	void setMargins();
-
 	inline XMPP::Jid jidForNick(const QString &nick) const;
+
+	void setMargins();
 
 };
 

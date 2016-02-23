@@ -30,7 +30,6 @@
 #include "mood.h"
 #include "activity.h"
 #include "geolocation.h"
-//#include "physicallocation.h"
 #include "maybe.h"
 
 class AvatarFactory;

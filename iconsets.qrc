@@ -23,7 +23,11 @@
         <file>iconsets/roster/default/typing.png</file>
         <file>iconsets/system/default/account.png</file>
         <file>iconsets/system/default/add.png</file>
+	<file>iconsets/system/default/plugins.png</file>
         <file>iconsets/system/default/advanced.png</file>
+        <file>iconsets/system/default/advanced-plus.png</file>
+        <file>iconsets/system/default/avcall.png</file>
+        <file>iconsets/system/default/bookmarks.png</file>
         <file>iconsets/system/default/appearance.png</file>
         <file>iconsets/system/default/arrow_down.png</file>
         <file>iconsets/system/default/arrow_left.png</file>
@@ -42,6 +46,8 @@
         <file>iconsets/system/default/events.png</file>
         <file>iconsets/system/default/eye_blue.png</file>
         <file>iconsets/system/default/filemanager.png</file>
+        <file>iconsets/system/default/import.png</file>
+        <file>iconsets/system/default/export.png</file>
         <file>iconsets/system/default/groupchat.png</file>
         <file>iconsets/system/default/gstreamer-logo-50.png</file>
         <file>iconsets/system/default/help.png</file>
@@ -61,6 +67,7 @@
         <file>iconsets/system/default/ok.png</file>
         <file>iconsets/system/default/command.png</file>
         <file>iconsets/system/default/options.png</file>
+        <file>iconsets/system/default/roster_icon.png</file>
         <file>iconsets/system/default/pgp.png</file>
         <file>iconsets/system/default/play.png</file>
         <file>iconsets/system/default/play_sounds.png</file>
@@ -90,58 +97,51 @@
         <file>iconsets/system/default/vcard.png</file>
         <file>iconsets/system/default/xml.png</file>
         <file>iconsets/system/default/publish_tune.png</file>
+        <file>iconsets/system/default/tune.png</file>
+        <file>iconsets/system/default/geolocation.png</file>
+        <file>iconsets/system/default/activity.png</file>
+        <file>iconsets/system/default/mood.png</file>
         <file>iconsets/system/default/default_avatar.png</file>
         <file>iconsets/system/default/notification_chat_delivery_ok.png</file>
         <file>iconsets/system/default/notification_chat_info.png</file>
         <file>iconsets/system/default/notification_chat_receive.png</file>
         <file>iconsets/system/default/notification_chat_send.png</file>
         <file>iconsets/system/default/notification_chat_time.png</file>
+        <file>iconsets/system/default/notification_chat_delivery_ok_pgp.png</file>
+        <file>iconsets/system/default/notification_chat_receive_pgp.png</file>
+        <file>iconsets/system/default/notification_chat_send_pgp.png</file>
         <file>iconsets/system/default/throbber.png</file>
+	<file>iconsets/system/default/text.png</file>
+        <file>iconsets/system/default/enable-groups.png</file>
         <file>iconsets/system/default/bookmark_add.png</file>
         <file>iconsets/system/default/bookmark_remove.png</file>
+        <file>iconsets/system/default/action_muc_hide.png</file>
+        <file>iconsets/system/default/action_muc_leave.png</file>
+        <file>iconsets/system/default/action_muc_show.png</file>
+        <file>iconsets/system/default/action_templates_edit.png</file>
+        <file>iconsets/system/default/action_templates.png</file>
         <file>iconsets/system/default/theme_title_texture.png</file>
-	<file>iconsets/system/default/action_button_send.png</file>
-        <file>iconsets/system/default/psiplus/activity.png</file>
-        <file>iconsets/system/default/psiplus/mood.png</file>
-        <file>iconsets/system/default/psiplus/geolocation.png</file>
+        <file>iconsets/system/default/action_button_send.png</file>
+        <file>iconsets/system/default/autojid.png</file>
+	<file>iconsets/system/default/ignore_global_actions.png</file>
+        <file>iconsets/system/default/action_direct_presence.png</file>
         <file>iconsets/system/default/psiplus/psiplus_icon.png</file>
-        <file>iconsets/system/default/psiplus/action_direct_presence.png</file>
-        <file>iconsets/system/default/psiplus/action_muc_hide.png</file>
-        <file>iconsets/system/default/psiplus/action_muc_leave.png</file>
-        <file>iconsets/system/default/psiplus/action_muc_show.png</file>
         <file>iconsets/system/default/psiplus/action_paste_and_send.png</file>
-        <file>iconsets/system/default/psiplus/action_templates_edit.png</file>
-        <file>iconsets/system/default/psiplus/action_templates.png</file>
         <file>iconsets/system/default/psiplus/action_vcard_restore.png</file>
         <file>iconsets/system/default/psiplus/action_vcard_save_as.png</file>
-        <file>iconsets/system/default/psiplus/advanced.png</file>
-        <file>iconsets/system/default/psiplus/avcall.png</file>
-        <file>iconsets/system/default/psiplus/bookmarks.png</file>
         <file>iconsets/system/default/psiplus/cm_check.png</file>
-        <file>iconsets/system/default/psiplus/cm_export.png</file>
-        <file>iconsets/system/default/psiplus/cm_import.png</file>
         <file>iconsets/system/default/psiplus/cm_invertcheck.png</file>
         <file>iconsets/system/default/psiplus/cm_uncheck.png</file>
-        <file>iconsets/system/default/psiplus/notification_chat_delivery_ok_pgp.png</file>
-        <file>iconsets/system/default/psiplus/notification_chat_receive_pgp.png</file>
-        <file>iconsets/system/default/psiplus/notification_chat_send_pgp.png</file>
-        <file>iconsets/system/default/psiplus/notification_roster_tune.png</file>
-        <file>iconsets/system/default/psiplus/plugins.png</file>
-        <file>iconsets/system/default/psiplus/roster_icon.png</file>
         <file>iconsets/system/default/psiplus/psiplus_logo.png</file>
         <file>iconsets/system/default/psiplus/action_contacts_manager.png</file>
-        <file>iconsets/system/default/psiplus/enable-groups.png</file>
         <file>iconsets/system/default/psiplus/doublenextarrow.png</file>
         <file>iconsets/system/default/psiplus/doublebackarrow.png</file>
         <file>iconsets/system/default/psiplus/crop.png</file>
         <file>iconsets/system/default/psiplus/draw.png</file>
         <file>iconsets/system/default/psiplus/frame.png</file>
         <file>iconsets/system/default/psiplus/palette.png</file>
-        <file>iconsets/system/default/psiplus/text.png</file>
         <file>iconsets/system/default/psiplus/undo.png</file>
         <file>iconsets/system/default/psiplus/print.png</file>
-        <file>iconsets/system/default/psiplus/autojid.png</file>
-        <file>iconsets/system/default/psiplus/ignore_global_actions.png</file>
         <file>iconsets/system/default/whiteboarding/whiteboard.png</file>
         <file>iconsets/system/default/whiteboarding/save.png</file>
         <file>iconsets/system/default/whiteboarding/select.png</file>

@@ -197,7 +197,7 @@ bool PsiOptions::newProfile()
 		chatToolbar.name = "Chat";
 		chatToolbar.keys << "chat_clear"  << "chat_find" << "chat_html_text" << "chat_add_contact";
 		chatToolbar.keys += pluginsKeys;
-		chatToolbar.keys << "spacer" << "chat_icon" << "chat_templates" << "chat_ps" << "chat_file"
+		chatToolbar.keys << "spacer" << "chat_icon" << "chat_file"
 						 << "chat_pgp" << "chat_info" << "chat_history" << "chat_voice"
 						 << "chat_active_contacts";
 
@@ -206,7 +206,7 @@ bool PsiOptions::newProfile()
 		groupchatToolbar.name = "Groupchat";
 		groupchatToolbar.keys << "gchat_clear"  << "gchat_find" << "gchat_html_text" << "gchat_configure";
 		groupchatToolbar.keys += pluginsKeys;
-		groupchatToolbar.keys << "spacer" << "gchat_icon" << "gchat_templates" << "gchat_ps" ;
+		groupchatToolbar.keys << "spacer" << "gchat_icon" ;
 
 		ToolbarPrefs buttons;
 		buttons.name = tr("Buttons");

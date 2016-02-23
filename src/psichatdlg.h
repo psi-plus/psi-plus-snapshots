@@ -22,7 +22,6 @@ class PsiChatDlg : public ChatDlg
 	Q_OBJECT
 public:
 	PsiChatDlg(const Jid& jid, PsiAccount* account, TabManager* tabManager);
-	~PsiChatDlg();
 
 	virtual void setVSplitterPosition(int log,int chat);
 
@@ -40,30 +39,25 @@ private slots:
 	void toggleSmallChat();
 	void doClearButton();
 	void doMiniCmd();
-	void addContact();
 	void doMinimize();
+	void addContact();
 	void buildMenu();
 	void updateCounter();
 	void updateIdentityVisibility();
 	void updateCountVisibility();
 	void updateContactAdding(PsiContact* c = 0);
 	void updateContactAdding(const Jid &j);
-	void updateToolbuttons();
-	void copyUserJid();
-
-	// reimplemented
-	void chatEditCreated();
-	void sendButtonMenu();
-	void editTemplates();
-	void doPasteAndSend();
-	void sendTemp(const QString &);
-	void psButtonEnabled();
 	void verticalSplitterMoved(int, int);
 	void contactChanged();
 	QString makeContactName(const QString &name, const Jid &jid) const;
+	void updateToolbuttons();
 	void doSwitchJidMode();
+	void copyUserJid();
 	void actActiveContacts();
 	void actPgpToggled(bool);
+
+	// reimplemented
+	void chatEditCreated();
 
 private:
 	void initToolBar();
@@ -86,9 +80,9 @@ private:
 	void appendSysMsg(const QString &);
 	ChatView* chatView() const;
 	ChatEdit* chatEdit() const;
-	void setMargins();
 	void updateAutojidIcon();
 	void setJidComboItem(int pos, const QString &text, const Jid &jid, const QString &icon_str);
+	void setMargins();
 
 private:
 	Ui::ChatDlg ui_;
@@ -96,8 +90,9 @@ private:
 	QMenu* pm_settings_;
 
 	ActionList* actions_;
-	TypeAheadFindBar *typeahead;
-	QAction *act_mini_cmd_, *act_minimize_;
+	QAction *act_mini_cmd_;
+	QAction *act_minimize_;
+	TypeAheadFindBar *typeahead_;
 
 	ActionLineEdit *le_autojid;
 	IconAction *act_autojid;
@@ -108,6 +103,7 @@ private:
 
 	MCmdTabCompletion tabCompletion;
 
+	bool autoPGP_;
 	bool smallChat_;
 	class ChatDlgMCmdProvider;
 
@@ -121,8 +117,6 @@ private:
 
 	int logHeight;
 	int chateditHeight;
-
-	bool autoPGP_;
 };
 
 #endif

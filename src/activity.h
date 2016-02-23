@@ -22,6 +22,7 @@
 #define ACTIVITY_H
 
 #include <QString>
+#include <QMetaType>
 
 #define PEP_ACTIVITY_TN "activity"
 #define PEP_ACTIVITY_NS "http://jabber.org/protocol/activity"
@@ -95,5 +96,7 @@ private:
 	SpecificType specificType_;
 	QString text_;
 };
+
+Q_DECLARE_METATYPE(Activity)
 
 #endif

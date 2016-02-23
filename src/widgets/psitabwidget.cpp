@@ -81,20 +81,20 @@ PsiTabWidget::PsiTabWidget(QWidget *parent)
 	setTabPosition(QTabWidget::North);
 	setLooks();
 
+	if (!PsiOptions::instance()->getOption("options.ui.tabs.show-tab-close-buttons").toBool()){
+		tabBar_->setTabsClosable(false);
+	}
 	if (!PsiOptions::instance()->getOption("options.ui.tabs.show-tab-buttons").toBool()){
 		closeButton_->hide();
 		downButton_->hide();
 	}
-	if (!PsiOptions::instance()->getOption("options.ui.tabs.show-tab-close-buttons").toBool()){
-		tabBar_->setTabsClosable(false);
-	}
-	connect( tabBar_, SIGNAL(mouseDoubleClickTab(int)), SLOT(mouseDoubleClickTab(int)));
-	connect( tabBar_, SIGNAL(mouseMiddleClickTab(int)), SLOT(mouseMiddleClickTab(int)));
-	connect( tabBar_, SIGNAL( currentChanged(int)), SLOT(tab_currentChanged(int)));
-	connect( tabBar_, SIGNAL( contextMenu(QContextMenuEvent*,int)), SLOT( tab_contextMenu(QContextMenuEvent*,int)));
-	connect( closeButton_, SIGNAL(clicked()), SIGNAL(closeButtonClicked()));
+	connect(tabBar_, SIGNAL(mouseDoubleClickTab(int)), SLOT(mouseDoubleClickTab(int)));
+	connect(tabBar_, SIGNAL(mouseMiddleClickTab(int)), SLOT(mouseMiddleClickTab(int)));
+	connect(tabBar_, SIGNAL( currentChanged(int)), SLOT(tab_currentChanged(int)));
+	connect(tabBar_, SIGNAL( contextMenu(QContextMenuEvent*,int)), SLOT( tab_contextMenu(QContextMenuEvent*,int)));
 	connect(tabBar_, SIGNAL(tabMoved(int,int)),SLOT(widgetMoved(int,int)));
 	connect(tabBar_, SIGNAL(tabCloseRequested(int)),SIGNAL(tabCloseRequested(int)));
+	connect(closeButton_, SIGNAL(clicked()), SIGNAL(closeButtonClicked()));
 }
 
 void PsiTabWidget::setCloseIcon(const QIcon& icon) {

@@ -87,17 +87,17 @@ public:
 		connect(statusMenu_, SIGNAL(statusPresetDialogForced(const QString &)), account->account(), SLOT(showStatusDialog(const QString &)));
 		connect(statusMenu_, SIGNAL(reconnectActivated()), account->account(), SLOT(reconnectOnce()));
 
-		moodAction_ = new IconAction(tr("Mood"), this, QString(("mood/%1")).arg(account->account()->mood().typeValue()));
+		QString moodIcon = account->account()->mood().typeValue();
+		if (!moodIcon.isNull()) {
+			moodIcon = QLatin1String("mood/") + moodIcon;
+		}
+		moodAction_ = new IconAction(tr("Mood"), this, moodIcon);
 		connect(moodAction_, SIGNAL(triggered()), SLOT(setMood()));
 
-		QString act = account->account()->activity().typeValue();
-		if (account->account()->activity().specificType() != Activity::UnknownSpecific && account->account()->activity().specificType() != Activity::Other) {
-			act += "_" + account->account()->activity().specificTypeValue();
-		}
-		activityAction_ = new IconAction(tr("Activity"), this, QString(("activities/%1")).arg(act));
+		activityAction_ = new IconAction(tr("Activity"), this, activityIconName(account->account()->activity()));
 		connect(activityAction_, SIGNAL(triggered()), SLOT(setActivity()));
 
-		geolocationAction_ = new IconAction(tr("GeoLocation"), this, "system/geolocation");
+		geolocationAction_ = new IconAction(tr("GeoLocation"), this, "pep/geolocation");
 		connect(geolocationAction_, SIGNAL(triggered()), SLOT(setGeolocation()));
 
 		setAvatarAction_ = new QAction(tr("Set Avatar"), this);

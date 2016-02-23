@@ -124,7 +124,6 @@
 				<show-status-changes type="bool">true</show-status-changes>
 				<warn-before-clear type="bool">true</warn-before-clear>
 				<css type="QString" />
-				<only-paste-template type="bool">false</only-paste-template>
 				<hide-when-closing type="bool">false</hide-when-closing>
 				<status-with-priority comment="Show priority with status change" type="bool">false</status-with-priority>
 				<log-height type="int">325</log-height>
@@ -225,7 +224,7 @@ QLineEdit#le_status_text {
 				<raise-on-new-event type="bool">false</raise-on-new-event>
 				<quit-on-close type="bool">false</quit-on-close>
 				<raise-inactive type="bool">true</raise-inactive>
-				<show-roster-avatar-frame type="bool">false</show-roster-avatar-frame>
+				<show-avatar-frame type="bool">false</show-avatar-frame>
 				<show>
 					<agent-contacts type="bool">true</agent-contacts>
 					<away-contacts type="bool">true</away-contacts>
@@ -255,7 +254,7 @@ QLineEdit#le_status_text {
 				<use-left-click type="bool">false</use-left-click>
 				<use-single-click type="bool">false</use-single-click>
 				<use-status-change-animation type="bool">true</use-status-change-animation>
-				<roster-at-left-when-all-in-one-window type="bool">false</roster-at-left-when-all-in-one-window>
+				<aio-left-roster type="bool">false</aio-left-roster>
 				<use-transport-icons type="bool">true</use-transport-icons>
 				<saved-window-geometry type="QRect" >
 					<x>64</x>
@@ -499,12 +498,11 @@ QLineEdit#le_status_text {
 			</service-discovery>
 			<tabs>
 				<show-tab-icons type="bool">true</show-tab-icons>
-				<disable-wheel-scroll type="bool">false</disable-wheel-scroll>
 				<can-close-inactive-tab type="bool">true</can-close-inactive-tab>
 				<show-tab-close-buttons type="bool">true</show-tab-close-buttons>
 				<put-tabs-at-bottom type="bool">false</put-tabs-at-bottom>
 				<use-tabs type="bool">true</use-tabs>
- 				<mouse-middle-button type="QString">close</mouse-middle-button>
+				<mouse-middle-button type="QString">close</mouse-middle-button> <!-- hide|close|detach -->
 				<mouse-doubleclick-action type="QString">detach</mouse-doubleclick-action>
 				<size type="QString"></size> <!-- will be invalid when converted to QSize so we can detect first load -->
 				<grouping type="QString" comment="A ':' seperated list of groups of kinds of tabs to keep in the same tabset. 'C' for chat and 'M' for mucs. 'A' means using all in one window patch.">CM</grouping>
@@ -669,8 +667,7 @@ QLineEdit#le_status_text {
 			<hide-on-start type="bool">false</hide-on-start>
 			<resolve-nicks-on-contact-add type="bool">true</resolve-nicks-on-contact-add>
 			<use-toolwindow type="bool">false</use-toolwindow>
-			<use-autohide type="bool">false</use-autohide>
-			<autohide-interval type="int">600</autohide-interval>
+			<autohide-interval type="int">0</autohide-interval>
 		</contactlist>
 		<external-control>
 			<adhoc-remote-control>
@@ -764,6 +761,7 @@ QLineEdit#le_status_text {
 				<audio-input type="QString"/>
 				<video-input type="QString"/>
 			</devices>
+			<video-support type="bool">false</video-support>
 		</media>
 	</options>
 	<accounts comment="Account definitions and options"/>
