@@ -27,6 +27,7 @@
 //#include "xmpp_types.h"
 #include "xmpp_vcard.h"
 #include "xmpp_bitsofbinary.h"
+#include "xmpp/base/timezone.h"
 
 #include <qregexp.h>
 #include <QList>
@@ -1417,52 +1418,81 @@ const QString & JT_ClientVersion::os() const
 
 
 //----------------------------------------------------------------------------
-// JT_ClientTime
+// JT_EntityTime
 //----------------------------------------------------------------------------
-/*JT_ClientTime::JT_ClientTime(Task *parent, const Jid &_j)
-:Task(parent)
+JT_EntityTime::JT_EntityTime(Task* parent) : Task(parent)
 {
-	j = _j;
-	iq = createIQ("get", j.full(), id());
-	QDomElement query = doc()->createElement("query");
-	query.setAttribute("xmlns", "jabber:iq:time");
-	iq.appendChild(query);
 }
 
-void JT_ClientTime::go()
+/**
+ * \brief Queried entity's JID.
+ */
+const Jid & JT_EntityTime::jid() const
+{
+	return j;
+}
+
+/**
+ * \brief Prepares the task to get information from JID.
+ */
+void JT_EntityTime::get(const Jid &jid)
+{
+	j = jid;
+	iq = createIQ(doc(), "get", jid.full(), id());
+	QDomElement time = doc()->createElement("time");
+	time.setAttribute("xmlns", "urn:xmpp:time");
+	iq.appendChild(time);
+}
+
+void JT_EntityTime::onGo()
 {
 	send(iq);
 }
 
-bool JT_ClientTime::take(const QDomElement &x)
+bool JT_EntityTime::take(const QDomElement &x)
 {
-	if(x.attribute("id") != id())
-		return FALSE;
+	if (!iqVerify(x, j, id()))
+		return false;
 
-	if(x.attribute("type") == "result") {
-		bool found;
-		QDomElement q = queryTag(x);
+	if (x.attribute("type") == "result") {
+		QDomElement q = x.firstChildElement("time");
 		QDomElement tag;
-		tag = findSubTag(q, "utc", &found);
-		if(found)
-			stamp2TS(tagContent(tag), &utc);
-		tag = findSubTag(q, "tz", &found);
-		if(found)
-			timezone = tagContent(tag);
-		tag = findSubTag(q, "display", &found);
-		if(found)
-			display = tagContent(tag);
-
-		setSuccess(TRUE);
+		tag = q.firstChildElement("utc");
+		do {
+			if (tag.isNull()) {
+				break;
+			}
+			utc = QDateTime::fromString(tagContent(tag), Qt::ISODate);
+			tag = q.firstChildElement("tzo");
+			if (!utc.isValid() || tag.isNull()) {
+				break;
+			}
+			tzo = TimeZone::tzdToInt(tagContent(tag));
+			if (tzo == -1) {
+				break;
+			}
+			setSuccess();
+			return true;
+		}
+		while (false);
+		setError(406);
 	}
 	else {
-		setError(getErrorString(x));
-		setSuccess(FALSE);
+		setError(x);
 	}
 
-	return TRUE;
+	return true;
 }
-*/
+
+const QDateTime & JT_EntityTime::dateTime() const
+{
+	return utc;
+}
+
+int JT_EntityTime::timezoneOffset() const
+{
+	return tzo;
+}
 
 
 //----------------------------------------------------------------------------
@@ -1494,20 +1524,26 @@ bool JT_ServInfo::take(const QDomElement &e)
 		send(iq);
 		return true;
 	}
-	//else if(ns == "jabber:iq:time") {
-	//	QDomElement iq = createIQ("result", e.attribute("from"), e.attribute("id"));
-	//	QDomElement query = doc()->createElement("query");
-	//	query.setAttribute("xmlns", "jabber:iq:time");
-	//	iq.appendChild(query);
-	//	QDateTime local = QDateTime::currentDateTime();
-	//	QDateTime utc = local.addSecs(-getTZOffset() * 3600);
-	//	QString str = getTZString();
-	//	query.appendChild(textTag("utc", TS2stamp(utc)));
-	//	query.appendChild(textTag("tz", str));
-	//	query.appendChild(textTag("display", QString("%1 %2").arg(local.toString()).arg(str)));
-	//	send(iq);
-	//	return TRUE;
-	//}
+	else if (ns == "urn:xmpp:time") {
+		QDomElement iq = createIQ(doc(), "result", e.attribute("from"), e.attribute("id"));
+		QDomElement time = doc()->createElement("time");
+		time.setAttribute("xmlns", ns);
+		iq.appendChild(time);
+
+		QDateTime local = QDateTime::currentDateTime();
+
+		int off = TimeZone::offsetFromUtc();
+		QTime t = QTime(0, 0).addSecs(qAbs(off)*60);
+		QString tzo = (off < 0 ? "-" : "+") + t.toString("HH:mm");
+		time.appendChild(textTag(doc(), "tzo", tzo));
+		QString localTimeStr = local.toUTC().toString(Qt::ISODate);
+		if (!localTimeStr.endsWith("Z"))
+			localTimeStr.append("Z");
+		time.appendChild(textTag(doc(), "utc", localTimeStr));
+
+		send(iq);
+		return true;
+	}
 	else if(ns == "http://jabber.org/protocol/disco#info") {
 		// Find out the node
 		bool invalid_node = false;
@@ -1571,6 +1607,10 @@ bool JT_ServInfo::take(const QDomElement &e)
 
 			feature = doc()->createElement("feature");
 			feature.setAttribute("var", "urn:xmpp:ping");
+			query.appendChild(feature);
+
+			feature = doc()->createElement("feature");
+			feature.setAttribute("var", "urn:xmpp:time");
 			query.appendChild(feature);
 
 			// Client-specific features

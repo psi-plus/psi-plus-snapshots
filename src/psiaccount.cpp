@@ -133,7 +133,6 @@
 #include "rc.h"
 #include "tabdlg.h"
 #include "proxy.h"
-#include "timeserver.h"
 #include "passdialog.h"
 #include "bobfilecache.h"
 #include "psicontactlist.h"
@@ -1256,10 +1255,6 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, CapsRegis
 	// HttpAuth
 	d->httpAuthManager = new HttpAuthManager(d->client->rootTask());
 	connect(d->httpAuthManager, SIGNAL(confirmationRequest(const PsiHttpAuthRequest &)), SLOT(incomingHttpAuthRequest(const PsiHttpAuthRequest &)));
-
-	// Time server
-	new TimeServer(d->client->rootTask());
-	d->client->addExtension("e-time", QStringList("urn:xmpp:time"));
 
 	// Initialize Adhoc Commands server
 	d->ahcManager = new AHCServerManager(this);

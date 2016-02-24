@@ -45,7 +45,6 @@
 #include "iconset.h"
 #include "common.h"
 #include "lastactivitytask.h"
-#include "entitytimetask.h"
 #include "vcardfactory.h"
 #include "iconwidget.h"
 #ifndef NEWCONTACTLIST
@@ -793,7 +792,7 @@ void InfoDlg::requestResourceInfo(const Jid& j)
 	jcv->get(j);
 	jcv->go(true);
 
-	EntityTimeTask *jet = new EntityTimeTask(d->pa->client()->rootTask());
+	JT_EntityTime *jet = new JT_EntityTime(d->pa->client()->rootTask());
 	connect(jet, SIGNAL(finished()), SLOT(entityTimeFinished()));
 	jet->get(j);
 	jet->go(true);
@@ -819,7 +818,7 @@ void InfoDlg::clientVersionFinished()
 
 void InfoDlg::entityTimeFinished()
 {
-	EntityTimeTask *j = (EntityTimeTask *)sender();
+	JT_EntityTime *j = (JT_EntityTime *)sender();
 	if(j->success()) {
 		foreach(UserListItem* u, d->findRelevant(j->jid())) {
 			UserResourceList::Iterator rit = u->userResourceList().find(j->jid().resource());

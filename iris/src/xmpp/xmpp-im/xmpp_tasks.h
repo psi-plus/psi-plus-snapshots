@@ -21,9 +21,8 @@
 #ifndef JABBER_TASKS_H
 #define JABBER_TASKS_H
 
-#include <qstring.h>
-#include <qdom.h>
-//Added by qt3to4:
+#include <QString>
+#include <QtXml>
 #include <QList>
 
 #include "im.h"
@@ -314,24 +313,27 @@ namespace XMPP
 		Jid j;
 		QString v_name, v_ver, v_os;
 	};
-/*
-	class JT_ClientTime : public Task
+
+	class JT_EntityTime : public Task
 	{
-		Q_OBJECT
 	public:
-		JT_ClientTime(Task *, const Jid &);
+		JT_EntityTime(Task*);
 
-		void go();
+		void onGo();
 		bool take(const QDomElement &);
+		void get(const XMPP::Jid &j);
+		const XMPP::Jid & jid() const;
 
-		Jid j;
-		QDateTime utc;
-		QString timezone, display;
+		const QDateTime & dateTime() const;
+		int timezoneOffset() const;
 
 	private:
 		QDomElement iq;
+		XMPP::Jid j;
+		QDateTime utc;
+		int tzo;
 	};
-*/
+
 	class JT_ServInfo : public Task
 	{
 		Q_OBJECT
