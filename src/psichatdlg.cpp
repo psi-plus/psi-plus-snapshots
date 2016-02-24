@@ -313,7 +313,6 @@ void PsiChatDlg::updateCountVisibility()
 	else {
 		ui_.lb_count->hide();
 	}
-	delete actions_;
 }
 
 void PsiChatDlg::setLooks()
