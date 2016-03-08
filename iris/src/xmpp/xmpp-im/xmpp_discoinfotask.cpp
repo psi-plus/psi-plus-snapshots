@@ -125,39 +125,8 @@ bool DiscoInfoTask::take(const QDomElement &x)
 		return false;
 
 	if(x.attribute("type") == "result") {
-		QDomElement q = queryTag(x);
-
-		DiscoItem item;
-
-		item.setJid( d->jid );
-		item.setNode( q.attribute("node") );
-
-		QStringList features;
-		DiscoItem::Identities identities;
-
-		for(QDomNode n = q.firstChild(); !n.isNull(); n = n.nextSibling()) {
-			QDomElement e = n.toElement();
-			if( e.isNull() )
-				continue;
-
-			if ( e.tagName() == "feature" ) {
-				features << e.attribute("var");
-			}
-			else if ( e.tagName() == "identity" ) {
-				DiscoItem::Identity id;
-
-				id.category = e.attribute("category");
-				id.name     = e.attribute("name");
-				id.type     = e.attribute("type");
-
-				identities.append( id );
-			}
-		}
-
-		item.setFeatures( features );
-		item.setIdentities( identities );
-
-		d->item = item;
+		d->item = DiscoItem::fromDiscoInfoResult(queryTag(x));
+		d->item.setJid( d->jid );
 
 		setSuccess(true);
 	}

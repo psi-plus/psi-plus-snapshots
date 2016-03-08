@@ -22,12 +22,16 @@
 #define XMPP_DISCOITEM
 
 #include <QString>
+#include <QCryptographicHash>
 
 #include "xmpp/jid/jid.h"
 #include "xmpp_features.h"
+#include "xmpp_xdata.h"
 #include "xmpp_agentitem.h"
 
 namespace XMPP {
+	class DiscoItemPrivate;
+
 	class DiscoItem
 	{
 	public:
@@ -57,14 +61,26 @@ namespace XMPP {
 		struct Identity
 		{
 			QString category;
-			QString name;
 			QString type;
+			QString lang;
+			QString name;
+
+			inline Identity() {}
+			inline Identity(const QString &categoty, const QString &type,
+							const QString &lang = QString::null, const QString &name = QString::null) :
+				category(categoty), type(type), lang(lang), name(name) {}
+			bool operator==(const Identity &other) const;
 		};
 
 		typedef QList<Identity> Identities;
 
 		const Identities &identities() const;
 		void setIdentities(const Identities &);
+		inline void setIdentities(const Identity &id) { setIdentities(Identities() << id); }
+
+		const QList<XData> &extensions() const;
+		void setExtensions(const QList<XData> &extlist);
+		XData registeredExtension(const QString &ns) const;
 
 		// some useful helper functions
 		static Action string2action(QString s);
@@ -77,10 +93,16 @@ namespace XMPP {
 		AgentItem toAgentItem() const;
 		void fromAgentItem(const AgentItem &);
 
+		QString capsHash(QCryptographicHash::Algorithm algo) const;
+
+		static DiscoItem fromDiscoInfoResult(const QDomElement &x);
+		QDomElement toDiscoInfoResult(QDomDocument *doc) const;
+
 	private:
-		class Private;
-		Private *d;
+		QSharedDataPointer<DiscoItemPrivate> d;
 	};
+
+	bool operator<(const DiscoItem::Identity &a, const DiscoItem::Identity &b);
 }
 
 #endif

@@ -22,6 +22,7 @@
 
 #include <QObject>
 #include <QStringList>
+#include <QCryptographicHash>
 
 #include "xmpp/jid/jid.h"
 #include "xmpp_status.h"
@@ -48,6 +49,7 @@ namespace XMPP {
 	class BSConnection;
 	class Stream;
 	class Task;
+	class CapsManager;
 }
 
 namespace XMPP
@@ -95,32 +97,27 @@ namespace XMPP
 		bool manualTimeZoneOffset() const;
 		QString clientName() const;
 		QString clientVersion() const;
-		QString capsNode() const;
-		QString capsVersion() const;
-		QString capsExt() const;
+		CapsSpec caps() const;
+		CapsSpec serverCaps() const;
 
 		void setOSName(const QString &);
 		void setTimeZone(const QString &, int);
 		void setClientName(const QString &);
 		void setClientVersion(const QString &);
-		void setCapsNode(const QString &);
-		void setCapsVersion(const QString &);
+		void setCaps(const CapsSpec &);
 
-		void setIdentity(DiscoItem::Identity);
-		DiscoItem::Identity identity();
+		void setIdentity(const DiscoItem::Identity &);
+		DiscoItem::Identity identity() const;
 
 		void setFeatures(const Features& f);
 		const Features& features() const;
-
-		void addExtension(const QString& ext, const Features& f);
-		void removeExtension(const QString& ext);
-		const Features& extension(const QString& ext) const;
-		QStringList extensions() const;
+		DiscoItem makeDiscoResult(const QString &node = QString::null) const;
 
 		S5BManager *s5bManager() const;
 		IBBManager *ibbManager() const;
 		BoBManager *bobManager() const;
 		JidLinkManager *jidLinkManager() const;
+		CapsManager *capsManager() const;
 
 		void setFileTransferEnabled(bool b);
 		FileTransferManager *fileTransferManager() const;

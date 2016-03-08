@@ -1428,6 +1428,11 @@ QStringList ClientStream::hosts() const
 	return d->client.hosts;
 }
 
+const StreamFeatures &ClientStream::streamFeatures() const
+{
+	return d->client.features;
+}
+
 
 //----------------------------------------------------------------------------
 // Debug

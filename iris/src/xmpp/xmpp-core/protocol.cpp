@@ -1539,6 +1539,12 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 					f.hosts += l.item(n).toElement().text();
 				hosts += f.hosts;
 			}
+			QDomElement caps = e.elementsByTagNameNS(NS_CAPS, "c").item(0).toElement();
+			if(!caps.isNull()) {
+				f.capsNode = caps.attribute("node");
+				f.capsVersion = caps.attribute("ver");
+				f.capsAlgo = caps.attribute("hash");
+			}
 
 			// check for XEP-0198 support if we are already authed
 			if (sasl_authed) {

@@ -22,6 +22,7 @@
 #define XMPP_FEATURES_H
 
 #include <QStringList>
+#include <QSet>
 
 class QString;
 
@@ -32,14 +33,17 @@ namespace XMPP
 	public:
 		Features();
 		Features(const QStringList &);
+		Features(const QSet<QString> &);
 		Features(const QString &);
 		~Features();
 
 		QStringList list() const; // actual featurelist
 		void setList(const QStringList &);
+		void setList(const QSet<QString> &);
 		void addFeature(const QString&);
 
 		// features
+		inline bool isEmpty() const { return _list.isEmpty(); }
 		bool canRegister() const;
 		bool canSearch() const;
 		bool canMulticast() const;
@@ -70,6 +74,7 @@ namespace XMPP
 
 		// useful functions
 		bool test(const QStringList &) const;
+		bool test(const QSet<QString> &) const;
 
 		QString name() const;
 		static QString name(long id);
@@ -79,9 +84,13 @@ namespace XMPP
 		static long id(const QString &feature);
 		static QString feature(long id);
 
+		Features &operator<<(const QString &feature);
+		inline bool operator==(const Features &other)
+		{ return _list == other._list; }
+
 		class FeatureName;
 	private:
-		QStringList _list;
+		QSet<QString> _list;
 	};
 }
 

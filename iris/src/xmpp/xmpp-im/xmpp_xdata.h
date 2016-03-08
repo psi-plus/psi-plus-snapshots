@@ -161,6 +161,7 @@ namespace XMPP {
 		typedef QList<Field> FieldList;
 
 		FieldList fields() const;
+		Field getField(const QString &var) const;
 		void setFields(const FieldList &);
 
 	private:

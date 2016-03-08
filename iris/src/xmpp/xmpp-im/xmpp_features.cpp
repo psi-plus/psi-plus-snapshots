@@ -36,9 +36,14 @@ Features::Features(const QStringList &l)
 	setList(l);
 }
 
+Features::Features(const QSet<QString> &s)
+{
+	setList(s);
+}
+
 Features::Features(const QString &str)
 {
-	QStringList l;
+	QSet<QString> l;
 	l << str;
 
 	setList(l);
@@ -50,10 +55,15 @@ Features::~Features()
 
 QStringList Features::list() const
 {
-	return _list;
+	return _list.toList();
 }
 
 void Features::setList(const QStringList &l)
+{
+	_list = QSet<QString>::fromList(l);
+}
+
+void Features::setList(const QSet<QString> &l)
 {
 	_list = l;
 }
@@ -65,19 +75,18 @@ void Features::addFeature(const QString& s)
 
 bool Features::test(const QStringList &ns) const
 {
-	QStringList::ConstIterator it = ns.begin();
-	for ( ; it != ns.end(); ++it) {
-		if ( _list.contains( *it )) {
-			return true;
-		}
-	}
-	return false;
+	return _list.contains(QSet<QString>::fromList(ns));
+}
+
+bool Features::test(const QSet<QString> &ns) const
+{
+	return _list.contains(ns);
 }
 
 #define FID_MULTICAST "http://jabber.org/protocol/address"
 bool Features::canMulticast() const
 {
-	QStringList ns;
+	QSet<QString> ns;
 	ns << FID_MULTICAST;
 
 	return test(ns);
@@ -86,7 +95,7 @@ bool Features::canMulticast() const
 #define FID_AHCOMMAND "http://jabber.org/protocol/commands"
 bool Features::canCommand() const
 {
-	QStringList ns;
+	QSet<QString> ns;
 	ns << FID_AHCOMMAND;
 
 	return test(ns);
@@ -95,7 +104,7 @@ bool Features::canCommand() const
 #define FID_REGISTER "jabber:iq:register"
 bool Features::canRegister() const
 {
-	QStringList ns;
+	QSet<QString> ns;
 	ns << FID_REGISTER;
 
 	return test(ns);
@@ -104,7 +113,7 @@ bool Features::canRegister() const
 #define FID_SEARCH "jabber:iq:search"
 bool Features::canSearch() const
 {
-	QStringList ns;
+	QSet<QString> ns;
 	ns << FID_SEARCH;
 
 	return test(ns);
@@ -113,7 +122,7 @@ bool Features::canSearch() const
 #define FID_GROUPCHAT "jabber:iq:conference"
 bool Features::canGroupchat() const
 {
-	QStringList ns;
+	QSet<QString> ns;
 	ns << "http://jabber.org/protocol/muc";
 	ns << FID_GROUPCHAT;
 
@@ -123,7 +132,7 @@ bool Features::canGroupchat() const
 #define FID_VOICE "http://www.google.com/xmpp/protocol/voice/v1"
 bool Features::canVoice() const
 {
-	QStringList ns;
+	QSet<QString> ns;
 	ns << FID_VOICE;
 
 	return test(ns);
@@ -132,7 +141,7 @@ bool Features::canVoice() const
 #define FID_GATEWAY "jabber:iq:gateway"
 bool Features::isGateway() const
 {
-	QStringList ns;
+	QSet<QString> ns;
 	ns << FID_GATEWAY;
 
 	return test(ns);
@@ -141,7 +150,7 @@ bool Features::isGateway() const
 #define FID_QUERYVERSION "jabber:iq:version"
 bool Features::hasVersion() const
 {
-	QStringList ns;
+	QSet<QString> ns;
 	ns << FID_QUERYVERSION;
 
 	return test(ns);
@@ -150,7 +159,7 @@ bool Features::hasVersion() const
 #define FID_DISCO "http://jabber.org/protocol/disco"
 bool Features::canDisco() const
 {
-	QStringList ns;
+	QSet<QString> ns;
 	ns << FID_DISCO;
 	ns << "http://jabber.org/protocol/disco#info";
 	ns << "http://jabber.org/protocol/disco#items";
@@ -161,7 +170,7 @@ bool Features::canDisco() const
 #define FID_CHATSTATE "http://jabber.org/protocol/chatstates"
 bool Features::canChatState() const
 {
-	QStringList ns;
+	QSet<QString> ns;
 	ns << FID_CHATSTATE;
 
 	return test(ns);
@@ -170,7 +179,7 @@ bool Features::canChatState() const
 #define FID_VCARD "vcard-temp"
 bool Features::haveVCard() const
 {
-	QStringList ns;
+	QSet<QString> ns;
 	ns << FID_VCARD;
 
 	return test(ns);
@@ -264,6 +273,12 @@ QString Features::feature(long id)
 		featureName = new FeatureName();
 
 	return featureName->id2f[id];
+}
+
+Features &Features::operator<<(const QString &feature)
+{
+	_list << feature;
+	return *this;
 }
 
 QString Features::name(long id)

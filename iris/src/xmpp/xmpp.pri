@@ -68,6 +68,7 @@ HEADERS += \
 	$$PWD/xmpp-im/xmpp_agentitem.h \
 	$$PWD/xmpp-im/xmpp_discoitem.h \
 	$$PWD/xmpp-im/xmpp_bitsofbinary.h \
+	$$PWD/xmpp-im/xmpp_caps.h \
 	$$PWD/xmpp-im/im.h
 
 SOURCES += \
@@ -95,4 +96,6 @@ SOURCES += \
 	$$PWD/xmpp-im/s5b.cpp \
 	$$PWD/xmpp-im/xmpp_ibb.cpp \
 	$$PWD/xmpp-im/filetransfer.cpp \
-	$$PWD/xmpp-im/xmpp_bitsofbinary.cpp
+	$$PWD/xmpp-im/xmpp_bitsofbinary.cpp \
+	$$PWD/xmpp-im/xmpp_caps.cpp
+

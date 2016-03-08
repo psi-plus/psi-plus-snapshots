@@ -36,6 +36,7 @@ namespace XMPP
 {
 	class TLSHandler;
 	class Connector;
+	class StreamFeatures;
 
 	class ClientStream : public Stream
 	{
@@ -171,6 +172,8 @@ namespace XMPP
 
 		// barracuda extension
 		QStringList hosts() const;
+
+		const StreamFeatures &streamFeatures() const;
 
 	signals:
 		void connected();

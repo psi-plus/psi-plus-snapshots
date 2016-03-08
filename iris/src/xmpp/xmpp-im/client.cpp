@@ -18,9 +18,6 @@
  *
  */
 
-#include "im.h"
-#include "safedelete.h"
-
 //! \class XMPP::Client client.h
 //! \brief Communicates with the XMPP network.  Start here.
 //!
@@ -69,34 +66,22 @@
 //!  }
 //!  \endcode
 
-#include <stdarg.h>
-#include <qobject.h>
+#include <QObject>
 #include <QMap>
-#include <qtimer.h>
-#include <qpointer.h>
-//Added by qt3to4:
+#include <QTimer>
+#include <QPointer>
 #include <QList>
+
+#include "im.h"
+#include "safedelete.h"
 #include "xmpp_tasks.h"
 #include "xmpp_xmlcommon.h"
 #include "s5b.h"
 #include "xmpp_ibb.h"
 #include "xmpp_bitsofbinary.h"
 #include "filetransfer.h"
-
-/*#include <stdio.h>
-#include <stdarg.h>
-#include <qstring.h>
-#include <qdom.h>
-#include <qobjectlist.h>
-#include <qtimer.h>
-#include "xmpp_stream.h"
-#include "xmpp_tasks.h"
-#include "xmpp_xmlcommon.h"
-#include "xmpp_dtcp.h"
-#include "xmpp_ibb.h"
-#include "xmpp_jidlink.h"
-
-using namespace Jabber;*/
+#include "xmpp_caps.h"
+#include "protocol.h"
 
 #ifdef Q_OS_WIN
 #define vsnprintf _vsnprintf
@@ -131,7 +116,8 @@ public:
 	int id_seed;
 	Task *root;
 	QString host, user, pass, resource;
-	QString osname, tzname, clientName, clientVersion, capsNode, capsVersion, capsExt;
+	QString osname, tzname, clientName, clientVersion;
+	CapsSpec caps;
 	DiscoItem::Identity identity;
 	Features features;
 	QMap<QString,Features> extension_features;
@@ -141,6 +127,7 @@ public:
 
 	LiveRoster roster;
 	ResourceList resourceList;
+	CapsManager *capsman;
 	S5BManager *s5bman;
 	IBBManager *ibbman;
 	BoBManager *bobman;
@@ -160,9 +147,6 @@ Client::Client(QObject *par)
 	d->osname = "N/A";
 	d->clientName = "N/A";
 	d->clientVersion = "0.0";
-	d->capsNode = "";
-	d->capsVersion = "";
-	d->capsExt = "";
 
 	d->id_seed = 0xaaaa;
 	d->root = new Task(this, true);
@@ -176,6 +160,8 @@ Client::Client(QObject *par)
 	d->bobman = new BoBManager(this);
 
 	d->ftman = 0;
+
+	d->capsman = new CapsManager(this);
 }
 
 Client::~Client()
@@ -265,6 +251,11 @@ IBBManager *Client::ibbManager() const
 BoBManager *Client::bobManager() const
 {
 	return d->bobman;
+}
+
+CapsManager *Client::capsManager() const
+{
+	return d->capsman;
 }
 
 bool Client::isActive() const
@@ -1036,6 +1027,12 @@ void Client::sendSubscription(const Jid &jid, const QString &type, const QString
 
 void Client::setPresence(const Status &s)
 {
+	if (d->capsman->isEnabled()) {
+		if (d->caps.version().isEmpty() && !d->caps.node().isEmpty()) {
+			d->caps = CapsSpec(makeDiscoResult(d->caps.node())); /* recompute caps hash */
+		}
+	}
+
 	JT_Presence *j = new JT_Presence(rootTask());
 	j->pres(s);
 	j->go(true);
@@ -1087,19 +1084,20 @@ QString Client::clientVersion() const
 	return d->clientVersion;
 }
 
-QString Client::capsNode() const
+CapsSpec Client::caps() const
 {
-	return d->capsNode;
+	return d->caps;
 }
 
-QString Client::capsVersion() const
+CapsSpec Client::serverCaps() const
 {
-	return d->capsVersion;
-}
-
-QString Client::capsExt() const
-{
-	return d->capsExt;
+	const StreamFeatures &f = d->stream->streamFeatures();
+	if (!(f.capsAlgo.isEmpty() || f.capsNode.isEmpty() || f.capsVersion.isEmpty())) {
+		if (CapsSpec::cryptoMap().contains(f.capsAlgo)) {
+			return CapsSpec(f.capsNode, CapsSpec::cryptoMap().value(f.capsAlgo), f.capsVersion);
+		}
+	}
+	return CapsSpec();
 }
 
 void Client::setOSName(const QString &name)
@@ -1124,28 +1122,29 @@ void Client::setClientVersion(const QString &s)
 	d->clientVersion = s;
 }
 
-void Client::setCapsNode(const QString &s)
+void Client::setCaps(const CapsSpec &s)
 {
-	d->capsNode = s;
+	d->caps = s;
 }
 
-void Client::setCapsVersion(const QString &s)
-{
-	d->capsVersion = s;
-}
-
-DiscoItem::Identity Client::identity()
+DiscoItem::Identity Client::identity() const
 {
 	return d->identity;
 }
 
-void Client::setIdentity(DiscoItem::Identity identity)
+void Client::setIdentity(const DiscoItem::Identity &identity)
 {
+	if (!(d->identity == identity)) {
+		d->caps.resetVersion();
+	}
 	d->identity = identity;
 }
 
 void Client::setFeatures(const Features& f)
 {
+	if (!(d->features == f)) {
+		d->caps.resetVersion();
+	}
 	d->features = f;
 }
 
@@ -1154,30 +1153,38 @@ const Features& Client::features() const
 	return d->features;
 }
 
-void Client::addExtension(const QString& ext, const Features& features)
+DiscoItem Client::makeDiscoResult(const QString &node) const
 {
-	if (!ext.isEmpty()) {
-		d->extension_features[ext] = features;
-		d->capsExt = extensions().join(" ");
+	DiscoItem item;
+	item.setNode(node);
+	DiscoItem::Identity id = identity();
+	if (id.category.isEmpty() || id.type.isEmpty()) {
+		id.category = "client";
+		id.type = "pc";
 	}
-}
+	item.setIdentities(id);
 
-void Client::removeExtension(const QString& ext)
-{
-	if (d->extension_features.contains(ext)) {
-		d->extension_features.remove(ext);
-		d->capsExt = extensions().join(" ");
+	Features features;
+
+	if (d->ftman) {
+		features.addFeature("http://jabber.org/protocol/bytestreams");
+		features.addFeature("http://jabber.org/protocol/ibb");
+		features.addFeature("http://jabber.org/protocol/si");
+		features.addFeature("http://jabber.org/protocol/si/profile/file-transfer");
 	}
-}
+	features.addFeature("http://jabber.org/protocol/disco#info");
+	features.addFeature("jabber:x:data");
+	features.addFeature("urn:xmpp:bob");
+	features.addFeature("urn:xmpp:ping");
+	features.addFeature("urn:xmpp:time");
 
-QStringList Client::extensions() const
-{
-	return d->extension_features.keys();
-}
+	// Client-specific features
+	foreach (const QString & i, d->features.list()) {
+		features.addFeature(i);
+	}
 
-const Features& Client::extension(const QString& ext) const
-{
-	return d->extension_features[ext];
+	item.setFeatures(features);
+	return item;
 }
 
 void Client::s5b_incomingReady()
