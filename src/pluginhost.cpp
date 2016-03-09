@@ -984,8 +984,8 @@ QString PluginHost::appCapsNode()
 }
 
 QString PluginHost::appCapsVersion()
-{
-	return ApplicationInfo::capsVersion();
+{ // this stuff is incompatible with new caps 1.5
+	return QString(); // return ApplicationInfo::capsVersion();
 }
 
 QString PluginHost::appOsName()
