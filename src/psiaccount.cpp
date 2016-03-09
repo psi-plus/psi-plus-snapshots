@@ -1641,6 +1641,9 @@ void PsiAccount::updateFeatures()
 	if (d->voiceCaller) {
 		features << "http://www.google.com/xmpp/protocol/voice/v1"; // isn't obsoleted?
 	}
+#ifdef WHITEBOARDING
+	features << SXENS << WBNS;
+#endif
 
 	// TODO reset hash
 	d->client->setFeatures(Features(features));

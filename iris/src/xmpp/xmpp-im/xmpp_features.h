@@ -73,6 +73,8 @@ namespace XMPP
 		};
 
 		// useful functions
+		inline bool test(const char *ns) const
+		{ return test(QSet<QString>() << QLatin1String(ns)); }
 		bool test(const QStringList &) const;
 		bool test(const QSet<QString> &) const;
 
