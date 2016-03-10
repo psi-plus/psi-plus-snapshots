@@ -1149,7 +1149,8 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, TabManage
 #ifdef PSI_PLUGINS
 	PluginManager::instance()->addAccount(this, d->client);
 #endif
-	d->client->setOSName(SystemInfo::instance()->os());
+	d->client->setOSName(SystemInfo::instance()->osName());
+	d->client->setOSVersion(SystemInfo::instance()->osVersion());
 	d->client->setClientName(ApplicationInfo::name());
 	d->client->setClientVersion(ApplicationInfo::version());
 	d->client->setCaps(CapsSpec(ApplicationInfo::capsNode(), QCryptographicHash::Sha1));

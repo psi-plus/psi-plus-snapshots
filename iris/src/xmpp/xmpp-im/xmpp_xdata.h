@@ -162,7 +162,7 @@ namespace XMPP {
 
 		FieldList fields() const;
 		Field getField(const QString &var) const;
-		void setFields(const FieldList &);
+		void setFields(const FieldList &fl);
 
 	private:
 		class Private : public QSharedData {

@@ -149,8 +149,10 @@ QString DiscoItem::capsHash(QCryptographicHash::Algorithm algo) const
 			qSort(v);
 			values[f.var()] = v;
 		}
-		foreach (const QStringList &sl, values.values()) {
-			prep += sl;
+		QMap <QString, QStringList>::ConstIterator it = values.constBegin();
+		for (; it != values.constEnd(); ++it) {
+			prep += it.key();
+			prep += it.value();
 		}
 	}
 

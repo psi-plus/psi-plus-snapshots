@@ -116,7 +116,7 @@ public:
 	int id_seed;
 	Task *root;
 	QString host, user, pass, resource;
-	QString osname, tzname, clientName, clientVersion;
+	QString osName, osVersion, tzname, clientName, clientVersion;
 	CapsSpec caps;
 	DiscoItem::Identity identity;
 	Features features;
@@ -144,7 +144,7 @@ Client::Client(QObject *par)
 	d->tzoffset = 0;
 	d->useTzoffset = false;
 	d->active = false;
-	d->osname = "N/A";
+	d->osName = "N/A";
 	d->clientName = "N/A";
 	d->clientVersion = "0.0";
 
@@ -1046,7 +1046,12 @@ void Client::setPresence(const Status &s)
 
 QString Client::OSName() const
 {
-	return d->osname;
+	return d->osName;
+}
+
+QString Client::OSVersion() const
+{
+	return d->osVersion;
 }
 
 QString Client::timeZone() const
@@ -1102,7 +1107,12 @@ CapsSpec Client::serverCaps() const
 
 void Client::setOSName(const QString &name)
 {
-	d->osname = name;
+	d->osName = name;
+}
+
+void Client::setOSVersion(const QString &version)
+{
+	d->osVersion = version;
 }
 
 void Client::setTimeZone(const QString &name, int offset)
@@ -1184,6 +1194,46 @@ DiscoItem Client::makeDiscoResult(const QString &node) const
 	}
 
 	item.setFeatures(features);
+
+	// xep-0232 Software Information
+	XData si;
+	XData::FieldList si_fields;
+
+	XData::Field si_type_field;
+	si_type_field.setType(XData::Field::Field_Hidden);
+	si_type_field.setVar("FORM_TYPE");
+	si_type_field.setValue(QStringList(QLatin1String("urn:xmpp:dataforms:softwareinfo")));
+	si_fields.append(si_type_field);
+
+	XData::Field software_field;
+	software_field.setType(XData::Field::Field_TextSingle);
+	software_field.setVar("software");
+	software_field.setValue(QStringList(d->clientName));
+	si_fields.append(software_field);
+
+	XData::Field software_v_field;
+	software_v_field.setType(XData::Field::Field_TextSingle);
+	software_v_field.setVar("software_version");
+	software_v_field.setValue(QStringList(d->clientVersion));
+	si_fields.append(software_v_field);
+
+	XData::Field os_field;
+	os_field.setType(XData::Field::Field_TextSingle);
+	os_field.setVar("os");
+	os_field.setValue(QStringList(d->osName));
+	si_fields.append(os_field);
+
+	XData::Field os_v_field;
+	os_v_field.setType(XData::Field::Field_TextSingle);
+	os_v_field.setVar("os_version");
+	os_v_field.setValue(QStringList(d->osVersion));
+	si_fields.append(os_v_field);
+
+	si.setType(XData::Data_Result);
+	si.setFields(si_fields);
+
+	item.setExtensions(QList<XData>() << si);
+
 	return item;
 }
 

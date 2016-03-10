@@ -34,7 +34,8 @@ using namespace XMLHelper;
 //----------------------------------------------------------------------------
 // XData::Field
 //----------------------------------------------------------------------------
-XData::Field::Field()
+XData::Field::Field() :
+    _required(false)
 {
 }
 
@@ -444,9 +445,14 @@ XData::Field XData::getField(const QString &var) const
 	return Field();
 }
 
-void XData::setFields(const FieldList &f)
+void XData::setFields(const FieldList &fl)
 {
-	d->fields = f;
+	d->fields = fl;
+	foreach (const Field &f, fl) {
+		if (f.type() == Field::Field_Hidden && f.var() == "FORM_TYPE") {
+			d->registrarType = f.value().value(0);
+		}
+	}
 }
 
 void XData::fromXml(const QDomElement &e)

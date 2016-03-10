@@ -92,6 +92,7 @@ namespace XMPP
 		QDomDocument *doc() const;
 
 		QString OSName() const;
+		QString OSVersion() const;
 		QString timeZone() const;
 		int timeZoneOffset() const;
 		bool manualTimeZoneOffset() const;
@@ -101,6 +102,7 @@ namespace XMPP
 		CapsSpec serverCaps() const;
 
 		void setOSName(const QString &);
+		void setOSVersion(const QString &);
 		void setTimeZone(const QString &, int);
 		void setClientName(const QString &);
 		void setClientVersion(const QString &);
