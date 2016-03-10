@@ -1470,7 +1470,7 @@ void OptionsMigration::lateMigration()
 		PsiToolBar::structToOptions(o, tb);
 	}
 
-	// 2016-02-09 touches Psi+ users. but lt it be here for awhile
+	// 2016-02-09 touches Psi+ users. but let it be here for awhile
 	if (o->getOption("options.contactlist.use-autohide", false).toBool()) {
 		o->setOption("options.contactlist.autohide-interval", 0);
 		o->removeOption("options.contactlist.use-autohide");

@@ -447,9 +447,6 @@ QString CapsManager::clientVersion(const Jid& jid) const
 		version = form.getField("software_version").value().value(0);
 	}
 
-	if (version.isEmpty())
-		version = cs.version();
-
 	return version;
 }
 

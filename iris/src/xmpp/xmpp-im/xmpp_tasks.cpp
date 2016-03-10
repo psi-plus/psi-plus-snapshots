@@ -1509,7 +1509,7 @@ bool JT_ServInfo::take(const QDomElement &e)
 		iq.appendChild(query);
 		query.appendChild(textTag(doc(), "name", client()->clientName()));
 		query.appendChild(textTag(doc(), "version", client()->clientVersion()));
-		query.appendChild(textTag(doc(), "os", client()->OSName()));
+		query.appendChild(textTag(doc(), "os", client()->OSName() + ' ' + client()->OSVersion()));
 		send(iq);
 		return true;
 	}
