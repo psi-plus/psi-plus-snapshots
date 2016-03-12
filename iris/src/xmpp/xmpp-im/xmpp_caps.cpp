@@ -471,4 +471,9 @@ QString CapsManager::osVersion(const Jid &jid) const
 	return os_str;
 }
 
+CapsSpec CapsManager::capsSpec(const Jid &jid) const
+{
+	return capsSpecs_.value(jid.full());
+}
+
 } // namespace XMPP

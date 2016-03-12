@@ -98,6 +98,7 @@ public:
 	QString clientName(const Jid& jid) const;
 	QString clientVersion(const Jid& jid) const;
 	QString osVersion(const Jid& jid) const;
+	CapsSpec capsSpec(const Jid &jid) const;
 
 signals:
 	/**
