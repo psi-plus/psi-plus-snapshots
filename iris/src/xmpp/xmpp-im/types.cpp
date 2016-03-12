@@ -2203,7 +2203,8 @@ bool Subscription::fromString(const QString &s)
 /**
  * Default constructor.
  */
-CapsSpec::CapsSpec()
+CapsSpec::CapsSpec() :
+    hashAlgo_(CapsSpec::invalidAlgo)
 {
 }
 
@@ -2232,7 +2233,7 @@ CapsSpec::CapsSpec(const DiscoItem &disco, QCryptographicHash::Algorithm hashAlg
  */
 bool CapsSpec::isValid() const
 {
-	return !node_.isEmpty() && !ver_.isEmpty();
+	return !node_.isEmpty() && !ver_.isEmpty() && (hashAlgo_ != CapsSpec::invalidAlgo);
 }
 
 
@@ -2275,7 +2276,10 @@ CapsSpec CapsSpec::fromXml(const QDomElement &e)
 	QString ver = e.attribute("ver");
 	QString hashAlgo = e.attribute("hash");
 	CryptoMap &cm = cryptoMap();
-	if (!hashAlgo.isEmpty() && !node.isEmpty() && !ver.isEmpty()) {
+	if (!node.isEmpty() && !ver.isEmpty()) {
+		if (hashAlgo.isEmpty()) {
+			return CapsSpec(node, CapsSpec::invalidAlgo, ver);
+		}
 		CryptoMap::ConstIterator it = cm.constFind(hashAlgo);
 		if (it != cm.constEnd()) {
 			return CapsSpec(node, it.value(), ver);

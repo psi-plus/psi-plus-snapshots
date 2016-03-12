@@ -36,6 +36,7 @@ namespace XMPP
 	{
 		public:
 			typedef QMap<QString,QCryptographicHash::Algorithm> CryptoMap;
+			static const QCryptographicHash::Algorithm invalidAlgo = (QCryptographicHash::Algorithm)255;
 
 			CapsSpec();
 			CapsSpec(const QString& node, QCryptographicHash::Algorithm hashAlgo, const QString& ver = QString::null);
