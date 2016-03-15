@@ -156,7 +156,7 @@ QString DiscoItem::capsHash(QCryptographicHash::Algorithm algo) const
 		}
 	}
 
-	QByteArray ba = (prep.join(QLatin1String("<")) + QLatin1Char('<')).toUtf8();
+	QByteArray ba = QString(prep.join(QLatin1String("<")) + QLatin1Char('<')).toUtf8();
 	//qDebug() << "Server caps ver: " << (prep.join(QLatin1String("<")) + QLatin1Char('<'))
 	//         << "Hash:" << QString::fromLatin1(QCryptographicHash::hash(ba, algo).toBase64());
 	return QString::fromLatin1(QCryptographicHash::hash(ba, algo).toBase64());

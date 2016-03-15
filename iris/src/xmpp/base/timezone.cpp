@@ -22,6 +22,9 @@
 #if QT_VERSION < QT_VERSION_CHECK(5, 2, 0)
 #include <QByteArray>
 #include <QTime>
+#ifdef Q_OS_UNIX
+#include <time.h>
+#endif
 #ifdef Q_OS_WIN
 #include <windows.h>
 #endif
