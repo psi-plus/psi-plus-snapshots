@@ -200,6 +200,7 @@ public:
 	QString connectHost;
 	int minimumSSF, maximumSSF;
 	QString sasl_mech;
+	QMap<QString,QString> mechProviders; // mech to provider map
 	bool doBinding;
 
 	bool in_rrsig;
@@ -435,6 +436,24 @@ void ClientStream::continueAfterParams()
 				d->sasl->continueAfterParams();
 		}
 	}
+}
+
+void ClientStream::setSaslMechanismProvider(const QString &m, const QString &p)
+{
+	d->mechProviders.insert(m, p);
+}
+
+QString ClientStream::saslMechanismProvider(const QString &m) const
+{
+	return d->mechProviders.value(m);
+}
+
+QCA::Provider::Context *ClientStream::currentSASLContext() const
+{
+	if (d->sasl) {
+		return d->sasl->context();
+	}
+	return 0;
 }
 
 void ClientStream::setSCRAMStoredSaltedHash(const QString &s) {
@@ -1163,7 +1182,21 @@ bool ClientStream::handleNeed()
 				QCA::setProviderPriority("simplesasl", 10);
 			}
 
-			d->sasl = new QCA::SASL();
+			QStringList ml;
+			if(!d->sasl_mech.isEmpty())
+				ml += d->sasl_mech;
+			else
+				ml = d->client.features.sasl_mechs;
+
+			QString saslProvider;
+			foreach (const QString &mech, d->mechProviders.keys()) {
+				if (ml.contains(mech)) {
+					saslProvider = d->mechProviders[mech];
+					break;
+				}
+			}
+
+			d->sasl = new QCA::SASL(0, saslProvider);
 			connect(d->sasl, SIGNAL(clientStarted(bool,QByteArray)), SLOT(sasl_clientFirstStep(bool,QByteArray)));
 			connect(d->sasl, SIGNAL(nextStep(QByteArray)), SLOT(sasl_nextStep(QByteArray)));
 			connect(d->sasl, SIGNAL(needParams(QCA::SASL::Params)), SLOT(sasl_needParams(QCA::SASL::Params)));
@@ -1187,12 +1220,6 @@ bool ClientStream::handleNeed()
 			if (d->mutualAuth)
 				auth_flags = (QCA::SASL::AuthFlags) (auth_flags | QCA::SASL::RequireMutualAuth);
 			d->sasl->setConstraints(auth_flags,d->minimumSSF,d->maximumSSF);
-
-			QStringList ml;
-			if(!d->sasl_mech.isEmpty())
-				ml += d->sasl_mech;
-			else
-				ml = d->client.features.sasl_mechs;
 
 #ifdef IRIS_SASLCONNECTHOST
 			d->sasl->startClient("xmpp", QUrl::toAce(d->connectHost), ml, QCA::SASL::AllowClientSendFirst);
