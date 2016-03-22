@@ -46,6 +46,7 @@ namespace XMPP
 			const QString& node() const;
 			const QString& version() const;
 			QCryptographicHash::Algorithm hashAlgorithm() const;
+			inline const QStringList &ext() const { return ext_; }
 			QString flatten() const;
 
 			void resetVersion();
@@ -62,6 +63,7 @@ namespace XMPP
 		private:
 			QString node_, ver_;
 			QCryptographicHash::Algorithm hashAlgo_;
+			QStringList ext_;
 	};
 
 	class StatusPrivate;

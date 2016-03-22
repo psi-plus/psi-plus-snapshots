@@ -2275,17 +2275,21 @@ CapsSpec CapsSpec::fromXml(const QDomElement &e)
 	QString node = e.attribute("node");
 	QString ver = e.attribute("ver");
 	QString hashAlgo = e.attribute("hash");
+	QString ext = e.attribute("ext"); // deprecated. let it be here till 2018
 	CryptoMap &cm = cryptoMap();
+	CapsSpec cs;
 	if (!node.isEmpty() && !ver.isEmpty()) {
-		if (hashAlgo.isEmpty()) {
-			return CapsSpec(node, CapsSpec::invalidAlgo, ver);
+		QCryptographicHash::Algorithm algo = CapsSpec::invalidAlgo;
+		CryptoMap::ConstIterator it;
+		if (!hashAlgo.isEmpty() && (it = cm.constFind(hashAlgo)) != cm.constEnd()) {
+			algo = it.value();
 		}
-		CryptoMap::ConstIterator it = cm.constFind(hashAlgo);
-		if (it != cm.constEnd()) {
-			return CapsSpec(node, it.value(), ver);
+		cs = CapsSpec(node, algo, ver);
+		if (!ext.isEmpty()) {
+			cs.ext_ = ext.split(" ", QString::SkipEmptyParts);
 		}
 	}
-	return CapsSpec();
+	return cs;
 }
 
 CapsSpec::CryptoMap &CapsSpec::cryptoMap()
