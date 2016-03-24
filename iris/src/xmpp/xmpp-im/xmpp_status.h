@@ -23,6 +23,7 @@
 
 #include <QList>
 #include <QString>
+#include <QStringList>
 #include <QDateTime>
 #include <QCryptographicHash>
 
