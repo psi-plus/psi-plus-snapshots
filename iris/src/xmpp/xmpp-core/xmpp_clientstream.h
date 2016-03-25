@@ -176,7 +176,8 @@ namespace XMPP
 		// barracuda extension
 		QStringList hosts() const;
 
-		const StreamFeatures &streamFeatures() const;
+		const StreamFeatures &streamFeatures() const;	
+		QList<QDomElement> unhandledFeatures() const;
 
 	signals:
 		void connected();
@@ -184,6 +185,7 @@ namespace XMPP
 		void needAuthParams(bool user, bool pass, bool realm);
 		void authenticated();
 		void warning(int);
+		void haveUnhandledFeatures();
 		void incomingXml(const QString &s);
 		void outgoingXml(const QString &s);
 		void stanzasAcked(int);

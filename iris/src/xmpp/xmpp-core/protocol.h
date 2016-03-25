@@ -66,9 +66,6 @@ namespace XMPP
 		QStringList sasl_mechs;
 		QStringList compression_mechs;
 		QStringList hosts;
-		QString capsVersion;
-		QString capsNode;
-		QString capsAlgo;
 	};
 
 	class BasicProtocol : public XmlProtocol
@@ -305,6 +302,7 @@ namespace XMPP
 		bool old;
 
 		StreamFeatures features;
+		QList<QDomElement> unhandledFeatures;
 		QStringList hosts;
 
 		//static QString xmlToString(const QDomElement &e, bool clip=false);

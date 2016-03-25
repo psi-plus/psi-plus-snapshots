@@ -117,7 +117,7 @@ public:
 	Task *root;
 	QString host, user, pass, resource;
 	QString osName, osVersion, tzname, clientName, clientVersion;
-	CapsSpec caps;
+	CapsSpec caps, serverCaps;
 	DiscoItem::Identity identity;
 	Features features;
 	QMap<QString,Features> extension_features;
@@ -187,6 +187,7 @@ void Client::connectToServer(ClientStream *s, const Jid &j, bool auth)
 	//connect(d->stream, SIGNAL(closeFinished()), SLOT(streamCloseFinished()));
 	connect(d->stream, SIGNAL(incomingXml(QString)), SLOT(streamIncomingXml(QString)));
 	connect(d->stream, SIGNAL(outgoingXml(QString)), SLOT(streamOutgoingXml(QString)));
+	connect(d->stream, SIGNAL(haveUnhandledFeatures()), SLOT(parseUnhandledStreamFeatures()));
 
 	d->stream->connectToServer(j, auth);
 }
@@ -541,6 +542,16 @@ void Client::streamOutgoingXml(const QString &s)
 	if(str.at(str.length()-1) != '\n')
 		str += '\n';
 	emit xmlOutgoing(str);
+}
+
+void Client::parseUnhandledStreamFeatures()
+{
+	QList<QDomElement> nl = d->stream->unhandledFeatures();
+	foreach (const QDomElement &e, nl) {
+		if (e.hasAttributeNS(NS_CAPS, "c")) {
+			d->serverCaps = CapsSpec::fromXml(e);
+		}
+	}
 }
 
 void Client::debug(const QString &str)
@@ -1096,13 +1107,7 @@ CapsSpec Client::caps() const
 
 CapsSpec Client::serverCaps() const
 {
-	const StreamFeatures &f = d->stream->streamFeatures();
-	if (!(f.capsAlgo.isEmpty() || f.capsNode.isEmpty() || f.capsVersion.isEmpty())) {
-		if (CapsSpec::cryptoMap().contains(f.capsAlgo)) {
-			return CapsSpec(f.capsNode, CapsSpec::cryptoMap().value(f.capsAlgo), f.capsVersion);
-		}
-	}
-	return CapsSpec();
+	return d->serverCaps;
 }
 
 void Client::setOSName(const QString &name)

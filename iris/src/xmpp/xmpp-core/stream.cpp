@@ -1056,6 +1056,9 @@ void ClientStream::processNext()
 #ifdef XMPP_DEBUG
 				qDebug("Break (Features)\n");
 #endif
+				if (d->client.unhandledFeatures.count()) {
+					emit haveUnhandledFeatures();
+				}
 				if(!d->tls_warned && !d->using_tls && !d->client.features.tls_supported) {
 					d->tls_warned = true;
 					d->state = WaitTLS;
@@ -1458,6 +1461,11 @@ QStringList ClientStream::hosts() const
 const StreamFeatures &ClientStream::streamFeatures() const
 {
 	return d->client.features;
+}
+
+QList<QDomElement> ClientStream::unhandledFeatures() const
+{
+	return d->client.unhandledFeatures;
 }
 
 

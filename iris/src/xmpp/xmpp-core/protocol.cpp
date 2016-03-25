@@ -90,6 +90,7 @@ StreamFeatures::StreamFeatures()
 	bind_supported = false;
 	tls_required = false;
 	compress_supported = false;
+	sm_supported = false;
 }
 
 //----------------------------------------------------------------------------
@@ -1510,47 +1511,46 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 		if(e.namespaceURI() == NS_ETHERX && e.tagName() == "features") {
 			// extract features
 			StreamFeatures f;
-			QDomElement s = e.elementsByTagNameNS(NS_TLS, "starttls").item(0).toElement();
-			if(!s.isNull()) {
-				f.tls_supported = true;
-				f.tls_required = s.elementsByTagNameNS(NS_TLS, "required").count() > 0;
-			}
-			QDomElement m = e.elementsByTagNameNS(NS_SASL, "mechanisms").item(0).toElement();
-			if(!m.isNull()) {
-				f.sasl_supported = true;
-				QDomNodeList l = m.elementsByTagNameNS(NS_SASL, "mechanism");
-				for(int n = 0; n < l.count(); ++n)
-					f.sasl_mechs += l.item(n).toElement().text();
-			}
-			QDomElement c = e.elementsByTagNameNS(NS_COMPRESS_FEATURE, "compression").item(0).toElement();
-			if(!c.isNull()) {
-				f.compress_supported = true;
-				QDomNodeList l = c.elementsByTagNameNS(NS_COMPRESS_FEATURE, "method");
-				for(int n = 0; n < l.count(); ++n)
-					f.compression_mechs += l.item(n).toElement().text();
-			}
-			QDomElement b = e.elementsByTagNameNS(NS_BIND, "bind").item(0).toElement();
-			if(!b.isNull())
-				f.bind_supported = true;
-			QDomElement h = e.elementsByTagNameNS(NS_HOSTS, "hosts").item(0).toElement();
-			if(!h.isNull()) {
-				QDomNodeList l = h.elementsByTagNameNS(NS_HOSTS, "host");
-				for(int n = 0; n < l.count(); ++n)
-					f.hosts += l.item(n).toElement().text();
-				hosts += f.hosts;
-			}
-			QDomElement caps = e.elementsByTagNameNS(NS_CAPS, "c").item(0).toElement();
-			if(!caps.isNull()) {
-				f.capsNode = caps.attribute("node");
-				f.capsVersion = caps.attribute("ver");
-				f.capsAlgo = caps.attribute("hash");
-			}
+			QDomNodeList nl = e.childNodes();
+			QList<QDomElement> unhandled;
+			for (int i = 0; i < nl.size(); i++) {
+				QDomElement c = nl.item(i).toElement();
+				if (c.isNull()) {
+					continue;
+				}
+				qDebug() << c.localName() << c.namespaceURI();
+				if (c.localName() == "starttls" && c.namespaceURI() == NS_TLS) {
+					f.tls_supported = true;
+					f.tls_required = c.elementsByTagNameNS(NS_TLS, "required").count() > 0;
 
-			// check for XEP-0198 support if we are already authed
-			if (sasl_authed) {
-				QDomElement sm = e.elementsByTagNameNS(NS_STREAM_MANAGEMENT, "sm").item(0).toElement();
-				if (!sm.isNull()) f.sm_supported = true;
-				else f.sm_supported = false;
+				} else if (c.localName() == "mechanisms" && c.namespaceURI() == NS_SASL) {
+					f.sasl_supported = true;
+					QDomNodeList l = c.elementsByTagNameNS(NS_SASL, "mechanism");
+					for(int n = 0; n < l.count(); ++n)
+						f.sasl_mechs += l.item(n).toElement().text();
+
+				} else if (c.localName() == "compression" && c.namespaceURI() == NS_COMPRESS_FEATURE) {
+					f.compress_supported = true;
+					QDomNodeList l = c.elementsByTagNameNS(NS_COMPRESS_FEATURE, "method");
+					for(int n = 0; n < l.count(); ++n)
+						f.compression_mechs += l.item(n).toElement().text();
+
+				} else if (c.localName() == "bind" && c.namespaceURI() == NS_BIND) {
+					f.bind_supported = true;
+
+				} else if (c.localName() == "hosts" && c.namespaceURI() == NS_HOSTS) {
+					QDomNodeList l = c.elementsByTagNameNS(NS_HOSTS, "host");
+					for(int n = 0; n < l.count(); ++n)
+						f.hosts += l.item(n).toElement().text();
+					hosts += f.hosts;
+
+				} else if (c.localName() == "sm" && c.namespaceURI() == NS_STREAM_MANAGEMENT) {
+					f.sm_supported = true;
+					// REVIEW: previously we checked for sasl_authed as well. why?
+
+				} else {
+					unhandled.append(c);
+				}
 			}
 
 			if(f.tls_supported) {
@@ -1580,6 +1580,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 
 			event = EFeatures;
 			features = f;
+			unhandledFeatures = unhandled;
 			step = HandleFeatures;
 			return true;
 		}
