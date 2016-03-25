@@ -310,8 +310,10 @@ void FileTransfer::stream_connected()
 
 void FileTransfer::stream_connectionClosed()
 {
+	bool err = (d->sent != d->length);
 	reset();
-	emit error(ErrStream);
+	if (err)
+		emit error(ErrStream);
 }
 
 void FileTransfer::stream_readyRead()
@@ -321,8 +323,8 @@ void FileTransfer::stream_readyRead()
 	if((qlonglong)a.size() > need)
 		a.resize((uint)need);
 	d->sent += a.size();
-	if(d->sent == d->length)
-		reset();
+//	if(d->sent == d->length) // we close it in stream_connectionClosed. at least for ibb
+//		reset();             // in other words we wait for another party to close the connection
 	readyRead(a);
 }
 

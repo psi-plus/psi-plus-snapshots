@@ -1518,7 +1518,6 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 				if (c.isNull()) {
 					continue;
 				}
-				qDebug() << c.localName() << c.namespaceURI();
 				if (c.localName() == "starttls" && c.namespaceURI() == NS_TLS) {
 					f.tls_supported = true;
 					f.tls_required = c.elementsByTagNameNS(NS_TLS, "required").count() > 0;

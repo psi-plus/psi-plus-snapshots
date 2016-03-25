@@ -334,16 +334,15 @@ void IBBConnection::trySend()
 //----------------------------------------------------------------------------
 IBBData& IBBData::fromXml(const QDomElement &e)
 {
-	sid = e.attribute("sid"),
-	seq = e.attribute("seq").toInt(),
-	data = QCA::Base64().stringToArray(e.text()).toByteArray();
+	sid = e.attribute("sid");
+	seq = e.attribute("seq").toInt();
+	data = QByteArray::fromBase64(e.text().toUtf8());
 	return *this;
 }
 
 QDomElement IBBData::toXml(QDomDocument *doc) const
 {
-	QDomElement query = textTag(doc, "data",
-						QCA::Base64().arrayToString(data)).toElement();
+	QDomElement query = textTag(doc, "data", QString::fromLatin1(data.toBase64())).toElement();
 	query.setAttribute("xmlns", IBB_NS);
 	query.setAttribute("seq", QString::number(seq));
 	query.setAttribute("sid", sid);
