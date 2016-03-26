@@ -442,7 +442,7 @@ SocksClient::SocksClient(QObject *parent)
 	d->incoming = false;
 }
 
-SocksClient::SocksClient(int s, QObject *parent)
+SocksClient::SocksClient(qintptr s, QObject *parent)
 :ByteStream(parent)
 {
 	init();
@@ -1035,7 +1035,7 @@ SocksServer::SocksServer(QObject *parent)
 {
 	d = new Private(this);
 	d->sd = 0;
-	connect(&d->serv, SIGNAL(connectionReady(int)), SLOT(connectionReady(int)));
+	connect(&d->serv, SIGNAL(connectionReady(qintptr)), SLOT(connectionReady(qintptr)));
 }
 
 SocksServer::~SocksServer()
@@ -1110,7 +1110,7 @@ void SocksServer::writeUDP(const QHostAddress &addr, int port, const QByteArray 
 	}
 }
 
-void SocksServer::connectionReady(int s)
+void SocksServer::connectionReady(qintptr s)
 {
 	SocksClient *c = new SocksClient(s, this);
 	connect(c, SIGNAL(error(int)), this, SLOT(connectionError()));

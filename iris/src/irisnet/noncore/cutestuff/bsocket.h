@@ -23,7 +23,6 @@
 #define CS_BSOCKET_H
 
 #include <QAbstractSocket>
-
 #include <limits>
 
 #include "bytestream.h"
@@ -56,7 +55,7 @@ public:
 	void connectToHost(const QString &service, const QString &transport, const QString &domain, quint16 port = std::numeric_limits<quint16>::max());
 	virtual QAbstractSocket* abstractSocket() const;
 	int socket() const;
-	void setSocket(int);
+	void setSocket(qintptr);
 	int state() const;
 
 	// from ByteStream
@@ -99,7 +98,7 @@ private:
 	bool check_protocol_fallback();
 	void dns_srv_try_next();
 	bool connect_host_try_next();
-	void qs_connected_step2();
+	void qs_connected_step2(bool signalConnected = true);
 };
 
 // CS_NAMESPACE_END

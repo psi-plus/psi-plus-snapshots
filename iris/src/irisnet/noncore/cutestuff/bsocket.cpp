@@ -523,13 +523,13 @@ int BSocket::socket() const
 		return -1;
 }
 
-void BSocket::setSocket(int s)
+void BSocket::setSocket(qintptr s)
 {
 	resetConnection(true);
 	d->qsock = new QTcpSocket(this);
 	d->qsock->setSocketDescriptor(s);
 	d->qsock_relay = new QTcpSocketSignalRelay(d->qsock, this);
-	qs_connected_step2();
+	qs_connected_step2(false); // we have desriptor already. so it's already known to be connected
 }
 
 int BSocket::state() const
@@ -646,10 +646,10 @@ void BSocket::qs_connected()
 	d->qsock = sd.sock;
 	d->qsock_relay = sd.relay;
 	d->connector->deleteLater();
-	qs_connected_step2();
+	qs_connected_step2(true);
 }
 
-void BSocket::qs_connected_step2()
+void BSocket::qs_connected_step2(bool signalConnected)
 {
 	connect(d->qsock_relay, SIGNAL(disconnected()), SLOT(qs_closed()));
 	connect(d->qsock_relay, SIGNAL(readyRead()), SLOT(qs_readyRead()));
@@ -662,7 +662,9 @@ void BSocket::qs_connected_step2()
 	BSDEBUG << "Connected";
 #endif
 	//SafeDeleteLock s(&d->sd);
-	emit connected();
+	if (signalConnected) {
+		emit connected();
+	}
 
 	if (d->qsock->bytesAvailable()) {
 		qs_readyRead();

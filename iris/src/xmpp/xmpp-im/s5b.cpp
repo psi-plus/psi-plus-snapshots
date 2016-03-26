@@ -25,6 +25,7 @@
 #include <QByteArray>
 #include <stdlib.h>
 #include <qca.h>
+
 #include "xmpp_xmlcommon.h"
 #include "im.h"
 #include "socks.h"
@@ -2104,7 +2105,7 @@ void S5BServer::ss_incomingReady()
 
 void S5BServer::ss_incomingUDP(const QString &host, int port, const QHostAddress &addr, int sourcePort, const QByteArray &data)
 {
-	if(port != 0 || port != 1)
+	if(port != 0 && port != 1)
 		return;
 
 	foreach(S5BManager* m, d->manList) {

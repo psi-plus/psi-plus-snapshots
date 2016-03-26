@@ -61,7 +61,7 @@ bool ServSock::listen(quint16 port)
 		d->serv = 0;
 		return false;
 	}
-	connect(d->serv, SIGNAL(connectionReady(int)), SLOT(sss_connectionReady(int)));
+	connect(d->serv, SIGNAL(connectionReady(qintptr)), SLOT(sss_connectionReady(qintptr)));
 
 	return true;
 }
@@ -88,7 +88,7 @@ QHostAddress ServSock::address() const
 		return QHostAddress();
 }
 
-void ServSock::sss_connectionReady(int s)
+void ServSock::sss_connectionReady(qintptr s)
 {
 	connectionReady(s);
 }
@@ -103,8 +103,13 @@ ServSockSignal::ServSockSignal(QObject *parent)
 	setMaxPendingConnections(16);
 }
 
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
 void ServSockSignal::incomingConnection(int socketDescriptor)
+#else
+void ServSockSignal::incomingConnection(qintptr socketDescriptor)
+#endif
 {
+	// TODO all these stuff was necessary with Qt3. For now it's better to use pending QTcpSocket object
 	connectionReady(socketDescriptor);
 }
 

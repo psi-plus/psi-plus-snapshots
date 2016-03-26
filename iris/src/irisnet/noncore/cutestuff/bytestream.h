@@ -25,6 +25,10 @@
 #include <QByteArray>
 #include <QIODevice>
 
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
+typedef int qintptr;
+#endif
+
 class QAbstractSocket;
 // CS_NAMESPACE_BEGIN
 

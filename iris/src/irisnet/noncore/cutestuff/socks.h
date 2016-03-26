@@ -60,7 +60,7 @@ public:
 	enum Method { AuthNone=0x0001, AuthUsername=0x0002 };
 	enum Request { ReqConnect, ReqUDPAssociate };
 	SocksClient(QObject *parent=0);
-	SocksClient(int, QObject *parent=0);
+	SocksClient(qintptr, QObject *parent=0);
 	~SocksClient();
 
 	virtual QAbstractSocket* abstractSocket() const;
@@ -149,7 +149,7 @@ signals:
 	void incomingUDP(const QString &host, int port, const QHostAddress &addr, int sourcePort, const QByteArray &data);
 
 private slots:
-	void connectionReady(int);
+	void connectionReady(qintptr);
 	void connectionError();
 	void sd_activated();
 
