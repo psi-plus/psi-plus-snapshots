@@ -449,7 +449,7 @@ namespace XMPP
 
 		void onGo();
 		bool take(const QDomElement &);
-		BoBData data();
+		BoBData &data();
 
 	private:
 		class Private;
