@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2014-03-13
+# Updated: 2016-03-31
 # Version: N/A
 
 set -e
@@ -20,6 +20,13 @@ export MAIN_DIR="${PSIPLUS_DIR}/.."
 host github.com > /dev/null
 
 cd "${PSIPLUS_DIR}"
+
+if [ "${1}" = "push" ]; then
+    git push
+    git push --tags
+    exit 0
+fi
+
 OLD_VER=$(git tag -l | sort -V | tail -n1)
 OLD_REVISION=$(echo ${OLD_VER} | sed -e "s/^[0-9]\+\.[0-9]\+\.\([0-9]\+\)$/\1/")
 
@@ -261,10 +268,5 @@ if [ "${NEW_VER}" != "${OLD_VER}" ]; then
     git tag "${NEW_VER}"
     echo "Git tag ${NEW_VER} was created."
     echo;
-fi
-
-if [ "${1}" = "push" ]; then
-    git push
-    git push --tags
 fi
 
