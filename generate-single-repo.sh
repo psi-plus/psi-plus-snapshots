@@ -139,48 +139,48 @@ rsync -a "${MAIN_DIR}/psi/" "${PSIPLUS_DIR}/" \
     --exclude="^README"
 mv "${MAIN_DIR}/configure" "${PSIPLUS_DIR}/configure"
 mv "${MAIN_DIR}/README" "${PSIPLUS_DIR}/README"
-echo "Files from psi project were copied."
+echo "Files from psi project are copied."
 echo;
 
 cat "${MAIN_DIR}/main/patches"/*.diff | \
     patch -d "${PSIPLUS_DIR}" -p1 2>&1 > \
     "${MAIN_DIR}/applying-patches_${NEW_VER}.log"
 echo "${NEW_VER} ($(echo ${LAST_REVISION_DATE}))" > version
-echo "Patches from Psi+ project were applied."
+echo "Patches from Psi+ project are applied."
 echo;
 
 mkdir -p "${PSIPLUS_DIR}/patches"
 rsync -a "${MAIN_DIR}/main/patches/dev" "${PSIPLUS_DIR}/patches/"
 rsync -a "${MAIN_DIR}/main/patches/mac" "${PSIPLUS_DIR}/patches/"
 rsync -a "${MAIN_DIR}/main/patches/haiku" "${PSIPLUS_DIR}/patches/"
-echo "Extra patches from Psi+ project were copied."
+echo "Extra patches from Psi+ project are copied."
 echo;
 
 rsync -a "${MAIN_DIR}/plugins" "${PSIPLUS_DIR}/src/" \
     --exclude=".git*"
-echo "Plugins from Psi+ project were copied."
+echo "Plugins from Psi+ project are copied."
 echo;
 
 rsync -a "${MAIN_DIR}/main/iconsets/system/" "${PSIPLUS_DIR}/iconsets/system/"
 rsync -a "${MAIN_DIR}/main/iconsets/affiliations/" "${PSIPLUS_DIR}/iconsets/affiliations/"
-echo "Iconsets from Psi+ project were copied."
+echo "Iconsets from Psi+ project are copied."
 echo;
 
 rsync -a "${MAIN_DIR}/resources/sound/" "${PSIPLUS_DIR}/sound/"
-echo "Sound files from Psi+ project were copied."
+echo "Sound files from Psi+ project are copied."
 echo;
 
 mkdir -p "${PSIPLUS_DIR}/skins/"
 rsync -a "${MAIN_DIR}/resources/skins/" "${PSIPLUS_DIR}/skins/"
-echo "Skins from Psi+ project were copied."
+echo "Skins from Psi+ project are copied."
 echo;
 
 rsync -a "${MAIN_DIR}/resources/themes/" "${PSIPLUS_DIR}/themes/"
-echo "Themes from Psi+ project were copied."
+echo "Themes from Psi+ project are copied."
 echo;
 
 cp "${MAIN_DIR}/main/changelog.txt" "${PSIPLUS_DIR}/ChangeLog"
-echo "ChangeLog from Psi+ project was copied."
+echo "ChangeLog from Psi+ project is copied."
 echo;
 
 
@@ -188,7 +188,7 @@ rm configure.exe
 rm iris/configure.exe
 rm -r win32/
 rm -r src/libpsi/tools/idle/win32/
-echo "Trash was removed."
+echo "Trash is removed."
 echo;
 
 
@@ -227,36 +227,36 @@ fi
 
 if [ "${NEW_VER}" = "${OLD_VER}" ]; then
     if [ -z "${EXTRA_TAG}" ]; then
-        COMMENT+="Sources were sync with upstream:\n"
+        COMMENT+="Sources are sync with upstream:\n"
     else
-        COMMENT+="Psi+ was updated:\n"
+        COMMENT+="Psi+ is updated:\n"
     fi
     if [ "${TEST_SRC}" -gt "$((${TEST_LIBPSI}+${TEST_PLUGINS}+0))" ]; then
-        COMMENT+="Psi was updated.\n"
+        COMMENT+="Psi is updated.\n"
     fi
 else
     COMMENT+="Current version is ${NEW_VER}:\n"
     if [ "${TEST_SRC}" -gt "$((${TEST_LIBPSI}+${TEST_PLUGINS}+0))" ]; then
-        COMMENT+="Psi+ was updated.\n"
+        COMMENT+="Psi+ is updated.\n"
     fi
 fi
 
 if [ "${TEST_IRIS}" -gt 0 ]; then
-    COMMENT+="Iris was updated.\n"
+    COMMENT+="iris is updated.\n"
 fi
 
 if [ "${TEST_LIBPSI}" -gt 0 ]; then
-    COMMENT+="Libpsi was updated.\n"
+    COMMENT+="libpsi is updated.\n"
 fi
 
 if [ "${TEST_PLUGINS}" -eq 1 ]; then
-    COMMENT+="One plugin was updated.\n"
+    COMMENT+="One plugin is updated.\n"
 elif [ "${TEST_PLUGINS}" -gt 1 ]; then
-    COMMENT+="Plugins were updated.\n"
+    COMMENT+="Plugins are updated.\n"
 fi
 
 if [ "${TEST_PATCHES}" -gt 0 ]; then
-    COMMENT+="Extra patches were updated.\n"
+    COMMENT+="Extra patches are updated.\n"
 fi
 
 echo -e "${COMMENT}"
@@ -266,7 +266,7 @@ git cm -a -m "$(echo -e ${COMMENT})" 2>&1 > \
 
 if [ "${NEW_VER}" != "${OLD_VER}" ]; then
     git tag "${NEW_VER}"
-    echo "Git tag ${NEW_VER} was created."
+    echo "Git tag ${NEW_VER} is created."
     echo;
 fi
 
