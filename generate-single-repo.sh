@@ -116,13 +116,13 @@ find . -depth -type d -empty -exec rmdir {} \;
 echo "Directory is cleaned."
 echo;
 
-if [ ! -e "${PSIPLUS_DIR}/configure" ]; then
-    wget -c "https://raw.github.com/psi-plus/psi-plus-snapshots/master/configure" || touch configure
-fi
-
-if [ ! -e "${PSIPLUS_DIR}/README" ]; then
-    wget -c "https://raw.github.com/psi-plus/psi-plus-snapshots/master/README" || touch README
-fi
+# Some paranoid checks:
+for FILE in generate-single-repo.sh configure README; do
+    if [ ! -e "${PSIPLUS_DIR}/${FILE}" ]; then
+        wget -c "https://raw.github.com/psi-plus/psi-plus-snapshots/master/${FILE}"
+    fi
+done
+chmod uog+x generate-single-repo.sh configure
 
 mv "${PSIPLUS_DIR}/configure" "${MAIN_DIR}/configure"
 mv "${PSIPLUS_DIR}/README" "${MAIN_DIR}/README"
