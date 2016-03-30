@@ -27,9 +27,6 @@ if [ "${1}" = "push" ]; then
     exit 0
 fi
 
-OLD_VER=$(git tag -l | sort -V | tail -n1)
-OLD_REVISION=$(echo ${OLD_VER} | sed -e "s/^[0-9]\+\.[0-9]\+\.\([0-9]\+\)$/\1/")
-
 MOD=psi
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
@@ -99,12 +96,7 @@ else
     PSI_REVISION=""
 fi
 NEW_VER="${MAIN_REVISION}${PSI_REVISION}"
-
-# Fix NEW_VER if manually created tag exists
-if [ "$(echo -e "${NEW_VER}\\n${OLD_VER}" | sort -V | tail -n1)" != "${NEW_VER}" ]; then
-    NEW_VER="${OLD_VER}"
-    EXTRA_TAG="true"
-fi
+OLD_VER=$(cd "${PSIPLUS_DIR}" && git tag -l | sort -V | tail -n1)
 
 echo "OLD_VER = ${OLD_VER}"
 echo "NEW_VER = ${NEW_VER}"
@@ -226,20 +218,10 @@ if [ "${TEST_ALL}" -eq 0 ]; then
     exit 0;
 fi
 
-if [ "${NEW_VER}" = "${OLD_VER}" ]; then
-    if [ -z "${EXTRA_TAG}" ]; then
-        COMMENT+="Sources are sync with upstream:\n"
-    else
-        COMMENT+="Psi+ is updated:\n"
-    fi
-    if [ "${TEST_SRC}" -gt "$((${TEST_LIBPSI}+${TEST_PLUGINS}+0))" ]; then
-        COMMENT+="Psi is updated.\n"
-    fi
-else
-    COMMENT+="Current version is ${NEW_VER}:\n"
-    if [ "${TEST_SRC}" -gt "$((${TEST_LIBPSI}+${TEST_PLUGINS}+0))" ]; then
-        COMMENT+="Psi+ is updated.\n"
-    fi
+COMMENT+="Current version is ${NEW_VER}:\n"
+
+if [ "${TEST_SRC}" -gt "$((${TEST_LIBPSI}+${TEST_PLUGINS}+0))" ]; then
+    COMMENT+="Psi+ is updated.\n"
 fi
 
 if [ "${TEST_IRIS}" -gt 0 ]; then
@@ -256,7 +238,9 @@ elif [ "${TEST_PLUGINS}" -gt 1 ]; then
     COMMENT+="Plugins are updated.\n"
 fi
 
-if [ "${TEST_PATCHES}" -gt 0 ]; then
+if [ "${TEST_PATCHES}" -eq 1 ]; then
+    COMMENT+="One extra patch is updated.\n"
+elif [ "${TEST_PATCHES}" -gt 1 ]; then
     COMMENT+="Extra patches are updated.\n"
 fi
 
@@ -268,6 +252,7 @@ git cm -a -m "$(echo -e ${COMMENT})" 2>&1 > \
 if [ "${NEW_VER}" != "${OLD_VER}" ]; then
     git tag "${NEW_VER}"
     echo "Git tag ${NEW_VER} is created."
-    echo;
 fi
+
+echo;
 
