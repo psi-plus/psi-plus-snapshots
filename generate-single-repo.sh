@@ -117,11 +117,11 @@ echo "Directory is cleaned."
 echo;
 
 if [ ! -e "${PSIPLUS_DIR}/configure" ]; then
-    wget -c "https://raw.github.com/tehnick/psi-plus/master/configure" || touch configure
+    wget -c "https://raw.github.com/psi-plus/psi-plus-snapshots/master/configure" || touch configure
 fi
 
 if [ ! -e "${PSIPLUS_DIR}/README" ]; then
-    wget -c "https://raw.github.com/tehnick/psi-plus/master/README" || touch README
+    wget -c "https://raw.github.com/psi-plus/psi-plus-snapshots/master/README" || touch README
 fi
 
 mv "${PSIPLUS_DIR}/configure" "${MAIN_DIR}/configure"
