@@ -25,6 +25,7 @@
 #include <windows.h>
 #ifdef HAVE_QT5
 # include <QAbstractNativeEventFilter>
+# include <QApplication>
 #endif
 
 class GlobalShortcutManager::KeyTrigger::Impl : public QWidget
@@ -35,7 +36,7 @@ class GlobalShortcutManager::KeyTrigger::Impl : public QWidget
 		GlobalShortcutManager::KeyTrigger::Impl *impl;
 
 	public:
-		WinEventFilter(GlobalShortcutManager::KeyTrigger::Impl *parent) : impl(parent) {}
+		WinEventFilter(GlobalShortcutManager::KeyTrigger::Impl *parent) : impl(parent) {qApp->installNativeEventFilter(this);}
 
 		virtual bool nativeEventFilter(const QByteArray &eventType, void *m, long *result) Q_DECL_OVERRIDE
 		{
@@ -58,7 +59,7 @@ public:
 		trigger_(t),
 		id_(0)
 	{
-		UINT mod, key;
+		UINT mod = 0, key = 0;
 		if (convertKeySequence(ks, &mod, &key))
 			if (RegisterHotKey((HWND)winId(), nextId, mod, key))
 				id_ = nextId++;
@@ -86,6 +87,7 @@ public:
 			return true;
 		}
 #ifdef HAVE_QT5
+		Q_UNUSED(result);
 		return false;
 #else
 		return QWidget::winEvent(m, result);

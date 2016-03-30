@@ -24,6 +24,7 @@
 #include <windows.h>
 #ifdef HAVE_QT5
 # include <QAbstractNativeEventFilter>
+# include <QApplication>
 #endif
 
 // workaround for the very old MinGW version bundled with Qt
@@ -60,7 +61,7 @@ class WinSystemWatch::EventFilter : public QAbstractNativeEventFilter
     WinSystemWatch *syswatch;
 
 public:
-    EventFilter(WinSystemWatch *parent) : syswatch(parent) {}
+    EventFilter(WinSystemWatch *parent) : syswatch(parent) {qApp->installNativeEventFilter(this);}
 
     virtual bool nativeEventFilter(const QByteArray &eventType, void *m, long *result) Q_DECL_OVERRIDE
     {
@@ -111,6 +112,7 @@ WinSystemWatch::~WinSystemWatch()
 
 bool WinSystemWatch::processWinEvent(MSG *m, long* result)
 {
+	Q_UNUSED(result);
 	if(WM_POWERBROADCAST == m->message) {
 		switch (m->wParam) {
 			case PBT_APMSUSPEND:
