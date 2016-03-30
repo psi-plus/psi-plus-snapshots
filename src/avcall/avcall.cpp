@@ -111,14 +111,14 @@ static void ensureLoaded()
 		if(pluginFile.isEmpty())
 		{
 #if defined(Q_OS_WIN)
-			pluginFile = findPlugin(".", "gstprovider");
+			pluginFile = findPlugin(".", "gstprovider"DEBUG_POSTFIX);
 			resourcePath = QCoreApplication::applicationDirPath() + "/gstreamer-0.10";
 #elif defined(Q_OS_MAC)
-			pluginFile = findPlugin("../Plugins", "gstprovider");
+			pluginFile = findPlugin("../Plugins", "gstprovider"DEBUG_POSTFIX);
 			resourcePath = QCoreApplication::applicationDirPath() + "/../Frameworks/gstreamer-0.10";
 #else
 			foreach(const QString& path, ApplicationInfo::pluginDirs()) {
-				pluginFile = findPlugin(path, "gstprovider");
+				pluginFile = findPlugin(path, "gstprovider"DEBUG_POSTFIX);
 				if(!pluginFile.isEmpty())
 					break;
 			}
