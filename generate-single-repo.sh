@@ -86,18 +86,19 @@ else
     echo;
 fi
 
-MOD=main
-cd "${MAIN_DIR}/${MOD}"
-
-rev=$(git describe --tags | sed -e "s/^.*-\([0-9]\+\)-.*$/\1/")
-if [ "${rev}" = "$(git describe --tags)" ]; then rev="0"; fi
-REVISION_DATE_LIST="$(cd ${MAIN_DIR}/psi  && git log -n1 --date=short --pretty=format:'%ad')
-                    $(cd ${MAIN_DIR}/main && git log -n1 --date=short --pretty=format:'%ad')"
+REVISION_DATE_LIST="$(cd ${MAIN_DIR}/psi        && git log -n1 --date=short --pretty=format:'%ad')
+                    $(cd ${MAIN_DIR}/main       && git log -n1 --date=short --pretty=format:'%ad')
+                    $(cd ${MAIN_DIR}/plugins    && git log -n1 --date=short --pretty=format:'%ad')
+                    $(cd ${MAIN_DIR}/resources  && git log -n1 --date=short --pretty=format:'%ad')"
 LAST_REVISION_DATE=$(echo "${REVISION_DATE_LIST}" | sort -r | head -n1)
 
-CUR_VER="0.16"
-LAST_REVISION=${rev}
-NEW_VER="${CUR_VER}.${LAST_REVISION}"
+MAIN_REVISION=$(cd ${MAIN_DIR}/main && git describe --tags | sed -e "s/^\(.\+\)-g.*$/\1/" | sed -e "s/-/\./")
+if [ "$(cd ${MAIN_DIR}/psi && git describe --tags | sed -e "s/-/\n/g" | wc -l)" = "3" ]; then
+    PSI_REVISION=".$(cd ${MAIN_DIR}/psi && git describe --tags | sed -e 's/^.*-\([0-9]\+\)-.*$/\1/')"
+else
+    PSI_REVISION=""
+fi
+NEW_VER="${MAIN_REVISION}${PSI_REVISION}"
 
 # Fix NEW_VER if manually created tag exists
 if [ "$(echo -e "${NEW_VER}\\n${OLD_VER}" | sort -V | tail -n1)" != "${NEW_VER}" ]; then
