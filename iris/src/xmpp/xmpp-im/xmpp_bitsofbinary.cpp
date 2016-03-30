@@ -17,12 +17,13 @@
  *
  */
 
+#include <QCryptographicHash>
+#include <QFile>
+
 #include "xmpp_bitsofbinary.h"
 #include "xmpp_xmlcommon.h"
 #include "xmpp_client.h"
 #include "xmpp_tasks.h"
-#include <QCryptographicHash>
-#include <QFile>
 
 using namespace XMPP;
 

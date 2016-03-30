@@ -25,7 +25,7 @@
 class TimeZone
 {
 public:
-	static int offsetFromUtc();
+	static int offsetFromUtc(); // in minutes
 	static QString abbreviation();
 	static int tzdToInt(const QString &tzd);
 };

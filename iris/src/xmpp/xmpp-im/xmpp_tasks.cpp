@@ -26,6 +26,7 @@
 #include "xmpp_xmlcommon.h"
 #include "xmpp_vcard.h"
 #include "xmpp_bitsofbinary.h"
+#include "xmpp_captcha.h"
 #include "xmpp/base/timezone.h"
 #include "xmpp_caps.h"
 
@@ -1513,26 +1514,6 @@ bool JT_ServInfo::take(const QDomElement &e)
 		send(iq);
 		return true;
 	}
-	else if (ns == "urn:xmpp:time") {
-		QDomElement iq = createIQ(doc(), "result", e.attribute("from"), e.attribute("id"));
-		QDomElement time = doc()->createElement("time");
-		time.setAttribute("xmlns", ns);
-		iq.appendChild(time);
-
-		QDateTime local = QDateTime::currentDateTime();
-
-		int off = TimeZone::offsetFromUtc();
-		QTime t = QTime(0, 0).addSecs(qAbs(off)*60);
-		QString tzo = (off < 0 ? "-" : "+") + t.toString("HH:mm");
-		time.appendChild(textTag(doc(), "tzo", tzo));
-		QString localTimeStr = local.toUTC().toString(Qt::ISODate);
-		if (!localTimeStr.endsWith("Z"))
-			localTimeStr.append("Z");
-		time.appendChild(textTag(doc(), "utc", localTimeStr));
-
-		send(iq);
-		return true;
-	}
 	else if(ns == "http://jabber.org/protocol/disco#info") {
 		// Find out the node
 		QString node;
@@ -1565,6 +1546,31 @@ bool JT_ServInfo::take(const QDomElement &e)
 			error.appendChild(error_type);
 			send(error_reply);
 		}
+		return true;
+	}
+	if (!ns.isEmpty()) {
+		return false;
+	}
+
+	ns = e.firstChildElement("time").attribute("xmlns");
+	if (ns == "urn:xmpp:time") {
+		QDomElement iq = createIQ(doc(), "result", e.attribute("from"), e.attribute("id"));
+		QDomElement time = doc()->createElement("time");
+		time.setAttribute("xmlns", ns);
+		iq.appendChild(time);
+
+		QDateTime local = QDateTime::currentDateTime();
+
+		int off = TimeZone::offsetFromUtc();
+		QTime t = QTime(0, 0).addSecs(qAbs(off)*60);
+		QString tzo = (off < 0 ? "-" : "+") + t.toString("HH:mm");
+		time.appendChild(textTag(doc(), "tzo", tzo));
+		QString localTimeStr = local.toUTC().toString(Qt::ISODate);
+		if (!localTimeStr.endsWith("Z"))
+			localTimeStr.append("Z");
+		time.appendChild(textTag(doc(), "utc", localTimeStr));
+
+		send(iq);
 		return true;
 	}
 
@@ -2097,4 +2103,141 @@ bool JT_PongServer::take(const QDomElement &e)
 		return true;
 	}
 	return false;
+}
+
+//---------------------------------------------------------------------------
+// JT_CaptchaChallenger
+//---------------------------------------------------------------------------
+class JT_CaptchaChallenger::Private
+{
+public:
+	Jid j;
+	CaptchaChallenge challenge;
+};
+
+JT_CaptchaChallenger::JT_CaptchaChallenger(Task *parent) :
+    Task(parent),
+    d(new Private)
+{
+}
+
+JT_CaptchaChallenger::~JT_CaptchaChallenger()
+{
+	delete d;
+}
+
+void JT_CaptchaChallenger::set(const Jid &j, const CaptchaChallenge &c)
+{
+	d->j = j;
+	d->challenge = c;
+}
+
+void JT_CaptchaChallenger::onGo()
+{
+	Message m;
+	m.setId(id());
+	m.setBody(d->challenge.explanation());
+	m.setUrlList(d->challenge.urls());
+
+	XData form = d->challenge.form();
+	XData::FieldList fl = form.fields();
+	XData::FieldList::Iterator it;
+	for (it = fl.begin(); it < fl.end(); ++it) {
+		if (it->var() == "challenge" && it->type() == XData::Field::Field_Hidden) {
+			it->setValue(QStringList() << id());
+		}
+	}
+	if (it == fl.end()) {
+		XData::Field f;
+		f.setType(XData::Field::Field_Hidden);
+		f.setVar("challenge");
+		f.setValue(QStringList() << id());
+		fl.append(f);
+	}
+	form.setFields(fl);
+
+	m.setForm(form);
+	m.setTo(d->j);
+	client()->sendMessage(m);
+}
+
+bool JT_CaptchaChallenger::take(const QDomElement &x)
+{
+	if(x.tagName() == "message" && x.attribute("id") == id() &&
+	        Jid(x.attribute("from")) == d->j && !x.firstChildElement("error").isNull())
+	{
+		setError(x);
+		return true;
+	}
+
+	XDomNodeList nl;
+	XData xd;
+	QString rid = x.attribute("id");
+	if (rid.isEmpty() || x.tagName() != "iq" ||
+	        Jid(x.attribute("from")) != d->j || x.attribute("type") != "set" ||
+	        (nl = childElementsByTagNameNS(x, "urn:xmpp:captcha", "captcha")).isEmpty() ||
+	        (nl = childElementsByTagNameNS(nl.item(0).toElement(), "jabber:x:data", "x")).isEmpty() ||
+	        (xd.fromXml(nl.item(0).toElement()), xd.getField("challenge").value().value(0) != id()))
+	{
+		return false;
+	}
+
+	CaptchaChallenge::Result r = d->challenge.validateResponse(xd);
+	QDomElement iq;
+	if (r == CaptchaChallenge::Passed) {
+		iq = createIQ(doc(), "result", d->j.full(), rid);
+	} else {
+		Stanza::Error::ErrorCond ec;
+		if (r == CaptchaChallenge::Unavailable) {
+			ec = Stanza::Error::ServiceUnavailable;
+		} else {
+			ec = Stanza::Error::NotAcceptable;
+		}
+		iq = createIQ(doc(), "error", d->j.full(), rid);
+		Stanza::Error error(Stanza::Error::Cancel, ec);
+		iq.appendChild(error.toXml(*doc(), client()->stream().baseNS()));
+	}
+	send(iq);
+
+	setSuccess();
+
+	return true;
+}
+
+
+//---------------------------------------------------------------------------
+// JT_CaptchaSender
+//---------------------------------------------------------------------------
+JT_CaptchaSender::JT_CaptchaSender(Task *parent) :
+    Task(parent)
+{}
+
+void JT_CaptchaSender::set(const Jid &j, const XData &xd)
+{
+	to = j;
+
+	iq = createIQ(doc(), "set", to.full(), id());
+	iq.appendChild(doc()->createElementNS("urn:xmpp:captcha", "captcha"))
+	        .appendChild(xd.toXml(doc(), true));
+}
+
+void JT_CaptchaSender::onGo()
+{
+	send(iq);
+}
+
+bool JT_CaptchaSender::take(const QDomElement &x)
+{
+	if (!iqVerify(x, to, id())) {
+		return false;
+	}
+
+	if (x.attribute("type") == "result") {
+		setSuccess();
+	}
+	else {
+		setError(x);
+	}
+
+	return true;
 }

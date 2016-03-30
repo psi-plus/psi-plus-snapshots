@@ -445,6 +445,16 @@ XData::Field XData::getField(const QString &var) const
 	return Field();
 }
 
+XData::Field &XData::fieldRef(const QString &var)
+{
+	FieldList::Iterator it = d->fields.begin();
+	for ( ; it != d->fields.end(); ++it) {
+		if (it->isValid() && it->var() == var)
+			break;
+	}
+	return *it;
+}
+
 void XData::setFields(const FieldList &fl)
 {
 	d->fields = fl;

@@ -92,7 +92,7 @@ int TimeZone::offsetFromUtc()
 	}
 	return timezone_offset_;
 #else
-	return QTimeZone::systemTimeZone().offsetFromUtc(QDateTime::currentDateTime());
+	return QTimeZone::systemTimeZone().offsetFromUtc(QDateTime::currentDateTime()) / 60;
 #endif
 }
 

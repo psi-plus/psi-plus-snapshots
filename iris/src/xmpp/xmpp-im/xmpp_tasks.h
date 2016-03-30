@@ -34,6 +34,7 @@ namespace XMPP
 	class Roster;
 	class Status;
 	class BoBData;
+	class CaptchaChallenge;
 
 	class JT_Register : public Task
 	{
@@ -462,6 +463,39 @@ namespace XMPP
 	public:
 		JT_PongServer(Task *);
 		bool take(const QDomElement &);
+	};
+
+	class JT_CaptchaChallenger : public Task
+	{
+		Q_OBJECT
+	public:
+		JT_CaptchaChallenger(Task *);
+		~JT_CaptchaChallenger();
+
+		void set(const Jid &, const CaptchaChallenge &);
+
+		void onGo();
+		bool take(const QDomElement &);
+
+	private:
+		class Private;
+		Private *d;
+	};
+
+	class JT_CaptchaSender : public Task
+	{
+		Q_OBJECT
+	public:
+		JT_CaptchaSender(Task *);
+
+		void set(const Jid &, const XData &);
+
+		void onGo();
+		bool take(const QDomElement &);
+
+	private:
+		Jid to;
+		QDomElement iq;
 	};
 }
 

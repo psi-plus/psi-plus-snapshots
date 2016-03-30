@@ -26,6 +26,7 @@
 #include "xmpp_xmlcommon.h"
 #include "xmpp_bitsofbinary.h"
 #include "xmpp_ibb.h"
+#include "xmpp_captcha.h"
 #include "protocol.h"
 #define NS_XML     "http://www.w3.org/XML/1998/namespace"
 
@@ -935,7 +936,7 @@ public:
 	Stanza::Error error;
 
 	// extensions
-	QDateTime timeStamp;
+	QDateTime timeStamp; // local time
 	bool timeStampSend;
 	UrlList urlList;
 	AddressList addressList;
@@ -1690,7 +1691,11 @@ Stanza Message::toStanza(Stream *stream) const
 	// data form
 	if(!d->xdata.fields().empty() || (d->xdata.type() == XData::Data_Cancel)) {
 		bool submit = (d->xdata.type() == XData::Data_Submit) || (d->xdata.type() == XData::Data_Cancel);
-		s.appendChild(d->xdata.toXml(&s.doc(), submit));
+		QDomElement dr = s.element();
+		if (d->xdata.registrarType() == "urn:xmpp:captcha") {
+			dr = dr.appendChild(s.createElement("urn:xmpp:captcha", "captcha")).toElement();
+		}
+		dr.appendChild(d->xdata.toXml(&s.doc(), submit));
 	}
 
 	// bits of binary
@@ -1999,7 +2004,7 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 												 "captcha").item(0).toElement();
 	QDomElement xdataRoot = root;
 	if (!captcha.isNull()) {
-		//xdataRoot = captcha;
+		xdataRoot = captcha;
 	}
 
 	// data form
@@ -3331,5 +3336,114 @@ const QString& PubSubRetraction::id() const
 	return id_;
 }
 
+
+
+// =========================================
+//            CaptchaChallenge
+// =========================================
+class CaptchaChallengePrivate : public QSharedData
+{
+public:
+	CaptchaChallengePrivate() :
+	    state(CaptchaChallenge::New) {}
+
+	CaptchaChallenge::State state;
+	Jid arbiter;
+	Jid offendedJid;
+	XData form;
+	QDateTime dt;
+	QString explanation;
+	UrlList urls;
+};
+
+CaptchaChallenge::CaptchaChallenge() :
+    d(new CaptchaChallengePrivate)
+{}
+
+CaptchaChallenge::CaptchaChallenge(const CaptchaChallenge &other) :
+    d(other.d)
+{}
+
+CaptchaChallenge::CaptchaChallenge(const Message &m) :
+    d(new CaptchaChallengePrivate)
+{
+	if (m.spooled()) {
+		if (m.timeStamp().secsTo(QDateTime::currentDateTime()) < Timeout) {
+			return;
+		}
+		d->dt = m.timeStamp();
+	} else {
+		d->dt = QDateTime::currentDateTime();
+	}
+
+	if (m.getForm().registrarType() != "urn:xmpp:captcha" || m.getForm().type() != XData::Data_Form)
+		return;
+
+	if (m.id().isEmpty() || m.getForm().getField("challenge").value().value(0) !=m.id())
+		return;
+
+	if (m.getForm().getField("from").value().value(0).isEmpty())
+		return;
+
+	d->form = m.getForm();
+	d->explanation = m.body();
+	d->urls = m.urlList();
+	d->arbiter = m.from();
+	d->offendedJid = Jid(m.getForm().getField("from").value().value(0));
+}
+
+CaptchaChallenge::~CaptchaChallenge()
+{
+
+}
+
+CaptchaChallenge &CaptchaChallenge::operator=(const CaptchaChallenge &from)
+{
+	d = from.d;
+	return *this;
+}
+
+const XData &CaptchaChallenge::form() const
+{
+	return d->form;
+}
+
+QString CaptchaChallenge::explanation() const
+{
+	return d->explanation;
+}
+
+const UrlList &CaptchaChallenge::urls() const
+{
+	return d->urls;
+}
+
+CaptchaChallenge::State CaptchaChallenge::state() const
+{
+	return d->state;
+}
+
+CaptchaChallenge::Result CaptchaChallenge::validateResponse(const XData &xd)
+{
+	d->state = Fail;
+	return Unavailable; // TODO implement response validation
+}
+
+bool CaptchaChallenge::isValid() const
+{
+	return d->dt.isValid() &&
+	        d->dt.secsTo(QDateTime::currentDateTime()) < Timeout &&
+	        d->form.fields().count() > 0;
+}
+
+const Jid &CaptchaChallenge::offendedJid() const
+{
+	return d->offendedJid;
+}
+
+const Jid &CaptchaChallenge::arbiter() const
+{
+	return d->arbiter;
+}
 
 }

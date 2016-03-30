@@ -64,6 +64,7 @@ HEADERS += \
 	$$PWD/xmpp-im/xmpp_task.h \
 	$$PWD/xmpp-im/xmpp_httpauthrequest.h \
 	$$PWD/xmpp-im/xmpp_status.h \
+	$$PWD/xmpp-im/xmpp_captcha.h \
 	$$PWD/xmpp-im/xmpp_features.h \
 	$$PWD/xmpp-im/xmpp_agentitem.h \
 	$$PWD/xmpp-im/xmpp_discoitem.h \
