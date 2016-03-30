@@ -91,7 +91,11 @@ LAST_REVISION_DATE=$(echo "${REVISION_DATE_LIST}" | sort -r | head -n1)
 
 MAIN_REVISION=$(cd ${MAIN_DIR}/main && git describe --tags | sed -e "s/^\(.\+\)-g.*$/\1/" | sed -e "s/-/\./")
 if [ "$(cd ${MAIN_DIR}/psi && git describe --tags | sed -e "s/-/\n/g" | wc -l)" = "3" ]; then
-    PSI_REVISION=".$(cd ${MAIN_DIR}/psi && git describe --tags | sed -e 's/^.*-\([0-9]\+\)-.*$/\1/')"
+    if [ "${MAIN_REVISION}" = "$(cd ${MAIN_DIR}/main && git describe --tags)" ]; then
+        PSI_REVISION=".0.$(cd ${MAIN_DIR}/psi && git describe --tags | sed -e 's/^.*-\([0-9]\+\)-.*$/\1/')"
+    else
+        PSI_REVISION=".$(cd ${MAIN_DIR}/psi && git describe --tags | sed -e 's/^.*-\([0-9]\+\)-.*$/\1/')"
+    fi
 else
     PSI_REVISION=""
 fi
