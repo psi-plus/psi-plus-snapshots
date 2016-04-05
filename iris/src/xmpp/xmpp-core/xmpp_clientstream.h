@@ -52,7 +52,8 @@ namespace XMPP
 		};
 		enum Warning {
 			WarnOldVersion,             // server uses older XMPP/Jabber "0.9" protocol
-			WarnNoTLS                   // there is no chance for TLS at this point
+			WarnNoTLS,                  // there is no chance for TLS at this point
+			WarnSMReconnection          // SM started a quiet stream reconnection
 		};
 		enum NegCond {
 			HostGone,                   // host no longer hosted
@@ -90,18 +91,6 @@ namespace XMPP
 			NoAllowPlain,
 			AllowPlain,
 			AllowPlainOverTLS
-		};
-
-		struct SMState {
-			QList<QPair<unsigned long, bool> > sm_receive_queue;
-			QList<QPair<QDomElement, bool> > sm_send_queue;
-			unsigned long sm_receive_count;
-			unsigned long sm_server_last_handled;
-			int sm_stanzas_notify;
-
-			bool sm_resumtion_supported;
-			QString sm_resumption_id;
-			QPair<QString,int> sm_resumption_location;
 		};
 
 		ClientStream(Connector *conn, TLSHandler *tlsHandler=0, QObject *parent=0);
@@ -156,7 +145,7 @@ namespace XMPP
 		void close();
 		bool stanzaAvailable() const;
 		Stanza read();
-		void write(const Stanza &s, bool notify = false);
+		void write(const Stanza &s);
 
 		int errorCondition() const;
 		QString errorText() const;
@@ -166,12 +155,9 @@ namespace XMPP
 		void writeDirect(const QString &s);
 		void setNoopTime(int mills);
 
-		// session management stuff
-		bool isStreamManagementActive();
-		void ackLastMessageStanza();
-
-		SMState getSMState() const;
-		void setSMState(SMState state);
+		// Stream management
+		bool isResumed() const;
+		void setSMEnabled(bool enable);
 
 		// barracuda extension
 		QStringList hosts() const;

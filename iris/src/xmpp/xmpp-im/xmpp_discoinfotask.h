@@ -38,6 +38,9 @@ namespace XMPP
 		DiscoInfoTask(Task *);
 		~DiscoInfoTask();
 
+		// Allow retreive result from cache and update cache on finish with new data
+		void setAllowCache(bool allow = true);
+
 		void get(const Jid &, const QString &node = QString::null, const DiscoItem::Identity = DiscoItem::Identity());
 		void get(const DiscoItem &);
 
@@ -47,6 +50,9 @@ namespace XMPP
 
 		void onGo();
 		bool take(const QDomElement &);
+
+	private slots:
+		void cachedReady();
 
 	private:
 		class Private;

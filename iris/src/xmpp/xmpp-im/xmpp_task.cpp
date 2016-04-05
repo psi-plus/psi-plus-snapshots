@@ -24,7 +24,7 @@
 #include "xmpp_client.h"
 #include "xmpp_xmlcommon.h"
 
-#define DEFAULT_TIMEOUT 300
+#define DEFAULT_TIMEOUT 120
 
 using namespace XMPP;
 
@@ -153,7 +153,7 @@ bool Task::take(const QDomElement &x)
 			continue;
 
 		t = static_cast<Task*>(obj);
-		if(t->take(x))
+		if(!t->d->done && t->take(x))
 			return true;
 	}
 
@@ -167,7 +167,7 @@ void Task::safeDelete()
 
 	d->deleteme = true;
 	if(!d->insig)
-		SafeDelete::deleteSingle(this);
+		deleteLater();
 }
 
 void Task::onGo()
@@ -190,15 +190,15 @@ void Task::onTimeout()
 {
 	if(!d->done) {
 		d->success = false;
-		// d->statusCode = ErrTimeout;
+		d->statusCode = ErrTimeout;
 		d->statusString = tr("Request timed out");
 		done();
 	}
 }
 
-void Task::send(const QDomElement &x, bool want_notify)
+void Task::send(const QDomElement &x)
 {
-	client()->send(x, want_notify);
+	client()->send(x);
 }
 
 void Task::setSuccess(int code, const QString &str)
@@ -244,7 +244,7 @@ void Task::done()
 	d->insig = false;
 
 	if(d->deleteme)
-		SafeDelete::deleteSingle(this);
+		deleteLater();
 }
 
 void Task::clientDisconnected()
@@ -254,7 +254,8 @@ void Task::clientDisconnected()
 
 void Task::timeoutFinished()
 {
-	onTimeout();
+	if (!d->done)
+		onTimeout();
 }
 
 void Task::debug(const char *fmt, ...)

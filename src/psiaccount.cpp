@@ -469,18 +469,19 @@ public:
 	Status loginStatus;
 	bool loginWithPriority;
 	bool reconnectingOnce;
+	bool nickFromVCard;
+	bool pepAvailable;
+	bool vcardChecked;
 	EventQueue *eventQueue;
 	XmlConsole *xmlConsole;
 	UserList userList;
 	UserListItem self;
-	bool nickFromVCard;
 	QCA::PGPKey cur_pgpSecretKey;
 	QList<Message*> messageQueue;
 	BlockTransportPopupList *blockTransportPopupList;
 	int userCounter;
 	PsiPrivacyManager* privacyManager;
 	RosterItemExchangeTask* rosterItemExchangeTask;
-	bool pepAvailable;
 	QString currentConnectionError;
 	int currentConnectionErrorCondition;
 	QTimer *updateOnlineContactsCountTimer_;
@@ -545,9 +546,6 @@ public:
 	QList<PsiContact*> contacts;
 	int onlineContactsCount;
 
-	// Stream management
-	QQueue<ChatDlg*> chatdlg_ack_interest;
-	ClientStream::SMState smState;
 private:
 	bool doPopups_;
 
@@ -1131,6 +1129,7 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, TabManage
 	d->self = UserListItem(true);
 	d->self.setSubscription(Subscription::Both);
 	d->nickFromVCard = false;
+	d->vcardChecked = false;
 
 	// we need to copy groupState, because later initialization will depend on that
 	d->acc.groupState = acc.groupState;
@@ -1141,8 +1140,6 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, TabManage
 	d->tlsHandler = 0;
 	d->stream = 0;
 	d->usingSSL = false;
-
-	d->smState.sm_resumtion_supported = false;
 
 	// create XMPP::Client
 	d->client = new Client;
@@ -1389,7 +1386,6 @@ void PsiAccount::cleanupStream()
 {
 	// GSOC: Get SM state out of stream
 	if (d->stream) {
-		d->smState = d->stream->getSMState();
 		delete d->stream;
 	}
 
@@ -1759,12 +1755,7 @@ void PsiAccount::login()
 		connect(d->tlsHandler, SIGNAL(tlsHandshaken()), SLOT(tls_handshaken()));
 	}
 	d->conn->setProxy(p);
-	if (d->smState.sm_resumtion_supported && !d->smState.sm_resumption_location.first.isEmpty()) {
-		useHost = true;
-		host = d->smState.sm_resumption_location.first;
-		port = d->smState.sm_resumption_location.second;
-		d->smState.sm_resumption_location.first.clear(); // we don't want to try it again if failed
-	}
+
 	if (useHost) {
 		d->conn->setOptHostPort(host, port);
 		d->conn->setOptSSL(d->acc.ssl == UserAccount::SSL_Legacy);
@@ -1789,10 +1780,9 @@ void PsiAccount::login()
 	connect(d->stream, SIGNAL(delayedCloseFinished()), SLOT(cs_delayedCloseFinished()));
 	connect(d->stream, SIGNAL(warning(int)), SLOT(cs_warning(int)));
 	connect(d->stream, SIGNAL(error(int)), SLOT(cs_error(int)), Qt::QueuedConnection);
-	connect(d->stream, SIGNAL(stanzasAcked(int)), SLOT(messageStanzasAcked(int)));
 
 	Jid j = d->jid.withResource((d->acc.opt_automatic_resource ? localHostName() : d->acc.resource ));
-	if (d->smState.sm_resumtion_supported) d->stream->setSMState(d->smState);
+	d->stream->setSMEnabled(d->acc.opt_sm);
 	d->client->connectToServer(d->stream, j);
 }
 
@@ -1825,9 +1815,6 @@ void PsiAccount::forceDisconnect(bool fast, const XMPP::Status &s)
 		// send logout status
 		d->client->groupChatLeaveAll(PsiOptions::instance()->getOption("options.muc.leave-status-message").toString());
 		d->client->setPresence(s);
-
-		// we are not going to restore session if we a here?
-		d->stream->setSMState(ClientStream::SMState());
 	}
 
 	isDisconnecting = true;
@@ -2023,6 +2010,9 @@ void PsiAccount::cs_delayedCloseFinished()
 
 void PsiAccount::cs_warning(int w)
 {
+	if (w == ClientStream::WarnSMReconnection)
+		return;
+
 	bool showNoTlsWarning = w == ClientStream::WarnNoTLS && d->acc.ssl == UserAccount::SSL_Yes;
 	bool doCleanupStream = !d->stream || showNoTlsWarning;
 
@@ -2370,6 +2360,23 @@ void PsiAccount::resolveContactName()
 void PsiAccount::serverFeaturesChanged()
 {
 	setPEPAvailable(d->serverInfoManager->hasPEP());
+
+	if (d->serverInfoManager->features().haveVCard() && !d->vcardChecked) {
+		// Get the vcard
+		const VCard *vcard = VCardFactory::instance()->vcard(d->jid);
+		if (PsiOptions::instance()->getOption("options.vcard.query-own-vcard-on-login").toBool() || !vcard || vcard->isEmpty() || (vcard->nickName().isEmpty() && vcard->fullName().isEmpty()))
+			VCardFactory::instance()->getVCard(d->jid, d->client->rootTask(), this, SLOT(slotCheckVCard()));
+		else {
+			d->nickFromVCard = true;
+			// if we get here, one of these fields is non-empty
+			if (!vcard->nickName().isEmpty()) {
+				setNick(vcard->nickName());
+			} else {
+				setNick(vcard->fullName());
+			}
+		}
+		d->vcardChecked = true;
+	}
 }
 
 void PsiAccount::setPEPAvailable(bool b)
@@ -2728,11 +2735,6 @@ void PsiAccount::client_messageReceived(const Message &m)
 #endif
 
 	processIncomingMessage(_m);
-
-	XMPP::ClientStream *cs = qobject_cast<XMPP::ClientStream*>(&(d->client->stream()));
-	if (cs) {
-		cs->ackLastMessageStanza();
-	}
 }
 
 #ifdef WHITEBOARDING
@@ -3152,20 +3154,6 @@ bool PsiAccount::noPopup() const
 void PsiAccount::sentInitialPresence()
 {
 	QTimer::singleShot(15000, this, SLOT(enableNotifyOnline()));
-
-	// Get the vcard
-	const VCard *vcard = VCardFactory::instance()->vcard(d->jid);
-	if (PsiOptions::instance()->getOption("options.vcard.query-own-vcard-on-login").toBool() || !vcard || vcard->isEmpty() || (vcard->nickName().isEmpty() && vcard->fullName().isEmpty()))
-		VCardFactory::instance()->getVCard(d->jid, d->client->rootTask(), this, SLOT(slotCheckVCard()));
-	else {
-		d->nickFromVCard = true;
-		// if we get here, one of these fields is non-empty
-		if (!vcard->nickName().isEmpty()) {
-			setNick(vcard->nickName());
-		} else {
-			setNick(vcard->fullName());
-		}
-	}
 }
 
 void PsiAccount::capsChanged(const Jid& j)
@@ -4688,13 +4676,6 @@ void PsiAccount::dj_sendMessage(const Message &m, bool log)
 			}
 		}
 	}
-
-	if (!nm.body().isEmpty()) {
-		UserListItem *u = findFirstRelevant(m.to());
-		if (!u || (!u->isConference() && u->subscription().type() != Subscription::Both && u->subscription().type() != Subscription::From)) {
-			nm.setNick(nick());
-		}
-	}
 	
 #ifdef PSI_PLUGINS
 	if (!nm.body().isEmpty()) {
@@ -4712,17 +4693,14 @@ void PsiAccount::dj_sendMessage(const Message &m, bool log)
 	}
 #endif
 
-	// GSOC: stream management
-	// check whether message came from a ChatDlg
-	if (d->client->isStreamManagementActive()) {
-		ChatDlg *chat_dlg = qobject_cast<ChatDlg*>(sender());
-		if (chat_dlg) {
-			d->chatdlg_ack_interest.enqueue(chat_dlg);
-			d->client->sendMessage(nm, true);
+	if (!nm.body().isEmpty()) {
+		UserListItem *u = findFirstRelevant(m.to());
+		if (!u || (!u->isConference() && u->subscription().type() != Subscription::Both && u->subscription().type() != Subscription::From)) {
+			nm.setNick(nick());
 		}
-		else d->client->sendMessage(nm);
 	}
-	else d->client->sendMessage(nm);
+
+	d->client->sendMessage(nm);
 
 	// only toggle if not an invite or body is not empty
 	if(m.invite().isEmpty() && !m.body().isEmpty())
@@ -5686,14 +5664,6 @@ void PsiAccount::processReadNext(const UserListItem &u)
 	updateReadNext(u.jid());
 }
 
-void PsiAccount::messageStanzasAcked(int n) {
-	for (int i=0; i < n; i++) {
-		ChatDlg *chatdlg = d->chatdlg_ack_interest.dequeue();
-		chatdlg->ackLastMessages(1);
-		qWarning() << "Inform chat dialog that message has been acked by the server.";
-	}
-}
-
 void PsiAccount::processChatsHelper(const Jid& j, bool removeEvents)
 {
 	//printf("processing chats for [%s]\n", j.full().latin1());
@@ -5860,6 +5830,16 @@ void PsiAccount::groupChatLeave(const QString &host, const QString &room)
 		d->removeEntry(j);
 		d->userList.removeAll(u);
 	}
+}
+
+void PsiAccount::setLocalMucBookmarks(const QStringList &sl)
+{
+	d->acc.localMucBookmarks = sl;
+}
+
+QStringList PsiAccount::localMucBookmarks() const
+{
+	return d->acc.localMucBookmarks;
 }
 
 GCContact *PsiAccount::findGCContact(const Jid &j) const

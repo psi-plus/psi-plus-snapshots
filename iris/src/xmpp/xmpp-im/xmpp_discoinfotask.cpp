@@ -19,23 +19,27 @@
 
 #include <QDomElement>
 #include <QString>
+#include <QTimer>
 
 #include "xmpp_task.h"
 #include "xmpp/jid/jid.h"
 #include "xmpp_discoitem.h"
 #include "xmpp_discoinfotask.h"
 #include "xmpp_xmlcommon.h"
+#include "xmpp_client.h"
+#include "xmpp_caps.h"
 
 using namespace XMPP;
 
 class DiscoInfoTask::Private
 {
 public:
-	Private() { }
+	Private() : allowCache(true) { }
 
-	QDomElement iq;
+	bool allowCache;
 	Jid jid;
 	QString node;
+	DiscoItem::Identity ident;
 	DiscoItem item;
 };
 
@@ -48,6 +52,11 @@ DiscoInfoTask::DiscoInfoTask(Task *parent)
 DiscoInfoTask::~DiscoInfoTask()
 {
 	delete d;
+}
+
+void DiscoInfoTask::setAllowCache(bool allow)
+{
+	d->allowCache = allow;
 }
 
 void DiscoInfoTask::get(const DiscoItem &item)
@@ -64,26 +73,7 @@ void DiscoInfoTask::get (const Jid &j, const QString &node, DiscoItem::Identity 
 
 	d->jid = j;
 	d->node = node;
-	d->iq = createIQ(doc(), "get", d->jid.full(), id());
-	QDomElement query = doc()->createElement("query");
-	query.setAttribute("xmlns", "http://jabber.org/protocol/disco#info");
-
-	if ( !node.isEmpty() )
-		query.setAttribute("node", node);
-
-	if ( !ident.category.isEmpty() && !ident.type.isEmpty() ) {
-		QDomElement i = doc()->createElement("item");
-
-		i.setAttribute("category", ident.category);
-		i.setAttribute("type", ident.type);
-		if ( !ident.name.isEmpty() )
-			i.setAttribute("name", ident.name);
-
-		query.appendChild( i );
-
-	}
-
-	d->iq.appendChild(query);
+	d->ident = ident;
 }
 
 
@@ -107,8 +97,6 @@ const QString& DiscoInfoTask::node() const
 	return d->node;
 }
 
-
-
 const DiscoItem &DiscoInfoTask::item() const
 {
 	return d->item;
@@ -116,7 +104,41 @@ const DiscoItem &DiscoInfoTask::item() const
 
 void DiscoInfoTask::onGo ()
 {
-	send(d->iq);
+	if (d->allowCache && client()->capsManager()->isEnabled()) {
+		d->item = client()->capsManager()->disco(d->jid);
+		if (!d->item.features().isEmpty() || d->item.identities().count()) {
+			QTimer::singleShot(0, this, SLOT(cachedReady())); // to be consistent with network requests
+			return;
+		}
+	}
+
+	QDomElement iq = createIQ(doc(), "get", d->jid.full(), id());
+	QDomElement query = doc()->createElement("query");
+	query.setAttribute("xmlns", "http://jabber.org/protocol/disco#info");
+
+	if ( !d->node.isEmpty() )
+		query.setAttribute("node", d->node);
+
+	if ( !d->ident.category.isEmpty() && !d->ident.type.isEmpty() ) {
+		QDomElement i = doc()->createElement("item");
+
+		i.setAttribute("category", d->ident.category);
+		i.setAttribute("type", d->ident.type);
+		if ( !d->ident.name.isEmpty() )
+			i.setAttribute("name", d->ident.name);
+
+		query.appendChild( i );
+
+	}
+
+	iq.appendChild(query);
+	send(iq);
+}
+
+void DiscoInfoTask::cachedReady()
+{
+	d->item.setJid( d->jid );
+	setSuccess();
 }
 
 bool DiscoInfoTask::take(const QDomElement &x)
@@ -127,8 +149,11 @@ bool DiscoInfoTask::take(const QDomElement &x)
 	if(x.attribute("type") == "result") {
 		d->item = DiscoItem::fromDiscoInfoResult(queryTag(x));
 		d->item.setJid( d->jid );
+		if (d->allowCache && client()->capsManager()->isEnabled()) {
+			client()->capsManager()->updateDisco(d->jid, d->item);
+		}
 
-		setSuccess(true);
+		setSuccess();
 	}
 	else {
 		setError(x);

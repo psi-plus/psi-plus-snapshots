@@ -34,8 +34,6 @@
 #include "td.h"
 #endif
 
-//#define IRIS_SM_DEBUG
-
 using namespace XMPP;
 
 // printArray
@@ -599,10 +597,6 @@ CoreProtocol::CoreProtocol()
 :BasicProtocol()
 {
 	init();
-	sm_resumption_supported = false;
-	sm_resumption_id = "";
-	sm_receive_count = 0;
-	sm_server_last_handled = 0;
 }
 
 CoreProtocol::~CoreProtocol()
@@ -640,7 +634,7 @@ void CoreProtocol::init()
 	sasl_started = false;
 	compress_started = false;
 
-	sm_started = false;
+	sm.reset();
 }
 
 void CoreProtocol::reset()
@@ -650,31 +644,18 @@ void CoreProtocol::reset()
 }
 
 void CoreProtocol::startTimer(int seconds) {
-	sm_ack_last_requested.start();
 	notify |= NTimeout;
 	need = NNotify;
 	timeout_sec = seconds;
 }
 
-void CoreProtocol::sendStanza(const QDomElement &e, bool notify) {
-	if (isStreamManagementActive()) {
-#ifdef XMPP_TEST
-		if (notify) qDebug() << "Want notification for stanza";
-#endif
-		sm_send_queue.push_back(qMakePair(e, notify));
-#ifdef IRIS_SM_DEBUG
-		qDebug() << "sm_send_queue: ";
-#endif
-		for (QList<QPair<QDomElement, bool> >::iterator i = sm_send_queue.begin(); i != sm_send_queue.end(); ++i) {
-			QPair<QDomElement, bool> entry = *i;
-#ifdef IRIS_SM_DEBUG
-			qDebug() << "\t" << entry.first.tagName() << " : " << entry.second;
-#endif
-		}
-		if (sm_send_queue.length() > 5 && sm_send_queue.length() % 4 == 0) requestSMAcknowlegement();
-		startTimer(20);
+void CoreProtocol::sendStanza(const QDomElement &e) {
+	if (sm.isActive()) {
+		int len = sm.addUnacknowledgedStanza(e);
+		if (len > 5 && len % 4 == 0)
+			if (needSMRequest())
+				event = ESend;
 	}
-	//qDebug() << "CoreProtocol::sendStanza";
 	BasicProtocol::sendStanza(e);
 }
 
@@ -778,12 +759,11 @@ bool CoreProtocol::loginComplete()
 	setReady(true);
 
 	// deal with stream management
-	if(!sm_started && features.sm_supported) {
-		if (sm_resumption_supported && sm_resumption_id != "") {
+	if (features.sm_supported && sm.state().isEnabled() && !sm.isActive()) {
+		if (sm.state().isResumption()) {
 			QDomElement e = doc.createElementNS(NS_STREAM_MANAGEMENT, "resume");
-			e.setAttribute("previd", sm_resumption_id);
-			qulonglong lasthandledid = getSMLastHandledId();
-			e.setAttribute("h", lasthandledid);
+			e.setAttribute("previd", sm.state().resumption_id);
+			e.setAttribute("h", sm.state().received_count);
 			send(e);
 		} else {
 			QDomElement e = doc.createElementNS(NS_STREAM_MANAGEMENT, "enable");
@@ -949,147 +929,39 @@ bool CoreProtocol::streamManagementHandleStanza(const QDomElement &e)
 {
 	QString s = e.tagName();
 	if(s == "r") {
-		qulonglong last_handled_id = getSMLastHandledId();
-		QDomElement e = doc.createElementNS(NS_STREAM_MANAGEMENT, "a");
-		e.setAttribute("h", last_handled_id);
 #ifdef IRIS_SM_DEBUG
-		qWarning() << "Stream Management: Sending acknowledgment with h=" << last_handled_id;
+		qDebug() << "Stream Management: [<-?] Received request from server";
 #endif
-		send(e);
+		send(sm.makeResponseStanza(doc));
 		event = ESend;
 		return true;
 	} else if (s == "a") {
+		quint32 last_id = e.attribute("h").toULong();
 #ifdef IRIS_SM_DEBUG
-		qWarning() << "Received ack response from server";
+		qDebug() << "Stream Management: [<--] Received ack response from server with h =" << last_id;
 #endif
-		processSMAcknowlegement(e.attribute("h").toULong());
+		sm.processAcknowledgement(last_id);
+		startTimer(SM_TIMER_INTERVAL_SECS);
 		event = EAck;
 		return true;
 	} else {
+		if (sm.processNormalStanza(e))
+			startTimer(SM_TIMER_INTERVAL_SECS);
 		need = NNotify;
 		notify |= NRecv;
 		return false;
 	}
 }
 
-unsigned long CoreProtocol::getNewSMId() {
-	unsigned long sm_id = sm_receive_count;
-	sm_receive_queue.push_back(qMakePair(sm_id, false));
-	sm_receive_count++;
-	if (sm_receive_count == (unsigned long)-1) sm_receive_count = 0; /* why do we skip -1? */
-#ifdef IRIS_SM_DEBUG
-	qWarning() << "Current SM id: " << sm_id;
-#endif
-	return sm_id;
-}
-
-unsigned long CoreProtocol::getSMLastHandledId() {
-	if (sm_receive_queue.isEmpty()) {
-		return sm_receive_count - 1;
-	} else {
-		QPair<unsigned long, bool> queue_item;
-		unsigned long last_handled_id = sm_receive_count - 1;;
-		do {
-			queue_item = sm_receive_queue.front();
-			if (queue_item.second == true) {
-				last_handled_id = queue_item.first;
-				sm_receive_queue.pop_front();
-			}
-		} while (queue_item.second == true && !sm_receive_queue.isEmpty());
-		return last_handled_id;
+bool CoreProtocol::needSMRequest()
+{
+	QDomElement e = sm.generateRequestStanza(doc);
+	if (!e.isNull()) {
+		send(e);
+		startTimer(SM_TIMER_INTERVAL_SECS);
+		return true;
 	}
-}
-
-void CoreProtocol::markStanzaHandled(unsigned long id) {
-	for(QList<QPair<unsigned long, bool> >::Iterator it = sm_receive_queue.begin(); it != sm_receive_queue.end(); ++it ) {
-		if (it->first == id) {
-			it->second = true;
-			return;
-		}
-	}
-#ifdef IRIS_SM_DEBUG
-	qWarning() << "Stream Management: Higher level client marked unknown stanza handled!";
-#endif
-}
-
-void CoreProtocol::markLastMessageStanzaAcked() {
-	if (sm_receive_queue.isEmpty()) {
-#ifdef IRIS_SM_DEBUG
-		qWarning() << "Stream Management: Higher level client marked unexistant stanza as acked.";
-#endif
-		return;
-	}
-#ifdef IRIS_SM_DEBUG
-	qWarning() << "Previous list: " << sm_receive_queue;
-#endif
-	for(QList<QPair<unsigned long, bool> >::Iterator it = sm_receive_queue.begin(); it != sm_receive_queue.end(); ++it ) {
-		if (it->second == false) {
-			it->second = true;
-			return;
-		}
-	}
-}
-
-bool CoreProtocol::isStreamManagementActive() const {
-	return sm_started;
-}
-
-void CoreProtocol::requestSMAcknowlegement() {
-#ifdef IRIS_SM_DEBUG
-	qDebug() << "Now I'd request acknowledgement from the server.";
-#endif
-	sendDirect(QString("<r xmlns='" NS_STREAM_MANAGEMENT "'/>"));
-	startTimer(20);
-}
-
-int CoreProtocol::getNotableStanzasAcked() {
-	return sm_stanzas_notify;
-}
-
-ClientStream::SMState CoreProtocol::getSMState() const {
-#ifdef IRIS_SM_DEBUG
-	qDebug("\tCoreProtocol::getSMState()");
-#endif
-	ClientStream::SMState state;
-	state.sm_receive_queue = sm_receive_queue;
-	state.sm_send_queue = sm_send_queue;
-	state.sm_receive_count = sm_receive_count;
-
-	state.sm_server_last_handled = sm_server_last_handled;
-	state.sm_stanzas_notify = sm_stanzas_notify;
-
-	state.sm_resumtion_supported = sm_resumption_supported;
-	state.sm_resumption_id = sm_resumption_id;
-	state.sm_resumption_location = sm_resumption_location;
-	return state;
-}
-
-void CoreProtocol::setSMState(ClientStream::SMState &state) {
-	fprintf(stderr, "\tCoreProtocol::setSMState()\n");
-	sm_receive_queue = state.sm_receive_queue;
-	sm_send_queue = state.sm_send_queue;
-	sm_receive_count = state.sm_receive_count;
-
-	sm_server_last_handled = state.sm_server_last_handled;
-	sm_stanzas_notify = state.sm_stanzas_notify;
-
-	sm_resumption_supported = state.sm_resumtion_supported;
-	sm_resumption_id = state.sm_resumption_id;
-}
-
-void CoreProtocol::processSMAcknowlegement(unsigned long last_handled) {
-	int handled_stanzas = 0;
-	int notifies = 0;
-	if (sm_server_last_handled == 0) handled_stanzas = last_handled + 1;
-	else handled_stanzas = last_handled - sm_server_last_handled;
-	sm_server_last_handled = last_handled;
-
-	for (int n = 0; n < handled_stanzas && !sm_send_queue.isEmpty() ; ++n) {
-		QPair<QDomElement, bool> entry = sm_send_queue.first();
-		sm_send_queue.pop_front();
-		if (entry.second) notifies++;
-	}
-	sm_stanzas_notify = notifies;
+	return false;
 }
 
 bool CoreProtocol::grabPendingItem(const Jid &to, const Jid &from, int type, DBItem *item)
@@ -1318,9 +1190,8 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 			return true;
 		}
 
-		if (sm_resumption_supported && sm_resumption_id != "") {
+		if (sm.state().isResumption()) {
 			// try to resume;
-			fprintf(stderr, "\tResume session\n");
 			return loginComplete();
 		} else {
 			QDomElement e = doc.createElement("iq");
@@ -1906,28 +1777,29 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 		if (e.namespaceURI() == NS_STREAM_MANAGEMENT) {
 			if (e.localName() == "enabled") {
 #ifdef IRIS_SM_DEBUG
-				qWarning() << "Stream Management enabled";
+				qDebug() << "Stream Management: [INF] Enabled";
 #endif
-				sm_started = true;
-				if (e.attribute("resume", "false") == "true" || e.attribute("resume", "false") == "1") {
+				QString rs = e.attribute("resume");
+				QString id = (rs == "true" || rs == "1") ? e.attribute("id") : QString();
+				sm.started(id);
+				if (!id.isEmpty()) {
 #ifdef IRIS_SM_DEBUG
-					qDebug("\tResumption Supported");
+					qDebug() << "Stream Management: [INF] Resumption Supported";
 #endif
-					sm_resumption_supported = true;
-					sm_resumption_id = e.attribute("id", "");
-
-					if (!e.attribute("location").isEmpty()) {
+					QString location = e.attribute("location").trimmed();
+					if (!location.isEmpty()) {
 						int port_off = 0;
 						QStringRef sm_host;
 						int sm_port = -1;
-						QString location = e.attribute("location");
-						if (location[0] == '[') { // ipv6
+						if (location.startsWith('[')) { // ipv6
 							port_off = location.indexOf(']');
 							if (port_off != -1) { // looks valid
 								sm_host = location.midRef(1, port_off - 1);
+								if (location.length() > port_off + 2 && location.at(port_off + 1) == ':')
+									sm_port = location.mid(port_off + 2).toInt();
 							}
 						}
-						if (port_off != -1) { // -1 means previous ipv6 parse failed
+						if (port_off == 0) {
 							port_off = location.indexOf(':');
 							if (port_off != -1) {
 								sm_host = location.leftRef(port_off);
@@ -1936,25 +1808,29 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 								sm_host = location.midRef(0);
 							}
 						}
-						if (!sm_host.isEmpty() && sm_port) {
-							sm_resumption_location = QPair<QString,int>(sm_host.toString(), sm_port);
-						}
+						sm.setLocation(sm_host.toString(), sm_port);
 					}
 
-					startTimer(20);
+					startTimer(SM_TIMER_INTERVAL_SECS);
 					event = EReady;
 					step = Done;
 					return true;
 				}
 			} else if (e.localName() == "resumed") {
-				processSMAcknowlegement(e.attribute("h").toULong());
-				startTimer(20);
+				sm.resumed(e.attribute("h").toULong());
+				while(true) {
+					QDomElement st = sm.getUnacknowledgedStanza();
+					if (st.isNull())
+						break;
+					send(st);
+				}
+				startTimer(SM_TIMER_INTERVAL_SECS);
 				event = EReady;
 				step = Done;
 				return true;
 			} else if (e.localName() == "failed") {
-				if (!sm_resumption_id.isEmpty()) { // tried to resume? ok, then try to just enable
-					sm_resumption_id.clear();
+				if (sm.state().isResumption()) { // tried to resume? ok, then try to just enable
+					sm.state().resumption_id.clear();
 					step = HandleFeatures;
 					event = EFeatures;
 					return true;
@@ -1963,20 +1839,25 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 		}
 	}
 
-	if (isStreamManagementActive()) {
-		if (sm_ack_last_requested.elapsed() >= 20000) {
-			requestSMAcknowlegement();
+	if(isReady()) {
+		if (!e.isNull()) {
+			if(isValidStanza(e)) {
+				stanzaToRecv = e;
+				event = EStanzaReady;
+				setIncomingAsExternal();
+				return true;
+			} else if (sm.isActive()) {
+				return streamManagementHandleStanza(e);
+			}
 		}
-	}
-
-	if(isReady() && !e.isNull()) {
-		if(isValidStanza(e)) {
-			stanzaToRecv = e;
-			event = EStanzaReady;
-			setIncomingAsExternal();
-			return true;
-		} else if (sm_started) {
-			return streamManagementHandleStanza(e);
+		if (sm.isActive()) {
+			if (sm.lastAckElapsed() >= SM_TIMER_INTERVAL_SECS) {
+				if (needSMRequest())
+					event = ESend;
+				else
+					event = ESMConnTimeout;
+				return true;
+			}
 		}
 	}
 

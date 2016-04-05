@@ -514,6 +514,9 @@ int main(int argc, char *argv[])
 	// version.
 	// see http://www.mozilla.org/security/announce/2007/mfsa2007-23.html
 	// for how this problem affected firefox on windows.
+#if defined(HAVE_QT5) && defined(Q_OS_WIN)
+	const QString appPath = QFileInfo(QString::fromLocal8Bit(argv[0])).absoluteDir().absolutePath();
+#endif
 
 	PsiCli cli;
 
@@ -550,6 +553,9 @@ int main(int argc, char *argv[])
 	// it must be initialized first in order for ApplicationInfo::resourcesDir() to work
 #ifdef HAVE_QT5
 	qInstallMessageHandler(psiMessageOutput);
+# ifdef Q_OS_WIN
+	QCoreApplication::addLibraryPath(appPath);
+# endif
 #else
 	qInstallMsgHandler(psiMessageOutput);
 #endif

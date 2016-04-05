@@ -35,7 +35,7 @@ namespace XMPP {
 	{
 		Q_OBJECT
 	public:
-		enum { ErrDisc };
+		enum { ErrDisc, ErrTimeout };
 		Task(Task *parent);
 		Task(Client *, bool isRoot);
 		virtual ~Task();
@@ -63,7 +63,7 @@ namespace XMPP {
 		virtual void onGo();
 		virtual void onDisconnect();
 		virtual void onTimeout();
-		void send(const QDomElement &, bool want_notify = false);
+		void send(const QDomElement &);
 		void setSuccess(int code=0, const QString &str="");
 		void setError(const QDomElement &);
 		void setError(int code=0, const QString &str="");

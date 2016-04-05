@@ -30,7 +30,6 @@ protected:
 	void contextMenuEvent(QContextMenuEvent *);
 	void doSend();
 	bool eventFilter(QObject *obj, QEvent *event);
-	void ackLastMessages(int msgs);
 
 private:
 	void setContactToolTip(QString text);
@@ -106,10 +105,6 @@ private:
 	bool autoPGP_;
 	bool smallChat_;
 	class ChatDlgMCmdProvider;
-
-	const PsiIcon *current_status_icon;
-	QString last_contact_tooltip;
-	int unacked_messages;
 
 	static PsiIcon *throbber_icon;
 	bool tabmode;

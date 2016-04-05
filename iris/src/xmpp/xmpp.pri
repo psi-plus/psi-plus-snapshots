@@ -30,6 +30,7 @@ HEADERS += \
 	$$PWD/xmpp-core/parser.h \
 	$$PWD/xmpp-core/xmlprotocol.h \
 	$$PWD/xmpp-core/protocol.h \
+	$$PWD/xmpp-core/sm.h \
 	$$PWD/xmpp-core/compressionhandler.h \
 	$$PWD/xmpp-core/td.h \
 	$$PWD/xmpp-im/xmpp_tasks.h \
@@ -79,6 +80,7 @@ SOURCES += \
 	$$PWD/xmpp-core/parser.cpp \
 	$$PWD/xmpp-core/xmlprotocol.cpp \
 	$$PWD/xmpp-core/protocol.cpp \
+	$$PWD/xmpp-core/sm.cpp \
 	$$PWD/xmpp-core/compressionhandler.cpp \
 	$$PWD/xmpp-core/stream.cpp \
 	$$PWD/xmpp-core/simplesasl.cpp \

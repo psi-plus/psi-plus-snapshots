@@ -1,2 +1,2 @@
 TEMPLATE = subdirs
-SUBDIRS = nettool icetunnel xmpptest
+#SUBDIRS = nettool icetunnel xmpptest

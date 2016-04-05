@@ -829,7 +829,7 @@ void S5BManager::srv_incomingReady(SocksClient *sc, const QString &key)
 	Entry *e = findEntryByHash(key);
 	if(!e->i->allowIncoming) {
 		sc->requestDeny();
-		SafeDelete::deleteSingle(sc);
+		sc->deleteLater();
 		return;
 	}
 	if(e->c->d->mode == S5BConnection::Datagram)

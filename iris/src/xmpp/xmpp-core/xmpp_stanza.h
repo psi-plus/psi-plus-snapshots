@@ -23,6 +23,7 @@
 #include <QPair>
 #include <QString>
 #include <QDomElement>
+#include <QSharedPointer>
 
 class QDomDocument;
 
@@ -124,6 +125,8 @@ namespace XMPP
 
 		void markHandled();
 		void setSMId(unsigned long id);
+
+		QSharedPointer<QDomDocument> unboundDocument(QSharedPointer<QDomDocument>);
 
 	private:
 		friend class Stream;

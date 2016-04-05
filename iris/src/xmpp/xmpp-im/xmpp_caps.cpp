@@ -281,6 +281,7 @@ void CapsManager::updateCaps(const Jid& jid, const CapsSpec &c)
 				if (!CapsRegistry::instance()->isRegistered(fullNode) && capsJids_[fullNode].count() == 1) {
 					//qDebug() << QString("caps.cpp: Sending disco request to %1, node=%2").arg(QString(jid.full()).replace('%',"%%")).arg(node + "#" + s.extensions());
 					JT_DiscoInfo* disco = new JT_DiscoInfo(client_->rootTask());
+					disco->setAllowCache(false);
 					connect(disco, SIGNAL(finished()), SLOT(discoFinished()));
 					disco->get(jid, fullNode);
 					disco->go(true);
@@ -325,15 +326,18 @@ void CapsManager::disableCaps(const Jid& jid)
  */
 void CapsManager::discoFinished()
 {
-	//qDebug() << QString("caps.cpp: Disco response from %1, node=%2").arg(QString(jid.full()).replace('%',"%%")).arg(node);
-	// Update features
 	JT_DiscoInfo *task = (JT_DiscoInfo *)sender();
-	CapsSpec cs = capsSpecs_.value(task->jid().full());
+	updateDisco(task->jid(), task->item());
+}
+
+void CapsManager::updateDisco(const Jid &jid, const DiscoItem &item)
+{
+	CapsSpec cs = capsSpecs_.value(jid.full());
 	if (!cs.isValid()) {
 		return;
 	}
-	if (task->item().capsHash(cs.hashAlgorithm()) == cs.version()) {
-		CapsRegistry::instance()->registerCaps(cs, task->item());
+	if (item.capsHash(cs.hashAlgorithm()) == cs.version()) {
+		CapsRegistry::instance()->registerCaps(cs, item);
 	}
 }
 

@@ -93,7 +93,10 @@ public:
 	void updateCaps(const Jid& jid, const CapsSpec& caps);
 	void disableCaps(const Jid& jid);
 	bool capsEnabled(const Jid& jid) const;
+
 	XMPP::DiscoItem disco(const Jid &jid) const;
+	void updateDisco(const Jid &jid, const XMPP::DiscoItem &item);
+
 	XMPP::Features features(const Jid& jid) const;
 	QString clientName(const Jid& jid) const;
 	QString clientVersion(const Jid& jid) const;

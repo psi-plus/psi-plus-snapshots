@@ -222,7 +222,6 @@ bool PsiOptions::newProfile()
 		showContacts.keys << "view_groups" << "menu_add_contact" << "menu_disco" << "menu_options" << "menu_play_sounds" <<"menu_xml_console";
 
 		ToolbarPrefs eventNotifier;
-		eventNotifier.on = true;
 		eventNotifier.name = tr("Event notifier");
 		eventNotifier.keys << "event_notifier";
 		eventNotifier.dock = Qt3Dock_Bottom;

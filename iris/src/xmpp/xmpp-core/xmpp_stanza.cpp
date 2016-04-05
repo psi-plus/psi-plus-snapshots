@@ -456,6 +456,7 @@ public:
 
 	Stream *s;
 	QDomElement e;
+	QSharedPointer<QDomDocument> sharedDoc;
 };
 
 Stanza::Stanza()
@@ -656,3 +657,14 @@ void Stanza::clearError()
 	if(!errElem.isNull())
 		d->e.removeChild(errElem);
 }
+
+QSharedPointer<QDomDocument> Stanza::unboundDocument(QSharedPointer<QDomDocument> sd)
+{
+	if (!sd) {
+		sd = QSharedPointer<QDomDocument>(new QDomDocument);
+	}
+	sd->importNode(d->e, true);
+	d->sharedDoc = sd;
+	return d->sharedDoc;
+}
+

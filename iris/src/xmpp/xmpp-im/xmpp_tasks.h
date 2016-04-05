@@ -189,14 +189,13 @@ namespace XMPP
 	{
 		Q_OBJECT
 	public:
-		JT_Message(Task *parent, const Message &, bool want_notify = false);
+		JT_Message(Task *parent, const Message &);
 		~JT_Message();
 
 		void onGo();
 
 	private:
 		Message m;
-		bool w_notify;
 
 		class Private;
 		Private *d;
@@ -469,6 +468,8 @@ namespace XMPP
 	{
 		Q_OBJECT
 	public:
+		const static int CaptchaValidTimeout = 120;
+
 		JT_CaptchaChallenger(Task *);
 		~JT_CaptchaChallenger();
 

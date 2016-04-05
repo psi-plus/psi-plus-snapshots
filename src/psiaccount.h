@@ -214,6 +214,8 @@ public:
 	void groupChatSetStatus(const QString &host, const QString &room, const Status &);
 	void groupChatChangeNick(const QString &host, const QString &room, const QString& nick, const Status &);
 	void groupChatLeave(const QString &host, const QString &room);
+	void setLocalMucBookmarks(const QStringList &sl);
+	QStringList localMucBookmarks() const;
 
 	Jid realJid(const Jid &j) const;
 	PsiContact* selfContact() const;
@@ -477,7 +479,6 @@ private slots:
 	void processReadNext(const Jid &);
 	void queryVersionFinished();
 
-	void messageStanzasAcked(int n);
 protected:
 	bool validRosterExchangeItem(const RosterExchangeItem&);
 	QString localHostName();

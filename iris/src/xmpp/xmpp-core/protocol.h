@@ -28,6 +28,7 @@
 
 #include "xmlprotocol.h"
 #include "xmpp.h"
+#include "sm.h"
 
 #define NS_ETHERX   "http://etherx.jabber.org/streams"
 #define NS_CLIENT   "jabber:client"
@@ -43,7 +44,6 @@
 #define NS_COMPRESS_FEATURE "http://jabber.org/features/compress"
 #define NS_COMPRESS_PROTOCOL "http://jabber.org/protocol/compress"
 #define NS_HOSTS    "http://barracuda.com/xmppextensions/hosts"
-#define NS_STREAM_MANAGEMENT  "urn:xmpp:sm:xxx"
 
 namespace XMPP
 {
@@ -266,7 +266,7 @@ namespace XMPP
 		void startTimer(int seconds);
 
 		// reimplemented to do SM
-		void sendStanza(const QDomElement &e, bool notify = false);
+		void sendStanza(const QDomElement &e);
 
 		void startClientOut(const Jid &jid, bool oldOnly, bool tlsActive, bool doAuth, bool doCompression);
 		void startServerOut(const QString &to);
@@ -285,16 +285,6 @@ namespace XMPP
 		void setFrom(const QString &s);
 		void setDialbackKey(const QString &s);
 
-		unsigned long getNewSMId();
-		void markStanzaHandled(unsigned long id);
-		void markLastMessageStanzaAcked();
-
-		bool isStreamManagementActive() const;
-		int getNotableStanzasAcked();
-
-		ClientStream::SMState getSMState() const;
-		void setSMState(ClientStream::SMState &state);
-
 		// input
 		QString user, host;
 
@@ -306,6 +296,8 @@ namespace XMPP
 		QStringList hosts;
 
 		//static QString xmlToString(const QDomElement &e, bool clip=false);
+
+		StreamManagement sm;
 
 		class DBItem
 		{
@@ -338,27 +330,16 @@ namespace XMPP
 			GetAuthGetResponse, // read auth-get response
 			HandleAuthSet,      // send old-protocol auth-set
 			GetAuthSetResponse, // read auth-set response
-			GetSMResponse
+			GetSMResponse       // read SM init response
 		};
 
 		QList<DBItem> dbrequests, dbpending, dbvalidated;
-
-		QList<QPair<unsigned long, bool> > sm_receive_queue;
-		QList<QPair<QDomElement, bool> > sm_send_queue;
-		unsigned long sm_receive_count;
-		QTime sm_ack_last_requested;
-		unsigned long sm_server_last_handled;
-		int sm_stanzas_notify;
-
-		bool sm_resumption_supported;
-		QString sm_resumption_id;
-		QPair<QString,int> sm_resumption_location;
 
 		bool server, dialback, dialback_verify;
 		int step;
 
 		bool digest;
-		bool tls_started, sasl_started, compress_started, sm_started;
+		bool tls_started, sasl_started, compress_started;
 
 		Jid jid_;
 		bool oldOnly;
@@ -379,9 +360,7 @@ namespace XMPP
 		bool normalStep(const QDomElement &e);
 		bool dialbackStep(const QDomElement &e);
 
-		unsigned long getSMLastHandledId();
-		void requestSMAcknowlegement();
-		void processSMAcknowlegement(unsigned long last_handled);
+		bool needSMRequest();
 
 		// reimplemented
 		bool stepAdvancesParser() const;

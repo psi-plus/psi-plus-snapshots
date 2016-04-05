@@ -166,6 +166,9 @@ Client::Client(QObject *par)
 
 Client::~Client()
 {
+	//fprintf(stderr, "\tClient::~Client\n");
+	//fflush(stderr);
+
 	close(true);
 
 	delete d->ftman;
@@ -402,14 +405,6 @@ QString Client::groupChatNick(const QString &host, const QString &room) const
 	return QString();
 }
 
-bool Client::isStreamManagementActive() const {
-	ClientStream *cs = qobject_cast<ClientStream*>(d->stream);
-	if(cs)
-		return cs->isStreamManagementActive();
-	return false;
-}
-
-
 /*void Client::start()
 {
 	if(d->stream->old()) {
@@ -425,6 +420,9 @@ bool Client::isStreamManagementActive() const {
 // TODO: fast close
 void Client::close(bool)
 {
+	//fprintf(stderr, "\tClient::close\n");
+	//fflush(stderr);
+
 	if(d->stream) {
 		d->stream->disconnect(this);
 		d->stream->close();
@@ -516,6 +514,9 @@ static QDomElement oldStyleNS(const QDomElement &e)
 
 void Client::streamReadyRead()
 {
+	//fprintf(stderr, "\tClientStream::streamReadyRead\n");
+	//fflush(stderr);
+
 	while(d->stream && d->stream->stanzaAvailable()) {
 		Stanza s = d->stream->read();
 
@@ -548,8 +549,11 @@ void Client::parseUnhandledStreamFeatures()
 {
 	QList<QDomElement> nl = d->stream->unhandledFeatures();
 	foreach (const QDomElement &e, nl) {
-		if (e.hasAttributeNS(NS_CAPS, "c")) {
+		if (e.localName() == "c" && e.namespaceURI() == NS_CAPS) {
 			d->serverCaps = CapsSpec::fromXml(e);
+			if (d->capsman->isEnabled()) {
+				d->capsman->updateCaps(Jid(d->stream->jid().domain()), d->serverCaps);
+			}
 		}
 	}
 }
@@ -611,7 +615,7 @@ void Client::distribute(const QDomElement &x)
 	}
 }
 
-void Client::send(const QDomElement &x, bool want_notify)
+void Client::send(const QDomElement &x)
 {
 	if(!d->stream)
 		return;
@@ -637,7 +641,7 @@ void Client::send(const QDomElement &x, bool want_notify)
 	emit xmlOutgoing(out);
 
 	//printf("x[%s] x2[%s] s[%s]\n", Stream::xmlToString(x).toLatin1(), Stream::xmlToString(e).toLatin1(), s.toString().toLatin1());
-	d->stream->write(s, want_notify);
+	d->stream->write(s);
 }
 
 void Client::send(const QString &str)
@@ -1023,9 +1027,9 @@ void Client::importRosterItem(const RosterItem &item)
 	debug(dstr + str);
 }
 
-void Client::sendMessage(const Message &m, bool want_notify)
+void Client::sendMessage(const Message &m)
 {
-	JT_Message *j = new JT_Message(rootTask(), m, want_notify);
+	JT_Message *j = new JT_Message(rootTask(), m);
 	j->go(true);
 }
 
