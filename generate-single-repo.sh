@@ -1,19 +1,14 @@
-#! /bin/bash
+#! /bin/sh
 
 # Author:  Boris Pek <tehnick-8@mail.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2016-03-31
+# Updated: 2016-04-06
 # Version: N/A
 
 set -e
 
-if [[ ${0} =~ ^/.+$ ]]; then
-    export PSIPLUS_DIR="$(dirname ${0})"
-else
-    export PSIPLUS_DIR="${PWD}/$(dirname ${0})"
-fi
-
+export PSIPLUS_DIR="$(dirname $(realpath -s ${0}))"
 export MAIN_DIR="${PSIPLUS_DIR}/.."
 
 # Test Internet connection:
@@ -37,7 +32,7 @@ if [ -d "${MAIN_DIR}/${MOD}" ]; then
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
-    git clone --depth 1 git://github.com/psi-im/${MOD}.git
+    git clone https://github.com/psi-im/${MOD}.git
     cd "${MAIN_DIR}/${MOD}"
     git submodule init
     git submodule update
@@ -53,7 +48,7 @@ if [ -d "${MAIN_DIR}/${MOD}" ]; then
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
-    git clone git://github.com/psi-plus/${MOD}.git
+    git clone https://github.com/psi-plus/${MOD}.git
     echo;
 fi
 
@@ -66,7 +61,7 @@ if [ -d "${MAIN_DIR}/${MOD}" ]; then
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
-    git clone --depth 1 git://github.com/psi-plus/${MOD}.git
+    git clone https://github.com/psi-plus/${MOD}.git
     echo;
 fi
 
@@ -79,7 +74,7 @@ if [ -d "${MAIN_DIR}/${MOD}" ]; then
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
-    git clone --depth 1 git://github.com/psi-plus/${MOD}.git
+    git clone https://github.com/psi-plus/${MOD}.git
     echo;
 fi
 
@@ -159,7 +154,6 @@ echo "Plugins from Psi+ project are copied."
 echo;
 
 rsync -a "${MAIN_DIR}/main/iconsets/system/" "${PSIPLUS_DIR}/iconsets/system/"
-rsync -a "${MAIN_DIR}/main/iconsets/affiliations/" "${PSIPLUS_DIR}/iconsets/affiliations/"
 echo "Iconsets from Psi+ project are copied."
 echo;
 
@@ -193,7 +187,6 @@ echo;
 git add -A
 
 
-COMMENT=""
 STATUS="$(git status)"
 
 TEST_ALL=$(echo "${STATUS}" | grep "   " |
@@ -222,35 +215,35 @@ if [ "${TEST_ALL}" -eq 0 ]; then
     exit 0;
 fi
 
-COMMENT+="Current version is ${NEW_VER}:\n"
+COMMENT="Current version is ${NEW_VER}:\n"
 
 if [ "${TEST_SRC}" -gt "$((${TEST_LIBPSI}+${TEST_PLUGINS}+0))" ]; then
-    COMMENT+="Psi+ is updated.\n"
+    COMMENT="${COMMENT}Psi+ is updated.\n"
 fi
 
 if [ "${TEST_IRIS}" -gt 0 ]; then
-    COMMENT+="iris is updated.\n"
+    COMMENT="${COMMENT}iris is updated.\n"
 fi
 
 if [ "${TEST_LIBPSI}" -gt 0 ]; then
-    COMMENT+="libpsi is updated.\n"
+    COMMENT="${COMMENT}libpsi is updated.\n"
 fi
 
 if [ "${TEST_PLUGINS}" -eq 1 ]; then
-    COMMENT+="One plugin is updated.\n"
+    COMMENT="${COMMENT}One plugin is updated.\n"
 elif [ "${TEST_PLUGINS}" -gt 1 ]; then
-    COMMENT+="Plugins are updated.\n"
+    COMMENT="${COMMENT}Plugins are updated.\n"
 fi
 
 if [ "${TEST_PATCHES}" -eq 1 ]; then
-    COMMENT+="One extra patch is updated.\n"
+    COMMENT="${COMMENT}One extra patch is updated.\n"
 elif [ "${TEST_PATCHES}" -gt 1 ]; then
-    COMMENT+="Extra patches are updated.\n"
+    COMMENT="${COMMENT}Extra patches are updated.\n"
 fi
 
-echo -e "${COMMENT}"
+echo "${COMMENT}"
 
-git cm -a -m "$(echo -e ${COMMENT})" 2>&1 > \
+git cm -a -m "$(echo ${COMMENT})" 2>&1 > \
     "${MAIN_DIR}/git-commit_${NEW_VER}.log"
 
 if [ "${NEW_VER}" != "${OLD_VER}" ]; then
