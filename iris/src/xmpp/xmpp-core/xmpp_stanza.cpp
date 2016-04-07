@@ -663,7 +663,7 @@ QSharedPointer<QDomDocument> Stanza::unboundDocument(QSharedPointer<QDomDocument
 	if (!sd) {
 		sd = QSharedPointer<QDomDocument>(new QDomDocument);
 	}
-	sd->importNode(d->e, true);
+	d->e = sd->importNode(d->e, true).toElement();
 	d->sharedDoc = sd;
 	return d->sharedDoc;
 }

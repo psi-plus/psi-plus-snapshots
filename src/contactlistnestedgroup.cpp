@@ -41,7 +41,7 @@ void ContactListNestedGroup::clearGroup()
 {
 	quietSetName(QString());
 	foreach(ContactListGroup* group, groups_) {
-CL_DEBUG("~ContactListNextedGroup(%x): %s", this, qPrintable(group->fullName()));
+CL_DEBUG("~ContactListNextedGroup(%p): %s", this, qPrintable(group->fullName()));
 		removeItem(ContactListGroup::findGroup(group));
 	}
 	qDeleteAll(groups_);
@@ -54,7 +54,7 @@ CL_DEBUG("~ContactListNextedGroup(%x): %s", this, qPrintable(group->fullName()))
 		ContactListGroup* group = it.value().data();
 		if (group)
 		{
-CL_DEBUG("~ContactListNextedGroup(%x): %s", this, qPrintable(group->fullName()));
+CL_DEBUG("~ContactListNextedGroup(%p): %s", this, qPrintable(group->fullName()));
 			removeItem(ContactListGroup::findGroup(group));
 			delete group;
 		}
@@ -69,10 +69,7 @@ void ContactListNestedGroup::addContact(PsiContact* contact, QStringList contact
 	if (canContainSpecialGroups()) {
 		ContactListGroup* group = specialGroupFor(contact);
 		if (group) {
-			if (!contact->isAgent())
-				group->addContact(contact, contactGroups);
-			else
-				group->addContact(contact, QStringList() << QString());
+			group->addContact(contact, contactGroups);
 			return;
 		}
 	}
@@ -99,7 +96,7 @@ void ContactListNestedGroup::addContact(PsiContact* contact, QStringList contact
 			if (!group) {
 				group = new ContactListNestedGroup(model(), this, nestedGroups.first());
 				addGroup(group);
-CL_DEBUG("ContactListNextedGroup(%x)::addContact: %s", this, qPrintable(group->fullName()));
+CL_DEBUG("ContactListNextedGroup(%p)::addContact: %s", this, qPrintable(group->fullName()));
 			}
 
 			QStringList moreGroups;
@@ -143,23 +140,6 @@ void ContactListNestedGroup::contactGroupsChanged(PsiContact* contact, QStringLi
 		}
 
 		restrictContactAdd = specialGroup != 0;
-	}
-	else if (!isSpecial() && contact->isAgent() && model()->groupsEnabled())
-	{
-		ContactListNestedGroup *rootGroup = this;
-		while (rootGroup->parent())
-		{
-			rootGroup = static_cast<ContactListNestedGroup *>(rootGroup->parent());
-			if (rootGroup->canContainSpecialGroups())
-			{
-				ContactListGroup* specialGroup = rootGroup->specialGroupFor(contact);
-				if (specialGroup && specialGroup != this)
-				{
-					specialGroup->contactGroupsChanged(contact, QStringList() << QString());
-					return;
-				}
-			}
-		}
 	}
 
 #ifdef CONTACTLISTNESTEDGROUP_OLD_CONTACTGROUPSCHANGED
@@ -232,7 +212,7 @@ void ContactListNestedGroup::contactGroupsChanged(PsiContact* contact, QStringLi
 
 	// remove empty groups afterwards
 	foreach(ContactListGroup* group, emptyGroups) {
-CL_DEBUG("ContactListNextedGroup(%x)::contactGroupsChanged: removing empty group: %s", this, qPrintable(group->fullName()));
+CL_DEBUG("ContactListNextedGroup(%p)::contactGroupsChanged: removing empty group: %s", this, qPrintable(group->fullName()));
 		removeItem(ContactListGroup::findGroup(group));
 		groups_.remove(groups_.indexOf(group));
 		delete group;

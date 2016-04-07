@@ -119,11 +119,10 @@ bool Features::canSearch() const
 	return test(ns);
 }
 
-#define FID_GROUPCHAT "jabber:iq:conference"
+#define FID_GROUPCHAT "http://jabber.org/protocol/muc"
 bool Features::canGroupchat() const
 {
 	QSet<QString> ns;
-	ns << "http://jabber.org/protocol/muc";
 	ns << FID_GROUPCHAT;
 
 	return test(ns);

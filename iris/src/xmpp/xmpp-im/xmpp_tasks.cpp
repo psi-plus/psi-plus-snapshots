@@ -823,6 +823,9 @@ bool JT_PushPresence::take(const QDomElement &e)
 		}
  		else if(i.tagName() == "c" && i.attribute("xmlns") == NS_CAPS) {
 			p.setCaps(CapsSpec::fromXml(i));
+			if(!e.hasAttribute("type") && p.caps().isValid()) {
+				client()->capsManager()->updateCaps(j, p.caps());
+			}
   		}
 		else if(i.tagName() == "x" && i.attribute("xmlns") == "vcard-temp:x:update") {
 			QDomElement t;
