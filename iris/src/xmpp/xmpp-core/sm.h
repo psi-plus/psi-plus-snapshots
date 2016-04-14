@@ -27,7 +27,7 @@
 #include <QDateTime>
 
 #define NS_STREAM_MANAGEMENT   "urn:xmpp:sm:3"
-#define SM_TIMER_INTERVAL_SECS 20
+#define SM_TIMER_INTERVAL_SECS 40
 
 //#define IRIS_SM_DEBUG
 
@@ -40,6 +40,7 @@ namespace XMPP
 		void reset();
 		bool isResumption() const { return !resumption_id.isEmpty(); }
 		bool isEnabled() const { return enabled; }
+		bool isLocationValid() { return !resumption_location.host.isEmpty() && resumption_location.port != 0; }
 		void setEnabled(bool e) { enabled = e; }
 
 	public:
@@ -50,7 +51,7 @@ namespace XMPP
 		QString resumption_id;
 		struct {
 			QString host;
-			int port;
+			quint16 port;
 		} resumption_location;
 	};
 

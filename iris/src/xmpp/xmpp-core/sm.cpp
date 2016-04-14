@@ -40,7 +40,7 @@ void SMState::reset()
 	send_queue.clear();
 	resumption_id.clear();
 	resumption_location.host.clear();
-	resumption_location.port = -1;
+	resumption_location.port = 0;
 }
 
 

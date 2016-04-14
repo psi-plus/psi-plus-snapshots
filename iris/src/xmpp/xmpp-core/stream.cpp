@@ -1162,6 +1162,8 @@ void ClientStream::processNext()
 					d->state = Connecting;
 					emit warning(WarnSMReconnection);
 					d->quiet_reconnection = true;
+					if (d->client.sm.state().isLocationValid())
+						d->conn->setOptHostPort(d->client.sm.state().resumption_location.host , d->client.sm.state().resumption_location.port);
 					d->conn->connectToServer(d->server);
 				} else {
 					d->quiet_reconnection = false;

@@ -75,6 +75,7 @@ namespace XMPP
 		Connector(QObject *parent=0);
 		virtual ~Connector();
 
+		virtual void setOptHostPort(const QString &host, quint16 port)=0;
 		virtual void connectToServer(const QString &server)=0;
 		virtual ByteStream *stream() const=0;
 		virtual void done()=0;
@@ -141,12 +142,12 @@ namespace XMPP
 		};
 
 		void setProxy(const Proxy &proxy);
-		void setOptHostPort(const QString &host, quint16 port);
 		void setOptProbe(bool);
 		void setOptSSL(bool);
 
 		void changePollInterval(int secs);
 
+		void setOptHostPort(const QString &host, quint16 port);
 		void connectToServer(const QString &server);
 		ByteStream *stream() const;
 		void done();
