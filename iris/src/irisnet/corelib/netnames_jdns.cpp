@@ -244,8 +244,7 @@ public:
 	QList<NetInterface*> ifaces;
 	QTimer *updateTimer;
 
-	JDnsGlobal() :
-		netman(this)
+	JDnsGlobal()
 	{
 		uni_net = 0;
 		uni_local = 0;
