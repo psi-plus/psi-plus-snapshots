@@ -178,7 +178,7 @@ InfoDlg::InfoDlg(int type, const Jid &j, const VCard &vcard, PsiAccount *pa, QWi
 	connect(ui_.pb_disco, SIGNAL(clicked()), this, SLOT(doDisco()));
 	//connect(editnames, SIGNAL(triggered()), d->namesDlg, SLOT(show()));
 
-	if(d->type == Self) {
+	if(d->type == Self || d->type == MucAdm) {
 		d->bdayPopup = new QFrame(this);
 		d->bdayPopup->setFrameShape(QFrame::StyledPanel);
 		QVBoxLayout* vbox = new QVBoxLayout(d->bdayPopup);
@@ -273,8 +273,11 @@ void InfoDlg::closeEvent ( QCloseEvent * e ) {
 		return;
 	}
 
-	if(d->type == Self && edited()) {
-		int n = QMessageBox::information(this, tr("Warning"), tr("You have not published your account information changes.\nAre you sure you want to discard them?"), tr("Close and discard"), tr("Don't close"));
+	if((d->type == Self || d->type == MucAdm) && edited()) {
+		int n = QMessageBox::information(this, tr("Warning"),
+		                                 d->type == MucAdm ? tr("You have not published conference information changes.\nAre you sure you want to discard them?") :
+		                                                     tr("You have not published your account information changes.\nAre you sure you want to discard them?"),
+		                                 tr("Close and discard"), tr("Don't close"));
 		if(n != 0) {
 			e->ignore();
 			return;
@@ -327,6 +330,8 @@ void InfoDlg::jt_finished()
 		if(d->actionType == 0) {
 			if(d->type == Self)
 				QMessageBox::critical(this, tr("Error"), tr("Unable to retrieve your account information.  Perhaps you haven't entered any yet."));
+			else if (d->type == MucAdm)
+				QMessageBox::critical(this, tr("Error"), tr("Unable to retrieve information about this conference.\nReason: %1").arg(jtVCard->statusString()));
 			else
 				QMessageBox::critical(this, tr("Error"), tr("Unable to retrieve information about this contact.\nReason: %1").arg(jtVCard->statusString()));
 		}
@@ -350,7 +355,7 @@ void InfoDlg::setData(const VCard &i)
 		ui_.le_bday->setText( i.bdayStr() );
 	}
 	const QString fullName = i.fullName();
-	if (d->type != Self && fullName.isEmpty()) {
+	if (d->type != Self && d->type != MucAdm && fullName.isEmpty()) {
 		ui_.le_fullname->setText( QString("%1 %2 %3")
 			.arg(i.givenName())
 			.arg(i.middleName())
@@ -584,7 +589,11 @@ void InfoDlg::doSubmit()
 	d->actionType = 1;
 	d->busy->start();
 
-	VCardFactory::instance()->setVCard(d->pa, submit_vcard, this, SLOT(jt_finished()));
+	if (d->type == MucAdm) {
+		VCardFactory::instance()->setMucVCard(d->pa, submit_vcard, d->jid, this, SLOT(jt_finished()));
+	} else {
+		VCardFactory::instance()->setVCard(d->pa, submit_vcard, this, SLOT(jt_finished()));
+	}
 }
 
 void InfoDlg::doShowCal()

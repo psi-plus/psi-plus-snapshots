@@ -38,7 +38,7 @@ class InfoDlg : public QDialog
 {
 	Q_OBJECT
 public:
-	enum { Self, Contact };
+	enum { Self, Contact, MucAdm };
 	InfoDlg(int type, const XMPP::Jid &, const XMPP::VCard &, PsiAccount *, QWidget *parent=0, bool cacheVCard = true);
 	~InfoDlg();
 

@@ -1108,12 +1108,12 @@ void JT_VCard::set(const VCard &card)
 	d->iq.appendChild(card.toXml(doc()) );
 }
 
-void JT_VCard::set(const Jid &j, const VCard &card)
+void JT_VCard::set(const Jid &j, const VCard &card, bool isMuc)
 {
 	type = 1;
 	d->vcard = card;
 	d->jid = j;
-	d->iq = createIQ(doc(), "set", "", id());
+	d->iq = createIQ(doc(), "set", isMuc? j.full() : "", id());
 	d->iq.appendChild(card.toXml(doc()) );
 }
 

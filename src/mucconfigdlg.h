@@ -52,6 +52,7 @@ protected:
 	void setAffiliation(MUCItem::Affiliation);
 	void refreshGeneral();
 	void refreshAffiliations();
+	void refreshVcard();
 	void removePendingRequest(MUCItem::Affiliation);
 
 protected slots:

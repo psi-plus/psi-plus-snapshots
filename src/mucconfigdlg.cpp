@@ -29,6 +29,9 @@
 #include "mucaffiliationsproxymodel.h"
 #include "mucconfigdlg.h"
 #include "xdata_widget.h"
+#include "infodlg.h"
+#include "vcardfactory.h"
+#include "xmpp_vcard.h"
 
 using namespace XMPP;
 
@@ -154,6 +157,24 @@ void MUCConfigDlg::refreshAffiliations()
 	ui_.tv_affiliations->clearSelection();
 }
 
+void MUCConfigDlg::refreshVcard()
+{
+	if (ui_.tab_vcard->layout()) {
+		return;
+	}
+	QVBoxLayout *layout = new QVBoxLayout;
+
+	const VCard *vcard = VCardFactory::instance()->vcard(manager_->room());
+
+	VCard tmp;
+	if ( vcard )
+		tmp = *vcard;
+
+	InfoDlg *dlg = new InfoDlg(InfoDlg::MucAdm, manager_->room(), tmp, manager_->account());
+	layout->addWidget(dlg);
+	ui_.tab_vcard->setLayout(layout);
+}
+
 void MUCConfigDlg::add()
 {
 	bool ok;
@@ -216,10 +237,14 @@ void MUCConfigDlg::destroy()
 void MUCConfigDlg::currentTabChanged(int)
 {
 	ui_.busy->stop();
-	if (ui_.tabs->currentWidget() == ui_.tab_affiliations)
+	if (ui_.tabs->currentWidget() == ui_.tab_affiliations) {
 		refreshAffiliations();
-	else
+	} else if (ui_.tabs->currentWidget() == ui_.tab_general) {
 		refreshGeneral();
+	} else {
+		refreshVcard();
+	}
+
 }
 
 void MUCConfigDlg::applyFilter(const QString& s)
