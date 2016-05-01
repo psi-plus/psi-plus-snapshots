@@ -159,20 +159,22 @@ void MUCConfigDlg::refreshAffiliations()
 
 void MUCConfigDlg::refreshVcard()
 {
-	if (ui_.tab_vcard->layout()) {
-		return;
+	if (!ui_.tab_vcard->layout()) {
+		QVBoxLayout *layout = new QVBoxLayout;
+
+		const VCard *vcard = VCardFactory::instance()->vcard(manager_->room());
+
+		VCard tmp;
+		if ( vcard )
+			tmp = *vcard;
+
+		vcard_ = new InfoWidget(InfoWidget::MucAdm, manager_->room(), tmp, manager_->account());
+		layout->addWidget(vcard_);
+		ui_.tab_vcard->setLayout(layout);
+		connect(vcard_, SIGNAL(busy()), ui_.busy, SLOT(start()));
+		connect(vcard_, SIGNAL(released()), ui_.busy, SLOT(stop()));
 	}
-	QVBoxLayout *layout = new QVBoxLayout;
-
-	const VCard *vcard = VCardFactory::instance()->vcard(manager_->room());
-
-	VCard tmp;
-	if ( vcard )
-		tmp = *vcard;
-
-	InfoDlg *dlg = new InfoDlg(InfoDlg::MucAdm, manager_->room(), tmp, manager_->account());
-	layout->addWidget(dlg);
-	ui_.tab_vcard->setLayout(layout);
+	vcard_->doRefresh();
 }
 
 void MUCConfigDlg::add()
@@ -223,6 +225,9 @@ void MUCConfigDlg::apply()
 			ui_.busy->start();
 			manager_->setItems(changes);
 		}
+	}
+	else if (ui_.tabs->currentWidget() == ui_.tab_vcard) {
+		vcard_->publish();
 	}
 }
 

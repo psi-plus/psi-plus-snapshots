@@ -31,6 +31,7 @@ class XDataWidget;
 class MUCManager;
 class MUCAffiliationsModel;
 class MUCAffiliationsProxyModel;
+class InfoWidget;
 namespace XMPP {
 	class XData;
 }
@@ -80,6 +81,7 @@ private:
 	MUCManager* manager_;
 	QScrollArea* data_container_;
 	XDataWidget* data_;
+	InfoWidget* vcard_;
 	MUCAffiliationsModel* affiliations_model_;
 	MUCAffiliationsProxyModel* affiliations_proxy_model_;
 	QList<MUCItem::Affiliation> pending_requests_;

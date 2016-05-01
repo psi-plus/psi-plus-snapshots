@@ -581,6 +581,7 @@ FORMS += \
 	$$PWD/addurl.ui \
 	$$PWD/adduser.ui \
 	$$PWD/info.ui \
+	$$PWD/infodlg.ui \
 	$$PWD/search.ui \
 	$$PWD/about.ui \
 	$$PWD/history.ui \

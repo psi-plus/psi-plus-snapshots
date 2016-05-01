@@ -59,7 +59,7 @@
 
 using namespace XMPP;
 
-class InfoDlg::Private
+class InfoWidget::Private
 {
 public:
 	Private() {}
@@ -68,7 +68,7 @@ public:
 	Jid jid;
 	VCard vcard;
 	PsiAccount *pa;
-	BusyWidget *busy;
+	bool busy;
 	bool te_edited;
 	int actionType;
 	JT_VCard *jt;
@@ -122,23 +122,20 @@ public:
 	}
 };
 
-InfoDlg::InfoDlg(int type, const Jid &j, const VCard &vcard, PsiAccount *pa, QWidget *parent, bool cacheVCard)
-	: QDialog(parent)
+InfoWidget::InfoWidget(int type, const Jid &j, const VCard &vcard, PsiAccount *pa, QWidget *parent, bool cacheVCard)
+	: QWidget(parent)
 {
-	setAttribute(Qt::WA_DeleteOnClose);
-	setWindowFlags(Qt::Dialog | Qt::WindowTitleHint | Qt::WindowMinimizeButtonHint | Qt::WindowMaximizeButtonHint | Qt::WindowCloseButtonHint | Qt::CustomizeWindowHint);
 	ui_.setupUi(this);
 	d = new Private;
-	setModal(false);
 	d->type = type;
 	d->jid = j;
 	d->vcard = vcard;
 	d->pa = pa;
+	d->busy = false;
 	d->te_edited = false;
 	d->jt = 0;
 	d->pa->dialogRegister(this, j);
 	d->cacheVCard = cacheVCard;
-	d->busy = ui_.busy;
 	d->dateTextFormat = "d MMM yyyy";
 
 	setWindowTitle(d->jid.full());
@@ -168,14 +165,10 @@ InfoDlg::InfoDlg(int type, const Jid &j, const VCard &vcard, PsiAccount *pa, QWi
 	ui_.le_homepage->addAction(d->homepageAction);
 	connect(d->homepageAction, SIGNAL(triggered()), SLOT(goHomepage()));
 
-	connect(ui_.pb_refresh, SIGNAL(clicked()), this, SLOT(doRefresh()));
-	connect(ui_.pb_refresh, SIGNAL(clicked()), this, SLOT(updateStatus()));
 	connect(ui_.te_desc, SIGNAL(textChanged()), this, SLOT(textChanged()));
 	connect(ui_.pb_open, SIGNAL(clicked()), this, SLOT(selectPhoto()));
 	connect(ui_.pb_clear, SIGNAL(clicked()), this, SLOT(clearPhoto()));
-	connect(ui_.pb_close, SIGNAL(clicked()), this, SLOT(close()));
 	connect(ui_.tb_photo, SIGNAL(clicked()), SLOT(showPhoto()));
-	connect(ui_.pb_disco, SIGNAL(clicked()), this, SLOT(doDisco()));
 	//connect(editnames, SIGNAL(triggered()), d->namesDlg, SLOT(show()));
 
 	if(d->type == Self || d->type == MucAdm) {
@@ -203,17 +196,13 @@ InfoDlg::InfoDlg(int type, const Jid &j, const VCard &vcard, PsiAccount *pa, QWi
 		showcal->setToolTip(tr("Edit birthday"));
 		ui_.le_bday->addAction(showcal);
 		ui_.le_bday->widgetForAction(showcal)->setPopup(d->bdayPopup);
-		connect(ui_.pb_submit, SIGNAL(clicked()), this, SLOT(doSubmit()));
 		connect(showcal, SIGNAL(triggered()), this, SLOT(doShowCal()));
 		connect(d->calendar, SIGNAL(clicked(QDate)), this, SLOT(doUpdateFromCalendar(QDate)));
 		connect(d->calendar, SIGNAL(activated(QDate)), this, SLOT(doUpdateFromCalendar(QDate)));
 		connect(d->noBdayButton, SIGNAL(clicked()), SLOT(doClearBirthDate()));
-
-		ui_.pb_disco->hide();
 	}
 	else {
 		// Hide buttons
-		ui_.pb_submit->hide();
 		ui_.pb_open->hide();
 		ui_.pb_clear->hide();
 		setReadOnly(true);
@@ -254,7 +243,7 @@ InfoDlg::InfoDlg(int type, const Jid &j, const VCard &vcard, PsiAccount *pa, QWi
 	setData(d->vcard);
 }
 
-InfoDlg::~InfoDlg()
+InfoWidget::~InfoWidget()
 {
 	d->pa->dialogUnregister(this);
 	delete d->userListItem;
@@ -265,12 +254,11 @@ InfoDlg::~InfoDlg()
 /**
  * Redefined so the window does not close when changes are not saved.
  */
-void InfoDlg::closeEvent ( QCloseEvent * e ) {
+bool InfoWidget::aboutToClose() {
 
 	// don't close if submitting
-	if(d->busy->isActive() && d->actionType == 1) {
-		e->ignore();
-		return;
+	if(d->busy && d->actionType == 1) {
+		return false;
 	}
 
 	if((d->type == Self || d->type == MucAdm) && edited()) {
@@ -279,29 +267,26 @@ void InfoDlg::closeEvent ( QCloseEvent * e ) {
 		                                                     tr("You have not published your account information changes.\nAre you sure you want to discard them?"),
 		                                 tr("Close and discard"), tr("Don't close"));
 		if(n != 0) {
-			e->ignore();
-			return;
+			return false;
 		}
 	}
 
 	// cancel active transaction (refresh only)
-	if(d->busy->isActive() && d->actionType == 0) {
+	if(d->busy && d->actionType == 0) {
 		delete d->jt;
 		d->jt = 0;
 	}
 
-	e->accept();
+	return true;
 }
 
-void InfoDlg::jt_finished()
+void InfoWidget::jt_finished()
 {
 	d->jt = 0;
 	JT_VCard* jtVCard = static_cast<JT_VCard*> (sender());
 
-	d->busy->stop();
-	ui_.pb_refresh->setEnabled(true);
-	ui_.pb_submit->setEnabled(true);
-	ui_.pb_close->setEnabled(true);
+	d->busy = false;
+	emit released();
 	fieldsEnable(true);
 
 	if(jtVCard->success()) {
@@ -324,7 +309,9 @@ void InfoDlg::jt_finished()
 		}
 
 		if(d->actionType == 1)
-			QMessageBox::information(this, tr("Success"), tr("Your account information has been published."));
+			QMessageBox::information(this, tr("Success"), d->type == MucAdm?
+			                             tr("Your conference information has been published.") :
+			                             tr("Your account information has been published."));
 	}
 	else {
 		if(d->actionType == 0) {
@@ -341,7 +328,7 @@ void InfoDlg::jt_finished()
 	}
 }
 
-void InfoDlg::setData(const VCard &i)
+void InfoWidget::setData(const VCard &i)
 {
 	d->le_givenname->setText( i.givenName() );
 	d->le_middlename->setText( i.middleName() );
@@ -417,9 +404,9 @@ void InfoDlg::setData(const VCard &i)
 	setEdited(false);
 }
 
-void InfoDlg::showEvent( QShowEvent * event )
+void InfoWidget::showEvent( QShowEvent * event )
 {
-	QDialog::showEvent(event);
+	QWidget::showEvent(event);
 	if ( !d->vcard.photo().isEmpty() ) {
 		//printf("There is a picture...\n");
 		d->photo = d->vcard.photo();
@@ -427,7 +414,7 @@ void InfoDlg::showEvent( QShowEvent * event )
 	}
 }
 
-bool InfoDlg::updatePhoto()
+bool InfoWidget::updatePhoto()
 {
 	const QImage img = QImage::fromData(d->photo);
 	if (img.isNull()) {
@@ -441,7 +428,7 @@ bool InfoDlg::updatePhoto()
 	return true;
 }
 
-void InfoDlg::fieldsEnable(bool x)
+void InfoWidget::fieldsEnable(bool x)
 {
 	ui_.le_fullname->setEnabled(x);
 	d->le_givenname->setEnabled(x);
@@ -471,7 +458,7 @@ void InfoDlg::fieldsEnable(bool x)
 	setEdited(false);
 }
 
-void InfoDlg::setEdited(bool x)
+void InfoWidget::setEdited(bool x)
 {
 	ui_.le_fullname->setModified(x);
 	d->le_givenname->setModified(x);
@@ -496,7 +483,7 @@ void InfoDlg::setEdited(bool x)
 	d->te_edited = x;
 }
 
-bool InfoDlg::edited()
+bool InfoWidget::edited()
 {
 	bool x = false;
 
@@ -524,7 +511,7 @@ bool InfoDlg::edited()
 	return x;
 }
 
-void InfoDlg::setReadOnly(bool x)
+void InfoWidget::setReadOnly(bool x)
 {
 	ui_.le_fullname->setReadOnly(x);
 	d->le_givenname->setReadOnly(x);
@@ -548,46 +535,39 @@ void InfoDlg::setReadOnly(bool x)
 	ui_.te_desc->setReadOnly(x);
 }
 
-void InfoDlg::doRefresh()
+void InfoWidget::doRefresh()
 {
 	if(!d->pa->checkConnected(this))
 		return;
-	if(!ui_.pb_refresh->isEnabled())
-		return;
-	if(d->busy->isActive())
+	if(d->busy)
 		return;
 
-	ui_.pb_submit->setEnabled(false);
-	ui_.pb_refresh->setEnabled(false);
 	fieldsEnable(false);
 
 	d->actionType = 0;
-	d->busy->start();
+	emit busy();
 
 	d->jt = VCardFactory::instance()->getVCard(d->jid, d->pa->client()->rootTask(), this, SLOT(jt_finished()), d->cacheVCard);
 }
 
-void InfoDlg::doSubmit()
+void InfoWidget::publish()
 {
 	if(!d->pa->checkConnected(this)) {
 		return;
 	}
-	if(!ui_.pb_submit->isEnabled()) {
+	if(!(d->type == Self || d->type == MucAdm)) {
 		return;
 	}
-	if(d->busy->isActive()) {
+	if(d->busy) {
 		return;
 	}
 
 	VCard submit_vcard = makeVCard();
 
-	ui_.pb_submit->setEnabled(false);
-	ui_.pb_refresh->setEnabled(false);
-	ui_.pb_close->setEnabled(false);
 	fieldsEnable(false);
 
 	d->actionType = 1;
-	d->busy->start();
+	emit busy();
 
 	if (d->type == MucAdm) {
 		VCardFactory::instance()->setMucVCard(d->pa, submit_vcard, d->jid, this, SLOT(jt_finished()));
@@ -596,7 +576,17 @@ void InfoDlg::doSubmit()
 	}
 }
 
-void InfoDlg::doShowCal()
+PsiAccount *InfoWidget::account() const
+{
+	return d->pa;
+}
+
+const Jid &InfoWidget::jid() const
+{
+	return d->jid;
+}
+
+void InfoWidget::doShowCal()
 {
 	d->noBdayButton->setChecked(ui_.le_bday->text().isEmpty());
 	if (d->bday.isValid()) {
@@ -604,14 +594,7 @@ void InfoDlg::doShowCal()
 	}
 }
 
-void InfoDlg::doDisco()
-{
-	DiscoDlg* w=new DiscoDlg(d->pa, d->jid, "");
-	connect(w, SIGNAL(featureActivated(QString, Jid, QString)), d->pa, SLOT(featureActivated(QString, Jid, QString)));
-	w->show();
-}
-
-void InfoDlg::doUpdateFromCalendar(const QDate& date)
+void InfoWidget::doUpdateFromCalendar(const QDate& date)
 {
 	if (d->bday != date) {
 		d->bday = date;
@@ -621,7 +604,7 @@ void InfoDlg::doUpdateFromCalendar(const QDate& date)
 	d->bdayPopup->hide();
 }
 
-void InfoDlg::doClearBirthDate()
+void InfoWidget::doClearBirthDate()
 {
 	if (!ui_.le_bday->text().isEmpty()) {
 		d->bday = QDate();
@@ -631,7 +614,7 @@ void InfoDlg::doClearBirthDate()
 	d->bdayPopup->hide();
 }
 
-VCard InfoDlg::makeVCard()
+VCard InfoWidget::makeVCard()
 {
 	VCard v;
 
@@ -708,7 +691,7 @@ VCard InfoDlg::makeVCard()
 	return v;
 }
 
-void InfoDlg::textChanged()
+void InfoWidget::textChanged()
 {
 	d->te_edited = true;
 }
@@ -717,7 +700,7 @@ void InfoDlg::textChanged()
  * Opens a file browser dialog, and if selected, calls the setPreviewPhoto with the consecuent path.
  * \see setPreviewPhoto(const QString& path)
 */
-void InfoDlg::selectPhoto()
+void InfoWidget::selectPhoto()
 {
 	QString str = FileUtil::getImageFileName(this);
 	if (!str.isEmpty()) {
@@ -729,7 +712,7 @@ void InfoDlg::selectPhoto()
  * Loads the image from the requested URL, and inserts the resized image into the preview box.
  * \param path image file to load
 */
-void InfoDlg::setPreviewPhoto(const QString& path)
+void InfoWidget::setPreviewPhoto(const QString& path)
 {
 	QFile photo_file(path);
 	if (!photo_file.open(QIODevice::ReadOnly))
@@ -747,7 +730,7 @@ void InfoDlg::setPreviewPhoto(const QString& path)
 /**
  * Clears the preview image box and marks the te_edited signal in the private.
 */
-void InfoDlg::clearPhoto()
+void InfoWidget::clearPhoto()
 {
 	ui_.tb_photo->setIcon(QIcon());
 	ui_.tb_photo->setText(tr("Picture not\navailable"));
@@ -760,7 +743,7 @@ void InfoDlg::clearPhoto()
 /**
  * Updates the status info of the contact
  */
-void InfoDlg::updateStatus()
+void InfoWidget::updateStatus()
 {
 	UserListItem *u = d->find(d->jid);
 	if(u) {
@@ -774,7 +757,7 @@ void InfoDlg::updateStatus()
 /**
  * Sets the visibility of the status tab
  */
-void InfoDlg::setStatusVisibility(bool visible)
+void InfoWidget::setStatusVisibility(bool visible)
 {
 	// Add/remove tab if necessary
 	int index = ui_.tabwidget->indexOf(ui_.tab_status);
@@ -792,7 +775,7 @@ void InfoDlg::setStatusVisibility(bool visible)
  *
  * Gets information about client version and time.
  */
-void InfoDlg::requestResourceInfo(const Jid& j)
+void InfoWidget::requestResourceInfo(const Jid& j)
 {
 	d->infoRequested += j.full();
 
@@ -807,7 +790,7 @@ void InfoDlg::requestResourceInfo(const Jid& j)
 	jet->go(true);
 }
 
-void InfoDlg::clientVersionFinished()
+void InfoWidget::clientVersionFinished()
 {
 	JT_ClientVersion *j = (JT_ClientVersion *)sender();
 	if(j->success()) {
@@ -825,7 +808,7 @@ void InfoDlg::clientVersionFinished()
 	}
 }
 
-void InfoDlg::entityTimeFinished()
+void InfoWidget::entityTimeFinished()
 {
 	JT_EntityTime *j = (JT_EntityTime *)sender();
 	if(j->success()) {
@@ -842,14 +825,14 @@ void InfoDlg::entityTimeFinished()
 	}
 }
 
-void InfoDlg::requestLastActivity()
+void InfoWidget::requestLastActivity()
 {
 	LastActivityTask *jla = new LastActivityTask(d->jid.bare(),d->pa->client()->rootTask());
 	connect(jla, SIGNAL(finished()), SLOT(requestLastActivityFinished()));
 	jla->go(true);
 }
 
-void InfoDlg::requestLastActivityFinished()
+void InfoWidget::requestLastActivityFinished()
 {
 	LastActivityTask *j = (LastActivityTask *)sender();
 	if(j->success()) {
@@ -863,7 +846,7 @@ void InfoDlg::requestLastActivityFinished()
 }
 
 
-void InfoDlg::contactAvailable(const Jid &j, const Resource &r)
+void InfoWidget::contactAvailable(const Jid &j, const Resource &r)
 {
 	if (d->jid.compare(j,false)) {
 		if (!d->infoRequested.contains(j.withResource(r.name()).full())) {
@@ -872,21 +855,21 @@ void InfoDlg::contactAvailable(const Jid &j, const Resource &r)
 	}
 }
 
-void InfoDlg::contactUnavailable(const Jid &j, const Resource &r)
+void InfoWidget::contactUnavailable(const Jid &j, const Resource &r)
 {
 	if (d->jid.compare(j,false)) {
 		d->infoRequested.removeAll(j.withResource(r.name()).full());
 	}
 }
 
-void InfoDlg::contactUpdated(const XMPP::Jid & j)
+void InfoWidget::contactUpdated(const XMPP::Jid & j)
 {
 	if (d->jid.compare(j,false)) {
 		updateStatus();
 	}
 }
 
-void InfoDlg::showPhoto()
+void InfoWidget::showPhoto()
 {
 	 if (!d->photo.isEmpty()) {
 		QPixmap pixmap;
@@ -902,7 +885,7 @@ void InfoDlg::showPhoto()
 	 }
 }
 
-void InfoDlg::goHomepage()
+void InfoWidget::goHomepage()
 {
 	QString homepage = ui_.le_homepage->text();
 	if (!homepage.isEmpty()) {
@@ -911,4 +894,64 @@ void InfoDlg::goHomepage()
 		}
 		DesktopUtil::openUrl(homepage);
 	}
+}
+
+
+// --------------------------------------------
+// InfoDlg
+// --------------------------------------------
+InfoDlg::InfoDlg(int type, const Jid &j, const VCard &vc, PsiAccount *pa, QWidget *parent, bool cacheVCard)
+{
+	setAttribute(Qt::WA_DeleteOnClose);
+	setWindowFlags(Qt::Dialog | Qt::WindowTitleHint | Qt::WindowMinimizeButtonHint | Qt::WindowMaximizeButtonHint | Qt::WindowCloseButtonHint | Qt::CustomizeWindowHint);
+	setModal(false);
+	ui_.setupUi(this);
+	iw = new InfoWidget(type, j, vc, pa, parent, cacheVCard);
+	ui_.loContents->addWidget(iw);
+
+	if (type == InfoWidget::Self) {
+		ui_.pb_disco->hide();
+	} else {
+		ui_.pb_submit->hide();
+	}
+
+	connect(ui_.pb_refresh, SIGNAL(clicked()), iw, SLOT(doRefresh()));
+	connect(ui_.pb_refresh, SIGNAL(clicked()), iw, SLOT(updateStatus()));
+	connect(ui_.pb_submit, SIGNAL(clicked()),  iw, SLOT(publish()));
+	connect(ui_.pb_close, SIGNAL(clicked()), this, SLOT(close()));
+	connect(ui_.pb_disco, SIGNAL(clicked()), this, SLOT(doDisco()));
+	connect(iw, SIGNAL(busy()), SLOT(doBusy()));
+	connect(iw, SIGNAL(released()), SLOT(release()));
+}
+
+void InfoDlg::closeEvent(QCloseEvent *e)
+{
+	if (iw->aboutToClose()) {
+		e->accept();
+	} else {
+		e->ignore();
+	}
+}
+
+void InfoDlg::doDisco()
+{
+	DiscoDlg* w=new DiscoDlg(iw->account(), iw->jid(), "");
+	connect(w, SIGNAL(featureActivated(QString, Jid, QString)), iw->account(), SLOT(featureActivated(QString, Jid, QString)));
+	w->show();
+}
+
+void InfoDlg::doBusy()
+{
+	ui_.pb_submit->setEnabled(false);
+	ui_.pb_refresh->setEnabled(false);
+	ui_.pb_close->setEnabled(false);
+	ui_.busy->start();
+}
+
+void InfoDlg::release()
+{
+	ui_.pb_refresh->setEnabled(true);
+	ui_.pb_submit->setEnabled(true);
+	ui_.pb_close->setEnabled(true);
+	ui_.busy->stop();
 }
