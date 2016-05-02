@@ -20,13 +20,6 @@ public:
 		// Finish
 		conf->addExtra("CONFIG += psi_plugins");
 
-		qWarning("");
-		qWarning("");
-		qWarning("        !!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!");
-		qWarning("        PLUGIN SUPPORT IS STILL UNFINISHED !!!");
-		qWarning("        THE PLUGIN INTERFACE /WILL/ CHANGE !!!");
-		qWarning("        USE AT YOUR OWN RISK !!!");
-
 		return true;
 	}
 };

@@ -45,7 +45,7 @@
   <dep type='spell'>
     <required/>
   </dep>
-  <dep type='plugins'><disabled/></dep>
+  <dep type='plugins'/>
   <dep type='conf'>
     <required/>
   </dep>
