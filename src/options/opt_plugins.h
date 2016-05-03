@@ -4,7 +4,6 @@
 #include "optionstab.h"
 #include "advwidget.h"
 #include "ui_plugininfodialog.h"
-#include "ui_pluginsettsdialog.h"
 #include <QPointer>
 #include <QTreeWidgetItem>
 
@@ -24,6 +23,8 @@ public:
 	OptionsTabPlugins(QObject *parent);
 	~OptionsTabPlugins();
 
+	void setData(PsiCon *, QWidget *);
+
 	QWidget *widget();
 	void applyOptions();
 	void restoreOptions();
@@ -32,17 +33,14 @@ public:
 private:
 	QWidget *w;
 	QPointer<QDialog> infoDialog;
-	QPointer<AdvancedWidget<QDialog> > settingsDialog;
 	Ui::PluginInfoDialog ui_;
-	Ui::PluginSettingsDialog settsUi_;
+	PsiCon *psi;
 
 private slots:
 	void listPlugins();
 	void showPluginInfo();
 	void itemChanged(QTreeWidgetItem *item, int column);
 	void settingsClicked();
-	void onSettingsOk();
-	void onDataChanged();
 };
 
 #endif
