@@ -21,10 +21,9 @@
 #include "xmpp_vcard.h"
 
 #include <qdom.h>
-#include <qdatetime.h>
-
-#include <qimage.h> // needed for image format recognition
-#include <qbuffer.h>
+#include <QDateTime>
+#include <QImage> // needed for image format recognition
+#include <QBuffer>
 #include <QImageReader>
 #include <QImageWriter>
 #include <QtCrypto>
@@ -32,7 +31,6 @@
 
 #include "xmpp_xmlcommon.h"
 
-using namespace XMPP;
 using namespace XMLHelper;
 
 //----------------------------------------------------------------------------
@@ -66,6 +64,8 @@ QString image2type(const QByteArray &ba)
 	return "image/unknown";
 }
 
+namespace XMPP {
+
 // Long lines of encoded binary data SHOULD BE folded to 75 characters using the folding method defined in [MIME-DIR].
 static QString foldString(const QString &s)
 {
@@ -80,11 +80,15 @@ static QString foldString(const QString &s)
 	return ret;
 }
 
-class VCard::Private
+class VCardPrivate : public QSharedData
 {
 public:
-	Private();
-	~Private();
+	VCardPrivate();
+	~VCardPrivate();
+
+	// do we need copy constructor?
+	//VCardPrivate(const VCardPrivate &other) :
+	//    QSharedData(other), version(other.version), fullName(other.fullName) { qDebug("Copy VCardPrivate"); }
 
 	QString version;
 	QString fullName;
@@ -95,24 +99,24 @@ public:
 	QString photoURI;
 
 	QString bday;
-	AddressList addressList;
-	LabelList labelList;
-	PhoneList phoneList;
-	EmailList emailList;
+	VCard::AddressList addressList;
+	VCard::LabelList labelList;
+	VCard::PhoneList phoneList;
+	VCard::EmailList emailList;
 	QString jid;
 	QString mailer;
 	QString timezone;
-	Geo geo;
+	VCard::Geo geo;
 	QString title;
 	QString role;
 
 	QByteArray logo;
 	QString logoURI;
 
-	VCard *agent;
+	QSharedPointer<VCard> agent;
 	QString agentURI;
 
-	Org org;
+	VCard::Org org;
 	QStringList categories;
 	QString note;
 	QString prodId;
@@ -125,24 +129,23 @@ public:
 	QString uid;
 	QString url;
 	QString desc;
-	PrivacyClass privacyClass;
+	VCard::PrivacyClass privacyClass;
 	QByteArray key;
 
-	bool isEmpty();
+	bool isEmpty() const;
 };
 
-VCard::Private::Private()
+VCardPrivate::VCardPrivate()
 {
-	privacyClass = pcNone;
-	agent = 0;
+	privacyClass = VCard::pcNone;
 }
 
-VCard::Private::~Private()
+VCardPrivate::~VCardPrivate()
 {
-	delete agent;
+
 }
 
-bool VCard::Private::isEmpty()
+bool VCardPrivate::isEmpty() const
 {
 	if (	!version.isEmpty() ||
 		!fullName.isEmpty() ||
@@ -172,7 +175,7 @@ bool VCard::Private::isEmpty()
 		!uid.isEmpty() ||
 		!url.isEmpty() ||
 		!desc.isEmpty() ||
-		(privacyClass != pcNone) ||
+		(privacyClass != VCard::pcNone) ||
 		!key.isEmpty() )
 	{
 		return false;
@@ -182,35 +185,21 @@ bool VCard::Private::isEmpty()
 
 VCard::VCard()
 {
-	d = new Private;
 }
 
-VCard::VCard(const VCard &from)
+VCard::VCard(const VCard &from) :
+    d(from.d)
 {
-	d = new Private;
-	*this = from;
 }
 
 VCard & VCard::operator=(const VCard &from)
 {
-	if(d->agent) {
-		delete d->agent;
-		d->agent = 0;
-	}
-
-	*d = *from.d;
-
-	if(from.d->agent) {
-		// dup the agent
-		d->agent = new VCard(*from.d->agent);
-	}
-
+	d = from.d;
 	return *this;
 }
 
 VCard::~VCard()
 {
-	delete d;
 }
 
 QDomElement VCard::toXml(QDomDocument *doc) const
@@ -261,10 +250,10 @@ QDomElement VCard::toXml(QDomDocument *doc) const
 		v.appendChild( textTag(doc, "BDAY",	d->bday) );
 
 	if ( !d->addressList.isEmpty() ) {
-		AddressList::Iterator it = d->addressList.begin();
+		AddressList::ConstIterator it = d->addressList.constBegin();
 		for ( ; it != d->addressList.end(); ++it ) {
 			QDomElement w = doc->createElement("ADR");
-			Address a = *it;
+			const Address &a = *it;
 
 			if ( a.home )
 				w.appendChild( emptyTag(doc, "HOME") );
@@ -301,10 +290,10 @@ QDomElement VCard::toXml(QDomDocument *doc) const
 	}
 
 	if ( !d->labelList.isEmpty() ) {
-		LabelList::Iterator it = d->labelList.begin();
+		LabelList::ConstIterator it = d->labelList.constBegin();
 		for ( ; it != d->labelList.end(); ++it ) {
 			QDomElement w = doc->createElement("LABEL");
-			Label l = *it;
+			const Label &l = *it;
 
 			if ( l.home )
 				w.appendChild( emptyTag(doc, "HOME") );
@@ -322,7 +311,7 @@ QDomElement VCard::toXml(QDomDocument *doc) const
 				w.appendChild( emptyTag(doc, "PREF") );
 
 			if ( !l.lines.isEmpty() ) {
-				QStringList::Iterator it = l.lines.begin();
+				QStringList::ConstIterator it = l.lines.constBegin();
 				for ( ; it != l.lines.end(); ++it )
 					w.appendChild( textTag(doc, "LINE", *it) );
 			}
@@ -332,10 +321,10 @@ QDomElement VCard::toXml(QDomDocument *doc) const
 	}
 
 	if ( !d->phoneList.isEmpty() ) {
-		PhoneList::Iterator it = d->phoneList.begin();
+		PhoneList::ConstIterator it = d->phoneList.constBegin();
 		for ( ; it != d->phoneList.end(); ++it ) {
 			QDomElement w = doc->createElement("TEL");
-			Phone p = *it;
+			const Phone &p = *it;
 
 			if ( p.home )
 				w.appendChild( emptyTag(doc, "HOME") );
@@ -372,10 +361,10 @@ QDomElement VCard::toXml(QDomDocument *doc) const
 	}
 
 	if ( !d->emailList.isEmpty() ) {
-		EmailList::Iterator it = d->emailList.begin();
+		EmailList::ConstIterator it = d->emailList.constBegin();
 		for ( ; it != d->emailList.end(); ++it ) {
 			QDomElement w = doc->createElement("EMAIL");
-			Email e = *it;
+			const Email &e = *it;
 
 			if ( e.home )
 				w.appendChild( emptyTag(doc, "HOME") );
@@ -447,7 +436,7 @@ QDomElement VCard::toXml(QDomDocument *doc) const
 			w.appendChild( textTag(doc, "ORGNAME",	d->org.name) );
 
 		if ( !d->org.unit.isEmpty() ) {
-			QStringList::Iterator it = d->org.unit.begin();
+			QStringList::ConstIterator it = d->org.unit.constBegin();
 			for ( ; it != d->org.unit.end(); ++it )
 				w.appendChild( textTag(doc, "ORGUNIT",	*it) );
 		}
@@ -458,7 +447,7 @@ QDomElement VCard::toXml(QDomDocument *doc) const
 	if ( !d->categories.isEmpty() ) {
 		QDomElement w = doc->createElement("CATEGORIES");
 
-		QStringList::Iterator it = d->categories.begin();
+		QStringList::ConstIterator it = d->categories.constBegin();
 		for ( ; it != d->categories.end(); ++it )
 			w.appendChild( textTag(doc, "KEYWORD", *it) );
 
@@ -520,10 +509,13 @@ QDomElement VCard::toXml(QDomDocument *doc) const
 	return v;
 }
 
-bool VCard::fromXml(const QDomElement &q)
+VCard VCard::fromXml(const QDomElement &q)
 {
 	if ( q.tagName().toUpper() != "VCARD" )
-		return false;
+		return VCard();
+
+	VCard v;
+	v.d = new VCardPrivate;
 
 	QDomNode n = q.firstChild();
 	for ( ; !n.isNull(); n = n.nextSibling() ) {
@@ -536,24 +528,24 @@ bool VCard::fromXml(const QDomElement &q)
 		QDomElement e;
 
 		if ( tag == "VERSION" )
-			d->version = i.text().trimmed();
+			v.d->version = i.text().trimmed();
 		else if ( tag == "FN" )
-			d->fullName = i.text().trimmed();
+			v.d->fullName = i.text().trimmed();
 		else if ( tag == "N" ) {
-			d->familyName = subTagText(i, "FAMILY");
-			d->givenName  = subTagText(i, "GIVEN");
-			d->middleName = subTagText(i, "MIDDLE");
-			d->prefixName = subTagText(i, "PREFIX");
-			d->suffixName = subTagText(i, "SUFFIX");
+			v.d->familyName = subTagText(i, "FAMILY");
+			v.d->givenName  = subTagText(i, "GIVEN");
+			v.d->middleName = subTagText(i, "MIDDLE");
+			v.d->prefixName = subTagText(i, "PREFIX");
+			v.d->suffixName = subTagText(i, "SUFFIX");
 		}
 		else if ( tag == "NICKNAME" )
-			d->nickName = i.text().trimmed();
+			v.d->nickName = i.text().trimmed();
 		else if ( tag == "PHOTO" ) {
-			d->photo = QCA::Base64().stringToArray(subTagText(i, "BINVAL").replace(QRegExp("[\r\n]+"),"")).toByteArray();
-			d->photoURI = subTagText(i, "EXTVAL");
+			v.d->photo = QCA::Base64().stringToArray(subTagText(i, "BINVAL").replace(QRegExp("[\r\n]+"),"")).toByteArray();
+			v.d->photoURI = subTagText(i, "EXTVAL");
 		}
 		else if ( tag == "BDAY" )
-			d->bday = i.text().trimmed();
+			v.d->bday = i.text().trimmed();
 		else if ( tag == "ADR" ) {
 			Address a;
 
@@ -581,7 +573,7 @@ bool VCard::fromXml(const QDomElement &q)
 				if ( hasSubTag(i, "EXTADD") )
 					a.extaddr = subTagText(i, "EXTADD");
 
-			d->addressList.append ( a );
+			v.d->addressList.append ( a );
 		}
 		else if ( tag == "LABEL" ) {
 			Label l;
@@ -604,7 +596,7 @@ bool VCard::fromXml(const QDomElement &q)
 					l.lines.append ( ii.text().trimmed() );
 			}
 
-			d->labelList.append ( l );
+			v.d->labelList.append ( l );
 		}
 		else if ( tag == "TEL" ) {
 			Phone p;
@@ -629,7 +621,7 @@ bool VCard::fromXml(const QDomElement &q)
 				if ( hasSubTag(i, "VOICE") )
 					p.number = subTagText(i, "VOICE");
 
-			d->phoneList.append ( p );
+			v.d->phoneList.append ( p );
 		}
 		else if ( tag == "EMAIL" ) {
 			Email m;
@@ -645,41 +637,41 @@ bool VCard::fromXml(const QDomElement &q)
 				if ( !i.text().isEmpty() )
 					m.userid = i.text().trimmed();
 
-			d->emailList.append ( m );
+			v.d->emailList.append ( m );
 		}
 		else if ( tag == "JABBERID" )
-			d->jid = i.text().trimmed();
+			v.d->jid = i.text().trimmed();
 		else if ( tag == "MAILER" )
-			d->mailer = i.text().trimmed();
+			v.d->mailer = i.text().trimmed();
 		else if ( tag == "TZ" )
-			d->timezone = i.text().trimmed();
+			v.d->timezone = i.text().trimmed();
 		else if ( tag == "GEO" ) {
-			d->geo.lat = subTagText(i, "LAT");
-			d->geo.lon = subTagText(i, "LON");
+			v.d->geo.lat = subTagText(i, "LAT");
+			v.d->geo.lon = subTagText(i, "LON");
 		}
 		else if ( tag == "TITLE" )
-			d->title = i.text().trimmed();
+			v.d->title = i.text().trimmed();
 		else if ( tag == "ROLE" )
-			d->role = i.text().trimmed();
+			v.d->role = i.text().trimmed();
 		else if ( tag == "LOGO" ) {
-			d->logo = QCA::Base64().stringToArray( subTagText(i, "BINVAL").replace("\n","") ).toByteArray();
-			d->logoURI = subTagText(i, "EXTVAL");
+			v.d->logo = QCA::Base64().stringToArray( subTagText(i, "BINVAL").replace("\n","") ).toByteArray();
+			v.d->logoURI = subTagText(i, "EXTVAL");
 		}
 		else if ( tag == "AGENT" ) {
 			e = i.firstChildElement("VCARD");
 			if ( !e.isNull() ) {
 				VCard a;
 				if ( a.fromXml(e) ) {
-					if ( !d->agent )
-						d->agent = new VCard;
-					*(d->agent) = a;
+					if ( !v.d->agent )
+						v.d->agent = QSharedPointer<VCard>(new VCard);
+					*(v.d->agent) = a;
 				}
 			}
 
-			d->agentURI = subTagText(i, "EXTVAL");
+			v.d->agentURI = subTagText(i, "EXTVAL");
 		}
 		else if ( tag == "ORG" ) {
-			d->org.name = subTagText(i, "ORGNAME");
+			v.d->org.name = subTagText(i, "ORGNAME");
 
 			QDomNode nn = i.firstChild();
 			for ( ; !nn.isNull(); nn = nn.nextSibling() ) {
@@ -688,7 +680,7 @@ bool VCard::fromXml(const QDomElement &q)
 					continue;
 
 				if ( ii.tagName().toUpper() == "ORGUNIT" )
-					d->org.unit.append( ii.text().trimmed() );
+					v.d->org.unit.append( ii.text().trimmed() );
 			}
 		}
 		else if ( tag == "CATEGORIES") {
@@ -699,35 +691,35 @@ bool VCard::fromXml(const QDomElement &q)
 					continue;
 
 				if ( ee.tagName().toUpper() == "KEYWORD" )
-					d->categories << ee.text().trimmed();
+					v.d->categories << ee.text().trimmed();
 			}
 		}
 		else if ( tag == "NOTE" )
-			d->note = i.text().trimmed();
+			v.d->note = i.text().trimmed();
 		else if ( tag == "PRODID" )
-			d->prodId = i.text().trimmed();
+			v.d->prodId = i.text().trimmed();
 		else if ( tag == "REV" )
-			d->rev = i.text().trimmed();
+			v.d->rev = i.text().trimmed();
 		else if ( tag == "SORT-STRING" )
-			d->sortString = i.text().trimmed();
+			v.d->sortString = i.text().trimmed();
 		else if ( tag == "SOUND" ) {
-			d->sound = QCA::Base64().stringToArray( subTagText(i, "BINVAL").replace("\n","") ).toByteArray();
-			d->soundURI      = subTagText(i, "EXTVAL");
-			d->soundPhonetic = subTagText(i, "PHONETIC");
+			v.d->sound = QCA::Base64().stringToArray( subTagText(i, "BINVAL").replace("\n","") ).toByteArray();
+			v.d->soundURI      = subTagText(i, "EXTVAL");
+			v.d->soundPhonetic = subTagText(i, "PHONETIC");
 		}
 		else if ( tag == "UID" )
-			d->uid = i.text().trimmed();
+			v.d->uid = i.text().trimmed();
 		else if ( tag == "URL")
-			d->url = i.text().trimmed();
+			v.d->url = i.text().trimmed();
 		else if ( tag == "DESC" )
-			d->desc = i.text().trimmed();
+			v.d->desc = i.text().trimmed();
 		else if ( tag == "CLASS" ) {
 			if ( hasSubTag(i, "PUBLIC") )
-				d->privacyClass = pcPublic;
+				v.d->privacyClass = pcPublic;
 			else if ( hasSubTag(i, "PRIVATE") )
-				d->privacyClass = pcPrivate;
+				v.d->privacyClass = pcPrivate;
 			else if ( hasSubTag(i, "CONFIDENTIAL") )
-				d->privacyClass = pcConfidential;
+				v.d->privacyClass = pcConfidential;
 		}
 		else if ( tag == "KEY" ) {
 			// TODO: Justin, please check out this code
@@ -741,16 +733,23 @@ bool VCard::fromXml(const QDomElement &q)
 				e = i.firstChildElement("BINVAL"); // case for very clever clients ;-)
 
 			if ( !e.isNull() )
-				d->key = e.text().toUtf8(); // FIXME
+				v.d->key = e.text().toUtf8(); // FIXME
 		}
 	}
 
-	return true;
+	return v;
 }
 
 bool VCard::isEmpty() const
 {
-	return d->isEmpty();
+	return !d || d->isEmpty();
+}
+
+VCard VCard::makeEmpty()
+{
+	VCard vcard;
+	vcard.d = new VCardPrivate;
+	return vcard;
 }
 
 // Some constructors
@@ -1025,15 +1024,18 @@ void VCard::setLogoURI(const QString &l)
 	d->logoURI = l;
 }
 
-const VCard *VCard::agent() const
+VCard VCard::agent() const
 {
-	return d->agent;
+	if (d->agent) {
+		return *(d->agent); // implicit copy
+	}
+	return VCard();
 }
 
 void VCard::setAgent(const VCard &v)
 {
 	if ( !d->agent )
-		d->agent = new VCard;
+		d->agent = QSharedPointer<VCard>(new VCard);
 	*(d->agent) = v;
 }
 
@@ -1186,3 +1188,5 @@ void VCard::setKey(const QByteArray &k)
 {
 	d->key = k;
 }
+
+} // namespace XMPP

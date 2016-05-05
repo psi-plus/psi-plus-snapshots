@@ -1108,12 +1108,13 @@ void JT_VCard::set(const VCard &card)
 	d->iq.appendChild(card.toXml(doc()) );
 }
 
-void JT_VCard::set(const Jid &j, const VCard &card, bool isMuc)
+// isTarget is when we setting target's vcard. for example in case of muc own vcard
+void JT_VCard::set(const Jid &j, const VCard &card, bool isTarget)
 {
 	type = 1;
 	d->vcard = card;
 	d->jid = j;
-	d->iq = createIQ(doc(), "set", isMuc? j.full() : "", id());
+	d->iq = createIQ(doc(), "set", isTarget? j.full() : "", id());
 	d->iq.appendChild(card.toXml(doc()) );
 }
 
@@ -1138,7 +1139,8 @@ bool JT_VCard::take(const QDomElement &x)
 					continue;
 
 				if(q.tagName().toUpper() == "VCARD") {
-					if(d->vcard.fromXml(q)) {
+					d->vcard = VCard::fromXml(q);
+					if(d->vcard) {
 						setSuccess();
 						return true;
 					}

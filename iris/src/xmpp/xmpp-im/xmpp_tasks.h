@@ -249,7 +249,7 @@ namespace XMPP
 
 		void get(const Jid &);
 		void set(const VCard &);
-		void set(const Jid &, const VCard &, bool isMuc = false);
+		void set(const Jid &, const VCard &, bool isTarget = false);
 
 		const Jid & jid() const;
 		const VCard  & vcard() const;

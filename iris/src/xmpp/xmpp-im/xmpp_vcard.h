@@ -21,8 +21,9 @@
 #ifndef JABBER_VCARD_H
 #define JABBER_VCARD_H
 
-#include <qstring.h>
-#include <qstringlist.h>
+#include <QSharedDataPointer>
+#include <QString>
+#include <QStringList>
 
 #include <QList>
 #include <qdom.h>
@@ -31,6 +32,7 @@ class QDate;
 
 namespace XMPP
 {
+	class VCardPrivate;
 	class VCard
 	{
 	public:
@@ -40,8 +42,12 @@ namespace XMPP
 		~VCard();
 
 		QDomElement toXml(QDomDocument *) const;
-		bool fromXml(const QDomElement &);
+		static VCard fromXml(const QDomElement &);
 		bool isEmpty() const;
+		inline bool isNull() const { return !d; }
+		inline bool operator!() const { return !d; }
+		inline operator bool() const { return !!d; }
+		static VCard makeEmpty();
 
 		const QString &version() const;
 		void setVersion(const QString &);
@@ -207,7 +213,7 @@ namespace XMPP
 		void setLogoURI(const QString &);
 
 
-		const VCard *agent() const;
+		VCard agent() const;
 		void setAgent(const VCard &);
 
 		const QString agentURI() const;
@@ -275,8 +281,7 @@ namespace XMPP
 		void setKey(const QByteArray &);
 
 	private:
-		class Private;
-		Private *d;
+		QSharedDataPointer<VCardPrivate> d;
 	};
 }
 
