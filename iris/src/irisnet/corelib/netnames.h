@@ -29,6 +29,11 @@
 
 #include "irisnetglobal.h"
 
+// it seems visual studio defines it somewhere
+#ifdef max
+# undef max
+#endif
+
 namespace XMPP {
 
 class NameManager;

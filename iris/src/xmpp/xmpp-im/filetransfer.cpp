@@ -432,7 +432,7 @@ FileTransfer *FileTransferManager::takeIncoming()
 
 bool FileTransferManager::isActive(const FileTransfer *ft) const
 {
-	return d->list.contains(const_cast<FileTransfer*>(ft)) > 0;
+	return d->list.contains(const_cast<FileTransfer*>(ft));
 }
 
 void FileTransferManager::setDisabled(const QString &ns, bool state)

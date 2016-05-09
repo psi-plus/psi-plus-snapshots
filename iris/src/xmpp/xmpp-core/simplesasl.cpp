@@ -185,7 +185,7 @@ public:
 			out_mech = mechanism_;
 
 			// PLAIN
-			if (out_mech == "PLAIN" or out_mech == "SCRAM-SHA-1") {
+			if (out_mech == "PLAIN" || out_mech == "SCRAM-SHA-1") {
 				// First, check if we have everything
 				if(need.user || need.pass) {
 					qWarning("simplesasl.cpp: Did not receive necessary auth parameters");
