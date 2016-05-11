@@ -2,7 +2,7 @@
 -----BEGIN QCMOD-----
 name: extra
 section: project
-arg: disable-tests,Don't build examples and unittests.
+arg: enable-tests,Build examples and unittests.
 -----END QCMOD-----
 */
 
@@ -21,8 +21,8 @@ public:
 		QString str;
 		QFile f;
 
-		if(conf->getenv("QC_DISABLE_TESTS") == "Y")
-			str += "CONFIG += no_tests\n";
+		if(conf->getenv("QC_ENABLE_TESTS") == "Y")
+			str += "CONFIG += iris_tests\n";
 
 		conf->addExtra(str);
 

@@ -17,4 +17,4 @@ sub_tools.depends = sub_src
 
 build_src:SUBDIRS += sub_src
 
-!no_tests:SUBDIRS += sub_tools
+iris_tests:SUBDIRS += sub_tools
