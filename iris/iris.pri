@@ -33,7 +33,7 @@ else {
 # force on all windows, plus qca ordering workaround
 windows {
 	DEFINES += IRISNET_STATIC             # from irisnet
-	LIBS += -L$$IRIS_BASE/lib -lirisnet   # from iris
+	LIBS += -L$$top_iris_builddir/lib -lirisnet   # from iris
 	LIBS += -lWs2_32 -lAdvapi32   # from jdns
 	contains(LIBS, -lqca) {
 		LIBS -= -lqca
