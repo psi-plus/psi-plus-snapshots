@@ -293,24 +293,12 @@ void MainWin::Private::updateMenu(QStringList actions, QMenu* menu)
 // MainWin
 //----------------------------------------------------------------------------
 
-//#ifdef HAVE_X11
-//#define TOOLW_FLAGS WStyle_Customize
-//#else
-//#define TOOLW_FLAGS ((Qt::WFlags) 0)
-//#endif
-
-#ifdef Q_OS_WIN
-#define TOOLW_FLAGS (Qt::WindowMinimizeButtonHint)
-#else
-#define TOOLW_FLAGS ((Qt::WindowFlags) 0)
-#endif
-
 const QString toolbarsStateOptionPath = "options.ui.save.toolbars-state";
 const QString rosterGeometryPath      = "options.ui.save.roster-width";
 const QString tabsGeometryPath        = "options.ui.save.log-width";
 
 MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
-:AdvancedWidget<QMainWindow>(0, (_onTop ? Qt::WindowStaysOnTopHint : Qt::Widget) | (_asTool ? (Qt::Tool |TOOLW_FLAGS) : Qt::Widget))
+:AdvancedWidget<QMainWindow>(0, (_onTop ? Qt::WindowStaysOnTopHint : Qt::Widget) | (_asTool ? Qt::Tool : Qt::Widget))
 {
 	setObjectName("MainWin");
 	setAttribute(Qt::WA_AlwaysShowToolTips);
@@ -829,10 +817,13 @@ void MainWin::setWindowOpts(bool _onTop, bool _asTool)
 		flags &= ~Qt::WindowStaysOnTopHint;
 	}
 	if(d->asTool) {
-		flags |= Qt::Tool | TOOLW_FLAGS;
+		flags |= Qt::Tool;
 	}
 	else {
 		flags &= ~Qt::Tool;
+#ifdef Q_OS_WIN
+		flags |= Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint;
+#endif
 	}
 
 	setWindowFlags(flags);
