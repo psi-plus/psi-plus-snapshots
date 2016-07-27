@@ -1,5 +1,5 @@
 /*
- * iconset.cpp - plugin
+ * iconset.h - plugin
  * Copyright (C) 2011  Khryukin Evgeny
  *
  * This program is free software; you can redistribute it and/or
@@ -18,50 +18,33 @@
  *
  */
 
-#include "iconset.h"
+#ifndef SCREENSHOTICONSET_H
+#define SCREENSHOTICONSET_H
 
-#include "iconfactoryaccessinghost.h"
-
-Iconset* Iconset::instance_ = 0;
-
-Iconset* Iconset::instance()
-{
-	if(!instance_) {
-		instance_ = new Iconset();
-	}
-
-	return instance_;
-}
-
-Iconset::Iconset()
-	: QObject(0)
-	, icoHost(0)
-{
-}
-
-Iconset::~Iconset()
-{
-}
-
-void Iconset::reset()
-{
-	delete instance_;
-	instance_ = 0;
-}
-
-QIcon Iconset::getIcon(const QString& name)
-{
-	QIcon ico;
-	if(icoHost) {
-		ico = icoHost->getIcon(name);
-	}
-
-	return ico;
-}
-
+#include <QIcon>
 
 //for Psi plugin only
-void Iconset::setIconHost(IconFactoryAccessingHost *_icoHost)
+class IconFactoryAccessingHost;
+
+class ScreenshotIconset : public QObject
 {
-	icoHost = _icoHost;
-}
+	Q_OBJECT
+public:
+	static ScreenshotIconset* instance();
+	static void reset();
+	~ScreenshotIconset();
+
+	QIcon getIcon(const QString& name);
+
+	//for Psi plugin only
+	void setIconHost(IconFactoryAccessingHost* _icoHost);
+
+private:
+	ScreenshotIconset();
+	static ScreenshotIconset* instance_;
+
+	//for Psi plugin only
+	IconFactoryAccessingHost* icoHost;
+};
+
+#endif // SCREENSHOTICONSET_H
