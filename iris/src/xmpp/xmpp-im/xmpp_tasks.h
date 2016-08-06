@@ -464,6 +464,22 @@ namespace XMPP
 		bool take(const QDomElement &);
 	};
 
+	class JT_MessageCarbons : public Task
+	{
+		Q_OBJECT
+
+	public:
+		JT_MessageCarbons(Task *parent);
+		void enable();
+		void disable();
+
+		void onGo();
+		bool take(const QDomElement &e);
+
+	private:
+		QDomElement _iq;
+	};
+
 	class JT_CaptchaChallenger : public Task
 	{
 		Q_OBJECT

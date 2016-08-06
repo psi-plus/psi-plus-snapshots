@@ -837,7 +837,7 @@ void ChatDlg::incomingMessage(const Message &m)
 		else {
 			setContactChatState(XMPP::StateNone);
 		}
-		appendMessage(m);
+		appendMessage(m, m.carbonDirection() == Message::Sent);
 	}
 }
 

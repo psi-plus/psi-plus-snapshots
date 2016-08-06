@@ -957,6 +957,7 @@ public:
 	QMap<QString,HTMLElement> htmlElements;
  	QDomElement sxe;
 	QList<BoBData> bobDataList;
+	Jid forwardedFrom;
 
 	QList<int> mucStatuses;
 	QList<MUCInvite> mucInvites;
@@ -964,6 +965,10 @@ public:
 	QString mucPassword;
 
 	bool spooled, wasEncrypted;
+
+	//XEP-0280 Message Carbons
+	Message::CarbonDir carbonDir; // it's a forwarded message
+	bool isDisabledCarbons;
 };
 
 //! \brief Constructs Message with given Jid information.
@@ -984,6 +989,8 @@ Message::Message(const Jid &to)
 	d->errorCode = -1;*/
 	d->chatState = StateNone;
 	d->messageReceipt = ReceiptNone;
+	d->carbonDir = Message::NoCarbon;
+	d->isDisabledCarbons = false;
 }
 
 //! \brief Constructs a copy of Message object
@@ -1458,6 +1465,36 @@ const IBBData& Message::ibbData() const
 	return d->ibbData;
 }
 
+void Message::setDisabledCarbons(bool disabled)
+{
+	d->isDisabledCarbons = disabled;
+}
+
+bool Message::isDisabledCarbons() const
+{
+	return d->isDisabledCarbons;
+}
+
+void Message::setCarbonDirection(Message::CarbonDir cd)
+{
+	d->carbonDir = cd;
+}
+
+Message::CarbonDir Message::carbonDirection() const
+{
+	return d->carbonDir;
+}
+
+void Message::setForwardedFrom(const Jid &jid)
+{
+	d->forwardedFrom = jid;
+}
+
+const Jid &Message::forwardedFrom() const
+{
+	return d->forwardedFrom;
+}
+
 bool Message::spooled() const
 {
 	return d->spooled;
@@ -1701,6 +1738,12 @@ Stanza Message::toStanza(Stream *stream) const
 	// bits of binary
 	foreach(const BoBData &bd, d->bobDataList) {
 		s.appendChild(bd.toXml(&s.doc()));
+	}
+
+	// Avoiding Carbons
+	if (isDisabledCarbons() || wasEncrypted()) {
+		QDomElement e = s.createElement("urn:xmpp:carbons:2","private");
+		s.appendChild(e);
 	}
 
 	return s;

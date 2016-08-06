@@ -184,6 +184,15 @@ bool Features::haveVCard() const
 	return test(ns);
 }
 
+#define FID_MESSAGECARBONS "urn:xmpp:carbons:2"
+bool Features::canMessageCarbons() const
+{
+	QStringList ns;
+	ns << FID_MESSAGECARBONS;
+
+	return test(ns);
+}
+
 // custom Psi acitons
 #define FID_ADD "psi:add"
 
@@ -205,6 +214,7 @@ public:
 		id2s[FID_VCard]			= tr("VCard");
 		id2s[FID_AHCommand]		= tr("Execute command");
 		id2s[FID_QueryVersion]	= tr("Query version");
+		id2s[FID_MessageCarbons]= tr("Message Carbons");
 
 		// custom Psi actions
 		id2s[FID_Add]			= tr("Add to roster");
@@ -222,6 +232,7 @@ public:
 		id2f[FID_VCard]			= FID_VCARD;
 		id2f[FID_AHCommand]		= FID_AHCOMMAND;
 		id2f[FID_QueryVersion]	= FID_QUERYVERSION;
+		id2f[FID_MessageCarbons]= FID_MESSAGECARBONS;
 
 		// custom Psi actions
 		id2f[FID_Add]			= FID_ADD;

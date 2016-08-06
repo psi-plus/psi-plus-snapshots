@@ -2361,6 +2361,12 @@ void PsiAccount::serverFeaturesChanged()
 {
 	setPEPAvailable(d->serverInfoManager->hasPEP());
 
+	if (d->serverInfoManager->canMessageCarbons()) {
+		JT_MessageCarbons *j = new JT_MessageCarbons(d->client->rootTask());
+		j->enable();
+		j->go(true);
+	}
+
 	if (d->serverInfoManager->features().haveVCard() && !d->vcardChecked) {
 		// Get the vcard
 		const VCard vcard = VCardFactory::instance()->vcard(d->jid);
@@ -5078,7 +5084,16 @@ void PsiAccount::handleEvent(const PsiEvent::Ptr &e, ActivationType activationTy
 				}
 #endif
 				if (!isMuc) {
-					logEvent(e->from(), e);
+					Jid	chatJid = e->from();
+					if(e->type() == PsiEvent::Message) {
+						MessageEvent::Ptr me = e.staticCast<MessageEvent>();
+						const Message &m = me->message();
+						if (m.carbonDirection() == Message::Sent) {
+							chatJid = m.to();
+						}
+					}
+
+					logEvent(chatJid, e);
 				}
 			}
 		}
@@ -5087,6 +5102,7 @@ void PsiAccount::handleEvent(const PsiEvent::Ptr &e, ActivationType activationTy
 	if(e->type() == PsiEvent::Message) {
 		MessageEvent::Ptr me = e.staticCast<MessageEvent>();
 		const Message &m = me->message();
+		bool carbonForwarded = m.carbonDirection() != Message::NoCarbon;
 
 #ifdef PSI_PLUGINS
 		//TODO(mck): clean up
@@ -5119,6 +5135,9 @@ void PsiAccount::handleEvent(const PsiEvent::Ptr &e, ActivationType activationTy
 
 		// Pass message events to chat window
 		if ((m.containsEvents() || m.chatState() != StateNone) && m.body().isEmpty() && m.type() != "groupchat") {
+			if (m.carbonDirection() == Message::Sent) {
+				return; // ignore own composing for carbon. TODO should we?
+			}
 			if (o->getOption("options.messages.send-composing-events").toBool()) {
 				ChatDlg *c = findChatDialogEx(e->from());
 				if (c) {
@@ -5138,9 +5157,17 @@ void PsiAccount::handleEvent(const PsiEvent::Ptr &e, ActivationType activationTy
 
 		// pass chat messages directly to a chat window if possible (and deal with sound)
 		else if(m.type() == "chat") {
-			ChatDlg *c = findChatDialogEx(e->from());
+			Jid	chatJid = m.carbonDirection() == Message::Sent ? m.to() : m.from();
+
+			if (carbonForwarded) {
+				e->setOriginLocal(m.carbonDirection() == Message::Sent);
+				putToQueue = false;
+				doPopup = false;
+			}
+
+			ChatDlg *c = findChatDialogEx(chatJid);
 			if (c)
-				c->setJid(e->from());
+				c->setJid(chatJid);
 
 			//if the chat exists, and is either open in a tab,
 			//or in a window

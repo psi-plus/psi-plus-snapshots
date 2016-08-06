@@ -47,6 +47,12 @@ namespace XMPP {
 	class Message
 	{
 	public:
+		enum CarbonDir : quint8 {
+			NoCarbon,
+			Received,
+			Sent
+		};
+
 		Message(const Jid &to="");
 		Message(const Message &from);
 		Message & operator=(const Message &from);
@@ -148,6 +154,16 @@ namespace XMPP {
 
 		// XEP-0047 ibb
 		const IBBData& ibbData() const;
+
+		// XEP-0280 Message Carbons
+		void setDisabledCarbons(bool disabled);
+		bool isDisabledCarbons() const;
+		void setCarbonDirection(CarbonDir);
+		CarbonDir carbonDirection() const;
+
+		// XEP-0297
+		void setForwardedFrom(const Jid &jid);
+		const Jid &forwardedFrom() const;
 
 		// MUC
 		void addMUCStatus(int);

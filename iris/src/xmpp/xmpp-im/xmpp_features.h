@@ -55,6 +55,7 @@ namespace XMPP
 		bool isGateway() const;
 		bool hasVersion() const;
 		bool haveVCard() const;
+		bool canMessageCarbons() const;
 
 		enum FeatureID {
 			FID_Invalid = -1,
@@ -67,6 +68,7 @@ namespace XMPP
 			FID_VCard,
 			FID_AHCommand,
 			FID_QueryVersion,
+			FID_MessageCarbons,
 
 			// private Psi actions
 			FID_Add
