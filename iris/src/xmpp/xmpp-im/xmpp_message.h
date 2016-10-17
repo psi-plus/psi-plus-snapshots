@@ -165,6 +165,10 @@ namespace XMPP {
 		void setForwardedFrom(const Jid &jid);
 		const Jid &forwardedFrom() const;
 
+		// XEP-308
+		QString replaceId() const;
+		void setReplaceId(const QString& id);
+
 		// MUC
 		void addMUCStatus(int);
 		const QList<int>& getMUCStatuses() const;

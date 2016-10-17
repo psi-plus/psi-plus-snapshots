@@ -969,6 +969,7 @@ public:
 	//XEP-0280 Message Carbons
 	Message::CarbonDir carbonDir; // it's a forwarded message
 	bool isDisabledCarbons;
+	QString replaceId;
 };
 
 //! \brief Constructs Message with given Jid information.
@@ -1515,6 +1516,14 @@ void Message::setWasEncrypted(bool b)
 	d->wasEncrypted = b;
 }
 
+QString Message::replaceId() const {
+	return d->replaceId;
+}
+
+void Message::setReplaceId(const QString& id) {
+	d->replaceId = id;
+}
+
 Stanza Message::toStanza(Stream *stream) const
 {
 	Stanza s = stream->createStanza(Stanza::Message, d->to, d->type);
@@ -1745,7 +1754,11 @@ Stanza Message::toStanza(Stream *stream) const
 		QDomElement e = s.createElement("urn:xmpp:carbons:2","private");
 		s.appendChild(e);
 	}
-
+	if (!d->replaceId.isEmpty()) {
+		QDomElement e = s.createElement("urn:xmpp:message-correct:0", "replace");
+		e.setAttribute("id", d->replaceId);
+		s.appendChild(e);
+	}
 	return s;
 }
 
@@ -2060,7 +2073,10 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 	if (!t.isNull()) {
 		d->ibbData.fromXml(t);
 	}
-
+	t = childElementsByTagNameNS(root, "urn:xmpp:message-correct:0", "replace").item(0).toElement();
+	if (!t.isNull()) {
+		d->replaceId = t.attribute("id");
+	}
 	return true;
 }
 

@@ -170,6 +170,8 @@ ChatEdit::ChatEdit(QWidget *parent)
 	, dialog_(0)
 	, check_spelling_(false)
 	, spellhighlighter_(0)
+	, palOriginal(palette())
+	, palCorrection(palOriginal)
 {
 	controller_ = new HTMLTextController(this);
 	capitalizer_ = new CapitalLettersController(this);
@@ -186,7 +188,7 @@ ChatEdit::ChatEdit(QWidget *parent)
 	setCheckSpelling(checkSpellingGloballyEnabled());
 	connect(PsiOptions::instance(),SIGNAL(optionChanged(const QString&)),SLOT(optionsChanged()));
 	typedMsgsIndex = 0;
-
+	palCorrection.setColor(QPalette::Base, QColor(160, 160, 0));
 	initActions();
 	setShortcuts();
 	optionsChanged();
@@ -436,6 +438,7 @@ void ChatEdit::optionsChanged()
 
 void ChatEdit::showHistoryMessageNext()
 {
+	correction = false;
 	if (!typedMsgsHistory.isEmpty()) {
 		if (typedMsgsIndex + 1 < typedMsgsHistory.size()) {
 			++typedMsgsIndex;
@@ -445,6 +448,7 @@ void ChatEdit::showHistoryMessageNext()
 				typedMsgsIndex = typedMsgsHistory.size();
 				// Restore last typed text
 				setEditText(currentText);
+				updateBackground();
 			}
 		}
 	}
@@ -464,10 +468,16 @@ void ChatEdit::pasteAsQuote()
 
 void ChatEdit::showHistoryMessagePrev()
 {
-	if (!typedMsgsHistory.isEmpty() && typedMsgsIndex > 0) {
+	if (!typedMsgsHistory.isEmpty() && (typedMsgsIndex > 0 || correction)) {
 		// Save current typed text
-		if (typedMsgsIndex == typedMsgsHistory.size())
+		if (typedMsgsIndex == typedMsgsHistory.size()) {
 			currentText = toPlainText();
+			correction = true;
+		}
+		if (typedMsgsIndex == typedMsgsHistory.size() -1 && correction) {
+			correction = false;
+			++typedMsgsIndex;
+		}
 		--typedMsgsIndex;
 		showMessageHistory();
 	}
@@ -475,6 +485,7 @@ void ChatEdit::showHistoryMessagePrev()
 
 void ChatEdit::showHistoryMessageFirst()
 {
+	correction = false;
 	if (!typedMsgsHistory.isEmpty()) {
 		if (currentText.isEmpty()) {
 			typedMsgsIndex = typedMsgsHistory.size() - 1;
@@ -483,12 +494,14 @@ void ChatEdit::showHistoryMessageFirst()
 			typedMsgsIndex = typedMsgsHistory.size();
 			// Restore last typed text
 			setEditText(currentText);
+			updateBackground();
 		}
 	}
 }
 
 void ChatEdit::showHistoryMessageLast()
 {
+	correction = false;
 	if (!typedMsgsHistory.isEmpty()) {
 		typedMsgsIndex = 0;
 		showMessageHistory();
@@ -501,9 +514,14 @@ void ChatEdit::setEditText(const QString& text)
 	moveCursor(QTextCursor::End);
 }
 
+void ChatEdit::updateBackground() {
+	setPalette(correction ? palCorrection : palOriginal);
+}
+
 void ChatEdit::showMessageHistory()
 {
 	setEditText(typedMsgsHistory.at(typedMsgsIndex));
+	updateBackground();
 }
 
 void ChatEdit::appendMessageHistory(const QString& text)

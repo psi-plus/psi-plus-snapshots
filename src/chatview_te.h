@@ -113,6 +113,7 @@ private:
 	QPixmap logIconDeliveredPgp;
 	QPixmap logIconTime;
 	QPixmap logIconInfo;
+	QPixmap logIconCorrected;
 	QAction *actQuote_;
 };
 

@@ -39,6 +39,8 @@ class CapitalLettersController;
 
 class ChatEdit : public QTextEdit
 {
+	void updateBackground();
+
 	Q_OBJECT
 
 public:
@@ -55,6 +57,10 @@ public:
 	static bool checkSpellingGloballyEnabled();
 	void setCheckSpelling(bool);
 	XMPP::HTMLElement toHTMLElement();
+	bool isCorrection() { return correction; }
+	void setLastMessageId(const QString& id) { lastId = id; }
+	const QString& lastMessageId() { return lastId; }
+	void resetCorrection() { correction = false; updateBackground(); };
 	CapitalLettersController * capitalizer();
 
 public slots:
@@ -104,6 +110,10 @@ private:
 	QString currentText;
 	HTMLTextController *controller_;
 	CapitalLettersController *capitalizer_;
+	bool correction;
+	QString lastId;
+	QPalette palOriginal;
+	QPalette palCorrection;
 };
 
 
