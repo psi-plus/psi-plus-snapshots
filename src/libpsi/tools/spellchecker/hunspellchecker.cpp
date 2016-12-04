@@ -39,6 +39,9 @@
 #include "applicationinfo.h"
 #endif
 
+#ifdef H_DEPRECATED
+#define NEW_HUNSPELL
+#endif
 
 HunspellChecker::HunspellChecker()
 {
@@ -133,12 +136,21 @@ QList<QString> HunspellChecker::suggestions(const QString& word)
 {
 	QStringList qtResult;
 	foreach (const LangItem &li, languages_) {
+#ifdef NEW_HUNSPELL
+		std::vector<std::string> result = li.hunspell_->suggest(li.codec->fromUnicode(word).toStdString());
+		if(!result.empty()){
+			foreach (const std::string &item, result) {
+				qtResult << QString(li.codec->toUnicode(item.c_str()));
+			}
+		}
+#else
 		char **result;
 		int sugNum = li.hunspell_->suggest(&result, li.codec->fromUnicode(word));
 		for (int i=0; i < sugNum; i++) {
 			qtResult << li.codec->toUnicode(result[i]);
 		}
 		li.hunspell_->free_list(&result, sugNum);
+#endif
 	}
 	return qtResult;
 }
@@ -146,10 +158,15 @@ QList<QString> HunspellChecker::suggestions(const QString& word)
 bool HunspellChecker::isCorrect(const QString &word)
 {
 	foreach (const LangItem &li, languages_) {
+#ifdef NEW_HUNSPELL
+		if (li.hunspell_->spell(li.codec->fromUnicode(word).toStdString()) != 0) {
+#else
 		if (li.hunspell_->spell(li.codec->fromUnicode(word)) != 0) {
+#endif
 			return true;
 		}
 	}
+
 	return false;
 }
 bool HunspellChecker::add(const QString& word)
@@ -157,7 +174,11 @@ bool HunspellChecker::add(const QString& word)
 	if (!word.isEmpty()) {
 		QString trimmed_word = word.trimmed();
 		foreach (const LangItem &li, languages_) {
+#ifdef NEW_HUNSPELL
+			if (li.hunspell_->add(li.codec->fromUnicode(trimmed_word).toStdString()) != 0) {
+#else
 			if (li.hunspell_->add(li.codec->fromUnicode(trimmed_word)) != 0) {
+#endif
 				return true;
 			}
 		}
