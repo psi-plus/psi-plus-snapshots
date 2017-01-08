@@ -178,6 +178,7 @@ namespace XMPP {
 		const MUCDecline& mucDecline() const;
 		const QString& mucPassword() const;
 		void setMUCPassword(const QString&);
+		bool hasMUCUser() const;
 
 		// Obsolete invitation
 		QString invite() const;

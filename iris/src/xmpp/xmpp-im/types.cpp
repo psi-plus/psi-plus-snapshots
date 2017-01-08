@@ -963,6 +963,7 @@ public:
 	QList<MUCInvite> mucInvites;
 	MUCDecline mucDecline;
 	QString mucPassword;
+	bool hasMUCUser;
 
 	bool spooled, wasEncrypted;
 
@@ -992,6 +993,7 @@ Message::Message(const Jid &to)
 	d->messageReceipt = ReceiptNone;
 	d->carbonDir = Message::NoCarbon;
 	d->isDisabledCarbons = false;
+	d->hasMUCUser = false;
 }
 
 //! \brief Constructs a copy of Message object
@@ -1399,6 +1401,11 @@ const QString& Message::mucPassword() const
 void Message::setMUCPassword(const QString& p)
 {
 	d->mucPassword = p;
+}
+
+bool Message::hasMUCUser() const
+{
+	return d->hasMUCUser;
 }
 
 QString Message::invite() const
@@ -2026,6 +2033,7 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 
 	t = childElementsByTagNameNS(root, "http://jabber.org/protocol/muc#user", "x").item(0).toElement();
 	if(!t.isNull()) {
+		d->hasMUCUser = true;
 		for(QDomNode muc_n = t.firstChild(); !muc_n.isNull(); muc_n = muc_n.nextSibling()) {
 			QDomElement muc_e = muc_n.toElement();
 			if(muc_e.isNull())
