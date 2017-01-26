@@ -955,14 +955,18 @@ bool JT_PushMessage::take(const QDomElement &e)
 	QDomElement forward;
 	Message::CarbonDir cd = Message::NoCarbon;
 
+	Jid fromJid = Jid(e1.attribute(QLatin1String("from")));
 	// Check for Carbon
 	QDomNodeList list = e1.childNodes();
 	for (int i = 0; i < list.size(); ++i) {
 		QDomElement el = list.at(i).toElement();
 
-		if (el.attribute("xmlns") == QLatin1String("urn:xmpp:carbons:2") && (el.tagName() == QLatin1String("received") || el.tagName() == QLatin1String("sent"))) {
+		if (el.attribute("xmlns") == QLatin1String("urn:xmpp:carbons:2")
+		    && (el.tagName() == QLatin1String("received") || el.tagName() == QLatin1String("sent"))
+		    && fromJid.compare(Jid(e1.attribute(QLatin1String("to"))), false)) {
 			QDomElement el1 = el.firstChildElement();
-			if (el1.tagName() == QLatin1String("forwarded") && el1.attribute(QLatin1String("xmlns")) == QLatin1String("urn:xmpp:forward:0")) {
+			if (el1.tagName() == QLatin1String("forwarded")
+			    && el1.attribute(QLatin1String("xmlns")) == QLatin1String("urn:xmpp:forward:0")) {
 				QDomElement el2 = el1.firstChildElement(QLatin1String("message"));
 				if (!el2.isNull()) {
 					forward = el2;
@@ -971,7 +975,8 @@ bool JT_PushMessage::take(const QDomElement &e)
 				}
 			}
 		}
-		else if (el.tagName() == QLatin1String("forwarded") && el.attribute(QLatin1String("xmlns")) == QLatin1String("urn:xmpp:forward:0")) {
+		else if (el.tagName() == QLatin1String("forwarded")
+			 && el.attribute(QLatin1String("xmlns")) == QLatin1String("urn:xmpp:forward:0")) {
 			forward = el.firstChildElement(QLatin1String("message")); // currently only messages are supportted
 			// TODO <delay> element support
 			if (!forward.isNull()) {
@@ -980,7 +985,6 @@ bool JT_PushMessage::take(const QDomElement &e)
 		}
 	}
 
-	QString from = e1.attribute(QLatin1String("from"));
 	Stanza s = client()->stream().createStanza(addCorrectNS(forward.isNull()? e1 : forward));
 	if(s.isNull()) {
 		//printf("take: bad stanza??\n");
@@ -993,7 +997,7 @@ bool JT_PushMessage::take(const QDomElement &e)
 		return false;
 	}
 	if (!forward.isNull()) {
-		m.setForwardedFrom(Jid(from));
+		m.setForwardedFrom(fromJid);
 		m.setCarbonDirection(cd);
 	}
 
