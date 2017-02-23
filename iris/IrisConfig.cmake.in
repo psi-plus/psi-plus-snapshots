@@ -1,0 +1,19 @@
+# known at buildtime
+set(Iris_VERSION "@IRIS_LIB_VERSION_STRING@")
+set(Iris_VERSION_MAJOR @IRIS_LIB_VERSION_MAJOR@)
+set(Iris_VERSION_MINOR @IRIS_LIB_VERSION_MINOR@)
+set(Iris_VERSION_PATCH @IRIS_LIB_VERSION_PATCH@)
+
+get_filename_component(currentDir ${CMAKE_CURRENT_LIST_FILE} PATH) # get the directory where I myself am
+get_filename_component(rootDir ${currentDir}/@relInstallDir@ ABSOLUTE) # get the chosen install prefix
+
+# install locations
+set(Iris_INCLUDE_DIR "${rootDir}/@IRIS_INCLUDEDIR_REL@")
+set(Iris_LIBRARY_DIR "${rootDir}/@LIB_INSTALL_DIR_REL@")
+set(Iris_LIB_SONAME iris)
+
+if(NOT TARGET iris)
+	include(${currentDir}/IrisTargets.cmake)
+endif()
+
+set(Iris_LIBRARY iris)

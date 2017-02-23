@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=@LIB_INSTALL_DIR@
+includedir=@INCLUDE_INSTALL_DIR@/iris
+
+Name: iris
+Description: Iris is a comprehensive library for working with the XMPP protocol
+Version: @IRIS_LIB_MAJOR_VERSION@.@IRIS_LIB_MINOR_VERSION@.@IRIS_LIB_PATCH_VERSION@
+Libs: -L${libdir} -liris
+Cflags: -I${includedir}
