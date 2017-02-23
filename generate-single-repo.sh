@@ -1,9 +1,9 @@
 #! /bin/sh
 
-# Author:  Boris Pek <tehnick-8@mail.ru>
+# Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2016-04-06
+# Updated: 2017-02-23
 # Version: N/A
 
 set -e
@@ -26,7 +26,7 @@ MOD=psi
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
-    git pull --all
+    git pull --all --prune
     git submodule update
     echo;
 else
@@ -43,7 +43,7 @@ MOD=main
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
-    git pull --all
+    git pull --all --prune
     echo;
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
@@ -56,12 +56,12 @@ MOD=plugins
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
-    git pull --all
+    git pull --all --prune
     echo;
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
-    git clone https://github.com/psi-plus/${MOD}.git
+    git clone https://github.com/psi-im/${MOD}.git
     echo;
 fi
 
@@ -69,7 +69,7 @@ MOD=resources
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
-    git pull --all
+    git pull --all --prune
     echo;
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
