@@ -194,12 +194,17 @@ cp -a "${MAIN_DIR}/psi-plus-cmake/README.md" "${PSIPLUS_DIR}/README.cmake.md"
 echo "Files from psi-plus-cmake repo are copied."
 echo;
 
-
 rm configure.exe
 rm iris/configure.exe
-rm -r win32/
+rm -r win32/*
 rm -r src/libpsi/tools/idle/win32/
 echo "Trash is removed."
+echo;
+
+cp -a "${MAIN_DIR}/psi/win32"/*.rc "${PSIPLUS_DIR}/win32/"
+cp -a "${MAIN_DIR}/psi/win32"/*.manifest "${PSIPLUS_DIR}/win32/"
+cp -a "${MAIN_DIR}/main/app.ico" "${PSIPLUS_DIR}/win32/"
+echo "Some files for MS Windows build are copied."
 echo;
 
 
