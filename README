@@ -9,6 +9,7 @@ Here is a list of main changes:
    - plugins (from original Psi project)
    - main (patches and icons from Psi+ project)
    - resources (sounds and icons from Psi+ project)
+   - psi-plus-cmake (cmake scripts from Psi+ project)
 2) All patches from Psi+ project are applied.
    (Except patches from dev/ and mac/ subdirectories)
 3) Trash is removed. (MS Windows binary files and non-free icons)
