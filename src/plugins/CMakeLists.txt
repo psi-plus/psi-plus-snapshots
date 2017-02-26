@@ -12,8 +12,17 @@ endif()
 option( BUILD_DEV_PLUGINS "Build plugins from dev directory" OFF )
 
 # Use the same path for shared and static plugins
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/plugins")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/plugins")
+if(WIN32)
+	#Store old runtime output path
+	set(OLD_RUNTIME_TARGETS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+	#Set runtime output path for plugins dll-files
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/plugins")
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/")
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/")
+else()
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/plugins")
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/plugins")
+endif()
 
 set(BUILD_PLUGINS "ALL" CACHE STRING "List of plugins to build")
 
@@ -40,3 +49,7 @@ endif()
 
 unset(BUILD_PLUGINS CACHE)
 unset(PLUGINS_PATH CACHE)
+#Restore default psi-plsu runtime output path
+if(WIN32)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OLD_RUNTIME_TARGETS}")
+endif()
