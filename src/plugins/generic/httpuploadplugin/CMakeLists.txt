@@ -30,7 +30,7 @@ set( _RSCS
 	${PLUGIN}.qrc
 )
 IF( USE_QT5 )
-        add_definitions(-DHAVE_QT5)
+	add_definitions(-DHAVE_QT5)
 	find_package( Qt5Widgets REQUIRED )
 	find_package( Qt5Xml REQUIRED )
 	find_package( Qt5Network REQUIRED )
@@ -60,7 +60,7 @@ ENDIF()
 
 add_library(
 	${PLUGIN}
-	SHARED
+	MODULE
 	${_SRCS}
 	${UIS}
 	${RSCS}
@@ -92,4 +92,4 @@ if( WIN32 )
 		RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${PLUGINS_PATH}
 	)
 endif()
- 
+

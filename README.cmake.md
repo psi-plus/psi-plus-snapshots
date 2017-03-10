@@ -1,52 +1,90 @@
-Files to build Psi+ using cmake utility.
+#Files to build Psi+ using cmake utility
 
-HOWTO USE:
-
-Instead of PSI_SOURCES_PATH must be your real psi_sources path
+##Installation:
 
 > $ cp -rf * PSI_SOURCES_PATH/
 
 > $ cd PSI_SOURCES_PATH && mkdir build && cd build
 
-> $ cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+  instead of PSI_SOURCES_PATH must be your real psi_sources path!
 
-> $ make && make install
+##Prepare sources:
 
-USEFULL CMAKE FLAGS:
+> $ cmake FLAGS ..
 
-  -DUSE_QT5=ON
+  instead of FLAGS must be your flags from "Usefull CMAKE FLAGS" section
+
+##Build sources:
+
+> $ cmake --build . --target all --
+
+or
+
+> $ make
+
+##Install Psi+:
+
+> $ cmake --build . --target install --
+
+or
+
+> $ make install
+
+##Usefull CMAKE FLAGS:
+
+>  -DUSE_QT5=ON
   
   to build psi-plus with Qt5 support (default ON)
 
-  -DENABLE_PLUGINS=ON
+> -DCMAKE_INSTALL_PREFIX=prefix
 
-  to build psi-plus plugins (default OFF)
+  to set installation prefix
 
-  -DONLY_PLUGINS=ON
-
-  to build only psi-plus plugins (default OFF)
-
-  -DBUNDLED_IRIS=ON
+>  -DBUNDLED_IRIS=ON
 
   to build iris library bundled (default ON)
 
-  -DUSE_ENCHANT=ON
+>  -DUSE_ENCHANT=ON
   
   to use Enchant spellchecker (default OFF)
   
-  -DUSE_HUNSPELL=ON
+>  -DUSE_HUNSPELL=ON
   
   to use Hunspell spellchecker (default ON)
   
-  -DSEPARATE_QJDNS=ON
+>  -DSEPARATE_QJDNS=ON
 
   to build qjdns library as separate library (default ON)
   
-  -DPSI_PLUS_VERSION=${version}
+>  -DPSI_PLUS_VERSION=${version}
   
-  to set Psi-plus version manually
+  to set Psi-plus version manually (in format x.xx.xxx.xxx, where x is a decimal digit). Script sets this flag automatically from "version" file if it exists in psi-plus directory
 
-  -DBUILD_PLUGINS=${plugins}
+>  -DCMAKE_BUILD_TYPE=Release (default: Release)
+
+  to set build type. Possible values: DEBUG, RELEASE, RELWITHDEBINFO, MINSIZEREL
+
+> -USE_CCACHE=ON (default: ON)
+
+  to enable ccache utility support
+
+>  -DUSE_MXE=ON (default: OFF)
+
+  Enables MXE (M cross environment) support. Disables USE_CCACHE, adds new dependencies if PRODUCTION flag is enabled
+
+> -DENABLE_PLUGINS=ON
+
+  to build psi-plus plugins (default OFF)
+  
+>  -DONLY_PLUGINS=ON
+
+  to build only psi-plus plugins (default OFF). On enabling this flag ENABLE_PLUGINS flag turns on automatically
+
+##Work with plugins:
+
+###Next flags are working only if ENABLE_PLUGINS or ONLY_PLUGINS are enabled
+
+>  -DBUILD_PLUGINS=${plugins}
 
   set list of plugins to build. To build all plugins:  -DBUILD_PLUGINS="ALL" or do not set this flag
 
@@ -57,15 +95,15 @@ USEFULL CMAKE FLAGS:
     clientswitcherplugin captchaformsplugin watcherplugin videostatusplugin screenshotplugin
     jabberdiskplugin storagenotesplugin	extendedoptionsplugin imageplugin	extendedmenuplugin
     birthdayreminderplugin gmailserviceplugin gnupgplugin pepchangenotifyplugin otrplugin
-    chessplugin conferenceloggerplugin gnome3supportplugin enummessagesplugin
+    chessplugin conferenceloggerplugin gnome3supportplugin enummessagesplugin httpuploadplugin 
+    imagepreviewplugin
   
   Example:
   
-  > $ cmake -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_PLUGINS="chessplugin;otrplugin;gnome3supportplugin" ..
+  > -DBUILD_PLUGINS="chessplugin;otrplugin;gnome3supportplugin"
 
 
-
-  -DPLUGINS_PATH=${path} 
+>  -DPLUGINS_PATH=${path} 
 
   to install plugins into ${path}. To install into default suffix:
 
@@ -73,64 +111,63 @@ USEFULL CMAKE FLAGS:
 
   For example to install plugins into ~/.local/share/psi+/plugins:
 
-  > $ cmake -DCMAKE_INSTALL_PREFIX=$HOME/.local -DPLUGINS_PATH=share/psi+/plugins ..
+  > -DCMAKE_INSTALL_PREFIX=$HOME/.local -DPLUGINS_PATH=share/psi+/plugins
 
   For example to install plugins into /usr/share/psi-plus/plugins:
 
-  > $ cmake -DCMAKE_INSTALL_PREFIX=/usr -DPLUGINS_PATH=share/psi-plus/plugins ..
+  > -DCMAKE_INSTALL_PREFIX=/usr -DPLUGINS_PATH=share/psi-plus/plugins
 
- 
-  -DCMAKE_BUILD_TYPE=Release or -DCMAKE_BUILD_TYPE=Debug
+##Win32 or MXE Section:
 
-To build Psi-plus in OS QWINDOWS you need to set additional variables
-
-  -DQCA_DIR=DIRECTORY
+>  -DQCA_DIR=DIRECTORY
   
-  to set Qca directory (WIN32)
+  to set Qca library root directory
   
-  -DIDN_ROOT=DIRECTORY
+>  -DIDN_ROOT=DIRECTORY
   
-  to set Idn directory (WIN32)
+  to set Idn library root directory
   
-  -DZLIB_ROOT=DIRECTORY
+>  -DZLIB_ROOT=DIRECTORY
 
-  to set Zlib directory (WIN32)
+  to set Zlib library root directory
   
-  -DHUNSPELL_ROOT=DIRECTORY
+>  -DHUNSPELL_ROOT=DIRECTORY
   
-  to set Hunspell directory (WIN32)
+  to set Hunspell library root directory
   
-  -DPRODUCTION=ON
+>  -DPRODUCTION=ON
   
-  to install needed libs to run Psi+ (WIN32)
+  to install needed libs to run Psi+. When you running cmake from MXE you also need to enable USE_MXE flag
+  
+> -DBUILD_ARCH=i386 (default: i386 for MinGW and win32 for MSVC)
 
-To build OTRPLUGIN in OS WINDOWS you need to set additional variables
+  to set build architecture. Possible values: i386, x86_64 for MinGW and win32, win64 for MSVC
 
-- path to LIBGCRYPT:
+###To build OTRPLUGIN in OS WINDOWS you need to set additional variables
 
-  -DLIBGCRYPT_ROOT=%LIBGCRYPT_ROOT%
+> -DLIBGCRYPT_ROOT=%LIBGCRYPT_ROOT%
 
-- path to LIBGPG-ERROR
+  path to LIBGCRYPT library root directory
 
-  -DLIBGPGERROR_ROOT=%LIBGPGERROR_ROOT%
+> -DLIBGPGERROR_ROOT=%LIBGPGERROR_ROOT%
 
-- path to LIBOTR
+  path to LIBGPG-ERROR library root directory
 
-  -DLIBOTR_ROOT=%LIBOTR_ROOT%
+> -DLIBOTR_ROOT=%LIBOTR_ROOT%
 
-- path to LIBTIDY
+  path to LIBOTR library root directory
 
-  -DLIBTIDY_ROOT=%LIBTIDY_ROOT%
+> -DLIBTIDY_ROOT=%LIBTIDY_ROOT%
+
+  path to LIBTIDY library root directory
 
   For example:
 
-  > $ cmake -DLIBGCRYPT_ROOT=C:\libgcrypt -DLIBGPGERROR_ROOT=C:\libgpg-error -DLIBOTR_ROOT=C:\libotr -DLIBTIDY_ROOT=C:\libtidy ..
+  > -DLIBGCRYPT_ROOT=C:\libgcrypt -DLIBGPGERROR_ROOT=C:\libgpg-error -DLIBOTR_ROOT=C:\libotr -DLIBTIDY_ROOT=C:\libtidy
 
-If you use Psi+ SDK set SDK_PATH (WIN32)
+###If you using Psi+ SDK you need to set SDK_PATH:
 
-  -DSDK_PATH=path
-
-
+>  -DSDK_PATH=path
   
-TODO LIST:
-- Add MacOSX support
+#TODO LIST:
+- [ ] Add MacOSX support

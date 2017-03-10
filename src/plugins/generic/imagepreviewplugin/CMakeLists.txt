@@ -69,7 +69,7 @@ ENDIF()
 
 add_library(
 	${PLUGIN}
-	SHARED
+	MODULE
 	${_SRCS}
 	${RSCS}
 )
@@ -98,4 +98,4 @@ if( WIN32 )
 		RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${PLUGINS_PATH}
 	)
 endif()
- 
+

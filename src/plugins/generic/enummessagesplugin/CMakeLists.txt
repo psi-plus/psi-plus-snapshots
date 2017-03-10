@@ -57,7 +57,7 @@ ENDIF()
 
 add_library(
 	${PLUGIN}
-	SHARED
+	MODULE
 	${_SRCS}
 	defines.h
 	${UIS}

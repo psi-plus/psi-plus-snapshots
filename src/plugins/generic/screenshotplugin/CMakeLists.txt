@@ -111,7 +111,7 @@ IF( USE_QT5 )
 			${QT_DEPLIBS}
 			Qt5::X11Extras
 		)
-        endif()
+	endif()
 	qt5_wrap_ui(UIS ${_UIS})
 	qt5_add_resources(RSCS ${_RSCS})
 ELSE()
@@ -135,7 +135,7 @@ ENDIF()
 
 add_library(
 	${PLUGIN}
-	SHARED
+	MODULE
 	${_SRCS}
 	${UIS}
 	${RSCS}

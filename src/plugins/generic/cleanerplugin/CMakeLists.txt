@@ -33,7 +33,7 @@ set( _SRCS
 	optionsparser.cpp
 )
 set( _UIS
-	cleaner.ui 
+	cleaner.ui
 	clearingtab.ui
 )
 set( _RSCS
@@ -67,7 +67,7 @@ ENDIF()
 
 add_library(
 	${PLUGIN}
-	SHARED
+	MODULE
 	${_SRCS}
 	${UIS}
 	${RSCS}

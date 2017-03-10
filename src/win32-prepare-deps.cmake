@@ -10,17 +10,22 @@ if(WIN32)
 	string(REGEX REPLACE "([^ ]+)[/\\].*" "\\1" QT_BIN_DIR_TMP "${QT_MOC_EXECUTABLE}")
 	string(REGEX REPLACE "\\\\" "/" QT_BIN_DIR "${QT_BIN_DIR_TMP}")
 	unset(QT_BIN_DIR_TMP)
-	macro(find_psi_lib)
-		set(LIBLIST ${ARGN})
+	function(find_psi_lib LIBLIST PATHES)
 		set( inc 1 )
+		set(FIXED_PATHES "")
+		foreach(_path ${PATHES})
+			string(REGEX REPLACE "//bin" "/bin" tmp_path "${_path}")
+			list(APPEND FIXED_PATHES ${tmp_path})
+		endforeach()
 		foreach(_liba ${LIBLIST})
-			find_file( ${_liba}${inc} ${_liba} )
+			find_file( ${_liba}${inc} ${_liba} PATHS ${FIXED_PATHES})
 			if( NOT "${${_liba}${inc}}" STREQUAL "${_liba}${inc}-NOTFOUND" )
+				message("library found ${${_liba}${inc}}")
 				copy("${${_liba}${inc}}" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/" prepare-bin-libs)
 			endif()
 			math( EXPR inc ${inc}+1)
 		endforeach()
-	endmacro()
+	endfunction()
 	get_filename_component(QT_DIR ${QT_BIN_DIR} DIRECTORY)
 	set(QT_PLUGINS_DIR ${QT_DIR}/plugins)
 	set(QT_TRANSLATIONS_DIR ${QT_DIR}/translations)
@@ -205,50 +210,29 @@ if(WIN32)
 	endforeach()
 
 	# other libs and executables
-	if(EXISTS "${SDK_PATH}")
-		set(SDK_LIBS
-			${LIBGCRYPT_ROOT}/bin/libgcrypt-11.dll
-			${LIBGCRYPT_ROOT}/bin/libgcrypt-20.dll
-			${LIBOTR_ROOT}/bin/libotr.dll
-			${LITIDY_ROOT}/bin/libotr.dll
-			${ZLIB_ROOT}/bin/zlib1.dll
-			${LIBGPGERROR_ROOT}/bin/libgpg-error-0.dll
-			${IDN_ROOT}/bin/libidn-11.dll
-			${HUNSPELL_ROOT}/bin/libhunspell.dll
-			${SDK_PATH}/${SDK_PREFIX}openssl/bin/libeay32.dll
-			${SDK_PATH}/${SDK_PREFIX}openssl/bin/ssleay32.dll
-			)
-		if(NOT USE_QT5)
-			list(APPEND SDK_LIBS ${QJSON_ROOT}/bin/libqjson.dll)
-		endif()
-	else()
-		set(SDK_LIBS
-			libgcrypt-11.dll
-			libgcrypt-20.dll
-			libotr.dll
-			libtidy.dll
-			zlib1.dll
-			libgpg-error-0.dll
-			libidn-11.dll
-			libhunspell.dll
-			libhunspell-1.3-0.dll
-			libeay32.dll
-			ssleay32.dll
-			)
-		if(NOT USE_QT5)
-			list(APPEND SDK_LIBS libqjson.dll)
-		endif()
+        set( LIBRARIES_LIST
+                libgcc_s_sjlj-1.dll
+                libgcc_s_dw2-1.dll
+                libgcc_s_seh-1.dll
+                libstdc++-6.dll
+                libwinpthread-1.dll
+                gpg.exe
+		libgcrypt-11.dll
+		libgcrypt-20.dll
+		libotr.dll
+		libtidy.dll
+		zlib1.dll
+		libgpg-error-0.dll
+		libidn-11.dll
+		libhunspell.dll
+		libhunspell-1.3-0.dll
+		libeay32.dll
+		ssleay32.dll
+	)
+	if(NOT USE_QT5)
+		list(APPEND LIBRARIES_LIST libqjson.dll)
 	endif()
 
-	set( LIBRARIES_LIST
-		libgcc_s_sjlj-1.dll
-		libgcc_s_dw2-1.dll
-		libgcc_s_seh-1.dll
-		libstdc++-6.dll
-		libwinpthread-1.dll
-		gpg.exe
-		${SDK_LIBS}
-	)
 	if(USE_MXE)
 		list(APPEND LIBRARIES_LIST
 			libbz2.dll
@@ -272,9 +256,23 @@ if(WIN32)
 			libwebp-5.dll
 			libwebpdecoder-1.dll
 			libwebpdemux-1.dll
-			)
+                )
 	endif()
-	find_psi_lib(${LIBRARIES_LIST})
+
+	if(EXISTS "${SDK_PATH}")
+		set(PATHES
+			"${IDN_ROOT}bin"
+			"${HUNSPELL_ROOT}bin"
+			"${LIBGCRYPT_ROOT}bin"
+			"${LIBGPGERROR_ROOT}bin"
+			"${LIBOTR_ROOT}bin"
+			"${LIBTIDY_ROOT}bin"
+			"${QJSON_ROOT}bin"
+			"${ZLIB_ROOT}bin"
+			"${SDK_PATH}/openssl/bin"
+		)
+	endif()
+	find_psi_lib("${LIBRARIES_LIST}" "${PATHES}")
 
 	if(SEPARATE_QJDNS)
 		copy(${QJDNS_DIR}/libqjdns${D}.dll "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/" prepare-bin-libs)

@@ -2,6 +2,7 @@ cmake_minimum_required( VERSION 2.8.11)
 set( LIBOTR otr )
 project( ${LIBOTR} )
 set( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules" )
+option(BUILD_STATIC_LIBS "Build LibOtr as a static library" OFF)
 
 find_package( LibGcrypt REQUIRED )
 find_package( LibGpgError REQUIRED )
@@ -9,7 +10,7 @@ find_package( LibGpgError REQUIRED )
 #Get library version
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/src/version.h versionFile)
 if (NOT versionFile)
-	message("Unable to determine libtidy version. ${CMAKE_CURRENT_SOURCE_DIR}/src/version.h file is missing.")
+	message("Unable to determine libotr version. ${CMAKE_CURRENT_SOURCE_DIR}/src/version.h file is missing.")
 endif()
 string(STRIP "${versionFile}" VERSION_TEXT)
 string(REGEX REPLACE ".*OTRL_VERSION \"(.*)\".*" "\\1" LIBOTR_VERSION ${VERSION_TEXT})
@@ -30,9 +31,9 @@ include_directories(
 		${CMAKE_CURRENT_BINARY_DIR}
 		${LIBGCRYPT_INCLUDE_DIR}
 		${LIBGPGERROR_INCLUDE_DIR}
-		./src
-		./toolkit
-		.
+		${PROJECT_SOURCE_DIR}/src
+		${PROJECT_SOURCE_DIR}/toolkit
+		${PROJECT_SOURCE_DIR}
 )
 set( otr_HDRS 
 	src/auth.h
@@ -69,11 +70,20 @@ set ( otr_SRCS
 	src/userstate.c
 )
 
-add_library( ${LIBOTR}
-	SHARED
-	${otr_SRCS}
-	${otr_HDRS}
-)
+if(BUILD_SHARED_LIBS)
+	add_library( ${LIBOTR}
+		SHARED
+		${otr_SRCS}
+		${otr_HDRS}
+	)
+endif()
+if(BUILD_STATIC_LIBS)
+	add_library( ${LIBOTR}
+		STATIC
+		${otr_SRCS}
+		${otr_HDRS}
+	)
+endif()
 if(LIBOTR_VERSION)
 set_target_properties( ${LIBOTR} PROPERTIES 
 	                VERSION ${LIBOTR_VERSION}

@@ -63,7 +63,7 @@ ENDIF( ${USE_QT5} )
 
 add_library(
 	${PLUGIN}
-	SHARED
+	MODULE
 	${_SRCS}
 	${UIS}
 	${RSCS}

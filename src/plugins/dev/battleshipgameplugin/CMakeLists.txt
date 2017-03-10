@@ -85,7 +85,7 @@ ENDIF( ${USE_QT5} )
 
 add_library(
 	${PLUGIN}
-	SHARED
+	MODULE
 	${_SRCS}
 	${UIS}
 	${RSCS}
@@ -117,4 +117,4 @@ if( WIN32 )
 		RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${PLUGINS_PATH}
 	)
 endif( WIN32 )
- 
+
