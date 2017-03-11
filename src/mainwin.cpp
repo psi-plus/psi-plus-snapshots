@@ -574,7 +574,6 @@ MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
 	optionChanged("options.ui.contactlist.css");
 
 	setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
-	setMouseTracking(!isBorder());
 
 	reinitAutoHide();
 }
@@ -617,7 +616,6 @@ void MainWin::optionChanged(const QString& option)
 	}
 	else if (option == "options.ui.decorate-windows") {
 		setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
-		setMouseTracking(!isBorder());
 		show();
 	}
 }
@@ -2060,10 +2058,12 @@ void MainWin::mouseReleaseEvent(QMouseEvent *e)
 {
 	if (e->button() == Qt::MidButton && !isBorder() && d->isHide) {
 		d->isHide = false;
-		if (e->globalPos().x() >= geometry().left()
-			&& e->globalPos().x() <= geometry().right()
-			&& e->globalPos().y() >= geometry().top()
-			&& e->globalPos().y() <= geometry().bottom()){
+		const int x_ = e->globalPos().x();
+		const int y_ = e->globalPos().y();
+		if (x_ >= geometry().left()
+			&& x_ <= geometry().right()
+			&& y_ >= geometry().top()
+			&& y_ <= geometry().bottom()){
 			if (d->asTool){
 				d->mainWin->trayHide();
 			} else {

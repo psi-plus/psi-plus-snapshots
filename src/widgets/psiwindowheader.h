@@ -1,6 +1,6 @@
 /*
  * psiwindowheader.cpp
- * Copyright (C) 2010  Khryukin Evgeny, Vitaly Tonkacheyev
+ * Copyright (C) 2010-2017  Khryukin Evgeny, Vitaly Tonkacheyev
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -38,16 +38,17 @@ public:
 private:
 	Ui::PsiWindowHeader ui_;
 	QWidget *parent_;
-	QPoint movepath;
-	bool isDrag;
-	bool isResize;
-	bool inVRect;
-	bool inLDRect;
-	bool inRDRect;
-	bool maximized;
-	QRect oldSize;
-	QSize defaultSize;
-	void mouseEnterEvent(const int mouse_x, const int mouse_y, const QRect &geom);
+private:
+	enum class WinAction{None, Dragging, Resizing};
+	Qt::WindowFrameSection getMouseRegion(const int mouse_x, const int mouse_y, const QRect &geom) const;
+	void doWindowResize(QWidget* window, const QPoint& eventPos, Qt::WindowFrameSection region);
+	void updateCursor(Qt::WindowFrameSection region);
+	void enableMouseTracking(bool enabled);
+private:
+	QPoint movePath_;
+	bool maximized_;
+	Qt::WindowFrameSection region_;
+	WinAction action_;
 
 private slots:
 	void hidePressed();

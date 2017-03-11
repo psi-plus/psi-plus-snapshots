@@ -1,6 +1,6 @@
 /*
  * psiwindowheader.cpp
- * Copyright (C) 2010  Khryukin Evgeny, Vitaly Tonkacheyev
+ * Copyright (C) 2010-2017  Khryukin Evgeny, Vitaly Tonkacheyev
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -20,15 +20,14 @@
 
 
 #include <QIcon>
-#include <QDesktopWidget>
+#include <QApplication>
 
 #include "psiwindowheader.h"
 #include "psiiconset.h"
 
 PsiWindowHeader::PsiWindowHeader(QWidget *p)
 	: QWidget(p),
-	  maximized(false),
-	  defaultSize(QSize(320, 280))
+	  maximized_(false)
 {
 	parent_ = p->window();
 	ui_.setupUi(this);
@@ -46,6 +45,7 @@ PsiWindowHeader::PsiWindowHeader(QWidget *p)
 	connect(ui_.closeButton, SIGNAL(clicked()), SLOT(closePressed()));
 	connect(ui_.maximizeButton, SIGNAL(clicked()), SLOT(maximizePressed()));
 	setMouseTracking(true);
+	enableMouseTracking(true);
 }
 
 PsiWindowHeader::~PsiWindowHeader()
@@ -64,37 +64,13 @@ void PsiWindowHeader::closePressed()
 
 void PsiWindowHeader::maximizePressed()
 {
-	const QRect desktop = qApp->desktop()->availableGeometry(-1);
-	if (!maximized) {
-		if (parent_->window()->width() != qApp->desktop()->width()
-			&& parent_->window()->height() != qApp->desktop()->height()) {
-			oldSize = parent_->window()->geometry();
-			parent_->window()->setGeometry(desktop);
-			maximized = true;
-		}
-		else if (!oldSize.isNull() && !oldSize.isEmpty()) {
-			parent_->window()->setGeometry(oldSize);
-			maximized = false;
-		}
-		else {
-			parent_->window()->resize(defaultSize);
-			maximized = false;
-		}
-	} else {
-		if (oldSize.top() < desktop.top()) {
-			oldSize.setTop(desktop.top());
-		}
-		if (oldSize.left() < desktop.left() ) {
-			oldSize.setLeft(desktop.left());
-		}
-		if (oldSize.right() > desktop.right()) {
-			oldSize.setRight(desktop.right());
-		}
-		if (oldSize.bottom() > desktop.bottom()) {
-			oldSize.setBottom(desktop.bottom());
-		}
-		parent_->window()->setGeometry(oldSize);
-		maximized = false;
+	if(parent_->window()->windowState() != Qt::WindowMaximized) {
+		parent_->window()->showMaximized();
+		maximized_ = true;
+	}
+	else {
+		parent_->window()->showNormal();
+		maximized_ = false;
 	}
 }
 
@@ -108,119 +84,180 @@ void PsiWindowHeader::mouseDoubleClickEvent(QMouseEvent *e)
 
 void PsiWindowHeader::mousePressEvent(QMouseEvent *e)
 {
-	if (e->button() == Qt::LeftButton) {
-		mouseEnterEvent(e->pos().x(),e->pos().y(),geometry());
-		if (inVRect || inLDRect || inRDRect) {
-			isResize = true;
+	if (e->button() == Qt::LeftButton && isVisible()) {
+		region_ = getMouseRegion(e->globalPos().x(), e->globalPos().y(), parent_->window()->geometry());
+		if (region_ != Qt::NoSection) {
+			action_ = WinAction::Resizing;
 		}
 		else{
-			movepath = e->pos();
-			isResize = false;
+			movePath_ = e->globalPos() - parent_->window()->pos();
+			action_ = WinAction::Dragging;
 		}
-		isDrag = true;
 		e->accept();
 	}
 }
 
 void PsiWindowHeader::mouseMoveEvent(QMouseEvent *e)
 {
-	bool isLeftButton = (e->buttons() & Qt::LeftButton);
-	const QPoint pg = e->globalPos();
-	int ypath = 0;
-	int xpath = 0;
-	if (isLeftButton && inLDRect && isResize && !maximized) {
-		setCursor(QCursor(Qt::SizeFDiagCursor));
-		ypath = parent_->window()->y() - pg.y() ;
-		xpath = parent_->window()->x() - pg.x();
-		if ((parent_->window()->width() + xpath) < parent_->window()->minimumWidth()) {
-			xpath = parent_->window()->minimumWidth() - parent_->window()->width();
+	if(isVisible()) {
+		bool isLeftButton = (e->buttons() & Qt::LeftButton);
+		const QPoint pg = e->globalPos();
+		if (!isLeftButton && !maximized_) {
+			Qt::WindowFrameSection region = getMouseRegion(pg.x(), pg.y(), parent_->window()->geometry());
+			updateCursor(region);
 		}
-		if ((parent_->window()->height() + ypath) < parent_->window()->minimumHeight()) {
-			ypath = parent_->window()->minimumHeight() - parent_->window()->height();
+		else if(isLeftButton && action_ == WinAction::Resizing && !maximized_) {
+			doWindowResize(parent_->window(), pg, region_);
 		}
-		parent_->window()->setGeometry(parent_->window()->x() - xpath,
-						parent_->window()->y() - ypath,
-						parent_->window()->width() + xpath,
-						parent_->window()->height() + ypath);
-
-	}
-	else if (isLeftButton && inVRect && isResize && !maximized) {
-		setCursor(QCursor(Qt::SizeVerCursor));
-		ypath = parent_->window()->y() - pg.y();
-		if ((parent_->window()->height() + ypath) < parent_->window()->minimumHeight()) {
-			ypath = parent_->window()->minimumHeight() - parent_->window()->height();
+		else if(isLeftButton && action_ == WinAction::Dragging && !maximized_) {
+			setCursor(QCursor(Qt::SizeAllCursor));
+			parent_->window()->move( pg - movePath_ );
 		}
-		parent_->window()->setGeometry(parent_->window()->x(),
-						parent_->window()->y() - ypath,
-						parent_->window()->width(),
-						parent_->window()->height() + ypath);
-	}
-	else if (isLeftButton && inRDRect && isResize && !maximized) {
-		setCursor(QCursor(Qt::SizeBDiagCursor));
-		ypath = parent_->window()->y() - pg.y();
-		xpath = pg.x() - parent_->window()->geometry().right();
-		if ((parent_->window()->height() + ypath) < parent_->window()->minimumHeight()) {
-			ypath = parent_->window()->minimumHeight() - parent_->window()->height();
-		}
-		parent_->window()->setGeometry(parent_->window()->x(),
-						parent_->window()->y() - ypath,
-						parent_->window()->width() + xpath,
-						parent_->window()->height() + ypath);
-
-	}
-	else if(isLeftButton && isDrag &&!isResize && !maximized) {
-		setCursor(QCursor(Qt::ArrowCursor));
-		parent_->window()->move( e->globalPos() - movepath );
 	}
 	e->accept();
 }
 
-void PsiWindowHeader::mouseEnterEvent(const int mouse_x, const int mouse_y, const QRect &geom)
+void PsiWindowHeader::doWindowResize(QWidget* window, const QPoint& eventPos, Qt::WindowFrameSection region)
 {
-	if(mouse_y <= geom.top()+7
-		&& qAbs(mouse_x - geom.left()) <= 4) {
-		inLDRect = true;
-		inRDRect = false;
-		inVRect = false;
+	int ypath = 0;
+	int xpath = 0;
+	const QRect winGeom = window->geometry();
+	const int right = winGeom.right();
+	const int left =  winGeom.left();
+	const int top =  winGeom.top();
+	switch(region) {
+	case Qt::TopLeftSection:
+		ypath =  top - eventPos.y();
+		xpath = left - eventPos.x();
+		if ((window->width() + xpath) < window->minimumWidth()) {
+			xpath = window->minimumWidth() - window->width();
+		}
+		if ((window->height() + ypath) < window->minimumHeight()) {
+			ypath = window->minimumHeight() - window->height();
+		}
+		window->setGeometry(window->x() - xpath, window->y() - ypath,
+				    window->width() + xpath, window->height() + ypath);
+		break;
+	case Qt::TopRightSection:
+		ypath =  top - eventPos.y();
+		xpath = eventPos.x() - right;
+		if ((window->width() + xpath) < window->minimumWidth()) {
+			xpath = window->minimumWidth() - window->width();
+		}
+		if ((window->height() + ypath) < window->minimumHeight()) {
+			ypath = window->minimumHeight() - window->height();
+		}
+		window->setGeometry(window->x(), window->y() - ypath,
+				    window->width() + xpath, window->height() + ypath);
+		break;
+	case Qt::RightSection:
+		xpath =  eventPos.x() - right;
+		window->resize(window->width() + xpath, window->height());
+		break;
+	case Qt::LeftSection:
+		xpath =  left - eventPos.x();
+		if ((window->width() + xpath) < window->minimumWidth()) {
+			xpath = window->minimumWidth() - window->width();
+		}
+		window->setGeometry(window->x() - xpath, window->y(),
+				    window->width() + xpath, window->height());
+		break;
+	case Qt::TopSection:
+		ypath =  top - eventPos.y();
+		if ((window->height() + ypath) < window->minimumHeight()) {
+			ypath = window->minimumHeight() - window->height();
+		}
+		window->setGeometry(window->x(), window->y() - ypath,
+				    window->width(), window->height() + ypath);
+		break;
+	case(Qt::NoSection):
+	default:
+		break;
 	}
-	else if(mouse_y <= geom.top()+7
-		&& qAbs(mouse_x - geom.right()) <= 4) {
-		inRDRect = true;
-		inLDRect = false;
-		inVRect = false;
+}
+
+Qt::WindowFrameSection PsiWindowHeader::getMouseRegion(const int mouse_x, const int mouse_y, const QRect &geom) const
+{
+	const int mouseAccuracy = 7;
+	const int top = geom.top();
+	const int left = geom.left();
+	const int right = geom.right();
+	const int maxtop = top + mouseAccuracy;
+	if(qAbs(top - mouse_y) < mouseAccuracy
+		&& qAbs(mouse_x - left) < mouseAccuracy) {
+		return Qt::TopLeftSection;
 	}
-	else if (mouse_x > (geom.left() + 4)
-		&& mouse_x < (geom.right() - 4)
-		&& qAbs(mouse_y - geom.top()) <= 4) {
-		inVRect = true;
-		inLDRect = false;
-		inRDRect = false;
+	else if(qAbs(top -mouse_y) < mouseAccuracy
+		&& qAbs(mouse_x - right) < mouseAccuracy) {
+		return Qt::TopRightSection;
 	}
-	else {
-		inVRect = false;
-		inLDRect = false;
-		inRDRect = false;
+	else if (mouse_x > (left + mouseAccuracy)
+		&& mouse_x < (right - mouseAccuracy)
+		&& qAbs(mouse_y - top) < mouseAccuracy) {
+		return Qt::TopSection;
 	}
+	else if (qAbs(right - mouse_x) < mouseAccuracy
+			 &&  mouse_y > maxtop) {
+		return Qt::RightSection;
+	}
+	else if (qAbs(mouse_x - left) < mouseAccuracy
+		 &&  mouse_y > maxtop) {
+		return Qt::LeftSection;
+	}
+	return Qt::NoSection;
 }
 
 void PsiWindowHeader::mouseReleaseEvent(QMouseEvent *e)
 {
-	if (e->button() == Qt::LeftButton && isDrag) {
-		movepath.setX(0);
-		movepath.setY(0);
-		isDrag = false;
-		isResize = false;
-		setCursor(QCursor(Qt::ArrowCursor));
-	}
-	int min_x = qMin(ui_.hideButton->geometry().left(), qMin(ui_.maximizeButton->geometry().left(), ui_.closeButton->geometry().left()));
-	int max_x = qMax(ui_.hideButton->geometry().right(), qMax(ui_.maximizeButton->geometry().right(), ui_.closeButton->geometry().right()));
-	if (e->button() == Qt::MidButton) {
-		if (((e->x() > geometry().left() && e->x() < min_x)
-			|| (e->x() < geometry().right() && e->x() > max_x ))
-			&& e->y() > geometry().top()
-			&& e->y() < geometry().bottom()) {
-			hidePressed();
+	if(isVisible()) {
+		if (e->button() == Qt::LeftButton && action_ == WinAction::Dragging) {
+			movePath_ = QPoint(0,0);
+			action_ = WinAction::None;
+			setCursor(QCursor(Qt::ArrowCursor));
+		}
+		int min_x = qMin(ui_.hideButton->geometry().left(), qMin(ui_.maximizeButton->geometry().left(), ui_.closeButton->geometry().left()));
+		int max_x = qMax(ui_.hideButton->geometry().right(), qMax(ui_.maximizeButton->geometry().right(), ui_.closeButton->geometry().right()));
+		if (e->button() == Qt::MidButton) {
+			if (((e->x() > geometry().left() && e->x() < min_x)
+				|| (e->x() < geometry().right() && e->x() > max_x ))
+				&& e->y() > geometry().top()
+				&& e->y() < geometry().bottom()) {
+				hidePressed();
+			}
 		}
 	}
 	e->accept();
+}
+
+void PsiWindowHeader::updateCursor(Qt::WindowFrameSection region)
+{
+	switch (region) {
+	case Qt::TopLeftSection:
+		setCursor(QCursor(Qt::SizeFDiagCursor));
+		break;
+	case Qt::TopRightSection:
+		setCursor(QCursor(Qt::SizeBDiagCursor));
+		break;
+	case Qt::RightSection:
+		setCursor(QCursor(Qt::SizeHorCursor));
+		break;
+	case Qt::LeftSection:
+		setCursor(QCursor(Qt::SizeHorCursor));
+		break;
+	case Qt::TopSection:
+		setCursor(QCursor(Qt::SizeVerCursor));
+		break;
+	case Qt::NoSection:
+	default:
+		setCursor(QCursor(Qt::ArrowCursor));
+		break;
+	}
+}
+
+void PsiWindowHeader::enableMouseTracking(bool enabled)
+{
+	//Dirty hack to enable mouse tracking for psichatdlg
+	foreach (QWidget *w, qApp->allWidgets()) {
+		w->setMouseTracking(enabled);
+	}
 }
