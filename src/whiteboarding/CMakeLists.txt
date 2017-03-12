@@ -36,4 +36,5 @@ set(PLAIN_HEADERS
 
 qt_wrap_cpp(MOC_SOURCES ${HEADERS})
 add_library(whiteboarding STATIC ${HEADERS} ${MOC_SOURCES} ${PLAIN_SOURCES} ${PLAIN_HEADERS})
+add_dependencies(whiteboarding build_ui_files)
 target_link_libraries(whiteboarding ${QT_LIBRARIES} tools widgets)
