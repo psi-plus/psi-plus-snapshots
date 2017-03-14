@@ -53,7 +53,7 @@ find_path(
 
 find_library(
 	LIBOTR_LIBRARY
-	NAMES otr libotr
+	NAMES otr libotr otr-5
 	HINTS 
 	${PC_LIBOTR_LIBDIR}
 	${PC_LIBOTR_LIBRARY_DIRS}
