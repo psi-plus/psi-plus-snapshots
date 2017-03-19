@@ -43,25 +43,26 @@ QString image2type(const QByteArray &ba)
 	buf.open(QIODevice::ReadOnly);
 	QString format = QImageReader::imageFormat( &buf );
 
-	// TODO: add more formats
-	if ( format.toUpper() == "PNG" || format == "PsiPNG" )
-		return "image/png";
-	if ( format.toUpper() == "MNG" )
-		return "video/x-mng";
-	if ( format.toUpper() == "GIF" )
-		return "image/gif";
-	if ( format.toUpper() == "BMP" )
-		return "image/bmp";
-	if ( format.toUpper() == "XPM" )
-		return "image/x-xpm";
-	if ( format.toUpper() == "SVG" )
-		return "image/svg+xml";
-	if ( format.toUpper() == "JPEG" )
-		return "image/jpeg";
+	// TODO: add more formats: PBM PGM PPM XBM XPM
+	if ( format.toUpper() == QLatin1String("PNG") || format == QLatin1String("PsiPNG") )
+		return QLatin1String("image/png");
+	if ( format.toUpper() == QLatin1String("MNG") )
+		return QLatin1String("video/x-mng");
+	if ( format.toUpper() == QLatin1String("GIF") )
+		return QLatin1String("image/gif");
+	if ( format.toUpper() == QLatin1String("JPEG"))
+		return QLatin1String("image/jpeg");
+	if ( format.toUpper() == QLatin1String("BMP") )
+		return QLatin1String("image/bmp");
+	if ( format.toUpper() == QLatin1String("XPM") )
+		return QLatin1String("image/x-xpm");
+	if ( format.toUpper() == QLatin1String("SVG") )
+		return QLatin1String("image/svg+xml");
+
 
 	qWarning() << QString("WARNING! VCard::image2type: unknown format = '%1'").arg(format.isNull() ? QString("UNKNOWN") : format);
 
-	return "image/unknown";
+	return QLatin1String("image/unknown");
 }
 
 namespace XMPP {

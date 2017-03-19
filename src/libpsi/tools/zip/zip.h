@@ -35,6 +35,7 @@ public:
 	};
 
 	UnZip(const QString &fname="");
+	UnZip(UnZip &&o);
 	~UnZip();
 
 	void setCaseSensitivity(CaseSensitivity state = CS_Default);
@@ -46,6 +47,7 @@ public:
 
 	const QStringList & list() const;
 	bool readFile(const QString &, QByteArray *, int max=0);
+	bool fileExists(const QString &);
 
 private:
 	class UnZipPrivate *d;

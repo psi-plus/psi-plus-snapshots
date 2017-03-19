@@ -79,12 +79,4 @@ public:
 
 		return true;
 	}
-
-	QString makeEscapedDefine(const QString &var, const QString &val)
-	{
-		QString str = QString(
-		"DEFINES += %1=\\\\\\\\\\\\\\"%2\\\\\\\\\\\\\\"\n"
-		).arg(var).arg(val);
-		return str;
-	}
 };

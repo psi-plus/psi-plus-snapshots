@@ -283,7 +283,7 @@ fi
 printf "Verifying Qt build environment ... "
 
 if [ -z "$QC_QTSELECT" ]; then
-	QC_QTSELECT="${QT_SELECT/qt/}"
+	QC_QTSELECT="$(echo $QT_SELECT | tr -d "qt")"
 fi
 
 if [ ! -z "$QC_QTSELECT" ]; then
@@ -1083,14 +1083,6 @@ public:
 
 		return true;
 	}
-
-	QString makeEscapedDefine(const QString &var, const QString &val)
-	{
-		QString str = QString(
-		"DEFINES += %1=\\\\\\\\\\\\\\\\\\\\\\\\\\\\"%2\\\\\\\\\\\\\\\\\\\\\\\\\\\\"\\n"
-		).arg(var).arg(val);
-		return str;
-	}
 };
 #line 1 "qjdns.qcm"
 /*
@@ -1121,7 +1113,12 @@ public:
 		QString version, libs, other;
 		QString s;
 
-		if(!conf->findPkgConfig("qjdns", VersionMin, "2.0.0", &version, &incs, &libs, &other)) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+		bool found = conf->findPkgConfig("qjdns-qt5", VersionMin, "2.0.3", &version, &incs, &libs, &other);
+#else
+		bool found = conf->findPkgConfig("qjdns-qt4", VersionMin, "2.0.3", &version, &incs, &libs, &other);
+#endif
+		if(!found && !conf->findPkgConfig("qjdns", VersionMin, "2.0.0", &version, &incs, &libs, &other)) {
 			s = conf->getenv("QC_WITH_QJDNS_INC");
 			if ((!s.isEmpty() && conf->checkHeader(s, "qjdns.h")) ||
 				(s.isEmpty() && conf->findHeader("qjdns.h", QStringList(), &s))) {
@@ -1491,7 +1488,9 @@ QStringList qc_splitflags(const QString &flags)
 	bool escaped = false;
 	QChar quote, backslash = QLatin1Char('\\\\');
 	QString buf;
+#ifdef PATH_MAX
 	buf.reserve(PATH_MAX);
+#endif
 	for (int i=0; i < flags.length(); i++) {
 		if (searchStart && flags[i].isSpace()) {
 			continue;

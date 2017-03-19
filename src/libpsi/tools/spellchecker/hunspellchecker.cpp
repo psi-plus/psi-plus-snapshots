@@ -40,8 +40,16 @@
 #endif
 
 #ifdef H_DEPRECATED
-#define NEW_HUNSPELL
+# define NEW_HUNSPELL
+# ifdef HAVE_QT5
+#  define HS_STRING(text) li.codec->fromUnicode(text).toStdString()
+# else
+#  define HS_STRING(text) std::string(li.codec->fromUnicode(text).data())
+# endif
+#else
+# define HS_STRING(text) li.codec->fromUnicode(text)
 #endif
+
 
 HunspellChecker::HunspellChecker()
 {
@@ -137,7 +145,7 @@ QList<QString> HunspellChecker::suggestions(const QString& word)
 	QStringList qtResult;
 	foreach (const LangItem &li, languages_) {
 #ifdef NEW_HUNSPELL
-		std::vector<std::string> result = li.hunspell_->suggest(li.codec->fromUnicode(word).toStdString());
+		std::vector<std::string> result = li.hunspell_->suggest(HS_STRING(word));
 		if(!result.empty()){
 			foreach (const std::string &item, result) {
 				qtResult << QString(li.codec->toUnicode(item.c_str()));
@@ -145,7 +153,7 @@ QList<QString> HunspellChecker::suggestions(const QString& word)
 		}
 #else
 		char **result;
-		int sugNum = li.hunspell_->suggest(&result, li.codec->fromUnicode(word));
+		int sugNum = li.hunspell_->suggest(&result, HS_STRING(word));
 		for (int i=0; i < sugNum; i++) {
 			qtResult << li.codec->toUnicode(result[i]);
 		}
@@ -158,11 +166,7 @@ QList<QString> HunspellChecker::suggestions(const QString& word)
 bool HunspellChecker::isCorrect(const QString &word)
 {
 	foreach (const LangItem &li, languages_) {
-#ifdef NEW_HUNSPELL
-		if (li.hunspell_->spell(li.codec->fromUnicode(word).toStdString()) != 0) {
-#else
-		if (li.hunspell_->spell(li.codec->fromUnicode(word)) != 0) {
-#endif
+		if (li.hunspell_->spell(HS_STRING(word)) != 0) {
 			return true;
 		}
 	}
@@ -174,11 +178,7 @@ bool HunspellChecker::add(const QString& word)
 	if (!word.isEmpty()) {
 		QString trimmed_word = word.trimmed();
 		foreach (const LangItem &li, languages_) {
-#ifdef NEW_HUNSPELL
-			if (li.hunspell_->add(li.codec->fromUnicode(trimmed_word).toStdString()) != 0) {
-#else
-			if (li.hunspell_->add(li.codec->fromUnicode(trimmed_word)) != 0) {
-#endif
+			if (li.hunspell_->add(HS_STRING(trimmed_word)) != 0) {
 				return true;
 			}
 		}

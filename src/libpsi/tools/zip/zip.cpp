@@ -47,10 +47,18 @@ UnZip::UnZip(const QString &name)
 	d->name = name;
 }
 
+UnZip::UnZip(UnZip &&o) :
+    d(o.d)
+{
+	o.d = nullptr;
+}
+
 UnZip::~UnZip()
 {
-	close();
-	delete d;
+	if (d) {
+		close();
+		delete d;
+	}
 }
 
 void UnZip::setCaseSensitivity(CaseSensitivity state)
@@ -167,4 +175,10 @@ bool UnZip::readFile(const QString &fname, QByteArray *buf, int max)
 
 	*buf = a;
 	return true;
+}
+
+bool UnZip::fileExists(const QString &fname)
+{
+	int err = unzLocateFile(d->uf, QFile::encodeName(fname).data(), d->caseSensitive);
+	return err == UNZ_OK;
 }
