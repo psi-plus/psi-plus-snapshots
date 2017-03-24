@@ -10,18 +10,21 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QLineEdit>
-#include "qsettings.h"
+#include <QSettings>
 #include <QList>
 #include <QMessageBox>
 #include <QDir>
+#ifdef HAVE_QT5
+#include <QStandardPaths>
+#endif
 
 #include "ui_opt_application.h"
 
 #ifdef Q_OS_WIN
 	static const QString regString = "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 #endif
-#ifdef HAVE_X11
-	static const QString psiAutoStart = "/.config/autostart/psi-plus.desktop";
+#ifdef HAVE_FREEDESKTOP
+	static const QString psiAutoStart("/.config/autostart/" APP_BIN_NAME ".desktop");
 #endif
 
 class OptApplicationUI : public QWidget, public Ui::OptApplication
@@ -146,10 +149,15 @@ void OptionsTabApplication::applyOptions()
 		set.remove(ApplicationInfo::name());
 	}
 #endif
-#ifdef HAVE_X11
-	QDir home = QDir::home();
-	if (!home.exists(".config/autostart")) {
-		home.mkpath(".config/autostart");
+#ifdef HAVE_FREEDESKTOP
+#ifndef HAVE_QT5
+	QDir home(QString::fromLocal8Bit(getenv("XDG_CONFIG_HOME")));
+#else
+	QDir home(QStandardPaths::writableLocation(QStandardPaths::ConfigLocation));
+#endif
+
+	if (!home.exists("autostart")) {
+		home.mkpath("autostart");
 	}
 	QFile f(home.absolutePath() + psiAutoStart);
 	if (f.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
@@ -203,7 +211,7 @@ void OptionsTabApplication::restoreOptions()
 	const QString path = set.value(ApplicationInfo::name()).toString();
 	d->ck_auto_load->setChecked( (path == QDir::toNativeSeparators(qApp->applicationFilePath())) );
 #endif
-#ifdef HAVE_X11
+#ifdef HAVE_FREEDESKTOP
 	QFile desktop(QDir::homePath() + psiAutoStart);
 	if (desktop.open(QIODevice::ReadOnly)
 		&& QString(desktop.readAll()).contains(QRegExp("\\bhidden\\s*=\\s*false", Qt::CaseInsensitive)))

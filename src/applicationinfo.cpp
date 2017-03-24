@@ -10,7 +10,7 @@
 #include <QStandardPaths>
 #endif
 
-#ifdef HAVE_X11
+#ifdef Q_OS_UNIX
 #include <sys/stat.h> // chmod
 #endif
 
@@ -36,6 +36,9 @@
 #include "config.h"
 #endif
 
+#define xstr(a) str(a)
+#define str(a) #a
+
 // Constants. These should be moved to a more 'dynamically changeable'
 // place (like an external file loaded through the resources system)
 // Should also be overridable through an optional file.
@@ -57,11 +60,6 @@
 #else
 #define PROG_APPCAST_URL ""
 #endif
-
-#if defined(HAVE_X11) && !defined(PSI_DATADIR)
-#define PSI_DATADIR "/usr/local/share/psi"
-#endif
-
 
 QString ApplicationInfo::name()
 {
@@ -152,7 +150,7 @@ QString ApplicationInfo::getCertificateStoreSaveDir()
 
 QString ApplicationInfo::resourcesDir()
 {
-#if defined(HAVE_X11)
+#if defined(Q_OS_UNIX)
 	return PSI_DATADIR;
 #elif defined(Q_OS_WIN)
 	return qApp->applicationDirPath();
@@ -249,10 +247,16 @@ QString ApplicationInfo::homeDir(ApplicationInfo::HomedirType type)
 			QDir configDir(QDir::homePath() + "/Library/Application Support/" + name());
 			QDir cacheDir(QDir::homePath() + "/Library/Caches/" + name());
 			QDir dataDir(configDir);
-#elif defined HAVE_X11
+#elif defined HAVE_FREEDESKTOP
+#ifndef HAVE_QT5
 			QString XdgConfigHome = QString::fromLocal8Bit(getenv("XDG_CONFIG_HOME"));
 			QString XdgDataHome = QString::fromLocal8Bit(getenv("XDG_DATA_HOME"));
 			QString XdgCacheHome = QString::fromLocal8Bit(getenv("XDG_CACHE_HOME"));
+#else
+			QString XdgConfigHome(QStandardPaths::writableLocation(QStandardPaths::ConfigLocation));
+			QString XdgDataHome(QStandardPaths::writableLocation(QStandardPaths::HomeLocation));
+			QString XdgCacheHome(QStandardPaths::writableLocation(QStandardPaths::CacheLocation));
+#endif
 			if (XdgConfigHome.isEmpty()) {
 				XdgConfigHome = QDir::homePath() + "/.config";
 			}
@@ -398,24 +402,10 @@ QString ApplicationInfo::currentProfileDir(ApplicationInfo::HomedirType type)
 QString ApplicationInfo::desktopFile()
 {
 	QString dFile;
-	const QString execFileName = QFileInfo(qApp->applicationFilePath()).fileName();
-	const QString desktopFile = QString("/usr/share/applications/%1.desktop").arg(execFileName);
-	QFile f(desktopFile);
+	const QString _desktopFile(xstr(APP_PREFIX) "/share/applications/" xstr(APP_BIN_NAME) ".desktop");
+	QFile f(_desktopFile);
 	if(f.open(QIODevice::ReadOnly)) {
 		dFile = QString::fromUtf8(f.readAll());
 	}
-	else {
-		dFile = "[Desktop Entry]\n";
-		dFile += "Version=1.0\n";
-		dFile += "Type=Application\n";
-		dFile += QString("Name=%1\n").arg(name());
-		dFile += "GenericName=Jabber Client\n";
-		dFile += "Comment=Communicate over the Jabber network\n";
-		dFile += QString("Icon=%1\n").arg(execFileName);
-		dFile += QString("Exec=%1\n").arg(execFileName);
-		dFile += "Terminal=false\n";
-		dFile += "Categories=Network;InstantMessaging;Qt;";
-	}
-
 	return dFile;
 }

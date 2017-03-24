@@ -104,9 +104,8 @@ private:
 	QAction* act_showMessageNext;
 	QAction* act_showMessageFirst;
 	QAction* act_showMessageLast;
-	QAction *actPasteAsQuote_;
 	QAction *act_changeCase;
-
+	QAction *actPasteAsQuote_;
 	QString currentText;
 	HTMLTextController *controller_;
 	CapitalLettersController *capitalizer_;

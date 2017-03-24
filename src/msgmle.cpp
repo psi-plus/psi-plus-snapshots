@@ -41,8 +41,6 @@
 #include "psioptions.h"
 #include "htmltextcontroller.h"
 
-#include "qdebug.h"
-
 //----------------------------------------------------------------------------
 // CapitalLettersController
 //----------------------------------------------------------------------------
@@ -225,16 +223,16 @@ void ChatEdit::initActions()
 	addAction(act_showMessageLast);
 	connect(act_showMessageLast, SIGNAL(triggered()), SLOT(showHistoryMessageLast()));
 
+	act_changeCase = new QAction(this);
+	addAction(act_changeCase);
+	connect(act_changeCase, SIGNAL(triggered()), capitalizer_, SLOT(changeCase()));
+
 	QClipboard *clipboard = QApplication::clipboard();
 	actPasteAsQuote_ = new QAction(tr("Paste as Quotation"), this);
 	actPasteAsQuote_->setEnabled(clipboard->mimeData()->hasText());
 	addAction(actPasteAsQuote_);
 	connect(actPasteAsQuote_, SIGNAL(triggered()), SLOT(pasteAsQuote()));
 	connect(clipboard, SIGNAL(dataChanged()), SLOT(changeActPasteAsQuoteState()));
-
-	act_changeCase = new QAction(this);
-	addAction(act_changeCase);
-	connect(act_changeCase, SIGNAL(triggered()), capitalizer_, SLOT(changeCase()));
 }
 
 void ChatEdit::setShortcuts()

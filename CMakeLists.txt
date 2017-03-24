@@ -84,6 +84,12 @@ option(PRODUCTION "Build production version" OFF)
 # Define LINUX on Linux like as WIN32 on Windows and APPLE on Mac OS X
 if(UNIX AND NOT APPLE)
 	set(LINUX ON)
+	add_definitions(
+		-DHAVE_X11
+		-DHAVE_FREEDESKTOP
+		-DAPP_PREFIX="${CMAKE_INSTALL_PREFIX}"
+		-DAPP_BIN_NAME="${PROJECT_NAME}"
+	)
 endif()
 
 # Qt dependencies make building very slow

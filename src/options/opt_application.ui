@@ -13,7 +13,7 @@
    <string>OptApplicationUI</string>
   </property>
   <layout class="QVBoxLayout" >
-   <item>
+  <item>
     <widget class="QCheckBox" name="ck_auto_load">
      <property name="text">
       <string>Automatically launch application when OS starts</string>
