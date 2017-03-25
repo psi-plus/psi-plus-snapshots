@@ -18,7 +18,6 @@ endif()
 if(UNIX AND NOT APPLE)
 	add_definitions(
 		-DUSE_DBUS
-		-DHAVE_X11
 		)
 endif()
 
