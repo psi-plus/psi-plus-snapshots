@@ -52,14 +52,17 @@ find_path(
 	tidy
 )
 
-if( EXISTS "${LIBTIDY_INCLUDE_DIR}/buffio.h" OR (EXISTS "${LIBTIDY_INCLUDE_DIR}/tidy/buffio.h") )
+if( EXISTS "${LIBTIDY_INCLUDE_DIR}/tidybuffio.h" OR (EXISTS "${LIBTIDY_INCLUDE_DIR}/tidy/tidybuffio.h") )
+	message("-- Tidy-html5 detected")
+else()
+	message("-- Tidy-html legacy detected")
 	set( LIBTIDY_DEFINITIONS "${LIBTIDY_DEFINITIONS} -DLEGACY_TIDY" )
 endif()
 
 find_library(
 	LIBTIDY_LIBRARY
 	NAMES tidy libtidy libtidy-0-99-0 tidy-0-99-0
-	HINTS 
+	HINTS
 	${PC_LIBTIDY_LIBDIR}
 	${PC_LIBTIDY_LIBRARY_DIRS}
 	${LIBTIDY_ROOT}/lib

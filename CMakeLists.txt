@@ -92,6 +92,12 @@ if(UNIX AND NOT APPLE)
 	)
 endif()
 
+#Detect MXE cross-compilation
+if( (CMAKE_CROSSCOMPILING) AND (DEFINED MSYS) )
+	message("-- MXE environment detected")
+	set(USE_MXE ON)
+endif()
+
 # Qt dependencies make building very slow
 # Track only .h files
 include_regular_expression("^.*\\.h$")
