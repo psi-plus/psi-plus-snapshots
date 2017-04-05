@@ -98,7 +98,7 @@ if(NOT SEPARATE_QJDNS)
 		)
 	add_library(jdns STATIC ${jdns_SRCS} ${jdns_HEADERS} ${jdns_PUBLIC_HEADERS})
 	if(WIN32)
-		target_link_libraries(jdns Ws2_32 Advapi32)
+		target_link_libraries(jdns ws2_32 advapi32)
 	endif(WIN32)
 	set(qjdns_MOC_HDRS
 		src/jdns/include/jdns/qjdns.h

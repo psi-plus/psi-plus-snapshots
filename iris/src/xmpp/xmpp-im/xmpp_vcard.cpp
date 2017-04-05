@@ -41,22 +41,24 @@ QString image2type(const QByteArray &ba)
 	QBuffer buf;
 	buf.setData(ba);
 	buf.open(QIODevice::ReadOnly);
-	QString format = QImageReader::imageFormat( &buf );
+	QString format = QImageReader::imageFormat( &buf ).toUpper();
 
 	// TODO: add more formats: PBM PGM PPM XBM XPM
-	if ( format.toUpper() == QLatin1String("PNG") || format == QLatin1String("PsiPNG") )
+	if ( format == QLatin1String("PNG") || format == QLatin1String("PSIPNG") ) // PsiPNG in normal case
 		return QLatin1String("image/png");
-	if ( format.toUpper() == QLatin1String("MNG") )
+	if ( format == QLatin1String("MNG") )
 		return QLatin1String("video/x-mng");
-	if ( format.toUpper() == QLatin1String("GIF") )
+	if ( format == QLatin1String("GIF") )
 		return QLatin1String("image/gif");
-	if ( format.toUpper() == QLatin1String("JPEG"))
+	if ( format == QLatin1String("JPEG"))
 		return QLatin1String("image/jpeg");
-	if ( format.toUpper() == QLatin1String("BMP") )
+	if ( format == QLatin1String("BMP") )
 		return QLatin1String("image/bmp");
-	if ( format.toUpper() == QLatin1String("XPM") )
+	if ( format == QLatin1String("WEBP") )
+		return QLatin1String("image/webp");
+	if ( format == QLatin1String("XPM") )
 		return QLatin1String("image/x-xpm");
-	if ( format.toUpper() == QLatin1String("SVG") )
+	if ( format == QLatin1String("SVG") )
 		return QLatin1String("image/svg+xml");
 
 

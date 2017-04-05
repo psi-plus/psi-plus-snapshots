@@ -21,7 +21,7 @@ set(jdns_HEADERS
 add_library(jdns ${jdns_SRCS} ${jdns_HEADERS} ${jdns_PUBLIC_HEADERS})
 
 if(WIN32)
-  target_link_libraries(jdns Ws2_32 Advapi32)
+  target_link_libraries(jdns ws2_32 advapi32)
 endif(WIN32)
 
 if(NOT android)
