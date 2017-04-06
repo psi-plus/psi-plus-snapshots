@@ -220,6 +220,7 @@ if(WIN32)
 		libgcrypt-11.dll
 		libgcrypt-20.dll
 		libotr.dll
+		libotr-5.dll
 		libtidy.dll
 		zlib1.dll
 		libgpg-error-0.dll
@@ -251,6 +252,7 @@ if(WIN32)
 			libpcre16-0.dll
 			libpcre-1.dll
 			libpng16-16.dll
+			libssp-0.dll
 			libsqlite3-0.dll
 			libtiff-5.dll
 			libwebp-5.dll
