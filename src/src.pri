@@ -154,6 +154,7 @@ HEADERS += \
 	$$PWD/infodlg.h \
 	$$PWD/translationmanager.h \
 	$$PWD/eventdb.h \
+	$$PWD/edbflatfile.h \
 	$$PWD/historydlg.h \
 	$$PWD/tipdlg.h \
 	$$PWD/searchdlg.h \
@@ -290,6 +291,7 @@ SOURCES += \
 	$$PWD/infodlg.cpp \
 	$$PWD/translationmanager.cpp \
 	$$PWD/eventdb.cpp \
+	$$PWD/edbflatfile.cpp \
 	$$PWD/historydlg.cpp \
 	$$PWD/searchdlg.cpp \
 	$$PWD/registrationdlg.cpp \
