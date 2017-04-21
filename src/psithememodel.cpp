@@ -36,17 +36,37 @@ struct PsiThemeModel::Loader
 
 	ThemeItemInfo operator()(const QString &id)
 	{
-		Theme *t = provider->load(id);
 		ThemeItemInfo ti;
-		if (t) { // if loaded
-			ti.id = id;
-			ti.title = t->title();
-			ti.screenshot = t->screenshot();
+		ti.id = id;
+		Theme *theme = provider->theme(id);
+		if (theme && theme->load()) {
+			ti.title = theme->title();
+			ti.screenshot = theme->screenshot();
 			ti.isValid = true;
-		} else {
-			ti.isValid = false;
 		}
+
+		qDebug("%s theme loading status: %s", qPrintable(theme->id()), ti.isValid? "success" : "failure");
 		return ti;
+	}
+
+	void asyncLoad(const QString &id, std::function<void(const ThemeItemInfo&)> loadCallback)
+	{
+		Theme *theme = provider->theme(id);
+		if (!theme || !theme->load([this, theme, loadCallback](bool success) {
+			qDebug("%s theme loading status: %s", qPrintable(theme->id()), success? "success" : "failure");
+			// TODO invent something smarter
+
+		    ThemeItemInfo ti;
+			if (success) { // if loaded
+				ti.id = theme->id();
+				ti.title = theme->title();
+				ti.screenshot = theme->screenshot();
+				ti.isValid = true;
+			}
+		    loadCallback(ti);
+		})) {
+			loadCallback(ThemeItemInfo());
+		}
 	}
 
 	PsiThemeProvider *provider;
@@ -72,9 +92,7 @@ void PsiThemeModel::loadProgress(int pv)
 void PsiThemeModel::loadComplete()
 {
 	QFutureIterator<ThemeItemInfo> i(themesFuture);
-#if QT_VERSION >= 0x040600
 	beginResetModel();
-#endif
 	while (i.hasNext()) {
 		ThemeItemInfo ti = i.next();
 		if (ti.isValid) {
@@ -84,11 +102,7 @@ void PsiThemeModel::loadComplete()
 			qDebug("failed to load theme %s", qPrintable(ti.id));
 		}
 	}
-#if QT_VERSION >= 0x040600
 	endResetModel();
-#else
-	reset();
-#endif
 }
 
 void PsiThemeModel::setType(const QString &type)
@@ -100,20 +114,18 @@ void PsiThemeModel::setType(const QString &type)
 			themesFuture = QtConcurrent::mapped(provider->themeIds(), loader);
 			themeWatcher.setFuture(themesFuture);
 		} else {
-#if QT_VERSION >= 0x040600
-			beginResetModel();
-#endif
+
 			foreach (const QString id, provider->themeIds()) {
-				ThemeItemInfo ti = loader(id);
-				if (ti.isValid) {
-					themesInfo.append(ti);
-				}
+				loader.asyncLoad(id, [this](const ThemeItemInfo &ti) {
+					if (ti.isValid) {
+						beginInsertRows(QModelIndex(), themesInfo.size(), themesInfo.size());
+						//beginResetModel(); // FIXME make proper model update
+						themesInfo.append(ti);
+						endInsertRows();
+						//endResetModel();
+					}
+				});
 			}
-#if QT_VERSION >= 0x040600
-			endResetModel();
-#else
-			reset();
-#endif
 		}
 	}
 }

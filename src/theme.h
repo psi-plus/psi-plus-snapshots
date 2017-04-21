@@ -26,24 +26,56 @@
 #ifndef PSITHEME_H
 #define PSITHEME_H
 
+#include <QObject>
 #include <QSharedData>
 #include <QHash>
 #include <QStringList>
+#include <functional>
 
-class ThemeMetaData;
+class QFileInfo;
+class ThemePrivate;
+class PsiThemeProvider;
 
 //-----------------------------------------------
 // Theme
 //-----------------------------------------------
-class Theme {
+class Theme
+{
 public:
-	Theme(const QString &id);
-	Theme(const Theme &other);
-	virtual ~Theme();
+    class ResourceLoader {
+        // By default theme does not internal info about its fs.
+        // That means rereading zip themes on each file or
+        // dir by dir search of each file with name in invalid case.
+        // To optimize it, we have this class. It keeps zip opened
+        // has a cache of mapping requested names to real.
 
-	static QByteArray loadData(const QString &fileName, const QString &dir, bool caseInsensetive = false);
+    public:
+        virtual ~ResourceLoader();
+        virtual QByteArray loadData(const QString &fileName) = 0;
+        virtual bool fileExists(const QString &fileName) = 0;
+    };
+
+
+	Theme();
+	Theme(PsiThemeProvider *provider);
+	Theme(const Theme &other);
+	Theme &operator=(const Theme &other);
+	virtual ~Theme();
+	bool isValid() const;
+
+	virtual bool exists() = 0;
+	virtual bool load(); // synchronous load
+	virtual bool load(std::function<void(bool)> loadCallback);  // asynchronous load
+
+    static bool isCompressed(const QFileInfo &); // just tells if theme looks like compressed.
+    bool isCompressed();
+	// load file from theme in `themePath`
+	static QByteArray loadData(const QString &fileName, const QString &themePath, bool caseInsensetive = false);
+	QByteArray loadData(const QString &fileName) const;
+    ResourceLoader* resourceLoader();
 
 	const QString &id() const;
+	void setId(const QString &id);
 	const QString &name() const;
 	void setName(const QString &name);
 	const QString &version() const;
@@ -51,8 +83,10 @@ public:
 	const QStringList &authors() const;
 	const QString &creation() const;
 	const QString &homeUrl() const;
-	const QString &fileName() const;
-	void setFileName(const QString &f);
+
+	PsiThemeProvider* themeProvider() const;
+	const QString &filePath() const;
+	void setFilePath(const QString &f);
 	const QHash<QString, QString> info() const;
 	void setInfo(const QHash<QString, QString> &i);
 
@@ -61,8 +95,9 @@ public:
 
 	virtual QString title() const;
 	virtual QByteArray screenshot() = 0; // this hack must be replaced with something widget based
-protected:
-	QSharedDataPointer<ThemeMetaData> md;
+private:
+	friend class ThemePrivate;
+	QExplicitlySharedDataPointer<ThemePrivate> d;
 };
 
 

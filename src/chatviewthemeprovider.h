@@ -24,7 +24,9 @@
 
 #include "psithemeprovider.h"
 
+class QWebEngineUrlRequestInterceptor;
 class ChatViewTheme;
+class ThemeServer;
 
 class ChatViewThemeProvider : public PsiThemeProvider
 {
@@ -35,11 +37,18 @@ public:
 
 	const char* type() const { return "chatview"; }
 	const QStringList themeIds() const;
-	Theme* load(const QString &themeId);
+	Theme* theme(const QString &id);
+
 	bool loadCurrent();
-	Theme *current() const { return (Theme*)curTheme; } // currently loaded theme
+	Theme *current() const { return (Theme *)curTheme; } // currently loaded theme
+
 	void setCurrentTheme(const QString &);
 	virtual int screenshotWidth() const { return 512; } // hack
+
+#if QT_WEBENGINEWIDGETS_LIB
+	ThemeServer *themeServer();
+	QWebEngineUrlRequestInterceptor *requestInterceptor();
+#endif
 
 	QString optionsName() const { return tr("Chat Message Style"); }
 	QString optionsDescription() const { return tr("Configure your chat theme here"); }
@@ -51,7 +60,7 @@ signals:
 	void themeChanged();
 
 private:
-	ChatViewTheme *curTheme;
+	ChatViewTheme *curTheme; // FIXME it does not make sense to keep it as pointer
 };
 
 class GroupChatViewThemeProvider : public ChatViewThemeProvider

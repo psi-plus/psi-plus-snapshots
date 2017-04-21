@@ -135,7 +135,7 @@ void ChatDlg::init()
 
 	chatEdit()->installEventFilter(this);
 	chatView()->setDialog(this);
-	chatView()->setSessionData(false, jid().full(), jid().full()); //FIXME fix nick updating
+	chatView()->setSessionData(false, jid(), jid().full()); //FIXME fix nick updating
 #ifdef WEBKIT
 	chatView()->setAccount(account());
 #endif
@@ -532,8 +532,12 @@ void ChatDlg::doVoice()
 
 void ChatDlg::updateAvatar(const Jid& j)
 {
-	if (j.compare(jid(), false))
+	if (j.compare(jid(), false)) {
 		updateAvatar();
+		chatView()->updateAvatar(j, ChatViewCommon::RemoteParty);
+	} else if (j.compare(account()->jid(), false)) {
+		chatView()->updateAvatar(j, ChatViewCommon::LocalParty);
+	}
 }
 
 void ChatDlg::setLooks()

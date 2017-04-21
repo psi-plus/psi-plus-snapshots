@@ -28,10 +28,14 @@
 
 #include "psitextview.h"
 #include "chatviewcommon.h"
+#include "xmpp/jid/jid.h"
 
 class ChatEdit;
 class ChatViewBase;
 class MessageView;
+namespace XMPP {
+	class Jid;
+}
 
 class ChatView : public PsiTextView, public ChatViewCommon
 {
@@ -51,7 +55,7 @@ public:
 
 	void init();
 	void setDialog(QWidget* dialog);
-	void setSessionData(bool isMuc, const QString &jid, const QString name);
+	void setSessionData(bool isMuc, const XMPP::Jid &jid, const QString name);
 
 	void appendText(const QString &text);
 	void dispatchMessage(const MessageView &);
@@ -63,6 +67,7 @@ public:
 	ChatView *textWidget();
 	QWidget *realTextWidget();
 
+	void updateAvatar(const XMPP::Jid &jid, ChatViewCommon::UserType utype);
 public slots:
 	void scrollUp();
 	void scrollDown();
@@ -77,6 +82,7 @@ protected:
 	QString formatTimeStamp(const QDateTime &time);
 	QString colorString(bool local, bool spooled) const;
 
+	QString replaceMarker(const MessageView &mv) const;
 	void renderMucMessage(const MessageView &);
 	void renderMessage(const MessageView &);
 	void renderSysMessage(const MessageView &);
@@ -95,11 +101,12 @@ private slots:
 signals:
 	void showNM(const QString&);
 	void quote(const QString &text);
+	void nickInsertClick(const QString &nick);
 
 private:
 	bool isMuc_;
 	bool isEncryptionEnabled_;
-	QString jid_;
+	XMPP::Jid jid_;
 	QString name_;
 	int  oldTrackBarPosition;
 	QPointer<QWidget> dialog_;

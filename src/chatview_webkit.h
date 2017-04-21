@@ -33,9 +33,10 @@ class ChatView;
 class MessageView;
 class PsiAccount;
 class ChatViewTheme;
-
-
-class ChatViewJSObject;
+class ChatViewPrivate;
+namespace XMPP {
+	class Jid;
+}
 
 class ChatView : public QFrame, public ChatViewCommon
 {
@@ -50,12 +51,11 @@ public:
 	QSize sizeHint() const;
 
 	void setDialog(QWidget* dialog);
-	void setSessionData(bool isMuc, const QString &jid, const QString name);
-	void setAccount(PsiAccount *acc) { account_ = acc; }
+	void setSessionData(bool isMuc, const XMPP::Jid &jid, const QString name);
+	void setAccount(PsiAccount *acc);
 
 	void contextMenuEvent(QContextMenuEvent* event);
 	void sendJsObject(const QVariantMap &);
-	void sendJsCommand(const QString &cmd);
 	bool handleCopyEvent(QObject *object, QEvent *event, ChatEdit *chatEdit);
 
 	void dispatchMessage(const MessageView &m);
@@ -65,10 +65,12 @@ public:
 	bool internalFind(QString str, bool startFromBeginning = false);
 	WebView * textWidget();
 	QWidget * realTextWidget();
+	QObject * jsBridge();
 
 public slots:
 	void scrollUp();
 	void scrollDown();
+	void updateAvatar(const XMPP::Jid &jid, UserType utype);
 
 	void setEncryptionEnabled(bool enabled);
 
@@ -84,29 +86,22 @@ protected slots:
 
 public slots:
 	void init();
-
 private slots:
+#ifndef QT_WEBENGINEWIDGETS_LIB
 	void embedJsObject();
+#endif
 	void checkJsBuffer();
 	void sessionInited();
 
 signals:
 	void showNM(const QString&);
+	void nickInsertClick(const QString &nick);
 
 private:
+	friend class ChatViewPrivate;
 	friend class ChatViewJSObject;
-	ChatViewTheme* currentTheme();
-
-	WebView *webView;
-	ChatViewJSObject *jsObject;
-	QStringList jsBuffer_;
-	bool sessionReady_;
-	QPointer<QWidget> dialog_;
-	bool isMuc_;
-	bool isEncryptionEnabled_;
-	QString jid_;
-	QString name_;
-	PsiAccount *account_;
+	friend class ChatViewThemeSessionBridge;
+	QScopedPointer<ChatViewPrivate> d;
 };
 
 #endif

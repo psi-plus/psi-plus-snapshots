@@ -21,7 +21,11 @@
 #ifndef _WEBVIEW_H
 #define	_WEBVIEW_H
 
+#ifdef QT_WEBENGINEWIDGETS_LIB
+#include <QWebEngineView>
+#else
 #include <QWebView>
+#endif
 #include <QMessageBox>
 #include <QMenu>
 #include <QContextMenuEvent>
@@ -34,30 +38,6 @@
 #include "networkaccessmanager.h"
 #include "iconset.h"
 
-class IconHandler : public NAMSchemeHandler
-{
-	QByteArray data(const QUrl &url) const {
-#ifdef HAVE_QT5
-		int w = QUrlQuery(url.query()).queryItemValue("w").toInt();
-		int h = QUrlQuery(url.query()).queryItemValue("h").toInt();
-#else
-		int w = url.queryItemValue("w").toInt();
-		int h = url.queryItemValue("h").toInt();
-#endif
-		PsiIcon icon = IconsetFactory::icon(url.path());
-		if (w && h && !icon.isAnimated()) {
-			QByteArray ba;
-			QBuffer buffer(&ba);
-			buffer.open(QIODevice::WriteOnly);
-			icon.pixmap().scaled(w, h, Qt::KeepAspectRatio, Qt::SmoothTransformation)
-					.toImage().save(&buffer, "PNG");
-			return ba;
-		} else { //scaling impossible, return as is. do scaling with help of css or html attributes
-			return IconsetFactory::raw(url.path());
-		}
-	}
-};
-
 /**
  * Extended QWebView.
  *
@@ -68,8 +48,11 @@ class IconHandler : public NAMSchemeHandler
  * Better name for it would be: PsiWebView, but it's used in HTMLChatView which is
  * Psi-unaware.
  */
+#ifdef QT_WEBENGINEWIDGETS_LIB
+class WebView : public QWebEngineView {
+#else
 class WebView : public QWebView {
-
+#endif
     Q_OBJECT
 public:
 
@@ -78,7 +61,9 @@ public:
 	/** Evaluates JavaScript code */
 	void evaluateJS(const QString &scriptSource = "");
 
+#ifndef QT_WEBENGINEWIDGETS_LIB
 	QString selectedText();
+#endif
 	bool isLoading() { return isLoading_; }
 
 public slots:
@@ -87,15 +72,17 @@ public slots:
 protected:
     /** Creates menu with Copy actions */
 	void contextMenuEvent(QContextMenuEvent* event);
+#ifndef QT_WEBENGINEWIDGETS_LIB
 	void mousePressEvent ( QMouseEvent * event );
 	void mouseReleaseEvent ( QMouseEvent * event );
 	void mouseMoveEvent(QMouseEvent *event);
-
+#endif
 	//QAction* copyAction, *copyLinkAction;
 
 private:
+#ifndef QT_WEBENGINEWIDGETS_LIB
 	void convertClipboardHtmlImages(QClipboard::Mode);
-
+#endif
 	bool possibleDragging;
 	bool isLoading_;
 	QStringList jsBuffer_;

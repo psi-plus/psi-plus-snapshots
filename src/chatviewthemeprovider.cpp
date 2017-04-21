@@ -24,21 +24,23 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
+#if QT_WEBENGINEWIDGETS_LIB
+#include <QWebEngineUrlRequestInterceptor>
+#endif
 
 #include "chatviewtheme.h"
 #include "psioptions.h"
 #include "theme.h"
 #include "applicationinfo.h"
-#include "psiwkavatarhandler.h"
 #include "psithememanager.h"
-
-static bool singleInited = false;
-static QMap<QString, QString> chatViewScripts;
-static QMap<QString, QString> chatViewAdapterDirs;
+#if QT_WEBENGINEWIDGETS_LIB
+# include "themeserver.h"
+#endif
+#include "chatviewthemeprovider_priv.h"
 
 class ChatViewThemeProvider;
 
-class ChatViewThemeUrlHandler : public NAMSchemeHandler
+class ChatViewThemeUrlHandler : public NAMDataHandler
 {
 public:
 	QByteArray data(const QUrl &url) const
@@ -56,8 +58,7 @@ public:
 		}
 		if (theme) {
 			//theme->ChatViewTheme
-			QByteArray td = Theme::loadData(url.path().mid(themeId.size() + 2), /* 2 slashes before and after */
-											theme->fileName(), theme->caseInsensitiveFS());
+			QByteArray td = theme->loadData(url.path().mid(themeId.size() + 2)); /* 2 slashes before and after */
 			if (td.isNull()) {
 				qDebug("content of %s is not found in the theme",
 					   qPrintable(url.toString()));
@@ -71,19 +72,6 @@ public:
 
 };
 
-static void singleInit(PsiCon *pc)
-{
-	if (!singleInited) {
-		NetworkAccessManager::instance()->setSchemeHandler(
-				"avatar", new PsiWKAvatarHandler(pc));
-		NetworkAccessManager::instance()->setSchemeHandler(
-				"theme", new ChatViewThemeUrlHandler());
-		singleInited = true;
-	}
-}
-
-
-
 //--------------------------------------
 // ChatViewThemeProvider
 //--------------------------------------
@@ -91,7 +79,7 @@ ChatViewThemeProvider::ChatViewThemeProvider(QObject *parent_)
 	: PsiThemeProvider(parent_)
 	, curTheme(0)
 {
-	singleInit((PsiCon*)parent());
+	ChatViewCon::init((PsiCon*)parent());
 }
 
 const QStringList ChatViewThemeProvider::themeIds() const
@@ -128,65 +116,16 @@ const QStringList ChatViewThemeProvider::themeIds() const
  * @param themeId theme to load
  * @return
  */
-Theme * ChatViewThemeProvider::load(const QString &themeId)
+Theme* ChatViewThemeProvider::theme(const QString &id)
 {
-	QString up;
-	if (chatViewScripts.value("util").isEmpty()) { // if not cached yet or cached some bad version (empty)
-		if (!(up = themePath("chatview/util.js")).isEmpty()) {
-			QFile file(up);
-			if (file.open(QIODevice::ReadOnly)) {
-				chatViewScripts["util"] = file.readAll();
-			}
-		}
+	auto theme = new ChatViewTheme(this);
+	theme->setId(id);
+	if (theme->exists()) {
+		return theme;
 	}
 
-	// find theme. load adapter is necessary. load theme. return theme
-	for (;;) {
-		if (chatViewScripts.value("util").isEmpty()) { // util is still not cached
-			break;
-		}
-
-		int pos;
-		if ((pos = themeId.indexOf('/')) < 0) { // themeId = <adapter name>/<theme dir>
-			break;
-		}
-		QString tp = themePath("chatview/" + themeId);
-		QString adapterName = themeId.mid(0, pos);
-		if (tp.isEmpty()) { // theme does not exists
-			break;
-		}
-
-		QString ap, ad;
-		if (chatViewScripts.value(adapterName).isEmpty() &&
-			!(ap = themePath("chatview/" + adapterName + "/adapter.js")).isEmpty()) {
-
-			QFile afile(ap);
-			if (!afile.open(QIODevice::ReadOnly)) {
-				qDebug("%s %s", qPrintable(ap), qPrintable(afile.errorString()));
-				break;
-			}
-
-			QString ajs = QString::fromUtf8(afile.readAll());
-			if (ajs.isEmpty()) {
-				qDebug("%s empty/unreadable", qPrintable(ap));
-				break;
-			}
-			chatViewScripts[adapterName] = ajs;
-			ad = QFileInfo(afile).dir().absolutePath();
-			chatViewAdapterDirs.insert(adapterName, ad);
-		} else {
-			ad = chatViewAdapterDirs.value(adapterName);
-		}
-
-		ChatViewTheme *theme = new ChatViewTheme(themeId);
-		if (theme->load(tp, QStringList()<<chatViewScripts["util"]
-						<<chatViewScripts[adapterName], ad)) {
-			return theme;
-		}
-		break;
-	}
-
-	return 0;
+	delete theme;
+	return nullptr;
 }
 
 /**
@@ -202,26 +141,36 @@ bool ChatViewThemeProvider::loadCurrent()
 	if (!loadedId.isEmpty() && loadedId == themeName) {
 		return true; // already loaded. nothing todo
 	}
-	ChatViewTheme *theme = 0;
-	if (!(theme = (ChatViewTheme *)load(themeName))) {
-		if (themeName != "psi/classic") {
+	ChatViewTheme *t = 0;
+	if (!(t = (ChatViewTheme *)theme(themeName))) {
+		if (themeName != QLatin1String("psi/classic")) {
+			qDebug("Invalid theme id: %s", qPrintable(themeName));
 			qDebug("fallback to classic chatview theme");
-			if ( (theme = (ChatViewTheme *)load("psi/classic")) ) {
-				PsiOptions::instance()->setOption(optionString(), "psi/classic");
+			PsiOptions::instance()->setOption(optionString(), QLatin1String("psi/classic"));
+			return loadCurrent();
+		}
+		qDebug("Classic theme failed to load. No fallback..");
+		return false;
+	}
+
+	bool startedLoading = t->load([this, t, loadedId](bool success){
+		if (!success && t->id() != QLatin1String("psi/classic")) {
+			qDebug("Failed to load theme \"%s\"", qPrintable(t->id()));
+			qDebug("fallback to classic chatview theme");
+			PsiOptions::instance()->setOption(optionString(), QLatin1String("psi/classic"));
+			loadCurrent();
+		} else if (success) {
+			if (curTheme) {
+				delete curTheme;
 			}
-		}
-	}
-	if (theme) {
-		if (curTheme) {
-			delete curTheme;
-		}
-		curTheme = theme;
-		if (theme->id() != loadedId) {
-			emit themeChanged();
-		}
-		return true;
-	}
-	return false;
+			curTheme = t;
+			if (t->id() != loadedId) {
+				emit themeChanged();
+			}
+		} // else it was already classic
+	});
+
+	return startedLoading; // does not really matter. may fail later on loading
 }
 
 void ChatViewThemeProvider::setCurrentTheme(const QString &id)
@@ -231,3 +180,17 @@ void ChatViewThemeProvider::setCurrentTheme(const QString &id)
 		loadCurrent();
 	}
 }
+
+#if QT_WEBENGINEWIDGETS_LIB
+ThemeServer *ChatViewThemeProvider::themeServer()
+{
+	Q_ASSERT(ChatViewCon::isReady());
+	return ChatViewCon::instance()->themeServer;
+}
+
+QWebEngineUrlRequestInterceptor *ChatViewThemeProvider::requestInterceptor()
+{
+	Q_ASSERT(ChatViewCon::isReady());
+	return ChatViewCon::instance()->requestInterceptor;
+}
+#endif

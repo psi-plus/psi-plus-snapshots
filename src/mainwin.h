@@ -51,6 +51,8 @@ namespace XMPP {
 	class Status;
 }
 
+using namespace XMPP;
+
 class MainWin : public AdvancedWidget<QMainWindow>
 {
 	Q_OBJECT
@@ -167,7 +169,7 @@ private slots:
 	void doTrayToolTip(QObject *, QPoint);
 
 	void nickChanged();
-	void avatarChanged();
+	void avatarChanged(const Jid &jid);
 
 	void hideTimerTimeout();
 
