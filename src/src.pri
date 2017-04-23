@@ -669,6 +669,7 @@ qtwebengine|qwebkit {
 	qtwebengine {
 		CONFIG += c++14
 		QT += webenginewidgets webchannel
+		DEFINES += WEBENGINE
 		include (../3rdparty/qhttp.pri)
 
 		HEADERS +=  \

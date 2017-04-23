@@ -1,7 +1,10 @@
 # common stuff for iris.pro and iris.pri
 
-# FIXME: Remove this
-DEFINES += IRIS_XMPP_JID_DEPRECATED
+greaterThan(QT_MAJOR_VERSION, 4) {
+	CONFIG += c++11
+} else {
+	QMAKE_CXXFLAGS += -std=c++11
+}
 
 # default build configuration
 !iris_build_pri {
