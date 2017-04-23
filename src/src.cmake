@@ -120,6 +120,7 @@ list(APPEND HEADERS
 	contactlistview.h
 	contactupdatesmanager.h
 	discodlg.h
+	edbflatfile.h
 	eventdb.h
 	eventdlg.h
 	filecache.h
@@ -221,6 +222,7 @@ list(APPEND SOURCES
 	contactlistaccountmenu.cpp
 	contactlistgroupmenu.cpp
 	discodlg.cpp
+	edbflatfile.cpp
 	eventdlg.cpp
 	filetransdlg.cpp
 	gcuserview.cpp
@@ -496,13 +498,14 @@ if(ENABLE_WEBKIT)
 		chatviewthemeprovider.cpp
 		)
 	if(USE_WEBENGINE)
-		include(../3rdparty/qhttp.cmake)
-		include_directories(
-			../3rdparty/qhttp/src
-			../3rdparty/http-parser
+		list(APPEND SOURCES
+			themeserver.cpp
 		)
 		list(APPEND PLAIN_SOURCES
 			themeserver.cpp
+		)
+		list(APPEND HEADERS
+			themeserver.h
 		)
 		list(APPEND PLAIN_HEADERS
 			themeserver.h

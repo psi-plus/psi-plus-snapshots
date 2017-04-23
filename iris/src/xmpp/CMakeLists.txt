@@ -144,6 +144,9 @@ add_library(iris
 	${PLAIN_HEADERS}
 	)
 
+set_property(TARGET iris PROPERTY CXX_STANDARD 11)
+set_property(TARGET iris PROPERTY CXX_STANDARD_REQUIRED ON)
+
 target_link_libraries(iris ${IDN_LIBRARY} ${ZLIB_LIBRARY})
 if(USE_QT5)
 	target_link_libraries(iris irisnet Qt5::Core Qt5::Gui Qt5::Network Qt5::Xml ${qca_LIB})

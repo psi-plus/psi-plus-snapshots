@@ -149,15 +149,16 @@ endmacro()
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${CMAKE_CURRENT_BINARY_DIR}
+	${PROJECT_SOURCE_DIR}
 	${QCA_INCLUDES}
-	)
+)
 
 if( BUNDLED_IRIS )
 	include_directories(
-		../iris/src
-		../iris/include
-		../iris/include/iris
-		)
+		${PROJECT_SOURCE_DIR}/iris/src
+		${PROJECT_SOURCE_DIR}/iris/include
+		${PROJECT_SOURCE_DIR}/iris/include/iris
+	)
 else()
 	include_directories(${Iris_INCLUDE_DIR})
 endif()
@@ -223,6 +224,16 @@ add_subdirectory(libpsi/tools)
 add_subdirectory(widgets)
 add_subdirectory(sxe)
 add_subdirectory(whiteboarding)
+
+if(USE_WEBENGINE)
+	add_subdirectory( "../3rdparty" "${CMAKE_CURRENT_BINARY_DIR}/qhttp" )
+	include_directories(
+		${CMAKE_CURRENT_BINARY_DIR}/qhttp
+		${PROJECT_SOURCE_DIR}/3rdparty/http-parser
+		${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src
+	)
+endif()
+
 
 if(EXISTS "${PROJECT_SOURCE_DIR}/translations")
 	set(LANGS_EXISTS ON)
@@ -323,6 +334,15 @@ add_executable(${PROJECT_NAME}
 	${RC_FILE}
 	)
 
+if(USE_WEBENGINE)
+	set(STANDARD_NUM 14)
+else()
+	set(STANDARD_NUM 11)
+endif()
+
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD ${STANDARD_NUM})
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
+
 add_dependencies(${PROJECT_NAME} iris)
 add_dependencies(${PROJECT_NAME} build_ui_files)
 
@@ -335,6 +355,7 @@ target_link_libraries(${PROJECT_NAME}
 	${qca_LIB}
 	)
 target_link_libraries(${PROJECT_NAME}
+	qhttp
 	options
 	Certificates
 	psimedia
