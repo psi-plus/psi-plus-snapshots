@@ -481,7 +481,6 @@ if(ENABLE_WEBKIT)
 		chatviewthemeprovider.h
 		)
 	list(APPEND PLAIN_HEADERS
-		psiwkavatarhandler.h
 		jsutil.h
 		chatviewtheme.h
 		)
@@ -493,12 +492,15 @@ if(ENABLE_WEBKIT)
 		networkaccessmanager.cpp
 		bytearrayreply.cpp
 		webview.cpp
-		psiwkavatarhandler.cpp
 		jsutil.cpp
 		chatviewthemeprovider.cpp
 		)
 	if(USE_WEBENGINE)
 		include(../3rdparty/qhttp.cmake)
+		include_directories(
+			../3rdparty/qhttp/src
+			../3rdparty/http-parser
+		)
 		list(APPEND PLAIN_SOURCES
 			themeserver.cpp
 		)

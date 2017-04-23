@@ -10,29 +10,37 @@ if(WIN32)
 	)
 endif()
 
+include_directories(
+	${PROJECT_SOURCE_DIR}/3rdparty
+	${PROJECT_SOURCE_DIR}/3rdparty/http-parser
+	${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src
+)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++14")
+
 set(http_parser_srcs
-	http-parser/http_parser.c
+	${PROJECT_SOURCE_DIR}/3rdparty/http-parser/http_parser.c
 )
 
 set(http_parser_hdrs
-	http-parser/http_parser.h
+	${PROJECT_SOURCE_DIR}/3rdparty/http-parser/http_parser.h
 )
 
 set(qhttp_srcs
-	qhttp/src/qhttpabstracts.cpp
-	qhttp/src/qhttpserverconnection.cpp
-	qhttp/src/qhttpserverrequest.cpp
-	qhttp/src/qhttpserverresponse.cpp
-	qhttp/src/qhttpserver.cpp
+	${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src/qhttpabstracts.cpp
+	${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src/qhttpserverconnection.cpp
+	${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src/qhttpserverrequest.cpp
+	${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src/qhttpserverresponse.cpp
+	${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src/qhttpserver.cpp
 )
 
 set(qhttp_hdrs
-    qhttp/src/qhttpfwd.hpp
-    qhttp/src/qhttpabstracts.hpp
-    qhttp/src/qhttpserverconnection.hpp
-    qhttp/src/qhttpserverrequest.hpp
-    qhttp/src/qhttpserverresponse.hpp
-    qhttp/src/qhttpserver.hpp
+	${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src/qhttpfwd.hpp
+	${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src/qhttpabstracts.hpp
+	${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src/qhttpserverconnection.hpp
+	${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src/qhttpserverrequest.hpp
+	${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src/qhttpserverresponse.hpp
+	${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src/qhttpserver.hpp
 )
 
 list(APPEND PLAIN_SOURCES
