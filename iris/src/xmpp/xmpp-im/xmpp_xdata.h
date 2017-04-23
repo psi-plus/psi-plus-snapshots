@@ -87,7 +87,7 @@ namespace XMPP {
 			};
 
 			struct MediaUri {
-				QString type;
+				QString mimeType;
 				QString uri;
 				QHash<QString,QString> params;
 			};
