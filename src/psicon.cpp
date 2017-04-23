@@ -298,6 +298,7 @@ public:
 	EDB *edb;
 	S5BServer *s5bServer;
 	IconSelectPopup *iconSelect;
+	NetworkAccessManager *nam;
 #ifdef FILETRANSFER
 	FileTransDlg *ftwin;
 #endif
@@ -527,6 +528,7 @@ bool PsiCon::init()
 		//}
 	}
 
+	d->nam = new NetworkAccessManager(this);
 #ifdef WEBKIT
 	PsiThemeManager::instance()->registerProvider(
 			new ChatViewThemeProvider(this), true);
@@ -722,6 +724,7 @@ void PsiCon::deinit()
 		acc = d->contactList->getUserAccountList();
 		delete d->contactList;
 	}
+	d->nam->releaseHandlers();
 
 	// delete s5b server
 	delete d->s5bServer;
@@ -850,6 +853,11 @@ QStringList PsiCon::xmppFatures() const
 TabManager *PsiCon::tabManager() const
 {
 	return d->tabManager;
+}
+
+NetworkAccessManager *PsiCon::networkAccessManager() const
+{
+	return d->nam;
 }
 
 TuneControllerManager *PsiCon::tuneManager() const
@@ -1935,7 +1943,7 @@ void PsiCon::promptUserToCreateAccount()
 		w.exec();
 	}
 	else if (msgBox.clickedButton() ==  registerButton) {
-		AccountRegDlg w;
+		AccountRegDlg w(this);
 		int n = w.exec();
 		if (n == QDialog::Accepted) {
 			contactList()->createAccount(w.jid().node(),w.jid(),w.pass(),w.useHost(),w.host(),w.port(),w.legacySSLProbe(),w.ssl(),w.proxy(),w.tlsOverrideDomain(), w.tlsOverrideCert());
