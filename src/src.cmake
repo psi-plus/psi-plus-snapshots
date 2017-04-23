@@ -497,6 +497,15 @@ if(ENABLE_WEBKIT)
 		jsutil.cpp
 		chatviewthemeprovider.cpp
 		)
+	if(USE_WEBENGINE)
+		include(../3rdparty/qhttp.cmake)
+		list(APPEND PLAIN_SOURCES
+			themeserver.cpp
+		)
+		list(APPEND PLAIN_HEADERS
+			themeserver.h
+		)
+	endif()
 else()
 	list(APPEND HEADERS
 		chatview_te.h
