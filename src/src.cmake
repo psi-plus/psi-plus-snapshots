@@ -9,12 +9,6 @@ add_definitions(
 	-DQT_STATICPLUGIN
 	)
 
-if(ENABLE_WEBKIT)
-	add_definitions(
-		-DWEBKIT
-		)
-endif()
-
 if(UNIX AND NOT APPLE)
 	add_definitions(
 		-DUSE_DBUS
@@ -216,6 +210,7 @@ list(APPEND SOURCES
 	accountmanagedlg.cpp
 	actionlist.cpp
 	activecontactsmenu.cpp
+	ahcommanddlg.cpp
 	ahcservermanager.cpp
 	alerticon.cpp
 	avatars.cpp
@@ -344,7 +339,6 @@ list(APPEND PLAIN_SOURCES
 	ahcexecutetask.cpp
 	ahcformdlg.cpp
 	ahcommand.cpp
-	ahcommanddlg.cpp
 	ahcommandserver.cpp
 	alertable.cpp
 	alertmanager.cpp
@@ -475,12 +469,27 @@ list(APPEND PLAIN_SOURCES
 	)
 
 if(ENABLE_WEBKIT)
+	if(USE_WEBENGINE)
+		list(APPEND PLAIN_SOURCES
+			themeserver.cpp
+		)
+		list(APPEND PLAIN_HEADERS
+			themeserver.h
+		)
+		list(APPEND SOURCES
+			themeserver.cpp
+		)
+		list(APPEND HEADERS
+			themeserver.h
+		)
+	endif()
 	list(APPEND HEADERS
 		chatview_webkit.h
 		networkaccessmanager.h
 		bytearrayreply.h
 		webview.h
 		chatviewthemeprovider.h
+		chatviewthemeprovider_priv.h
 		)
 	list(APPEND PLAIN_HEADERS
 		jsutil.h
@@ -496,21 +505,8 @@ if(ENABLE_WEBKIT)
 		webview.cpp
 		jsutil.cpp
 		chatviewthemeprovider.cpp
+		chatviewthemeprovider_priv.cpp
 		)
-	if(USE_WEBENGINE)
-		list(APPEND SOURCES
-			themeserver.cpp
-		)
-		list(APPEND PLAIN_SOURCES
-			themeserver.cpp
-		)
-		list(APPEND HEADERS
-			themeserver.h
-		)
-		list(APPEND PLAIN_HEADERS
-			themeserver.h
-		)
-	endif()
 else()
 	list(APPEND HEADERS
 		chatview_te.h

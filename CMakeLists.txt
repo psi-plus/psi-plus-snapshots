@@ -27,11 +27,15 @@ if(ENABLE_WEBKIT)
 	endif()
 	if(${Qt5Core_VERSION} VERSION_LESS 5.7.0)
 		set( USE_WEBENGINE OFF )
+		add_definitions(
+			-DWEBKIT
+		)
 		message("-- Webkit - enabled")
 	else()
 		set( USE_WEBENGINE ON )
 		add_definitions(
-			-DWEBENGINE
+			-DWEBKIT
+			-DWEBENGINE=1
 		)
 		message("-- QWebEngine - enabled")
 	endif()
@@ -209,6 +213,9 @@ endif()
 
 
 if(NOT ONLY_PLUGINS)
+	if( USE_WEBENGINE )
+		add_subdirectory( 3rdparty )
+	endif()
 	if( ${BUNDLED_IRIS} )
 		add_subdirectory( iris )
 	else( ${BUNDLED_IRIS} )

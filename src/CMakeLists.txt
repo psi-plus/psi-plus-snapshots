@@ -71,6 +71,12 @@ if(USE_QT5)
 	if(LINUX)
 		list(APPEND QT_LIBRARIES Qt5::DBus Qt5::X11Extras ${LIBXCB_LIBRARIES})
 	endif()
+	if(USE_WEBENGINE)
+		set(EXTRA_LIBS
+			${EXTRA_LIBS}
+			qhttp
+		)
+	endif()
 else()
 	if(LINUX)
 		set(QT_EXTRA_MODULES QtDBus)
@@ -226,11 +232,11 @@ add_subdirectory(sxe)
 add_subdirectory(whiteboarding)
 
 if(USE_WEBENGINE)
-	add_subdirectory( "../3rdparty" "${CMAKE_CURRENT_BINARY_DIR}/qhttp" )
 	include_directories(
-		${CMAKE_CURRENT_BINARY_DIR}/qhttp
+		${PROJECT_SOURCE_DIR}/3rdparty
 		${PROJECT_SOURCE_DIR}/3rdparty/http-parser
 		${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src
+		${PROJECT_SOURCE_DIR}/3rdparty/qhttp/src/private
 	)
 endif()
 
@@ -344,6 +350,9 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD ${STANDARD_NUM})
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 
 add_dependencies(${PROJECT_NAME} iris)
+if(USE_WEBENGINE)
+	add_dependencies(${PROJECT_NAME} qhttp)
+endif()
 add_dependencies(${PROJECT_NAME} build_ui_files)
 
 target_link_libraries(${PROJECT_NAME}
@@ -355,7 +364,6 @@ target_link_libraries(${PROJECT_NAME}
 	${qca_LIB}
 	)
 target_link_libraries(${PROJECT_NAME}
-	qhttp
 	options
 	Certificates
 	psimedia
