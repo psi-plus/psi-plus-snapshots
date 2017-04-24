@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2017-02-24
+# Updated: 2017-04-24
 # Version: N/A
 
 set -e
@@ -27,6 +27,7 @@ if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
     git pull --all --prune
+    git submodule init
     git submodule update
     echo;
 else
