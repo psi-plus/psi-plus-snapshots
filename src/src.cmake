@@ -217,7 +217,6 @@ list(APPEND SOURCES
 	contactlistaccountmenu.cpp
 	contactlistgroupmenu.cpp
 	discodlg.cpp
-	edbflatfile.cpp
 	eventdlg.cpp
 	filetransdlg.cpp
 	gcuserview.cpp
@@ -377,6 +376,7 @@ list(APPEND PLAIN_SOURCES
 	contactupdatesmanager.cpp
 	desktoputil.cpp
 	dummystream.cpp
+	edbflatfile.cpp
 	eventdb.cpp
 	filecache.cpp
 	fileutil.cpp
@@ -471,12 +471,6 @@ list(APPEND PLAIN_SOURCES
 if(ENABLE_WEBKIT)
 	if(USE_WEBENGINE)
 		list(APPEND PLAIN_SOURCES
-			themeserver.cpp
-		)
-		list(APPEND PLAIN_HEADERS
-			themeserver.h
-		)
-		list(APPEND SOURCES
 			themeserver.cpp
 		)
 		list(APPEND HEADERS
