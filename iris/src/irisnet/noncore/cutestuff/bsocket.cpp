@@ -440,14 +440,15 @@ void BSocket::resetConnection(bool clear)
 		delete d->qsock_relay;
 		d->qsock_relay = 0;
 
-		/*d->qsock->disconnect(this);
-
-		if(!clear && d->qsock->isOpen() && d->qsock->isValid()) {*/
-			// move remaining into the local queue
+		// move remaining into the local queue
+		if (d->qsock->isOpen()) {
 			QByteArray block(d->qsock->bytesAvailable(), 0);
-			d->qsock->read(block.data(), block.size());
-			appendRead(block);
-		//}
+			if (block.size()) {
+				d->qsock->read(block.data(), block.size());
+				appendRead(block);
+			}
+			d->qsock->close();
+		}
 
 		//d->sd.deleteLater(d->qsock);
 		d->qsock->deleteLater();
@@ -551,10 +552,13 @@ void BSocket::close()
 		return;
 
 	if(d->qsock) {
-		d->qsock->close();
 		d->state = Closing;
-		if(d->qsock->bytesToWrite() == 0)
+		if(d->qsock->bytesToWrite() == 0) {
 			resetConnection();
+		} else {
+			d->qsock->close();
+		}
+
 	}
 	else {
 		resetConnection();
