@@ -89,6 +89,7 @@ list(APPEND HEADERS
 	bookmarkmanagedlg.h
 	bookmarkmanager.h
 	bosskey.h
+	bytearrayreply.h
 	captchadlg.h
 	changepwdlg.h
 	chatdlg.h
@@ -146,6 +147,7 @@ list(APPEND HEADERS
 	mucjoindlg.h
 	mucmanager.h
 	mucreasonseditor.h
+	networkaccessmanager.h
 	passdialog.h
 	passphrasedlg.h
 	pepmanager.h
@@ -346,6 +348,7 @@ list(APPEND PLAIN_SOURCES
 	bookmarkmanagedlg.cpp
 	bookmarkmanager.cpp
 	bosskey.cpp
+	bytearrayreply.cpp
 	captchadlg.cpp
 	changepwdlg.cpp
 	chatdlg.cpp
@@ -410,6 +413,7 @@ list(APPEND PLAIN_SOURCES
 	mucjoindlg.cpp
 	mucmanager.cpp
 	mucreasonseditor.cpp
+	networkaccessmanager.cpp
 	passdialog.cpp
 	passphrasedlg.cpp
 	pepmanager.cpp
@@ -479,8 +483,6 @@ if(ENABLE_WEBKIT)
 	endif()
 	list(APPEND HEADERS
 		chatview_webkit.h
-		networkaccessmanager.h
-		bytearrayreply.h
 		webview.h
 		chatviewthemeprovider.h
 		chatviewthemeprovider_priv.h
@@ -494,8 +496,6 @@ if(ENABLE_WEBKIT)
 		chatviewtheme.cpp
 		)
 	list(APPEND PLAIN_SOURCES
-		networkaccessmanager.cpp
-		bytearrayreply.cpp
 		webview.cpp
 		jsutil.cpp
 		chatviewthemeprovider.cpp
