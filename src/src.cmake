@@ -180,7 +180,6 @@ list(APPEND HEADERS
 	psithememanager.h
 	psithememodel.h
 	psithemeprovider.h
-	psithemeviewdelegate.h
 	psitoolbar.h
 	psitrayicon.h
 	registrationdlg.h
@@ -439,7 +438,6 @@ list(APPEND PLAIN_SOURCES
 	psithememanager.cpp
 	psithememodel.cpp
 	psithemeprovider.cpp
-	psithemeviewdelegate.cpp
 	psitoolbar.cpp
 	psitrayicon.cpp
 	pubsubsubscription.cpp

@@ -116,7 +116,6 @@ HEADERS += \
 	$$PWD/psiiconset.h \
 	$$PWD/psithememanager.h \
 	$$PWD/psithememodel.h \
-	$$PWD/psithemeviewdelegate.h \
 	$$PWD/psithemeprovider.h \
 	$$PWD/theme.cpp \
 	$$PWD/applicationinfo.h \
@@ -252,7 +251,6 @@ SOURCES += \
 	$$PWD/psiiconset.cpp \
 	$$PWD/psithememanager.cpp \
 	$$PWD/psithememodel.cpp \
-	$$PWD/psithemeviewdelegate.cpp \
 	$$PWD/psithemeprovider.cpp \
 	$$PWD/theme.cpp \
 	$$PWD/applicationinfo.cpp \
