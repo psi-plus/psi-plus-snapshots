@@ -37,10 +37,10 @@ if(ENABLE_WEBKIT)
 				message(STATUS "QWebEngine - enabled")
 			else()
 				set( USE_WEBENGINE OFF )
-				message(STATUS "Webkit - enabled")
 			endif()
 		endif()
 	endif()
+	message(STATUS "Webkit - enabled")
 endif()
 
 
