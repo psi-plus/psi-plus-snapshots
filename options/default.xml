@@ -688,7 +688,7 @@ QLineEdit#le_status_text {
 			<activities type="QString">default</activities>
 			<clients type="QString">default</clients>
 			<affiliations type="QString">default</affiliations>
-			<clients type="QString"></clients>
+			<clients type="QString">default</clients>
 		</iconsets>
 		<messages>
 			<default-outgoing-message-type type="QString">chat</default-outgoing-message-type>
