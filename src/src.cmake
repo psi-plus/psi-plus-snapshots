@@ -317,6 +317,7 @@ list(APPEND PLAIN_HEADERS
 	systeminfo.h
 	textutil.h
 	theme.h
+	theme_p.h
 	urlbookmark.h
 	userlist.h
 	varlist.h
@@ -459,6 +460,7 @@ list(APPEND PLAIN_SOURCES
 	tabcompletion.cpp
 	textutil.cpp
 	theme.cpp
+	theme_p.cpp
 	tipdlg.cpp
 	translationmanager.cpp
 	urlbookmark.cpp
@@ -482,6 +484,7 @@ if(ENABLE_WEBKIT)
 	list(APPEND HEADERS
 		chatview_webkit.h
 		webview.h
+		chatviewtheme_p.h
 		chatviewthemeprovider.h
 		chatviewthemeprovider_priv.h
 		)
