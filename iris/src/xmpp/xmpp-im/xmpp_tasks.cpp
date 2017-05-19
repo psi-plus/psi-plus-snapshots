@@ -138,6 +138,7 @@ public:
 	Form form;
 	XData xdata;
 	bool hasXData;
+	bool registered;
 	Jid jid;
 	int type;
 };
@@ -148,6 +149,7 @@ JT_Register::JT_Register(Task *parent)
 	d = new Private;
 	d->type = -1;
 	d->hasXData = false;
+	d->registered = false;
 }
 
 JT_Register::~JT_Register()
@@ -250,6 +252,11 @@ const XData& JT_Register::xdata() const
 	return d->xdata;
 }
 
+bool JT_Register::isRegistered() const
+{
+	return d->registered;
+}
+
 void JT_Register::onGo()
 {
 	send(iq);
@@ -276,6 +283,8 @@ bool JT_Register::take(const QDomElement &x)
 					d->form.setInstructions(tagContent(i));
 				else if(i.tagName() == "key")
 					d->form.setKey(tagContent(i));
+				else if (i.tagName() == QLatin1String("registered"))
+					d->registered = true;
 				else if(i.tagName() == "x" && i.attribute("xmlns") == "jabber:x:data") {
 					d->xdata.fromXml(i);
 					d->hasXData = true;
@@ -344,10 +353,13 @@ void JT_UnRegister::onGo()
 void JT_UnRegister::getFormFinished()
 {
 	disconnect(d->jt_reg, 0, this, 0);
-
-	d->jt_reg->unreg(d->j);
-	connect(d->jt_reg, SIGNAL(finished()), SLOT(unregFinished()));
-	d->jt_reg->go(false);
+	if (d->jt_reg->isRegistered()) {
+		d->jt_reg->unreg(d->j);
+		connect(d->jt_reg, SIGNAL(finished()), SLOT(unregFinished()));
+		d->jt_reg->go(false);
+	} else {
+		setSuccess(); // no need to unregister
+	}
 }
 
 void JT_UnRegister::unregFinished()

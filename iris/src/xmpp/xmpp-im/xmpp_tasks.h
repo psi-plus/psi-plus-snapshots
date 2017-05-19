@@ -52,6 +52,7 @@ namespace XMPP
 		const Form & form() const;
 		bool hasXData() const;
 		const XData& xdata() const;
+		bool isRegistered() const;
 		void getForm(const Jid &);
 		void setForm(const Form &);
 		void setForm(const Jid&, const XData &);

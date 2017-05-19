@@ -484,13 +484,13 @@ if(ENABLE_WEBKIT)
 	list(APPEND HEADERS
 		chatview_webkit.h
 		webview.h
+		chatviewtheme.h
 		chatviewtheme_p.h
 		chatviewthemeprovider.h
 		chatviewthemeprovider_priv.h
 		)
 	list(APPEND PLAIN_HEADERS
 		jsutil.h
-		chatviewtheme.h
 		)
 	list(APPEND SOURCES
 		chatview_webkit.cpp
