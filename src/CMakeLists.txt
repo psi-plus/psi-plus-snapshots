@@ -177,7 +177,7 @@ if(ENABLE_WEBKIT)
 	#endif()
 endif()
 if(NOT PSI_PLUS_VERSION)
-	set(PSI_PLUS_VERSION "${APP_VERSION}-dev" CACHE STRING "Version string of Psi+")
+	set(PSI_PLUS_VERSION "${APP_VERSION}-dev" CACHE STRING "Version string of Psi")
 endif()
 add_definitions(-DPSI_VERSION="${PSI_PLUS_VERSION}${PSI_VER_SUFFIX} \(${PSI_COMPILATION_DATE}\)")
 
@@ -216,13 +216,16 @@ include(irisprotocol/irisprotocol.cmake)
 include(protocol/protocol.cmake)
 include(plugins/plugins.cmake)
 
+add_subdirectory(AutoUpdater)
 add_subdirectory(options)
 add_subdirectory(tabs)
 add_subdirectory(privacy)
 add_subdirectory(Certificates)
 add_subdirectory(avcall)
 add_subdirectory(psimedia)
-add_subdirectory(contactmanager)
+if(IS_PSIPLUS)
+	add_subdirectory(contactmanager)
+endif()
 add_subdirectory(tools)
 add_subdirectory(libpsi/dialogs)
 add_subdirectory(libpsi/tools)
@@ -363,11 +366,11 @@ target_link_libraries(${PROJECT_NAME}
 	${qca_LIB}
 	)
 target_link_libraries(${PROJECT_NAME}
+	AutoUpdater
 	options
 	Certificates
 	psimedia
 	avcall
-	contactmanager
 	whiteboarding
 	sxe
 	tools
@@ -377,6 +380,11 @@ target_link_libraries(${PROJECT_NAME}
 	privacy
 	tabs
 	)
+if(IS_PSIPLUS)
+target_link_libraries(${PROJECT_NAME}
+	contactmanager
+)
+endif()
 
 set(OTHER_FILES
 	../certs
@@ -391,12 +399,18 @@ copy("${PROJECT_SOURCE_DIR}/skins/" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/skins/" p
 copy("${PROJECT_SOURCE_DIR}/client_icons.txt" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/" prepare-bin)
 
 if(LINUX)
-	set(SHARE_SUFF "share/psi-plus")
+	if(IS_PSIPLUS)
+		set(SHARE_SUFF "share/psi-plus")
+		install(FILES ../psi.desktop DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications RENAME psi-plus.desktop)
+		install(FILES ../iconsets/system/default/psiplus/logo_128.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/pixmaps RENAME psi-plus.png)
+	else()
+		set(SHARE_SUFF "share/psi")
+		install(FILES ../psi.desktop DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
+		install(FILES ../iconsets/system/default/logo_128.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/pixmaps RENAME psi.png)
+	endif()
 	install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 	install(FILES ../client_icons.txt DESTINATION ${CMAKE_INSTALL_PREFIX}/${SHARE_SUFF})
-	install(FILES ../psi.desktop DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications RENAME psi-plus.desktop)
 	install(DIRECTORY ${OTHER_FILES} DESTINATION ${CMAKE_INSTALL_PREFIX}/${SHARE_SUFF})
-	install(FILES ../iconsets/system/default/psiplus/logo_128.png DESTINATION ${CMAKE_INSTALL_PREFIX}/share/pixmaps RENAME psi-plus.png)
 	if(ENABLE_WEBKIT)
 		install(DIRECTORY ../themes DESTINATION ${CMAKE_INSTALL_PREFIX}/${SHARE_SUFF})
 	endif()

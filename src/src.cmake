@@ -250,7 +250,6 @@ if(UNIX AND NOT APPLE)
 
 	list(APPEND PLAIN_SOURCES
 		activeprofiles_dbus.cpp
-		x11windowsystem.cpp
 		psidbusnotifier.cpp
 		)
 
@@ -259,9 +258,16 @@ if(UNIX AND NOT APPLE)
 		)
 
 	list(APPEND PLAIN_HEADERS
-		x11windowsystem.h
 		dbus.h
 		)
+	if(IS_PSIPLUS)
+		list(APPEND PLAIN_SOURCES
+			x11windowsystem.cpp
+			)
+		list(APPEND PLAIN_HEADERS
+			x11windowsystem.h
+			)
+	endif()
 elseif(APPLE)
 	list(APPEND SOURCES
 		psigrowlnotifier.cpp

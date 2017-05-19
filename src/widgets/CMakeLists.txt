@@ -17,7 +17,6 @@ set(SOURCES
 	psirichtext.cpp
 	psitextview.cpp
 	psitooltip.cpp
-	tabbar.cpp
 	urlobject.cpp
 	)
 
@@ -26,7 +25,6 @@ set(PLAIN_SOURCES
 	psitabbar.cpp
 	psitabwidget.cpp
 	psitiplabel.cpp
-	psiwindowheader.cpp
 	typeaheadfind.cpp
 	urllabel.cpp
 	)
@@ -49,8 +47,6 @@ set(HEADERS
 	psitabwidget.h
 	psitextview.h
 	psitiplabel.h
-	psiwindowheader.h
-	tabbar.h
 	typeaheadfind.h
 	updatingcombobox.h
 	urllabel.h
@@ -65,8 +61,27 @@ set(PLAIN_HEADERS
 
 set(FORMS
 	fancypopup.ui
-	psiwindowheader.ui
 	)
+
+if(IS_PSIPLUS)
+	set(SOURCES
+		${SOURCES}
+		tabbar.cpp
+	)
+	set(PLAIN_SOURCES
+		${PLAIN_SOURCES}
+		psiwindowheader.cpp
+	)
+	set(HEADERS
+		${HEADERS}
+		psiwindowheader.h
+		tabbar.h
+	)
+	set(FORMS
+		${FORMS}
+		psiwindowheader.ui
+	)
+endif()
 
 qt4_wrap_ui(UI_FORMS ${FORMS})
 qt_wrap_cpp(MOC_SOURCES ${SOURCES} ${HEADERS})
