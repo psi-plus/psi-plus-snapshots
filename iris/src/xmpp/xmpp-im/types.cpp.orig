@@ -2252,15 +2252,15 @@ QString Subscription::toString() const
 
 bool Subscription::fromString(const QString &s)
 {
-	if(s == "remove")
+	if(s == QLatin1String("remove"))
 		value = Remove;
-	else if(s == "both")
+	else if(s == QLatin1String("both"))
 		value = Both;
-	else if(s == "from")
+	else if(s == QLatin1String("from"))
 		value = From;
-	else if(s == "to")
+	else if(s == QLatin1String("to"))
 		value = To;
-	else if(s == "none")
+	else if(s.isEmpty() || s == QLatin1String("none"))
 		value = None;
 	else
 		return false;
@@ -3049,13 +3049,17 @@ bool RosterItem::fromXml(const QDomElement &item)
 {
 	if(item.tagName() != "item")
 		return false;
+
 	Jid j(item.attribute("jid"));
 	if(!j.isValid())
 		return false;
+
 	QString na = item.attribute("name");
+
 	Subscription s;
 	if(!s.fromString(item.attribute("subscription")) )
 		return false;
+
 	QStringList g;
 	for(QDomNode n = item.firstChild(); !n.isNull(); n = n.nextSibling()) {
 		QDomElement i = n.toElement();
