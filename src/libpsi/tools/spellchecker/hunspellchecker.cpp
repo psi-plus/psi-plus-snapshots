@@ -1,7 +1,7 @@
 /*
  * hunspellchecker.cpp
  *
- * Copyright (C) 2015  Ili'nykh Sergey, Vitaly Tonkacheyev
+ * Copyright (C) 2015  Ilinykh Sergey, Vitaly Tonkacheyev
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
