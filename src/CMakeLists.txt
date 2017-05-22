@@ -366,7 +366,6 @@ target_link_libraries(${PROJECT_NAME}
 	${qca_LIB}
 	)
 target_link_libraries(${PROJECT_NAME}
-	AutoUpdater
 	options
 	Certificates
 	psimedia
@@ -379,6 +378,7 @@ target_link_libraries(${PROJECT_NAME}
 	widgets
 	privacy
 	tabs
+	AutoUpdater
 	)
 if(IS_PSIPLUS)
 target_link_libraries(${PROJECT_NAME}

@@ -6,6 +6,10 @@ unset(SOURCES)
 unset(PLAIN_SOURCES)
 unset(UI_FORMS)
 
+if(WIN32 AND IS_PSIPLUS)
+	set(USE_QDCHECKER ON)
+endif()
+
 include_directories(
 	../
 )
@@ -30,7 +34,7 @@ if(APPLE)
 	#)
 endif()
 
-if(WIN32 AND IS_PSIPLUS)
+if(USE_QDCHECKER)
 	add_definitions(-DUSE_QDCHECKER)
 	list(APPEND HEADERS
 		QDChecker.h
@@ -41,10 +45,21 @@ if(WIN32 AND IS_PSIPLUS)
 	list(APPEND FORMS
 		QDChangeLog.ui
 	)
+	include_directories(
+		../tools/optionstree
+		../widgets
+	)
+	set(EXTRA_STATIC_LIBS
+		tools
+		widgets
+	)
 endif()
 
 qt4_wrap_ui(UI_FORMS ${FORMS})
 qt_wrap_cpp(MOC_SOURCES ${HEADERS})
 add_library(AutoUpdater STATIC ${HEADERS} ${MOC_SOURCES} ${UI_FORMS} ${PLAIN_SOURCES})
-target_link_libraries(AutoUpdater ${QT_LIBRARIES})
+if(USE_QDCHECKER)
+	add_dependencies(AutoUpdater build_ui_files tools widgets)
+endif()
+target_link_libraries(AutoUpdater ${EXTRA_STATIC_LIBS} ${QT_LIBRARIES})
 target_include_directories(AutoUpdater PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
