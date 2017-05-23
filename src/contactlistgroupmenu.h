@@ -23,22 +23,18 @@
 
 #include "contactlistitemmenu.h"
 
-class ContactListGroup;
 class QMimeData;
 
 class ContactListGroupMenu : public ContactListItemMenu
 {
 	Q_OBJECT
 public:
-	ContactListGroupMenu(ContactListGroup* group, ContactListModel* model);
+	ContactListGroupMenu(ContactListItem *item, ContactListModel *model);
 	~ContactListGroupMenu();
 
 signals:
 	void removeSelection();
 	void removeGroupWithoutContacts(QMimeData*);
-#ifdef YAPSI
-	void addGroup();
-#endif
 
 private:
 	class Private;

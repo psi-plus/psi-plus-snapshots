@@ -288,6 +288,7 @@ QLineEdit#le_status_text {
 					<active-chats comment="Show the 'active chats' menu" type="bool">true</active-chats>
 					<custom-picture comment="Show the 'picture' menu" type="bool">true</custom-picture>
 					<custom-pgp-key comment="Show the 'assign pgp key' menu" type="bool">true</custom-pgp-key>
+					<send-status comment="Show the 'send status' menu" type="bool">false</send-status>
 				</contact>
 				<main comment="Options for the main menu">
 					<change-profile comment="Show the 'change profile' menu" type="bool">true</change-profile>
@@ -421,6 +422,7 @@ QLineEdit#le_status_text {
 				<contactlist>
 					<use-outlined-group-headings type="bool">false</use-outlined-group-headings>
 					<use-slim-group-headings type="bool">false</use-slim-group-headings>
+					<nick-indent type="int">0</nick-indent>
 				</contactlist>
 				<font>
 					<chat type="QString">Sans Serif,9,-1,5,50,0,0,0,0,0</chat>

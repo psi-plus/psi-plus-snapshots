@@ -124,15 +124,15 @@
         <file>iconsets/system/default/autojid.png</file>
 	<file>iconsets/system/default/ignore_global_actions.png</file>
         <file>iconsets/system/default/action_direct_presence.png</file>
+        <file>iconsets/system/default/action_contacts_manager.png</file>
+        <file>iconsets/system/default/cm_check.png</file>
+        <file>iconsets/system/default/cm_invertcheck.png</file>
+        <file>iconsets/system/default/cm_uncheck.png</file>
         <file>iconsets/system/default/psiplus/psiplus_icon.png</file>
         <file>iconsets/system/default/psiplus/action_paste_and_send.png</file>
         <file>iconsets/system/default/psiplus/action_vcard_restore.png</file>
         <file>iconsets/system/default/psiplus/action_vcard_save_as.png</file>
-        <file>iconsets/system/default/psiplus/cm_check.png</file>
-        <file>iconsets/system/default/psiplus/cm_invertcheck.png</file>
-        <file>iconsets/system/default/psiplus/cm_uncheck.png</file>
         <file>iconsets/system/default/psiplus/psiplus_logo.png</file>
-        <file>iconsets/system/default/psiplus/action_contacts_manager.png</file>
         <file>iconsets/system/default/psiplus/doublenextarrow.png</file>
         <file>iconsets/system/default/psiplus/doublebackarrow.png</file>
         <file>iconsets/system/default/psiplus/crop.png</file>

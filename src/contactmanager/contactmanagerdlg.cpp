@@ -58,8 +58,8 @@ ContactManagerDlg::ContactManagerDlg(PsiAccount *pa) :
 	ui_.cbAction->addItem(IconsetFactory::icon("psi/command").icon(), tr("Change domain"), 5);
 	ui_.cbAction->addItem(IconsetFactory::icon("psi/info").icon(), tr("Resolve nicks"), 6);
 	ui_.cbAction->addItem(IconsetFactory::icon("psi/browse").icon(), tr("Move to group"), 7);
-	ui_.cbAction->addItem(IconsetFactory::icon("psi/export").icon(), tr("Export"), 8);
-	ui_.cbAction->addItem(IconsetFactory::icon("psi/import").icon(), tr("Import"), 9);
+	ui_.cbAction->addItem(IconsetFactory::icon("psi/cm_export").icon(), tr("Export"), 8);
+	ui_.cbAction->addItem(IconsetFactory::icon("psi/cm_import").icon(), tr("Import"), 9);
 	connect(ui_.cbAction, SIGNAL(currentIndexChanged(int)), this, SLOT(showParamField(int)));
 	showParamField(0); // 0 - default index of combobox
 
@@ -280,12 +280,12 @@ void ContactManagerDlg::importRoster()
 		QString jid, nick;
 		QStringList jids;
 		QStringList labelContent;
-		for (unsigned i=0; i<domContacts.length(); i++) {
+		for (int i = 0; i < static_cast<int>(domContacts.length()); i++) {
 			QDomElement contact = domContacts.item(i).toElement();
 			jid = contact.attribute("jid");
 			jids.append(jid);
 			QDomNodeList props = contact.childNodes();
-			for (unsigned j=0; j<props.length(); j++) {
+			for (int j = 0; j < static_cast<int>(props.length()); j++) {
 				if (!props.item(j).isElement()) {
 					continue;
 				}
