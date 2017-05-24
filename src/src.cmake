@@ -66,6 +66,7 @@ list(APPEND FORMS
 
 list(APPEND HEADERS
 	aboutdlg.h
+	abstracttreemodel.h
 	accountadddlg.h
 	accountlabel.h
 	accountloginpassword.h
@@ -96,23 +97,19 @@ list(APPEND HEADERS
 	chateditproxy.h
 	chatsplitter.h
 	coloropt.h
-	contactlistaccountgroup.h
 	contactlistaccountmenu.h
 	contactlistdragmodel.h
 	contactlistdragview.h
-	contactlistgroup.h
-	contactlistgroupcache.h
 	contactlistgroupmenu.h
-	contactlistgroupstate.h
+	contactlistgroupmenu_p.h
 	contactlistitemmenu.h
 	contactlistmodel.h
+	contactlistmodel_p.h
 	contactlistmodelselection.h
-	contactlistmodelupdater.h
-	contactlistnestedgroup.h
 	contactlistproxymodel.h
-	contactlistspecialgroup.h
-	contactlistutil.h
 	contactlistview.h
+	contactlistviewdelegate.h
+	contactlistviewdelegate_p.h
 	contactupdatesmanager.h
 	discodlg.h
 	edbflatfile.h
@@ -127,12 +124,14 @@ list(APPEND HEADERS
 	globalstatusmenu.h
 	groupchatdlg.h
 	groupchattopicdlg.h
+	groupmenu.h
 	historydlg.h
 	homedirmigration.h
 	hoverabletreeview.h
 	htmltextcontroller.h
 	httpauthmanager.h
 	infodlg.h
+	invitetogroupchatmenu.h
 	main.h
 	mainwin.h
 	mainwin_p.h
@@ -166,10 +165,9 @@ list(APPEND HEADERS
 	psicon.h
 	psicontact.h
 	psicontactlist.h
-	psicontactlistmodel.h
 	psicontactlistview.h
-	psicontactlistviewdelegate.h
 	psicontactmenu.h
+	psicontactmenu_p.h
 	psievent.h
 	psifilteredcontactlistview.h
 	psiiconset.h
@@ -183,7 +181,6 @@ list(APPEND HEADERS
 	psitoolbar.h
 	psitrayicon.h
 	registrationdlg.h
-	removeconfirmationmessagebox.h
 	resourcemenu.h
 	rosteravatarframe.h
 	rosteritemexchangetask.h
@@ -216,7 +213,6 @@ list(APPEND SOURCES
 	alerticon.cpp
 	avatars.cpp
 	contactlistaccountmenu.cpp
-	contactlistgroupmenu.cpp
 	discodlg.cpp
 	eventdlg.cpp
 	filetransdlg.cpp
@@ -230,9 +226,7 @@ list(APPEND SOURCES
 	psiaccount.cpp
 	psiactionlist.cpp
 	psichatdlg.cpp
-	psicontactmenu.cpp
 	psicon.cpp
-	psicontact.cpp
 	psicontactlistview.cpp
 	psievent.cpp
 	psioptionseditor.cpp
@@ -283,6 +277,7 @@ elseif(WIN32)
 endif()
 
 list(APPEND PLAIN_HEADERS
+	abstracttreeitem.h
 	activity.h
 	activitycatalog.h
 	ahcexecutetask.h
@@ -295,8 +290,7 @@ list(APPEND PLAIN_HEADERS
 	common.h
 	conferencebookmark.h
 	contactlistitem.h
-	contactlistitemproxy.h
-	contactlistviewdelegate.h
+	debug.h
 	desktoputil.h
 	dummystream.h
 	geolocation.h
@@ -331,6 +325,8 @@ list(APPEND PLAIN_HEADERS
 
 list(APPEND PLAIN_SOURCES
 	aboutdlg.cpp
+	abstracttreeitem.cpp
+	abstracttreemodel.cpp
 	accountadddlg.cpp
 	accountlabel.cpp
 	accountloginpassword.cpp
@@ -364,25 +360,18 @@ list(APPEND PLAIN_SOURCES
 	coloropt.cpp
 	common.cpp
 	conferencebookmark.cpp
-	contactlistaccountgroup.cpp
 	contactlistdragmodel.cpp
 	contactlistdragview.cpp
-	contactlistgroup.cpp
-	contactlistgroupcache.cpp
-	contactlistgroupstate.cpp
+	contactlistgroupmenu.cpp
 	contactlistitem.cpp
 	contactlistitemmenu.cpp
-	contactlistitemproxy.cpp
 	contactlistmodel.cpp
 	contactlistmodelselection.cpp
-	contactlistmodelupdater.cpp
-	contactlistnestedgroup.cpp
 	contactlistproxymodel.cpp
-	contactlistspecialgroup.cpp
-	contactlistutil.cpp
 	contactlistview.cpp
 	contactlistviewdelegate.cpp
 	contactupdatesmanager.cpp
+	debug.cpp
 	desktoputil.cpp
 	dummystream.cpp
 	edbflatfile.cpp
@@ -395,11 +384,13 @@ list(APPEND PLAIN_SOURCES
 	globaleventqueue.cpp
 	globalstatusmenu.cpp
 	groupchattopicdlg.cpp
+	groupmenu.cpp
 	historydlg.cpp
 	homedirmigration.cpp
 	hoverabletreeview.cpp
 	infodlg.cpp
 	infodlg.cpp
+	invitetogroupchatmenu.cpp
 	jidutil.cpp
 	lastactivitytask.cpp
 	main.cpp
@@ -432,16 +423,15 @@ list(APPEND PLAIN_SOURCES
 	popupmanager.cpp
 	profiledlg.cpp
 	psicapsregsitry.cpp
+	psicontactmenu.cpp
 	psi_profiles.cpp
 	psiapplication.cpp
+	psicontact.cpp
 	psicontactlist.cpp
-	psicontactlistmodel.cpp
-	psicontactlistviewdelegate.cpp
 	psifilteredcontactlistview.cpp
 	psiiconset.cpp
 	psioptions.cpp
 	psipopupinterface.cpp
-	psiselfcontact.cpp
 	psithememanager.cpp
 	psithememodel.cpp
 	psithemeprovider.cpp
@@ -449,7 +439,6 @@ list(APPEND PLAIN_SOURCES
 	psitrayicon.cpp
 	pubsubsubscription.cpp
 	rc.cpp
-	removeconfirmationmessagebox.cpp
 	resourcemenu.cpp
 	rosteravatarframe.cpp
 	rosteritemexchangetask.cpp
@@ -500,11 +489,11 @@ if(ENABLE_WEBKIT)
 		)
 	list(APPEND SOURCES
 		chatview_webkit.cpp
-		chatviewtheme.cpp
 		)
 	list(APPEND PLAIN_SOURCES
 		webview.cpp
 		jsutil.cpp
+		chatviewtheme.cpp
 		chatviewthemeprovider.cpp
 		chatviewthemeprovider_priv.cpp
 		)

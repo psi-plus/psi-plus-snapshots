@@ -29,6 +29,7 @@ cmake_minimum_required( VERSION 2.8.11)
 set( LIBOTR otr )
 project( ${LIBOTR} )
 set( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules" )
+option(BUILD_SHARED_LIBS "Build LibOtr as a shared library" ON)
 option(BUILD_STATIC_LIBS "Build LibOtr as a static library" OFF)
 
 find_package( LibGcrypt REQUIRED )
