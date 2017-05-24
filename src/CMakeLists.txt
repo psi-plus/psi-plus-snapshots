@@ -367,6 +367,7 @@ target_link_libraries(${PROJECT_NAME}
 	options
 	Certificates
 	psimedia
+	contactmanager
 	avcall
 	whiteboarding
 	sxe
@@ -378,11 +379,6 @@ target_link_libraries(${PROJECT_NAME}
 	tabs
 	AutoUpdater
 	)
-if(IS_PSIPLUS)
-target_link_libraries(${PROJECT_NAME}
-	contactmanager
-)
-endif()
 
 set(OTHER_FILES
 	../certs
