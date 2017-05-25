@@ -125,6 +125,7 @@ list(APPEND HEADERS
 	groupchatdlg.h
 	groupchattopicdlg.h
 	groupmenu.h
+	historycontactlistmodel.h
 	historydlg.h
 	homedirmigration.h
 	hoverabletreeview.h
@@ -385,6 +386,7 @@ list(APPEND PLAIN_SOURCES
 	globalstatusmenu.cpp
 	groupchattopicdlg.cpp
 	groupmenu.cpp
+	historycontactlistmodel.cpp
 	historydlg.cpp
 	homedirmigration.cpp
 	hoverabletreeview.cpp
