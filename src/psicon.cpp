@@ -359,7 +359,7 @@ PsiCon::PsiCon()
 	d->ftwin = 0;
 #endif
 
-	d->edb = new EDBFlatFile;
+	d->edb = new EDBFlatFile(this);
 
 	d->s5bServer = 0;
 	d->tuneManager = 0;

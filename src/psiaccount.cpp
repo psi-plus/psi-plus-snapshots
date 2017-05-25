@@ -593,8 +593,8 @@ private slots:
 	void removeContact(PsiContact* contact)
 	{
 		Q_ASSERT(contacts.contains(contact));
-		emit account->removedContact(contact);
 		contacts.removeAll(contact);
+		emit account->removedContact(contact);
 	}
 
 	/**
