@@ -297,7 +297,7 @@ bool HistoryDlg::selectContact(const QStringList &ids)
 	QModelIndex startIndex = model->index(0, 0);
 	foreach (const QString &id, ids)
 	{
-		QModelIndexList ilist = model->match(startIndex, Qt::UserRole, id, -1, Qt::MatchRecursive | Qt::MatchFixedString);
+		QModelIndexList ilist = model->match(startIndex, HistoryContactListModel::ItemIdRole, id, -1, Qt::MatchRecursive | Qt::MatchFixedString);
 		if (ilist.count() > 0)
 		{
 			ui_.contactList->selectionModel()->setCurrentIndex(ilist.at(0), QItemSelectionModel::SelectCurrent);
@@ -364,7 +364,7 @@ void HistoryDlg::openSelectedContact()
 	QModelIndex index = ui_.contactList->selectionModel()->currentIndex();
 	if (index.isValid() && index.data(HistoryContactListModel::ItemTypeRole) != HistoryContactListModel::Group)
 	{
-		QString id = ui_.contactList->model()->data(index, Qt::UserRole).toString();
+		QString id = ui_.contactList->model()->data(index, HistoryContactListModel::ItemIdRole).toString();
 		if (!id.isEmpty())
 		{
 			ui_.msgLog->clear();
@@ -451,10 +451,8 @@ void HistoryDlg::removeHistory()
 
 void HistoryDlg::openChat()
 {
-	UserListItem *u = currentUserListItem();
-	if(u) {
-		d->pa->actionOpenChat2(u->jid().bare());
-	}
+	if (d->pa && !d->jid.isEmpty())
+		d->pa->actionOpenChat2(d->jid);
 }
 
 void HistoryDlg::exportHistory()
@@ -574,6 +572,8 @@ void HistoryDlg::doMenu()
 		chat->setEnabled(false);
 		del->setEnabled(false);
 	}
+	else if (!d->jid.resource().isEmpty()) // Private messages in conferences
+		chat->setEnabled(false);
 	int features = d->psi->edb()->features();
 	if ((!d->pa && !(features & EDB::AllAccounts)) || (d->jid.isEmpty() && !(features & EDB::AllContacts)))
 		exp->setEnabled(false);
@@ -726,7 +726,7 @@ void HistoryDlg::removedContact(PsiContact *pc)
 	QString cid;
 	QModelIndex index = ui_.contactList->selectionModel()->currentIndex();
 	if (index.isValid())
-		cid = ui_.contactList->model()->data(index, Qt::UserRole).toString();
+		cid = ui_.contactList->model()->data(index, HistoryContactListModel::ItemIdRole).toString();
 
 	contactListModel()->updateContacts(d->psi, getCurrentAccountId());
 
