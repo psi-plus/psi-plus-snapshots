@@ -23,6 +23,9 @@ public:
     Private(ContactListViewDelegate *parent, ContactListView *contactList);
     ~Private();
 
+signals:
+	void geometryUpdated();
+
 public slots:
 	void optionChanged(const QString &option);
 	void updateAlerts();
@@ -73,7 +76,6 @@ public:
 	int verticalMargin_;
 	int statusIconSize_;
 	int avatarRadius_;
-	int _nickIndent;
 
 	QTimer *alertTimer_;
 	QTimer *animTimer;

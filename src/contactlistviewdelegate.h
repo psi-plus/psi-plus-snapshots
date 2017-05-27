@@ -37,6 +37,7 @@ public:
 	ContactListViewDelegate(ContactListView *parent);
 	virtual ~ContactListViewDelegate();
 
+	void recomputeGeometry();
 	int avatarSize() const;
 
 	void contactAlert(const QModelIndex &index);
@@ -50,6 +51,9 @@ public:
 
 	void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
 	QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+
+signals:
+	void geometryUpdated();
 
 protected:
 	// reimplemented
