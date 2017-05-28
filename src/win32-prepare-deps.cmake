@@ -222,6 +222,7 @@ if(WIN32)
 		libotr.dll
 		libotr-5.dll
 		libtidy.dll
+		libzlib.dll
 		zlib1.dll
 		libgpg-error-0.dll
 		libidn-11.dll
