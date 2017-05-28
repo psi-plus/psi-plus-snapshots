@@ -524,8 +524,10 @@ bool SecureStream::isOpen() const
 
 void SecureStream::write(const QByteArray &a)
 {
-	if(!isOpen())
+	if(!isOpen()) {
+		qDebug("Writing to closed stream!");
 		return;
+	}
 
 	d->pending += a.size();
 

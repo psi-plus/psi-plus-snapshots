@@ -1,5 +1,9 @@
 # Files to build Psi+ using cmake utility
 
+**All files from this repository has moved to upstream [https://github.com/psi-im/psi](https://github.com/psi-im/psi).
+This repository now is only for testing new experimental features.
+When using files from upstream, Installation section of this README is no longer relevant.**
+
 **Authors:**
 
   - Ivan Romanov (2016)
