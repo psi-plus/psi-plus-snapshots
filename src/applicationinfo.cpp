@@ -150,9 +150,7 @@ QString ApplicationInfo::getCertificateStoreSaveDir()
 
 QString ApplicationInfo::resourcesDir()
 {
-#if defined(Q_OS_UNIX)
-	return PSI_DATADIR;
-#elif defined(Q_OS_WIN)
+#if defined(Q_OS_WIN)
 	return qApp->applicationDirPath();
 #elif defined(Q_OS_MAC)
 	// FIXME: Clean this up (remko)
@@ -192,6 +190,8 @@ QString ApplicationInfo::resourcesDir()
 	}
 	return resourcePath;
 #endif
+
+	return PSI_DATADIR;
 }
 
 QString ApplicationInfo::libDir()
