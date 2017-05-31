@@ -189,9 +189,9 @@ QString ApplicationInfo::resourcesDir()
 		resourcePath = fileInfo.absolutePath();
 	}
 	return resourcePath;
-#endif
-
+#else
 	return PSI_DATADIR;
+#endif
 }
 
 QString ApplicationInfo::libDir()
