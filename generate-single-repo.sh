@@ -179,6 +179,7 @@ rm configure.exe
 rm iris/configure.exe
 rm -r win32/*
 rm -r src/libpsi/tools/idle/win32/
+rm -r iconsets/clients/
 echo "Trash is removed."
 echo;
 
