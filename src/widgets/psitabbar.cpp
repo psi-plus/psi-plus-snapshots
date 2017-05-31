@@ -22,7 +22,6 @@
 #include "psitabwidget.h"
 #include <QMouseEvent>
 #include <QApplication>
-#include <QDrag>
 #include <QMimeData>
 #include <QPainter>
 
@@ -33,13 +32,12 @@
  */
 PsiTabBar::PsiTabBar(PsiTabWidget *parent)
 		: TabBar(parent)
-		, dragsEnabled_(true) {
+{
 	//setAcceptDrops(true);
 
 	setMovable(true);
 	setTabsClosable(true);
 	setSelectionBehaviorOnRemove ( QTabBar::SelectPreviousTab );
-	currTab=-1;
 }
 
 /**
@@ -58,7 +56,11 @@ PsiTabWidget* PsiTabBar::psiTabWidget() {
 /**
  * Overriding this allows us to emit signals for double clicks
  */
-void PsiTabBar::mouseDoubleClickEvent(QMouseEvent *event) {
+void PsiTabBar::mouseDoubleClickEvent(QMouseEvent *event)
+{
+	if (event->button() != Qt::MouseButton::LeftButton)
+		return;
+
 	const QPoint pos = event->pos();
 	int tab = findTabUnder(pos);
 	if (tab >= 0 && tab < count()) {
@@ -89,38 +91,26 @@ void PsiTabBar::mouseReleaseEvent ( QMouseEvent * event )
 		emit mouseMiddleClickTab(findTabUnder(event->pos()));
 		event->accept();
 	}
-	QTabBar::mouseReleaseEvent(event);
+	TabBar::mouseReleaseEvent(event);
 
-	if ((dragTab_ != -1) && (event->button() != Qt::MidButton)) {
+	if (event->button() != Qt::MidButton) {
 		this->setCurrentIndex(currentIndex());
 	}
 };
 
-/*
- * Used for starting drags of tabs
- */
-void PsiTabBar::mouseMoveEvent(QMouseEvent *event) {
-	if (!dragsEnabled_) {
-		return;
-	}
-	if (!(event->buttons() & Qt::LeftButton)) {
-		currTab=-1;
-		return;
-	}
-	if ((event->pos() - dragStartPosition_).manhattanLength()
-		< QApplication::startDragDistance()) {
-		return;
-	}
-
-	QTabBar::mouseMoveEvent(event);
-}
-
 void PsiTabBar::contextMenuEvent(QContextMenuEvent *event) {
 	event->accept();
-	emit contextMenu(event, findTabUnder(event->pos()));
+	int tab = findTabUnder(event->pos());
+	if (tab < 0)
+		tab = currentIndex();
+
+	emit contextMenu(event, tab);
 }
 
 void PsiTabBar::wheelEvent(QWheelEvent *event) {
+	if (PsiOptions::instance()->getOption("options.ui.tabs.disable-wheel-scroll").toBool())
+		return;
+
 	int numDegrees = event->delta() / 8;
 	int numSteps = numDegrees / 15;
 
@@ -134,13 +124,6 @@ void PsiTabBar::wheelEvent(QWheelEvent *event) {
 	setCurrentIndex(newIndex);
 
 	event->accept();
-}
-
-/*
- * Enable/disable dragging of tabs
- */
-void PsiTabBar::setDragsEnabled(bool enabled) {
-	dragsEnabled_ = enabled;
 }
 
 void PsiTabBar::paintEvent(QPaintEvent *event)

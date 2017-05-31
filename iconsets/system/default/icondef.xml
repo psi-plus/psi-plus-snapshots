@@ -731,6 +731,11 @@
 		<x xmlns='name'>psi/doubleBackArrow</x>
 		<object mime='image/png'>psiplus/doublebackarrow.png</object>
 	</icon>
+
+	<icon>
+		<x xmlns='name'>psi/pin</x>
+		<object mime='image/png'>psiplus/pin.png</object>
+	</icon>
 	<!-- End psi Plus icons -->
 
 	<!-- Icons for screenshot-plugin -->

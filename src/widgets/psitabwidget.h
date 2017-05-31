@@ -51,6 +51,9 @@ public:
 	void showPage(QWidget *);
 	void showPageDirectly(QWidget *);
 
+	void setPagePinned(QWidget *page, bool pinned);
+	bool isPagePinned(QWidget *page);
+
 	void removePage(QWidget *);
 	QWidget* page(int index);
 	int getIndex(QWidget *);
@@ -62,6 +65,8 @@ public:
 	void setTabBarShown(bool shown);     // default shown
 	void setTabButtonsShown(bool shown); // default shown
 	void setDragsEnabled(bool enabled);  // default enabled
+
+	void setTabBarUpdateEnabled(bool b);
 
 public slots:
 	void setCurrentPage(int);

@@ -291,6 +291,11 @@ void TabDlg::showTabMenu(int tab, QPoint pos, QContextMenuEvent * event)
 			tabMenu_->addMenu(sendTo);
 		}
 
+		QAction *p = 0;
+		if (PsiOptions::instance()->getOption("options.ui.tabs.multi-rows", true).toBool()) {
+			p = tabMenu_->addAction(tabWidget_->isPagePinned(getTab(tab)) ? tr("Unpin Tab") : tr("Pin Tab"));
+		}
+
 		QAction *act = tabMenu_->exec(pos);
 		if (!act)
 			return;
@@ -302,6 +307,9 @@ void TabDlg::showTabMenu(int tab, QPoint pos, QContextMenuEvent * event)
 		}
 		else if(act == h) {
 			hideTab(getTab(tab));
+		}
+		else if (p && act == p) {
+			pinTab(getTab(tab));
 		}
 		else {
 			TabDlg* target = sentTos[act];
@@ -446,6 +454,11 @@ void TabDlg::hideCurrentTab()
 void TabDlg::hideTab(TabbableWidget* tab)
 {
 	closeTab(tab, false);
+}
+
+void TabDlg::pinTab(TabbableWidget* tab)
+{
+	tabWidget_->setPagePinned(tab, !tabWidget_->isPagePinned(tab));
 }
 
 void TabDlg::hideAllTab()
@@ -922,6 +935,11 @@ void TabDlg::updateVSplitters(int log, int chat)
 	foreach(TabbableWidget *w, tabs_) {
 		w->setVSplitterPosition(log, chat);
 	}
+}
+
+bool TabDlg::isTabPinned(QWidget *page)
+{
+	return tabWidget_->isPagePinned(page);
 }
 
 TabbableWidget* TabDlg::getCurrentTab() const

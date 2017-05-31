@@ -38,10 +38,11 @@ PsiTabWidget::PsiTabWidget(QWidget *parent)
 		: QWidget(parent) {
 	tabsPosition_ = QTabWidget::East; // impossible => uninitialised state
 	tabBar_ = new PsiTabBar(this);
-
 	bool multiRow = PsiOptions::instance()->getOption("options.ui.tabs.multi-rows", true).toBool();
+	bool currentIndexAlwaysAtBottom  = PsiOptions::instance()->getOption("options.ui.tabs.current-index-at-bottom", true).toBool();
 	tabBar_->setMultiRow(multiRow);
 	tabBar_->setUsesScrollButtons(!multiRow);
+	tabBar_->setCurrentIndexAlwaysAtBottom(currentIndexAlwaysAtBottom);
 	layout_ = new QVBoxLayout(this);
 	layout_->setMargin(0);
 	layout_->setSpacing(0);
@@ -81,20 +82,23 @@ PsiTabWidget::PsiTabWidget(QWidget *parent)
 	setTabPosition(QTabWidget::North);
 	setLooks();
 
-	if (!PsiOptions::instance()->getOption("options.ui.tabs.show-tab-close-buttons").toBool()){
-		tabBar_->setTabsClosable(false);
-	}
 	if (!PsiOptions::instance()->getOption("options.ui.tabs.show-tab-buttons").toBool()){
 		closeButton_->hide();
 		downButton_->hide();
 	}
-	connect(tabBar_, SIGNAL(mouseDoubleClickTab(int)), SLOT(mouseDoubleClickTab(int)));
-	connect(tabBar_, SIGNAL(mouseMiddleClickTab(int)), SLOT(mouseMiddleClickTab(int)));
-	connect(tabBar_, SIGNAL( currentChanged(int)), SLOT(tab_currentChanged(int)));
-	connect(tabBar_, SIGNAL( contextMenu(QContextMenuEvent*,int)), SLOT( tab_contextMenu(QContextMenuEvent*,int)));
+#if QT_VERSION >= 0x040500
+	if (!PsiOptions::instance()->getOption("options.ui.tabs.show-tab-close-buttons").toBool()){
+		tabBar_->setTabsClosable(false);
+	}
+#endif
+	connect( tabBar_, SIGNAL(mouseDoubleClickTab(int)), SLOT(mouseDoubleClickTab(int)));
+	connect( tabBar_, SIGNAL(mouseMiddleClickTab(int)), SLOT(mouseMiddleClickTab(int)));
+	// TabBar::tabRemove must be handled before tab_currentChanged
+	connect( tabBar_, SIGNAL( currentChanged(int)), SLOT(tab_currentChanged(int)));
+	connect( tabBar_, SIGNAL( contextMenu(QContextMenuEvent*,int)), SLOT( tab_contextMenu(QContextMenuEvent*,int)));
+	connect( closeButton_, SIGNAL(clicked()), SIGNAL(closeButtonClicked()));
 	connect(tabBar_, SIGNAL(tabMoved(int,int)),SLOT(widgetMoved(int,int)));
 	connect(tabBar_, SIGNAL(tabCloseRequested(int)),SIGNAL(tabCloseRequested(int)));
-	connect(closeButton_, SIGNAL(clicked()), SIGNAL(closeButtonClicked()));
 }
 
 void PsiTabWidget::setCloseIcon(const QIcon& icon) {
@@ -229,6 +233,29 @@ void PsiTabWidget::showPageDirectly(QWidget* widget) {
 			return;
 		}
 	}
+}
+
+void PsiTabWidget::setPagePinned(QWidget *page, bool pinned)
+{
+	for (int i = 0; i < count(); ++i) {
+		if (widgets_.at(i) == page) {
+			tabBar_->setTabPinned(i, pinned);
+			showPageDirectly(page);
+			break;
+		}
+	}
+}
+
+bool PsiTabWidget::isPagePinned(QWidget *page)
+{
+	for (int i = 0; i < count(); ++i) {
+		if (widgets_.at(i) == page) {
+			return tabBar_->isTabPinned(i);
+			break;
+		}
+	}
+
+	return false;
 }
 
 /**
@@ -378,6 +405,11 @@ void PsiTabWidget::setDragsEnabled(bool enabled) {
 	((PsiTabBar *)tabBar_)->setDragsEnabled(enabled);
 }
 
+void PsiTabWidget::setTabBarUpdateEnabled(bool b)
+{
+	tabBar_->setUpdateEnabled(b);
+}
+
 void PsiTabWidget::widgetMoved(int from, int to)
 {
 	if (from > to) {
@@ -393,6 +425,9 @@ void PsiTabWidget::widgetMoved(int from, int to)
 		stacked_->insertWidget(to,widgets_[to]);
 	}
 
+#if QT_VERSION <= 0x040500
+	setCurrentPage(to);
+#endif
 	emit currentChanged(currentPage());
 
 };

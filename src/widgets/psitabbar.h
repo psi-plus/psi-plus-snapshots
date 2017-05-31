@@ -35,8 +35,6 @@ public:
 	~PsiTabBar();
 	PsiTabWidget *psiTabWidget();
 
-	void setDragsEnabled(bool enabled); // default enabled
-
 signals:
 	void mouseDoubleClickTab(int tab);
 	void mouseMiddleClickTab(int tab);
@@ -46,7 +44,6 @@ signals:
 
 protected:
 	void mouseDoubleClickEvent(QMouseEvent *event);
-	void mouseMoveEvent(QMouseEvent *event);
 	//void dragEnterEvent(QDragEnterEvent *event);
 	//void dropEvent(QDropEvent *event);
 	void mousePressEvent(QMouseEvent *event);
@@ -58,11 +55,7 @@ protected:
 
 private:
 	int findTabUnder(const QPoint &pos);
-	QPoint dragStartPosition_;
-	int dragTab_;
-	int currTab;
 	bool isOnTheLeft;
-	bool dragsEnabled_;
 };
 
 #endif /* _PSITABBAR_H_ */
