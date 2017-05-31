@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2017-04-24
+# Updated: 2017-06-01
 # Version: N/A
 
 set -e
@@ -67,19 +67,6 @@ else
 fi
 
 MOD=resources
-if [ -d "${MAIN_DIR}/${MOD}" ]; then
-    echo "Updating ${MAIN_DIR}/${MOD}"
-    cd "${MAIN_DIR}/${MOD}"
-    git pull --all --prune
-    echo;
-else
-    echo "Creating ${MAIN_DIR}/${MOD}"
-    cd "${MAIN_DIR}"
-    git clone https://github.com/psi-plus/${MOD}.git
-    echo;
-fi
-
-MOD=psi-plus-cmake
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
@@ -188,13 +175,6 @@ cp "${MAIN_DIR}/main/changelog.txt" "${PSIPLUS_DIR}/ChangeLog"
 echo "ChangeLog from Psi+ project is copied."
 echo;
 
-rsync -a "${MAIN_DIR}/psi-plus-cmake/" "${PSIPLUS_DIR}/" \
-    --exclude=".git*" \
-    --exclude="README.md"
-cp -a "${MAIN_DIR}/psi-plus-cmake/README.md" "${PSIPLUS_DIR}/README.cmake.md"
-echo "Files from psi-plus-cmake repo are copied."
-echo;
-
 rm configure.exe
 rm iris/configure.exe
 rm -r win32/*
@@ -221,19 +201,17 @@ TEST_ALL=$(echo "${STATUS}" | grep "   " |
              grep -v " configure" | \
              grep -v " README" | \
              wc -l)
-TEST_SRC=$(echo "${STATUS}"     | grep " src/"          | grep -iv "cmake" | wc -l)
-TEST_IRIS=$(echo "${STATUS}"    | grep " iris/"         | grep -iv "cmake" | wc -l)
-TEST_LIBPSI=$(echo "${STATUS}"  | grep " src/libpsi/"   | grep -iv "cmake" | wc -l)
-TEST_PLUGINS=$(echo "${STATUS}" | grep " src/plugins/"  | grep -iv "cmake" | wc -l)
-TEST_PATCHES=$(echo "${STATUS}" | grep " patches/"      | grep -iv "cmake" | wc -l)
-TEST_CMAKE=$(echo "${STATUS}"   | grep -i "cmake"       | wc -l)
+TEST_SRC=$(echo "${STATUS}"     | grep " src/"          | wc -l)
+TEST_IRIS=$(echo "${STATUS}"    | grep " iris/"         | wc -l)
+TEST_LIBPSI=$(echo "${STATUS}"  | grep " src/libpsi/"   | wc -l)
+TEST_PLUGINS=$(echo "${STATUS}" | grep " src/plugins/"  | wc -l)
+TEST_PATCHES=$(echo "${STATUS}" | grep " patches/"      | wc -l)
 
 echo "TEST_ALL = ${TEST_ALL}"
 echo "TEST_IRIS = ${TEST_IRIS}"
 echo "TEST_LIBPSI = ${TEST_LIBPSI}"
 echo "TEST_PLUGINS = ${TEST_PLUGINS}"
 echo "TEST_PATCHES = ${TEST_PATCHES}"
-echo "TEST_CMAKE = ${TEST_CMAKE}"
 echo "TEST_SRC = ${TEST_SRC}"
 echo;
 
@@ -267,12 +245,6 @@ if [ "${TEST_PATCHES}" -eq 1 ]; then
     COMMENT="${COMMENT}One extra patch is updated.\n"
 elif [ "${TEST_PATCHES}" -gt 1 ]; then
     COMMENT="${COMMENT}Extra patches are updated.\n"
-fi
-
-if [ "${TEST_CMAKE}" -eq 1 ]; then
-    COMMENT="${COMMENT}Cmake script is updated.\n"
-elif [ "${TEST_CMAKE}" -gt 1 ]; then
-    COMMENT="${COMMENT}Cmake scripts are updated.\n"
 fi
 
 echo "${COMMENT}"
