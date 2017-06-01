@@ -99,8 +99,7 @@ if(APPLE)
 		systemwatch/systemwatch_mac.cpp
 
 		# globalshortcut
-		# *g++*:QMAKE_OBJECTIVE_CFLAGS += -std=gnu99
-		globalshortcut/$$PWD/globalshortcutmanager_mac.mm
+		globalshortcut/globalshortcutmanager_mac.mm
 		globalshortcut/NDKeyboardLayout.m
 
 		# spellchecker

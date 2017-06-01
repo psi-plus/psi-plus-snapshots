@@ -323,6 +323,7 @@ static volatile NDKeyboardLayout		* kCurrentKeyboardLayout = nil;
 
 void NDKeyboardLayoutNotificationCallback( CFNotificationCenterRef aCenter, void * self, CFStringRef aName, const void * anObj, CFDictionaryRef aUserInfo )
 {
+	(void)aCenter; (void)aName; (void)anObj; (void)aUserInfo;
 	NSDictionary		* theUserInfo = [NSDictionary dictionaryWithObject:kCurrentKeyboardLayout forKey:NDKeyboardLayoutPreviousKeyboardLayoutUserInfoKey];
 	@synchronized(self) { [kCurrentKeyboardLayout release], kCurrentKeyboardLayout = nil; }
 	[[NSNotificationCenter defaultCenter] postNotificationName:NDKeyboardLayoutSelectedKeyboardInputSourceChangedNotification object:self userInfo:theUserInfo];

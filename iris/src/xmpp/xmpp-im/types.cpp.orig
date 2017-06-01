@@ -3464,6 +3464,7 @@ CaptchaChallenge::State CaptchaChallenge::state() const
 
 CaptchaChallenge::Result CaptchaChallenge::validateResponse(const XData &xd)
 {
+	Q_UNUSED(xd)
 	d->state = Fail;
 	return Unavailable; // TODO implement response validation
 }

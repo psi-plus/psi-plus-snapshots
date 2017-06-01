@@ -57,7 +57,7 @@ QList<QString> MacSpellChecker::suggestions(const QString& word)
 	return s;
 }
 
-bool MacSpellChecker::add(const QString& word)
+bool MacSpellChecker::add(const QString& /*word*/)
 {
 	return false;
 }

@@ -63,8 +63,8 @@ public:
 	virtual bool mouseMoveEvent(QWidget *widget, QMouseEvent *event);
 	virtual bool mouseReleaseEvent(QWidget *widget, QMouseEvent *event);
 	virtual bool changeEvent(QWidget *widget, QEvent *event);
-	virtual bool event(QWidget *widget, QEvent *event);
-	virtual bool eventFilter(QWidget *widget, QObject *obj, QEvent *event);
+	virtual bool tabEvent(QWidget *widget, QEvent *event);
+	virtual bool tabEventFilter(QWidget *widget, QObject *obj, QEvent *event);
 };
 
 class TabDlg : public AdvancedWidget<QWidget>
@@ -89,7 +89,7 @@ public:
 	void setSimplifiedCaptionEnabled(bool enabled); // default disabled
 	void setTabIcon(QWidget *,const QIcon &);
 	TabbableWidget* getCurrentTab() const;
-	
+
 	bool isTabPinned(QWidget *page);
 
 protected:
