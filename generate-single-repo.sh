@@ -3,18 +3,23 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2017-06-01
+# Updated: 2017-06-02
 # Version: N/A
 
 set -e
 
-export PSIPLUS_DIR="$(dirname $(realpath -s ${0}))"
-export MAIN_DIR="${PSIPLUS_DIR}/.."
+export SNAPSHOTS_DIR="$(dirname $(realpath -s ${0}))"
+export MAIN_DIR="${SNAPSHOTS_DIR}/.."
+
+PSI_URL=https://github.com/psi-im/psi.git
+PLUGINS_URL=https://github.com/psi-im/plugins.git
+PATCHES_URL=https://github.com/psi-plus/main.git
+RESOURCES_URL=https://github.com/psi-plus/resources.git
 
 # Test Internet connection:
 host github.com > /dev/null
 
-cd "${PSIPLUS_DIR}"
+cd "${SNAPSHOTS_DIR}"
 
 if [ "${1}" = "push" ]; then
     git push
@@ -33,7 +38,7 @@ if [ -d "${MAIN_DIR}/${MOD}" ]; then
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
-    git clone https://github.com/psi-im/${MOD}.git
+    git clone "${PSI_URL}"
     cd "${MAIN_DIR}/${MOD}"
     git submodule init
     git submodule update
@@ -49,7 +54,7 @@ if [ -d "${MAIN_DIR}/${MOD}" ]; then
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
-    git clone https://github.com/psi-plus/${MOD}.git
+    git clone "${PATCHES_URL}"
     echo;
 fi
 
@@ -62,7 +67,7 @@ if [ -d "${MAIN_DIR}/${MOD}" ]; then
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
-    git clone https://github.com/psi-im/${MOD}.git
+    git clone "${PLUGINS_URL}"
     echo;
 fi
 
@@ -75,36 +80,12 @@ if [ -d "${MAIN_DIR}/${MOD}" ]; then
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}"
-    git clone https://github.com/psi-plus/${MOD}.git
+    git clone "${RESOURCES_URL}"
     echo;
 fi
 
-REVISION_DATE_LIST="$(cd ${MAIN_DIR}/psi        && git log -n1 --date=short --pretty=format:'%ad')
-                    $(cd ${MAIN_DIR}/main       && git log -n1 --date=short --pretty=format:'%ad')
-                    $(cd ${MAIN_DIR}/plugins    && git log -n1 --date=short --pretty=format:'%ad')
-                    $(cd ${MAIN_DIR}/resources  && git log -n1 --date=short --pretty=format:'%ad')"
-LAST_REVISION_DATE=$(echo "${REVISION_DATE_LIST}" | sort -r | head -n1)
-
-MAIN_REVISION=$(cd ${MAIN_DIR}/main && git describe --tags | sed -e "s/^\(.\+\)-g.*$/\1/" | sed -e "s/-/\./")
-if [ "$(cd ${MAIN_DIR}/psi && git describe --tags | sed -e "s/-/\n/g" | wc -l)" = "3" ]; then
-    if [ "${MAIN_REVISION}" = "$(cd ${MAIN_DIR}/main && git describe --tags)" ]; then
-        PSI_REVISION=".0.$(cd ${MAIN_DIR}/psi && git describe --tags | sed -e 's/^.*-\([0-9]\+\)-.*$/\1/')"
-    else
-        PSI_REVISION=".$(cd ${MAIN_DIR}/psi && git describe --tags | sed -e 's/^.*-\([0-9]\+\)-.*$/\1/')"
-    fi
-else
-    PSI_REVISION=""
-fi
-NEW_VER="${MAIN_REVISION}${PSI_REVISION}"
-OLD_VER=$(cd "${PSIPLUS_DIR}" && git tag -l | sort -V | tail -n1)
-
-echo "OLD_VER = ${OLD_VER}"
-echo "NEW_VER = ${NEW_VER}"
-echo;
-
-cd "${PSIPLUS_DIR}"
-echo "Updating is started."
-echo;
+cd "${SNAPSHOTS_DIR}"
+echo "Checking for updates..."
 
 find . -type f | \
     grep -v "^\./\.git" | \
@@ -113,149 +94,137 @@ find . -type f | \
     grep -v "^\./README" | \
     while read var; do rm "$var"; done
 find . -depth -type d -empty -exec rmdir {} \;
-echo "Directory is cleaned."
-echo;
+echo "* Directory is cleaned."
 
 # Some paranoid checks:
 for FILE in generate-single-repo.sh configure README; do
-    if [ ! -e "${PSIPLUS_DIR}/${FILE}" ]; then
+    if [ ! -e "${SNAPSHOTS_DIR}/${FILE}" ]; then
         wget -c "https://raw.github.com/psi-plus/psi-plus-snapshots/master/${FILE}"
     fi
 done
 chmod uog+x generate-single-repo.sh configure
 
-mv "${PSIPLUS_DIR}/configure" "${MAIN_DIR}/configure"
-mv "${PSIPLUS_DIR}/README" "${MAIN_DIR}/README"
-rsync -a "${MAIN_DIR}/psi/" "${PSIPLUS_DIR}/" \
+mv "${SNAPSHOTS_DIR}/configure" "${MAIN_DIR}/configure"
+mv "${SNAPSHOTS_DIR}/README" "${MAIN_DIR}/README"
+rsync -a "${MAIN_DIR}/psi/" "${SNAPSHOTS_DIR}/" \
     --exclude=".git*" \
     --exclude="^configure" \
     --exclude="^README"
-mv "${MAIN_DIR}/configure" "${PSIPLUS_DIR}/configure"
-mv "${MAIN_DIR}/README" "${PSIPLUS_DIR}/README"
-echo "Files from psi project are copied."
-echo;
+mv "${MAIN_DIR}/configure" "${SNAPSHOTS_DIR}/configure"
+mv "${MAIN_DIR}/README" "${SNAPSHOTS_DIR}/README"
+echo "* Files from psi project are copied."
 
 cat "${MAIN_DIR}/main/patches"/*.diff | \
-    patch -d "${PSIPLUS_DIR}" -p1 2>&1 > \
+    patch -d "${SNAPSHOTS_DIR}" -p1 2>&1 > \
     "${MAIN_DIR}/applying-patches_${NEW_VER}.log"
-echo "${NEW_VER} ($(echo ${LAST_REVISION_DATE}))" > version
-echo "Patches from Psi+ project are applied."
-echo;
+echo "* Patches from Psi+ project are applied."
 
-mkdir -p "${PSIPLUS_DIR}/patches"
-rsync -a "${MAIN_DIR}/main/patches/dev" "${PSIPLUS_DIR}/patches/"
-rsync -a "${MAIN_DIR}/main/patches/mac" "${PSIPLUS_DIR}/patches/"
-rsync -a "${MAIN_DIR}/main/patches/haiku" "${PSIPLUS_DIR}/patches/"
-echo "Extra patches from Psi+ project are copied."
-echo;
+mkdir -p "${SNAPSHOTS_DIR}/patches"
+rsync -a "${MAIN_DIR}/main/patches/dev" "${SNAPSHOTS_DIR}/patches/"
+rsync -a "${MAIN_DIR}/main/patches/mac" "${SNAPSHOTS_DIR}/patches/"
+rsync -a "${MAIN_DIR}/main/patches/haiku" "${SNAPSHOTS_DIR}/patches/"
+echo "* Extra patches from Psi+ project are copied."
 
-rsync -a "${MAIN_DIR}/plugins" "${PSIPLUS_DIR}/src/" \
+rsync -a "${MAIN_DIR}/plugins" "${SNAPSHOTS_DIR}/src/" \
     --exclude=".git*"
-echo "Plugins from Psi+ project are copied."
-echo;
+echo "* Plugins from Psi project are copied."
 
-rsync -a "${MAIN_DIR}/main/iconsets/system/" "${PSIPLUS_DIR}/iconsets/system/"
-echo "Iconsets from Psi+ project are copied."
-echo;
+rsync -a "${MAIN_DIR}/main/iconsets/system/" "${SNAPSHOTS_DIR}/iconsets/system/"
+echo "* Iconsets from Psi+ project are copied."
 
-rsync -a "${MAIN_DIR}/resources/sound/" "${PSIPLUS_DIR}/sound/"
-echo "Sound files from Psi+ project are copied."
-echo;
+rsync -a "${MAIN_DIR}/resources/sound/" "${SNAPSHOTS_DIR}/sound/"
+echo "* Sound files from Psi+ project are copied."
 
-mkdir -p "${PSIPLUS_DIR}/skins/"
-rsync -a "${MAIN_DIR}/resources/skins/" "${PSIPLUS_DIR}/skins/"
-echo "Skins from Psi+ project are copied."
-echo;
+mkdir -p "${SNAPSHOTS_DIR}/skins/"
+rsync -a "${MAIN_DIR}/resources/skins/" "${SNAPSHOTS_DIR}/skins/"
+echo "* Skins from Psi+ project are copied."
 
-rsync -a "${MAIN_DIR}/resources/themes/" "${PSIPLUS_DIR}/themes/"
-echo "Themes from Psi+ project are copied."
-echo;
+rsync -a "${MAIN_DIR}/resources/themes/" "${SNAPSHOTS_DIR}/themes/"
+echo "* Themes from Psi+ project are copied."
 
-cp "${MAIN_DIR}/main/changelog.txt" "${PSIPLUS_DIR}/ChangeLog"
-echo "ChangeLog from Psi+ project is copied."
-echo;
+cp "${MAIN_DIR}/main/changelog.txt" "${SNAPSHOTS_DIR}/ChangeLog"
+echo "* ChangeLog from Psi+ project is copied."
 
 rm configure.exe
 rm iris/configure.exe
 rm -r win32/*
 rm -r src/libpsi/tools/idle/win32/
-rm -r iconsets/clients/
-echo "Trash is removed."
-echo;
+find . -type f -name "*.orig" -delete
+echo "* Trash is removed."
 
-cp -a "${MAIN_DIR}/psi/win32"/*.rc "${PSIPLUS_DIR}/win32/"
-cp -a "${MAIN_DIR}/psi/win32"/*.manifest "${PSIPLUS_DIR}/win32/"
-cp -a "${MAIN_DIR}/main/app.ico" "${PSIPLUS_DIR}/win32/"
-echo "Some files for MS Windows build are copied."
-echo;
+cp -a "${MAIN_DIR}/psi/win32"/*.rc "${SNAPSHOTS_DIR}/win32/"
+cp -a "${MAIN_DIR}/psi/win32"/*.manifest "${SNAPSHOTS_DIR}/win32/"
+cp -a "${MAIN_DIR}/main/app.ico" "${SNAPSHOTS_DIR}/win32/"
+echo "* Some files for MS Windows build are copied."
 
+echo;
 
 # Update repo and make analysis
 git add -A
 
-
-STATUS="$(git status)"
-
-TEST_ALL=$(echo "${STATUS}" | grep "   " |
-             grep -v " src/applicationinfo.cpp" | \
+TEST_ALL=$(LC_ALL=C git status | grep ":   " |
              grep -v " generate-single-repo.sh" | \
              grep -v " configure" | \
              grep -v " README" | \
+             grep -v " version" | \
              wc -l)
-TEST_SRC=$(echo "${STATUS}"     | grep " src/"          | wc -l)
-TEST_IRIS=$(echo "${STATUS}"    | grep " iris/"         | wc -l)
-TEST_LIBPSI=$(echo "${STATUS}"  | grep " src/libpsi/"   | wc -l)
-TEST_PLUGINS=$(echo "${STATUS}" | grep " src/plugins/"  | wc -l)
-TEST_PATCHES=$(echo "${STATUS}" | grep " patches/"      | wc -l)
 
-echo "TEST_ALL = ${TEST_ALL}"
-echo "TEST_IRIS = ${TEST_IRIS}"
-echo "TEST_LIBPSI = ${TEST_LIBPSI}"
-echo "TEST_PLUGINS = ${TEST_PLUGINS}"
-echo "TEST_PATCHES = ${TEST_PATCHES}"
-echo "TEST_SRC = ${TEST_SRC}"
-echo;
-
-
-if [ "${TEST_ALL}" -eq 0 ]; then
-    echo "Updating is not required.";
+if [ "${TEST_ALL}" = "0" ]; then
+    echo "Updating is not required!";
+    echo;
     exit 0;
 fi
 
-COMMENT="Current version is ${NEW_VER}:\n"
+PSI_HASH="$(cd ${MAIN_DIR}/psi && git show -s --pretty='format:%h')"
+PATCHES_HASH="$(cd ${MAIN_DIR}/main && git show -s --pretty='format:%h')"
+PLUGINS_HASH="$(cd ${MAIN_DIR}/plugins && git show -s --pretty='format:%h')"
+RESOURCES_HASH="$(cd ${MAIN_DIR}/resources && git show -s --pretty='format:%h')"
 
-if [ "${TEST_SRC}" -gt "$((${TEST_LIBPSI}+${TEST_PLUGINS}+0))" ]; then
-    COMMENT="${COMMENT}Psi+ is updated.\n"
+REVISION_DATE_LIST="$(cd ${MAIN_DIR}/psi        && git log -n1 --date=short --pretty=format:'%ad')
+                    $(cd ${MAIN_DIR}/main       && git log -n1 --date=short --pretty=format:'%ad')
+                    $(cd ${MAIN_DIR}/plugins    && git log -n1 --date=short --pretty=format:'%ad')
+                    $(cd ${MAIN_DIR}/resources  && git log -n1 --date=short --pretty=format:'%ad')"
+LAST_REVISION_DATE=$(echo "${REVISION_DATE_LIST}" | sort -r | head -n1)
+
+MAIN_VERSION=$(cd ${MAIN_DIR}/main && git tag | sort -V | grep '^[0-9]\+.[0-9]\+$' | tail -n 1)
+LAST_REVISION=$(cd "${SNAPSHOTS_DIR}" && git tag -l | sort -V | tail -n1 | sed -e 's/^[0-9]\+\.[0-9\+]\.\([0-9]\+\).*$/\1/')
+
+PREV_PSI_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* psi: \(.*\)$/\1/p')
+PREV_PATCHES_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* patches: \(.*\)$/\1/p')
+
+if [ "${PSI_HASH}" != "${PREV_PSI_HASH}" ] || [ "${PATCHES_HASH}" != "${PREV_PATCHES_HASH}" ]; then
+    CUR_REVISION=$((${LAST_REVISION} + 1))
+else
+    CUR_REVISION="${LAST_REVISION}"
 fi
 
-if [ "${TEST_IRIS}" -gt 0 ]; then
-    COMMENT="${COMMENT}iris is updated.\n"
-fi
+NEW_VER="${MAIN_VERSION}.${CUR_REVISION}"
+OLD_VER=$(cd "${SNAPSHOTS_DIR}" && git tag -l | sort -V | tail -n1)
 
-if [ "${TEST_LIBPSI}" -gt 0 ]; then
-    COMMENT="${COMMENT}libpsi is updated.\n"
-fi
+echo "OLD_VER = ${OLD_VER}"
+echo "NEW_VER = ${NEW_VER}"
+echo;
 
-if [ "${TEST_PLUGINS}" -eq 1 ]; then
-    COMMENT="${COMMENT}One plugin is updated.\n"
-elif [ "${TEST_PLUGINS}" -gt 1 ]; then
-    COMMENT="${COMMENT}Plugins are updated.\n"
-fi
+echo "${NEW_VER}.${PATCHES_HASH}.${PSI_HASH} (${LAST_REVISION_DATE})" > version
+echo "Version file is created."
+echo;
 
-if [ "${TEST_PATCHES}" -eq 1 ]; then
-    COMMENT="${COMMENT}One extra patch is updated.\n"
-elif [ "${TEST_PATCHES}" -gt 1 ]; then
-    COMMENT="${COMMENT}Extra patches are updated.\n"
-fi
+COMMENT="Current version of Psi+ is ${NEW_VER}
 
+It is based on:
+* psi: ${PSI_HASH}
+* patches: ${PATCHES_HASH}
+* plugins: ${PLUGINS_HASH}
+* resources: ${RESOURCES_HASH}
+"
 echo "${COMMENT}"
 
-git cm -a -m "$(echo ${COMMENT})" 2>&1 > \
+git cm -a -m "${COMMENT}" 2>&1 > \
     "${MAIN_DIR}/git-commit_${NEW_VER}.log"
 
 if [ "${NEW_VER}" != "${OLD_VER}" ]; then
     git tag "${NEW_VER}"
-    echo "Git tag ${NEW_VER} is created."
+    echo "Git tag \"${NEW_VER}\" is created."
 fi
 
 echo;
