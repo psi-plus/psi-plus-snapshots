@@ -171,6 +171,7 @@ TEST_ALL=$(LC_ALL=C git status | grep ":   " |
 
 if [ "${TEST_ALL}" = "0" ]; then
     echo "Updating is not required!";
+    git co HEAD version
     echo;
     exit 0;
 fi
