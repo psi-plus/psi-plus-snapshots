@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2017-06-02
+# Updated: 2017-06-03
 # Version: N/A
 
 set -e
@@ -181,9 +181,9 @@ PLUGINS_HASH="$(cd ${MAIN_DIR}/plugins && git show -s --pretty='format:%h')"
 RESOURCES_HASH="$(cd ${MAIN_DIR}/resources && git show -s --pretty='format:%h')"
 
 REVISION_DATE_LIST="$(cd ${MAIN_DIR}/psi        && git log -n1 --date=short --pretty=format:'%ad')
-                    $(cd ${MAIN_DIR}/main       && git log -n1 --date=short --pretty=format:'%ad')
-                    $(cd ${MAIN_DIR}/plugins    && git log -n1 --date=short --pretty=format:'%ad')
-                    $(cd ${MAIN_DIR}/resources  && git log -n1 --date=short --pretty=format:'%ad')"
+$(cd ${MAIN_DIR}/main       && git log -n1 --date=short --pretty=format:'%ad')
+$(cd ${MAIN_DIR}/plugins    && git log -n1 --date=short --pretty=format:'%ad')
+$(cd ${MAIN_DIR}/resources  && git log -n1 --date=short --pretty=format:'%ad')"
 LAST_REVISION_DATE=$(echo "${REVISION_DATE_LIST}" | sort -r | head -n1)
 
 MAIN_VERSION=$(cd ${MAIN_DIR}/main && git tag | sort -V | grep '^[0-9]\+.[0-9]\+$' | tail -n 1)
