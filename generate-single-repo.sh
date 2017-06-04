@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2017-06-03
+# Updated: 2017-06-05
 # Version: N/A
 
 set -e
@@ -115,8 +115,8 @@ mv "${MAIN_DIR}/README" "${SNAPSHOTS_DIR}/README"
 echo "* Files from psi project are copied."
 
 cat "${MAIN_DIR}/main/patches"/*.diff | \
-    patch -d "${SNAPSHOTS_DIR}" -p1 2>&1 > \
-    "${MAIN_DIR}/applying-patches_${NEW_VER}.log"
+    patch -d "${SNAPSHOTS_DIR}" -p1 &> \
+    "${MAIN_DIR}/applying-patches.log"
 echo "* Patches from Psi+ project are applied."
 
 mkdir -p "${SNAPSHOTS_DIR}/patches"
@@ -220,8 +220,7 @@ It is based on:
 "
 echo "${COMMENT}"
 
-git cm -a -m "${COMMENT}" 2>&1 > \
-    "${MAIN_DIR}/git-commit_${NEW_VER}.log"
+git cm -a -m "${COMMENT}" &> /dev/null
 
 if [ "${NEW_VER}" != "${OLD_VER}" ]; then
     git tag "${NEW_VER}"
