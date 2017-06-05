@@ -909,12 +909,12 @@ void PsiChatDlg::buildMenu()
 
 	pm_settings_->addAction(actions_->action("chat_info"));
 	pm_settings_->addAction(actions_->action("chat_history"));
-	if (getManagingTabDlg()->isTabPinned(this)) {
-		pm_settings_->addAction(actions_->action("chat_unpin_tab"));
-	}
-	else {
-		pm_settings_->addAction(actions_->action("chat_pin_tab"));
-	}
+    auto dlg = getManagingTabDlg();
+    if (dlg) {
+        pm_settings_->addAction(actions_->action(dlg->isTabPinned(this)?
+                                                     "chat_unpin_tab":
+                                                     "chat_pin_tab"));
+    } // else it's not tabbed dialog
 #ifdef PSI_PLUGINS
 	if(!PsiOptions::instance()->getOption("options.ui.contactlist.toolbars.m0.visible").toBool()) {
 		pm_settings_->addSeparator();
