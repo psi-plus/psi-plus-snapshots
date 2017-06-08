@@ -621,7 +621,7 @@ unix:!dbus {
 	SOURCES += $$PWD/activeprofiles_stub.cpp
 }
 
-qtwebengine|qwebkit {
+qtwebengine|qtwebkit {
 	HEADERS += 	$$PWD/chatview_webkit.h \
 			$$PWD/webview.h \
 			$$PWD/jsutil.h \
