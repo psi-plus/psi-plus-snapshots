@@ -22,6 +22,7 @@ class PsiChatDlg : public ChatDlg
 	Q_OBJECT
 public:
 	PsiChatDlg(const Jid& jid, PsiAccount* account, TabManager* tabManager);
+	~PsiChatDlg();
 
 	virtual void setVSplitterPosition(int log,int chat);
 

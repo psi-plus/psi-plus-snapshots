@@ -187,6 +187,11 @@ PsiChatDlg::PsiChatDlg(const Jid& jid, PsiAccount* pa, TabManager* tabManager)
 	setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
 }
 
+PsiChatDlg::~PsiChatDlg()
+{
+	delete actions_;
+}
+
 void PsiChatDlg::initUi()
 {
 	ui_.setupUi(this);
