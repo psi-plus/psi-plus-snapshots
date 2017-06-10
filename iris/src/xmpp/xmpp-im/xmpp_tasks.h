@@ -219,28 +219,6 @@ namespace XMPP
 		Private *d;
 	};
 
-	class JT_GetServices : public Task
-	{
-		Q_OBJECT
-	public:
-		JT_GetServices(Task *);
-
-		void get(const Jid &);
-
-		const AgentList & agents() const;
-
-		void onGo();
-		bool take(const QDomElement &x);
-
-	private:
-		class Private;
-		Private *d;
-
-		QDomElement iq;
-		Jid jid;
-		AgentList agentList;
-	};
-
 	class JT_VCard : public Task
 	{
 		Q_OBJECT
@@ -369,28 +347,6 @@ namespace XMPP
 		Jid v_jid;
 		Jid v_translatedJid;
 		QString v_prompt, v_desc;
-	};
-
-	class JT_Browse : public Task
-	{
-		Q_OBJECT
-	public:
-		JT_Browse(Task *);
-		~JT_Browse();
-
-		void get(const Jid &);
-
-		const AgentList & agents() const;
-		const AgentItem & root() const;
-
-		void onGo();
-		bool take(const QDomElement &);
-
-	private:
-		class Private;
-		Private *d;
-
-		AgentItem browseHelper (const QDomElement &i);
 	};
 
 	class JT_DiscoItems : public Task

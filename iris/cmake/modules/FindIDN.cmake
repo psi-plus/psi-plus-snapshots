@@ -1,5 +1,5 @@
 #=============================================================================
-# Copyright 2016-2017 Psi+ Project
+# Copyright 2016-2017 Psi+ Project, Vitaly Tonkacheyev
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,61 +25,48 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #=============================================================================
-
-if (QJDns_INCLUDE_DIR AND QJDns_LIBRARY)
+if( IDN_INCLUDE_DIR AND IDN_LIBRARY )
 	# in cache already
-	set(QJDns_FIND_QUIETLY TRUE)
-endif ()
+	set(IDN_FIND_QUIETLY TRUE)
+endif( IDN_INCLUDE_DIR AND IDN_LIBRARY )
 
-if ( UNIX AND NOT( APPLE OR CYGWIN ) )
+if( UNIX AND NOT( APPLE OR CYGWIN ) )
 	find_package( PkgConfig QUIET )
-	pkg_check_modules( PC_QJDns QUIET jdns )
-	set ( QJDns_DEFINITIONS 
-		${PC_QJDns_CFLAGS}
-		${PC_QJDns_CFLAGS_OTHER}
-	)
-endif ( UNIX AND NOT( APPLE OR CYGWIN ) )
+	pkg_check_modules( PC_IDN QUIET libidn )
+	if( PC_IDN_FOUND )
+		set( IDN_DEFINITIONS ${PC_IDN_CFLAGS} ${PC_IDN_CFLAGS_OTHER} )
+	endif( PC_IDN_FOUND )
+endif( UNIX AND NOT( APPLE OR CYGWIN ) )
 
-set ( LIBINCS 
-	qjdns.h
-)
-
-if(NOT QJDns_SUFFIX)
-	set( QJDns_SUFFIX "")
-endif()
+set( IDN_ROOT "" CACHE STRING "Path to libidn library" )
 
 find_path(
-	QJDns_INCLUDE_DIR ${LIBINCS}
+	IDN_INCLUDE_DIR idna.h
 	HINTS
-	${QJDNS_DIR}/include
-	${PC_QJDns_INCLUDEDIR}
-	${PC_QJDns_INCLUDE_DIRS}
-	PATH_SUFFIXES
-	""
-	if( NOT WIN32 )
-		jdns
-	endif( NOT WIN32 )
+	${IDN_ROOT}/include
+	${PC_IDN_INCLUDEDIR}
+	${PC_IDN_INCLUDE_DIRS}
 )
 
 find_library(
-	QJDns_LIBRARY
-	NAMES qjdns${QJDns_SUFFIX}
-	HINTS 
-	${PC_QJDns_LIBDIR}
-	${PC_QJDns_LIBRARY_DIRS}
-	${QJDNS_DIR}/lib
-	${QJDNS_DIR}/bin
+	IDN_LIBRARY
+	NAMES idn libidn idn-11 libidn-11
+	HINTS
+	${PC_IDN_LIBDIR}
+	${PC_IDN_LIBRARY_DIRS}
+	${IDN_ROOT}/lib
+	${IDN_ROOT}/bin
 )
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
-				QJDns
+				IDN
 				DEFAULT_MSG
-				QJDns_LIBRARY
-				QJDns_INCLUDE_DIR
+				IDN_LIBRARY
+				IDN_INCLUDE_DIR
 )
-if ( QJDns_FOUND )
-	set ( QJDns_LIBRARIES ${QJDns_LIBRARY} )
-	set ( QJDns_INCLUDE_DIRS ${QJDns_INCLUDE_DIR} )
-endif ( QJDns_FOUND )
+if( IDN_FOUND )
+	set( IDN_LIBRARIES ${IDN_LIBRARY} )
+	set( IDN_INCLUDE_DIRS ${IDN_INCLUDE_DIR} )
+endif( IDN_FOUND )
 
-mark_as_advanced( QJDns_INCLUDE_DIR QJDns_LIBRARY )
+mark_as_advanced( IDN_INCLUDE_DIR IDN_LIBRARY )
