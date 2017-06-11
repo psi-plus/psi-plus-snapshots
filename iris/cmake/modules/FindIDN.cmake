@@ -25,54 +25,48 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #=============================================================================
-if (Qca_INCLUDE_DIR AND Qca_LIBRARY)
+if( IDN_INCLUDE_DIR AND IDN_LIBRARY )
 	# in cache already
-	set(Qca_FIND_QUIETLY TRUE)
-endif ()
+	set(IDN_FIND_QUIETLY TRUE)
+endif( IDN_INCLUDE_DIR AND IDN_LIBRARY )
 
-set ( LIBINCS 
-	qca.h
-)
+if( UNIX AND NOT( APPLE OR CYGWIN ) )
+	find_package( PkgConfig QUIET )
+	pkg_check_modules( PC_IDN QUIET libidn )
+	if( PC_IDN_FOUND )
+		set( IDN_DEFINITIONS ${PC_IDN_CFLAGS} ${PC_IDN_CFLAGS_OTHER} )
+	endif( PC_IDN_FOUND )
+endif( UNIX AND NOT( APPLE OR CYGWIN ) )
 
-if(NOT Qca_SUFFIX)
-	set(Qca_SUFFIX "")
-endif()
-
-if(${Qca_SUFFIX} == "-qt5")
-	set(EXTRA_PATH_SUFFIXES
-		qt5/Qca-qt5/QtCrypto
-		Qca-qt5/QtCrypto
-		qt5/QtCrypto
-	)
-endif()
+set( IDN_ROOT "" CACHE STRING "Path to libidn library" )
 
 find_path(
-	Qca_INCLUDE_DIR ${LIBINCS}
+	IDN_INCLUDE_DIR idna.h
 	HINTS
-	${QCA_DIR}/include
-	PATH_SUFFIXES
-	QtCrypto
-	${EXTRA_PATH_SUFFIXES}
+	${IDN_ROOT}/include
+	${PC_IDN_INCLUDEDIR}
+	${PC_IDN_INCLUDE_DIRS}
 )
 
 find_library(
-	Qca_LIBRARY
-	NAMES qca${Qca_SUFFIX}
-	HINTS 
-	${QCA_DIR}/lib
-	${QCA_DIR}/bin
+	IDN_LIBRARY
+	NAMES idn libidn idn-11 libidn-11
+	HINTS
+	${PC_IDN_LIBDIR}
+	${PC_IDN_LIBRARY_DIRS}
+	${IDN_ROOT}/lib
+	${IDN_ROOT}/bin
 )
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
-				Qca
+				IDN
 				DEFAULT_MSG
-				Qca_LIBRARY
-				Qca_INCLUDE_DIR
+				IDN_LIBRARY
+				IDN_INCLUDE_DIR
 )
-if ( Qca_FOUND )
-	set ( Qca_LIBRARIES ${Qca_LIBRARY} )
-	set ( Qca_INCLUDE_DIRS ${Qca_INCLUDE_DIR} )
-endif ( Qca_FOUND )
+if( IDN_FOUND )
+	set( IDN_LIBRARIES ${IDN_LIBRARY} )
+	set( IDN_INCLUDE_DIRS ${IDN_INCLUDE_DIR} )
+endif( IDN_FOUND )
 
-mark_as_advanced( Qca_INCLUDE_DIR Qca_LIBRARY )
-
+mark_as_advanced( IDN_INCLUDE_DIR IDN_LIBRARY )

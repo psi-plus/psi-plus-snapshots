@@ -1,5 +1,5 @@
 #=============================================================================
-# Copyright 2016-2017 Psi+ Project, Vitaly Tonkacheyev
+# Copyright 2016-2017 Psi+ Project
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,54 +25,61 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #=============================================================================
-if (Qca_INCLUDE_DIR AND Qca_LIBRARY)
+
+if (QJDns_INCLUDE_DIR AND QJDns_LIBRARY)
 	# in cache already
-	set(Qca_FIND_QUIETLY TRUE)
+	set(QJDns_FIND_QUIETLY TRUE)
 endif ()
 
+if ( UNIX AND NOT( APPLE OR CYGWIN ) )
+	find_package( PkgConfig QUIET )
+	pkg_check_modules( PC_QJDns QUIET jdns )
+	set ( QJDns_DEFINITIONS 
+		${PC_QJDns_CFLAGS}
+		${PC_QJDns_CFLAGS_OTHER}
+	)
+endif ( UNIX AND NOT( APPLE OR CYGWIN ) )
+
 set ( LIBINCS 
-	qca.h
+	qjdns.h
 )
 
-if(NOT Qca_SUFFIX)
-	set(Qca_SUFFIX "")
-endif()
-
-if(${Qca_SUFFIX} == "-qt5")
-	set(EXTRA_PATH_SUFFIXES
-		qt5/Qca-qt5/QtCrypto
-		Qca-qt5/QtCrypto
-		qt5/QtCrypto
-	)
+if(NOT QJDns_SUFFIX)
+	set( QJDns_SUFFIX "")
 endif()
 
 find_path(
-	Qca_INCLUDE_DIR ${LIBINCS}
+	QJDns_INCLUDE_DIR ${LIBINCS}
 	HINTS
-	${QCA_DIR}/include
+	${QJDNS_DIR}/include
+	${PC_QJDns_INCLUDEDIR}
+	${PC_QJDns_INCLUDE_DIRS}
 	PATH_SUFFIXES
-	QtCrypto
-	${EXTRA_PATH_SUFFIXES}
+	""
+	if( NOT WIN32 )
+		jdns
+	endif( NOT WIN32 )
 )
 
 find_library(
-	Qca_LIBRARY
-	NAMES qca${Qca_SUFFIX}
+	QJDns_LIBRARY
+	NAMES qjdns qjdns${QJDns_SUFFIX}
 	HINTS 
-	${QCA_DIR}/lib
-	${QCA_DIR}/bin
+	${PC_QJDns_LIBDIR}
+	${PC_QJDns_LIBRARY_DIRS}
+	${QJDNS_DIR}/lib
+	${QJDNS_DIR}/bin
 )
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
-				Qca
+				QJDns
 				DEFAULT_MSG
-				Qca_LIBRARY
-				Qca_INCLUDE_DIR
+				QJDns_LIBRARY
+				QJDns_INCLUDE_DIR
 )
-if ( Qca_FOUND )
-	set ( Qca_LIBRARIES ${Qca_LIBRARY} )
-	set ( Qca_INCLUDE_DIRS ${Qca_INCLUDE_DIR} )
-endif ( Qca_FOUND )
+if ( QJDns_FOUND )
+	set ( QJDns_LIBRARIES ${QJDns_LIBRARY} )
+	set ( QJDns_INCLUDE_DIRS ${QJDns_INCLUDE_DIR} )
+endif ( QJDns_FOUND )
 
-mark_as_advanced( Qca_INCLUDE_DIR Qca_LIBRARY )
-
+mark_as_advanced( QJDns_INCLUDE_DIR QJDns_LIBRARY )
