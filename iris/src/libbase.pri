@@ -5,4 +5,4 @@ include($$top_iris_builddir/../conf.pri)
 
 include(../common.pri)
 
-QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.3
+QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9

@@ -3,4 +3,4 @@ windows:include(confapp_win.pri)
 
 include(common.pri)
 
-mac:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.3
+mac:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
