@@ -25,6 +25,11 @@ SOURCES += \
 	$$PWD/netnames.cpp \
 	$$PWD/addressresolver.cpp
 
+greaterThan(QT_MAJOR_VERSION, 4) {
+	SOURCES += \
+		$$PWD/netinterface_qt.cpp
+}
+
 unix {
 	SOURCES += \
 		$$PWD/netinterface_unix.cpp

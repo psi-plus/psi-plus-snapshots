@@ -25,6 +25,9 @@
 namespace XMPP {
 
 // built-in providers
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+extern IrisNetProvider *irisnet_createQtNetProvider();
+#endif
 #ifdef Q_OS_WIN
 extern IrisNetProvider *irisnet_createWinNetProvider();
 #endif
@@ -180,6 +183,9 @@ public:
 	{
 		if(!builtin_done)
 		{
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+			addBuiltIn(irisnet_createQtNetProvider());
+#endif
 #ifdef Q_OS_WIN
 			addBuiltIn(irisnet_createWinNetProvider());
 #endif

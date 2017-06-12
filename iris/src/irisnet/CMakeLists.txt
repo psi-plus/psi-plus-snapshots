@@ -60,6 +60,9 @@ if(WIN32)
 elseif(UNIX)
 	list(APPEND SOURCES corelib/netinterface_unix.cpp)
 endif()
+if(USE_QT5)
+	list(APPEND SOURCES corelib/netinterface_qt.cpp)
+endif()
 
 set(PLAIN_HEADERS
 	corelib/irisnetexport.h
