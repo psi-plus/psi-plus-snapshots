@@ -86,6 +86,7 @@ public:
 	// reimplemented
 	virtual TabbableWidget::State state() const;
 	virtual int unreadMessageCount() const;
+	const QString & getDisplayName();
 	virtual QString desiredCaption() const;
 	virtual void setVSplitterPosition(int log,int chat);
 
@@ -140,6 +141,7 @@ private slots:
 	void setConnecting();
 	void unsetConnecting();
 	void action_error(MUCManager::Action, int, const QString&);
+	void updateMucName();
 	void updateGCVCard();
 	void updateIdentityVisibility();
 	void updateBookmarkIcon();
