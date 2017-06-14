@@ -5719,9 +5719,19 @@ void PsiAccount::setLocalMucBookmarks(const QStringList &sl)
 	d->acc.localMucBookmarks = sl;
 }
 
+void PsiAccount::setIgnoreMucBookmarks(const QStringList &sl)
+{
+	d->acc.ignoreMucBookmarks = sl;
+}
+
 QStringList PsiAccount::localMucBookmarks() const
 {
 	return d->acc.localMucBookmarks;
+}
+
+QStringList PsiAccount::ignoreMucBookmarks() const
+{
+	return d->acc.ignoreMucBookmarks;
 }
 
 GCContact *PsiAccount::findGCContact(const Jid &j) const
