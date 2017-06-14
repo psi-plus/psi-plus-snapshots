@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2017-06-05
+# Updated: 2017-06-14
 # Version: N/A
 
 set -e
@@ -115,7 +115,7 @@ mv "${MAIN_DIR}/README" "${SNAPSHOTS_DIR}/README"
 echo "* Files from psi project are copied."
 
 cat "${MAIN_DIR}/main/patches"/*.diff | \
-    patch -d "${SNAPSHOTS_DIR}" -p1 &> \
+    patch -d "${SNAPSHOTS_DIR}" -p1 2>&1 > \
     "${MAIN_DIR}/applying-patches.log"
 echo "* Patches from Psi+ project are applied."
 
@@ -128,6 +128,9 @@ echo "* Extra patches from Psi+ project are copied."
 rsync -a "${MAIN_DIR}/plugins" "${SNAPSHOTS_DIR}/src/" \
     --exclude=".git*"
 echo "* Plugins from Psi project are copied."
+
+rsync -a "${MAIN_DIR}/main/admin/" "${SNAPSHOTS_DIR}/admin/"
+echo "* Extra scripts from Psi+ project are copied."
 
 rsync -a "${MAIN_DIR}/main/iconsets/system/" "${SNAPSHOTS_DIR}/iconsets/system/"
 echo "* Iconsets from Psi+ project are copied."
@@ -187,17 +190,14 @@ $(cd ${MAIN_DIR}/plugins    && git log -n1 --date=short --pretty=format:'%ad')
 $(cd ${MAIN_DIR}/resources  && git log -n1 --date=short --pretty=format:'%ad')"
 LAST_REVISION_DATE=$(echo "${REVISION_DATE_LIST}" | sort -r | head -n1)
 
+PSI_DEFINING_COMMIT=2812a0af876f47b9001fcd3a4af9ad89e2ccb1ea
+PATCHES_DEFINING_COMMIT=871fac5f74f247df1d28297d5ea3982a8dcfaacc
+
+PSI_NUM="$(cd ${MAIN_DIR}/psi && git rev-list --count ${PSI_DEFINING_COMMIT}..HEAD)"
+PATCHES_NUM="$(cd ${MAIN_DIR}/main && git rev-list --count ${PATCHES_DEFINING_COMMIT}..HEAD)"
+
 MAIN_VERSION=$(cd ${MAIN_DIR}/main && git tag | sort -V | grep '^[0-9]\+.[0-9]\+$' | tail -n 1)
-LAST_REVISION=$(cd "${SNAPSHOTS_DIR}" && git tag -l | sort -V | tail -n1 | sed -e 's/^[0-9]\+\.[0-9\+]\.\([0-9]\+\).*$/\1/')
-
-PREV_PSI_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* psi: \(.*\)$/\1/p')
-PREV_PATCHES_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* patches: \(.*\)$/\1/p')
-
-if [ "${PSI_HASH}" != "${PREV_PSI_HASH}" ] || [ "${PATCHES_HASH}" != "${PREV_PATCHES_HASH}" ]; then
-    CUR_REVISION=$((${LAST_REVISION} + 1))
-else
-    CUR_REVISION="${LAST_REVISION}"
-fi
+CUR_REVISION="$(expr ${PSI_NUM} + ${PATCHES_NUM})"
 
 NEW_VER="${MAIN_VERSION}.${CUR_REVISION}"
 OLD_VER=$(cd "${SNAPSHOTS_DIR}" && git tag -l | sort -V | tail -n1)
@@ -206,8 +206,9 @@ echo "OLD_VER = ${OLD_VER}"
 echo "NEW_VER = ${NEW_VER}"
 echo;
 
-echo "${NEW_VER}.${PATCHES_HASH}.${PSI_HASH} (${LAST_REVISION_DATE})" > version
-echo "Version file is created."
+echo "${NEW_VER} (${LAST_REVISION_DATE}, Psi:${PSI_HASH}, Psi+:${PATCHES_HASH})" > version
+echo "Version file is created:"
+cat  version
 echo;
 
 COMMENT="Current version of Psi+ is ${NEW_VER}
@@ -220,7 +221,7 @@ It is based on:
 "
 echo "${COMMENT}"
 
-git cm -a -m "${COMMENT}" &> /dev/null
+git cm -a -m "${COMMENT}" 2>&1 > /dev/null
 
 if [ "${NEW_VER}" != "${OLD_VER}" ]; then
     git tag "${NEW_VER}"
