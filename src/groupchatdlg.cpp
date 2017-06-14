@@ -218,7 +218,7 @@ public:
 	int state;
 	MUCManager *mucManager;
 	QString self, prev_self;
-	QString mucName;
+	QString mucName, discoMucName, vcardMucName;
 	QString password;
 	QString topic;
 	bool nonAnonymous;		 // got status code 100 ?
@@ -672,7 +672,6 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 	setAttribute(Qt::WA_DeleteOnClose);
 	d = new Private(this);
 	d->self = d->prev_self = j.resource();
-	d->mucName = j.full();
 	account()->dialogRegister(this, jid());
 	connect(account(), SIGNAL(updatedActivity()), SLOT(pa_updatedActivity()));
 	d->mucManager = new MUCManager(account(), jid());
@@ -901,6 +900,10 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 
 	updateMucName();
 	updateGCVCard();
+	JT_DiscoInfo* disco = new JT_DiscoInfo(account()->client()->rootTask()); // FIXME in fact xep says we should do this before entering.
+	connect(disco, SIGNAL(finished()), SLOT(discoInfoFinished()));     // but we need this just for name for now.
+	disco->get(jid());                                             // From other side we could provide the name outside.
+	disco->go(true);
 	VCardFactory::instance()->getVCard(jid(), account()->client()->rootTask(), this, SLOT(updateGCVCard()), true);
 
 	setLooks();
@@ -1142,15 +1145,12 @@ void GCMainDlg::action_error(MUCManager::Action, int, const QString& err)
 
 void GCMainDlg::updateMucName()
 {
-	QString newName;
-	auto bm = account()->bookmarkManager();
-	int index = bm->indexOfConference(jid());
-	auto mucs = bm->conferences();
-	if (index < 0 || mucs[index].name().isEmpty()) {
-		newName = jid().full();
-		// TODO try to get from VCard or from muc manager or from disco#info
-	} else {
-		newName = mucs[index].name();
+	QString newName = account()->bookmarkManager()->conferenceName(jid());
+	if (newName.isEmpty()) {
+		newName = d->discoMucName;
+	}
+	if (newName.isEmpty()) {
+		newName = d->vcardMucName;
 	}
 	if (newName != d->mucName) {
 		d->mucName = newName;
@@ -1158,10 +1158,25 @@ void GCMainDlg::updateMucName()
 	}
 }
 
+void GCMainDlg::discoInfoFinished()
+{
+	JT_DiscoInfo *t = static_cast<JT_DiscoInfo *>(sender());
+	const DiscoItem::Identities& i = t->item().identities();
+	if (i.count() > 0) {
+		d->discoMucName = i.first().name;
+	}
+	updateMucName();
+}
+
 void GCMainDlg::updateGCVCard()
 {
 	const VCard vcard = VCardFactory::instance()->vcard(jid());
 	if (vcard) {
+		d->vcardMucName = vcard.nickName();
+		if (d->vcardMucName.isEmpty()) {
+			d->vcardMucName = vcard.fullName();
+		}
+		updateMucName();
 		QImage avatar = QImage::fromData(vcard.photo());
 		if (!avatar.isNull()) {
 			ui_.lblAvatar->show();
@@ -2040,7 +2055,8 @@ void GCMainDlg::doAlert()
 
 const QString &GCMainDlg::getDisplayName()
 {
-	return d->mucName;
+	return d->mucName.isEmpty()?
+	            jid().full() : d->mucName;
 }
 
 QString GCMainDlg::desiredCaption() const
@@ -2056,7 +2072,9 @@ QString GCMainDlg::desiredCaption() const
 			cap += QString("[%1] ").arg(d->pending);
 		}
 	}
-	cap += d->mucName;
+	QString name = d->mucName.isEmpty()?
+	            jid().full() : d->mucName; // FIXME a dup because it's const func.
+	cap += name;
 
 	return cap;
 }
