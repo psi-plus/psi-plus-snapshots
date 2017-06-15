@@ -142,7 +142,7 @@ void TabbableWidget::setJid(const Jid& j)
 	jid_ = j;
 }
 
-const QString& TabbableWidget::getDisplayName()
+const QString& TabbableWidget::getDisplayName() const
 {
 	return jid_.node();
 }
