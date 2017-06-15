@@ -560,9 +560,8 @@ void MainWin::splitterMoved()
 
 void MainWin::optionChanged(const QString& option)
 {
-	if (option == toolbarsStateOptionPath) { //for compatibility with skins plugin
+	if (option == toolbarsStateOptionPath) {
 		loadToolbarsState();
-		//buildToolbars(); //FIXME!!! not a very good solution
 	}
 	else if (option == "options.ui.contactlist.css") {
 		const QString css = PsiOptions::instance()->getOption("options.ui.contactlist.css").toString();
