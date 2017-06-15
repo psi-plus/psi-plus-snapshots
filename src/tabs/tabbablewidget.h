@@ -81,7 +81,6 @@ public slots:
 	void bringToFront(bool raiseWindow = true);
 	virtual void ensureTabbedCorrectly();
 	void hideTab();
-	void pinTab();
 
 protected:
 	virtual void setJid(const Jid&);

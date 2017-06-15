@@ -94,7 +94,6 @@
 #include "mcmdsimplesite.h"
 #include "tabcompletion.h"
 #include "vcardfactory.h"
-#include "tabdlg.h"
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -781,9 +780,6 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 		}
 		else if (name == "gchat_info") {
 			connect(action, SIGNAL(triggered()), SLOT(doInfo()));
-		}
-		else if (name == "gchat_pin_tab" || name == "gchat_unpin_tab") {
-			connect(action, SIGNAL(triggered()), SLOT(pinTab()));
 		}
 	}
 
@@ -2311,13 +2307,6 @@ void GCMainDlg::buildMenu()
 	d->pm_settings->addAction(d->actions->action("gchat_icon"));
 	d->pm_settings->addAction(d->act_nick);
 	d->pm_settings->addAction(d->act_bookmark);
-	if (PsiOptions::instance()->getOption("options.ui.tabs.multi-rows").toBool()) {
-		d->pm_settings->addSeparator();
-		if (getManagingTabDlg()->isTabPinned(this))
-			d->pm_settings->addAction(d->actions->action("gchat_unpin_tab"));
-		else
-			d->pm_settings->addAction(d->actions->action("gchat_pin_tab"));
-	}
 #ifdef PSI_PLUGINS
 	if(!PsiOptions::instance()->getOption("options.ui.contactlist.toolbars.m1.visible").toBool()) {
 		d->pm_settings->addSeparator();

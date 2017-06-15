@@ -252,8 +252,3 @@ void TabbableWidget::hideTab()
 	else
 		hide();
 }
-
-void TabbableWidget::pinTab()
-{
-	getManagingTabDlg()->pinTab(this);
-}
