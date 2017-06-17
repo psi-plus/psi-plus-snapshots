@@ -24,65 +24,6 @@
 
 namespace XMPP {
 
-class IrisQtNet : public NetInterfaceProvider
-{
-	Q_OBJECT
-	Q_INTERFACES(XMPP::NetInterfaceProvider)
-public:
-	QList<Info> info;
-	QNetworkConfigurationManager ncm;
-
-	IrisQtNet()
-	{
-		connect(&ncm, SIGNAL(configurationAdded(QNetworkConfiguration)), SLOT(check()));
-		connect(&ncm, SIGNAL(configurationChanged(QNetworkConfiguration)), SLOT(check()));
-		connect(&ncm, SIGNAL(configurationRemoved(QNetworkConfiguration)), SLOT(check()));
-	}
-
-	void start()
-	{
-		poll();
-	}
-
-	QList<Info> interfaces() const
-	{
-		return info;
-	}
-
-	void poll()
-	{
-		QList<Info> ifaces;
-
-		for (auto &iface: QNetworkInterface::allInterfaces()) {
-			Info i;
-			i.id = iface.name();
-			i.name = iface.humanReadableName();
-			i.isLoopback = (iface.flags() & QNetworkInterface::IsLoopBack);
-			for (auto &ae: iface.addressEntries()) {
-				i.addresses.append(ae.ip());
-				// FIXME: the code below for gateway detection is wrong
-				QHostAddress gw(ae.ip());
-				if (gw.protocol() == QAbstractSocket::IPv4Protocol) {
-					// that's just a quick hack. Don't blame me for this.
-					// In fact all this API should be rewritten or dropped.
-					gw.setAddress((gw.toIPv4Address() & ae.netmask().toIPv4Address()) | 1);
-					i.gateway = gw;
-				}
-			}
-			ifaces << i;
-		}
-
-		info = ifaces;
-	}
-
-public slots:
-	void check()
-	{
-		poll();
-		emit updated();
-	}
-};
-
 class IrisQtName : public NameProvider
 {
 	Q_OBJECT
@@ -201,15 +142,11 @@ private slots:
 	}
 };
 
-class IrisQtNetProvider : public IrisNetProvider
+class IrisQtNameProvider : public IrisNetProvider
 {
 	Q_OBJECT
 	Q_INTERFACES(XMPP::IrisNetProvider)
 public:
-	NetInterfaceProvider *createNetInterfaceProvider()
-	{
-		return new IrisQtNet;
-	}
 
 	NameProvider *createNameProviderInternet()
 	{
@@ -217,11 +154,11 @@ public:
 	}
 };
 
-IrisNetProvider *irisnet_createQtNetProvider()
+IrisNetProvider *irisnet_createQtNameProvider()
 {
-	return new IrisQtNetProvider;
+	return new IrisQtNameProvider;
 }
 
 }
 
-#include "netinterface_qt.moc"
+#include "netinterface_qtname.moc"

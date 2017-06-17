@@ -1,10 +1,5 @@
 QT *= network
 
-iris-qjdns {
-	include(../../jdns/jdns.pri)
-	INCLUDEPATH += $$PWD/../../jdns
-}
-
 HEADERS += \
 	$$PWD/objectsession.h \
 	$$PWD/irisnetexport.h \
@@ -21,27 +16,29 @@ SOURCES += \
 	$$PWD/irisnetplugin.cpp \
 	$$PWD/irisnetglobal.cpp \
 	$$PWD/netinterface.cpp \
+	$$PWD/netinterface_qtnet.cpp \
 	$$PWD/netavailability.cpp \
 	$$PWD/netnames.cpp \
 	$$PWD/addressresolver.cpp
-
-greaterThan(QT_MAJOR_VERSION, 4) {
-	SOURCES += \
-		$$PWD/netinterface_qt.cpp
-}
 
 unix {
 	SOURCES += \
 		$$PWD/netinterface_unix.cpp
 }
 
-windows {
-	SOURCES += \
-		$$PWD/netinterface_win.cpp
-}
+need_jdns|lessThan(QT_MAJOR_VERSION, 5) {
+	!ext-qjdns {
+		include(../../jdns/jdns.pri)
+		INCLUDEPATH += $$PWD/../../jdns
+	}
 
-SOURCES += \
-	$$PWD/netnames_jdns.cpp
+	SOURCES += \
+		$$PWD/netnames_jdns.cpp
+
+	DEFINES += NEED_JDNS
+} else {
+	SOURCES += $$PWD/netinterface_qtname.cpp \
+}
 
 #include(legacy/legacy.pri)
 

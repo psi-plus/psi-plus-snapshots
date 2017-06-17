@@ -25,16 +25,15 @@
 namespace XMPP {
 
 // built-in providers
-#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
 extern IrisNetProvider *irisnet_createQtNetProvider();
-#endif
-#ifdef Q_OS_WIN
-extern IrisNetProvider *irisnet_createWinNetProvider();
-#endif
 #ifdef Q_OS_UNIX
 extern IrisNetProvider *irisnet_createUnixNetProvider();
 #endif
+#ifdef NEED_JDNS
 extern IrisNetProvider *irisnet_createJDnsProvider();
+#else
+extern IrisNetProvider *irisnet_createQtNameProvider();
+#endif
 #ifdef APPLEDNS_STATIC
 extern IrisNetProvider *irisnet_createAppleProvider();
 #endif
@@ -183,16 +182,15 @@ public:
 	{
 		if(!builtin_done)
 		{
-#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
-			addBuiltIn(irisnet_createQtNetProvider());
-#endif
-#ifdef Q_OS_WIN
-			addBuiltIn(irisnet_createWinNetProvider());
-#endif
+			addBuiltIn(irisnet_createQtNetProvider()); // interfaces. crossplatform. no need to reimplement
 #ifdef Q_OS_UNIX
-			addBuiltIn(irisnet_createUnixNetProvider());
+			addBuiltIn(irisnet_createUnixNetProvider()); // gateways
 #endif
+#ifdef NEED_JDNS
 			addBuiltIn(irisnet_createJDnsProvider());
+#else
+			addBuiltIn(irisnet_createQtNameProvider()); // works with Qt5+ only
+#endif
 			builtin_done = true;
 		}
 

@@ -197,7 +197,6 @@ public:
 	bool valid;
 	QString id, name;
 	QList<QHostAddress> addrs;
-	QHostAddress gw;
 
 	NetInterfacePrivate(NetInterface *_q) : QObject(_q), q(_q)
 	{
@@ -226,7 +225,6 @@ NetInterface::NetInterface(const QString &id, NetInterfaceManager *manager)
 		d->id = info->id;
 		d->name = info->name;
 		d->addrs = info->addresses;
-		d->gw = info->gateway;
 		delete info;
 	}
 }
@@ -255,11 +253,6 @@ QString NetInterface::name() const
 QList<QHostAddress> NetInterface::addresses() const
 {
 	return d->addrs;
-}
-
-QHostAddress NetInterface::gateway() const
-{
-	return d->gw;
 }
 
 //----------------------------------------------------------------------------
@@ -300,7 +293,7 @@ public:
 	static bool sameContent(const NetInterfaceProvider::Info &a, const NetInterfaceProvider::Info &b)
 	{
 		// assume ids are the same already
-		return (a.name == b.name && a.isLoopback == b.isLoopback && a.addresses == b.addresses && a.gateway == b.gateway);
+		return (a.name == b.name && a.isLoopback == b.isLoopback && a.addresses == b.addresses);
 	}
 
 	void do_update()

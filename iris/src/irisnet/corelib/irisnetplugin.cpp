@@ -30,6 +30,11 @@ NetInterfaceProvider *IrisNetProvider::createNetInterfaceProvider()
 	return 0;
 }
 
+NetGatewayProvider *IrisNetProvider::createNetGatewayProvider()
+{
+	return 0;
+}
+
 NetAvailabilityProvider *IrisNetProvider::createNetAvailabilityProvider()
 {
 	return 0;

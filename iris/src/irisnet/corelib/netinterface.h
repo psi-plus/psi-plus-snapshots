@@ -34,7 +34,7 @@ class NetInterfaceManagerPrivate;
 
    NetInterface provides information about a particular network interface.  Construct it by passing the interface id of interest (e.g. "eth0") and a NetInterfaceManager parent object.  Interface ids can be obtained from NetInterfaceManager.
 
-   To test if a NetInterface is valid, call isValid().  Use name() to return a display-friendly name of the interface.  The addresses() function returns a list of IP addresses for this interface.  There may be a gateway IP address associated with this interface, which can be fetched with gateway().
+   To test if a NetInterface is valid, call isValid().  Use name() to return a display-friendly name of the interface.  The addresses() function returns a list of IP addresses for this interface.
 
    Here's an example of how to print the IP addresses of eth0:
    \code
@@ -98,13 +98,6 @@ public:
 	   There will always be at least one address.  In some cases there might be multiple, such as on Unix where it is possible for the same interface to have both an IPv4 and an IPv6 address.
 	*/
 	QList<QHostAddress> addresses() const;
-
-	/**
-	   \brief Returns the gateway of this interface
-
-	   If there is no gateway associated with this interface, a null QHostAddress is returned.
-	*/
-	QHostAddress gateway() const; // optional
 
 signals:
 	/**

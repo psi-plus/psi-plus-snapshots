@@ -37,8 +37,8 @@ set(SOURCES
 	corelib/addressresolver.cpp
 	corelib/netavailability.cpp
 	corelib/netinterface.cpp
+	corelib/netinterface_qtnet.cpp
 	corelib/netnames.cpp
-	corelib/netnames_jdns.cpp
 	corelib/objectsession.cpp
 
 	noncore/ice176.cpp
@@ -55,13 +55,15 @@ set(SOURCES
 	noncore/cutestuff/bsocket.cpp
 	)
 
-if(WIN32)
-	list(APPEND SOURCES corelib/netinterface_win.cpp)
-elseif(UNIX)
+if(UNIX)
 	list(APPEND SOURCES corelib/netinterface_unix.cpp)
 endif()
+# TODO add a key to force use jdns (see corelib.pri)
 if(USE_QT5)
-	list(APPEND SOURCES corelib/netinterface_qt.cpp)
+	list(APPEND SOURCES corelib/netinterface_qtname.cpp)
+else()
+	list(APPEND SOURCES corelib/netinterface_jdns.cpp)
+	add_definitions(-DNEED_JDNS)
 endif()
 
 set(PLAIN_HEADERS

@@ -40,103 +40,6 @@
 # include<sys/sockio.h>
 #endif
 
-class UnixIface
-{
-public:
-	QString name;
-	bool loopback;
-	QHostAddress address;
-};
-
-class UnixGateway
-{
-public:
-	QString ifaceName;
-	QHostAddress address;
-};
-
-static QList<UnixIface> get_sioc_ifaces()
-{
-	QList<UnixIface> out;
-
-	int tmpsock = socket(AF_INET, SOCK_DGRAM, 0);
-	if(tmpsock < 0)
-		return out;
-
-	struct ifconf ifc;
-	int lastlen = 0;
-	QByteArray buf(100 * sizeof(struct ifreq), 0); // guess
-	while(1)
-	{
-		ifc.ifc_len = buf.size();
-		ifc.ifc_buf = buf.data();
-		if(ioctl(tmpsock, SIOCGIFCONF, &ifc) < 0)
-		{
-			if(errno != EINVAL || lastlen != 0)
-				return out;
-		}
-		else
-		{
-			// if it didn't grow since last time, then
-			//   there's no overflow
-			if(ifc.ifc_len == lastlen)
-				break;
-			lastlen = ifc.ifc_len;
-		}
-		buf.resize(buf.size() + 10 * sizeof(struct ifreq));
-	}
-	buf.resize(lastlen);
-
-	int itemsize;
-	for(int at = 0; at < buf.size(); at += itemsize)
-	{
-		struct ifreq *ifr = (struct ifreq *)(buf.data() + at);
-
-#ifndef Q_OS_LINUX
-		int sockaddr_len;
-
-		if(((struct sockaddr *)&ifr->ifr_addr)->sa_family == AF_INET) {
-			sockaddr_len = sizeof(struct sockaddr_in);
-		} else if(((struct sockaddr *)&ifr->ifr_addr)->sa_family == AF_INET6) {
-			sockaddr_len = sizeof(struct sockaddr_in6);
-		} else {
-			sockaddr_len = sizeof(struct sockaddr);
-		}
-
-		// set this asap so the next iteration is possible
-		itemsize = sizeof(ifr->ifr_name) + sockaddr_len;
-#else
-		itemsize = sizeof(ifreq);
-#endif
-
-		// skip if the family is 0 (sometimes you get empty entries)
-		if(ifr->ifr_addr.sa_family == 0)
-			continue;
-
-		// make a copy of this item to do additional ioctls on
-		struct ifreq ifrcopy = *ifr;
-
-		// grab the flags
-		if(ioctl(tmpsock, SIOCGIFFLAGS, &ifrcopy) < 0)
-			continue;
-
-		// device must be up and not loopback
-		if(!(ifrcopy.ifr_flags & IFF_UP))
-			continue;
-
-		UnixIface i;
-		i.name = QString::fromLatin1(ifr->ifr_name);
-		i.loopback = (ifrcopy.ifr_flags & IFF_LOOPBACK) ? true : false;
-		i.address.setAddress(&ifr->ifr_addr);
-		out += i;
-	}
-
-	// don't need this anymore
-	close(tmpsock);
-
-	return out;
-}
-
 #ifdef Q_OS_LINUX
 static QStringList read_proc_as_lines(const char *procfile)
 {
@@ -201,50 +104,9 @@ static QHostAddress linux_ipv4_to_qaddr(const QString &in)
 	return out;
 }
 
-static QList<UnixIface> get_linux_ipv6_ifaces()
+static QList<XMPP::NetGatewayProvider::Info> get_linux_gateways()
 {
-	QList<UnixIface> out;
-
-	QStringList lines = read_proc_as_lines("/proc/net/if_inet6");
-	for(int n = 0; n < lines.count(); ++n)
-	{
-		const QString &line = lines[n];
-		QStringList parts = line.simplified().split(' ', QString::SkipEmptyParts);
-		if(parts.count() < 6)
-			continue;
-
-		QString name = parts[5];
-		if(name.isEmpty())
-			continue;
-		QHostAddress addr = linux_ipv6_to_qaddr(parts[0]);
-		if(addr.isNull())
-			continue;
-
-		QString scopestr = parts[3];
-		bool ok;
-		unsigned int scope = parts[3].toInt(&ok, 16);
-		if(!ok)
-			continue;
-
-		// IPV6_ADDR_LOOPBACK    0x0010U
-		// IPV6_ADDR_SCOPE_MASK  0x00f0U
-		bool loopback = false;
-		if((scope & 0x00f0U) == 0x0010U)
-			loopback = true;
-
-		UnixIface i;
-		i.name = name;
-		i.loopback = loopback;
-		i.address = addr;
-		out += i;
-	}
-
-	return out;
-}
-
-static QList<UnixGateway> get_linux_gateways()
-{
-	QList<UnixGateway> out;
+	QList<XMPP::NetGatewayProvider::Info> out;
 
 	QStringList lines = read_proc_as_lines("/proc/net/route");
 	// skip the first line, so we start at 1
@@ -266,9 +128,9 @@ static QList<UnixGateway> get_linux_gateways()
 		if(!(iflags & RTF_GATEWAY))
 			continue;
 
-		UnixGateway g;
-		g.ifaceName = parts[0];
-		g.address = addr;
+		XMPP::NetGatewayProvider::Info g;
+		g.ifaceId = parts[0];
+		g.gateway = addr;
 		out += g;
 	}
 
@@ -291,9 +153,9 @@ static QList<UnixGateway> get_linux_gateways()
 		if(!(iflags & RTF_GATEWAY))
 			continue;
 
-		UnixGateway g;
-		g.ifaceName = parts[9];
-		g.address = addr;
+		XMPP::NetGatewayProvider::Info g;
+		g.ifaceId = parts[9];
+		g.gateway = addr;
 		out += g;
 	}
 
@@ -301,19 +163,10 @@ static QList<UnixGateway> get_linux_gateways()
 }
 #endif
 
-static QList<UnixIface> get_unix_ifaces()
-{
-	QList<UnixIface> out = get_sioc_ifaces();
-#ifdef Q_OS_LINUX
-	out += get_linux_ipv6_ifaces();
-#endif
-	return out;
-}
-
-static QList<UnixGateway> get_unix_gateways()
+static QList<XMPP::NetGatewayProvider::Info> get_unix_gateways()
 {
 	// support other platforms here
-	QList<UnixGateway> out;
+	QList<XMPP::NetGatewayProvider::Info> out;
 #ifdef Q_OS_LINUX
 	out = get_linux_gateways();
 #endif
@@ -322,84 +175,34 @@ static QList<UnixGateway> get_unix_gateways()
 
 namespace XMPP {
 
-class UnixNet : public NetInterfaceProvider
+class UnixGateway : public NetGatewayProvider
 {
 	Q_OBJECT
-	Q_INTERFACES(XMPP::NetInterfaceProvider);
+	Q_INTERFACES(XMPP::NetGatewayProvider)
 public:
 	QList<Info> info;
-	QTimer t;
+	//QTimer t;
 
-	UnixNet() : t(this)
+	UnixGateway() //: t(this)
 	{
-		connect(&t, SIGNAL(timeout()), SLOT(check()));
+		//connect(&t, SIGNAL(timeout()), SLOT(check()));
+		// TODO track changes without timers
 	}
 
 	void start()
 	{
-		t.start(5000);
+		//t.start(5000);
 		poll();
 	}
 
-	QList<Info> interfaces() const
+	QList<Info> gateways() const
 	{
 		return info;
 	}
 
 	void poll()
 	{
-		QList<Info> ifaces;
-
-		QList<UnixIface> list = get_unix_ifaces();
-		for(int n = 0; n < list.count(); ++n)
-		{
-			// see if we have it already
-			int lookup = -1;
-			for(int k = 0; k < ifaces.count(); ++k)
-			{
-				if(ifaces[k].id == list[n].name)
-				{
-					lookup = k;
-					break;
-				}
-			}
-
-			// don't have it?  make it
-			if(lookup == -1)
-			{
-				Info i;
-				i.id = list[n].name;
-				i.name = list[n].name;
-				i.isLoopback = list[n].loopback;
-				i.addresses += list[n].address;
-				ifaces += i;
-			}
-			// otherwise, tack on the address
-			else
-				ifaces[lookup].addresses += list[n].address;
-		}
-
-		QList<UnixGateway> glist = get_unix_gateways();
-		for(int n = 0; n < glist.count(); ++n)
-		{
-			// look up the interface
-			int lookup = -1;
-			for(int k = 0; k < ifaces.count(); ++k)
-			{
-				if(ifaces[k].id == glist[n].ifaceName)
-				{
-					lookup = k;
-					break;
-				}
-			}
-
-			if(lookup == -1)
-				break;
-
-			ifaces[lookup].gateway = glist[n].address;
-		}
-
-		info = ifaces;
+		info = get_unix_gateways();
 	}
 
 public slots:
@@ -413,11 +216,11 @@ public slots:
 class UnixNetProvider : public IrisNetProvider
 {
 	Q_OBJECT
-	Q_INTERFACES(XMPP::IrisNetProvider);
+	Q_INTERFACES(XMPP::IrisNetProvider)
 public:
-	virtual NetInterfaceProvider *createNetInterfaceProvider()
+	virtual NetGatewayProvider *createNetGatewayProvider()
 	{
-		return new UnixNet;
+		return new UnixGateway;
 	}
 };
 

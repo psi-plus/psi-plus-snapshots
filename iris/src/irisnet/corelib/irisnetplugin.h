@@ -29,6 +29,7 @@
 namespace XMPP {
 
 class NetInterfaceProvider;
+class NetGatewayProvider;
 class NetAvailabilityProvider;
 class NameProvider;
 class ServiceProvider;
@@ -39,6 +40,7 @@ class IRISNET_EXPORT IrisNetProvider : public QObject
 
 public:
 	virtual NetInterfaceProvider *createNetInterfaceProvider();
+	virtual NetGatewayProvider *createNetGatewayProvider();
 	virtual NetAvailabilityProvider *createNetAvailabilityProvider();
 	virtual NameProvider *createNameProviderInternet();
 	virtual NameProvider *createNameProviderLocal();
@@ -56,7 +58,6 @@ public:
 		QString id, name;
 		bool isLoopback;
 		QList<QHostAddress> addresses;
-		QHostAddress gateway;
 	};
 
 	NetInterfaceProvider(QObject *parent = 0) :
@@ -68,6 +69,32 @@ public:
 	//   immediately fetched.  do not signal updated() for this.
 	virtual void start() = 0;
 	virtual QList<Info> interfaces() const = 0;
+
+signals:
+	void updated();
+};
+
+class IRISNET_EXPORT NetGatewayProvider : public QObject
+{
+	Q_OBJECT
+
+public:
+	class Info
+	{
+	public:
+		QString ifaceId;
+		QHostAddress gateway;
+	};
+
+	NetGatewayProvider(QObject *parent = 0) :
+		QObject(parent)
+	{
+	}
+
+	// calling start should populate an initial list that can be
+	//   immediately fetched.  do not signal updated() for this.
+	virtual void start() = 0;
+	virtual QList<Info> gateways() const = 0;
 
 signals:
 	void updated();
@@ -169,8 +196,9 @@ signals:
 
 }
 
+Q_DECLARE_INTERFACE(XMPP::NetGatewayProvider,   "com.affinix.irisnet.IrisGatewayProvider/1.0")
 Q_DECLARE_INTERFACE(XMPP::IrisNetProvider,      "com.affinix.irisnet.IrisNetProvider/1.0")
-Q_DECLARE_INTERFACE(XMPP::NetInterfaceProvider, "com.affinix.irisnet.NetInterfaceProvider/1.0")
+Q_DECLARE_INTERFACE(XMPP::NetInterfaceProvider, "com.affinix.irisnet.NetInterfaceProvider/2.0")
 Q_DECLARE_INTERFACE(XMPP::NameProvider,         "com.affinix.irisnet.NameProvider/1.0")
 Q_DECLARE_INTERFACE(XMPP::ServiceProvider,      "com.affinix.irisnet.ServiceProvider/1.0")
 
