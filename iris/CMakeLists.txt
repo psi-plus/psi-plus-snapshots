@@ -20,6 +20,7 @@ set( CMAKE_MODULE_PATH
 	"${PROJECT_SOURCE_DIR}/../cmake/modules"
 	)
 
+option( USE_QJDNS "Use qjdns/jdns library. Disabled by default for Qt5" OFF )
 option( SEPARATE_QJDNS "Build qjdns with iris library" OFF )
 
 include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
@@ -40,17 +41,26 @@ if(USE_QT5)
 	endmacro()
 
 	add_definitions(-DHAVE_QT5)
+	if(USE_QJDNS)
+		message(WARNING "USE_QJDNS flag is enabled with Qt5. If you have problems with connection please disable this flag")
+	endif()
 else()
 	find_package(Qt4 COMPONENTS QtCore QtGui QtNetwork QtXml REQUIRED)
 	include(${QT_USE_FILE})
+	set(USE_QJDNS ON)
 endif()
+
+if(USE_QJDNS)
+	add_definitions(-DNEED_JDNS)
+endif()
+
 find_package(Qca REQUIRED)
 set(QCA_INCLUDES ${Qca_INCLUDE_DIR})
 set(qca_LIB ${Qca_LIBRARY})
 
 include_directories(
 	${QCA_INCLUDES}
-	)
+)
 
 macro(qt_wrap_cpp)
 	set(_SOURCES ${ARGN})
@@ -71,7 +81,12 @@ macro(qt_wrap_cpp)
 	unset(_SOURCES)
 endmacro()
 
-if(NOT SEPARATE_QJDNS)
+if(NOT USE_QJDNS AND SEPARATE_QJDNS)
+	message(WARNING "SEPARATE_QJDNS flag enabled, but USE_QJDNS flag disabled. Both flags will be disabled")
+	set(SEPARATE_QJDNS OFF)
+endif()
+
+if(USE_QJDNS AND (NOT SEPARATE_QJDNS))
 	add_definitions(-DJDNS_STATIC)
 	set(QJDns_LIBRARY qjdns)
 	include_directories(
@@ -96,7 +111,7 @@ if(NOT SEPARATE_QJDNS)
 	add_library(jdns STATIC ${jdns_SRCS} ${jdns_HEADERS} ${jdns_PUBLIC_HEADERS})
 	if(WIN32)
 		target_link_libraries(jdns ws2_32 advapi32)
-	endif(WIN32)
+	endif()
 	set(qjdns_MOC_HDRS
 		src/jdns/include/jdns/qjdns.h
 		src/jdns/include/jdns/qjdnsshared.h
@@ -126,7 +141,7 @@ if(NOT SEPARATE_QJDNS)
 		target_link_libraries(${QJDns_LIBRARY} ${QT_LIBRARIES})
 	endif()
 	target_link_libraries(${QJDns_LIBRARY} jdns)
-else()
+elseif(USE_QJDNS)
 	if(USE_QT5)
 		set(QJDns_SUFFIX -qt5)
 	else()

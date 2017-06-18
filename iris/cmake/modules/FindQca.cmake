@@ -38,7 +38,7 @@ if(NOT Qca_SUFFIX)
 	set(Qca_SUFFIX "")
 endif()
 
-if(${Qca_SUFFIX} == "-qt5")
+if("${Qca_SUFFIX}" STREQUAL "-qt5")
 	set(EXTRA_PATH_SUFFIXES
 		qt5/Qca-qt5/QtCrypto
 		Qca-qt5/QtCrypto

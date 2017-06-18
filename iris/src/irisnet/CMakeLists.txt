@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 3.1.0)
 include_directories(
 	${CMAKE_CURRENT_BINARY_DIR}
 	corelib
@@ -5,13 +6,13 @@ include_directories(
 	noncore/cutestuff
 	noncore/legacy
 	${QCA_INCLUDES}
-	)
+)
 
 set( CMAKE_MODULE_PATH
 	"${CMAKE_MODULE_PATH}"
 	"${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../cmake/modules"
-	)
+)
 
 set(PLAIN_SOURCES
 	corelib/irisnetglobal.cpp
@@ -31,7 +32,7 @@ set(PLAIN_SOURCES
 	noncore/legacy/safedelete.cpp
 	noncore/legacy/servsock.cpp
 	noncore/legacy/srvresolver.cpp
-	)
+)
 
 set(SOURCES
 	corelib/addressresolver.cpp
@@ -53,17 +54,16 @@ set(SOURCES
 	noncore/udpportreserver.cpp
 
 	noncore/cutestuff/bsocket.cpp
-	)
+)
 
 if(UNIX)
 	list(APPEND SOURCES corelib/netinterface_unix.cpp)
 endif()
-# TODO add a key to force use jdns (see corelib.pri)
-if(USE_QT5)
+
+if(NOT USE_QJDNS)
 	list(APPEND SOURCES corelib/netinterface_qtname.cpp)
 else()
-	list(APPEND SOURCES corelib/netinterface_jdns.cpp)
-	add_definitions(-DNEED_JDNS)
+	list(APPEND SOURCES corelib/netnames_jdns.cpp)
 endif()
 
 set(PLAIN_HEADERS
@@ -74,7 +74,7 @@ set(PLAIN_HEADERS
 	noncore/stunmessage.h
 	noncore/stuntypes.h
 	noncore/stunutil.h
-	)
+)
 
 set(HEADERS
 	corelib/addressresolver.h
@@ -106,13 +106,20 @@ set(HEADERS
 	noncore/legacy/safedelete.h
 	noncore/legacy/servsock.h
 	noncore/legacy/srvresolver.h
-	)
+)
 
 qt_wrap_cpp(MOC_SOURCES ${HEADERS} ${SOURCES})
 add_library(irisnet STATIC ${SOURCES} ${HEADERS} ${MOC_SOURCES} ${PLAIN_SOURCES} ${PLAIN_HEADERS} )
 
-if( SEPARATE_QJDNS AND WIN32)
+set_property(TARGET irisnet PROPERTY CXX_STANDARD 11)
+set_property(TARGET irisnet PROPERTY CXX_STANDARD_REQUIRED ON)
+
+if(USE_QJDNS AND (SEPARATE_QJDNS AND WIN32))
 	set(EXTRA_LDFLAGS ws2_32)
+endif()
+
+if(NOT USE_QJDNS)
+	set(QJDns_LIBRARY "")
 endif()
 
 target_link_libraries(irisnet ${QJDns_LIBRARY} ${EXTRA_LDFLAGS})
