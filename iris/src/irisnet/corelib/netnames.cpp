@@ -608,6 +608,9 @@ void WeightedNameRecordList::append(const XMPP::WeightedNameRecordList &list) {
 
 void WeightedNameRecordList::append(const QList<XMPP::NameRecord> &list) {
 	foreach (const XMPP::NameRecord &record, list) {
+		if (record.type() != XMPP::NameRecord::Srv) {
+			continue;
+		}
 		WeightedNameRecordPriorityGroup group(priorityGroups.value(record.priority()));
 
 		group.insert(record.weight(), record);
@@ -624,6 +627,7 @@ void WeightedNameRecordList::append(const QList<XMPP::NameRecord> &list) {
 void WeightedNameRecordList::append(const XMPP::NameRecord &record) {
 	WeightedNameRecordPriorityGroup group(priorityGroups.value(record.priority()));
 
+	Q_ASSERT(record.type() == XMPP::NameRecord::Srv);
 	group.insert(record.weight(), record);
 
 	if (!priorityGroups.contains(record.priority())) {
