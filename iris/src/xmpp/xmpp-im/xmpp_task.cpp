@@ -127,7 +127,7 @@ void Task::go(bool autoDelete)
 {
 	d->autoDelete = autoDelete;
 
-	if (!client() || !&client()->stream()) {
+	if (!client() || !client()->hasStream()) {
 		qWarning("Task::go(): attempted to send a task over the broken connection.");
 		if (autoDelete) {
 			deleteLater();

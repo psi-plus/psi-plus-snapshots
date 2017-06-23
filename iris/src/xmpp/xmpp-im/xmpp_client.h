@@ -67,6 +67,7 @@ namespace XMPP
 		void start(const QString &host, const QString &user, const QString &pass, const QString &resource);
 		void close(bool fast=false);
 
+		bool hasStream() const;
 		Stream & stream();
 		QString streamBaseNS() const;
 		const LiveRoster & roster() const;
@@ -188,6 +189,7 @@ namespace XMPP
 
 	public:
 		class GroupChat;
+
 	private:
 		void cleanup();
 		void distribute(const QDomElement &);
