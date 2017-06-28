@@ -1,6 +1,6 @@
 /*
  * advwidget.h - AdvancedWidget template class
- * Copyright (C) 2005-2007  Michail Pishchagin, 2017  Khryukin Evgeny
+ * Copyright (C) 2005-2007  Michail Pishchagin, 2017  Evgeny Khryukin
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public

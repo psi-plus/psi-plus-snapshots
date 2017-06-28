@@ -1,6 +1,6 @@
 /*
  * psiwindowheader.cpp
- * Copyright (C) 2010-2017  Khryukin Evgeny, Vitaly Tonkacheyev
+ * Copyright (C) 2010-2017  Evgeny Khryukin, Vitaly Tonkacheyev
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
