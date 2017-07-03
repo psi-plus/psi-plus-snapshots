@@ -22,7 +22,6 @@
 #define PSITABWIDGET_H
 
 #include <QTabWidget>
-#include <QTabBar>
 #include <QDragEnterEvent>
 #include "psitabbar.h"
 
@@ -52,6 +51,9 @@ public:
 	void showPage(QWidget *);
 	void showPageDirectly(QWidget *);
 
+	void setPagePinned(QWidget *page, bool pinned);
+	bool isPagePinned(QWidget *page);
+
 	void removePage(QWidget *);
 	QWidget* page(int index);
 	int getIndex(QWidget *);
@@ -63,6 +65,8 @@ public:
 	void setTabBarShown(bool shown);     // default shown
 	void setTabButtonsShown(bool shown); // default shown
 	void setDragsEnabled(bool enabled);  // default enabled
+
+	void setTabBarUpdateEnabled(bool b);
 
 public slots:
 	void setCurrentPage(int);
@@ -80,6 +84,9 @@ signals:
 	// context menu on the blank space will have tab==-1
 	void tabContextMenu(int tab, QPoint pos, QContextMenuEvent *event);
 
+protected:
+	void resizeEvent(QResizeEvent *event);
+
 private slots:
 	void mouseDoubleClickTab(int tab);
 	void mouseMiddleClickTab(int tab);
@@ -91,7 +98,7 @@ private slots:
 
 private:
 	QVector<QWidget*> widgets_;
-	QTabBar *tabBar_;
+	PsiTabBar *tabBar_;
 	QVBoxLayout *layout_;
 	QHBoxLayout *barLayout_;
 	QStackedLayout *stacked_;

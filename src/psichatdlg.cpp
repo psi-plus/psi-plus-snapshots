@@ -49,6 +49,7 @@
 #include "avcall/avcall.h"
 #include "actionlist.h"
 #include "psiactionlist.h"
+#include "tabdlg.h"
 #ifdef PSI_PLUGINS
 #include "pluginmanager.h"
 #endif
@@ -534,6 +535,9 @@ void PsiChatDlg::initToolButtons()
 		else if (name == "chat_active_contacts") {
 			connect(action, SIGNAL(triggered()), SLOT(actActiveContacts()));
 		}
+		else if (name == "chat_pin_tab" || name == "chat_unpin_tab") {
+			connect(action, SIGNAL(triggered()), SLOT(pinTab()));
+		}
 	}
 
 	list = account()->psi()->actionList()->actionLists(PsiActionList::Actions_Common).at(0);
@@ -910,6 +914,12 @@ void PsiChatDlg::buildMenu()
 
 	pm_settings_->addAction(actions_->action("chat_info"));
 	pm_settings_->addAction(actions_->action("chat_history"));
+    auto dlg = getManagingTabDlg();
+    if (dlg && PsiOptions::instance()->getOption("options.ui.tabs.multi-rows").toBool()) {
+        pm_settings_->addAction(actions_->action(dlg->isTabPinned(this)?
+                                                     "chat_unpin_tab":
+                                                     "chat_pin_tab"));
+    } // else it's not tabbed dialog
 #ifdef PSI_PLUGINS
 	if(!PsiOptions::instance()->getOption("options.ui.contactlist.toolbars.m0.visible").toBool()) {
 		pm_settings_->addSeparator();

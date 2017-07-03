@@ -508,6 +508,9 @@ QLineEdit#le_status_text {
 				<tab-singles type="QString" comment="Tab types that would have been untabbed are given their own tabset. 'C' for chat and 'M' for mucs"/>
 				<use-tab-shortcuts type="bool">true</use-tab-shortcuts>
 				<show-tab-buttons type="bool">true</show-tab-buttons>
+				<multi-rows comment="Use multi rows mode for chat tab bar" type="bool">true</multi-rows>
+				<current-index-at-bottom comment="Move current row to bottom in multi-row mode" type="bool">true</current-index-at-bottom>
+				<disable-wheel-scroll type="bool">false</disable-wheel-scroll>
 			</tabs>
 		</ui>
 		<shortcuts comment="Shortcuts">
@@ -575,8 +578,10 @@ QLineEdit#le_status_text {
 				<chat_icon type="QKeySequence"></chat_icon>
 				<chat_info type="QKeySequence"></chat_info>
 				<chat_pgp type="QKeySequence"></chat_pgp>
+				<chat_pin_tab type="QKeySequence"></chat_pin_tab>
 				<chat_ps type="QKeySequence"></chat_ps>
 				<chat_templates type="QKeySequence"></chat_templates>
+				<chat_unpin_tab type="QKeySequence"></chat_unpin_tab>
 				<chat_voice type="QKeySequence"></chat_voice>
 				<gchat_clear type="QKeySequence"></gchat_clear>
 				<gchat_configure type="QKeySequence"></gchat_configure>
@@ -585,6 +590,8 @@ QLineEdit#le_status_text {
 				<gchat_icon type="QKeySequence"></gchat_icon>
 				<gchat_ps type="QKeySequence"></gchat_ps>
 				<gchat_templates type="QKeySequence"></gchat_templates>
+				<gchat_pin_tab type="QKeySequence"></gchat_pin_tab>
+				<gchat_unpin_tab type="QKeySequence"></gchat_unpin_tab>
 			</alist>
 			<chat comment="Shortcuts in the chat dialog">
 				<next-tab type="QVariantList" comment="Switch to the next tab">
