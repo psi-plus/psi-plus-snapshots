@@ -40,6 +40,11 @@ public:
 
 	}
 
+	~IrisQtName()
+	{
+		qDeleteAll(lookups);
+	}
+
 	bool supportsSingle() const
 	{
 		return true;
@@ -63,14 +68,16 @@ public:
 		int id = currentId++;
 		lookup->setProperty("iid", id);
 		lookups.insert(id, lookup);
-		lookup->lookup();
+		QMetaObject::invokeMethod(lookup, "lookup", Qt::QueuedConnection);
 		return id;
 	}
 
 	void resolve_stop(int id)
 	{
-		QDnsLookup *lookup = lookups.take(id);
-		lookup->abort();
+		QDnsLookup *lookup = lookups.value(id);
+		if (lookup) {
+			lookup->abort(); // handleLookup will catch it and delete
+		}
 	}
 
 private slots:
@@ -97,7 +104,10 @@ private slots:
 					e = XMPP::NameResolver::ErrorGeneric;
 					break;
 			}
-			emit resolve_error(id, e);
+			if (lookup->error() != QDnsLookup::OperationCancelledError) { // don't report after resolve_stop()
+				emit resolve_error(id, e);
+			}
+			lookup->deleteLater();
 			return;
 		}
 
