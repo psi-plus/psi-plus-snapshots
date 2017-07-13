@@ -59,19 +59,19 @@ void StreamManagement::reset()
 	sm_resumed = false;
 	sm_stanzas_notify = 0;
 	sm_resend_pos = 0;
-	sm_timeout_data.pause_mode = true;
-	sm_timeout_data.point_time = QDateTime();
+	sm_timeout_data.elapsed_timer = QElapsedTimer();
+	sm_timeout_data.waiting_answer = false;
 	//state_.reset();
 }
 
-void StreamManagement::started(const QString &resumption_id)
+void StreamManagement::start(const QString &resumption_id)
 {
 	reset();
 	state_.resumption_id = resumption_id;
 	sm_started = true;
 }
 
-void StreamManagement::resumed(quint32 last_handled)
+void StreamManagement::resume(quint32 last_handled)
 {
 	sm_resumed = true;
 	sm_resend_pos = 0;
@@ -86,9 +86,14 @@ void StreamManagement::setLocation(const QString &host, int port)
 
 int StreamManagement::lastAckElapsed() const
 {
-	if (sm_timeout_data.point_time.isNull())
+	if (!sm_timeout_data.elapsed_timer.isValid())
 		return 0;
-	return sm_timeout_data.point_time.secsTo(QDateTime::currentDateTime());
+
+	int msecs = sm_timeout_data.elapsed_timer.elapsed();
+	int secs = msecs / 1000;
+	if (msecs % 1000 != 0)
+		++secs;
+	return secs;
 }
 
 int StreamManagement::takeAckedCount()
@@ -96,6 +101,14 @@ int StreamManagement::takeAckedCount()
 	int cnt = sm_stanzas_notify;
 	sm_stanzas_notify = 0;
 	return cnt;
+}
+
+void StreamManagement::countInputRawData(int bytes)
+{
+	if (sm_timeout_data.waiting_answer) {
+		if (bytes > 2) // '\r' and '\n'
+			sm_timeout_data.elapsed_timer.start();
+	}
 }
 
 QDomElement StreamManagement::getUnacknowledgedStanza()
@@ -117,8 +130,8 @@ int StreamManagement::addUnacknowledgedStanza(const QDomElement &e)
 
 void StreamManagement::processAcknowledgement(quint32 last_handled)
 {
-	sm_timeout_data.pause_mode = true;
-	sm_timeout_data.point_time = QDateTime::currentDateTime();
+	sm_timeout_data.waiting_answer = false;
+	sm_timeout_data.elapsed_timer.start();
 #ifdef IRIS_SM_DEBUG
 	bool f = false;
 #endif
@@ -139,16 +152,6 @@ void StreamManagement::processAcknowledgement(quint32 last_handled)
 #endif
 }
 
-bool StreamManagement::processNormalStanza(const QDomElement &e)
-{
-	Q_UNUSED(e)
-	if (!sm_timeout_data.pause_mode) {
-		sm_timeout_data.point_time = QDateTime::currentDateTime();
-		return true;
-	}
-	return false;
-}
-
 void StreamManagement::markStanzaHandled()
 {
 	++state_.received_count;
@@ -159,12 +162,12 @@ void StreamManagement::markStanzaHandled()
 
 QDomElement StreamManagement::generateRequestStanza(QDomDocument &doc)
 {
-	if (sm_timeout_data.pause_mode) {
+	if (!sm_timeout_data.waiting_answer) {
 #ifdef IRIS_SM_DEBUG
 		qDebug() << "Stream Management: [?->] Sending request of acknowledgment to server";
 #endif
-		sm_timeout_data.pause_mode = false;
-		sm_timeout_data.point_time = QDateTime::currentDateTime();
+		sm_timeout_data.waiting_answer = true;
+		sm_timeout_data.elapsed_timer.start();
 		return doc.createElementNS(NS_STREAM_MANAGEMENT, "r");
 	}
 	return QDomElement();

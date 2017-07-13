@@ -24,7 +24,7 @@
 #include <QObject>
 #include <QQueue>
 #include <QDomElement>
-#include <QDateTime>
+#include <QElapsedTimer>
 
 #define NS_STREAM_MANAGEMENT   "urn:xmpp:sm:3"
 #define SM_TIMER_INTERVAL_SECS 40
@@ -64,15 +64,15 @@ namespace XMPP
 		bool isActive() const { return sm_started || sm_resumed; }
 		bool isResumed() const { return sm_resumed; }
 		void reset();
-		void started(const QString &resumption_id);
-		void resumed(quint32 last_handled);
+		void start(const QString &resumption_id);
+		void resume(quint32 last_handled);
 		void setLocation(const QString &host, int port);
 		int  lastAckElapsed() const;
 		int  takeAckedCount();
+		void countInputRawData(int bytes);
 		QDomElement getUnacknowledgedStanza();
 		int  addUnacknowledgedStanza(const QDomElement &e);
 		void processAcknowledgement(quint32 last_handled);
-		bool processNormalStanza(const QDomElement &e);
 		void markStanzaHandled();
 		QDomElement generateRequestStanza(QDomDocument &doc);
 		QDomElement makeResponseStanza(QDomDocument &doc);
@@ -84,8 +84,8 @@ namespace XMPP
 		int  sm_stanzas_notify;
 		int  sm_resend_pos;
 		struct {
-			QDateTime point_time;
-			bool pause_mode;
+			QElapsedTimer elapsed_timer;
+			bool waiting_answer;
 		} sm_timeout_data;
 	};
 }

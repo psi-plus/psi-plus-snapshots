@@ -643,7 +643,7 @@ void CoreProtocol::reset()
 	init();
 }
 
-void CoreProtocol::startTimer(int seconds) {
+void CoreProtocol::needTimer(int seconds) {
 	notify |= NTimeout;
 	need = NNotify;
 	timeout_sec = seconds;
@@ -941,12 +941,10 @@ bool CoreProtocol::streamManagementHandleStanza(const QDomElement &e)
 		qDebug() << "Stream Management: [<--] Received ack response from server with h =" << last_id;
 #endif
 		sm.processAcknowledgement(last_id);
-		startTimer(SM_TIMER_INTERVAL_SECS);
+		needTimer(SM_TIMER_INTERVAL_SECS);
 		event = EAck;
 		return true;
 	} else {
-		if (sm.processNormalStanza(e))
-			startTimer(SM_TIMER_INTERVAL_SECS);
 		need = NNotify;
 		notify |= NRecv;
 		return false;
@@ -958,7 +956,7 @@ bool CoreProtocol::needSMRequest()
 	QDomElement e = sm.generateRequestStanza(doc);
 	if (!e.isNull()) {
 		send(e);
-		startTimer(SM_TIMER_INTERVAL_SECS);
+		needTimer(SM_TIMER_INTERVAL_SECS);
 		return true;
 	}
 	return false;
@@ -1781,7 +1779,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 #endif
 				QString rs = e.attribute("resume");
 				QString id = (rs == "true" || rs == "1") ? e.attribute("id") : QString();
-				sm.started(id);
+				sm.start(id);
 				if (!id.isEmpty()) {
 #ifdef IRIS_SM_DEBUG
 					qDebug() << "Stream Management: [INF] Resumption Supported";
@@ -1811,20 +1809,20 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 						sm.setLocation(sm_host.toString(), sm_port);
 					}
 
-					startTimer(SM_TIMER_INTERVAL_SECS);
+					needTimer(SM_TIMER_INTERVAL_SECS);
 					event = EReady;
 					step = Done;
 					return true;
 				}
 			} else if (e.localName() == "resumed") {
-				sm.resumed(e.attribute("h").toULong());
+				sm.resume(e.attribute("h").toULong());
 				while(true) {
 					QDomElement st = sm.getUnacknowledgedStanza();
 					if (st.isNull())
 						break;
 					send(st);
 				}
-				startTimer(SM_TIMER_INTERVAL_SECS);
+				needTimer(SM_TIMER_INTERVAL_SECS);
 				event = EReady;
 				step = Done;
 				return true;

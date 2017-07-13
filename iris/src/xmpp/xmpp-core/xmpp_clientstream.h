@@ -215,6 +215,7 @@ namespace XMPP
 		bool handleNeed();
 		void handleError();
 		void srvProcessNext();
+		void setTimer(int secs);
 	};
 }
 

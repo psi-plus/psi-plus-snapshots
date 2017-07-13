@@ -704,10 +704,14 @@ void ClientStream::ss_readyRead()
 	qDebug("ClientStream: recv: %d [%s]\n", a.size(), a.data());
 #endif
 
-	if(d->mode == Client)
+	if(d->mode == Client) {
 		d->client.addIncomingData(a);
-	else
+		d->client.sm.countInputRawData(a.size());
+	}
+	else {
 		d->srv.addIncomingData(a);
+		d->srv.sm.countInputRawData(a.size());
+	}
 	if(d->notify & CoreProtocol::NRecv) {
 #ifdef XMPP_DEBUG
 		qDebug("We needed data, so let's process it\n");
@@ -1007,9 +1011,7 @@ void ClientStream::processNext()
 #ifdef XMPP_DEBUG
 			qDebug() << "Time = "<< d->client.timeout_sec;
 #endif
-			d->timeout_timer.setSingleShot(true);
-			d->timeout_timer.start(d->client.timeout_sec * 1000);
-			d->client.notify &= ~ CoreProtocol::NTimeout;
+			setTimer(d->client.timeout_sec);
 #ifdef XMPP_DEBUG
 			qDebug() << "\tNTimeout received | Start timer";
 #endif
@@ -1321,12 +1323,19 @@ int ClientStream::convertedSASLCond() const
 	return 0;
 }
 
-void ClientStream::sm_timeout() {
+void ClientStream::sm_timeout()
+{
 #ifdef XMPP_DEBUG
 	printf("ClientStream::sm_timeout()\n");
 #endif
-	d->client.timeout_sec = 0;
-	processNext();
+	int elapsed = d->client.sm.lastAckElapsed();
+	if (elapsed < d->client.timeout_sec) {
+		setTimer(d->client.timeout_sec - elapsed);
+	}
+	else {
+		d->client.timeout_sec = 0;
+		processNext();
+	}
 }
 
 void ClientStream::doNoop()
@@ -1483,6 +1492,12 @@ void ClientStream::setSMEnabled(bool e)
 	d->client.sm.state().setEnabled(e);
 }
 
+void ClientStream::setTimer(int secs)
+{
+	d->timeout_timer.setSingleShot(true);
+	d->timeout_timer.start(secs * 1000);
+	d->client.notify &= ~ CoreProtocol::NTimeout;
+}
 
 QStringList ClientStream::hosts() const
 {
