@@ -919,9 +919,15 @@ void ClientStream::srvProcessNext()
 				return;
 			}
 			case CoreProtocol::ESend: {
-				QByteArray a = d->srv.takeOutgoingData();
-				qDebug("Need Send: {%s}\n", a.data());
-				d->ss->write(a);
+				while (true) {
+					QByteArray a = d->srv.takeOutgoingData();
+					if (a.isEmpty())
+						break;
+#ifdef XMPP_DEBUG
+					qDebug("Need Send: {%s}\n", a.data());
+#endif
+					d->ss->write(a);
+				}
 				break;
 			}
 			case CoreProtocol::ERecvOpen: {
@@ -1046,11 +1052,15 @@ void ClientStream::processNext()
 				return;
 			}
 			case CoreProtocol::ESend: {
-				QByteArray a = d->client.takeOutgoingData();
+				while (true) {
+					QByteArray a = d->client.takeOutgoingData();
+					if (a.isEmpty())
+						break;
 #ifdef XMPP_DEBUG
-				qDebug("Need Send: {%s}\n", a.data());
+					qDebug("Need Send: {%s}\n", a.data());
 #endif
-				d->ss->write(a);
+					d->ss->write(a);
+				}
 				break;
 			}
 			case CoreProtocol::ERecvOpen: {

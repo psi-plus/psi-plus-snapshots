@@ -293,8 +293,10 @@ void XmlProtocol::reset()
 	tagOpen = QString();
 	tagClose = QString();
 	xml.reset();
-	outData.resize(0);
-	trackQueue.clear();
+	outDataNormal.resize(0);
+	outDataUrgent.resize(0);
+	trackQueueNormal.clear();
+	trackQueueUrgent.clear();
 	transferItemList.clear();
 }
 
@@ -305,37 +307,21 @@ void XmlProtocol::addIncomingData(const QByteArray &a)
 
 QByteArray XmlProtocol::takeOutgoingData()
 {
-	QByteArray a = outData;
-	outData.resize(0);
+	if (!outDataUrgent.isEmpty()) {
+		QByteArray a = outDataUrgent;
+		outDataUrgent.resize(0);
+		return a;
+	}
+	QByteArray a = outDataNormal;
+	outDataNormal.resize(0);
 	return a;
 }
 
 void XmlProtocol::outgoingDataWritten(int bytes)
 {
-	for(QList<TrackItem>::Iterator it = trackQueue.begin(); it != trackQueue.end();) {
-		TrackItem &i = *it;
-
-		// enough bytes?
-		if(bytes < i.size) {
-			i.size -= bytes;
-			break;
-		}
-		int type = i.type;
-		int id = i.id;
-		int size = i.size;
-		bytes -= i.size;
-		it = trackQueue.erase(it);
-
-		if(type == TrackItem::Raw) {
-			// do nothing
-		}
-		else if(type == TrackItem::Close) {
-			closeWritten = true;
-		}
-		else if(type == TrackItem::Custom) {
-			itemWritten(id, size);
-		}
-	}
+	int b = processTrackQueue(trackQueueUrgent, bytes);
+	if (b > 0)
+		processTrackQueue(trackQueueNormal, b);
 }
 
 bool XmlProtocol::processStep()
@@ -518,7 +504,7 @@ int XmlProtocol::writeString(const QString &s, int id, bool external)
 	return internalWriteString(s, TrackItem::Custom, id);
 }
 
-int XmlProtocol::writeElement(const QDomElement &e, int id, bool external, bool clip)
+int XmlProtocol::writeElement(const QDomElement &e, int id, bool external, bool clip, bool urgent)
 {
 	if(e.isNull())
 		return 0;
@@ -526,7 +512,7 @@ int XmlProtocol::writeElement(const QDomElement &e, int id, bool external, bool 
 
 	//elementSend(e);
 	QString out = sanitizeForStream(elementToString(e, clip));
-	return internalWriteString(out, TrackItem::Custom, id);
+	return internalWriteString(out, TrackItem::Custom, id, urgent);
 }
 
 QByteArray XmlProtocol::resetStream()
@@ -543,22 +529,60 @@ QByteArray XmlProtocol::resetStream()
 	return spare;
 }
 
-int XmlProtocol::internalWriteData(const QByteArray &a, TrackItem::Type t, int id)
+int XmlProtocol::internalWriteData(const QByteArray &a, TrackItem::Type t, int id, bool urgent)
 {
 	TrackItem i;
 	i.type = t;
 	i.id = id;
 	i.size = a.size();
-	trackQueue += i;
 
-	outData += a;
+	if (urgent) {
+		trackQueueUrgent += i;
+		outDataUrgent += a;
+	}
+	else {
+		trackQueueNormal += i;
+		outDataNormal += a;
+	}
 	return a.size();
 }
 
-int XmlProtocol::internalWriteString(const QString &s, TrackItem::Type t, int id)
+int XmlProtocol::internalWriteString(const QString &s, TrackItem::Type t, int id, bool urgent)
 {
 	QString out=sanitizeForStream(s);
-	return internalWriteData(s.toUtf8(), t, id);
+	return internalWriteData(s.toUtf8(), t, id, urgent);
+}
+
+int XmlProtocol::processTrackQueue(QList<TrackItem> &queue, int bytes)
+{
+	for(QList<TrackItem>::Iterator it = queue.begin(); it != queue.end();) {
+		TrackItem &i = *it;
+
+		// enough bytes?
+		if(bytes < i.size) {
+			i.size -= bytes;
+			bytes = 0;
+			break;
+		}
+		int type = i.type;
+		int id = i.id;
+		int size = i.size;
+		bytes -= i.size;
+		it = queue.erase(it);
+
+		if(type == TrackItem::Raw) {
+			// do nothing
+		}
+		else if(type == TrackItem::Close) {
+			closeWritten = true;
+		}
+		else if(type == TrackItem::Custom) {
+			itemWritten(id, size);
+		}
+		if (bytes == 0)
+			break;
+	}
+	return bytes;
 }
 
 void XmlProtocol::sendTagOpen()

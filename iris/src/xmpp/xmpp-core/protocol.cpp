@@ -21,7 +21,6 @@
 // TODO: let the app know if tls is required
 //       require mutual auth for server out/in
 //       report ErrProtocol if server uses wrong NS
-//       use send() instead of writeElement() in CoreProtocol
 
 #include "protocol.h"
 
@@ -332,7 +331,12 @@ void BasicProtocol::extractStreamError(const QDomElement &e)
 
 void BasicProtocol::send(const QDomElement &e, bool clip)
 {
-	writeElement(e, TypeElement, false, clip);
+	writeElement(e, TypeElement, false, clip, false);
+}
+
+void BasicProtocol::sendUrgent(const QDomElement &e, bool clip)
+{
+	writeElement(e, TypeElement, false, clip, true);
 }
 
 void BasicProtocol::sendStreamError(int cond, const QString &text, const QDomElement &appSpec)
@@ -932,7 +936,7 @@ bool CoreProtocol::streamManagementHandleStanza(const QDomElement &e)
 #ifdef IRIS_SM_DEBUG
 		qDebug() << "Stream Management: [<-?] Received request from server";
 #endif
-		send(sm.makeResponseStanza(doc));
+		sendUrgent(sm.makeResponseStanza(doc));
 		event = ESend;
 		return true;
 	} else if (s == "a") {
@@ -1032,7 +1036,7 @@ bool CoreProtocol::dialbackStep(const QDomElement &e)
 			r.setAttribute("type", i.ok ? "valid" : "invalid");
 		}
 
-		writeElement(r, TypeElement, false);
+		send(r);
 		event = ESend;
 		return true;
 	}
@@ -1232,7 +1236,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 		if(isIncoming()) {
 			if(sasl_authed) {
 				QDomElement e = doc.createElementNS(NS_SASL, "success");
-				writeElement(e, TypeElement, false, true);
+				send(e, true);
 				event = ESend;
 				step = IncHandleSASLSuccess;
 				return true;
@@ -1243,7 +1247,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 				if(!stepData.isEmpty())
 					e.appendChild(doc.createTextNode(QCA::Base64().arrayToString(stepData)));
 
-				writeElement(e, TypeElement, false, true);
+				send(e, true);
 				event = ESend;
 				step = GetSASLResponse;
 				return true;
@@ -1354,7 +1358,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 			f.appendChild(mechs);
 		}
 
-		writeElement(f, TypeElement, false);
+		send(f);
 		event = ESend;
 		step = GetRequest;
 		return true;
@@ -1707,7 +1711,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 			// TODO: don't let this be done twice
 
 			QDomElement e = doc.createElementNS(NS_TLS, "proceed");
-			writeElement(e, TypeElement, false, true);
+			send(e, true);
 			event = ESend;
 			step = HandleTLS;
 			return true;
@@ -1750,7 +1754,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 				bind.appendChild(jid);
 				r.appendChild(bind);
 
-				writeElement(r, TypeElement, false);
+				send(r);
 				event = ESend;
 				// TODO
 				return true;

@@ -69,6 +69,7 @@ void StreamManagement::start(const QString &resumption_id)
 	reset();
 	state_.resumption_id = resumption_id;
 	sm_started = true;
+	sm_timeout_data.elapsed_timer.start();
 }
 
 void StreamManagement::resume(quint32 last_handled)
@@ -76,6 +77,8 @@ void StreamManagement::resume(quint32 last_handled)
 	sm_resumed = true;
 	sm_resend_pos = 0;
 	processAcknowledgement(last_handled);
+	sm_timeout_data.waiting_answer = false;
+	sm_timeout_data.elapsed_timer.start();
 }
 
 void StreamManagement::setLocation(const QString &host, int port)

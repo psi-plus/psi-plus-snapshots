@@ -190,6 +190,7 @@ namespace XMPP
 		static QString streamCondToString(int);
 
 		void send(const QDomElement &e, bool clip=false);
+		void sendUrgent(const QDomElement &e, bool clip=false);
 		void sendStreamError(int cond, const QString &text="", const QDomElement &appSpec=QDomElement());
 		void sendStreamError(const QString &text); // old-style
 

@@ -112,7 +112,7 @@ namespace XMPP
 		void startAccept();
 		bool close();
 		int writeString(const QString &s, int id, bool external);
-		int writeElement(const QDomElement &e, int id, bool external, bool clip=false);
+		int writeElement(const QDomElement &e, int id, bool external, bool clip=false, bool urgent = false);
 		QByteArray resetStream();
 
 	private:
@@ -133,12 +133,15 @@ namespace XMPP
 		bool closeWritten;
 
 		Parser xml;
-		QByteArray outData;
-		QList<TrackItem> trackQueue;
+		QByteArray outDataNormal;
+		QByteArray outDataUrgent;
+		QList<TrackItem> trackQueueNormal;
+		QList<TrackItem> trackQueueUrgent;
 
 		void init();
-		int internalWriteData(const QByteArray &a, TrackItem::Type t, int id=-1);
-		int internalWriteString(const QString &s, TrackItem::Type t, int id=-1);
+		int internalWriteData(const QByteArray &a, TrackItem::Type t, int id=-1, bool urgent = false);
+		int internalWriteString(const QString &s, TrackItem::Type t, int id=-1, bool urgent = false);
+		int processTrackQueue(QList<TrackItem> &queue, int bytes);
 		void sendTagOpen();
 		void sendTagClose();
 		bool baseStep(const Parser::Event &pe);
