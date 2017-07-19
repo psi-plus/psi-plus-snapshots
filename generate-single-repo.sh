@@ -3,13 +3,17 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2017-06-14
+# Updated: 2017-06-19
 # Version: N/A
 
 set -e
 
 export SNAPSHOTS_DIR="$(dirname $(realpath -s ${0}))"
 export MAIN_DIR="${SNAPSHOTS_DIR}/.."
+
+MAIN_VERSION=1.1
+PSI_DEFINING_COMMIT=000473ebfd463c910ee81d599a7982d8753b83dc
+PATCHES_DEFINING_COMMIT=bc58aa0748e85a97a177a05b32854ab006c9e8b9
 
 PSI_URL=https://github.com/psi-im/psi.git
 PLUGINS_URL=https://github.com/psi-im/plugins.git
@@ -190,16 +194,10 @@ $(cd ${MAIN_DIR}/plugins    && git log -n1 --date=short --pretty=format:'%ad')
 $(cd ${MAIN_DIR}/resources  && git log -n1 --date=short --pretty=format:'%ad')"
 LAST_REVISION_DATE=$(echo "${REVISION_DATE_LIST}" | sort -r | head -n1)
 
-PSI_DEFINING_COMMIT=2812a0af876f47b9001fcd3a4af9ad89e2ccb1ea
-PATCHES_DEFINING_COMMIT=871fac5f74f247df1d28297d5ea3982a8dcfaacc
-
 PSI_NUM="$(cd ${MAIN_DIR}/psi && git rev-list --count ${PSI_DEFINING_COMMIT}..HEAD)"
 PATCHES_NUM="$(cd ${MAIN_DIR}/main && git rev-list --count ${PATCHES_DEFINING_COMMIT}..HEAD)"
 
-MAIN_VERSION=$(cd ${MAIN_DIR}/main && git tag | sort -V | grep '^[0-9]\+.[0-9]\+$' | tail -n 1)
-CUR_REVISION="$(expr ${PSI_NUM} + ${PATCHES_NUM})"
-
-NEW_VER="${MAIN_VERSION}.${CUR_REVISION}"
+NEW_VER="${MAIN_VERSION}.$(expr ${PSI_NUM} + ${PATCHES_NUM})"
 OLD_VER=$(cd "${SNAPSHOTS_DIR}" && git tag -l | sort -V | tail -n1)
 
 echo "OLD_VER = ${OLD_VER}"
