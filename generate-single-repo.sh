@@ -9,7 +9,7 @@
 set -e
 
 export SNAPSHOTS_DIR="$(dirname $(realpath -s ${0}))"
-export MAIN_DIR="${SNAPSHOTS_DIR}/.."
+export MAIN_DIR="$(realpath -s ${SNAPSHOTS_DIR}/..)"
 
 MAIN_VERSION=1.1
 PSI_DEFINING_COMMIT=000473ebfd463c910ee81d599a7982d8753b83dc
