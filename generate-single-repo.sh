@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2017-06-19
+# Updated: 2017-07-23
 # Version: N/A
 
 set -e
@@ -35,7 +35,7 @@ MOD=psi
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
-    git pull --all --prune
+    git pull --all --prune -f
     git submodule init
     git submodule update
     echo;
@@ -53,7 +53,7 @@ MOD=main
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
-    git pull --all --prune
+    git pull --all --prune -f
     echo;
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
@@ -66,7 +66,7 @@ MOD=plugins
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
-    git pull --all --prune
+    git pull --all --prune -f
     echo;
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
@@ -79,7 +79,7 @@ MOD=resources
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
     cd "${MAIN_DIR}/${MOD}"
-    git pull --all --prune
+    git pull --all --prune -f
     echo;
 else
     echo "Creating ${MAIN_DIR}/${MOD}"
@@ -90,6 +90,32 @@ fi
 
 cd "${SNAPSHOTS_DIR}"
 echo "Checking for updates..."
+
+PSI_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* psi: \(.*\)$/\1/p')
+PATCHES_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* patches: \(.*\)$/\1/p')
+PLUGINS_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* plugins: \(.*\)$/\1/p')
+RESOURCES_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* resources: \(.*\)$/\1/p')
+
+PSI_NEW_HASH=$(cd "${MAIN_DIR}/psi" && git show -s --pretty='format:%h')
+PATCHES_NEW_HASH=$(cd "${MAIN_DIR}/main" && git show -s --pretty='format:%h')
+PLUGINS_NEW_HASH=$(cd "${MAIN_DIR}/plugins" && git show -s --pretty='format:%h')
+RESOURCES_NEW_HASH=$(cd "${MAIN_DIR}/resources" && git show -s --pretty='format:%h')
+
+if [ "${PSI_OLD_HASH}"       = "${PSI_NEW_HASH}" ] && \
+   [ "${PATCHES_OLD_HASH}"   = "${PATCHES_NEW_HASH}" ] && \
+   [ "${PLUGINS_OLD_HASH}"   = "${PLUGINS_NEW_HASH}" ] && \
+   [ "${RESOURCES_OLD_HASH}" = "${RESOURCES_NEW_HASH}" ]; then
+    echo "Updating is not required!";
+    git checkout HEAD .
+    echo;
+    exit 0;
+fi
+
+echo "Updating is required!";
+echo;
+
+cd "${SNAPSHOTS_DIR}"
+echo "Statring Psi+ update..."
 
 find . -type f | \
     grep -v "^\./\.git" | \
@@ -118,9 +144,26 @@ mv "${MAIN_DIR}/configure" "${SNAPSHOTS_DIR}/configure"
 mv "${MAIN_DIR}/README" "${SNAPSHOTS_DIR}/README"
 echo "* Files from psi project are copied."
 
+failed_to_apply_patches()
+{
+    remove_trash
+    git checkout HEAD .
+    echo "* Failed to apply patches from Psi+ project!"
+    exit 1
+}
+
+remove_trash()
+{
+    rm configure.exe
+    rm iris/configure.exe
+    rm -r win32/*
+    rm -r src/libpsi/tools/idle/win32/
+    find . -type f -name "*.orig" -delete
+}
+
 cat "${MAIN_DIR}/main/patches"/*.diff | \
     patch -d "${SNAPSHOTS_DIR}" -p1 2>&1 > \
-    "${MAIN_DIR}/applying-patches.log"
+    "${MAIN_DIR}/applying-patches.log" || failed_to_apply_patches
 echo "* Patches from Psi+ project are applied."
 
 mkdir -p "${SNAPSHOTS_DIR}/patches"
@@ -152,11 +195,7 @@ echo "* Themes from Psi+ project are copied."
 cp "${MAIN_DIR}/main/changelog.txt" "${SNAPSHOTS_DIR}/ChangeLog"
 echo "* ChangeLog from Psi+ project is copied."
 
-rm configure.exe
-rm iris/configure.exe
-rm -r win32/*
-rm -r src/libpsi/tools/idle/win32/
-find . -type f -name "*.orig" -delete
+remove_trash
 echo "* Trash is removed."
 
 cp -a "${MAIN_DIR}/psi/win32"/*.rc "${SNAPSHOTS_DIR}/win32/"
@@ -167,7 +206,7 @@ echo "* Some files for MS Windows build are copied."
 echo;
 
 # Update repo and make analysis
-git add -A
+git add -A .
 
 TEST_ALL=$(LC_ALL=C git status | grep ":   " |
              grep -v " generate-single-repo.sh" | \
@@ -178,15 +217,10 @@ TEST_ALL=$(LC_ALL=C git status | grep ":   " |
 
 if [ "${TEST_ALL}" = "0" ]; then
     echo "Updating is not required!";
-    git co HEAD version
+    git checkout HEAD .
     echo;
     exit 0;
 fi
-
-PSI_HASH="$(cd ${MAIN_DIR}/psi && git show -s --pretty='format:%h')"
-PATCHES_HASH="$(cd ${MAIN_DIR}/main && git show -s --pretty='format:%h')"
-PLUGINS_HASH="$(cd ${MAIN_DIR}/plugins && git show -s --pretty='format:%h')"
-RESOURCES_HASH="$(cd ${MAIN_DIR}/resources && git show -s --pretty='format:%h')"
 
 REVISION_DATE_LIST="$(cd ${MAIN_DIR}/psi        && git log -n1 --date=short --pretty=format:'%ad')
 $(cd ${MAIN_DIR}/main       && git log -n1 --date=short --pretty=format:'%ad')
@@ -204,7 +238,7 @@ echo "OLD_VER = ${OLD_VER}"
 echo "NEW_VER = ${NEW_VER}"
 echo;
 
-echo "${NEW_VER} (${LAST_REVISION_DATE}, Psi:${PSI_HASH}, Psi+:${PATCHES_HASH})" > version
+echo "${NEW_VER} (${LAST_REVISION_DATE}, Psi:${PSI_NEW_HASH}, Psi+:${PATCHES_NEW_HASH})" > version
 echo "Version file is created:"
 cat  version
 echo;
@@ -212,10 +246,10 @@ echo;
 COMMENT="Current version of Psi+ is ${NEW_VER}
 
 It is based on:
-* psi: ${PSI_HASH}
-* patches: ${PATCHES_HASH}
-* plugins: ${PLUGINS_HASH}
-* resources: ${RESOURCES_HASH}
+* psi: ${PSI_NEW_HASH}
+* patches: ${PATCHES_NEW_HASH}
+* plugins: ${PLUGINS_NEW_HASH}
+* resources: ${RESOURCES_NEW_HASH}
 "
 echo "${COMMENT}"
 
