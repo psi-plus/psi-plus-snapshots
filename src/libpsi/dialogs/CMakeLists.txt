@@ -21,7 +21,7 @@ list(APPEND FORMS
 	grepshortcutkeydialog.ui
 	)
 
-qt4_wrap_ui(UI_FORMS ${FORMS})
+qt5_wrap_ui(UI_FORMS ${FORMS})
 qt_wrap_cpp(MOC_SOURCES ${HEADERS})
 add_library(libpsi_dialogs STATIC ${HEADERS} ${MOC_SOURCES} ${UI_FORMS} ${PLAIN_SOURCES} ${PLAIN_HEADERS})
 target_link_libraries(libpsi_dialogs ${QT_LIBRARIES})
