@@ -356,8 +356,7 @@ PsiCon::PsiCon()
 	d->ftwin = 0;
 #endif
 
-	d->edb = new EDBFlatFile(this);
-
+	d->edb = 0;
 	d->s5bServer = 0;
 	d->tuneManager = 0;
 	d->autoUpdater = 0;
@@ -644,6 +643,8 @@ bool PsiCon::init()
 	}
 
 	checkAccountsEmpty();
+
+	d->edb = new EDBFlatFile(this);
 
 	// try autologin if needed
 	foreach(PsiAccount* account, d->contactList->accounts()) {

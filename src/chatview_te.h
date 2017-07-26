@@ -121,6 +121,7 @@ private:
 	QPixmap logIconTime;
 	QPixmap logIconInfo;
 	QPixmap logIconCorrected;
+	QPixmap logIconHistory;
 	QAction *actQuote_;
 };
 
