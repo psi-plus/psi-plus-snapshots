@@ -11,9 +11,9 @@ set -e
 export SNAPSHOTS_DIR="$(dirname $(realpath -s ${0}))"
 export MAIN_DIR="$(realpath -s ${SNAPSHOTS_DIR}/..)"
 
-MAIN_VERSION=1.1
-PSI_DEFINING_COMMIT=000473ebfd463c910ee81d599a7982d8753b83dc
-PATCHES_DEFINING_COMMIT=bc58aa0748e85a97a177a05b32854ab006c9e8b9
+MAIN_VERSION=1.2
+PSI_DEFINING_COMMIT=4b8a3473ee1de59f84627000cba462e05f8a9b84
+PATCHES_DEFINING_COMMIT=db1a4053ef7aae72ae819eb00eba47bae9530320
 
 PSI_URL=https://github.com/psi-im/psi.git
 PLUGINS_URL=https://github.com/psi-im/plugins.git
