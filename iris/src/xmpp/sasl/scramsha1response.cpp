@@ -49,7 +49,7 @@ namespace XMPP {
 		QString salt = pattern.cap(2);
 		QString icount = pattern.cap(3);
 
-		size_t dkLen;
+		unsigned int dkLen;
 
 		QCA::Hash shaHash("sha1");
 		shaHash.update("", 0);
