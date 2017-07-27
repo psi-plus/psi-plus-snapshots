@@ -165,6 +165,10 @@ if(USE_ENCHANT)
 elseif(USE_HUNSPELL)
 	add_definitions(-DHAVE_HUNSPELL)
 
+	if(MSVC)
+		add_definitions(-DHUNSPELL_STATIC)
+	endif()
+
 	include_directories(
 		${HUNSPELL_INCLUDE_DIR}
 		)
