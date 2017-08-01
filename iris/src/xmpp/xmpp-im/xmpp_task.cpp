@@ -153,7 +153,7 @@ bool Task::take(const QDomElement &x)
 			continue;
 
 		t = static_cast<Task*>(obj);
-		if(!t->d->done && t->take(x))
+		if(t->take(x)) // don't check for done here. it will hurt server tasks
 			return true;
 	}
 
@@ -183,6 +183,8 @@ void Task::onDisconnect()
 
 		// delay this so that tasks that react don't block the shutdown
 		QTimer::singleShot(0, this, SLOT(done()));
+		// Even server tasks will be marked as done,
+		// but we don't check the attribute for them.
 	}
 }
 
