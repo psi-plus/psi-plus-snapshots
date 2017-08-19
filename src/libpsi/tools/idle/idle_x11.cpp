@@ -74,6 +74,9 @@ IdlePlatform::~IdlePlatform()
 
 bool IdlePlatform::init()
 {
+	if(!QX11Info::isPlatformX11())
+		return false;
+
 	if(d->ss_info)
 		return true;
 

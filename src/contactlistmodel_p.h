@@ -31,7 +31,6 @@ public:
 	int simplifiedOperationList(int operations) const;
 
 	ContactListItem::SpecialGroupType specialGroupFor(PsiContact *contact);
-	QModelIndex findItemRecursvive(PsiContact *contact, QModelIndex index = QModelIndex());
 
 public slots:
 	void commit();
@@ -52,7 +51,7 @@ public:
 	PsiContactList *contactList;
 	QTimer *commitTimer;
 	QDateTime commitTimerStartTime;
-	QHash<PsiContact*, QPersistentModelIndex> monitoredContacts;
+	QHash<PsiContact*, QPersistentModelIndex> monitoredContacts; // always keeps all the contacts
 	QHash<PsiContact*, int> operationQueue;
 	QStringList collapsed;
 	QStringList hidden;

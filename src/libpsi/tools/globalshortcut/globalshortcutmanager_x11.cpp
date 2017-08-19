@@ -131,7 +131,7 @@ private:
 			return;
 
 		Display* appDpy = QX11Info::display();
-		XModifierKeymap* map = XGetModifierMapping(appDpy);
+		XModifierKeymap* map = QX11Info::isPlatformX11() ? XGetModifierMapping(appDpy) : nullptr;
 		if (map) {
 			// XKeycodeToKeysym helper code adapeted from xmodmap
 			int min_keycode, max_keycode, keysyms_per_keycode_return, keysyms_per_keycode = 1;
@@ -277,7 +277,7 @@ private:
 
 	void bind(int keysym, unsigned int mod)
 	{
-		int code = XKeysymToKeycode(QX11Info::display(), keysym);
+		int code = QX11Info::isPlatformX11() ? XKeysymToKeycode(QX11Info::display(), keysym) : 0;
 
 		// don't grab keys with empty code (because it means just the modifier key)
 		if (keysym && !code)
