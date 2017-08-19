@@ -1812,12 +1812,11 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 						}
 						sm.setLocation(sm_host.toString(), sm_port);
 					}
-
-					needTimer(SM_TIMER_INTERVAL_SECS);
-					event = EReady;
-					step = Done;
-					return true;
-				}
+				} // else resumption is not supported on this server
+				needTimer(SM_TIMER_INTERVAL_SECS);
+				event = EReady;
+				step = Done;
+				return true;
 			} else if (e.localName() == "resumed") {
 				sm.resume(e.attribute("h").toULong());
 				while(true) {
