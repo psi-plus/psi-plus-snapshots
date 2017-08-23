@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2017-07-23
+# Updated: 2017-08-24
 # Version: N/A
 
 set -e
@@ -198,7 +198,7 @@ echo "* ChangeLog from Psi+ project is copied."
 remove_trash
 echo "* Trash is removed."
 
-cp -a "${MAIN_DIR}/psi/win32"/*.rc "${SNAPSHOTS_DIR}/win32/"
+cp -a "${MAIN_DIR}/psi/win32"/*.rc* "${SNAPSHOTS_DIR}/win32/"
 cp -a "${MAIN_DIR}/psi/win32"/*.manifest "${SNAPSHOTS_DIR}/win32/"
 cp -a "${MAIN_DIR}/main/app.ico" "${SNAPSHOTS_DIR}/win32/"
 echo "* Some files for MS Windows build are copied."
