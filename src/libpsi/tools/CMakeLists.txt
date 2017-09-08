@@ -145,7 +145,16 @@ endif()
 
 # spellchecker
 if(USE_ENCHANT)
-	add_definitions(-DHAVE_ENCHANT)
+	if(Enchant_VERSION)
+		if(${Enchant_VERSION} VERSION_LESS "2.0")
+			add_definitions(-DHAVE_ENCHANT)
+		else()
+			add_definitions(-DHAVE_ENCHANT2)
+		endif()
+		message(STATUS "Enchant version - ${Enchant_VERSION}")
+	else()
+		add_definitions(-DHAVE_ENCHANT)
+	endif()
 
 	include_directories(
 		${Enchant_INCLUDE_DIR}
