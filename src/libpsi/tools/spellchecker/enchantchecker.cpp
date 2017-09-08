@@ -31,13 +31,20 @@
 #include "enchant++.h"
 #include "enchantchecker.h"
 
+static enchant::Broker *brocker;
+
 EnchantChecker::EnchantChecker()
 	: spellers_(EnchantDictList())
 	, allLanguages_(QStringList())
 {
-	if (enchant::Broker *instance = enchant::Broker::instance())
+#ifdef HAVE_ENCHANT2
+	brocker = new enchant::Broker();
+#else
+	brocker = enchant::Broker::instance();
+#endif
+	if (brocker)
 	{
-		instance->list_dicts(enchantDictDescribeFn, static_cast<void*>(this));
+		brocker->list_dicts(enchantDictDescribeFn, static_cast<void*>(this));
 		setActiveLanguages(getAllLanguages());
 	}
 }
@@ -45,6 +52,9 @@ EnchantChecker::EnchantChecker()
 EnchantChecker::~EnchantChecker()
 {
 	clearSpellers();
+#ifdef HAVE_ENCHANT2
+	delete brocker;
+#endif
 }
 
 bool EnchantChecker::isCorrect(const QString& word)
@@ -80,7 +90,11 @@ bool EnchantChecker::add(const QString& word)
 	if (!spellers_.isEmpty()) {
 		QString trimmed_word = word.trimmed();
 		if(!word.isEmpty()) {
+#ifdef HAVE_ENCHANT2
+			spellers_.first()->add(word.toUtf8().constData());
+#else
 			spellers_.first()->add_to_pwl(word.toUtf8().constData());
+#endif
 			result = true;
 		}
 	}
@@ -111,7 +125,7 @@ void EnchantChecker::setActiveLanguages(const QList<QString>& langs)
 			continue;
 
 		try {
-			spellers_ << enchant::Broker::instance()->request_dict(lang.toStdString());
+			spellers_ << brocker->request_dict(lang.toStdString());
 		} catch (enchant::Exception &e) {
 			qWarning() << QString("Enchant error: %1").arg(e.what());
 		}
