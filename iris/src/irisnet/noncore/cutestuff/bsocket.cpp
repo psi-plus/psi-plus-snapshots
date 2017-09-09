@@ -183,17 +183,26 @@ public:
 		this->domain = host;
 		this->port = port;
 		SockData &sd = addSocket();
-		sd.resolver = new XMPP::ServiceResolver;
-		initResolver(sd.resolver);
-		sd.resolver->setProtocol(protocol == QAbstractSocket::UnknownNetworkLayerProtocol?
-			(fallbackProtocol == QAbstractSocket::IPv4Protocol? XMPP::ServiceResolver::IPv6 : XMPP::ServiceResolver::IPv4) :
-			(protocol== QAbstractSocket::IPv4Protocol? XMPP::ServiceResolver::IPv4 : XMPP::ServiceResolver::IPv6));
-		if (protocol == QAbstractSocket::UnknownNetworkLayerProtocol) {
-			addSocket();
-			fallbackTimer.start();
-		}
-		sd.state = Resolve;
-		sd.resolver->start(domain, port);
+
+        QHostAddress addr(host);
+        if (addr.isNull()) {
+            sd.resolver = new XMPP::ServiceResolver;
+            initResolver(sd.resolver);
+            sd.resolver->setProtocol(protocol == QAbstractSocket::UnknownNetworkLayerProtocol?
+                (fallbackProtocol == QAbstractSocket::IPv4Protocol? XMPP::ServiceResolver::IPv6 : XMPP::ServiceResolver::IPv4) :
+                (protocol== QAbstractSocket::IPv4Protocol? XMPP::ServiceResolver::IPv4 : XMPP::ServiceResolver::IPv6));
+            if (protocol == QAbstractSocket::UnknownNetworkLayerProtocol) {
+                addSocket();
+                fallbackTimer.start();
+            }
+            sd.state = Resolve;
+            sd.resolver->start(domain, port);
+        } else {
+            // connecting by IP.
+            lastIndex = sockets.count() - 1;
+            sd.state = Connecting;
+            sd.sock->connectToHost(addr, port);
+        }
 	}
 
 	void connectToHost(const QString &service, const QString &transport, const QString &domain, quint16 port)

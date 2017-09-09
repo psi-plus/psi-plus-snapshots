@@ -2,7 +2,10 @@ IRIS_BASE = $$PWD
 include(common.pri)
 
 CONFIG *= link_prl # doesn't seems to work but at least it's documented unlike dependp_prl
-unix:PRE_TARGETDEPS += $$top_iris_builddir/lib/libiris.a # most of devs are on Linux anyway
+unix {  # most of devs are on Linux anyway
+	PRE_TARGETDEPS += $$top_iris_builddir/lib/libiris.a
+	PRE_TARGETDEPS += $$top_iris_builddir/lib/libirisnet.a
+}
 
 INCLUDEPATH += $$IRIS_BASE/include $$IRIS_BASE/include/iris $$IRIS_BASE/src
 

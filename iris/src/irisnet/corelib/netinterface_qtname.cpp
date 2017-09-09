@@ -63,12 +63,24 @@ public:
 	int resolve_start(const QByteArray &name, int qType, bool longLived)
 	{
 		Q_UNUSED(longLived); // FIXME handle local like in jdns name provider
-		QDnsLookup *lookup = new QDnsLookup((QDnsLookup::Type)qType, QString::fromLatin1(name), this);
-		connect(lookup, SIGNAL(finished()), this, SLOT(handleLookup()));
-		int id = currentId++;
-		lookup->setProperty("iid", id);
-		lookups.insert(id, lookup);
-		QMetaObject::invokeMethod(lookup, "lookup", Qt::QueuedConnection);
+        int id = currentId++;
+
+        // check if it's A/AAAA. QDnsLookup fails to handle this in some cases.
+        QHostAddress addr(QString::fromLatin1(name));
+        if (!addr.isNull()) {
+            QList<XMPP::NameRecord> results;
+            XMPP::NameRecord r;
+            r.setAddress(addr);
+            results.append(r);
+            QMetaObject::invokeMethod(this, "resolve_resultsReady", Qt::QueuedConnection,
+                                      Q_ARG(int, id), Q_ARG(QList<XMPP::NameRecord>, results));
+        } else {
+            QDnsLookup *lookup = new QDnsLookup((QDnsLookup::Type)qType, QString::fromLatin1(name), this);
+            connect(lookup, SIGNAL(finished()), this, SLOT(handleLookup()));
+            lookup->setProperty("iid", id);
+            lookups.insert(id, lookup);
+            QMetaObject::invokeMethod(lookup, "lookup", Qt::QueuedConnection);
+        }
 		return id;
 	}
 
