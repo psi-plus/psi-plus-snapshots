@@ -29,6 +29,7 @@
 #include "mucjoindlg.h"
 #include "psicontactlist.h"
 #include "groupchatdlg.h"
+#include "psiiconset.h"
 #include "bookmarkmanager.h"
 #include "iconset.h"
 
@@ -52,7 +53,7 @@ MUCJoinDlg::MUCJoinDlg(PsiCon* psi, PsiAccount* pa)
 	joinButton_ = ui_.buttonBox->addButton(tr("&Join"), QDialogButtonBox::AcceptRole);
 	joinButton_->setDefault(true);
 
-	reason_ = MucCustomJoin;
+	reason_ = PsiAccount::MucCustomJoin;
 
 	updateIdentity(pa);
 
@@ -64,30 +65,13 @@ MUCJoinDlg::MUCJoinDlg(PsiCon* psi, PsiAccount* pa)
 	connect(controller_, SIGNAL(accountCountChanged()), this, SLOT(updateIdentityVisibility()));
 	updateIdentityVisibility();
 
-	foreach(QString j, controller_->recentGCList()) {
-		Jid jid(j);
-		QString s = tr("%1 on %2").arg(jid.resource()).arg(JIDUtil::toString(jid, false));
-		ui_.cb_recent->addItem(s);
-		ui_.cb_recent->setItemData(ui_.cb_recent->count()-1, QVariant(j));
-	}
-
 	setWindowTitle(CAP(windowTitle()));
-	connect(ui_.cb_recent, SIGNAL(activated(int)), SLOT(recent_activated(int)));
-	connect(ui_.cb_bookmarks, SIGNAL(activated(int)), SLOT(bookmarksActivated(int)));
-	if (!ui_.cb_recent->count()) {
-		ui_.cb_recent->setEnabled(false);
-		ui_.le_host->setFocus();
-	}
-	else {
-		recent_activated(0);
-	}
-	if (!ui_.cb_bookmarks->count()) {
-		ui_.cb_bookmarks->setEnabled(false);
-		ui_.le_host->setFocus();
-	}
-	else {
-		bookmarksActivated(0);
-	}
+
+	connect(ui_.lwFavorites, SIGNAL(currentRowChanged(int)), SLOT(favoritesCurrentRowChanged(int)));
+	connect(ui_.lwFavorites, SIGNAL(itemDoubleClicked(QListWidgetItem*)), SLOT(favoritesItemDoubleClicked(QListWidgetItem*)));
+	ui_.lwFavorites->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContentsOnFirstShow);
+
+	favoritesCurrentRowChanged(ui_.lwFavorites->currentRow());
 
 	setWidgetsEnabled(true);
 	adjustSize();
@@ -125,9 +109,8 @@ void MUCJoinDlg::updateIdentity(PsiAccount *pa)
 		return;
 	}
 
-	updateBookmarks(account_);
-
 	connect(account_, SIGNAL(disconnected()), this, SLOT(pa_disconnected()));
+	updateFavorites();
 }
 
 void MUCJoinDlg::updateIdentityVisibility()
@@ -137,6 +120,58 @@ void MUCJoinDlg::updateIdentityVisibility()
 	ui_.lb_identity->setVisible(visible);
 }
 
+void MUCJoinDlg::updateFavorites()
+{
+	QListWidgetItem *recentLwi = 0, *lwi;
+
+	ui_.lwFavorites->clear();
+
+	QHash<QString, QListWidgetItem *> bmMap;
+	if (account_ && account_->bookmarkManager()->isAvailable()) {
+		foreach(ConferenceBookmark c, account_->bookmarkManager()->conferences()) {
+			QString jidBare(c.jid().bare());
+			QString name = c.name();
+			if (name.isEmpty()) {
+				name = jidBare;
+			}
+			QString s = tr("%1 on %2").arg(c.nick()).arg(name);
+			lwi = new QListWidgetItem(IconsetFactory::icon(QLatin1String("psi/bookmarks")).icon(), s);
+			lwi->setData(Qt::UserRole, c.jid().withResource(c.nick()).full());
+			lwi->setData(Qt::UserRole + 1, c.password());
+			bmMap.insert(jidBare, lwi);
+
+			ui_.lwFavorites->addItem(lwi);
+		}
+	}
+
+	foreach(QString j, controller_->recentGCList()) {
+		Jid jid(j);
+		QString bareJid = jid.bare();
+		lwi = bmMap.value(bareJid);
+		if (!lwi) {
+			QString s = tr("%1 on %2").arg(jid.resource()).arg(JIDUtil::toString(jid, false));
+			lwi = new QListWidgetItem(IconsetFactory::icon(QLatin1String("psi/history")).icon(), s);
+			lwi->setData(Qt::UserRole, j);
+			ui_.lwFavorites->addItem(lwi);
+		}
+		if (!recentLwi)
+		{
+			recentLwi = lwi;
+		}
+	}
+
+	ui_.lwFavorites->setVisible(ui_.lwFavorites->count() > 0);
+	if (ui_.lwFavorites->count() > 0) {
+		ui_.lwFavorites->setFocus();
+	} else {
+		ui_.le_room->setFocus();
+	}
+
+	if (recentLwi && ui_.le_room->text().isEmpty()) {
+		ui_.lwFavorites->setCurrentItem(recentLwi);
+	}
+}
+
 void MUCJoinDlg::pa_disconnected()
 {
 	if (ui_.busy->isActive()) {
@@ -144,45 +179,41 @@ void MUCJoinDlg::pa_disconnected()
 	}
 }
 
-void MUCJoinDlg::recent_activated(int x)
+void MUCJoinDlg::favoritesCurrentRowChanged(int row)
 {
-	Jid jid(ui_.cb_recent->itemData(x).toString());
-	if (jid.full().isEmpty())
+	if (row < 0) {
 		return;
+	}
+	QListWidgetItem *lwi = ui_.lwFavorites->currentItem();
+	Jid jid(lwi->data(Qt::UserRole).toString());
+	QString password(lwi->data(Qt::UserRole + 1).toString());
+	if (!jid.isValid() || jid.node().isEmpty()) {
+		return;
+	}
 
 	ui_.le_host->setText(jid.domain());
 	ui_.le_room->setText(jid.node());
 	ui_.le_nick->setText(jid.resource());
+	ui_.le_pass->setText(password);
 }
 
-void MUCJoinDlg::bookmarksActivated(int x)
+void MUCJoinDlg::favoritesItemDoubleClicked(QListWidgetItem *lwi)
 {
-	Jid jid(ui_.cb_bookmarks->itemData(x).toString());
-	if (jid.full().isEmpty())
+	Jid jid(lwi->data(Qt::UserRole).toString());
+	QString password(lwi->data(Qt::UserRole + 1).toString());
+	if (!jid.isValid() || jid.node().isEmpty()) {
 		return;
+	}
 
 	ui_.le_host->setText(jid.domain());
 	ui_.le_room->setText(jid.node());
 	ui_.le_nick->setText(jid.resource());
+	ui_.le_pass->setText(password);
+	doJoin();
 }
 
-void MUCJoinDlg::updateBookmarks(PsiAccount *pa)
-{
-	ui_.cb_bookmarks->clear();
-	if (pa && pa->bookmarkManager()->isAvailable()) {
-		ui_.cb_bookmarks->setEnabled(true);
-		foreach(ConferenceBookmark c, pa->bookmarkManager()->conferences()) {
-			Jid jid = c.jid().withResource(c.nick());
-			ui_.cb_bookmarks->addItem(JIDUtil::toString(jid, false));
-			ui_.cb_bookmarks->setItemData(ui_.cb_bookmarks->count()-1, QVariant(jid.full()));
-		}
-	}
-	else {
-		ui_.cb_bookmarks->setEnabled(false);
-	}
-}
 
-void MUCJoinDlg::doJoin(MucJoinReason r)
+void MUCJoinDlg::doJoin(PsiAccount::MucJoinReason r)
 {
 	if (!account_ || !account_->checkConnected(this))
 		return;
@@ -236,8 +267,7 @@ void MUCJoinDlg::doJoin(MucJoinReason r)
 void MUCJoinDlg::setWidgetsEnabled(bool enabled)
 {
 	ui_.cb_ident->setEnabled(enabled);
-	ui_.cb_recent->setEnabled(enabled && ui_.cb_recent->count() > 0);
-	ui_.cb_bookmarks->setEnabled(enabled && ui_.cb_bookmarks->count() > 0);
+	ui_.lwFavorites->setEnabled(enabled && ui_.lwFavorites->count() > 0);
 	ui_.gb_info->setEnabled(enabled);
 	joinButton_->setEnabled(enabled);
 }
@@ -261,7 +291,7 @@ void MUCJoinDlg::error(int error, const QString &str)
 	account_->dialogUnregister(this);
 	controller_->dialogRegister(this);
 
-	if(!nickAlreadyCompleted_ && reason_ == MucAutoJoin && error == nickConflictCode) {
+	if(!nickAlreadyCompleted_ && reason_ == PsiAccount::MucAutoJoin && error == nickConflictCode) {
 		nickAlreadyCompleted_ = true;
 		ui_.le_nick->setText(ui_.le_nick->text() + additionalSymbol);
 		doJoin(reason_);

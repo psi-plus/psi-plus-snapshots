@@ -31,20 +31,20 @@
 #include "enchant++.h"
 #include "enchantchecker.h"
 
-static enchant::Broker *brocker;
+static enchant::Broker *broker;
 
 EnchantChecker::EnchantChecker()
 	: spellers_(EnchantDictList())
 	, allLanguages_(QStringList())
 {
 #ifdef HAVE_ENCHANT2
-	brocker = new enchant::Broker();
+	broker = new enchant::Broker();
 #else
-	brocker = enchant::Broker::instance();
+	broker = enchant::Broker::instance();
 #endif
-	if (brocker)
+	if (broker)
 	{
-		brocker->list_dicts(enchantDictDescribeFn, static_cast<void*>(this));
+		broker->list_dicts(enchantDictDescribeFn, static_cast<void*>(this));
 		setActiveLanguages(getAllLanguages());
 	}
 }
@@ -53,7 +53,7 @@ EnchantChecker::~EnchantChecker()
 {
 	clearSpellers();
 #ifdef HAVE_ENCHANT2
-	delete brocker;
+	delete broker;
 #endif
 }
 
@@ -125,7 +125,7 @@ void EnchantChecker::setActiveLanguages(const QList<QString>& langs)
 			continue;
 
 		try {
-			spellers_ << brocker->request_dict(lang.toStdString());
+			spellers_ << broker->request_dict(lang.toStdString());
 		} catch (enchant::Exception &e) {
 			qWarning() << QString("Enchant error: %1").arg(e.what());
 		}
