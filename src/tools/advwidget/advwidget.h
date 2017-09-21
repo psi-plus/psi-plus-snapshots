@@ -378,7 +378,7 @@ public:
 		}
 #endif
 		border_ = isDecorated;
-		enableMouseTracking(true);
+		enableMouseTracking(!isDecorated);
 	}
 	bool isBorder() const
 	{
