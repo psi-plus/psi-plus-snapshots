@@ -50,6 +50,8 @@ PsiWindowHeader::PsiWindowHeader(QWidget *p)
 
 PsiWindowHeader::~PsiWindowHeader()
 {
+	//Disable mouse tracking on widget deletion
+	enableMouseTracking(false);
 }
 
 void PsiWindowHeader::hidePressed()
