@@ -24,6 +24,7 @@
 
 #include "psiwindowheader.h"
 #include "psiiconset.h"
+#include "psioptions.h"
 
 PsiWindowHeader::PsiWindowHeader(QWidget *p)
 	: QWidget(p),
@@ -51,7 +52,9 @@ PsiWindowHeader::PsiWindowHeader(QWidget *p)
 PsiWindowHeader::~PsiWindowHeader()
 {
 	//Disable mouse tracking on widget deletion
-	enableMouseTracking(false);
+	if(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool()) {
+		enableMouseTracking(false);
+	}
 }
 
 void PsiWindowHeader::hidePressed()
