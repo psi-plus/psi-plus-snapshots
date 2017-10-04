@@ -38,6 +38,7 @@ class Hunspell;
 class QTextCodec;
 
 typedef QSharedPointer<Hunspell> HunspellPtr;
+typedef QPair<QLocale::Language, QLocale::Country> LangId;
 
 class HunspellChecker : public SpellChecker
 {
@@ -49,6 +50,8 @@ public:
 	virtual bool add(const QString &word);
 	virtual bool available() const;
 	virtual bool writable() const;
+	virtual void setActiveLanguages(const QList<QString> &langs);
+	virtual QList<QString> getAllLanguages() const;
 private:
 	struct DictInfo
 	{
@@ -65,7 +68,7 @@ private:
 	void addLanguage(const QLocale &locale);
 	void getDictPaths();
 	bool scanDictPaths(const QString &language, QFileInfo &aff , QFileInfo &dic);
-
+	void unloadLanguage(const QLocale &locale);
 private:
 	QList<LangItem> languages_;
 	QStringList dictPaths_;
