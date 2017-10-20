@@ -1,12 +1,13 @@
 cmake_minimum_required( VERSION 3.1.0 )
+if(NOT ${PROJECT_SOURCE_DIR})
+	project(psi-plugins)
+endif()
 set_directory_properties(PROPERTIES
 	INCLUDE_DIRECTORIES ""
 	COMPILE_DEFINITIONS ""
 )
 
-add_definitions(-DHAVE_QT5)
 set(QT5_BUILD ON)
-
 
 option( BUILD_DEV_PLUGINS "Build plugins from dev directory" OFF )
 
@@ -34,6 +35,13 @@ if(BUILD_DEV_PLUGINS)
 	endif()
 endif()
 
+if( NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY )
+	if( ${PROJECT_SOURCE_DIR} )
+		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/psi")
+	else()
+		set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+	endif()
+endif()
 # Use the same path for shared and static plugins
 if(WIN32)
 	#Store old runtime output path
