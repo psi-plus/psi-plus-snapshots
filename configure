@@ -589,21 +589,21 @@ fi
 
 gen_files() {
 cat >"$1/modules.cpp" <<EOT
-#line 1 "qt4.qcm"
+#line 1 "qt5.qcm"
 /*
 -----BEGIN QCMOD-----
-name: Qt >= 4.7.0
+name: Qt >= 5.0.0
 -----END QCMOD-----
 */
-class qc_qt4 : public ConfObj
+class qc_qt5 : public ConfObj
 {
 public:
-	qc_qt4(Conf *c) : ConfObj(c) {}
-	QString name() const { return "Qt >= 4.7.0"; }
-	QString shortname() const { return "qt4"; }
+	qc_qt5(Conf *c) : ConfObj(c) {}
+	QString name() const { return "Qt >= 5.0.0"; }
+	QString shortname() const { return "qt5"; }
 	bool exec()
 	{
-		return(QT_VERSION >= 0x040700);
+		return(QT_VERSION >= 0x050000);
 	}
 
 	QString resultString() const
@@ -611,6 +611,65 @@ public:
 		return QT_VERSION_STR;
 	}
 };
+
+class QtCompFinder : public ConfObj
+{
+protected:
+	QString compId;
+	QString compShortName;
+	QString compName;
+	QString extraConfIfFound;
+
+public:
+	QtCompFinder(const QString &id,const QString &shortName, const QString &name,
+		     const QString &extraConfIfFound, Conf *c) :
+		ConfObj(c), compId(id), compShortName(shortName), compName(name),
+		extraConfIfFound(extraConfIfFound)
+	{}
+
+	QString name() const { return compName; }
+	QString shortname() const { return compShortName; }
+	bool exec()
+	{
+		QString proextra =
+		"CONFIG += qt\\n"
+		"QT -= gui\\n";
+		"QT += ";
+		
+		proextra += compId;
+		proextra += "multimedia\\n";
+
+		QString str =
+		"\\n"
+		"int main()\\n"
+		"{\\n"
+		"	return 0;\\n"
+		"}\\n";
+
+		int ret;
+		if(!conf->doCompileAndLink(str, QStringList(), QString(), proextra, &ret))
+			return false;
+		if(ret != 0)
+			return false;
+
+		if (!extraConfIfFound.isEmpty()) {
+			conf->addExtra("CONFIG += dbus");
+		}
+
+		return true;
+	}
+};
+
+#define QC_AS_STR(s) #s
+
+#define QC_FIND_QT_COMP_E(id, shortname, name, extraConfIfFound) \\
+class qc_##shortname : public QtCompFinder \\
+{ \\
+public: \\
+	qc_##shortname(Conf *c) : QtCompFinder(QC_AS_STR(id), QC_AS_STR(shortname), QC_AS_STR(name), extraConfIfFound, c) {} \\
+};
+
+#define QC_FIND_QT_COMP(id, shortname, name) QC_FIND_QT_COMP_E(id, shortname, name, "")
 #line 1 "buildmodeapp.qcm"
 /*
 -----BEGIN QCMOD-----
@@ -629,6 +688,37 @@ bool qc_buildmode_release = false;
 bool qc_buildmode_debug = false;
 bool qc_buildmode_separate_debug_info = false;
 
+#define PSI_DIR_NAME "psi-plus"
+
+static QString sourceDir;
+
+// this is a utility function required by few other modules
+static bool psiGenerateFile(const QString &inFile, const QString &outFile, const QHash<QString,QString> &vars)
+{
+	QFile fin(inFile);
+	QFile fout(outFile);
+	if(!fin.open(QIODevice::ReadOnly | QIODevice::Text) || !fout.open(QIODevice::WriteOnly | QIODevice::Truncate))
+		return false;
+
+	QTextStream tin(&fin);
+	QTextStream tout(&fout);
+	while(!tin.atEnd())
+	{
+		QString line = tin.readLine();
+
+		QHashIterator<QString,QString> it(vars);
+		while(it.hasNext())
+		{
+			it.next();
+			line.replace("@@" + it.key() + "@@", it.value());
+		}
+
+		tout << line << endl;
+	}
+
+	return true;
+}
+
 class qc_buildmodeapp : public ConfObj
 {
 public:
@@ -641,6 +731,9 @@ public:
 
 	bool exec()
 	{
+		QFileInfo fi(qc_getenv("QC_COMMAND"));
+		sourceDir = fi.absolutePath();
+
 		// first, parse out the options
 		bool opt_release = false;
 		bool opt_debug = false;
@@ -1225,6 +1318,7 @@ public:
 		QString proextra = "CONFIG += x11\\n";
 #if QT_VERSION >= 0x050000 && defined Q_OS_LINUX
 		proextra += "LIBS += -lxcb\\n";
+		proextra += "QT += x11extras\\n";
 #endif
 		return conf->doCompileAndLink(str, QStringList(), QString(), proextra, NULL);
 	}
@@ -1265,49 +1359,8 @@ name: QDBUS
 //----------------------------------------------------------------------------
 // qc_qdbus
 //----------------------------------------------------------------------------
-class qc_qdbus : public ConfObj
-{
-public:
-	qc_qdbus(Conf *c) : ConfObj(c) {}
-	QString name() const { return "QDBUS"; }
-	QString shortname() const { return "qdbus"; }
-#ifdef Q_OS_WIN
-	QString checkString() const { return QString(); }
-#endif
-	bool exec()
-	{
-#ifdef Q_OS_WIN
-		// skip dbus support on windows
-		return false;
-#else
-		if (!conf->getenv("QC_DISABLE_qdbus").isEmpty())
-			return false;
-
-		// test for "qdbus" feature
-
-		QString proextra =
-		"CONFIG += qt\\n"
-		"QT -= gui\\n";
-		"QT += dbus\\n";
-
-		QString str =
-		"\\n"
-		"int main()\\n"
-		"{\\n"
-		"	return 0;\\n"
-		"}\\n";
-
-		int ret;
-		if(!conf->doCompileAndLink(str, QStringList(), QString(), proextra, &ret))
-			return false;
-		if(ret != 0)
-			return false;
-
-		conf->addExtra("CONFIG += dbus");
-		return true;
-#endif
-	}
-};
+// id, shortname, name, extraConfIfFound
+QC_FIND_QT_COMP_E(dbus, qdbus, QtDbus, "CONFIG += dbus")
 #line 1 "qtmultimedia.qcm"
 /*
 -----BEGIN QCMOD-----
@@ -1318,45 +1371,56 @@ name: QtMultimedia
 //----------------------------------------------------------------------------
 // qc_qtmultimedia
 //----------------------------------------------------------------------------
-class qc_qtmultimedia : public ConfObj
-{
-public:
-	qc_qtmultimedia(Conf *c) : ConfObj(c) {}
-	QString name() const { return "QtMultimedia"; }
-	QString shortname() const { return "qtmultimedia"; }
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-	QString checkString() const { return QString(); }
-#endif
-	bool exec()
-	{
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-		// was not required with qt4
-		return true;
-#else
-		// test for "qtmultimedia" feature
+// id, shortname, name
+QC_FIND_QT_COMP(multimedia, qtmultimedia, QtMultimedia)
+#line 1 "qtconcurrent.qcm"
+/*
+-----BEGIN QCMOD-----
+name: QtConcurrent
+-----END QCMOD-----
+*/
 
-		QString proextra =
-		"CONFIG += qt\\n"
-		"QT -= gui\\n";
-		"QT += multimedia\\n";
+//----------------------------------------------------------------------------
+// qc_qtconcurrent
+//----------------------------------------------------------------------------
+// id, shortname, name
+QC_FIND_QT_COMP(concurrent, qtconcurrent, QtConcurrent)
+#line 1 "qtwidgets.qcm"
+/*
+-----BEGIN QCMOD-----
+name: QtWidgets
+-----END QCMOD-----
+*/
 
-		QString str =
-		"\\n"
-		"int main()\\n"
-		"{\\n"
-		"	return 0;\\n"
-		"}\\n";
+//----------------------------------------------------------------------------
+// qc_qtwidgets
+//----------------------------------------------------------------------------
+// id, shortname, name
+QC_FIND_QT_COMP(widgets, qtwidgets, QtWidgets)
+#line 1 "qtnetwork.qcm"
+/*
+-----BEGIN QCMOD-----
+name: QtNetwork
+-----END QCMOD-----
+*/
 
-		int ret;
-		if(!conf->doCompileAndLink(str, QStringList(), QString(), proextra, &ret))
-			return false;
-		if(ret != 0)
-			return false;
+//----------------------------------------------------------------------------
+// qc_qtnetwork
+//----------------------------------------------------------------------------
+// id, shortname, name
+QC_FIND_QT_COMP(network, qtnetwork, QtNetwork)
+#line 1 "qtxml.qcm"
+/*
+-----BEGIN QCMOD-----
+name: QtXml
+-----END QCMOD-----
+*/
 
-		return true;
-#endif
-	}
-};
+//----------------------------------------------------------------------------
+// qc_qtxml
+//----------------------------------------------------------------------------
+// id, shortname, name
+QC_FIND_QT_COMP(xml, qtxml, QtXml)
 #line 1 "webkit.qcm"
 /*
 -----BEGIN QCMOD-----
@@ -1364,6 +1428,8 @@ name: webkit
 arg: with-webkit=[type],type of webkit QtWebKit/QtWebEngine
 -----END QCMOD-----
 */
+
+QString qc_webkit_type;
 
 //----------------------------------------------------------------------------
 // qc_webkit
@@ -1430,6 +1496,7 @@ public:
 				continue;
 
 			conf->addExtra("CONFIG += " + wt);
+			qc_webkit_type = wt;
 			return true;
 		}
 
@@ -1518,14 +1585,26 @@ name: White Board support
 //----------------------------------------------------------------------------
 // qc_whiteboarding
 //----------------------------------------------------------------------------
-class qc_whiteboarding : public ConfObj
+static bool qc_qtsvg_found = false;
+class qc_whiteboarding : public QtCompFinder
 {
 public:
-	qc_whiteboarding(Conf *c) : ConfObj(c) {}
-	QString name() const { return "White Board support"; }
-	QString shortname() const { return "whiteboarding"; }
+	qc_whiteboarding(Conf *c) : QtCompFinder("svg", "whiteboarding", "White Board support", "", c) {}
+	QString resultString() const
+	{
+		if (!qc_qtsvg_found) {
+			return "QtSVG is not found";
+		}
+		return ConfObj::resultString();
+	}
+
 	bool exec()
 	{
+		if (!QtCompFinder::exec()) {
+			return false;
+		}
+		qc_qtsvg_found = true;
+
 		conf->addDefine("WHITEBOARDING");
 
 		// Finish
@@ -1761,6 +1840,8 @@ public:
 		QString version, libs, other;
 		if(!conf->findPkgConfig("enchant", VersionMin, "1.3.0", &version, &incs, &libs, &other))
                         return false;
+		if(conf->findPkgConfig("enchant", VersionMin, "2.0.0", &version, &incs, &libs, &other))
+                        qc_enchant_defs += "HAVE_ENCHANT2";
 
 		qc_enchant_defs += "HAVE_ENCHANT";
 		qc_enchant_incs += incs;
@@ -1815,7 +1896,7 @@ public:
 		s = conf->getenv("QC_WITH_HUNSPELL_INC");
 		if(!s.isEmpty()) {
 			if(!conf->checkHeader(s, "hunspell.hxx")) {
-				conf->debug("Hunspell includes not found!");
+				conf->debug(QString("Hunspell includes not found at %1!").arg(s));
 				return false;
 			}
 			qc_hunspell_incs += s;
@@ -1830,8 +1911,15 @@ public:
 		QStringList libnames;
 		libnames += "hunspell-1.3";
 		libnames += "hunspell";
+#ifdef _MSC_VER
+# ifdef QC_BUILDMODE
+		libnames += (qc_buildmode_debug? "libhunspelld" : "libhunspell");
+# else
+		libnames += "libhunspell";
+# endif
+#endif
 
-		bool success;
+		bool success = false;
 		QString libname_success;
 		foreach(const QString &libname, libnames) {
 			conf->debug(QString("Trying %1").arg(libname));
@@ -1846,6 +1934,9 @@ public:
 			return false;
 
 		qc_hunspell_defs += "HAVE_HUNSPELL";
+#ifdef _MSC_VER
+		qc_hunspell_defs += "HUNSPELL_STATIC"; // at least it's static by default when their msvc sln is in use.
+#endif
 		qc_hunspell_libs += QString("-L") + a_lib;
 		qc_hunspell_libs += QString("-l") + libname_success;
 		qc_hunspell_have = true;
@@ -1970,10 +2061,28 @@ public:
 	QString shortname() const { return "plugins"; }
 	bool exec()
 	{
+		QFileInfo fi(qc_getenv("QC_COMMAND"));
+		QString sourceDir = fi.absolutePath();
+
 		conf->addDefine("PSI_PLUGINS");
 
 		// Finish
 		conf->addExtra("CONFIG += psi_plugins");
+
+		QHash<QString,QString> vars;
+#ifdef Q_OS_WIN
+		vars["plugins_dir"] = "";
+		vars["data_dir"] = "";
+#else
+		vars["plugins_dir"] = conf->getenv("LIBDIR") + "/" PSI_DIR_NAME "/plugins";
+		vars["data_dir"] = conf->getenv("DATADIR") + "/" PSI_DIR_NAME;
+#endif
+		QStringList psiFeatures;
+		if (!qc_webkit_type.isEmpty()) {
+			psiFeatures << qc_webkit_type;
+		}
+		vars["features"] = psiFeatures.join(" ");
+		psiGenerateFile(sourceDir + "/pluginsconf.pri.in", "pluginsconf.pri", vars);
 
 		return true;
 	}
@@ -1986,34 +2095,6 @@ name: Psi Configuration
 */
 
 #include <QDateTime>
-
-static QString sourceDir;
-
-static bool psiGenerateFile(const QString &inFile, const QString &outFile, const QHash<QString,QString> &vars)
-{
-	QFile fin(inFile);
-	QFile fout(outFile);
-	if(!fin.open(QIODevice::ReadOnly | QIODevice::Text) || !fout.open(QIODevice::WriteOnly | QIODevice::Truncate))
-		return false;
-
-	QTextStream tin(&fin);
-	QTextStream tout(&fout);
-	while(!tin.atEnd())
-	{
-		QString line = tin.readLine();
-
-		QHashIterator<QString,QString> it(vars);
-		while(it.hasNext())
-		{
-			it.next();
-			line.replace("@@" + it.key() + "@@", it.value());
-		}
-
-		tout << line << endl;
-	}
-
-	return true;
-}
 
 static QString psiGetVersion()
 {
@@ -2046,13 +2127,16 @@ public:
 	QString checkString() const { return QString(); }
 	bool exec()
 	{
-		QFileInfo fi(qc_getenv("QC_COMMAND"));
-		sourceDir = fi.absolutePath();
-
 		QString version = psiGetVersion();
+		QRegExp verre("^\\\\d+(?:\\\\.\\\\d+)+");
+		if (verre.indexIn(version) == -1) {
+			conf->debug("Failed to parse version file");
+			return false;
+		}
+		conf->addExtra(QString("PSI_VERSION = %1").arg(verre.cap(0)));
+		
 		QHash<QString,QString> vars;
 		vars["VERSION"] = version;
-		
 		QDir::current().mkpath("mac");
 		psiGenerateFile(sourceDir + "/mac/Info.plist.in", "mac/Info.plist", vars);
 		
@@ -2062,8 +2146,8 @@ public:
 		psiGenerateFile(sourceDir + "/.qmake.cache.in", ".qmake.cache", vars);
 
 #ifndef Q_OS_WIN
-		conf->addExtra(QString("PSI_LIBDIR=%1/psi-plus").arg(conf->getenv("LIBDIR")));
-		conf->addExtra(QString("PSI_DATADIR=%1/psi-plus").arg(conf->getenv("DATADIR")));
+		conf->addExtra(QString("PSI_LIBDIR=%1/" PSI_DIR_NAME).arg(conf->getenv("LIBDIR")));
+		conf->addExtra(QString("PSI_DATADIR=%1/" PSI_DIR_NAME).arg(conf->getenv("DATADIR")));
 #endif
 
 		QDir(".").mkdir("src");
@@ -2071,8 +2155,8 @@ public:
 		if ( file.open(QIODevice::WriteOnly | QIODevice::Text) ) {
 			QTextStream stream( &file );
 #ifndef Q_OS_WIN
-			stream << "#define PSI_LIBDIR \\"" << conf->getenv("LIBDIR") << "/psi-plus\\"" << endl;
-			stream << "#define PSI_DATADIR \\"" << conf->getenv("DATADIR") << "/psi-plus\\"" << endl;
+			stream << "#define PSI_LIBDIR \\"" << conf->getenv("LIBDIR") << "/" PSI_DIR_NAME "\\"" << endl;
+			stream << "#define PSI_DATADIR \\"" << conf->getenv("DATADIR") << "/" PSI_DIR_NAME "\\"" << endl;
 #endif
 			stream << "#define PSI_VERSION \\"" << version << "\\"" << endl;
 		}
@@ -2194,7 +2278,7 @@ public:
 
 EOT
 cat >"$1/modules_new.cpp" <<EOT
-    o = new qc_qt4(conf);
+    o = new qc_qt5(conf);
     o->required = true;
     o->disabled = false;
     o = new qc_buildmodeapp(conf);
@@ -2222,6 +2306,18 @@ cat >"$1/modules_new.cpp" <<EOT
     o->required = false;
     o->disabled = false;
     o = new qc_qtmultimedia(conf);
+    o->required = true;
+    o->disabled = false;
+    o = new qc_qtconcurrent(conf);
+    o->required = true;
+    o->disabled = false;
+    o = new qc_qtwidgets(conf);
+    o->required = true;
+    o->disabled = false;
+    o = new qc_qtnetwork(conf);
+    o->required = true;
+    o->disabled = false;
+    o = new qc_qtxml(conf);
     o->required = true;
     o->disabled = false;
     o = new qc_webkit(conf);
@@ -2812,10 +2908,6 @@ public:
 			conf->addLib(libs);
 		//if(!other.isEmpty())
 		//	conf->addExtra(QString("QMAKE_CFLAGS += %1\\n").arg(other));
-
-		if(!required)
-			conf->addDefine("HAVE_PKG_" + qc_escapeArg(pkgname).toUpper());
-
 		return true;
 	}
 };
