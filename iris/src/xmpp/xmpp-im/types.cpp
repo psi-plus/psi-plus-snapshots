@@ -1054,20 +1054,40 @@ QString Message::subject(const QString &lang) const
 	return d->subject.value(lang);
 }
 
+//! \brief Return subject information.
+QString Message::subject(const QLocale &lang) const
+{
+	return d->subject.value(lang.bcp47Name());
+}
+
 //! \brief Return body information.
 //!
-//! This function will return a plain text or the Richtext version if it
-//! it exists.
-//! \param rich - Returns richtext if true and plain text if false. (default: false)
-//! \note Richtext is in Qt's richtext format and not in xhtml.
+//! This function will return a plain text body
+//! for speficified BCP4 language if it it exists.
+//!
+//! \param lang - Language identified by BCP47 standard
+//! \note Returns first body if not found by language.
 QString Message::body(const QString &lang) const
 {
 	if (d->body.empty())
-		return "";
-	else if (d->body.contains(lang))
-		return d->body[lang];
-	else
-		return d->body.begin().value();
+		return QString();
+
+	auto it = d->body.constFind(lang);
+	if (it != d->body.constEnd())
+		return *it;
+
+	return d->body.begin().value();
+}
+
+//! \brief Return body information.
+//!
+//! This is a convenience function for getting body by locale
+//!
+//! \param lang - requested body's locale
+//! \note Returns first body if not found by locale.
+QString Message::body(const QLocale &lang) const
+{
+	return body(lang.bcp47Name());
 }
 
 //! \brief Return xhtml body.
@@ -1820,11 +1840,15 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 			if(e.namespaceURI() == s.baseNS()) {
 				if(e.tagName() == "subject") {
 					QString lang = e.attributeNS(NS_XML, "lang", "");
-					d->subject[lang] = e.text();
+					if (lang.isEmpty() || !(lang = XMLHelper::sanitizedLang(lang)).isEmpty()) {
+						d->subject[lang] = e.text();
+					}
 				}
 				else if(e.tagName() == "body") {
 					QString lang = e.attributeNS(NS_XML, "lang", "");
-					d->body[lang] = e.text();
+					if (lang.isEmpty() || !(lang = XMLHelper::sanitizedLang(lang)).isEmpty()) {
+						d->body[lang] = e.text();
+					}
 				}
 				else if(e.tagName() == "thread")
 					d->thread = e.text();
@@ -1874,8 +1898,10 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 			QDomElement e = nl.item(n).toElement();
 			if (e.tagName() == "body" && e.namespaceURI() == "http://www.w3.org/1999/xhtml") {
 				QString lang = e.attributeNS(NS_XML, "lang", "");
-				d->htmlElements[lang] = e;
-				d->htmlElements[lang].filterOutUnwanted(false); // just clear iframes and javascript event handlers
+				if (lang.isEmpty() || !(lang = XMLHelper::sanitizedLang(lang)).isEmpty()) {
+					d->htmlElements[lang] = e;
+					d->htmlElements[lang].filterOutUnwanted(false); // just clear iframes and javascript event handlers
+				}
 			}
 		}
 	}

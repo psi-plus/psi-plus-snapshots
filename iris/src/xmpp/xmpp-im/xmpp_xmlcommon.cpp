@@ -24,6 +24,7 @@
 #include <QRect>
 #include <QStringList>
 #include <QColor>
+#include <QLocale>
 
 #include "xmpp_xmlcommon.h"
 #include "xmpp_stanza.h"
@@ -518,5 +519,14 @@ void readBoolAttribute(QDomElement e, const QString &name, bool *v)
 	}
 }
 
-};
+QString sanitizedLang(const QString &lang)
+{
+	if (!lang.isEmpty()) {
+		QLocale l(lang);
+		if (l != QLocale::c())
+			return l.bcp47Name();
+	}
+	return QString();
+}
 
+}
