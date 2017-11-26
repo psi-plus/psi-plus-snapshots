@@ -49,9 +49,6 @@ QWidget *OptionsTabMsgCommon::widget()
 	d->ck_contactsMessageFormatting->setWhatsThis(
 		tr("If enabled, Psi will display incoming messages formatted in the style specified by the contact"));
 
-	d->ck_autoCapitalize->setWhatsThis(
-		tr("Enables automatical substitution of the first lettter in a sentence to the same capital letter"));
-
 	return w_;
 }
 
@@ -97,7 +94,6 @@ void OptionsTabMsgCommon::applyOptions()
 
 	o->setOption("options.ui.tabs.use-tab-shortcuts", d->ck_tabShortcuts->isChecked());
 	o->setOption("options.ui.chat.show-previews", d->ck_showPreviews->isChecked());
-	o->setOption("options.ui.chat.auto-capitalize", d->ck_autoCapitalize->isChecked());
 }
 
 void OptionsTabMsgCommon::restoreOptions()
@@ -138,7 +134,6 @@ void OptionsTabMsgCommon::restoreOptions()
 	}
 	d->ck_tabShortcuts->setChecked( o->getOption("options.ui.tabs.use-tab-shortcuts").toBool() );
 	d->ck_showPreviews->setChecked( o->getOption("options.ui.chat.show-previews").toBool() );
-	d->ck_autoCapitalize->setChecked(o->getOption("options.ui.chat.auto-capitalize").toBool());
 }
 
 void OptionsTabMsgCommon::setData(PsiCon *psi, QWidget *)

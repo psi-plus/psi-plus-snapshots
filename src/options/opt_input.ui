@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>OptInputUI</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0">
    <property name="spacing">
     <number>6</number>
    </property>
@@ -33,6 +33,13 @@
     <widget class="QCheckBox" name="isAutoResize">
      <property name="text">
       <string>Auto-resize text input field</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="ck_autoCapitalize">
+     <property name="text">
+      <string>Automatically capitalize the first letter in a sentence</string>
      </property>
     </widget>
    </item>

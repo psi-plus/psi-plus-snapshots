@@ -130,13 +130,6 @@
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="ck_autoCapitalize">
-     <property name="text">
-      <string>Automatically capitalize the first letter in a sentence</string>
-     </property>
-    </widget>
-   </item>
-   <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>

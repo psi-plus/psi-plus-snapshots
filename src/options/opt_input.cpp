@@ -58,6 +58,9 @@ QWidget *OptionsTabInput::widget()
 
 	connect(d->isSpellCheck, &QCheckBox::toggled, this, &OptionsTabInput::itemToggled);
 
+	d->ck_autoCapitalize->setWhatsThis(
+		tr("Enables automatical substitution of the first lettter in a sentence to the same capital letter"));
+
 	return w_;
 }
 
@@ -83,6 +86,7 @@ void OptionsTabInput::applyOptions()
 		s->setActiveLanguages(loadedDicts_);
 		o->setOption(DICTS_OPTION, QVariant(loadedDicts_.join(" ")));
 	}
+	o->setOption("options.ui.chat.auto-capitalize", d->ck_autoCapitalize->isChecked());
 }
 
 void OptionsTabInput::restoreOptions()
@@ -113,7 +117,7 @@ void OptionsTabInput::restoreOptions()
 	else {
 		d->dictsWarnLabel->setVisible(true);
 	}
-
+	d->ck_autoCapitalize->setChecked(o->getOption("options.ui.chat.auto-capitalize").toBool());
 }
 
 void OptionsTabInput::setData(PsiCon *psi, QWidget *)
