@@ -41,6 +41,8 @@ namespace XMPP {
 	class BoBData;
 	class IBBData;
 
+	typedef QMap<QString, QString> StringMap;
+
 	typedef enum { OfflineEvent, DeliveredEvent, DisplayedEvent,
 			ComposingEvent, CancelEvent } MsgEvent;
 
@@ -65,6 +67,7 @@ namespace XMPP {
 		QString lang() const;
 		QString subject(const QString &lang=QString::null) const;
 		QString subject(const QLocale &lang) const;
+		StringMap subjectMap() const;
 		QString body(const QString &lang="") const;
 		QString body(const QLocale &lang) const;
 		QString thread() const;

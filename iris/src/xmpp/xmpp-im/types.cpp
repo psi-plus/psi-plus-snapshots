@@ -1060,6 +1060,11 @@ QString Message::subject(const QLocale &lang) const
 	return d->subject.value(lang.bcp47Name());
 }
 
+StringMap Message::subjectMap() const
+{
+	return d->subject;
+}
+
 //! \brief Return body information.
 //!
 //! This function will return a plain text body

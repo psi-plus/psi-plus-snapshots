@@ -53,8 +53,6 @@
 
 namespace XMPP
 {
-	typedef QMap<QString, QString> StringMap;
-
 	typedef QList<AgentItem> AgentList;
 	typedef QList<DiscoItem> DiscoList;
 

@@ -233,7 +233,7 @@ HEADERS += \
 	$$PWD/accountloginpassword.h \
 	$$PWD/mcmdcompletion.h \
 	$$PWD/captchadlg.h \
-	$$PWD/languagemodel.h
+	$$PWD/languagemanager.h
 
 # Source files
 SOURCES += \
@@ -368,7 +368,7 @@ SOURCES += \
 	$$PWD/accountloginpassword.cpp \
 	$$PWD/mcmdcompletion.cpp \
 	$$PWD/captchadlg.cpp \
-	$$PWD/languagemodel.cpp
+	$$PWD/languagemanager.cpp
 
 CONFIG += filetransfer
 filetransfer {
@@ -579,7 +579,8 @@ FORMS += \
 	$$PWD/ahcformdlg.ui \
 	$$PWD/geolocation.ui \
 	$$PWD/rosteravatarframe.ui \
-	$$PWD/captchadlg.ui
+	$$PWD/captchadlg.ui \
+    $$PWD/groupchattopicaddlang.ui
 
 # options dialog
 include($$PWD/options/options.pri)
