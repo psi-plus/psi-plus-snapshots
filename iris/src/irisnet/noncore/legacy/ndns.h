@@ -29,29 +29,29 @@
 
 class NDns : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	NDns(QObject *parent=0);
-	~NDns();
+    NDns(QObject *parent=0);
+    ~NDns();
 
-	void resolve(const QString &);
-	void stop();
-	bool isBusy() const;
+    void resolve(const QString &);
+    void stop();
+    bool isBusy() const;
 
-	QHostAddress result() const;
-	QString resultString() const;
+    QHostAddress result() const;
+    QString resultString() const;
 
 signals:
-	void resultsReady();
+    void resultsReady();
 
 private slots:
-	void dns_resultsReady(const QList<XMPP::NameRecord> &);
-	void dns_error(XMPP::NameResolver::Error);
+    void dns_resultsReady(const QList<XMPP::NameRecord> &);
+    void dns_error(XMPP::NameResolver::Error);
 
 private:
-	XMPP::NameResolver dns;
-	bool busy;
-	QHostAddress addr;
+    XMPP::NameResolver dns;
+    bool busy;
+    QHostAddress addr;
 };
 
 // CS_NAMESPACE_END

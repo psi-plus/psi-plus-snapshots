@@ -13,101 +13,101 @@
 
 class IODeviceOpenerTest : public QObject
 {
-		Q_OBJECT
+        Q_OBJECT
 
-	private slots:
-		void testConstructor() {
-			QBuffer buffer;
+    private slots:
+        void testConstructor() {
+            QBuffer buffer;
 
-			IODeviceOpener opener(&buffer, QIODevice::WriteOnly);
+            IODeviceOpener opener(&buffer, QIODevice::WriteOnly);
 
-			QVERIFY(buffer.isOpen());
-			QVERIFY(QIODevice::WriteOnly == buffer.openMode());
-			QVERIFY(opener.isOpen());
-		}
+            QVERIFY(buffer.isOpen());
+            QVERIFY(QIODevice::WriteOnly == buffer.openMode());
+            QVERIFY(opener.isOpen());
+        }
 
-		void testConstructor_Open() {
-			QBuffer buffer;
-			buffer.open(QIODevice::ReadOnly);
+        void testConstructor_Open() {
+            QBuffer buffer;
+            buffer.open(QIODevice::ReadOnly);
 
-			IODeviceOpener opener(&buffer, QIODevice::ReadOnly);
+            IODeviceOpener opener(&buffer, QIODevice::ReadOnly);
 
-			QVERIFY(buffer.isOpen());
-			QVERIFY(QIODevice::ReadOnly == buffer.openMode());
-			QVERIFY(opener.isOpen());
-		}
+            QVERIFY(buffer.isOpen());
+            QVERIFY(QIODevice::ReadOnly == buffer.openMode());
+            QVERIFY(opener.isOpen());
+        }
 
-		void testConstructor_OpenInSubsetMode() {
-			QBuffer buffer;
-			buffer.open(QIODevice::ReadWrite);
+        void testConstructor_OpenInSubsetMode() {
+            QBuffer buffer;
+            buffer.open(QIODevice::ReadWrite);
 
-			IODeviceOpener opener(&buffer, QIODevice::WriteOnly);
+            IODeviceOpener opener(&buffer, QIODevice::WriteOnly);
 
-			QVERIFY(buffer.isOpen());
-			QVERIFY(QIODevice::ReadWrite == buffer.openMode());
-			QVERIFY(opener.isOpen());
-		}
+            QVERIFY(buffer.isOpen());
+            QVERIFY(QIODevice::ReadWrite == buffer.openMode());
+            QVERIFY(opener.isOpen());
+        }
 
-		void testConstructor_OpenInWrongMode() {
-			QBuffer buffer;
-			buffer.open(QIODevice::ReadOnly);
+        void testConstructor_OpenInWrongMode() {
+            QBuffer buffer;
+            buffer.open(QIODevice::ReadOnly);
 
-			IODeviceOpener opener(&buffer, QIODevice::WriteOnly);
+            IODeviceOpener opener(&buffer, QIODevice::WriteOnly);
 
-			QVERIFY(buffer.isOpen());
-			QVERIFY(QIODevice::ReadOnly == buffer.openMode());
-			QVERIFY(!opener.isOpen());
-		}
+            QVERIFY(buffer.isOpen());
+            QVERIFY(QIODevice::ReadOnly == buffer.openMode());
+            QVERIFY(!opener.isOpen());
+        }
 
-		void testConstructor_Unopenable() {
-			UnopenableBuffer buffer;
+        void testConstructor_Unopenable() {
+            UnopenableBuffer buffer;
 
-			IODeviceOpener opener(&buffer, QIODevice::WriteOnly);
+            IODeviceOpener opener(&buffer, QIODevice::WriteOnly);
 
-			QVERIFY(!opener.isOpen());
-		}
+            QVERIFY(!opener.isOpen());
+        }
 
-		void testDestructor() {
-			QBuffer buffer;
+        void testDestructor() {
+            QBuffer buffer;
 
-			{
-				IODeviceOpener opener(&buffer, QIODevice::WriteOnly);
-			}
+            {
+                IODeviceOpener opener(&buffer, QIODevice::WriteOnly);
+            }
 
-			QVERIFY(!buffer.isOpen());
-		}
+            QVERIFY(!buffer.isOpen());
+        }
 
-		void testDestructor_Open() {
-			QBuffer buffer;
-			buffer.open(QIODevice::ReadOnly);
+        void testDestructor_Open() {
+            QBuffer buffer;
+            buffer.open(QIODevice::ReadOnly);
 
-			{
-				IODeviceOpener opener(&buffer, QIODevice::ReadOnly);
-			}
+            {
+                IODeviceOpener opener(&buffer, QIODevice::ReadOnly);
+            }
 
-			QVERIFY(buffer.isOpen());
-		}
+            QVERIFY(buffer.isOpen());
+        }
 
-		void testDestructor_OpenInWrongMode() {
-			QBuffer buffer;
-			buffer.open(QIODevice::ReadOnly);
+        void testDestructor_OpenInWrongMode() {
+            QBuffer buffer;
+            buffer.open(QIODevice::ReadOnly);
 
-			{
-				IODeviceOpener opener(&buffer, QIODevice::WriteOnly);
-			}
+            {
+                IODeviceOpener opener(&buffer, QIODevice::WriteOnly);
+            }
 
-			QVERIFY(buffer.isOpen());
-			QVERIFY(QIODevice::ReadOnly == buffer.openMode());
-		}
+            QVERIFY(buffer.isOpen());
+            QVERIFY(QIODevice::ReadOnly == buffer.openMode());
+        }
 
-	private:
-		class UnopenableBuffer : public QBuffer
-		{
-			public:
-				UnopenableBuffer() : QBuffer() { }
+    private:
+        class UnopenableBuffer : public QBuffer
+        {
+            public:
+                UnopenableBuffer() : QBuffer() { }
 
-				bool open(QIODevice::OpenMode) { return false; }
-		};
+                bool open(QIODevice::OpenMode) { return false; }
+        };
 };
 
 QTTESTUTIL_REGISTER_TEST(IODeviceOpenerTest);

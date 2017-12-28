@@ -34,22 +34,22 @@
 class SpellChecker : public QObject
 {
 public:
-	static SpellChecker* instance();
-	virtual bool available() const;
-	virtual bool writable() const;
-	virtual QList<QString> suggestions(const QString&);
-	virtual bool isCorrect(const QString&);
-	virtual bool add(const QString&);
+    static SpellChecker* instance();
+    virtual bool available() const;
+    virtual bool writable() const;
+    virtual QList<QString> suggestions(const QString&);
+    virtual bool isCorrect(const QString&);
+    virtual bool add(const QString&);
 
-	virtual void setActiveLanguages(const QList<QString>& ) {}
-	virtual QList<QString> getAllLanguages() const { return QList<QString>(); }
+    virtual void setActiveLanguages(const QList<QString>& ) {}
+    virtual QList<QString> getAllLanguages() const { return QList<QString>(); }
 
 protected:
-	SpellChecker();
-	virtual ~SpellChecker();
+    SpellChecker();
+    virtual ~SpellChecker();
 
 private:
-	static SpellChecker* instance_;
+    static SpellChecker* instance_;
 };
 
 #endif

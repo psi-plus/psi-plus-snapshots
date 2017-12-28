@@ -24,33 +24,33 @@ namespace XMPP {
 
 class NetAvailability::Private : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	NetAvailability *q;
+    NetAvailability *q;
 
-	Private(NetAvailability *_q) :
-		QObject(_q),
-		q(_q)
-	{
-	}
+    Private(NetAvailability *_q) :
+        QObject(_q),
+        q(_q)
+    {
+    }
 };
 
 NetAvailability::NetAvailability(QObject *parent) :
-	QObject(parent)
+    QObject(parent)
 {
-	d = new Private(this);
+    d = new Private(this);
 }
 
 NetAvailability::~NetAvailability()
 {
-	delete d;
+    delete d;
 }
 
 bool NetAvailability::isAvailable() const
 {
-	// TODO
-	return true;
+    // TODO
+    return true;
 }
 
 }

@@ -30,52 +30,52 @@
 class Q3Dns
 {
 public:
-	class Server
-	{
-	public:
-		Server(const QString &n = QString(), quint16 p = 0, quint16 w = 0, quint16 po = 0)
-		:name(n), priority(p), weight(w), port(po) {}
+    class Server
+    {
+    public:
+        Server(const QString &n = QString(), quint16 p = 0, quint16 w = 0, quint16 po = 0)
+        :name(n), priority(p), weight(w), port(po) {}
 
-		QString name;
-		quint16 priority;
-		quint16 weight;
-		quint16 port;
-	};
+        QString name;
+        quint16 priority;
+        quint16 weight;
+        quint16 port;
+    };
 };
 
 class SrvResolver : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	SrvResolver(QObject *parent=0);
-	~SrvResolver();
+    SrvResolver(QObject *parent=0);
+    ~SrvResolver();
 
-	void resolve(const QString &server, const QString &type, const QString &proto);
-	void resolveSrvOnly(const QString &server, const QString &type, const QString &proto);
-	void next();
-	void stop();
-	bool isBusy() const;
+    void resolve(const QString &server, const QString &type, const QString &proto);
+    void resolveSrvOnly(const QString &server, const QString &type, const QString &proto);
+    void next();
+    void stop();
+    bool isBusy() const;
 
-	QList<Q3Dns::Server> servers() const;
+    QList<Q3Dns::Server> servers() const;
 
-	bool failed() const;
-	QHostAddress resultAddress() const;
-	quint16 resultPort() const;
+    bool failed() const;
+    QHostAddress resultAddress() const;
+    quint16 resultPort() const;
 
 signals:
-	void resultsReady();
+    void resultsReady();
 
 private slots:
-	void nndns_resultsReady(const QList<XMPP::NameRecord> &);
-	void nndns_error(XMPP::NameResolver::Error);
-	void ndns_done();
-	void t_timeout();
+    void nndns_resultsReady(const QList<XMPP::NameRecord> &);
+    void nndns_error(XMPP::NameResolver::Error);
+    void ndns_done();
+    void t_timeout();
 
 private:
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 
-	void tryNext();
+    void tryNext();
 };
 
 // CS_NAMESPACE_END

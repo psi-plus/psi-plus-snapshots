@@ -27,32 +27,32 @@ namespace XMPP {
 //----------------------------------------------------------------------------
 NetInterfaceProvider *IrisNetProvider::createNetInterfaceProvider()
 {
-	return 0;
+    return 0;
 }
 
 NetGatewayProvider *IrisNetProvider::createNetGatewayProvider()
 {
-	return 0;
+    return 0;
 }
 
 NetAvailabilityProvider *IrisNetProvider::createNetAvailabilityProvider()
 {
-	return 0;
+    return 0;
 }
 
 NameProvider *IrisNetProvider::createNameProviderInternet()
 {
-	return 0;
+    return 0;
 }
 
 NameProvider *IrisNetProvider::createNameProviderLocal()
 {
-	return 0;
+    return 0;
 }
 
 ServiceProvider *IrisNetProvider::createServiceProvider()
 {
-	return 0;
+    return 0;
 }
 
 //----------------------------------------------------------------------------
@@ -60,30 +60,30 @@ ServiceProvider *IrisNetProvider::createServiceProvider()
 //----------------------------------------------------------------------------
 bool NameProvider::supportsSingle() const
 {
-	return false;
+    return false;
 }
 
 bool NameProvider::supportsLongLived() const
 {
-	return false;
+    return false;
 }
 
 bool NameProvider::supportsRecordType(int type) const
 {
-	Q_UNUSED(type);
-	return false;
+    Q_UNUSED(type);
+    return false;
 }
 
 void NameProvider::resolve_localResultsReady(int id, const QList<XMPP::NameRecord> &results)
 {
-	Q_UNUSED(id);
-	Q_UNUSED(results);
+    Q_UNUSED(id);
+    Q_UNUSED(results);
 }
 
 void NameProvider::resolve_localError(int id, XMPP::NameResolver::Error e)
 {
-	Q_UNUSED(id);
-	Q_UNUSED(e);
+    Q_UNUSED(id);
+    Q_UNUSED(e);
 }
 
 }

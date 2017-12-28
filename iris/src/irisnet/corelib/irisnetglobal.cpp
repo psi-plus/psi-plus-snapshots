@@ -44,205 +44,205 @@ extern IrisNetProvider *irisnet_createAppleProvider();
 class PluginInstance
 {
 private:
-	QPluginLoader *_loader;
-	QObject *_instance;
-	bool _ownInstance;
+    QPluginLoader *_loader;
+    QObject *_instance;
+    bool _ownInstance;
 
-	PluginInstance()
-	{
-	}
+    PluginInstance()
+    {
+    }
 
 public:
-	static PluginInstance *fromFile(const QString &fname)
-	{
-		QPluginLoader *loader = new QPluginLoader(fname);
-		if(!loader->load())
-		{
-			delete loader;
-			return 0;
-		}
-		QObject *obj = loader->instance();
-		if(!obj)
-		{
-			loader->unload();
-			delete loader;
-			return 0;
-		}
-		PluginInstance *i = new PluginInstance;
-		i->_loader = loader;
-		i->_instance = obj;
-		i->_ownInstance = true;
-		return i;
-	}
+    static PluginInstance *fromFile(const QString &fname)
+    {
+        QPluginLoader *loader = new QPluginLoader(fname);
+        if(!loader->load())
+        {
+            delete loader;
+            return 0;
+        }
+        QObject *obj = loader->instance();
+        if(!obj)
+        {
+            loader->unload();
+            delete loader;
+            return 0;
+        }
+        PluginInstance *i = new PluginInstance;
+        i->_loader = loader;
+        i->_instance = obj;
+        i->_ownInstance = true;
+        return i;
+    }
 
-	static PluginInstance *fromStatic(QObject *obj)
-	{
-		PluginInstance *i = new PluginInstance;
-		i->_loader = 0;
-		i->_instance = obj;
-		i->_ownInstance = false;
-		return i;
-	}
+    static PluginInstance *fromStatic(QObject *obj)
+    {
+        PluginInstance *i = new PluginInstance;
+        i->_loader = 0;
+        i->_instance = obj;
+        i->_ownInstance = false;
+        return i;
+    }
 
-	static PluginInstance *fromInstance(QObject *obj)
-	{
-		PluginInstance *i = new PluginInstance;
-		i->_loader = 0;
-		i->_instance = obj;
-		i->_ownInstance = true;
-		return i;
-	}
+    static PluginInstance *fromInstance(QObject *obj)
+    {
+        PluginInstance *i = new PluginInstance;
+        i->_loader = 0;
+        i->_instance = obj;
+        i->_ownInstance = true;
+        return i;
+    }
 
-	~PluginInstance()
-	{
-		if(_ownInstance)
-			delete _instance;
+    ~PluginInstance()
+    {
+        if(_ownInstance)
+            delete _instance;
 
-		if(_loader)
-		{
-			_loader->unload();
-			delete _loader;
-		}
-	}
+        if(_loader)
+        {
+            _loader->unload();
+            delete _loader;
+        }
+    }
 
-	void claim()
-	{
-		if(_loader)
-			_loader->moveToThread(0);
-		if(_ownInstance)
-			_instance->moveToThread(0);
-	}
+    void claim()
+    {
+        if(_loader)
+            _loader->moveToThread(0);
+        if(_ownInstance)
+            _instance->moveToThread(0);
+    }
 
-	QObject *instance()
-	{
-		return _instance;
-	}
+    QObject *instance()
+    {
+        return _instance;
+    }
 
-	bool sameType(const PluginInstance *other)
-	{
-		if(!_instance || !other->_instance)
-			return false;
+    bool sameType(const PluginInstance *other)
+    {
+        if(!_instance || !other->_instance)
+            return false;
 
-		if(qstrcmp(_instance->metaObject()->className(), other->_instance->metaObject()->className()) != 0)
-			return false;
+        if(qstrcmp(_instance->metaObject()->className(), other->_instance->metaObject()->className()) != 0)
+            return false;
 
-		return true;
-	}
+        return true;
+    }
 };
 
 class PluginManager
 {
 public:
-	bool builtin_done;
-	QStringList paths;
-	QList<PluginInstance*> plugins;
-	QList<IrisNetProvider*> providers;
+    bool builtin_done;
+    QStringList paths;
+    QList<PluginInstance*> plugins;
+    QList<IrisNetProvider*> providers;
 
-	PluginManager()
-	{
-		builtin_done = false;
-	}
+    PluginManager()
+    {
+        builtin_done = false;
+    }
 
-	~PluginManager()
-	{
-		unload();
-	}
+    ~PluginManager()
+    {
+        unload();
+    }
 
-	bool tryAdd(PluginInstance *i, bool lowPriority = false)
-	{
-		// is it the right kind of plugin?
-		IrisNetProvider *p = qobject_cast<IrisNetProvider*>(i->instance());
-		if(!p)
-			return false;
+    bool tryAdd(PluginInstance *i, bool lowPriority = false)
+    {
+        // is it the right kind of plugin?
+        IrisNetProvider *p = qobject_cast<IrisNetProvider*>(i->instance());
+        if(!p)
+            return false;
 
-		// make sure we don't have it already
-		for(int n = 0; n < plugins.count(); ++n)
-		{
-			if(i->sameType(plugins[n]))
-				return false;
-		}
+        // make sure we don't have it already
+        for(int n = 0; n < plugins.count(); ++n)
+        {
+            if(i->sameType(plugins[n]))
+                return false;
+        }
 
-		i->claim();
-		plugins += i;
-		if(lowPriority)
-			providers.append(p);
-		else
-			providers.prepend(p);
-		return true;
-	}
+        i->claim();
+        plugins += i;
+        if(lowPriority)
+            providers.append(p);
+        else
+            providers.prepend(p);
+        return true;
+    }
 
-	void addBuiltIn(IrisNetProvider *p)
-	{
-		PluginInstance *i = PluginInstance::fromInstance(p);
-		if(!tryAdd(i, true))
-			delete i;
-	}
+    void addBuiltIn(IrisNetProvider *p)
+    {
+        PluginInstance *i = PluginInstance::fromInstance(p);
+        if(!tryAdd(i, true))
+            delete i;
+    }
 
-	void scan()
-	{
-		if(!builtin_done)
-		{
-			addBuiltIn(irisnet_createQtNetProvider()); // interfaces. crossplatform. no need to reimplement
+    void scan()
+    {
+        if(!builtin_done)
+        {
+            addBuiltIn(irisnet_createQtNetProvider()); // interfaces. crossplatform. no need to reimplement
 #ifdef Q_OS_UNIX
-			addBuiltIn(irisnet_createUnixNetProvider()); // gateways
+            addBuiltIn(irisnet_createUnixNetProvider()); // gateways
 #endif
 #ifdef NEED_JDNS
-			addBuiltIn(irisnet_createJDnsProvider());
+            addBuiltIn(irisnet_createJDnsProvider());
 #else
-			addBuiltIn(irisnet_createQtNameProvider()); // works with Qt5+ only
+            addBuiltIn(irisnet_createQtNameProvider()); // works with Qt5+ only
 #endif
-			builtin_done = true;
-		}
+            builtin_done = true;
+        }
 
-		QObjectList list = QPluginLoader::staticInstances();
-		for(int n = 0; n < list.count(); ++n)
-		{
-			PluginInstance *i = PluginInstance::fromStatic(list[n]);
-			if(!tryAdd(i))
-				delete i;
-		}
-		for(int n = 0; n < paths.count(); ++n)
-		{
-			QDir dir(paths[n]);
-			if(!dir.exists())
-				continue;
+        QObjectList list = QPluginLoader::staticInstances();
+        for(int n = 0; n < list.count(); ++n)
+        {
+            PluginInstance *i = PluginInstance::fromStatic(list[n]);
+            if(!tryAdd(i))
+                delete i;
+        }
+        for(int n = 0; n < paths.count(); ++n)
+        {
+            QDir dir(paths[n]);
+            if(!dir.exists())
+                continue;
 
-			QStringList entries = dir.entryList();
-			for(int k = 0; k < entries.count(); ++k)
-			{
-				QFileInfo fi(dir.filePath(entries[k]));
-				if(!fi.exists())
-					continue;
-				QString fname = fi.filePath();
-				PluginInstance *i = PluginInstance::fromFile(fname);
-				if(!i)
-					continue;
+            QStringList entries = dir.entryList();
+            for(int k = 0; k < entries.count(); ++k)
+            {
+                QFileInfo fi(dir.filePath(entries[k]));
+                if(!fi.exists())
+                    continue;
+                QString fname = fi.filePath();
+                PluginInstance *i = PluginInstance::fromFile(fname);
+                if(!i)
+                    continue;
 
-				if(!tryAdd(i))
-					delete i;
-			}
-		}
-	}
+                if(!tryAdd(i))
+                    delete i;
+            }
+        }
+    }
 
-	void unload()
-	{
-		// unload in reverse order
-		QList<PluginInstance*> revlist;
-		for(int n = 0; n < plugins.count(); ++n)
-			revlist.prepend(plugins[n]);
-		qDeleteAll(revlist);
+    void unload()
+    {
+        // unload in reverse order
+        QList<PluginInstance*> revlist;
+        for(int n = 0; n < plugins.count(); ++n)
+            revlist.prepend(plugins[n]);
+        qDeleteAll(revlist);
 
-		plugins.clear();
-		providers.clear();
-	}
+        plugins.clear();
+        providers.clear();
+    }
 };
 
 class IrisNetGlobal
 {
 public:
-	QMutex m;
-	PluginManager pluginManager;
-	QList<IrisNetCleanUpFunction> cleanupList;
+    QMutex m;
+    PluginManager pluginManager;
+    QList<IrisNetCleanUpFunction> cleanupList;
 };
 
 Q_GLOBAL_STATIC(QMutex, global_mutex)
@@ -252,24 +252,24 @@ static void deinit();
 
 static void init()
 {
-	QMutexLocker locker(global_mutex());
-	if(global)
-		return;
+    QMutexLocker locker(global_mutex());
+    if(global)
+        return;
 
-	global = new IrisNetGlobal;
-	qAddPostRoutine(deinit);
+    global = new IrisNetGlobal;
+    qAddPostRoutine(deinit);
 }
 
 void deinit()
 {
-	if(!global)
-		return;
+    if(!global)
+        return;
 
-	while(!global->cleanupList.isEmpty())
-		(global->cleanupList.takeFirst())();
+    while(!global->cleanupList.isEmpty())
+        (global->cleanupList.takeFirst())();
 
-	delete global;
-	global = 0;
+    delete global;
+    global = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -277,33 +277,33 @@ void deinit()
 //----------------------------------------------------------------------------
 void irisNetSetPluginPaths(const QStringList &paths)
 {
-	init();
+    init();
 
-	QMutexLocker locker(&global->m);
-	global->pluginManager.paths = paths;
+    QMutexLocker locker(&global->m);
+    global->pluginManager.paths = paths;
 }
 
 void irisNetCleanup()
 {
-	deinit();
-	qRemovePostRoutine(deinit);
+    deinit();
+    qRemovePostRoutine(deinit);
 }
 
 void irisNetAddPostRoutine(IrisNetCleanUpFunction func)
 {
-	init();
+    init();
 
-	QMutexLocker locker(&global->m);
-	global->cleanupList.prepend(func);
+    QMutexLocker locker(&global->m);
+    global->cleanupList.prepend(func);
 }
 
 QList<IrisNetProvider*> irisNetProviders()
 {
-	init();
+    init();
 
-	QMutexLocker locker(&global->m);
-	global->pluginManager.scan();
-	return global->pluginManager.providers;
+    QMutexLocker locker(&global->m);
+    global->pluginManager.scan();
+    return global->pluginManager.providers;
 }
 
 }

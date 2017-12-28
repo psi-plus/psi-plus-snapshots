@@ -26,16 +26,16 @@
 namespace XMPP
 {
 
-	class PubSubRetraction
-	{
-	public:
-		PubSubRetraction();
-		PubSubRetraction(const QString& id);
-		const QString& id() const;
+    class PubSubRetraction
+    {
+    public:
+        PubSubRetraction();
+        PubSubRetraction(const QString& id);
+        const QString& id() const;
 
-	private:
-		QString id_;
-	};
+    private:
+        QString id_;
+    };
 }
 
 #endif

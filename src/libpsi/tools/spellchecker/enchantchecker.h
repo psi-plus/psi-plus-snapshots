@@ -33,34 +33,34 @@
 
 namespace enchant
 {
-	class Dict;
+    class Dict;
 }
 
 class EnchantChecker : public SpellChecker
 {
 public:
-	EnchantChecker();
-	~EnchantChecker();
-	virtual QList<QString> suggestions(const QString&);
-	virtual bool isCorrect(const QString&);
-	virtual bool add(const QString&);
-	virtual bool available() const;
-	virtual bool writable() const;
+    EnchantChecker();
+    ~EnchantChecker();
+    virtual QList<QString> suggestions(const QString&);
+    virtual bool isCorrect(const QString&);
+    virtual bool add(const QString&);
+    virtual bool available() const;
+    virtual bool writable() const;
 
-	virtual void setActiveLanguages(const QList<QString>& langs);
-	virtual QList<QString> getAllLanguages() const;
+    virtual void setActiveLanguages(const QList<QString>& langs);
+    virtual QList<QString> getAllLanguages() const;
 
 private:
-	static void enchantDictDescribeFn(const char *const lang_tag,
-									  const char *const provider_name,
-									  const char *const provider_desc,
-									  const char *const provider_file,
-									  void *user_data);
-	void clearSpellers();
+    static void enchantDictDescribeFn(const char *const lang_tag,
+                                      const char *const provider_name,
+                                      const char *const provider_desc,
+                                      const char *const provider_file,
+                                      void *user_data);
+    void clearSpellers();
 
-	typedef QList<enchant::Dict*> EnchantDictList;
-	EnchantDictList spellers_;
-	QStringList allLanguages_;
+    typedef QList<enchant::Dict*> EnchantDictList;
+    EnchantDictList spellers_;
+    QStringList allLanguages_;
 };
 
 #endif

@@ -27,37 +27,37 @@
 
 class HttpConnect : public ByteStream
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
-	HttpConnect(QObject *parent=0);
-	~HttpConnect();
+    enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
+    HttpConnect(QObject *parent=0);
+    ~HttpConnect();
 
-	void setAuth(const QString &user, const QString &pass="");
-	void connectToHost(const QString &proxyHost, int proxyPort, const QString &host, int port);
+    void setAuth(const QString &user, const QString &pass="");
+    void connectToHost(const QString &proxyHost, int proxyPort, const QString &host, int port);
 
-	// from ByteStream
-	void close();
-	qint64 bytesToWrite() const;
+    // from ByteStream
+    void close();
+    qint64 bytesToWrite() const;
 protected:
-	qint64 writeData(const char *data, qint64 maxSize);
+    qint64 writeData(const char *data, qint64 maxSize);
 
 signals:
-	void connected();
+    void connected();
 
 private slots:
-	void sock_connected();
-	void sock_connectionClosed();
-	void sock_delayedCloseFinished();
-	void sock_readyRead();
-	void sock_bytesWritten(qint64);
-	void sock_error(int);
+    void sock_connected();
+    void sock_connectionClosed();
+    void sock_delayedCloseFinished();
+    void sock_readyRead();
+    void sock_bytesWritten(qint64);
+    void sock_error(int);
 
 private:
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 
-	void resetConnection(bool clear=false);
+    void resetConnection(bool clear=false);
 };
 
 // CS_NAMESPACE_END

@@ -32,43 +32,43 @@ typedef int qintptr; // temporary hack until we get rid of file descriptors
 
 class ServSock : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	ServSock(QObject *parent=0);
-	~ServSock();
+    ServSock(QObject *parent=0);
+    ~ServSock();
 
-	bool isActive() const;
-	bool listen(quint16 port);
-	void stop();
-	int port() const;
-	QHostAddress address() const;
+    bool isActive() const;
+    bool listen(quint16 port);
+    void stop();
+    int port() const;
+    QHostAddress address() const;
 
 signals:
-	void connectionReady(qintptr);
+    void connectionReady(qintptr);
 
 private slots:
-	void sss_connectionReady(qintptr);
+    void sss_connectionReady(qintptr);
 
 private:
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 };
 
 class ServSockSignal : public QTcpServer
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	ServSockSignal(QObject *parent = 0);
+    ServSockSignal(QObject *parent = 0);
 
 signals:
-	void connectionReady(qintptr);
+    void connectionReady(qintptr);
 
 protected:
-	// reimplemented
+    // reimplemented
 #if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-	void incomingConnection(int socketDescriptor);
+    void incomingConnection(int socketDescriptor);
 #else
-	void incomingConnection(qintptr socketDescriptor);
+    void incomingConnection(qintptr socketDescriptor);
 #endif
 };
 

@@ -1,2 +1,2 @@
 SOURCES += \
-	$$PWD/iodeviceopenertest.cpp
+    $$PWD/iodeviceopenertest.cpp

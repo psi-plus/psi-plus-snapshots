@@ -27,7 +27,7 @@ namespace XMPP
 {
 
 BytestreamManager::BytestreamManager(Client *parent)
-	: QObject(parent)
+    : QObject(parent)
 {
 
 }
@@ -39,13 +39,13 @@ BytestreamManager::~BytestreamManager()
 
 QString BytestreamManager::genUniqueSID(const Jid &peer) const
 {
-	// get unused key
-	QString sid;
-	do {
-		sid = QString("%1%2").arg(sidPrefix())
-							 .arg(qrand() & 0xffff, 4, 16, QChar('0'));
-	} while(!isAcceptableSID(peer, sid));
-	return sid;
+    // get unused key
+    QString sid;
+    do {
+        sid = QString("%1%2").arg(sidPrefix())
+                             .arg(qrand() & 0xffff, 4, 16, QChar('0'));
+    } while(!isAcceptableSID(peer, sid));
+    return sid;
 }
 
 /**
@@ -53,12 +53,12 @@ QString BytestreamManager::genUniqueSID(const Jid &peer) const
  */
 void BytestreamManager::deleteConnection(BSConnection *c, int msec)
 {
-	if (msec) {
-		QTimer::singleShot(msec, c, SLOT(deleteLater()));
-	}
-	else {
-		delete c;
-	}
+    if (msec) {
+        QTimer::singleShot(msec, c, SLOT(deleteLater()));
+    }
+    else {
+        delete c;
+    }
 }
 
 }

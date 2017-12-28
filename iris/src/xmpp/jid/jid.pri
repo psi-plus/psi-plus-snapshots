@@ -2,7 +2,7 @@ INCLUDEPATH *= $$PWD/../..
 DEPENDPATH *= $$PWD/../..
 
 HEADERS += \
-	$$PWD/jid.h
+    $$PWD/jid.h
 
 SOURCES += \
-	$$PWD/jid.cpp
+    $$PWD/jid.cpp

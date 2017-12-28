@@ -36,69 +36,69 @@ class QByteArray;
 
 
 /*!
-	Socket with automatic hostname lookups, using SRV, AAAA and A DNS queries.
+    Socket with automatic hostname lookups, using SRV, AAAA and A DNS queries.
 */
 class BSocket : public ByteStream
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound };
-	enum State { Idle, HostLookup, Connecting, Connected, Closing };
-	BSocket(QObject *parent=0);
-	~BSocket();
+    enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound };
+    enum State { Idle, HostLookup, Connecting, Connected, Closing };
+    BSocket(QObject *parent=0);
+    ~BSocket();
 
-	/*! Connect to an already resolved host */
-	void connectToHost(const QHostAddress &address, quint16 port);
-	/*! Connect to a host via the specified protocol, or the default protocols if not specified */
-	void connectToHost(const QString &host, quint16 port, QAbstractSocket::NetworkLayerProtocol protocol = QAbstractSocket::UnknownNetworkLayerProtocol);
-	/*! Connect to the hosts for the specified service */
-	void connectToHost(const QString &service, const QString &transport, const QString &domain, quint16 port = std::numeric_limits<quint16>::max());
-	virtual QAbstractSocket* abstractSocket() const;
-	int socket() const;
-	void setSocket(qintptr);
-	int state() const;
+    /*! Connect to an already resolved host */
+    void connectToHost(const QHostAddress &address, quint16 port);
+    /*! Connect to a host via the specified protocol, or the default protocols if not specified */
+    void connectToHost(const QString &host, quint16 port, QAbstractSocket::NetworkLayerProtocol protocol = QAbstractSocket::UnknownNetworkLayerProtocol);
+    /*! Connect to the hosts for the specified service */
+    void connectToHost(const QString &service, const QString &transport, const QString &domain, quint16 port = std::numeric_limits<quint16>::max());
+    virtual QAbstractSocket* abstractSocket() const;
+    int socket() const;
+    void setSocket(qintptr);
+    int state() const;
 
-	// from ByteStream
-	bool isOpen() const;
-	void close();
+    // from ByteStream
+    bool isOpen() const;
+    void close();
 
-	qint64 bytesAvailable() const;
-	qint64 bytesToWrite() const;
+    qint64 bytesAvailable() const;
+    qint64 bytesToWrite() const;
 
-	// local
-	QHostAddress address() const;
-	quint16 port() const;
+    // local
+    QHostAddress address() const;
+    quint16 port() const;
 
-	// remote
-	QHostAddress peerAddress() const;
-	quint16 peerPort() const;
+    // remote
+    QHostAddress peerAddress() const;
+    quint16 peerPort() const;
 
 protected:
-	qint64 writeData(const char *data, qint64 maxSize);
-	qint64 readData(char *data, qint64 maxSize);
+    qint64 writeData(const char *data, qint64 maxSize);
+    qint64 readData(char *data, qint64 maxSize);
 
 signals:
-	void hostFound();
-	void connected();
+    void hostFound();
+    void connected();
 
 private slots:
-	void qs_connected();
-	void qs_closed();
-	void qs_readyRead();
-	void qs_bytesWritten(qint64);
-	void qs_error(QAbstractSocket::SocketError);
+    void qs_connected();
+    void qs_closed();
+    void qs_readyRead();
+    void qs_bytesWritten(qint64);
+    void qs_error(QAbstractSocket::SocketError);
 
 private:
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 
-	void resetConnection(bool clear=false);
-	void ensureConnector();
-	void recreate_resolver();
-	bool check_protocol_fallback();
-	void dns_srv_try_next();
-	bool connect_host_try_next();
-	void qs_connected_step2(bool signalConnected = true);
+    void resetConnection(bool clear=false);
+    void ensureConnector();
+    void recreate_resolver();
+    bool check_protocol_fallback();
+    void dns_srv_try_next();
+    bool connect_host_try_next();
+    void qs_connected_step2(bool signalConnected = true);
 };
 
 // CS_NAMESPACE_END

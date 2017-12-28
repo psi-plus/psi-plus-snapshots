@@ -42,20 +42,20 @@ namespace XMPP {
 
 QDomElement CapsInfo::toXml(QDomDocument *doc) const
 {
-	QDomElement caps = doc->createElement("info");
-	caps.appendChild(textTag(doc, "atime", _lastSeen.toString(Qt::ISODate)));
-	caps.appendChild(_disco.toDiscoInfoResult(doc));
-	return caps;
+    QDomElement caps = doc->createElement("info");
+    caps.appendChild(textTag(doc, "atime", _lastSeen.toString(Qt::ISODate)));
+    caps.appendChild(_disco.toDiscoInfoResult(doc));
+    return caps;
 }
 
 CapsInfo CapsInfo::fromXml(const QDomElement &caps)
 {
-	QDateTime lastSeen = QDateTime::fromString(caps.firstChildElement("atime").nodeValue(), Qt::ISODate);
-	DiscoItem item = DiscoItem::fromDiscoInfoResult(caps.firstChildElement("query"));
-	if (item.features().isEmpty()) { // it's hardly possible if client does not support anything.
-		return CapsInfo();
-	}
-	return CapsInfo(item, lastSeen);
+    QDateTime lastSeen = QDateTime::fromString(caps.firstChildElement("atime").nodeValue(), Qt::ISODate);
+    DiscoItem item = DiscoItem::fromDiscoInfoResult(caps.firstChildElement("query"));
+    if (item.features().isEmpty()) { // it's hardly possible if client does not support anything.
+        return CapsInfo();
+    }
+    return CapsInfo(item, lastSeen);
 }
 
 
@@ -71,21 +71,21 @@ CapsRegistry *CapsRegistry::instance_ = 0;
  * \brief Default constructor.
  */
 CapsRegistry::CapsRegistry(QObject *parent) :
-	QObject(parent)
+    QObject(parent)
 {
 }
 
 CapsRegistry *CapsRegistry::instance()
 {
-	if (!instance_) {
-		instance_ = new CapsRegistry(qApp);
-	}
-	return instance_;
+    if (!instance_) {
+        instance_ = new CapsRegistry(qApp);
+    }
+    return instance_;
 }
 
 void CapsRegistry::setInstance(CapsRegistry *instance)
 {
-	instance_ = instance;
+    instance_ = instance;
 }
 
 /**
@@ -93,29 +93,29 @@ void CapsRegistry::setInstance(CapsRegistry *instance)
  */
 void CapsRegistry::save()
 {
-	// Generate XML
-	QDomDocument doc;
-	QDomElement capabilities = doc.createElement("capabilities");
-	doc.appendChild(capabilities);
-	QHash<QString,CapsInfo>::ConstIterator i = capsInfo_.constBegin();
-	for( ; i != capsInfo_.end(); i++) {
-		QDomElement info = i.value().toXml(&doc);
-		info.setAttribute("node",i.key());
-		capabilities.appendChild(info);
-	}
+    // Generate XML
+    QDomDocument doc;
+    QDomElement capabilities = doc.createElement("capabilities");
+    doc.appendChild(capabilities);
+    QHash<QString,CapsInfo>::ConstIterator i = capsInfo_.constBegin();
+    for( ; i != capsInfo_.end(); i++) {
+        QDomElement info = i.value().toXml(&doc);
+        info.setAttribute("node",i.key());
+        capabilities.appendChild(info);
+    }
 
-	saveData(doc.toString().toUtf8());
+    saveData(doc.toString().toUtf8());
 }
 
 void CapsRegistry::saveData(const QByteArray &data)
 {
-	Q_UNUSED(data)
-	return;
+    Q_UNUSED(data)
+    return;
 }
 
 QByteArray CapsRegistry::loadData()
 {
-	return QByteArray();
+    return QByteArray();
 }
 
 /**
@@ -123,52 +123,52 @@ QByteArray CapsRegistry::loadData()
  */
 void CapsRegistry::load()
 {
-	QByteArray data = loadData();
-	if (data.isEmpty()) {
-		return;
-	}
+    QByteArray data = loadData();
+    if (data.isEmpty()) {
+        return;
+    }
 
-	// Load settings
-	QDomDocument doc;
+    // Load settings
+    QDomDocument doc;
 
-	if (!doc.setContent(QString::fromUtf8(data))) {
-		qWarning() << "CapsRegistry: Cannnot parse input";
-		return;
-	}
+    if (!doc.setContent(QString::fromUtf8(data))) {
+        qWarning() << "CapsRegistry: Cannnot parse input";
+        return;
+    }
 
-	QDomElement caps = doc.documentElement();
-	if (caps.tagName() != "capabilities") {
-		qWarning("caps.cpp: Invalid capabilities element");
-		return;
-	}
+    QDomElement caps = doc.documentElement();
+    if (caps.tagName() != "capabilities") {
+        qWarning("caps.cpp: Invalid capabilities element");
+        return;
+    }
 
-	// keep unseen info for last 3 month. adjust if required
-	QDateTime validTime = QDateTime::currentDateTime().addMonths(-3);
-	for(QDomNode n = caps.firstChild(); !n.isNull(); n = n.nextSibling()) {
-		QDomElement i = n.toElement();
-		if(i.isNull()) {
-			qWarning("capsregistry.cpp: Null element");
-			continue;
-		}
+    // keep unseen info for last 3 month. adjust if required
+    QDateTime validTime = QDateTime::currentDateTime().addMonths(-3);
+    for(QDomNode n = caps.firstChild(); !n.isNull(); n = n.nextSibling()) {
+        QDomElement i = n.toElement();
+        if(i.isNull()) {
+            qWarning("capsregistry.cpp: Null element");
+            continue;
+        }
 
-		if(i.tagName() == "info") {
-			QString node = i.attribute("node");
-			int sep = node.indexOf('#');
-			if (sep > 0 && sep + 1 < node.length()) {
-				CapsInfo info = CapsInfo::fromXml(i);
-				if (info.isValid() && info.lastSeen() > validTime) {
-					capsInfo_[node] = CapsInfo::fromXml(i);
-				}
-				//qDebug() << QString("Read %1 %2").arg(node).arg(ver);
-			}
-			else {
-				qWarning() << "capsregistry.cpp: Node" << node << "invalid";
-			}
-		}
-		else {
-			qWarning("capsregistry.cpp: Unknown element");
-		}
-	}
+        if(i.tagName() == "info") {
+            QString node = i.attribute("node");
+            int sep = node.indexOf('#');
+            if (sep > 0 && sep + 1 < node.length()) {
+                CapsInfo info = CapsInfo::fromXml(i);
+                if (info.isValid() && info.lastSeen() > validTime) {
+                    capsInfo_[node] = CapsInfo::fromXml(i);
+                }
+                //qDebug() << QString("Read %1 %2").arg(node).arg(ver);
+            }
+            else {
+                qWarning() << "capsregistry.cpp: Node" << node << "invalid";
+            }
+        }
+        else {
+            qWarning("capsregistry.cpp: Unknown element");
+        }
+    }
 }
 
 /**
@@ -176,12 +176,12 @@ void CapsRegistry::load()
  */
 void CapsRegistry::registerCaps(const CapsSpec& spec, const DiscoItem &item)
 {
-	QString dnode = spec.flatten();
-	if (!isRegistered(dnode)) {
-		CapsInfo info(item);
-		capsInfo_[dnode] = info;
-		emit registered(spec);
-	}
+    QString dnode = spec.flatten();
+    if (!isRegistered(dnode)) {
+        CapsInfo info(item);
+        capsInfo_[dnode] = info;
+        emit registered(spec);
+    }
 }
 
 /**
@@ -189,13 +189,13 @@ void CapsRegistry::registerCaps(const CapsSpec& spec, const DiscoItem &item)
  */
 bool CapsRegistry::isRegistered(const QString& spec) const
 {
-	return capsInfo_.contains(spec);
+    return capsInfo_.contains(spec);
 }
 
 DiscoItem CapsRegistry::disco(const QString &spec) const
 {
-	CapsInfo ci = capsInfo_.value(spec);
-	return ci.disco();
+    CapsInfo ci = capsInfo_.value(spec);
+    return ci.disco();
 }
 
 
@@ -221,8 +221,8 @@ DiscoItem CapsRegistry::disco(const QString &spec) const
  * \brief Default constructor.
  */
 CapsManager::CapsManager(Client *client) :
-	client_(client),
-	isEnabled_(true)
+    client_(client),
+    isEnabled_(true)
 {}
 
 CapsManager::~CapsManager()
@@ -234,7 +234,7 @@ CapsManager::~CapsManager()
  */
 bool CapsManager::isEnabled()
 {
-	return isEnabled_;
+    return isEnabled_;
 }
 
 /**
@@ -242,7 +242,7 @@ bool CapsManager::isEnabled()
  */
 void CapsManager::setEnabled(bool b)
 {
-	isEnabled_ = b;
+    isEnabled_ = b;
 }
 
 /**
@@ -257,47 +257,47 @@ void CapsManager::setEnabled(bool b)
  */
 void CapsManager::updateCaps(const Jid& jid, const CapsSpec &c)
 {
-	if (jid.compare(client_->jid(),false))
-		return;
+    if (jid.compare(client_->jid(),false))
+        return;
 
-	QString fullNode = c.flatten();
-	if (capsSpecs_[jid.full()] != c) {
-		//qDebug() << QString("caps.cpp: Updating caps for %1 (node=%2,ver=%3,ext=%4)").arg(QString(jid.full()).replace('%',"%%")).arg(node).arg(ver).arg(ext);
+    QString fullNode = c.flatten();
+    if (capsSpecs_[jid.full()] != c) {
+        //qDebug() << QString("caps.cpp: Updating caps for %1 (node=%2,ver=%3,ext=%4)").arg(QString(jid.full()).replace('%',"%%")).arg(node).arg(ver).arg(ext);
 
-		// Unregister from all old caps node
-		capsJids_[capsSpecs_[jid.full()].flatten()].removeAll(jid.full());
+        // Unregister from all old caps node
+        capsJids_[capsSpecs_[jid.full()].flatten()].removeAll(jid.full());
 
-		if (c.isValid()) {
-			// Register with all new caps nodes
-			capsSpecs_[jid.full()] = c;
-			if (!capsJids_[fullNode].contains(jid.full())) {
-				capsJids_[fullNode].push_back(jid.full());
-			}
+        if (c.isValid()) {
+            // Register with all new caps nodes
+            capsSpecs_[jid.full()] = c;
+            if (!capsJids_[fullNode].contains(jid.full())) {
+                capsJids_[fullNode].push_back(jid.full());
+            }
 
-			emit capsChanged(jid);
+            emit capsChanged(jid);
 
-			// Register new caps and check if we need to discover features
-			if (isEnabled()) {
-				if (!CapsRegistry::instance()->isRegistered(fullNode) && capsJids_[fullNode].count() == 1) {
-					//qDebug() << QString("caps.cpp: Sending disco request to %1, node=%2").arg(QString(jid.full()).replace('%',"%%")).arg(node + "#" + s.extensions());
-					JT_DiscoInfo* disco = new JT_DiscoInfo(client_->rootTask());
-					disco->setAllowCache(false);
-					connect(disco, SIGNAL(finished()), SLOT(discoFinished()));
-					disco->get(jid, fullNode);
-					disco->go(true);
-				}
-			}
-		}
-		else {
-			// Remove all caps specifications
-			qWarning() << QString("caps.cpp: Illegal caps info from %1: node=%2, ver=%3").arg(QString(jid.full()).replace('%',"%%")).arg(fullNode).arg(c.version());
-			capsSpecs_.remove(jid.full());
-		}
-	}
-	else {
-		// Add to the list of jids
-		capsJids_[fullNode].push_back(jid.full());
-	}
+            // Register new caps and check if we need to discover features
+            if (isEnabled()) {
+                if (!CapsRegistry::instance()->isRegistered(fullNode) && capsJids_[fullNode].count() == 1) {
+                    //qDebug() << QString("caps.cpp: Sending disco request to %1, node=%2").arg(QString(jid.full()).replace('%',"%%")).arg(node + "#" + s.extensions());
+                    JT_DiscoInfo* disco = new JT_DiscoInfo(client_->rootTask());
+                    disco->setAllowCache(false);
+                    connect(disco, SIGNAL(finished()), SLOT(discoFinished()));
+                    disco->get(jid, fullNode);
+                    disco->go(true);
+                }
+            }
+        }
+        else {
+            // Remove all caps specifications
+            qWarning() << QString("caps.cpp: Illegal caps info from %1: node=%2, ver=%3").arg(QString(jid.full()).replace('%',"%%")).arg(fullNode).arg(c.version());
+            capsSpecs_.remove(jid.full());
+        }
+    }
+    else {
+        // Add to the list of jids
+        capsJids_[fullNode].push_back(jid.full());
+    }
 }
 
 /**
@@ -307,15 +307,15 @@ void CapsManager::updateCaps(const Jid& jid, const CapsSpec &c)
  */
 void CapsManager::disableCaps(const Jid& jid)
 {
-	//qDebug() << QString("caps.cpp: Disabling caps for %1.").arg(QString(jid.full()).replace('%',"%%"));
-	if (capsEnabled(jid)) {
-		QString node = capsSpecs_[jid.full()].flatten();
-		if (!node.isEmpty()) {
-			capsJids_[node].removeAll(jid.full());
-		}
-		capsSpecs_.remove(jid.full());
-		emit capsChanged(jid);
-	}
+    //qDebug() << QString("caps.cpp: Disabling caps for %1.").arg(QString(jid.full()).replace('%',"%%"));
+    if (capsEnabled(jid)) {
+        QString node = capsSpecs_[jid.full()].flatten();
+        if (!node.isEmpty()) {
+            capsJids_[node].removeAll(jid.full());
+        }
+        capsSpecs_.remove(jid.full());
+        emit capsChanged(jid);
+    }
 }
 
 /**
@@ -326,19 +326,19 @@ void CapsManager::disableCaps(const Jid& jid)
  */
 void CapsManager::discoFinished()
 {
-	JT_DiscoInfo *task = (JT_DiscoInfo *)sender();
-	updateDisco(task->jid(), task->item());
+    JT_DiscoInfo *task = (JT_DiscoInfo *)sender();
+    updateDisco(task->jid(), task->item());
 }
 
 void CapsManager::updateDisco(const Jid &jid, const DiscoItem &item)
 {
-	CapsSpec cs = capsSpecs_.value(jid.full());
-	if (!cs.isValid()) {
-		return;
-	}
-	if (item.capsHash(cs.hashAlgorithm()) == cs.version()) {
-		CapsRegistry::instance()->registerCaps(cs, item);
-	}
+    CapsSpec cs = capsSpecs_.value(jid.full());
+    if (!cs.isValid()) {
+        return;
+    }
+    if (item.capsHash(cs.hashAlgorithm()) == cs.version()) {
+        CapsRegistry::instance()->registerCaps(cs, item);
+    }
 }
 
 /**
@@ -347,11 +347,11 @@ void CapsManager::updateDisco(const Jid &jid, const DiscoItem &item)
  */
 void CapsManager::capsRegistered(const CapsSpec& cs)
 {
-	// Notify affected jids.
-	foreach(const QString &s, capsJids_[cs.flatten()]) {
-		//qDebug() << QString("caps.cpp: Notifying %1.").arg(s.replace('%',"%%"));
-		emit capsChanged(s);
-	}
+    // Notify affected jids.
+    foreach(const QString &s, capsJids_[cs.flatten()]) {
+        //qDebug() << QString("caps.cpp: Notifying %1.").arg(s.replace('%',"%%"));
+        emit capsChanged(s);
+    }
 }
 
 /**
@@ -359,7 +359,7 @@ void CapsManager::capsRegistered(const CapsSpec& cs)
  */
 bool CapsManager::capsEnabled(const Jid& jid) const
 {
-	return capsSpecs_.contains(jid.full());
+    return capsSpecs_.contains(jid.full());
 }
 
 
@@ -368,14 +368,14 @@ bool CapsManager::capsEnabled(const Jid& jid) const
  */
 XMPP::DiscoItem CapsManager::disco(const Jid& jid) const
 {
-	//qDebug() << "caps.cpp: Retrieving features of " << jid.full();
-	QStringList f;
-	if (!capsEnabled(jid)) {
-		return DiscoItem();
-	}
-	QString node = capsSpecs_[jid.full()].flatten();
-	//qDebug() << QString("	%1").arg(CapsRegistry::instance()->features(s).list().join("\n"));
-	return CapsRegistry::instance()->disco(node);
+    //qDebug() << "caps.cpp: Retrieving features of " << jid.full();
+    QStringList f;
+    if (!capsEnabled(jid)) {
+        return DiscoItem();
+    }
+    QString node = capsSpecs_[jid.full()].flatten();
+    //qDebug() << QString("    %1").arg(CapsRegistry::instance()->features(s).list().join("\n"));
+    return CapsRegistry::instance()->disco(node);
 }
 
 /**
@@ -383,7 +383,7 @@ XMPP::DiscoItem CapsManager::disco(const Jid& jid) const
  */
 XMPP::Features CapsManager::features(const Jid& jid) const
 {
-	return disco(jid).features();
+    return disco(jid).features();
 }
 
 /**
@@ -392,47 +392,47 @@ XMPP::Features CapsManager::features(const Jid& jid) const
  */
 QString CapsManager::clientName(const Jid& jid) const
 {
-	if (capsEnabled(jid)) {
-		CapsSpec cs = capsSpecs_[jid.full()];
-		QString name;
+    if (capsEnabled(jid)) {
+        CapsSpec cs = capsSpecs_[jid.full()];
+        QString name;
 
-		QString cs_str = cs.flatten();
-		if (CapsRegistry::instance()->isRegistered(cs_str)) {
-			DiscoItem disco = CapsRegistry::instance()->disco(cs_str);
-			XData si = disco.registeredExtension(QLatin1String("urn:xmpp:dataforms:softwareinfo"));
-			if (si.isValid()) {
-				name = si.getField("software").value().value(0);
-			}
+        QString cs_str = cs.flatten();
+        if (CapsRegistry::instance()->isRegistered(cs_str)) {
+            DiscoItem disco = CapsRegistry::instance()->disco(cs_str);
+            XData si = disco.registeredExtension(QLatin1String("urn:xmpp:dataforms:softwareinfo"));
+            if (si.isValid()) {
+                name = si.getField("software").value().value(0);
+            }
 
-			if (name.isEmpty()) {
-				const DiscoItem::Identities& i = disco.identities();
-				if (i.count() > 0) {
-					name = i.first().name;
-				}
-			}
-		}
+            if (name.isEmpty()) {
+                const DiscoItem::Identities& i = disco.identities();
+                if (i.count() > 0) {
+                    name = i.first().name;
+                }
+            }
+        }
 
-		// Try to be intelligent about the name
-		if (name.isEmpty()) {
-			name = cs.node();
-			if (name.startsWith("http://"))
-				name = name.right(name.length() - 7);
-			else if (name.startsWith("https://"))
-				name = name.right(name.length() - 8);
+        // Try to be intelligent about the name
+        if (name.isEmpty()) {
+            name = cs.node();
+            if (name.startsWith("http://"))
+                name = name.right(name.length() - 7);
+            else if (name.startsWith("https://"))
+                name = name.right(name.length() - 8);
 
-			if (name.startsWith("www."))
-				name = name.right(name.length() - 4);
+            if (name.startsWith("www."))
+                name = name.right(name.length() - 4);
 
-			int cut_pos = name.indexOf("/");
-			if (cut_pos != -1)
-				name = name.left(cut_pos);
-		}
+            int cut_pos = name.indexOf("/");
+            if (cut_pos != -1)
+                name = name.left(cut_pos);
+        }
 
-		return name;
-	}
-	else {
-		return QString();
-	}
+        return name;
+    }
+    else {
+        return QString();
+    }
 }
 
 /**
@@ -440,18 +440,18 @@ QString CapsManager::clientName(const Jid& jid) const
  */
 QString CapsManager::clientVersion(const Jid& jid) const
 {
-	if (!capsEnabled(jid))
-		return QString();
+    if (!capsEnabled(jid))
+        return QString();
 
-	QString version;
-	const CapsSpec &cs = capsSpecs_[jid.full()];
-	QString cs_str = cs.flatten();
-	if (CapsRegistry::instance()->isRegistered(cs_str)) {
-		XData form = CapsRegistry::instance()->disco(cs_str).registeredExtension("urn:xmpp:dataforms:softwareinfo");
-		version = form.getField("software_version").value().value(0);
-	}
+    QString version;
+    const CapsSpec &cs = capsSpecs_[jid.full()];
+    QString cs_str = cs.flatten();
+    if (CapsRegistry::instance()->isRegistered(cs_str)) {
+        XData form = CapsRegistry::instance()->disco(cs_str).registeredExtension("urn:xmpp:dataforms:softwareinfo");
+        version = form.getField("software_version").value().value(0);
+    }
 
-	return version;
+    return version;
 }
 
 /**
@@ -459,25 +459,25 @@ QString CapsManager::clientVersion(const Jid& jid) const
  */
 QString CapsManager::osVersion(const Jid &jid) const
 {
-	QString os_str;
-	if (capsEnabled(jid)) {
-		QString cs_str = capsSpecs_[jid.full()].flatten();
-		if (CapsRegistry::instance()->isRegistered(cs_str)) {
-			XData form = CapsRegistry::instance()->disco(cs_str).registeredExtension("urn:xmpp:dataforms:softwareinfo");
-			os_str = form.getField("os").value().value(0).trimmed();
-			if (!os_str.isEmpty()) {
-				QString os_ver = form.getField("os_version").value().value(0).trimmed();
-				if (!os_ver.isEmpty())
-					os_str.append(" " + os_ver);
-			}
-		}
-	}
-	return os_str;
+    QString os_str;
+    if (capsEnabled(jid)) {
+        QString cs_str = capsSpecs_[jid.full()].flatten();
+        if (CapsRegistry::instance()->isRegistered(cs_str)) {
+            XData form = CapsRegistry::instance()->disco(cs_str).registeredExtension("urn:xmpp:dataforms:softwareinfo");
+            os_str = form.getField("os").value().value(0).trimmed();
+            if (!os_str.isEmpty()) {
+                QString os_ver = form.getField("os_version").value().value(0).trimmed();
+                if (!os_ver.isEmpty())
+                    os_str.append(" " + os_ver);
+            }
+        }
+    }
+    return os_str;
 }
 
 CapsSpec CapsManager::capsSpec(const Jid &jid) const
 {
-	return capsSpecs_.value(jid.full());
+    return capsSpecs_.value(jid.full());
 }
 
 } // namespace XMPP

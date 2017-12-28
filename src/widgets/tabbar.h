@@ -24,59 +24,59 @@
 
 class TabBar : public QTabBar
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	explicit TabBar(QWidget *parent = 0);
-	~TabBar();
+    explicit TabBar(QWidget *parent = 0);
+    ~TabBar();
 
-	void layoutTabs();
+    void layoutTabs();
 
-	void setMultiRow(bool b);
-	bool multiRow() const;
+    void setMultiRow(bool b);
+    bool multiRow() const;
 
-	void setDragsEnabled(bool enabled); // default enabled
-	void setTabPinned(int index, bool pinned);
-	bool isTabPinned(int index);
+    void setDragsEnabled(bool enabled); // default enabled
+    void setTabPinned(int index, bool pinned);
+    bool isTabPinned(int index);
 
-	void setCurrentIndexAlwaysAtBottom(bool b);
-	bool currentIndexAlwaysAtBottom() const;
+    void setCurrentIndexAlwaysAtBottom(bool b);
+    bool currentIndexAlwaysAtBottom() const;
 
-	// reimplemented
-	QSize minimumSizeHint() const;
-	QSize sizeHint() const;
-	QSize tabSizeHint(int index) const;
-	void setTabsClosable(bool b);
-	bool tabsClosable() const;
-	void setCurrentIndex(int index);
-	void setTabText(int index, const QString &text);
-	void setTabTextColor(int index, const QColor &color);
-	void setTabIcon(int index, const QIcon &icon);
-	QRect tabRect(int index) const;
-	QWidget *tabButton(int index, ButtonPosition position) const;
-	int tabAt(const QPoint &position) const;
-	bool eventFilter(QObject *watched, QEvent *event);
-	void setUpdateEnabled(bool b);
+    // reimplemented
+    QSize minimumSizeHint() const;
+    QSize sizeHint() const;
+    QSize tabSizeHint(int index) const;
+    void setTabsClosable(bool b);
+    bool tabsClosable() const;
+    void setCurrentIndex(int index);
+    void setTabText(int index, const QString &text);
+    void setTabTextColor(int index, const QColor &color);
+    void setTabIcon(int index, const QIcon &icon);
+    QRect tabRect(int index) const;
+    QWidget *tabButton(int index, ButtonPosition position) const;
+    int tabAt(const QPoint &position) const;
+    bool eventFilter(QObject *watched, QEvent *event);
+    void setUpdateEnabled(bool b);
 
 protected:
-	// reimplemented
-	void paintEvent(QPaintEvent *event);
-	void mousePressEvent(QMouseEvent *event);
-	void mouseReleaseEvent(QMouseEvent *event);
-	void mouseMoveEvent(QMouseEvent *event);
+    // reimplemented
+    void paintEvent(QPaintEvent *event);
+    void mousePressEvent(QMouseEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
 
-	void dragMoveEvent(QDragMoveEvent *event);
-	void dragEnterEvent(QDragEnterEvent *event);
-	void dragLeaveEvent(QDragLeaveEvent *event);
-	void dropEvent(QDropEvent *event);
+    void dragMoveEvent(QDragMoveEvent *event);
+    void dragEnterEvent(QDragEnterEvent *event);
+    void dragLeaveEvent(QDragLeaveEvent *event);
+    void dropEvent(QDropEvent *event);
 
-	void leaveEvent(QEvent *event);
-	void tabInserted(int index);
-	void tabRemoved(int index);
+    void leaveEvent(QEvent *event);
+    void tabInserted(int index);
+    void tabRemoved(int index);
 
 private slots:
-	void closeTab();
+    void closeTab();
 
 private:
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 };

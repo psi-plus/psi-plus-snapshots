@@ -31,131 +31,131 @@ class SocksServer;
 
 class SocksUDP : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	~SocksUDP();
+    ~SocksUDP();
 
-	void change(const QString &host, int port);
-	void write(const QByteArray &data);
+    void change(const QString &host, int port);
+    void write(const QByteArray &data);
 
 signals:
-	void packetReady(const QByteArray &data);
+    void packetReady(const QByteArray &data);
 
 private slots:
-	void sd_activated();
+    void sd_activated();
 
 private:
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 
-	friend class SocksClient;
-	SocksUDP(SocksClient *sc, const QString &host, int port, const QHostAddress &routeAddr, int routePort);
+    friend class SocksClient;
+    SocksUDP(SocksClient *sc, const QString &host, int port, const QHostAddress &routeAddr, int routePort);
 };
 
 class SocksClient : public ByteStream
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
-	enum Method { AuthNone=0x0001, AuthUsername=0x0002 };
-	enum Request { ReqConnect, ReqUDPAssociate };
-	SocksClient(QObject *parent=0);
-	SocksClient(qintptr, QObject *parent=0);
-	~SocksClient();
+    enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
+    enum Method { AuthNone=0x0001, AuthUsername=0x0002 };
+    enum Request { ReqConnect, ReqUDPAssociate };
+    SocksClient(QObject *parent=0);
+    SocksClient(qintptr, QObject *parent=0);
+    ~SocksClient();
 
-	virtual QAbstractSocket* abstractSocket() const;
+    virtual QAbstractSocket* abstractSocket() const;
 
-	bool isIncoming() const;
+    bool isIncoming() const;
 
-	// outgoing
-	void setAuth(const QString &user, const QString &pass="");
-	void connectToHost(const QString &proxyHost, int proxyPort, const QString &host, int port, bool udpMode=false);
+    // outgoing
+    void setAuth(const QString &user, const QString &pass="");
+    void connectToHost(const QString &proxyHost, int proxyPort, const QString &host, int port, bool udpMode=false);
 
-	// incoming
-	void chooseMethod(int);
-	void authGrant(bool);
-	void requestDeny();
-	void grantConnect();
-	void grantUDPAssociate(const QString &relayHost, int relayPort);
+    // incoming
+    void chooseMethod(int);
+    void authGrant(bool);
+    void requestDeny();
+    void grantConnect();
+    void grantUDPAssociate(const QString &relayHost, int relayPort);
 
-	// from ByteStream
-	void close();
-	qint64 bytesAvailable() const;
-	qint64 bytesToWrite() const;
+    // from ByteStream
+    void close();
+    qint64 bytesAvailable() const;
+    qint64 bytesToWrite() const;
 
-	// remote address
-	QHostAddress peerAddress() const;
-	quint16 peerPort() const;
+    // remote address
+    QHostAddress peerAddress() const;
+    quint16 peerPort() const;
 
-	// udp
-	QString udpAddress() const;
-	quint16 udpPort() const;
-	SocksUDP *createUDP(const QString &host, int port, const QHostAddress &routeAddr, int routePort);
+    // udp
+    QString udpAddress() const;
+    quint16 udpPort() const;
+    SocksUDP *createUDP(const QString &host, int port, const QHostAddress &routeAddr, int routePort);
 
 protected:
-	qint64 writeData(const char *data, qint64 maxSize);
-	qint64 readData(char *data, qint64 maxSize);
+    qint64 writeData(const char *data, qint64 maxSize);
+    qint64 readData(char *data, qint64 maxSize);
 
 signals:
-	// outgoing
-	void connected();
+    // outgoing
+    void connected();
 
-	// incoming
-	void incomingMethods(int);
-	void incomingAuth(const QString &user, const QString &pass);
-	void incomingConnectRequest(const QString &host, int port);
-	void incomingUDPAssociateRequest();
+    // incoming
+    void incomingMethods(int);
+    void incomingAuth(const QString &user, const QString &pass);
+    void incomingConnectRequest(const QString &host, int port);
+    void incomingUDPAssociateRequest();
 
 private slots:
-	void sock_connected();
-	void sock_connectionClosed();
-	void sock_delayedCloseFinished();
-	void sock_readyRead();
-	void sock_bytesWritten(qint64);
-	void sock_error(int);
-	void serve();
+    void sock_connected();
+    void sock_connectionClosed();
+    void sock_delayedCloseFinished();
+    void sock_readyRead();
+    void sock_bytesWritten(qint64);
+    void sock_error(int);
+    void serve();
 
 private:
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 
-	void init();
-	void resetConnection(bool clear=false);
-	void do_request();
-	void processOutgoing(const QByteArray &);
-	void processIncoming(const QByteArray &);
-	void continueIncoming();
-	void writeData(const QByteArray &a);
+    void init();
+    void resetConnection(bool clear=false);
+    void do_request();
+    void processOutgoing(const QByteArray &);
+    void processIncoming(const QByteArray &);
+    void continueIncoming();
+    void writeData(const QByteArray &a);
 };
 
 class SocksServer : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	SocksServer(QObject *parent=0);
-	~SocksServer();
+    SocksServer(QObject *parent=0);
+    ~SocksServer();
 
-	bool isActive() const;
-	bool listen(quint16 port, bool udp=false);
-	void stop();
-	int port() const;
-	QHostAddress address() const;
-	SocksClient *takeIncoming();
+    bool isActive() const;
+    bool listen(quint16 port, bool udp=false);
+    void stop();
+    int port() const;
+    QHostAddress address() const;
+    SocksClient *takeIncoming();
 
-	void writeUDP(const QHostAddress &addr, int port, const QByteArray &data);
+    void writeUDP(const QHostAddress &addr, int port, const QByteArray &data);
 
 signals:
-	void incomingReady();
-	void incomingUDP(const QString &host, int port, const QHostAddress &addr, int sourcePort, const QByteArray &data);
+    void incomingReady();
+    void incomingUDP(const QString &host, int port, const QHostAddress &addr, int sourcePort, const QByteArray &data);
 
 private slots:
-	void connectionReady(qintptr);
-	void connectionError();
-	void sd_activated();
+    void connectionReady(qintptr);
+    void connectionError();
+    void sd_activated();
 
 private:
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 };
 
 // CS_NAMESPACE_END

@@ -25,18 +25,18 @@
 #include <QtCrypto>
 
 namespace XMPP {
-	class SCRAMSHA1Signature
-	{
-		public:
-			SCRAMSHA1Signature(const QByteArray &server_final_message, const QCA::SecureArray &server_signature_should);
+    class SCRAMSHA1Signature
+    {
+        public:
+            SCRAMSHA1Signature(const QByteArray &server_final_message, const QCA::SecureArray &server_signature_should);
 
-			bool isValid() const {
-				return isValid_;
-			}
+            bool isValid() const {
+                return isValid_;
+            }
 
-		private:
-			bool isValid_;
-	};
+        private:
+            bool isValid_;
+    };
 }
 
 #endif

@@ -99,7 +99,7 @@ typedef struct linkedlist_data_s
 
 typedef struct
 {
-	z_stream stream;            /* zLib stream structure for inflate */
+    z_stream stream;            /* zLib stream structure for inflate */
     int  stream_initialised;    /* 1 is stream is initialised */
     uInt pos_in_buffered_data;  /* last written byte in buffered_data */
 
@@ -618,9 +618,9 @@ extern int ZEXPORT zipCloseFileInZip (file)
     if (err==ZIP_OK)
     {
         long cur_pos_inzip = ftell(zi->filezip);
-	    if (fseek(zi->filezip,
+        if (fseek(zi->filezip,
                   zi->ci.pos_local_header + 14,SEEK_SET)!=0)
-		    err = ZIP_ERRNO;
+            err = ZIP_ERRNO;
 
         if (err==ZIP_OK)
             err = ziplocal_putValue(zi->filezip,(uLong)zi->ci.crc32,4); /* crc 32, unknown */
@@ -631,9 +631,9 @@ extern int ZEXPORT zipCloseFileInZip (file)
         if (err==ZIP_OK) /* uncompressed size, unknown */
             err = ziplocal_putValue(zi->filezip,(uLong)zi->ci.stream.total_in,4);
 
-	    if (fseek(zi->filezip,
+        if (fseek(zi->filezip,
                   cur_pos_inzip,SEEK_SET)!=0)
-		    err = ZIP_ERRNO;
+            err = ZIP_ERRNO;
     }
 
     zi->number_entry ++;
@@ -702,7 +702,7 @@ extern int ZEXPORT zipClose (file, global_comment)
         err = ziplocal_putValue(zi->filezip,(uLong)size_centraldir,4);
 
     if (err==ZIP_OK) /* offset of start of central directory with respect to the
-	                        starting disk number */
+                            starting disk number */
         err = ziplocal_putValue(zi->filezip,(uLong)centraldir_pos_inzip ,4);
 
     if (err==ZIP_OK) /* zipfile comment length */

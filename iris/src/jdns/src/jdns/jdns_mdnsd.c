@@ -1034,7 +1034,7 @@ void mdnsd_query(mdnsd d, char *host, int type, int (*answer)(mdnsda a, void *ar
         }
         _q_reset(d,q);
         q->nexttry = d->checkqlist = d->now.tv_sec; // new questin, immediately send out
-	return;
+    return;
     }
     if(!answer)
     { // no answer means we don't care anymore

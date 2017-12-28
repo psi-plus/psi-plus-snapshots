@@ -31,51 +31,51 @@ class StunTransactionPool;
 
 class StunBinding : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	enum Error
-	{
-		ErrorGeneric,
-		ErrorTimeout,
-		ErrorRejected,
-		ErrorProtocol,
-		ErrorConflict
-	};
+    enum Error
+    {
+        ErrorGeneric,
+        ErrorTimeout,
+        ErrorRejected,
+        ErrorProtocol,
+        ErrorConflict
+    };
 
-	StunBinding(StunTransactionPool *pool);
-	~StunBinding();
+    StunBinding(StunTransactionPool *pool);
+    ~StunBinding();
 
-	// for ICE-use only
-	void setPriority(quint32 i);
-	void setUseCandidate(bool enabled);
-	void setIceControlling(quint64 i);
-	void setIceControlled(quint64 i);
+    // for ICE-use only
+    void setPriority(quint32 i);
+    void setUseCandidate(bool enabled);
+    void setIceControlling(quint64 i);
+    void setIceControlled(quint64 i);
 
-	void setShortTermUsername(const QString &username);
-	void setShortTermPassword(const QString &password);
+    void setShortTermUsername(const QString &username);
+    void setShortTermPassword(const QString &password);
 
-	void setFingerprintRequired(bool enabled);
+    void setFingerprintRequired(bool enabled);
 
-	void start();
-	void start(const QHostAddress &addr, int port); // use addr association
+    void start();
+    void start(const QHostAddress &addr, int port); // use addr association
 
-	QHostAddress reflexiveAddress() const;
-	int reflexivePort() const;
+    QHostAddress reflexiveAddress() const;
+    int reflexivePort() const;
 
-	// non-translatable diagnostic string for convenience
-	QString errorString() const;
+    // non-translatable diagnostic string for convenience
+    QString errorString() const;
 
 signals:
-	void success();
-	void error(XMPP::StunBinding::Error e);
+    void success();
+    void error(XMPP::StunBinding::Error e);
 
 private:
-	Q_DISABLE_COPY(StunBinding)
+    Q_DISABLE_COPY(StunBinding)
 
-	class Private;
-	friend class Private;
-	Private *d;
+    class Private;
+    friend class Private;
+    Private *d;
 };
 
 }

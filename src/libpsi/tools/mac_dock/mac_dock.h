@@ -6,13 +6,13 @@
 class MacDock
 {
 public:
-	static void startBounce();
-	static void stopBounce();
-	static void overlay(const QString& text = QString::null);
+    static void startBounce();
+    static void stopBounce();
+    static void overlay(const QString& text = QString::null);
 
 private:
-	static bool isBouncing;
-	static bool overlayed;
+    static bool isBouncing;
+    static bool overlayed;
 };
 
 #endif

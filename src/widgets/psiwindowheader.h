@@ -30,36 +30,36 @@
 
 class PsiWindowHeader : public QWidget
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	PsiWindowHeader(QWidget* p);
-	~PsiWindowHeader();
+    PsiWindowHeader(QWidget* p);
+    ~PsiWindowHeader();
 
 private:
-	Ui::PsiWindowHeader ui_;
-	QWidget *parent_;
+    Ui::PsiWindowHeader ui_;
+    QWidget *parent_;
 private:
-	enum class WinAction{None, Dragging, Resizing};
-	Qt::WindowFrameSection getMouseRegion(const int mouse_x, const int mouse_y, const QRect &geom) const;
-	void doWindowResize(QWidget* window, const QPoint& eventPos, Qt::WindowFrameSection region);
-	void updateCursor(Qt::WindowFrameSection region);
-	void enableMouseTracking(bool enabled);
+    enum class WinAction{None, Dragging, Resizing};
+    Qt::WindowFrameSection getMouseRegion(const int mouse_x, const int mouse_y, const QRect &geom) const;
+    void doWindowResize(QWidget* window, const QPoint& eventPos, Qt::WindowFrameSection region);
+    void updateCursor(Qt::WindowFrameSection region);
+    void enableMouseTracking(bool enabled);
 private:
-	QPoint movePath_;
-	bool maximized_;
-	Qt::WindowFrameSection region_;
-	WinAction action_;
+    QPoint movePath_;
+    bool maximized_;
+    Qt::WindowFrameSection region_;
+    WinAction action_;
 
 private slots:
-	void hidePressed();
-	void closePressed();
-	void maximizePressed();
+    void hidePressed();
+    void closePressed();
+    void maximizePressed();
 
 protected:
-	void mouseMoveEvent(QMouseEvent *e);
-	void mousePressEvent(QMouseEvent *e);
-	void mouseReleaseEvent(QMouseEvent *e);
-	void mouseDoubleClickEvent(QMouseEvent *e);
+    void mouseMoveEvent(QMouseEvent *e);
+    void mousePressEvent(QMouseEvent *e);
+    void mouseReleaseEvent(QMouseEvent *e);
+    void mouseDoubleClickEvent(QMouseEvent *e);
 
 };
 

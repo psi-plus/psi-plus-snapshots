@@ -30,16 +30,16 @@
  * saving config file, data is not lost.
  */
 AtomicXmlFile::AtomicXmlFile(QString fileName)
-	: fileName_(fileName)
+    : fileName_(fileName)
 {
 }
 
 QStringList AtomicXmlFile::loadCandidateList() const {
-	QStringList fileNames;
-	fileNames << fileName_
-	          << tempFileName()
-	          << backupFileName();
-	return fileNames;
+    QStringList fileNames;
+    fileNames << fileName_
+              << tempFileName()
+              << backupFileName();
+    return fileNames;
 }
 
 /**
@@ -47,7 +47,7 @@ QStringList AtomicXmlFile::loadCandidateList() const {
  */
 QString AtomicXmlFile::tempFileName() const
 {
-	return fileName_ + ".temp";
+    return fileName_ + ".temp";
 }
 
 /**
@@ -55,72 +55,72 @@ QString AtomicXmlFile::tempFileName() const
  */
 QString AtomicXmlFile::backupFileName() const
 {
-	return fileName_ + ".backup";
+    return fileName_ + ".backup";
 }
 
 bool AtomicXmlFile::saveDocument(const QDomDocument& doc, QString fileName) const
 {
-	QFile file(fileName);
-	if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-		return false;
-	}
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        return false;
+    }
 
-	QTextStream *text = new QTextStream(&file);
-	text->setCodec("UTF-8");
-	*text << doc.toString();
-	delete text;
+    QTextStream *text = new QTextStream(&file);
+    text->setCodec("UTF-8");
+    *text << doc.toString();
+    delete text;
 
-	bool res = (file.error() == QFile::NoError);
-	if (res)
-		res = file.flush();
-	file.close();
+    bool res = (file.error() == QFile::NoError);
+    if (res)
+        res = file.flush();
+    file.close();
 
-	return res;
+    return res;
 }
 
 bool AtomicXmlFile::loadDocument(QDomDocument* doc, QString fileName) const
 {
-	Q_ASSERT(doc);
-	QFile file(fileName);
-	if (!file.open(QIODevice::ReadOnly)) {
-		return false;
-	}
+    Q_ASSERT(doc);
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return false;
+    }
 
-	return doc->setContent(&file);
+    return doc->setContent(&file);
 }
 
 bool AtomicXmlFile::saveDocument(AtomicXmlFileWriter* writer, QString fileName) const
 {
-	Q_ASSERT(writer);
-	QFile file(fileName);
-	if (!file.open(QIODevice::WriteOnly)) {
-		return false;
-	}
+    Q_ASSERT(writer);
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly)) {
+        return false;
+    }
 
-	if (!writer->write(&file)) {
-		return false;
-	}
+    if (!writer->write(&file)) {
+        return false;
+    }
 
-	return file.error() == QFile::NoError;
+    return file.error() == QFile::NoError;
 }
 
 bool AtomicXmlFile::loadDocument(AtomicXmlFileReader* reader, QString fileName) const
 {
-	Q_ASSERT(reader);
-	QFile file(fileName);
-	if (!file.open(QIODevice::ReadOnly)) {
-		return false;
-	}
+    Q_ASSERT(reader);
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return false;
+    }
 
-	if (!reader->read(&file)) {
-		qWarning("Parse error in file %s at line %d, column %d:\n%s",
-		         qPrintable(fileName), (int)reader->lineNumber(),
-		         (int)reader->columnNumber(), qPrintable(reader->errorString()));
+    if (!reader->read(&file)) {
+        qWarning("Parse error in file %s at line %d, column %d:\n%s",
+                 qPrintable(fileName), (int)reader->lineNumber(),
+                 (int)reader->columnNumber(), qPrintable(reader->errorString()));
 
-		return false;
-	}
+        return false;
+    }
 
-	return true;
+    return true;
 }
 
 /**
@@ -129,12 +129,12 @@ bool AtomicXmlFile::loadDocument(AtomicXmlFileReader* reader, QString fileName) 
  * it *doesn't* check that there is at least one uncorupted file.
  */
 bool AtomicXmlFile::exists(QString fileName) {
-	AtomicXmlFile tmp(fileName);
+    AtomicXmlFile tmp(fileName);
 
-	foreach(QString fileName, tmp.loadCandidateList()) {
-		if (QFile::exists(fileName)) {
-			return true;
-		}
-	}
-	return false;
+    foreach(QString fileName, tmp.loadCandidateList()) {
+        if (QFile::exists(fileName)) {
+            return true;
+        }
+    }
+    return false;
 }

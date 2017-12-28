@@ -27,8 +27,8 @@
 #include "im.h" // ChatState
 
 namespace XMPP {
-	class Jid;
-	class Message;
+    class Jid;
+    class Message;
 }
 using namespace XMPP;
 
@@ -38,71 +38,71 @@ class TabDlg;
 
 class TabbableWidget : public AdvancedWidget<QWidget>
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	TabbableWidget(const Jid &, PsiAccount *, TabManager *tabManager);
-	~TabbableWidget();
+    TabbableWidget(const Jid &, PsiAccount *, TabManager *tabManager);
+    ~TabbableWidget();
 
-	PsiAccount* account() const;
-	void setTabIcon(const QIcon &);
-	const QIcon &icon() const;
+    PsiAccount* account() const;
+    void setTabIcon(const QIcon &);
+    const QIcon &icon() const;
 
-	virtual Jid jid() const;
-	virtual const QString & getDisplayName() const;
+    virtual Jid jid() const;
+    virtual const QString & getDisplayName() const;
 
-	virtual bool readyToHide();
-	TabDlg* getManagingTabDlg();
+    virtual bool readyToHide();
+    TabDlg* getManagingTabDlg();
 
-	bool isTabbed();
-	bool isActiveTab();
+    bool isTabbed();
+    bool isActiveTab();
 
-	// reimplemented
-	virtual void doFlash(bool on);
+    // reimplemented
+    virtual void doFlash(bool on);
 
-	virtual void invalidateTab();
+    virtual void invalidateTab();
 
-	enum State {
-		StateNone = 0,
-		StateComposing,
-		StateHighlighted
-	};
-	virtual State state() const = 0;
-	virtual int unreadMessageCount() const = 0;
-	virtual QString desiredCaption() const = 0;
-	virtual void setVSplitterPosition(int,int){}; // default implementation do nothing
+    enum State {
+        StateNone = 0,
+        StateComposing,
+        StateHighlighted
+    };
+    virtual State state() const = 0;
+    virtual int unreadMessageCount() const = 0;
+    virtual QString desiredCaption() const = 0;
+    virtual void setVSplitterPosition(int,int){}; // default implementation do nothing
 
 signals:
-	void invalidateTabInfo();
-	void updateFlashState();
-	void eventsRead(const Jid &);
-	void vSplitterMoved(int,int);
+    void invalidateTabInfo();
+    void updateFlashState();
+    void eventsRead(const Jid &);
+    void vSplitterMoved(int,int);
 
 public slots:
-	void bringToFront(bool raiseWindow = true);
-	virtual void ensureTabbedCorrectly();
-	void hideTab();
-	void pinTab();
+    void bringToFront(bool raiseWindow = true);
+    virtual void ensureTabbedCorrectly();
+    void hideTab();
+    void pinTab();
 
 protected:
-	virtual void setJid(const Jid&);
-	virtual void deactivated();
-	virtual void activated();
+    virtual void setJid(const Jid&);
+    virtual void deactivated();
+    virtual void activated();
 
-	// reimplemented
-	void changeEvent(QEvent* e);
+    // reimplemented
+    void changeEvent(QEvent* e);
 
 private slots:
-	void commitState();
+    void commitState();
 
 private:
-	enum ActivationState { Activated, Deactivated };
-	ActivationState state_;
-	QTimer stateCommitTimer_;
+    enum ActivationState { Activated, Deactivated };
+    ActivationState state_;
+    QTimer stateCommitTimer_;
 
-	Jid jid_;
-	PsiAccount *pa_;
-	TabManager *tabManager_;
-	QIcon icon_;
+    Jid jid_;
+    PsiAccount *pa_;
+    TabManager *tabManager_;
+    QIcon icon_;
 };
 
 #endif

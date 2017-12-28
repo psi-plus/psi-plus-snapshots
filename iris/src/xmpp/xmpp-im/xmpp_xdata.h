@@ -35,148 +35,148 @@ class QDomDocument;
 
 namespace XMPP {
 
-	class XData
-	{
-	public:
-		XData();
+    class XData
+    {
+    public:
+        XData();
 
-		QString title() const;
-		void setTitle(const QString &);
+        QString title() const;
+        void setTitle(const QString &);
 
-		QString instructions() const;
-		void setInstructions(const QString &);
+        QString instructions() const;
+        void setInstructions(const QString &);
 
-		enum Type {
-			Data_Form,
-			Data_Result,
-			Data_Submit,
-			Data_Cancel
-		};
+        enum Type {
+            Data_Form,
+            Data_Result,
+            Data_Submit,
+            Data_Cancel
+        };
 
-		Type type() const;
-		void setType(Type);
-		QString registrarType() const;
+        Type type() const;
+        void setType(Type);
+        QString registrarType() const;
 
-		struct ReportField {
-			ReportField() { }
-			ReportField( QString _label, QString _name ) { label = _label; name = _name; }
-			QString label;
-			QString name;
-		};
-		const QList<ReportField> &report() const;
+        struct ReportField {
+            ReportField() { }
+            ReportField( QString _label, QString _name ) { label = _label; name = _name; }
+            QString label;
+            QString name;
+        };
+        const QList<ReportField> &report() const;
 
-		typedef QMap<QString, QString> ReportItem;
-		const QList<ReportItem> &reportItems() const;
+        typedef QMap<QString, QString> ReportItem;
+        const QList<ReportItem> &reportItems() const;
 
-		void fromXml(const QDomElement &);
-		QDomElement toXml(QDomDocument *, bool submitForm = true) const;
-		bool isValid() const;
+        void fromXml(const QDomElement &);
+        QDomElement toXml(QDomDocument *, bool submitForm = true) const;
+        bool isValid() const;
 
-	public:
-		class Field {
-		public:
-			Field();
-			~Field();
+    public:
+        class Field {
+        public:
+            Field();
+            ~Field();
 
-			QString desc() const;
-			void setDesc(const QString &);
+            QString desc() const;
+            void setDesc(const QString &);
 
-			struct Option {
-				QString label;
-				QString value;
-			};
+            struct Option {
+                QString label;
+                QString value;
+            };
 
-			struct MediaUri {
-				QString mimeType;
-				QString uri;
-				QHash<QString,QString> params;
-			};
+            struct MediaUri {
+                QString mimeType;
+                QString uri;
+                QHash<QString,QString> params;
+            };
 
-			class MediaElement : public QList<MediaUri>
-			{
-			public:
-				void append(const QString &type, const QString &uri, QHash<QString,QString> params);
-				void setMediaSize(const QSize &size);
-				QSize mediaSize() const;
-				bool checkSupport(const QStringList &wildcards);
+            class MediaElement : public QList<MediaUri>
+            {
+            public:
+                void append(const QString &type, const QString &uri, QHash<QString,QString> params);
+                void setMediaSize(const QSize &size);
+                QSize mediaSize() const;
+                bool checkSupport(const QStringList &wildcards);
 
-			private:
-				QSize _size;
-			};
+            private:
+                QSize _size;
+            };
 
-			typedef QList<Option> OptionList;
-			OptionList options() const;
-			void setOptions(OptionList);
+            typedef QList<Option> OptionList;
+            OptionList options() const;
+            void setOptions(OptionList);
 
-			MediaElement mediaElement() const;
-			void setMediaElement(const MediaElement &);
+            MediaElement mediaElement() const;
+            void setMediaElement(const MediaElement &);
 
-			bool required() const;
-			void setRequired(bool);
+            bool required() const;
+            void setRequired(bool);
 
-			QString label() const;
-			void setLabel(const QString &);
+            QString label() const;
+            void setLabel(const QString &);
 
-			QString var() const;
-			void setVar(const QString &);
+            QString var() const;
+            void setVar(const QString &);
 
-			// generic value variable, because every possible Type
-			// can be converted to QStringList. Field_Single will
-			// use just one string in QStringList. Field_Boolean will
-			// use just one string, and that string will equal 0 or 1.
-			// and so on...
-			QStringList value() const;
-			void setValue(const QStringList &);
+            // generic value variable, because every possible Type
+            // can be converted to QStringList. Field_Single will
+            // use just one string in QStringList. Field_Boolean will
+            // use just one string, and that string will equal 0 or 1.
+            // and so on...
+            QStringList value() const;
+            void setValue(const QStringList &);
 
-			enum Type {
-				Field_Boolean,
-				Field_Fixed,
-				Field_Hidden,
-				Field_JidMulti,
-				Field_JidSingle,
-				Field_ListMulti,
-				Field_ListSingle,
-				Field_TextMulti,
-				Field_TextPrivate,
-				Field_TextSingle
-			};
+            enum Type {
+                Field_Boolean,
+                Field_Fixed,
+                Field_Hidden,
+                Field_JidMulti,
+                Field_JidSingle,
+                Field_ListMulti,
+                Field_ListSingle,
+                Field_TextMulti,
+                Field_TextPrivate,
+                Field_TextSingle
+            };
 
-			Type type() const;
-			void setType(Type);
+            Type type() const;
+            void setType(Type);
 
-			bool isValid() const;
+            bool isValid() const;
 
-			void fromXml(const QDomElement &);
-			QDomElement toXml(QDomDocument *, bool submitForm = true) const;
+            void fromXml(const QDomElement &);
+            QDomElement toXml(QDomDocument *, bool submitForm = true) const;
 
-		private:
-			QString _desc, _label, _var;
-			QList<Option> _options;
-			MediaElement _mediaElement;
-			bool _required;
-			Type _type;
-			QStringList _value;
-		};
+        private:
+            QString _desc, _label, _var;
+            QList<Option> _options;
+            MediaElement _mediaElement;
+            bool _required;
+            Type _type;
+            QStringList _value;
+        };
 
-		typedef QList<Field> FieldList;
+        typedef QList<Field> FieldList;
 
-		FieldList fields() const;
-		Field getField(const QString &var) const;
-		Field &fieldRef(const QString &var);
-		void setFields(const FieldList &fl);
+        FieldList fields() const;
+        Field getField(const QString &var) const;
+        Field &fieldRef(const QString &var);
+        void setFields(const FieldList &fl);
 
-	private:
-		class Private : public QSharedData {
-		public:
-			QString title, instructions;
-			XData::Type type;
-			QString registrarType;
-			FieldList fields;
-			QList<ReportField> report;
-			QList<ReportItem>  reportItems;
-		};
-		QSharedDataPointer<Private> d;
-	};
+    private:
+        class Private : public QSharedData {
+        public:
+            QString title, instructions;
+            XData::Type type;
+            QString registrarType;
+            FieldList fields;
+            QList<ReportField> report;
+            QList<ReportItem>  reportItems;
+        };
+        QSharedDataPointer<Private> d;
+    };
 
 };
 

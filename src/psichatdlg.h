@@ -19,100 +19,100 @@ class PsiContact;
 
 class PsiChatDlg : public ChatDlg
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	PsiChatDlg(const Jid& jid, PsiAccount* account, TabManager* tabManager);
-	~PsiChatDlg();
+    PsiChatDlg(const Jid& jid, PsiAccount* account, TabManager* tabManager);
+    ~PsiChatDlg();
 
-	virtual void setVSplitterPosition(int log,int chat);
+    virtual void setVSplitterPosition(int log,int chat);
 
 protected:
-	// reimplemented
-	void contextMenuEvent(QContextMenuEvent *);
-	void doSend();
-	bool eventFilter(QObject *obj, QEvent *event);
+    // reimplemented
+    void contextMenuEvent(QContextMenuEvent *);
+    void doSend();
+    bool eventFilter(QObject *obj, QEvent *event);
 
 private:
-	void setContactToolTip(QString text);
+    void setContactToolTip(QString text);
 
 private slots:
-	void toggleSmallChat();
-	void doClearButton();
-	void doMiniCmd();
-	void doMinimize();
-	void addContact();
-	void buildMenu();
-	void updateCounter();
-	void updateIdentityVisibility();
-	void updateCountVisibility();
-	void updateContactAdding(PsiContact* c = 0);
-	void updateContactAdding(const Jid &j);
-	void verticalSplitterMoved(int, int);
-	void contactChanged();
-	QString makeContactName(const QString &name, const Jid &jid) const;
-	void updateToolbuttons();
-	void doSwitchJidMode();
-	void copyUserJid();
-	void actActiveContacts();
-	void actPgpToggled(bool);
+    void toggleSmallChat();
+    void doClearButton();
+    void doMiniCmd();
+    void doMinimize();
+    void addContact();
+    void buildMenu();
+    void updateCounter();
+    void updateIdentityVisibility();
+    void updateCountVisibility();
+    void updateContactAdding(PsiContact* c = 0);
+    void updateContactAdding(const Jid &j);
+    void verticalSplitterMoved(int, int);
+    void contactChanged();
+    QString makeContactName(const QString &name, const Jid &jid) const;
+    void updateToolbuttons();
+    void doSwitchJidMode();
+    void copyUserJid();
+    void actActiveContacts();
+    void actPgpToggled(bool);
 
-	// reimplemented
-	void chatEditCreated();
-
-private:
-	void initToolBar();
-	void initToolButtons();
-
-	// reimplemented
-	void initUi();
-	void capsChanged();
-	bool isEncryptionEnabled() const;
-	void updateJidWidget(const QList<UserListItem*> &ul, int status, bool fromPresence);
-	void contactUpdated(UserListItem* u, int status, const QString& statusString);
-	void updateAvatar();
-	void optionsUpdate();
-	void updatePGP();
-	void checkPGPAutostart();
-	void setPGPEnabled(bool enabled);
-	void activated();
-	void setLooks();
-	void setShortcuts();
-	void appendSysMsg(const QString &);
-	ChatView* chatView() const;
-	ChatEdit* chatEdit() const;
-	void updateAutojidIcon();
-	void setJidComboItem(int pos, const QString &text, const Jid &jid, const QString &icon_str);
-	void setMargins();
+    // reimplemented
+    void chatEditCreated();
 
 private:
-	Ui::ChatDlg ui_;
+    void initToolBar();
+    void initToolButtons();
 
-	QMenu* pm_settings_;
+    // reimplemented
+    void initUi();
+    void capsChanged();
+    bool isEncryptionEnabled() const;
+    void updateJidWidget(const QList<UserListItem*> &ul, int status, bool fromPresence);
+    void contactUpdated(UserListItem* u, int status, const QString& statusString);
+    void updateAvatar();
+    void optionsUpdate();
+    void updatePGP();
+    void checkPGPAutostart();
+    void setPGPEnabled(bool enabled);
+    void activated();
+    void setLooks();
+    void setShortcuts();
+    void appendSysMsg(const QString &);
+    ChatView* chatView() const;
+    ChatEdit* chatEdit() const;
+    void updateAutojidIcon();
+    void setJidComboItem(int pos, const QString &text, const Jid &jid, const QString &icon_str);
+    void setMargins();
 
-	ActionList* actions_;
-	QAction *act_mini_cmd_;
-	QAction *act_minimize_;
-	TypeAheadFindBar *typeahead_;
+private:
+    Ui::ChatDlg ui_;
 
-	ActionLineEdit *le_autojid;
-	IconAction *act_autojid;
-	IconAction *act_active_contacts;
+    QMenu* pm_settings_;
 
-	MCmdManager mCmdManager_;
-	MCmdSimpleSite mCmdSite_;
+    ActionList* actions_;
+    QAction *act_mini_cmd_;
+    QAction *act_minimize_;
+    TypeAheadFindBar *typeahead_;
 
-	MCmdTabCompletion tabCompletion;
+    ActionLineEdit *le_autojid;
+    IconAction *act_autojid;
+    IconAction *act_active_contacts;
 
-	bool autoPGP_;
-	bool smallChat_;
-	class ChatDlgMCmdProvider;
+    MCmdManager mCmdManager_;
+    MCmdSimpleSite mCmdSite_;
 
-	static PsiIcon *throbber_icon;
-	bool tabmode;
-	QPointer <PsiWindowHeader> winHeader_;
+    MCmdTabCompletion tabCompletion;
 
-	int logHeight;
-	int chateditHeight;
+    bool autoPGP_;
+    bool smallChat_;
+    class ChatDlgMCmdProvider;
+
+    static PsiIcon *throbber_icon;
+    bool tabmode;
+    QPointer <PsiWindowHeader> winHeader_;
+
+    int logHeight;
+    int chateditHeight;
 };
 
 #endif

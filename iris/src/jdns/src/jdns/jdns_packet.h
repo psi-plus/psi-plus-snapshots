@@ -45,9 +45,9 @@ int jdns_packet_name_isvalid(const unsigned char *name, int size); // 0 if not v
 
 typedef struct jdns_packet_question
 {
-	JDNS_OBJECT
-	jdns_string_t *qname;
-	unsigned short int qtype, qclass;
+    JDNS_OBJECT
+    jdns_string_t *qname;
+    unsigned short int qtype, qclass;
 } jdns_packet_question_t;
 
 jdns_packet_question_t *jdns_packet_question_new();
@@ -59,15 +59,15 @@ typedef struct jdns_packet jdns_packet_t;
 
 typedef struct jdns_packet_resource
 {
-	JDNS_OBJECT
-	jdns_string_t *qname;
-	unsigned short int qtype, qclass;
-	unsigned long int ttl; // 31-bit number, top bit always 0
-	unsigned short int rdlength;
-	unsigned char *rdata;
+    JDNS_OBJECT
+    jdns_string_t *qname;
+    unsigned short int qtype, qclass;
+    unsigned long int ttl; // 31-bit number, top bit always 0
+    unsigned short int rdlength;
+    unsigned char *rdata;
 
-	// private
-	jdns_list_t *writelog; // jdns_packet_write_t
+    // private
+    jdns_list_t *writelog; // jdns_packet_write_t
 } jdns_packet_resource_t;
 
 jdns_packet_resource_t *jdns_packet_resource_new();
@@ -79,32 +79,32 @@ int jdns_packet_resource_read_name(const jdns_packet_resource_t *a, const jdns_p
 
 struct jdns_packet
 {
-	JDNS_OBJECT
-	unsigned short int id;
-	struct
-	{
-		unsigned short qr, opcode, aa, tc, rd, ra, z, rcode;
-	} opts;
+    JDNS_OBJECT
+    unsigned short int id;
+    struct
+    {
+        unsigned short qr, opcode, aa, tc, rd, ra, z, rcode;
+    } opts;
 
-	// item counts as specified by the packet.  do not use these
-	//   for iteration over the item lists, since they can be wrong
-	//   if the packet is truncated.
-	int qdcount, ancount, nscount, arcount;
+    // item counts as specified by the packet.  do not use these
+    //   for iteration over the item lists, since they can be wrong
+    //   if the packet is truncated.
+    int qdcount, ancount, nscount, arcount;
 
-	// value lists
-	jdns_list_t *questions;         // jdns_packet_question_t
-	jdns_list_t *answerRecords;     // jdns_packet_resource_t
-	jdns_list_t *authorityRecords;  // jdns_packet_resource_t
-	jdns_list_t *additionalRecords; // jdns_packet_resource_t
+    // value lists
+    jdns_list_t *questions;         // jdns_packet_question_t
+    jdns_list_t *answerRecords;     // jdns_packet_resource_t
+    jdns_list_t *authorityRecords;  // jdns_packet_resource_t
+    jdns_list_t *additionalRecords; // jdns_packet_resource_t
 
-	// since dns packets are allowed to be truncated, it is possible
-	//   for a packet to not get fully parsed yet still be considered
-	//   successfully parsed.  this flag means the packet was fully
-	//   parsed also.
-	int fully_parsed;
+    // since dns packets are allowed to be truncated, it is possible
+    //   for a packet to not get fully parsed yet still be considered
+    //   successfully parsed.  this flag means the packet was fully
+    //   parsed also.
+    int fully_parsed;
 
-	int raw_size;
-	unsigned char *raw_data;
+    int raw_size;
+    unsigned char *raw_data;
 };
 
 jdns_packet_t *jdns_packet_new();

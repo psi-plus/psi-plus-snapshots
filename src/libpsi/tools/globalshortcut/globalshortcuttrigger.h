@@ -26,36 +26,36 @@
 
 class GlobalShortcutManager::KeyTrigger : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	/**
-	 * Is there any slot connected to this hotkey?
-	 */
-	bool isUsed() const
-	{
-		return QObject::receivers(SIGNAL(triggered())) > 0;
-	}
+    /**
+     * Is there any slot connected to this hotkey?
+     */
+    bool isUsed() const
+    {
+        return QObject::receivers(SIGNAL(triggered())) > 0;
+    }
 
 signals:
-	void triggered();
+    void triggered();
 
 private:
-	/**
-	 * Registers the \a key.
-	 */
-	KeyTrigger(const QKeySequence& key);
-	/**
-	 * Unregisters the key.
-	 */
-	~KeyTrigger();
+    /**
+     * Registers the \a key.
+     */
+    KeyTrigger(const QKeySequence& key);
+    /**
+     * Unregisters the key.
+     */
+    ~KeyTrigger();
 
-	friend class GlobalShortcutManager;
+    friend class GlobalShortcutManager;
 
-	/**
-	 * Platform-specific helper
-	 */
-	class Impl;
-	Impl* d;
+    /**
+     * Platform-specific helper
+     */
+    class Impl;
+    Impl* d;
 };
 
 #endif

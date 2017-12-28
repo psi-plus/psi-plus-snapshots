@@ -43,7 +43,7 @@ class QJDnsSharedDebugPrivate;
 \code
 QJDnsSharedDebug *db = new QJDnsSharedDebug;
 connect(db, SIGNAL(debugLinesReady(QStringList)),
-	SLOT(db_debugLinesReady(QStringList)));
+    SLOT(db_debugLinesReady(QStringList)));
 
 QJDnsShared *jdnsShared1 = new QJDnsShared(QJDnsShared::UnicastInternet);
 jdnsShared1->setDebug(db, "U");
@@ -53,8 +53,8 @@ jdnsShared2->setDebug(db, "L");
 ...
 void db_debugLinesReady(const QStringList &lines)
 {
-	foreach(QString line, lines)
-		printf("%s\n", qPrintable(line));
+    foreach(QString line, lines)
+        printf("%s\n", qPrintable(line));
 }
 \endcode
 
@@ -66,40 +66,40 @@ void db_debugLinesReady(const QStringList &lines)
 */
 class JDNS_EXPORT QJDnsSharedDebug : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	/**
-	   \brief Constructs a new object with the given \a parent
-	*/
-	QJDnsSharedDebug(QObject *parent = 0);
+    /**
+       \brief Constructs a new object with the given \a parent
+    */
+    QJDnsSharedDebug(QObject *parent = 0);
 
-	/**
-	   \brief Destroys the object
-	*/
-	~QJDnsSharedDebug();
+    /**
+       \brief Destroys the object
+    */
+    ~QJDnsSharedDebug();
 
-	/**
-	   \brief Read the available debug information
+    /**
+       \brief Read the available debug information
 
-	   Debug information is reported as a series of lines.  The lines are of reasonable length, and so if you're storing a backlog of the most recent debug information, it should be safe to make the cut-off point based on lines.
+       Debug information is reported as a series of lines.  The lines are of reasonable length, and so if you're storing a backlog of the most recent debug information, it should be safe to make the cut-off point based on lines.
 
-	   \sa readyRead
-	*/
-	QStringList readDebugLines();
+       \sa readyRead
+    */
+    QStringList readDebugLines();
 
 signals:
-	/**
-	   \brief Emitted when there is debug information to report
+    /**
+       \brief Emitted when there is debug information to report
 
-	   \sa readDebugLines
-	*/
-	void readyRead();
+       \sa readDebugLines
+    */
+    void readyRead();
 
 private:
-	friend class QJDnsShared;
-	friend class QJDnsSharedPrivate;
-	friend class QJDnsSharedDebugPrivate;
-	QJDnsSharedDebugPrivate *d;
+    friend class QJDnsShared;
+    friend class QJDnsSharedPrivate;
+    friend class QJDnsSharedDebugPrivate;
+    QJDnsSharedDebugPrivate *d;
 };
 
 /**
@@ -124,18 +124,18 @@ req->query("psi-im.org", QJDns::A);
 ...
 void req_resultsReady()
 {
-	if(req->success())
-	{
-		// print all of the IP addresses obtained
-		QList<QJDns::Record> results = req->results();
-		foreach(QJDns::Record r, results)
-		{
-			if(r.type == QJDns::A)
-				printf("%s\n", qPrintable(r.address.toString());
-		}
-	}
-	else
-		printf("Error resolving!\n");
+    if(req->success())
+    {
+        // print all of the IP addresses obtained
+        QList<QJDns::Record> results = req->results();
+        foreach(QJDns::Record r, results)
+        {
+            if(r.type == QJDns::A)
+                printf("%s\n", qPrintable(r.address.toString());
+        }
+    }
+    else
+        printf("Error resolving!\n");
 }
 \endcode
 
@@ -157,10 +157,10 @@ pub->publish(QJDns::Unique, rec);
 ...
 void pub_resultsReady()
 {
-	if(pub->success())
-		printf("Record published\n");
-	else
-		printf("Error publishing!\n");
+    if(pub->success())
+        printf("Record published\n");
+    else
+        printf("Error publishing!\n");
 }
 \endcode
 
@@ -199,94 +199,94 @@ pub->publish(QJDns::Unique, rec);
 */
 class JDNS_EXPORT QJDnsSharedRequest : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	/**
-	   \brief Operation type
-	*/
-	enum Type
-	{
-		Query,   ///< Query operation, initiated by query()
-		Publish  ///< Publish operation, initiated by publish() or publishUpdate()
-	};
+    /**
+       \brief Operation type
+    */
+    enum Type
+    {
+        Query,   ///< Query operation, initiated by query()
+        Publish  ///< Publish operation, initiated by publish() or publishUpdate()
+    };
 
-	/**
-	   \brief Request error
-	*/
-	enum Error
-	{
-		ErrorNoNet,     ///< There are no available network interfaces to operate on.  This happens if QJDnsShared::addInterface() was not called.
-		ErrorGeneric,   ///< Generic error during the operation.
-		ErrorNXDomain,  ///< The name looked up does not exist.
-		ErrorTimeout,   ///< The operation timed out.
-		ErrorConflict   ///< Attempt to publish an already published unique record.
-	};
+    /**
+       \brief Request error
+    */
+    enum Error
+    {
+        ErrorNoNet,     ///< There are no available network interfaces to operate on.  This happens if QJDnsShared::addInterface() was not called.
+        ErrorGeneric,   ///< Generic error during the operation.
+        ErrorNXDomain,  ///< The name looked up does not exist.
+        ErrorTimeout,   ///< The operation timed out.
+        ErrorConflict   ///< Attempt to publish an already published unique record.
+    };
 
-	/**
-	   \brief Constructs a new object with the given \a jdnsShared and \a parent
-	*/
-	QJDnsSharedRequest(QJDnsShared *jdnsShared, QObject *parent = 0);
+    /**
+       \brief Constructs a new object with the given \a jdnsShared and \a parent
+    */
+    QJDnsSharedRequest(QJDnsShared *jdnsShared, QObject *parent = 0);
 
-	/**
-	   \brief Destroys the object
+    /**
+       \brief Destroys the object
 
-	   If there is an active operation, it is cancelled.
-	*/
-	~QJDnsSharedRequest();
+       If there is an active operation, it is cancelled.
+    */
+    ~QJDnsSharedRequest();
 
-	/**
-	   \brief The type of operation being performed
-	*/
-	Type type();
+    /**
+       \brief The type of operation being performed
+    */
+    Type type();
 
-	/**
-	   \brief Perform a query operation
-	*/
-	void query(const QByteArray &name, int type);
+    /**
+       \brief Perform a query operation
+    */
+    void query(const QByteArray &name, int type);
 
-	/**
-	   \brief Perform a publish operation
-	*/
-	void publish(QJDns::PublishMode m, const QJDns::Record &record);
+    /**
+       \brief Perform a publish operation
+    */
+    void publish(QJDns::PublishMode m, const QJDns::Record &record);
 
-	/**
-	   \brief Update a record that is currently published
-	*/
-	void publishUpdate(const QJDns::Record &record);
+    /**
+       \brief Update a record that is currently published
+    */
+    void publishUpdate(const QJDns::Record &record);
 
-	/**
-	   \brief Cancels the current operation
-	*/
-	void cancel();
+    /**
+       \brief Cancels the current operation
+    */
+    void cancel();
 
-	/**
-	   \brief Indicates whether or not the operation was successful
-	*/
-	bool success() const;
+    /**
+       \brief Indicates whether or not the operation was successful
+    */
+    bool success() const;
 
-	/**
-	   \brief Returns the reason for error
-	*/
-	Error error() const;
+    /**
+       \brief Returns the reason for error
+    */
+    Error error() const;
 
-	/**
-	   \brief Returns the results of the operation
-	*/
-	QList<QJDns::Record> results() const;
+    /**
+       \brief Returns the results of the operation
+    */
+    QList<QJDns::Record> results() const;
 
 signals:
-	/**
-	   \brief Indicates that the operation has something to report
+    /**
+       \brief Indicates that the operation has something to report
 
-	   After receiving this signal, call success() to check on the status of the operation, followed by results() or error() as appropriate.
-	*/
-	void resultsReady();
+       After receiving this signal, call success() to check on the status of the operation, followed by results() or error() as appropriate.
+    */
+    void resultsReady();
 
 private:
-	friend class QJDnsShared;
-	friend class QJDnsSharedPrivate;
-	friend class QJDnsSharedRequestPrivate;
-	QJDnsSharedRequestPrivate *d;
+    friend class QJDnsShared;
+    friend class QJDnsSharedPrivate;
+    friend class QJDnsSharedRequestPrivate;
+    QJDnsSharedRequestPrivate *d;
 };
 
 /**
@@ -338,18 +338,18 @@ req->query("psi-im.org", QJDns::A);
 ...
 void req_resultsReady()
 {
-	if(req->success())
-	{
-		// print all of the IP addresses obtained
-		QList<QJDns::Record> results = req->results();
-		foreach(QJDns::Record r, results)
-		{
-			if(r.type == QJDns::A)
-				printf("%s\n", qPrintable(r.address.toString());
-		}
-	}
-	else
-		printf("Error resolving!\n");
+    if(req->success())
+    {
+        // print all of the IP addresses obtained
+        QList<QJDns::Record> results = req->results();
+        foreach(QJDns::Record r, results)
+        {
+            if(r.type == QJDns::A)
+                printf("%s\n", qPrintable(r.address.toString());
+        }
+    }
+    else
+        printf("Error resolving!\n");
 }
 \endcode
 
@@ -363,7 +363,7 @@ dns->shutdown();
 ...
 void dns_shutdownFinished()
 {
-	delete dns;
+    delete dns;
 }
 \endcode
 
@@ -406,88 +406,88 @@ dns->addInterface(addr);
 */
 class JDNS_EXPORT QJDnsShared : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	/**
-	   \brief The mode to operate in
-	*/
-	enum Mode
-	{
-		/**
-		   For regular DNS resolution.  In this mode, lookups are performed on all interfaces, and the first returned result is used.
-		*/
-		UnicastInternet,
+    /**
+       \brief The mode to operate in
+    */
+    enum Mode
+    {
+        /**
+           For regular DNS resolution.  In this mode, lookups are performed on all interfaces, and the first returned result is used.
+        */
+        UnicastInternet,
 
-		/**
-		   Perform regular DNS resolution using the Multicast DNS address.  This is used to resolve large and/or known Multicast DNS names without actually multicasting anything.
-		*/
-		UnicastLocal,
+        /**
+           Perform regular DNS resolution using the Multicast DNS address.  This is used to resolve large and/or known Multicast DNS names without actually multicasting anything.
+        */
+        UnicastLocal,
 
-		/**
-		   Multicast DNS querying and publishing.
+        /**
+           Multicast DNS querying and publishing.
 
-		   \note For Multicast mode, QJDnsShared supports up to one interface for each IP version (e.g. one IPv4 interface and one IPv6 interface), and expects the default/primary multicast interface for that IP version to be used.
-		*/
-		Multicast
-	};
+           \note For Multicast mode, QJDnsShared supports up to one interface for each IP version (e.g. one IPv4 interface and one IPv6 interface), and expects the default/primary multicast interface for that IP version to be used.
+        */
+        Multicast
+    };
 
-	/**
-	   \brief Constructs a new object with the given \a mode and \a parent
-	*/
-	QJDnsShared(Mode mode, QObject *parent = 0);
+    /**
+       \brief Constructs a new object with the given \a mode and \a parent
+    */
+    QJDnsShared(Mode mode, QObject *parent = 0);
 
-	/**
-	   \brief Destroys the object
-	*/
-	~QJDnsShared();
+    /**
+       \brief Destroys the object
+    */
+    ~QJDnsShared();
 
-	/**
-	   \brief Sets the debug object to report to
+    /**
+       \brief Sets the debug object to report to
 
-	   If a debug object is set using this function, then QJDnsShared will send output text to it, prefixing each line with \a name.
-	*/
-	void setDebug(QJDnsSharedDebug *db, const QString &name);
+       If a debug object is set using this function, then QJDnsShared will send output text to it, prefixing each line with \a name.
+    */
+    void setDebug(QJDnsSharedDebug *db, const QString &name);
 
-	/**
-	   \brief Adds an interface to operate on
+    /**
+       \brief Adds an interface to operate on
 
-	   For UnicastInternet and UnicastLocal, these will almost always be QHostAddress::Any or QHostAddress::AnyIPv6 (operate on the default interface for IPv4 or IPv6, respectively).
+       For UnicastInternet and UnicastLocal, these will almost always be QHostAddress::Any or QHostAddress::AnyIPv6 (operate on the default interface for IPv4 or IPv6, respectively).
 
-	   For Multicast, it is expected that the default/primary multicast interface will be used here.  Do not pass QHostAddress::Any (or AnyIPv6) with Multicast mode.
+       For Multicast, it is expected that the default/primary multicast interface will be used here.  Do not pass QHostAddress::Any (or AnyIPv6) with Multicast mode.
 
-	   Returns true if the interface was successfully added, otherwise returns false.
-	*/
-	bool addInterface(const QHostAddress &addr);
+       Returns true if the interface was successfully added, otherwise returns false.
+    */
+    bool addInterface(const QHostAddress &addr);
 
-	/**
-	   \brief Removes a previously-added interface
-	*/
-	void removeInterface(const QHostAddress &addr);
+    /**
+       \brief Removes a previously-added interface
+    */
+    void removeInterface(const QHostAddress &addr);
 
-	/**
-	   \brief Shuts down the object
+    /**
+       \brief Shuts down the object
 
-	   This operation primarily exists for Multicast mode, so that any published records have a chance to be unpublished.  If the QJDnsShared object is simply deleted without performing a shutdown, then published records will linger on the network until their TTLs expire.
+       This operation primarily exists for Multicast mode, so that any published records have a chance to be unpublished.  If the QJDnsShared object is simply deleted without performing a shutdown, then published records will linger on the network until their TTLs expire.
 
-	   When shutdown is complete, the shutdownFinished() signal will be emitted.
-	*/
-	void shutdown();
+       When shutdown is complete, the shutdownFinished() signal will be emitted.
+    */
+    void shutdown();
 
-	/**
-	   \brief The domains to search in
+    /**
+       \brief The domains to search in
 
-	   You should perform a separate resolution for every domain configured on this machine.
-	*/
-	static QList<QByteArray> domains();
+       You should perform a separate resolution for every domain configured on this machine.
+    */
+    static QList<QByteArray> domains();
 
-	/**
-	   \brief Performs a blocking shutdown of many QJDnsShared instances
+    /**
+       \brief Performs a blocking shutdown of many QJDnsShared instances
 
-	   This function is a convenient way to shutdown multiple QJDnsShared instances synchronously.  The internal shutdown procedure uses no more than a few cycles of the eventloop, so it should be safe to call without worry of the application being overly stalled.  This function takes ownership of the instances passed to it, and will delete them upon completion.
+       This function is a convenient way to shutdown multiple QJDnsShared instances synchronously.  The internal shutdown procedure uses no more than a few cycles of the eventloop, so it should be safe to call without worry of the application being overly stalled.  This function takes ownership of the instances passed to it, and will delete them upon completion.
 
-	   It is worth noting that this function is implemented without the use of a nested eventloop.  All of the QJDnsShared instances are moved into a temporary thread to perform the shutdown procedure, which should not cause any unexpected behavior in the current thread.
+       It is worth noting that this function is implemented without the use of a nested eventloop.  All of the QJDnsShared instances are moved into a temporary thread to perform the shutdown procedure, which should not cause any unexpected behavior in the current thread.
 
-	   \code
+       \code
 QList<QJDnsShared*> list;
 list += jdnsShared_unicast;
 list += jdnsShared_multicast;
@@ -495,20 +495,20 @@ QJDnsShared::waitForShutdown(list);
 
 // collect remaining debug information
 QStringList finalDebugLines = jdnsSharedDebug.readDebugLines();
-	   \endcode
-	*/
-	static void waitForShutdown(const QList<QJDnsShared*> &instances);
+       \endcode
+    */
+    static void waitForShutdown(const QList<QJDnsShared*> &instances);
 
 signals:
-	/**
-	   \brief Indicates the object has been shut down
-	*/
-	void shutdownFinished();
+    /**
+       \brief Indicates the object has been shut down
+    */
+    void shutdownFinished();
 
 private:
-	friend class QJDnsSharedRequest;
-	friend class QJDnsSharedPrivate;
-	QJDnsSharedPrivate *d;
+    friend class QJDnsSharedRequest;
+    friend class QJDnsSharedPrivate;
+    QJDnsSharedPrivate *d;
 };
 
 #endif

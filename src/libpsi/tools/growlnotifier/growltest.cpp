@@ -39,56 +39,56 @@
 
 class GrowlTestWidget : public QWidget
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
     GrowlTestWidget(QWidget *parent=0);
 
 public slots:
-	void do_notification1();
-	void do_notification2();
-	void notification_clicked();
+    void do_notification1();
+    void do_notification2();
+    void notification_clicked();
 
 private:
-	QLineEdit *text, *title;
-	QCheckBox* sticky;
-	GrowlNotifier* growlNotifier;
+    QLineEdit *text, *title;
+    QCheckBox* sticky;
+    GrowlNotifier* growlNotifier;
 };
 
 
 GrowlTestWidget::GrowlTestWidget(QWidget *parent) : QWidget(parent)
 {
-	// Initialize widgets
-	QGridLayout *layout = new QGridLayout(this);
+    // Initialize widgets
+    QGridLayout *layout = new QGridLayout(this);
 
-	layout->addWidget(new QLabel("Title",this),0,0);
-	title = new QLineEdit(this);
-	title->setText("My Text");
-	layout->addWidget(title,0,1);
+    layout->addWidget(new QLabel("Title",this),0,0);
+    title = new QLineEdit(this);
+    title->setText("My Text");
+    layout->addWidget(title,0,1);
 
-	layout->addWidget(new QLabel("Text",this),1,0);
-	text = new QLineEdit(this);
-	text->setText("My Description");
-	layout->addWidget(text,1,1);
+    layout->addWidget(new QLabel("Text",this),1,0);
+    text = new QLineEdit(this);
+    text->setText("My Description");
+    layout->addWidget(text,1,1);
 
-	//layout->addWidget(new QLabel("Sticky",this),2,0);
-	//sticky = new QCheckBox(this);
-	//sticky->setTristate();
-	//layout->addWidget(sticky,2,1);
+    //layout->addWidget(new QLabel("Sticky",this),2,0);
+    //sticky = new QCheckBox(this);
+    //sticky->setTristate();
+    //layout->addWidget(sticky,2,1);
 
     QPushButton *notification1 = new QPushButton( "Notification 1", this );
-	connect(notification1, SIGNAL(clicked()), SLOT(do_notification1()));
-	layout->addWidget(notification1,3,0);
+    connect(notification1, SIGNAL(clicked()), SLOT(do_notification1()));
+    layout->addWidget(notification1,3,0);
 
-	QPushButton *notification2 = new QPushButton( "Notification 2", this );
-	connect(notification2, SIGNAL(clicked()), SLOT(do_notification2()));
-	layout->addWidget(notification2,3,1);
+    QPushButton *notification2 = new QPushButton( "Notification 2", this );
+    connect(notification2, SIGNAL(clicked()), SLOT(do_notification2()));
+    layout->addWidget(notification2,3,1);
 
-	// Initialize GrowlNotifier
-	QStringList nots, defaults;
-	nots << "Notification 1" << "Notification 2";
-	defaults << "Notification 1";
-	growlNotifier = new GrowlNotifier(nots, defaults, "GrowlNotifierTest");
+    // Initialize GrowlNotifier
+    QStringList nots, defaults;
+    nots << "Notification 1" << "Notification 2";
+    defaults << "Notification 1";
+    growlNotifier = new GrowlNotifier(nots, defaults, "GrowlNotifierTest");
 }
 
 int main( int argc, char **argv )
@@ -101,29 +101,29 @@ int main( int argc, char **argv )
 
 void GrowlTestWidget::do_notification1()
 {
-	//if (sticky->state() != QButton::NoChange) {
-	//	growlNotifier->notify("Notification 1", title->text(), text->text(), QPixmap(), sticky->isChecked(), this, SLOT(notification_clicked()));
-	//}
-	//else {
-	//	growlNotifier->notify("Notification 1", title->text(), text->text(), QPixmap());
-	//}
-	growlNotifier->notify("Notification 1", title->text(), text->text(), QPixmap(), false, this, SLOT(notification_clicked()));
+    //if (sticky->state() != QButton::NoChange) {
+    //    growlNotifier->notify("Notification 1", title->text(), text->text(), QPixmap(), sticky->isChecked(), this, SLOT(notification_clicked()));
+    //}
+    //else {
+    //    growlNotifier->notify("Notification 1", title->text(), text->text(), QPixmap());
+    //}
+    growlNotifier->notify("Notification 1", title->text(), text->text(), QPixmap(), false, this, SLOT(notification_clicked()));
 }
 
 void GrowlTestWidget::do_notification2()
 {
-	//if (sticky->state() != QButton::NoChange) {
-	//	growlNotifier->notify("Notification 2", title->text(), text->text(), QPixmap(), sticky->isChecked(), this, SLOT(notification_clicked()));
-	//}
-	//else {
-	//	growlNotifier->notify("Notification 2", title->text(), text->text(), QPixmap());
-	//}
-		growlNotifier->notify("Notification 2", title->text(), text->text(), QPixmap(), false, this, SLOT(notification_clicked()));
+    //if (sticky->state() != QButton::NoChange) {
+    //    growlNotifier->notify("Notification 2", title->text(), text->text(), QPixmap(), sticky->isChecked(), this, SLOT(notification_clicked()));
+    //}
+    //else {
+    //    growlNotifier->notify("Notification 2", title->text(), text->text(), QPixmap());
+    //}
+        growlNotifier->notify("Notification 2", title->text(), text->text(), QPixmap(), false, this, SLOT(notification_clicked()));
 }
 
 void GrowlTestWidget::notification_clicked()
 {
-	QMessageBox::information(0, "Information", "Notification was clicked\n");
+    QMessageBox::information(0, "Information", "Notification was clicked\n");
 }
 
 #include "growltest.moc"

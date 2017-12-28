@@ -30,32 +30,32 @@
 
 class App : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	bool opt_debug, opt_ipv6, opt_quit;
-	int quit_time;
-	QString mode, type, name, ipaddr;
-	QStringList nslist;
-	QList<QJDns::Record> pubitems;
-	QJDns jdns;
-	int req_id;
+    bool opt_debug, opt_ipv6, opt_quit;
+    int quit_time;
+    QString mode, type, name, ipaddr;
+    QStringList nslist;
+    QList<QJDns::Record> pubitems;
+    QJDns jdns;
+    int req_id;
 
-	App();
-	~App();
-	
+    App();
+    ~App();
+    
 public slots:
-	void start();
-	
+    void start();
+    
 signals:
-	void quit();
+    void quit();
 
 private slots:
-	void jdns_resultsReady(int id, const QJDns::Response &results);
-	void jdns_published(int id);
-	void jdns_error(int id, QJDns::Error e);
-	void jdns_shutdownFinished();
-	void jdns_debugLinesReady();
-	void doShutdown();
-};	
+    void jdns_resultsReady(int id, const QJDns::Response &results);
+    void jdns_published(int id);
+    void jdns_error(int id, QJDns::Error e);
+    void jdns_shutdownFinished();
+    void jdns_debugLinesReady();
+    void doShutdown();
+};    
 
 #endif // MAIN_H

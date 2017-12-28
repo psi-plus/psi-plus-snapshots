@@ -29,113 +29,113 @@ class QDomDocument;
 
 namespace XMPP
 {
-	class Jid;
-	class Stream;
+    class Jid;
+    class Stream;
 
-	class Stanza
-	{
-	public:
-		enum Kind { Message, Presence, IQ };
+    class Stanza
+    {
+    public:
+        enum Kind { Message, Presence, IQ };
 
-		Stanza();
-		Stanza(const Stanza &from);
-		Stanza & operator=(const Stanza &from);
-		virtual ~Stanza();
+        Stanza();
+        Stanza(const Stanza &from);
+        Stanza & operator=(const Stanza &from);
+        virtual ~Stanza();
 
-		class Error
-		{
-		public:
-			enum ErrorType { Cancel = 1, Continue, Modify, Auth, Wait };
-			enum ErrorCond
-			{
-				BadRequest = 1,
-				Conflict,
-				FeatureNotImplemented,
-				Forbidden,
-				Gone,
-				InternalServerError,
-				ItemNotFound,
-				JidMalformed,
-				NotAcceptable,
-				NotAllowed,
-				NotAuthorized,
-				PaymentRequired,
-				RecipientUnavailable,
-				Redirect,
-				RegistrationRequired,
-				RemoteServerNotFound,
-				RemoteServerTimeout,
-				ResourceConstraint,
-				ServiceUnavailable,
-				SubscriptionRequired,
-				UndefinedCondition,
-				UnexpectedRequest
-			};
+        class Error
+        {
+        public:
+            enum ErrorType { Cancel = 1, Continue, Modify, Auth, Wait };
+            enum ErrorCond
+            {
+                BadRequest = 1,
+                Conflict,
+                FeatureNotImplemented,
+                Forbidden,
+                Gone,
+                InternalServerError,
+                ItemNotFound,
+                JidMalformed,
+                NotAcceptable,
+                NotAllowed,
+                NotAuthorized,
+                PaymentRequired,
+                RecipientUnavailable,
+                Redirect,
+                RegistrationRequired,
+                RemoteServerNotFound,
+                RemoteServerTimeout,
+                ResourceConstraint,
+                ServiceUnavailable,
+                SubscriptionRequired,
+                UndefinedCondition,
+                UnexpectedRequest
+            };
 
-			Error(int type=Cancel, int condition=UndefinedCondition, const QString &text=QString(), const QDomElement &appSpec=QDomElement());
+            Error(int type=Cancel, int condition=UndefinedCondition, const QString &text=QString(), const QDomElement &appSpec=QDomElement());
 
-			int type;
-			int condition;
-			QString text;
-			QDomElement appSpec;
+            int type;
+            int condition;
+            QString text;
+            QDomElement appSpec;
 
-			int code() const;
-			bool fromCode(int code);
+            int code() const;
+            bool fromCode(int code);
 
-			QPair<QString, QString> description() const;
+            QPair<QString, QString> description() const;
 
-			QDomElement toXml(QDomDocument &doc, const QString &baseNS) const;
-			bool fromXml(const QDomElement &e, const QString &baseNS);
-		private:
-			class Private;
-			int originalCode;
+            QDomElement toXml(QDomDocument &doc, const QString &baseNS) const;
+            bool fromXml(const QDomElement &e, const QString &baseNS);
+        private:
+            class Private;
+            int originalCode;
 
-		};
+        };
 
-		bool isNull() const;
+        bool isNull() const;
 
-		QDomElement element() const;
-		QString toString() const;
+        QDomElement element() const;
+        QString toString() const;
 
-		QDomDocument & doc() const;
-		QString baseNS() const;
-		QDomElement createElement(const QString &ns, const QString &tagName);
-		QDomElement createTextElement(const QString &ns, const QString &tagName, const QString &text);
-		void appendChild(const QDomElement &e);
+        QDomDocument & doc() const;
+        QString baseNS() const;
+        QDomElement createElement(const QString &ns, const QString &tagName);
+        QDomElement createTextElement(const QString &ns, const QString &tagName, const QString &text);
+        void appendChild(const QDomElement &e);
 
-		Kind kind() const;
-		static Kind kind(const QString &tagName);
-		void setKind(Kind k);
+        Kind kind() const;
+        static Kind kind(const QString &tagName);
+        void setKind(Kind k);
 
-		Jid to() const;
-		Jid from() const;
-		QString id() const;
-		QString type() const;
-		QString lang() const;
+        Jid to() const;
+        Jid from() const;
+        QString id() const;
+        QString type() const;
+        QString lang() const;
 
-		void setTo(const Jid &j);
-		void setFrom(const Jid &j);
-		void setId(const QString &id);
-		void setType(const QString &type);
-		void setLang(const QString &lang);
+        void setTo(const Jid &j);
+        void setFrom(const Jid &j);
+        void setId(const QString &id);
+        void setType(const QString &type);
+        void setLang(const QString &lang);
 
-		Error error() const;
-		void setError(const Error &err);
-		void clearError();
+        Error error() const;
+        void setError(const Error &err);
+        void clearError();
 
-		void markHandled();
-		void setSMId(unsigned long id);
+        void markHandled();
+        void setSMId(unsigned long id);
 
-		QSharedPointer<QDomDocument> unboundDocument(QSharedPointer<QDomDocument>);
+        QSharedPointer<QDomDocument> unboundDocument(QSharedPointer<QDomDocument>);
 
-	private:
-		friend class Stream;
-		Stanza(Stream *s, Kind k, const Jid &to, const QString &type, const QString &id);
-		Stanza(Stream *s, const QDomElement &e);
+    private:
+        friend class Stream;
+        Stanza(Stream *s, Kind k, const Jid &to, const QString &type, const QString &id);
+        Stanza(Stream *s, const QDomElement &e);
 
-		class Private;
-		Private *d;
-	};
+        class Private;
+        Private *d;
+    };
 }
 
 #endif

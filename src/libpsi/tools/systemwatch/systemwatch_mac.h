@@ -26,12 +26,12 @@
 class MacSystemWatch : public SystemWatch
 {
 public:
-	MacSystemWatch();
+    MacSystemWatch();
 
-	// These shouldn't be called from outside, but i can't hide them atm.
-	void emitSleep() { emit sleep(); }
-	void emitIdleSleep() { emit idleSleep(); }
-	void emitWakeup() { emit wakeup(); }
+    // These shouldn't be called from outside, but i can't hide them atm.
+    void emitSleep() { emit sleep(); }
+    void emitIdleSleep() { emit idleSleep(); }
+    void emitWakeup() { emit wakeup(); }
 };
 
 #endif

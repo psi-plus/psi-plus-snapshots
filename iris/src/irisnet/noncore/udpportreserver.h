@@ -36,37 +36,37 @@ namespace XMPP {
 // note: you must return all sockets back to this class before destructing
 class UdpPortReserver : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	UdpPortReserver(QObject *parent = 0);
-	~UdpPortReserver();
+    UdpPortReserver(QObject *parent = 0);
+    ~UdpPortReserver();
 
-	void setAddresses(const QList<QHostAddress> &addrs);
-	void setPorts(int start, int len);
-	void setPorts(const QList<int> &ports);
+    void setAddresses(const QList<QHostAddress> &addrs);
+    void setPorts(int start, int len);
+    void setPorts(const QList<int> &ports);
 
-	// return true if all ports got reserved, false if only some
-	//   or none got reserved
-	bool reservedAll() const;
+    // return true if all ports got reserved, false if only some
+    //   or none got reserved
+    bool reservedAll() const;
 
-	// may return less than asked for, if we had less reserved ports
-	//   left. some attempt is made to return aligned or consecutive port
-	//   values, but this is just a best effort and not a guarantee.  if
-	//   not all ports were able to be reserved earlier, then this call
-	//   may attempt to reserve those ports again.  the sockets in the
-	//   returned list are ordered by port (in ascending order) and then
-	//   by address (in the order provided).  since all addresses must be
-	//   able to bind to a port for it to be considered reserved, this
-	//   function always returns a list with a size that is a multiple of
-	//   the number of addresses.
-	QList<QUdpSocket*> borrowSockets(int portCount, QObject *parent = 0);
+    // may return less than asked for, if we had less reserved ports
+    //   left. some attempt is made to return aligned or consecutive port
+    //   values, but this is just a best effort and not a guarantee.  if
+    //   not all ports were able to be reserved earlier, then this call
+    //   may attempt to reserve those ports again.  the sockets in the
+    //   returned list are ordered by port (in ascending order) and then
+    //   by address (in the order provided).  since all addresses must be
+    //   able to bind to a port for it to be considered reserved, this
+    //   function always returns a list with a size that is a multiple of
+    //   the number of addresses.
+    QList<QUdpSocket*> borrowSockets(int portCount, QObject *parent = 0);
 
-	void returnSockets(const QList<QUdpSocket*> &sockList);
+    void returnSockets(const QList<QUdpSocket*> &sockList);
 
 private:
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 };
 
 }

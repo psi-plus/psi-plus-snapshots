@@ -28,39 +28,39 @@ class QDomElement;
 
 namespace XMPP
 {
-	class Address
-	{
-	public:
-		typedef enum { Unknown, To, Cc, Bcc, ReplyTo, ReplyRoom, NoReply, OriginalFrom, OriginalTo } Type;
+    class Address
+    {
+    public:
+        typedef enum { Unknown, To, Cc, Bcc, ReplyTo, ReplyRoom, NoReply, OriginalFrom, OriginalTo } Type;
 
-		Address(Type type = Unknown, const Jid& jid = Jid());
-		Address(const QDomElement&);
+        Address(Type type = Unknown, const Jid& jid = Jid());
+        Address(const QDomElement&);
 
-		const Jid& jid() const;
-		const QString& uri() const;
-		const QString& node() const;
-		const QString& desc() const;
-		bool delivered() const;
-		Type type() const;
+        const Jid& jid() const;
+        const QString& uri() const;
+        const QString& node() const;
+        const QString& desc() const;
+        bool delivered() const;
+        Type type() const;
 
-		QDomElement toXml(Stanza&) const;
-		void fromXml(const QDomElement& t);
+        QDomElement toXml(Stanza&) const;
+        void fromXml(const QDomElement& t);
 
-		void setJid(const Jid &);
-		void setUri(const QString &);
-		void setNode(const QString &);
-		void setDesc(const QString &);
-		void setDelivered(bool);
-		void setType(Type);
+        void setJid(const Jid &);
+        void setUri(const QString &);
+        void setNode(const QString &);
+        void setDesc(const QString &);
+        void setDelivered(bool);
+        void setType(Type);
 
-	private:
-		Jid v_jid;
-		QString v_uri, v_node, v_desc;
-		bool v_delivered;
-		Type v_type;
-	};
+    private:
+        Jid v_jid;
+        QString v_uri, v_node, v_desc;
+        bool v_delivered;
+        Type v_type;
+    };
 
-	typedef QList<Address> AddressList;
+    typedef QList<Address> AddressList;
 };
 
 #endif

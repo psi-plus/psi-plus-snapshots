@@ -32,153 +32,153 @@
 class UnZipPrivate
 {
 public:
-	UnZipPrivate() : caseSensitive(UnZip::CS_Default) {}
+    UnZipPrivate() : caseSensitive(UnZip::CS_Default) {}
 
-	QString name;
-	unzFile uf;
-	QStringList listing;
-	UnZip::CaseSensitivity caseSensitive;
+    QString name;
+    unzFile uf;
+    QStringList listing;
+    UnZip::CaseSensitivity caseSensitive;
 };
 
 UnZip::UnZip(const QString &name)
 {
-	d = new UnZipPrivate;
-	d->uf = 0;
-	d->name = name;
+    d = new UnZipPrivate;
+    d->uf = 0;
+    d->name = name;
 }
 
 UnZip::UnZip(UnZip &&o) :
     d(o.d)
 {
-	o.d = nullptr;
+    o.d = nullptr;
 }
 
 UnZip::~UnZip()
 {
-	if (d) {
-		close();
-		delete d;
-	}
+    if (d) {
+        close();
+        delete d;
+    }
 }
 
 void UnZip::setCaseSensitivity(CaseSensitivity state)
 {
-	d->caseSensitive = state;
+    d->caseSensitive = state;
 }
 
 void UnZip::setName(const QString &name)
 {
-	d->name = name;
+    d->name = name;
 }
 
 const QString & UnZip::name() const
 {
-	return d->name;
+    return d->name;
 }
 
 bool UnZip::open()
 {
-	close();
+    close();
 
-	d->uf = unzOpen(QFile::encodeName(d->name).data());
-	if(!d->uf)
-		return false;
+    d->uf = unzOpen(QFile::encodeName(d->name).data());
+    if(!d->uf)
+        return false;
 
-	return getList();
+    return getList();
 }
 
 void UnZip::close()
 {
-	if(d->uf) {
-		unzClose(d->uf);
-		d->uf = 0;
-	}
+    if(d->uf) {
+        unzClose(d->uf);
+        d->uf = 0;
+    }
 
-	d->listing.clear();
+    d->listing.clear();
 }
 
 const QStringList & UnZip::list() const
 {
-	return d->listing;
+    return d->listing;
 }
 
 bool UnZip::getList()
 {
-	unz_global_info gi;
-	int err = unzGetGlobalInfo(d->uf, &gi);
-	if(err != UNZ_OK)
-		return false;
+    unz_global_info gi;
+    int err = unzGetGlobalInfo(d->uf, &gi);
+    if(err != UNZ_OK)
+        return false;
 
-	QStringList l;
-	for(int n = 0; n < (int)gi.number_entry; ++n) {
-		char filename_inzip[256];
-		unz_file_info file_info;
-		int err = unzGetCurrentFileInfo(d->uf, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
-		if(err != UNZ_OK)
-			return false;
+    QStringList l;
+    for(int n = 0; n < (int)gi.number_entry; ++n) {
+        char filename_inzip[256];
+        unz_file_info file_info;
+        int err = unzGetCurrentFileInfo(d->uf, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
+        if(err != UNZ_OK)
+            return false;
 
-		l += filename_inzip;
+        l += filename_inzip;
 
-		if((n+1) < (int)gi.number_entry) {
-			err = unzGoToNextFile(d->uf);
-			if(err != UNZ_OK)
-				return false;
-		}
-	}
+        if((n+1) < (int)gi.number_entry) {
+            err = unzGoToNextFile(d->uf);
+            if(err != UNZ_OK)
+                return false;
+        }
+    }
 
-	d->listing = l;
+    d->listing = l;
 
-	return true;
+    return true;
 }
 
 bool UnZip::readFile(const QString &fname, QByteArray *buf, int max)
 {
-	int err = unzLocateFile(d->uf, QFile::encodeName(fname).data(), d->caseSensitive);
-	if(err != UNZ_OK)
-		return false;
+    int err = unzLocateFile(d->uf, QFile::encodeName(fname).data(), d->caseSensitive);
+    if(err != UNZ_OK)
+        return false;
 
-	char filename_inzip[256];
-	unz_file_info file_info;
-	err = unzGetCurrentFileInfo(d->uf, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
-	if(err != UNZ_OK)
-		return false;
+    char filename_inzip[256];
+    unz_file_info file_info;
+    err = unzGetCurrentFileInfo(d->uf, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
+    if(err != UNZ_OK)
+        return false;
 
-	err = unzOpenCurrentFile(d->uf);
-	if(err != UNZ_OK)
-		return false;
+    err = unzOpenCurrentFile(d->uf);
+    if(err != UNZ_OK)
+        return false;
 
-	QByteArray a;
-	QByteArray chunk;
-	chunk.resize(16384);
-	while(1) {
-		err = unzReadCurrentFile(d->uf, chunk.data(), chunk.size());
-		if(err < 0) {
-			unzCloseCurrentFile(d->uf);
-			return false;
-		}
-		if(err == 0)
-			break;
+    QByteArray a;
+    QByteArray chunk;
+    chunk.resize(16384);
+    while(1) {
+        err = unzReadCurrentFile(d->uf, chunk.data(), chunk.size());
+        if(err < 0) {
+            unzCloseCurrentFile(d->uf);
+            return false;
+        }
+        if(err == 0)
+            break;
 
-		int oldsize = a.size();
-		if(max > 0 && oldsize + err > max)
-			err = max - oldsize;
-		a.resize(oldsize + err);
-		memcpy(a.data() + oldsize, chunk.data(), err);
+        int oldsize = a.size();
+        if(max > 0 && oldsize + err > max)
+            err = max - oldsize;
+        a.resize(oldsize + err);
+        memcpy(a.data() + oldsize, chunk.data(), err);
 
-		if(max > 0 && (int)a.size() >= max)
-			break;
-	}
+        if(max > 0 && (int)a.size() >= max)
+            break;
+    }
 
-	err = unzCloseCurrentFile(d->uf);
-	if(err != UNZ_OK)
-		return false;
+    err = unzCloseCurrentFile(d->uf);
+    if(err != UNZ_OK)
+        return false;
 
-	*buf = a;
-	return true;
+    *buf = a;
+    return true;
 }
 
 bool UnZip::fileExists(const QString &fname)
 {
-	int err = unzLocateFile(d->uf, QFile::encodeName(fname).data(), d->caseSensitive);
-	return err == UNZ_OK;
+    int err = unzLocateFile(d->uf, QFile::encodeName(fname).data(), d->caseSensitive);
+    return err == UNZ_OK;
 }

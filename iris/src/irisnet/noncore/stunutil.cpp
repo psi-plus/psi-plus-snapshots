@@ -26,74 +26,74 @@ namespace StunUtil {
 
 quint16 read16(const quint8 *in)
 {
-	quint16 out = in[0];
-	out <<= 8;
-	out += in[1];
-	return out;
+    quint16 out = in[0];
+    out <<= 8;
+    out += in[1];
+    return out;
 }
 
 quint32 read32(const quint8 *in)
 {
-	quint32 out = in[0];
-	out <<= 8;
-	out += in[1];
-	out <<= 8;
-	out += in[2];
-	out <<= 8;
-	out += in[3];
-	return out;
+    quint32 out = in[0];
+    out <<= 8;
+    out += in[1];
+    out <<= 8;
+    out += in[2];
+    out <<= 8;
+    out += in[3];
+    return out;
 }
 
 quint64 read64(const quint8 *in)
 {
-	quint64 out = in[0];
-	out <<= 8;
-	out += in[1];
-	out <<= 8;
-	out += in[2];
-	out <<= 8;
-	out += in[3];
-	out <<= 8;
-	out += in[4];
-	out <<= 8;
-	out += in[5];
-	out <<= 8;
-	out += in[6];
-	out <<= 8;
-	out += in[7];
-	return out;
+    quint64 out = in[0];
+    out <<= 8;
+    out += in[1];
+    out <<= 8;
+    out += in[2];
+    out <<= 8;
+    out += in[3];
+    out <<= 8;
+    out += in[4];
+    out <<= 8;
+    out += in[5];
+    out <<= 8;
+    out += in[6];
+    out <<= 8;
+    out += in[7];
+    return out;
 }
 
 void write16(quint8 *out, quint16 i)
 {
-	out[0] = (i >> 8) & 0xff;
-	out[1] = i & 0xff;
+    out[0] = (i >> 8) & 0xff;
+    out[1] = i & 0xff;
 }
 
 void write32(quint8 *out, quint32 i)
 {
-	out[0] = (i >> 24) & 0xff;
-	out[1] = (i >> 16) & 0xff;
-	out[2] = (i >> 8) & 0xff;
-	out[3] = i & 0xff;
+    out[0] = (i >> 24) & 0xff;
+    out[1] = (i >> 16) & 0xff;
+    out[2] = (i >> 8) & 0xff;
+    out[3] = i & 0xff;
 }
 
 void write64(quint8 *out, quint64 i)
 {
-	out[0] = (i >> 56) & 0xff;
-	out[1] = (i >> 48) & 0xff;
-	out[2] = (i >> 40) & 0xff;
-	out[3] = (i >> 32) & 0xff;
-	out[4] = (i >> 24) & 0xff;
-	out[5] = (i >> 16) & 0xff;
-	out[6] = (i >> 8) & 0xff;
-	out[7] = i & 0xff;
+    out[0] = (i >> 56) & 0xff;
+    out[1] = (i >> 48) & 0xff;
+    out[2] = (i >> 40) & 0xff;
+    out[3] = (i >> 32) & 0xff;
+    out[4] = (i >> 24) & 0xff;
+    out[5] = (i >> 16) & 0xff;
+    out[6] = (i >> 8) & 0xff;
+    out[7] = i & 0xff;
 }
 
 QCA::SecureArray saslPrep(const QCA::SecureArray &in)
 {
-	// TODO
-	return in;
+    // TODO
+    return in;
 }
 
 }

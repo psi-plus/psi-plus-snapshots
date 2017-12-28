@@ -28,134 +28,134 @@
 // DOR-compliant
 class QDnsSd : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	class LowLevelError
-	{
-	public:
-		QString func;
-		int code;
+    class LowLevelError
+    {
+    public:
+        QString func;
+        int code;
 
-		LowLevelError() :
-			code(0)
-		{
-		}
+        LowLevelError() :
+            code(0)
+        {
+        }
 
-		LowLevelError(const QString &_func, int _code) :
-			func(_func),
-			code(_code)
-		{
-		}
-	};
+        LowLevelError(const QString &_func, int _code) :
+            func(_func),
+            code(_code)
+        {
+        }
+    };
 
-	class Record
-	{
-	public:
-		bool added; // only used by QueryResult
+    class Record
+    {
+    public:
+        bool added; // only used by QueryResult
 
-		QByteArray name;
-		int rrtype;
-		QByteArray rdata;
-		quint32 ttl;
-	};
+        QByteArray name;
+        int rrtype;
+        QByteArray rdata;
+        quint32 ttl;
+    };
 
-	class BrowseEntry
-	{
-	public:
-		bool added;
-		QByteArray serviceName;
+    class BrowseEntry
+    {
+    public:
+        bool added;
+        QByteArray serviceName;
 
-		// these may be different from request, see dns_sd docs
-		QByteArray serviceType;
-		QByteArray replyDomain;
-	};
+        // these may be different from request, see dns_sd docs
+        QByteArray serviceType;
+        QByteArray replyDomain;
+    };
 
-	class QueryResult
-	{
-	public:
-		bool success;
-		LowLevelError lowLevelError;
+    class QueryResult
+    {
+    public:
+        bool success;
+        LowLevelError lowLevelError;
 
-		QList<Record> records;
-	};
+        QList<Record> records;
+    };
 
-	class BrowseResult
-	{
-	public:
-		bool success;
-		LowLevelError lowLevelError;
+    class BrowseResult
+    {
+    public:
+        bool success;
+        LowLevelError lowLevelError;
 
-		QList<BrowseEntry> entries;
-	};
+        QList<BrowseEntry> entries;
+    };
 
-	class ResolveResult
-	{
-	public:
-		bool success;
-		LowLevelError lowLevelError;
+    class ResolveResult
+    {
+    public:
+        bool success;
+        LowLevelError lowLevelError;
 
-		QByteArray fullName;
-		QByteArray hostTarget;
-		int port; // host byte-order
-		QByteArray txtRecord;
-	};
+        QByteArray fullName;
+        QByteArray hostTarget;
+        int port; // host byte-order
+        QByteArray txtRecord;
+    };
 
-	class RegResult
-	{
-	public:
-		enum Error
-		{
-			ErrorGeneric,
-			ErrorConflict
-		};
+    class RegResult
+    {
+    public:
+        enum Error
+        {
+            ErrorGeneric,
+            ErrorConflict
+        };
 
-		bool success;
-		Error errorCode;
-		LowLevelError lowLevelError;
+        bool success;
+        Error errorCode;
+        LowLevelError lowLevelError;
 
-		QByteArray domain;
-	};
+        QByteArray domain;
+    };
 
-	QDnsSd(QObject *parent = 0);
-	~QDnsSd();
+    QDnsSd(QObject *parent = 0);
+    ~QDnsSd();
 
-	int query(const QByteArray &name, int qType);
+    int query(const QByteArray &name, int qType);
 
-	// domain may be empty
-	int browse(const QByteArray &serviceType, const QByteArray &domain);
+    // domain may be empty
+    int browse(const QByteArray &serviceType, const QByteArray &domain);
 
-	int resolve(const QByteArray &serviceName, const QByteArray &serviceType, const QByteArray &domain);
+    int resolve(const QByteArray &serviceName, const QByteArray &serviceType, const QByteArray &domain);
 
-	// domain may be empty
-	int reg(const QByteArray &serviceName, const QByteArray &serviceType, const QByteArray &domain, int port, const QByteArray &txtRecord);
+    // domain may be empty
+    int reg(const QByteArray &serviceName, const QByteArray &serviceType, const QByteArray &domain, int port, const QByteArray &txtRecord);
 
-	// return -1 on error, else a record id
-	int recordAdd(int reg_id, const Record &rec, LowLevelError *lowLevelError = 0);
+    // return -1 on error, else a record id
+    int recordAdd(int reg_id, const Record &rec, LowLevelError *lowLevelError = 0);
 
-	bool recordUpdate(int rec_id, const Record &rec, LowLevelError *lowLevelError = 0);
-	bool recordUpdateTxt(int reg_id, const QByteArray &txtRecord, quint32 ttl, LowLevelError *lowLevelError = 0);
-	void recordRemove(int rec_id);
+    bool recordUpdate(int rec_id, const Record &rec, LowLevelError *lowLevelError = 0);
+    bool recordUpdateTxt(int reg_id, const QByteArray &txtRecord, quint32 ttl, LowLevelError *lowLevelError = 0);
+    void recordRemove(int rec_id);
 
-	void stop(int id);
+    void stop(int id);
 
-	// return empty array on error
-	static QByteArray createTxtRecord(const QList<QByteArray> &strings);
+    // return empty array on error
+    static QByteArray createTxtRecord(const QList<QByteArray> &strings);
 
-	// return empty list on error (note that it is possible to have a
-	//   txt record with no entries, but in that case txtRecord will be
-	//   empty and so you shouldn't call this function)
-	static QList<QByteArray> parseTxtRecord(const QByteArray &txtRecord);
+    // return empty list on error (note that it is possible to have a
+    //   txt record with no entries, but in that case txtRecord will be
+    //   empty and so you shouldn't call this function)
+    static QList<QByteArray> parseTxtRecord(const QByteArray &txtRecord);
 
 signals:
-	void queryResult(int id, const QDnsSd::QueryResult &result);
-	void browseResult(int id, const QDnsSd::BrowseResult &result);
-	void resolveResult(int id, const QDnsSd::ResolveResult &result);
-	void regResult(int id, const QDnsSd::RegResult &result);
+    void queryResult(int id, const QDnsSd::QueryResult &result);
+    void browseResult(int id, const QDnsSd::BrowseResult &result);
+    void resolveResult(int id, const QDnsSd::ResolveResult &result);
+    void regResult(int id, const QDnsSd::RegResult &result);
 
 private:
-	class Private;
-	friend class Private;
-	Private *d;
+    class Private;
+    friend class Private;
+    Private *d;
 };
 
 #endif

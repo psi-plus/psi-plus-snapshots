@@ -29,61 +29,61 @@ template <typename T>
 class QtCFType
 {
 public:
-	inline QtCFType(const T &t = 0) : type(t) {}
-	inline QtCFType(const QtCFType &helper) : type(helper.type) {
-		if (type) CFRetain(type);
-	}
-	inline ~QtCFType() {
-		if (type) CFRelease(type);
-	}
-	inline operator T() {
-		return type;
-	}
-	inline QtCFType operator=(const QtCFType &helper) {
-		if (helper.type)
-			CFRetain(helper.type);
-		CFTypeRef type2 = type;
-		type = helper.type;
-		if (type2)
-			CFRelease(type2);
-		return *this;
-	}
-	inline T *operator&() {
-		return &type;
-	}
-	static QtCFType constructFromGet(const T &t) {
-		CFRetain(t);
-		return QtCFType<T>(t);
-	}
+    inline QtCFType(const T &t = 0) : type(t) {}
+    inline QtCFType(const QtCFType &helper) : type(helper.type) {
+        if (type) CFRetain(type);
+    }
+    inline ~QtCFType() {
+        if (type) CFRelease(type);
+    }
+    inline operator T() {
+        return type;
+    }
+    inline QtCFType operator=(const QtCFType &helper) {
+        if (helper.type)
+            CFRetain(helper.type);
+        CFTypeRef type2 = type;
+        type = helper.type;
+        if (type2)
+            CFRelease(type2);
+        return *this;
+    }
+    inline T *operator&() {
+        return &type;
+    }
+    static QtCFType constructFromGet(const T &t) {
+        CFRetain(t);
+        return QtCFType<T>(t);
+    }
 protected:
-	T type;
+    T type;
 };
 
 class QtCFString : public QtCFType<CFStringRef>
 {
 public:
-	inline QtCFString(const QString &str) : QtCFType<CFStringRef>(0), string(str) {}
-	inline QtCFString(const CFStringRef cfstr = 0) : QtCFType<CFStringRef>(cfstr) {}
-	inline QtCFString(const QtCFType<CFStringRef> &other) : QtCFType<CFStringRef>(other) {}
-	operator QString() const;
-	operator CFStringRef() const;
-	static QString toQString(CFStringRef cfstr);
-	static CFStringRef toCFStringRef(const QString &str);
+    inline QtCFString(const QString &str) : QtCFType<CFStringRef>(0), string(str) {}
+    inline QtCFString(const CFStringRef cfstr = 0) : QtCFType<CFStringRef>(cfstr) {}
+    inline QtCFString(const QtCFType<CFStringRef> &other) : QtCFType<CFStringRef>(other) {}
+    operator QString() const;
+    operator CFStringRef() const;
+    static QString toQString(CFStringRef cfstr);
+    static CFStringRef toCFStringRef(const QString &str);
 private:
-	QString string;
+    QString string;
 };
 
 class QtMacCocoaAutoReleasePool
 {
 private:
-	void *pool;
+    void *pool;
 public:
-	QtMacCocoaAutoReleasePool();
-	~QtMacCocoaAutoReleasePool();
+    QtMacCocoaAutoReleasePool();
+    ~QtMacCocoaAutoReleasePool();
 
-	inline void *handle() const {
-		return pool;
-	}
+    inline void *handle() const {
+        return pool;
+    }
 };
 
 struct _NSRange;

@@ -1,2 +1,2 @@
 SOURCES += \
-	$$PWD/jidtest.cpp
+    $$PWD/jidtest.cpp

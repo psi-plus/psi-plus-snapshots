@@ -28,92 +28,92 @@
 
 namespace XMPP
 {
-	class StringPrepCache
-	{
-	public:
-		static bool nameprep(const QString &in, int maxbytes, QString& out);
-		static bool nodeprep(const QString &in, int maxbytes, QString& out);
-		static bool resourceprep(const QString &in, int maxbytes, QString& out);
-		static bool saslprep(const QString &in, int maxbytes, QString& out);
+    class StringPrepCache
+    {
+    public:
+        static bool nameprep(const QString &in, int maxbytes, QString& out);
+        static bool nodeprep(const QString &in, int maxbytes, QString& out);
+        static bool resourceprep(const QString &in, int maxbytes, QString& out);
+        static bool saslprep(const QString &in, int maxbytes, QString& out);
 
-		static void cleanup();
+        static void cleanup();
 
-		~StringPrepCache();
-	private:
-		class Result
-		{
-		public:
-			QString *norm;
+        ~StringPrepCache();
+    private:
+        class Result
+        {
+        public:
+            QString *norm;
 
-			Result() : norm(0)
-			{
-			}
+            Result() : norm(0)
+            {
+            }
 
-			Result(const QString &s) : norm(new QString(s))
-			{
-			}
+            Result(const QString &s) : norm(new QString(s))
+            {
+            }
 
-			~Result()
-			{
-				delete norm;
-			}
-		};
+            ~Result()
+            {
+                delete norm;
+            }
+        };
 
-		QHash<QString,Result*> nameprep_table;
-		QHash<QString,Result*> nodeprep_table;
-		QHash<QString,Result*> resourceprep_table;
-		QHash<QString,Result*> saslprep_table;
+        QHash<QString,Result*> nameprep_table;
+        QHash<QString,Result*> nodeprep_table;
+        QHash<QString,Result*> resourceprep_table;
+        QHash<QString,Result*> saslprep_table;
 
-		static QScopedPointer<StringPrepCache> _instance;
-		static StringPrepCache *instance();
+        static QScopedPointer<StringPrepCache> _instance;
+        static StringPrepCache *instance();
 
-		StringPrepCache();
-	};
+        StringPrepCache();
+    };
 
-	class Jid
-	{
-	public:
-		Jid();
-		~Jid();
+    class Jid
+    {
+    public:
+        Jid();
+        ~Jid();
 
-		Jid(const QString &s);
-		Jid(const QString &node, const QString& domain, const QString& resource = "");
-		Jid(const char *s);
-		Jid & operator=(const QString &s);
-		Jid & operator=(const char *s);
+        Jid(const QString &s);
+        Jid(const QString &node, const QString& domain, const QString& resource = "");
+        Jid(const char *s);
+        Jid & operator=(const QString &s);
+        Jid & operator=(const char *s);
 
-		bool isNull() const { return null; }
-		const QString & domain() const { return d; }
-		const QString & node() const { return n; }
-		const QString & resource() const { return r; }
-		const QString & bare() const { return b; }
-		const QString & full() const { return f; }
+        bool isNull() const { return null; }
+        const QString & domain() const { return d; }
+        const QString & node() const { return n; }
+        const QString & resource() const { return r; }
+        const QString & bare() const { return b; }
+        const QString & full() const { return f; }
 
-		Jid withNode(const QString &s) const;
-		Jid withDomain(const QString &s) const;
-		Jid withResource(const QString &s) const;
+        Jid withNode(const QString &s) const;
+        Jid withDomain(const QString &s) const;
+        Jid withResource(const QString &s) const;
 
-		bool isValid() const;
-		bool isEmpty() const;
-		bool compare(const Jid &a, bool compareRes=true) const;
-		inline bool operator==(const Jid &other) const { return compare(other, true); }
-		inline bool operator!=(const Jid &other) const { return !(*this == other); }
+        bool isValid() const;
+        bool isEmpty() const;
+        bool compare(const Jid &a, bool compareRes=true) const;
+        inline bool operator==(const Jid &other) const { return compare(other, true); }
+        inline bool operator!=(const Jid &other) const { return !(*this == other); }
 
-	private:
-		void set(const QString &s);
-		void set(const QString &domain, const QString &node, const QString &resource="");
+    private:
+        void set(const QString &s);
+        void set(const QString &domain, const QString &node, const QString &resource="");
 
-		void setDomain(const QString &s);
-		void setNode(const QString &s);
-		void setResource(const QString &s);
+        void setDomain(const QString &s);
+        void setNode(const QString &s);
+        void setResource(const QString &s);
 
-	private:
-		void reset();
-		void update();
+    private:
+        void reset();
+        void update();
 
-		QString f, b, d, n, r;
-		bool valid, null;
-	};
+        QString f, b, d, n, r;
+        bool valid, null;
+    };
 }
 
 #endif

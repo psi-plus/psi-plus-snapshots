@@ -23,7 +23,7 @@
 namespace XMPP {
 
 IceTransport::IceTransport(QObject *parent) :
-	QObject(parent)
+    QObject(parent)
 {
 }
 

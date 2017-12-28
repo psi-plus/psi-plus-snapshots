@@ -40,24 +40,24 @@
 
 SpellChecker* SpellChecker::instance()
 {
-	if (!instance_) {
+    if (!instance_) {
 #ifdef Q_OS_MAC
-		instance_ = new MacSpellChecker();
+        instance_ = new MacSpellChecker();
 #elif defined(HAVE_ENCHANT)
-		instance_ = new EnchantChecker();
+        instance_ = new EnchantChecker();
 #elif defined(HAVE_ASPELL)
-		instance_ = new ASpellChecker();
+        instance_ = new ASpellChecker();
 #elif defined(HAVE_HUNSPELL)
-		instance_ = new HunspellChecker();
+        instance_ = new HunspellChecker();
 #else
-		instance_ = new SpellChecker();
+        instance_ = new SpellChecker();
 #endif
-	}
-	return instance_;
+    }
+    return instance_;
 }
 
 SpellChecker::SpellChecker()
-	: QObject(QCoreApplication::instance())
+    : QObject(QCoreApplication::instance())
 {
 }
 
@@ -67,27 +67,27 @@ SpellChecker::~SpellChecker()
 
 bool SpellChecker::available() const
 {
-	return false;
+    return false;
 }
 
 bool SpellChecker::writable() const
 {
-	return true;
+    return true;
 }
 
 bool SpellChecker::isCorrect(const QString&)
 {
-	return true;
+    return true;
 }
 
 QList<QString> SpellChecker::suggestions(const QString&)
 {
-	return QList<QString>();
+    return QList<QString>();
 }
 
 bool SpellChecker::add(const QString&)
 {
-	return false;
+    return false;
 }
 
 SpellChecker* SpellChecker::instance_ = NULL;

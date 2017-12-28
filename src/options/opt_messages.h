@@ -5,9 +5,9 @@
 
 class OptionsTabMessages: public MetaOptionsTab
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	OptionsTabMessages(QObject *parent);
+    OptionsTabMessages(QObject *parent);
 };
 
 #endif // OPT_TABTABMESSAGES_H

@@ -54,8 +54,8 @@
 
 HunspellChecker::HunspellChecker()
 {
-	getDictPaths();
-	getSupportedLanguages();
+    getDictPaths();
+    getSupportedLanguages();
 }
 
 HunspellChecker::~HunspellChecker()
@@ -64,194 +64,194 @@ HunspellChecker::~HunspellChecker()
 
 void HunspellChecker::getDictPaths()
 {
-	if (dictPaths_.isEmpty()) {
-		QSet<QString> dictPathSet;
-		QString pathFromEnv = QString::fromLocal8Bit(qgetenv("MYSPELL_DICT_DIR"));
-		if (!pathFromEnv.isEmpty())
-			dictPathSet << pathFromEnv;
+    if (dictPaths_.isEmpty()) {
+        QSet<QString> dictPathSet;
+        QString pathFromEnv = QString::fromLocal8Bit(qgetenv("MYSPELL_DICT_DIR"));
+        if (!pathFromEnv.isEmpty())
+            dictPathSet << pathFromEnv;
 #if defined(Q_OS_WIN)
-		dictPathSet << QCoreApplication::applicationDirPath() + QLatin1String("/myspell/dicts")
-			    << ApplicationInfo::homeDir(ApplicationInfo::DataLocation) + QLatin1String("/myspell/dicts");
+        dictPathSet << QCoreApplication::applicationDirPath() + QLatin1String("/myspell/dicts")
+                << ApplicationInfo::homeDir(ApplicationInfo::DataLocation) + QLatin1String("/myspell/dicts");
 
 #elif defined(Q_OS_MAC)
-		dictPathSet << QLatin1String("/opt/local/share/myspell"); // MacPorts standard paths
+        dictPathSet << QLatin1String("/opt/local/share/myspell"); // MacPorts standard paths
 #else
-		dictPathSet << QLatin1String("/usr/share/myspell")
-			    << QLatin1String("/usr/share/hunspell")
-			    << QLatin1String("/usr/local/share/myspell")
-			    << QLatin1String("/usr/local/share/hunspell")
-			    << QString("%1/.local/share/myspell").arg(QDir::home().absolutePath())
-			    << QString("%1/.local/share/hunspell").arg(QDir::home().absolutePath());
+        dictPathSet << QLatin1String("/usr/share/myspell")
+                << QLatin1String("/usr/share/hunspell")
+                << QLatin1String("/usr/local/share/myspell")
+                << QLatin1String("/usr/local/share/hunspell")
+                << QString("%1/.local/share/myspell").arg(QDir::home().absolutePath())
+                << QString("%1/.local/share/hunspell").arg(QDir::home().absolutePath());
 #endif
-		dictPaths_ = dictPathSet.toList();
-	}
+        dictPaths_ = dictPathSet.toList();
+    }
 }
 
 bool HunspellChecker::scanDictPaths(const QString &language, QFileInfo &aff , QFileInfo &dic)
 {
-	foreach (const QString &dictPath, dictPaths_) {
-		QDir dir(dictPath);
-		if (dir.exists()) {
-			QFileInfo affInfo(dir.filePath(language + QLatin1String(".aff")));
-			QFileInfo dicInfo(dir.filePath(language + QLatin1String(".dic")));
-			if (affInfo.isReadable() && dicInfo.isReadable()) {
-				aff = affInfo;
-				dic = dicInfo;
-				return true;
-			}
-		}
-	}
-	return false;
+    foreach (const QString &dictPath, dictPaths_) {
+        QDir dir(dictPath);
+        if (dir.exists()) {
+            QFileInfo affInfo(dir.filePath(language + QLatin1String(".aff")));
+            QFileInfo dicInfo(dir.filePath(language + QLatin1String(".dic")));
+            if (affInfo.isReadable() && dicInfo.isReadable()) {
+                aff = affInfo;
+                dic = dicInfo;
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void HunspellChecker::getSupportedLanguages()
 {
-	QMap<QString,QLocale> retHash;
-	foreach (const QString &dictPath, dictPaths_) {
-		QDir dir(dictPath);
-		if (!dir.exists()) {
-			continue;
-		}
-		foreach (const QFileInfo &fi, dir.entryInfoList(QStringList() << "*.dic", QDir::Files)) {
-			QLocale locale(fi.baseName());
-			if (locale != QLocale::c()
-			    && !locale.nativeLanguageName().isEmpty()
-			    && !locale.nativeCountryName().isEmpty()) {
-				retHash.insert(locale.nativeLanguageName()+locale.nativeCountryName(), locale);
-			}
-		}
-	}
-	supportedLangs_ = retHash.values();
+    QMap<QString,QLocale> retHash;
+    foreach (const QString &dictPath, dictPaths_) {
+        QDir dir(dictPath);
+        if (!dir.exists()) {
+            continue;
+        }
+        foreach (const QFileInfo &fi, dir.entryInfoList(QStringList() << "*.dic", QDir::Files)) {
+            QLocale locale(fi.baseName());
+            if (locale != QLocale::c()
+                && !locale.nativeLanguageName().isEmpty()
+                && !locale.nativeCountryName().isEmpty()) {
+                retHash.insert(locale.nativeLanguageName()+locale.nativeCountryName(), locale);
+            }
+        }
+    }
+    supportedLangs_ = retHash.values();
 }
 
 void HunspellChecker::addLanguage(const QLocale &locale)
 {
-	QString language = locale.name();
-	QFileInfo aff, dic;
-	if (scanDictPaths(language, aff, dic)) {
-		LangItem li;
-		li.hunspell_ = HunspellPtr(new Hunspell(aff.absoluteFilePath().toLocal8Bit(),
-							dic.absoluteFilePath().toLocal8Bit()));
-		QByteArray codecName(li.hunspell_->get_dic_encoding());
-		if (codecName.startsWith("microsoft-cp125")) {
-			codecName.replace(0, sizeof("microsoft-cp") - 1, "Windows-");
-		} else if (codecName.startsWith("TIS620-2533")) {
-			codecName.resize(sizeof("TIS620") - 1);
-		}
-		li.codec = QTextCodec::codecForName(codecName);
-		if (li.codec) {
-			li.info.language = locale.language();
-			li.info.country = locale.country();
-			li.info.filename = dic.filePath();
-			languages_.append(li);
-		} else {
-			qDebug("Unsupported myspell dict encoding: \"%s\" for %s", codecName.data(), qPrintable(dic.fileName()));
-		}
-	}
+    QString language = locale.name();
+    QFileInfo aff, dic;
+    if (scanDictPaths(language, aff, dic)) {
+        LangItem li;
+        li.hunspell_ = HunspellPtr(new Hunspell(aff.absoluteFilePath().toLocal8Bit(),
+                            dic.absoluteFilePath().toLocal8Bit()));
+        QByteArray codecName(li.hunspell_->get_dic_encoding());
+        if (codecName.startsWith("microsoft-cp125")) {
+            codecName.replace(0, sizeof("microsoft-cp") - 1, "Windows-");
+        } else if (codecName.startsWith("TIS620-2533")) {
+            codecName.resize(sizeof("TIS620") - 1);
+        }
+        li.codec = QTextCodec::codecForName(codecName);
+        if (li.codec) {
+            li.info.language = locale.language();
+            li.info.country = locale.country();
+            li.info.filename = dic.filePath();
+            languages_.append(li);
+        } else {
+            qDebug("Unsupported myspell dict encoding: \"%s\" for %s", codecName.data(), qPrintable(dic.fileName()));
+        }
+    }
 }
 
 QList<QString> HunspellChecker::suggestions(const QString& word)
 {
-	QStringList qtResult;
-	foreach (const LangItem &li, languages_) {
+    QStringList qtResult;
+    foreach (const LangItem &li, languages_) {
 #ifdef NEW_HUNSPELL
-		std::vector<std::string> result = li.hunspell_->suggest(HS_STRING(word));
-		if(!result.empty()){
-			foreach (const std::string &item, result) {
-				qtResult << QString(li.codec->toUnicode(item.c_str()));
-			}
-		}
+        std::vector<std::string> result = li.hunspell_->suggest(HS_STRING(word));
+        if(!result.empty()){
+            foreach (const std::string &item, result) {
+                qtResult << QString(li.codec->toUnicode(item.c_str()));
+            }
+        }
 #else
-		char **result;
-		int sugNum = li.hunspell_->suggest(&result, HS_STRING(word));
-		for (int i=0; i < sugNum; i++) {
-			qtResult << li.codec->toUnicode(result[i]);
-		}
-		li.hunspell_->free_list(&result, sugNum);
+        char **result;
+        int sugNum = li.hunspell_->suggest(&result, HS_STRING(word));
+        for (int i=0; i < sugNum; i++) {
+            qtResult << li.codec->toUnicode(result[i]);
+        }
+        li.hunspell_->free_list(&result, sugNum);
 #endif
-	}
-	return qtResult;
+    }
+    return qtResult;
 }
 
 bool HunspellChecker::isCorrect(const QString &word)
 {
-	foreach (const LangItem &li, languages_) {
-		if (li.hunspell_->spell(HS_STRING(word)) != 0) {
-			return true;
-		}
-	}
-	return false;
+    foreach (const LangItem &li, languages_) {
+        if (li.hunspell_->spell(HS_STRING(word)) != 0) {
+            return true;
+        }
+    }
+    return false;
 }
 bool HunspellChecker::add(const QString& word)
 {
-	if (!word.isEmpty()) {
-		QString trimmed_word = word.trimmed();
-		foreach (const LangItem &li, languages_) {
-			if (li.hunspell_->add(HS_STRING(trimmed_word)) != 0) {
-				return true;
-			}
-		}
-	}
-	return false;
+    if (!word.isEmpty()) {
+        QString trimmed_word = word.trimmed();
+        foreach (const LangItem &li, languages_) {
+            if (li.hunspell_->add(HS_STRING(trimmed_word)) != 0) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 bool HunspellChecker::available() const
 {
-	foreach (const LangItem &li, languages_) {
-		if (li.hunspell_) {
-			return true;
-		}
-	}
-	return false;
+    foreach (const LangItem &li, languages_) {
+        if (li.hunspell_) {
+            return true;
+        }
+    }
+    return false;
 }
 bool HunspellChecker::writable() const
 {
-	return false;
+    return false;
 }
 
 void HunspellChecker::unloadLanguage(const QLocale &locale)
 {
-	QMutableListIterator<LangItem> it(languages_);
-	while(it.hasNext()) {
-		LangItem item = it.next();
-		if(item.info.language == locale.language()
-		   && item.info.country == locale.country()) {
-			it.remove();
-		}
-	}
+    QMutableListIterator<LangItem> it(languages_);
+    while(it.hasNext()) {
+        LangItem item = it.next();
+        if(item.info.language == locale.language()
+           && item.info.country == locale.country()) {
+            it.remove();
+        }
+    }
 }
 
 QList<QString> HunspellChecker::getAllLanguages() const
 {
-	QList<QString> result;
-	foreach (const QLocale &locale, supportedLangs_) {
-		result << locale.name();
-	}
-	return result;
+    QList<QString> result;
+    foreach (const QLocale &locale, supportedLangs_) {
+        result << locale.name();
+    }
+    return result;
 }
 
 void HunspellChecker::setActiveLanguages(const QList<QString> &langs)
 {
-	QSet<LangId> loadedLangs;
-	QSet<LangId> newLangs;
-	foreach (const LangItem &item, languages_) {
-		LangId id(item.info.language, item.info.country);
-		loadedLangs << id;
-	}
-	foreach (const QString &lang, langs) {
-		QLocale locale(lang);
-		LangId id(locale.language(), locale.country());
-		newLangs << id;
-	}
-	QSet<LangId> langsToUnload = loadedLangs - newLangs;
-	QSet<LangId> langsToLoad = newLangs - loadedLangs;
-	QSetIterator<LangId> it(langsToUnload);
-	while(it.hasNext()) {
-		LangId id = it.next();
-		unloadLanguage(QLocale(id.first,id.second));
-	}
-	it = langsToLoad;
-	while(it.hasNext()) {
-		LangId id = it.next();
-		addLanguage(QLocale(id.first,id.second));
-	}
+    QSet<LangId> loadedLangs;
+    QSet<LangId> newLangs;
+    foreach (const LangItem &item, languages_) {
+        LangId id(item.info.language, item.info.country);
+        loadedLangs << id;
+    }
+    foreach (const QString &lang, langs) {
+        QLocale locale(lang);
+        LangId id(locale.language(), locale.country());
+        newLangs << id;
+    }
+    QSet<LangId> langsToUnload = loadedLangs - newLangs;
+    QSet<LangId> langsToLoad = newLangs - loadedLangs;
+    QSetIterator<LangId> it(langsToUnload);
+    while(it.hasNext()) {
+        LangId id = it.next();
+        unloadLanguage(QLocale(id.first,id.second));
+    }
+    it = langsToLoad;
+    while(it.hasNext()) {
+        LangId id = it.next();
+        addLanguage(QLocale(id.first,id.second));
+    }
 }

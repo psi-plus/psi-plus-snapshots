@@ -33,30 +33,30 @@ class QStringList;
 class XDomNodeList
 {
 public:
-	XDomNodeList();
-	XDomNodeList(const XDomNodeList &from);
-	XDomNodeList(const QDomNodeList &from);
-	~XDomNodeList();
-	XDomNodeList & operator=(const XDomNodeList &from);
+    XDomNodeList();
+    XDomNodeList(const XDomNodeList &from);
+    XDomNodeList(const QDomNodeList &from);
+    ~XDomNodeList();
+    XDomNodeList & operator=(const XDomNodeList &from);
 
-	QDomNode at(int index) const { return item(index); }
-	int count() const { return (int)length(); }
-	bool isEmpty() const;
-	QDomNode item(int index) const;
-	uint length() const;
-	int size() const { return (int)length(); }
+    QDomNode at(int index) const { return item(index); }
+    int count() const { return (int)length(); }
+    bool isEmpty() const;
+    QDomNode item(int index) const;
+    uint length() const;
+    int size() const { return (int)length(); }
 
-	void append(const QDomNode &i);
+    void append(const QDomNode &i);
 
-	bool operator==(const XDomNodeList &a) const;
+    bool operator==(const XDomNodeList &a) const;
 
-	bool operator!=(const XDomNodeList &a) const
-	{
-		return !operator==(a);
-	}
+    bool operator!=(const XDomNodeList &a) const
+    {
+        return !operator==(a);
+    }
 
 private:
-	QList<QDomNode> list;
+    QList<QDomNode> list;
 };
 
 QDateTime stamp2TS(const QString &ts);
@@ -72,33 +72,33 @@ void getErrorFromElement(const QDomElement &e, const QString &baseNS, int *code,
 QDomElement addCorrectNS(const QDomElement &e);
 
 namespace XMLHelper {
-	//QDomElement findSubTag(const QDomElement &e, const QString &name, bool *found);
-	bool hasSubTag(const QDomElement &e, const QString &name);
+    //QDomElement findSubTag(const QDomElement &e, const QString &name, bool *found);
+    bool hasSubTag(const QDomElement &e, const QString &name);
 
-	QDomElement emptyTag(QDomDocument *doc, const QString &name);
-	QString subTagText(const QDomElement &e, const QString &name);
+    QDomElement emptyTag(QDomDocument *doc, const QString &name);
+    QString subTagText(const QDomElement &e, const QString &name);
 
-	QDomElement textTag(QDomDocument &doc, const QString &name, const QString &content);
-	QDomElement textTag(QDomDocument &doc, const QString &name, int content);
-	QDomElement textTag(QDomDocument &doc, const QString &name, bool content);
-	QDomElement textTag(QDomDocument &doc, const QString &name, QSize &s);
-	QDomElement textTag(QDomDocument &doc, const QString &name, QRect &r);
-	QDomElement stringListToXml(QDomDocument &doc, const QString &name, const QStringList &l);
+    QDomElement textTag(QDomDocument &doc, const QString &name, const QString &content);
+    QDomElement textTag(QDomDocument &doc, const QString &name, int content);
+    QDomElement textTag(QDomDocument &doc, const QString &name, bool content);
+    QDomElement textTag(QDomDocument &doc, const QString &name, QSize &s);
+    QDomElement textTag(QDomDocument &doc, const QString &name, QRect &r);
+    QDomElement stringListToXml(QDomDocument &doc, const QString &name, const QStringList &l);
 
-	void readEntry(const QDomElement &e, const QString &name, QString *v);
-	void readNumEntry(const QDomElement &e, const QString &name, int *v);
-	void readBoolEntry(const QDomElement &e, const QString &name, bool *v);
-	void readSizeEntry(const QDomElement &e, const QString &name, QSize *v);
-	void readRectEntry(const QDomElement &e, const QString &name, QRect *v);
-	void readColorEntry(const QDomElement &e, const QString &name, QColor *v);
+    void readEntry(const QDomElement &e, const QString &name, QString *v);
+    void readNumEntry(const QDomElement &e, const QString &name, int *v);
+    void readBoolEntry(const QDomElement &e, const QString &name, bool *v);
+    void readSizeEntry(const QDomElement &e, const QString &name, QSize *v);
+    void readRectEntry(const QDomElement &e, const QString &name, QRect *v);
+    void readColorEntry(const QDomElement &e, const QString &name, QColor *v);
 
-	void xmlToStringList(const QDomElement &e, const QString &name, QStringList *v);
+    void xmlToStringList(const QDomElement &e, const QString &name, QStringList *v);
 
-	void setBoolAttribute(QDomElement e, const QString &name, bool b);
-	void readBoolAttribute(QDomElement e, const QString &name, bool *v);
+    void setBoolAttribute(QDomElement e, const QString &name, bool b);
+    void readBoolAttribute(QDomElement e, const QString &name, bool *v);
 
-	//QString tagContent(const QDomElement &e); // obsolete;
-	QString sanitizedLang(const QString &lang);
+    //QString tagContent(const QDomElement &e); // obsolete;
+    QString sanitizedLang(const QString &lang);
 }
 
 #endif

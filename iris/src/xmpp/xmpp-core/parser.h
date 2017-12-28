@@ -26,61 +26,61 @@
 
 namespace XMPP
 {
-	class Parser
-	{
-	public:
-		Parser();
-		~Parser();
+    class Parser
+    {
+    public:
+        Parser();
+        ~Parser();
 
-		class Event
-		{
-		public:
-			enum Type { DocumentOpen, DocumentClose, Element, Error };
-			Event();
-			Event(const Event &);
-			Event & operator=(const Event &);
-			~Event();
+        class Event
+        {
+        public:
+            enum Type { DocumentOpen, DocumentClose, Element, Error };
+            Event();
+            Event(const Event &);
+            Event & operator=(const Event &);
+            ~Event();
 
-			bool isNull() const;
-			int type() const;
+            bool isNull() const;
+            int type() const;
 
-			// for document open
-			QString nsprefix(const QString &s=QString::null) const;
+            // for document open
+            QString nsprefix(const QString &s=QString::null) const;
 
-			// for document open / close
-			QString namespaceURI() const;
-			QString localName() const;
-			QString qName() const;
-			QXmlAttributes atts() const;
+            // for document open / close
+            QString namespaceURI() const;
+            QString localName() const;
+            QString qName() const;
+            QXmlAttributes atts() const;
 
-			// for element
-			QDomElement element() const;
+            // for element
+            QDomElement element() const;
 
-			// for any
-			QString actualString() const;
+            // for any
+            QString actualString() const;
 
-			// setup
-			void setDocumentOpen(const QString &namespaceURI, const QString &localName, const QString &qName, const QXmlAttributes &atts, const QStringList &nsnames, const QStringList &nsvalues);
-			void setDocumentClose(const QString &namespaceURI, const QString &localName, const QString &qName);
-			void setElement(const QDomElement &elem);
-			void setError();
-			void setActualString(const QString &);
+            // setup
+            void setDocumentOpen(const QString &namespaceURI, const QString &localName, const QString &qName, const QXmlAttributes &atts, const QStringList &nsnames, const QStringList &nsvalues);
+            void setDocumentClose(const QString &namespaceURI, const QString &localName, const QString &qName);
+            void setElement(const QDomElement &elem);
+            void setError();
+            void setActualString(const QString &);
 
-		private:
-			class Private;
-			Private *d;
-		};
+        private:
+            class Private;
+            Private *d;
+        };
 
-		void reset();
-		void appendData(const QByteArray &a);
-		Event readNext();
-		QByteArray unprocessed() const;
-		QString encoding() const;
+        void reset();
+        void appendData(const QByteArray &a);
+        Event readNext();
+        QByteArray unprocessed() const;
+        QString encoding() const;
 
-	private:
-		class Private;
-		Private *d;
-	};
+    private:
+        class Private;
+        Private *d;
+    };
 }
 
 #endif

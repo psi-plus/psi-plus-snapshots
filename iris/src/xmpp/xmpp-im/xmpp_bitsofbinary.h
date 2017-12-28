@@ -30,74 +30,74 @@
 
 namespace XMPP
 {
-	class JT_BitsOfBinary;
-	class Client;
+    class JT_BitsOfBinary;
+    class Client;
 
-	class BoBData
-	{
-		class Private;
-	public:
-		BoBData();
-		BoBData(const BoBData &other);
-		BoBData(const QDomElement &);
-		~BoBData();
-		BoBData &operator=(const BoBData &other);
+    class BoBData
+    {
+        class Private;
+    public:
+        BoBData();
+        BoBData(const BoBData &other);
+        BoBData(const QDomElement &);
+        ~BoBData();
+        BoBData &operator=(const BoBData &other);
 
-		bool isNull() const;
+        bool isNull() const;
 
-		QString cid() const;
-		void setCid(const QString &);
+        QString cid() const;
+        void setCid(const QString &);
 
-		QByteArray data() const;
-		void setData(const QByteArray &);
+        QByteArray data() const;
+        void setData(const QByteArray &);
 
-		QString type() const;
-		void setType(const QString &);
+        QString type() const;
+        void setType(const QString &);
 
-		unsigned int maxAge() const;
-		void setMaxAge(unsigned int);
+        unsigned int maxAge() const;
+        void setMaxAge(unsigned int);
 
-		void fromXml(const QDomElement &);
-		QDomElement toXml(QDomDocument *doc) const;
+        void fromXml(const QDomElement &);
+        QDomElement toXml(QDomDocument *doc) const;
 
-	private:
-		QSharedDataPointer<Private> d;
-	};
-
-
-
-	class BoBCache : public QObject
-	{
-		Q_OBJECT
-
-	public:
-		BoBCache(QObject *parent);
-		virtual void put(const BoBData &) = 0;
-		virtual BoBData get(const QString &) = 0;
-	};
+    private:
+        QSharedDataPointer<Private> d;
+    };
 
 
 
-	class BoBManager : public QObject
-	{
-		Q_OBJECT
+    class BoBCache : public QObject
+    {
+        Q_OBJECT
 
-	public:
-		BoBManager(Client *);
-		void setCache(BoBCache*);
+    public:
+        BoBCache(QObject *parent);
+        virtual void put(const BoBData &) = 0;
+        virtual BoBData get(const QString &) = 0;
+    };
 
-		BoBData bobData(const QString &);
-		// file data, mime type, max age in seconds
-		BoBData append(const QByteArray &data, const QString &type,
-							unsigned int maxAge = 0);
-		QString append(QFile &file,
-							 const QString &type = "application/octet-stream");
-		void append(const BoBData &);
 
-	private:
-		BoBCache *_cache;
-		QHash<QString, QPair<QString,QString> > _localFiles; //cid => (filename, mime)
-	};
+
+    class BoBManager : public QObject
+    {
+        Q_OBJECT
+
+    public:
+        BoBManager(Client *);
+        void setCache(BoBCache*);
+
+        BoBData bobData(const QString &);
+        // file data, mime type, max age in seconds
+        BoBData append(const QByteArray &data, const QString &type,
+                            unsigned int maxAge = 0);
+        QString append(QFile &file,
+                             const QString &type = "application/octet-stream");
+        void append(const BoBData &);
+
+    private:
+        BoBCache *_cache;
+        QHash<QString, QPair<QString,QString> > _localFiles; //cid => (filename, mime)
+    };
 
 }
 

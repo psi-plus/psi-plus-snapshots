@@ -38,25 +38,25 @@ struct AspellSpeller;
 class ASpellChecker : public SpellChecker
 {
 public:
-	ASpellChecker();
-	~ASpellChecker();
-	virtual QList<QString> suggestions(const QString&);
-	virtual bool isCorrect(const QString&);
-	virtual bool add(const QString&);
-	virtual bool available() const;
-	virtual bool writable() const;
+    ASpellChecker();
+    ~ASpellChecker();
+    virtual QList<QString> suggestions(const QString&);
+    virtual bool isCorrect(const QString&);
+    virtual bool add(const QString&);
+    virtual bool available() const;
+    virtual bool writable() const;
 
-	virtual void setActiveLanguages(const QList<QString>& langs);
-	virtual QList<QString> getAllLanguages() const;
-
-private:
-	void clearSpellers();
+    virtual void setActiveLanguages(const QList<QString>& langs);
+    virtual QList<QString> getAllLanguages() const;
 
 private:
-	AspellConfig* config_;
+    void clearSpellers();
 
-	typedef QList<AspellSpeller*> ASpellers;
-	ASpellers spellers_;
+private:
+    AspellConfig* config_;
+
+    typedef QList<AspellSpeller*> ASpellers;
+    ASpellers spellers_;
 };
 
 #endif

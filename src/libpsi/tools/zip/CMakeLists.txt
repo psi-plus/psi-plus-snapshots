@@ -14,33 +14,33 @@ include_directories(${ZLIB_INCLUDE_DIRS})
 find_package(MINIZIP QUIET)
 
 set(DEPLIBS
-	${ZLIB_LIBRARIES}
-	)
+    ${ZLIB_LIBRARIES}
+    )
 
 if(NOT MINIZIP_FOUND)
-	set(USE_PSI_MINIZIP ON)
+    set(USE_PSI_MINIZIP ON)
 else()
-	include_directories(${MINIZIP_INCLUDE_DIR})
-	set(DEPLIBS
-		${DEPLIBS}
-		${MINIZIP_LIBRARY}
-		)
+    include_directories(${MINIZIP_INCLUDE_DIR})
+    set(DEPLIBS
+        ${DEPLIBS}
+        ${MINIZIP_LIBRARY}
+        )
 endif()
 
 set(PLAIN_HEADERS
-	zip.h
-	)
+    zip.h
+    )
 
 set(PLAIN_SOURCES
-	zip.cpp
-	)
+    zip.cpp
+    )
 
 if(USE_PSI_MINIZIP)
-	set(PLAIN_SOURCES
-		${PLAIN_SOURCES}
-		minizip/unzip.c
-		)
-	add_definitions(-DPSIMINIZIP)
+    set(PLAIN_SOURCES
+        ${PLAIN_SOURCES}
+        minizip/unzip.c
+        )
+    add_definitions(-DPSIMINIZIP)
 endif()
 
 add_library(zip STATIC ${PLAIN_SOURCES} ${PLAIN_HEADERS})

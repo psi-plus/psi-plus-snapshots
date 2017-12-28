@@ -29,44 +29,44 @@
  * again when the opener is destroyed.
  *
  * Example:
- *		void foo(QIODevice* device) {
- *			IODeviceOpener opener(device, QIODevice::ReadOnly);
- *			if (!opener.isOpen()) {
- *				qDebug() << "Error opening QIODevice";
- *				return;
- *			}
- *			...
- *			device->readAll()
- *			...
- *		}
+ *        void foo(QIODevice* device) {
+ *            IODeviceOpener opener(device, QIODevice::ReadOnly);
+ *            if (!opener.isOpen()) {
+ *                qDebug() << "Error opening QIODevice";
+ *                return;
+ *            }
+ *            ...
+ *            device->readAll()
+ *            ...
+ *        }
  */
 class IODeviceOpener
 {
 public:
-	/**
-	 * Opens an QIODevice in a specific mode if the device was not opened
-	 * yet.
-	 * If the device was already open but in a different, non-compatible
-	 * mode than the one requested, isOpen() will return false.
-	 */
-	IODeviceOpener(QIODevice* device, QIODevice::OpenModeFlag mode);
+    /**
+     * Opens an QIODevice in a specific mode if the device was not opened
+     * yet.
+     * If the device was already open but in a different, non-compatible
+     * mode than the one requested, isOpen() will return false.
+     */
+    IODeviceOpener(QIODevice* device, QIODevice::OpenModeFlag mode);
 
-	/**
-	 * Closes the QIODevice passed to the constructor if the IODevice was not
-	 * opened at that time.
-	 */
-	~IODeviceOpener();
+    /**
+     * Closes the QIODevice passed to the constructor if the IODevice was not
+     * opened at that time.
+     */
+    ~IODeviceOpener();
 
-	/**
-	 * Checks whether the io device was opened succesfully in the mode
-	 * requested.
-	 */
-	bool isOpen() const { return isOpen_; }
+    /**
+     * Checks whether the io device was opened succesfully in the mode
+     * requested.
+     */
+    bool isOpen() const { return isOpen_; }
 
 private:
-	QPointer<QIODevice> device_;
-	bool close_;
-	bool isOpen_;
+    QPointer<QIODevice> device_;
+    bool close_;
+    bool isOpen_;
 };
 
 #endif

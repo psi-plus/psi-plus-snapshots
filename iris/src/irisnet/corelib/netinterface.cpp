@@ -33,64 +33,64 @@ namespace XMPP {
 // NetTracker
 //----------------------------------------------------------------------------
 class NetTracker : public QObject {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	QList<NetInterfaceProvider::Info> getInterfaces() {
-		QMutexLocker locker(&m);
+    QList<NetInterfaceProvider::Info> getInterfaces() {
+        QMutexLocker locker(&m);
 
-		return info;
-	}
+        return info;
+    }
 
-	NetTracker() {
-		QList<IrisNetProvider*> list = irisNetProviders();
+    NetTracker() {
+        QList<IrisNetProvider*> list = irisNetProviders();
 
-		c = 0;
-		foreach(IrisNetProvider* p, list) {
-			c = p->createNetInterfaceProvider();
-			if(c) break;
-		}
-		Q_ASSERT(c); // we have built-in support, so this should never fail
-		connect(c, SIGNAL(updated()), SLOT(c_updated()));
+        c = 0;
+        foreach(IrisNetProvider* p, list) {
+            c = p->createNetInterfaceProvider();
+            if(c) break;
+        }
+        Q_ASSERT(c); // we have built-in support, so this should never fail
+        connect(c, SIGNAL(updated()), SLOT(c_updated()));
 
-		c->start();
-		info = filterList(c->interfaces());
-	}
+        c->start();
+        info = filterList(c->interfaces());
+    }
 
-	~NetTracker() {
-		QMutexLocker locker(&m);
-		delete c;
-	}
+    ~NetTracker() {
+        QMutexLocker locker(&m);
+        delete c;
+    }
 
 
 signals:
-	void updated();
+    void updated();
 private:
 
 
-	static QList<NetInterfaceProvider::Info> filterList(const QList<NetInterfaceProvider::Info> &in) {
-		QList<NetInterfaceProvider::Info> out;
-		for(int n = 0; n < in.count(); ++n)
-		{
-			if(!in[n].isLoopback) out += in[n];
-		}
-		return out;
-	}
+    static QList<NetInterfaceProvider::Info> filterList(const QList<NetInterfaceProvider::Info> &in) {
+        QList<NetInterfaceProvider::Info> out;
+        for(int n = 0; n < in.count(); ++n)
+        {
+            if(!in[n].isLoopback) out += in[n];
+        }
+        return out;
+    }
 
 private slots:
-	void c_updated() {
-		{
-			QMutexLocker locker(&m);
-			info = filterList(c->interfaces());
-		}
-		emit updated();
-	}
+    void c_updated() {
+        {
+            QMutexLocker locker(&m);
+            info = filterList(c->interfaces());
+        }
+        emit updated();
+    }
 
 
 private:
-	// this are all protected by m
-	NetInterfaceProvider *c;
-	QMutex m;
-	QList<NetInterfaceProvider::Info> info;
+    // this are all protected by m
+    NetInterfaceProvider *c;
+    QMutex m;
+    QList<NetInterfaceProvider::Info> info;
 
 };
 
@@ -99,84 +99,84 @@ private:
 Q_GLOBAL_STATIC(QMutex, nettracker_mutex)
 
 class NetTrackerThread : public QThread {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	/** Get a reference to the NetTracker singleton.
-	    Calls to getInterfaces will immediately give valid results
-	 */
-	static NetTrackerThread* getRef() {
-		QMutexLocker locker(nettracker_mutex());
+    /** Get a reference to the NetTracker singleton.
+        Calls to getInterfaces will immediately give valid results
+     */
+    static NetTrackerThread* getRef() {
+        QMutexLocker locker(nettracker_mutex());
 
-		if (!self) {
-			self = new NetTrackerThread();
-		}
-		self->refs++;
-		return self;
-	}
+        if (!self) {
+            self = new NetTrackerThread();
+        }
+        self->refs++;
+        return self;
+    }
 
-	/** Release reference.
-	 */
-	void releaseRef() {
-		QMutexLocker locker(nettracker_mutex());
+    /** Release reference.
+     */
+    void releaseRef() {
+        QMutexLocker locker(nettracker_mutex());
 
-		Q_ASSERT(refs > 0);
-		refs--;
-		if (refs <= 0) {
-			exit(0);
-			wait();
-			delete this;
-			self = 0;
-		}
-	}
+        Q_ASSERT(refs > 0);
+        refs--;
+        if (refs <= 0) {
+            exit(0);
+            wait();
+            delete this;
+            self = 0;
+        }
+    }
 
-	QList<NetInterfaceProvider::Info> getInterfaces() {
-		return nettracker->getInterfaces();
-	}
+    QList<NetInterfaceProvider::Info> getInterfaces() {
+        return nettracker->getInterfaces();
+    }
 
 
-	~NetTrackerThread() {
-		// locked from caller
-	}
+    ~NetTrackerThread() {
+        // locked from caller
+    }
 
 
 signals:
-	void updated();
+    void updated();
 private:
-	NetTrackerThread() {
-		// locked from caller
-		refs = 0;
-		moveToThread(QCoreApplication::instance()->thread());
-		startMutex = new QMutex();
-		{
-			QMutexLocker startLocker(startMutex);
-			start();
-			startCond.wait(startMutex); // wait for thread startup finished
-		}
-		delete startMutex;
-		startMutex = 0;
-	}
+    NetTrackerThread() {
+        // locked from caller
+        refs = 0;
+        moveToThread(QCoreApplication::instance()->thread());
+        startMutex = new QMutex();
+        {
+            QMutexLocker startLocker(startMutex);
+            start();
+            startCond.wait(startMutex); // wait for thread startup finished
+        }
+        delete startMutex;
+        startMutex = 0;
+    }
 
-	void run() {
-		{
-			QMutexLocker locker(startMutex);
+    void run() {
+        {
+            QMutexLocker locker(startMutex);
 
-			nettracker = new NetTracker();
-			connect(nettracker, SIGNAL(updated()), SIGNAL(updated()), Qt::DirectConnection);
+            nettracker = new NetTracker();
+            connect(nettracker, SIGNAL(updated()), SIGNAL(updated()), Qt::DirectConnection);
 
-			startCond.wakeOne(); // we're ready to serve.
-		}
-		exec();
-		delete nettracker;
-		nettracker = 0;
-	}
+            startCond.wakeOne(); // we're ready to serve.
+        }
+        exec();
+        delete nettracker;
+        nettracker = 0;
+    }
 
 private:
-	QWaitCondition startCond;
-	QMutex *startMutex;
-	// these are all protected by global nettracker_mutex.
-	int refs;
-	static NetTrackerThread *self;
-	NetTracker *nettracker;
+    QWaitCondition startCond;
+    QMutex *startMutex;
+    // these are all protected by global nettracker_mutex.
+    int refs;
+    static NetTrackerThread *self;
+    NetTracker *nettracker;
 };
 
 NetTrackerThread *NetTrackerThread::self = 0;
@@ -187,72 +187,72 @@ NetTrackerThread *NetTrackerThread::self = 0;
 //----------------------------------------------------------------------------
 class NetInterfacePrivate : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	friend class NetInterfaceManagerPrivate;
+    friend class NetInterfaceManagerPrivate;
 
-	NetInterface *q;
+    NetInterface *q;
 
-	QPointer<NetInterfaceManager> man;
-	bool valid;
-	QString id, name;
-	QList<QHostAddress> addrs;
+    QPointer<NetInterfaceManager> man;
+    bool valid;
+    QString id, name;
+    QList<QHostAddress> addrs;
 
-	NetInterfacePrivate(NetInterface *_q) : QObject(_q), q(_q)
-	{
-		valid = false;
-	}
+    NetInterfacePrivate(NetInterface *_q) : QObject(_q), q(_q)
+    {
+        valid = false;
+    }
 
-	void doUnavailable()
-	{
-		if (!valid) return;
-		valid = false;
-		if (man.isNull()) return;
-		man->unreg(q);
-		emit q->unavailable();
-	}
+    void doUnavailable()
+    {
+        if (!valid) return;
+        valid = false;
+        if (man.isNull()) return;
+        man->unreg(q);
+        emit q->unavailable();
+    }
 };
 
 NetInterface::NetInterface(const QString &id, NetInterfaceManager *manager)
-				: QObject(manager)
+                : QObject(manager)
 {
-	d = new NetInterfacePrivate(this);
-	d->man = manager;
+    d = new NetInterfacePrivate(this);
+    d->man = manager;
 
-	NetInterfaceProvider::Info *info = (NetInterfaceProvider::Info *)d->man->reg(id, this);
-	if (info) {
-		d->valid = true;
-		d->id = info->id;
-		d->name = info->name;
-		d->addrs = info->addresses;
-		delete info;
-	}
+    NetInterfaceProvider::Info *info = (NetInterfaceProvider::Info *)d->man->reg(id, this);
+    if (info) {
+        d->valid = true;
+        d->id = info->id;
+        d->name = info->name;
+        d->addrs = info->addresses;
+        delete info;
+    }
 }
 
 NetInterface::~NetInterface()
 {
-	if (d->valid && !d->man.isNull()) d->man->unreg(this);
-	delete d;
+    if (d->valid && !d->man.isNull()) d->man->unreg(this);
+    delete d;
 }
 
 bool NetInterface::isValid() const
 {
-	return d->valid && !d->man.isNull();
+    return d->valid && !d->man.isNull();
 }
 
 QString NetInterface::id() const
 {
-	return d->id;
+    return d->id;
 }
 
 QString NetInterface::name() const
 {
-	return d->name;
+    return d->name;
 }
 
 QList<QHostAddress> NetInterface::addresses() const
 {
-	return d->addrs;
+    return d->addrs;
 }
 
 //----------------------------------------------------------------------------
@@ -260,155 +260,155 @@ QList<QHostAddress> NetInterface::addresses() const
 //----------------------------------------------------------------------------
 class NetInterfaceManagerPrivate : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	NetInterfaceManager *q;
+    NetInterfaceManager *q;
 
-	QList<NetInterfaceProvider::Info> info;
-	QList<NetInterface*> listeners;
-	NetTrackerThread *tracker;
+    QList<NetInterfaceProvider::Info> info;
+    QList<NetInterface*> listeners;
+    NetTrackerThread *tracker;
 
-	bool pending;
+    bool pending;
 
-	NetInterfaceManagerPrivate(NetInterfaceManager *_q) : QObject(_q), q(_q)
-	{
-		tracker = NetTrackerThread::getRef();
-		pending = false;
-		connect(tracker, SIGNAL(updated()), SLOT(tracker_updated()));
-	}
+    NetInterfaceManagerPrivate(NetInterfaceManager *_q) : QObject(_q), q(_q)
+    {
+        tracker = NetTrackerThread::getRef();
+        pending = false;
+        connect(tracker, SIGNAL(updated()), SLOT(tracker_updated()));
+    }
 
-	~NetInterfaceManagerPrivate() {
-		tracker->releaseRef();
-		tracker = 0;
-	}
+    ~NetInterfaceManagerPrivate() {
+        tracker->releaseRef();
+        tracker = 0;
+    }
 
-	static int lookup(const QList<NetInterfaceProvider::Info> &list, const QString &id)
-	{
-		for(int n = 0; n < list.count(); ++n) {
-			if(list[n].id == id) return n;
-		}
-		return -1;
-	}
+    static int lookup(const QList<NetInterfaceProvider::Info> &list, const QString &id)
+    {
+        for(int n = 0; n < list.count(); ++n) {
+            if(list[n].id == id) return n;
+        }
+        return -1;
+    }
 
-	static bool sameContent(const NetInterfaceProvider::Info &a, const NetInterfaceProvider::Info &b)
-	{
-		// assume ids are the same already
-		return (a.name == b.name && a.isLoopback == b.isLoopback && a.addresses == b.addresses);
-	}
+    static bool sameContent(const NetInterfaceProvider::Info &a, const NetInterfaceProvider::Info &b)
+    {
+        // assume ids are the same already
+        return (a.name == b.name && a.isLoopback == b.isLoopback && a.addresses == b.addresses);
+    }
 
-	void do_update()
-	{
-		// grab the latest info
-		QList<NetInterfaceProvider::Info> newinfo = tracker->getInterfaces();
+    void do_update()
+    {
+        // grab the latest info
+        QList<NetInterfaceProvider::Info> newinfo = tracker->getInterfaces();
 
-		QStringList here_ids, gone_ids;
+        QStringList here_ids, gone_ids;
 
-		// removed / changed
-		for(int n = 0; n < info.count(); ++n)
-		{
-			int i = lookup(newinfo, info[n].id);
-			// id is still here
-			if(i != -1) {
-				// content changed?
-				if(!sameContent(info[n], newinfo[i])) {
-					gone_ids += info[n].id;
-					here_ids += info[n].id;
-				}
-			} else { // id is gone
-				gone_ids += info[n].id;
-			}
-		}
+        // removed / changed
+        for(int n = 0; n < info.count(); ++n)
+        {
+            int i = lookup(newinfo, info[n].id);
+            // id is still here
+            if(i != -1) {
+                // content changed?
+                if(!sameContent(info[n], newinfo[i])) {
+                    gone_ids += info[n].id;
+                    here_ids += info[n].id;
+                }
+            } else { // id is gone
+                gone_ids += info[n].id;
+            }
+        }
 
-		// added
-		for(int n = 0; n < newinfo.count(); ++n) {
-			int i = lookup(info, newinfo[n].id);
-			if(i == -1)
-				here_ids += newinfo[n].id;
-		}
-		info = newinfo;
+        // added
+        for(int n = 0; n < newinfo.count(); ++n) {
+            int i = lookup(info, newinfo[n].id);
+            if(i == -1)
+                here_ids += newinfo[n].id;
+        }
+        info = newinfo;
 
-		// announce gone
-		for(int n = 0; n < gone_ids.count(); ++n) {
-			// work on a copy, just in case the list changes.
-			//   it is important to make the copy here, and not
-			//   outside the outer loop, in case the items
-			//   get deleted
-			QList<NetInterface*> list = listeners;
-			for(int i = 0; i < list.count(); ++i) {
-				if(list[i]->d->id == gone_ids[n]) {
-					list[i]->d->doUnavailable();
-				}
-			}
-		}
+        // announce gone
+        for(int n = 0; n < gone_ids.count(); ++n) {
+            // work on a copy, just in case the list changes.
+            //   it is important to make the copy here, and not
+            //   outside the outer loop, in case the items
+            //   get deleted
+            QList<NetInterface*> list = listeners;
+            for(int i = 0; i < list.count(); ++i) {
+                if(list[i]->d->id == gone_ids[n]) {
+                    list[i]->d->doUnavailable();
+                }
+            }
+        }
 
-		// announce here
-		for(int n = 0; n < here_ids.count(); ++n)
-			emit q->interfaceAvailable(here_ids[n]);
-	}
+        // announce here
+        for(int n = 0; n < here_ids.count(); ++n)
+            emit q->interfaceAvailable(here_ids[n]);
+    }
 
 public slots:
-	void tracker_updated()
-	{
-		// collapse multiple updates by queuing up an update if there isn't any queued yet.
-		if(!pending) {
-			QMetaObject::invokeMethod(this, "update", Qt::QueuedConnection);
-			pending = true;
-		}
-	}
+    void tracker_updated()
+    {
+        // collapse multiple updates by queuing up an update if there isn't any queued yet.
+        if(!pending) {
+            QMetaObject::invokeMethod(this, "update", Qt::QueuedConnection);
+            pending = true;
+        }
+    }
 
-	void update()
-	{
-		pending = false;
-		do_update();
-	}
+    void update()
+    {
+        pending = false;
+        do_update();
+    }
 };
 
 NetInterfaceManager::NetInterfaceManager(QObject *parent)
-				:QObject(parent)
+                :QObject(parent)
 {
-	d = new NetInterfaceManagerPrivate(this);
+    d = new NetInterfaceManagerPrivate(this);
 }
 
 NetInterfaceManager::~NetInterfaceManager()
 {
-	delete d;
+    delete d;
 }
 
 QStringList NetInterfaceManager::interfaces() const
 {
-	d->info = d->tracker->getInterfaces();
-	QStringList out;
-	for(int n = 0; n < d->info.count(); ++n) {
-		out += d->info[n].id;
-	}
-	return out;
+    d->info = d->tracker->getInterfaces();
+    QStringList out;
+    for(int n = 0; n < d->info.count(); ++n) {
+        out += d->info[n].id;
+    }
+    return out;
 }
 
 QString NetInterfaceManager::interfaceForAddress(const QHostAddress &a)
 {
-	NetInterfaceManager netman;
-	QStringList list = netman.interfaces();
-	for(int n = 0; n < list.count(); ++n) {
-		NetInterface iface(list[n], &netman);
-		if(iface.addresses().contains(a)) return list[n];
-	}
-	return QString();
+    NetInterfaceManager netman;
+    QStringList list = netman.interfaces();
+    for(int n = 0; n < list.count(); ++n) {
+        NetInterface iface(list[n], &netman);
+        if(iface.addresses().contains(a)) return list[n];
+    }
+    return QString();
 }
 
 void *NetInterfaceManager::reg(const QString &id, NetInterface *i)
 {
-	for(int n = 0; n < d->info.count(); ++n) {
-		if(d->info[n].id == id) {
-			d->listeners += i;
-			return new NetInterfaceProvider::Info(d->info[n]);
-		}
-	}
-	return 0;
+    for(int n = 0; n < d->info.count(); ++n) {
+        if(d->info[n].id == id) {
+            d->listeners += i;
+            return new NetInterfaceProvider::Info(d->info[n]);
+        }
+    }
+    return 0;
 }
 
 void NetInterfaceManager::unreg(NetInterface *i)
 {
-	d->listeners.removeAll(i);
+    d->listeners.removeAll(i);
 }
 
 }

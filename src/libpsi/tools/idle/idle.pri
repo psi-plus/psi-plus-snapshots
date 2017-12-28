@@ -3,11 +3,11 @@ SOURCES += $$PWD/idle.cpp
 DEPENDPATH  += $$PWD
 
 unix:!mac {
-	SOURCES += $$PWD/idle_x11.cpp
+    SOURCES += $$PWD/idle_x11.cpp
 }
 win32: {
-	SOURCES += $$PWD/idle_win.cpp
+    SOURCES += $$PWD/idle_win.cpp
 }
 mac: {
-	SOURCES += $$PWD/idle_mac.cpp
+    SOURCES += $$PWD/idle_mac.cpp
 }

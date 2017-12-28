@@ -50,56 +50,56 @@ myapp.connect(ProcessQuit::instance(), SIGNAL(quit()), SLOT(do_quit()));
 */
 class IRISNET_EXPORT ProcessQuit : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	/**
-	   \brief Returns the global ProcessQuit instance
+    /**
+       \brief Returns the global ProcessQuit instance
 
-	   If the global instance does not exist yet, it will be created, and the termination handlers will be installed.
+       If the global instance does not exist yet, it will be created, and the termination handlers will be installed.
 
-	   \sa cleanup
-	*/
-	static ProcessQuit *instance();
+       \sa cleanup
+    */
+    static ProcessQuit *instance();
 
-	/**
-	   \brief Allows the quit() signal to be emitted again
+    /**
+       \brief Allows the quit() signal to be emitted again
 
-	   ProcessQuit only emits the quit() signal once, so that if a user repeatedly presses Ctrl-C or sends SIGTERM, your shutdown slot will not be called multiple times.  This is normally the desired behavior, but if you are ignoring the termination request then you may want to allow future notifications.  Calling this function will allow the quit() signal to be emitted again, if a new termination request arrives.
+       ProcessQuit only emits the quit() signal once, so that if a user repeatedly presses Ctrl-C or sends SIGTERM, your shutdown slot will not be called multiple times.  This is normally the desired behavior, but if you are ignoring the termination request then you may want to allow future notifications.  Calling this function will allow the quit() signal to be emitted again, if a new termination request arrives.
 
-	   \sa quit
-	*/
-	static void reset();
+       \sa quit
+    */
+    static void reset();
 
-	/**
-	   \brief Frees all resources used by ProcessQuit
+    /**
+       \brief Frees all resources used by ProcessQuit
 
-	   This function will free any resources used by ProcessQuit, including the global instance, and the termination handlers will be uninstalled (reverted to default).  Future termination requests will cause the application to exit abruptly.
+       This function will free any resources used by ProcessQuit, including the global instance, and the termination handlers will be uninstalled (reverted to default).  Future termination requests will cause the application to exit abruptly.
 
-	   \note You normally do not need to call this function directly.  When IrisNet cleans up, it will be called.
+       \note You normally do not need to call this function directly.  When IrisNet cleans up, it will be called.
 
-	   \sa instance
-	*/
-	static void cleanup();
+       \sa instance
+    */
+    static void cleanup();
 
 signals:
-	/**
-	   \brief Notification of termination request
+    /**
+       \brief Notification of termination request
 
-	   This signal is emitted when a termination request is received.  It is only emitted once, unless reset() is called.
+       This signal is emitted when a termination request is received.  It is only emitted once, unless reset() is called.
 
-	   Upon receiving this signal, the application should proceed to exit gracefully, and generally without user interaction.
+       Upon receiving this signal, the application should proceed to exit gracefully, and generally without user interaction.
 
-	   \sa reset
-	*/
-	void quit();
+       \sa reset
+    */
+    void quit();
 
 private:
-	class Private;
-	friend class Private;
-	Private *d;
+    class Private;
+    friend class Private;
+    Private *d;
 
-	ProcessQuit(QObject *parent = 0);
-	~ProcessQuit();
+    ProcessQuit(QObject *parent = 0);
+    ~ProcessQuit();
 };
 
 #ifndef NO_IRISNET

@@ -33,63 +33,63 @@ namespace StunTypes {
 
 enum Method
 {
-	Binding           = 0x001,
-	Allocate          = 0x003,
-	Refresh           = 0x004,
-	Send              = 0x006,
-	Data              = 0x007,
-	CreatePermission  = 0x008,
-	ChannelBind       = 0x009
+    Binding           = 0x001,
+    Allocate          = 0x003,
+    Refresh           = 0x004,
+    Send              = 0x006,
+    Data              = 0x007,
+    CreatePermission  = 0x008,
+    ChannelBind       = 0x009
 };
 
 enum Attribute
 {
-	MAPPED_ADDRESS       = 0x0001,
-	USERNAME             = 0x0006,
-	MESSAGE_INTEGRITY    = 0x0008,
-	ERROR_CODE           = 0x0009,
-	UNKNOWN_ATTRIBUTES   = 0x000a,
-	REALM                = 0x0014,
-	NONCE                = 0x0015,
-	XOR_MAPPED_ADDRESS   = 0x0020,
-	CHANNEL_NUMBER       = 0x000c,
-	LIFETIME             = 0x000d,
-	XOR_PEER_ADDRESS     = 0x0012,
-	DATA                 = 0x0013,
-	XOR_RELAYED_ADDRESS  = 0x0016,
-	EVEN_PORT            = 0x0018,
-	REQUESTED_TRANSPORT  = 0x0019,
-	DONT_FRAGMENT        = 0x001a,
-	RESERVATION_TOKEN    = 0x0022,
+    MAPPED_ADDRESS       = 0x0001,
+    USERNAME             = 0x0006,
+    MESSAGE_INTEGRITY    = 0x0008,
+    ERROR_CODE           = 0x0009,
+    UNKNOWN_ATTRIBUTES   = 0x000a,
+    REALM                = 0x0014,
+    NONCE                = 0x0015,
+    XOR_MAPPED_ADDRESS   = 0x0020,
+    CHANNEL_NUMBER       = 0x000c,
+    LIFETIME             = 0x000d,
+    XOR_PEER_ADDRESS     = 0x0012,
+    DATA                 = 0x0013,
+    XOR_RELAYED_ADDRESS  = 0x0016,
+    EVEN_PORT            = 0x0018,
+    REQUESTED_TRANSPORT  = 0x0019,
+    DONT_FRAGMENT        = 0x001a,
+    RESERVATION_TOKEN    = 0x0022,
 
-	PRIORITY             = 0x0024,
-	USE_CANDIDATE        = 0x0025,
+    PRIORITY             = 0x0024,
+    USE_CANDIDATE        = 0x0025,
 
-	SOFTWARE             = 0x8022,
-	ALTERNATE_SERVER     = 0x8023,
-	FINGERPRINT          = 0x8028,
+    SOFTWARE             = 0x8022,
+    ALTERNATE_SERVER     = 0x8023,
+    FINGERPRINT          = 0x8028,
 
-	ICE_CONTROLLED       = 0x8029,
-	ICE_CONTROLLING      = 0x802a
+    ICE_CONTROLLED       = 0x8029,
+    ICE_CONTROLLING      = 0x802a
 };
 
 enum Error
 {
-	TryAlternate                  = 300,
-	BadRequest                    = 400,
-	Unauthorized                  = 401,
-	UnknownAttribute              = 420,
-	StaleNonce                    = 438,
-	ServerError                   = 500,
+    TryAlternate                  = 300,
+    BadRequest                    = 400,
+    Unauthorized                  = 401,
+    UnknownAttribute              = 420,
+    StaleNonce                    = 438,
+    ServerError                   = 500,
 
-	Forbidden                     = 403,
-	AllocationMismatch            = 437,
-	WrongCredentials              = 441,
-	UnsupportedTransportProtocol  = 442,
-	AllocationQuotaReached        = 486,
-	InsufficientCapacity          = 508,
+    Forbidden                     = 403,
+    AllocationMismatch            = 437,
+    WrongCredentials              = 441,
+    UnsupportedTransportProtocol  = 442,
+    AllocationQuotaReached        = 486,
+    InsufficientCapacity          = 508,
 
-	RoleConflict                  = 487
+    RoleConflict                  = 487
 };
 
 QByteArray createMappedAddress(const QHostAddress &addr, quint16 port);

@@ -34,100 +34,100 @@ class StunTransactionPool;
 
 class StunAllocate : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	enum Error
-	{
-		ErrorGeneric,
-		ErrorTimeout,
-		ErrorAuth,
-		ErrorRejected,
-		ErrorProtocol,
-		ErrorCapacity,
-		ErrorMismatch
-	};
+    enum Error
+    {
+        ErrorGeneric,
+        ErrorTimeout,
+        ErrorAuth,
+        ErrorRejected,
+        ErrorProtocol,
+        ErrorCapacity,
+        ErrorMismatch
+    };
 
-	class Channel
-	{
-	public:
-		QHostAddress address;
-		int port;
+    class Channel
+    {
+    public:
+        QHostAddress address;
+        int port;
 
-		Channel(const QHostAddress &_address, int _port) :
-			address(_address),
-			port(_port)
-		{
-		}
+        Channel(const QHostAddress &_address, int _port) :
+            address(_address),
+            port(_port)
+        {
+        }
 
-		inline bool operator==(const Channel &other)
-		{
-			if(address == other.address && port == other.port)
-				return true;
-			else
-				return false;
-		}
+        inline bool operator==(const Channel &other)
+        {
+            if(address == other.address && port == other.port)
+                return true;
+            else
+                return false;
+        }
 
-		inline bool operator!=(const Channel &other)
-		{
-			return !operator==(other);
-		}
-	};
+        inline bool operator!=(const Channel &other)
+        {
+            return !operator==(other);
+        }
+    };
 
-	StunAllocate(StunTransactionPool *pool);
-	~StunAllocate();
+    StunAllocate(StunTransactionPool *pool);
+    ~StunAllocate();
 
-	void setClientSoftwareNameAndVersion(const QString &str);
+    void setClientSoftwareNameAndVersion(const QString &str);
 
-	void start();
-	void start(const QHostAddress &addr, int port); // use addr association
-	void stop();
+    void start();
+    void start(const QHostAddress &addr, int port); // use addr association
+    void stop();
 
-	QString serverSoftwareNameAndVersion() const;
+    QString serverSoftwareNameAndVersion() const;
 
-	QHostAddress reflexiveAddress() const;
-	int reflexivePort() const;
+    QHostAddress reflexiveAddress() const;
+    int reflexivePort() const;
 
-	QHostAddress relayedAddress() const;
-	int relayedPort() const;
+    QHostAddress relayedAddress() const;
+    int relayedPort() const;
 
-	QList<QHostAddress> permissions() const;
-	void setPermissions(const QList<QHostAddress> &perms);
+    QList<QHostAddress> permissions() const;
+    void setPermissions(const QList<QHostAddress> &perms);
 
-	QList<Channel> channels() const;
-	void setChannels(const QList<Channel> &channels);
+    QList<Channel> channels() const;
+    void setChannels(const QList<Channel> &channels);
 
-	int packetHeaderOverhead(const QHostAddress &addr, int port) const;
+    int packetHeaderOverhead(const QHostAddress &addr, int port) const;
 
-	QByteArray encode(const QByteArray &datagram, const QHostAddress &addr, int port);
-	QByteArray decode(const QByteArray &encoded, QHostAddress *addr = 0, int *port = 0);
-	QByteArray decode(const StunMessage &encoded, QHostAddress *addr = 0, int *port = 0);
+    QByteArray encode(const QByteArray &datagram, const QHostAddress &addr, int port);
+    QByteArray decode(const QByteArray &encoded, QHostAddress *addr = 0, int *port = 0);
+    QByteArray decode(const StunMessage &encoded, QHostAddress *addr = 0, int *port = 0);
 
-	QString errorString() const;
+    QString errorString() const;
 
-	static bool containsChannelData(const quint8 *data, int size);
-	static QByteArray readChannelData(const quint8 *data, int size);
+    static bool containsChannelData(const quint8 *data, int size);
+    static QByteArray readChannelData(const quint8 *data, int size);
 
 signals:
-	void started();
-	void stopped();
-	void error(XMPP::StunAllocate::Error e);
+    void started();
+    void stopped();
+    void error(XMPP::StunAllocate::Error e);
 
-	// emitted after calling setPermissions()
-	void permissionsChanged();
+    // emitted after calling setPermissions()
+    void permissionsChanged();
 
-	// emitted after calling setChannels()
-	void channelsChanged();
+    // emitted after calling setChannels()
+    void channelsChanged();
 
-	// not DOR-SS/DS safe
-	void debugLine(const QString &line);
+    // not DOR-SS/DS safe
+    void debugLine(const QString &line);
 
 private:
-	Q_DISABLE_COPY(StunAllocate)
+    Q_DISABLE_COPY(StunAllocate)
 
-	class Private;
-	friend class Private;
-	Private *d;
+    class Private;
+    friend class Private;
+    Private *d;
 };
 
 }

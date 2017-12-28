@@ -24,18 +24,18 @@
 #include <QString>
 
 namespace XMPP {
-	class PLAINMessage
-	{
-		public:
-			PLAINMessage(const QString& authzid, const QString& authcid, const QByteArray& password);
+    class PLAINMessage
+    {
+        public:
+            PLAINMessage(const QString& authzid, const QString& authcid, const QByteArray& password);
 
-			const QByteArray& getValue() {
-				return value_;
-			}
+            const QByteArray& getValue() {
+                return value_;
+            }
 
-		private:
-			QByteArray value_;
-	};
+        private:
+            QByteArray value_;
+    };
 }
 
 #endif

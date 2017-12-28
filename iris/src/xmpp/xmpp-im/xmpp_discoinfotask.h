@@ -24,42 +24,42 @@
 #include "xmpp_discoitem.h"
 
 namespace XMPP {
-	class Jid;
+    class Jid;
 }
 class QString;
 class QDomElement;
 
 namespace XMPP
 {
-	class DiscoInfoTask : public Task
-	{
-		Q_OBJECT
-	public:
-		DiscoInfoTask(Task *);
-		~DiscoInfoTask();
+    class DiscoInfoTask : public Task
+    {
+        Q_OBJECT
+    public:
+        DiscoInfoTask(Task *);
+        ~DiscoInfoTask();
 
-		// Allow retreive result from cache and update cache on finish with new data
-		void setAllowCache(bool allow = true);
+        // Allow retreive result from cache and update cache on finish with new data
+        void setAllowCache(bool allow = true);
 
-		void get(const Jid &, const QString &node = QString::null, const DiscoItem::Identity = DiscoItem::Identity());
-		void get(const DiscoItem &);
+        void get(const Jid &, const QString &node = QString::null, const DiscoItem::Identity = DiscoItem::Identity());
+        void get(const DiscoItem &);
 
-		const DiscoItem &item() const;
-		const Jid& jid() const;
-		const QString& node() const;
+        const DiscoItem &item() const;
+        const Jid& jid() const;
+        const QString& node() const;
 
-		void onGo();
-		bool take(const QDomElement &);
+        void onGo();
+        bool take(const QDomElement &);
 
-	private slots:
-		void cachedReady();
+    private slots:
+        void cachedReady();
 
-	private:
-		class Private;
-		Private *d;
-	};
+    private:
+        class Private;
+        Private *d;
+    };
 
-	// Deprecated name
-	typedef DiscoInfoTask JT_DiscoInfo;
+    // Deprecated name
+    typedef DiscoInfoTask JT_DiscoInfo;
 }
 #endif

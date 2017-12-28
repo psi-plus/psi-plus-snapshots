@@ -39,23 +39,23 @@ class GrowlNotifierSignaler;
 class GrowlNotifier
 {
 public:
-	GrowlNotifier(  const QStringList& notifications,
-			const QStringList& default_notifications,
-			const QString& app_name = "");
+    GrowlNotifier(  const QStringList& notifications,
+            const QStringList& default_notifications,
+            const QString& app_name = "");
 
-	virtual ~GrowlNotifier();
+    virtual ~GrowlNotifier();
 
-	void notify(const QString& name, const QString& title,
-		    const QString& description, const QPixmap& icon = QPixmap(),
-		    bool sticky = false, const QObject* receiver = 0,
-		    const char* clicked_slot = 0, const char* timeout_slot = 0,
-		    void* context = 0);
+    void notify(const QString& name, const QString& title,
+            const QString& description, const QPixmap& icon = QPixmap(),
+            bool sticky = false, const QObject* receiver = 0,
+            const char* clicked_slot = 0, const char* timeout_slot = 0,
+            void* context = 0);
 
-	static bool isRunning();
+    static bool isRunning();
 
 private:
-	class Private;
-	Private* d;
+    class Private;
+    Private* d;
 };
 
 #endif

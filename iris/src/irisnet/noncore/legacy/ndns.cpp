@@ -65,26 +65,26 @@
 NDns::NDns(QObject *parent)
 :QObject(parent),dns(this)
 {
-	busy = false;
+    busy = false;
 
-	connect(&dns, SIGNAL(resultsReady(QList<XMPP::NameRecord>)), SLOT(dns_resultsReady(QList<XMPP::NameRecord>)));
-	connect(&dns, SIGNAL(error(XMPP::NameResolver::Error)), SLOT(dns_error(XMPP::NameResolver::Error)));
+    connect(&dns, SIGNAL(resultsReady(QList<XMPP::NameRecord>)), SLOT(dns_resultsReady(QList<XMPP::NameRecord>)));
+    connect(&dns, SIGNAL(error(XMPP::NameResolver::Error)), SLOT(dns_error(XMPP::NameResolver::Error)));
 }
 
 //!
 //! Destroys the object and frees allocated resources.
 NDns::~NDns()
 {
-	stop();
+    stop();
 }
 
 //!
 //! Resolves hostname \a host (eg. psi.affinix.com)
 void NDns::resolve(const QString &host)
 {
-	stop();
-	busy = true;
-	dns.start(host.toLatin1());
+    stop();
+    busy = true;
+    dns.start(host.toLatin1());
 }
 
 //!
@@ -92,8 +92,8 @@ void NDns::resolve(const QString &host)
 //! \note This will not stop the underlying system call, which must finish before the next lookup will proceed.
 void NDns::stop()
 {
-	dns.stop();
-	busy = false;
+    dns.stop();
+    busy = false;
 }
 
 //!
@@ -101,7 +101,7 @@ void NDns::stop()
 //! \sa resultsReady()
 QHostAddress NDns::result() const
 {
-	return addr;
+    return addr;
 }
 
 //!
@@ -109,28 +109,28 @@ QHostAddress NDns::result() const
 //! \sa resultsReady()
 QString NDns::resultString() const
 {
-	return addr.toString();
+    return addr.toString();
 }
 
 //!
 //! Returns TRUE if busy resolving a hostname.
 bool NDns::isBusy() const
 {
-	return busy;
+    return busy;
 }
 
 void NDns::dns_resultsReady(const QList<XMPP::NameRecord> &results)
 {
-	addr = results[0].address();
-	busy = false;
-	emit resultsReady();
+    addr = results[0].address();
+    busy = false;
+    emit resultsReady();
 }
 
 void NDns::dns_error(XMPP::NameResolver::Error)
 {
-	addr = QHostAddress();
-	busy = false;
-	emit resultsReady();
+    addr = QHostAddress();
+    busy = false;
+    emit resultsReady();
 }
 
 // CS_NAMESPACE_END

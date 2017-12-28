@@ -43,41 +43,41 @@ namespace {
 
 void releaseAndDeleteLater(QObject *owner, QObject *obj)
 {
-	obj->disconnect(owner);
-	obj->setParent(0);
-	obj->deleteLater();
+    obj->disconnect(owner);
+    obj->setParent(0);
+    obj->deleteLater();
 }
 
 class SafeSocketNotifier : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	SafeSocketNotifier(int socket, QSocketNotifier::Type type,
-		QObject *parent = 0) :
-		QObject(parent)
-	{
-		sn = new QSocketNotifier(socket, type, this);
-		connect(sn, SIGNAL(activated(int)), SIGNAL(activated(int)));
-	}
+    SafeSocketNotifier(int socket, QSocketNotifier::Type type,
+        QObject *parent = 0) :
+        QObject(parent)
+    {
+        sn = new QSocketNotifier(socket, type, this);
+        connect(sn, SIGNAL(activated(int)), SIGNAL(activated(int)));
+    }
 
-	~SafeSocketNotifier()
-	{
-		sn->setEnabled(false);
-		releaseAndDeleteLater(this, sn);
-	}
+    ~SafeSocketNotifier()
+    {
+        sn->setEnabled(false);
+        releaseAndDeleteLater(this, sn);
+    }
 
-	bool isEnabled() const             { return sn->isEnabled(); }
-	int socket() const                 { return sn->socket(); }
-	QSocketNotifier::Type type() const { return sn->type(); }
+    bool isEnabled() const             { return sn->isEnabled(); }
+    int socket() const                 { return sn->socket(); }
+    QSocketNotifier::Type type() const { return sn->type(); }
 
 public slots:
-	void setEnabled(bool enable)       { sn->setEnabled(enable); }
+    void setEnabled(bool enable)       { sn->setEnabled(enable); }
 
 signals:
-	void activated(int socket);
+    void activated(int socket);
 
 private:
-	QSocketNotifier *sn;
+    QSocketNotifier *sn;
 };
 
 }
@@ -93,189 +93,189 @@ inline bool is_gui_app()
 {
 #ifdef QT_GUI_LIB
 #if QT_VERSION >= 0x050000
-	return qobject_cast<QGuiApplication *>(QCoreApplication::instance());
+    return qobject_cast<QGuiApplication *>(QCoreApplication::instance());
 #else
-	return (QApplication::type() != QApplication::Tty);
+    return (QApplication::type() != QApplication::Tty);
 #endif // QT_VERSION >= 0x050000
 #else
-	return false;
+    return false;
 #endif
 }
 
 class ProcessQuit::Private : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	ProcessQuit *q;
+    ProcessQuit *q;
 
-	bool done;
+    bool done;
 #ifdef Q_OS_WIN
-	bool use_handler;
+    bool use_handler;
 #endif
 #ifdef Q_OS_UNIX
-	int sig_pipe[2];
-	SafeSocketNotifier *sig_notifier;
+    int sig_pipe[2];
+    SafeSocketNotifier *sig_notifier;
 #endif
 
-	Private(ProcessQuit *_q) : QObject(_q), q(_q)
-	{
-		done = false;
+    Private(ProcessQuit *_q) : QObject(_q), q(_q)
+    {
+        done = false;
 #ifdef Q_OS_WIN
-		use_handler = !is_gui_app();
-		if(use_handler)
-			SetConsoleCtrlHandler((PHANDLER_ROUTINE)winHandler, TRUE);
+        use_handler = !is_gui_app();
+        if(use_handler)
+            SetConsoleCtrlHandler((PHANDLER_ROUTINE)winHandler, TRUE);
 #endif
 #ifdef Q_OS_UNIX
-		if(pipe(sig_pipe) == -1)
-		{
-			// no support then
-			return;
-		}
+        if(pipe(sig_pipe) == -1)
+        {
+            // no support then
+            return;
+        }
 
-		sig_notifier = new SafeSocketNotifier(sig_pipe[0], QSocketNotifier::Read, this);
-		connect(sig_notifier, SIGNAL(activated(int)), SLOT(sig_activated(int)));
-		unixWatchAdd(SIGINT);
-		unixWatchAdd(SIGHUP);
-		unixWatchAdd(SIGTERM);
+        sig_notifier = new SafeSocketNotifier(sig_pipe[0], QSocketNotifier::Read, this);
+        connect(sig_notifier, SIGNAL(activated(int)), SLOT(sig_activated(int)));
+        unixWatchAdd(SIGINT);
+        unixWatchAdd(SIGHUP);
+        unixWatchAdd(SIGTERM);
 #endif
-	}
+    }
 
-	~Private()
-	{
+    ~Private()
+    {
 #ifdef Q_OS_WIN
-		if(use_handler)
-			SetConsoleCtrlHandler((PHANDLER_ROUTINE)winHandler, FALSE);
+        if(use_handler)
+            SetConsoleCtrlHandler((PHANDLER_ROUTINE)winHandler, FALSE);
 #endif
 #ifdef Q_OS_UNIX
-		unixWatchRemove(SIGINT);
-		unixWatchRemove(SIGHUP);
-		unixWatchRemove(SIGTERM);
-		delete sig_notifier;
-		close(sig_pipe[0]);
-		close(sig_pipe[1]);
+        unixWatchRemove(SIGINT);
+        unixWatchRemove(SIGHUP);
+        unixWatchRemove(SIGTERM);
+        delete sig_notifier;
+        close(sig_pipe[0]);
+        close(sig_pipe[1]);
 #endif
-	}
+    }
 
 #ifdef Q_OS_WIN
-	static BOOL winHandler(DWORD ctrlType)
-	{
-		Q_UNUSED(ctrlType);
-		QMetaObject::invokeMethod(g_pq->d, "ctrl_ready", Qt::QueuedConnection);
-		return TRUE;
-	}
+    static BOOL winHandler(DWORD ctrlType)
+    {
+        Q_UNUSED(ctrlType);
+        QMetaObject::invokeMethod(g_pq->d, "ctrl_ready", Qt::QueuedConnection);
+        return TRUE;
+    }
 #endif
 
 #ifdef Q_OS_UNIX
-	static void unixHandler(int sig)
-	{
-		Q_UNUSED(sig);
-		unsigned char c = 0;
-		if(::write(g_pq->d->sig_pipe[1], &c, 1) == -1)
-		{
-			// TODO: error handling?
-			return;
-		}
-	}
+    static void unixHandler(int sig)
+    {
+        Q_UNUSED(sig);
+        unsigned char c = 0;
+        if(::write(g_pq->d->sig_pipe[1], &c, 1) == -1)
+        {
+            // TODO: error handling?
+            return;
+        }
+    }
 
-	void unixWatchAdd(int sig)
-	{
-		struct sigaction sa;
-		sigaction(sig, NULL, &sa);
-		// if the signal is ignored, don't take it over.  this is
-		//   recommended by the glibc manual
-		if(sa.sa_handler == SIG_IGN)
-			return;
-		sigemptyset(&(sa.sa_mask));
-		sa.sa_flags = 0;
-		sa.sa_handler = unixHandler;
-		sigaction(sig, &sa, 0);
-	}
+    void unixWatchAdd(int sig)
+    {
+        struct sigaction sa;
+        sigaction(sig, NULL, &sa);
+        // if the signal is ignored, don't take it over.  this is
+        //   recommended by the glibc manual
+        if(sa.sa_handler == SIG_IGN)
+            return;
+        sigemptyset(&(sa.sa_mask));
+        sa.sa_flags = 0;
+        sa.sa_handler = unixHandler;
+        sigaction(sig, &sa, 0);
+    }
 
-	void unixWatchRemove(int sig)
-	{
-		struct sigaction sa;
-		sigaction(sig, NULL, &sa);
-		// ignored means we skipped it earlier, so we should
-		//   skip it again
-		if(sa.sa_handler == SIG_IGN)
-			return;
-		sigemptyset(&(sa.sa_mask));
-		sa.sa_flags = 0;
-		sa.sa_handler = SIG_DFL;
-		sigaction(sig, &sa, 0);
-	}
+    void unixWatchRemove(int sig)
+    {
+        struct sigaction sa;
+        sigaction(sig, NULL, &sa);
+        // ignored means we skipped it earlier, so we should
+        //   skip it again
+        if(sa.sa_handler == SIG_IGN)
+            return;
+        sigemptyset(&(sa.sa_mask));
+        sa.sa_flags = 0;
+        sa.sa_handler = SIG_DFL;
+        sigaction(sig, &sa, 0);
+    }
 #endif
 
 public slots:
-	void ctrl_ready()
-	{
+    void ctrl_ready()
+    {
 #ifdef Q_OS_WIN
-		do_emit();
+        do_emit();
 #endif
-	}
+    }
 
-	void sig_activated(int)
-	{
+    void sig_activated(int)
+    {
 #ifdef Q_OS_UNIX
-		unsigned char c;
-		if(::read(sig_pipe[0], &c, 1) == -1)
-		{
-			// TODO: error handling?
-			return;
-		}
+        unsigned char c;
+        if(::read(sig_pipe[0], &c, 1) == -1)
+        {
+            // TODO: error handling?
+            return;
+        }
 
-		do_emit();
+        do_emit();
 #endif
-	}
+    }
 
 private:
-	void do_emit()
-	{
-		// only signal once
-		if(!done)
-		{
-			done = true;
-			emit q->quit();
-		}
-	}
+    void do_emit()
+    {
+        // only signal once
+        if(!done)
+        {
+            done = true;
+            emit q->quit();
+        }
+    }
 };
 
 ProcessQuit::ProcessQuit(QObject *parent)
 :QObject(parent)
 {
-	d = new Private(this);
+    d = new Private(this);
 }
 
 ProcessQuit::~ProcessQuit()
 {
-	delete d;
+    delete d;
 }
 
 ProcessQuit *ProcessQuit::instance()
 {
-	QMutexLocker locker(pq_mutex());
-	if(!g_pq)
-	{
-		g_pq = new ProcessQuit;
-		g_pq->moveToThread(QCoreApplication::instance()->thread());
+    QMutexLocker locker(pq_mutex());
+    if(!g_pq)
+    {
+        g_pq = new ProcessQuit;
+        g_pq->moveToThread(QCoreApplication::instance()->thread());
 #ifndef NO_IRISNET
-		irisNetAddPostRoutine(cleanup);
+        irisNetAddPostRoutine(cleanup);
 #endif
-	}
-	return g_pq;
+    }
+    return g_pq;
 }
 
 void ProcessQuit::reset()
 {
-	QMutexLocker locker(pq_mutex());
-	if(g_pq)
-		g_pq->d->done = false;
+    QMutexLocker locker(pq_mutex());
+    if(g_pq)
+        g_pq->d->done = false;
 }
 
 void ProcessQuit::cleanup()
 {
-	delete g_pq;
-	g_pq = 0;
+    delete g_pq;
+    g_pq = 0;
 }
 
 #ifndef NO_IRISNET

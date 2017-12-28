@@ -26,6 +26,6 @@
  */
 int main(int argc, char* argv[])
 {
-	QCoreApplication application(argc, argv);
-	return QtTestUtil::TestRegistry::getInstance()->runTests(argc, argv);
+    QCoreApplication application(argc, argv);
+    return QtTestUtil::TestRegistry::getInstance()->runTests(argc, argv);
 }

@@ -29,124 +29,124 @@ class QUrl;
 
 class HttpPoll : public ByteStream
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
-	HttpPoll(QObject *parent=0);
-	~HttpPoll();
+    enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
+    HttpPoll(QObject *parent=0);
+    ~HttpPoll();
 
-	virtual QAbstractSocket* abstractSocket() const;
+    virtual QAbstractSocket* abstractSocket() const;
 
-	void setAuth(const QString &user, const QString &pass="");
-	void connectToUrl(const QUrl &url);
-	void connectToHost(const QString &proxyHost, int proxyPort, const QUrl &url);
+    void setAuth(const QString &user, const QString &pass="");
+    void connectToUrl(const QUrl &url);
+    void connectToHost(const QString &proxyHost, int proxyPort, const QUrl &url);
 
-	int pollInterval() const;
-	void setPollInterval(int seconds);
+    int pollInterval() const;
+    void setPollInterval(int seconds);
 
-	// from ByteStream
-	bool isOpen() const;
-	void close();
+    // from ByteStream
+    bool isOpen() const;
+    void close();
 
 signals:
-	void connected();
-	void syncStarted();
-	void syncFinished();
+    void connected();
+    void syncStarted();
+    void syncFinished();
 
 protected:
-	int tryWrite();
+    int tryWrite();
 
 private slots:
-	void http_result();
-	void http_error(int);
-	void do_sync();
+    void http_result();
+    void http_error(int);
+    void do_sync();
 
 private:
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 
-	void resetConnection(bool clear=false);
-	QByteArray makePacket(const QString &ident, const QString &key, const QString &newkey, const QByteArray &block);
-	void resetKey();
-	const QString & getKey(bool *);
+    void resetConnection(bool clear=false);
+    QByteArray makePacket(const QString &ident, const QString &key, const QString &newkey, const QByteArray &block);
+    void resetKey();
+    const QString & getKey(bool *);
 };
 
 class HttpProxyPost : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	enum Error { ErrConnectionRefused, ErrHostNotFound, ErrSocket, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
-	HttpProxyPost(QObject *parent=0);
-	~HttpProxyPost();
+    enum Error { ErrConnectionRefused, ErrHostNotFound, ErrSocket, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
+    HttpProxyPost(QObject *parent=0);
+    ~HttpProxyPost();
 
-	QAbstractSocket* abstractSocket() const;
+    QAbstractSocket* abstractSocket() const;
 
-	void setUseSsl(bool state);
-	void setAuth(const QString &user, const QString &pass="");
-	bool isActive() const;
-	void post(const QString &proxyHost, int proxyPort, const QUrl &url, const QByteArray &data, bool asProxy=true);
-	void stop();
-	QByteArray body() const;
-	QString getHeader(const QString &) const;
+    void setUseSsl(bool state);
+    void setAuth(const QString &user, const QString &pass="");
+    bool isActive() const;
+    void post(const QString &proxyHost, int proxyPort, const QUrl &url, const QByteArray &data, bool asProxy=true);
+    void stop();
+    QByteArray body() const;
+    QString getHeader(const QString &) const;
 
 signals:
-	void result();
-	void error(int);
+    void result();
+    void error(int);
 
 private slots:
-	void sock_connected();
-	void sock_connectionClosed();
-	void sock_readyRead();
-	void sock_error(int);
-	void tls_readyRead();
-	void tls_readyReadOutgoing();
-	void tls_error();
+    void sock_connected();
+    void sock_connectionClosed();
+    void sock_readyRead();
+    void sock_error(int);
+    void tls_readyRead();
+    void tls_readyReadOutgoing();
+    void tls_error();
 
 private:
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 
-	void resetConnection(bool clear=false);
-	void processData(const QByteArray &block);
+    void resetConnection(bool clear=false);
+    void processData(const QByteArray &block);
 };
 
 class HttpProxyGetStream : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	enum Error { ErrConnectionRefused, ErrHostNotFound, ErrSocket, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
-	HttpProxyGetStream(QObject *parent=0);
-	~HttpProxyGetStream();
+    enum Error { ErrConnectionRefused, ErrHostNotFound, ErrSocket, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
+    HttpProxyGetStream(QObject *parent=0);
+    ~HttpProxyGetStream();
 
-	void setAuth(const QString &user, const QString &pass="");
-	bool isActive() const;
-	void get(const QString &proxyHost, int proxyPort, const QString &url, bool ssl=false, bool asProxy=false);
-	void stop();
-	QString getHeader(const QString &) const;
-	int length() const; // -1 for unknown
+    void setAuth(const QString &user, const QString &pass="");
+    bool isActive() const;
+    void get(const QString &proxyHost, int proxyPort, const QString &url, bool ssl=false, bool asProxy=false);
+    void stop();
+    QString getHeader(const QString &) const;
+    int length() const; // -1 for unknown
 
 signals:
-	void handshaken();
-	void dataReady(const QByteArray &buf);
-	void finished();
-	void error(int);
+    void handshaken();
+    void dataReady(const QByteArray &buf);
+    void finished();
+    void error(int);
 
 private slots:
-	void sock_connected();
-	void sock_connectionClosed();
-	void sock_readyRead();
-	void sock_error(int);
+    void sock_connected();
+    void sock_connectionClosed();
+    void sock_readyRead();
+    void sock_error(int);
 
-	void tls_readyRead();
-	void tls_readyReadOutgoing();
-	void tls_error();
+    void tls_readyRead();
+    void tls_readyReadOutgoing();
+    void tls_error();
 
 private:
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 
-	void resetConnection(bool clear=false);
-	void processData(const QByteArray &block);
+    void resetConnection(bool clear=false);
+    void processData(const QByteArray &block);
 };
 
 // CS_NAMESPACE_END

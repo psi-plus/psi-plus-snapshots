@@ -53,79 +53,79 @@
 
 namespace XMPP
 {
-	typedef QList<AgentItem> AgentList;
-	typedef QList<DiscoItem> DiscoList;
+    typedef QList<AgentItem> AgentList;
+    typedef QList<DiscoItem> DiscoList;
 
-	class FormField
-	{
-	public:
-		enum { username, nick, password, name, first, last, email, address, city, state, zip, phone, url, date, misc };
-		FormField(const QString &type="", const QString &value="");
-		~FormField();
+    class FormField
+    {
+    public:
+        enum { username, nick, password, name, first, last, email, address, city, state, zip, phone, url, date, misc };
+        FormField(const QString &type="", const QString &value="");
+        ~FormField();
 
-		int type() const;
-		QString fieldName() const;
-		QString realName() const;
-		bool isSecret() const;
-		const QString & value() const;
-		void setType(int);
-		bool setType(const QString &);
-		void setValue(const QString &);
+        int type() const;
+        QString fieldName() const;
+        QString realName() const;
+        bool isSecret() const;
+        const QString & value() const;
+        void setType(int);
+        bool setType(const QString &);
+        void setValue(const QString &);
 
-	private:
-		int tagNameToType(const QString &) const;
-		QString typeToTagName(int) const;
+    private:
+        int tagNameToType(const QString &) const;
+        QString typeToTagName(int) const;
 
-		int v_type;
-		QString v_value;
+        int v_type;
+        QString v_value;
 
-		class Private;
-		Private *d;
-	};
+        class Private;
+        Private *d;
+    };
 
-	class Form : public QList<FormField>
-	{
-	public:
-		Form(const Jid &j="");
-		~Form();
+    class Form : public QList<FormField>
+    {
+    public:
+        Form(const Jid &j="");
+        ~Form();
 
-		Jid jid() const;
-		QString instructions() const;
-		QString key() const;
-		void setJid(const Jid &);
-		void setInstructions(const QString &);
-		void setKey(const QString &);
+        Jid jid() const;
+        QString instructions() const;
+        QString key() const;
+        void setJid(const Jid &);
+        void setInstructions(const QString &);
+        void setKey(const QString &);
 
-	private:
-		Jid v_jid;
-		QString v_instructions, v_key;
+    private:
+        Jid v_jid;
+        QString v_instructions, v_key;
 
-		class Private;
-		Private *d;
-	};
+        class Private;
+        Private *d;
+    };
 
-	class SearchResult
-	{
-	public:
-		SearchResult(const Jid &jid="");
-		~SearchResult();
+    class SearchResult
+    {
+    public:
+        SearchResult(const Jid &jid="");
+        ~SearchResult();
 
-		const Jid & jid() const;
-		const QString & nick() const;
-		const QString & first() const;
-		const QString & last() const;
-		const QString & email() const;
+        const Jid & jid() const;
+        const QString & nick() const;
+        const QString & first() const;
+        const QString & last() const;
+        const QString & email() const;
 
-		void setJid(const Jid &);
-		void setNick(const QString &);
-		void setFirst(const QString &);
-		void setLast(const QString &);
-		void setEmail(const QString &);
+        void setJid(const Jid &);
+        void setNick(const QString &);
+        void setFirst(const QString &);
+        void setLast(const QString &);
+        void setEmail(const QString &);
 
-	private:
-		Jid v_jid;
-		QString v_nick, v_first, v_last, v_email;
-	};
+    private:
+        Jid v_jid;
+        QString v_nick, v_first, v_last, v_email;
+    };
 }
 
 #endif

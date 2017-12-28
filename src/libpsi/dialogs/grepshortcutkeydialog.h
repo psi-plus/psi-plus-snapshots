@@ -30,30 +30,30 @@
 
 class GrepShortcutKeyDialog : public QDialog
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	GrepShortcutKeyDialog();
+    GrepShortcutKeyDialog();
 
-	// reimplemented
-	void show();
+    // reimplemented
+    void show();
 
 protected:
-	// reimplemented
-	void keyPressEvent(QKeyEvent* event);
-	void keyReleaseEvent(QKeyEvent* event);
-	void closeEvent(QCloseEvent *event);
+    // reimplemented
+    void keyPressEvent(QKeyEvent* event);
+    void keyReleaseEvent(QKeyEvent* event);
+    void closeEvent(QCloseEvent *event);
 
 signals:
-	void newShortcutKey(const QKeySequence& key);
+    void newShortcutKey(const QKeySequence& key);
 
 private:
-	Ui::GrepShortcutKeyDialog ui_;
-	bool gotKey;
+    Ui::GrepShortcutKeyDialog ui_;
+    bool gotKey;
 
-	void displayPressedKeys(const QKeySequence& keys);
-	QKeySequence getKeySequence(QKeyEvent* event) const;
-	bool isValid(int key) const;
-	bool isModifier(int key) const;
+    void displayPressedKeys(const QKeySequence& keys);
+    QKeySequence getKeySequence(QKeyEvent* event) const;
+    bool isValid(int key) const;
+    bool isModifier(int key) const;
 };
 
 #endif

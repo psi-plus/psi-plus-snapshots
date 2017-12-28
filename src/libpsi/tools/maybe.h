@@ -39,29 +39,29 @@
 template<class T> class Maybe
 {
 public:
-	/**
-	 * \brief Constructs a Maybe container with no value.
-	 */
-	Maybe() : hasValue_(false) {}
+    /**
+     * \brief Constructs a Maybe container with no value.
+     */
+    Maybe() : hasValue_(false) {}
 
-	/**
-	 * \brief Constructs a Maybe container with a value.
-	 */
-	Maybe(const T& value) : value_(value), hasValue_(true) {}
+    /**
+     * \brief Constructs a Maybe container with a value.
+     */
+    Maybe(const T& value) : value_(value), hasValue_(true) {}
 
-	/**
-	 * \brief Checks whether this container has a value.
-	 */
-	bool hasValue() const { return hasValue_; }
+    /**
+     * \brief Checks whether this container has a value.
+     */
+    bool hasValue() const { return hasValue_; }
 
-	/**
-	 * \brief Returns the value of the container.
-	 */
-	const T& value() const { return value_; }
+    /**
+     * \brief Returns the value of the container.
+     */
+    const T& value() const { return value_; }
 
 private:
-	T value_;
-	bool hasValue_;
+    T value_;
+    bool hasValue_;
 };
 
 #endif

@@ -27,32 +27,32 @@ class QStringList;
 class UnZip
 {
 public:
-	enum CaseSensitivity
-	{
-		CS_Default = 0, // system default
-		CS_Sensitive = 1,
-		CS_Insensitive = 2
-	};
+    enum CaseSensitivity
+    {
+        CS_Default = 0, // system default
+        CS_Sensitive = 1,
+        CS_Insensitive = 2
+    };
 
-	UnZip(const QString &fname="");
-	UnZip(UnZip &&o);
-	~UnZip();
+    UnZip(const QString &fname="");
+    UnZip(UnZip &&o);
+    ~UnZip();
 
-	void setCaseSensitivity(CaseSensitivity state = CS_Default);
-	void setName(const QString &);
-	const QString & name() const;
+    void setCaseSensitivity(CaseSensitivity state = CS_Default);
+    void setName(const QString &);
+    const QString & name() const;
 
-	bool open();
-	void close();
+    bool open();
+    void close();
 
-	const QStringList & list() const;
-	bool readFile(const QString &, QByteArray *, int max=0);
-	bool fileExists(const QString &);
+    const QStringList & list() const;
+    bool readFile(const QString &, QByteArray *, int max=0);
+    bool fileExists(const QString &);
 
 private:
-	class UnZipPrivate *d;
+    class UnZipPrivate *d;
 
-	bool getList();
+    bool getList();
 };
 
 #endif

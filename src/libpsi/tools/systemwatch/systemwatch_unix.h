@@ -25,14 +25,14 @@
 
 class UnixSystemWatch : public SystemWatch
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	UnixSystemWatch();
+    UnixSystemWatch();
 
 private slots:
-	void prepareForSleep(bool beforeSleep);
-	void sleeping();
-	void resuming();
+    void prepareForSleep(bool beforeSleep);
+    void sleeping();
+    void resuming();
 };
 
 

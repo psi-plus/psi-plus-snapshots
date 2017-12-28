@@ -41,9 +41,9 @@ class NetInterfaceManagerPrivate;
 NetInterface iface("eth0");
 if(iface.isValid())
 {
-	QList<QHostAddress> addrs = iface.addresses();
-	for(int n = 0; n < addrs.count(); ++n)
-		printf("%s\n", qPrintable(addrs[n].toString()));
+    QList<QHostAddress> addrs = iface.addresses();
+    for(int n = 0; n < addrs.count(); ++n)
+        printf("%s\n", qPrintable(addrs[n].toString()));
 }
    \endcode
 
@@ -53,69 +53,69 @@ if(iface.isValid())
 */
 class IRISNET_EXPORT NetInterface : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	/**
-	   \brief Constructs a new interface object with the given \a id and \a manager
+    /**
+       \brief Constructs a new interface object with the given \a id and \a manager
 
-	   If \a id is not a valid interface id, then the object will not be valid (isValid() will return false).  Normally it is not necessary to check for validity, since interface ids obtained from NetInterfaceManager are guaranteed to be valid until the event loop resumes.
+       If \a id is not a valid interface id, then the object will not be valid (isValid() will return false).  Normally it is not necessary to check for validity, since interface ids obtained from NetInterfaceManager are guaranteed to be valid until the event loop resumes.
 
-	   \sa isValid
-	*/
-	NetInterface(const QString &id, NetInterfaceManager *manager);
+       \sa isValid
+    */
+    NetInterface(const QString &id, NetInterfaceManager *manager);
 
-	/**
-	   \brief Destroys the interface object
-	*/
-	~NetInterface();
+    /**
+       \brief Destroys the interface object
+    */
+    ~NetInterface();
 
-	/**
-	   \brief Returns true if the interface is valid, otherwise returns false
+    /**
+       \brief Returns true if the interface is valid, otherwise returns false
 
-	   \sa unavailable
-	*/
-	bool isValid() const;
+       \sa unavailable
+    */
+    bool isValid() const;
 
-	/**
-	   \brief Returns the id of this interface
+    /**
+       \brief Returns the id of this interface
 
-	   This is the id that was passed in the constructor.
-	*/
-	QString id() const;
+       This is the id that was passed in the constructor.
+    */
+    QString id() const;
 
-	/**
-	   \brief Returns a display-friendly name of this interface
+    /**
+       \brief Returns a display-friendly name of this interface
 
-	   The name may be the same as the id.
+       The name may be the same as the id.
 
-	   \sa id
-	*/
-	QString name() const;
+       \sa id
+    */
+    QString name() const;
 
-	/**
-	   \brief Returns the addresses of this interface
+    /**
+       \brief Returns the addresses of this interface
 
-	   There will always be at least one address.  In some cases there might be multiple, such as on Unix where it is possible for the same interface to have both an IPv4 and an IPv6 address.
-	*/
-	QList<QHostAddress> addresses() const;
+       There will always be at least one address.  In some cases there might be multiple, such as on Unix where it is possible for the same interface to have both an IPv4 and an IPv6 address.
+    */
+    QList<QHostAddress> addresses() const;
 
 signals:
-	/**
-	   \brief Notifies when the interface becomes unavailable
+    /**
+       \brief Notifies when the interface becomes unavailable
 
-	   Once this signal is emitted, the NetInterface object becomes invalid and is no longer very useful.  A new NetInterface object must be created if a valid object with current information is desired.
+       Once this signal is emitted, the NetInterface object becomes invalid and is no longer very useful.  A new NetInterface object must be created if a valid object with current information is desired.
 
-	   \note If the interface information changes, the interface is considered to have become unavailable.
+       \note If the interface information changes, the interface is considered to have become unavailable.
 
-	   \sa isValid
-	*/
-	void unavailable();
+       \sa isValid
+    */
+    void unavailable();
 
 private:
-	friend class NetInterfacePrivate;
-	NetInterfacePrivate *d;
+    friend class NetInterfacePrivate;
+    NetInterfacePrivate *d;
 
-	friend class NetInterfaceManagerPrivate;
+    friend class NetInterfaceManagerPrivate;
 };
 
 /**
@@ -132,8 +132,8 @@ NetInterfaceManager netman;
 QStringList id_list = netman.interfaces();
 for(int n = 0; n < id_list.count(); ++n)
 {
-	NetInterface iface(id_list[n], &netman);
-	printf("name: [%s]\n", qPrintable(iface.name()));
+    NetInterface iface(id_list[n], &netman);
+    printf("name: [%s]\n", qPrintable(iface.name()));
 }
    \endcode
 
@@ -145,58 +145,58 @@ for(int n = 0; n < id_list.count(); ++n)
 */
 class IRISNET_EXPORT NetInterfaceManager : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	/**
-	   \brief Constructs a new manager object with the given \a parent
-	*/
-	NetInterfaceManager(QObject *parent = 0);
+    /**
+       \brief Constructs a new manager object with the given \a parent
+    */
+    NetInterfaceManager(QObject *parent = 0);
 
-	/**
-	   \brief Destroys the manager object
-	*/
-	~NetInterfaceManager();
+    /**
+       \brief Destroys the manager object
+    */
+    ~NetInterfaceManager();
 
-	/**
-	   \brief Returns the list of available interface ids
+    /**
+       \brief Returns the list of available interface ids
 
-	   \sa interfaceAvailable
-	   \sa interfaceForAddress
-	*/
-	QStringList interfaces() const;
+       \sa interfaceAvailable
+       \sa interfaceForAddress
+    */
+    QStringList interfaces() const;
 
-	/**
-	   \brief Looks up an interface id by IP address
+    /**
+       \brief Looks up an interface id by IP address
 
-	   This function looks for an interface that has the address \a a.  If there is no such interface, a null string is returned.
+       This function looks for an interface that has the address \a a.  If there is no such interface, a null string is returned.
 
-	   This is useful for determing the network interface associated with an outgoing QTcpSocket:
+       This is useful for determing the network interface associated with an outgoing QTcpSocket:
 
-	   \code
+       \code
 QString iface = NetInterfaceManager::interfaceForAddress(tcpSocket->localAddress());
-	   \endcode
+       \endcode
 
-	   \sa interfaces
-	*/
-	static QString interfaceForAddress(const QHostAddress &a);
+       \sa interfaces
+    */
+    static QString interfaceForAddress(const QHostAddress &a);
 
 signals:
-	/**
-	   \brief Notifies when an interface becomes available
+    /**
+       \brief Notifies when an interface becomes available
 
-	   The \a id parameter is the interface id, ready to use with NetInterface.
-	*/
-	void interfaceAvailable(const QString &id);
+       The \a id parameter is the interface id, ready to use with NetInterface.
+    */
+    void interfaceAvailable(const QString &id);
 
 private:
-	friend class NetInterfaceManagerPrivate;
-	NetInterfaceManagerPrivate *d;
+    friend class NetInterfaceManagerPrivate;
+    NetInterfaceManagerPrivate *d;
 
-	friend class NetInterface;
-	friend class NetInterfacePrivate;
+    friend class NetInterface;
+    friend class NetInterfacePrivate;
 
-	void *reg(const QString &id, NetInterface *i);
-	void unreg(NetInterface *i);
+    void *reg(const QString &id, NetInterface *i);
+    void unreg(NetInterface *i);
 };
 
 }

@@ -25,24 +25,24 @@
 #include "xmpp/base/randomnumbergenerator.h"
 
 namespace XMPP {
-	class IncrementingRandomNumberGenerator : public RandomNumberGenerator
-	{
-		public:
-			IncrementingRandomNumberGenerator(int maximumNumber = 10) : maximumNumber_(maximumNumber), currentNumber_(maximumNumber_) {}
+    class IncrementingRandomNumberGenerator : public RandomNumberGenerator
+    {
+        public:
+            IncrementingRandomNumberGenerator(int maximumNumber = 10) : maximumNumber_(maximumNumber), currentNumber_(maximumNumber_) {}
 
-			virtual double generateNumber() const {
-				currentNumber_ = (currentNumber_ + 1) % (maximumNumber_ + 1);
-				return currentNumber_;
-			}
+            virtual double generateNumber() const {
+                currentNumber_ = (currentNumber_ + 1) % (maximumNumber_ + 1);
+                return currentNumber_;
+            }
 
-			virtual double getMaximumGeneratedNumber() const {
-				return maximumNumber_;
-			}
+            virtual double getMaximumGeneratedNumber() const {
+                return maximumNumber_;
+            }
 
-		private:
-			int maximumNumber_;
-			mutable int currentNumber_;
-	};
+        private:
+            int maximumNumber_;
+            mutable int currentNumber_;
+    };
 }
 
 #endif

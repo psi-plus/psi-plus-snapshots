@@ -28,34 +28,34 @@ class PsiTabWidget;
 
 class PsiTabBar : public TabBar
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	PsiTabBar(PsiTabWidget *parent);
-	~PsiTabBar();
-	PsiTabWidget *psiTabWidget();
+    PsiTabBar(PsiTabWidget *parent);
+    ~PsiTabBar();
+    PsiTabWidget *psiTabWidget();
 
 signals:
-	void mouseDoubleClickTab(int tab);
-	void mouseMiddleClickTab(int tab);
-	void tabDropped(int tab, PsiTabBar *source);
-	// context menu on the blank space will have tab==-1
-	void contextMenu(QContextMenuEvent *event, int tab);
+    void mouseDoubleClickTab(int tab);
+    void mouseMiddleClickTab(int tab);
+    void tabDropped(int tab, PsiTabBar *source);
+    // context menu on the blank space will have tab==-1
+    void contextMenu(QContextMenuEvent *event, int tab);
 
 protected:
-	void mouseDoubleClickEvent(QMouseEvent *event);
-	//void dragEnterEvent(QDragEnterEvent *event);
-	//void dropEvent(QDropEvent *event);
-	void mousePressEvent(QMouseEvent *event);
-	void contextMenuEvent(QContextMenuEvent *event);
-	void wheelEvent(QWheelEvent *event);
-	void paintEvent(QPaintEvent *event);
-	void mouseReleaseEvent ( QMouseEvent * event );
-	void resizeEvent(QResizeEvent * event);
+    void mouseDoubleClickEvent(QMouseEvent *event);
+    //void dragEnterEvent(QDragEnterEvent *event);
+    //void dropEvent(QDropEvent *event);
+    void mousePressEvent(QMouseEvent *event);
+    void contextMenuEvent(QContextMenuEvent *event);
+    void wheelEvent(QWheelEvent *event);
+    void paintEvent(QPaintEvent *event);
+    void mouseReleaseEvent ( QMouseEvent * event );
+    void resizeEvent(QResizeEvent * event);
 
 private:
-	int findTabUnder(const QPoint &pos);
-	bool isOnTheLeft;
+    int findTabUnder(const QPoint &pos);
+    bool isOnTheLeft;
 };
 
 #endif /* _PSITABBAR_H_ */

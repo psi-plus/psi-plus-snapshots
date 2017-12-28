@@ -28,69 +28,69 @@
 class ServSock::Private
 {
 public:
-	Private() {}
+    Private() {}
 
-	ServSockSignal *serv;
+    ServSockSignal *serv;
 };
 
 ServSock::ServSock(QObject *parent)
 :QObject(parent)
 {
-	d = new Private;
-	d->serv = 0;
+    d = new Private;
+    d->serv = 0;
 }
 
 ServSock::~ServSock()
 {
-	stop();
-	delete d;
+    stop();
+    delete d;
 }
 
 bool ServSock::isActive() const
 {
-	return (d->serv ? true: false);
+    return (d->serv ? true: false);
 }
 
 bool ServSock::listen(quint16 port)
 {
-	stop();
+    stop();
 
-	d->serv = new ServSockSignal(this);
-	if(!d->serv->listen(QHostAddress::Any, port)) {
-		delete d->serv;
-		d->serv = 0;
-		return false;
-	}
-	connect(d->serv, SIGNAL(connectionReady(qintptr)), SLOT(sss_connectionReady(qintptr)));
+    d->serv = new ServSockSignal(this);
+    if(!d->serv->listen(QHostAddress::Any, port)) {
+        delete d->serv;
+        d->serv = 0;
+        return false;
+    }
+    connect(d->serv, SIGNAL(connectionReady(qintptr)), SLOT(sss_connectionReady(qintptr)));
 
-	return true;
+    return true;
 }
 
 void ServSock::stop()
 {
-	delete d->serv;
-	d->serv = 0;
+    delete d->serv;
+    d->serv = 0;
 }
 
 int ServSock::port() const
 {
-	if(d->serv)
-		return d->serv->serverPort();
-	else
-		return -1;
+    if(d->serv)
+        return d->serv->serverPort();
+    else
+        return -1;
 }
 
 QHostAddress ServSock::address() const
 {
-	if(d->serv)
-		return d->serv->serverAddress();
-	else
-		return QHostAddress();
+    if(d->serv)
+        return d->serv->serverAddress();
+    else
+        return QHostAddress();
 }
 
 void ServSock::sss_connectionReady(qintptr s)
 {
-	connectionReady(s);
+    connectionReady(s);
 }
 
 
@@ -100,7 +100,7 @@ void ServSock::sss_connectionReady(qintptr s)
 ServSockSignal::ServSockSignal(QObject *parent)
 :QTcpServer(parent)
 {
-	setMaxPendingConnections(16);
+    setMaxPendingConnections(16);
 }
 
 #if QT_VERSION < QT_VERSION_CHECK(5,0,0)
@@ -109,8 +109,8 @@ void ServSockSignal::incomingConnection(int socketDescriptor)
 void ServSockSignal::incomingConnection(qintptr socketDescriptor)
 #endif
 {
-	// TODO all these stuff was necessary with Qt3. For now it's better to use pending QTcpSocket object
-	connectionReady(socketDescriptor);
+    // TODO all these stuff was necessary with Qt3. For now it's better to use pending QTcpSocket object
+    connectionReady(socketDescriptor);
 }
 
 // CS_NAMESPACE_END

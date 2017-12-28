@@ -30,28 +30,28 @@ using namespace XMPP;
 class BoBData::Private : public QSharedData
 {
 public:
-	QByteArray data;
-	QString type;
-	QString cid;
-	unsigned int maxAge;
+    QByteArray data;
+    QString type;
+    QString cid;
+    unsigned int maxAge;
 };
 
 BoBData::BoBData()
-	: d(new Private)
+    : d(new Private)
 {
 
 }
 
 BoBData::BoBData(const BoBData &other)
-	: d(other.d)
+    : d(other.d)
 {
 
 }
 
 BoBData::BoBData(const QDomElement &e)
-	: d(new Private)
+    : d(new Private)
 {
-	fromXml(e);
+    fromXml(e);
 }
 
 BoBData::~BoBData()
@@ -61,74 +61,74 @@ BoBData::~BoBData()
 
 BoBData & BoBData::operator=(const BoBData &other)
 {
-	if (this==&other) return *this; //Protect against self-assignment
-	d = other.d;
-	return *this;
+    if (this==&other) return *this; //Protect against self-assignment
+    d = other.d;
+    return *this;
 }
 
 bool BoBData::isNull() const
 {
-	return d->cid.isEmpty() || d->data.isNull();
+    return d->cid.isEmpty() || d->data.isNull();
 }
 
 QString BoBData::cid() const
 {
-	return d->cid;
+    return d->cid;
 }
 
 void BoBData::setCid(const QString &cid)
 {
-	d->cid = cid;
+    d->cid = cid;
 }
 
 QByteArray BoBData::data() const
 {
-	return d->data;
+    return d->data;
 }
 
 void BoBData::setData(const QByteArray &data)
 {
-	d->data = data;
+    d->data = data;
 }
 
 QString BoBData::type() const
 {
-	return d->type;
+    return d->type;
 }
 
 void BoBData::setType(const QString &type)
 {
-	d->type = type;
+    d->type = type;
 }
 
 unsigned int BoBData::maxAge() const
 {
-	return d->maxAge;
+    return d->maxAge;
 }
 
 void BoBData::setMaxAge(unsigned int maxAge)
 {
-	d->maxAge = maxAge;
+    d->maxAge = maxAge;
 }
 
 void BoBData::fromXml(const QDomElement &data)
 {
-	d->cid = data.attribute("cid");
-	d->maxAge = data.attribute("max-age").toInt();
-	d->type = data.attribute("type");
-	d->data = QCA::Base64().stringToArray(data.text().replace("\n",""))
-			.toByteArray();
+    d->cid = data.attribute("cid");
+    d->maxAge = data.attribute("max-age").toInt();
+    d->type = data.attribute("type");
+    d->data = QCA::Base64().stringToArray(data.text().replace("\n",""))
+            .toByteArray();
 }
 
 QDomElement BoBData::toXml(QDomDocument *doc) const
 {
-	QDomElement data = doc->createElement("data");
-	data.setAttribute("xmlns", "urn:xmpp:bob");
-	data.setAttribute("cid", d->cid);
-	data.setAttribute("max-age", d->maxAge);
-	data.setAttribute("type", d->type);
-	data.appendChild(doc->createTextNode(QCA::Base64().arrayToString(d->data)));
-	return data;
+    QDomElement data = doc->createElement("data");
+    data.setAttribute("xmlns", "urn:xmpp:bob");
+    data.setAttribute("cid", d->cid);
+    data.setAttribute("max-age", d->maxAge);
+    data.setAttribute("type", d->type);
+    data.appendChild(doc->createTextNode(QCA::Base64().arrayToString(d->data)));
+    return data;
 }
 
 
@@ -137,7 +137,7 @@ QDomElement BoBData::toXml(QDomDocument *doc) const
 // BoBCache
 // ---------------------------------------------------------
 BoBCache::BoBCache(QObject *parent)
-	: QObject(parent)
+    : QObject(parent)
 {
 
 }
@@ -147,70 +147,70 @@ BoBCache::BoBCache(QObject *parent)
 // BoBManager
 //------------------------------------------------------------------------------
 BoBManager::BoBManager(Client *client)
-	: QObject(client)
-	, _cache(0)
+    : QObject(client)
+    , _cache(0)
 {
-	new JT_BoBServer(client->rootTask());
+    new JT_BoBServer(client->rootTask());
 }
 
 void BoBManager::setCache(BoBCache *cache)
 {
-	_cache = cache;
+    _cache = cache;
 }
 
 BoBData BoBManager::bobData(const QString &cid)
 {
-	BoBData bd;
-	if (_cache) {
-		bd = _cache->get(cid);
-	}
-	if (bd.isNull() && _localFiles.contains(cid)) {
-		QPair<QString, QString> fileData = _localFiles.value(cid);
-		QFile file(fileData.first);
-		if (file.open(QIODevice::ReadOnly)) {
-			bd.setCid(cid);
-			bd.setData(file.readAll());
-			bd.setMaxAge(0);
-			bd.setType(fileData.second);
-		}
-	}
-	return bd;
+    BoBData bd;
+    if (_cache) {
+        bd = _cache->get(cid);
+    }
+    if (bd.isNull() && _localFiles.contains(cid)) {
+        QPair<QString, QString> fileData = _localFiles.value(cid);
+        QFile file(fileData.first);
+        if (file.open(QIODevice::ReadOnly)) {
+            bd.setCid(cid);
+            bd.setData(file.readAll());
+            bd.setMaxAge(0);
+            bd.setType(fileData.second);
+        }
+    }
+    return bd;
 }
 
 BoBData BoBManager::append(const QByteArray &data, const QString &type,
-								unsigned int maxAge)
+                                unsigned int maxAge)
 {
-	BoBData b;
-	b.setCid(QString("sha1+%1@bob.xmpp.org").arg(QString(
-		QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex())));
-	b.setData(data);
-	b.setMaxAge(maxAge);
-	b.setType(type);
-	if (_cache) {
-		_cache->put(b);
-	}
-	return b;
+    BoBData b;
+    b.setCid(QString("sha1+%1@bob.xmpp.org").arg(QString(
+        QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex())));
+    b.setData(data);
+    b.setMaxAge(maxAge);
+    b.setType(type);
+    if (_cache) {
+        _cache->put(b);
+    }
+    return b;
 }
 
 QString BoBManager::append(QFile &file, const QString &type)
 {
-	bool isOpen = file.isOpen();
-	if (isOpen || file.open(QIODevice::ReadOnly)) {
-		QString cid = QString("sha1+%1@bob.xmpp.org").arg(
-			QString(QCryptographicHash::hash(file.readAll(),
-											QCryptographicHash::Sha1).toHex()));
-		_localFiles[cid] = QPair<QString,QString>(file.fileName(), type);
-		if (!isOpen) {
-			file.close();
-		}
-		return cid;
-	}
-	return QString();
+    bool isOpen = file.isOpen();
+    if (isOpen || file.open(QIODevice::ReadOnly)) {
+        QString cid = QString("sha1+%1@bob.xmpp.org").arg(
+            QString(QCryptographicHash::hash(file.readAll(),
+                                            QCryptographicHash::Sha1).toHex()));
+        _localFiles[cid] = QPair<QString,QString>(file.fileName(), type);
+        if (!isOpen) {
+            file.close();
+        }
+        return cid;
+    }
+    return QString();
 }
 
 void BoBManager::append(const BoBData &data)
 {
-	if (!data.isNull() && _cache) {
-		_cache->put(data);
-	}
+    if (!data.isNull() && _cache) {
+        _cache->put(data);
+    }
 }

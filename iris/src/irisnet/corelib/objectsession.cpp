@@ -31,279 +31,279 @@ namespace XMPP {
 class ObjectSessionWatcherPrivate
 {
 public:
-	ObjectSession *sess;
+    ObjectSession *sess;
 };
 
 class ObjectSessionPrivate : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	ObjectSession *q;
+    ObjectSession *q;
 
-	class MethodCall
-	{
-	public:
-		QObject *obj;
-		QByteArray method;
-		class Argument
-		{
-		public:
-			int type;
-			void *data;
-		};
-		QList<Argument> args;
+    class MethodCall
+    {
+    public:
+        QObject *obj;
+        QByteArray method;
+        class Argument
+        {
+        public:
+            int type;
+            void *data;
+        };
+        QList<Argument> args;
 
-		MethodCall(QObject *_obj, const char *_method) :
-			obj(_obj),
-			method(_method)
-		{
-		}
+        MethodCall(QObject *_obj, const char *_method) :
+            obj(_obj),
+            method(_method)
+        {
+        }
 
-		~MethodCall()
-		{
-			clearArgs();
-		}
+        ~MethodCall()
+        {
+            clearArgs();
+        }
 
-		void clearArgs()
-		{
-			for(int n = 0; n < args.count(); ++n)
-				QMetaType::destroy(args[n].type, args[n].data);
-			args.clear();
-		}
+        void clearArgs()
+        {
+            for(int n = 0; n < args.count(); ++n)
+                QMetaType::destroy(args[n].type, args[n].data);
+            args.clear();
+        }
 
-		bool setArgs(QGenericArgument val0 = QGenericArgument(),
-			QGenericArgument val1 = QGenericArgument(),
-			QGenericArgument val2 = QGenericArgument(),
-			QGenericArgument val3 = QGenericArgument(),
-			QGenericArgument val4 = QGenericArgument(),
-			QGenericArgument val5 = QGenericArgument(),
-			QGenericArgument val6 = QGenericArgument(),
-			QGenericArgument val7 = QGenericArgument(),
-			QGenericArgument val8 = QGenericArgument(),
-			QGenericArgument val9 = QGenericArgument())
-		{
-			const char *arg_name[] =
-			{
-				val0.name(), val1.name(), val2.name(),
-				val3.name(), val4.name(), val5.name(),
-				val6.name(), val7.name(), val8.name(),
-				val9.name()
-			};
+        bool setArgs(QGenericArgument val0 = QGenericArgument(),
+            QGenericArgument val1 = QGenericArgument(),
+            QGenericArgument val2 = QGenericArgument(),
+            QGenericArgument val3 = QGenericArgument(),
+            QGenericArgument val4 = QGenericArgument(),
+            QGenericArgument val5 = QGenericArgument(),
+            QGenericArgument val6 = QGenericArgument(),
+            QGenericArgument val7 = QGenericArgument(),
+            QGenericArgument val8 = QGenericArgument(),
+            QGenericArgument val9 = QGenericArgument())
+        {
+            const char *arg_name[] =
+            {
+                val0.name(), val1.name(), val2.name(),
+                val3.name(), val4.name(), val5.name(),
+                val6.name(), val7.name(), val8.name(),
+                val9.name()
+            };
 
-			void *arg_data[] =
-			{
-				val0.data(), val1.data(), val2.data(),
-				val3.data(), val4.data(), val5.data(),
-				val6.data(), val7.data(), val8.data(),
-				val9.data()
-			};
+            void *arg_data[] =
+            {
+                val0.data(), val1.data(), val2.data(),
+                val3.data(), val4.data(), val5.data(),
+                val6.data(), val7.data(), val8.data(),
+                val9.data()
+            };
 
-			clearArgs();
+            clearArgs();
 
-			for(int n = 0; n < 10; ++n)
-			{
-				if(arg_name[n] == 0)
-					break;
+            for(int n = 0; n < 10; ++n)
+            {
+                if(arg_name[n] == 0)
+                    break;
 
-				Argument arg;
-				arg.type = QMetaType::type(arg_name[n]);
-				if(!arg.type)
-				{
-					clearArgs();
-					return false;
-				}
+                Argument arg;
+                arg.type = QMetaType::type(arg_name[n]);
+                if(!arg.type)
+                {
+                    clearArgs();
+                    return false;
+                }
 
 #if QT_VERSION < 0x050000
-				arg.data = QMetaType::construct(arg.type, arg_data[n]);
+                arg.data = QMetaType::construct(arg.type, arg_data[n]);
 #else
-				arg.data = QMetaType::create(arg.type, arg_data[n]);
+                arg.data = QMetaType::create(arg.type, arg_data[n]);
 #endif
-				args += arg;
-			}
+                args += arg;
+            }
 
-			return true;
-		}
-	};
+            return true;
+        }
+    };
 
-	QList<MethodCall*> pendingCalls;
-	QTimer *callTrigger;
-	bool paused;
-	QList<ObjectSessionWatcherPrivate*> watchers;
+    QList<MethodCall*> pendingCalls;
+    QTimer *callTrigger;
+    bool paused;
+    QList<ObjectSessionWatcherPrivate*> watchers;
 
-	ObjectSessionPrivate(ObjectSession *_q) :
-		QObject(_q),
-		q(_q),
-		paused(false)
-	{
-		callTrigger = new QTimer(this);
-		connect(callTrigger, SIGNAL(timeout()), SLOT(doCall()));
-		callTrigger->setSingleShot(true);
-	}
+    ObjectSessionPrivate(ObjectSession *_q) :
+        QObject(_q),
+        q(_q),
+        paused(false)
+    {
+        callTrigger = new QTimer(this);
+        connect(callTrigger, SIGNAL(timeout()), SLOT(doCall()));
+        callTrigger->setSingleShot(true);
+    }
 
-	~ObjectSessionPrivate()
-	{
-		invalidateWatchers();
+    ~ObjectSessionPrivate()
+    {
+        invalidateWatchers();
 
-		callTrigger->disconnect(this);
-		callTrigger->setParent(0);
-		callTrigger->deleteLater();
-		qDeleteAll(pendingCalls);
-		pendingCalls.clear();
-	}
+        callTrigger->disconnect(this);
+        callTrigger->setParent(0);
+        callTrigger->deleteLater();
+        qDeleteAll(pendingCalls);
+        pendingCalls.clear();
+    }
 
-	void addPendingCall(MethodCall *call)
-	{
-		pendingCalls += call;
-		if(!paused && !callTrigger->isActive())
-			callTrigger->start();
-	}
+    void addPendingCall(MethodCall *call)
+    {
+        pendingCalls += call;
+        if(!paused && !callTrigger->isActive())
+            callTrigger->start();
+    }
 
-	bool havePendingCall(QObject *obj, const char *method) const
-	{
-		foreach(const MethodCall *call, pendingCalls)
-		{
-			if(call->obj == obj && qstrcmp(call->method.data(), method) == 0)
-				return true;
-		}
-		return false;
-	}
+    bool havePendingCall(QObject *obj, const char *method) const
+    {
+        foreach(const MethodCall *call, pendingCalls)
+        {
+            if(call->obj == obj && qstrcmp(call->method.data(), method) == 0)
+                return true;
+        }
+        return false;
+    }
 
-	void invalidateWatchers()
-	{
-		for(int n = 0; n < watchers.count(); ++n)
-			watchers[n]->sess = 0;
-		watchers.clear();
-	}
+    void invalidateWatchers()
+    {
+        for(int n = 0; n < watchers.count(); ++n)
+            watchers[n]->sess = 0;
+        watchers.clear();
+    }
 
 private slots:
-	void doCall()
-	{
-		MethodCall *call = pendingCalls.takeFirst();
-		if(!pendingCalls.isEmpty())
-			callTrigger->start();
+    void doCall()
+    {
+        MethodCall *call = pendingCalls.takeFirst();
+        if(!pendingCalls.isEmpty())
+            callTrigger->start();
 
-		Q_ASSERT(call->args.count() <= 10);
+        Q_ASSERT(call->args.count() <= 10);
 
-		QGenericArgument arg[10];
-		for(int n = 0; n < call->args.count(); ++n)
-                	arg[n] = QGenericArgument(QMetaType::typeName(call->args[n].type), call->args[n].data);
+        QGenericArgument arg[10];
+        for(int n = 0; n < call->args.count(); ++n)
+                    arg[n] = QGenericArgument(QMetaType::typeName(call->args[n].type), call->args[n].data);
 
-		bool ok;
-		ok = QMetaObject::invokeMethod(call->obj, call->method.data(),
-			Qt::DirectConnection,
-			arg[0], arg[1], arg[2], arg[3], arg[4],
-			arg[5], arg[6], arg[7], arg[8], arg[9]);
-		Q_ASSERT(ok);
-		if(!ok)
-			abort();
+        bool ok;
+        ok = QMetaObject::invokeMethod(call->obj, call->method.data(),
+            Qt::DirectConnection,
+            arg[0], arg[1], arg[2], arg[3], arg[4],
+            arg[5], arg[6], arg[7], arg[8], arg[9]);
+        Q_ASSERT(ok);
+        if(!ok)
+            abort();
 
-		delete call;
-	}
+        delete call;
+    }
 };
 
 ObjectSessionWatcher::ObjectSessionWatcher(ObjectSession *sess)
 {
-	d = new ObjectSessionWatcherPrivate;
-	d->sess = sess;
-	if(d->sess)
-		d->sess->d->watchers += d;
+    d = new ObjectSessionWatcherPrivate;
+    d->sess = sess;
+    if(d->sess)
+        d->sess->d->watchers += d;
 }
 
 ObjectSessionWatcher::~ObjectSessionWatcher()
 {
-	if(d->sess)
-		d->sess->d->watchers.removeAll(d);
-	delete d;
+    if(d->sess)
+        d->sess->d->watchers.removeAll(d);
+    delete d;
 }
 
 bool ObjectSessionWatcher::isValid() const
 {
-	if(d->sess)
-		return true;
-	else
-		return false;
+    if(d->sess)
+        return true;
+    else
+        return false;
 }
 
 
 ObjectSession::ObjectSession(QObject *parent) :
-	QObject(parent)
+    QObject(parent)
 {
-	d = new ObjectSessionPrivate(this);
+    d = new ObjectSessionPrivate(this);
 }
 
 ObjectSession::~ObjectSession()
 {
-	delete d;
+    delete d;
 }
 
 void ObjectSession::reset()
 {
-	d->invalidateWatchers();
-	if(d->callTrigger->isActive())
-		d->callTrigger->stop();
-	qDeleteAll(d->pendingCalls);
-	d->pendingCalls.clear();
+    d->invalidateWatchers();
+    if(d->callTrigger->isActive())
+        d->callTrigger->stop();
+    qDeleteAll(d->pendingCalls);
+    d->pendingCalls.clear();
 }
 
 bool ObjectSession::isDeferred(QObject *obj, const char *method)
 {
-	return d->havePendingCall(obj, method);
+    return d->havePendingCall(obj, method);
 }
 
 void ObjectSession::defer(QObject *obj, const char *method,
-	QGenericArgument val0,
-	QGenericArgument val1,
-	QGenericArgument val2,
-	QGenericArgument val3,
-	QGenericArgument val4,
-	QGenericArgument val5,
-	QGenericArgument val6,
-	QGenericArgument val7,
-	QGenericArgument val8,
-	QGenericArgument val9)
+    QGenericArgument val0,
+    QGenericArgument val1,
+    QGenericArgument val2,
+    QGenericArgument val3,
+    QGenericArgument val4,
+    QGenericArgument val5,
+    QGenericArgument val6,
+    QGenericArgument val7,
+    QGenericArgument val8,
+    QGenericArgument val9)
 {
-	ObjectSessionPrivate::MethodCall *call = new ObjectSessionPrivate::MethodCall(obj, method);
-	call->setArgs(val0, val1, val2, val3, val4, val5, val6, val7, val8, val9);
-	d->addPendingCall(call);
+    ObjectSessionPrivate::MethodCall *call = new ObjectSessionPrivate::MethodCall(obj, method);
+    call->setArgs(val0, val1, val2, val3, val4, val5, val6, val7, val8, val9);
+    d->addPendingCall(call);
 }
 
 void ObjectSession::deferExclusive(QObject *obj, const char *method,
-	QGenericArgument val0,
-	QGenericArgument val1,
-	QGenericArgument val2,
-	QGenericArgument val3,
-	QGenericArgument val4,
-	QGenericArgument val5,
-	QGenericArgument val6,
-	QGenericArgument val7,
-	QGenericArgument val8,
-	QGenericArgument val9)
+    QGenericArgument val0,
+    QGenericArgument val1,
+    QGenericArgument val2,
+    QGenericArgument val3,
+    QGenericArgument val4,
+    QGenericArgument val5,
+    QGenericArgument val6,
+    QGenericArgument val7,
+    QGenericArgument val8,
+    QGenericArgument val9)
 {
-	if(d->havePendingCall(obj, method))
-		return;
+    if(d->havePendingCall(obj, method))
+        return;
 
-	ObjectSessionPrivate::MethodCall *call = new ObjectSessionPrivate::MethodCall(obj, method);
-	call->setArgs(val0, val1, val2, val3, val4, val5, val6, val7, val8, val9);
-	d->addPendingCall(call);
+    ObjectSessionPrivate::MethodCall *call = new ObjectSessionPrivate::MethodCall(obj, method);
+    call->setArgs(val0, val1, val2, val3, val4, val5, val6, val7, val8, val9);
+    d->addPendingCall(call);
 }
 
 void ObjectSession::pause()
 {
-	Q_ASSERT(!d->paused);
+    Q_ASSERT(!d->paused);
 
-	if(d->callTrigger->isActive())
-		d->callTrigger->stop();
-	d->paused = true;
+    if(d->callTrigger->isActive())
+        d->callTrigger->stop();
+    d->paused = true;
 }
 
 void ObjectSession::resume()
 {
-	Q_ASSERT(d->paused);
+    Q_ASSERT(d->paused);
 
-	d->paused = false;
-	if(!d->pendingCalls.isEmpty())
-		d->callTrigger->start();
+    d->paused = false;
+    if(!d->pendingCalls.isEmpty())
+        d->callTrigger->start();
 }
 
 }

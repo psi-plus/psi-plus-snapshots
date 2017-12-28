@@ -22,23 +22,23 @@
 
 IODeviceOpener::IODeviceOpener(QIODevice* device, QIODevice::OpenModeFlag mode) : device_(device), close_(false)
 {
-	if (!device_->isOpen()) {
-		if (!device_->open(mode)) {
-			isOpen_ = false;
-			return;
-		}
-		close_ = true;
-	}
-	else if (!(device_->openMode() & mode)) {
-		isOpen_ = false;
-		return;
-	}
-	isOpen_ = true;
+    if (!device_->isOpen()) {
+        if (!device_->open(mode)) {
+            isOpen_ = false;
+            return;
+        }
+        close_ = true;
+    }
+    else if (!(device_->openMode() & mode)) {
+        isOpen_ = false;
+        return;
+    }
+    isOpen_ = true;
 }
 
 IODeviceOpener::~IODeviceOpener()
 {
-	if (close_) {
-		device_->close();
-	}
+    if (close_) {
+        device_->close();
+    }
 }

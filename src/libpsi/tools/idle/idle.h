@@ -27,39 +27,39 @@ class IdlePlatform;
 
 class Idle : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	Idle();
-	~Idle();
+    Idle();
+    ~Idle();
 
-	bool isActive() const;
-	bool usingPlatform() const;
-	void start();
-	void stop();
+    bool isActive() const;
+    bool usingPlatform() const;
+    void start();
+    void stop();
 
 signals:
-	void secondsIdle(int);
+    void secondsIdle(int);
 
 private slots:
-	void doCheck();
+    void doCheck();
 
 private:
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 };
 
 class IdlePlatform
 {
 public:
-	IdlePlatform();
-	~IdlePlatform();
+    IdlePlatform();
+    ~IdlePlatform();
 
-	bool init();
-	int secondsIdle();
+    bool init();
+    int secondsIdle();
 
 private:
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 };
 
 #endif

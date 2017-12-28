@@ -6,14 +6,14 @@
 class TD
 {
 public:
-	TD();
-	~TD();
+    TD();
+    ~TD();
 
-	static void msg(const QString &);
-	static void outgoingTag(const QString &);
-	static void incomingTag(const QString &);
-	static void outgoingXml(const QDomElement &);
-	static void incomingXml(const QDomElement &);
+    static void msg(const QString &);
+    static void outgoingTag(const QString &);
+    static void incomingTag(const QString &);
+    static void outgoingXml(const QDomElement &);
+    static void incomingXml(const QDomElement &);
 };
 
 #endif

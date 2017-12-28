@@ -4,21 +4,21 @@ HEADERS += $$PWD/spellchecker.h $$PWD/spellhighlighter.h
 SOURCES += $$PWD/spellchecker.cpp $$PWD/spellhighlighter.cpp
 
 mac {
-	HEADERS += $$PWD/macspellchecker.h
-	OBJECTIVE_SOURCES += $$PWD/macspellchecker.mm
+    HEADERS += $$PWD/macspellchecker.h
+    OBJECTIVE_SOURCES += $$PWD/macspellchecker.mm
 }
 
 !mac:contains(DEFINES, HAVE_ASPELL) {
-	HEADERS += $$PWD/aspellchecker.h
-	SOURCES += $$PWD/aspellchecker.cpp
+    HEADERS += $$PWD/aspellchecker.h
+    SOURCES += $$PWD/aspellchecker.cpp
 }
 
 !mac:contains(DEFINES, HAVE_ENCHANT) {
-	HEADERS += $$PWD/enchantchecker.h
-	SOURCES += $$PWD/enchantchecker.cpp
+    HEADERS += $$PWD/enchantchecker.h
+    SOURCES += $$PWD/enchantchecker.cpp
 }
 
 !mac:contains(DEFINES, HAVE_HUNSPELL) {
-	HEADERS += $$PWD/hunspellchecker.h
-	SOURCES += $$PWD/hunspellchecker.cpp
+    HEADERS += $$PWD/hunspellchecker.h
+    SOURCES += $$PWD/hunspellchecker.cpp
 }

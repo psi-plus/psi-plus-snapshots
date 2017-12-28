@@ -8,18 +8,18 @@
 class WinSystemWatch : public SystemWatch
 {
 public:
-	WinSystemWatch();
-	~WinSystemWatch();
+    WinSystemWatch();
+    ~WinSystemWatch();
 
 private:
 #ifdef HAVE_QT5
     class EventFilter;
     EventFilter *d;
 #else
-	class MessageWindow;
-	MessageWindow *d;
+    class MessageWindow;
+    MessageWindow *d;
 #endif
-	bool processWinEvent(MSG *m, long* result);
+    bool processWinEvent(MSG *m, long* result);
 };
 
 #endif

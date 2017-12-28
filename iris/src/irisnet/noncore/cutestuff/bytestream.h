@@ -35,47 +35,47 @@ class QAbstractSocket;
 // CS_EXPORT_BEGIN
 class ByteStream : public QIODevice
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	enum Error { ErrOk, ErrRead, ErrWrite, ErrCustom = 10 };
-	ByteStream(QObject *parent=0);
-	~ByteStream()=0;
+    enum Error { ErrOk, ErrRead, ErrWrite, ErrCustom = 10 };
+    ByteStream(QObject *parent=0);
+    ~ByteStream()=0;
 
-	bool isSequential() const { return true; }
-	qint64 bytesAvailable() const;
-	qint64 bytesToWrite() const;
+    bool isSequential() const { return true; }
+    qint64 bytesAvailable() const;
+    qint64 bytesToWrite() const;
 
-	static QByteArray takeArray(QByteArray &from, int size=0, bool del=true);
+    static QByteArray takeArray(QByteArray &from, int size=0, bool del=true);
 
-	int errorCode() const;
-	QString &errorText() const;
+    int errorCode() const;
+    QString &errorText() const;
 
-	virtual QAbstractSocket* abstractSocket() const { return 0; }
+    virtual QAbstractSocket* abstractSocket() const { return 0; }
 
 signals:
-	void connectionClosed();
-	void delayedCloseFinished();
-	void error(int);
+    void connectionClosed();
+    void delayedCloseFinished();
+    void error(int);
 
 protected:
-	qint64 writeData(const char *data, qint64 maxSize);
-	qint64 readData(char *data, qint64 maxSize);
+    qint64 writeData(const char *data, qint64 maxSize);
+    qint64 readData(char *data, qint64 maxSize);
 
-	void setError(int code = ErrOk, const QString &text = QString());
-	void clearReadBuffer();
-	void clearWriteBuffer();
-	void appendRead(const QByteArray &);
-	void appendWrite(const QByteArray &);
-	QByteArray takeRead(int size=0, bool del=true);
-	QByteArray takeWrite(int size=0, bool del=true);
-	QByteArray & readBuf();
-	QByteArray & writeBuf();
-	virtual int tryWrite();
+    void setError(int code = ErrOk, const QString &text = QString());
+    void clearReadBuffer();
+    void clearWriteBuffer();
+    void appendRead(const QByteArray &);
+    void appendWrite(const QByteArray &);
+    QByteArray takeRead(int size=0, bool del=true);
+    QByteArray takeWrite(int size=0, bool del=true);
+    QByteArray & readBuf();
+    QByteArray & writeBuf();
+    virtual int tryWrite();
 
 private:
 //! \if _hide_doc_
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 //! \endif
 };
 // CS_EXPORT_END

@@ -1,16 +1,16 @@
 HEADERS += \
-	$$PWD/zip.h
+    $$PWD/zip.h
 
 SOURCES += \
-	$$PWD/zip.cpp
+    $$PWD/zip.cpp
 
 psi-minizip {
-	SOURCES += $$PWD/minizip/unzip.c
-	DEFINES += PSIMINIZIP
+    SOURCES += $$PWD/minizip/unzip.c
+    DEFINES += PSIMINIZIP
 }
 
 DEPENDPATH  += $$PWD
 
 mac {
-	QMAKE_LFLAGS += -lz
+    QMAKE_LFLAGS += -lz
 }

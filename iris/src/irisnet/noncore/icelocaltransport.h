@@ -29,7 +29,7 @@ class QHostAddress;
 class QUdpSocket;
 
 namespace QCA {
-	class SecureArray;
+    class SecureArray;
 }
 
 namespace XMPP {
@@ -40,62 +40,62 @@ namespace XMPP {
 //   just one path (0=direct)
 class IceLocalTransport : public IceTransport
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	enum Error
-	{
-		ErrorBind = ErrorCustom
-	};
+    enum Error
+    {
+        ErrorBind = ErrorCustom
+    };
 
-	IceLocalTransport(QObject *parent = 0);
-	~IceLocalTransport();
+    IceLocalTransport(QObject *parent = 0);
+    ~IceLocalTransport();
 
-	void setClientSoftwareNameAndVersion(const QString &str);
+    void setClientSoftwareNameAndVersion(const QString &str);
 
-	// passed socket must already be bind()'ed, don't support
-	//   ErrorMismatch retries
-	void start(QUdpSocket *sock);
+    // passed socket must already be bind()'ed, don't support
+    //   ErrorMismatch retries
+    void start(QUdpSocket *sock);
 
-	// bind to this address on a random port, do support ErrorMismatch
-	//   retries
-	void start(const QHostAddress &addr);
+    // bind to this address on a random port, do support ErrorMismatch
+    //   retries
+    void start(const QHostAddress &addr);
 
-	void setStunBindService(const QHostAddress &addr, int port);
-	void setStunRelayService(const QHostAddress &addr, int port, const QString &user, const QCA::SecureArray &pass);
+    void setStunBindService(const QHostAddress &addr, int port);
+    void setStunRelayService(const QHostAddress &addr, int port, const QString &user, const QCA::SecureArray &pass);
 
-	// obtain relay / reflexive
-	void stunStart();
+    // obtain relay / reflexive
+    void stunStart();
 
-	QHostAddress localAddress() const;
-	int localPort() const;
+    QHostAddress localAddress() const;
+    int localPort() const;
 
-	QHostAddress serverReflexiveAddress() const;
-	int serverReflexivePort() const;
+    QHostAddress serverReflexiveAddress() const;
+    int serverReflexivePort() const;
 
-	QHostAddress relayedAddress() const;
-	int relayedPort() const;
+    QHostAddress relayedAddress() const;
+    int relayedPort() const;
 
-	// reimplemented
-	virtual void stop();
-	virtual bool hasPendingDatagrams(int path) const;
-	virtual QByteArray readDatagram(int path, QHostAddress *addr, int *port);
-	virtual void writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port);
-	virtual void addChannelPeer(const QHostAddress &addr, int port);
-	virtual void setDebugLevel(DebugLevel level);
+    // reimplemented
+    virtual void stop();
+    virtual bool hasPendingDatagrams(int path) const;
+    virtual QByteArray readDatagram(int path, QHostAddress *addr, int *port);
+    virtual void writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port);
+    virtual void addChannelPeer(const QHostAddress &addr, int port);
+    virtual void setDebugLevel(DebugLevel level);
 
 signals:
-	// may be emitted multiple times.
-	// if handling internal ErrorMismatch, then local address may change
-	//   and server reflexive address may disappear.
-	// if start(QUdpSocket*) was used, then ErrorMismatch is not handled,
-	//   and this signal will only be emitted to add addresses
-	void addressesChanged();
+    // may be emitted multiple times.
+    // if handling internal ErrorMismatch, then local address may change
+    //   and server reflexive address may disappear.
+    // if start(QUdpSocket*) was used, then ErrorMismatch is not handled,
+    //   and this signal will only be emitted to add addresses
+    void addressesChanged();
 
 private:
-	class Private;
-	friend class Private;
-	Private *d;
+    class Private;
+    friend class Private;
+    Private *d;
 };
 
 }

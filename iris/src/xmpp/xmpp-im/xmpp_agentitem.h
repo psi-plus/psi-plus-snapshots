@@ -27,28 +27,28 @@
 #include "xmpp_features.h"
 
 namespace XMPP {
-	class AgentItem
-	{
-	public:
-		AgentItem() { }
+    class AgentItem
+    {
+    public:
+        AgentItem() { }
 
-		const Jid & jid() const { return v_jid; }
-		const QString & name() const { return v_name; }
-		const QString & category() const { return v_category; }
-		const QString & type() const { return v_type; }
-		const Features & features() const { return v_features; }
+        const Jid & jid() const { return v_jid; }
+        const QString & name() const { return v_name; }
+        const QString & category() const { return v_category; }
+        const QString & type() const { return v_type; }
+        const Features & features() const { return v_features; }
 
-		void setJid(const Jid &j) { v_jid = j; }
-		void setName(const QString &n) { v_name = n; }
-		void setCategory(const QString &c) { v_category = c; }
-		void setType(const QString &t) { v_type = t; }
-		void setFeatures(const Features &f) { v_features = f; }
+        void setJid(const Jid &j) { v_jid = j; }
+        void setName(const QString &n) { v_name = n; }
+        void setCategory(const QString &c) { v_category = c; }
+        void setType(const QString &t) { v_type = t; }
+        void setFeatures(const Features &f) { v_features = f; }
 
-	private:
-		Jid v_jid;
-		QString v_name, v_category, v_type;
-		Features v_features;
-	};
+    private:
+        Jid v_jid;
+        QString v_name, v_category, v_type;
+        Features v_features;
+    };
 }
 
 #endif

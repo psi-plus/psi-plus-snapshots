@@ -30,80 +30,80 @@ namespace XMPP {
 class StunMessage
 {
 public:
-	enum Class
-	{
-		Request,
-		SuccessResponse,
-		ErrorResponse,
-		Indication
-	};
+    enum Class
+    {
+        Request,
+        SuccessResponse,
+        ErrorResponse,
+        Indication
+    };
 
-	enum ValidationFlags
-	{
-		Fingerprint      = 0x01,
+    enum ValidationFlags
+    {
+        Fingerprint      = 0x01,
 
-		// you must have the hmac(sha1) algorithm in QCA to use
-		MessageIntegrity = 0x02
-	};
+        // you must have the hmac(sha1) algorithm in QCA to use
+        MessageIntegrity = 0x02
+    };
 
-	enum ConvertResult
-	{
-		ConvertGood,
-		ErrorFormat,
-		ErrorFingerprint,
-		ErrorMessageIntegrity,
-		ErrorConvertUnknown = 64
-	};
+    enum ConvertResult
+    {
+        ConvertGood,
+        ErrorFormat,
+        ErrorFingerprint,
+        ErrorMessageIntegrity,
+        ErrorConvertUnknown = 64
+    };
 
-	class Attribute
-	{
-	public:
-		quint16 type;
-		QByteArray value;
-	};
+    class Attribute
+    {
+    public:
+        quint16 type;
+        QByteArray value;
+    };
 
-	StunMessage();
-	StunMessage(const StunMessage &from);
-	~StunMessage();
-	StunMessage & operator=(const StunMessage &from);
+    StunMessage();
+    StunMessage(const StunMessage &from);
+    ~StunMessage();
+    StunMessage & operator=(const StunMessage &from);
 
-	bool isNull() const;
-	Class mclass() const;
-	quint16 method() const;
-	const quint8 *magic() const; // 4 bytes
-	const quint8 *id() const; // 12 bytes
-	QList<Attribute> attributes() const;
+    bool isNull() const;
+    Class mclass() const;
+    quint16 method() const;
+    const quint8 *magic() const; // 4 bytes
+    const quint8 *id() const; // 12 bytes
+    QList<Attribute> attributes() const;
 
-	// returns the first instance or null
-	QByteArray attribute(quint16 type) const;
+    // returns the first instance or null
+    QByteArray attribute(quint16 type) const;
 
-	void setClass(Class mclass);
-	void setMethod(quint16 method);
-	void setMagic(const quint8 *magic); // 4 bytes
-	void setId(const quint8 *id); // 12 bytes
-	void setAttributes(const QList<Attribute> &attribs);
+    void setClass(Class mclass);
+    void setMethod(quint16 method);
+    void setMagic(const quint8 *magic); // 4 bytes
+    void setId(const quint8 *id); // 12 bytes
+    void setAttributes(const QList<Attribute> &attribs);
 
-	QByteArray toBinary(int validationFlags = 0, const QByteArray &key = QByteArray()) const;
-	static StunMessage fromBinary(const QByteArray &a, ConvertResult *result = 0, int validationFlags = 0, const QByteArray &key = QByteArray());
+    QByteArray toBinary(int validationFlags = 0, const QByteArray &key = QByteArray()) const;
+    static StunMessage fromBinary(const QByteArray &a, ConvertResult *result = 0, int validationFlags = 0, const QByteArray &key = QByteArray());
 
-	// minimal 3-field check
-	static bool isProbablyStun(const QByteArray &a);
+    // minimal 3-field check
+    static bool isProbablyStun(const QByteArray &a);
 
-	// extract out the class value from a raw packet.  assumes that 'a' has
-	//   already passed isProbablyStun()
-	static Class extractClass(const QByteArray &a);
+    // extract out the class value from a raw packet.  assumes that 'a' has
+    //   already passed isProbablyStun()
+    static Class extractClass(const QByteArray &a);
 
-	// examine raw data, such as from a stream, to see if it contains a
-	//   stun packet
-	static bool containsStun(const quint8 *data, int size);
+    // examine raw data, such as from a stream, to see if it contains a
+    //   stun packet
+    static bool containsStun(const quint8 *data, int size);
 
-	// try to read a stun packet from the raw data, else return null.
-	//   a successful result can be passed to fromBinary()
-	static QByteArray readStun(const quint8 *data, int size);
+    // try to read a stun packet from the raw data, else return null.
+    //   a successful result can be passed to fromBinary()
+    static QByteArray readStun(const quint8 *data, int size);
 
 private:
-	class Private;
-	QSharedDataPointer<Private> d;
+    class Private;
+    QSharedDataPointer<Private> d;
 };
 
 }

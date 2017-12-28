@@ -29,8 +29,8 @@
 
 struct mytimeval
 {
-	unsigned long int tv_sec;   /* seconds */
-	unsigned long int tv_usec;  /* microseconds */
+    unsigned long int tv_sec;   /* seconds */
+    unsigned long int tv_usec;  /* microseconds */
 };
 
 typedef struct mdnsd_struct *mdnsd; // main daemon data

@@ -33,130 +33,130 @@
 #include "aspellchecker.h"
 
 ASpellChecker::ASpellChecker()
-	: config_(new_aspell_config())
+    : config_(new_aspell_config())
 {
-	aspell_config_replace(config_, "encoding", "utf-8");
+    aspell_config_replace(config_, "encoding", "utf-8");
 #ifdef Q_OS_WIN
-	aspell_config_replace(config_, "conf-dir", QDir::homePath().toLocal8Bit().data());
-	aspell_config_replace(config_, "data-dir", QString("%1/aspell").arg(QCoreApplication::applicationDirPath()).toLocal8Bit().data());
-	aspell_config_replace(config_, "dict-dir", QString("%1/aspell").arg(QCoreApplication::applicationDirPath()).toLocal8Bit().data());
+    aspell_config_replace(config_, "conf-dir", QDir::homePath().toLocal8Bit().data());
+    aspell_config_replace(config_, "data-dir", QString("%1/aspell").arg(QCoreApplication::applicationDirPath()).toLocal8Bit().data());
+    aspell_config_replace(config_, "dict-dir", QString("%1/aspell").arg(QCoreApplication::applicationDirPath()).toLocal8Bit().data());
 #endif
-	setActiveLanguages(getAllLanguages());
+    setActiveLanguages(getAllLanguages());
 }
 
 ASpellChecker::~ASpellChecker()
 {
-	if(config_) {
-		delete_aspell_config(config_);
-		config_ = NULL;
-	}
+    if(config_) {
+        delete_aspell_config(config_);
+        config_ = NULL;
+    }
 
-	clearSpellers();
+    clearSpellers();
 }
 
 bool ASpellChecker::isCorrect(const QString& word)
 {
-	if(spellers_.isEmpty())
-		return true;
+    if(spellers_.isEmpty())
+        return true;
 
-	foreach(AspellSpeller* speller, spellers_) {
-		if (aspell_speller_check(speller, word.toUtf8().constData(), -1) != 0)
-			return true;
-	}
-	return false;
+    foreach(AspellSpeller* speller, spellers_) {
+        if (aspell_speller_check(speller, word.toUtf8().constData(), -1) != 0)
+            return true;
+    }
+    return false;
 }
 
 QList<QString> ASpellChecker::suggestions(const QString& word)
 {
-	QList<QString> words;
+    QList<QString> words;
 
-	foreach(AspellSpeller* speller, spellers_) {
-		const AspellWordList* list = aspell_speller_suggest(speller, word.toUtf8(), -1);
-		AspellStringEnumeration* elements = aspell_word_list_elements(list);
-		const char *c_word;
-		while ((c_word = aspell_string_enumeration_next(elements)) != NULL) {
-			QString suggestion = QString::fromUtf8(c_word);
-			if(suggestion.size() > 2)
-				words.append(suggestion);
-		}
-		delete_aspell_string_enumeration(elements);
-	}
-	return words;
+    foreach(AspellSpeller* speller, spellers_) {
+        const AspellWordList* list = aspell_speller_suggest(speller, word.toUtf8(), -1);
+        AspellStringEnumeration* elements = aspell_word_list_elements(list);
+        const char *c_word;
+        while ((c_word = aspell_string_enumeration_next(elements)) != NULL) {
+            QString suggestion = QString::fromUtf8(c_word);
+            if(suggestion.size() > 2)
+                words.append(suggestion);
+        }
+        delete_aspell_string_enumeration(elements);
+    }
+    return words;
 }
 
 bool ASpellChecker::add(const QString& word)
 {
-	bool result = false;
-	if (config_ && !spellers_.empty()) {
-		QString trimmed_word = word.trimmed();
-		if(!word.isEmpty()) {
-			aspell_speller_add_to_personal(spellers_.first(), trimmed_word.toUtf8(), trimmed_word.toUtf8().length());
-			aspell_speller_save_all_word_lists(spellers_.first());
-			result = true;
-		}
-	}
-	return result;
+    bool result = false;
+    if (config_ && !spellers_.empty()) {
+        QString trimmed_word = word.trimmed();
+        if(!word.isEmpty()) {
+            aspell_speller_add_to_personal(spellers_.first(), trimmed_word.toUtf8(), trimmed_word.toUtf8().length());
+            aspell_speller_save_all_word_lists(spellers_.first());
+            result = true;
+        }
+    }
+    return result;
 }
 
 bool ASpellChecker::available() const
 {
-	return !spellers_.isEmpty();
+    return !spellers_.isEmpty();
 }
 
 bool ASpellChecker::writable() const
 {
-	return false;
+    return false;
 }
 
 QList<QString> ASpellChecker::getAllLanguages() const
 {
-	QList<QString> langs;
+    QList<QString> langs;
 
-	AspellDictInfoList* dict_info_list = get_aspell_dict_info_list(config_);
+    AspellDictInfoList* dict_info_list = get_aspell_dict_info_list(config_);
 
-	if (!aspell_dict_info_list_empty(dict_info_list))
-	{
-		AspellDictInfoEnumeration* dict_info_enum = aspell_dict_info_list_elements(dict_info_list);
+    if (!aspell_dict_info_list_empty(dict_info_list))
+    {
+        AspellDictInfoEnumeration* dict_info_enum = aspell_dict_info_list_elements(dict_info_list);
 
-		while (!aspell_dict_info_enumeration_at_end(dict_info_enum)) {
-			const AspellDictInfo* dict_info = aspell_dict_info_enumeration_next(dict_info_enum);
-			QString lang(dict_info -> code);
-			if (lang.contains('_'))
-				lang.truncate(lang.indexOf('_'));
-			if (!langs.contains(lang)) {
-				langs.append(lang);
-			}
-		}
+        while (!aspell_dict_info_enumeration_at_end(dict_info_enum)) {
+            const AspellDictInfo* dict_info = aspell_dict_info_enumeration_next(dict_info_enum);
+            QString lang(dict_info -> code);
+            if (lang.contains('_'))
+                lang.truncate(lang.indexOf('_'));
+            if (!langs.contains(lang)) {
+                langs.append(lang);
+            }
+        }
 
-		delete_aspell_dict_info_enumeration(dict_info_enum);
-	}
+        delete_aspell_dict_info_enumeration(dict_info_enum);
+    }
 
-	return langs;
+    return langs;
 }
 
 void ASpellChecker::setActiveLanguages(const QList<QString>& langs)
 {
-	clearSpellers();
+    clearSpellers();
 
-	foreach(const QString& lang, langs)
-	{
-		AspellConfig* conf = aspell_config_clone(config_);
-		aspell_config_replace(conf, "lang", lang.toUtf8().constData());
-		AspellCanHaveError* ret = new_aspell_speller(conf);
-		if (aspell_error_number(ret) == 0) {
-			spellers_.append(to_aspell_speller(ret));
-		}
-		else {
-			qDebug() << QString("Aspell error: %1").arg(aspell_error_message(ret));
-		}
-		delete_aspell_config(conf);
-	}
+    foreach(const QString& lang, langs)
+    {
+        AspellConfig* conf = aspell_config_clone(config_);
+        aspell_config_replace(conf, "lang", lang.toUtf8().constData());
+        AspellCanHaveError* ret = new_aspell_speller(conf);
+        if (aspell_error_number(ret) == 0) {
+            spellers_.append(to_aspell_speller(ret));
+        }
+        else {
+            qDebug() << QString("Aspell error: %1").arg(aspell_error_message(ret));
+        }
+        delete_aspell_config(conf);
+    }
 }
 
 void ASpellChecker::clearSpellers()
 {
-	foreach(AspellSpeller* speller, spellers_)
-		delete_aspell_speller(speller);
+    foreach(AspellSpeller* speller, spellers_)
+        delete_aspell_speller(speller);
 
-	spellers_.clear();
+    spellers_.clear();
 }

@@ -16,29 +16,29 @@ class QNetworkAccessManager;
 
 class QDChecker : public QObject, public AutoUpdater
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	QDChecker();
-	virtual ~QDChecker();
+    QDChecker();
+    virtual ~QDChecker();
 
-	// from AutoUpdater
-	virtual void checkForUpdates();
+    // from AutoUpdater
+    virtual void checkForUpdates();
 
 private slots:
-	void onCheckFinished();
-	void onDownloadLogFinished();
-	void onOpenDownloadPage();
+    void onCheckFinished();
+    void onDownloadLogFinished();
+    void onOpenDownloadPage();
 
 private:
-	QNetworkAccessManager* manager_;
-	QWidget* logForm_;
+    QNetworkAccessManager* manager_;
+    QWidget* logForm_;
 
-	static const QUrl updateCheckUrl_;
-	static const QUrl changelogUrl_;
-	static const QUrl downloadPageUrl_;
+    static const QUrl updateCheckUrl_;
+    static const QUrl changelogUrl_;
+    static const QUrl downloadPageUrl_;
 
-	static const QString settingsKey_;
+    static const QString settingsKey_;
 };
 
 #endif // QDCHECKER_H

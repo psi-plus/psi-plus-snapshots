@@ -1,7 +1,7 @@
 DEPENDPATH  += $$PWD
 
 SOURCES += \
-	$$PWD/atomicxmlfile.cpp
+    $$PWD/atomicxmlfile.cpp
 
 HEADERS += \
-	$$PWD/atomicxmlfile.h
+    $$PWD/atomicxmlfile.h

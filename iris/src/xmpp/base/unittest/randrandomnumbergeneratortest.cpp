@@ -27,17 +27,17 @@ using namespace XMPP;
 
 class RandRandomNumberGeneratorTest : public QObject
 {
-		Q_OBJECT
+        Q_OBJECT
 
-	private slots:
-		void testGenerateNumber() {
-			RandRandomNumberGenerator testling;
+    private slots:
+        void testGenerateNumber() {
+            RandRandomNumberGenerator testling;
 
-			double a = testling.generateNumberBetween(0.0,100.0);
-			double b = testling.generateNumberBetween(0.0,100.0);
+            double a = testling.generateNumberBetween(0.0,100.0);
+            double b = testling.generateNumberBetween(0.0,100.0);
 
-			QVERIFY(a != b);
-		}
+            QVERIFY(a != b);
+        }
  };
 
 QTTESTUTIL_REGISTER_TEST(RandRandomNumberGeneratorTest);

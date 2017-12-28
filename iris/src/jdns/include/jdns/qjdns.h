@@ -32,128 +32,128 @@
 
 class JDNS_EXPORT QJDns : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	enum Mode
-	{
-		Unicast,
-		Multicast
-	};
+    enum Mode
+    {
+        Unicast,
+        Multicast
+    };
 
-	enum PublishMode
-	{
-		Unique,
-		Shared
-	};
+    enum PublishMode
+    {
+        Unique,
+        Shared
+    };
 
-	enum Type
-	{
-		A       = 1,
-		Aaaa    = 28,
-		Mx      = 15,
-		Srv     = 33,
-		Cname   = 5,
-		Ptr     = 12,
-		Txt     = 16,
-		Hinfo   = 13,
-		Ns      = 2,
-		Any     = 255
-	};
+    enum Type
+    {
+        A       = 1,
+        Aaaa    = 28,
+        Mx      = 15,
+        Srv     = 33,
+        Cname   = 5,
+        Ptr     = 12,
+        Txt     = 16,
+        Hinfo   = 13,
+        Ns      = 2,
+        Any     = 255
+    };
 
-	enum Error
-	{
-		ErrorGeneric,
-		ErrorNXDomain, // query only
-		ErrorTimeout,  // query only
-		ErrorConflict  // publish only
-	};
+    enum Error
+    {
+        ErrorGeneric,
+        ErrorNXDomain, // query only
+        ErrorTimeout,  // query only
+        ErrorConflict  // publish only
+    };
 
-	class JDNS_EXPORT NameServer
-	{
-	public:
-		QHostAddress address;
-		int port;
+    class JDNS_EXPORT NameServer
+    {
+    public:
+        QHostAddress address;
+        int port;
 
-		NameServer();
-	};
+        NameServer();
+    };
 
-	class JDNS_EXPORT DnsHost
-	{
-	public:
-		QByteArray name;
-		QHostAddress address;
-	};
+    class JDNS_EXPORT DnsHost
+    {
+    public:
+        QByteArray name;
+        QHostAddress address;
+    };
 
-	class JDNS_EXPORT SystemInfo
-	{
-	public:
-		QList<NameServer> nameServers;
-		QList<QByteArray> domains;
-		QList<DnsHost> hosts;
-	};
+    class JDNS_EXPORT SystemInfo
+    {
+    public:
+        QList<NameServer> nameServers;
+        QList<QByteArray> domains;
+        QList<DnsHost> hosts;
+    };
 
-	class JDNS_EXPORT Record
-	{
-	public:
-		QByteArray owner;
-		int ttl;
-		int type;
-		QByteArray rdata;
-		bool haveKnown;
+    class JDNS_EXPORT Record
+    {
+    public:
+        QByteArray owner;
+        int ttl;
+        int type;
+        QByteArray rdata;
+        bool haveKnown;
 
-		// known
-		QHostAddress address;    // for A, Aaaa
-		QByteArray name;         // for Mx, Srv, Cname, Ptr, Ns
-		int priority;            // for Mx, Srv
-		int weight;              // for Srv
-		int port;                // for Srv
-		QList<QByteArray> texts; // for Txt
-		QByteArray cpu;          // for Hinfo
-		QByteArray os;           // for Hinfo
+        // known
+        QHostAddress address;    // for A, Aaaa
+        QByteArray name;         // for Mx, Srv, Cname, Ptr, Ns
+        int priority;            // for Mx, Srv
+        int weight;              // for Srv
+        int port;                // for Srv
+        QList<QByteArray> texts; // for Txt
+        QByteArray cpu;          // for Hinfo
+        QByteArray os;           // for Hinfo
 
-		Record();
-		bool verify() const;
-	};
+        Record();
+        bool verify() const;
+    };
 
-	class JDNS_EXPORT Response
-	{
-	public:
-		QList<Record> answerRecords;
-		QList<Record> authorityRecords;
-		QList<Record> additionalRecords;
-	};
+    class JDNS_EXPORT Response
+    {
+    public:
+        QList<Record> answerRecords;
+        QList<Record> authorityRecords;
+        QList<Record> additionalRecords;
+    };
 
-	QJDns(QObject *parent = 0);
-	~QJDns();
+    QJDns(QObject *parent = 0);
+    ~QJDns();
 
-	bool init(Mode mode, const QHostAddress &address);
-	void shutdown();
-	QStringList debugLines();
+    bool init(Mode mode, const QHostAddress &address);
+    void shutdown();
+    QStringList debugLines();
 
-	static SystemInfo systemInfo();
-	static QHostAddress detectPrimaryMulticast(const QHostAddress &address);
+    static SystemInfo systemInfo();
+    static QHostAddress detectPrimaryMulticast(const QHostAddress &address);
 
-	void setNameServers(const QList<NameServer> &list);
+    void setNameServers(const QList<NameServer> &list);
 
-	int queryStart(const QByteArray &name, int type);
-	void queryCancel(int id);
+    int queryStart(const QByteArray &name, int type);
+    void queryCancel(int id);
 
-	// for multicast mode only
-	int publishStart(PublishMode m, const Record &record);
-	void publishUpdate(int id, const Record &record);
-	void publishCancel(int id);
+    // for multicast mode only
+    int publishStart(PublishMode m, const Record &record);
+    void publishUpdate(int id, const Record &record);
+    void publishCancel(int id);
 
 signals:
-	void resultsReady(int id, const QJDns::Response &results);
-	void published(int id);
-	void error(int id, QJDns::Error e);
-	void shutdownFinished();
-	void debugLinesReady();
+    void resultsReady(int id, const QJDns::Response &results);
+    void published(int id);
+    void error(int id, QJDns::Error e);
+    void shutdownFinished();
+    void debugLinesReady();
 
 private:
-	class Private;
-	friend class Private;
-	Private *d;
+    class Private;
+    friend class Private;
+    Private *d;
 };
 
 #endif

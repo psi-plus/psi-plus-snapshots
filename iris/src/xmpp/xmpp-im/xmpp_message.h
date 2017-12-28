@@ -32,178 +32,178 @@ class QString;
 class QDateTime;
 
 namespace XMPP {
-	class Jid;
-	class PubSubItem;
-	class PubSubRetraction;
-	class HTMLElement;
-	class HttpAuthRequest;
-	class XData;
-	class BoBData;
-	class IBBData;
+    class Jid;
+    class PubSubItem;
+    class PubSubRetraction;
+    class HTMLElement;
+    class HttpAuthRequest;
+    class XData;
+    class BoBData;
+    class IBBData;
 
-	typedef QMap<QString, QString> StringMap;
+    typedef QMap<QString, QString> StringMap;
 
-	typedef enum { OfflineEvent, DeliveredEvent, DisplayedEvent,
-			ComposingEvent, CancelEvent } MsgEvent;
+    typedef enum { OfflineEvent, DeliveredEvent, DisplayedEvent,
+            ComposingEvent, CancelEvent } MsgEvent;
 
-	class Message
-	{
-	public:
-		enum CarbonDir : quint8 {
-			NoCarbon,
-			Received,
-			Sent
-		};
+    class Message
+    {
+    public:
+        enum CarbonDir : quint8 {
+            NoCarbon,
+            Received,
+            Sent
+        };
 
-		Message(const Jid &to="");
-		Message(const Message &from);
-		Message & operator=(const Message &from);
-		~Message();
+        Message(const Jid &to="");
+        Message(const Message &from);
+        Message & operator=(const Message &from);
+        ~Message();
 
-		Jid to() const;
-		Jid from() const;
-		QString id() const;
-		QString type() const;
-		QString lang() const;
-		QString subject(const QString &lang=QString::null) const;
-		QString subject(const QLocale &lang) const;
-		StringMap subjectMap() const;
-		QString body(const QString &lang="") const;
-		QString body(const QLocale &lang) const;
-		QString thread() const;
-		Stanza::Error error() const;
+        Jid to() const;
+        Jid from() const;
+        QString id() const;
+        QString type() const;
+        QString lang() const;
+        QString subject(const QString &lang=QString::null) const;
+        QString subject(const QLocale &lang) const;
+        StringMap subjectMap() const;
+        QString body(const QString &lang="") const;
+        QString body(const QLocale &lang) const;
+        QString thread() const;
+        Stanza::Error error() const;
 
-		void setTo(const Jid &j);
-		void setFrom(const Jid &j);
-		void setId(const QString &s);
-		void setType(const QString &s);
-		void setLang(const QString &s);
-		void setSubject(const QString &s, const QString &lang="");
-		void setBody(const QString &s, const QString &lang="");
-		void setThread(const QString &s, bool send = false);
-		void setError(const Stanza::Error &err);
+        void setTo(const Jid &j);
+        void setFrom(const Jid &j);
+        void setId(const QString &s);
+        void setType(const QString &s);
+        void setLang(const QString &s);
+        void setSubject(const QString &s, const QString &lang="");
+        void setBody(const QString &s, const QString &lang="");
+        void setThread(const QString &s, bool send = false);
+        void setError(const Stanza::Error &err);
 
-		// JEP-0060
-		const QString& pubsubNode() const;
-		const QList<PubSubItem>& pubsubItems() const;
-		const QList<PubSubRetraction>& pubsubRetractions() const;
+        // JEP-0060
+        const QString& pubsubNode() const;
+        const QList<PubSubItem>& pubsubItems() const;
+        const QList<PubSubRetraction>& pubsubRetractions() const;
 
-		// JEP-0091
-		QDateTime timeStamp() const;
-		void setTimeStamp(const QDateTime &ts, bool send = false);
+        // JEP-0091
+        QDateTime timeStamp() const;
+        void setTimeStamp(const QDateTime &ts, bool send = false);
 
-		// JEP-0071
-		HTMLElement html(const QString &lang="") const;
-		void setHTML(const HTMLElement &s, const QString &lang="");
-		bool containsHTML() const;
+        // JEP-0071
+        HTMLElement html(const QString &lang="") const;
+        void setHTML(const HTMLElement &s, const QString &lang="");
+        bool containsHTML() const;
 
-		// JEP-0066
-		UrlList urlList() const;
-		void urlAdd(const Url &u);
-		void urlsClear();
-		void setUrlList(const UrlList &list);
+        // JEP-0066
+        UrlList urlList() const;
+        void urlAdd(const Url &u);
+        void urlsClear();
+        void setUrlList(const UrlList &list);
 
-		// JEP-0022
-		QString eventId() const;
-		void setEventId(const QString& id);
-		bool containsEvents() const;
-		bool containsEvent(MsgEvent e) const;
-		void addEvent(MsgEvent e);
+        // JEP-0022
+        QString eventId() const;
+        void setEventId(const QString& id);
+        bool containsEvents() const;
+        bool containsEvent(MsgEvent e) const;
+        void addEvent(MsgEvent e);
 
-		// JEP-0085
-		ChatState chatState() const;
-		void setChatState(ChatState);
+        // JEP-0085
+        ChatState chatState() const;
+        void setChatState(ChatState);
 
-		// XEP-0184
-		MessageReceipt messageReceipt() const;
-		void setMessageReceipt(MessageReceipt);
-		QString messageReceiptId() const;
-		void setMessageReceiptId(const QString &s);
+        // XEP-0184
+        MessageReceipt messageReceipt() const;
+        void setMessageReceipt(MessageReceipt);
+        QString messageReceiptId() const;
+        void setMessageReceiptId(const QString &s);
 
-		// JEP-0027
-		QString xsigned() const;
-		void setXSigned(const QString &s);
-		QString xencrypted() const;
-		void setXEncrypted(const QString &s);
+        // JEP-0027
+        QString xsigned() const;
+        void setXSigned(const QString &s);
+        QString xencrypted() const;
+        void setXEncrypted(const QString &s);
 
-		// JEP-0033
-		AddressList addresses() const;
-		AddressList findAddresses(Address::Type t) const;
-		void addAddress(const Address &a);
-		void clearAddresses();
-		void setAddresses(const AddressList &list);
+        // JEP-0033
+        AddressList addresses() const;
+        AddressList findAddresses(Address::Type t) const;
+        void addAddress(const Address &a);
+        void clearAddresses();
+        void setAddresses(const AddressList &list);
 
-		// JEP-144
-		const RosterExchangeItems& rosterExchangeItems() const;
-		void setRosterExchangeItems(const RosterExchangeItems&);
+        // JEP-144
+        const RosterExchangeItems& rosterExchangeItems() const;
+        void setRosterExchangeItems(const RosterExchangeItems&);
 
-		// JEP-172
-		void setNick(const QString&);
-		const QString& nick() const;
+        // JEP-172
+        void setNick(const QString&);
+        const QString& nick() const;
 
-		// JEP-0070
-		void setHttpAuthRequest(const HttpAuthRequest&);
-		HttpAuthRequest httpAuthRequest() const;
+        // JEP-0070
+        void setHttpAuthRequest(const HttpAuthRequest&);
+        HttpAuthRequest httpAuthRequest() const;
 
-		// JEP-0004
-		void setForm(const XData&);
-		const XData& getForm() const;
+        // JEP-0004
+        void setForm(const XData&);
+        const XData& getForm() const;
 
-		// JEP-xxxx SXE
-		void setSxe(const QDomElement&);
-		const QDomElement& sxe() const;
+        // JEP-xxxx SXE
+        void setSxe(const QDomElement&);
+        const QDomElement& sxe() const;
 
-		// XEP-0231 bits of binary
-		void addBoBData(const BoBData &);
-		QList<BoBData> bobDataList() const;
+        // XEP-0231 bits of binary
+        void addBoBData(const BoBData &);
+        QList<BoBData> bobDataList() const;
 
-		// XEP-0047 ibb
-		const IBBData& ibbData() const;
+        // XEP-0047 ibb
+        const IBBData& ibbData() const;
 
-		// XEP-0280 Message Carbons
-		void setDisabledCarbons(bool disabled);
-		bool isDisabledCarbons() const;
-		void setCarbonDirection(CarbonDir);
-		CarbonDir carbonDirection() const;
+        // XEP-0280 Message Carbons
+        void setDisabledCarbons(bool disabled);
+        bool isDisabledCarbons() const;
+        void setCarbonDirection(CarbonDir);
+        CarbonDir carbonDirection() const;
 
-		// XEP-0297
-		void setForwardedFrom(const Jid &jid);
-		const Jid &forwardedFrom() const;
+        // XEP-0297
+        void setForwardedFrom(const Jid &jid);
+        const Jid &forwardedFrom() const;
 
-		// XEP-308
-		QString replaceId() const;
-		void setReplaceId(const QString& id);
+        // XEP-308
+        QString replaceId() const;
+        void setReplaceId(const QString& id);
 
-		// MUC
-		void addMUCStatus(int);
-		const QList<int>& getMUCStatuses() const;
-		void addMUCInvite(const MUCInvite&);
-		const QList<MUCInvite>& mucInvites() const;
-		void setMUCDecline(const MUCDecline&);
-		const MUCDecline& mucDecline() const;
-		const QString& mucPassword() const;
-		void setMUCPassword(const QString&);
-		bool hasMUCUser() const;
+        // MUC
+        void addMUCStatus(int);
+        const QList<int>& getMUCStatuses() const;
+        void addMUCInvite(const MUCInvite&);
+        const QList<MUCInvite>& mucInvites() const;
+        void setMUCDecline(const MUCDecline&);
+        const MUCDecline& mucDecline() const;
+        const QString& mucPassword() const;
+        void setMUCPassword(const QString&);
+        bool hasMUCUser() const;
 
-		// Obsolete invitation
-		QString invite() const;
-		void setInvite(const QString &s);
+        // Obsolete invitation
+        QString invite() const;
+        void setInvite(const QString &s);
 
-		// for compatibility.  delete me later
-		bool spooled() const;
-		void setSpooled(bool);
-		bool wasEncrypted() const;
-		void setWasEncrypted(bool);
+        // for compatibility.  delete me later
+        bool spooled() const;
+        void setSpooled(bool);
+        bool wasEncrypted() const;
+        void setWasEncrypted(bool);
 
-		Stanza toStanza(Stream *stream) const;
-		bool fromStanza(const Stanza &s);
-		bool fromStanza(const Stanza &s, int tzoffset);
-		bool fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOffset);
+        Stanza toStanza(Stream *stream) const;
+        bool fromStanza(const Stanza &s);
+        bool fromStanza(const Stanza &s, int tzoffset);
+        bool fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOffset);
 
-	private:
-		class Private;
-		Private *d;
-	};
+    private:
+        class Private;
+        Private *d;
+    };
 }
 
 #endif

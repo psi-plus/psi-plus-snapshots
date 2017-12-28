@@ -1,3 +1,3 @@
 SOURCES += \
-	$$PWD/randrandomnumbergeneratortest.cpp \
-	$$PWD/randomnumbergeneratortest.cpp
+    $$PWD/randrandomnumbergeneratortest.cpp \
+    $$PWD/randomnumbergeneratortest.cpp

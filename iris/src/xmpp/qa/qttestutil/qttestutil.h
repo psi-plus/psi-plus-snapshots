@@ -31,12 +31,12 @@
  *
  * Execute this macro in the body of your unit test's .cpp file, e.g.
  *    class MyTest {
- *			...
- *		};
+ *            ...
+ *        };
  *
- *		QTTESTUTIL_REGISTER_TEST(MyTest)
+ *        QTTESTUTIL_REGISTER_TEST(MyTest)
  */
 #define QTTESTUTIL_REGISTER_TEST(TestClass) \
-	static QtTestUtil::TestRegistration<TestClass> TestClass##Registration
+    static QtTestUtil::TestRegistration<TestClass> TestClass##Registration
 
 #endif

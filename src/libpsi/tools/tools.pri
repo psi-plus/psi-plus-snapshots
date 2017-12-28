@@ -7,20 +7,20 @@ include($$PWD/atomicxmlfile/atomicxmlfile.pri)
 include($$PWD/simplecli/simplecli.pri)
 
 mac {
-	# Growl
-	contains(DEFINES, HAVE_GROWL) {
-		include($$PWD/growlnotifier/growlnotifier.pri)
-	}
+    # Growl
+    contains(DEFINES, HAVE_GROWL) {
+        include($$PWD/growlnotifier/growlnotifier.pri)
+    }
 
-	# Mac dock
-	include($$PWD/mac_dock/mac_dock.pri)
+    # Mac dock
+    include($$PWD/mac_dock/mac_dock.pri)
 }
 
 HEADERS += \
-	$$PWD/maybe.h \
-	$$PWD/priorityvalidator.h \
-	$$PWD/iodeviceopener.h
+    $$PWD/maybe.h \
+    $$PWD/priorityvalidator.h \
+    $$PWD/iodeviceopener.h
 
 SOURCES += \
-	$$PWD/priorityvalidator.cpp \
-	$$PWD/iodeviceopener.cpp
+    $$PWD/priorityvalidator.cpp \
+    $$PWD/iodeviceopener.cpp

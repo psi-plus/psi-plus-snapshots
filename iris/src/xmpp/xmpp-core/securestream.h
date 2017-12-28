@@ -29,7 +29,7 @@
 #ifdef USE_TLSHANDLER
 namespace XMPP
 {
-	class TLSHandler;
+    class TLSHandler;
 }
 #endif
 
@@ -37,51 +37,51 @@ class CompressionHandler;
 
 class SecureStream : public ByteStream
 {
-	Q_OBJECT
+    Q_OBJECT
 public:
-	enum Error { ErrTLS = ErrCustom, ErrSASL };
-	SecureStream(ByteStream *s);
-	~SecureStream();
+    enum Error { ErrTLS = ErrCustom, ErrSASL };
+    SecureStream(ByteStream *s);
+    ~SecureStream();
 
-	void startTLSClient(QCA::TLS *t, const QByteArray &spare=QByteArray());
-	void startTLSServer(QCA::TLS *t, const QByteArray &spare=QByteArray());
-	void setLayerCompress(const QByteArray &spare=QByteArray());
-	void setLayerSASL(QCA::SASL *s, const QByteArray &spare=QByteArray());
+    void startTLSClient(QCA::TLS *t, const QByteArray &spare=QByteArray());
+    void startTLSServer(QCA::TLS *t, const QByteArray &spare=QByteArray());
+    void setLayerCompress(const QByteArray &spare=QByteArray());
+    void setLayerSASL(QCA::SASL *s, const QByteArray &spare=QByteArray());
 #ifdef USE_TLSHANDLER
-	void startTLSClient(XMPP::TLSHandler *t, const QString &server, const QByteArray &spare=QByteArray());
+    void startTLSClient(XMPP::TLSHandler *t, const QString &server, const QByteArray &spare=QByteArray());
 #endif
 
-	void closeTLS();
-	int errorCode() const;
+    void closeTLS();
+    int errorCode() const;
 
-	// reimplemented
-	bool isOpen() const;
-	void write(const QByteArray &);
-	qint64 bytesToWrite() const;
+    // reimplemented
+    bool isOpen() const;
+    void write(const QByteArray &);
+    qint64 bytesToWrite() const;
 
 signals:
-	void tlsHandshaken();
-	void tlsClosed();
+    void tlsHandshaken();
+    void tlsClosed();
 
 private slots:
-	void bs_readyRead();
-	void bs_bytesWritten(qint64);
+    void bs_readyRead();
+    void bs_bytesWritten(qint64);
 
-	void layer_tlsHandshaken();
-	void layer_tlsClosed(const QByteArray &);
-	void layer_readyRead(const QByteArray &);
-	void layer_needWrite(const QByteArray &);
-	void layer_error(int);
+    void layer_tlsHandshaken();
+    void layer_tlsClosed(const QByteArray &);
+    void layer_readyRead(const QByteArray &);
+    void layer_needWrite(const QByteArray &);
+    void layer_error(int);
 
 private:
-	void linkLayer(QObject *);
-	int calcPrebytes() const;
-	void insertData(const QByteArray &a);
-	void writeRawData(const QByteArray &a);
-	void incomingData(const QByteArray &a);
+    void linkLayer(QObject *);
+    int calcPrebytes() const;
+    void insertData(const QByteArray &a);
+    void writeRawData(const QByteArray &a);
+    void incomingData(const QByteArray &a);
 
-	class Private;
-	Private *d;
+    class Private;
+    Private *d;
 };
 
 #endif

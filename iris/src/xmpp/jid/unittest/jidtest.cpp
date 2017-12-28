@@ -29,16 +29,16 @@ using namespace XMPP;
 
 class JidTest : public QObject
 {
-		Q_OBJECT
+        Q_OBJECT
 
-	private slots:
-		void testConstructorWithString() {
-			Jid testling("foo@bar/baz");
+    private slots:
+        void testConstructorWithString() {
+            Jid testling("foo@bar/baz");
 
-			QCOMPARE(testling.node(), QString("foo"));
-			QCOMPARE(testling.domain(), QString("bar"));
-			QCOMPARE(testling.resource(), QString("baz"));
-		}
+            QCOMPARE(testling.node(), QString("foo"));
+            QCOMPARE(testling.domain(), QString("bar"));
+            QCOMPARE(testling.resource(), QString("baz"));
+        }
 };
 
 QTTESTUTIL_REGISTER_TEST(JidTest);

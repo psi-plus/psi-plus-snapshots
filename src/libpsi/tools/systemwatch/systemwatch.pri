@@ -3,14 +3,14 @@ SOURCES += $$PWD/systemwatch.cpp
 DEPENDPATH  += $$PWD
 
 unix:!mac {
-	HEADERS += $$PWD/systemwatch_unix.h
-	SOURCES += $$PWD/systemwatch_unix.cpp
+    HEADERS += $$PWD/systemwatch_unix.h
+    SOURCES += $$PWD/systemwatch_unix.cpp
 }
 win32: {
-	HEADERS += $$PWD/systemwatch_win.h
-	SOURCES += $$PWD/systemwatch_win.cpp
+    HEADERS += $$PWD/systemwatch_win.h
+    SOURCES += $$PWD/systemwatch_win.cpp
 }
 mac: {
-	HEADERS += $$PWD/systemwatch_mac.h
-	SOURCES += $$PWD/systemwatch_mac.cpp
+    HEADERS += $$PWD/systemwatch_mac.h
+    SOURCES += $$PWD/systemwatch_mac.cpp
 }

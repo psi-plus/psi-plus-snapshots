@@ -30,44 +30,44 @@ namespace XMPP {
 
 class IceTransport : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	enum Error
-	{
-		ErrorGeneric,
-		ErrorCustom
-	};
+    enum Error
+    {
+        ErrorGeneric,
+        ErrorCustom
+    };
 
-	enum DebugLevel
-	{
-		DL_None,
-		DL_Info,
-		DL_Packet
-	};
+    enum DebugLevel
+    {
+        DL_None,
+        DL_Info,
+        DL_Packet
+    };
 
-	IceTransport(QObject *parent = 0);
-	~IceTransport();
+    IceTransport(QObject *parent = 0);
+    ~IceTransport();
 
-	virtual void stop() = 0;
+    virtual void stop() = 0;
 
-	virtual bool hasPendingDatagrams(int path) const = 0;
-	virtual QByteArray readDatagram(int path, QHostAddress *addr, int *port) = 0;
-	virtual void writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port) = 0;
-	virtual void addChannelPeer(const QHostAddress &addr, int port) = 0;
+    virtual bool hasPendingDatagrams(int path) const = 0;
+    virtual QByteArray readDatagram(int path, QHostAddress *addr, int *port) = 0;
+    virtual void writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port) = 0;
+    virtual void addChannelPeer(const QHostAddress &addr, int port) = 0;
 
-	virtual void setDebugLevel(DebugLevel level) = 0;
+    virtual void setDebugLevel(DebugLevel level) = 0;
 
 signals:
-	void started();
-	void stopped();
-	void error(int e);
+    void started();
+    void stopped();
+    void error(int e);
 
-	void readyRead(int path);
-	void datagramsWritten(int path, int count, const QHostAddress &addr, int port);
+    void readyRead(int path);
+    void datagramsWritten(int path, int count, const QHostAddress &addr, int port);
 
-	// not DOR-SS/DS safe
-	void debugLine(const QString &str);
+    // not DOR-SS/DS safe
+    void debugLine(const QString &str);
 };
 
 }

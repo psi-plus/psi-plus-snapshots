@@ -699,12 +699,12 @@
 		<object mime='image/png'>cm_uncheck.png</object>
 	</icon>
 
-    <!-- conferenceloggerplugin icon -->
-    <icon>
+	<!-- conferenceloggerplugin icon -->
+	<icon>
 		<x xmlns='name'>loggerplugin/openlog</x>
 		<object mime='image/png'>history.png</object>
 	</icon>
-    <!-- End conferenceloggerplugin icon -->
+	<!-- End conferenceloggerplugin icon -->
 
 	<!-- Psi Plus icons -->
 	<icon>

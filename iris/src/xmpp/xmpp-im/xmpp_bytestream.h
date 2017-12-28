@@ -27,44 +27,44 @@
 
 namespace XMPP
 {
-	class Client;
-	class BytestreamManager;
+    class Client;
+    class BytestreamManager;
 
-	class BSConnection : public ByteStream
-	{
-	public:
-		enum Error { ErrRefused = ErrCustom, ErrConnect, ErrProxy, ErrSocket };
-		enum State { Idle, Requesting, Connecting, WaitingForAccept, Active };
+    class BSConnection : public ByteStream
+    {
+    public:
+        enum Error { ErrRefused = ErrCustom, ErrConnect, ErrProxy, ErrSocket };
+        enum State { Idle, Requesting, Connecting, WaitingForAccept, Active };
 
-		BSConnection(QObject *parent = 0) : ByteStream(parent) {}
+        BSConnection(QObject *parent = 0) : ByteStream(parent) {}
 
-		virtual void connectToJid(const Jid &peer, const QString &sid) = 0;
-		virtual void accept() = 0;
+        virtual void connectToJid(const Jid &peer, const QString &sid) = 0;
+        virtual void accept() = 0;
 
-		virtual Jid peer() const = 0;
-		virtual QString sid() const = 0;
-		virtual BytestreamManager* manager() const = 0;
-	};
+        virtual Jid peer() const = 0;
+        virtual QString sid() const = 0;
+        virtual BytestreamManager* manager() const = 0;
+    };
 
-	class BytestreamManager : public QObject
-	{
-		Q_OBJECT
+    class BytestreamManager : public QObject
+    {
+        Q_OBJECT
 
-	public:
-		BytestreamManager(Client *);
-		virtual ~BytestreamManager();
+    public:
+        BytestreamManager(Client *);
+        virtual ~BytestreamManager();
 
-		virtual bool isAcceptableSID(const Jid &peer, const QString &sid) const = 0;
-		QString genUniqueSID(const Jid &peer) const;
-		virtual BSConnection* createConnection() = 0;
-		virtual void deleteConnection(BSConnection *c, int msec = 0);
+        virtual bool isAcceptableSID(const Jid &peer, const QString &sid) const = 0;
+        QString genUniqueSID(const Jid &peer) const;
+        virtual BSConnection* createConnection() = 0;
+        virtual void deleteConnection(BSConnection *c, int msec = 0);
 
-	protected:
-		virtual const char* sidPrefix() const = 0;
+    protected:
+        virtual const char* sidPrefix() const = 0;
 
-	signals:
-		void incomingReady();
-	};
+    signals:
+        void incomingReady();
+    };
 }
 
 #endif

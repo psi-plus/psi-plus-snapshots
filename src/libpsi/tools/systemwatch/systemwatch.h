@@ -25,21 +25,21 @@
 
 class SystemWatch : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	static SystemWatch* instance();
+    static SystemWatch* instance();
 
 signals:
-	void sleep();
-	void idleSleep();
-	void wakeup();
+    void sleep();
+    void idleSleep();
+    void wakeup();
 
 protected:
-	SystemWatch();
+    SystemWatch();
 
 private:
-	static SystemWatch* instance_;
+    static SystemWatch* instance_;
 };
 
 #endif

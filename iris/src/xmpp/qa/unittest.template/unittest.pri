@@ -1,2 +1,2 @@
 SOURCES += \
-	$$PWD/myclasstest.cpp
+    $$PWD/myclasstest.cpp

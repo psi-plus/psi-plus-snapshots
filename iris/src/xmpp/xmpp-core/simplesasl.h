@@ -22,12 +22,12 @@
 #define SIMPLESASL_H
 
 namespace QCA {
-	class Provider;
+    class Provider;
 }
 
 namespace XMPP
 {
-	QCA::Provider* createProviderSimpleSASL();
+    QCA::Provider* createProviderSimpleSASL();
 }
 
 #endif

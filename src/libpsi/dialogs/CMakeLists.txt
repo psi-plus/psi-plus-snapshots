@@ -10,16 +10,16 @@ unset(EXTRA_LDFLAGS)
 include_directories(libpsi/dialogs)
 
 list(APPEND HEADERS
-	grepshortcutkeydialog.h
-	)
+    grepshortcutkeydialog.h
+    )
 
 list(APPEND PLAIN_SOURCES
-	grepshortcutkeydialog.cpp
-	)
+    grepshortcutkeydialog.cpp
+    )
 
 list(APPEND FORMS
-	grepshortcutkeydialog.ui
-	)
+    grepshortcutkeydialog.ui
+    )
 
 qt5_wrap_ui(UI_FORMS ${FORMS})
 qt_wrap_cpp(MOC_SOURCES ${HEADERS})
