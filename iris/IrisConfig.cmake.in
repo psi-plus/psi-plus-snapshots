@@ -13,7 +13,7 @@ set(Iris_LIBRARY_DIR "${rootDir}/@LIB_INSTALL_DIR_REL@")
 set(Iris_LIB_SONAME iris)
 
 if(NOT TARGET iris)
-	include(${currentDir}/IrisTargets.cmake)
+    include(${currentDir}/IrisTargets.cmake)
 endif()
 
 set(Iris_LIBRARY iris)
