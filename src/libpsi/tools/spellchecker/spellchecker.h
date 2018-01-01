@@ -31,6 +31,8 @@
 #include <QList>
 #include <QString>
 
+#include "languagemanager.h"
+
 class SpellChecker : public QObject
 {
 public:
@@ -41,8 +43,8 @@ public:
     virtual bool isCorrect(const QString&);
     virtual bool add(const QString&);
 
-    virtual void setActiveLanguages(const QList<QString>& ) {}
-    virtual QList<QString> getAllLanguages() const { return QList<QString>(); }
+    virtual void setActiveLanguages(const QSet<LanguageManager::LangId>& ) {}
+    virtual QSet<LanguageManager::LangId> getAllLanguages() const { return QSet<LanguageManager::LangId>(); }
 
 protected:
     SpellChecker();

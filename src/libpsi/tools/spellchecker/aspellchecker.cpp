@@ -108,9 +108,9 @@ bool ASpellChecker::writable() const
     return false;
 }
 
-QList<QString> ASpellChecker::getAllLanguages() const
+QSet<LanguageManager::LangId> ASpellChecker::getAllLanguages() const
 {
-    QList<QString> langs;
+    QSet<LanguageManager::LangId> langs;
 
     AspellDictInfoList* dict_info_list = get_aspell_dict_info_list(config_);
 
@@ -120,11 +120,9 @@ QList<QString> ASpellChecker::getAllLanguages() const
 
         while (!aspell_dict_info_enumeration_at_end(dict_info_enum)) {
             const AspellDictInfo* dict_info = aspell_dict_info_enumeration_next(dict_info_enum);
-            QString lang(dict_info -> code);
-            if (lang.contains('_'))
-                lang.truncate(lang.indexOf('_'));
-            if (!langs.contains(lang)) {
-                langs.append(lang);
+            auto id = LanguageManager::fromString(QString::fromLatin1(dict_info -> code));
+            if (id.language) {
+                langs.insert(id);
             }
         }
 
@@ -134,14 +132,15 @@ QList<QString> ASpellChecker::getAllLanguages() const
     return langs;
 }
 
-void ASpellChecker::setActiveLanguages(const QList<QString>& langs)
+void ASpellChecker::setActiveLanguages(const QSet<LanguageManager::LangId>& langs)
 {
     clearSpellers();
 
-    foreach(const QString& lang, langs)
+    for(auto const &lang: langs)
     {
         AspellConfig* conf = aspell_config_clone(config_);
-        aspell_config_replace(conf, "lang", lang.toUtf8().constData());
+        aspell_config_replace(conf, "lang", LanguageManager::toString(lang)
+                              .replace(QLatin1Char('-'),QLatin1Char('_')).toUtf8().constData());
         AspellCanHaveError* ret = new_aspell_speller(conf);
         if (aspell_error_number(ret) == 0) {
             spellers_.append(to_aspell_speller(ret));

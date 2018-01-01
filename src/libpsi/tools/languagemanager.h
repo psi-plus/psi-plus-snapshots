@@ -16,10 +16,17 @@ public:
 
     static LangId fromString(const QString &langDesc);
     static QString toString(const LangId &id);
-    static LangId bestUiMatch(const QList<LangId> &avail);
+    static QList<LanguageManager::LangId> bestUiMatch(const QSet<LanguageManager::LangId> &avail, bool justOne = false);
     static QString languageName(const LangId &id);
     static QString countryName(const LangId &id);
+    static QSet<LangId> deserializeLanguageSet(const QString &);
+    static QString serializeLanguageSet(const QSet<LanguageManager::LangId> &langs);
 };
+
+inline uint qHash(const LanguageManager::LangId &t)
+{
+    return qHash(t.language) ^ qHash(t.country) ^ qHash(t.script);
+}
 
 // weird sorting operator
 inline bool operator<(const LanguageManager::LangId &a, const LanguageManager::LangId &b)

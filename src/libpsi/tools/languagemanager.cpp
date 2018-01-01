@@ -1,3 +1,5 @@
+#include <QSet>
+
 #include "languagemanager.h"
 
 LanguageModel::LanguageModel(QObject *parent) :
@@ -146,34 +148,101 @@ QString LanguageManager::toString(const LanguageManager::LangId &id)
     return ret.join('-');
 }
 
-LanguageManager::LangId LanguageManager::bestUiMatch(const QList<LanguageManager::LangId> &avail)
+/**
+ * @brief LanguageManager::bestUiMatch
+ *
+ *  Lookups the best match from available locales against each next
+ *  locale from QLocale::uiLanguages.
+ *  For example available is comprised of en_ANY, en_US, ru_ANY (depends on LangId fields),
+ *  and uiLanguages has ru_RU then "ru_ANY" will be selected and returned.
+ *  If uiLanguages locale is en_US for the example above, then en_US
+ *  will be selected with language and country in LangId.
+ *
+ *  Another case is when available have something like en_US, ru_RU, ru_UA but
+ *  uiLanguages has just "ru" then system locale will be checked for country.
+ *  In case of Russia, ru_RU will be selected for Belarus nothing will selected.
+ *
+ *  Exmaples:
+ *  available    |  ui          | selected          |
+ *  -------------------------------------------------
+ *  en_ANY en_US | en_US        | en_US
+ *  en_ANY       | en_US        | en_ANY
+ *  en_US        | en           | en_US if system is US. nothing otherwise
+ *
+ *
+ * @param avail available languages to select from.
+ * @param justOne just one langId in result is enough
+ * @return priority sorted languages list. best match comes first
+ */
+QList<LanguageManager::LangId> LanguageManager::bestUiMatch(const QSet<LanguageManager::LangId> &avail, bool justOne)
 {
     QLocale def; // default locale (or system locale if default is not set). FIXME get from settings
-    LangId preferred;
-    for (auto const &aId: avail) {
-        if (def.language() != aId.language ||
-                (aId.script != QLocale::AnyScript && aId.script != def.script()) ||
-                (aId.country != QLocale::AnyCountry && aId.country != def.country()))
-        { // we don't care about different languages/scripts/countries
-            continue;
-        }
-        // now if ui lang in the list of available we can check if the current available has better match by country and script
-        if (preferred.language == QLocale::AnyLanguage) { // if preferred is not initialized
-            preferred = aId;
-            continue;
-        }
-        if (preferred.script == QLocale::AnyScript && aId.script != QLocale::AnyScript) {
-            preferred = aId;
-            continue;
-        }
-        if (preferred.country == QLocale::AnyCountry && aId.country != QLocale::AnyCountry) {
-            preferred = aId;
-        }
-        if (preferred.script && preferred.country) {
-            break;
+    static QSet<LangId> uiLangs;
+    if (uiLangs.isEmpty()) {
+        for (auto const &l: QLocale::system().uiLanguages()) {
+            auto id = fromString(l);
+            if (id.language) {
+                uiLangs.insert(id);
+            }
         }
     }
-    return preferred;
+    QList<LangId> ret;
+    QList<LangId> toCheck;
+    toCheck.reserve(4);
+    for (auto uiId: uiLangs) {
+        toCheck.clear();
+        // check if ui locale looks like system locale and set missed parts
+        if (uiId.language == def.language()) { // matches with system. consider country and script from system to be preferred if not set in ui
+            if (!uiId.country && (!uiId.script || uiId.script == def.script())) {
+                uiId.country = def.country();
+            }
+            if (!uiId.script && (!uiId.country || uiId.country == def.country())) {
+                uiId.script = def.script();
+            }
+        }
+        // now when everything is filled we can fallback from example 3 to 2 if it was system.
+        // of course it's still possible to have just language in ui.
+
+        // next things are simple.
+        // first try uiId match as is and add to result if it's within available.
+        // then check if we can remove script or country and try again.
+        // repeat till we have just language
+        toCheck.append(uiId);
+
+        auto copyId = uiId;
+        // try to check with any script
+        if (uiId.script != QLocale::AnyScript) {
+            uiId.script = QLocale::AnyScript;
+            toCheck.append(uiId);
+            uiId = copyId;
+        }
+        // try to check with any country
+        if (uiId.country != QLocale::AnyCountry) {
+            uiId.country = QLocale::AnyCountry;
+            toCheck.append(uiId);
+            uiId = copyId;
+        }
+        // try to check any script and any country
+        if (uiId.script != QLocale::AnyScript && uiId.country != QLocale::AnyCountry) {
+            uiId.script = QLocale::AnyScript;
+            uiId.country = QLocale::AnyCountry;
+            toCheck.append(uiId);
+        }
+
+        for (auto const &id: toCheck) {
+            if (avail.contains(id)) {
+                ret.append(id);
+                if (justOne) {
+                    return ret;
+                }
+            }
+        }
+    }
+    LangId defLangId;
+    if (avail.contains(defLangId)) {
+        ret.append(defLangId);
+    }
+    return ret;
 }
 
 QString LanguageManager::languageName(const LanguageManager::LangId &id)
@@ -220,4 +289,26 @@ QString LanguageManager::countryName(const LanguageManager::LangId &id)
         ret += " (" + loc.countryToString(loc.country()) + ")";
     }
     return ret;
+}
+
+QSet<LanguageManager::LangId> LanguageManager::deserializeLanguageSet(const QString &str)
+{
+    QStringList langs = str.split(QRegExp("\\s+"), QString::SkipEmptyParts);
+    QSet<LangId> ret;
+    for (auto const &l: langs) {
+        auto id = fromString(l);
+        if (id.language) {
+            ret.insert(id);
+        }
+    }
+    return ret;
+}
+
+QString LanguageManager::serializeLanguageSet(const QSet<LanguageManager::LangId> &langs)
+{
+    QStringList ret;
+    for (auto const &l: langs) {
+        ret.append(toString(l));
+    }
+    return ret.join(' ');
 }

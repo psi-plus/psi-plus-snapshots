@@ -3,6 +3,7 @@
 
 #include "optionstab.h"
 #include "psicon.h"
+#include "languagemanager.h"
 
 class QWidget;
 class QTreeWidgetItem;
@@ -33,9 +34,9 @@ private slots:
 private:
     QWidget *w_;
     PsiCon *psi_;
-    QStringList availableDicts_;
-    QStringList loadedDicts_;
-    QStringList defaultLangs_;
+    QSet<LanguageManager::LangId> availableDicts_;
+    QSet<LanguageManager::LangId> loadedDicts_;
+    QSet<LanguageManager::LangId> defaultLangs_;
 };
 
 #endif // OPT_TABINPUT_H

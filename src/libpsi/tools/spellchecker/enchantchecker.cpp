@@ -34,8 +34,6 @@
 static enchant::Broker *broker;
 
 EnchantChecker::EnchantChecker()
-    : spellers_(EnchantDictList())
-    , allLanguages_(QStringList())
 {
 #ifdef HAVE_ENCHANT2
     broker = new enchant::Broker();
@@ -111,21 +109,22 @@ bool EnchantChecker::writable() const
     return false;
 }
 
-QList<QString> EnchantChecker::getAllLanguages() const
+QSet<LanguageManager::LangId> EnchantChecker::getAllLanguages() const
 {
-    return allLanguages_;
+    return allLanguages_.keys().toSet();
 }
 
-void EnchantChecker::setActiveLanguages(const QList<QString>& langs)
+void EnchantChecker::setActiveLanguages(const QSet<LanguageManager::LangId>& langs)
 {
     clearSpellers();
 
-    foreach (const QString& lang, langs) {
-        if (!allLanguages_.contains(lang))
+    for (auto const &lang: langs) {
+        auto it = allLanguages_.constFind(lang);
+        if (it == allLanguages_.constEnd())
             continue;
 
         try {
-            spellers_ << broker->request_dict(lang.toStdString());
+            spellers_ << broker->request_dict(it.value().toStdString());
         } catch (enchant::Exception &e) {
             qWarning() << QString("Enchant error: %1").arg(e.what());
         }
@@ -149,11 +148,14 @@ void EnchantChecker::enchantDictDescribeFn(const char *const lang_tag,
     Q_UNUSED(provider_file);
     EnchantChecker *enchantChecker = static_cast<EnchantChecker*>(user_data);
 
-    QString lang(lang_tag);
-
-    if (lang.contains('_'))
-        lang.truncate(lang.indexOf('_'));
-
-    if (!enchantChecker->allLanguages_.contains(lang))
-        enchantChecker->allLanguages_ << lang;
+    QString lang(QString::fromLatin1(lang_tag));
+    auto id = LanguageManager::fromString(lang);
+    if (!id.language) {
+        id = LanguageManager::fromString(lang.section(QLatin1Char('_'), 0, 0));
+    }
+    if (id.language) {
+        if (!enchantChecker->allLanguages_.contains(id)) {
+            enchantChecker->allLanguages_.insert(id, lang);
+        }
+    }
 }

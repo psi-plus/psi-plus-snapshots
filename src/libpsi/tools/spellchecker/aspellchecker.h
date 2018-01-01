@@ -46,8 +46,8 @@ public:
     virtual bool available() const;
     virtual bool writable() const;
 
-    virtual void setActiveLanguages(const QList<QString>& langs);
-    virtual QList<QString> getAllLanguages() const;
+    virtual void setActiveLanguages(const QSet<LanguageManager::LangId> &langs);
+    virtual QSet<LanguageManager::LangId> getAllLanguages() const;
 
 private:
     void clearSpellers();

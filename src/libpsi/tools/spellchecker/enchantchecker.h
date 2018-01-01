@@ -47,8 +47,8 @@ public:
     virtual bool available() const;
     virtual bool writable() const;
 
-    virtual void setActiveLanguages(const QList<QString>& langs);
-    virtual QList<QString> getAllLanguages() const;
+    virtual void setActiveLanguages(const QSet<LanguageManager::LangId> &langs);
+    virtual QSet<LanguageManager::LangId> getAllLanguages() const;
 
 private:
     static void enchantDictDescribeFn(const char *const lang_tag,
@@ -60,7 +60,7 @@ private:
 
     typedef QList<enchant::Dict*> EnchantDictList;
     EnchantDictList spellers_;
-    QStringList allLanguages_;
+    QHash<LanguageManager::LangId, QString> allLanguages_;
 };
 
 #endif

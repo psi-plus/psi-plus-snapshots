@@ -232,8 +232,7 @@ HEADERS += \
     $$PWD/alertmanager.h \
     $$PWD/accountloginpassword.h \
     $$PWD/mcmdcompletion.h \
-    $$PWD/captchadlg.h \
-    $$PWD/languagemanager.h
+    $$PWD/captchadlg.h
 
 # Source files
 SOURCES += \
@@ -367,8 +366,7 @@ SOURCES += \
     $$PWD/alertmanager.cpp \
     $$PWD/accountloginpassword.cpp \
     $$PWD/mcmdcompletion.cpp \
-    $$PWD/captchadlg.cpp \
-    $$PWD/languagemanager.cpp
+    $$PWD/captchadlg.cpp
 
 CONFIG += filetransfer
 filetransfer {

@@ -37,6 +37,7 @@ list(APPEND PLAIN_HEADERS
     # tools
     maybe.h
     iodeviceopener.h
+    languagemanager.h
 
     # atomicxmlfile
     atomicxmlfile/atomicxmlfile.h
@@ -55,6 +56,7 @@ list(APPEND PLAIN_HEADERS
 list(APPEND PLAIN_SOURCES
     # tools
     priorityvalidator.cpp
+    languagemanager.cpp
 
     # spellchecker
     spellchecker/spellchecker.cpp

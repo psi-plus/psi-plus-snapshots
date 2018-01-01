@@ -19,8 +19,10 @@ mac {
 HEADERS += \
     $$PWD/maybe.h \
     $$PWD/priorityvalidator.h \
-    $$PWD/iodeviceopener.h
+    $$PWD/iodeviceopener.h \
+    $$PWD/languagemanager.h
 
 SOURCES += \
     $$PWD/priorityvalidator.cpp \
-    $$PWD/iodeviceopener.cpp
+    $$PWD/iodeviceopener.cpp \
+    $$PWD/languagemanager.cpp

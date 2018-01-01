@@ -6,6 +6,7 @@
 #include <QCheckBox>
 #include <QLocale>
 //#include <QDebug>
+#include <QStringLiteral>
 
 #include "psioptions.h"
 #include "spellchecker/spellchecker.h"
@@ -13,9 +14,9 @@
 
 #include "ui_opt_input.h"
 
-static const QString ENABLED_OPTION("options.ui.spell-check.enabled");
-static const QString DICTS_OPTION("options.ui.spell-check.langs");
-static const QString AUTORESIZE_OPTION("options.ui.chat.use-expanding-line-edit");
+static const QString ENABLED_OPTION = QStringLiteral("options.ui.spell-check.enabled");
+static const QString DICTS_OPTION = QStringLiteral("options.ui.spell-check.langs");
+static const QString AUTORESIZE_OPTION = QStringLiteral("options.ui.chat.use-expanding-line-edit");
 static const uint FullName = 0;
 
 
@@ -45,14 +46,7 @@ QWidget *OptionsTabInput::widget()
     OptInputUI *d = (OptInputUI *)w_;
 
     availableDicts_ = SpellChecker::instance()->getAllLanguages();
-    QStringList uiLangs = QLocale::system().uiLanguages();
-    if(!uiLangs.isEmpty()) {
-        foreach (QString loc, uiLangs) {
-            if(availableDicts_.contains(loc.replace("-", "_"), Qt::CaseInsensitive)) {
-                defaultLangs_ << loc;
-            }
-        }
-    }
+    defaultLangs_ = LanguageManager::bestUiMatch(availableDicts_).toSet();
 
     d->isSpellCheck->setWhatsThis(tr("Check this option if you want your spelling to be checked"));
 
@@ -84,7 +78,11 @@ void OptionsTabInput::applyOptions()
     else {
         d->groupBoxDicts->setEnabled(isEnabled);
         s->setActiveLanguages(loadedDicts_);
-        o->setOption(DICTS_OPTION, QVariant(loadedDicts_.join(" ")));
+        QStringList loaded;
+        for (auto const &id: loadedDicts_) {
+            loaded.append(LanguageManager::toString(id));
+        }
+        o->setOption(DICTS_OPTION, QVariant(loaded.join(" ")));
     }
     o->setOption("options.ui.chat.auto-capitalize", d->ck_autoCapitalize->isChecked());
 }
@@ -129,9 +127,17 @@ void OptionsTabInput::updateDictLists()
 {
     PsiOptions* o = PsiOptions::instance();
     QStringList newLoadedList = o->getOption(DICTS_OPTION).toString().split(QRegExp("\\s+"), QString::SkipEmptyParts);
-    newLoadedList = (newLoadedList.isEmpty()) ? defaultLangs_ : newLoadedList;
-    if(newLoadedList != loadedDicts_ || loadedDicts_.isEmpty()) {
-        loadedDicts_ = newLoadedList;
+    QSet<LanguageManager::LangId> newLoadedSet;
+    for (auto &l: newLoadedList) {
+        auto id = LanguageManager::fromString(l);
+        if (id.language) {
+            newLoadedSet.insert(id);
+        }
+    }
+
+    newLoadedSet = (newLoadedSet.isEmpty()) ? defaultLangs_ : newLoadedSet;
+    if(newLoadedSet != loadedDicts_ || loadedDicts_.isEmpty()) {
+        loadedDicts_ = newLoadedSet;
     }
 }
 
@@ -146,12 +152,11 @@ void OptionsTabInput::fillList()
     if(!availableDicts_.isEmpty()) {
         d->availDicts->disconnect();
         d->availDicts->clear();
-        foreach (const QString &item, availableDicts_) {
+        for (auto const &id: availableDicts_) {
             QTreeWidgetItem *dic = new QTreeWidgetItem(d->availDicts, QTreeWidgetItem::Type);
-            QLocale loc(item);
-            dic->setText(FullName, QString("%1 - %2").arg(loc.nativeLanguageName()).arg(loc.nativeCountryName()));
-            dic->setData(FullName, Qt::UserRole, item);
-            if(!loadedDicts_.contains(item)) {
+            dic->setText(FullName, LanguageManager::languageName(id));
+            dic->setData(FullName, Qt::UserRole, QVariant::fromValue<LanguageManager::LangId>(id));
+            if(!loadedDicts_.contains(id)) {
                 dic->setCheckState(FullName, Qt::Unchecked);
                 //qDebug() << "item" << item << "unchecked";
             }
@@ -174,8 +179,8 @@ void OptionsTabInput::setChecked()
     QTreeWidgetItemIterator it(d->availDicts);
     while(*it) {
         QTreeWidgetItem *item = *it;
-        QString itemText = item->data(FullName, Qt::UserRole).toString();
-        Qt::CheckState state = loadedDicts_.contains(itemText, Qt::CaseInsensitive) ? Qt::Checked : Qt::Unchecked;
+        LanguageManager::LangId langId = item->data(FullName, Qt::UserRole).value<LanguageManager::LangId>();
+        Qt::CheckState state = loadedDicts_.contains(langId) ? Qt::Checked : Qt::Unchecked;
         if(state != item->checkState(FullName)) {
             item->setCheckState(FullName, state);
         }
@@ -205,12 +210,12 @@ void OptionsTabInput::itemChanged(QTreeWidgetItem *item, int column)
         return;
 
     bool enabled = bool(item->checkState(column) == Qt::Checked);
-    QString itemText = item->data(column, Qt::UserRole).toString();
-    if(loadedDicts_.contains(itemText, Qt::CaseInsensitive) && !enabled) {
-        loadedDicts_.removeOne(itemText);
+    LanguageManager::LangId id = item->data(column, Qt::UserRole).value<LanguageManager::LangId>();
+    if(loadedDicts_.contains(id) && !enabled) {
+        loadedDicts_.remove(id);
     }
     else if (enabled){
-        loadedDicts_ << itemText;
+        loadedDicts_ << id;
     }
     dataChanged();
 }
