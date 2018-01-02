@@ -408,10 +408,10 @@ QLineEdit#le_status_text {
                         <informational type="QColor" comment="Color used to indicate informational (status change, spooled) messages.">#008000</informational>
                         <usertext type="QColor" comment="Color used to indicate additional text for informational messages.">#606060</usertext>
                         <highlighting type="QColor">#FF0000</highlighting>
+                        <link type="QColor">#000080</link>
+                        <link-visited type="QColor">#400080</link>
                     </messages>
                     <chat>
-                        <link-color type="QColor">#0000ff</link-color>
-                        <mailto-color type="QColor">#0000ff</mailto-color>
                         <composing-color type="QColor">darkGreen</composing-color>
                         <unread-message-color type="QColor">red</unread-message-color>
                     </chat>
