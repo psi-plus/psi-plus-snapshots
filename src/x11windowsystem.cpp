@@ -2,9 +2,101 @@
 
 #include <QX11Info>
 #include <X11/Xlib.h>
+#include <X11/Xutil.h> // needed for WM_CLASS hinting
 
 const long MAX_PROP_SIZE = 100000;
 X11WindowSystem* X11WindowSystem::_instance = 0;
+
+
+void X11WindowSystem::x11wmClass(Display *dsp, WId wid, QString resName)
+{
+    if (!QX11Info::isPlatformX11())
+        return;
+
+    //Display *dsp = x11Display();                 // get the display
+    //WId win = winId();                           // get the window
+    XClassHint classhint;                          // class hints
+    // Get old class hint. It is important to save old class name
+    XGetClassHint(dsp, wid, &classhint);
+    XFree(classhint.res_name);
+
+    const QByteArray latinResName = resName.toLatin1();
+    classhint.res_name = (char *)latinResName.data(); // res_name
+    XSetClassHint(dsp, wid, &classhint);           // set the class hints
+
+    XFree(classhint.res_class);
+}
+
+//>>>-- Nathaniel Gray -- Caltech Computer Science ------>
+//>>>-- Mojave Project -- http://mojave.cs.caltech.edu -->
+// Copied from http://www.nedit.org/archives/discuss/2002-Aug/0386.html
+
+// Helper function
+static bool getCardinal32Prop(Display *display, Window win, char *propName, long *value)
+{
+    if (!QX11Info::isPlatformX11())
+        return false;
+
+    Atom nameAtom, typeAtom, actual_type_return;
+    int actual_format_return, result;
+    unsigned long nitems_return, bytes_after_return;
+    long *result_array=NULL;
+
+    nameAtom = XInternAtom(display, propName, False);
+    typeAtom = XInternAtom(display, "CARDINAL", False);
+    if (nameAtom == None || typeAtom == None) {
+        //qDebug("Atoms not interned!");
+        return false;
+    }
+
+
+    // Try to get the property
+    result = XGetWindowProperty(display, win, nameAtom, 0, 1, False,
+        typeAtom, &actual_type_return, &actual_format_return,
+        &nitems_return, &bytes_after_return,
+        (unsigned char **)&result_array);
+
+    if( result != Success ) {
+        //qDebug("not Success");
+        return false;
+    }
+    if( actual_type_return == None || actual_format_return == 0 ) {
+        //qDebug("Prop not found");
+        return false;
+    }
+    if( actual_type_return != typeAtom ) {
+        //qDebug("Wrong type atom");
+    }
+    *value = result_array[0];
+    XFree(result_array);
+    return true;
+}
+
+
+// Get the desktop number that a window is on
+bool X11WindowSystem::desktopOfWindow(Window *window, long *desktop)
+{
+    Display *display = QX11Info::display();
+    bool result = getCardinal32Prop(display, *window, (char *)"_NET_WM_DESKTOP", desktop);
+    //if( result )
+    //    qDebug("Desktop: " + QString::number(*desktop));
+    return result;
+}
+
+
+// Get the current desktop the WM is displaying
+bool X11WindowSystem::currentDesktop(long *desktop)
+{
+    Window rootWin;
+    Display *display = QX11Info::display();
+    bool result;
+
+    rootWin = RootWindow(QX11Info::display(), XDefaultScreen(QX11Info::display()));
+    result = getCardinal32Prop(display, rootWin, (char *)"_NET_CURRENT_DESKTOP", desktop);
+    //if( result )
+    //    qDebug("Current Desktop: " + QString::number(*desktop));
+    return result;
+}
 
 X11WindowSystem::X11WindowSystem()
 {
@@ -115,6 +207,8 @@ bool X11WindowSystem::isWindowObscured(QWidget *widget, bool alwaysOnTop)
     Q_ASSERT(widget);
     QWidget* w = widget->window();
     Window win = w->winId();
+    long desktop;
+    desktopOfWindow(&win, &desktop);
 
     const Atom XA_WINDOW= (Atom) 33;
     Atom type_ret;
@@ -135,6 +229,11 @@ bool X11WindowSystem::isWindowObscured(QWidget *widget, bool alwaysOnTop)
                 while (nitems_ret--)
                 {
                     Window current = wins[nitems_ret];
+
+                    long winDesktop;
+                    desktopOfWindow(&current, &winDesktop);
+                    if (desktop != winDesktop)
+                        continue;
 
                     //We are not interested in underlying windows
                     if (current == win)
