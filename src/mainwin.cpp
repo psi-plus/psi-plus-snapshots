@@ -1621,12 +1621,16 @@ void MainWin::trayClicked(const QPoint &, int button)
         return;
     }
 
+    // if we widget is obscured by other widgets then hiding is not that expected
+    // some interesting info about the problem
+    // http://www.qtcentre.org/threads/56573-Get-the-Window-Visible-State-when-it-is-partially-visible
+    // But currently now really good cross-platform solution.
     toggleVisible(true);
 }
 
 void MainWin::trayDoubleClicked()
 {
-    //Double click works like second single click now if "double-click" style is disabled
+     //Double click works like second single click now if "double-click" style is disabled
 
     if(PsiOptions::instance()->getOption("options.ui.systemtray.use-double-click").toBool()) {
         if(d->nextAmount > 0) {
@@ -1634,7 +1638,6 @@ void MainWin::trayDoubleClicked()
             return;
         }
     }
-
     toggleVisible(true);
 }
 
