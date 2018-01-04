@@ -30,7 +30,6 @@
 #include <QObject>
 #include <QList>
 #include <QString>
-#include <QSet>
 
 #include "languagemanager.h"
 
