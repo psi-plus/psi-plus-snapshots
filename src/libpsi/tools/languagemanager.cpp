@@ -11,9 +11,9 @@ LanguageManager::LangId LanguageManager::fromString(const QString &langDesc)
     }
     int cnt = langDesc.count(QRegExp("[_-]"));
     id.language = loc.language();
-    if (cnt > 1) {
-        id.country = loc.country();
-        if (cnt > 2) { // lang_script_country
+    if (cnt) {
+        id.country = loc.country(); // supposing if there are two components then it's lways country and not script
+        if (cnt > 1) { // lang_script_country
             id.script = loc.script();
         }
     }
