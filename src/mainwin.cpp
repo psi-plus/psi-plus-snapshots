@@ -653,6 +653,7 @@ void MainWin::registerAction( IconAction* action )
             // Check before connecting, otherwise we get a loop
             if ( aName == "publish_tune") {
                 action->setChecked( PsiOptions::instance()->getOption("options.extended-presence.tune.publish").toBool() );
+                d->rosterAvatar->setTuneAction(action);
             }
 #endif
 
@@ -809,10 +810,6 @@ void MainWin::buildStatusMenu(GlobalStatusMenu *statusMenu)
 {
     statusMenu->clear();
     statusMenu->fill();
-#ifdef USE_PEP
-    statusMenu->addSeparator();
-    d->getAction("publish_tune")->addTo(statusMenu);
-#endif
 }
 
 void MainWin::activatedStatusAction(int id)

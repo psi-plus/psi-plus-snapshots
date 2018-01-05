@@ -229,7 +229,7 @@ QLineEdit#le_status_text {
                 <raise-on-new-event type="bool">false</raise-on-new-event>
                 <quit-on-close type="bool">false</quit-on-close>
                 <raise-inactive type="bool">true</raise-inactive>
-                <show-avatar-frame type="bool">false</show-avatar-frame>
+                <show-avatar-frame type="bool">true</show-avatar-frame>
                 <show>
                     <agent-contacts type="bool">true</agent-contacts>
                     <away-contacts type="bool">true</away-contacts>
@@ -242,7 +242,7 @@ QLineEdit#le_status_text {
                 <disable-scrollbar type="bool">true</disable-scrollbar>
                 <avatars>
                     <show type="bool">true</show>
-                    <avatars-at-left type="bool">false</avatars-at-left>
+                    <avatars-at-left type="bool">true</avatars-at-left>
                     <use-default-avatar type="bool">true</use-default-avatar>
                     <size type="int">24</size>
                     <radius type="int">5</radius>
@@ -251,7 +251,7 @@ QLineEdit#le_status_text {
                 <show-activity-icons type="bool">true</show-activity-icons>
                 <show-geolocation-icons type="bool">true</show-geolocation-icons>
                 <show-status-icons type="bool">true</show-status-icons>
-                <status-icon-over-avatar type="bool">false</status-icon-over-avatar>
+                <status-icon-over-avatar type="bool">true</status-icon-over-avatar>
                 <show-tune-icons type="bool">true</show-tune-icons>
                 <show-client-icons type="bool">true</show-client-icons>
                 <show-all-client-icons type="bool">false</show-all-client-icons>
