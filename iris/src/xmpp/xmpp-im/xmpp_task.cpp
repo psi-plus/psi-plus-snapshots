@@ -238,7 +238,7 @@ void Task::done()
         return;
     d->done = true;
 
-    if(d->deleteme || d->autoDelete)
+    if(d->autoDelete)
         d->deleteme = true;
 
     d->insig = true;
