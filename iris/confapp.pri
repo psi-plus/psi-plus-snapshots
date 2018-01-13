@@ -1,5 +1,5 @@
-unix:include(confapp_unix.pri)
-windows:include(confapp_win.pri)
+unix:exists(confapp_unix.pri):include(confapp_unix.pri)
+windows:exists(confapp_win.pri):include(confapp_win.pri)
 
 include(common.pri)
 

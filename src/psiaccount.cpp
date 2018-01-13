@@ -1942,7 +1942,7 @@ void PsiAccount::cs_needAuthParams(bool user, bool pass, bool realm)
         if (d->acc.storeSaltedHashedPassword) d->stream->setSCRAMStoredSaltedHash(d->acc.scramSaltedHashPassword);
     }
 #ifdef HAVE_KEYCHAIN
-    bool useKeyring = PsiOptions::instance()->getOption("options.keychain.enabled").toBool();
+    bool useKeyring = PsiOptions::instance()->getOption("options.keychain.enabled", true).toBool();
     if (pass) {
         if (useKeyring) {
             auto pwJob = new QKeychain::ReadPasswordJob(QLatin1String("xmpp"), this); // qApp is kind of wrong, but "this" is not QObject
@@ -3122,7 +3122,7 @@ void PsiAccount::passwordPrompt()
         d->acc.pass = dialog.password();
         d->acc.opt_pass = dialog.savePassword();
 #if HAVE_KEYCHAIN
-        if (d->acc.opt_pass && PsiOptions::instance()->getOption("options.keychain.enabled").toBool()) {
+        if (d->acc.opt_pass && PsiOptions::instance()->getOption("options.keychain.enabled", true).toBool()) {
             savePassword();
         }
 #endif
