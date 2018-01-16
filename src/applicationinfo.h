@@ -48,6 +48,7 @@ public:
 
     // Common
     static QString desktopFile();
+    static bool isPortable();
 };
 
 #endif

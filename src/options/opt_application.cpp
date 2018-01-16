@@ -113,6 +113,9 @@ void OptionsTabApplication::applyOptions()
     OptApplicationUI *d = (OptApplicationUI *)w;
 
     PsiOptions::instance()->setOption("options.ui.contactlist.quit-on-close", d->ck_quitOnClose->isChecked());
+    if (!ApplicationInfo::isPortable()) {
+        PsiOptions::instance()->setOption("options.keychain.enabled", d->ck_useKeychain->isChecked());
+    }
     PsiOptions::instance()->setOption("options.ui.decorate-windows", d->ck_winDecor->isChecked());
 
     // Auto-update
@@ -181,6 +184,9 @@ void OptionsTabApplication::restoreOptions()
 
     d->ck_autoUpdate->setChecked(PsiOptions::instance()->getOption("options.auto-update.check-on-startup").toBool());
     d->ck_quitOnClose->setChecked(PsiOptions::instance()->getOption("options.ui.contactlist.quit-on-close").toBool());
+    if (!ApplicationInfo::isPortable()) {
+        d->ck_useKeychain->setChecked(PsiOptions::instance()->getOption("options.keychain.enabled").toBool());
+    }
     d->ck_winDecor->setChecked(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
 
     // docklet
@@ -223,6 +229,7 @@ void OptionsTabApplication::restoreOptions()
         d->ck_auto_load->setChecked(true);
     }
 #endif
+    d->ck_useKeychain->setVisible(!ApplicationInfo::isPortable());
 }
 
 void OptionsTabApplication::doEnableQuitOnClose(int state)
