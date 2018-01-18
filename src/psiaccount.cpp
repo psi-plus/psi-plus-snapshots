@@ -656,7 +656,6 @@ private slots:
 
         if (newOnlineContactsCount != onlineContactsCount) {
             onlineContactsCount = newOnlineContactsCount;
-            emit account->updatedAccount();
         }
     }
 
