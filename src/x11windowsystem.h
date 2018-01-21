@@ -42,7 +42,7 @@ public:
     bool windowHasAnyOfStates(Window win, const QSet<Atom> &filteredStates);
     bool currentDesktop(long *desktop);
     bool desktopOfWindow(Window *window, long *desktop);
-    void x11wmClass(Display *dsp, WId wid, QString resName);
+    void x11wmClass(WId wid, QString resName);
 };
 
 #endif // X11WINDOWSYSTEM_H

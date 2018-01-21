@@ -8,7 +8,7 @@ const long MAX_PROP_SIZE = 100000;
 X11WindowSystem* X11WindowSystem::_instance = 0;
 
 
-void X11WindowSystem::x11wmClass(Display *dsp, WId wid, QString resName)
+void X11WindowSystem::x11wmClass(WId wid, QString resName)
 {
     if (!QX11Info::isPlatformX11())
         return;
@@ -17,12 +17,12 @@ void X11WindowSystem::x11wmClass(Display *dsp, WId wid, QString resName)
     //WId win = winId();                           // get the window
     XClassHint classhint;                          // class hints
     // Get old class hint. It is important to save old class name
-    XGetClassHint(dsp, wid, &classhint);
+    XGetClassHint(QX11Info::display(), wid, &classhint);
     XFree(classhint.res_name);
 
     const QByteArray latinResName = resName.toLatin1();
     classhint.res_name = (char *)latinResName.data(); // res_name
-    XSetClassHint(dsp, wid, &classhint);           // set the class hints
+    XSetClassHint(QX11Info::display(), wid, &classhint);           // set the class hints
 
     XFree(classhint.res_class);
 }

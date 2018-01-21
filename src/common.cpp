@@ -38,11 +38,6 @@
 
 #include <stdio.h>
 #ifdef HAVE_X11
-#include <QX11Info>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-
 #include "x11windowsystem.h"
 #endif
 
