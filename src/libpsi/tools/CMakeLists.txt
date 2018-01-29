@@ -82,23 +82,6 @@ list(APPEND PLAIN_SOURCES
     )
 
 if(APPLE)
-    list(APPEND PLAIN_HEADERS
-        mac_dock/mac_dock.h
-        mac_dock/privateqt_mac.h
-        )
-
-    list(APPEND PLAIN_SOURCES
-        # globalshortcut
-        globalshortcut/globalshortcutmanager_mac.mm
-        globalshortcut/NDKeyboardLayout.m
-
-        # spellchecker
-        spellchecker/macspellchecker.mm
-
-        mac_dock/mac_dock.mm
-        mac_dock/privateqt_mac.mm
-        )
-
     list(APPEND HEADERS
         # systemwatch
         systemwatch/systemwatch_mac.h
@@ -116,6 +99,13 @@ if(APPLE)
 
         # systemwatch
         systemwatch/systemwatch_mac.cpp
+
+        # globalshortcut
+        globalshortcut/globalshortcutmanager_mac.mm
+        globalshortcut/NDKeyboardLayout.m
+
+        # spellchecker
+        spellchecker/macspellchecker.mm
         )
 elseif(WIN32)
     list(APPEND PLAIN_HEADERS

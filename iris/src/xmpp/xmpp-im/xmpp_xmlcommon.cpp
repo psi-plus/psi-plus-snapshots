@@ -267,20 +267,21 @@ QDomElement addCorrectNS(const QDomElement &e)
     for(x = 0; x < nl.count(); ++x)
         frag.appendChild(nl.item(x).cloneNode());*/
 
-    // find closest xmlns
+    // find from this to parent closest node with xmlns/namespaceURI
     QDomNode n = e;
-    while(!n.isNull() && !n.toElement().hasAttribute("xmlns") && n.toElement().namespaceURI() == "" )
+    while(!n.isNull() && !n.toElement().hasAttribute("xmlns") && n.toElement().namespaceURI().isEmpty())
         n = n.parentNode();
     QString ns;
-    if(n.isNull() || !n.toElement().hasAttribute("xmlns")){
-        if (n.toElement().namespaceURI () == ""){
+    if(n.isNull() || !n.toElement().hasAttribute("xmlns")) { // if not found or it's namespaceURI
+        if (n.toElement().namespaceURI().isEmpty()) { // if nothing found, then use default jabber:client namespace
             ns = "jabber:client";
         } else {
             ns = n.toElement().namespaceURI();
         }
-    } else {
+    } else { // if found node with xmlns
         ns = n.toElement().attribute("xmlns");
     }
+    // at this point `ns` is either detected namespace of `e` or jabber:client
     // make a new node
     QDomElement i = e.ownerDocument().createElementNS(ns, e.tagName());
 
