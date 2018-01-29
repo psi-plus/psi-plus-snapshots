@@ -437,6 +437,16 @@ void PluginManager::processOutgoingStanza(PsiAccount* account, QDomElement &stan
     }
 }
 
+bool PluginManager::stanzaWasEncrypted(const QString &stanzaId)
+{
+    foreach (PluginHost* host, pluginByFile_.values()) {
+        if (host->stanzaWasEncrypted(stanzaId)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /**
  * Notify to plugins that an account will go offline now.
  */
@@ -794,6 +804,15 @@ QIcon PluginManager::icon(const QString& plugin) const
     return icon;
 }
 
+QStringList PluginManager::pluginFeatures() const
+{
+    QStringList features;
+    foreach (PluginHost* host, pluginByFile_.values()) {
+        features << host->pluginFeatures();
+    }
+    return features;
+}
+
 /**
  * Tells the plugin manager about an XMPP::Client and the owning PsiAccount
  */
@@ -915,6 +934,14 @@ void PluginManager::createNewEvent(int account, const QString &jid, const QStrin
     PsiAccount *acc = accountIds_.account(account);
     if(acc) {
         acc->createNewPluginEvent(account, jid, descr, receiver, slot);
+    }
+}
+
+void PluginManager::createNewMessageEvent(int account, QDomElement const &element)
+{
+    PsiAccount *acc = accountIds_.account(account);
+    if(acc) {
+        acc->createNewMessageEvent(element);
     }
 }
 
