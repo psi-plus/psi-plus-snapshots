@@ -185,10 +185,23 @@ PsiChatDlg::PsiChatDlg(const Jid& jid, PsiAccount* pa, TabManager* tabManager)
     mCmdManager_.registerProvider(new ChatDlgMCmdProvider(this));
     tabmode = PsiOptions::instance()->getOption("options.ui.tabs.use-tabs").toBool();
     setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
+
+    SendButtonTemplatesMenu* menu = getTemplateMenu();
+    if (menu) {
+        connect(menu, SIGNAL(doPasteAndSend()), this, SLOT(doPasteAndSend()));
+        connect(menu, SIGNAL(doEditTemplates()), this, SLOT(editTemplates()));
+        connect(menu, SIGNAL(doTemplateText(const QString &)), this, SLOT(sendTemp(const QString &)));
+    }
 }
 
 PsiChatDlg::~PsiChatDlg()
 {
+    SendButtonTemplatesMenu* menu = getTemplateMenu();
+    if (menu) {
+        disconnect(menu, SIGNAL(doPasteAndSend()), this, SLOT(doPasteAndSend()));
+        disconnect(menu, SIGNAL(doEditTemplates()), this, SLOT(editTemplates()));
+        disconnect(menu, SIGNAL(doTemplateText(const QString &)), this, SLOT(sendTemp(const QString &)));
+    }
     delete actions_;
 }
 
@@ -267,6 +280,7 @@ void PsiChatDlg::initUi()
     smallChat_ = PsiOptions::instance()->getOption("options.ui.chat.use-small-chats").toBool();
      ui_.pb_send->setIcon(IconsetFactory::icon("psi/action_button_send").icon());
     connect(ui_.pb_send, SIGNAL(clicked()), this, SLOT(doSend()));
+    connect(ui_.pb_send, SIGNAL(customContextMenuRequested(const QPoint)), SLOT(sendButtonMenu()));
 
     act_mini_cmd_ = new QAction(this);
     act_mini_cmd_->setText(tr("Input command..."));
@@ -278,6 +292,9 @@ void PsiChatDlg::initUi()
     }
     setMargins();
     connect(ui_.log->textWidget(), SIGNAL(quote(const QString &)), ui_.mle->chatEdit(), SLOT(insertAsQuote(const QString &)));
+
+    act_pastesend_ = new IconAction(tr("Paste and Send"), "psi/action_paste_and_send", tr("Paste and Send"), 0, this);
+    connect(act_pastesend_, SIGNAL(triggered()), SLOT(doPasteAndSend()));
 
     ui_.log->realTextWidget()->installEventFilter(this);
     ui_.mini_prompt->hide();
@@ -458,7 +475,7 @@ void PsiChatDlg::updateToolbuttons()
         IconAction *action = actions_->action(actionName);
         if (action) {
             action->addTo(ui_.toolbar);
-            if (actionName == "chat_icon") {
+            if (actionName == QLatin1String("chat_icon") || actionName == QLatin1String("chat_templates")) {
                 ((QToolButton *)ui_.toolbar->widgetForAction(action))->setPopupMode(QToolButton::InstantPopup);
             }
         }
@@ -534,6 +551,9 @@ void PsiChatDlg::initToolButtons()
         }
         else if (name == "chat_active_contacts") {
             connect(action, SIGNAL(triggered()), SLOT(actActiveContacts()));
+        }
+        else if (name == "chat_templates") {
+            action->setMenu(getTemplateMenu());
         }
         else if (name == "chat_pin_tab" || name == "chat_unpin_tab") {
             connect(action, SIGNAL(triggered()), SLOT(pinTab()));
@@ -905,6 +925,8 @@ void PsiChatDlg::buildMenu()
     pm_settings_->addSeparator();
 
     pm_settings_->addAction(actions_->action("chat_icon"));
+    pm_settings_->addAction(actions_->action("chat_templates"));
+    pm_settings_->addAction(act_pastesend_);
     pm_settings_->addAction(actions_->action("chat_file"));
     if (AvCallManager::isSupported()) {
         pm_settings_->addAction(actions_->action("chat_voice"));
@@ -965,9 +987,48 @@ void PsiChatDlg::chatEditCreated()
     tabCompletion.setTextEdit(chatEdit());
 }
 
-void PsiChatDlg::doMinimize()
+void PsiChatDlg::sendButtonMenu()
 {
-    window()->showMinimized();
+    SendButtonTemplatesMenu* menu = getTemplateMenu();
+    if (menu) {
+        menu->setParams(true);
+        menu->exec(QCursor::pos());
+        menu->setParams(false);
+        chatEdit()->setFocus();
+    }
+}
+
+void PsiChatDlg::editTemplates()
+{
+    if(ChatDlg::isActiveTab()) {
+        showTemplateEditor();
+    }
+}
+
+void PsiChatDlg::doPasteAndSend()
+{
+    if(ChatDlg::isActiveTab()) {
+        chatEdit()->paste();
+        doSend();
+        act_pastesend_->setEnabled(false);
+        QTimer::singleShot(2000, this, SLOT(psButtonEnabled()));
+    }
+}
+
+void PsiChatDlg::psButtonEnabled()
+{
+    act_pastesend_->setEnabled(true);
+}
+
+void PsiChatDlg::sendTemp(const QString &templText)
+{
+    if(ChatDlg::isActiveTab()) {
+        if (!templText.isEmpty()) {
+            chatEdit()->textCursor().insertText(templText);
+            if (!PsiOptions::instance()->getOption("options.ui.chat.only-paste-template").toBool())
+                doSend();
+        }
+    }
 }
 
 void PsiChatDlg::doSend() {
@@ -1017,6 +1078,10 @@ bool PsiChatDlg::eventFilter( QObject *obj, QEvent *ev ) {
     return ChatDlg::eventFilter( obj, ev );
 }
 
+void PsiChatDlg::doMinimize()
+{
+    window()->showMinimized();
+}
 
 QString PsiChatDlg::makeContactName(const QString &name, const Jid &jid) const
 {

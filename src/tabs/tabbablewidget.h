@@ -25,6 +25,7 @@
 #include <QTimer>
 #include "advwidget.h"
 #include "im.h" // ChatState
+#include "sendbuttonmenu.h"
 
 namespace XMPP {
     class Jid;
@@ -69,7 +70,12 @@ public:
     virtual State state() const = 0;
     virtual int unreadMessageCount() const = 0;
     virtual QString desiredCaption() const = 0;
-    virtual void setVSplitterPosition(int,int){}; // default implementation do nothing
+    virtual void setVSplitterPosition(int,int) {} // default implementation do nothing
+
+    // Templates
+    SendButtonTemplatesMenu* getTemplateMenu();
+    void showTemplateEditor();
+    // ---
 
 signals:
     void invalidateTabInfo();
@@ -103,6 +109,11 @@ private:
     PsiAccount *pa_;
     TabManager *tabManager_;
     QIcon icon_;
+    // Templates
+    static int chatsCount;
+    static SendButtonTemplatesMenu *templateMenu;
+    static QPointer<SendButtonTemplatesEditor> templateEditDlg;
+    // ---
 };
 
 #endif

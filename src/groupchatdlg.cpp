@@ -226,7 +226,7 @@ public:
     QMap<LanguageManager::LangId, QString> subjectMap;
     bool nonAnonymous;         // got status code 100 ?
     ActionList *actions;
-    IconAction *act_bookmark;
+    IconAction *act_bookmark, *act_pastesend;
     TypeAheadFindBar *typeahead;
 //#ifdef WHITEBOARDING
 //    IconAction *act_whiteboard;
@@ -694,6 +694,13 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 
     d->state = Private::Connected;
 
+    SendButtonTemplatesMenu* menu = getTemplateMenu();
+    if (menu) {
+        connect(menu, SIGNAL(doPasteAndSend()), this, SLOT(doPasteAndSend()));
+        connect(menu, SIGNAL(doEditTemplates()), this, SLOT(editTemplates()));
+        connect(menu, SIGNAL(doTemplateText(const QString &)), this, SLOT(sendTemp(const QString &)));
+    }
+
     setAcceptDrops(true);
 
 #ifndef Q_OS_MAC
@@ -765,27 +772,30 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
         action->setParent(this);
         d->actions->addAction(name, action);
 
-        if (name == "gchat_clear") {
+        if (name == QLatin1String("gchat_clear")) {
             connect(action, SIGNAL(triggered()), SLOT(doClearButton()));
         }
-        else if (name == "gchat_find") {
+        else if (name == QLatin1String("gchat_find")) {
             // typeahead find
             connect(action, SIGNAL(triggered()), d->typeahead, SLOT(toggleVisibility()));
         // -- typeahead
         }
-        else if (name == "gchat_configure") {
+        else if (name == QLatin1String("gchat_configure")) {
             connect(action, SIGNAL(triggered()), SLOT(configureRoom()));
         }
-        else if (name == "gchat_html_text") {
+        else if (name == QLatin1String("gchat_html_text")) {
             connect(action, SIGNAL(triggered()), d->mle(), SLOT(doHTMLTextMenu()));
         }
-        else if (name == "gchat_icon") {
+        else if (name == QLatin1String("gchat_icon")) {
             connect(account()->psi()->iconSelectPopup(), SIGNAL(textSelected(QString)), d, SLOT(addEmoticon(QString)));
             action->setMenu(pa->psi()->iconSelectPopup());
             ui_.tb_emoticons->setMenu(pa->psi()->iconSelectPopup());
         }
-        else if (name == "gchat_info") {
+        else if (name == QLatin1String("gchat_info")) {
             connect(action, SIGNAL(triggered()), SLOT(doInfo()));
+        }
+        else if (name == QLatin1String("gchat_templates")) {
+            action->setMenu(getTemplateMenu());
         }
         else if (name == "gchat_pin_tab" || name == "gchat_unpin_tab") {
             connect(action, SIGNAL(triggered()), SLOT(pinTab()));
@@ -831,6 +841,9 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
     connect(bm, SIGNAL(conferencesChanged(QList<ConferenceBookmark>)), SLOT(updateMucName()));
     connect(bm, SIGNAL(bookmarksSaved()), SLOT(updateBookmarkIcon()));
 
+    d->act_pastesend = new IconAction(tr("Paste and Send"), "psi/action_paste_and_send", tr("Paste and Send"), 0, this);
+    connect(d->act_pastesend, SIGNAL(triggered()), SLOT(doPasteAndSend()));
+
     d->act_minimize = new QAction(this);
     connect(d->act_minimize, SIGNAL(triggered()), SLOT(doMinimize()));
     addAction(d->act_minimize);
@@ -850,6 +863,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
     connect(d->act_send,SIGNAL(triggered()), SLOT(mle_returnPressed()));
      ui_.pb_send->setIcon(IconsetFactory::icon("psi/action_button_send").icon());
     connect(ui_.pb_send, SIGNAL(clicked()), SLOT(mle_returnPressed()));
+    connect(ui_.pb_send, SIGNAL(customContextMenuRequested(const QPoint)), SLOT(sendButtonMenu()));
     d->act_close = new QAction(this);
     addAction(d->act_close);
     connect(d->act_close,SIGNAL(triggered()), SLOT(close()));
@@ -945,6 +959,13 @@ GCMainDlg::~GCMainDlg()
     account()->dialogUnregister(this);
     delete d->mucManager;
     delete d;
+
+    SendButtonTemplatesMenu* menu = getTemplateMenu();
+    if (menu) {
+        disconnect(menu, SIGNAL(doPasteAndSend()), this, SLOT(doPasteAndSend()));
+        disconnect(menu, SIGNAL(doEditTemplates()), this, SLOT(editTemplates()));
+        disconnect(menu, SIGNAL(doTemplateText(const QString &)), this, SLOT(sendTemp(const QString &)));
+    }
 }
 
 void GCMainDlg::horizSplitterMoved()
@@ -2328,6 +2349,8 @@ void GCMainDlg::buildMenu()
     d->pm_settings->addSeparator();
 
     d->pm_settings->addAction(d->actions->action("gchat_icon"));
+    d->pm_settings->addAction(d->actions->action("gchat_templates"));
+    d->pm_settings->addAction(d->act_pastesend);
     d->pm_settings->addAction(d->act_nick);
     d->pm_settings->addAction(d->act_bookmark);
     if (PsiOptions::instance()->getOption("options.ui.tabs.multi-rows").toBool() && d->tabmode) {
@@ -2398,6 +2421,50 @@ void GCMainDlg::resizeEvent(QResizeEvent *e)
 
     ui_.hsplitter->setSizes(sizes);
     QTimer::singleShot(0, this, SLOT(horizSplitterMoved()));
+}
+
+void GCMainDlg::sendButtonMenu()
+{
+    SendButtonTemplatesMenu* menu = getTemplateMenu();
+    if (menu) {
+        menu->setParams(true);
+        menu->exec(QCursor::pos());
+        menu->setParams(false);
+        d->mle()->setFocus();
+    }
+}
+
+void GCMainDlg::editTemplates()
+{
+    if(TabbableWidget::isActiveTab()) {
+        showTemplateEditor();
+    }
+}
+
+void GCMainDlg::doPasteAndSend()
+{
+    if(TabbableWidget::isActiveTab()) {
+        d->mle()->paste();
+        mle_returnPressed();
+        d->act_pastesend->setEnabled(false);
+        QTimer::singleShot(2000, this, SLOT(psButtonEnabled()));
+    }
+}
+
+void GCMainDlg::psButtonEnabled()
+{
+    d->act_pastesend->setEnabled(true);
+}
+
+void GCMainDlg::sendTemp(const QString &templText)
+{
+    if(TabbableWidget::isActiveTab()) {
+        if (!templText.isEmpty()) {
+            d->mle()->textCursor().insertText(templText);
+            if (!PsiOptions::instance()->getOption("options.ui.chat.only-paste-template").toBool())
+                mle_returnPressed();
+        }
+    }
 }
 
 void GCMainDlg::setMargins()

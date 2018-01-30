@@ -125,6 +125,7 @@
                 <show-status-changes type="bool">true</show-status-changes>
                 <show-previews type="bool">true</show-previews>
                 <warn-before-clear type="bool">true</warn-before-clear>
+                <only-paste-template type="bool">false</only-paste-template>
                 <css type="QString" />
                 <hide-when-closing type="bool">false</hide-when-closing>
                 <status-with-priority comment="Show priority with status change" type="bool">false</status-with-priority>

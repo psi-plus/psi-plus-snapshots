@@ -55,6 +55,11 @@ private slots:
     void copyUserJid();
     void actActiveContacts();
     void actPgpToggled(bool);
+    void sendButtonMenu();
+    void editTemplates();
+    void doPasteAndSend();
+    void sendTemp(const QString &);
+    void psButtonEnabled();
 
     // reimplemented
     void chatEditCreated();
@@ -97,6 +102,7 @@ private:
     ActionLineEdit *le_autojid;
     IconAction *act_autojid;
     IconAction *act_active_contacts;
+    IconAction* act_pastesend_;
 
     MCmdManager mCmdManager_;
     MCmdSimpleSite mCmdSite_;
