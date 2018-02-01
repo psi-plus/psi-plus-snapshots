@@ -71,6 +71,7 @@ set(HEADERS
 
     xmpp-im/xmpp_caps.h
     xmpp-im/filetransfer.h
+    xmpp-im/httpfileupload.h
     xmpp-im/s5b.h
     xmpp-im/xmpp_bitsofbinary.h
     xmpp-im/xmpp_bytestream.h
@@ -97,6 +98,7 @@ set(PLAIN_SOURCES
 
     xmpp-im/client.cpp
     xmpp-im/filetransfer.cpp
+    xmpp-im/httpfileupload.cpp
     xmpp-im/types.cpp
     xmpp-im/xmpp_bitsofbinary.cpp
     xmpp-im/xmpp_bytestream.cpp

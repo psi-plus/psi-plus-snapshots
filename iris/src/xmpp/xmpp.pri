@@ -41,6 +41,7 @@ HEADERS += \
     $$PWD/xmpp-im/s5b.h \
     $$PWD/xmpp-im/xmpp_ibb.h \
     $$PWD/xmpp-im/filetransfer.h \
+    $$PWD/xmpp-im/httpfileupload.h \
     $$PWD/xmpp-core/xmpp.h \
     $$PWD/xmpp-im/xmpp_url.h \
     $$PWD/xmpp-im/xmpp_chatstate.h \
@@ -99,6 +100,7 @@ SOURCES += \
     $$PWD/xmpp-im/s5b.cpp \
     $$PWD/xmpp-im/xmpp_ibb.cpp \
     $$PWD/xmpp-im/filetransfer.cpp \
+    $$PWD/xmpp-im/httpfileupload.cpp \
     $$PWD/xmpp-im/xmpp_bitsofbinary.cpp \
     $$PWD/xmpp-im/xmpp_caps.cpp
 
