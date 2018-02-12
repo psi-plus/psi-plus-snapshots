@@ -488,40 +488,40 @@ const QString& MUCItem::reason() const
 
 void MUCItem::fromXml(const QDomElement& e)
 {
-    if (e.tagName() != "item")
+    if (e.tagName() != QLatin1String("item"))
         return;
 
     jid_ = Jid(e.attribute("jid"));
-    nick_ = e.attribute("nick");
+    nick_ = e.attribute(QLatin1String("nick"));
 
     // Affiliation
-    if (e.attribute("affiliation") == "owner") {
+    if (e.attribute(QLatin1String("affiliation")) == QLatin1String("owner")) {
         affiliation_ = Owner;
     }
-    else if (e.attribute("affiliation") == "admin") {
+    else if (e.attribute(QLatin1String("affiliation")) == QLatin1String("admin")) {
         affiliation_ = Admin;
     }
-    else if (e.attribute("affiliation") == "member") {
+    else if (e.attribute(QLatin1String("affiliation")) == QLatin1String("member")) {
         affiliation_ = Member;
     }
-    else if (e.attribute("affiliation") == "outcast") {
+    else if (e.attribute(QLatin1String("affiliation")) == QLatin1String("outcast")) {
         affiliation_ = Outcast;
     }
-    else if (e.attribute("affiliation") == "none") {
+    else if (e.attribute(QLatin1String("affiliation")) == QLatin1String("none")) {
         affiliation_ = NoAffiliation;
     }
 
     // Role
-    if (e.attribute("role") == "moderator") {
+    if (e.attribute(QLatin1String("role")) == QLatin1String("moderator")) {
         role_ = Moderator;
     }
-    else if (e.attribute("role") == "participant") {
+    else if (e.attribute(QLatin1String("role")) == QLatin1String("participant")) {
         role_ = Participant;
     }
-    else if (e.attribute("role") == "visitor") {
+    else if (e.attribute(QLatin1String("role")) == QLatin1String("visitor")) {
         role_ = Visitor;
     }
-    else if (e.attribute("role") == "none") {
+    else if (e.attribute(QLatin1String("role")) == QLatin1String("none")) {
         role_ = NoRole;
     }
 
@@ -530,9 +530,9 @@ void MUCItem::fromXml(const QDomElement& e)
         if(i.isNull())
             continue;
 
-        if (i.tagName() == "actor")
-            actor_ = Jid(i.attribute("jid"));
-        else if (i.tagName() == "reason")
+        if (i.tagName() == QLatin1String("actor"))
+            actor_ = Jid(i.attribute(QLatin1String("jid")));
+        else if (i.tagName() == QLatin1String("reason"))
             reason_ = i.text();
     }
 }

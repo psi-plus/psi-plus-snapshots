@@ -45,7 +45,7 @@ namespace XMPP
         void setReason(const QString&);
 
         const QString& nick() const;
-        const Jid& jid() const;
+        const Jid& jid() const; // real jid of muc participant
         Affiliation affiliation() const;
         Role role() const;
         const Jid& actor() const;

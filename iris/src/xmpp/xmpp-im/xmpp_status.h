@@ -150,4 +150,6 @@ namespace XMPP
 
 }
 
+Q_DECLARE_METATYPE(XMPP::Status)
+
 #endif

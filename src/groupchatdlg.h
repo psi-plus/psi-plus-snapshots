@@ -115,7 +115,6 @@ public slots:
     void doBookmark();
 
 private slots:
-    void showNM(const QString&);
     void openURL(const QString&);
     void onNickInsertClick(const QString &nick);
     void scrollUp();
@@ -158,6 +157,7 @@ private slots:
     void verticalSplitterMoved(int, int);
     void doMinimize();
     void avatarUpdated(const Jid& jid);
+    void doContactContextMenu(const QString &nick);
 
 public:
     class Private;
