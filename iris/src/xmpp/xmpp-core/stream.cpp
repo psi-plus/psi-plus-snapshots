@@ -1237,11 +1237,25 @@ bool ClientStream::handleNeed()
                 QCA::setProviderPriority("simplesasl", 10);
             }
 
+            static QStringList preference{ "GSSAPI", "SCRAM-SHA-1", "DIGEST-MD5", "PLAIN" };
+            // TODO qca should maintain the list of preferred
+
             QStringList ml;
             if(!d->sasl_mech.isEmpty())
                 ml += d->sasl_mech;
-            else
-                ml = d->client.features.sasl_mechs;
+            else {
+                QMap<int, QString> prefOrdered;
+                QStringList unpreferred;
+                for (auto const &m : d->client.features.sasl_mechs) {
+                    int i = preference.indexOf(m);
+                    if (i != -1) {
+                        prefOrdered.insert(i, m);
+                    } else {
+                        unpreferred.append(m);
+                    }
+                }
+                ml = prefOrdered.values() + unpreferred;
+            }
 
             QString saslProvider;
             foreach (const QString &mech, d->mechProviders.keys()) {
