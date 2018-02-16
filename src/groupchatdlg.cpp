@@ -853,9 +853,6 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 
     setAcceptDrops(true);
 
-#ifndef Q_OS_MAC
-    setWindowIcon(IconsetFactory::icon("psi/start-chat").icon());
-#endif
     ui_.setupUi(this);
     d->tabmode = PsiOptions::instance()->getOption("options.ui.tabs.use-tabs").toBool();
     setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
