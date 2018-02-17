@@ -192,25 +192,6 @@ private:
 };
 
 
-void GCMainDlg::setMargins()
-{
-    ui_.vboxLayout->setContentsMargins(0,0,0,0);
-    ui_.vboxLayout2->setContentsMargins(4,0,4,4);
-    if (!d->tabmode) {
-        ui_.hboxLayout->setContentsMargins(4,0,4,0);
-        if (!isBorder()) {
-            ui_.vboxLayout1->setContentsMargins(0,0,0,0);
-        }
-        else {
-            ui_.vboxLayout1->setContentsMargins(0,4,0,0);
-        }
-    }
-    else {
-        ui_.vboxLayout1->setContentsMargins(4,4,4,0);
-        ui_.hboxLayout->setContentsMargins(2,0,4,0);
-    }
-}
-
 //----------------------------------------------------------------------------
 // GCMainDlg
 //----------------------------------------------------------------------------
@@ -2317,6 +2298,25 @@ void GCMainDlg::setLooks()
 #endif
 
     ui_.lv_users->setLooks();
+}
+
+void GCMainDlg::setMargins()
+{
+    ui_.vboxLayout->setContentsMargins(0,0,0,0);
+    ui_.vboxLayout2->setContentsMargins(4,0,4,4);
+    if (!d->tabmode) {
+        ui_.hboxLayout->setContentsMargins(4,0,4,0);
+        if (!isBorder()) {
+            ui_.vboxLayout1->setContentsMargins(0,0,0,0);
+        }
+        else {
+            ui_.vboxLayout1->setContentsMargins(0,4,0,0);
+        }
+    }
+    else {
+        ui_.vboxLayout1->setContentsMargins(4,4,4,0);
+        ui_.hboxLayout->setContentsMargins(2,0,4,0);
+    }
 }
 
 void GCMainDlg::setToolbuttons()
