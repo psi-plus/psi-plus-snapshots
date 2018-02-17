@@ -193,7 +193,7 @@ bool Features::canMessageCarbons() const
     return test(ns);
 }
 
-// custom Psi acitons
+// custom Psi actions
 #define FID_ADD "psi:add"
 
 class Features::FeatureName : public QObject

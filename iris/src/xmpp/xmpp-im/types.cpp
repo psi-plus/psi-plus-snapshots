@@ -2417,11 +2417,11 @@ CapsSpec::CryptoMap &CapsSpec::cryptoMap()
  * A 'simple' specification is a specification with exactly one extension,
  * or with the version number as the extension.
  *
- * Example: A caps specification with node=http://psi-im.org, version=0.10,
+ * Example: A caps specification with node=https://psi-im.org, version=0.10,
  * and ext='achat vchat' would be expanded into the following list of specs:
- *    node=http://psi-im.org, ver=0.10, ext=0.10
- *    node=http://psi-im.org, ver=0.10, ext=achat
- *    node=http://psi-im.org, ver=0.10, ext=vchat
+ *    node=https://psi-im.org, ver=0.10, ext=0.10
+ *    node=https://psi-im.org, ver=0.10, ext=achat
+ *    node=https://psi-im.org, ver=0.10, ext=vchat
  */
 QString CapsSpec::flatten() const
 {
