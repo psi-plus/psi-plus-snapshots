@@ -662,7 +662,7 @@ private slots:
 public:
     void updateOnlineContactsCount()
     {
-        updateOnlineContactsCountTimer_->start();
+        updateOnlineContactsCountTimer_->start(); // a little delay to not load cpu when bunch of contacts change their state
     }
 
     // FIXME: Rename updateEntry -> updateContact
@@ -1846,13 +1846,15 @@ void PsiAccount::disconnect()
     if (isDisconnecting) {
         // disconnect
         d->client->close();
-        cleanupStream();
+        QTimer::singleShot(0,[this]() { // delayed close to let stream close tag to be written (this fix is rather has to be in iris)
+            cleanupStream();
 
-        emit disconnected();
-        isDisconnecting = false;
+            emit disconnected();
+            isDisconnecting = false;
 
-        if(d->loginStatus.isAvailable())
-            login();
+            if(d->loginStatus.isAvailable())
+                login();
+        });
     }
 }
 

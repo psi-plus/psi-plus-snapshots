@@ -97,9 +97,6 @@ protected:
     // reimplemented
     void changeEvent(QEvent* e);
 
-private slots:
-    void commitState();
-
 private:
     enum ActivationState { Activated, Deactivated };
     ActivationState state_;
