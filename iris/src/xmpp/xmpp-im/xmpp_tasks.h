@@ -28,6 +28,7 @@
 #include "im.h"
 #include "xmpp_vcard.h"
 #include "xmpp_discoinfotask.h"
+#include "xmpp_subsets.h"
 
 namespace XMPP
 {
@@ -360,6 +361,9 @@ namespace XMPP
         void get(const DiscoItem &);
 
         const DiscoList &items() const;
+
+        void includeSubsetQuery(const SubsetsClientManager &);
+        bool extractSubsetInfo(SubsetsClientManager &);
 
         void onGo();
         bool take(const QDomElement &);

@@ -1653,6 +1653,7 @@ public:
     QDomElement iq;
     Jid jid;
     DiscoList items;
+    QDomElement subsetsEl;
 };
 
 JT_DiscoItems::JT_DiscoItems(Task *parent)
@@ -1683,12 +1684,27 @@ void JT_DiscoItems::get (const Jid &j, const QString &node)
     if ( !node.isEmpty() )
         query.setAttribute("node", node);
 
+    if (!d->subsetsEl.isNull()) {
+        query.appendChild(d->subsetsEl);
+        d->subsetsEl = QDomElement();
+    }
+
     d->iq.appendChild(query);
 }
 
 const DiscoList &JT_DiscoItems::items() const
 {
     return d->items;
+}
+
+void JT_DiscoItems::includeSubsetQuery(const SubsetsClientManager &subsets)
+{
+        d->subsetsEl = subsets.makeQueryElement(doc());
+}
+
+bool JT_DiscoItems::extractSubsetInfo(SubsetsClientManager &subsets)
+{
+    return d->subsetsEl.isNull() ? false : subsets.updateFromElement(d->subsetsEl);
 }
 
 void JT_DiscoItems::onGo ()
@@ -1718,6 +1734,9 @@ bool JT_DiscoItems::take(const QDomElement &x)
                 item.setAction( DiscoItem::string2action(e.attribute("action")) );
 
                 d->items.append( item );
+            }
+            else if (d->subsetsEl.isNull()) {
+                d->subsetsEl = SubsetsClientManager::findElement(e, false);
             }
         }
 

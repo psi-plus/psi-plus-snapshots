@@ -66,6 +66,7 @@ HEADERS += \
     $$PWD/xmpp-im/xmpp_task.h \
     $$PWD/xmpp-im/xmpp_httpauthrequest.h \
     $$PWD/xmpp-im/xmpp_status.h \
+    $$PWD/xmpp-im/xmpp_subsets.h \
     $$PWD/xmpp-im/xmpp_captcha.h \
     $$PWD/xmpp-im/xmpp_features.h \
     $$PWD/xmpp-im/xmpp_agentitem.h \
@@ -92,6 +93,7 @@ SOURCES += \
     $$PWD/xmpp-im/xmpp_discoitem.cpp \
     $$PWD/xmpp-im/xmpp_discoinfotask.cpp \
     $$PWD/xmpp-im/xmpp_xdata.cpp \
+    $$PWD/xmpp-im/xmpp_subsets.cpp \
     $$PWD/xmpp-im/xmpp_task.cpp \
     $$PWD/xmpp-im/xmpp_tasks.cpp \
     $$PWD/xmpp-im/xmpp_xmlcommon.cpp \
