@@ -29,7 +29,6 @@ include_directories(include/iris)
 set(CMAKE_AUTOMOC OFF)
 
 find_package(Qt5 COMPONENTS Core Gui Xml Network REQUIRED)
-set(Qca_SUFFIX "-qt5")
 add_definitions(-DHAVE_QT5)
 if(USE_QJDNS)
     message(WARNING "USE_QJDNS flag is enabled with Qt5. If you have problems with connection please disable this flag")
