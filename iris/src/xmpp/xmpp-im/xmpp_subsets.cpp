@@ -39,6 +39,7 @@ public:
         int  index;
         bool first;
         bool last;
+        int  itemsCount;
         QString firstId;
         QString lastId;
     } result;
@@ -50,6 +51,7 @@ public:
         result.index = -1;
         result.first = false;
         result.last  = false;
+        result.itemsCount = 0;
         valid        = false;
     }
 
@@ -118,8 +120,11 @@ public:
         if (result.firstId.isEmpty() != result.lastId.isEmpty())
             valid = false;
 
-        result.first = query.type == First || result.index == 0;
-        result.last = (query.type == Last || (result.index != -1 && result.count != -1 && result.count - query.max <= result.index));
+        result.first = query.type == First || result.index == 0 ||
+                (result.itemsCount == 0 && result.index == -1 && (query.type == Last || query.type == Previous));
+        result.last = query.type == Last ||
+                (result.index != -1 && result.count != -1 && result.count - result.itemsCount <= result.index) ||
+                (result.itemsCount == 0 && result.index == -1 && (query.type == First || query.type == Next));
         if (result.firstId.isEmpty() && result.lastId.isEmpty()) {
             switch (query.type) {
             case Previous:
@@ -200,9 +205,13 @@ QDomElement SubsetsClientManager::findElement(const QDomElement &el, bool child)
     return QDomElement();
 }
 
-bool SubsetsClientManager::updateFromElement(const QDomElement &el)
+bool SubsetsClientManager::updateFromElement(const QDomElement &el, int itemsCount)
 {
-    return findElement(el, false).isNull() ? false : d->updateFromElement(el);
+    if (findElement(el, false).isNull())
+        return false;
+
+    d->result.itemsCount = itemsCount;
+    return d->updateFromElement(el);
 }
 
 void SubsetsClientManager::getCount()

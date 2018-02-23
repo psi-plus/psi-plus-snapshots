@@ -46,7 +46,7 @@ namespace XMPP
         void getByIndex();
 
         static QDomElement findElement(const QDomElement &el, bool child);
-        bool updateFromElement(const QDomElement &el);
+        bool updateFromElement(const QDomElement &el, int itemsCount);
         QDomElement makeQueryElement(QDomDocument *doc) const;
 
     private:

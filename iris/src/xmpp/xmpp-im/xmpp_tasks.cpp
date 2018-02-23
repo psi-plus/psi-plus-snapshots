@@ -1704,7 +1704,7 @@ void JT_DiscoItems::includeSubsetQuery(const SubsetsClientManager &subsets)
 
 bool JT_DiscoItems::extractSubsetInfo(SubsetsClientManager &subsets)
 {
-    return d->subsetsEl.isNull() ? false : subsets.updateFromElement(d->subsetsEl);
+    return d->subsetsEl.isNull() ? false : subsets.updateFromElement(d->subsetsEl, d->items.count());
 }
 
 void JT_DiscoItems::onGo ()
