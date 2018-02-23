@@ -498,6 +498,7 @@ QLineEdit#le_status_text {
             <service-discovery>
                 <automatically-get-info type="bool">false</automatically-get-info>
                 <automatically-get-items type="bool">false</automatically-get-items>
+                <items-per-page type="int" comment="Number of items per page for page-by-page feature (XEP-0059). 0 turns this feature off.">0</items-per-page>
                 <recent-jids type="QStringList" />
             </service-discovery>
             <tabs>
