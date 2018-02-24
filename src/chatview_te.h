@@ -55,7 +55,7 @@ public:
 
     void init();
     void setDialog(QWidget* dialog);
-    void setSessionData(bool isMuc, const XMPP::Jid &jid, const QString name);
+    void setSessionData(bool isMuc, bool isMucPrivate, const XMPP::Jid &jid, const QString name);
 
     void appendText(const QString &text);
     void dispatchMessage(const MessageView &);
@@ -105,6 +105,7 @@ signals:
 
 private:
     bool isMuc_;
+    bool isMucPrivate_;
     bool isEncryptionEnabled_;
     XMPP::Jid jid_;
     QString name_;
