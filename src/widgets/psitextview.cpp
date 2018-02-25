@@ -169,6 +169,21 @@ void PsiTextView::appendText(const QString &text)
     setTextCursor(cursor);
 }
 
+/**
+ * This function is provided for convenience. Please see
+ * PsiRichText::appendText() documentation for usage details.
+ */
+void PsiTextView::insertText(const QString &text, QTextCursor &cursor)
+{
+    QTextCursor selCursor = textCursor();
+    PsiRichText::Selection selection = PsiRichText::saveSelection(this, selCursor);
+
+    PsiRichText::appendText(document(), cursor, text, false);
+
+    PsiRichText::restoreSelection(this, selCursor, selection);
+    setTextCursor(selCursor);
+}
+
 QString PsiTextView::getTextHelper(bool html) const
 {
     PsiTextView *ptv = (PsiTextView *)this;
@@ -177,13 +192,6 @@ QString PsiTextView::getTextHelper(bool html) const
 
     bool unselectAll = false;
     if (!textCursor().hasSelection()) {
-#if QT_VERSION == 0x040701
-        // workaround for crash when deleting last character with backspace (qt-4.7.1)
-        // http://bugreports.qt.nokia.com/browse/QTBUG-15857
-        QTextCursor tempCursor = QTextCursor(ptv->document());
-        tempCursor.movePosition(QTextCursor::Start);
-        ptv->setTextCursor(tempCursor);
-#endif
         ptv->selectAll();
         unselectAll = true;
     }
