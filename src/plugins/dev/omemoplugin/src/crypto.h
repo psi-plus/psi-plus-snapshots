@@ -21,7 +21,9 @@
 #ifndef PSIOMEMO_CRYPTO_H
 #define PSIOMEMO_CRYPTO_H
 
-#include <QtCrypto>
+#include <QByteArray>
+#include <QPair>
+
 extern "C" {
 #include <signal_protocol.h>
 };
@@ -33,24 +35,39 @@ extern "C" {
 namespace psiomemo {
   class Crypto {
   public:
+    enum Direction
+    {
+      Encode,
+      Decode
+    };
+
     static void initCryptoProvider(signal_context *pContext);
 
     static bool isSupported();
 
-    static QPair<QByteArray, QCA::AuthTag>
-    aes_gcm(QCA::Direction direction,
-            const QCA::InitializationVector &iv,
-            const QCA::SymmetricKey &key,
+    static QPair<QByteArray, QByteArray>
+    aes_gcm(Direction direction,
+            const QByteArray &iv,
+            const QByteArray &key,
             const QByteArray &input,
-            const QCA::AuthTag &tag = QCA::AuthTag(OMEMO_AES_GCM_TAG_LENGTH));
+            const QByteArray &tag = QByteArray(OMEMO_AES_GCM_TAG_LENGTH, Qt::Uninitialized));
+
+    static QByteArray randomBytes(int length);
+    static uint32_t randomInt();
+
+  private:
+    static void doInit();
   };
 
   int random(uint8_t *data, size_t len, void *user_data);
   int hmac_sha256_init(void **context, const uint8_t *key, size_t key_len, void *user_data);
+  int hmac_sha256_update(void *context, const uint8_t *data, size_t data_len, void *user_data);
+  int hmac_sha256_final(void *context, signal_buffer **output, void *user_data);
+  void hmac_sha256_cleanup(void *context, void *user_data);
   int sha512_digest_init(void **context, void *user_data);
-  int algo_update(void *context, const uint8_t *data, size_t data_len, void *user_data);
-  int algo_final(void *context, signal_buffer **output, void *user_data);
-  void algo_cleanup(void *context, void *user_data);
+  int sha512_digest_update(void *context, const uint8_t *data, size_t data_len, void *user_data);
+  int sha512_digest_final(void *context, signal_buffer **output, void *user_data);
+  void sha512_digest_cleanup(void *context, void *user_data);
   int aes_decrypt(signal_buffer **output,
                   int cipherMode,
                   const uint8_t *key, size_t key_len,
