@@ -250,7 +250,7 @@ void ConferenceLogger::Logger(QString room, QString from, QString MyJid, QString
 		Stamp.insert(7, "-");
 		Stamp.replace("T", " ");
 	}
-	QFile file(HistoryDir + QDir::separator() + MyJid + room + ".history");
+	QFile file(HistoryDir + QDir::separator() + MyJid + room);
 	if(file.open(QIODevice::WriteOnly | QIODevice::Append)) {
 		QTextStream out(&file);
 		//out.seek(file.size());
@@ -289,7 +289,7 @@ void ConferenceLogger::view() {
 	QStringList List = YourJid.split("/");
 	YourJid = List.takeFirst();
 	YourJid = YourJid.replace("@", "_at_");
-	QString FName = YourJid + "_in_" + Jid + ".history";
+	QString FName = YourJid + "_in_" + Jid;
 	QDir dir(HistoryDir);
 	foreach(QString file, dir.entryList(QDir::Files)) {
 		if(file == FName) {
