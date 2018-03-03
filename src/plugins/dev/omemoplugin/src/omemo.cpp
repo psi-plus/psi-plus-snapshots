@@ -304,19 +304,15 @@ namespace psiomemo {
 
   void OMEMO::buildSessionsFromBundle(const QVector<uint32_t> &invalidSessions, const QString &ownJid, int account,
                                       const QDomElement &messageToResend) {
-    QTextStream stream;
-    stream.setString(new QString());
-    messageToResend.save(stream, 0);
-
-    MessageWaitingForBundles message;
-    message.xml = *stream.string();
+    std::shared_ptr<MessageWaitingForBundles> message(new MessageWaitingForBundles);
+    message->xml = messageToResend;
 
     QString recipient = messageToResend.attribute("to").split("/").first();
 
     foreach (uint32_t deviceId, invalidSessions) {
       QString stanza = pepRequest(account, ownJid, recipient, bundleNodeName(deviceId));
-      message.sentStanzas.insert(stanza);
-      message.pendingBundles.insert(deviceId);
+      message->sentStanzas.insert(stanza);
+      message->pendingBundles.insert(deviceId);
     }
     m_pendingMessages.append(message);
   }
@@ -325,10 +321,10 @@ namespace psiomemo {
     QString stanzaId = xml.attribute("id");
     if (stanzaId.isNull()) return false;
 
-    MessageWaitingForBundles *message = nullptr;
-    foreach (MessageWaitingForBundles msg, m_pendingMessages) {
-      if (msg.sentStanzas.contains(stanzaId)) {
-        message = &msg;
+    std::shared_ptr<MessageWaitingForBundles> message;
+    foreach (std::shared_ptr<MessageWaitingForBundles> msg, m_pendingMessages) {
+      if (msg->sentStanzas.contains(stanzaId)) {
+        message = msg;
         break;
       }
     }
@@ -369,15 +365,13 @@ namespace psiomemo {
     }
 
     if (message->pendingBundles.isEmpty()) {
-      QDomDocument xmlDoc;
-      xmlDoc.setContent(message->xml);
-      QDomElement messageXml = xmlDoc.firstChild().toElement();
+      QDomElement messageXml = message->xml;
       if (!messageXml.hasAttribute("id")) {
         messageXml.setAttribute("id", m_stanzaSender->uniqueId(account));
       }
       encryptMessage(ownJid, account, messageXml, false, messageXml.firstChildElement("body").isNull() ? &deviceId : nullptr);
       m_stanzaSender->sendStanza(account, messageXml);
-      m_pendingMessages.removeOne(*message);
+      m_pendingMessages.removeOne(message);
     }
 
     return true;
