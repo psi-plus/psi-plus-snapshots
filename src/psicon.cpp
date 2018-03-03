@@ -36,6 +36,7 @@
 #include <QDir>
 #include <QSessionManager>
 
+#include "iris/processquit.h"
 #include "s5b.h"
 #include "xmpp_caps.h"
 #include "psiaccount.h"
@@ -350,6 +351,7 @@ PsiCon::PsiCon()
     d = new Private(this);
     d->tabManager = new TabManager(this);
     connect(QCoreApplication::instance(), SIGNAL(aboutToQuit()), SLOT(aboutToQuit()));
+    connect(ProcessQuit::instance(), SIGNAL(quit()), SLOT(aboutToQuit()));
 
 
     d->mainwin = 0;
@@ -1930,6 +1932,8 @@ void PsiCon::forceSavePreferences(QSessionManager &session)
 {
     session.setRestartHint(QSessionManager::RestartIfRunning);
     PsiOptions::instance()->save(optionsFile());
+    // TODO save any other options
+    // TODO warn about unfinished stuff like file transfer
 }
 
 void PsiCon::doQuit(int quitCode)
