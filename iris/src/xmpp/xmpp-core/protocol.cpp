@@ -197,6 +197,11 @@ void BasicProtocol::sendWhitespace()
     sendList += i;
 }
 
+void BasicProtocol::clearSendQueue()
+{
+    sendList.clear();
+}
+
 QDomElement BasicProtocol::recvStanza()
 {
     QDomElement e = stanzaToRecv;

@@ -657,6 +657,12 @@ void Client::send(const QString &str)
     static_cast<ClientStream*>(d->stream)->writeDirect(str);
 }
 
+/* drops any pending outgoing xml elements */
+void Client::clearSendQueue()
+{
+    d->stream->clearSendQueue();
+}
+
 bool Client::hasStream() const
 {
     return !!d->stream;

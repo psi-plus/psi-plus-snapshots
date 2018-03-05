@@ -75,6 +75,7 @@ namespace XMPP
 
         void send(const QDomElement &);
         void send(const QString &);
+        void clearSendQueue();
 
         QString host() const;
         QString user() const;

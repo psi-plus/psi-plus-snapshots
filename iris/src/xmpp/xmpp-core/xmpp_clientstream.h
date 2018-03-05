@@ -146,6 +146,7 @@ namespace XMPP
         bool stanzaAvailable() const;
         Stanza read();
         void write(const Stanza &s);
+        void clearSendQueue();
 
         int errorCondition() const;
         QString errorText() const;

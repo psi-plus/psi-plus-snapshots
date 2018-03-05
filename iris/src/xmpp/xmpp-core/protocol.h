@@ -161,6 +161,7 @@ namespace XMPP
         void sendStanza(const QDomElement &e);
         void sendDirect(const QString &s);
         void sendWhitespace();
+        void clearSendQueue();
         QDomElement recvStanza();
 
         // shutdown

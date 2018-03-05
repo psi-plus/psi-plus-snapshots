@@ -624,6 +624,11 @@ void ClientStream::write(const Stanza &s)
     }
 }
 
+void ClientStream::clearSendQueue()
+{
+    d->client.clearSendQueue();
+}
+
 void ClientStream::cr_connected()
 {
     d->connectHost = d->conn->host();

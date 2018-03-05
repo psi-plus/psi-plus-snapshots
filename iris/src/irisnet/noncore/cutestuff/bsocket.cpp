@@ -562,12 +562,12 @@ void BSocket::close()
 
     if(d->qsock) {
         d->state = Closing;
-        if(d->qsock->bytesToWrite() == 0) {
-            resetConnection();
+        d->qsock->close();
+        if (d->qsock->state() == QAbstractSocket::ClosingState) {
+            return; // wait for disconnected signal
         } else {
-            d->qsock->close();
+            resetConnection();
         }
-
     }
     else {
         resetConnection();
