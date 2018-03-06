@@ -247,6 +247,8 @@ public:
     int hPending; // highlight pending
     bool connecting;
     bool alert;
+    bool gcSelfPresenceSupported = false;
+    bool gcSelfAvatarRequested = false; // when self presence is not supported
 
     QStringList hist;
     int histAt;
@@ -1061,7 +1063,6 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
     connect(disco, SIGNAL(finished()), SLOT(discoInfoFinished()));     // but we need this just for name for now.
     disco->get(jid());                                             // From other side we could provide the name outside.
     disco->go(true);
-    VCardFactory::instance()->getVCard(jid(), account()->client()->rootTask(), this, SLOT(updateGCVCard()), true);
 
     setLooks();
     setToolbuttons();
@@ -1341,9 +1342,18 @@ void GCMainDlg::discoInfoFinished()
     }
 }
 
+void GCMainDlg::setMucSelfAvatar(const QPixmap &p)
+{
+    ui_.lblAvatar->setVisible(!p.isNull());
+    if (!p.isNull()) {
+         ui_.lblAvatar->setPixmap(p.scaled(QSize(64,64), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    }
+}
+
 void GCMainDlg::updateGCVCard()
 {
     const VCard vcard = VCardFactory::instance()->vcard(jid());
+    QPixmap avatar;
     if (vcard) {
         d->vcardMucName = vcard.nickName();
         if (d->vcardMucName.isEmpty()) {
@@ -1352,14 +1362,9 @@ void GCMainDlg::updateGCVCard()
         if (d->mucNameSource >= Private::TitleVCard) {
             updateMucName();
         }
-        QImage avatar = QImage::fromData(vcard.photo());
-        if (!avatar.isNull()) {
-            ui_.lblAvatar->show();
-            ui_.lblAvatar->setPixmap(QPixmap::fromImage(avatar).scaled(ui_.lblAvatar->minimumSize(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-            return;
-        }
+        avatar.loadFromData(vcard.photo());
     }
-    ui_.lblAvatar->hide();
+    setMucSelfAvatar(avatar);
 }
 
 void MiniCommand_Depreciation_Message(const QString &old,const QString &newCmd, QString &line1, QString &line2) {
@@ -1749,6 +1754,13 @@ void GCMainDlg::mucKickMsgHelper(const QString &nick, const Status &s, const QSt
     appendSysMsg(message);
 }
 
+// presence from muc itself (resource is empty)
+void GCMainDlg::gcSelfPresence(const Status &s)
+{
+    d->gcSelfPresenceSupported = true;
+    account()->avatarFactory()->statusUpdate(jid().withResource(QString()), s);
+}
+
 void GCMainDlg::presence(const QString &nick, const Status &s)
 {
     if(s.hasError()) {
@@ -1770,6 +1782,11 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
 
     bool isSelf = (nick == d->self);
     if (isSelf) {
+        if (!d->gcSelfPresenceSupported && !d->gcSelfAvatarRequested) {
+            d->gcSelfAvatarRequested = true;
+            VCardFactory::instance()->getVCard(jid(), account()->client()->rootTask(), this, SLOT(updateGCVCard()), true);
+        }
+
         if(s.isAvailable())
             setStatusTabIcon(s.type());
         UserListItem* u = account()->find(d->dlg->jid().bare());
@@ -1994,6 +2011,7 @@ void GCMainDlg::avatarUpdated(const Jid &jid_)
     if(jid_.compare(jid(), false)) {
         if (jid_.resource().isEmpty()) {
             ui_.log->updateAvatar(jid_, ChatViewCommon::RemoteParty);
+            setMucSelfAvatar(account()->avatarFactory()->getAvatar(jid_));
             return;
         }
         d->usersModel->updateAvatar(jid_.resource());
@@ -2021,7 +2039,10 @@ void GCMainDlg::message(const Message &_m, const PsiEvent::Ptr &e)
     }
     if (m.getMUCStatuses().contains(104)) {
         // new MUC vcard available
-        VCardFactory::instance()->getVCard(jid(), account()->client()->rootTask(), this, SLOT(updateGCVCard()), true);
+        if (!d->gcSelfPresenceSupported) {
+            // we had to handle avatar hash from presence already
+            VCardFactory::instance()->getVCard(jid(), account()->client()->rootTask(), this, SLOT(updateGCVCard()), true);
+        }
     }
 
     PsiOptions *options = PsiOptions::instance();
