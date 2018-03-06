@@ -1,6 +1,14 @@
 #!/bin/sh
 
-ref_commit=4b8a3473ee1de59f84627000cba462e05f8a9b84 # change version file to 1.2
-
 cd $(dirname "$0")
+
+ref_commit="$(git describe --tags | cut -d - -f1)"
+
+if [ ! -z "${1}" ]; then
+    if [ "$(git tag | grep -x "^${1}$" | wc -l)" = "1" ]; then
+        ref_commit="${1}"
+    fi
+fi
+
 git rev-list --count ${ref_commit}..HEAD
+
