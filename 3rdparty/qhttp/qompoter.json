@@ -1,0 +1,19 @@
+{
+    "name": "oliviermaridat/qhttp",
+    "description": "a light-weight and asynchronous HTTP library (both server & client) in Qt5.3+ and C++11",
+    "keywords": ["Qt", "C++", "HTTP"],
+    "authors": [
+        {
+          "name": "azadkuh",
+          "homepage": "https://github.com/azadkuh"
+        },
+        {
+            "name": "Olivier Maridat",
+            "email": "olivier.maridat@trialog.com",
+            "company": "Trialog"
+        }
+    ],
+    "require": {
+        "oliviermaridat/http-parser-wrapper": "v2.7.*"
+    }
+}

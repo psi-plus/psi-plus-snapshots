@@ -11,6 +11,7 @@
 #define __QHTTP_HTTPWRITER_HXX__
 
 #include "qhttpbase.hpp"
+#include <QHashIterator>
 
 ///////////////////////////////////////////////////////////////////////////////
 namespace qhttp {
@@ -84,9 +85,14 @@ public:
         TImpl* me = static_cast<TImpl*>(this);
         me->prepareHeadersToWrite();
 
-        TBase::iheaders.forEach([this](const auto& cit) {
-            this->writeHeader(cit.key(), cit.value());
-        });
+        QHashIterator<QByteArray, QByteArray> cit(TBase::iheaders);
+        while (cit.hasNext()) {
+            cit.next();
+            const QByteArray& field = cit.key();
+            const QByteArray& value = cit.value();
+
+            this->writeHeader(field, value);
+        }
 
         isocket.writeRaw("\r\n");
         if ( doFlush )

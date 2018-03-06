@@ -95,7 +95,7 @@ protected:
     http_parser          iparser;
     http_parser_settings iparserSettings;
 
-    static auto me(http_parser* p) {
+    static TImpl* me(http_parser* p) {
         return static_cast<TImpl*>(p->data);
     }
 }; //
