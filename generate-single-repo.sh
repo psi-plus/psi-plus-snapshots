@@ -117,7 +117,6 @@ find . -type f | \
     grep -v "^\./\.git" | \
     grep -v "^\./generate-single-repo.sh" | \
     grep -v "^\./configure" | \
-    grep -v "^\./README.md" | \
     grep -v "^\./README" | \
     while read var; do rm "$var"; done
 find . -depth -type d -empty -exec rmdir {} \;
@@ -136,6 +135,7 @@ mv "${SNAPSHOTS_DIR}/README" "${MAIN_DIR}/README"
 rsync -a "${MAIN_DIR}/psi/" "${SNAPSHOTS_DIR}/" \
     --exclude=".git*" \
     --exclude="^configure" \
+    --exclude="^README.md" \
     --exclude="^README"
 mv "${MAIN_DIR}/configure" "${SNAPSHOTS_DIR}/configure"
 mv "${MAIN_DIR}/README" "${SNAPSHOTS_DIR}/README"
