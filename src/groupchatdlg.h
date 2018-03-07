@@ -169,7 +169,7 @@ private:
     inline XMPP::Jid jidForNick(const QString &nick) const;
 
     void setMargins();
-    void setMucSelfAvatar(const QPixmap &p);
+    void setMucSelfAvatar();
 };
 
 #endif

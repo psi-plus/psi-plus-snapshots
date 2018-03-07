@@ -18,8 +18,10 @@ SOURCES += \
     $$PWD/psitabbar.cpp \
     $$PWD/psiwindowheader.cpp \
     $$PWD/actionlineedit.cpp \
+    $$PWD/tabbar.cpp \
     $$PWD/typeaheadfind.cpp \
-    $$PWD/tabbar.cpp
+    $$PWD/pixmapratiolabel.cpp
+
 
 HEADERS += \
     $$PWD/stretchwidget.h \
@@ -46,8 +48,9 @@ HEADERS += \
     $$PWD/psitabbar.h \
     $$PWD/psiwindowheader.h \
     $$PWD/actionlineedit.h \
+    $$PWD/tabbar.h \
     $$PWD/typeaheadfind.h \
-    $$PWD/tabbar.h
+    $$PWD/pixmapratiolabel.h
 
 FORMS += $$PWD/fancypopup.ui \
     $$PWD/psiwindowheader.ui
