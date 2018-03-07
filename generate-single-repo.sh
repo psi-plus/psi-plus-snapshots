@@ -111,13 +111,13 @@ echo "Updating is required!";
 echo;
 
 cd "${SNAPSHOTS_DIR}"
-echo "Statring Psi+ update..."
+echo "Starting Psi+ update..."
 
 find . -type f | \
     grep -v "^\./\.git" | \
-    grep -v "^\./generate-single-repo.sh" | \
-    grep -v "^\./configure" | \
-    grep -v "^\./README" | \
+    grep -v "^\./generate-single-repo.sh$" | \
+    grep -v "^\./configure$" | \
+    grep -v "^\./README$" | \
     while read var; do rm "$var"; done
 find . -depth -type d -empty -exec rmdir {} \;
 echo "* Directory is cleaned."
@@ -130,13 +130,13 @@ for FILE in generate-single-repo.sh configure README; do
 done
 chmod uog+x generate-single-repo.sh configure
 
-mv "${SNAPSHOTS_DIR}/configure" "${MAIN_DIR}/configure"
-mv "${SNAPSHOTS_DIR}/README" "${MAIN_DIR}/README"
+cp -f "${SNAPSHOTS_DIR}/configure" "${MAIN_DIR}/configure"
+cp -f "${SNAPSHOTS_DIR}/README" "${MAIN_DIR}/README"
 rsync -a "${MAIN_DIR}/psi/" "${SNAPSHOTS_DIR}/" \
     --exclude=".git*" \
-    --exclude="^configure" \
-    --exclude="^README.md" \
-    --exclude="^README"
+    --exclude="/configure" \
+    --exclude="/README.md" \
+    --exclude="/README"
 mv "${MAIN_DIR}/configure" "${SNAPSHOTS_DIR}/configure"
 mv "${MAIN_DIR}/README" "${SNAPSHOTS_DIR}/README"
 echo "* Files from psi project are copied."
