@@ -26,11 +26,12 @@ Advantages of this repository:
   - you don't need to calculate current version using magic hacks, just look to
     available git tags
   - you could download any previous version if you need and all parts of Psi+
-    sources will be compatible in it (Psi sources, Psi+ patches, plugins, etc.)
+    sources will be compatible with each other (Psi sources, Psi+ patches,
+    plugins, etc.)
 * Gzipped tarballs are available for each git tag. (Thanks to GitHub service.)
 
 This repository was created and is supported by Boris Pek <tehnick-8@yandex.ru>.
-Please contact me if you have any troubles with this repository.
+Please contact me if you have any troubles with it.
 
 Please contact me if you find non-free content here! Use Debian criteria of
 free content in this case:
