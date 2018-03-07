@@ -1,8 +1,11 @@
 This is a special repository with snapshots for Psi+ project:
-  http://psi-plus.com/
+  https://psi-plus.com/
 
-Here is a list of main changes:
-1) Source tree is aggregated from 6 independent git repositories:
+Current address:
+  https://github.com/psi-plus/psi-plus-snapshots
+
+Main features of this repository:
+1) Source tree is aggregated from six independent git repositories:
    - psi (original Psi project)
    - iris (from original Psi project)
    - libpsi (from original Psi project)
@@ -10,36 +13,33 @@ Here is a list of main changes:
    - main (patches and icons from Psi+ project)
    - resources (sounds and icons from Psi+ project)
 2) All patches from Psi+ project are applied.
-   (Except patches from dev/ and mac/ subdirectories)
-3) Trash is removed. (MS Windows binary files and non-free icons)
+   (Except patches from dev/ and mac/ subdirectories.)
+3) Trash is removed. (MS Windows executables and non-free icons.)
 
 More details see in file generate-single-repo.sh
 
-Current address: https://github.com/psi-plus/psi-plus-snapshots
-Previous location: https://github.com/tehnick/psi-plus
-
-Here is a list of advantages of this repository:
+Advantages of this repository:
 * Sources has been updated regularly from Psi and Psi+ projects.
+  (Script is launched one time per hour.)
 * There is no non-free content in the source tree.
 * There is a transparent system of version numbering:
-  - You don't need to calculate current version using magic hacks,
-    just look to available git tags.
-  - You could download any previous version if you need.
-* Gzipped tarballs are available for each git tag.
-  (Thanks to GitHub service)
+  - you don't need to calculate current version using magic hacks, just look to
+    available git tags
+  - you could download any previous version if you need and all parts of Psi+
+    sources will be compatible in it (Psi sources, Psi+ patches, plugins, etc.)
+* Gzipped tarballs are available for each git tag. (Thanks to GitHub service.)
 
-This git repo was created by Boris Pek <tehnick-8@yandex.ru>.
+This repository was created and is supported by Boris Pek <tehnick-8@yandex.ru>.
+Please contact me if you have any troubles with this repository.
 
-Please contact me if you have any troubles with this git repo.
-
-Please contact me if you find non-free content here.
-Use Debian criteria of free content in this case:
+Please contact me if you find non-free content here! Use Debian criteria of
+free content in this case:
   https://www.debian.org/social_contract#guidelines
   https://en.wikipedia.org/wiki/Debian_Free_Software_Guidelines
 
 If you find bugs or problems in Psi+ program you may report about them here:
   https://github.com/psi-im/psi/issues
 
-Even if bugs came from psi-im/plugins or psi-plus/main repositories,
-developers are prefer to get bug reports at above link.
+Even if bugs came from psi-im/plugins or psi-plus/main repositories, developers
+prefer to get bug reports at above link.
 

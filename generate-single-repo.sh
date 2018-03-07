@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2018-03-06
+# Updated: 2018-03-07
 # Version: N/A
 
 set -e
@@ -117,6 +117,7 @@ find . -type f | \
     grep -v "^\./\.git" | \
     grep -v "^\./generate-single-repo.sh" | \
     grep -v "^\./configure" | \
+    grep -v "^\./README.md" | \
     grep -v "^\./README" | \
     while read var; do rm "$var"; done
 find . -depth -type d -empty -exec rmdir {} \;
