@@ -29,18 +29,18 @@ using namespace XMPP;
 
 SMState::SMState()
 {
-    reset();
-}
-
-void SMState::reset()
-{
     enabled = false;
-    received_count = 0;
-    server_last_handled = 0;
-    send_queue.clear();
     resumption_id.clear();
     resumption_location.host.clear();
     resumption_location.port = 0;
+    resetCounters();
+}
+
+void SMState::resetCounters()
+{
+    received_count = 0;
+    server_last_handled = 0;
+    send_queue.clear();
 }
 
 
@@ -61,12 +61,12 @@ void StreamManagement::reset()
     sm_resend_pos = 0;
     sm_timeout_data.elapsed_timer = QElapsedTimer();
     sm_timeout_data.waiting_answer = false;
-    //state_.reset();
 }
 
 void StreamManagement::start(const QString &resumption_id)
 {
     reset();
+    state_.resetCounters();
     state_.resumption_id = resumption_id;
     sm_started = true;
     sm_timeout_data.elapsed_timer.start();

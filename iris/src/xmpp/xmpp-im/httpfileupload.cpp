@@ -394,9 +394,16 @@ bool JT_HTTPFileUpload::take(const QDomElement &e)
                 putUrl = put.attribute("url");
                 QDomElement he = put.firstChildElement("header");
                 while (!he.isNull()) {
-                    XEP0363::HttpHeader h = { he.attribute("name"), he.text() };
-                    if (!h.name.isEmpty() && !h.value.isEmpty())
-                        headers.append(h);
+                    // only next are allowed: Authorization, Cookie, Expires
+                    QString header = he.attribute("name").trimmed().remove(QLatin1Char('\n'));
+                    QString value = he.text().trimmed().remove(QLatin1Char('\n'));
+                    if (!value.isEmpty() &&
+                            (header.compare(QLatin1String("Authorization"), Qt::CaseInsensitive) == 0 ||
+                            header.compare(QLatin1String("Cookie"), Qt::CaseInsensitive) == 0 ||
+                            header.compare(QLatin1String("Expires"), Qt::CaseInsensitive) == 0))
+                    {
+                        headers.append(XEP0363::HttpHeader{header, value});
+                    }
                     he = he.nextSiblingElement("header");
                 }
             }

@@ -37,7 +37,7 @@ namespace XMPP
     {
     public:
         SMState();
-        void reset();
+        void resetCounters();
         bool isResumption() const { return !resumption_id.isEmpty(); }
         bool isEnabled() const { return enabled; }
         bool isLocationValid() { return !resumption_location.host.isEmpty() && resumption_location.port != 0; }

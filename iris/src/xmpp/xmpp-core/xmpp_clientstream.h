@@ -48,6 +48,7 @@ namespace XMPP
             ErrTLS,                     // TLS error, see condition
             ErrAuth,                    // Auth error, see condition
             ErrSecurityLayer,           // broken SASL security layer
+            ErrSmResume,                // SM resume error
             ErrBind                     // Resource binding error
         };
         enum Warning {

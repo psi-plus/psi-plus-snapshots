@@ -43,7 +43,8 @@ namespace XMPP
             ERecvOpen,    // breakpoint after root element open tag is received
             EPeerClosed,  // root element close tag received
             EClosed,      // finished closing
-            ESMConnTimeout, // absence of responses to <r/> query
+            ESMConnTimeout,  // absence of responses to <r/> query
+            ESMResumeFailed, // failed to resume sm session
             ECustom = 10
         };
         enum Error {

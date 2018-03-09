@@ -1837,8 +1837,8 @@ bool CoreProtocol::normalStep(const QDomElement &e)
             } else if (e.localName() == "failed") {
                 if (sm.state().isResumption()) { // tried to resume? ok, then try to just enable
                     sm.state().resumption_id.clear();
-                    step = HandleFeatures;
-                    event = EFeatures;
+                    //step = HandleFeatures;
+                    event = ESMResumeFailed;
                     return true;
                 }
             }

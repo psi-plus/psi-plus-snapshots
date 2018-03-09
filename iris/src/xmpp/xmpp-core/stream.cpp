@@ -1188,6 +1188,15 @@ void ClientStream::processNext()
                 }
                 return;
             }
+            case CoreProtocol::ESMResumeFailed: {
+#ifdef XMPP_DEBUG
+                qDebug() << "Stream Management: [INF] Resuming session failed";
+#endif
+                reset();
+                d->quiet_reconnection = false;
+                emit error(ErrSmResume);
+                return;
+            }
         }
     }
 }
