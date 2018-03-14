@@ -28,6 +28,7 @@
 #include "stunutil.h"
 #include "stunmessage.h"
 #include "stuntypes.h"
+#include "stunbinding.h"
 
 Q_DECLARE_METATYPE(XMPP::StunTransaction::Error)
 
@@ -591,6 +592,7 @@ StunTransactionPool::StunTransactionPool(StunTransaction::Mode mode, QObject *pa
 
 StunTransactionPool::~StunTransactionPool()
 {
+    qDeleteAll(findChildren<StunBinding*>()); // early remove of binding since they require alive pool (should fix one crash)
     delete d;
 }
 
