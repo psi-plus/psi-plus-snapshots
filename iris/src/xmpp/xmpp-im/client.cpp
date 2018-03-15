@@ -688,6 +688,11 @@ const ResourceList & Client::resourceList() const
     return d->resourceList;
 }
 
+bool Client::isSessionRequired() const
+{
+    return d->stream && !d->stream->old() && d->stream->streamFeatures().session_required;
+}
+
 QString Client::host() const
 {
     return d->host;

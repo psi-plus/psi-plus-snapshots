@@ -88,6 +88,8 @@ StreamFeatures::StreamFeatures()
     tls_required = false;
     compress_supported = false;
     sm_supported = false;
+    session_supported = false;
+    session_required = false;
 }
 
 //----------------------------------------------------------------------------
@@ -1386,7 +1388,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
     }
     else if(step == GetFeatures) {
         // we are waiting for stream features
-        if(e.namespaceURI() == NS_ETHERX && e.tagName() == "features") {
+        if(e.namespaceURI() == NS_ETHERX && e.tagName() == QLatin1String("features")) {
             // extract features
             StreamFeatures f;
             QDomNodeList nl = e.childNodes();
@@ -1396,34 +1398,39 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                 if (c.isNull()) {
                     continue;
                 }
-                if (c.localName() == "starttls" && c.namespaceURI() == NS_TLS) {
+                if (c.localName() == QLatin1String("starttls") && c.namespaceURI() == NS_TLS) {
                     f.tls_supported = true;
-                    f.tls_required = c.elementsByTagNameNS(NS_TLS, "required").count() > 0;
+                    f.tls_required = c.elementsByTagNameNS(NS_TLS, QLatin1String("required")).count() > 0;
 
-                } else if (c.localName() == "mechanisms" && c.namespaceURI() == NS_SASL) {
+                } else if (c.localName() == QLatin1String("mechanisms") && c.namespaceURI() == NS_SASL) {
                     f.sasl_supported = true;
-                    QDomNodeList l = c.elementsByTagNameNS(NS_SASL, "mechanism");
+                    QDomNodeList l = c.elementsByTagNameNS(NS_SASL, QLatin1String("mechanism"));
                     for(int n = 0; n < l.count(); ++n)
                         f.sasl_mechs += l.item(n).toElement().text();
 
-                } else if (c.localName() == "compression" && c.namespaceURI() == NS_COMPRESS_FEATURE) {
+                } else if (c.localName() == QLatin1String("compression") && c.namespaceURI() == NS_COMPRESS_FEATURE) {
                     f.compress_supported = true;
-                    QDomNodeList l = c.elementsByTagNameNS(NS_COMPRESS_FEATURE, "method");
+                    QDomNodeList l = c.elementsByTagNameNS(NS_COMPRESS_FEATURE, QLatin1String("method"));
                     for(int n = 0; n < l.count(); ++n)
                         f.compression_mechs += l.item(n).toElement().text();
 
-                } else if (c.localName() == "bind" && c.namespaceURI() == NS_BIND) {
+                } else if (c.localName() == QLatin1String("bind") && c.namespaceURI() == NS_BIND) {
                     f.bind_supported = true;
 
-                } else if (c.localName() == "hosts" && c.namespaceURI() == NS_HOSTS) {
-                    QDomNodeList l = c.elementsByTagNameNS(NS_HOSTS, "host");
+                } else if (c.localName() == QLatin1String("hosts") && c.namespaceURI() == NS_HOSTS) {
+                    QDomNodeList l = c.elementsByTagNameNS(NS_HOSTS, QLatin1String("host"));
                     for(int n = 0; n < l.count(); ++n)
                         f.hosts += l.item(n).toElement().text();
                     hosts += f.hosts;
 
-                } else if (c.localName() == "sm" && c.namespaceURI() == NS_STREAM_MANAGEMENT) {
+                } else if (c.localName() == QLatin1String("sm") && c.namespaceURI() == NS_STREAM_MANAGEMENT) {
                     f.sm_supported = true;
                     // REVIEW: previously we checked for sasl_authed as well. why?
+
+                } else if (c.localName() == QLatin1String("session") && c.namespaceURI() == NS_SESSION) {
+                    f.session_supported = true;
+                    f.session_required = c.elementsByTagName(QLatin1String("optional")).count() == 0;
+                    // more details https://tools.ietf.org/html/draft-cridland-xmpp-session-01
 
                 } else {
                     unhandled.append(c);

@@ -72,6 +72,7 @@ namespace XMPP
         QString streamBaseNS() const;
         const LiveRoster & roster() const;
         const ResourceList & resourceList() const;
+        bool isSessionRequired() const;
 
         void send(const QDomElement &);
         void send(const QString &);

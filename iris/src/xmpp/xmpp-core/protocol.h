@@ -63,6 +63,8 @@ namespace XMPP
         bool tls_supported, sasl_supported, bind_supported, compress_supported;
         bool tls_required;
         bool sm_supported;
+        bool session_supported;
+        bool session_required;
         QStringList sasl_mechs;
         QStringList compression_mechs;
         QStringList hosts;
