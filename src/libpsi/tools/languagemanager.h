@@ -16,6 +16,7 @@ public:
     static LangId fromString(const QString &langDesc);
     static QString toString(const LangId &id);
     static QList<LanguageManager::LangId> bestUiMatch(const QSet<LanguageManager::LangId> &avail, bool justOne = false);
+    static QString bestUiMatch(QHash<QString,QString> langToText);
     static QString languageName(const LangId &id);
     static QString countryName(const LangId &id);
     static QSet<LangId> deserializeLanguageSet(const QString &);

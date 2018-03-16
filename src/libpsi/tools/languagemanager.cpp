@@ -138,6 +138,19 @@ QList<LanguageManager::LangId> LanguageManager::bestUiMatch(const QSet<LanguageM
     return ret;
 }
 
+QString LanguageManager::bestUiMatch(QHash<QString, QString> langToText)
+{
+    QHash<LangId,QString> langs;
+    for (auto l = langToText.constBegin(); l != langToText.constEnd(); ++l) {
+        langs.insert(LanguageManager::fromString(l.key()), l.value()); // FIXME: all unknown languages will be converted to C/default locale
+    }
+    auto preferred = LanguageManager::bestUiMatch(langs.keys().toSet(), true);
+    if (preferred.count()) {
+        return langs.value(preferred.first());
+    }
+    return QString();
+}
+
 QString LanguageManager::languageName(const LanguageManager::LangId &id)
 {
     bool needCountry = true;
