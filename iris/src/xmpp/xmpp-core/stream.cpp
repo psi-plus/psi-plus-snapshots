@@ -146,6 +146,7 @@ enum {
     WaitVersion,
     WaitTLS,
     NeedParams,
+    AuthAbort,
     Active,
     Closing
 };
@@ -234,6 +235,7 @@ public:
 
     int errCond;
     QString errText;
+    QHash<QString,QString> errLangText; // xml:lang => error text
     QDomElement errAppSpec;
 
     QList<Stanza*> in;
@@ -449,7 +451,20 @@ void ClientStream::continueAfterParams()
             if(d->sasl)
                 d->sasl->continueAfterParams();
         }
+    } else if (d->state == AuthAbort) {
+        auto e = doc().createElement("abort"); // FIXME it's kind of wrong to forge xml here
+        e.setAttribute("xmlns", NS_SASL);
+        d->client.sendStanza(e);
+        processNext();
     }
+}
+
+void ClientStream::abortAuth()
+{
+    if (d->state != NeedParams) {
+        return; // nothing to abort
+    }
+    d->state = AuthAbort;
 }
 
 void ClientStream::setSaslMechanismProvider(const QString &m, const QString &p)
@@ -544,6 +559,12 @@ int ClientStream::errorCondition() const
 QString ClientStream::errorText() const
 {
     return d->errText;
+}
+
+
+QHash<QString,QString> ClientStream::errorLangText() const
+{
+    return d->errLangText;
 }
 
 QDomElement ClientStream::errorAppSpec() const
@@ -1351,7 +1372,7 @@ int ClientStream::convertedSASLCond() const
     if(x == QCA::SASL::NoMechanism)
         return NoMech;
     else if(x == QCA::SASL::BadProtocol)
-        return BadProto;
+        return MalformedRequest;
     else if(x == QCA::SASL::BadServer)
         return BadServ;
     else if(x == QCA::SASL::TooWeak)
@@ -1412,6 +1433,7 @@ void ClientStream::handleError()
     else if(c == CoreProtocol::ErrStream) {
         int x = d->client.errCond;
         QString text = d->client.errText;
+        auto langText = d->client.errLangText;
         QDomElement appSpec = d->client.errAppSpec;
 
         int connErr = -1;
@@ -1432,6 +1454,7 @@ void ClientStream::handleError()
             case CoreProtocol::StreamNotAuthorized: { break; } // should NOT happen (we're not stupid)
             case CoreProtocol::PolicyViolation: { strErr = PolicyViolation; break; }
             case CoreProtocol::RemoteConnectionFailed: { connErr = RemoteConnectionFailed; break; }
+            case CoreProtocol::StreamReset: { strErr = StreamReset; break; }
             case CoreProtocol::ResourceConstraint: { strErr = ResourceConstraint; break; }
             case CoreProtocol::RestrictedXml: { strErr = InvalidXml; break; } // group with this one
             case CoreProtocol::SeeOtherHost: { connErr = SeeOtherHost; break; }
@@ -1447,6 +1470,7 @@ void ClientStream::handleError()
         reset();
 
         d->errText = text;
+        d->errLangText = langText;
         d->errAppSpec = appSpec;
         if(connErr != -1) {
             d->errCond = connErr;
@@ -1479,9 +1503,13 @@ void ClientStream::handleError()
         else {
             switch(x) {
                 case CoreProtocol::Aborted: { r = GenericAuthError; break; } // should NOT happen (we never send <abort/>)
+                case CoreProtocol::AccountDisabled: { r = AccountDisabled; break; }            // account temporrily disabled
+                case CoreProtocol::CredentialsExpired: { r = CredentialsExpired; break; }         // credential expired
+                case CoreProtocol::EncryptionRequired: { r = EncryptionRequired; break; }         // can't use mech without TLS
                 case CoreProtocol::IncorrectEncoding: { r = GenericAuthError; break; } // should NOT happen
                 case CoreProtocol::InvalidAuthzid: { r = InvalidAuthzid; break; }
                 case CoreProtocol::InvalidMech: { r = InvalidMech; break; }
+                case CoreProtocol::MalformedRequest: { r = MalformedRequest; break; }
                 case CoreProtocol::MechTooWeak: { r = MechTooWeak; break; }
                 case CoreProtocol::NotAuthorized: { r = NotAuthorized; break; }
                 case CoreProtocol::TemporaryAuthFailure: { r = TemporaryAuthFailure; break; }
@@ -1489,6 +1517,7 @@ void ClientStream::handleError()
         }
         reset();
         d->errCond = r;
+        d->errLangText = d->client.errLangText;
         error(ErrAuth);
     }
     else if(c == CoreProtocol::ErrPlain) {

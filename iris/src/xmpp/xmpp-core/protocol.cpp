@@ -98,9 +98,13 @@ StreamFeatures::StreamFeatures()
 BasicProtocol::SASLCondEntry BasicProtocol::saslCondTable[] =
 {
     { "aborted",                Aborted },
+    { "account-disabled",       AccountDisabled },
+    { "credentials-expired",    CredentialsExpired },
+    { "encryption-required",    EncryptionRequired },
     { "incorrect-encoding",     IncorrectEncoding },
     { "invalid-authzid",        InvalidAuthzid },
     { "invalid-mechanism",      InvalidMech },
+    { "malformed-request",      MalformedRequest },
     { "mechanism-too-weak",     MechTooWeak },
     { "not-authorized",         NotAuthorized },
     { "temporary-auth-failure", TemporaryAuthFailure },
@@ -121,8 +125,10 @@ BasicProtocol::StreamCondEntry BasicProtocol::streamCondTable[] =
     { "invalid-namespace",        InvalidNamespace },
     { "invalid-xml",              InvalidXml },
     { "not-authorized",           StreamNotAuthorized },
+    { "not-well-formed",          NotWellFormed },
     { "policy-violation",         PolicyViolation },
     { "remote-connection-failed", RemoteConnectionFailed },
+    { "reset",                    StreamReset },
     { "resource-constraint",      ResourceConstraint },
     { "restricted-xml",           RestrictedXml },
     { "see-other-host",           SeeOtherHost },
@@ -131,7 +137,6 @@ BasicProtocol::StreamCondEntry BasicProtocol::streamCondTable[] =
     { "unsupported-encoding",     UnsupportedEncoding },
     { "unsupported-stanza-type",  UnsupportedStanzaType },
     { "unsupported-version",      UnsupportedVersion },
-    { "not-well-formed",          NotWellFormed },
     { 0, 0 },
 };
 
@@ -302,6 +307,7 @@ QString BasicProtocol::streamCondToString(int x)
 void BasicProtocol::extractStreamError(const QDomElement &e)
 {
     QString text;
+    QHash<QString,QString> langText;
     QDomElement appSpec;
 
     QDomElement t = firstChildElement(e);
@@ -317,8 +323,14 @@ void BasicProtocol::extractStreamError(const QDomElement &e)
         if(errCond == SeeOtherHost)
             otherHost = t.text();
 
-        t = e.elementsByTagNameNS(NS_STREAMS, "text").item(0).toElement();
-        if(!t.isNull())
+        auto nodes = e.elementsByTagNameNS(NS_STREAMS, "text");
+        if (nodes.count()) {
+            for (int i = 0; i < nodes.count(); i++) {
+                auto e = nodes.item(i).toElement();
+                QString lang = e.attributeNS(NS_STREAMS, "lang", "");
+                langText.insert(lang, e.text());
+            }
+        } else
             text = t.text();
 
         // find first non-standard namespaced element
@@ -332,6 +344,7 @@ void BasicProtocol::extractStreamError(const QDomElement &e)
         }
 
         errText = text;
+        errLangText = langText;
         errAppSpec = appSpec;
     }
 }
@@ -1566,6 +1579,16 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                 else
                     errCond = stringToSASLCond(t.tagName());
 
+                // handle text elements
+                auto nodes = e.elementsByTagNameNS(NS_SASL, QLatin1String("text"));
+                decltype(errLangText) lt;
+                for (int i = 0; i < nodes.count(); i++) {
+                    auto e = nodes.item(i).toElement();
+                    QString lang = e.attributeNS(NS_SASL, "lang", "");
+                    lt.insert(lang, e.text());
+                }
+
+                errLangText = lt;
                 event = EError;
                 errorCode = ErrAuth;
                 return true;

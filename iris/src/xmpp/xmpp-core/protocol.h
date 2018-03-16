@@ -73,15 +73,19 @@ namespace XMPP
     class BasicProtocol : public XmlProtocol
     {
     public:
-        // xmpp 1.0 error conditions
+        // xmpp 1.0 error conditions // rfc6120
         enum SASLCond {
-            Aborted,
-            IncorrectEncoding,
-            InvalidAuthzid,
-            InvalidMech,
-            MechTooWeak,
-            NotAuthorized,
-            TemporaryAuthFailure
+            Aborted,                    // server confirms auth abort
+            AccountDisabled,            // account temporrily disabled
+            CredentialsExpired,         // credential expired
+            EncryptionRequired,         // can't use mech without TLS
+            IncorrectEncoding,          // Incorrect encoding. should not happen
+            InvalidAuthzid,             // bad input JID
+            InvalidMech,                // bad mechanism
+            MalformedRequest,           // malformded request
+            MechTooWeak,                // can't use mech with this authzid
+            NotAuthorized,              // bad user, bad password, bad creditials
+            TemporaryAuthFailure,       // please try again later!
         };
         enum StreamCond {
             BadFormat,
@@ -98,6 +102,7 @@ namespace XMPP
             StreamNotAuthorized,
             PolicyViolation,
             RemoteConnectionFailed,
+            StreamReset,
             ResourceConstraint,
             RestrictedXml,
             SeeOtherHost,
@@ -177,6 +182,7 @@ namespace XMPP
         // error output
         int errCond;
         QString errText;
+        QHash<QString,QString> errLangText;
         QDomElement errAppSpec;
         QString otherHost;
 

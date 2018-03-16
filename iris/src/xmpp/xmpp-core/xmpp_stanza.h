@@ -77,6 +77,7 @@ namespace XMPP
             int type;
             int condition;
             QString text;
+            QString by;
             QDomElement appSpec;
 
             int code() const;

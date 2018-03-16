@@ -45,7 +45,8 @@ namespace XMPP
             InvalidXml,
             PolicyViolation,
             ResourceConstraint,
-            SystemShutdown
+            SystemShutdown,
+            StreamReset
         };
 
         Stream(QObject *parent=0);
@@ -62,6 +63,7 @@ namespace XMPP
 
         virtual int errorCondition() const=0;
         virtual QString errorText() const=0;
+        virtual QHash<QString,QString> errorLangText() const=0; // localized error descriptions
         virtual QDomElement errorAppSpec() const=0;
 
         Stanza createStanza(Stanza::Kind k, const Jid &to="", const QString &type="", const QString &id="");

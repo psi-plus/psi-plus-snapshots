@@ -816,8 +816,10 @@ private slots:
                 s = "unable to login";
             else if(x == XMPP::ClientStream::NoMech)
                 s = "no appropriate auth mechanism available for given security settings";
-            else if(x == XMPP::ClientStream::BadProto)
-                s = "bad server response";
+            else if(x == XMPP::ClientStream::Aborted)
+                s = "server confirms abort";
+            else if(x == XMPP::ClientStream::MalformedRequest)
+                s = "malformed request";
             else if(x == XMPP::ClientStream::BadServ)
                 s = "server failed mutual authentication";
             else if(x == XMPP::ClientStream::EncryptionRequired)
@@ -826,8 +828,6 @@ private slots:
                 s = "invalid authzid";
             else if(x == XMPP::ClientStream::InvalidMech)
                 s = "invalid SASL mechanism";
-            else if(x == XMPP::ClientStream::InvalidRealm)
-                s = "invalid realm";
             else if(x == XMPP::ClientStream::MechTooWeak)
                 s = "SASL mechanism too weak for authzid";
             else if(x == XMPP::ClientStream::NotAuthorized)

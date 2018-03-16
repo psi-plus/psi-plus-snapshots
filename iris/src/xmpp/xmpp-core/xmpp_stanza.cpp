@@ -317,6 +317,7 @@ bool Stanza::Error::fromXml(const QDomElement &e, const QString &baseNS)
 
     // type
     type = Private::stringToErrorType(e.attribute("type"));
+    by = e.attribute(QLatin1String("by"));
 
     // condition
     QDomNodeList nl = e.childNodes();
@@ -394,6 +395,9 @@ QDomElement Stanza::Error::toXml(QDomDocument &doc, const QString &baseNS) const
         return errElem;
 
     errElem.setAttribute("type", stype);
+    if (!by.isEmpty()) {
+        errElem.setAttribute("by", by);
+    }
     errElem.appendChild(t = doc.createElementNS(NS_STANZAS, scond));
     t.setAttribute("xmlns", NS_STANZAS);    // FIX-ME: this shouldn't be needed
 

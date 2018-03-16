@@ -72,17 +72,23 @@ namespace XMPP
             LayerSASL
         };
         enum AuthCond {
-            GenericAuthError,           // all-purpose "can't login" error
-            NoMech,                     // No appropriate auth mech available
-            BadProto,                   // Bad SASL auth protocol
-            BadServ,                    // Server failed mutual auth
+            GenericAuthError,           // all-purpose "can't login" error (includes: IncorrectEncoding, )
+
+            // standard xmpp auth errors (not all. some of the converted to GenericAuthError):
+            Aborted,                    // server confirms auth abort
+            AccountDisabled,            // account temporrily disabled
+            CredentialsExpired,         // credential expired
             EncryptionRequired,         // can't use mech without TLS
             InvalidAuthzid,             // bad input JID
             InvalidMech,                // bad mechanism
-            InvalidRealm,               // bad realm
+            MalformedRequest,           // malformded request
             MechTooWeak,                // can't use mech with this authzid
             NotAuthorized,              // bad user, bad password, bad creditials
-            TemporaryAuthFailure        // please try again later!
+            TemporaryAuthFailure,       // please try again later!
+
+            // non-xmpp
+            NoMech,                     // No appropriate auth mech available
+            BadServ,                    // Server failed mutual auth
         };
         enum BindCond {
             BindNotAllowed,             // not allowed to bind a resource
@@ -110,6 +116,7 @@ namespace XMPP
         void setRealm(const QString &s);
         void setAuthzid(const QString &s);
         void continueAfterParams();
+        void abortAuth();
         void setSaslMechanismProvider(const QString &m, const QString &p);
         QString saslMechanismProvider(const QString &m) const;
         QCA::Provider::Context *currentSASLContext() const;
@@ -151,6 +158,7 @@ namespace XMPP
 
         int errorCondition() const;
         QString errorText() const;
+        QHash<QString,QString> errorLangText() const;
         QDomElement errorAppSpec() const;
 
         // extra
