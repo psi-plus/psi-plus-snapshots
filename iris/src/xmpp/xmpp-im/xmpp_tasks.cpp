@@ -719,8 +719,8 @@ void JT_Presence::sub(const Jid &to, const QString &subType, const QString& nick
     tag = doc()->createElement("presence");
     tag.setAttribute("to", to.full());
     tag.setAttribute("type", subType);
-    if (!nick.isEmpty() && (type == QLatin1String("subscribe") || type == QLatin1String("subscribed") ||
-                            type == QLatin1String("unsubscribe") || type == QLatin1String("unsubscribed")))
+    if (!nick.isEmpty() && (subType == QLatin1String("subscribe") || subType == QLatin1String("subscribed") ||
+                            subType == QLatin1String("unsubscribe") || subType == QLatin1String("unsubscribed")))
     {
         QDomElement nick_tag = textTag(doc(),"nick",nick);
         nick_tag.setAttribute("xmlns","http://jabber.org/protocol/nick");
