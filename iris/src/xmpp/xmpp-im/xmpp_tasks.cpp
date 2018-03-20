@@ -719,7 +719,9 @@ void JT_Presence::sub(const Jid &to, const QString &subType, const QString& nick
     tag = doc()->createElement("presence");
     tag.setAttribute("to", to.full());
     tag.setAttribute("type", subType);
-    if (!nick.isEmpty()) {
+    if (!nick.isEmpty() && (type == QLatin1String("subscribe") || type == QLatin1String("subscribed") ||
+                            type == QLatin1String("unsubscribe") || type == QLatin1String("unsubscribed")))
+    {
         QDomElement nick_tag = textTag(doc(),"nick",nick);
         nick_tag.setAttribute("xmlns","http://jabber.org/protocol/nick");
         tag.appendChild(nick_tag);
@@ -773,7 +775,8 @@ bool JT_PushPresence::take(const QDomElement &e)
             getErrorFromElement(e, client()->stream().baseNS(), &code, &str);
             p.setError(code, str);
         }
-        else if(type == "subscribe" || type == "subscribed" || type == "unsubscribe" || type == "unsubscribed") {
+        else if(type == QLatin1String("subscribe") || type == QLatin1String("subscribed") ||
+                type == QLatin1String("unsubscribe") || type == QLatin1String("unsubscribed")) {
             QString nick;
             QDomElement tag = e.firstChildElement("nick");
             if (!tag.isNull() && tag.attribute("xmlns") == "http://jabber.org/protocol/nick") {
