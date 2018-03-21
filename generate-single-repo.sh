@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2018-03-07
+# Updated: 2018-03-21
 # Version: N/A
 
 set -e
@@ -189,7 +189,7 @@ echo "* Skins from Psi+ project are copied."
 rsync -a "${MAIN_DIR}/resources/themes/" "${SNAPSHOTS_DIR}/themes/"
 echo "* Themes from Psi+ project are copied."
 
-cp "${MAIN_DIR}/main/changelog.txt" "${SNAPSHOTS_DIR}/ChangeLog"
+cp "${MAIN_DIR}/main/ChangeLog.Psi+.txt" "${SNAPSHOTS_DIR}/ChangeLog.Psi+.txt"
 echo "* ChangeLog from Psi+ project is copied."
 
 remove_trash
