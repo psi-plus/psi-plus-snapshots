@@ -20,14 +20,22 @@
 
 #ifndef SYSTEMWATCH_UNIX_H
 #define SYSTEMWATCH_UNIX_H
-
+#ifdef USE_DBUS
+#include <QDBusUnixFileDescriptor>
+#endif
 #include "systemwatch.h"
 
 class UnixSystemWatch : public SystemWatch
 {
     Q_OBJECT
+
+#ifdef USE_DBUS
+    QDBusUnixFileDescriptor lockFd; // systemd inhibitor for sleep. system goes to sleep as soon as lock is closed
+#endif
+    void takeSleepLock();
 public:
     UnixSystemWatch();
+    void proceedWithSleep();
 
 private slots:
     void prepareForSleep(bool beforeSleep);

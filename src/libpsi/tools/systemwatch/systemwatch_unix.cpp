@@ -18,10 +18,15 @@
  *
  */
 
+#include <unistd.h>
 #include "systemwatch_unix.h"
 #ifdef USE_DBUS
 # include <QDBusConnection>
+# include <QDBusReply>
+# include <QDBusInterface>
+# include <QDBusUnixFileDescriptor>
 #endif
+#include "applicationinfo.h"
 
 UnixSystemWatch::UnixSystemWatch()
 {
@@ -34,7 +39,31 @@ UnixSystemWatch::UnixSystemWatch()
     // listen to UPower
     conn.connect("org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.UPower", "Sleeping", this, SLOT(sleeping()));
     conn.connect("org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.UPower", "Resuming", this, SLOT(resuming()));
+
+    takeSleepLock();
 #endif
+}
+
+void UnixSystemWatch::takeSleepLock()
+{
+#ifdef USE_DBUS
+    /* dbus-send --system --print-reply --dest=org.freedesktop.login1 /org/freedesktop/login1 \
+       "org.freedesktop.login1.Manager.Inhibit" string:"sleep" string:"Psi" \
+                                                               string:"Closing connections..." string:"delay"
+    */
+    QDBusInterface login1iface("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", QDBusConnection::systemBus());
+    QDBusReply<QDBusUnixFileDescriptor> repl = login1iface.call("Inhibit", "sleep", ApplicationInfo::name(), "Closing connections...", "block");
+    if (repl.isValid()) {
+        lockFd = repl.value();
+    } else {
+        lockFd = QDBusUnixFileDescriptor();
+    }
+#endif
+}
+
+void UnixSystemWatch::proceedWithSleep()
+{
+    lockFd = QDBusUnixFileDescriptor();
 }
 
 void UnixSystemWatch::prepareForSleep(bool beforeSleep)
@@ -46,6 +75,7 @@ void UnixSystemWatch::prepareForSleep(bool beforeSleep)
     else
     {
         emit wakeup();
+        takeSleepLock();
     }
 }
 

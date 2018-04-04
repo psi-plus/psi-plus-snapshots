@@ -47,5 +47,10 @@ SystemWatch* SystemWatch::instance()
     return instance_;
 }
 
+void SystemWatch::proceedWithSleep()
+{
+    // do nothing in base impl
+}
+
 
 SystemWatch* SystemWatch::instance_ = 0;

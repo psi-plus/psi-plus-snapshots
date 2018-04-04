@@ -29,6 +29,7 @@ class SystemWatch : public QObject
 
 public:
     static SystemWatch* instance();
+    virtual void proceedWithSleep();
 
 signals:
     void sleep();
