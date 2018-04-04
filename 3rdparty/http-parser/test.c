@@ -27,9 +27,7 @@
 #include <stdarg.h>
 
 #if defined(__APPLE__)
-# undef strlcat
 # undef strlncpy
-# undef strlcpy
 #endif  /* defined(__APPLE__) */
 
 #undef TRUE
@@ -42,6 +40,8 @@
 #define MAX_CHUNKS 16
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
+
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof(*x))
 
 static http_parser *parser;
 
@@ -1173,8 +1173,6 @@ const struct message requests[] =
   ,.headers= { { "Host", "example.com" } }
   ,.body= ""
   }
-
-, {.name= NULL } /* sentinel */
 };
 
 /* * R E S P O N S E S * */
@@ -1952,8 +1950,6 @@ const struct message responses[] =
   ,.num_chunks_complete= 3
   ,.chunk_lengths= { 2, 2 }
   }
-
-, {.name= NULL } /* sentinel */
 };
 
 /* strnlen() is a POSIX.2008 addition. Can't rely on it being available so
@@ -1994,12 +1990,6 @@ strlncat(char *dst, size_t len, const char *src, size_t n)
 }
 
 size_t
-strlcat(char *dst, const char *src, size_t len)
-{
-  return strlncat(dst, len, src, (size_t) -1);
-}
-
-size_t
 strlncpy(char *dst, size_t len, const char *src, size_t n)
 {
   size_t slen;
@@ -2015,12 +2005,6 @@ strlncpy(char *dst, size_t len, const char *src, size_t n)
 
   assert(len > slen);
   return slen;
-}
-
-size_t
-strlcpy(char *dst, const char *src, size_t len)
-{
-  return strlncpy(dst, len, src, (size_t) -1);
 }
 
 int
@@ -4115,9 +4099,7 @@ int
 main (void)
 {
   parser = NULL;
-  int i, j, k;
-  int request_count;
-  int response_count;
+  unsigned i, j, k;
   unsigned long version;
   unsigned major;
   unsigned minor;
@@ -4130,9 +4112,6 @@ main (void)
   printf("http_parser v%u.%u.%u (0x%06lx)\n", major, minor, patch, version);
 
   printf("sizeof(http_parser) = %u\n", (unsigned int)sizeof(http_parser));
-
-  for (request_count = 0; requests[request_count].name; request_count++);
-  for (response_count = 0; responses[response_count].name; response_count++);
 
   //// API
   test_preserve_data();
@@ -4168,6 +4147,27 @@ main (void)
   test_invalid_header_field_token_error(HTTP_RESPONSE);
   test_invalid_header_field_content_error(HTTP_RESPONSE);
 
+  test_simple_type(
+      "POST / HTTP/1.1\r\n"
+      "Content-Length:  42 \r\n"  // Note the surrounding whitespace.
+      "\r\n",
+      HPE_OK,
+      HTTP_REQUEST);
+
+  test_simple_type(
+      "POST / HTTP/1.1\r\n"
+      "Content-Length: 4 2\r\n"
+      "\r\n",
+      HPE_INVALID_CONTENT_LENGTH,
+      HTTP_REQUEST);
+
+  test_simple_type(
+      "POST / HTTP/1.1\r\n"
+      "Content-Length: 13 37\r\n"
+      "\r\n",
+      HPE_INVALID_CONTENT_LENGTH,
+      HTTP_REQUEST);
+
   //// RESPONSES
 
   test_simple_type("HTP/1.1 200 OK\r\n\r\n", HPE_INVALID_VERSION, HTTP_RESPONSE);
@@ -4176,23 +4176,23 @@ main (void)
   test_simple_type("HTTP/1.01 200 OK\r\n\r\n", HPE_INVALID_VERSION, HTTP_RESPONSE);
   test_simple_type("HTTP/1.1\t200 OK\r\n\r\n", HPE_INVALID_VERSION, HTTP_RESPONSE);
 
-  for (i = 0; i < response_count; i++) {
+  for (i = 0; i < ARRAY_SIZE(responses); i++) {
     test_message(&responses[i]);
   }
 
-  for (i = 0; i < response_count; i++) {
+  for (i = 0; i < ARRAY_SIZE(responses); i++) {
     test_message_pause(&responses[i]);
   }
 
-  for (i = 0; i < response_count; i++) {
+  for (i = 0; i < ARRAY_SIZE(responses); i++) {
     test_message_connect(&responses[i]);
   }
 
-  for (i = 0; i < response_count; i++) {
+  for (i = 0; i < ARRAY_SIZE(responses); i++) {
     if (!responses[i].should_keep_alive) continue;
-    for (j = 0; j < response_count; j++) {
+    for (j = 0; j < ARRAY_SIZE(responses); j++) {
       if (!responses[j].should_keep_alive) continue;
-      for (k = 0; k < response_count; k++) {
+      for (k = 0; k < ARRAY_SIZE(responses); k++) {
         test_multiple3(&responses[i], &responses[j], &responses[k]);
       }
     }
@@ -4408,19 +4408,19 @@ main (void)
 
 
   /* check to make sure our predefined requests are okay */
-  for (i = 0; requests[i].name; i++) {
+  for (i = 0; i < ARRAY_SIZE(requests); i++) {
     test_message(&requests[i]);
   }
 
-  for (i = 0; i < request_count; i++) {
+  for (i = 0; i < ARRAY_SIZE(requests); i++) {
     test_message_pause(&requests[i]);
   }
 
-  for (i = 0; i < request_count; i++) {
+  for (i = 0; i < ARRAY_SIZE(requests); i++) {
     if (!requests[i].should_keep_alive) continue;
-    for (j = 0; j < request_count; j++) {
+    for (j = 0; j < ARRAY_SIZE(requests); j++) {
       if (!requests[j].should_keep_alive) continue;
-      for (k = 0; k < request_count; k++) {
+      for (k = 0; k < ARRAY_SIZE(requests); k++) {
         test_multiple3(&requests[i], &requests[j], &requests[k]);
       }
     }
