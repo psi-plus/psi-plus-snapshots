@@ -593,6 +593,8 @@ QString TabDlg::desiredCaption() const
             cap += qobject_cast<TabbableWidget*>(tabWidget_->currentPage())->getDisplayName();
             if (qobject_cast<TabbableWidget*>(tabWidget_->currentPage())->state() == TabbableWidget::StateComposing) {
                 cap += tr(" is composing");
+            } else if (qobject_cast<TabbableWidget*>(tabWidget_->currentPage())->state() == TabbableWidget::StateInactive) {
+                cap = tr("%1 (Inactive)").arg(cap);
             }
         }
     }
@@ -679,7 +681,9 @@ void TabDlg::updateTab(TabbableWidget* chat)
         if (state == TabbableWidget::StateHighlighted) {
             tabWidget_->setTabTextColor(chat, PsiOptions::instance()->getOption("options.ui.look.colors.chat.unread-message-color").value<QColor>());
         }
-        else {
+        else if (state == TabbableWidget::StateInactive) {
+            tabWidget_->setTabTextColor(chat, PsiOptions::instance()->getOption("options.ui.look.colors.chat.inactive-color").value<QColor>());
+        } else {
             tabWidget_->setTabTextColor(chat, palette().color(QPalette::Text));
         }
 

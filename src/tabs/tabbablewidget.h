@@ -65,6 +65,7 @@ public:
     enum State {
         StateNone = 0,
         StateComposing,
+        StateInactive,
         StateHighlighted
     };
     virtual State state() const = 0;

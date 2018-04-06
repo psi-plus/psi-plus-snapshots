@@ -56,6 +56,7 @@
 #include "iconwidget.h"
 #include "textutil.h"
 #include "xmpp_message.h"
+#include "xmpp_caps.h"
 #include "xmpp_htmlelement.h"
 #include "fancylabel.h"
 #include "msgmle.h"
@@ -128,6 +129,9 @@ ChatDlg::ChatDlg(const Jid& jid, PsiAccount* pa, TabManager* tabManager)
 
     // Message events
     contactChatState_ = XMPP::StateNone;
+    if ((PsiOptions::instance()->getOption("options.messages.send-composing-events-at-start").toBool()) && (account()->client()->capsManager()->features(jid).canChatState())) {
+        contactChatState_ = XMPP::StateActive;
+    }
     lastChatState_ = XMPP::StateNone;
     sendComposingEvents_ = false;
     isComposing_ = false;
@@ -281,9 +285,9 @@ bool ChatDlg::readyToHide()
 
     // Reset 'contact is composing' & cancel own composing event
     resetComposing();
-    setChatState(StateGone);
+    setChatState(XMPP::StateGone);
     if (contactChatState_ == XMPP::StateComposing || contactChatState_ == XMPP::StateInactive) {
-        setContactChatState(StatePaused);
+        setContactChatState(XMPP::StatePaused);
     }
 
     if (pending_ > 0) {
@@ -312,7 +316,7 @@ void ChatDlg::hideEvent(QHideEvent* e)
 {
     if (isMinimized()) {
         resetComposing();
-        setChatState(StateInactive);
+        setChatState(XMPP::StateInactive);
     }
     TabbableWidget::hideEvent(e);
 }
@@ -707,7 +711,7 @@ QString ChatDlg::desiredCaption() const
     if (contactChatState_ == XMPP::StateComposing) {
         cap = tr("%1 (Composing ...)").arg(cap);
     }
-    else if (contactChatState_ == XMPP::StateInactive) {
+    else if (contactChatState_ == XMPP::StateInactive || contactChatState_ == XMPP::StateGone) {
         cap = tr("%1 (Inactive)").arg(cap);
     }
 
@@ -1259,6 +1263,8 @@ TabbableWidget::State ChatDlg::state() const
     }
     else if(unreadMessageCount()) {
         state = TabbableWidget::StateHighlighted;
+    } else if (contactChatState_ == XMPP::StateInactive || contactChatState_ == XMPP::StateGone) {
+        state = TabbableWidget::StateInactive;
     }
 
     return state;
