@@ -255,7 +255,7 @@ It is based on:
 "
 echo "${COMMENT}"
 
-git cm -a -m "${COMMENT}" 2>&1 > /dev/null
+git commit -a -m "${COMMENT}" 2>&1 > /dev/null
 
 if [ "${NEW_VER}" != "${OLD_VER}" ]; then
     git tag "${NEW_VER}"
