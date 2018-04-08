@@ -44,12 +44,12 @@ using namespace XMPP;
 
         StringPrepCache *that = instance();
 
-        Result *r = that->nameprep_table[in];
-        if (r) {
-            if(!r->norm) {
+        auto it = that->nameprep_table.constFind(in);\
+        if (it != that->nameprep_table.constEnd()) {
+            if (it.value().isNull()) {
                 return false;
             }
-            out = *(r->norm);
+            out = it.value();
             return true;
         }
 
@@ -57,12 +57,12 @@ using namespace XMPP;
         cs.resize(maxbytes);
         if(stringprep(cs.data(), maxbytes, (Stringprep_profile_flags)0, stringprep_nameprep) != 0)
         {
-            that->nameprep_table.insert(in, new Result);
+            that->nameprep_table.insert(in, QString::null);
             return false;
         }
 
         QString norm = QString::fromUtf8(cs);
-        that->nameprep_table.insert(in, new Result(norm));
+        that->nameprep_table.insert(in, norm);
         out = norm;
         return true;
     }
@@ -70,30 +70,30 @@ using namespace XMPP;
     bool StringPrepCache::nodeprep(const QString &in, int maxbytes, QString& out)
     {
         if(in.isEmpty()) {
-      out = QString();
+            out = QString();
             return true;
         }
 
         StringPrepCache *that = instance();
 
-        Result *r = that->nodeprep_table[in];
-        if(r) {
-            if(!r->norm) {
+        auto it = that->nodeprep_table.constFind(in);\
+        if (it != that->nodeprep_table.constEnd()) {
+            if (it.value().isNull()) {
                 return false;
             }
-            out = *(r->norm);
+            out = it.value();
             return true;
         }
 
         QByteArray cs = in.toUtf8();
         cs.resize(maxbytes);
         if(stringprep(cs.data(), maxbytes, (Stringprep_profile_flags)0, stringprep_xmpp_nodeprep) != 0) {
-            that->nodeprep_table.insert(in, new Result);
+            that->nodeprep_table.insert(in, QString::null);
             return false;
         }
 
         QString norm = QString::fromUtf8(cs);
-        that->nodeprep_table.insert(in, new Result(norm));
+        that->nodeprep_table.insert(in, norm);
         out = norm;
         return true;
     }
@@ -101,30 +101,30 @@ using namespace XMPP;
     bool StringPrepCache::resourceprep(const QString &in, int maxbytes, QString& out)
     {
         if(in.isEmpty()) {
-      out = QString();
+            out = QString();
             return true;
         }
 
         StringPrepCache *that = instance();
 
-        Result *r = that->resourceprep_table[in];
-        if(r) {
-            if(!r->norm) {
+        auto it = that->resourceprep_table.constFind(in);\
+        if (it != that->resourceprep_table.constEnd()) {
+            if (it.value().isNull()) {
                 return false;
             }
-            out = *(r->norm);
+            out = it.value();
             return true;
         }
 
         QByteArray cs = in.toUtf8();
         cs.resize(maxbytes);
         if(stringprep(cs.data(), maxbytes, (Stringprep_profile_flags)0, stringprep_xmpp_resourceprep) != 0) {
-            that->resourceprep_table.insert(in, new Result);
+            that->resourceprep_table.insert(in, QString::null);
             return false;
         }
 
         QString norm = QString::fromUtf8(cs);
-        that->resourceprep_table.insert(in, new Result(norm));
+        that->resourceprep_table.insert(in, norm);
         out = norm;
         return true;
     }
@@ -132,30 +132,30 @@ using namespace XMPP;
     bool StringPrepCache::saslprep(const QString &in, int maxbytes, QString& out)
     {
         if(in.isEmpty()) {
-      out = QString();
+            out = QString();
             return true;
         }
 
         StringPrepCache *that = instance();
 
-        Result *r = that->saslprep_table[in];
-        if(r) {
-            if(!r->norm) {
+        auto it = that->saslprep_table.constFind(in);\
+        if (it != that->saslprep_table.constEnd()) {
+            if (it.value().isNull()) {
                 return false;
             }
-            out = *(r->norm);
+            out = it.value();
             return true;
         }
 
         QByteArray cs = in.toUtf8();
         cs.resize(maxbytes);
         if(stringprep(cs.data(), maxbytes, (Stringprep_profile_flags)0, stringprep_saslprep) != 0) {
-            that->saslprep_table.insert(in, new Result);
+            that->saslprep_table.insert(in, QString::null);
             return false;
         }
 
         QString norm = QString::fromUtf8(cs);
-        that->saslprep_table.insert(in, new Result(norm));
+        that->saslprep_table.insert(in, norm);
         out = norm;
         return true;
     }
@@ -171,7 +171,7 @@ using namespace XMPP;
         {
             _instance.reset(new StringPrepCache);
 #ifndef NO_IRISNET
-            irisNetAddPostRoutine(cleanup);
+            irisNetAddPostRoutine(cleanup); // REVIEW probably not necessary since heap will be deallocated with destructors
 #endif
         }
         return _instance.data();
@@ -179,26 +179,6 @@ using namespace XMPP;
 
     StringPrepCache::StringPrepCache()
     {
-    }
-
-    StringPrepCache::~StringPrepCache()
-    {
-        foreach(Result* r, nameprep_table) {
-            delete r;
-        }
-        nameprep_table.clear();
-        foreach(Result* r, nodeprep_table) {
-            delete r;
-        }
-        nodeprep_table.clear();
-        foreach(Result* r, resourceprep_table) {
-            delete r;
-        }
-        resourceprep_table.clear();
-        foreach(Result* r, saslprep_table) {
-            delete r;
-        }
-        saslprep_table.clear();
     }
 
 //----------------------------------------------------------------------------

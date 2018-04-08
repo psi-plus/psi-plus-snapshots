@@ -37,32 +37,12 @@ namespace XMPP
         static bool saslprep(const QString &in, int maxbytes, QString& out);
 
         static void cleanup();
-
-        ~StringPrepCache();
     private:
-        class Result
-        {
-        public:
-            QString *norm;
 
-            Result() : norm(0)
-            {
-            }
-
-            Result(const QString &s) : norm(new QString(s))
-            {
-            }
-
-            ~Result()
-            {
-                delete norm;
-            }
-        };
-
-        QHash<QString,Result*> nameprep_table;
-        QHash<QString,Result*> nodeprep_table;
-        QHash<QString,Result*> resourceprep_table;
-        QHash<QString,Result*> saslprep_table;
+        QHash<QString,QString> nameprep_table;
+        QHash<QString,QString> nodeprep_table;
+        QHash<QString,QString> resourceprep_table;
+        QHash<QString,QString> saslprep_table;
 
         static QScopedPointer<StringPrepCache> _instance;
         static StringPrepCache *instance();
