@@ -59,7 +59,7 @@ namespace psiomemo {
 
   class Signal {
   public:
-    void init(const QString &string);
+    void init(const QString &dataPath, const QString &accountId);
     void deinit();
     Bundle collectBundle();
     void processBundle(const QString &from, uint32_t deviceId, const Bundle &bundle);
@@ -76,6 +76,7 @@ namespace psiomemo {
     void setEnabledForUser(const QString &user, bool enabled);
 
     QString getOwnFingerprint();
+    QSet<uint32_t> getDeviceList(const QString &user);
     QList<Fingerprint> getKnownFingerprints();
     void confirmDeviceTrust(const QString &user, uint32_t deviceId, bool skipNewDevicePart, bool ownJid = false);
 

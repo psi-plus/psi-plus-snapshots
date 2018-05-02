@@ -36,11 +36,11 @@ namespace psiomemo {
 
   class Storage {
   public:
-    void init(signal_context *ctx, const QString &dataPath);
+    void init(signal_context *ctx, const QString &dataPath, const QString &accountId);
     void deinit();
 
-    QSet<uint32_t> retrieveDeviceList(const QString &user, bool onlyTrusted = true);
-    QSet<uint32_t> retrieveUndecidedDeviceList(const QString &user);
+    QSet<uint32_t> getDeviceList(const QString &user, bool onlyTrusted = true);
+    QSet<uint32_t> getUndecidedDeviceList(const QString &user);
     void updateDeviceList(const QString &user, const QSet<uint32_t> &actualIds);
 
     QVector<QPair<uint32_t, QByteArray>> loadAllPreKeys(int limit = 100);

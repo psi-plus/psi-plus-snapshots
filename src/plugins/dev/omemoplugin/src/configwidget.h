@@ -24,33 +24,83 @@
 #include <QtGui>
 #include <QWidget>
 #include <QTableView>
+#include <QLabel>
+#include <QPushButton>
 #include "omemo.h"
 
 namespace psiomemo {
+  class ConfigWidgetTab: public QWidget {
+  Q_OBJECT
+  public:
+    ConfigWidgetTab(int account, OMEMO *omemo, QWidget *parent): QWidget(parent), m_account(account), m_omemo(omemo) { }
+    void setAccount(int account) {
+      m_account = account;
+      updateData();
+    }
+  protected:
+    virtual void updateData() = 0;
+  protected:
+    int m_account;
+    OMEMO *m_omemo;
+  };
+
+  class ConfigWidgetTabWithTable: public ConfigWidgetTab {
+  Q_OBJECT
+  public:
+    ConfigWidgetTabWithTable(int account, OMEMO *omemo, QWidget *parent);
+  protected:
+    void updateData() override;
+    virtual void doUpdateData() = 0;
+    QTableView *m_table;
+    QStandardItemModel* m_tableModel;
+  };
+
+  class OwnFingerprint: public ConfigWidgetTab {
+  Q_OBJECT
+  public:
+    OwnFingerprint(int account, OMEMO *omemo, QWidget *parent);
+  protected:
+    void updateData() override;
+  private:
+    QLabel *m_deviceLabel;
+    QLabel *m_fingerprintLabel;
+  };
+
+  class KnownFingerprints: public ConfigWidgetTabWithTable {
+  Q_OBJECT
+  public:
+    KnownFingerprints(int account, OMEMO *omemo, QWidget *parent);
+  protected:
+    void doUpdateData() override;
+  private slots:
+    void trustRevokeFingerprint();
+  };
+
+  class ManageKeys: public ConfigWidgetTabWithTable {
+  Q_OBJECT
+  public:
+    ManageKeys(int account, OMEMO *omemo, QWidget *parent);
+  private:
+    int m_ourDeviceId;
+    QPushButton *m_deleteButton;
+    uint32_t selectedDeviceId(const QModelIndexList &selection) const;
+  protected:
+    void doUpdateData() override;
+  private slots:
+    void selectionChanged(const QItemSelection &, const QItemSelection &);
+    void deleteDevice();
+    void deviceListUpdated(int account);
+  };
+
   class ConfigWidget: public QWidget {
   Q_OBJECT
   public:
-    ConfigWidget(OMEMO *omemo);
-  };
-
-  class OwnFingerprint: public QWidget {
-  Q_OBJECT
-  public:
-    OwnFingerprint(OMEMO *omemo, QWidget *parent);
-  };
-
-  class KnownFingerprints: public QWidget {
-  Q_OBJECT
-  public:
-    KnownFingerprints(OMEMO *omemo, QWidget *parent);
+    ConfigWidget(OMEMO *omemo, AccountInfoAccessingHost *accountInfo);
   private:
-    QTableView *m_table;
-    QStandardItemModel* m_tableModel;
-    OMEMO *m_omemo;
-
-    void updateData();
+    AccountInfoAccessingHost *m_accountInfo;
+    QTabWidget *m_tabWidget;
   private slots:
-    void trustRevokeFingerprint();
+    void currentAccountChanged(int index);
   };
 }
 
