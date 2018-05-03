@@ -944,7 +944,7 @@ void ChatDlg::appendMessage(const Message &m, bool local)
                 MessageView::System
         ));
         if (!local) {
-            setPGPEnabled(encEnabled);
+            setPGPEnabled(encEnabled && account()->hasPGP());
             if (!encEnabled) {
                 // enable warning
                 warnSend_ = true;
