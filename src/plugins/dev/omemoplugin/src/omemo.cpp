@@ -119,7 +119,7 @@ namespace psiomemo {
       emptyMessage.setAttribute("from", to);
       emptyMessage.setAttribute("to", from);
 
-      buildSessionsFromBundle(QVector<uint32_t>({deviceId}), to.split("/").first(), account, emptyMessage);
+      buildSessionsFromBundle(QVector<uint32_t>({deviceId}), QVector<uint32_t>(), to.split("/").first(), account, emptyMessage);
       return result;
     }
 
@@ -150,7 +150,7 @@ namespace psiomemo {
           QString text = decryptedBody.first;
 
           if (!trusted) {
-            bool res = m_accountController->appendSysMsg(account, sender, "[OMEMO] The following message is from an untrusted device:");
+            bool res = m_accountController->appendSysMsg(account, xml.attribute("from"), "[OMEMO] The following message is from an untrusted device:");
             if (!res) {
               text = "[UNTRUSTED]: " + text;
             }
@@ -175,8 +175,10 @@ namespace psiomemo {
 
     if (buildSessions) {
       QVector<uint32_t> invalidSessions = signal->invalidSessions(recipient);
-      if (!invalidSessions.isEmpty()) {
-        buildSessionsFromBundle(invalidSessions, ownJid, account, xml);
+      QVector<uint32_t> invalidSessionsWithOwnDevices = signal->invalidSessions(ownJid);
+      invalidSessionsWithOwnDevices.removeOne(signal->getDeviceId());
+      if (!invalidSessions.isEmpty() || !invalidSessionsWithOwnDevices.isEmpty()) {
+        buildSessionsFromBundle(invalidSessions, invalidSessionsWithOwnDevices, ownJid, account, xml);
         xml = QDomElement();
         return true;
       }
@@ -208,7 +210,7 @@ namespace psiomemo {
     QList<EncryptedKey> encryptedKeys = signal->encryptKey(ownJid, recipient, key);
 
     if (encryptedKeys.isEmpty()) {
-      m_accountController->appendSysMsg(account, recipient, "[OMEMO] Unable to build any sessions, the message was not sent");
+      m_accountController->appendSysMsg(account, xml.attribute("to"), "[OMEMO] Unable to build any sessions, the message was not sent");
       xml = QDomElement();
     }
     else {
@@ -311,18 +313,28 @@ namespace psiomemo {
     pepPublish(account, doc.toString());
   }
 
-  void OMEMO::buildSessionsFromBundle(const QVector<uint32_t> &invalidSessions, const QString &ownJid, int account,
+  void OMEMO::buildSessionsFromBundle(const QVector<uint32_t> &recipientInvalidSessions,
+                                      const QVector<uint32_t> &ownInvalidSessions,
+                                      const QString &ownJid, int account,
                                       const QDomElement &messageToResend) {
     std::shared_ptr<MessageWaitingForBundles> message(new MessageWaitingForBundles);
     message->xml = messageToResend;
 
     QString recipient = messageToResend.attribute("to").split("/").first();
 
-    foreach (uint32_t deviceId, invalidSessions) {
+    auto requestBundle = [&](uint32_t deviceId, const QString &recipient) {
       QString stanza = pepRequest(account, ownJid, recipient, bundleNodeName(deviceId));
       message->sentStanzas.insert(stanza);
       message->pendingBundles.insert(deviceId);
+    };
+
+    foreach (uint32_t deviceId, recipientInvalidSessions) {
+      requestBundle(deviceId, recipient);
     }
+    foreach (uint32_t deviceId, ownInvalidSessions) {
+      requestBundle(deviceId, ownJid);
+    }
+
     m_pendingMessages.append(message);
   }
 
