@@ -52,7 +52,8 @@ void UnixSystemWatch::takeSleepLock()
                                                                string:"Closing connections..." string:"delay"
     */
     QDBusInterface login1iface("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", QDBusConnection::systemBus());
-    QDBusReply<QDBusUnixFileDescriptor> repl = login1iface.call("Inhibit", "sleep", ApplicationInfo::name(), "Closing connections...", "block");
+    QDBusReply<QDBusUnixFileDescriptor> repl = login1iface.call("Inhibit", "sleep", ApplicationInfo::name(), "Closing connections...", "delay");
+    // we could delay "shutdown" as well probably Qt session manager already can do this
     if (repl.isValid()) {
         lockFd = repl.value();
     } else {
@@ -63,7 +64,7 @@ void UnixSystemWatch::takeSleepLock()
 
 void UnixSystemWatch::proceedWithSleep()
 {
-    lockFd = QDBusUnixFileDescriptor();
+    lockFd = QDBusUnixFileDescriptor(); // null descriptor should release it
 }
 
 void UnixSystemWatch::prepareForSleep(bool beforeSleep)
