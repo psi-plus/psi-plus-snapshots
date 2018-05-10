@@ -704,6 +704,11 @@
 		<object mime='image/png'>cm_uncheck.png</object>
 	</icon>
 
+	<icon>
+		<x xmlns='name'>psi/xmpp</x>
+		<object mime='image/png'>xmpp.svg</object>
+	</icon>
+
 	<!-- conferenceloggerplugin icon -->
 	<icon>
 		<x xmlns='name'>loggerplugin/openlog</x>
