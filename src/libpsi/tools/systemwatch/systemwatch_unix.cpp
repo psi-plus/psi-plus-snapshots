@@ -64,7 +64,9 @@ void UnixSystemWatch::takeSleepLock()
 
 void UnixSystemWatch::proceedWithSleep()
 {
+#ifdef USE_DBUS
     lockFd = QDBusUnixFileDescriptor(); // null descriptor should release it
+#endif
 }
 
 void UnixSystemWatch::prepareForSleep(bool beforeSleep)
