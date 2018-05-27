@@ -21,6 +21,7 @@
 
 #include <QIcon>
 #include <QApplication>
+#include <QStyle>
 
 #include "psiwindowheader.h"
 #include "psiiconset.h"
