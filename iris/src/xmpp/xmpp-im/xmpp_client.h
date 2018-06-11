@@ -50,6 +50,7 @@ namespace XMPP {
     class Stream;
     class Task;
     class CapsManager;
+    class EncryptionHandler;
 }
 
 namespace XMPP
@@ -85,7 +86,7 @@ namespace XMPP
         Jid jid() const;
 
         void rosterRequest(bool withGroupsDelimiter = true);
-        void sendMessage(const Message &);
+        void sendMessage(Message &);
         void sendSubscription(const Jid &, const QString &, const QString& nick = QString());
         void setPresence(const Status &);
 
@@ -110,6 +111,7 @@ namespace XMPP
         void setClientName(const QString &);
         void setClientVersion(const QString &);
         void setCaps(const CapsSpec &);
+        void setEncryptionHandler(EncryptionHandler *);
 
         void setIdentity(const DiscoItem::Identity &);
         DiscoItem::Identity identity() const;

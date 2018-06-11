@@ -52,6 +52,7 @@
 #include "soundaccessor.h"
 #include "textutil.h"
 #include "chattabaccessor.h"
+#include "pluginaccessor.h"
 
 /**
  * \brief Constructs a host/wrapper for a plugin.
@@ -452,6 +453,13 @@ bool PluginHost::enable()
 #endif
                 soa->setSoundAccessingHost(this);
             }
+            PluginAccessor *pla = qobject_cast<PluginAccessor*>(plugin_);
+            if(pla) {
+#ifndef PLUGINS_NO_DEBUG
+                qDebug("connecting plugin accessor");
+#endif
+              pla->setPluginAccessingHost(this);
+            }
 
             connected_ = true;
         }
@@ -566,15 +574,6 @@ bool PluginHost::outgoingXml(int account, QDomElement &e)
         handled = true;
     }
     return handled;
-}
-
-bool PluginHost::stanzaWasEncrypted(const QString &stanzaId)
-{
-    StanzaFilter *ef = qobject_cast<StanzaFilter*>(plugin_);
-    if (ef && ef->stanzaWasEncrypted(stanzaId)) {
-        return true;
-    }
-    return false;
 }
 
 //-- for EventFilter ------------------------------------------------
@@ -1328,9 +1327,9 @@ bool PluginHost::appendSysMsg(int account, const QString& jid, const QString& me
     return manager_->appendSysMsg(account, jid, message);
 }
 
-bool PluginHost::appendMsg(int account, const QString& jid, const QString& message, const QString& id)
+bool PluginHost::appendMsg(int account, const QString& jid, const QString& message, const QString& id, bool wasEncrypted)
 {
-    return manager_->appendMsg(account, jid, message, id);
+    return manager_->appendMsg(account, jid, message, id, wasEncrypted);
 }
 
 void PluginHost::createNewEvent(int account, const QString& jid, const QString& descr, QObject *receiver, const char* slot)
@@ -1346,6 +1345,36 @@ void PluginHost::createNewMessageEvent(int account, QDomElement const &element)
 void PluginHost::playSound(const QString &fileName)
 {
     soundPlay(fileName);
+}
+
+/**
+ * EncryptionSupport
+ */
+
+bool PluginHost::decryptMessageElement(int account, QDomElement &message)
+{
+    EncryptionSupport *es = qobject_cast<EncryptionSupport*>(plugin_);
+    return es && es->decryptMessageElement(account, message);
+}
+
+bool PluginHost::encryptMessageElement(int account, QDomElement &message)
+{
+    EncryptionSupport *es = qobject_cast<EncryptionSupport*>(plugin_);
+    return es && es->encryptMessageElement(account, message);
+}
+
+/**
+ * PluginAccessingHost
+ */
+
+QObject* PluginHost::getPlugin(const QString &name)
+{
+  foreach (PluginHost *plugin, manager_->pluginsByPriority_) {
+      if (plugin->name() == name || plugin->shortName() == name) {
+          return plugin->plugin_;
+      }
+  }
+  return nullptr;
 }
 
 //-- helpers --------------------------------------------------------

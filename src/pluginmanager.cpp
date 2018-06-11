@@ -437,16 +437,6 @@ void PluginManager::processOutgoingStanza(PsiAccount* account, QDomElement &stan
     }
 }
 
-bool PluginManager::stanzaWasEncrypted(const QString &stanzaId)
-{
-    foreach (PluginHost* host, pluginByFile_.values()) {
-        if (host->stanzaWasEncrypted(stanzaId)) {
-            return true;
-        }
-    }
-    return false;
-}
-
 /**
  * Notify to plugins that an account will go offline now.
  */
@@ -905,7 +895,7 @@ bool PluginManager::appendSysMsg(int account, const QString& jid, const QString&
     return false;
 }
 
-bool PluginManager::appendMsg(int account, const QString& jid, const QString& message, const QString& id)
+bool PluginManager::appendMsg(int account, const QString& jid, const QString& message, const QString& id, bool wasEncrypted)
 {
     PsiAccount *acc = accountIds_.account(account);
     if(acc) {
@@ -922,6 +912,7 @@ bool PluginManager::appendMsg(int account, const QString& jid, const QString& me
             msg.setMessageReceipt(ReceiptRequest);
             msg.setId(id);
             msg.setTimeStamp(QDateTime::currentDateTime(), true);
+            msg.setWasEncrypted(wasEncrypted);
             chatDlg->appendMessage(msg, true);
             return true;
         }
@@ -1047,6 +1038,26 @@ QStringList PluginManager::resources(int account, const QString& jid) const
         }
     }
     return l;
+}
+
+bool PluginManager::decryptMessageElement(PsiAccount *account, QDomElement &message) const
+{
+    foreach (PluginHost* host, pluginByFile_.values()) {
+        if (host->decryptMessageElement(accountIds_.id(account), message)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool PluginManager::encryptMessageElement(PsiAccount *account, QDomElement &message) const
+{
+    foreach (PluginHost* host, pluginByFile_.values()) {
+        if (host->encryptMessageElement(accountIds_.id(account), message)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 int AccountIds::appendAccount(PsiAccount *acc)

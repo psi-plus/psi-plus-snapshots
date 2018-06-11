@@ -134,6 +134,7 @@ public:
     FileTransferManager *ftman;
     bool ftEnabled;
     QList<GroupChat> groupChatList;
+    EncryptionHandler *encryptionHandler;
 };
 
 
@@ -211,7 +212,7 @@ void Client::start(const QString &host, const QString &user, const QString &pass
     connect(pp, SIGNAL(subscription(Jid,QString,QString)), SLOT(ppSubscription(Jid,QString,QString)));
     connect(pp, SIGNAL(presence(Jid,Status)), SLOT(ppPresence(Jid,Status)));
 
-    JT_PushMessage *pm = new JT_PushMessage(rootTask());
+    JT_PushMessage *pm = new JT_PushMessage(rootTask(), d->encryptionHandler);
     connect(pm, SIGNAL(message(Message)), SLOT(pmMessage(Message)));
 
     JT_PushRoster *pr = new JT_PushRoster(rootTask());
@@ -1046,9 +1047,9 @@ void Client::importRosterItem(const RosterItem &item)
     debug(dstr + str);
 }
 
-void Client::sendMessage(const Message &m)
+void Client::sendMessage(Message &m)
 {
-    JT_Message *j = new JT_Message(rootTask(), m);
+    JT_Message *j = new JT_Message(rootTask(), m, d->encryptionHandler);
     j->go(true);
 }
 
@@ -1163,6 +1164,11 @@ void Client::setClientVersion(const QString &s)
 void Client::setCaps(const CapsSpec &s)
 {
     d->caps = s;
+}
+
+void Client::setEncryptionHandler(EncryptionHandler *encryptionHandler)
+{
+    d->encryptionHandler = encryptionHandler;
 }
 
 DiscoItem::Identity Client::identity() const

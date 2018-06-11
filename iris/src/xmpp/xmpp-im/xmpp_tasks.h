@@ -29,6 +29,7 @@
 #include "xmpp_vcard.h"
 #include "xmpp_discoinfotask.h"
 #include "xmpp_subsets.h"
+#include "xmpp_encryptionhandler.h"
 
 namespace XMPP
 {
@@ -191,13 +192,13 @@ namespace XMPP
     {
         Q_OBJECT
     public:
-        JT_Message(Task *parent, const Message &);
+        JT_Message(Task *parent, Message &, EncryptionHandler *encryptionHandler = nullptr);
         ~JT_Message();
 
         void onGo();
 
     private:
-        Message m;
+        QDomElement e;
 
         class Private;
         Private *d;
@@ -207,7 +208,7 @@ namespace XMPP
     {
         Q_OBJECT
     public:
-        JT_PushMessage(Task *parent);
+        JT_PushMessage(Task *parent, EncryptionHandler *encryptionHandler = nullptr);
         ~JT_PushMessage();
 
         bool take(const QDomElement &);
