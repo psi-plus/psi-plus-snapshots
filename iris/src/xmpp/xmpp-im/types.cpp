@@ -924,7 +924,7 @@ void HTMLElement::filterOutUnwantedRecursive(QDomElement &el, bool strict)
 //----------------------------------------------------------------------------
 // Message
 //----------------------------------------------------------------------------
-class Message::Private
+class Message::Private : public QSharedData
 {
 public:
     Jid to, from;
@@ -932,12 +932,12 @@ public:
 
     StringMap subject, body;
     QString thread;
-    bool threadSend;
+    bool threadSend = false;
     Stanza::Error error;
 
     // extensions
     QDateTime timeStamp; // local time
-    bool timeStampSend;
+    bool timeStampSend = false;
     UrlList urlList;
     AddressList addressList;
     RosterExchangeItems rosterExchangeItems;
@@ -947,15 +947,15 @@ public:
     QList<PubSubRetraction> pubsubRetractions;
     QString eventId;
     QString xsigned, xencrypted, invite;
-    ChatState chatState;
-    MessageReceipt messageReceipt;
+    ChatState chatState = StateNone;
+    MessageReceipt messageReceipt = ReceiptNone;
     QString messageReceiptId;
     QString nick;
     HttpAuthRequest httpAuthRequest;
     XData xdata;
     IBBData ibbData;
     QMap<QString,HTMLElement> htmlElements;
-     QDomElement sxe;
+    QDomElement sxe;
     QList<BoBData> bobDataList;
     Jid forwardedFrom;
 
@@ -963,13 +963,13 @@ public:
     QList<MUCInvite> mucInvites;
     MUCDecline mucDecline;
     QString mucPassword;
-    bool hasMUCUser;
+    bool hasMUCUser = false;
 
-    bool spooled, wasEncrypted;
+    bool spooled = false, wasEncrypted = false;
 
     //XEP-0280 Message Carbons
-    Message::CarbonDir carbonDir; // it's a forwarded message
-    bool isDisabledCarbons;
+    Message::CarbonDir carbonDir = Message::NoCarbon; // it's a forwarded message
+    bool isDisabledCarbons = false;
     QString replaceId;
 };
 
@@ -981,19 +981,6 @@ Message::Message(const Jid &to)
 {
     d = new Private;
     d->to = to;
-    d->spooled = false;
-    d->threadSend = false;
-    d->timeStampSend = false;
-    d->wasEncrypted = false;
-    /*d->flag = false;
-    d->spooled = false;
-    d->wasEncrypted = false;
-    d->errorCode = -1;*/
-    d->chatState = StateNone;
-    d->messageReceipt = ReceiptNone;
-    d->carbonDir = Message::NoCarbon;
-    d->isDisabledCarbons = false;
-    d->hasMUCUser = false;
 }
 
 //! \brief Constructs a copy of Message object
@@ -1001,23 +988,21 @@ Message::Message(const Jid &to)
 //! Overloaded constructor which will constructs a exact copy of the Message
 //! object that was passed to the constructor.
 //! \param from - Message object you want to copy
-Message::Message(const Message &from)
+Message::Message(const Message &from) :
+    d(from.d)
 {
-    d = new Private;
-    *this = from;
 }
 
 //! \brief Required for internel use.
 Message & Message::operator=(const Message &from)
 {
-    *d = *from.d;
+    d = from.d;
     return *this;
 }
 
 //! \brief Destroy Message object.
 Message::~Message()
 {
-    delete d;
 }
 
 //! \brief Return receiver's Jid information.

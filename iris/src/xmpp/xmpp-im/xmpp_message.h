@@ -28,6 +28,8 @@
 #include "xmpp_rosterx.h"
 #include "xmpp_muc.h"
 
+#include <QExplicitlySharedDataPointer>
+
 class QString;
 class QDateTime;
 
@@ -202,7 +204,7 @@ namespace XMPP {
 
     private:
         class Private;
-        Private *d;
+        QExplicitlySharedDataPointer<Private> d;
     };
 }
 
