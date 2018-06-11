@@ -112,6 +112,7 @@ namespace XMPP
         void setClientVersion(const QString &);
         void setCaps(const CapsSpec &);
         void setEncryptionHandler(EncryptionHandler *);
+        EncryptionHandler *encryptionHandler() const;
 
         void setIdentity(const DiscoItem::Identity &);
         DiscoItem::Identity identity() const;

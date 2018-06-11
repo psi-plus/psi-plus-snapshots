@@ -61,6 +61,7 @@ namespace XMPP {
         Message(const Message &from);
         Message & operator=(const Message &from);
         ~Message();
+        bool operator ==(const Message &from) const;
 
         Jid to() const;
         Jid from() const;

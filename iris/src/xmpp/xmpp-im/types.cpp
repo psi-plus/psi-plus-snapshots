@@ -941,16 +941,16 @@ public:
     UrlList urlList;
     AddressList addressList;
     RosterExchangeItems rosterExchangeItems;
-    QList<MsgEvent> eventList;
+    QString messageReceiptId;
+    QString nick;
+    QString eventId;
+    QString xsigned, xencrypted, invite;
     QString pubsubNode;
     QList<PubSubItem> pubsubItems;
     QList<PubSubRetraction> pubsubRetractions;
-    QString eventId;
-    QString xsigned, xencrypted, invite;
+    QList<MsgEvent> eventList;
     ChatState chatState = StateNone;
     MessageReceipt messageReceipt = ReceiptNone;
-    QString messageReceiptId;
-    QString nick;
     HttpAuthRequest httpAuthRequest;
     XData xdata;
     IBBData ibbData;
@@ -968,8 +968,8 @@ public:
     bool spooled = false, wasEncrypted = false;
 
     //XEP-0280 Message Carbons
-    Message::CarbonDir carbonDir = Message::NoCarbon; // it's a forwarded message
     bool isDisabledCarbons = false;
+    Message::CarbonDir carbonDir = Message::NoCarbon; // it's a forwarded message
     QString replaceId;
 };
 
@@ -1003,6 +1003,12 @@ Message & Message::operator=(const Message &from)
 //! \brief Destroy Message object.
 Message::~Message()
 {
+}
+
+//! \brief Check if it's exactly the same instance.
+bool Message::operator==(const Message &from) const
+{
+    return d == from.d;
 }
 
 //! \brief Return receiver's Jid information.

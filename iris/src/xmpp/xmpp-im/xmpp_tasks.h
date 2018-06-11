@@ -192,13 +192,13 @@ namespace XMPP
     {
         Q_OBJECT
     public:
-        JT_Message(Task *parent, Message &, EncryptionHandler *encryptionHandler = nullptr);
+        JT_Message(Task *parent, Message &);
         ~JT_Message();
 
         void onGo();
 
     private:
-        QDomElement e;
+        Message m;
 
         class Private;
         Private *d;
