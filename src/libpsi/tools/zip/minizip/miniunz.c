@@ -276,7 +276,7 @@ int do_extract_currentfile(uf,popt_extract_without_path,popt_overwrite)
 
         if (((*popt_overwrite)==0) && (err==UNZ_OK))
         {
-            char rep;
+            char rep = '\0';
             FILE* ftestexist;
             ftestexist = fopen(write_filename,"rb");
             if (ftestexist!=NULL)
