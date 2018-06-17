@@ -407,6 +407,9 @@ public:
 
         Q_ASSERT(at != -1);
 
+        if (at < 0)
+            return;
+
         Candidate &c = localCandidates[at];
 
         TransportAddress ta(addr, port);
