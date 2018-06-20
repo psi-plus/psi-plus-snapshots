@@ -591,9 +591,9 @@ QString TabDlg::desiredCaption() const
             cap += tr("%1 Conversations").arg(tabs_.count());
         } else {
             cap += qobject_cast<TabbableWidget*>(tabWidget_->currentPage())->getDisplayName();
-            if (qobject_cast<TabbableWidget*>(tabWidget_->currentPage())->state() == TabbableWidget::StateComposing) {
+            if (qobject_cast<TabbableWidget*>(tabWidget_->currentPage())->state() == TabbableWidget::State::Composing) {
                 cap += tr(" is composing");
-            } else if (qobject_cast<TabbableWidget*>(tabWidget_->currentPage())->state() == TabbableWidget::StateInactive) {
+            } else if (qobject_cast<TabbableWidget*>(tabWidget_->currentPage())->state() == TabbableWidget::State::Inactive) {
                 cap = tr("%1 (Inactive)").arg(cap);
             }
         }
@@ -673,15 +673,15 @@ void TabDlg::updateTab(TabbableWidget* chat)
     //now set text colour based upon whether there are new messages/composing etc
 
     TabbableWidget::State state = chat->state();
-    if (state == TabbableWidget::StateComposing) {
+    if (state == TabbableWidget::State::Composing) {
         tabWidget_->setTabTextColor(chat, PsiOptions::instance()->getOption("options.ui.look.colors.chat.composing-color").value<QColor>());
         tabWidget_->setTabIcon(chat, IconsetFactory::iconPtr("psi/typing")->icon());
     }
     else {
-        if (state == TabbableWidget::StateHighlighted) {
+        if (state == TabbableWidget::State::Highlighted) {
             tabWidget_->setTabTextColor(chat, PsiOptions::instance()->getOption("options.ui.look.colors.chat.unread-message-color").value<QColor>());
         }
-        else if (state == TabbableWidget::StateInactive) {
+        else if (state == TabbableWidget::State::Inactive) {
             tabWidget_->setTabTextColor(chat, PsiOptions::instance()->getOption("options.ui.look.colors.chat.inactive-color").value<QColor>());
         } else {
             tabWidget_->setTabTextColor(chat, palette().color(QPalette::Text));

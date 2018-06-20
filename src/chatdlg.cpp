@@ -1257,14 +1257,14 @@ void ChatDlg::chatEditCreated()
 
 TabbableWidget::State ChatDlg::state() const
 {
-    TabbableWidget::State state = TabbableWidget::StateNone;
+    TabbableWidget::State state = TabbableWidget::State::None;
     if(contactChatState_ == XMPP::StateComposing) {
-        state = TabbableWidget::StateComposing;
+        state = TabbableWidget::State::Composing;
     }
     else if(unreadMessageCount()) {
-        state = TabbableWidget::StateHighlighted;
+        state = TabbableWidget::State::Highlighted;
     } else if (contactChatState_ == XMPP::StateInactive || contactChatState_ == XMPP::StateGone) {
-        state = TabbableWidget::StateInactive;
+        state = TabbableWidget::State::Inactive;
     }
 
     return state;
