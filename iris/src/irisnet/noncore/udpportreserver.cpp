@@ -229,6 +229,9 @@ public:
 
             Q_ASSERT(at != -1);
 
+            if (at == -1)
+                continue;
+
             Item &i = items[at];
 
             QHostAddress a = sock->localAddress();

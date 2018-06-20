@@ -407,7 +407,7 @@ public:
 
         Q_ASSERT(at != -1);
 
-        if (at < 0)
+        if (at == -1)
             return;
 
         Candidate &c = localCandidates[at];
