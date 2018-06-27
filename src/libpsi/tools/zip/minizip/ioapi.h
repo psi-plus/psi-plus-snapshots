@@ -155,6 +155,11 @@ typedef struct zlib_filefunc_def_s
     voidpf              opaque;
 } zlib_filefunc_def;
 
+// Workaround for cppcheck error: syntax error
+#ifndef ZPOS64_T
+typedef unsigned long long int ZPOS64_T;
+#endif
+
 typedef ZPOS64_T (ZCALLBACK *tell64_file_func)    OF((voidpf opaque, voidpf stream));
 typedef long     (ZCALLBACK *seek64_file_func)    OF((voidpf opaque, voidpf stream, ZPOS64_T offset, int origin));
 typedef voidpf   (ZCALLBACK *open64_file_func)    OF((voidpf opaque, const void* filename, int mode));
