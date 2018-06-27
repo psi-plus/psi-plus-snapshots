@@ -22,7 +22,7 @@
 
 #ifndef HAVE_XSS
 
-IdlePlatform::IdlePlatform() {}
+IdlePlatform::IdlePlatform() { d = nullptr; }
 IdlePlatform::~IdlePlatform() {}
 bool IdlePlatform::init() { return false; }
 int IdlePlatform::secondsIdle() { return 0; }
@@ -52,13 +52,12 @@ class IdlePlatform::Private
 public:
     Private() {}
 
-    XScreenSaverInfo *ss_info;
+    XScreenSaverInfo *ss_info = nullptr;
 };
 
 IdlePlatform::IdlePlatform()
 {
     d = new Private;
-    d->ss_info = 0;
 }
 
 IdlePlatform::~IdlePlatform()

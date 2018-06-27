@@ -39,6 +39,7 @@ if(USE_PSI_MINIZIP)
     set(PLAIN_SOURCES
         ${PLAIN_SOURCES}
         minizip/unzip.c
+        minizip/ioapi.c
         )
     add_definitions(-DPSIMINIZIP)
 endif()

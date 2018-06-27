@@ -5,7 +5,7 @@ SOURCES += \
     $$PWD/zip.cpp
 
 psi-minizip {
-    SOURCES += $$PWD/minizip/unzip.c
+    SOURCES += $$PWD/minizip/unzip.c $$PWD/minizip/ioapi.c
     DEFINES += PSIMINIZIP
 }
 

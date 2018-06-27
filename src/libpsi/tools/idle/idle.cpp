@@ -30,13 +30,13 @@ static int platform_ref = 0;
 class Idle::Private
 {
 public:
-    Private() {}
+    Private() = default;
 
     QPoint lastMousePos;
     QDateTime idleSince;
 
-    bool active;
-    int idleTime;
+    bool active = false;
+    int idleTime = 0;
     QDateTime startTime;
     QTimer checkTimer;
 };
@@ -44,8 +44,6 @@ public:
 Idle::Idle()
 {
     d = new Private;
-    d->active = false;
-    d->idleTime = 0;
 
     // try to use platform idle
     if(!platform) {
