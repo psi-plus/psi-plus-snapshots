@@ -241,12 +241,12 @@ private slots:
         {
             if(rec.added)
             {
-                printf("%2d: Added:   %s, ttl=%d\n", c.id, qPrintable(recordToDesc(rec)), rec.ttl);
+                printf("%2d: Added:   %s, ttl=%u\n", c.id, qPrintable(recordToDesc(rec)), rec.ttl);
                 if(rec.rrtype == 16)
                     printIndentedTxt(rec.rdata);
             }
             else
-                printf("%2d: Removed: %s, ttl=%d\n", c.id, qPrintable(recordToDesc(rec)), rec.ttl);
+                printf("%2d: Removed: %s, ttl=%u\n", c.id, qPrintable(recordToDesc(rec)), rec.ttl);
         }
     }
 

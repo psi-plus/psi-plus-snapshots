@@ -2564,6 +2564,9 @@ int _process_response(jdns_session_t *s, jdns_response_t *r, int nxdomain, int n
         return 1;
     }
 
+    if(!r)
+        return 1;
+
     // all we got was a cname that we didn't ask for?
     if(r->answerCount == 1 && r->answerRecords[0]->type == JDNS_RTYPE_CNAME && q->qtype != JDNS_RTYPE_CNAME)
     {

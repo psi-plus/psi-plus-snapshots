@@ -512,6 +512,9 @@ Stanza::Stanza(const Stanza &from)
 
 Stanza & Stanza::operator=(const Stanza &from)
 {
+    if(&from == this)
+        return *this;
+
     delete d;
     d = 0;
     if(from.d)

@@ -577,6 +577,9 @@ Parser::Event::Event(const Event &from)
 
 Parser::Event & Parser::Event::operator=(const Event &from)
 {
+    if(&from == this)
+        return *this;
+
     delete d;
     d = 0;
     if(from.d)
