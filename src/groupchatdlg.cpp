@@ -2606,6 +2606,11 @@ void GCMainDlg::resizeEvent(QResizeEvent *e)
     QTimer::singleShot(0, this, SLOT(horizSplitterMoved()));
 }
 
+QStringList GCMainDlg::mucRosterContent() const
+{
+    return d->usersModel->nickList();
+}
+
 void GCMainDlg::sendButtonMenu()
 {
     SendButtonTemplatesMenu* menu = getTemplateMenu();
