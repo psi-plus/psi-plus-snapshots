@@ -35,8 +35,8 @@ Project options:
 Dependency options:
   --with-idn-inc=[path]      Path to libidn include files
   --with-idn-lib=[path]      Path to libidn library or framework files
-  --with-qca=[path]          Specify path to QCA tree, mainly for building
-                             against an uninstalled QCA.
+  --with-qca-inc=[path]      Path to QCA include files
+  --with-qca-lib=[path]      Path to QCA library or framework files
   --with-zlib-inc=[path]     Path to zlib include files
   --with-zlib-lib=[path]     Path to zlib library files
   --with-qjdns-inc=[path]    Path to QJDns include files
@@ -214,8 +214,13 @@ while [ $# -gt 0 ]; do
 			shift
 			;;
 
-		--with-qca=*)
-			QC_WITH_QCA=$optarg
+		--with-qca-inc=*)
+			QC_WITH_QCA_INC=$optarg
+			shift
+			;;
+
+		--with-qca-lib=*)
+			QC_WITH_QCA_LIB=$optarg
 			shift
 			;;
 
@@ -272,7 +277,8 @@ echo QC_MAC_SDK=$QC_MAC_SDK
 echo QC_ENABLE_TESTS=$QC_ENABLE_TESTS
 echo QC_WITH_IDN_INC=$QC_WITH_IDN_INC
 echo QC_WITH_IDN_LIB=$QC_WITH_IDN_LIB
-echo QC_WITH_QCA=$QC_WITH_QCA
+echo QC_WITH_QCA_INC=$QC_WITH_QCA_INC
+echo QC_WITH_QCA_LIB=$QC_WITH_QCA_LIB
 echo QC_WITH_ZLIB_INC=$QC_WITH_ZLIB_INC
 echo QC_WITH_ZLIB_LIB=$QC_WITH_ZLIB_LIB
 echo QC_WITH_QJDNS_INC=$QC_WITH_QJDNS_INC
@@ -822,50 +828,111 @@ public:
 /*
 -----BEGIN QCMOD-----
 name: QCA >= 2.0
-arg: with-qca=[path],Specify path to QCA tree, mainly for building against an uninstalled QCA.
+arg: with-qca-inc=[path],Path to QCA include files
+arg: with-qca-lib=[path],Path to QCA library or framework files
 -----END QCMOD-----
 */
 
-// based on crypto.prf. any changes made to that file need to be tracked here.
-static QString internal_crypto_prf(const QString &incdir, const QString &libdir)
+// adapted from crypto.prf
+static QString internal_crypto_prf(const QString &incdir, const QString &libdir, const QString &frameworkdir)
 {
-	QString out = QString(
+    QString out = QString(
 "QCA_INCDIR = %1\\n"
 "QCA_LIBDIR = %2\\n"
+"QMAKE_RPATHDIR = %2\\n"
+"QCA_FRAMEWORKDIR = %3\\n"
 "\\n"
 "CONFIG *= qt\\n"
 "\\n"
 "LINKAGE =\\n"
+"QCA_NAME = qca-qt5\\n"
 "\\n"
-"# on mac, if qca was built as a framework, link against it\\n"
-"mac: {\\n"
-"	framework_dir = \$\$QCA_LIBDIR\\n"
-"	exists(\$\$framework_dir/qca.framework) {\\n"
-"		#QMAKE_FRAMEWORKPATH *= \$\$framework_dir\\n"
-"		LIBS += -F\$\$framework_dir\\n"
-"		INCLUDEPATH += \$\$framework_dir/qca.framework/Headers\\n"
-"		LINKAGE = -framework qca\\n"
-"	}\\n"
+"!isEmpty(QCA_FRAMEWORKDIR): {\\n"
+"    framework_dir = \$\$QCA_FRAMEWORKDIR\\n"
+"    exists(\$\$framework_dir/\$\${QCA_NAME}.framework) {\\n"
+"    	#QMAKE_FRAMEWORKPATH *= \$\$framework_dir\\n"
+"    	LIBS *= -F\$\$framework_dir\\n"
+"    	INCLUDEPATH += \$\$framework_dir/\$\${QCA_NAME}.framework/Headers\\n"
+"    	LINKAGE = -framework \$\${QCA_NAME}\\n"
+"    }\\n"
 "}\\n"
 "\\n"
 "# else, link normally\\n"
 "isEmpty(LINKAGE) {\\n"
-"	INCLUDEPATH += \$\$QCA_INCDIR/QtCrypto\\n"
-"	LIBS += -L\$\$QCA_LIBDIR\\n"
-"	LINKAGE = -lqca\\n"
-"	CONFIG(debug, debug|release) {\\n"
-"		windows:LINKAGE = -lqcad\\n"
-"		mac:LINKAGE = -lqca_debug\\n"
-"	}\\n"
+"    !isEmpty(QCA_INCDIR):INCLUDEPATH += \$\$QCA_INCDIR/QtCrypto\\n"
+"    !isEmpty(QCA_LIBDIR):LIBS += -L\$\$QCA_LIBDIR\\n"
+"    LINKAGE = -l\$\${QCA_NAME}\\n"
+"    CONFIG(debug, debug|release) {\\n"
+"    	windows:LINKAGE = -l\$\${QCA_NAME}d\\n"
+"    	mac:LINKAGE = -l\$\${QCA_NAME}_debug\\n"
+"    }\\n"
 "}\\n"
 "\\n"
 "LIBS += \$\$LINKAGE\\n"
-	).arg(incdir, libdir);
-	return out;
+    ).arg(incdir, libdir, frameworkdir);
+    return out;
 }
 
-#define QC_QCA
-QString qc_qca_procode;
+// set either libdir or frameworkdir, but not both
+static bool qca_try(Conf *conf, const QString &incdir, const QString &libdir, const QString &frameworkdir, bool release, bool debug, QString *_prf)
+{
+    QString proextra;
+    QString prf;
+    if (!incdir.isEmpty() || !libdir.isEmpty() || !frameworkdir.isEmpty()) {
+    	prf = internal_crypto_prf(conf->escapePath(incdir), conf->escapePath(libdir), frameworkdir);
+    } else {
+    	prf = "CONFIG += crypto\\n";
+    }
+    proextra =
+    "CONFIG += qt\\n"
+    "CONFIG -= debug_and_release debug release\\n"
+    "QT -= gui\\n";
+    proextra += prf;
+
+    QString str =
+    "#include <QtCrypto>\\n"
+    "\\n"
+    "int main()\\n"
+    "{\\n"
+    "	unsigned long x = QCA_VERSION;\\n"
+    "	if(x >= 0x020000 && x < 0x030000) return 0; else return 1;\\n"
+    "}\\n";
+
+    // test desired versions, potentially both release and debug
+
+    if(release)
+    {
+    	int ret;
+    	if(!conf->doCompileAndLink(str, QStringList(), QString(), proextra + "CONFIG += release\\n", &ret) || ret != 0)
+    		return false;
+    }
+
+    if(debug)
+    {
+    	int ret;
+    	if(!conf->doCompileAndLink(str, QStringList(), QString(), proextra + "CONFIG += debug\\n", &ret) || ret != 0)
+    		return false;
+    }
+
+    *_prf = prf;
+    return true;
+}
+
+static bool qca_try_lib(Conf *conf, const QString &incdir, const QString &libdir, bool release, bool debug, QString *prf)
+{
+    return qca_try(conf, incdir, libdir, QString(), release, debug, prf) ||
+            qca_try(conf, incdir + "/Qca-qt5", libdir, QString(), release, debug, prf);
+}
+
+static bool qca_try_framework(Conf *conf, const QString &frameworkdir, bool release, bool debug, QString *prf)
+{
+    return qca_try(conf, QString(), QString(), frameworkdir, release, debug, prf);
+}
+
+static bool qca_try_ext_prf(Conf *conf, bool release, bool debug, QString *prf)
+{
+    return qca_try(conf, QString(), QString(), QString(), release, debug, prf);
+}
 
 //----------------------------------------------------------------------------
 // qc_qca
@@ -873,77 +940,79 @@ QString qc_qca_procode;
 class qc_qca : public ConfObj
 {
 public:
-	qc_qca(Conf *c) : ConfObj(c) {}
-	QString name() const { return "QCA >= 2.0"; }
-	QString shortname() const { return "qca"; }
-	bool exec()
-	{
-		// get the build mode
+    qc_qca(Conf *c) : ConfObj(c) {}
+    QString name() const { return "QCA >= 2.0"; }
+    QString shortname() const { return "qca"; }
+    bool exec()
+    {
+    	// get the build mode
 #ifdef QC_BUILDMODE
-		bool release = qc_buildmode_release;
-		bool debug = qc_buildmode_debug;
+    	bool release = qc_buildmode_release;
+    	bool debug = qc_buildmode_debug;
 #else
-		// else, default to just release mode
-		bool release = true;
-		bool debug = false;
+    	// else, default to just release mode
+    	bool release = true;
+    	bool debug = false;
 #endif
 
-		// test for "crypto" feature and check qca version number
-		QString qca_prefix, qca_incdir, qca_libdir, qca_crypto_prf;
-		qca_prefix = conf->getenv("QC_WITH_QCA");
+    	QString qca_incdir, qca_libdir, qca_crypto_prf;
+    	qca_incdir = conf->getenv("QC_WITH_QCA_INC");
+    	qca_libdir = conf->getenv("QC_WITH_QCA_LIB");
 
-		QString proextra;
-		if(!qca_prefix.isEmpty()) {
-			qca_incdir = qca_prefix + "/include";
-			qca_libdir = qca_prefix + "/lib";
-			qca_crypto_prf = internal_crypto_prf(qca_incdir, qca_libdir);
-			proextra =
-			"CONFIG += qt\\n"
-			"QT -= gui\\n";
-			proextra += qca_crypto_prf;
-		} else {
-			proextra =
-			"CONFIG += qt crypto\\n"
-			"QT -= gui\\n";
-		}
+#if defined(Q_OS_MAC)
+    	if(!qca_libdir.isEmpty() && qca_try_framework(conf, qca_libdir, release, debug, &qca_crypto_prf))
+    	{
+    		conf->addExtra(qca_crypto_prf);
+    		return true;
+    	}
+#endif
 
-		QString str =
-		"#include <QtCrypto>\\n"
-		"\\n"
-		"int main()\\n"
-		"{\\n"
-		"	unsigned long x = QCA_VERSION;\\n"
-		"	if(x >= 0x020000 && x < 0x030000) return 0; else return 1;\\n"
-		"}\\n";
+    	if(!qca_incdir.isEmpty() && !qca_libdir.isEmpty() && qca_try_lib(conf, qca_incdir, qca_libdir, release, debug, &qca_crypto_prf))
+    	{
+    		conf->addExtra(qca_crypto_prf);
+    		return true;
+    	}
+    	
+    	if (qca_try_ext_prf(conf, release, debug, &qca_crypto_prf))
+    	{
+    		conf->addExtra(qca_crypto_prf);
+    		return true;
+    	}
 
-		if(release)
-		{
-			int ret;
-			if(!conf->doCompileAndLink(str, QStringList(), QString(), proextra + "CONFIG += release\\n", &ret))
-				return false;
-			if(ret != 0)
-				return false;
-		}
+    	QStringList incs;
+    	QString version, libs, other;
 
-		if(debug)
-		{
-			int ret;
-			if(!conf->doCompileAndLink(str, QStringList(), QString(), proextra + "CONFIG += debug\\n", &ret))
-				return false;
-			if(ret != 0)
-				return false;
-		}
+        if(conf->findPkgConfig("qca2-qt5", VersionMin, "2.0.0", &version, &incs, &libs, &other))
+        {
+            for(int n = 0; n < incs.count(); ++n)
+                conf->addIncludePath(incs[n]);
+            if(!libs.isEmpty())
+                conf->addLib(libs);
+            return true;
+        }
 
-		if(!qca_prefix.isEmpty())
-			str = qca_crypto_prf;
-		else
-			str = "CONFIG += crypto\\n";
+    	QStringList prefixes;
+#ifndef Q_OS_WIN
+        prefixes += "/usr";
+    	prefixes += "/usr/local";
+#endif
+        QString prefix = conf->getenv("PREFIX");
+        if (!prefix.isEmpty()) {
+            prefixes += prefix;
+        }
 
-		qc_qca_procode = str;
-		conf->addExtra(str);
+    	for(int n = 0; n < prefixes.count(); ++n)
+    	{
+    		const QString &prefix = prefixes[n];
+    		if(qca_try_lib(conf, prefix + "/include", prefix + "/lib", release, debug, &qca_crypto_prf))
+    		{
+    			conf->addExtra(qca_crypto_prf);
+    			return true;
+    		}
+    	}
 
-		return true;
-	}
+    	return false;
+    }
 };
 #line 1 "zlib.qcm"
 /*
@@ -2020,6 +2089,15 @@ bool Conf::findHeader(const QString &h, const QStringList &ext, QString *inc)
 	QStringList dirs;
 	dirs += "/usr/local/include";
 	dirs += ext;
+
+	QString prefix = qc_getenv("PREFIX");
+	if (!prefix.isEmpty()) {
+		prefix += "/include";
+		prefix = qc_normalize_path(prefix);
+		if (!dirs.contains(prefix))
+			dirs << prefix;
+	}
+
 	for(QStringList::ConstIterator it = dirs.begin(); it != dirs.end(); ++it)
 	{
 		if(checkHeader(*it, h))
@@ -2062,6 +2140,18 @@ bool Conf::findLibrary(const QString &name, QString *lib)
 		*lib = "/usr/local/lib";
 		return true;
 	}
+
+	QString prefix = qc_getenv("PREFIX");
+	if (!prefix.isEmpty()) {
+		prefix += "/lib";
+		prefix = qc_normalize_path(prefix);
+		if(checkLibrary(prefix, name))
+		{
+			*lib = prefix;
+			return true;
+		}
+	}
+
 	return false;
 }
 
@@ -2075,33 +2165,45 @@ bool Conf::findSimpleLibrary(const QString &incvar, const QString &libvar, const
 	QString inc, lib;
 	QString s;
 
-	s = getenv(incvar);
+	s = getenv(incvar).trimmed();
 	if(!s.isEmpty()) {
-		if(!checkHeader(s, incname))
+		if(!checkHeader(s, incname)) {
+			if(debug_enabled)
+				printf("%s is not found in \\"%s\\"\\n", qPrintable(incname), qPrintable(s));
 			return false;
+		}
 		inc = s;
 	}
 	else {
-		if(!findHeader(incname, QStringList(), &s))
+		if(!findHeader(incname, QStringList(), &s)) {
+			if(debug_enabled)
+				printf("%s is not found anywhere\\n", qPrintable(incname));
 			return false;
+		}
 		inc = s;
 	}
 
-	s = getenv(libvar);
+	s = getenv(libvar).trimmed();
 	if(!s.isEmpty()) {
-		if(!checkLibrary(s, libname))
+		if(!checkLibrary(s, libname)) {
+			if(debug_enabled)
+				printf("%s is not found in \\"%s\\"\\n", qPrintable(libname), qPrintable(s));
 			return false;
+		}
 		lib = s;
 	}
 	else {
-		if(!findLibrary(libname, &s))
+		if(!findLibrary(libname, &s)) {
+			if(debug_enabled)
+				printf("%s is not found anywhere\\n", qPrintable(libname));
 			return false;
+		}
 		lib = s;
 	}
 
 	QString lib_out;
 	if(!lib.isEmpty())
-		lib_out += QString("-L") + s;
+		lib_out += QString("-L") + s + " ";
 	lib_out += QString("-l") + libname;
 
 	*incpath = inc;
@@ -2416,7 +2518,8 @@ export QC_MAC_SDK
 export QC_ENABLE_TESTS
 export QC_WITH_IDN_INC
 export QC_WITH_IDN_LIB
-export QC_WITH_QCA
+export QC_WITH_QCA_INC
+export QC_WITH_QCA_LIB
 export QC_WITH_ZLIB_INC
 export QC_WITH_ZLIB_LIB
 export QC_WITH_QJDNS_INC
