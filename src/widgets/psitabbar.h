@@ -55,7 +55,6 @@ protected:
 
 private:
     int findTabUnder(const QPoint &pos);
-    bool isOnTheLeft;
 };
 
 #endif /* _PSITABBAR_H_ */
