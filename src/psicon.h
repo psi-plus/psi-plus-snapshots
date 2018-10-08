@@ -187,6 +187,7 @@ private slots:
     void secondsIdle(int);    
     void proceedWithSleep();
     void networkSessionOpened();
+    void networkSessionClosed();
 private:
     class Private;
     Private *d;
@@ -202,6 +203,7 @@ private:
     void promptUserToCreateAccount();
     QString optionsFile() const;
     void doQuit(int);
+    void initNetSession();
 };
 
 #endif

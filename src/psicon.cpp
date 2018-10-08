@@ -417,9 +417,7 @@ bool PsiCon::init()
     PGPUtil::instance();
 #endif
 
-    d->netSession = new QNetworkSession(d->netConfMng.defaultConfiguration(), this);
-    connect(d->netSession, &QNetworkSession::opened, this, &PsiCon::networkSessionOpened);
-    d->netSession->open();
+    initNetSession();
 
     d->contactList = new PsiContactList(this);
 
@@ -1920,6 +1918,27 @@ void PsiCon::doWakeup()
     //setGlobalStatus(Status());
 
     d->wakeupPending = true; // and wait for signal till network session is opened (proved to work on gentoo+nm+xfce)
+}
+
+void PsiCon::networkSessionClosed()
+{
+    /*
+     * The original connection is gone. (E.g. suspend on LAN, wake with WLAN
+     * only.)
+     *
+     * This is mostly a work-around, merely a hack. We need to implement
+     * roaming (or something alike) in the longterm.
+     */
+    delete d->netSession;
+    initNetSession();
+}
+
+void PsiCon::initNetSession()
+{
+    d->netSession = new QNetworkSession(d->netConfMng.defaultConfiguration(), this);
+    connect(d->netSession, &QNetworkSession::opened, this, &PsiCon::networkSessionOpened);
+    connect(d->netSession, &QNetworkSession::closed, this, &PsiCon::networkSessionClosed);
+    d->netSession->open();
 }
 
 void PsiCon::networkSessionOpened()
