@@ -13,6 +13,4 @@ HEADERS   +=
 
 SOURCES   += main.cpp
 
-include($$PWD/../../vendor/qompote.pri)
-LIBS      += -L$${OUT_PWD}/../../src -l$$getLibName(qhttp, "Qt")
-
+LIBS      += -lqhttp

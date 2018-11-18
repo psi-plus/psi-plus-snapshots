@@ -1,8 +1,5 @@
 # QHttp
 
-This project is a backport of [azadkuh/qhttp](https://github.com/azadkuh/qhttp) for Qt5.3+ and C++11 (instead of Qt5.5+ and C++14). It fits the last version of azadkuh/qhttp and no issue has been reported at the moment.
-
-Read more about [motivations here](https://github.com/azadkuh/qhttp/issues/35).
 
 ### Table of contents
 - [About](#about)
@@ -17,20 +14,23 @@ Read more about [motivations here](https://github.com/azadkuh/qhttp/issues/35).
 ## About
 [TOC](#table-of-contents)
 
-`QHttp` is a lightweight, asynchronous and fast HTTP library in `C++11 / Qt5.3+`,
+`QHttp` is a lightweight, asynchronous and fast HTTP library in `c++14 / Qt5`,
 containing both server and client side classes for managing connections,
 parsing and building HTTP requests and responses.
 
 - the objective of `QHttp` is being light weight with a simple API for Qt
 developers to implement RESTful web services in private (internal) zones.
 [more](#disclaimer)
-- by using `std::function` and `C++11 lambda`, the API is intentionally similar
+- by using `std::function` and `c++14 generic lambda`, the API is intentionally similar
 to the [Node.js' http module](http://nodejs.org/api/http.html). Asynchronous
 and non-blocking HTTP programming is quite easy with `QHttp`. have a look at
 [sample codes](#sample-codes).
 - the fantastic [nodejs/http-parser](https://github.com/nodejs/http-parser)
 (which is a single pair of `*.h/*.c` files) is the only dependency of the
 `QHttp`.
+
+> **attention**: c++14 is the minimum requirement for version 3.0+
+> please see [releases](https://github.com/azadkuh/qhttp/releases)
 
 This project was inspired by
 [nikhilm/qhttpserver](https://github.com/nikhilm/qhttpserver) effort to
@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
 ## Features
 [TOC](#table-of-contents)
 
-- the only dependencies are: `Qt5.3 minimum`, `C++11` and the `http-parser`
+- the only dependencies are: `Qt5`, `c++14` and the `http-parser`
 - both TCP and UNIX (local) sockets are supported as backend.
 - separate `namespace`s for server and client classes.
 - HTTP server classes: [QHttpServer](./src/qhttpserver.hpp),
@@ -152,9 +152,7 @@ $> git clone https://github.com/azadkuh/qhttp.git
 $> cd qhttp
 
 # prepare dependencies:
-$qhttp/> qompoter install
-
-*Note: to install Qompoter on your machine, use `npm install -g qompoter` or check [Qompoter documentation](https://github.com/Fylhan/qompoter/blob/master/README.md#installation).*
+$qhttp/> ./update-dependencies.sh
 
 # now build the library and the examples
 $qhttp/> qmake -r qhttp.pro
@@ -185,7 +183,7 @@ in some rare scenarios you may want to use multiple handler threads (although
 - **`src/`**: holds the source code of `QHttp`. server classes are prefixed by
 `qhttpserver*` and client classes by `qhttpclient*`.
   - **`private/`**: Private classes of the library.
-- **`vendor/`**: will contain `http-parser` source tree as the only
+- **`3rdparty/`**: will contain `http-parser` source tree as the only
 dependency.  this directory is created by setup. see also: [setup](#setup).
 - **`example/`**: contains some sample applications representing the `QHttp`
 usage:
@@ -230,5 +228,4 @@ use `QNetworkAccessManager` which supports proxy, redirections, authentication,
 [TOC](#table-of-contents)
 
 Distributed under the MIT license. Copyright (c) 2014, Amir Zamani.
-Distributed under the MIT license. Copyright (c) 2017, Olivier Maridat.
 
