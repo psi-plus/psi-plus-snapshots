@@ -59,12 +59,12 @@ void runServer(const QString& portOrPath) {
                 qPrintable(req->url().toString().toUtf8())
               );
         qDebug("[Headers (%d)]", h.size());
-        h.forEach([](auto iter) {
-            qDebug(" %s : %s",
-                    iter.key().constData(),
-                    iter.value().constData()
-                  );
-        });
+//        h.forEach([](auto iter) {
+//            qDebug(" %s : %s",
+//                    iter.key().constData(),
+//                    iter.value().constData()
+//                  );
+//        });
     });
 
     if ( !server.isListening() ) {
@@ -101,9 +101,9 @@ void runClient(QString url) {
 
         // just for fun! print headers:
         qDebug("\n[Headers:]");
-        res->headers().forEach([](auto cit) {
-            qDebug("%s : %s", cit.key().constData(), cit.value().constData());
-        });
+//        res->headers().forEach([](auto cit) {
+//            qDebug("%s : %s", cit.key().constData(), cit.value().constData());
+//        });
     });
 
     if ( !success ) {
@@ -144,9 +144,9 @@ void runWeatherClient(const QString& cityName) {
 
         // just for fun! print headers:
         qDebug("\n[Headers:]");
-        res->headers().forEach([](auto cit) {
-            qDebug("%s : %s", cit.key().constData(), cit.value().constData());
-        });
+//        res->headers().forEach([](auto cit) {
+//            qDebug("%s : %s", cit.key().constData(), cit.value().constData());
+//        });
     });
 
     // set a timeout for making the request
@@ -183,18 +183,18 @@ int main(int argc, char ** argv) {
     parser.addPositionalArgument("mode",
             "working mode: server, client or weather. default: server");
 
-    parser.addOption({
-            {"l", "listen"},
-            "listening tcp port number in server mode (default 8080)",
-            "portNo", "8080"});
-    parser.addOption({
-            {"u", "url"},
-            "fetch url data in client mode",
-            "address", "http://www.google.com"});
-    parser.addOption({
-            {"g", "geolocation"},
-            "a city name [,country name] in weather mode, default: Tehran",
-            "city", "Tehran"});
+//    parser.addOption({
+//            {"l", "listen"},
+//            "listening tcp port number in server mode (default 8080)",
+//            "portNo", "8080"});
+//    parser.addOption({
+//            {"u", "url"},
+//            "fetch url data in client mode",
+//            "address", "http://www.google.com"});
+//    parser.addOption({
+//            {"g", "geolocation"},
+//            "a city name [,country name] in weather mode, default: Tehran",
+//            "city", "Tehran"});
     parser.process(app);
 
 

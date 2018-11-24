@@ -1,10 +1,7 @@
 # common stuff for iris.pro and iris.pri
 
-greaterThan(QT_MAJOR_VERSION, 4) {
-    CONFIG += c++11
-} else {
-    QMAKE_CXXFLAGS += -std=c++11
-}
+CONFIG -= c++11
+CONFIG += c++14
 
 # default build configuration
 !iris_build_pri {

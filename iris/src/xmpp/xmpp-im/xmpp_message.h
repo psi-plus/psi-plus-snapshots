@@ -53,8 +53,8 @@ namespace XMPP {
     public:
         enum CarbonDir : quint8 {
             NoCarbon,
-            Received,
-            Sent
+            Received, // other party messages are sent to another own client
+            Sent      // own messages are sent from other clients
         };
 
         Message(const Jid &to="");

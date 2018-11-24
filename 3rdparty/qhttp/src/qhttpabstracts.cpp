@@ -1,5 +1,5 @@
 #include "qhttpabstracts.hpp"
-#include "http-parser/http_parser.h"
+#include "http_parser.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 namespace qhttp {

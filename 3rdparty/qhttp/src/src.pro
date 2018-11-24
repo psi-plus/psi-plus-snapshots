@@ -1,18 +1,39 @@
-QT       += core network
-QT       -= gui
+DEPENDPATH += $$PWD
+INCLUDEPATH += $$PWD $$PWD/. $$PWD/..
 
-TARGET    = qhttp
-TEMPLATE  = lib
-
-PRJDIR    = ..
+include($$PWD/../vendor/vendor.pri)
+PRJDIR       = ..
 include($$PRJDIR/commondir.pri)
+$$setLibPath()
+
+VENDORNAME=oliviermaridat
+APPNAME=qhttp
+TARGET = $$getLibName($$APPNAME, "Qt")
+TEMPLATE = lib
+CONFIG += staticlib
+#CONFIG += debug_and_release build_all
+QT += network
+QT -= gui
+CONFIG += c++11
+VERSION = 3.1.2
+
+defined(EXPORT_PATH_PREFIX, "var"){
+    EXPORT_PATH = $$EXPORT_PATH_PREFIX
+}
+else{
+    EXPORT_PATH = $$OUT_PWD/export
+}
+EXPORT_PATH = $${EXPORT_PATH}/$${VENDORNAME}/$${APPNAME}/v$${VERSION}-lib
+EXPORT_INCLUDEPATH = $$EXPORT_PATH/include
+EXPORT_LIBPATH = $$EXPORT_PATH/$$LIBPATH
+message("$$APPNAME [ export folder is $${EXPORT_LIBPATH} ]")
 
 DEFINES       *= QHTTP_MEMORY_LOG=0
 win32:DEFINES *= QHTTP_EXPORT
 
 # Joyent http_parser
-SOURCES  += $$PRJDIR/3rdparty/http-parser/http_parser.c
-HEADERS  += $$PRJDIR/3rdparty/http-parser/http_parser.h
+SOURCES  += $$PWD/../vendor/http-parser/http_parser.c
+HEADERS  += $$PWD/../vendor/http-parser/http_parser.h
 
 SOURCES  += \
     qhttpabstracts.cpp \
@@ -21,7 +42,7 @@ SOURCES  += \
     qhttpserverresponse.cpp \
     qhttpserver.cpp
 
-HEADERS  += \
+PUBLIC_HEADERS  += \
     qhttpfwd.hpp \
     qhttpabstracts.hpp \
     qhttpserverconnection.hpp \
@@ -35,8 +56,30 @@ contains(DEFINES, QHTTP_HAS_CLIENT) {
         qhttpclientresponse.cpp \
         qhttpclient.cpp
 
-    HEADERS += \
+    PUBLIC_HEADERS += \
         qhttpclient.hpp \
         qhttpclientresponse.hpp \
         qhttpclientrequest.hpp
 }
+
+
+HEADERS += $${PUBLIC_HEADERS}
+
+# Lib
+QMAKE_STRIP = echo # Avoid striping header files (which will not work)
+target.extra = strip $(TARGET)
+applibs.files = $${DESTDIR}/*.a
+applibs.path = $$EXPORT_LIBPATH
+INSTALLS += applibs
+
+# Include files
+headers.files = $$PUBLIC_HEADERS
+headers.path = $$EXPORT_INCLUDEPATH
+INSTALLS += headers
+
+## qompoter.pri
+qompoter.files = $$PWD/../qompoter.pri
+qompoter.files += $$PWD/../qompoter.json
+qompoter.path = $$EXPORT_PATH
+INSTALLS += qompoter
+

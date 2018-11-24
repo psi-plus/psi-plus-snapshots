@@ -15,7 +15,7 @@
 #include <QHostAddress>
 #include <QBasicTimer>
 
-#include "http-parser/http_parser.h"
+#include "http_parser.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 namespace qhttp {

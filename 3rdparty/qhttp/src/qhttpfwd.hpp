@@ -145,6 +145,7 @@ enum TStatusCode {
      ESTATUS_REQUEST_UNSUPPORTED_MEDIA_TYPE     = 415,
      ESTATUS_REQUESTED_RANGE_NOT_SATISFIABLE    = 416,
      ESTATUS_EXPECTATION_FAILED                 = 417,
+     ESTATUS_I_AM_A_TEAPOT                      = 418,
      ESTATUS_INTERNAL_SERVER_ERROR              = 500,
      ESTATUS_NOT_IMPLEMENTED                    = 501,
      ESTATUS_BAD_GATEWAY                        = 502,
