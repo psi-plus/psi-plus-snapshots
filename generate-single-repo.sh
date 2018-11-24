@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2018-03-21
+# Updated: 2018-11-24
 # Version: N/A
 
 set -e
@@ -25,6 +25,13 @@ if [ "${1}" = "push" ]; then
     git push
     git push --tags
     exit 0
+fi
+
+SNAPSHOTS_URL="$(git remote -v | grep '(fetch)')"
+if [ "$(echo ${SNAPSHOTS_URL} | grep 'https://' | wc -l)" = "1" ]; then
+    echo "Updating ${SNAPSHOTS_DIR}"
+    git pull --all --prune -f
+    echo;
 fi
 
 MOD=psi
@@ -196,6 +203,7 @@ remove_trash
 echo "* Trash is removed."
 
 cp -a "${MAIN_DIR}/psi/win32"/*.rc* "${SNAPSHOTS_DIR}/win32/"
+cp -a "${MAIN_DIR}/psi/win32"/*.cmake "${SNAPSHOTS_DIR}/win32/"
 cp -a "${MAIN_DIR}/psi/win32"/*.manifest "${SNAPSHOTS_DIR}/win32/"
 cp -a "${MAIN_DIR}/main/app.ico" "${SNAPSHOTS_DIR}/win32/"
 echo "* Some files for MS Windows build are copied."
