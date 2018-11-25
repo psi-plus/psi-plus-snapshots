@@ -152,7 +152,7 @@ if( SEPARATE_QJDNS AND WIN32)
     set(EXTRA_LDFLAGS ws2_32)
 endif()
 
-set_property(TARGET iris PROPERTY CXX_STANDARD 11)
+set_property(TARGET iris PROPERTY CXX_STANDARD 14)
 set_property(TARGET iris PROPERTY CXX_STANDARD_REQUIRED ON)
 
 target_link_libraries(iris ${IDN_LIBRARY} ${ZLIB_LIBRARY} ${EXTRA_LDFLAGS})
