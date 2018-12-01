@@ -29,6 +29,12 @@ int IdlePlatform::secondsIdle() { return 0; }
 
 #else
 
+// gajim uses 'org.gnome.Mutter.IdleMonitor'.
+// we can also use https://blog.sleeplessbeastie.eu/2013/02/26/how-to-automate-kde-using-d-bus/
+//   in short qdbus org.kde.screensaver /ScreenSaver GetSessionIdleTime
+//   but on kde it returns in ms while gnome is in secs https://bugs.kde.org/show_bug.cgi?id=313571
+
+
 #include <QApplication>
 #include <QDesktopWidget>
 
