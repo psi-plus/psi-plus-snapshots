@@ -51,7 +51,7 @@ using namespace XMPP;
     e.appendChild(error.toXml(*client()->doc(), client()->stream().baseNS()));
     \endcode
 
-    This class implements JEP-0086, which means that it can read both
+    This class implements XEP-0086, which means that it can read both
     old and new style error elements. Also, generated XML will contain
     both type/condition and code.
     Error text in output XML is always presented in XMPP-style only.

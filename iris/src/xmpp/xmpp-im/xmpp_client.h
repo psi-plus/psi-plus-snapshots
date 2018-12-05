@@ -51,6 +51,7 @@ namespace XMPP {
     class Task;
     class CapsManager;
     class EncryptionHandler;
+    class ServerInfoManager;
 }
 
 namespace XMPP
@@ -126,6 +127,7 @@ namespace XMPP
         BoBManager *bobManager() const;
         JidLinkManager *jidLinkManager() const;
         CapsManager *capsManager() const;
+        ServerInfoManager *serverInfoManager() const;
 
         void setFileTransferEnabled(bool b);
         FileTransferManager *fileTransferManager() const;

@@ -135,7 +135,7 @@ namespace XMPP
         void setXSigned(const QString &);
         void setSongTitle(const QString &);
 
-        // JEP-153: VCard-based Avatars
+        // XEP-153: VCard-based Avatars
         const QString& photoHash() const;
         void setPhotoHash(const QString&);
         bool hasPhotoHash() const;

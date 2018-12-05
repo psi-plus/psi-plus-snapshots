@@ -16,16 +16,3 @@ Sparkle {
 
     LIBS += -framework Sparkle
 }
-
-QuickDirtyChecker {
-        DEFINES += USE_QDCHECKER
-
-        HEADERS += \
-                $$PWD/QDChecker.h
-
-        SOURCES += \
-                $$PWD/QDChecker.cpp
-
-        FORMS += \
-                $$PWD/QDChangeLog.ui
-}

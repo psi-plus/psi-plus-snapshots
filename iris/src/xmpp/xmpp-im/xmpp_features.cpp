@@ -84,7 +84,7 @@ bool Features::test(const QSet<QString> &ns) const
 }
 
 #define FID_MULTICAST "http://jabber.org/protocol/address"
-bool Features::canMulticast() const
+bool Features::hasMulticast() const
 {
     QSet<QString> ns;
     ns << FID_MULTICAST;
@@ -93,7 +93,7 @@ bool Features::canMulticast() const
 }
 
 #define FID_AHCOMMAND "http://jabber.org/protocol/commands"
-bool Features::canCommand() const
+bool Features::hasCommand() const
 {
     QSet<QString> ns;
     ns << FID_AHCOMMAND;
@@ -102,7 +102,7 @@ bool Features::canCommand() const
 }
 
 #define FID_REGISTER "jabber:iq:register"
-bool Features::canRegister() const
+bool Features::hasRegister() const
 {
     QSet<QString> ns;
     ns << FID_REGISTER;
@@ -111,7 +111,7 @@ bool Features::canRegister() const
 }
 
 #define FID_SEARCH "jabber:iq:search"
-bool Features::canSearch() const
+bool Features::hasSearch() const
 {
     QSet<QString> ns;
     ns << FID_SEARCH;
@@ -120,7 +120,7 @@ bool Features::canSearch() const
 }
 
 #define FID_GROUPCHAT "http://jabber.org/protocol/muc"
-bool Features::canGroupchat() const
+bool Features::hasGroupchat() const
 {
     QSet<QString> ns;
     ns << FID_GROUPCHAT;
@@ -129,7 +129,7 @@ bool Features::canGroupchat() const
 }
 
 #define FID_VOICE "http://www.google.com/xmpp/protocol/voice/v1"
-bool Features::canVoice() const
+bool Features::hasVoice() const
 {
     QSet<QString> ns;
     ns << FID_VOICE;
@@ -138,7 +138,7 @@ bool Features::canVoice() const
 }
 
 #define FID_GATEWAY "jabber:iq:gateway"
-bool Features::isGateway() const
+bool Features::hasGateway() const
 {
     QSet<QString> ns;
     ns << FID_GATEWAY;
@@ -156,7 +156,7 @@ bool Features::hasVersion() const
 }
 
 #define FID_DISCO "http://jabber.org/protocol/disco"
-bool Features::canDisco() const
+bool Features::hasDisco() const
 {
     QSet<QString> ns;
     ns << FID_DISCO;
@@ -167,7 +167,7 @@ bool Features::canDisco() const
 }
 
 #define FID_CHATSTATE "http://jabber.org/protocol/chatstates"
-bool Features::canChatState() const
+bool Features::hasChatState() const
 {
     QSet<QString> ns;
     ns << FID_CHATSTATE;
@@ -176,7 +176,7 @@ bool Features::canChatState() const
 }
 
 #define FID_VCARD "vcard-temp"
-bool Features::haveVCard() const
+bool Features::hasVCard() const
 {
     QSet<QString> ns;
     ns << FID_VCARD;
@@ -185,7 +185,7 @@ bool Features::haveVCard() const
 }
 
 #define FID_MESSAGECARBONS "urn:xmpp:carbons:2"
-bool Features::canMessageCarbons() const
+bool Features::hasMessageCarbons() const
 {
     QStringList ns;
     ns << FID_MESSAGECARBONS;
@@ -249,19 +249,19 @@ long Features::id() const
 {
     if ( _list.count() > 1 )
         return FID_Invalid;
-    else if ( canRegister() )
+    else if ( hasRegister() )
         return FID_Register;
-    else if ( canSearch() )
+    else if ( hasSearch() )
         return FID_Search;
-    else if ( canGroupchat() )
+    else if ( hasGroupchat() )
         return FID_Groupchat;
-    else if ( isGateway() )
+    else if ( hasGateway() )
         return FID_Gateway;
-    else if ( canDisco() )
+    else if ( hasDisco() )
         return FID_Disco;
-    else if ( haveVCard() )
+    else if ( hasVCard() )
         return FID_VCard;
-    else if ( canCommand() )
+    else if ( hasCommand() )
         return FID_AHCommand;
     else if ( test(QStringList(FID_ADD)) )
         return FID_Add;

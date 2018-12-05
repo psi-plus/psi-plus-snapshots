@@ -18,8 +18,8 @@
  *
  */
 
-#include <qapplication.h>
-#include <qtextedit.h>
+#include <QApplication>
+#include <QTextEdit>
 #include <qgroupbox.h>
 #include <qlineedit.h>
 #include <qlabel.h>
@@ -314,7 +314,7 @@ private slots:
             "\n"
             "Currently supports:\n"
             "  draft-ietf-xmpp-core-21\n"
-            "  JEP-0025\n"
+            "  XEP-0025\n"
             "\n"
             "Copyright (C) 2003 Justin Karneges").arg(AppName));
     }

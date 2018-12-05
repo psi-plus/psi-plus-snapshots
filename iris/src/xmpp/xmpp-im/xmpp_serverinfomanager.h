@@ -1,5 +1,5 @@
 /*
- * serverinfomanager.h
+ * xmpp_serverinfomanager.h
  * Copyright (C) 2006  Remko Troncon
  *
  * This program is free software; you can redistribute it and/or
@@ -21,19 +21,17 @@
 #ifndef SERVERINFOMANAGER_H
 #define SERVERINFOMANAGER_H
 
+#include "xmpp_caps.h"
+
 #include <QObject>
 #include <QString>
 
-#include "xmpp_caps.h"
-
 namespace XMPP {
-    class Client;
-    class Features;
-    class Jid;
-    class DiscoItem;
-}
 
-using namespace XMPP;
+class Client;
+class Features;
+class Jid;
+class DiscoItem;
 
 class ServerInfoManager : public QObject
 {
@@ -44,8 +42,9 @@ public:
 
     const QString& multicastService() const;
     bool hasPEP() const;
-    inline const Features &features() const { return features_; }
+    inline const Features &features() const { return _features; }
     bool canMessageCarbons() const;
+    inline const QMap<QString,QStringList> &extraServerInfo() const { return _extraServerInfo; }
 
 signals:
     void featuresChanged();
@@ -57,13 +56,16 @@ private slots:
     void reset();
 
 private:
-    XMPP::Client* client_;
-    CapsSpec caps_;
-    Features features_;
-    QString multicastService_;
-    bool featuresRequested_;
-    bool hasPEP_;
+    XMPP::Client* _client = nullptr;
+    CapsSpec _caps;
+    Features _features;
+    QString _multicastService;
+    QMap<QString,QStringList> _extraServerInfo; // XEP-0128, XEP-0157
+    bool _featuresRequested;
+    bool _hasPEP;
     bool _canMessageCarbons;
 };
+
+} // namespace XMPP
 
 #endif

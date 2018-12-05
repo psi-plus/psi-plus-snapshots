@@ -45,13 +45,14 @@ public:
     QString mediaType;
     QList<HttpHost> httpHosts;
     int hostIndex;
+
     struct {
         int statusCode;
         QString statusString;
         QString get_url;
         QString put_url;
         XEP0363::HttpHeaders headers;
-        int sizeLimit;
+        quint64 sizeLimit;
     } result;
 
     void httpHostsUpdate(const HttpHost &host)
@@ -166,7 +167,7 @@ void HttpFileUpload::discoItemsFinished()
 
 void HttpFileUpload::discoInfoFinished()
 {
-    JT_DiscoInfo *jt = (JT_DiscoInfo *)sender();
+    JT_DiscoInfo *jt = static_cast<JT_DiscoInfo *>(sender());
     d->jtDiscoInfo.removeOne(jt);
     if (!jt->success()) {
         // It can be better to continue the search
@@ -186,7 +187,7 @@ void HttpFileUpload::discoInfoFinished()
     if (ver != XEP0363::vUnknown) {
         const XData::Field field = jt->item().registeredExtension("jabber:x:data").getField("max-file-size");
         if (field.isValid() && field.type() == XData::Field::Field_TextSingle)
-            sizeLimit = field.value().at(0).toInt();
+            sizeLimit = field.value().at(0).toULongLong();
         HttpHost host;
         host.ver = ver;
         host.jid = jt->item().jid();

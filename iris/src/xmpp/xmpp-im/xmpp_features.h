@@ -44,18 +44,30 @@ namespace XMPP
 
         // features
         inline bool isEmpty() const { return _list.isEmpty(); }
-        bool canRegister() const;
-        bool canSearch() const;
-        bool canMulticast() const;
-        bool canGroupchat() const;
-        bool canVoice() const;
-        bool canDisco() const;
-        bool canChatState() const;
-        bool canCommand() const;
-        bool isGateway() const;
+        bool hasRegister() const;
+        bool hasSearch() const;
+        bool hasMulticast() const;
+        bool hasGroupchat() const;
+        bool hasVoice() const;
+        bool hasDisco() const;
+        bool hasChatState() const;
+        bool hasCommand() const;
+        bool hasGateway() const;
         bool hasVersion() const;
-        bool haveVCard() const;
-        bool canMessageCarbons() const;
+        bool hasVCard() const;
+        bool hasMessageCarbons() const;
+
+        [[deprecated]] inline bool canRegister() const { return hasRegister(); }
+        [[deprecated]] inline bool canSearch() const { return hasSearch(); }
+        [[deprecated]] inline bool canMulticast() const { return hasMulticast(); }
+        [[deprecated]] inline bool canGroupchat() const { return hasGroupchat(); }
+        [[deprecated]] inline bool canVoice() const { return hasVoice(); }
+        [[deprecated]] inline bool canDisco() const { return hasDisco(); }
+        [[deprecated]] inline bool canChatState() const { return hasChatState(); }
+        [[deprecated]] inline bool canCommand() const { return hasCommand(); }
+        [[deprecated]] inline bool isGateway() const { return hasGateway(); }
+        [[deprecated]] inline bool haveVCard() const { return hasVCard(); }
+        [[deprecated]] inline bool canMessageCarbons() const { return hasMessageCarbons(); }
 
         enum FeatureID {
             FID_Invalid = -1,

@@ -47,6 +47,7 @@ namespace XMPP
     {
     public:
         RosterItem(const Jid &jid="");
+        RosterItem(const RosterItem &item);
         virtual ~RosterItem();
 
         const Jid & jid() const;

@@ -73,7 +73,8 @@ HEADERS += \
     $$PWD/xmpp-im/xmpp_discoitem.h \
     $$PWD/xmpp-im/xmpp_bitsofbinary.h \
     $$PWD/xmpp-im/xmpp_caps.h \
-    $$PWD/xmpp-im/im.h
+    $$PWD/xmpp-im/im.h \
+    $$PWD/xmpp-im/xmpp_serverinfomanager.h
 
 SOURCES += \
     $$PWD/xmpp-core/connector.cpp \
@@ -104,5 +105,6 @@ SOURCES += \
     $$PWD/xmpp-im/filetransfer.cpp \
     $$PWD/xmpp-im/httpfileupload.cpp \
     $$PWD/xmpp-im/xmpp_bitsofbinary.cpp \
-    $$PWD/xmpp-im/xmpp_caps.cpp
+    $$PWD/xmpp-im/xmpp_caps.cpp \
+    $$PWD/xmpp-im/xmpp_serverinfomanager.cpp
 

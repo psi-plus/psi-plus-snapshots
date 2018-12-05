@@ -57,6 +57,20 @@ namespace XMPP {
             Sent      // own messages are sent from other clients
         };
 
+        // XEP-0334
+        enum ProcessingHint {
+            NoPermanentStore = 1,
+            NoStore          = 2,
+            NoCopy           = 4,
+            Store            = 8
+        };
+        Q_DECLARE_FLAGS(ProcessingHints, ProcessingHint)
+
+        struct StanzaId {
+            Jid by;
+            QString id;
+        };
+
         Message(const Jid &to="");
         Message(const Message &from);
         Message & operator=(const Message &from);
@@ -86,34 +100,34 @@ namespace XMPP {
         void setThread(const QString &s, bool send = false);
         void setError(const Stanza::Error &err);
 
-        // JEP-0060
+        // XEP-0060
         const QString& pubsubNode() const;
         const QList<PubSubItem>& pubsubItems() const;
         const QList<PubSubRetraction>& pubsubRetractions() const;
 
-        // JEP-0091
+        // XEP-0091
         QDateTime timeStamp() const;
         void setTimeStamp(const QDateTime &ts, bool send = false);
 
-        // JEP-0071
+        // XEP-0071
         HTMLElement html(const QString &lang="") const;
         void setHTML(const HTMLElement &s, const QString &lang="");
         bool containsHTML() const;
 
-        // JEP-0066
+        // XEP-0066
         UrlList urlList() const;
         void urlAdd(const Url &u);
         void urlsClear();
         void setUrlList(const UrlList &list);
 
-        // JEP-0022
+        // XEP-0022
         QString eventId() const;
         void setEventId(const QString& id);
         bool containsEvents() const;
         bool containsEvent(MsgEvent e) const;
         void addEvent(MsgEvent e);
 
-        // JEP-0085
+        // XEP-0085
         ChatState chatState() const;
         void setChatState(ChatState);
 
@@ -123,36 +137,36 @@ namespace XMPP {
         QString messageReceiptId() const;
         void setMessageReceiptId(const QString &s);
 
-        // JEP-0027
+        // XEP-0027
         QString xsigned() const;
         void setXSigned(const QString &s);
         QString xencrypted() const;
         void setXEncrypted(const QString &s);
 
-        // JEP-0033
+        // XEP-0033
         AddressList addresses() const;
         AddressList findAddresses(Address::Type t) const;
         void addAddress(const Address &a);
         void clearAddresses();
         void setAddresses(const AddressList &list);
 
-        // JEP-144
+        // XEP-144
         const RosterExchangeItems& rosterExchangeItems() const;
         void setRosterExchangeItems(const RosterExchangeItems&);
 
-        // JEP-172
+        // XEP-172
         void setNick(const QString&);
         const QString& nick() const;
 
-        // JEP-0070
+        // XEP-0070
         void setHttpAuthRequest(const HttpAuthRequest&);
         HttpAuthRequest httpAuthRequest() const;
 
-        // JEP-0004
+        // XEP-0004
         void setForm(const XData&);
         const XData& getForm() const;
 
-        // JEP-xxxx SXE
+        // XEP-xxxx SXE
         void setSxe(const QDomElement&);
         const QDomElement& sxe() const;
 
@@ -173,9 +187,13 @@ namespace XMPP {
         void setForwardedFrom(const Jid &jid);
         const Jid &forwardedFrom() const;
 
-        // XEP-308
+        // XEP-0308
         QString replaceId() const;
         void setReplaceId(const QString& id);
+
+        // XEP-0334
+        void setProcessingHints(const ProcessingHints &hints);
+        ProcessingHints processingHints() const;
 
         // MUC
         void addMUCStatus(int);
@@ -187,6 +205,12 @@ namespace XMPP {
         const QString& mucPassword() const;
         void setMUCPassword(const QString&);
         bool hasMUCUser() const;
+
+        // XEP-0359
+        StanzaId stanzaId() const;
+        void setStanzaId(const StanzaId &id);
+        QString originId() const;
+        void setOriginId(const QString &id);
 
         // Obsolete invitation
         QString invite() const;
@@ -208,5 +232,8 @@ namespace XMPP {
         QExplicitlySharedDataPointer<Private> d;
     };
 }
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(XMPP::Message::ProcessingHints)
+
 
 #endif

@@ -30,7 +30,6 @@ namespace XMPP
     {
     public:
         Resource(const QString &name="", const Status &s=Status());
-        ~Resource();
 
         const QString & name() const;
         int priority() const;

@@ -53,7 +53,7 @@ class CapsRegistry : public QObject
     Q_OBJECT
 
 public:
-    CapsRegistry(QObject *parent = 0);
+    CapsRegistry(QObject *parent = nullptr);
 
     static CapsRegistry* instance();
     static void setInstance(CapsRegistry*instance);

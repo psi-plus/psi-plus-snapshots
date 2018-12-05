@@ -228,7 +228,7 @@ QString queryNS(const QDomElement &e)
     or - if the error is not defined in the RFC - the empty string.
 
     Note: This function uses the Stanza::Error class,
-    so it may guess missing values as defined in JEP-0086.
+    so it may guess missing values as defined in XEP-0086.
 
     \param e    the element representing stanza
     \param baseNS    the base namespace of the stream

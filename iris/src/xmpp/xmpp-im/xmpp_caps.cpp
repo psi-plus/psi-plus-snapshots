@@ -65,7 +65,7 @@ CapsInfo CapsInfo::fromXml(const QDomElement &caps)
  * \class CapsRegistry
  * \brief A singleton class managing the capabilities of clients.
  */
-CapsRegistry *CapsRegistry::instance_ = 0;
+CapsRegistry *CapsRegistry::instance_ = nullptr;
 
 /**
  * \brief Default constructor.

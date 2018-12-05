@@ -20,7 +20,7 @@
 
 /*
   Notes:
-    - For Non-SASL auth (JEP-0078), username and resource fields are required.
+    - For Non-SASL auth (XEP-0078), username and resource fields are required.
 
   TODO:
     - sasl needParams is totally jacked?  PLAIN requires authzid, etc

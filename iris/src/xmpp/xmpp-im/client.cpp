@@ -82,6 +82,7 @@
 #include "filetransfer.h"
 #include "xmpp_caps.h"
 #include "protocol.h"
+#include "xmpp_serverinfomanager.h"
 
 #ifdef Q_OS_WIN
 #define vsnprintf _vsnprintf
@@ -113,28 +114,28 @@ public:
 
     QPointer<ClientStream> stream;
     QDomDocument doc;
-    int id_seed;
-    Task *root;
+    int id_seed = 0xaaaa;
+    Task *root = nullptr;
     QString host, user, pass, resource;
     QString osName, osVersion, tzname, clientName, clientVersion;
     CapsSpec caps, serverCaps;
     DiscoItem::Identity identity;
     Features features;
     QMap<QString,Features> extension_features;
-    int tzoffset;
-    bool useTzoffset;    // manual tzoffset is old way of doing utc<->local translations
-    bool active;
+    int tzoffset = 0;
+    bool useTzoffset = false;    // manual tzoffset is old way of doing utc<->local translations
+    bool active = false;
 
     LiveRoster roster;
     ResourceList resourceList;
-    CapsManager *capsman;
-    S5BManager *s5bman;
-    IBBManager *ibbman;
-    BoBManager *bobman;
-    FileTransferManager *ftman;
-    bool ftEnabled;
+    CapsManager *capsman = nullptr;
+    S5BManager *s5bman = nullptr;
+    IBBManager *ibbman = nullptr;
+    BoBManager *bobman = nullptr;
+    FileTransferManager *ftman = nullptr;
+    ServerInfoManager *serverInfoManager = nullptr;
     QList<GroupChat> groupChatList;
-    EncryptionHandler *encryptionHandler;
+    EncryptionHandler *encryptionHandler = nullptr;
 };
 
 
@@ -142,14 +143,11 @@ Client::Client(QObject *par)
 :QObject(par)
 {
     d = new ClientPrivate;
-    d->tzoffset = 0;
-    d->useTzoffset = false;
     d->active = false;
     d->osName = "N/A";
     d->clientName = "N/A";
     d->clientVersion = "0.0";
 
-    d->id_seed = 0xaaaa;
     d->root = new Task(this, true);
 
     d->s5bman = new S5BManager(this);
@@ -160,9 +158,11 @@ Client::Client(QObject *par)
 
     d->bobman = new BoBManager(this);
 
-    d->ftman = 0;
+    d->ftman = nullptr;
 
     d->capsman = new CapsManager(this);
+
+    d->serverInfoManager = new ServerInfoManager(this);
 }
 
 Client::~Client()
@@ -261,6 +261,11 @@ BoBManager *Client::bobManager() const
 CapsManager *Client::capsManager() const
 {
     return d->capsman;
+}
+
+ServerInfoManager *Client::serverInfoManager() const
+{
+    return d->serverInfoManager;
 }
 
 bool Client::isActive() const

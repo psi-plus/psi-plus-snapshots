@@ -34,9 +34,7 @@ using namespace XMPP;
 class DiscoInfoTask::Private
 {
 public:
-    Private() : allowCache(true) { }
-
-    bool allowCache;
+    bool allowCache = true;
     Jid jid;
     QString node;
     DiscoItem::Identity ident;

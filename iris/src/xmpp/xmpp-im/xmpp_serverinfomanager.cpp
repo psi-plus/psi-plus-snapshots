@@ -1,5 +1,5 @@
 /*
- * serverinfomanager.cpp
+ * xmpp_serverinfomanager.cpp
  * Copyright (C) 2006  Remko Troncon
  *
  * This program is free software; you can redistribute it and/or
@@ -18,34 +18,36 @@
  *
  */
 
-#include "serverinfomanager.h"
+#include "xmpp_serverinfomanager.h"
 #include "xmpp_tasks.h"
 #include "xmpp_caps.h"
 
-using namespace XMPP;
+namespace XMPP {
 
 ServerInfoManager::ServerInfoManager(Client* client)
-    : client_(client)
+    : _client(client)
     , _canMessageCarbons(false)
 {
     deinitialize();
-    connect(client_, SIGNAL(rosterRequestFinished(bool, int, const QString &)), SLOT(initialize()));
+    // NOTE we can use this class for any server, but for this we shouldn't use roster signal here
+    connect(_client, SIGNAL(rosterRequestFinished(bool, int, const QString &)), SLOT(initialize()), Qt::QueuedConnection);
 }
 
 void ServerInfoManager::reset()
 {
-    hasPEP_ = false;
-    multicastService_ = QString();
+    _hasPEP = false;
+    _multicastService.clear();
+    _extraServerInfo.clear();
     disconnect(CapsRegistry::instance());
-    disconnect(client_, SIGNAL(disconnected()), this, SLOT(deinitialize()));
+    disconnect(_client, SIGNAL(disconnected()), this, SLOT(deinitialize()));
 }
 
 void ServerInfoManager::initialize()
 {
-    connect(client_, SIGNAL(disconnected()), SLOT(deinitialize()));
-    JT_DiscoInfo *jt = new JT_DiscoInfo(client_->rootTask());
+    connect(_client, SIGNAL(disconnected()), SLOT(deinitialize()));
+    JT_DiscoInfo *jt = new JT_DiscoInfo(_client->rootTask());
     connect(jt, SIGNAL(finished()), SLOT(disco_finished()));
-    jt->get(client_->jid().domain());
+    jt->get(_client->jid().domain());
     jt->go(true);
 }
 
@@ -57,12 +59,12 @@ void ServerInfoManager::deinitialize()
 
 const QString& ServerInfoManager::multicastService() const
 {
-    return multicastService_;
+    return _multicastService;
 }
 
 bool ServerInfoManager::hasPEP() const
 {
-    return hasPEP_;
+    return _hasPEP;
 }
 
 bool ServerInfoManager::canMessageCarbons() const
@@ -72,22 +74,35 @@ bool ServerInfoManager::canMessageCarbons() const
 
 void ServerInfoManager::disco_finished()
 {
-    JT_DiscoInfo *jt = (JT_DiscoInfo *)sender();
+    JT_DiscoInfo *jt = static_cast<JT_DiscoInfo *>(sender());
     if (jt->success()) {
-        features_ = jt->item().features();
+        _features = jt->item().features();
 
-        if (features_.canMulticast())
-            multicastService_ = client_->jid().domain();
+        if (_features.hasMulticast())
+            _multicastService = _client->jid().domain();
 
-        _canMessageCarbons = features_.canMessageCarbons();
+        _canMessageCarbons = _features.hasMessageCarbons();
 
         // Identities
         DiscoItem::Identities is = jt->item().identities();
         foreach(DiscoItem::Identity i, is) {
             if (i.category == "pubsub" && i.type == "pep")
-                hasPEP_ = true;
+                _hasPEP = true;
+        }
+
+        for (const auto &x: jt->item().extensions()) {
+            if (x.type() == XData::Data_Result && x.registrarType() == QLatin1String("http://jabber.org/network/serverinfo")) {
+                for (const auto &f: x.fields()) {
+                    if (f.type() == XData::Field::Field_ListMulti) {
+                        QStringList values;
+                        _extraServerInfo.insert(f.var(), f.value()); // covers XEP-0157
+                    }
+                }
+            }
         }
 
         emit featuresChanged();
     }
 }
+
+} // namespace XMPP
