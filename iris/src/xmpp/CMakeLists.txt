@@ -79,6 +79,7 @@ set(HEADERS
     xmpp-im/xmpp_client.h
     xmpp-im/xmpp_discoinfotask.h
     xmpp-im/xmpp_ibb.h
+    xmpp-im/xmpp_serverinfomanager.h
     xmpp-im/xmpp_task.h
     xmpp-im/xmpp_tasks.h
 
@@ -107,6 +108,7 @@ set(PLAIN_SOURCES
     xmpp-im/xmpp_discoinfotask.cpp
     xmpp-im/xmpp_discoitem.cpp
     xmpp-im/xmpp_ibb.cpp
+    xmpp-im/xmpp_serverinfomanager.cpp
     xmpp-im/xmpp_subsets.cpp
     xmpp-im/xmpp_task.cpp
     xmpp-im/xmpp_tasks.cpp
