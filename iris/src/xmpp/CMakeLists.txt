@@ -154,9 +154,6 @@ if( SEPARATE_QJDNS AND WIN32)
     set(EXTRA_LDFLAGS ws2_32)
 endif()
 
-set_property(TARGET iris PROPERTY CXX_STANDARD 14)
-set_property(TARGET iris PROPERTY CXX_STANDARD_REQUIRED ON)
-
 target_link_libraries(iris ${IDN_LIBRARY} ${ZLIB_LIBRARY} ${EXTRA_LDFLAGS})
 target_link_libraries(iris irisnet Qt5::Core Qt5::Gui Qt5::Network Qt5::Xml ${qca_LIB})
 target_compile_definitions(iris INTERFACE IRISNET_STATIC)

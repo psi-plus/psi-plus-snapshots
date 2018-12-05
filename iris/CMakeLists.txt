@@ -23,6 +23,8 @@ set( CMAKE_MODULE_PATH
 option( USE_QJDNS "Use qjdns/jdns library. Disabled by default for Qt5" OFF )
 option( SEPARATE_QJDNS "Build qjdns with iris library" OFF )
 
+set(CMAKE_CXX_STANDARD 14)
+
 include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 include_directories(include/iris)
 

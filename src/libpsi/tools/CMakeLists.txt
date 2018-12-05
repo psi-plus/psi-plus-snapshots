@@ -1,3 +1,5 @@
+set(CMAKE_CXX_STANDARD 14)
+
 unset(MOC_SOURCES)
 unset(HEADERS)
 unset(PLAIN_HEADERS)
