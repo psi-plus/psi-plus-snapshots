@@ -176,7 +176,7 @@ JDnsShutdownWorker::JDnsShutdownWorker(const QList<QJDnsShared*> &_list) : QObje
 
 void JDnsShutdownWorker::jdns_shutdownFinished()
 {
-    QJDnsShared *i = (QJDnsShared *)sender();
+    QJDnsShared *i = static_cast<QJDnsShared *>(sender());
     list.removeAll(i);
     delete i;
     if(list.isEmpty())
@@ -1010,7 +1010,7 @@ void QJDnsSharedPrivate::publishCancel(QJDnsSharedRequest *obj)
 
 void QJDnsSharedPrivate::jdns_resultsReady(int id, const QJDns::Response &results)
 {
-    QJDns *jdns = (QJDns *)sender();
+    QJDns *jdns = static_cast<QJDns *>(sender());
     QJDnsSharedRequest *obj = findRequest(jdns, id);
     Q_ASSERT(obj);
 
@@ -1091,7 +1091,7 @@ void QJDnsSharedPrivate::jdns_resultsReady(int id, const QJDns::Response &result
 
 void QJDnsSharedPrivate::jdns_published(int id)
 {
-    QJDns *jdns = (QJDns *)sender();
+    QJDns *jdns = static_cast<QJDns *>(sender());
     QJDnsSharedRequest *obj = findRequest(jdns, id);
     Q_ASSERT(obj);
 
@@ -1125,7 +1125,7 @@ void QJDnsSharedPrivate::jdns_published(int id)
 
 void QJDnsSharedPrivate::jdns_error(int id, QJDns::Error e)
 {
-    QJDns *jdns = (QJDns *)sender();
+    QJDns *jdns = static_cast<QJDns *>(sender());
     QJDnsSharedRequest *obj = findRequest(jdns, id);
     Q_ASSERT(obj);
 
@@ -1186,7 +1186,7 @@ void QJDnsSharedPrivate::jdns_error(int id, QJDns::Error e)
 
 void QJDnsSharedPrivate::jdns_shutdownFinished()
 {
-    QJDns *jdns = (QJDns *)sender();
+    QJDns *jdns = static_cast<QJDns *>(sender());
 
     addDebug(instanceForQJDns.value(jdns)->index, "jdns_shutdownFinished, removing interface");
 
@@ -1202,7 +1202,7 @@ void QJDnsSharedPrivate::jdns_shutdownFinished()
 
 void QJDnsSharedPrivate::jdns_debugLinesReady()
 {
-    QJDns *jdns = (QJDns *)sender();
+    QJDns *jdns = static_cast<QJDns *>(sender());
 
     doDebug(jdns, instanceForQJDns.value(jdns)->index);
 }

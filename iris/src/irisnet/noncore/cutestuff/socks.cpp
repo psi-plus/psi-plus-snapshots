@@ -1120,7 +1120,7 @@ void SocksServer::connectionReady(qintptr s)
 
 void SocksServer::connectionError()
 {
-    SocksClient *c = (SocksClient *)sender();
+    SocksClient *c = static_cast<SocksClient *>(sender());
     d->incomingConns.removeAll(c);
     c->deleteLater();
 }

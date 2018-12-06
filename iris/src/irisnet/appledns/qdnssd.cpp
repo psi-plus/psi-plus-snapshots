@@ -625,7 +625,7 @@ public:
 private slots:
     void sn_activated()
     {
-        SafeSocketNotifier *sn_read = (SafeSocketNotifier *)sender();
+        SafeSocketNotifier *sn_read = static_cast<SafeSocketNotifier *>(sender());
         Request *req = _requestsBySocket.value(sn_read);
         if(!req)
             return;
@@ -747,7 +747,7 @@ private slots:
 
     void doError()
     {
-        SafeTimer *t = (SafeTimer *)sender();
+        SafeTimer *t = static_cast<SafeTimer *>(sender());
         Request *req = _requestsByTimer.value(t);
         if(!req)
             return;

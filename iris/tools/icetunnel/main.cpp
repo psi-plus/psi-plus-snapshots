@@ -837,7 +837,7 @@ private slots:
 
     void sock_readyRead()
     {
-        QUdpSocket *sock = (QUdpSocket *)sender();
+        QUdpSocket *sock = static_cast<QUdpSocket *>(sender());
         int at = -1;
         for(int n = 0; n < channels.count(); ++n)
         {

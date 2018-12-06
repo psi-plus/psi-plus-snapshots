@@ -836,7 +836,7 @@ void S5BManager::srv_incomingReady(SocksClient *sc, const QString &key)
         sc->grantUDPAssociate("", 0);
     else
         sc->grantConnect();
-    e->relatedServer = (S5BServer *)sender();
+    e->relatedServer = static_cast<S5BServer *>(sender());
     e->i->setIncomingClient(sc);
 }
 
@@ -942,7 +942,7 @@ void S5BManager::con_sendUDP(S5BConnection *c, const QByteArray &buf)
 
 void S5BManager::item_accepted()
 {
-    Item *i = (Item *)sender();
+    Item *i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
     emit e->c->accepted(); // signal
@@ -950,7 +950,7 @@ void S5BManager::item_accepted()
 
 void S5BManager::item_tryingHosts(const StreamHostList &list)
 {
-    Item *i = (Item *)sender();
+    Item *i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
     e->c->tryingHosts(list); // signal
@@ -958,7 +958,7 @@ void S5BManager::item_tryingHosts(const StreamHostList &list)
 
 void S5BManager::item_proxyConnect()
 {
-    Item *i = (Item *)sender();
+    Item *i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
     e->c->proxyConnect(); // signal
@@ -966,7 +966,7 @@ void S5BManager::item_proxyConnect()
 
 void S5BManager::item_waitingForActivation()
 {
-    Item *i = (Item *)sender();
+    Item *i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
     e->c->waitingForActivation(); // signal
@@ -974,7 +974,7 @@ void S5BManager::item_waitingForActivation()
 
 void S5BManager::item_connected()
 {
-    Item *i = (Item *)sender();
+    Item *i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
     // grab the client
@@ -989,7 +989,7 @@ void S5BManager::item_connected()
 
 void S5BManager::item_error(int x)
 {
-    Item *i = (Item *)sender();
+    Item *i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
     e->c->man_failed(x);
@@ -1035,7 +1035,7 @@ void S5BManager::queryProxy(Entry *e)
 
 void S5BManager::query_finished()
 {
-    JT_S5B *query = (JT_S5B *)sender();
+    JT_S5B *query = static_cast<JT_S5B *>(sender());
     Entry* e = 0;
     foreach(Entry* i, d->activeList) {
         if(i->query == query) {
@@ -1920,7 +1920,7 @@ StreamHost S5BConnector::streamHostUsed() const
 
 void S5BConnector::item_result(bool b)
 {
-    Item *i = (Item *)sender();
+    Item *i = static_cast<Item *>(sender());
     if(b) {
         d->active = i->client;
         i->client = 0;
@@ -2118,7 +2118,7 @@ void S5BServer::ss_incomingUDP(const QString &host, int port, const QHostAddress
 
 void S5BServer::item_result(bool b)
 {
-    Item *i = (Item *)sender();
+    Item *i = static_cast<Item *>(sender());
 #ifdef S5B_DEBUG
     qDebug("S5BServer item result: %d\n", b);
 #endif

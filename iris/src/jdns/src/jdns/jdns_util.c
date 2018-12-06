@@ -416,7 +416,7 @@ jdns_stringlist_t *jdns_stringlist_new()
 {
     jdns_list_t *a = jdns_list_new();
     a->valueList = 1;
-    return (jdns_stringlist_t *)a;
+    return static_cast<jdns_stringlist_t *>(a);
 }
 
 jdns_stringlist_t *jdns_stringlist_copy(const jdns_stringlist_t *a)

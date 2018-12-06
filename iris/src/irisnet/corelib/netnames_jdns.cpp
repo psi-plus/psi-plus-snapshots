@@ -381,7 +381,7 @@ private slots:
 
     void iface_unavailable()
     {
-        NetInterface *iface = (NetInterface *)sender();
+        NetInterface *iface = static_cast<NetInterface *>(sender());
         ifaces.removeAll(iface);
         delete iface;
 
@@ -689,7 +689,7 @@ public:
 private slots:
     void req_resultsReady()
     {
-        QJDnsSharedRequest *req = (QJDnsSharedRequest *)sender();
+        QJDnsSharedRequest *req = static_cast<QJDnsSharedRequest *>(sender());
         Item *i = getItemByReq(req);
         Q_ASSERT(i);
 
@@ -1823,7 +1823,7 @@ private slots:
 
     void pub_extra_ready()
     {
-        QJDnsSharedRequest *req = (QJDnsSharedRequest *)sender();
+        QJDnsSharedRequest *req = static_cast<QJDnsSharedRequest *>(sender());
         JDnsPublishExtra *extra = 0;
         foreach(JDnsPublishExtra *e, extraList)
         {
@@ -2471,7 +2471,7 @@ private slots:
 
     void jb_available(const QByteArray &instance)
     {
-        JDnsBrowse *jb = (JDnsBrowse *)sender();
+        JDnsBrowse *jb = static_cast<JDnsBrowse *>(sender());
         BrowseItem *i = browseItemList.itemByBrowse(jb);
         Q_ASSERT(i);
 
@@ -2484,7 +2484,7 @@ private slots:
 
     void jb_unavailable(const QByteArray &instance)
     {
-        JDnsBrowse *jb = (JDnsBrowse *)sender();
+        JDnsBrowse *jb = static_cast<JDnsBrowse *>(sender());
         BrowseItem *i = browseItemList.itemByBrowse(jb);
         Q_ASSERT(i);
 
@@ -2508,7 +2508,7 @@ private slots:
 
     void jr_finished()
     {
-        JDnsServiceResolve *jr = (JDnsServiceResolve *)sender();
+        JDnsServiceResolve *jr = static_cast<JDnsServiceResolve *>(sender());
         ResolveItem *i = resolveItemList.itemByResolve(jr);
         Q_ASSERT(i);
 
@@ -2563,7 +2563,7 @@ private slots:
 
     void jr_error(QJDnsSharedRequest::Error e)
     {
-        JDnsServiceResolve *jr = (JDnsServiceResolve *)sender();
+        JDnsServiceResolve *jr = static_cast<JDnsServiceResolve *>(sender());
         ResolveItem *i = resolveItemList.itemByResolve(jr);
         Q_ASSERT(i);
 
@@ -2596,7 +2596,7 @@ private slots:
 
     void jp_published()
     {
-        JDnsPublish *jp = (JDnsPublish *)sender();
+        JDnsPublish *jp = static_cast<JDnsPublish *>(sender());
         PublishItem *i = publishItemList.itemByPublish(jp);
         Q_ASSERT(i);
 
@@ -2605,7 +2605,7 @@ private slots:
 
     void jp_error(QJDnsSharedRequest::Error e)
     {
-        JDnsPublish *jp = (JDnsPublish *)sender();
+        JDnsPublish *jp = static_cast<JDnsPublish *>(sender());
         PublishItem *i = publishItemList.itemByPublish(jp);
         Q_ASSERT(i);
 
@@ -2633,7 +2633,7 @@ private slots:
 
     void jpe_published()
     {
-        JDnsPublishExtra *jp = (JDnsPublishExtra *)sender();
+        JDnsPublishExtra *jp = static_cast<JDnsPublishExtra *>(sender());
         PublishExtraItem *i = publishExtraItemList.itemByPublish(jp);
         Q_ASSERT(i);
 
@@ -2642,7 +2642,7 @@ private slots:
 
     void jpe_error(QJDnsSharedRequest::Error e)
     {
-        JDnsPublishExtra *jp = (JDnsPublishExtra *)sender();
+        JDnsPublishExtra *jp = static_cast<JDnsPublishExtra *>(sender());
         PublishExtraItem *i = publishExtraItemList.itemByPublish(jp);
         Q_ASSERT(i);
 

@@ -563,7 +563,7 @@ static void list_delete(list_t *l)
 
 static void list_insert(list_t *l, void *item, int pos)
 {
-    list_item_t *i = (list_item_t *)item;
+    list_item_t *i = static_cast<list_item_t *>(item);
     if(!l->item)
         l->item = (list_item_t **)malloc(sizeof(list_item_t *));
     else
@@ -579,7 +579,7 @@ static void list_insert(list_t *l, void *item, int pos)
 static void list_remove(list_t *l, void *item)
 {
     int n;
-    list_item_t *i = (list_item_t *)item;
+    list_item_t *i = static_cast<list_item_t *>(item);
     int pos = -1;
     for(n = 0; n < l->count; ++n)
     {
@@ -1566,7 +1566,7 @@ void _debug_line(jdns_session_t *s, const char *format, ...)
 
 int _callback_time_now(mdnsd d, void *arg)
 {
-    jdns_session_t *s = (jdns_session_t *)arg;
+    jdns_session_t *s = static_cast<jdns_session_t *>(arg);
     (void)d;
     // offset the time, mdnsd doesn't like starting at 0
     return s->cb.time_now(s, s->cb.app) + 120 * 1000;
@@ -1574,7 +1574,7 @@ int _callback_time_now(mdnsd d, void *arg)
 
 int _callback_rand_int(mdnsd d, void *arg)
 {
-    jdns_session_t *s = (jdns_session_t *)arg;
+    jdns_session_t *s = static_cast<jdns_session_t *>(arg);
     (void)d;
     return s->cb.rand_int(s, s->cb.app);
 }
@@ -2779,7 +2779,7 @@ int _multicast_query_ans(mdnsda a, void *arg)
     jdns_rr_t *rr;
     jdns_event_t *event;
 
-    s = (jdns_session_t *)arg;
+    s = static_cast<jdns_session_t *>(arg);
 
     // what query is this for?
     q = 0;
@@ -2951,7 +2951,7 @@ void _multicast_pubresult(int result, char *name, int type, void *arg)
     jdns_event_t *event;
     int n;
 
-    s = (jdns_session_t *)arg;
+    s = static_cast<jdns_session_t *>(arg);
 
     // find the associated pub item
     pub = 0;

@@ -927,7 +927,7 @@ public:
 private slots:
     void browse_available(const XMPP::ServiceInstance &instance)
     {
-        int at = indexOfBrowseByBrowse((AppleBrowse *)sender());
+        int at = indexOfBrowseByBrowse(static_cast<AppleBrowse *>(sender()));
         Q_ASSERT(at != -1);
 
         emit browse_instanceAvailable(browseList[at]->id, instance);
@@ -935,7 +935,7 @@ private slots:
 
     void browse_unavailable(const XMPP::ServiceInstance &instance)
     {
-        int at = indexOfBrowseByBrowse((AppleBrowse *)sender());
+        int at = indexOfBrowseByBrowse(static_cast<AppleBrowse *>(sender()));
         Q_ASSERT(at != -1);
 
         emit browse_instanceUnavailable(browseList[at]->id, instance);
@@ -943,7 +943,7 @@ private slots:
 
     void browse_error()
     {
-        int at = indexOfBrowseByBrowse((AppleBrowse *)sender());
+        int at = indexOfBrowseByBrowse(static_cast<AppleBrowse *>(sender()));
         Q_ASSERT(at != -1);
 
         Browse *b = browseList[at];
@@ -958,7 +958,7 @@ private slots:
 
     void resolve_finished(const QList<QHostAddress> &addrs, int port)
     {
-        int at = indexOfResolveByResolve((AppleBrowseLookup *)sender());
+        int at = indexOfResolveByResolve(static_cast<AppleBrowseLookup *>(sender()));
         Q_ASSERT(at != -1);
 
         Resolve *r = resolveList[at];
@@ -980,7 +980,7 @@ private slots:
 
     void resolve_error()
     {
-        int at = indexOfResolveByResolve((AppleBrowseLookup *)sender());
+        int at = indexOfResolveByResolve(static_cast<AppleBrowseLookup *>(sender()));
         Q_ASSERT(at != -1);
 
         Resolve *r = resolveList[at];

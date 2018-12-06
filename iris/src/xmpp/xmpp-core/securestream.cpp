@@ -588,7 +588,7 @@ void SecureStream::layer_tlsClosed(const QByteArray &)
 
 void SecureStream::layer_readyRead(const QByteArray &a)
 {
-    SecureLayer *s = (SecureLayer *)sender();
+    SecureLayer *s = static_cast<SecureLayer *>(sender());
     QList<SecureLayer*>::Iterator it(d->layers.begin());
     while((*it) != s) {
         Q_ASSERT(it != d->layers.end());
@@ -609,7 +609,7 @@ void SecureStream::layer_readyRead(const QByteArray &a)
 
 void SecureStream::layer_needWrite(const QByteArray &a)
 {
-    SecureLayer *s = (SecureLayer *)sender();
+    SecureLayer *s = static_cast<SecureLayer *>(sender());
     QList<SecureLayer*>::Iterator it(d->layers.begin());
     while((*it) != s) {
         Q_ASSERT(it != d->layers.end());
@@ -630,7 +630,7 @@ void SecureStream::layer_needWrite(const QByteArray &a)
 
 void SecureStream::layer_error(int x)
 {
-    SecureLayer *s = (SecureLayer *)sender();
+    SecureLayer *s = static_cast<SecureLayer *>(sender());
     int type = s->type;
     d->errorCode = x;
     setOpenMode(QIODevice::NotOpen);

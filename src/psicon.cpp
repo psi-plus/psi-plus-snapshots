@@ -1193,7 +1193,7 @@ void PsiCon::setStatusMessage(QString message)
 
 void PsiCon::pa_updatedActivity()
 {
-    PsiAccount *pa = (PsiAccount *)sender();
+    PsiAccount *pa = static_cast<PsiAccount *>(sender());
     emit accountUpdated(pa);
 
     // update s5b server
@@ -1204,7 +1204,7 @@ void PsiCon::pa_updatedActivity()
 
 void PsiCon::pa_updatedAccount()
 {
-    PsiAccount *pa = (PsiAccount *)sender();
+    PsiAccount *pa = static_cast<PsiAccount *>(sender());
     emit accountUpdated(pa);
 
     d->updatedAccountTimer_->start();

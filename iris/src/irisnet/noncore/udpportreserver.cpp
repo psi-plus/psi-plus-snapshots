@@ -253,7 +253,7 @@ public:
 private slots:
     void sock_readyRead()
     {
-        QUdpSocket *sock = (QUdpSocket *)sender();
+        QUdpSocket *sock = static_cast<QUdpSocket *>(sender());
 
         // eat all packets
         while(sock->hasPendingDatagrams())

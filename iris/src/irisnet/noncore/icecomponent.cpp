@@ -632,7 +632,7 @@ private slots:
 
     void lt_started()
     {
-        IceLocalTransport *sock = (IceLocalTransport *)sender();
+        IceLocalTransport *sock = static_cast<IceLocalTransport *>(sender());
         bool isLocalLeap = false;
         int at = findLocalTransport(sock, &isLocalLeap);
         Q_ASSERT(at != -1);
@@ -711,7 +711,7 @@ private slots:
 
     void lt_stopped()
     {
-        IceLocalTransport *sock = (IceLocalTransport *)sender();
+        IceLocalTransport *sock = static_cast<IceLocalTransport *>(sender());
         bool isLocalLeap = false;
         int at = findLocalTransport(sock, &isLocalLeap);
         Q_ASSERT(at != -1);
@@ -752,7 +752,7 @@ private slots:
 
     void lt_addressesChanged()
     {
-        IceLocalTransport *sock = (IceLocalTransport *)sender();
+        IceLocalTransport *sock = static_cast<IceLocalTransport *>(sender());
         bool isLocalLeap = false;
         int at = findLocalTransport(sock, &isLocalLeap);
         Q_ASSERT(at != -1);
@@ -841,7 +841,7 @@ private slots:
     {
         Q_UNUSED(e);
 
-        IceLocalTransport *sock = (IceLocalTransport *)sender();
+        IceLocalTransport *sock = static_cast<IceLocalTransport *>(sender());
         bool isLocalLeap = false;
         int at = findLocalTransport(sock, &isLocalLeap);
         Q_ASSERT(at != -1);

@@ -326,7 +326,7 @@ void CapsManager::disableCaps(const Jid& jid)
  */
 void CapsManager::discoFinished()
 {
-    JT_DiscoInfo *task = (JT_DiscoInfo *)sender();
+    JT_DiscoInfo *task = static_cast<JT_DiscoInfo *>(sender());
     updateDisco(task->jid(), task->item());
 }
 

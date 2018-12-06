@@ -1170,7 +1170,7 @@ private slots:
         else if(e == StunAllocatePermission::ErrorForbidden)
         {
             // silently discard the permission request
-            StunAllocatePermission *perm = (StunAllocatePermission *)sender();
+            StunAllocatePermission *perm = static_cast<StunAllocatePermission *>(sender());
             QHostAddress addr = perm->addr;
             delete perm;
             perms.removeAll(perm);

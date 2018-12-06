@@ -97,7 +97,7 @@ public slots:
 
     void gone()
     {
-        NetInterface *iface = (NetInterface *)sender();
+        NetInterface *iface = static_cast<NetInterface *>(sender());
         printf("GONE: %s\n", qPrintable(iface->id()));
         ifaces.removeAll(iface);
         delete iface;

@@ -806,7 +806,7 @@ private slots:
 
     void ic_localFinished()
     {
-        IceComponent *ic = (IceComponent *)sender();
+        IceComponent *ic = static_cast<IceComponent *>(sender());
         int at = findComponent(ic);
         Q_ASSERT(at != -1);
 
@@ -878,7 +878,7 @@ private slots:
 
     void ic_stopped()
     {
-        IceComponent *ic = (IceComponent *)sender();
+        IceComponent *ic = static_cast<IceComponent *>(sender());
         int at = findComponent(ic);
         Q_ASSERT(at != -1);
 
@@ -900,7 +900,7 @@ private slots:
 
     void ic_debugLine(const QString &line)
     {
-        IceComponent *ic = (IceComponent *)sender();
+        IceComponent *ic = static_cast<IceComponent *>(sender());
         int at = findComponent(ic);
         Q_ASSERT(at != -1);
 
@@ -950,7 +950,7 @@ private slots:
 
     void it_readyRead(int path)
     {
-        IceTransport *it = (IceTransport *)sender();
+        IceTransport *it = static_cast<IceTransport *>(sender());
         int at = findLocalCandidate(it, path);
         Q_ASSERT(at != -1);
 
@@ -1091,7 +1091,7 @@ private slots:
         Q_UNUSED(addr);
         Q_UNUSED(port);
 
-        StunTransactionPool *pool = (StunTransactionPool *)sender();
+        StunTransactionPool *pool = static_cast<StunTransactionPool *>(sender());
         int at = -1;
         for(int n = 0; n < checkList.pairs.count(); ++n)
         {
@@ -1121,7 +1121,7 @@ private slots:
 
     void binding_success()
     {
-        StunBinding *binding = (StunBinding *)sender();
+        StunBinding *binding = static_cast<StunBinding *>(sender());
         int at = -1;
         for(int n = 0; n < checkList.pairs.count(); ++n)
         {
