@@ -73,7 +73,6 @@
 #include <QList>
 
 #include "im.h"
-#include "safedelete.h"
 #include "xmpp_tasks.h"
 #include "xmpp_xmlcommon.h"
 #include "s5b.h"

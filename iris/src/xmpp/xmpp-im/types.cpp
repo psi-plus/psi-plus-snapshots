@@ -2476,12 +2476,10 @@ CapsSpec::CryptoMap &CapsSpec::cryptoMap()
     if (cm.isEmpty()) {
         cm.insert("md5",     QCryptographicHash::Md5);
         cm.insert("sha-1",   QCryptographicHash::Sha1);
-#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
         cm.insert("sha-224", QCryptographicHash::Sha224);
         cm.insert("sha-256", QCryptographicHash::Sha256);
         cm.insert("sha-384", QCryptographicHash::Sha384);
         cm.insert("sha-512", QCryptographicHash::Sha512);
-#endif
     }
     return cm;
 }

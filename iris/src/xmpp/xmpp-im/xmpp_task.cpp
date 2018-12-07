@@ -19,7 +19,6 @@
 
 #include <QTimer>
 
-#include "safedelete.h"
 #include "xmpp_task.h"
 #include "xmpp_client.h"
 #include "xmpp_xmlcommon.h"

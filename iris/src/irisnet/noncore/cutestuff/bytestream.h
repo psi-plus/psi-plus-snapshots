@@ -25,10 +25,6 @@
 #include <QByteArray>
 #include <QIODevice>
 
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-typedef int qintptr;
-#endif
-
 class QAbstractSocket;
 // CS_NAMESPACE_BEGIN
 
@@ -38,7 +34,7 @@ class ByteStream : public QIODevice
     Q_OBJECT
 public:
     enum Error { ErrOk, ErrRead, ErrWrite, ErrCustom = 10 };
-    ByteStream(QObject *parent=0);
+    ByteStream(QObject *parent=nullptr);
     ~ByteStream()=0;
 
     bool isSequential() const { return true; }
@@ -50,7 +46,7 @@ public:
     int errorCode() const;
     QString &errorText() const;
 
-    virtual QAbstractSocket* abstractSocket() const { return 0; }
+    virtual QAbstractSocket* abstractSocket() const { return nullptr; }
 
 signals:
     void connectionClosed();

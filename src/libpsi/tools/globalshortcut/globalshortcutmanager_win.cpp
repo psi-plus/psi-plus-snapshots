@@ -23,14 +23,11 @@
 
 #include <QWidget>
 #include <windows.h>
-#ifdef HAVE_QT5
-# include <QAbstractNativeEventFilter>
-# include <QApplication>
-#endif
+#include <QAbstractNativeEventFilter>
+#include <QApplication>
 
 class GlobalShortcutManager::KeyTrigger::Impl : public QWidget
 {
-#ifdef HAVE_QT5
     class WinEventFilter : public QAbstractNativeEventFilter
     {
         GlobalShortcutManager::KeyTrigger::Impl *impl;
@@ -46,16 +43,13 @@ class GlobalShortcutManager::KeyTrigger::Impl : public QWidget
             return false;
         }
     };
-#endif
 
 public:
     /**
      * Constructor registers the hotkey.
      */
     Impl(GlobalShortcutManager::KeyTrigger* t, const QKeySequence& ks) :
-#ifdef HAVE_QT5
         filter(new WinEventFilter(this)),
-#endif
         trigger_(t),
         id_(0)
     {
@@ -70,9 +64,7 @@ public:
      */
     ~Impl()
     {
-#ifdef HAVE_QT5
         delete filter;
-#endif
         if (id_)
             UnregisterHotKey((HWND)winId(), id_);
     }
@@ -86,18 +78,12 @@ public:
             emit trigger_->triggered();
             return true;
         }
-#ifdef HAVE_QT5
         Q_UNUSED(result);
         return false;
-#else
-        return QWidget::winEvent(m, result);
-#endif
     }
 
 private:
-#ifdef HAVE_QT5
     WinEventFilter *filter;
-#endif
     KeyTrigger* trigger_;
     WPARAM id_;
     static WPARAM nextId;

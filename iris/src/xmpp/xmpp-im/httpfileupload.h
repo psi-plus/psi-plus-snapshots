@@ -51,6 +51,7 @@ namespace XMPP
         };
 
         HttpFileUpload(Client *client, QObject *parent = nullptr);
+        HttpFileUpload(const HttpFileUpload &) = delete;
         ~HttpFileUpload();
 
         void start(const QString &fname, quint64 fsize, const QString &mType = QString::null);
@@ -63,7 +64,6 @@ namespace XMPP
         void finished();
 
     private slots:
-        void discoItemsFinished();
         void discoInfoFinished();
         void httpSlotFinished();
 
@@ -83,7 +83,7 @@ namespace XMPP
 
     private:
         class Private;
-        Private *d;
+        std::unique_ptr<Private> d;
     };
     Q_DECLARE_OPERATORS_FOR_FLAGS(HttpFileUpload::HostProps)
 

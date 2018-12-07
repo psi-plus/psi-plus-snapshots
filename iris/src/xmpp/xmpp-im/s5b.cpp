@@ -29,7 +29,6 @@
 #include "xmpp_xmlcommon.h"
 #include "im.h"
 #include "socks.h"
-#include "safedelete.h"
 
 #ifdef Q_OS_WIN
 # include <windows.h>

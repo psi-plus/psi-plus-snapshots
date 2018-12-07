@@ -54,7 +54,7 @@ public:
     /*! Connect to the hosts for the specified service */
     void connectToHost(const QString &service, const QString &transport, const QString &domain, quint16 port = std::numeric_limits<quint16>::max());
     virtual QAbstractSocket* abstractSocket() const;
-    int socket() const;
+    qintptr socket() const;
     void setSocket(qintptr);
     int state() const;
 

@@ -43,11 +43,7 @@
 
 #ifdef H_DEPRECATED
 # define NEW_HUNSPELL
-# ifdef HAVE_QT5
-#  define HS_STRING(text) li.codec->fromUnicode(text).toStdString()
-# else
-#  define HS_STRING(text) std::string(li.codec->fromUnicode(text).data())
-# endif
+# define HS_STRING(text) li.codec->fromUnicode(text).toStdString()
 #else
 # define HS_STRING(text) li.codec->fromUnicode(text)
 #endif

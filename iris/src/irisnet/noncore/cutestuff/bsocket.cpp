@@ -27,8 +27,6 @@
 
 #include "bsocket.h"
 
-//#include "safedelete.h"
-
 //#define BS_DEBUG
 
 #ifdef BS_DEBUG
@@ -232,7 +230,7 @@ public:
         csd.relay->setParent(parent);
         csd.sock->setParent(parent);
         delete csd.resolver; // FIME ensure it's accessible only from connected signal. we don't delete resolver from its slot
-        csd.resolver = 0;
+        csd.resolver = nullptr;
         return csd;
     }
 
@@ -404,8 +402,8 @@ class BSocket::Private
 public:
     Private()
     {
-        qsock = 0;
-        qsock_relay = 0;
+        qsock = nullptr;
+        qsock_relay = nullptr;
     }
 
     QTcpSocket *qsock;
@@ -416,8 +414,6 @@ public:
     QString host; //!< Hostname we are currently connected to
     QHostAddress address; //!< IP address we are currently connected to
     quint16 port; //!< Port we are currently connected to
-
-    //SafeDelete sd;
 
     QPointer<HappyEyeballsConnector> connector;
 };
@@ -447,11 +443,11 @@ void BSocket::resetConnection(bool clear)
 
     if(d->qsock) {
         delete d->qsock_relay;
-        d->qsock_relay = 0;
+        d->qsock_relay = nullptr;
 
         // move remaining into the local queue
         if (d->qsock->isOpen()) {
-            QByteArray block(d->qsock->bytesAvailable(), 0);
+            QByteArray block(int(d->qsock->bytesAvailable()), 0); // memory won't never be cheap enough to have gigabytes for socket buffer
             if (block.size()) {
                 d->qsock->read(block.data(), block.size());
                 appendRead(block);
@@ -461,7 +457,7 @@ void BSocket::resetConnection(bool clear)
 
         //d->sd.deleteLater(d->qsock);
         d->qsock->deleteLater();
-        d->qsock = 0;
+        d->qsock = nullptr;
     }
     else {
         if(clear)
@@ -525,7 +521,7 @@ QAbstractSocket* BSocket::abstractSocket() const
     return d->qsock;
 }
 
-int BSocket::socket() const
+qintptr BSocket::socket() const
 {
     if(d->qsock)
         return d->qsock->socketDescriptor();
@@ -589,9 +585,9 @@ qint64 BSocket::readData(char *data, qint64 maxSize)
     if(!maxSize) {
         return 0;
     }
-    quint64 readSize;
+    qint64 readSize;
     if(d->qsock) {
-        int max = bytesAvailable();
+        qint64 max = bytesAvailable();
         if(maxSize <= 0 || maxSize > max) {
             maxSize = max;
         }
@@ -674,7 +670,6 @@ void BSocket::qs_connected_step2(bool signalConnected)
 #ifdef BS_DEBUG
     BSDEBUG << "Connected";
 #endif
-    //SafeDeleteLock s(&d->sd);
     if (signalConnected) {
         emit connected();
     }
@@ -691,7 +686,6 @@ void BSocket::qs_closed()
 #ifdef BS_DEBUG
         BSDEBUG << "Delayed Close Finished";
 #endif
-        //SafeDeleteLock s(&d->sd);
         resetConnection();
         emit delayedCloseFinished();
     }
@@ -699,7 +693,6 @@ void BSocket::qs_closed()
 
 void BSocket::qs_readyRead()
 {
-    //SafeDeleteLock s(&d->sd);
     emit readyRead();
 }
 
@@ -709,7 +702,6 @@ void BSocket::qs_bytesWritten(qint64 x64)
 #ifdef BS_DEBUG_EXTRA
     BSDEBUG << "BytesWritten [" << x << "]";
 #endif
-    //SafeDeleteLock s(&d->sd);
     emit bytesWritten(x);
 }
 
@@ -719,7 +711,6 @@ void BSocket::qs_error(QAbstractSocket::SocketError x)
 #ifdef BS_DEBUG
         BSDEBUG << "Connection Closed";
 #endif
-        //SafeDeleteLock s(&d->sd);
         resetConnection();
         emit connectionClosed();
         return;
@@ -728,8 +719,6 @@ void BSocket::qs_error(QAbstractSocket::SocketError x)
 #ifdef BS_DEBUG
     BSDEBUG << "Error";
 #endif
-    //SafeDeleteLock s(&d->sd);
-
     resetConnection();
     if(x == QTcpSocket::ConnectionRefusedError)
         emit error(ErrConnectionRefused);

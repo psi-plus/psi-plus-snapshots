@@ -103,11 +103,7 @@ ServSockSignal::ServSockSignal(QObject *parent)
     setMaxPendingConnections(16);
 }
 
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-void ServSockSignal::incomingConnection(int socketDescriptor)
-#else
 void ServSockSignal::incomingConnection(qintptr socketDescriptor)
-#endif
 {
     // TODO all these stuff was necessary with Qt3. For now it's better to use pending QTcpSocket object
     connectionReady(socketDescriptor);

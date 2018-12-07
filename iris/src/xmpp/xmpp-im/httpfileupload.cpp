@@ -35,24 +35,23 @@ static QLatin1String xmlns_v0_3_1("urn:xmpp:http:upload:0");
 class HttpFileUpload::Private
 {
 public:
-    HttpFileUpload::State state;
-    XMPP::Client *client;
-    JT_DiscoItems *jtDiscoItems;
+    HttpFileUpload::State state = State::None;
+    XMPP::Client *client = nullptr;
     QList<JT_DiscoInfo *> jtDiscoInfo;
-    JT_HTTPFileUpload *jtHttpSlot;
-    quint64 fileSize;
+    JT_HTTPFileUpload *jtHttpSlot = nullptr;
+    quint64 fileSize = 0;
     QString fileName;
     QString mediaType;
     QList<HttpHost> httpHosts;
-    int hostIndex;
+    int hostIndex = -1;
 
     struct {
-        int statusCode;
+        int statusCode = 0;
         QString statusString;
         QString get_url;
         QString put_url;
         XEP0363::HttpHeaders headers;
-        quint64 sizeLimit;
+        quint64 sizeLimit = 0;
     } result;
 
     void httpHostsUpdate(const HttpHost &host)
@@ -68,35 +67,17 @@ public:
     }
 };
 
-HttpFileUpload::HttpFileUpload(XMPP::Client *client, QObject *parent)
-    : QObject(parent)
+HttpFileUpload::HttpFileUpload(XMPP::Client *client, QObject *parent) :
+    QObject(parent),
+    d(new Private)
 {
-    d = new Private;
     d->client = client;
-    init();
 }
 
 HttpFileUpload::~HttpFileUpload()
 {
     qDeleteAll(d->jtDiscoInfo);
-    delete d->jtDiscoItems;
     delete d->jtHttpSlot;
-    delete d;
-}
-
-void HttpFileUpload::init()
-{
-    d->state = State::None;
-    d->jtDiscoItems = nullptr;
-    d->jtHttpSlot = nullptr;
-    d->httpHosts.clear();
-    d->hostIndex = -1;
-    d->result.statusCode = 0;
-    d->result.statusString = "";
-    d->result.get_url = "";
-    d->result.put_url = "";
-    d->result.headers.clear();
-    d->result.sizeLimit = 0;
 }
 
 void HttpFileUpload::start(const QString &fname, quint64 fsize, const QString &mType)
@@ -111,10 +92,24 @@ void HttpFileUpload::start(const QString &fname, quint64 fsize, const QString &m
     d->hostIndex = -1;
     d->result.statusCode = 0;
     if (d->httpHosts.isEmpty()) {
-        d->jtDiscoItems = new JT_DiscoItems(d->client->rootTask());
-        connect(d->jtDiscoItems, SIGNAL(finished()), this, SLOT(discoItemsFinished()), Qt::QueuedConnection);
-        d->jtDiscoItems->get(d->client->jid().domain());
-        d->jtDiscoItems->go(true);
+        auto jt = new JT_DiscoItems(d->client->rootTask());
+        connect(jt, &JT_DiscoItems::finished, this, [=]()
+        {
+            if (jt->success()) {
+                d->state = State::SendingInfoQueryes;
+                foreach(const DiscoItem &item, jt->items()) {
+                    sendDiscoInfoRequest(item);
+                }
+                d->state = State::WaitingDiscoInfo;
+            }
+            else {
+                d->result.statusCode   = jt->statusCode();
+                d->result.statusString = jt->statusString();
+                done(State::Error);
+            }
+        }, Qt::QueuedConnection);
+        jt->get(d->client->jid().domain());
+        jt->go(true);
     }
     else
         sendHttpSlotRequest();
@@ -145,24 +140,6 @@ HttpFileUpload::HttpSlot HttpFileUpload::getHttpSlot()
         slot.limits.fileSize = d->result.sizeLimit;
     }
     return slot;
-}
-
-void HttpFileUpload::discoItemsFinished()
-{
-    JT_DiscoItems *jt = d->jtDiscoItems;
-    d->jtDiscoItems = nullptr;
-    if (jt->success()) {
-        d->state = State::SendingInfoQueryes;
-        foreach(const DiscoItem &item, jt->items()) {
-            sendDiscoInfoRequest(item);
-        }
-        d->state = State::WaitingDiscoInfo;
-    }
-    else {
-        d->result.statusCode   = jt->statusCode();
-        d->result.statusString = jt->statusString();
-        done(State::Error);
-    }
 }
 
 void HttpFileUpload::discoInfoFinished()
@@ -276,7 +253,7 @@ int HttpFileUpload::selectHost() const
     int selVal = 0;
     for (int i = 0; i < d->httpHosts.size(); ++i) {
         if (d->fileSize >= d->httpHosts[i].sizeLimit) {
-            int props = d->httpHosts[i].props;
+            auto props = d->httpHosts[i].props;
             int val = 0;
             if (props & SecureGet) val += 5;
             if (props & SecurePut) val += 5;

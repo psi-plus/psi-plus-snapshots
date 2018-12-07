@@ -24,17 +24,13 @@
 #include <QtCore>
 #include <QtNetwork>
 
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-typedef int qintptr; // temporary hack until we get rid of file descriptors
-#endif
-
 // CS_NAMESPACE_BEGIN
 
 class ServSock : public QObject
 {
     Q_OBJECT
 public:
-    ServSock(QObject *parent=0);
+    ServSock(QObject *parent=nullptr);
     ~ServSock();
 
     bool isActive() const;
@@ -58,18 +54,14 @@ class ServSockSignal : public QTcpServer
 {
     Q_OBJECT
 public:
-    ServSockSignal(QObject *parent = 0);
+    ServSockSignal(QObject *parent = nullptr);
 
 signals:
     void connectionReady(qintptr);
 
 protected:
     // reimplemented
-#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
-    void incomingConnection(int socketDescriptor);
-#else
     void incomingConnection(qintptr socketDescriptor);
-#endif
 };
 
 // CS_NAMESPACE_END
