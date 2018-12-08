@@ -56,7 +56,8 @@ namespace XMPP
         QByteArray data() const;
 
     private:
-        int _source, _dest;
+        int _source = 0;
+        int _dest = 0;
         QByteArray _buf;
     };
 

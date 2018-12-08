@@ -43,13 +43,13 @@ public:
 };
 
 DiscoItem::DiscoItem()
+    : d(new DiscoItemPrivate)
 {
-    d = new DiscoItemPrivate;
 }
 
 DiscoItem::DiscoItem(const DiscoItem &from)
+    : d(new DiscoItemPrivate)
 {
-    d = new DiscoItemPrivate;
     *this = from;
 }
 
@@ -316,7 +316,7 @@ XData DiscoItem::registeredExtension(const QString &ns) const
     return XData();
 }
 
-DiscoItem::Action DiscoItem::string2action(QString s)
+DiscoItem::Action DiscoItem::string2action(const QString &s)
 {
     Action a;
 
@@ -330,7 +330,7 @@ DiscoItem::Action DiscoItem::string2action(QString s)
     return a;
 }
 
-QString DiscoItem::action2string(Action a)
+QString DiscoItem::action2string(const Action a)
 {
     QString s;
 

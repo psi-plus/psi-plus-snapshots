@@ -83,8 +83,8 @@ namespace XMPP {
         XData registeredExtension(const QString &ns) const;
 
         // some useful helper functions
-        static Action string2action(QString s);
-        static QString action2string(Action a);
+        static Action string2action(const QString &s);
+        static QString action2string(const Action a);
 
         DiscoItem & operator= (const DiscoItem &);
         DiscoItem(const DiscoItem &);

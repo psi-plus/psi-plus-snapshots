@@ -159,30 +159,7 @@ enum {
 class ClientStream::Private
 {
 public:
-    Private()
-    {
-        conn = 0;
-        bs = 0;
-        ss = 0;
-        tlsHandler = 0;
-        tls = 0;
-        sasl = 0;
-
-        oldOnly = false;
-        allowPlain = NoAllowPlain;
-        mutualAuth = false;
-        haveLocalAddr = false;
-        minimumSSF = 0;
-        maximumSSF = 0;
-        doBinding = true;
-        doCompress = false;
-        lang = "";
-
-        in_rrsig = false;
-        quiet_reconnection = false;
-
-        reset();
-    }
+    Private() = default;
 
     void reset()
     {
@@ -196,26 +173,27 @@ public:
 
     Jid jid;
     QString server;
-    bool oldOnly;
-    bool mutualAuth;
-    AllowPlainType allowPlain;
-    bool haveLocalAddr;
+    bool oldOnly = false;
+    bool mutualAuth = false;
+    AllowPlainType allowPlain = NoAllowPlain;
+    bool haveLocalAddr = false;
     QHostAddress localAddr;
     quint16 localPort;
     QString connectHost;
-    int minimumSSF, maximumSSF;
+    int minimumSSF = 0;
+    int maximumSSF = 0;
     QString sasl_mech;
     QMap<QString,QString> mechProviders; // mech to provider map
-    bool doBinding;
+    bool doBinding = true;
 
-    bool in_rrsig;
+    bool in_rrsig = false;
 
-    Connector *conn;
-    ByteStream *bs;
-    TLSHandler *tlsHandler;
-    QCA::TLS *tls;
-    QCA::SASL *sasl;
-    SecureStream *ss;
+    Connector *conn = nullptr;
+    ByteStream *bs = nullptr;
+    TLSHandler *tlsHandler = nullptr;
+    QCA::TLS *tls = nullptr;
+    QCA::SASL *sasl = nullptr;
+    SecureStream *ss = nullptr;
     CoreProtocol client;
     CoreProtocol srv;
     QString lang;
@@ -223,13 +201,14 @@ public:
     QString defRealm;
 
     int mode;
-    int state;
-    int notify;
-    bool newStanzas;
-    int sasl_ssf;
-    bool tls_warned, using_tls;
+    int state = Idle;
+    int notify = 0;
+    bool newStanzas = false;
+    int sasl_ssf = 0;
+    bool tls_warned = false;
+    bool using_tls;
     bool doAuth;
-    bool doCompress;
+    bool doCompress = false;
 
     QStringList sasl_mechlist;
 
@@ -243,7 +222,7 @@ public:
     QTimer timeout_timer;
     QTimer noopTimer;
     int noop_time;
-    bool quiet_reconnection;
+    bool quiet_reconnection = false;
 };
 
 ClientStream::ClientStream(Connector *conn, TLSHandler *tlsHandler, QObject *parent)

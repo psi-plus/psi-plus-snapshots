@@ -253,19 +253,19 @@ XmlProtocol::TransferItem::TransferItem()
 }
 
 XmlProtocol::TransferItem::TransferItem(const QString &_str, bool sent, bool external)
+    : isSent(sent)
+    , isString(true)
+    , isExternal(external)
+    , str(_str)
 {
-    isString = true;
-    isSent = sent;
-    isExternal = external;
-    str = _str;
 }
 
 XmlProtocol::TransferItem::TransferItem(const QDomElement &_elem, bool sent, bool external)
+    : isSent(sent)
+    , isString(false)
+    , isExternal(external)
+    , elem(_elem)
 {
-    isString = false;
-    isSent = sent;
-    isExternal = external;
-    elem = _elem;
 }
 
 XmlProtocol::XmlProtocol()

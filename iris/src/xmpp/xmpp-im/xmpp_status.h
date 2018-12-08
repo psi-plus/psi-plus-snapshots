@@ -115,7 +115,7 @@ namespace XMPP
 
         void setPriority(int);
         void setType(Type);
-        void setType(QString);
+        void setType(const QString &);
         void setShow(const QString &);
         void setStatus(const QString &);
         void setTimeStamp(const QDateTime &);

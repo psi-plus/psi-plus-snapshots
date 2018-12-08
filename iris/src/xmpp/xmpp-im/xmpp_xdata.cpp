@@ -386,9 +386,9 @@ bool XData::Field::MediaElement::checkSupport(const QStringList &wildcards)
 // XData
 //----------------------------------------------------------------------------
 
-XData::XData()
+XData::XData() :
+    d(new Private)
 {
-    d = new Private;
     d->type = Data_Form;
 }
 

@@ -136,15 +136,13 @@ private:
 //----------------------------------------------------------------------------
 S5BDatagram::S5BDatagram()
 {
-    _source = 0;
-    _dest = 0;
 }
 
 S5BDatagram::S5BDatagram(int source, int dest, const QByteArray &data)
+    : _source(source)
+    , _dest(dest)
+    , _buf(data)
 {
-    _source = source;
-    _dest = dest;
-    _buf = data;
 }
 
 int S5BDatagram::sourcePort() const
@@ -1752,14 +1750,16 @@ public:
     QTimer t;
     Jid jid;
 
-    Item(const Jid &self, const StreamHost &_host, const QString &_key, bool _udp) : QObject(0)
+    Item(const Jid &self, const StreamHost &_host, const QString &_key, bool _udp)
+        : QObject(0)
+        , client(new SocksClient)
+        , client_udp(0)
+        , host(_host)
+        , key(_key)
+        , udp(_udp)
+        , udp_tries(0)
+        , jid(self)
     {
-        jid = self;
-        host = _host;
-        key = _key;
-        udp = _udp;
-        client = new SocksClient;
-        client_udp = 0;
         connect(client, SIGNAL(connected()), SLOT(sc_connected()));
         connect(client, SIGNAL(error(int)), SLOT(sc_error(int)));
         connect(&t, SIGNAL(timeout()), SLOT(trySendUDP()));

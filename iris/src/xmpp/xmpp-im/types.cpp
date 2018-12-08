@@ -124,15 +124,14 @@ void Url::setDesc(const QString &desc)
 //! \param Jid - specify address (default: empty string)
 //! \sa setType() setJid()
 Address::Address(Type type, const Jid & jid)
-: v_delivered(false)
+    : v_jid(jid)
+    , v_delivered(false)
+    , v_type(type)
 {
-    v_type = type;
-    v_jid = jid;
-    v_delivered = false;
 }
 
 Address::Address(const QDomElement& e)
-: v_delivered(false)
+    : v_delivered(false)
 {
     fromXml(e);
 }
@@ -981,8 +980,8 @@ public:
 //! This function will construct a Message container.
 //! \param to - specify receiver (default: empty string)
 Message::Message(const Jid &to)
+    : d(new Private)
 {
-    d = new Private;
     d->to = to;
 }
 
@@ -2569,9 +2568,8 @@ public:
 
 
 Status::Status(const QString &show, const QString &status, int priority, bool available)
+    : d(new StatusPrivate)
 {
-    d = new StatusPrivate;
-
     d->isAvailable = available;
     d->show = show;
     d->status = status;
@@ -2581,9 +2579,8 @@ Status::Status(const QString &show, const QString &status, int priority, bool av
 }
 
 Status::Status(Type type, const QString& status, int priority)
+    : d(new StatusPrivate)
 {
-    d = new StatusPrivate;
-
     d->status = status;
     d->priority = priority;
     d->timeStamp = QDateTime::currentDateTime();
@@ -2670,7 +2667,7 @@ Status::Type Status::txt2type(const QString& stat)
               return XMPP::Status::Away;
 }
 
-void Status::setType(QString stat)
+void Status::setType(const QString &stat)
 {
       setType(txt2type(stat));
 }
@@ -2940,9 +2937,9 @@ const QString & Status::errorString() const
 // Resource
 //---------------------------------------------------------------------------
 Resource::Resource(const QString &name, const Status &stat)
+    : v_name(name)
+    , v_status(stat)
 {
-    v_name = name;
-    v_status = stat;
 }
 
 const QString & Resource::name() const
@@ -3031,10 +3028,10 @@ ResourceList::ConstIterator ResourceList::priority() const
 //---------------------------------------------------------------------------
 // RosterItem
 //---------------------------------------------------------------------------
-RosterItem::RosterItem(const Jid &_jid)
+RosterItem::RosterItem(const Jid &_jid) :
+    v_jid(_jid),
+    v_push(false)
 {
-    v_jid = _jid;
-    v_push = false;
 }
 
 RosterItem::RosterItem(const RosterItem &item) :

@@ -86,11 +86,10 @@ PsiTabWidget::PsiTabWidget(QWidget *parent)
         closeButton_->hide();
         downButton_->hide();
     }
-#if QT_VERSION >= 0x040500
     if (!PsiOptions::instance()->getOption("options.ui.tabs.show-tab-close-buttons").toBool()){
         tabBar_->setTabsClosable(false);
     }
-#endif
+
     connect( tabBar_, SIGNAL(mouseDoubleClickTab(int)), SLOT(mouseDoubleClickTab(int)));
     connect( tabBar_, SIGNAL(mouseMiddleClickTab(int)), SLOT(mouseMiddleClickTab(int)));
     // TabBar::tabRemove must be handled before tab_currentChanged
@@ -401,7 +400,7 @@ void PsiTabWidget::setTabButtonsShown(bool shown) {
  * Enable/disable dragging of tabs
  */
 void PsiTabWidget::setDragsEnabled(bool enabled) {
-    ((PsiTabBar *)tabBar_)->setDragsEnabled(enabled);
+    static_cast<PsiTabBar *>(tabBar_)->setDragsEnabled(enabled);
 }
 
 void PsiTabWidget::setTabBarUpdateEnabled(bool b)
@@ -424,9 +423,6 @@ void PsiTabWidget::widgetMoved(int from, int to)
         stacked_->insertWidget(to,widgets_[to]);
     }
 
-#if QT_VERSION <= 0x040500
-    setCurrentPage(to);
-#endif
     emit currentChanged(currentPage());
 
 };

@@ -102,8 +102,11 @@ static void getHex(unsigned char in, char *hi, char *lo)
 {
     QString str;
     str.sprintf("%02x", in);
-    *hi = str[0].toLatin1();
-    *lo = str[1].toLatin1();
+    if (!str.isEmpty())
+    {
+        *hi = str[0].toLatin1();
+        *lo = str[1].toLatin1();
+    }
 }
 
 static QByteArray getDec(int in)
@@ -120,7 +123,7 @@ static QByteArray makeReverseName(const QHostAddress &addr)
         Q_IPV6ADDR raw = addr.toIPv6Address();
         for(int n = 0; n < 32; ++n)
         {
-            char hi, lo;
+            char hi = '0', lo = '0';
             getHex(raw.c[31 - n], &hi, &lo);
             out += lo;
             out += '.';

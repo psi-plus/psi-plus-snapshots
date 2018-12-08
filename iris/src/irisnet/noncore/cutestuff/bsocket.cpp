@@ -118,9 +118,9 @@ public:
     QString service;
     QString transport;
     QString domain;
-    quint16 port;
+    quint16 port = 0;
     QHostAddress address;
-    QAbstractSocket::NetworkLayerProtocol fallbackProtocol;
+    QAbstractSocket::NetworkLayerProtocol fallbackProtocol = QAbstractSocket::IPv4Protocol;
 
     /*! runtime data */
     QString lastError;
@@ -129,10 +129,8 @@ public:
     QTimer fallbackTimer;
 
     HappyEyeballsConnector(QObject *parent) :
-        QObject(parent),
-        port(0)
+        QObject(parent)
     {
-        fallbackProtocol = QAbstractSocket::IPv4Protocol;
         fallbackTimer.setSingleShot(true);
         fallbackTimer.setInterval(250); /* rfc recommends 150-250ms */
         connect(&fallbackTimer, SIGNAL(timeout()), SLOT(startFallback()));

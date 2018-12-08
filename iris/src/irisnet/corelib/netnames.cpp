@@ -58,21 +58,21 @@ public:
 
 #define ENSURE_D { if(!d) d = new Private; }
 
-NameRecord::NameRecord()
+NameRecord::NameRecord() :
+    d(nullptr)
 {
-    d = 0;
 }
 
-NameRecord::NameRecord(const QByteArray &owner, int ttl)
+NameRecord::NameRecord(const QByteArray &owner, int ttl) :
+    d(nullptr)
 {
-    d = 0;
     setOwner(owner);
     setTtl(ttl);
 }
 
-NameRecord::NameRecord(const NameRecord &from)
+NameRecord::NameRecord(const NameRecord &from) :
+    d(nullptr)
 {
-    d = 0;
     *this = from;
 }
 
@@ -382,14 +382,14 @@ public:
     QByteArray name;
 };
 
-ServiceInstance::ServiceInstance()
+ServiceInstance::ServiceInstance() :
+    d(new Private)
 {
-    d = new Private;
 }
 
-ServiceInstance::ServiceInstance(const QString &instance, const QString &type, const QString &domain, const QMap<QString,QByteArray> &attribs)
+ServiceInstance::ServiceInstance(const QString &instance, const QString &type, const QString &domain, const QMap<QString,QByteArray> &attribs) :
+    d(new Private)
 {
-    d = new Private;
     d->instance = instance;
     d->type = type;
     d->domain = domain;
@@ -399,9 +399,9 @@ ServiceInstance::ServiceInstance(const QString &instance, const QString &type, c
     d->name = instance.toLatin1() + '.' + type.toLatin1() + '.' + domain.toLatin1();
 }
 
-ServiceInstance::ServiceInstance(const ServiceInstance &from)
+ServiceInstance::ServiceInstance(const ServiceInstance &from) :
+    d(nullptr)
 {
-    d = 0;
     *this = from;
 }
 
@@ -539,7 +539,7 @@ bool WeightedNameRecordList::isEmpty() const {
 XMPP::NameRecord WeightedNameRecordList::takeNext() {
     /* Find the next useful priority group */
     while (currentPriorityGroup != priorityGroups.end() && currentPriorityGroup->empty()) {
-        currentPriorityGroup++;
+        ++currentPriorityGroup;
     }
     /* There are no priority groups left, return failure */
     if (currentPriorityGroup == priorityGroups.end()) {
