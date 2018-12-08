@@ -21,6 +21,8 @@
 #ifndef XMPP_HTTPFILEUPLOAD_H
 #define XMPP_HTTPFILEUPLOAD_H
 
+#include <memory>
+
 #include "im.h"
 
 namespace XMPP
