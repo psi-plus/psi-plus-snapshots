@@ -29,7 +29,6 @@ set(PLAIN_SOURCES
     noncore/cutestuff/socks.cpp
 
     noncore/legacy/ndns.cpp
-    noncore/legacy/safedelete.cpp
     noncore/legacy/servsock.cpp
     noncore/legacy/srvresolver.cpp
 )
@@ -103,7 +102,6 @@ set(HEADERS
     noncore/cutestuff/socks.h
 
     noncore/legacy/ndns.h
-    noncore/legacy/safedelete.h
     noncore/legacy/servsock.h
     noncore/legacy/srvresolver.h
 )
