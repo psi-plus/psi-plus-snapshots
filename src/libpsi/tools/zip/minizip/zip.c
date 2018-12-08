@@ -1206,7 +1206,7 @@ extern int ZEXPORT zipOpenNewFileInZip4_64 (zipFile file, const char* filename, 
 #ifdef HAVE_BZIP2
     if ((err==ZIP_OK) && (zi->ci.method == Z_DEFLATED || zi->ci.method == Z_BZIP2ED) && (!zi->ci.raw))
 #else
-    if ((err==ZIP_OK) && (zi->ci.method == Z_DEFLATED) && (!zi->ci.raw))
+    if ((err==ZIP_OK) && (!zi->ci.raw))
 #endif
     {
         if(zi->ci.method == Z_DEFLATED)
@@ -1223,9 +1223,9 @@ extern int ZEXPORT zipOpenNewFileInZip4_64 (zipFile file, const char* filename, 
           if (err==Z_OK)
               zi->ci.stream_initialised = Z_DEFLATED;
         }
+#ifdef HAVE_BZIP2
         else if(zi->ci.method == Z_BZIP2ED)
         {
-#ifdef HAVE_BZIP2
             // Init BZip stuff here
           zi->ci.bstream.bzalloc = 0;
           zi->ci.bstream.bzfree = 0;
@@ -1234,8 +1234,8 @@ extern int ZEXPORT zipOpenNewFileInZip4_64 (zipFile file, const char* filename, 
           err = BZ2_bzCompressInit(&zi->ci.bstream, level, 0,35);
           if(err == BZ_OK)
             zi->ci.stream_initialised = Z_BZIP2ED;
-#endif
         }
+#endif
 
     }
 

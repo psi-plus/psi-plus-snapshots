@@ -46,7 +46,7 @@ class QDomDocument;
 class AtomicXmlFile
 {
 public:
-    AtomicXmlFile(QString fileName);
+    AtomicXmlFile(const QString &fileName);
 
     /**
      * Atomically save \a writer to specified name. Prior to saving, back up
@@ -99,7 +99,7 @@ public:
         return false;
     }
 
-    static bool exists(QString fileName);
+    static bool exists(const QString &fileName);
 
 private:
     QString fileName_;

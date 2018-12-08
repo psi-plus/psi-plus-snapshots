@@ -27,6 +27,7 @@
 #include <QDir>
 #include <QCoreApplication>
 #include <QtDebug>
+#include <QTimer>
 
 #include "enchant++.h"
 #include "enchantchecker.h"
@@ -43,7 +44,9 @@ EnchantChecker::EnchantChecker()
     if (broker)
     {
         broker->list_dicts(enchantDictDescribeFn, static_cast<void*>(this));
-        setActiveLanguages(getAllLanguages());
+        QTimer::singleShot(1000, [=]() {
+            this->setActiveLanguages(getAllLanguages());
+        });
     }
 }
 

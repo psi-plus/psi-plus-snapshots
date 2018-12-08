@@ -29,7 +29,7 @@
  * atomically save config file, so if application is terminated while
  * saving config file, data is not lost.
  */
-AtomicXmlFile::AtomicXmlFile(QString fileName)
+AtomicXmlFile::AtomicXmlFile(const QString &fileName)
     : fileName_(fileName)
 {
 }
@@ -128,7 +128,7 @@ bool AtomicXmlFile::loadDocument(AtomicXmlFileReader* reader, QString fileName) 
  * returns true if any of the files loadDocument tries to read exists,
  * it *doesn't* check that there is at least one uncorupted file.
  */
-bool AtomicXmlFile::exists(QString fileName) {
+bool AtomicXmlFile::exists(const QString &fileName) {
     AtomicXmlFile tmp(fileName);
 
     foreach(QString fileName, tmp.loadCandidateList()) {

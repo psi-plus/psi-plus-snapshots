@@ -64,17 +64,19 @@ public:
             const GroupChatBrowseWindow::RoomInfo &info = alist[n];
 
             QList<QStandardItem*> clist;
-            clist += new QStandardItem(icon, info.roomName);
-            clist[0]->setData(list.count(), InternalRowRole);
-            clist[0]->setData(qVariantFromValue(info), RoomInfoRole);
-            //clist += new QStandardItem(QString::number(info.participants));
-            clist += new QStandardItem;
-            clist[1]->setData(list.count(), InternalRowRole);
-            clist[1]->setCheckable(true);
+            clist.append(new QStandardItem(icon, info.roomName));
+            clist.first()->setData(list.count(), InternalRowRole);
+            clist.first()->setData(qVariantFromValue(info), RoomInfoRole);
+            //clist.append(new QStandardItem(QString::number(info.participants)));
+            clist.append(new QStandardItem);
+            clist.last()->setData(list.count(), InternalRowRole);
+            clist.last()->setCheckable(true);
             if(info.autoJoin)
-                clist[1]->setCheckState(Qt::Checked);
-            clist[0]->setEditable(false);
-            clist[1]->setEditable(false);
+            {
+                clistlast()->setCheckState(Qt::Checked);
+            }
+            clist.first()->setEditable(false);
+            clist.last()->setEditable(false);
 
             list += info;
             appendRow(clist);
