@@ -178,17 +178,10 @@ private:
     Private *d;
 };
 
-#if QT_VERSION < 0x050000
-inline uint qHash(const XMPP::IceComponent::TransportAddress &key)
-{
-    return ::qHash(key.addr) ^ ::qHash(key.port);
-}
-#else
 inline uint qHash(const XMPP::IceComponent::TransportAddress &key, uint seed = 0)
 {
     return ::qHash(key.addr, seed) ^ ::qHash(key.port, seed);
 }
-#endif
 
 } //namespace XMPP
 

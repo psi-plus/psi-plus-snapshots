@@ -159,11 +159,7 @@ void HttpPoll::connectToHost(const QString &proxyHost, int proxyPort, const QUrl
             d->port = 443;
             useSsl = true;
         }
-#if QT_VERSION < 0x050000
-        d->url = url.path() + "?" + url.encodedQuery();
-#else
         d->url.setUrl(url.path() + "?" + url.query(QUrl::FullyEncoded), QUrl::StrictMode);
-#endif
         d->use_proxy = false;
     }
 

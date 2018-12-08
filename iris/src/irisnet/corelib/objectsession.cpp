@@ -114,11 +114,7 @@ public:
                     return false;
                 }
 
-#if QT_VERSION < 0x050000
-                arg.data = QMetaType::construct(arg.type, arg_data[n]);
-#else
                 arg.data = QMetaType::create(arg.type, arg_data[n]);
-#endif
                 args += arg;
             }
 
