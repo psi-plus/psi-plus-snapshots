@@ -73,7 +73,7 @@ public:
             clist.last()->setCheckable(true);
             if(info.autoJoin)
             {
-                clistlast()->setCheckState(Qt::Checked);
+                clist.last()->setCheckState(Qt::Checked);
             }
             clist.first()->setEditable(false);
             clist.last()->setEditable(false);
