@@ -106,7 +106,6 @@ HEADERS += \
     $$PWD/profiles.h \
     $$PWD/activeprofiles.h \
     $$PWD/profiledlg.h \
-    $$PWD/homedirmigration.h \
     $$PWD/aboutdlg.h \
     $$PWD/desktoputil.h \
     $$PWD/fileutil.h \
@@ -247,7 +246,6 @@ SOURCES += \
     $$PWD/psi_profiles.cpp \
     $$PWD/activeprofiles.cpp \
     $$PWD/profiledlg.cpp \
-    $$PWD/homedirmigration.cpp \
     $$PWD/aboutdlg.cpp \
     $$PWD/desktoputil.cpp \
     $$PWD/fileutil.cpp \
@@ -551,7 +549,6 @@ FORMS += \
     $$PWD/profileopen.ui \
     $$PWD/profilemanage.ui \
     $$PWD/profilenew.ui \
-    $$PWD/homedirmigration.ui \
     $$PWD/proxy.ui \
     $$PWD/accountmanage.ui \
     $$PWD/accountadd.ui \
