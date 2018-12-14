@@ -97,11 +97,13 @@ QHash<QByteArray, QByteArray> SimpleCli::parse(int argc, char* argv[], const QLi
         QByteArray str = QByteArray(argv[n]);
         QByteArray left, right;
         int sep = str.indexOf('=');
+        bool explicitValue = false;
         if (sep == -1) {
             left = str;
         } else {
             left = str.mid(0, sep);
             right = str.mid(sep + 1);
+            explicitValue = true;
         }
 
         bool unnamedArgument = true;
@@ -125,7 +127,11 @@ QHash<QByteArray, QByteArray> SimpleCli::parse(int argc, char* argv[], const QLi
             value = right;
             if (aliases.contains(name)) {
                 name = argdefs[aliases[name]].name;
-                if (argdefs[name].needsValue && value.isNull() && n + 1 < argc) {
+                bool needsValue = argdefs[name].needsValue;
+                if (!needsValue && explicitValue) {
+                    continue; // ignore strange switch with value
+                }
+                if (needsValue && value.isNull() && n + 1 < argc) {
                     value = QByteArray(argv[++n]);
                 }
             }
