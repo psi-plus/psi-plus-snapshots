@@ -1896,7 +1896,8 @@ void PsiCon::networkSessionClosed()
      * This is mostly a work-around, merely a hack. We need to implement
      * roaming (or something alike) in the longterm.
      */
-    delete d->netSession;
+    disconnect(d->netSession);
+    d->netSession->deleteLater();
     initNetSession();
 }
 
