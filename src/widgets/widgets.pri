@@ -16,7 +16,6 @@ SOURCES += \
     $$PWD/psitiplabel.cpp \
     $$PWD/psitabwidget.cpp \
     $$PWD/psitabbar.cpp \
-    $$PWD/psiwindowheader.cpp \
     $$PWD/actionlineedit.cpp \
     $$PWD/tabbar.cpp \
     $$PWD/typeaheadfind.cpp \
@@ -46,14 +45,12 @@ HEADERS += \
     $$PWD/psitiplabel.h \
     $$PWD/psitabwidget.h \
     $$PWD/psitabbar.h \
-    $$PWD/psiwindowheader.h \
     $$PWD/actionlineedit.h \
     $$PWD/tabbar.h \
     $$PWD/typeaheadfind.h \
     $$PWD/pixmapratiolabel.h
 
-FORMS += $$PWD/fancypopup.ui \
-    $$PWD/psiwindowheader.ui
+FORMS += $$PWD/fancypopup.ui
 
 # to remove dependency on iconset and stuff
 #DEFINES += WIDGET_PLUGIN

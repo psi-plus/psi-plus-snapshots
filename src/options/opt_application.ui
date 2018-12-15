@@ -22,16 +22,6 @@
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="ck_winDecor" >
-     <property name="text" >
-      <string>Decorate windows</string>
-     </property>
-     <property name="checked" >
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item>
     <widget class="QCheckBox" name="ck_docklet">
      <property name="text">
       <string>Enable docklet</string>
@@ -250,7 +240,6 @@
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <tabstops>
-  <tabstop>ck_winDecor</tabstop>
   <tabstop>ck_docklet</tabstop>
   <tabstop>ck_dockDCstyle</tabstop>
   <tabstop>ck_dockHideMW</tabstop>

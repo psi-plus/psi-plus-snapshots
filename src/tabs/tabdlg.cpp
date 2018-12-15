@@ -167,18 +167,8 @@ TabDlg::TabDlg(TabManager* tabManager, const QString& geometryOption, TabDlgDele
         delegate_->tabWidgetCreated(this, tabWidget_);
 
     QVBoxLayout *vert1 = new QVBoxLayout(this);
-    //Add windowheader widget if window not decorated
-    if (!PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool()
-        && !PsiOptions::instance()->getOption("options.ui.tabs.grouping").toString().contains('A')) {
-        winHeader_ = new PsiWindowHeader(this);
-        vert1->addWidget(winHeader_);
-        vert1->setSpacing(0);
-        vert1->setMargin(0);
-    } else {
-        vert1->setMargin(1);
-    }
+    vert1->setMargin(1);
     vert1->addWidget(tabWidget_);
-
 
     setAcceptDrops(true);
 
@@ -199,7 +189,6 @@ TabDlg::TabDlg(TabManager* tabManager, const QString& geometryOption, TabDlgDele
 
     if(!PsiOptions::instance()->getOption("options.ui.tabs.grouping").toString().contains('A'))
         setGeometryOptionPath(geometryOption);
-    setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
 }
 
 TabDlg::~TabDlg()

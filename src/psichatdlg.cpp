@@ -183,9 +183,6 @@ PsiChatDlg::PsiChatDlg(const Jid& jid, PsiAccount* pa, TabManager* tabManager)
     connect(account(), SIGNAL(removedContact(PsiContact*)), SLOT(updateContactAdding(PsiContact*)));
     connect(account(), SIGNAL(updateContact(const Jid &)), SLOT(updateContactAdding(const Jid &)));
     mCmdManager_.registerProvider(new ChatDlgMCmdProvider(this));
-    tabmode = PsiOptions::instance()->getOption("options.ui.tabs.use-tabs").toBool();
-    setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
-
     SendButtonTemplatesMenu* menu = getTemplateMenu();
     if (menu) {
         connect(menu, SIGNAL(doPasteAndSend()), this, SLOT(doPasteAndSend()));
@@ -286,11 +283,7 @@ void PsiChatDlg::initUi()
     act_mini_cmd_->setText(tr("Input command..."));
     connect(act_mini_cmd_, SIGNAL(triggered()), SLOT(doMiniCmd()));
     addAction(act_mini_cmd_);
-    if (!tabmode) {
-        winHeader_ = new PsiWindowHeader(this);
-        ui_.vboxLayout1->insertWidget(0, winHeader_);
-    }
-    setMargins();
+
     connect(ui_.log->textWidget(), SIGNAL(quote(const QString &)), ui_.mle->chatEdit(), SLOT(insertAsQuote(const QString &)));
 
     act_pastesend_ = new IconAction(tr("Paste and Send"), "psi/action_paste_and_send", tr("Paste and Send"), 0, this);
@@ -599,22 +592,6 @@ void PsiChatDlg::activated()
     ChatDlg::activated();
 
     updateCountVisibility();
-
-    bool border = PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool();
-    if (!PsiOptions::instance()->getOption("options.ui.tabs.use-tabs").toBool()){
-        if (!winHeader_.isNull())
-            winHeader_->setVisible(!border);
-        setWindowBorder(border);
-        setMargins();
-#if defined(Q_OS_MAC) || defined(Q_WS_HAIKU)
-        //
-#else
-        bringToFront(true);
-#endif
-    } else {
-        if (!winHeader_.isNull())
-            winHeader_->setVisible(false);
-    }
 }
 
 void PsiChatDlg::setContactToolTip(QString text)
@@ -1152,25 +1129,6 @@ void PsiChatDlg::doSwitchJidMode()
         updateJidWidget(ul, userStatus.statusType, true);
         userStatus = userStatusFor(jid(), ul, false);
         contactUpdated(userStatus.userListItem, userStatus.statusType, userStatus.status);
-    }
-}
-
-void PsiChatDlg::setMargins()
-{
-    ui_.vboxLayout->setContentsMargins(0,0,0,0);
-    ui_.vboxLayout2->setContentsMargins(4,0,4,4);
-    if (!tabmode) {
-        ui_.hboxLayout->setContentsMargins(4,0,4,0);
-        if (!isBorder()) {
-            ui_.vboxLayout1->setContentsMargins(0,0,0,0);
-        }
-        else {
-            ui_.vboxLayout1->setContentsMargins(0,4,0,0);
-        }
-    }
-    else {
-        ui_.vboxLayout1->setContentsMargins(4,4,4,0);
-        ui_.hboxLayout->setContentsMargins(2,0,4,0);
     }
 }
 

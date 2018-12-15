@@ -57,9 +57,6 @@ QWidget *OptionsTabApplication::widget()
     w = new OptApplicationUI();
     OptApplicationUI *d = static_cast<OptApplicationUI *>(w);
 
-    d->ck_winDecor->setWhatsThis(
-        tr("Set or remove window decorations for roster and chats."
-        " For chats there are special header with close, hide and maximize buttons"));
     // docklet
     d->ck_docklet->setWhatsThis(
         tr("Makes Psi use a docklet icon, also known as system tray icon."));
@@ -110,7 +107,6 @@ void OptionsTabApplication::applyOptions()
     if (!ApplicationInfo::isPortable()) {
         PsiOptions::instance()->setOption("options.keychain.enabled", d->ck_useKeychain->isChecked());
     }
-    PsiOptions::instance()->setOption("options.ui.decorate-windows", d->ck_winDecor->isChecked());
 
     // Auto-update
     PsiOptions::instance()->setOption("options.auto-update.check-on-startup", d->ck_autoUpdate->isChecked());
@@ -181,7 +177,6 @@ void OptionsTabApplication::restoreOptions()
     if (!ApplicationInfo::isPortable()) {
         d->ck_useKeychain->setChecked(PsiOptions::instance()->getOption("options.keychain.enabled").toBool());
     }
-    d->ck_winDecor->setChecked(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
 
     // docklet
     d->ck_docklet->setChecked( PsiOptions::instance()->getOption("options.ui.systemtray.enable").toBool() );

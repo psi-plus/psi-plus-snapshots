@@ -10,7 +10,6 @@
 
 #include "ui_chatdlg.h"
 #include "typeaheadfind.h"
-#include "psiwindowheader.h"
 #include "widgets/actionlineedit.h"
 #include "actionlist.h"
 
@@ -87,7 +86,6 @@ private:
     ChatEdit* chatEdit() const;
     void updateAutojidIcon();
     void setJidComboItem(int pos, const QString &text, const Jid &jid, const QString &icon_str);
-    void setMargins();
 
 private:
     Ui::ChatDlg ui_;
@@ -114,8 +112,6 @@ private:
     class ChatDlgMCmdProvider;
 
     static PsiIcon *throbber_icon;
-    bool tabmode;
-    QPointer <PsiWindowHeader> winHeader_;
 
     int logHeight;
     int chateditHeight;

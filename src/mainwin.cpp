@@ -130,7 +130,6 @@ public:
     int tabsSize;
     int rosterSize;
     bool isLeftRoster;
-    bool isHide;
 
     PopupAction *optionsButton, *statusButton;
     IconActionGroup *statusGroup, *viewGroups;
@@ -555,8 +554,6 @@ MainWin::MainWin(bool _onTop, bool _asTool, PsiCon* psi)
         connect(sp_ss, SIGNAL(triggered()), SLOT(avcallConfig()));*/
     optionChanged("options.ui.contactlist.css");
 
-    setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
-
     reinitAutoHide();
 }
 
@@ -594,10 +591,6 @@ void MainWin::optionChanged(const QString& option)
         if (!css.isEmpty()) {
             setStyleSheet(css);
         }
-    }
-    else if (option == "options.ui.decorate-windows") {
-        setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
-        show();
     }
 }
 
@@ -1754,7 +1747,6 @@ void MainWin::statusClicked(int x)
 {
     if(x == Qt::MidButton) {
         recvNextEvent();
-        d->isHide = false;
     }
 }
 
@@ -2000,36 +1992,6 @@ void MainWin::resizeEvent(QResizeEvent *e)
         d->splitter->setSizes(sizes);
         d->tabsSize = tabsWidth + dw;
     }
-}
-
-void MainWin::mousePressEvent(QMouseEvent *e)
-{
-    if (e->button() == Qt::MidButton && !isBorder()) {
-        d->isHide = true;
-    }
-
-    AdvancedWidget<QMainWindow>::mousePressEvent(e);
-}
-
-void MainWin::mouseReleaseEvent(QMouseEvent *e)
-{
-    if (e->button() == Qt::MidButton && !isBorder() && d->isHide) {
-        d->isHide = false;
-        const int x_ = e->globalPos().x();
-        const int y_ = e->globalPos().y();
-        if (x_ >= geometry().left()
-            && x_ <= geometry().right()
-            && y_ >= geometry().top()
-            && y_ <= geometry().bottom()){
-            if (d->asTool){
-                d->mainWin->trayHide();
-            } else {
-                setWindowState(windowState() | Qt::WindowMinimized);
-            }
-        }
-    }
-
-    AdvancedWidget<QMainWindow>::mouseReleaseEvent(e);
 }
 
 //#endif

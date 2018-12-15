@@ -91,7 +91,6 @@
 #include "pluginmanager.h"
 #endif
 #include "psirichtext.h"
-#include "psiwindowheader.h"
 #include "mcmdsimplesite.h"
 #include "tabcompletion.h"
 #include "vcardfactory.h"
@@ -259,15 +258,11 @@ public:
 
     int logSize;
     int rosterSize;
-
-    int logHeight;
-    int chateditHeight;
-
 public:
     bool trackBar;
 
-    bool tabmode;
-    PsiWindowHeader *winHeader_;
+    int logHeight;
+    int chateditHeight;
 
 public:
     ChatEdit* mle() const { return dlg->ui_.mle->chatEdit(); }
@@ -854,14 +849,6 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
     setAcceptDrops(true);
 
     ui_.setupUi(this);
-    d->tabmode = PsiOptions::instance()->getOption("options.ui.tabs.use-tabs").toBool();
-    setWindowBorder(PsiOptions::instance()->getOption("options.ui.decorate-windows").toBool());
-    if (!d->tabmode && !isBorder()) {
-        d->winHeader_ = new PsiWindowHeader(this);
-        ui_.vboxLayout1->insertWidget(0, d->winHeader_);
-    }
-    setMargins();
-
     ui_.lb_ident->setAccount(account());
     ui_.lb_ident->setShowJid(false);
     ui_.log->setSessionData(true, false, jid(), jid().full()); //FIXME change conference name
@@ -2339,25 +2326,6 @@ void GCMainDlg::setLooks()
                                                  Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
     ui_.lv_users->setLooks();
     setMucSelfAvatar();
-}
-
-void GCMainDlg::setMargins()
-{
-    ui_.vboxLayout->setContentsMargins(0,0,0,0);
-    ui_.vboxLayout2->setContentsMargins(4,0,4,4);
-    if (!d->tabmode) {
-        ui_.hboxLayout->setContentsMargins(4,0,4,0);
-        if (!isBorder()) {
-            ui_.vboxLayout1->setContentsMargins(0,0,0,0);
-        }
-        else {
-            ui_.vboxLayout1->setContentsMargins(0,4,0,0);
-        }
-    }
-    else {
-        ui_.vboxLayout1->setContentsMargins(4,4,4,0);
-        ui_.hboxLayout->setContentsMargins(2,0,4,0);
-    }
 }
 
 void GCMainDlg::setToolbuttons()

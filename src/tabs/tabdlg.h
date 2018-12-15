@@ -29,7 +29,6 @@
 #include "advwidget.h"
 
 #include "tabbablewidget.h"
-#include "psiwindowheader.h"
 
 class PsiCon;
 class ChatTabs;
@@ -175,7 +174,6 @@ private:
     void extinguishFlashingTabs();
     void updateCaption();
     void updateTabBar();
-    PsiWindowHeader *winHeader_;
 };
 
 #endif

@@ -26,7 +26,6 @@
 #include <QList>
 #include <QString>
 #include <QStringList>
-#include <QMouseEvent>
 
 #include "advwidget.h"
 #include "xmpp_status.h"
@@ -87,8 +86,6 @@ protected:
 #ifdef Q_OS_WIN
     bool winEvent(MSG *, long *);
 #endif
-    void mousePressEvent(QMouseEvent *e);
-    void mouseReleaseEvent(QMouseEvent *e);
 
 signals:
     void statusChanged(XMPP::Status::Type);

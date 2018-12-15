@@ -386,11 +386,7 @@ bool GAdvancedWidget::Private::eventFilter(QObject* obj, QEvent* e)
             }
             saveGeometryTimer_->start();
         }
-#if defined(Q_OS_WIN)
-        if (e->type() == QEvent::Show) {
-            parentWidget_->setAttribute(Qt::WA_Mapped);
-        }
-#endif
+
         return false;
     }
 

@@ -496,7 +496,6 @@ QLineEdit#le_status_text {
                 </sounds>
                 <successful-subscription type="bool">true</successful-subscription>
             </notifications>
-            <decorate-windows type="bool">true</decorate-windows>
             <service-discovery>
                 <automatically-get-info type="bool">false</automatically-get-info>
                 <automatically-get-items type="bool">false</automatically-get-items>
