@@ -260,6 +260,7 @@ public:
     int rosterSize;
 public:
     bool trackBar;
+    bool tabmode;
 
     int logHeight;
     int chateditHeight;
@@ -849,6 +850,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
     setAcceptDrops(true);
 
     ui_.setupUi(this);
+    d->tabmode = PsiOptions::instance()->getOption("options.ui.tabs.use-tabs").toBool();
     ui_.lb_ident->setAccount(account());
     ui_.lb_ident->setShowJid(false);
     ui_.log->setSessionData(true, false, jid(), jid().full()); //FIXME change conference name
