@@ -83,7 +83,7 @@ NSUInteger NDCarbonModifierFlagsForCocoaModifierFlags( NSUInteger modifierFlags 
     @abstract initialise a keyboard layout.
     @discussion Initialises a KeyboardLayout with an <tt>TISInputSourceRef</tt> for the supplied language.
  */
-- (id)initWithLanguage:static_cast<NSString *>(langauge);
+- (id)initWithLanguage:(NSString *)langauge;
 /*!
     @method initWithInputSource:
     @abstract initialise a keyboard layout.
