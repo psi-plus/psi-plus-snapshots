@@ -1,12 +1,12 @@
 # Qt5 or above is required.
 
-list(APPEND SOURCES
+set(qite_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/qite.cpp
     ${CMAKE_CURRENT_LIST_DIR}/qiteaudio.cpp
     ${CMAKE_CURRENT_LIST_DIR}/qiteaudiorecorder.cpp
     )
 
-list(APPEND HEADERS
+set(qite_HEADERS
     ${CMAKE_CURRENT_LIST_DIR}/qite.h
     ${CMAKE_CURRENT_LIST_DIR}/qiteaudio.h
     ${CMAKE_CURRENT_LIST_DIR}/qiteaudiorecorder.h
