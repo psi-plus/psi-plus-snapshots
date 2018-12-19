@@ -1,6 +1,4 @@
-if(${Qt5Core_VERSION} VERSION_LESS 5.0.0)
-	message(FATAL_ERROR "Qt5 or above is required")
-endif()
+# Qt5 or above is required.
 
 list(APPEND SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/qite.cpp
