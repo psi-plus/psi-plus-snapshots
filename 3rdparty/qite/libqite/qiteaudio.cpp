@@ -19,6 +19,7 @@ under the License.
 
 #include "qiteaudio.h"
 
+#include <QtGlobal>
 #include <QTextEdit>
 #include <QPainter>
 #include <QVector2D>
