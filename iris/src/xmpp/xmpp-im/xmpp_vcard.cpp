@@ -36,12 +36,9 @@ using namespace XMLHelper;
 //----------------------------------------------------------------------------
 // VCard
 //----------------------------------------------------------------------------
-QString image2type(const QByteArray &ba)
+QString openedImage2type(QIODevice *dev)
 {
-    QBuffer buf;
-    buf.setData(ba);
-    buf.open(QIODevice::ReadOnly);
-    QString format = QImageReader::imageFormat( &buf ).toUpper();
+    QString format = QImageReader::imageFormat( dev ).toUpper();
 
     // TODO: add more formats: PBM PGM PPM XBM XPM
     if ( format == QLatin1String("PNG") || format == QLatin1String("PSIPNG") ) // PsiPNG in normal case
@@ -65,6 +62,14 @@ QString image2type(const QByteArray &ba)
     qWarning() << QString("WARNING! VCard::image2type: unknown format = '%1'").arg(format.isNull() ? QString("UNKNOWN") : format);
 
     return QLatin1String("image/unknown");
+}
+
+QString image2type(const QByteArray &ba)
+{
+    QBuffer buf;
+    buf.setData(ba);
+    buf.open(QIODevice::ReadOnly);
+    return openedImage2type(&buf);
 }
 
 namespace XMPP {

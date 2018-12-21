@@ -285,6 +285,7 @@ namespace XMPP
     };
 }
 
+QString openedImage2type(QIODevice *dev);
 QString image2type(const QByteArray &ba);
 
 #endif

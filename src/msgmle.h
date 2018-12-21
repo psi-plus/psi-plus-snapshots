@@ -21,6 +21,7 @@
 #ifndef MSGMLE_H
 #define MSGMLE_H
 
+#include <memory>
 #include <QTextEdit>
 
 #include "xmpp_htmlelement.h"
@@ -32,6 +33,7 @@ class QEvent;
 class QKeyEvent;
 class QResizeEvent;
 class QTimer;
+class QImage;
 class SpellHighlighter;
 class HTMLTextController;
 class CapitalLettersController;
@@ -60,7 +62,7 @@ public:
     bool isCorrection() { return correction; }
     void setLastMessageId(const QString& id) { lastId = id; }
     const QString& lastMessageId() { return lastId; }
-    void resetCorrection() { correction = false; updateBackground(); };
+    void resetCorrection() { correction = false; updateBackground(); }
     CapitalLettersController * capitalizer();
 
 public slots:
@@ -71,8 +73,8 @@ public slots:
     void insertAsQuote(const QString& text);
 
 protected slots:
-     void applySuggestion();
-     void addToDictionary();
+    void applySuggestion();
+    void addToDictionary();
     void optionsChanged();
     void showHistoryMessageNext();
     void showHistoryMessagePrev();
@@ -80,6 +82,9 @@ protected slots:
     void showHistoryMessageLast();
     void changeActPasteAsQuoteState();
     void pasteAsQuote();
+
+signals:
+    void imagePasted(const QImage &);
 
 protected:
     // override the tab/esc behavior
@@ -91,25 +96,26 @@ protected:
     void initActions();
     void setShortcuts();
     void setEditText(const QString& text);
+    void insertFromMimeData(const QMimeData *source);
 
 private:
-    QWidget    *dialog_;
-    bool check_spelling_;
-    SpellHighlighter* spellhighlighter_;
+    QWidget    *dialog_ = nullptr;
+    bool check_spelling_ = false;
+    std::unique_ptr<SpellHighlighter> spellhighlighter_;
     QPoint last_click_;
-    int previous_position_;
+    int previous_position_ = 0;
     QStringList typedMsgsHistory;
-    long typedMsgsIndex;
-    QAction* act_showMessagePrev;
-    QAction* act_showMessageNext;
-    QAction* act_showMessageFirst;
-    QAction* act_showMessageLast;
-    QAction *act_changeCase;
-    QAction *actPasteAsQuote_;
+    long typedMsgsIndex = 0;
+    QAction* act_showMessagePrev = nullptr;
+    QAction* act_showMessageNext = nullptr;
+    QAction* act_showMessageFirst = nullptr;
+    QAction* act_showMessageLast = nullptr;
+    QAction* act_changeCase = nullptr;
+    QAction *actPasteAsQuote_ = nullptr;
     QString currentText;
-    HTMLTextController *controller_;
-    CapitalLettersController *capitalizer_;
-    bool correction;
+    HTMLTextController *controller_ = nullptr;
+    CapitalLettersController *capitalizer_ = nullptr;
+    bool correction = false;
     QString lastId;
     QPalette palOriginal;
     QPalette palCorrection;
