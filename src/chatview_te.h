@@ -93,8 +93,6 @@ protected:
 
 protected slots:
     void autoCopy();
-    void quoteEvent();
-    void changeActQuoteState();
 
 private slots:
     void slotScroll();

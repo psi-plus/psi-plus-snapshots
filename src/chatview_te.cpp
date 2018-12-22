@@ -72,8 +72,10 @@ ChatView::ChatView(QWidget *parent)
     actQuote_->setEnabled(false);
     actQuote_->setShortcut(QKeySequence(tr("Ctrl+S")));
     addAction(actQuote_);
-    connect(actQuote_, SIGNAL(triggered()), SLOT(quoteEvent()));
-    connect(this, SIGNAL(selectionChanged()), SLOT(changeActQuoteState()));
+    connect(actQuote_, &QAction::triggered, this, [this](bool){ emit quote(getPlainText()); });
+    connect(this, &ChatView::selectionChanged, this, [this](){
+        actQuote_->setEnabled(textCursor().hasSelection());
+    });
 
     useMessageIcons_ = PsiOptions::instance()->getOption("options.ui.chat.use-message-icons").toBool();
     if (useMessageIcons_) {
@@ -232,24 +234,6 @@ void ChatView::autoCopy()
     if (isReadOnly() && PsiOptions::instance()->getOption("options.ui.automatically-copy-selected-text").toBool()) {
         copy();
     }
-}
-
-/**
- * Make quote from any selected text and paste it in chat window
- */
-
-void ChatView::quoteEvent()
-{
-    emit quote(getPlainText());
-}
-
-/**
- * Enable or disable actQuote_ in relations from hasSelection()
- */
-
-void ChatView::changeActQuoteState()
-{
-    actQuote_->setEnabled(textCursor().hasSelection());
 }
 
 /**

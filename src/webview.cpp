@@ -76,11 +76,6 @@ WebView::WebView(QWidget* parent) :
 #endif
     connect(page(), SIGNAL(loadStarted()), this, SLOT(loadStartedEvent()));
     connect(page(), SIGNAL(loadFinished(bool)), this, SLOT(loadFinishedEvent(bool)));
-
-    actQuote_ = new QAction(tr("Quote"), this);
-    actQuote_->setShortcut(QKeySequence(tr("Ctrl+S")));
-    addAction(actQuote_);
-    connect(actQuote_, SIGNAL(triggered()), SLOT(quoteEvent()));
 }
 
 void WebView::linkClickedEvent(const QUrl& url)
@@ -102,11 +97,6 @@ void WebView::loadFinishedEvent(bool success)
         qDebug("webview page load failed");
     }
     isLoading_ = false;
-}
-
-void WebView::quoteEvent()
-{
-    emit quote(selectedText());
 }
 
 void WebView::contextMenuEvent(QContextMenuEvent* event)
@@ -138,6 +128,9 @@ void WebView::contextMenuEvent(QContextMenuEvent* event)
         if (!page()->selectedText().isEmpty()) {
 #ifdef WEBENGINE
             menu->addAction(pageAction(QWebEnginePage::Copy));
+            for (auto act: contextMenuActions_) {
+                menu->addAction(act);
+            }
         } else {
             if (!menu->isEmpty()) {
                 menu->addSeparator();
@@ -149,7 +142,9 @@ void WebView::contextMenuEvent(QContextMenuEvent* event)
     menu->addAction(pageAction(QWebEnginePage::Reload));
 #else
             menu->addAction(pageAction(QWebPage::Copy));
-            menu->addAction(actQuote_);
+            for (auto act: contextMenuActions_) {
+                menu->addAction(act);
+            }
         } else {
             if (!menu->isEmpty()) {
                 menu->addSeparator();
@@ -240,6 +235,11 @@ void WebView::evaluateJS(const QString &scriptSource)
 #else
     page()->mainFrame()->evaluateJavaScript(scriptSource);
 #endif
+}
+
+void WebView::addContextMenuAction(QAction *act)
+{
+    contextMenuActions_.append(act);
 }
 
 #ifndef WEBENGINE

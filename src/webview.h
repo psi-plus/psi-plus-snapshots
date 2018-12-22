@@ -64,6 +64,8 @@ public:
 #endif
     bool isLoading() { return isLoading_; }
 
+    void addContextMenuAction(QAction *act);
+
 public slots:
     void copySelected();
 
@@ -85,17 +87,13 @@ private:
     bool isLoading_;
     QStringList jsBuffer_;
     QPoint dragStartPosition;
-    QAction *actQuote_;
-
-signals:
-    void quote(const QString &text);
+    QList<QAction*> contextMenuActions_;
 
 protected slots:
     void linkClickedEvent(const QUrl& url);
     void textCopiedEvent();
     void loadStartedEvent();
     void loadFinishedEvent(bool);
-    void quoteEvent();
 };
 
 
