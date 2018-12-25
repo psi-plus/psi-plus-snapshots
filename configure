@@ -920,6 +920,25 @@ arg: with-idn-lib=[path],Path to libidn library or framework files
 -----END QCMOD-----
 */
 
+/*
+Warning: libidn is somewhat deprecated in favor of libidn2, but we can't just
+drop it since IDNA2008 doesn't include XMPP profiles and has nothing from
+stringprep. This stuff was moved to RFC8264 and RFC8265 and its usage was
+described in RFC7622. There are no known C/C++ implementations of these specs
+at the moment of this writing. A partial and not sufficient implementation can
+be found at https://gitlab.com/gnutls/gnutls/blob/master/lib/str-unicode.c. It
+implements OpaqueString Profile but doesn't implement UsernameCaseMapped
+profile required by RFC7622. Note it may be also desired to implement RFC8266.
+
+Some implementations in other languages:
+Go: https://godoc.org/golang.org/x/text/secure/precis
+Python: https://pypi.org/project/precis-i18n/
+Perl: https://metacpan.org/release/Unicode-Precis
+PHP: https://github.com/tom--/precis
+
+We can try to use https://github.com/lpereira/gomoku to convert from Go.
+*/
+
 //----------------------------------------------------------------------------
 // qc_idn
 //----------------------------------------------------------------------------
@@ -1325,11 +1344,7 @@ public:
     	QString version, libs, other;
     	QString s;
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     	bool found = conf->findPkgConfig("qjdns-qt5", VersionMin, "2.0.3", &version, &incs, &libs, &other);
-#else
-    	bool found = conf->findPkgConfig("qjdns-qt4", VersionMin, "2.0.3", &version, &incs, &libs, &other);
-#endif
     	if(!found && !conf->findPkgConfig("qjdns", VersionMin, "2.0.0", &version, &incs, &libs, &other)) {
     		s = conf->getenv("QC_WITH_QJDNS_INC");
     		if ((!s.isEmpty() && conf->checkHeader(s, "qjdns.h")) ||
@@ -1620,10 +1635,7 @@ public:
     			qt = "webenginewidgets webchannel";
     		} else {
     			webkitType = "QtWebKit";
-    			qt = "webkit";
-#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
-    			qt += " webkitwidgets";
-#endif
+    			qt = "webkit webkitwidgets";
     		}
 
     		QString proextra = "CONFIG += qt webkit\\n";
