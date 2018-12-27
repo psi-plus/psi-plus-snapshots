@@ -1886,28 +1886,36 @@ void PsiCon::doWakeup()
 
     d->wakeupPending = true; // and wait for signal till network session is opened (proved to work on gentoo+nm+xfce)
 
-    QTimer::singleShot(5000, this, SLOT(networkSessionOpened()));
-}
-
-void PsiCon::networkSessionClosed()
-{
-    /*
-     * The original connection is gone. (E.g. suspend on LAN, wake with WLAN
-     * only.)
-     *
-     * This is mostly a work-around, merely a hack. We need to implement
-     * roaming (or something alike) in the longterm.
-     */
-    disconnect(d->netSession);
-    d->netSession->deleteLater();
-    initNetSession();
+    QTimer::singleShot(5000, this, SLOT(networkSessionOpened())); // a fallback if QNetworkSession doesn't signal
+    // if 5secs is not enough to connect to the network then it isn't considered a wakeup anymore but a regular reconnect.
 }
 
 void PsiCon::initNetSession()
 {
     d->netSession = new QNetworkSession(d->netConfMng.defaultConfiguration(), this);
     connect(d->netSession, &QNetworkSession::opened, this, &PsiCon::networkSessionOpened);
-    connect(d->netSession, &QNetworkSession::closed, this, &PsiCon::networkSessionClosed);
+    connect(d->netSession, &QNetworkSession::closed, this, [this]()
+    {
+        disconnect(d->netSession);
+        d->netSession->deleteLater();
+        initNetSession();
+    });
+    /* next commented out lines could be used for fine-grained control. otherwise forced roaming will be used
+
+    connect(d->netSession, &QNetworkSession::preferredConfigurationChanged, this,
+            [this](const QNetworkConfiguration &config, bool isSeamless)
+    {
+        Q_UNUSED(config)
+        Q_UNUSED(isSeamless)
+
+        d->netSession->migrate();
+    });
+    connect(d->netSession, &QNetworkSession::newConfigurationActivated, this, [this]()
+    {
+        d->netSession->accept();
+        // theoretically psi should catch connection failure on sockets and start reconnecting
+    });
+    */
     d->netSession->open();
 }
 

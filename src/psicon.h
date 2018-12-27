@@ -187,13 +187,13 @@ private slots:
     void secondsIdle(int);    
     void proceedWithSleep();
     void networkSessionOpened();
-    void networkSessionClosed();
 private:
     class Private;
     Private *d;
     friend class Private;
     ContactUpdatesManager* contactUpdatesManager_;
 
+    void initNetSession();
     void deleteAllDialogs();
     void s5b_init();
     void updateS5BServerAddresses();
@@ -203,7 +203,6 @@ private:
     void promptUserToCreateAccount();
     QString optionsFile() const;
     void doQuit(int);
-    void initNetSession();
 };
 
 #endif
