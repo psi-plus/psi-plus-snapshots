@@ -1885,6 +1885,8 @@ void PsiCon::doWakeup()
     //setGlobalStatus(Status());
 
     d->wakeupPending = true; // and wait for signal till network session is opened (proved to work on gentoo+nm+xfce)
+
+    QTimer::singleShot(5000, this, SLOT(networkSessionOpened()));
 }
 
 void PsiCon::networkSessionClosed()
