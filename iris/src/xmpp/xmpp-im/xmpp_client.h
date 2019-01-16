@@ -32,6 +32,7 @@ class QString;
 class QDomElement;
 class QDomDocument;
 class ByteStream;
+class QNetworkAccessManager;
 namespace XMPP {
     class ClientStream;
     class Features;
@@ -52,6 +53,7 @@ namespace XMPP {
     class CapsManager;
     class EncryptionHandler;
     class ServerInfoManager;
+    class HttpFileUploadManager;
 }
 
 namespace XMPP
@@ -128,6 +130,7 @@ namespace XMPP
         JidLinkManager *jidLinkManager() const;
         CapsManager *capsManager() const;
         ServerInfoManager *serverInfoManager() const;
+        HttpFileUploadManager *httpFileUploadManager() const;
 
         void setFileTransferEnabled(bool b);
         FileTransferManager *fileTransferManager() const;

@@ -577,7 +577,7 @@ const QList<XData::ReportItem> &XData::reportItems() const
 
 bool XData::isValid() const
 {
-    foreach(Field f, d->fields) {
+    foreach(const Field &f, d->fields) {
         if (!f.isValid())
             return false;
     }

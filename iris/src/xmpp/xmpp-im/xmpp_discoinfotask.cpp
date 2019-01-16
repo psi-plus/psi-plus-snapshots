@@ -113,10 +113,10 @@ void DiscoInfoTask::onGo ()
     QDomElement iq = createIQ(doc(), "get", d->jid.full(), id());
     QDomElement query = doc()->createElement("query");
     query.setAttribute("xmlns", "http://jabber.org/protocol/disco#info");
-
     if ( !d->node.isEmpty() )
         query.setAttribute("node", d->node);
 
+#if 0 // seems like disco#info get request was misinterpreted. xep-0030 says it has to be an EMPTY query.
     if ( !d->ident.category.isEmpty() && !d->ident.type.isEmpty() ) {
         QDomElement i = doc()->createElement("item");
 
@@ -128,7 +128,7 @@ void DiscoInfoTask::onGo ()
         query.appendChild( i );
 
     }
-
+#endif
     iq.appendChild(query);
     send(iq);
 }
