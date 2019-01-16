@@ -27,6 +27,7 @@
 #include <QObject>
 #include <QString>
 #include <QLinkedList>
+#include <QVariant>
 
 #include <functional>
 
