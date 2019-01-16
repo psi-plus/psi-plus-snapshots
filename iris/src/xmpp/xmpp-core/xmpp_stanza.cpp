@@ -338,7 +338,7 @@ bool Stanza::Error::fromXml(const QDomElement &e, const QString &baseNS)
     }
 
     // code
-    originalCode = e.attribute("code").toInt();
+    originalCode = e.attribute("code").toInt(); // deprecated. rfc6120 has just a little note about it. also see XEP-0086
 
     // try to guess type/condition
     if(type == -1 || condition == -1) {

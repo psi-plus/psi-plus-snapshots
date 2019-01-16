@@ -49,6 +49,15 @@ public:
     };
     Q_DECLARE_FLAGS(HostProps, HostPropFlag)
 
+    enum class ErrorCode : int {
+        NoError = 0,
+        XmppConnectionFailure,
+        Timeout,
+        SlotReceiveFailed,
+        NoUploadService = 5, // previous could be mapped to Task errors
+        HttpFailed
+    };
+
     struct HttpSlot {
         struct {
             QString url;
@@ -85,7 +94,7 @@ public:
     void setNetworkAccessManager(QNetworkAccessManager *qnam);
 
     bool success() const;
-    int  statusCode() const;
+    ErrorCode statusCode() const;
     const QString & statusString() const;
     HttpSlot getHttpSlot();
 
@@ -116,6 +125,7 @@ class JT_HTTPFileUpload : public Task
     Q_OBJECT
 public:
     enum UrlType { GetUrl = 0, PutUrl = 1 };
+    enum { ErrInvalidResponse = int(HttpFileUpload::ErrorCode::SlotReceiveFailed) - 1 }; // -1 to be mapped to ErrDisc, ErrTimeout, ...
 
     JT_HTTPFileUpload(Task *parent);
     ~JT_HTTPFileUpload();

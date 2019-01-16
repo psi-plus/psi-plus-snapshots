@@ -50,7 +50,7 @@ public:
     QList<HttpHost> httpHosts;
 
     struct {
-        int statusCode = 0;
+        enum HttpFileUpload::ErrorCode statusCode = HttpFileUpload::ErrorCode::NoError;
         QString statusString;
         QString getUrl;
         QString putUrl;
@@ -88,7 +88,7 @@ void HttpFileUpload::start()
 
     setState(State::GettingSlot);
 
-    d->result.statusCode = 0;
+    d->result.statusCode = HttpFileUpload::ErrorCode::NoError;
     static QList<QSet<QString>> featureOptions;
     if (featureOptions.isEmpty()) {
         featureOptions << (QSet<QString>() << xmlns_v0_2_5) << (QSet<QString>() << xmlns_v0_3_1);
@@ -147,7 +147,7 @@ void HttpFileUpload::start()
         }
         //d->currentHost = d->httpHosts.begin();
         if (d->httpHosts.isEmpty()) { // if empty as the last resort check all services
-            d->result.statusCode   = -1;
+            d->result.statusCode   = HttpFileUpload::ErrorCode::NoUploadService;
             d->result.statusString = "No suitable http upload services were found";
             done(State::Error);
         } else {
@@ -159,7 +159,7 @@ void HttpFileUpload::start()
 void HttpFileUpload::tryNextServer()
 {
     if (d->httpHosts.isEmpty()) { // if empty as the last resort check all services
-        d->result.statusCode   = -1;
+        d->result.statusCode   = HttpFileUpload::ErrorCode::NoUploadService;
         d->result.statusString = "All http services are either non compliant or returned errors";
         done(State::Error);
         return;
@@ -170,10 +170,17 @@ void HttpFileUpload::tryNextServer()
     connect(jt, &JT_HTTPFileUpload::finished, this, [this, jt, host]() mutable {
         if (!jt->success()) {
             host.props |= Failure;
-            d->result.statusCode   = jt->statusCode();
+            int code = jt->statusCode();
+            if (code < 300) {
+                code++; // ErrDisc and ErrTimeout. but 0 code is already occupated
+            }
+            d->result.statusCode   = static_cast<ErrorCode>(jt->statusCode());
             d->result.statusString = jt->statusString();
             d->client->serverInfoManager()->setServiceMeta(host.jid, QLatin1String("httpprops"), int(host.props));
-            done(State::Error);
+            if (d->httpHosts.isEmpty())
+                done(State::Error);
+            else
+                tryNextServer();
             return;
         }
 
@@ -208,9 +215,12 @@ void HttpFileUpload::tryNextServer()
             if (reply->error() == QNetworkReply::NoError) {
                 done(State::Success);
             } else {
-                d->result.statusCode   = -1;
+                d->result.statusCode   = ErrorCode::HttpFailed;
                 d->result.statusString = reply->errorString();
-                done(State::Error);
+                if (d->httpHosts.isEmpty())
+                    done(State::Error);
+                else
+                    tryNextServer();
             }
             reply->deleteLater();
         });
@@ -225,7 +235,7 @@ bool HttpFileUpload::success() const
     return d->state == State::Success;
 }
 
-int HttpFileUpload::statusCode() const
+HttpFileUpload::ErrorCode HttpFileUpload::statusCode() const
 {
     return d->result.statusCode;
 }
@@ -250,6 +260,10 @@ HttpFileUpload::HttpSlot HttpFileUpload::getHttpSlot()
 void HttpFileUpload::setState(State state)
 {
     d->state = state;
+    if (state == Success) {
+        d->result.statusCode = ErrorCode::NoError;
+        d->result.statusString.clear();
+    }
     emit stateChanged();
 }
 
@@ -382,7 +396,7 @@ bool JT_HTTPFileUpload::take(const QDomElement &e)
         }
     }
     if (!correct_xmlns) {
-        setError(900);
+        setError(ErrInvalidResponse);
         return true;
     }
     if (!getUrl.isEmpty() && !putUrl.isEmpty()) {
@@ -392,7 +406,7 @@ bool JT_HTTPFileUpload::take(const QDomElement &e)
         setSuccess();
     }
     else
-        setError(900, "Either `put` or `get` URL is missing in the server's reply.");
+        setError(ErrInvalidResponse, "Either `put` or `get` URL is missing in the server's reply.");
     return true;
 }
 
