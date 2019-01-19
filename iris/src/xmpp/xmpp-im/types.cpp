@@ -28,6 +28,7 @@
 #include "xmpp_ibb.h"
 #include "xmpp_captcha.h"
 #include "protocol.h"
+#include "xmpp/blake2/blake2qt.h"
 #define NS_XML     "http://www.w3.org/XML/1998/namespace"
 
 namespace XMPP
@@ -113,7 +114,7 @@ void Url::setDesc(const QString &desc)
     d->desc = desc;
 }
 
- //----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 // Address
 //----------------------------------------------------------------------------
 
@@ -176,33 +177,33 @@ QDomElement Address::toXml(Stanza& s) const
     if(delivered())
         e.setAttribute("delivered", "true");
     switch (type()) {
-        case To:
-            e.setAttribute("type", "to");
-            break;
-        case Cc:
-            e.setAttribute("type", "cc");
-            break;
-        case Bcc:
-            e.setAttribute("type", "bcc");
-            break;
-        case ReplyTo:
-            e.setAttribute("type", "replyto");
-            break;
-        case ReplyRoom:
-            e.setAttribute("type", "replyroom");
-            break;
-        case NoReply:
-            e.setAttribute("type", "noreply");
-            break;
-        case OriginalFrom:
-            e.setAttribute("type", "ofrom");
-            break;
-        case OriginalTo:
-            e.setAttribute("type", "oto");
-            break;
-        case Unknown:
-            // Add nothing
-            break;
+    case To:
+        e.setAttribute("type", "to");
+        break;
+    case Cc:
+        e.setAttribute("type", "cc");
+        break;
+    case Bcc:
+        e.setAttribute("type", "bcc");
+        break;
+    case ReplyTo:
+        e.setAttribute("type", "replyto");
+        break;
+    case ReplyRoom:
+        e.setAttribute("type", "replyroom");
+        break;
+    case NoReply:
+        e.setAttribute("type", "noreply");
+        break;
+    case OriginalFrom:
+        e.setAttribute("type", "ofrom");
+        break;
+    case OriginalTo:
+        e.setAttribute("type", "oto");
+        break;
+    case Unknown:
+        // Add nothing
+        break;
     }
     return e;
 }
@@ -309,6 +310,102 @@ void Address::setType(Type type)
     v_type = type;
 }
 
+
+//----------------------------------------------------------------------------
+// Hash
+//----------------------------------------------------------------------------
+static const struct {
+    const char *text;
+    HashType hashType;
+} HashTypes[] =
+{
+{ "sha-1",       HashType::Sha1 },
+{ "sha-256",     HashType::Sha256 },
+{ "sha-512",     HashType::Sha512 },
+{ "sha3-256",    HashType::Sha3_256 },
+{ "sha3-512",    HashType::Sha3_512 },
+{ "blake2b-256", HashType::Blake2b256 },
+{ "blake2b-512", HashType::Blake2b512 }
+};
+
+
+Hash::Hash(const QDomElement &el)
+{
+    QString algo = el.attribute(QLatin1String("algo"));
+    if (!algo.isEmpty()) {
+        for(int n = 0; sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
+            if(algo == QLatin1String(HashTypes[n].text)) {
+                v_data = QByteArray::fromBase64(el.text().toLatin1());
+                if (!v_data.isEmpty()) {
+                    v_type = HashTypes[n].hashType;
+                }
+                break;
+            }
+        }
+    }
+}
+
+bool Hash::computeFromData(const QByteArray &ba)
+{
+    v_data.clear();
+    switch (v_type) {
+    case HashType::Sha1:     v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha1); break;
+    case HashType::Sha256:   v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha256); break;
+    case HashType::Sha512:   v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha512); break;
+    case HashType::Sha3_256: v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha3_256); break;
+    case HashType::Sha3_512: v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha3_512); break;
+    case HashType::Blake2b256: v_data = computeBlake2Hash(ba, Blake2Digest256); break;
+    case HashType::Blake2b512: v_data = computeBlake2Hash(ba, Blake2Digest512); break;
+    case HashType::Unknown:
+    default:
+        qDebug("invalid has type");
+        return false;
+    }
+    return !v_data.isEmpty();
+}
+
+QDomElement Hash::toXml(Stanza &s) const
+{
+    if (v_type != HashType::Unknown && !v_data.isEmpty()) {
+        for(int n = 0; sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
+            if(v_type == HashTypes[n].hashType) {
+                auto el = s.createElement(XMPP_HASH_NS, QLatin1String("hash"));
+                el.setAttribute(QLatin1String("algo"), QLatin1String(HashTypes[n].text));
+                XMLHelper::setTagText(el, v_data.toBase64());
+                return el;
+            }
+        }
+    }
+    return QDomElement();
+}
+
+HashUsed::HashUsed(const QDomElement &el)
+{
+    QString algo = el.attribute(QLatin1String("algo"));
+    if (!algo.isEmpty()) {
+        for(int n = 0; sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
+            if(algo == QLatin1String(HashTypes[n].text)) {
+                v_type = HashTypes[n].hashType;
+                break;
+            }
+        }
+    }
+}
+
+QDomElement HashUsed::toXml(Stanza &s) const
+{
+    if (v_type != HashType::Unknown) {
+        for(int n = 0; sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
+            if(v_type == HashTypes[n].hashType) {
+                auto el = s.createElement(XMPP_HASH_NS, QLatin1String("hash"));
+                el.setAttribute(QLatin1String("algo"), QLatin1String(HashTypes[n].text));
+                return el;
+            }
+        }
+    }
+    return QDomElement();
+}
+
 //----------------------------------------------------------------------------
 // RosterExchangeItem
 //----------------------------------------------------------------------------
@@ -374,15 +471,15 @@ QDomElement RosterExchangeItem::toXml(Stanza& s) const
     if (!name().isEmpty())
         e.setAttribute("name", name());
     switch(action()) {
-        case Add:
-            e.setAttribute("action","add");
-            break;
-        case Delete:
-            e.setAttribute("action","delete");
-            break;
-        case Modify:
-            e.setAttribute("action","modify");
-            break;
+    case Add:
+        e.setAttribute("action","add");
+        break;
+    case Delete:
+        e.setAttribute("action","delete");
+        break;
+    case Modify:
+        e.setAttribute("action","modify");
+        break;
     }
     foreach(QString group, groups_) {
         e.appendChild(s.createTextElement("http://jabber.org/protocol/rosterx", "group",group));
@@ -550,39 +647,39 @@ QDomElement MUCItem::toXml(QDomDocument& d)
         e.appendChild(textTag(&d,"reason",reason_));
 
     switch (affiliation_) {
-        case NoAffiliation:
-            e.setAttribute("affiliation","none");
-            break;
-        case Owner:
-            e.setAttribute("affiliation","owner");
-            break;
-        case Admin:
-            e.setAttribute("affiliation","admin");
-            break;
-        case Member:
-            e.setAttribute("affiliation","member");
-            break;
-        case Outcast:
-            e.setAttribute("affiliation","outcast");
-            break;
-        default:
-            break;
+    case NoAffiliation:
+        e.setAttribute("affiliation","none");
+        break;
+    case Owner:
+        e.setAttribute("affiliation","owner");
+        break;
+    case Admin:
+        e.setAttribute("affiliation","admin");
+        break;
+    case Member:
+        e.setAttribute("affiliation","member");
+        break;
+    case Outcast:
+        e.setAttribute("affiliation","outcast");
+        break;
+    default:
+        break;
     }
     switch (role_) {
-        case NoRole:
-            e.setAttribute("role","none");
-            break;
-        case Moderator:
-            e.setAttribute("role","moderator");
-            break;
-        case Participant:
-            e.setAttribute("role","participant");
-            break;
-        case Visitor:
-            e.setAttribute("role","visitor");
-            break;
-        default:
-            break;
+    case NoRole:
+        e.setAttribute("role","none");
+        break;
+    case Moderator:
+        e.setAttribute("role","moderator");
+        break;
+    case Participant:
+        e.setAttribute("role","participant");
+        break;
+    case Visitor:
+        e.setAttribute("role","visitor");
+        break;
+    default:
+        break;
     }
 
     return e;
@@ -663,7 +760,7 @@ void MUCInvite::fromXml(const QDomElement& e)
             continue;
 
         if (i.tagName() == "continue")
-           cont_ = true;
+            cont_ = true;
         else if (i.tagName() == "reason")
             reason_ = i.text();
     }
@@ -1659,21 +1756,21 @@ Stanza Message::toStanza(Stream *stream) const
 
         foreach (const MsgEvent& ev, d->eventList) {
             switch (ev) {
-                case OfflineEvent:
-                    x.appendChild(s.createElement("jabber:x:event", "offline"));
-                    break;
-                case DeliveredEvent:
-                    x.appendChild(s.createElement("jabber:x:event", "delivered"));
-                    break;
-                case DisplayedEvent:
-                    x.appendChild(s.createElement("jabber:x:event", "displayed"));
-                    break;
-                case ComposingEvent:
-                    x.appendChild(s.createElement("jabber:x:event", "composing"));
-                    break;
-                case CancelEvent:
-                    // Add nothing
-                    break;
+            case OfflineEvent:
+                x.appendChild(s.createElement("jabber:x:event", "offline"));
+                break;
+            case DeliveredEvent:
+                x.appendChild(s.createElement("jabber:x:event", "delivered"));
+                break;
+            case DisplayedEvent:
+                x.appendChild(s.createElement("jabber:x:event", "displayed"));
+                break;
+            case ComposingEvent:
+                x.appendChild(s.createElement("jabber:x:event", "composing"));
+                break;
+            case CancelEvent:
+                // Add nothing
+                break;
             }
         }
         s.appendChild(x);
@@ -1683,23 +1780,23 @@ Stanza Message::toStanza(Stream *stream) const
     QString chatStateNS = "http://jabber.org/protocol/chatstates";
     if (d->chatState != StateNone) {
         switch(d->chatState) {
-            case StateActive:
-                s.appendChild(s.createElement(chatStateNS, "active"));
-                break;
-            case StateComposing:
-                s.appendChild(s.createElement(chatStateNS, "composing"));
-                break;
-            case StatePaused:
-                s.appendChild(s.createElement(chatStateNS, "paused"));
-                break;
-            case StateInactive:
-                s.appendChild(s.createElement(chatStateNS, "inactive"));
-                break;
-            case StateGone:
-                s.appendChild(s.createElement(chatStateNS, "gone"));
-                break;
-            default:
-                break;
+        case StateActive:
+            s.appendChild(s.createElement(chatStateNS, "active"));
+            break;
+        case StateComposing:
+            s.appendChild(s.createElement(chatStateNS, "composing"));
+            break;
+        case StatePaused:
+            s.appendChild(s.createElement(chatStateNS, "paused"));
+            break;
+        case StateInactive:
+            s.appendChild(s.createElement(chatStateNS, "inactive"));
+            break;
+        case StateGone:
+            s.appendChild(s.createElement(chatStateNS, "gone"));
+            break;
+        default:
+            break;
         }
     }
 
@@ -1707,20 +1804,20 @@ Stanza Message::toStanza(Stream *stream) const
     QString messageReceiptNS = "urn:xmpp:receipts";
     if (d->messageReceipt != ReceiptNone) {
         switch(d->messageReceipt) {
-            case ReceiptRequest:
-                s.appendChild(s.createElement(messageReceiptNS, "request"));
-                break;
-            case ReceiptReceived:
-                {
-                    QDomElement elem = s.createElement(messageReceiptNS, "received");
-                    if (!d->messageReceiptId.isEmpty()) {
-                        elem.setAttribute("id", d->messageReceiptId);
-                    }
-                    s.appendChild(elem);
-                }
-                break;
-            default:
-                break;
+        case ReceiptRequest:
+            s.appendChild(s.createElement(messageReceiptNS, "request"));
+            break;
+        case ReceiptReceived:
+        {
+            QDomElement elem = s.createElement(messageReceiptNS, "received");
+            if (!d->messageReceiptId.isEmpty()) {
+                elem.setAttribute("id", d->messageReceiptId);
+            }
+            s.appendChild(elem);
+        }
+            break;
+        default:
+            break;
         }
     }
 
@@ -2170,7 +2267,7 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
     }
 
     QDomElement captcha = childElementsByTagNameNS(root, "urn:xmpp:captcha",
-                                                 "captcha").item(0).toElement();
+                                                   "captcha").item(0).toElement();
     QDomElement xdataRoot = root;
     if (!captcha.isNull()) {
         xdataRoot = captcha;
@@ -2341,17 +2438,17 @@ int Subscription::type() const
 QString Subscription::toString() const
 {
     switch(value) {
-        case Remove:
-            return "remove";
-        case Both:
-            return "both";
-        case From:
-            return "from";
-        case To:
-            return "to";
-        case None:
-        default:
-            return "none";
+    case Remove:
+        return "remove";
+    case Both:
+        return "both";
+    case From:
+        return "from";
+    case To:
+        return "to";
+    case None:
+    default:
+        return "none";
     }
 }
 
@@ -2520,8 +2617,8 @@ bool CapsSpec::operator!=(const CapsSpec& s) const
 bool CapsSpec::operator<(const CapsSpec& s) const
 {
     return (node() != s.node() ? node() < s.node() :
-            (version() != s.version() ? version() < s.version() :
-             hashAlgorithm() < s.hashAlgorithm()));
+                                 (version() != s.version() ? version() < s.version() :
+                                                             hashAlgorithm() < s.hashAlgorithm()));
 }
 
 
@@ -2634,13 +2731,13 @@ void Status::setType(Status::Type _type)
     bool invisible = false;
     QString show;
     switch(_type) {
-        case Away:    show = "away"; break;
-        case FFC:     show = "chat"; break;
-        case XA:      show = "xa"; break;
-        case DND:     show = "dnd"; break;
-        case Offline: available = false; break;
-        case Invisible: invisible = true; break;
-        default: break;
+    case Away:    show = "away"; break;
+    case FFC:     show = "chat"; break;
+    case XA:      show = "xa"; break;
+    case DND:     show = "dnd"; break;
+    case Offline: available = false; break;
+    case Invisible: invisible = true; break;
+    default: break;
     }
     setShow(show);
     setIsAvailable(available);
@@ -2649,27 +2746,27 @@ void Status::setType(Status::Type _type)
 
 Status::Type Status::txt2type(const QString& stat)
 {
-      if (stat == "offline")
-              return XMPP::Status::Offline;
-      else if (stat == "online")
-              return XMPP::Status::Online;
-      else if (stat == "away")
-              return XMPP::Status::Away;
-      else if (stat == "xa")
-              return XMPP::Status::XA;
-      else if (stat == "dnd")
-              return XMPP::Status::DND;
-      else if (stat == "invisible")
-              return XMPP::Status::Invisible;
-      else if (stat == "chat")
-              return XMPP::Status::FFC;
-      else
-              return XMPP::Status::Away;
+    if (stat == "offline")
+        return XMPP::Status::Offline;
+    else if (stat == "online")
+        return XMPP::Status::Online;
+    else if (stat == "away")
+        return XMPP::Status::Away;
+    else if (stat == "xa")
+        return XMPP::Status::XA;
+    else if (stat == "dnd")
+        return XMPP::Status::DND;
+    else if (stat == "invisible")
+        return XMPP::Status::Invisible;
+    else if (stat == "chat")
+        return XMPP::Status::FFC;
+    else
+        return XMPP::Status::Away;
 }
 
 void Status::setType(const QString &stat)
 {
-      setType(txt2type(stat));
+    setType(txt2type(stat));
 }
 
 void Status::setShow(const QString & _show)
@@ -2793,9 +2890,9 @@ Status::Type Status::type() const
         if (s == "away")
             type = Status::Away;
         else if (s == "xa")
-              type = Status::XA;
+            type = Status::XA;
         else if (s == "dnd")
-             type = Status::DND;
+            type = Status::DND;
         else if (s == "chat")
             type = Status::FFC;
     }
@@ -2806,14 +2903,14 @@ QString Status::typeString() const
 {
     QString stat;
     switch(type()) {
-        case XMPP::Status::Offline: stat = "offline"; break;
-        case XMPP::Status::Online: stat = "online"; break;
-        case XMPP::Status::Away: stat = "away"; break;
-        case XMPP::Status::XA: stat = "xa"; break;
-        case XMPP::Status::DND: stat = "dnd"; break;
-        case XMPP::Status::Invisible: stat = "invisible"; break;
-        case XMPP::Status::FFC: stat = "chat"; break;
-        default: stat = "away";
+    case XMPP::Status::Offline: stat = "offline"; break;
+    case XMPP::Status::Online: stat = "online"; break;
+    case XMPP::Status::Away: stat = "away"; break;
+    case XMPP::Status::XA: stat = "xa"; break;
+    case XMPP::Status::DND: stat = "dnd"; break;
+    case XMPP::Status::Invisible: stat = "invisible"; break;
+    case XMPP::Status::FFC: stat = "chat"; break;
+    default: stat = "away";
     }
     return stat;
 }
@@ -2972,7 +3069,7 @@ void Resource::setStatus(const Status & _status)
 // ResourceList
 //---------------------------------------------------------------------------
 ResourceList::ResourceList()
-:QList<Resource>()
+    :QList<Resource>()
 {
 }
 
@@ -3283,22 +3380,22 @@ QString FormField::realName() const
 QString FormField::fieldName() const
 {
     switch(v_type) {
-        case username:  return QObject::tr("Username");
-        case nick:      return QObject::tr("Nickname");
-        case password:  return QObject::tr("Password");
-        case name:      return QObject::tr("Name");
-        case first:     return QObject::tr("First Name");
-        case last:      return QObject::tr("Last Name");
-        case email:     return QObject::tr("E-mail");
-        case address:   return QObject::tr("Address");
-        case city:      return QObject::tr("City");
-        case state:     return QObject::tr("State");
-        case zip:       return QObject::tr("Zipcode");
-        case phone:     return QObject::tr("Phone");
-        case url:       return QObject::tr("URL");
-        case date:      return QObject::tr("Date");
-        case misc:      return QObject::tr("Misc");
-        default:        return "";
+    case username:  return QObject::tr("Username");
+    case nick:      return QObject::tr("Nickname");
+    case password:  return QObject::tr("Password");
+    case name:      return QObject::tr("Name");
+    case first:     return QObject::tr("First Name");
+    case last:      return QObject::tr("Last Name");
+    case email:     return QObject::tr("E-mail");
+    case address:   return QObject::tr("Address");
+    case city:      return QObject::tr("City");
+    case state:     return QObject::tr("State");
+    case zip:       return QObject::tr("Zipcode");
+    case phone:     return QObject::tr("Phone");
+    case url:       return QObject::tr("URL");
+    case date:      return QObject::tr("Date");
+    case misc:      return QObject::tr("Misc");
+    default:        return "";
     };
 }
 
@@ -3356,22 +3453,22 @@ int FormField::tagNameToType(const QString &in) const
 QString FormField::typeToTagName(int type) const
 {
     switch(type) {
-        case username:  return "username";
-        case nick:      return "nick";
-        case password:  return "password";
-        case name:      return "name";
-        case first:     return "first";
-        case last:      return "last";
-        case email:     return "email";
-        case address:   return "address";
-        case city:      return "city";
-        case state:     return "state";
-        case zip:       return "zipcode";
-        case phone:     return "phone";
-        case url:       return "url";
-        case date:      return "date";
-        case misc:      return "misc";
-        default:        return "";
+    case username:  return "username";
+    case nick:      return "nick";
+    case password:  return "password";
+    case name:      return "name";
+    case first:     return "first";
+    case last:      return "last";
+    case email:     return "email";
+    case address:   return "address";
+    case city:      return "city";
+    case state:     return "state";
+    case zip:       return "zipcode";
+    case phone:     return "phone";
+    case url:       return "url";
+    case date:      return "date";
+    case misc:      return "misc";
+    default:        return "";
     };
 }
 
@@ -3380,7 +3477,7 @@ QString FormField::typeToTagName(int type) const
 // Form
 //---------------------------------------------------------------------------
 Form::Form(const Jid &j)
-:QList<FormField>()
+    :QList<FormField>()
 {
     setJid(j);
 }

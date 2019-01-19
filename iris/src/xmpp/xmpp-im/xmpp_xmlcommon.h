@@ -83,6 +83,7 @@ namespace XMLHelper {
     QDomElement textTag(QDomDocument &doc, const QString &name, bool content);
     QDomElement textTag(QDomDocument &doc, const QString &name, QSize &s);
     QDomElement textTag(QDomDocument &doc, const QString &name, QRect &r);
+    void setTagText(QDomElement &e, const QString &text);
     QDomElement stringListToXml(QDomDocument &doc, const QString &name, const QStringList &l);
 
     void readEntry(const QDomElement &e, const QString &name, QString *v);

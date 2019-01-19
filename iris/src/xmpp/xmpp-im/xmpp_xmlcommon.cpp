@@ -530,4 +530,9 @@ QString sanitizedLang(const QString &lang)
     return QString();
 }
 
+void setTagText(QDomElement &e, const QString &text)
+{
+    e.appendChild(e.ownerDocument().createTextNode(text));
+}
+
 }

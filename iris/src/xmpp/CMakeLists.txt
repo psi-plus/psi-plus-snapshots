@@ -3,6 +3,7 @@ add_definitions(-DXMPP_TEST)
 find_package(ZLIB REQUIRED)
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_CURRENT_LIST_DIR}
     ..
     ../irisnet/corelib
     xmpp-core
@@ -21,6 +22,7 @@ set(PLAIN_HEADERS
     xmpp-core/xmpp_stanza.h
 
     xmpp-im/xmpp_address.h
+    xmpp-im/xmpp_hash.h
     xmpp-im/xmpp_agentitem.h
     xmpp-im/xmpp_captcha.h
     xmpp-im/xmpp_chatstate.h
@@ -46,6 +48,7 @@ set(PLAIN_HEADERS
     xmpp-im/xmpp_vcard.h
     xmpp-im/xmpp_xdata.h
     xmpp-im/xmpp_xmlcommon.h
+    xmpp-im/jingle.h
 
     base/randomnumbergenerator.h
     base/randrandomnumbergenerator.h
@@ -61,6 +64,10 @@ set(PLAIN_HEADERS
     sasl/scramsha1message.h
     sasl/scramsha1response.h
     sasl/scramsha1signature.h
+
+    blake2/blake2qt.h
+    blake2/blake2.h
+    blake2/blake2-impl.h
     )
 
 set(HEADERS
@@ -115,12 +122,17 @@ set(PLAIN_SOURCES
     xmpp-im/xmpp_vcard.cpp
     xmpp-im/xmpp_xdata.cpp
     xmpp-im/xmpp_xmlcommon.cpp
+    xmpp-im/jingle.cpp
 
     base/randomnumbergenerator.cpp
     base/timezone.cpp
 
     zlib/zlibcompressor.cpp
     zlib/zlibdecompressor.cpp
+
+    blake2/blake2qt.cpp
+    blake2/blake2b-ref.c
+    blake2/blake2s-ref.c
 
     jid/jid.cpp
 

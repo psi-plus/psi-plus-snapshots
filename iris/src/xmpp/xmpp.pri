@@ -16,6 +16,7 @@ include($$IRIS_XMPP_BASE_MODULE)
 include($$IRIS_XMPP_ZLIB_MODULE)
 include($$IRIS_XMPP_JID_MODULE)
 include($$IRIS_XMPP_SASL_MODULE)
+include($$IRIS_XMPP_BLAKE2_MODULE)
 
 DEFINES += XMPP_TEST
 
@@ -51,6 +52,7 @@ HEADERS += \
     $$PWD/xmpp-core/xmpp_stanza.h \
     $$PWD/xmpp-core/xmpp_stream.h \
     $$PWD/xmpp-im/xmpp_address.h \
+    $$PWD/xmpp-im/xmpp_hash.h \
     $$PWD/xmpp-im/xmpp_htmlelement.h \
     $$PWD/xmpp-im/xmpp_muc.h \
     $$PWD/xmpp-im/xmpp_message.h \
@@ -74,7 +76,8 @@ HEADERS += \
     $$PWD/xmpp-im/xmpp_bitsofbinary.h \
     $$PWD/xmpp-im/xmpp_caps.h \
     $$PWD/xmpp-im/im.h \
-    $$PWD/xmpp-im/xmpp_serverinfomanager.h
+    $$PWD/xmpp-im/xmpp_serverinfomanager.h \
+    $$PWD/xmpp-im/jingle.h
 
 SOURCES += \
     $$PWD/xmpp-core/connector.cpp \
@@ -106,5 +109,6 @@ SOURCES += \
     $$PWD/xmpp-im/httpfileupload.cpp \
     $$PWD/xmpp-im/xmpp_bitsofbinary.cpp \
     $$PWD/xmpp-im/xmpp_caps.cpp \
-    $$PWD/xmpp-im/xmpp_serverinfomanager.cpp
+    $$PWD/xmpp-im/xmpp_serverinfomanager.cpp \
+    $$PWD/xmpp-im/jingle.cpp
 

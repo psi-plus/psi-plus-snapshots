@@ -48,6 +48,7 @@
 #include "xmpp_agentitem.h"
 #include "xmpp_client.h"
 #include "xmpp_address.h"
+#include "xmpp_hash.h"
 #include "xmpp_pubsubitem.h"
 #include "xmpp_pubsubretraction.h"
 

@@ -85,7 +85,7 @@ void ServerInfoManager::queryServicesList()
         if (jtitems->success()) {
             _servicesListState = ST_Ready;
             for (const auto &item: jtitems->items()) {
-                _servicesInfo.insert(item.jid().full(), {ST_NotQueried, item});
+                _servicesInfo.insert(item.jid().full(), {ST_NotQueried, item, QMap<QString,QVariant>()});
             }
         }
         else {

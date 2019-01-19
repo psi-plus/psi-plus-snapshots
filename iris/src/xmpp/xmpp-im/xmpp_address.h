@@ -61,6 +61,6 @@ namespace XMPP
     };
 
     typedef QList<Address> AddressList;
-};
+}
 
 #endif
