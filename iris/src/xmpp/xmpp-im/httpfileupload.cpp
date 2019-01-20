@@ -50,7 +50,7 @@ public:
     QList<HttpHost> httpHosts;
 
     struct {
-        enum HttpFileUpload::ErrorCode statusCode = HttpFileUpload::ErrorCode::NoError;
+        HttpFileUpload::ErrorCode statusCode = HttpFileUpload::ErrorCode::NoError;
         QString statusString;
         QString getUrl;
         QString putUrl;

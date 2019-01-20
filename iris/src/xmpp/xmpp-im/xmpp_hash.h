@@ -29,6 +29,7 @@ class QDomElement;
 
 namespace XMPP
 {
+    class Features;
     enum class HashType { // XEP-0300 Version 0.5.3 (2018-02-14)
         Unknown,    // not standard, just a default
         Sha1,       // SHOULD NOT
@@ -54,6 +55,7 @@ namespace XMPP
         bool computeFromData(const QByteArray &); // computes hash from passed data
 
         QDomElement toXml(Stanza&) const;
+        static void populateFeatures(XMPP::Features &);
 
     private:
         HashType v_type = HashType::Unknown;

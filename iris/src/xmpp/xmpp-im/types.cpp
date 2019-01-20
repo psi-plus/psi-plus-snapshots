@@ -379,6 +379,13 @@ QDomElement Hash::toXml(Stanza &s) const
     return QDomElement();
 }
 
+void Hash::populateFeatures(Features &features)
+{
+    for(int n = 0; sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
+        features.addFeature(QLatin1String("urn:xmpp:hash-function-text-names:") + QLatin1String(HashTypes[n].text));
+    }
+}
+
 HashUsed::HashUsed(const QDomElement &el)
 {
     QString algo = el.attribute(QLatin1String("algo"));
@@ -397,7 +404,7 @@ QDomElement HashUsed::toXml(Stanza &s) const
     if (v_type != HashType::Unknown) {
         for(int n = 0; sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
             if(v_type == HashTypes[n].hashType) {
-                auto el = s.createElement(XMPP_HASH_NS, QLatin1String("hash"));
+                auto el = s.createElement(XMPP_HASH_NS, QLatin1String("hash-used"));
                 el.setAttribute(QLatin1String("algo"), QLatin1String(HashTypes[n].text));
                 return el;
             }

@@ -80,6 +80,7 @@
 #include "xmpp_bitsofbinary.h"
 #include "filetransfer.h"
 #include "xmpp_caps.h"
+#include "xmpp_hash.h"
 #include "protocol.h"
 #include "xmpp_serverinfomanager.h"
 #include "httpfileupload.h"
@@ -1239,6 +1240,7 @@ DiscoItem Client::makeDiscoResult(const QString &node) const
     features.addFeature("urn:xmpp:ping");
     features.addFeature("urn:xmpp:time");
     features.addFeature("urn:xmpp:message-correct:0");
+    Hash::populateFeatures(features);
 
     // Client-specific features
     foreach (const QString & i, d->features.list()) {
