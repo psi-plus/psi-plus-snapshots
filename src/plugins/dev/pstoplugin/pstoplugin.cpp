@@ -1,7 +1,7 @@
 #include "pstoplugin.h"
 
 PstoPlugin::PstoPlugin()
-    : psto_jids(QStringList() << PSTO_JIDS)
+    : psto_jids(QStringList({PSTO_JIDS}))
     , post_id_regexp_str("(#[\\w/]+)")
     , user_regexp_str("(\\@[\\w-_]+)")
     , link_regexp_str("((https?|ftp)://\\S+)")
@@ -11,6 +11,7 @@ PstoPlugin::PstoPlugin()
     // #abcde[/123] http://dfgfdhfdh.psto.net/abcde[#123]
     , post_footer_regexp_str("^(\\#(\\w+)(/(\\d+))?) (http://(.*)psto[.]net/\\2(\\#\\4)?)$")
     , enabled(false)
+    , psiOptions(nullptr)
 {
 }
 
@@ -158,7 +159,7 @@ bool PstoPlugin::processEvent(int account, QDomElement &e) {
         body.parentNode().appendChild(html);
 
         QDomElement html_body = doc.createElement("body");
-        html_body.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+        html_body.setAttribute("xmlns", "https://www.w3.org/1999/xhtml");
         html.appendChild(html_body);
 
         QStringList message_strings = body_text.nodeValue().split("\n");

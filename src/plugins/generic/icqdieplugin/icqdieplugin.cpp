@@ -14,7 +14,7 @@
  * appearing in the file copying.txt included in the packaging of this file.
  * Please review the following information to ensure the GNU General
  * Public License version 2.0 requirements will be met:
- * <http://www.gnu.org/licenses/>.
+ * <https://www.gnu.org/licenses/>.
  */
 
 #include <QtGui>
@@ -263,7 +263,7 @@ QWidget* IcqDie::options()
 
 	QWidget *options = new QWidget;
 	ui.setupUi(options);
-	ui.wiki->setText(tr("<a href=\"http://psi-plus.com/wiki/plugins#icq_must_die_plugin\">Wiki (Online)</a>"));
+	ui.wiki->setText(tr("<a href=\"https://psi-plus.com/wiki/plugins#icq_must_die_plugin\">Wiki (Online)</a>"));
 	ui.wiki->setOpenExternalLinks(true);
 
 	restoreOptions();
