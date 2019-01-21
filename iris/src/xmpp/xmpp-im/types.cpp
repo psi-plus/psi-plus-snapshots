@@ -333,7 +333,7 @@ Hash::Hash(const QDomElement &el)
 {
     QString algo = el.attribute(QLatin1String("algo"));
     if (!algo.isEmpty()) {
-        for(int n = 0; sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
+        for(int n = 0; n < sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
             if(algo == QLatin1String(HashTypes[n].text)) {
                 v_data = QByteArray::fromBase64(el.text().toLatin1());
                 if (!v_data.isEmpty()) {
@@ -367,7 +367,7 @@ bool Hash::computeFromData(const QByteArray &ba)
 QDomElement Hash::toXml(Stanza &s) const
 {
     if (v_type != HashType::Unknown && !v_data.isEmpty()) {
-        for(int n = 0; sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
+        for(int n = 0; n < sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
             if(v_type == HashTypes[n].hashType) {
                 auto el = s.createElement(XMPP_HASH_NS, QLatin1String("hash"));
                 el.setAttribute(QLatin1String("algo"), QLatin1String(HashTypes[n].text));
@@ -381,8 +381,9 @@ QDomElement Hash::toXml(Stanza &s) const
 
 void Hash::populateFeatures(Features &features)
 {
-    for(int n = 0; sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
-        features.addFeature(QLatin1String("urn:xmpp:hash-function-text-names:") + QLatin1String(HashTypes[n].text));
+    for(int n = 0; n < sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
+        features.addFeature(QLatin1String("urn:xmpp:hash-function-text-names:") +
+                            QLatin1String(HashTypes[n].text));
     }
 }
 
@@ -390,7 +391,7 @@ HashUsed::HashUsed(const QDomElement &el)
 {
     QString algo = el.attribute(QLatin1String("algo"));
     if (!algo.isEmpty()) {
-        for(int n = 0; sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
+        for(int n = 0; n < sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
             if(algo == QLatin1String(HashTypes[n].text)) {
                 v_type = HashTypes[n].hashType;
                 break;
@@ -402,7 +403,7 @@ HashUsed::HashUsed(const QDomElement &el)
 QDomElement HashUsed::toXml(Stanza &s) const
 {
     if (v_type != HashType::Unknown) {
-        for(int n = 0; sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
+        for(int n = 0; n < sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
             if(v_type == HashTypes[n].hashType) {
                 auto el = s.createElement(XMPP_HASH_NS, QLatin1String("hash-used"));
                 el.setAttribute(QLatin1String("algo"), QLatin1String(HashTypes[n].text));
