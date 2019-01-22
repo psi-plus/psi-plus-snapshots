@@ -316,16 +316,16 @@ void Address::setType(Type type)
 //----------------------------------------------------------------------------
 static const struct {
     const char *text;
-    HashType hashType;
-} HashTypes[] =
+    Hash::Type hashType;
+} hashTypes[] =
 {
-{ "sha-1",       HashType::Sha1 },
-{ "sha-256",     HashType::Sha256 },
-{ "sha-512",     HashType::Sha512 },
-{ "sha3-256",    HashType::Sha3_256 },
-{ "sha3-512",    HashType::Sha3_512 },
-{ "blake2b-256", HashType::Blake2b256 },
-{ "blake2b-512", HashType::Blake2b512 }
+{ "sha-1",       Hash::Type::Sha1 },
+{ "sha-256",     Hash::Type::Sha256 },
+{ "sha-512",     Hash::Type::Sha512 },
+{ "sha3-256",    Hash::Type::Sha3_256 },
+{ "sha3-512",    Hash::Type::Sha3_512 },
+{ "blake2b-256", Hash::Type::Blake2b256 },
+{ "blake2b-512", Hash::Type::Blake2b512 }
 };
 
 
@@ -333,12 +333,15 @@ Hash::Hash(const QDomElement &el)
 {
     QString algo = el.attribute(QLatin1String("algo"));
     if (!algo.isEmpty()) {
-        for(int n = 0; n < sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
-            if(algo == QLatin1String(HashTypes[n].text)) {
-                v_data = QByteArray::fromBase64(el.text().toLatin1());
-                if (!v_data.isEmpty()) {
-                    v_type = HashTypes[n].hashType;
-                }
+        for(size_t n = 0; n < sizeof(hashTypes) / sizeof(hashTypes[0]); ++n) {
+            if(algo == QLatin1String(hashTypes[n].text)) {
+                v_type = hashTypes[n].hashType;
+                if (el.tagName() == QLatin1String("hash")) {
+                    v_data = QByteArray::fromBase64(el.text().toLatin1());
+                    if (v_data.isEmpty()) {
+                        v_type = Type::Unknown;
+                    }
+                } // else hash-used
                 break;
             }
         }
@@ -349,16 +352,16 @@ bool Hash::computeFromData(const QByteArray &ba)
 {
     v_data.clear();
     switch (v_type) {
-    case HashType::Sha1:     v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha1); break;
-    case HashType::Sha256:   v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha256); break;
-    case HashType::Sha512:   v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha512); break;
-    case HashType::Sha3_256: v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha3_256); break;
-    case HashType::Sha3_512: v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha3_512); break;
-    case HashType::Blake2b256: v_data = computeBlake2Hash(ba, Blake2Digest256); break;
-    case HashType::Blake2b512: v_data = computeBlake2Hash(ba, Blake2Digest512); break;
-    case HashType::Unknown:
+    case Type::Sha1:     v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha1); break;
+    case Type::Sha256:   v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha256); break;
+    case Type::Sha512:   v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha512); break;
+    case Type::Sha3_256: v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha3_256); break;
+    case Type::Sha3_512: v_data = QCryptographicHash::hash(ba, QCryptographicHash::Sha3_512); break;
+    case Type::Blake2b256: v_data = computeBlake2Hash(ba, Blake2Digest256); break;
+    case Type::Blake2b512: v_data = computeBlake2Hash(ba, Blake2Digest512); break;
+    case Type::Unknown:
     default:
-        qDebug("invalid has type");
+        qDebug("invalid hash type");
         return false;
     }
     return !v_data.isEmpty();
@@ -366,12 +369,14 @@ bool Hash::computeFromData(const QByteArray &ba)
 
 QDomElement Hash::toXml(Stanza &s) const
 {
-    if (v_type != HashType::Unknown && !v_data.isEmpty()) {
-        for(int n = 0; n < sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
-            if(v_type == HashTypes[n].hashType) {
-                auto el = s.createElement(XMPP_HASH_NS, QLatin1String("hash"));
-                el.setAttribute(QLatin1String("algo"), QLatin1String(HashTypes[n].text));
-                XMLHelper::setTagText(el, v_data.toBase64());
+    if (v_type != Type::Unknown) {
+        for(size_t n = 0; n < sizeof(hashTypes) / sizeof(hashTypes[0]); ++n) {
+            if(v_type == hashTypes[n].hashType) {
+                auto el = s.createElement(XMPP_HASH_NS, QLatin1String(v_data.isEmpty()? "hash-used": "hash"));
+                el.setAttribute(QLatin1String("algo"), QLatin1String(hashTypes[n].text));
+                if (!v_data.isEmpty()) {
+                    XMLHelper::setTagText(el, v_data.toBase64());
+                }
                 return el;
             }
         }
@@ -381,37 +386,10 @@ QDomElement Hash::toXml(Stanza &s) const
 
 void Hash::populateFeatures(Features &features)
 {
-    for(int n = 0; n < sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
+    for(size_t n = 0; n < sizeof(hashTypes) / sizeof(hashTypes[0]); ++n) {
         features.addFeature(QLatin1String("urn:xmpp:hash-function-text-names:") +
-                            QLatin1String(HashTypes[n].text));
+                            QLatin1String(hashTypes[n].text));
     }
-}
-
-HashUsed::HashUsed(const QDomElement &el)
-{
-    QString algo = el.attribute(QLatin1String("algo"));
-    if (!algo.isEmpty()) {
-        for(int n = 0; n < sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
-            if(algo == QLatin1String(HashTypes[n].text)) {
-                v_type = HashTypes[n].hashType;
-                break;
-            }
-        }
-    }
-}
-
-QDomElement HashUsed::toXml(Stanza &s) const
-{
-    if (v_type != HashType::Unknown) {
-        for(int n = 0; n < sizeof(HashTypes) / sizeof(HashTypes[0]); ++n) {
-            if(v_type == HashTypes[n].hashType) {
-                auto el = s.createElement(XMPP_HASH_NS, QLatin1String("hash-used"));
-                el.setAttribute(QLatin1String("algo"), QLatin1String(HashTypes[n].text));
-                return el;
-            }
-        }
-    }
-    return QDomElement();
 }
 
 //----------------------------------------------------------------------------

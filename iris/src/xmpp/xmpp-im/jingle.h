@@ -20,6 +20,8 @@
 #ifndef JINGLE_H
 #define JINGLE_H
 
+#include "xmpp_hash.h"
+
 #include <QSharedDataPointer>
 
 class QDomElement;
@@ -55,7 +57,7 @@ public:
 
     inline Jingle(){}
     Jingle(const QDomElement &e);
-    QDomElement element(QDomDocument *doc) const;
+    QDomElement toXml(QDomDocument *doc) const;
 private:
     class Private;
     QSharedDataPointer<Private> d;
@@ -95,7 +97,7 @@ public:
     QString text() const;
     void setText(const QString &text);
 
-    QDomElement element(QDomDocument *doc) const;
+    QDomElement toXml(QDomDocument *doc) const;
 
 private:
     Private *ensureD();
@@ -103,14 +105,29 @@ private:
     QSharedDataPointer<Private> d;
 };
 
-class Content
-{
+class ContentBase {
 public:
     enum class Creator {
+        NoCreator, // not standard, just a default
         Initiator,
         Responder
     };
 
+    inline bool isValid() const { return creator != Creator::NoCreator && !name.isEmpty(); }
+protected:
+    inline ContentBase(){}
+    ContentBase(const QDomElement &el);
+    QDomElement toXml(QDomDocument *doc, const char *tagName) const;
+    static Creator creatorAttr(const QDomElement &el);
+    static bool setCreatorAttr(QDomElement &el, Creator creator);
+
+    Creator creator = Creator::NoCreator;
+    QString name;
+};
+
+class Content : public ContentBase // TODO that's somewhat wrong mixing pimpl with this base
+{
+public:
     enum class Senders {
         None,
         Both,
@@ -121,30 +138,50 @@ public:
     inline Content(){}
     Content(const QDomElement &content);
     inline bool isValid() const { return d != nullptr; }
-    QDomElement element(QDomDocument *doc) const;
+    QDomElement toXml(QDomDocument *doc) const;
 private:
     class Private;
     Private *ensureD();
     QSharedDataPointer<Private> d;
 };
 
-class FileTransfer
+
+namespace FileTransfer {
+
+struct Range {
+    quint64 offset = 0;
+    quint64 length = 0;
+    Hash hash;
+};
+
+class File
 {
 public:
-    struct Range {
-        quint64 offset;
-        quint64 length;
-    };
-
-    inline FileTransfer(){}
-    FileTransfer(const QDomElement &file);
+    inline File(){}
+    File(const QDomElement &file);
     inline bool isValid() const { return d != nullptr; }
-    QDomElement element(QDomDocument *doc) const;
+    QDomElement toXml(QDomDocument *doc) const;
 private:
     class Private;
     Private *ensureD();
     QSharedDataPointer<Private> d;
 };
+
+class Checksum : public ContentBase {
+    inline Checksum(){}
+    Checksum(const QDomElement &file);
+    bool isValid() const;
+    QDomElement toXml(QDomDocument *doc) const;
+private:
+    File file;
+};
+
+class Received : public ContentBase {
+    using ContentBase::ContentBase;
+    QDomElement toXml(QDomDocument *doc) const;
+};
+
+} // namespace FT
 
 class Description
 {

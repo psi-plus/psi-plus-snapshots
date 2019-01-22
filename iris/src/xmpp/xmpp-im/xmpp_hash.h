@@ -30,25 +30,26 @@ class QDomElement;
 namespace XMPP
 {
     class Features;
-    enum class HashType { // XEP-0300 Version 0.5.3 (2018-02-14)
-        Unknown,    // not standard, just a default
-        Sha1,       // SHOULD NOT
-        Sha256,     // MUST
-        Sha512,     // SHOULD
-        Sha3_256,   // MUST
-        Sha3_512,   // SHOULD
-        Blake2b256, // MUST
-        Blake2b512, // SHOULD
-    };
 
     class Hash
     {
     public:
-        inline Hash(HashType type = HashType::Unknown) : v_type(type) {}
+        enum Type { // XEP-0300 Version 0.5.3 (2018-02-14)
+            Unknown,    // not standard, just a default
+            Sha1,       // SHOULD NOT
+            Sha256,     // MUST
+            Sha512,     // SHOULD
+            Sha3_256,   // MUST
+            Sha3_512,   // SHOULD
+            Blake2b256, // MUST
+            Blake2b512, // SHOULD
+        };
+
+        inline Hash(Type type = Type::Unknown) : v_type(type) {}
         Hash(const QDomElement&);
 
-        inline HashType type() const { return v_type; }
-        inline void setType(HashType t) { v_type = t; }
+        inline Type type() const { return v_type; }
+        inline void setType(Type t) { v_type = t; }
 
         inline QByteArray data() const { return v_data; }
         inline void setData(const QByteArray &d) { v_data = d; } // sets already computed hash
@@ -58,24 +59,9 @@ namespace XMPP
         static void populateFeatures(XMPP::Features &);
 
     private:
-        HashType v_type = HashType::Unknown;
+        Type v_type = Type::Unknown;
         QByteArray v_data;
     };
-
-    class HashUsed
-    {
-    public:
-        inline HashUsed(HashType hashType = HashType::Unknown) : v_type(hashType) {}
-        HashUsed(const QDomElement&);
-
-        inline HashType type() const { return v_type; }
-        inline void setType(HashType t) { v_type = t; }
-
-        QDomElement toXml(Stanza&) const;
-    private:
-        HashType v_type;
-    };
-
 }
 
 #endif

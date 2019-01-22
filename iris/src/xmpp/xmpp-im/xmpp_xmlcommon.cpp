@@ -82,7 +82,7 @@ void XDomNodeList::append(const QDomNode &i)
     list += i;
 }
 
-
+// YYYYMMDDThh:mm:ss
 QDateTime stamp2TS(const QString &ts)
 {
     if(ts.length() != 17)
