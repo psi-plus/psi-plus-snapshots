@@ -357,11 +357,10 @@ namespace XMPP
     class ParserHandler : public QXmlDefaultHandler
     {
     public:
-        ParserHandler(StreamInput *_in, QDomDocument *_doc)
+        explicit ParserHandler(StreamInput *_in, QDomDocument *_doc)
+            : in(_in)
+            , doc(_doc)
         {
-            in = _in;
-            doc = _doc;
-            needMore = false;
         }
 
         ~ParserHandler()
@@ -541,11 +540,11 @@ namespace XMPP
 
         StreamInput *in;
         QDomDocument *doc;
-        int depth;
+        int depth = 1;
         QStringList nsnames, nsvalues;
         QDomElement elem, current;
         QList<Parser::Event*> eventList;
-        bool needMore;
+        bool needMore = false;
     };
 };
 

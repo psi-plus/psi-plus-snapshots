@@ -78,8 +78,8 @@ namespace XMPP {
     public:
         class Field {
         public:
-            Field();
-            ~Field();
+            explicit Field() = default;
+            ~Field() {}
 
             QString desc() const;
             void setDesc(const QString &);
@@ -156,7 +156,7 @@ namespace XMPP {
             QString _desc, _label, _var;
             QList<Option> _options;
             MediaElement _mediaElement;
-            bool _required;
+            bool _required = false;
             Type _type;
             QStringList _value;
         };

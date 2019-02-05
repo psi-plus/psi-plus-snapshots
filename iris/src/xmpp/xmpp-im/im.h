@@ -81,7 +81,7 @@ namespace XMPP
         QString v_value;
 
         class Private;
-        Private *d;
+        Private *d = nullptr;
     };
 
     class Form : public QList<FormField>
@@ -102,7 +102,7 @@ namespace XMPP
         QString v_instructions, v_key;
 
         class Private;
-        Private *d;
+        Private *d = nullptr;
     };
 
     class SearchResult

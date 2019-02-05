@@ -30,16 +30,18 @@ using namespace XMPP;
 class Task::TaskPrivate
 {
 public:
-    TaskPrivate() {}
+    TaskPrivate() = default;
 
     QString id;
-    bool success;
-    int statusCode;
+    bool success = false;
+    int statusCode = 0;
     QString statusString;
-    Client *client;
-    bool insig, deleteme, autoDelete;
-    bool done;
-    int timeout;
+    Client *client = nullptr;
+    bool insig = false;
+    bool deleteme = false;
+    bool autoDelete = false;
+    bool done = false;
+    int timeout = 0;
 };
 
 Task::Task(Task *parent)
@@ -53,7 +55,7 @@ Task::Task(Task *parent)
 }
 
 Task::Task(Client *parent, bool)
-:QObject(0)
+:QObject(nullptr)
 {
     init();
 
@@ -291,10 +293,10 @@ void Task::debug(const QString &str)
 
 bool Task::iqVerify(const QDomElement &x, const Jid &to, const QString &id, const QString &xmlns)
 {
-    if(x.tagName() != "iq")
+    if(x.tagName() != QStringLiteral("iq"))
         return false;
 
-    Jid from(x.attribute("from"));
+    Jid from(x.attribute(QStringLiteral("from")));
     Jid local = client()->jid();
     Jid server = client()->host();
 
@@ -317,7 +319,7 @@ bool Task::iqVerify(const QDomElement &x, const Jid &to, const QString &id, cons
     }
 
     if(!id.isEmpty()) {
-        if(x.attribute("id") != id)
+        if(x.attribute(QStringLiteral("id")) != id)
             return false;
     }
 

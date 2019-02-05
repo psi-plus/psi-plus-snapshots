@@ -41,18 +41,18 @@ static const char *IBB_NS = "http://jabber.org/protocol/ibb";
 class IBBConnection::Private
 {
 public:
-    Private() {}
+    Private() = default;
 
-    int state;
-    quint16 seq;
+    int state = 0;
+    quint16 seq = 0;
     Jid peer;
     QString sid;
-    IBBManager *m;
-    JT_IBB *j;
+    IBBManager *m = nullptr;
+    JT_IBB *j = nullptr;
     QString iq_id;
     QString stanza;
 
-    int blockSize;
+    int blockSize = 0;
     //QByteArray recvBuf, sendBuf;
     bool closePending, closing;
 
@@ -355,12 +355,12 @@ QDomElement IBBData::toXml(QDomDocument *doc) const
 class IBBManager::Private
 {
 public:
-    Private() {}
+    Private() = default;
 
-    Client *client;
+    Client *client = nullptr;
     IBBConnectionList activeConns;
     IBBConnectionList incomingConns;
-    JT_IBB *ibb;
+    JT_IBB *ibb = nullptr;
 };
 
 IBBManager::IBBManager(Client *parent)
@@ -498,14 +498,14 @@ void IBBManager::doReject(IBBConnection *c, const QString &id,
 class JT_IBB::Private
 {
 public:
-    Private() {}
+    Private() = default;
 
     QDomElement iq;
-    int mode;
-    bool serve;
+    int mode = 0;
+    bool serve = false;
     Jid to;
     QString sid;
-    int bytesWritten;
+    int bytesWritten = 0;
 };
 
 JT_IBB::JT_IBB(Task *parent, bool serve)

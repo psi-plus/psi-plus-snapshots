@@ -194,16 +194,13 @@ class ResolveName : public QObject
 {
     Q_OBJECT
 public:
+    ResolveName() = default;
+
     QString name;
     NameRecord::Type type;
-    bool longlived;
+    bool longlived = false;
     NameResolver dns;
-    bool null_dump;
-
-    ResolveName()
-    {
-        null_dump = false;
-    }
+    bool null_dump = false;
 
 public slots:
     void start()
@@ -580,24 +577,21 @@ class TurnClientTest : public QObject
 {
     Q_OBJECT
 public:
-    int mode;
-    bool debug;
+    int mode = 0;
+    bool debug = false;
     QHostAddress relayAddr;
-    int relayPort;
-    QString relayUser, relayPass, relayRealm;
+    int relayPort = 0;
+    QString relayUser;
+    QString relayPass;
+    QString relayRealm;
     QHostAddress peerAddr;
-    int peerPort;
-    QUdpSocket *udp;
-    StunTransactionPool *pool;
+    int peerPort = 0;
+    QUdpSocket *udp = nullptr;
+    StunTransactionPool *pool = nullptr;
     QList<bool> writeItems; // true = turn-originated, false = external
-    TurnClient *turn;
+    TurnClient *turn = nullptr;
 
-    TurnClientTest() :
-        udp(0),
-        pool(0),
-        turn(0)
-    {
-    }
+    TurnClientTest() = default;
 
     ~TurnClientTest()
     {

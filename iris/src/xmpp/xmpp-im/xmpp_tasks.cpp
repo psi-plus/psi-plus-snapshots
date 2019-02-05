@@ -133,7 +133,7 @@ bool JT_Session::take(const QDomElement& x)
 class JT_Register::Private
 {
 public:
-    Private() {}
+    Private() = default;
 
     Form form;
     XData xdata;
@@ -316,10 +316,10 @@ bool JT_Register::take(const QDomElement &x)
 class JT_UnRegister::Private
 {
 public:
-    Private() { }
+    Private() = default;
 
     Jid j;
-    JT_Register *jt_reg;
+    JT_Register *jt_reg = nullptr;
 };
 
 JT_UnRegister::JT_UnRegister(Task *parent)
@@ -379,7 +379,7 @@ void JT_UnRegister::unregFinished()
 class JT_Roster::Private
 {
 public:
-    Private() {}
+    Private() = default;
 
     Roster roster;
     QString groupsDelimiter;
@@ -594,8 +594,7 @@ bool JT_Roster::take(const QDomElement &x)
 //----------------------------------------------------------------------------
 // JT_PushRoster
 //----------------------------------------------------------------------------
-JT_PushRoster::JT_PushRoster(Task *parent)
-:Task(parent)
+JT_PushRoster::JT_PushRoster(Task *parent) : Task(parent)
 {
 }
 
@@ -622,10 +621,8 @@ bool JT_PushRoster::take(const QDomElement &e)
 //----------------------------------------------------------------------------
 // JT_Presence
 //----------------------------------------------------------------------------
-JT_Presence::JT_Presence(Task *parent)
-:Task(parent)
+JT_Presence::JT_Presence(Task *parent) : Task(parent)
 {
-    type = -1;
 }
 
 JT_Presence::~JT_Presence()
@@ -748,7 +745,7 @@ void JT_Presence::onGo()
 // JT_PushPresence
 //----------------------------------------------------------------------------
 JT_PushPresence::JT_PushPresence(Task *parent)
-:Task(parent)
+    : Task(parent)
 {
 }
 
@@ -928,7 +925,8 @@ static QDomElement oldStyleNS(const QDomElement &e)
 }
 
 JT_Message::JT_Message(Task *parent, Message &msg)
-:Task(parent), m(msg)
+    : Task(parent)
+    , m(msg)
 {
     if (msg.id().isEmpty())
         msg.setId(id());
@@ -1049,7 +1047,7 @@ bool JT_PushMessage::take(const QDomElement &e)
 class JT_VCard::Private
 {
 public:
-    Private() {}
+    Private() = default;
 
     QDomElement iq;
     Jid jid;
@@ -1158,11 +1156,11 @@ bool JT_VCard::take(const QDomElement &x)
 class JT_Search::Private
 {
 public:
-    Private() {}
+    Private() = default;
 
     Jid jid;
     Form form;
-    bool hasXData;
+    bool hasXData = false;
     XData xdata;
     QList<SearchResult> resultList;
 };

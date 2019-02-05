@@ -54,6 +54,10 @@ namespace XMPP {
     class EncryptionHandler;
     class ServerInfoManager;
     class HttpFileUploadManager;
+
+    namespace Jingle {
+        class Manager;
+    }
 }
 
 namespace XMPP
@@ -131,6 +135,7 @@ namespace XMPP
         CapsManager *capsManager() const;
         ServerInfoManager *serverInfoManager() const;
         HttpFileUploadManager *httpFileUploadManager() const;
+        Jingle::Manager* jingleManager() const;
 
         void setFileTransferEnabled(bool b);
         FileTransferManager *fileTransferManager() const;

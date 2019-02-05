@@ -2611,24 +2611,15 @@ bool CapsSpec::operator<(const CapsSpec& s) const
 class StatusPrivate : public QSharedData
 {
 public:
-    StatusPrivate() :
-        hasPhotoHash(false),
-        isMUC(false),
-        hasMUCItem(false),
-        hasMUCDestroy(false),
-        mucHistoryMaxChars(-1),
-        mucHistoryMaxStanzas(-1),
-        mucHistorySeconds(-1),
-        ecode(-1)
-    {}
+    StatusPrivate() = default;
 
-    int priority;
+    int priority = 0;
     QString show, status, key;
     QDateTime timeStamp;
-    bool isAvailable;
-    bool isInvisible;
+    bool isAvailable = false;
+    bool isInvisible = false;
     QString photoHash;
-    bool hasPhotoHash;
+    bool hasPhotoHash = false;
 
     QString xsigned;
     // gabber song extension
@@ -2637,15 +2628,19 @@ public:
     QList<BoBData> bobDataList;
 
     // MUC
-    bool isMUC, hasMUCItem, hasMUCDestroy;
+    bool isMUC = false;
+    bool hasMUCItem = false;
+    bool hasMUCDestroy = false;
     MUCItem mucItem;
     MUCDestroy mucDestroy;
     QList<int> mucStatuses;
     QString mucPassword;
-    int mucHistoryMaxChars, mucHistoryMaxStanzas, mucHistorySeconds;
+    int mucHistoryMaxChars = -1;
+    int mucHistoryMaxStanzas = -1;
+    int mucHistorySeconds = -1;
     QDateTime mucHistorySince;
 
-    int ecode;
+    int ecode = -1;
     QString estr;
 };
 
@@ -3462,8 +3457,7 @@ QString FormField::typeToTagName(int type) const
 //---------------------------------------------------------------------------
 // Form
 //---------------------------------------------------------------------------
-Form::Form(const Jid &j)
-    :QList<FormField>()
+Form::Form(const Jid &j) : QList<FormField>()
 {
     setJid(j);
 }

@@ -1,4 +1,5 @@
 /*
+ * jignle.h - General purpose Jingle
  * Copyright (C) 2019  Sergey Ilinykh
  *
  * This library is free software; you can redistribute it and/or
@@ -23,16 +24,19 @@
 #include "xmpp_hash.h"
 
 #include <QSharedDataPointer>
+#include <QSharedPointer>
 
 class QDomElement;
 class QDomDocument;
 
-#define JINGLE_NS "urn:xmpp:jingle:1"
-#define JINGLE_FT_NS "urn:xmpp:jingle:apps:file-transfer:5"
-
 namespace XMPP {
+class Client;
+
 namespace Jingle {
 
+extern const QString NS;
+
+class Manager;
 class Jingle
 {
 public:
@@ -55,9 +59,13 @@ public:
         TransportReplace
     };
 
-    inline Jingle(){}
-    Jingle(const QDomElement &e);
+    Jingle();
+    Jingle(Manager *manager, const QDomElement &e);
+    Jingle(const Jingle &);
+    ~Jingle();
     QDomElement toXml(QDomDocument *doc) const;
+    inline bool isValid() const { return d != nullptr; }
+    Action action() const;
 private:
     class Private;
     QSharedDataPointer<Private> d;
@@ -89,8 +97,10 @@ public:
         UnsupportedTransports
     };
 
-    inline Reason(){}
+    Reason();
+    ~Reason();
     Reason(const QDomElement &el);
+    Reason(const Reason &other);
     inline bool isValid() const { return d != nullptr; }
     Condition condition() const;
     void setCondition(Condition cond);
@@ -113,75 +123,27 @@ public:
         Responder
     };
 
-    inline bool isValid() const { return creator != Creator::NoCreator && !name.isEmpty(); }
-protected:
+    enum class Senders {
+        Both, // it's default
+        None,
+        Initiator,
+        Responder
+    };
+
     inline ContentBase(){}
     ContentBase(const QDomElement &el);
+
+    inline bool isValid() const { return creator != Creator::NoCreator && !name.isEmpty(); }
+protected:
     QDomElement toXml(QDomDocument *doc, const char *tagName) const;
     static Creator creatorAttr(const QDomElement &el);
     static bool setCreatorAttr(QDomElement &el, Creator creator);
 
     Creator creator = Creator::NoCreator;
     QString name;
+    Senders senders = Senders::Both;
+    QString disposition; // default "session"
 };
-
-class Content : public ContentBase // TODO that's somewhat wrong mixing pimpl with this base
-{
-public:
-    enum class Senders {
-        None,
-        Both,
-        Initiator,
-        Responder
-    };
-
-    inline Content(){}
-    Content(const QDomElement &content);
-    inline bool isValid() const { return d != nullptr; }
-    QDomElement toXml(QDomDocument *doc) const;
-private:
-    class Private;
-    Private *ensureD();
-    QSharedDataPointer<Private> d;
-};
-
-
-namespace FileTransfer {
-
-struct Range {
-    quint64 offset = 0;
-    quint64 length = 0;
-    Hash hash;
-};
-
-class File
-{
-public:
-    inline File(){}
-    File(const QDomElement &file);
-    inline bool isValid() const { return d != nullptr; }
-    QDomElement toXml(QDomDocument *doc) const;
-private:
-    class Private;
-    Private *ensureD();
-    QSharedDataPointer<Private> d;
-};
-
-class Checksum : public ContentBase {
-    inline Checksum(){}
-    Checksum(const QDomElement &file);
-    bool isValid() const;
-    QDomElement toXml(QDomDocument *doc) const;
-private:
-    File file;
-};
-
-class Received : public ContentBase {
-    using ContentBase::ContentBase;
-    QDomElement toXml(QDomDocument *doc) const;
-};
-
-} // namespace FT
 
 class Description
 {
@@ -194,6 +156,118 @@ private:
     class Private;
     Private *ensureD();
     QSharedDataPointer<Private> d;
+};
+
+class TransportManager
+{
+public:
+    /*
+    Categorization by speed, reliability and connectivity
+    - speed: realtim, fast, slow
+    - reliability: reliable, not reliable
+    - connectivity: always connect, hard to connect
+
+    Some transports may change their qualities, so we have to consider worst case.
+
+    ICE-UDP: RealTime, Not Reliable, Hard To Connect
+    S5B:     Fast,     Reliable,     Hard To Connect
+    IBB:     Slow,     Reliable,     Always Connect
+    */
+    enum Feature {
+        // connection establishment
+        HardToConnect = 0x01,
+        AlwaysConnect = 0x02,
+
+        // reliability
+        NotReliable   = 0x10,
+        Reliable      = 0x20,
+
+        // speed
+        Slow          = 0x100,
+        Fast          = 0x200,
+        RealTime      = 0x400
+    };
+
+    Q_DECLARE_FLAGS(Features, Feature)
+};
+
+class Security
+{
+
+};
+
+class Content : public ContentBase // TODO that's somewhat wrong mixing pimpl with this base
+{
+public:
+
+    inline Content(){}
+    Content(Manager *manager, const QDomElement &content);
+    QDomElement toXml(QDomDocument *doc) const;
+
+    QSharedPointer<Description> description;
+    QSharedPointer<TransportManager> transport;
+    QSharedPointer<Security> security;
+    Reason reason;
+};
+
+class Manager;
+class Session : public QObject
+{
+    Q_OBJECT
+public:
+    Session(Manager *manager);
+    ~Session();
+
+    void initiate(const Content &content);
+private:
+    class Private;
+    QScopedPointer<Private> d;
+};
+
+class Application : public QObject
+{
+    Q_OBJECT
+public:
+    Application(Client *client);
+    virtual ~Application();
+
+    Client *client() const;
+    virtual void incomingSession(Session *session) = 0;
+
+    virtual QSharedPointer<Description> descriptionFromXml(const QDomElement &el) = 0;
+
+private:
+    class Private;
+    QScopedPointer<Private> d;
+};
+
+class Manager : public QObject
+{
+    Q_OBJECT
+
+	static const int MaxSessions = 1000; //1000? just to have some limit
+
+public:
+	explicit Manager(XMPP::Client *client = 0);
+	~Manager();
+
+	XMPP::Client* client() const;
+	//Session* sessionInitiate(const Jid &to, const QDomElement &description, const QDomElement &transport);
+	// TODO void setRedirection(const Jid &to);
+
+	void registerApp(const QString &ns, Application *app);
+
+	Session* newSession(const Jid &j);
+
+    QSharedPointer<Description> descriptionFromXml(const QDomElement &el);
+    QSharedPointer<TransportManager> transportFromXml(const QDomElement &el);
+
+private:
+    friend class JTPush;
+    bool incomingIQ(const QDomElement &iq);
+
+    class Private;
+	QScopedPointer<Private> d;
 };
 
 } // namespace Jingle

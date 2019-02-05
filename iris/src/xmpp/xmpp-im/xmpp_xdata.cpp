@@ -34,14 +34,6 @@ using namespace XMLHelper;
 //----------------------------------------------------------------------------
 // XData::Field
 //----------------------------------------------------------------------------
-XData::Field::Field() :
-    _required(false)
-{
-}
-
-XData::Field::~Field()
-{
-}
 
 QString XData::Field::desc() const
 {

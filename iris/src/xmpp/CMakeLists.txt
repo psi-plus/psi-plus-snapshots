@@ -48,7 +48,7 @@ set(PLAIN_HEADERS
     xmpp-im/xmpp_vcard.h
     xmpp-im/xmpp_xdata.h
     xmpp-im/xmpp_xmlcommon.h
-    xmpp-im/jingle.h
+    xmpp-im/jingle-s5b.h
 
     base/randomnumbergenerator.h
     base/randrandomnumbergenerator.h
@@ -89,6 +89,8 @@ set(HEADERS
     xmpp-im/xmpp_serverinfomanager.h
     xmpp-im/xmpp_task.h
     xmpp-im/xmpp_tasks.h
+    xmpp-im/jingle.h
+    xmpp-im/jingle-ft.h
 
     zlib/zlibcompressor.h
     zlib/zlibdecompressor.h
@@ -122,7 +124,8 @@ set(PLAIN_SOURCES
     xmpp-im/xmpp_vcard.cpp
     xmpp-im/xmpp_xdata.cpp
     xmpp-im/xmpp_xmlcommon.cpp
-    xmpp-im/jingle.cpp
+    xmpp-im/jingle-s5b.cpp
+    xmpp-im/jingle-ft.cpp
 
     base/randomnumbergenerator.cpp
     base/timezone.cpp
@@ -150,6 +153,7 @@ set(SOURCES
 
     xmpp-im/s5b.cpp
     xmpp-im/xmpp_features.cpp
+    xmpp-im/jingle.cpp
     )
 
 qt_wrap_cpp(MOC_SOURCES ${HEADERS} ${SOURCES})

@@ -433,33 +433,31 @@ public:
         Relay
     };
 
-    int opt_mode;
-    int opt_localBase;
-    int opt_iceBase;
-    int opt_channels;
+    int opt_mode = 0;
+    int opt_localBase = 0;
+    int opt_iceBase = 0;
+    int opt_channels = 0;
     QString opt_stunHost;
-    int opt_stunPort;
-    StunServiceType opt_stunType;
-    QString opt_user, opt_pass;
-    bool opt_ipv6_only, opt_relay_udp_only, opt_relay_tcp_only;
+    int opt_stunPort = 0;
+    StunServiceType opt_stunType = Auto;
+    QString opt_user;
+    QString opt_pass;
+    bool opt_ipv6_only = false;
+    bool opt_relay_udp_only = false;
+    bool opt_relay_tcp_only = false;
 
     XMPP::NameResolver dns;
     QHostAddress stunAddr;
     XMPP::UdpPortReserver portReserver;
-    XMPP::Ice176 *ice;
+    XMPP::Ice176 *ice = nullptr;
     QList<XMPP::Ice176::LocalAddress> localAddrs;
     QList<Channel> channels;
-    QCA::Console *console;
-    IceBlockReader *reader;
-    EnterPrompt *prompt;
+    QCA::Console *console = nullptr;
+    IceBlockReader *reader = nullptr;
+    EnterPrompt *prompt = nullptr;
     IceOffer inOffer;
 
-    App() :
-        portReserver(this),
-        ice(0),
-        console(0),
-        reader(0),
-        prompt(0)
+    App() : portReserver(this)
     {
     }
 

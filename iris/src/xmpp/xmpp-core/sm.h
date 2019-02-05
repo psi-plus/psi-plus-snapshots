@@ -85,7 +85,7 @@ namespace XMPP
         int  sm_resend_pos;
         struct {
             QElapsedTimer elapsed_timer;
-            bool waiting_answer;
+            bool waiting_answer = false;
         } sm_timeout_data;
     };
 }

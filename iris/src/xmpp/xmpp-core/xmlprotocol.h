@@ -71,7 +71,7 @@ namespace XMPP
         bool processStep();
 
         // set these before returning from a step
-        int need, event, errorCode, notify, timeout_sec;
+        int need = 0, event = 0, errorCode = 0, notify = 0, timeout_sec = 0;
 
         inline bool isIncoming() const { return incoming; }
         QString xmlEncoding() const;
@@ -128,8 +128,9 @@ namespace XMPP
         bool incoming;
         QDomDocument elemDoc;
         QDomElement elem;
-        QString tagOpen, tagClose;
-        int state;
+        QString tagOpen;
+        QString tagClose;
+        int state = 0;
         bool peerClosed;
         bool closeWritten;
 

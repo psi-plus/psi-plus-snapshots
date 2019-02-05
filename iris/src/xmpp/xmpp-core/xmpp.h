@@ -115,8 +115,8 @@ namespace XMPP
         {
         public:
             enum { None, HttpConnect, HttpPoll, Socks };
-            Proxy();
-            ~Proxy();
+            Proxy() = default;
+            ~Proxy() {}
 
             int type() const;
             QString host() const;
@@ -133,12 +133,13 @@ namespace XMPP
             void setPollInterval(int secs);
 
         private:
-            int t;
+            int t = None;
             QUrl v_url;
             QString v_host;
-            quint16 v_port;
-            QString v_user, v_pass;
-            int v_poll;
+            quint16 v_port = 0;
+            QString v_user;
+            QString v_pass;
+            int v_poll = 30;
         };
 
         void setProxy(const Proxy &proxy);

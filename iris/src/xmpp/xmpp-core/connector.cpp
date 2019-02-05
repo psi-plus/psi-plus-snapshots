@@ -118,15 +118,6 @@ QString Connector::host() const
 //----------------------------------------------------------------------------
 // AdvancedConnector::Proxy
 //----------------------------------------------------------------------------
-AdvancedConnector::Proxy::Proxy()
-{
-    t = None;
-    v_poll = 30;
-}
-
-AdvancedConnector::Proxy::~Proxy()
-{
-}
 
 int AdvancedConnector::Proxy::type() const
 {

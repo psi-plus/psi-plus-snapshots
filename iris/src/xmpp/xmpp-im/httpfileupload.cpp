@@ -164,7 +164,7 @@ void HttpFileUpload::tryNextServer()
         done(State::Error);
         return;
     }
-    HttpHost host = std::move(d->httpHosts.takeFirst());
+    HttpHost host = d->httpHosts.takeFirst();
     d->result.sizeLimit = host.sizeLimit;
     auto jt = new JT_HTTPFileUpload(d->client->rootTask());
     connect(jt, &JT_HTTPFileUpload::finished, this, [this, jt, host]() mutable {

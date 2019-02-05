@@ -32,13 +32,15 @@ class App : public QObject
 {
     Q_OBJECT
 public:
-    bool opt_debug, opt_ipv6, opt_quit;
-    int quit_time;
+    bool opt_debug = false;
+    bool opt_ipv6 = false;
+    bool opt_quit = false;
+    int quit_time = 500;
     QString mode, type, name, ipaddr;
     QStringList nslist;
     QList<QJDns::Record> pubitems;
     QJDns jdns;
-    int req_id;
+    int req_id = 0;
 
     App();
     ~App();

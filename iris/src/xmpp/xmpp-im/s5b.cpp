@@ -65,22 +65,28 @@ static bool haveHost(const StreamHostList &list, const Jid &j)
 class S5BManager::Item : public QObject
 {
     Q_OBJECT
+
 public:
     enum { Idle, Requester, Target, Active };
     enum { ErrRefused, ErrConnect, ErrWrongHost, ErrProxy };
     enum { Unknown, Fast, NotFast };
-    S5BManager *m;
-    int state;
+
+    S5BManager *m = nullptr;
+    int state = 0;
     QString sid, key, out_key, out_id, in_id;
     Jid self, peer;
     StreamHostList in_hosts;
-    JT_S5B *task, *proxy_task;
-    SocksClient *client, *client_out;
-    SocksUDP *client_udp, *client_out_udp;
-    S5BConnector *conn, *proxy_conn;
-    bool wantFast;
+    JT_S5B *task = nullptr;
+    JT_S5B *proxy_task = nullptr;
+    SocksClient *client = nullptr;
+    SocksClient *client_out = nullptr;
+    SocksUDP *client_udp = nullptr;
+    SocksUDP *client_out_udp = nullptr;
+    S5BConnector *conn = nullptr;
+    S5BConnector *proxy_conn = nullptr;
+    bool wantFast = false;
     StreamHost proxy;
-    int targetMode; // requester sets this once it figures it out
+    int targetMode = 0; // requester sets this once it figures it out
     bool fast; // target sets this
     bool activated;
     bool lateProxy;
@@ -88,7 +94,7 @@ public:
     bool localFailed, remoteFailed;
     bool allowIncoming;
     bool udp;
-    int statusCode;
+    int statusCode = 0;
     Jid activatedStream;
 
     Item(S5BManager *manager);
@@ -542,28 +548,23 @@ void S5BConnection::sendUDP(const QByteArray &buf)
 class S5BManager::Entry
 {
 public:
-    Entry()
-    {
-        i = 0;
-        query = 0;
-        udp_init = false;
-    }
+    Entry() = default;
 
     ~Entry()
     {
         delete query;
     }
 
-    S5BConnection *c;
-    Item *i;
+    S5BConnection *c = nullptr;
+    Item *i = nullptr;
     QString sid;
-    JT_S5B *query;
+    JT_S5B *query = nullptr;
     StreamHost proxyInfo;
     QPointer<S5BServer> relatedServer;
 
-    bool udp_init;
+    bool udp_init = false;
     QHostAddress udp_addr;
-    int udp_port;
+    int udp_port = 0;
 };
 
 class S5BManager::Private
@@ -1089,17 +1090,10 @@ bool S5BManager::targetShouldOfferProxy(Entry *e)
 //----------------------------------------------------------------------------
 // S5BManager::Item
 //----------------------------------------------------------------------------
-S5BManager::Item::Item(S5BManager *manager) : QObject(0)
+S5BManager::Item::Item(S5BManager *manager)
+    : QObject(nullptr)
+    , m(manager)
 {
-    m = manager;
-    task = 0;
-    proxy_task = 0;
-    conn = 0;
-    proxy_conn = 0;
-    client_udp = 0;
-    client = 0;
-    client_out_udp = 0;
-    client_out = 0;
     resetConnection();
 }
 
@@ -1111,28 +1105,28 @@ S5BManager::Item::~Item()
 void S5BManager::Item::resetConnection()
 {
     delete task;
-    task = 0;
+    task = nullptr;
 
     delete proxy_task;
-    proxy_task = 0;
+    proxy_task = nullptr;
 
     delete conn;
-    conn = 0;
+    conn = nullptr;
 
     delete proxy_conn;
-    proxy_conn = 0;
+    proxy_conn = nullptr;
 
     delete client_udp;
-    client_udp = 0;
+    client_udp = nullptr;
 
     delete client;
-    client = 0;
+    client = nullptr;
 
     delete client_out_udp;
-    client_out_udp = 0;
+    client_out_udp = nullptr;
 
     delete client_out;
-    client_out = 0;
+    client_out = nullptr;
 
     state = Idle;
     wantFast = false;

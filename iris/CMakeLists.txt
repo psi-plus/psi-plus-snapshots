@@ -5,6 +5,13 @@ endif()
 project(iris)
 cmake_minimum_required(VERSION 3.1.0)
 
+if(POLICY CMP0071)
+    cmake_policy(SET CMP0071 OLD)
+endif()
+if(POLICY CMP0074)
+    cmake_policy(SET CMP0074 NEW)
+endif()
+
 set( IRIS_LIB_VERSION_MAJOR 1 )
 set( IRIS_LIB_VERSION_MINOR 0 )
 set( IRIS_LIB_VERSION_PATCH 0 )
