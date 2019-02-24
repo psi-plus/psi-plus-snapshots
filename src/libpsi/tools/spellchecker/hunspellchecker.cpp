@@ -68,17 +68,18 @@ void HunspellChecker::getDictPaths()
             dictPathSet << pathFromEnv;
 #if defined(Q_OS_WIN)
         dictPathSet << QCoreApplication::applicationDirPath() + QLatin1String("/myspell/dicts")
-                << ApplicationInfo::homeDir(ApplicationInfo::DataLocation) + QLatin1String("/myspell/dicts");
+                    << ApplicationInfo::homeDir(ApplicationInfo::DataLocation) + QLatin1String("/myspell/dicts");
 
 #elif defined(Q_OS_MAC)
-        dictPathSet << QLatin1String("/opt/local/share/myspell"); // MacPorts standard paths
+        dictPathSet << QCoreApplication::applicationDirPath() + QLatin1String("/../Resources/myspell/dicts") // relative path to dictionaries inside app bundle
+                    << QLatin1String("/opt/local/share/myspell"); // MacPorts standard paths
 #else
         dictPathSet << QLatin1String("/usr/share/myspell")
-                << QLatin1String("/usr/share/hunspell")
-                << QLatin1String("/usr/local/share/myspell")
-                << QLatin1String("/usr/local/share/hunspell")
-                << QString("%1/.local/share/myspell").arg(QDir::home().absolutePath())
-                << QString("%1/.local/share/hunspell").arg(QDir::home().absolutePath());
+                    << QLatin1String("/usr/share/hunspell")
+                    << QLatin1String("/usr/local/share/myspell")
+                    << QLatin1String("/usr/local/share/hunspell")
+                    << QString("%1/.local/share/myspell").arg(QDir::home().absolutePath())
+                    << QString("%1/.local/share/hunspell").arg(QDir::home().absolutePath());
 #endif
         dictPaths_ = dictPathSet.toList();
     }

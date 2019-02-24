@@ -94,9 +94,6 @@ if(APPLE)
         globalshortcut/globalshortcutmanager_mac.mm
         globalshortcut/NDKeyboardLayout.m
 
-        # spellchecker
-        spellchecker/macspellchecker.mm
-
         mac_dock/mac_dock.mm
         mac_dock/privateqt_mac.mm
         )
@@ -107,9 +104,6 @@ if(APPLE)
 
         # globalshortcut
         globalshortcut/NDKeyboardLayout.h
-
-        # spellchecker
-        spellchecker/macspellchecker.h
         )
 
     list(APPEND SOURCES
@@ -207,7 +201,14 @@ elseif(USE_HUNSPELL)
     list(APPEND PLAIN_SOURCES
         spellchecker/hunspellchecker.cpp
         )
+elseif(APPLE)
+    list(APPEND PLAIN_SOURCES
+        spellchecker/macspellchecker.mm
+        )
 
+    list(APPEND HEADERS
+        spellchecker/macspellchecker.h
+        )
 endif()
 
 qt5_wrap_ui(UI_FORMS ${FORMS})
