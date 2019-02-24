@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2018-11-24
+# Updated: 2019-02-24
 # Version: N/A
 
 set -e
@@ -206,7 +206,10 @@ cp -a "${MAIN_DIR}/psi/win32"/*.rc* "${SNAPSHOTS_DIR}/win32/"
 cp -a "${MAIN_DIR}/psi/win32"/*.cmake "${SNAPSHOTS_DIR}/win32/"
 cp -a "${MAIN_DIR}/psi/win32"/*.manifest "${SNAPSHOTS_DIR}/win32/"
 cp -a "${MAIN_DIR}/main/app.ico" "${SNAPSHOTS_DIR}/win32/"
-echo "* Some files for MS Windows build are copied."
+echo "* Some files for MS Windows builds are copied."
+
+cp -a "${MAIN_DIR}/main/application.icns" "${SNAPSHOTS_DIR}/mac/"
+echo "* Some files for macOS builds are copied."
 
 echo;
 
