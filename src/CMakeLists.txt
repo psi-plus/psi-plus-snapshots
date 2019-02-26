@@ -217,61 +217,39 @@ if(USE_WEBENGINE)
 endif()
 
 if(LANGS_EXISTS)
-    set(TRANSLATIONS
-        ${TRANSLATIONS_DIR}/psi_be.ts
-        ${TRANSLATIONS_DIR}/psi_bg.ts
-        ${TRANSLATIONS_DIR}/psi_ca.ts
-        ${TRANSLATIONS_DIR}/psi_cs.ts
-        ${TRANSLATIONS_DIR}/psi_de.ts
-        ${TRANSLATIONS_DIR}/psi_en.ts
-        ${TRANSLATIONS_DIR}/psi_eo.ts
-        ${TRANSLATIONS_DIR}/psi_es.ts
-        ${TRANSLATIONS_DIR}/psi_et.ts
-        ${TRANSLATIONS_DIR}/psi_fa.ts
-        ${TRANSLATIONS_DIR}/psi_fi.ts
-        ${TRANSLATIONS_DIR}/psi_fr.ts
-        ${TRANSLATIONS_DIR}/psi_he.ts
-        ${TRANSLATIONS_DIR}/psi_hu.ts
-        ${TRANSLATIONS_DIR}/psi_it.ts
-        ${TRANSLATIONS_DIR}/psi_ja.ts
-        ${TRANSLATIONS_DIR}/psi_kk.ts
-        ${TRANSLATIONS_DIR}/psi_mk.ts
-        ${TRANSLATIONS_DIR}/psi_nl.ts
-        ${TRANSLATIONS_DIR}/psi_pl.ts
-        ${TRANSLATIONS_DIR}/psi_pt_BR.ts
-        ${TRANSLATIONS_DIR}/psi_pt.ts
-        ${TRANSLATIONS_DIR}/psi_ru.ts
-        ${TRANSLATIONS_DIR}/psi_sk.ts
-        ${TRANSLATIONS_DIR}/psi_sl.ts
-        ${TRANSLATIONS_DIR}/psi_sr@latin.ts
-        ${TRANSLATIONS_DIR}/psi_sv.ts
-        ${TRANSLATIONS_DIR}/psi_sw.ts
-        ${TRANSLATIONS_DIR}/psi_uk.ts
-        ${TRANSLATIONS_DIR}/psi_ur_PK.ts
-        ${TRANSLATIONS_DIR}/psi_vi.ts
-        ${TRANSLATIONS_DIR}/psi_zh_CN.ts
-        ${TRANSLATIONS_DIR}/psi_zh_TW.ts
+    file(GLOB PSI_TRANSLATIONS "${TRANSLATIONS_DIR}/psi_*.ts")
+
+    set_property(SOURCE ${PSI_TRANSLATIONS}
+        PROPERTY OUTPUT_LOCATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translations
     )
 
-    set_property(SOURCE ${TRANSLATIONS}
-        PROPERTY OUTPUT_LOCATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translations)
-
     add_custom_target(lupdate)
-    foreach(_LANG ${TRANSLATIONS})
-        if(EXISTS "${_LANG}")
-            get_filename_component(_SHORT_LANG ${_LANG} NAME_WE)
-            string(REPLACE "@" "_" _SHORT_LANG ${_SHORT_LANG})
-            add_custom_target(${_SHORT_LANG}
-                COMMAND ${QT_LUPDATE_EXECUTABLE}
-                ARGS -no-obsolete -recursive . ../iris -ts ${_LANG}
-                WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-                VERBATIM
-            )
-            add_dependencies(lupdate ${_SHORT_LANG})
-        endif()
+    foreach(_LANG ${PSI_TRANSLATIONS})
+        get_filename_component(_SHORT_LANG ${_LANG} NAME_WE)
+        string(REPLACE "@" "_" _SHORT_LANG ${_SHORT_LANG})
+        add_custom_target(${_SHORT_LANG}
+            COMMAND ${QT_LUPDATE_EXECUTABLE}
+            ARGS -no-obsolete -recursive . ../iris -ts ${_LANG}
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            VERBATIM
+        )
+        add_dependencies(lupdate ${_SHORT_LANG})
     endforeach()
 
-    qt5_add_translation(QM ${TRANSLATIONS})
+    # Psi translations
+    qt5_add_translation(QM ${PSI_TRANSLATIONS})
+endif()
+
+if(LANGS_EXISTS AND (WIN32 OR APPLE))
+    # Qt translations
+    get_target_property(QtCore_location Qt5::Core LOCATION)
+    get_filename_component(QtCore_DIR "${QtCore_location}" PATH)
+    set(QT_ROOT_DIR "${QtCore_DIR}/../..")
+    set(QT_TRANSLATIONS_DIR "${QT_ROOT_DIR}/translations")
+    if(EXISTS "${QT_TRANSLATIONS_DIR}")
+        file(GLOB QT_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/q*.qm")
+        list(APPEND QM ${QT_TRANSLATIONS})
+    endif()
 endif()
 
 set(RESOURCES
@@ -448,14 +426,15 @@ set(DOC_FILES
 #PREPARE SECTION
 copy("${PROJECT_SOURCE_DIR}/certs/" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/certs/" prepare-bin)
 copy("${PROJECT_SOURCE_DIR}/iconsets/" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/iconsets/" prepare-bin)
+copy("${PROJECT_SOURCE_DIR}/sound/" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/sound/" prepare-bin)
 if(ENABLE_WEBKIT)
     copy("${PROJECT_SOURCE_DIR}/themes/" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/themes/" prepare-bin)
 endif()
-copy("${PROJECT_SOURCE_DIR}/sound/" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/sound/" prepare-bin)
-if(ENABLE_PLUGINS)
+if(ENABLE_PLUGINS AND EXISTS ${PROJECT_SOURCE_DIR}/skins)
     copy("${PROJECT_SOURCE_DIR}/skins/" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/skins/" prepare-bin)
 endif()
 copy("${PROJECT_SOURCE_DIR}/client_icons.txt" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/" prepare-bin)
+#PREPARE SECTION END
 
 #INSTALL SECTION
 if(LINUX)
@@ -577,30 +556,6 @@ if(APPLE)
                 install(DIRECTORY ${PROJECT_SOURCE_DIR}/themes DESTINATION "${PROJECT_OUTPUT_DATA_DIR}")
             endif()
             if(LANGS_EXISTS)
-                # Qt translations
-                get_target_property (QtCore_location Qt5::Core LOCATION)
-                get_filename_component (QtCore_DIR "${QtCore_location}" PATH)
-                set (QT_ROOT_DIR "${QtCore_DIR}/../..")
-                set (QT_TRANSLATIONS_DIR "${QT_ROOT_DIR}/translations/")
-                file (GLOB QT_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qt_*.qm")
-                foreach (FILE ${QT_TRANSLATIONS})
-                    if (NOT FILE MATCHES "_help_")
-                        list (APPEND QM ${FILE})
-                    endif ()
-                endforeach ()
-                file (GLOB QT_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtbase_*.qm")
-                foreach (FILE ${QT_TRANSLATIONS})
-                    list (APPEND QM ${FILE})
-                endforeach()
-                file (GLOB QT_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtdeclarative_*.qm")
-                foreach (FILE ${QT_TRANSLATIONS})
-                    list (APPEND QM ${FILE})
-                endforeach()
-                file (GLOB QT_TRANSLATIONS "${QT_TRANSLATIONS_DIR}/qtmultimedia_*.qm")
-                foreach (FILE ${QT_TRANSLATIONS})
-                    list (APPEND QM ${FILE})
-                endforeach()
-                # Install all translations
                 install(FILES ${QM} DESTINATION "${PROJECT_OUTPUT_DATA_DIR}/translations")
             endif()
             if(USE_HUNSPELL AND EXISTS "${PROJECT_SOURCE_DIR}/myspell")
