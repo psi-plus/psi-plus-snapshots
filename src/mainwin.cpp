@@ -1020,17 +1020,17 @@ void MainWin::actReadmeActivated ()
 
 void MainWin::actOnlineWikiActivated ()
 {
-    DesktopUtil::openUrl("https://github.com/psi-im/psi/wiki");
+    DesktopUtil::openUrl("https://psi-plus.com/wiki/main");
 }
 
 void MainWin::actOnlineHomeActivated ()
 {
-    DesktopUtil::openUrl("https://psi-im.org");
+    DesktopUtil::openUrl("https://psi-plus.com");
 }
 
 void MainWin::actOnlineForumActivated ()
 {
-    DesktopUtil::openUrl("https://forum.psi-plus.com");
+    DesktopUtil::openUrl("https://groups.google.com/forum/#!forum/psi-users");
 }
 
 void MainWin::actJoinPsiMUCActivated()
