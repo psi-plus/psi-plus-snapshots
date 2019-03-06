@@ -49,7 +49,6 @@ set(PLAIN_HEADERS
     xmpp-im/xmpp_vcard.h
     xmpp-im/xmpp_xdata.h
     xmpp-im/xmpp_xmlcommon.h
-    xmpp-im/jingle-s5b.h
 
     base/randomnumbergenerator.h
     base/randrandomnumbergenerator.h
@@ -92,6 +91,7 @@ set(HEADERS
     xmpp-im/xmpp_tasks.h
     xmpp-im/jingle.h
     xmpp-im/jingle-ft.h
+    xmpp-im/jingle-s5b.h
 
     zlib/zlibcompressor.h
     zlib/zlibdecompressor.h
