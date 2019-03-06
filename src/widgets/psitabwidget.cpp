@@ -250,7 +250,6 @@ bool PsiTabWidget::isPagePinned(QWidget *page)
     foreach (QWidget *w, widgets_) {
         if(w == page) {
             return tabBar_->isTabPinned(widgets_.indexOf(w));
-            break;
         }
     }
     return false;
