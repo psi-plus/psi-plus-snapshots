@@ -11,3 +11,5 @@ sub_noncore.subdir = noncore
 !irisnetcore_bundle:SUBDIRS += sub_corelib
 appledns:!appledns_bundle:SUBDIRS += sub_appledns
 !iris_bundle:SUBDIRS += sub_noncore
+
+OTHER_FILES += CMakeLists.txt

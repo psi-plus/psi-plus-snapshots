@@ -23,6 +23,7 @@ set(PLAIN_HEADERS
 
     xmpp-im/xmpp_address.h
     xmpp-im/xmpp_hash.h
+    xmpp-im/xmpp_thumbs.h
     xmpp-im/xmpp_agentitem.h
     xmpp-im/xmpp_captcha.h
     xmpp-im/xmpp_chatstate.h

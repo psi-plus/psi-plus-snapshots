@@ -28,6 +28,7 @@
 
 #include "xmpp_xmlcommon.h"
 #include "im.h"
+#include "jingle-s5b.h"
 #include "socks.h"
 
 #ifdef Q_OS_WIN
@@ -2037,6 +2038,7 @@ public:
     SocksServer serv;
     QStringList hostList;
     QList<S5BManager*> manList;
+    QList<Jingle::S5B::Manager*> jingleManagerList;
     QList<Item*> itemList;
 };
 
@@ -2101,6 +2103,7 @@ void S5BServer::ss_incomingUDP(const QString &host, int port, const QHostAddress
     if(port != 0 && port != 1)
         return;
 
+    // TODO check jingle managers too
     foreach(S5BManager* m, d->manList) {
         if(m->srv_ownsHash(host)) {
             m->srv_incomingUDP(port == 1 ? true : false, addr, sourcePort, host, data);
@@ -2126,6 +2129,13 @@ void S5BServer::item_result(bool b)
     QString key = i->host;
     d->itemList.removeAll(i);
     delete i;
+
+
+    for (Jingle::S5B::Manager *m: d->jingleManagerList) {
+        if (m->incomingConnection(c, key)) {
+            return;
+        }
+    }
 
     // find the appropriate manager for this incoming connection
     foreach(S5BManager *m, d->manList) {
@@ -2153,8 +2163,24 @@ void S5BServer::unlink(S5BManager *m)
     d->manList.removeAll(m);
 }
 
+void S5BServer::link(Jingle::S5B::Manager *m)
+{
+    d->jingleManagerList.append(m);
+}
+
+void S5BServer::unlink(Jingle::S5B::Manager *m)
+{
+    d->jingleManagerList.removeAll(m);
+}
+
 void S5BServer::unlinkAll()
 {
+    auto jl = d->jingleManagerList;
+    d->jingleManagerList.clear(); // clear early for setServer optimization
+    for(Jingle::S5B::Manager *m : jl) {
+        m->setServer(nullptr);
+    }
+
     foreach(S5BManager *m, d->manList) {
         m->srv_unlink();
     }

@@ -3702,4 +3702,26 @@ const Jid &CaptchaChallenge::arbiter() const
     return d->arbiter;
 }
 
+Thumbnail::Thumbnail(const QDomElement &el)
+{
+    if(el.attribute("xmlns") == QLatin1String(XMPP_THUMBS_NS)) {
+        uri = QUrl(el.attribute("uri"), QUrl::StrictMode);
+        mimeType = el.attribute("mime-type");
+        width = el.attribute("width").toUInt();
+        height = el.attribute("height").toUInt();
+    }
+}
+
+QDomElement Thumbnail::toXml(QDomDocument *doc)
+{
+    auto el = doc->createElementNS(QStringLiteral("thumbnail"), XMPP_THUMBS_NS);
+    el.setAttribute("uri", uri.toString(QUrl::FullyEncoded));
+    el.setAttribute("mime-type", mimeType);
+    if (width && height) {
+        el.setAttribute("width", width);
+        el.setAttribute("height", height);
+    }
+    return el;
+}
+
 }

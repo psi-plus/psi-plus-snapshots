@@ -159,8 +159,8 @@ public:
      * setting qnam allows doing automatic http requests after getting slot,
      * so finished signal will be emitted when http finished.
      *
-     * NOTE: the logic may change eventually and iris will set qnam automatically,
-     * if it's not desired set nullptr explicitly
+     * NOTE: by default QNAM from Client will be in use until something set with this method.
+     *       So it's possible to disable HTTP part by setting NULL here.
      */
     void setNetworkAccessManager(QNetworkAccessManager *qnam);
 

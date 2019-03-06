@@ -53,6 +53,7 @@ HEADERS += \
     $$PWD/xmpp-core/xmpp_stream.h \
     $$PWD/xmpp-im/xmpp_address.h \
     $$PWD/xmpp-im/xmpp_hash.h \
+    $$PWD/xmpp-im/xmpp_thumbs.h \
     $$PWD/xmpp-im/xmpp_htmlelement.h \
     $$PWD/xmpp-im/xmpp_muc.h \
     $$PWD/xmpp-im/xmpp_message.h \

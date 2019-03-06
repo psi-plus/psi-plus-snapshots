@@ -94,6 +94,11 @@ namespace XMPP
         QString f, b, d, n, r;
         bool valid, null;
     };
+
+    Q_DECL_PURE_FUNCTION inline uint qHash(const XMPP::Jid &key, uint seed = 0) Q_DECL_NOTHROW
+    {
+        return qHash(key.full(), seed);
+    }
 }
 
 #endif

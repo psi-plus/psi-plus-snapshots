@@ -415,6 +415,7 @@ class HttpFileUploadManager::Private {
 public:
     Client *client = nullptr;
     QPointer<QNetworkAccessManager> qnam;
+    bool externalQnam = false;
     QLinkedList<HttpFileUpload::HttpHost> hosts;
 };
 
@@ -429,6 +430,7 @@ HttpFileUploadManager::HttpFileUploadManager(Client *parent) :
 
 void HttpFileUploadManager::setNetworkAccessManager(QNetworkAccessManager *qnam)
 {
+    d->externalQnam = true;
     d->qnam = qnam;
 }
 
@@ -444,7 +446,8 @@ HttpFileUpload* HttpFileUploadManager::upload(const QString &srcFilename, const 
 HttpFileUpload* HttpFileUploadManager::upload(QIODevice *source, size_t fsize, const QString &dstFilename, const QString &mType)
 {
     auto hfu = new HttpFileUpload(d->client, source, fsize, dstFilename, mType);
-    hfu->setNetworkAccessManager(d->qnam);
+    QNetworkAccessManager *qnam = d->externalQnam? d->qnam.data() : d->client->networkAccessManager();
+    hfu->setNetworkAccessManager(qnam);
     QMetaObject::invokeMethod(hfu, "start", Qt::QueuedConnection);
     return hfu;
 }

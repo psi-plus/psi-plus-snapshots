@@ -36,6 +36,12 @@ class SocksUDP;
 
 namespace XMPP
 {
+    namespace Jingle {
+        namespace S5B {
+            class Manager;
+        }
+    }
+
     class StreamHost;
     class Client;
     class S5BConnection;
@@ -262,8 +268,11 @@ namespace XMPP
         Private *d;
 
         friend class S5BManager;
+        friend class Jingle::S5B::Manager;
         void link(S5BManager *);
         void unlink(S5BManager *);
+        void link(Jingle::S5B::Manager *m);
+        void unlink(Jingle::S5B::Manager *m);
         void unlinkAll();
         const QList<S5BManager*> & managerList() const;
         void writeUDP(const QHostAddress &addr, int port, const QByteArray &data);

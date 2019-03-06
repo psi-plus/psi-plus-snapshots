@@ -26,6 +26,7 @@
 // CS_NAMESPACE_BEGIN
 
 class QHostAddress;
+class QTcpSocket;
 class SocksClient;
 class SocksServer;
 
@@ -60,7 +61,7 @@ public:
     enum Method { AuthNone=0x0001, AuthUsername=0x0002 };
     enum Request { ReqConnect, ReqUDPAssociate };
     SocksClient(QObject *parent=0);
-    SocksClient(qintptr, QObject *parent=0);
+    SocksClient(QTcpSocket *, QObject *parent=0);
     ~SocksClient();
 
     virtual QAbstractSocket* abstractSocket() const;
@@ -149,7 +150,7 @@ signals:
     void incomingUDP(const QString &host, int port, const QHostAddress &addr, int sourcePort, const QByteArray &data);
 
 private slots:
-    void connectionReady(qintptr);
+    void newConnection();
     void connectionError();
     void sd_activated();
 

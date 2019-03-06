@@ -55,7 +55,7 @@ public:
     void connectToHost(const QString &service, const QString &transport, const QString &domain, quint16 port = std::numeric_limits<quint16>::max());
     virtual QAbstractSocket* abstractSocket() const;
     qintptr socket() const;
-    void setSocket(qintptr);
+    void setSocket(QTcpSocket *);
     int state() const;
 
     // from ByteStream

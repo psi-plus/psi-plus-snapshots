@@ -527,11 +527,11 @@ qintptr BSocket::socket() const
         return -1;
 }
 
-void BSocket::setSocket(qintptr s)
+void BSocket::setSocket(QTcpSocket *s)
 {
     resetConnection(true);
-    d->qsock = new QTcpSocket(this);
-    d->qsock->setSocketDescriptor(s);
+    s->setParent(this);
+    d->qsock = s;
     d->qsock_relay = new QTcpSocketSignalRelay(d->qsock, this);
     qs_connected_step2(false); // we have desriptor already. so it's already known to be connected
 }

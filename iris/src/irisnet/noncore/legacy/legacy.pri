@@ -1,9 +1,7 @@
 HEADERS += \
     $$PWD/ndns.h \
-    $$PWD/srvresolver.h \
-    $$PWD/servsock.h
+    $$PWD/srvresolver.h
 
 SOURCES += \
     $$PWD/ndns.cpp \
-    $$PWD/srvresolver.cpp \
-    $$PWD/servsock.cpp
+    $$PWD/srvresolver.cpp

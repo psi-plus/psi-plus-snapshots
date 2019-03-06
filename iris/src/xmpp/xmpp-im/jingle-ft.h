@@ -31,6 +31,7 @@ namespace Jingle {
 namespace FileTransfer {
 
 extern const QString NS;
+class Manager;
 
 struct Range {
     quint64 offset = 0;
@@ -69,13 +70,50 @@ class Received : public ContentBase
     QDomElement toXml(QDomDocument *doc) const;
 };
 
-class FTApplication : public Application
+class Pad : public SessionManagerPad
+{
+    Q_OBJECT
+    // TODO
+public:
+    Pad(Manager *manager, Session *session);
+    QDomElement takeOutgoingSessionInfoUpdate();
+    QString ns() const;
+private:
+    Manager *manager;
+    Session *session;
+};
+
+class Application : public XMPP::Jingle::Application
 {
     Q_OBJECT
 public:
-    FTApplication(Client *client);
-    void incomingSession(Session *session);
-    QSharedPointer<Description> descriptionFromXml(const QDomElement &el);
+    Application(Pad *pad, Origin creator, Origin senders);
+    ~Application();
+
+    bool setDescription(const QDomElement &description);
+    void setTransport(const QSharedPointer<Transport> &transport);
+    QSharedPointer<Transport> transport() const;
+
+    Jingle::Action outgoingUpdateType() const;
+    bool isReadyForSessionAccept() const;
+    QDomElement takeOutgoingUpdate();
+    QDomElement sessionAcceptContent() const;
+
+    bool isValid() const;
+
+private:
+    class Private;
+    QScopedPointer<Private> d;
+};
+
+class Manager : public XMPP::Jingle::ApplicationManager
+{
+    Q_OBJECT
+public:
+    Manager(Client *client);
+    Application *startApplication(SessionManagerPad *pad, Origin creator, Origin senders);
+    SessionManagerPad* pad(Session *session); // pad factory
+    void closeAll();
 
 private:
     Client *client;
