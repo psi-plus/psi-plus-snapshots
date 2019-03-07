@@ -190,14 +190,14 @@ QSharedPointer<XMPP::Jingle::Transport> Transport::createIncoming(SessionManager
     d->sid = transportEl.attribute(QStringLiteral("sid"));
     if (d->sid.isEmpty()) {
         delete d;
-        return nullptr;
+        return QSharedPointer<XMPP::Jingle::Transport>();
     }
 
     auto t = new Transport;
     t->d.reset(d);
     QSharedPointer<XMPP::Jingle::Transport> st(t);
     if (!st->update(transportEl)) {
-        return nullptr;
+        return QSharedPointer<XMPP::Jingle::Transport>();
     }
     return st;
 }

@@ -1005,7 +1005,7 @@ QSharedPointer<Transport> Manager::initTransport(SessionManagerPad *pad,
 {
     auto transportManager = d->transportManagers.value(el.namespaceURI());
     if (!transportManager) {
-        return NULL;
+        return QSharedPointer<Transport>();
     }
     return transportManager->sessionInitiate(pad, jid, el);
 }
