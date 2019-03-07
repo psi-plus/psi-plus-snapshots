@@ -33,11 +33,11 @@ int main(int argc, char ** argv) {
             int size = req->collectedData().size();
             auto message = [size]() -> QByteArray {
                 if ( size == 0 )
-                    return "Hello World!\n";
+                    return QByteArray("Hello World!\n");
 
                 char buffer[65] = {0};
                 qsnprintf(buffer, 64, "Hello!\nyou've sent me %d bytes!\n", size);
-                return buffer;
+                return QByteArray(buffer);
             };
 
             res->end(message());  // response body data
