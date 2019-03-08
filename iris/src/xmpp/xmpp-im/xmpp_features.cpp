@@ -25,6 +25,9 @@
 
 #include "xmpp_features.h"
 
+#include "jingle.h"
+#include "jingle-ft.h"
+
 using namespace XMPP;
 
 Features::Features()
@@ -189,6 +192,14 @@ bool Features::hasMessageCarbons() const
 {
     QStringList ns;
     ns << FID_MESSAGECARBONS;
+
+    return test(ns);
+}
+
+bool Features::hasJingleFT() const
+{
+    QStringList ns;
+    ns << Jingle::FileTransfer::NS;
 
     return test(ns);
 }

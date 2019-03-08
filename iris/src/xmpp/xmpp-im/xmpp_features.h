@@ -56,6 +56,7 @@ namespace XMPP
         bool hasVersion() const;
         bool hasVCard() const;
         bool hasMessageCarbons() const;
+        bool hasJingleFT() const;
 
         [[deprecated]] inline bool canRegister() const { return hasRegister(); }
         [[deprecated]] inline bool canSearch() const { return hasSearch(); }
