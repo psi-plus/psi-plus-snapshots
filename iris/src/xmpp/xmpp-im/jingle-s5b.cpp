@@ -99,7 +99,7 @@ Candidate::~Candidate()
 
 class Transport::Private {
 public:
-    SessionManagerPad *pad = nullptr;
+    TransportManagerPad::Ptr pad = nullptr;
     Jid remoteJid;
     QList<Candidate> localCandidates;
     QList<Candidate> remoteCandidates;
@@ -144,9 +144,8 @@ Jingle::Action Transport::outgoingUpdateType() const
     return Jingle::NoAction; // TODO
 }
 
-QDomElement Transport::takeUpdate(QDomDocument *doc)
+QDomElement Transport::takeOutgoingUpdate()
 {
-    Q_UNUSED(doc)
     return QDomElement(); // TODO
 }
 
@@ -165,7 +164,7 @@ QString Transport::sid() const
     return d->sid;
 }
 
-QSharedPointer<XMPP::Jingle::Transport> Transport::createOutgoing(SessionManagerPad *pad, const Jid &to, const QString &transportSid)
+QSharedPointer<XMPP::Jingle::Transport> Transport::createOutgoing(const TransportManagerPad::Ptr &pad, const Jid &to, const QString &transportSid)
 {
     auto d = new Private;
     d->pad = pad;
@@ -179,7 +178,7 @@ QSharedPointer<XMPP::Jingle::Transport> Transport::createOutgoing(SessionManager
     return QSharedPointer<XMPP::Jingle::Transport>(t);
 }
 
-QSharedPointer<XMPP::Jingle::Transport> Transport::createIncoming(SessionManagerPad *pad, const Jid &from, const QDomElement &transportEl)
+QSharedPointer<XMPP::Jingle::Transport> Transport::createIncoming(const TransportManagerPad::Ptr &pad, const Jid &from, const QDomElement &transportEl)
 {
     auto d = new Private;
     d->pad = pad;
@@ -209,7 +208,7 @@ QSharedPointer<XMPP::Jingle::Transport> Transport::createIncoming(SessionManager
 class Manager::Private
 {
 public:
-    XMPP::Jingle::Manager *jingleManager;
+    XMPP::Jingle::Manager *jingleManager = nullptr;
     S5BServer *serv = nullptr;
 
     // FIMME it's reuiqred to split transports by direction otherwise we gonna hit conflicts.
@@ -217,11 +216,10 @@ public:
     QHash<QPair<Jid,QString>,QSharedPointer<XMPP::Jingle::Transport>> transports;
 };
 
-Manager::Manager(XMPP::Jingle::Manager *manager) :
-    TransportManager(manager),
+Manager::Manager(QObject *parent) :
+    TransportManager(parent),
     d(new Private)
 {
-    d->jingleManager = manager;
 }
 
 Manager::~Manager()
@@ -229,7 +227,12 @@ Manager::~Manager()
     d->jingleManager->unregisterTransport(NS);
 }
 
-QSharedPointer<XMPP::Jingle::Transport> Manager::sessionInitiate(SessionManagerPad *pad, const Jid &to)
+void Manager::setJingleManager(XMPP::Jingle::Manager *jm)
+{
+    d->jingleManager = jm;
+}
+
+QSharedPointer<XMPP::Jingle::Transport> Manager::sessionInitiate(const TransportManagerPad::Ptr &pad, const Jid &to)
 {
     QString sid;
     QPair<Jid,QString> key;
@@ -243,7 +246,7 @@ QSharedPointer<XMPP::Jingle::Transport> Manager::sessionInitiate(SessionManagerP
     return t;
 }
 
-QSharedPointer<XMPP::Jingle::Transport> Manager::sessionInitiate(SessionManagerPad *pad, const Jid &from, const QDomElement &transportEl)
+QSharedPointer<XMPP::Jingle::Transport> Manager::sessionInitiate(const TransportManagerPad::Ptr &pad, const Jid &from, const QDomElement &transportEl)
 {
     auto t = Transport::createIncoming(pad, from, transportEl);
     if (t->isValid()) {
@@ -252,9 +255,9 @@ QSharedPointer<XMPP::Jingle::Transport> Manager::sessionInitiate(SessionManagerP
     return t;
 }
 
-SessionManagerPad *Manager::pad()
+TransportManagerPad* Manager::pad(Session *session)
 {
-    return new Pad(this);
+    return new Pad(this, session);
 }
 
 bool Manager::hasTrasport(const Jid &jid, const QString &sid) const
@@ -291,9 +294,9 @@ bool Manager::incomingConnection(SocksClient *client, const QString &key)
 //----------------------------------------------------------------
 // Pad
 //----------------------------------------------------------------
-Pad::Pad(Manager *manager) :
-    SessionManagerPad(manager),
-    manager(manager)
+Pad::Pad(Manager *manager, Session *session) :
+    _manager(manager),
+    _session(session)
 {
 
 }
@@ -301,6 +304,11 @@ Pad::Pad(Manager *manager) :
 QString Pad::ns() const
 {
     return NS;
+}
+
+Session *Pad::session() const
+{
+    return _session;
 }
 
 

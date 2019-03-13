@@ -240,6 +240,12 @@ Reason::~Reason()
 
 }
 
+Reason::Reason(Reason::Condition cond) :
+    d(new Private)
+{
+    d->cond = cond;
+}
+
 Reason::Reason(const QDomElement &e)
 {
     if(e.tagName() != QLatin1String("reason"))
@@ -323,6 +329,11 @@ Reason::Private* Reason::ensureD()
 //----------------------------------------------------------------------------
 // ContentBase
 //----------------------------------------------------------------------------
+ContentBase::ContentBase(Origin creator, const QString &name) :
+    creator(creator), name(name)
+{
+}
+
 ContentBase::ContentBase(const QDomElement &el)
 {
     static QMap<QString,Origin> sendersMap({
@@ -402,33 +413,16 @@ bool ContentBase::setCreatorAttr(QDomElement &el, Origin creator)
 //----------------------------------------------------------------------------
 // Application
 //----------------------------------------------------------------------------
-class ApplicationManager::Private
+ApplicationManager::ApplicationManager(QObject *parent) :
+    QObject(parent)
 {
-public:
-    Client *client;
-};
-
-ApplicationManager::ApplicationManager(Client *client) :
-    d(new Private)
-{
-    d->client = client;
-}
-
-ApplicationManager::~ApplicationManager()
-{
-
-}
-
-Client *ApplicationManager::client() const
-{
-    return d->client;
 }
 
 //----------------------------------------------------------------------------
 // TransportManager
 //----------------------------------------------------------------------------
-TransportManager::TransportManager(Manager *jingleManager) :
-    QObject(jingleManager)
+TransportManager::TransportManager(QObject *parent) :
+    QObject(parent)
 {
 
 }
@@ -575,12 +569,16 @@ public:
 class Session::Private
 {
 public:
+    Session *q;
     Manager *manager;
     QTimer stepTimer;
     Session::State state = Session::Starting;
-    Session::Role  role  = Session::Role::Initiator; // my role in the session
+    Origin  role  = Origin::Initiator; // my role in the session
     XMPP::Stanza::Error lastError;
-    QMap<QString,SessionManagerPad*> managerPads;
+    Jingle::Action outgoingUpdateType = Jingle::Action::NoAction;
+    QDomElement outgoingUpdate;
+    QMap<QString,QWeakPointer<ApplicationManagerPad>> applicationPads;
+    QMap<QString,QWeakPointer<TransportManagerPad>> transportPads;
     QMap<QString,Application*> myContent;     // content::creator=(role == Session::Role::Initiator?initiator:responder)
     QMap<QString,Application*> remoteContent; // content::creator=(role == Session::Role::Responder?initiator:responder)
     QString sid;
@@ -616,6 +614,7 @@ public:
     }
 
     void planStep() {
+        lastError = Stanza::Error(0, 0);
         if (!stepTimer.isActive()) {
             stepTimer.start();
         }
@@ -626,17 +625,18 @@ public:
             return;
         }
         QList<QDomElement> updateXml;
-        for (auto mp : managerPads) {
-            QDomElement el = mp->takeOutgoingSessionInfoUpdate();
+        for (auto mp : applicationPads) {
+            auto p = mp.toStrongRef();
+            QDomElement el = p->takeOutgoingSessionInfoUpdate();
             if (!el.isNull()) {
                 updateXml.append(el);
                 // we can send session-info for just one application. so stop processing
-                sendJingle(Jingle::Action::SecurityInfo, updateXml);
+                sendJingle(Jingle::Action::SessionInfo, updateXml);
                 return;
             }
         }
 
-        bool needCheckAcceptance = (role == Session::Role::Responder && state != Session::State::Active);
+        bool needCheckAcceptance = (role == Origin::Responder && state != Session::State::Active);
         bool needAccept = needCheckAcceptance;
         QMultiMap<Jingle::Action, Application*> updates;
 
@@ -691,11 +691,60 @@ public:
         }
         return reason;
     }
+
+    enum AddContentError {
+        Ok,
+        Unparsed,
+        Unsupported
+    };
+
+    std::tuple<AddContentError, Reason::Condition, Application*> addContent(const QDomElement &ce)
+    {
+        QDomElement descriptionEl = ce.firstChildElement(QLatin1String("description"));
+        QDomElement transportEl = ce.firstChildElement(QLatin1String("transport"));
+        QString descriptionNS = descriptionEl.namespaceURI();
+        QString transportNS = transportEl.namespaceURI();
+
+        ContentBase c(ce);
+        if (!c.isValid() || descriptionEl.isNull() || transportEl.isNull() || descriptionNS.isEmpty() || transportNS.isEmpty()) {
+            return {Unparsed, Reason::Success, nullptr};
+        }
+
+        auto appPad = q->applicationPadFactory(descriptionNS);
+        if (!appPad) {
+            return {Unsupported, Reason::UnsupportedApplications, nullptr}; // <unsupported-applications/> condition
+        }
+        QScopedPointer<Application> app(manager->startApplication(appPad, c.name, c.creator, c.senders));
+        auto descErr = app->setDescription(descriptionEl);
+        if (descErr == Application::IncompatibleParameters) {
+            return {Unsupported, Reason::IncompatibleParameters, nullptr};
+        } else
+        if (descErr == Application::Unparsed) {
+            return {Unparsed, Reason::Success, nullptr};
+        } else
+        {
+            // same for transport
+            auto trPad = q->transportPadFactory(transportNS);
+            if (!trPad) {
+                return {Unsupported, Reason::UnsupportedTransports, app.take()}; // <unsupported-transports/> condition or we can try fallback and fail with <failed-transport/>
+            }
+            auto transport = manager->initTransport(trPad, origFrom, transportEl);
+            if (transport) {
+                if (app->setTransport(transport)) {
+                    return {Ok, Reason::Success, app.take()};
+                }
+                return {Unsupported, Reason::UnsupportedTransports, app.take()};
+            }
+        }
+
+        return {Unparsed, Reason::Success, nullptr};
+    }
 };
 
 Session::Session(Manager *manager) :
     d(new Private)
 {
+    d->q = this;
     d->manager = manager;
     d->stepTimer.setSingleShot(true);
     d->stepTimer.setInterval(0);
@@ -718,19 +767,24 @@ Jid Session::peer() const
     return d->otherParty;
 }
 
+Origin Session::role() const
+{
+    return d->role;
+}
+
 XMPP::Stanza::Error Session::lastError() const
 {
     return d->lastError;
 }
 
-QStringList Session::allManagerPads() const
+ApplicationManagerPad::Ptr Session::applicationPad(const QString &ns)
 {
-    return d->managerPads.keys();
+    return d->applicationPads.value(ns).toStrongRef();
 }
 
-SessionManagerPad *Session::pad(const QString &ns)
+TransportManagerPad::Ptr Session::transportPad(const QString &ns)
 {
-    return d->managerPads.value(ns);
+    return d->transportPads.value(ns).toStrongRef();
 }
 
 QString Session::preferredApplication() const
@@ -741,12 +795,12 @@ QString Session::preferredApplication() const
 
 QStringList Session::allApplicationTypes() const
 {
-    QSet<QString> ret;
-    for (auto const &k: d->managerPads.keys()) {
-        if (d->manager->isRegisteredApplication(k))
-            ret.insert(k);
-    }
-    return ret.toList();
+    return d->applicationPads.keys();
+}
+
+void Session::initiate()
+{
+    // TODO
 }
 
 void Session::reject()
@@ -754,48 +808,36 @@ void Session::reject()
     // TODO
 }
 
-void Session::deleteUnusedPads()
+TransportManagerPad::Ptr Session::transportPadFactory(const QString &ns)
 {
-    // TODO
+    auto pad = d->transportPads.value(ns).toStrongRef();
+    if (!pad) {
+        auto deleter = [ns, this](TransportManagerPad *pad){
+            d->transportPads.remove(ns);
+            delete pad;
+        };
+        pad = TransportManagerPad::Ptr(d->manager->transportPad(this, ns), deleter);
+        if (pad) {
+            d->transportPads.insert(ns, pad);
+        }
+    }
+    return pad;
 }
 
-bool Session::addContent(const QDomElement &ce)
+ApplicationManagerPad::Ptr Session::applicationPadFactory(const QString &ns)
 {
-    QDomElement descriptionEl = ce.firstChildElement(QLatin1String("description"));
-    QDomElement transportEl = ce.firstChildElement(QLatin1String("transport"));
-    QString descriptionNS = descriptionEl.namespaceURI();
-    QString transportNS = transportEl.namespaceURI();
-
-    ContentBase c(ce);
-    if (!c.isValid() || descriptionEl.isNull() || transportEl.isNull() || descriptionNS.isEmpty() || transportNS.isEmpty()) {
-        d->lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
-        return false;
-    }
-
-    SessionManagerPad *pad = d->managerPads.value(descriptionNS);
+    auto pad = d->applicationPads.value(ns).toStrongRef();
     if (!pad) {
-        pad = d->manager->applicationPad(this, descriptionNS);
-        d->managerPads.insert(descriptionNS, pad);
-    }
-    auto app = d->manager->startApplication(pad, c.creator, c.senders);
-    if (app->setDescription(descriptionEl)) {
-        // same for transport
-        pad = d->managerPads.value(transportNS);
-        if (!pad) {
-            auto *pad = d->manager->transportPad(transportNS);
-            d->managerPads.insert(transportNS, pad);
+        auto deleter = [ns, this](ApplicationManagerPad *pad){
+            d->applicationPads.remove(ns);
+            delete pad;
+        };
+        pad = ApplicationManagerPad::Ptr(d->manager->applicationPad(this, ns), deleter);
+        if (pad) {
+            d->applicationPads.insert(ns, pad);
         }
-        auto transport = d->manager->initTransport(pad, d->origFrom, transportEl);
-        if (transport) {
-            app->setTransport(transport);
-            return true;
-        }
-        delete app;
     }
-
-    d->lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
-    deleteUnusedPads();
-    return false;
+    return pad;
 }
 
 bool Session::incomingInitiate(const Jid &from, const Jingle &jingle, const QDomElement &jingleEl)
@@ -805,54 +847,65 @@ bool Session::incomingInitiate(const Jid &from, const Jingle &jingle, const QDom
     d->otherParty = jingle.initiator().isValid()? jingle.initiator() : from;
     //auto key = qMakePair(from, jingle.sid());
 
+    QMap<QString,std::tuple<Reason::Condition, Application *>> addSet; // application to supported
+
     QString contentTag(QStringLiteral("content"));
     for(QDomElement ce = jingleEl.firstChildElement(contentTag);
         !ce.isNull(); ce = ce.nextSiblingElement(contentTag)) {
-        if (!addContent(ce)) { // not parsed
+        Private::AddContentError err;
+        Reason::Condition cond;
+        Application *app;
+        auto r = d->addContent(ce);
+        std::tie(err, cond, app) = r;
+        if (err == Private::AddContentError::Unparsed) {
+            for (auto const &i: addSet) {
+                delete std::get<1>(i);
+            }
+            d->lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
             return false;
+        }
+        if (err == Private::AddContentError::Unsupported) {
+            if (cond == Reason::Condition::UnsupportedTransports) {
+
+            }
+            // can't continue as well
+            for (auto const &i: addSet) {
+                delete std::get<1>(i);
+            }
+            d->outgoingUpdateType = Jingle::Action::SessionTerminate;
+            Reason r(cond);
+            d->outgoingUpdate = r.toXml(d->manager->client()->doc());
+            return true;
+        }
+        QString contentName = ce.attribute(QStringLiteral("name"));
+        if (err == Private::AddContentError::Ok) {
+            auto et = addSet.value(contentName);
+            auto eapp = std::get<1>(et);
+            if (!eapp || eapp->wantBetterTransport(app->transport())) {
+                addSet.insert(contentName, std::make_tuple(cond,app));
+            }
+        } else if (!std::get<1>(addSet.value(contentName))) {
+            // something unsupported. but lets parse all items. maybe it will get replaced
+            addSet.insert(contentName, std::make_tuple(cond,app));
+        }
+
+        // TODO at this point if all addSet items have application it's success,
+        // otherwise we have to think what to do with this. for example replace transport if it's unsupported.
+
+        for (auto const &i: addSet) {
+            Reason::Condition cond;
+            Application *app;
+            std::tie(cond, app) = i;
+            if (!app) {
+                // TODO
+                return false; // FIXME. memory release
+            }
+            d->remoteContent.insert(app->contentName(), app);
         }
     }
 
     d->planStep();
     return true;
-    //QDomElement securityEl = content.firstChildElement(QLatin1String("security"));
-/*
-    if (jingle->action() == Jingle::Action::SessionInitiate   ||
-            jingle->action() == Jingle::Action::SessionAccept ||
-            jingle->action() == Jingle::Action::ContentAdd    ||
-            jingle->action() == Jingle::Action::ContentAccept ||
-            jingle->action() == Jingle::Action::ContentReject ||
-            jingle->action() == Jingle::Action::DescriptionInfo)
-    {
-        description = manager->descriptionFromXml(descriptionEl);
-        if (description.isNull()) {
-            return;
-        }
-    } // else description is unexpected. log it?
-
-    if (jingle->action() == Jingle::Action::SessionInitiate   ||
-            jingle->action() == Jingle::Action::SessionAccept ||
-            jingle->action() == Jingle::Action::ContentAdd    ||
-            jingle->action() == Jingle::Action::ContentAccept ||
-            jingle->action() == Jingle::Action::ContentReject)
-    {
-        // content-reject posses empty transport
-        auto transport = manager->transportFromXml(transportEl);
-    }
-    */
-    /*
-    if (!securityEl.isNull()) {
-        security = client->jingleManager()->securityFromXml(securityEl);
-        // if security == 0 then then its unsupported? just ignore it atm
-        // according to xtls draft responder may omit security when unsupported.
-    }
-    */
-
-    // TODO description
-    // TODO transports
-    // TODO security
-
-    //return client()->jingleManager()->incomingIQ(el);
 }
 
 bool Session::updateFromXml(Jingle::Action action, const QDomElement &jingleEl)
@@ -861,14 +914,73 @@ bool Session::updateFromXml(Jingle::Action action, const QDomElement &jingleEl)
 
     }
 
+    if (action != Jingle::ContentAdd) {
+        return false;
+    }
+
+    QMap<QString,Application *> addSet; // application to supported
+    bool parsed = true;
+    int unsupported = 0;
+    Reason::Condition rejectCond = Reason::Condition::Success;
+
     QString contentTag(QStringLiteral("content"));
     for(QDomElement ce = jingleEl.firstChildElement(contentTag);
         !ce.isNull(); ce = ce.nextSiblingElement(contentTag)) {
-        if (!addContent(ce)) { // not parsed
-            return false;
+        Private::AddContentError err;
+        Reason::Condition cond;
+        Application *app;
+        QString contentName = ce.attribute(QStringLiteral("name"));
+        if (!contentName.size()) {
+            parsed = false;
+            break;
+        }
+
+        std::tie(err, cond, app) = d->addContent(ce);
+        bool alreadyAdded = addSet.contains(contentName);
+        if (err != Private::AddContentError::Ok) {
+            // can't continue as well
+            if (app) { // we are going to reject it completely so delete
+                delete app;
+            }
+            if (err == Private::AddContentError::Unsupported) {
+                rejectCond = cond;
+            }
+            if (!alreadyAdded) {
+                unsupported++;
+                addSet.insert(contentName, nullptr);
+            } // else just ignore this unsupported content. we aready have one
+            continue;
+        }
+
+        auto eapp = addSet.value(contentName);
+        if (alreadyAdded && !eapp) {
+            unsupported--; // we are going to overwrite previous with successful
+        }
+        if (!eapp || eapp->wantBetterTransport(app->transport())) {
+            addSet.insert(contentName, app);
         }
     }
-    return false;
+
+    if (unsupported && rejectCond == Reason::Condition::Success) {
+        parsed = false; // the only way it's possible
+    }
+    if (!parsed) {
+        d->lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
+        qDeleteAll(addSet);
+        return false;
+    } else if (unsupported) {
+        d->outgoingUpdateType = Jingle::Action::ContentReject;
+        Reason r(rejectCond);
+        d->outgoingUpdate = r.toXml(d->manager->client()->doc());
+        qDeleteAll(addSet);
+        return true;
+    }
+
+    for (auto const &app: addSet) {
+        d->remoteContent.insert(app->contentName(), app); // TODO check conflicts
+    }
+
+    return true;
 }
 
 
@@ -948,16 +1060,16 @@ bool Manager::isRegisteredApplication(const QString &ns)
     return d->applicationManagers.contains(ns);
 }
 
-Application* Manager::startApplication(SessionManagerPad *pad, Origin creator, Origin senders)
+Application* Manager::startApplication(ApplicationManagerPad::Ptr pad, const QString &contentName, Origin creator, Origin senders)
 {
     auto appManager = d->applicationManagers.value(pad->ns());
     if (!appManager) {
         return NULL;
     }
-    return appManager->startApplication(pad, creator, senders);
+    return appManager->startApplication(pad, contentName, creator, senders);
 }
 
-SessionManagerPad *Manager::applicationPad(Session *session, const QString &ns)
+ApplicationManagerPad *Manager::applicationPad(Session *session, const QString &ns)
 {
     auto am = d->applicationManagers.value(ns);
     if (!am) {
@@ -1000,7 +1112,7 @@ void Manager::setRemoteJidChecked(std::function<bool(const Jid &)> checker)
     d->remoteJidCecker = checker;
 }
 
-QSharedPointer<Transport> Manager::initTransport(SessionManagerPad *pad,
+QSharedPointer<Transport> Manager::initTransport(const TransportManagerPad::Ptr &pad,
                                                  const Jid &jid, const QDomElement &el)
 {
     auto transportManager = d->transportManagers.value(el.namespaceURI());
@@ -1010,13 +1122,13 @@ QSharedPointer<Transport> Manager::initTransport(SessionManagerPad *pad,
     return transportManager->sessionInitiate(pad, jid, el);
 }
 
-SessionManagerPad *Manager::transportPad(const QString &ns)
+TransportManagerPad* Manager::transportPad(Session *session, const QString &ns)
 {
     auto transportManager = d->transportManagers.value(ns);
     if (!transportManager) {
         return NULL;
     }
-    return transportManager->pad();
+    return transportManager->pad(session);
 }
 
 Session* Manager::incomingSessionInitiate(const Jid &from, const Jingle &jingle, const QDomElement &jingleEl)

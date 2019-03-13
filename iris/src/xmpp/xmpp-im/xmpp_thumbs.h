@@ -41,7 +41,7 @@ namespace XMPP
         Thumbnail(const QDomElement &el);
 
         inline bool isValid() const { return uri.isValid(); }
-        QDomElement toXml(QDomDocument *doc);
+        QDomElement toXml(QDomDocument *doc) const;
 
         QUrl       uri;
         QByteArray data;

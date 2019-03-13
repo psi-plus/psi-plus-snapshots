@@ -79,8 +79,8 @@ public:
 
     void start();
     bool update(const QDomElement &transportEl);
-    Jingle::Action outgoingUpdateType() const;
-    QDomElement takeUpdate(QDomDocument *doc);
+    Jingle::Action outgoingUpdateType() const override;
+    QDomElement takeOutgoingUpdate() override;
     bool isValid() const;
     Features features() const;
 
@@ -88,35 +88,38 @@ public:
 
 private:
     friend class Manager;
-    static QSharedPointer<XMPP::Jingle::Transport> createOutgoing(SessionManagerPad *pad, const Jid &to, const QString &transportSid);
-    static QSharedPointer<XMPP::Jingle::Transport> createIncoming(SessionManagerPad *pad, const Jid &from, const QDomElement &transportEl);
+    static QSharedPointer<XMPP::Jingle::Transport> createOutgoing(const TransportManagerPad::Ptr &pad, const Jid &to, const QString &transportSid);
+    static QSharedPointer<XMPP::Jingle::Transport> createIncoming(const TransportManagerPad::Ptr &pad, const Jid &from, const QDomElement &transportEl);
 
     class Private;
     QScopedPointer<Private> d;
 };
 
 class Manager;
-class Pad : public SessionManagerPad
+class Pad : public TransportManagerPad
 {
     Q_OBJECT
     // TODO
 public:
-    Pad(Manager *manager);
-    QString ns() const;
-
+    Pad(Manager *manager, Session *session);
+    QString ns() const override;
+    Session *session() const override;
+    inline Manager *manager() const { return _manager; }
 private:
-    Manager *manager;
+    Manager *_manager;
+    Session *_session;
 };
 
 class Manager : public TransportManager {
     Q_OBJECT
 public:
-    Manager(XMPP::Jingle::Manager *manager);
+    Manager(QObject *parent = nullptr);
     ~Manager();
 
-    QSharedPointer<XMPP::Jingle::Transport> sessionInitiate(SessionManagerPad *pad, const Jid &to); // outgoing. one have to call Transport::start to collect candidates
-    QSharedPointer<XMPP::Jingle::Transport> sessionInitiate(SessionManagerPad *pad, const Jid &from, const QDomElement &transportEl); // incoming
-    SessionManagerPad* pad();
+    void setJingleManager(XMPP::Jingle::Manager *jm);
+    QSharedPointer<XMPP::Jingle::Transport> sessionInitiate(const TransportManagerPad::Ptr &pad, const Jid &to) override; // outgoing. one have to call Transport::start to collect candidates
+    QSharedPointer<XMPP::Jingle::Transport> sessionInitiate(const TransportManagerPad::Ptr &pad, const Jid &from, const QDomElement &transportEl) override; // incoming
+    TransportManagerPad* pad(Session *session) override;
 
     bool hasTrasport(const Jid &jid, const QString &sid) const;
     void closeAll();

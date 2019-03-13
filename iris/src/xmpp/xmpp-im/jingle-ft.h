@@ -26,6 +26,7 @@
 namespace XMPP {
 
 class Client;
+class Thumbnail;
 
 namespace Jingle {
 namespace FileTransfer {
@@ -37,17 +38,38 @@ struct Range {
     quint64 offset = 0;
     quint64 length = 0;
     Hash hash;
+
+    inline bool isValid() const { return hash.isValid() || offset || length; }
+    QDomElement toXml(QDomDocument *doc) const;
 };
 
 class File
 {
 public:
     File();
-    ~File();
     File(const File &other);
     File(const QDomElement &file);
+    ~File();
     inline bool isValid() const { return d != nullptr; }
     QDomElement toXml(QDomDocument *doc) const;
+
+    QDateTime date()  const;
+    QString description() const;
+    Hash    hash()  const;
+    QString mediaType() const;
+    QString name()  const;
+    quint64 size()   const;
+    Range     range() const;
+    Thumbnail thumbnail() const;
+
+    void setDate(const QDateTime &date);
+    void setDescription(const QString &desc);
+    void setHash(const Hash &hash);
+    void setMediaType(const QString &mediaType);
+    void setName(const QString &name);
+    void setSize(quint64 size);
+    void setRange(const Range &range = Range()); // default empty just to indicate it's supported
+    void setThumbnail(const Thumbnail &thumb);
 private:
     class Private;
     Private *ensureD();
@@ -70,34 +92,40 @@ class Received : public ContentBase
     QDomElement toXml(QDomDocument *doc) const;
 };
 
-class Pad : public SessionManagerPad
+class Pad : public ApplicationManagerPad
 {
     Q_OBJECT
     // TODO
 public:
     Pad(Manager *manager, Session *session);
-    QDomElement takeOutgoingSessionInfoUpdate();
-    QString ns() const;
+    QDomElement takeOutgoingSessionInfoUpdate() override;
+    QString ns() const override;
+    Session *session() const override;
+    Manager *manager() const;
+
+    void addOutgoingOffer(const File &file);
 private:
-    Manager *manager;
-    Session *session;
+    Manager *_manager;
+    Session *_session;
 };
 
 class Application : public XMPP::Jingle::Application
 {
     Q_OBJECT
 public:
-    Application(Pad *pad, Origin creator, Origin senders);
+    Application(const QSharedPointer<Pad> &pad, const QString &contentName, Origin creator, Origin senders);
     ~Application();
 
-    bool setDescription(const QDomElement &description);
-    void setTransport(const QSharedPointer<Transport> &transport);
-    QSharedPointer<Transport> transport() const;
+    QString contentName() const;
+    SetDescError setDescription(const QDomElement &description) override;
+    bool setTransport(const QSharedPointer<Transport> &transport) override;
+    QSharedPointer<Transport> transport() const override;
 
-    Jingle::Action outgoingUpdateType() const;
-    bool isReadyForSessionAccept() const;
-    QDomElement takeOutgoingUpdate();
-    QDomElement sessionAcceptContent() const;
+    Jingle::Action outgoingUpdateType() const override;
+    bool isReadyForSessionAccept() const override;
+    QDomElement takeOutgoingUpdate() override;
+    QDomElement sessionAcceptContent() const override;
+    bool wantBetterTransport(const QSharedPointer<XMPP::Jingle::Transport> &) const override;
 
     bool isValid() const;
 
@@ -110,13 +138,15 @@ class Manager : public XMPP::Jingle::ApplicationManager
 {
     Q_OBJECT
 public:
-    Manager(Client *client);
-    Application *startApplication(SessionManagerPad *pad, Origin creator, Origin senders);
-    SessionManagerPad* pad(Session *session); // pad factory
+    Manager(QObject *parent = nullptr);
+    void setJingleManager(XMPP::Jingle::Manager *jm);
+    Application *startApplication(const ApplicationManagerPad::Ptr &pad, const QString &contentName, Origin creator, Origin senders);
+    ApplicationManagerPad *pad(Session *session); // pad factory
     void closeAll();
+    Client* client();
 
 private:
-    Client *client;
+    XMPP::Jingle::Manager *jingleManager = nullptr;
 };
 
 } // namespace FileTransfer

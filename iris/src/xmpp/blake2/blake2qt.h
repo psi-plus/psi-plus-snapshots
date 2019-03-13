@@ -3,6 +3,8 @@
 
 #include <QByteArray>
 
+class QIODevice;
+
 namespace XMPP {
 
 enum Blake2DigestSize {
@@ -11,6 +13,7 @@ enum Blake2DigestSize {
 };
 
 QByteArray computeBlake2Hash(const QByteArray &ba, Blake2DigestSize digestSize);
+QByteArray computeBlake2Hash(QIODevice *dev, Blake2DigestSize digestSize);
 
 }
 #endif

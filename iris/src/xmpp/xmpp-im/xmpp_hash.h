@@ -23,6 +23,7 @@
 #include "xmpp_stanza.h"
 
 #include <QString>
+#include <QFuture>
 #define XMPP_HASH_NS "urn:xmpp:hashes:2" // TODO make nsdb.cpp/h with static declarations of all ns
 
 class QDomElement;
@@ -43,10 +44,13 @@ namespace XMPP
             Sha3_512,   // SHOULD
             Blake2b256, // MUST
             Blake2b512, // SHOULD
+            LastType = Blake2b512
         };
 
         inline Hash(Type type = Type::Unknown) : v_type(type) {}
         Hash(const QDomElement&);
+
+        inline bool isValid() const { return v_type > Unknown && v_type <= LastType; }
 
         inline Type type() const { return v_type; }
         inline void setType(Type t) { v_type = t; }
@@ -54,8 +58,9 @@ namespace XMPP
         inline QByteArray data() const { return v_data; }
         inline void setData(const QByteArray &d) { v_data = d; } // sets already computed hash
         bool computeFromData(const QByteArray &); // computes hash from passed data
+        bool computeFromDevice(QIODevice *dev);
 
-        QDomElement toXml(Stanza&) const;
+        QDomElement toXml(QDomDocument *doc) const;
         static void populateFeatures(XMPP::Features &);
 
     private:

@@ -367,12 +367,30 @@ bool Hash::computeFromData(const QByteArray &ba)
     return !v_data.isEmpty();
 }
 
-QDomElement Hash::toXml(Stanza &s) const
+bool Hash::computeFromDevice(QIODevice *dev)
+{
+    switch (v_type) {
+    case Type::Sha1:     { QCryptographicHash h(QCryptographicHash::Sha1); h.addData(dev); v_data = h.result(); break; }
+    case Type::Sha256:   { QCryptographicHash h(QCryptographicHash::Sha256); h.addData(dev); v_data = h.result(); break; }
+    case Type::Sha512:   { QCryptographicHash h(QCryptographicHash::Sha512); h.addData(dev); v_data = h.result(); break; }
+    case Type::Sha3_256: { QCryptographicHash h(QCryptographicHash::Sha3_256); h.addData(dev); v_data = h.result(); break; }
+    case Type::Sha3_512: { QCryptographicHash h(QCryptographicHash::Sha3_512); h.addData(dev); v_data = h.result(); break; }
+    case Type::Blake2b256: v_data = computeBlake2Hash(dev, Blake2Digest256); break;
+    case Type::Blake2b512: v_data = computeBlake2Hash(dev, Blake2Digest512); break;
+    case Type::Unknown:
+    default:
+        qDebug("invalid hash type");
+        return false;
+    }
+    return !v_data.isEmpty();
+}
+
+QDomElement Hash::toXml(QDomDocument *doc) const
 {
     if (v_type != Type::Unknown) {
         for(size_t n = 0; n < sizeof(hashTypes) / sizeof(hashTypes[0]); ++n) {
             if(v_type == hashTypes[n].hashType) {
-                auto el = s.createElement(XMPP_HASH_NS, QLatin1String(v_data.isEmpty()? "hash-used": "hash"));
+                auto el = doc->createElementNS(XMPP_HASH_NS, QLatin1String(v_data.isEmpty()? "hash-used": "hash"));
                 el.setAttribute(QLatin1String("algo"), QLatin1String(hashTypes[n].text));
                 if (!v_data.isEmpty()) {
                     XMLHelper::setTagText(el, v_data.toBase64());
@@ -3712,7 +3730,7 @@ Thumbnail::Thumbnail(const QDomElement &el)
     }
 }
 
-QDomElement Thumbnail::toXml(QDomDocument *doc)
+QDomElement Thumbnail::toXml(QDomDocument *doc) const
 {
     auto el = doc->createElementNS(QStringLiteral("thumbnail"), XMPP_THUMBS_NS);
     el.setAttribute("uri", uri.toString(QUrl::FullyEncoded));
