@@ -99,7 +99,7 @@ Candidate::~Candidate()
 
 class Transport::Private {
 public:
-    TransportManagerPad::Ptr pad = nullptr;
+    TransportManagerPad::Ptr pad;
     Jid remoteJid;
     QList<Candidate> localCandidates;
     QList<Candidate> remoteCandidates;
