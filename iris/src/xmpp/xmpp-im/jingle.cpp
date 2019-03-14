@@ -704,40 +704,41 @@ public:
         QDomElement transportEl = ce.firstChildElement(QLatin1String("transport"));
         QString descriptionNS = descriptionEl.namespaceURI();
         QString transportNS = transportEl.namespaceURI();
+        typedef std::tuple<AddContentError, Reason::Condition, Application*> result;
 
         ContentBase c(ce);
         if (!c.isValid() || descriptionEl.isNull() || transportEl.isNull() || descriptionNS.isEmpty() || transportNS.isEmpty()) {
-            return {Unparsed, Reason::Success, nullptr};
+            return result{Unparsed, Reason::Success, nullptr};
         }
 
         auto appPad = q->applicationPadFactory(descriptionNS);
         if (!appPad) {
-            return {Unsupported, Reason::UnsupportedApplications, nullptr}; // <unsupported-applications/> condition
+            return result{Unsupported, Reason::UnsupportedApplications, nullptr}; // <unsupported-applications/> condition
         }
         QScopedPointer<Application> app(manager->startApplication(appPad, c.name, c.creator, c.senders));
         auto descErr = app->setDescription(descriptionEl);
         if (descErr == Application::IncompatibleParameters) {
-            return {Unsupported, Reason::IncompatibleParameters, nullptr};
+            return result{Unsupported, Reason::IncompatibleParameters, nullptr};
         } else
         if (descErr == Application::Unparsed) {
-            return {Unparsed, Reason::Success, nullptr};
+            return result{Unparsed, Reason::Success, nullptr};
         } else
         {
             // same for transport
             auto trPad = q->transportPadFactory(transportNS);
             if (!trPad) {
-                return {Unsupported, Reason::UnsupportedTransports, app.take()}; // <unsupported-transports/> condition or we can try fallback and fail with <failed-transport/>
+                return result{Unsupported, Reason::UnsupportedTransports, app.take()}; // <unsupported-transports/> condition or we can try fallback and fail with <failed-transport/>
             }
             auto transport = manager->initTransport(trPad, origFrom, transportEl);
             if (transport) {
                 if (app->setTransport(transport)) {
-                    return {Ok, Reason::Success, app.take()};
+                    return result{Ok, Reason::Success, app.take()};
                 }
-                return {Unsupported, Reason::UnsupportedTransports, app.take()};
+                return result{Unsupported, Reason::UnsupportedTransports, app.take()};
             }
         }
 
-        return {Unparsed, Reason::Success, nullptr};
+        return result{Unparsed, Reason::Success, nullptr};
     }
 };
 
