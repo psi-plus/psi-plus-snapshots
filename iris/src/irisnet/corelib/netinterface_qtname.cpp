@@ -75,20 +75,48 @@ public:
             QMetaObject::invokeMethod(this, "resolve_resultsReady", Qt::QueuedConnection,
                                       Q_ARG(int, id), Q_ARG(QList<XMPP::NameRecord>, results));
         } else {
-            QDnsLookup *lookup = new QDnsLookup((QDnsLookup::Type)qType, QString::fromLatin1(name), this);
-            connect(lookup, SIGNAL(finished()), this, SLOT(handleLookup()));
-            lookup->setProperty("iid", id);
-            lookups.insert(id, lookup);
-            QMetaObject::invokeMethod(lookup, "lookup", Qt::QueuedConnection);
+            if (qType == QDnsLookup::A || qType == QDnsLookup::AAAA) {
+                // QDnsLookup doesn't support A and AAAA according to docs (see corresponding note)
+                lookups.insert(id, nullptr);
+                QHostInfo::lookupHost(QString::fromLatin1(name), [this, id](const QHostInfo &info){
+                    lookups.remove(id);
+                    if (info.error() != QHostInfo::NoError) {
+                        if (info.error() == QHostInfo::HostNotFound) {
+                            emit resolve_error(id, XMPP::NameResolver::ErrorNoName);
+                        } else {
+                            emit resolve_error(id, XMPP::NameResolver::ErrorGeneric);
+                        }
+                        return;
+                    }
+                    QList<XMPP::NameRecord> results;
+                    for (const auto &a: info.addresses()) {
+                        XMPP::NameRecord ir(info.hostName().toLatin1(), 5 * 60); // ttl = 5 mins
+                        ir.setAddress(a);
+                        results += ir;
+                    }
+                    emit resolve_resultsReady(id, results);
+                });
+            } else {
+                QDnsLookup *lookup = new QDnsLookup((QDnsLookup::Type)qType, QString::fromLatin1(name), this);
+                connect(lookup, SIGNAL(finished()), this, SLOT(handleLookup()));
+                lookup->setProperty("iid", id);
+                lookups.insert(id, lookup);
+                QMetaObject::invokeMethod(lookup, "lookup", Qt::QueuedConnection);
+            }
         }
         return id;
     }
 
     void resolve_stop(int id)
     {
-        QDnsLookup *lookup = lookups.value(id);
-        if (lookup) {
-            lookup->abort(); // handleLookup will catch it and delete
+        auto it = lookups.find(id);
+        if (it != lookups.end()) {
+            QDnsLookup *lookup = *it;
+            if (lookup) {
+                lookup->abort(); // handleLookup will catch it and delete
+            } else {
+                QHostInfo::abortHostLookup(id);
+            }
         }
     }
 
