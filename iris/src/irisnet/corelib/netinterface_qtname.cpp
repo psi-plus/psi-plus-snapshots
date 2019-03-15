@@ -29,8 +29,14 @@ class IrisQtName : public NameProvider
     Q_OBJECT
     Q_INTERFACES(XMPP::NameProvider)
 
+    struct Query {
+        bool isHostInfo;
+        quintptr handle;
+    };
+
     int currentId;
-    QHash<int,QDnsLookup*> lookups;
+    QHash<int,Query> lookups;
+    QHash<int,int> hostInfo; // we need all these tricks with double mapping because we still support Qt 5.5.1. (5.12 is way better)
 
 public:
     IrisQtName(QObject *parent = 0) :
@@ -42,7 +48,11 @@ public:
 
     ~IrisQtName()
     {
-        qDeleteAll(lookups);
+        for (auto const &l: lookups) {
+            if (!l.isHostInfo) {
+                delete reinterpret_cast<QDnsLookup*>(l.handle);
+            }
+        }
     }
 
     bool supportsSingle() const
@@ -77,30 +87,14 @@ public:
         } else {
             if (qType == QDnsLookup::A || qType == QDnsLookup::AAAA) {
                 // QDnsLookup doesn't support A and AAAA according to docs (see corresponding note)
-                lookups.insert(id, nullptr);
-                QHostInfo::lookupHost(QString::fromLatin1(name), [this, id](const QHostInfo &info){
-                    lookups.remove(id);
-                    if (info.error() != QHostInfo::NoError) {
-                        if (info.error() == QHostInfo::HostNotFound) {
-                            emit resolve_error(id, XMPP::NameResolver::ErrorNoName);
-                        } else {
-                            emit resolve_error(id, XMPP::NameResolver::ErrorGeneric);
-                        }
-                        return;
-                    }
-                    QList<XMPP::NameRecord> results;
-                    for (const auto &a: info.addresses()) {
-                        XMPP::NameRecord ir(info.hostName().toLatin1(), 5 * 60); // ttl = 5 mins
-                        ir.setAddress(a);
-                        results += ir;
-                    }
-                    emit resolve_resultsReady(id, results);
-                });
+                int hiid = QHostInfo::lookupHost(QString::fromLatin1(name), this, SLOT(hostInfoFinished(QHostInfo)));
+                hostInfo.insert(hiid, id);
+                lookups.insert(id, Query{true, quintptr(hiid)});
             } else {
                 QDnsLookup *lookup = new QDnsLookup((QDnsLookup::Type)qType, QString::fromLatin1(name), this);
                 connect(lookup, SIGNAL(finished()), this, SLOT(handleLookup()));
                 lookup->setProperty("iid", id);
-                lookups.insert(id, lookup);
+                lookups.insert(id, Query{false, quintptr(lookup)});
                 QMetaObject::invokeMethod(lookup, "lookup", Qt::QueuedConnection);
             }
         }
@@ -111,16 +105,47 @@ public:
     {
         auto it = lookups.find(id);
         if (it != lookups.end()) {
-            QDnsLookup *lookup = *it;
-            if (lookup) {
-                lookup->abort(); // handleLookup will catch it and delete
+            Query q = *it;
+            if (q.isHostInfo) {
+                auto hiid = int(q.handle);
+                QHostInfo::abortHostLookup(hiid);
+                hostInfo.remove(hiid);
+                lookups.erase(it);
             } else {
-                QHostInfo::abortHostLookup(id);
+                auto lookup = reinterpret_cast<QDnsLookup*>(q.handle);
+                lookup->abort(); // handleLookup will catch it and delete
             }
         }
     }
 
 private slots:
+    void hostInfoFinished(const QHostInfo &info) {
+        auto hiid = info.lookupId();
+        auto idIt = hostInfo.find(hiid);
+        if (idIt == hostInfo.end()) { // removed already?
+            return;
+        }
+        auto id = *idIt;
+        hostInfo.erase(idIt);
+        lookups.remove(id);
+
+        if (info.error() != QHostInfo::NoError) {
+            if (info.error() == QHostInfo::HostNotFound) {
+                emit resolve_error(id, XMPP::NameResolver::ErrorNoName);
+            } else {
+                emit resolve_error(id, XMPP::NameResolver::ErrorGeneric);
+            }
+            return;
+        }
+        QList<XMPP::NameRecord> results;
+        for (const auto &a: info.addresses()) {
+            XMPP::NameRecord ir(info.hostName().toLatin1(), 5 * 60); // ttl = 5 mins
+            ir.setAddress(a);
+            results += ir;
+        }
+        emit resolve_resultsReady(id, results);
+    }
+
     void handleLookup()
     {
         QDnsLookup *lookup = static_cast<QDnsLookup *>(sender());
