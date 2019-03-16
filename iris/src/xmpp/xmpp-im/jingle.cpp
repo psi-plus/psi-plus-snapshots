@@ -778,6 +778,24 @@ XMPP::Stanza::Error Session::lastError() const
     return d->lastError;
 }
 
+Application *Session::newContent(const QString &ns, Origin senders)
+{
+    auto pad = applicationPadFactory(ns);
+    if (pad) {
+        return d->manager->startApplication(pad, pad->generateContentName(senders), d->role, senders);
+    }
+    return nullptr;
+}
+
+Application *Session::content(const QString &contentName, Origin creator)
+{
+    if (creator == d->role) {
+        return d->myContent.value(contentName);
+    } else {
+        return d->remoteContent.value(contentName);
+    }
+}
+
 ApplicationManagerPad::Ptr Session::applicationPad(const QString &ns)
 {
     return d->applicationPads.value(ns).toStrongRef();
@@ -799,9 +817,12 @@ QStringList Session::allApplicationTypes() const
     return d->applicationPads.keys();
 }
 
-void Session::initiate()
+void Session::initiate(QList<XMPP::Jingle::Application*> appList)
 {
-    // TODO
+    for (const auto &p: appList) {
+        d->myContent.insert(p->contentName(), p);
+    }
+    // TODO send request
 }
 
 void Session::reject()

@@ -280,13 +280,12 @@ public:
 
     using SessionManagerPad::SessionManagerPad;
 
-    //const QString &
     /*
      * for example we transfer a file
      * then first file may generate name "file1", next "file2" etc
      * As result it will be sent as <content name="file1" ... >
      */
-    //QString newContentName();
+    virtual QString generateContentName(Origin senders) = 0;
 };
 
 class Session : public QObject
@@ -309,13 +308,18 @@ public:
     Origin role() const; // my role in session: initiator or responder
     XMPP::Stanza::Error lastError() const;
 
+    // make new local content but do not add it to session yet
+    Application *newContent(const QString &ns, Origin senders = Origin::Both);
+    // get registered content if any
+    Application *content(const QString &contentName, Origin creator);
+
     ApplicationManagerPad::Ptr applicationPad(const QString &ns);
     TransportManagerPad::Ptr transportPad(const QString &ns);
 
     QString preferredApplication() const;
     QStringList allApplicationTypes() const;
 
-    void initiate();
+    void initiate(QList<Application *> appList);
     void reject();
 
     // allocates or returns existing pads

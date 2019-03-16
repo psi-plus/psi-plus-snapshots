@@ -102,6 +102,7 @@ public:
     QString ns() const override;
     Session *session() const override;
     Manager *manager() const;
+    QString generateContentName(Origin senders) override;
 
     void addOutgoingOffer(const File &file);
 private:
@@ -118,6 +119,7 @@ public:
 
     QString contentName() const;
     SetDescError setDescription(const QDomElement &description) override;
+    void setFile(const File &file);
     bool setTransport(const QSharedPointer<Transport> &transport) override;
     QSharedPointer<Transport> transport() const override;
 

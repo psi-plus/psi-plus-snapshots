@@ -416,6 +416,11 @@ Application::SetDescError Application::setDescription(const QDomElement &descrip
     return d->file.isValid()? Ok: Unparsed;
 }
 
+void Application::setFile(const File &file)
+{
+    d->file = file;
+}
+
 bool Application::setTransport(const QSharedPointer<Transport> &transport)
 {
     if (transport->features() & Transport::Reliable) {
@@ -518,10 +523,21 @@ Manager *Pad::manager() const
     return _manager;
 }
 
+QString Pad::generateContentName(Origin senders)
+{
+    QString prefix = senders == _session->role()? "fileoffer" : "filereq";
+    QString name;
+    do {
+        name = prefix + QString("_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
+    } while (_session->content(name, _session->role()));
+    return name;
+}
+
 void Pad::addOutgoingOffer(const File &file)
 {
-    Q_UNUSED(file)
-    // TODO
+    auto selfp = _session->applicationPad(NS);
+    auto app = _manager->startApplication(selfp, "ft", _session->role(), _session->role());
+    app->setFile(file);
 }
 
 
