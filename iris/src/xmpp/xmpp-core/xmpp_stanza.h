@@ -84,6 +84,7 @@ namespace XMPP
             bool fromCode(int code);
 
             QPair<QString, QString> description() const;
+            QString toString() const;
 
             QDomElement toXml(QDomDocument &doc, const QString &baseNS) const;
             bool fromXml(const QDomElement &e, const QString &baseNS);

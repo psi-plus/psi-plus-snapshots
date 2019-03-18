@@ -368,15 +368,20 @@ Client *Manager::client()
     return nullptr;
 }
 
+QStringList Manager::availableTransports() const
+{
+    return jingleManager->availableTransports(Transport::Reliable);
+}
+
 //----------------------------------------------------------------------------
-// ApplicationManager
+// Application
 //----------------------------------------------------------------------------
 class Application::Private
 {
 public:
     enum State {
         Created,          // just after constructor
-        SettingTransport, // either side sets transport to app either with initial offer of later update
+        SettingTransport, // either side sets transport to app either with initial offer of later update (TODO review if needed)
         Pending,          // waits for session-accept or content-accept
         Connecting,       // s5b/ice probes etc
         Active            // active transfer. transport is connected
@@ -389,6 +394,7 @@ public:
     Origin  creator;
     Origin  senders;
     QSharedPointer<Transport> transport;
+    QStringList availableTransports;
 };
 
 Application::Application(const QSharedPointer<Pad> &pad, const QString &contentName, Origin creator, Origin senders) :
@@ -398,6 +404,7 @@ Application::Application(const QSharedPointer<Pad> &pad, const QString &contentN
     d->contentName = contentName;
     d->creator = creator;
     d->senders = senders;
+    d->availableTransports = static_cast<Manager*>(pad->manager())->availableTransports();
 }
 
 Application::~Application()
@@ -413,6 +420,7 @@ QString Application::contentName() const
 Application::SetDescError Application::setDescription(const QDomElement &description)
 {
     d->file = File(description.firstChildElement("file"));
+    d->state = Private::Pending; // basically it's incomming  content. so if we parsed it it's pending. if not parsed if will rejected anyway.
     return d->file.isValid()? Ok: Unparsed;
 }
 
@@ -463,14 +471,15 @@ QDomElement Application::takeOutgoingUpdate()
         return d->transport->takeOutgoingUpdate();
     }
     if (d->state == Private::Created && d->file.isValid()) { // basically when we come to this function Created is possible only for outgoing content
+        auto client = d->pad->session()->manager()->client();
         if (d->file.thumbnail().data.size()) {
             auto thumb = d->file.thumbnail();
-            auto bm = d->pad->manager()->client()->bobManager();
+            auto bm = client->bobManager();
             BoBData data = bm->append(thumb.data, thumb.mimeType);
             thumb.uri = QLatin1String("cid:") + data.cid();
             d->file.setThumbnail(thumb);
         }
-        auto doc = d->pad->manager()->client()->doc();
+        auto doc = client->doc();
         ContentBase cb(d->pad->session()->role(), d->contentName);
         cb.senders = d->senders;
         auto cel = cb.toXml(doc, "content");
@@ -489,6 +498,16 @@ bool Application::wantBetterTransport(const QSharedPointer<Transport> &t) const
 {
     Q_UNUSED(t)
     return true; // TODO check
+}
+
+bool Application::selectNextTransport()
+{
+    if (d->availableTransports.size()) {
+        QString ns = d->availableTransports.takeFirst();
+        d->transport = d->pad->session()->newOutgoingTransport(ns);
+        return true;
+    }
+    return false;
 }
 
 bool Application::isValid() const
@@ -518,7 +537,7 @@ Session *Pad::session() const
     return _session;
 }
 
-Manager *Pad::manager() const
+ApplicationManager *Pad::manager() const
 {
     return _manager;
 }

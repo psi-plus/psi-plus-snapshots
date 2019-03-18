@@ -227,15 +227,21 @@ Manager::~Manager()
     d->jingleManager->unregisterTransport(NS);
 }
 
+Transport::Features Manager::features() const
+{
+    return Transport::Reliable | Transport::Fast;
+}
+
 void Manager::setJingleManager(XMPP::Jingle::Manager *jm)
 {
     d->jingleManager = jm;
 }
 
-QSharedPointer<XMPP::Jingle::Transport> Manager::sessionInitiate(const TransportManagerPad::Ptr &pad, const Jid &to)
+QSharedPointer<XMPP::Jingle::Transport> Manager::newTransport(const TransportManagerPad::Ptr &pad)
 {
     QString sid;
     QPair<Jid,QString> key;
+    Jid to = pad->session()->peer();
     do {
         sid = QString("s5b_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
         key = qMakePair(to, sid);
@@ -246,8 +252,9 @@ QSharedPointer<XMPP::Jingle::Transport> Manager::sessionInitiate(const Transport
     return t;
 }
 
-QSharedPointer<XMPP::Jingle::Transport> Manager::sessionInitiate(const TransportManagerPad::Ptr &pad, const Jid &from, const QDomElement &transportEl)
+QSharedPointer<XMPP::Jingle::Transport> Manager::newTransport(const TransportManagerPad::Ptr &pad, const QDomElement &transportEl)
 {
+    Jid from = pad->session()->peer();
     auto t = Transport::createIncoming(pad, from, transportEl);
     if (t->isValid()) {
         d->transports.insert(qMakePair(from, t.staticCast<Transport>()->sid()), t); // FIXME collisions??
@@ -309,6 +316,11 @@ QString Pad::ns() const
 Session *Pad::session() const
 {
     return _session;
+}
+
+TransportManager *Pad::manager() const
+{
+    return _manager;
 }
 
 

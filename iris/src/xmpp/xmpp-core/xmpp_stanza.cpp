@@ -430,6 +430,18 @@ QPair<QString,QString> Stanza::Error::description() const
     return Private::errorCondToDesc(condition);
 }
 
+/**
+ * \brief Returns string human-reabable representation of the error
+ */
+QString Stanza::Error::toString() const
+{
+    QPair<QString, QString> desc = description();
+    if (text.isEmpty())
+        return desc.first + ".\n" + desc.second;
+    else
+        return desc.first + ".\n" + desc.second + "\n" + text;
+}
+
 //----------------------------------------------------------------------------
 // Stanza
 //----------------------------------------------------------------------------

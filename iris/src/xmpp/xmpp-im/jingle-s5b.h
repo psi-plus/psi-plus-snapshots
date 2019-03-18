@@ -95,7 +95,6 @@ private:
     QScopedPointer<Private> d;
 };
 
-class Manager;
 class Pad : public TransportManagerPad
 {
     Q_OBJECT
@@ -104,7 +103,7 @@ public:
     Pad(Manager *manager, Session *session);
     QString ns() const override;
     Session *session() const override;
-    inline Manager *manager() const { return _manager; }
+    TransportManager *manager() const override;
 private:
     Manager *_manager;
     Session *_session;
@@ -116,13 +115,14 @@ public:
     Manager(QObject *parent = nullptr);
     ~Manager();
 
-    void setJingleManager(XMPP::Jingle::Manager *jm);
-    QSharedPointer<XMPP::Jingle::Transport> sessionInitiate(const TransportManagerPad::Ptr &pad, const Jid &to) override; // outgoing. one have to call Transport::start to collect candidates
-    QSharedPointer<XMPP::Jingle::Transport> sessionInitiate(const TransportManagerPad::Ptr &pad, const Jid &from, const QDomElement &transportEl) override; // incoming
+    XMPP::Jingle::Transport::Features features() const override;
+    void setJingleManager(XMPP::Jingle::Manager *jm) override;
+    QSharedPointer<XMPP::Jingle::Transport> newTransport(const TransportManagerPad::Ptr &pad) override; // outgoing. one have to call Transport::start to collect candidates
+    QSharedPointer<XMPP::Jingle::Transport> newTransport(const TransportManagerPad::Ptr &pad, const QDomElement &transportEl) override; // incoming
     TransportManagerPad* pad(Session *session) override;
 
     bool hasTrasport(const Jid &jid, const QString &sid) const;
-    void closeAll();
+    void closeAll() override;
 
     void setServer(S5BServer *serv);
     bool incomingConnection(SocksClient *client, const QString &key); // returns false if key is unknown

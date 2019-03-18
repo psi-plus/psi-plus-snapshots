@@ -22,6 +22,7 @@
 #include "xmpp_task.h"
 #include "xmpp_client.h"
 #include "xmpp_xmlcommon.h"
+#include "xmpp_stanza.h"
 
 #define DEFAULT_TIMEOUT 120
 
@@ -36,6 +37,7 @@ public:
     bool success = false;
     int statusCode = 0;
     QString statusString;
+    XMPP::Stanza::Error error;
     Client *client = nullptr;
     bool insig = false;
     bool deleteme = false;
@@ -112,6 +114,11 @@ int Task::statusCode() const
 const QString & Task::statusString() const
 {
     return d->statusString;
+}
+
+const Stanza::Error &Task::error() const
+{
+    return d->error;
 }
 
 void Task::setTimeout(int seconds) const
@@ -218,7 +225,16 @@ void Task::setError(const QDomElement &e)
 {
     if(!d->done) {
         d->success = false;
-        getErrorFromElement(e, d->client->streamBaseNS(), &d->statusCode, &d->statusString);
+
+        QDomElement tag = e.firstChildElement("error");
+        if(tag.isNull())
+            return;
+
+        XMPP::Stanza::Error err;
+        err.fromXml(tag, d->client->streamBaseNS());
+        d->error = err;
+        d->statusCode = err.code();
+        d->statusString = err.toString();
         done();
     }
 }

@@ -230,9 +230,9 @@ QString queryNS(const QDomElement &e)
     Note: This function uses the Stanza::Error class,
     so it may guess missing values as defined in XEP-0086.
 
-    \param e    the element representing stanza
-    \param baseNS    the base namespace of the stream
-    \param code    if not NULL, will be filled with numeric error code
+    \param e      the element representing stanza
+    \param baseNS the base namespace of the stream
+    \param code   if not NULL, will be filled with numeric error code
     \param str    if not NULL, will be filled with human readable error description
 */
 
@@ -247,14 +247,8 @@ void getErrorFromElement(const QDomElement &e, const QString &baseNS, int *code,
 
     if(code)
         *code = err.code();
-    if(str) {
-        QPair<QString, QString> desc = err.description();
-        if (err.text.isEmpty())
-            *str = desc.first + ".\n" + desc.second;
-        else
-            *str = desc.first + ".\n" + desc.second + "\n" + err.text;
-    }
-
+    if(str)
+        *str = err.toString();
 }
 
 QDomElement addCorrectNS(const QDomElement &e)

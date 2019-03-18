@@ -3732,7 +3732,7 @@ Thumbnail::Thumbnail(const QDomElement &el)
 
 QDomElement Thumbnail::toXml(QDomDocument *doc) const
 {
-    auto el = doc->createElementNS(QStringLiteral("thumbnail"), XMPP_THUMBS_NS);
+    auto el = doc->createElementNS(XMPP_THUMBS_NS, QStringLiteral("thumbnail"));
     el.setAttribute("uri", uri.toString(QUrl::FullyEncoded));
     el.setAttribute("mime-type", mimeType);
     if (width && height) {

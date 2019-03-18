@@ -233,6 +233,7 @@ public:
     virtual QDomElement takeOutgoingUpdate() = 0; // this may return something only when outgoingUpdateType() != NoAction
     virtual QDomElement sessionAcceptContent() const = 0; // for example has filtered ice candidates (only connected)
     virtual bool wantBetterTransport(const QSharedPointer<Transport> &) const = 0;
+    virtual bool selectNextTransport() = 0;
 };
 
 class Security
@@ -265,13 +266,17 @@ public:
     virtual Session *session() const = 0;
 };
 
+class TransportManager;
 class TransportManagerPad : public SessionManagerPad
 {
     Q_OBJECT
 public:
     typedef QSharedPointer<TransportManagerPad> Ptr;
+
+    virtual TransportManager *manager() const = 0;
 };
 
+class ApplicationManager;
 class ApplicationManagerPad : public SessionManagerPad
 {
     Q_OBJECT
@@ -279,6 +284,8 @@ public:
     typedef QSharedPointer<ApplicationManagerPad> Ptr;
 
     using SessionManagerPad::SessionManagerPad;
+
+    virtual ApplicationManager *manager() const = 0;
 
     /*
      * for example we transfer a file
@@ -300,9 +307,10 @@ public:
         Ended
     };
 
-    Session(Manager *manager);
+    Session(Manager *manager, const Jid &peer);
     ~Session();
 
+    Manager* manager() const;
     State state() const;
     Jid peer() const;
     Origin role() const; // my role in session: initiator or responder
@@ -316,9 +324,12 @@ public:
     ApplicationManagerPad::Ptr applicationPad(const QString &ns);
     TransportManagerPad::Ptr transportPad(const QString &ns);
 
+    QSharedPointer<Transport> newOutgoingTransport(const QString &ns);
+
     QString preferredApplication() const;
     QStringList allApplicationTypes() const;
 
+    void setLocalJid(const Jid &jid); // w/o real use case the implementation is rather stub
     void initiate(QList<Application *> appList);
     void reject();
 
@@ -327,11 +338,12 @@ public:
     TransportManagerPad::Ptr transportPadFactory(const QString &ns);
 signals:
     void managerPadAdded(const QString &ns);
+    void terminated();
 
 private:
     friend class Manager;
     friend class JTPush;
-    bool incomingInitiate(const Jid &from, const Jingle &jingle, const QDomElement &jingleEl);
+    bool incomingInitiate(const Jingle &jingle, const QDomElement &jingleEl);
     bool updateFromXml(Jingle::Action action, const QDomElement &jingleEl);
 
     class Private;
@@ -359,9 +371,13 @@ public:
 
     TransportManager(QObject *parent = nullptr);
 
+    // may show more features than Transport instance. For example some transports may work in both reliable and not reliable modes
+    virtual Transport::Features features() const = 0;
     virtual void setJingleManager(Manager *jm) = 0;
-    virtual QSharedPointer<Transport> sessionInitiate(const TransportManagerPad::Ptr &pad, const Jid &to) = 0; // outgoing. one have to call Transport::start to collect candidates
-    virtual QSharedPointer<Transport> sessionInitiate(const TransportManagerPad::Ptr &pad, const Jid &from, const QDomElement &transportEl) = 0; // incoming
+
+    // FIXME rename methods
+    virtual QSharedPointer<Transport> newTransport(const TransportManagerPad::Ptr &pad) = 0; // outgoing. one have to call Transport::start to collect candidates
+    virtual QSharedPointer<Transport> newTransport(const TransportManagerPad::Ptr &pad, const QDomElement &transportEl) = 0; // incoming
     virtual TransportManagerPad* pad(Session *session) = 0;
 
     // this method is supposed to gracefully close all related sessions as a preparation for plugin unload for example
@@ -384,13 +400,13 @@ public:
     void registerApp(const QString &ns, ApplicationManager *app);
     void unregisterApp(const QString &ns);
     bool isRegisteredApplication(const QString &ns);
-    Application* startApplication(ApplicationManagerPad::Ptr pad, const QString &contentName, Origin creator, Origin senders);
     ApplicationManagerPad* applicationPad(Session *session, const QString &ns); // allocates new pad on application manager
 
     void registerTransport(const QString &ns, TransportManager *transport);
     void unregisterTransport(const QString &ns);
-    QSharedPointer<Transport> initTransport(const TransportManagerPad::Ptr &pad, const Jid &jid, const QDomElement &el);
+    bool isRegisteredTransport(const QString &ns);
     TransportManagerPad* transportPad(Session *session, const QString &ns); // allocates new pad on transport manager
+    QStringList availableTransports(const Transport::Features &features = Transport::Features()) const;
 
     /**
      * @brief isAllowedParty checks if the remote jid allowed to initiate a session
@@ -398,11 +414,11 @@ public:
      * @return true if allowed
      */
     bool isAllowedParty(const Jid &jid) const;
-    void setRemoteJidChecked(std::function<bool(const Jid &)> checker);
-
+    void setRemoteJidChecker(std::function<bool(const Jid &)> checker);
 
     Session* session(const Jid &remoteJid, const QString &sid);
     Session* newSession(const Jid &j);
+    QString generateSessionId(const Jid &peer);
     XMPP::Stanza::Error lastError() const;
 
 signals:
@@ -410,7 +426,7 @@ signals:
 
 private:
     friend class JTPush;
-    Session *incomingSessionInitiate(const Jid &initiator, const Jingle &jingle, const QDomElement &jingleEl);
+    Session *incomingSessionInitiate(const Jid &from, const Jingle &jingle, const QDomElement &jingleEl);
 
     class Private;
     QScopedPointer<Private> d;
@@ -418,5 +434,7 @@ private:
 
 } // namespace Jingle
 } // namespace XMPP
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(XMPP::Jingle::Transport::Features)
 
 #endif // JINGLE_H

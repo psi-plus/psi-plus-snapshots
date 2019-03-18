@@ -21,6 +21,8 @@
 #ifndef XMPP_TASK_H
 #define XMPP_TASK_H
 
+#include "xmpp_stanza.h"
+
 #include <QObject>
 #include <QString>
 
@@ -48,6 +50,7 @@ namespace XMPP {
         bool success() const;
         int statusCode() const;
         const QString & statusString() const;
+        const Stanza::Error & error() const;
 
         void setTimeout(int seconds) const;
         int timeout();

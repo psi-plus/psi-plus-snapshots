@@ -101,7 +101,7 @@ public:
     QDomElement takeOutgoingSessionInfoUpdate() override;
     QString ns() const override;
     Session *session() const override;
-    Manager *manager() const;
+    ApplicationManager *manager() const override;
     QString generateContentName(Origin senders) override;
 
     void addOutgoingOffer(const File &file);
@@ -128,6 +128,7 @@ public:
     QDomElement takeOutgoingUpdate() override;
     QDomElement sessionAcceptContent() const override;
     bool wantBetterTransport(const QSharedPointer<XMPP::Jingle::Transport> &) const override;
+    bool selectNextTransport() override;
 
     bool isValid() const;
 
@@ -147,6 +148,7 @@ public:
     void closeAll();
     Client* client();
 
+    QStringList availableTransports() const;
 private:
     XMPP::Jingle::Manager *jingleManager = nullptr;
 };
