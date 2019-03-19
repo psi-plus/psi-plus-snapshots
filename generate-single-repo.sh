@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2019-02-24
+# Updated: 2019-03-19
 # Version: N/A
 
 set -e
@@ -173,7 +173,6 @@ echo "* Patches from Psi+ project are applied."
 mkdir -p "${SNAPSHOTS_DIR}/patches"
 rsync -a "${MAIN_DIR}/main/patches/dev" "${SNAPSHOTS_DIR}/patches/"
 rsync -a "${MAIN_DIR}/main/patches/mac" "${SNAPSHOTS_DIR}/patches/"
-rsync -a "${MAIN_DIR}/main/patches/haiku" "${SNAPSHOTS_DIR}/patches/"
 echo "* Extra patches from Psi+ project are copied."
 
 rsync -a "${MAIN_DIR}/plugins" "${SNAPSHOTS_DIR}/src/" \
