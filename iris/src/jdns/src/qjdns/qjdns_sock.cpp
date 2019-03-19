@@ -44,6 +44,10 @@
 # include <arpa/inet.h>
 #endif
 
+#ifdef Q_OS_HAIKU
+#define QT_NO_IPV6 1
+#endif
+
 #ifndef QT_NO_IPV6
 # define HAVE_IPV6
 # ifndef s6_addr
@@ -58,7 +62,7 @@
      } _S6_un;
    };
 #  define s6_addr _S6_un._S6_u8
-# endif
+# endif // s6_addr
 # ifndef IPV6_JOIN_GROUP
 #  define IPV6_JOIN_GROUP 12
 #  define IPV6_MULTICAST_HOPS 10
@@ -67,8 +71,8 @@
      struct in6_addr ipv6mr_multiaddr;
      unsigned int ipv6mr_interface;
    };
-# endif
-#endif
+# endif // IPV6_JOIN_GROUP
+#endif // QT_NO_IPV6
 
 static int get_last_error()
 {
@@ -83,6 +87,7 @@ static int get_last_error()
 
 bool qjdns_sock_setMulticast4(int s, unsigned long int addr, int *errorCode)
 {
+#ifndef Q_OS_HAIKU
     int ret;
     struct ip_mreq mc;
 
@@ -98,6 +103,12 @@ bool qjdns_sock_setMulticast4(int s, unsigned long int addr, int *errorCode)
         return false;
     }
     return true;
+#else // Q_OS_HAIKU
+    Q_UNUSED(s);
+    Q_UNUSED(addr);
+    Q_UNUSED(errorCode);
+    return false;
+#endif // Q_OS_HAIKU
 }
 
 bool qjdns_sock_setMulticast6(int s, unsigned char *addr, int *errorCode)
@@ -118,16 +129,17 @@ bool qjdns_sock_setMulticast6(int s, unsigned char *addr, int *errorCode)
         return false;
     }
     return true;
-#else
+#else // HAVE_IPV6
     Q_UNUSED(s);
     Q_UNUSED(addr);
     Q_UNUSED(errorCode);
     return false;
-#endif
+#endif // HAVE_IPV6
 }
 
 bool qjdns_sock_setTTL4(int s, int ttl)
 {
+#ifndef Q_OS_HAIKU
     unsigned char cttl;
     int ret, ittl;
 
@@ -143,6 +155,11 @@ bool qjdns_sock_setTTL4(int s, int ttl)
             return false;
     }
     return true;
+#else // Q_OS_HAIKU
+    Q_UNUSED(s);
+    Q_UNUSED(ttl);
+    return false;
+#endif // Q_OS_HAIKU
 }
 
 bool qjdns_sock_setTTL6(int s, int ttl)
@@ -163,11 +180,11 @@ bool qjdns_sock_setTTL6(int s, int ttl)
             return false;
     }
     return true;
-#else
+#else // HAVE_IPV6
     Q_UNUSED(s);
     Q_UNUSED(ttl);
     return false;
-#endif
+#endif // HAVE_IPV6
 }
 
 bool qjdns_sock_setIPv6Only(int s)

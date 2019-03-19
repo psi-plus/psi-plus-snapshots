@@ -45,7 +45,7 @@
 #include <stdlib.h>
 #include "zlib.h"
 
-#if defined(USE_FILE32API)
+#if defined(USE_FILE32API) || defined(__HAIKU__)
 #define fopen64 fopen
 #define ftello64 ftell
 #define fseeko64 fseek

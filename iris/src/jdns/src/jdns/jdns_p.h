@@ -42,6 +42,8 @@
 # define JDNS_OS_NETBSD
 #elif defined(__OpenBSD__)
 # define JDNS_OS_OPENBSD
+#elif defined(__HAIKU__)
+# define JDNS_OS_HAIKU
 #elif defined(sun) || defined(__sun)
 # define JDNS_OS_SOLARIS
 #elif defined(__APPLE__) && (defined(__GNUC__) || defined(__xlC__) || defined(__xlc__))

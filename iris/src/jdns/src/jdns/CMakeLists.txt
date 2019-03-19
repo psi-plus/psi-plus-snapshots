@@ -21,8 +21,12 @@ set(jdns_HEADERS
 add_library(jdns ${jdns_SRCS} ${jdns_HEADERS} ${jdns_PUBLIC_HEADERS})
 
 if(WIN32)
-  target_link_libraries(jdns ws2_32 advapi32)
+    target_link_libraries(jdns ws2_32 advapi32)
 endif(WIN32)
+
+if(HAIKU)
+    target_link_libraries(jdns network)
+endif(HAIKU)
 
 if(NOT android)
   set_target_properties(jdns PROPERTIES
