@@ -22,6 +22,7 @@
 #include "xmpp_client.h"
 #include "xmpp_thumbs.h"
 #include "xmpp_hash.h"
+#include "xmpp_xmlcommon.h"
 
 namespace XMPP {
 namespace Jingle {
@@ -180,22 +181,22 @@ QDomElement File::toXml(QDomDocument *doc) const
     }
     QDomElement el = doc->createElement(QStringLiteral("file"));
     if (d->date.isValid()) {
-        el.appendChild(doc->createElement(QStringLiteral("date"))).setNodeValue(d->date.toString(Qt::ISODate));
+        el.appendChild(XMLHelper::textTag(*doc, QStringLiteral("date"), d->date.toString(Qt::ISODate)));
     }
     if (d->desc.size()) {
-        el.appendChild(doc->createElement(QStringLiteral("desc"))).setNodeValue(d->desc);
+        el.appendChild(XMLHelper::textTag(*doc, QStringLiteral("desc"), d->desc));
     }
     if (d->hash.isValid()) {
         el.appendChild(d->hash.toXml(doc));
     }
     if (d->mediaType.size()) {
-        el.appendChild(doc->createElement(QStringLiteral("media-type"))).setNodeValue(d->mediaType);
+        el.appendChild(XMLHelper::textTag(*doc, QStringLiteral("media-type"), d->mediaType));
     }
     if (d->name.size()) {
-        el.appendChild(doc->createElement(QStringLiteral("name"))).setNodeValue(d->name);
+        el.appendChild(XMLHelper::textTag(*doc, QStringLiteral("name"), d->name));
     }
     if (d->size) {
-        el.appendChild(doc->createElement(QStringLiteral("size"))).setNodeValue(QString::number(d->size));
+        el.appendChild(XMLHelper::textTag(*doc, QStringLiteral("size"), QString::number(d->size)));
     }
     if (d->rangeSupported || d->range.isValid()) {
         el.appendChild(d->range.toXml(doc));
@@ -342,12 +343,11 @@ void Manager::setJingleManager(XMPP::Jingle::Manager *jm)
 
 Application* Manager::startApplication(const ApplicationManagerPad::Ptr &pad, const QString &contentName, Origin creator, Origin senders)
 {
-    auto app = new Application(pad.staticCast<Pad>(), contentName, creator, senders); // ContentOrigin::Remote
-    if (app->isValid()) {
-        return app;
+    if (!(contentName.size() > 0 && (senders == Origin::Initiator || senders == Origin::Responder))) {
+        qDebug("Invalid Jignle FT App start parameters");
+        return nullptr;
     }
-    delete app;
-    return nullptr;
+    return new Application(pad.staticCast<Pad>(), contentName, creator, senders); // ContentOrigin::Remote
 }
 
 ApplicationManagerPad* Manager::pad(Session *session)
@@ -387,7 +387,7 @@ public:
         Active            // active transfer. transport is connected
     };
 
-    State   state;
+    State   state = Created;
     QSharedPointer<Pad> pad;
     QString contentName;
     File    file;
@@ -512,7 +512,8 @@ bool Application::selectNextTransport()
 
 bool Application::isValid() const
 {
-    return d->file.isValid();
+    return d->file.isValid() &&  d->contentName.size() > 0 &&
+            (d->senders == Origin::Initiator || d->senders == Origin::Responder);
 }
 
 Pad::Pad(Manager *manager, Session *session) :

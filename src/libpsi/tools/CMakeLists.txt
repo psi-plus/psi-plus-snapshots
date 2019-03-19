@@ -132,22 +132,6 @@ elseif(WIN32)
         # spellchecker
         spellchecker/hunspellchecker.cpp
         )
-elseif(HAIKU)
-        list(APPEND HEADERS
-        # systemwatch
-        systemwatch/systemwatch_unix.h
-        )
-
-        list(APPEND PLAIN_SOURCES
-        #idle
-        idle/idle_x11.cpp
-
-        # systemwatch
-        systemwatch/systemwatch_unix.cpp
-
-        # globalshortcut
-        globalshortcut/globalshortcutmanager_haiku.cpp
-        )
 else()
     list(APPEND HEADERS
         # systemwatch

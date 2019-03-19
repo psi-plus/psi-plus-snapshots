@@ -861,6 +861,7 @@ void Session::initiate(QList<XMPP::Jingle::Application*> appList)
             deleteLater();
         }
     });
+    jt->go(true);
 }
 
 void Session::reject()
@@ -1106,6 +1107,7 @@ const Jid &Manager::redirectionJid() const
 void Manager::registerApp(const QString &ns, ApplicationManager *app)
 {
     d->applicationManagers.insert(ns, app);
+    app->setJingleManager(this);
 }
 
 void Manager::unregisterApp(const QString &ns)
@@ -1134,6 +1136,7 @@ ApplicationManagerPad *Manager::applicationPad(Session *session, const QString &
 void Manager::registerTransport(const QString &ns, TransportManager *transport)
 {
     d->transportManagers.insert(ns, transport);
+    transport->setJingleManager(this);
 }
 
 void Manager::unregisterTransport(const QString &ns)
