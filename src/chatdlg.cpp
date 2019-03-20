@@ -669,16 +669,6 @@ void ChatDlg::doClear()
     chatView()->clear();
 }
 
-void ChatDlg::setKeepOpenFalse()
-{
-    keepOpen_ = false;
-}
-
-void ChatDlg::setWarnSendFalse()
-{
-    warnSend_ = false;
-}
-
 void ChatDlg::setSelfDestruct(int minutes)
 {
     if (minutes <= 0) {
@@ -952,7 +942,7 @@ void ChatDlg::appendMessage(const Message &m, bool local)
             if (!encEnabled) {
                 // enable warning
                 warnSend_ = true;
-                QTimer::singleShot(3000, this, SLOT(setWarnSendFalse()));
+                QTimer::singleShot(3000, this, [this](){warnSend_ = false;});
             }
         }
     }
@@ -1071,7 +1061,7 @@ void ChatDlg::displayMessage(const MessageView &mv)
 
     if (!mv.isLocal()) {
         keepOpen_ = true;
-        QTimer::singleShot(1000, this, SLOT(setKeepOpenFalse()));
+        QTimer::singleShot(1000, this, [this](){keepOpen_ = false;});
     }
 }
 

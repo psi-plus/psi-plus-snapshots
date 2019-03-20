@@ -1859,7 +1859,7 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
                 mv.setJoinLeaveHidden();
             }
             mv.setLocal(isSelf); // hack
-            appendSysMsg(mv);
+            dispatchMessage(mv);
         }
         else {
             // Status change
@@ -1985,19 +1985,19 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
             if (s.getMUCStatuses().contains(303)) {
                 message = tr("%1 is now known as %2").arg(nick).arg(s.mucItem().nick());
                 d->usersModel->updateEntry(s.mucItem().nick(), s);
-                appendSysMsg(MessageView::nickChangeMessage(nick, s.mucItem().nick()));
+                dispatchMessage(MessageView::nickChangeMessage(nick, s.mucItem().nick()));
             } else {
                 //contact leaving
                 message = tr("%1 has left the room").arg(nickJid);
                 if (!s.status().isEmpty()) {
                     message += QString(" (%1)").arg(s.status());
                 }
-                appendSysMsg(MessageView::mucPartMessage(nick, message, s.status()));
+                dispatchMessage(MessageView::mucPartMessage(nick, message, s.status()));
             }
         } else {
             MessageView mv = MessageView::mucPartMessage(nick);
             mv.setJoinLeaveHidden();
-            appendSysMsg(mv);
+            dispatchMessage(mv);
         }
         d->usersModel->removeEntry(nick);
     }
@@ -2095,7 +2095,7 @@ void GCMainDlg::message(const Message &_m, const PsiEvent::Ptr &e)
         ui_.le_topic->setCursorPosition(0);
         ui_.le_topic->setToolTip(QString("<qt><p>%1</p></qt>").arg(subjectTooltip));
 
-        appendSysMsg(tv);
+        dispatchMessage(tv);
         return;
     }
 
@@ -2137,9 +2137,11 @@ void GCMainDlg::message(const Message &_m, const PsiEvent::Ptr &e)
         }
     }
 
-    if(from.isEmpty())
-        appendSysMsg(m.body(), d->alert, m.timeStamp());
-    else
+    if(from.isEmpty()) {
+        auto mv = MessageView::systemMessage(m.body());
+        mv.setDateTime(m.timeStamp());
+        dispatchMessage(mv);
+    } else
         appendMessage(m, d->alert);
 }
 
@@ -2177,22 +2179,16 @@ bool GCMainDlg::isLastMessageAlert() const
     return d->alert;
 }
 
-void GCMainDlg::appendSysMsg(const QString &str, bool alert, const QDateTime &ts)
+void GCMainDlg::appendSysMsg(const QString &str, bool alert)
 {
     MessageView mv = MessageView::systemMessage(str);
-    if (!PsiOptions::instance()->getOption("options.ui.muc.use-highlighting").toBool()) {
-        alert = false;
-    }
-    mv.setAlert(alert);
-    if(!ts.isNull()) {
-        mv.setDateTime(ts);
-    }
-    appendSysMsg(mv);
+    mv.setAlert(alert && PsiOptions::instance()->getOption(QStringLiteral("options.ui.muc.use-highlighting")).toBool());
+    dispatchMessage(mv);
 }
 
-void GCMainDlg::appendSysMsg(const MessageView &mv)
+void GCMainDlg::dispatchMessage(const MessageView &mv)
 {
-    if (d->trackBar)
+    if (d->trackBar && !mv.isLocal() && !mv.isSpooled())
         d->doTrackBar();
 
     ui_.log->dispatchMessage(mv);
@@ -2220,10 +2216,7 @@ void GCMainDlg::appendMessage(const Message &m, bool alert)
     mv.setDateTime(m.timeStamp());
     mv.setReplaceId(m.replaceId());
 
-    if (d->trackBar && !mv.isLocal() && !mv.isSpooled()) {
-        d->doTrackBar();
-    }
-    ui_.log->dispatchMessage(mv);
+    dispatchMessage(mv);
 
     // if we're not active, notify the user by changing the title
     if(!isActiveTab() && !mv.isLocal()) {
@@ -2237,10 +2230,6 @@ void GCMainDlg::appendMessage(const Message &m, bool alert)
         }
         invalidateTab();
     }
-
-    //if someone directed their comments to us, notify the user
-    if(alert)
-        doAlert();
 
     //if the message spoke to us, alert the user before closing this window
     //except that keepopen doesn't seem to be implemented for this class yet.
