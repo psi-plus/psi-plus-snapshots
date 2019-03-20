@@ -141,6 +141,7 @@ public:
         SockData sd;
         sd.state = Created;
         sd.sock = new QTcpSocket(this);
+        sd.sock->setProxy(QNetworkProxy::NoProxy);
         sd.sock->setReadBufferSize(READBUFSIZE);
         sd.relay = new QTcpSocketSignalRelay(sd.sock, this);
         sd.resolver = 0;
