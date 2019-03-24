@@ -54,7 +54,7 @@
 #include "pluginmanager.h"
 #endif
 
-#define MCMDCHAT        "http://psi-im.org/ids/mcmd#chatmain"
+#define MCMDCHAT        "https://psi-im.org/ids/mcmd#chatmain"
 
 PsiIcon* PsiChatDlg::throbber_icon = 0;
 
