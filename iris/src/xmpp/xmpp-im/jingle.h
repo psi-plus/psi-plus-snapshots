@@ -12,9 +12,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
 
@@ -45,6 +44,14 @@ enum class Origin {
     Both,
     Initiator,
     Responder
+};
+
+enum class State {
+    Created,     // just after constructor
+    Pending,     // waits for session-accept or content-accept
+    Connecting,  // s5b/ice probes etc
+    Active,      // active transfer. transport is connected
+    Finished     // transfering is finished for whatever reason
 };
 
 class Jingle
@@ -152,90 +159,6 @@ public:
     QString disposition; // default "session"
 };
 
-class Transport : public QObject {
-    Q_OBJECT
-public:
-    /*
-    Categorization by speed, reliability and connectivity
-    - speed: realtim, fast, slow
-    - reliability: reliable, not reliable (some transport can both modes)
-    - connectivity: always connect, hard to connect
-
-    Some transports may change their qualities, so we have to consider worst case.
-
-    ICE-UDP: RealTime, Not Reliable, Hard To Connect
-    S5B:     Fast,     Reliable,     Hard To Connect
-    IBB:     Slow,     Reliable,     Always Connect
-
-    Also most of transports may add extra features but it's matter of configuration.
-    For example all of them can enable p2p crypto mode (<security/> should work here)
-    */
-    enum Feature {
-        // connection establishment
-        HardToConnect = 0x01,  // anything else but ibb
-        AlwaysConnect = 0x02,  // ibb. basically it's always connected
-
-        // reliability
-        NotReliable   = 0x10,  // datagram-oriented
-        Reliable      = 0x20,  // connection-orinted
-
-        // speed.
-        Slow          = 0x100, // only ibb is here probably
-        Fast          = 0x200, // basically all tcp-based and reliable part of sctp
-        RealTime      = 0x400  // it's rather about synchronization of frames with time which implies fast
-    };
-    Q_DECLARE_FLAGS(Features, Feature)
-
-
-    using QObject::QObject;
-
-    enum Direction { // incoming or outgoing file/data transfer.
-        Outgoing,
-        Incoming
-    };
-
-    virtual void start() = 0; // for local transport start searching for candidates (including probing proxy,stun etc)
-                         // for remote transport try to connect to all proposed hosts in order their priority.
-                         // in-band transport may just emit updated() here
-    virtual bool update(const QDomElement &el) = 0; // accepts transport element on incoming transport-info
-    virtual Jingle::Action outgoingUpdateType() const = 0;
-    virtual QDomElement takeOutgoingUpdate() = 0;
-    virtual bool isValid() const = 0;
-    virtual Features features() const = 0;
-signals:
-    void updated(); // found some candidates and they have to be sent. takeUpdate has to be called from this signal handler.
-                    // if it's just always ready then signal has to be sent at least once otherwise session-initiate won't be sent.
-    void connected(); // this signal is for app logic. maybe to finally start drawing some progress bar
-};
-
-class Application : public QObject
-{
-    Q_OBJECT
-public:
-
-    enum SetDescError {
-        Ok,
-        Unparsed,
-        IncompatibleParameters // this one is for <reason>
-    };
-
-    /**
-     * @brief setTransport checks if transport is compatible and stores it
-     * @param transport
-     * @return false if not compatible
-     */
-    virtual QString contentName() const = 0;
-    virtual SetDescError setDescription(const QDomElement &description) = 0;
-    virtual bool setTransport(const QSharedPointer<Transport> &transport) = 0;
-    virtual QSharedPointer<Transport> transport() const = 0;
-    virtual Jingle::Action outgoingUpdateType() const = 0;
-    virtual bool isReadyForSessionAccept() const = 0; // has connected transport for example
-    virtual QDomElement takeOutgoingUpdate() = 0; // this may return something only when outgoingUpdateType() != NoAction
-    virtual QDomElement sessionAcceptContent() const = 0; // for example has filtered ice candidates (only connected)
-    virtual bool wantBetterTransport(const QSharedPointer<Transport> &) const = 0;
-    virtual bool selectNextTransport() = 0;
-};
-
 class Security
 {
 
@@ -295,6 +218,101 @@ public:
     virtual QString generateContentName(Origin senders) = 0;
 };
 
+class Application;
+class Transport : public QObject {
+    Q_OBJECT
+public:
+    /*
+    Categorization by speed, reliability and connectivity
+    - speed: realtim, fast, slow
+    - reliability: reliable, not reliable (some transport can both modes)
+    - connectivity: always connect, hard to connect
+
+    Some transports may change their qualities, so we have to consider worst case.
+
+    ICE-UDP: RealTime, Not Reliable, Hard To Connect
+    S5B:     Fast,     Reliable,     Hard To Connect
+    IBB:     Slow,     Reliable,     Always Connect
+
+    Also most of transports may add extra features but it's matter of configuration.
+    For example all of them can enable p2p crypto mode (<security/> should work here)
+    */
+    enum Feature {
+        // connection establishment
+        HardToConnect = 0x01,  // anything else but ibb
+        AlwaysConnect = 0x02,  // ibb. basically it's always connected
+
+        // reliability
+        NotReliable   = 0x10,  // datagram-oriented
+        Reliable      = 0x20,  // connection-orinted
+
+        // speed.
+        Slow          = 0x100, // only ibb is here probably
+        Fast          = 0x200, // basically all tcp-based and reliable part of sctp
+        RealTime      = 0x400  // it's rather about synchronization of frames with time which implies fast
+    };
+    Q_DECLARE_FLAGS(Features, Feature)
+
+
+    using QObject::QObject;
+
+    enum Direction { // incoming or outgoing file/data transfer.
+        Outgoing,
+        Incoming
+    };
+
+    virtual void start() = 0; // for local transport start searching for candidates (including probing proxy,stun etc)
+                         // for remote transport try to connect to all proposed hosts in order their priority.
+                         // in-band transport may just emit updated() here
+    virtual bool update(const QDomElement &el) = 0; // accepts transport element on incoming transport-info
+    virtual Jingle::Action outgoingUpdateType() const = 0;
+    virtual QDomElement takeOutgoingUpdate() = 0;
+    virtual bool isValid() const = 0;
+    virtual Features features() const = 0;
+    virtual TransportManagerPad::Ptr pad() const = 0;
+    virtual void setApplication(Application *) = 0;
+signals:
+    void updated(); // found some candidates and they have to be sent. takeUpdate has to be called from this signal handler.
+                    // if it's just always ready then signal has to be sent at least once otherwise session-initiate won't be sent.
+    void connected(); // this signal is for app logic. maybe to finally start drawing some progress bar
+    void failed();    // transport ailed for whatever reason. aborted for example
+};
+
+class Application : public QObject
+{
+    Q_OBJECT
+public:
+
+    enum SetDescError {
+        Ok,
+        Unparsed,
+        IncompatibleParameters // this one is for <reason>
+    };
+
+    virtual ApplicationManagerPad::Ptr pad() const = 0;
+    virtual State state() const = 0;
+
+    virtual Origin creator() const = 0;
+    virtual Origin senders() const = 0;
+    virtual QString contentName() const = 0;
+    virtual SetDescError setDescription(const QDomElement &description) = 0;
+
+    /**
+     * @brief setTransport checks if transport is compatible and stores it
+     * @param transport
+     * @return false if not compatible
+     */
+    virtual bool setTransport(const QSharedPointer<Transport> &transport) = 0;
+    virtual QSharedPointer<Transport> transport() const = 0;
+    virtual Jingle::Action outgoingUpdateType() const = 0;
+    virtual bool isReadyForSessionAccept() const = 0; // has connected transport for example
+    virtual QDomElement takeOutgoingUpdate() = 0; // this may return something only when outgoingUpdateType() != NoAction
+    virtual QDomElement sessionAcceptContent() const = 0; // for example has filtered ice candidates (only connected)
+    virtual bool wantBetterTransport(const QSharedPointer<Transport> &) const = 0;
+    virtual bool selectNextTransport() = 0;
+
+};
+
 class Session : public QObject
 {
     Q_OBJECT
@@ -313,6 +331,8 @@ public:
     Manager* manager() const;
     State state() const;
     Jid peer() const;
+    Jid initiator() const;
+    Jid responder() const;
     Origin role() const; // my role in session: initiator or responder
     XMPP::Stanza::Error lastError() const;
 
@@ -382,6 +402,8 @@ public:
 
     // this method is supposed to gracefully close all related sessions as a preparation for plugin unload for example
     virtual void closeAll() = 0;
+signals:
+    void abortAllRequested(); // mostly used by transport instances to abort immediately
 };
 
 class Manager : public QObject
@@ -431,6 +453,8 @@ private:
     class Private;
     QScopedPointer<Private> d;
 };
+
+Origin negateOrigin(Origin o);
 
 } // namespace Jingle
 } // namespace XMPP

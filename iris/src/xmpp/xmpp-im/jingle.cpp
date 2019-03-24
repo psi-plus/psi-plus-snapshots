@@ -12,9 +12,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
 
@@ -774,6 +773,16 @@ Jid Session::peer() const
     return d->otherParty;
 }
 
+Jid Session::initiator() const
+{
+    return d->role == Origin::Initiator? d->manager->client()->jid() : d->otherParty;
+}
+
+Jid Session::responder() const
+{
+    return d->role == Origin::Responder? d->manager->client()->jid() : d->otherParty;
+}
+
 Origin Session::role() const
 {
     return d->role;
@@ -1228,6 +1237,17 @@ QString Manager::generateSessionId(const Jid &peer)
         id = QString("%1").arg(quint32(qrand()), 6, 32, QChar('0'));
     } while (d->sessions.contains(QPair<Jid,QString>(peer,id)));
     return id;
+}
+
+Origin negateOrigin(Origin o)
+{
+    switch (o) {
+    case Origin::None:      return Origin::Both;
+    case Origin::Both:      return Origin::None;
+    case Origin::Initiator: return Origin::Responder;
+    case Origin::Responder: return Origin::Initiator;
+    }
+    return Origin::None;
 }
 
 

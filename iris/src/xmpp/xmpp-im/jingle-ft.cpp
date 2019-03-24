@@ -12,9 +12,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
 
@@ -379,15 +378,8 @@ QStringList Manager::availableTransports() const
 class Application::Private
 {
 public:
-    enum State {
-        Created,          // just after constructor
-        SettingTransport, // either side sets transport to app either with initial offer of later update (TODO review if needed)
-        Pending,          // waits for session-accept or content-accept
-        Connecting,       // s5b/ice probes etc
-        Active            // active transfer. transport is connected
-    };
 
-    State   state = Created;
+    State   state = State::Created;
     QSharedPointer<Pad> pad;
     QString contentName;
     File    file;
@@ -412,15 +404,35 @@ Application::~Application()
 
 }
 
+ApplicationManagerPad::Ptr Application::pad() const
+{
+    return d->pad.staticCast<ApplicationManagerPad>();
+}
+
+State Application::state() const
+{
+    return d->state;
+}
+
 QString Application::contentName() const
 {
     return d->contentName;
 }
 
+Origin Application::creator() const
+{
+    return d->creator;
+}
+
+Origin Application::senders() const
+{
+   return d->senders;
+}
+
 Application::SetDescError Application::setDescription(const QDomElement &description)
 {
     d->file = File(description.firstChildElement("file"));
-    d->state = Private::Pending; // basically it's incomming  content. so if we parsed it it's pending. if not parsed if will rejected anyway.
+    d->state = State::Pending; // basically it's incomming  content. so if we parsed it it's pending. if not parsed if will rejected anyway.
     return d->file.isValid()? Ok: Unparsed;
 }
 
@@ -429,11 +441,18 @@ void Application::setFile(const File &file)
     d->file = file;
 }
 
+// incoming one? or we have to check real direction
 bool Application::setTransport(const QSharedPointer<Transport> &transport)
 {
     if (transport->features() & Transport::Reliable) {
+        int nsIndex = d->availableTransports.indexOf(transport->pad()->ns());
+        if (nsIndex == -1) {
+            return false;
+        }
+        d->availableTransports.removeAt(nsIndex);
         d->transport = transport;
-        d->state = Private::Pending;
+        d->transport->setApplication(this);
+        d->state = State::Pending;
         return true;
     }
     return false;
@@ -441,19 +460,21 @@ bool Application::setTransport(const QSharedPointer<Transport> &transport)
 
 QSharedPointer<Transport> Application::transport() const
 {
-    // TODO
-    return QSharedPointer<Transport>();
+    return d->transport;
 }
 
 Jingle::Action Application::outgoingUpdateType() const
 {
     switch (d->state) {
-    case Private::Created:
-        break;
-    case Private::Connecting:
-    case Private::Active:
+    case State::Created:
+        if (!d->transport && !d->availableTransports.size()) {
+            break; // not yet ready
+        }
+        return Jingle::ContentAdd;
+    case State::Connecting:
+    case State::Active:
         return d->transport->outgoingUpdateType();
-    case Private::Pending:
+    case State::Pending:
     default:
         break;
     }
@@ -462,15 +483,21 @@ Jingle::Action Application::outgoingUpdateType() const
 
 bool Application::isReadyForSessionAccept() const
 {
-    return false; // TODO
+    return d->state == State::Pending; // check direction as well?
 }
 
 QDomElement Application::takeOutgoingUpdate()
 {
-    if (d->state == Private::Connecting || d->state == Private::Active) {
+    if (d->state == State::Connecting || d->state == State::Active) {
         return d->transport->takeOutgoingUpdate();
     }
-    if (d->state == Private::Created && d->file.isValid()) { // basically when we come to this function Created is possible only for outgoing content
+    if (d->state == State::Created && isValid()) { // basically when we come to this function Created is possible only for outgoing content
+        if (!d->transport && d->availableTransports.size()) {
+            selectNextTransport();
+        }
+        if (!d->transport) { // failed to select next transport. can't continue
+            return QDomElement();
+        }
         auto client = d->pad->session()->manager()->client();
         if (d->file.thumbnail().data.size()) {
             auto thumb = d->file.thumbnail();
@@ -484,6 +511,7 @@ QDomElement Application::takeOutgoingUpdate()
         cb.senders = d->senders;
         auto cel = cb.toXml(doc, "content");
         cel.appendChild(doc->createElementNS(NS, "description")).appendChild(d->file.toXml(doc));
+        cel.appendChild(d->transport->takeOutgoingUpdate());
         return cel;
     }
     return QDomElement(); // TODO
@@ -505,6 +533,7 @@ bool Application::selectNextTransport()
     if (d->availableTransports.size()) {
         QString ns = d->availableTransports.takeFirst();
         d->transport = d->pad->session()->newOutgoingTransport(ns);
+        d->transport->setApplication(this);
         return true;
     }
     return false;
@@ -512,7 +541,7 @@ bool Application::selectNextTransport()
 
 bool Application::isValid() const
 {
-    return d->file.isValid() &&  d->contentName.size() > 0 &&
+    return d->file.isValid() && d->transport &&  d->contentName.size() > 0 &&
             (d->senders == Origin::Initiator || d->senders == Origin::Responder);
 }
 

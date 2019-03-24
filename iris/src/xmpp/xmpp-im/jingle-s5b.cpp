@@ -12,9 +12,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
 
@@ -99,24 +98,74 @@ Candidate::~Candidate()
 
 class Transport::Private {
 public:
-    TransportManagerPad::Ptr pad;
-    Jid remoteJid;
+    Pad::Ptr pad;
+    bool aborted = false;
+    Application *application = nullptr;
     QList<Candidate> localCandidates;
     QList<Candidate> remoteCandidates;
     QString dstaddr;
     QString sid;
     Transport::Mode mode = Transport::Tcp;
-    Transport::Direction direction = Transport::Outgoing;
+    Jid proxy;
+
+    bool amISender() const
+    {
+        Q_ASSERT(application);
+        auto senders = application->senders();
+        return senders == Origin::Both || senders == application->creator();
+    }
+
+    bool amIReceiver() const
+    {
+        Q_ASSERT(application);
+        auto senders = application->senders();
+        return senders == Origin::Both || senders == negateOrigin(application->creator());
+    }
+
+    inline Jid remoteJid() const
+    {
+        return pad->session()->peer();
+    }
 };
 
-Transport::Transport()
+Transport::Transport(const TransportManagerPad::Ptr &pad) :
+    d(new Private)
 {
+    d->pad = pad.staticCast<Pad>();
+    connect(pad->manager(), &TransportManager::abortAllRequested, this, [this](){
+        d->aborted = true;
+        emit failed();
+    });
+}
 
+Transport::Transport(const TransportManagerPad::Ptr &pad, const QDomElement &transportEl) :
+    Transport::Transport(pad)
+{
+    d->dstaddr = transportEl.attribute(QStringLiteral("dstaddr"));
+    d->sid = transportEl.attribute(QStringLiteral("sid"));
+    if (d->sid.isEmpty() || !update(transportEl)) {
+        d.reset();
+        return;
+    }
 }
 
 Transport::~Transport()
 {
 
+}
+
+TransportManagerPad::Ptr Transport::pad() const
+{
+    return d->pad.staticCast<TransportManagerPad>();
+}
+
+void Transport::setApplication(Application *app)
+{
+    d->application = app;
+    if (app->creator() == d->pad->session()->role()) { // I'm a creator
+        d->sid = d->pad->generateSid();
+    }
+    d->pad->registerSid(d->sid);
 }
 
 void Transport::start()
@@ -146,6 +195,28 @@ Jingle::Action Transport::outgoingUpdateType() const
 
 QDomElement Transport::takeOutgoingUpdate()
 {
+    if (!isValid() || !d->application) {
+        return QDomElement();
+    }
+    if (d->application->creator() == d->pad->session()->role()) { // I'm the creator
+        if (d->application->state() == State::Created) {
+            auto doc = d->pad->session()->manager()->client()->doc();
+            auto tel = doc->createElementNS(NS, "transport");
+            tel.setAttribute(QStringLiteral("sid"), d->sid);
+            if (d->mode != Tcp) {
+                tel.setAttribute(QStringLiteral("mode"), "udp");
+            }
+            if (d->proxy.isValid()) {
+                QString dstaddr = QCryptographicHash::hash((d->sid +
+                                                           d->pad->session()->initiator().full() +
+                                                           d->pad->session()->responder().full()).toUtf8(),
+                                                           QCryptographicHash::Sha1);
+                tel.setAttribute(QStringLiteral("dstaddr"), dstaddr);
+            }
+        }
+    } else {
+
+    }
     return QDomElement(); // TODO
 }
 
@@ -164,43 +235,6 @@ QString Transport::sid() const
     return d->sid;
 }
 
-QSharedPointer<XMPP::Jingle::Transport> Transport::createOutgoing(const TransportManagerPad::Ptr &pad, const Jid &to, const QString &transportSid)
-{
-    auto d = new Private;
-    d->pad = pad;
-    d->remoteJid = to;
-    d->direction = Transport::Outgoing;
-    d->mode = Transport::Tcp;
-    d->sid = transportSid;
-
-    auto t = new Transport;
-    t->d.reset(d);
-    return QSharedPointer<XMPP::Jingle::Transport>(t);
-}
-
-QSharedPointer<XMPP::Jingle::Transport> Transport::createIncoming(const TransportManagerPad::Ptr &pad, const Jid &from, const QDomElement &transportEl)
-{
-    auto d = new Private;
-    d->pad = pad;
-    d->remoteJid = from;
-    d->direction = Transport::Incoming;
-    d->mode = Transport::Tcp;
-    d->dstaddr = transportEl.attribute(QStringLiteral("dstaddr"));
-    d->sid = transportEl.attribute(QStringLiteral("sid"));
-    if (d->sid.isEmpty()) {
-        delete d;
-        return QSharedPointer<XMPP::Jingle::Transport>();
-    }
-
-    auto t = new Transport;
-    t->d.reset(d);
-    QSharedPointer<XMPP::Jingle::Transport> st(t);
-    if (!st->update(transportEl)) {
-        return QSharedPointer<XMPP::Jingle::Transport>();
-    }
-    return st;
-}
-
 //----------------------------------------------------------------
 // Manager
 //----------------------------------------------------------------
@@ -213,7 +247,7 @@ public:
 
     // FIMME it's reuiqred to split transports by direction otherwise we gonna hit conflicts.
     // jid,transport-sid -> transport mapping
-    QHash<QPair<Jid,QString>,QSharedPointer<XMPP::Jingle::Transport>> transports;
+    QSet<QPair<Jid,QString>> sids;
 };
 
 Manager::Manager(QObject *parent) :
@@ -239,27 +273,17 @@ void Manager::setJingleManager(XMPP::Jingle::Manager *jm)
 
 QSharedPointer<XMPP::Jingle::Transport> Manager::newTransport(const TransportManagerPad::Ptr &pad)
 {
-    QString sid;
-    QPair<Jid,QString> key;
-    Jid to = pad->session()->peer();
-    do {
-        sid = QString("s5b_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
-        key = qMakePair(to, sid);
-    } while (d->transports.contains(key));
-
-    auto t = Transport::createOutgoing(pad, to, sid);
-    d->transports.insert(key, t);
-    return t;
+    return QSharedPointer<XMPP::Jingle::Transport>(new Transport(pad));
 }
 
 QSharedPointer<XMPP::Jingle::Transport> Manager::newTransport(const TransportManagerPad::Ptr &pad, const QDomElement &transportEl)
 {
-    Jid from = pad->session()->peer();
-    auto t = Transport::createIncoming(pad, from, transportEl);
+    auto t = new Transport(pad, transportEl);
+    QSharedPointer<XMPP::Jingle::Transport> ret(t);
     if (t->isValid()) {
-        d->transports.insert(qMakePair(from, t.staticCast<Transport>()->sid()), t); // FIXME collisions??
+        return ret;
     }
-    return t;
+    return QSharedPointer<XMPP::Jingle::Transport>();
 }
 
 TransportManagerPad* Manager::pad(Session *session)
@@ -267,14 +291,9 @@ TransportManagerPad* Manager::pad(Session *session)
     return new Pad(this, session);
 }
 
-bool Manager::hasTrasport(const Jid &jid, const QString &sid) const
-{
-    return d->transports.contains(qMakePair(jid, sid));
-}
-
 void Manager::closeAll()
 {
-
+    emit abortAllRequested();
 }
 
 void Manager::setServer(S5BServer *serv)
@@ -296,6 +315,22 @@ bool Manager::incomingConnection(SocksClient *client, const QString &key)
     Q_UNUSED(client);
     Q_UNUSED(key);
     return false;
+}
+
+QString Manager::generateSid(const Jid &remote)
+{
+    QString sid;
+    QPair<Jid,QString> key;
+    do {
+        sid = QString("s5b_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
+        key = qMakePair(remote, sid);
+    } while (d->sids.contains(key));
+    return sid;
+}
+
+void Manager::registerSid(const Jid &remote, const QString &sid)
+{
+    d->sids.insert(qMakePair(remote, sid));
 }
 
 //----------------------------------------------------------------
@@ -323,6 +358,15 @@ TransportManager *Pad::manager() const
     return _manager;
 }
 
+QString Pad::generateSid() const
+{
+    return _manager->generateSid(_session->peer());
+}
+
+void Pad::registerSid(const QString &sid)
+{
+    return _manager->registerSid(_session->peer(), sid);
+}
 
 } // namespace S5B
 } // namespace Jingle

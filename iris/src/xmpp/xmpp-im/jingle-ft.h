@@ -12,9 +12,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
 
@@ -117,7 +116,12 @@ public:
     Application(const QSharedPointer<Pad> &pad, const QString &contentName, Origin creator, Origin senders);
     ~Application();
 
-    QString contentName() const;
+    ApplicationManagerPad::Ptr pad() const override;
+    State state() const override;
+
+    QString contentName() const override;
+    Origin creator() const override;
+    Origin senders() const override;
     SetDescError setDescription(const QDomElement &description) override;
     void setFile(const File &file);
     bool setTransport(const QSharedPointer<Transport> &transport) override;
