@@ -391,7 +391,7 @@ join <channel>{,<channel>} [pass{,<pass>}
             if(cmd == "clear") {
                 dlg->doClear();
                 histAt = 0;
-                newstate = 0;
+                newstate = nullptr;
             } else if(cmd == "nick") {
                 if (command.count() > 1) {
                     QString nick = command[1].trimmed();
@@ -399,7 +399,7 @@ join <channel>{,<channel>} [pass{,<pass>}
                     prev_self = self;
                     self = nick;
                     dlg->account()->groupChatChangeNick(dlg->jid().domain(), dlg->jid().node(), self, dlg->account()->status());
-                    newstate = 0;
+                    newstate = nullptr;
                 } else {
                     // FIXME DRY with doNick
                     MCmdSimpleState *state = new MCmdSimpleState("nick", tr("new nick") + '=', MCMDSTATE_UNPARSED);
@@ -409,7 +409,7 @@ join <channel>{,<channel>} [pass{,<pass>}
                 }
             } else if(cmd == "sping") {
                 doSPing();
-                newstate = 0;
+                newstate = nullptr;
             } else if(cmd == "kick" && command.count() > 1) {
                 command.removeFirst();
                 const QString nick = command.takeFirst().trimmed();
@@ -446,14 +446,14 @@ join <channel>{,<channel>} [pass{,<pass>}
                 connect(version, SIGNAL(finished()), SLOT(version_finished()));
                 version->get(target);
                 version->go();
-                newstate = 0;
+                newstate = nullptr;
             } else if (cmd == "idle" && command.count() > 1) {
                 QString nick = command[1].trimmed();
                 Jid target = dlg->jid().withResource(nick);
                 LastActivityTask *idle = new LastActivityTask(target, dlg->account()->client()->rootTask());
                 connect(idle, SIGNAL(finished()), SLOT(lastactivity_finished()));
                 idle->go();
-                newstate = 0;
+                newstate = nullptr;
             } else if (cmd == "quote") {
                 dlg->appendSysMsg(command.join("|"), false);
                 preset = command;
@@ -835,7 +835,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 
     d->histAt = 0;
     //d->findDlg = 0;
-    d->configDlg = 0;
+    d->configDlg = nullptr;
     d->usersModel = new GCUserModel(pa, j, this);
 
     d->state = Private::Connected;
@@ -889,7 +889,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
 
     // typeahead find bar
     QHBoxLayout *hb3a = new QHBoxLayout();
-    d->typeahead = new TypeAheadFindBar(ui_.log->textWidget(), tr("Find toolbar"), 0);
+    d->typeahead = new TypeAheadFindBar(ui_.log->textWidget(), tr("Find toolbar"), nullptr);
     hb3a->addWidget( d->typeahead );
     ui_.vboxLayout1->addLayout(hb3a);
 
