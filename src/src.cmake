@@ -208,6 +208,40 @@ list(APPEND HEADERS
     xmlconsole.h
     )
 
+if(UNIX AND NOT APPLE AND NOT HAIKU)
+    list(APPEND SOURCES
+        dbus.cpp
+        activeprofiles_dbus.cpp
+        psidbusnotifier.cpp
+        x11windowsystem.cpp
+        )
+
+    list(APPEND HEADERS
+        psidbusnotifier.h
+        dbus.h
+        x11windowsystem.h
+        )
+elseif(APPLE)
+    list(APPEND SOURCES
+        activeprofiles_stub.cpp
+        )
+#    list(APPEND SOURCES
+#        psigrowlnotifier.cpp
+#        )
+#
+#    list(APPEND HEADERS
+#        psigrowlnotifier.h
+#        )
+elseif(HAIKU)
+    list(APPEND SOURCES
+        activeprofiles_stub.cpp
+        )
+elseif(WIN32)
+    list(APPEND SOURCES
+        activeprofiles_win.cpp
+        )
+endif()
+
 # Source files
 list(APPEND SOURCES
     accountmanagedlg.cpp
@@ -242,51 +276,7 @@ list(APPEND SOURCES
     xdata_widget.cpp
     )
 
-if(UNIX AND NOT APPLE AND NOT HAIKU)
-    list(APPEND SOURCES
-        dbus.cpp
-        )
-
-    list(APPEND PLAIN_SOURCES
-        activeprofiles_dbus.cpp
-        psidbusnotifier.cpp
-        )
-
-    list(APPEND HEADERS
-        psidbusnotifier.h
-        )
-
-    list(APPEND PLAIN_HEADERS
-        dbus.h
-        )
-    list(APPEND PLAIN_SOURCES
-        x11windowsystem.cpp
-        )
-    list(APPEND PLAIN_HEADERS
-        x11windowsystem.h
-        )
-elseif(APPLE)
-    list(APPEND PLAIN_SOURCES
-        activeprofiles_stub.cpp
-        )
-#    list(APPEND SOURCES
-#        psigrowlnotifier.cpp
-#        )
-#
-#    list(APPEND HEADERS
-#        psigrowlnotifier.h
-#        )
-elseif(HAIKU)
-    list(APPEND PLAIN_SOURCES
-        activeprofiles_stub.cpp
-        )
-elseif(WIN32)
-    list(APPEND PLAIN_SOURCES
-        activeprofiles_win.cpp
-        )
-endif()
-
-list(APPEND PLAIN_HEADERS
+list(APPEND HEADERS
     abstracttreeitem.h
     activity.h
     activitycatalog.h
@@ -333,7 +323,7 @@ list(APPEND PLAIN_HEADERS
     varlist.h
     )
 
-list(APPEND PLAIN_SOURCES
+list(APPEND SOURCES
     aboutdlg.cpp
     abstracttreeitem.cpp
     abstracttreemodel.cpp
@@ -482,7 +472,7 @@ list(APPEND PLAIN_SOURCES
 
 if(ENABLE_WEBKIT)
     if(USE_WEBENGINE)
-        list(APPEND PLAIN_SOURCES
+        list(APPEND SOURCES
             themeserver.cpp
         )
         list(APPEND HEADERS
@@ -496,14 +486,10 @@ if(ENABLE_WEBKIT)
         chatviewtheme_p.h
         chatviewthemeprovider.h
         chatviewthemeprovider_priv.h
-        )
-    list(APPEND PLAIN_HEADERS
         jsutil.h
         )
     list(APPEND SOURCES
         chatview_webkit.cpp
-        )
-    list(APPEND PLAIN_SOURCES
         webview.cpp
         jsutil.cpp
         chatviewtheme.cpp
@@ -513,8 +499,6 @@ if(ENABLE_WEBKIT)
 else()
     list(APPEND HEADERS
         chatview_te.h
-        )
-    list(APPEND SOURCES
         chatview_te.cpp
         )
 endif()
@@ -523,7 +507,7 @@ list(APPEND HEADERS
     edbsqlite.h
     historyimp.h
     )
-list(APPEND PLAIN_SOURCES
+list(APPEND SOURCES
     edbsqlite.cpp
     historyimp.cpp
     )
@@ -535,7 +519,7 @@ if(IS_PSIPLUS)
     list(APPEND HEADERS
         sendbuttonmenu.h
     )
-    list(APPEND PLAIN_SOURCES
+    list(APPEND SOURCES
         sendbuttonmenu.cpp
     )
 endif()

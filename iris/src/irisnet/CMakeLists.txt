@@ -14,7 +14,7 @@ set( CMAKE_MODULE_PATH
     "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/modules"
 )
 
-set(PLAIN_SOURCES
+set(SOURCES
     corelib/irisnetglobal.cpp
     corelib/irisnetplugin.cpp
 
@@ -30,9 +30,7 @@ set(PLAIN_SOURCES
 
     noncore/legacy/ndns.cpp
     noncore/legacy/srvresolver.cpp
-)
 
-set(SOURCES
     corelib/addressresolver.cpp
     corelib/netavailability.cpp
     corelib/netinterface.cpp
@@ -64,7 +62,7 @@ else()
     list(APPEND SOURCES corelib/netnames_jdns.cpp)
 endif()
 
-set(PLAIN_HEADERS
+set(HEADERS
     corelib/irisnetexport.h
     corelib/irisnetglobal.h
     corelib/irisnetglobal_p.h
@@ -72,9 +70,7 @@ set(PLAIN_HEADERS
     noncore/stunmessage.h
     noncore/stuntypes.h
     noncore/stunutil.h
-)
 
-set(HEADERS
     corelib/addressresolver.h
     corelib/irisnetplugin.h
     corelib/netavailability.h
@@ -104,8 +100,7 @@ set(HEADERS
     noncore/legacy/srvresolver.h
 )
 
-qt_wrap_cpp(MOC_SOURCES ${HEADERS} ${SOURCES})
-add_library(irisnet STATIC ${SOURCES} ${HEADERS} ${MOC_SOURCES} ${PLAIN_SOURCES} ${PLAIN_HEADERS} )
+add_library(irisnet STATIC ${SOURCES} ${HEADERS} )
 
 if(WIN32 AND (SEPARATE_QJDNS OR (NOT USE_QJDNS)))
     set(EXTRA_LDFLAGS ws2_32)

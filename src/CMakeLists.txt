@@ -4,7 +4,7 @@ set( CMAKE_MODULE_PATH
     "${CMAKE_MODULE_PATH}"
     "${CMAKE_CURRENT_SOURCE_DIR}"
     "${PROJECT_SOURCE_DIR}/cmake/modules" )
-set(CMAKE_AUTOMOC OFF)
+set(CMAKE_AUTOMOC ON)
 
 if(LINUX)
     set(LIB_SUFFIX "" CACHE STRING "Define suffix of directory name (32/64)")
@@ -263,9 +263,9 @@ set(RESOURCES
 qt5_add_resources(QRC_SOURCES ${RESOURCES})
 
 qt5_wrap_ui(UI_FORMS ${FORMS})
-add_custom_target(build_ui_files DEPENDS "${UI_FORMS}" SOURCES "${FORMS}")
+add_custom_target(build_ui_files DEPENDS "${UI_FORMS}")# SOURCES "${FORMS}")
 
-qt_wrap_cpp(MOC_SOURCES ${SOURCES} ${HEADERS})
+#qt_wrap_cpp(MOC_SOURCES ${SOURCES} ${HEADERS})
 
 if(WIN32)
     if(IS_PSIPLUS)
@@ -325,10 +325,7 @@ add_executable(${PROJECT_NAME}
     MACOSX_BUNDLE
     ${SOURCES}
     ${HEADERS}
-    ${MOC_SOURCES}
     ${UI_FORMS}
-    ${PLAIN_SOURCES}
-    ${PLAIN_HEADERS}
     ${QRC_SOURCES}
     ${QM}
     ${RC_FILE}

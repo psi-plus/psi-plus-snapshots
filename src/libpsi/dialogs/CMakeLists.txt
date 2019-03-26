@@ -13,7 +13,7 @@ list(APPEND HEADERS
     grepshortcutkeydialog.h
     )
 
-list(APPEND PLAIN_SOURCES
+list(APPEND SOURCES
     grepshortcutkeydialog.cpp
     )
 
@@ -22,7 +22,6 @@ list(APPEND FORMS
     )
 
 qt5_wrap_ui(UI_FORMS ${FORMS})
-qt_wrap_cpp(MOC_SOURCES ${HEADERS})
-add_library(libpsi_dialogs STATIC ${HEADERS} ${MOC_SOURCES} ${UI_FORMS} ${PLAIN_SOURCES} ${PLAIN_HEADERS})
+add_library(libpsi_dialogs STATIC ${HEADERS} ${SOURCES} ${UI_FORMS})
 target_link_libraries(libpsi_dialogs ${QT_LIBRARIES})
 target_include_directories(libpsi_dialogs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})

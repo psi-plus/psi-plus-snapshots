@@ -13,7 +13,7 @@ include_directories(
     ${QCA_INCLUDES}
     )
 
-set(PLAIN_HEADERS
+set(HEADERS
     xmpp-core/parser.h
     xmpp-core/protocol.h
     xmpp-core/sm.h
@@ -68,9 +68,7 @@ set(PLAIN_HEADERS
     blake2/blake2qt.h
     blake2/blake2.h
     blake2/blake2-impl.h
-    )
 
-set(HEADERS
     xmpp-core/compressionhandler.h
     xmpp-core/securestream.h
     xmpp-core/xmpp.h
@@ -97,7 +95,7 @@ set(HEADERS
     zlib/zlibdecompressor.h
     )
 
-set(PLAIN_SOURCES
+set(SOURCES
     xmpp-core/compressionhandler.cpp
     xmpp-core/connector.cpp
     xmpp-core/parser.cpp
@@ -146,9 +144,7 @@ set(PLAIN_SOURCES
     sasl/scramsha1message.cpp
     sasl/scramsha1response.cpp
     sasl/scramsha1signature.cpp
-    )
 
-set(SOURCES
     xmpp-core/securestream.cpp
     xmpp-core/simplesasl.cpp
 
@@ -157,14 +153,10 @@ set(SOURCES
     xmpp-im/jingle.cpp
     )
 
-qt_wrap_cpp(MOC_SOURCES ${HEADERS} ${SOURCES})
 add_library(iris
     STATIC
     ${HEADERS}
     ${SOURCES}
-    ${MOC_SOURCES}
-    ${PLAIN_SOURCES}
-    ${PLAIN_HEADERS}
 )
 
 if( SEPARATE_QJDNS AND WIN32)

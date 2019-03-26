@@ -33,9 +33,7 @@ list(APPEND HEADERS
 
     # globalshortcut
     globalshortcut/globalshortcuttrigger.h
-    )
 
-list(APPEND PLAIN_HEADERS
     # tools
     maybe.h
     iodeviceopener.h
@@ -55,7 +53,7 @@ list(APPEND PLAIN_HEADERS
     spellchecker/spellhighlighter.h
     )
 
-list(APPEND PLAIN_SOURCES
+list(APPEND SOURCES
     # tools
     priorityvalidator.cpp
     languagemanager.cpp
@@ -84,12 +82,12 @@ list(APPEND PLAIN_SOURCES
     )
 
 if(APPLE)
-    list(APPEND PLAIN_HEADERS
+    list(APPEND HEADERS
         mac_dock/mac_dock.h
         mac_dock/privateqt_mac.h
         )
 
-    list(APPEND PLAIN_SOURCES
+    list(APPEND SOURCES
         # globalshortcut
         globalshortcut/globalshortcutmanager_mac.mm
         globalshortcut/NDKeyboardLayout.m
@@ -114,12 +112,12 @@ if(APPLE)
         systemwatch/systemwatch_mac.cpp
         )
 elseif(WIN32)
-    list(APPEND PLAIN_HEADERS
+    list(APPEND HEADERS
         # spellchecker
         spellchecker/hunspellchecker.h
         )
 
-    list(APPEND PLAIN_SOURCES
+    list(APPEND SOURCES
         #idle
         idle/idle_win.cpp
 
@@ -138,7 +136,7 @@ elseif(HAIKU)
         systemwatch/systemwatch_unix.h
         )
 
-        list(APPEND PLAIN_SOURCES
+        list(APPEND SOURCES
         #idle
         idle/idle_x11.cpp
 
@@ -154,7 +152,7 @@ else()
         systemwatch/systemwatch_unix.h
         )
 
-    list(APPEND PLAIN_SOURCES
+    list(APPEND SOURCES
         #idle
         idle/idle_x11.cpp
 
@@ -188,11 +186,11 @@ if(USE_ENCHANT)
         ${Enchant_LIBRARY}
         )
 
-    list(APPEND PLAIN_HEADERS
+    list(APPEND HEADERS
         spellchecker/enchantchecker.h
         )
 
-    list(APPEND PLAIN_SOURCES
+    list(APPEND SOURCES
         spellchecker/enchantchecker.cpp
         )
 elseif(USE_HUNSPELL)
@@ -210,15 +208,15 @@ elseif(USE_HUNSPELL)
         ${HUNSPELL_LIBRARY}
         )
 
-    list(APPEND PLAIN_HEADERS
+    list(APPEND HEADERS
         spellchecker/hunspellchecker.h
         )
 
-    list(APPEND PLAIN_SOURCES
+    list(APPEND SOURCES
         spellchecker/hunspellchecker.cpp
         )
 elseif(APPLE)
-    list(APPEND PLAIN_SOURCES
+    list(APPEND SOURCES
         spellchecker/macspellchecker.mm
         )
 
@@ -228,8 +226,7 @@ elseif(APPLE)
 endif()
 
 qt5_wrap_ui(UI_FORMS ${FORMS})
-qt_wrap_cpp(MOC_SOURCES ${SOURCES} ${HEADERS})
-add_library(libpsi_tools STATIC  ${SOURCES} ${HEADERS} ${MOC_SOURCES} ${UI_FORMS} ${PLAIN_SOURCES} ${PLAIN_HEADERS})
+add_library(libpsi_tools STATIC  ${SOURCES} ${HEADERS} ${UI_FORMS})
 target_link_libraries(libpsi_tools ${QT_LIBRARIES} tools ${EXTRA_LDFLAGS})
 target_include_directories(libpsi_tools PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 

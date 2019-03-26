@@ -35,7 +35,7 @@ set(CMAKE_CXX_STANDARD 14)
 include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 include_directories(include/iris)
 
-set(CMAKE_AUTOMOC OFF)
+set(CMAKE_AUTOMOC ON)
 
 find_package(Qt5 COMPONENTS Core Gui Xml Network REQUIRED)
 if(USE_QJDNS)
