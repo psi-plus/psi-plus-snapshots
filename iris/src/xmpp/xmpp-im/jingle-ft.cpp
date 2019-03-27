@@ -463,14 +463,14 @@ QSharedPointer<Transport> Application::transport() const
     return d->transport;
 }
 
-Jingle::Action Application::outgoingUpdateType() const
+Action Application::outgoingUpdateType() const
 {
     switch (d->state) {
     case State::Created:
         if (!d->transport && !d->availableTransports.size()) {
             break; // not yet ready
         }
-        return Jingle::ContentAdd;
+        return Action::ContentAdd;
     case State::Connecting:
     case State::Active:
         return d->transport->outgoingUpdateType();
@@ -478,7 +478,7 @@ Jingle::Action Application::outgoingUpdateType() const
     default:
         break;
     }
-    return Jingle::NoAction; // TODO
+    return Action::NoAction; // TODO
 }
 
 bool Application::isReadyForSessionAccept() const
@@ -537,6 +537,16 @@ bool Application::selectNextTransport()
         return true;
     }
     return false;
+}
+
+void Application::prepare()
+{
+    if (!d->transport) {
+        selectNextTransport();
+    }
+    if (d->transport) {
+        d->transport->prepare();
+    }
 }
 
 bool Application::isValid() const

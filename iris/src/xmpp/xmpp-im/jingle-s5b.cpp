@@ -21,6 +21,7 @@
 #include "s5b.h"
 #include "xmpp/jid/jid.h"
 #include "xmpp_client.h"
+#include "xmpp_serverinfomanager.h"
 
 namespace XMPP {
 namespace Jingle {
@@ -34,7 +35,7 @@ public:
     QString host;
     Jid jid;
     quint16 port;
-    quint16 priority;
+    quint32 priority;
     Candidate::Type type;
 };
 
@@ -91,22 +92,82 @@ Candidate::Candidate(const Candidate &other) :
 
 }
 
+Candidate::Candidate(const Jid &proxy, const QString &cid) :
+    d(new Private)
+{
+    d->cid = cid;
+    d->jid = proxy;
+    d->priority = ProxyPreference << 16;
+    d->type = Proxy;
+}
+
+Candidate::Candidate(const QString &host, quint16 port, const QString &cid, Type type, quint16 localPreference) :
+    d(new Private)
+{
+    d->cid = cid;
+    d->host = host;
+    d->port = port;
+    d->type = type;
+    static const int priorities[] = {0, ProxyPreference, TunnelPreference, AssistedPreference, DirectPreference};
+    if (type >= Type(0) && type <= Direct) {
+        d->priority = (priorities[type] << 16) + localPreference;
+    } else {
+        d->priority = 0;
+    }
+}
+
 Candidate::~Candidate()
 {
 
 }
 
+Candidate::Type Candidate::type() const
+{
+    return d->type;
+}
+
+QString Candidate::cid() const
+{
+    return d->cid;
+}
+
+Jid Candidate::jid() const
+{
+    return d->jid;
+}
+
+QString Candidate::host() const
+{
+    return d->host;
+}
+
+void Candidate::setHost(const QString &host)
+{
+    d->host = host;
+}
+
+quint16 Candidate::port() const
+{
+    return d->port;
+}
+
+void Candidate::setPort(quint16 port)
+{
+    d->port = port;
+}
+
 class Transport::Private {
 public:
+    Transport *q;
     Pad::Ptr pad;
     bool aborted = false;
     Application *application = nullptr;
-    QList<Candidate> localCandidates;
-    QList<Candidate> remoteCandidates;
+    QMap<QString,Candidate> localCandidates; // cid to candidate mapping
+    QList<Candidate> pendingLocalCandidates; // not yet sent to remote
+    QMap<QString,Candidate> remoteCandidates;
     QString dstaddr;
     QString sid;
     Transport::Mode mode = Transport::Tcp;
-    Jid proxy;
 
     bool amISender() const
     {
@@ -126,11 +187,40 @@ public:
     {
         return pad->session()->peer();
     }
+
+    QString generateCid() const
+    {
+        QString cid;
+        do {
+            cid = QString("%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
+        } while (localCandidates.contains(cid) || remoteCandidates.contains(cid));
+        return cid;
+    }
+
+    bool isDup(const Candidate &c) const
+    {
+        for (auto const &rc: remoteCandidates) {
+            if (c.host() == rc.host() && c.port() == rc.port()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void sendLocalCandidate(const Candidate &c)
+    {
+        if (isDup(c)) {
+            return; // seems like remote already sent us it..
+        }
+        pendingLocalCandidates.append(c);
+        emit q->updated();
+    }
 };
 
 Transport::Transport(const TransportManagerPad::Ptr &pad) :
     d(new Private)
 {
+    d->q = this;
     d->pad = pad.staticCast<Pad>();
     connect(pad->manager(), &TransportManager::abortAllRequested, this, [this](){
         d->aborted = true;
@@ -168,6 +258,74 @@ void Transport::setApplication(Application *app)
     d->pad->registerSid(d->sid);
 }
 
+void Transport::prepare()
+{
+    auto m = static_cast<Manager*>(d->pad->manager());
+
+    auto serv = m->socksServ();
+    if (serv) {
+        for(auto const &h: serv->hostList()) {
+            Candidate c(h, serv->port(), d->generateCid(), Candidate::Direct);
+            if (!d->isDup(c)) {
+                d->localCandidates.insert(c.cid(), c);
+            }
+        }
+    }
+
+    Jid proxy = m->userProxy();
+    if (proxy.isValid()) {
+        Candidate c(proxy, d->generateCid());
+        if (!d->isDup(c)) {
+            d->localCandidates.insert(c.cid(), c);
+        }
+    }
+
+    QList<QSet<QString>> featureOptions;
+    if (featureOptions.isEmpty()) {
+        featureOptions << (QSet<QString>() << "http://jabber.org/protocol/bytestreams");
+    }
+    d->pad->session()->manager()->client()->serverInfoManager()->
+            queryServiceInfo(QStringLiteral("proxy"),
+                             QStringLiteral("bytestreams"),
+                             featureOptions,
+                             QRegExp("proxy|socks.*|stream.*"),
+                             ServerInfoManager::SQ_CheckAllOnNoMatch,
+                             [this](const QList<DiscoItem> &items)
+    {
+        auto m = static_cast<Manager*>(d->pad->manager());
+        Jid userProxy = m->userProxy();
+
+        // queries proxy's host/port and sends the candidate to remote
+        auto queryProxy = [this](const Jid &j) {
+            auto query = new JT_S5B(d->pad->session()->manager()->client()->rootTask());
+            connect(query, &JT_S5B::finished, this, [this,query](){
+                if (query->success()) {
+                    auto sh = query->proxyInfo();
+                    Candidate c(sh.jid(), d->generateCid());
+                    c.setHost(sh.host());
+                    c.setPort(sh.port());
+                    d->sendLocalCandidate(c);
+                }
+            });
+            query->requestProxyInfo(j);
+            query->go(true);
+        };
+
+        bool userProxyFound = !userProxy.isValid();
+        for (const auto i: items) {
+            if (!userProxyFound && i.jid() == userProxy) {
+                userProxyFound = true;
+            }
+            queryProxy(i.jid());
+        }
+        if (!userProxyFound) {
+            queryProxy(userProxy);
+        }
+    });
+
+    // TODO nat-assisted candidates..
+}
+
 void Transport::start()
 {
 
@@ -182,15 +340,15 @@ bool Transport::update(const QDomElement &transportEl)
         if (!c.isValid()) {
             return false;
         }
-        d->remoteCandidates.append(c); // TODO check for collisions!
+        d->remoteCandidates.insert(c.cid(), c); // TODO check for collisions!
     }
     // TODO handle "candidate-used" and "activted"
     return true;
 }
 
-Jingle::Action Transport::outgoingUpdateType() const
+Action Transport::outgoingUpdateType() const
 {
-    return Jingle::NoAction; // TODO
+    return Action::NoAction; // TODO
 }
 
 QDomElement Transport::takeOutgoingUpdate()
@@ -206,16 +364,23 @@ QDomElement Transport::takeOutgoingUpdate()
             if (d->mode != Tcp) {
                 tel.setAttribute(QStringLiteral("mode"), "udp");
             }
-            if (d->proxy.isValid()) {
+            bool useProxy = false;
+            for (auto const &c: d->localCandidates) {
+                if (c.type() == Candidate::Proxy) {
+                    useProxy = true;
+                    break;
+                }
+            }
+            if (useProxy) {
                 QString dstaddr = QCryptographicHash::hash((d->sid +
-                                                           d->pad->session()->initiator().full() +
-                                                           d->pad->session()->responder().full()).toUtf8(),
+                                                            d->pad->session()->me().full() +
+                                                            d->pad->session()->peer().full()).toUtf8(),
                                                            QCryptographicHash::Sha1);
                 tel.setAttribute(QStringLiteral("dstaddr"), dstaddr);
             }
         }
     } else {
-
+        // handle pendingLocalCandidates
     }
     return QDomElement(); // TODO
 }
@@ -235,6 +400,25 @@ QString Transport::sid() const
     return d->sid;
 }
 
+bool Transport::incomingConnection(SocksClient *sc, const QString &key)
+{
+    // incoming direct connection
+#if 0
+    if(!d->allowIncoming) {
+        sc->requestDeny();
+        sc->deleteLater();
+        return;
+    }
+    if(d->mode == Transport::Udp)
+        sc->grantUDPAssociate("", 0);
+    else
+        sc->grantConnect();
+    e->relatedServer = static_cast<S5BServer *>(sender());
+    e->i->setIncomingClient(sc);
+#endif
+    return false;
+}
+
 //----------------------------------------------------------------
 // Manager
 //----------------------------------------------------------------
@@ -248,6 +432,8 @@ public:
     // FIMME it's reuiqred to split transports by direction otherwise we gonna hit conflicts.
     // jid,transport-sid -> transport mapping
     QSet<QPair<Jid,QString>> sids;
+    QHash<QString,Transport*> key2transport;
+    Jid proxy;
 };
 
 Manager::Manager(QObject *parent) :
@@ -311,9 +497,10 @@ void Manager::setServer(S5BServer *serv)
 
 bool Manager::incomingConnection(SocksClient *client, const QString &key)
 {
-    // TODO
-    Q_UNUSED(client);
-    Q_UNUSED(key);
+    auto t = d->key2transport.value(key);
+    if (t) {
+        return t->incomingConnection(client, key);
+    }
     return false;
 }
 
@@ -331,6 +518,16 @@ QString Manager::generateSid(const Jid &remote)
 void Manager::registerSid(const Jid &remote, const QString &sid)
 {
     d->sids.insert(qMakePair(remote, sid));
+}
+
+S5BServer *Manager::socksServ() const
+{
+    return d->serv;
+}
+
+Jid Manager::userProxy() const
+{
+    return d->proxy;
 }
 
 //----------------------------------------------------------------

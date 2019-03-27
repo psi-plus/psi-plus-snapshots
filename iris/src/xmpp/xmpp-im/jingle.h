@@ -54,28 +54,28 @@ enum class State {
     Finished     // transfering is finished for whatever reason
 };
 
+enum class Action {
+    NoAction, // non-standard, just a default
+    ContentAccept,
+    ContentAdd,
+    ContentModify,
+    ContentReject,
+    ContentRemove,
+    DescriptionInfo,
+    SecurityInfo,
+    SessionAccept,
+    SessionInfo,
+    SessionInitiate,
+    SessionTerminate,
+    TransportAccept,
+    TransportInfo,
+    TransportReject,
+    TransportReplace
+};
+
 class Jingle
 {
 public:
-    enum Action {
-        NoAction, // non-standard, just a default
-        ContentAccept,
-        ContentAdd,
-        ContentModify,
-        ContentReject,
-        ContentRemove,
-        DescriptionInfo,
-        SecurityInfo,
-        SessionAccept,
-        SessionInfo,
-        SessionInitiate,
-        SessionTerminate,
-        TransportAccept,
-        TransportInfo,
-        TransportReject,
-        TransportReplace
-    };
-
     Jingle(); // make invalid jingle element
     Jingle(Action action, const QString &sid); // start making outgoing jingle
     Jingle(const QDomElement &e); // likely incoming
@@ -261,11 +261,20 @@ public:
         Incoming
     };
 
-    virtual void start() = 0; // for local transport start searching for candidates (including probing proxy,stun etc)
-                         // for remote transport try to connect to all proposed hosts in order their priority.
-                         // in-band transport may just emit updated() here
+    /**
+     * @brief prepare to send content-add/session-initiate
+     *  When ready, the application first set update type to ContentAdd and then emit updated()
+     */
+    virtual void prepare() = 0;
+
+    /**
+     * @brief start really transfer data. starting with connection to remote candidates for example
+     */
+    virtual void start() = 0;   // for local transport start searching for candidates (including probing proxy,stun etc)
+                                // for remote transport try to connect to all proposed hosts in order their priority.
+                                // in-band transport may just emit updated() here
     virtual bool update(const QDomElement &el) = 0; // accepts transport element on incoming transport-info
-    virtual Jingle::Action outgoingUpdateType() const = 0;
+    virtual Action outgoingUpdateType() const = 0;
     virtual QDomElement takeOutgoingUpdate() = 0;
     virtual bool isValid() const = 0;
     virtual Features features() const = 0;
@@ -304,25 +313,36 @@ public:
      */
     virtual bool setTransport(const QSharedPointer<Transport> &transport) = 0;
     virtual QSharedPointer<Transport> transport() const = 0;
-    virtual Jingle::Action outgoingUpdateType() const = 0;
+    virtual Action outgoingUpdateType() const = 0;
     virtual bool isReadyForSessionAccept() const = 0; // has connected transport for example
     virtual QDomElement takeOutgoingUpdate() = 0; // this may return something only when outgoingUpdateType() != NoAction
     virtual QDomElement sessionAcceptContent() const = 0; // for example has filtered ice candidates (only connected)
     virtual bool wantBetterTransport(const QSharedPointer<Transport> &) const = 0;
     virtual bool selectNextTransport() = 0;
 
+    /**
+     * @brief prepare to send content-add/session-initiate
+     *  When ready, the application first set update type to ContentAdd and then emit updated()
+     */
+    virtual void prepare() = 0;
+
+signals:
+    void updated();
 };
 
 class Session : public QObject
 {
     Q_OBJECT
 public:
+    // Note incoming session are not registered in Jingle Manager until validated.
+    // and then either rejected or registered in Pending state.
     enum State {
-        Starting,
-        Unacked,
-        Pending,
-        Active,
-        Ended
+        Starting,           // just created outgoing session
+        WaitInitiateReady,  // local user requested session-initiate but wait until all contents report ready
+        Unacked,            // outgoing session-initiate send. waiting for IQ ack
+        Pending,            // wait for user confirmation either local or remote
+        Active,             // transfering data (including connection establishing)
+        Ended               // session-terminate sent or received
     };
 
     Session(Manager *manager, const Jid &peer);
@@ -330,9 +350,12 @@ public:
 
     Manager* manager() const;
     State state() const;
+
+    Jid me() const;
     Jid peer() const;
     Jid initiator() const;
     Jid responder() const;
+
     Origin role() const; // my role in session: initiator or responder
     XMPP::Stanza::Error lastError() const;
 
@@ -340,6 +363,7 @@ public:
     Application *newContent(const QString &ns, Origin senders = Origin::Both);
     // get registered content if any
     Application *content(const QString &contentName, Origin creator);
+    void addContent(Application *content);
 
     ApplicationManagerPad::Ptr applicationPad(const QString &ns);
     TransportManagerPad::Ptr transportPad(const QString &ns);
@@ -350,7 +374,7 @@ public:
     QStringList allApplicationTypes() const;
 
     void setLocalJid(const Jid &jid); // w/o real use case the implementation is rather stub
-    void initiate(QList<Application *> appList);
+    void initiate();
     void reject();
 
     // allocates or returns existing pads
@@ -364,7 +388,7 @@ private:
     friend class Manager;
     friend class JTPush;
     bool incomingInitiate(const Jingle &jingle, const QDomElement &jingleEl);
-    bool updateFromXml(Jingle::Action action, const QDomElement &jingleEl);
+    bool updateFromXml(Action action, const QDomElement &jingleEl);
 
     class Private;
     QScopedPointer<Private> d;

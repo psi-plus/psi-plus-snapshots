@@ -127,14 +127,16 @@ public:
     bool setTransport(const QSharedPointer<Transport> &transport) override;
     QSharedPointer<Transport> transport() const override;
 
-    Jingle::Action outgoingUpdateType() const override;
+    Action outgoingUpdateType() const override;
     bool isReadyForSessionAccept() const override;
     QDomElement takeOutgoingUpdate() override;
     QDomElement sessionAcceptContent() const override;
     bool wantBetterTransport(const QSharedPointer<XMPP::Jingle::Transport> &) const override;
     bool selectNextTransport() override;
+    void prepare() override;
 
     bool isValid() const;
+
 
 private:
     class Private;

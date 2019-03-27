@@ -44,29 +44,29 @@ const QString NS(QStringLiteral("urn:xmpp:jingle:1"));
 //----------------------------------------------------------------------------
 static const struct {
     const char *text;
-    Jingle::Action action;
+    Action action;
 } jingleActions[] = {
-{ "content-accept",     Jingle::ContentAccept },
-{ "content-add",        Jingle::ContentAdd },
-{ "content-modify",     Jingle::ContentModify },
-{ "content-reject",     Jingle::ContentReject },
-{ "content-remove",     Jingle::ContentRemove },
-{ "description-info",   Jingle::DescriptionInfo },
-{ "security-info",      Jingle::SecurityInfo },
-{ "session-accept",     Jingle::SessionAccept },
-{ "session-info",       Jingle::SessionInfo },
-{ "session-initiate",   Jingle::SessionInitiate },
-{ "session-terminate",  Jingle::SessionTerminate },
-{ "transport-accept",   Jingle::TransportAccept },
-{ "transport-info",     Jingle::TransportInfo },
-{ "transport-reject",   Jingle::TransportReject },
-{ "transport-replace",  Jingle::TransportReplace }
+{ "content-accept",     Action::ContentAccept },
+{ "content-add",        Action::ContentAdd },
+{ "content-modify",     Action::ContentModify },
+{ "content-reject",     Action::ContentReject },
+{ "content-remove",     Action::ContentRemove },
+{ "description-info",   Action::DescriptionInfo },
+{ "security-info",      Action::SecurityInfo },
+{ "session-accept",     Action::SessionAccept },
+{ "session-info",       Action::SessionInfo },
+{ "session-initiate",   Action::SessionInitiate },
+{ "session-terminate",  Action::SessionTerminate },
+{ "transport-accept",   Action::TransportAccept },
+{ "transport-info",     Action::TransportInfo },
+{ "transport-reject",   Action::TransportReject },
+{ "transport-replace",  Action::TransportReplace }
 };
 
 class Jingle::Private : public QSharedData
 {
 public:
-    Jingle::Action action;
+    Action action;
     QString sid;
     Jid initiator;
     Jid responder;
@@ -77,7 +77,7 @@ Jingle::Jingle()
 
 }
 
-Jingle::Jingle(Jingle::Action action, const QString &sid) :
+Jingle::Jingle(Action action, const QString &sid) :
     d(new Private)
 {
     d->action = action;
@@ -147,7 +147,7 @@ Jingle::Private* Jingle::ensureD()
 
 QDomElement Jingle::toXml(QDomDocument *doc) const
 {
-    if (!d || d->sid.isEmpty() || d->action == NoAction) {
+    if (!d || d->sid.isEmpty() || d->action == Action::NoAction) {
         return QDomElement();
     }
 
@@ -169,7 +169,7 @@ QDomElement Jingle::toXml(QDomDocument *doc) const
     return query;
 }
 
-Jingle::Action Jingle::action() const
+Action Jingle::action() const
 {
     return d->action;
 }
@@ -458,7 +458,7 @@ public:
 
         QString fromStr(iq.attribute(QStringLiteral("from")));
         Jid from(fromStr);
-        if (jingle.action() == Jingle::SessionInitiate) {
+        if (jingle.action() == Action::SessionInitiate) {
             if (!client()->jingleManager()->isAllowedParty(from) ||
                     (!jingle.initiator().isEmpty() && !client()->jingleManager()->isAllowedParty(jingle.initiator()))) {
                 respondError(iq, Stanza::Error::Cancel, Stanza::Error::ServiceUnavailable);
@@ -573,26 +573,27 @@ public:
     Session::State state = Session::Starting;
     Origin  role  = Origin::Initiator; // my role in the session
     XMPP::Stanza::Error lastError;
-    Jingle::Action outgoingUpdateType = Jingle::Action::NoAction;
+    Action outgoingUpdateType = Action::NoAction;
     QDomElement outgoingUpdate;
     QMap<QString,QWeakPointer<ApplicationManagerPad>> applicationPads;
     QMap<QString,QWeakPointer<TransportManagerPad>> transportPads;
     QMap<QString,Application*> myContent;     // content::creator=(role == Session::Role::Initiator?initiator:responder)
     QMap<QString,Application*> remoteContent; // content::creator=(role == Session::Role::Responder?initiator:responder)
+    QSet<Application*> signalingContent;
     QString sid;
     Jid origFrom; // "from" attr of IQ.
     Jid otherParty; // either "from" or initiator/responder. it's where to send all requests.
     Jid localParty; // that one will be set as initiator/responder if provided
     bool waitingAck = false;
 
-    void sendJingle(Jingle::Action action, QList<QDomElement> update)
+    void sendJingle(Action action, QList<QDomElement> update)
     {
         QDomDocument &doc = *manager->client()->doc();
         Jingle jingle(action, sid);
-        if (action == Jingle::Action::SessionInitiate) {
+        if (action == Action::SessionInitiate) {
             jingle.setInitiator(manager->client()->jid());
         }
-        if (action == Jingle::Action::SessionAccept) {
+        if (action == Action::SessionAccept) {
             jingle.setResponder(manager->client()->jid());
         }
         auto xml = jingle.toXml(&doc);
@@ -613,15 +614,70 @@ public:
     }
 
     void planStep() {
+        if (waitingAck) {
+            return;
+        }
         lastError = Stanza::Error(0, 0);
         if (!stepTimer.isActive()) {
             stepTimer.start();
         }
     }
 
+    // come here from doStep. in other words it's safe to not check current state.
+    void sendSessionInitiate()
+    {
+        waitingAck = true;
+        state = Session::Unacked;
+        auto jt = new JT(manager->client()->rootTask());
+
+        Jingle jingle(Action::SessionInitiate, manager->generateSessionId(otherParty));
+        Jid initiator  = localParty.isValid()? localParty : manager->client()->jid();
+        jingle.setInitiator(initiator);
+        QDomElement jingleEl = jingle.toXml(manager->client()->doc());
+
+        for (const auto &p: myContent) {
+            jingleEl.appendChild(p->takeOutgoingUpdate());
+        }
+        jt->request(otherParty, jingleEl);
+        jt->connect(jt, &JT::finished, q, [this, jt](){
+            waitingAck = false;
+            if (jt->success()) {
+                state = Session::Pending;
+                planStep();
+            } else {
+                state = Session::Ended;
+                lastError = jt->error();
+                emit q->terminated();
+                q->deleteLater();
+            }
+        });
+        jt->go(true);
+    }
+
     void doStep() {
         if (waitingAck) { // we will return here when ack is received
             return;
+        }
+        if (state == Session::Starting) {
+            return; // we will start doing something when initiate() is called
+        }
+        if (state == Session::WaitInitiateReady) {
+            // we have if all the content is ready for initiate().
+            for (const auto &c: myContent) {
+                auto out = c->outgoingUpdateType();
+                if (out == Action::ContentReject) { // yeah we are rejecting local content. invalid?
+                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
+                    state = Session::Ended;
+                    q->deleteLater();
+                    emit q->terminated();
+                    return;
+                }
+                if (out != Action::ContentAdd) {
+                    return; // keep waiting.
+                }
+            }
+            // so all contents is ready for session-initiate. let's do it
+            sendSessionInitiate();
         }
         QList<QDomElement> updateXml;
         for (auto mp : applicationPads) {
@@ -630,18 +686,18 @@ public:
             if (!el.isNull()) {
                 updateXml.append(el);
                 // we can send session-info for just one application. so stop processing
-                sendJingle(Jingle::Action::SessionInfo, updateXml);
+                sendJingle(Action::SessionInfo, updateXml);
                 return;
             }
         }
 
         bool needCheckAcceptance = (role == Origin::Responder && state != Session::State::Active);
         bool needAccept = needCheckAcceptance;
-        QMultiMap<Jingle::Action, Application*> updates;
+        QMultiMap<Action, Application*> updates;
 
         for (auto app : myContent) {
-            Jingle::Action updateType = app->outgoingUpdateType();
-            if (updateType != Jingle::Action::NoAction) {
+            Action updateType = app->outgoingUpdateType();
+            if (updateType != Action::NoAction) {
                 updates.insert(updateType, app);
                 needAccept = false;
             } else if (needCheckAcceptance && !app->isReadyForSessionAccept()) {
@@ -651,8 +707,8 @@ public:
 
         // the same for remote. where is boost::join in Qt?
         for (auto app : remoteContent) {
-            Jingle::Action updateType = app->outgoingUpdateType();
-            if (updateType != Jingle::Action::NoAction) {
+            Action updateType = app->outgoingUpdateType();
+            if (updateType != Action::NoAction) {
                 updates.insert(updateType, app);
                 needAccept = false;
             } else if (needCheckAcceptance && !app->isReadyForSessionAccept()) {
@@ -661,7 +717,7 @@ public:
         }
 
         if (updates.size()) {
-            Jingle::Action action = updates.begin().key();
+            Action action = updates.begin().key();
             auto apps = updates.values(action);
             for (auto app: apps) {
                 updateXml.append(app->takeOutgoingUpdate());
@@ -674,7 +730,7 @@ public:
             for (auto app : remoteContent) {
                 updateXml.append(app->sessionAcceptContent());
             }
-            sendJingle(Jingle::Action::SessionAccept, updateXml);
+            sendJingle(Action::SessionAccept, updateXml);
         }
     }
 
@@ -768,6 +824,11 @@ Session::State Session::state() const
     return d->state;
 }
 
+Jid Session::me() const
+{
+    return d->manager->client()->jid();
+}
+
 Jid Session::peer() const
 {
     return d->otherParty;
@@ -811,6 +872,43 @@ Application *Session::content(const QString &contentName, Origin creator)
     }
 }
 
+void Session::addContent(Application *content)
+{
+    d->myContent.insert(content->contentName(), content);
+    if (d->state != Session::Starting && content->outgoingUpdateType() != Action::NoAction) {
+        d->signalingContent.insert(content);
+    }
+    connect(content, &Application::updated, this, [this](){
+        d->signalingContent.insert(static_cast<Application*>(sender()));
+        if (!d->waitingAck && !d->stepTimer.isActive()) {
+            d->stepTimer.start();
+        }
+    });
+    /**
+      we have d->pendingSendLocalContent,    // before it's sent to remote side
+              d->pendingAckLocalContent,     // not necessary. use lambda capture
+              d->pendingConfirmLocalContent, // send to remote side but no iq ack yet
+              d->localContent                // accepted with session-accept or content-accept
+      First we add to pendingSendLocalContent.
+      Connect signals to the content, like
+        - updated
+      If we are waiting for ack from remote, then just exit. We will get back to this later
+      If session->state is Created, then just exit. We will get back to this when session->initiate is called
+      So session was already initiated and it's a regular content add. We don't wait anythig so have to send
+      cotent-add request now.
+      call session->d->flushContentAdd() to send it.
+
+      flushContentAdd() iterates over all pendingSendLocalContent,
+         if content->outgoingUpdateType() == Action::ContentAdd then it's ready to be sent,
+            add it to temporary send list and remove from pendingSendLocalContent
+      if temporary send list is not empty then append it to pendingAckLocalContent and send content-add
+
+      On ack receive it will be decided what to do with pendingAckLocalContent. On iq timeout it will be put back
+      to pendingSendLocalContent with consequent call to flushContentAdd().
+      or on success it will added to pendingConfirmLocalContent
+     */
+}
+
 ApplicationManagerPad::Ptr Session::applicationPad(const QString &ns)
 {
     return d->applicationPads.value(ns).toStrongRef();
@@ -846,31 +944,13 @@ void Session::setLocalJid(const Jid &jid)
     d->localParty = jid;
 }
 
-void Session::initiate(QList<XMPP::Jingle::Application*> appList)
+void Session::initiate()
 {
-    auto jt = new JT(d->manager->client()->rootTask());
-
-    Jingle jingle(Jingle::Action::SessionInitiate, d->manager->generateSessionId(d->otherParty));
-    Jid initiator  = d->localParty.isValid()? d->localParty : d->manager->client()->jid();
-    jingle.setInitiator(initiator);
-    QDomElement jingleEl = jingle.toXml(d->manager->client()->doc());
-
-    for (const auto &p: appList) {
-        jingleEl.appendChild(p->takeOutgoingUpdate());
+    d->state = WaitInitiateReady;
+    for (auto &c: d->myContent) {
+        c->prepare();
     }
-    jt->request(d->otherParty, jingleEl);
-    connect(jt, &JT::finished, this, [this, jt, appList](){
-        if (jt->success()) {
-            for (const auto &p: appList) {
-                d->myContent.insert(p->contentName(), p);
-            }
-        } else {
-            d->lastError = jt->error();
-            emit terminated();
-            deleteLater();
-        }
-    });
-    jt->go(true);
+    d->planStep();
 }
 
 void Session::reject()
@@ -944,7 +1024,7 @@ bool Session::incomingInitiate(const Jingle &jingle, const QDomElement &jingleEl
             for (auto const &i: addSet) {
                 delete std::get<1>(i);
             }
-            d->outgoingUpdateType = Jingle::Action::SessionTerminate;
+            d->outgoingUpdateType = Action::SessionTerminate;
             Reason r(cond);
             d->outgoingUpdate = r.toXml(d->manager->client()->doc());
             return true;
@@ -980,13 +1060,13 @@ bool Session::incomingInitiate(const Jingle &jingle, const QDomElement &jingleEl
     return true;
 }
 
-bool Session::updateFromXml(Jingle::Action action, const QDomElement &jingleEl)
+bool Session::updateFromXml(Action action, const QDomElement &jingleEl)
 {
-    if (action == Jingle::SessionInfo) {
+    if (action == Action::SessionInfo) {
 
     }
 
-    if (action != Jingle::ContentAdd) {
+    if (action != Action::ContentAdd) {
         return false;
     }
 
@@ -1041,7 +1121,7 @@ bool Session::updateFromXml(Jingle::Action action, const QDomElement &jingleEl)
         qDeleteAll(addSet);
         return false;
     } else if (unsupported) {
-        d->outgoingUpdateType = Jingle::Action::ContentReject;
+        d->outgoingUpdateType = Action::ContentReject;
         Reason r(rejectCond);
         d->outgoingUpdate = r.toXml(d->manager->client()->doc());
         qDeleteAll(addSet);

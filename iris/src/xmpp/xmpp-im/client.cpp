@@ -80,6 +80,7 @@
 #include "filetransfer.h"
 #include "xmpp_caps.h"
 #include "xmpp_hash.h"
+#include "xmpp_serverinfomanager.h"
 #include "protocol.h"
 #include "xmpp_serverinfomanager.h"
 #include "httpfileupload.h"

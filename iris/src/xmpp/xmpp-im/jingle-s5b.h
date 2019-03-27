@@ -47,16 +47,32 @@ class Candidate {
 public:
     enum Type {
         None, // non standard, just a default
-        Assisted,
-        Direct,
         Proxy,
-        Tunnel
+        Tunnel,
+        Assisted,
+        Direct
+    };
+
+    enum {
+        ProxyPreference = 10,
+        TunnelPreference = 110,
+        AssistedPreference = 120,
+        DirectPreference = 126
     };
 
     Candidate(const QDomElement &el);
     Candidate(const Candidate &other);
+    Candidate(const Jid &proxy, const QString &cid);
+    Candidate(const QString &host, quint16 port, const QString &cid, Type type, quint16 localPreference = 0);
     ~Candidate();
     inline bool isValid() const { return d != nullptr; }
+    Type type() const;
+    QString cid() const;
+    Jid jid() const;
+    QString host() const;
+    void setHost(const QString &host);
+    quint16 port() const;
+    void setPort(quint16 port);
 
 private:
     class Private;
@@ -80,14 +96,17 @@ public:
     TransportManagerPad::Ptr pad() const override;
     void setApplication(Application *app) override;
 
-    void start();
-    bool update(const QDomElement &transportEl);
-    Jingle::Action outgoingUpdateType() const override;
+    void prepare() override;
+    void start() override;
+    bool update(const QDomElement &transportEl) override;
+    Action outgoingUpdateType() const override;
     QDomElement takeOutgoingUpdate() override;
-    bool isValid() const;
-    Features features() const;
+    bool isValid() const override;
+    Features features() const override;
 
     QString sid() const;
+
+    bool incomingConnection(SocksClient *sc, const QString &key);
 
 private:
     friend class Manager;
@@ -137,6 +156,8 @@ public:
     QString generateSid(const Jid &remote);
     void registerSid(const Jid &remote, const QString &sid);
 
+    S5BServer* socksServ() const;
+    Jid userProxy() const;
 private:
     class Private;
     QScopedPointer<Private> d;

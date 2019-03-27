@@ -413,18 +413,19 @@ QString CapsManager::clientName(const Jid& jid) const
 
         // Try to be intelligent about the name
         if (name.isEmpty()) {
-            name = cs.node();
-            if (name.startsWith("http://"))
-                name = name.right(name.length() - 7);
-            else if (name.startsWith("https://"))
-                name = name.right(name.length() - 8);
+            const QString &node = cs.node();
+            int startPos = 0, ds = 0;
+            if (node.startsWith(QStringLiteral("http://")))
+                startPos = 7;
+            else if (node.startsWith(QStringLiteral("https://")))
+                startPos = 8;
+            if (node.startsWith(QStringLiteral("www.")))
+                startPos += 4;
+            if (node.endsWith(QStringLiteral("/caps"))) {
+                ds = 5;
+            }
 
-            if (name.startsWith("www."))
-                name = name.right(name.length() - 4);
-
-            int cut_pos = name.indexOf("/");
-            if (cut_pos != -1)
-                name = name.left(cut_pos);
+            name = QStringRef(&node, startPos, node.size() - startPos - ds).toString();
         }
 
         return name;
