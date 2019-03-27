@@ -1,9 +1,6 @@
-unset(MOC_SOURCES)
 unset(HEADERS)
-unset(PLAIN_HEADERS)
 unset(FORMS)
 unset(SOURCES)
-unset(PLAIN_SOURCES)
 unset(UI_FORMS)
 
 set(HEADERS

@@ -1,24 +1,36 @@
 set(CMAKE_CXX_STANDARD 14)
 
-unset(MOC_SOURCES)
 unset(HEADERS)
-unset(PLAIN_HEADERS)
 unset(FORMS)
 unset(SOURCES)
-unset(PLAIN_SOURCES)
 unset(UI_FORMS)
 unset(EXTRA_LDFLAGS)
 
 if(APPLE)
-    # mac {
-    #     # Growl
-    #     contains(DEFINES, HAVE_GROWL) {
-    #         include($$PWD/growlnotifier/growlnotifier.pri)
-    #     }
-
-    #     # Mac dock
-    #     include($$PWD/mac_dock/mac_dock.pri)
-    # }
+    if(USE_GROWL)
+        list(APPEND EXTRA_LDFLAGS
+            "-framework Growl -framework Cocoa"
+            )
+        list(APPEND HEADERS
+            growlnotifier/growlnotifier.h
+            )
+        list(APPEND SOURCES
+            growlnotifier/growlnotifier.mm
+            )
+    endif()
+    if(USE_MAC_DOC)
+        list(APPEND EXTRA_LDFLAGS
+            "-framework Carbon"
+            )
+        list(APPEND HEADERS
+            mac_dock/mac_dock.h
+            mac_dock/privateqt_mac.h
+            )
+        list(APPEND SOURCES
+            mac_dock/mac_dock.mm
+            mac_dock/privateqt_mac.mm
+            )
+    endif()
 endif()
 
 list(APPEND HEADERS
@@ -158,7 +170,6 @@ else()
 
         # systemwatch
         systemwatch/systemwatch_unix.cpp
-
 
         # globalshortcut
         globalshortcut/globalshortcutmanager_x11.cpp
