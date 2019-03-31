@@ -1250,7 +1250,11 @@ bool ClientStream::handleNeed()
                 QCA::setProviderPriority("simplesasl", 10);
             }
 
-            static QStringList preference{ "GSSAPI", "SCRAM-SHA-1", "DIGEST-MD5", "PLAIN" };
+            static QStringList preference{ "GSSAPI", "SCRAM-SHA-512-PLUS", "SCRAM-SHA-512",
+                                           "SCRAM-SHA-384-PLUS", "SCRAM-SHA-384",
+                                           "SCRAM-SHA-256-PLUS", "SCRAM-SHA-256",
+                                           "SCRAM-SHA-1-PLUS", "SCRAM-SHA-1",
+                                           "DIGEST-MD5", "PLAIN" };
             // TODO qca should maintain the list of preferred
 
             QStringList ml;

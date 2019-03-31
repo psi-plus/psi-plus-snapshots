@@ -517,11 +517,6 @@ QDomElement Application::takeOutgoingUpdate()
     return QDomElement(); // TODO
 }
 
-QDomElement Application::sessionAcceptContent() const
-{
-    return QDomElement(); // TODO
-}
-
 bool Application::wantBetterTransport(const QSharedPointer<Transport> &t) const
 {
     Q_UNUSED(t)
@@ -547,6 +542,14 @@ void Application::prepare()
     if (d->transport) {
         d->transport->prepare();
     }
+}
+
+void Application::start()
+{
+    if (d->transport) {
+        d->transport->start();
+    }
+    // TODO we nedd QIODevice somewhere here
 }
 
 bool Application::isValid() const

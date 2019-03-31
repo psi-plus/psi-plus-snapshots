@@ -73,6 +73,8 @@ enum class Action {
     TransportReplace
 };
 
+typedef QPair<QString,Origin> ContentKey;
+
 class Jingle
 {
 public:
@@ -123,7 +125,7 @@ public:
 
     Reason();
     ~Reason();
-    Reason(Condition cond);
+    Reason(Condition cond, const QString &text = QString());
     Reason(const QDomElement &el);
     Reason(const Reason &other);
     inline bool isValid() const { return d != nullptr; }
@@ -314,9 +316,8 @@ public:
     virtual bool setTransport(const QSharedPointer<Transport> &transport) = 0;
     virtual QSharedPointer<Transport> transport() const = 0;
     virtual Action outgoingUpdateType() const = 0;
-    virtual bool isReadyForSessionAccept() const = 0; // has connected transport for example
     virtual QDomElement takeOutgoingUpdate() = 0; // this may return something only when outgoingUpdateType() != NoAction
-    virtual QDomElement sessionAcceptContent() const = 0; // for example has filtered ice candidates (only connected)
+    virtual bool isReadyForSessionAccept() const = 0; // has connected transport for example
     virtual bool wantBetterTransport(const QSharedPointer<Transport> &) const = 0;
     virtual bool selectNextTransport() = 0;
 
@@ -325,6 +326,7 @@ public:
      *  When ready, the application first set update type to ContentAdd and then emit updated()
      */
     virtual void prepare() = 0;
+    virtual void start() = 0;
 
 signals:
     void updated();
@@ -337,9 +339,9 @@ public:
     // Note incoming session are not registered in Jingle Manager until validated.
     // and then either rejected or registered in Pending state.
     enum State {
-        Starting,           // just created outgoing session
-        WaitInitiateReady,  // local user requested session-initiate but wait until all contents report ready
-        Unacked,            // outgoing session-initiate send. waiting for IQ ack
+        Starting,           // just created session
+        PrepapreLocalOffer, // user called session-initiate or session-accept but session is not yet ready to do this action
+        Unacked,            // session-initiate/accept is sent to remote but no IQ ack yet
         Pending,            // wait for user confirmation either local or remote
         Active,             // transfering data (including connection establishing)
         Ended               // session-terminate sent or received
@@ -374,14 +376,17 @@ public:
     QStringList allApplicationTypes() const;
 
     void setLocalJid(const Jid &jid); // w/o real use case the implementation is rather stub
+
+    void accept();
     void initiate();
-    void reject();
+    void terminate(Reason::Condition cond, const QString &comment = QString());
 
     // allocates or returns existing pads
     ApplicationManagerPad::Ptr applicationPadFactory(const QString &ns);
     TransportManagerPad::Ptr transportPadFactory(const QString &ns);
 signals:
     void managerPadAdded(const QString &ns);
+    void activated();
     void terminated();
 
 private:

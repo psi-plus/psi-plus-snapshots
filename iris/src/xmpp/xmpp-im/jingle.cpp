@@ -239,10 +239,11 @@ Reason::~Reason()
 
 }
 
-Reason::Reason(Reason::Condition cond) :
+Reason::Reason(Reason::Condition cond, const QString &text) :
     d(new Private)
 {
     d->cond = cond;
+    d->text = text;
 }
 
 Reason::Reason(const QDomElement &e)
@@ -573,12 +574,14 @@ public:
     Session::State state = Session::Starting;
     Origin  role  = Origin::Initiator; // my role in the session
     XMPP::Stanza::Error lastError;
+    Reason terminateReason;
     Action outgoingUpdateType = Action::NoAction;
     QDomElement outgoingUpdate;
     QMap<QString,QWeakPointer<ApplicationManagerPad>> applicationPads;
     QMap<QString,QWeakPointer<TransportManagerPad>> transportPads;
-    QMap<QString,Application*> myContent;     // content::creator=(role == Session::Role::Initiator?initiator:responder)
-    QMap<QString,Application*> remoteContent; // content::creator=(role == Session::Role::Responder?initiator:responder)
+    //QMap<QString,Application*> myContent;     // content::creator=(role == Session::Role::Initiator?initiator:responder)
+    //QMap<QString,Application*> remoteContent; // content::creator=(role == Session::Role::Responder?initiator:responder)
+    QMap<ContentKey,Application*> contentList;
     QSet<Application*> signalingContent;
     QString sid;
     Jid origFrom; // "from" attr of IQ.
@@ -586,7 +589,7 @@ public:
     Jid localParty; // that one will be set as initiator/responder if provided
     bool waitingAck = false;
 
-    void sendJingle(Action action, QList<QDomElement> update)
+    void sendJingle(Action action, QList<QDomElement> update, std::function<void()> successCB = std::function<void()>())
     {
         QDomDocument &doc = *manager->client()->doc();
         Jingle jingle(action, sid);
@@ -604,10 +607,20 @@ public:
 
         auto jt = new JT(manager->client()->rootTask());
         jt->request(otherParty, xml);
-        QObject::connect(jt, &JT::finished, manager, [jt, jingle, this](){
+        QObject::connect(jt, &JT::finished, manager, [jt, jingle, successCB, this](){
             waitingAck = false;
-            // TODO handle errors
-            planStep();
+            if (jt->success()) {
+                if (successCB) {
+                    successCB();
+                } else {
+                    planStep();
+                }
+            } else {
+                state = Session::Ended;
+                lastError = jt->error();
+                emit q->terminated();
+                q->deleteLater();
+            }
         });
         waitingAck = true;
         jt->go(true);
@@ -626,44 +639,50 @@ public:
     // come here from doStep. in other words it's safe to not check current state.
     void sendSessionInitiate()
     {
-        waitingAck = true;
-        state = Session::Unacked;
-        auto jt = new JT(manager->client()->rootTask());
-
-        Jingle jingle(Action::SessionInitiate, manager->generateSessionId(otherParty));
-        Jid initiator  = localParty.isValid()? localParty : manager->client()->jid();
-        jingle.setInitiator(initiator);
-        QDomElement jingleEl = jingle.toXml(manager->client()->doc());
-
-        for (const auto &p: myContent) {
-            jingleEl.appendChild(p->takeOutgoingUpdate());
+        QList<QDomElement> contents;
+        for (const auto &p: contentList) {
+            contents.append(p->takeOutgoingUpdate());
         }
-        jt->request(otherParty, jingleEl);
-        jt->connect(jt, &JT::finished, q, [this, jt](){
-            waitingAck = false;
-            if (jt->success()) {
-                state = Session::Pending;
-                planStep();
-            } else {
-                state = Session::Ended;
-                lastError = jt->error();
-                emit q->terminated();
-                q->deleteLater();
-            }
+        state = Session::Unacked;
+        sid = manager->generateSessionId(otherParty);
+        sendJingle(Action::SessionInitiate, contents, [this](){
+            state = Session::Pending;
+            planStep();
         });
-        jt->go(true);
+    }
+
+    void sendSessionAccept()
+    {
+        QList<QDomElement> contents;
+        for (const auto &p: contentList) {
+            contents.append(p->takeOutgoingUpdate());
+        }
+        state = Session::Unacked;
+        sendJingle(Action::SessionAccept, contents, [this](){
+            state = Session::Active;
+            emit q->activated();
+            planStep();
+        });
     }
 
     void doStep() {
-        if (waitingAck) { // we will return here when ack is received
+        if (waitingAck) { // we will return here when ack is received. Session::Unacked is possible also only with waitingAck
             return;
         }
-        if (state == Session::Starting) {
+        if (terminateReason.condition() && state != Session::Ended) {
+            if (state != Session::Starting || role == Origin::Responder) {
+                sendJingle(Action::SessionTerminate, QList<QDomElement>() << terminateReason.toXml(manager->client()->doc()));
+            }
+            state = Session::Ended;
+            q->deleteLater();
+            emit q->terminated();
+            return;
+        }
+        if (state == Session::Starting || state == Session::Ended) {
             return; // we will start doing something when initiate() is called
         }
-        if (state == Session::WaitInitiateReady) {
-            // we have if all the content is ready for initiate().
-            for (const auto &c: myContent) {
+        if (state == Session::PrepapreLocalOffer) {
+            for (const auto &c: contentList) {
                 auto out = c->outgoingUpdateType();
                 if (out == Action::ContentReject) { // yeah we are rejecting local content. invalid?
                     lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
@@ -672,13 +691,20 @@ public:
                     emit q->terminated();
                     return;
                 }
-                if (out != Action::ContentAdd) {
+                if (out != Action::ContentAdd && out != Action::ContentAccept) {
                     return; // keep waiting.
                 }
             }
             // so all contents is ready for session-initiate. let's do it
-            sendSessionInitiate();
+            if (role == Origin::Initiator) {
+                sendSessionInitiate();
+            } else {
+                sendSessionAccept();
+            }
+            return;
         }
+
+        // So session is either Pending or Active here
         QList<QDomElement> updateXml;
         for (auto mp : applicationPads) {
             auto p = mp.toStrongRef();
@@ -691,28 +717,12 @@ public:
             }
         }
 
-        bool needCheckAcceptance = (role == Origin::Responder && state != Session::State::Active);
-        bool needAccept = needCheckAcceptance;
         QMultiMap<Action, Application*> updates;
 
-        for (auto app : myContent) {
+        for (auto app : contentList) {
             Action updateType = app->outgoingUpdateType();
             if (updateType != Action::NoAction) {
                 updates.insert(updateType, app);
-                needAccept = false;
-            } else if (needCheckAcceptance && !app->isReadyForSessionAccept()) {
-                needAccept = false;
-            }
-        }
-
-        // the same for remote. where is boost::join in Qt?
-        for (auto app : remoteContent) {
-            Action updateType = app->outgoingUpdateType();
-            if (updateType != Action::NoAction) {
-                updates.insert(updateType, app);
-                needAccept = false;
-            } else if (needCheckAcceptance && !app->isReadyForSessionAccept()) {
-                needAccept = false;
             }
         }
 
@@ -723,14 +733,6 @@ public:
                 updateXml.append(app->takeOutgoingUpdate());
             }
             sendJingle(action, updateXml);
-        } else if (needAccept) {
-            for (auto app : myContent) {
-                updateXml.append(app->sessionAcceptContent());
-            }
-            for (auto app : remoteContent) {
-                updateXml.append(app->sessionAcceptContent());
-            }
-            sendJingle(Action::SessionAccept, updateXml);
         }
     }
 
@@ -811,7 +813,7 @@ Session::Session(Manager *manager, const Jid &peer) :
 
 Session::~Session()
 {
-
+    qDebug("session %s destroyed", qPrintable(d->sid));
 }
 
 Manager *Session::manager() const
@@ -865,16 +867,12 @@ Application *Session::newContent(const QString &ns, Origin senders)
 
 Application *Session::content(const QString &contentName, Origin creator)
 {
-    if (creator == d->role) {
-        return d->myContent.value(contentName);
-    } else {
-        return d->remoteContent.value(contentName);
-    }
+    return d->contentList.value(ContentKey{contentName, creator});
 }
 
 void Session::addContent(Application *content)
 {
-    d->myContent.insert(content->contentName(), content);
+    d->contentList.insert(ContentKey{content->contentName(), d->role}, content);
     if (d->state != Session::Starting && content->outgoingUpdateType() != Action::NoAction) {
         d->signalingContent.insert(content);
     }
@@ -944,18 +942,32 @@ void Session::setLocalJid(const Jid &jid)
     d->localParty = jid;
 }
 
-void Session::initiate()
+void Session::accept()
 {
-    d->state = WaitInitiateReady;
-    for (auto &c: d->myContent) {
-        c->prepare();
+    // So we presented a user incoming session in UI, the user modified it somehow and finally accepted.
+    if (d->role == Origin::Responder && d->state == Starting) {
+        d->state = PrepapreLocalOffer;
+        for (auto &c: d->contentList) {
+            c->prepare();
+        }
+        d->planStep();
     }
-    d->planStep();
 }
 
-void Session::reject()
+void Session::initiate()
 {
-    // TODO
+    if (d->role == Origin::Initiator && d->state == Starting) {
+        d->state = PrepapreLocalOffer;
+        for (auto &c: d->contentList) {
+            c->prepare();
+        }
+        d->planStep();
+    }
+}
+
+void Session::terminate(Reason::Condition cond, const QString &comment)
+{
+    d->terminateReason = Reason(cond, comment);
 }
 
 TransportManagerPad::Ptr Session::transportPadFactory(const QString &ns)
@@ -1052,7 +1064,7 @@ bool Session::incomingInitiate(const Jingle &jingle, const QDomElement &jingleEl
                 // TODO
                 return false; // FIXME. memory release
             }
-            d->remoteContent.insert(app->contentName(), app);
+            d->contentList.insert(ContentKey{app->contentName(), Origin::Initiator}, app);
         }
     }
 
@@ -1128,8 +1140,9 @@ bool Session::updateFromXml(Action action, const QDomElement &jingleEl)
         return true;
     }
 
+    Origin remoteRole = negateOrigin(d->role);
     for (auto const &app: addSet) {
-        d->remoteContent.insert(app->contentName(), app); // TODO check conflicts
+        d->contentList.insert(ContentKey{app->contentName(), remoteRole}, app); // TODO check conflicts
     }
 
     return true;

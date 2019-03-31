@@ -280,10 +280,7 @@ void Transport::prepare()
         }
     }
 
-    QList<QSet<QString>> featureOptions;
-    if (featureOptions.isEmpty()) {
-        featureOptions << (QSet<QString>() << "http://jabber.org/protocol/bytestreams");
-    }
+    QList<QSet<QString>> featureOptions = {{"http://jabber.org/protocol/bytestreams"}};
     d->pad->session()->manager()->client()->serverInfoManager()->
             queryServiceInfo(QStringLiteral("proxy"),
                              QStringLiteral("bytestreams"),
@@ -324,11 +321,12 @@ void Transport::prepare()
     });
 
     // TODO nat-assisted candidates..
+    emit updated();
 }
 
 void Transport::start()
 {
-
+    // TODO start connecting to remote candidates
 }
 
 bool Transport::update(const QDomElement &transportEl)

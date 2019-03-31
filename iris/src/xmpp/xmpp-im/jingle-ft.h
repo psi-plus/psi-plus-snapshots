@@ -130,10 +130,10 @@ public:
     Action outgoingUpdateType() const override;
     bool isReadyForSessionAccept() const override;
     QDomElement takeOutgoingUpdate() override;
-    QDomElement sessionAcceptContent() const override;
     bool wantBetterTransport(const QSharedPointer<XMPP::Jingle::Transport> &) const override;
     bool selectNextTransport() override;
     void prepare() override;
+    void start() override;
 
     bool isValid() const;
 
