@@ -74,6 +74,8 @@ public:
     quint16 port() const;
     void setPort(quint16 port);
 
+    QDomElement toXml(QDomDocument *doc) const;
+
 private:
     class Private;
     QSharedDataPointer<Private> d;

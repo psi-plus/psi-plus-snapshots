@@ -414,6 +414,11 @@ State Application::state() const
     return d->state;
 }
 
+void Application::setState(State state)
+{
+    d->state = state;
+}
+
 QString Application::contentName() const
 {
     return d->contentName;
@@ -467,6 +472,8 @@ Action Application::outgoingUpdateType() const
 {
     switch (d->state) {
     case State::Created:
+        break;
+    case State::PrepareLocalOffer:
         if (!d->transport && !d->availableTransports.size()) {
             break; // not yet ready
         }
@@ -488,14 +495,17 @@ bool Application::isReadyForSessionAccept() const
 
 QDomElement Application::takeOutgoingUpdate()
 {
+    if (!isValid() || d->state == State::Created) {
+        return QDomElement();
+    }
     if (d->state == State::Connecting || d->state == State::Active) {
         return d->transport->takeOutgoingUpdate();
     }
-    if (d->state == State::Created && isValid()) { // basically when we come to this function Created is possible only for outgoing content
+    if (d->state == State::PrepareLocalOffer) { // basically when we come to this function Created is possible only for outgoing content
         if (!d->transport && d->availableTransports.size()) {
             selectNextTransport();
         }
-        if (!d->transport) { // failed to select next transport. can't continue
+        if (!d->transport || d->transport->outgoingUpdateType() == Action::NoAction) { // failed to select next transport. can't continue
             return QDomElement();
         }
         auto client = d->pad->session()->manager()->client();
@@ -512,6 +522,8 @@ QDomElement Application::takeOutgoingUpdate()
         auto cel = cb.toXml(doc, "content");
         cel.appendChild(doc->createElementNS(NS, "description")).appendChild(d->file.toXml(doc));
         cel.appendChild(d->transport->takeOutgoingUpdate());
+
+        d->state = State::Unacked;
         return cel;
     }
     return QDomElement(); // TODO
@@ -540,6 +552,7 @@ void Application::prepare()
         selectNextTransport();
     }
     if (d->transport) {
+        d->state = State::PrepareLocalOffer;
         d->transport->prepare();
     }
 }
@@ -547,6 +560,7 @@ void Application::prepare()
 void Application::start()
 {
     if (d->transport) {
+        d->state = State::Active;
         d->transport->start();
     }
     // TODO we nedd QIODevice somewhere here

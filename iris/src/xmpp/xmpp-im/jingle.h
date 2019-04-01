@@ -46,10 +46,18 @@ enum class Origin {
     Responder
 };
 
+inline uint qHash(const XMPP::Jingle::Origin &o, uint seed = 0)
+{
+    return ::qHash(int(o), seed);
+}
+
 enum class State {
     Created,     // just after constructor
-    Pending,     // waits for session-accept or content-accept
-    Connecting,  // s5b/ice probes etc
+    PrepareLocalOffer, // content accepted by local user but we are not ready yet to send content-accept or session-accept.
+                       // same for content-add/session-initiate, where user already already sent/added in ui and it's network turn.
+    Unacked,     // local conten offer is sent to remote but no IQ ack yet
+    Pending,     // waits for session-accept or content-accept from remote
+    Connecting,  // s5b/ice probes etc (particular application state. can be omited for other entities)
     Active,      // active transfer. transport is connected
     Finished     // transfering is finished for whatever reason
 };
@@ -302,6 +310,7 @@ public:
 
     virtual ApplicationManagerPad::Ptr pad() const = 0;
     virtual State state() const = 0;
+    virtual void setState(State state) = 0; // likely just remember the state
 
     virtual Origin creator() const = 0;
     virtual Origin senders() const = 0;
@@ -338,14 +347,6 @@ class Session : public QObject
 public:
     // Note incoming session are not registered in Jingle Manager until validated.
     // and then either rejected or registered in Pending state.
-    enum State {
-        Starting,           // just created session
-        PrepapreLocalOffer, // user called session-initiate or session-accept but session is not yet ready to do this action
-        Unacked,            // session-initiate/accept is sent to remote but no IQ ack yet
-        Pending,            // wait for user confirmation either local or remote
-        Active,             // transfering data (including connection establishing)
-        Ended               // session-terminate sent or received
-    };
 
     Session(Manager *manager, const Jid &peer);
     ~Session();

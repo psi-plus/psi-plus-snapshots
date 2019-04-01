@@ -571,7 +571,7 @@ public:
     Session *q;
     Manager *manager;
     QTimer stepTimer;
-    Session::State state = Session::Starting;
+    State state = State::Created;
     Origin  role  = Origin::Initiator; // my role in the session
     XMPP::Stanza::Error lastError;
     Reason terminateReason;
@@ -616,7 +616,7 @@ public:
                     planStep();
                 }
             } else {
-                state = Session::Ended;
+                state = State::Finished;
                 lastError = jt->error();
                 emit q->terminated();
                 q->deleteLater();
@@ -642,11 +642,15 @@ public:
         QList<QDomElement> contents;
         for (const auto &p: contentList) {
             contents.append(p->takeOutgoingUpdate());
+            p->setState(State::Unacked);
         }
-        state = Session::Unacked;
+        state = State::Unacked;
         sid = manager->generateSessionId(otherParty);
         sendJingle(Action::SessionInitiate, contents, [this](){
-            state = Session::Pending;
+            state = State::Pending;
+            for (const auto &p: contentList) {
+                p->setState(state);
+            }
             planStep();
         });
     }
@@ -656,10 +660,14 @@ public:
         QList<QDomElement> contents;
         for (const auto &p: contentList) {
             contents.append(p->takeOutgoingUpdate());
+            p->setState(State::Unacked);
         }
-        state = Session::Unacked;
+        state = State::Unacked;
         sendJingle(Action::SessionAccept, contents, [this](){
-            state = Session::Active;
+            state = State::Active;
+            for (const auto &p: contentList) {
+                p->setState(state);
+            }
             emit q->activated();
             planStep();
         });
@@ -669,24 +677,24 @@ public:
         if (waitingAck) { // we will return here when ack is received. Session::Unacked is possible also only with waitingAck
             return;
         }
-        if (terminateReason.condition() && state != Session::Ended) {
-            if (state != Session::Starting || role == Origin::Responder) {
+        if (terminateReason.condition() && state != State::Finished) {
+            if (state != State::Created || role == Origin::Responder) {
                 sendJingle(Action::SessionTerminate, QList<QDomElement>() << terminateReason.toXml(manager->client()->doc()));
             }
-            state = Session::Ended;
+            state = State::Finished;
             q->deleteLater();
             emit q->terminated();
             return;
         }
-        if (state == Session::Starting || state == Session::Ended) {
+        if (state == State::Created || state == State::Finished) {
             return; // we will start doing something when initiate() is called
         }
-        if (state == Session::PrepapreLocalOffer) {
+        if (state == State::PrepareLocalOffer) {
             for (const auto &c: contentList) {
                 auto out = c->outgoingUpdateType();
                 if (out == Action::ContentReject) { // yeah we are rejecting local content. invalid?
                     lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
-                    state = Session::Ended;
+                    state = State::Finished;
                     q->deleteLater();
                     emit q->terminated();
                     return;
@@ -821,7 +829,7 @@ Manager *Session::manager() const
     return d->manager;
 }
 
-Session::State Session::state() const
+State Session::state() const
 {
     return d->state;
 }
@@ -873,7 +881,7 @@ Application *Session::content(const QString &contentName, Origin creator)
 void Session::addContent(Application *content)
 {
     d->contentList.insert(ContentKey{content->contentName(), d->role}, content);
-    if (d->state != Session::Starting && content->outgoingUpdateType() != Action::NoAction) {
+    if (d->state != State::Created && content->outgoingUpdateType() != Action::NoAction) {
         d->signalingContent.insert(content);
     }
     connect(content, &Application::updated, this, [this](){
@@ -945,8 +953,8 @@ void Session::setLocalJid(const Jid &jid)
 void Session::accept()
 {
     // So we presented a user incoming session in UI, the user modified it somehow and finally accepted.
-    if (d->role == Origin::Responder && d->state == Starting) {
-        d->state = PrepapreLocalOffer;
+    if (d->role == Origin::Responder && d->state == State::Created) {
+        d->state = State::PrepareLocalOffer;
         for (auto &c: d->contentList) {
             c->prepare();
         }
@@ -956,8 +964,8 @@ void Session::accept()
 
 void Session::initiate()
 {
-    if (d->role == Origin::Initiator && d->state == Starting) {
-        d->state = PrepapreLocalOffer;
+    if (d->role == Origin::Initiator && d->state == State::Created) {
+        d->state = State::PrepareLocalOffer;
         for (auto &c: d->contentList) {
             c->prepare();
         }

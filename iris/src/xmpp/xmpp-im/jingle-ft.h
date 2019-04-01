@@ -118,6 +118,7 @@ public:
 
     ApplicationManagerPad::Ptr pad() const override;
     State state() const override;
+    void setState(State state) override;
 
     QString contentName() const override;
     Origin creator() const override;

@@ -156,6 +156,26 @@ void Candidate::setPort(quint16 port)
     d->port = port;
 }
 
+QDomElement Candidate::toXml(QDomDocument *doc) const
+{
+    auto e = doc->createElement(QStringLiteral("candidate"));
+    e.setAttribute(QStringLiteral("cid"), d->cid);
+    if (d->type == Proxy) {
+        e.setAttribute(QStringLiteral("jid"), d->jid.full());
+    }
+    if (!d->host.isEmpty() && d->port) {
+        e.setAttribute(QStringLiteral("host"), d->host);
+        e.setAttribute(QStringLiteral("port"), d->port);
+    }
+    e.setAttribute(QStringLiteral("priority"), d->priority);
+
+    static const char *types[] = {"proxy", "tunnel", "assisted"}; // same order as in enum
+    if (d->type && d->type < Direct) {
+        e.setAttribute(QStringLiteral("type"), QLatin1String(types[d->type - 1]));
+    }
+    return e;
+}
+
 class Transport::Private {
 public:
     Transport *q;
@@ -165,6 +185,7 @@ public:
     QMap<QString,Candidate> localCandidates; // cid to candidate mapping
     QList<Candidate> pendingLocalCandidates; // not yet sent to remote
     QMap<QString,Candidate> remoteCandidates;
+    QSet<QPair<QString,Origin>> signalingCandidates; // origin here is session role. so for remote it's != session->role
     QString dstaddr;
     QString sid;
     Transport::Mode mode = Transport::Tcp;
@@ -320,6 +341,10 @@ void Transport::prepare()
         }
     });
 
+    for (auto const &c: d->localCandidates) {
+        d->signalingCandidates.insert(QPair<QString,Origin>{c.cid(),d->pad->session()->role()});
+    }
+
     // TODO nat-assisted candidates..
     emit updated();
 }
@@ -346,41 +371,55 @@ bool Transport::update(const QDomElement &transportEl)
 
 Action Transport::outgoingUpdateType() const
 {
+    if (isValid() && d->application) {
+        // if we are preparing local offer and have at least one candidate, we have to sent it.
+        // otherwise it's not first update to remote from this transport, so we have to send just signalling candidates
+        if ((d->application->state() == State::PrepareLocalOffer && d->localCandidates.size()) ||
+                (d->application->state() > State::PrepareLocalOffer && d->application->state() < State::Finished &&
+                 !d->signalingCandidates.isEmpty()))
+        {
+            return Action::TransportInfo;
+        }
+    }
     return Action::NoAction; // TODO
 }
 
 QDomElement Transport::takeOutgoingUpdate()
 {
+    QDomElement tel;
     if (!isValid() || !d->application) {
-        return QDomElement();
+        return tel;
     }
-    if (d->application->creator() == d->pad->session()->role()) { // I'm the creator
-        if (d->application->state() == State::Created) {
-            auto doc = d->pad->session()->manager()->client()->doc();
-            auto tel = doc->createElementNS(NS, "transport");
-            tel.setAttribute(QStringLiteral("sid"), d->sid);
-            if (d->mode != Tcp) {
-                tel.setAttribute(QStringLiteral("mode"), "udp");
-            }
-            bool useProxy = false;
-            for (auto const &c: d->localCandidates) {
-                if (c.type() == Candidate::Proxy) {
-                    useProxy = true;
-                    break;
-                }
-            }
-            if (useProxy) {
-                QString dstaddr = QCryptographicHash::hash((d->sid +
-                                                            d->pad->session()->me().full() +
-                                                            d->pad->session()->peer().full()).toUtf8(),
-                                                           QCryptographicHash::Sha1);
-                tel.setAttribute(QStringLiteral("dstaddr"), dstaddr);
-            }
+
+    auto appState = d->application->state();
+    auto sessRole = d->pad->session()->role();
+    auto doc = d->pad->session()->manager()->client()->doc();
+
+    if (appState == State::PrepareLocalOffer && !d->localCandidates.isEmpty()) {
+        tel = doc->createElementNS(NS, "transport");
+        tel.setAttribute(QStringLiteral("sid"), d->sid);
+        if (d->mode != Tcp) {
+            tel.setAttribute(QStringLiteral("mode"), "udp");
         }
-    } else {
-        // handle pendingLocalCandidates
+        bool useProxy = false;
+        for (auto const &c: d->localCandidates) {
+            if (c.type() == Candidate::Proxy) {
+                useProxy = true;
+            }
+            if (!c.host().isEmpty()) {
+                tel.appendChild(c.toXml(doc));
+            }
+            d->signalingCandidates.remove(QPair<QString,Origin>{c.cid(),sessRole});
+        }
+        if (useProxy) {
+            QString dstaddr = QCryptographicHash::hash((d->sid +
+                                                        d->pad->session()->me().full() +
+                                                        d->pad->session()->peer().full()).toUtf8(),
+                                                       QCryptographicHash::Sha1);
+            tel.setAttribute(QStringLiteral("dstaddr"), dstaddr);
+        }
     }
-    return QDomElement(); // TODO
+    return tel; // TODO
 }
 
 bool Transport::isValid() const
