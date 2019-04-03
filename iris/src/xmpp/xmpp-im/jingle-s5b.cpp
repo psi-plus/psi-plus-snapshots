@@ -56,7 +56,7 @@ Candidate::Candidate(const QDomElement &el)
     if (priorityStr.isEmpty()) {
         return;
     }
-    quint16 priority = priorityStr.toUShort(&ok);
+    quint32 priority = priorityStr.toUInt(&ok);
     if (!ok) {
         return; // make the whole candidate invalid
     }
@@ -66,6 +66,9 @@ Candidate::Candidate(const QDomElement &el)
     }
 
     QString ct = el.attribute(QStringLiteral("type"));
+    if (ct.isEmpty()) {
+        ct = QStringLiteral("direct");
+    }
     static QMap<QString,Type> types{{QStringLiteral("assisted"), Assisted},
                                     {QStringLiteral("direct"),   Direct},
                                     {QStringLiteral("proxy"),    Proxy},

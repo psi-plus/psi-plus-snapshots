@@ -87,6 +87,7 @@ File::File(const QDomElement &file)
     QString   name;
     QString   desc;
     size_t    size = 0;
+    bool      rangeSupported = false;
     Range     range;
     Hash      hash;
     Thumbnail thumbnail;
@@ -128,19 +129,19 @@ File::File(const QDomElement &file)
                 }
             }
             QDomElement hashEl = ce.firstChildElement(QLatin1String("hash"));
-            if (hashEl.namespaceURI() == QLatin1String("urn:xmpp:hashes:2")) {
+            if (hashEl.attribute(QStringLiteral("xmlns")) == QLatin1String("urn:xmpp:hashes:2")) {
                 range.hash = Hash(hashEl);
                 if (range.hash.type() == Hash::Type::Unknown) {
                     return;
                 }
             }
-            d->rangeSupported = true;
+            rangeSupported = true;
 
         } else if (ce.tagName() == QLatin1String("desc")) {
             desc = ce.text();
 
         } else if (ce.tagName() == QLatin1String("hash")) {
-            if (ce.namespaceURI() == QLatin1String(XMPP_HASH_NS)) {
+            if (ce.attribute(QStringLiteral("xmlns")) == QLatin1String(XMPP_HASH_NS)) {
                 hash = Hash(ce);
                 if (hash.type() == Hash::Type::Unknown) {
                     return;
@@ -148,7 +149,7 @@ File::File(const QDomElement &file)
             }
 
         } else if (ce.tagName() == QLatin1String("hash-used")) {
-            if (ce.namespaceURI() == QLatin1String(XMPP_HASH_NS)) {
+            if (ce.attribute(QStringLiteral("xmlns")) == QLatin1String(XMPP_HASH_NS)) {
                 hash = Hash(ce);
                 if (hash.type() == Hash::Type::Unknown) {
                     return;
@@ -166,6 +167,7 @@ File::File(const QDomElement &file)
     p->name = name;
     p->desc = desc;
     p->size = size;
+    p->rangeSupported = rangeSupported;
     p->range = range;
     p->hash = hash;
     p->thumbnail = thumbnail;
