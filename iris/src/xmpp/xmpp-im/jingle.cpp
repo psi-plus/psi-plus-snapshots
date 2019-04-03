@@ -894,6 +894,11 @@ void Session::addContent(Application *content)
     });
 }
 
+const QMap<ContentKey, Application *> &Session::contentList() const
+{
+    return d->contentList;
+}
+
 ApplicationManagerPad::Ptr Session::applicationPad(const QString &ns)
 {
     return d->applicationPads.value(ns).toStrongRef();

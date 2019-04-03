@@ -367,6 +367,7 @@ public:
     // get registered content if any
     Application *content(const QString &contentName, Origin creator);
     void addContent(Application *content);
+    const QMap<ContentKey,Application*> &contentList() const;
 
     ApplicationManagerPad::Ptr applicationPad(const QString &ns);
     TransportManagerPad::Ptr transportPad(const QString &ns);

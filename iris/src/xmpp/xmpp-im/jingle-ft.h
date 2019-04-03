@@ -125,6 +125,7 @@ public:
     Origin senders() const override;
     SetDescError setDescription(const QDomElement &description) override;
     void setFile(const File &file);
+    File file() const;
     bool setTransport(const QSharedPointer<Transport> &transport) override;
     QSharedPointer<Transport> transport() const override;
 

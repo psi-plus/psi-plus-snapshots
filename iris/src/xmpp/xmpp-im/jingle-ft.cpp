@@ -448,6 +448,11 @@ void Application::setFile(const File &file)
     d->file = file;
 }
 
+File Application::file() const
+{
+    return d->file;
+}
+
 // incoming one? or we have to check real direction
 bool Application::setTransport(const QSharedPointer<Transport> &transport)
 {
