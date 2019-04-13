@@ -1075,10 +1075,16 @@ public:
     Message::StanzaId stanzaId; // XEP-0359
 };
 
+#define MessageD() (d? d : (d = new Private))
 //! \brief Constructs Message with given Jid information.
 //!
 //! This function will construct a Message container.
 //! \param to - specify receiver (default: empty string)
+Message::Message()
+{
+
+}
+
 Message::Message(const Jid &to)
     : d(new Private)
 {
@@ -1116,46 +1122,46 @@ bool Message::operator==(const Message &from) const
 //! \brief Return receiver's Jid information.
 Jid Message::to() const
 {
-    return d->to;
+    return d? d->to: Jid();
 }
 
 //! \brief Return sender's Jid information.
 Jid Message::from() const
 {
-    return d->from;
+    return d? d->from: Jid();
 }
 
 QString Message::id() const
 {
-    return d->id;
+    return d? d->id: QString();
 }
 
 //! \brief Return type information
 QString Message::type() const
 {
-    return d->type;
+    return d? d->type: QString();
 }
 
 QString Message::lang() const
 {
-    return d->lang;
+    return d? d->lang: QString();
 }
 
 //! \brief Return subject information.
 QString Message::subject(const QString &lang) const
 {
-    return d->subject.value(lang);
+    return d? d->subject.value(lang): QString();
 }
 
 //! \brief Return subject information.
 QString Message::subject(const QLocale &lang) const
 {
-    return d->subject.value(lang.bcp47Name());
+    return d? d->subject.value(lang.bcp47Name()): QString();
 }
 
 StringMap Message::subjectMap() const
 {
-    return d->subject;
+    return d? d->subject: StringMap();
 }
 
 //! \brief Return body information.
@@ -1167,7 +1173,7 @@ StringMap Message::subjectMap() const
 //! \note Returns first body if not found by language.
 QString Message::body(const QString &lang) const
 {
-    if (d->body.empty())
+    if (!d || d->body.empty())
         return QString();
 
     auto it = d->body.constFind(lang);
@@ -1212,17 +1218,17 @@ HTMLElement Message::html(const QString &lang) const
 //! in the message.
 bool Message::containsHTML() const
 {
-    return !(d->htmlElements.isEmpty());
+    return d && !(d->htmlElements.isEmpty());
 }
 
 QString Message::thread() const
 {
-    return d->thread;
+    return d? d->thread: QString();
 }
 
 Stanza::Error Message::error() const
 {
-    return d->error;
+    return d? d->error: Stanza::Error();
 }
 
 //! \brief Set receivers information
@@ -1230,19 +1236,19 @@ Stanza::Error Message::error() const
 //! \param to - Receivers Jabber id
 void Message::setTo(const Jid &j)
 {
-    d->to = j;
+    MessageD()->to = j;
     //d->flag = false;
 }
 
 void Message::setFrom(const Jid &j)
 {
-    d->from = j;
+    MessageD()->from = j;
     //d->flag = false;
 }
 
 void Message::setId(const QString &s)
 {
-    d->id = s;
+    MessageD()->id = s;
 }
 
 //! \brief Set Type of message
@@ -1250,13 +1256,13 @@ void Message::setId(const QString &s)
 //! \param type - type of message your going to send
 void Message::setType(const QString &s)
 {
-    d->type = s;
+    MessageD()->type = s;
     //d->flag = false;
 }
 
 void Message::setLang(const QString &s)
 {
-    d->lang = s;
+    MessageD()->lang = s;
 }
 
 //! \brief Set subject
@@ -1264,7 +1270,7 @@ void Message::setLang(const QString &s)
 //! \param subject - Subject information
 void Message::setSubject(const QString &s, const QString &lang)
 {
-    d->subject[lang] = s;
+    MessageD()->subject[lang] = s;
     //d->flag = false;
 }
 
@@ -1275,7 +1281,7 @@ void Message::setSubject(const QString &s, const QString &lang)
 //! \note Richtext support will be implemented in the future... Sorry.
 void Message::setBody(const QString &s, const QString &lang)
 {
-    d->body[lang] = s;
+    MessageD()->body[lang] = s;
     //d->flag = false;
 }
 
@@ -1286,50 +1292,50 @@ void Message::setBody(const QString &s, const QString &lang)
 //! \note The body should be in xhtml.
 void Message::setHTML(const HTMLElement &e, const QString &lang)
 {
-    d->htmlElements[lang] = e;
+    MessageD()->htmlElements[lang] = e;
 }
 
 void Message::setThread(const QString &s, bool send)
 {
-    d->threadSend = send;
+    MessageD()->threadSend = send;
     d->thread = s;
 }
 
 void Message::setError(const Stanza::Error &err)
 {
-    d->error = err;
+    MessageD()->error = err;
 }
 
-const QString& Message::pubsubNode() const
+QString Message::pubsubNode() const
 {
-    return d->pubsubNode;
+    return d? d->pubsubNode: QString();
 }
 
-const QList<PubSubItem>& Message::pubsubItems() const
+QList<PubSubItem> Message::pubsubItems() const
 {
-    return d->pubsubItems;
+    return d? d->pubsubItems: QList<PubSubItem>();
 }
 
-const QList<PubSubRetraction>& Message::pubsubRetractions() const
+QList<PubSubRetraction> Message::pubsubRetractions() const
 {
-    return d->pubsubRetractions;
+    return d? d->pubsubRetractions: QList<PubSubRetraction>();
 }
 
 QDateTime Message::timeStamp() const
 {
-    return d->timeStamp;
+    return d? d->timeStamp: QDateTime();
 }
 
 void Message::setTimeStamp(const QDateTime &ts, bool send)
 {
-    d->timeStampSend = send;
+    MessageD()->timeStampSend = send;
     d->timeStamp = ts;
 }
 
 //! \brief Return list of urls attached to message.
 UrlList Message::urlList() const
 {
-    return d->urlList;
+    return d? d->urlList: UrlList();
 }
 
 //! \brief Add Url to the url list.
@@ -1337,13 +1343,15 @@ UrlList Message::urlList() const
 //! \param url - url to append
 void Message::urlAdd(const Url &u)
 {
-    d->urlList += u;
+    MessageD()->urlList += u;
 }
 
 //! \brief clear out the url list.
 void Message::urlsClear()
 {
-    d->urlList.clear();
+    if (d) {
+        d->urlList.clear();
+    }
 }
 
 //! \brief Set urls to send
@@ -1351,13 +1359,13 @@ void Message::urlsClear()
 //! \param urlList - list of urls to send
 void Message::setUrlList(const UrlList &list)
 {
-    d->urlList = list;
+    MessageD()->urlList = list;
 }
 
 //! \brief Return list of addresses attached to message.
 AddressList Message::addresses() const
 {
-    return d->addressList;
+    return d? d->addressList : AddressList();
 }
 
 //! \brief Add Address to the address list.
@@ -1365,17 +1373,22 @@ AddressList Message::addresses() const
 //! \param address - address to append
 void Message::addAddress(const Address &a)
 {
-    d->addressList += a;
+    MessageD()->addressList += a;
 }
 
 //! \brief clear out the address list.
 void Message::clearAddresses()
 {
-    d->addressList.clear();
+    if (d) {
+        d->addressList.clear();
+    }
 }
 
 AddressList Message::findAddresses(Address::Type t) const
 {
+    if (!d) {
+        return AddressList();
+    }
     AddressList matches;
     foreach(Address a, d->addressList) {
         if (a.type() == t)
@@ -1389,42 +1402,42 @@ AddressList Message::findAddresses(Address::Type t) const
 //! \param list - list of addresses to send
 void Message::setAddresses(const AddressList &list)
 {
-    d->addressList = list;
+    MessageD()->addressList = list;
 }
 
-const RosterExchangeItems& Message::rosterExchangeItems() const
+RosterExchangeItems Message::rosterExchangeItems() const
 {
-    return d->rosterExchangeItems;
+    return d? d->rosterExchangeItems : RosterExchangeItems();
 }
 
 void Message::setRosterExchangeItems(const RosterExchangeItems& items)
 {
-    d->rosterExchangeItems = items;
+    MessageD()->rosterExchangeItems = items;
 }
 
 QString Message::eventId() const
 {
-    return d->eventId;
+    return d? d->eventId: QString();
 }
 
 void Message::setEventId(const QString& id)
 {
-    d->eventId = id;
+    MessageD()->eventId = id;
 }
 
 bool Message::containsEvents() const
 {
-    return !d->eventList.isEmpty();
+    return d && !d->eventList.isEmpty();
 }
 
 bool Message::containsEvent(MsgEvent e) const
 {
-    return d->eventList.contains(e);
+    return d && d->eventList.contains(e);
 }
 
 void Message::addEvent(MsgEvent e)
 {
-    if (!d->eventList.contains(e)) {
+    if (!MessageD()->eventList.contains(e)) {
         if (e == CancelEvent || containsEvent(CancelEvent))
             d->eventList.clear(); // Reset list
         d->eventList += e;
@@ -1433,254 +1446,258 @@ void Message::addEvent(MsgEvent e)
 
 ChatState Message::chatState() const
 {
-    return d->chatState;
+    return d? d->chatState : StateNone;
 }
 
 void Message::setChatState(ChatState state)
 {
-    d->chatState = state;
+    MessageD()->chatState = state;
 }
 
 MessageReceipt Message::messageReceipt() const
 {
-    return d->messageReceipt;
+    return d? d->messageReceipt: ReceiptNone;
 }
 
 void Message::setMessageReceipt(MessageReceipt messageReceipt)
 {
-    d->messageReceipt = messageReceipt;
+    MessageD()->messageReceipt = messageReceipt;
 }
 
 QString Message::messageReceiptId() const
 {
-    return d->messageReceiptId;
+    return d? d->messageReceiptId: QString();
 }
 
 void Message::setMessageReceiptId(const QString &s)
 {
-    d->messageReceiptId = s;
+    MessageD()->messageReceiptId = s;
 }
 
 QString Message::xsigned() const
 {
-    return d->xsigned;
+    return d? d->xsigned: QString();
 }
 
 void Message::setXSigned(const QString &s)
 {
-    d->xsigned = s;
+    MessageD()->xsigned = s;
 }
 
 QString Message::xencrypted() const
 {
-    return d->xencrypted;
+    return d? d->xencrypted: QString();
 }
 
 void Message::setXEncrypted(const QString &s)
 {
-    d->xencrypted = s;
+    MessageD()->xencrypted = s;
 }
 
-const QList<int>& Message::getMUCStatuses() const
+QList<int> Message::getMUCStatuses() const
 {
-    return d->mucStatuses;
+    return d? d->mucStatuses: QList<int>();
 }
 
 void Message::addMUCStatus(int i)
 {
-    d->mucStatuses += i;
+    MessageD()->mucStatuses += i;
 }
 
 void Message::addMUCInvite(const MUCInvite& i)
 {
-    d->mucInvites += i;
+    MessageD()->mucInvites += i;
 }
 
-const QList<MUCInvite>& Message::mucInvites() const
+QList<MUCInvite> Message::mucInvites() const
 {
-    return d->mucInvites;
+    return d? d->mucInvites: QList<MUCInvite>();
 }
 
 void Message::setMUCDecline(const MUCDecline& de)
 {
-    d->mucDecline = de;
+    MessageD()->mucDecline = de;
 }
 
-const MUCDecline& Message::mucDecline() const
+MUCDecline Message::mucDecline() const
 {
-    return d->mucDecline;
+    return d? d->mucDecline: MUCDecline();
 }
 
-const QString& Message::mucPassword() const
+QString Message::mucPassword() const
 {
-    return d->mucPassword;
+    return d? d->mucPassword: QString();
 }
 
 void Message::setMUCPassword(const QString& p)
 {
-    d->mucPassword = p;
+    MessageD()->mucPassword = p;
 }
 
 bool Message::hasMUCUser() const
 {
-    return d->hasMUCUser;
+    return d & d->hasMUCUser;
 }
 
 Message::StanzaId Message::stanzaId() const
 {
-    return d->stanzaId;
+    return d? d->stanzaId: StanzaId();
 }
 
 void Message::setStanzaId(const Message::StanzaId &id)
 {
-    d->stanzaId = id;
+    MessageD()->stanzaId = id;
 }
 
 QString Message::originId() const
 {
-    return d->originId;
+    return d? d->originId: QString();
 }
 
 void Message::setOriginId(const QString &id)
 {
-    d->originId = id;
+    MessageD()->originId = id;
 }
 
 QString Message::invite() const
 {
-    return d->invite;
+    return d? d->invite: QString();
 }
 
 void Message::setInvite(const QString &s)
 {
-    d->invite = s;
+    MessageD()->invite = s;
 }
 
-const QString& Message::nick() const
+QString Message::nick() const
 {
-    return d->nick;
+    return d? d->nick: QString();
 }
 
 void Message::setNick(const QString& n)
 {
-    d->nick = n;
+    MessageD()->nick = n;
 }
 
 void Message::setHttpAuthRequest(const HttpAuthRequest &req)
 {
-    d->httpAuthRequest = req;
+    MessageD()->httpAuthRequest = req;
 }
 
 HttpAuthRequest Message::httpAuthRequest() const
 {
-    return d->httpAuthRequest;
+    return d? d->httpAuthRequest: HttpAuthRequest();
 }
 
 void Message::setForm(const XData &form)
 {
-    d->xdata = form;
+    MessageD()->xdata = form;
 }
 
-const XData& Message::getForm() const
+XData Message::getForm() const
 {
-    return d->xdata;
+    return d? d->xdata: XData();
 }
 
-const QDomElement& Message::sxe() const
+QDomElement Message::sxe() const
 {
-    return d->sxe;
+    return d? d->sxe: QDomElement();
 }
 
 void Message::setSxe(const QDomElement& e)
 {
-    d->sxe = e;
+    MessageD()->sxe = e;
 }
 
 void Message::addBoBData(const BoBData &bob)
 {
-    d->bobDataList.append(bob);
+    MessageD()->bobDataList.append(bob);
 }
 
 QList<BoBData> Message::bobDataList() const
 {
-    return d->bobDataList;
+    return d? d->bobDataList: QList<BoBData>();
 }
 
-const IBBData& Message::ibbData() const
+IBBData Message::ibbData() const
 {
-    return d->ibbData;
+    return d? d->ibbData: IBBData();
 }
 
 void Message::setDisabledCarbons(bool disabled)
 {
-    d->isDisabledCarbons = disabled;
+    MessageD()->isDisabledCarbons = disabled;
 }
 
 bool Message::isDisabledCarbons() const
 {
-    return d->isDisabledCarbons;
+    return d && d->isDisabledCarbons;
 }
 
 void Message::setCarbonDirection(Message::CarbonDir cd)
 {
-    d->carbonDir = cd;
+    MessageD()->carbonDir = cd;
 }
 
 Message::CarbonDir Message::carbonDirection() const
 {
-    return d->carbonDir;
+    return d? d->carbonDir: NoCarbon;
 }
 
 void Message::setForwardedFrom(const Jid &jid)
 {
-    d->forwardedFrom = jid;
+    MessageD()->forwardedFrom = jid;
 }
 
-const Jid &Message::forwardedFrom() const
+Jid Message::forwardedFrom() const
 {
-    return d->forwardedFrom;
+    return d? d->forwardedFrom: Jid();
 }
 
 bool Message::spooled() const
 {
-    return d->spooled;
+    return d && d->spooled;
 }
 
 void Message::setSpooled(bool b)
 {
-    d->spooled = b;
+    MessageD()->spooled = b;
 }
 
 bool Message::wasEncrypted() const
 {
-    return d->wasEncrypted;
+    return d && d->wasEncrypted;
 }
 
 void Message::setWasEncrypted(bool b)
 {
-    d->wasEncrypted = b;
+    MessageD()->wasEncrypted = b;
 }
 
 QString Message::replaceId() const {
-    return d->replaceId;
+    return d? d->replaceId: QString();
 }
 
-void Message::setReplaceId(const QString& id) {
-    d->replaceId = id;
+void Message::setReplaceId(const QString& id)
+{
+    MessageD()->replaceId = id;
 }
 
 void Message::setProcessingHints(const ProcessingHints &hints)
 {
-    d->processingHints = hints;
+    MessageD()->processingHints = hints;
 }
 
 Message::ProcessingHints Message::processingHints() const
 {
-    return d->processingHints;
+    return d? d->processingHints: ProcessingHints();
 }
 
 Stanza Message::toStanza(Stream *stream) const
 {
+    if (!d) {
+        return Stanza();
+    }
     Stanza s = stream->createStanza(Stanza::Message, d->to, d->type);
     if(!d->from.isEmpty())
         s.setFrom(d->from);
@@ -1977,6 +1994,7 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
     if(s.kind() != Stanza::Message)
         return false;
 
+    d = new Private;
     setTo(s.to());
     setFrom(s.from());
     setId(s.id());

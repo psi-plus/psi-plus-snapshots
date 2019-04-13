@@ -60,12 +60,40 @@ public:
         DirectPreference = 126
     };
 
+    /**
+     * Local candidates states:
+     *   Probing      - potential candidate but no ip:port yet. upnp for example
+     *   New          - candidate is ready to be sent to remote
+     *   Unacked      - candidate is sent to remote but no iq ack yet
+     *   Pending      - canidate sent to remote. we have iq ack but no "used" or "error"
+     *   Accepted     - we got "candidate-used" for this candidate
+     *   Discarded    - we got "candidate-error" so all pending were marked Discarded
+     *
+     * Remote candidates states:
+     *   New          - the candidate waits its turn to start connection probing
+     *   Probing      - connection probing
+     *   Pending      - connection was successful, but we didn't send candidate-used to remote
+     *   Unacked      - connection was successful and we sent candidate-used to remote but no iq ack yet
+     *   Accepted     - we sent candidate-used and got iq ack
+     *   Discarded    - failed to connect to all remote candidates
+     */
+    enum State {
+        New,
+        Probing,
+        Pending,
+        Unacked,
+        Accepted,
+        Discarded,
+    };
+
+    Candidate();
     Candidate(const QDomElement &el);
     Candidate(const Candidate &other);
-    Candidate(const Jid &proxy, const QString &cid);
+    Candidate(const Jid &proxy, const QString &cid, quint16 localPreference = 0);
     Candidate(const QString &host, quint16 port, const QString &cid, Type type, quint16 localPreference = 0);
     ~Candidate();
     inline bool isValid() const { return d != nullptr; }
+    inline operator bool() const { return isValid(); }
     Type type() const;
     QString cid() const;
     Jid jid() const;
@@ -73,12 +101,15 @@ public:
     void setHost(const QString &host);
     quint16 port() const;
     void setPort(quint16 port);
+    State state() const;
+    void setState(State s);
+    quint32 priority() const;
 
     QDomElement toXml(QDomDocument *doc) const;
 
 private:
     class Private;
-    QSharedDataPointer<Private> d;
+    QExplicitlySharedDataPointer<Private> d;
 };
 
 class Manager;
@@ -102,7 +133,7 @@ public:
     void start() override;
     bool update(const QDomElement &transportEl) override;
     Action outgoingUpdateType() const override;
-    QDomElement takeOutgoingUpdate() override;
+    OutgoingUpdate takeOutgoingUpdate() override;
     bool isValid() const override;
     Features features() const override;
 

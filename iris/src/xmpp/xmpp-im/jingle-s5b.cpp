@@ -23,6 +23,8 @@
 #include "xmpp_client.h"
 #include "xmpp_serverinfomanager.h"
 
+#include <QTimer>
+
 namespace XMPP {
 namespace Jingle {
 namespace S5B {
@@ -36,8 +38,14 @@ public:
     Jid jid;
     quint16 port;
     quint32 priority;
-    Candidate::Type type;
+    Candidate::Type type = Candidate::Direct;
+    Candidate::State state = Candidate::New;
 };
+
+Candidate::Candidate()
+{
+
+}
 
 Candidate::Candidate(const QDomElement &el)
 {
@@ -86,6 +94,7 @@ Candidate::Candidate(const QDomElement &el)
     d->port = port;
     d->priority = priority;
     d->type = candidateType;
+    d->state = New;
     this->d = d;
 }
 
@@ -95,13 +104,14 @@ Candidate::Candidate(const Candidate &other) :
 
 }
 
-Candidate::Candidate(const Jid &proxy, const QString &cid) :
+Candidate::Candidate(const Jid &proxy, const QString &cid, quint16 localPreference) :
     d(new Private)
 {
     d->cid = cid;
     d->jid = proxy;
-    d->priority = ProxyPreference << 16;
+    d->priority = (ProxyPreference << 16) + localPreference;
     d->type = Proxy;
+    d->state = Probing;
 }
 
 Candidate::Candidate(const QString &host, quint16 port, const QString &cid, Type type, quint16 localPreference) :
@@ -117,6 +127,7 @@ Candidate::Candidate(const QString &host, quint16 port, const QString &cid, Type
     } else {
         d->priority = 0;
     }
+    d->state = New;
 }
 
 Candidate::~Candidate()
@@ -159,6 +170,21 @@ void Candidate::setPort(quint16 port)
     d->port = port;
 }
 
+Candidate::State Candidate::state() const
+{
+    return d->state;
+}
+
+void Candidate::setState(Candidate::State s)
+{
+    d->state = s;
+}
+
+quint32 Candidate::priority() const
+{
+    return d->priority;
+}
+
 QDomElement Candidate::toXml(QDomDocument *doc) const
 {
     auto e = doc->createElement(QStringLiteral("candidate"));
@@ -179,16 +205,23 @@ QDomElement Candidate::toXml(QDomDocument *doc) const
     return e;
 }
 
-class Transport::Private {
+class Transport::Private : public QSharedData {
 public:
-    Transport *q;
+    Transport *q = NULL;
     Pad::Ptr pad;
     bool aborted = false;
+    bool signalNegotiated = false;
+    bool remoteReportedCandidateError = false;
+    bool localReportedCandidateError = false;
+    bool proxyDiscoveryInProgress = false;
+    int proxiesInDiscoCount = 0;
     Application *application = nullptr;
     QMap<QString,Candidate> localCandidates; // cid to candidate mapping
     QList<Candidate> pendingLocalCandidates; // not yet sent to remote
     QMap<QString,Candidate> remoteCandidates;
     QSet<QPair<QString,Origin>> signalingCandidates; // origin here is session role. so for remote it's != session->role
+    Candidate localUsedCandidate; // we received "candidate-used" for this candidate
+    Candidate remoteUsedCandidate;
     QString dstaddr;
     QString sid;
     Transport::Mode mode = Transport::Tcp;
@@ -238,6 +271,48 @@ public:
         }
         pendingLocalCandidates.append(c);
         emit q->updated();
+    }
+
+    void updateSelfState()
+    {
+        // TODO code below is from handler of "candidate-used". it has to be updated
+        bool hasMoreCandidates = false;
+        for (auto &c: localCandidates) {
+            auto s = c.state();
+            if (s < Candidate::Pending && c.priority() > localUsedCandidate.priority()) {
+                hasMoreCandidates = true;
+                continue; // we have more high priority candidates to be handled by remote
+            }
+            c.setState(Candidate::Discarded);
+        }
+
+        if (hasMoreCandidates) {
+            return;
+        }
+
+        // let's check remote candidates too before we decide to use this local candidate
+        for (auto &c: remoteCandidates) {
+            auto s = c.state();
+            if (c.priority() > localUsedCandidate.priority() && (s == Candidate::Pending ||
+                                                    s == Candidate::Probing ||
+                                                    s == Candidate::New)) {
+                hasMoreCandidates = true;
+                continue; // we have more high priority candidates to be handled by remote
+            } else if (c.priority() == localUsedCandidate.priority() && s == Candidate::Unacked &&
+                       pad->session()->role() == Origin::Initiator) {
+                hasMoreCandidates = true;
+                continue; // see 2.4 Completing the Negotiation (p.4)
+            }
+            c.setState(Candidate::Discarded); // TODO stop any probing as well
+        }
+
+        if (hasMoreCandidates) {
+            return;
+        }
+
+        // seems like we don't have better candidates,
+        // so we are going to use the d->localUsedCandidate
+        signalNegotiated = true;
     }
 };
 
@@ -304,12 +379,13 @@ void Transport::prepare()
         }
     }
 
+    d->proxyDiscoveryInProgress = true;
     QList<QSet<QString>> featureOptions = {{"http://jabber.org/protocol/bytestreams"}};
     d->pad->session()->manager()->client()->serverInfoManager()->
             queryServiceInfo(QStringLiteral("proxy"),
                              QStringLiteral("bytestreams"),
                              featureOptions,
-                             QRegExp("proxy|socks.*|stream.*"),
+                             QRegExp("proxy.*|socks.*|stream.*|s5b.*"),
                              ServerInfoManager::SQ_CheckAllOnNoMatch,
                              [this](const QList<DiscoItem> &items)
     {
@@ -317,16 +393,23 @@ void Transport::prepare()
         Jid userProxy = m->userProxy();
 
         // queries proxy's host/port and sends the candidate to remote
-        auto queryProxy = [this](const Jid &j) {
+        auto queryProxy = [this](const Jid &j, const QString &cid) {
+            d->proxiesInDiscoCount++;
             auto query = new JT_S5B(d->pad->session()->manager()->client()->rootTask());
-            connect(query, &JT_S5B::finished, this, [this,query](){
+            connect(query, &JT_S5B::finished, this, [this,query,cid](){
                 if (query->success()) {
                     auto sh = query->proxyInfo();
-                    Candidate c(sh.jid(), d->generateCid());
-                    c.setHost(sh.host());
-                    c.setPort(sh.port());
-                    d->sendLocalCandidate(c);
+                    auto c = d->localCandidates.value(cid);
+                    if (c && c.state() == Candidate::Probing) {
+                        c.setHost(sh.host());
+                        c.setPort(sh.port());
+                    }
                 }
+                d->proxiesInDiscoCount--;
+                if (!d->proxiesInDiscoCount) {
+                    d->proxyDiscoveryInProgress = false;
+                }
+                d->updateSelfState();
             });
             query->requestProxyInfo(j);
             query->go(true);
@@ -334,13 +417,24 @@ void Transport::prepare()
 
         bool userProxyFound = !userProxy.isValid();
         for (const auto i: items) {
+            int localPref = 0;
             if (!userProxyFound && i.jid() == userProxy) {
+                localPref = 1;
                 userProxyFound = true;
             }
-            queryProxy(i.jid());
+            Candidate c(i.jid(), d->generateCid(), localPref);
+            d->localCandidates.insert(c.cid(), c);
+
+            queryProxy(i.jid(), c.cid());
         }
         if (!userProxyFound) {
-            queryProxy(userProxy);
+            Candidate c(userProxy, d->generateCid(), 1);
+            d->localCandidates.insert(c.cid(), c);
+            queryProxy(userProxy, c.cid());
+        } else if (items.count() == 0) {
+            // seems like we don't have any proxy
+            d->proxyDiscoveryInProgress = false;
+            d->updateSelfState();
         }
     });
 
@@ -363,12 +457,28 @@ bool Transport::update(const QDomElement &transportEl)
     for(QDomElement ce = transportEl.firstChildElement(contentTag);
         !ce.isNull(); ce = ce.nextSiblingElement(contentTag)) {
         Candidate c(ce);
-        if (!c.isValid()) {
+        if (!c) {
             return false;
         }
         d->remoteCandidates.insert(c.cid(), c); // TODO check for collisions!
     }
-    // TODO handle "candidate-used" and "activted"
+    QDomElement cUsedEl = transportEl.firstChildElement(QStringLiteral("candidate-used"));
+    if (!cUsedEl.isNull()) {
+        auto cUsed = d->localCandidates.value(cUsedEl.attribute(QStringLiteral("cid")));
+        if (!cUsed) {
+            return false;
+        }
+        cUsed.setState(Candidate::Accepted);
+        d->localUsedCandidate = cUsed;
+        cUsed.setState(Candidate::Accepted);
+        QTimer::singleShot(0, this, [this](){ d->updateSelfState(); });
+    }
+    QDomElement cErrEl = transportEl.firstChildElement(QStringLiteral("candidate-error"));
+    if (!cUsedEl.isNull()) {
+        d->remoteReportedCandidateError = true;
+        QTimer::singleShot(0, this, [this](){ d->updateSelfState(); });
+    }
+    // TODO handle "activted", "proxy-error"
     return true;
 }
 
@@ -387,32 +497,35 @@ Action Transport::outgoingUpdateType() const
     return Action::NoAction; // TODO
 }
 
-QDomElement Transport::takeOutgoingUpdate()
+OutgoingUpdate Transport::takeOutgoingUpdate()
 {
-    QDomElement tel;
-    if (!isValid() || !d->application) {
-        return tel;
+    OutgoingUpdate upd;
+    State appState;
+    if (!isValid() || !d->application || (appState = d->application->state()) == State::Finished) {
+        return upd;
     }
 
-    auto appState = d->application->state();
     auto sessRole = d->pad->session()->role();
     auto doc = d->pad->session()->manager()->client()->doc();
 
     if (appState == State::PrepareLocalOffer && !d->localCandidates.isEmpty()) {
-        tel = doc->createElementNS(NS, "transport");
+        QDomElement tel = doc->createElementNS(NS, "transport");
         tel.setAttribute(QStringLiteral("sid"), d->sid);
         if (d->mode != Tcp) {
             tel.setAttribute(QStringLiteral("mode"), "udp");
         }
         bool useProxy = false;
-        for (auto const &c: d->localCandidates) {
+        QList<Candidate> candidatesToSend;
+        for (auto &c: d->localCandidates) {
             if (c.type() == Candidate::Proxy) {
                 useProxy = true;
             }
             if (!c.host().isEmpty()) {
                 tel.appendChild(c.toXml(doc));
             }
+            candidatesToSend.append(c);
             d->signalingCandidates.remove(QPair<QString,Origin>{c.cid(),sessRole});
+            c.setState(Candidate::Unacked);
         }
         if (useProxy) {
             QString dstaddr = QCryptographicHash::hash((d->sid +
@@ -421,8 +534,13 @@ QDomElement Transport::takeOutgoingUpdate()
                                                        QCryptographicHash::Sha1);
             tel.setAttribute(QStringLiteral("dstaddr"), dstaddr);
         }
+        OutgoingUpdate{tel, [this, candidatesToSend]() mutable {
+                for (auto &c: candidatesToSend) {
+                    c.setState(Candidate::Pending);
+                }
+            }}; // FIXME we should update candidates status here
     }
-    return tel; // TODO
+    return upd; // TODO
 }
 
 bool Transport::isValid() const

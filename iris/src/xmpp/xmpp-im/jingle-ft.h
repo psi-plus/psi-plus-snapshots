@@ -130,8 +130,7 @@ public:
     QSharedPointer<Transport> transport() const override;
 
     Action outgoingUpdateType() const override;
-    bool isReadyForSessionAccept() const override;
-    QDomElement takeOutgoingUpdate() override;
+    OutgoingUpdate takeOutgoingUpdate() override;
     bool wantBetterTransport(const QSharedPointer<XMPP::Jingle::Transport> &) const override;
     bool selectNextTransport() override;
     void prepare() override;

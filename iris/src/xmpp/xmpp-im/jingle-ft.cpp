@@ -439,7 +439,7 @@ Origin Application::senders() const
 Application::SetDescError Application::setDescription(const QDomElement &description)
 {
     d->file = File(description.firstChildElement("file"));
-    d->state = State::Pending; // basically it's incomming  content. so if we parsed it it's pending. if not parsed if will rejected anyway.
+    //d->state = State::Pending; // basically it's incomming  content. so if we parsed it it's pending. if not parsed if will rejected anyway.
     return d->file.isValid()? Ok: Unparsed;
 }
 
@@ -495,15 +495,10 @@ Action Application::outgoingUpdateType() const
     return Action::NoAction; // TODO
 }
 
-bool Application::isReadyForSessionAccept() const
-{
-    return d->state == State::Pending; // check direction as well?
-}
-
-QDomElement Application::takeOutgoingUpdate()
+OutgoingUpdate Application::takeOutgoingUpdate()
 {
     if (!isValid() || d->state == State::Created) {
-        return QDomElement();
+        return OutgoingUpdate();
     }
     if (d->state == State::Connecting || d->state == State::Active) {
         return d->transport->takeOutgoingUpdate();
@@ -513,7 +508,7 @@ QDomElement Application::takeOutgoingUpdate()
             selectNextTransport();
         }
         if (!d->transport || d->transport->outgoingUpdateType() == Action::NoAction) { // failed to select next transport. can't continue
-            return QDomElement();
+            return OutgoingUpdate();
         }
         auto client = d->pad->session()->manager()->client();
         if (d->file.thumbnail().data.size()) {
@@ -528,12 +523,20 @@ QDomElement Application::takeOutgoingUpdate()
         cb.senders = d->senders;
         auto cel = cb.toXml(doc, "content");
         cel.appendChild(doc->createElementNS(NS, "description")).appendChild(d->file.toXml(doc));
-        cel.appendChild(d->transport->takeOutgoingUpdate());
+        QDomElement tel;
+        OutgoingUpdateCB trCallback;
+        std::tie(tel, trCallback) = d->transport->takeOutgoingUpdate();
+        cel.appendChild(tel);
 
         d->state = State::Unacked;
-        return cel;
+        return OutgoingUpdate{cel, [this, trCallback](){
+                if (trCallback) {
+                    trCallback();
+                }
+                d->state = d->pad->session()->role() == Origin::Initiator? State::Pending : State::Active;
+            }};
     }
-    return QDomElement(); // TODO
+    return OutgoingUpdate(); // TODO
 }
 
 bool Application::wantBetterTransport(const QSharedPointer<Transport> &t) const

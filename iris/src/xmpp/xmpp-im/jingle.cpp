@@ -638,43 +638,6 @@ public:
         }
     }
 
-    // come here from doStep. in other words it's safe to not check current state.
-    void sendSessionInitiate()
-    {
-        QList<QDomElement> contents;
-        for (const auto &p: contentList) {
-            contents.append(p->takeOutgoingUpdate());
-            p->setState(State::Unacked);
-        }
-        state = State::Unacked;
-        sid = manager->generateSessionId(otherParty);
-        sendJingle(Action::SessionInitiate, contents, [this](){
-            state = State::Pending;
-            for (const auto &p: contentList) {
-                p->setState(state);
-            }
-            planStep();
-        });
-    }
-
-    void sendSessionAccept()
-    {
-        QList<QDomElement> contents;
-        for (const auto &p: contentList) {
-            contents.append(p->takeOutgoingUpdate());
-            p->setState(State::Unacked);
-        }
-        state = State::Unacked;
-        sendJingle(Action::SessionAccept, contents, [this](){
-            state = State::Active;
-            for (const auto &p: contentList) {
-                p->setState(state);
-            }
-            emit q->activated();
-            planStep();
-        });
-    }
-
     void doStep() {
         if (waitingAck) { // we will return here when ack is received. Session::Unacked is possible also only with waitingAck
             return;
@@ -691,8 +654,22 @@ public:
         if (state == State::Created || state == State::Finished) {
             return; // we will start doing something when initiate() is called
         }
-        if (state == State::PrepareLocalOffer) {
+        typedef std::tuple<QPointer<Application>,OutgoingUpdateCB> AckHndl; // will be used from callback on iq ack
+        if (state == State::PrepareLocalOffer) { // we are going to send session-initiate/accept (already accepted by the user but not sent yet)
+            /*
+             * For session-initiate everything is prety much straightforward, just any content with Action::ContentAdd
+             * update type has to be added. But with session-accept things are more complicated
+             *   1. Local client could add its content. So we have to check content origin too.
+             *   2. Remote client could add more content before local session-accept. Then we have two options
+             *         a) send content-accept and skip this content in session-accept later
+             *         b) don't send content-accept and accept everything with session-accept
+             *      We prefer option (b) in our implementation.
+             */
+            Action expectedContentAction = role == Origin::Initiator? Action::ContentAdd : Action::ContentAccept;
             for (const auto &c: contentList) {
+                if (c->creator() != role) {
+                    continue; // we care only about local content for now.
+                }
                 auto out = c->outgoingUpdateType();
                 if (out == Action::ContentReject) { // yeah we are rejecting local content. invalid?
                     lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
@@ -701,20 +678,55 @@ public:
                     emit q->terminated();
                     return;
                 }
-                if (out != Action::ContentAdd && out != Action::ContentAccept) {
+                if (out != expectedContentAction) {
                     return; // keep waiting.
                 }
             }
+            Action actionToSend = Action::SessionAccept;
+            State finalState = State::Active;
             // so all contents is ready for session-initiate. let's do it
             if (role == Origin::Initiator) {
-                sendSessionInitiate();
-            } else {
-                sendSessionAccept();
+                sid = manager->generateSessionId(otherParty);
+                actionToSend = Action::SessionInitiate;
+                finalState = State::Pending;
             }
+
+            QList<QDomElement> contents;
+            QList<AckHndl> acceptApps;
+            for (const auto &p: contentList) {
+                if (p->creator() != role) {
+                    continue; // we care only about local content for now.
+                }
+                QDomElement xml;
+                OutgoingUpdateCB callback;
+                std::tie(xml, callback) = p->takeOutgoingUpdate();
+                contents.append(xml);
+                //p->setState(State::Unacked);
+                if (callback) {
+                    acceptApps.append(AckHndl{p, callback});
+                }
+            }
+            state = State::Unacked;
+            sendJingle(actionToSend, contents, [this, acceptApps, finalState](){
+                state = finalState;
+                for (const auto &h: acceptApps) {
+                    auto app = std::get<0>(h);
+                    auto callback = std::get<1>(h);
+                    if (app) {
+                        callback();
+                    }
+                }
+                if (finalState == State::Active) {
+                    emit q->activated();
+                }
+                planStep();
+            });
+
             return;
         }
 
-        // So session is either Pending or Active here
+        // So session is either in State::Pending or State::Active here.
+        // State::Connecting status is skipped for session.
         QList<QDomElement> updateXml;
         for (auto mp : applicationPads) {
             auto p = mp.toStrongRef();
@@ -722,7 +734,7 @@ public:
             if (!el.isNull()) {
                 updateXml.append(el);
                 // we can send session-info for just one application. so stop processing
-                sendJingle(Action::SessionInfo, updateXml);
+                sendJingle(Action::SessionInfo, updateXml, [this](){planStep();});
                 return;
             }
         }
@@ -736,13 +748,29 @@ public:
             }
         }
 
+        QList<AckHndl> acceptApps;
         if (updates.size()) {
             Action action = updates.begin().key();
             auto apps = updates.values(action);
             for (auto app: apps) {
-                updateXml.append(app->takeOutgoingUpdate());
+                QDomElement xml;
+                OutgoingUpdateCB callback;
+                std::tie(xml, callback) = app->takeOutgoingUpdate();
+                updateXml.append(xml);
+                if (callback) {
+                    acceptApps.append(AckHndl{app, callback});
+                }
             }
-            sendJingle(action, updateXml);
+            sendJingle(action, updateXml, [this, acceptApps](){
+                for (const auto &h: acceptApps) {
+                    auto app = std::get<0>(h);
+                    auto callback = std::get<1>(h);
+                    if (app) {
+                        callback();
+                    }
+                }
+                planStep();
+            });
         }
     }
 

@@ -82,6 +82,8 @@ enum class Action {
 };
 
 typedef QPair<QString,Origin> ContentKey;
+typedef std::function<void ()> OutgoingUpdateCB;
+typedef std::tuple<QDomElement, OutgoingUpdateCB> OutgoingUpdate;
 
 class Jingle
 {
@@ -285,7 +287,7 @@ public:
                                 // in-band transport may just emit updated() here
     virtual bool update(const QDomElement &el) = 0; // accepts transport element on incoming transport-info
     virtual Action outgoingUpdateType() const = 0;
-    virtual QDomElement takeOutgoingUpdate() = 0;
+    virtual OutgoingUpdate takeOutgoingUpdate() = 0;
     virtual bool isValid() const = 0;
     virtual Features features() const = 0;
     virtual TransportManagerPad::Ptr pad() const = 0;
@@ -325,8 +327,7 @@ public:
     virtual bool setTransport(const QSharedPointer<Transport> &transport) = 0;
     virtual QSharedPointer<Transport> transport() const = 0;
     virtual Action outgoingUpdateType() const = 0;
-    virtual QDomElement takeOutgoingUpdate() = 0; // this may return something only when outgoingUpdateType() != NoAction
-    virtual bool isReadyForSessionAccept() const = 0; // has connected transport for example
+    virtual OutgoingUpdate takeOutgoingUpdate() = 0; // this may return something only when outgoingUpdateType() != NoAction
     virtual bool wantBetterTransport(const QSharedPointer<Transport> &) const = 0;
     virtual bool selectNextTransport() = 0;
 
