@@ -121,7 +121,7 @@ PsiOptionsEditor::PsiOptionsEditor(QWidget *parent)
     filterLe->setToolTip(tr("Options filter"));
     layout->addWidget(filterLe);
     connect(filterLe, &QLineEdit::textChanged, this, [this, filterLe](){
-        tpm_->setFilterRegularExpression(filterLe->text());
+        tpm_->setFilterWildcard(filterLe->text());
     });
 
     tv_ = new QTreeView(this);
@@ -168,7 +168,7 @@ PsiOptionsEditor::PsiOptionsEditor(QWidget *parent)
     connect(cb_, &QCheckBox::toggled, tm_, [this, filterLe](bool b){
         if (tm_->setFlat(b)) {
             if (!b) {
-                tpm_->setFilterRegularExpression(QString());
+                tpm_->setFilterWildcard(QString());
             }
             filterLe->setVisible(b);
         }
