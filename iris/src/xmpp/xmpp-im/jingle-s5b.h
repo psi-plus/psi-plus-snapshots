@@ -67,6 +67,7 @@ public:
      *   Unacked      - candidate is sent to remote but no iq ack yet
      *   Pending      - canidate sent to remote. we have iq ack but no "used" or "error"
      *   Accepted     - we got "candidate-used" for this candidate
+     *   Active       - use this candidate for actual data transfer
      *   Discarded    - we got "candidate-error" so all pending were marked Discarded
      *
      * Remote candidates states:
@@ -75,6 +76,7 @@ public:
      *   Pending      - connection was successful, but we didn't send candidate-used to remote
      *   Unacked      - connection was successful and we sent candidate-used to remote but no iq ack yet
      *   Accepted     - we sent candidate-used and got iq ack
+     *   Active       - use this candidate for actual data transfer
      *   Discarded    - failed to connect to all remote candidates
      */
     enum State {
@@ -83,6 +85,7 @@ public:
         Pending,
         Unacked,
         Accepted,
+        Active,
         Discarded,
     };
 

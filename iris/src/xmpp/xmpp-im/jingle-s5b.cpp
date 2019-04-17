@@ -207,6 +207,14 @@ QDomElement Candidate::toXml(QDomDocument *doc) const
 
 class Transport::Private : public QSharedData {
 public:
+    enum PendingActions {
+        NewCandidate,
+        CandidateUsed,
+        CandidateError,
+        Activated,
+        ProxyError
+    };
+
     Transport *q = NULL;
     Pad::Ptr pad;
     bool aborted = false;
@@ -214,10 +222,11 @@ public:
     bool remoteReportedCandidateError = false;
     bool localReportedCandidateError = false;
     bool proxyDiscoveryInProgress = false;
+    quint16 pendingActions;
     int proxiesInDiscoCount = 0;
+    quint32 minimalPriority = 0;
     Application *application = nullptr;
     QMap<QString,Candidate> localCandidates; // cid to candidate mapping
-    QList<Candidate> pendingLocalCandidates; // not yet sent to remote
     QMap<QString,Candidate> remoteCandidates;
     QSet<QPair<QString,Origin>> signalingCandidates; // origin here is session role. so for remote it's != session->role
     Candidate localUsedCandidate; // we received "candidate-used" for this candidate
@@ -264,15 +273,6 @@ public:
         return false;
     }
 
-    void sendLocalCandidate(const Candidate &c)
-    {
-        if (isDup(c)) {
-            return; // seems like remote already sent us it..
-        }
-        pendingLocalCandidates.append(c);
-        emit q->updated();
-    }
-
     void updateSelfState()
     {
         // TODO code below is from handler of "candidate-used". it has to be updated
@@ -313,6 +313,25 @@ public:
         // seems like we don't have better candidates,
         // so we are going to use the d->localUsedCandidate
         signalNegotiated = true;
+    }
+
+    void tryConnectToRemoteCandidate()
+    {
+        if (application->state() != State::Connecting) {
+            return; // will come back later
+        }
+        quint64 priority = 0;
+        Candidate candidate;
+        for (auto &c: remoteCandidates) {
+            if ((c.state() == Candidate::New || c.state() == Candidate::Probing) && c.priority() > priority) {
+                candidate = c;
+                priority = c.priority();
+            }
+        }
+        if (candidate && candidate.state() == Candidate::Probing) {
+            return; // already trying connection
+        }
+        // TODO start connecting to the candidate here
     }
 };
 
@@ -389,6 +408,11 @@ void Transport::prepare()
                              ServerInfoManager::SQ_CheckAllOnNoMatch,
                              [this](const QList<DiscoItem> &items)
     {
+        if (d->minimalPriority >= (Candidate::TunnelPreference << 16)) {
+            // seems like we have successful connection via higher priority channel. so nobody cares about proxy
+            d->proxyDiscoveryInProgress = false;
+            return;
+        }
         auto m = static_cast<Manager*>(d->pad->manager());
         Jid userProxy = m->userProxy();
 
@@ -397,19 +421,25 @@ void Transport::prepare()
             d->proxiesInDiscoCount++;
             auto query = new JT_S5B(d->pad->session()->manager()->client()->rootTask());
             connect(query, &JT_S5B::finished, this, [this,query,cid](){
+                bool candidateUpdated = false;
                 if (query->success()) {
                     auto sh = query->proxyInfo();
                     auto c = d->localCandidates.value(cid);
-                    if (c && c.state() == Candidate::Probing) {
+                    if (c && c.state() == Candidate::Probing) { // it can discarded by this moment. so we have to check.
                         c.setHost(sh.host());
                         c.setPort(sh.port());
+                        c.setState(Candidate::New);
+                        candidateUpdated = true;
                     }
                 }
                 d->proxiesInDiscoCount--;
                 if (!d->proxiesInDiscoCount) {
                     d->proxyDiscoveryInProgress = false;
                 }
-                d->updateSelfState();
+                if (candidateUpdated) {
+                    d->pendingActions |= Private::NewCandidate;
+                    emit updated();
+                }
             });
             query->requestProxyInfo(j);
             query->go(true);
@@ -434,7 +464,26 @@ void Transport::prepare()
         } else if (items.count() == 0) {
             // seems like we don't have any proxy
             d->proxyDiscoveryInProgress = false;
-            d->updateSelfState();
+            // but it's possible it was our last hope and probaby we have to send candidate-error now.
+            // so the situation: we discarded all remote candidates (failed to connect)
+            // and all our candidates were already sent to remote
+            // if we send candidate-error while we have unsent candidates this may trigger transport failure.
+            // So for candidate-error two conditions have to be met 1) all remote failed 2) all local were sent no more
+            // local candidates are expected to be discovered
+            for (const auto &c: d->remoteCandidates) {
+                if (c.state() != Candidate::Discarded) {
+                    // we have other cadidates to handle. so we don't need candidate-error to be sent to remote yet
+                    return;
+                }
+            }
+            // now ensure all local were sent to remote and no hope left
+            for (const auto &c: d->localCandidates) {
+                auto s = c.state();
+                if (s == Candidate::Probing || s == Candidate::New) {
+                    return;
+                }
+            }
+            d->pendingActions |= Private::CandidateError;
         }
     });
 
@@ -454,6 +503,7 @@ void Transport::start()
 bool Transport::update(const QDomElement &transportEl)
 {
     QString contentTag(QStringLiteral("candidate"));
+    bool candidatesAdded = false;;
     for(QDomElement ce = transportEl.firstChildElement(contentTag);
         !ce.isNull(); ce = ce.nextSiblingElement(contentTag)) {
         Candidate c(ce);
@@ -461,10 +511,19 @@ bool Transport::update(const QDomElement &transportEl)
             return false;
         }
         d->remoteCandidates.insert(c.cid(), c); // TODO check for collisions!
+        candidatesAdded = true;
     }
-    QDomElement cUsedEl = transportEl.firstChildElement(QStringLiteral("candidate-used"));
-    if (!cUsedEl.isNull()) {
-        auto cUsed = d->localCandidates.value(cUsedEl.attribute(QStringLiteral("cid")));
+    if (candidatesAdded) {
+        d->localReportedCandidateError = false;
+        QTimer::singleShot(0, this, [this](){
+            d->tryConnectToRemoteCandidate();
+        });
+        return true;
+    }
+
+    QDomElement el = transportEl.firstChildElement(QStringLiteral("candidate-used"));
+    if (!el.isNull()) {
+        auto cUsed = d->localCandidates.value(el.attribute(QStringLiteral("cid")));
         if (!cUsed) {
             return false;
         }
@@ -473,12 +532,33 @@ bool Transport::update(const QDomElement &transportEl)
         cUsed.setState(Candidate::Accepted);
         QTimer::singleShot(0, this, [this](){ d->updateSelfState(); });
     }
-    QDomElement cErrEl = transportEl.firstChildElement(QStringLiteral("candidate-error"));
-    if (!cUsedEl.isNull()) {
+
+    el = transportEl.firstChildElement(QStringLiteral("candidate-error"));
+    if (!el.isNull()) {
         d->remoteReportedCandidateError = true;
         QTimer::singleShot(0, this, [this](){ d->updateSelfState(); });
     }
-    // TODO handle "activted", "proxy-error"
+
+    el = transportEl.firstChildElement(QStringLiteral("activated"));
+    if (!el.isNull()) {
+        auto c = d->localCandidates.value(el.attribute(QStringLiteral("cid")));
+        if (!c) {
+            return false;
+        }
+        c.setState(Candidate::Active);
+        QTimer::singleShot(0, this, [this](){ d->updateSelfState(); });
+    }
+
+    el = transportEl.firstChildElement(QStringLiteral("proxy-error"));
+    if (!el.isNull()) {
+        auto c = d->localCandidates.value(el.attribute(QStringLiteral("cid")));
+        if (!c) {
+            return false;
+        }
+        c.setState(Candidate::Discarded);
+        QTimer::singleShot(0, this, [this](){ d->updateSelfState(); });
+    }
+
     return true;
 }
 
