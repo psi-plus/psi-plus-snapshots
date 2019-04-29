@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2019-03-19
+# Updated: 2019-04-29
 # Version: N/A
 
 set -e
@@ -158,10 +158,9 @@ failed_to_apply_patches()
 
 remove_trash()
 {
-    rm configure.exe
-    rm iris/configure.exe
-    rm -r win32/*
-    rm -r src/libpsi/tools/idle/win32/
+    rm -rf *.exe
+    rm -rf */*.exe
+    rm -rf src/libpsi/tools/idle/win32/
     find . -type f -name "*.orig" -delete
 }
 
