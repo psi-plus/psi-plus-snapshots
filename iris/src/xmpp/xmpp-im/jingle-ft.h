@@ -135,6 +135,7 @@ public:
     bool selectNextTransport() override;
     void prepare() override;
     void start() override;
+    bool accept(const QDomElement &el) override;
 
     bool isValid() const;
 

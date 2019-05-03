@@ -51,15 +51,28 @@ inline uint qHash(const XMPP::Jingle::Origin &o, uint seed = 0)
     return ::qHash(int(o), seed);
 }
 
+/*
+ Session states:
+  * Created           - new session
+  * PrepareLocalOffer - user accepted session but it's not yet ready for session-initiate/accept message
+  * Unacked           - session-initiate/accept was sent. wait for IQ ack
+  * Pending           - session-initiate was acknowledged. awaits session-accept.
+  * Active            - session was accepted and now active.
+  * Finihed           - session-terminate was sent/received
+
+ Locally initiated session passes all the above and remotely initiated skips Pending.
+*/
 enum class State {
     Created,     // just after constructor
     PrepareLocalOffer, // content accepted by local user but we are not ready yet to send content-accept or session-accept.
                        // same for content-add/session-initiate, where user already already sent/added in ui and it's network turn.
-    Unacked,     // local conten offer is sent to remote but no IQ ack yet
+    Unacked,     // local content offer is sent to remote but no IQ ack yet
     Pending,     // waits for session-accept or content-accept from remote
-    Connecting,  // s5b/ice probes etc (particular application state. can be omited for other entities)
-    Active,      // active transfer. transport is connected
-    Finished     // transfering is finished for whatever reason
+    Accepted,    // app only: local: "accept" received, waits for start(). remote: "accept" sent and acknowledged, waits for start()
+    Connecting,  // app only: s5b/ice probes etc (particular application state. can be omited for other entities)
+    Active,      // active transfer. transport is connected. For session it means it was accepted
+    Finishing,   // app only: basically it's finished but has some pending operations. like sending content-reject/remove to remote
+    Finished     // transfering is finished for whatever reason. no more signals/state changes etc. can be deleted
 };
 
 enum class Action {
@@ -81,9 +94,15 @@ enum class Action {
     TransportReplace
 };
 
+inline uint qHash(const XMPP::Jingle::Action &o, uint seed = 0)
+{
+    return ::qHash(int(o), seed);
+}
+
 typedef QPair<QString,Origin> ContentKey;
 typedef std::function<void ()> OutgoingUpdateCB;
-typedef std::tuple<QDomElement, OutgoingUpdateCB> OutgoingUpdate;
+typedef std::tuple<QList<QDomElement>, OutgoingUpdateCB> OutgoingUpdate; // list of elements to b inserted to <jingle> and success callback
+typedef std::tuple<QDomElement, OutgoingUpdateCB> OutgoingTransportInfoUpdate; // transport element and success callback
 
 class Jingle
 {
@@ -286,12 +305,11 @@ public:
                                 // for remote transport try to connect to all proposed hosts in order their priority.
                                 // in-band transport may just emit updated() here
     virtual bool update(const QDomElement &el) = 0; // accepts transport element on incoming transport-info
-    virtual Action outgoingUpdateType() const = 0;
-    virtual OutgoingUpdate takeOutgoingUpdate() = 0;
+    virtual bool hasUpdates() const = 0;
+    virtual OutgoingTransportInfoUpdate takeOutgoingUpdate() = 0;
     virtual bool isValid() const = 0;
     virtual Features features() const = 0;
     virtual TransportManagerPad::Ptr pad() const = 0;
-    virtual void setApplication(Application *) = 0;
 signals:
     void updated(); // found some candidates and they have to be sent. takeUpdate has to be called from this signal handler.
                     // if it's just always ready then signal has to be sent at least once otherwise session-initiate won't be sent.
@@ -336,6 +354,7 @@ public:
      *  When ready, the application first set update type to ContentAdd and then emit updated()
      */
     virtual void prepare() = 0;
+    virtual bool accept(const QDomElement &el) = 0; // remote accepted our content
     virtual void start() = 0;
 
 signals:
@@ -391,6 +410,7 @@ signals:
     void managerPadAdded(const QString &ns);
     void activated();
     void terminated();
+    void newContentReceived();
 
 private:
     friend class Manager;

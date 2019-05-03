@@ -463,7 +463,6 @@ bool Application::setTransport(const QSharedPointer<Transport> &transport)
         }
         d->availableTransports.removeAt(nsIndex);
         d->transport = transport;
-        d->transport->setApplication(this);
         d->state = State::Pending;
         return true;
     }
@@ -481,14 +480,17 @@ Action Application::outgoingUpdateType() const
     case State::Created:
         break;
     case State::PrepareLocalOffer:
-        if (!d->transport && !d->availableTransports.size()) {
-            break; // not yet ready
+        if (d->transport->hasUpdates()) {
+            return d->creator == d->pad->session()->role()? Action::ContentAdd : Action::ContentAccept;
         }
-        return Action::ContentAdd;
+        break;
     case State::Connecting:
     case State::Active:
-        return d->transport->outgoingUpdateType();
     case State::Pending:
+        if (d->transport->hasUpdates()) {
+            return Action::TransportInfo;
+        }
+        break;
     default:
         break;
     }
@@ -500,17 +502,14 @@ OutgoingUpdate Application::takeOutgoingUpdate()
     if (!isValid() || d->state == State::Created) {
         return OutgoingUpdate();
     }
-    if (d->state == State::Connecting || d->state == State::Active) {
-        return d->transport->takeOutgoingUpdate();
-    }
+
+    auto client = d->pad->session()->manager()->client();
+    auto doc = client->doc();
     if (d->state == State::PrepareLocalOffer) { // basically when we come to this function Created is possible only for outgoing content
-        if (!d->transport && d->availableTransports.size()) {
-            selectNextTransport();
-        }
-        if (!d->transport || d->transport->outgoingUpdateType() == Action::NoAction) { // failed to select next transport. can't continue
+        if (!d->transport->hasUpdates()) { // failed to select next transport. can't continue
             return OutgoingUpdate();
         }
-        auto client = d->pad->session()->manager()->client();
+
         if (d->file.thumbnail().data.size()) {
             auto thumb = d->file.thumbnail();
             auto bm = client->bobManager();
@@ -518,7 +517,6 @@ OutgoingUpdate Application::takeOutgoingUpdate()
             thumb.uri = QLatin1String("cid:") + data.cid();
             d->file.setThumbnail(thumb);
         }
-        auto doc = client->doc();
         ContentBase cb(d->pad->session()->role(), d->contentName);
         cb.senders = d->senders;
         auto cel = cb.toXml(doc, "content");
@@ -529,12 +527,24 @@ OutgoingUpdate Application::takeOutgoingUpdate()
         cel.appendChild(tel);
 
         d->state = State::Unacked;
-        return OutgoingUpdate{cel, [this, trCallback](){
+        return OutgoingUpdate{QList<QDomElement>()<<cel, [this, trCallback](){
                 if (trCallback) {
                     trCallback();
                 }
                 d->state = d->pad->session()->role() == Origin::Initiator? State::Pending : State::Active;
             }};
+    }
+    if (d->state == State::Connecting || d->state == State::Active || d->state == State::Pending) {
+        if (d->transport->hasUpdates()) { // failed to select next transport. can't continue
+            ContentBase cb(d->pad->session()->role(), d->contentName);
+            cb.senders = d->senders;
+            auto cel = cb.toXml(doc, "content");
+            QDomElement tel;
+            OutgoingUpdateCB trCallback;
+            std::tie(tel, trCallback) = d->transport->takeOutgoingUpdate();
+            cel.appendChild(tel);
+            return OutgoingUpdate{QList<QDomElement>()<<cel, trCallback};
+        }
     }
     return OutgoingUpdate(); // TODO
 }
@@ -550,7 +560,6 @@ bool Application::selectNextTransport()
     if (d->availableTransports.size()) {
         QString ns = d->availableTransports.takeFirst();
         d->transport = d->pad->session()->newOutgoingTransport(ns);
-        d->transport->setApplication(this);
         return true;
     }
     return false;
@@ -574,6 +583,12 @@ void Application::start()
         d->transport->start();
     }
     // TODO we nedd QIODevice somewhere here
+}
+
+bool Application::accept(const QDomElement &el)
+{
+    Q_UNUSED(el);
+    return true; // TODO!!!
 }
 
 bool Application::isValid() const
