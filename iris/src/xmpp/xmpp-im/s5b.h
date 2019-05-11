@@ -46,6 +46,7 @@ namespace XMPP
     class S5BConnection;
     class S5BManager;
     class S5BServer;
+    class JT_PushS5B;
     struct S5BRequest;
     typedef QList<StreamHost> StreamHostList;
     typedef QList<S5BConnection*> S5BConnectionList;
@@ -152,6 +153,7 @@ namespace XMPP
         Client *client() const;
         S5BServer *server() const;
         void setServer(S5BServer *s);
+        JT_PushS5B *jtPush() const;
 
         bool isAcceptableSID(const Jid &peer, const QString &sid) const;
 

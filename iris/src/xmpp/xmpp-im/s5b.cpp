@@ -632,6 +632,11 @@ void S5BManager::setServer(S5BServer *serv)
     }
 }
 
+JT_PushS5B* S5BManager::jtPush() const
+{
+    return d->ps;
+}
+
 BSConnection *S5BManager::createConnection()
 {
     return new S5BConnection(this);
@@ -2102,7 +2107,12 @@ void S5BServer::ss_incomingUDP(const QString &host, int port, const QHostAddress
     if(port != 0 && port != 1)
         return;
 
-    // TODO check jingle managers too
+    for (Jingle::S5B::Manager *m: d->jingleManagerList) {
+        if (m->incomingUDP(port == 1 ? true : false, addr, sourcePort, host, data)) {
+            return;
+        }
+    }
+
     foreach(S5BManager* m, d->manList) {
         if(m->srv_ownsHash(host)) {
             m->srv_incomingUDP(port == 1 ? true : false, addr, sourcePort, host, data);

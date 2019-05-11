@@ -21,6 +21,7 @@
 #define JINGLEFT_H
 
 #include "jingle.h"
+#include "xmpp_hash.h"
 
 namespace XMPP {
 

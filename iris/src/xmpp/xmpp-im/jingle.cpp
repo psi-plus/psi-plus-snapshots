@@ -1588,6 +1588,16 @@ Origin negateOrigin(Origin o)
     return Origin::None;
 }
 
+bool Connection::hasPendingDatagrams() const
+{
+    return false;
+}
+
+NetworkDatagram Connection::receiveDatagram(qint64 maxSize)
+{
+    return NetworkDatagram();
+}
+
 
 } // namespace Jingle
 } // namespace XMPP

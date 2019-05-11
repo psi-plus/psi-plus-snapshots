@@ -31,6 +31,7 @@
 
 #include "jingle.h"
 
+class QHostAddress;
 class SocksClient;
 
 namespace XMPP {
@@ -104,13 +105,16 @@ public:
     void setHost(const QString &host);
     quint16 port() const;
     void setPort(quint16 port);
+    quint16 localPort() const;
+    void setLocalPort(quint16 port);
     State state() const;
     void setState(State s);
     quint32 priority() const;
 
     QDomElement toXml(QDomDocument *doc) const;
 
-    void connectToHost(std::function<void (bool)> callback);
+    void connectToHost(const QString &key, std::function<void (bool)> callback, bool isUdp = false);
+    bool incomingConnection(SocksClient *sc);
 private:
     class Private;
     QExplicitlySharedDataPointer<Private> d;
@@ -140,11 +144,12 @@ public:
     bool isValid() const override;
     Features features() const override;
 
-    QString sid() const;
-
-    bool incomingConnection(SocksClient *sc, const QString &key);
-
+    QString sid() const;    
 private:
+    friend class S5BServer;
+    bool incomingConnection(SocksClient *sc);
+    bool incomingUDP(bool init, const QHostAddress &addr, int port, const QString &key, const QByteArray &data);
+
     friend class Manager;
     static QSharedPointer<XMPP::Jingle::Transport> createOutgoing(const TransportManagerPad::Ptr &pad);
     static QSharedPointer<XMPP::Jingle::Transport> createIncoming(const TransportManagerPad::Ptr &pad, const QDomElement &transportEl);
@@ -188,12 +193,15 @@ public:
 
     void setServer(S5BServer *serv);
     bool incomingConnection(SocksClient *client, const QString &key); // returns false if key is unknown
+    bool incomingUDP(bool init, const QHostAddress &addr, int port, const QString &key, const QByteArray &data);
 
     QString generateSid(const Jid &remote);
     void registerSid(const Jid &remote, const QString &sid);
 
     S5BServer* socksServ() const;
     Jid userProxy() const;
+    void addKeyMapping(const QString &key, Transport *transport);
+    void removeKeyMapping(const QString &key);
 private:
     class Private;
     QScopedPointer<Private> d;

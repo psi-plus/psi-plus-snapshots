@@ -22,7 +22,9 @@
 #include "xmpp/jid/jid.h"
 #include "xmpp_client.h"
 #include "xmpp_serverinfomanager.h"
+#include "socks.h"
 
+#include <QElapsedTimer>
 #include <QTimer>
 
 namespace XMPP {
@@ -31,15 +33,51 @@ namespace S5B {
 
 const QString NS(QStringLiteral("urn:xmpp:jingle:transports:s5b:1"));
 
+static QString makeKey(const QString &sid, const Jid &j1, const Jid &j2)
+{
+    return QString::fromLatin1(QCryptographicHash::hash((sid +
+                                                         j1.full() +
+                                                         j2.full()).toUtf8(),
+                                                        QCryptographicHash::Sha1));
+}
+
+class Connection : public XMPP::Jingle::Connection
+{
+    Q_OBJECT
+
+    QList<NetworkDatagram> datagrams;
+public:
+    bool hasPendingDatagrams() const
+    {
+        return datagrams.size() > 0;
+    }
+
+    NetworkDatagram receiveDatagram(qint64 maxSize = -1)
+    {
+        Q_UNUSED(maxSize); // TODO or not?
+        return datagrams.size()? datagrams.takeFirst(): NetworkDatagram();
+    }
+protected:
+    friend class Transport;
+    void enqueueIncomingUDP(const QByteArray &data)
+    {
+        datagrams.append(NetworkDatagram{data});
+        emit readyRead();
+    }
+};
+
 class Candidate::Private : public QSharedData {
 public:
     QString cid;
     QString host;
     Jid jid;
-    quint16 port;
-    quint32 priority;
+    quint16 port = 0;
+    quint32 priority = 0;
     Candidate::Type type = Candidate::Direct;
     Candidate::State state = Candidate::New;
+
+    quint16 localPort = 0; // where Psi actually listens. e.g. with NAT-assited candidats it may be different from just port
+    SocksClient *socksClient = nullptr;
 };
 
 Candidate::Candidate()
@@ -133,12 +171,15 @@ Candidate::Candidate(const QString &host, quint16 port, const QString &cid, Type
     } else {
         d->priority = 0;
     }
+    if (type == Direct) {
+        d->localPort = port;
+    }
     d->state = New;
 }
 
 Candidate::~Candidate()
 {
-
+    delete d->socksClient;
 }
 
 Candidate::Type Candidate::type() const
@@ -176,6 +217,16 @@ void Candidate::setPort(quint16 port)
     d->port = port;
 }
 
+quint16 Candidate::localPort() const
+{
+    return d->localPort;
+}
+
+void Candidate::setLocalPort(quint16 port)
+{
+    d->localPort = port;
+}
+
 Candidate::State Candidate::state() const
 {
     return d->state;
@@ -211,10 +262,30 @@ QDomElement Candidate::toXml(QDomDocument *doc) const
     return e;
 }
 
-void Candidate::connectToHost(std::function<void(bool)> callback)
+void Candidate::connectToHost(const QString &key, std::function<void(bool)> callback, bool isUdp)
 {
     // TODO negotiate socks5 connection to host and port
-    Q_UNUSED(callback)
+    d->socksClient = new SocksClient;
+
+    QObject::connect(d->socksClient, &SocksClient::connected, [this, callback](){
+        callback(true);
+    });
+    QObject::connect(d->socksClient, &SocksClient::error, [this, callback](int error){
+        Q_UNUSED(error);
+        callback(false);
+    });
+    //connect(&t, SIGNAL(timeout()), SLOT(trySendUDP()));
+
+    d->socksClient->connectToHost(d->host, d->port, key, 0, isUdp);
+}
+
+bool Candidate::incomingConnection(SocksClient *sc)
+{
+    if (d->socksClient) {
+        return false;
+    }
+    d->socksClient = sc;
+    return false;
 }
 
 class Transport::Private : public QSharedData {
@@ -244,9 +315,20 @@ public:
     QMap<QString,Candidate> remoteCandidates;
     Candidate localUsedCandidate; // we received "candidate-used" for this candidate from localCandidates list
     Candidate remoteUsedCandidate; // we sent "candidate-used" for this candidate from remoteCandidates list
-    QString dstaddr;
+    QString dstaddr; // an address for xmpp proxy as it comes from remote. each side calculates it like sha1(sid + local jid + remote jid)
+    QString directAddr; // like dstaddr but for direct connection. Basically it's sha1(sid + initiator jid + responder jid)
     QString sid;
     Transport::Mode mode = Transport::Tcp;
+    QTimer probingTimer;
+    QElapsedTimer lastConnectionStart;
+
+    QSharedPointer<Connection> connection;
+
+    // udp stuff
+    bool udpInitialized;
+    quint16 udpPort;
+    QHostAddress udpAddress;
+
 
     inline Jid remoteJid() const
     {
@@ -277,18 +359,63 @@ public:
         if (!connectionStarted) {
             return; // will come back later
         }
-        quint64 priority = 0;
-        Candidate candidate;
+        quint64 maxProbingPrio = 0;
+        quint64 maxNewPrio = 0;
+        Candidate maxProbing;
+        Candidate maxNew;
+
+        /*
+         We have to find highest-priority already connecting candidate and highest-priority new candidate.
+         If already-connecting is not found then start connecting to new if it's found.
+         If both already-connecting and new are found then
+            if new candidate has higher priority or the same priority then start connecting
+            else ensure the new candidate starts connecting in 200ms after previous connection attempt
+                 (if it's in future then reschedule this call for future)
+         In all the other cases just return and wait for events.
+        */
+
         for (auto &c: remoteCandidates) {
-            if ((c.state() == Candidate::New || c.state() == Candidate::Probing) && c.priority() > priority) {
-                candidate = c;
-                priority = c.priority();
+            if (c.state() == Candidate::New && c.priority() > maxNewPrio) {
+                maxNew = c;
+                maxNewPrio = c.priority();
+            }
+            if (c.state() == Candidate::Probing && c.priority() > maxProbingPrio) {
+                maxProbing = c;
+                maxProbingPrio = c.priority();
             }
         }
-        if (candidate && candidate.state() == Candidate::Probing) {
-            return; // already trying connection
+        if (!maxNew) {
+            return; // nowhere to connect
         }
-        // TODO start connecting to the candidate here
+
+        if (maxProbing) {
+            if (maxNew.priority() < maxProbing.priority()) {
+                if (probingTimer.isActive()) {
+                    return; // we will come back here soon
+                }
+                qint64 msToFuture = 200 - lastConnectionStart.elapsed();
+                if (msToFuture > 0) { // seems like we have to rescheduler for future
+                    probingTimer.start(int(msToFuture));
+                    return;
+                }
+            }
+        }
+
+        // now we have to connect to maxNew candidate
+        lastConnectionStart.start();
+        QString key = maxNew.type() == Candidate::Proxy? dstaddr : directAddr;
+        maxNew.connectToHost(key, [this, maxNew](bool success) {
+            // candidate's status had to be changed by connectToHost, so we don't set it again
+            // if our candidate has higher priority than any of local or remoteUsedCandidate then set it as "used"
+            if (success && (!remoteUsedCandidate || remoteUsedCandidate.priority() < maxNew.priority()) &&
+                    ((!localUsedCandidate || localUsedCandidate.priority() < maxNew.priority())))
+            {
+                remoteUsedCandidate = maxNew;
+                localUsedCandidate = Candidate();
+                updateMinimalPriority();
+            }
+            checkAndFinishNegotiation();
+        }, mode == Transport::Udp);
     }
 
     bool hasUnaknowledgedLocalCandidates() const
@@ -347,14 +474,15 @@ public:
                             // If it's proxy, first it has to be activated
                             if (localUsedCandidate) {
                                 // it's our side who proposed proxy. so we have to connect to it and activate
-                                c.connectToHost([this](bool success){
+                                auto key = makeKey(sid, pad->session()->me(), pad->session()->peer());
+                                c.connectToHost(key, [this](bool success){
                                     if (success) {
                                         pendingActions |= Private::Activated;
                                     } else {
                                         pendingActions |= Private::ProxyError;
                                     }
                                     emit q->updated();
-                                });
+                                }, mode == Transport::Udp);
                             } // else so it's remote proxy. let's just wait for <activated> from remote
                         } else {
                             c.setState(Candidate::Active);
@@ -452,6 +580,8 @@ Transport::Transport(const TransportManagerPad::Ptr &pad) :
 {
     d->q = this;
     d->pad = pad.staticCast<Pad>();
+    d->probingTimer.setSingleShot(true);
+    d->probingTimer.callOnTimeout([this](){ d->tryConnectToRemoteCandidate(); });
     connect(pad->manager(), &TransportManager::abortAllRequested, this, [this](){
         d->aborted = true;
         emit failed();
@@ -472,7 +602,7 @@ Transport::Transport(const TransportManagerPad::Ptr &pad, const QDomElement &tra
 
 Transport::~Transport()
 {
-
+    static_cast<Manager*>(d->pad->manager())->removeKeyMapping(d->directAddr);
 }
 
 TransportManagerPad::Ptr Transport::pad() const
@@ -487,6 +617,9 @@ void Transport::prepare()
         d->sid = d->pad->generateSid();
     }
     d->pad->registerSid(d->sid);
+    d->directAddr = makeKey(d->sid, d->pad->session()->initiator(), d->pad->session()->responder());
+    m->addKeyMapping(d->directAddr, this);
+
 
     auto serv = m->socksServ();
     if (serv) {
@@ -728,10 +861,7 @@ OutgoingTransportInfoUpdate Transport::takeOutgoingUpdate()
             c.setState(Candidate::Unacked);
         }
         if (useProxy) {
-            QString dstaddr = QCryptographicHash::hash((d->sid +
-                                                        d->pad->session()->me().full() +
-                                                        d->pad->session()->peer().full()).toUtf8(),
-                                                       QCryptographicHash::Sha1);
+            QString dstaddr = makeKey(d->sid, d->pad->session()->me(), d->pad->session()->peer());
             tel.setAttribute(QStringLiteral("dstaddr"), dstaddr);
         }
         if (!candidatesToSend.isEmpty()) {
@@ -832,23 +962,58 @@ QString Transport::sid() const
     return d->sid;
 }
 
-bool Transport::incomingConnection(SocksClient *sc, const QString &key)
+bool Transport::incomingConnection(SocksClient *sc)
 {
-    // incoming direct connection
-#if 0
-    if(!d->allowIncoming) {
-        sc->requestDeny();
-        sc->deleteLater();
-        return;
+    if (!d->connection) {
+        for (auto &c: d->localCandidates) {
+            auto s = sc->abstractSocket();
+            if (s->localPort() == c.localPort() && c.state() == Candidate::Pending) {
+                if(d->mode == Transport::Udp)
+                    sc->grantUDPAssociate("", 0);
+                else
+                    sc->grantConnect();
+                // we can also remember the server it comes from. static_cast<S5BServer *>(sender())
+                return c.incomingConnection(sc);
+            }
+        }
     }
-    if(d->mode == Transport::Udp)
-        sc->grantUDPAssociate("", 0);
-    else
-        sc->grantConnect();
-    e->relatedServer = static_cast<S5BServer *>(sender());
-    e->i->setIncomingClient(sc);
-#endif
+
+    sc->requestDeny();
+    sc->deleteLater();
     return false;
+}
+
+bool Transport::incomingUDP(bool init, const QHostAddress &addr, int port, const QString &key, const QByteArray &data)
+{
+    if (d->mode != Transport::Mode::Udp) {
+        return false;
+    }
+
+    if(init) {
+        // TODO probably we could create a Connection here and put all the params inside
+        if(d->udpInitialized)
+            return false; // only init once
+
+        // lock on to this sender
+        d->udpAddress = addr;
+        d->udpPort = port;
+        d->udpInitialized = true;
+
+        // reply that initialization was successful
+        d->pad->session()->manager()->client()->s5bManager()->jtPush()->sendUDPSuccess(d->pad->session()->peer(), key); // TODO fix ->->->
+        return true;
+    }
+
+    // not initialized yet?  something went wrong
+    if(!d->udpInitialized)
+        return false;
+
+    // must come from same source as when initialized
+    if(addr != d->udpAddress || port != d->udpPort)
+        return false;
+
+    d->connection->enqueueIncomingUDP(data); // man_udpReady
+    return true;
 }
 
 //----------------------------------------------------------------
@@ -919,6 +1084,15 @@ void Manager::setServer(S5BServer *serv)
     if(d->serv) {
         d->serv->unlink(this);
         d->serv = nullptr;
+
+        auto jt = d->jingleManager->client()->s5bManager()->jtPush();
+        connect(jt, &JT_PushS5B::incomingUDPSuccess, this, [this](const Jid &from, const QString &dstaddr) {
+            Q_UNUSED(from);
+            auto t = d->key2transport.value(dstaddr);
+            if (t) {
+                // TODO return t->incomingUDPSuccess(from);
+            }
+        }, Qt::UniqueConnection);
     }
 
     if(serv) {
@@ -927,11 +1101,30 @@ void Manager::setServer(S5BServer *serv)
     }
 }
 
+void Manager::addKeyMapping(const QString &key, Transport *transport)
+{
+    d->key2transport.insert(key, transport);
+}
+
+void Manager::removeKeyMapping(const QString &key)
+{
+    d->key2transport.remove(key);
+}
+
 bool Manager::incomingConnection(SocksClient *client, const QString &key)
 {
     auto t = d->key2transport.value(key);
     if (t) {
-        return t->incomingConnection(client, key);
+        return t->incomingConnection(client);
+    }
+    return false;
+}
+
+bool Manager::incomingUDP(bool init, const QHostAddress &addr, int port, const QString &key, const QByteArray &data)
+{
+    auto t = d->key2transport.value(key);
+    if (t) {
+        return t->incomingUDP(init, addr, port, key, data);
     }
     return false;
 }

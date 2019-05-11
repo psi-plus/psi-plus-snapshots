@@ -20,11 +20,16 @@
 #ifndef JINGLE_H
 #define JINGLE_H
 
-#include "xmpp_hash.h"
+#include "bytestream.h"
 
 #include <QSharedDataPointer>
 #include <QSharedPointer>
 #include <functional>
+#if QT_VERSION >= QT_VERSION_CHECK(5,8,0)
+# include <QNetworkDatagram>
+#endif
+
+#include "xmpp_stanza.h"
 
 class QDomElement;
 class QDomDocument;
@@ -249,6 +254,47 @@ public:
     virtual QString generateContentName(Origin senders) = 0;
 };
 
+#if QT_VERSION < QT_VERSION_CHECK(5,8,0)
+// stub implementation
+class NetworkDatagram
+{
+public:
+    bool _valid = false;
+    QByteArray _data;
+    inline NetworkDatagram(const QByteArray &data, const QHostAddress &destinationAddress = QHostAddress(), quint16 port = 0) :
+        _valid(true),
+        _data(data)
+    {
+        Q_UNUSED(destinationAddress);
+        Q_UNUSED(port)
+    }
+    inline NetworkDatagram(){}
+
+    inline bool isValid() const { return _valid; }
+    inline QByteArray data() const { return _data; }
+}
+#else
+typedef QNetworkDatagram NetworkDatagram;
+#endif
+
+class Connection : public ByteStream
+{
+    Q_OBJECT
+
+    QList<NetworkDatagram> datagrams;
+public:
+    virtual bool hasPendingDatagrams() const;
+    virtual NetworkDatagram receiveDatagram(qint64 maxSize = -1);
+
+protected:
+    friend class Transport;
+    void enqueueIncomingUDP(const QByteArray &data)
+    {
+        datagrams.append(data);
+        emit readyRead();
+    }
+};
+
 class Application;
 class Transport : public QObject {
     Q_OBJECT
@@ -330,7 +376,7 @@ public:
 
     virtual ApplicationManagerPad::Ptr pad() const = 0;
     virtual State state() const = 0;
-    virtual void setState(State state) = 0; // likely just remember the state
+    virtual void setState(State state) = 0; // likely just remember the state and not generate any signals
 
     virtual Origin creator() const = 0;
     virtual Origin senders() const = 0;
@@ -358,7 +404,8 @@ public:
     virtual void start() = 0;
 
 signals:
-    void updated();
+    void updated(); // signal for session it has to send updates to remote. so it will follow with takeOutgoingUpdate() eventually
+    void stateChanged(State);
 };
 
 class Session : public QObject

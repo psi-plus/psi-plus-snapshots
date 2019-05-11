@@ -380,7 +380,7 @@ QStringList Manager::availableTransports() const
 class Application::Private
 {
 public:
-
+    Application *q = nullptr;
     State   state = State::Created;
     QSharedPointer<Pad> pad;
     QString contentName;
@@ -389,11 +389,19 @@ public:
     Origin  senders;
     QSharedPointer<Transport> transport;
     QStringList availableTransports;
+    bool transportFailed = false;
+
+    void setState(State s)
+    {
+        state = s;
+        emit q->stateChanged(s);
+    }
 };
 
 Application::Application(const QSharedPointer<Pad> &pad, const QString &contentName, Origin creator, Origin senders) :
     d(new Private)
 {
+    d->q       = this;
     d->pad     = pad;
     d->contentName = contentName;
     d->creator = creator;
@@ -456,6 +464,9 @@ File Application::file() const
 // incoming one? or we have to check real direction
 bool Application::setTransport(const QSharedPointer<Transport> &transport)
 {
+    if (d->transport) {
+        d->transport->disconnect(this);
+    }
     if (transport->features() & Transport::Reliable) {
         int nsIndex = d->availableTransports.indexOf(transport->pad()->ns());
         if (nsIndex == -1) {
@@ -463,7 +474,18 @@ bool Application::setTransport(const QSharedPointer<Transport> &transport)
         }
         d->availableTransports.removeAt(nsIndex);
         d->transport = transport;
-        d->state = State::Pending;
+        d->setState(State::Pending);
+        connect(transport.data(), &Transport::updated, this, &Application::updated);
+        connect(transport.data(), &Transport::connected, this, [this](){
+
+        });
+        connect(transport.data(), &Transport::failed, this, [this](){
+            if (d->availableTransports.size()) { // we can do transport-replace here
+                // TODO
+            }
+            d->transportFailed = true;
+            d->setState(State::Finishing);
+        });
         return true;
     }
     return false;
@@ -491,6 +513,11 @@ Action Application::outgoingUpdateType() const
             return Action::TransportInfo;
         }
         break;
+    case State::Finishing:
+        if (d->transportFailed) {
+            return Action::ContentRemove;
+        }
+        return Action::SecurityInfo;
     default:
         break;
     }
@@ -526,7 +553,7 @@ OutgoingUpdate Application::takeOutgoingUpdate()
         std::tie(tel, trCallback) = d->transport->takeOutgoingUpdate();
         cel.appendChild(tel);
 
-        d->state = State::Unacked;
+        d->setState(State::Unacked);
         return OutgoingUpdate{QList<QDomElement>()<<cel, [this, trCallback](){
                 if (trCallback) {
                     trCallback();
@@ -546,6 +573,24 @@ OutgoingUpdate Application::takeOutgoingUpdate()
             return OutgoingUpdate{QList<QDomElement>()<<cel, trCallback};
         }
     }
+    if (d->state == State::Finishing) {
+        if (d->transportFailed) {
+            ContentBase cb(d->pad->session()->role(), d->contentName);
+            QList<QDomElement> updates;
+            updates << cb.toXml(doc, "content");
+            updates << Reason(Reason::Condition::FailedTransport).toXml(doc);
+            return OutgoingUpdate{updates, [this](){
+                    d->setState(State::Finished);
+                }
+            };
+        }
+        // else send <received>
+        ContentBase cb(d->pad->session()->role(), d->contentName);
+        return OutgoingUpdate{QList<QDomElement>() << cb.toXml(doc, "received"), [this](){
+                d->setState(State::Finished);
+            }
+        };
+    }
     return OutgoingUpdate(); // TODO
 }
 
@@ -558,9 +603,7 @@ bool Application::wantBetterTransport(const QSharedPointer<Transport> &t) const
 bool Application::selectNextTransport()
 {
     if (d->availableTransports.size()) {
-        QString ns = d->availableTransports.takeFirst();
-        d->transport = d->pad->session()->newOutgoingTransport(ns);
-        return true;
+        return setTransport(d->pad->session()->newOutgoingTransport(d->availableTransports.first()));
     }
     return false;
 }
@@ -582,13 +625,18 @@ void Application::start()
         d->state = State::Active;
         d->transport->start();
     }
-    // TODO we nedd QIODevice somewhere here
+    // TODO we need QIODevice somewhere here
 }
 
 bool Application::accept(const QDomElement &el)
 {
-    Q_UNUSED(el);
-    return true; // TODO!!!
+    File f(el.firstChildElement("file"));
+    if (!f.isValid()) {
+        return false;
+    }
+    // TODO validate if accept file matches to the offer
+    setState(State::Accepted);
+    return true;
 }
 
 bool Application::isValid() const

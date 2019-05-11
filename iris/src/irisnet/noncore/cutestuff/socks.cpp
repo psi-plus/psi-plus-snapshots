@@ -1126,12 +1126,14 @@ void SocksServer::connectionError()
 void SocksServer::sd_activated()
 {
     while (d->sd->hasPendingDatagrams()) {
-        QByteArray datagram;
+        QByteArray datagram(d->sd->pendingDatagramSize(), Qt::Uninitialized);
         QHostAddress sender;
         quint16 senderPort;
-        datagram.resize(d->sd->pendingDatagramSize());
-        d->sd->readDatagram(datagram.data(), datagram.size(), &sender, &senderPort);
-        incomingUDP(sender.toString(), senderPort, d->sd->peerAddress(), d->sd->peerPort(), datagram);
+        auto sz = d->sd->readDatagram(datagram.data(), datagram.size(), &sender, &senderPort);
+        if (sz >= 0) {
+            datagram.truncate(sz);
+            incomingUDP(sender.toString(), senderPort, d->sd->peerAddress(), d->sd->peerPort(), datagram);
+        }
     }
 }
 
