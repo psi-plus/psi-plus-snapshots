@@ -123,8 +123,9 @@ set(SOURCES
     xmpp-im/xmpp_vcard.cpp
     xmpp-im/xmpp_xdata.cpp
     xmpp-im/xmpp_xmlcommon.cpp
-    xmpp-im/jingle-s5b.cpp
+    xmpp-im/jingle.cpp
     xmpp-im/jingle-ft.cpp
+    xmpp-im/jingle-s5b.cpp
 
     base/randomnumbergenerator.cpp
     base/timezone.cpp
@@ -150,7 +151,6 @@ set(SOURCES
 
     xmpp-im/s5b.cpp
     xmpp-im/xmpp_features.cpp
-    xmpp-im/jingle.cpp
     )
 
 add_library(iris

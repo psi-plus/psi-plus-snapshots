@@ -16,7 +16,6 @@
  * along with this library.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
-
 #include "jingle-s5b.h"
 #include "s5b.h"
 #include "xmpp/jid/jid.h"
@@ -1193,3 +1192,5 @@ void Pad::registerSid(const QString &sid)
 } // namespace S5B
 } // namespace Jingle
 } // namespace XMPP
+
+#include "jingle-s5b.moc"
