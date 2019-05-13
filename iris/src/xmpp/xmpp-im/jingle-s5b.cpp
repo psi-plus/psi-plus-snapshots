@@ -37,7 +37,8 @@ static QString makeKey(const QString &sid, const Jid &j1, const Jid &j2)
     return QString::fromLatin1(QCryptographicHash::hash((sid +
                                                          j1.full() +
                                                          j2.full()).toUtf8(),
-                                                        QCryptographicHash::Sha1));
+                                                        QCryptographicHash::Sha1)
+                               .toHex());
 }
 
 class Connection : public XMPP::Jingle::Connection
@@ -225,7 +226,9 @@ Candidate::Candidate(const QString &host, quint16 port, const QString &cid, Type
 
 Candidate::~Candidate()
 {
-    delete d->socksClient;
+    if (d) { // if it's valid candidate
+        delete d->socksClient;
+    }
 }
 
 Candidate::Type Candidate::type() const
@@ -360,7 +363,7 @@ public:
         ProxyError      = 16
     };
 
-    Transport *q = NULL;
+    Transport *q = nullptr;
     Pad::Ptr pad;
     bool meCreator = true; // content.content is local side
     bool connectionStarted = false; // where start() was called
@@ -369,7 +372,7 @@ public:
     bool remoteReportedCandidateError = false;
     bool localReportedCandidateError = false;
     bool proxyDiscoveryInProgress = false; // if we have valid proxy requests
-    quint16 pendingActions;
+    quint16 pendingActions = 0;
     int proxiesInDiscoCount = 0;
     quint32 minimalPriority = 0;
     Application *application = nullptr;

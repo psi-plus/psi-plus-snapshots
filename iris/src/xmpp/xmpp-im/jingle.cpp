@@ -488,8 +488,9 @@ public:
             }
         } else {
             auto session = client()->jingleManager()->session(from, jingle.sid());
-            if (session) {
-                respondError(iq, Stanza::Error::Cancel, Stanza::Error::Conflict);
+            if (!session) {
+                auto el = client()->doc()->createElementNS(QString::fromLatin1("urn:xmpp:jingle:errors:1"), QStringLiteral("unknown-session"));
+                respondError(iq, Stanza::Error::Cancel, Stanza::Error::ItemNotFound, QString(), el);
                 return true;
             }
             if (!session->updateFromXml(jingle.action(), jingleEl)) {
@@ -503,11 +504,16 @@ public:
         return true;
     }
 
-    void respondError(const QDomElement &iq, Stanza::Error::ErrorType errType, Stanza::Error::ErrorCond errCond, const QString &text = QString())
+    void respondError(const QDomElement &iq, Stanza::Error::ErrorType errType, Stanza::Error::ErrorCond errCond,
+                      const QString &text = QString(), const QDomElement &jingleErr = QDomElement())
     {
         auto resp = createIQ(client()->doc(), "error", iq.attribute(QStringLiteral("from")), iq.attribute(QStringLiteral("id")));
         Stanza::Error error(errType, errCond, text);
-        resp.appendChild(error.toXml(*client()->doc(), client()->stream().baseNS()));
+        auto errEl = error.toXml(*client()->doc(), client()->stream().baseNS());
+        if (!jingleErr.isNull()) {
+            errEl.appendChild(jingleErr);
+        }
+        resp.appendChild(errEl);
         client()->send(resp);
     }
 
@@ -819,9 +825,7 @@ public:
         }
         QObject::connect(content, &Application::updated, q, [this, content](){
             signalingContent.insert(content);
-            if (!waitingAck && !stepTimer.isActive()) {
-                stepTimer.start();
-            }
+            planStep();
         });
         QObject::connect(content, &Application::destroyed, q, [this, content](){
             signalingContent.remove(content);

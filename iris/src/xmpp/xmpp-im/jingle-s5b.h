@@ -203,7 +203,19 @@ public:
     void registerSid(const Jid &remote, const QString &sid);
 
     S5BServer* socksServ() const;
+
+    /**
+     * @brief userProxy returns custom (set by user) SOCKS proxy JID
+     * @return
+     */
     Jid userProxy() const;
+
+    /**
+     * @brief addKeyMapping sets mapping between key/socks hostname used for direct connection and transport.
+     *        The key is sha1(sid, initiator full jid, responder full jid)
+     * @param key
+     * @param transport
+     */
     void addKeyMapping(const QString &key, Transport *transport);
     void removeKeyMapping(const QString &key);
 private:
