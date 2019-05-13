@@ -45,7 +45,21 @@ class Connection : public XMPP::Jingle::Connection
     Q_OBJECT
 
     QList<NetworkDatagram> datagrams;
+    SocksClient *client;
+    Transport::Mode mode;
 public:
+    Connection(SocksClient *client, Transport::Mode mode) :
+        client(client),
+        mode(mode)
+    {
+        connect(client, &SocksClient::readyRead, this, &Connection::readyRead);
+        if (client->isOpen()) {
+            setOpenMode(client->openMode());
+        } else {
+            qWarning("Creating S5B Transport connection on closed SockClient connection");
+        }
+    }
+
     bool hasPendingDatagrams() const
     {
         return datagrams.size() > 0;
@@ -56,7 +70,39 @@ public:
         Q_UNUSED(maxSize); // TODO or not?
         return datagrams.size()? datagrams.takeFirst(): NetworkDatagram();
     }
+
+    qint64 bytesAvailable() const
+    {
+        if(client)
+            return client->bytesAvailable();
+        else
+            return 0;
+    }
+
+    qint64 bytesToWrite() const
+    {
+        return client->bytesToWrite();
+    }
+
 protected:
+    qint64 writeData(const char *data, qint64 maxSize)
+    {
+        if(mode == Transport::Tcp)
+            return client->write(data, maxSize);
+        return 0;
+    }
+
+    qint64 readData(char *data, qint64 maxSize)
+    {
+        if(client)
+            return client->read(data, maxSize);
+        else
+            return 0;
+    }
+
+
+
+private:
     friend class Transport;
     void enqueueIncomingUDP(const QByteArray &data)
     {
@@ -65,7 +111,8 @@ protected:
     }
 };
 
-class Candidate::Private : public QSharedData {
+class Candidate::Private : public QObject, public QSharedData {
+    Q_OBJECT
 public:
     QString cid;
     QString host;
@@ -261,16 +308,17 @@ QDomElement Candidate::toXml(QDomDocument *doc) const
     return e;
 }
 
-void Candidate::connectToHost(const QString &key, std::function<void(bool)> callback, bool isUdp)
+void Candidate::connectToHost(const QString &key, State successState, std::function<void(bool)> callback, bool isUdp)
 {
-    // TODO negotiate socks5 connection to host and port
     d->socksClient = new SocksClient;
 
-    QObject::connect(d->socksClient, &SocksClient::connected, [this, callback](){
+    QObject::connect(d->socksClient, &SocksClient::connected, [this, callback, successState](){
+        d->state = successState;
         callback(true);
     });
     QObject::connect(d->socksClient, &SocksClient::error, [this, callback](int error){
         Q_UNUSED(error);
+        d->state = Candidate::Discarded;
         callback(false);
     });
     //connect(&t, SIGNAL(timeout()), SLOT(trySendUDP()));
@@ -284,7 +332,22 @@ bool Candidate::incomingConnection(SocksClient *sc)
         return false;
     }
     d->socksClient = sc;
+    QObject::connect(d->socksClient, &SocksClient::error, [this](int error){
+        Q_UNUSED(error);
+        d->state = Candidate::Discarded;
+    });
     return false;
+}
+
+SocksClient *Candidate::takeSocksClient()
+{
+    if (!d->socksClient) {
+        return nullptr;
+    }
+    auto c = d->socksClient;
+    d->socksClient = nullptr;
+    d->disconnect(c);
+    return c;
 }
 
 class Transport::Private : public QSharedData {
@@ -403,7 +466,7 @@ public:
         // now we have to connect to maxNew candidate
         lastConnectionStart.start();
         QString key = maxNew.type() == Candidate::Proxy? dstaddr : directAddr;
-        maxNew.connectToHost(key, [this, maxNew](bool success) {
+        maxNew.connectToHost(key, Candidate::Pending, [this, maxNew](bool success) {
             // candidate's status had to be changed by connectToHost, so we don't set it again
             // if our candidate has higher priority than any of local or remoteUsedCandidate then set it as "used"
             if (success && (!remoteUsedCandidate || remoteUsedCandidate.priority() < maxNew.priority()) &&
@@ -474,7 +537,7 @@ public:
                             if (localUsedCandidate) {
                                 // it's our side who proposed proxy. so we have to connect to it and activate
                                 auto key = makeKey(sid, pad->session()->me(), pad->session()->peer());
-                                c.connectToHost(key, [this](bool success){
+                                c.connectToHost(key, Candidate::Active, [this](bool success){
                                     if (success) {
                                         pendingActions |= Private::Activated;
                                     } else {
@@ -488,6 +551,7 @@ public:
                         }
                     }
                     if (c.state() == Candidate::Active) {
+                        connection.reset(new Connection(c.takeSocksClient(), mode));
                         emit q->connected();
                     }
                 } else { // both sides reported candidate error
@@ -580,7 +644,7 @@ Transport::Transport(const TransportManagerPad::Ptr &pad) :
     d->q = this;
     d->pad = pad.staticCast<Pad>();
     d->probingTimer.setSingleShot(true);
-    d->probingTimer.callOnTimeout([this](){ d->tryConnectToRemoteCandidate(); });
+    connect(&d->probingTimer, &QTimer::timeout, [this](){ d->tryConnectToRemoteCandidate(); });
     connect(pad->manager(), &TransportManager::abortAllRequested, this, [this](){
         d->aborted = true;
         emit failed();
@@ -788,6 +852,7 @@ bool Transport::update(const QDomElement &transportEl)
             return true;
         }
         c.setState(Candidate::Active);
+        d->connection.reset(new Connection(c.takeSocksClient(), d->mode));
         QTimer::singleShot(0, this, [this](){ emit connected(); });
         return true;
     }
@@ -959,6 +1024,11 @@ Transport::Features Transport::features() const
 QString Transport::sid() const
 {
     return d->sid;
+}
+
+Connection::Ptr Transport::connection() const
+{
+    return d->connection.staticCast<XMPP::Jingle::Connection>();
 }
 
 bool Transport::incomingConnection(SocksClient *sc)

@@ -280,19 +280,10 @@ typedef QNetworkDatagram NetworkDatagram;
 class Connection : public ByteStream
 {
     Q_OBJECT
-
-    QList<NetworkDatagram> datagrams;
 public:
+    using Ptr = QSharedPointer<Connection>; // will be shared between transport and application
     virtual bool hasPendingDatagrams() const;
     virtual NetworkDatagram receiveDatagram(qint64 maxSize = -1);
-
-protected:
-    friend class Transport;
-    void enqueueIncomingUDP(const QByteArray &data)
-    {
-        datagrams.append(data);
-        emit readyRead();
-    }
 };
 
 class Application;
@@ -356,6 +347,7 @@ public:
     virtual bool isValid() const = 0;
     virtual Features features() const = 0;
     virtual TransportManagerPad::Ptr pad() const = 0;
+    virtual Connection::Ptr connection() const = 0; // returns established QIODevice-based connection
 signals:
     void updated(); // found some candidates and they have to be sent. takeUpdate has to be called from this signal handler.
                     // if it's just always ready then signal has to be sent at least once otherwise session-initiate won't be sent.

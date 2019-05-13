@@ -44,6 +44,7 @@ namespace S5B {
 
 extern const QString NS;
 
+class Transport;
 class Candidate {
 public:
     enum Type {
@@ -113,10 +114,12 @@ public:
 
     QDomElement toXml(QDomDocument *doc) const;
 
-    void connectToHost(const QString &key, std::function<void (bool)> callback, bool isUdp = false);
+    void connectToHost(const QString &key, State successState, std::function<void (bool)> callback, bool isUdp = false);
     bool incomingConnection(SocksClient *sc);
+    SocksClient* takeSocksClient();
 private:
     class Private;
+    friend class Transport;
     QExplicitlySharedDataPointer<Private> d;
 };
 
@@ -144,7 +147,8 @@ public:
     bool isValid() const override;
     Features features() const override;
 
-    QString sid() const;    
+    QString sid() const;
+    Connection::Ptr connection() const;
 private:
     friend class S5BServer;
     bool incomingConnection(SocksClient *sc);

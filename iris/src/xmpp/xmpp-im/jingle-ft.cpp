@@ -388,6 +388,7 @@ public:
     Origin  creator;
     Origin  senders;
     QSharedPointer<Transport> transport;
+    Connection::Ptr connection;
     QStringList availableTransports;
     bool transportFailed = false;
 
@@ -477,7 +478,11 @@ bool Application::setTransport(const QSharedPointer<Transport> &transport)
         d->setState(State::Pending);
         connect(transport.data(), &Transport::updated, this, &Application::updated);
         connect(transport.data(), &Transport::connected, this, [this](){
-
+            d->connection = d->transport->connection();
+            connect(d->connection.data(), &Connection::readyRead, this, [this](){
+                // TODO read data
+            });
+            d->setState(State::Active);
         });
         connect(transport.data(), &Transport::failed, this, [this](){
             if (d->availableTransports.size()) { // we can do transport-replace here
