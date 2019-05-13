@@ -274,7 +274,7 @@ public:
 
     inline bool isValid() const { return _valid; }
     inline QByteArray data() const { return _data; }
-}
+};
 #else
 typedef QNetworkDatagram NetworkDatagram;
 #endif
