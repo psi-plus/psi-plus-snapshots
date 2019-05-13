@@ -1239,7 +1239,10 @@ QSharedPointer<Transport> Session::newOutgoingTransport(const QString &ns)
 QString Session::preferredApplication() const
 {
     // TODO some heuristics to detect preferred application
-    return d->applicationPads.keys().value(0);
+    if (d->applicationPads.size()) {
+        return d->applicationPads.constBegin().key();
+    }
+    return QString();
 }
 
 QStringList Session::allApplicationTypes() const
@@ -1595,6 +1598,7 @@ bool Connection::hasPendingDatagrams() const
 
 NetworkDatagram Connection::receiveDatagram(qint64 maxSize)
 {
+    Q_UNUSED(maxSize)
     return NetworkDatagram();
 }
 

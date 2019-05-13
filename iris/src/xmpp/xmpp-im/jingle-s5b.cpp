@@ -1106,11 +1106,25 @@ Manager::Manager(QObject *parent) :
     TransportManager(parent),
     d(new Private)
 {
+    // ensure S5BManager is initialized
+    QTimer::singleShot(0, [this](){
+        auto jt = d->jingleManager->client()->s5bManager()->jtPush();
+        connect(jt, &JT_PushS5B::incomingUDPSuccess, this, [this](const Jid &from, const QString &dstaddr) {
+            Q_UNUSED(from);
+            auto t = d->key2transport.value(dstaddr);
+            if (t) {
+                // TODO return t->incomingUDPSuccess(from);
+            }
+        });
+    });
 }
 
 Manager::~Manager()
 {
     d->jingleManager->unregisterTransport(NS);
+    if (d->serv) {
+        d->serv->unlink(this);
+    }
 }
 
 Transport::Features Manager::features() const
@@ -1153,20 +1167,13 @@ void Manager::setServer(S5BServer *serv)
     if(d->serv) {
         d->serv->unlink(this);
         d->serv = nullptr;
-
-        auto jt = d->jingleManager->client()->s5bManager()->jtPush();
-        connect(jt, &JT_PushS5B::incomingUDPSuccess, this, [this](const Jid &from, const QString &dstaddr) {
-            Q_UNUSED(from);
-            auto t = d->key2transport.value(dstaddr);
-            if (t) {
-                // TODO return t->incomingUDPSuccess(from);
-            }
-        }, Qt::UniqueConnection);
     }
 
     if(serv) {
         d->serv = serv;
         d->serv->link(this);
+    } else {
+        d->serv = nullptr;
     }
 }
 
