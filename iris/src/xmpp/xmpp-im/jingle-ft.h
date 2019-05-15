@@ -144,6 +144,7 @@ public:
 
 signals:
     void deviceRequested(quint64 offset, quint64 size);
+    void progress(quint64 offset);
 
 private:
     class Private;

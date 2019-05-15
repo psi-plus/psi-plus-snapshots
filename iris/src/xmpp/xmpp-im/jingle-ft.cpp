@@ -405,6 +405,13 @@ public:
         emit q->stateChanged(s);
     }
 
+    void handleStreamFail()
+    {
+        // TODO d->lastError = Condition::FailedApplication
+        connection.reset();
+        setState(State::Finished);
+    }
+
     void writeNextBlockToTransport()
     {
         if (!bytesLeft) {
@@ -417,22 +424,40 @@ public:
         }
         QByteArray data = device->read(sz);
         if (data.isEmpty()) {
-            // TODO d->lastError = Condition::FailedApplication
-            connection.reset();
-            setState(State::Finished);
+            handleStreamFail();
             return;
         }
         if (connection->write(data) == -1) {
-            // TODO d->lastError = Condition::FailedApplication
-            connection.reset();
-            setState(State::Finished);
+            handleStreamFail();
             return;
         }
+        emit q->progress(device->pos());
     }
 
     void readNextBlockFromTransport()
     {
-        // TODO
+        quint64 bytesAvail = connection->bytesAvailable();
+        if (!bytesLeft || !bytesAvail) {
+            return; // nothing to read
+        }
+        quint64 sz = transport->blockSize();
+        sz = sz? sz : 8192;
+        if (sz > bytesLeft) {
+            sz = bytesLeft;
+        }
+        if (sz > bytesAvail) {
+            sz = bytesAvail;
+        }
+        QByteArray data = connection->read(sz);
+        if (data.isEmpty()) {
+            handleStreamFail();
+            return;
+        }
+        if (device->write(data) == -1) {
+            handleStreamFail();
+            return;
+        }
+        emit q->progress(device->pos());
     }
 };
 
@@ -538,6 +563,9 @@ bool Application::setTransport(const QSharedPointer<Transport> &transport)
                 }
             });
             d->setState(State::Active);
+            if (d->pad->session()->role() != d->senders && d->connection->bytesAvailable()) {
+                d->readNextBlockFromTransport();
+            }
         });
 
         connect(transport.data(), &Transport::failed, this, [this](){
