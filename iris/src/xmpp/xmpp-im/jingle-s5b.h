@@ -149,6 +149,7 @@ public:
 
     QString sid() const;
     Connection::Ptr connection() const;
+    size_t blockSize() const;
 private:
     friend class S5BServer;
     bool incomingConnection(SocksClient *sc);

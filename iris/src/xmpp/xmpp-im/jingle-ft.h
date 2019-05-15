@@ -140,6 +140,10 @@ public:
 
     bool isValid() const;
 
+    void setDevice(QIODevice *dev);
+
+signals:
+    void deviceRequested(quint64 offset, quint64 size);
 
 private:
     class Private;

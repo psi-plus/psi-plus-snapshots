@@ -886,6 +886,7 @@ void SocksClient::continueIncoming()
                 else
                     d->rhost = s.addr.toString();
                 d->rport = s.port;
+                QIODevice::open(QIODevice::ReadWrite);
                 incomingConnectRequest(d->rhost, d->rport);
             }
             else if(s.cmd == REQ_UDPASSOCIATE) {

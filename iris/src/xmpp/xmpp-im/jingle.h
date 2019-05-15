@@ -350,6 +350,7 @@ public:
     virtual Features features() const = 0;
     virtual TransportManagerPad::Ptr pad() const = 0;
     virtual Connection::Ptr connection() const = 0; // returns established QIODevice-based connection
+    virtual size_t blockSize() const = 0;
 signals:
     void updated(); // found some candidates and they have to be sent. takeUpdate has to be called from this signal handler.
                     // if it's just always ready then signal has to be sent at least once otherwise session-initiate won't be sent.
@@ -419,6 +420,7 @@ public:
     Jid peer() const;
     Jid initiator() const;
     Jid responder() const;
+    QString sid() const;
 
     Origin role() const; // my role in session: initiator or responder
     XMPP::Stanza::Error lastError() const;
@@ -449,6 +451,7 @@ public:
     TransportManagerPad::Ptr transportPadFactory(const QString &ns);
 signals:
     void managerPadAdded(const QString &ns);
+    void initiated();
     void activated();
     void terminated();
     void newContentReceived();
@@ -533,7 +536,7 @@ public:
 
     Session* session(const Jid &remoteJid, const QString &sid);
     Session* newSession(const Jid &j);
-    QString generateSessionId(const Jid &peer);
+    QString registerSession(Session *session);
     XMPP::Stanza::Error lastError() const;
 
 signals:

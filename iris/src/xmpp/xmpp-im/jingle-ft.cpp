@@ -385,17 +385,50 @@ public:
     QSharedPointer<Pad> pad;
     QString contentName;
     File    file;
+    File    acceptFile; // as it comes with "accept" response
     Origin  creator;
     Origin  senders;
     QSharedPointer<Transport> transport;
     Connection::Ptr connection;
     QStringList availableTransports;
     bool transportFailed = false;
+    QIODevice *device = nullptr;
+    quint64 bytesLeft = 0;
 
     void setState(State s)
     {
         state = s;
         emit q->stateChanged(s);
+    }
+
+    void writeNextBlockToTransport()
+    {
+        if (!bytesLeft) {
+            return; // everything is written
+        }
+        auto sz = transport->blockSize();
+        sz = sz? sz : 8192;
+        if (sz > bytesLeft) {
+            sz = bytesLeft;
+        }
+        QByteArray data = device->read(sz);
+        if (data.isEmpty()) {
+            // TODO d->lastError = Condition::FailedApplication
+            connection.reset();
+            setState(State::Finished);
+            return;
+        }
+        if (connection->write(data) == -1) {
+            // TODO d->lastError = Condition::FailedApplication
+            connection.reset();
+            setState(State::Finished);
+            return;
+        }
+    }
+
+    void readNextBlockFromTransport()
+    {
+        // TODO
     }
 };
 
@@ -479,11 +512,30 @@ bool Application::setTransport(const QSharedPointer<Transport> &transport)
         connect(transport.data(), &Transport::updated, this, &Application::updated);
         connect(transport.data(), &Transport::connected, this, [this](){
             d->connection = d->transport->connection();
+            if (d->acceptFile.range().isValid()) {
+                d->bytesLeft = d->acceptFile.range().length;
+                emit deviceRequested(d->acceptFile.range().offset, d->bytesLeft);
+            } else {
+                d->bytesLeft = d->file.size();
+                emit deviceRequested(0, d->bytesLeft);
+            }
             connect(d->connection.data(), &Connection::readyRead, this, [this](){
-                // TODO read data
+                if (!d->device) {
+                    return;
+                }
+                if (d->pad->session()->role() != d->senders) {
+                    d->readNextBlockFromTransport();
+                }
+            });
+            connect(d->connection.data(), &Connection::bytesWritten, this, [this](qint64 bytes){
+                Q_UNUSED(bytes)
+                if (d->pad->session()->role() == d->senders && !d->connection->bytesToWrite()) {
+                    d->writeNextBlockToTransport();
+                }
             });
             d->setState(State::Active);
         });
+
         connect(transport.data(), &Transport::failed, this, [this](){
             if (d->availableTransports.size()) { // we can do transport-replace here
                 // TODO
@@ -639,6 +691,7 @@ bool Application::accept(const QDomElement &el)
     if (!f.isValid()) {
         return false;
     }
+    d->acceptFile = f;
     // TODO validate if accept file matches to the offer
     setState(State::Accepted);
     return true;
@@ -648,6 +701,16 @@ bool Application::isValid() const
 {
     return d->file.isValid() && d->transport &&  d->contentName.size() > 0 &&
             (d->senders == Origin::Initiator || d->senders == Origin::Responder);
+}
+
+void Application::setDevice(QIODevice *dev)
+{
+    d->device = dev;
+    if (d->senders == d->pad->session()->role()) {
+        d->writeNextBlockToTransport();
+    } else {
+        d->readNextBlockFromTransport();
+    }
 }
 
 Pad::Pad(Manager *manager, Session *session) :

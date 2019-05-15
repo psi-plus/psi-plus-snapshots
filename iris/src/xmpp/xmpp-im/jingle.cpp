@@ -716,7 +716,7 @@ public:
             State finalState = State::Active;
             // so all contents is ready for session-initiate. let's do it
             if (role == Origin::Initiator) {
-                sid = manager->generateSessionId(otherParty);
+                sid = manager->registerSession(q);
                 actionToSend = Action::SessionInitiate;
                 finalState = State::Pending;
             }
@@ -1138,6 +1138,34 @@ public:
 
         return true;
     }
+
+    bool handleIncomingTransportInfo(const QDomElement &jingleEl)
+    {
+        QString contentTag(QStringLiteral("content"));
+        QList<QPair<QSharedPointer<Transport>,QDomElement>> updates;
+        for(QDomElement ce = jingleEl.firstChildElement(contentTag);
+            !ce.isNull(); ce = ce.nextSiblingElement(contentTag))
+        {
+            Application *app;
+            ContentBase cb(ce);
+            if (!cb.isValid() || !(app = q->content(cb.name, role)) || app->state() >= State::Finishing || !app->transport()) {
+                return false;
+            }
+            auto tel = ce.firstChildElement(QStringLiteral("transport"));
+            if (tel.isNull() || tel.attribute(QStringLiteral("xmlns")) != app->transport()->pad()->ns()) {
+                return false;
+            }
+            updates.append(qMakePair(app->transport(), tel));
+        }
+
+        for (auto &u: updates) {
+            if (!u.first->update(u.second)) {
+                return false; // yes this may lead to half updated content, but what choice do we have?
+            }
+        }
+
+        return true;
+    }
 };
 
 Session::Session(Manager *manager, const Jid &peer) :
@@ -1185,6 +1213,11 @@ Jid Session::initiator() const
 Jid Session::responder() const
 {
     return d->role == Origin::Responder? d->manager->client()->jid() : d->otherParty;
+}
+
+QString Session::sid() const
+{
+    return d->sid;
 }
 
 Origin Session::role() const
@@ -1273,6 +1306,7 @@ void Session::accept()
 
 void Session::initiate()
 {
+    emit initiated();
     if (d->role == Origin::Initiator && d->state == State::Created) {
         d->state = State::PrepareLocalOffer;
         for (auto &c: d->contentList) {
@@ -1385,7 +1419,7 @@ bool Session::updateFromXml(Action action, const QDomElement &jingleEl)
     case Action::TransportAccept:
         break;
     case Action::TransportInfo:
-        break;
+        return d->handleIncomingTransportInfo(jingleEl);
     case Action::TransportReject:
         break;
     case Action::TransportReplace:
@@ -1572,15 +1606,21 @@ XMPP::Stanza::Error Manager::lastError() const
 
 Session *Manager::newSession(const Jid &j)
 {
-    return new Session(this, j);
+    auto s = new Session(this, j);
+    connect(s, &Session::terminated, this, [this, s](){
+        d->sessions.remove(qMakePair(s->peer(), s->sid()));
+    });
+    return s;
 }
 
-QString Manager::generateSessionId(const Jid &peer)
+QString Manager::registerSession(Session *session)
 {
     QString id;
+    auto peer = session->peer();
     do {
         id = QString("%1").arg(quint32(qrand()), 6, 32, QChar('0'));
-    } while (d->sessions.contains(QPair<Jid,QString>(peer,id)));
+    } while (d->sessions.contains(qMakePair(peer,id)));
+    d->sessions.insert(qMakePair(peer, id), session);
     return id;
 }
 
