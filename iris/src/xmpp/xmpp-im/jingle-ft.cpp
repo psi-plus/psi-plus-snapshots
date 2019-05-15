@@ -605,7 +605,7 @@ OutgoingUpdate Application::takeOutgoingUpdate()
             thumb.uri = QLatin1String("cid:") + data.cid();
             d->file.setThumbnail(thumb);
         }
-        ContentBase cb(d->pad->session()->role(), d->contentName);
+        ContentBase cb(d->creator, d->contentName);
         cb.senders = d->senders;
         auto cel = cb.toXml(doc, "content");
         cel.appendChild(doc->createElementNS(NS, "description")).appendChild(d->file.toXml(doc));
@@ -624,8 +624,8 @@ OutgoingUpdate Application::takeOutgoingUpdate()
     }
     if (d->state == State::Connecting || d->state == State::Active || d->state == State::Pending) {
         if (d->transport->hasUpdates()) { // failed to select next transport. can't continue
-            ContentBase cb(d->pad->session()->role(), d->contentName);
-            cb.senders = d->senders;
+            ContentBase cb(d->creator, d->contentName);
+            //cb.senders = d->senders;
             auto cel = cb.toXml(doc, "content");
             QDomElement tel;
             OutgoingUpdateCB trCallback;
@@ -636,7 +636,7 @@ OutgoingUpdate Application::takeOutgoingUpdate()
     }
     if (d->state == State::Finishing) {
         if (d->transportFailed) {
-            ContentBase cb(d->pad->session()->role(), d->contentName);
+            ContentBase cb(d->creator, d->contentName);
             QList<QDomElement> updates;
             updates << cb.toXml(doc, "content");
             updates << Reason(Reason::Condition::FailedTransport).toXml(doc);

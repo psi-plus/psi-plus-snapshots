@@ -406,7 +406,7 @@ public:
     Transport::Mode mode = Transport::Tcp;
     QTimer probingTimer;
     QElapsedTimer lastConnectionStart;
-    size_t blockSize = 8129;
+    size_t blockSize = 8192;
 
     QSharedPointer<Connection> connection;
 

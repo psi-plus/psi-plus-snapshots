@@ -699,9 +699,6 @@ public:
              */
             Action expectedContentAction = role == Origin::Initiator? Action::ContentAdd : Action::ContentAccept;
             for (const auto &c: contentList) {
-                if (c->creator() != role) {
-                    continue; // we care only about local content for now.
-                }
                 auto out = c->outgoingUpdateType();
                 if (out == Action::ContentReject) { // yeah we are rejecting local content. invalid?
                     lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
@@ -724,9 +721,6 @@ public:
             QList<QDomElement> contents;
             QList<AckHndl> acceptApps;
             for (const auto &p: contentList) {
-                if (p->creator() != role) {
-                    continue; // we care only about local content for now.
-                }
                 QList<QDomElement> xml;
                 OutgoingUpdateCB callback;
                 std::tie(xml, callback) = p->takeOutgoingUpdate();
