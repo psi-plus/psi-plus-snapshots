@@ -392,12 +392,16 @@ public:
     Connection::Ptr connection;
     QStringList availableTransports;
     bool transportFailed = false;
+    bool closeDeviceOnFinish = true;
     QIODevice *device = nullptr;
     quint64 bytesLeft = 0;
 
     void setState(State s)
     {
         state = s;
+        if (s == State::Finished && device && closeDeviceOnFinish) {
+            device->close();
+        }
         emit q->stateChanged(s);
     }
 
@@ -703,9 +707,10 @@ bool Application::isValid() const
             (d->senders == Origin::Initiator || d->senders == Origin::Responder);
 }
 
-void Application::setDevice(QIODevice *dev)
+void Application::setDevice(QIODevice *dev, bool closeOnFinish)
 {
     d->device = dev;
+    d->closeDeviceOnFinish = closeOnFinish;
     if (d->senders == d->pad->session()->role()) {
         d->writeNextBlockToTransport();
     } else {

@@ -928,10 +928,10 @@ public:
 
             rejectSet.remove(contentName);
             if (it == addSet.end() || (*it)->wantBetterTransport(app->transport())) { // probably not wantBetterTransport but wantBetterApplication
-                delete *it; // unpreferred app
                 if (it == addSet.end()) {
                     addSet.insert(contentName, app);
                 } else {
+                    delete *it; // unpreferred app
                     *it = app;
                 }
             }
@@ -1168,10 +1168,11 @@ public:
     }
 };
 
-Session::Session(Manager *manager, const Jid &peer) :
+Session::Session(Manager *manager, const Jid &peer, Origin role) :
     d(new Private)
 {
     d->q = this;
+    d->role = role;
     d->manager = manager;
     d->otherParty = peer;
     d->stepTimer.setSingleShot(true);
@@ -1586,7 +1587,7 @@ Session* Manager::incomingSessionInitiate(const Jid &from, const Jingle &jingle,
         return NULL;
     }
     auto key = qMakePair(from, jingle.sid());
-    auto s = new Session(this, from);
+    auto s = new Session(this, from, Origin::Responder);
     if (s->incomingInitiate(jingle, jingleEl)) { // if parsed well
         d->sessions.insert(key, s);
         // emit incomingSession makes sense when there are no unsolved conflicts in content descriptions / transports

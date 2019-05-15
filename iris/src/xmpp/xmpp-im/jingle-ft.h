@@ -140,7 +140,7 @@ public:
 
     bool isValid() const;
 
-    void setDevice(QIODevice *dev);
+    void setDevice(QIODevice *dev, bool closeOnFinish = true);
 
 signals:
     void deviceRequested(quint64 offset, quint64 size);

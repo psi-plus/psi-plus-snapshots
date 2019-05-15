@@ -410,7 +410,7 @@ public:
     // Note incoming session are not registered in Jingle Manager until validated.
     // and then either rejected or registered in Pending state.
 
-    Session(Manager *manager, const Jid &peer);
+    Session(Manager *manager, const Jid &peer, Origin role = Origin::Initiator);
     ~Session();
 
     Manager* manager() const;
