@@ -738,6 +738,9 @@ public:
                     auto callback = std::get<1>(h);
                     if (app) {
                         callback();
+                        if (role == Origin::Responder) {
+                            app->start();
+                        }
                     }
                 }
                 if (finalState == State::Active) {
@@ -1142,7 +1145,7 @@ public:
         {
             Application *app;
             ContentBase cb(ce);
-            if (!cb.isValid() || !(app = q->content(cb.name, role)) || app->state() >= State::Finishing || !app->transport()) {
+            if (!cb.isValid() || !(app = q->content(cb.name, cb.creator)) || app->state() >= State::Finishing || !app->transport()) {
                 return false;
             }
             auto tel = ce.firstChildElement(QStringLiteral("transport"));

@@ -842,6 +842,8 @@ void Transport::start()
 {
     d->connectionStarted = true;
     d->tryConnectToRemoteCandidate();
+    // if there is no higher priority candidates than ours but they are already connected then
+    d->checkAndFinishNegotiation();
 }
 
 bool Transport::update(const QDomElement &transportEl)
