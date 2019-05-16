@@ -432,15 +432,19 @@ public:
             return;
         }
         emit q->progress(device->pos());
+        bytesLeft -= sz;
+        if (!bytesLeft) {
+            if (closeDeviceOnFinish) {
+                device->close();
+            }
+            setState(State::Finished);
+        }
     }
 
     void readNextBlockFromTransport()
     {
-        while (quint64 bytesAvail = connection->bytesAvailable()) {
-            qDebug("bytes available %llu", bytesAvail);
-            if (!bytesLeft || !bytesAvail) {
-                return; // nothing to read
-            }
+        quint64 bytesAvail;
+        while (bytesLeft && (bytesAvail = connection->bytesAvailable())) {
             quint64 sz = 65536; // should be respect transport->blockSize() ?
             if (sz > bytesLeft) {
                 sz = bytesLeft;
@@ -458,6 +462,14 @@ public:
                 return;
             }
             emit q->progress(device->pos());
+            bytesLeft -= sz;
+        }
+        if (!bytesLeft) {
+            if (closeDeviceOnFinish) {
+                device->close();
+            }
+            // TODO send <received>
+            setState(State::Finished);
         }
     }
 };
@@ -542,13 +554,6 @@ bool Application::setTransport(const QSharedPointer<Transport> &transport)
         connect(transport.data(), &Transport::updated, this, &Application::updated);
         connect(transport.data(), &Transport::connected, this, [this](){
             d->connection = d->transport->connection();
-            if (d->acceptFile.range().isValid()) {
-                d->bytesLeft = d->acceptFile.range().length;
-                emit deviceRequested(d->acceptFile.range().offset, d->bytesLeft);
-            } else {
-                d->bytesLeft = d->file.size();
-                emit deviceRequested(0, d->bytesLeft);
-            }
             connect(d->connection.data(), &Connection::readyRead, this, [this](){
                 if (!d->device) {
                     return;
@@ -564,8 +569,12 @@ bool Application::setTransport(const QSharedPointer<Transport> &transport)
                 }
             });
             d->setState(State::Active);
-            if (d->pad->session()->role() != d->senders && d->connection->bytesAvailable()) {
-                d->readNextBlockFromTransport();
+            if (d->acceptFile.range().isValid()) {
+                d->bytesLeft = d->acceptFile.range().length;
+                emit deviceRequested(d->acceptFile.range().offset, d->bytesLeft);
+            } else {
+                d->bytesLeft = d->file.size();
+                emit deviceRequested(0, d->bytesLeft);
             }
         });
 

@@ -768,7 +768,9 @@ Transport::Transport(const TransportManagerPad::Ptr &pad, const QDomElement &tra
 
 Transport::~Transport()
 {
-    static_cast<Manager*>(d->pad->manager())->removeKeyMapping(d->directAddr);
+    if (d) {
+        static_cast<Manager*>(d->pad->manager())->removeKeyMapping(d->directAddr);
+    }
 }
 
 TransportManagerPad::Ptr Transport::pad() const
@@ -790,6 +792,9 @@ void Transport::prepare()
     auto serv = m->socksServ();
     if (serv) {
         for(auto const &h: serv->hostList()) {
+            if (!serv->port() || h.isEmpty()) {
+                continue;
+            }
             Candidate c(h, serv->port(), d->generateCid(), Candidate::Direct);
             if (!d->isDup(c)) {
                 d->localCandidates.insert(c.cid(), c);

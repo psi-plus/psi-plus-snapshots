@@ -1250,7 +1250,13 @@ Application *Session::content(const QString &contentName, Origin creator)
 
 void Session::addContent(Application *content)
 {
+    Q_ASSERT(d->state < State::Finishing);
     d->addAndInitContent(d->role, content);
+    if (d->state >= State::PrepareLocalOffer) {
+        // If we add content to already initiated session then we are gonna
+        // send it immediatelly. So start prepare
+        content->prepare();
+    }
 }
 
 const QMap<ContentKey, Application *> &Session::contentList() const
