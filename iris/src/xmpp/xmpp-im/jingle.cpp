@@ -1066,6 +1066,7 @@ public:
         switch (err) {
         case Private::AddContentError::Unparsed:
         case Private::AddContentError::Unexpected:
+            lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
             return false;
         case Private::AddContentError::Unsupported:
             rejects += Reason(cond).toXml(manager->client()->doc());
@@ -1101,6 +1102,7 @@ public:
 
         std::tie(parsed, apps) = parseContentAcceptList(jingleEl);
         if (!parsed) {
+            lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
             return false;
         }
 
@@ -1123,6 +1125,7 @@ public:
 
         std::tie(parsed, apps) = parseContentAcceptList(jingleEl); // marks valid apps as accepted
         if (!parsed) {
+            lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
             return false;
         }
 
@@ -1146,10 +1149,12 @@ public:
             Application *app;
             ContentBase cb(ce);
             if (!cb.isValid() || !(app = q->content(cb.name, cb.creator)) || app->state() >= State::Finishing || !app->transport()) {
+                lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                 return false;
             }
             auto tel = ce.firstChildElement(QStringLiteral("transport"));
             if (tel.isNull() || tel.attribute(QStringLiteral("xmlns")) != app->transport()->pad()->ns()) {
+                lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                 return false;
             }
             updates.append(qMakePair(app->transport(), tel));
@@ -1157,6 +1162,7 @@ public:
 
         for (auto &u: updates) {
             if (!u.first->update(u.second)) {
+                lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                 return false; // yes this may lead to half updated content, but what choice do we have?
             }
         }

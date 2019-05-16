@@ -436,28 +436,29 @@ public:
 
     void readNextBlockFromTransport()
     {
-        quint64 bytesAvail = connection->bytesAvailable();
-        if (!bytesLeft || !bytesAvail) {
-            return; // nothing to read
+        while (quint64 bytesAvail = connection->bytesAvailable()) {
+            qDebug("bytes available %llu", bytesAvail);
+            if (!bytesLeft || !bytesAvail) {
+                return; // nothing to read
+            }
+            quint64 sz = 65536; // should be respect transport->blockSize() ?
+            if (sz > bytesLeft) {
+                sz = bytesLeft;
+            }
+            if (sz > bytesAvail) {
+                sz = bytesAvail;
+            }
+            QByteArray data = connection->read(sz);
+            if (data.isEmpty()) {
+                handleStreamFail();
+                return;
+            }
+            if (device->write(data) == -1) {
+                handleStreamFail();
+                return;
+            }
+            emit q->progress(device->pos());
         }
-        quint64 sz = transport->blockSize();
-        sz = sz? sz : 8192;
-        if (sz > bytesLeft) {
-            sz = bytesLeft;
-        }
-        if (sz > bytesAvail) {
-            sz = bytesAvail;
-        }
-        QByteArray data = connection->read(sz);
-        if (data.isEmpty()) {
-            handleStreamFail();
-            return;
-        }
-        if (device->write(data) == -1) {
-            handleStreamFail();
-            return;
-        }
-        emit q->progress(device->pos());
     }
 };
 
@@ -652,12 +653,15 @@ OutgoingUpdate Application::takeOutgoingUpdate()
     }
     if (d->state == State::Connecting || d->state == State::Active || d->state == State::Pending) {
         if (d->transport->hasUpdates()) { // failed to select next transport. can't continue
-            ContentBase cb(d->creator, d->contentName);
-            //cb.senders = d->senders;
-            auto cel = cb.toXml(doc, "content");
             QDomElement tel;
             OutgoingUpdateCB trCallback;
             std::tie(tel, trCallback) = d->transport->takeOutgoingUpdate();
+            if (tel.isNull()) {
+                qWarning("transport for content=%s reported it had updates but got null update", qPrintable(d->contentName));
+                return OutgoingUpdate();
+            }
+            ContentBase cb(d->creator, d->contentName);
+            auto cel = cb.toXml(doc, "content");
             cel.appendChild(tel);
             return OutgoingUpdate{QList<QDomElement>()<<cel, trCallback};
         }

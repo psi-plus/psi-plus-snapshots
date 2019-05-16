@@ -117,6 +117,10 @@ public:
     void connectToHost(const QString &key, State successState, std::function<void (bool)> callback, bool isUdp = false);
     bool incomingConnection(SocksClient *sc);
     SocksClient* takeSocksClient();
+    void deleteSocksClient();
+
+    bool operator==(const Candidate &other) const;
+    inline bool operator!=(const Candidate &other) const { return !(*this == other); }
 private:
     class Private;
     friend class Transport;

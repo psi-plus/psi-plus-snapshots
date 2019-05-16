@@ -373,6 +373,18 @@ SocksClient *Candidate::takeSocksClient()
     return c;
 }
 
+void Candidate::deleteSocksClient()
+{
+    d->socksClient->disconnect();
+    delete d->socksClient;
+    d->socksClient = nullptr;
+}
+
+bool Candidate::operator==(const Candidate &other) const
+{
+    return d.data() == other.d.data();
+}
+
 class Transport::Private
 {
 public:
@@ -448,7 +460,7 @@ public:
         quint64 maxProbingPrio = 0;
         quint64 maxNewPrio = 0;
         Candidate maxProbing;
-        Candidate maxNew;
+        QList<Candidate> maxNew;
 
         /*
          We have to find highest-priority already connecting candidate and highest-priority new candidate.
@@ -461,21 +473,26 @@ public:
         */
 
         for (auto &c: remoteCandidates) {
-            if (c.state() == Candidate::New && c.priority() > maxNewPrio) {
-                maxNew = c;
-                maxNewPrio = c.priority();
+            if (c.state() == Candidate::New) {
+                if (c.priority() > maxNewPrio) {
+                    maxNew = QList<Candidate>();
+                    maxNew.append(c);
+                    maxNewPrio = c.priority();
+                } else if (c.priority() == maxNewPrio) {
+                    maxNew.append(c);
+                }
             }
             if (c.state() == Candidate::Probing && c.priority() > maxProbingPrio) {
                 maxProbing = c;
                 maxProbingPrio = c.priority();
             }
         }
-        if (!maxNew) {
+        if (maxNew.isEmpty()) {
             return; // nowhere to connect
         }
 
         if (maxProbing) {
-            if (maxNew.priority() < maxProbing.priority()) {
+            if (maxNewPrio < maxProbing.priority()) {
                 if (probingTimer.isActive()) {
                     return; // we will come back here soon
                 }
@@ -487,27 +504,37 @@ public:
             }
         }
 
-        // now we have to connect to maxNew candidate
-        lastConnectionStart.start();
-        QString key = maxNew.type() == Candidate::Proxy? dstaddr : directAddr;
-        maxNew.setState(Candidate::Probing);
-        maxNew.connectToHost(key, Candidate::Pending, [this, maxNew](bool success) {
-            // candidate's status had to be changed by connectToHost, so we don't set it again
-            if (success) {
-                // let's reject candidates which are meaningless to try
-                for (auto &c: remoteCandidates) {
-                    if (c.state() == Candidate::New && c.priority() <= maxNew.priority()) {
-                        c.setState(Candidate::Discarded);
+        // now we have to connect to maxNew candidates
+        for (auto &mnc: maxNew) {
+            lastConnectionStart.start();
+            QString key = mnc.type() == Candidate::Proxy? dstaddr : directAddr;
+            mnc.setState(Candidate::Probing);
+            mnc.connectToHost(key, Candidate::Pending, [this, mnc](bool success) {
+                // candidate's status had to be changed by connectToHost, so we don't set it again
+                if (success) {
+                    // let's reject candidates which are meaningless to try
+                    bool hasUnckeckedNew = false;
+                    for (auto &c: remoteCandidates) {
+                        if (c.state() == Candidate::New) {
+                            if (c.priority() <= mnc.priority()) {
+                                c.setState(Candidate::Discarded);
+                            } else {
+                                hasUnckeckedNew = true;
+                            }
+                        }
                     }
+                    if (!hasUnckeckedNew) {
+                        pendingActions &= ~Private::NewCandidate; // just if we had it for example after proxy discovery
+                    }
+                    if (proxyDiscoveryInProgress && (mnc.priority() >> 16) > Candidate::ProxyPreference) {
+                        proxyDiscoveryInProgress = false; // doesn't make sense anymore
+                    }
+                    // TODO do the same for upnp
+                    updateMinimalPriority();
                 }
-                if (proxyDiscoveryInProgress && (maxNew.priority() >> 16) > Candidate::ProxyPreference) {
-                    proxyDiscoveryInProgress = false; // doesn't make sense anymore
-                }
-                // TODO do the same for upnp
-                updateMinimalPriority();
-            }
-            checkAndFinishNegotiation();
-        }, mode == Transport::Udp);
+                checkAndFinishNegotiation();
+            }, mode == Transport::Udp);
+        }
     }
 
     bool hasUnaknowledgedLocalCandidates() const
@@ -599,10 +626,7 @@ public:
                         }
                     }
                     if (c.state() == Candidate::Active) {
-                        connection.reset(new Connection(c.takeSocksClient(), mode));
-                        localCandidates.clear();
-                        remoteCandidates.clear();
-                        emit q->connected();
+                        handleConnected(c);
                     }
                 } else { // both sides reported candidate error
                     emit q->failed();
@@ -686,6 +710,34 @@ public:
                 localReportedCandidateError = true; // as a sign of completeness even if not true
             }
         }
+
+        // now check and reset NewCandidate pending action
+        bool haveNewCandidates = false;
+        for (auto &c: remoteCandidates) {
+            if (c.state() == Candidate::New) {
+                haveNewCandidates = true;
+                break;
+            }
+        }
+        if (!haveNewCandidates) {
+            pendingActions &= ~Private::NewCandidate;
+        }
+    }
+
+    void handleConnected(Candidate &connCand)
+    {
+        connection.reset(new Connection(connCand.takeSocksClient(), mode));
+        probingTimer.stop();
+        for (auto &rc: remoteCandidates) {
+            if (rc != connCand && rc.state() == Candidate::Probing) {
+                rc.deleteSocksClient();
+            }
+        }
+        QTimer::singleShot(0, q, [this](){
+            localCandidates.clear();
+            remoteCandidates.clear();
+            emit q->connected();
+        });
     }
 };
 
@@ -919,12 +971,7 @@ bool Transport::update(const QDomElement &transportEl)
             return true;
         }
         c.setState(Candidate::Active);
-        d->connection.reset(new Connection(c.takeSocksClient(), d->mode));
-        QTimer::singleShot(0, this, [this](){
-            d->localCandidates.clear();
-            d->remoteCandidates.clear();
-            emit connected();
-        });
+        d->handleConnected(c);
         return true;
     }
 
@@ -1011,6 +1058,8 @@ OutgoingTransportInfoUpdate Transport::takeOutgoingUpdate()
                 }
                 d->checkAndFinishNegotiation();
             }};
+        } else {
+            qWarning("Got NewCandidate pending action but no candidate to send");
         }
     } else if (d->pendingActions & Private::CandidateUsed) {
         d->pendingActions &= ~Private::CandidateUsed;
@@ -1035,6 +1084,9 @@ OutgoingTransportInfoUpdate Transport::takeOutgoingUpdate()
             }};
 
             break;
+        }
+        if (std::get<0>(upd).isNull()) {
+            qWarning("Got CandidateUsed pending action but no pending candidates");
         }
     } else if (d->pendingActions & Private::CandidateError) {
         d->pendingActions &= ~Private::CandidateError;
@@ -1078,6 +1130,8 @@ OutgoingTransportInfoUpdate Transport::takeOutgoingUpdate()
                 d->localUsedCandidate = Candidate();
                 emit failed();
             }};
+        } else {
+            qWarning("Got ProxyError pending action but no local used candidate is not set");
         }
     }
 
@@ -1114,7 +1168,7 @@ bool Transport::incomingConnection(SocksClient *sc)
     if (!d->connection) {
         auto s = sc->abstractSocket();
         for (auto &c: d->localCandidates) {
-            if (s->localPort() == c.localPort() && c.state() == Candidate::Pending) {
+            if (s->localPort() == c.localPort() && (c.state() == Candidate::Pending || c.state() == Candidate::Unacked)) {
                 if(d->mode == Transport::Udp)
                     sc->grantUDPAssociate("", 0);
                 else
