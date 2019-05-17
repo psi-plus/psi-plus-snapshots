@@ -537,6 +537,11 @@ File Application::file() const
     return d->file;
 }
 
+File Application::acceptFile() const
+{
+    return d->acceptFile;
+}
+
 // incoming one? or we have to check real direction
 bool Application::setTransport(const QSharedPointer<Transport> &transport)
 {

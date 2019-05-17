@@ -127,6 +127,7 @@ public:
     SetDescError setDescription(const QDomElement &description) override;
     void setFile(const File &file);
     File file() const;
+    File acceptFile() const;
     bool setTransport(const QSharedPointer<Transport> &transport) override;
     QSharedPointer<Transport> transport() const override;
 
