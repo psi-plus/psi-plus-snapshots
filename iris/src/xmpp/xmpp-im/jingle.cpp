@@ -1328,6 +1328,7 @@ void Session::initiate()
 
 void Session::terminate(Reason::Condition cond, const QString &comment)
 {
+    d->state = State::Finishing;
     d->terminateReason = Reason(cond, comment);
 }
 
