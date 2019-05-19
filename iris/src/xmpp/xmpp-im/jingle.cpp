@@ -633,7 +633,7 @@ public:
 
         auto jt = new JT(manager->client()->rootTask());
         jt->request(otherParty, xml);
-        QObject::connect(jt, &JT::finished, manager, [jt, jingle, successCB, this](){
+        QObject::connect(jt, &JT::finished, q, [jt, jingle, successCB, this](){
             waitingAck = false;
             if (jt->success()) {
                 if (successCB) {
@@ -1335,6 +1335,7 @@ void Session::terminate(Reason::Condition cond, const QString &comment)
 {
     d->state = State::Finishing;
     d->terminateReason = Reason(cond, comment);
+    d->planStep();
 }
 
 TransportManagerPad::Ptr Session::transportPadFactory(const QString &ns)
