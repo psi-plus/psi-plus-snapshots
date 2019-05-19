@@ -1479,6 +1479,13 @@ public:
     XMPP::Stanza::Error lastError;
     QHash<QPair<Jid,QString>,Session*> sessions;
     int maxSessions = -1; // no limit
+
+    void setupSession(Session *s)
+    {
+        QObject::connect(s, &Session::terminated, manager, [this, s](){
+            sessions.remove(qMakePair(s->peer(), s->sid()));
+        });
+    }
 };
 
 Manager::Manager(Client *client) :
@@ -1606,6 +1613,7 @@ Session* Manager::incomingSessionInitiate(const Jid &from, const Jingle &jingle,
     auto s = new Session(this, from, Origin::Responder);
     if (s->incomingInitiate(jingle, jingleEl)) { // if parsed well
         d->sessions.insert(key, s);
+        d->setupSession(s);
         // emit incomingSession makes sense when there are no unsolved conflicts in content descriptions / transports
         //QTimer::singleShot(0,[s, this](){ emit incomingSession(s); });
         QMetaObject::invokeMethod(this, "incomingSession", Qt::QueuedConnection, Q_ARG(Session*, s));
@@ -1624,9 +1632,7 @@ XMPP::Stanza::Error Manager::lastError() const
 Session *Manager::newSession(const Jid &j)
 {
     auto s = new Session(this, j);
-    connect(s, &Session::terminated, this, [this, s](){
-        d->sessions.remove(qMakePair(s->peer(), s->sid()));
-    });
+    d->setupSession(s);
     return s;
 }
 
