@@ -399,8 +399,13 @@ public:
     void setState(State s)
     {
         state = s;
-        if (s == State::Finished && device && closeDeviceOnFinish) {
-            device->close();
+        if (s == State::Finished) {
+            if (device && closeDeviceOnFinish) {
+                device->close();
+            }
+            if (connection) {
+                connection->close();
+            }
         }
         emit q->stateChanged(s);
     }
@@ -408,7 +413,6 @@ public:
     void handleStreamFail()
     {
         // TODO d->lastError = Condition::FailedApplication
-        connection.reset();
         setState(State::Finished);
     }
 
@@ -434,9 +438,6 @@ public:
         emit q->progress(device->pos());
         bytesLeft -= sz;
         if (!bytesLeft) {
-            if (closeDeviceOnFinish) {
-                device->close();
-            }
             setState(State::Finished);
         }
     }
@@ -465,9 +466,6 @@ public:
             bytesLeft -= sz;
         }
         if (!bytesLeft) {
-            if (closeDeviceOnFinish) {
-                device->close();
-            }
             // TODO send <received>
             setState(State::Finished);
         }

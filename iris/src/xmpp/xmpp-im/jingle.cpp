@@ -602,6 +602,11 @@ public:
         state = State::Finished;
         emit q->terminated();
         signalingContent.clear();
+        for (auto &c: contentList) {
+            if (c->state() != State::Finished) {
+                c->setState(State::Finished);
+            }
+        }
         auto vals = contentList.values();
         contentList.clear();
         while (vals.size()) {
