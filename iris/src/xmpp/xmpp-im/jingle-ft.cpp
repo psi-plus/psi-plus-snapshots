@@ -419,6 +419,7 @@ public:
     void writeNextBlockToTransport()
     {
         if (!bytesLeft) {
+            setState(State::Finished);
             return; // everything is written
         }
         auto sz = transport->blockSize();
@@ -437,9 +438,6 @@ public:
         }
         emit q->progress(device->pos());
         bytesLeft -= sz;
-        if (!bytesLeft) {
-            setState(State::Finished);
-        }
     }
 
     void readNextBlockFromTransport()
