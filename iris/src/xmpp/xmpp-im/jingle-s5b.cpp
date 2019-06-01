@@ -22,6 +22,7 @@
 #include "xmpp_client.h"
 #include "xmpp_serverinfomanager.h"
 #include "socks.h"
+#include "ice176.h"
 
 #include <QElapsedTimer>
 #include <QNetworkInterface>
@@ -897,9 +898,9 @@ public:
                 auto c = preferredUsedCandidate();
                 if (c) {
                     if (c.state() != Candidate::Active) {
-                        if (c.type() == Candidate::Proxy && c == localUsedCandidate) { // local proxy
+                        if (c.type() == Candidate::Proxy) { // local proxy
                             // If it's proxy, first it has to be activated
-                            if (localUsedCandidate) {
+                            if (c == localUsedCandidate) {
                                 // it's our side who proposed proxy. so we have to connect to it and activate
                                 auto key = makeKey(sid, pad->session()->me(), pad->session()->peer());
                                 c.connectToHost(key, Candidate::Active, [this](bool success){
@@ -909,6 +910,7 @@ public:
                                         pendingActions |= Private::ProxyError;
                                     }
                                     emit q->updated();
+                                    handleConnected(localUsedCandidate);
                                 }, mode == Transport::Udp);
                             } // else so it's remote proxy. let's just wait for <activated> from remote
                         } else {
@@ -1079,7 +1081,6 @@ Transport::Transport(const TransportManagerPad::Ptr &pad, const QDomElement &tra
     Transport::Transport(pad)
 {
     d->meCreator = false;
-    d->dstaddr = transportEl.attribute(QStringLiteral("dstaddr"));
     d->sid = transportEl.attribute(QStringLiteral("sid"));
     if (d->sid.isEmpty() || !update(transportEl)) {
         d.reset();
@@ -1141,6 +1142,10 @@ bool Transport::update(const QDomElement &transportEl)
             d->blockSize = bsn;
         }
     }
+    auto dstaddr = transportEl.attribute(QStringLiteral("dstaddr"));
+    if (!dstaddr.isEmpty()) {
+        d->dstaddr = dstaddr;
+    }
     QString candidateTag(QStringLiteral("candidate"));
     int candidatesAdded = 0;
     for(QDomElement ce = transportEl.firstChildElement(candidateTag);
@@ -1195,11 +1200,12 @@ bool Transport::update(const QDomElement &transportEl)
 
     el = transportEl.firstChildElement(QStringLiteral("activated"));
     if (!el.isNull()) {
-        auto c = d->localCandidates.value(el.attribute(QStringLiteral("cid")));
-        if (!c) {
+        QString cid = el.attribute(QStringLiteral("cid"));
+        if (cid.isEmpty()) {
             return false;
         }
-        if (!(c.type() == Candidate::Proxy && c.state() == Candidate::Accepted && c == d->localUsedCandidate)) {
+        auto c = d->remoteUsedCandidate;
+        if (!(c.cid() == cid && c.type() == Candidate::Proxy && c.state() == Candidate::Accepted)) {
             qDebug("Received <activated> on a candidate in an inappropriate state. Ignored.");
             return true;
         }
@@ -1340,11 +1346,6 @@ OutgoingTransportInfoUpdate Transport::takeOutgoingUpdate()
             d->waitingAck = true;
             upd = OutgoingTransportInfoUpdate{tel, [this, cand]() mutable {
                 d->waitingAck = false;
-                if (cand.state() != Candidate::Accepted || d->localUsedCandidate != cand) {
-                    return; // seems like state was changed while we was waiting for an ack
-                }
-                cand.setState(Candidate::Active);
-                d->checkAndFinishNegotiation();
             }};
         }
     } else if (d->pendingActions & Private::ProxyError) {
