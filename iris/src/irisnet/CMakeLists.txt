@@ -48,6 +48,7 @@ set(SOURCES
     noncore/stuntransaction.cpp
     noncore/turnclient.cpp
     noncore/udpportreserver.cpp
+    noncore/tcpportreserver.cpp
 
     noncore/cutestuff/bsocket.cpp
 )
@@ -89,6 +90,7 @@ set(HEADERS
     noncore/stuntransaction.h
     noncore/turnclient.h
     noncore/udpportreserver.h
+    noncore/tcpportreserver.h
 
     noncore/cutestuff/bsocket.h
     noncore/cutestuff/bytestream.h

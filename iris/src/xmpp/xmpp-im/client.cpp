@@ -87,6 +87,7 @@
 #include "jingle.h"
 #include "jingle-ft.h"
 #include "jingle-s5b.h"
+#include "tcpportreserver.h"
 
 #ifdef Q_OS_WIN
 #define vsnprintf _vsnprintf
@@ -134,6 +135,7 @@ public:
     LiveRoster roster;
     ResourceList resourceList;
     CapsManager *capsman = nullptr;
+    TcpPortReserver *tcpPortReserver = nullptr;
     S5BManager *s5bman = nullptr;
     Jingle::S5B::Manager *jingleS5BManager = nullptr;
     IBBManager *ibbman = nullptr;
@@ -237,6 +239,16 @@ void Client::start(const QString &host, const QString &user, const QString &pass
     new JT_PongServer(rootTask());
 
     d->active = true;
+}
+
+void Client::setTcpPortReserver(TcpPortReserver *portReserver)
+{
+    d->tcpPortReserver = portReserver;
+}
+
+TcpPortReserver * Client::tcpPortReserver() const
+{
+    return d->tcpPortReserver;
 }
 
 void Client::setFileTransferEnabled(bool b)

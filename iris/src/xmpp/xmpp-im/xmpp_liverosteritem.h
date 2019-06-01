@@ -31,6 +31,7 @@ namespace XMPP
         LiveRosterItem(const Jid &j="");
         LiveRosterItem(const RosterItem &);
         ~LiveRosterItem();
+        LiveRosterItem& operator=(const LiveRosterItem& other) = default;
 
         void setRosterItem(const RosterItem &);
 

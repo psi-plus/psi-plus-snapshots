@@ -27,7 +27,8 @@ HEADERS += \
     $$PWD/icelocaltransport.h \
     $$PWD/iceturntransport.h \
     $$PWD/icecomponent.h \
-    $$PWD/ice176.h
+    $$PWD/ice176.h \
+    $$PWD/tcpportreserver.h
 
 SOURCES += \
     $$PWD/processquit.cpp \
@@ -43,7 +44,8 @@ SOURCES += \
     $$PWD/icelocaltransport.cpp \
     $$PWD/iceturntransport.cpp \
     $$PWD/icecomponent.cpp \
-    $$PWD/ice176.cpp
+    $$PWD/ice176.cpp \
+    $$PWD/tcpportreserver.cpp
 
 INCLUDEPATH += $$PWD/legacy
 include(legacy/legacy.pri)

@@ -26,6 +26,7 @@
 
 class QHostAddress;
 class QTcpSocket;
+class QTcpServer;
 class SocksClient;
 class SocksServer;
 
@@ -135,6 +136,7 @@ public:
     SocksServer(QObject *parent=0);
     ~SocksServer();
 
+    void setServerSocket(QTcpServer *server);
     bool isActive() const;
     bool listen(quint16 port, bool udp=false);
     void stop();

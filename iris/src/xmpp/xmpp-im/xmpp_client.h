@@ -53,6 +53,7 @@ namespace XMPP {
     class EncryptionHandler;
     class ServerInfoManager;
     class HttpFileUploadManager;
+    class TcpPortReserver;
 
     namespace Jingle {
         class Manager;
@@ -133,6 +134,8 @@ namespace XMPP
         const Features& features() const;
         DiscoItem makeDiscoResult(const QString &node = QString::null) const;
 
+        void setTcpPortReserver(TcpPortReserver *portReserver);
+        TcpPortReserver *tcpPortReserver() const;
         S5BManager *s5bManager() const;
         IBBManager *ibbManager() const;
         BoBManager *bobManager() const;

@@ -48,6 +48,7 @@ namespace XMPP
         RosterItem(const Jid &jid="");
         RosterItem(const RosterItem &item);
         virtual ~RosterItem();
+        RosterItem& operator=(const RosterItem& other) = default;
 
         const Jid & jid() const;
         const QString & name() const;

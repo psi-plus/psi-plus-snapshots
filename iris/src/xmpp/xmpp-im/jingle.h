@@ -164,6 +164,7 @@ public:
     Reason(Condition cond, const QString &text = QString());
     Reason(const QDomElement &el);
     Reason(const Reason &other);
+    Reason& operator=(const Reason &)=default;
     inline bool isValid() const { return d != nullptr; }
     Condition condition() const;
     void setCondition(Condition cond);

@@ -489,8 +489,13 @@ public:
         } else {
             auto session = client()->jingleManager()->session(from, jingle.sid());
             if (!session) {
-                auto el = client()->doc()->createElementNS(QString::fromLatin1("urn:xmpp:jingle:errors:1"), QStringLiteral("unknown-session"));
-                respondError(iq, Stanza::Error::Cancel, Stanza::Error::ItemNotFound, QString(), el);
+                if (jingle.action() == Action::SessionTerminate) {
+                    auto resp = createIQ(client()->doc(), "result", fromStr, iq.attribute(QStringLiteral("id")));
+                    client()->send(resp);
+                } else {
+                    auto el = client()->doc()->createElementNS(QString::fromLatin1("urn:xmpp:jingle:errors:1"), QStringLiteral("unknown-session"));
+                    respondError(iq, Stanza::Error::Cancel, Stanza::Error::ItemNotFound, QString(), el);
+                }
                 return true;
             }
             if (!session->updateFromXml(jingle.action(), jingleEl)) {
@@ -1093,6 +1098,38 @@ public:
         return true;
     }
 
+    bool handleIncomingContentRemove(const QDomElement &jingleEl)
+    {
+        QSet<Application*> toRemove;
+        QString contentTag(QStringLiteral("content"));
+        for(QDomElement ce = jingleEl.firstChildElement(contentTag);
+            !ce.isNull(); ce = ce.nextSiblingElement(contentTag))
+        {
+            ContentBase cb(ce);
+            if (!cb.isValid()) {
+                lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
+                return false;
+            }
+            Application *app = contentList.value(ContentKey{cb.name, cb.creator});
+            if (app) {
+                toRemove.insert(app);
+            }
+        }
+
+        for (auto app: toRemove) {
+            contentList.remove(ContentKey{app->contentName(), app->creator()});
+            delete app;
+        }
+
+        if (contentList.isEmpty()) {
+            auto reasonEl = jingleEl.firstChildElement(QString::fromLatin1("reason"));
+            terminateReason = reasonEl.isNull()? Reason(Reason::Success) : Reason(reasonEl);
+        }
+
+        planStep();
+        return true;
+    }
+
     bool handleIncomingSessionTerminate(const QDomElement &jingleEl)
     {
         terminateReason = Reason(jingleEl.firstChildElement(QString::fromLatin1("reason")));
@@ -1420,7 +1457,7 @@ bool Session::updateFromXml(Action action, const QDomElement &jingleEl)
     case Action::ContentReject:
         break;
     case Action::ContentRemove:
-        break;
+        return d->handleIncomingContentRemove(jingleEl);
     case Action::DescriptionInfo:
         break;
     case Action::SecurityInfo:

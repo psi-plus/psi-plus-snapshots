@@ -1019,22 +1019,15 @@ SocksUDP *SocksClient::createUDP(const QString &host, int port, const QHostAddre
 class SocksServer::Private
 {
 public:
-    Private(SocksServer *_q) :
-        serv(_q)
-    {
-    }
-
-    QTcpServer serv;
+    QTcpServer          *serv = nullptr;
     QList<SocksClient*> incomingConns;
-    QUdpSocket *sd;
+    QUdpSocket          *sd = nullptr;
 };
 
 SocksServer::SocksServer(QObject *parent)
 :QObject(parent)
 {
-    d = new Private(this);
-    d->sd = 0;
-    connect(&d->serv, SIGNAL(newConnection()), SLOT(newConnection()));
+    d = new Private;
 }
 
 SocksServer::~SocksServer()
@@ -1046,22 +1039,32 @@ SocksServer::~SocksServer()
     delete d;
 }
 
+void SocksServer::setServerSocket(QTcpServer *server)
+{
+    d->serv = server;
+    connect(d->serv, SIGNAL(newConnection()), SLOT(newConnection()));
+}
+
 bool SocksServer::isActive() const
 {
-    return d->serv.isListening();
+    return d->serv->isListening();
 }
 
 bool SocksServer::listen(quint16 port, bool udp)
 {
     stop();
-    if(!d->serv.listen(QHostAddress::Any, port))
+    if (!d->serv) {
+        setServerSocket(new QTcpServer(this));
+    }
+    if(!d->serv->listen(QHostAddress::Any, port))
         return false;
     if(udp) {
         d->sd = new QUdpSocket(this);
         if(!d->sd->bind(QHostAddress::LocalHost, port)) {
             delete d->sd;
-            d->sd = 0;
-            d->serv.close();
+            d->sd = nullptr;
+            delete d->serv;
+            d->serv = nullptr;
             return false;
         }
         connect(d->sd, SIGNAL(readyRead()), SLOT(sd_activated()));
@@ -1072,18 +1075,19 @@ bool SocksServer::listen(quint16 port, bool udp)
 void SocksServer::stop()
 {
     delete d->sd;
-    d->sd = 0;
-    d->serv.close();
+    d->sd = nullptr;
+    delete d->serv;
+    d->serv = nullptr;
 }
 
 int SocksServer::port() const
 {
-    return d->serv.serverPort();
+    return d->serv? d->serv->serverPort(): 0;
 }
 
 QHostAddress SocksServer::address() const
 {
-    return d->serv.serverAddress();
+    return d->serv? d->serv->serverAddress(): QHostAddress();
 }
 
 SocksClient *SocksServer::takeIncoming()
@@ -1111,7 +1115,7 @@ void SocksServer::writeUDP(const QHostAddress &addr, int port, const QByteArray 
 
 void SocksServer::newConnection()
 {
-    SocksClient *c = new SocksClient(d->serv.nextPendingConnection(), this);
+    SocksClient *c = new SocksClient(d->serv->nextPendingConnection(), this);
     connect(c, SIGNAL(error(int)), this, SLOT(connectionError()));
     d->incomingConns.append(c);
     incomingReady();

@@ -23,6 +23,7 @@
 #include <QObject>
 #include <QList>
 #include <QHostAddress>
+#include <tcpportreserver.h>
 
 #include "bytestream.h"
 #include "xmpp_bytestream.h"
@@ -43,9 +44,9 @@ namespace XMPP
 
     class StreamHost;
     class Client;
+    class TcpPortReserver;
     class S5BConnection;
     class S5BManager;
-    class S5BServer;
     class JT_PushS5B;
     struct S5BRequest;
     typedef QList<StreamHost> StreamHostList;
@@ -151,8 +152,6 @@ namespace XMPP
 
         static const char* ns();
         Client *client() const;
-        S5BServer *server() const;
-        void setServer(S5BServer *s);
         JT_PushS5B *jtPush() const;
 
         bool isAcceptableSID(const Jid &peer, const QString &sid) const;
@@ -187,7 +186,6 @@ namespace XMPP
         Entry *findEntry(Item *) const;
         Entry *findEntryByHash(const QString &key) const;
         Entry *findEntryBySID(const Jid &peer, const QString &sid) const;
-        Entry *findServerEntryByHash(const QString &key) const;
 
         void entryContinue(Entry *e);
         void queryProxy(Entry *e);
@@ -204,7 +202,6 @@ namespace XMPP
         bool srv_ownsHash(const QString &key) const;
         void srv_incomingReady(SocksClient *sc, const QString &key);
         void srv_incomingUDP(bool init, const QHostAddress &addr, int port, const QString &key, const QByteArray &data);
-        void srv_unlink();
 
         friend class Item;
         void doSuccess(const Jid &peer, const QString &id, const Jid &streamHost);
@@ -242,41 +239,34 @@ namespace XMPP
         void man_udpSuccess(const Jid &streamHost);
     };
 
-    // listens on a port for serving
-    class S5BServer : public QObject
+
+    class S5BServersProducer : public TcpPortScope
+    {
+    protected:
+        TcpPortServer* makeServer(QTcpServer *socket); // in fact returns S5BServer
+    };
+
+    class S5BServer : public TcpPortServer
     {
         Q_OBJECT
+
     public:
-        S5BServer(QObject *par=0);
+        S5BServer(QTcpServer *serverSocket);
         ~S5BServer();
 
+        void writeUDP(const QHostAddress &addr, int port, const QByteArray &data);
         bool isActive() const;
-        bool start(int port);
-        void stop();
-        int port() const;
-        void setHostList(const QStringList &);
-        QStringList hostList() const;
+        bool hasKey(const QString &key);
+        void registerKey(const QString &key);
+        void unregisterKey(const QString &key);
 
-        class Item;
-
-    private slots:
-        void ss_incomingReady();
-        void ss_incomingUDP(const QString &host, int port, const QHostAddress &addr, int sourcePort, const QByteArray &data);
-        void item_result(bool);
+    signals:
+        void incomingConnection(SocksClient *c, const QString &key);
+        void incomingUdp(bool isInit, const QHostAddress &addr, int sourcePort, const QString &key, const QByteArray &data);
 
     private:
         class Private;
-        Private *d;
-
-        friend class S5BManager;
-        friend class Jingle::S5B::Manager;
-        void link(S5BManager *);
-        void unlink(S5BManager *);
-        void link(Jingle::S5B::Manager *m);
-        void unlink(Jingle::S5B::Manager *m);
-        void unlinkAll();
-        const QList<S5BManager*> & managerList() const;
-        void writeUDP(const QHostAddress &addr, int port, const QByteArray &data);
+        QScopedPointer<Private> d;
     };
 
     class JT_S5B : public Task
