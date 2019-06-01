@@ -237,7 +237,7 @@ public:
         #endif
                 )
         {
-            qDebug() << "connect to host with " << cid << "candidate using V6LinkLocalSocksConnector";
+            qDebug() << "connect to host with cid=" << cid << "and key=" << key << "candidate using V6LinkLocalSocksConnector";
             // we have link local address without scope. We have to enumerate all possible scopes.
             auto v6llConnector = new V6LinkLocalSocksConnector(this);
             connect(v6llConnector, &V6LinkLocalSocksConnector::ready, this, [this, v6llConnector, callback, successState]() {
@@ -261,7 +261,7 @@ public:
             v6llConnector->connectToHost(ha, port, key, isUdp);
         } else {
             socksClient = new SocksClient;
-            qDebug() << "connect to host with " << cid << "candidate and socks client" << socksClient;
+            qDebug() << "connect to host with cid=" << cid << ", key=" << key << " and socks client" << socksClient;
             connect(socksClient, &SocksClient::connected, [this, callback, successState](){
                 state = successState;
                 qDebug() << "socks client"  << socksClient << "is connected";
@@ -903,14 +903,28 @@ public:
                             if (c == localUsedCandidate) {
                                 // it's our side who proposed proxy. so we have to connect to it and activate
                                 auto key = makeKey(sid, pad->session()->me(), pad->session()->peer());
-                                c.connectToHost(key, Candidate::Active, [this](bool success){
-                                    if (success) {
-                                        pendingActions |= Private::Activated;
-                                    } else {
+                                c.connectToHost(key, Candidate::Accepted, [this](bool success){
+                                    if (!success) {
                                         pendingActions |= Private::ProxyError;
+                                        emit q->updated();
+                                        return;
                                     }
-                                    emit q->updated();
-                                    handleConnected(localUsedCandidate);
+
+                                    auto query = new JT_S5B(pad->session()->manager()->client()->rootTask());
+                                    connect(query, &JT_S5B::finished, q, [this,query]() {
+                                        Q_ASSERT(localUsedCandidate.state() == Candidate::Accepted);
+                                        if (!query->success()) {
+                                            pendingActions |= Private::ProxyError;
+                                            emit q->updated();
+                                            return;
+                                        }
+                                        pendingActions |= Private::Activated;
+                                        localUsedCandidate.setState(Candidate::Active);
+                                        emit q->updated();
+                                        handleConnected(localUsedCandidate);
+                                    });
+                                    query->requestActivation(localUsedCandidate.jid(), sid, pad->session()->peer());
+                                    query->go(true);
                                 }, mode == Transport::Udp);
                             } // else so it's remote proxy. let's just wait for <activated> from remote
                         } else {
@@ -1117,6 +1131,7 @@ void Transport::prepare()
         d->onLocalServerDiscovered();
     });
     d->onLocalServerDiscovered();
+
     d->discoS5BProxy();
 
     emit updated();
