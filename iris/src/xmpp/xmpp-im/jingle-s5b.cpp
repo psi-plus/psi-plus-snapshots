@@ -889,7 +889,8 @@ public:
             // but as soon as it's taken it will switch to waitingAck.
             // And with unacknowledged local candidates we can't send used/error as well as report connected()/failure()
             // until tried them all
-            qDebug("checkAndFinishNegotiation not finished: waitingAck || pendingActions || hasUnaknowledgedLocalCandidates()");
+            qDebug("checkAndFinishNegotiation not finished: waitingAck=%d || pendingActions=%x || hasUnaknowledgedLocalCandidates()=%d",
+                   int(waitingAck), int(pendingActions), int(hasUnaknowledgedLocalCandidates()));
             return;
         }
 
@@ -1040,6 +1041,7 @@ public:
 
     void onLocalServerDiscovered()
     {
+        bool hasNewCandidates = false;
         for (auto serv: disco->takeServers()) {
             auto s5bserv = serv.staticCast<S5BServer>();
             s5bserv->registerKey(directAddr);
@@ -1092,7 +1094,11 @@ public:
                 });
                 localCandidates.insert(c.cid(), c);
                 pendingActions |= NewCandidate;
+                hasNewCandidates = true;
             }
+        }
+        if (hasNewCandidates) {
+            emit q->updated();
         }
     }
 
