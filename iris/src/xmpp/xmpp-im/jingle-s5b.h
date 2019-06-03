@@ -200,6 +200,7 @@ public:
      * @return
      */
     Jid userProxy() const;
+    void setUserProxy(const Jid &jid);
 
     /**
      * @brief addKeyMapping sets mapping between key/socks hostname used for direct connection and transport.

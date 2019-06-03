@@ -539,9 +539,11 @@ SocksClient *Candidate::takeSocksClient()
 
 void Candidate::deleteSocksClient()
 {
-    d->socksClient->disconnect();
-    delete d->socksClient;
-    d->socksClient = nullptr;
+    if (d->socksClient) {
+        d->socksClient->disconnect();
+        delete d->socksClient;
+        d->socksClient = nullptr;
+    }
 }
 
 TcpPortServer::Ptr Candidate::server() const
@@ -1138,7 +1140,11 @@ Transport::Transport(const TransportManagerPad::Ptr &pad, const QDomElement &tra
 Transport::~Transport()
 {
     if (d) {
+        // TODO unregister sid too
         static_cast<Manager*>(d->pad->manager())->removeKeyMapping(d->directAddr);
+        for (auto &c: d->remoteCandidates) {
+            c.deleteSocksClient();
+        }
     }
 }
 
@@ -1563,6 +1569,11 @@ void Manager::registerSid(const Jid &remote, const QString &sid)
 Jid Manager::userProxy() const
 {
     return d->proxy;
+}
+
+void Manager::setUserProxy(const Jid &jid)
+{
+    d->proxy = jid;
 }
 
 //----------------------------------------------------------------
