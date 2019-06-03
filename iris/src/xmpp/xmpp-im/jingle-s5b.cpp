@@ -195,7 +195,10 @@ public:
     SocksClient* takeClient()
     {
         auto c = client;
-        client = nullptr;
+        if (c) {
+            c->setParent(nullptr);
+            client = nullptr;
+        }
         return c;
     }
 
@@ -242,7 +245,6 @@ public:
             auto v6llConnector = new V6LinkLocalSocksConnector(this);
             connect(v6llConnector, &V6LinkLocalSocksConnector::ready, this, [this, v6llConnector, callback, successState]() {
                 socksClient = v6llConnector->takeClient();
-                socksClient->setParent(nullptr);
                 delete v6llConnector;
                 if (state == Candidate::Discarded) {
                     return;
@@ -1055,6 +1057,37 @@ public:
                     sc->requestDeny();
                     sc->deleteLater();
                 });
+                QObject::connect(s5bserv.data(), &S5BServer::incomingUdp, q, [this, c](bool isInit, const QHostAddress &addr, int sourcePort, const QString &key, const QByteArray &data){
+                    if (mode != Transport::Mode::Udp || !connection) {
+                        return false;
+                    }
+
+                    if(isInit) {
+                        // TODO probably we could create a Connection here and put all the params inside
+                        if(udpInitialized)
+                            return false; // only init once
+
+                        // lock on to this sender
+                        udpAddress = addr;
+                        udpPort = sourcePort;
+                        udpInitialized = true;
+
+                        // reply that initialization was successful
+                        pad->session()->manager()->client()->s5bManager()->jtPush()->sendUDPSuccess(pad->session()->peer(), key); // TODO fix ->->->
+                        return true;
+                    }
+
+                    // not initialized yet?  something went wrong
+                    if(!udpInitialized)
+                        return false;
+
+                    // must come from same source as when initialized
+                    if(addr != udpAddress || sourcePort != udpPort)
+                        return false;
+
+                    connection->enqueueIncomingUDP(data); // man_udpReady
+                    return true;
+                });
                 localCandidates.insert(c.cid(), c);
                 pendingActions |= NewCandidate;
             }
@@ -1417,63 +1450,6 @@ size_t Transport::blockSize() const
     return d->blockSize;
 }
 
-bool Transport::incomingConnection(SocksClient *sc)
-{
-    if (!d->connection) {
-        auto s = sc->abstractSocket();
-        for (auto &c: d->localCandidates) {
-            if (s->localPort() == c.localPort() &&
-                    (c.state() == Candidate::Pending || c.state() == Candidate::Unacked) &&
-                    c.incomingConnection(sc))
-            {
-
-                if(d->mode == Transport::Udp)
-                    sc->grantUDPAssociate("", 0);
-                else
-                    sc->grantConnect();
-                // we can also remember the server it comes from. static_cast<S5BServer *>(sender())
-                return true;
-            }
-        }
-    }
-
-    sc->requestDeny();
-    sc->deleteLater();
-    return false;
-}
-
-bool Transport::incomingUDP(bool init, const QHostAddress &addr, int port, const QString &key, const QByteArray &data)
-{
-    if (d->mode != Transport::Mode::Udp) {
-        return false;
-    }
-
-    if(init) {
-        // TODO probably we could create a Connection here and put all the params inside
-        if(d->udpInitialized)
-            return false; // only init once
-
-        // lock on to this sender
-        d->udpAddress = addr;
-        d->udpPort = port;
-        d->udpInitialized = true;
-
-        // reply that initialization was successful
-        d->pad->session()->manager()->client()->s5bManager()->jtPush()->sendUDPSuccess(d->pad->session()->peer(), key); // TODO fix ->->->
-        return true;
-    }
-
-    // not initialized yet?  something went wrong
-    if(!d->udpInitialized)
-        return false;
-
-    // must come from same source as when initialized
-    if(addr != d->udpAddress || port != d->udpPort)
-        return false;
-
-    d->connection->enqueueIncomingUDP(data); // man_udpReady
-    return true;
-}
 
 //----------------------------------------------------------------
 // Manager
@@ -1556,24 +1532,6 @@ void Manager::addKeyMapping(const QString &key, Transport *transport)
 void Manager::removeKeyMapping(const QString &key)
 {
     d->key2transport.remove(key);
-}
-
-bool Manager::incomingConnection(SocksClient *client, const QString &key)
-{
-    auto t = d->key2transport.value(key);
-    if (t) {
-        return t->incomingConnection(client);
-    }
-    return false;
-}
-
-bool Manager::incomingUDP(bool init, const QHostAddress &addr, int port, const QString &key, const QByteArray &data)
-{
-    auto t = d->key2transport.value(key);
-    if (t) {
-        return t->incomingUDP(init, addr, port, key, data);
-    }
-    return false;
 }
 
 QString Manager::generateSid(const Jid &remote)
