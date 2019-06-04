@@ -431,11 +431,14 @@ TransportManager::TransportManager(QObject *parent) :
 }
 
 //----------------------------------------------------------------------------
-// JT - Jingle Task
+// JTPush - Jingle Task
 //----------------------------------------------------------------------------
 class JTPush : public Task
 {
     Q_OBJECT
+
+    QList<QString> externalManagers;
+    QList<QString> externalSessions;
 public:
     JTPush(Task *parent) :
         Task(parent)
@@ -444,6 +447,10 @@ public:
     }
 
     ~JTPush(){}
+
+    inline void addExternalManager(const QString &ns) { externalManagers.append(ns); }
+    inline void forgetExternalSession(const QString &sid) { externalSessions.removeOne(sid); }
+
 
     bool take(const QDomElement &iq)
     {
@@ -454,10 +461,30 @@ public:
         if (jingleEl.isNull() || jingleEl.attribute(QStringLiteral("xmlns")) != ::XMPP::Jingle::NS) {
             return false;
         }
+
         Jingle jingle(jingleEl);
         if (!jingle.isValid()) {
             respondError(iq, Stanza::Error::Cancel, Stanza::Error::BadRequest);
             return true;
+        }
+
+        if (externalManagers.size()) {
+            if (jingle.action() == Action::SessionInitiate) {
+                auto cname = QString::fromLatin1("content");
+                auto dname = QString::fromLatin1("description");
+                for (auto n = jingleEl.firstChildElement(cname); !n.isNull(); n = n.nextSiblingElement(cname)) {
+                    auto del = n.firstChildElement(dname);
+                    if (!del.isNull() && externalManagers.contains(del.attribute(QStringLiteral("xmlns")))) {
+                        externalSessions.append(jingle.sid());
+                        return false;
+                    }
+                }
+            } else if (externalSessions.contains(jingle.sid())) {
+                if (jingle.action() == Action::SessionTerminate) {
+                    externalSessions.removeOne(jingle.sid());
+                }
+                return false;
+            }
         }
 
         QString fromStr(iq.attribute(QStringLiteral("from")));
@@ -1540,6 +1567,16 @@ Manager::~Manager()
 Client *Manager::client() const
 {
     return d->client;
+}
+
+void Manager::addExternalManager(const QString &ns)
+{
+    d->pushTask->addExternalManager(ns);
+}
+
+void Manager::forgetExternalSession(const QString &sid)
+{
+    d->pushTask->forgetExternalSession(sid);
 }
 
 void Manager::setRedirection(const Jid &to)

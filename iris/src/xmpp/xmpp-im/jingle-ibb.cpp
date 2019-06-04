@@ -19,6 +19,7 @@
 
 #include "jingle-ibb.h"
 #include "xmpp/jid/jid.h"
+#include "xmpp_client.h"
 
 namespace XMPP {
 namespace Jingle {
@@ -39,6 +40,11 @@ public:
     {
 
     }
+
+    void open()
+    {
+        // TODO
+    }
 };
 
 struct Transport::Private
@@ -47,6 +53,7 @@ struct Transport::Private
     QString sid;
     QSharedPointer<Connection> connection;
     size_t blockSize = 4096;
+    bool waitingAck = false;
 };
 
 Transport::Transport(const TransportManagerPad::Ptr &pad) :
@@ -95,16 +102,32 @@ bool Transport::update(const QDomElement &transportEl)
             d->blockSize = bsn;
         }
     }
+    return true;
 }
 
 bool Transport::hasUpdates() const
 {
-
+    return !d->connection;
 }
 
 OutgoingTransportInfoUpdate Transport::takeOutgoingUpdate()
 {
+    OutgoingTransportInfoUpdate upd;
+    if (!isValid()) {
+        return upd;
+    }
 
+    auto doc = d->pad->session()->manager()->client()->doc();
+
+    QDomElement tel = doc->createElementNS(NS, "transport");
+    tel.setAttribute(QStringLiteral("sid"), d->sid);
+    tel.setAttribute(QString::fromLatin1("block-size"), qulonglong(d->blockSize));
+
+    d->connection.reset(new Connection(d->pad->session()->peer(), d->sid, d->blockSize));
+    upd = OutgoingTransportInfoUpdate{tel, [this]() mutable {
+        d->connection->open();
+    }};
+    return upd;
 }
 
 bool Transport::isValid() const
@@ -134,7 +157,8 @@ size_t Transport::blockSize() const
 
 Pad::Pad(Manager *manager, Session *session)
 {
-
+    _manager = manager;
+    _session = session;
 }
 
 QString Pad::ns() const
@@ -159,7 +183,7 @@ QString Pad::generateSid() const
 
 void Pad::registerSid(const QString &sid)
 {
-
+    Q_UNUSED(sid);
 }
 
 } // namespace IBB
