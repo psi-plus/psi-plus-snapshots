@@ -1457,12 +1457,6 @@ Connection::Ptr Transport::connection() const
     return d->connection.staticCast<XMPP::Jingle::Connection>();
 }
 
-size_t Transport::blockSize() const
-{
-    return d->blockSize;
-}
-
-
 //----------------------------------------------------------------
 // Manager
 //----------------------------------------------------------------

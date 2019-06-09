@@ -148,7 +148,7 @@ public:
     QString sid() const;
     QString directAddr() const;
     Connection::Ptr connection() const;
-    size_t blockSize() const;
+
 private:
     friend class Manager;
 

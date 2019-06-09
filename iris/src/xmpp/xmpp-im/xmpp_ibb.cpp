@@ -25,7 +25,6 @@
 
 #include <stdlib.h>
 
-#define IBB_PACKET_SIZE   4096
 #define IBB_PACKET_DELAY  0
 
 using namespace XMPP;
@@ -51,7 +50,7 @@ public:
     QString iq_id;
     QString stanza;
 
-    int blockSize = 0;
+    int blockSize = IBBConnection::PacketSize;
     //QByteArray recvBuf, sendBuf;
     bool closePending, closing;
 
@@ -64,7 +63,7 @@ IBBConnection::IBBConnection(IBBManager *m)
     d = new Private;
     d->m = m;
     d->j = 0;
-    d->blockSize = IBB_PACKET_SIZE;
+    d->blockSize = PacketSize;
     resetConnection();
 
     ++num_conn;
@@ -104,6 +103,11 @@ IBBConnection::~IBBConnection()
     delete d;
 }
 
+void IBBConnection::setPacketSize(int blockSize)
+{
+    d->blockSize = blockSize;
+}
+
 void IBBConnection::connectToJid(const Jid &peer, const QString &sid)
 {
     close();
@@ -119,7 +123,7 @@ void IBBConnection::connectToJid(const Jid &peer, const QString &sid)
 
     d->j = new JT_IBB(d->m->client()->rootTask());
     connect(d->j, SIGNAL(finished()), SLOT(ibb_finished()));
-    d->j->request(d->peer, d->sid);
+    d->j->request(d->peer, d->sid, d->blockSize);
     d->j->go(true);
 }
 
@@ -161,7 +165,7 @@ void IBBConnection::close()
         trySend();
 
         // if there is data pending to be written, then pend the closing
-        if(bytesToWrite() > 0) {
+        if(bytesToWrite() > 0 || d->closing) {
             return;
         }
     }
@@ -405,7 +409,7 @@ BSConnection *IBBManager::createConnection()
 
 IBBConnection *IBBManager::takeIncoming()
 {
-    return d->incomingConns.isEmpty()? 0 : d->incomingConns.takeFirst();
+    return d->incomingConns.isEmpty()? nullptr : d->incomingConns.takeFirst();
 }
 
 void IBBManager::ibb_incomingRequest(const Jid &from, const QString &id,
@@ -519,7 +523,7 @@ JT_IBB::~JT_IBB()
     delete d;
 }
 
-void JT_IBB::request(const Jid &to, const QString &sid)
+void JT_IBB::request(const Jid &to, const QString &sid, int blockSize)
 {
     d->mode = ModeRequest;
     QDomElement iq;
@@ -529,7 +533,7 @@ void JT_IBB::request(const Jid &to, const QString &sid)
     //genUniqueKey
     query.setAttribute("xmlns", IBB_NS);
     query.setAttribute("sid", sid);
-    query.setAttribute("block-size", IBB_PACKET_SIZE);
+    query.setAttribute("block-size", blockSize);
     query.setAttribute("stanza", "iq");
     iq.appendChild(query);
     d->iq = iq;

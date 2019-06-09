@@ -88,6 +88,7 @@
 #include "jingle-ft.h"
 #include "jingle-s5b.h"
 #include "tcpportreserver.h"
+#include "jingle-ibb.h"
 
 #ifdef Q_OS_WIN
 #define vsnprintf _vsnprintf
@@ -138,6 +139,7 @@ public:
     TcpPortReserver *tcpPortReserver = nullptr;
     S5BManager *s5bman = nullptr;
     Jingle::S5B::Manager *jingleS5BManager = nullptr;
+    Jingle::IBB::Manager *jingleIBBManager = nullptr;
     IBBManager *ibbman = nullptr;
     BoBManager *bobman = nullptr;
     FileTransferManager *ftman = nullptr;
@@ -179,7 +181,9 @@ Client::Client(QObject *par)
     auto ft = new Jingle::FileTransfer::Manager(this);
     d->jingleManager->registerApp(Jingle::FileTransfer::NS, ft);
     d->jingleS5BManager = new Jingle::S5B::Manager(d->jingleManager);
+    d->jingleIBBManager = new Jingle::IBB::Manager(d->jingleManager);
     d->jingleManager->registerTransport(Jingle::S5B::NS, d->jingleS5BManager);
+    d->jingleManager->registerTransport(Jingle::IBB::NS, d->jingleIBBManager);
 }
 
 Client::~Client()
@@ -278,6 +282,11 @@ S5BManager *Client::s5bManager() const
 Jingle::S5B::Manager *Client::jingleS5BManager() const
 {
     return d->jingleS5BManager;
+}
+
+Jingle::IBB::Manager *Client::jingleIBBManager() const
+{
+    return d->jingleIBBManager;
 }
 
 IBBManager *Client::ibbManager() const
@@ -1286,7 +1295,9 @@ DiscoItem Client::makeDiscoResult(const QString &node) const
     features.addFeature("urn:xmpp:time");
     features.addFeature("urn:xmpp:message-correct:0");
     features.addFeature("urn:xmpp:jingle:1");
+    // TODO rather do foreach for all registered jingle apps and transports
     features.addFeature("urn:xmpp:jingle:transports:s5b:1");
+    features.addFeature("urn:xmpp:jingle:transports:ibb:1");
     features.addFeature("urn:xmpp:jingle:apps:file-transfer:5"); // TODO: since it depends on UI it needs a way to be disabled
     Hash::populateFeatures(features);
 
@@ -1346,7 +1357,13 @@ void Client::s5b_incomingReady()
 
 void Client::ibb_incomingReady()
 {
-    handleIncoming(d->ibbman->takeIncoming());
+    auto c = d->ibbman->takeIncoming();
+    if (!c)
+        return;
+
+    if (d->jingleIBBManager && d->jingleIBBManager->handleIncoming(c))
+        return;
+    handleIncoming(c);
 }
 
 void Client::handleIncoming(BSConnection *c)

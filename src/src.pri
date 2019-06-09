@@ -239,7 +239,7 @@ HEADERS += \
     $$PWD/filesharedlg.h \
     $$PWD/multifiletransfermodel.h \
     $$PWD/multifiletransferitem.h \
-    $$PWD/multifiletransferview.h
+    $$PWD/multifiletransferdelegate.h
 
 # Source files
 SOURCES += \
@@ -377,7 +377,7 @@ SOURCES += \
     $$PWD/filesharedlg.cpp \
     $$PWD/multifiletransfermodel.cpp \
     $$PWD/multifiletransferitem.cpp \
-    $$PWD/multifiletransferview.cpp
+    $$PWD/multifiletransferdelegate.cpp
 
 CONFIG += filetransfer
 filetransfer {

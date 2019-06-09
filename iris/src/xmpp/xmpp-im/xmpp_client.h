@@ -60,6 +60,9 @@ namespace XMPP {
         namespace S5B {
             class Manager;
         }
+        namespace IBB {
+            class Manager;
+        }
     }
 }
 
@@ -145,6 +148,7 @@ namespace XMPP
         HttpFileUploadManager *httpFileUploadManager() const;
         Jingle::Manager* jingleManager() const;
         Jingle::S5B::Manager *jingleS5BManager() const;
+        Jingle::IBB::Manager *jingleIBBManager() const;
 
         void setFileTransferEnabled(bool b);
         FileTransferManager *fileTransferManager() const;

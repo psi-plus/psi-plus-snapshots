@@ -57,11 +57,14 @@ namespace XMPP
     {
         Q_OBJECT
     public:
+        static const int PacketSize = 4096;
+
         enum { ErrRequest, ErrData };
         enum { Idle, Requesting, WaitingForAccept, Active };
         IBBConnection(IBBManager *);
         ~IBBConnection();
 
+        void setPacketSize(int blockSize = IBBConnection::PacketSize);
         void connectToJid(const Jid &peer, const QString &sid);
         void accept();
         void close();
@@ -147,7 +150,7 @@ namespace XMPP
         JT_IBB(Task *, bool serve=false);
         ~JT_IBB();
 
-        void request(const Jid &, const QString &sid);
+        void request(const Jid &, const QString &sid, int blockSize = IBBConnection::PacketSize);
         void sendData(const Jid &, const IBBData &ibbData);
         void close(const Jid &, const QString &sid);
         void respondError(const Jid &, const QString &id,

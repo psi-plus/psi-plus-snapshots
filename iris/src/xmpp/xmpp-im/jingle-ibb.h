@@ -23,6 +23,8 @@
 #include "jingle.h"
 
 namespace XMPP {
+    class IBBConnection;
+
 namespace Jingle {
 namespace IBB {
 
@@ -46,9 +48,8 @@ public:
     bool isValid() const override;
     Features features() const override;
 
-    QString sid() const;
     Connection::Ptr connection() const;
-    size_t blockSize() const;
+
 private:
     friend class Manager;
 
@@ -69,8 +70,7 @@ public:
     Session *session() const override;
     TransportManager *manager() const override;
 
-    QString generateSid() const;
-    void registerSid(const QString &sid);
+    Connection::Ptr makeConnection(const QString &sid, size_t blockSize);
 private:
     Manager *_manager;
     Session *_session;
@@ -90,8 +90,8 @@ public:
 
     void closeAll() override;
 
-    QString generateSid(const Jid &remote);
-    void registerSid(const Jid &remote, const QString &sid);
+    Connection::Ptr makeConnection(const Jid &peer, const QString &sid, size_t blockSize);
+    bool handleIncoming(IBBConnection *c);
 private:
     class Private;
     QScopedPointer<Private> d;

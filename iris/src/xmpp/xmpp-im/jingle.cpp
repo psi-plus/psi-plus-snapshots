@@ -1743,6 +1743,11 @@ NetworkDatagram Connection::receiveDatagram(qint64 maxSize)
     return NetworkDatagram();
 }
 
+size_t Connection::blockSize() const
+{
+    return 0; // means "block" is not applicable for this kind of connection
+}
+
 
 } // namespace Jingle
 } // namespace XMPP

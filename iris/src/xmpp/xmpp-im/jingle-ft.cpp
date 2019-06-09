@@ -422,7 +422,7 @@ public:
             setState(State::Finished);
             return; // everything is written
         }
-        auto sz = transport->blockSize();
+        auto sz = connection->blockSize();
         sz = sz? sz : 8192;
         if (sz > bytesLeft) {
             sz = bytesLeft;
@@ -444,7 +444,7 @@ public:
     {
         quint64 bytesAvail;
         while (bytesLeft && (bytesAvail = connection->bytesAvailable())) {
-            quint64 sz = 65536; // should be respect transport->blockSize() ?
+            quint64 sz = 65536; // shall we respect transport->blockSize() ?
             if (sz > bytesLeft) {
                 sz = bytesLeft;
             }
