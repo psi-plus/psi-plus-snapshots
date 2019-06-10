@@ -391,8 +391,10 @@ public:
     QSharedPointer<Transport> transport;
     Connection::Ptr connection;
     QStringList availableTransports;
+    bool transportReady = false; // when prepare local offer finished for the transport
     bool transportFailed = false;
     bool closeDeviceOnFinish = true;
+    bool waitTransportAccept = false;
     QIODevice *device = nullptr;
     quint64 bytesLeft = 0;
 
@@ -498,7 +500,7 @@ State Application::state() const
 
 void Application::setState(State state)
 {
-    d->state = state;
+    d->setState(state);
 }
 
 QString Application::contentName() const
@@ -513,7 +515,7 @@ Origin Application::creator() const
 
 Origin Application::senders() const
 {
-   return d->senders;
+    return d->senders;
 }
 
 Application::SetDescError Application::setDescription(const QDomElement &description)
@@ -543,52 +545,64 @@ bool Application::setTransport(const QSharedPointer<Transport> &transport)
 {
     if (d->transport) {
         d->transport->disconnect(this);
+        d->transport.reset();
     }
-    if (transport->features() & Transport::Reliable) {
-        int nsIndex = d->availableTransports.indexOf(transport->pad()->ns());
-        if (nsIndex == -1) {
-            return false;
-        }
-        d->availableTransports.removeAt(nsIndex);
-        d->transport = transport;
-        d->setState(State::Pending);
-        connect(transport.data(), &Transport::updated, this, &Application::updated);
-        connect(transport.data(), &Transport::connected, this, [this](){
-            d->connection = d->transport->connection();
-            connect(d->connection.data(), &Connection::readyRead, this, [this](){
-                if (!d->device) {
-                    return;
-                }
-                if (d->pad->session()->role() != d->senders) {
-                    d->readNextBlockFromTransport();
-                }
-            });
-            connect(d->connection.data(), &Connection::bytesWritten, this, [this](qint64 bytes){
-                Q_UNUSED(bytes)
-                if (d->pad->session()->role() == d->senders && !d->connection->bytesToWrite()) {
-                    d->writeNextBlockToTransport();
-                }
-            });
-            d->setState(State::Active);
-            if (d->acceptFile.range().isValid()) {
-                d->bytesLeft = d->acceptFile.range().length;
-                emit deviceRequested(d->acceptFile.range().offset, d->bytesLeft);
-            } else {
-                d->bytesLeft = d->file.size();
-                emit deviceRequested(0, d->bytesLeft);
-            }
-        });
+    if (!(transport->features() & Transport::Reliable))
+        return false;
 
-        connect(transport.data(), &Transport::failed, this, [this](){
-            if (d->availableTransports.size()) { // we can do transport-replace here
-                // TODO
-            }
-            d->transportFailed = true;
-            d->setState(State::Finishing);
-        });
-        return true;
+    int nsIndex = d->availableTransports.indexOf(transport->pad()->ns());
+    if (nsIndex == -1) {
+        return false;
     }
-    return false;
+
+    d->availableTransports.removeAt(nsIndex);
+    d->transport = transport;
+    connect(transport.data(), &Transport::updated, this, &Application::updated);
+    connect(transport.data(), &Transport::connected, this, [this](){
+        d->transportFailed = false;
+        d->connection = d->transport->connection();
+        connect(d->connection.data(), &Connection::readyRead, this, [this](){
+            if (!d->device) {
+                return;
+            }
+            if (d->pad->session()->role() != d->senders) {
+                d->readNextBlockFromTransport();
+            }
+        });
+        connect(d->connection.data(), &Connection::bytesWritten, this, [this](qint64 bytes){
+            Q_UNUSED(bytes)
+            if (d->pad->session()->role() == d->senders && !d->connection->bytesToWrite()) {
+                d->writeNextBlockToTransport();
+            }
+        });
+        d->setState(State::Active);
+        if (d->acceptFile.range().isValid()) {
+            d->bytesLeft = d->acceptFile.range().length;
+            emit deviceRequested(d->acceptFile.range().offset, d->bytesLeft);
+        } else {
+            d->bytesLeft = d->file.size();
+            emit deviceRequested(0, d->bytesLeft);
+        }
+    });
+
+    connect(transport.data(), &Transport::failed, this, [this](){
+        d->transportFailed = true;
+        d->waitTransportAccept = false;
+        if (!selectNextTransport()) { // we can do transport-replace here
+            if (d->state == State::PrepareLocalOffer && d->creator == d->pad->session()->role()) {
+                // we were unable to send even initial offer
+                d->setState(State::Finished);
+            } else {
+                d->setState(State::Finishing); // we have to notify our peer about problems
+            }
+        }
+    });
+
+    if (d->state >= State::Unacked) {
+        // seems like we are in transport failure recovery. d->transportFailed may confirm this
+        d->transport->prepare();
+    }
+    return true;
 }
 
 QSharedPointer<Transport> Application::transport() const
@@ -598,18 +612,32 @@ QSharedPointer<Transport> Application::transport() const
 
 Action Application::outgoingUpdateType() const
 {
+    if (d->waitTransportAccept && d->state < State::Finishing)
+        return Action::NoAction; // let's first finish waiting. and after we will do content-accept
+
     switch (d->state) {
     case State::Created:
         break;
     case State::PrepareLocalOffer:
-        if (d->transport->hasUpdates()) {
-            return d->creator == d->pad->session()->role()? Action::ContentAdd : Action::ContentAccept;
+        if (d->transportFailed && !d->transport)
+            return Action::ContentReject; // case me=initiator was already handled by this momemnt
+
+        if (d->transport->hasUpdates() || d->transportReady) {
+            d->transportReady = true;
+            return d->creator == d->pad->session()->role()? Action::ContentAdd :
+                                                            (d->transportFailed? Action::ContentAccept : Action::TransportReplace);
         }
         break;
     case State::Connecting:
     case State::Active:
     case State::Pending:
+        if (d->transportFailed && (d->state == State::Active || !d->transport))
+            return Action::ContentRemove;
+
         if (d->transport->hasUpdates()) {
+            if (d->transportFailed) {
+                return Action::TransportReplace;
+            }
             return Action::TransportInfo;
         }
         break;
@@ -632,6 +660,19 @@ OutgoingUpdate Application::takeOutgoingUpdate()
 
     auto client = d->pad->session()->manager()->client();
     auto doc = client->doc();
+
+    // content-remove or content-reject
+    if (d->transportFailed && (d->state >= State::Active || !d->transport)) {
+        ContentBase cb(d->creator, d->contentName);
+        QList<QDomElement> updates;
+        updates << cb.toXml(doc, "content");
+        updates << Reason(Reason::Condition::FailedTransport).toXml(doc);
+        return OutgoingUpdate{updates, [this](){
+                d->setState(State::Finished);
+            }
+        };
+    }
+
     if (d->state == State::PrepareLocalOffer) { // basically when we come to this function Created is possible only for outgoing content
         if (!d->transport->hasUpdates()) { // failed to select next transport. can't continue
             return OutgoingUpdate();
@@ -653,12 +694,17 @@ OutgoingUpdate Application::takeOutgoingUpdate()
         std::tie(tel, trCallback) = d->transport->takeOutgoingUpdate();
         cel.appendChild(tel);
 
+        if (d->transportFailed) {
+            d->waitTransportAccept = true;
+            return OutgoingUpdate{QList<QDomElement>()<<cel, trCallback};
+        }
+
         d->setState(State::Unacked);
         return OutgoingUpdate{QList<QDomElement>()<<cel, [this, trCallback](){
                 if (trCallback) {
                     trCallback();
                 }
-                d->state = d->pad->session()->role() == Origin::Initiator? State::Pending : State::Active;
+                d->setState(d->pad->session()->role() == Origin::Initiator? State::Pending : State::Connecting);
             }};
     }
     if (d->state == State::Connecting || d->state == State::Active || d->state == State::Pending) {
@@ -673,21 +719,11 @@ OutgoingUpdate Application::takeOutgoingUpdate()
             ContentBase cb(d->creator, d->contentName);
             auto cel = cb.toXml(doc, "content");
             cel.appendChild(tel);
+            d->waitTransportAccept = true;
             return OutgoingUpdate{QList<QDomElement>()<<cel, trCallback};
         }
     }
     if (d->state == State::Finishing) {
-        if (d->transportFailed) {
-            ContentBase cb(d->creator, d->contentName);
-            QList<QDomElement> updates;
-            updates << cb.toXml(doc, "content");
-            updates << Reason(Reason::Condition::FailedTransport).toXml(doc);
-            return OutgoingUpdate{updates, [this](){
-                    d->setState(State::Finished);
-                }
-            };
-        }
-        // else send <received>
         ContentBase cb(d->pad->session()->role(), d->contentName);
         return OutgoingUpdate{QList<QDomElement>() << cb.toXml(doc, "received"), [this](){
                 d->setState(State::Finished);
@@ -705,8 +741,13 @@ bool Application::wantBetterTransport(const QSharedPointer<Transport> &t) const
 
 bool Application::selectNextTransport()
 {
-    if (d->availableTransports.size()) {
-        return setTransport(d->pad->session()->newOutgoingTransport(d->availableTransports.first()));
+    while (d->availableTransports.size()) {
+        auto t = d->pad->session()->newOutgoingTransport(d->availableTransports.first());
+        if (t && setTransport(t)) {
+            return true;
+        } else {
+            d->availableTransports.removeFirst();
+        }
     }
     return false;
 }
@@ -717,7 +758,7 @@ void Application::prepare()
         selectNextTransport();
     }
     if (d->transport) {
-        d->state = State::PrepareLocalOffer;
+        d->setState(State::PrepareLocalOffer);
         d->transport->prepare();
     }
 }
@@ -725,7 +766,7 @@ void Application::prepare()
 void Application::start()
 {
     if (d->transport) {
-        d->state = State::Active;
+        d->setState(State::Active);
         d->transport->start();
     }
     // TODO we need QIODevice somewhere here
@@ -741,6 +782,13 @@ bool Application::accept(const QDomElement &el)
     // TODO validate if accept file matches to the offer
     setState(State::Accepted);
     return true;
+}
+
+void Application::setTransportAccepted()
+{
+    d->waitTransportAccept = false;
+    d->transportFailed = false;
+    emit updated();
 }
 
 bool Application::isValid() const

@@ -139,6 +139,7 @@ public:
     void prepare() override;
     void start() override;
     bool accept(const QDomElement &el) override;
+    void setTransportAccepted() override;
 
     bool isValid() const;
 

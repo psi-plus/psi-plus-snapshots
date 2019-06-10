@@ -390,6 +390,7 @@ public:
     virtual OutgoingUpdate takeOutgoingUpdate() = 0; // this may return something only when outgoingUpdateType() != NoAction
     virtual bool wantBetterTransport(const QSharedPointer<Transport> &) const = 0;
     virtual bool selectNextTransport() = 0;
+    virtual void setTransportAccepted() = 0;
 
     /**
      * @brief prepare to send content-add/session-initiate
