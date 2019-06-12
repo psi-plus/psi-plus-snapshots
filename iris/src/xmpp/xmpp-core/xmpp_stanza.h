@@ -79,6 +79,8 @@ namespace XMPP
             QString by;
             QDomElement appSpec;
 
+            void reset();
+
             int code() const;
             bool fromCode(int code);
 

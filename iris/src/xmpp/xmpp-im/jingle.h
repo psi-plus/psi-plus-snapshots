@@ -111,6 +111,26 @@ typedef std::function<void ()> OutgoingUpdateCB;
 typedef std::tuple<QList<QDomElement>, OutgoingUpdateCB> OutgoingUpdate; // list of elements to b inserted to <jingle> and success callback
 typedef std::tuple<QDomElement, OutgoingUpdateCB> OutgoingTransportInfoUpdate; // transport element and success callback
 
+class ErrorUtil
+{
+public:
+    enum {
+        UnknownError, // unparsed/unknown error
+        OutOfOrder,
+        TieBreak,
+        UnknownSession,
+        UnsupportedInfo,
+        Last
+    };
+
+    static const char* names[Last];
+
+    static XMPP::Stanza::Error make(QDomDocument &doc, int jingleCond, int type=XMPP::Stanza::Error::Cancel, int condition=XMPP::Stanza::Error::UndefinedCondition, const QString &text=QString());
+    static XMPP::Stanza::Error makeTieBreak(QDomDocument &doc);
+    static void fill(QDomDocument doc, XMPP::Stanza::Error &error, int jingleCond);
+    static int jingleCondition(const XMPP::Stanza::Error &error);
+};
+
 class Jingle
 {
 public:
@@ -373,10 +393,12 @@ public:
     virtual ApplicationManagerPad::Ptr pad() const = 0;
     virtual State state() const = 0;
     virtual void setState(State state) = 0; // likely just remember the state and not generate any signals
+    virtual XMPP::Stanza::Error lastError() const = 0;
 
     virtual Origin creator() const = 0;
     virtual Origin senders() const = 0;
     virtual QString contentName() const = 0;
+    virtual Origin transportReplaceOrigin() const = 0; // returns Origin::None if no transport-replace in progress or the side triggered the replace.
     virtual SetDescError setDescription(const QDomElement &description) = 0;
 
     /**
@@ -390,6 +412,7 @@ public:
     virtual OutgoingUpdate takeOutgoingUpdate() = 0; // this may return something only when outgoingUpdateType() != NoAction
     virtual bool wantBetterTransport(const QSharedPointer<Transport> &) const = 0;
     virtual bool selectNextTransport() = 0;
+    virtual bool replaceTransport(const QSharedPointer<Transport> &transport) = 0;
     virtual void setTransportAccepted() = 0;
 
     /**
@@ -425,6 +448,8 @@ public:
     QString sid() const;
 
     Origin role() const; // my role in session: initiator or responder
+    Origin peerRole() const;
+
     XMPP::Stanza::Error lastError() const;
 
     // make new local content but do not add it to session yet
@@ -546,6 +571,7 @@ public:
     QString registerSession(Session *session);
     XMPP::Stanza::Error lastError() const;
 
+    void detachSession(Session *s); // disconnect the session from manager
 signals:
     void incomingSession(Session *);
 

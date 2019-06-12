@@ -121,10 +121,12 @@ public:
     ApplicationManagerPad::Ptr pad() const override;
     State state() const override;
     void setState(State state) override;
+    XMPP::Stanza::Error lastError() const;
 
     QString contentName() const override;
     Origin creator() const override;
     Origin senders() const override;
+    Origin transportReplaceOrigin() const;
     SetDescError setDescription(const QDomElement &description) override;
     void setFile(const File &file);
     File file() const;
@@ -139,6 +141,7 @@ public:
     void prepare() override;
     void start() override;
     bool accept(const QDomElement &el) override;
+    bool replaceTransport(const QSharedPointer<Transport> &transport) override;
     void setTransportAccepted() override;
 
     bool isValid() const;

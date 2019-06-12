@@ -388,11 +388,12 @@ public:
     File    acceptFile; // as it comes with "accept" response
     Origin  creator;
     Origin  senders;
+    Origin  transportFailedOrigin = Origin::None;
+    XMPP::Stanza::Error lastError;
     QSharedPointer<Transport> transport;
     Connection::Ptr connection;
     QStringList availableTransports;
     bool transportReady = false; // when prepare local offer finished for the transport
-    bool transportFailed = false;
     bool closeDeviceOnFinish = true;
     bool waitTransportAccept = false;
     QIODevice *device = nullptr;
@@ -503,6 +504,11 @@ void Application::setState(State state)
     d->setState(state);
 }
 
+Stanza::Error Application::lastError() const
+{
+    return d->lastError;
+}
+
 QString Application::contentName() const
 {
     return d->contentName;
@@ -543,10 +549,6 @@ File Application::acceptFile() const
 // incoming one? or we have to check real direction
 bool Application::setTransport(const QSharedPointer<Transport> &transport)
 {
-    if (d->transport) {
-        d->transport->disconnect(this);
-        d->transport.reset();
-    }
     if (!(transport->features() & Transport::Reliable))
         return false;
 
@@ -555,11 +557,17 @@ bool Application::setTransport(const QSharedPointer<Transport> &transport)
         return false;
     }
 
+    // in case we automatically select a new transport on our own we definitely will come up to this point
+    if (d->transport) {
+        d->transport->disconnect(this);
+        d->transport.reset();
+    }
+
     d->availableTransports.removeAt(nsIndex);
     d->transport = transport;
     connect(transport.data(), &Transport::updated, this, &Application::updated);
     connect(transport.data(), &Transport::connected, this, [this](){
-        d->transportFailed = false;
+        d->transportFailedOrigin = Origin::None;
         d->connection = d->transport->connection();
         connect(d->connection.data(), &Connection::readyRead, this, [this](){
             if (!d->device) {
@@ -586,16 +594,21 @@ bool Application::setTransport(const QSharedPointer<Transport> &transport)
     });
 
     connect(transport.data(), &Transport::failed, this, [this](){
-        d->transportFailed = true;
+        d->transportFailedOrigin = d->pad->session()->role();
         d->waitTransportAccept = false;
+        if (d->state >= State::Active) {
+            emit updated(); // late failure are unhandled. just notify the remote
+            return;
+        }
+        // we can try to replace the transport
         if (!selectNextTransport()) { // we can do transport-replace here
             if (d->state == State::PrepareLocalOffer && d->creator == d->pad->session()->role()) {
                 // we were unable to send even initial offer
                 d->setState(State::Finished);
             } else {
-                d->setState(State::Finishing); // we have to notify our peer about problems
+                emit updated(); // we have to notify our peer about failure
             }
-        }
+        } // else transport will notify when ready
     });
 
     if (d->state >= State::Unacked) {
@@ -603,6 +616,26 @@ bool Application::setTransport(const QSharedPointer<Transport> &transport)
         d->transport->prepare();
     }
     return true;
+}
+
+Origin Application::transportReplaceOrigin() const
+{
+    return d->transportFailedOrigin;
+}
+
+bool Application::replaceTransport(const QSharedPointer<Transport> &transport)
+{
+    auto prev = d->transportFailedOrigin;
+    d->transportFailedOrigin = d->pad->session()->peerRole();
+    auto ret = setTransport(transport);
+    if (ret)
+        d->waitTransportAccept = false;
+    else {
+        d->transportFailedOrigin = prev;
+        d->lastError.reset();
+    }
+
+    return ret;
 }
 
 QSharedPointer<Transport> Application::transport() const
@@ -613,36 +646,39 @@ QSharedPointer<Transport> Application::transport() const
 Action Application::outgoingUpdateType() const
 {
     if (d->waitTransportAccept && d->state < State::Finishing)
-        return Action::NoAction; // let's first finish waiting. and after we will do content-accept
+        return Action::NoAction;
 
     switch (d->state) {
     case State::Created:
         break;
     case State::PrepareLocalOffer:
-        if (d->transportFailed && !d->transport)
-            return Action::ContentReject; // case me=initiator was already handled by this momemnt
+        if (d->transportFailedOrigin != Origin::None && !d->transport)
+            return Action::ContentReject; // case me=creator was already handled by this momemnt. see Transport::failed connectio above
 
         if (d->transport->hasUpdates() || d->transportReady) {
             d->transportReady = true;
-            return d->creator == d->pad->session()->role()? Action::ContentAdd :
-                                                            (d->transportFailed? Action::ContentAccept : Action::TransportReplace);
+            auto myRole = d->pad->session()->role();
+            if (d->creator == myRole) {
+                return Action::ContentAdd;
+            }
+            return d->transportFailedOrigin == myRole? Action::TransportReplace : Action::ContentAccept;
         }
         break;
     case State::Connecting:
     case State::Active:
     case State::Pending:
-        if (d->transportFailed && (d->state == State::Active || !d->transport))
+        if (d->transportFailedOrigin != Origin::None && (d->state == State::Active || !d->transport))
             return Action::ContentRemove;
 
         if (d->transport->hasUpdates()) {
-            if (d->transportFailed) {
+            if (d->transportFailedOrigin != Origin::None) {
                 return Action::TransportReplace;
             }
             return Action::TransportInfo;
         }
         break;
     case State::Finishing:
-        if (d->transportFailed) {
+        if (d->transportFailedOrigin != Origin::None) {
             return Action::ContentRemove;
         }
         return Action::SecurityInfo;
@@ -658,11 +694,14 @@ OutgoingUpdate Application::takeOutgoingUpdate()
         return OutgoingUpdate();
     }
 
+    if (d->waitTransportAccept && d->state < State::Finishing)
+        return OutgoingUpdate();
+
     auto client = d->pad->session()->manager()->client();
     auto doc = client->doc();
 
     // content-remove or content-reject
-    if (d->transportFailed && (d->state >= State::Active || !d->transport)) {
+    if (d->transportFailedOrigin != Origin::None && (d->state >= State::Active || !d->transport)) {
         ContentBase cb(d->creator, d->contentName);
         QList<QDomElement> updates;
         updates << cb.toXml(doc, "content");
@@ -694,7 +733,7 @@ OutgoingUpdate Application::takeOutgoingUpdate()
         std::tie(tel, trCallback) = d->transport->takeOutgoingUpdate();
         cel.appendChild(tel);
 
-        if (d->transportFailed) {
+        if (d->transportFailedOrigin == d->pad->session()->role()) {
             d->waitTransportAccept = true;
             return OutgoingUpdate{QList<QDomElement>()<<cel, trCallback};
         }
@@ -719,7 +758,9 @@ OutgoingUpdate Application::takeOutgoingUpdate()
             ContentBase cb(d->creator, d->contentName);
             auto cel = cb.toXml(doc, "content");
             cel.appendChild(tel);
-            d->waitTransportAccept = true;
+            if (d->transportFailedOrigin != Origin::None) {
+                d->waitTransportAccept = true;
+            }
             return OutgoingUpdate{QList<QDomElement>()<<cel, trCallback};
         }
     }
@@ -787,7 +828,7 @@ bool Application::accept(const QDomElement &el)
 void Application::setTransportAccepted()
 {
     d->waitTransportAccept = false;
-    d->transportFailed = false;
+    d->transportFailedOrigin = Origin::None;
     emit updated();
 }
 

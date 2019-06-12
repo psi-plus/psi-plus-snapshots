@@ -81,6 +81,16 @@ Stanza::Error::Error(int _type, int _condition, const QString &_text, const QDom
     originalCode = 0;
 }
 
+void Stanza::Error::reset()
+{
+    type = 0;
+    condition = UndefinedCondition;
+    text.clear();
+    by.clear();
+    appSpec = QDomElement();
+    originalCode = 0;
+}
+
 
 class Stanza::Error::Private
 {
