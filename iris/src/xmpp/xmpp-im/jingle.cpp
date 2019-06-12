@@ -1357,6 +1357,7 @@ Session::Session(Manager *manager, const Jid &peer, Origin role) :
 
 Session::~Session()
 {
+    qDeleteAll(d->contentList);
     qDebug("session %s destroyed", qPrintable(d->sid));
 }
 

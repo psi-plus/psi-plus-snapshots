@@ -713,7 +713,7 @@ OutgoingUpdate Application::takeOutgoingUpdate()
     }
 
     if (d->state == State::PrepareLocalOffer) { // basically when we come to this function Created is possible only for outgoing content
-        if (!d->transport->hasUpdates()) { // failed to select next transport. can't continue
+        if (!d->transport->hasUpdates() && !d->transportReady) { // failed to select next transport. can't continue
             return OutgoingUpdate();
         }
 
@@ -783,11 +783,11 @@ bool Application::wantBetterTransport(const QSharedPointer<Transport> &t) const
 bool Application::selectNextTransport()
 {
     while (d->availableTransports.size()) {
-        auto t = d->pad->session()->newOutgoingTransport(d->availableTransports.first());
+        auto t = d->pad->session()->newOutgoingTransport(d->availableTransports.last());
         if (t && setTransport(t)) {
             return true;
         } else {
-            d->availableTransports.removeFirst();
+            d->availableTransports.removeLast();
         }
     }
     return false;
@@ -807,7 +807,7 @@ void Application::prepare()
 void Application::start()
 {
     if (d->transport) {
-        d->setState(State::Active);
+        d->setState(State::Connecting);
         d->transport->start();
     }
     // TODO we need QIODevice somewhere here
