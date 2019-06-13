@@ -427,6 +427,11 @@ HttpFileUploadManager::HttpFileUploadManager(Client *parent) :
     d->client = parent;
 }
 
+HttpFileUploadManager::~HttpFileUploadManager()
+{
+    delete d;
+}
+
 void HttpFileUploadManager::setNetworkAccessManager(QNetworkAccessManager *qnam)
 {
     d->externalQnam = true;

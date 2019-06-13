@@ -190,8 +190,10 @@ Transport::Transport(const TransportManagerPad::Ptr &pad, const QDomElement &tra
 Transport::~Transport()
 {
     // we have to mark all of them as finished just in case they are captured somewhere else
-    for (auto &c: d->connections) {
-        c->finished = true;
+    if (d) {
+        for (auto &c: d->connections) {
+            c->finished = true;
+        }
     }
 }
 
@@ -262,6 +264,9 @@ bool Transport::update(const QDomElement &transportEl)
                 auto c = static_cast<Connection*>(sender());
                 d->handleConnected(d->connections.value(c->sid));
             });
+        } else {
+            qWarning("failed to create IBB connection");
+            return false;
         }
     } else {
         if (bs_final < (*it)->_blockSize) {

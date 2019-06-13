@@ -327,23 +327,22 @@ bool Stanza::Error::fromXml(const QDomElement &e, const QString &baseNS)
     // type
     type = Private::stringToErrorType(e.attribute("type"));
     by = e.attribute(QLatin1String("by"));
-
-    // condition
-    QDomNodeList nl = e.childNodes();
-    QDomElement t;
     condition = -1;
-    int n;
-    for(n = 0; n < nl.count(); ++n) {
-        QDomNode i = nl.item(n);
-        t = i.toElement();
-        if(!t.isNull()) {
-            // FIX-ME: this shouldn't be needed
-            if(t.namespaceURI() == NS_STANZAS || t.attribute("xmlns") == NS_STANZAS) {
+
+    QString textTag(QString::fromLatin1("text"));
+    for (auto t = e.firstChildElement(); !t.isNull(); t = t.nextSiblingElement()) {
+        if(t.namespaceURI() == NS_STANZAS || t.attribute(QString::fromLatin1("xmlns")) == NS_STANZAS) {
+            if (t.tagName() == textTag) {
+                text = t.text().trimmed();
+            } else {
                 condition = Private::stringToErrorCond(t.tagName());
-                if (condition != -1)
-                    break;
             }
+        } else {
+            appSpec = t;
         }
+
+        if (condition != -1 && !appSpec.isNull() && !text.isEmpty())
+            break;
     }
 
     // code
@@ -359,24 +358,6 @@ bool Stanza::Error::fromXml(const QDomElement &e, const QString &baseNS)
             type = guess.first != -1 ? guess.first : Cancel;
         if (condition == -1)
             condition = guess.second != -1 ? guess.second : UndefinedCondition;
-    }
-
-    // text
-    t = e.elementsByTagNameNS(NS_STANZAS, "text").item(0).toElement();
-    if(!t.isNull())
-        text = t.text().trimmed();
-    else
-        text = e.text().trimmed();
-
-    // appspec: find first non-standard namespaced element
-    appSpec = QDomElement();
-    nl = e.childNodes();
-    for(n = 0; n < nl.count(); ++n) {
-        QDomNode i = nl.item(n);
-        if(i.isElement() && i.namespaceURI() != NS_STANZAS) {
-            appSpec = i.toElement();
-            break;
-        }
     }
 
     return true;

@@ -149,6 +149,7 @@ public:
     typedef std::function<void(bool,const QString &)> Callback; // params: success, detail. where detail could be a "get" url
 
     HttpFileUploadManager(Client *parent);
+    ~HttpFileUploadManager();
 
     /**
      * @brief setNetworkAccessManager sets network access manager to do http requests.

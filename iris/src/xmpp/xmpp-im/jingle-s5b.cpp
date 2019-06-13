@@ -211,13 +211,13 @@ class Candidate::Private : public QObject, public QSharedData {
 public:
     ~Private()
     {
-        if (server) {
+        if (server && transport) {
             server->unregisterKey(transport->directAddr());
         }
         delete socksClient;
     }
 
-    Transport *transport;
+    QPointer<Transport> transport;
     QString cid;
     QString host;
     Jid jid;
@@ -229,7 +229,7 @@ public:
     QSharedPointer<S5BServer> server;
     SocksClient *socksClient = nullptr;
 
-    void connectToHost(const QString &key, State successState, std::function<void(bool)> callback, bool isUdp)
+    void connectToHost(const QString &key, State successState, QObject *callbackContext, std::function<void(bool)> callback, bool isUdp)
     {
         QHostAddress ha(host);
         if (!ha.isNull() && ha.protocol() == QAbstractSocket::IPv6Protocol && ha.scopeId().isEmpty() &&
@@ -264,12 +264,12 @@ public:
         } else {
             socksClient = new SocksClient;
             qDebug() << "connect to host with cid=" << cid << ", key=" << key << " and socks client" << socksClient;
-            connect(socksClient, &SocksClient::connected, [this, callback, successState](){
+            connect(socksClient, &SocksClient::connected, callbackContext, [this, callback, successState](){
                 state = successState;
                 qDebug() << "socks client"  << socksClient << "is connected";
                 callback(true);
             });
-            connect(socksClient, &SocksClient::error, [this, callback](int error){
+            connect(socksClient, &SocksClient::error, callbackContext, [this, callback](int error){
                 Q_UNUSED(error);
                 state = Candidate::Discarded;
                 qDebug() << "socks client"  << socksClient << "failed to connect";
@@ -509,9 +509,9 @@ QDomElement Candidate::toXml(QDomDocument *doc) const
     return e;
 }
 
-void Candidate::connectToHost(const QString &key, State successState, std::function<void(bool)> callback, bool isUdp)
+void Candidate::connectToHost(const QString &key, State successState, QObject *callbackContext, std::function<void(bool)> callback, bool isUdp)
 {
-    d->connectToHost(key, successState, callback, isUdp);
+    d->connectToHost(key, successState, callbackContext, callback, isUdp);
 }
 
 bool Candidate::incomingConnection(SocksClient *sc)
@@ -778,7 +778,7 @@ public:
             lastConnectionStart.start();
             QString key = mnc.type() == Candidate::Proxy? dstaddr : directAddr;
             mnc.setState(Candidate::Probing);
-            mnc.connectToHost(key, Candidate::Pending, [this, mnc](bool success) {
+            mnc.connectToHost(key, Candidate::Pending, q, [this, mnc](bool success) {
                 // candidate's status had to be changed by connectToHost, so we don't set it again
                 if (success) {
                     // let's reject candidates which are meaningless to try
@@ -908,7 +908,7 @@ public:
                             if (c == localUsedCandidate) {
                                 // it's our side who proposed proxy. so we have to connect to it and activate
                                 auto key = makeKey(sid, pad->session()->me(), pad->session()->peer());
-                                c.connectToHost(key, Candidate::Accepted, [this](bool success){
+                                c.connectToHost(key, Candidate::Accepted, q, [this](bool success){
                                     if (!success) {
                                         pendingActions |= Private::ProxyError;
                                         emit q->updated();
@@ -1150,6 +1150,12 @@ Transport::~Transport()
         static_cast<Manager*>(d->pad->manager())->removeKeyMapping(d->directAddr);
         for (auto &c: d->remoteCandidates) {
             c.deleteSocksClient();
+        }
+        for (auto &c: d->remoteCandidates) {
+            auto srv = c.server();
+            if (srv) {
+                srv.staticCast<S5BServer>()->unregisterKey(d->directAddr);
+            }
         }
     }
 }

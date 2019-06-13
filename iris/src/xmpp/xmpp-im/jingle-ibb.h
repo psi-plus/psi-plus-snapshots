@@ -72,8 +72,8 @@ public:
 
     Connection::Ptr makeConnection(const QString &sid, size_t blockSize);
 private:
-    Manager *_manager;
-    Session *_session;
+    Manager *_manager = nullptr;
+    Session *_session = nullptr;
 };
 
 class Manager : public TransportManager {

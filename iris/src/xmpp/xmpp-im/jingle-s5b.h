@@ -107,7 +107,7 @@ public:
 
     QDomElement toXml(QDomDocument *doc) const;
 
-    void connectToHost(const QString &key, State successState, std::function<void (bool)> callback, bool isUdp = false);
+    void connectToHost(const QString &key, State successState, QObject *callbackContext, std::function<void (bool)> callback, bool isUdp = false);
     bool incomingConnection(SocksClient *sc);
     SocksClient* takeSocksClient();
     void deleteSocksClient();

@@ -626,6 +626,10 @@ Origin Application::transportReplaceOrigin() const
 bool Application::replaceTransport(const QSharedPointer<Transport> &transport)
 {
     auto prev = d->transportFailedOrigin;
+    if (d->pad->session()->role() == Origin::Responder && prev == Origin::Responder && d->transport) {
+        // if I'm a responder and tried to send transport-replace too, then push ns back
+        d->availableTransports.append(d->transport->pad()->ns());
+    }
     d->transportFailedOrigin = d->pad->session()->peerRole();
     auto ret = setTransport(transport);
     if (ret)
@@ -665,8 +669,8 @@ Action Application::outgoingUpdateType() const
         }
         break;
     case State::Connecting:
-    case State::Active:
     case State::Pending:
+    case State::Active:
         if (d->transportFailedOrigin != Origin::None && (d->state == State::Active || !d->transport))
             return Action::ContentRemove;
 

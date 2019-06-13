@@ -687,7 +687,10 @@ public:
                 }
             } else {
                 lastError = jt->error();
-                setSessionFinished();
+                if (ErrorUtil::jingleCondition(lastError) != ErrorUtil::TieBreak)
+                    setSessionFinished();
+                else
+                    planStep();
             }
         });
         waitingAck = true;
@@ -1867,24 +1870,25 @@ const char* ErrorUtil::names[ErrorUtil::Last] = {"out-of-order","tie-break", "un
 
 Stanza::Error ErrorUtil::make(QDomDocument &doc, int jingleCond, int type, int condition, const QString &text)
 {
-    auto el = doc.createElementNS(ERROR_NS, QString::fromLatin1(names[jingleCond]));
+    auto el = doc.createElementNS(ERROR_NS, QString::fromLatin1(names[jingleCond - 1]));
     return Stanza::Error(type, condition, text, el);
 }
 
 void ErrorUtil::fill(QDomDocument doc, Stanza::Error &error, int jingleCond)
 {
-    error.appSpec = doc.createElementNS(ERROR_NS, QString::fromLatin1(names[jingleCond]));
+    error.appSpec = doc.createElementNS(ERROR_NS, QString::fromLatin1(names[jingleCond - 1]));
 }
 
 int ErrorUtil::jingleCondition(const Stanza::Error &error)
 {
+    //qDebug() << "tag" << error.appSpec.tagName() << "xmlns" << error.appSpec.attribute(QString::fromLatin1("xmlns")) << "ns" << error.appSpec.namespaceURI();
     if (error.appSpec.attribute(QString::fromLatin1("xmlns")) != ERROR_NS) {
         return UnknownError;
     }
     QString tagName = error.appSpec.tagName();
     for (int i = 0; i < int(sizeof(names) / sizeof(names[0])); ++i) {
         if (tagName == names[i]) {
-            return i;
+            return i + 1;
         }
     }
     return UnknownError;
