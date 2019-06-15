@@ -42,6 +42,8 @@ public:
 
     void prepare() override;
     void start() override;
+    bool isInitialOfferReady() const override;
+    OutgoingTransportInfoUpdate takeInitialOffer() override;
     bool update(const QDomElement &transportEl) override;
     bool hasUpdates() const override;
     OutgoingTransportInfoUpdate takeOutgoingUpdate() override;

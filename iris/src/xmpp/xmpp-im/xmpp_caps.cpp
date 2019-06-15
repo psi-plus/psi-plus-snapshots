@@ -220,6 +220,7 @@ DiscoItem CapsRegistry::disco(const QString &spec) const
  * \brief Default constructor.
  */
 CapsManager::CapsManager(Client *client) :
+    QObject(client),
     client_(client),
     isEnabled_(true)
 {}

@@ -134,19 +134,21 @@ public:
     bool setTransport(const QSharedPointer<Transport> &transport) override;
     QSharedPointer<Transport> transport() const override;
 
-    Action outgoingUpdateType() const override;
+    Action evaluateOutgoingUpdate() override;
     OutgoingUpdate takeOutgoingUpdate() override;
     bool wantBetterTransport(const QSharedPointer<XMPP::Jingle::Transport> &) const override;
     bool selectNextTransport() override;
     void prepare() override;
     void start() override;
     bool accept(const QDomElement &el) override;
-    bool replaceTransport(const QSharedPointer<Transport> &transport) override;
-    void setTransportAccepted() override;
 
     bool isValid() const;
 
     void setDevice(QIODevice *dev, bool closeOnFinish = true);
+
+protected:
+    bool incomingTransportReplace(const QSharedPointer<Transport> &transport) override;
+    bool incomingTransportAccept(const QDomElement &transportEl) override;
 
 signals:
     void deviceRequested(quint64 offset, quint64 size);
@@ -162,6 +164,7 @@ class Manager : public XMPP::Jingle::ApplicationManager
     Q_OBJECT
 public:
     Manager(QObject *parent = nullptr);
+    ~Manager();
     void setJingleManager(XMPP::Jingle::Manager *jm);
     Application *startApplication(const ApplicationManagerPad::Ptr &pad, const QString &contentName, Origin creator, Origin senders);
     ApplicationManagerPad *pad(Session *session); // pad factory

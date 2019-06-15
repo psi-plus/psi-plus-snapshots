@@ -751,7 +751,7 @@ public:
              */
             Action expectedContentAction = role == Origin::Initiator? Action::ContentAdd : Action::ContentAccept;
             for (const auto &c: contentList) {
-                auto out = c->outgoingUpdateType();
+                auto out = c->evaluateOutgoingUpdate();
                 if (out == Action::ContentReject) { // yeah we are rejecting local content. invalid?
                     lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                     setSessionFinished();
@@ -821,7 +821,7 @@ public:
         QMultiMap<Action, Application*> updates;
 
         for (auto app : signalingContent) {
-            Action updateType = app->outgoingUpdateType();
+            Action updateType = app->evaluateOutgoingUpdate();
             if (updateType != Action::NoAction) {
                 updates.insert(updateType, app);
             }
@@ -869,7 +869,7 @@ public:
     void addAndInitContent(Origin creator, Application *content)
     {
         contentList.insert(ContentKey{content->contentName(), creator}, content);
-        if (state != State::Created && content->outgoingUpdateType() != Action::NoAction) {
+        if (state != State::Created && content->evaluateOutgoingUpdate() != Action::NoAction) {
             signalingContent.insert(content);
         }
         QObject::connect(content, &Application::updated, q, [this, content](){
@@ -1245,7 +1245,10 @@ public:
                 return false;
             }
             Application *app = contentList.value(ContentKey{cb.name, cb.creator});
-            if (!app) continue; //wtf?
+            if (!app) {
+                toReject.append(ce);
+                continue;
+            }
 
             auto trPad = q->transportPadFactory(transportNS);
             if (!trPad) {
@@ -1274,7 +1277,7 @@ public:
             QSharedPointer<Transport> transport;
             QDomElement ce;
             std::tie(app,transport,ce) = v;
-            if (!app->replaceTransport(transport)) { // app should generate transport accept eventually. content-accept will work too if the content wasn't accepted yet
+            if (!app->incomingTransportReplace(transport)) { // app should generate transport accept eventually. content-accept will work too if the content wasn't accepted yet
                 toReject.append(ce);
             }
         }
@@ -1289,24 +1292,22 @@ public:
 
     bool handleIncomingTransportAccept(const QDomElement &jingleEl)
     {
-        QSet<Application*> apps;
         QString contentTag(QStringLiteral("content"));
         for(QDomElement ce = jingleEl.firstChildElement(contentTag);
             !ce.isNull(); ce = ce.nextSiblingElement(contentTag))
         {
             ContentBase cb(ce);
-            if (!cb.isValid()) {
+            auto transportEl = ce.firstChildElement(QString::fromLatin1("transport"));
+            QString transportNS = transportEl.attribute(QStringLiteral("xmlns"));
+            if (!cb.isValid() || transportEl.isNull() || transportNS.isEmpty()) {
                 lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                 return false;
             }
             Application *app = contentList.value(ContentKey{cb.name, cb.creator});
-            if (app) {
-                apps.insert(app);
+            if (!app || !app->transport() || app->transport()->pad()->ns() != transportNS || !app->incomingTransportAccept(transportEl)) {
+                lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
+                return false;
             }
-        }
-
-        for (auto app: apps) {
-            app->setTransportAccepted();
         }
 
         planStep();
@@ -1508,6 +1509,10 @@ void Session::initiate()
 
 void Session::terminate(Reason::Condition cond, const QString &comment)
 {
+    if (d->role == Origin::Initiator && d->state == State::PrepareLocalOffer) {
+        d->setSessionFinished();
+        return;
+    }
     d->state = State::Finishing;
     d->terminateReason = Reason(cond, comment);
     d->planStep();
@@ -1635,6 +1640,11 @@ QDomElement SessionManagerPad::takeOutgoingSessionInfoUpdate()
     return QDomElement();
 }
 
+QDomDocument *SessionManagerPad::doc() const
+{
+    return session()->manager()->client()->doc();
+}
+
 //----------------------------------------------------------------------------
 // Manager
 //----------------------------------------------------------------------------
@@ -1665,6 +1675,7 @@ public:
 };
 
 Manager::Manager(Client *client) :
+    QObject(client),
     d(new Private())
 {
     d->client = client;
@@ -1674,6 +1685,12 @@ Manager::Manager(Client *client) :
 
 Manager::~Manager()
 {
+    for (auto &m: d->transportManagers) {
+        m->setJingleManager(nullptr);
+    }
+    for (auto &m: d->applicationManagers) {
+        m->setJingleManager(nullptr);
+    }
 }
 
 Client *Manager::client() const
@@ -1897,6 +1914,11 @@ int ErrorUtil::jingleCondition(const Stanza::Error &error)
 Stanza::Error ErrorUtil::makeTieBreak(QDomDocument &doc)
 {
     return make(doc, TieBreak, XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::Conflict);
+}
+
+Stanza::Error ErrorUtil::makeOutOfOrder(QDomDocument &doc)
+{
+    return make(doc, OutOfOrder, XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::UnexpectedRequest);
 }
 
 

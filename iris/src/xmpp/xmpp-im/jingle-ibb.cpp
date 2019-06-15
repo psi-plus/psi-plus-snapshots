@@ -138,10 +138,12 @@ struct Transport::Private
     Pad::Ptr pad;
     QMap<QString,QSharedPointer<Connection>> connections;
     QList<QSharedPointer<Connection>> readyConnections;
+    QSharedPointer<Connection> lastOfferedConnection;
     size_t defaultBlockSize = 4096;
     bool started = false;
+    bool initialOfferSent = false; // if we ever sent anything
 
-    void checkAndStartConnection(QSharedPointer<Connection> &c)
+    void checkAndStartConnection(const QSharedPointer<Connection> &c)
     {
         if (!c->connection && !c->finished && c->offerReceived && c->offerSent && pad->session()->role() == Origin::Initiator) {
             auto con = pad->session()->manager()->client()->ibbManager()->createConnection();
@@ -158,6 +160,29 @@ struct Transport::Private
             readyConnections.append(c);
             emit q->connected();
         }
+    }
+
+    OutgoingTransportInfoUpdate makeOffer(const QSharedPointer<Connection> &connection)
+    {
+        OutgoingTransportInfoUpdate upd;
+        if (!connection) {
+            return upd;
+        }
+
+        auto doc = pad->session()->manager()->client()->doc();
+
+        QDomElement tel = doc->createElementNS(NS, "transport");
+        tel.setAttribute(QStringLiteral("sid"), connection->sid);
+        tel.setAttribute(QString::fromLatin1("block-size"), qulonglong(connection->_blockSize));
+
+        upd = OutgoingTransportInfoUpdate{tel, [this, connection]() mutable {
+            if (started)
+                checkAndStartConnection(connection);
+        }};
+
+        lastOfferedConnection = connection;
+        connection->offerSent = true;
+        return upd;
     }
 };
 
@@ -282,6 +307,21 @@ bool Transport::update(const QDomElement &transportEl)
     return true;
 }
 
+
+bool Transport::isInitialOfferReady() const
+{
+    return isValid() && (hasUpdates() || d->initialOfferSent);
+}
+
+OutgoingTransportInfoUpdate Transport::takeInitialOffer()
+{
+    auto upd = takeOutgoingUpdate();
+    if (std::get<0>(upd).isNull() && d->lastOfferedConnection) {
+        return d->makeOffer(d->lastOfferedConnection);
+    }
+    return upd;
+}
+
 bool Transport::hasUpdates() const
 {
     for (auto &c: d->connections) {
@@ -306,23 +346,7 @@ OutgoingTransportInfoUpdate Transport::takeOutgoingUpdate()
             break;
         }
     }
-    if (!connection) {
-        return upd;
-    }
-
-    auto doc = d->pad->session()->manager()->client()->doc();
-
-    QDomElement tel = doc->createElementNS(NS, "transport");
-    tel.setAttribute(QStringLiteral("sid"), connection->sid);
-    tel.setAttribute(QString::fromLatin1("block-size"), qulonglong(connection->_blockSize));
-
-    upd = OutgoingTransportInfoUpdate{tel, [this, connection]() mutable {
-        if (d->started)
-            d->checkAndStartConnection(connection);
-    }};
-
-    connection->offerSent = true;
-    return upd;
+    return d->makeOffer(connection);
 }
 
 bool Transport::isValid() const
@@ -381,7 +405,8 @@ Manager::Manager(QObject *parent) :
 
 Manager::~Manager()
 {
-
+    if (d->jingleManager)
+        d->jingleManager->unregisterTransport(NS);
 }
 
 Transport::Features Manager::features() const
