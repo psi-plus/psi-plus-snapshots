@@ -144,6 +144,8 @@ private:
                         KeySym *sym = 0;
                         int symIndex = 0;
                         do {
+                            if (sym)
+                                XFree(sym);
                             sym = XGetKeyboardMapping(appDpy,map->modifiermap[mapIndex], 1, &keysyms_per_keycode_return);
                             symIndex++;
                         } while ( !sym[0] && symIndex < keysyms_per_keycode);

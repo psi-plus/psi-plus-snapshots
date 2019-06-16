@@ -57,10 +57,7 @@ QString openedImage2type(QIODevice *dev)
     if ( format == QLatin1String("SVG") )
         return QLatin1String("image/svg+xml");
 
-
-    qWarning() << QString("WARNING! VCard::image2type: unknown format = '%1'").arg(format.isNull() ? QString("UNKNOWN") : format);
-
-    return QLatin1String("image/unknown");
+    return QString();
 }
 
 QString image2type(const QByteArray &ba)
