@@ -977,7 +977,7 @@ void PsiChatDlg::chatEditCreated()
             }
         });
 
-        dlg->exec();
+        dlg->show();
     });
 }
 

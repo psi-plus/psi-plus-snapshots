@@ -103,6 +103,7 @@ public slots:
 signals:
     void stateChanged();
     void finished();
+    void progress(qint64 bytesReceived, qint64 bytesTotal);
 
 private:
     enum State { None, GettingSlot, HttpRequest, Success, Error };
