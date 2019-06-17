@@ -62,6 +62,8 @@ QString openedImage2type(QIODevice *dev)
 
 QString image2type(const QByteArray &ba)
 {
+    if (ba.isEmpty())
+        return QString();
     QBuffer buf;
     buf.setData(ba);
     buf.open(QIODevice::ReadOnly);
