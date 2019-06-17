@@ -387,9 +387,61 @@ void VariantTree::fromXml(const QDomElement &ele)
  */
 QVariant VariantTree::elementToVariant(const QDomElement& e)
 {
+    // next declaration sorted from most popular
+    static QString boolType(QString::fromLatin1("bool"));
+    static QString stringType(QString::fromLatin1("QString"));
+    static QString keyseqType(QString::fromLatin1("QKeySequence"));
+    static QString intType(QString::fromLatin1("int"));
+    static QString ulonglongType(QString::fromLatin1("qulonglong"));
+    static QString colorType(QString::fromLatin1("QColor"));
+    static QString stringListType(QString::fromLatin1("QStringList"));
+    static QString rectType(QString::fromLatin1("QRect"));
+    static QString variantListType(QString::fromLatin1("QVariantList"));
+    static QString sizeType(QString::fromLatin1("QSize"));
+    static QString variantMapType(QString::fromLatin1("QVariantMap"));
+    static QString variantHashType(QString::fromLatin1("QVariantHash"));
+    static QString byteArrayType(QString::fromLatin1("QByteArray"));
+
+    static QString typeAttr(QString::fromLatin1("type"));
+
     QVariant value;
-    QString type = e.attribute(QLatin1String("type"));
-    if (type == "QStringList") {
+    QString type = e.attribute(typeAttr);
+
+    { // let's start from basic most popular types
+        QVariant::Type varianttype;
+        bool known = true;
+
+        if (type==boolType) {
+            varianttype = QVariant::Bool;
+        } else if (type == stringType) {
+            varianttype = QVariant::String;
+        } else if (type==intType) {
+            varianttype = QVariant::Int;
+        } else if (type==ulonglongType) {
+            varianttype = QVariant::ULongLong;
+        } else if (type == keyseqType) {
+            varianttype = QVariant::KeySequence;
+        } else if (type == colorType) {
+            varianttype = QVariant::Color;
+        } else {
+            known = false;
+        }
+
+        if (known) {
+            for (QDomNode node = e.firstChild(); !node.isNull(); node = node.nextSibling()) {
+                if ( node.isText() )
+                    value=node.toText().data();
+            }
+
+            if (!value.isValid())
+                value = QString("");
+
+            value.convert(varianttype);
+            return value;
+        }
+    }
+
+    if (type == stringListType) {
         QStringList list;
         for (QDomNode node = e.firstChild(); !node.isNull(); node = node.nextSibling()) {
             QDomElement e = node.toElement();
@@ -399,7 +451,7 @@ QVariant VariantTree::elementToVariant(const QDomElement& e)
         }
         value = list;
     }
-    else if (type == QLatin1String("QVariantList")) {
+    else if (type == variantListType) {
         QVariantList list;
         for (QDomNode node = e.firstChild(); !node.isNull(); node = node.nextSibling()) {
             QDomElement e = node.toElement();
@@ -411,7 +463,7 @@ QVariant VariantTree::elementToVariant(const QDomElement& e)
         }
         value = list;
     }
-    else if (type == QLatin1String("QVariantMap")) {
+    else if (type == variantMapType) {
         QVariantMap map;
         for (QDomElement ine = e.firstChildElement(); !ine.isNull(); ine = ine.nextSiblingElement()) {
             QVariant v = elementToVariant(ine);
@@ -420,7 +472,7 @@ QVariant VariantTree::elementToVariant(const QDomElement& e)
         }
         value = map;
     }
-    else if (type == QLatin1String("QVariantHash")) {
+    else if (type == variantHashType) {
         QVariantHash map;
         for (QDomElement ine = e.firstChildElement(); !ine.isNull(); ine = ine.nextSiblingElement()) {
             QVariant v = elementToVariant(ine);
@@ -429,7 +481,7 @@ QVariant VariantTree::elementToVariant(const QDomElement& e)
         }
         value = map;
     }
-    else if (type == QLatin1String("QSize")) {
+    else if (type == sizeType) {
         int width = 0, height = 0;
         for (QDomNode node = e.firstChild(); !node.isNull(); node = node.nextSibling()) {
             QDomElement e = node.toElement();
@@ -444,7 +496,7 @@ QVariant VariantTree::elementToVariant(const QDomElement& e)
         }
         value = QVariant(QSize(width,height));
     }
-    else if (type == QLatin1String("QRect")) {
+    else if (type == rectType) {
         int x = 0, y = 0, width = 0, height = 0;
         for (QDomNode node = e.firstChild(); !node.isNull(); node = node.nextSibling()) {
             QDomElement e = node.toElement();
@@ -465,7 +517,7 @@ QVariant VariantTree::elementToVariant(const QDomElement& e)
         }
         value = QVariant(QRect(x,y,width,height));
     }
-    else if (type == QLatin1String("QByteArray")) {
+    else if (type == byteArrayType) {
         value = QByteArray();
         for (QDomNode node = e.firstChild(); !node.isNull(); node = node.nextSibling()) {
             if (node.isText()) {
@@ -474,38 +526,7 @@ QVariant VariantTree::elementToVariant(const QDomElement& e)
             }
         }
     }
-    else { // Standard values
-        QVariant::Type varianttype;
-        bool known = true;
 
-        if (type==QLatin1String("QString")) {
-            varianttype = QVariant::String;
-        } else if (type==QLatin1String("bool")) {
-            varianttype = QVariant::Bool;
-        } else if (type==QLatin1String("int")) {
-            varianttype = QVariant::Int;
-        } else if (type == QLatin1String("QKeySequence")) {
-            varianttype = QVariant::KeySequence;
-        } else if (type == QLatin1String("QColor")) {
-            varianttype = QVariant::Color;
-        } else {
-            known = false;
-        }
-
-        if (known) {
-            for (QDomNode node = e.firstChild(); !node.isNull(); node = node.nextSibling()) {
-                if ( node.isText() )
-                    value=node.toText().data();
-            }
-
-            if (!value.isValid())
-                value = QString("");
-
-            value.convert(varianttype);
-        } else {
-            value = QVariant();
-        }
-    }
     return value;
 }
 
