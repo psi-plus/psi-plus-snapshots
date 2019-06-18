@@ -925,7 +925,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
         else if (name == QLatin1String("gchat_templates")) {
             action->setMenu(getTemplateMenu());
         }
-        else if (name == "gchat_pin_tab" || name == "gchat_unpin_tab") {
+        else if (name == "gchat_pin_tab") {
             connect(action, SIGNAL(triggered()), SLOT(pinTab()));
         }
     }
@@ -2498,10 +2498,7 @@ void GCMainDlg::buildMenu()
     d->pm_settings->addAction(d->act_bookmark);
     if (PsiOptions::instance()->getOption("options.ui.tabs.multi-rows").toBool() && d->tabmode) {
         d->pm_settings->addSeparator();
-        if (getManagingTabDlg()->isTabPinned(this))
-            d->pm_settings->addAction(d->actions->action("gchat_unpin_tab"));
-        else
-            d->pm_settings->addAction(d->actions->action("gchat_pin_tab"));
+        d->pm_settings->addAction(d->actions->action("gchat_pin_tab"));
     }
 #ifdef PSI_PLUGINS
     if(!PsiOptions::instance()->getOption("options.ui.contactlist.toolbars.m1.visible").toBool()) {

@@ -42,7 +42,7 @@ TabbableWidget::TabbableWidget(const Jid &jid, PsiAccount *pa, TabManager *tabMa
     , tabManager_(tabManager)
 {
     if (TabbableWidget::chatsCount == 0) {
-        TabbableWidget::templateMenu = new SendButtonTemplatesMenu(NULL);
+        TabbableWidget::templateMenu = new SendButtonTemplatesMenu(nullptr);
         TabbableWidget::templateMenu->setParams(false);
         TabbableWidget::templateMenu->setStyleSheet(PsiOptions::instance()->getOption("options.ui.chat.css").toString());
     }
@@ -124,20 +124,20 @@ TabbableWidget::~TabbableWidget()
     }
     --TabbableWidget::chatsCount;
     if (TabbableWidget::chatsCount == 0) {
-        if (TabbableWidget::templateMenu != NULL) {
+        if (TabbableWidget::templateMenu != nullptr) {
             delete TabbableWidget::templateMenu;
-            TabbableWidget::templateMenu = NULL;
+            TabbableWidget::templateMenu = nullptr;
         }
         if (!TabbableWidget::templateEditDlg.isNull()) {
             delete (TabbableWidget::templateEditDlg);
-            TabbableWidget::templateEditDlg = NULL;
+            TabbableWidget::templateEditDlg = nullptr;
         }
     }
 }
 
 int TabbableWidget::chatsCount = 0;
-SendButtonTemplatesMenu *TabbableWidget::templateMenu = NULL;
-QPointer<SendButtonTemplatesEditor> TabbableWidget::templateEditDlg = NULL;
+SendButtonTemplatesMenu *TabbableWidget::templateMenu = nullptr;
+QPointer<SendButtonTemplatesEditor> TabbableWidget::templateEditDlg = nullptr;
 
 SendButtonTemplatesMenu* TabbableWidget::getTemplateMenu()
 {
@@ -149,7 +149,7 @@ void TabbableWidget::showTemplateEditor()
     bool new_window = false;
     if (TabbableWidget::templateEditDlg.isNull()) {
         new_window = true;
-        TabbableWidget::templateEditDlg = new SendButtonTemplatesEditor(NULL);
+        TabbableWidget::templateEditDlg = new SendButtonTemplatesEditor(nullptr);
         if (TabbableWidget::templateMenu) {
             TabbableWidget::templateEditDlg->setStyleSheet(PsiOptions::instance()->getOption("options.ui.chat.css").toString());
             connect(TabbableWidget::templateEditDlg.data(), SIGNAL(accepted()), TabbableWidget::templateMenu, SLOT(update()));

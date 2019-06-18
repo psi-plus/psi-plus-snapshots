@@ -273,7 +273,7 @@ void TabDlg::showTabMenu(int tab, QPoint pos, QContextMenuEvent * event)
             tabMenu_->addMenu(sendTo);
         }
 
-        QAction *p = 0;
+        QAction *p = nullptr;
         if (PsiOptions::instance()->getOption("options.ui.tabs.multi-rows", true).toBool()) {
             p = tabMenu_->addAction(tabWidget_->isPagePinned(getTab(tab)) ? tr("Unpin Tab") : tr("Pin Tab"));
         }

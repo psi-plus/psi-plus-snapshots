@@ -454,8 +454,7 @@ void PsiActionList::Private::createChat()
         IconAction *actCompact = new IconAction(tr("Toggle Compact/Full Size"), "psi/compact", tr("Toggle Compact/Full Size"), 0, this);
         IconAction *actActiveContacts = new IconAction (tr("Active contacts"), "psi/jabber", tr("Active contacts"), 0, this);
         IconAction *actTemplates = new IconAction(tr("Templates"), "psi/action_templates", tr("Templates"), 0, this);
-        IconAction *actPinTab = new IconAction(tr("Pin Tab"), "psi/pin", tr("Pin Tab"), 0 , this);
-        IconAction *actUnpinTab = new IconAction(tr("Unpin Tab"), "psi/pin", tr("Unpin Tab"), 0 , this);
+        IconAction *actPinTab = new IconAction(tr("Pin/UnPin Tab"), "psi/pin", tr("Pin/UnPin Tab"), 0 , this);
 
         ActionNames actions[] = {
             { "chat_clear",  actClear  },
@@ -472,7 +471,6 @@ void PsiActionList::Private::createChat()
             { "chat_active_contacts", actActiveContacts   },
             { "chat_templates", actTemplates },
             { "chat_pin_tab", actPinTab },
-            { "chat_unpin_tab", actUnpinTab },
             { "", nullptr }
         };
 
@@ -491,8 +489,7 @@ void PsiActionList::Private::createGroupchat()
         IconAction *actConfigure = new IconAction(tr("Configure Room"), "psi/configure-room", tr("Configure Room"), 0, this);
         IconAction *actIcon = new IconAction(tr("Select Icon"), "psi/smile", tr("Select Icon"), 0, this);
         IconAction *actTemplates = new IconAction(tr("Templates"), "psi/action_templates", tr("Templates"), 0, this);
-        IconAction *actPinTab = new IconAction(tr("Pin Tab"), "psi/pin", tr("Pin Tab"), 0 , this);
-        IconAction *actUnpinTab = new IconAction(tr("Unpin Tab"), "psi/pin", tr("Unpin Tab"), 0 , this);
+        IconAction *actPinTab = new IconAction(tr("Pin/UnPin Tab"), "psi/pin", tr("Pin/UnPin Tab"), 0 , this);
 
         ActionNames actions[] = {
             { "gchat_clear",     actClear     },
@@ -502,7 +499,6 @@ void PsiActionList::Private::createGroupchat()
             { "gchat_icon",      actIcon      },
             { "gchat_templates", actTemplates },
             { "gchat_pin_tab",   actPinTab    },
-            { "gchat_unpin_tab", actUnpinTab  },
             { "", nullptr }
         };
 
