@@ -513,7 +513,13 @@ public:
         trackBar = false;
         te_log()->doTrackBar();
     }
-
+    void doFileShare(FileSharingItem *item){
+        Message m(dlg->jid());
+        m.setType("groupchat");
+        if (item->setupMessage(m)) {
+            dlg->aSend(m);
+        }
+    }
 public:
     QString lastReferrer;  // contains nick of last person, who have said "yourNick: ..."
 
@@ -900,27 +906,34 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
         action->setParent(this);
         d->actions->addAction(name, action);
 
-        if (name == QLatin1String("gchat_clear")) {
+        if (name == QString::fromLatin1("gchat_clear")) {
             connect(action, SIGNAL(triggered()), SLOT(doClearButton()));
         }
-        else if (name == QLatin1String("gchat_find")) {
+        else if (name == QString::fromLatin1("gchat_find")) {
             // typeahead find
             connect(action, SIGNAL(triggered()), d->typeahead, SLOT(toggleVisibility()));
         // -- typeahead
         }
-        else if (name == QLatin1String("gchat_configure")) {
+        else if (name == QString::fromLatin1("gchat_configure")) {
             connect(action, SIGNAL(triggered()), SLOT(configureRoom()));
         }
-        else if (name == QLatin1String("gchat_html_text")) {
+        else if (name == QString::fromLatin1("gchat_html_text")) {
             connect(action, SIGNAL(triggered()), d->mle(), SLOT(doHTMLTextMenu()));
         }
-        else if (name == QLatin1String("gchat_icon")) {
+        else if (name == QString::fromLatin1("gchat_icon")) {
             connect(account()->psi()->iconSelectPopup(), SIGNAL(textSelected(QString)), d, SLOT(addEmoticon(QString)));
             action->setMenu(pa->psi()->iconSelectPopup());
             ui_.tb_emoticons->setMenu(pa->psi()->iconSelectPopup());
         }
-        else if (name == QLatin1String("gchat_info")) {
+        else if (name == QString::fromLatin1("gchat_info")) {
             connect(action, SIGNAL(triggered()), SLOT(doInfo()));
+        }
+        else if (name == QString::fromLatin1("gchat_share_files")) {
+            connect(action, &QAction::triggered, account(), [this](){
+                account()->shareFiles(this, [this](FileSharingItem *item){
+                    d->doFileShare(item);
+                });
+            });
         }
         else if (name == QLatin1String("gchat_templates")) {
             action->setMenu(getTemplateMenu());
@@ -2527,11 +2540,7 @@ void GCMainDlg::chatEditCreated()
         connect(dlg, &FileShareDlg::published, this, [this, dlg](){
             FileSharingItem *item;
             while ((item = dlg->takePendingPublisher())) {
-                Message m(jid());
-                m.setType("groupchat");
-                if (item->setupMessage(m)) {
-                    aSend(m);
-                }
+                d->doFileShare(item);
             }
         });
 
