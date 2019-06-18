@@ -1527,8 +1527,12 @@ Transport::Features Manager::features() const
 void Manager::setJingleManager(XMPP::Jingle::Manager *jm)
 {
     d->jingleManager = jm;
+    if (!jm)
+        return;
     // ensure S5BManager is initialized
-    QTimer::singleShot(0, [this](){
+    QTimer::singleShot(0, this, [this](){
+        if (!d->jingleManager) // unregistered that early?
+            return;
         auto jt = d->jingleManager->client()->s5bManager()->jtPush();
         connect(jt, &JT_PushS5B::incomingUDPSuccess, this, [this](const Jid &from, const QString &dstaddr) {
             Q_UNUSED(from);
