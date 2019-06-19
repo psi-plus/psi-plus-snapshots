@@ -26,6 +26,7 @@
 #include "xmpp_address.h"
 #include "xmpp_rosterx.h"
 #include "xmpp_muc.h"
+#include "xmpp_reference.h"
 
 #include <QExplicitlySharedDataPointer>
 
@@ -212,6 +213,10 @@ namespace XMPP {
         void setStanzaId(const StanzaId &id);
         QString originId() const;
         void setOriginId(const QString &id);
+
+        // XEP-0385 and XEP-0372
+        Reference reference() const;
+        void setReference(const Reference &r);
 
         // Obsolete invitation
         QString invite() const;

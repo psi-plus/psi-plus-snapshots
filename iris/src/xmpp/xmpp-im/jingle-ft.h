@@ -50,7 +50,7 @@ public:
     File(const File &other);
     File(const QDomElement &file);
     ~File();
-    File& operator=(const File& other) = default;
+    File& operator=(const File& other);
     inline bool isValid() const { return d != nullptr; }
     QDomElement toXml(QDomDocument *doc) const;
 

@@ -56,6 +56,7 @@ HEADERS += \
     $$PWD/xmpp-im/xmpp_thumbs.h \
     $$PWD/xmpp-im/xmpp_htmlelement.h \
     $$PWD/xmpp-im/xmpp_muc.h \
+    $$PWD/xmpp-im/xmpp_reference.h \
     $$PWD/xmpp-im/xmpp_message.h \
     $$PWD/xmpp-im/xmpp_pubsubitem.h \
     $$PWD/xmpp-im/xmpp_resource.h \
@@ -109,6 +110,7 @@ SOURCES += \
     $$PWD/xmpp-im/xmpp_bytestream.cpp \
     $$PWD/xmpp-im/s5b.cpp \
     $$PWD/xmpp-im/xmpp_ibb.cpp \
+    $$PWD/xmpp-im/xmpp_reference.cpp \
     $$PWD/xmpp-im/filetransfer.cpp \
     $$PWD/xmpp-im/httpfileupload.cpp \
     $$PWD/xmpp-im/xmpp_bitsofbinary.cpp \

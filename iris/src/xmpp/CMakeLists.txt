@@ -35,6 +35,7 @@ set(HEADERS
     xmpp-im/xmpp_liverosteritem.h
     xmpp-im/xmpp_message.h
     xmpp-im/xmpp_muc.h
+    xmpp-im/xmpp_reference.h
     xmpp-im/xmpp_pubsubitem.h
     xmpp-im/xmpp_pubsubretraction.h
     xmpp-im/xmpp_receipts.h
@@ -117,6 +118,7 @@ set(SOURCES
     xmpp-im/xmpp_discoinfotask.cpp
     xmpp-im/xmpp_discoitem.cpp
     xmpp-im/xmpp_ibb.cpp
+    xmpp-im/xmpp_reference.cpp
     xmpp-im/xmpp_serverinfomanager.cpp
     xmpp-im/xmpp_subsets.cpp
     xmpp-im/xmpp_task.cpp

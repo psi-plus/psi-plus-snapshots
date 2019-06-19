@@ -74,6 +74,12 @@ File::~File()
 
 }
 
+File &File::operator=(const File &other)
+{
+    d = other.d;
+    return *this;
+}
+
 File::File(const File &other) :
     d(other.d)
 {
