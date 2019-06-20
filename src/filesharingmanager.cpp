@@ -97,6 +97,8 @@ void FileSharingItem::checkFinished()
             auto d = f.readAll();
             f.close();
             cache = manager->saveToCache(sha1hash, d, mime, TEMP_TTL);
+            _fileName = cache->fileName();
+            f.remove();
         } else {
             mime["link"] = _fileName;
             cache = manager->saveToCache(sha1hash, QByteArray(), mime, FILE_TTL);
@@ -161,7 +163,11 @@ FileSharingItem::FileSharingItem(const QString &fileName, PsiAccount *acc, FileS
 
 FileSharingItem::~FileSharingItem()
 {
-
+    if (!cache && isTempFile && !_fileName.isEmpty()) {
+        QFile f(_fileName);
+        if (f.exists())
+            f.remove();
+    }
 }
 
 Reference FileSharingItem::toReference() const
@@ -223,7 +229,7 @@ QIcon FileSharingItem::thumbnail(const QSize &size) const
 QImage FileSharingItem::preview(const QSize &maxSize) const
 {
     QImage image;
-    if (isImage && image.load(_fileName)) {
+    if (image.load(_fileName)) {
         auto s = image.size().boundedTo(maxSize);
         return image.scaled(s, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     }
@@ -260,7 +266,6 @@ void FileSharingItem::publish()
                 readyUris.append(hfu->getHttpSlot().get.url);
             }
             checkFinished();
-            hfu->deleteLater();
         });
     }
     if (!jingleFinished) {
