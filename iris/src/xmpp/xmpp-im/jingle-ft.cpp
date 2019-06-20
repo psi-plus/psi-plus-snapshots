@@ -186,7 +186,7 @@ QDomElement File::toXml(QDomDocument *doc) const
     if (!isValid()) {
         return QDomElement();
     }
-    QDomElement el = doc->createElement(QStringLiteral("file"));
+    QDomElement el = doc->createElementNS(NS, QStringLiteral("file"));
     if (d->date.isValid()) {
         el.appendChild(XMLHelper::textTag(*doc, QStringLiteral("date"), d->date.toString(Qt::ISODate)));
     }

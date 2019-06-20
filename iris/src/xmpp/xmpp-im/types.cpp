@@ -1075,7 +1075,7 @@ public:
     QString replaceId;
     QString originId; // XEP-0359
     Message::StanzaId stanzaId; // XEP-0359
-    Reference reference; // XEP-0385 and XEP-0372
+    QList<Reference> references; // XEP-0385 and XEP-0372
 };
 
 #define MessageD() (d? d : (d = new Private))
@@ -1562,14 +1562,19 @@ void Message::setOriginId(const QString &id)
     MessageD()->originId = id;
 }
 
-Reference Message::reference() const
+QList<Reference> Message::references() const
 {
-    return d? d->reference: Reference();
+    return d? d->references: QList<Reference>();
 }
 
-void Message::setReference(const Reference &r)
+void Message::addReference(const Reference &r)
 {
-    MessageD()->reference = r;
+    MessageD()->references.append(r);
+}
+
+void Message::setReferences(const QList<Reference> &r)
+{
+    MessageD()->references = r;
 }
 
 QString Message::invite() const
@@ -1976,8 +1981,8 @@ Stanza Message::toStanza(Stream *stream) const
     }
 
     // XEP-0372 and XEP-0385
-    if (d->reference.isValid()) {
-        s.appendChild(d->reference.toXml(&s.doc()));
+    for (auto const &r: d->references) {
+        s.appendChild(r.toXml(&s.doc()));
     }
 
     return s;
@@ -2328,9 +2333,12 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
     }
 
     // XEP-0385 SIMS and XEP-0372 Reference
-    t = childElementsByTagNameNS(root, REFERENCE_NS, QString::fromLatin1("reference")).item(0).toElement();
-    if (!t.isNull()) {
-        d->reference.fromXml(t);
+    auto references = childElementsByTagNameNS(root, REFERENCE_NS, QString::fromLatin1("reference"));
+    for (int i = 0; i < references.size(); i++) {
+        Reference r;
+        if (r.fromXml(references.at(i).toElement())) {
+            d->references.append(r);
+        }
     }
 
     return true;

@@ -215,8 +215,9 @@ namespace XMPP {
         void setOriginId(const QString &id);
 
         // XEP-0385 and XEP-0372
-        Reference reference() const;
-        void setReference(const Reference &r);
+        QList<Reference> references() const;
+        void addReference(const Reference &r);
+        void setReferences(const QList<Reference> &r);
 
         // Obsolete invitation
         QString invite() const;
