@@ -35,6 +35,8 @@ namespace XMPP
     public:
         Jingle::FileTransfer::File file;
         QStringList sources;
+
+        inline bool isValid() const { return file.isValid(); }
     };
 
     class Reference
@@ -56,8 +58,8 @@ namespace XMPP
         Type type() const;
         const QString &uri() const;
 
-        void setRange(int start, int end);
-        int start() const;
+        void setRange(int begin, int end);
+        int begin() const;
         int end() const;
 
         const QString &anchor() const;

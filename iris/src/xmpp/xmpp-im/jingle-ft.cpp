@@ -29,7 +29,7 @@ namespace Jingle {
 namespace FileTransfer {
 
 const QString NS = QStringLiteral("urn:xmpp:jingle:apps:file-transfer:5");
-
+const QString SPECTRUM_NS = QStringLiteral("iris.psi-im.org/spectrum");
 
 QDomElement Range::toXml(QDomDocument *doc) const
 {
@@ -60,8 +60,9 @@ public:
     quint64   size = 0;
     Range     range;
     bool      rangeSupported = false;
-    Hash      hash;
+    QList<Hash> hashes;
     Thumbnail thumbnail;
+    File::Spectrum audioSpectrum;
 };
 
 File::File()
@@ -88,15 +89,16 @@ File::File(const File &other) :
 
 File::File(const QDomElement &file)
 {
-    QDateTime date;
-    QString   mediaType;
-    QString   name;
-    QString   desc;
-    size_t    size = 0;
-    bool      rangeSupported = false;
-    Range     range;
-    Hash      hash;
-    Thumbnail thumbnail;
+    QDateTime   date;
+    QString     mediaType;
+    QString     name;
+    QString     desc;
+    size_t      size = 0;
+    bool        rangeSupported = false;
+    Range       range;
+    QList<Hash> hashes;
+    Thumbnail   thumbnail;
+    Spectrum    spectrum;
 
     bool ok;
 
@@ -148,22 +150,43 @@ File::File(const QDomElement &file)
 
         } else if (ce.tagName() == QLatin1String("hash")) {
             if (ce.attribute(QStringLiteral("xmlns")) == QLatin1String(XMPP_HASH_NS)) {
-                hash = Hash(ce);
-                if (hash.type() == Hash::Type::Unknown) {
+                Hash h(ce);
+                if (h.type() == Hash::Type::Unknown) {
                     return;
                 }
+                hashes.append(h);
             }
 
         } else if (ce.tagName() == QLatin1String("hash-used")) {
             if (ce.attribute(QStringLiteral("xmlns")) == QLatin1String(XMPP_HASH_NS)) {
-                hash = Hash(ce);
-                if (hash.type() == Hash::Type::Unknown) {
+                Hash h(ce);
+                if (h.type() == Hash::Type::Unknown) {
                     return;
                 }
+                hashes.append(h);
             }
 
         } else if (ce.tagName() == QLatin1String("thumbnail")) {
             thumbnail = Thumbnail(ce);
+        } else if (ce.tagName() == QLatin1String("spectrum") && ce.attribute(QStringLiteral("xmlns")) == SPECTRUM_NS) {
+            QStringList spv = ce.text().split(',');
+            spectrum.bars.reserve(spv.count());
+            std::transform(spv.begin(), spv.end(), std::back_inserter(spectrum.bars), [](const QString &v){ return v.toUInt(); });
+            auto c = ce.attribute(QStringLiteral("coding")).toLatin1();
+            if (c == "u8")
+                spectrum.coding = File::Spectrum::Coding::U8;
+            else if (c == "s8")
+                spectrum.coding = File::Spectrum::Coding::S8;
+            else if (c == "u16")
+                spectrum.coding = File::Spectrum::Coding::U16;
+            else if (c == "s16")
+                spectrum.coding = File::Spectrum::Coding::S16;
+            else if (c == "u32")
+                spectrum.coding = File::Spectrum::Coding::U32;
+            else if (c == "s32")
+                spectrum.coding = File::Spectrum::Coding::S32;
+            else
+                spectrum.bars.clear(); // drop invalid spectrum
         }
     }
 
@@ -175,15 +198,16 @@ File::File(const QDomElement &file)
     p->size = size;
     p->rangeSupported = rangeSupported;
     p->range = range;
-    p->hash = hash;
+    p->hashes = hashes;
     p->thumbnail = thumbnail;
+    p->audioSpectrum = spectrum;
 
     d = p;
 }
 
 QDomElement File::toXml(QDomDocument *doc) const
 {
-    if (!isValid()) {
+    if (!isValid() || d->hashes.isEmpty()) {
         return QDomElement();
     }
     QDomElement el = doc->createElementNS(NS, QStringLiteral("file"));
@@ -193,8 +217,8 @@ QDomElement File::toXml(QDomDocument *doc) const
     if (d->desc.size()) {
         el.appendChild(XMLHelper::textTag(*doc, QStringLiteral("desc"), d->desc));
     }
-    if (d->hash.isValid()) {
-        el.appendChild(d->hash.toXml(doc));
+    for (const auto &h: d->hashes) {
+        el.appendChild(h.toXml(doc));
     }
     if (d->mediaType.size()) {
         el.appendChild(XMLHelper::textTag(*doc, QStringLiteral("media-type"), d->mediaType));
@@ -211,7 +235,32 @@ QDomElement File::toXml(QDomDocument *doc) const
     if (d->thumbnail.isValid()) {
         el.appendChild(d->thumbnail.toXml(doc));
     }
+    if (d->audioSpectrum.bars.count()) {
+        auto sel = el.appendChild(doc->createElementNS(SPECTRUM_NS, QString::fromLatin1("spectrum"))).toElement();
+        const char* s[] = {"u8","s8","u16","s16","u32","s32"};
+        sel.setAttribute(QString::fromLatin1("coding"), QString::fromLatin1(s[d->audioSpectrum.coding]));
+        QStringList sl;
+        std::transform(d->audioSpectrum.bars.begin(), d->audioSpectrum.bars.end(), std::back_inserter(sl),
+                       [](quint32 v){ return QString::number(v); });
+        sel.appendChild(doc->createTextNode(sl.join(',')));
+    }
     return el;
+}
+
+bool File::merge(const File &other)
+{
+    if (!d->thumbnail.isValid()) {
+        d->thumbnail = other.thumbnail();
+    }
+    for (auto const &h: other.d->hashes) {
+        auto it = std::find_if(d->hashes.constBegin(), d->hashes.constEnd(), [&h](auto const &v){ return h.type() == v.type(); });
+        if (it == d->hashes.constEnd()) {
+            d->hashes.append(h);
+        } else if (h.data() != it->data()) {
+            return false; // hashes are different
+        }
+    }
+    return true;
 }
 
 QDateTime File::date() const
@@ -224,9 +273,18 @@ QString File::description() const
     return d? d->desc : QString();
 }
 
-Hash File::hash() const
+Hash File::hash(Hash::Type t) const
 {
-    return d? d->hash : Hash();
+    if (d && d->hashes.count()) {
+        if (t == Hash::Unknown)
+            return d->hashes.at(0);
+        for (auto const &h: d->hashes) {
+            if (h.type() == t) {
+                return h;
+            }
+        }
+    }
+    return Hash();
 }
 
 QString File::mediaType() const
@@ -254,6 +312,11 @@ Thumbnail File::thumbnail() const
     return d? d->thumbnail: Thumbnail();
 }
 
+File::Spectrum File::audioSpectrum() const
+{
+    return d? d->audioSpectrum: Spectrum();
+}
+
 void File::setDate(const QDateTime &date)
 {
     ensureD()->date = date;
@@ -264,9 +327,9 @@ void File::setDescription(const QString &desc)
     ensureD()->desc = desc;
 }
 
-void File::setHash(const Hash &hash)
+void File::addHash(const Hash &hash)
 {
-    ensureD()->hash = hash;
+    ensureD()->hashes.append(hash);
 }
 
 void File::setMediaType(const QString &mediaType)

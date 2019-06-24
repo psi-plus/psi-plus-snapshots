@@ -82,7 +82,7 @@ void Reference::setRange(int begin, int end)
     d->end = end;
 }
 
-int Reference::start() const
+int Reference::begin() const
 {
     return d->begin;
 }
@@ -134,12 +134,17 @@ bool Reference::fromXml(const QDomElement &e)
 
     int beginN = -1, endN = -1;
     bool ok;
-    if (!begin.isEmpty() && !(beginN = begin.toInt(&ok),ok)) {
+    if (!begin.isEmpty() && !(beginN = begin.toInt(&ok),ok))
         return false;
-    }
-    if (!end.isEmpty() && !(endN = end.toInt(&ok),ok)) {
+
+    if (!end.isEmpty() && !(endN = end.toInt(&ok),ok))
         return false;
-    }
+
+    if (beginN >= 0 && endN >= 0 && endN < beginN)
+        return false;
+
+    if ((endN >= 0 && beginN == -1) || (endN == -1 && beginN >= 0))
+        return false;
 
     auto msEl = e.firstChildElement("media-sharing");
     MediaSharing ms;

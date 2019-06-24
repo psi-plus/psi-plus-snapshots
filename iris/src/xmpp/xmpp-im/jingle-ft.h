@@ -46,6 +46,18 @@ struct Range {
 class File
 {
 public:
+    struct Spectrum
+    {
+        enum Coding {
+            U8,  S8,
+            U16, S16,
+            U32, S32
+        };
+
+        Coding coding;
+        QList<quint32> bars;
+    };
+
     File();
     File(const File &other);
     File(const QDomElement &file);
@@ -53,19 +65,21 @@ public:
     File& operator=(const File& other);
     inline bool isValid() const { return d != nullptr; }
     QDomElement toXml(QDomDocument *doc) const;
+    bool merge(const File &other);
 
     QDateTime date()  const;
-    QString description() const;
-    Hash    hash()  const;
-    QString mediaType() const;
-    QString name()  const;
-    quint64 size()   const;
+    QString   description() const;
+    Hash      hash(Hash::Type t = Hash::Unknown)  const;
+    QString   mediaType() const;
+    QString   name()  const;
+    quint64   size()  const;
     Range     range() const;
     Thumbnail thumbnail() const;
+    Spectrum  audioSpectrum() const;
 
     void setDate(const QDateTime &date);
     void setDescription(const QString &desc);
-    void setHash(const Hash &hash);
+    void addHash(const Hash &hash);
     void setMediaType(const QString &mediaType);
     void setName(const QString &name);
     void setSize(quint64 size);
