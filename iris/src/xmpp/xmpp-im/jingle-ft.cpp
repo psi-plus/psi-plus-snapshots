@@ -241,7 +241,17 @@ QDomElement File::toXml(QDomDocument *doc) const
         sel.setAttribute(QString::fromLatin1("coding"), QString::fromLatin1(s[d->audioSpectrum.coding]));
         QStringList sl;
         std::transform(d->audioSpectrum.bars.begin(), d->audioSpectrum.bars.end(), std::back_inserter(sl),
-                       [](quint32 v){ return QString::number(v); });
+                       [this](quint32 v){
+            switch (d->audioSpectrum.coding) {
+            case Spectrum::U8:  return QString::number(quint8(v));
+            case Spectrum::S8:  return QString::number(qint8(v));
+            case Spectrum::U16: return QString::number(quint16(v));
+            case Spectrum::S16: return QString::number(qint16(v));
+            case Spectrum::U32: return QString::number(quint32(v));
+            case Spectrum::S32: return QString::number(qint32(v));
+            }
+            return QString();
+        });
         sel.appendChild(doc->createTextNode(sl.join(',')));
     }
     return el;
