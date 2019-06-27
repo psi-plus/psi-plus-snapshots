@@ -137,7 +137,7 @@ File::File(const QDomElement &file)
                 }
             }
             QDomElement hashEl = ce.firstChildElement(QLatin1String("hash"));
-            if (hashEl.attribute(QStringLiteral("xmlns")) == QLatin1String("urn:xmpp:hashes:2")) {
+            if (hashEl.attribute(QStringLiteral("xmlns")) == HASH_NS || hashEl.namespaceURI() == HASH_NS) {
                 range.hash = Hash(hashEl);
                 if (range.hash.type() == Hash::Type::Unknown) {
                     return;
@@ -149,7 +149,7 @@ File::File(const QDomElement &file)
             desc = ce.text();
 
         } else if (ce.tagName() == QLatin1String("hash")) {
-            if (ce.attribute(QStringLiteral("xmlns")) == QLatin1String(XMPP_HASH_NS)) {
+            if (ce.attribute(QStringLiteral("xmlns")) == HASH_NS || ce.namespaceURI() == HASH_NS) {
                 Hash h(ce);
                 if (h.type() == Hash::Type::Unknown) {
                     return;
@@ -158,7 +158,7 @@ File::File(const QDomElement &file)
             }
 
         } else if (ce.tagName() == QLatin1String("hash-used")) {
-            if (ce.attribute(QStringLiteral("xmlns")) == QLatin1String(XMPP_HASH_NS)) {
+            if (ce.attribute(QStringLiteral("xmlns")) == HASH_NS || ce.namespaceURI() == HASH_NS) {
                 Hash h(ce);
                 if (h.type() == Hash::Type::Unknown) {
                     return;
@@ -168,7 +168,7 @@ File::File(const QDomElement &file)
 
         } else if (ce.tagName() == QLatin1String("thumbnail")) {
             thumbnail = Thumbnail(ce);
-        } else if (ce.tagName() == QLatin1String("spectrum") && ce.attribute(QStringLiteral("xmlns")) == SPECTRUM_NS) {
+        } else if (ce.tagName() == QLatin1String("spectrum") && (ce.attribute(QStringLiteral("xmlns")) == SPECTRUM_NS || ce.namespaceURI() == SPECTRUM_NS)) {
             QStringList spv = ce.text().split(',');
             spectrum.bars.reserve(spv.count());
             std::transform(spv.begin(), spv.end(), std::back_inserter(spectrum.bars), [](const QString &v){ return v.toUInt(); });
@@ -271,6 +271,17 @@ bool File::merge(const File &other)
         }
     }
     return true;
+}
+
+bool File::hasComputedHashes() const
+{
+    if (!d)
+        return false;
+    for (auto const &h: d->hashes) {
+        if (h.data().size())
+            return true;
+    }
+    return false;
 }
 
 QDateTime File::date() const

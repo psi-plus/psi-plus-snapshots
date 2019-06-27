@@ -148,20 +148,19 @@ bool Reference::fromXml(const QDomElement &e)
 
     auto msEl = e.firstChildElement("media-sharing");
     MediaSharing ms;
-    if (msEl.attribute(QString::fromLatin1("xmlns")) == MEDIASHARING_NS) {
+    if (msEl.namespaceURI() == MEDIASHARING_NS) {
         auto fileEl = msEl.firstChildElement("file");
-        auto sourcesEl = msEl.firstChildElement("file");
-        if (sourcesEl.isNull() || fileEl.isNull() || fileEl.attribute(QString::fromLatin1("xmlns")) != XMPP::Jingle::FileTransfer::NS)
+        auto sourcesEl = msEl.firstChildElement("sources");
+        if (sourcesEl.isNull() || fileEl.isNull() || fileEl.namespaceURI() != XMPP::Jingle::FileTransfer::NS)
             return false;
 
         ms.file = XMPP::Jingle::FileTransfer::File(fileEl);
-        if (!ms.file.isValid())
+        if (!ms.file.isValid() || !ms.file.hasComputedHashes())
             return false;
 
-
         auto srcName = QString::fromLatin1("reference");
-        for (auto el = msEl.firstChildElement(srcName); !el.isNull(); el = el.nextSiblingElement(srcName)) {
-            if (el.attribute(QString::fromLatin1("xmlns")) == REFERENCE_NS) {
+        for (auto el = sourcesEl.firstChildElement(srcName); !el.isNull(); el = el.nextSiblingElement(srcName)) {
+            if (el.namespaceURI() == REFERENCE_NS) {
                 Reference ref;
                 if (!ref.fromXml(el)) {
                     return false;
@@ -169,6 +168,8 @@ bool Reference::fromXml(const QDomElement &e)
                 ms.sources.append(ref.uri());
             }
         }
+        if (ms.sources.isEmpty())
+            return false;
     }
 
     D()->type = t;

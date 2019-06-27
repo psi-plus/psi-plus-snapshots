@@ -23,17 +23,18 @@
 
 #include <QString>
 #include <QFuture>
-#define XMPP_HASH_NS "urn:xmpp:hashes:2" // TODO make nsdb.cpp/h with static declarations of all ns
 
 class QDomElement;
 
 namespace XMPP
 {
+    extern QString HASH_NS;
     class Features;
 
     class Hash
     {
     public:
+
         enum Type { // XEP-0300 Version 0.5.3 (2018-02-14)
             Unknown,    // not standard, just a default
             Sha1,       // SHOULD NOT

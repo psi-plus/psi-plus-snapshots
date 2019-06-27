@@ -66,6 +66,7 @@ public:
     inline bool isValid() const { return d != nullptr; }
     QDomElement toXml(QDomDocument *doc) const;
     bool merge(const File &other);
+    bool hasComputedHashes() const;
 
     QDateTime date()  const;
     QString   description() const;

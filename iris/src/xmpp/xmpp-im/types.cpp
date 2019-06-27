@@ -35,6 +35,7 @@
 namespace XMPP
 {
 
+QString HASH_NS = QStringLiteral("urn:xmpp:hashes:2");
 //----------------------------------------------------------------------------
 // Url
 //----------------------------------------------------------------------------
@@ -391,7 +392,7 @@ QDomElement Hash::toXml(QDomDocument *doc) const
     if (v_type != Type::Unknown) {
         for(size_t n = 0; n < sizeof(hashTypes) / sizeof(hashTypes[0]); ++n) {
             if(v_type == hashTypes[n].hashType) {
-                auto el = doc->createElementNS(XMPP_HASH_NS, QLatin1String(v_data.isEmpty()? "hash-used": "hash"));
+                auto el = doc->createElementNS(HASH_NS, QLatin1String(v_data.isEmpty()? "hash-used": "hash"));
                 el.setAttribute(QLatin1String("algo"), QLatin1String(hashTypes[n].text));
                 if (!v_data.isEmpty()) {
                     XMLHelper::setTagText(el, v_data.toBase64());
@@ -3772,7 +3773,8 @@ const Jid &CaptchaChallenge::arbiter() const
 
 Thumbnail::Thumbnail(const QDomElement &el)
 {
-    if(el.attribute("xmlns") == QLatin1String(XMPP_THUMBS_NS)) {
+    QString ns(QLatin1String(XMPP_THUMBS_NS));
+    if(el.attribute("xmlns") == ns || el.namespaceURI() == ns) {
         uri = QUrl(el.attribute("uri"), QUrl::StrictMode);
         mimeType = el.attribute("mime-type");
         width = el.attribute("width").toUInt();
