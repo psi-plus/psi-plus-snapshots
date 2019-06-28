@@ -32,7 +32,7 @@ under the License.
 #include <QNetworkReply>
 
 #if QT_VERSION < QT_VERSION_CHECK(5,7,0)
-# define SET_QFLAG(flags, flag, state) { if (state) flags |= flag; else flags &= ~flag, flags  }
+# define SET_QFLAG(flags, flag, state) ( if (state) flags |= flag; else flags &= ~flag, flags  )
 #else
 # define SET_QFLAG(flags, flag, state) flags.setFlag(flag, state)
 #endif
