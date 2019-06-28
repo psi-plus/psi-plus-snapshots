@@ -414,7 +414,7 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                     });
 
                     // try to extract from metadata and store histogram
-                    connect(player, QOverload<const QString &, const QVariant &>::of(&QMediaPlayer::metaDataChanged),
+                    connect(player, static_cast<void(QMediaPlayer::*)(const QString &, const QVariant &)>(&QMediaPlayer::metaDataChanged),
                           [=](const QString &key, const QVariant &value){
                         QString comment;
                         int index = 0;
