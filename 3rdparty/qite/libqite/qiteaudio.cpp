@@ -31,12 +31,6 @@ under the License.
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 
-#if QT_VERSION < QT_VERSION_CHECK(5,7,0)
-# define SET_QFLAG(flags, flag, state) ( if (state) flags |= flag; else flags &= ~flag, flags  )
-#else
-# define SET_QFLAG(flags, flag, state) flags.setFlag(flag, state)
-#endif
-
 class AudioMessageFormat : public InteractiveTextFormat
 {
 public:
@@ -111,7 +105,7 @@ void AudioMessageFormat::setPlayPosition(quint32 position)
 
 QUrl AudioMessageFormat::url() const
 {
-    return property(AudioMessageFormat::Url).value<QUrl>();
+    return property(AudioMessageFormat::Url).toUrl();
 }
 
 QVariant AudioMessageFormat::metaData() const
@@ -531,7 +525,7 @@ void ITEAudioController::playerStateChanged(QMediaPlayer::State state)
         QTextCursor cursor = itc->findElement(playerId, textCursorPos);
         if (!cursor.isNull()) {
             auto audioFormat = AudioMessageFormat::fromCharFormat(cursor.charFormat());
-            audioFormat.setState(SET_QFLAG(audioFormat.state(), AudioMessageFormat::Playing, false));
+            audioFormat.setState(audioFormat.state() & ~AudioMessageFormat::Playing);
             audioFormat.setPlayPosition(0);
             cursor.setCharFormat(audioFormat);
         }
