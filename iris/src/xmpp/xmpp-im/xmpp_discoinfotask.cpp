@@ -110,8 +110,7 @@ void DiscoInfoTask::onGo ()
     }
 
     QDomElement iq = createIQ(doc(), "get", d->jid.full(), id());
-    QDomElement query = doc()->createElement("query");
-    query.setAttribute("xmlns", "http://jabber.org/protocol/disco#info");
+    QDomElement query = doc()->createElementNS("http://jabber.org/protocol/disco#info", "query");
     if ( !d->node.isEmpty() )
         query.setAttribute("node", d->node);
 

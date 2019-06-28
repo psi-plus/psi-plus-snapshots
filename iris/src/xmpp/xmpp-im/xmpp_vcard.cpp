@@ -210,8 +210,7 @@ VCard::~VCard()
 
 QDomElement VCard::toXml(QDomDocument *doc) const
 {
-    QDomElement v = doc->createElement("vCard");
-    v.setAttribute("xmlns", "vcard-temp");
+    QDomElement v = doc->createElementNS("vcard-temp", "vCard");
 
     if ( !d->version.isEmpty() )
         v.appendChild( textTag(doc, "VERSION",    d->version) );

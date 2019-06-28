@@ -430,8 +430,7 @@ void ClientStream::continueAfterParams()
                 d->sasl->continueAfterParams();
         }
     } else if (d->state == AuthAbort) {
-        auto e = doc().createElement("abort"); // FIXME it's kind of wrong to forge xml here
-        e.setAttribute("xmlns", NS_SASL);
+        auto e = doc().createElementNS(NS_SASL, "abort");
         d->client.sendStanza(e);
         processNext();
     }

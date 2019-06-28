@@ -121,8 +121,7 @@ void BoBData::fromXml(const QDomElement &data)
 
 QDomElement BoBData::toXml(QDomDocument *doc) const
 {
-    QDomElement data = doc->createElement("data");
-    data.setAttribute("xmlns", "urn:xmpp:bob");
+    QDomElement data = doc->createElementNS("urn:xmpp:bob", "data");
     data.setAttribute("cid", d->cid);
     data.setAttribute("max-age", d->maxAge);
     data.setAttribute("type", d->type);

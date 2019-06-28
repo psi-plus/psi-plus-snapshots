@@ -143,6 +143,15 @@ QDomElement textTag(QDomDocument *doc, const QString &name, const QString &conte
     return tag;
 }
 
+QDomElement textTagNS(QDomDocument *doc, const QString &ns, const QString &name, const QString &content)
+{
+    QDomElement tag = doc->createElementNS(ns, name);
+    QDomText text = doc->createTextNode(content);
+    tag.appendChild(text);
+
+    return tag;
+}
+
 QString tagContent(const QDomElement &e)
 {
     // look for some tag content
@@ -211,7 +220,7 @@ QDomElement queryTag(const QDomElement &e)
 
 QString queryNS(const QDomElement &e)
 {
-    return e.firstChildElement("query").attribute("xmlns");
+    return e.firstChildElement("query").namespaceURI();
 }
 
 /**
@@ -262,17 +271,18 @@ QDomElement addCorrectNS(const QDomElement &e)
 
     // find from this to parent closest node with xmlns/namespaceURI
     QDomNode n = e;
-    while(!n.isNull() && !n.toElement().hasAttribute("xmlns") && n.toElement().namespaceURI().isEmpty())
+    static QString xmlns = QStringLiteral("xmlns");
+    while(!n.isNull() && !n.toElement().hasAttribute(xmlns) && n.toElement().namespaceURI().isEmpty())
         n = n.parentNode();
     QString ns;
-    if(n.isNull() || !n.toElement().hasAttribute("xmlns")) { // if not found or it's namespaceURI
+    if(n.isNull() || !n.toElement().hasAttribute(xmlns)) { // if not found or it's namespaceURI
         if (n.toElement().namespaceURI().isEmpty()) { // if nothing found, then use default jabber:client namespace
             ns = "jabber:client";
         } else {
             ns = n.toElement().namespaceURI();
         }
     } else { // if found node with xmlns
-        ns = n.toElement().attribute("xmlns");
+        ns = n.toElement().attribute(xmlns);
     }
     // at this point `ns` is either detected namespace of `e` or jabber:client
     // make a new node
@@ -282,7 +292,7 @@ QDomElement addCorrectNS(const QDomElement &e)
     QDomNamedNodeMap al = e.attributes();
     for(x = 0; x < al.count(); ++x) {
         QDomAttr a = al.item(x).toAttr();
-        if(a.name() != "xmlns")
+        if(a.name() != xmlns)
             i.setAttributeNodeNS(a.cloneNode().toAttr());
     }
 

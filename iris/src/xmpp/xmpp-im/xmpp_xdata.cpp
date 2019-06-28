@@ -220,7 +220,7 @@ void XData::Field::fromXml(const QDomElement &e)
             _value.append(i.text());
         }
         else if (tag == "media" && (i.namespaceURI() == "urn:xmpp:media-element"
-                 || i.attribute("xmlns") == "urn:xmpp:media-element")) { // allow only one media element
+                 || i.namespaceURI() == "urn:xmpp:media-element")) { // allow only one media element
             QSize s;
             if (i.hasAttribute("width")) {
                 s.setWidth(i.attribute("width").toInt());
@@ -457,7 +457,7 @@ void XData::setFields(const FieldList &fl)
 
 void XData::fromXml(const QDomElement &e)
 {
-    if ( (e.attribute("xmlns") != "jabber:x:data") && (e.namespaceURI() != "jabber:x:data") )
+    if (e.namespaceURI() != "jabber:x:data")
         return;
 
     QString type = e.attribute("type");
@@ -526,7 +526,6 @@ void XData::fromXml(const QDomElement &e)
 QDomElement XData::toXml(QDomDocument *doc, bool submitForm) const
 {
     QDomElement x = doc->createElementNS("jabber:x:data", "x");
-    x.setAttribute("xmlns", "jabber:x:data");
 
     QString type = "form";
     if ( d->type == Data_Result )

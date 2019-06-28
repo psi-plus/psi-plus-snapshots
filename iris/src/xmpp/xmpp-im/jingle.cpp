@@ -155,7 +155,6 @@ QDomElement Jingle::toXml(QDomDocument *doc) const
     }
 
     QDomElement query = doc->createElementNS(NS, QLatin1String("jingle"));
-    //query.setAttribute("xmlns", JINGLE_NS);
     for (unsigned int i = 0; i < sizeof(jingleActions) / sizeof(jingleActions[0]); i++) {
         if (jingleActions[i].action == d->action) {
             query.setAttribute(QLatin1String("action"), QLatin1String(jingleActions[i].text));
@@ -256,13 +255,13 @@ Reason::Reason(const QDomElement &e)
 
     Condition condition = NoReason;
     QString text;
-    QString rns = e.attribute(QStringLiteral("xmlns"));
+    QString rns = e.namespaceURI();
 
     for (QDomElement c = e.firstChildElement(); !c.isNull(); c = c.nextSiblingElement()) {
         if (c.tagName() == QLatin1String("text")) {
             text = c.text();
         }
-        else if (c.attribute(QStringLiteral("xmlns")) != rns) {
+        else if (c.namespaceURI() != rns) {
             // TODO add here all the extensions to reason.
         }
         else {
@@ -459,7 +458,7 @@ public:
             return false;
         }
         auto jingleEl = iq.firstChildElement(QStringLiteral("jingle"));
-        if (jingleEl.isNull() || jingleEl.attribute(QStringLiteral("xmlns")) != ::XMPP::Jingle::NS) {
+        if (jingleEl.isNull() || jingleEl.namespaceURI() != ::XMPP::Jingle::NS) {
             return false;
         }
 
@@ -475,7 +474,7 @@ public:
                 auto dname = QString::fromLatin1("description");
                 for (auto n = jingleEl.firstChildElement(cname); !n.isNull(); n = n.nextSiblingElement(cname)) {
                     auto del = n.firstChildElement(dname);
-                    if (!del.isNull() && externalManagers.contains(del.attribute(QStringLiteral("xmlns")))) {
+                    if (!del.isNull() && externalManagers.contains(del.namespaceURI())) {
                         externalSessions.append(jingle.sid());
                         return false;
                     }
@@ -898,8 +897,8 @@ public:
     {
         QDomElement descriptionEl = ce.firstChildElement(QLatin1String("description"));
         QDomElement transportEl = ce.firstChildElement(QLatin1String("transport"));
-        QString descriptionNS = descriptionEl.attribute(QStringLiteral("xmlns"));
-        QString transportNS = transportEl.attribute(QStringLiteral("xmlns"));
+        QString descriptionNS = descriptionEl.namespaceURI();
+        QString transportNS = transportEl.namespaceURI();
         typedef std::tuple<AddContentError, Reason::Condition, Application*> result;
 
         ContentBase c(ce);
@@ -1001,8 +1000,8 @@ public:
     {
         QDomElement descriptionEl = ce.firstChildElement(QLatin1String("description"));
         QDomElement transportEl = ce.firstChildElement(QLatin1String("transport"));
-        QString descriptionNS = descriptionEl.attribute(QStringLiteral("xmlns"));
-        QString transportNS = transportEl.attribute(QStringLiteral("xmlns"));
+        QString descriptionNS = descriptionEl.namespaceURI();
+        QString transportNS = transportEl.namespaceURI();
         typedef std::tuple<AddContentError, Reason::Condition, Application*> result;
 
         ContentBase c(ce);
@@ -1239,7 +1238,7 @@ public:
         {
             ContentBase cb(ce);
             auto transportEl = ce.firstChildElement(QString::fromLatin1("transport"));
-            QString transportNS = transportEl.attribute(QStringLiteral("xmlns"));
+            QString transportNS = transportEl.namespaceURI();
             if (!cb.isValid() || transportEl.isNull() || transportNS.isEmpty()) {
                 lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                 return false;
@@ -1298,7 +1297,7 @@ public:
         {
             ContentBase cb(ce);
             auto transportEl = ce.firstChildElement(QString::fromLatin1("transport"));
-            QString transportNS = transportEl.attribute(QStringLiteral("xmlns"));
+            QString transportNS = transportEl.namespaceURI();
             if (!cb.isValid() || transportEl.isNull() || transportNS.isEmpty()) {
                 lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                 return false;
@@ -1328,7 +1327,7 @@ public:
                 return false;
             }
             auto tel = ce.firstChildElement(QStringLiteral("transport"));
-            if (tel.isNull() || tel.attribute(QStringLiteral("xmlns")) != app->transport()->pad()->ns()) {
+            if (tel.isNull() || tel.namespaceURI() != app->transport()->pad()->ns()) {
                 lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                 return false;
             }
@@ -1898,8 +1897,7 @@ void ErrorUtil::fill(QDomDocument doc, Stanza::Error &error, int jingleCond)
 
 int ErrorUtil::jingleCondition(const Stanza::Error &error)
 {
-    //qDebug() << "tag" << error.appSpec.tagName() << "xmlns" << error.appSpec.attribute(QString::fromLatin1("xmlns")) << "ns" << error.appSpec.namespaceURI();
-    if (error.appSpec.attribute(QString::fromLatin1("xmlns")) != ERROR_NS) {
+    if (error.appSpec.namespaceURI() != ERROR_NS) {
         return UnknownError;
     }
     QString tagName = error.appSpec.tagName();

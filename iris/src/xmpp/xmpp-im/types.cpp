@@ -2449,7 +2449,6 @@ QDomElement HttpAuthRequest::toXml(QDomDocument &doc) const
         return e;
 
     e = doc.createElementNS("http://jabber.org/protocol/http-auth", "confirm");
-    e.setAttribute("xmlns", "http://jabber.org/protocol/http-auth");
 
     if(hasId_)
         e.setAttribute("id", id_);
@@ -2590,8 +2589,7 @@ QCryptographicHash::Algorithm CapsSpec::hashAlgorithm() const
 
 QDomElement CapsSpec::toXml(QDomDocument *doc) const
 {
-    QDomElement c = doc->createElement("c");
-    c.setAttribute("xmlns", NS_CAPS);
+    QDomElement c = doc->createElementNS(NS_CAPS, "c");
     QString algo = cryptoMap().key(hashAlgo_);
     c.setAttribute("hash",algo);
     c.setAttribute("node",node_);
@@ -3774,7 +3772,7 @@ const Jid &CaptchaChallenge::arbiter() const
 Thumbnail::Thumbnail(const QDomElement &el)
 {
     QString ns(QLatin1String(XMPP_THUMBS_NS));
-    if(el.attribute("xmlns") == ns || el.namespaceURI() == ns) {
+    if(el.namespaceURI() == ns) {
         uri = QUrl(el.attribute("uri"), QUrl::StrictMode);
         mimeType = el.attribute("mime-type");
         width = el.attribute("width").toUInt();

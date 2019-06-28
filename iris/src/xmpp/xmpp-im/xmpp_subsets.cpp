@@ -56,8 +56,7 @@ public:
 
     QDomElement mainElement(QDomDocument *doc)
     {
-        QDomElement e = doc->createElement(QStringLiteral("set"));
-        e.setAttribute(QStringLiteral("xmlns"), xmlns_ns_rsm);
+        QDomElement e = doc->createElementNS(xmlns_ns_rsm, QStringLiteral("set"));
         return e;
     }
 
@@ -189,13 +188,13 @@ void SubsetsClientManager::setMax(int max)
 
 QDomElement SubsetsClientManager::findElement(const QDomElement &el, bool child)
 {
-    if (el.tagName() == QLatin1String("set") && el.attribute(QLatin1String("xmlns")) == xmlns_ns_rsm)
+    if (el.tagName() == QLatin1String("set") && el.namespaceURI() == xmlns_ns_rsm)
         return el;
 
     if (child) {
         QDomElement e = el.firstChildElement(QLatin1String("set"));
         while (!e.isNull()) {
-            if (e.attribute(QLatin1String("xmlns")) == xmlns_ns_rsm) {
+            if (e.namespaceURI() == xmlns_ns_rsm) {
                 return e;
             }
             e = e.nextSiblingElement(QLatin1String("set"));

@@ -565,13 +565,11 @@ void JT_FT::request(const Jid &to, const QString &_id, const QString &fname,
     QDomElement iq;
     d->to = to;
     iq = createIQ(doc(), "set", to.full(), id());
-    QDomElement si = doc()->createElement("si");
-    si.setAttribute("xmlns", "http://jabber.org/protocol/si");
+    QDomElement si = doc()->createElementNS("http://jabber.org/protocol/si", "si");
     si.setAttribute("id", _id);
     si.setAttribute("profile", "http://jabber.org/protocol/si/profile/file-transfer");
 
-    QDomElement file = doc()->createElement("file");
-    file.setAttribute("xmlns", "http://jabber.org/protocol/si/profile/file-transfer");
+    QDomElement file = doc()->createElementNS("http://jabber.org/protocol/si/profile/file-transfer", "file");
     file.setAttribute("name", fname);
     file.setAttribute("size", QString::number(size));
     if(!desc.isEmpty()) {
@@ -590,10 +588,8 @@ void JT_FT::request(const Jid &to, const QString &_id, const QString &fname,
 
     si.appendChild(file);
 
-    QDomElement feature = doc()->createElement("feature");
-    feature.setAttribute("xmlns", "http://jabber.org/protocol/feature-neg");
-    QDomElement x = doc()->createElement("x");
-    x.setAttribute("xmlns", "jabber:x:data");
+    QDomElement feature = doc()->createElementNS("http://jabber.org/protocol/feature-neg", "feature");
+    QDomElement x = doc()->createElementNS("jabber:x:data", "x");
     x.setAttribute("type", "form");
 
     QDomElement field = doc()->createElement("field");
@@ -645,7 +641,7 @@ bool JT_FT::take(const QDomElement &x)
 
     if(x.attribute("type") == "result") {
         QDomElement si = firstChildElement(x);
-        if(si.attribute("xmlns") != "http://jabber.org/protocol/si" || si.tagName() != "si") {
+        if(si.namespaceURI() != "http://jabber.org/protocol/si" || si.tagName() != "si") {
             setError(900, "");
             return true;
         }
@@ -687,7 +683,7 @@ bool JT_FT::take(const QDomElement &x)
 
         QString streamtype;
         QDomElement feature = si.elementsByTagName("feature").item(0).toElement();
-        if(!feature.isNull() && feature.attribute("xmlns") == "http://jabber.org/protocol/feature-neg") {
+        if(!feature.isNull() && feature.namespaceURI() == "http://jabber.org/protocol/feature-neg") {
             QDomElement x = feature.elementsByTagName("x").item(0).toElement();
             if(!x.isNull() && x.attribute("type") == "submit") {
                 QDomElement field = x.elementsByTagName("field").item(0).toElement();
@@ -731,12 +727,10 @@ JT_PushFT::~JT_PushFT()
 void JT_PushFT::respondSuccess(const Jid &to, const QString &id, qlonglong rangeOffset, qlonglong rangeLength, const QString &streamType)
 {
     QDomElement iq = createIQ(doc(), "result", to.full(), id);
-    QDomElement si = doc()->createElement("si");
-    si.setAttribute("xmlns", "http://jabber.org/protocol/si");
+    QDomElement si = doc()->createElementNS("http://jabber.org/protocol/si", "si");
 
     if(rangeOffset != 0 || rangeLength != 0) {
-        QDomElement file = doc()->createElement("file");
-        file.setAttribute("xmlns", "http://jabber.org/protocol/si/profile/file-transfer");
+        QDomElement file = doc()->createElementNS("http://jabber.org/protocol/si/profile/file-transfer", "file");
         QDomElement range = doc()->createElement("range");
         if(rangeOffset > 0)
             range.setAttribute("offset", QString::number(rangeOffset));
@@ -746,10 +740,8 @@ void JT_PushFT::respondSuccess(const Jid &to, const QString &id, qlonglong range
         si.appendChild(file);
     }
 
-    QDomElement feature = doc()->createElement("feature");
-    feature.setAttribute("xmlns", "http://jabber.org/protocol/feature-neg");
-    QDomElement x = doc()->createElement("x");
-    x.setAttribute("xmlns", "jabber:x:data");
+    QDomElement feature = doc()->createElementNS("http://jabber.org/protocol/feature-neg", "feature");
+    QDomElement x = doc()->createElementNS("jabber:x:data", "x");
     x.setAttribute("type", "submit");
 
     QDomElement field = doc()->createElement("field");
@@ -784,7 +776,7 @@ bool JT_PushFT::take(const QDomElement &e)
         return false;
 
     QDomElement si = firstChildElement(e);
-    if(si.attribute("xmlns") != "http://jabber.org/protocol/si" || si.tagName() != "si")
+    if(si.namespaceURI() != "http://jabber.org/protocol/si" || si.tagName() != "si")
         return false;
     if(si.attribute("profile") != "http://jabber.org/protocol/si/profile/file-transfer")
         return false;
@@ -827,7 +819,7 @@ bool JT_PushFT::take(const QDomElement &e)
 
     QStringList streamTypes;
     QDomElement feature = si.elementsByTagName("feature").item(0).toElement();
-    if(!feature.isNull() && feature.attribute("xmlns") == "http://jabber.org/protocol/feature-neg") {
+    if(!feature.isNull() && feature.namespaceURI() == "http://jabber.org/protocol/feature-neg") {
         QDomElement x = feature.elementsByTagName("x").item(0).toElement();
         if(!x.isNull() /*&& x.attribute("type") == "form"*/) {
             QDomElement field = x.elementsByTagName("field").item(0).toElement();

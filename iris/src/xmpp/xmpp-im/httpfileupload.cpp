@@ -302,14 +302,22 @@ JT_HTTPFileUpload::~JT_HTTPFileUpload()
 void JT_HTTPFileUpload::request(const Jid &to, const QString &fname,
                                 quint64 fsize, const QString &ftype, XEP0363::version ver)
 {
+    QString ns;
+    switch (ver)
+    {
+    case XEP0363::v0_2_5: ns = xmlns_v0_2_5; break;
+    case XEP0363::v0_3_1: ns = xmlns_v0_3_1; break;
+    default: return;
+    }
+
     d->to = to;
     d->ver = ver;
     d->iq = createIQ(doc(), "get", to.full(), id());
-    QDomElement req = doc()->createElement("request");
+    QDomElement req = doc()->createElementNS(ns, "request");
     switch (ver)
     {
     case XEP0363::v0_2_5:
-        req.setAttribute("xmlns", xmlns_v0_2_5);
+        ns = xmlns_v0_2_5;
         req.appendChild(textTag(doc(), "filename", fname));
         req.appendChild(textTag(doc(), "size", QString::number(fsize)));
         if (!ftype.isEmpty()) {
@@ -317,7 +325,7 @@ void JT_HTTPFileUpload::request(const Jid &to, const QString &fname,
         }
         break;
     case XEP0363::v0_3_1:
-        req.setAttribute("xmlns", xmlns_v0_3_1);
+        ns = xmlns_v0_3_1;
         req.setAttribute("filename", fname);
         req.setAttribute("size", fsize);
         if (!ftype.isEmpty())
@@ -366,12 +374,12 @@ bool JT_HTTPFileUpload::take(const QDomElement &e)
         switch (d->ver)
         {
         case XEP0363::v0_2_5:
-            correct_xmlns = slot.attribute("xmlns") == xmlns_v0_2_5;
+            correct_xmlns = slot.namespaceURI() == xmlns_v0_2_5;
             getUrl = tagContent(get);
             putUrl = tagContent(put);
             break;
         case XEP0363::v0_3_1:
-            correct_xmlns = slot.attribute("xmlns") == xmlns_v0_3_1;
+            correct_xmlns = slot.namespaceURI() == xmlns_v0_3_1;
             getUrl = get.attribute("url");
             if (!put.isNull()) {
                 putUrl = put.attribute("url");

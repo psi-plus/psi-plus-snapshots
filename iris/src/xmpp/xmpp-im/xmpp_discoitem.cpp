@@ -189,7 +189,7 @@ DiscoItem DiscoItem::fromDiscoInfoResult(const QDomElement &q)
 
             identities.append( id );
         }
-        else if (e.tagName() == QLatin1String("x") && e.attribute("xmlns") == QLatin1String("jabber:x:data")) {
+        else if (e.tagName() == QLatin1String("x") && e.namespaceURI() == QLatin1String("jabber:x:data")) {
             XData form;
             form.fromXml(e);
             extList.append(form);

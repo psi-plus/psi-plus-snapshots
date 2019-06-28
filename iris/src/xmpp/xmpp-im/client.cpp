@@ -582,7 +582,7 @@ void Client::streamReadyRead()
         debug(QString("Client: incoming: [\n%1]\n").arg(out));
         emit xmlIncoming(out);
 
-        QDomElement x = oldStyleNS(s.element());
+        QDomElement x = s.element();//oldStyleNS(s.element());
         distribute(x);
     }
 }
@@ -666,8 +666,8 @@ void Client::distribute(const QDomElement &x)
         error.setAttribute("type","cancel");
         reply.appendChild(error);
 
-        QDomElement error_type = doc()->createElement("feature-not-implemented");
-        error_type.setAttribute("xmlns","urn:ietf:params:xml:ns:xmpp-stanzas");
+        QDomElement error_type = doc()->createElementNS(QLatin1String("urn:ietf:params:xml:ns:xmpp-stanzas"),
+                                                        QLatin1String("feature-not-implemented"));
         error.appendChild(error_type);
 
         send(reply);

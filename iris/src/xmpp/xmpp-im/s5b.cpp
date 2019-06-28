@@ -1991,8 +1991,7 @@ void JT_S5B::request(const Jid &to, const QString &sid, const QString &dstaddr,
     QDomElement iq;
     d->to = to;
     iq = createIQ(doc(), "set", to.full(), id());
-    QDomElement query = doc()->createElement("query");
-    query.setAttribute("xmlns", S5B_NS);
+    QDomElement query = doc()->createElementNS(S5B_NS, "query");
     query.setAttribute("sid", sid);
     if (!client()->groupChatNick(to.domain(), to.node()).isEmpty()) {
         query.setAttribute("dstaddr", dstaddr); // special case for muc as in xep-0065rc3
@@ -2005,15 +2004,13 @@ void JT_S5B::request(const Jid &to, const QString &sid, const QString &dstaddr,
         shost.setAttribute("host", (*it).host());
         shost.setAttribute("port", QString::number((*it).port()));
         if((*it).isProxy()) {
-            QDomElement p = doc()->createElement("proxy");
-            p.setAttribute("xmlns", "http://affinix.com/jabber/stream");
+            QDomElement p = doc()->createElementNS("http://affinix.com/jabber/stream", "proxy");
             shost.appendChild(p);
         }
         query.appendChild(shost);
     }
     if(fast) {
-        QDomElement e = doc()->createElement("fast");
-        e.setAttribute("xmlns", "http://affinix.com/jabber/stream");
+        QDomElement e = doc()->createElementNS("http://affinix.com/jabber/stream", "fast");
         query.appendChild(e);
     }
     d->iq = iq;
@@ -2026,8 +2023,7 @@ void JT_S5B::requestProxyInfo(const Jid &to)
     QDomElement iq;
     d->to = to;
     iq = createIQ(doc(), "get", to.full(), id());
-    QDomElement query = doc()->createElement("query");
-    query.setAttribute("xmlns", S5B_NS);
+    QDomElement query = doc()->createElementNS(S5B_NS, "query");
     iq.appendChild(query);
     d->iq = iq;
 }
@@ -2039,8 +2035,7 @@ void JT_S5B::requestActivation(const Jid &to, const QString &sid, const Jid &tar
     QDomElement iq;
     d->to = to;
     iq = createIQ(doc(), "set", to.full(), id());
-    QDomElement query = doc()->createElement("query");
-    query.setAttribute("xmlns", S5B_NS);
+    QDomElement query = doc()->createElementNS(S5B_NS, "query");
     query.setAttribute("sid", sid);
     iq.appendChild(query);
     QDomElement act = doc()->createElement("activate");
@@ -2156,12 +2151,12 @@ bool JT_PushS5B::take(const QDomElement &e)
     // look for udpsuccess
     if(e.tagName() == "message") {
         QDomElement x = e.elementsByTagName("udpsuccess").item(0).toElement();
-        if(!x.isNull() && x.attribute("xmlns") == S5B_NS) {
+        if(!x.isNull() && x.namespaceURI() == S5B_NS) {
             incomingUDPSuccess(Jid(x.attribute("from")), x.attribute("dstaddr"));
             return true;
         }
         x = e.elementsByTagName("activate").item(0).toElement();
-        if(!x.isNull() && x.attribute("xmlns") == "http://affinix.com/jabber/stream") {
+        if(!x.isNull() && x.namespaceURI() == "http://affinix.com/jabber/stream") {
             incomingActivate(Jid(x.attribute("from")), x.attribute("sid"), Jid(x.attribute("jid")));
             return true;
         }
@@ -2194,7 +2189,7 @@ bool JT_PushS5B::take(const QDomElement &e)
             int port = shost.attribute("port").toInt();
             QDomElement p = shost.elementsByTagName("proxy").item(0).toElement();
             bool isProxy = false;
-            if(!p.isNull() && p.attribute("xmlns") == "http://affinix.com/jabber/stream")
+            if(!p.isNull() && p.namespaceURI() == "http://affinix.com/jabber/stream")
                 isProxy = true;
 
             StreamHost h;
@@ -2209,7 +2204,7 @@ bool JT_PushS5B::take(const QDomElement &e)
     bool fast = false;
     QDomElement t;
     t = q.elementsByTagName("fast").item(0).toElement();
-    if(!t.isNull() && t.attribute("xmlns") == "http://affinix.com/jabber/stream")
+    if(!t.isNull() && t.namespaceURI() == "http://affinix.com/jabber/stream")
         fast = true;
 
     S5BRequest r;
@@ -2228,8 +2223,7 @@ bool JT_PushS5B::take(const QDomElement &e)
 void JT_PushS5B::respondSuccess(const Jid &to, const QString &id, const Jid &streamHost)
 {
     QDomElement iq = createIQ(doc(), "result", to.full(), id);
-    QDomElement query = doc()->createElement("query");
-    query.setAttribute("xmlns", S5B_NS);
+    QDomElement query = doc()->createElementNS(S5B_NS, "query");
     iq.appendChild(query);
     QDomElement shost = doc()->createElement("streamhost-used");
     shost.setAttribute("jid", streamHost.full());
@@ -2250,8 +2244,7 @@ void JT_PushS5B::sendUDPSuccess(const Jid &to, const QString &dstaddr)
 {
     QDomElement m = doc()->createElement("message");
     m.setAttribute("to", to.full());
-    QDomElement u = doc()->createElement("udpsuccess");
-    u.setAttribute("xmlns", S5B_NS);
+    QDomElement u = doc()->createElementNS(S5B_NS, "udpsuccess");
     u.setAttribute("dstaddr", dstaddr);
     m.appendChild(u);
     send(m);
@@ -2261,8 +2254,7 @@ void JT_PushS5B::sendActivate(const Jid &to, const QString &sid, const Jid &stre
 {
     QDomElement m = doc()->createElement("message");
     m.setAttribute("to", to.full());
-    QDomElement act = doc()->createElement("activate");
-    act.setAttribute("xmlns", "http://affinix.com/jabber/stream");
+    QDomElement act = doc()->createElementNS("http://affinix.com/jabber/stream", "activate");
     act.setAttribute("sid", sid);
     act.setAttribute("jid", streamHost.full());
     m.appendChild(act);

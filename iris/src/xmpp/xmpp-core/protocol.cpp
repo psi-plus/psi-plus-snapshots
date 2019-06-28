@@ -426,24 +426,24 @@ QDomElement BasicProtocol::docElement()
 
     // HACK: using attributes seems to be the only way to get additional namespaces in here
     if(!defns.isEmpty())
-        e.setAttribute("xmlns", defns);
+        e.setAttribute(QString::fromLatin1("xmlns"), defns);
     for(QStringList::ConstIterator it = list.begin(); it != list.end();) {
         QString prefix = *(it++);
         QString uri = *(it++);
-        e.setAttribute(QString("xmlns:") + prefix, uri);
+        e.setAttribute(QString::fromLatin1("xmlns:") + prefix, uri);
     }
 
     // additional attributes
     if(!isIncoming() && !to.isEmpty())
-        e.setAttribute("to", to);
+        e.setAttribute(QString::fromLatin1("to"), to);
     if(isIncoming() && !from.isEmpty())
-        e.setAttribute("from", from);
+        e.setAttribute(QString::fromLatin1("from"), from);
     if(!id.isEmpty())
-        e.setAttribute("id", id);
+        e.setAttribute(QString::fromLatin1("id"), id);
     if(!lang.isEmpty())
-        e.setAttributeNS(NS_XML, "xml:lang", lang);
+        e.setAttributeNS(QString::fromLatin1(NS_XML), QString::fromLatin1("xml:lang"), lang);
     if(version.major > 0 || version.minor > 0)
-        e.setAttribute("version", QString::number(version.major) + '.' + QString::number(version.minor));
+        e.setAttribute(QString::fromLatin1("version"), QString::number(version.major) + '.' + QString::number(version.minor));
 
     return e;
 }

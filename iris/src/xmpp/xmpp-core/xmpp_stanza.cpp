@@ -331,7 +331,7 @@ bool Stanza::Error::fromXml(const QDomElement &e, const QString &baseNS)
 
     QString textTag(QString::fromLatin1("text"));
     for (auto t = e.firstChildElement(); !t.isNull(); t = t.nextSiblingElement()) {
-        if(t.namespaceURI() == NS_STANZAS || t.attribute(QString::fromLatin1("xmlns")) == NS_STANZAS) {
+        if(t.namespaceURI() == NS_STANZAS) {
             if (t.tagName() == textTag) {
                 text = t.text().trimmed();
             } else {
@@ -389,7 +389,7 @@ QDomElement Stanza::Error::toXml(QDomDocument &doc, const QString &baseNS) const
         errElem.setAttribute("by", by);
     }
     errElem.appendChild(t = doc.createElementNS(NS_STANZAS, scond));
-    t.setAttribute("xmlns", NS_STANZAS);    // FIX-ME: this shouldn't be needed
+    //t.setAttribute("xmlns", NS_STANZAS);    // FIX-ME: this shouldn't be needed
 
     // old code
     int scode = code();
@@ -399,7 +399,7 @@ QDomElement Stanza::Error::toXml(QDomDocument &doc, const QString &baseNS) const
     // text
     if(!text.isEmpty()) {
         t = doc.createElementNS(NS_STANZAS, "text");
-        t.setAttribute("xmlns", NS_STANZAS);    // FIX-ME: this shouldn't be needed
+        //t.setAttribute("xmlns", NS_STANZAS);    // FIX-ME: this shouldn't be needed
         t.appendChild(doc.createTextNode(text));
         errElem.appendChild(t);
     }

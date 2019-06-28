@@ -345,8 +345,7 @@ IBBData& IBBData::fromXml(const QDomElement &e)
 
 QDomElement IBBData::toXml(QDomDocument *doc) const
 {
-    QDomElement query = textTag(doc, "data", QString::fromLatin1(data.toBase64())).toElement();
-    query.setAttribute("xmlns", IBB_NS);
+    QDomElement query = textTagNS(doc, IBB_NS, "data", QString::fromLatin1(data.toBase64())).toElement();
     query.setAttribute("seq", QString::number(seq));
     query.setAttribute("sid", sid);
     return query;
@@ -529,9 +528,8 @@ void JT_IBB::request(const Jid &to, const QString &sid, int blockSize)
     QDomElement iq;
     d->to = to;
     iq = createIQ(doc(), "set", to.full(), id());
-    QDomElement query = doc()->createElement("open");
+    QDomElement query = doc()->createElementNS(IBB_NS, "open");
     //genUniqueKey
-    query.setAttribute("xmlns", IBB_NS);
     query.setAttribute("sid", sid);
     query.setAttribute("block-size", blockSize);
     query.setAttribute("stanza", "iq");
@@ -556,8 +554,7 @@ void JT_IBB::close(const Jid &to, const QString &sid)
     QDomElement iq;
     d->to = to;
     iq = createIQ(doc(), "set", to.full(), id());
-    QDomElement query = iq.appendChild(doc()->createElement("close")).toElement();
-    query.setAttribute("xmlns", IBB_NS);
+    QDomElement query = iq.appendChild(doc()->createElementNS(IBB_NS, "close")).toElement();
     query.setAttribute("sid", sid);
 
     d->iq = iq;
@@ -592,7 +589,7 @@ bool JT_IBB::take(const QDomElement &e)
         QString id = e.attribute("id");
         QString from = e.attribute("from");
         QDomElement openEl = e.firstChildElement("open");
-        if (!openEl.isNull() && openEl.attribute("xmlns") == IBB_NS) {
+        if (!openEl.isNull() && openEl.namespaceURI() == IBB_NS) {
             emit incomingRequest(Jid(from), id,
                             openEl.attribute("sid"),
                             openEl.attribute("block-size").toInt(),
@@ -600,13 +597,13 @@ bool JT_IBB::take(const QDomElement &e)
             return true;
         }
         QDomElement dataEl = e.firstChildElement("data");
-        if (!dataEl.isNull() && dataEl.attribute("xmlns") == IBB_NS) {
+        if (!dataEl.isNull() && dataEl.namespaceURI() == IBB_NS) {
             IBBData data;
             emit incomingData(Jid(from), id, data.fromXml(dataEl), Stanza::IQ);
             return true;
         }
         QDomElement closeEl = e.firstChildElement("close");
-        if (!closeEl.isNull() && closeEl.attribute("xmlns") == IBB_NS) {
+        if (!closeEl.isNull() && closeEl.namespaceURI() == IBB_NS) {
             emit closeRequest(Jid(from), id, closeEl.attribute("sid"));
             return true;
         }
