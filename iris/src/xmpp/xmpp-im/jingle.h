@@ -187,7 +187,7 @@ public:
     Reason(Condition cond, const QString &text = QString());
     Reason(const QDomElement &el);
     Reason(const Reason &other);
-    Reason& operator=(const Reason &)=default;
+    Reason& operator=(const Reason &);
     inline bool isValid() const { return d != nullptr; }
     Condition condition() const;
     void setCondition(Condition cond);
@@ -400,6 +400,7 @@ public:
     virtual State state() const = 0;
     virtual void setState(State state) = 0; // likely just remember the state and not generate any signals
     virtual XMPP::Stanza::Error lastError() const = 0;
+    virtual Reason terminationReason() const = 0;
 
     virtual Origin creator() const = 0;
     virtual Origin senders() const = 0;

@@ -476,24 +476,25 @@ QStringList Manager::availableTransports() const
 class Application::Private
 {
 public:
-    Application *q = nullptr;
-    State   state = State::Created;
-    State   transportReplaceState = State::Finished;
-    Action  updateToSend = Action::NoAction;
+    Application     *q = nullptr;
+    State           state = State::Created;
+    State           transportReplaceState = State::Finished;
+    Action          updateToSend = Action::NoAction;
     QSharedPointer<Pad> pad;
-    QString contentName;
-    File    file;
-    File    acceptFile; // as it comes with "accept" response
-    Origin  creator;
-    Origin  senders;
-    Origin  transportReplaceOrigin = Origin::None;
+    QString         contentName;
+    File            file;
+    File            acceptFile; // as it comes with "accept" response
+    Origin          creator;
+    Origin          senders;
+    Origin          transportReplaceOrigin = Origin::None;
     XMPP::Stanza::Error lastError;
+    Reason          terminationReason;
     QSharedPointer<Transport> transport;
     Connection::Ptr connection;
-    QStringList availableTransports;
-    bool closeDeviceOnFinish = true;
-    QIODevice *device = nullptr;
-    quint64 bytesLeft = 0;
+    QStringList     availableTransports;
+    bool            closeDeviceOnFinish = true;
+    QIODevice       *device = nullptr;
+    quint64         bytesLeft = 0;
 
     void setState(State s)
     {
@@ -511,13 +512,14 @@ public:
 
     void handleStreamFail()
     {
-        // TODO d->lastError = Condition::FailedApplication
+        terminationReason = Reason(Reason::Condition::FailedApplication, QString::fromLatin1("stream failed"));
         setState(State::Finished);
     }
 
     void writeNextBlockToTransport()
     {
         if (!bytesLeft) {
+            terminationReason = Reason(Reason::Condition::Success);
             setState(State::Finished);
             return; // everything is written
         }
@@ -564,6 +566,7 @@ public:
         }
         if (!bytesLeft) {
             // TODO send <received>
+            terminationReason = Reason(Reason::Condition::Success);
             setState(State::Finished);
         }
     }
@@ -603,6 +606,11 @@ void Application::setState(State state)
 Stanza::Error Application::lastError() const
 {
     return d->lastError;
+}
+
+Reason Application::terminationReason() const
+{
+    return d->terminationReason;
 }
 
 QString Application::contentName() const
@@ -790,7 +798,10 @@ Action Application::evaluateOutgoingUpdate()
             return d->updateToSend;
         }
 
-        if (d->transport->hasUpdates())
+        if (d->terminationReason.isValid() && d->terminationReason.condition() != Reason::Condition::Success) {
+            d->updateToSend = Action::ContentRemove;
+        }
+        else if (d->transport->hasUpdates())
             d->updateToSend = Action::TransportInfo;
 
         break;
@@ -842,7 +853,9 @@ OutgoingUpdate Application::takeOutgoingUpdate()
     case Action::ContentReject:
     case Action::ContentRemove:
         if (d->transportReplaceOrigin != Origin::None)
-            updates << Reason(Reason::Condition::FailedTransport).toXml(doc);
+            d->terminationReason = Reason(Reason::Condition::FailedTransport);
+        if (d->terminationReason.isValid())
+            updates << d->terminationReason.toXml(doc);
         return OutgoingUpdate{updates, [this](){
                 d->setState(State::Finished);
             }
@@ -972,6 +985,11 @@ bool Application::isValid() const
 
 void Application::setDevice(QIODevice *dev, bool closeOnFinish)
 {
+    if (!dev) { // failed to provide proper device
+        d->terminationReason = Reason(Reason::Condition::FailedApplication, QString::fromLatin1("No destination device"));
+        emit updated();
+        return;
+    }
     d->device = dev;
     d->closeDeviceOnFinish = closeOnFinish;
     if (d->senders == d->pad->session()->role()) {

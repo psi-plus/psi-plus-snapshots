@@ -282,6 +282,12 @@ Reason::Reason(const Reason &other) :
 
 }
 
+Reason &Reason::operator=(const Reason &other)
+{
+    d = other.d;
+    return *this;
+}
+
 Reason::Condition Reason::condition() const
 {
     if (d) return d->cond;

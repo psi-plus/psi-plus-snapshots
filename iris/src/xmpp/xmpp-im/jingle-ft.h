@@ -137,6 +137,7 @@ public:
     State state() const override;
     void setState(State state) override;
     XMPP::Stanza::Error lastError() const;
+    Reason terminationReason() const;
 
     QString contentName() const override;
     Origin creator() const override;

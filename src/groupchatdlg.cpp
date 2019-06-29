@@ -2246,7 +2246,7 @@ void GCMainDlg::appendMessage(const Message &m, bool alert)
             }
 
             auto file = ms.file;
-            QString shareId = account()->psi()->fileSharingManager()->registerSource(file, m.from());
+            QString shareId = account()->psi()->fileSharingManager()->registerSource(file, m.from(), ms.sources);
 
             auto as = file.audioSpectrum();
             QList<quint8> spectrum;

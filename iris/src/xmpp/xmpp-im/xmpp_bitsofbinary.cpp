@@ -29,10 +29,10 @@ using namespace XMPP;
 class BoBData::Private : public QSharedData
 {
 public:
-    QByteArray data;
-    QString type;
-    QString cid;
-    unsigned int maxAge;
+    QByteArray data;  // file data itself
+    QString type;     // mime type. e.g. image/png
+    QString cid;      // content identifier without "cid:"
+    unsigned int maxAge; // seconds to live
 };
 
 BoBData::BoBData()
