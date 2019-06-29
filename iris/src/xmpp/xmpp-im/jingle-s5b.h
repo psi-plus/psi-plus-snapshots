@@ -149,7 +149,7 @@ public:
 
     QString sid() const;
     QString directAddr() const;
-    Connection::Ptr connection() const;
+    Connection::Ptr connection() const override;
 
 private:
     friend class Manager;

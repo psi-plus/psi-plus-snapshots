@@ -136,13 +136,13 @@ public:
     ApplicationManagerPad::Ptr pad() const override;
     State state() const override;
     void setState(State state) override;
-    XMPP::Stanza::Error lastError() const;
-    Reason terminationReason() const;
+    XMPP::Stanza::Error lastError() const override;
+    Reason terminationReason() const override;
 
     QString contentName() const override;
     Origin creator() const override;
     Origin senders() const override;
-    Origin transportReplaceOrigin() const;
+    Origin transportReplaceOrigin() const override;
     SetDescError setDescription(const QDomElement &description) override;
     void setFile(const File &file);
     File file() const;

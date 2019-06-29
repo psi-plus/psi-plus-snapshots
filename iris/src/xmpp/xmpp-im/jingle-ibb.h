@@ -50,7 +50,7 @@ public:
     bool isValid() const override;
     Features features() const override;
 
-    Connection::Ptr connection() const;
+    Connection::Ptr connection() const override;
 
 private:
     friend class Manager;
