@@ -66,8 +66,7 @@ public:
     QSizeF intrinsicSize(QTextDocument *doc, int posInDocument, const QTextFormat &format);
     void drawITE(QPainter *painter, const QRectF &rect, int posInDocument, const QTextFormat &format);
 
-
-    void insert(const QUrl &audioSrc); // add new media to textedit
+    void insert(const QUrl &audioSrc, ITEMediaOpener *mediaOpener = nullptr); // add new media to textedit. see QMediaPlayer::setMedia
     QCursor cursor(); // cursor form after last mose events
 
     inline void setAutoFetchMetadata(bool fetch = true) { autoFetchMetadata=fetch; }

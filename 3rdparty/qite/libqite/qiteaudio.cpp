@@ -36,6 +36,7 @@ class AudioMessageFormat : public InteractiveTextFormat
 public:
     enum Property {
         Url =           InteractiveTextFormat::UserProperty,
+        MediaOpener,
         PlayPosition, /* in pixels */
         State,
         MetadataState,
@@ -55,7 +56,8 @@ public:
     Q_DECLARE_FLAGS(Flags, Flag)
 
     using InteractiveTextFormat::InteractiveTextFormat;
-    AudioMessageFormat(int objectType, const QUrl &url, quint32 position = 0, const Flags &state = Flags());
+    AudioMessageFormat(int objectType, const QUrl &url, ITEMediaOpener *mediaOpener = nullptr,
+                       quint32 position = 0, const Flags &state = Flags());
 
     Flags state() const;
     void setState(const Flags &state);
@@ -64,6 +66,7 @@ public:
     void setPlayPosition(quint32 position);
 
     QUrl url() const;
+    ITEMediaOpener* mediaOpener() const;
 
     QVariant metaData() const;
     void setMetaData(const QVariant &v);
@@ -71,14 +74,16 @@ public:
     MDState metaDataState() const;
     void setMetaDataState(MDState state);
 
-    static AudioMessageFormat fromCharFormat(const QTextCharFormat &fmt) { return AudioMessageFormat(fmt); }
+    static AudioMessageFormat fromCharFormat(const QTextCharFormat &fmt) { return static_cast<AudioMessageFormat>(fmt); }
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(AudioMessageFormat::Flags)
 
-AudioMessageFormat::AudioMessageFormat(int objectType, const QUrl &url, quint32 position, const Flags &state)
+AudioMessageFormat::AudioMessageFormat(int objectType, const QUrl &url, ITEMediaOpener *mediaOpener,
+                                       quint32 position, const Flags &state)
     : InteractiveTextFormat(objectType)
 {
     setProperty(Url, url);
+    setProperty(MediaOpener, QVariant::fromValue<void*>(mediaOpener));
     setProperty(PlayPosition, position);
     setState(state);
 }
@@ -106,6 +111,11 @@ void AudioMessageFormat::setPlayPosition(quint32 position)
 QUrl AudioMessageFormat::url() const
 {
     return property(AudioMessageFormat::Url).toUrl();
+}
+
+ITEMediaOpener* AudioMessageFormat::mediaOpener() const
+{
+    return static_cast<ITEMediaOpener*>(property(AudioMessageFormat::MediaOpener).value<void*>());
 }
 
 QVariant AudioMessageFormat::metaData() const
@@ -327,9 +337,9 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
     //runnerRect.set
 }
 
-void ITEAudioController::insert(const QUrl &audioSrc)
+void ITEAudioController::insert(const QUrl &audioSrc, ITEMediaOpener *mediaOpener)
 {
-    AudioMessageFormat fmt(objectType, audioSrc);
+    AudioMessageFormat fmt(objectType, audioSrc, mediaOpener);
     fmt.setFontPointSize(itc->textEdit()->currentFont().pointSize());
     itc->insert(fmt);
 }
@@ -369,7 +379,8 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                     player->setProperty("playerId", playerId);
                     player->setProperty("cursorPos", selected.anchor());
                     activePlayers.insert(playerId, player);
-                    player->setMedia(format.url());
+                    ITEMediaOpener *opener = format.mediaOpener();
+                    player->setMedia(format.url(), opener? opener->open(format.url()): nullptr);
                     auto part = double(format.playPosition()) / double(scaleFillRect.width());
 
                     if (player->duration() > 0) {

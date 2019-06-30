@@ -120,6 +120,11 @@ private:
     bool _lastMouseHandled = false;
 };
 
-
+class ITEMediaOpener
+{
+public:
+    virtual QIODevice *open(const QUrl &url) = 0;
+    virtual void close(QIODevice *dev) = 0;
+};
 
 #endif // QITE_H
