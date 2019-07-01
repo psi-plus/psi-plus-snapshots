@@ -380,7 +380,12 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                     player->setProperty("cursorPos", selected.anchor());
                     activePlayers.insert(playerId, player);
                     ITEMediaOpener *opener = format.mediaOpener();
-                    player->setMedia(format.url(), opener? opener->open(format.url()): nullptr);
+                    QIODevice *stream = opener? opener->open(format.url()): nullptr;
+                    if (stream)
+                        connect(player, &QMediaPlayer::destroyed, this, [opener, stream](){
+                            opener->close(stream);
+                        });
+                    player->setMedia(format.url(), stream);
                     auto part = double(format.playPosition()) / double(scaleFillRect.width());
 
                     if (player->duration() > 0) {
