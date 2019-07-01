@@ -123,7 +123,7 @@ private:
 class ITEMediaOpener
 {
 public:
-    virtual QIODevice *open(const QUrl &url) = 0;
+    virtual QIODevice *open(QUrl &url) = 0;
     virtual void close(QIODevice *dev) = 0;
 };
 
