@@ -30,7 +30,7 @@ class NDns : public QObject
 {
     Q_OBJECT
 public:
-    NDns(QObject *parent=0);
+    NDns(QObject *parent=nullptr);
     ~NDns();
 
     void resolve(const QString &);

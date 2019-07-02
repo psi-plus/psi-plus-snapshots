@@ -74,8 +74,8 @@ FileTransfer::FileTransfer(FileTransferManager *m, QObject *parent)
 {
     d = new Private;
     d->m = m;
-    d->ft = 0;
-    d->c = 0;
+    d->ft = nullptr;
+    d->c = nullptr;
     reset();
 }
 
@@ -85,7 +85,7 @@ FileTransfer::FileTransfer(const FileTransfer& other)
     d = new Private;
     *d = *other.d;
     d->m = other.d->m;
-    d->ft = 0;
+    d->ft = nullptr;
     d->c = 0;
     reset();
 
@@ -109,13 +109,13 @@ void FileTransfer::reset()
     d->m->unlink(this);
 
     delete d->ft;
-    d->ft = 0;
+    d->ft = nullptr;
 
     if (d->c) {
         d->c->disconnect(this);
         d->c->manager()->deleteConnection(d->c, d->state == Active && !d->sender ?
                                               3000 : 0);
-        d->c = 0;
+        d->c = nullptr;
     }
 
     d->state = Idle;
@@ -247,7 +247,7 @@ BSConnection *FileTransfer::bsConnection() const
 void FileTransfer::ft_finished()
 {
     JT_FT *ft = d->ft;
-    d->ft = 0;
+    d->ft = nullptr;
 
     if(ft->success()) {
         d->state = Connecting;
@@ -420,7 +420,7 @@ FileTransfer *FileTransferManager::createTransfer()
 FileTransfer *FileTransferManager::takeIncoming()
 {
     if(d->incoming.isEmpty())
-        return 0;
+        return nullptr;
 
     FileTransfer *ft = d->incoming.takeFirst();
 
@@ -472,7 +472,7 @@ void FileTransferManager::pft_incoming(const FTRequest &req)
 BytestreamManager* FileTransferManager::streamManager(const QString &ns) const
 {
     if (d->disabledStreamTypes.contains(ns)) {
-        return 0;
+        return nullptr;
     }
     return d->streamMap.value(ns);
 }

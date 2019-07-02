@@ -35,7 +35,7 @@ public:
         ErrorGeneric
     };
 
-    AddressResolver(QObject *parent = 0);
+    AddressResolver(QObject *parent = nullptr);
     ~AddressResolver();
 
     void start(const QByteArray &hostName);

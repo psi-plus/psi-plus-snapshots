@@ -82,7 +82,7 @@ public:
     void setAttributes(const QList<Attribute> &attribs);
 
     QByteArray toBinary(int validationFlags = 0, const QByteArray &key = QByteArray()) const;
-    static StunMessage fromBinary(const QByteArray &a, ConvertResult *result = 0, int validationFlags = 0, const QByteArray &key = QByteArray());
+    static StunMessage fromBinary(const QByteArray &a, ConvertResult *result = nullptr, int validationFlags = 0, const QByteArray &key = QByteArray());
 
     // minimal 3-field check
     static bool isProbablyStun(const QByteArray &a);

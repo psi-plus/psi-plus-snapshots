@@ -158,8 +158,8 @@ public:
         StunTransactionPool *pool;
 
         CandidatePair() :
-            binding(0),
-            pool(0)
+            binding(nullptr),
+            pool(nullptr)
         {
         }
     };
@@ -224,14 +224,14 @@ public:
         QObject(_q),
         q(_q),
         state(Stopped),
-        portReserver(0),
+        portReserver(nullptr),
         componentCount(0),
         useLocal(true),
         useStunBind(true),
         useStunRelayUdp(true),
         useStunRelayTcp(true),
         useTrickle(false),
-        collectTimer(0)
+        collectTimer(nullptr)
     {
     }
 
@@ -792,7 +792,7 @@ private slots:
                 if(pool)
                 {
                     pool->disconnect(this);
-                    pool->setParent(0);
+                    pool->setParent(nullptr);
                     pool->deleteLater();
                 }
 
@@ -910,7 +910,7 @@ private slots:
     {
         collectTimer->disconnect(this);
         collectTimer->deleteLater();
-        collectTimer = 0;
+        collectTimer = nullptr;
 
         QList<Ice176::Candidate> list;
         foreach(const IceComponent::Candidate &cc, localCandidates)

@@ -29,7 +29,7 @@ class HttpConnect : public ByteStream
     Q_OBJECT
 public:
     enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
-    HttpConnect(QObject *parent=0);
+    HttpConnect(QObject *parent=nullptr);
     ~HttpConnect();
 
     void setAuth(const QString &user, const QString &pass="");

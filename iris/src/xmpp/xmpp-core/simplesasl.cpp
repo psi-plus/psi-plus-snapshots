@@ -448,7 +448,7 @@ public:
     {
         if(cap == "sasl")
             return new SimpleSASLContext(this);
-        return 0;
+        return nullptr;
     }
     int qcaVersion() const
     {

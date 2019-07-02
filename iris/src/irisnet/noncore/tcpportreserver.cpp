@@ -54,7 +54,7 @@ bool TcpPortDiscoverer::setExternalHost(const QString &extHost, quint16 extPort,
 
 TcpPortServer::PortTypes TcpPortDiscoverer::inProgressPortTypes() const
 {
-    return 0; // same as for stop()
+    return nullptr; // same as for stop()
 }
 
 bool TcpPortDiscoverer::isDepleted() const

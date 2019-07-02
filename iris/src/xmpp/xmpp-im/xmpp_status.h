@@ -39,7 +39,7 @@ namespace XMPP
             static const QCryptographicHash::Algorithm invalidAlgo = (QCryptographicHash::Algorithm)255;
 
             CapsSpec();
-            CapsSpec(const QString& node, QCryptographicHash::Algorithm hashAlgo, const QString& ver = QString::null);
+            CapsSpec(const QString& node, QCryptographicHash::Algorithm hashAlgo, const QString& ver = QString());
             CapsSpec(const DiscoItem &disco, QCryptographicHash::Algorithm hashAlgo = QCryptographicHash::Sha1);
 
             bool isValid() const;

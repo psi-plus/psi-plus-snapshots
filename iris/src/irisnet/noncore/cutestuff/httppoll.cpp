@@ -443,7 +443,7 @@ class HttpProxyPost::Private
 public:
     Private(HttpProxyPost *_q) :
         sock(_q),
-        tls(0)
+        tls(nullptr)
     {
     }
 
@@ -774,7 +774,7 @@ HttpProxyGetStream::HttpProxyGetStream(QObject *parent)
 :QObject(parent)
 {
     d = new Private(this);
-    d->tls = 0;
+    d->tls = nullptr;
     connect(&d->sock, SIGNAL(connected()), SLOT(sock_connected()));
     connect(&d->sock, SIGNAL(connectionClosed()), SLOT(sock_connectionClosed()));
     connect(&d->sock, SIGNAL(readyRead()), SLOT(sock_readyRead()));
@@ -792,7 +792,7 @@ void HttpProxyGetStream::resetConnection(bool /*clear*/)
 {
     if(d->tls) {
         delete d->tls;
-        d->tls = 0;
+        d->tls = nullptr;
     }
     if(d->sock.state() != BSocket::Idle)
         d->sock.close();

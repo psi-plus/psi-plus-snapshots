@@ -42,7 +42,7 @@ public:
     NetTracker() {
         QList<IrisNetProvider*> list = irisNetProviders();
 
-        c = 0;
+        c = nullptr;
         foreach(IrisNetProvider* p, list) {
             c = p->createNetInterfaceProvider();
             if(c) break;
@@ -123,7 +123,7 @@ public:
             exit(0);
             wait();
             delete this;
-            self = 0;
+            self = nullptr;
         }
     }
 
@@ -151,7 +151,7 @@ private:
             startCond.wait(startMutex); // wait for thread startup finished
         }
         delete startMutex;
-        startMutex = 0;
+        startMutex = nullptr;
     }
 
     void run() {
@@ -165,7 +165,7 @@ private:
         }
         exec();
         delete nettracker;
-        nettracker = 0;
+        nettracker = nullptr;
     }
 
 private:
@@ -177,7 +177,7 @@ private:
     NetTracker *nettracker;
 };
 
-NetTrackerThread *NetTrackerThread::self = 0;
+NetTrackerThread *NetTrackerThread::self = nullptr;
 
 
 //----------------------------------------------------------------------------
@@ -277,7 +277,7 @@ public:
 
     ~NetInterfaceManagerPrivate() {
         tracker->releaseRef();
-        tracker = 0;
+        tracker = nullptr;
     }
 
     static int lookup(const QList<NetInterfaceProvider::Info> &list, const QString &id)
@@ -401,7 +401,7 @@ void *NetInterfaceManager::reg(const QString &id, NetInterface *i)
             return new NetInterfaceProvider::Info(d->info[n]);
         }
     }
-    return 0;
+    return nullptr;
 }
 
 void NetInterfaceManager::unreg(NetInterface *i)

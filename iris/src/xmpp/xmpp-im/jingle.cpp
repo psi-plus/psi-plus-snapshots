@@ -1747,7 +1747,7 @@ ApplicationManagerPad *Manager::applicationPad(Session *session, const QString &
 {
     auto am = d->applicationManagers.value(ns);
     if (!am) {
-        return NULL;
+        return nullptr;
     }
     return am->pad(session);
 }
@@ -1801,7 +1801,7 @@ TransportManagerPad* Manager::transportPad(Session *session, const QString &ns)
 {
     auto transportManager = d->transportManagers.value(ns);
     if (!transportManager) {
-        return NULL;
+        return nullptr;
     }
     return transportManager->pad(session);
 }
@@ -1821,7 +1821,7 @@ Session* Manager::incomingSessionInitiate(const Jid &from, const Jingle &jingle,
 {
     if (d->maxSessions > 0 && d->sessions.size() == d->maxSessions) {
         d->lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Wait, XMPP::Stanza::Error::ResourceConstraint);
-        return NULL;
+        return nullptr;
     }
     auto key = qMakePair(from, jingle.sid());
     auto s = new Session(this, from, Origin::Responder);
@@ -1835,7 +1835,7 @@ Session* Manager::incomingSessionInitiate(const Jid &from, const Jingle &jingle,
     }
     d->lastError = s->lastError();
     delete s;
-    return NULL;
+    return nullptr;
 }
 
 XMPP::Stanza::Error Manager::lastError() const

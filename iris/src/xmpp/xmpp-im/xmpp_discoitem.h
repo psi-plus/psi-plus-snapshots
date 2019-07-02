@@ -66,7 +66,7 @@ namespace XMPP {
 
             inline Identity() {}
             inline Identity(const QString &categoty, const QString &type,
-                            const QString &lang = QString::null, const QString &name = QString::null) :
+                            const QString &lang = QString(), const QString &name = QString()) :
                 category(categoty), type(type), lang(lang), name(name) {}
             bool operator==(const Identity &other) const;
         };

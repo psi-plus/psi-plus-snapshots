@@ -98,8 +98,8 @@ public:
     int packetHeaderOverhead(const QHostAddress &addr, int port) const;
 
     QByteArray encode(const QByteArray &datagram, const QHostAddress &addr, int port);
-    QByteArray decode(const QByteArray &encoded, QHostAddress *addr = 0, int *port = 0);
-    QByteArray decode(const StunMessage &encoded, QHostAddress *addr = 0, int *port = 0);
+    QByteArray decode(const QByteArray &encoded, QHostAddress *addr = nullptr, int *port = nullptr);
+    QByteArray decode(const StunMessage &encoded, QHostAddress *addr = nullptr, int *port = nullptr);
 
     QString errorString() const;
 

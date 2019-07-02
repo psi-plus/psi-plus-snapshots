@@ -60,8 +60,8 @@ public:
     enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
     enum Method { AuthNone=0x0001, AuthUsername=0x0002 };
     enum Request { ReqConnect, ReqUDPAssociate };
-    SocksClient(QObject *parent=0);
-    SocksClient(QTcpSocket *, QObject *parent=0);
+    SocksClient(QObject *parent=nullptr);
+    SocksClient(QTcpSocket *, QObject *parent=nullptr);
     ~SocksClient();
 
     virtual QAbstractSocket* abstractSocket() const;
@@ -133,7 +133,7 @@ class SocksServer : public QObject
 {
     Q_OBJECT
 public:
-    SocksServer(QObject *parent=0);
+    SocksServer(QObject *parent=nullptr);
     ~SocksServer();
 
     void setServerSocket(QTcpServer *server);

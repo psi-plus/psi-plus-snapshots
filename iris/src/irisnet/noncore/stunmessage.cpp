@@ -228,7 +228,7 @@ static int get_attribute_props(const QByteArray &buf, int offset, quint16 *type,
 // len    = take attribute value length (value is at offset + 4)
 // next   = take offset of next attribute
 // returns offset of found attribute, -1 if not found
-static int find_attribute(const QByteArray &buf, quint16 type, int *len, int *next = 0)
+static int find_attribute(const QByteArray &buf, quint16 type, int *len, int *next = nullptr)
 {
     int at = ATTRIBUTE_AREA_START;
     quint16 _type;
@@ -386,7 +386,7 @@ public:
 };
 
 StunMessage::StunMessage() :
-    d(0)
+    d(nullptr)
 {
 }
 

@@ -95,7 +95,7 @@ namespace XMPP
         Private *d;
 
         friend class FileTransferManager;
-        FileTransfer(FileTransferManager *, QObject *parent=0);
+        FileTransfer(FileTransferManager *, QObject *parent=nullptr);
         FileTransfer(const FileTransfer& other);
         void man_waitForAccept(const FTRequest &req, const QString &streamType);
         void takeConnection(BSConnection *c);

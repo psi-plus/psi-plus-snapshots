@@ -199,7 +199,7 @@ Stanza::Error::Private::ErrorTypeEntry Stanza::Error::Private::errorTypeTable[] 
     { "modify",   Modify },
     { "auth",     Auth },
     { "wait",     Wait },
-    { 0, 0 },
+    { nullptr, 0 },
 };
 
 Stanza::Error::Private::ErrorCondEntry Stanza::Error::Private::errorCondTable[] =
@@ -225,7 +225,7 @@ Stanza::Error::Private::ErrorCondEntry Stanza::Error::Private::errorCondTable[] 
     { "subscription-required",   SubscriptionRequired },
     { "undefined-condition",     UndefinedCondition },
     { "unexpected-request",      UnexpectedRequest },
-    { 0, 0 },
+    { nullptr, 0 },
 };
 
 Stanza::Error::Private::ErrorCodeEntry Stanza::Error::Private::errorCodeTable[] =
@@ -467,7 +467,7 @@ public:
 
 Stanza::Stanza()
 {
-    d = 0;
+    d = nullptr;
 }
 
 Stanza::Stanza(Stream *s, Kind k, const Jid &to, const QString &type, const QString &id)
@@ -495,7 +495,7 @@ Stanza::Stanza(Stream *s, Kind k, const Jid &to, const QString &type, const QStr
 Stanza::Stanza(Stream *s, const QDomElement &e)
 {
     Q_ASSERT(s);
-    d = 0;
+    d = nullptr;
     if(e.namespaceURI() != s->baseNS())
         return;
     int x = Private::stringToKind(e.tagName());
@@ -508,7 +508,7 @@ Stanza::Stanza(Stream *s, const QDomElement &e)
 
 Stanza::Stanza(const Stanza &from)
 {
-    d = 0;
+    d = nullptr;
     *this = from;
 }
 
@@ -518,7 +518,7 @@ Stanza & Stanza::operator=(const Stanza &from)
         return *this;
 
     delete d;
-    d = 0;
+    d = nullptr;
     if(from.d)
         d = new Private(*from.d);
     return *this;

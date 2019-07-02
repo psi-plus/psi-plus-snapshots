@@ -89,4 +89,4 @@ bool SpellChecker::add(const QString&)
     return false;
 }
 
-SpellChecker* SpellChecker::instance_ = NULL;
+SpellChecker* SpellChecker::instance_ = nullptr;

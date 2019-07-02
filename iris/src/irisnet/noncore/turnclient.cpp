@@ -187,11 +187,11 @@ public:
         QObject(_q),
         q(_q),
         sess(this),
-        bs(0),
+        bs(nullptr),
         tls(0),
         udp(false),
-        pool(0),
-        allocate(0),
+        pool(nullptr),
+        allocate(nullptr),
         retryCount(0),
         debugLevel(TurnClient::DL_None),
         writtenBytes(0),
@@ -208,15 +208,15 @@ public:
     void cleanup()
     {
         delete allocate;
-        allocate = 0;
+        allocate = nullptr;
 
         // in udp mode, we don't own the pool
         if(!udp)
             delete pool;
-        pool = 0;
+        pool = nullptr;
 
         delete tls;
-        tls = 0;
+        tls = nullptr;
 
         delete bs;
         bs = 0;
@@ -293,12 +293,12 @@ public:
         else
         {
             delete allocate;
-            allocate = 0;
+            allocate = nullptr;
 
             // in udp mode, we don't own the pool
             if(!udp)
                 delete pool;
-            pool = 0;
+            pool = nullptr;
 
             if(udp)
                 sess.defer(q, "closed");
@@ -316,7 +316,7 @@ public:
         else
         {
             delete tls;
-            tls = 0;
+            tls = nullptr;
 
             do_sock_close();
         }
@@ -697,7 +697,7 @@ public:
 
             int tmp_retryCount = retryCount;
             StunTransactionPool *tmp_pool = pool;
-            pool = 0;
+            pool = nullptr;
 
             cleanup();
 
@@ -887,7 +887,7 @@ private slots:
     void tls_closed()
     {
         delete tls;
-        tls = 0;
+        tls = nullptr;
 
         do_sock_close();
     }
@@ -935,12 +935,12 @@ private slots:
     void allocate_stopped()
     {
         delete allocate;
-        allocate = 0;
+        allocate = nullptr;
 
         // in udp mode, we don't own the pool
         if(!udp)
             delete pool;
-        pool = 0;
+        pool = nullptr;
 
         if(udp)
             emit q->closed();

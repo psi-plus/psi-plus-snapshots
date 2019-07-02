@@ -57,14 +57,14 @@ public:
         if(!loader->load())
         {
             delete loader;
-            return 0;
+            return nullptr;
         }
         QObject *obj = loader->instance();
         if(!obj)
         {
             loader->unload();
             delete loader;
-            return 0;
+            return nullptr;
         }
         PluginInstance *i = new PluginInstance;
         i->_loader = loader;
@@ -76,7 +76,7 @@ public:
     static PluginInstance *fromStatic(QObject *obj)
     {
         PluginInstance *i = new PluginInstance;
-        i->_loader = 0;
+        i->_loader = nullptr;
         i->_instance = obj;
         i->_ownInstance = false;
         return i;
@@ -85,7 +85,7 @@ public:
     static PluginInstance *fromInstance(QObject *obj)
     {
         PluginInstance *i = new PluginInstance;
-        i->_loader = 0;
+        i->_loader = nullptr;
         i->_instance = obj;
         i->_ownInstance = true;
         return i;
@@ -108,7 +108,7 @@ public:
         if(_loader)
             _loader->moveToThread(0);
         if(_ownInstance)
-            _instance->moveToThread(0);
+            _instance->moveToThread(nullptr);
     }
 
     QObject *instance()
@@ -244,7 +244,7 @@ public:
 };
 
 Q_GLOBAL_STATIC(QMutex, global_mutex)
-static IrisNetGlobal *global = 0;
+static IrisNetGlobal *global = nullptr;
 
 static void deinit();
 
@@ -267,7 +267,7 @@ void deinit()
         (global->cleanupList.takeFirst())();
 
     delete global;
-    global = 0;
+    global = nullptr;
 }
 
 //----------------------------------------------------------------------------

@@ -565,7 +565,7 @@ class Manager : public QObject
     Q_OBJECT
 
 public:
-    explicit Manager(XMPP::Client *client = 0);
+    explicit Manager(XMPP::Client *client = nullptr);
     ~Manager();
 
     XMPP::Client* client() const;

@@ -62,7 +62,7 @@ IBBConnection::IBBConnection(IBBManager *m)
 {
     d = new Private;
     d->m = m;
-    d->j = 0;
+    d->j = nullptr;
     d->blockSize = PacketSize;
     resetConnection();
 
@@ -82,7 +82,7 @@ void IBBConnection::resetConnection(bool clear)
     d->seq = 0;
 
     delete d->j;
-    d->j = 0;
+    d->j = nullptr;
 
     clearWriteBuffer();
     if(clear)
@@ -254,7 +254,7 @@ void IBBConnection::setRemoteClosed()
 void IBBConnection::ibb_finished()
 {
     JT_IBB *j = d->j;
-    d->j = 0;
+    d->j = nullptr;
 
     if(j->success()) {
         if(j->mode() == JT_IBB::ModeRequest) {
@@ -455,7 +455,7 @@ void IBBManager::ibb_closeRequest(const Jid &from, const QString &id,
 
 bool IBBManager::isAcceptableSID(const XMPP::Jid &jid, const QString&sid) const
 {
-    return findConnection(sid, jid) == NULL;
+    return findConnection(sid, jid) == nullptr;
 }
 
 const char* IBBManager::sidPrefix() const
@@ -479,7 +479,7 @@ IBBConnection *IBBManager::findConnection(const QString &sid, const Jid &peer) c
         if(c->sid() == sid && (peer.isEmpty() || c->peer().compare(peer)) )
             return c;
     }
-    return 0;
+    return nullptr;
 }
 
 void IBBManager::doAccept(IBBConnection *c, const QString &id)

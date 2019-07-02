@@ -84,7 +84,7 @@ namespace XMPP {
         QString id() const;
         QString type() const;
         QString lang() const;
-        QString subject(const QString &lang=QString::null) const;
+        QString subject(const QString &lang=QString()) const;
         QString subject(const QLocale &lang) const;
         StringMap subjectMap() const;
         QString body(const QString &lang="") const;

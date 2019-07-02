@@ -430,7 +430,7 @@ struct MethodEntry
     METHOD_ENTRY(Data),
     METHOD_ENTRY(CreatePermission),
     METHOD_ENTRY(ChannelBind),
-    { (Method)-1, 0 }
+    { (Method)-1, nullptr }
 };
 
 QString methodToString(int method)
@@ -477,7 +477,7 @@ struct AttribEntry
     ATTRIB_ENTRY(FINGERPRINT),
     ATTRIB_ENTRY(ICE_CONTROLLED),
     ATTRIB_ENTRY(ICE_CONTROLLING),
-    { (Attribute)-1, 0 }
+    { (Attribute)-1, nullptr }
 };
 
 QString attributeTypeToString(int type)

@@ -253,7 +253,7 @@ public:
     QMap<long, QString> id2f;
 };
 
-static Features::FeatureName *featureName = 0;
+static Features::FeatureName *featureName = nullptr;
 
 long Features::id() const
 {

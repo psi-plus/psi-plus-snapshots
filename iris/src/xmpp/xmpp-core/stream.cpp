@@ -71,7 +71,7 @@
 
 using namespace XMPP;
 
-static Debug *debug_ptr = 0;
+static Debug *debug_ptr = nullptr;
 void XMPP::setDebug(Debug *p)
 {
     debug_ptr = p;
@@ -98,7 +98,7 @@ static QString genId()
 //----------------------------------------------------------------------------
 // Stream
 //----------------------------------------------------------------------------
-static XmlProtocol *foo = 0;
+static XmlProtocol *foo = nullptr;
 Stream::Stream(QObject *parent)
 :QObject(parent)
 {
@@ -133,7 +133,7 @@ QString Stream::xmlToString(const QDomElement &e, bool clip)
 void Stream::cleanup()
 {
     delete foo;
-    foo = 0;
+    foo = nullptr;
 }
 
 //----------------------------------------------------------------------------
@@ -290,11 +290,11 @@ void ClientStream::reset(bool all)
 
     // delete securestream
     delete d->ss;
-    d->ss = 0;
+    d->ss = nullptr;
 
     // reset sasl
     delete d->sasl;
-    d->sasl = 0;
+    d->sasl = nullptr;
 
     if(all) {
         while (!d->in.isEmpty()) {
@@ -317,7 +317,7 @@ void ClientStream::reset(bool all)
         // reset connector
         if(d->bs) {
             d->bs->close();
-            d->bs = 0;
+            d->bs = nullptr;
         }
         d->conn->done();
 
@@ -331,7 +331,7 @@ void ClientStream::reset(bool all)
 
         if(d->bs) {
             d->bs->close();
-            d->bs = 0;
+            d->bs = nullptr;
         }
 
         d->srv.reset();
@@ -459,7 +459,7 @@ QCA::Provider::Context *ClientStream::currentSASLContext() const
     if (d->sasl) {
         return d->sasl->context();
     }
-    return 0;
+    return nullptr;
 }
 
 void ClientStream::setSCRAMStoredSaltedHash(const QString &s) {
@@ -1281,7 +1281,7 @@ bool ClientStream::handleNeed()
                 }
             }
 
-            d->sasl = new QCA::SASL(0, saslProvider);
+            d->sasl = new QCA::SASL(nullptr, saslProvider);
             connect(d->sasl, SIGNAL(clientStarted(bool,QByteArray)), SLOT(sasl_clientFirstStep(bool,QByteArray)));
             connect(d->sasl, SIGNAL(nextStep(QByteArray)), SLOT(sasl_nextStep(QByteArray)));
             connect(d->sasl, SIGNAL(needParams(QCA::SASL::Params)), SLOT(sasl_needParams(QCA::SASL::Params)));
