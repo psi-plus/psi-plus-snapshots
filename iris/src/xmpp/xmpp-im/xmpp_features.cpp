@@ -214,16 +214,16 @@ public:
     FeatureName()
     : QObject(QCoreApplication::instance())
     {
-        id2s[FID_Invalid]        = tr("ERROR: Incorrect usage of Features class");
-        id2s[FID_None]            = tr("None");
-        id2s[FID_Register]        = tr("Register");
+        id2s[FID_Invalid]       = tr("ERROR: Incorrect usage of Features class");
+        id2s[FID_None]          = tr("None");
+        id2s[FID_Register]      = tr("Register");
         id2s[FID_Search]        = tr("Search");
-        id2s[FID_Groupchat]        = tr("Groupchat");
-        id2s[FID_Gateway]        = tr("Gateway");
-        id2s[FID_Disco]            = tr("Service Discovery");
-        id2s[FID_VCard]            = tr("VCard");
-        id2s[FID_AHCommand]        = tr("Execute command");
-        id2s[FID_QueryVersion]    = tr("Query version");
+        id2s[FID_Groupchat]     = tr("Groupchat");
+        id2s[FID_Gateway]       = tr("Gateway");
+        id2s[FID_Disco]         = tr("Service Discovery");
+        id2s[FID_VCard]         = tr("VCard");
+        id2s[FID_AHCommand]     = tr("Execute command");
+        id2s[FID_QueryVersion]  = tr("Query version");
         id2s[FID_MessageCarbons]= tr("Message Carbons");
 
         // custom Psi actions
@@ -234,18 +234,18 @@ public:
         //for ( ; it != id2s.end(); ++it)
         //    s2id[it.data()] = it.key();
 
-        id2f[FID_Register]        = FID_REGISTER;
+        id2f[FID_Register]      = FID_REGISTER;
         id2f[FID_Search]        = FID_SEARCH;
-        id2f[FID_Groupchat]        = FID_GROUPCHAT;
-        id2f[FID_Gateway]        = FID_GATEWAY;
-        id2f[FID_Disco]            = FID_DISCO;
-        id2f[FID_VCard]            = FID_VCARD;
-        id2f[FID_AHCommand]        = FID_AHCOMMAND;
-        id2f[FID_QueryVersion]    = FID_QUERYVERSION;
+        id2f[FID_Groupchat]     = FID_GROUPCHAT;
+        id2f[FID_Gateway]       = FID_GATEWAY;
+        id2f[FID_Disco]         = FID_DISCO;
+        id2f[FID_VCard]         = FID_VCARD;
+        id2f[FID_AHCommand]     = FID_AHCOMMAND;
+        id2f[FID_QueryVersion]  = FID_QUERYVERSION;
         id2f[FID_MessageCarbons]= FID_MESSAGECARBONS;
 
         // custom Psi actions
-        id2f[FID_Add]            = FID_ADD;
+        id2f[FID_Add]           = FID_ADD;
     }
 
     //QMap<QString, long> s2id;
