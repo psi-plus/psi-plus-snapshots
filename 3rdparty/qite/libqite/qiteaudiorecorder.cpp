@@ -22,6 +22,7 @@ under the License.
 
 #include <cmath>
 
+#include <QDir>
 #include <QAudioProbe>
 #include <QAudioRecorder>
 #include <QByteArray>
@@ -29,7 +30,8 @@ under the License.
 #include <QFile>
 #include <QMediaMetaData>
 #include <QUrl>
-
+#include <QTemporaryFile>
+#include <QTimer>
 
 template <typename T> struct SoloFrameDefault { enum { Default = 0 }; };
 
@@ -99,8 +101,8 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
     //qDebug() << "supported codecs for recorder:" << _recorder->supportedAudioCodecs();
     //qDebug() << "supported containers for recorder:" << _recorder->supportedContainers();
 
-    probe = new QAudioProbe(this);
-    probe->setSource(_recorder);
+    _probe = new QAudioProbe(this);
+    _probe->setSource(_recorder);
 
     QAudioEncoderSettings audioSettings;
     audioSettings.setCodec("audio/x-opus");
@@ -109,31 +111,37 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
     _recorder->setEncodingSettings(audioSettings, QVideoEncoderSettings(), "audio/ogg");
 
     connect(_recorder, &QAudioRecorder::stateChanged, this, [this](){
+        qDebug() << _recorder->state() << _recorder->duration() << _maxVolume;
         if (_recorder->state() == QAudioRecorder::StoppedState && _recorder->duration() && _maxVolume) {
             // compress histogram..
             auto volumeK = 255.0 / double(_maxVolume); // amplificator
             if (volumeK > 2) {
                 volumeK = 2; // don't be mad on showing silence
             }
-            auto step = histogram.size() / double(ITEAudioController::HistogramCompressedSize);
-            QStringList columns;
+            auto step = _histogram.size() / double(ITEAudioController::HistogramCompressedSize);
+            _compressedHistorgram.reserve(ITEAudioController::HistogramCompressedSize);
+
             for (int i = 0; i < ITEAudioController::HistogramCompressedSize; i++) {
                 int prev = int(step * i);
                 int curr = int(step * (i + 1));
-                if (curr == histogram.size()) {
-                    curr = histogram.size() - 1;
+                if (curr == _histogram.size()) {
+                    curr = _histogram.size() - 1;
                 }
 
                 int sum = 0;
                 for (int j = prev; j <= curr; j++) {
-                    sum += quint8(histogram[j]);
+                    sum += quint8(_histogram[j]);
                 }
-                columns.append(QString::number(int(sum / double(curr - prev + 1) * volumeK)));
+                _compressedHistorgram.append(int(sum / double(curr - prev + 1) * volumeK));
             }
 
+            QStringList columns;
+            std::transform(_compressedHistorgram.begin(), _compressedHistorgram.end(),
+                           std::back_inserter(columns), [](auto const &v){ return QString::number(v);});
+
             //qDebug() << columns.join(",");
-            histogram.clear();
-            histogram.squeeze();
+            _histogram.clear();
+            _histogram.squeeze();
 #ifdef ITE_EMBED_HISTOGRAM // it's somewhat buggy with Qt since it not always writes metainfo at least in 5.11.2
             QFile f(_recorder->outputLocation().toLocalFile());
             QByteArray buffer;
@@ -156,17 +164,34 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
                 f.close();
             }
 #else
-            QFile metaFile(_recorder->outputLocation().toLocalFile()+".histogram");
-            if (metaFile.open(QIODevice::WriteOnly)) {
-                metaFile.write(columns.join(",").toLatin1());
-                metaFile.close();
+            if (_isTmpFile) {
+                QString fn = _recorder->outputLocation().toLocalFile();
+                QFile f(fn);
+                f.open(QIODevice::ReadOnly);
+                _audioData = f.readAll();
+                f.close();
+                f.remove();
+            } else {
+                QFile metaFile(_recorder->outputLocation().toLocalFile()+".histogram");
+                if (metaFile.open(QIODevice::WriteOnly)) {
+                    metaFile.write(columns.join(",").toLatin1());
+                    metaFile.close();
+                }
             }
 #endif
+            emit recorded();
         }
-        emit stateChanged();
+
+        if (_recorder->state() == QAudioRecorder::StoppedState && _maxDurationTimer && _maxDurationTimer->isActive()) {
+            delete _maxDurationTimer;
+            _maxDurationTimer = nullptr;
+        }
+
+        if (!_destroying)
+            emit stateChanged();
     });
 
-    connect(probe, &QAudioProbe::audioBufferProbed, this, [this](const QAudioBuffer &buffer){
+    connect(_probe, &QAudioProbe::audioBufferProbed, this, [this](const QAudioBuffer &buffer){
         auto format = buffer.format();
         if (format.channelCount() > 2) {
             qWarning("unsupported amount of channels: %d", format.channelCount());
@@ -177,48 +202,68 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
             switch (format.sampleSize()) {
             case 8:
                 if(format.channelCount() == 2)
-                    handle<QAudioBuffer::S8S>(buffer, quantum, histogram, _maxVolume);
+                    handle<QAudioBuffer::S8S>(buffer, _quantum, _histogram, _maxVolume);
                 else
-                    handle<SoloFrame<signed char>>(buffer, quantum, histogram, _maxVolume);
+                    handle<SoloFrame<signed char>>(buffer, _quantum, _histogram, _maxVolume);
                 break;
             case 16:
                 if(format.channelCount() == 2)
-                    handle<QAudioBuffer::S16S>(buffer, quantum, histogram, _maxVolume);
+                    handle<QAudioBuffer::S16S>(buffer, _quantum, _histogram, _maxVolume);
                 else
-                    handle<SoloFrame<signed short>>(buffer, quantum, histogram, _maxVolume);
+                    handle<SoloFrame<signed short>>(buffer, _quantum, _histogram, _maxVolume);
                 break;
             }
         } else if (format.sampleType() == QAudioFormat::UnSignedInt) {
             switch (format.sampleSize()) {
             case 8:
                 if(format.channelCount() == 2)
-                    handle<QAudioBuffer::S8U>(buffer, quantum, histogram, _maxVolume);
+                    handle<QAudioBuffer::S8U>(buffer, _quantum, _histogram, _maxVolume);
                 else
-                    handle<SoloFrame<unsigned char>>(buffer, quantum, histogram, _maxVolume);
+                    handle<SoloFrame<unsigned char>>(buffer, _quantum, _histogram, _maxVolume);
                 break;
             case 16:
                 if(format.channelCount() == 2)
-                    handle<QAudioBuffer::S16U>(buffer, quantum, histogram, _maxVolume);
+                    handle<QAudioBuffer::S16U>(buffer, _quantum, _histogram, _maxVolume);
                 else
-                    handle<SoloFrame<unsigned short>>(buffer, quantum, histogram, _maxVolume);
+                    handle<SoloFrame<unsigned short>>(buffer, _quantum, _histogram, _maxVolume);
                 break;
             }
         } else if(format.sampleType() == QAudioFormat::Float) {
             if(format.channelCount() == 2)
-                handle<QAudioBuffer::S32F>(buffer, quantum, histogram, _maxVolume);
+                handle<QAudioBuffer::S32F>(buffer, _quantum, _histogram, _maxVolume);
             else
-                handle<SoloFrame<float>>(buffer, quantum, histogram, _maxVolume);
+                handle<SoloFrame<float>>(buffer, _quantum, _histogram, _maxVolume);
         } else {
             qWarning("unsupported audio sample type: %d", int(format.sampleType()));
         }
     });
 }
 
+void AudioRecorder::record()
+{
+    cleanup();
+    _isTmpFile = true;
+
+    QTemporaryFile *tmpFile = new QTemporaryFile(QDir::tempPath() + QLatin1String("/qite-record-XXXXXX.ogg"), this);
+    tmpFile->setAutoRemove(false);
+    tmpFile->open();
+    QString fn = tmpFile->fileName();
+    delete tmpFile;
+
+    recordToFile(fn);
+}
+
 void AudioRecorder::record(const QString &fileName)
 {
-    quantum = Quantum();
-    histogram.clear();
-    histogram.reserve(HistogramMemSize);
+    cleanup();
+    recordToFile(fileName);
+}
+
+void AudioRecorder::recordToFile(const QString &fileName)
+{
+    _quantum = Quantum();
+    _histogram.clear();
+    _histogram.reserve(HistogramMemSize);
     _maxVolume = 0;
     _recorder->setOutputLocation(QUrl::fromLocalFile(fileName));
 #ifdef ITE_EMBED_HISTOGRAM
@@ -227,10 +272,36 @@ void AudioRecorder::record(const QString &fileName)
         _recorder->setMetaData(QMediaMetaData::Comment, reserved);
     }
 #endif
+    if (_maxDuration != -1) {
+        _maxDurationTimer = new QTimer(this);
+        _maxDurationTimer->setSingleShot(true);
+        _maxDurationTimer->setInterval(_maxDuration);
+        connect(_maxDurationTimer, &QTimer::timeout, this, &AudioRecorder::stop);
+    }
     _recorder->record();
 }
 
 void AudioRecorder::stop()
 {
     _recorder->stop();
+}
+
+quint64 AudioRecorder::duration() const
+{
+    return _recorder->duration();
+}
+
+void AudioRecorder::cleanup()
+{
+    _destroying = true;
+    _recorder->stop();
+    _destroying = false;
+    _isTmpFile = false;
+    _compressedHistorgram.clear();
+    _audioData.clear();
+    _audioData.squeeze();
+    if (_maxDurationTimer) {
+        delete _maxDurationTimer;
+        _maxDurationTimer = nullptr;
+    }
 }

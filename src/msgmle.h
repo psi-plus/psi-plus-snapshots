@@ -36,6 +36,9 @@ class QImage;
 class SpellHighlighter;
 class HTMLTextController;
 class CapitalLettersController;
+class QToolButton;
+class QLabel;
+class AudioRecorder;
 
 
 class ChatEdit : public QTextEdit
@@ -104,7 +107,7 @@ private:
     QPoint last_click_;
     int previous_position_ = 0;
     QStringList typedMsgsHistory;
-    long typedMsgsIndex = 0;
+    int typedMsgsIndex = 0;
     QAction* act_showMessagePrev = nullptr;
     QAction* act_showMessageNext = nullptr;
     QAction* act_showMessageFirst = nullptr;
@@ -139,6 +142,14 @@ protected:
 private slots:
     void recalculateSize();
     void updateScrollBar();
+
+private:
+    QLayout *layout_;
+    QToolButton *recButton_;
+    QLabel *overlay_;
+    std::unique_ptr<QTimer> timer_;
+    std::unique_ptr<AudioRecorder> recorder_;
+    int timeout_;
 };
 
 #endif

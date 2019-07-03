@@ -24,6 +24,9 @@ under the License.
 
 class QAudioRecorder;
 class QAudioProbe;
+class QTemporaryFile;
+class QTimer;
+
 class AudioRecorder : public QObject
 {
     Q_OBJECT
@@ -39,22 +42,38 @@ public:
 
     explicit AudioRecorder(QObject *parent = nullptr);
 
+    void record(); // for short-term records
     void record(const QString &fileName);
     void stop();
+    inline void setMaxDuration(int ms) { _maxDuration = ms; } // set it before record() call or don't set at all
 
     inline auto recorder() const { return _recorder; }
     inline auto maxVolume() const { return _maxVolume; } // peak value of vlume over all the recording.
+    inline auto histogram() const { return _compressedHistorgram; }
+    inline auto data() const { return _audioData; }
+    quint64 duration() const; // just a convenience method
+
+private:
+    void cleanup();
+    void recordToFile(const QString &fileName);
 
 signals:
     void stateChanged();
+    void recorded();
 public slots:
 
 private:
-    QAudioRecorder *_recorder = nullptr;
-    QAudioProbe *probe;
-    Quantum quantum;
-    QByteArray histogram;
-    quint8 _maxVolume;
+    QAudioRecorder  *_recorder = nullptr;
+    QAudioProbe     *_probe;
+    Quantum         _quantum;
+    QByteArray      _histogram;
+    QByteArray      _compressedHistorgram;
+    QByteArray      _audioData;
+    QTimer          *_maxDurationTimer = nullptr;
+    int             _maxDuration = -1;
+    quint8          _maxVolume;
+    bool            _destroying = false;
+    bool            _isTmpFile = false;
 };
 
 #endif // QITEAUDIORECORDER_H

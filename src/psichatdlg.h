@@ -44,7 +44,7 @@ private slots:
     void updateCounter();
     void updateIdentityVisibility();
     void updateCountVisibility();
-    void updateContactAdding(PsiContact* c = 0);
+    void updateContactAdding(PsiContact* c = nullptr);
     void updateContactAdding(const Jid &j);
     void verticalSplitterMoved(int, int);
     void contactChanged();
