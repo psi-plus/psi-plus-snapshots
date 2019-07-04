@@ -51,7 +51,7 @@ public:
     inline auto maxVolume() const { return _maxVolume; } // peak value of vlume over all the recording.
     inline auto histogram() const { return _compressedHistorgram; }
     inline auto data() const { return _audioData; }
-    quint64 duration() const; // just a convenience method
+    inline quint64 duration() const { return _duration; }
 
 private:
     void cleanup();
@@ -70,6 +70,7 @@ private:
     QByteArray      _compressedHistorgram;
     QByteArray      _audioData;
     QTimer          *_maxDurationTimer = nullptr;
+    qint64          _duration;
     int             _maxDuration = -1;
     quint8          _maxVolume;
     bool            _destroying = false;

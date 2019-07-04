@@ -110,9 +110,12 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
 
     _recorder->setEncodingSettings(audioSettings, QVideoEncoderSettings(), "audio/ogg");
 
+    connect(_recorder, &QAudioRecorder::durationChanged, this, [this](qint64 duration){
+        _duration = duration;
+    });
+
     connect(_recorder, &QAudioRecorder::stateChanged, this, [this](){
-        qDebug() << _recorder->state() << _recorder->duration() << _maxVolume;
-        if (_recorder->state() == QAudioRecorder::StoppedState && _recorder->duration() && _maxVolume) {
+        if (_recorder->state() == QAudioRecorder::StoppedState && _maxVolume) {
             // compress histogram..
             auto volumeK = 255.0 / double(_maxVolume); // amplificator
             if (volumeK > 2) {
@@ -283,12 +286,8 @@ void AudioRecorder::recordToFile(const QString &fileName)
 
 void AudioRecorder::stop()
 {
+    _duration = _recorder->duration();
     _recorder->stop();
-}
-
-quint64 AudioRecorder::duration() const
-{
-    return _recorder->duration();
 }
 
 void AudioRecorder::cleanup()
