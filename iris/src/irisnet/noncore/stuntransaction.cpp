@@ -156,7 +156,7 @@ public:
     StunTransactionPrivate(StunTransaction *_q) :
         QObject(_q),
         q(_q),
-        pool(nullptr),
+        pool(0),
         fpRequired(false)
     {
         qRegisterMetaType<StunTransaction::Error>();
@@ -180,7 +180,7 @@ public:
             pool->d->remove(q);
 
         t->disconnect(this);
-        t->setParent(nullptr);
+        t->setParent(0);
         t->deleteLater();
     }
 

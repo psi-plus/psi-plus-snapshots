@@ -81,9 +81,9 @@ public:
         bool ext_finished;
 
         LocalTransport() :
-            qsock(nullptr),
+            qsock(0),
             borrowedSocket(false),
-            sock(nullptr),
+            sock(0),
             network(-1),
             isVpn(false),
             started(false),
@@ -120,9 +120,9 @@ public:
         QObject(_q),
         q(_q),
         sess(this),
-        portReserver(nullptr),
+        portReserver(0),
         stopping(false),
-        tt(nullptr),
+        tt(0),
         useLocal(true),
         useStunBind(true),
         useStunRelayUdp(true),
@@ -180,7 +180,7 @@ public:
                     continue;
                 }
 
-                QUdpSocket *qsock = nullptr;
+                QUdpSocket *qsock = 0;
                 if(socketList)
                     qsock = takeFromSocketList(socketList, la.addr, this);
 
@@ -444,7 +444,7 @@ private:
         return calc_priority(typePref, localPref, componentId);
     }
 
-    static QUdpSocket *takeFromSocketList(QList<QUdpSocket*> *socketList, const QHostAddress &addr, QObject *parent = nullptr)
+    static QUdpSocket *takeFromSocketList(QList<QUdpSocket*> *socketList, const QHostAddress &addr, QObject *parent = 0)
     {
         for(int n = 0; n < socketList->count(); ++n)
         {
@@ -456,7 +456,7 @@ private:
             }
         }
 
-        return nullptr;
+        return 0;
     }
 
     int getId() const
@@ -727,7 +727,7 @@ private slots:
             return;
 
         delete lt->sock;
-        lt->sock = nullptr;
+        lt->sock = 0;
 
         if(isLocalLeap)
         {
@@ -857,7 +857,7 @@ private slots:
             return;
 
         delete lt->sock;
-        lt->sock = nullptr;
+        lt->sock = 0;
 
         if(isLocalLeap)
         {
@@ -915,7 +915,7 @@ private slots:
             return;
 
         delete tt;
-        tt = nullptr;
+        tt = 0;
 
         tryStopped();
     }
@@ -931,7 +931,7 @@ private slots:
             return;
 
         delete tt;
-        tt = nullptr;
+        tt = 0;
     }
 
     void tt_debugLine(const QString &line)

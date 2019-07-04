@@ -23,7 +23,7 @@
 #include <QDateTime>
 #include <QTimer>
 
-static IdlePlatform *platform = nullptr;
+static IdlePlatform *platform = 0;
 static int platform_ref = 0;
 
 class Idle::Private
@@ -64,7 +64,7 @@ Idle::~Idle()
         --platform_ref;
         if(platform_ref == 0) {
             delete platform;
-            platform = nullptr;
+            platform = 0;
         }
     }
     delete d;

@@ -42,7 +42,7 @@ public:
 UnZip::UnZip(const QString &name)
 {
     d = new UnZipPrivate;
-    d->uf = nullptr;
+    d->uf = 0;
     d->name = name;
 }
 
@@ -90,7 +90,7 @@ void UnZip::close()
 {
     if(d->uf) {
         unzClose(d->uf);
-        d->uf = nullptr;
+        d->uf = 0;
     }
 
     d->listing.clear();
@@ -112,7 +112,7 @@ bool UnZip::getList()
     for(int n = 0; n < (int)gi.number_entry; ++n) {
         char filename_inzip[256];
         unz_file_info file_info;
-        int err = unzGetCurrentFileInfo(d->uf, &file_info, filename_inzip, sizeof(filename_inzip), nullptr, 0, nullptr, 0);
+        int err = unzGetCurrentFileInfo(d->uf, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
         if(err != UNZ_OK)
             return false;
 
@@ -138,7 +138,7 @@ bool UnZip::readFile(const QString &fname, QByteArray *buf, int max)
 
     char filename_inzip[256];
     unz_file_info file_info;
-    err = unzGetCurrentFileInfo(d->uf, &file_info, filename_inzip, sizeof(filename_inzip), nullptr, 0, nullptr, 0);
+    err = unzGetCurrentFileInfo(d->uf, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
     if(err != UNZ_OK)
         return false;
 

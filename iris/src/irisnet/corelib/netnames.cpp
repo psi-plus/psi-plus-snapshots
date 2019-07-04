@@ -444,7 +444,7 @@ QByteArray ServiceInstance::name() const
 class NameManager;
 
 Q_GLOBAL_STATIC(QMutex, nman_mutex)
-static NameManager *g_nman = nullptr;
+static NameManager *g_nman = 0;
 
 class NameResolver::Private
 {
@@ -706,10 +706,10 @@ public:
     QHash<int,ServiceResolver::Private*> sres_instances;
     QHash<int,ServiceLocalPublisher::Private*> slp_instances;
 
-    NameManager(QObject *parent = nullptr) : QObject(parent)
+    NameManager(QObject *parent = 0) : QObject(parent)
     {
-        p_net = nullptr;
-        p_local = nullptr;
+        p_net = 0;
+        p_local = 0;
         p_serv = 0;
     }
 
@@ -734,7 +734,7 @@ public:
     static void cleanup()
     {
         delete g_nman;
-        g_nman = nullptr;
+        g_nman = 0;
     }
 
     void resolve_start(NameResolver::Private *np, const QByteArray &name, int qType, bool longLived)
@@ -802,7 +802,7 @@ public:
         res_instances.remove(np->id);
         NameResolver *q = np->q;
         delete q->d;
-        q->d = nullptr;
+        q->d = 0;
     }
 
     void browse_start(ServiceBrowser::Private *np, const QString &type, const QString &domain)
@@ -811,7 +811,7 @@ public:
 
         if(!p_serv)
         {
-            ServiceProvider *c = nullptr;
+            ServiceProvider *c = 0;
             QList<IrisNetProvider*> list = irisNetProviders();
             for(int n = 0; n < list.count(); ++n)
             {
@@ -845,7 +845,7 @@ public:
 
         if(!p_serv)
         {
-            ServiceProvider *c = nullptr;
+            ServiceProvider *c = 0;
             QList<IrisNetProvider*> list = irisNetProviders();
             for(int n = 0; n < list.count(); ++n)
             {
@@ -875,7 +875,7 @@ public:
 
         if(!p_serv)
         {
-            ServiceProvider *c = nullptr;
+            ServiceProvider *c = 0;
             QList<IrisNetProvider*> list = irisNetProviders();
             for(int n = 0; n < list.count(); ++n)
             {
@@ -944,7 +944,7 @@ private slots:
         // transfer to local
         if(!p_local)
         {
-            NameProvider *c = nullptr;
+            NameProvider *c = 0;
             QList<IrisNetProvider*> list = irisNetProviders();
             for(int n = 0; n < list.count(); ++n)
             {
@@ -1064,7 +1064,7 @@ static int recordType2Rtype(NameRecord::Type type)
 NameResolver::NameResolver(QObject *parent)
 :QObject(parent)
 {
-    d = nullptr;
+    d = 0;
 }
 
 NameResolver::~NameResolver()
@@ -1088,7 +1088,7 @@ void NameResolver::stop()
     {
         NameManager::instance()->resolve_stop(d);
         delete d;
-        d = nullptr;
+        d = 0;
     }
 }
 

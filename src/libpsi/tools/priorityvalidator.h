@@ -26,7 +26,7 @@ class PriorityValidator : public QValidator
 {
       Q_OBJECT
 public:
-      PriorityValidator(QObject* parent = nullptr) : QValidator(parent) { };
+      PriorityValidator(QObject* parent = 0) : QValidator(parent) { };
       virtual State validate(QString &input, int &pos) const;
 };
 

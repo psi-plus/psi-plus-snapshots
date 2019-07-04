@@ -25,32 +25,32 @@ namespace XMPP {
 //----------------------------------------------------------------------------
 NetInterfaceProvider *IrisNetProvider::createNetInterfaceProvider()
 {
-    return nullptr;
+    return 0;
 }
 
 NetGatewayProvider *IrisNetProvider::createNetGatewayProvider()
 {
-    return nullptr;
+    return 0;
 }
 
 NetAvailabilityProvider *IrisNetProvider::createNetAvailabilityProvider()
 {
-    return nullptr;
+    return 0;
 }
 
 NameProvider *IrisNetProvider::createNameProviderInternet()
 {
-    return nullptr;
+    return 0;
 }
 
 NameProvider *IrisNetProvider::createNameProviderLocal()
 {
-    return nullptr;
+    return 0;
 }
 
 ServiceProvider *IrisNetProvider::createServiceProvider()
 {
-    return nullptr;
+    return 0;
 }
 
 //----------------------------------------------------------------------------

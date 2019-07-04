@@ -146,7 +146,7 @@ BoBCache::BoBCache(QObject *parent)
 //------------------------------------------------------------------------------
 BoBManager::BoBManager(Client *client)
     : QObject(client)
-    , _cache(nullptr)
+    , _cache(0)
 {
     new JT_BoBServer(client->rootTask());
 }

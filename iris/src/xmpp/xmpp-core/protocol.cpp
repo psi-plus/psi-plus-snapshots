@@ -107,7 +107,7 @@ BasicProtocol::SASLCondEntry BasicProtocol::saslCondTable[] =
     { "mechanism-too-weak",     MechTooWeak },
     { "not-authorized",         NotAuthorized },
     { "temporary-auth-failure", TemporaryAuthFailure },
-    { nullptr, 0 },
+    { 0, 0 },
 };
 
 BasicProtocol::StreamCondEntry BasicProtocol::streamCondTable[] =
@@ -136,7 +136,7 @@ BasicProtocol::StreamCondEntry BasicProtocol::streamCondTable[] =
     { "unsupported-encoding",     UnsupportedEncoding },
     { "unsupported-stanza-type",  UnsupportedStanzaType },
     { "unsupported-version",      UnsupportedVersion },
-    { nullptr, 0 },
+    { 0, 0 },
 };
 
 BasicProtocol::BasicProtocol()

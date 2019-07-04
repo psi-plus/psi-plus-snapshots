@@ -64,7 +64,7 @@ class StreamInput : public QXmlInputSource
 public:
     StreamInput()
     {
-        dec = nullptr;
+        dec = 0;
         reset();
     }
 
@@ -76,7 +76,7 @@ public:
     void reset()
     {
         delete dec;
-        dec = nullptr;
+        dec = 0;
         in.resize(0);
         out = "";
         at = 0;
@@ -197,7 +197,7 @@ private:
         printf("processing.  size=%d, at=%d\n", in.size(), at);
 #endif
         if(!dec) {
-            QTextCodec *codec = nullptr;
+            QTextCodec *codec = 0;
             uchar *p = (uchar *)in.data() + at;
             int size = in.size() - at;
 
@@ -239,7 +239,7 @@ private:
                         ++n2;
                         QString h = out.mid(n, n2-n);
                         QString enc = processXmlHeader(h);
-                        QTextCodec *codec = nullptr;
+                        QTextCodec *codec = 0;
                         if(!enc.isEmpty())
                             codec = QTextCodec::codecForName(enc.toLatin1());
 
@@ -528,9 +528,9 @@ namespace XMPP
         Parser::Event *takeEvent()
         {
             if(needMore)
-                return nullptr;
+                return 0;
             if(eventList.isEmpty())
-                return nullptr;
+                return 0;
 
             Parser::Event *e = eventList.takeFirst();
             in->pause(false);
@@ -564,12 +564,12 @@ public:
 
 Parser::Event::Event()
 {
-    d = nullptr;
+    d = 0;
 }
 
 Parser::Event::Event(const Event &from)
 {
-    d = nullptr;
+    d = 0;
     *this = from;
 }
 
@@ -579,7 +579,7 @@ Parser::Event & Parser::Event::operator=(const Event &from)
         return *this;
 
     delete d;
-    d = nullptr;
+    d = 0;
     if(from.d)
         d = new Private(*from.d);
     return *this;
@@ -611,7 +611,7 @@ QString Parser::Event::nsprefix(const QString &s) const
             return (*it2);
         ++it2;
     }
-    return QString();
+    return QString::null;
 }
 
 QString Parser::Event::namespaceURI() const
@@ -695,9 +695,9 @@ class Parser::Private
 public:
     Private()
     {
-        doc = nullptr;
+        doc = 0;
         in = 0;
-        handler = nullptr;
+        handler = 0;
         reader = 0;
         reset();
     }
@@ -726,9 +726,9 @@ public:
             reader->parse(in, true);
             in->pause(false);
         } else {
-            reader = nullptr;
-            handler = nullptr;
-            in = nullptr;
+            reader = 0;
+            handler = 0;
+            in = 0;
             doc = 0;
         }
     }

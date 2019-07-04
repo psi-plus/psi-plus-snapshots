@@ -52,4 +52,4 @@ void SystemWatch::proceedWithSleep()
 }
 
 
-SystemWatch* SystemWatch::instance_ = nullptr;
+SystemWatch* SystemWatch::instance_ = 0;

@@ -48,8 +48,8 @@ public:
     Private(StunBinding *_q) :
         QObject(_q),
         q(_q),
-        pool(nullptr),
-        trans(nullptr),
+        pool(0),
+        trans(0),
         use_extPriority(false),
         use_extIceControlling(false),
         use_extIceControlled(false),
@@ -134,7 +134,7 @@ private slots:
     void trans_finished(const XMPP::StunMessage &response)
     {
         delete trans;
-        trans = nullptr;
+        trans = 0;
 
         bool error = false;
         int code;
@@ -203,7 +203,7 @@ private slots:
     void trans_error(XMPP::StunTransaction::Error e)
     {
         delete trans;
-        trans = nullptr;
+        trans = 0;
 
         if(e == StunTransaction::ErrorTimeout)
         {

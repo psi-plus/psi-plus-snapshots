@@ -5,14 +5,14 @@
 
 static void initZStream(z_stream* z)
 {
-    z->next_in = nullptr;
+    z->next_in = NULL;
     z->avail_in = 0;
     z->total_in = 0;
-    z->next_out = nullptr;
+    z->next_out = NULL;
     z->avail_out = 0;
     z->total_out = 0;
-    z->msg = nullptr;
-    z->state = nullptr;
+    z->msg = NULL;
+    z->state = NULL;
     z->zalloc = Z_NULL;
     z->zfree = Z_NULL;
     z->opaque = Z_NULL;

@@ -125,7 +125,7 @@ public:
         ports = newPorts;
 
         // keep ports in sorted order
-        std::sort(ports.begin(), ports.end());
+        qSort(ports);
 
         foreach(int x, added)
         {
@@ -255,7 +255,7 @@ private slots:
 
         // eat all packets
         while(sock->hasPendingDatagrams())
-            sock->readDatagram(nullptr, 0);
+            sock->readDatagram(0, 0);
     }
 
 private:

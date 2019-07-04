@@ -71,7 +71,7 @@ namespace XMPP
     {
         Q_OBJECT
     public:
-        Connector(QObject *parent=nullptr);
+        Connector(QObject *parent=0);
         virtual ~Connector();
 
         virtual void setOptHostPort(const QString &host, quint16 port)=0;
@@ -107,7 +107,7 @@ namespace XMPP
         Q_OBJECT
     public:
         enum Error { ErrConnectionRefused, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth, ErrStream };
-        AdvancedConnector(QObject *parent=nullptr);
+        AdvancedConnector(QObject *parent=0);
         virtual ~AdvancedConnector();
 
         class Proxy
@@ -180,7 +180,7 @@ namespace XMPP
     {
         Q_OBJECT
     public:
-        TLSHandler(QObject *parent=nullptr);
+        TLSHandler(QObject *parent=0);
         virtual ~TLSHandler();
 
         virtual void reset()=0;

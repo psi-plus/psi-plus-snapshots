@@ -102,7 +102,7 @@ public:
 
             for(int n = 0; n < 10; ++n)
             {
-                if(arg_name[n] == nullptr)
+                if(arg_name[n] == 0)
                     break;
 
                 Argument arg;
@@ -141,7 +141,7 @@ public:
         invalidateWatchers();
 
         callTrigger->disconnect(this);
-        callTrigger->setParent(nullptr);
+        callTrigger->setParent(0);
         callTrigger->deleteLater();
         qDeleteAll(pendingCalls);
         pendingCalls.clear();
@@ -167,7 +167,7 @@ public:
     void invalidateWatchers()
     {
         for(int n = 0; n < watchers.count(); ++n)
-            watchers[n]->sess = nullptr;
+            watchers[n]->sess = 0;
         watchers.clear();
     }
 

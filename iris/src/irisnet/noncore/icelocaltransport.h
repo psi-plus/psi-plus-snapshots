@@ -46,7 +46,7 @@ public:
         ErrorBind = ErrorCustom
     };
 
-    IceLocalTransport(QObject *parent = nullptr);
+    IceLocalTransport(QObject *parent = 0);
     ~IceLocalTransport();
 
     void setClientSoftwareNameAndVersion(const QString &str);

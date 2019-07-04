@@ -58,7 +58,7 @@ public:
         QList<QHostAddress> addresses;
     };
 
-    NetInterfaceProvider(QObject *parent = nullptr) :
+    NetInterfaceProvider(QObject *parent = 0) :
         QObject(parent)
     {
     }
@@ -84,7 +84,7 @@ public:
         QHostAddress gateway;
     };
 
-    NetGatewayProvider(QObject *parent = nullptr) :
+    NetGatewayProvider(QObject *parent = 0) :
         QObject(parent)
     {
     }
@@ -103,7 +103,7 @@ class IRISNET_EXPORT NetAvailabilityProvider : public QObject
     Q_OBJECT
 
 public:
-    NetAvailabilityProvider(QObject *parent = nullptr) :
+    NetAvailabilityProvider(QObject *parent = 0) :
         QObject(parent)
     {
     }
@@ -122,7 +122,7 @@ class IRISNET_EXPORT NameProvider : public QObject
     Q_OBJECT
 
 public:
-    NameProvider(QObject *parent = nullptr) :
+    NameProvider(QObject *parent = 0) :
         QObject(parent)
     {
     }
@@ -160,7 +160,7 @@ public:
         QByteArray hostName; // optional
     };
 
-    ServiceProvider(QObject *parent = nullptr) :
+    ServiceProvider(QObject *parent = 0) :
         QObject(parent)
     {
     }

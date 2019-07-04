@@ -56,7 +56,7 @@ using namespace XMPP;
         cs.resize(maxbytes);
         if(stringprep(cs.data(), maxbytes, (Stringprep_profile_flags)0, stringprep_nameprep) != 0)
         {
-            that->nameprep_table.insert(in, QString());
+            that->nameprep_table.insert(in, QString::null);
             return false;
         }
 
@@ -87,7 +87,7 @@ using namespace XMPP;
         QByteArray cs = in.toUtf8();
         cs.resize(maxbytes);
         if(stringprep(cs.data(), maxbytes, (Stringprep_profile_flags)0, stringprep_xmpp_nodeprep) != 0) {
-            that->nodeprep_table.insert(in, QString());
+            that->nodeprep_table.insert(in, QString::null);
             return false;
         }
 
@@ -118,7 +118,7 @@ using namespace XMPP;
         QByteArray cs = in.toUtf8();
         cs.resize(maxbytes);
         if(stringprep(cs.data(), maxbytes, (Stringprep_profile_flags)0, stringprep_xmpp_resourceprep) != 0) {
-            that->resourceprep_table.insert(in, QString());
+            that->resourceprep_table.insert(in, QString::null);
             return false;
         }
 
@@ -149,7 +149,7 @@ using namespace XMPP;
         QByteArray cs = in.toUtf8();
         cs.resize(maxbytes);
         if(stringprep(cs.data(), maxbytes, (Stringprep_profile_flags)0, stringprep_saslprep) != 0) {
-            that->saslprep_table.insert(in, QString());
+            that->saslprep_table.insert(in, QString::null);
             return false;
         }
 
@@ -161,7 +161,7 @@ using namespace XMPP;
 
     void StringPrepCache::cleanup()
     {
-        _instance.reset(nullptr);
+        _instance.reset(0);
     }
 
     StringPrepCache *StringPrepCache::instance()

@@ -57,7 +57,7 @@ namespace XMPP
     class StreamManagement : QObject
     {
     public:
-        StreamManagement(QObject *parent = nullptr);
+        StreamManagement(QObject *parent = 0);
         XMPP::SMState &state() { return state_; }
         const XMPP::SMState &state() const { return state_; }
         bool isActive() const { return sm_started || sm_resumed; }

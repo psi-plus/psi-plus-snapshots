@@ -66,7 +66,7 @@ public:
     ~Private()
     {
         opTimer->disconnect(this);
-        opTimer->setParent(nullptr);
+        opTimer->setParent(0);
         opTimer->deleteLater();
     }
 

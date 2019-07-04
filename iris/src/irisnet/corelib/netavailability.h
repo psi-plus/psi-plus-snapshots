@@ -28,7 +28,7 @@ class NetAvailability : public QObject
     Q_OBJECT
 
 public:
-    NetAvailability(QObject *parent = nullptr);
+    NetAvailability(QObject *parent = 0);
     ~NetAvailability();
 
     bool isAvailable() const;
