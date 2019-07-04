@@ -140,7 +140,7 @@ namespace XMPP
         void man_clientReady(SocksClient *, SocksUDP *);
         void man_udpReady(const QByteArray &buf);
         void man_failed(int);
-        S5BConnection(S5BManager *, QObject *parent=0);
+        S5BConnection(S5BManager *, QObject *parent=nullptr);
     };
 
     class S5BManager : public BytestreamManager
@@ -213,7 +213,7 @@ namespace XMPP
     {
         Q_OBJECT
     public:
-        S5BConnector(QObject *parent=0);
+        S5BConnector(QObject *parent=nullptr);
         ~S5BConnector();
 
         void resetConnection();

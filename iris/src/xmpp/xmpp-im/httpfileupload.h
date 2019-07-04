@@ -78,7 +78,7 @@ public:
     };
 
     HttpFileUpload(Client *client, QIODevice *source, size_t fsize, const QString &dstFilename,
-                   const QString &mType = QString::null);
+                   const QString &mType = QString());
     HttpFileUpload(const HttpFileUpload &) = delete;
     ~HttpFileUpload();
 
@@ -172,8 +172,8 @@ public:
      * @param mType meta type. image/png for example
      * @return returns a handler object which will signal "finished" when ready
      */
-    HttpFileUpload* upload(const QString &srcFilename, const QString &dstFilename = QString::null,
-                           const QString &mType = QString::null);
+    HttpFileUpload* upload(const QString &srcFilename, const QString &dstFilename = QString(),
+                           const QString &mType = QString());
 
     /**
      * @brief uploads data of given size from the given to remote server
@@ -184,7 +184,7 @@ public:
      * @return returns a handler object which will signal "finished" when ready
      */
     HttpFileUpload* upload(QIODevice *source, size_t fsize, const QString &dstFilename,
-                           const QString &mType = QString::null);
+                           const QString &mType = QString());
 
 private:
     class Private;

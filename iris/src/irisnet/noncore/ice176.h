@@ -105,7 +105,7 @@ public:
         }
     };
 
-    Ice176(QObject *parent = 0);
+    Ice176(QObject *parent = nullptr);
     ~Ice176();
 
     void reset();

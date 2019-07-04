@@ -111,14 +111,14 @@ QString DiscoItem::capsHash(QCryptographicHash::Algorithm algo) const
 {
     QStringList prep;
     DiscoItem::Identities idents = d->identities;
-    qSort(idents);
+    std::sort(idents.begin(), idents.end());
 
     foreach (const DiscoItem::Identity &id, idents) {
         prep << QString("%1/%2/%3/%4").arg(id.category, id.type, id.lang, id.name);
     }
 
     QStringList fl = d->features.list();
-    qSort(fl);
+    std::sort(fl.begin(), fl.end());
     prep += fl;
 
     QMap<QString,XData> forms;
@@ -145,7 +145,7 @@ QString DiscoItem::capsHash(QCryptographicHash::Algorithm algo) const
             if (v.isEmpty()) {
                 continue; // maybe it's media-element but xep-115 (1.5) and xep-232 (0.3) are not clear about that.
             }
-            qSort(v);
+            std::sort(v.begin(), v.end());
             values[f.var()] = v;
         }
         QMap <QString, QStringList>::ConstIterator it = values.constBegin();
@@ -338,7 +338,7 @@ QString DiscoItem::action2string(const Action a)
     else if ( a == Remove )
         s = "remove";
     else
-        s = QString::null;
+        s = QString();
 
     return s;
 }

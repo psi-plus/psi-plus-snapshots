@@ -37,7 +37,7 @@ class IrisQtName : public NameProvider
     QHash<int,int> hostInfo; // we need all these tricks with double mapping because we still support Qt 5.5.1. (5.12 is way better)
 
 public:
-    IrisQtName(QObject *parent = 0) :
+    IrisQtName(QObject *parent = nullptr) :
         NameProvider(parent),
         currentId(0)
     {

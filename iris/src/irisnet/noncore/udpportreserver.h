@@ -37,7 +37,7 @@ class UdpPortReserver : public QObject
     Q_OBJECT
 
 public:
-    UdpPortReserver(QObject *parent = 0);
+    UdpPortReserver(QObject *parent = nullptr);
     ~UdpPortReserver();
 
     void setAddresses(const QList<QHostAddress> &addrs);
@@ -58,7 +58,7 @@ public:
     //   able to bind to a port for it to be considered reserved, this
     //   function always returns a list with a size that is a multiple of
     //   the number of addresses.
-    QList<QUdpSocket*> borrowSockets(int portCount, QObject *parent = 0);
+    QList<QUdpSocket*> borrowSockets(int portCount, QObject *parent = nullptr);
 
     void returnSockets(const QList<QUdpSocket*> &sockList);
 

@@ -265,7 +265,7 @@ void Client::setFileTransferEnabled(bool b)
     else {
         if(d->ftman) {
             delete d->ftman;
-            d->ftman = 0;
+            d->ftman = nullptr;
         }
     }
 }
@@ -484,7 +484,7 @@ void Client::close(bool)
     if(d->stream) {
         d->stream->disconnect(this);
         d->stream->close();
-        d->stream = 0;
+        d->stream = nullptr;
     }
     disconnected();
     cleanup();

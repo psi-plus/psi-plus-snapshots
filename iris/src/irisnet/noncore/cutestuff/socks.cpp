@@ -1093,7 +1093,7 @@ QHostAddress SocksServer::address() const
 SocksClient *SocksServer::takeIncoming()
 {
     if(d->incomingConns.isEmpty())
-        return 0;
+        return nullptr;
 
     SocksClient *c = d->incomingConns.takeFirst();
 

@@ -318,7 +318,7 @@ JT_UnRegister::JT_UnRegister(Task *parent)
 : Task(parent)
 {
     d = new Private;
-    d->jt_reg = 0;
+    d->jt_reg = nullptr;
 }
 
 JT_UnRegister::~JT_UnRegister()
@@ -344,7 +344,7 @@ void JT_UnRegister::onGo()
 
 void JT_UnRegister::getFormFinished()
 {
-    disconnect(d->jt_reg, 0, this, 0);
+    disconnect(d->jt_reg, nullptr, this, nullptr);
     if (d->jt_reg->isRegistered()) {
         d->jt_reg->unreg(d->j);
         connect(d->jt_reg, SIGNAL(finished()), SLOT(unregFinished()));
@@ -362,7 +362,7 @@ void JT_UnRegister::unregFinished()
         setError(d->jt_reg->statusCode(), d->jt_reg->statusString());
 
     delete d->jt_reg;
-    d->jt_reg = 0;
+    d->jt_reg = nullptr;
 }
 
 //----------------------------------------------------------------------------

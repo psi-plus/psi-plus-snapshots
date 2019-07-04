@@ -99,8 +99,8 @@ namespace XMPP
             AllowPlainOverTLS
         };
 
-        ClientStream(Connector *conn, TLSHandler *tlsHandler=0, QObject *parent=0);
-        ClientStream(const QString &host, const QString &defRealm, ByteStream *bs, QCA::TLS *tls=0, QObject *parent=0); // server
+        ClientStream(Connector *conn, TLSHandler *tlsHandler=nullptr, QObject *parent=nullptr);
+        ClientStream(const QString &host, const QString &defRealm, ByteStream *bs, QCA::TLS *tls=nullptr, QObject *parent=nullptr); // server
         ~ClientStream();
 
         Jid jid() const;

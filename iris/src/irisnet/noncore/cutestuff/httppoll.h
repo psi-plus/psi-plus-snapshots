@@ -31,7 +31,7 @@ class HttpPoll : public ByteStream
     Q_OBJECT
 public:
     enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
-    HttpPoll(QObject *parent=0);
+    HttpPoll(QObject *parent=nullptr);
     ~HttpPoll();
 
     virtual QAbstractSocket* abstractSocket() const;
@@ -75,7 +75,7 @@ class HttpProxyPost : public QObject
     Q_OBJECT
 public:
     enum Error { ErrConnectionRefused, ErrHostNotFound, ErrSocket, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
-    HttpProxyPost(QObject *parent=0);
+    HttpProxyPost(QObject *parent=nullptr);
     ~HttpProxyPost();
 
     QAbstractSocket* abstractSocket() const;
@@ -114,7 +114,7 @@ class HttpProxyGetStream : public QObject
     Q_OBJECT
 public:
     enum Error { ErrConnectionRefused, ErrHostNotFound, ErrSocket, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
-    HttpProxyGetStream(QObject *parent=0);
+    HttpProxyGetStream(QObject *parent=nullptr);
     ~HttpProxyGetStream();
 
     void setAuth(const QString &user, const QString &pass="");

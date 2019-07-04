@@ -48,7 +48,7 @@ namespace XMPP
             StreamReset
         };
 
-        Stream(QObject *parent=0);
+        Stream(QObject *parent=nullptr);
         virtual ~Stream();
 
         virtual QDomDocument & doc() const=0;

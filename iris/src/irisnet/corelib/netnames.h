@@ -421,7 +421,7 @@ public:
     /**
        \brief Constructs a new resolver object with the given \a parent
     */
-    NameResolver(QObject *parent = 0);
+    NameResolver(QObject *parent = nullptr);
 
     /**
        \brief Destroys the resolver object
@@ -523,7 +523,7 @@ public:
         ErrorNoWide
     };
 
-    ServiceBrowser(QObject *parent = 0);
+    ServiceBrowser(QObject *parent = nullptr);
     ~ServiceBrowser();
 
     void start(const QString &type, const QString &domain = "local");
@@ -589,7 +589,7 @@ public:
      * Create a new ServiceResolver.
      * This resolver can be used for multiple lookups in a row, but not concurrently!
      */
-    ServiceResolver(QObject *parent = 0);
+    ServiceResolver(QObject *parent = nullptr);
     ~ServiceResolver();
 
     Protocol protocol() const; //!< IP protocol to use, defaults to IPv6_IPv4
@@ -675,7 +675,7 @@ public:
         ErrorNoLocal   // unable to setup multicast dns
     };
 
-    ServiceLocalPublisher(QObject *parent = 0);
+    ServiceLocalPublisher(QObject *parent = nullptr);
     ~ServiceLocalPublisher();
 
     void publish(const QString &instance, const QString &type, int port, const QMap<QString,QByteArray> &attributes);

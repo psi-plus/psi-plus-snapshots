@@ -42,7 +42,7 @@ namespace {
 void releaseAndDeleteLater(QObject *owner, QObject *obj)
 {
     obj->disconnect(owner);
-    obj->setParent(0);
+    obj->setParent(nullptr);
     obj->deleteLater();
 }
 
@@ -51,7 +51,7 @@ class SafeSocketNotifier : public QObject
     Q_OBJECT
 public:
     SafeSocketNotifier(int socket, QSocketNotifier::Type type,
-        QObject *parent = 0) :
+        QObject *parent = nullptr) :
         QObject(parent)
     {
         sn = new QSocketNotifier(socket, type, this);
@@ -85,7 +85,7 @@ namespace XMPP {
 #endif
 
 Q_GLOBAL_STATIC(QMutex, pq_mutex)
-static ProcessQuit *g_pq = 0;
+static ProcessQuit *g_pq = nullptr;
 
 inline bool is_gui_app()
 {
@@ -174,7 +174,7 @@ public:
     void unixWatchAdd(int sig)
     {
         struct sigaction sa;
-        sigaction(sig, NULL, &sa);
+        sigaction(sig, nullptr, &sa);
         // if the signal is ignored, don't take it over.  this is
         //   recommended by the glibc manual
         if(sa.sa_handler == SIG_IGN)
@@ -182,13 +182,13 @@ public:
         sigemptyset(&(sa.sa_mask));
         sa.sa_flags = 0;
         sa.sa_handler = unixHandler;
-        sigaction(sig, &sa, 0);
+        sigaction(sig, &sa, nullptr);
     }
 
     void unixWatchRemove(int sig)
     {
         struct sigaction sa;
-        sigaction(sig, NULL, &sa);
+        sigaction(sig, nullptr, &sa);
         // ignored means we skipped it earlier, so we should
         //   skip it again
         if(sa.sa_handler == SIG_IGN)
@@ -196,7 +196,7 @@ public:
         sigemptyset(&(sa.sa_mask));
         sa.sa_flags = 0;
         sa.sa_handler = SIG_DFL;
-        sigaction(sig, &sa, 0);
+        sigaction(sig, &sa, nullptr);
     }
 #endif
 
@@ -269,7 +269,7 @@ void ProcessQuit::reset()
 void ProcessQuit::cleanup()
 {
     delete g_pq;
-    g_pq = 0;
+    g_pq = nullptr;
 }
 
 #ifndef NO_IRISNET

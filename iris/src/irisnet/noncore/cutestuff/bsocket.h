@@ -43,7 +43,7 @@ class BSocket : public ByteStream
 public:
     enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound };
     enum State { Idle, HostLookup, Connecting, Connected, Closing };
-    BSocket(QObject *parent=0);
+    BSocket(QObject *parent=nullptr);
     ~BSocket();
 
     /*! Connect to an already resolved host */

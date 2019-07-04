@@ -119,7 +119,7 @@ static QList<XMPP::NetGatewayProvider::Info> get_linux_gateways()
         if(addr.isNull())
             continue;
 
-        int iflags = parts[3].toInt(0, 16);
+        int iflags = parts[3].toInt(nullptr, 16);
         if(!(iflags & RTF_UP))
             continue;
 
@@ -144,7 +144,7 @@ static QList<XMPP::NetGatewayProvider::Info> get_linux_gateways()
         if(addr.isNull())
             continue;
 
-        int iflags = parts[8].toInt(0, 16);
+        int iflags = parts[8].toInt(nullptr, 16);
         if(!(iflags & RTF_UP))
             continue;
 

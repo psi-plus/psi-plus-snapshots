@@ -200,8 +200,8 @@ S5BConnection::S5BConnection(S5BManager *m, QObject *parent)
 {
     d = new Private;
     d->m = m;
-    d->sc = 0;
-    d->su = 0;
+    d->sc = nullptr;
+    d->su = nullptr;
 
     ++num_conn;
     d->id = id_conn++;
@@ -229,10 +229,10 @@ void S5BConnection::resetConnection(bool clear)
     d->m->con_unlink(this);
     if(clear && d->sc) {
         delete d->sc;
-        d->sc = 0;
+        d->sc = nullptr;
     }
     delete d->su;
-    d->su = 0;
+    d->su = nullptr;
     if(clear) {
         while (!d->dglist.isEmpty()) {
             delete d->dglist.takeFirst();
@@ -627,7 +627,7 @@ BSConnection *S5BManager::createConnection()
 S5BConnection *S5BManager::takeIncoming()
 {
     if(d->incomingConns.isEmpty())
-        return 0;
+        return nullptr;
 
     S5BConnection *c = d->incomingConns.takeFirst();
 
@@ -757,7 +757,7 @@ S5BConnection *S5BManager::findIncoming(const Jid &from, const QString &sid) con
         if(c->d->peer.compare(from) && c->d->sid == sid)
             return c;
     }
-    return 0;
+    return nullptr;
 }
 
 S5BManager::Entry *S5BManager::findEntry(S5BConnection *c) const
@@ -766,7 +766,7 @@ S5BManager::Entry *S5BManager::findEntry(S5BConnection *c) const
         if(e->c == c)
             return e;
     }
-    return 0;
+    return nullptr;
 }
 
 S5BManager::Entry *S5BManager::findEntry(Item *i) const
@@ -775,7 +775,7 @@ S5BManager::Entry *S5BManager::findEntry(Item *i) const
         if(e->i == i)
             return e;
     }
-    return 0;
+    return nullptr;
 }
 
 S5BManager::Entry *S5BManager::findEntryByHash(const QString &key) const
@@ -784,7 +784,7 @@ S5BManager::Entry *S5BManager::findEntryByHash(const QString &key) const
         if(e->i && e->i->key == key)
             return e;
     }
-    return 0;
+    return nullptr;
 }
 
 S5BManager::Entry *S5BManager::findEntryBySID(const Jid &peer, const QString &sid) const
@@ -793,7 +793,7 @@ S5BManager::Entry *S5BManager::findEntryBySID(const Jid &peer, const QString &si
         if(e->i && e->i->peer.compare(peer) && e->sid == sid)
             return e;
     }
-    return 0;
+    return nullptr;
 }
 
 bool S5BManager::srv_ownsHash(const QString &key) const
@@ -951,9 +951,9 @@ void S5BManager::item_connected()
 
     // grab the client
     SocksClient *client = i->client;
-    i->client = 0;
+    i->client = nullptr;
     SocksUDP *client_udp = i->client_udp;
-    i->client_udp = 0;
+    i->client_udp = nullptr;
 
     // give it to the connection
     e->c->man_clientReady(client, client_udp);
@@ -1008,7 +1008,7 @@ void S5BManager::queryProxy(Entry *e)
 void S5BManager::query_finished()
 {
     JT_S5B *query = static_cast<JT_S5B *>(sender());
-    Entry* e = 0;
+    Entry* e = nullptr;
     foreach(Entry* i, d->activeList) {
         if(i->query == query) {
             e = i;
@@ -1017,7 +1017,7 @@ void S5BManager::query_finished()
     }
     if(!e)
         return;
-    e->query = 0;
+    e->query = nullptr;
 
 #ifdef S5B_DEBUG
     qDebug("query finished: ");
@@ -1304,7 +1304,7 @@ void S5BManager::Item::incomingActivate(const Jid &streamHost)
 void S5BManager::Item::jt_finished()
 {
     JT_S5B *j = task;
-    task = 0;
+    task = nullptr;
 
 #ifdef S5B_DEBUG
     qDebug("jt_finished: state=%s, %s\n", state == Requester ? "requester" : "target", j->success() ? "ok" : "fail");
@@ -1330,7 +1330,7 @@ void S5BManager::Item::jt_finished()
         // stop connecting out
         if(conn || lateProxy) {
             delete conn;
-            conn = 0;
+            conn = nullptr;
             doConnectError();
         }
 
@@ -1357,7 +1357,7 @@ void S5BManager::Item::jt_finished()
         else if(streamHost.compare(proxy.jid())) {
             // toss out any direct incoming, since it won't be used
             delete client;
-            client = 0;
+            client = nullptr;
             allowIncoming = false;
 
 #ifdef S5B_DEBUG
@@ -1412,7 +1412,7 @@ void S5BManager::Item::conn_result(bool b)
         SocksUDP *sc_udp = conn->takeUDP();
         StreamHost h = conn->streamHostUsed();
         delete conn;
-        conn = 0;
+        conn = nullptr;
         connSuccess = true;
 
 #ifdef S5B_DEBUG
@@ -1448,7 +1448,7 @@ void S5BManager::Item::conn_result(bool b)
     }
     else {
         delete conn;
-        conn = 0;
+        conn = nullptr;
 
         // if we delayed the proxies for later, try now
         if(lateProxy) {
@@ -1469,7 +1469,7 @@ void S5BManager::Item::proxy_result(bool b)
         SocksClient *sc = proxy_conn->takeClient();
         SocksUDP *sc_udp = proxy_conn->takeUDP();
         delete proxy_conn;
-        proxy_conn = 0;
+        proxy_conn = nullptr;
 
         connect(sc, SIGNAL(readyRead()), SLOT(sc_readyRead()));
         connect(sc, SIGNAL(bytesWritten(qint64)), SLOT(sc_bytesWritten(qint64)));
@@ -1489,7 +1489,7 @@ void S5BManager::Item::proxy_result(bool b)
     }
     else {
         delete proxy_conn;
-        proxy_conn = 0;
+        proxy_conn = nullptr;
         resetConnection();
         error(ErrProxy);
     }
@@ -1498,7 +1498,7 @@ void S5BManager::Item::proxy_result(bool b)
 void S5BManager::Item::proxy_finished()
 {
     JT_S5B *j = proxy_task;
-    proxy_task = 0;
+    proxy_task = nullptr;
 
     if(j->success()) {
 #ifdef S5B_DEBUG
@@ -1575,7 +1575,7 @@ void S5BManager::Item::tryActivation()
     else if(targetMode == Fast) {
         // with fast mode, we don't wait for the iq reply, so delete the task (if any)
         delete task;
-        task = 0;
+        task = nullptr;
 
         activated = true;
 
@@ -1628,15 +1628,15 @@ void S5BManager::Item::checkForActivation()
             }
 
             if(ok) {
-                SocksUDP *sc_udp = 0;
+                SocksUDP *sc_udp = nullptr;
                 if(sc == client) {
                     delete client_out_udp;
-                    client_out_udp = 0;
+                    client_out_udp = nullptr;
                     sc_udp = client_udp;
                 }
                 else if(sc == client_out) {
                     delete client_udp;
-                    client_udp = 0;
+                    client_udp = nullptr;
                     sc_udp = client_out_udp;
                 }
 
@@ -1645,7 +1645,7 @@ void S5BManager::Item::checkForActivation()
                     delete clientList.takeFirst();
                 }
                 client = sc;
-                client_out = 0;
+                client_out = nullptr;
                 client_udp = sc_udp;
                 activated = true;
 #ifdef S5B_DEBUG
@@ -1664,7 +1664,7 @@ void S5BManager::Item::checkForActivation()
                 delete clientList.takeFirst();
             }
             client = sc;
-            client_out = 0;
+            client_out = nullptr;
             activated = true;
             break;
         }
@@ -1738,9 +1738,9 @@ public:
     Jid jid;
 
     Item(const Jid &self, const StreamHost &_host, const QString &_key, bool _udp)
-        : QObject(0)
+        : QObject(nullptr)
         , client(new SocksClient)
-        , client_udp(0)
+        , client_udp(nullptr)
         , host(_host)
         , key(_key)
         , udp(_udp)
@@ -1816,9 +1816,9 @@ private:
     void cleanup()
     {
         delete client_udp;
-        client_udp = 0;
+        client_udp = nullptr;
         delete client;
-        client = 0;
+        client = nullptr;
     }
 
     void success()
@@ -1846,8 +1846,8 @@ S5BConnector::S5BConnector(QObject *parent)
 :QObject(parent)
 {
     d = new Private;
-    d->active = 0;
-    d->active_udp = 0;
+    d->active = nullptr;
+    d->active_udp = nullptr;
     connect(&d->t, SIGNAL(timeout()), SLOT(t_timeout()));
 }
 
@@ -1861,9 +1861,9 @@ void S5BConnector::resetConnection()
 {
     d->t.stop();
     delete d->active_udp;
-    d->active_udp = 0;
+    d->active_udp = nullptr;
     delete d->active;
-    d->active = 0;
+    d->active = nullptr;
     while (!d->itemList.empty()) {
         delete d->itemList.takeFirst();
     }
@@ -1888,14 +1888,14 @@ void S5BConnector::start(const Jid &self, const StreamHostList &hosts, const QSt
 SocksClient *S5BConnector::takeClient()
 {
     SocksClient *c = d->active;
-    d->active = 0;
+    d->active = nullptr;
     return c;
 }
 
 SocksUDP *S5BConnector::takeUDP()
 {
     SocksUDP *c = d->active_udp;
-    d->active_udp = 0;
+    d->active_udp = nullptr;
     return c;
 }
 
@@ -1909,9 +1909,9 @@ void S5BConnector::item_result(bool b)
     Item *i = static_cast<Item *>(sender());
     if(b) {
         d->active = i->client;
-        i->client = 0;
+        i->client = nullptr;
         d->active_udp = i->client_udp;
-        i->client_udp = 0;
+        i->client_udp = nullptr;
         d->activeHost = i->host;
         while (!d->itemList.isEmpty()) {
             delete d->itemList.takeFirst();
@@ -2329,7 +2329,7 @@ public:
     QString host;
     QTimer expire;
 
-    S5BIncomingConnection(SocksClient *c) : QObject(0)
+    S5BIncomingConnection(SocksClient *c) : QObject(nullptr)
     {
         client = c;
         connect(client, &SocksClient::incomingMethods, [this](int methods){
@@ -2372,7 +2372,7 @@ private slots:
     {
         expire.stop();
         delete client;
-        client = 0;
+        client = nullptr;
         result(false);
     }
 };
@@ -2406,7 +2406,7 @@ S5BServer::S5BServer(QTcpServer *serverSocket) :
             }
 
             SocksClient *c = inConn->client;
-            inConn->client = 0;
+            inConn->client = nullptr;
             QString key = inConn->host;
             delete inConn;
 

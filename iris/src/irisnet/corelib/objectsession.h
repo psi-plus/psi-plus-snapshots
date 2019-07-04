@@ -31,7 +31,7 @@ class ObjectSession : public QObject
     Q_OBJECT
 
 public:
-    ObjectSession(QObject *parent = 0);
+    ObjectSession(QObject *parent = nullptr);
     ~ObjectSession();
 
     // clear all deferred requests, invalidate watchers

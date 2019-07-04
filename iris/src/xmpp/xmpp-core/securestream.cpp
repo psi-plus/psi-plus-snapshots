@@ -390,7 +390,7 @@ public:
 };
 
 SecureStream::SecureStream(ByteStream *s)
-:ByteStream(0)
+:ByteStream(nullptr)
 {
     d = new Private;
 

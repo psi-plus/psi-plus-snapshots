@@ -53,7 +53,7 @@ private:
     int writtenCount;
 
 public:
-    SafeUdpSocket(QUdpSocket *_sock, QObject *parent = 0) :
+    SafeUdpSocket(QUdpSocket *_sock, QObject *parent = nullptr) :
         QObject(parent),
         sess(this),
         sock(_sock)
@@ -77,9 +77,9 @@ public:
     QUdpSocket *release()
     {
         sock->disconnect(this);
-        sock->setParent(0);
+        sock->setParent(nullptr);
         QUdpSocket *out = sock;
-        sock = 0;
+        sock = nullptr;
         return out;
     }
 
@@ -98,7 +98,7 @@ public:
         return sock->hasPendingDatagrams();
     }
 
-    QByteArray readDatagram(QHostAddress *address = 0, quint16 *port = 0)
+    QByteArray readDatagram(QHostAddress *address = nullptr, quint16 *port = nullptr)
     {
         if(!sock->hasPendingDatagrams())
             return QByteArray();
@@ -212,11 +212,11 @@ public:
         QObject(_q),
         q(_q),
         sess(this),
-        extSock(0),
-        sock(0),
-        pool(0),
-        stunBinding(0),
-        turn(0),
+        extSock(nullptr),
+        sock(nullptr),
+        pool(nullptr),
+        stunBinding(nullptr),
+        turn(nullptr),
         turnActivated(false),
         port(-1),
         refPort(-1),
@@ -237,10 +237,10 @@ public:
         sess.reset();
 
         delete stunBinding;
-        stunBinding = 0;
+        stunBinding = nullptr;
 
         delete turn;
-        turn = 0;
+        turn = nullptr;
         turnActivated = false;
 
         if(sock)
@@ -248,11 +248,11 @@ public:
             if(extSock)
             {
                 sock->release();
-                extSock = 0;
+                extSock = nullptr;
             }
 
             delete sock;
-            sock = 0;
+            sock = nullptr;
         }
 
         addr = QHostAddress();
@@ -350,7 +350,7 @@ private:
         {
             delete qsock;
             emit q->error(IceLocalTransport::ErrorBind);
-            return 0;
+            return nullptr;
         }
 
         return qsock;
@@ -379,7 +379,7 @@ private:
                 emit q->debugLine("retrying...");
 
             delete sock;
-            sock = 0;
+            sock = nullptr;
 
             // to receive this error, it is a Relay, so change
             //   the mode
@@ -619,7 +619,7 @@ private slots:
         refPort = stunBinding->reflexivePort();
 
         delete stunBinding;
-        stunBinding = 0;
+        stunBinding = nullptr;
 
         emit q->addressesChanged();
     }
@@ -629,7 +629,7 @@ private slots:
         Q_UNUSED(e);
 
         delete stunBinding;
-        stunBinding = 0;
+        stunBinding = nullptr;
 
         // don't report any error
         //if(stunType == IceLocalTransport::Basic || (stunType == IceLocalTransport::Auto && !turn))
@@ -654,7 +654,7 @@ private slots:
             emit q->debugLine("turn_closed");
 
         delete turn;
-        turn = 0;
+        turn = nullptr;
         turnActivated = false;
 
         postStop();
@@ -696,7 +696,7 @@ private slots:
             emit q->debugLine(QString("turn_error: ") + turn->errorString());
 
         delete turn;
-        turn = 0;
+        turn = nullptr;
         bool wasActivated = turnActivated;
         turnActivated = false;
 
@@ -833,7 +833,7 @@ bool IceLocalTransport::hasPendingDatagrams(int path) const
 
 QByteArray IceLocalTransport::readDatagram(int path, QHostAddress *addr, int *port)
 {
-    QList<Private::Datagram> *in = 0;
+    QList<Private::Datagram> *in = nullptr;
     if(path == Direct)
         in = &d->in;
     else if(path == Relayed)

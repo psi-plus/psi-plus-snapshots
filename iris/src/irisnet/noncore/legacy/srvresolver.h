@@ -46,7 +46,7 @@ class SrvResolver : public QObject
 {
     Q_OBJECT
 public:
-    SrvResolver(QObject *parent=0);
+    SrvResolver(QObject *parent=nullptr);
     ~SrvResolver();
 
     void resolve(const QString &server, const QString &type, const QString &proto);

@@ -41,7 +41,7 @@ class QTcpSocketSignalRelay : public QObject
 {
     Q_OBJECT
 public:
-    QTcpSocketSignalRelay(QTcpSocket *sock, QObject *parent = 0)
+    QTcpSocketSignalRelay(QTcpSocket *sock, QObject *parent = nullptr)
     :QObject(parent)
     {
         qRegisterMetaType<QAbstractSocket::SocketError>("QAbstractSocket::SocketError");
@@ -143,7 +143,7 @@ public:
         sd.sock->setProxy(QNetworkProxy::NoProxy);
         sd.sock->setReadBufferSize(READBUFSIZE);
         sd.relay = new QTcpSocketSignalRelay(sd.sock, this);
-        sd.resolver = 0;
+        sd.resolver = nullptr;
         connect(sd.relay, SIGNAL(connected()), SLOT(qs_connected()));
         connect(sd.relay, SIGNAL(error(QAbstractSocket::SocketError)), SLOT(qs_error(QAbstractSocket::SocketError)));
         sockets.append(sd);

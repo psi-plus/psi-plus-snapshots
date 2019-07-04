@@ -39,7 +39,7 @@ namespace XMPP {
 void releaseAndDeleteLater(QObject *owner, QObject *obj)
 {
     obj->disconnect(owner);
-    obj->setParent(0);
+    obj->setParent(nullptr);
     obj->deleteLater();
 }
 
@@ -96,7 +96,7 @@ public:
     StunAllocatePermission(StunTransactionPool *_pool, const QHostAddress &_addr) :
         QObject(_pool),
         pool(_pool),
-        trans(0),
+        trans(nullptr),
         addr(_addr),
         active(false)
     {
@@ -149,7 +149,7 @@ private:
     void cleanup()
     {
         delete trans;
-        trans = 0;
+        trans = nullptr;
 
         timer->stop();
 
@@ -200,7 +200,7 @@ private slots:
     void trans_finished(const XMPP::StunMessage &response)
     {
         delete trans;
-        trans = 0;
+        trans = nullptr;
 
         bool err = false;
         int code;
@@ -284,7 +284,7 @@ public:
     StunAllocateChannel(StunTransactionPool *_pool, int _channelId, const QHostAddress &_addr, int _port) :
         QObject(_pool),
         pool(_pool),
-        trans(0),
+        trans(nullptr),
         channelId(_channelId),
         addr(_addr),
         port(_port),
@@ -339,7 +339,7 @@ private:
     void cleanup()
     {
         delete trans;
-        trans = 0;
+        trans = nullptr;
 
         timer->stop();
 
@@ -394,7 +394,7 @@ private slots:
     void trans_finished(const XMPP::StunMessage &response)
     {
         delete trans;
-        trans = 0;
+        trans = nullptr;
 
         bool err = false;
         int code;
@@ -498,8 +498,8 @@ public:
         QObject(_q),
         q(_q),
         sess(this),
-        pool(0),
-        trans(0),
+        pool(nullptr),
+        trans(nullptr),
         state(Stopped),
         dfState(DF_Unknown),
         erroringCode(-1)
@@ -797,7 +797,7 @@ private:
     void cleanupTasks()
     {
         delete trans;
-        trans = 0;
+        trans = nullptr;
 
         allocateRefreshTimer->stop();
 
@@ -956,7 +956,7 @@ private slots:
     void trans_finished(const XMPP::StunMessage &response)
     {
         delete trans;
-        trans = 0;
+        trans = nullptr;
 
         bool error = false;
         int code;
@@ -1206,7 +1206,7 @@ private slots:
     void trans_error(XMPP::StunTransaction::Error e)
     {
         delete trans;
-        trans = 0;
+        trans = nullptr;
 
         cleanup();
 

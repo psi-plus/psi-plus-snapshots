@@ -156,8 +156,8 @@ void SubsetsClientManager::reset()
     d->query.type     = Private::None;
     d->query.max      = 50;
     d->query.index    = -1;
-    d->result.firstId = QString::null;
-    d->result.lastId  = QString::null;
+    d->result.firstId = QString();
+    d->result.lastId  = QString();
     d->resetResult();
 }
 
@@ -259,7 +259,7 @@ QDomElement SubsetsClientManager::makeQueryElement(QDomDocument *doc) const
         d->insertMaxElement(doc, &e, 0);
         break;
     case Private::Last:
-        d->insertBeforeElement(doc, &e, QString::null);
+        d->insertBeforeElement(doc, &e, QString());
         break;
     case Private::Next:
         d->insertAfterElement(doc, &e, d->result.lastId);

@@ -333,7 +333,7 @@ QString subTagText(const QDomElement &e, const QString &name)
     QDomElement i = e.firstChildElement(name);
     if ( !i.isNull() )
         return i.text();
-    return QString::null;
+    return QString();
 }
 
 QDomElement textTag(QDomDocument &doc, const QString &name, const QString &content)

@@ -44,7 +44,7 @@ public:
         DL_Packet
     };
 
-    IceTransport(QObject *parent = 0);
+    IceTransport(QObject *parent = nullptr);
     ~IceTransport();
 
     virtual void stop() = 0;

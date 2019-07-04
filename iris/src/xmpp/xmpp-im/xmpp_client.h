@@ -73,7 +73,7 @@ namespace XMPP
         Q_OBJECT
 
     public:
-        Client(QObject *parent=0);
+        Client(QObject *parent=nullptr);
         ~Client();
 
         bool isActive() const;
@@ -135,7 +135,7 @@ namespace XMPP
 
         void setFeatures(const Features& f);
         const Features& features() const;
-        DiscoItem makeDiscoResult(const QString &node = QString::null) const;
+        DiscoItem makeDiscoResult(const QString &node = QString()) const;
 
         void setTcpPortReserver(TcpPortReserver *portReserver);
         TcpPortReserver *tcpPortReserver() const;

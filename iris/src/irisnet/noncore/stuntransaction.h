@@ -76,7 +76,7 @@ public:
         ErrorTimeout
     };
 
-    StunTransaction(QObject *parent = 0);
+    StunTransaction(QObject *parent = nullptr);
     ~StunTransaction();
 
     // toAddress/toPort are optional, to associate this request to a
@@ -140,7 +140,7 @@ public:
         DL_Packet
     };
 
-    StunTransactionPool(StunTransaction::Mode mode, QObject *parent = 0);
+    StunTransactionPool(StunTransaction::Mode mode, QObject *parent = nullptr);
     ~StunTransactionPool();
 
     StunTransaction::Mode mode() const;
@@ -157,7 +157,7 @@ public:
     //   not be a STUN message.  *notStun will be set to true if the packet
     //   is surely not STUN, or set to false if it is unclear whether the
     //   packet is STUN or not.
-    bool writeIncomingMessage(const QByteArray &packet, bool *notStun = 0, const QHostAddress &addr = QHostAddress(), int port = -1);
+    bool writeIncomingMessage(const QByteArray &packet, bool *notStun = nullptr, const QHostAddress &addr = QHostAddress(), int port = -1);
 
     void setLongTermAuthEnabled(bool enabled);
 

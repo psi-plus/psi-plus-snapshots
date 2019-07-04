@@ -111,7 +111,7 @@ public:
         QString v_user, v_pass;
     };
 
-    TurnClient(QObject *parent = 0);
+    TurnClient(QObject *parent = nullptr);
     ~TurnClient();
 
     void setProxy(const Proxy &proxy);

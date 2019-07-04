@@ -293,7 +293,8 @@ void AudioRecorder::stop()
 void AudioRecorder::cleanup()
 {
     _destroying = true;
-    _recorder->stop();
+    if (_recorder->state() == QAudioRecorder::RecordingState)
+        _recorder->stop();
     _destroying = false;
     _isTmpFile = false;
     _compressedHistorgram.clear();

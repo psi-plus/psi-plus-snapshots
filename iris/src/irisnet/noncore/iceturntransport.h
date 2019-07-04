@@ -39,7 +39,7 @@ public:
         ErrorTurn = ErrorCustom
     };
 
-    IceTurnTransport(QObject *parent = 0);
+    IceTurnTransport(QObject *parent = nullptr);
     ~IceTurnTransport();
 
     void setClientSoftwareNameAndVersion(const QString &str);

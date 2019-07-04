@@ -113,7 +113,7 @@ public:
         DL_Packet
     };
 
-    IceComponent(int id, QObject *parent = 0);
+    IceComponent(int id, QObject *parent = nullptr);
     ~IceComponent();
 
     int id() const;
@@ -143,7 +143,7 @@ public:
     void setUseStunRelayTcp(bool enabled);
 
     // if socketList is not null then port reserver must be set
-    void update(QList<QUdpSocket*> *socketList = 0);
+    void update(QList<QUdpSocket*> *socketList = nullptr);
     void stop();
 
     // prflx priority to use when replying from this transport/path

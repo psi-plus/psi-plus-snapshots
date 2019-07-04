@@ -34,7 +34,7 @@ public:
 
     QHash<QByteArray, QByteArray> parse(int argc, char* argv[],
                                        const QList<QByteArray> &terminalArgs = QList<QByteArray>(),
-                                       int* safeArgc = 0);
+                                       int* safeArgc = nullptr);
 
     QString optionsHelp(int textWidth);
     static QString wrap(QString text, int width, int margin = 0, int firstMargin = -1);

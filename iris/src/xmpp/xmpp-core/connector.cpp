@@ -215,7 +215,7 @@ AdvancedConnector::AdvancedConnector(QObject *parent)
 :Connector(parent)
 {
     d = new Private;
-    d->bs = 0;
+    d->bs = nullptr;
     d->opt_ssl = Never;
     cleanup();
     d->errorCode = 0;
@@ -233,7 +233,7 @@ void AdvancedConnector::cleanup()
 
     // destroy the bytestream, if there is one
     delete d->bs;
-    d->bs = 0;
+    d->bs = nullptr;
 
     setUseSSL(false);
     setPeerAddressNone();
@@ -403,7 +403,7 @@ ByteStream *AdvancedConnector::stream() const
     if(d->mode == Connected)
         return d->bs;
     else
-        return 0;
+        return nullptr;
 }
 
 void AdvancedConnector::done()

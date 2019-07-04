@@ -141,7 +141,7 @@ private:
             for (maskIndex = 0; maskIndex < 8; maskIndex++) {
                 for (i = 0; i < map->max_keypermod; i++) {
                     if (map->modifiermap[mapIndex]) {
-                        KeySym *sym = 0;
+                        KeySym *sym = nullptr;
                         int symIndex = 0;
                         do {
                             if (sym)
@@ -254,7 +254,7 @@ public:
     }
 };
 
-X11KeyTriggerManager* X11KeyTriggerManager::instance_ = NULL;
+X11KeyTriggerManager* X11KeyTriggerManager::instance_ = nullptr;
 
 class GlobalShortcutManager::KeyTrigger::Impl : public X11KeyTrigger
 {
@@ -437,5 +437,5 @@ GlobalShortcutManager::KeyTrigger::KeyTrigger(const QKeySequence& key)
 GlobalShortcutManager::KeyTrigger::~KeyTrigger()
 {
     delete d;
-    d = 0;
+    d = nullptr;
 }
