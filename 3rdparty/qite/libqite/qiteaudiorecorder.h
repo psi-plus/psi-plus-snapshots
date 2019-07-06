@@ -60,6 +60,7 @@ private:
 signals:
     void stateChanged();
     void recorded();
+    void error(const QString &message);
 public slots:
 
 private:

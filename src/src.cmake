@@ -255,6 +255,11 @@ list(APPEND HEADERS
     historyimp.h
     )
 
+if(UNIX OR IS_WEBENGINE)
+    list(APPEND SOURCES webserver.cpp)
+    list(APPEND HEADERS webserver.h)
+endif()
+
 if(UNIX AND NOT APPLE AND NOT HAIKU)
     list(APPEND SOURCES
         dbus.cpp
@@ -477,14 +482,6 @@ list(APPEND HEADERS ${qite_HEADERS})
 list(APPEND SOURCES ${qite_SOURCES})
 
 if(IS_WEBKIT OR IS_WEBENGINE)
-    if(IS_WEBENGINE)
-        list(APPEND SOURCES
-            themeserver.cpp
-        )
-        list(APPEND HEADERS
-            themeserver.h
-        )
-    endif()
     list(APPEND HEADERS
         chatview_webkit.h
         webview.h
