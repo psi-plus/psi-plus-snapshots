@@ -159,7 +159,6 @@ HEADERS += \
     $$PWD/historydlg.h \
     $$PWD/historyimp.h \
     $$PWD/historycontactlistmodel.h \
-    $$PWD/tipdlg.h \
     $$PWD/searchdlg.h \
     $$PWD/registrationdlg.h \
     $$PWD/psitoolbar.h \
@@ -290,7 +289,6 @@ SOURCES += \
     $$PWD/psichatdlg.cpp \
     $$PWD/chatsplitter.cpp \
     $$PWD/chateditproxy.cpp \
-    $$PWD/tipdlg.cpp \
     $$PWD/adduserdlg.cpp \
     $$PWD/mcmdmanager.cpp \
     $$PWD/mcmdsimplesite.cpp \
@@ -584,7 +582,6 @@ FORMS += \
     $$PWD/mucreasonseditor.ui \
     $$PWD/xmlconsole.ui \
     $$PWD/disco.ui \
-    $$PWD/tip.ui \
     $$PWD/mood.ui \
     $$PWD/activity.ui \
     $$PWD/voicecall.ui \
