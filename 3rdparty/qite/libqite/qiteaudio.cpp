@@ -52,6 +52,7 @@ public:
     enum Flag {
         Playing = 0x1,
         MouseOnButton = 0x2,
+        MouseOnTrackbar = 0x4
     };
     Q_DECLARE_FLAGS(Flags, Flag)
 
@@ -347,11 +348,15 @@ void ITEAudioController::insert(const QUrl &audioSrc, ITEMediaOpener *mediaOpene
 bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QTextCursor &selected)
 {
     Q_UNUSED(rect);
-    quint32 onButton = false;
+    bool onButton = false;
+    bool onTrackbar = false;
     if (event.type != EventType::Leave) {
-        onButton = isOnButton(event.pos, bgRect)? AudioMessageFormat::MouseOnButton : 0;
+        onButton = isOnButton(event.pos, bgRect);
+        if (!onButton) {
+            onTrackbar = scaleRect.contains(event.pos);
+        }
     }
-    if (onButton) {
+    if (onButton || onTrackbar) {
         _cursor = QCursor(Qt::PointingHandCursor);
     } else {
         _cursor = QCursor(Qt::ArrowCursor);
@@ -359,12 +364,16 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
 
     AudioMessageFormat format = AudioMessageFormat::fromCharFormat(selected.charFormat());
     AudioMessageFormat::Flags state = format.state();
-    bool onButtonChanged = (state & AudioMessageFormat::MouseOnButton) != onButton;
+    bool onButtonChanged = bool(state & AudioMessageFormat::MouseOnButton) != onButton;
+    bool onTrackbarChanged = bool(state & AudioMessageFormat::MouseOnTrackbar) != onTrackbar;
     bool playStateChanged = false;
     bool positionSet = false;
 
     if (onButtonChanged) {
         state ^= AudioMessageFormat::MouseOnButton;
+    }
+    if (onTrackbarChanged) {
+        state ^= AudioMessageFormat::MouseOnTrackbar;
     }
 
     auto playerId = format.id();
@@ -464,6 +473,13 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                     });
 
                     connect(player, SIGNAL(stateChanged(QMediaPlayer::State)), this, SLOT(playerStateChanged(QMediaPlayer::State)));
+                    QObject::connect(player, &QMediaPlayer::mediaStatusChanged, [=](){
+                        qDebug() << "Media status changed:" << player->mediaStatus();
+                    });
+                    QObject::connect(player, static_cast<void(QMediaPlayer::*)(QMediaPlayer::Error)>(&QMediaPlayer::error),
+                            [=](QMediaPlayer::Error error) {
+                        qDebug() << "Error occured:" << error;
+                    });
                 }
                 //player->setVolume(0);
                 player->play();
@@ -473,7 +489,7 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                     //player->disconnect(this);activePlayers.take(playerId)->deleteLater();
                 }
             }
-        } else if (scaleRect.contains(event.pos)) {
+        } else if (onTrackbar) {
             // include outline to clickable area but compute only for inner part
             double part;
             if (event.pos.x() < scaleFillRect.left()) {
@@ -485,6 +501,7 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
             }
             auto player = activePlayers.value(playerId);
             if (player) {
+                qDebug("Set position to %d", int(part * 100));
                 player->setPosition(qint64(player->duration() * part));
             } // else it's not playing likely
             format.setPlayPosition(quint32(double(scaleFillRect.width()) * part));
@@ -546,6 +563,7 @@ void ITEAudioController::playerStateChanged(QMediaPlayer::State state)
             audioFormat.setPlayPosition(0);
             cursor.setCharFormat(audioFormat);
         }
+        qDebug("deleting player");
         activePlayers.take(playerId)->deleteLater();
     }
 }

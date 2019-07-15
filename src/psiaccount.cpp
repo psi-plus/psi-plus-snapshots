@@ -3047,7 +3047,7 @@ void PsiAccount::client_incomingJingle(Jingle::Session *session)
             return;
         }
 
-        if (!psi()->fileSharingManager()->jingleAutoAcceptDownloadRequest(session)) {
+        if (!psi()->fileSharingManager()->jingleAutoAcceptIncomingDownloadRequest(session)) {
             FileEvent::Ptr fe(new FileEvent(session->peer().full(), session, this));
             fe->setTimeStamp(QDateTime::currentDateTime());
             handleEvent(fe, IncomingStanza);
