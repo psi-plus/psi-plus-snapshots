@@ -210,7 +210,7 @@ void HttpFileUpload::tryNextServer()
             req.setRawHeader(h.name.toLatin1(), h.value.toLatin1());
         }
         auto reply = d->qnam->put(req, d->sourceDevice);
-        connect(reply, &QNetworkReply::downloadProgress, this, &HttpFileUpload::progress);
+        connect(reply, &QNetworkReply::uploadProgress, this, &HttpFileUpload::progress);
         connect(reply, &QNetworkReply::finished, this, [this, reply](){
             if (reply->error() == QNetworkReply::NoError) {
                 done(State::Success);

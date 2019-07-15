@@ -60,6 +60,7 @@ public:
     quint64   size = 0;
     Range     range;
     bool      rangeSupported = false;
+    bool      hasSize = false;
     QList<Hash> hashes;
     Thumbnail thumbnail;
     File::Spectrum audioSpectrum;
@@ -95,6 +96,7 @@ File::File(const QDomElement &file)
     QString     desc;
     size_t      size = 0;
     bool        rangeSupported = false;
+    bool        hasSize = false;
     Range       range;
     QList<Hash> hashes;
     Thumbnail   thumbnail;
@@ -122,6 +124,7 @@ File::File(const QDomElement &file)
             if (!ok) {
                 return;
             }
+            hasSize = true;
 
         } else if (ce.tagName() == QLatin1String("range")) {
             if (ce.hasAttribute(QLatin1String("offset"))) {
@@ -131,8 +134,8 @@ File::File(const QDomElement &file)
                 }
             }
             if (ce.hasAttribute(QLatin1String("length"))) {
-                range.offset = ce.attribute(QLatin1String("length")).toULongLong(&ok);
-                if (!ok) {
+                range.length = ce.attribute(QLatin1String("length")).toULongLong(&ok);
+                if (!ok || !range.length) { // length should absent if we need to read till end of file. 0-length is nonsense
                     return;
                 }
             }
@@ -197,6 +200,7 @@ File::File(const QDomElement &file)
     p->desc = desc;
     p->size = size;
     p->rangeSupported = rangeSupported;
+    p->hasSize = hasSize;
     p->range = range;
     p->hashes = hashes;
     p->thumbnail = thumbnail;
@@ -284,6 +288,11 @@ bool File::hasComputedHashes() const
     return false;
 }
 
+bool File::hasSize() const
+{
+    return d->hasSize;
+}
+
 QDateTime File::date() const
 {
     return d? d->date : QDateTime();
@@ -366,6 +375,7 @@ void File::setName(const QString &name)
 void File::setSize(quint64 size)
 {
     ensureD()->size = size;
+    d->hasSize = true;
 }
 
 void File::setRange(const Range &range)
@@ -493,6 +503,7 @@ public:
     Connection::Ptr connection;
     QStringList     availableTransports;
     bool            closeDeviceOnFinish = true;
+    bool            streamigMode = false;
     QIODevice       *device = nullptr;
     quint64         bytesLeft = 0;
 
@@ -674,27 +685,33 @@ bool Application::setTransport(const QSharedPointer<Transport> &transport)
         d->transportReplaceOrigin = Origin::None;
         d->transportReplaceState = State::Finished; // not needed here probably
         d->connection = d->transport->connection();
-        connect(d->connection.data(), &Connection::readyRead, this, [this](){
-            if (!d->device) {
-                return;
-            }
-            if (d->pad->session()->role() != d->senders) {
-                d->readNextBlockFromTransport();
-            }
-        });
-        connect(d->connection.data(), &Connection::bytesWritten, this, [this](qint64 bytes){
-            Q_UNUSED(bytes)
-            if (d->pad->session()->role() == d->senders && !d->connection->bytesToWrite()) {
-                d->writeNextBlockToTransport();
-            }
-        });
+        if (d->streamigMode) {
+            connect(d->connection.data(), &Connection::readyRead, this, [this](){
+                if (!d->device) {
+                    return;
+                }
+                if (d->pad->session()->role() != d->senders) {
+                    d->readNextBlockFromTransport();
+                }
+            });
+            connect(d->connection.data(), &Connection::bytesWritten, this, [this](qint64 bytes){
+                Q_UNUSED(bytes)
+                if (d->pad->session()->role() == d->senders && !d->connection->bytesToWrite()) {
+                    d->writeNextBlockToTransport();
+                }
+            });
+        }
         d->setState(State::Active);
-        if (d->acceptFile.range().isValid()) {
-            d->bytesLeft = d->acceptFile.range().length;
-            emit deviceRequested(d->acceptFile.range().offset, d->bytesLeft);
+        if (d->streamigMode) {
+            if (d->acceptFile.range().isValid()) {
+                d->bytesLeft = d->acceptFile.range().length;
+                emit deviceRequested(d->acceptFile.range().offset, d->bytesLeft);
+            } else {
+                d->bytesLeft = d->file.size();
+                emit deviceRequested(0, d->bytesLeft);
+            }
         } else {
-            d->bytesLeft = d->file.size();
-            emit deviceRequested(0, d->bytesLeft);
+            emit connectionReady();
         }
     });
 
@@ -754,6 +771,13 @@ QSharedPointer<Transport> Application::transport() const
     return d->transport;
 }
 
+void Application::setStreamingMode(bool mode)
+{
+    if (d->state <= State::Connecting) {
+        d->streamigMode = mode;
+    }
+}
+
 Action Application::evaluateOutgoingUpdate()
 {
     d->updateToSend = Action::NoAction;
@@ -806,10 +830,10 @@ Action Application::evaluateOutgoingUpdate()
 
         break;
     case State::Finishing:
-        if (d->transportReplaceOrigin != Origin::None) {
+        if (d->transportReplaceOrigin != Origin::None || d->terminationReason.isValid()) {
             d->updateToSend = Action::ContentRemove;
         } else {
-            d->updateToSend = Action::SessionInfo;
+            d->updateToSend = Action::SessionInfo; // to send checksum
         }
         break;
     default:
@@ -959,6 +983,26 @@ bool Application::accept(const QDomElement &el)
     return true;
 }
 
+void Application::remove(Reason::Condition cond, const QString &comment)
+{
+    if (d->state >= State::Finishing)
+        return;
+
+    d->terminationReason = Reason(cond, comment);
+    d->transportReplaceOrigin = Origin::None; // just in case
+    d->transport->disconnect(this);
+    d->transport.reset();
+
+    if (d->creator == d->pad->session()->role() && d->state <= State::PrepareLocalOffer) {
+        // local content, not yet sent to remote
+        setState(State::Finished);
+        return;
+    }
+
+    setState(State::Finishing);
+    emit updated();
+}
+
 bool Application::incomingTransportAccept(const QDomElement &transportEl)
 {
     if (d->transportReplaceOrigin != d->pad->session()->role()) {
@@ -997,6 +1041,11 @@ void Application::setDevice(QIODevice *dev, bool closeOnFinish)
     } else {
         d->readNextBlockFromTransport();
     }
+}
+
+Connection::Ptr Application::connection() const
+{
+    return d->connection.staticCast<XMPP::Jingle::Connection>();
 }
 
 Pad::Pad(Manager *manager, Session *session) :

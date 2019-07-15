@@ -445,6 +445,7 @@ public:
     virtual void prepare() = 0;
     virtual bool accept(const QDomElement &el) = 0; // remote accepted our content
     virtual void start() = 0;
+    virtual void remove(Reason::Condition cond = Reason::Success, const QString &comment = QString()) = 0;
 
     /**
      * @brief incomingTransportReplace it's jingle transport-replace
