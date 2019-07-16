@@ -88,6 +88,21 @@ void HttpFileUpload::start()
     setState(State::GettingSlot);
 
     d->result.statusCode = HttpFileUpload::ErrorCode::NoError;
+
+    auto mgr = d->client->httpFileUploadManager();
+    if (mgr->discoveryStatus() == HttpFileUploadManager::DiscoNotFound) {
+        d->result.statusCode   = HttpFileUpload::ErrorCode::NoUploadService;
+        d->result.statusString = "No suitable http upload services were found";
+        done(State::Error);
+        return;
+    }
+
+    if (mgr->discoveryStatus() == HttpFileUploadManager::DiscoFound) {
+        d->httpHosts = mgr->discoHosts();
+        tryNextServer();
+        return;
+    }
+
     static QList<QSet<QString>> featureOptions;
     if (featureOptions.isEmpty()) {
         featureOptions << (QSet<QString>() << xmlns_v0_2_5) << (QSet<QString>() << xmlns_v0_3_1);
@@ -145,6 +160,7 @@ void HttpFileUpload::start()
             }
         }
         //d->currentHost = d->httpHosts.begin();
+        d->client->httpFileUploadManager()->setDiscoHosts(d->httpHosts);
         if (d->httpHosts.isEmpty()) { // if empty as the last resort check all services
             d->result.statusCode   = HttpFileUpload::ErrorCode::NoUploadService;
             d->result.statusString = "No suitable http upload services were found";
@@ -423,6 +439,8 @@ class HttpFileUploadManager::Private {
 public:
     Client *client = nullptr;
     QPointer<QNetworkAccessManager> qnam;
+    int discoStatus = 0;
+    QList<HttpFileUpload::HttpHost> discoHosts;
     bool externalQnam = false;
     QLinkedList<HttpFileUpload::HttpHost> hosts;
 };
@@ -439,6 +457,11 @@ HttpFileUploadManager::HttpFileUploadManager(Client *parent) :
 HttpFileUploadManager::~HttpFileUploadManager()
 {
     delete d;
+}
+
+int HttpFileUploadManager::discoveryStatus() const
+{
+    return d->discoStatus;
 }
 
 void HttpFileUploadManager::setNetworkAccessManager(QNetworkAccessManager *qnam)
@@ -463,4 +486,14 @@ HttpFileUpload* HttpFileUploadManager::upload(QIODevice *source, size_t fsize, c
     hfu->setNetworkAccessManager(qnam);
     QMetaObject::invokeMethod(hfu, "start", Qt::QueuedConnection);
     return hfu;
+}
+
+const QList<HttpFileUpload::HttpHost> &HttpFileUploadManager::discoHosts() const
+{
+    return d->discoHosts;
+}
+
+void HttpFileUploadManager::setDiscoHosts(const QList<HttpFileUpload::HttpHost> &hosts)
+{
+    d->discoStatus = hosts.size()? DiscoFound : DiscoNotFound;
 }

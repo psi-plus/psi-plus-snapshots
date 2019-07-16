@@ -147,10 +147,18 @@ class HttpFileUploadManager : public QObject
 {
     Q_OBJECT
 public:
+    enum {
+        DiscoNone      = 0x0,
+        DiscoNotFound  = 0x1,
+        DiscoFound     = 0x2
+    };
+
     typedef std::function<void(bool,const QString &)> Callback; // params: success, detail. where detail could be a "get" url
 
     HttpFileUploadManager(Client *parent);
     ~HttpFileUploadManager();
+
+    int discoveryStatus() const;
 
     /**
      * @brief setNetworkAccessManager sets network access manager to do http requests.
@@ -187,6 +195,10 @@ public:
                            const QString &mType = QString());
 
 private:
+    friend class HttpFileUpload;
+    const QList<HttpFileUpload::HttpHost> &discoHosts() const;
+    void setDiscoHosts(const QList<HttpFileUpload::HttpHost> &hosts);
+
     class Private;
     Private *d;
 };
