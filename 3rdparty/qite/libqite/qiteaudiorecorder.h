@@ -59,6 +59,7 @@ private:
 
 signals:
     void stateChanged();
+    void recordingStarted();
     void recorded();
     void error(const QString &message);
 public slots:
