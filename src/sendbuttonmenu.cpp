@@ -40,7 +40,7 @@ SendButtonTemplatesEditor::SendButtonTemplatesEditor(QWidget* parent)
         if (menu_list.size() == 0)
             continue;
         // find subitems if exists
-        QTreeWidgetItem *item = NULL;
+        QTreeWidgetItem *item = nullptr;
         QString menu_str = "";
         int j = menu_list.size() - 2;
         for (; j >= 0; j--) {
@@ -50,7 +50,7 @@ SendButtonTemplatesEditor::SendButtonTemplatesEditor(QWidget* parent)
                 menu_str = menu_str2;
                 menu_str2.append("/" + menu_list.at(k));
             }
-            item = subitems.value(menu_str2, NULL);
+            item = subitems.value(menu_str2, nullptr);
             if (item) {
                 menu_str = menu_str2;
                 ++j;
@@ -311,7 +311,6 @@ void SendButtonTemplatesEditor::reject()
 
 SendButtonTemplatesMenu::SendButtonTemplatesMenu(QWidget* parent)
     : QMenu(parent)
-    , mapper(NULL)
     , ps_(false)
 {
     setSeparatorsCollapsible(true);
@@ -386,9 +385,6 @@ QAction *SendButtonTemplatesMenu::makeAction(QString text)
 void SendButtonTemplatesMenu::update()
 {
     clearMenu(this);
-    if (mapper)
-        delete mapper;
-    mapper = new QSignalMapper(this);
 
     pasteSendAct = new QAction(IconsetFactory::icon("psi/action_paste_and_send").icon(), tr("Paste and &Send"), this);
     connect(pasteSendAct, SIGNAL(triggered()), SIGNAL(doPasteAndSend()));
@@ -415,7 +411,7 @@ void SendButtonTemplatesMenu::update()
         if (menu_list.size() == 0)
             continue;
         // find submenus if exists
-        QAction *m_act = NULL;
+        QAction *m_act = nullptr;
         QString menu_str = "";
         int j = menu_list.size() - 2;
         for (; j >= 0; j--) {
@@ -425,7 +421,7 @@ void SendButtonTemplatesMenu::update()
                 menu_str = menu_str2;
                 menu_str2.append("/" + menu_list.at(k));
             }
-            m_act = submenus.value(menu_str2, NULL);
+            m_act = submenus.value(menu_str2, nullptr);
             if (m_act) {
                 menu_str = menu_str2;
                 ++j;
@@ -451,8 +447,9 @@ void SendButtonTemplatesMenu::update()
             QAction *c_act = makeAction(SendButtonTemplatesMenu::stripSlashes(str1));
             smenu->addAction(c_act);
             if (j == (sub_cnt - 1)) {
-                connect(c_act, SIGNAL(triggered()), mapper, SLOT(map()));
-                mapper->setMapping(c_act, SendButtonTemplatesMenu::stripSlashes(str1));
+                connect(c_act, &QAction::triggered, this, [this, str1](){
+                    emit doTemplateText(SendButtonTemplatesMenu::stripSlashes(str1));
+                });
                 break;
             } else {
                 smenu = new QMenu(this);
@@ -462,7 +459,6 @@ void SendButtonTemplatesMenu::update()
             }
         }
     }
-    connect(mapper, SIGNAL(mapped(const QString &)), SIGNAL(doTemplateText(const QString &)));
 }
 
 void SendButtonTemplatesMenu::clickOnlyPaste()

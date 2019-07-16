@@ -4,7 +4,6 @@
 #include <QDialog>
 #include <QMenu>
 #include <QPointer>
-#include <QSignalMapper>
 
 #include "ui_sendbuttontemplateseditor.h"
 
@@ -12,7 +11,7 @@ class SendButtonTemplatesEditor : public QDialog
 {
     Q_OBJECT
 public:
-    SendButtonTemplatesEditor(QWidget* parent = 0);
+    SendButtonTemplatesEditor(QWidget* parent = nullptr);
 
 private:
     Ui::SendButtonTemplatesEditor ui_;
@@ -55,7 +54,6 @@ public:
     static QString stripSlashes(QString);
 
 private:
-    QSignalMapper *mapper;
     bool ps_;
     QAction *pasteSendAct;
     QAction *onlyPaste;
