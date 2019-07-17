@@ -125,6 +125,7 @@ class ITEMediaOpener
 public:
     virtual QIODevice *open(QUrl &url) = 0;
     virtual void close(QIODevice *dev) = 0;
+    virtual QVariant metadata(const QUrl &url) = 0;
 };
 
 #endif // QITE_H

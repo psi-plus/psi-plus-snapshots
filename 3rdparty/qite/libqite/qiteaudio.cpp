@@ -261,6 +261,29 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
     // check metadata. maybe it's ready or we need to query it
     auto mdState = audioFormat.metaDataState();
     if (mdState != AudioMessageFormat::Finished) {
+
+        auto opener = audioFormat.mediaOpener();
+        if (opener) {
+            QVariant metadata = opener->metadata(audioFormat.url());
+            if (metadata.isValid()) {
+                auto id = audioFormat.id();
+                QTimer::singleShot(0, this, [this, id, posInDocument, metadata](){
+                    QTextCursor cursor = itc->findElement(id, posInDocument);
+                    if (cursor.isNull())
+                        return; // was deleted so quickly?
+
+                    auto audioFormat = AudioMessageFormat::fromCharFormat(cursor.charFormat());
+                    if (audioFormat.metaDataState() == AudioMessageFormat::Finished)
+                        return;
+
+                    QVariantMap vm = metadata.toMap();
+                    audioFormat.setMetaData(vm.value(QLatin1String("histogram")));
+                    audioFormat.setMetaDataState(AudioMessageFormat::Finished);
+                    cursor.setCharFormat(audioFormat);
+                });
+            }
+        }
+
         if (!autoFetchMetadata || mdState == AudioMessageFormat::RequestInProgress) {
             return;
         }

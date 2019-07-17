@@ -29,7 +29,7 @@ namespace Jingle {
 namespace FileTransfer {
 
 const QString NS = QStringLiteral("urn:xmpp:jingle:apps:file-transfer:5");
-const QString SPECTRUM_NS = QStringLiteral("iris.psi-im.org/spectrum");
+const QString HISTOGRAM_NS = QStringLiteral("urn:audio:histogram");
 
 QDomElement Range::toXml(QDomDocument *doc) const
 {
@@ -63,7 +63,7 @@ public:
     bool      hasSize = false;
     QList<Hash> hashes;
     Thumbnail thumbnail;
-    File::Spectrum audioSpectrum;
+    File::Histogram audioHistogram;
 };
 
 File::File()
@@ -100,7 +100,7 @@ File::File(const QDomElement &file)
     Range       range;
     QList<Hash> hashes;
     Thumbnail   thumbnail;
-    Spectrum    spectrum;
+    Histogram   histogram;
 
     bool ok;
 
@@ -171,25 +171,25 @@ File::File(const QDomElement &file)
 
         } else if (ce.tagName() == QLatin1String("thumbnail")) {
             thumbnail = Thumbnail(ce);
-        } else if (ce.tagName() == QLatin1String("spectrum") && (ce.namespaceURI() == SPECTRUM_NS || ce.namespaceURI() == SPECTRUM_NS)) {
+        } else if (ce.tagName() == QLatin1String("histogram") && (ce.namespaceURI() == HISTOGRAM_NS || ce.namespaceURI() == HISTOGRAM_NS)) {
             QStringList spv = ce.text().split(',');
-            spectrum.bars.reserve(spv.count());
-            std::transform(spv.begin(), spv.end(), std::back_inserter(spectrum.bars), [](const QString &v){ return v.toUInt(); });
+            histogram.bars.reserve(spv.count());
+            std::transform(spv.begin(), spv.end(), std::back_inserter(histogram.bars), [](const QString &v){ return v.toUInt(); });
             auto c = ce.attribute(QStringLiteral("coding")).toLatin1();
             if (c == "u8")
-                spectrum.coding = File::Spectrum::Coding::U8;
+                histogram.coding = File::Histogram::Coding::U8;
             else if (c == "s8")
-                spectrum.coding = File::Spectrum::Coding::S8;
+                histogram.coding = File::Histogram::Coding::S8;
             else if (c == "u16")
-                spectrum.coding = File::Spectrum::Coding::U16;
+                histogram.coding = File::Histogram::Coding::U16;
             else if (c == "s16")
-                spectrum.coding = File::Spectrum::Coding::S16;
+                histogram.coding = File::Histogram::Coding::S16;
             else if (c == "u32")
-                spectrum.coding = File::Spectrum::Coding::U32;
+                histogram.coding = File::Histogram::Coding::U32;
             else if (c == "s32")
-                spectrum.coding = File::Spectrum::Coding::S32;
+                histogram.coding = File::Histogram::Coding::S32;
             else
-                spectrum.bars.clear(); // drop invalid spectrum
+                histogram.bars.clear(); // drop invalid histogram
         }
     }
 
@@ -204,7 +204,7 @@ File::File(const QDomElement &file)
     p->range = range;
     p->hashes = hashes;
     p->thumbnail = thumbnail;
-    p->audioSpectrum = spectrum;
+    p->audioHistogram = histogram;
 
     d = p;
 }
@@ -239,20 +239,20 @@ QDomElement File::toXml(QDomDocument *doc) const
     if (d->thumbnail.isValid()) {
         el.appendChild(d->thumbnail.toXml(doc));
     }
-    if (d->audioSpectrum.bars.count()) {
-        auto sel = el.appendChild(doc->createElementNS(SPECTRUM_NS, QString::fromLatin1("spectrum"))).toElement();
+    if (d->audioHistogram.bars.count()) {
+        auto sel = el.appendChild(doc->createElementNS(HISTOGRAM_NS, QString::fromLatin1("histogram"))).toElement();
         const char* s[] = {"u8","s8","u16","s16","u32","s32"};
-        sel.setAttribute(QString::fromLatin1("coding"), QString::fromLatin1(s[d->audioSpectrum.coding]));
+        sel.setAttribute(QString::fromLatin1("coding"), QString::fromLatin1(s[d->audioHistogram.coding]));
         QStringList sl;
-        std::transform(d->audioSpectrum.bars.begin(), d->audioSpectrum.bars.end(), std::back_inserter(sl),
+        std::transform(d->audioHistogram.bars.begin(), d->audioHistogram.bars.end(), std::back_inserter(sl),
                        [this](quint32 v){
-            switch (d->audioSpectrum.coding) {
-            case Spectrum::U8:  return QString::number(quint8(v));
-            case Spectrum::S8:  return QString::number(qint8(v));
-            case Spectrum::U16: return QString::number(quint16(v));
-            case Spectrum::S16: return QString::number(qint16(v));
-            case Spectrum::U32: return QString::number(quint32(v));
-            case Spectrum::S32: return QString::number(qint32(v));
+            switch (d->audioHistogram.coding) {
+            case Histogram::U8:  return QString::number(quint8(v));
+            case Histogram::S8:  return QString::number(qint8(v));
+            case Histogram::U16: return QString::number(quint16(v));
+            case Histogram::S16: return QString::number(qint16(v));
+            case Histogram::U32: return QString::number(quint32(v));
+            case Histogram::S32: return QString::number(qint32(v));
             }
             return QString();
         });
@@ -342,9 +342,9 @@ Thumbnail File::thumbnail() const
     return d? d->thumbnail: Thumbnail();
 }
 
-File::Spectrum File::audioSpectrum() const
+File::Histogram File::audioHistogram() const
 {
-    return d? d->audioSpectrum: Spectrum();
+    return d? d->audioHistogram: Histogram();
 }
 
 void File::setDate(const QDateTime &date)
@@ -387,6 +387,11 @@ void File::setRange(const Range &range)
 void File::setThumbnail(const Thumbnail &thumb)
 {
     ensureD()->thumbnail = thumb;
+}
+
+void File::setAudioHistogram(const File::Histogram &histogram)
+{
+    d->audioHistogram = histogram;
 }
 
 File::Private *File::ensureD()
