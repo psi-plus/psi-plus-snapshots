@@ -118,8 +118,8 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
         if (_recorder->state() == QAudioRecorder::StoppedState && _maxVolume) {
             // compress histogram..
             auto volumeK = 255.0 / double(_maxVolume); // amplificator
-            if (volumeK > 2) {
-                volumeK = 2; // don't be mad on showing silence
+            if (volumeK > 8) {
+                volumeK = 8; // don't be mad on showing silence
             }
             auto step = _histogram.size() / double(ITEAudioController::HistogramCompressedSize);
             _compressedHistorgram.reserve(ITEAudioController::HistogramCompressedSize);
