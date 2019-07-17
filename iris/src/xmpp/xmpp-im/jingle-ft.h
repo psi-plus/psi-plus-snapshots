@@ -80,24 +80,6 @@ public:
     Range     range() const;
     Thumbnail thumbnail() const;
     Histogram  audioHistogram() const;
-    template<typename T>
-    QList<T> audioHistogram() const
-    {
-        QList<T> ret;
-        auto hg = audioHistogram();
-        std::function<quint8(quint32)> normalizer;
-        switch (hg.coding) {
-        case Histogram::U8:  normalizer = [](quint32 v){ return v/T(255);             }; break;
-        case Histogram::S8:  normalizer = [](quint32 v){ return std::abs(v/T(128));   }; break;
-        case Histogram::U16: normalizer = [](quint32 v){ return v/T(2<<16);           }; break;
-        case Histogram::S16: normalizer = [](quint32 v){ return std::abs(v/T(2<<15)); }; break;
-        case Histogram::U32: normalizer = [](quint32 v){ return quint64(v)/T(2L<<32);          }; break;
-        case Histogram::S32: normalizer = [](quint32 v){ return std::abs(qint64(v)/T(2L<<31)); }; break;
-        }
-        if (normalizer)
-            std::transform(hg.bars.begin(), hg.bars.end(), std::back_inserter(ret), normalizer);
-        return ret;
-    }
 
     void setDate(const QDateTime &date);
     void setDescription(const QString &desc);
