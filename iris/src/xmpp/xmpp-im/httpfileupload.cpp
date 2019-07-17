@@ -174,8 +174,10 @@ void HttpFileUpload::start()
 void HttpFileUpload::tryNextServer()
 {
     if (d->httpHosts.isEmpty()) { // if empty as the last resort check all services
-        d->result.statusCode   = HttpFileUpload::ErrorCode::NoUploadService;
-        d->result.statusString = "All http services are either non compliant or returned errors";
+        if (d->result.statusCode == HttpFileUpload::ErrorCode::NoError) {
+            d->result.statusCode   = HttpFileUpload::ErrorCode::NoUploadService;
+            d->result.statusString = "All http services are either non compliant or returned errors";
+        }
         done(State::Error);
         return;
     }
@@ -233,6 +235,7 @@ void HttpFileUpload::tryNextServer()
             } else {
                 d->result.statusCode   = ErrorCode::HttpFailed;
                 d->result.statusString = reply->errorString();
+                qDebug("http upload failed: %s", qPrintable(d->result.statusString));
                 if (d->httpHosts.isEmpty())
                     done(State::Error);
                 else
@@ -496,4 +499,5 @@ const QList<HttpFileUpload::HttpHost> &HttpFileUploadManager::discoHosts() const
 void HttpFileUploadManager::setDiscoHosts(const QList<HttpFileUpload::HttpHost> &hosts)
 {
     d->discoStatus = hosts.size()? DiscoFound : DiscoNotFound;
+    d->discoHosts = hosts;
 }
