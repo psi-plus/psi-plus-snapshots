@@ -579,7 +579,6 @@ QLineEdit#le_status_text {
                 <chat_pin_tab type="QKeySequence"></chat_pin_tab>
                 <chat_ps type="QKeySequence"></chat_ps>
                 <chat_templates type="QKeySequence"></chat_templates>
-                <chat_unpin_tab type="QKeySequence"></chat_unpin_tab>
                 <chat_voice type="QKeySequence"></chat_voice>
                 <gchat_clear type="QKeySequence"></gchat_clear>
                 <gchat_configure type="QKeySequence"></gchat_configure>
@@ -589,7 +588,6 @@ QLineEdit#le_status_text {
                 <gchat_ps type="QKeySequence"></gchat_ps>
                 <gchat_templates type="QKeySequence"></gchat_templates>
                 <gchat_pin_tab type="QKeySequence"></gchat_pin_tab>
-                <gchat_unpin_tab type="QKeySequence"></gchat_unpin_tab>
             </alist>
             <chat comment="Shortcuts in the chat dialog">
                 <next-tab type="QVariantList" comment="Switch to the next tab">
