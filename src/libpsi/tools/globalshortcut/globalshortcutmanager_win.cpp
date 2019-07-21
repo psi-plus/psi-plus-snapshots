@@ -37,7 +37,7 @@ class GlobalShortcutManager::KeyTrigger::Impl : public QWidget
         virtual bool nativeEventFilter(const QByteArray &eventType, void *m, long *result) Q_DECL_OVERRIDE
         {
             if (eventType == "windows_generic_MSG") {
-                return impl->winEvent(static_cast<MSG*>(m), result);
+                return impl->nativeEvent(eventType, static_cast<MSG*>(m), result);
             }
             return false;
         }
@@ -54,7 +54,7 @@ public:
     {
         UINT mod = 0, key = 0;
         if (convertKeySequence(ks, &mod, &key))
-            if (RegisterHotKey((HWND)winId(), nextId, mod, key))
+            if (RegisterHotKey(HWND(winId()), nextId, mod, key))
                 id_ = nextId++;
     }
 
@@ -65,14 +65,15 @@ public:
     {
         delete filter;
         if (id_)
-            UnregisterHotKey((HWND)winId(), id_);
+            UnregisterHotKey(HWND(winId()), id_);
     }
 
     /**
      * Triggers triggered() signal when the hotkey is activated.
      */
-    bool winEvent(MSG* m, long* result)
+    bool nativeEvent(const QByteArray &eventType, MSG* m, long* result)
     {
+        Q_UNUSED(eventType);
         if (m->message == WM_HOTKEY && m->wParam == id_) {
             emit trigger_->triggered();
             return true;
@@ -219,5 +220,5 @@ GlobalShortcutManager::KeyTrigger::KeyTrigger(const QKeySequence& key)
 GlobalShortcutManager::KeyTrigger::~KeyTrigger()
 {
     delete d;
-    d = 0;
+    d = nullptr;
 }
