@@ -105,7 +105,6 @@ ChatDlg::ChatDlg(const Jid& jid, PsiAccount* pa, TabManager* tabManager)
     pending_ = 0;
     keepOpen_ = false;
     warnSend_ = false;
-    selfDestruct_ = nullptr;
     transid_ = -1;
     key_ = "";
     lastWasEncrypted_ = false;
@@ -270,19 +269,7 @@ bool ChatDlg::readyToHide()
     }
     keepOpen_ = false; // tabdlg calls readyToHide twice on tabdlg close, only display message once.
 
-    // destroy the dialog if delChats is dcClose
-    QString del = PsiOptions::instance()->getOption("options.ui.chat.delete-contents-after").toString();
-    if (del == "instant") {
-        setAttribute(Qt::WA_DeleteOnClose);
-    }
-    else {
-        if (del == "hour") {
-            setSelfDestruct(60);
-        }
-        else if (del == "day") {
-            setSelfDestruct(60 * 24);
-        }
-    }
+    setAttribute(Qt::WA_DeleteOnClose);
 
     // Reset 'contact is composing' & cancel own composing event
     resetComposing();
@@ -324,7 +311,7 @@ void ChatDlg::hideEvent(QHideEvent* e)
 
 void ChatDlg::showEvent(QShowEvent *)
 {
-    setSelfDestruct(0);
+//
 }
 
 void ChatDlg::logSelectionChanged()
@@ -627,22 +614,8 @@ void ChatDlg::optionsUpdate()
     setShortcuts();
 
     if (!isTabbed() && isHidden()) {
-        QString del = PsiOptions::instance()->getOption("options.ui.chat.delete-contents-after").toString();
-        if (del == "instant") {
-            deleteLater();
-            return;
-        }
-        else {
-            if (del == "hour") {
-                setSelfDestruct(60);
-            }
-            else if (del == "day") {
-                setSelfDestruct(60 * 24);
-            }
-            else {
-                setSelfDestruct(0);
-            }
-        }
+        deleteLater();
+        return;
     }
 }
 
@@ -670,30 +643,9 @@ void ChatDlg::doClear()
     chatView()->clear();
 }
 
-void ChatDlg::setSelfDestruct(int minutes)
-{
-    if (minutes <= 0) {
-        if (selfDestruct_) {
-            delete selfDestruct_;
-            selfDestruct_ = nullptr;
-        }
-        return;
-    }
-
-    if (!selfDestruct_) {
-        selfDestruct_ = new QTimer(this);
-        connect(selfDestruct_, SIGNAL(timeout()), SLOT(deleteLater()));
-    }
-
-    selfDestruct_->start(minutes * 60000);
-}
-
 QString ChatDlg::desiredCaption() const
 {
-    QString cap = PsiOptions::instance()->getOption("options.ui.chat.caption").toString();
-    if(!cap.isEmpty()) {
-        return cap;
-    }
+    QString cap = "";
 
     if (pending_ > 0) {
         cap += "* ";

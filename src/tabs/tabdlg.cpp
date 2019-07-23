@@ -547,10 +547,7 @@ void TabDlg::activated()
 
 QString TabDlg::desiredCaption() const
 {
-    QString cap = PsiOptions::instance()->getOption("options.ui.chat.caption").toString();
-    if(!cap.isEmpty()) {
-        return cap;
-    }
+    QString cap = "";
     uint pending = 0;
     foreach(TabbableWidget* tab, tabs_) {
         pending += uint(tab->unreadMessageCount());
@@ -593,13 +590,8 @@ void TabDlg::closeEvent(QCloseEvent* closeEvent)
             return;
         }
     }
-    if(PsiOptions::instance()->getOption("options.ui.chat.hide-when-closing").toBool()) {
-        hide();
-    }
-    else {
-        foreach(TabbableWidget* tab, tabs_) {
-            closeTab(tab);
-        }
+    foreach(TabbableWidget* tab, tabs_) {
+        closeTab(tab);
     }
 }
 
@@ -895,10 +887,6 @@ void TabDlg::tabCloseRequested(int i)
             selectTab(static_cast<TabbableWidget*>(tabWidget_->page(i)));
             return;
         }
-
-    if (PsiOptions::instance()->getOption("options.ui.chat.hide-when-closing").toBool())
-        hideTab(static_cast<TabbableWidget*>(tabWidget_->page(i)));
-    else
         closeTab(static_cast<TabbableWidget*>(tabWidget_->page(i)));
 }
 
