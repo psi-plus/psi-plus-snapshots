@@ -1,0 +1,5 @@
+
+[Desktop Action SelectProfile]
+Exec=psi-plus --choose-profile
+Name=Start with another profile
+Icon=psi-plus 
