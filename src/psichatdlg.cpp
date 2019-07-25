@@ -820,6 +820,7 @@ void PsiChatDlg::optionsUpdate()
 
     updateToolbuttons();
     ChatDlg::optionsUpdate();
+    ui_.mle->chatEdit()->addSoundRecButton();
 // typeahead find bar
     typeahead_->optionsUpdate();
 }
