@@ -300,6 +300,7 @@ void PsiChatDlg::initUi()
 #ifdef PSI_PLUGINS
     PluginManager::instance()->setupChatTab(this, account(), jid().full());
 #endif
+    ui_.mle->chatEdit()->addSoundRecButton();
 }
 
 void PsiChatDlg::verticalSplitterMoved(int, int)
