@@ -456,6 +456,7 @@ public:
 
     inline void addExternalManager(const QString &ns) { externalManagers.append(ns); }
     inline void forgetExternalSession(const QString &sid) { externalSessions.removeOne(sid); }
+    inline void registerExternalSession(const QString &sid) { externalSessions.append(sid); }
 
 
     bool take(const QDomElement &iq)
@@ -1706,6 +1707,11 @@ Client *Manager::client() const
 void Manager::addExternalManager(const QString &ns)
 {
     d->pushTask->addExternalManager(ns);
+}
+
+void Manager::registerExternalSession(const QString &sid)
+{
+    d->pushTask->registerExternalSession(sid);
 }
 
 void Manager::forgetExternalSession(const QString &sid)

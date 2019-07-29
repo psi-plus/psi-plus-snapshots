@@ -574,6 +574,7 @@ public:
     // if we have another jingle manager we can add its contents' namespaces here.
     void addExternalManager(const QString &ns);
     // on outgoing session destroy an external manager should call this function.
+    void registerExternalSession(const QString &sid);
     void forgetExternalSession(const QString &sid);
 
     void setRedirection(const Jid &to);
