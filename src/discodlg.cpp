@@ -413,7 +413,7 @@ const DiscoItem &DiscoListItem::item() const
 
 DiscoDlg *DiscoListItem::dlg() const
 {
-    return (DiscoDlg *)treeWidget()->parent();
+    return static_cast<DiscoDlg *>(treeWidget()->parent());
 }
 
 bool DiscoListItem::autoItemsEnabled() const
@@ -523,14 +523,14 @@ void DiscoListItem::updateItemsFinished(const DiscoList &list)
     treeWidget()->setUpdatesEnabled(false);
 
     QHash<QString, DiscoListItem*> children;
-    DiscoBaseItem *child = (DiscoBaseItem *)QTreeWidgetItem::child(0);
+    DiscoBaseItem *child = static_cast<DiscoBaseItem *>(QTreeWidgetItem::child(0));
     DiscoListItem *item;
     for ( int i = 1; child; ++i ) {
         if (!moreItem && child->type() != MoreItemsType) {
-            item = (DiscoListItem *)child;
+            item = static_cast<DiscoListItem *>(child);
             children.insert(item->hash(), item);
         }
-        child = (DiscoListItem *)QTreeWidgetItem::child(i);
+        child = static_cast<DiscoListItem *>(QTreeWidgetItem::child(i));
     }
 
     // add/update items
@@ -582,11 +582,11 @@ void DiscoListItem::autoItemsChildren() const
     if ( !autoItemsEnabled() )
         return;
 
-    DiscoListItem *child = (DiscoListItem *)QTreeWidgetItem::child(0);
+    DiscoListItem *child = static_cast<DiscoListItem *>(QTreeWidgetItem::child(0));
     for ( int i = 1; child; ++i ) {
         child->updateItems(true);
 
-        child = (DiscoListItem *)QTreeWidgetItem::child(i);
+        child = static_cast<DiscoListItem *>(QTreeWidgetItem::child(i));
     }
 }
 
@@ -731,8 +731,8 @@ void DiscoListView::resizeEvent(QResizeEvent* e)
     h->resizeSection(2, h->fontMetrics().width(headerItem()->text(2)) * 2);
 #endif
     float remainingWidth = viewport()->width() - h->sectionSize(2);
-    h->resizeSection(1, int(remainingWidth * 0.3));
-    h->resizeSection(0, int(remainingWidth * 0.7));
+    h->resizeSection(1, int(remainingWidth * 0.3f));
+    h->resizeSection(0, int(remainingWidth * 0.7f));
 
     //h->adjustHeaderSize();
 }
@@ -746,7 +746,7 @@ bool DiscoListView::maybeTip(const QPoint &pos)
     if (!twi || twi->type() == MoreItemsType)
         return false;
 
-    DiscoListItem* i = (DiscoListItem*)twi;
+    DiscoListItem* i = static_cast<DiscoListItem*>(twi);
 
     // NAME <JID> (Node "NODE")
     //
@@ -1125,7 +1125,7 @@ void DiscoDlg::Private::actionStop()
 
 void DiscoDlg::Private::actionRefresh()
 {
-    DiscoListItem *it = (DiscoListItem *)dlg->lv_disco->currentItem();
+    DiscoListItem *it = static_cast<DiscoListItem *>(dlg->lv_disco->currentItem());
     if ( !it )
         return;
 
@@ -1135,7 +1135,7 @@ void DiscoDlg::Private::actionRefresh()
 
 void DiscoDlg::Private::actionBrowse()
 {
-    DiscoListItem *it = (DiscoListItem *)dlg->lv_disco->currentItem();
+    DiscoListItem *it = static_cast<DiscoListItem *>(dlg->lv_disco->currentItem());
     if ( !it )
         return;
 
@@ -1284,7 +1284,7 @@ bool DiscoDlg::Private::eventFilter (QObject *object, QEvent *event)
             QTreeWidgetItem *twi = dlg->lv_disco->currentItem();
             if (!twi || twi->type() == MoreItemsType)
                 return true;
-            DiscoListItem *it = (DiscoListItem *)twi;
+            DiscoListItem *it = static_cast<DiscoListItem *>(twi);
 
             // prepare features list
             QList<long> idFeatures;
@@ -1303,7 +1303,7 @@ bool DiscoDlg::Private::eventFilter (QObject *object, QEvent *event)
             {    // ensure, that there's in no duplicated IDs inside. FIXME: optimize this, anyone?
                 long id = 0, count = 0;
                 QList<long>::Iterator it;
-                while ( count < (long)idFeatures.count() ) {
+                while ( count < long(idFeatures.count()) ) {
                     bool found = false;
 
                     for (it = idFeatures.begin(); it != idFeatures.end(); ++it) {
@@ -1345,7 +1345,7 @@ bool DiscoDlg::Private::eventFilter (QObject *object, QEvent *event)
             {
                 QList<long>::Iterator it = ids.begin();
                 for ( ; it != ids.end(); ++it)
-                    actions.insert(fm->addAction(Features::name(*it)), *it + 10000); // TODO: add pixmap
+                    actions.insert(fm->addAction(Features::name(*it)), int(*it) + 10000); // TODO: add pixmap
             }
 
             //p.insertSeparator();
@@ -1375,7 +1375,7 @@ bool DiscoDlg::Private::eventFilter (QObject *object, QEvent *event)
 
 void DiscoDlg::Private::actionActivated(int id)
 {
-    DiscoListItem *it = (DiscoListItem *)dlg->lv_disco->currentItem();
+    DiscoListItem *it = static_cast<DiscoListItem *>(dlg->lv_disco->currentItem());
     if ( !it )
         return;
 
@@ -1440,8 +1440,8 @@ DiscoDlg::~DiscoDlg()
     delete d;
 
     // save options
-    PsiOptions::instance()->setOption("options.ui.service-discovery.automatically-get-items", (bool) ck_autoItems->isChecked());
-    PsiOptions::instance()->setOption("options.ui.service-discovery.automatically-get-info", (bool) ck_autoInfo->isChecked());
+    PsiOptions::instance()->setOption("options.ui.service-discovery.automatically-get-items", bool(ck_autoItems->isChecked()));
+    PsiOptions::instance()->setOption("options.ui.service-discovery.automatically-get-info", bool(ck_autoInfo->isChecked()));
 }
 
 void DiscoDlg::doDisco(QString host, QString node)
