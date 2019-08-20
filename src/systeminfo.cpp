@@ -258,7 +258,7 @@ SystemInfo::SystemInfo() : QObject(QCoreApplication::instance())
             os_name_str_ = QSysInfo::productType();
             os_str_ = QSysInfo::prettyProductName();
     }
-# else //Mac users please review next part of code
+# else
     auto current = QOperatingSystemVersion::current();
     if(current.type() == QOperatingSystemVersion::MacOS && current.minorVersion() > 12) {
         os_name_str_ = "macOS";
