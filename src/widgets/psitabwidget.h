@@ -20,15 +20,18 @@
 #ifndef PSITABWIDGET_H
 #define PSITABWIDGET_H
 
-#include <QTabWidget>
-#include <QDragEnterEvent>
 #include "psitabbar.h"
 
-class QVBoxLayout;
+#include <QDragEnterEvent>
+#include <QTabWidget>
+
+#define PSITABDRAGMIMETYPE "x-drag-drop/x-psi-tab-drag"
+
 class QHBoxLayout;
-class QToolButton;
-class QStackedLayout;
 class QMenu;
+class QStackedLayout;
+class QToolButton;
+class QVBoxLayout;
 
 /**
  * \class PsiTabWidget
@@ -107,7 +110,4 @@ private:
     QMenu *menu_;
 };
 
-
-#define PSITABDRAGMIMETYPE "x-drag-drop/x-psi-tab-drag"
-
-#endif
+#endif // PSITABWIDGET_H

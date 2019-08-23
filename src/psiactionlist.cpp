@@ -18,20 +18,19 @@
  */
 
 #include "psiactionlist.h"
+
+#include "iconset.h"
+#include "mainwin_p.h"
+#ifdef PSI_PLUGINS
+#    include "pluginmanager.h"
+#endif
+#include "psioptions.h"
 #include "shortcutmanager.h"
 
 #include <QObject>
 #include <QPointer>
 #include <map>
 #include <utility>
-
-#include "iconset.h"
-#include "psioptions.h"
-#ifdef PSI_PLUGINS
-#include "pluginmanager.h"
-#endif
-
-#include "mainwin_p.h"
 
 using namespace std;
 
@@ -207,7 +206,6 @@ void PsiActionList::Private::createMainWin()
 
         createActionList( tr( "Buttons" ), Actions_MainWin, actions );
     }
-
 
     {
         IconAction *add_act = nullptr;

@@ -20,10 +20,10 @@
 #ifndef DISCODLG_H
 #define DISCODLG_H
 
-#include <QDialog>
-
 #include "ui_disco.h"
 #include "xmpp_jid.h"
+
+#include <QDialog>
 
 class PsiAccount;
 class QString;
@@ -51,6 +51,4 @@ private:
     Private *d;
 };
 
-
-#endif
-
+#endif // DISCODLG_H
