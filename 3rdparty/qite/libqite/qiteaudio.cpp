@@ -57,7 +57,7 @@ public:
     Q_DECLARE_FLAGS(Flags, Flag)
 
     using InteractiveTextFormat::InteractiveTextFormat;
-    AudioMessageFormat(int objectType, const QUrl &url, ITEMediaOpener *mediaOpener = nullptr,
+    AudioMessageFormat(int objectType, ElementId id, const QUrl &url, ITEMediaOpener *mediaOpener = nullptr,
                        quint32 position = 0, const Flags &state = Flags());
 
     Flags state() const;
@@ -79,9 +79,9 @@ public:
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(AudioMessageFormat::Flags)
 
-AudioMessageFormat::AudioMessageFormat(int objectType, const QUrl &url, ITEMediaOpener *mediaOpener,
+AudioMessageFormat::AudioMessageFormat(int objectType, ElementId id, const QUrl &url, ITEMediaOpener *mediaOpener,
                                        quint32 position, const Flags &state)
-    : InteractiveTextFormat(objectType)
+    : InteractiveTextFormat(objectType, id)
 {
     setProperty(Url, url);
     setProperty(MediaOpener, QVariant::fromValue<void*>(mediaOpener));
@@ -202,7 +202,6 @@ void ITEAudioController::updateGeomtry()
 
 void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posInDocument, const QTextFormat &format)
 {
-    Q_UNUSED(posInDocument);
     const AudioMessageFormat audioFormat = AudioMessageFormat::fromCharFormat(format.toCharFormat());
     //qDebug() << audioFormat.id();
 
@@ -361,11 +360,18 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
     //runnerRect.set
 }
 
+
+QTextCharFormat ITEAudioController::makeFormat(const QUrl &audioSrc, ITEMediaOpener *mediaOpener) const
+{
+    AudioMessageFormat fmt(objectType, itc->nextId(), audioSrc, mediaOpener);
+    fmt.setFontPointSize(itc->textEdit()->currentFont().pointSize());
+    return fmt;
+}
+
 void ITEAudioController::insert(const QUrl &audioSrc, ITEMediaOpener *mediaOpener)
 {
-    AudioMessageFormat fmt(objectType, audioSrc, mediaOpener);
-    fmt.setFontPointSize(itc->textEdit()->currentFont().pointSize());
-    itc->insert(fmt);
+    auto fmt = makeFormat(audioSrc, mediaOpener);
+    itc->insert(static_cast<InteractiveTextFormat>(fmt));
 }
 
 bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QTextCursor &selected)
@@ -501,7 +507,7 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                     });
                     QObject::connect(player, static_cast<void(QMediaPlayer::*)(QMediaPlayer::Error)>(&QMediaPlayer::error),
                             [=](QMediaPlayer::Error error) {
-                        qDebug() << "Error occured:" << error;
+                        qDebug() << "Error occurred:" << error;
                     });
                 }
                 //player->setVolume(0);

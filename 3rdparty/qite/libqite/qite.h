@@ -42,14 +42,18 @@ public:
 
     typedef quint32 ElementId;
 
-    inline InteractiveTextFormat(int objectType)
-    { setObjectType(objectType); }
+    // just make it public. no reason to keep it protected
+    inline explicit InteractiveTextFormat(const QTextCharFormat &fmt) :
+        QTextCharFormat(fmt) {}
+
+    inline InteractiveTextFormat(int objectType, ElementId id)
+    { setObjectType(objectType); setProperty(Id, id); }
 
     inline ElementId id() const
     { return id(*this); }
 
     static inline ElementId id(const QTextFormat &format)
-    { return format.property(Id).toUInt(); }
+    { return ElementId(format.property(Id).toUInt()); }
 };
 
 class InteractiveTextElementController : public QObject, public QTextObjectInterface
@@ -98,9 +102,10 @@ public:
 
     int registerController(InteractiveTextElementController *elementController);
     void unregisterController(InteractiveTextElementController *elementController);
-    quint32 insert(InteractiveTextFormat &fmt);
+    void insert(const InteractiveTextFormat &fmt);
     QTextCursor findElement(quint32 elementId, int cursorPositionHint = 0);
     void markVisible(const InteractiveTextFormat::ElementId &id);
+    InteractiveTextFormat::ElementId nextId();
 protected:
     bool eventFilter(QObject *obj, QEvent *event);
 private:

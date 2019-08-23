@@ -100,13 +100,15 @@ void InteractiveText::unregisterController(InteractiveTextElementController *ele
     _controllers.remove(elementController->objectType);
 }
 
-quint32 InteractiveText::insert(InteractiveTextFormat &fmt)
+InteractiveTextFormat::ElementId InteractiveText::nextId()
 {
-    auto id = _uniqueElementId++;
-    fmt.setProperty(InteractiveTextFormat::Id, id);
+    return ++_uniqueElementId;
+}
+
+void InteractiveText::insert(const InteractiveTextFormat &fmt)
+{
     _textEdit->textCursor().insertText(QString(QChar::ObjectReplacementCharacter), fmt);
     // TODO check if mouse is already on the element
-    return id;
 }
 
 QTextCursor InteractiveText::findElement(quint32 elementId, int cursorPositionHint)
