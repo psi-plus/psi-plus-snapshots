@@ -80,6 +80,7 @@ public:
     Range     range() const;
     Thumbnail thumbnail() const;
     Histogram  audioHistogram() const;
+    QList<float> audioFloatHistogram() const;
 
     void setDate(const QDateTime &date);
     void setDescription(const QString &desc);

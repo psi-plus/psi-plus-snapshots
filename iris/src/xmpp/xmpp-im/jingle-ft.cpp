@@ -23,6 +23,9 @@
 #include "xmpp_hash.h"
 #include "xmpp_xmlcommon.h"
 
+#include <cmath>
+#include <functional>
+
 namespace XMPP {
 namespace Jingle {
 
@@ -345,6 +348,30 @@ Thumbnail File::thumbnail() const
 File::Histogram File::audioHistogram() const
 {
     return d? d->audioHistogram: Histogram();
+}
+
+QList<float> File::audioFloatHistogram() const
+{
+    QList<float> ret;
+    if (!d->audioHistogram.bars.count())
+        return ret;
+
+    std::function<float(quint32)> normalizer;
+    switch (d->audioHistogram.coding) {
+    case Histogram::U8:  normalizer = [](quint32 v){ return quint8(v) / 255.0f;                      }; break;
+    case Histogram::S8:  normalizer = [](quint32 v){ return std::fabs(qint8(v) / 128.0f);            }; break;
+    case Histogram::U16: normalizer = [](quint32 v){ return quint16(v) / float(1 << 16);             }; break;
+    case Histogram::S16: normalizer = [](quint32 v){ return std::fabs(qint16(v) / float(1 << 15));   }; break;
+    case Histogram::U32: normalizer = [](quint32 v){ return quint32(v) / float(quint64(1) << 32);           }; break;
+    case Histogram::S32: normalizer = [](quint32 v){ return std::fabs(qint32(v) / float(quint64(1) << 31)); }; break;
+    }
+
+    if (normalizer) {
+        ret.reserve(d->audioHistogram.bars.count());
+        std::transform(d->audioHistogram.bars.begin(), d->audioHistogram.bars.end(), std::back_inserter(ret), normalizer);
+    }
+
+    return ret;
 }
 
 void File::setDate(const QDateTime &date)
