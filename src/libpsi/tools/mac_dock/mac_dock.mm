@@ -1,8 +1,8 @@
-#include <Cocoa/Cocoa.h>
-
 #include "mac_dock.h"
 
 #include "privateqt_mac.h"
+
+#include <Cocoa/Cocoa.h>
 
 static NSInteger requestType = 0;
 

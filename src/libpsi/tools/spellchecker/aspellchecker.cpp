@@ -24,12 +24,13 @@
  *
  */
 
-#include <QDir>
-#include <QCoreApplication>
-#include <QtDebug>
+#include "aspellchecker.h"
 
 #include "aspell.h"
-#include "aspellchecker.h"
+
+#include <QCoreApplication>
+#include <QDir>
+#include <QtDebug>
 
 ASpellChecker::ASpellChecker()
     : config_(new_aspell_config())

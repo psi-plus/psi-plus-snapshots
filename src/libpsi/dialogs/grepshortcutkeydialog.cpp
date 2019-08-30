@@ -1,7 +1,7 @@
 /*
  * grepshortcutkeydialog.cpp - a dialog which greps a KeySequence and
  * emits a signal with this KeySequence as Parameter
- * Copyright (C) 2006 Cestonaro Thilo
+ * Copyright (C) 2006  Cestonaro Thilo
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

@@ -18,12 +18,13 @@
 
 #include "groupchatbrowsewindow.h"
 
-#include <QStandardItem>
-#include <QStandardItemModel>
-#include <QMessageBox>
+#include "ui_groupchatbrowsewindow.h"
+
 #include <QInputDialog>
 #include <QMenu>
-#include "ui_groupchatbrowsewindow.h"
+#include <QMessageBox>
+#include <QStandardItem>
+#include <QStandardItemModel>
 
 // TODO: recent list of joins, like original gcjoindlg?
 

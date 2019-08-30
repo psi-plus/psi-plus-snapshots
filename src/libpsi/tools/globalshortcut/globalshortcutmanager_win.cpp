@@ -20,10 +20,10 @@
 #include "globalshortcutmanager.h"
 #include "globalshortcuttrigger.h"
 
-#include <QWidget>
-#include <windows.h>
 #include <QAbstractNativeEventFilter>
 #include <QApplication>
+#include <QWidget>
+#include <windows.h>
 
 class GlobalShortcutManager::KeyTrigger::Impl : public QWidget
 {

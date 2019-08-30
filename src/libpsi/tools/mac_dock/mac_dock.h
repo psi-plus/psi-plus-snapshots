@@ -1,5 +1,5 @@
-#ifndef MACDOCK_H
-#define MACDOCK_H
+#ifndef MAC_DOCK_H
+#define MAC_DOCK_H
 
 #include <QString>
 
@@ -15,4 +15,4 @@ private:
     static bool overlayed;
 };
 
-#endif
+#endif // MAC_DOCK_H

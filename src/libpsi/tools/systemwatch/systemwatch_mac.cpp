@@ -17,19 +17,16 @@
  *
  */
 
-#include <ctype.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-#include <mach/mach_port.h>
-#include <mach/mach_interface.h>
-#include <mach/mach_init.h>
-
-#include <IOKit/pwr_mgt/IOPMLib.h>
-#include <IOKit/IOMessage.h>
-
 #include "systemwatch_mac.h"
 
+#include <IOKit/IOMessage.h>
+#include <IOKit/pwr_mgt/IOPMLib.h>
+#include <ctype.h>
+#include <mach/mach_init.h>
+#include <mach/mach_interface.h>
+#include <mach/mach_port.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 // -----------------------------------------------------------------------------
 // Callbacks
@@ -67,7 +64,6 @@ void sleepCallBack(void* systemWatch, io_service_t, natural_t messageType, void 
             break;
     }
 }
-
 
 // -----------------------------------------------------------------------------
 // MacSystemWatch

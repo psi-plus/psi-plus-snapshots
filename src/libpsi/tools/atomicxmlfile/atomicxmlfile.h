@@ -20,11 +20,13 @@
 #ifndef ATOMICXMLFILE_H
 #define ATOMICXMLFILE_H
 
+#include <QFile>
 #include <QString>
 #include <QStringList>
-#include <QFile>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
+
+class QDomDocument;
 
 class AtomicXmlFileReader : public QXmlStreamReader
 {
@@ -39,8 +41,6 @@ public:
     virtual ~AtomicXmlFileWriter() {}
     virtual bool write(QIODevice* device) = 0;
 };
-
-class QDomDocument;
 
 class AtomicXmlFile
 {
@@ -112,4 +112,4 @@ private:
     bool loadDocument(AtomicXmlFileReader* reader, QString fileName) const;
 };
 
-#endif
+#endif // ATOMICXMLFILE_H

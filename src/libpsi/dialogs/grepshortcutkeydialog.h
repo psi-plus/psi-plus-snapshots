@@ -1,7 +1,7 @@
 /*
  * grepshortcutkeydialog.h - a dialog which greps a KeySequence and
  * emits a signal with this KeySequence as Parameter
- * Copyright (C) 2006 Cestonaro Thilo
+ * Copyright (C) 2006  Cestonaro Thilo
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,14 +18,14 @@
  *
  */
 
-#include <QDialog>
-#include <QKeyEvent>
-#include <QKeySequence>
+#ifndef GREPSHORTCUTKEYDIALOG_H
+#define GREPSHORTCUTKEYDIALOG_H
 
 #include "ui_grepshortcutkeydialog.h"
 
-#ifndef GREPSHORTCUTKEYDIALOG_H
-#define GREPSHORTCUTKEYDIALOG_H
+#include <QDialog>
+#include <QKeyEvent>
+#include <QKeySequence>
 
 class GrepShortcutKeyDialog : public QDialog
 {
@@ -55,4 +55,4 @@ private:
     bool isModifier(int key) const;
 };
 
-#endif
+#endif // GREPSHORTCUTKEYDIALOG_H

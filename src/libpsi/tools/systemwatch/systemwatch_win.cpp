@@ -19,10 +19,10 @@
 
 #include "systemwatch_win.h"
 
-#include <QWidget>
-#include <windows.h>
 #include <QAbstractNativeEventFilter>
 #include <QApplication>
+#include <QWidget>
+#include <windows.h>
 
 // workaround for the very old MinGW version bundled with Qt
 #ifndef PBT_APMSUSPEND

@@ -68,4 +68,4 @@ private:
     bool isOpen_;
 };
 
-#endif
+#endif // IODEVICEOPENER_H

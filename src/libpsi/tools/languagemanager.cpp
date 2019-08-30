@@ -1,6 +1,6 @@
-#include <QSet>
-
 #include "languagemanager.h"
+
+#include <QSet>
 
 LanguageManager::LangId LanguageManager::fromString(const QString &langDesc)
 {

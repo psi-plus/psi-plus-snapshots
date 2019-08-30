@@ -22,12 +22,11 @@
 #include "globalshortcuttrigger.h"
 
 #include <InterfaceDefs.h>
-
-#include <QWidget>
-#include <QKeyEvent>
-#include <QCoreApplication>
 #include <QAbstractNativeEventFilter>
 #include <QApplication>
+#include <QCoreApplication>
+#include <QKeyEvent>
+#include <QWidget>
 
 class HKeyTrigger
 {
@@ -187,7 +186,6 @@ public:
     }
 };
 
-
 HKeyTriggerManager* HKeyTriggerManager::instance_ = NULL;
 class GlobalShortcutManager::KeyTrigger::Impl : public HKeyTrigger
 {
@@ -244,7 +242,6 @@ long HKeyTriggerManager::super_mask  = 0;
 long HKeyTriggerManager::hyper_mask  = 0;
 long HKeyTriggerManager::numlock_mask  = 0;
 bool HKeyTriggerManager::haveMods  = false;
-
 
 HKeyTriggerManager::Qt_HK_Keymap
 HKeyTriggerManager::qt_hk_table[] = {

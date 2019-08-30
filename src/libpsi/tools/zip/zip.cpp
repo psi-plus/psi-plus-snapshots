@@ -16,17 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
-
-#include <QString>
-#include <QStringList>
-#include <QFile>
+ 
+#include "zip.h"
 
 #ifdef PSIMINIZIP
-#include "minizip/unzip.h"
+#    include "minizip/unzip.h"
 #else
-#include <unzip.h>
+#    include <unzip.h>
 #endif
-#include "zip.h"
+
+#include <QFile>
+#include <QString>
+#include <QStringList>
 
 class UnZipPrivate
 {

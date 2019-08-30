@@ -2,7 +2,7 @@
  * growlnotifier.mm - A simple Qt interface to Growl
  *
  * Copyright (C) 2005  Remko Troncon
- *               2012  Evgeny Khryukin
+ * Copyright (C) 2012  Evgeny Khryukin
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,12 +24,12 @@
  *
  */
 
+#include "growlnotifier.h"
+
 #include <AppKit/AppKit.h>
 #include <Cocoa/Cocoa.h>
 #include <Growl/GrowlApplicationBridge.h>
-
 #include <QBuffer>
-#include "growlnotifier.h"
 
 //------------------------------------------------------------------------------ 
 
@@ -179,7 +179,6 @@ public:
 
 	GrowlController* controller_;
 };
-
 
 /**
  * Constructs a GrowlNotifier.

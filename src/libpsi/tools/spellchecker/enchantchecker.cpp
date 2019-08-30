@@ -23,13 +23,14 @@
  *
  */
 
-#include <QDir>
-#include <QCoreApplication>
-#include <QtDebug>
-#include <QTimer>
+#include "enchantchecker.h"
 
 #include "enchant++.h"
-#include "enchantchecker.h"
+
+#include <QCoreApplication>
+#include <QDir>
+#include <QTimer>
+#include <QtDebug>
 
 static enchant::Broker *broker;
 

@@ -24,17 +24,17 @@
 
 #include "growlnotifier.h"
 
-#include <QStringList>
 #include <QApplication>
-#include <QMessageBox>
-#include <QPushButton>
-#include <QLayout>
-#include <QVBoxLayout>
-#include <QLineEdit>
 #include <QCheckBox>
-#include <QLabel>
-#include <QPixmap>
 #include <QGridLayout>
+#include <QLabel>
+#include <QLayout>
+#include <QLineEdit>
+#include <QMessageBox>
+#include <QPixmap>
+#include <QPushButton>
+#include <QStringList>
+#include <QVBoxLayout>
 
 class GrowlTestWidget : public QWidget
 {
@@ -53,7 +53,6 @@ private:
     QCheckBox* sticky;
     GrowlNotifier* growlNotifier;
 };
-
 
 GrowlTestWidget::GrowlTestWidget(QWidget *parent) : QWidget(parent)
 {

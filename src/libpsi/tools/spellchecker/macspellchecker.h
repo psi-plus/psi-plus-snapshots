@@ -26,10 +26,10 @@
 #ifndef MACSPELLCHECKER_H
 #define MACSPELLCHECKER_H
 
+#include "spellchecker.h"
+
 #include <QList>
 #include <QString>
-
-#include "spellchecker.h"
 
 class MacSpellChecker : public SpellChecker
 {
@@ -43,4 +43,4 @@ public:
     virtual bool writable() const;
 };
 
-#endif
+#endif // MACSPELLCHECKER_H

@@ -17,17 +17,17 @@
  *
  */
 
-#include <Carbon/Carbon.h>
 #import "NDKeyboardLayout.h"
 
 #include "globalshortcutmanager.h"
 #include "globalshortcuttrigger.h"
 
+#include <Carbon/Carbon.h>
+#include <QCoreApplication>
+
 // TODO:
 //  - don't invoke hotkey if there is a modal dialog?
 //  - do multi-mapping, like the x11 version
-
-#include <QCoreApplication>
 
 class MacKeyTrigger
 {

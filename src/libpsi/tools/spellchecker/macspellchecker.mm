@@ -23,9 +23,9 @@
  *
  */
 
-#include <Cocoa/Cocoa.h>
-
 #include "macspellchecker.h"
+
+#include <Cocoa/Cocoa.h>
 
 MacSpellChecker::MacSpellChecker()
 {

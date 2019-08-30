@@ -19,9 +19,10 @@
 #ifndef GROUPCHATBROWSEWINDOW_H
 #define GROUPCHATBROWSEWINDOW_H
 
+#include <iris/xmpp_jid.h>
+
 #include <QString>
 #include <QWidget>
-#include <iris/xmpp_jid.h>
 
 class GroupChatBrowseWindow : public QWidget
 {
@@ -145,4 +146,4 @@ private:
     Private *d;
 };
 
-#endif
+#endif // GROUPCHATBROWSEWINDOW_H

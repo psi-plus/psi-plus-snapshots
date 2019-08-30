@@ -1,15 +1,15 @@
 /**
- * Copyright (C) 2007, Remko Troncon
+ * Copyright (C) 2007  Remko Troncon
  */
-
-#include <QObject>
-#include <QtTest/QtTest>
-#include <QList>
-#include <QStringList>
-#include <QBuffer>
 
 #include "qttestutil/qttestutil.h"
 #include "utilities/iodeviceopener.h"
+
+#include <QBuffer>
+#include <QList>
+#include <QObject>
+#include <QStringList>
+#include <QtTest/QtTest>
 
 class IODeviceOpenerTest : public QObject
 {

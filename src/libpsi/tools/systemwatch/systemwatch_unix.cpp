@@ -17,15 +17,17 @@
  *
  */
 
-#include <unistd.h>
 #include "systemwatch_unix.h"
+
+#include "applicationinfo.h"
+
 #ifdef USE_DBUS
 # include <QDBusConnection>
-# include <QDBusReply>
 # include <QDBusInterface>
+# include <QDBusReply>
 # include <QDBusUnixFileDescriptor>
 #endif
-#include "applicationinfo.h"
+#include <unistd.h>
 
 UnixSystemWatch::UnixSystemWatch()
 {

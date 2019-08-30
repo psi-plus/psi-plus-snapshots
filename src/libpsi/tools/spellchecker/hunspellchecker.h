@@ -1,7 +1,7 @@
 /*
  * hunspellchecker.h
  *
- * Copyright (C) 2015  Ili'nykh Sergey, Vitaly Tonkacheyev
+ * Copyright (C) 2015  Sergey Ilinykh, Vitaly Tonkacheyev
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -25,14 +25,15 @@
 #ifndef HUNSPELLCHECKER_H
 #define HUNSPELLCHECKER_H
 
-#include <QList>
-#include <QString>
-#include <QLocale>
-#include <QFileInfo>
-#include <QStringList>
-#include <QSharedPointer>
-#include "spellchecker.h"
 #include "languagemanager.h"
+#include "spellchecker.h"
+
+#include <QFileInfo>
+#include <QList>
+#include <QLocale>
+#include <QSharedPointer>
+#include <QString>
+#include <QStringList>
 
 class Hunspell;
 class QTextCodec;

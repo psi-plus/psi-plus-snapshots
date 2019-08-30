@@ -33,4 +33,4 @@ public:
     void emitWakeup() { emit wakeup(); }
 };
 
-#endif
+#endif // SYSTEMWATCH_MAC_H

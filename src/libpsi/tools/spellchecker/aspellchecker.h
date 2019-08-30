@@ -26,10 +26,10 @@
 #ifndef ASPELLCHECKER_H
 #define ASPELLCHECKER_H
 
+#include "spellchecker.h"
+
 #include <QList>
 #include <QString>
-
-#include "spellchecker.h"
 
 struct AspellConfig;
 struct AspellSpeller;
@@ -58,4 +58,4 @@ private:
     ASpellers spellers_;
 };
 
-#endif
+#endif // ASPELLCHECKER_H

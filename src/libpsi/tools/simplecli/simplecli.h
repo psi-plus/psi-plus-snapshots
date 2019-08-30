@@ -20,8 +20,8 @@
 #ifndef SIMPLECLI_H
 #define SIMPLECLI_H
 
-#include <QObject>
 #include <QMap>
+#include <QObject>
 #include <QStringList>
 
 class SimpleCli : public QObject
@@ -50,7 +50,6 @@ private:
         QString help;
         QString valueHelp;
 
-
         Arg(const QByteArray& argName, const QString& argValueHelp, const QString& argHelp, bool argNeedsValue)
                 : name(argName), needsValue(argNeedsValue), help(argHelp), valueHelp(argValueHelp) {}
 
@@ -61,4 +60,4 @@ private:
     QMap<QByteArray, QByteArray> aliases;
 };
 
-#endif
+#endif // SIMPLECLI_H

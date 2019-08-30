@@ -26,12 +26,11 @@
 #ifndef ENCHANTCHECKER_H
 #define ENCHANTCHECKER_H
 
-#include <QStringList>
-
 #include "spellchecker.h"
 
-namespace enchant
-{
+#include <QStringList>
+
+namespace enchant {
     class Dict;
 }
 
@@ -62,4 +61,4 @@ private:
     QHash<LanguageManager::LangId, QString> allLanguages_;
 };
 
-#endif
+#endif // ENCHANTCHECKER_H

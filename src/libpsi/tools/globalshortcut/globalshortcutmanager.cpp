@@ -19,9 +19,9 @@
 
 #include "globalshortcutmanager.h"
 
-#include <QCoreApplication>
-
 #include "globalshortcuttrigger.h"
+
+#include <QCoreApplication>
 
 /**
  * \brief Constructs new GlobalShortcutManager.

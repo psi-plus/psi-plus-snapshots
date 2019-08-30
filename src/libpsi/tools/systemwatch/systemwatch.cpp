@@ -18,6 +18,7 @@
  */
 
 #include "systemwatch.h"
+
 #if defined(Q_OS_MAC)
     #include "systemwatch_mac.h"
 #elif defined(Q_OS_WIN32)
@@ -50,6 +51,5 @@ void SystemWatch::proceedWithSleep()
 {
     // do nothing in base impl
 }
-
 
 SystemWatch* SystemWatch::instance_ = nullptr;

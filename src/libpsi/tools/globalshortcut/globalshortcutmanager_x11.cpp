@@ -20,15 +20,13 @@
 #include "globalshortcutmanager.h"
 #include "globalshortcuttrigger.h"
 
-#include <QWidget>
-#include <QKeyEvent>
 #include <QCoreApplication>
-
+#include <QKeyEvent>
+#include <QWidget>
+#include <QX11Info>
 #include <X11/X.h>
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
-
-#include <QX11Info>
 
 #ifdef KeyPress
 // defined by X11 headers

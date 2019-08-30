@@ -25,8 +25,6 @@
 
 #include "spellchecker.h"
 
-#include <QCoreApplication>
-
 #if defined(Q_OS_MAC) && !defined(HAVE_HUNSPELL)
 #include "macspellchecker.h"
 #elif defined(HAVE_ENCHANT)
@@ -36,6 +34,8 @@
 #elif defined(HAVE_HUNSPELL)
 #include "hunspellchecker.h"
 #endif
+
+#include <QCoreApplication>
 
 SpellChecker* SpellChecker::instance()
 {

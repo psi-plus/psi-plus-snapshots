@@ -61,4 +61,4 @@ private:
     Private *d;
 };
 
-#endif
+#endif // IDLE_H

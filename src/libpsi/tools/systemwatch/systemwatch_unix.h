@@ -19,10 +19,12 @@
 
 #ifndef SYSTEMWATCH_UNIX_H
 #define SYSTEMWATCH_UNIX_H
+
+#include "systemwatch.h"
+
 #ifdef USE_DBUS
 #include <QDBusUnixFileDescriptor>
 #endif
-#include "systemwatch.h"
 
 class UnixSystemWatch : public SystemWatch
 {
@@ -42,5 +44,4 @@ private slots:
     void resuming();
 };
 
-
-#endif
+#endif // SYSTEMWATCH_UNIX_H

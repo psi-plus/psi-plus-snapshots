@@ -17,4 +17,4 @@ private:
     bool processWinEvent(MSG *m, long* result);
 };
 
-#endif
+#endif // SYSTEMWATCH_WIN_H

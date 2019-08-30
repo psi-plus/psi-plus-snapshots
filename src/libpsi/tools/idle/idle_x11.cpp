@@ -33,15 +33,12 @@ int IdlePlatform::secondsIdle() { return 0; }
 //   in short qdbus org.kde.screensaver /ScreenSaver GetSessionIdleTime
 //   but on kde it returns in ms while gnome is in secs https://bugs.kde.org/show_bug.cgi?id=313571
 
-
 #include <QApplication>
 #include <QDesktopWidget>
-
+#include <QX11Info>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/extensions/scrnsaver.h>
-
-#include <QX11Info>
 
 static XErrorHandler old_handler = 0;
 extern "C" int xerrhandler(Display* dpy, XErrorEvent* err)
@@ -103,4 +100,4 @@ int IdlePlatform::secondsIdle()
     return d->ss_info->idle / 1000;
 }
 
-#endif
+#endif // HAVE_XSS

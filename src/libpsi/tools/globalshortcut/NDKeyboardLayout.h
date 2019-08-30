@@ -29,9 +29,9 @@
     @author Nathan Day
  */
 
+#import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
 #import <CoreServices/CoreServices.h>
-#import <Carbon/Carbon.h>
 
 struct ReverseMappingEntry;
 

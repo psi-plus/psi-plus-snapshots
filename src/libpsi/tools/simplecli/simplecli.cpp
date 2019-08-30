@@ -32,7 +32,6 @@
  * and provided only to support options like -h and -v.
  */
 
-
 /**
   * \brief Define a switch (option that does not have a value)
   */

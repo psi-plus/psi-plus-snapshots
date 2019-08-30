@@ -42,4 +42,4 @@ private:
     static SystemWatch* instance_;
 };
 
-#endif
+#endif // SYSTEMWATCH_H

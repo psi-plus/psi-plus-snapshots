@@ -63,4 +63,4 @@ private:
     bool hasValue_;
 };
 
-#endif
+#endif // MAYBE_H

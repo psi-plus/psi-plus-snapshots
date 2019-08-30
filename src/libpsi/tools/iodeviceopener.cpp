@@ -18,7 +18,6 @@
 
 #include "iodeviceopener.h"
 
-
 IODeviceOpener::IODeviceOpener(QIODevice* device, QIODevice::OpenModeFlag mode) : device_(device), close_(false)
 {
     if (!device_->isOpen()) {

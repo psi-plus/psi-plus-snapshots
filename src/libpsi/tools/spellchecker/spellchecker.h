@@ -26,12 +26,12 @@
 #ifndef SPELLCHECKER_H
 #define SPELLCHECKER_H
 
-#include <QObject>
-#include <QList>
-#include <QString>
-#include <QSet>
-
 #include "languagemanager.h"
+
+#include <QList>
+#include <QObject>
+#include <QSet>
+#include <QString>
 
 class SpellChecker : public QObject
 {
@@ -54,4 +54,4 @@ private:
     static SpellChecker* instance_;
 };
 
-#endif
+#endif // SPELLCHECKER_H

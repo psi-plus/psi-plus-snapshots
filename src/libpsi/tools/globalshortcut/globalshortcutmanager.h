@@ -20,12 +20,12 @@
 #ifndef GLOBALSHORTCUTMANAGER_H
 #define GLOBALSHORTCUTMANAGER_H
 
-#include <QObject>
 #include <QKeySequence>
 #include <QMap>
+#include <QObject>
 
-class QObject;
 class KeyTrigger;
+class QObject;
 
 class GlobalShortcutManager : public QObject
 {
@@ -43,4 +43,4 @@ private:
     QMap<QKeySequence, KeyTrigger*> triggers_;
 };
 
-#endif
+#endif // GLOBALSHORTCUTMANAGER_H

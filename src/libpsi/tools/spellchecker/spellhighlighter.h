@@ -1,7 +1,7 @@
 #ifndef SPELLHIGHLIGHTER_H
 #define SPELLHIGHLIGHTER_H
 
- #include <QSyntaxHighlighter>
+#include <QSyntaxHighlighter>
 
 class QString;
 
@@ -13,4 +13,4 @@ public:
     virtual void highlightBlock(const QString& text);
 };
 
-#endif
+#endif // SPELLHIGHLIGHTER_H

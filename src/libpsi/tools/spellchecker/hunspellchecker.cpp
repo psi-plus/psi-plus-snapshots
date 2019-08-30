@@ -1,7 +1,7 @@
 /*
  * hunspellchecker.cpp
  *
- * Copyright (C) 2015  Ilinykh Sergey, Vitaly Tonkacheyev
+ * Copyright (C) 2015  Sergey Ilinykh, Vitaly Tonkacheyev
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -25,20 +25,21 @@
 
 #include "hunspellchecker.h"
 
-#include <QString>
-#include <QSet>
-#include <QDir>
-#include <QLibraryInfo>
-#include <QTextCodec>
-#include <QCoreApplication>
-#include <QLocale>
-#include <QMutableListIterator>
-//#include <QDebug>
-#include <hunspell.hxx>
 #ifdef Q_OS_WIN
-#include "applicationinfo.h"
+#    include "applicationinfo.h"
 #endif
 #include "languagemanager.h"
+
+#include <QCoreApplication>
+//#include <QDebug>
+#include <QDir>
+#include <QLibraryInfo>
+#include <QLocale>
+#include <QMutableListIterator>
+#include <QSet>
+#include <QString>
+#include <QTextCodec>
+#include <hunspell.hxx>
 
 #ifdef H_DEPRECATED
 # define NEW_HUNSPELL
@@ -46,7 +47,6 @@
 #else
 # define HS_STRING(text) li.codec->fromUnicode(text)
 #endif
-
 
 HunspellChecker::HunspellChecker()
 {

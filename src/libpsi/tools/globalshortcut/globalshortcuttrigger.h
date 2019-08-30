@@ -21,6 +21,7 @@
 #define GLOBALSHORTCUTTRIGGER_H
 
 #include "globalshortcutmanager.h"
+
 #include <QObject>
 
 class GlobalShortcutManager::KeyTrigger : public QObject
@@ -57,4 +58,4 @@ private:
     Impl* d;
 };
 
-#endif
+#endif // GLOBALSHORTCUTTRIGGER_H

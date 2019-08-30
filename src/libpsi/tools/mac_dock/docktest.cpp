@@ -22,16 +22,16 @@
  *
  */
 
+#include "mac_dock.h"
+
 #include <QApplication>
-#include <QMessageBox>
-#include <QPushButton>
-#include <QLayout>
-#include <QVBoxLayout>
-#include <QLineEdit>
 #include <QCheckBox>
 #include <QLabel>
-
-#include "mac_dock.h"
+#include <QLayout>
+#include <QLineEdit>
+#include <QMessageBox>
+#include <QPushButton>
+#include <QVBoxLayout>
 
 class DockTestWidget : public QWidget
 {
@@ -46,7 +46,6 @@ public slots:
 private:
     QLineEdit *text;
 };
-
 
 DockTestWidget::DockTestWidget( QWidget *parent ) : QWidget(parent)
 {

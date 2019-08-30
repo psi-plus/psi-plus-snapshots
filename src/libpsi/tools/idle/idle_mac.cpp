@@ -18,8 +18,8 @@
  */
 
 #include "idle.h"
-#include <Carbon/Carbon.h>
 
+#include <Carbon/Carbon.h>
 
 // Why does Apple have to make this so complicated?
 static OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef *bundlePtr) {
@@ -75,7 +75,6 @@ static OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef *bundlePt
     return err;
 }
 
-
 class IdlePlatform::Private {
 public:
     EventLoopTimerRef mTimerRef;
@@ -86,7 +85,6 @@ public:
     static pascal void IdleTimerAction(EventLoopTimerRef, EventLoopIdleTimerMessage inState, void* inUserData);
 
 };
-
 
 pascal void IdlePlatform::Private::IdleTimerAction(EventLoopTimerRef, EventLoopIdleTimerMessage inState, void* inUserData) {
     switch (inState) {
@@ -103,7 +101,6 @@ pascal void IdlePlatform::Private::IdleTimerAction(EventLoopTimerRef, EventLoopI
     }
 }
 
-
 IdlePlatform::IdlePlatform() {
     d = new Private();
 }
@@ -113,7 +110,6 @@ IdlePlatform::~IdlePlatform() {
     delete d;
 }
 
-
 // Typedef for the function we're getting back from CFBundleGetFunctionPointerForName.
 typedef OSStatus (*InstallEventLoopIdleTimerPtr)(EventLoopRef inEventLoop,
                                                                  EventTimerInterval   inFireDelay,
@@ -121,7 +117,6 @@ typedef OSStatus (*InstallEventLoopIdleTimerPtr)(EventLoopRef inEventLoop,
                                                                  EventLoopIdleTimerUPP    inTimerProc,
                                                                  void *               inTimerData,
                                                                  EventLoopTimerRef *  outTimer);
-
 
 bool IdlePlatform::init() {
     // May already be init'ed.
@@ -152,7 +147,6 @@ bool IdlePlatform::init() {
 
     return false;
 }
-
 
 int IdlePlatform::secondsIdle() {
     return d->mSecondsIdle;

@@ -22,6 +22,7 @@
 #define PRIVATEQT_MAC_H
 
 #include <CoreFoundation/CoreFoundation.h>
+
 #include <QtCore/QString>
 
 template <typename T>
@@ -88,4 +89,4 @@ public:
 struct _NSRange;
 typedef struct _NSRange NSRange;
 
-#endif
+#endif // PRIVATEQT_MAC_H

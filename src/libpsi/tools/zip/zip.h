@@ -20,7 +20,9 @@
 #ifndef CS_ZIP_H
 #define CS_ZIP_H
 
-class QString;
+#include <QString>
+
+class QByteArray;
 class QStringList;
 
 class UnZip
@@ -33,7 +35,7 @@ public:
         CS_Insensitive = 2
     };
 
-    UnZip(const QString &fname="");
+    UnZip(const QString &fname=QString());
     UnZip(UnZip &&o);
     ~UnZip();
 
@@ -54,4 +56,4 @@ private:
     bool getList();
 };
 
-#endif
+#endif // CS_ZIP_H
