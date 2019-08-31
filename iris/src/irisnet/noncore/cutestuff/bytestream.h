@@ -20,13 +20,13 @@
 #ifndef CS_BYTESTREAM_H
 #define CS_BYTESTREAM_H
 
-#include <QObject>
 #include <QByteArray>
 #include <QIODevice>
+#include <QObject>
 
 class QAbstractSocket;
-// CS_NAMESPACE_BEGIN
 
+// CS_NAMESPACE_BEGIN
 // CS_EXPORT_BEGIN
 class ByteStream : public QIODevice
 {
@@ -74,7 +74,6 @@ private:
 //! \endif
 };
 // CS_EXPORT_END
-
 // CS_NAMESPACE_END
 
-#endif
+#endif // CS_BYTESTREAM_H

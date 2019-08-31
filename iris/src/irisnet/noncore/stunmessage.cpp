@@ -18,14 +18,14 @@
 
 #include "stunmessage.h"
 
+#include "stunutil.h"
+
 #include <QSharedData>
 #include <QtCrypto>
-#include "stunutil.h"
 
 #define ENSURE_D { if(!d) d = new Private; }
 
 namespace XMPP {
-
 using namespace StunUtil;
 
 // some attribute types we need to explicitly support
@@ -727,5 +727,4 @@ QByteArray StunMessage::readStun(const quint8 *data, int size)
     else
         return QByteArray();
 }
-
-}
+} // namespace XMPP

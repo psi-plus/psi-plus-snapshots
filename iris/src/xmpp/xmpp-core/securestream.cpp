@@ -27,14 +27,14 @@
 
 #include "securestream.h"
 
-#include <qpointer.h>
-#include <QList>
-#include <qtimer.h>
-
+#include "compressionhandler.h"
 #ifdef USE_TLSHANDLER
 #include "xmpp.h"
 #endif
-#include "compressionhandler.h"
+
+#include <QList>
+#include <qpointer.h>
+#include <qtimer.h>
 
 //----------------------------------------------------------------------------
 // LayerTracker

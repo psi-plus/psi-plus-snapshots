@@ -16,10 +16,10 @@
  *
  */
 
+#include "qttestutil/qttestutil.h"
+
 #include <QObject>
 #include <QtTest/QtTest>
-
-#include "qttestutil/qttestutil.h"
 
 class MyClassTest : public QObject
 {

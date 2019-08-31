@@ -13,12 +13,12 @@
    https://blake2.net.
 */
 
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
-
-#include "blake2.h"
 #include "blake2-impl.h"
+#include "blake2.h"
+
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 static const uint64_t blake2b_IV[8] =
 {
@@ -43,7 +43,6 @@ static const uint8_t blake2b_sigma[12][16] =
   {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 } ,
   { 14, 10,  4,  8,  9, 15, 13,  6,  1, 12,  0,  2, 11,  7,  5,  3 }
 };
-
 
 static void blake2b_set_lastnode( blake2b_state *S )
 {
@@ -93,8 +92,6 @@ int blake2b_init_param( blake2b_state *S, const blake2b_param *P )
   return 0;
 }
 
-
-
 int blake2b_init( blake2b_state *S, size_t outlen )
 {
   blake2b_param P[1];
@@ -115,7 +112,6 @@ int blake2b_init( blake2b_state *S, size_t outlen )
   memset( P->personal, 0, sizeof( P->personal ) );
   return blake2b_init_param( S, P );
 }
-
 
 int blake2b_init_key( blake2b_state *S, size_t outlen, const void *key, size_t keylen )
 {
@@ -311,8 +307,8 @@ int crypto_hash( unsigned char *out, unsigned char *in, unsigned long long inlen
 #endif
 
 #if defined(BLAKE2B_SELFTEST)
-#include <string.h>
 #include "blake2-kat.h"
+#include <string.h>
 int main( void )
 {
   uint8_t key[BLAKE2B_KEYBYTES];

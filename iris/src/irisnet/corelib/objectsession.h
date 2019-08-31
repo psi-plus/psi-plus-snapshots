@@ -22,7 +22,6 @@
 #include <QObject>
 
 namespace XMPP {
-
 class ObjectSessionPrivate;
 class ObjectSessionWatcherPrivate;
 
@@ -81,7 +80,6 @@ private:
     friend class ObjectSessionPrivate;
     ObjectSessionWatcherPrivate *d;
 };
+} // namespace XMPP
 
-}
-
-#endif
+#endif // OBJECTSESSION_H

@@ -23,7 +23,6 @@
 #include "bytestream.h"
 
 // CS_NAMESPACE_BEGIN
-
 class HttpConnect : public ByteStream
 {
     Q_OBJECT
@@ -61,4 +60,4 @@ private:
 
 // CS_NAMESPACE_END
 
-#endif
+#endif // CS_HTTPCONNECT_H

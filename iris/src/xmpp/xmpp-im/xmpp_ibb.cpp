@@ -1,6 +1,6 @@
 /*
  * ibb.cpp - Inband bytestream
- * Copyright (C) 2001, 2002  Justin Karneges
+ * Copyright (C) 2001-2002  Justin Karneges
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,10 +19,10 @@
 
 #include "xmpp_ibb.h"
 
-#include <qtimer.h>
 #include "xmpp_xmlcommon.h"
-#include <QtCrypto>
 
+#include <QtCrypto>
+#include <qtimer.h>
 #include <stdlib.h>
 
 #define IBB_PACKET_DELAY  0
@@ -330,8 +330,6 @@ void IBBConnection::trySend()
     d->j->go(true);
 }
 
-
-
 //----------------------------------------------------------------------------
 // IBBData
 //----------------------------------------------------------------------------
@@ -493,7 +491,6 @@ void IBBManager::doReject(IBBConnection *c, const QString &id,
     d->ibb->respondError(c->peer(), id, cond, str);
 }
 
-
 //----------------------------------------------------------------------------
 // JT_IBB
 //----------------------------------------------------------------------------
@@ -639,4 +636,3 @@ int JT_IBB::bytesWritten() const
 {
     return d->bytesWritten;
 }
-

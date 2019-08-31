@@ -19,11 +19,10 @@
 #ifndef ADDRESSRESOLVER_H
 #define ADDRESSRESOLVER_H
 
-#include <QObject>
 #include <QHostAddress>
+#include <QObject>
 
 namespace XMPP {
-
 // resolve both AAAA and A for a hostname
 class AddressResolver : public QObject
 {
@@ -50,7 +49,6 @@ private:
     friend class Private;
     Private *d;
 };
+} // namespace XMPP
 
-}
-
-#endif
+#endif // ADDRESSRESOLVER_H

@@ -20,13 +20,13 @@
 #ifndef XMPP_DISCOITEM
 #define XMPP_DISCOITEM
 
-#include <QString>
-#include <QCryptographicHash>
-
 #include "xmpp/jid/jid.h"
+#include "xmpp_agentitem.h"
 #include "xmpp_features.h"
 #include "xmpp_xdata.h"
-#include "xmpp_agentitem.h"
+
+#include <QCryptographicHash>
+#include <QString>
 
 namespace XMPP {
     class DiscoItemPrivate;
@@ -102,6 +102,6 @@ namespace XMPP {
     };
 
     bool operator<(const DiscoItem::Identity &a, const DiscoItem::Identity &b);
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_DISCOITEM

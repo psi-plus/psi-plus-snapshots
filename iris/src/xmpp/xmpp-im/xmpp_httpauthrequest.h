@@ -21,11 +21,10 @@
 
 #include <QString>
 
-class QDomElement;
 class QDomDocument;
+class QDomElement;
 
-namespace XMPP
-{
+namespace XMPP {
     class HttpAuthRequest
     {
     public:
@@ -51,6 +50,6 @@ namespace XMPP
         QString method_, url_, id_;
         bool hasId_;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_AUTHREQUEST_H

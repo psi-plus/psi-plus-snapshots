@@ -22,8 +22,7 @@
 
 #include <QDomDocument>
 
-namespace XMPP
-{
+namespace XMPP {
     class SubsetsClientManager
     {
     public:
@@ -52,6 +51,6 @@ namespace XMPP
         class Private;
         Private *d;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_SUBSETS_H

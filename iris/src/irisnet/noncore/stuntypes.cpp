@@ -18,19 +18,17 @@
 
 #include "stuntypes.h"
 
-#include <stdio.h>
-#include <QtCrypto>
 #include "stunutil.h"
+
+#include <QtCrypto>
+#include <stdio.h>
 
 #define STRING_MAX_CHARS 127
 #define STRING_MAX_BYTES 763
 
 namespace XMPP {
-
 using namespace StunUtil;
-
 namespace StunTypes {
-
 static void xorIPv4(QByteArray *in, const quint8 *magic)
 {
     quint8 *p = (quint8 *)in->data();
@@ -730,7 +728,5 @@ void print_packet(const StunMessage &message)
 {
     printf("%s\n", qPrintable(print_packet_str(message)));
 }
-
-}
-
-}
+} // namespace StunTypes
+} // namespace XMPP

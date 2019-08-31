@@ -19,7 +19,6 @@
 #include "xmpp/sasl/digestmd5proplist.h"
 
 namespace XMPP {
-
 DIGESTMD5PropList::DIGESTMD5PropList() : QList<DIGESTMD5Prop>()
 {
 }
@@ -129,4 +128,4 @@ int DIGESTMD5PropList::varCount(const QByteArray &var) const
     return n;
 }
 
-}
+} // namespace XMPP

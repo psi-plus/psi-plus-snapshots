@@ -19,16 +19,16 @@
 
 #include "xmpp_vcard.h"
 
-#include <qdom.h>
+#include "xmpp_xmlcommon.h"
+
+#include <QBuffer>
 #include <QDateTime>
 #include <QImage> // needed for image format recognition
-#include <QBuffer>
 #include <QImageReader>
 #include <QImageWriter>
 #include <QtCrypto>
 #include <QtDebug>
-
-#include "xmpp_xmlcommon.h"
+#include <qdom.h>
 
 using namespace XMLHelper;
 
@@ -71,7 +71,6 @@ QString image2type(const QByteArray &ba)
 }
 
 namespace XMPP {
-
 // Long lines of encoded binary data SHOULD BE folded to 75 characters using the folding method defined in [MIME-DIR].
 static QString foldString(const QString &s)
 {
@@ -1193,5 +1192,4 @@ void VCard::setKey(const QByteArray &k)
 {
     d->key = k;
 }
-
 } // namespace XMPP

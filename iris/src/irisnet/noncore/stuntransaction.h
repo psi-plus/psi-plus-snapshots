@@ -19,21 +19,19 @@
 #ifndef STUNTRANSACTION_H
 #define STUNTRANSACTION_H
 
-#include <QObject>
 #include <QByteArray>
 #include <QHostAddress>
+#include <QObject>
 
 namespace QCA {
     class SecureArray;
 }
 
 namespace XMPP {
-
 class StunMessage;
-
-class StunTransactionPrivate;
 class StunTransactionPool;
 class StunTransactionPoolPrivate;
+class StunTransactionPrivate;
 
 // Notes:
 //
@@ -199,7 +197,6 @@ private:
     friend class StunTransactionPoolPrivate;
     StunTransactionPoolPrivate *d;
 };
+} // namespace XMPP
 
-}
-
-#endif
+#endif // STUNTRANSACTION_H

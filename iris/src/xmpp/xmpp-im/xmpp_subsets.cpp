@@ -18,6 +18,7 @@
  */
 
 #include "xmpp_subsets.h"
+
 #include "xmpp_xmlcommon.h"
 
 using namespace XMPP;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Rion
+ * Copyright (C) 2016  Sergey Ilinykh
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,17 +19,16 @@
 #ifndef XMPP_CAPTCHA_H
 #define XMPP_CAPTCHA_H
 
-#include <QDateTime>
-
 #include "xmpp/jid/jid.h"
 #include "xmpp_url.h"
 
-namespace XMPP
-{
+#include <QDateTime>
+
+namespace XMPP {
+    class CaptchaChallengePrivate;
     class Message;
     class XData;
 
-    class CaptchaChallengePrivate;
     class CaptchaChallenge
     {
     public:
@@ -68,6 +67,6 @@ namespace XMPP
         friend class CaptchaChallengePrivate;
         QSharedDataPointer<CaptchaChallengePrivate> d;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_CAPTCHA_H

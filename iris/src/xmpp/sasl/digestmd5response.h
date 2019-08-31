@@ -50,6 +50,6 @@ namespace XMPP {
             bool isValid_;
             QByteArray value_;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // DIGESTMD5RESPONSE_H

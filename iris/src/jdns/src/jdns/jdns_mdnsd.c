@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005       Jeremie Miller
- * Copyright (C) 2005,2006  Justin Karneges
+ * Copyright (C) 2005-2006  Justin Karneges
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -637,7 +637,6 @@ int _r_out(mdnsd d, jdns_packet_t *m, mdnsdr *list)
     }
     return ret;
 }
-
 
 mdnsd mdnsd_new(int class, int frame, int port, int (*time_now)(mdnsd d, void *arg), int (*rand_int)(mdnsd d, void *arg), void *arg)
 {

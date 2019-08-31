@@ -18,15 +18,16 @@
 
 #include "stunallocate.h"
 
-#include <QMetaType>
+#include "objectsession.h"
+#include "stunmessage.h"
+#include "stuntransaction.h"
+#include "stuntypes.h"
+#include "stunutil.h"
+
 #include <QHostAddress>
+#include <QMetaType>
 #include <QTimer>
 #include <QtCrypto>
-#include "objectsession.h"
-#include "stunutil.h"
-#include "stunmessage.h"
-#include "stuntypes.h"
-#include "stuntransaction.h"
 
 // permissions last 5 minutes, update them every 4 minutes
 #define PERM_INTERVAL  (4 * 60 * 1000)
@@ -35,7 +36,6 @@
 #define CHAN_INTERVAL  (9 * 60 * 1000)
 
 namespace XMPP {
-
 void releaseAndDeleteLater(QObject *owner, QObject *obj)
 {
     obj->disconnect(owner);
@@ -1447,7 +1447,6 @@ QByteArray StunAllocate::readChannelData(const quint8 *data, int size)
     else
         return QByteArray();
 }
-
-}
+} // namespace XMPP
 
 #include "stunallocate.moc"

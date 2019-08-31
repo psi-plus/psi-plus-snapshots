@@ -25,20 +25,16 @@
 #ifdef QT_GUI_LIB
 # include <QApplication>
 #endif
-
-#ifdef Q_OS_WIN
-# include <windows.h>
-#endif
-
 #ifdef Q_OS_UNIX
 # include <signal.h>
 # include <unistd.h>
 #endif
+#ifdef Q_OS_WIN
+# include <windows.h>
+#endif
 
 namespace {
-
 // safeobj stuff, from qca
-
 void releaseAndDeleteLater(QObject *owner, QObject *obj)
 {
     obj->disconnect(owner);
@@ -77,8 +73,7 @@ signals:
 private:
     QSocketNotifier *sn;
 };
-
-}
+} // namespace
 
 #ifndef NO_IRISNET
 namespace XMPP {
@@ -274,6 +269,6 @@ void ProcessQuit::cleanup()
 
 #ifndef NO_IRISNET
 }
-#endif
+#endif // NO_IRISNET
 
 #include "processquit.moc"

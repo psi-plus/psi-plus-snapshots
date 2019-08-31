@@ -28,6 +28,6 @@ namespace XMPP {
         StateInactive,
         StateGone
     } ChatState;
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_CHATSTATE

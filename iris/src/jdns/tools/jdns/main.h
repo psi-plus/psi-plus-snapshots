@@ -25,6 +25,7 @@
 #define MAIN_H
 
 #include "qjdns.h"
+
 #include <QObject>
 #include <QStringList>
 

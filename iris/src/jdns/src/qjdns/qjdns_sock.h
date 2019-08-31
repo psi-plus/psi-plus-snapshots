@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005,2006  Justin Karneges
+ * Copyright (C) 2005-2006  Justin Karneges
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -30,4 +30,4 @@ bool qjdns_sock_setTTL4(int s, int ttl);
 bool qjdns_sock_setTTL6(int s, int ttl);
 bool qjdns_sock_setIPv6Only(int s);
 
-#endif
+#endif // QJDNS_SOCK_H

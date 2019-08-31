@@ -347,12 +347,10 @@ private:
     }
 };
 
-
 //----------------------------------------------------------------------------
 // ParserHandler
 //----------------------------------------------------------------------------
-namespace XMPP
-{
+namespace XMPP {
     class ParserHandler : public QXmlDefaultHandler
     {
     public:
@@ -545,8 +543,7 @@ namespace XMPP
         QList<Parser::Event*> eventList;
         bool needMore = false;
     };
-};
-
+}; // namespace XMPP
 
 //----------------------------------------------------------------------------
 // Event

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006,2007  Justin Karneges
+ * Copyright (C) 2006-2007  Justin Karneges
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -27,9 +27,9 @@
 #include "qjdns.h"
 
 class QJDnsShared;
+class QJDnsSharedDebugPrivate;
 class QJDnsSharedPrivate;
 class QJDnsSharedRequestPrivate;
-class QJDnsSharedDebugPrivate;
 
 /**
    \brief Collects debugging information from QJDnsShared
@@ -511,4 +511,4 @@ private:
     QJDnsSharedPrivate *d;
 };
 
-#endif
+#endif // QJDNSSHARED_H

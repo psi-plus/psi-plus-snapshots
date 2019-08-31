@@ -21,19 +21,17 @@
 #ifndef CS_BSOCKET_H
 #define CS_BSOCKET_H
 
-#include <QAbstractSocket>
-#include <limits>
-
 #include "bytestream.h"
 #include "netnames.h"
 
-class QString;
-class QObject;
+#include <QAbstractSocket>
+#include <limits>
+
 class QByteArray;
+class QObject;
+class QString;
 
 // CS_NAMESPACE_BEGIN
-
-
 /*!
     Socket with automatic hostname lookups, using SRV, AAAA and A DNS queries.
 */
@@ -98,8 +96,6 @@ private:
     void dns_srv_try_next();
     bool connect_host_try_next();
     void qs_connected_step2(bool signalConnected = true);
-};
+}; // CS_NAMESPACE_END
 
-// CS_NAMESPACE_END
-
-#endif
+#endif // CS_BSOCKET_H

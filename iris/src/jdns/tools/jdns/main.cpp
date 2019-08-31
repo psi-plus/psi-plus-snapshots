@@ -22,9 +22,11 @@
  */
 
 #include "main.h"
+
+#include "qjdns.h"
+
 #include <QtCore>
 #include <QtNetwork>
-#include "qjdns.h"
 
 QString dataToString(const QByteArray &buf)
 {
@@ -215,7 +217,6 @@ void  App::start()
     if(opt_quit)
         QTimer::singleShot(quit_time * 1000, this, SLOT(doShutdown()));
 }
-
 
 void App::jdns_resultsReady(int id, const QJDns::Response &results)
 {

@@ -23,15 +23,13 @@
 #include "xmpp_caps.h"
 #include "xmpp_discoitem.h"
 
+#include <QLinkedList>
 #include <QObject>
 #include <QString>
-#include <QLinkedList>
 #include <QVariant>
-
 #include <functional>
 
 namespace XMPP {
-
 class Client;
 class Features;
 class Jid;
@@ -83,7 +81,6 @@ private:
         DiscoItem item;
         QMap<QString,QVariant> meta;
     };
-
 
 public:
 
@@ -148,7 +145,6 @@ private:
     bool _hasPEP;
     bool _canMessageCarbons;
 };
-
 } // namespace XMPP
 
-#endif
+#endif // SERVERINFOMANAGER_H

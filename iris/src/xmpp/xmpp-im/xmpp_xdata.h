@@ -17,22 +17,21 @@
  *
  */
 
-#ifndef XMPPXDATA_H
-#define XMPPXDATA_H
+#ifndef XMPP_XDATA_H
+#define XMPP_XDATA_H
 
-#include <QString>
-#include <QMap>
-#include <QList>
-#include <QSharedDataPointer>
-#include <QStringList>
-#include <QSize>
 #include <QHash>
+#include <QList>
+#include <QMap>
+#include <QSharedDataPointer>
+#include <QSize>
+#include <QString>
+#include <QStringList>
 
-class QDomElement;
 class QDomDocument;
+class QDomElement;
 
 namespace XMPP {
-
     class XData
     {
     public:
@@ -178,7 +177,6 @@ namespace XMPP {
         };
         QSharedDataPointer<Private> d;
     };
+}; // namespace XMPP
 
-};
-
-#endif
+#endif // XMPP_XDATA_H

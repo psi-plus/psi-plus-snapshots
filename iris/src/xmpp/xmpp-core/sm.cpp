@@ -17,12 +17,11 @@
  *
  */
 
+#include "sm.h"
+
 #ifdef IRIS_SM_DEBUG
 #include <QDebug>
 #endif
-
-
-#include "sm.h"
 
 using namespace XMPP;
 
@@ -41,7 +40,6 @@ void SMState::resetCounters()
     server_last_handled = 0;
     send_queue.clear();
 }
-
 
 StreamManagement::StreamManagement(QObject *parent)
     : QObject(parent)

@@ -49,4 +49,4 @@
 # define JDNS_EXPORT
 #endif
 
-#endif
+#endif // JDNS_EXPORT_H

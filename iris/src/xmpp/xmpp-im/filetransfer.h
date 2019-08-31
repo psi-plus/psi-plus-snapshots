@@ -22,9 +22,7 @@
 
 #include "im.h"
 
-namespace XMPP
-{
-    //class BSConnection;
+namespace XMPP {
     class BSConnection;
     class BytestreamManager;
     struct FTRequest;
@@ -186,6 +184,6 @@ namespace XMPP
     signals:
         void incoming(const FTRequest &req);
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_FILETRANSFER_H

@@ -23,14 +23,14 @@
 
 #include "protocol.h"
 
-#include <qca.h>
-#include <QList>
-#include <QByteArray>
-#include <QtCrypto>
-
 #ifdef XMPP_TEST
 #include "td.h"
 #endif
+
+#include <QByteArray>
+#include <QList>
+#include <QtCrypto>
+#include <qca.h>
 
 using namespace XMPP;
 

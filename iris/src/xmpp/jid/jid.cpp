@@ -19,15 +19,14 @@
 
 #include "xmpp/jid/jid.h"
 
+#ifndef NO_IRISNET
+#    include "irisnetglobal_p.h"
+#endif
+
 #include <QCoreApplication>
 #include <stringprep.h>
 
-#ifndef NO_IRISNET
-#include "irisnetglobal_p.h"
-#endif
-
 using namespace XMPP;
-
 
 //----------------------------------------------------------------------------
 // StringPrepCache

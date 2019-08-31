@@ -19,14 +19,13 @@
 #ifndef UDPPORTRESERVER_H
 #define UDPPORTRESERVER_H
 
-#include <QObject>
 #include <QList>
+#include <QObject>
 
 class QHostAddress;
 class QUdpSocket;
 
 namespace XMPP {
-
 // call both setAddresses() and setPorts() at least once for socket
 //   reservations to occur.  at any time you can update the list of addresses
 //   (interfaces) and ports to reserve.  note that the port must be available
@@ -66,7 +65,6 @@ private:
     class Private;
     Private *d;
 };
+} // namespace XMPP
 
-}
-
-#endif
+#endif // UDPPORTRESERVER_H

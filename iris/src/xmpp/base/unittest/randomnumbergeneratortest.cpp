@@ -16,11 +16,11 @@
  *
  */
 
-#include <QObject>
-#include <QtTest/QtTest>
-
 #include "qttestutil/qttestutil.h"
 #include "xmpp/base/randomnumbergenerator.h"
+
+#include <QObject>
+#include <QtTest/QtTest>
 
 using namespace XMPP;
 

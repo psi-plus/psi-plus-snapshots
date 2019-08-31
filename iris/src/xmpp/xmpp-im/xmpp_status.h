@@ -20,18 +20,19 @@
 #ifndef XMPP_STATUS_H
 #define XMPP_STATUS_H
 
+#include "xmpp_bitsofbinary.h"
+#include "xmpp_muc.h"
+
+#include <QCryptographicHash>
+#include <QDateTime>
 #include <QList>
 #include <QString>
 #include <QStringList>
-#include <QDateTime>
-#include <QCryptographicHash>
 
-#include "xmpp_muc.h"
-#include "xmpp_bitsofbinary.h"
-
-namespace XMPP
-{
+namespace XMPP {
     class DiscoItem;
+    class StatusPrivate;
+
     class CapsSpec
     {
         public:
@@ -65,8 +66,6 @@ namespace XMPP
             QCryptographicHash::Algorithm hashAlgo_;
             QStringList ext_;
     };
-
-    class StatusPrivate;
 
     class Status
     {
@@ -146,9 +145,8 @@ namespace XMPP
     private:
         QSharedDataPointer<StatusPrivate> d;
     };
-
-}
+} // namespace XMPP
 
 Q_DECLARE_METATYPE(XMPP::Status)
 
-#endif
+#endif // XMPP_STATUS_H

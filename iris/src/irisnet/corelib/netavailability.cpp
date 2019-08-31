@@ -19,7 +19,6 @@
 #include "netavailability.h"
 
 namespace XMPP {
-
 class NetAvailability::Private : public QObject
 {
     Q_OBJECT
@@ -51,6 +50,6 @@ bool NetAvailability::isAvailable() const
     return true;
 }
 
-}
+} // namespace XMPP
 
 #include "netavailability.moc"

@@ -18,16 +18,16 @@
 
 #include "icecomponent.h"
 
-#include <stdlib.h>
-#include <QUdpSocket>
-#include <QtCrypto>
-#include "objectsession.h"
-#include "udpportreserver.h"
 #include "icelocaltransport.h"
 #include "iceturntransport.h"
+#include "objectsession.h"
+#include "udpportreserver.h"
+
+#include <QUdpSocket>
+#include <QtCrypto>
+#include <stdlib.h>
 
 namespace XMPP {
-
 static int calc_priority(int typePref, int localPref, int componentId)
 {
     Q_ASSERT(typePref >= 0 && typePref <= 126);
@@ -1055,6 +1055,6 @@ void IceComponent::setDebugLevel(DebugLevel level)
         d->tt->setDebugLevel((IceTransport::DebugLevel)level);
 }
 
-}
+} // namespace XMPP
 
 #include "icecomponent.moc"

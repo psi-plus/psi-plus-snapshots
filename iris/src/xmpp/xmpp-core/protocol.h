@@ -20,14 +20,14 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-#include <QObject>
-#include <QList>
-#include <QPair>
-#include <QTimer>
-
+#include "sm.h"
 #include "xmlprotocol.h"
 #include "xmpp.h"
-#include "sm.h"
+
+#include <QList>
+#include <QObject>
+#include <QPair>
+#include <QTimer>
 
 #define NS_ETHERX   "http://etherx.jabber.org/streams"
 #define NS_CLIENT   "jabber:client"
@@ -44,8 +44,7 @@
 #define NS_COMPRESS_PROTOCOL "http://jabber.org/protocol/compress"
 #define NS_HOSTS    "http://barracuda.com/xmppextensions/hosts"
 
-namespace XMPP
-{
+namespace XMPP {
     class Version
     {
     public:
@@ -383,6 +382,6 @@ namespace XMPP
         void elementSend(const QDomElement &e);
         void elementRecv(const QDomElement &e);
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // PROTOCOL_H

@@ -24,7 +24,6 @@
 #endif
 
 // CS_NAMESPACE_BEGIN
-
 static void sortSRVList(QList<Q3Dns::Server> &list)
 {
     QList<Q3Dns::Server> tmp = list;

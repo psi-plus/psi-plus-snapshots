@@ -18,15 +18,14 @@
 
 #include "xmpp/sasl/digestmd5response.h"
 
+#include "xmpp/base/randomnumbergenerator.h"
+#include "xmpp/sasl/digestmd5proplist.h"
+
 #include <QByteArray>
 #include <QtCrypto>
 #include <QtDebug>
 
-#include "xmpp/sasl/digestmd5proplist.h"
-#include "xmpp/base/randomnumbergenerator.h"
-
 namespace XMPP {
-
 DIGESTMD5Response::DIGESTMD5Response(const QByteArray& challenge, const QString& service, const QString& host, const QString& arealm, const QString& user, const QString& authz,  const QByteArray& password, const RandomNumberGenerator& rand) : isValid_(true)
 {
     QString realm = arealm;
@@ -93,5 +92,4 @@ DIGESTMD5Response::DIGESTMD5Response(const QByteArray& challenge, const QString&
         out.set("authzid", authz.toUtf8());
     value_  = out.toString();
 }
-
-}
+} // namespace XMPP

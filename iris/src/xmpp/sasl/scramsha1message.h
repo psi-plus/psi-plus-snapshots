@@ -19,10 +19,10 @@
 #ifndef SCRAMSHA1MESSAGE_H
 #define SCRAMSHA1MESSAGE_H
 
+#include "xmpp/base/randomnumbergenerator.h"
+
 #include <QByteArray>
 #include <QString>
-
-#include "xmpp/base/randomnumbergenerator.h"
 
 namespace XMPP {
     class SCRAMSHA1Message
@@ -42,6 +42,6 @@ namespace XMPP {
             QByteArray value_;
             bool isValid_;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // SCRAMSHA1MESSAGE_H

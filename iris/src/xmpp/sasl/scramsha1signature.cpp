@@ -18,17 +18,16 @@
 
 #include "xmpp/sasl/scramsha1signature.h"
 
+#include "xmpp/base/randomnumbergenerator.h"
+
 #include <QByteArray>
+#include <QRegExp>
 #include <QString>
 #include <QTextStream>
 #include <QtCrypto>
 #include <QtDebug>
-#include <QRegExp>
-
-#include "xmpp/base/randomnumbergenerator.h"
 
 namespace XMPP {
-
     SCRAMSHA1Signature::SCRAMSHA1Signature(const QByteArray &server_final_message, const QCA::SecureArray &server_signature_should)
 {
     QRegExp pattern("v=([^,]*)");
@@ -43,5 +42,4 @@ namespace XMPP {
         isValid_ = false;
     }
 }
-
-}
+} // namespace XMPP

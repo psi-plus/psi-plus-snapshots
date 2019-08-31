@@ -257,7 +257,6 @@ while [ $# -gt 0 ]; do
 	esac
 done
 
-
 echo "Configuring Iris ..."
 
 if [ "$QC_VERBOSE" = "Y" ]; then
@@ -1384,9 +1383,9 @@ preserved.
 
 #include "conf4.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <limits.h>
 #ifndef PATH_MAX
 # ifdef Q_OS_WIN
 #  define PATH_MAX 260
@@ -1657,7 +1656,6 @@ QString qc_escapeArg(const QString &str)
 	}
 	return out;
 }
-
 
 QString qc_trim_char(const QString &s, const QChar &ch)
 {
@@ -2494,7 +2492,6 @@ DESTDIR  = \$\$PWD
 
 HEADERS += conf4.h
 SOURCES += conf4.cpp
-
 
 DEFINES += HAVE_MODULES
 

@@ -13,12 +13,12 @@
    https://blake2.net.
 */
 
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
-
-#include "blake2.h"
 #include "blake2-impl.h"
+#include "blake2.h"
+
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 static const uint32_t blake2s_IV[8] =
 {
@@ -87,7 +87,6 @@ int blake2s_init_param( blake2s_state *S, const blake2s_param *P )
   S->outlen = P->digest_length;
   return 0;
 }
-
 
 /* Sequential blake2s initialization */
 int blake2s_init( blake2s_state *S, size_t outlen )
@@ -299,8 +298,8 @@ int crypto_hash( unsigned char *out, unsigned char *in, unsigned long long inlen
 #endif
 
 #if defined(BLAKE2S_SELFTEST)
-#include <string.h>
 #include "blake2-kat.h"
+#include <string.h>
 int main( void )
 {
   uint8_t key[BLAKE2S_KEYBYTES];

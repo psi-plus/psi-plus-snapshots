@@ -19,14 +19,15 @@
 
 #include "filetransfer.h"
 
-#include <QList>
-#include <QTimer>
-#include <QPointer>
-#include <QFileInfo>
-#include <QSet>
-#include "xmpp_xmlcommon.h"
 #include "s5b.h"
 #include "xmpp_ibb.h"
+#include "xmpp_xmlcommon.h"
+
+#include <QFileInfo>
+#include <QList>
+#include <QPointer>
+#include <QSet>
+#include <QTimer>
 
 #define SENDBUFSIZE 65536
 

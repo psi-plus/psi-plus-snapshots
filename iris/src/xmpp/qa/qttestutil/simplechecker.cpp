@@ -16,9 +16,9 @@
  *
  */
 
-#include <QCoreApplication>
-
 #include "qttestutil/testregistry.h"
+
+#include <QCoreApplication>
 
 /**
  * Runs all tests registered with the QtTestUtil registry.

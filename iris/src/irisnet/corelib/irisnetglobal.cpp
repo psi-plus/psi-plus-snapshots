@@ -17,11 +17,9 @@
  */
 
 #include "irisnetglobal_p.h"
-
 #include "irisnetplugin.h"
 
 namespace XMPP {
-
 // built-in providers
 extern IrisNetProvider *irisnet_createQtNetProvider();
 #ifdef Q_OS_UNIX
@@ -304,4 +302,4 @@ QList<IrisNetProvider*> irisNetProviders()
     return global->pluginManager.providers;
 }
 
-}
+} // namespace XMPP

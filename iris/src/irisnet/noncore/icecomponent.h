@@ -19,15 +19,15 @@
 #ifndef ICECOMPONENT_H
 #define ICECOMPONENT_H
 
-#include <QList>
-#include "turnclient.h"
-#include "icetransport.h"
 #include "ice176.h"
+#include "icetransport.h"
+#include "turnclient.h"
+
+#include <QList>
 
 class QUdpSocket;
 
 namespace XMPP {
-
 class UdpPortReserver;
 
 class IceComponent : public QObject
@@ -180,7 +180,6 @@ inline uint qHash(const XMPP::IceComponent::TransportAddress &key, uint seed = 0
 {
     return ::qHash(key.addr, seed) ^ ::qHash(key.port, seed);
 }
-
 } //namespace XMPP
 
-#endif
+#endif // ICECOMPONENT_H

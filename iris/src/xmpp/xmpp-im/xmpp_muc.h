@@ -20,13 +20,12 @@
 #ifndef XMPP_MUC_H
 #define XMPP_MUC_H
 
+#include "xmpp/jid/jid.h"
+
 #include <QDomElement>
 #include <QString>
 
-#include "xmpp/jid/jid.h"
-
-namespace XMPP
-{
+namespace XMPP {
     class MUCItem
     {
     public:
@@ -79,7 +78,6 @@ namespace XMPP
         bool cont() const;
         void setCont(bool);
 
-
         void fromXml(const QDomElement&);
         QDomElement toXml(QDomDocument&) const;
         bool isNull() const;
@@ -131,6 +129,6 @@ namespace XMPP
         Jid jid_;
         QString reason_;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_MUC_H

@@ -19,33 +19,29 @@
 
 #include "socks.h"
 
+#include "bsocket.h"
+
+#include <QByteArray>
 #include <QHostAddress>
-#include <QStringList>
-#include <QTimer>
 #include <QPointer>
 #include <QSocketNotifier>
-#include <QByteArray>
+#include <QStringList>
+#include <QTimer>
+
+//#define PROX_DEBUG
+#ifdef PROX_DEBUG
+#include <stdio.h>
+#endif
 
 #ifdef Q_OS_UNIX
-#include <sys/types.h>
+#include <fcntl.h>
 #include <netinet/in.h>
+#include <sys/types.h>
+#include <unistd.h>
 #endif
 
 #ifdef Q_OS_WIN32
 #include <windows.h>
-#endif
-
-#ifdef Q_OS_UNIX
-#include <unistd.h>
-#include <fcntl.h>
-#endif
-
-#include "bsocket.h"
-
-//#define PROX_DEBUG
-
-#ifdef PROX_DEBUG
-#include <stdio.h>
 #endif
 
 // CS_NAMESPACE_BEGIN

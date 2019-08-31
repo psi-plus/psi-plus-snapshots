@@ -24,9 +24,8 @@ namespace QCA {
     class Provider;
 }
 
-namespace XMPP
-{
+namespace XMPP {
     QCA::Provider* createProviderSimpleSASL();
 }
 
-#endif
+#endif // SIMPLESASL_H

@@ -18,29 +18,26 @@
  */
 
 #include "jingle.h"
-#include "xmpp_xmlcommon.h"
-#include "xmpp/jid/jid.h"
+
 #include "xmpp-im/xmpp_hash.h"
+#include "xmpp/jid/jid.h"
 #include "xmpp_client.h"
-#include "xmpp_task.h"
 #include "xmpp_stream.h"
+#include "xmpp_task.h"
+#include "xmpp_xmlcommon.h"
 
 #include <QDateTime>
+#include <QDebug>
 #include <QDomElement>
-#include <QMap>
 #include <QMap>
 #include <QPointer>
 #include <QTimer>
 #include <functional>
-#include <QDebug>
-#include <QTimer>
 
 namespace XMPP {
 namespace Jingle {
-
 const QString NS(QStringLiteral("urn:xmpp:jingle:1"));
 const QString ERROR_NS(QStringLiteral("urn:xmpp:jingle:errors:1"));
-
 
 //----------------------------------------------------------------------------
 // Jingle
@@ -94,7 +91,6 @@ Jingle::Jingle(const QDomElement &e)
     QString sid = e.attribute(QLatin1String("sid"));
     Jid initiator;
     Jid responder;
-
 
     bool found = false;
     for (unsigned int i = 0; i < sizeof(jingleActions) / sizeof(jingleActions[0]); i++) {
@@ -200,7 +196,6 @@ void Jingle::setResponder(const Jid &jid)
 {
     d->responder = jid;
 }
-
 
 //----------------------------------------------------------------------------
 // Reason
@@ -394,7 +389,6 @@ QDomElement ContentBase::toXml(QDomDocument *doc, const char *tagName) const
     return el;
 }
 
-
 Origin ContentBase::creatorAttr(const QDomElement &el)
 {
     auto creatorStr = el.attribute(QLatin1String("creator"));
@@ -457,7 +451,6 @@ public:
     inline void addExternalManager(const QString &ns) { externalManagers.append(ns); }
     inline void forgetExternalSession(const QString &sid) { externalSessions.removeOne(sid); }
     inline void registerExternalSession(const QString &sid) { externalSessions.append(sid); }
-
 
     bool take(const QDomElement &iq)
     {
@@ -619,7 +612,6 @@ public:
         return true;
     }
 };
-
 
 //----------------------------------------------------------------------------
 // Session
@@ -943,7 +935,6 @@ public:
         return result{Unparsed, Reason::Success, nullptr};
     }
 
-
     typedef std::tuple<AddContentError, Reason::Condition, QList<Application*>, QList<QDomElement>> ParseContentListResult;
 
     ParseContentListResult parseContentAddList(const QDomElement &jingleEl)
@@ -1114,7 +1105,6 @@ public:
         }
         return std::tuple<bool,QList<Application*>>(true, acceptSet.values());
     }
-
 
     bool handleIncomingContentAdd(const QDomElement &jingleEl)
     {
@@ -1637,7 +1627,6 @@ bool Session::updateFromXml(Action action, const QDomElement &jingleEl)
     return false;
 }
 
-
 //----------------------------------------------------------------------------
 // SessionManagerPad - handle event related to a type of app/transport but not specific instance
 //----------------------------------------------------------------------------
@@ -1930,7 +1919,6 @@ Stanza::Error ErrorUtil::makeOutOfOrder(QDomDocument &doc)
 {
     return make(doc, OutOfOrder, XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::UnexpectedRequest);
 }
-
 
 } // namespace Jingle
 } // namespace XMPP

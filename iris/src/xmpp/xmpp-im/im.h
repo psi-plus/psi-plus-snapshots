@@ -20,40 +20,38 @@
 #ifndef XMPP_IM_H
 #define XMPP_IM_H
 
-#include <qdatetime.h>
-//Added by qt3to4:
-#include <QList>
-
 #include "xmpp.h"
 #include "xmpp/jid/jid.h"
-#include "xmpp_muc.h"
-#include "xmpp_message.h"
+#include "xmpp_address.h"
+#include "xmpp_agentitem.h"
 #include "xmpp_chatstate.h"
-#include "xmpp_status.h"
-#include "xmpp_htmlelement.h"
+#include "xmpp_client.h"
+#include "xmpp_discoitem.h"
 #include "xmpp_features.h"
+#include "xmpp_hash.h"
+#include "xmpp_htmlelement.h"
 #include "xmpp_httpauthrequest.h"
-#include "xmpp_url.h"
-#include "xmpp_task.h"
+#include "xmpp_liveroster.h"
+#include "xmpp_liverosteritem.h"
+#include "xmpp_message.h"
+#include "xmpp_muc.h"
+#include "xmpp_pubsubitem.h"
+#include "xmpp_pubsubretraction.h"
 #include "xmpp_resource.h"
 #include "xmpp_resourcelist.h"
 #include "xmpp_roster.h"
 #include "xmpp_rosteritem.h"
-#include "xmpp_liverosteritem.h"
-#include "xmpp_liveroster.h"
 #include "xmpp_rosterx.h"
-#include "xmpp_xdata.h"
-#include "xmpp_discoitem.h"
-#include "xmpp_agentitem.h"
-#include "xmpp_client.h"
-#include "xmpp_address.h"
-#include "xmpp_hash.h"
+#include "xmpp_status.h"
+#include "xmpp_task.h"
 #include "xmpp_thumbs.h"
-#include "xmpp_pubsubitem.h"
-#include "xmpp_pubsubretraction.h"
+#include "xmpp_url.h"
+#include "xmpp_xdata.h"
 
-namespace XMPP
-{
+#include <QList>
+#include <qdatetime.h>
+
+namespace XMPP {
     typedef QList<AgentItem> AgentList;
     typedef QList<DiscoItem> DiscoList;
 
@@ -127,6 +125,6 @@ namespace XMPP
         Jid v_jid;
         QString v_nick, v_first, v_last, v_email;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_IM_H

@@ -18,14 +18,15 @@
  */
 
 #include "xmpp_xdata.h"
-#include "xmpp_xmlcommon.h"
+
 #include "xmpp/jid/jid.h"
+#include "xmpp_xmlcommon.h"
 
 #include <QList>
 #include <QSharedDataPointer>
 
-using namespace XMPP;
 using namespace XMLHelper;
+using namespace XMPP;
 
 // TODO: report, item
 
@@ -329,9 +330,6 @@ QDomElement XData::Field::toXml(QDomDocument *doc, bool submitForm) const
     return f;
 }
 
-
-
-
 //----------------------------------------------------------------------------
 // MediaElement
 //----------------------------------------------------------------------------
@@ -368,9 +366,6 @@ bool XData::Field::MediaElement::checkSupport(const QStringList &wildcards)
     }
     return false;
 }
-
-
-
 
 //----------------------------------------------------------------------------
 // XData

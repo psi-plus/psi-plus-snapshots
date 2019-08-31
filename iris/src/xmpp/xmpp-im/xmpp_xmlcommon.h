@@ -1,6 +1,6 @@
 /*
  * xmlcommon.h - helper functions for dealing with XML
- * Copyright (C) 2001, 2002  Justin Karneges
+ * Copyright (C) 2001-2002  Justin Karneges
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,20 +17,19 @@
  *
  */
 
-#ifndef JABBER_XMLCOMMON_H
-#define JABBER_XMLCOMMON_H
+#ifndef XMPP_XMLCOMMON_H
+#define XMPP_XMLCOMMON_H
 
 #include <qdom.h>
 #include <qlist.h>
 
+class QColor;
 class QDateTime;
 class QRect;
 class QSize;
-class QColor;
 class QStringList;
 
-class XDomNodeList
-{
+class XDomNodeList {
 public:
     XDomNodeList();
     XDomNodeList(const XDomNodeList &from);
@@ -100,6 +99,6 @@ namespace XMLHelper {
 
     //QString tagContent(const QDomElement &e); // obsolete;
     QString sanitizedLang(const QString &lang);
-}
+} // namespace XMLHelper
 
-#endif
+#endif // XMPP_XMLCOMMON_H

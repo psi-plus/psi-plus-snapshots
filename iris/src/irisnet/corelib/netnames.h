@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006,2008  Justin Karneges
+ * Copyright (C) 2006-2008  Justin Karneges
  * Copyright (C) 2009-2010  Dennis Schridde
  *
  * This library is free software; you can redistribute it and/or
@@ -20,12 +20,11 @@
 #ifndef NETNAMES_H
 #define NETNAMES_H
 
+#include "irisnetglobal.h"
+
 #include <QtCore>
 #include <QtNetwork>
-
 #include <limits>
-
-#include "irisnetglobal.h"
 
 // it seems visual studio defines it somewhere
 #ifdef max
@@ -33,7 +32,6 @@
 #endif
 
 namespace XMPP {
-
 class NameManager;
 
 class IRISNET_EXPORT NetNames
@@ -308,7 +306,6 @@ private:
 IRISNET_EXPORT QDebug operator<<(QDebug, XMPP::NameRecord::Type);
 IRISNET_EXPORT QDebug operator<<(QDebug, const XMPP::NameRecord &);
 
-
 class IRISNET_EXPORT ServiceInstance
 {
 public:
@@ -477,7 +474,6 @@ private:
 
 IRISNET_EXPORT QDebug operator<<(QDebug, XMPP::NameResolver::Error);
 
-
 class IRISNET_EXPORT WeightedNameRecordList
 {
     friend QDebug operator<<(QDebug, const WeightedNameRecordList&);
@@ -511,7 +507,6 @@ private:
 
 QDebug operator<<(QDebug, const XMPP::WeightedNameRecordList&);
 
-
 class IRISNET_EXPORT ServiceBrowser : public QObject
 {
     Q_OBJECT
@@ -541,7 +536,6 @@ private:
 
     friend class NameManager;
 };
-
 
 /*! DNS resolver with DNS-SD/mDNS and recursive lookup support */
 /*
@@ -695,10 +689,8 @@ private:
     friend class NameManager;
 };
 
-}
-
+} // namespace XMPP
 
 Q_DECLARE_METATYPE(XMPP::NameResolver::Error)
 
-
-#endif
+#endif // NETNAMES_H

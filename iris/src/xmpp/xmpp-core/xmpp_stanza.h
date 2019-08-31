@@ -19,15 +19,14 @@
 #ifndef XMPP_STANZA_H
 #define XMPP_STANZA_H
 
-#include <QPair>
-#include <QString>
 #include <QDomElement>
+#include <QPair>
 #include <QSharedPointer>
+#include <QString>
 
 class QDomDocument;
 
-namespace XMPP
-{
+namespace XMPP {
     class Jid;
     class Stream;
 
@@ -139,6 +138,6 @@ namespace XMPP
         class Private;
         Private *d;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_STANZA_H

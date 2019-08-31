@@ -28,21 +28,19 @@
   greatly simplify this class.  - Sep 3rd, 2003.
 */
 
-#include "xmpp.h"
-
-#include <QPointer>
-#include <QList>
-#include <QUrl>
-#include <QTimer>
-#include <qca.h>
-
 #include "bsocket.h"
 #include "httpconnect.h"
 #include "httppoll.h"
 #include "socks.h"
+#include "xmpp.h"
+
+#include <QList>
+#include <QPointer>
+#include <QTimer>
+#include <QUrl>
+#include <qca.h>
 
 //#define XMPP_DEBUG
-
 #ifdef XMPP_DEBUG
 # define XDEBUG (qDebug() << this << "#" << __FUNCTION__ << ":")
 #endif
@@ -53,7 +51,6 @@ static const int XMPP_DEFAULT_PORT = 5222;
 static const int XMPP_LEGACY_PORT = 5223;
 static const char* XMPP_CLIENT_SRV = "xmpp-client";
 static const char* XMPP_CLIENT_TRANSPORT = "tcp";
-
 
 //----------------------------------------------------------------------------
 // Connector
@@ -112,7 +109,6 @@ QString Connector::host() const
 {
     return QString();
 }
-
 
 //----------------------------------------------------------------------------
 // AdvancedConnector::Proxy
@@ -185,7 +181,6 @@ void AdvancedConnector::Proxy::setPollInterval(int secs)
 {
     v_poll = secs;
 }
-
 
 //----------------------------------------------------------------------------
 // AdvancedConnector

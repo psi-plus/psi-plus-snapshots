@@ -1,6 +1,6 @@
 /*
  * tasks.cpp - basic tasks
- * Copyright (C) 2001, 2002  Justin Karneges
+ * Copyright (C) 2001-2002  Justin Karneges
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,20 +17,20 @@
  *
  */
 
-#include <QRegExp>
+#include "xmpp_tasks.h"
+
+#include "xmpp/base/timezone.h"
+#include "xmpp_bitsofbinary.h"
+#include "xmpp_caps.h"
+#include "xmpp_captcha.h"
+#include "xmpp_vcard.h"
+#include "xmpp_xmlcommon.h"
+
 #include <QList>
+#include <QRegExp>
 #include <QTimer>
 
-#include "xmpp_tasks.h"
-#include "xmpp_xmlcommon.h"
-#include "xmpp_vcard.h"
-#include "xmpp_bitsofbinary.h"
-#include "xmpp_captcha.h"
-#include "xmpp/base/timezone.h"
-#include "xmpp_caps.h"
-
 using namespace XMPP;
-
 
 static QString lineEncode(QString str)
 {
@@ -580,7 +580,6 @@ bool JT_Roster::take(const QDomElement &x)
     return false;
 }
 
-
 //----------------------------------------------------------------------------
 // JT_PushRoster
 //----------------------------------------------------------------------------
@@ -606,7 +605,6 @@ bool JT_PushRoster::take(const QDomElement &e)
 
     return true;
 }
-
 
 //----------------------------------------------------------------------------
 // JT_Presence
@@ -724,7 +722,6 @@ void JT_Presence::onGo()
     send(tag);
     setSuccess();
 }
-
 
 //----------------------------------------------------------------------------
 // JT_PushPresence
@@ -852,7 +849,6 @@ bool JT_PushPresence::take(const QDomElement &e)
         }
     }
 
-
     if (stamp.isValid()) {
         if (client()->manualTimeZoneOffset()) {
             stamp = stamp.addSecs(client()->timeZoneOffset() * 3600);
@@ -867,7 +863,6 @@ bool JT_PushPresence::take(const QDomElement &e)
 
     return true;
 }
-
 
 //----------------------------------------------------------------------------
 // JT_Message
@@ -937,7 +932,6 @@ void JT_Message::onGo()
     }
     setSuccess();
 }
-
 
 //----------------------------------------------------------------------------
 // JT_PushMessage
@@ -1133,7 +1127,6 @@ bool JT_VCard::take(const QDomElement &x)
     return true;
 }
 
-
 //----------------------------------------------------------------------------
 // JT_Search
 //----------------------------------------------------------------------------
@@ -1308,7 +1301,6 @@ bool JT_Search::take(const QDomElement &x)
     return true;
 }
 
-
 //----------------------------------------------------------------------------
 // JT_ClientVersion
 //----------------------------------------------------------------------------
@@ -1376,7 +1368,6 @@ const QString & JT_ClientVersion::os() const
 {
     return v_os;
 }
-
 
 //----------------------------------------------------------------------------
 // JT_EntityTime
@@ -1453,7 +1444,6 @@ int JT_EntityTime::timezoneOffset() const
 {
     return tzo;
 }
-
 
 //----------------------------------------------------------------------------
 // JT_ServInfo
@@ -1543,7 +1533,6 @@ bool JT_ServInfo::take(const QDomElement &e)
 
     return false;
 }
-
 
 //----------------------------------------------------------------------------
 // JT_Gateway
@@ -1820,7 +1809,6 @@ bool JT_DiscoPublish::take(const QDomElement &x)
     return true;
 }
 
-
 // ---------------------------------------------------------
 // JT_BoBServer
 // ---------------------------------------------------------
@@ -1855,7 +1843,6 @@ bool JT_BoBServer::take(const QDomElement &e)
     }
     return false;
 }
-
 
 //----------------------------------------------------------------------------
 // JT_BitsOfBinary
@@ -2062,7 +2049,6 @@ bool JT_CaptchaChallenger::take(const QDomElement &x)
 
     return true;
 }
-
 
 //---------------------------------------------------------------------------
 // JT_CaptchaSender

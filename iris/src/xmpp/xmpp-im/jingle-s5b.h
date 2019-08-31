@@ -27,15 +27,14 @@ class QHostAddress;
 class SocksClient;
 
 namespace XMPP {
-
 class Client;
 
 namespace Jingle {
 namespace S5B {
-
 extern const QString NS;
 
 class Transport;
+
 class Candidate {
 public:
     enum Type {
@@ -216,7 +215,6 @@ private:
     class Private;
     QScopedPointer<Private> d;
 };
-
 } // namespace S5B
 } // namespace Jingle
 } // namespace XMPP

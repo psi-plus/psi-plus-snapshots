@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009,2010  Barracuda Networks, Inc.
+ * Copyright (C) 2009-2010  Barracuda Networks, Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,20 +18,20 @@
 
 #include "ice176.h"
 
+#include "icecomponent.h"
+#include "icelocaltransport.h"
+#include "iceturntransport.h"
+#include "stunbinding.h"
+#include "stunmessage.h"
+#include "stuntransaction.h"
+#include "udpportreserver.h"
+
 #include <QSet>
 #include <QTimer>
 #include <QUdpSocket>
 #include <QtCrypto>
-#include "stuntransaction.h"
-#include "stunbinding.h"
-#include "stunmessage.h"
-#include "udpportreserver.h"
-#include "icelocaltransport.h"
-#include "iceturntransport.h"
-#include "icecomponent.h"
 
 namespace XMPP {
-
 enum
 {
     Direct,
@@ -1339,6 +1339,6 @@ bool Ice176::isIPv6LinkLocalAddress(const QHostAddress &addr)
         return false;
 }
 
-}
+} // namespace XMPP
 
 #include "ice176.moc"

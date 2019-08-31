@@ -1,9 +1,9 @@
 #ifndef ZLIBCOMPRESSOR_H
 #define ZLIBCOMPRESSOR_H
 
-#include <QObject>
-
 #include "zlib.h"
+
+#include <QObject>
 
 class QIODevice;
 
@@ -29,4 +29,4 @@ private:
     bool flushed_;
 };
 
-#endif
+#endif // ZLIBCOMPRESSOR_H

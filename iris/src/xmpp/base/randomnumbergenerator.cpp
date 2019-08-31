@@ -21,7 +21,6 @@
 #include <cassert>
 
 namespace XMPP {
-
 RandomNumberGenerator::~RandomNumberGenerator()
 {
 }
@@ -31,5 +30,4 @@ double RandomNumberGenerator::generateNumberBetween(double a, double b) const
     assert(b > a);
     return a + (generateNumber()/getMaximumGeneratedNumber())*(b-a);
 }
-
-}
+} // namespace XMPP

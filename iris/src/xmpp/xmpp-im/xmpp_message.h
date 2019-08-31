@@ -19,29 +19,29 @@
 #ifndef XMPP_MESSAGE_H
 #define XMPP_MESSAGE_H
 
+#include "xmpp_address.h"
+#include "xmpp_chatstate.h"
+#include "xmpp_muc.h"
+#include "xmpp_receipts.h"
+#include "xmpp_reference.h"
+#include "xmpp_rosterx.h"
 #include "xmpp_stanza.h"
 #include "xmpp_url.h"
-#include "xmpp_chatstate.h"
-#include "xmpp_receipts.h"
-#include "xmpp_address.h"
-#include "xmpp_rosterx.h"
-#include "xmpp_muc.h"
-#include "xmpp_reference.h"
 
 #include <QExplicitlySharedDataPointer>
 
-class QString;
 class QDateTime;
+class QString;
 
 namespace XMPP {
+    class BoBData;
+    class HTMLElement;
+    class HttpAuthRequest;
+    class IBBData;
     class Jid;
     class PubSubItem;
     class PubSubRetraction;
-    class HTMLElement;
-    class HttpAuthRequest;
     class XData;
-    class BoBData;
-    class IBBData;
 
     typedef QMap<QString, QString> StringMap;
 
@@ -238,9 +238,8 @@ namespace XMPP {
         class Private;
         QExplicitlySharedDataPointer<Private> d;
     };
-}
+} // namespace XMPP
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(XMPP::Message::ProcessingHints)
 
-
-#endif
+#endif // XMPP_MESSAGE_H

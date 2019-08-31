@@ -16,12 +16,13 @@
  *
  */
 
-#include <QTimer>
-
 #include "xmpp_task.h"
+
 #include "xmpp_client.h"
-#include "xmpp_xmlcommon.h"
 #include "xmpp_stanza.h"
+#include "xmpp_xmlcommon.h"
+
+#include <QTimer>
 
 #define DEFAULT_TIMEOUT 120
 
@@ -291,7 +292,6 @@ void Task::debug(const QString &str)
     client()->debug(QString("%1: ").arg(metaObject()->className()) + str);
 }
 
-
 /**
  * \brief verifiys a stanza is a IQ reply for this task
  *
@@ -345,4 +345,3 @@ bool Task::iqVerify(const QDomElement &x, const Jid &to, const QString &id, cons
 
     return true;
 }
-

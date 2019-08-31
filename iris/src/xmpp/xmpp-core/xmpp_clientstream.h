@@ -19,23 +19,22 @@
 #ifndef XMPP_CLIENTSTREAM_H
 #define XMPP_CLIENTSTREAM_H
 
-#include <QtCrypto>
-
 #include "xmpp_stream.h"
 
+#include <QtCrypto>
+
+class ByteStream;
 class QByteArray;
-class QString;
 class QDomDocument;
 class QDomElement;
-class QObject;
-class ByteStream;
 class QHostAddress;
+class QObject;
+class QString;
 
-namespace XMPP
-{
-    class TLSHandler;
+namespace XMPP {
     class Connector;
     class StreamFeatures;
+    class TLSHandler;
 
     class ClientStream : public Stream
     {
@@ -226,6 +225,6 @@ namespace XMPP
         void srvProcessNext();
         void setTimer(int secs);
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_CLIENTSTREAM_H

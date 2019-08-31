@@ -19,8 +19,8 @@
 #ifndef DIGESTMD5PROPLIST_H
 #define DIGESTMD5PROPLIST_H
 
-#include <QList>
 #include <QByteArray>
+#include <QList>
 
 namespace XMPP {
     struct DIGESTMD5Prop
@@ -41,6 +41,6 @@ namespace XMPP {
         private:
             int varCount(const QByteArray &var) const;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // DIGESTMD5PROPLIST_H

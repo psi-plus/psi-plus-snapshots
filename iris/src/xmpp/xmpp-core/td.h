@@ -16,5 +16,4 @@ public:
     static void incomingXml(const QDomElement &);
 };
 
-#endif
-
+#endif // TESTDEBUG_H

@@ -1,9 +1,9 @@
-#include <QTimer>
-#include <QDebug>
-
 #include "compressionhandler.h"
 #include "xmpp/zlib/zlibcompressor.h"
 #include "xmpp/zlib/zlibdecompressor.h"
+
+#include <QDebug>
+#include <QTimer>
 
 CompressionHandler::CompressionHandler()
     : errorCode_(0)

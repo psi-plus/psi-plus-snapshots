@@ -19,9 +19,9 @@
 #ifndef INCREMENTINGRANDOMNUMBERGENERATOR_H
 #define INCREMENTINGRANDOMNUMBERGENERATOR_H
 
-#include <QtDebug>
-
 #include "xmpp/base/randomnumbergenerator.h"
+
+#include <QtDebug>
 
 namespace XMPP {
     class IncrementingRandomNumberGenerator : public RandomNumberGenerator
@@ -42,6 +42,6 @@ namespace XMPP {
             int maximumNumber_;
             mutable int currentNumber_;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // INCREMENTINGRANDOMNUMBERGENERATOR_H

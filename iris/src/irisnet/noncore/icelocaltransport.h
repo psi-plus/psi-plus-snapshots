@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009,2010  Barracuda Networks, Inc.
+ * Copyright (C) 2009-2010  Barracuda Networks, Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,9 +19,10 @@
 #ifndef ICELOCALTRANSPORT_H
 #define ICELOCALTRANSPORT_H
 
-#include <QObject>
-#include <QByteArray>
 #include "icetransport.h"
+
+#include <QByteArray>
+#include <QObject>
 
 class QHostAddress;
 class QUdpSocket;
@@ -31,7 +32,6 @@ namespace QCA {
 }
 
 namespace XMPP {
-
 // this class manages a single port on a single interface, including the
 //   relationship with an associated STUN/TURN server.  if TURN is used, this
 //   class offers two paths (0=direct and 1=relayed), otherwise it offers
@@ -95,7 +95,6 @@ private:
     friend class Private;
     Private *d;
 };
+} // namespace XMPP
 
-}
-
-#endif
+#endif // ICELOCALTRANSPORT_H

@@ -18,25 +18,21 @@
  *
  */
 
-#include <QTcpSocket>
-#include <QHostAddress>
-#include <QMetaType>
-
-#include <limits>
-
 #include "bsocket.h"
 
-//#define BS_DEBUG
+#include <QHostAddress>
+#include <QMetaType>
+#include <QTcpSocket>
+#include <limits>
 
+//#define BS_DEBUG
 #ifdef BS_DEBUG
 # define BSDEBUG (qDebug() << this << "#" << __FUNCTION__ << ":")
 #endif
 
-
 #define READBUFSIZE 65536
 
 // CS_NAMESPACE_BEGIN
-
 class QTcpSocketSignalRelay : public QObject
 {
     Q_OBJECT
@@ -92,7 +88,6 @@ public slots:
         emit error(x);
     }
 };
-
 
 class HappyEyeballsConnector : public QObject
 {
@@ -157,7 +152,6 @@ public:
         }
         fallbackTimer.stop();
     }
-
 
     void connectToHost(const QHostAddress &address, quint16 port)
     {
@@ -428,7 +422,6 @@ BSocket::~BSocket()
     resetConnection(true);
     delete d;
 }
-
 
 void BSocket::resetConnection(bool clear)
 {

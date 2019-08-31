@@ -19,13 +19,12 @@
 #ifndef XMPP_ROSTERITEM_H
 #define XMPP_ROSTERITEM_H
 
+#include "xmpp/jid/jid.h"
+
 #include <QString>
 #include <QStringList>
 
-#include "xmpp/jid/jid.h"
-
-namespace XMPP
-{
+namespace XMPP {
     class Subscription
     {
     public:
@@ -78,6 +77,6 @@ namespace XMPP
         QString v_ask;
         bool v_push;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_ROSTERITEM_H

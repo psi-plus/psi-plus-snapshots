@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2008    Justin Karneges
+ * Copyright (C) 2006-2008  Justin Karneges
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -158,7 +158,6 @@ static inline uint qHash(const Handle &key)
     uint h2 = ::qHash(key.id);
     return ((h1 << 16) | (h1 >> 16)) ^ h2;
 }
-
 
 //----------------------------------------------------------------------------
 // JDnsShutdown

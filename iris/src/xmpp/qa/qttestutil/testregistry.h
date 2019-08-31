@@ -24,7 +24,6 @@
 class QObject;
 
 namespace QtTestUtil {
-
     /**
      * A registry of QtTest test classes.
      * All test classes registered with QTTESTUTIL_REGISTER_TEST add
@@ -57,6 +56,6 @@ namespace QtTestUtil {
         private:
             QList<QObject*> tests_;
     };
-}
+} // namespace QtTestUtil
 
-#endif
+#endif // QTTESTUTIL_TESTREGISTRY_H

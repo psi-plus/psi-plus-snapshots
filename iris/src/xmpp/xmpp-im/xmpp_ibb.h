@@ -1,6 +1,6 @@
 /*
  * ibb.h - Inband bytestream
- * Copyright (C) 2001, 2002  Justin Karneges
+ * Copyright (C) 2001-2002  Justin Karneges
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,20 +17,19 @@
  *
  */
 
-#ifndef JABBER_IBB_H
-#define JABBER_IBB_H
-
-#include <QList>
-#include <QObject>
-#include <QDomElement>
+#ifndef XMPP_IBB_H
+#define XMPP_IBB_H
 
 #include "bytestream.h"
-#include "xmpp_bytestream.h"
 #include "im.h"
+#include "xmpp_bytestream.h"
 #include "xmpp_task.h"
 
-namespace XMPP
-{
+#include <QDomElement>
+#include <QList>
+#include <QObject>
+
+namespace XMPP {
     class Client;
     class IBBManager;
 
@@ -176,6 +175,6 @@ namespace XMPP
         class Private;
         Private *d;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_IBB_H

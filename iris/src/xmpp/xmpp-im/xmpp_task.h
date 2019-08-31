@@ -84,6 +84,6 @@ namespace XMPP {
         class TaskPrivate;
         TaskPrivate *d;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_TASK_H

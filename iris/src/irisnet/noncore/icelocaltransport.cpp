@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009,2010  Barracuda Networks, Inc.
+ * Copyright (C) 2009-2010  Barracuda Networks, Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,21 +18,21 @@
 
 #include "icelocaltransport.h"
 
+#include "objectsession.h"
+#include "stunallocate.h"
+#include "stunbinding.h"
+#include "stunmessage.h"
+#include "stuntransaction.h"
+#include "turnclient.h"
+
 #include <QHostAddress>
 #include <QUdpSocket>
 #include <QtCrypto>
-#include "objectsession.h"
-#include "stunmessage.h"
-#include "stuntransaction.h"
-#include "stunbinding.h"
-#include "stunallocate.h"
-#include "turnclient.h"
 
 // don't queue more incoming packets than this per transmit path
 #define MAX_PACKET_QUEUE 64
 
 namespace XMPP {
-
 enum
 {
     Direct,
@@ -881,6 +881,6 @@ void IceLocalTransport::setDebugLevel(DebugLevel level)
         d->turn->setDebugLevel((TurnClient::DebugLevel)level);
 }
 
-}
+} // namespace XMPP
 
 #include "icelocaltransport.moc"

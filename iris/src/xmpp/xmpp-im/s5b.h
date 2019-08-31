@@ -20,34 +20,33 @@
 #ifndef XMPP_S5B_H
 #define XMPP_S5B_H
 
-#include <QObject>
-#include <QList>
-#include <QHostAddress>
-#include <tcpportreserver.h>
-
 #include "bytestream.h"
-#include "xmpp_bytestream.h"
 #include "xmpp/jid/jid.h"
-#include "xmpp_task.h"
+#include "xmpp_bytestream.h"
 #include "xmpp_stanza.h"
+#include "xmpp_task.h"
+
+#include <QHostAddress>
+#include <QList>
+#include <QObject>
+#include <tcpportreserver.h>
 
 class SocksClient;
 class SocksUDP;
 
-namespace XMPP
-{
+namespace XMPP {
     namespace Jingle {
         namespace S5B {
             class Manager;
         }
     }
 
-    class StreamHost;
     class Client;
-    class TcpPortReserver;
+    class JT_PushS5B;
     class S5BConnection;
     class S5BManager;
-    class JT_PushS5B;
+    class StreamHost;
+    class TcpPortReserver;
     struct S5BRequest;
     typedef QList<StreamHost> StreamHostList;
     typedef QList<S5BConnection*> S5BConnectionList;
@@ -239,7 +238,6 @@ namespace XMPP
         void man_udpSuccess(const Jid &streamHost);
     };
 
-
     class S5BServersProducer : public TcpPortScope
     {
     protected:
@@ -347,6 +345,6 @@ namespace XMPP
         int v_port;
         bool proxy;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_S5B_H

@@ -24,7 +24,6 @@
 #include "xmpp_hash.h"
 
 namespace XMPP {
-
 class Client;
 class Thumbnail;
 
@@ -211,7 +210,6 @@ public:
 private:
     XMPP::Jingle::Manager *jingleManager = nullptr;
 };
-
 } // namespace FileTransfer
 } // namespace Jingle
 } // namespace XMPP

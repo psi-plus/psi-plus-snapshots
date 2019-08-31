@@ -1,6 +1,6 @@
 /*
  * ndns.h - native DNS resolution
- * Copyright (C) 2001, 2002  Justin Karneges
+ * Copyright (C) 2001-2002  Justin Karneges
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,12 +20,12 @@
 #ifndef CS_NDNS_H
 #define CS_NDNS_H
 
-#include <QtCore>
-#include <QtNetwork>
 #include "netnames.h"
 
-// CS_NAMESPACE_BEGIN
+#include <QtCore>
+#include <QtNetwork>
 
+// CS_NAMESPACE_BEGIN
 class NDns : public QObject
 {
     Q_OBJECT
@@ -55,4 +55,4 @@ private:
 
 // CS_NAMESPACE_END
 
-#endif
+#endif // CS_NDNS_H

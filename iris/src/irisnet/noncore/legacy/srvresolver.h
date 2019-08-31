@@ -20,12 +20,12 @@
 #ifndef CS_SRVRESOLVER_H
 #define CS_SRVRESOLVER_H
 
-#include <QtCore>
-#include <QtNetwork>
 #include "netnames.h"
 
-// CS_NAMESPACE_BEGIN
+#include <QtCore>
+#include <QtNetwork>
 
+// CS_NAMESPACE_BEGIN
 class Q3Dns
 {
 public:
@@ -79,4 +79,4 @@ private:
 
 // CS_NAMESPACE_END
 
-#endif
+#endif // CS_SRVRESOLVER_H

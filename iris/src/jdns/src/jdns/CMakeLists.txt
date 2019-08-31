@@ -6,7 +6,6 @@ set(jdns_SRCS
     jdns_util.c
 )
 
-
 set(jdns_PUBLIC_HEADERS
     "${JDNS_INCLUDEDIR}/jdns.h"
     "${JDNS_INCLUDEDIR}/jdns_export.h"

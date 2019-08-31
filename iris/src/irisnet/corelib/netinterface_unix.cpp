@@ -24,19 +24,17 @@
 
 #include "irisnetplugin.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
+#include <errno.h>
 #include <net/if.h>
 #include <net/route.h>
 #include <netinet/in.h>
-#include <errno.h>
-#include <unistd.h>
-
-// for solaris
-#ifndef SIOCGIFCONF
-# include<sys/sockio.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#ifndef SIOCGIFCONF // for solaris
+# include <sys/sockio.h>
 #endif
+#include <sys/types.h>
+#include <unistd.h>
 
 #ifdef Q_OS_LINUX
 static QStringList read_proc_as_lines(const char *procfile)
@@ -172,7 +170,6 @@ static QList<XMPP::NetGatewayProvider::Info> get_unix_gateways()
 }
 
 namespace XMPP {
-
 class UnixGateway : public NetGatewayProvider
 {
     Q_OBJECT
@@ -226,7 +223,6 @@ IrisNetProvider *irisnet_createUnixNetProvider()
 {
     return new UnixNetProvider;
 }
-
-}
+} // namespace XMPP
 
 #include "netinterface_unix.moc"

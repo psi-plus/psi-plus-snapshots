@@ -18,19 +18,19 @@
 
 #include "turnclient.h"
 
-#include <QtCrypto>
-#include "stuntypes.h"
+#include "bsocket.h"
+#include "bytestream.h"
+#include "httpconnect.h"
+#include "objectsession.h"
+#include "socks.h"
+#include "stunallocate.h"
 #include "stunmessage.h"
 #include "stuntransaction.h"
-#include "stunallocate.h"
-#include "objectsession.h"
-#include "bytestream.h"
-#include "bsocket.h"
-#include "httpconnect.h"
-#include "socks.h"
+#include "stuntypes.h"
+
+#include <QtCrypto>
 
 namespace XMPP {
-
 //----------------------------------------------------------------------------
 // TurnClient::Proxy
 //----------------------------------------------------------------------------
@@ -1139,7 +1139,6 @@ void TurnClient::setDebugLevel(DebugLevel level)
     if(d->pool)
         d->pool->setDebugLevel((StunTransactionPool::DebugLevel)level);
 }
-
-}
+} // namespace XMPP
 
 #include "turnclient.moc"

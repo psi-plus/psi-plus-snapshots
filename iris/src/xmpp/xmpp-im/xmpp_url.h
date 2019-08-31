@@ -21,8 +21,7 @@
 
 class QString;
 
-namespace XMPP
-{
+namespace XMPP {
     class Url
     {
     public:
@@ -43,6 +42,6 @@ namespace XMPP
     };
 
     typedef QList<Url> UrlList;
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_URL

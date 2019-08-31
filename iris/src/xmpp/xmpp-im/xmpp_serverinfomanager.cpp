@@ -1,6 +1,6 @@
 /*
  * xmpp_serverinfomanager.cpp
- * Copyright (C) 2006,2019  Remko Troncon, Sergey Ilinykh
+ * Copyright (C) 2006-2019  Remko Troncon, Sergey Ilinykh
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,11 +18,11 @@
  */
 
 #include "xmpp_serverinfomanager.h"
-#include "xmpp_tasks.h"
+
 #include "xmpp_caps.h"
+#include "xmpp_tasks.h"
 
 namespace XMPP {
-
 ServerInfoManager::ServerInfoManager(Client* client):
     QObject(client),
     _client(client),
@@ -293,5 +293,4 @@ void ServerInfoManager::disco_finished()
         emit featuresChanged();
     }
 }
-
 } // namespace XMPP

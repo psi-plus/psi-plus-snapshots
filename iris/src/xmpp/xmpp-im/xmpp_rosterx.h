@@ -20,15 +20,14 @@
 #ifndef XMPP_ROSTERX_H
 #define XMPP_ROSTERX_H
 
+#include "xmpp/jid/jid.h"
+
 #include <QString>
 #include <QStringList>
 
-#include "xmpp/jid/jid.h"
-
 class QDomElement;
 
-namespace XMPP
-{
+namespace XMPP {
     class Stanza;
 
     class RosterExchangeItem
@@ -60,6 +59,6 @@ namespace XMPP
         Action action_;
     };
     typedef QList<RosterExchangeItem> RosterExchangeItems;
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_ROSTERX_H

@@ -19,22 +19,22 @@
 
 #include "simplesasl.h"
 
+#include "xmpp/base/randrandomnumbergenerator.h"
+#include "xmpp/sasl/digestmd5response.h"
+#include "xmpp/sasl/plainmessage.h"
+#include "xmpp/sasl/scramsha1message.h"
+#include "xmpp/sasl/scramsha1response.h"
+#include "xmpp/sasl/scramsha1signature.h"
+
+#include <QByteArray>
+#include <QDebug>
+#include <QList>
 #include <QObject>
+#include <QtCrypto>
+#include <qca.h>
 #include <qhostaddress.h>
 #include <qstringlist.h>
-#include <QList>
-#include <qca.h>
-#include <QByteArray>
 #include <stdlib.h>
-#include <QtCrypto>
-#include <QDebug>
-
-#include "xmpp/sasl/plainmessage.h"
-#include "xmpp/sasl/digestmd5response.h"
-#include "xmpp/sasl/scramsha1response.h"
-#include "xmpp/sasl/scramsha1message.h"
-#include "xmpp/sasl/scramsha1signature.h"
-#include "xmpp/base/randrandomnumbergenerator.h"
 
 namespace XMPP {
 class SimpleSASLContext : public QCA::SASLContext
@@ -460,7 +460,6 @@ QCA::Provider *createProviderSimpleSASL()
 {
     return (new QCASimpleSASL);
 }
-
-}
+} // namespace XMPP
 
 #include "simplesasl.moc"

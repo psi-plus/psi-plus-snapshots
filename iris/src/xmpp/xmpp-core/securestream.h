@@ -20,14 +20,13 @@
 #ifndef SECURESTREAM_H
 #define SECURESTREAM_H
 
-#include <qca.h>
 #include "bytestream.h"
 
-#define USE_TLSHANDLER
+#include <qca.h>
 
+#define USE_TLSHANDLER
 #ifdef USE_TLSHANDLER
-namespace XMPP
-{
+namespace XMPP {
     class TLSHandler;
 }
 #endif
@@ -83,4 +82,4 @@ private:
     Private *d;
 };
 
-#endif
+#endif // SECURESTREAM_H

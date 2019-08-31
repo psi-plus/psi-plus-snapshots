@@ -1,7 +1,7 @@
+#include "qttestutil/qttestutil.h"
+
 #include <QObject>
 #include <QtTest/QtTest>
-
-#include "qttestutil/qttestutil.h"
 
 class MySecondClassTest : public QObject
 {

@@ -22,10 +22,9 @@
 #include "irisnetglobal.h"
 
 namespace XMPP {
-
 class NetInterfaceManager;
-class NetInterfacePrivate;
 class NetInterfaceManagerPrivate;
+class NetInterfacePrivate;
 
 /**
    \brief Provides information about a network interface
@@ -196,7 +195,6 @@ private:
     void *reg(const QString &id, NetInterface *i);
     void unreg(NetInterface *i);
 };
+} // namespace XMPP
 
-}
-
-#endif
+#endif // NETINTERFACE_H

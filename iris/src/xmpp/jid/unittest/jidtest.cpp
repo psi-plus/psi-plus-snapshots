@@ -18,11 +18,11 @@
 
 // FIXME: Complete this
 
-#include <QtTest/QtTest>
-#include <QObject>
-
 #include "qttestutil/qttestutil.h"
 #include "xmpp/jid/jid.h"
+
+#include <QObject>
+#include <QtTest/QtTest>
 
 using namespace XMPP;
 

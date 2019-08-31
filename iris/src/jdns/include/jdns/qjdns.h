@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005,2006  Justin Karneges
+ * Copyright (C) 2005-2006  Justin Karneges
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -27,6 +27,7 @@
 #define QJDNS_H
 
 #include "jdns_export.h"
+
 #include <QtCore>
 #include <QtNetwork>
 
@@ -156,4 +157,4 @@ private:
     Private *d;
 };
 
-#endif
+#endif // QJDNS_H

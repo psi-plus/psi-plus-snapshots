@@ -113,4 +113,4 @@ private:
 }
 #endif
 
-#endif
+#endif // PROCESSQUIT_H

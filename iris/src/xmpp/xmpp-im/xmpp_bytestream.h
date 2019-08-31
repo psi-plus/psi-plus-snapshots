@@ -1,6 +1,6 @@
 /*
  * bytestream_manager.h - base class for bytestreams over xmpp
- * Copyright (C) 2003  Justin Karneges, Rion
+ * Copyright (C) 2003  Justin Karneges, Sergey Ilinykh
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,14 +20,14 @@
 #ifndef BYTESTREAM_MANAGER_H
 #define BYTESTREAM_MANAGER_H
 
-#include <QObject>
-#include "xmpp/jid/jid.h"
 #include "bytestream.h"
+#include "xmpp/jid/jid.h"
 
-namespace XMPP
-{
-    class Client;
+#include <QObject>
+
+namespace XMPP {
     class BytestreamManager;
+    class Client;
 
     class BSConnection : public ByteStream
     {
@@ -64,6 +64,6 @@ namespace XMPP
     signals:
         void incomingReady();
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // BYTESTREAM_MANAGER_H

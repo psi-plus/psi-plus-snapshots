@@ -18,15 +18,14 @@
 
 #include "objectsession.h"
 
-#include <stdlib.h>
-#include <QList>
 #include <QByteArray>
+#include <QList>
 #include <QMetaObject>
 #include <QMetaType>
 #include <QTimer>
+#include <stdlib.h>
 
 namespace XMPP {
-
 class ObjectSessionWatcherPrivate
 {
 public:
@@ -220,7 +219,6 @@ bool ObjectSessionWatcher::isValid() const
         return false;
 }
 
-
 ObjectSession::ObjectSession(QObject *parent) :
     QObject(parent)
 {
@@ -300,7 +298,6 @@ void ObjectSession::resume()
     if(!d->pendingCalls.isEmpty())
         d->callTrigger->start();
 }
-
-}
+} // namespace XMPP
 
 #include "objectsession.moc"

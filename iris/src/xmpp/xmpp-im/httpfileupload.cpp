@@ -17,16 +17,17 @@
  *
  */
 
+#include "httpfileupload.h"
+
+#include "xmpp_serverinfomanager.h"
+#include "xmpp_tasks.h"
+#include "xmpp_xmlcommon.h"
+
 #include <QList>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QRegExp>
-
-#include "httpfileupload.h"
-#include "xmpp_tasks.h"
-#include "xmpp_xmlcommon.h"
-#include "xmpp_serverinfomanager.h"
 
 using namespace XMPP;
 
@@ -437,7 +438,6 @@ bool JT_HTTPFileUpload::take(const QDomElement &e)
     return true;
 }
 
-
 class HttpFileUploadManager::Private {
 public:
     Client *client = nullptr;
@@ -447,8 +447,6 @@ public:
     bool externalQnam = false;
     QLinkedList<HttpFileUpload::HttpHost> hosts;
 };
-
-
 
 HttpFileUploadManager::HttpFileUploadManager(Client *parent) :
     QObject(parent),

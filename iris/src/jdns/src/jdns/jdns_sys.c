@@ -113,15 +113,14 @@ read /etc/hosts manually:
 
 #include "jdns_p.h"
 
+#ifdef JDNS_OS_UNIX
+# include <arpa/nameser.h>
+# include <dlfcn.h>
+# include <netinet/in.h>
+# include <resolv.h>
+#endif
 #ifdef JDNS_OS_WIN
 # include <windows.h>
-#endif
-
-#ifdef JDNS_OS_UNIX
-# include <netinet/in.h>
-# include <arpa/nameser.h>
-# include <resolv.h>
-# include <dlfcn.h>
 #endif
 
 #define string_indexOf jdns_string_indexOf

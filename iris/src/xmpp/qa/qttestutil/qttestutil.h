@@ -38,4 +38,4 @@
 #define QTTESTUTIL_REGISTER_TEST(TestClass) \
     static QtTestUtil::TestRegistration<TestClass> TestClass##Registration
 
-#endif
+#endif // QTTESTUTIL_H

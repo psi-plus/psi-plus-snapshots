@@ -23,10 +23,9 @@
 #include "bytestream.h"
 
 // CS_NAMESPACE_BEGIN
-
 class QHostAddress;
-class QTcpSocket;
 class QTcpServer;
+class QTcpSocket;
 class SocksClient;
 class SocksServer;
 
@@ -162,4 +161,4 @@ private:
 
 // CS_NAMESPACE_END
 
-#endif
+#endif // CS_SOCKS_H

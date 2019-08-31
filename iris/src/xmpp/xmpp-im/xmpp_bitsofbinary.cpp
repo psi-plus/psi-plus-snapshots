@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Rion
+ * Copyright (C) 2010  Sergey Ilinykh
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -16,13 +16,14 @@
  *
  */
 
-#include <QCryptographicHash>
-#include <QFile>
-
 #include "xmpp_bitsofbinary.h"
-#include "xmpp_xmlcommon.h"
+
 #include "xmpp_client.h"
 #include "xmpp_tasks.h"
+#include "xmpp_xmlcommon.h"
+
+#include <QCryptographicHash>
+#include <QFile>
 
 using namespace XMPP;
 
@@ -129,8 +130,6 @@ QDomElement BoBData::toXml(QDomDocument *doc) const
     return data;
 }
 
-
-
 // ---------------------------------------------------------
 // BoBCache
 // ---------------------------------------------------------
@@ -139,7 +138,6 @@ BoBCache::BoBCache(QObject *parent)
 {
 
 }
-
 
 //------------------------------------------------------------------------------
 // BoBManager

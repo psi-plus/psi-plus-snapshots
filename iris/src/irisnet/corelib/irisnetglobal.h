@@ -19,19 +19,17 @@
 #ifndef IRISNETGLOBAL_H
 #define IRISNETGLOBAL_H
 
-#include <QtCore>
-#include <QtNetwork>
 #include "irisnetexport.h"
 
-namespace XMPP {
+#include <QtCore>
+#include <QtNetwork>
 
+namespace XMPP {
 // set the directories for plugins.  call before doing anything else.
 IRISNET_EXPORT void irisNetSetPluginPaths(const QStringList &paths);
-
 // free any shared data and plugins.
 // note: this is automatically called when qapp shuts down.
 IRISNET_EXPORT void irisNetCleanup();
+} // namespace XMPP
 
-}
-
-#endif
+#endif // IRISNETGLOBAL_H

@@ -19,20 +19,18 @@
 
 #include "httpconnect.h"
 
-#include <QStringList>
-#include <QByteArray>
-#include <QtCrypto>
-
 #include "bsocket.h"
 
-//#define PROX_DEBUG
+#include <QByteArray>
+#include <QStringList>
+#include <QtCrypto>
 
+//#define PROX_DEBUG
 #ifdef PROX_DEBUG
 #include <stdio.h>
 #endif
 
 // CS_NAMESPACE_BEGIN
-
 #ifdef PROX_DEBUG
 QString escapeOutput(const QByteArray &in)
 {

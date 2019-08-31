@@ -19,23 +19,22 @@
 
 #include "httppoll.h"
 
-#include <QUrl>
-#include <qstringlist.h>
-#include <qtimer.h>
-#include <qpointer.h>
-#include <QtCrypto>
-#include <QByteArray>
-#include <stdlib.h>
 #include "bsocket.h"
 
+#include <QByteArray>
+#include <QUrl>
+#include <QtCrypto>
+#include <qpointer.h>
+#include <qstringlist.h>
+#include <qtimer.h>
 #ifdef PROX_DEBUG
-#include <stdio.h>
+#    include <stdio.h>
 #endif
+#include <stdlib.h>
 
 #define POLL_KEYS 64
 
 // CS_NAMESPACE_BEGIN
-
 static QByteArray randomArray(int size)
 {
     QByteArray a;
@@ -388,7 +387,6 @@ const QString & HttpPoll::getKey(bool *last)
         *last = true;
     return d->key[d->key_n];
 }
-
 
 //----------------------------------------------------------------------------
 // HttpProxyPost

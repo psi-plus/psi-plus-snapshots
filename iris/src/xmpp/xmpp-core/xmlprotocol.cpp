@@ -17,12 +17,13 @@
  *
  */
 
+#include "xmlprotocol.h"
+
+#include "bytestream.h"
+
+#include <QByteArray>
 #include <QList>
 #include <QTextStream>
-#include <QByteArray>
-
-#include "xmlprotocol.h"
-#include "bytestream.h"
 
 using namespace XMPP;
 
@@ -171,7 +172,6 @@ static inline bool highSurrogate(const quint32 ch)
     return  ch >= 0xD800 && ch <= 0xDBFF;
 }
 
-
 // force encoding of '>'.  this function is needed for XMPP-Core, which
 //  requires the '>' character to be encoded as "&gt;" even though this is
 //  not required by the XML spec.
@@ -242,7 +242,6 @@ static QString sanitizeForStream(const QString &in)
     }
     return out;
 }
-
 
 //----------------------------------------------------------------------------
 // Protocol

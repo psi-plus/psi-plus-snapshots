@@ -113,4 +113,4 @@ void jdns_packet_delete(jdns_packet_t *a);
 int jdns_packet_import(jdns_packet_t **a, const unsigned char *data, int size); // 0 on fail
 int jdns_packet_export(jdns_packet_t *a, int maxsize); // 0 on fail
 
-#endif
+#endif // JDNS_PACKET_H

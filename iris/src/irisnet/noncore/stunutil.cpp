@@ -19,9 +19,7 @@
 #include "stunutil.h"
 
 namespace XMPP {
-
 namespace StunUtil {
-
 quint16 read16(const quint8 *in)
 {
     quint16 out = in[0];
@@ -93,7 +91,5 @@ QCA::SecureArray saslPrep(const QCA::SecureArray &in)
     // TODO
     return in;
 }
-
-}
-
-}
+} // namespace StunUtil
+} // namespace XMPP

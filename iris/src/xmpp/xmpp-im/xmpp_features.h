@@ -20,13 +20,12 @@
 #ifndef XMPP_FEATURES_H
 #define XMPP_FEATURES_H
 
-#include <QStringList>
 #include <QSet>
+#include <QStringList>
 
 class QString;
 
-namespace XMPP
-{
+namespace XMPP {
     class Features
     {
     public:
@@ -108,6 +107,6 @@ namespace XMPP
     private:
         QSet<QString> _list;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_FEATURES_H

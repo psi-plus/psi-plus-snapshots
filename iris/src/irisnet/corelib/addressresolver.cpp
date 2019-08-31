@@ -18,11 +18,10 @@
 
 #include "addressresolver.h"
 
-#include "objectsession.h"
 #include "netnames.h"
+#include "objectsession.h"
 
 namespace XMPP {
-
 class AddressResolver::Private : public QObject
 {
     Q_OBJECT
@@ -207,6 +206,6 @@ void AddressResolver::stop()
     d->stop();
 }
 
-}
+} // namespace XMPP
 
 #include "addressresolver.moc"

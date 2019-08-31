@@ -18,11 +18,10 @@
 
 #include "udpportreserver.h"
 
-#include <stdlib.h>
 #include <QUdpSocket>
+#include <stdlib.h>
 
 namespace XMPP {
-
 class UdpPortReserver::Private : public QObject
 {
     Q_OBJECT
@@ -433,7 +432,6 @@ void UdpPortReserver::returnSockets(const QList<QUdpSocket*> &sockList)
 {
     d->returnSockets(sockList);
 }
-
-}
+} // namespace XMPP
 
 #include "udpportreserver.moc"

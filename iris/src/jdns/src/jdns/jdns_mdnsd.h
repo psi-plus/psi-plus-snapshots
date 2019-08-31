@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005       Jeremie Miller
- * Copyright (C) 2005,2006  Justin Karneges
+ * Copyright (C) 2005-2006  Justin Karneges
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -116,5 +116,4 @@ void mdnsd_set_srv(mdnsd d, mdnsdr r, int priority, int weight, int port, char *
 //
 ///////////
 
-
-#endif
+#endif // JDNS_MDNSD_H

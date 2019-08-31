@@ -56,6 +56,6 @@ namespace XMPP {
             QCA::SecureArray server_signature_;
             QCA::SymmetricKey salted_password_;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // SCRAMSHA1RESPONSE_H

@@ -1,10 +1,10 @@
 #include "blake2qt.h"
+
 #include "blake2.h"
 
 #include <QIODevice>
 
 namespace XMPP {
-
 QByteArray computeBlake2Hash(const QByteArray &ba, Blake2DigestSize digestSize)
 {
     QByteArray ret;
@@ -101,5 +101,4 @@ QByteArray computeBlake2Hash(QIODevice *dev, Blake2DigestSize digestSize)
         return computeBlake2Hash512(dev);
     }
 }
-
 } //namespace XMPP

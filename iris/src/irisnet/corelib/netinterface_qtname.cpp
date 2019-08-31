@@ -21,7 +21,6 @@
 #include <QNetworkInterface>
 
 namespace XMPP {
-
 class IrisQtName : public NameProvider
 {
     Q_OBJECT
@@ -231,7 +230,6 @@ IrisNetProvider *irisnet_createQtNameProvider()
 {
     return new IrisQtNameProvider;
 }
-
-}
+} // namespace XMPP
 
 #include "netinterface_qtname.moc"

@@ -18,13 +18,13 @@
 
 #include "stunbinding.h"
 
-#include <QHostAddress>
 #include "stunmessage.h"
-#include "stuntypes.h"
 #include "stuntransaction.h"
+#include "stuntypes.h"
+
+#include <QHostAddress>
 
 namespace XMPP {
-
 class StunBinding::Private : public QObject
 {
     Q_OBJECT
@@ -292,7 +292,6 @@ QString StunBinding::errorString() const
 {
     return d->errorString;
 }
-
-}
+} // namespace XMPP
 
 #include "stunbinding.moc"

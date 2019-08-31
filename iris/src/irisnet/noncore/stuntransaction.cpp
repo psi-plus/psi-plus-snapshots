@@ -18,20 +18,20 @@
 
 #include "stuntransaction.h"
 
+#include "stunbinding.h"
+#include "stunmessage.h"
+#include "stuntypes.h"
+#include "stunutil.h"
+
 #include <QHash>
 #include <QMetaType>
 #include <QTime>
 #include <QTimer>
 #include <QtCrypto>
-#include "stunutil.h"
-#include "stunmessage.h"
-#include "stuntypes.h"
-#include "stunbinding.h"
 
 Q_DECLARE_METATYPE(XMPP::StunTransaction::Error)
 
 namespace XMPP {
-
 // parse a stun message, optionally performing validity checks.  the
 //   StunMessage class itself provides parsing with validity or parsing
 //   without validity, but it does not provide a way to do both together,
@@ -740,6 +740,6 @@ void StunTransactionPool::setDebugLevel(DebugLevel level)
     d->debugLevel = level;
 }
 
-}
+} // namespace XMPP
 
 #include "stuntransaction.moc"

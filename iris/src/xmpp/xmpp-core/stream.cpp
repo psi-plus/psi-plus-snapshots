@@ -41,31 +41,26 @@
     - sasl anonymous
 */
 
-#include "xmpp.h"
+#include "bytestream.h"
+#ifndef NO_IRISNET
+#    include "irisnetglobal_p.h"
+#endif
+#include "protocol.h"
+#include "securestream.h"
+#include "simplesasl.h"
+#ifdef XMPP_TEST
+#    include "td.h"
+#endif
 
-#include <QTextStream>
-#include <QPointer>
-#include <QTimer>
-#include <QList>
 #include <QByteArray>
-#include <QtCrypto>
+#include <QList>
+#include <QPointer>
+#include <QTextStream>
+#include <QTimer>
 #include <QUrl>
+#include <QtCrypto>
 //#include <stdio.h>
 #include <stdlib.h>
-
-#include "bytestream.h"
-#include "simplesasl.h"
-#include "securestream.h"
-#include "protocol.h"
-
-#ifndef NO_IRISNET
-#include "irisnetglobal_p.h"
-#endif
-
-#ifdef XMPP_TEST
-#include "td.h"
-#endif
-
 
 //#define XMPP_DEBUG
 
@@ -537,7 +532,6 @@ QString ClientStream::errorText() const
 {
     return d->errText;
 }
-
 
 QHash<QString,QString> ClientStream::errorLangText() const
 {
@@ -1561,7 +1555,6 @@ QList<QDomElement> ClientStream::unhandledFeatures() const
 {
     return d->client.unhandledFeatures;
 }
-
 
 //----------------------------------------------------------------------------
 // Debug

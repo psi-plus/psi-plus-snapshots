@@ -19,19 +19,18 @@
 #ifndef TURNCLIENT_H
 #define TURNCLIENT_H
 
-#include <QObject>
 #include <QByteArray>
-#include <QString>
 #include <QHostAddress>
+#include <QObject>
+#include <QString>
 
 namespace QCA {
     class SecureArray;
 }
 
 namespace XMPP {
-
-class StunTransactionPool;
 class StunAllocate;
+class StunTransactionPool;
 
 class TurnClient : public QObject
 {
@@ -186,7 +185,6 @@ private:
     friend class Private;
     Private *d;
 };
+} // namespace XMPP
 
-}
-
-#endif
+#endif // TURNCLIENT_H

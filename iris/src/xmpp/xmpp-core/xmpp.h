@@ -20,33 +20,29 @@
 #ifndef XMPP_H
 #define XMPP_H
 
-#include <QPair>
-#include <QUrl>
-#include <QObject>
-#include <QString>
-#include <QHostAddress>
-#include <QString>
-#include <QDomDocument>
-
 #include "addressresolver.h"
 #include "xmpp/jid/jid.h"
+#include "xmpp_clientstream.h"
 #include "xmpp_stanza.h"
 #include "xmpp_stream.h"
-#include "xmpp_clientstream.h"
 
-namespace QCA
-{
+#include <QDomDocument>
+#include <QHostAddress>
+#include <QObject>
+#include <QPair>
+#include <QString>
+#include <QUrl>
+#include <QtCrypto> // For QCA::SASL::Params
+
+#ifndef CS_XMPP
+    class ByteStream;
+#endif
+
+namespace QCA {
     class TLS;
 };
 
-#ifndef CS_XMPP
-class ByteStream;
-#endif
-
-#include <QtCrypto> // For QCA::SASL::Params
-
-namespace XMPP
-{
+namespace XMPP {
     // CS_IMPORT_BEGIN cutestuff/bytestream.h
 #ifdef CS_XMPP
     class ByteStream;
@@ -232,6 +228,6 @@ namespace XMPP
         class Private;
         Private *d;
     };
-};
+}; // namespace XMPP
 
-#endif
+#endif // XMPP_H

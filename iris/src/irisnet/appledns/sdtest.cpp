@@ -16,12 +16,11 @@
  *
  */
 
-#include <QtCore>
-#include <QHostAddress>
 #include "qdnssd.h"
 
-// for ntohl
-#ifdef Q_OS_WIN
+#include <QHostAddress>
+#include <QtCore>
+#ifdef Q_OS_WIN // for ntohl
 # include <windows.h>
 #else
 # include <netinet/in.h>

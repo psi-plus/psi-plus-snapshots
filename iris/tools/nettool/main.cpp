@@ -16,18 +16,18 @@
  *
  */
 
-#include <stdio.h>
-#include <iris/processquit.h>
-#include <iris/netinterface.h>
-#include <iris/netavailability.h>
-#include <iris/netnames.h>
+#include <QtCrypto>
 #include <iris/addressresolver.h>
+#include <iris/netavailability.h>
+#include <iris/netinterface.h>
+#include <iris/netnames.h>
+#include <iris/processquit.h>
+#include <iris/stunallocate.h>
+#include <iris/stunbinding.h>
 #include <iris/stunmessage.h>
 #include <iris/stuntransaction.h>
-#include <iris/stunbinding.h>
-#include <iris/stunallocate.h>
 #include <iris/turnclient.h>
-#include <QtCrypto>
+#include <stdio.h>
 
 using namespace XMPP;
 

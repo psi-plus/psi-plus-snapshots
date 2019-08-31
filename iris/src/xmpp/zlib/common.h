@@ -21,4 +21,4 @@ static void initZStream(z_stream* z)
     z->reserved = 0;
 }
 
-#endif
+#endif // ZLIB_COMMON_H

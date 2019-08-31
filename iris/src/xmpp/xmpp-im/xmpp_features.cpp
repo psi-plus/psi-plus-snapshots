@@ -17,15 +17,15 @@
  *
  */
 
-#include <QCoreApplication>
-#include <QString>
-#include <QMap>
-#include <QStringList>
-
 #include "xmpp_features.h"
 
-#include "jingle.h"
 #include "jingle-ft.h"
+#include "jingle.h"
+
+#include <QCoreApplication>
+#include <QMap>
+#include <QString>
+#include <QStringList>
 
 using namespace XMPP;
 

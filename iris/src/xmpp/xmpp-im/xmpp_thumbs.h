@@ -19,14 +19,13 @@
 #ifndef XMPP_THUMBS_H
 #define XMPP_THUMBS_H
 
+#include <QDomElement>
 #include <QString>
 #include <QUrl>
-#include <QDomElement>
 
 #define XMPP_THUMBS_NS "urn:xmpp:thumbs:1" // TODO make nsdb.cpp/h with static declarations of all ns
 
-namespace XMPP
-{
+namespace XMPP {
     class Thumbnail
     {
     public:
@@ -48,6 +47,6 @@ namespace XMPP
         quint32    width;
         quint32    height;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_THUMBS_H

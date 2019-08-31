@@ -17,10 +17,9 @@
  */
 
 #include "irisnetplugin.h"
-
+#include "netinterface.h"
 #include "objectsession.h"
 #include "qjdnsshared.h"
-#include "netinterface.h"
 
 //#define JDNS_DEBUG
 
@@ -31,7 +30,6 @@ Q_DECLARE_METATYPE(XMPP::ServiceResolver::Error)
 Q_DECLARE_METATYPE(XMPP::ServiceLocalPublisher::Error)
 
 namespace XMPP {
-
 static NameRecord importJDNSRecord(const QJDns::Record &in)
 {
     NameRecord out;
@@ -2716,7 +2714,6 @@ IrisNetProvider *irisnet_createJDnsProvider()
 {
         return new JDnsProvider;
 }
-
-}
+} // namespace XMPP
 
 #include "netnames_jdns.moc"

@@ -17,24 +17,22 @@
  *
  */
 
-#include <QMap>
-#include <QList>
-
 #include "im.h"
-#include "xmpp_features.h"
-#include "xmpp_xmlcommon.h"
-#include "xmpp_bitsofbinary.h"
-#include "xmpp_ibb.h"
-#include "xmpp_reference.h"
-#include "xmpp_captcha.h"
 #include "protocol.h"
 #include "xmpp/blake2/blake2qt.h"
+#include "xmpp_bitsofbinary.h"
+#include "xmpp_captcha.h"
+#include "xmpp_features.h"
+#include "xmpp_ibb.h"
 #include "xmpp_reference.h"
-#define NS_XML     "http://www.w3.org/XML/1998/namespace"
+#include "xmpp_xmlcommon.h"
 
-namespace XMPP
-{
+#include <QList>
+#include <QMap>
 
+#define NS_XML "http://www.w3.org/XML/1998/namespace"
+
+namespace XMPP {
 QString HASH_NS = QStringLiteral("urn:xmpp:hashes:2");
 //----------------------------------------------------------------------------
 // Url
@@ -312,7 +310,6 @@ void Address::setType(Type type)
     v_type = type;
 }
 
-
 //----------------------------------------------------------------------------
 // Hash
 //----------------------------------------------------------------------------
@@ -329,7 +326,6 @@ static const struct {
 { "blake2b-256", Hash::Type::Blake2b256 },
 { "blake2b-512", Hash::Type::Blake2b512 }
 };
-
 
 Hash::Hash(const QDomElement &el)
 {
@@ -514,7 +510,6 @@ void RosterExchangeItem::fromXml(const QDomElement& e)
         }
     }
 }
-
 
 //----------------------------------------------------------------------------
 // MUCItem
@@ -1021,7 +1016,6 @@ void HTMLElement::filterOutUnwantedRecursive(QDomElement &el, bool strict)
         child = sibling;
     }
 }
-
 
 //----------------------------------------------------------------------------
 // Message
@@ -2524,7 +2518,6 @@ bool Subscription::fromString(const QString &s)
     return true;
 }
 
-
 //---------------------------------------------------------------------------
 // Status
 //---------------------------------------------------------------------------
@@ -2535,7 +2528,6 @@ CapsSpec::CapsSpec() :
     hashAlgo_(CapsSpec::invalidAlgo)
 {
 }
-
 
 /**
  * \brief Basic constructor.
@@ -2564,7 +2556,6 @@ bool CapsSpec::isValid() const
     return !node_.isEmpty() && !ver_.isEmpty() && (hashAlgo_ != CapsSpec::invalidAlgo);
 }
 
-
 /**
  * \brief Returns the node of the capabilities specification.
  */
@@ -2572,7 +2563,6 @@ const QString& CapsSpec::node() const
 {
     return node_;
 }
-
 
 /**
  * \brief Returns the version of the capabilities specification.
@@ -2674,7 +2664,6 @@ bool CapsSpec::operator<(const CapsSpec& s) const
                                                              hashAlgorithm() < s.hashAlgorithm()));
 }
 
-
 class StatusPrivate : public QSharedData
 {
 public:
@@ -2710,7 +2699,6 @@ public:
     int ecode = -1;
     QString estr;
 };
-
 
 Status::Status(const QString &show, const QString &status, int priority, bool available)
     : d(new StatusPrivate)
@@ -2876,7 +2864,6 @@ void Status::setMUCHistory(int maxchars, int maxstanzas, int seconds, const QDat
     d->mucHistorySeconds = seconds;
     d->mucHistorySince = since;
 }
-
 
 const QString& Status::photoHash() const
 {
@@ -3077,7 +3064,6 @@ const QString & Status::errorString() const
     return d->estr;
 }
 
-
 //---------------------------------------------------------------------------
 // Resource
 //---------------------------------------------------------------------------
@@ -3111,7 +3097,6 @@ void Resource::setStatus(const Status & _status)
 {
     v_status = _status;
 }
-
 
 //---------------------------------------------------------------------------
 // ResourceList
@@ -3168,7 +3153,6 @@ ResourceList::ConstIterator ResourceList::priority() const
 
     return highest;
 }
-
 
 //---------------------------------------------------------------------------
 // RosterItem
@@ -3331,7 +3315,6 @@ bool RosterItem::fromXml(const QDomElement &item)
     return true;
 }
 
-
 //---------------------------------------------------------------------------
 // Roster
 //---------------------------------------------------------------------------
@@ -3395,7 +3378,6 @@ QString Roster::groupsDelimiter() const
 {
     return d->groupsDelimiter;
 }
-
 
 //---------------------------------------------------------------------------
 // FormField
@@ -3520,7 +3502,6 @@ QString FormField::typeToTagName(int type) const
     };
 }
 
-
 //---------------------------------------------------------------------------
 // Form
 //---------------------------------------------------------------------------
@@ -3562,7 +3543,6 @@ void Form::setKey(const QString &s)
 {
     v_key = s;
 }
-
 
 //---------------------------------------------------------------------------
 // SearchResult
@@ -3644,7 +3624,6 @@ const QDomElement& PubSubItem::payload() const
     return payload_;
 }
 
-
 PubSubRetraction::PubSubRetraction()
 {
 }
@@ -3657,8 +3636,6 @@ const QString& PubSubRetraction::id() const
 {
     return id_;
 }
-
-
 
 // =========================================
 //            CaptchaChallenge
@@ -3791,5 +3768,4 @@ QDomElement Thumbnail::toXml(QDomDocument *doc) const
     }
     return el;
 }
-
-}
+} // namespace XMPP

@@ -18,6 +18,7 @@
  */
 
 #include "jingle-ibb.h"
+
 #include "xmpp/jid/jid.h"
 #include "xmpp_client.h"
 #include "xmpp_ibb.h"
@@ -27,7 +28,6 @@
 namespace XMPP {
 namespace Jingle {
 namespace IBB {
-
 const QString NS(QStringLiteral("urn:xmpp:jingle:transports:ibb:1"));
 
 class Connection : public XMPP::Jingle::Connection
@@ -307,7 +307,6 @@ bool Transport::update(const QDomElement &transportEl)
     return true;
 }
 
-
 bool Transport::isInitialOfferReady() const
 {
     return isValid() && (hasUpdates() || d->initialOfferSent);
@@ -478,7 +477,6 @@ bool Manager::handleIncoming(IBBConnection *c)
     }
     return false;
 }
-
 } // namespace IBB
 } // namespace Jingle
 } // namespace XMPP

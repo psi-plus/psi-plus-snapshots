@@ -35,6 +35,6 @@ namespace XMPP {
         private:
             QByteArray value_;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // PLAINMESSAGE_H

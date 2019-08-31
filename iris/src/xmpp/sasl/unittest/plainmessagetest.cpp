@@ -16,11 +16,11 @@
  *
  */
 
+#include "qttestutil/qttestutil.h"
+#include "xmpp/sasl/plainmessage.h"
+
 #include <QObject>
 #include <QtTest/QtTest>
-
-#include "xmpp/sasl/plainmessage.h"
-#include "qttestutil/qttestutil.h"
 
 using namespace XMPP;
 

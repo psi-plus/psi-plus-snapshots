@@ -21,13 +21,12 @@
 
 #include "xmpp_stanza.h"
 
-#include <QString>
 #include <QFuture>
+#include <QString>
 
 class QDomElement;
 
-namespace XMPP
-{
+namespace XMPP {
     extern QString HASH_NS;
     class Features;
 
@@ -67,6 +66,6 @@ namespace XMPP
         Type v_type = Type::Unknown;
         QByteArray v_data;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_HASH_H

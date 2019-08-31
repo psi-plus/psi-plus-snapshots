@@ -86,7 +86,6 @@ extern "C" {
     size_t        outlen;
   } blake2bp_state;
 
-
   BLAKE2_PACKED(struct blake2s_param__
   {
     uint8_t  digest_length; /* 1 */
@@ -192,4 +191,4 @@ extern "C" {
 }
 #endif
 
-#endif
+#endif // BLAKE2_H

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016  Remko Troncon, Rion
+ * Copyright (C) 2016  Remko Troncon, Sergey Ilinykh
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,15 +19,13 @@
 #ifndef XMPP_CAPS_H
 #define XMPP_CAPS_H
 
-#include <QPointer>
-
-#include "xmpp_features.h"
 #include "xmpp_discoitem.h"
+#include "xmpp_features.h"
 #include "xmpp_status.h"
 
+#include <QPointer>
 
 namespace XMPP {
-
 class CapsInfo
 {
 public:
@@ -45,7 +43,6 @@ private:
     QDateTime _lastSeen;
     XMPP::DiscoItem _disco;
 };
-
 
 class CapsRegistry : public QObject
 {
@@ -76,7 +73,6 @@ private:
     static CapsRegistry *instance_;
     QHash<QString,CapsInfo> capsInfo_;
 };
-
 
 class CapsManager : public QObject
 {
@@ -118,7 +114,6 @@ private:
     QMap<QString,CapsSpec> capsSpecs_;
     QMap<QString,QList<QString> > capsJids_;
 };
-
 } // namespace XMPP
 
-#endif // CAPS_H
+#endif // XMPP_CAPS_H

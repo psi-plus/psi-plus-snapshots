@@ -27,7 +27,6 @@ namespace XMPP {
 
 namespace Jingle {
 namespace IBB {
-
 extern const QString NS;
 
 class Transport : public XMPP::Jingle::Transport
@@ -98,7 +97,6 @@ private:
     class Private;
     QScopedPointer<Private> d;
 };
-
 } // namespace IBB
 } // namespace Jingle
 } // namespace XMPP

@@ -22,11 +22,10 @@
 
 #include <QObject>
 #include <QSharedPointer>
-#include <QVariant>
 #include <QTcpServer>
+#include <QVariant>
 
 namespace XMPP {
-
 class TcpPortServer : public QObject
 {
     Q_OBJECT
@@ -131,7 +130,6 @@ private:
     QScopedPointer<Private> d;
 };
 
-
 /**
  * @brief The TcpPortReserver class
  * This class should have the only instance per application
@@ -158,7 +156,6 @@ signals:
 
 public slots:
 };
-
 } // namespace XMPP
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(XMPP::TcpPortServer::PortTypes)

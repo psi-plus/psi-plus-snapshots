@@ -20,13 +20,12 @@
 #ifndef XMPP_JID_H
 #define XMPP_JID_H
 
-#include <QString>
-#include <QScopedPointer>
 #include <QByteArray>
 #include <QHash>
+#include <QScopedPointer>
+#include <QString>
 
-namespace XMPP
-{
+namespace XMPP {
     class StringPrepCache
     {
     public:
@@ -98,6 +97,6 @@ namespace XMPP
     {
         return qHash(key.full(), seed);
     }
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_JID_H

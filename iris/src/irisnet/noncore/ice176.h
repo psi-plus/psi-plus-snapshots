@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009,2010  Barracuda Networks, Inc.
+ * Copyright (C) 2009-2010  Barracuda Networks, Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,17 +19,17 @@
 #ifndef ICE176_H
 #define ICE176_H
 
+#include "turnclient.h"
+
+#include <QHostAddress>
 #include <QObject>
 #include <QString>
-#include <QHostAddress>
-#include "turnclient.h"
 
 namespace QCA {
     class SecureArray;
 }
 
 namespace XMPP {
-
 class UdpPortReserver;
 
 class Ice176 : public QObject
@@ -181,7 +181,6 @@ private:
     friend class Private;
     Private *d;
 };
+} // namespace XMPP
 
-}
-
-#endif
+#endif // ICE176_H

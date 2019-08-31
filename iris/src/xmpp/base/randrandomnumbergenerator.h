@@ -21,6 +21,8 @@
 
 #include "xmpp/base/randomnumbergenerator.h"
 
+#include <cstdlib>
+
 namespace XMPP {
     class RandRandomNumberGenerator : public RandomNumberGenerator
     {
@@ -35,6 +37,6 @@ namespace XMPP {
                 return RAND_MAX;
             }
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // RANDRANDOMNUMBERGENERATOR_H

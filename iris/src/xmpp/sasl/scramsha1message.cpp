@@ -18,16 +18,15 @@
 
 #include "xmpp/sasl/scramsha1message.h"
 
-#include <QString>
-#include <QTextStream>
-#include <QtCrypto>
-#include <QDebug>
-
 #include "xmpp/base/randomnumbergenerator.h"
 #include "xmpp/jid/jid.h"
 
-namespace XMPP {
+#include <QDebug>
+#include <QString>
+#include <QTextStream>
+#include <QtCrypto>
 
+namespace XMPP {
 bool Normalize(const QString &username_in, QString &username_out ) {
     // SASLprep
     if (StringPrepCache::saslprep(username_in, 1024, username_out)) {
@@ -68,5 +67,4 @@ SCRAMSHA1Message::SCRAMSHA1Message(const QString& authzid, const QString& authci
     QTextStream(&result) << ",n=" << username << ",r=" << clientnonce;
     value_ = result.toUtf8();
 }
-
-}
+} // namespace XMPP

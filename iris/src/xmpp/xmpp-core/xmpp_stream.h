@@ -20,16 +20,15 @@
 #ifndef XMPP_STREAM_H
 #define XMPP_STREAM_H
 
+#include "xmpp/jid/jid.h"
+#include "xmpp_stanza.h"
+
 #include <QDomElement>
 #include <QObject>
 
-#include "xmpp_stanza.h"
-#include "xmpp/jid/jid.h"
-
 class QDomDocument;
 
-namespace XMPP
-{
+namespace XMPP {
     class Stream : public QObject
     {
         Q_OBJECT
@@ -79,6 +78,6 @@ namespace XMPP
         void stanzaWritten();
         void error(int);
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_STREAM_H

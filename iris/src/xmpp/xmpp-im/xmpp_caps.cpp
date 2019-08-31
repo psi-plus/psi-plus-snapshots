@@ -1,6 +1,6 @@
 /*
  * capsregistry.cpp
- * Copyright (C) 2006-2016  Remko Troncon, Rion
+ * Copyright (C) 2006-2016  Remko Troncon, Sergey Ilinykh
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,21 +24,20 @@
  * goes to CapsSpec.
  */
 
-#include <QCoreApplication>
-#include <QDebug>
-#include <QTextCodec>
-#include <QFile>
-#include <QDomElement>
-
-#include "xmpp_features.h"
 #include "xmpp_caps.h"
-#include "xmpp_discoinfotask.h"
+
 #include "xmpp_client.h"
+#include "xmpp_discoinfotask.h"
+#include "xmpp_features.h"
 #include "xmpp_xmlcommon.h"
 
+#include <QCoreApplication>
+#include <QDebug>
+#include <QDomElement>
+#include <QFile>
+#include <QTextCodec>
+
 namespace XMPP {
-
-
 QDomElement CapsInfo::toXml(QDomDocument *doc) const
 {
     QDomElement caps = doc->createElement("info");
@@ -56,7 +55,6 @@ CapsInfo CapsInfo::fromXml(const QDomElement &caps)
     }
     return CapsInfo(item, lastSeen);
 }
-
 
 // -----------------------------------------------------------------------------
 
@@ -197,7 +195,6 @@ DiscoItem CapsRegistry::disco(const QString &spec) const
     return ci.disco();
 }
 
-
 /*--------------------------------------------------------------
   _____                __  __
  / ____|              |  \/  |
@@ -227,7 +224,6 @@ CapsManager::CapsManager(Client *client) :
 
 CapsManager::~CapsManager()
 {}
-
 
 /**
  * \brief Checks whether the caps manager is enabled (and does lookups).
@@ -362,7 +358,6 @@ bool CapsManager::capsEnabled(const Jid& jid) const
     return capsSpecs_.contains(jid.full());
 }
 
-
 /**
  * \brief Requests the list of features of a given JID.
  */
@@ -480,5 +475,4 @@ CapsSpec CapsManager::capsSpec(const Jid &jid) const
 {
     return capsSpecs_.value(jid.full());
 }
-
 } // namespace XMPP

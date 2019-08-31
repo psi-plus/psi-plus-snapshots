@@ -1,6 +1,6 @@
 /*
  * bytestream_manager.cpp - base class for bytestreams over xmpp
- * Copyright (C) 2003  Justin Karneges, Rion
+ * Copyright (C) 2003  Justin Karneges, Sergey Ilinykh
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,14 +17,13 @@
  *
  */
 
-#include <QTimer>
-
 #include "xmpp_bytestream.h"
+
 #include "xmpp_client.h"
 
-namespace XMPP
-{
+#include <QTimer>
 
+namespace XMPP {
 BytestreamManager::BytestreamManager(Client *parent)
     : QObject(parent)
 {
@@ -59,5 +58,4 @@ void BytestreamManager::deleteConnection(BSConnection *c, int msec)
         delete c;
     }
 }
-
-}
+} // namespace XMPP

@@ -36,6 +36,6 @@ namespace XMPP {
         private:
             bool isValid_;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // SCRAMSHA1SIGNATURE_H

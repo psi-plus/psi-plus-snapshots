@@ -1,6 +1,6 @@
 /*
  * tasks.h - basic tasks
- * Copyright (C) 2001, 2002  Justin Karneges
+ * Copyright (C) 2001-2002  Justin Karneges
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,25 +17,24 @@
  *
  */
 
-#ifndef JABBER_TASKS_H
-#define JABBER_TASKS_H
-
-#include <QString>
-#include <QtXml>
-#include <QList>
+#ifndef XMPP_TASKS_H
+#define XMPP_TASKS_H
 
 #include "im.h"
-#include "xmpp_vcard.h"
 #include "xmpp_discoinfotask.h"
-#include "xmpp_subsets.h"
 #include "xmpp_encryptionhandler.h"
+#include "xmpp_subsets.h"
+#include "xmpp_vcard.h"
 
-namespace XMPP
-{
-    class Roster;
-    class Status;
+#include <QList>
+#include <QString>
+#include <QtXml>
+
+namespace XMPP {
     class BoBData;
     class CaptchaChallenge;
+    class Roster;
+    class Status;
 
     class JT_Register : public Task
     {
@@ -475,6 +474,6 @@ namespace XMPP
         Jid to;
         QDomElement iq;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_TASKS_H

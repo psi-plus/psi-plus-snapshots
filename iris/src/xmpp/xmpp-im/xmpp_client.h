@@ -19,23 +19,28 @@
 #ifndef XMPP_CLIENT_H
 #define XMPP_CLIENT_H
 
+#include "xmpp/jid/jid.h"
+#include "xmpp_discoitem.h"
+#include "xmpp_status.h"
+
+#include <QCryptographicHash>
 #include <QObject>
 #include <QStringList>
-#include <QCryptographicHash>
 
-#include "xmpp/jid/jid.h"
-#include "xmpp_status.h"
-#include "xmpp_discoitem.h"
-
-class QString;
-class QDomElement;
-class QDomDocument;
 class ByteStream;
+class QDomDocument;
+class QDomElement;
 class QNetworkAccessManager;
+class QString;
+
 namespace XMPP {
+    class BSConnection;
+    class CapsManager;
     class ClientStream;
+    class EncryptionHandler;
     class Features;
     class FileTransferManager;
+    class HttpFileUploadManager;
     class IBBManager;
     class JidLinkManager;
     class LiveRoster;
@@ -46,15 +51,10 @@ namespace XMPP {
     class Roster;
     class RosterItem;
     class S5BManager;
-    class BSConnection;
+    class ServerInfoManager;
     class Stream;
     class Task;
-    class CapsManager;
-    class EncryptionHandler;
-    class ServerInfoManager;
-    class HttpFileUploadManager;
     class TcpPortReserver;
-
     namespace Jingle {
         class Manager;
         namespace S5B {
@@ -66,8 +66,7 @@ namespace XMPP {
     }
 }
 
-namespace XMPP
-{
+namespace XMPP {
     class Client : public QObject
     {
         Q_OBJECT
@@ -232,6 +231,6 @@ namespace XMPP
         class ClientPrivate;
         ClientPrivate *d;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_CLIENT_H

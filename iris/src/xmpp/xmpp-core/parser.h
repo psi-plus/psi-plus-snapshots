@@ -23,8 +23,7 @@
 #include <qdom.h>
 #include <qxml.h>
 
-namespace XMPP
-{
+namespace XMPP {
     class Parser
     {
     public:
@@ -80,6 +79,6 @@ namespace XMPP
         class Private;
         Private *d;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // PARSER_H

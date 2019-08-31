@@ -31,6 +31,6 @@ namespace XMPP {
             virtual double generateNumber() const = 0;
             virtual double getMaximumGeneratedNumber() const = 0;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // RANDOMNUMBERGENERATOR_H

@@ -1,8 +1,8 @@
 #ifndef COMPRESSIONHANDLER_H
 #define COMPRESSIONHANDLER_H
 
-#include <QObject>
 #include <QBuffer>
+#include <QObject>
 
 class ZLibCompressor;
 class ZLibDecompressor;
@@ -32,4 +32,4 @@ private:
     int errorCode_;
 };
 
-#endif
+#endif // COMPRESSIONHANDLER_H

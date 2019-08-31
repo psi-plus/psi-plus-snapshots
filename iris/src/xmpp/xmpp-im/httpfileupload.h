@@ -20,21 +20,19 @@
 #ifndef XMPP_HTTPFILEUPLOAD_H
 #define XMPP_HTTPFILEUPLOAD_H
 
-#include <memory>
+#include "im.h"
+
 #include <functional>
+#include <memory>
 
 class QNetworkAccessManager;
 
-#include "im.h"
-
-namespace XMPP
-{
-
-namespace XEP0363 {
-enum version { vUnknown, v0_2_5, v0_3_1 };
-struct HttpHeader { QString name; QString value; };
-typedef QList<HttpHeader> HttpHeaders;
-}
+namespace XMPP {
+    namespace XEP0363 {
+        enum version { vUnknown, v0_2_5, v0_3_1 };
+        struct HttpHeader { QString name; QString value; };
+        typedef QList<HttpHeader> HttpHeaders;
+    }
 
 class HttpFileUpload : public QObject
 {
@@ -202,7 +200,6 @@ private:
     class Private;
     Private *d;
 };
+} // namespace XMPP
 
-}
-
-#endif
+#endif // XMPP_HTTPFILEUPLOAD_H

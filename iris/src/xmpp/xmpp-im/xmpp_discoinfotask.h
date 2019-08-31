@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001, 2002  Justin Karneges
+ * Copyright (C) 2001-2002  Justin Karneges
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,17 +19,15 @@
 #ifndef XMPP_DISCOINFOTASK_H
 #define XMPP_DISCOINFOTASK_H
 
-#include "xmpp_task.h"
 #include "xmpp_discoitem.h"
+#include "xmpp_task.h"
+
+class QDomElement;
+class QString;
 
 namespace XMPP {
     class Jid;
-}
-class QString;
-class QDomElement;
 
-namespace XMPP
-{
     class DiscoInfoTask : public Task
     {
         Q_OBJECT
@@ -57,8 +55,8 @@ namespace XMPP
         class Private;
         Private *d;
     };
-
     // Deprecated name
     typedef DiscoInfoTask JT_DiscoInfo;
-}
-#endif
+} // namespace XMPP
+
+#endif // XMPP_DISCOINFOTASK_H

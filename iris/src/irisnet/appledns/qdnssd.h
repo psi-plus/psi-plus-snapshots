@@ -19,9 +19,9 @@
 #ifndef QDNSSD_H
 #define QDNSSD_H
 
-#include <QObject>
 #include <QByteArray>
 #include <QList>
+#include <QObject>
 
 // DOR-compliant
 class QDnsSd : public QObject
@@ -156,4 +156,4 @@ private:
     Private *d;
 };
 
-#endif
+#endif // QDNSSD_H

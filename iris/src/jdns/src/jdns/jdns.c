@@ -21,12 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "jdns_mdnsd.h"
 #include "jdns_p.h"
+#include "jdns_packet.h"
 
 #include <time.h>
-
-#include "jdns_packet.h"
-#include "jdns_mdnsd.h"
 
 #define JDNS_UDP_UNI_OUT_MAX  512
 #define JDNS_UDP_UNI_IN_MAX   16384

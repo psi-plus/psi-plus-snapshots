@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Rion
+ * Copyright (C) 2010  Sergey Ilinykh
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -19,18 +19,17 @@
 #ifndef XMPP_BITSOFBINARY_H
 #define XMPP_BITSOFBINARY_H
 
-#include <QDomElement>
-#include <QObject>
-#include <QHash>
-#include <QSharedDataPointer>
-#include <QFile>
-
 #include "xmpp/jid/jid.h"
 
-namespace XMPP
-{
-    class JT_BitsOfBinary;
+#include <QDomElement>
+#include <QFile>
+#include <QHash>
+#include <QObject>
+#include <QSharedDataPointer>
+
+namespace XMPP {
     class Client;
+    class JT_BitsOfBinary;
 
     class BoBData
     {
@@ -63,8 +62,6 @@ namespace XMPP
         QSharedDataPointer<Private> d;
     };
 
-
-
     class BoBCache : public QObject
     {
         Q_OBJECT
@@ -74,8 +71,6 @@ namespace XMPP
         virtual void put(const BoBData &) = 0;
         virtual BoBData get(const QString &) = 0;
     };
-
-
 
     class BoBManager : public QObject
     {
@@ -97,7 +92,6 @@ namespace XMPP
         BoBCache *_cache;
         QHash<QString, QPair<QString,QString> > _localFiles; //cid => (filename, mime)
     };
-
-}
+} // namespace XMPP
 
 #endif // XMPP_BITSOFBINARY_H

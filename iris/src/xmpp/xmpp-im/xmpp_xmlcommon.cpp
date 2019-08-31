@@ -1,6 +1,6 @@
 /*
  * xmlcommon.cpp - helper functions for dealing with XML
- * Copyright (C) 2001, 2002  Justin Karneges
+ * Copyright (C) 2001-2002  Justin Karneges
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,16 +17,17 @@
  *
  */
 
-#include <QString>
-#include <QDateTime>
-#include <QSize>
-#include <QRect>
-#include <QStringList>
-#include <QColor>
-#include <QLocale>
-
 #include "xmpp_xmlcommon.h"
+
 #include "xmpp_stanza.h"
+
+#include <QColor>
+#include <QDateTime>
+#include <QLocale>
+#include <QRect>
+#include <QSize>
+#include <QString>
+#include <QStringList>
 
 //----------------------------------------------------------------------------
 // XDomNodeList
@@ -165,7 +166,6 @@ QString tagContent(const QDomElement &e)
     return "";
 }
 
-
 /**
  * \brief obtain direct child elements of a certain kind.  unlike
  *        elementsByTagNameNS, this function does not descend beyond the first
@@ -187,7 +187,6 @@ XDomNodeList childElementsByTagNameNS(const QDomElement &e, const QString &nsURI
     }
     return out;
 }
-
 
 /**
  * \brief create a new IQ stanza
@@ -313,9 +312,7 @@ QDomElement addCorrectNS(const QDomElement &e)
 //----------------------------------------------------------------------------
 // XMLHelper
 //----------------------------------------------------------------------------
-
 namespace XMLHelper {
-
 QDomElement emptyTag(QDomDocument *doc, const QString &name)
 {
     QDomElement tag = doc->createElement(name);
@@ -537,5 +534,4 @@ void setTagText(QDomElement &e, const QString &text)
 {
     e.appendChild(e.ownerDocument().createTextNode(text));
 }
-
-}
+} // namespace XMLHelper

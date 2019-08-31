@@ -22,12 +22,10 @@
  */
 
 #include "qjdns_p.h"
-
-#include <time.h>
 #include "qjdns_sock.h"
 
-// for fprintf
-#include <stdio.h>
+#include <stdio.h> // for fprintf
+#include <time.h>
 
 // safeobj stuff, from qca
 

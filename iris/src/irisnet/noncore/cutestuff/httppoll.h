@@ -25,7 +25,6 @@
 class QUrl;
 
 // CS_NAMESPACE_BEGIN
-
 class HttpPoll : public ByteStream
 {
     Q_OBJECT
@@ -150,4 +149,4 @@ private:
 
 // CS_NAMESPACE_END
 
-#endif
+#endif // CS_HTTPPOLL_H

@@ -19,23 +19,19 @@
 
 #include "netnames.h"
 
-#include <limits>
+#include "addressresolver.h"
+#include "irisnetglobal_p.h"
+#include "irisnetplugin.h"
 
 //#include <idna.h>
-#include "irisnetplugin.h"
-#include "irisnetglobal_p.h"
-#include "addressresolver.h"
-
+#include <limits>
 
 //#define NETNAMES_DEBUG
-
 #ifdef NETNAMES_DEBUG
 # define NNDEBUG (qDebug() << this << "#" << __FUNCTION__ << ":")
 #endif
 
-
 namespace XMPP {
-
 //----------------------------------------------------------------------------
 // NameRecord
 //----------------------------------------------------------------------------
@@ -501,7 +497,6 @@ public:
 
 };
 
-
 WeightedNameRecordList::WeightedNameRecordList()
     : currentPriorityGroup(priorityGroups.end()) /* void current state */
 {}
@@ -661,7 +656,6 @@ XMPP::WeightedNameRecordList& WeightedNameRecordList::operator<<(const XMPP::Nam
     return *this;
 }
 
-
 QDebug operator<<(QDebug dbg, const XMPP::WeightedNameRecordList &list) {
     dbg.nospace() << "XMPP::WeightedNameRecordList(\n";
 
@@ -679,7 +673,6 @@ QDebug operator<<(QDebug dbg, const XMPP::WeightedNameRecordList &list) {
     dbg.nospace() << "})";
     return dbg;
 }
-
 
 class ServiceLocalPublisher::Private
 {
@@ -1118,7 +1111,6 @@ QDebug operator<<(QDebug dbg, XMPP::NameResolver::Error e)
     return dbg;
 }
 
-
 //----------------------------------------------------------------------------
 // ServiceBrowser
 //----------------------------------------------------------------------------
@@ -1141,7 +1133,6 @@ void ServiceBrowser::start(const QString &type, const QString &domain)
 void ServiceBrowser::stop()
 {
 }
-
 
 //----------------------------------------------------------------------------
 // ServiceResolver
@@ -1457,7 +1448,6 @@ ServiceResolver::ProtoSplit ServiceResolver::happySplit()
     return s;
 }
 
-
 //----------------------------------------------------------------------------
 // ServiceLocalPublisher
 //----------------------------------------------------------------------------
@@ -1532,7 +1522,6 @@ QByteArray NetNames::unescapeDomain(const QByteArray &in)
     Q_UNUSED(in);
     return QByteArray();
 }
-
-}
+} // namespace XMPP
 
 #include "netnames.moc"

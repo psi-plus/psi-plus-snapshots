@@ -19,12 +19,11 @@
 #ifndef XMPP_LIVEROSTERITEM_H
 #define XMPP_LIVEROSTERITEM_H
 
-#include "xmpp_status.h"
 #include "xmpp_resourcelist.h"
 #include "xmpp_rosteritem.h"
+#include "xmpp_status.h"
 
-namespace XMPP
-{
+namespace XMPP {
     class LiveRosterItem : public RosterItem
     {
     public:
@@ -53,6 +52,6 @@ namespace XMPP
         Status v_lastUnavailableStatus;
         bool v_flagForDelete;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_LIVEROSTERITEM_H

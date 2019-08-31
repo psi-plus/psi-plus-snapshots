@@ -16,13 +16,15 @@
  * along with this library.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
+
 #include "jingle-s5b.h"
+
+#include "ice176.h"
 #include "s5b.h"
+#include "socks.h"
 #include "xmpp/jid/jid.h"
 #include "xmpp_client.h"
 #include "xmpp_serverinfomanager.h"
-#include "socks.h"
-#include "ice176.h"
 
 #include <QElapsedTimer>
 #include <QNetworkInterface>
@@ -31,7 +33,6 @@
 namespace XMPP {
 namespace Jingle {
 namespace S5B {
-
 const QString NS(QStringLiteral("urn:xmpp:jingle:transports:s5b:1"));
 
 static QString makeKey(const QString &sid, const Jid &j1, const Jid &j2)
@@ -114,8 +115,6 @@ protected:
         else
             return 0;
     }
-
-
 
 private:
     friend class Transport;
@@ -599,7 +598,6 @@ public:
     bool udpInitialized;
     quint16 udpPort;
     QHostAddress udpAddress;
-
 
     inline Jid remoteJid() const
     {
@@ -1316,7 +1314,6 @@ bool Transport::update(const QDomElement &transportEl)
     return true;
 }
 
-
 bool Transport::isInitialOfferReady() const
 {
     return isValid() && (d->pendingActions || d->offerSent ||
@@ -1650,10 +1647,8 @@ void Pad::registerSid(const QString &sid)
 {
     return _manager->registerSid(_session->peer(), sid);
 }
-
 } // namespace S5B
 } // namespace Jingle
 } // namespace XMPP
 
 #include "jingle-s5b.moc"
-

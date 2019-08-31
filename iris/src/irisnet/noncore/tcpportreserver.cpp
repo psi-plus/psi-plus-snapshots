@@ -17,15 +17,15 @@
  *
  */
 
+#include "tcpportreserver.h"
+
+#include "ice176.h"
+
 #include <QNetworkInterface>
 #include <QTcpServer>
 #include <QTcpSocket>
 
-#include "tcpportreserver.h"
-#include "ice176.h"
-
 namespace XMPP {
-
 TcpPortDiscoverer::TcpPortDiscoverer(TcpPortScope *scope) :
     QObject(scope),
     scope(scope)
@@ -154,7 +154,6 @@ struct TcpPortScope::Private
     QHash<QPair<QHostAddress,quint16>, QWeakPointer<TcpPortServer>> servers;
 };
 
-
 TcpPortScope::TcpPortScope() :
     d(new Private)
 {
@@ -219,7 +218,6 @@ TcpPortServer::Ptr TcpPortScope::bind(const QHostAddress &addr, quint16 port)
     return shared;
 }
 
-
 // --------------------------------------------------------------------------
 // TcpPortScope
 // --------------------------------------------------------------------------
@@ -252,5 +250,4 @@ TcpPortScope *TcpPortReserver::unregisterScope(const QString &id)
     }
     return s;
 }
-
 } // namespace XMPP

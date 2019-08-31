@@ -17,9 +17,9 @@
  *
  */
 
-#include <QtXml>
-
 #include "xmpp_discoitem.h"
+
+#include <QtXml>
 
 using namespace XMPP;
 
@@ -342,8 +342,6 @@ QString DiscoItem::action2string(const Action a)
 
     return s;
 }
-
-
 
 bool XMPP::operator<(const DiscoItem::Identity &a, const DiscoItem::Identity &b)
 {

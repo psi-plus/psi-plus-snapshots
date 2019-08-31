@@ -20,13 +20,12 @@
 #ifndef XMPPREFERENCE_H
 #define XMPPREFERENCE_H
 
+#include "jingle-ft.h"
+
 #include <QDomElement>
 #include <QSharedPointer>
 
-#include "jingle-ft.h"
-
-namespace XMPP
-{
+namespace XMPP {
     extern const QString MEDIASHARING_NS;
     extern const QString REFERENCE_NS;
 
@@ -75,6 +74,6 @@ namespace XMPP
         class Private;
         QSharedDataPointer<Private> d;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPPREFERENCE_H

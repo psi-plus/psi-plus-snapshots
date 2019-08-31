@@ -1,11 +1,11 @@
 #include "xmpp/zlib/zlibdecompressor.h"
 
-#include <QtDebug>
-#include <QObject>
-#include <QIODevice>
+#include "xmpp/zlib/common.h"
 #include "zlib.h"
 
-#include "xmpp/zlib/common.h"
+#include <QIODevice>
+#include <QObject>
+#include <QtDebug>
 
 ZLibDecompressor::ZLibDecompressor(QIODevice* device) : device_(device)
 {

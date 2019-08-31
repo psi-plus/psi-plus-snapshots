@@ -19,14 +19,13 @@
 #ifndef STUNALLOCATE_H
 #define STUNALLOCATE_H
 
-#include <QObject>
-#include <QList>
 #include <QHostAddress>
+#include <QList>
+#include <QObject>
 
 class QByteArray;
 
 namespace XMPP {
-
 class StunMessage;
 class StunTransactionPool;
 
@@ -127,7 +126,6 @@ private:
     friend class Private;
     Private *d;
 };
+} // namespace XMPP
 
-}
-
-#endif
+#endif // STUNALLOCATE_H

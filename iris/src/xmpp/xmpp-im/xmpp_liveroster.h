@@ -19,12 +19,11 @@
 #ifndef XMPP_LIVEROSTER_H
 #define XMPP_LIVEROSTER_H
 
-#include <QList>
-
 #include "xmpp_liverosteritem.h"
 
-namespace XMPP
-{
+#include <QList>
+
+namespace XMPP {
     class Jid;
 
     class LiveRoster : public QList<LiveRosterItem>
@@ -47,6 +46,6 @@ namespace XMPP
         class Private;
         Private *d;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_LIVEROSTER_H

@@ -17,13 +17,11 @@
  */
 
 #include "irisnetplugin.h"
+#include "qdnssd.h"
 
 #include <QtCore>
 #include <QtNetwork>
-#include "qdnssd.h"
-
-// for ntohl
-#ifdef Q_OS_WIN
+#ifdef Q_OS_WIN // for ntohl
 # include <windows.h>
 #else
 # include <netinet/in.h>
@@ -152,7 +150,6 @@ static XMPP::NameRecord importQDnsSdRecord(const QDnsSd::Record &in)
 }
 
 namespace {
-
 class QDnsSdDelegate
 {
 public:
@@ -227,7 +224,7 @@ public:
     }
 };
 
-}
+} // namespace
 
 //----------------------------------------------------------------------------
 // AppleProvider

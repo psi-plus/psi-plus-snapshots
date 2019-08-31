@@ -24,7 +24,6 @@
 #include <QSharedDataPointer>
 
 namespace XMPP {
-
 class StunMessage
 {
 public:
@@ -103,7 +102,6 @@ private:
     class Private;
     QSharedDataPointer<Private> d;
 };
+} // namespace XMPP
 
-}
-
-#endif
+#endif // STUNMESSAGE_H

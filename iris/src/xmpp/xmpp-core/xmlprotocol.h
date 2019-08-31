@@ -20,15 +20,15 @@
 #ifndef XMLPROTOCOL_H
 #define XMLPROTOCOL_H
 
-#include <qdom.h>
+#include "parser.h"
+
 #include <QList>
 #include <QObject>
-#include "parser.h"
+#include <qdom.h>
 
 #define NS_XML "http://www.w3.org/XML/1998/namespace"
 
-namespace XMPP
-{
+namespace XMPP {
     class XmlProtocol : public QObject
     {
     public:
@@ -147,6 +147,6 @@ namespace XMPP
         void sendTagClose();
         bool baseStep(const Parser::Event &pe);
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMLPROTOCOL_H

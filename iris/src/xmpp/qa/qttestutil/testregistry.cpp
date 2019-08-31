@@ -21,7 +21,6 @@
 #include <QtTest/QtTest>
 
 namespace QtTestUtil {
-
 TestRegistry* TestRegistry::getInstance()
 {
     static TestRegistry registry;
@@ -41,5 +40,4 @@ int TestRegistry::runTests(int argc, char* argv[])
     }
     return result;
 }
-
-}
+} // namespace QtTestUtil 

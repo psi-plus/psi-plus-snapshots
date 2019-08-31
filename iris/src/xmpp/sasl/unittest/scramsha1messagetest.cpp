@@ -16,13 +16,13 @@
  *
  */
 
-#include <QObject>
-#include <QtTest/QtTest>
-#include <QtCrypto>
-
 #include "qttestutil/qttestutil.h"
 #include "xmpp/base/unittest/incrementingrandomnumbergenerator.h"
 #include "xmpp/sasl/scramsha1message.h"
+
+#include <QObject>
+#include <QtCrypto>
+#include <QtTest/QtTest>
 
 using namespace XMPP;
 

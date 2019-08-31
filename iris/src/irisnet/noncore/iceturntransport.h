@@ -19,16 +19,15 @@
 #ifndef ICETURNTRANSPORT_H
 #define ICETURNTRANSPORT_H
 
-#include <QObject>
+#include "icetransport.h"
+#include "turnclient.h"
+
 #include <QByteArray>
 #include <QHostAddress>
-#include "turnclient.h"
-#include "icetransport.h"
+#include <QObject>
 
 namespace XMPP {
-
 // for the turn transport, only path 0 is used
-
 class IceTurnTransport : public IceTransport
 {
     Q_OBJECT
@@ -70,7 +69,6 @@ private:
     friend class Private;
     Private *d;
 };
+} // namespace XMPP
 
-}
-
-#endif
+#endif // ICETURNTRANSPORT_H

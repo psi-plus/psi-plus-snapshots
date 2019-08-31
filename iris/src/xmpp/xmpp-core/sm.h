@@ -20,18 +20,17 @@
 #ifndef XMPP_SM_H
 #define XMPP_SM_H
 
-#include <QObject>
-#include <QQueue>
 #include <QDomElement>
 #include <QElapsedTimer>
+#include <QObject>
+#include <QQueue>
 
 #define NS_STREAM_MANAGEMENT   "urn:xmpp:sm:3"
 #define SM_TIMER_INTERVAL_SECS 40
 
 //#define IRIS_SM_DEBUG
 
-namespace XMPP
-{
+namespace XMPP {
     class SMState
     {
     public:
@@ -87,6 +86,6 @@ namespace XMPP
             bool waiting_answer = false;
         } sm_timeout_data;
     };
-}
+} // namespace XMPP
 
-#endif //XMPP_SM_H
+#endif // XMPP_SM_H

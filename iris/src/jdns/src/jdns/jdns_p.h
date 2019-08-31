@@ -24,11 +24,14 @@
 #ifndef JDNS_P_H
 #define JDNS_P_H
 
+#include "jdns.h"
+#include "jdns_packet.h"
+
+#include <ctype.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
-#include <ctype.h>
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 # define JDNS_OS_WIN
@@ -50,17 +53,14 @@
 # define JDNS_OS_MAC
 #endif
 
+#ifdef JDNS_OS_UNIX
+# include <netinet/in.h>
+# include <unistd.h>
+#endif
+
 #ifdef JDNS_OS_WIN
 # include <windows.h>
 #endif
-
-#ifdef JDNS_OS_UNIX
-# include <unistd.h>
-# include <netinet/in.h>
-#endif
-
-#include "jdns.h"
-#include "jdns_packet.h"
 
 // jdns_util.c
 void *jdns_alloc(int size);
@@ -96,4 +96,4 @@ void jdns_response_remove_answer(jdns_response_t *r, int pos);
 #define _ustrlen(str) strlen((const char *)str)
 #define _ustrcmp(a, b) strcmp((const char *)a, (const char *)b)
 
-#endif
+#endif // JDNS_P_H

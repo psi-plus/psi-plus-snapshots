@@ -26,6 +26,6 @@ namespace XMPP {
         ReceiptRequest,
         ReceiptReceived
     } MessageReceipt;
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_RECEIPTS_H

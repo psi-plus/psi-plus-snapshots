@@ -16,32 +16,30 @@
  *
  */
 
+#include "im.h"
+#include "ui_test.h"
+#include "xmpp.h"
+
 #include <QApplication>
+#include <QTextBlock>
 #include <QTextEdit>
-#include <qgroupbox.h>
-#include <qlineedit.h>
-#include <qlabel.h>
+#include <qca.h>
 #include <qcheckbox.h>
 #include <qcombobox.h>
-#include <qpushbutton.h>
-#include <qmessagebox.h>
+#include <qgroupbox.h>
 #include <qinputdialog.h>
-#include <qspinbox.h>
-#include <qtimer.h>
-#include <qmenubar.h>
+#include <qlabel.h>
+#include <qlineedit.h>
 #include <qmenu.h>
+#include <qmenubar.h>
+#include <qmessagebox.h>
+#include <qpushbutton.h>
+#include <qspinbox.h>
 #include <qtabwidget.h>
-#include <QTextBlock>
-#include <qca.h>
-#include "xmpp.h"
-#include "im.h"
-
+#include <qtimer.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
-#include "ui_test.h"
-
-#include <stdio.h>
 
 #define AppName "xmpptest"
 

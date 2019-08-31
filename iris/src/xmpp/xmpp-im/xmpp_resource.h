@@ -19,12 +19,11 @@
 #ifndef XMPP_RESOURCE_H
 #define XMPP_RESOURCE_H
 
-#include <QString>
-
 #include "xmpp_status.h"
 
-namespace XMPP
-{
+#include <QString>
+
+namespace XMPP {
     class Resource
     {
     public:
@@ -41,6 +40,6 @@ namespace XMPP
         QString v_name;
         Status v_status;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_RESOURCE_H

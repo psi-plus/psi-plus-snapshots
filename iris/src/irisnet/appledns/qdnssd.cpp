@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007,2008  Justin Karneges
+ * Copyright (C) 2007-2008  Justin Karneges
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,22 +18,18 @@
 
 #include "qdnssd.h"
 
+#include "dns_sd.h"
+
 #include <QtCore>
 #include <stdio.h>
-
-// for ntohs
-#ifdef Q_OS_WIN
+#ifdef Q_OS_WIN // for ntohs
 # include <windows.h>
 #else
 # include <netinet/in.h>
 #endif
 
-#include "dns_sd.h"
-
 namespace {
-
 // safeobj stuff, from qca
-
 void releaseAndDeleteLater(QObject *owner, QObject *obj)
 {
     obj->disconnect(owner);
@@ -210,7 +206,7 @@ public:
     }
 };
 
-}
+} // namespace
 
 //----------------------------------------------------------------------------
 // QDnsSd

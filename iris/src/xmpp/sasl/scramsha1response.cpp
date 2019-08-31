@@ -18,15 +18,15 @@
 
 #include "xmpp/sasl/scramsha1response.h"
 
+#include "xmpp/base/randomnumbergenerator.h"
+#include "xmpp/jid/jid.h"
+
 #include <QByteArray>
+#include <QRegExp>
 #include <QString>
 #include <QTextStream>
 #include <QtCrypto>
 #include <QtDebug>
-#include <QRegExp>
-
-#include "xmpp/base/randomnumbergenerator.h"
-#include "xmpp/jid/jid.h"
 
 namespace XMPP {
     QCA::SecureArray HMAC_SHA_1(const QCA::SecureArray &key, const QCA::SecureArray &str) {
@@ -130,5 +130,4 @@ namespace XMPP {
 const QString SCRAMSHA1Response::getSaltedPassword() {
     return QCA::Base64().arrayToString(salted_password_);
 }
-
-}
+} // namespace XMPP

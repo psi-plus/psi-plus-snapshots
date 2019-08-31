@@ -19,16 +19,15 @@
 #ifndef STUNTYPES_H
 #define STUNTYPES_H
 
-#include <QString>
-#include <QByteArray>
-#include <QList>
-#include <QHostAddress>
 #include "stunmessage.h"
 
+#include <QByteArray>
+#include <QHostAddress>
+#include <QList>
+#include <QString>
+
 namespace XMPP {
-
 namespace StunTypes {
-
 enum Method
 {
     Binding           = 0x001,
@@ -137,8 +136,7 @@ QString attributeValueToString(int type, const QByteArray &val, const quint8 *ma
 QString print_packet_str(const StunMessage &message);
 void print_packet(const StunMessage &message);
 
-}
+} // namespace StunTypes
+} // namespace XMPP
 
-}
-
-#endif
+#endif // STUNTYPES_H

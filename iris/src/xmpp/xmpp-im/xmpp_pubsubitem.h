@@ -19,11 +19,10 @@
 #ifndef XMPP_PUBSUBITEM_H
 #define XMPP_PUBSUBITEM_H
 
-#include <QString>
 #include <QDomElement>
+#include <QString>
 
-namespace XMPP
-{
+namespace XMPP {
     class PubSubItem
     {
     public:
@@ -36,6 +35,6 @@ namespace XMPP
         QString id_;
         QDomElement payload_;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_PUBSUBITEM_H

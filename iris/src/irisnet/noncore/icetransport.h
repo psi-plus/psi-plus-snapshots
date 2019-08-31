@@ -19,13 +19,12 @@
 #ifndef ICETRANSPORT_H
 #define ICETRANSPORT_H
 
-#include <QObject>
 #include <QByteArray>
+#include <QObject>
 
 class QHostAddress;
 
 namespace XMPP {
-
 class IceTransport : public QObject
 {
     Q_OBJECT
@@ -67,7 +66,6 @@ signals:
     // not DOR-SS/DS safe
     void debugLine(const QString &str);
 };
+} // namespace XMPP
 
-}
-
-#endif
+#endif // ICETRANSPORT_H

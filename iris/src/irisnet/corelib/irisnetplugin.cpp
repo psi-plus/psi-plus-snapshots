@@ -19,7 +19,6 @@
 #include "irisnetplugin.h"
 
 namespace XMPP {
-
 //----------------------------------------------------------------------------
 // IrisNetProvider
 //----------------------------------------------------------------------------
@@ -84,4 +83,4 @@ void NameProvider::resolve_localError(int id, XMPP::NameResolver::Error e)
     Q_UNUSED(e);
 }
 
-}
+} // namespace XMPP

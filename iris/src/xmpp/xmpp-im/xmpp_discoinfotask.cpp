@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001, 2002  Justin Karneges
+ * Copyright (C) 2001-2002  Justin Karneges
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -16,17 +16,18 @@
  *
  */
 
+#include "xmpp_discoinfotask.h"
+
+#include "xmpp/jid/jid.h"
+#include "xmpp_caps.h"
+#include "xmpp_client.h"
+#include "xmpp_discoitem.h"
+#include "xmpp_task.h"
+#include "xmpp_xmlcommon.h"
+
 #include <QDomElement>
 #include <QString>
 #include <QTimer>
-
-#include "xmpp_task.h"
-#include "xmpp/jid/jid.h"
-#include "xmpp_discoitem.h"
-#include "xmpp_discoinfotask.h"
-#include "xmpp_xmlcommon.h"
-#include "xmpp_client.h"
-#include "xmpp_caps.h"
 
 using namespace XMPP;
 
@@ -72,7 +73,6 @@ void DiscoInfoTask::get (const Jid &j, const QString &node, DiscoItem::Identity 
     d->node = node;
     d->ident = ident;
 }
-
 
 /**
  * Original requested jid.
@@ -157,5 +157,3 @@ bool DiscoInfoTask::take(const QDomElement &x)
 
     return true;
 }
-
-

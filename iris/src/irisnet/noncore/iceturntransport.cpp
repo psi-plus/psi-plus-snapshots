@@ -18,11 +18,11 @@
 
 #include "iceturntransport.h"
 
-#include <QtCrypto>
 #include "stunallocate.h"
 
-namespace XMPP {
+#include <QtCrypto>
 
+namespace XMPP {
 class IceTurnTransport::Private : public QObject
 {
     Q_OBJECT
@@ -244,6 +244,6 @@ void IceTurnTransport::setDebugLevel(DebugLevel level)
     d->turn.setDebugLevel((TurnClient::DebugLevel)level);
 }
 
-}
+} // namespace XMPP
 
 #include "iceturntransport.moc"

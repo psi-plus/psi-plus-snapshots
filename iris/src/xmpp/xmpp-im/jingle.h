@@ -21,6 +21,7 @@
 #define JINGLE_H
 
 #include "bytestream.h"
+#include "xmpp_stanza.h"
 
 #include <QSharedDataPointer>
 #include <QSharedPointer>
@@ -31,16 +32,13 @@
 # include <QHostAddress>
 #endif
 
-#include "xmpp_stanza.h"
-
-class QDomElement;
 class QDomDocument;
+class QDomElement;
 
 namespace XMPP {
 class Client;
 
 namespace Jingle {
-
 extern const QString NS;
 
 class Manager;
@@ -348,7 +346,6 @@ public:
         RealTime      = 0x400  // it's rather about synchronization of frames with time which implies fast
     };
     Q_DECLARE_FLAGS(Features, Feature)
-
 
     using QObject::QObject;
 

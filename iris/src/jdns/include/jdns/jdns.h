@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005,2006  Justin Karneges
+ * Copyright (C) 2005-2006  Justin Karneges
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -505,4 +505,4 @@ JDNS_EXPORT void jdns_set_hold_ids_enabled(jdns_session_t *s, int enabled);
 }
 #endif
 
-#endif
+#endif // JDNS_H

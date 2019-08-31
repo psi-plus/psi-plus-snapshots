@@ -23,8 +23,7 @@
 
 class QString;
 
-namespace XMPP
-{
+namespace XMPP {
     class HTMLElement
     {
     public:
@@ -43,6 +42,6 @@ namespace XMPP
         QDomDocument doc_;
         QDomElement body_;
     };
-}
+} // namespace XMPP
 
-#endif
+#endif // XMPP_HTMLELEMENT_H

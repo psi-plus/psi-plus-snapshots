@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006,2008  Justin Karneges
+ * Copyright (C) 2006-2008  Justin Karneges
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,16 +20,15 @@
 #define IRISNETPLUGIN_H
 
 #include "irisnetglobal.h"
-#include "netinterface.h"
 #include "netavailability.h"
+#include "netinterface.h"
 #include "netnames.h"
 
 namespace XMPP {
-
-class NetInterfaceProvider;
-class NetGatewayProvider;
-class NetAvailabilityProvider;
 class NameProvider;
+class NetAvailabilityProvider;
+class NetGatewayProvider;
+class NetInterfaceProvider;
 class ServiceProvider;
 
 class IRISNET_EXPORT IrisNetProvider : public QObject
@@ -191,8 +190,7 @@ signals:
     void publish_extra_published(int id);
     void publish_extra_error(int id, XMPP::ServiceLocalPublisher::Error e);
 };
-
-}
+} // namespace XMPP
 
 Q_DECLARE_INTERFACE(XMPP::NetGatewayProvider,   "com.affinix.irisnet.IrisGatewayProvider/1.0")
 Q_DECLARE_INTERFACE(XMPP::IrisNetProvider,      "com.affinix.irisnet.IrisNetProvider/1.0")
@@ -200,4 +198,4 @@ Q_DECLARE_INTERFACE(XMPP::NetInterfaceProvider, "com.affinix.irisnet.NetInterfac
 Q_DECLARE_INTERFACE(XMPP::NameProvider,         "com.affinix.irisnet.NameProvider/1.0")
 Q_DECLARE_INTERFACE(XMPP::ServiceProvider,      "com.affinix.irisnet.ServiceProvider/1.0")
 
-#endif
+#endif // IRISNETPLUGIN_H

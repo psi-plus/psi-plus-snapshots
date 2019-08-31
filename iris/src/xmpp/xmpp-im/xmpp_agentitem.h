@@ -20,10 +20,10 @@
 #ifndef XMPP_AGENTITEM
 #define XMPP_AGENTITEM
 
-#include <QString>
-
 #include "xmpp/jid/jid.h"
 #include "xmpp_features.h"
+
+#include <QString>
 
 namespace XMPP {
     class AgentItem
@@ -48,7 +48,6 @@ namespace XMPP {
         QString v_name, v_category, v_type;
         Features v_features;
     };
-}
+} // namespace XMPP
 
-#endif
-
+#endif // XMPP_AGENTITEM

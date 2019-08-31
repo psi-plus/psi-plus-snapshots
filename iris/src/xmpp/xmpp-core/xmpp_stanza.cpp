@@ -18,16 +18,16 @@
 
 #include "xmpp_stanza.h"
 
-#include <QCoreApplication>
 #include "xmpp/jid/jid.h"
-#include "xmpp_stream.h"
 #include "xmpp_clientstream.h"
+#include "xmpp_stream.h"
 
+#include <QCoreApplication>
 #include <QDebug>
 
 using namespace XMPP;
 
-#define NS_STANZAS  "urn:ietf:params:xml:ns:xmpp-stanzas"
+#define NS_STANZAS "urn:ietf:params:xml:ns:xmpp-stanzas"
 #define NS_XML "http://www.w3.org/XML/1998/namespace"
 
 //----------------------------------------------------------------------------
@@ -91,7 +91,6 @@ void Stanza::Error::reset()
     originalCode = 0;
 }
 
-
 class Stanza::Error::Private
 {
 public:
@@ -124,7 +123,6 @@ public:
         const char *str;
     };
     static ErrorDescEntry errorDescriptions[];
-
 
     static int stringToErrorType(const QString &s)
     {
@@ -676,4 +674,3 @@ QSharedPointer<QDomDocument> Stanza::unboundDocument(QSharedPointer<QDomDocument
     d->sharedDoc = sd;
     return d->sharedDoc;
 }
-

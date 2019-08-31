@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005,2006  Justin Karneges
+ * Copyright (C) 2005-2006  Justin Karneges
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -27,21 +27,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#ifdef Q_OS_UNIX
+# include <arpa/inet.h>
+# include <errno.h>
+# include <fcntl.h>
+# include <netinet/in.h>
+# include <signal.h>
+# include <sys/socket.h>
+# include <sys/time.h>
+# include <sys/types.h>
+#endif
 #ifdef Q_OS_WIN
 # include <winsock2.h>
 # include <ws2tcpip.h>
-#endif
-
-#ifdef Q_OS_UNIX
-# include <sys/time.h>
-# include <sys/types.h>
-# include <sys/socket.h>
-# include <netinet/in.h>
-# include <fcntl.h>
-# include <errno.h>
-# include <signal.h>
-# include <arpa/inet.h>
 #endif
 
 #ifdef Q_OS_HAIKU

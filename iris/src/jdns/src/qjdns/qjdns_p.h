@@ -26,13 +26,14 @@
 
 #include "jdns.h"
 #include "qjdns.h"
-#include <QObject>
-#include <QTime>
-#include <QStringList>
-#include <QHash>
 
-class QUdpSocket;
+#include <QHash>
+#include <QObject>
+#include <QStringList>
+#include <QTime>
+
 class QTimer;
+class QUdpSocket;
 
 class SafeTimer : public QObject
 {
@@ -131,4 +132,4 @@ private:
     static int cb_udp_write(jdns_session_t *, void *app, int handle, const jdns_address_t *addr, int port, unsigned char *buf, int bufsize);
 };
 
-#endif
+#endif // QJDNS_P_H

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2008    Justin Karneges
+ * Copyright (C) 2006-2008  Justin Karneges
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
@@ -27,13 +27,14 @@
 // SafeTimer
 #include "qjdns_p.h"
 #include "qjdnsshared.h"
-#include <QWaitCondition>
-#include <QThread>
-#include <QObject>
-#include <QMutex>
-#include <QStringList>
-#include <QSet>
+
 #include <QHash>
+#include <QMutex>
+#include <QObject>
+#include <QSet>
+#include <QStringList>
+#include <QThread>
+#include <QWaitCondition>
 
 class JDnsShutdownAgent : public QObject
 {
@@ -230,4 +231,4 @@ private slots:
     void lateTimer_timeout();
 };
 
-#endif
+#endif // QJDNSSHARED_P_H

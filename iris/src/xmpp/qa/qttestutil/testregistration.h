@@ -22,7 +22,6 @@
 #include "qttestutil/testregistry.h"
 
 namespace QtTestUtil {
-
     /**
      * A wrapper class around a test to manage registration and static
      * creation of an instance of the test class.
@@ -45,7 +44,6 @@ namespace QtTestUtil {
         private:
             TestClass* test_;
     };
+} // namespace QtTestUtil
 
-}
-
-#endif
+#endif // QTTESTUTIL_TESTREGISTRATION_H

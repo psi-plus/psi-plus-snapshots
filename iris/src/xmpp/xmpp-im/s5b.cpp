@@ -19,18 +19,17 @@
 
 #include "s5b.h"
 
-#include <QTimer>
-#include <QPointer>
-#include <QByteArray>
-#include <stdlib.h>
-#include <qca.h>
-
-#include "xmpp_xmlcommon.h"
 #include "im.h"
 #include "jingle-s5b.h"
 #include "socks.h"
 #include "tcpportreserver.h"
+#include "xmpp_xmlcommon.h"
 
+#include <QByteArray>
+#include <QPointer>
+#include <QTimer>
+#include <qca.h>
+#include <stdlib.h>
 #ifdef Q_OS_WIN
 # include <windows.h>
 #else
@@ -42,7 +41,6 @@
 static const char *S5B_NS = "http://jabber.org/protocol/bytestreams";
 
 namespace XMPP {
-
 static QString makeKey(const QString &sid, const Jid &requester, const Jid &target)
 {
 #ifdef S5B_DEBUG
@@ -62,7 +60,6 @@ static bool haveHost(const StreamHostList &list, const Jid &j)
     }
     return false;
 }
-
 
 class S5BManager::Item : public QObject
 {
@@ -1955,7 +1952,6 @@ void S5BConnector::man_udpSuccess(const Jid &streamHost)
     }
 }
 
-
 //----------------------------------------------------------------------------
 // JT_S5B
 //----------------------------------------------------------------------------
@@ -2453,7 +2449,6 @@ void S5BServer::unregisterKey(const QString &key)
 {
     d->keys.remove(key);
 }
-
-}
+} // namespace XMPP
 
 #include "s5b.moc"
