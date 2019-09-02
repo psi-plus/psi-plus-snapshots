@@ -896,16 +896,16 @@ void TabDlg::setTabIcon(QWidget *widget,const QIcon &icon)
     tabWidget_->setTabIcon(widget, icon);
 }
 
+bool TabDlg::isTabPinned(QWidget *page)
+{
+    return tabWidget_->isPagePinned(page);
+}
+
 void TabDlg::updateVSplitters(int log, int chat)
 {
     foreach(TabbableWidget *w, tabs_) {
         w->setVSplitterPosition(log, chat);
     }
-}
-
-bool TabDlg::isTabPinned(QWidget *page)
-{
-    return tabWidget_->isPagePinned(page);
 }
 
 TabbableWidget* TabDlg::getCurrentTab() const

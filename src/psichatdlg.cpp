@@ -26,11 +26,11 @@
 #include "psitooltip.h"
 #include "shortcutmanager.h"
 #include "stretchwidget.h"
+#include "tabdlg.h"
 #include "textutil.h"
 #include "userlist.h"
 #include "xmpp_caps.h"
 #include "xmpp_tasks.h"
-#include "tabdlg.h"
 #ifdef PSI_PLUGINS
 #    include "filesharedlg.h"
 #    include "pluginmanager.h"
@@ -552,11 +552,11 @@ void PsiChatDlg::initToolButtons()
                 });
             });
         }
-        else if (name == "chat_templates") {
-            action->setMenu(getTemplateMenu());
-        }
         else if (name == "chat_pin_tab") {
             connect(action, SIGNAL(triggered()), SLOT(pinTab()));
+        }
+        else if (name == "chat_templates") {
+            action->setMenu(getTemplateMenu());
         }
     }
 

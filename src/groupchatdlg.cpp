@@ -62,6 +62,7 @@
 #include "statusdlg.h"
 #include "stretchwidget.h"
 #include "tabcompletion.h"
+#include "tabdlg.h"
 #include "textutil.h"
 #include "typeaheadfind.h"
 #include "urlobject.h"
@@ -70,7 +71,6 @@
 #include "xmpp_caps.h"
 #include "xmpp_message.h"
 #include "xmpp_tasks.h"
-#include "tabdlg.h"
 
 #include <QAction>
 #include <QCheckBox>
@@ -931,11 +931,11 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager)
                 });
             });
         }
-        else if (name == QLatin1String("gchat_templates")) {
-            action->setMenu(getTemplateMenu());
-        }
         else if (name == "gchat_pin_tab") {
             connect(action, SIGNAL(triggered()), SLOT(pinTab()));
+        }
+        else if (name == QLatin1String("gchat_templates")) {
+            action->setMenu(getTemplateMenu());
         }
     }
 
