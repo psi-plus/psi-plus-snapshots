@@ -72,6 +72,8 @@ void HunspellChecker::getDictPaths()
 #elif defined(Q_OS_MAC)
         dictPathSet << QCoreApplication::applicationDirPath() + QLatin1String("/../Resources/myspell/dicts") // relative path to dictionaries inside app bundle
                     << QLatin1String("/opt/local/share/myspell"); // MacPorts standard paths
+#elif defined(Q_OS_HAIKU)
+        dictPathSet << QLatin1String("/system/data/hunspell");
 #else
         dictPathSet << QLatin1String("/usr/share/myspell")
                     << QLatin1String("/usr/share/hunspell")
