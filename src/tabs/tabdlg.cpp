@@ -560,10 +560,10 @@ QString TabDlg::desiredCaption() const
         if (simplifiedCaption_ && tabs_.count() > 1) {
             cap += tr("%1 Conversations").arg(tabs_.count());
         } else {
-            cap += qobject_cast<TabbableWidget*>(tabWidget_->currentPage())->getDisplayName();
-            if (qobject_cast<TabbableWidget*>(tabWidget_->currentPage())->state() == TabbableWidget::State::Composing) {
+            cap += static_cast<TabbableWidget*>(tabWidget_->currentPage())->getDisplayName();
+            if (static_cast<TabbableWidget*>(tabWidget_->currentPage())->state() == TabbableWidget::State::Composing) {
                 cap += tr(" is composing");
-            } else if (qobject_cast<TabbableWidget*>(tabWidget_->currentPage())->state() == TabbableWidget::State::Inactive) {
+            } else if (static_cast<TabbableWidget*>(tabWidget_->currentPage())->state() == TabbableWidget::State::Inactive) {
                 cap = tr("%1 (Inactive)").arg(cap);
             }
         }
@@ -588,7 +588,10 @@ void TabDlg::closeEvent(QCloseEvent* closeEvent)
         }
     }
     foreach(TabbableWidget* tab, tabs_) {
-        closeTab(tab);
+        bool res = true;
+        if(PsiOptions::instance()->getOption("options.ui.muc.hide-when-closing").toBool() && tab->isGroupChat())
+            res = false;
+        closeTab(tab, res);
     }
 }
 
@@ -879,13 +882,18 @@ void TabDlg::setSimplifiedCaptionEnabled(bool enabled)
   */
 void TabDlg::tabCloseRequested(int i)
 {
+    TabbableWidget *tw = static_cast<TabbableWidget*>(tabWidget_->page(i));
     if (tabWidget_->currentPageIndex() != i) {
         if (!PsiOptions::instance()->getOption("options.ui.tabs.can-close-inactive-tab").toBool()) {
-            selectTab(static_cast<TabbableWidget*>(tabWidget_->page(i)));
+            selectTab(tw);
             return;
         }
     }
-    closeTab(static_cast<TabbableWidget*>(tabWidget_->page(i)));
+    if(PsiOptions::instance()->getOption("options.ui.muc.hide-when-closing").toBool() && tw->isGroupChat()) {
+        hideTab(tw);
+        return;
+    }
+    closeTab(tw);
 }
 
 /**

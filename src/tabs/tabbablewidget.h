@@ -56,6 +56,7 @@ public:
 
     bool isTabbed();
     bool isActiveTab();
+    bool isGroupChat();
 
     // reimplemented
     virtual void doFlash(bool on);
