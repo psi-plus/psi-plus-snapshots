@@ -30,121 +30,125 @@
 #include <QStringList>
 
 namespace XMPP {
-    class DiscoItem;
-    class StatusPrivate;
+class DiscoItem;
+class StatusPrivate;
 
-    class CapsSpec
-    {
-        public:
-            typedef QMap<QString,QCryptographicHash::Algorithm> CryptoMap;
-            static const QCryptographicHash::Algorithm invalidAlgo = (QCryptographicHash::Algorithm)255;
+class CapsSpec {
+public:
+    typedef QMap<QString, QCryptographicHash::Algorithm> CryptoMap;
+    static const QCryptographicHash::Algorithm           invalidAlgo = (QCryptographicHash::Algorithm)255;
 
-            CapsSpec();
-            CapsSpec(const QString& node, QCryptographicHash::Algorithm hashAlgo, const QString& ver = QString());
-            CapsSpec(const DiscoItem &disco, QCryptographicHash::Algorithm hashAlgo = QCryptographicHash::Sha1);
+    CapsSpec();
+    CapsSpec(const QString &node, QCryptographicHash::Algorithm hashAlgo, const QString &ver = QString());
+    CapsSpec(const DiscoItem &disco, QCryptographicHash::Algorithm hashAlgo = QCryptographicHash::Sha1);
 
-            bool isValid() const;
-            const QString& node() const;
-            const QString& version() const;
-            QCryptographicHash::Algorithm hashAlgorithm() const;
-            inline const QStringList &ext() const { return ext_; }
-            QString flatten() const;
+    bool                          isValid() const;
+    const QString &               node() const;
+    const QString &               version() const;
+    QCryptographicHash::Algorithm hashAlgorithm() const;
+    inline const QStringList &    ext() const { return ext_; }
+    QString                       flatten() const;
 
-            void resetVersion();
+    void resetVersion();
 
-            bool operator==(const CapsSpec&) const;
-            bool operator!=(const CapsSpec&) const;
-            bool operator<(const CapsSpec&) const;
+    bool operator==(const CapsSpec &) const;
+    bool operator!=(const CapsSpec &) const;
+    bool operator<(const CapsSpec &) const;
 
-            QDomElement toXml(QDomDocument *doc) const;
-            static CapsSpec fromXml(const QDomElement &e);
+    QDomElement     toXml(QDomDocument *doc) const;
+    static CapsSpec fromXml(const QDomElement &e);
 
-            static CryptoMap &cryptoMap();
+    static CryptoMap &cryptoMap();
 
-        private:
-            QString node_, ver_;
-            QCryptographicHash::Algorithm hashAlgo_;
-            QStringList ext_;
-    };
+private:
+    QString                       node_, ver_;
+    QCryptographicHash::Algorithm hashAlgo_;
+    QStringList                   ext_;
+};
 
-    class Status
-    {
-    public:
-        enum Type { Offline, Online, Away, XA, DND, Invisible, FFC };
+class Status {
+public:
+    enum Type { Offline,
+                Online,
+                Away,
+                XA,
+                DND,
+                Invisible,
+                FFC };
 
-        Status(const QString &show=QString(), const QString &status=QString(), int priority=0, bool available=true);
-        Status(Type type, const QString& status=QString(), int priority=0);
-        Status(const Status &);
-        Status &operator=(const Status &);
-        ~Status();
+    Status(const QString &show = QString(), const QString &status = QString(), int priority = 0, bool available = true);
+    Status(Type type, const QString &status = QString(), int priority = 0);
+    Status(const Status &);
+    Status &operator=(const Status &);
+    ~Status();
 
-        int priority() const;
-        Type type() const;
-        QString typeString() const;
-        const QString & show() const;
-        const QString & status() const;
-        QDateTime timeStamp() const;
-        const QString & keyID() const;
-        bool isAvailable() const;
-        bool isAway() const;
-        bool isInvisible() const;
-        bool hasError() const;
-        int errorCode() const;
-        const QString & errorString() const;
+    int            priority() const;
+    Type           type() const;
+    QString        typeString() const;
+    const QString &show() const;
+    const QString &status() const;
+    QDateTime      timeStamp() const;
+    const QString &keyID() const;
+    bool           isAvailable() const;
+    bool           isAway() const;
+    bool           isInvisible() const;
+    bool           hasError() const;
+    int            errorCode() const;
+    const QString &errorString() const;
 
-        const QString & xsigned() const;
-        const QString & songTitle() const;
-        const CapsSpec & caps() const;
+    const QString & xsigned() const;
+    const QString & songTitle() const;
+    const CapsSpec &caps() const;
 
-        bool isMUC() const;
-        bool hasMUCItem() const;
-        const MUCItem & mucItem() const;
-        bool hasMUCDestroy() const;
-        const MUCDestroy & mucDestroy() const;
-        const QList<int>& getMUCStatuses() const;
-        const QString& mucPassword() const;
-        bool hasMUCHistory() const;
-        int mucHistoryMaxChars() const;
-        int mucHistoryMaxStanzas() const;
-        int mucHistorySeconds() const;
-        const QDateTime & mucHistorySince() const;
+    bool              isMUC() const;
+    bool              hasMUCItem() const;
+    const MUCItem &   mucItem() const;
+    bool              hasMUCDestroy() const;
+    const MUCDestroy &mucDestroy() const;
+    const QList<int> &getMUCStatuses() const;
+    const QString &   mucPassword() const;
+    bool              hasMUCHistory() const;
+    int               mucHistoryMaxChars() const;
+    int               mucHistoryMaxStanzas() const;
+    int               mucHistorySeconds() const;
+    const QDateTime & mucHistorySince() const;
 
-        static Type txt2type(const QString& stat);
+    static Type txt2type(const QString &stat);
 
-        void setPriority(int);
-        void setType(Type);
-        void setType(const QString &);
-        void setShow(const QString &);
-        void setStatus(const QString &);
-        void setTimeStamp(const QDateTime &);
-        void setKeyID(const QString &);
-        void setIsAvailable(bool);
-        void setIsInvisible(bool);
-        void setError(int, const QString &);
-        void setCaps(const CapsSpec&);
+    void setPriority(int);
+    void setType(Type);
+    void setType(const QString &);
+    void setShow(const QString &);
+    void setStatus(const QString &);
+    void setTimeStamp(const QDateTime &);
+    void setKeyID(const QString &);
+    void setIsAvailable(bool);
+    void setIsInvisible(bool);
+    void setError(int, const QString &);
+    void setCaps(const CapsSpec &);
 
-        void setMUC();
-        void setMUCItem(const MUCItem&);
-        void setMUCDestroy(const MUCDestroy&);
-        void addMUCStatus(int);
-        void setMUCPassword(const QString&);
-        void setMUCHistory(int maxchars, int maxstanzas, int seconds, const QDateTime &since);
+    void setMUC();
+    void setMUCItem(const MUCItem &);
+    void setMUCDestroy(const MUCDestroy &);
+    void addMUCStatus(int);
+    void setMUCPassword(const QString &);
+    void setMUCHistory(int maxchars, int maxstanzas, int seconds, const QDateTime &since);
 
-        void setXSigned(const QString &);
-        void setSongTitle(const QString &);
+    void setXSigned(const QString &);
+    void setSongTitle(const QString &);
 
-        // XEP-153: VCard-based Avatars
-        const QString& photoHash() const;
-        void setPhotoHash(const QString&);
-        bool hasPhotoHash() const;
+    // XEP-153: VCard-based Avatars
+    const QByteArray &photoHash() const;
+    void              setPhotoHash(const QByteArray &);
+    bool              hasPhotoHash() const;
 
-        // XEP-0231 bits of binary
-        void addBoBData(const BoBData &);
-        QList<BoBData> bobDataList() const;
+    // XEP-0231 bits of binary
+    void           addBoBData(const BoBData &);
+    QList<BoBData> bobDataList() const;
 
-    private:
-        QSharedDataPointer<StatusPrivate> d;
-    };
+private:
+    QSharedDataPointer<StatusPrivate> d;
+};
 } // namespace XMPP
 
 Q_DECLARE_METATYPE(XMPP::Status)
