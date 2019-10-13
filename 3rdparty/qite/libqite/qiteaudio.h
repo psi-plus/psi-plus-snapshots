@@ -57,7 +57,7 @@ class ITEAudioController : public InteractiveTextElementController
     bool isOnButton(const QPoint &pos, const QRect &rect);
     void updateGeomtry();
 public:
-    typedef QList<float> Histogram; // can be fetched via DeviceOpener::metadata()[histogram]
+    typedef QList<float> Histogram; // can be fetched via DeviceOpener::metadata()[amplitudes]
     static const int HistogramCompressedSize = 100; // amount of drawn columns
 
     ITEAudioController(InteractiveText *itc);

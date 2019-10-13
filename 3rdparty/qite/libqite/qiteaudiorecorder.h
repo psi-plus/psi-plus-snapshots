@@ -35,7 +35,7 @@ public:
     static const int HistogramMemSize = int(1e6) / HistogramQuantumSize * 20; // for 20 secs. ~ 2Kb
 
     struct Quantum {
-        qint64 timeLeft = HistogramQuantumSize; // to generate next value for aplitude histogram
+        qint64 timeLeft = HistogramQuantumSize; // to generate next value for aplitude amplitudes
         qreal sum = 0.0;
         int count = 0;
     };
@@ -49,7 +49,7 @@ public:
 
     inline auto recorder() const { return _recorder; }
     inline auto maxVolume() const { return _maxVolume; } // peak value of vlume over all the recording.
-    inline auto histogram() const { return _compressedHistorgram; }
+    inline auto amplitudes() const { return _compressedHistorgram; }
     inline auto data() const { return _audioData; }
     inline quint64 duration() const { return _duration; }
 
@@ -68,7 +68,7 @@ private:
     QAudioRecorder  *_recorder = nullptr;
     QAudioProbe     *_probe;
     Quantum         _quantum;
-    QByteArray      _histogram;
+    QByteArray      _amplitudes;
     QByteArray      _compressedHistorgram;
     QByteArray      _audioData;
     QTimer          *_maxDurationTimer = nullptr;
