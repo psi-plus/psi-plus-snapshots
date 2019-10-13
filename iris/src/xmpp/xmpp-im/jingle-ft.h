@@ -170,12 +170,13 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     protected:
         bool incomingTransportReplace(const QSharedPointer<Transport> &transport) override;
         bool incomingTransportAccept(const QDomElement &transportEl) override;
+        void incomingRemove(const Reason &r) override;
 
     signals:
         void connectionReady(); // streaming mode only
-        void
-             deviceRequested(quint64 offset,
-                             quint64 size); // if size = 0 then it's reamaining part of the file (non-streaming mode only)
+
+        // if size = 0 then it's reamaining part of the file (non-streaming mode only)
+        void deviceRequested(quint64 offset, quint64 size);
         void progress(quint64 offset);
 
     private:

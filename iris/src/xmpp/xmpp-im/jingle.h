@@ -64,8 +64,8 @@ namespace Jingle {
         PrepareLocalOffer, // content accepted by local user but we are not ready yet to send content-accept or
                            // session-accept. same for content-add/session-initiate, where user already already
                            // sent/added in ui and it's network turn.
-        Unacked,    // local content offer is sent to remote but no IQ ack yet
-        Pending,    // waits for session-accept or content-accept from remote
+        Unacked,           // local content offer is sent to remote but no IQ ack yet
+        Pending,           // waits for session-accept or content-accept from remote
         Accepted,   // app only: local: "accept" received, waits for start(). remote: "accept" sent and acknowledged,
                     // waits for start()
         Connecting, // app only: s5b/ice probes etc (particular application state. can be omited for other entities)
@@ -389,8 +389,9 @@ namespace Jingle {
         virtual Origin  creator() const     = 0;
         virtual Origin  senders() const     = 0;
         virtual QString contentName() const = 0;
-        virtual Origin  transportReplaceOrigin()
-            const = 0; // returns Origin::None if no transport-replace in progress or the side triggered the replace.
+
+        // returns Origin::None if no transport-replace in progress or the side triggered the replace.
+        virtual Origin       transportReplaceOrigin() const                 = 0;
         virtual SetDescError setDescription(const QDomElement &description) = 0;
 
         /**
@@ -407,9 +408,9 @@ namespace Jingle {
          *   other applications.
          * @return update type
          */
-        virtual Action         evaluateOutgoingUpdate() = 0;
-        virtual OutgoingUpdate takeOutgoingUpdate()
-            = 0; // this may return something only when evaluateOutgoingUpdate() != NoAction
+        virtual Action evaluateOutgoingUpdate() = 0;
+        // this may return something only when evaluateOutgoingUpdate() != NoAction
+        virtual OutgoingUpdate takeOutgoingUpdate() = 0;
 
         /**
          * @brief wantBetterTransport checks if the transport is a better match for the application
@@ -440,6 +441,7 @@ namespace Jingle {
          */
         virtual bool incomingTransportReplace(const QSharedPointer<Transport> &transport) = 0;
         virtual bool incomingTransportAccept(const QDomElement &transportEl)              = 0;
+        virtual void incomingRemove(const Reason &r)                                      = 0;
 
     signals:
         void updated(); // signal for session it has to send updates to remote. so it will follow with

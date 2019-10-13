@@ -901,6 +901,12 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         return false;
     }
 
+    void Application::incomingRemove(const Reason &r)
+    {
+        d->terminationReason = r;
+        d->setState(State::Finished);
+    }
+
     bool Application::isValid() const
     {
         return d->file.isValid() && d->contentName.size() > 0

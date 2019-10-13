@@ -1094,14 +1094,17 @@ namespace XMPP { namespace Jingle {
                 }
             }
 
+            auto   reasonEl = jingleEl.firstChildElement(QString::fromLatin1("reason"));
+            Reason reason   = reasonEl.isNull() ? Reason(Reason::Success) : Reason(reasonEl);
+
             for (auto app : toRemove) {
+                app->incomingRemove(reason);
                 contentList.remove(ContentKey { app->contentName(), app->creator() });
                 delete app;
             }
 
             if (contentList.isEmpty()) {
-                auto reasonEl   = jingleEl.firstChildElement(QString::fromLatin1("reason"));
-                terminateReason = reasonEl.isNull() ? Reason(Reason::Success) : Reason(reasonEl);
+                terminateReason = reason;
             }
 
             planStep();
