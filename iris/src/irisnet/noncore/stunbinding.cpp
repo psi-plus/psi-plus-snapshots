@@ -25,43 +25,32 @@
 #include <QHostAddress>
 
 namespace XMPP {
-class StunBinding::Private : public QObject
-{
+class StunBinding::Private : public QObject {
     Q_OBJECT
 
 public:
-    StunBinding *q;
+    StunBinding *        q;
     StunTransactionPool *pool;
-    StunTransaction *trans;
-    QHostAddress stunAddr;
-    int stunPort;
-    QHostAddress addr;
-    int port;
-    QString errorString;
-    bool use_extPriority, use_extIceControlling, use_extIceControlled;
-    quint32 extPriority;
-    bool extUseCandidate;
-    quint64 extIceControlling, extIceControlled;
-    QString stuser, stpass;
-    bool fpRequired;
+    StunTransaction *    trans;
+    QHostAddress         stunAddr;
+    int                  stunPort;
+    QHostAddress         addr;
+    int                  port;
+    QString              errorString;
+    bool                 use_extPriority, use_extIceControlling, use_extIceControlled;
+    quint32              extPriority;
+    bool                 extUseCandidate;
+    quint64              extIceControlling, extIceControlled;
+    QString              stuser, stpass;
+    bool                 fpRequired;
 
     Private(StunBinding *_q) :
-        QObject(_q),
-        q(_q),
-        pool(nullptr),
-        trans(nullptr),
-        use_extPriority(false),
-        use_extIceControlling(false),
-        use_extIceControlled(false),
-        extUseCandidate(false),
-        fpRequired(false)
+        QObject(_q), q(_q), pool(nullptr), trans(nullptr), use_extPriority(false), use_extIceControlling(false),
+        use_extIceControlled(false), extUseCandidate(false), fpRequired(false)
     {
     }
 
-    ~Private()
-    {
-        delete trans;
-    }
+    ~Private() { delete trans; }
 
     void start(const QHostAddress &_addr = QHostAddress(), int _port = -1)
     {
@@ -75,8 +64,7 @@ public:
         connect(trans, SIGNAL(finished(XMPP::StunMessage)), SLOT(trans_finished(XMPP::StunMessage)));
         connect(trans, SIGNAL(error(XMPP::StunTransaction::Error)), SLOT(trans_error(XMPP::StunTransaction::Error)));
 
-        if(!stuser.isEmpty())
-        {
+        if (!stuser.isEmpty()) {
             trans->setShortTermUsername(stuser);
             trans->setShortTermPassword(stpass);
         }
@@ -95,33 +83,29 @@ private slots:
 
         QList<StunMessage::Attribute> list;
 
-        if(use_extPriority)
-        {
+        if (use_extPriority) {
             StunMessage::Attribute a;
-            a.type = StunTypes::PRIORITY;
+            a.type  = StunTypes::PRIORITY;
             a.value = StunTypes::createPriority(extPriority);
             list += a;
         }
 
-        if(extUseCandidate)
-        {
+        if (extUseCandidate) {
             StunMessage::Attribute a;
             a.type = StunTypes::USE_CANDIDATE;
             list += a;
         }
 
-        if(use_extIceControlling)
-        {
+        if (use_extIceControlling) {
             StunMessage::Attribute a;
-            a.type = StunTypes::ICE_CONTROLLING;
+            a.type  = StunTypes::ICE_CONTROLLING;
             a.value = StunTypes::createIceControlling(extIceControlling);
             list += a;
         }
 
-        if(use_extIceControlled)
-        {
+        if (use_extIceControlled) {
             StunMessage::Attribute a;
-            a.type = StunTypes::ICE_CONTROLLED;
+            a.type  = StunTypes::ICE_CONTROLLED;
             a.value = StunTypes::createIceControlled(extIceControlled);
             list += a;
         }
@@ -136,13 +120,11 @@ private slots:
         delete trans;
         trans = nullptr;
 
-        bool error = false;
-        int code;
+        bool    error = false;
+        int     code;
         QString reason;
-        if(response.mclass() == StunMessage::ErrorResponse)
-        {
-            if(!StunTypes::parseErrorCode(response.attribute(StunTypes::ERROR_CODE), &code, &reason))
-            {
+        if (response.mclass() == StunMessage::ErrorResponse) {
+            if (!StunTypes::parseErrorCode(response.attribute(StunTypes::ERROR_CODE), &code, &reason)) {
                 errorString = "Unable to parse ERROR-CODE in error response.";
                 emit q->error(StunBinding::ErrorProtocol);
                 return;
@@ -151,10 +133,9 @@ private slots:
             error = true;
         }
 
-        if(error)
-        {
+        if (error) {
             errorString = reason;
-            if(code == StunTypes::RoleConflict)
+            if (code == StunTypes::RoleConflict)
                 emit q->error(StunBinding::ErrorConflict);
             else
                 emit q->error(StunBinding::ErrorRejected);
@@ -162,33 +143,25 @@ private slots:
         }
 
         QHostAddress saddr;
-        quint16 sport = 0;
+        quint16      sport = 0;
 
         QByteArray val;
         val = response.attribute(StunTypes::XOR_MAPPED_ADDRESS);
-        if(!val.isNull())
-        {
-            if(!StunTypes::parseXorMappedAddress(val, response.magic(), response.id(), &saddr, &sport))
-            {
+        if (!val.isNull()) {
+            if (!StunTypes::parseXorMappedAddress(val, response.magic(), response.id(), &saddr, &sport)) {
                 errorString = "Unable to parse XOR-MAPPED-ADDRESS response.";
                 emit q->error(StunBinding::ErrorProtocol);
                 return;
             }
-        }
-        else
-        {
+        } else {
             val = response.attribute(StunTypes::MAPPED_ADDRESS);
-            if(!val.isNull())
-            {
-                if(!StunTypes::parseMappedAddress(val, &saddr, &sport))
-                {
+            if (!val.isNull()) {
+                if (!StunTypes::parseMappedAddress(val, &saddr, &sport)) {
                     errorString = "Unable to parse MAPPED-ADDRESS response.";
                     emit q->error(StunBinding::ErrorProtocol);
                     return;
                 }
-            }
-            else
-            {
+            } else {
                 errorString = "Response does not contain XOR-MAPPED-ADDRESS or MAPPED-ADDRESS.";
                 emit q->error(StunBinding::ErrorProtocol);
                 return;
@@ -205,93 +178,59 @@ private slots:
         delete trans;
         trans = nullptr;
 
-        if(e == StunTransaction::ErrorTimeout)
-        {
+        if (e == StunTransaction::ErrorTimeout) {
             errorString = "Request timed out.";
             emit q->error(StunBinding::ErrorTimeout);
-        }
-        else
-        {
+        } else {
             errorString = "Generic transaction error.";
             emit q->error(StunBinding::ErrorGeneric);
         }
     }
 };
 
-StunBinding::StunBinding(StunTransactionPool *pool) :
-    QObject(pool)
+StunBinding::StunBinding(StunTransactionPool *pool) : QObject(pool)
 {
-    d = new Private(this);
+    d       = new Private(this);
     d->pool = pool;
 }
 
-StunBinding::~StunBinding()
-{
-    delete d;
-}
+StunBinding::~StunBinding() { delete d; }
 
 void StunBinding::setPriority(quint32 i)
 {
     d->use_extPriority = true;
-    d->extPriority = i;
+    d->extPriority     = i;
 }
 
-void StunBinding::setUseCandidate(bool enabled)
-{
-    d->extUseCandidate = enabled;
-}
+void StunBinding::setUseCandidate(bool enabled) { d->extUseCandidate = enabled; }
 
 void StunBinding::setIceControlling(quint64 i)
 {
     d->use_extIceControlling = true;
-    d->extIceControlling = i;
+    d->extIceControlling     = i;
 }
 
 void StunBinding::setIceControlled(quint64 i)
 {
     d->use_extIceControlled = true;
-    d->extIceControlled = i;
+    d->extIceControlled     = i;
 }
 
-void StunBinding::setShortTermUsername(const QString &username)
-{
-    d->stuser = username;
-}
+void StunBinding::setShortTermUsername(const QString &username) { d->stuser = username; }
 
-void StunBinding::setShortTermPassword(const QString &password)
-{
-    d->stpass = password;
-}
+void StunBinding::setShortTermPassword(const QString &password) { d->stpass = password; }
 
-void StunBinding::setFingerprintRequired(bool enabled)
-{
-    d->fpRequired = enabled;
-}
+void StunBinding::setFingerprintRequired(bool enabled) { d->fpRequired = enabled; }
 
-void StunBinding::start()
-{
-    d->start();
-}
+void StunBinding::start() { d->start(); }
 
-void StunBinding::start(const QHostAddress &addr, int port)
-{
-    d->start(addr, port);
-}
+void StunBinding::start(const QHostAddress &addr, int port) { d->start(addr, port); }
 
-QHostAddress StunBinding::reflexiveAddress() const
-{
-    return d->addr;
-}
+QHostAddress StunBinding::reflexiveAddress() const { return d->addr; }
 
-int StunBinding::reflexivePort() const
-{
-    return d->port;
-}
+int StunBinding::reflexivePort() const { return d->port; }
 
-QString StunBinding::errorString() const
-{
-    return d->errorString;
-}
+QString StunBinding::errorString() const { return d->errorString; }
 } // namespace XMPP
 
 #include "stunbinding.moc"

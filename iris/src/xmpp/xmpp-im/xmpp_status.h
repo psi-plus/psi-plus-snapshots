@@ -68,13 +68,7 @@ private:
 
 class Status {
 public:
-    enum Type { Offline,
-                Online,
-                Away,
-                XA,
-                DND,
-                Invisible,
-                FFC };
+    enum Type { Offline, Online, Away, XA, DND, Invisible, FFC };
 
     Status(const QString &show = QString(), const QString &status = QString(), int priority = 0, bool available = true);
     Status(Type type, const QString &status = QString(), int priority = 0);

@@ -28,21 +28,23 @@
 class QNetworkAccessManager;
 
 namespace XMPP {
-    namespace XEP0363 {
-        enum version { vUnknown, v0_2_5, v0_3_1 };
-        struct HttpHeader { QString name; QString value; };
-        typedef QList<HttpHeader> HttpHeaders;
-    }
+namespace XEP0363 {
+    enum version { vUnknown, v0_2_5, v0_3_1 };
+    struct HttpHeader {
+        QString name;
+        QString value;
+    };
+    typedef QList<HttpHeader> HttpHeaders;
+}
 
-class HttpFileUpload : public QObject
-{
+class HttpFileUpload : public QObject {
     Q_OBJECT
 public:
     enum HostPropFlag {
         SecureGet = 1, // 0.2.5 of the xep didn't require that
         SecurePut = 2, // 0.2.5 of the xep didn't require that
         NewestVer = 4,
-        Failure   = 8  // had some failure (no/unexpected response to slot request, early http errors)
+        Failure   = 8 // had some failure (no/unexpected response to slot request, early http errors)
     };
     Q_DECLARE_FLAGS(HostProps, HostPropFlag)
 
@@ -60,7 +62,7 @@ public:
             QString url;
         } get;
         struct {
-            QString url;
+            QString                    url;
             QList<XEP0363::HttpHeader> headers;
         } put;
         struct {
@@ -70,9 +72,9 @@ public:
 
     struct HttpHost {
         XEP0363::version ver;
-        Jid jid;
-        quint64 sizeLimit;
-        HostProps props;
+        Jid              jid;
+        quint64          sizeLimit;
+        HostProps        props;
     };
 
     HttpFileUpload(Client *client, QIODevice *source, size_t fsize, const QString &dstFilename,
@@ -90,10 +92,10 @@ public:
      */
     void setNetworkAccessManager(QNetworkAccessManager *qnam);
 
-    bool success() const;
-    ErrorCode statusCode() const;
-    const QString & statusString() const;
-    HttpSlot getHttpSlot();
+    bool           success() const;
+    ErrorCode      statusCode() const;
+    const QString &statusString() const;
+    HttpSlot       getHttpSlot();
 
 public slots:
     void start();
@@ -118,18 +120,18 @@ private:
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(HttpFileUpload::HostProps)
 
-class JT_HTTPFileUpload : public Task
-{
+class JT_HTTPFileUpload : public Task {
     Q_OBJECT
 public:
     enum UrlType { GetUrl = 0, PutUrl = 1 };
-    enum { ErrInvalidResponse = int(HttpFileUpload::ErrorCode::SlotReceiveFailed) - 1 }; // -1 to be mapped to ErrDisc, ErrTimeout, ...
+    enum {
+        ErrInvalidResponse = int(HttpFileUpload::ErrorCode::SlotReceiveFailed) - 1
+    }; // -1 to be mapped to ErrDisc, ErrTimeout, ...
 
     JT_HTTPFileUpload(Task *parent);
     ~JT_HTTPFileUpload();
 
-    void request(const Jid &to, const QString &fname,
-                 quint64 fsize, const QString &ftype, XEP0363::version ver);
+    void    request(const Jid &to, const QString &fname, quint64 fsize, const QString &ftype, XEP0363::version ver);
     QString url(UrlType t) const;
     XEP0363::HttpHeaders headers() const;
 
@@ -141,17 +143,13 @@ private:
     Private *d;
 };
 
-class HttpFileUploadManager : public QObject
-{
+class HttpFileUploadManager : public QObject {
     Q_OBJECT
 public:
-    enum {
-        DiscoNone      = 0x0,
-        DiscoNotFound  = 0x1,
-        DiscoFound     = 0x2
-    };
+    enum { DiscoNone = 0x0, DiscoNotFound = 0x1, DiscoFound = 0x2 };
 
-    typedef std::function<void(bool,const QString &)> Callback; // params: success, detail. where detail could be a "get" url
+    typedef std::function<void(bool, const QString &)>
+        Callback; // params: success, detail. where detail could be a "get" url
 
     HttpFileUploadManager(Client *parent);
     ~HttpFileUploadManager();
@@ -178,7 +176,7 @@ public:
      * @param mType meta type. image/png for example
      * @return returns a handler object which will signal "finished" when ready
      */
-    HttpFileUpload* upload(const QString &srcFilename, const QString &dstFilename = QString(),
+    HttpFileUpload *upload(const QString &srcFilename, const QString &dstFilename = QString(),
                            const QString &mType = QString());
 
     /**
@@ -189,13 +187,13 @@ public:
      * @param mType - meta type
      * @return returns a handler object which will signal "finished" when ready
      */
-    HttpFileUpload* upload(QIODevice *source, size_t fsize, const QString &dstFilename,
+    HttpFileUpload *upload(QIODevice *source, size_t fsize, const QString &dstFilename,
                            const QString &mType = QString());
 
 private:
     friend class HttpFileUpload;
     const QList<HttpFileUpload::HttpHost> &discoHosts() const;
-    void setDiscoHosts(const QList<HttpFileUpload::HttpHost> &hosts);
+    void                                   setDiscoHosts(const QList<HttpFileUpload::HttpHost> &hosts);
 
     class Private;
     Private *d;

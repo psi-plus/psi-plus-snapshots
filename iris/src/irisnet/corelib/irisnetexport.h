@@ -22,13 +22,13 @@
 #include <QtGlobal>
 
 #ifdef IRISNET_STATIC
-# define IRISNET_EXPORT
+#define IRISNET_EXPORT
 #else
-# ifdef IRISNET_MAKEDLL
-#  define IRISNET_EXPORT Q_DECL_EXPORT
-# else
-#  define IRISNET_EXPORT Q_DECL_IMPORT
-# endif
+#ifdef IRISNET_MAKEDLL
+#define IRISNET_EXPORT Q_DECL_EXPORT
+#else
+#define IRISNET_EXPORT Q_DECL_IMPORT
+#endif
 #endif
 
 #endif // IRISNETEXPORT_H

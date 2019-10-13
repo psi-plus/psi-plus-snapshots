@@ -7,9 +7,9 @@
 #include <QObject>
 #include <QtDebug>
 
-ZLibDecompressor::ZLibDecompressor(QIODevice* device) : device_(device)
+ZLibDecompressor::ZLibDecompressor(QIODevice *device) : device_(device)
 {
-    zlib_stream_ = (z_stream*) malloc(sizeof(z_stream));
+    zlib_stream_ = (z_stream *)malloc(sizeof(z_stream));
     initZStream(zlib_stream_);
     int result = inflateInit2(zlib_stream_, 15 + 32);
     Q_ASSERT(result == Z_OK);
@@ -30,7 +30,7 @@ void ZLibDecompressor::flush()
         return;
 
     // Flush
-    write(QByteArray(),true);
+    write(QByteArray(), true);
     int result = inflateEnd(zlib_stream_);
     if (result != Z_OK)
         qWarning() << QString("compressor.c: inflateEnd failed (%1)").arg(result);
@@ -38,16 +38,13 @@ void ZLibDecompressor::flush()
     flushed_ = true;
 }
 
-qint64 ZLibDecompressor::write(const QByteArray& input)
-{
-    return write(input,false);
-}
+qint64 ZLibDecompressor::write(const QByteArray &input) { return write(input, false); }
 
-qint64 ZLibDecompressor::write(const QByteArray& input, bool flush)
+qint64 ZLibDecompressor::write(const QByteArray &input, bool flush)
 {
     int result;
     zlib_stream_->avail_in = input.size();
-    zlib_stream_->next_in = (Bytef*) input.data();
+    zlib_stream_->next_in  = (Bytef *)input.data();
     QByteArray output;
 
     // Write the data
@@ -55,18 +52,18 @@ qint64 ZLibDecompressor::write(const QByteArray& input, bool flush)
     do {
         output.resize(output_position + CHUNK_SIZE);
         zlib_stream_->avail_out = CHUNK_SIZE;
-        zlib_stream_->next_out = (Bytef*) (output.data() + output_position);
-        result = inflate(zlib_stream_,(flush ? Z_FINISH : Z_NO_FLUSH));
+        zlib_stream_->next_out  = (Bytef *)(output.data() + output_position);
+        result                  = inflate(zlib_stream_, (flush ? Z_FINISH : Z_NO_FLUSH));
         if (result == Z_STREAM_ERROR) {
             qWarning() << QString("compressor.cpp: Error ('%1')").arg(zlib_stream_->msg);
             return result;
         }
         output_position += CHUNK_SIZE;
-    }
-    while (zlib_stream_->avail_out == 0);
-    //Q_ASSERT(zlib_stream_->avail_in == 0);
+    } while (zlib_stream_->avail_out == 0);
+    // Q_ASSERT(zlib_stream_->avail_in == 0);
     if (zlib_stream_->avail_in != 0) {
-        qWarning() << "ZLibDecompressor: Unexpected state: avail_in=" << zlib_stream_->avail_in << ",avail_out=" << zlib_stream_->avail_out << ",result=" << result;
+        qWarning() << "ZLibDecompressor: Unexpected state: avail_in=" << zlib_stream_->avail_in
+                   << ",avail_out=" << zlib_stream_->avail_out << ",result=" << result;
         return Z_STREAM_ERROR; // FIXME: Should probably return 'result'
     }
     output_position -= zlib_stream_->avail_out;
@@ -76,15 +73,14 @@ qint64 ZLibDecompressor::write(const QByteArray& input, bool flush)
         do {
             output.resize(output_position + CHUNK_SIZE);
             zlib_stream_->avail_out = CHUNK_SIZE;
-            zlib_stream_->next_out = (Bytef*) (output.data() + output_position);
-            result = inflate(zlib_stream_,Z_SYNC_FLUSH);
+            zlib_stream_->next_out  = (Bytef *)(output.data() + output_position);
+            result                  = inflate(zlib_stream_, Z_SYNC_FLUSH);
             if (result == Z_STREAM_ERROR) {
                 qWarning() << QString("compressor.cpp: Error ('%1')").arg(zlib_stream_->msg);
                 return result;
             }
             output_position += CHUNK_SIZE;
-        }
-        while (zlib_stream_->avail_out == 0);
+        } while (zlib_stream_->avail_out == 0);
         output_position -= zlib_stream_->avail_out;
     }
     output.resize(output_position);

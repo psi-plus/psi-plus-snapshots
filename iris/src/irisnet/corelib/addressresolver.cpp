@@ -22,34 +22,24 @@
 #include "objectsession.h"
 
 namespace XMPP {
-class AddressResolver::Private : public QObject
-{
+class AddressResolver::Private : public QObject {
     Q_OBJECT
 
 public:
-    enum State
-    {
-        AddressWait,
-        AddressFirstCome
-    };
+    enum State { AddressWait, AddressFirstCome };
 
-    AddressResolver *q;
-    ObjectSession sess;
-    State state;
-    NameResolver req6;
-    NameResolver req4;
-    bool done6;
-    bool done4;
+    AddressResolver *   q;
+    ObjectSession       sess;
+    State               state;
+    NameResolver        req6;
+    NameResolver        req4;
+    bool                done6;
+    bool                done4;
     QList<QHostAddress> addrs6;
     QList<QHostAddress> addrs4;
-    QTimer *opTimer;
+    QTimer *            opTimer;
 
-    Private(AddressResolver *_q) :
-        QObject(_q),
-        q(_q),
-        sess(this),
-        req6(this),
-        req4(this)
+    Private(AddressResolver *_q) : QObject(_q), q(_q), sess(this), req6(this), req4(this)
     {
         connect(&req6, SIGNAL(resultsReady(QList<XMPP::NameRecord>)), SLOT(req6_resultsReady(QList<XMPP::NameRecord>)));
         connect(&req6, SIGNAL(error(XMPP::NameResolver::Error)), SLOT(req6_error(XMPP::NameResolver::Error)));
@@ -75,12 +65,11 @@ public:
 
         // was an IP address used as input?
         QHostAddress addr;
-        if(addr.setAddress(QString::fromLatin1(hostName)))
-        {
+        if (addr.setAddress(QString::fromLatin1(hostName))) {
             // use this as the result, no need to perform dns query
             done6 = true;
             done4 = true;
-            if(addr.protocol() == QAbstractSocket::IPv6Protocol)
+            if (addr.protocol() == QAbstractSocket::IPv6Protocol)
                 addrs6 += addr;
             else
                 addrs4 += addr;
@@ -100,10 +89,7 @@ public:
         req4.start(hostName, NameRecord::A);
     }
 
-    void stop()
-    {
-        cleanup();
-    }
+    void stop() { cleanup(); }
 
 private:
     void cleanup()
@@ -120,12 +106,11 @@ private:
 
     bool tryDone()
     {
-        if((done6 && done4) || (state == AddressFirstCome && (done6 || done4)))
-        {
+        if ((done6 && done4) || (state == AddressFirstCome && (done6 || done4))) {
             QList<QHostAddress> results = addrs6 + addrs4;
             cleanup();
 
-            if(!results.isEmpty())
+            if (!results.isEmpty())
                 emit q->resultsReady(results);
             else
                 emit q->error(ErrorGeneric);
@@ -139,7 +124,7 @@ private:
 private slots:
     void req6_resultsReady(const QList<XMPP::NameRecord> &results)
     {
-        foreach(const NameRecord &rec, results)
+        foreach (const NameRecord &rec, results)
             addrs6 += rec.address();
 
         done6 = true;
@@ -156,7 +141,7 @@ private slots:
 
     void req4_resultsReady(const QList<XMPP::NameRecord> &results)
     {
-        foreach(const NameRecord &rec, results)
+        foreach (const NameRecord &rec, results)
             addrs4 += rec.address();
 
         done4 = true;
@@ -175,36 +160,20 @@ private slots:
     {
         state = AddressFirstCome;
 
-        if(done6 || done4)
+        if (done6 || done4)
             tryDone();
     }
 
-    void ipAddress_input()
-    {
-        tryDone();
-    }
+    void ipAddress_input() { tryDone(); }
 };
 
-AddressResolver::AddressResolver(QObject *parent) :
-    QObject(parent)
-{
-    d = new Private(this);
-}
+AddressResolver::AddressResolver(QObject *parent) : QObject(parent) { d = new Private(this); }
 
-AddressResolver::~AddressResolver()
-{
-    delete d;
-}
+AddressResolver::~AddressResolver() { delete d; }
 
-void AddressResolver::start(const QByteArray &hostName)
-{
-    d->start(hostName);
-}
+void AddressResolver::start(const QByteArray &hostName) { d->start(hostName); }
 
-void AddressResolver::stop()
-{
-    d->stop();
-}
+void AddressResolver::stop() { d->stop(); }
 
 } // namespace XMPP
 

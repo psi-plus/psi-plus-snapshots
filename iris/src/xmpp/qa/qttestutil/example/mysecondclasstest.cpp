@@ -3,20 +3,18 @@
 #include <QObject>
 #include <QtTest/QtTest>
 
-class MySecondClassTest : public QObject
-{
-     Q_OBJECT
+class MySecondClassTest : public QObject {
+    Q_OBJECT
 
-    private slots:
-        void initTestCase() {
-        }
+private slots:
+    void initTestCase() {}
 
-        void cleanupTestCase() {
-        }
+    void cleanupTestCase() {}
 
-        void testMyMethod() {
-            QCOMPARE(1, 0); // Dummy test
-        }
+    void testMyMethod()
+    {
+        QCOMPARE(1, 0); // Dummy test
+    }
 };
 
 QTTESTUTIL_REGISTER_TEST(MySecondClassTest);

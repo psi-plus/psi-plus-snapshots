@@ -26,27 +26,27 @@
 #define XMPP_THUMBS_NS "urn:xmpp:thumbs:1" // TODO make nsdb.cpp/h with static declarations of all ns
 
 namespace XMPP {
-    class Thumbnail
+class Thumbnail {
+public:
+    inline Thumbnail() : width(0), height(0) {}
+    // data - for outgoing it's actual image data. for incoming - cid
+    inline Thumbnail(const QByteArray &data, const QString &mimeType = QString(), quint32 width = 0,
+                     quint32 height = 0) :
+        data(data),
+        mimeType(mimeType), width(width), height(height)
     {
-    public:
-        inline Thumbnail() : width(0), height(0) {}
-        // data - for outgoing it's actual image data. for incoming - cid
-        inline Thumbnail(const QByteArray &data,
-                           const QString &mimeType = QString(),
-                           quint32 width = 0, quint32 height = 0) :
-            data(data), mimeType(mimeType),
-            width(width), height(height) { }
-        Thumbnail(const QDomElement &el);
+    }
+    Thumbnail(const QDomElement &el);
 
-        inline bool isValid() const { return uri.isValid(); }
-        QDomElement toXml(QDomDocument *doc) const;
+    inline bool isValid() const { return uri.isValid(); }
+    QDomElement toXml(QDomDocument *doc) const;
 
-        QUrl       uri;
-        QByteArray data;
-        QString    mimeType;
-        quint32    width;
-        quint32    height;
-    };
+    QUrl       uri;
+    QByteArray data;
+    QString    mimeType;
+    quint32    width;
+    quint32    height;
+};
 } // namespace XMPP
 
 #endif // XMPP_THUMBS_H

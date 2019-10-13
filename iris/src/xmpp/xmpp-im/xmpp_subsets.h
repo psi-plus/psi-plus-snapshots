@@ -23,34 +23,33 @@
 #include <QDomDocument>
 
 namespace XMPP {
-    class SubsetsClientManager
-    {
-    public:
-        SubsetsClientManager();
-        ~SubsetsClientManager();
+class SubsetsClientManager {
+public:
+    SubsetsClientManager();
+    ~SubsetsClientManager();
 
-        void reset();
-        bool isValid() const;
-        bool isFirst() const;
-        bool isLast() const;
-        int  count() const;
-        void setMax(int max);
+    void reset();
+    bool isValid() const;
+    bool isFirst() const;
+    bool isLast() const;
+    int  count() const;
+    void setMax(int max);
 
-        void getCount();
-        void getFirst();
-        void getNext();
-        void getLast();
-        void getPrevious();
-        void getByIndex();
+    void getCount();
+    void getFirst();
+    void getNext();
+    void getLast();
+    void getPrevious();
+    void getByIndex();
 
-        static QDomElement findElement(const QDomElement &el, bool child);
-        bool updateFromElement(const QDomElement &el, int itemsCount);
-        QDomElement makeQueryElement(QDomDocument *doc) const;
+    static QDomElement findElement(const QDomElement &el, bool child);
+    bool               updateFromElement(const QDomElement &el, int itemsCount);
+    QDomElement        makeQueryElement(QDomDocument *doc) const;
 
-    private:
-        class Private;
-        Private *d;
-    };
+private:
+    class Private;
+    Private *d;
+};
 } // namespace XMPP
 
 #endif // XMPP_SUBSETS_H

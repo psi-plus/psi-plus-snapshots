@@ -75,44 +75,29 @@ Url &Url::operator=(const Url &from)
 }
 
 //! \brief destroy Url object.
-Url::~Url()
-{
-    delete d;
-}
+Url::~Url() { delete d; }
 
 //! \brief Get url information.
 //!
 //! Returns url information.
-QString Url::url() const
-{
-    return d->url;
-}
+QString Url::url() const { return d->url; }
 
 //! \brief Get Description information.
 //!
 //! Returns desction of the URL.
-QString Url::desc() const
-{
-    return d->desc;
-}
+QString Url::desc() const { return d->desc; }
 
 //! \brief Set Url information.
 //!
 //! Set url information.
 //! \param url - url string (eg: http://psi.affinix.com/)
-void Url::setUrl(const QString &url)
-{
-    d->url = url;
-}
+void Url::setUrl(const QString &url) { d->url = url; }
 
 //! \brief Set Description information.
 //!
 //! Set description of the url.
 //! \param desc - description of url
-void Url::setDesc(const QString &desc)
-{
-    d->desc = desc;
-}
+void Url::setDesc(const QString &desc) { d->desc = desc; }
 
 //----------------------------------------------------------------------------
 // Address
@@ -124,16 +109,9 @@ void Url::setDesc(const QString &desc)
 //! \param Type - type (default: Unknown)
 //! \param Jid - specify address (default: empty string)
 //! \sa setType() setJid()
-Address::Address(Type type, const Jid &jid) :
-    v_jid(jid), v_delivered(false), v_type(type)
-{
-}
+Address::Address(Type type, const Jid &jid) : v_jid(jid), v_delivered(false), v_type(type) {}
 
-Address::Address(const QDomElement &e) :
-    v_delivered(false)
-{
-    fromXml(e);
-}
+Address::Address(const QDomElement &e) : v_delivered(false) { fromXml(e); }
 
 void Address::fromXml(const QDomElement &t)
 {
@@ -209,104 +187,68 @@ QDomElement Address::toXml(Stanza &s) const
 //! \brief Get Jid information.
 //!
 //! Returns jid information.
-const Jid &Address::jid() const
-{
-    return v_jid;
-}
+const Jid &Address::jid() const { return v_jid; }
 
 //! \brief Get Uri information.
 //!
 //! Returns desction of the Address.
-const QString &Address::uri() const
-{
-    return v_uri;
-}
+const QString &Address::uri() const { return v_uri; }
 
 //! \brief Get Node information.
 //!
 //! Returns node of the Address.
-const QString &Address::node() const
-{
-    return v_node;
-}
+const QString &Address::node() const { return v_node; }
 
 //! \brief Get Description information.
 //!
 //! Returns desction of the Address.
-const QString &Address::desc() const
-{
-    return v_desc;
-}
+const QString &Address::desc() const { return v_desc; }
 
 //! \brief Get Delivered information.
 //!
 //! Returns delivered of the Address.
-bool Address::delivered() const
-{
-    return v_delivered;
-}
+bool Address::delivered() const { return v_delivered; }
 
 //! \brief Get Type information.
 //!
 //! Returns type of the Address.
-Address::Type Address::type() const
-{
-    return v_type;
-}
+Address::Type Address::type() const { return v_type; }
 
 //! \brief Set Address information.
 //!
 //! Set jid information.
 //! \param jid - jid
-void Address::setJid(const Jid &jid)
-{
-    v_jid = jid;
-}
+void Address::setJid(const Jid &jid) { v_jid = jid; }
 
 //! \brief Set Address information.
 //!
 //! Set uri information.
 //! \param uri - url string (eg: http://psi.affinix.com/)
-void Address::setUri(const QString &uri)
-{
-    v_uri = uri;
-}
+void Address::setUri(const QString &uri) { v_uri = uri; }
 
 //! \brief Set Node information.
 //!
 //! Set node information.
 //! \param node - node string
-void Address::setNode(const QString &node)
-{
-    v_node = node;
-}
+void Address::setNode(const QString &node) { v_node = node; }
 
 //! \brief Set Description information.
 //!
 //! Set description of the url.
 //! \param desc - description of url
-void Address::setDesc(const QString &desc)
-{
-    v_desc = desc;
-}
+void Address::setDesc(const QString &desc) { v_desc = desc; }
 
 //! \brief Set delivered information.
 //!
 //! Set delivered information.
 //! \param delivered - delivered flag
-void Address::setDelivered(bool delivered)
-{
-    v_delivered = delivered;
-}
+void Address::setDelivered(bool delivered) { v_delivered = delivered; }
 
 //! \brief Set Type information.
 //!
 //! Set type information.
 //! \param type - type
-void Address::setType(Type type)
-{
-    v_type = type;
-}
+void Address::setType(Type type) { v_type = type; }
 
 //----------------------------------------------------------------------------
 // Hash
@@ -315,15 +257,13 @@ void Address::setType(Type type)
 static const struct {
     const char *text;
     Hash::Type  hashType;
-} hashTypes[] = {
-    { "sha-1", Hash::Type::Sha1 },
-    { "sha-256", Hash::Type::Sha256 },
-    { "sha-512", Hash::Type::Sha512 },
-    { "sha3-256", Hash::Type::Sha3_256 },
-    { "sha3-512", Hash::Type::Sha3_512 },
-    { "blake2b-256", Hash::Type::Blake2b256 },
-    { "blake2b-512", Hash::Type::Blake2b512 }
-};
+} hashTypes[] = { { "sha-1", Hash::Type::Sha1 },
+                  { "sha-256", Hash::Type::Sha256 },
+                  { "sha-512", Hash::Type::Sha512 },
+                  { "sha3-256", Hash::Type::Sha3_256 },
+                  { "sha3-512", Hash::Type::Sha3_512 },
+                  { "blake2b-256", Hash::Type::Blake2b256 },
+                  { "blake2b-512", Hash::Type::Blake2b512 } };
 
 Hash::Hash(const QDomElement &el)
 {
@@ -502,56 +442,25 @@ RosterExchangeItem::RosterExchangeItem(const Jid &jid, const QString &name, cons
 {
 }
 
-RosterExchangeItem::RosterExchangeItem(const QDomElement &el) :
-    action_(Add)
-{
-    fromXml(el);
-}
+RosterExchangeItem::RosterExchangeItem(const QDomElement &el) : action_(Add) { fromXml(el); }
 
-const Jid &RosterExchangeItem::jid() const
-{
-    return jid_;
-}
+const Jid &RosterExchangeItem::jid() const { return jid_; }
 
-RosterExchangeItem::Action RosterExchangeItem::action() const
-{
-    return action_;
-}
+RosterExchangeItem::Action RosterExchangeItem::action() const { return action_; }
 
-const QString &RosterExchangeItem::name() const
-{
-    return name_;
-}
+const QString &RosterExchangeItem::name() const { return name_; }
 
-const QStringList &RosterExchangeItem::groups() const
-{
-    return groups_;
-}
+const QStringList &RosterExchangeItem::groups() const { return groups_; }
 
-bool RosterExchangeItem::isNull() const
-{
-    return jid_.isEmpty();
-}
+bool RosterExchangeItem::isNull() const { return jid_.isEmpty(); }
 
-void RosterExchangeItem::setJid(const Jid &jid)
-{
-    jid_ = jid;
-}
+void RosterExchangeItem::setJid(const Jid &jid) { jid_ = jid; }
 
-void RosterExchangeItem::setAction(Action action)
-{
-    action_ = action;
-}
+void RosterExchangeItem::setAction(Action action) { action_ = action; }
 
-void RosterExchangeItem::setName(const QString &name)
-{
-    name_ = name;
-}
+void RosterExchangeItem::setName(const QString &name) { name_ = name; }
 
-void RosterExchangeItem::setGroups(const QStringList &groups)
-{
-    groups_ = groups;
-}
+void RosterExchangeItem::setGroups(const QStringList &groups) { groups_ = groups; }
 
 QDomElement RosterExchangeItem::toXml(Stanza &s) const
 {
@@ -599,76 +508,33 @@ void RosterExchangeItem::fromXml(const QDomElement &e)
 //----------------------------------------------------------------------------
 // MUCItem
 //----------------------------------------------------------------------------
-MUCItem::MUCItem(Role r, Affiliation a) :
-    affiliation_(a), role_(r)
-{
-}
+MUCItem::MUCItem(Role r, Affiliation a) : affiliation_(a), role_(r) {}
 
-MUCItem::MUCItem(const QDomElement &el) :
-    affiliation_(UnknownAffiliation), role_(UnknownRole)
-{
-    fromXml(el);
-}
+MUCItem::MUCItem(const QDomElement &el) : affiliation_(UnknownAffiliation), role_(UnknownRole) { fromXml(el); }
 
-void MUCItem::setNick(const QString &n)
-{
-    nick_ = n;
-}
+void MUCItem::setNick(const QString &n) { nick_ = n; }
 
-void MUCItem::setJid(const Jid &j)
-{
-    jid_ = j;
-}
+void MUCItem::setJid(const Jid &j) { jid_ = j; }
 
-void MUCItem::setAffiliation(Affiliation a)
-{
-    affiliation_ = a;
-}
+void MUCItem::setAffiliation(Affiliation a) { affiliation_ = a; }
 
-void MUCItem::setRole(Role r)
-{
-    role_ = r;
-}
+void MUCItem::setRole(Role r) { role_ = r; }
 
-void MUCItem::setActor(const Jid &a)
-{
-    actor_ = a;
-}
+void MUCItem::setActor(const Jid &a) { actor_ = a; }
 
-void MUCItem::setReason(const QString &r)
-{
-    reason_ = r;
-}
+void MUCItem::setReason(const QString &r) { reason_ = r; }
 
-const QString &MUCItem::nick() const
-{
-    return nick_;
-}
+const QString &MUCItem::nick() const { return nick_; }
 
-const Jid &MUCItem::jid() const
-{
-    return jid_;
-}
+const Jid &MUCItem::jid() const { return jid_; }
 
-MUCItem::Affiliation MUCItem::affiliation() const
-{
-    return affiliation_;
-}
+MUCItem::Affiliation MUCItem::affiliation() const { return affiliation_; }
 
-MUCItem::Role MUCItem::role() const
-{
-    return role_;
-}
+MUCItem::Role MUCItem::role() const { return role_; }
 
-const Jid &MUCItem::actor() const
-{
-    return actor_;
-}
+const Jid &MUCItem::actor() const { return actor_; }
 
-const QString &MUCItem::reason() const
-{
-    return reason_;
-}
+const QString &MUCItem::reason() const { return reason_; }
 
 void MUCItem::fromXml(const QDomElement &e)
 {
@@ -768,68 +634,36 @@ QDomElement MUCItem::toXml(QDomDocument &d)
 
 bool MUCItem::operator==(const MUCItem &o)
 {
-    return !nick_.compare(o.nick_) && ((!jid_.isValid() && !o.jid_.isValid()) || jid_.compare(o.jid_, true)) && ((!actor_.isValid() && !o.actor_.isValid()) || actor_.compare(o.actor_, true)) && affiliation_ == o.affiliation_ && role_ == o.role_ && !reason_.compare(o.reason_);
+    return !nick_.compare(o.nick_) && ((!jid_.isValid() && !o.jid_.isValid()) || jid_.compare(o.jid_, true))
+        && ((!actor_.isValid() && !o.actor_.isValid()) || actor_.compare(o.actor_, true))
+        && affiliation_ == o.affiliation_ && role_ == o.role_ && !reason_.compare(o.reason_);
 }
 
 //----------------------------------------------------------------------------
 // MUCInvite
 //----------------------------------------------------------------------------
 
-MUCInvite::MUCInvite() :
-    cont_(false)
-{
-}
+MUCInvite::MUCInvite() : cont_(false) {}
 
-MUCInvite::MUCInvite(const Jid &to, const QString &reason) :
-    to_(to), reason_(reason), cont_(false)
-{
-}
+MUCInvite::MUCInvite(const Jid &to, const QString &reason) : to_(to), reason_(reason), cont_(false) {}
 
-MUCInvite::MUCInvite(const QDomElement &e) :
-    cont_(false)
-{
-    fromXml(e);
-}
+MUCInvite::MUCInvite(const QDomElement &e) : cont_(false) { fromXml(e); }
 
-const Jid &MUCInvite::from() const
-{
-    return from_;
-}
+const Jid &MUCInvite::from() const { return from_; }
 
-void MUCInvite::setFrom(const Jid &j)
-{
-    from_ = j;
-}
+void MUCInvite::setFrom(const Jid &j) { from_ = j; }
 
-const Jid &MUCInvite::to() const
-{
-    return to_;
-}
+const Jid &MUCInvite::to() const { return to_; }
 
-void MUCInvite::setTo(const Jid &j)
-{
-    to_ = j;
-}
+void MUCInvite::setTo(const Jid &j) { to_ = j; }
 
-const QString &MUCInvite::reason() const
-{
-    return reason_;
-}
+const QString &MUCInvite::reason() const { return reason_; }
 
-void MUCInvite::setReason(const QString &r)
-{
-    reason_ = r;
-}
+void MUCInvite::setReason(const QString &r) { reason_ = r; }
 
-bool MUCInvite::cont() const
-{
-    return cont_;
-}
+bool MUCInvite::cont() const { return cont_; }
 
-void MUCInvite::setCont(bool b)
-{
-    cont_ = b;
-}
+void MUCInvite::setCont(bool b) { cont_ = b; }
 
 void MUCInvite::fromXml(const QDomElement &e)
 {
@@ -868,53 +702,27 @@ QDomElement MUCInvite::toXml(QDomDocument &d) const
     return invite;
 }
 
-bool MUCInvite::isNull() const
-{
-    return to_.isEmpty() && from_.isEmpty();
-}
+bool MUCInvite::isNull() const { return to_.isEmpty() && from_.isEmpty(); }
 
 //----------------------------------------------------------------------------
 // MUCDecline
 //----------------------------------------------------------------------------
 
-MUCDecline::MUCDecline()
-{
-}
+MUCDecline::MUCDecline() {}
 
-MUCDecline::MUCDecline(const QDomElement &e)
-{
-    fromXml(e);
-}
+MUCDecline::MUCDecline(const QDomElement &e) { fromXml(e); }
 
-const Jid &MUCDecline::from() const
-{
-    return from_;
-}
+const Jid &MUCDecline::from() const { return from_; }
 
-void MUCDecline::setFrom(const Jid &j)
-{
-    from_ = j;
-}
+void MUCDecline::setFrom(const Jid &j) { from_ = j; }
 
-const Jid &MUCDecline::to() const
-{
-    return to_;
-}
+const Jid &MUCDecline::to() const { return to_; }
 
-void MUCDecline::setTo(const Jid &j)
-{
-    to_ = j;
-}
+void MUCDecline::setTo(const Jid &j) { to_ = j; }
 
-const QString &MUCDecline::reason() const
-{
-    return reason_;
-}
+const QString &MUCDecline::reason() const { return reason_; }
 
-void MUCDecline::setReason(const QString &r)
-{
-    reason_ = r;
-}
+void MUCDecline::setReason(const QString &r) { reason_ = r; }
 
 void MUCDecline::fromXml(const QDomElement &e)
 {
@@ -948,43 +756,23 @@ QDomElement MUCDecline::toXml(QDomDocument &d) const
     return decline;
 }
 
-bool MUCDecline::isNull() const
-{
-    return to_.isEmpty() && from_.isEmpty();
-}
+bool MUCDecline::isNull() const { return to_.isEmpty() && from_.isEmpty(); }
 
 //----------------------------------------------------------------------------
 // MUCDestroy
 //----------------------------------------------------------------------------
 
-MUCDestroy::MUCDestroy()
-{
-}
+MUCDestroy::MUCDestroy() {}
 
-MUCDestroy::MUCDestroy(const QDomElement &e)
-{
-    fromXml(e);
-}
+MUCDestroy::MUCDestroy(const QDomElement &e) { fromXml(e); }
 
-const Jid &MUCDestroy::jid() const
-{
-    return jid_;
-}
+const Jid &MUCDestroy::jid() const { return jid_; }
 
-void MUCDestroy::setJid(const Jid &j)
-{
-    jid_ = j;
-}
+void MUCDestroy::setJid(const Jid &j) { jid_ = j; }
 
-const QString &MUCDestroy::reason() const
-{
-    return reason_;
-}
+const QString &MUCDestroy::reason() const { return reason_; }
 
-void MUCDestroy::setReason(const QString &r)
-{
-    reason_ = r;
-}
+void MUCDestroy::setReason(const QString &r) { reason_ = r; }
 
 void MUCDestroy::fromXml(const QDomElement &e)
 {
@@ -1017,21 +805,13 @@ QDomElement MUCDestroy::toXml(QDomDocument &d) const
 //----------------------------------------------------------------------------
 // HTMLElement
 //----------------------------------------------------------------------------
-HTMLElement::HTMLElement()
-{
-}
+HTMLElement::HTMLElement() {}
 
 HTMLElement::HTMLElement(const QDomElement &body) { setBody(body); }
 
-void HTMLElement::setBody(const QDomElement &body)
-{
-    body_ = doc_.importNode(body, true).toElement();
-}
+void HTMLElement::setBody(const QDomElement &body) { body_ = doc_.importNode(body, true).toElement(); }
 
-const QDomElement &HTMLElement::body() const
-{
-    return body_;
-}
+const QDomElement &HTMLElement::body() const { return body_; }
 
 /**
  * Returns the string reperesentation of the HTML element.
@@ -1056,20 +836,17 @@ QString HTMLElement::toString(const QString &rootTagName) const
     return (Stream::xmlToString(e));
 }
 
-QString HTMLElement::text() const
-{
-    return body_.text();
-}
+QString HTMLElement::text() const { return body_.text(); }
 
 void HTMLElement::filterOutUnwanted(bool strict)
 {
-    Q_UNUSED(strict) //TODO filter out not xhtml-im elements
+    Q_UNUSED(strict) // TODO filter out not xhtml-im elements
     filterOutUnwantedRecursive(body_, strict);
 }
 
 void HTMLElement::filterOutUnwantedRecursive(QDomElement &el, bool strict)
 {
-    Q_UNUSED(strict) //TODO filter out not xhtml-im elements
+    Q_UNUSED(strict) // TODO filter out not xhtml-im elements
 
     static QSet<QString> unwanted = QSet<QString>() << "script"
                                                     << "iframe";
@@ -1083,7 +860,7 @@ void HTMLElement::filterOutUnwantedRecursive(QDomElement &el, bool strict)
             } else {
                 QDomNamedNodeMap domAttrs = childEl.attributes();
                 int              acnt     = domAttrs.count();
-                QStringList      attrs; //attributes for removing
+                QStringList      attrs; // attributes for removing
                 for (int i = 0; i < acnt; i++) {
                     QString name = domAttrs.item(i).toAttr().name();
                     if (name.startsWith("on")) {
@@ -1145,7 +922,7 @@ public:
 
     bool spooled = false, wasEncrypted = false;
 
-    //XEP-0280 Message Carbons
+    // XEP-0280 Message Carbons
     bool                     isDisabledCarbons = false;
     Message::CarbonDir       carbonDir         = Message::NoCarbon; // it's a forwarded message
     Message::ProcessingHints processingHints;
@@ -1160,25 +937,16 @@ public:
 //!
 //! This function will construct a Message container.
 //! \param to - specify receiver (default: empty string)
-Message::Message()
-{
-}
+Message::Message() {}
 
-Message::Message(const Jid &to) :
-    d(new Private)
-{
-    d->to = to;
-}
+Message::Message(const Jid &to) : d(new Private) { d->to = to; }
 
 //! \brief Constructs a copy of Message object
 //!
 //! Overloaded constructor which will constructs a exact copy of the Message
 //! object that was passed to the constructor.
 //! \param from - Message object you want to copy
-Message::Message(const Message &from) :
-    d(from.d)
-{
-}
+Message::Message(const Message &from) : d(from.d) {}
 
 //! \brief Required for internel use.
 Message &Message::operator=(const Message &from)
@@ -1188,60 +956,31 @@ Message &Message::operator=(const Message &from)
 }
 
 //! \brief Destroy Message object.
-Message::~Message()
-{
-}
+Message::~Message() {}
 
 //! \brief Check if it's exactly the same instance.
-bool Message::operator==(const Message &from) const
-{
-    return d == from.d;
-}
+bool Message::operator==(const Message &from) const { return d == from.d; }
 
 //! \brief Return receiver's Jid information.
-Jid Message::to() const
-{
-    return d ? d->to : Jid();
-}
+Jid Message::to() const { return d ? d->to : Jid(); }
 
 //! \brief Return sender's Jid information.
-Jid Message::from() const
-{
-    return d ? d->from : Jid();
-}
+Jid Message::from() const { return d ? d->from : Jid(); }
 
-QString Message::id() const
-{
-    return d ? d->id : QString();
-}
+QString Message::id() const { return d ? d->id : QString(); }
 
 //! \brief Return type information
-QString Message::type() const
-{
-    return d ? d->type : QString();
-}
+QString Message::type() const { return d ? d->type : QString(); }
 
-QString Message::lang() const
-{
-    return d ? d->lang : QString();
-}
+QString Message::lang() const { return d ? d->lang : QString(); }
 
 //! \brief Return subject information.
-QString Message::subject(const QString &lang) const
-{
-    return d ? d->subject.value(lang) : QString();
-}
+QString Message::subject(const QString &lang) const { return d ? d->subject.value(lang) : QString(); }
 
 //! \brief Return subject information.
-QString Message::subject(const QLocale &lang) const
-{
-    return d ? d->subject.value(lang.bcp47Name()) : QString();
-}
+QString Message::subject(const QLocale &lang) const { return d ? d->subject.value(lang.bcp47Name()) : QString(); }
 
-StringMap Message::subjectMap() const
-{
-    return d ? d->subject : StringMap();
-}
+StringMap Message::subjectMap() const { return d ? d->subject : StringMap(); }
 
 //! \brief Return body information.
 //!
@@ -1268,10 +1007,7 @@ QString Message::body(const QString &lang) const
 //!
 //! \param lang - requested body's locale
 //! \note Returns first body if not found by locale.
-QString Message::body(const QLocale &lang) const
-{
-    return body(lang.bcp47Name());
-}
+QString Message::body(const QLocale &lang) const { return body(lang.bcp47Name()); }
 
 //! \brief Return xhtml body.
 //!
@@ -1294,20 +1030,11 @@ HTMLElement Message::html(const QString &lang) const
 //!
 //! Returns true if there is at least one xhtml-im body
 //! in the message.
-bool Message::containsHTML() const
-{
-    return d && !(d->htmlElements.isEmpty());
-}
+bool Message::containsHTML() const { return d && !(d->htmlElements.isEmpty()); }
 
-QString Message::thread() const
-{
-    return d ? d->thread : QString();
-}
+QString Message::thread() const { return d ? d->thread : QString(); }
 
-Stanza::Error Message::error() const
-{
-    return d ? d->error : Stanza::Error();
-}
+Stanza::Error Message::error() const { return d ? d->error : Stanza::Error(); }
 
 //! \brief Set receivers information
 //!
@@ -1315,19 +1042,16 @@ Stanza::Error Message::error() const
 void Message::setTo(const Jid &j)
 {
     MessageD()->to = j;
-    //d->flag = false;
+    // d->flag = false;
 }
 
 void Message::setFrom(const Jid &j)
 {
     MessageD()->from = j;
-    //d->flag = false;
+    // d->flag = false;
 }
 
-void Message::setId(const QString &s)
-{
-    MessageD()->id = s;
-}
+void Message::setId(const QString &s) { MessageD()->id = s; }
 
 //! \brief Set Type of message
 //!
@@ -1335,13 +1059,10 @@ void Message::setId(const QString &s)
 void Message::setType(const QString &s)
 {
     MessageD()->type = s;
-    //d->flag = false;
+    // d->flag = false;
 }
 
-void Message::setLang(const QString &s)
-{
-    MessageD()->lang = s;
-}
+void Message::setLang(const QString &s) { MessageD()->lang = s; }
 
 //! \brief Set subject
 //!
@@ -1349,7 +1070,7 @@ void Message::setLang(const QString &s)
 void Message::setSubject(const QString &s, const QString &lang)
 {
     MessageD()->subject[lang] = s;
-    //d->flag = false;
+    // d->flag = false;
 }
 
 //! \brief Set body
@@ -1360,7 +1081,7 @@ void Message::setSubject(const QString &s, const QString &lang)
 void Message::setBody(const QString &s, const QString &lang)
 {
     MessageD()->body[lang] = s;
-    //d->flag = false;
+    // d->flag = false;
 }
 
 //! \brief Set xhtml body
@@ -1368,10 +1089,7 @@ void Message::setBody(const QString &s, const QString &lang)
 //! \param s - body node
 //! \param lang - body language
 //! \note The body should be in xhtml.
-void Message::setHTML(const HTMLElement &e, const QString &lang)
-{
-    MessageD()->htmlElements[lang] = e;
-}
+void Message::setHTML(const HTMLElement &e, const QString &lang) { MessageD()->htmlElements[lang] = e; }
 
 void Message::setThread(const QString &s, bool send)
 {
@@ -1379,30 +1097,18 @@ void Message::setThread(const QString &s, bool send)
     d->thread              = s;
 }
 
-void Message::setError(const Stanza::Error &err)
-{
-    MessageD()->error = err;
-}
+void Message::setError(const Stanza::Error &err) { MessageD()->error = err; }
 
-QString Message::pubsubNode() const
-{
-    return d ? d->pubsubNode : QString();
-}
+QString Message::pubsubNode() const { return d ? d->pubsubNode : QString(); }
 
-QList<PubSubItem> Message::pubsubItems() const
-{
-    return d ? d->pubsubItems : QList<PubSubItem>();
-}
+QList<PubSubItem> Message::pubsubItems() const { return d ? d->pubsubItems : QList<PubSubItem>(); }
 
 QList<PubSubRetraction> Message::pubsubRetractions() const
 {
     return d ? d->pubsubRetractions : QList<PubSubRetraction>();
 }
 
-QDateTime Message::timeStamp() const
-{
-    return d ? d->timeStamp : QDateTime();
-}
+QDateTime Message::timeStamp() const { return d ? d->timeStamp : QDateTime(); }
 
 void Message::setTimeStamp(const QDateTime &ts, bool send)
 {
@@ -1411,18 +1117,12 @@ void Message::setTimeStamp(const QDateTime &ts, bool send)
 }
 
 //! \brief Return list of urls attached to message.
-UrlList Message::urlList() const
-{
-    return d ? d->urlList : UrlList();
-}
+UrlList Message::urlList() const { return d ? d->urlList : UrlList(); }
 
 //! \brief Add Url to the url list.
 //!
 //! \param url - url to append
-void Message::urlAdd(const Url &u)
-{
-    MessageD()->urlList += u;
-}
+void Message::urlAdd(const Url &u) { MessageD()->urlList += u; }
 
 //! \brief clear out the url list.
 void Message::urlsClear()
@@ -1435,24 +1135,15 @@ void Message::urlsClear()
 //! \brief Set urls to send
 //!
 //! \param urlList - list of urls to send
-void Message::setUrlList(const UrlList &list)
-{
-    MessageD()->urlList = list;
-}
+void Message::setUrlList(const UrlList &list) { MessageD()->urlList = list; }
 
 //! \brief Return list of addresses attached to message.
-AddressList Message::addresses() const
-{
-    return d ? d->addressList : AddressList();
-}
+AddressList Message::addresses() const { return d ? d->addressList : AddressList(); }
 
 //! \brief Add Address to the address list.
 //!
 //! \param address - address to append
-void Message::addAddress(const Address &a)
-{
-    MessageD()->addressList += a;
-}
+void Message::addAddress(const Address &a) { MessageD()->addressList += a; }
 
 //! \brief clear out the address list.
 void Message::clearAddresses()
@@ -1478,40 +1169,19 @@ AddressList Message::findAddresses(Address::Type t) const
 //! \brief Set addresses to send
 //!
 //! \param list - list of addresses to send
-void Message::setAddresses(const AddressList &list)
-{
-    MessageD()->addressList = list;
-}
+void Message::setAddresses(const AddressList &list) { MessageD()->addressList = list; }
 
-RosterExchangeItems Message::rosterExchangeItems() const
-{
-    return d ? d->rosterExchangeItems : RosterExchangeItems();
-}
+RosterExchangeItems Message::rosterExchangeItems() const { return d ? d->rosterExchangeItems : RosterExchangeItems(); }
 
-void Message::setRosterExchangeItems(const RosterExchangeItems &items)
-{
-    MessageD()->rosterExchangeItems = items;
-}
+void Message::setRosterExchangeItems(const RosterExchangeItems &items) { MessageD()->rosterExchangeItems = items; }
 
-QString Message::eventId() const
-{
-    return d ? d->eventId : QString();
-}
+QString Message::eventId() const { return d ? d->eventId : QString(); }
 
-void Message::setEventId(const QString &id)
-{
-    MessageD()->eventId = id;
-}
+void Message::setEventId(const QString &id) { MessageD()->eventId = id; }
 
-bool Message::containsEvents() const
-{
-    return d && !d->eventList.isEmpty();
-}
+bool Message::containsEvents() const { return d && !d->eventList.isEmpty(); }
 
-bool Message::containsEvent(MsgEvent e) const
-{
-    return d && d->eventList.contains(e);
-}
+bool Message::containsEvent(MsgEvent e) const { return d && d->eventList.contains(e); }
 
 void Message::addEvent(MsgEvent e)
 {
@@ -1522,270 +1192,111 @@ void Message::addEvent(MsgEvent e)
     }
 }
 
-ChatState Message::chatState() const
-{
-    return d ? d->chatState : StateNone;
-}
+ChatState Message::chatState() const { return d ? d->chatState : StateNone; }
 
-void Message::setChatState(ChatState state)
-{
-    MessageD()->chatState = state;
-}
+void Message::setChatState(ChatState state) { MessageD()->chatState = state; }
 
-MessageReceipt Message::messageReceipt() const
-{
-    return d ? d->messageReceipt : ReceiptNone;
-}
+MessageReceipt Message::messageReceipt() const { return d ? d->messageReceipt : ReceiptNone; }
 
-void Message::setMessageReceipt(MessageReceipt messageReceipt)
-{
-    MessageD()->messageReceipt = messageReceipt;
-}
+void Message::setMessageReceipt(MessageReceipt messageReceipt) { MessageD()->messageReceipt = messageReceipt; }
 
-QString Message::messageReceiptId() const
-{
-    return d ? d->messageReceiptId : QString();
-}
+QString Message::messageReceiptId() const { return d ? d->messageReceiptId : QString(); }
 
-void Message::setMessageReceiptId(const QString &s)
-{
-    MessageD()->messageReceiptId = s;
-}
+void Message::setMessageReceiptId(const QString &s) { MessageD()->messageReceiptId = s; }
 
-QString Message::xsigned() const
-{
-    return d ? d->xsigned : QString();
-}
+QString Message::xsigned() const { return d ? d->xsigned : QString(); }
 
-void Message::setXSigned(const QString &s)
-{
-    MessageD()->xsigned = s;
-}
+void Message::setXSigned(const QString &s) { MessageD()->xsigned = s; }
 
-QString Message::xencrypted() const
-{
-    return d ? d->xencrypted : QString();
-}
+QString Message::xencrypted() const { return d ? d->xencrypted : QString(); }
 
-void Message::setXEncrypted(const QString &s)
-{
-    MessageD()->xencrypted = s;
-}
+void Message::setXEncrypted(const QString &s) { MessageD()->xencrypted = s; }
 
-QList<int> Message::getMUCStatuses() const
-{
-    return d ? d->mucStatuses : QList<int>();
-}
+QList<int> Message::getMUCStatuses() const { return d ? d->mucStatuses : QList<int>(); }
 
-void Message::addMUCStatus(int i)
-{
-    MessageD()->mucStatuses += i;
-}
+void Message::addMUCStatus(int i) { MessageD()->mucStatuses += i; }
 
-void Message::addMUCInvite(const MUCInvite &i)
-{
-    MessageD()->mucInvites += i;
-}
+void Message::addMUCInvite(const MUCInvite &i) { MessageD()->mucInvites += i; }
 
-QList<MUCInvite> Message::mucInvites() const
-{
-    return d ? d->mucInvites : QList<MUCInvite>();
-}
+QList<MUCInvite> Message::mucInvites() const { return d ? d->mucInvites : QList<MUCInvite>(); }
 
-void Message::setMUCDecline(const MUCDecline &de)
-{
-    MessageD()->mucDecline = de;
-}
+void Message::setMUCDecline(const MUCDecline &de) { MessageD()->mucDecline = de; }
 
-MUCDecline Message::mucDecline() const
-{
-    return d ? d->mucDecline : MUCDecline();
-}
+MUCDecline Message::mucDecline() const { return d ? d->mucDecline : MUCDecline(); }
 
-QString Message::mucPassword() const
-{
-    return d ? d->mucPassword : QString();
-}
+QString Message::mucPassword() const { return d ? d->mucPassword : QString(); }
 
-void Message::setMUCPassword(const QString &p)
-{
-    MessageD()->mucPassword = p;
-}
+void Message::setMUCPassword(const QString &p) { MessageD()->mucPassword = p; }
 
-bool Message::hasMUCUser() const
-{
-    return d & d->hasMUCUser;
-}
+bool Message::hasMUCUser() const { return d & d->hasMUCUser; }
 
-Message::StanzaId Message::stanzaId() const
-{
-    return d ? d->stanzaId : StanzaId();
-}
+Message::StanzaId Message::stanzaId() const { return d ? d->stanzaId : StanzaId(); }
 
-void Message::setStanzaId(const Message::StanzaId &id)
-{
-    MessageD()->stanzaId = id;
-}
+void Message::setStanzaId(const Message::StanzaId &id) { MessageD()->stanzaId = id; }
 
-QString Message::originId() const
-{
-    return d ? d->originId : QString();
-}
+QString Message::originId() const { return d ? d->originId : QString(); }
 
-void Message::setOriginId(const QString &id)
-{
-    MessageD()->originId = id;
-}
+void Message::setOriginId(const QString &id) { MessageD()->originId = id; }
 
-QList<Reference> Message::references() const
-{
-    return d ? d->references : QList<Reference>();
-}
+QList<Reference> Message::references() const { return d ? d->references : QList<Reference>(); }
 
-void Message::addReference(const Reference &r)
-{
-    MessageD()->references.append(r);
-}
+void Message::addReference(const Reference &r) { MessageD()->references.append(r); }
 
-void Message::setReferences(const QList<Reference> &r)
-{
-    MessageD()->references = r;
-}
+void Message::setReferences(const QList<Reference> &r) { MessageD()->references = r; }
 
-QString Message::invite() const
-{
-    return d ? d->invite : QString();
-}
+QString Message::invite() const { return d ? d->invite : QString(); }
 
-void Message::setInvite(const QString &s)
-{
-    MessageD()->invite = s;
-}
+void Message::setInvite(const QString &s) { MessageD()->invite = s; }
 
-QString Message::nick() const
-{
-    return d ? d->nick : QString();
-}
+QString Message::nick() const { return d ? d->nick : QString(); }
 
-void Message::setNick(const QString &n)
-{
-    MessageD()->nick = n;
-}
+void Message::setNick(const QString &n) { MessageD()->nick = n; }
 
-void Message::setHttpAuthRequest(const HttpAuthRequest &req)
-{
-    MessageD()->httpAuthRequest = req;
-}
+void Message::setHttpAuthRequest(const HttpAuthRequest &req) { MessageD()->httpAuthRequest = req; }
 
-HttpAuthRequest Message::httpAuthRequest() const
-{
-    return d ? d->httpAuthRequest : HttpAuthRequest();
-}
+HttpAuthRequest Message::httpAuthRequest() const { return d ? d->httpAuthRequest : HttpAuthRequest(); }
 
-void Message::setForm(const XData &form)
-{
-    MessageD()->xdata = form;
-}
+void Message::setForm(const XData &form) { MessageD()->xdata = form; }
 
-XData Message::getForm() const
-{
-    return d ? d->xdata : XData();
-}
+XData Message::getForm() const { return d ? d->xdata : XData(); }
 
-QDomElement Message::sxe() const
-{
-    return d ? d->sxe : QDomElement();
-}
+QDomElement Message::sxe() const { return d ? d->sxe : QDomElement(); }
 
-void Message::setSxe(const QDomElement &e)
-{
-    MessageD()->sxe = e;
-}
+void Message::setSxe(const QDomElement &e) { MessageD()->sxe = e; }
 
-void Message::addBoBData(const BoBData &bob)
-{
-    MessageD()->bobDataList.append(bob);
-}
+void Message::addBoBData(const BoBData &bob) { MessageD()->bobDataList.append(bob); }
 
-QList<BoBData> Message::bobDataList() const
-{
-    return d ? d->bobDataList : QList<BoBData>();
-}
+QList<BoBData> Message::bobDataList() const { return d ? d->bobDataList : QList<BoBData>(); }
 
-IBBData Message::ibbData() const
-{
-    return d ? d->ibbData : IBBData();
-}
+IBBData Message::ibbData() const { return d ? d->ibbData : IBBData(); }
 
-void Message::setDisabledCarbons(bool disabled)
-{
-    MessageD()->isDisabledCarbons = disabled;
-}
+void Message::setDisabledCarbons(bool disabled) { MessageD()->isDisabledCarbons = disabled; }
 
-bool Message::isDisabledCarbons() const
-{
-    return d && d->isDisabledCarbons;
-}
+bool Message::isDisabledCarbons() const { return d && d->isDisabledCarbons; }
 
-void Message::setCarbonDirection(Message::CarbonDir cd)
-{
-    MessageD()->carbonDir = cd;
-}
+void Message::setCarbonDirection(Message::CarbonDir cd) { MessageD()->carbonDir = cd; }
 
-Message::CarbonDir Message::carbonDirection() const
-{
-    return d ? d->carbonDir : NoCarbon;
-}
+Message::CarbonDir Message::carbonDirection() const { return d ? d->carbonDir : NoCarbon; }
 
-void Message::setForwardedFrom(const Jid &jid)
-{
-    MessageD()->forwardedFrom = jid;
-}
+void Message::setForwardedFrom(const Jid &jid) { MessageD()->forwardedFrom = jid; }
 
-Jid Message::forwardedFrom() const
-{
-    return d ? d->forwardedFrom : Jid();
-}
+Jid Message::forwardedFrom() const { return d ? d->forwardedFrom : Jid(); }
 
-bool Message::spooled() const
-{
-    return d && d->spooled;
-}
+bool Message::spooled() const { return d && d->spooled; }
 
-void Message::setSpooled(bool b)
-{
-    MessageD()->spooled = b;
-}
+void Message::setSpooled(bool b) { MessageD()->spooled = b; }
 
-bool Message::wasEncrypted() const
-{
-    return d && d->wasEncrypted;
-}
+bool Message::wasEncrypted() const { return d && d->wasEncrypted; }
 
-void Message::setWasEncrypted(bool b)
-{
-    MessageD()->wasEncrypted = b;
-}
+void Message::setWasEncrypted(bool b) { MessageD()->wasEncrypted = b; }
 
-QString Message::replaceId() const
-{
-    return d ? d->replaceId : QString();
-}
+QString Message::replaceId() const { return d ? d->replaceId : QString(); }
 
-void Message::setReplaceId(const QString &id)
-{
-    MessageD()->replaceId = id;
-}
+void Message::setReplaceId(const QString &id) { MessageD()->replaceId = id; }
 
-void Message::setProcessingHints(const ProcessingHints &hints)
-{
-    MessageD()->processingHints = hints;
-}
+void Message::setProcessingHints(const ProcessingHints &hints) { MessageD()->processingHints = hints; }
 
-Message::ProcessingHints Message::processingHints() const
-{
-    return d ? d->processingHints : ProcessingHints();
-}
+Message::ProcessingHints Message::processingHints() const { return d ? d->processingHints : ProcessingHints(); }
 
 Stanza Message::toStanza(Stream *stream) const
 {
@@ -2064,18 +1575,12 @@ Stanza Message::toStanza(Stream *stream) const
 /**
   \brief Create Message from Stanza \a s, using given \a timeZoneOffset (old style)
   */
-bool Message::fromStanza(const Stanza &s, int timeZoneOffset)
-{
-    return fromStanza(s, true, timeZoneOffset);
-}
+bool Message::fromStanza(const Stanza &s, int timeZoneOffset) { return fromStanza(s, true, timeZoneOffset); }
 
 /**
   \brief Create Message from Stanza \a s
   */
-bool Message::fromStanza(const Stanza &s)
-{
-    return fromStanza(s, false, 0);
-}
+bool Message::fromStanza(const Stanza &s) { return fromStanza(s, false, 0); }
 
 /**
   \brief Create Message from Stanza \a s
@@ -2123,7 +1628,8 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
                     }
                 } else if (e.tagName() == QLatin1String("thread"))
                     d->thread = e.text();
-            } else if (e.tagName() == QLatin1String("event") && e.namespaceURI() == QLatin1String("http://jabber.org/protocol/pubsub#event")) {
+            } else if (e.tagName() == QLatin1String("event")
+                       && e.namespaceURI() == QLatin1String("http://jabber.org/protocol/pubsub#event")) {
                 for (QDomNode enode = e.firstChild(); !enode.isNull(); enode = enode.nextSibling()) {
                     QDomElement eel = enode.toElement();
                     if (eel.tagName() == QLatin1String("items")) {
@@ -2144,23 +1650,27 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
                         }
                     }
                 }
-            } else if (e.tagName() == QLatin1String("no-permanent-store") && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
+            } else if (e.tagName() == QLatin1String("no-permanent-store")
+                       && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
                 d->processingHints |= NoPermanentStore;
-            } else if (e.tagName() == QLatin1String("no-store") && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
+            } else if (e.tagName() == QLatin1String("no-store")
+                       && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
                 d->processingHints |= NoStore;
             } else if (e.tagName() == QLatin1String("no-copy") && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
                 d->processingHints |= NoCopy;
             } else if (e.tagName() == QLatin1String("store") && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
                 d->processingHints |= Store;
-            } else if (e.tagName() == QLatin1String("origin-id") && e.namespaceURI() == QLatin1String("urn:xmpp:sid:0")) {
+            } else if (e.tagName() == QLatin1String("origin-id")
+                       && e.namespaceURI() == QLatin1String("urn:xmpp:sid:0")) {
                 d->originId = e.attribute(QStringLiteral("id"));
-            } else if (e.tagName() == QLatin1String("stanza-id") && e.namespaceURI() == QLatin1String("urn:xmpp:sid:0")) {
+            } else if (e.tagName() == QLatin1String("stanza-id")
+                       && e.namespaceURI() == QLatin1String("urn:xmpp:sid:0")) {
                 d->stanzaId.id = e.attribute(QStringLiteral("id"));
                 d->stanzaId.by = Jid(e.attribute(QStringLiteral("by")));
             }
 
             else {
-                //printf("extension element: [%s]\n", e.tagName().latin1());
+                // printf("extension element: [%s]\n", e.tagName().latin1());
             }
         }
     }
@@ -2368,10 +1878,7 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
         d->httpAuthRequest = HttpAuthRequest();
     }
 
-    QDomElement captcha = childElementsByTagNameNS(root, "urn:xmpp:captcha",
-                                                   "captcha")
-                              .item(0)
-                              .toElement();
+    QDomElement captcha   = childElementsByTagNameNS(root, "urn:xmpp:captcha", "captcha").item(0).toElement();
     QDomElement xdataRoot = root;
     if (!captcha.isNull()) {
         xdataRoot = captcha;
@@ -2420,42 +1927,27 @@ HttpAuthRequest::HttpAuthRequest(const QString &m, const QString &u, const QStri
 /*!
         Constructs request of resource URL \a u, made by method \a m, without transaction id.
 */
-HttpAuthRequest::HttpAuthRequest(const QString &m, const QString &u) :
-    method_(m), url_(u), hasId_(false)
-{
-}
+HttpAuthRequest::HttpAuthRequest(const QString &m, const QString &u) : method_(m), url_(u), hasId_(false) {}
 
 /*!
     Constructs request object by reading XML <confirm/> element \a e.
 */
-HttpAuthRequest::HttpAuthRequest(const QDomElement &e)
-{
-    fromXml(e);
-}
+HttpAuthRequest::HttpAuthRequest(const QDomElement &e) { fromXml(e); }
 
 /*!
     Returns true is object is empty (not valid).
 */
-bool HttpAuthRequest::isEmpty() const
-{
-    return method_.isEmpty() && url_.isEmpty();
-}
+bool HttpAuthRequest::isEmpty() const { return method_.isEmpty() && url_.isEmpty(); }
 
 /*!
     Sets request method.
 */
-void HttpAuthRequest::setMethod(const QString &m)
-{
-    method_ = m;
-}
+void HttpAuthRequest::setMethod(const QString &m) { method_ = m; }
 
 /*!
     Sets requested URL.
 */
-void HttpAuthRequest::setUrl(const QString &u)
-{
-    url_ = u;
-}
+void HttpAuthRequest::setUrl(const QString &u) { url_ = u; }
 
 /*!
     Sets transaction identifier.
@@ -2469,35 +1961,23 @@ void HttpAuthRequest::setId(const QString &i)
 /*!
     Returns request method.
 */
-QString HttpAuthRequest::method() const
-{
-    return method_;
-}
+QString HttpAuthRequest::method() const { return method_; }
 
 /*!
     Returns requested URL.
 */
-QString HttpAuthRequest::url() const
-{
-    return url_;
-}
+QString HttpAuthRequest::url() const { return url_; }
 
 /*!
     Returns transaction identifier.
     Empty QString may mean both empty id or no id. Use hasId() to tell the difference.
 */
-QString HttpAuthRequest::id() const
-{
-    return id_;
-}
+QString HttpAuthRequest::id() const { return id_; }
 
 /*!
     Returns true if the request contains transaction id.
 */
-bool HttpAuthRequest::hasId() const
-{
-    return hasId_;
-}
+bool HttpAuthRequest::hasId() const { return hasId_; }
 
 /*!
     Returns XML element representing the request.
@@ -2540,15 +2020,9 @@ bool HttpAuthRequest::fromXml(const QDomElement &e)
 //---------------------------------------------------------------------------
 // Subscription
 //---------------------------------------------------------------------------
-Subscription::Subscription(SubType type)
-{
-    value = type;
-}
+Subscription::Subscription(SubType type) { value = type; }
 
-int Subscription::type() const
-{
-    return value;
-}
+int Subscription::type() const { return value; }
 
 QString Subscription::toString() const
 {
@@ -2591,10 +2065,7 @@ bool Subscription::fromString(const QString &s)
 /**
  * Default constructor.
  */
-CapsSpec::CapsSpec() :
-    hashAlgo_(CapsSpec::invalidAlgo)
-{
-}
+CapsSpec::CapsSpec() : hashAlgo_(CapsSpec::invalidAlgo) {}
 
 /**
  * \brief Basic constructor.
@@ -2608,9 +2079,7 @@ CapsSpec::CapsSpec(const QString &node, QCryptographicHash::Algorithm hashAlgo, 
 }
 
 CapsSpec::CapsSpec(const DiscoItem &disco, QCryptographicHash::Algorithm hashAlgo) :
-    node_(disco.node().section('#', 0, 0)),
-    ver_(disco.capsHash(hashAlgo)),
-    hashAlgo_(hashAlgo)
+    node_(disco.node().section('#', 0, 0)), ver_(disco.capsHash(hashAlgo)), hashAlgo_(hashAlgo)
 {
 }
 
@@ -2618,31 +2087,19 @@ CapsSpec::CapsSpec(const DiscoItem &disco, QCryptographicHash::Algorithm hashAlg
  * @brief Checks for validity
  * @return true on valid
  */
-bool CapsSpec::isValid() const
-{
-    return !node_.isEmpty() && !ver_.isEmpty() && (hashAlgo_ != CapsSpec::invalidAlgo);
-}
+bool CapsSpec::isValid() const { return !node_.isEmpty() && !ver_.isEmpty() && (hashAlgo_ != CapsSpec::invalidAlgo); }
 
 /**
  * \brief Returns the node of the capabilities specification.
  */
-const QString &CapsSpec::node() const
-{
-    return node_;
-}
+const QString &CapsSpec::node() const { return node_; }
 
 /**
  * \brief Returns the version of the capabilities specification.
  */
-const QString &CapsSpec::version() const
-{
-    return ver_;
-}
+const QString &CapsSpec::version() const { return ver_; }
 
-QCryptographicHash::Algorithm CapsSpec::hashAlgorithm() const
-{
-    return hashAlgo_;
-}
+QCryptographicHash::Algorithm CapsSpec::hashAlgorithm() const { return hashAlgo_; }
 
 QDomElement CapsSpec::toXml(QDomDocument *doc) const
 {
@@ -2709,24 +2166,20 @@ QString CapsSpec::flatten() const
     return QString();
 }
 
-void CapsSpec::resetVersion()
-{
-    ver_.clear();
-}
+void CapsSpec::resetVersion() { ver_.clear(); }
 
 bool CapsSpec::operator==(const CapsSpec &s) const
 {
     return (node() == s.node() && version() == s.version() && hashAlgorithm() == s.hashAlgorithm());
 }
 
-bool CapsSpec::operator!=(const CapsSpec &s) const
-{
-    return !((*this) == s);
-}
+bool CapsSpec::operator!=(const CapsSpec &s) const { return !((*this) == s); }
 
 bool CapsSpec::operator<(const CapsSpec &s) const
 {
-    return (node() != s.node() ? node() < s.node() : (version() != s.version() ? version() < s.version() : hashAlgorithm() < s.hashAlgorithm()));
+    return (node() != s.node()
+                ? node() < s.node()
+                : (version() != s.version() ? version() < s.version() : hashAlgorithm() < s.hashAlgorithm()));
 }
 
 class StatusPrivate : public QSharedData {
@@ -2764,8 +2217,7 @@ public:
     QString estr;
 };
 
-Status::Status(const QString &show, const QString &status, int priority, bool available) :
-    d(new StatusPrivate)
+Status::Status(const QString &show, const QString &status, int priority, bool available) : d(new StatusPrivate)
 {
     d->isAvailable = available;
     d->show        = show;
@@ -2775,8 +2227,7 @@ Status::Status(const QString &show, const QString &status, int priority, bool av
     d->isInvisible = false;
 }
 
-Status::Status(Type type, const QString &status, int priority) :
-    d(new StatusPrivate)
+Status::Status(Type type, const QString &status, int priority) : d(new StatusPrivate)
 {
     d->status    = status;
     d->priority  = priority;
@@ -2784,10 +2235,7 @@ Status::Status(Type type, const QString &status, int priority) :
     setType(type);
 }
 
-Status::Status(const Status &other) :
-    d(other.d)
-{
-}
+Status::Status(const Status &other) : d(other.d) {}
 
 Status &Status::operator=(const Status &other)
 {
@@ -2795,14 +2243,9 @@ Status &Status::operator=(const Status &other)
     return *this;
 }
 
-Status::~Status()
-{
-}
+Status::~Status() {}
 
-bool Status::hasError() const
-{
-    return (d->ecode != -1);
-}
+bool Status::hasError() const { return (d->ecode != -1); }
 
 void Status::setError(int code, const QString &str)
 {
@@ -2810,20 +2253,11 @@ void Status::setError(int code, const QString &str)
     d->estr  = str;
 }
 
-void Status::setIsAvailable(bool available)
-{
-    d->isAvailable = available;
-}
+void Status::setIsAvailable(bool available) { d->isAvailable = available; }
 
-void Status::setIsInvisible(bool invisible)
-{
-    d->isInvisible = invisible;
-}
+void Status::setIsInvisible(bool invisible) { d->isInvisible = invisible; }
 
-void Status::setPriority(int x)
-{
-    d->priority = x;
-}
+void Status::setPriority(int x) { d->priority = x; }
 
 void Status::setType(Status::Type _type)
 {
@@ -2877,50 +2311,23 @@ Status::Type Status::txt2type(const QString &stat)
         return XMPP::Status::Away;
 }
 
-void Status::setType(const QString &stat)
-{
-    setType(txt2type(stat));
-}
+void Status::setType(const QString &stat) { setType(txt2type(stat)); }
 
-void Status::setShow(const QString &_show)
-{
-    d->show = _show;
-}
+void Status::setShow(const QString &_show) { d->show = _show; }
 
-void Status::setStatus(const QString &_status)
-{
-    d->status = _status;
-}
+void Status::setStatus(const QString &_status) { d->status = _status; }
 
-void Status::setTimeStamp(const QDateTime &_timestamp)
-{
-    d->timeStamp = _timestamp;
-}
+void Status::setTimeStamp(const QDateTime &_timestamp) { d->timeStamp = _timestamp; }
 
-void Status::setKeyID(const QString &key)
-{
-    d->key = key;
-}
+void Status::setKeyID(const QString &key) { d->key = key; }
 
-void Status::setXSigned(const QString &s)
-{
-    d->xsigned = s;
-}
+void Status::setXSigned(const QString &s) { d->xsigned = s; }
 
-void Status::setSongTitle(const QString &_songtitle)
-{
-    d->songTitle = _songtitle;
-}
+void Status::setSongTitle(const QString &_songtitle) { d->songTitle = _songtitle; }
 
-void Status::setCaps(const CapsSpec &caps)
-{
-    d->caps = caps;
-}
+void Status::setCaps(const CapsSpec &caps) { d->caps = caps; }
 
-void Status::setMUC()
-{
-    d->isMUC = true;
-}
+void Status::setMUC() { d->isMUC = true; }
 
 void Status::setMUCItem(const MUCItem &i)
 {
@@ -2942,10 +2349,7 @@ void Status::setMUCHistory(int maxchars, int maxstanzas, int seconds, const QDat
     d->mucHistorySince      = since;
 }
 
-const QByteArray &Status::photoHash() const
-{
-    return d->photoHash;
-}
+const QByteArray &Status::photoHash() const { return d->photoHash; }
 
 void Status::setPhotoHash(const QByteArray &h)
 {
@@ -2953,40 +2357,19 @@ void Status::setPhotoHash(const QByteArray &h)
     d->hasPhotoHash = true;
 }
 
-bool Status::hasPhotoHash() const
-{
-    return d->hasPhotoHash;
-}
+bool Status::hasPhotoHash() const { return d->hasPhotoHash; }
 
-void Status::addBoBData(const BoBData &bob)
-{
-    d->bobDataList.append(bob);
-}
+void Status::addBoBData(const BoBData &bob) { d->bobDataList.append(bob); }
 
-QList<BoBData> Status::bobDataList() const
-{
-    return d->bobDataList;
-}
+QList<BoBData> Status::bobDataList() const { return d->bobDataList; }
 
-bool Status::isAvailable() const
-{
-    return d->isAvailable;
-}
+bool Status::isAvailable() const { return d->isAvailable; }
 
-bool Status::isAway() const
-{
-    return (d->show == "away" || d->show == "xa" || d->show == "dnd");
-}
+bool Status::isAway() const { return (d->show == "away" || d->show == "xa" || d->show == "dnd"); }
 
-bool Status::isInvisible() const
-{
-    return d->isInvisible;
-}
+bool Status::isInvisible() const { return d->isInvisible; }
 
-int Status::priority() const
-{
-    return d->priority;
-}
+int Status::priority() const { return d->priority; }
 
 Status::Type Status::type() const
 {
@@ -3040,164 +2423,76 @@ QString Status::typeString() const
     return stat;
 }
 
-const QString &Status::show() const
-{
-    return d->show;
-}
-const QString &Status::status() const
-{
-    return d->status;
-}
+const QString &Status::show() const { return d->show; }
+const QString &Status::status() const { return d->status; }
 
-QDateTime Status::timeStamp() const
-{
-    return d->timeStamp;
-}
+QDateTime Status::timeStamp() const { return d->timeStamp; }
 
-const QString &Status::keyID() const
-{
-    return d->key;
-}
+const QString &Status::keyID() const { return d->key; }
 
-const QString &Status::xsigned() const
-{
-    return d->xsigned;
-}
+const QString &Status::xsigned() const { return d->xsigned; }
 
-const QString &Status::songTitle() const
-{
-    return d->songTitle;
-}
+const QString &Status::songTitle() const { return d->songTitle; }
 
-const CapsSpec &Status::caps() const
-{
-    return d->caps;
-}
+const CapsSpec &Status::caps() const { return d->caps; }
 
-bool Status::isMUC() const
-{
-    return d->isMUC || !d->mucPassword.isEmpty() || hasMUCHistory();
-}
+bool Status::isMUC() const { return d->isMUC || !d->mucPassword.isEmpty() || hasMUCHistory(); }
 
-bool Status::hasMUCItem() const
-{
-    return d->hasMUCItem;
-}
+bool Status::hasMUCItem() const { return d->hasMUCItem; }
 
-const MUCItem &Status::mucItem() const
-{
-    return d->mucItem;
-}
+const MUCItem &Status::mucItem() const { return d->mucItem; }
 
-bool Status::hasMUCDestroy() const
-{
-    return d->hasMUCDestroy;
-}
+bool Status::hasMUCDestroy() const { return d->hasMUCDestroy; }
 
-const MUCDestroy &Status::mucDestroy() const
-{
-    return d->mucDestroy;
-}
+const MUCDestroy &Status::mucDestroy() const { return d->mucDestroy; }
 
-const QList<int> &Status::getMUCStatuses() const
-{
-    return d->mucStatuses;
-}
+const QList<int> &Status::getMUCStatuses() const { return d->mucStatuses; }
 
-void Status::addMUCStatus(int i)
-{
-    d->mucStatuses += i;
-}
+void Status::addMUCStatus(int i) { d->mucStatuses += i; }
 
-const QString &Status::mucPassword() const
-{
-    return d->mucPassword;
-}
+const QString &Status::mucPassword() const { return d->mucPassword; }
 
 bool Status::hasMUCHistory() const
 {
-    return d->mucHistoryMaxChars >= 0 || d->mucHistoryMaxStanzas >= 0 || d->mucHistorySeconds >= 0 || !d->mucHistorySince.isNull();
+    return d->mucHistoryMaxChars >= 0 || d->mucHistoryMaxStanzas >= 0 || d->mucHistorySeconds >= 0
+        || !d->mucHistorySince.isNull();
 }
 
-int Status::mucHistoryMaxChars() const
-{
-    return d->mucHistoryMaxChars;
-}
+int Status::mucHistoryMaxChars() const { return d->mucHistoryMaxChars; }
 
-int Status::mucHistoryMaxStanzas() const
-{
-    return d->mucHistoryMaxStanzas;
-}
+int Status::mucHistoryMaxStanzas() const { return d->mucHistoryMaxStanzas; }
 
-int Status::mucHistorySeconds() const
-{
-    return d->mucHistorySeconds;
-}
+int Status::mucHistorySeconds() const { return d->mucHistorySeconds; }
 
-const QDateTime &Status::mucHistorySince() const
-{
-    return d->mucHistorySince;
-}
+const QDateTime &Status::mucHistorySince() const { return d->mucHistorySince; }
 
-void Status::setMUCPassword(const QString &i)
-{
-    d->mucPassword = i;
-}
+void Status::setMUCPassword(const QString &i) { d->mucPassword = i; }
 
-int Status::errorCode() const
-{
-    return d->ecode;
-}
+int Status::errorCode() const { return d->ecode; }
 
-const QString &Status::errorString() const
-{
-    return d->estr;
-}
+const QString &Status::errorString() const { return d->estr; }
 
 //---------------------------------------------------------------------------
 // Resource
 //---------------------------------------------------------------------------
-Resource::Resource(const QString &name, const Status &stat) :
-    v_name(name), v_status(stat)
-{
-}
+Resource::Resource(const QString &name, const Status &stat) : v_name(name), v_status(stat) {}
 
-const QString &Resource::name() const
-{
-    return v_name;
-}
+const QString &Resource::name() const { return v_name; }
 
-int Resource::priority() const
-{
-    return v_status.priority();
-}
+int Resource::priority() const { return v_status.priority(); }
 
-const Status &Resource::status() const
-{
-    return v_status;
-}
+const Status &Resource::status() const { return v_status; }
 
-void Resource::setName(const QString &_name)
-{
-    v_name = _name;
-}
+void Resource::setName(const QString &_name) { v_name = _name; }
 
-void Resource::setStatus(const Status &_status)
-{
-    v_status = _status;
-}
+void Resource::setStatus(const Status &_status) { v_status = _status; }
 
 //---------------------------------------------------------------------------
 // ResourceList
 //---------------------------------------------------------------------------
-ResourceList::ResourceList() :
-    QList<Resource>()
-{
-}
+ResourceList::ResourceList() : QList<Resource>() {}
 
-ResourceList::~ResourceList()
-{
-}
+ResourceList::~ResourceList() {}
 
 ResourceList::Iterator ResourceList::find(const QString &_find)
 {
@@ -3246,55 +2541,27 @@ ResourceList::ConstIterator ResourceList::priority() const
 //---------------------------------------------------------------------------
 // RosterItem
 //---------------------------------------------------------------------------
-RosterItem::RosterItem(const Jid &_jid) :
-    v_jid(_jid),
-    v_push(false)
-{
-}
+RosterItem::RosterItem(const Jid &_jid) : v_jid(_jid), v_push(false) {}
 
 RosterItem::RosterItem(const RosterItem &item) :
-    v_jid(item.v_jid),
-    v_name(item.v_name),
-    v_groups(item.v_groups),
-    v_subscription(item.v_subscription),
-    v_ask(item.v_ask),
-    v_push(item.v_push)
+    v_jid(item.v_jid), v_name(item.v_name), v_groups(item.v_groups), v_subscription(item.v_subscription),
+    v_ask(item.v_ask), v_push(item.v_push)
 {
 }
 
-RosterItem::~RosterItem()
-{
-}
+RosterItem::~RosterItem() {}
 
-const Jid &RosterItem::jid() const
-{
-    return v_jid;
-}
+const Jid &RosterItem::jid() const { return v_jid; }
 
-const QString &RosterItem::name() const
-{
-    return v_name;
-}
+const QString &RosterItem::name() const { return v_name; }
 
-const QStringList &RosterItem::groups() const
-{
-    return v_groups;
-}
+const QStringList &RosterItem::groups() const { return v_groups; }
 
-const Subscription &RosterItem::subscription() const
-{
-    return v_subscription;
-}
+const Subscription &RosterItem::subscription() const { return v_subscription; }
 
-const QString &RosterItem::ask() const
-{
-    return v_ask;
-}
+const QString &RosterItem::ask() const { return v_ask; }
 
-bool RosterItem::isPush() const
-{
-    return v_push;
-}
+bool RosterItem::isPush() const { return v_push; }
 
 bool RosterItem::inGroup(const QString &g) const
 {
@@ -3305,35 +2572,17 @@ bool RosterItem::inGroup(const QString &g) const
     return false;
 }
 
-void RosterItem::setJid(const Jid &_jid)
-{
-    v_jid = _jid;
-}
+void RosterItem::setJid(const Jid &_jid) { v_jid = _jid; }
 
-void RosterItem::setName(const QString &_name)
-{
-    v_name = _name;
-}
+void RosterItem::setName(const QString &_name) { v_name = _name; }
 
-void RosterItem::setGroups(const QStringList &_groups)
-{
-    v_groups = _groups;
-}
+void RosterItem::setGroups(const QStringList &_groups) { v_groups = _groups; }
 
-void RosterItem::setSubscription(const Subscription &type)
-{
-    v_subscription = type;
-}
+void RosterItem::setSubscription(const Subscription &type) { v_subscription = type; }
 
-void RosterItem::setAsk(const QString &_ask)
-{
-    v_ask = _ask;
-}
+void RosterItem::setAsk(const QString &_ask) { v_ask = _ask; }
 
-void RosterItem::setIsPush(bool b)
-{
-    v_push = b;
-}
+void RosterItem::setIsPush(bool b) { v_push = b; }
 
 bool RosterItem::addGroup(const QString &g)
 {
@@ -3407,26 +2656,16 @@ bool RosterItem::fromXml(const QDomElement &item)
 //---------------------------------------------------------------------------
 // Roster
 //---------------------------------------------------------------------------
-class Roster::Private
-{
+class Roster::Private {
 public:
     QString groupsDelimiter;
 };
 
-Roster::Roster() :
-    QList<RosterItem>()
-    , d(new Roster::Private)
-{
-}
+Roster::Roster() : QList<RosterItem>(), d(new Roster::Private) {}
 
-Roster::~Roster()
-{
-    delete d;
-}
+Roster::~Roster() { delete d; }
 
-Roster::Roster(const Roster &other)
-    : QList<RosterItem>(other)
-    , d(new Roster::Private)
+Roster::Roster(const Roster &other) : QList<RosterItem>(other), d(new Roster::Private)
 {
     d->groupsDelimiter = other.d->groupsDelimiter;
 }
@@ -3434,7 +2673,7 @@ Roster::Roster(const Roster &other)
 Roster &Roster::operator=(const Roster &other)
 {
     QList<RosterItem>::operator=(other);
-    d->groupsDelimiter = other.d->groupsDelimiter;
+    d->groupsDelimiter         = other.d->groupsDelimiter;
     return *this;
 }
 
@@ -3458,15 +2697,9 @@ Roster::ConstIterator Roster::find(const Jid &j) const
     return end();
 }
 
-void Roster::setGroupsDelimiter(const QString &groupsDelimiter)
-{
-    d->groupsDelimiter = groupsDelimiter;
-}
+void Roster::setGroupsDelimiter(const QString &groupsDelimiter) { d->groupsDelimiter = groupsDelimiter; }
 
-QString Roster::groupsDelimiter() const
-{
-    return d->groupsDelimiter;
-}
+QString Roster::groupsDelimiter() const { return d->groupsDelimiter; }
 
 //---------------------------------------------------------------------------
 // FormField
@@ -3482,19 +2715,11 @@ FormField::FormField(const QString &type, const QString &value)
     v_value = value;
 }
 
-FormField::~FormField()
-{
-}
+FormField::~FormField() {}
 
-int FormField::type() const
-{
-    return v_type;
-}
+int FormField::type() const { return v_type; }
 
-QString FormField::realName() const
-{
-    return typeToTagName(v_type);
-}
+QString FormField::realName() const { return typeToTagName(v_type); }
 
 QString FormField::fieldName() const
 {
@@ -3534,20 +2759,11 @@ QString FormField::fieldName() const
     };
 }
 
-bool FormField::isSecret() const
-{
-    return (type() == password);
-}
+bool FormField::isSecret() const { return (type() == password); }
 
-const QString &FormField::value() const
-{
-    return v_value;
-}
+const QString &FormField::value() const { return v_value; }
 
-void FormField::setType(int x)
-{
-    v_type = x;
-}
+void FormField::setType(int x) { v_type = x; }
 
 bool FormField::setType(const QString &in)
 {
@@ -3559,10 +2775,7 @@ bool FormField::setType(const QString &in)
     return true;
 }
 
-void FormField::setValue(const QString &in)
-{
-    v_value = in;
-}
+void FormField::setValue(const QString &in) { v_value = in; }
 
 int FormField::tagNameToType(const QString &in) const
 {
@@ -3641,148 +2854,69 @@ QString FormField::typeToTagName(int type) const
 //---------------------------------------------------------------------------
 // Form
 //---------------------------------------------------------------------------
-Form::Form(const Jid &j) :
-    QList<FormField>()
-{
-    setJid(j);
-}
+Form::Form(const Jid &j) : QList<FormField>() { setJid(j); }
 
-Form::~Form()
-{
-}
+Form::~Form() {}
 
-Jid Form::jid() const
-{
-    return v_jid;
-}
+Jid Form::jid() const { return v_jid; }
 
-QString Form::instructions() const
-{
-    return v_instructions;
-}
+QString Form::instructions() const { return v_instructions; }
 
-QString Form::key() const
-{
-    return v_key;
-}
+QString Form::key() const { return v_key; }
 
-void Form::setJid(const Jid &j)
-{
-    v_jid = j;
-}
+void Form::setJid(const Jid &j) { v_jid = j; }
 
-void Form::setInstructions(const QString &s)
-{
-    v_instructions = s;
-}
+void Form::setInstructions(const QString &s) { v_instructions = s; }
 
-void Form::setKey(const QString &s)
-{
-    v_key = s;
-}
+void Form::setKey(const QString &s) { v_key = s; }
 
 //---------------------------------------------------------------------------
 // SearchResult
 //---------------------------------------------------------------------------
-SearchResult::SearchResult(const Jid &jid)
-{
-    setJid(jid);
-}
+SearchResult::SearchResult(const Jid &jid) { setJid(jid); }
 
-SearchResult::~SearchResult()
-{
-}
+SearchResult::~SearchResult() {}
 
-const Jid &SearchResult::jid() const
-{
-    return v_jid;
-}
+const Jid &SearchResult::jid() const { return v_jid; }
 
-const QString &SearchResult::nick() const
-{
-    return v_nick;
-}
+const QString &SearchResult::nick() const { return v_nick; }
 
-const QString &SearchResult::first() const
-{
-    return v_first;
-}
+const QString &SearchResult::first() const { return v_first; }
 
-const QString &SearchResult::last() const
-{
-    return v_last;
-}
+const QString &SearchResult::last() const { return v_last; }
 
-const QString &SearchResult::email() const
-{
-    return v_email;
-}
+const QString &SearchResult::email() const { return v_email; }
 
-void SearchResult::setJid(const Jid &jid)
-{
-    v_jid = jid;
-}
+void SearchResult::setJid(const Jid &jid) { v_jid = jid; }
 
-void SearchResult::setNick(const QString &nick)
-{
-    v_nick = nick;
-}
+void SearchResult::setNick(const QString &nick) { v_nick = nick; }
 
-void SearchResult::setFirst(const QString &first)
-{
-    v_first = first;
-}
+void SearchResult::setFirst(const QString &first) { v_first = first; }
 
-void SearchResult::setLast(const QString &last)
-{
-    v_last = last;
-}
+void SearchResult::setLast(const QString &last) { v_last = last; }
 
-void SearchResult::setEmail(const QString &email)
-{
-    v_email = email;
-}
+void SearchResult::setEmail(const QString &email) { v_email = email; }
 
-PubSubItem::PubSubItem()
-{
-}
+PubSubItem::PubSubItem() {}
 
-PubSubItem::PubSubItem(const QString &id, const QDomElement &payload) :
-    id_(id), payload_(payload)
-{
-}
+PubSubItem::PubSubItem(const QString &id, const QDomElement &payload) : id_(id), payload_(payload) {}
 
-const QString &PubSubItem::id() const
-{
-    return id_;
-}
+const QString &PubSubItem::id() const { return id_; }
 
-const QDomElement &PubSubItem::payload() const
-{
-    return payload_;
-}
+const QDomElement &PubSubItem::payload() const { return payload_; }
 
-PubSubRetraction::PubSubRetraction()
-{
-}
+PubSubRetraction::PubSubRetraction() {}
 
-PubSubRetraction::PubSubRetraction(const QString &id) :
-    id_(id)
-{
-}
+PubSubRetraction::PubSubRetraction(const QString &id) : id_(id) {}
 
-const QString &PubSubRetraction::id() const
-{
-    return id_;
-}
+const QString &PubSubRetraction::id() const { return id_; }
 
 // =========================================
 //            CaptchaChallenge
 // =========================================
 class CaptchaChallengePrivate : public QSharedData {
 public:
-    CaptchaChallengePrivate() :
-        state(CaptchaChallenge::New) {}
+    CaptchaChallengePrivate() : state(CaptchaChallenge::New) {}
 
     CaptchaChallenge::State state;
     Jid                     arbiter;
@@ -3793,18 +2927,11 @@ public:
     UrlList                 urls;
 };
 
-CaptchaChallenge::CaptchaChallenge() :
-    d(new CaptchaChallengePrivate)
-{
-}
+CaptchaChallenge::CaptchaChallenge() : d(new CaptchaChallengePrivate) {}
 
-CaptchaChallenge::CaptchaChallenge(const CaptchaChallenge &other) :
-    d(other.d)
-{
-}
+CaptchaChallenge::CaptchaChallenge(const CaptchaChallenge &other) : d(other.d) {}
 
-CaptchaChallenge::CaptchaChallenge(const Message &m) :
-    d(new CaptchaChallengePrivate)
+CaptchaChallenge::CaptchaChallenge(const Message &m) : d(new CaptchaChallengePrivate)
 {
     if (m.spooled()) {
         if (m.timeStamp().secsTo(QDateTime::currentDateTime()) < Timeout) {
@@ -3831,9 +2958,7 @@ CaptchaChallenge::CaptchaChallenge(const Message &m) :
     d->offendedJid = Jid(m.getForm().getField("from").value().value(0));
 }
 
-CaptchaChallenge::~CaptchaChallenge()
-{
-}
+CaptchaChallenge::~CaptchaChallenge() {}
 
 CaptchaChallenge &CaptchaChallenge::operator=(const CaptchaChallenge &from)
 {
@@ -3841,25 +2966,13 @@ CaptchaChallenge &CaptchaChallenge::operator=(const CaptchaChallenge &from)
     return *this;
 }
 
-const XData &CaptchaChallenge::form() const
-{
-    return d->form;
-}
+const XData &CaptchaChallenge::form() const { return d->form; }
 
-QString CaptchaChallenge::explanation() const
-{
-    return d->explanation;
-}
+QString CaptchaChallenge::explanation() const { return d->explanation; }
 
-const UrlList &CaptchaChallenge::urls() const
-{
-    return d->urls;
-}
+const UrlList &CaptchaChallenge::urls() const { return d->urls; }
 
-CaptchaChallenge::State CaptchaChallenge::state() const
-{
-    return d->state;
-}
+CaptchaChallenge::State CaptchaChallenge::state() const { return d->state; }
 
 CaptchaChallenge::Result CaptchaChallenge::validateResponse(const XData &xd)
 {
@@ -3873,15 +2986,9 @@ bool CaptchaChallenge::isValid() const
     return d->dt.isValid() && d->dt.secsTo(QDateTime::currentDateTime()) < Timeout && d->form.fields().count() > 0;
 }
 
-const Jid &CaptchaChallenge::offendedJid() const
-{
-    return d->offendedJid;
-}
+const Jid &CaptchaChallenge::offendedJid() const { return d->offendedJid; }
 
-const Jid &CaptchaChallenge::arbiter() const
-{
-    return d->arbiter;
-}
+const Jid &CaptchaChallenge::arbiter() const { return d->arbiter; }
 
 Thumbnail::Thumbnail(const QDomElement &el)
 {

@@ -42,131 +42,89 @@
 
 //#define XMPP_DEBUG
 #ifdef XMPP_DEBUG
-# define XDEBUG (qDebug() << this << "#" << __FUNCTION__ << ":")
+#define XDEBUG (qDebug() << this << "#" << __FUNCTION__ << ":")
 #endif
 
 using namespace XMPP;
 
-static const int XMPP_DEFAULT_PORT = 5222;
-static const int XMPP_LEGACY_PORT = 5223;
-static const char* XMPP_CLIENT_SRV = "xmpp-client";
-static const char* XMPP_CLIENT_TRANSPORT = "tcp";
+static const int   XMPP_DEFAULT_PORT     = 5222;
+static const int   XMPP_LEGACY_PORT      = 5223;
+static const char *XMPP_CLIENT_SRV       = "xmpp-client";
+static const char *XMPP_CLIENT_TRANSPORT = "tcp";
 
 //----------------------------------------------------------------------------
 // Connector
 //----------------------------------------------------------------------------
-Connector::Connector(QObject *parent)
-:QObject(parent)
+Connector::Connector(QObject *parent) : QObject(parent)
 {
     setUseSSL(false);
     setPeerAddressNone();
 }
 
-Connector::~Connector()
-{
-}
+Connector::~Connector() {}
 
-bool Connector::useSSL() const
-{
-    return ssl;
-}
+bool Connector::useSSL() const { return ssl; }
 
-bool Connector::havePeerAddress() const
-{
-    return haveaddr;
-}
+bool Connector::havePeerAddress() const { return haveaddr; }
 
-QHostAddress Connector::peerAddress() const
-{
-    return addr;
-}
+QHostAddress Connector::peerAddress() const { return addr; }
 
-quint16 Connector::peerPort() const
-{
-    return port;
-}
+quint16 Connector::peerPort() const { return port; }
 
-void Connector::setUseSSL(bool b)
-{
-    ssl = b;
-}
+void Connector::setUseSSL(bool b) { ssl = b; }
 
 void Connector::setPeerAddressNone()
 {
     haveaddr = false;
-    addr = QHostAddress();
-    port = 0;
+    addr     = QHostAddress();
+    port     = 0;
 }
 
 void Connector::setPeerAddress(const QHostAddress &_addr, quint16 _port)
 {
     haveaddr = true;
-    addr = _addr;
-    port = _port;
+    addr     = _addr;
+    port     = _port;
 }
 
-QString Connector::host() const
-{
-    return QString();
-}
+QString Connector::host() const { return QString(); }
 
 //----------------------------------------------------------------------------
 // AdvancedConnector::Proxy
 //----------------------------------------------------------------------------
 
-int AdvancedConnector::Proxy::type() const
-{
-    return t;
-}
+int AdvancedConnector::Proxy::type() const { return t; }
 
-QString AdvancedConnector::Proxy::host() const
-{
-    return v_host;
-}
+QString AdvancedConnector::Proxy::host() const { return v_host; }
 
-quint16 AdvancedConnector::Proxy::port() const
-{
-    return v_port;
-}
+quint16 AdvancedConnector::Proxy::port() const { return v_port; }
 
-QUrl AdvancedConnector::Proxy::url() const
-{
-    return v_url;
-}
+QUrl AdvancedConnector::Proxy::url() const { return v_url; }
 
-QString AdvancedConnector::Proxy::user() const
-{
-    return v_user;
-}
+QString AdvancedConnector::Proxy::user() const { return v_user; }
 
-QString AdvancedConnector::Proxy::pass() const
-{
-    return v_pass;
-}
+QString AdvancedConnector::Proxy::pass() const { return v_pass; }
 
-int AdvancedConnector::Proxy::pollInterval() const
-{
-    return v_poll;
-}
+int AdvancedConnector::Proxy::pollInterval() const { return v_poll; }
 
 void AdvancedConnector::Proxy::setHttpConnect(const QString &host, quint16 port)
 {
-    t = HttpConnect;
+    t      = HttpConnect;
     v_host = host;
     v_port = port;
 }
 
 void AdvancedConnector::Proxy::setHttpPoll(const QString &host, quint16 port, const QUrl &url)
 {
-    t = HttpPoll;
+    t      = HttpPoll;
     v_host = host;
     v_port = port;
-    v_url = url;
+    v_url  = url;
 }
 
 void AdvancedConnector::Proxy::setSocks(const QString &host, quint16 port)
 {
-    t = Socks;
+    t      = Socks;
     v_host = host;
     v_port = port;
 }
@@ -177,10 +135,7 @@ void AdvancedConnector::Proxy::setUserPass(const QString &user, const QString &p
     v_pass = pass;
 }
 
-void AdvancedConnector::Proxy::setPollInterval(int secs)
-{
-    v_poll = secs;
-}
+void AdvancedConnector::Proxy::setPollInterval(int secs) { v_poll = secs; }
 
 //----------------------------------------------------------------------------
 // AdvancedConnector
@@ -188,29 +143,27 @@ void AdvancedConnector::Proxy::setPollInterval(int secs)
 typedef enum { Idle, Connecting, Connected } Mode;
 typedef enum { Force, Probe, Never } LegacySSL;
 
-class AdvancedConnector::Private
-{
+class AdvancedConnector::Private {
 public:
     ByteStream *bs; //!< Socket to use
 
     /* configuration values / "options" */
-    QString opt_host; //!< explicit host from config
-    quint16 opt_port; //!< explicit port from config
-    LegacySSL opt_ssl; //!< Whether to use legacy SSL support
-    Proxy proxy; //!< Proxy configuration
+    QString   opt_host; //!< explicit host from config
+    quint16   opt_port; //!< explicit port from config
+    LegacySSL opt_ssl;  //!< Whether to use legacy SSL support
+    Proxy     proxy;    //!< Proxy configuration
 
     /* State tracking values */
-    Mode mode; //!< Idle, Connecting, Connected
-    QString host; //!< Host we currently try to connect to, set from connectToServer()
-    int port; //!< Port we currently try to connect to, set from connectToServer() and bs_error()
-    int errorCode; //!< Current error, if any
+    Mode    mode;      //!< Idle, Connecting, Connected
+    QString host;      //!< Host we currently try to connect to, set from connectToServer()
+    int     port;      //!< Port we currently try to connect to, set from connectToServer() and bs_error()
+    int     errorCode; //!< Current error, if any
 };
 
-AdvancedConnector::AdvancedConnector(QObject *parent)
-:Connector(parent)
+AdvancedConnector::AdvancedConnector(QObject *parent) : Connector(parent)
 {
-    d = new Private;
-    d->bs = nullptr;
+    d          = new Private;
+    d->bs      = nullptr;
     d->opt_ssl = Never;
     cleanup();
     d->errorCode = 0;
@@ -236,7 +189,7 @@ void AdvancedConnector::cleanup()
 
 void AdvancedConnector::setProxy(const Proxy &proxy)
 {
-    if(d->mode != Idle)
+    if (d->mode != Idle)
         return;
     d->proxy = proxy;
 }
@@ -247,11 +200,11 @@ void AdvancedConnector::setOptHostPort(const QString &_host, quint16 _port)
     XDEBUG << "h:" << _host << "p:" << _port;
 #endif
 
-    if(d->mode != Idle)
+    if (d->mode != Idle)
         return;
 
     // empty host means disable explicit host support
-    if(_host.isEmpty()) {
+    if (_host.isEmpty()) {
         d->opt_host.clear();
         return;
     }
@@ -265,7 +218,7 @@ void AdvancedConnector::setOptProbe(bool b)
     XDEBUG << "b:" << b;
 #endif
 
-    if(d->mode != Idle)
+    if (d->mode != Idle)
         return;
     d->opt_ssl = (b ? Probe : Never);
 }
@@ -276,7 +229,7 @@ void AdvancedConnector::setOptSSL(bool b)
     XDEBUG << "b:" << b;
 #endif
 
-    if(d->mode != Idle)
+    if (d->mode != Idle)
         return;
     d->opt_ssl = (b ? Force : Never);
 }
@@ -287,13 +240,13 @@ void AdvancedConnector::connectToServer(const QString &server)
     XDEBUG << "s:" << server;
 #endif
 
-    if(d->mode != Idle)
+    if (d->mode != Idle)
         return;
-    if(server.isEmpty())
+    if (server.isEmpty())
         return;
 
     d->errorCode = 0;
-    d->mode = Connecting;
+    d->mode      = Connecting;
 
     // Encode the servername
     d->host = QUrl::toAce(server);
@@ -310,61 +263,58 @@ void AdvancedConnector::connectToServer(const QString &server)
         d->opt_ssl = Never; // probe is possible only with direct connect
     }
 
-    if(d->proxy.type() == Proxy::HttpPoll) {
+    if (d->proxy.type() == Proxy::HttpPoll) {
         HttpPoll *s = new HttpPoll;
-        d->bs = s;
+        d->bs       = s;
 
         connect(s, SIGNAL(connected()), SLOT(bs_connected()));
         connect(s, SIGNAL(syncStarted()), SLOT(http_syncStarted()));
         connect(s, SIGNAL(syncFinished()), SLOT(http_syncFinished()));
         connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
 
-        if(!d->proxy.user().isEmpty())
+        if (!d->proxy.user().isEmpty())
             s->setAuth(d->proxy.user(), d->proxy.pass());
         s->setPollInterval(d->proxy.pollInterval());
 
-        if(d->proxy.host().isEmpty())
+        if (d->proxy.host().isEmpty())
             s->connectToUrl(d->proxy.url());
         else
             s->connectToHost(d->proxy.host(), d->proxy.port(), d->proxy.url());
-    }
-    else if (d->proxy.type() == Proxy::HttpConnect) {
+    } else if (d->proxy.type() == Proxy::HttpConnect) {
         HttpConnect *s = new HttpConnect;
-        d->bs = s;
+        d->bs          = s;
 
         connect(s, SIGNAL(connected()), SLOT(bs_connected()));
         connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
 
-        if(!d->opt_host.isEmpty()) {
+        if (!d->opt_host.isEmpty()) {
             d->host = d->opt_host;
             d->port = d->opt_port;
         }
 
-        if(!d->proxy.user().isEmpty())
+        if (!d->proxy.user().isEmpty())
             s->setAuth(d->proxy.user(), d->proxy.pass());
 
         s->connectToHost(d->proxy.host(), d->proxy.port(), d->host, d->port);
-    }
-    else if (d->proxy.type() == Proxy::Socks) {
+    } else if (d->proxy.type() == Proxy::Socks) {
         SocksClient *s = new SocksClient;
-        d->bs = s;
+        d->bs          = s;
 
         connect(s, SIGNAL(connected()), SLOT(bs_connected()));
         connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
 
-        if(!d->opt_host.isEmpty()) {
+        if (!d->opt_host.isEmpty()) {
             d->host = d->opt_host;
             d->port = d->opt_port;
         }
 
-        if(!d->proxy.user().isEmpty())
+        if (!d->proxy.user().isEmpty())
             s->setAuth(d->proxy.user(), d->proxy.pass());
 
         s->connectToHost(d->proxy.host(), d->proxy.port(), d->host, d->port);
-    }
-    else {
+    } else {
         BSocket *s = new BSocket;
-        d->bs = s;
+        d->bs      = s;
 #ifdef XMPP_DEBUG
         XDEBUG << "Adding socket:" << s;
 #endif
@@ -372,7 +322,7 @@ void AdvancedConnector::connectToServer(const QString &server)
         connect(s, SIGNAL(connected()), SLOT(bs_connected()));
         connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
 
-        if(!d->opt_host.isEmpty()) { /* if custom host:port */
+        if (!d->opt_host.isEmpty()) { /* if custom host:port */
             d->host = d->opt_host;
             d->port = d->opt_port;
             s->connectToHost(d->host, d->port);
@@ -387,46 +337,39 @@ void AdvancedConnector::connectToServer(const QString &server)
 
 void AdvancedConnector::changePollInterval(int secs)
 {
-    if(d->bs && (d->bs->inherits("XMPP::HttpPoll") || d->bs->inherits("HttpPoll"))) {
-        HttpPoll *s = static_cast<HttpPoll*>(d->bs);
+    if (d->bs && (d->bs->inherits("XMPP::HttpPoll") || d->bs->inherits("HttpPoll"))) {
+        HttpPoll *s = static_cast<HttpPoll *>(d->bs);
         s->setPollInterval(secs);
     }
 }
 
 ByteStream *AdvancedConnector::stream() const
 {
-    if(d->mode == Connected)
+    if (d->mode == Connected)
         return d->bs;
     else
         return nullptr;
 }
 
-void AdvancedConnector::done()
-{
-    cleanup();
-}
+void AdvancedConnector::done() { cleanup(); }
 
-int AdvancedConnector::errorCode() const
-{
-    return d->errorCode;
-}
+int AdvancedConnector::errorCode() const { return d->errorCode; }
 
 void AdvancedConnector::bs_connected()
 {
 #ifdef XMPP_DEBUG
     XDEBUG;
 #endif
-    if(d->proxy.type() == Proxy::None) {
-        QHostAddress h = (static_cast<BSocket*>(d->bs))->peerAddress();
-        int p = (static_cast<BSocket*>(d->bs))->peerPort();
+    if (d->proxy.type() == Proxy::None) {
+        QHostAddress h = (static_cast<BSocket *>(d->bs))->peerAddress();
+        int          p = (static_cast<BSocket *>(d->bs))->peerPort();
         setPeerAddress(h, p);
     }
 
     // We won't use ssl with HttpPoll since it has ow tls handler enabled for https.
     // The only variant for ssl is legacy port in probing or forced mde.
-    if(d->proxy.type() != Proxy::HttpPoll  && (d->opt_ssl == Force || (
-        d->opt_ssl == Probe && peerPort() == XMPP_LEGACY_PORT)))
-    {
+    if (d->proxy.type() != Proxy::HttpPoll
+        && (d->opt_ssl == Force || (d->opt_ssl == Probe && peerPort() == XMPP_LEGACY_PORT))) {
         // in case of Probe it's ok to check actual peer "port" since we are sure Proxy=None
         setUseSSL(true);
     }
@@ -441,67 +384,64 @@ void AdvancedConnector::bs_error(int x)
     XDEBUG << "e:" << x;
 #endif
 
-    if(d->mode == Connected) {
+    if (d->mode == Connected) {
         d->errorCode = ErrStream;
         emit error();
         return;
     }
 
     bool proxyError = false;
-    int err = ErrConnectionRefused;
-    int t = d->proxy.type();
+    int  err        = ErrConnectionRefused;
+    int  t          = d->proxy.type();
 
 #ifdef XMPP_DEBUG
     qDebug("bse1");
 #endif
 
     // figure out the error
-    if(t == Proxy::None) {
-        if(x == BSocket::ErrHostNotFound)
+    if (t == Proxy::None) {
+        if (x == BSocket::ErrHostNotFound)
             err = ErrHostNotFound;
         else
             err = ErrConnectionRefused;
-    }
-    else if(t == Proxy::HttpConnect) {
-        if(x == HttpConnect::ErrConnectionRefused)
+    } else if (t == Proxy::HttpConnect) {
+        if (x == HttpConnect::ErrConnectionRefused)
             err = ErrConnectionRefused;
-        else if(x == HttpConnect::ErrHostNotFound)
+        else if (x == HttpConnect::ErrHostNotFound)
             err = ErrHostNotFound;
         else {
             proxyError = true;
-            if(x == HttpConnect::ErrProxyAuth)
+            if (x == HttpConnect::ErrProxyAuth)
                 err = ErrProxyAuth;
-            else if(x == HttpConnect::ErrProxyNeg)
+            else if (x == HttpConnect::ErrProxyNeg)
                 err = ErrProxyNeg;
             else
                 err = ErrProxyConnect;
         }
-    }
-    else if(t == Proxy::HttpPoll) {
-        if(x == HttpPoll::ErrConnectionRefused)
+    } else if (t == Proxy::HttpPoll) {
+        if (x == HttpPoll::ErrConnectionRefused)
             err = ErrConnectionRefused;
-        else if(x == HttpPoll::ErrHostNotFound)
+        else if (x == HttpPoll::ErrHostNotFound)
             err = ErrHostNotFound;
         else {
             proxyError = true;
-            if(x == HttpPoll::ErrProxyAuth)
+            if (x == HttpPoll::ErrProxyAuth)
                 err = ErrProxyAuth;
-            else if(x == HttpPoll::ErrProxyNeg)
+            else if (x == HttpPoll::ErrProxyNeg)
                 err = ErrProxyNeg;
             else
                 err = ErrProxyConnect;
         }
-    }
-    else if(t == Proxy::Socks) {
-        if(x == SocksClient::ErrConnectionRefused)
+    } else if (t == Proxy::Socks) {
+        if (x == SocksClient::ErrConnectionRefused)
             err = ErrConnectionRefused;
-        else if(x == SocksClient::ErrHostNotFound)
+        else if (x == SocksClient::ErrHostNotFound)
             err = ErrHostNotFound;
         else {
             proxyError = true;
-            if(x == SocksClient::ErrProxyAuth)
+            if (x == SocksClient::ErrProxyAuth)
                 err = ErrProxyAuth;
-            else if(x == SocksClient::ErrProxyNeg)
+            else if (x == SocksClient::ErrProxyNeg)
                 err = ErrProxyNeg;
             else
                 err = ErrProxyConnect;
@@ -509,7 +449,7 @@ void AdvancedConnector::bs_error(int x)
     }
 
     // no-multi or proxy error means we quit
-    if(proxyError) {
+    if (proxyError) {
         cleanup();
         d->errorCode = err;
         emit error();
@@ -520,12 +460,12 @@ void AdvancedConnector::bs_error(int x)
         if we shall probe the ssl legacy port, and we just did that (port=legacy),
         then try to connect to the normal port instead
     */
-    if(d->opt_ssl == Probe && d->port == XMPP_LEGACY_PORT) {
+    if (d->opt_ssl == Probe && d->port == XMPP_LEGACY_PORT) {
 #ifdef XMPP_DEBUG
         qDebug("bse1.2");
 #endif
-        BSocket *s = static_cast<BSocket*>(d->bs);
-        d->port = XMPP_DEFAULT_PORT;
+        BSocket *s = static_cast<BSocket *>(d->bs);
+        d->port    = XMPP_DEFAULT_PORT;
         // at this moment we already tried everything from srv. so just try the host itself
         s->connectToHost(d->host, d->port);
     }
@@ -540,22 +480,13 @@ void AdvancedConnector::bs_error(int x)
     }
 }
 
-void AdvancedConnector::http_syncStarted()
-{
-    httpSyncStarted();
-}
+void AdvancedConnector::http_syncStarted() { httpSyncStarted(); }
 
-void AdvancedConnector::http_syncFinished()
-{
-    httpSyncFinished();
-}
+void AdvancedConnector::http_syncFinished() { httpSyncFinished(); }
 
 void AdvancedConnector::t_timeout()
 {
-    //bs_error(-1);
+    // bs_error(-1);
 }
 
-QString AdvancedConnector::host() const
-{
-    return d->host;
-}
+QString AdvancedConnector::host() const { return d->host; }

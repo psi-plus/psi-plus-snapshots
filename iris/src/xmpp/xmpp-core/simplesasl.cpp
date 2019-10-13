@@ -37,85 +37,77 @@
 #include <stdlib.h>
 
 namespace XMPP {
-class SimpleSASLContext : public QCA::SASLContext
-{
+class SimpleSASLContext : public QCA::SASLContext {
     Q_OBJECT
 public:
-        class ParamsMutable
-        {
-        public:
-            /**
-               User is held
-            */
-            bool user;
+    class ParamsMutable {
+    public:
+        /**
+           User is held
+        */
+        bool user;
 
-            /**
-               Authorization ID is held
-            */
-            bool authzid;
+        /**
+           Authorization ID is held
+        */
+        bool authzid;
 
-            /**
-               Password is held
-            */
-            bool pass;
+        /**
+           Password is held
+        */
+        bool pass;
 
-            /**
-               Realm is held
-            */
-            bool realm;
-        };
+        /**
+           Realm is held
+        */
+        bool realm;
+    };
     // core props
     QString service, host;
 
     // state
-    int step;
-    bool capable;
-    bool allow_plain;
+    int        step;
+    bool       capable;
+    bool       allow_plain;
     QByteArray out_buf, in_buf;
-    QString mechanism_;
-    QString out_mech;
+    QString    mechanism_;
+    QString    out_mech;
 
-    ParamsMutable need;
-    ParamsMutable have;
-    QString user, authz, realm;
-    QCA::SecureArray pass;
-    Result result_;
+    ParamsMutable            need;
+    ParamsMutable            have;
+    QString                  user, authz, realm;
+    QCA::SecureArray         pass;
+    Result                   result_;
     QCA::SASL::AuthCondition authCondition_;
-    QByteArray result_to_net_, result_to_app_;
-    int encoded_;
+    QByteArray               result_to_net_, result_to_app_;
+    int                      encoded_;
 
     // scram specific stuff
-    QByteArray client_first_message;
+    QByteArray       client_first_message;
     QCA::SecureArray server_signature;
 
-    SimpleSASLContext(QCA::Provider* p) : QCA::SASLContext(p)
-    {
-        reset();
-    }
+    SimpleSASLContext(QCA::Provider *p) : QCA::SASLContext(p) { reset(); }
 
-    ~SimpleSASLContext()
-    {
-        reset();
-    }
+    ~SimpleSASLContext() { reset(); }
 
     void reset()
     {
         resetState();
 
-        capable = true;
-        allow_plain = false;
-        need.user = false;
+        capable      = true;
+        allow_plain  = false;
+        need.user    = false;
         need.authzid = false;
-        need.pass = false;
-        need.realm = false;
-        have.user = false;
+        need.pass    = false;
+        need.realm   = false;
+        have.user    = false;
         have.authzid = false;
-        have.pass = false;
-        have.realm = false;
-        user = QString();
-        authz = QString();
-        pass = QCA::SecureArray();
-        realm = QString();
+        have.pass    = false;
+        have.realm   = false;
+        user         = QString();
+        authz        = QString();
+        pass         = QCA::SecureArray();
+        realm        = QString();
     }
 
     void resetState()
@@ -125,24 +117,30 @@ public:
         authCondition_ = QCA::SASL::AuthFail;
     }
 
-    virtual void setConstraints(QCA::SASL::AuthFlags flags, int ssfMin, int) {
-        if(flags & (QCA::SASL::RequireForwardSecrecy | QCA::SASL::RequirePassCredentials | QCA::SASL::RequireMutualAuth) || ssfMin > 0)
+    virtual void setConstraints(QCA::SASL::AuthFlags flags, int ssfMin, int)
+    {
+        if (flags
+                & (QCA::SASL::RequireForwardSecrecy | QCA::SASL::RequirePassCredentials | QCA::SASL::RequireMutualAuth)
+            || ssfMin > 0)
             capable = false;
         else
             capable = true;
         allow_plain = flags & QCA::SASL::AllowPlain;
     }
 
-    virtual void setup(const QString& _service, const QString& _host, const QCA::SASLContext::HostPort*, const QCA::SASLContext::HostPort*, const QString&, int) {
+    virtual void setup(const QString &_service, const QString &_host, const QCA::SASLContext::HostPort *,
+                       const QCA::SASLContext::HostPort *, const QString &, int)
+    {
         service = _service;
-        host = _host;
+        host    = _host;
     }
 
-    virtual void startClient(const QStringList &mechlist, bool allowClientSendFirst) {
+    virtual void startClient(const QStringList &mechlist, bool allowClientSendFirst)
+    {
         Q_UNUSED(allowClientSendFirst);
 
         mechanism_ = QString();
-        foreach(QString mech, mechlist) {
+        foreach (QString mech, mechlist) {
             if (mech == "SCRAM-SHA-1") {
                 mechanism_ = "SCRAM-SHA-1";
                 break;
@@ -155,8 +153,8 @@ public:
                 mechanism_ = "PLAIN";
         }
 
-        if(!capable || mechanism_.isEmpty()) {
-            result_ = Error;
+        if (!capable || mechanism_.isEmpty()) {
+            result_        = Error;
             authCondition_ = QCA::SASL::NoMechanism;
             if (!capable)
                 qWarning("simplesasl.cpp: Not enough capabilities");
@@ -168,34 +166,36 @@ public:
 
         resetState();
         result_ = Continue;
-        step = 0;
+        step    = 0;
         tryAgain();
     }
 
-    virtual void nextStep(const QByteArray &from_net) {
+    virtual void nextStep(const QByteArray &from_net)
+    {
         in_buf = from_net;
         tryAgain();
     }
 
-    virtual void tryAgain() {
+    virtual void tryAgain()
+    {
         // All exits of the method must emit the ready signal
         // so all exits go through a goto ready;
-        if(step == 0) {
+        if (step == 0) {
             out_mech = mechanism_;
 
             // PLAIN
             if (out_mech == "PLAIN" || out_mech == "SCRAM-SHA-1") {
                 // First, check if we have everything
-                if(need.user || need.pass) {
+                if (need.user || need.pass) {
                     qWarning("simplesasl.cpp: Did not receive necessary auth parameters");
                     result_ = Error;
                     goto ready;
                 }
-                if(!have.user)
+                if (!have.user)
                     need.user = true;
-                if(!have.pass)
+                if (!have.pass)
                     need.pass = true;
-                if(need.user || need.pass) {
+                if (need.user || need.pass) {
                     result_ = Params;
                     goto ready;
                 }
@@ -206,7 +206,7 @@ public:
                 // send client-first-message
                 SCRAMSHA1Message msg(authz, user, QByteArray(0, ' '), RandRandomNumberGenerator());
                 if (msg.isValid()) {
-                    out_buf = msg.getValue();
+                    out_buf              = msg.getValue();
                     client_first_message = out_buf;
                 } else {
                     qWarning("simplesasl.cpp: SASLprep failed.");
@@ -219,32 +219,33 @@ public:
                 result_ = Success;
             else
                 result_ = Continue;
-        } else if(step == 1) {
+        } else if (step == 1) {
             Q_ASSERT(out_mech != "PLAIN");
             if (out_mech == "DIGEST-MD5") {
                 // if we still need params, then the app has failed us!
-                if(need.user || need.authzid || need.pass || need.realm) {
+                if (need.user || need.authzid || need.pass || need.realm) {
                     qWarning("simplesasl.cpp: Did not receive necessary auth parameters");
                     result_ = Error;
                     goto ready;
                 }
 
                 // see if some params are needed
-                if(!have.user)
+                if (!have.user)
                     need.user = true;
-                //if(!have.authzid)
+                // if(!have.authzid)
                 //    need.authzid = true;
-                if(!have.pass)
+                if (!have.pass)
                     need.pass = true;
-                if(need.user || need.authzid || need.pass) {
+                if (need.user || need.authzid || need.pass) {
                     result_ = Params;
                     goto ready;
                 }
 
-                DIGESTMD5Response response(in_buf, service, host, realm, user, authz, pass.toByteArray(), RandRandomNumberGenerator());
+                DIGESTMD5Response response(in_buf, service, host, realm, user, authz, pass.toByteArray(),
+                                           RandRandomNumberGenerator());
                 if (!response.isValid()) {
                     authCondition_ = QCA::SASL::BadProtocol;
-                    result_ = Error;
+                    result_        = Error;
                     goto ready;
                 }
                 out_buf = response.getValue();
@@ -252,38 +253,39 @@ public:
                 result_ = Continue;
             } else if (out_mech == "SCRAM-SHA-1") {
                 // if we still need params, then the app has failed us!
-                if(need.user || need.pass) {
+                if (need.user || need.pass) {
                     qWarning("simplesasl.cpp: Did not receive necessary auth parameters");
                     result_ = Error;
                     goto ready;
                 }
 
                 // see if some params are needed
-                if(!have.user)
+                if (!have.user)
                     need.user = true;
-                //if(!have.authzid)
+                // if(!have.authzid)
                 //    need.authzid = true;
-                if(!have.pass)
+                if (!have.pass)
                     need.pass = true;
-                if(need.user || need.pass) {
+                if (need.user || need.pass) {
                     result_ = Params;
                     goto ready;
                 }
                 // parse server-first-message, send client-final-message
                 QVariant prop = property("scram-salted-password-base64");
-                QString salted_password_base64;
+                QString  salted_password_base64;
                 if (prop.isValid()) {
                     salted_password_base64 = prop.toString();
                 }
-                SCRAMSHA1Response response(in_buf, pass.toByteArray(), client_first_message, salted_password_base64, RandRandomNumberGenerator());
+                SCRAMSHA1Response response(in_buf, pass.toByteArray(), client_first_message, salted_password_base64,
+                                           RandRandomNumberGenerator());
                 if (!response.isValid()) {
                     authCondition_ = QCA::SASL::BadProtocol;
-                    result_ = Error;
+                    result_        = Error;
                     goto ready;
                 }
                 setProperty("scram-salted-password-base64", QVariant(response.getSaltedPassword()));
                 server_signature = response.getServerSignature();
-                out_buf = response.getValue();
+                out_buf          = response.getValue();
                 ++step;
                 result_ = Continue;
             }
@@ -295,7 +297,7 @@ public:
             } else {
                 qWarning() << "ServerSignature doesn't match the one we've calculated.";
                 authCondition_ = QCA::SASL::AuthFail;
-                result_ = Error;
+                result_        = Error;
                 goto ready;
             }
         }
@@ -309,87 +311,72 @@ public:
             out_buf.resize(0);
             result_ = Success;
         }
-ready:
+    ready:
         QMetaObject::invokeMethod(this, "resultsReady", Qt::QueuedConnection);
     }
 
-    virtual void update(const QByteArray &from_net, const QByteArray &from_app) {
+    virtual void update(const QByteArray &from_net, const QByteArray &from_app)
+    {
         result_to_app_ = from_net;
         result_to_net_ = from_app;
-        encoded_ = from_app.size();
-        result_ = Success;
+        encoded_       = from_app.size();
+        result_        = Success;
         QMetaObject::invokeMethod(this, "resultsReady", Qt::QueuedConnection);
     }
 
-    virtual bool waitForResultsReady(int msecs) {
+    virtual bool waitForResultsReady(int msecs)
+    {
 
         // TODO: for now, all operations block anyway
         Q_UNUSED(msecs);
         return true;
     }
 
-    virtual Result result() const {
-        return result_;
-    }
+    virtual Result result() const { return result_; }
 
-    virtual QStringList mechlist() const {
-        return QStringList();
-    }
+    virtual QStringList mechlist() const { return QStringList(); }
 
-    virtual QString mech() const {
-        return out_mech;
-    }
+    virtual QString mech() const { return out_mech; }
 
-    virtual bool haveClientInit() const {
-        return out_mech == "PLAIN";
-    }
+    virtual bool haveClientInit() const { return out_mech == "PLAIN"; }
 
-    virtual QByteArray stepData() const {
-        return out_buf;
-    }
+    virtual QByteArray stepData() const { return out_buf; }
 
-    virtual QByteArray to_net() {
-        return result_to_net_;
-    }
+    virtual QByteArray to_net() { return result_to_net_; }
 
-    virtual int encoded() const {
-        return encoded_;
-    }
+    virtual int encoded() const { return encoded_; }
 
-    virtual QByteArray to_app() {
-        return result_to_app_;
-    }
+    virtual QByteArray to_app() { return result_to_app_; }
 
-    virtual int ssf() const {
-        return 0;
-    }
+    virtual int ssf() const { return 0; }
 
-    virtual QCA::SASL::AuthCondition authCondition() const {
-        return authCondition_;
-    }
+    virtual QCA::SASL::AuthCondition authCondition() const { return authCondition_; }
 
-    virtual QCA::SASL::Params clientParams() const {
+    virtual QCA::SASL::Params clientParams() const
+    {
         return QCA::SASL::Params(need.user, need.authzid, need.pass, need.realm);
     }
 
-    virtual void setClientParams(const QString *_user, const QString *_authzid, const QCA::SecureArray *_pass, const QString *_realm) {
-        if(_user) {
-            user = *_user;
+    virtual void setClientParams(const QString *_user, const QString *_authzid, const QCA::SecureArray *_pass,
+                                 const QString *_realm)
+    {
+        if (_user) {
+            user      = *_user;
             need.user = false;
             have.user = true;
         }
-        if(_authzid) {
-            authz = *_authzid;
+        if (_authzid) {
+            authz        = *_authzid;
             need.authzid = false;
             have.authzid = true;
         }
-        if(_pass) {
-            pass = *_pass;
+        if (_pass) {
+            pass      = *_pass;
             need.pass = false;
             have.pass = true;
         }
-        if(_realm) {
-            realm = *_realm;
+        if (_realm) {
+            realm      = *_realm;
             need.realm = false;
             have.realm = true;
         }
@@ -401,65 +388,50 @@ ready:
         return QStringList();
     }
 
-    virtual QString username() const {
-        return QString();
-    }
+    virtual QString username() const { return QString(); }
 
-    virtual QString authzid() const {
-        return QString();
-    }
+    virtual QString authzid() const { return QString(); }
 
-    virtual QCA::Provider::Context* clone() const {
-        SimpleSASLContext* s = new SimpleSASLContext(provider());
+    virtual QCA::Provider::Context *clone() const
+    {
+        SimpleSASLContext *s = new SimpleSASLContext(provider());
         // TODO: Copy all the members
         return s;
     }
 
-    virtual void startServer(const QString &, bool) {
-        result_ =  QCA::SASLContext::Error;
+    virtual void startServer(const QString &, bool)
+    {
+        result_ = QCA::SASLContext::Error;
         QMetaObject::invokeMethod(this, "resultsReady", Qt::QueuedConnection);
     }
-    virtual void serverFirstStep(const QString &, const QByteArray *) {
-        result_ =  QCA::SASLContext::Error;
+    virtual void serverFirstStep(const QString &, const QByteArray *)
+    {
+        result_ = QCA::SASLContext::Error;
         QMetaObject::invokeMethod(this, "resultsReady", Qt::QueuedConnection);
     }
-
 };
 
-class QCASimpleSASL : public QCA::Provider
-{
+class QCASimpleSASL : public QCA::Provider {
 public:
     QCASimpleSASL() {}
     ~QCASimpleSASL() {}
 
-    void init()
+    void init() {}
+
+    QString name() const { return "simplesasl"; }
+
+    QStringList features() const { return QStringList("sasl"); }
+
+    QCA::Provider::Context *createContext(const QString &cap)
     {
-    }
-
-    QString name() const {
-        return "simplesasl";
-    }
-
-    QStringList features() const {
-        return QStringList("sasl");
-    }
-
-    QCA::Provider::Context* createContext(const QString& cap)
-    {
-        if(cap == "sasl")
+        if (cap == "sasl")
             return new SimpleSASLContext(this);
         return nullptr;
     }
-    int qcaVersion() const
-    {
-        return QCA_VERSION;
-    }
+    int qcaVersion() const { return QCA_VERSION; }
 };
 
-QCA::Provider *createProviderSimpleSASL()
-{
-    return (new QCASimpleSASL);
-}
+QCA::Provider *createProviderSimpleSASL() { return (new QCASimpleSASL); }
 } // namespace XMPP
 
 #include "simplesasl.moc"

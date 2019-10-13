@@ -21,44 +21,32 @@
 
 using namespace XMPP;
 
-#define D() (d? d:(d=new Private))
+#define D() (d ? d : (d = new Private))
 
 const QString XMPP::MEDIASHARING_NS(QStringLiteral("urn:xmpp:sims:1"));
 const QString XMPP::REFERENCE_NS(QStringLiteral("urn:xmpp:reference:0"));
 
-class Reference::Private : public QSharedData
-{
+class Reference::Private : public QSharedData {
 public:
     Reference::Type type;
-    QString uri;
-    QString anchor;
-    int     begin = -1;
-    int     end   = -1;
-    MediaSharing mediaSharing;
+    QString         uri;
+    QString         anchor;
+    int             begin = -1;
+    int             end   = -1;
+    MediaSharing    mediaSharing;
 };
 
-Reference::Reference()
-{
+Reference::Reference() {}
 
-}
-
-Reference::Reference(Type type, const QString &uri) :
-    d(new Private)
+Reference::Reference(Type type, const QString &uri) : d(new Private)
 {
     d->type = type;
-    d->uri = uri;
+    d->uri  = uri;
 }
 
-Reference::~Reference()
-{
+Reference::~Reference() {}
 
-}
-
-Reference::Reference(const Reference &other) :
-    d(other.d)
-{
-
-}
+Reference::Reference(const Reference &other) : d(other.d) {}
 
 Reference &Reference::operator=(const Reference &other)
 {
@@ -66,58 +54,34 @@ Reference &Reference::operator=(const Reference &other)
     return *this;
 }
 
-Reference::Type Reference::type() const
-{
-    return d->type;
-}
+Reference::Type Reference::type() const { return d->type; }
 
-const QString &Reference::uri() const
-{
-    return d->uri;
-}
+const QString &Reference::uri() const { return d->uri; }
 
 void Reference::setRange(int begin, int end)
 {
     D()->begin = begin;
-    d->end = end;
+    d->end     = end;
 }
 
-int Reference::begin() const
-{
-    return d->begin;
-}
+int Reference::begin() const { return d->begin; }
 
-int Reference::end() const
-{
-    return d->end;
-}
+int Reference::end() const { return d->end; }
 
-const QString &Reference::anchor() const
-{
-    return d->anchor;
-}
+const QString &Reference::anchor() const { return d->anchor; }
 
-void Reference::setAnchor(const QString &anchor)
-{
-    D()->anchor = anchor;
-}
+void Reference::setAnchor(const QString &anchor) { D()->anchor = anchor; }
 
-void Reference::setMediaSharing(const MediaSharing &ms)
-{
-    D()->mediaSharing = ms;
-}
+void Reference::setMediaSharing(const MediaSharing &ms) { D()->mediaSharing = ms; }
 
-const MediaSharing &Reference::mediaSharing() const
-{
-    return d->mediaSharing;
-}
+const MediaSharing &Reference::mediaSharing() const { return d->mediaSharing; }
 
 bool Reference::fromXml(const QDomElement &e)
 {
-    QString type = e.attribute(QString::fromLatin1("type"));
-    QString uri = e.attribute(QString::fromLatin1("uri"));
-    QString begin = e.attribute(QString::fromLatin1("begin"));
-    QString end = e.attribute(QString::fromLatin1("end"));
+    QString type   = e.attribute(QString::fromLatin1("type"));
+    QString uri    = e.attribute(QString::fromLatin1("uri"));
+    QString begin  = e.attribute(QString::fromLatin1("begin"));
+    QString end    = e.attribute(QString::fromLatin1("end"));
     QString anchor = e.attribute(QString::fromLatin1("anchor"));
 
     if (type.isEmpty() || uri.isEmpty()) {
@@ -132,12 +96,12 @@ bool Reference::fromXml(const QDomElement &e)
     else
         return false;
 
-    int beginN = -1, endN = -1;
+    int  beginN = -1, endN = -1;
     bool ok;
-    if (!begin.isEmpty() && !(beginN = begin.toInt(&ok),ok))
+    if (!begin.isEmpty() && !(beginN = begin.toInt(&ok), ok))
         return false;
 
-    if (!end.isEmpty() && !(endN = end.toInt(&ok),ok))
+    if (!end.isEmpty() && !(endN = end.toInt(&ok), ok))
         return false;
 
     if (beginN >= 0 && endN >= 0 && endN < beginN)
@@ -146,10 +110,10 @@ bool Reference::fromXml(const QDomElement &e)
     if ((endN >= 0 && beginN == -1) || (endN == -1 && beginN >= 0))
         return false;
 
-    auto msEl = e.firstChildElement("media-sharing");
+    auto         msEl = e.firstChildElement("media-sharing");
     MediaSharing ms;
     if (msEl.namespaceURI() == MEDIASHARING_NS) {
-        auto fileEl = msEl.firstChildElement("file");
+        auto fileEl    = msEl.firstChildElement("file");
         auto sourcesEl = msEl.firstChildElement("sources");
         if (sourcesEl.isNull() || fileEl.isNull() || fileEl.namespaceURI() != XMPP::Jingle::FileTransfer::NS)
             return false;
@@ -172,11 +136,11 @@ bool Reference::fromXml(const QDomElement &e)
             return false;
     }
 
-    D()->type = t;
-    d->uri = uri;
-    d->begin = beginN;
-    d->end = endN;
-    d->anchor = anchor;
+    D()->type       = t;
+    d->uri          = uri;
+    d->begin        = beginN;
+    d->end          = endN;
+    d->anchor       = anchor;
     d->mediaSharing = ms;
 
     return true;
@@ -189,15 +153,16 @@ QDomElement Reference::toXml(QDomDocument *doc) const
     }
     auto root = doc->createElementNS(REFERENCE_NS, QString::fromLatin1("reference"));
     root.setAttribute(QString::fromLatin1("uri"), d->uri);
-    root.setAttribute(QString::fromLatin1("type"), QString(d->type == Reference::Mention? "mention": "data"));
+    root.setAttribute(QString::fromLatin1("type"), QString(d->type == Reference::Mention ? "mention" : "data"));
 
     if (d->mediaSharing.file.isValid() && d->mediaSharing.sources.count()) {
         auto msEl = doc->createElementNS(MEDIASHARING_NS, QString::fromLatin1("media-sharing"));
         root.appendChild(msEl);
         msEl.appendChild(d->mediaSharing.file.toXml(doc));
         auto sourcesEl = msEl.appendChild(doc->createElement(QString::fromLatin1("sources"))).toElement();
-        for (auto const &s: d->mediaSharing.sources) {
-            auto sEl = sourcesEl.appendChild(doc->createElementNS(REFERENCE_NS, QString::fromLatin1("reference"))).toElement();
+        for (auto const &s : d->mediaSharing.sources) {
+            auto sEl = sourcesEl.appendChild(doc->createElementNS(REFERENCE_NS, QString::fromLatin1("reference")))
+                           .toElement();
             sEl.setAttribute(QString::fromLatin1("uri"), s);
             sEl.setAttribute(QString::fromLatin1("type"), QString::fromLatin1("data"));
         }
@@ -214,4 +179,3 @@ QDomElement Reference::toXml(QDomDocument *doc) const
 
     return root;
 }
-

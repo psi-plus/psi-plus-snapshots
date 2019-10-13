@@ -23,33 +23,22 @@
 #include <QString>
 
 namespace XMPP {
-    class RandomNumberGenerator;
+class RandomNumberGenerator;
 
-    class DIGESTMD5Response
-    {
-        public:
-            DIGESTMD5Response(
-                    const QByteArray& challenge,
-                    const QString& service,
-                    const QString& host,
-                    const QString& realm,
-                    const QString& user,
-                    const QString& authz,
-                    const QByteArray& password,
-                    const RandomNumberGenerator& rand);
+class DIGESTMD5Response {
+public:
+    DIGESTMD5Response(const QByteArray &challenge, const QString &service, const QString &host, const QString &realm,
+                      const QString &user, const QString &authz, const QByteArray &password,
+                      const RandomNumberGenerator &rand);
 
-            const QByteArray& getValue() const {
-                return value_;
-            }
+    const QByteArray &getValue() const { return value_; }
 
-            bool isValid() const {
-                return isValid_;
-            }
+    bool isValid() const { return isValid_; }
 
-        private:
-            bool isValid_;
-            QByteArray value_;
-    };
+private:
+    bool       isValid_;
+    QByteArray value_;
+};
 } // namespace XMPP
 
 #endif // DIGESTMD5RESPONSE_H

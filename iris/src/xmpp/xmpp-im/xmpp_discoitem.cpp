@@ -23,93 +23,79 @@
 
 using namespace XMPP;
 
-class XMPP::DiscoItemPrivate : public QSharedData
-{
+class XMPP::DiscoItemPrivate : public QSharedData {
 public:
-    DiscoItemPrivate()
-    {
-        action = DiscoItem::None;
-    }
+    DiscoItemPrivate() { action = DiscoItem::None; }
 
-    Jid jid;
-    QString name;
-    QString node;
+    Jid               jid;
+    QString           name;
+    QString           node;
     DiscoItem::Action action;
 
-    Features features;
+    Features              features;
     DiscoItem::Identities identities;
-    QList<XData> exts;
+    QList<XData>          exts;
 };
 
-DiscoItem::DiscoItem()
-    : d(new DiscoItemPrivate)
-{
-}
+DiscoItem::DiscoItem() : d(new DiscoItemPrivate) {}
 
-DiscoItem::DiscoItem(const DiscoItem &from)
-    : d(new DiscoItemPrivate)
-{
-    *this = from;
-}
+DiscoItem::DiscoItem(const DiscoItem &from) : d(new DiscoItemPrivate) { *this = from; }
 
-DiscoItem & DiscoItem::operator= (const DiscoItem &from)
+DiscoItem &DiscoItem::operator=(const DiscoItem &from)
 {
-    d->jid = from.d->jid;
-    d->name = from.d->name;
-    d->node = from.d->node;
-    d->action = from.d->action;
-    d->features = from.d->features;
+    d->jid        = from.d->jid;
+    d->name       = from.d->name;
+    d->node       = from.d->node;
+    d->action     = from.d->action;
+    d->features   = from.d->features;
     d->identities = from.d->identities;
-    d->exts = from.d->exts;
+    d->exts       = from.d->exts;
 
     return *this;
 }
 
-DiscoItem::~DiscoItem()
-{
-
-}
+DiscoItem::~DiscoItem() {}
 
 AgentItem DiscoItem::toAgentItem() const
 {
     AgentItem ai;
 
-    ai.setJid( jid() );
-    ai.setName( name() );
+    ai.setJid(jid());
+    ai.setName(name());
 
     Identity id;
-    if ( !identities().isEmpty() )
+    if (!identities().isEmpty())
         id = identities().first();
 
-    ai.setCategory( id.category );
-    ai.setType( id.type );
+    ai.setCategory(id.category);
+    ai.setType(id.type);
 
-    ai.setFeatures( d->features );
+    ai.setFeatures(d->features);
 
     return ai;
 }
 
 void DiscoItem::fromAgentItem(const AgentItem &ai)
 {
-    setJid( ai.jid() );
-    setName( ai.name() );
+    setJid(ai.jid());
+    setName(ai.name());
 
     Identity id;
     id.category = ai.category();
-    id.type = ai.type();
-    id.name = ai.name();
+    id.type     = ai.type();
+    id.name     = ai.name();
 
     Identities idList;
     idList << id;
 
-    setIdentities( idList );
+    setIdentities(idList);
 
-    setFeatures( ai.features() );
+    setFeatures(ai.features());
 }
 
 QString DiscoItem::capsHash(QCryptographicHash::Algorithm algo) const
 {
-    QStringList prep;
+    QStringList           prep;
     DiscoItem::Identities idents = d->identities;
     std::sort(idents.begin(), idents.end());
 
@@ -121,7 +107,7 @@ QString DiscoItem::capsHash(QCryptographicHash::Algorithm algo) const
     std::sort(fl.begin(), fl.end());
     prep += fl;
 
-    QMap<QString,XData> forms;
+    QMap<QString, XData> forms;
     foreach (const XData &xd, d->exts) {
         if (xd.registrarType().isEmpty()) {
             continue;
@@ -133,7 +119,7 @@ QString DiscoItem::capsHash(QCryptographicHash::Algorithm algo) const
     }
     foreach (const XData &xd, forms.values()) {
         prep << xd.registrarType();
-        QMap <QString, QStringList> values;
+        QMap<QString, QStringList> values;
         foreach (const XData::Field &f, xd.fields()) {
             if (f.var() == QLatin1String("FORM_TYPE")) {
                 continue;
@@ -148,7 +134,7 @@ QString DiscoItem::capsHash(QCryptographicHash::Algorithm algo) const
             std::sort(v.begin(), v.end());
             values[f.var()] = v;
         }
-        QMap <QString, QStringList>::ConstIterator it = values.constBegin();
+        QMap<QString, QStringList>::ConstIterator it = values.constBegin();
         for (; it != values.constEnd(); ++it) {
             prep += it.key();
             prep += it.value();
@@ -156,7 +142,7 @@ QString DiscoItem::capsHash(QCryptographicHash::Algorithm algo) const
     }
 
     QByteArray ba = QString(prep.join(QLatin1String("<")) + QLatin1Char('<')).toUtf8();
-    //qDebug() << "Server caps ver: " << (prep.join(QLatin1String("<")) + QLatin1Char('<'))
+    // qDebug() << "Server caps ver: " << (prep.join(QLatin1String("<")) + QLatin1Char('<'))
     //         << "Hash:" << QString::fromLatin1(QCryptographicHash::hash(ba, algo).toBase64());
     return QString::fromLatin1(QCryptographicHash::hash(ba, algo).toBase64());
 }
@@ -165,21 +151,20 @@ DiscoItem DiscoItem::fromDiscoInfoResult(const QDomElement &q)
 {
     DiscoItem item;
 
-    item.setNode( q.attribute("node") );
+    item.setNode(q.attribute("node"));
 
-    QStringList features;
+    QStringList           features;
     DiscoItem::Identities identities;
-    QList<XData> extList;
+    QList<XData>          extList;
 
-    for(QDomNode n = q.firstChild(); !n.isNull(); n = n.nextSibling()) {
+    for (QDomNode n = q.firstChild(); !n.isNull(); n = n.nextSibling()) {
         QDomElement e = n.toElement();
-        if( e.isNull() )
+        if (e.isNull())
             continue;
 
-        if ( e.tagName() == "feature" ) {
+        if (e.tagName() == "feature") {
             features << e.attribute("var");
-        }
-        else if ( e.tagName() == "identity" ) {
+        } else if (e.tagName() == "identity") {
             DiscoItem::Identity id;
 
             id.category = e.attribute("category");
@@ -187,25 +172,25 @@ DiscoItem DiscoItem::fromDiscoInfoResult(const QDomElement &q)
             id.lang     = e.attribute("lang");
             id.name     = e.attribute("name");
 
-            identities.append( id );
-        }
-        else if (e.tagName() == QLatin1String("x") && e.namespaceURI() == QLatin1String("jabber:x:data")) {
+            identities.append(id);
+        } else if (e.tagName() == QLatin1String("x") && e.namespaceURI() == QLatin1String("jabber:x:data")) {
             XData form;
             form.fromXml(e);
             extList.append(form);
         }
     }
 
-    item.setFeatures( features );
-    item.setIdentities( identities );
-    item.setExtensions( extList );
+    item.setFeatures(features);
+    item.setIdentities(identities);
+    item.setExtensions(extList);
 
     return item;
 }
 
 QDomElement DiscoItem::toDiscoInfoResult(QDomDocument *doc) const
 {
-    QDomElement q = doc->createElementNS(QLatin1String("http://jabber.org/protocol/disco#info"), QLatin1String("query"));
+    QDomElement q
+        = doc->createElementNS(QLatin1String("http://jabber.org/protocol/disco#info"), QLatin1String("query"));
     q.setAttribute("node", d->node);
 
     foreach (const Identity &id, d->identities) {
@@ -232,78 +217,39 @@ QDomElement DiscoItem::toDiscoInfoResult(QDomDocument *doc) const
     return q;
 }
 
-const Jid &DiscoItem::jid() const
-{
-    return d->jid;
-}
+const Jid &DiscoItem::jid() const { return d->jid; }
 
-void DiscoItem::setJid(const Jid &j)
-{
-    d->jid = j;
-}
+void DiscoItem::setJid(const Jid &j) { d->jid = j; }
 
-const QString &DiscoItem::name() const
-{
-    return d->name;
-}
+const QString &DiscoItem::name() const { return d->name; }
 
-void DiscoItem::setName(const QString &n)
-{
-    d->name = n;
-}
+void DiscoItem::setName(const QString &n) { d->name = n; }
 
-const QString &DiscoItem::node() const
-{
-    return d->node;
-}
+const QString &DiscoItem::node() const { return d->node; }
 
-void DiscoItem::setNode(const QString &n)
-{
-    d->node = n;
-}
+void DiscoItem::setNode(const QString &n) { d->node = n; }
 
-DiscoItem::Action DiscoItem::action() const
-{
-    return d->action;
-}
+DiscoItem::Action DiscoItem::action() const { return d->action; }
 
-void DiscoItem::setAction(Action a)
-{
-    d->action = a;
-}
+void DiscoItem::setAction(Action a) { d->action = a; }
 
-const Features &DiscoItem::features() const
-{
-    return d->features;
-}
+const Features &DiscoItem::features() const { return d->features; }
 
-void DiscoItem::setFeatures(const Features &f)
-{
-    d->features = f;
-}
+void DiscoItem::setFeatures(const Features &f) { d->features = f; }
 
-const DiscoItem::Identities &DiscoItem::identities() const
-{
-    return d->identities;
-}
+const DiscoItem::Identities &DiscoItem::identities() const { return d->identities; }
 
 void DiscoItem::setIdentities(const Identities &i)
 {
     d->identities = i;
 
-    if ( name().isEmpty() && i.count() )
-        setName( i.first().name );
+    if (name().isEmpty() && i.count())
+        setName(i.first().name);
 }
 
-const QList<XData> &DiscoItem::extensions() const
-{
-    return d->exts;
-}
+const QList<XData> &DiscoItem::extensions() const { return d->exts; }
 
-void DiscoItem::setExtensions(const QList<XData> &extlist)
-{
-    d->exts = extlist;
-}
+void DiscoItem::setExtensions(const QList<XData> &extlist) { d->exts = extlist; }
 
 XData DiscoItem::registeredExtension(const QString &ns) const
 {
@@ -319,9 +265,9 @@ DiscoItem::Action DiscoItem::string2action(const QString &s)
 {
     Action a;
 
-    if ( s == "update" )
+    if (s == "update")
         a = Update;
-    else if ( s == "remove" )
+    else if (s == "remove")
         a = Remove;
     else
         a = None;
@@ -333,9 +279,9 @@ QString DiscoItem::action2string(const Action a)
 {
     QString s;
 
-    if ( a == Update )
+    if (a == Update)
         s = "update";
-    else if ( a == Remove )
+    else if (a == Remove)
         s = "remove";
     else
         s = QString();
@@ -361,6 +307,5 @@ bool XMPP::operator<(const DiscoItem::Identity &a, const DiscoItem::Identity &b)
 
 bool DiscoItem::Identity::operator==(const DiscoItem::Identity &other) const
 {
-    return category == other.category && type == other.type &&
-            lang == other.lang && name == other.name;
+    return category == other.category && type == other.type && lang == other.lang && name == other.name;
 }

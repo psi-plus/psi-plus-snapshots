@@ -28,7 +28,7 @@ class QHostAddress;
 class QUdpSocket;
 
 namespace QCA {
-    class SecureArray;
+class SecureArray;
 }
 
 namespace XMPP {
@@ -36,15 +36,11 @@ namespace XMPP {
 //   relationship with an associated STUN/TURN server.  if TURN is used, this
 //   class offers two paths (0=direct and 1=relayed), otherwise it offers
 //   just one path (0=direct)
-class IceLocalTransport : public IceTransport
-{
+class IceLocalTransport : public IceTransport {
     Q_OBJECT
 
 public:
-    enum Error
-    {
-        ErrorBind = ErrorCustom
-    };
+    enum Error { ErrorBind = ErrorCustom };
 
     IceLocalTransport(QObject *parent = nullptr);
     ~IceLocalTransport();
@@ -66,21 +62,21 @@ public:
     void stunStart();
 
     QHostAddress localAddress() const;
-    int localPort() const;
+    int          localPort() const;
 
     QHostAddress serverReflexiveAddress() const;
-    int serverReflexivePort() const;
+    int          serverReflexivePort() const;
 
     QHostAddress relayedAddress() const;
-    int relayedPort() const;
+    int          relayedPort() const;
 
     // reimplemented
-    virtual void stop();
-    virtual bool hasPendingDatagrams(int path) const;
+    virtual void       stop();
+    virtual bool       hasPendingDatagrams(int path) const;
     virtual QByteArray readDatagram(int path, QHostAddress *addr, int *port);
-    virtual void writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port);
-    virtual void addChannelPeer(const QHostAddress &addr, int port);
-    virtual void setDebugLevel(DebugLevel level);
+    virtual void       writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port);
+    virtual void       addChannelPeer(const QHostAddress &addr, int port);
+    virtual void       setDebugLevel(DebugLevel level);
 
 signals:
     // may be emitted multiple times.

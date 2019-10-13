@@ -31,107 +31,88 @@ class NetGatewayProvider;
 class NetInterfaceProvider;
 class ServiceProvider;
 
-class IRISNET_EXPORT IrisNetProvider : public QObject
-{
+class IRISNET_EXPORT IrisNetProvider : public QObject {
     Q_OBJECT
 
 public:
-    virtual NetInterfaceProvider *createNetInterfaceProvider();
-    virtual NetGatewayProvider *createNetGatewayProvider();
+    virtual NetInterfaceProvider *   createNetInterfaceProvider();
+    virtual NetGatewayProvider *     createNetGatewayProvider();
     virtual NetAvailabilityProvider *createNetAvailabilityProvider();
-    virtual NameProvider *createNameProviderInternet();
-    virtual NameProvider *createNameProviderLocal();
-    virtual ServiceProvider *createServiceProvider();
+    virtual NameProvider *           createNameProviderInternet();
+    virtual NameProvider *           createNameProviderLocal();
+    virtual ServiceProvider *        createServiceProvider();
 };
 
-class IRISNET_EXPORT NetInterfaceProvider : public QObject
-{
+class IRISNET_EXPORT NetInterfaceProvider : public QObject {
     Q_OBJECT
 
 public:
-    class Info
-    {
+    class Info {
     public:
-        QString id, name;
-        bool isLoopback;
+        QString             id, name;
+        bool                isLoopback;
         QList<QHostAddress> addresses;
     };
 
-    NetInterfaceProvider(QObject *parent = nullptr) :
-        QObject(parent)
-    {
-    }
+    NetInterfaceProvider(QObject *parent = nullptr) : QObject(parent) {}
 
     // calling start should populate an initial list that can be
     //   immediately fetched.  do not signal updated() for this.
-    virtual void start() = 0;
+    virtual void        start()            = 0;
     virtual QList<Info> interfaces() const = 0;
 
 signals:
     void updated();
 };
 
-class IRISNET_EXPORT NetGatewayProvider : public QObject
-{
+class IRISNET_EXPORT NetGatewayProvider : public QObject {
     Q_OBJECT
 
 public:
-    class Info
-    {
+    class Info {
     public:
-        QString ifaceId;
+        QString      ifaceId;
         QHostAddress gateway;
     };
 
-    NetGatewayProvider(QObject *parent = nullptr) :
-        QObject(parent)
-    {
-    }
+    NetGatewayProvider(QObject *parent = nullptr) : QObject(parent) {}
 
     // calling start should populate an initial list that can be
     //   immediately fetched.  do not signal updated() for this.
-    virtual void start() = 0;
+    virtual void        start()          = 0;
     virtual QList<Info> gateways() const = 0;
 
 signals:
     void updated();
 };
 
-class IRISNET_EXPORT NetAvailabilityProvider : public QObject
-{
+class IRISNET_EXPORT NetAvailabilityProvider : public QObject {
     Q_OBJECT
 
 public:
-    NetAvailabilityProvider(QObject *parent = nullptr) :
-        QObject(parent)
-    {
-    }
+    NetAvailabilityProvider(QObject *parent = nullptr) : QObject(parent) {}
 
     // calling start should populate an initial value that can be
     //   immediately fetched.  do not signal updated() for this.
-    virtual void start() = 0;
+    virtual void start()             = 0;
     virtual bool isAvailable() const = 0;
 
 signals:
     void updated();
 };
 
-class IRISNET_EXPORT NameProvider : public QObject
-{
+class IRISNET_EXPORT NameProvider : public QObject {
     Q_OBJECT
 
 public:
-    NameProvider(QObject *parent = nullptr) :
-        QObject(parent)
-    {
-    }
+    NameProvider(QObject *parent = nullptr) : QObject(parent) {}
 
     virtual bool supportsSingle() const;
     virtual bool supportsLongLived() const;
     virtual bool supportsRecordType(int type) const;
 
-    virtual int resolve_start(const QByteArray &name, int qType, bool longLived) = 0;
-    virtual void resolve_stop(int id) = 0;
+    virtual int  resolve_start(const QByteArray &name, int qType, bool longLived) = 0;
+    virtual void resolve_stop(int id)                                             = 0;
 
     // transfer from local back to internet
     virtual void resolve_localResultsReady(int id, const QList<XMPP::NameRecord> &results);
@@ -145,35 +126,32 @@ signals:
     void resolve_useLocal(int id, const QByteArray &name);
 };
 
-class IRISNET_EXPORT ServiceProvider : public QObject
-{
+class IRISNET_EXPORT ServiceProvider : public QObject {
     Q_OBJECT
 
 public:
-    class ResolveResult
-    {
+    class ResolveResult {
     public:
-        QMap<QString,QByteArray> attributes;
-        QHostAddress address;
-        int port;
-        QByteArray hostName; // optional
+        QMap<QString, QByteArray> attributes;
+        QHostAddress              address;
+        int                       port;
+        QByteArray                hostName; // optional
     };
 
-    ServiceProvider(QObject *parent = nullptr) :
-        QObject(parent)
-    {
-    }
+    ServiceProvider(QObject *parent = nullptr) : QObject(parent) {}
 
-    virtual int browse_start(const QString &type, const QString &domain) = 0;
-    virtual void browse_stop(int id) = 0;
-    virtual int resolve_start(const QByteArray &name) = 0;
-    virtual void resolve_stop(int id) = 0;
-    virtual int publish_start(const QString &instance, const QString &type, int port, const QMap<QString,QByteArray> &attributes) = 0;
-    virtual void publish_update(int id, const QMap<QString,QByteArray> &attributes) = 0;
-    virtual void publish_stop(int id) = 0;
-    virtual int publish_extra_start(int pub_id, const NameRecord &name) = 0;
-    virtual void publish_extra_update(int id, const NameRecord &name) = 0;
-    virtual void publish_extra_stop(int id) = 0;
+    virtual int  browse_start(const QString &type, const QString &domain) = 0;
+    virtual void browse_stop(int id)                                      = 0;
+    virtual int  resolve_start(const QByteArray &name)                    = 0;
+    virtual void resolve_stop(int id)                                     = 0;
+    virtual int  publish_start(const QString &instance, const QString &type, int port,
+                               const QMap<QString, QByteArray> &attributes)
+        = 0;
+    virtual void publish_update(int id, const QMap<QString, QByteArray> &attributes) = 0;
+    virtual void publish_stop(int id)                                                = 0;
+    virtual int  publish_extra_start(int pub_id, const NameRecord &name)             = 0;
+    virtual void publish_extra_update(int id, const NameRecord &name)                = 0;
+    virtual void publish_extra_stop(int id)                                          = 0;
 
 signals:
     void browse_instanceAvailable(int id, const XMPP::ServiceInstance &instance);
@@ -192,10 +170,10 @@ signals:
 };
 } // namespace XMPP
 
-Q_DECLARE_INTERFACE(XMPP::NetGatewayProvider,   "com.affinix.irisnet.IrisGatewayProvider/1.0")
-Q_DECLARE_INTERFACE(XMPP::IrisNetProvider,      "com.affinix.irisnet.IrisNetProvider/1.0")
+Q_DECLARE_INTERFACE(XMPP::NetGatewayProvider, "com.affinix.irisnet.IrisGatewayProvider/1.0")
+Q_DECLARE_INTERFACE(XMPP::IrisNetProvider, "com.affinix.irisnet.IrisNetProvider/1.0")
 Q_DECLARE_INTERFACE(XMPP::NetInterfaceProvider, "com.affinix.irisnet.NetInterfaceProvider/2.0")
-Q_DECLARE_INTERFACE(XMPP::NameProvider,         "com.affinix.irisnet.NameProvider/1.0")
-Q_DECLARE_INTERFACE(XMPP::ServiceProvider,      "com.affinix.irisnet.ServiceProvider/1.0")
+Q_DECLARE_INTERFACE(XMPP::NameProvider, "com.affinix.irisnet.NameProvider/1.0")
+Q_DECLARE_INTERFACE(XMPP::ServiceProvider, "com.affinix.irisnet.ServiceProvider/1.0")
 
 #endif // IRISNETPLUGIN_H

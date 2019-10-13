@@ -21,11 +21,7 @@
 #define XMPP_RECEIPTS_H
 
 namespace XMPP {
-    typedef enum {
-        ReceiptNone,
-        ReceiptRequest,
-        ReceiptReceived
-    } MessageReceipt;
+typedef enum { ReceiptNone, ReceiptRequest, ReceiptReceived } MessageReceipt;
 } // namespace XMPP
 
 #endif // XMPP_RECEIPTS_H

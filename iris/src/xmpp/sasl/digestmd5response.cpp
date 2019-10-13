@@ -26,23 +26,26 @@
 #include <QtDebug>
 
 namespace XMPP {
-DIGESTMD5Response::DIGESTMD5Response(const QByteArray& challenge, const QString& service, const QString& host, const QString& arealm, const QString& user, const QString& authz,  const QByteArray& password, const RandomNumberGenerator& rand) : isValid_(true)
+DIGESTMD5Response::DIGESTMD5Response(const QByteArray &challenge, const QString &service, const QString &host,
+                                     const QString &arealm, const QString &user, const QString &authz,
+                                     const QByteArray &password, const RandomNumberGenerator &rand) :
+    isValid_(true)
 {
     QString realm = arealm;
 
     // get props
     DIGESTMD5PropList in;
-    if(!in.fromString(challenge)) {
+    if (!in.fromString(challenge)) {
         isValid_ = false;
         return;
     }
-    //qDebug() << (QString("simplesasl.cpp: IN: %1").arg(QString(in.toString())));
+    // qDebug() << (QString("simplesasl.cpp: IN: %1").arg(QString(in.toString())));
 
     // make a cnonce
     QByteArray a;
     a.resize(32);
-    for(int n = 0; n < (int)a.size(); ++n) {
-        a[n] = (char) rand.generateNumberBetween(0, 255);
+    for (int n = 0; n < (int)a.size(); ++n) {
+        a[n] = (char)rand.generateNumberBetween(0, 255);
     }
     QByteArray cnonce = a.toBase64();
 
@@ -51,28 +54,28 @@ DIGESTMD5Response::DIGESTMD5Response(const QByteArray& challenge, const QString&
         realm = QString::fromUtf8(in.get("realm"));
     }
     QByteArray nonce = in.get("nonce");
-    QByteArray nc = "00000001";
-    QByteArray uri = service.toUtf8() + '/' + host.toUtf8();
-    QByteArray qop = "auth";
+    QByteArray nc    = "00000001";
+    QByteArray uri   = service.toUtf8() + '/' + host.toUtf8();
+    QByteArray qop   = "auth";
 
     // build 'response'
-    QByteArray X = user.toUtf8() + ':' + realm.toUtf8() + ':' + password;
-    QByteArray Y = QCA::Hash("md5").hash(X).toByteArray();
+    QByteArray X   = user.toUtf8() + ':' + realm.toUtf8() + ':' + password;
+    QByteArray Y   = QCA::Hash("md5").hash(X).toByteArray();
     QByteArray tmp = ':' + nonce + ':' + cnonce;
     if (!authz.isEmpty())
         tmp += ':' + authz.toUtf8();
-    //qDebug() << (QString(tmp));
+    // qDebug() << (QString(tmp));
 
     QByteArray A1(Y + tmp);
-    QByteArray A2 = QByteArray("AUTHENTICATE:") + uri;
+    QByteArray A2  = QByteArray("AUTHENTICATE:") + uri;
     QByteArray HA1 = QCA::Hash("md5").hashToString(A1).toLatin1();
     QByteArray HA2 = QCA::Hash("md5").hashToString(A2).toLatin1();
-    QByteArray KD = HA1 + ':' + nonce + ':' + nc + ':' + cnonce + ':' + qop + ':' + HA2;
-    QByteArray Z = QCA::Hash("md5").hashToString(KD).toLatin1();
+    QByteArray KD  = HA1 + ':' + nonce + ':' + nc + ':' + cnonce + ':' + qop + ':' + HA2;
+    QByteArray Z   = QCA::Hash("md5").hashToString(KD).toLatin1();
 
-    //qDebug() << QString("simplesasl.cpp: A1 = %1").arg(QString(A1));
-    //qDebug() << QString("simplesasl.cpp: A2 = %1").arg(QString(A2));
-    //qDebug() << QString("simplesasl.cpp: KD = %1").arg(QString(KD));
+    // qDebug() << QString("simplesasl.cpp: A1 = %1").arg(QString(A1));
+    // qDebug() << QString("simplesasl.cpp: A2 = %1").arg(QString(A2));
+    // qDebug() << QString("simplesasl.cpp: KD = %1").arg(QString(KD));
 
     // build output
     DIGESTMD5PropList out;
@@ -82,14 +85,14 @@ DIGESTMD5Response::DIGESTMD5Response(const QByteArray& challenge, const QString&
     out.set("nonce", nonce);
     out.set("cnonce", cnonce);
     out.set("nc", nc);
-    //out.set("serv-type", service.toUtf8());
-    //out.set("host", host.toUtf8());
+    // out.set("serv-type", service.toUtf8());
+    // out.set("host", host.toUtf8());
     out.set("digest-uri", uri);
     out.set("qop", qop);
     out.set("response", Z);
     out.set("charset", "utf-8");
     if (!authz.isEmpty())
         out.set("authzid", authz.toUtf8());
-    value_  = out.toString();
+    value_ = out.toString();
 }
 } // namespace XMPP

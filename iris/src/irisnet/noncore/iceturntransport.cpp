@@ -23,28 +23,23 @@
 #include <QtCrypto>
 
 namespace XMPP {
-class IceTurnTransport::Private : public QObject
-{
+class IceTurnTransport::Private : public QObject {
     Q_OBJECT
 
 public:
     IceTurnTransport *q;
-    int mode;
-    QHostAddress serverAddr;
-    int serverPort;
-    QString relayUser;
-    QCA::SecureArray relayPass;
-    QHostAddress relayAddr;
-    int relayPort;
-    TurnClient turn;
-    int turnErrorCode;
-    int debugLevel;
+    int               mode;
+    QHostAddress      serverAddr;
+    int               serverPort;
+    QString           relayUser;
+    QCA::SecureArray  relayPass;
+    QHostAddress      relayAddr;
+    int               relayPort;
+    TurnClient        turn;
+    int               turnErrorCode;
+    int               debugLevel;
 
-    Private(IceTurnTransport *_q) :
-        QObject(_q),
-        q(_q),
-        turn(this),
-        debugLevel(IceTransport::DL_None)
+    Private(IceTurnTransport *_q) : QObject(_q), q(_q), turn(this), debugLevel(IceTransport::DL_None)
     {
         connect(&turn, SIGNAL(connected()), SLOT(turn_connected()));
         connect(&turn, SIGNAL(tlsHandshaken()), SLOT(turn_tlsHandshaken()));
@@ -53,7 +48,8 @@ public:
         connect(&turn, SIGNAL(retrying()), SLOT(turn_retrying()));
         connect(&turn, SIGNAL(activated()), SLOT(turn_activated()));
         connect(&turn, SIGNAL(readyRead()), SLOT(turn_readyRead()));
-        connect(&turn, SIGNAL(packetsWritten(int,QHostAddress,int)), SLOT(turn_packetsWritten(int,QHostAddress,int)));
+        connect(&turn, SIGNAL(packetsWritten(int, QHostAddress, int)),
+                SLOT(turn_packetsWritten(int, QHostAddress, int)));
         connect(&turn, SIGNAL(error(XMPP::TurnClient::Error)), SLOT(turn_error(XMPP::TurnClient::Error)));
         connect(&turn, SIGNAL(debugLine(QString)), SLOT(turn_debugLine(QString)));
     }
@@ -65,27 +61,24 @@ public:
         turn.connectToHost(serverAddr, serverPort, (TurnClient::Mode)mode);
     }
 
-    void stop()
-    {
-        turn.close();
-    }
+    void stop() { turn.close(); }
 
 private slots:
     void turn_connected()
     {
-        if(debugLevel >= IceTransport::DL_Info)
+        if (debugLevel >= IceTransport::DL_Info)
             emit q->debugLine("turn_connected");
     }
 
     void turn_tlsHandshaken()
     {
-        if(debugLevel >= IceTransport::DL_Info)
+        if (debugLevel >= IceTransport::DL_Info)
             emit q->debugLine("turn_tlsHandshaken");
     }
 
     void turn_closed()
     {
-        if(debugLevel >= IceTransport::DL_Info)
+        if (debugLevel >= IceTransport::DL_Info)
             emit q->debugLine("turn_closed");
 
         emit q->stopped();
@@ -102,7 +95,7 @@ private slots:
 
     void turn_retrying()
     {
-        if(debugLevel >= IceTransport::DL_Info)
+        if (debugLevel >= IceTransport::DL_Info)
             emit q->debugLine("turn_retrying");
     }
 
@@ -111,12 +104,12 @@ private slots:
         StunAllocate *allocate = turn.stunAllocate();
 
         QHostAddress saddr = allocate->reflexiveAddress();
-        quint16 sport = allocate->reflexivePort();
-        if(debugLevel >= IceTransport::DL_Info)
+        quint16      sport = allocate->reflexivePort();
+        if (debugLevel >= IceTransport::DL_Info)
             emit q->debugLine(QString("Server says we are ") + saddr.toString() + ';' + QString::number(sport));
         saddr = allocate->relayedAddress();
         sport = allocate->relayedPort();
-        if(debugLevel >= IceTransport::DL_Info)
+        if (debugLevel >= IceTransport::DL_Info)
             emit q->debugLine(QString("Server relays via ") + saddr.toString() + ';' + QString::number(sport));
 
         relayAddr = saddr;
@@ -125,10 +118,7 @@ private slots:
         emit q->started();
     }
 
-    void turn_readyRead()
-    {
-        emit q->readyRead(0);
-    }
+    void turn_readyRead() { emit q->readyRead(0); }
 
     void turn_packetsWritten(int count, const QHostAddress &addr, int port)
     {
@@ -137,82 +127,48 @@ private slots:
 
     void turn_error(XMPP::TurnClient::Error e)
     {
-        if(debugLevel >= IceTransport::DL_Info)
+        if (debugLevel >= IceTransport::DL_Info)
             emit q->debugLine(QString("turn_error: ") + turn.errorString());
 
         turnErrorCode = e;
         emit q->error(IceTurnTransport::ErrorTurn);
     }
 
-    void turn_debugLine(const QString &line)
-    {
-        emit q->debugLine(line);
-    }
+    void turn_debugLine(const QString &line) { emit q->debugLine(line); }
 };
 
-IceTurnTransport::IceTurnTransport(QObject *parent) :
-    IceTransport(parent)
-{
-    d = new Private(this);
-}
+IceTurnTransport::IceTurnTransport(QObject *parent) : IceTransport(parent) { d = new Private(this); }
 
-IceTurnTransport::~IceTurnTransport()
-{
-    delete d;
-}
+IceTurnTransport::~IceTurnTransport() { delete d; }
 
 void IceTurnTransport::setClientSoftwareNameAndVersion(const QString &str)
 {
     d->turn.setClientSoftwareNameAndVersion(str);
 }
 
-void IceTurnTransport::setUsername(const QString &user)
-{
-    d->relayUser = user;
-}
+void IceTurnTransport::setUsername(const QString &user) { d->relayUser = user; }
 
-void IceTurnTransport::setPassword(const QCA::SecureArray &pass)
-{
-    d->relayPass = pass;
-}
+void IceTurnTransport::setPassword(const QCA::SecureArray &pass) { d->relayPass = pass; }
 
-void IceTurnTransport::setProxy(const TurnClient::Proxy &proxy)
-{
-    d->turn.setProxy(proxy);
-}
+void IceTurnTransport::setProxy(const TurnClient::Proxy &proxy) { d->turn.setProxy(proxy); }
 
 void IceTurnTransport::start(const QHostAddress &addr, int port, TurnClient::Mode mode)
 {
     d->serverAddr = addr;
     d->serverPort = port;
-    d->mode = mode;
+    d->mode       = mode;
     d->start();
 }
 
-QHostAddress IceTurnTransport::relayedAddress() const
-{
-    return d->relayAddr;
-}
+QHostAddress IceTurnTransport::relayedAddress() const { return d->relayAddr; }
 
-int IceTurnTransport::relayedPort() const
-{
-    return d->relayPort;
-}
+int IceTurnTransport::relayedPort() const { return d->relayPort; }
 
-void IceTurnTransport::addChannelPeer(const QHostAddress &addr, int port)
-{
-    d->turn.addChannelPeer(addr, port);
-}
+void IceTurnTransport::addChannelPeer(const QHostAddress &addr, int port) { d->turn.addChannelPeer(addr, port); }
 
-TurnClient::Error IceTurnTransport::turnErrorCode() const
-{
-    return (TurnClient::Error)d->turnErrorCode;
-}
+TurnClient::Error IceTurnTransport::turnErrorCode() const { return (TurnClient::Error)d->turnErrorCode; }
 
-void IceTurnTransport::stop()
-{
-    d->stop();
-}
+void IceTurnTransport::stop() { d->stop(); }
 
 bool IceTurnTransport::hasPendingDatagrams(int path) const
 {

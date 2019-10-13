@@ -22,26 +22,25 @@
 class QString;
 
 namespace XMPP {
-    class Url
-    {
-    public:
-        Url(const QString &url="", const QString &desc="");
-        Url(const Url &);
-        Url & operator=(const Url &);
-        ~Url();
+class Url {
+public:
+    Url(const QString &url = "", const QString &desc = "");
+    Url(const Url &);
+    Url &operator=(const Url &);
+    ~Url();
 
-        QString url() const;
-        QString desc() const;
+    QString url() const;
+    QString desc() const;
 
-        void setUrl(const QString &);
-        void setDesc(const QString &);
+    void setUrl(const QString &);
+    void setDesc(const QString &);
 
-    private:
-        class Private;
-        Private *d;
-    };
+private:
+    class Private;
+    Private *d;
+};
 
-    typedef QList<Url> UrlList;
+typedef QList<Url> UrlList;
 } // namespace XMPP
 
 #endif // XMPP_URL

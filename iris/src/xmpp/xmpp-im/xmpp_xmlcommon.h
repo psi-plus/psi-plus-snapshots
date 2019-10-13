@@ -48,10 +48,7 @@ public:
 
     bool operator==(const XDomNodeList &a) const;
 
-    bool operator!=(const XDomNodeList &a) const
-    {
-        return !operator==(a);
-    }
+    bool operator!=(const XDomNodeList &a) const { return !operator==(a); }
 
 private:
     QList<QDomNode> list;
@@ -72,7 +69,7 @@ QDomElement  addCorrectNS(const QDomElement &e);
 
 namespace XMLHelper {
 
-//QDomElement findSubTag(const QDomElement &e, const QString &name, bool *found);
+// QDomElement findSubTag(const QDomElement &e, const QString &name, bool *found);
 bool hasSubTag(const QDomElement &e, const QString &name);
 
 QDomElement emptyTag(QDomDocument *doc, const QString &name);
@@ -100,7 +97,7 @@ void xmlToStringList(const QDomElement &e, const QString &name, QStringList *v);
 void setBoolAttribute(QDomElement e, const QString &name, bool b);
 void readBoolAttribute(QDomElement e, const QString &name, bool *v);
 
-//QString tagContent(const QDomElement &e); // obsolete;
+// QString tagContent(const QDomElement &e); // obsolete;
 QString sanitizedLang(const QString &lang);
 
 } // namespace XMLHelper

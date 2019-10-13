@@ -35,199 +35,193 @@
 #include <QtCrypto> // For QCA::SASL::Params
 
 #ifndef CS_XMPP
-    class ByteStream;
+class ByteStream;
 #endif
 
 namespace QCA {
-    class TLS;
+class TLS;
 };
 
 namespace XMPP {
-    // CS_IMPORT_BEGIN cutestuff/bytestream.h
+// CS_IMPORT_BEGIN cutestuff/bytestream.h
 #ifdef CS_XMPP
-    class ByteStream;
+class ByteStream;
 #endif
-    // CS_IMPORT_END
+// CS_IMPORT_END
 
-    class Debug
-    {
+class Debug {
+public:
+    virtual ~Debug();
+
+    virtual void msg(const QString &)             = 0;
+    virtual void outgoingTag(const QString &)     = 0;
+    virtual void incomingTag(const QString &)     = 0;
+    virtual void outgoingXml(const QDomElement &) = 0;
+    virtual void incomingXml(const QDomElement &) = 0;
+};
+
+void setDebug(Debug *);
+
+class Connector : public QObject {
+    Q_OBJECT
+public:
+    Connector(QObject *parent = nullptr);
+    virtual ~Connector();
+
+    virtual void        setOptHostPort(const QString &host, quint16 port) = 0;
+    virtual void        connectToServer(const QString &server)            = 0;
+    virtual ByteStream *stream() const                                    = 0;
+    virtual void        done()                                            = 0;
+
+    bool         useSSL() const;
+    bool         havePeerAddress() const;
+    QHostAddress peerAddress() const;
+    quint16      peerPort() const;
+
+    virtual QString host() const;
+
+signals:
+    void connected();
+    void error();
+
+protected:
+    void setUseSSL(bool b);
+    void setPeerAddressNone();
+    void setPeerAddress(const QHostAddress &addr, quint16 port);
+
+private:
+    bool         ssl; // a flag to start ssl handshake immediately
+    bool         haveaddr;
+    QHostAddress addr;
+    quint16      port;
+};
+
+class AdvancedConnector : public Connector {
+    Q_OBJECT
+public:
+    enum Error { ErrConnectionRefused, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth, ErrStream };
+    AdvancedConnector(QObject *parent = nullptr);
+    virtual ~AdvancedConnector();
+
+    class Proxy {
     public:
-        virtual ~Debug();
+        enum { None, HttpConnect, HttpPoll, Socks };
+        Proxy() = default;
+        ~Proxy() {}
 
-        virtual void msg(const QString &)=0;
-        virtual void outgoingTag(const QString &)=0;
-        virtual void incomingTag(const QString &)=0;
-        virtual void outgoingXml(const QDomElement &)=0;
-        virtual void incomingXml(const QDomElement &)=0;
-    };
+        int     type() const;
+        QString host() const;
+        quint16 port() const;
+        QUrl    url() const;
+        QString user() const;
+        QString pass() const;
+        int     pollInterval() const;
 
-    void setDebug(Debug *);
-
-    class Connector : public QObject
-    {
-        Q_OBJECT
-    public:
-        Connector(QObject *parent=nullptr);
-        virtual ~Connector();
-
-        virtual void setOptHostPort(const QString &host, quint16 port)=0;
-        virtual void connectToServer(const QString &server)=0;
-        virtual ByteStream *stream() const=0;
-        virtual void done()=0;
-
-        bool useSSL() const;
-        bool havePeerAddress() const;
-        QHostAddress peerAddress() const;
-        quint16 peerPort() const;
-
-        virtual QString host() const;
-
-    signals:
-        void connected();
-        void error();
-
-    protected:
-        void setUseSSL(bool b);
-        void setPeerAddressNone();
-        void setPeerAddress(const QHostAddress &addr, quint16 port);
+        void setHttpConnect(const QString &host, quint16 port);
+        void setHttpPoll(const QString &host, quint16 port, const QUrl &url);
+        void setSocks(const QString &host, quint16 port);
+        void setUserPass(const QString &user, const QString &pass);
+        void setPollInterval(int secs);
 
     private:
-        bool ssl; // a flag to start ssl handshake immediately
-        bool haveaddr;
-        QHostAddress addr;
-        quint16 port;
+        int     t = None;
+        QUrl    v_url;
+        QString v_host;
+        quint16 v_port = 0;
+        QString v_user;
+        QString v_pass;
+        int     v_poll = 30;
     };
 
-    class AdvancedConnector : public Connector
-    {
-        Q_OBJECT
-    public:
-        enum Error { ErrConnectionRefused, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth, ErrStream };
-        AdvancedConnector(QObject *parent=nullptr);
-        virtual ~AdvancedConnector();
+    void setProxy(const Proxy &proxy);
+    void setOptProbe(bool);
+    void setOptSSL(bool);
 
-        class Proxy
-        {
-        public:
-            enum { None, HttpConnect, HttpPoll, Socks };
-            Proxy() = default;
-            ~Proxy() {}
+    void changePollInterval(int secs);
 
-            int type() const;
-            QString host() const;
-            quint16 port() const;
-            QUrl url() const;
-            QString user() const;
-            QString pass() const;
-            int pollInterval() const;
+    void        setOptHostPort(const QString &host, quint16 port);
+    void        connectToServer(const QString &server);
+    ByteStream *stream() const;
+    void        done();
 
-            void setHttpConnect(const QString &host, quint16 port);
-            void setHttpPoll(const QString &host, quint16 port, const QUrl &url);
-            void setSocks(const QString &host, quint16 port);
-            void setUserPass(const QString &user, const QString &pass);
-            void setPollInterval(int secs);
+    int errorCode() const;
 
-        private:
-            int t = None;
-            QUrl v_url;
-            QString v_host;
-            quint16 v_port = 0;
-            QString v_user;
-            QString v_pass;
-            int v_poll = 30;
-        };
+    virtual QString host() const;
 
-        void setProxy(const Proxy &proxy);
-        void setOptProbe(bool);
-        void setOptSSL(bool);
+signals:
+    void srvLookup(const QString &server);
+    void srvResult(bool success);
+    void httpSyncStarted();
+    void httpSyncFinished();
 
-        void changePollInterval(int secs);
+private slots:
+    void bs_connected();
+    void bs_error(int);
+    void http_syncStarted();
+    void http_syncFinished();
+    void t_timeout();
 
-        void setOptHostPort(const QString &host, quint16 port);
-        void connectToServer(const QString &server);
-        ByteStream *stream() const;
-        void done();
+private:
+    class Private;
+    Private *d;
 
-        int errorCode() const;
+    void cleanup();
+};
 
-        virtual QString host() const;
+class TLSHandler : public QObject {
+    Q_OBJECT
+public:
+    TLSHandler(QObject *parent = nullptr);
+    virtual ~TLSHandler();
 
-    signals:
-        void srvLookup(const QString &server);
-        void srvResult(bool success);
-        void httpSyncStarted();
-        void httpSyncFinished();
+    virtual void reset()                            = 0;
+    virtual void startClient(const QString &host)   = 0;
+    virtual void write(const QByteArray &a)         = 0;
+    virtual void writeIncoming(const QByteArray &a) = 0;
 
-    private slots:
-        void bs_connected();
-        void bs_error(int);
-        void http_syncStarted();
-        void http_syncFinished();
-        void t_timeout();
+signals:
+    void success();
+    void fail();
+    void closed();
+    void readyRead(const QByteArray &a);
+    void readyReadOutgoing(const QByteArray &a, int plainBytes);
+};
 
-    private:
-        class Private;
-        Private *d;
+class QCATLSHandler : public TLSHandler {
+    Q_OBJECT
+public:
+    QCATLSHandler(QCA::TLS *parent);
+    ~QCATLSHandler();
 
-        void cleanup();
-    };
+    QCA::TLS *tls() const;
+    int       tlsError() const;
 
-    class TLSHandler : public QObject
-    {
-        Q_OBJECT
-    public:
-        TLSHandler(QObject *parent=nullptr);
-        virtual ~TLSHandler();
+    void setXMPPCertCheck(bool enable);
+    bool XMPPCertCheck();
+    bool certMatchesHostname();
 
-        virtual void reset()=0;
-        virtual void startClient(const QString &host)=0;
-        virtual void write(const QByteArray &a)=0;
-        virtual void writeIncoming(const QByteArray &a)=0;
+    void reset();
+    void startClient(const QString &host);
+    void write(const QByteArray &a);
+    void writeIncoming(const QByteArray &a);
 
-    signals:
-        void success();
-        void fail();
-        void closed();
-        void readyRead(const QByteArray &a);
-        void readyReadOutgoing(const QByteArray &a, int plainBytes);
-    };
+signals:
+    void tlsHandshaken();
 
-    class QCATLSHandler : public TLSHandler
-    {
-        Q_OBJECT
-    public:
-        QCATLSHandler(QCA::TLS *parent);
-        ~QCATLSHandler();
+public slots:
+    void continueAfterHandshake();
 
-        QCA::TLS *tls() const;
-        int tlsError() const;
+private slots:
+    void tls_handshaken();
+    void tls_readyRead();
+    void tls_readyReadOutgoing();
+    void tls_closed();
+    void tls_error();
 
-        void setXMPPCertCheck(bool enable);
-        bool XMPPCertCheck();
-        bool certMatchesHostname();
-
-        void reset();
-        void startClient(const QString &host);
-        void write(const QByteArray &a);
-        void writeIncoming(const QByteArray &a);
-
-    signals:
-        void tlsHandshaken();
-
-    public slots:
-        void continueAfterHandshake();
-
-    private slots:
-        void tls_handshaken();
-        void tls_readyRead();
-        void tls_readyReadOutgoing();
-        void tls_closed();
-        void tls_error();
-
-    private:
-        class Private;
-        Private *d;
-    };
+private:
+    class Private;
+    Private *d;
+};
 }; // namespace XMPP
 
 #endif // XMPP_H

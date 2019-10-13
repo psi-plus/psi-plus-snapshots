@@ -25,48 +25,39 @@
 #include <QDateTime>
 
 namespace XMPP {
-    class CaptchaChallengePrivate;
-    class Message;
-    class XData;
+class CaptchaChallengePrivate;
+class Message;
+class XData;
 
-    class CaptchaChallenge
-    {
-    public:
-        enum Result {
-            Passed,
-            Unavailable,
-            NotAcceptable
-        };
+class CaptchaChallenge {
+public:
+    enum Result { Passed, Unavailable, NotAcceptable };
 
-        enum State {
-            New,
-            Success,
-            Fail
-        };
+    enum State { New, Success, Fail };
 
-        static const int Timeout = 120; // secs
+    static const int Timeout = 120; // secs
 
-        CaptchaChallenge();
-        CaptchaChallenge(const Message &);
-        CaptchaChallenge(const CaptchaChallenge &);
-        ~CaptchaChallenge();
+    CaptchaChallenge();
+    CaptchaChallenge(const Message &);
+    CaptchaChallenge(const CaptchaChallenge &);
+    ~CaptchaChallenge();
 
-        CaptchaChallenge & operator=(const CaptchaChallenge &);
+    CaptchaChallenge &operator=(const CaptchaChallenge &);
 
-        bool isValid() const;
-        const Jid &offendedJid() const;
-        const Jid &arbiter() const;
-        const XData &form() const;
-        QString explanation() const;
-        const UrlList &urls() const;
-        State state() const;
+    bool           isValid() const;
+    const Jid &    offendedJid() const;
+    const Jid &    arbiter() const;
+    const XData &  form() const;
+    QString        explanation() const;
+    const UrlList &urls() const;
+    State          state() const;
 
-        Result validateResponse(const XData &);
+    Result validateResponse(const XData &);
 
-    private:
-        friend class CaptchaChallengePrivate;
-        QSharedDataPointer<CaptchaChallengePrivate> d;
-    };
+private:
+    friend class CaptchaChallengePrivate;
+    QSharedDataPointer<CaptchaChallengePrivate> d;
+};
 } // namespace XMPP
 
 #endif // XMPP_CAPTCHA_H

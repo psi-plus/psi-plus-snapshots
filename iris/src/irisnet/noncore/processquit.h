@@ -20,10 +20,10 @@
 #define PROCESSQUIT_H
 
 #ifdef NO_IRISNET
-# include <QtCore>
-# define IRISNET_EXPORT
+#include <QtCore>
+#define IRISNET_EXPORT
 #else
-# include "irisnetglobal.h"
+#include "irisnetglobal.h"
 #endif
 
 #ifndef NO_IRISNET
@@ -55,8 +55,7 @@ myapp.connect(ProcessQuit::instance(), SIGNAL(quit()), SLOT(do_quit()));
    The quit() signal is emitted when a request to terminate is received. The quit() signal is only emitted once,
    future termination requests are ignored.  Call reset() to allow the quit() signal to be emitted again.
 */
-class IRISNET_EXPORT ProcessQuit : public QObject
-{
+class IRISNET_EXPORT ProcessQuit : public QObject {
     Q_OBJECT
 public:
     /**
@@ -71,7 +70,10 @@ public:
     /**
        \brief Allows the quit() signal to be emitted again
 
-       ProcessQuit only emits the quit() signal once, so that if a user repeatedly presses Ctrl-C or sends SIGTERM, your shutdown slot will not be called multiple times.  This is normally the desired behavior, but if you are ignoring the termination request then you may want to allow future notifications.  Calling this function will allow the quit() signal to be emitted again, if a new termination request arrives.
+       ProcessQuit only emits the quit() signal once, so that if a user repeatedly presses Ctrl-C or sends SIGTERM, your
+       shutdown slot will not be called multiple times.  This is normally the desired behavior, but if you are ignoring
+       the termination request then you may want to allow future notifications.  Calling this function will allow the
+       quit() signal to be emitted again, if a new termination request arrives.
 
        \sa quit
     */
@@ -80,7 +82,9 @@ public:
     /**
        \brief Frees all resources used by ProcessQuit
 
-       This function will free any resources used by ProcessQuit, including the global instance, and the termination handlers will be uninstalled (reverted to default).  Future termination requests will cause the application to exit abruptly.
+       This function will free any resources used by ProcessQuit, including the global instance, and the termination
+       handlers will be uninstalled (reverted to default).  Future termination requests will cause the application to
+       exit abruptly.
 
        \note You normally do not need to call this function directly.  When IrisNet cleans up, it will be called.
 
@@ -92,9 +96,11 @@ signals:
     /**
        \brief Notification of termination request
 
-       This signal is emitted when a termination request is received.  It is only emitted once, unless reset() is called.
+       This signal is emitted when a termination request is received.  It is only emitted once, unless reset() is
+       called.
 
-       Upon receiving this signal, the application should proceed to exit gracefully, and generally without user interaction.
+       Upon receiving this signal, the application should proceed to exit gracefully, and generally without user
+       interaction.
 
        \sa reset
     */

@@ -24,22 +24,21 @@
 #include <QString>
 
 namespace XMPP {
-    class Resource
-    {
-    public:
-        Resource(const QString &name="", const Status &s=Status());
+class Resource {
+public:
+    Resource(const QString &name = "", const Status &s = Status());
 
-        const QString & name() const;
-        int priority() const;
-        const Status & status() const;
+    const QString &name() const;
+    int            priority() const;
+    const Status & status() const;
 
-        void setName(const QString &);
-        void setStatus(const Status &);
+    void setName(const QString &);
+    void setStatus(const Status &);
 
-    private:
-        QString v_name;
-        Status v_status;
-    };
+private:
+    QString v_name;
+    Status  v_status;
+};
 } // namespace XMPP
 
 #endif // XMPP_RESOURCE_H

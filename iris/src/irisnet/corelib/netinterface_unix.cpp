@@ -31,7 +31,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #ifndef SIOCGIFCONF // for solaris
-# include <sys/sockio.h>
+#include <sys/sockio.h>
 #endif
 #include <sys/types.h>
 #include <unistd.h>
@@ -42,16 +42,15 @@ static QStringList read_proc_as_lines(const char *procfile)
     QStringList out;
 
     FILE *f = fopen(procfile, "r");
-    if(!f)
+    if (!f)
         return out;
 
     QByteArray buf;
-    while(!feof(f))
-    {
+    while (!feof(f)) {
         // max read on a proc is 4K
         QByteArray block(4096, 0);
-        int ret = fread(block.data(), 1, block.size(), f);
-        if(ret <= 0)
+        int        ret = fread(block.data(), 1, block.size(), f);
+        if (ret <= 0)
             break;
         block.resize(ret);
         buf += block;
@@ -59,21 +58,20 @@ static QStringList read_proc_as_lines(const char *procfile)
     fclose(f);
 
     QString str = QString::fromLocal8Bit(buf);
-    out = str.split('\n', QString::SkipEmptyParts);
+    out         = str.split('\n', QString::SkipEmptyParts);
     return out;
 }
 
 static QHostAddress linux_ipv6_to_qaddr(const QString &in)
 {
     QHostAddress out;
-    if(in.length() != 32)
+    if (in.length() != 32)
         return out;
     quint8 raw[16];
-    for(int n = 0; n < 16; ++n)
-    {
+    for (int n = 0; n < 16; ++n) {
         bool ok;
-        int x = in.mid(n * 2, 2).toInt(&ok, 16);
-        if(!ok)
+        int  x = in.mid(n * 2, 2).toInt(&ok, 16);
+        if (!ok)
             return out;
         raw[n] = (quint8)x;
     }
@@ -84,17 +82,16 @@ static QHostAddress linux_ipv6_to_qaddr(const QString &in)
 static QHostAddress linux_ipv4_to_qaddr(const QString &in)
 {
     QHostAddress out;
-    if(in.length() != 8)
+    if (in.length() != 8)
         return out;
-    quint32 raw;
+    quint32        raw;
     unsigned char *rawp = (unsigned char *)&raw;
-    for(int n = 0; n < 4; ++n)
-    {
+    for (int n = 0; n < 4; ++n) {
         bool ok;
-        int x = in.mid(n * 2, 2).toInt(&ok, 16);
-        if(!ok)
+        int  x = in.mid(n * 2, 2).toInt(&ok, 16);
+        if (!ok)
             return out;
-        rawp[n] = (unsigned char )x;
+        rawp[n] = (unsigned char)x;
     }
     out.setAddress(raw);
     return out;
@@ -106,22 +103,21 @@ static QList<XMPP::NetGatewayProvider::Info> get_linux_gateways()
 
     QStringList lines = read_proc_as_lines("/proc/net/route");
     // skip the first line, so we start at 1
-    for(int n = 1; n < lines.count(); ++n)
-    {
-        const QString &line = lines[n];
-        QStringList parts = line.simplified().split(' ', QString::SkipEmptyParts);
-        if(parts.count() < 10) // net-tools does 10, but why not 11?
+    for (int n = 1; n < lines.count(); ++n) {
+        const QString &line  = lines[n];
+        QStringList    parts = line.simplified().split(' ', QString::SkipEmptyParts);
+        if (parts.count() < 10) // net-tools does 10, but why not 11?
             continue;
 
         QHostAddress addr = linux_ipv4_to_qaddr(parts[2]);
-        if(addr.isNull())
+        if (addr.isNull())
             continue;
 
         int iflags = parts[3].toInt(nullptr, 16);
-        if(!(iflags & RTF_UP))
+        if (!(iflags & RTF_UP))
             continue;
 
-        if(!(iflags & RTF_GATEWAY))
+        if (!(iflags & RTF_GATEWAY))
             continue;
 
         XMPP::NetGatewayProvider::Info g;
@@ -131,22 +127,21 @@ static QList<XMPP::NetGatewayProvider::Info> get_linux_gateways()
     }
 
     lines = read_proc_as_lines("/proc/net/ipv6_route");
-    for(int n = 0; n < lines.count(); ++n)
-    {
-        const QString &line = lines[n];
-        QStringList parts = line.simplified().split(' ', QString::SkipEmptyParts);
-        if(parts.count() < 10)
+    for (int n = 0; n < lines.count(); ++n) {
+        const QString &line  = lines[n];
+        QStringList    parts = line.simplified().split(' ', QString::SkipEmptyParts);
+        if (parts.count() < 10)
             continue;
 
         QHostAddress addr = linux_ipv6_to_qaddr(parts[4]);
-        if(addr.isNull())
+        if (addr.isNull())
             continue;
 
         int iflags = parts[8].toInt(nullptr, 16);
-        if(!(iflags & RTF_UP))
+        if (!(iflags & RTF_UP))
             continue;
 
-        if(!(iflags & RTF_GATEWAY))
+        if (!(iflags & RTF_GATEWAY))
             continue;
 
         XMPP::NetGatewayProvider::Info g;
@@ -170,35 +165,28 @@ static QList<XMPP::NetGatewayProvider::Info> get_unix_gateways()
 }
 
 namespace XMPP {
-class UnixGateway : public NetGatewayProvider
-{
+class UnixGateway : public NetGatewayProvider {
     Q_OBJECT
     Q_INTERFACES(XMPP::NetGatewayProvider)
 public:
     QList<Info> info;
-    //QTimer t;
+    // QTimer t;
 
     UnixGateway() //: t(this)
     {
-        //connect(&t, SIGNAL(timeout()), SLOT(check()));
+        // connect(&t, SIGNAL(timeout()), SLOT(check()));
         // TODO track changes without timers
     }
 
     void start()
     {
-        //t.start(5000);
+        // t.start(5000);
         poll();
     }
 
-    QList<Info> gateways() const
-    {
-        return info;
-    }
+    QList<Info> gateways() const { return info; }
 
-    void poll()
-    {
-        info = get_unix_gateways();
-    }
+    void poll() { info = get_unix_gateways(); }
 
 public slots:
     void check()
@@ -208,21 +196,14 @@ public slots:
     }
 };
 
-class UnixNetProvider : public IrisNetProvider
-{
+class UnixNetProvider : public IrisNetProvider {
     Q_OBJECT
     Q_INTERFACES(XMPP::IrisNetProvider)
 public:
-    virtual NetGatewayProvider *createNetGatewayProvider()
-    {
-        return new UnixGateway;
-    }
+    virtual NetGatewayProvider *createNetGatewayProvider() { return new UnixGateway; }
 };
 
-IrisNetProvider *irisnet_createUnixNetProvider()
-{
-    return new UnixNetProvider;
-}
+IrisNetProvider *irisnet_createUnixNetProvider() { return new UnixNetProvider; }
 } // namespace XMPP
 
 #include "netinterface_unix.moc"

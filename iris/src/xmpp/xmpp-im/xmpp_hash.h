@@ -44,12 +44,9 @@ public:
         LastType = Blake2b512
     };
 
-    inline Hash(Type type = Type::Unknown) :
-        v_type(type) {}
-    inline Hash(Type type, const QByteArray &data) :
-        v_type(type), v_data(data) {}
-    inline Hash(const QStringRef &algo) :
-        v_type(parseType(algo)) {}
+    inline Hash(Type type = Type::Unknown) : v_type(type) {}
+    inline Hash(Type type, const QByteArray &data) : v_type(type), v_data(data) {}
+    inline Hash(const QStringRef &algo) : v_type(parseType(algo)) {}
     Hash(const QDomElement &);
 
     inline bool operator==(const Hash &other) const { return v_type == other.v_type && v_data == other.v_data; }
@@ -65,9 +62,9 @@ public:
     inline void       setData(const QByteArray &d) { v_data = d; } // sets already computed hash
     inline QByteArray toHex() const { return v_data.toHex(); }
     inline QByteArray toBase64() const { return v_data.toBase64(); }
-    inline QString    toString() const { return QString("%1+%2").arg(stringType(), QString::fromLatin1(v_data.toHex())); }
-    bool              compute(const QByteArray &); // computes hash from passed data
-    bool              compute(QIODevice *dev);
+    inline QString toString() const { return QString("%1+%2").arg(stringType(), QString::fromLatin1(v_data.toHex())); }
+    bool           compute(const QByteArray &); // computes hash from passed data
+    bool           compute(QIODevice *dev);
 
     QDomElement toXml(QDomDocument *doc) const;
     static void populateFeatures(XMPP::Features &);

@@ -26,11 +26,10 @@
 #include <QtNetwork>
 
 // CS_NAMESPACE_BEGIN
-class NDns : public QObject
-{
+class NDns : public QObject {
     Q_OBJECT
 public:
-    NDns(QObject *parent=nullptr);
+    NDns(QObject *parent = nullptr);
     ~NDns();
 
     void resolve(const QString &);
@@ -38,7 +37,7 @@ public:
     bool isBusy() const;
 
     QHostAddress result() const;
-    QString resultString() const;
+    QString      resultString() const;
 
 signals:
     void resultsReady();
@@ -49,8 +48,8 @@ private slots:
 
 private:
     XMPP::NameResolver dns;
-    bool busy;
-    QHostAddress addr;
+    bool               busy;
+    QHostAddress       addr;
 };
 
 // CS_NAMESPACE_END

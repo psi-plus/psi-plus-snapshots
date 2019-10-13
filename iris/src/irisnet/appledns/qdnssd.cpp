@@ -23,9 +23,9 @@
 #include <QtCore>
 #include <stdio.h>
 #ifdef Q_OS_WIN // for ntohs
-# include <windows.h>
+#include <windows.h>
 #else
-# include <netinet/in.h>
+#include <netinet/in.h>
 #endif
 
 namespace {
@@ -37,33 +37,28 @@ void releaseAndDeleteLater(QObject *owner, QObject *obj)
     obj->deleteLater();
 }
 
-class SafeTimer : public QObject
-{
+class SafeTimer : public QObject {
     Q_OBJECT
 public:
-    SafeTimer(QObject *parent = 0) :
-        QObject(parent)
+    SafeTimer(QObject *parent = 0) : QObject(parent)
     {
         t = new QTimer(this);
         connect(t, SIGNAL(timeout()), SIGNAL(timeout()));
     }
 
-    ~SafeTimer()
-    {
-        releaseAndDeleteLater(this, t);
-    }
+    ~SafeTimer() { releaseAndDeleteLater(this, t); }
 
-    int interval() const                { return t->interval(); }
-    bool isActive() const               { return t->isActive(); }
-    bool isSingleShot() const           { return t->isSingleShot(); }
-    void setInterval(int msec)          { t->setInterval(msec); }
+    int  interval() const { return t->interval(); }
+    bool isActive() const { return t->isActive(); }
+    bool isSingleShot() const { return t->isSingleShot(); }
+    void setInterval(int msec) { t->setInterval(msec); }
     void setSingleShot(bool singleShot) { t->setSingleShot(singleShot); }
-    int timerId() const                 { return t->timerId(); }
+    int  timerId() const { return t->timerId(); }
 
 public slots:
-    void start(int msec)                { t->start(msec); }
-    void start()                        { t->start(); }
-    void stop()                         { t->stop(); }
+    void start(int msec) { t->start(msec); }
+    void start() { t->start(); }
+    void stop() { t->stop(); }
 
 signals:
     void timeout();
@@ -72,13 +67,10 @@ private:
     QTimer *t;
 };
 
-class SafeSocketNotifier : public QObject
-{
+class SafeSocketNotifier : public QObject {
     Q_OBJECT
 public:
-    SafeSocketNotifier(int socket, QSocketNotifier::Type type,
-        QObject *parent = 0) :
-        QObject(parent)
+    SafeSocketNotifier(int socket, QSocketNotifier::Type type, QObject *parent = 0) : QObject(parent)
     {
         sn = new QSocketNotifier(socket, type, this);
         connect(sn, SIGNAL(activated(int)), SIGNAL(activated(int)));
@@ -90,12 +82,12 @@ public:
         releaseAndDeleteLater(this, sn);
     }
 
-    bool isEnabled() const             { return sn->isEnabled(); }
-    int socket() const                 { return sn->socket(); }
+    bool                  isEnabled() const { return sn->isEnabled(); }
+    int                   socket() const { return sn->socket(); }
     QSocketNotifier::Type type() const { return sn->type(); }
 
 public slots:
-    void setEnabled(bool enable)       { sn->setEnabled(enable); }
+    void setEnabled(bool enable) { sn->setEnabled(enable); }
 
 signals:
     void activated(int socket);
@@ -111,85 +103,58 @@ private:
 //   to maintain a pointer which /can/ be copied.  Also, we'll keep
 //   a flag to indicate whether the allocated DNSServiceRef has been
 //   initialized yet.
-class ServiceRef
-{
+class ServiceRef {
 private:
     DNSServiceRef *_p;
-    bool _initialized;
+    bool           _initialized;
 
 public:
-    ServiceRef() :
-        _initialized(false)
-    {
-        _p = (DNSServiceRef *)malloc(sizeof(DNSServiceRef));
-    }
+    ServiceRef() : _initialized(false) { _p = (DNSServiceRef *)malloc(sizeof(DNSServiceRef)); }
 
     ~ServiceRef()
     {
-        if(_initialized)
+        if (_initialized)
             DNSServiceRefDeallocate(*_p);
         free(_p);
     }
 
-    DNSServiceRef *data()
-    {
-        return _p;
-    }
+    DNSServiceRef *data() { return _p; }
 
-    void setInitialized()
-    {
-        _initialized = true;
-    }
+    void setInitialized() { _initialized = true; }
 };
 
-class RecordRef
-{
+class RecordRef {
 private:
     DNSRecordRef *_p;
 
 public:
-    RecordRef()
-    {
-        _p = (DNSRecordRef *)malloc(sizeof(DNSRecordRef));
-    }
+    RecordRef() { _p = (DNSRecordRef *)malloc(sizeof(DNSRecordRef)); }
 
-    ~RecordRef()
-    {
-        free(_p);
-    }
+    ~RecordRef() { free(_p); }
 
-    DNSRecordRef *data()
-    {
-        return _p;
-    }
+    DNSRecordRef *data() { return _p; }
 };
 
-class IdManager
-{
+class IdManager {
 private:
     QSet<int> set;
-    int at;
+    int       at;
 
     inline void bump_at()
     {
-        if(at == 0x7fffffff)
+        if (at == 0x7fffffff)
             at = 0;
         else
             ++at;
     }
 
 public:
-    IdManager() :
-        at(0)
-    {
-    }
+    IdManager() : at(0) {}
 
     int reserveId()
     {
-        while(1)
-        {
-            if(!set.contains(at))
-            {
+        while (1) {
+            if (!set.contains(at)) {
                 int id = at;
                 set.insert(id);
                 bump_at();
@@ -200,10 +165,7 @@ public:
         }
     }
 
-    void releaseId(int id)
-    {
-        set.remove(id);
-    }
+    void releaseId(int id) { set.remove(id); }
 };
 
 } // namespace
@@ -211,26 +173,19 @@ public:
 //----------------------------------------------------------------------------
 // QDnsSd
 //----------------------------------------------------------------------------
-class QDnsSd::Private : public QObject
-{
+class QDnsSd::Private : public QObject {
     Q_OBJECT
 public:
-    QDnsSd *q;
+    QDnsSd *  q;
     IdManager idManager;
 
-    class SubRecord
-    {
+    class SubRecord {
     public:
-        Private *_self;
-        int _id;
+        Private *  _self;
+        int        _id;
         RecordRef *_sdref;
 
-        SubRecord(Private *self) :
-            _self(self),
-            _id(-1),
-            _sdref(0)
-        {
-        }
+        SubRecord(Private *self) : _self(self), _id(-1), _sdref(0) {}
 
         ~SubRecord()
         {
@@ -239,46 +194,33 @@ public:
         }
     };
 
-    class Request
-    {
+    class Request {
     public:
-        enum Type
-        {
-            Query,
-            Browse,
-            Resolve,
-            Reg
-        };
+        enum Type { Query, Browse, Resolve, Reg };
 
-        Private *_self;
-        int _type;
-        int _id;
-        ServiceRef *_sdref;
-        int _sockfd;
+        Private *           _self;
+        int                 _type;
+        int                 _id;
+        ServiceRef *        _sdref;
+        int                 _sockfd;
         SafeSocketNotifier *_sn_read;
-        SafeTimer *_errorTrigger;
+        SafeTimer *         _errorTrigger;
 
-        bool _doSignal;
-        LowLevelError _lowLevelError;
-        QList<QDnsSd::Record> _queryRecords;
+        bool                       _doSignal;
+        LowLevelError              _lowLevelError;
+        QList<QDnsSd::Record>      _queryRecords;
         QList<QDnsSd::BrowseEntry> _browseEntries;
-        QByteArray _resolveFullName;
-        QByteArray _resolveHost;
-        int _resolvePort;
-        QByteArray _resolveTxtRecord;
-        QByteArray _regDomain;
-        bool _regConflict;
+        QByteArray                 _resolveFullName;
+        QByteArray                 _resolveHost;
+        int                        _resolvePort;
+        QByteArray                 _resolveTxtRecord;
+        QByteArray                 _regDomain;
+        bool                       _regConflict;
 
-        QList<SubRecord*> _subRecords;
+        QList<SubRecord *> _subRecords;
 
         Request(Private *self) :
-            _self(self),
-            _id(-1),
-            _sdref(0),
-            _sockfd(-1),
-            _sn_read(0),
-            _errorTrigger(0),
-            _doSignal(false)
+            _self(self), _id(-1), _sdref(0), _sockfd(-1), _sn_read(0), _errorTrigger(0), _doSignal(false)
         {
         }
 
@@ -294,30 +236,22 @@ public:
 
         int subRecordIndexById(int rec_id) const
         {
-            for(int n = 0; n < _subRecords.count(); ++n)
-            {
-                if(_subRecords[n]->_id == rec_id)
+            for (int n = 0; n < _subRecords.count(); ++n) {
+                if (_subRecords[n]->_id == rec_id)
                     return n;
             }
             return -1;
         }
     };
 
-    QHash<int,Request*> _requestsById;
-    QHash<SafeSocketNotifier*,Request*> _requestsBySocket;
-    QHash<SafeTimer*,Request*> _requestsByTimer;
-    QHash<int,Request*> _requestsByRecId;
+    QHash<int, Request *>                  _requestsById;
+    QHash<SafeSocketNotifier *, Request *> _requestsBySocket;
+    QHash<SafeTimer *, Request *>          _requestsByTimer;
+    QHash<int, Request *>                  _requestsByRecId;
 
-    Private(QDnsSd *_q) :
-        QObject(_q),
-        q(_q)
-    {
-    }
+    Private(QDnsSd *_q) : QObject(_q), q(_q) {}
 
-    ~Private()
-    {
-        qDeleteAll(_requestsById);
-    }
+    ~Private() { qDeleteAll(_requestsById); }
 
     void setDelayedError(Request *req, const LowLevelError &lowLevelError)
     {
@@ -337,11 +271,11 @@ public:
 
     void removeRequest(Request *req)
     {
-        foreach(const SubRecord *srec, req->_subRecords)
+        foreach (const SubRecord *srec, req->_subRecords)
             _requestsByRecId.remove(srec->_id);
-        if(req->_errorTrigger)
+        if (req->_errorTrigger)
             _requestsByTimer.remove(req->_errorTrigger);
-        if(req->_sn_read)
+        if (req->_sn_read)
             _requestsBySocket.remove(req->_sn_read);
         _requestsById.remove(req->_id);
         delete req;
@@ -350,7 +284,7 @@ public:
     int regIdForRecId(int rec_id) const
     {
         Request *req = _requestsByRecId.value(rec_id);
-        if(req)
+        if (req)
             return req->_id;
         return -1;
     }
@@ -360,32 +294,27 @@ public:
         int id = idManager.reserveId();
 
         Request *req = new Request(this);
-        req->_type = Request::Query;
-        req->_id = id;
-        req->_sdref = new ServiceRef;
+        req->_type   = Request::Query;
+        req->_id     = id;
+        req->_sdref  = new ServiceRef;
 
-        DNSServiceErrorType err = DNSServiceQueryRecord(
-            req->_sdref->data(), kDNSServiceFlagsLongLivedQuery,
-            0, name.constData(), qType, kDNSServiceClass_IN,
-            cb_queryRecordReply, req);
-        if(err != kDNSServiceErr_NoError)
-        {
-            setDelayedError(req, LowLevelError(
-                "DNSServiceQueryRecord", err));
+        DNSServiceErrorType err
+            = DNSServiceQueryRecord(req->_sdref->data(), kDNSServiceFlagsLongLivedQuery, 0, name.constData(), qType,
+                                    kDNSServiceClass_IN, cb_queryRecordReply, req);
+        if (err != kDNSServiceErr_NoError) {
+            setDelayedError(req, LowLevelError("DNSServiceQueryRecord", err));
             return id;
         }
 
         req->_sdref->setInitialized();
 
         int sockfd = DNSServiceRefSockFD(*(req->_sdref->data()));
-        if(sockfd == -1)
-        {
-            setDelayedError(req, LowLevelError(
-                "DNSServiceRefSockFD", -1));
+        if (sockfd == -1) {
+            setDelayedError(req, LowLevelError("DNSServiceRefSockFD", -1));
             return id;
         }
 
-        req->_sockfd = sockfd;
+        req->_sockfd  = sockfd;
         req->_sn_read = new SafeSocketNotifier(sockfd, QSocketNotifier::Read, this);
         connect(req->_sn_read, SIGNAL(activated(int)), SLOT(sn_activated()));
         _requestsById.insert(id, req);
@@ -399,32 +328,26 @@ public:
         int id = idManager.reserveId();
 
         Request *req = new Request(this);
-        req->_type = Request::Browse;
-        req->_id = id;
-        req->_sdref = new ServiceRef;
+        req->_type   = Request::Browse;
+        req->_id     = id;
+        req->_sdref  = new ServiceRef;
 
-        DNSServiceErrorType err = DNSServiceBrowse(
-            req->_sdref->data(), 0, 0, serviceType.constData(),
-            !domain.isEmpty() ? domain.constData() : NULL,
-            cb_browseReply, req);
-        if(err != kDNSServiceErr_NoError)
-        {
-            setDelayedError(req, LowLevelError(
-                "DNSServiceBrowse", err));
+        DNSServiceErrorType err = DNSServiceBrowse(req->_sdref->data(), 0, 0, serviceType.constData(),
+                                                   !domain.isEmpty() ? domain.constData() : NULL, cb_browseReply, req);
+        if (err != kDNSServiceErr_NoError) {
+            setDelayedError(req, LowLevelError("DNSServiceBrowse", err));
             return id;
         }
 
         req->_sdref->setInitialized();
 
         int sockfd = DNSServiceRefSockFD(*(req->_sdref->data()));
-        if(sockfd == -1)
-        {
-            setDelayedError(req, LowLevelError(
-                "DNSServiceRefSockFD", -1));
+        if (sockfd == -1) {
+            setDelayedError(req, LowLevelError("DNSServiceRefSockFD", -1));
             return id;
         }
 
-        req->_sockfd = sockfd;
+        req->_sockfd  = sockfd;
         req->_sn_read = new SafeSocketNotifier(sockfd, QSocketNotifier::Read, this);
         connect(req->_sn_read, SIGNAL(activated(int)), SLOT(sn_activated()));
         _requestsById.insert(id, req);
@@ -438,32 +361,27 @@ public:
         int id = idManager.reserveId();
 
         Request *req = new Request(this);
-        req->_type = Request::Resolve;
-        req->_id = id;
-        req->_sdref = new ServiceRef;
+        req->_type   = Request::Resolve;
+        req->_id     = id;
+        req->_sdref  = new ServiceRef;
 
-        DNSServiceErrorType err = DNSServiceResolve(
-            req->_sdref->data(), 0, 0, serviceName.constData(),
-            serviceType.constData(), domain.constData(),
-            (DNSServiceResolveReply)cb_resolveReply, req);
-        if(err != kDNSServiceErr_NoError)
-        {
-            setDelayedError(req, LowLevelError(
-                "DNSServiceResolve", err));
+        DNSServiceErrorType err
+            = DNSServiceResolve(req->_sdref->data(), 0, 0, serviceName.constData(), serviceType.constData(),
+                                domain.constData(), (DNSServiceResolveReply)cb_resolveReply, req);
+        if (err != kDNSServiceErr_NoError) {
+            setDelayedError(req, LowLevelError("DNSServiceResolve", err));
             return id;
         }
 
         req->_sdref->setInitialized();
 
         int sockfd = DNSServiceRefSockFD(*(req->_sdref->data()));
-        if(sockfd == -1)
-        {
-            setDelayedError(req, LowLevelError(
-                "DNSServiceRefSockFD", -1));
+        if (sockfd == -1) {
+            setDelayedError(req, LowLevelError("DNSServiceRefSockFD", -1));
             return id;
         }
 
-        req->_sockfd = sockfd;
+        req->_sockfd  = sockfd;
         req->_sn_read = new SafeSocketNotifier(sockfd, QSocketNotifier::Read, this);
         connect(req->_sn_read, SIGNAL(activated(int)), SLOT(sn_activated()));
         _requestsById.insert(id, req);
@@ -472,48 +390,42 @@ public:
         return id;
     }
 
-    int reg(const QByteArray &serviceName, const QByteArray &serviceType, const QByteArray &domain, int port, const QByteArray &txtRecord)
+    int reg(const QByteArray &serviceName, const QByteArray &serviceType, const QByteArray &domain, int port,
+            const QByteArray &txtRecord)
     {
         int id = idManager.reserveId();
 
         Request *req = new Request(this);
-        req->_type = Request::Reg;
-        req->_id = id;
+        req->_type   = Request::Reg;
+        req->_id     = id;
 
-        if(port < 1 || port > 0xffff)
-        {
+        if (port < 1 || port > 0xffff) {
             setDelayedError(req, LowLevelError());
             return id;
         }
 
         uint16_t sport = port;
-        sport = htons(sport);
+        sport          = htons(sport);
 
         req->_sdref = new ServiceRef;
 
         DNSServiceErrorType err = DNSServiceRegister(
-            req->_sdref->data(), kDNSServiceFlagsNoAutoRename, 0,
-            serviceName.constData(), serviceType.constData(),
-            domain.constData(), NULL, sport, txtRecord.size(),
-            txtRecord.data(), cb_regReply, req);
-        if(err != kDNSServiceErr_NoError)
-        {
-            setDelayedError(req, LowLevelError(
-                "DNSServiceRegister", err));
+            req->_sdref->data(), kDNSServiceFlagsNoAutoRename, 0, serviceName.constData(), serviceType.constData(),
+            domain.constData(), NULL, sport, txtRecord.size(), txtRecord.data(), cb_regReply, req);
+        if (err != kDNSServiceErr_NoError) {
+            setDelayedError(req, LowLevelError("DNSServiceRegister", err));
             return id;
         }
 
         req->_sdref->setInitialized();
 
         int sockfd = DNSServiceRefSockFD(*(req->_sdref->data()));
-        if(sockfd == -1)
-        {
-            setDelayedError(req, LowLevelError(
-                "DNSServiceRefSockFD", -1));
+        if (sockfd == -1) {
+            setDelayedError(req, LowLevelError("DNSServiceRefSockFD", -1));
             return id;
         }
 
-        req->_sockfd = sockfd;
+        req->_sockfd  = sockfd;
         req->_sn_read = new SafeSocketNotifier(sockfd, QSocketNotifier::Read, this);
         connect(req->_sn_read, SIGNAL(activated(int)), SLOT(sn_activated()));
         _requestsById.insert(id, req);
@@ -525,31 +437,27 @@ public:
     int recordAdd(int reg_id, const Record &rec, LowLevelError *lowLevelError)
     {
         Request *req = _requestsById.value(reg_id);
-        if(!req)
-        {
-            if(lowLevelError)
+        if (!req) {
+            if (lowLevelError)
                 *lowLevelError = LowLevelError();
             return -1;
         }
 
         RecordRef *recordRef = new RecordRef;
 
-        DNSServiceErrorType err = DNSServiceAddRecord(
-            *(req->_sdref->data()), recordRef->data(), 0,
-            rec.rrtype, rec.rdata.size(), rec.rdata.data(),
-            rec.ttl);
-        if(err != kDNSServiceErr_NoError)
-        {
-            if(lowLevelError)
+        DNSServiceErrorType err = DNSServiceAddRecord(*(req->_sdref->data()), recordRef->data(), 0, rec.rrtype,
+                                                      rec.rdata.size(), rec.rdata.data(), rec.ttl);
+        if (err != kDNSServiceErr_NoError) {
+            if (lowLevelError)
                 *lowLevelError = LowLevelError("DNSServiceAddRecord", err);
             delete recordRef;
             return -1;
         }
 
-        int id = idManager.reserveId();
+        int        id   = idManager.reserveId();
         SubRecord *srec = new SubRecord(this);
-        srec->_id = id;
-        srec->_sdref = recordRef;
+        srec->_id       = id;
+        srec->_sdref    = recordRef;
         req->_subRecords += srec;
         _requestsByRecId.insert(id, req);
 
@@ -559,33 +467,27 @@ public:
     bool recordUpdate(int reg_id, int rec_id, const Record &rec, LowLevelError *lowLevelError)
     {
         Request *req = _requestsById.value(reg_id);
-        if(!req)
-        {
-            if(lowLevelError)
+        if (!req) {
+            if (lowLevelError)
                 *lowLevelError = LowLevelError();
             return false;
         }
 
         SubRecord *srec = 0;
-        if(rec_id != -1)
-        {
+        if (rec_id != -1) {
             int at = req->subRecordIndexById(rec_id);
-            if(at == -1)
-            {
-                if(lowLevelError)
+            if (at == -1) {
+                if (lowLevelError)
                     *lowLevelError = LowLevelError();
                 return false;
             }
             srec = req->_subRecords[at];
         }
 
-        DNSServiceErrorType err = DNSServiceUpdateRecord(
-            *(req->_sdref->data()),
-            srec ? *(srec->_sdref->data()) : NULL, 0,
-            rec.rdata.size(), rec.rdata.data(), rec.ttl);
-        if(err != kDNSServiceErr_NoError)
-        {
-            if(lowLevelError)
+        DNSServiceErrorType err = DNSServiceUpdateRecord(*(req->_sdref->data()), srec ? *(srec->_sdref->data()) : NULL,
+                                                         0, rec.rdata.size(), rec.rdata.data(), rec.ttl);
+        if (err != kDNSServiceErr_NoError) {
+            if (lowLevelError)
                 *lowLevelError = LowLevelError("DNSServiceUpdateRecord", err);
             return false;
         }
@@ -596,7 +498,7 @@ public:
     void recordRemove(int rec_id)
     {
         Request *req = _requestsByRecId.value(rec_id);
-        if(!req)
+        if (!req)
             return;
 
         // this can't fail
@@ -612,7 +514,7 @@ public:
     void stop(int id)
     {
         Request *req = _requestsById.value(id);
-        if(req)
+        if (req)
             removeRequest(req);
     }
 
@@ -620,8 +522,8 @@ private slots:
     void sn_activated()
     {
         SafeSocketNotifier *sn_read = static_cast<SafeSocketNotifier *>(sender());
-        Request *req = _requestsBySocket.value(sn_read);
-        if(!req)
+        Request *           req     = _requestsBySocket.value(sn_read);
+        if (!req)
             return;
 
         int id = req->_id;
@@ -630,47 +532,40 @@ private slots:
 
         // do error if the above function returns an error, or if we
         //   collected an error during a callback
-        if(err != kDNSServiceErr_NoError || !req->_lowLevelError.func.isEmpty())
-        {
+        if (err != kDNSServiceErr_NoError || !req->_lowLevelError.func.isEmpty()) {
             LowLevelError lowLevelError;
-            if(err != kDNSServiceErr_NoError)
+            if (err != kDNSServiceErr_NoError)
                 lowLevelError = LowLevelError("DNSServiceProcessResult", err);
             else
                 lowLevelError = req->_lowLevelError;
 
             // reg conflict indicated via callback
             bool regConflict = false;
-            if(req->_type == Request::Reg && !req->_lowLevelError.func.isEmpty())
+            if (req->_type == Request::Reg && !req->_lowLevelError.func.isEmpty())
                 regConflict = req->_regConflict;
 
             removeRequest(req);
 
-            if(req->_type == Request::Query)
-            {
+            if (req->_type == Request::Query) {
                 QDnsSd::QueryResult r;
-                r.success = false;
+                r.success       = false;
                 r.lowLevelError = lowLevelError;
                 emit q->queryResult(id, r);
-            }
-            else if(req->_type == Request::Browse)
-            {
+            } else if (req->_type == Request::Browse) {
                 QDnsSd::BrowseResult r;
-                r.success = false;
+                r.success       = false;
                 r.lowLevelError = lowLevelError;
                 emit q->browseResult(id, r);
-            }
-            else if(req->_type == Request::Resolve)
-            {
+            } else if (req->_type == Request::Resolve) {
                 QDnsSd::ResolveResult r;
-                r.success = false;
+                r.success       = false;
                 r.lowLevelError = lowLevelError;
                 emit q->resolveResult(id, r);
-            }
-            else // Reg
+            } else // Reg
             {
                 QDnsSd::RegResult r;
                 r.success = false;
-                if(regConflict)
+                if (regConflict)
                     r.errorCode = QDnsSd::RegResult::ErrorConflict;
                 else
                     r.errorCode = QDnsSd::RegResult::ErrorGeneric;
@@ -683,10 +578,8 @@ private slots:
 
         // handle success
 
-        if(req->_type == Request::Query)
-        {
-            if(req->_doSignal)
-            {
+        if (req->_type == Request::Query) {
+            if (req->_doSignal) {
                 QDnsSd::QueryResult r;
                 r.success = true;
                 r.records = req->_queryRecords;
@@ -694,11 +587,8 @@ private slots:
                 req->_doSignal = false;
                 emit q->queryResult(id, r);
             }
-        }
-        else if(req->_type == Request::Browse)
-        {
-            if(req->_doSignal)
-            {
+        } else if (req->_type == Request::Browse) {
+            if (req->_doSignal) {
                 QDnsSd::BrowseResult r;
                 r.success = true;
                 r.entries = req->_browseEntries;
@@ -706,17 +596,14 @@ private slots:
                 req->_doSignal = false;
                 emit q->browseResult(id, r);
             }
-        }
-        else if(req->_type == Request::Resolve)
-        {
-            if(req->_doSignal)
-            {
+        } else if (req->_type == Request::Resolve) {
+            if (req->_doSignal) {
                 QDnsSd::ResolveResult r;
-                r.success = true;
-                r.fullName = req->_resolveFullName;
-                r.hostTarget = req->_resolveHost;
-                r.port = req->_resolvePort;
-                r.txtRecord = req->_resolveTxtRecord;
+                r.success      = true;
+                r.fullName     = req->_resolveFullName;
+                r.hostTarget   = req->_resolveHost;
+                r.port         = req->_resolvePort;
+                r.txtRecord    = req->_resolveTxtRecord;
                 req->_doSignal = false;
 
                 // there is only one response
@@ -724,14 +611,12 @@ private slots:
 
                 emit q->resolveResult(id, r);
             }
-        }
-        else // Reg
+        } else // Reg
         {
-            if(req->_doSignal)
-            {
+            if (req->_doSignal) {
                 QDnsSd::RegResult r;
-                r.success = true;
-                r.domain = req->_regDomain;
+                r.success      = true;
+                r.domain       = req->_regDomain;
                 req->_doSignal = false;
 
                 emit q->regResult(id, r);
@@ -741,180 +626,155 @@ private slots:
 
     void doError()
     {
-        SafeTimer *t = static_cast<SafeTimer *>(sender());
-        Request *req = _requestsByTimer.value(t);
-        if(!req)
+        SafeTimer *t   = static_cast<SafeTimer *>(sender());
+        Request *  req = _requestsByTimer.value(t);
+        if (!req)
             return;
 
-        int id = req->_id;
+        int id   = req->_id;
         int type = req->_type;
         removeRequest(req);
 
-        if(type == Request::Query)
-        {
+        if (type == Request::Query) {
             QDnsSd::QueryResult r;
-            r.success = false;
+            r.success       = false;
             r.lowLevelError = req->_lowLevelError;
             emit q->queryResult(id, r);
-        }
-        else if(type == Request::Browse)
-        {
+        } else if (type == Request::Browse) {
             QDnsSd::BrowseResult r;
-            r.success = false;
+            r.success       = false;
             r.lowLevelError = req->_lowLevelError;
             emit q->browseResult(id, r);
-        }
-        else if(type == Request::Resolve)
-        {
+        } else if (type == Request::Resolve) {
             QDnsSd::ResolveResult r;
-            r.success = false;
+            r.success       = false;
             r.lowLevelError = req->_lowLevelError;
             emit q->resolveResult(id, r);
-        }
-        else // Reg
+        } else // Reg
         {
             QDnsSd::RegResult r;
-            r.success = false;
-            r.errorCode = QDnsSd::RegResult::ErrorGeneric;
+            r.success       = false;
+            r.errorCode     = QDnsSd::RegResult::ErrorGeneric;
             r.lowLevelError = req->_lowLevelError;
             emit q->regResult(id, r);
         }
     }
 
 private:
-    static void cb_queryRecordReply(DNSServiceRef ref,
-        DNSServiceFlags flags, uint32_t interfaceIndex,
-        DNSServiceErrorType errorCode, const char *fullname,
-        uint16_t rrtype, uint16_t rrclass, uint16_t rdlen,
-        const void *rdata, uint32_t ttl, void *context)
+    static void cb_queryRecordReply(DNSServiceRef ref, DNSServiceFlags flags, uint32_t interfaceIndex,
+                                    DNSServiceErrorType errorCode, const char *fullname, uint16_t rrtype,
+                                    uint16_t rrclass, uint16_t rdlen, const void *rdata, uint32_t ttl, void *context)
     {
         Q_UNUSED(ref);
         Q_UNUSED(interfaceIndex);
         Q_UNUSED(rrclass);
 
         Request *req = static_cast<Request *>(context);
-        req->_self->handle_queryRecordReply(req, flags, errorCode,
-            fullname, rrtype, rdlen, (const char *)rdata, ttl);
+        req->_self->handle_queryRecordReply(req, flags, errorCode, fullname, rrtype, rdlen, (const char *)rdata, ttl);
     }
 
-    static void cb_browseReply(DNSServiceRef ref,
-        DNSServiceFlags flags, uint32_t interfaceIndex,
-        DNSServiceErrorType errorCode, const char *serviceName,
-        const char *regtype, const char *replyDomain, void *context)
+    static void cb_browseReply(DNSServiceRef ref, DNSServiceFlags flags, uint32_t interfaceIndex,
+                               DNSServiceErrorType errorCode, const char *serviceName, const char *regtype,
+                               const char *replyDomain, void *context)
     {
         Q_UNUSED(ref);
         Q_UNUSED(interfaceIndex);
 
         Request *req = static_cast<Request *>(context);
-        req->_self->handle_browseReply(req, flags, errorCode,
-            serviceName, regtype, replyDomain);
+        req->_self->handle_browseReply(req, flags, errorCode, serviceName, regtype, replyDomain);
     }
 
-    static void cb_resolveReply(DNSServiceRef ref,
-        DNSServiceFlags flags, uint32_t interfaceIndex,
-        DNSServiceErrorType errorCode, const char *fullname,
-        const char *hosttarget, uint16_t port, uint16_t txtLen,
-        const unsigned char *txtRecord, void *context)
+    static void cb_resolveReply(DNSServiceRef ref, DNSServiceFlags flags, uint32_t interfaceIndex,
+                                DNSServiceErrorType errorCode, const char *fullname, const char *hosttarget,
+                                uint16_t port, uint16_t txtLen, const unsigned char *txtRecord, void *context)
     {
         Q_UNUSED(ref);
         Q_UNUSED(flags);
         Q_UNUSED(interfaceIndex);
 
         Request *req = static_cast<Request *>(context);
-        req->_self->handle_resolveReply(req, errorCode, fullname,
-            hosttarget, port, txtLen, txtRecord);
+        req->_self->handle_resolveReply(req, errorCode, fullname, hosttarget, port, txtLen, txtRecord);
     }
 
-    static void cb_regReply(DNSServiceRef ref,
-        DNSServiceFlags flags, DNSServiceErrorType errorCode,
-        const char *name, const char *regtype, const char *domain,
-        void *context)
+    static void cb_regReply(DNSServiceRef ref, DNSServiceFlags flags, DNSServiceErrorType errorCode, const char *name,
+                            const char *regtype, const char *domain, void *context)
     {
         Q_UNUSED(ref);
         Q_UNUSED(flags);
 
         Request *req = static_cast<Request *>(context);
-        req->_self->handle_regReply(req, errorCode, name, regtype,
-            domain);
+        req->_self->handle_regReply(req, errorCode, name, regtype, domain);
     }
 
-    void handle_queryRecordReply(Request *req, DNSServiceFlags flags,
-        DNSServiceErrorType errorCode, const char *fullname,
-        uint16_t rrtype, uint16_t rdlen, const char *rdata,
-        uint16_t ttl)
+    void handle_queryRecordReply(Request *req, DNSServiceFlags flags, DNSServiceErrorType errorCode,
+                                 const char *fullname, uint16_t rrtype, uint16_t rdlen, const char *rdata, uint16_t ttl)
     {
-        if(errorCode != kDNSServiceErr_NoError)
-        {
-            req->_doSignal = true;
+        if (errorCode != kDNSServiceErr_NoError) {
+            req->_doSignal      = true;
             req->_lowLevelError = LowLevelError("DNSServiceQueryRecordReply", errorCode);
             return;
         }
 
         QDnsSd::Record rec;
-        rec.added = (flags & kDNSServiceFlagsAdd) ? true: false;
-        rec.name = QByteArray(fullname);
+        rec.added  = (flags & kDNSServiceFlagsAdd) ? true : false;
+        rec.name   = QByteArray(fullname);
         rec.rrtype = rrtype;
-        rec.rdata = QByteArray(rdata, rdlen);
-        rec.ttl = ttl;
+        rec.rdata  = QByteArray(rdata, rdlen);
+        rec.ttl    = ttl;
         req->_queryRecords += rec;
 
-        if(!(flags & kDNSServiceFlagsMoreComing))
+        if (!(flags & kDNSServiceFlagsMoreComing))
             req->_doSignal = true;
     }
 
-    void handle_browseReply(Request *req, DNSServiceFlags flags,
-        DNSServiceErrorType errorCode, const char *serviceName,
-        const char *regtype, const char *replyDomain)
+    void handle_browseReply(Request *req, DNSServiceFlags flags, DNSServiceErrorType errorCode, const char *serviceName,
+                            const char *regtype, const char *replyDomain)
     {
-        if(errorCode != kDNSServiceErr_NoError)
-        {
-            req->_doSignal = true;
+        if (errorCode != kDNSServiceErr_NoError) {
+            req->_doSignal      = true;
             req->_lowLevelError = LowLevelError("DNSServiceBrowseReply", errorCode);
             return;
         }
 
         QDnsSd::BrowseEntry e;
-        e.added = (flags & kDNSServiceFlagsAdd) ? true: false;
+        e.added       = (flags & kDNSServiceFlagsAdd) ? true : false;
         e.serviceName = QByteArray(serviceName);
         e.serviceType = QByteArray(regtype);
         e.replyDomain = QByteArray(replyDomain);
         req->_browseEntries += e;
 
-        if(!(flags & kDNSServiceFlagsMoreComing))
+        if (!(flags & kDNSServiceFlagsMoreComing))
             req->_doSignal = true;
     }
 
-    void handle_resolveReply(Request *req, DNSServiceErrorType errorCode,
-        const char *fullname, const char *hosttarget, uint16_t port,
-        uint16_t txtLen, const unsigned char *txtRecord)
+    void handle_resolveReply(Request *req, DNSServiceErrorType errorCode, const char *fullname, const char *hosttarget,
+                             uint16_t port, uint16_t txtLen, const unsigned char *txtRecord)
     {
-        if(errorCode != kDNSServiceErr_NoError)
-        {
-            req->_doSignal = true;
+        if (errorCode != kDNSServiceErr_NoError) {
+            req->_doSignal      = true;
             req->_lowLevelError = LowLevelError("DNSServiceResolveReply", errorCode);
             return;
         }
 
-        req->_resolveFullName = QByteArray(fullname);
-        req->_resolveHost = QByteArray(hosttarget);
-        req->_resolvePort = ntohs(port);
+        req->_resolveFullName  = QByteArray(fullname);
+        req->_resolveHost      = QByteArray(hosttarget);
+        req->_resolvePort      = ntohs(port);
         req->_resolveTxtRecord = QByteArray((const char *)txtRecord, txtLen);
 
         req->_doSignal = true;
     }
 
-    void handle_regReply(Request *req, DNSServiceErrorType errorCode,
-        const char *name, const char *regtype, const char *domain)
+    void handle_regReply(Request *req, DNSServiceErrorType errorCode, const char *name, const char *regtype,
+                         const char *domain)
     {
         Q_UNUSED(name);
         Q_UNUSED(regtype);
 
-        if(errorCode != kDNSServiceErr_NoError)
-        {
-            req->_doSignal = true;
+        if (errorCode != kDNSServiceErr_NoError) {
+            req->_doSignal      = true;
             req->_lowLevelError = LowLevelError("DNSServiceRegisterReply", errorCode);
 
-            if(errorCode == kDNSServiceErr_NameConflict)
+            if (errorCode == kDNSServiceErr_NameConflict)
                 req->_regConflict = true;
             else
                 req->_regConflict = false;
@@ -922,37 +782,25 @@ private:
         }
 
         req->_regDomain = QByteArray(domain);
-        req->_doSignal = true;
+        req->_doSignal  = true;
     }
 };
 
-QDnsSd::QDnsSd(QObject *parent) :
-    QObject(parent)
-{
-    d = new Private(this);
-}
+QDnsSd::QDnsSd(QObject *parent) : QObject(parent) { d = new Private(this); }
 
-QDnsSd::~QDnsSd()
-{
-    delete d;
-}
+QDnsSd::~QDnsSd() { delete d; }
 
-int QDnsSd::query(const QByteArray &name, int qType)
-{
-    return d->query(name, qType);
-}
+int QDnsSd::query(const QByteArray &name, int qType) { return d->query(name, qType); }
 
-int QDnsSd::browse(const QByteArray &serviceType, const QByteArray &domain)
-{
-    return d->browse(serviceType, domain);
-}
+int QDnsSd::browse(const QByteArray &serviceType, const QByteArray &domain) { return d->browse(serviceType, domain); }
 
 int QDnsSd::resolve(const QByteArray &serviceName, const QByteArray &serviceType, const QByteArray &domain)
 {
     return d->resolve(serviceName, serviceType, domain);
 }
 
-int QDnsSd::reg(const QByteArray &serviceName, const QByteArray &serviceType, const QByteArray &domain, int port, const QByteArray &txtRecord)
+int QDnsSd::reg(const QByteArray &serviceName, const QByteArray &serviceType, const QByteArray &domain, int port,
+                const QByteArray &txtRecord)
 {
     return d->reg(serviceName, serviceType, domain, port, txtRecord);
 }
@@ -965,7 +813,7 @@ int QDnsSd::recordAdd(int reg_id, const Record &rec, LowLevelError *lowLevelErro
 bool QDnsSd::recordUpdate(int rec_id, const Record &rec, LowLevelError *lowLevelError)
 {
     int reg_id = d->regIdForRecId(rec_id);
-    if(reg_id == -1)
+    if (reg_id == -1)
         return false;
 
     return d->recordUpdate(reg_id, rec_id, rec, lowLevelError);
@@ -975,43 +823,33 @@ bool QDnsSd::recordUpdateTxt(int reg_id, const QByteArray &txtRecord, quint32 tt
 {
     Record rec;
     rec.rrtype = kDNSServiceType_TXT;
-    rec.rdata = txtRecord;
-    rec.ttl = ttl;
+    rec.rdata  = txtRecord;
+    rec.ttl    = ttl;
     return d->recordUpdate(reg_id, -1, rec, lowLevelError);
 }
 
-void QDnsSd::recordRemove(int rec_id)
-{
-    d->recordRemove(rec_id);
-}
+void QDnsSd::recordRemove(int rec_id) { d->recordRemove(rec_id); }
 
-void QDnsSd::stop(int id)
-{
-    d->stop(id);
-}
+void QDnsSd::stop(int id) { d->stop(id); }
 
 QByteArray QDnsSd::createTxtRecord(const QList<QByteArray> &strings)
 {
     // split into var/val and validate
     QList<QByteArray> vars;
     QList<QByteArray> vals; // null = no value, empty = empty value
-    foreach(const QByteArray &i, strings)
-    {
+    foreach (const QByteArray &i, strings) {
         QByteArray var;
         QByteArray val;
-        int n = i.indexOf('=');
-        if(n != -1)
-        {
+        int        n = i.indexOf('=');
+        if (n != -1) {
             var = i.mid(0, n);
             val = i.mid(n + 1);
-        }
-        else
+        } else
             var = i;
 
-        for(int n = 0; n < var.size(); ++n)
-        {
+        for (int n = 0; n < var.size(); ++n) {
             unsigned char c = var[n];
-            if(c < 0x20 || c > 0x7e)
+            if (c < 0x20 || c > 0x7e)
                 return QByteArray();
         }
 
@@ -1020,21 +858,18 @@ QByteArray QDnsSd::createTxtRecord(const QList<QByteArray> &strings)
     }
 
     TXTRecordRef ref;
-    QByteArray buf(256, 0);
+    QByteArray   buf(256, 0);
     TXTRecordCreate(&ref, buf.size(), buf.data());
-    for(int n = 0; n < vars.count(); ++n)
-    {
-        int valueSize = vals[n].size();
+    for (int n = 0; n < vars.count(); ++n) {
+        int   valueSize = vals[n].size();
         char *value;
-        if(!vals[n].isNull())
+        if (!vals[n].isNull())
             value = vals[n].data();
         else
             value = 0;
 
-        DNSServiceErrorType err = TXTRecordSetValue(&ref,
-            vars[n].data(), valueSize, value);
-        if(err != kDNSServiceErr_NoError)
-        {
+        DNSServiceErrorType err = TXTRecordSetValue(&ref, vars[n].data(), valueSize, value);
+        if (err != kDNSServiceErr_NoError) {
             TXTRecordDeallocate(&ref);
             return QByteArray();
         }
@@ -1047,23 +882,20 @@ QByteArray QDnsSd::createTxtRecord(const QList<QByteArray> &strings)
 QList<QByteArray> QDnsSd::parseTxtRecord(const QByteArray &txtRecord)
 {
     QList<QByteArray> out;
-    int count = TXTRecordGetCount(txtRecord.size(), txtRecord.data());
-    for(int n = 0; n < count; ++n)
-    {
-        QByteArray keyBuf(256, 0);
-        uint8_t valueLen;
-        const void *value;
-        DNSServiceErrorType err = TXTRecordGetItemAtIndex(
-            txtRecord.size(), txtRecord.data(), n, keyBuf.size(),
-            keyBuf.data(), &valueLen, &value);
-        if(err != kDNSServiceErr_NoError)
+    int               count = TXTRecordGetCount(txtRecord.size(), txtRecord.data());
+    for (int n = 0; n < count; ++n) {
+        QByteArray          keyBuf(256, 0);
+        uint8_t             valueLen;
+        const void *        value;
+        DNSServiceErrorType err = TXTRecordGetItemAtIndex(txtRecord.size(), txtRecord.data(), n, keyBuf.size(),
+                                                          keyBuf.data(), &valueLen, &value);
+        if (err != kDNSServiceErr_NoError)
             return QList<QByteArray>();
 
         keyBuf.resize(qstrlen(keyBuf.data()));
 
         QByteArray entry = keyBuf;
-        if(value)
-        {
+        if (value) {
             entry += '=';
             entry += QByteArray((const char *)value, valueLen);
         }

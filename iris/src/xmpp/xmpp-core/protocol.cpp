@@ -1,4 +1,4 @@
-            /*
+/*
  * protocol.cpp - XMPP-Core protocol state machine
  * Copyright (C) 2004  Justin Karneges
  *
@@ -42,14 +42,13 @@ using namespace XMPP;
 static QString printArray(const QByteArray &a)
 {
     QString s;
-    for(int n = 0; n < a.size(); ++n) {
+    for (int n = 0; n < a.size(); ++n) {
         unsigned char c = (unsigned char)a[(int)n];
-        if(c < 32 || c >= 127) {
+        if (c < 32 || c >= 127) {
             QString str;
             str.sprintf("[%02x]", c);
             s += str;
-        }
-        else
+        } else
             s += c;
     }
     return s;
@@ -60,8 +59,8 @@ static QString printArray(const QByteArray &a)
 // Get an element's first child element
 static QDomElement firstChildElement(const QDomElement &e)
 {
-    for(QDomNode n = e.firstChild(); !n.isNull(); n = n.nextSibling()) {
-        if(n.isElement())
+    for (QDomNode n = e.firstChild(); !n.isNull(); n = n.nextSibling()) {
+        if (n.isElement())
             return n.toElement();
     }
     return QDomElement();
@@ -81,82 +80,74 @@ Version::Version(int maj, int min)
 //----------------------------------------------------------------------------
 StreamFeatures::StreamFeatures()
 {
-    tls_supported = false;
-    sasl_supported = false;
-    bind_supported = false;
-    tls_required = false;
+    tls_supported      = false;
+    sasl_supported     = false;
+    bind_supported     = false;
+    tls_required       = false;
     compress_supported = false;
-    sm_supported = false;
-    session_supported = false;
-    session_required = false;
+    sm_supported       = false;
+    session_supported  = false;
+    session_required   = false;
 }
 
 //----------------------------------------------------------------------------
 // BasicProtocol
 //----------------------------------------------------------------------------
-BasicProtocol::SASLCondEntry BasicProtocol::saslCondTable[] =
-{
-    { "aborted",                Aborted },
-    { "account-disabled",       AccountDisabled },
-    { "credentials-expired",    CredentialsExpired },
-    { "encryption-required",    EncryptionRequired },
-    { "incorrect-encoding",     IncorrectEncoding },
-    { "invalid-authzid",        InvalidAuthzid },
-    { "invalid-mechanism",      InvalidMech },
-    { "malformed-request",      MalformedRequest },
-    { "mechanism-too-weak",     MechTooWeak },
-    { "not-authorized",         NotAuthorized },
+BasicProtocol::SASLCondEntry BasicProtocol::saslCondTable[] = {
+    { "aborted", Aborted },
+    { "account-disabled", AccountDisabled },
+    { "credentials-expired", CredentialsExpired },
+    { "encryption-required", EncryptionRequired },
+    { "incorrect-encoding", IncorrectEncoding },
+    { "invalid-authzid", InvalidAuthzid },
+    { "invalid-mechanism", InvalidMech },
+    { "malformed-request", MalformedRequest },
+    { "mechanism-too-weak", MechTooWeak },
+    { "not-authorized", NotAuthorized },
     { "temporary-auth-failure", TemporaryAuthFailure },
     { nullptr, 0 },
 };
 
-BasicProtocol::StreamCondEntry BasicProtocol::streamCondTable[] =
-{
-    { "bad-format",               BadFormat },
-    { "bad-namespace-prefix",     BadNamespacePrefix },
-    { "conflict",                 Conflict },
-    { "connection-timeout",       ConnectionTimeout },
-    { "host-gone",                HostGone },
-    { "host-unknown",             HostUnknown },
-    { "improper-addressing",      ImproperAddressing },
-    { "internal-server-error",    InternalServerError },
-    { "invalid-from",             InvalidFrom },
-    { "invalid-namespace",        InvalidNamespace },
-    { "invalid-xml",              InvalidXml },
-    { "not-authorized",           StreamNotAuthorized },
-    { "not-well-formed",          NotWellFormed },
-    { "policy-violation",         PolicyViolation },
+BasicProtocol::StreamCondEntry BasicProtocol::streamCondTable[] = {
+    { "bad-format", BadFormat },
+    { "bad-namespace-prefix", BadNamespacePrefix },
+    { "conflict", Conflict },
+    { "connection-timeout", ConnectionTimeout },
+    { "host-gone", HostGone },
+    { "host-unknown", HostUnknown },
+    { "improper-addressing", ImproperAddressing },
+    { "internal-server-error", InternalServerError },
+    { "invalid-from", InvalidFrom },
+    { "invalid-namespace", InvalidNamespace },
+    { "invalid-xml", InvalidXml },
+    { "not-authorized", StreamNotAuthorized },
+    { "not-well-formed", NotWellFormed },
+    { "policy-violation", PolicyViolation },
     { "remote-connection-failed", RemoteConnectionFailed },
-    { "reset",                    StreamReset },
-    { "resource-constraint",      ResourceConstraint },
-    { "restricted-xml",           RestrictedXml },
-    { "see-other-host",           SeeOtherHost },
-    { "system-shutdown",          SystemShutdown },
-    { "undefined-condition",      UndefinedCondition },
-    { "unsupported-encoding",     UnsupportedEncoding },
-    { "unsupported-stanza-type",  UnsupportedStanzaType },
-    { "unsupported-version",      UnsupportedVersion },
+    { "reset", StreamReset },
+    { "resource-constraint", ResourceConstraint },
+    { "restricted-xml", RestrictedXml },
+    { "see-other-host", SeeOtherHost },
+    { "system-shutdown", SystemShutdown },
+    { "undefined-condition", UndefinedCondition },
+    { "unsupported-encoding", UnsupportedEncoding },
+    { "unsupported-stanza-type", UnsupportedStanzaType },
+    { "unsupported-version", UnsupportedVersion },
     { nullptr, 0 },
 };
 
-BasicProtocol::BasicProtocol()
-:XmlProtocol()
-{
-    init();
-}
+BasicProtocol::BasicProtocol() : XmlProtocol() { init(); }
 
-BasicProtocol::~BasicProtocol()
-{
-}
+BasicProtocol::~BasicProtocol() {}
 
 void BasicProtocol::init()
 {
-    errCond = -1;
-    sasl_authed = false;
-    doShutdown = false;
-    delayedError = false;
-    closeError = false;
-    ready = false;
+    errCond        = -1;
+    sasl_authed    = false;
+    doShutdown     = false;
+    delayedError   = false;
+    closeError     = false;
+    ready          = false;
     stanzasPending = 0;
     stanzasWritten = 0;
 }
@@ -166,14 +157,14 @@ void BasicProtocol::reset()
     XmlProtocol::reset();
     init();
 
-    to = QString();
-    from = QString();
-    id = QString();
-    lang = QString();
-    version = Version(1,0);
-    errText = QString();
+    to         = QString();
+    from       = QString();
+    id         = QString();
+    lang       = QString();
+    version    = Version(1, 0);
+    errText    = QString();
     errAppSpec = QDomElement();
-    otherHost = QString();
+    otherHost  = QString();
     spare.resize(0);
     sasl_mech = QString();
     sasl_mechlist.clear();
@@ -203,22 +194,16 @@ void BasicProtocol::sendWhitespace()
     sendList += i;
 }
 
-void BasicProtocol::clearSendQueue()
-{
-    sendList.clear();
-}
+void BasicProtocol::clearSendQueue() { sendList.clear(); }
 
 QDomElement BasicProtocol::recvStanza()
 {
     QDomElement e = stanzaToRecv;
-    stanzaToRecv = QDomElement();
+    stanzaToRecv  = QDomElement();
     return e;
 }
 
-void BasicProtocol::shutdown()
-{
-    doShutdown = true;
-}
+void BasicProtocol::shutdown() { doShutdown = true; }
 
 void BasicProtocol::shutdownWithError(int cond, const QString &str)
 {
@@ -226,30 +211,15 @@ void BasicProtocol::shutdownWithError(int cond, const QString &str)
     delayErrorAndClose(cond);
 }
 
-bool BasicProtocol::isReady() const
-{
-    return ready;
-}
+bool BasicProtocol::isReady() const { return ready; }
 
-void BasicProtocol::setReady(bool b)
-{
-    ready = b;
-}
+void BasicProtocol::setReady(bool b) { ready = b; }
 
-QString BasicProtocol::saslMech() const
-{
-    return sasl_mech;
-}
+QString BasicProtocol::saslMech() const { return sasl_mech; }
 
-QByteArray BasicProtocol::saslStep() const
-{
-    return sasl_step;
-}
+QByteArray BasicProtocol::saslStep() const { return sasl_step; }
 
-void BasicProtocol::setSASLMechList(const QStringList &list)
-{
-    sasl_mechlist = list;
-}
+void BasicProtocol::setSASLMechList(const QStringList &list) { sasl_mechlist = list; }
 
 void BasicProtocol::setSASLFirst(const QString &mech, const QByteArray &step)
 {
@@ -257,20 +227,14 @@ void BasicProtocol::setSASLFirst(const QString &mech, const QByteArray &step)
     sasl_step = step;
 }
 
-void BasicProtocol::setSASLNext(const QByteArray &step)
-{
-    sasl_step = step;
-}
+void BasicProtocol::setSASLNext(const QByteArray &step) { sasl_step = step; }
 
-void BasicProtocol::setSASLAuthed()
-{
-    sasl_authed = true;
-}
+void BasicProtocol::setSASLAuthed() { sasl_authed = true; }
 
 int BasicProtocol::stringToSASLCond(const QString &s)
 {
-    for(int n = 0; saslCondTable[n].str; ++n) {
-        if(s == saslCondTable[n].str)
+    for (int n = 0; saslCondTable[n].str; ++n) {
+        if (s == saslCondTable[n].str)
             return saslCondTable[n].cond;
     }
     return -1;
@@ -278,8 +242,8 @@ int BasicProtocol::stringToSASLCond(const QString &s)
 
 int BasicProtocol::stringToStreamCond(const QString &s)
 {
-    for(int n = 0; streamCondTable[n].str; ++n) {
-        if(s == streamCondTable[n].str)
+    for (int n = 0; streamCondTable[n].str; ++n) {
+        if (s == streamCondTable[n].str)
             return streamCondTable[n].cond;
     }
     return -1;
@@ -287,8 +251,8 @@ int BasicProtocol::stringToStreamCond(const QString &s)
 
 QString BasicProtocol::saslCondToString(int x)
 {
-    for(int n = 0; saslCondTable[n].str; ++n) {
-        if(x == saslCondTable[n].cond)
+    for (int n = 0; saslCondTable[n].str; ++n) {
+        if (x == saslCondTable[n].cond)
             return saslCondTable[n].str;
     }
     return QString();
@@ -296,8 +260,8 @@ QString BasicProtocol::saslCondToString(int x)
 
 QString BasicProtocol::streamCondToString(int x)
 {
-    for(int n = 0; streamCondTable[n].str; ++n) {
-        if(x == streamCondTable[n].cond)
+    for (int n = 0; streamCondTable[n].str; ++n) {
+        if (x == streamCondTable[n].cond)
             return streamCondTable[n].str;
     }
     return QString();
@@ -305,27 +269,26 @@ QString BasicProtocol::streamCondToString(int x)
 
 void BasicProtocol::extractStreamError(const QDomElement &e)
 {
-    QString text;
-    QHash<QString,QString> langText;
-    QDomElement appSpec;
+    QString                 text;
+    QHash<QString, QString> langText;
+    QDomElement             appSpec;
 
     QDomElement t = firstChildElement(e);
-    if(t.isNull() || t.namespaceURI() != NS_STREAMS) {
+    if (t.isNull() || t.namespaceURI() != NS_STREAMS) {
         // probably old-style error
         errCond = -1;
         errText = e.text();
-    }
-    else
+    } else
         errCond = stringToStreamCond(t.tagName());
 
-    if(errCond != -1) {
-        if(errCond == SeeOtherHost)
+    if (errCond != -1) {
+        if (errCond == SeeOtherHost)
             otherHost = t.text();
 
         auto nodes = e.elementsByTagNameNS(NS_STREAMS, "text");
         if (nodes.count()) {
             for (int i = 0; i < nodes.count(); i++) {
-                auto e = nodes.item(i).toElement();
+                auto    e    = nodes.item(i).toElement();
                 QString lang = e.attributeNS(NS_STREAMS, "lang", "");
                 langText.insert(lang, e.text());
             }
@@ -334,38 +297,32 @@ void BasicProtocol::extractStreamError(const QDomElement &e)
 
         // find first non-standard namespaced element
         QDomNodeList nl = e.childNodes();
-        for(int n = 0; n < nl.count(); ++n) {
+        for (int n = 0; n < nl.count(); ++n) {
             QDomNode i = nl.item(n);
-            if(i.isElement() && i.namespaceURI() != NS_STREAMS) {
+            if (i.isElement() && i.namespaceURI() != NS_STREAMS) {
                 appSpec = i.toElement();
                 break;
             }
         }
 
-        errText = text;
+        errText     = text;
         errLangText = langText;
-        errAppSpec = appSpec;
+        errAppSpec  = appSpec;
     }
 }
 
-void BasicProtocol::send(const QDomElement &e, bool clip)
-{
-    writeElement(e, TypeElement, false, clip, false);
-}
+void BasicProtocol::send(const QDomElement &e, bool clip) { writeElement(e, TypeElement, false, clip, false); }
 
-void BasicProtocol::sendUrgent(const QDomElement &e, bool clip)
-{
-    writeElement(e, TypeElement, false, clip, true);
-}
+void BasicProtocol::sendUrgent(const QDomElement &e, bool clip) { writeElement(e, TypeElement, false, clip, true); }
 
 void BasicProtocol::sendStreamError(int cond, const QString &text, const QDomElement &appSpec)
 {
-    QDomElement se = doc.createElementNS(NS_ETHERX, "stream:error");
+    QDomElement se  = doc.createElementNS(NS_ETHERX, "stream:error");
     QDomElement err = doc.createElementNS(NS_STREAMS, streamCondToString(cond));
-    if(!otherHost.isEmpty())
+    if (!otherHost.isEmpty())
         err.appendChild(doc.createTextNode(otherHost));
     se.appendChild(err);
-    if(!text.isEmpty()) {
+    if (!text.isEmpty()) {
         QDomElement te = doc.createElementNS(NS_STREAMS, "text");
         te.setAttributeNS(NS_XML, "xml:lang", "en");
         te.appendChild(doc.createTextNode(text));
@@ -387,8 +344,8 @@ void BasicProtocol::sendStreamError(const QString &text)
 bool BasicProtocol::errorAndClose(int cond, const QString &text, const QDomElement &appSpec)
 {
     closeError = true;
-    errCond = cond;
-    errText = text;
+    errCond    = cond;
+    errText    = text;
     errAppSpec = appSpec;
     sendStreamError(cond, text, appSpec);
     return close();
@@ -396,23 +353,23 @@ bool BasicProtocol::errorAndClose(int cond, const QString &text, const QDomEleme
 
 bool BasicProtocol::error(int code)
 {
-    event = EError;
+    event     = EError;
     errorCode = code;
     return true;
 }
 
 void BasicProtocol::delayErrorAndClose(int cond, const QString &text, const QDomElement &appSpec)
 {
-    errorCode = ErrStream;
-    errCond = cond;
-    errText = text;
-    errAppSpec = appSpec;
+    errorCode    = ErrStream;
+    errCond      = cond;
+    errText      = text;
+    errAppSpec   = appSpec;
     delayedError = true;
 }
 
 void BasicProtocol::delayError(int code)
 {
-    errorCode = code;
+    errorCode    = code;
     delayedError = true;
 }
 
@@ -421,79 +378,78 @@ QDomElement BasicProtocol::docElement()
     // create the root element
     QDomElement e = doc.createElementNS(NS_ETHERX, "stream:stream");
 
-    QString defns = defaultNamespace();
-    const QStringList list = extraNamespaces();
+    QString           defns = defaultNamespace();
+    const QStringList list  = extraNamespaces();
 
     // HACK: using attributes seems to be the only way to get additional namespaces in here
-    if(!defns.isEmpty())
+    if (!defns.isEmpty())
         e.setAttribute(QString::fromLatin1("xmlns"), defns);
-    for(QStringList::ConstIterator it = list.begin(); it != list.end();) {
+    for (QStringList::ConstIterator it = list.begin(); it != list.end();) {
         QString prefix = *(it++);
-        QString uri = *(it++);
+        QString uri    = *(it++);
         e.setAttribute(QString::fromLatin1("xmlns:") + prefix, uri);
     }
 
     // additional attributes
-    if(!isIncoming() && !to.isEmpty())
+    if (!isIncoming() && !to.isEmpty())
         e.setAttribute(QString::fromLatin1("to"), to);
-    if(isIncoming() && !from.isEmpty())
+    if (isIncoming() && !from.isEmpty())
         e.setAttribute(QString::fromLatin1("from"), from);
-    if(!id.isEmpty())
+    if (!id.isEmpty())
         e.setAttribute(QString::fromLatin1("id"), id);
-    if(!lang.isEmpty())
+    if (!lang.isEmpty())
         e.setAttributeNS(QString::fromLatin1(NS_XML), QString::fromLatin1("xml:lang"), lang);
-    if(version.major > 0 || version.minor > 0)
-        e.setAttribute(QString::fromLatin1("version"), QString::number(version.major) + '.' + QString::number(version.minor));
+    if (version.major > 0 || version.minor > 0)
+        e.setAttribute(QString::fromLatin1("version"),
+                       QString::number(version.major) + '.' + QString::number(version.minor));
 
     return e;
 }
 
 void BasicProtocol::handleDocOpen(const Parser::Event &pe)
 {
-    if(isIncoming()) {
-        if(xmlEncoding() != "UTF-8") {
+    if (isIncoming()) {
+        if (xmlEncoding() != "UTF-8") {
             delayErrorAndClose(UnsupportedEncoding);
             return;
         }
     }
 
-    if(pe.namespaceURI() == NS_ETHERX && pe.localName() == "stream") {
+    if (pe.namespaceURI() == NS_ETHERX && pe.localName() == "stream") {
         QXmlAttributes atts = pe.atts();
 
         // grab the version
-        int major = 0;
-        int minor = 0;
+        int     major  = 0;
+        int     minor  = 0;
         QString verstr = atts.value("version");
-        if(!verstr.isEmpty()) {
+        if (!verstr.isEmpty()) {
             int n = verstr.indexOf('.');
-            if(n != -1) {
+            if (n != -1) {
                 major = verstr.mid(0, n).toInt();
-                minor = verstr.mid(n+1).toInt();
-            }
-            else {
+                minor = verstr.mid(n + 1).toInt();
+            } else {
                 major = verstr.toInt();
                 minor = 0;
             }
         }
         version = Version(major, minor);
 
-        if(isIncoming()) {
-            to = atts.value("to");
+        if (isIncoming()) {
+            to               = atts.value("to");
             QString peerLang = atts.value(NS_XML, "lang");
-            if(!peerLang.isEmpty())
+            if (!peerLang.isEmpty())
                 lang = peerLang;
         }
         // outgoing
         else {
             from = atts.value("from");
             lang = atts.value(NS_XML, "lang");
-            id = atts.value("id");
+            id   = atts.value("id");
         }
 
         handleStreamOpen(pe);
-    }
-    else {
-        if(isIncoming())
+    } else {
+        if (isIncoming())
             delayErrorAndClose(BadFormat);
         else
             delayError(ErrProtocol);
@@ -502,7 +458,7 @@ void BasicProtocol::handleDocOpen(const Parser::Event &pe)
 
 bool BasicProtocol::handleError()
 {
-    if(isIncoming())
+    if (isIncoming())
         return errorAndClose(NotWellFormed);
     else
         return error(ErrParse);
@@ -510,12 +466,11 @@ bool BasicProtocol::handleError()
 
 bool BasicProtocol::handleCloseFinished()
 {
-    if(closeError) {
-        event = EError;
+    if (closeError) {
+        event     = EError;
         errorCode = ErrStream;
         // note: errCond and friends are already set at this point
-    }
-    else
+    } else
         event = EClosed;
     return true;
 }
@@ -523,64 +478,63 @@ bool BasicProtocol::handleCloseFinished()
 bool BasicProtocol::doStep(const QDomElement &e)
 {
     // handle pending error
-    if(delayedError) {
-        if(isIncoming())
+    if (delayedError) {
+        if (isIncoming())
             return errorAndClose(errCond, errText, errAppSpec);
         else
             return error(errorCode);
     }
 
     // shutdown?
-    if(doShutdown) {
+    if (doShutdown) {
         doShutdown = false;
         return close();
     }
 
-    if(!e.isNull()) {
+    if (!e.isNull()) {
         // check for error
-        if(e.namespaceURI() == NS_ETHERX && e.tagName() == "error") {
+        if (e.namespaceURI() == NS_ETHERX && e.tagName() == "error") {
             extractStreamError(e);
             return error(ErrStream);
         }
     }
 
-    if(ready) {
+    if (ready) {
         // stanzas written?
-        if(stanzasWritten > 0) {
+        if (stanzasWritten > 0) {
             --stanzasWritten;
             event = EStanzaSent;
             return true;
         }
         // send items?
-        if(!sendList.isEmpty()) {
+        if (!sendList.isEmpty()) {
             SendItem i;
             {
                 QList<SendItem>::Iterator it = sendList.begin();
-                i = (*it);
+                i                            = (*it);
                 sendList.erase(it);
             }
 
             // outgoing stanza?
-            if(!i.stanzaToSend.isNull()) {
+            if (!i.stanzaToSend.isNull()) {
                 ++stanzasPending;
                 writeElement(i.stanzaToSend, TypeStanza, true);
                 event = ESend;
             }
             // direct send?
-            else if(!i.stringToSend.isEmpty()) {
+            else if (!i.stringToSend.isEmpty()) {
                 writeString(i.stringToSend, TypeDirect, true);
                 event = ESend;
             }
             // whitespace keepalive?
-            else if(i.doWhitespace) {
+            else if (i.doWhitespace) {
                 writeString("\n", TypePing, false);
                 event = ESend;
             }
             return true;
-        }
-        else {
+        } else {
             // if we have pending outgoing stanzas, ask for write notification
-            if(stanzasPending)
+            if (stanzasPending)
                 notify |= NSend;
         }
     }
@@ -590,7 +544,7 @@ bool BasicProtocol::doStep(const QDomElement &e)
 
 void BasicProtocol::itemWritten(int id, int)
 {
-    if(id == TypeStanza) {
+    if (id == TypeStanza) {
         --stanzasPending;
         ++stanzasWritten;
     }
@@ -616,15 +570,11 @@ void BasicProtocol::handleStreamOpen(const Parser::Event &)
 //----------------------------------------------------------------------------
 // CoreProtocol
 //----------------------------------------------------------------------------
-CoreProtocol::CoreProtocol()
-:BasicProtocol()
-{
-    init();
-}
+CoreProtocol::CoreProtocol() : BasicProtocol() { init(); }
 
 CoreProtocol::~CoreProtocol()
 {
-    //fprintf(stderr, "\tCoreProtocol::~CoreProtocol()\n");
+    // fprintf(stderr, "\tCoreProtocol::~CoreProtocol()\n");
 }
 
 void CoreProtocol::init()
@@ -632,29 +582,29 @@ void CoreProtocol::init()
     step = Start;
 
     // ??
-    server = false;
-    dialback = false;
+    server          = false;
+    dialback        = false;
     dialback_verify = false;
 
     // settings
-    jid_ = Jid();
-    password = QString();
-    oldOnly = false;
+    jid_       = Jid();
+    password   = QString();
+    oldOnly    = false;
     allowPlain = false;
-    doTLS = true;
-    doAuth = true;
+    doTLS      = true;
+    doAuth     = true;
     doCompress = true;
-    doBinding = true;
+    doBinding  = true;
 
     // input
     user = QString();
     host = QString();
 
     // status
-    old = false;
-    digest = false;
-    tls_started = false;
-    sasl_started = false;
+    old              = false;
+    digest           = false;
+    tls_started      = false;
+    sasl_started     = false;
     compress_started = false;
 
     sm.reset();
@@ -666,13 +616,15 @@ void CoreProtocol::reset()
     init();
 }
 
-void CoreProtocol::needTimer(int seconds) {
+void CoreProtocol::needTimer(int seconds)
+{
     notify |= NTimeout;
-    need = NNotify;
+    need        = NNotify;
     timeout_sec = seconds;
 }
 
-void CoreProtocol::sendStanza(const QDomElement &e) {
+void CoreProtocol::sendStanza(const QDomElement &e)
+{
     if (sm.isActive()) {
         int len = sm.addUnacknowledgedStanza(e);
         if (len > 5 && len % 4 == 0)
@@ -684,43 +636,44 @@ void CoreProtocol::sendStanza(const QDomElement &e) {
 
 void CoreProtocol::startClientOut(const Jid &_jid, bool _oldOnly, bool tlsActive, bool _doAuth, bool _doCompress)
 {
-    jid_ = _jid;
-    to = _jid.domain();
-    oldOnly = _oldOnly;
-    doAuth = _doAuth;
-    doCompress = _doCompress;
+    jid_        = _jid;
+    to          = _jid.domain();
+    oldOnly     = _oldOnly;
+    doAuth      = _doAuth;
+    doCompress  = _doCompress;
     tls_started = tlsActive;
 
-    if(oldOnly)
-        version = Version(0,0);
+    if (oldOnly)
+        version = Version(0, 0);
     startConnect();
 }
 
 void CoreProtocol::startServerOut(const QString &_to)
 {
     server = true;
-    to = _to;
+    to     = _to;
     startConnect();
 }
 
 void CoreProtocol::startDialbackOut(const QString &_to, const QString &_from)
 {
-    server = true;
-    dialback = true;
-    to = _to;
+    server    = true;
+    dialback  = true;
+    to        = _to;
     self_from = _from;
     startConnect();
 }
 
-void CoreProtocol::startDialbackVerifyOut(const QString &_to, const QString &_from, const QString &id, const QString &key)
+void CoreProtocol::startDialbackVerifyOut(const QString &_to, const QString &_from, const QString &id,
+                                          const QString &key)
 {
-    server = true;
-    dialback = true;
+    server          = true;
+    dialback        = true;
     dialback_verify = true;
-    to = _to;
-    self_from = _from;
-    dialback_id = id;
-    dialback_key = key;
+    to              = _to;
+    self_from       = _from;
+    dialback_id     = id;
+    dialback_key    = key;
     startConnect();
 }
 
@@ -733,49 +686,25 @@ void CoreProtocol::startClientIn(const QString &_id)
 void CoreProtocol::startServerIn(const QString &_id)
 {
     server = true;
-    id = _id;
+    id     = _id;
     startAccept();
 }
 
-void CoreProtocol::setLang(const QString &s)
-{
-    lang = s;
-}
+void CoreProtocol::setLang(const QString &s) { lang = s; }
 
-void CoreProtocol::setAllowTLS(bool b)
-{
-    doTLS = b;
-}
+void CoreProtocol::setAllowTLS(bool b) { doTLS = b; }
 
-void CoreProtocol::setAllowBind(bool b)
-{
-    doBinding = b;
-}
+void CoreProtocol::setAllowBind(bool b) { doBinding = b; }
 
-void CoreProtocol::setAllowPlain(bool b)
-{
-    allowPlain = b;
-}
+void CoreProtocol::setAllowPlain(bool b) { allowPlain = b; }
 
-const Jid& CoreProtocol::jid() const
-{
-    return jid_;
-}
+const Jid &CoreProtocol::jid() const { return jid_; }
 
-void CoreProtocol::setPassword(const QString &s)
-{
-    password = s;
-}
+void CoreProtocol::setPassword(const QString &s) { password = s; }
 
-void CoreProtocol::setFrom(const QString &s)
-{
-    from = s;
-}
+void CoreProtocol::setFrom(const QString &s) { from = s; }
 
-void CoreProtocol::setDialbackKey(const QString &s)
-{
-    dialback_key = s;
-}
+void CoreProtocol::setDialbackKey(const QString &s) { dialback_key = s; }
 
 bool CoreProtocol::loginComplete()
 {
@@ -794,10 +723,10 @@ bool CoreProtocol::loginComplete()
             send(e);
         }
         event = ESend;
-        step = GetSMResponse;
+        step  = GetSMResponse;
     } else {
         event = EReady;
-        step = Done;
+        step  = Done;
     }
     return true;
 }
@@ -805,7 +734,7 @@ bool CoreProtocol::loginComplete()
 int CoreProtocol::getOldErrorCode(const QDomElement &e)
 {
     QDomElement err = e.elementsByTagNameNS(NS_CLIENT, "error").item(0).toElement();
-    if(err.isNull() || !err.hasAttribute("code"))
+    if (err.isNull() || !err.hasAttribute("code"))
         return -1;
     return err.attribute("code").toInt();
 }
@@ -825,9 +754,9 @@ int CoreProtocol::getOldErrorCode(const QDomElement &e)
 
 bool CoreProtocol::stepAdvancesParser() const
 {
-    if(stepRequiresElement())
+    if (stepRequiresElement())
         return true;
-    else if(isReady())
+    else if (isReady())
         return true;
     return false;
 }
@@ -835,18 +764,18 @@ bool CoreProtocol::stepAdvancesParser() const
 // all element-needing steps need to be registered here
 bool CoreProtocol::stepRequiresElement() const
 {
-    switch(step) {
-        case GetFeatures:
-        case GetTLSProceed:
-        case GetCompressProceed:
-        case GetSASLChallenge:
-        case GetBindResponse:
-        case GetAuthGetResponse:
-        case GetAuthSetResponse:
-        case GetRequest:
-        case GetSASLResponse:
-        case GetSMResponse:
-            return true;
+    switch (step) {
+    case GetFeatures:
+    case GetTLSProceed:
+    case GetCompressProceed:
+    case GetSASLChallenge:
+    case GetBindResponse:
+    case GetAuthGetResponse:
+    case GetAuthSetResponse:
+    case GetRequest:
+    case GetSASLResponse:
+    case GetSMResponse:
+        return true;
     }
     return false;
 }
@@ -867,7 +796,7 @@ void CoreProtocol::stringRecv(const QString &s)
 
 QString CoreProtocol::defaultNamespace()
 {
-    if(server)
+    if (server)
         return NS_SERVER;
     else
         return NS_CLIENT;
@@ -876,7 +805,7 @@ QString CoreProtocol::defaultNamespace()
 QStringList CoreProtocol::extraNamespaces()
 {
     QStringList list;
-    if(dialback) {
+    if (dialback) {
         list += "db";
         list += NS_DIALBACK;
     }
@@ -885,30 +814,29 @@ QStringList CoreProtocol::extraNamespaces()
 
 void CoreProtocol::handleStreamOpen(const Parser::Event &pe)
 {
-    if(isIncoming()) {
+    if (isIncoming()) {
         QString ns = pe.nsprefix();
         QString db;
-        if(server) {
+        if (server) {
             db = pe.nsprefix("db");
-            if(!db.isEmpty())
+            if (!db.isEmpty())
                 dialback = true;
         }
 
         // verify namespace
-        if((!server && ns != NS_CLIENT) || (server && ns != NS_SERVER) || (dialback && db != NS_DIALBACK)) {
+        if ((!server && ns != NS_CLIENT) || (server && ns != NS_SERVER) || (dialback && db != NS_DIALBACK)) {
             delayErrorAndClose(InvalidNamespace);
             return;
         }
 
         // verify version
-        if(version.major < 1 && !dialback) {
+        if (version.major < 1 && !dialback) {
             delayErrorAndClose(UnsupportedVersion);
             return;
         }
-    }
-    else {
-        if(!dialback) {
-            if(version.major >= 1 && !oldOnly)
+    } else {
+        if (!dialback) {
+            if (version.major >= 1 && !oldOnly)
                 old = false;
             else
                 old = true;
@@ -932,7 +860,7 @@ void CoreProtocol::elementRecv(const QDomElement &e)
 
 bool CoreProtocol::doStep2(const QDomElement &e)
 {
-    if(dialback)
+    if (dialback)
         return dialbackStep(e);
     else
         return normalStep(e);
@@ -940,9 +868,10 @@ bool CoreProtocol::doStep2(const QDomElement &e)
 
 bool CoreProtocol::isValidStanza(const QDomElement &e) const
 {
-    QString s = e.tagName();
+    QString      s    = e.tagName();
     Stanza::Kind kind = Stanza::kind(s);
-    if(e.namespaceURI() == (server ? NS_SERVER : NS_CLIENT) && (kind == Stanza::Message || kind == Stanza::Presence || kind == Stanza::IQ))
+    if (e.namespaceURI() == (server ? NS_SERVER : NS_CLIENT)
+        && (kind == Stanza::Message || kind == Stanza::Presence || kind == Stanza::IQ))
         return true;
     else
         return false;
@@ -951,7 +880,7 @@ bool CoreProtocol::isValidStanza(const QDomElement &e) const
 bool CoreProtocol::streamManagementHandleStanza(const QDomElement &e)
 {
     QString s = e.tagName();
-    if(s == "r") {
+    if (s == "r") {
 #ifdef IRIS_SM_DEBUG
         qDebug() << "Stream Management: [<-?] Received request from server";
 #endif
@@ -987,11 +916,11 @@ bool CoreProtocol::needSMRequest()
 
 bool CoreProtocol::grabPendingItem(const Jid &to, const Jid &from, int type, DBItem *item)
 {
-    for(QList<DBItem>::Iterator it = dbpending.begin(); it != dbpending.end(); ++it) {
+    for (QList<DBItem>::Iterator it = dbpending.begin(); it != dbpending.end(); ++it) {
         const DBItem &i = *it;
-        if(i.type == type && i.to.compare(to) && i.from.compare(from)) {
+        if (i.type == type && i.to.compare(to) && i.from.compare(from)) {
             const DBItem &i = (*it);
-            *item = i;
+            *item           = i;
             dbpending.erase(it);
             return true;
         }
@@ -1001,44 +930,41 @@ bool CoreProtocol::grabPendingItem(const Jid &to, const Jid &from, int type, DBI
 
 bool CoreProtocol::dialbackStep(const QDomElement &e)
 {
-    if(step == Start) {
+    if (step == Start) {
         setReady(true);
-        step = Done;
+        step  = Done;
         event = EReady;
         return true;
     }
 
-    if(!dbrequests.isEmpty()) {
+    if (!dbrequests.isEmpty()) {
         // process a request
         DBItem i;
         {
             QList<DBItem>::Iterator it = dbrequests.begin();
-            i = (*it);
+            i                          = (*it);
             dbrequests.erase(it);
         }
 
         QDomElement r;
-        if(i.type == DBItem::ResultRequest) {
+        if (i.type == DBItem::ResultRequest) {
             r = doc.createElementNS(NS_DIALBACK, "db:result");
             r.setAttribute("to", i.to.full());
             r.setAttribute("from", i.from.full());
             r.appendChild(doc.createTextNode(i.key));
             dbpending += i;
-        }
-        else if(i.type == DBItem::ResultGrant) {
+        } else if (i.type == DBItem::ResultGrant) {
             r = doc.createElementNS(NS_DIALBACK, "db:result");
             r.setAttribute("to", i.to.full());
             r.setAttribute("from", i.from.full());
             r.setAttribute("type", i.ok ? "valid" : "invalid");
-            if(i.ok) {
+            if (i.ok) {
                 i.type = DBItem::Validated;
                 dbvalidated += i;
-            }
-            else {
+            } else {
                 // TODO: disconnect after writing element
             }
-        }
-        else if(i.type == DBItem::VerifyRequest) {
+        } else if (i.type == DBItem::VerifyRequest) {
             r = doc.createElementNS(NS_DIALBACK, "db:verify");
             r.setAttribute("to", i.to.full());
             r.setAttribute("from", i.from.full());
@@ -1060,60 +986,54 @@ bool CoreProtocol::dialbackStep(const QDomElement &e)
         return true;
     }
 
-    if(!e.isNull()) {
-        if(e.namespaceURI() == NS_DIALBACK) {
-            if(e.tagName() == "result") {
+    if (!e.isNull()) {
+        if (e.namespaceURI() == NS_DIALBACK) {
+            if (e.tagName() == "result") {
                 Jid to(Jid(e.attribute("to")).domain());
                 Jid from(Jid(e.attribute("from")).domain());
-                if(isIncoming()) {
+                if (isIncoming()) {
                     QString key = e.text();
                     // TODO: report event
-                }
-                else {
-                    bool ok = (e.attribute("type") == "valid") ? true: false;
+                } else {
+                    bool   ok = (e.attribute("type") == "valid") ? true : false;
                     DBItem i;
-                    if(grabPendingItem(from, to, DBItem::ResultRequest, &i)) {
-                        if(ok) {
+                    if (grabPendingItem(from, to, DBItem::ResultRequest, &i)) {
+                        if (ok) {
                             i.type = DBItem::Validated;
-                            i.ok = true;
+                            i.ok   = true;
                             dbvalidated += i;
                             // TODO: report event
-                        }
-                        else {
+                        } else {
                             // TODO: report event
                         }
                     }
                 }
-            }
-            else if(e.tagName() == "verify") {
-                Jid to(Jid(e.attribute("to")).domain());
-                Jid from(Jid(e.attribute("from")).domain());
+            } else if (e.tagName() == "verify") {
+                Jid     to(Jid(e.attribute("to")).domain());
+                Jid     from(Jid(e.attribute("from")).domain());
                 QString id = e.attribute("id");
-                if(isIncoming()) {
+                if (isIncoming()) {
                     QString key = e.text();
                     // TODO: report event
-                }
-                else {
-                    bool ok = (e.attribute("type") == "valid") ? true: false;
+                } else {
+                    bool   ok = (e.attribute("type") == "valid") ? true : false;
                     DBItem i;
-                    if(grabPendingItem(from, to, DBItem::VerifyRequest, &i)) {
-                        if(ok) {
+                    if (grabPendingItem(from, to, DBItem::VerifyRequest, &i)) {
+                        if (ok) {
                             // TODO: report event
-                        }
-                        else {
+                        } else {
                             // TODO: report event
                         }
                     }
                 }
             }
-        }
-        else {
-            if(isReady()) {
-                if(isValidStanza(e)) {
+        } else {
+            if (isReady()) {
+                if (isValidStanza(e)) {
                     // TODO: disconnect if stanza is from unverified sender
                     // TODO: ignore packets from receiving servers
                     stanzaToRecv = e;
-                    event = EStanzaReady;
+                    event        = EStanzaReady;
                     return true;
                 }
             }
@@ -1127,33 +1047,30 @@ bool CoreProtocol::dialbackStep(const QDomElement &e)
 
 bool CoreProtocol::normalStep(const QDomElement &e)
 {
-    if(step == Start) {
-        if(isIncoming()) {
+    if (step == Start) {
+        if (isIncoming()) {
             need = NSASLMechs;
             step = SendFeatures;
             return false;
-        }
-        else {
-            if(old) {
-                if(doAuth)
+        } else {
+            if (old) {
+                if (doAuth)
                     step = HandleAuthGet;
                 else
                     return loginComplete();
-            }
-            else
+            } else
                 step = GetFeatures;
 
             return processStep();
         }
-    }
-    else if(step == HandleFeatures) {
+    } else if (step == HandleFeatures) {
         // deal with TLS?
-        if(doTLS && !tls_started && !sasl_authed && features.tls_supported) {
+        if (doTLS && !tls_started && !sasl_authed && features.tls_supported) {
             QDomElement e = doc.createElementNS(NS_TLS, "starttls");
 
             send(e, true);
             event = ESend;
-            step = GetTLSProceed;
+            step  = GetTLSProceed;
             return true;
         }
 
@@ -1162,28 +1079,29 @@ bool CoreProtocol::normalStep(const QDomElement &e)
             return loginComplete();
 
         // Deal with compression
-        if (doCompress && !compress_started && features.compress_supported && features.compression_mechs.contains("zlib")) {
+        if (doCompress && !compress_started && features.compress_supported
+            && features.compression_mechs.contains("zlib")) {
             QDomElement e = doc.createElementNS(NS_COMPRESS_PROTOCOL, "compress");
             QDomElement m = doc.createElementNS(NS_COMPRESS_PROTOCOL, "method");
             m.appendChild(doc.createTextNode("zlib"));
             e.appendChild(m);
-            send(e,true);
+            send(e, true);
             event = ESend;
-            step = GetCompressProceed;
+            step  = GetCompressProceed;
             return true;
         }
 
         // deal with SASL?
-        if(!sasl_authed) {
-            if(!features.sasl_supported) {
+        if (!sasl_authed) {
+            if (!features.sasl_supported) {
                 // SASL MUST be supported
-                //event = EError;
-                //errorCode = ErrProtocol;
-                //return true;
+                // event = EError;
+                // errorCode = ErrProtocol;
+                // return true;
 
                 // Fall back on auth for non-compliant servers
                 step = HandleAuthGet;
-                old = true;
+                old  = true;
                 return true;
             }
 
@@ -1195,18 +1113,17 @@ bool CoreProtocol::normalStep(const QDomElement &e)
             return false;
         }
 
-        if(server) {
+        if (server) {
             return loginComplete();
-        }
-        else {
-            if(!doBinding)
+        } else {
+            if (!doBinding)
                 return loginComplete();
         }
 
         // deal with bind
-        if(!features.bind_supported) {
+        if (!features.bind_supported) {
             // bind MUST be supported
-            event = EError;
+            event     = EError;
             errorCode = ErrProtocol;
             return true;
         }
@@ -1222,7 +1139,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 
             // request specific resource?
             QString resource = jid_.resource();
-            if(!resource.isEmpty()) {
+            if (!resource.isEmpty()) {
                 QDomElement r = doc.createElement("resource");
                 r.appendChild(doc.createTextNode(jid_.resource()));
                 b.appendChild(r);
@@ -1232,14 +1149,13 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 
             send(e);
             event = ESend;
-            step = GetBindResponse;
+            step  = GetBindResponse;
             return true;
         }
-    }
-    else if(step == GetSASLFirst) {
+    } else if (step == GetSASLFirst) {
         QDomElement e = doc.createElementNS(NS_SASL, "auth");
         e.setAttribute("mechanism", sasl_mech);
-        if(!sasl_step.isEmpty()) {
+        if (!sasl_step.isEmpty()) {
 #ifdef XMPP_TEST
             TD::msg(QString("SASL OUT: [%1]").arg(printArray(sasl_step)));
 #endif
@@ -1248,38 +1164,34 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 
         send(e, true);
         event = ESend;
-        step = GetSASLChallenge;
+        step  = GetSASLChallenge;
         return true;
-    }
-    else if(step == GetSASLNext) {
-        if(isIncoming()) {
-            if(sasl_authed) {
+    } else if (step == GetSASLNext) {
+        if (isIncoming()) {
+            if (sasl_authed) {
                 QDomElement e = doc.createElementNS(NS_SASL, "success");
                 send(e, true);
                 event = ESend;
-                step = IncHandleSASLSuccess;
+                step  = IncHandleSASLSuccess;
                 return true;
-            }
-            else {
-                QByteArray stepData = sasl_step;
-                QDomElement e = doc.createElementNS(NS_SASL, "challenge");
-                if(!stepData.isEmpty())
+            } else {
+                QByteArray  stepData = sasl_step;
+                QDomElement e        = doc.createElementNS(NS_SASL, "challenge");
+                if (!stepData.isEmpty())
                     e.appendChild(doc.createTextNode(QCA::Base64().arrayToString(stepData)));
 
                 send(e, true);
                 event = ESend;
-                step = GetSASLResponse;
+                step  = GetSASLResponse;
                 return true;
             }
-        }
-        else {
+        } else {
             // already authed?  then ignore last client step
             //   (this happens if "additional data with success"
             //   is used)
-            if(sasl_authed)
-            {
+            if (sasl_authed) {
                 event = ESASLSuccess;
-                step = HandleSASLSuccess;
+                step  = HandleSASLSuccess;
                 return true;
             }
 
@@ -1288,22 +1200,20 @@ bool CoreProtocol::normalStep(const QDomElement &e)
             TD::msg(QString("SASL OUT: [%1]").arg(printArray(sasl_step)));
 #endif
             QDomElement e = doc.createElementNS(NS_SASL, "response");
-            if(!stepData.isEmpty())
+            if (!stepData.isEmpty())
                 e.appendChild(doc.createTextNode(QCA::Base64().arrayToString(stepData)));
 
             send(e, true);
             event = ESend;
-            step = GetSASLChallenge;
+            step  = GetSASLChallenge;
             return true;
         }
-    }
-    else if(step == HandleSASLSuccess) {
-        need = NSASLLayer;
+    } else if (step == HandleSASLSuccess) {
+        need  = NSASLLayer;
         spare = resetStream();
-        step = Start;
+        step  = Start;
         return false;
-    }
-    else if(step == HandleAuthGet) {
+    } else if (step == HandleAuthGet) {
         QDomElement e = doc.createElement("iq");
         e.setAttribute("to", to);
         e.setAttribute("type", "get");
@@ -1316,10 +1226,9 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 
         send(e);
         event = ESend;
-        step = GetAuthGetResponse;
+        step  = GetAuthGetResponse;
         return true;
-    }
-    else if(step == HandleAuthSet) {
+    } else if (step == HandleAuthSet) {
         QDomElement e = doc.createElement("iq");
         e.setAttribute("to", to);
         e.setAttribute("type", "set");
@@ -1329,16 +1238,15 @@ bool CoreProtocol::normalStep(const QDomElement &e)
         u.appendChild(doc.createTextNode(jid_.node()));
         q.appendChild(u);
         QDomElement p;
-        if(digest) {
+        if (digest) {
             // need SHA1 here
-            //if(!QCA::isSupported(QCA::CAP_SHA1))
+            // if(!QCA::isSupported(QCA::CAP_SHA1))
             //    QCA::insertProvider(createProviderHash());
 
-            p = doc.createElement("digest");
+            p             = doc.createElement("digest");
             QByteArray cs = id.toUtf8() + password.toUtf8();
             p.appendChild(doc.createTextNode(QCA::Hash("sha1").hashToString(cs)));
-        }
-        else {
+        } else {
             p = doc.createElement("password");
             p.appendChild(doc.createTextNode(password));
         }
@@ -1350,26 +1258,25 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 
         send(e, true);
         event = ESend;
-        step = GetAuthSetResponse;
+        step  = GetAuthSetResponse;
         return true;
     }
     // server
-    else if(step == SendFeatures) {
+    else if (step == SendFeatures) {
         QDomElement f = doc.createElementNS(NS_ETHERX, "stream:features");
-        if(!tls_started && !sasl_authed) { // don't offer tls if we are already sasl'd
+        if (!tls_started && !sasl_authed) { // don't offer tls if we are already sasl'd
             QDomElement tls = doc.createElementNS(NS_TLS, "starttls");
             f.appendChild(tls);
         }
 
-        if(sasl_authed) {
-            if(!server) {
+        if (sasl_authed) {
+            if (!server) {
                 QDomElement bind = doc.createElementNS(NS_BIND, "bind");
                 f.appendChild(bind);
             }
-        }
-        else {
+        } else {
             QDomElement mechs = doc.createElementNS(NS_SASL, "mechanisms");
-            foreach (const QString & it, sasl_mechlist) {
+            foreach (const QString &it, sasl_mechlist) {
                 QDomElement m = doc.createElement("mechanism");
                 m.appendChild(doc.createTextNode(it));
                 mechs.appendChild(m);
@@ -1379,31 +1286,30 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 
         send(f);
         event = ESend;
-        step = GetRequest;
+        step  = GetRequest;
         return true;
     }
     // server
-    else if(step == HandleTLS) {
+    else if (step == HandleTLS) {
         tls_started = true;
-        need = NStartTLS;
-        spare = resetStream();
-        step = Start;
+        need        = NStartTLS;
+        spare       = resetStream();
+        step        = Start;
         return false;
     }
     // server
-    else if(step == IncHandleSASLSuccess) {
+    else if (step == IncHandleSASLSuccess) {
         event = ESASLSuccess;
         spare = resetStream();
-        step = Start;
+        step  = Start;
         printf("sasl success\n");
         return true;
-    }
-    else if(step == GetFeatures) {
+    } else if (step == GetFeatures) {
         // we are waiting for stream features
-        if(e.namespaceURI() == NS_ETHERX && e.tagName() == QLatin1String("features")) {
+        if (e.namespaceURI() == NS_ETHERX && e.tagName() == QLatin1String("features")) {
             // extract features
-            StreamFeatures f;
-            QDomNodeList nl = e.childNodes();
+            StreamFeatures     f;
+            QDomNodeList       nl = e.childNodes();
             QList<QDomElement> unhandled;
             for (int i = 0; i < nl.size(); i++) {
                 QDomElement c = nl.item(i).toElement();
@@ -1412,18 +1318,18 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                 }
                 if (c.localName() == QLatin1String("starttls") && c.namespaceURI() == NS_TLS) {
                     f.tls_supported = true;
-                    f.tls_required = c.elementsByTagNameNS(NS_TLS, QLatin1String("required")).count() > 0;
+                    f.tls_required  = c.elementsByTagNameNS(NS_TLS, QLatin1String("required")).count() > 0;
 
                 } else if (c.localName() == QLatin1String("mechanisms") && c.namespaceURI() == NS_SASL) {
                     f.sasl_supported = true;
-                    QDomNodeList l = c.elementsByTagNameNS(NS_SASL, QLatin1String("mechanism"));
-                    for(int n = 0; n < l.count(); ++n)
+                    QDomNodeList l   = c.elementsByTagNameNS(NS_SASL, QLatin1String("mechanism"));
+                    for (int n = 0; n < l.count(); ++n)
                         f.sasl_mechs += l.item(n).toElement().text();
 
                 } else if (c.localName() == QLatin1String("compression") && c.namespaceURI() == NS_COMPRESS_FEATURE) {
                     f.compress_supported = true;
-                    QDomNodeList l = c.elementsByTagNameNS(NS_COMPRESS_FEATURE, QLatin1String("method"));
-                    for(int n = 0; n < l.count(); ++n)
+                    QDomNodeList l       = c.elementsByTagNameNS(NS_COMPRESS_FEATURE, QLatin1String("method"));
+                    for (int n = 0; n < l.count(); ++n)
                         f.compression_mechs += l.item(n).toElement().text();
 
                 } else if (c.localName() == QLatin1String("bind") && c.namespaceURI() == NS_BIND) {
@@ -1431,7 +1337,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 
                 } else if (c.localName() == QLatin1String("hosts") && c.namespaceURI() == NS_HOSTS) {
                     QDomNodeList l = c.elementsByTagNameNS(NS_HOSTS, QLatin1String("host"));
-                    for(int n = 0; n < l.count(); ++n)
+                    for (int n = 0; n < l.count(); ++n)
                         f.hosts += l.item(n).toElement().text();
                     hosts += f.hosts;
 
@@ -1441,7 +1347,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 
                 } else if (c.localName() == QLatin1String("session") && c.namespaceURI() == NS_SESSION) {
                     f.session_supported = true;
-                    f.session_required = c.elementsByTagName(QLatin1String("optional")).count() == 0;
+                    f.session_required  = c.elementsByTagName(QLatin1String("optional")).count() == 0;
                     // more details https://tools.ietf.org/html/draft-cridland-xmpp-session-01
 
                 } else {
@@ -1449,341 +1355,315 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                 }
             }
 
-            if(f.tls_supported) {
+            if (f.tls_supported) {
 #ifdef XMPP_TEST
                 QString s = "STARTTLS is available";
-                if(f.tls_required)
+                if (f.tls_required)
                     s += " (required)";
                 TD::msg(s);
 #endif
             }
-            if(f.sasl_supported) {
+            if (f.sasl_supported) {
 #ifdef XMPP_TEST
                 QString s = "SASL mechs:";
-                for(QStringList::ConstIterator it = f.sasl_mechs.begin(); it != f.sasl_mechs.end(); ++it)
+                for (QStringList::ConstIterator it = f.sasl_mechs.begin(); it != f.sasl_mechs.end(); ++it)
                     s += QString(" [%1]").arg((*it));
                 TD::msg(s);
 #endif
             }
-            if(f.compress_supported) {
+            if (f.compress_supported) {
 #ifdef XMPP_TEST
                 QString s = "Compression mechs:";
-                for(QStringList::ConstIterator it = f.compression_mechs.begin(); it != f.compression_mechs.end(); ++it)
+                for (QStringList::ConstIterator it = f.compression_mechs.begin(); it != f.compression_mechs.end(); ++it)
                     s += QString(" [%1]").arg((*it));
                 TD::msg(s);
 #endif
             }
 
-            event = EFeatures;
-            features = f;
+            event             = EFeatures;
+            features          = f;
             unhandledFeatures = unhandled;
-            step = HandleFeatures;
+            step              = HandleFeatures;
             return true;
-        }
-        else {
+        } else {
             // ignore
         }
-    }
-    else if(step == GetTLSProceed) {
+    } else if (step == GetTLSProceed) {
         // waiting for proceed to starttls
-        if(e.namespaceURI() == NS_TLS) {
-            if(e.tagName() == "proceed") {
+        if (e.namespaceURI() == NS_TLS) {
+            if (e.tagName() == "proceed") {
 #ifdef XMPP_TEST
                 TD::msg("Server wants us to proceed with ssl handshake");
 #endif
                 tls_started = true;
-                need = NStartTLS;
-                spare = resetStream();
-                step = Start;
+                need        = NStartTLS;
+                spare       = resetStream();
+                step        = Start;
                 return false;
-            }
-            else if(e.tagName() == "failure") {
-                event = EError;
+            } else if (e.tagName() == "failure") {
+                event     = EError;
                 errorCode = ErrStartTLS;
                 return true;
-            }
-            else {
-                event = EError;
+            } else {
+                event     = EError;
                 errorCode = ErrProtocol;
                 return true;
             }
-        }
-        else {
+        } else {
             // ignore
         }
-    }
-    else if(step == GetCompressProceed) {
+    } else if (step == GetCompressProceed) {
         // waiting for proceed to compression
-        if(e.namespaceURI() == NS_COMPRESS_PROTOCOL) {
-            if(e.tagName() == "compressed") {
+        if (e.namespaceURI() == NS_COMPRESS_PROTOCOL) {
+            if (e.tagName() == "compressed") {
 #ifdef XMPP_TEST
                 TD::msg("Server wants us to proceed with compression");
 #endif
                 compress_started = true;
-                need = NCompress;
-                spare = resetStream();
-                step = Start;
+                need             = NCompress;
+                spare            = resetStream();
+                step             = Start;
                 return false;
-            }
-            else if(e.tagName() == "failure") {
-                event = EError;
+            } else if (e.tagName() == "failure") {
+                event     = EError;
                 errorCode = ErrCompress;
                 return true;
-            }
-            else {
-                event = EError;
+            } else {
+                event     = EError;
                 errorCode = ErrProtocol;
                 return true;
             }
-        }
-        else {
+        } else {
             // ignore
         }
-    }
-    else if(step == GetSASLChallenge) {
+    } else if (step == GetSASLChallenge) {
         // waiting for sasl challenge/success/fail
-        if(e.namespaceURI() == NS_SASL) {
-            if(e.tagName() == "challenge") {
+        if (e.namespaceURI() == NS_SASL) {
+            if (e.tagName() == "challenge") {
                 QByteArray a = QCA::Base64().stringToArray(e.text()).toByteArray();
 #ifdef XMPP_TEST
                 TD::msg(QString("SASL IN: [%1]").arg(printArray(a)));
 #endif
                 sasl_step = a;
-                need = NSASLNext;
-                step = GetSASLNext;
+                need      = NSASLNext;
+                step      = GetSASLNext;
                 return false;
-            }
-            else if(e.tagName() == "success") {
+            } else if (e.tagName() == "success") {
                 QString str = e.text();
                 // "additional data with success" ?
-                if(!str.isEmpty())
-                {
+                if (!str.isEmpty()) {
                     QByteArray a = QCA::Base64().stringToArray(str).toByteArray();
-                    sasl_step = a;
-                    sasl_authed = true;
-                    need = NSASLNext;
-                    step = GetSASLNext;
+                    sasl_step    = a;
+                    sasl_authed  = true;
+                    need         = NSASLNext;
+                    step         = GetSASLNext;
                     return false;
                 }
 
                 sasl_authed = true;
-                event = ESASLSuccess;
-                step = HandleSASLSuccess;
+                event       = ESASLSuccess;
+                step        = HandleSASLSuccess;
                 return true;
-            }
-            else if(e.tagName() == "failure") {
+            } else if (e.tagName() == "failure") {
                 QDomElement t = firstChildElement(e);
-                if(t.isNull() || t.namespaceURI() != NS_SASL)
+                if (t.isNull() || t.namespaceURI() != NS_SASL)
                     errCond = -1;
                 else
                     errCond = stringToSASLCond(t.tagName());
 
                 // handle text elements
-                auto nodes = e.elementsByTagNameNS(NS_SASL, QLatin1String("text"));
+                auto                  nodes = e.elementsByTagNameNS(NS_SASL, QLatin1String("text"));
                 decltype(errLangText) lt;
                 for (int i = 0; i < nodes.count(); i++) {
-                    auto e = nodes.item(i).toElement();
+                    auto    e    = nodes.item(i).toElement();
                     QString lang = e.attributeNS(NS_SASL, "lang", "");
                     lt.insert(lang, e.text());
                 }
 
                 errLangText = lt;
-                event = EError;
-                errorCode = ErrAuth;
+                event       = EError;
+                errorCode   = ErrAuth;
                 return true;
-            }
-            else {
-                event = EError;
+            } else {
+                event     = EError;
                 errorCode = ErrProtocol;
                 return true;
             }
         }
-    }
-    else if(step == GetBindResponse) {
-        if(e.namespaceURI() == NS_CLIENT && e.tagName() == "iq") {
+    } else if (step == GetBindResponse) {
+        if (e.namespaceURI() == NS_CLIENT && e.tagName() == "iq") {
             QString type(e.attribute("type"));
             QString id(e.attribute("id"));
 
-            if(id == "bind_1" && (type == "result" || type == "error")) {
-                if(type == "result") {
+            if (id == "bind_1" && (type == "result" || type == "error")) {
+                if (type == "result") {
                     QDomElement b = e.elementsByTagNameNS(NS_BIND, "bind").item(0).toElement();
-                    Jid j;
-                    if(!b.isNull()) {
+                    Jid         j;
+                    if (!b.isNull()) {
                         QDomElement je = e.elementsByTagName("jid").item(0).toElement();
-                        j = je.text();
+                        j              = je.text();
                     }
-                    if(!j.isValid()) {
-                        event = EError;
+                    if (!j.isValid()) {
+                        event     = EError;
                         errorCode = ErrProtocol;
                         return true;
                     }
                     jid_ = j;
                     return loginComplete();
-                }
-                else {
+                } else {
                     errCond = -1;
 
                     QDomElement err = e.elementsByTagNameNS(NS_CLIENT, "error").item(0).toElement();
-                    if(!err.isNull()) {
+                    if (!err.isNull()) {
                         // get error condition
                         QDomNodeList nl = err.childNodes();
-                        QDomElement t;
-                        for(int n = 0; n < nl.count(); ++n) {
+                        QDomElement  t;
+                        for (int n = 0; n < nl.count(); ++n) {
                             QDomNode i = nl.item(n);
-                            if(i.isElement()) {
+                            if (i.isElement()) {
                                 t = i.toElement();
                                 break;
                             }
                         }
-                        if(!t.isNull() && t.namespaceURI() == NS_STANZAS) {
+                        if (!t.isNull() && t.namespaceURI() == NS_STANZAS) {
                             QString cond = t.tagName();
-                            if(cond == "not-allowed")
+                            if (cond == "not-allowed")
                                 errCond = BindNotAllowed;
-                            else if(cond == "conflict")
+                            else if (cond == "conflict")
                                 errCond = BindConflict;
                         }
                     }
 
-                    event = EError;
+                    event     = EError;
                     errorCode = ErrBind;
                     return true;
                 }
-            }
-            else {
+            } else {
                 // ignore
             }
-        }
-        else {
+        } else {
             // ignore
         }
-    }
-    else if(step == GetAuthGetResponse) {
+    } else if (step == GetAuthGetResponse) {
         // waiting for an iq
-        if(e.namespaceURI() == NS_CLIENT && e.tagName() == "iq") {
-            Jid from(e.attribute("from"));
+        if (e.namespaceURI() == NS_CLIENT && e.tagName() == "iq") {
+            Jid     from(e.attribute("from"));
             QString type(e.attribute("type"));
             QString id(e.attribute("id"));
 
             bool okfrom = (from.isEmpty() || from.compare(Jid(to)));
-            if(okfrom && id == "auth_1" && (type == "result" || type == "error")) {
-                if(type == "result") {
+            if (okfrom && id == "auth_1" && (type == "result" || type == "error")) {
+                if (type == "result") {
                     QDomElement q = e.elementsByTagNameNS("jabber:iq:auth", "query").item(0).toElement();
-                    if(q.isNull() || q.elementsByTagName("username").item(0).isNull() || q.elementsByTagName("resource").item(0).isNull()) {
-                        event = EError;
+                    if (q.isNull() || q.elementsByTagName("username").item(0).isNull()
+                        || q.elementsByTagName("resource").item(0).isNull()) {
+                        event     = EError;
                         errorCode = ErrProtocol;
                         return true;
                     }
-                    bool plain_supported = !q.elementsByTagName("password").item(0).isNull();
+                    bool plain_supported  = !q.elementsByTagName("password").item(0).isNull();
                     bool digest_supported = !q.elementsByTagName("digest").item(0).isNull();
 
-                    if(!digest_supported && !plain_supported) {
-                        event = EError;
+                    if (!digest_supported && !plain_supported) {
+                        event     = EError;
                         errorCode = ErrProtocol;
                         return true;
                     }
 
                     // plain text not allowed?
-                    if(!digest_supported && !allowPlain) {
-                        event = EError;
+                    if (!digest_supported && !allowPlain) {
+                        event     = EError;
                         errorCode = ErrPlain;
                         return true;
                     }
 
                     digest = digest_supported;
-                    need = NPassword;
-                    step = HandleAuthSet;
+                    need   = NPassword;
+                    step   = HandleAuthSet;
                     return false;
-                }
-                else {
+                } else {
                     errCond = getOldErrorCode(e);
 
-                    event = EError;
+                    event     = EError;
                     errorCode = ErrAuth;
                     return true;
                 }
-            }
-            else {
+            } else {
                 // ignore
             }
-        }
-        else {
+        } else {
             // ignore
         }
-    }
-    else if(step == GetAuthSetResponse) {
+    } else if (step == GetAuthSetResponse) {
         // waiting for an iq
-        if(e.namespaceURI() == NS_CLIENT && e.tagName() == "iq") {
-            Jid from(e.attribute("from"));
+        if (e.namespaceURI() == NS_CLIENT && e.tagName() == "iq") {
+            Jid     from(e.attribute("from"));
             QString type(e.attribute("type"));
             QString id(e.attribute("id"));
 
             bool okfrom = (from.isEmpty() || from.compare(Jid(to)));
-            if(okfrom && id == "auth_2" && (type == "result" || type == "error")) {
-                if(type == "result") {
+            if (okfrom && id == "auth_2" && (type == "result" || type == "error")) {
+                if (type == "result") {
                     return loginComplete();
-                }
-                else {
+                } else {
                     errCond = getOldErrorCode(e);
 
-                    event = EError;
+                    event     = EError;
                     errorCode = ErrAuth;
                     return true;
                 }
-            }
-            else {
+            } else {
                 // ignore
             }
-        }
-        else {
+        } else {
             // ignore
         }
     }
     // server
-    else if(step == GetRequest) {
+    else if (step == GetRequest) {
         printf("get request: [%s], %s\n", e.namespaceURI().toLatin1().data(), e.tagName().toLatin1().data());
-        if(e.namespaceURI() == NS_TLS && e.localName() == "starttls") {
+        if (e.namespaceURI() == NS_TLS && e.localName() == "starttls") {
             // TODO: don't let this be done twice
 
             QDomElement e = doc.createElementNS(NS_TLS, "proceed");
             send(e, true);
             event = ESend;
-            step = HandleTLS;
+            step  = HandleTLS;
             return true;
         }
-        if(e.namespaceURI() == NS_SASL) {
-            if(e.localName() == "auth") {
-                if(sasl_started) {
+        if (e.namespaceURI() == NS_SASL) {
+            if (e.localName() == "auth") {
+                if (sasl_started) {
                     // TODO
                     printf("error\n");
                     return false;
                 }
 
                 sasl_started = true;
-                sasl_mech = e.attribute("mechanism");
+                sasl_mech    = e.attribute("mechanism");
                 // TODO: if child text missing, don't pass it
                 sasl_step = QCA::Base64().stringToArray(e.text()).toByteArray();
-                need = NSASLFirst;
-                step = GetSASLNext;
+                need      = NSASLFirst;
+                step      = GetSASLNext;
                 return false;
-            }
-            else {
+            } else {
                 // TODO
                 printf("unknown sasl tag\n");
                 return false;
             }
         }
-        if(e.namespaceURI() == NS_CLIENT && e.tagName() == "iq") {
+        if (e.namespaceURI() == NS_CLIENT && e.tagName() == "iq") {
             QDomElement b = e.elementsByTagNameNS(NS_BIND, "bind").item(0).toElement();
-            if(!b.isNull()) {
-                QDomElement res = b.elementsByTagName("resource").item(0).toElement();
-                QString resource = res.text();
+            if (!b.isNull()) {
+                QDomElement res      = b.elementsByTagName("resource").item(0).toElement();
+                QString     resource = res.text();
 
                 QDomElement r = doc.createElement("iq");
                 r.setAttribute("type", "result");
                 r.setAttribute("id", e.attribute("id"));
                 QDomElement bind = doc.createElementNS(NS_BIND, "bind");
-                QDomElement jid = doc.createElement("jid");
-                Jid j = QString(user + '@' + host + '/' + resource);
+                QDomElement jid  = doc.createElement("jid");
+                Jid         j    = QString(user + '@' + host + '/' + resource);
                 jid.appendChild(doc.createTextNode(j.full()));
                 bind.appendChild(jid);
                 r.appendChild(bind);
@@ -1792,21 +1672,18 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                 event = ESend;
                 // TODO
                 return true;
-            }
-            else {
+            } else {
                 // TODO
             }
         }
-    }
-    else if(step == GetSASLResponse) {
-        if(e.namespaceURI() == NS_SASL && e.localName() == "response") {
+    } else if (step == GetSASLResponse) {
+        if (e.namespaceURI() == NS_SASL && e.localName() == "response") {
             sasl_step = QCA::Base64().stringToArray(e.text()).toByteArray();
-            need = NSASLNext;
-            step = GetSASLNext;
+            need      = NSASLNext;
+            step      = GetSASLNext;
             return false;
         }
-    }
-    else if(step == GetSMResponse) {
+    } else if (step == GetSMResponse) {
 #ifdef IRIS_SM_DEBUG
         qWarning() << "HandleSM: step";
 #endif
@@ -1824,9 +1701,9 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 #endif
                     QString location = e.attribute("location").trimmed();
                     if (!location.isEmpty()) {
-                        int port_off = 0;
+                        int        port_off = 0;
                         QStringRef sm_host;
-                        int sm_port = 0;
+                        int        sm_port = 0;
                         if (location.startsWith('[')) { // ipv6
                             port_off = location.indexOf(']');
                             if (port_off != -1) { // looks valid
@@ -1849,11 +1726,11 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                 } // else resumption is not supported on this server
                 needTimer(SM_TIMER_INTERVAL_SECS);
                 event = EReady;
-                step = Done;
+                step  = Done;
                 return true;
             } else if (e.localName() == "resumed") {
                 sm.resume(e.attribute("h").toULong());
-                while(true) {
+                while (true) {
                     QDomElement st = sm.getUnacknowledgedStanza();
                     if (st.isNull())
                         break;
@@ -1861,12 +1738,12 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                 }
                 needTimer(SM_TIMER_INTERVAL_SECS);
                 event = EReady;
-                step = Done;
+                step  = Done;
                 return true;
             } else if (e.localName() == "failed") {
                 if (sm.state().isResumption()) { // tried to resume? ok, then try to just enable
                     sm.state().resumption_id.clear();
-                    //step = HandleFeatures;
+                    // step = HandleFeatures;
                     event = ESMResumeFailed;
                     return true;
                 }
@@ -1874,11 +1751,11 @@ bool CoreProtocol::normalStep(const QDomElement &e)
         }
     }
 
-    if(isReady()) {
+    if (isReady()) {
         if (!e.isNull()) {
-            if(isValidStanza(e)) {
+            if (isValidStanza(e)) {
                 stanzaToRecv = e;
-                event = EStanzaReady;
+                event        = EStanzaReady;
                 setIncomingAsExternal();
                 return true;
             } else if (sm.isActive()) {

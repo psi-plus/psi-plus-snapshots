@@ -28,36 +28,33 @@
 
 using namespace XMPP;
 
-class Task::TaskPrivate
-{
+class Task::TaskPrivate {
 public:
     TaskPrivate() = default;
 
-    QString id;
-    bool success = false;
-    int statusCode = 0;
-    QString statusString;
+    QString             id;
+    bool                success    = false;
+    int                 statusCode = 0;
+    QString             statusString;
     XMPP::Stanza::Error error;
-    Client *client = nullptr;
-    bool insig = false;
-    bool deleteme = false;
-    bool autoDelete = false;
-    bool done = false;
-    int timeout = 0;
+    Client *            client     = nullptr;
+    bool                insig      = false;
+    bool                deleteme   = false;
+    bool                autoDelete = false;
+    bool                done       = false;
+    int                 timeout    = 0;
 };
 
-Task::Task(Task *parent)
-:QObject(parent)
+Task::Task(Task *parent) : QObject(parent)
 {
     init();
 
     d->client = parent->client();
-    d->id = client()->genUniqueId();
+    d->id     = client()->genUniqueId();
     connect(d->client, SIGNAL(disconnected()), SLOT(clientDisconnected()));
 }
 
-Task::Task(Client *parent, bool)
-:QObject(nullptr)
+Task::Task(Client *parent, bool) : QObject(nullptr)
 {
     init();
 
@@ -65,71 +62,38 @@ Task::Task(Client *parent, bool)
     connect(d->client, SIGNAL(disconnected()), SLOT(clientDisconnected()));
 }
 
-Task::~Task()
-{
-    delete d;
-}
+Task::~Task() { delete d; }
 
 void Task::init()
 {
-    d = new TaskPrivate;
-    d->success = false;
-    d->insig = false;
-    d->deleteme = false;
+    d             = new TaskPrivate;
+    d->success    = false;
+    d->insig      = false;
+    d->deleteme   = false;
     d->autoDelete = false;
-    d->done = false;
-    d->timeout = DEFAULT_TIMEOUT;
+    d->done       = false;
+    d->timeout    = DEFAULT_TIMEOUT;
 }
 
-Task *Task::parent() const
-{
-    return (Task *)QObject::parent();
-}
+Task *Task::parent() const { return (Task *)QObject::parent(); }
 
-Client *Task::client() const
-{
-    return d->client;
-}
+Client *Task::client() const { return d->client; }
 
-QDomDocument *Task::doc() const
-{
-    return client()->doc();
-}
+QDomDocument *Task::doc() const { return client()->doc(); }
 
-QString Task::id() const
-{
-    return d->id;
-}
+QString Task::id() const { return d->id; }
 
-bool Task::success() const
-{
-    return d->success;
-}
+bool Task::success() const { return d->success; }
 
-int Task::statusCode() const
-{
-    return d->statusCode;
-}
+int Task::statusCode() const { return d->statusCode; }
 
-const QString & Task::statusString() const
-{
-    return d->statusString;
-}
+const QString &Task::statusString() const { return d->statusString; }
 
-const Stanza::Error &Task::error() const
-{
-    return d->error;
-}
+const Stanza::Error &Task::error() const { return d->error; }
 
-void Task::setTimeout(int seconds) const
-{
-    d->timeout = seconds;
-}
+void Task::setTimeout(int seconds) const { d->timeout = seconds; }
 
-int Task::timeout()
-{
-    return d->timeout;
-}
+int Task::timeout() { return d->timeout; }
 
 void Task::go(bool autoDelete)
 {
@@ -140,8 +104,7 @@ void Task::go(bool autoDelete)
         if (autoDelete) {
             deleteLater();
         }
-    }
-    else {
+    } else {
         onGo();
         if (d->timeout) {
             QTimer::singleShot(d->timeout * 1000, this, SLOT(timeoutFinished()));
@@ -155,13 +118,13 @@ bool Task::take(const QDomElement &x)
 
     // pass along the xml
     Task *t;
-    for(QObjectList::ConstIterator it = p.begin(); it != p.end(); ++it) {
+    for (QObjectList::ConstIterator it = p.begin(); it != p.end(); ++it) {
         QObject *obj = *it;
-        if(!obj->inherits("XMPP::Task"))
+        if (!obj->inherits("XMPP::Task"))
             continue;
 
-        t = static_cast<Task*>(obj);
-        if(t->take(x)) // don't check for done here. it will hurt server tasks
+        t = static_cast<Task *>(obj);
+        if (t->take(x)) // don't check for done here. it will hurt server tasks
             return true;
     }
 
@@ -170,23 +133,21 @@ bool Task::take(const QDomElement &x)
 
 void Task::safeDelete()
 {
-    if(d->deleteme)
+    if (d->deleteme)
         return;
 
     d->deleteme = true;
-    if(!d->insig)
+    if (!d->insig)
         deleteLater();
 }
 
-void Task::onGo()
-{
-}
+void Task::onGo() {}
 
 void Task::onDisconnect()
 {
-    if(!d->done) {
-        d->success = false;
-        d->statusCode = ErrDisc;
+    if (!d->done) {
+        d->success      = false;
+        d->statusCode   = ErrDisc;
         d->statusString = tr("Disconnected");
 
         // delay this so that tasks that react don't block the shutdown
@@ -198,24 +159,21 @@ void Task::onDisconnect()
 
 void Task::onTimeout()
 {
-    if(!d->done) {
-        d->success = false;
-        d->statusCode = ErrTimeout;
+    if (!d->done) {
+        d->success      = false;
+        d->statusCode   = ErrTimeout;
         d->statusString = tr("Request timed out");
         done();
     }
 }
 
-void Task::send(const QDomElement &x)
-{
-    client()->send(x);
-}
+void Task::send(const QDomElement &x) { client()->send(x); }
 
 void Task::setSuccess(int code, const QString &str)
 {
-    if(!d->done) {
-        d->success = true;
-        d->statusCode = code;
+    if (!d->done) {
+        d->success      = true;
+        d->statusCode   = code;
         d->statusString = str;
         done();
     }
@@ -223,17 +181,17 @@ void Task::setSuccess(int code, const QString &str)
 
 void Task::setError(const QDomElement &e)
 {
-    if(!d->done) {
+    if (!d->done) {
         d->success = false;
 
         QDomElement tag = e.firstChildElement("error");
-        if(tag.isNull())
+        if (tag.isNull())
             return;
 
         XMPP::Stanza::Error err;
         err.fromXml(tag, d->client->streamBaseNS());
-        d->error = err;
-        d->statusCode = err.code();
+        d->error        = err;
+        d->statusCode   = err.code();
         d->statusString = err.toString();
         done();
     }
@@ -241,9 +199,9 @@ void Task::setError(const QDomElement &e)
 
 void Task::setError(int code, const QString &str)
 {
-    if(!d->done) {
-        d->success = false;
-        d->statusCode = code;
+    if (!d->done) {
+        d->success      = false;
+        d->statusCode   = code;
         d->statusString = str;
         done();
     }
@@ -251,25 +209,22 @@ void Task::setError(int code, const QString &str)
 
 void Task::done()
 {
-    if(d->done || d->insig)
+    if (d->done || d->insig)
         return;
     d->done = true;
 
-    if(d->autoDelete)
+    if (d->autoDelete)
         d->deleteme = true;
 
     d->insig = true;
     emit finished();
     d->insig = false;
 
-    if(d->deleteme)
+    if (d->deleteme)
         deleteLater();
 }
 
-void Task::clientDisconnected()
-{
-    onDisconnect();
-}
+void Task::clientDisconnected() { onDisconnect(); }
 
 void Task::timeoutFinished()
 {
@@ -287,10 +242,7 @@ void Task::debug(const char *fmt, ...)
     debug(str);
 }
 
-void Task::debug(const QString &str)
-{
-    client()->debug(QString("%1: ").arg(metaObject()->className()) + str);
-}
+void Task::debug(const QString &str) { client()->debug(QString("%1: ").arg(metaObject()->className()) + str); }
 
 /**
  * \brief verifiys a stanza is a IQ reply for this task
@@ -304,42 +256,42 @@ void Task::debug(const QString &str)
  * \param id the id of the send IQ
  * \param xmlns the expected namespace if the reply (if non empty)
  * \return true if it's a valid reply
-*/
+ */
 
 bool Task::iqVerify(const QDomElement &x, const Jid &to, const QString &id, const QString &xmlns)
 {
-    if(x.tagName() != QStringLiteral("iq"))
+    if (x.tagName() != QStringLiteral("iq"))
         return false;
 
     Jid from(x.attribute(QStringLiteral("from")));
-    Jid local = client()->jid();
+    Jid local  = client()->jid();
     Jid server = client()->host();
 
     // empty 'from' ?
-    if(from.isEmpty()) {
+    if (from.isEmpty()) {
         // allowed if we are querying the server
-        if(!to.isEmpty() && !to.compare(server))
+        if (!to.isEmpty() && !to.compare(server))
             return false;
     }
     // from ourself?
-    else if(from.compare(local, false) || from.compare(local.domain(),false)) {
+    else if (from.compare(local, false) || from.compare(local.domain(), false)) {
         // allowed if we are querying ourself or the server
-        if(!to.isEmpty() && !to.compare(local, false) && !to.compare(server))
+        if (!to.isEmpty() && !to.compare(local, false) && !to.compare(server))
             return false;
     }
     // from anywhere else?
     else {
-        if(!from.compare(to))
+        if (!from.compare(to))
             return false;
     }
 
-    if(!id.isEmpty()) {
-        if(x.attribute(QStringLiteral("id")) != id)
+    if (!id.isEmpty()) {
+        if (x.attribute(QStringLiteral("id")) != id)
             return false;
     }
 
-    if(!xmlns.isEmpty()) {
-        if(queryNS(x) != xmlns)
+    if (!xmlns.isEmpty()) {
+        if (queryNS(x) != xmlns)
             return false;
     }
 

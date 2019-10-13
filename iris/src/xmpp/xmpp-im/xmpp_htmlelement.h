@@ -24,24 +24,23 @@
 class QString;
 
 namespace XMPP {
-    class HTMLElement
-    {
-    public:
-        HTMLElement();
-        HTMLElement(const QDomElement &body);
+class HTMLElement {
+public:
+    HTMLElement();
+    HTMLElement(const QDomElement &body);
 
-        void setBody(const QDomElement &body);
-        const QDomElement& body() const;
-        QString toString(const QString &rootTagName = "body") const;
-        QString text() const;
-        void filterOutUnwanted(bool strict = false);
+    void               setBody(const QDomElement &body);
+    const QDomElement &body() const;
+    QString            toString(const QString &rootTagName = "body") const;
+    QString            text() const;
+    void               filterOutUnwanted(bool strict = false);
 
-    private:
-        void filterOutUnwantedRecursive(QDomElement &el, bool strict);
+private:
+    void filterOutUnwantedRecursive(QDomElement &el, bool strict);
 
-        QDomDocument doc_;
-        QDomElement body_;
-    };
+    QDomDocument doc_;
+    QDomElement  body_;
+};
 } // namespace XMPP
 
 #endif // XMPP_HTMLELEMENT_H

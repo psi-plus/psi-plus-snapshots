@@ -37,25 +37,24 @@ static QLatin1String xmlns_v0_3_1("urn:xmpp:http:upload:0");
 //----------------------------------------------------------------------------
 // HttpFileUpload
 //----------------------------------------------------------------------------
-class HttpFileUpload::Private
-{
+class HttpFileUpload::Private {
 public:
-    HttpFileUpload::State state = State::None;
-    XMPP::Client *client = nullptr;
-    QIODevice *sourceDevice = nullptr;
-    QPointer<QNetworkAccessManager> qnam = nullptr;
-    quint64 fileSize = 0;
-    QString fileName;
-    QString mediaType;
-    QList<HttpHost> httpHosts;
+    HttpFileUpload::State           state        = State::None;
+    XMPP::Client *                  client       = nullptr;
+    QIODevice *                     sourceDevice = nullptr;
+    QPointer<QNetworkAccessManager> qnam         = nullptr;
+    quint64                         fileSize     = 0;
+    QString                         fileName;
+    QString                         mediaType;
+    QList<HttpHost>                 httpHosts;
 
     struct {
         HttpFileUpload::ErrorCode statusCode = HttpFileUpload::ErrorCode::NoError;
-        QString statusString;
-        QString getUrl;
-        QString putUrl;
-        XEP0363::HttpHeaders putHeaders;
-        quint64 sizeLimit = 0;
+        QString                   statusString;
+        QString                   getUrl;
+        QString                   putUrl;
+        XEP0363::HttpHeaders      putHeaders;
+        quint64                   sizeLimit = 0;
     } result;
 };
 
@@ -64,22 +63,16 @@ HttpFileUpload::HttpFileUpload(XMPP::Client *client, QIODevice *source, size_t f
     QObject(client),
     d(new Private)
 {
-    d->client = client;
+    d->client       = client;
     d->sourceDevice = source;
-    d->fileName = dstFilename;
-    d->fileSize = fsize;
-    d->mediaType = mType;
+    d->fileName     = dstFilename;
+    d->fileSize     = fsize;
+    d->mediaType    = mType;
 }
 
-HttpFileUpload::~HttpFileUpload()
-{
-    qDebug("destroying");
-}
+HttpFileUpload::~HttpFileUpload() { qDebug("destroying"); }
 
-void HttpFileUpload::setNetworkAccessManager(QNetworkAccessManager *qnam)
-{
-    d->qnam = qnam;
-}
+void HttpFileUpload::setNetworkAccessManager(QNetworkAccessManager *qnam) { d->qnam = qnam; }
 
 void HttpFileUpload::start()
 {
@@ -109,67 +102,68 @@ void HttpFileUpload::start()
         featureOptions << (QSet<QString>() << xmlns_v0_2_5) << (QSet<QString>() << xmlns_v0_3_1);
     }
     d->client->serverInfoManager()->queryServiceInfo(
-                QLatin1String("store"), QLatin1String("file"),
-                featureOptions, QRegExp("^(upload|http|stor|file|dis|drive).*"), ServerInfoManager::SQ_CheckAllOnNoMatch,
-                [this](const QList<DiscoItem> &items)
-    {
-        d->httpHosts.clear();
-        for (const auto &item: items) {
-            const QStringList &l = item.features().list();
-            XEP0363::version ver = XEP0363::vUnknown;
-            QString xmlns;
-            quint64 sizeLimit = 0;
-            if (l.contains(xmlns_v0_3_1)) {
-                ver = XEP0363::v0_3_1;
-                xmlns = xmlns_v0_3_1;
-            } else if (l.contains(xmlns_v0_2_5)) {
-                ver = XEP0363::v0_2_5;
-                xmlns = xmlns_v0_2_5;
-            }
-            if (ver != XEP0363::vUnknown) {
-                QList<std::pair<HttpHost,int>> hosts;
-                const XData::Field field = item.registeredExtension(xmlns).getField(QLatin1String("max-file-size"));
-                if (field.isValid() && field.type() == XData::Field::Field_TextSingle)
-                    sizeLimit = field.value().at(0).toULongLong();
-                HttpHost host;
-                host.ver = ver;
-                host.jid = item.jid();
-                host.sizeLimit = sizeLimit;
-                QVariant metaProps(d->client->serverInfoManager()->serviceMeta(host.jid, "httpprops"));
-                if (metaProps.isValid()) {
-                    host.props = HostProps(metaProps.value<int>());
-                } else {
-                    host.props = SecureGet | SecurePut;
-                    if (ver == XEP0363::v0_3_1)
-                        host.props |= NewestVer;
+        QLatin1String("store"), QLatin1String("file"), featureOptions, QRegExp("^(upload|http|stor|file|dis|drive).*"),
+        ServerInfoManager::SQ_CheckAllOnNoMatch, [this](const QList<DiscoItem> &items) {
+            d->httpHosts.clear();
+            for (const auto &item : items) {
+                const QStringList &l   = item.features().list();
+                XEP0363::version   ver = XEP0363::vUnknown;
+                QString            xmlns;
+                quint64            sizeLimit = 0;
+                if (l.contains(xmlns_v0_3_1)) {
+                    ver   = XEP0363::v0_3_1;
+                    xmlns = xmlns_v0_3_1;
+                } else if (l.contains(xmlns_v0_2_5)) {
+                    ver   = XEP0363::v0_2_5;
+                    xmlns = xmlns_v0_2_5;
                 }
-                int value = 0;
-                if (host.props & SecureGet) value += 5;
-                if (host.props & SecurePut) value += 5;
-                if (host.props & NewestVer) value += 3;
-                if (host.props & Failure) value -= 15;
-                if (!sizeLimit || d->fileSize < sizeLimit)
-                    hosts.append({host,value});
+                if (ver != XEP0363::vUnknown) {
+                    QList<std::pair<HttpHost, int>> hosts;
+                    const XData::Field field = item.registeredExtension(xmlns).getField(QLatin1String("max-file-size"));
+                    if (field.isValid() && field.type() == XData::Field::Field_TextSingle)
+                        sizeLimit = field.value().at(0).toULongLong();
+                    HttpHost host;
+                    host.ver       = ver;
+                    host.jid       = item.jid();
+                    host.sizeLimit = sizeLimit;
+                    QVariant metaProps(d->client->serverInfoManager()->serviceMeta(host.jid, "httpprops"));
+                    if (metaProps.isValid()) {
+                        host.props = HostProps(metaProps.value<int>());
+                    } else {
+                        host.props = SecureGet | SecurePut;
+                        if (ver == XEP0363::v0_3_1)
+                            host.props |= NewestVer;
+                    }
+                    int value = 0;
+                    if (host.props & SecureGet)
+                        value += 5;
+                    if (host.props & SecurePut)
+                        value += 5;
+                    if (host.props & NewestVer)
+                        value += 3;
+                    if (host.props & Failure)
+                        value -= 15;
+                    if (!sizeLimit || d->fileSize < sizeLimit)
+                        hosts.append({ host, value });
 
-                // no sorting in preference order. most preferred go first
-                std::sort(hosts.begin(), hosts.end(), [](const auto &a, const auto &b){
-                    return a.second > b.second;
-                });
-                for (auto &hp: hosts) {
-                    d->httpHosts.append(hp.first);
+                    // no sorting in preference order. most preferred go first
+                    std::sort(hosts.begin(), hosts.end(),
+                              [](const auto &a, const auto &b) { return a.second > b.second; });
+                    for (auto &hp : hosts) {
+                        d->httpHosts.append(hp.first);
+                    }
                 }
             }
-        }
-        //d->currentHost = d->httpHosts.begin();
-        d->client->httpFileUploadManager()->setDiscoHosts(d->httpHosts);
-        if (d->httpHosts.isEmpty()) { // if empty as the last resort check all services
-            d->result.statusCode   = HttpFileUpload::ErrorCode::NoUploadService;
-            d->result.statusString = "No suitable http upload services were found";
-            done(State::Error);
-        } else {
-            tryNextServer();
-        }
-    });
+            // d->currentHost = d->httpHosts.begin();
+            d->client->httpFileUploadManager()->setDiscoHosts(d->httpHosts);
+            if (d->httpHosts.isEmpty()) { // if empty as the last resort check all services
+                d->result.statusCode   = HttpFileUpload::ErrorCode::NoUploadService;
+                d->result.statusString = "No suitable http upload services were found";
+                done(State::Error);
+            } else {
+                tryNextServer();
+            }
+        });
 }
 
 void HttpFileUpload::tryNextServer()
@@ -182,96 +176,89 @@ void HttpFileUpload::tryNextServer()
         done(State::Error);
         return;
     }
-    HttpHost host = d->httpHosts.takeFirst();
+    HttpHost host       = d->httpHosts.takeFirst();
     d->result.sizeLimit = host.sizeLimit;
-    auto jt = new JT_HTTPFileUpload(d->client->rootTask());
-    connect(jt, &JT_HTTPFileUpload::finished, this, [this, jt, host]() mutable {
-        if (!jt->success()) {
-            host.props |= Failure;
-            int code = jt->statusCode();
-            if (code < 300) {
-                code++; // ErrDisc and ErrTimeout. but 0 code is already occupated
-            }
-            d->result.statusCode   = static_cast<ErrorCode>(jt->statusCode());
-            d->result.statusString = jt->statusString();
-            d->client->serverInfoManager()->setServiceMeta(host.jid, QLatin1String("httpprops"), int(host.props));
-            if (d->httpHosts.isEmpty())
-                done(State::Error);
-            else
-                tryNextServer();
-            return;
-        }
-
-        d->result.getUrl = jt->url(JT_HTTPFileUpload::GetUrl);
-        d->result.putUrl = jt->url(JT_HTTPFileUpload::PutUrl);
-        d->result.putHeaders = jt->headers();
-        if (d->result.getUrl.startsWith("https://"))
-            host.props |= SecureGet;
-        else
-            host.props &= ~SecureGet;
-        if (d->result.putUrl.startsWith("https://"))
-            host.props |= SecurePut;
-        else
-            host.props &= ~SecurePut;
-        host.props &= ~Failure;
-
-        d->client->serverInfoManager()->setServiceMeta(host.jid, QLatin1String("httpprops"), int(host.props));
-
-        if (!d->qnam) { // w/o network access manager, it's not more than getting slots
-            done(State::Success);
-            return;
-        }
-
-        setState(State::HttpRequest);
-        // time for a http request
-        QNetworkRequest req(d->result.putUrl);
-        for (auto &h: d->result.putHeaders) {
-            req.setRawHeader(h.name.toLatin1(), h.value.toLatin1());
-        }
-        auto reply = d->qnam->put(req, d->sourceDevice);
-        connect(reply, &QNetworkReply::uploadProgress, this, &HttpFileUpload::progress);
-        connect(reply, &QNetworkReply::finished, this, [this, reply](){
-            if (reply->error() == QNetworkReply::NoError) {
-                done(State::Success);
-            } else {
-                d->result.statusCode   = ErrorCode::HttpFailed;
-                d->result.statusString = reply->errorString();
-                qDebug("http upload failed: %s", qPrintable(d->result.statusString));
+    auto jt             = new JT_HTTPFileUpload(d->client->rootTask());
+    connect(
+        jt, &JT_HTTPFileUpload::finished, this,
+        [this, jt, host]() mutable {
+            if (!jt->success()) {
+                host.props |= Failure;
+                int code = jt->statusCode();
+                if (code < 300) {
+                    code++; // ErrDisc and ErrTimeout. but 0 code is already occupated
+                }
+                d->result.statusCode   = static_cast<ErrorCode>(jt->statusCode());
+                d->result.statusString = jt->statusString();
+                d->client->serverInfoManager()->setServiceMeta(host.jid, QLatin1String("httpprops"), int(host.props));
                 if (d->httpHosts.isEmpty())
                     done(State::Error);
                 else
                     tryNextServer();
+                return;
             }
-            reply->deleteLater();
-        });
 
-    }, Qt::QueuedConnection);
+            d->result.getUrl     = jt->url(JT_HTTPFileUpload::GetUrl);
+            d->result.putUrl     = jt->url(JT_HTTPFileUpload::PutUrl);
+            d->result.putHeaders = jt->headers();
+            if (d->result.getUrl.startsWith("https://"))
+                host.props |= SecureGet;
+            else
+                host.props &= ~SecureGet;
+            if (d->result.putUrl.startsWith("https://"))
+                host.props |= SecurePut;
+            else
+                host.props &= ~SecurePut;
+            host.props &= ~Failure;
+
+            d->client->serverInfoManager()->setServiceMeta(host.jid, QLatin1String("httpprops"), int(host.props));
+
+            if (!d->qnam) { // w/o network access manager, it's not more than getting slots
+                done(State::Success);
+                return;
+            }
+
+            setState(State::HttpRequest);
+            // time for a http request
+            QNetworkRequest req(d->result.putUrl);
+            for (auto &h : d->result.putHeaders) {
+                req.setRawHeader(h.name.toLatin1(), h.value.toLatin1());
+            }
+            auto reply = d->qnam->put(req, d->sourceDevice);
+            connect(reply, &QNetworkReply::uploadProgress, this, &HttpFileUpload::progress);
+            connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+                if (reply->error() == QNetworkReply::NoError) {
+                    done(State::Success);
+                } else {
+                    d->result.statusCode   = ErrorCode::HttpFailed;
+                    d->result.statusString = reply->errorString();
+                    qDebug("http upload failed: %s", qPrintable(d->result.statusString));
+                    if (d->httpHosts.isEmpty())
+                        done(State::Error);
+                    else
+                        tryNextServer();
+                }
+                reply->deleteLater();
+            });
+        },
+        Qt::QueuedConnection);
     jt->request(host.jid, d->fileName, d->fileSize, d->mediaType, host.ver);
     jt->go(true);
 }
 
-bool HttpFileUpload::success() const
-{
-    return d->state == State::Success;
-}
+bool HttpFileUpload::success() const { return d->state == State::Success; }
 
-HttpFileUpload::ErrorCode HttpFileUpload::statusCode() const
-{
-    return d->result.statusCode;
-}
+HttpFileUpload::ErrorCode HttpFileUpload::statusCode() const { return d->result.statusCode; }
 
-const QString & HttpFileUpload::statusString() const
-{
-    return d->result.statusString;
-}
+const QString &HttpFileUpload::statusString() const { return d->result.statusString; }
 
 HttpFileUpload::HttpSlot HttpFileUpload::getHttpSlot()
 {
     HttpSlot slot;
     if (d->state == State::Success) {
-        slot.get.url = d->result.getUrl;
-        slot.put.url = d->result.putUrl;
-        slot.put.headers = d->result.putHeaders;
+        slot.get.url         = d->result.getUrl;
+        slot.put.url         = d->result.putUrl;
+        slot.put.headers     = d->result.putHeaders;
         slot.limits.fileSize = d->result.sizeLimit;
     }
     return slot;
@@ -296,46 +283,44 @@ void HttpFileUpload::done(State state)
 //----------------------------------------------------------------------------
 // JT_HTTPFileUpload
 //----------------------------------------------------------------------------
-class JT_HTTPFileUpload::Private
-{
+class JT_HTTPFileUpload::Private {
 public:
-    Jid to;
-    QDomElement iq;
-    QStringList urls;
-    XEP0363::version ver;
+    Jid                  to;
+    QDomElement          iq;
+    QStringList          urls;
+    XEP0363::version     ver;
     XEP0363::HttpHeaders headers;
 };
 
-JT_HTTPFileUpload::JT_HTTPFileUpload(Task *parent)
-    : Task(parent)
+JT_HTTPFileUpload::JT_HTTPFileUpload(Task *parent) : Task(parent)
 {
-    d = new Private;
+    d      = new Private;
     d->ver = XEP0363::vUnknown;
     d->urls << QString() << QString();
 }
 
-JT_HTTPFileUpload::~JT_HTTPFileUpload()
-{
-    delete d;
-}
+JT_HTTPFileUpload::~JT_HTTPFileUpload() { delete d; }
 
-void JT_HTTPFileUpload::request(const Jid &to, const QString &fname,
-                                quint64 fsize, const QString &ftype, XEP0363::version ver)
+void JT_HTTPFileUpload::request(const Jid &to, const QString &fname, quint64 fsize, const QString &ftype,
+                                XEP0363::version ver)
 {
     QString ns;
-    switch (ver)
-    {
-    case XEP0363::v0_2_5: ns = xmlns_v0_2_5; break;
-    case XEP0363::v0_3_1: ns = xmlns_v0_3_1; break;
-    default: return;
+    switch (ver) {
+    case XEP0363::v0_2_5:
+        ns = xmlns_v0_2_5;
+        break;
+    case XEP0363::v0_3_1:
+        ns = xmlns_v0_3_1;
+        break;
+    default:
+        return;
     }
 
-    d->to = to;
-    d->ver = ver;
-    d->iq = createIQ(doc(), "get", to.full(), id());
+    d->to           = to;
+    d->ver          = ver;
+    d->iq           = createIQ(doc(), "get", to.full(), id());
     QDomElement req = doc()->createElementNS(ns, "request");
-    switch (ver)
-    {
+    switch (ver) {
     case XEP0363::v0_2_5:
         ns = xmlns_v0_2_5;
         req.appendChild(textTag(doc(), "filename", fname));
@@ -358,15 +343,9 @@ void JT_HTTPFileUpload::request(const Jid &to, const QString &fname,
     d->iq.appendChild(req);
 }
 
-QString JT_HTTPFileUpload::url(UrlType t) const
-{
-    return d->urls.value(t);
-}
+QString JT_HTTPFileUpload::url(UrlType t) const { return d->urls.value(t); }
 
-XEP0363::HttpHeaders JT_HTTPFileUpload::headers() const
-{
-    return d->headers;
-}
+XEP0363::HttpHeaders JT_HTTPFileUpload::headers() const { return d->headers; }
 
 void JT_HTTPFileUpload::onGo()
 {
@@ -384,36 +363,34 @@ bool JT_HTTPFileUpload::take(const QDomElement &e)
         return true;
     }
 
-    bool correct_xmlns = false;
-    QString getUrl, putUrl;
+    bool                 correct_xmlns = false;
+    QString              getUrl, putUrl;
     XEP0363::HttpHeaders headers;
-    const QDomElement &slot = e.firstChildElement("slot");
+    const QDomElement &  slot = e.firstChildElement("slot");
     if (!slot.isNull()) {
         const QDomElement &get = slot.firstChildElement("get");
         const QDomElement &put = slot.firstChildElement("put");
-        switch (d->ver)
-        {
+        switch (d->ver) {
         case XEP0363::v0_2_5:
             correct_xmlns = slot.namespaceURI() == xmlns_v0_2_5;
-            getUrl = tagContent(get);
-            putUrl = tagContent(put);
+            getUrl        = tagContent(get);
+            putUrl        = tagContent(put);
             break;
         case XEP0363::v0_3_1:
             correct_xmlns = slot.namespaceURI() == xmlns_v0_3_1;
-            getUrl = get.attribute("url");
+            getUrl        = get.attribute("url");
             if (!put.isNull()) {
-                putUrl = put.attribute("url");
+                putUrl         = put.attribute("url");
                 QDomElement he = put.firstChildElement("header");
                 while (!he.isNull()) {
                     // only next are allowed: Authorization, Cookie, Expires
                     QString header = he.attribute("name").trimmed().remove(QLatin1Char('\n'));
-                    QString value = he.text().trimmed().remove(QLatin1Char('\n'));
-                    if (!value.isEmpty() &&
-                            (header.compare(QLatin1String("Authorization"), Qt::CaseInsensitive) == 0 ||
-                            header.compare(QLatin1String("Cookie"), Qt::CaseInsensitive) == 0 ||
-                            header.compare(QLatin1String("Expires"), Qt::CaseInsensitive) == 0))
-                    {
-                        headers.append(XEP0363::HttpHeader{header, value});
+                    QString value  = he.text().trimmed().remove(QLatin1Char('\n'));
+                    if (!value.isEmpty()
+                        && (header.compare(QLatin1String("Authorization"), Qt::CaseInsensitive) == 0
+                            || header.compare(QLatin1String("Cookie"), Qt::CaseInsensitive) == 0
+                            || header.compare(QLatin1String("Expires"), Qt::CaseInsensitive) == 0)) {
+                        headers.append(XEP0363::HttpHeader { header, value });
                     }
                     he = he.nextSiblingElement("header");
                 }
@@ -432,46 +409,35 @@ bool JT_HTTPFileUpload::take(const QDomElement &e)
         d->urls[PutUrl] = putUrl;
         d->headers      = headers;
         setSuccess();
-    }
-    else
+    } else
         setError(ErrInvalidResponse, "Either `put` or `get` URL is missing in the server's reply.");
     return true;
 }
 
 class HttpFileUploadManager::Private {
 public:
-    Client *client = nullptr;
-    QPointer<QNetworkAccessManager> qnam;
-    int discoStatus = 0;
-    QList<HttpFileUpload::HttpHost> discoHosts;
-    bool externalQnam = false;
+    Client *                              client = nullptr;
+    QPointer<QNetworkAccessManager>       qnam;
+    int                                   discoStatus = 0;
+    QList<HttpFileUpload::HttpHost>       discoHosts;
+    bool                                  externalQnam = false;
     QLinkedList<HttpFileUpload::HttpHost> hosts;
 };
 
-HttpFileUploadManager::HttpFileUploadManager(Client *parent) :
-    QObject(parent),
-    d(new Private)
-{
-    d->client = parent;
-}
+HttpFileUploadManager::HttpFileUploadManager(Client *parent) : QObject(parent), d(new Private) { d->client = parent; }
 
-HttpFileUploadManager::~HttpFileUploadManager()
-{
-    delete d;
-}
+HttpFileUploadManager::~HttpFileUploadManager() { delete d; }
 
-int HttpFileUploadManager::discoveryStatus() const
-{
-    return d->discoStatus;
-}
+int HttpFileUploadManager::discoveryStatus() const { return d->discoStatus; }
 
 void HttpFileUploadManager::setNetworkAccessManager(QNetworkAccessManager *qnam)
 {
     d->externalQnam = true;
-    d->qnam = qnam;
+    d->qnam         = qnam;
 }
 
-HttpFileUpload* HttpFileUploadManager::upload(const QString &srcFilename, const QString &dstFilename, const QString &mType)
+HttpFileUpload *HttpFileUploadManager::upload(const QString &srcFilename, const QString &dstFilename,
+                                              const QString &mType)
 {
     auto f = new QFile(srcFilename);
     f->open(QIODevice::ReadOnly);
@@ -480,22 +446,20 @@ HttpFileUpload* HttpFileUploadManager::upload(const QString &srcFilename, const 
     return hfu;
 }
 
-HttpFileUpload* HttpFileUploadManager::upload(QIODevice *source, size_t fsize, const QString &dstFilename, const QString &mType)
+HttpFileUpload *HttpFileUploadManager::upload(QIODevice *source, size_t fsize, const QString &dstFilename,
+                                              const QString &mType)
 {
-    auto hfu = new HttpFileUpload(d->client, source, fsize, dstFilename, mType);
-    QNetworkAccessManager *qnam = d->externalQnam? d->qnam.data() : d->client->networkAccessManager();
+    auto                   hfu  = new HttpFileUpload(d->client, source, fsize, dstFilename, mType);
+    QNetworkAccessManager *qnam = d->externalQnam ? d->qnam.data() : d->client->networkAccessManager();
     hfu->setNetworkAccessManager(qnam);
     QMetaObject::invokeMethod(hfu, "start", Qt::QueuedConnection);
     return hfu;
 }
 
-const QList<HttpFileUpload::HttpHost> &HttpFileUploadManager::discoHosts() const
-{
-    return d->discoHosts;
-}
+const QList<HttpFileUpload::HttpHost> &HttpFileUploadManager::discoHosts() const { return d->discoHosts; }
 
 void HttpFileUploadManager::setDiscoHosts(const QList<HttpFileUpload::HttpHost> &hosts)
 {
-    d->discoStatus = hosts.size()? DiscoFound : DiscoNotFound;
-    d->discoHosts = hosts;
+    d->discoStatus = hosts.size() ? DiscoFound : DiscoNotFound;
+    d->discoHosts  = hosts;
 }

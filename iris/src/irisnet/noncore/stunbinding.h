@@ -26,19 +26,11 @@ class QHostAddress;
 namespace XMPP {
 class StunTransactionPool;
 
-class StunBinding : public QObject
-{
+class StunBinding : public QObject {
     Q_OBJECT
 
 public:
-    enum Error
-    {
-        ErrorGeneric,
-        ErrorTimeout,
-        ErrorRejected,
-        ErrorProtocol,
-        ErrorConflict
-    };
+    enum Error { ErrorGeneric, ErrorTimeout, ErrorRejected, ErrorProtocol, ErrorConflict };
 
     StunBinding(StunTransactionPool *pool);
     ~StunBinding();
@@ -58,7 +50,7 @@ public:
     void start(const QHostAddress &addr, int port); // use addr association
 
     QHostAddress reflexiveAddress() const;
-    int reflexivePort() const;
+    int          reflexivePort() const;
 
     // non-translatable diagnostic string for convenience
     QString errorString() const;

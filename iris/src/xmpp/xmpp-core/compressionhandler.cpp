@@ -5,8 +5,7 @@
 #include <QDebug>
 #include <QTimer>
 
-CompressionHandler::CompressionHandler()
-    : errorCode_(0)
+CompressionHandler::CompressionHandler() : errorCode_(0)
 {
     outgoing_buffer_.open(QIODevice::ReadWrite);
     compressor_ = new ZLibCompressor(&outgoing_buffer_);
@@ -21,10 +20,10 @@ CompressionHandler::~CompressionHandler()
     delete decompressor_;
 }
 
-void CompressionHandler::writeIncoming(const QByteArray& a)
+void CompressionHandler::writeIncoming(const QByteArray &a)
 {
-    //qDebug("CompressionHandler::writeIncoming");
-    //qDebug() << QString("Incoming %1 bytes").arg(a.size());
+    // qDebug("CompressionHandler::writeIncoming");
+    // qDebug() << QString("Incoming %1 bytes").arg(a.size());
     errorCode_ = decompressor_->write(a);
     if (!errorCode_)
         QTimer::singleShot(0, this, SIGNAL(readyRead()));
@@ -32,9 +31,9 @@ void CompressionHandler::writeIncoming(const QByteArray& a)
         QTimer::singleShot(0, this, SIGNAL(error()));
 }
 
-void CompressionHandler::write(const QByteArray& a)
+void CompressionHandler::write(const QByteArray &a)
 {
-    //qDebug() << QString("CompressionHandler::write(%1)").arg(a.size());
+    // qDebug() << QString("CompressionHandler::write(%1)").arg(a.size());
     errorCode_ = compressor_->write(a);
     if (!errorCode_)
         QTimer::singleShot(0, this, SIGNAL(readyReadOutgoing()));
@@ -44,17 +43,17 @@ void CompressionHandler::write(const QByteArray& a)
 
 QByteArray CompressionHandler::read()
 {
-    //qDebug("CompressionHandler::read");
+    // qDebug("CompressionHandler::read");
     QByteArray b = incoming_buffer_.buffer();
     incoming_buffer_.buffer().clear();
     incoming_buffer_.reset();
     return b;
 }
 
-QByteArray CompressionHandler::readOutgoing(int* i)
+QByteArray CompressionHandler::readOutgoing(int *i)
 {
-    //qDebug("CompressionHandler::readOutgoing");
-    //qDebug() << QString("Outgoing %1 bytes").arg(outgoing_buffer_.size());
+    // qDebug("CompressionHandler::readOutgoing");
+    // qDebug() << QString("Outgoing %1 bytes").arg(outgoing_buffer_.size());
     QByteArray b = outgoing_buffer_.buffer();
     outgoing_buffer_.buffer().clear();
     outgoing_buffer_.reset();
@@ -62,7 +61,4 @@ QByteArray CompressionHandler::readOutgoing(int* i)
     return b;
 }
 
-int CompressionHandler::errorCode()
-{
-    return errorCode_;
-}
+int CompressionHandler::errorCode() { return errorCode_; }

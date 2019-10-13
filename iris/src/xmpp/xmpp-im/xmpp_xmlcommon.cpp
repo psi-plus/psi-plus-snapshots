@@ -32,14 +32,9 @@
 //----------------------------------------------------------------------------
 // XDomNodeList
 //----------------------------------------------------------------------------
-XDomNodeList::XDomNodeList()
-{
-}
+XDomNodeList::XDomNodeList() {}
 
-XDomNodeList::XDomNodeList(const XDomNodeList &from) :
-    list(from.list)
-{
-}
+XDomNodeList::XDomNodeList(const XDomNodeList &from) : list(from.list) {}
 
 XDomNodeList::XDomNodeList(const QDomNodeList &from)
 {
@@ -47,9 +42,7 @@ XDomNodeList::XDomNodeList(const QDomNodeList &from)
         list += from.item(n);
 }
 
-XDomNodeList::~XDomNodeList()
-{
-}
+XDomNodeList::~XDomNodeList() {}
 
 XDomNodeList &XDomNodeList::operator=(const XDomNodeList &from)
 {
@@ -57,30 +50,15 @@ XDomNodeList &XDomNodeList::operator=(const XDomNodeList &from)
     return *this;
 }
 
-bool XDomNodeList::isEmpty() const
-{
-    return list.isEmpty();
-}
+bool XDomNodeList::isEmpty() const { return list.isEmpty(); }
 
-QDomNode XDomNodeList::item(int index) const
-{
-    return list.value(index);
-}
+QDomNode XDomNodeList::item(int index) const { return list.value(index); }
 
-uint XDomNodeList::length() const
-{
-    return (uint)list.count();
-}
+uint XDomNodeList::length() const { return (uint)list.count(); }
 
-bool XDomNodeList::operator==(const XDomNodeList &a) const
-{
-    return (list == a.list);
-}
+bool XDomNodeList::operator==(const XDomNodeList &a) const { return (list == a.list); }
 
-void XDomNodeList::append(const QDomNode &i)
-{
-    list += i;
-}
+void XDomNodeList::append(const QDomNode &i) { list += i; }
 
 // YYYYMMDDThh:mm:ss
 QDateTime stamp2TS(const QString &ts)
@@ -124,13 +102,8 @@ QString TS2stamp(const QDateTime &d)
 {
     QString str;
 
-    str.sprintf("%04d%02d%02dT%02d:%02d:%02d",
-                d.date().year(),
-                d.date().month(),
-                d.date().day(),
-                d.time().hour(),
-                d.time().minute(),
-                d.time().second());
+    str.sprintf("%04d%02d%02dT%02d:%02d:%02d", d.date().year(), d.date().month(), d.date().day(), d.time().hour(),
+                d.time().minute(), d.time().second());
 
     return str;
 }
@@ -195,7 +168,7 @@ XDomNodeList childElementsByTagNameNS(const QDomElement &e, const QString &nsURI
  * \param to destination jid
  * \param id stanza id
  * \return the created stanza
-*/
+ */
 QDomElement createIQ(QDomDocument *doc, const QString &type, const QString &to, const QString &id)
 {
     QDomElement iq = doc->createElement("iq");
@@ -211,16 +184,10 @@ QDomElement createIQ(QDomDocument *doc, const QString &type, const QString &to, 
 
 /** \brief returns direct child element named "query"
  * \return the element (or a null QDomElemnt if not found)
-*/
-QDomElement queryTag(const QDomElement &e)
-{
-    return e.firstChildElement("query");
-}
+ */
+QDomElement queryTag(const QDomElement &e) { return e.firstChildElement("query"); }
 
-QString queryNS(const QDomElement &e)
-{
-    return e.firstChildElement("query").namespaceURI();
-}
+QString queryNS(const QDomElement &e) { return e.firstChildElement("query").namespaceURI(); }
 
 /**
     \brief Extracts the error code and description from the stanza element.
@@ -275,7 +242,7 @@ QDomElement addCorrectNS(const QDomElement &e)
         n = n.parentNode();
     QString ns;
     if (n.isNull() || !n.toElement().hasAttribute(xmlns)) { // if not found or it's namespaceURI
-        if (n.toElement().namespaceURI().isEmpty()) {       // if nothing found, then use default jabber:client namespace
+        if (n.toElement().namespaceURI().isEmpty()) { // if nothing found, then use default jabber:client namespace
             ns = "jabber:client";
         } else {
             ns = n.toElement().namespaceURI();
@@ -305,7 +272,7 @@ QDomElement addCorrectNS(const QDomElement &e)
             i.appendChild(n.cloneNode());
     }
 
-    //i.appendChild(frag);
+    // i.appendChild(frag);
     return i;
 }
 
@@ -320,10 +287,7 @@ QDomElement emptyTag(QDomDocument *doc, const QString &name)
     return tag;
 }
 
-bool hasSubTag(const QDomElement &e, const QString &name)
-{
-    return !e.firstChildElement(name).isNull();
-}
+bool hasSubTag(const QDomElement &e, const QString &name) { return !e.firstChildElement(name).isNull(); }
 
 QString subTagText(const QDomElement &e, const QString &name)
 {
@@ -507,10 +471,7 @@ void xmlToStringList(const QDomElement &e, const QString &name, QStringList *v)
     *v = list;
 }
 
-void setBoolAttribute(QDomElement e, const QString &name, bool b)
-{
-    e.setAttribute(name, b ? "true" : "false");
-}
+void setBoolAttribute(QDomElement e, const QString &name, bool b) { e.setAttribute(name, b ? "true" : "false"); }
 
 void readBoolAttribute(QDomElement e, const QString &name, bool *v)
 {
@@ -530,10 +491,7 @@ QString sanitizedLang(const QString &lang)
     return QString();
 }
 
-void setTagText(QDomElement &e, const QString &text)
-{
-    e.appendChild(e.ownerDocument().createTextNode(text));
-}
+void setTagText(QDomElement &e, const QString &text) { e.appendChild(e.ownerDocument().createTextNode(text)); }
 
 QDomElement textTagNS(QDomDocument *doc, const QString &ns, const QString &name, const QString &content)
 {

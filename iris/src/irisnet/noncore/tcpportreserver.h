@@ -26,22 +26,15 @@
 #include <QVariant>
 
 namespace XMPP {
-class TcpPortServer : public QObject
-{
+class TcpPortServer : public QObject {
     Q_OBJECT
 public:
     using Ptr = QSharedPointer<TcpPortServer>;
 
-    enum PortType {
-        NoType     = 0x0,
-        Direct     = 0x1,
-        NatAssited = 0x2,
-        Tunneled   = 0x4
-    };
+    enum PortType { NoType = 0x0, Direct = 0x1, NatAssited = 0x2, Tunneled = 0x4 };
     Q_DECLARE_FLAGS(PortTypes, PortType)
 
-    struct Port
-    {
+    struct Port {
         PortType portType = NoType;
         QString  publishHost;
         quint16  publishPort = 0;
@@ -52,14 +45,14 @@ public:
     inline void            setPortInfo(const Port &port) { this->port = port; }
     inline QHostAddress    serverAddress() const { return serverSocket->serverAddress(); }
     inline quint16         serverPort() const { return serverSocket->serverPort(); }
-    inline const QString  &publishHost() const { return port.publishHost; }
+    inline const QString & publishHost() const { return port.publishHost; }
     inline quint16         publishPort() const { return port.publishPort; }
     inline PortType        portType() const { return port.portType; }
     inline const QVariant &meta() const { return port.meta; }
 
 protected:
     QTcpServer *serverSocket = nullptr;
-    Port port;
+    Port        port;
 };
 
 class TcpPortScope;
@@ -68,16 +61,14 @@ class TcpPortScope;
  *
  * Discovers / starts listening on a set of unique tcp ports.
  */
-class TcpPortDiscoverer : public QObject
-{
+class TcpPortDiscoverer : public QObject {
     Q_OBJECT
 public:
-
     TcpPortDiscoverer(TcpPortScope *scope);
     bool setExternalHost(const QString &extHost, quint16 extPort, const QHostAddress &localIp, quint16 localPort);
 
     TcpPortServer::PortTypes inProgressPortTypes() const;
-    bool isDepleted() const;
+    bool                     isDepleted() const;
 
     /**
      * @brief setTypeMask sets expected port types mask and frees unnecessary resources
@@ -96,9 +87,11 @@ public slots:
     void stop();
 signals:
     void portAvailable();
+
 private:
-    TcpPortServer::PortTypes typeMask = TcpPortServer::PortTypes(TcpPortServer::Direct | TcpPortServer::NatAssited | TcpPortServer::Tunneled);
-    TcpPortScope *scope = nullptr;
+    TcpPortServer::PortTypes typeMask
+        = TcpPortServer::PortTypes(TcpPortServer::Direct | TcpPortServer::NatAssited | TcpPortServer::Tunneled);
+    TcpPortScope *            scope = nullptr;
     QList<TcpPortServer::Ptr> servers;
 };
 
@@ -109,17 +102,17 @@ class TcpPortReserver;
  * Handles scopes of ports. For example just S5B dedicated ports.
  * There only on scope instance per scope id
  */
-class TcpPortScope: public QObject
-{
+class TcpPortScope : public QObject {
     Q_OBJECT
 public:
     TcpPortScope();
     ~TcpPortScope();
-    TcpPortDiscoverer* disco();
+    TcpPortDiscoverer *       disco();
     QList<TcpPortServer::Ptr> allServers() const;
+
 protected:
-    virtual TcpPortServer* makeServer(QTcpServer *socket) = 0;
-    virtual void destroyServer(TcpPortServer *server);
+    virtual TcpPortServer *makeServer(QTcpServer *socket) = 0;
+    virtual void           destroyServer(TcpPortServer *server);
 
 private:
     friend class TcpPortDiscoverer;
@@ -134,8 +127,7 @@ private:
  * @brief The TcpPortReserver class
  * This class should have the only instance per application
  */
-class TcpPortReserver : public QObject
-{
+class TcpPortReserver : public QObject {
     Q_OBJECT
 public:
     explicit TcpPortReserver(QObject *parent = nullptr);
@@ -149,7 +141,7 @@ public:
      */
     TcpPortScope *scope(const QString &id);
 
-    void registerScope(const QString &id, TcpPortScope *scope);
+    void          registerScope(const QString &id, TcpPortScope *scope);
     TcpPortScope *unregisterScope(const QString &id);
 signals:
     void newDiscoverer(TcpPortDiscoverer *discoverer);

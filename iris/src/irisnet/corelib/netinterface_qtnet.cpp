@@ -21,12 +21,11 @@
 #include <QNetworkInterface>
 
 namespace XMPP {
-class IrisQtNet : public NetInterfaceProvider
-{
+class IrisQtNet : public NetInterfaceProvider {
     Q_OBJECT
     Q_INTERFACES(XMPP::NetInterfaceProvider)
 public:
-    QList<Info> info;
+    QList<Info>                  info;
     QNetworkConfigurationManager ncm;
 
     IrisQtNet()
@@ -36,26 +35,20 @@ public:
         connect(&ncm, SIGNAL(configurationRemoved(QNetworkConfiguration)), SLOT(check()));
     }
 
-    void start()
-    {
-        poll();
-    }
+    void start() { poll(); }
 
-    QList<Info> interfaces() const
-    {
-        return info;
-    }
+    QList<Info> interfaces() const { return info; }
 
     void poll()
     {
         QList<Info> ifaces;
 
-        for (auto &iface: QNetworkInterface::allInterfaces()) {
+        for (auto &iface : QNetworkInterface::allInterfaces()) {
             Info i;
-            i.id = iface.name();
-            i.name = iface.humanReadableName();
+            i.id         = iface.name();
+            i.name       = iface.humanReadableName();
             i.isLoopback = (iface.flags() & QNetworkInterface::IsLoopBack);
-            for (auto &ae: iface.addressEntries()) {
+            for (auto &ae : iface.addressEntries()) {
                 i.addresses.append(ae.ip());
             }
             ifaces << i;
@@ -72,21 +65,14 @@ public slots:
     }
 };
 
-class IrisQtNetProvider : public IrisNetProvider
-{
+class IrisQtNetProvider : public IrisNetProvider {
     Q_OBJECT
     Q_INTERFACES(XMPP::IrisNetProvider)
 public:
-    NetInterfaceProvider *createNetInterfaceProvider()
-    {
-        return new IrisQtNet;
-    }
+    NetInterfaceProvider *createNetInterfaceProvider() { return new IrisQtNet; }
 };
 
-IrisNetProvider *irisnet_createQtNetProvider()
-{
-    return new IrisQtNetProvider;
-}
+IrisNetProvider *irisnet_createQtNetProvider() { return new IrisQtNetProvider; }
 } // namespace XMPP
 
 #include "netinterface_qtnet.moc"

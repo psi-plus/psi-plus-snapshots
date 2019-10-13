@@ -24,7 +24,7 @@
 #include <QObject>
 
 namespace QCA {
-    class SecureArray;
+class SecureArray;
 }
 
 namespace XMPP {
@@ -57,22 +57,16 @@ class StunTransactionPrivate;
 // - if short term or long term auth is used, then the request is authenticated
 //   and the response is required to be authenticated.
 
-class StunTransaction : public QObject
-{
+class StunTransaction : public QObject {
     Q_OBJECT
 
 public:
-    enum Mode
-    {
+    enum Mode {
         Udp, // handle retransmissions
         Tcp  // send once
     };
 
-    enum Error
-    {
-        ErrorGeneric,
-        ErrorTimeout
-    };
+    enum Error { ErrorGeneric, ErrorTimeout };
 
     StunTransaction(QObject *parent = nullptr);
     ~StunTransaction();
@@ -126,17 +120,11 @@ private:
 //   emitted as a direct result of calling certain member functions of this
 //   class as well as any other class that might use it (such as StunBinding).
 //   so, be careful with what you do in your retransmit slot.
-class StunTransactionPool : public QObject
-{
+class StunTransactionPool : public QObject {
     Q_OBJECT
 
 public:
-    enum DebugLevel
-    {
-        DL_None,
-        DL_Info,
-        DL_Packet
-    };
+    enum DebugLevel { DL_None, DL_Info, DL_Packet };
 
     StunTransactionPool(StunTransaction::Mode mode, QObject *parent = nullptr);
     ~StunTransactionPool();
@@ -155,15 +143,16 @@ public:
     //   not be a STUN message.  *notStun will be set to true if the packet
     //   is surely not STUN, or set to false if it is unclear whether the
     //   packet is STUN or not.
-    bool writeIncomingMessage(const QByteArray &packet, bool *notStun = nullptr, const QHostAddress &addr = QHostAddress(), int port = -1);
+    bool writeIncomingMessage(const QByteArray &packet, bool *notStun = nullptr,
+                              const QHostAddress &addr = QHostAddress(), int port = -1);
 
     void setLongTermAuthEnabled(bool enabled);
 
     QString realm() const;
-    void setUsername(const QString &username);
-    void setPassword(const QCA::SecureArray &password);
-    void setRealm(const QString &realm);
-    void continueAfterParams();
+    void    setUsername(const QString &username);
+    void    setPassword(const QCA::SecureArray &password);
+    void    setRealm(const QString &realm);
+    void    continueAfterParams();
 
     // for use with stun indications
     QByteArray generateId() const;

@@ -22,8 +22,7 @@
 #include "irisnetglobal.h"
 
 namespace XMPP {
-class NetAvailability : public QObject
-{
+class NetAvailability : public QObject {
     Q_OBJECT
 
 public:

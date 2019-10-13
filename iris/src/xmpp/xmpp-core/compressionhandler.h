@@ -7,18 +7,17 @@
 class ZLibCompressor;
 class ZLibDecompressor;
 
-class CompressionHandler : public QObject
-{
+class CompressionHandler : public QObject {
     Q_OBJECT
 
 public:
     CompressionHandler();
     ~CompressionHandler();
-    void writeIncoming(const QByteArray& a);
-    void write(const QByteArray& a);
+    void       writeIncoming(const QByteArray &a);
+    void       write(const QByteArray &a);
     QByteArray read();
-    QByteArray readOutgoing(int*);
-    int errorCode();
+    QByteArray readOutgoing(int *);
+    int        errorCode();
 
 signals:
     void readyRead();
@@ -26,10 +25,10 @@ signals:
     void error();
 
 private:
-    ZLibCompressor* compressor_;
-    ZLibDecompressor* decompressor_;
-    QBuffer outgoing_buffer_, incoming_buffer_;
-    int errorCode_;
+    ZLibCompressor *  compressor_;
+    ZLibDecompressor *decompressor_;
+    QBuffer           outgoing_buffer_, incoming_buffer_;
+    int               errorCode_;
 };
 
 #endif // COMPRESSIONHANDLER_H

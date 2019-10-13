@@ -38,8 +38,8 @@ using namespace XMPP;
 // Get an element's first child element
 static QDomElement firstChildElement(const QDomElement &e)
 {
-    for(QDomNode n = e.firstChild(); !n.isNull(); n = n.nextSibling()) {
-        if(n.isElement())
+    for (QDomNode n = e.firstChild(); !n.isNull(); n = n.nextSibling()) {
+        if (n.isElement())
             return n.toElement();
     }
     return QDomElement();
@@ -48,46 +48,43 @@ static QDomElement firstChildElement(const QDomElement &e)
 //----------------------------------------------------------------------------
 // FileTransfer
 //----------------------------------------------------------------------------
-class FileTransfer::Private
-{
+class FileTransfer::Private {
 public:
     FileTransferManager *m;
-    JT_FT *ft;
-    Jid peer;
-    QString fname;
-    qlonglong size;
-    qlonglong sent;
-    QString desc;
-    bool rangeSupported;
-    qlonglong rangeOffset, rangeLength, length;
-    QString streamType;
-    Thumbnail thumbnail;
-    bool needStream;
-    QString id, iq_id;
-    BSConnection *c;
-    Jid proxy;
-    int state;
-    bool sender;
+    JT_FT *              ft;
+    Jid                  peer;
+    QString              fname;
+    qlonglong            size;
+    qlonglong            sent;
+    QString              desc;
+    bool                 rangeSupported;
+    qlonglong            rangeOffset, rangeLength, length;
+    QString              streamType;
+    Thumbnail            thumbnail;
+    bool                 needStream;
+    QString              id, iq_id;
+    BSConnection *       c;
+    Jid                  proxy;
+    int                  state;
+    bool                 sender;
 };
 
-FileTransfer::FileTransfer(FileTransferManager *m, QObject *parent)
-:QObject(parent)
+FileTransfer::FileTransfer(FileTransferManager *m, QObject *parent) : QObject(parent)
 {
-    d = new Private;
-    d->m = m;
+    d     = new Private;
+    d->m  = m;
     d->ft = nullptr;
-    d->c = nullptr;
+    d->c  = nullptr;
     reset();
 }
 
-FileTransfer::FileTransfer(const FileTransfer& other)
-    : QObject(other.parent())
+FileTransfer::FileTransfer(const FileTransfer &other) : QObject(other.parent())
 {
-    d = new Private;
-    *d = *other.d;
-    d->m = other.d->m;
+    d     = new Private;
+    *d    = *other.d;
+    d->m  = other.d->m;
     d->ft = nullptr;
-    d->c = 0;
+    d->c  = 0;
     reset();
 
     if (d->m->isActive(&other))
@@ -100,10 +97,7 @@ FileTransfer::~FileTransfer()
     delete d;
 }
 
-FileTransfer *FileTransfer::copy() const
-{
-    return new FileTransfer(*this);
-}
+FileTransfer *FileTransfer::copy() const { return new FileTransfer(*this); }
 
 void FileTransfer::reset()
 {
@@ -114,32 +108,27 @@ void FileTransfer::reset()
 
     if (d->c) {
         d->c->disconnect(this);
-        d->c->manager()->deleteConnection(d->c, d->state == Active && !d->sender ?
-                                              3000 : 0);
+        d->c->manager()->deleteConnection(d->c, d->state == Active && !d->sender ? 3000 : 0);
         d->c = nullptr;
     }
 
-    d->state = Idle;
+    d->state      = Idle;
     d->needStream = false;
-    d->sent = 0;
-    d->sender = false;
+    d->sent       = 0;
+    d->sender     = false;
 }
 
-void FileTransfer::setProxy(const Jid &proxy)
-{
-    d->proxy = proxy;
-}
+void FileTransfer::setProxy(const Jid &proxy) { d->proxy = proxy; }
 
-void FileTransfer::sendFile(const Jid &to, const QString &fname, qlonglong size,
-                            const QString &desc, Thumbnail &thumb)
+void FileTransfer::sendFile(const Jid &to, const QString &fname, qlonglong size, const QString &desc, Thumbnail &thumb)
 {
-    d->state = Requesting;
-    d->peer = to;
-    d->fname = fname;
-    d->size = size;
-    d->desc = desc;
+    d->state  = Requesting;
+    d->peer   = to;
+    d->fname  = fname;
+    d->size   = size;
+    d->desc   = desc;
     d->sender = true;
-    d->id = d->m->link(this);
+    d->id     = d->m->link(this);
 
     d->ft = new JT_FT(d->m->client()->rootTask());
     connect(d->ft, SIGNAL(finished()), SLOT(ft_finished()));
@@ -150,78 +139,53 @@ void FileTransfer::sendFile(const Jid &to, const QString &fname, qlonglong size,
 int FileTransfer::dataSizeNeeded() const
 {
     int pending = d->c->bytesToWrite();
-    if(pending >= SENDBUFSIZE)
+    if (pending >= SENDBUFSIZE)
         return 0;
     qlonglong left = d->length - (d->sent + pending);
-    int size = SENDBUFSIZE - pending;
-    if((qlonglong)size > left)
+    int       size = SENDBUFSIZE - pending;
+    if ((qlonglong)size > left)
         size = (int)left;
     return size;
 }
 
 void FileTransfer::writeFileData(const QByteArray &a)
 {
-    int pending = d->c->bytesToWrite();
-    qlonglong left = d->length - (d->sent + pending);
-    if(left == 0)
+    int       pending = d->c->bytesToWrite();
+    qlonglong left    = d->length - (d->sent + pending);
+    if (left == 0)
         return;
 
     QByteArray block;
-    if((qlonglong)a.size() > left) {
+    if ((qlonglong)a.size() > left) {
         block = a;
         block.resize((uint)left);
-    }
-    else
+    } else
         block = a;
     d->c->write(block);
 }
 
-const Thumbnail &FileTransfer::thumbnail() const
-{
-    return d->thumbnail;
-}
+const Thumbnail &FileTransfer::thumbnail() const { return d->thumbnail; }
 
-Jid FileTransfer::peer() const
-{
-    return d->peer;
-}
+Jid FileTransfer::peer() const { return d->peer; }
 
-QString FileTransfer::fileName() const
-{
-    return d->fname;
-}
+QString FileTransfer::fileName() const { return d->fname; }
 
-qlonglong FileTransfer::fileSize() const
-{
-    return d->size;
-}
+qlonglong FileTransfer::fileSize() const { return d->size; }
 
-QString FileTransfer::description() const
-{
-    return d->desc;
-}
+QString FileTransfer::description() const { return d->desc; }
 
-bool FileTransfer::rangeSupported() const
-{
-    return d->rangeSupported;
-}
+bool FileTransfer::rangeSupported() const { return d->rangeSupported; }
 
-qlonglong FileTransfer::offset() const
-{
-    return d->rangeOffset;
-}
+qlonglong FileTransfer::offset() const { return d->rangeOffset; }
 
-qlonglong FileTransfer::length() const
-{
-    return d->length;
-}
+qlonglong FileTransfer::length() const { return d->length; }
 
 void FileTransfer::accept(qlonglong offset, qlonglong length)
 {
-    d->state = Connecting;
+    d->state       = Connecting;
     d->rangeOffset = offset;
     d->rangeLength = length;
-    if(length > 0)
+    if (length > 0)
         d->length = length;
     else
         d->length = d->size;
@@ -230,38 +194,35 @@ void FileTransfer::accept(qlonglong offset, qlonglong length)
 
 void FileTransfer::close()
 {
-    if(d->state == Idle)
+    if (d->state == Idle)
         return;
-    if(d->state == WaitingForAccept)
+    if (d->state == WaitingForAccept)
         d->m->con_reject(this);
-    else if(d->state == Active)
+    else if (d->state == Active)
         d->c->close();
     reset();
 }
 
-BSConnection *FileTransfer::bsConnection() const
-{
-    return d->c;
-}
+BSConnection *FileTransfer::bsConnection() const { return d->c; }
 
 // file transfer request accepted or error happened
 void FileTransfer::ft_finished()
 {
     JT_FT *ft = d->ft;
-    d->ft = nullptr;
+    d->ft     = nullptr;
 
-    if(ft->success()) {
-        d->state = Connecting;
+    if (ft->success()) {
+        d->state       = Connecting;
         d->rangeOffset = ft->rangeOffset();
-        d->length = ft->rangeLength();
-        if(d->length == 0)
+        d->length      = ft->rangeLength();
+        if (d->length == 0)
             d->length = d->size - d->rangeOffset;
-        d->streamType = ft->streamType();
+        d->streamType                    = ft->streamType();
         BytestreamManager *streamManager = d->m->streamManager(d->streamType);
         if (streamManager) {
             d->c = streamManager->createConnection();
-            if (dynamic_cast<S5BManager*>(streamManager) && d->proxy.isValid()) {
-                ((S5BConnection*)(d->c))->setProxy(d->proxy);
+            if (dynamic_cast<S5BManager *>(streamManager) && d->proxy.isValid()) {
+                ((S5BConnection *)(d->c))->setProxy(d->proxy);
             }
             connect(d->c, SIGNAL(connected()), SLOT(stream_connected()));
             connect(d->c, SIGNAL(connectionClosed()), SLOT(stream_connectionClosed()));
@@ -270,16 +231,14 @@ void FileTransfer::ft_finished()
 
             d->c->connectToJid(d->peer, d->id);
             accepted();
-        }
-        else {
+        } else {
             emit error(Err400);
             reset();
         }
-    }
-    else {
-        if(ft->statusCode() == 403)
+    } else {
+        if (ft->statusCode() == 403)
             emit error(ErrReject);
-        else if(ft->statusCode() == 400)
+        else if (ft->statusCode() == 400)
             emit error(Err400);
         else
             emit error(ErrNeg);
@@ -295,8 +254,8 @@ void FileTransfer::takeConnection(BSConnection *c)
     connect(d->c, SIGNAL(readyRead()), SLOT(stream_readyRead()));
     connect(d->c, SIGNAL(error(int)), SLOT(stream_error(int)));
 
-    S5BConnection *s5b = dynamic_cast<S5BConnection*>(c);
-    if(s5b && d->proxy.isValid())
+    S5BConnection *s5b = dynamic_cast<S5BConnection *>(c);
+    if (s5b && d->proxy.isValid())
         s5b->setProxy(d->proxy);
     accepted();
     QTimer::singleShot(0, this, SLOT(doAccept()));
@@ -318,20 +277,20 @@ void FileTransfer::stream_connectionClosed()
 
 void FileTransfer::stream_readyRead()
 {
-    QByteArray a = d->c->readAll();
-    qlonglong need = d->length - d->sent;
-    if((qlonglong)a.size() > need)
+    QByteArray a    = d->c->readAll();
+    qlonglong  need = d->length - d->sent;
+    if ((qlonglong)a.size() > need)
         a.resize((uint)need);
     d->sent += a.size();
-//    if(d->sent == d->length) // we close it in stream_connectionClosed. at least for ibb
-//        reset();             // in other words we wait for another party to close the connection
+    //    if(d->sent == d->length) // we close it in stream_connectionClosed. at least for ibb
+    //        reset();             // in other words we wait for another party to close the connection
     readyRead(a);
 }
 
 void FileTransfer::stream_bytesWritten(qint64 x)
 {
     d->sent += x;
-    if(d->sent == d->length)
+    if (d->sent == d->length)
         reset();
     emit bytesWritten(x);
 }
@@ -339,9 +298,9 @@ void FileTransfer::stream_bytesWritten(qint64 x)
 void FileTransfer::stream_error(int x)
 {
     reset();
-    if(x == BSConnection::ErrRefused || x == BSConnection::ErrConnect)
+    if (x == BSConnection::ErrRefused || x == BSConnection::ErrConnect)
         error(ErrConnect);
-    else if(x == BSConnection::ErrProxy)
+    else if (x == BSConnection::ErrProxy)
         error(ErrProxy);
     else
         error(ErrStream);
@@ -349,41 +308,36 @@ void FileTransfer::stream_error(int x)
 
 void FileTransfer::man_waitForAccept(const FTRequest &req, const QString &streamType)
 {
-    d->state = WaitingForAccept;
-    d->peer = req.from;
-    d->id = req.id;
-    d->iq_id = req.iq_id;
-    d->fname = req.fname;
-    d->size = req.size;
-    d->desc = req.desc;
+    d->state          = WaitingForAccept;
+    d->peer           = req.from;
+    d->id             = req.id;
+    d->iq_id          = req.iq_id;
+    d->fname          = req.fname;
+    d->size           = req.size;
+    d->desc           = req.desc;
     d->rangeSupported = req.rangeSupported;
-    d->streamType = streamType;
-    d->thumbnail = req.thumbnail;
+    d->streamType     = streamType;
+    d->thumbnail      = req.thumbnail;
 }
 
-void FileTransfer::doAccept()
-{
-    d->c->accept();
-}
+void FileTransfer::doAccept() { d->c->accept(); }
 
 //----------------------------------------------------------------------------
 // FileTransferManager
 //----------------------------------------------------------------------------
-class FileTransferManager::Private
-{
+class FileTransferManager::Private {
 public:
-    Client *client;
-    QList<FileTransfer*> list, incoming;
-    QStringList streamPriority;
-    QHash<QString, BytestreamManager*> streamMap;
-    QSet<QString> disabledStreamTypes;
-    JT_PushFT *pft;
+    Client *                            client;
+    QList<FileTransfer *>               list, incoming;
+    QStringList                         streamPriority;
+    QHash<QString, BytestreamManager *> streamMap;
+    QSet<QString>                       disabledStreamTypes;
+    JT_PushFT *                         pft;
 };
 
-FileTransferManager::FileTransferManager(Client *client)
-:QObject(client)
+FileTransferManager::FileTransferManager(Client *client) : QObject(client)
 {
-    d = new Private;
+    d         = new Private;
     d->client = client;
     if (client->s5bManager()) {
         d->streamPriority.append(S5BManager::ns());
@@ -407,10 +361,7 @@ FileTransferManager::~FileTransferManager()
     delete d;
 }
 
-Client *FileTransferManager::client() const
-{
-    return d->client;
-}
+Client *FileTransferManager::client() const { return d->client; }
 
 FileTransfer *FileTransferManager::createTransfer()
 {
@@ -420,7 +371,7 @@ FileTransfer *FileTransferManager::createTransfer()
 
 FileTransfer *FileTransferManager::takeIncoming()
 {
-    if(d->incoming.isEmpty())
+    if (d->incoming.isEmpty())
         return nullptr;
 
     FileTransfer *ft = d->incoming.takeFirst();
@@ -432,15 +383,14 @@ FileTransfer *FileTransferManager::takeIncoming()
 
 bool FileTransferManager::isActive(const FileTransfer *ft) const
 {
-    return d->list.contains(const_cast<FileTransfer*>(ft));
+    return d->list.contains(const_cast<FileTransfer *>(ft));
 }
 
 void FileTransferManager::setDisabled(const QString &ns, bool state)
 {
     if (state) {
         d->disabledStreamTypes.insert(ns);
-    }
-    else {
+    } else {
         d->disabledStreamTypes.remove(ns);
     }
 }
@@ -448,8 +398,8 @@ void FileTransferManager::setDisabled(const QString &ns, bool state)
 void FileTransferManager::pft_incoming(const FTRequest &req)
 {
     QString streamType;
-    foreach(const QString& ns, d->streamPriority) {
-        if(req.streamTypes.contains(ns)) {
+    foreach (const QString &ns, d->streamPriority) {
+        if (req.streamTypes.contains(ns)) {
             BytestreamManager *manager = streamManager(ns);
             if (manager && manager->isAcceptableSID(req.from, req.id)) {
                 streamType = ns;
@@ -458,9 +408,8 @@ void FileTransferManager::pft_incoming(const FTRequest &req)
         }
     }
 
-    if(streamType.isEmpty()) {
-        d->pft->respondError(req.from, req.iq_id, Stanza::Error::NotAcceptable,
-                             "No valid stream types");
+    if (streamType.isEmpty()) {
+        d->pft->respondError(req.from, req.iq_id, Stanza::Error::NotAcceptable, "No valid stream types");
         return;
     }
 
@@ -470,7 +419,7 @@ void FileTransferManager::pft_incoming(const FTRequest &req)
     incomingReady();
 }
 
-BytestreamManager* FileTransferManager::streamManager(const QString &ns) const
+BytestreamManager *FileTransferManager::streamManager(const QString &ns) const
 {
     if (d->disabledStreamTypes.contains(ns)) {
         return nullptr;
@@ -491,8 +440,8 @@ QStringList FileTransferManager::streamPriority() const
 
 void FileTransferManager::stream_incomingReady(BSConnection *c)
 {
-    foreach(FileTransfer* ft, d->list) {
-        if(ft->d->needStream && ft->d->peer.compare(c->peer()) && ft->d->id == c->sid()) {
+    foreach (FileTransfer *ft, d->list) {
+        if (ft->d->needStream && ft->d->peer.compare(c->peer()) && ft->d->id == c->sid()) {
             ft->takeConnection(c);
             return;
         }
@@ -504,17 +453,17 @@ void FileTransferManager::stream_incomingReady(BSConnection *c)
 QString FileTransferManager::link(FileTransfer *ft)
 {
     QString id;
-    bool found;
+    bool    found;
     do {
         found = false;
-        id = QString("ft_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
-        foreach (FileTransfer* ft, d->list) {
+        id    = QString("ft_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
+        foreach (FileTransfer *ft, d->list) {
             if (ft->d->peer.compare(ft->d->peer) && ft->d->id == id) {
                 found = true;
                 break;
             }
         }
-    } while(found);
+    } while (found);
     d->list.append(ft);
     return id;
 }
@@ -530,42 +479,30 @@ void FileTransferManager::con_reject(FileTransfer *ft)
     d->pft->respondError(ft->d->peer, ft->d->iq_id, Stanza::Error::Forbidden, "Declined");
 }
 
-void FileTransferManager::unlink(FileTransfer *ft)
-{
-    d->list.removeAll(ft);
-}
+void FileTransferManager::unlink(FileTransfer *ft) { d->list.removeAll(ft); }
 
 //----------------------------------------------------------------------------
 // JT_FT
 //----------------------------------------------------------------------------
-class JT_FT::Private
-{
+class JT_FT::Private {
 public:
     QDomElement iq;
-    Jid to;
-    qlonglong size, rangeOffset, rangeLength;
-    QString streamType;
+    Jid         to;
+    qlonglong   size, rangeOffset, rangeLength;
+    QString     streamType;
     QStringList streamTypes;
 };
 
-JT_FT::JT_FT(Task *parent)
-:Task(parent)
-{
-    d = new Private;
-}
+JT_FT::JT_FT(Task *parent) : Task(parent) { d = new Private; }
 
-JT_FT::~JT_FT()
-{
-    delete d;
-}
+JT_FT::~JT_FT() { delete d; }
 
-void JT_FT::request(const Jid &to, const QString &_id, const QString &fname,
-                    qlonglong size, const QString &desc,
+void JT_FT::request(const Jid &to, const QString &_id, const QString &fname, qlonglong size, const QString &desc,
                     const QStringList &streamTypes, Thumbnail &thumb)
 {
     QDomElement iq;
-    d->to = to;
-    iq = createIQ(doc(), "set", to.full(), id());
+    d->to          = to;
+    iq             = createIQ(doc(), "set", to.full(), id());
     QDomElement si = doc()->createElementNS("http://jabber.org/protocol/si", "si");
     si.setAttribute("id", _id);
     si.setAttribute("profile", "http://jabber.org/protocol/si/profile/file-transfer");
@@ -573,7 +510,7 @@ void JT_FT::request(const Jid &to, const QString &_id, const QString &fname,
     QDomElement file = doc()->createElementNS("http://jabber.org/protocol/si/profile/file-transfer", "file");
     file.setAttribute("name", fname);
     file.setAttribute("size", QString::number(size));
-    if(!desc.isEmpty()) {
+    if (!desc.isEmpty()) {
         QDomElement de = doc()->createElement("desc");
         de.appendChild(doc()->createTextNode(desc));
         file.appendChild(de);
@@ -583,22 +520,22 @@ void JT_FT::request(const Jid &to, const QString &_id, const QString &fname,
 
     if (!thumb.data.isEmpty()) {
         BoBData data = client()->bobManager()->append(thumb.data, thumb.mimeType);
-        thumb.uri = QLatin1String("cid:") + data.cid();
+        thumb.uri    = QLatin1String("cid:") + data.cid();
         file.appendChild(thumb.toXml(doc()));
     }
 
     si.appendChild(file);
 
     QDomElement feature = doc()->createElementNS("http://jabber.org/protocol/feature-neg", "feature");
-    QDomElement x = doc()->createElementNS("jabber:x:data", "x");
+    QDomElement x       = doc()->createElementNS("jabber:x:data", "x");
     x.setAttribute("type", "form");
 
     QDomElement field = doc()->createElement("field");
     field.setAttribute("var", "stream-method");
     field.setAttribute("type", "list-single");
-    for(QStringList::ConstIterator it = streamTypes.begin(); it != streamTypes.end(); ++it) {
+    for (QStringList::ConstIterator it = streamTypes.begin(); it != streamTypes.end(); ++it) {
         QDomElement option = doc()->createElement("option");
-        QDomElement value = doc()->createElement("value");
+        QDomElement value  = doc()->createElement("value");
         value.appendChild(doc()->createTextNode(*it));
         option.appendChild(value);
         field.appendChild(option);
@@ -611,38 +548,26 @@ void JT_FT::request(const Jid &to, const QString &_id, const QString &fname,
     iq.appendChild(si);
 
     d->streamTypes = streamTypes;
-    d->size = size;
-    d->iq = iq;
+    d->size        = size;
+    d->iq          = iq;
 }
 
-qlonglong JT_FT::rangeOffset() const
-{
-    return d->rangeOffset;
-}
+qlonglong JT_FT::rangeOffset() const { return d->rangeOffset; }
 
-qlonglong JT_FT::rangeLength() const
-{
-    return d->rangeLength;
-}
+qlonglong JT_FT::rangeLength() const { return d->rangeLength; }
 
-QString JT_FT::streamType() const
-{
-    return d->streamType;
-}
+QString JT_FT::streamType() const { return d->streamType; }
 
-void JT_FT::onGo()
-{
-    send(d->iq);
-}
+void JT_FT::onGo() { send(d->iq); }
 
 bool JT_FT::take(const QDomElement &x)
 {
-    if(!iqVerify(x, d->to, id()))
+    if (!iqVerify(x, d->to, id()))
         return false;
 
-    if(x.attribute("type") == "result") {
+    if (x.attribute("type") == "result") {
         QDomElement si = firstChildElement(x);
-        if(si.namespaceURI() != "http://jabber.org/protocol/si" || si.tagName() != "si") {
+        if (si.namespaceURI() != "http://jabber.org/protocol/si" || si.tagName() != "si") {
             setError(900, "");
             return true;
         }
@@ -653,22 +578,22 @@ bool JT_FT::take(const QDomElement &x)
         qlonglong range_length = 0;
 
         QDomElement file = si.elementsByTagName("file").item(0).toElement();
-        if(!file.isNull()) {
+        if (!file.isNull()) {
             QDomElement range = file.elementsByTagName("range").item(0).toElement();
-            if(!range.isNull()) {
+            if (!range.isNull()) {
                 qlonglong x;
-                bool ok;
-                if(range.hasAttribute("offset")) {
+                bool      ok;
+                if (range.hasAttribute("offset")) {
                     x = range.attribute("offset").toLongLong(&ok);
-                    if(!ok || x < 0) {
+                    if (!ok || x < 0) {
                         setError(900, "");
                         return true;
                     }
                     range_offset = x;
                 }
-                if(range.hasAttribute("length")) {
+                if (range.hasAttribute("length")) {
                     x = range.attribute("length").toLongLong(&ok);
-                    if(!ok || x < 0) {
+                    if (!ok || x < 0) {
                         setError(900, "");
                         return true;
                     }
@@ -677,20 +602,20 @@ bool JT_FT::take(const QDomElement &x)
             }
         }
 
-        if(range_offset > d->size || (range_length > (d->size - range_offset))) {
+        if (range_offset > d->size || (range_length > (d->size - range_offset))) {
             setError(900, "");
             return true;
         }
 
-        QString streamtype;
+        QString     streamtype;
         QDomElement feature = si.elementsByTagName("feature").item(0).toElement();
-        if(!feature.isNull() && feature.namespaceURI() == "http://jabber.org/protocol/feature-neg") {
+        if (!feature.isNull() && feature.namespaceURI() == "http://jabber.org/protocol/feature-neg") {
             QDomElement x = feature.elementsByTagName("x").item(0).toElement();
-            if(!x.isNull() && x.attribute("type") == "submit") {
+            if (!x.isNull() && x.attribute("type") == "submit") {
                 QDomElement field = x.elementsByTagName("field").item(0).toElement();
-                if(!field.isNull() && field.attribute("var") == "stream-method") {
+                if (!field.isNull() && field.attribute("var") == "stream-method") {
                     QDomElement value = field.elementsByTagName("value").item(0).toElement();
-                    if(!value.isNull())
+                    if (!value.isNull())
                         streamtype = value.text();
                 }
             }
@@ -703,10 +628,9 @@ bool JT_FT::take(const QDomElement &x)
 
         d->rangeOffset = range_offset;
         d->rangeLength = range_length;
-        d->streamType = streamtype;
+        d->streamType  = streamtype;
         setSuccess();
-    }
-    else {
+    } else {
         setError(x);
     }
 
@@ -716,33 +640,29 @@ bool JT_FT::take(const QDomElement &x)
 //----------------------------------------------------------------------------
 // JT_PushFT
 //----------------------------------------------------------------------------
-JT_PushFT::JT_PushFT(Task *parent)
-:Task(parent)
-{
-}
+JT_PushFT::JT_PushFT(Task *parent) : Task(parent) {}
 
-JT_PushFT::~JT_PushFT()
-{
-}
+JT_PushFT::~JT_PushFT() {}
 
-void JT_PushFT::respondSuccess(const Jid &to, const QString &id, qlonglong rangeOffset, qlonglong rangeLength, const QString &streamType)
+void JT_PushFT::respondSuccess(const Jid &to, const QString &id, qlonglong rangeOffset, qlonglong rangeLength,
+                               const QString &streamType)
 {
     QDomElement iq = createIQ(doc(), "result", to.full(), id);
     QDomElement si = doc()->createElementNS("http://jabber.org/protocol/si", "si");
 
-    if(rangeOffset != 0 || rangeLength != 0) {
-        QDomElement file = doc()->createElementNS("http://jabber.org/protocol/si/profile/file-transfer", "file");
+    if (rangeOffset != 0 || rangeLength != 0) {
+        QDomElement file  = doc()->createElementNS("http://jabber.org/protocol/si/profile/file-transfer", "file");
         QDomElement range = doc()->createElement("range");
-        if(rangeOffset > 0)
+        if (rangeOffset > 0)
             range.setAttribute("offset", QString::number(rangeOffset));
-        if(rangeLength > 0)
+        if (rangeLength > 0)
             range.setAttribute("length", QString::number(rangeLength));
         file.appendChild(range);
         si.appendChild(file);
     }
 
     QDomElement feature = doc()->createElementNS("http://jabber.org/protocol/feature-neg", "feature");
-    QDomElement x = doc()->createElementNS("jabber:x:data", "x");
+    QDomElement x       = doc()->createElementNS("jabber:x:data", "x");
     x.setAttribute("type", "submit");
 
     QDomElement field = doc()->createElement("field");
@@ -759,10 +679,9 @@ void JT_PushFT::respondSuccess(const Jid &to, const QString &id, qlonglong range
     send(iq);
 }
 
-void JT_PushFT::respondError(const Jid &to, const QString &id,
-                             Stanza::Error::ErrorCond cond, const QString &str)
+void JT_PushFT::respondError(const Jid &to, const QString &id, Stanza::Error::ErrorCond cond, const QString &str)
 {
-    QDomElement iq = createIQ(doc(), "error", to.full(), id);
+    QDomElement   iq = createIQ(doc(), "error", to.full(), id);
     Stanza::Error error(Stanza::Error::Cancel, cond, str);
     iq.appendChild(error.toXml(*client()->doc(), client()->stream().baseNS()));
     send(iq);
@@ -771,26 +690,26 @@ void JT_PushFT::respondError(const Jid &to, const QString &id,
 bool JT_PushFT::take(const QDomElement &e)
 {
     // must be an iq-set tag
-    if(e.tagName() != "iq")
+    if (e.tagName() != "iq")
         return false;
-    if(e.attribute("type") != "set")
+    if (e.attribute("type") != "set")
         return false;
 
     QDomElement si = firstChildElement(e);
-    if(si.namespaceURI() != "http://jabber.org/protocol/si" || si.tagName() != "si")
+    if (si.namespaceURI() != "http://jabber.org/protocol/si" || si.tagName() != "si")
         return false;
-    if(si.attribute("profile") != "http://jabber.org/protocol/si/profile/file-transfer")
+    if (si.attribute("profile") != "http://jabber.org/protocol/si/profile/file-transfer")
         return false;
 
-    Jid from(e.attribute("from"));
+    Jid     from(e.attribute("from"));
     QString id = si.attribute("id");
 
     QDomElement file = si.elementsByTagName("file").item(0).toElement();
-    if(file.isNull())
+    if (file.isNull())
         return true;
 
     QString fname = file.attribute("name");
-    if(fname.isEmpty()) {
+    if (fname.isEmpty()) {
         respondError(from, id, Stanza::Error::BadRequest, "Bad file name");
         return true;
     }
@@ -801,35 +720,36 @@ bool JT_PushFT::take(const QDomElement &e)
         fname = fi.fileName();
     }
 
-    bool ok;
+    bool      ok;
     qlonglong size = file.attribute("size").toLongLong(&ok);
-    if(!ok || size < 0) {
+    if (!ok || size < 0) {
         respondError(from, id, Stanza::Error::BadRequest, "Bad file size");
         return true;
     }
 
-    QString desc;
+    QString     desc;
     QDomElement de = file.elementsByTagName("desc").item(0).toElement();
-    if(!de.isNull())
+    if (!de.isNull())
         desc = de.text();
 
-    bool rangeSupported = false;
-    QDomElement range = file.elementsByTagName("range").item(0).toElement();
-    if(!range.isNull())
+    bool        rangeSupported = false;
+    QDomElement range          = file.elementsByTagName("range").item(0).toElement();
+    if (!range.isNull())
         rangeSupported = true;
 
     QStringList streamTypes;
     QDomElement feature = si.elementsByTagName("feature").item(0).toElement();
-    if(!feature.isNull() && feature.namespaceURI() == "http://jabber.org/protocol/feature-neg") {
+    if (!feature.isNull() && feature.namespaceURI() == "http://jabber.org/protocol/feature-neg") {
         QDomElement x = feature.elementsByTagName("x").item(0).toElement();
-        if(!x.isNull() /*&& x.attribute("type") == "form"*/) {
+        if (!x.isNull() /*&& x.attribute("type") == "form"*/) {
             QDomElement field = x.elementsByTagName("field").item(0).toElement();
-            if(!field.isNull() && field.attribute("var") == "stream-method" && field.attribute("type") == "list-single") {
+            if (!field.isNull() && field.attribute("var") == "stream-method"
+                && field.attribute("type") == "list-single") {
                 QDomNodeList nl = field.elementsByTagName("option");
-                for(int n = 0; n < nl.count(); ++n) {
-                    QDomElement e = nl.item(n).toElement();
+                for (int n = 0; n < nl.count(); ++n) {
+                    QDomElement e     = nl.item(n).toElement();
                     QDomElement value = e.elementsByTagName("value").item(0).toElement();
-                    if(!value.isNull())
+                    if (!value.isNull())
                         streamTypes += value.text();
                 }
             }
@@ -837,15 +757,15 @@ bool JT_PushFT::take(const QDomElement &e)
     }
 
     FTRequest r;
-    r.from = from;
-    r.iq_id = e.attribute("id");
-    r.id = id;
-    r.fname = fname;
-    r.size = size;
-    r.desc = desc;
+    r.from           = from;
+    r.iq_id          = e.attribute("id");
+    r.id             = id;
+    r.fname          = fname;
+    r.size           = size;
+    r.desc           = desc;
     r.rangeSupported = rangeSupported;
-    r.streamTypes = streamTypes;
-    r.thumbnail = Thumbnail(file.firstChildElement(QLatin1String("thumbnail")));
+    r.streamTypes    = streamTypes;
+    r.thumbnail      = Thumbnail(file.firstChildElement(QLatin1String("thumbnail")));
 
     emit incoming(r);
     return true;

@@ -29,19 +29,11 @@
 
 using namespace XMPP;
 
-Features::Features()
-{
-}
+Features::Features() {}
 
-Features::Features(const QStringList &l)
-{
-    setList(l);
-}
+Features::Features(const QStringList &l) { setList(l); }
 
-Features::Features(const QSet<QString> &s)
-{
-    setList(s);
-}
+Features::Features(const QSet<QString> &s) { setList(s); }
 
 Features::Features(const QString &str)
 {
@@ -51,39 +43,19 @@ Features::Features(const QString &str)
     setList(l);
 }
 
-Features::~Features()
-{
-}
+Features::~Features() {}
 
-QStringList Features::list() const
-{
-    return _list.toList();
-}
+QStringList Features::list() const { return _list.toList(); }
 
-void Features::setList(const QStringList &l)
-{
-    _list = QSet<QString>::fromList(l);
-}
+void Features::setList(const QStringList &l) { _list = QSet<QString>::fromList(l); }
 
-void Features::setList(const QSet<QString> &l)
-{
-    _list = l;
-}
+void Features::setList(const QSet<QString> &l) { _list = l; }
 
-void Features::addFeature(const QString& s)
-{
-    _list += s;
-}
+void Features::addFeature(const QString &s) { _list += s; }
 
-bool Features::test(const QStringList &ns) const
-{
-    return _list.contains(QSet<QString>::fromList(ns));
-}
+bool Features::test(const QStringList &ns) const { return _list.contains(QSet<QString>::fromList(ns)); }
 
-bool Features::test(const QSet<QString> &ns) const
-{
-    return _list.contains(ns);
-}
+bool Features::test(const QSet<QString> &ns) const { return _list.contains(ns); }
 
 #define FID_MULTICAST "http://jabber.org/protocol/address"
 bool Features::hasMulticast() const
@@ -206,49 +178,47 @@ bool Features::hasJingleFT() const
 // custom Psi actions
 #define FID_ADD "psi:add"
 
-class Features::FeatureName : public QObject
-{
+class Features::FeatureName : public QObject {
     Q_OBJECT
 
 public:
-    FeatureName()
-    : QObject(QCoreApplication::instance())
+    FeatureName() : QObject(QCoreApplication::instance())
     {
-        id2s[FID_Invalid]       = tr("ERROR: Incorrect usage of Features class");
-        id2s[FID_None]          = tr("None");
-        id2s[FID_Register]      = tr("Register");
-        id2s[FID_Search]        = tr("Search");
-        id2s[FID_Groupchat]     = tr("Groupchat");
-        id2s[FID_Gateway]       = tr("Gateway");
-        id2s[FID_Disco]         = tr("Service Discovery");
-        id2s[FID_VCard]         = tr("VCard");
-        id2s[FID_AHCommand]     = tr("Execute command");
-        id2s[FID_QueryVersion]  = tr("Query version");
-        id2s[FID_MessageCarbons]= tr("Message Carbons");
+        id2s[FID_Invalid]        = tr("ERROR: Incorrect usage of Features class");
+        id2s[FID_None]           = tr("None");
+        id2s[FID_Register]       = tr("Register");
+        id2s[FID_Search]         = tr("Search");
+        id2s[FID_Groupchat]      = tr("Groupchat");
+        id2s[FID_Gateway]        = tr("Gateway");
+        id2s[FID_Disco]          = tr("Service Discovery");
+        id2s[FID_VCard]          = tr("VCard");
+        id2s[FID_AHCommand]      = tr("Execute command");
+        id2s[FID_QueryVersion]   = tr("Query version");
+        id2s[FID_MessageCarbons] = tr("Message Carbons");
 
         // custom Psi actions
-        id2s[FID_Add]            = tr("Add to roster");
+        id2s[FID_Add] = tr("Add to roster");
 
         // compute reverse map
-        //QMap<QString, long>::Iterator it = id2s.begin();
-        //for ( ; it != id2s.end(); ++it)
+        // QMap<QString, long>::Iterator it = id2s.begin();
+        // for ( ; it != id2s.end(); ++it)
         //    s2id[it.data()] = it.key();
 
-        id2f[FID_Register]      = FID_REGISTER;
-        id2f[FID_Search]        = FID_SEARCH;
-        id2f[FID_Groupchat]     = FID_GROUPCHAT;
-        id2f[FID_Gateway]       = FID_GATEWAY;
-        id2f[FID_Disco]         = FID_DISCO;
-        id2f[FID_VCard]         = FID_VCARD;
-        id2f[FID_AHCommand]     = FID_AHCOMMAND;
-        id2f[FID_QueryVersion]  = FID_QUERYVERSION;
-        id2f[FID_MessageCarbons]= FID_MESSAGECARBONS;
+        id2f[FID_Register]       = FID_REGISTER;
+        id2f[FID_Search]         = FID_SEARCH;
+        id2f[FID_Groupchat]      = FID_GROUPCHAT;
+        id2f[FID_Gateway]        = FID_GATEWAY;
+        id2f[FID_Disco]          = FID_DISCO;
+        id2f[FID_VCard]          = FID_VCARD;
+        id2f[FID_AHCommand]      = FID_AHCOMMAND;
+        id2f[FID_QueryVersion]   = FID_QUERYVERSION;
+        id2f[FID_MessageCarbons] = FID_MESSAGECARBONS;
 
         // custom Psi actions
-        id2f[FID_Add]           = FID_ADD;
+        id2f[FID_Add] = FID_ADD;
     }
 
-    //QMap<QString, long> s2id;
+    // QMap<QString, long> s2id;
     QMap<long, QString> id2s;
     QMap<long, QString> id2f;
 };
@@ -257,25 +227,25 @@ static Features::FeatureName *featureName = nullptr;
 
 long Features::id() const
 {
-    if ( _list.count() > 1 )
+    if (_list.count() > 1)
         return FID_Invalid;
-    else if ( hasRegister() )
+    else if (hasRegister())
         return FID_Register;
-    else if ( hasSearch() )
+    else if (hasSearch())
         return FID_Search;
-    else if ( hasGroupchat() )
+    else if (hasGroupchat())
         return FID_Groupchat;
-    else if ( hasGateway() )
+    else if (hasGateway())
         return FID_Gateway;
-    else if ( hasDisco() )
+    else if (hasDisco())
         return FID_Disco;
-    else if ( hasVCard() )
+    else if (hasVCard())
         return FID_VCard;
-    else if ( hasCommand() )
+    else if (hasCommand())
         return FID_AHCommand;
-    else if ( test(QStringList(FID_ADD)) )
+    else if (test(QStringList(FID_ADD)))
         return FID_Add;
-    else if ( hasVersion() )
+    else if (hasVersion())
         return FID_QueryVersion;
 
     return FID_None;
@@ -289,7 +259,7 @@ long Features::id(const QString &feature)
 
 QString Features::feature(long id)
 {
-    if ( !featureName )
+    if (!featureName)
         featureName = new FeatureName();
 
     return featureName->id2f[id];
@@ -303,16 +273,13 @@ Features &Features::operator<<(const QString &feature)
 
 QString Features::name(long id)
 {
-    if ( !featureName )
+    if (!featureName)
         featureName = new FeatureName();
 
     return featureName->id2s[id];
 }
 
-QString Features::name() const
-{
-    return name(id());
-}
+QString Features::name() const { return name(id()); }
 
 QString Features::name(const QString &feature)
 {

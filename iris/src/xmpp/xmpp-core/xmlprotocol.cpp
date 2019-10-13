@@ -37,33 +37,33 @@ static QDomElement stripExtraNS(const QDomElement &e)
 {
     // find closest parent with a namespace
     QDomNode par = e.parentNode();
-    while(!par.isNull() && par.namespaceURI().isNull())
+    while (!par.isNull() && par.namespaceURI().isNull())
         par = par.parentNode();
     bool noShowNS = false;
-    if(!par.isNull() && par.namespaceURI() == e.namespaceURI())
+    if (!par.isNull() && par.namespaceURI() == e.namespaceURI())
         noShowNS = true;
 
     // build qName (prefix:localName)
     QString qName;
-    if(!e.prefix().isEmpty())
+    if (!e.prefix().isEmpty())
         qName = e.prefix() + ':' + e.localName();
     else
         qName = e.tagName();
 
     QDomElement i;
-    int x;
-    if(noShowNS)
+    int         x;
+    if (noShowNS)
         i = e.ownerDocument().createElement(qName);
     else
         i = e.ownerDocument().createElementNS(e.namespaceURI(), qName);
 
     // copy attributes
     QDomNamedNodeMap al = e.attributes();
-    for(x = 0; x < al.count(); ++x) {
+    for (x = 0; x < al.count(); ++x) {
         QDomAttr a = al.item(x).cloneNode().toAttr();
 
         // don't show xml namespace
-        if(a.namespaceURI() == NS_XML)
+        if (a.namespaceURI() == NS_XML)
             i.setAttribute(QString("xml:") + a.name(), a.value());
         else
             i.setAttributeNodeNS(a);
@@ -71,9 +71,9 @@ static QDomElement stripExtraNS(const QDomElement &e)
 
     // copy children
     QDomNodeList nl = e.childNodes();
-    for(x = 0; x < nl.count(); ++x) {
+    for (x = 0; x < nl.count(); ++x) {
         QDomNode n = nl.item(x);
-        if(n.isElement())
+        if (n.isElement())
             i.appendChild(stripExtraNS(n.toElement()));
         else
             i.appendChild(n.cloneNode());
@@ -108,9 +108,9 @@ static QString xmlToString(const QDomElement &e, const QString &fakeNS, const QS
         fake.firstChild().save(ts, 0);
     }
     // 'clip' means to remove any unwanted (and unneeded) characters, such as a trailing newline
-    if(clip) {
+    if (clip) {
         int n = out.lastIndexOf('>');
-        out.truncate(n+1);
+        out.truncate(n + 1);
     }
     return out;
 }
@@ -139,14 +139,14 @@ static void createRootXmlTags(const QDomElement &root, QString *xmlHeader, QStri
     }
 
     // parse the tags out
-    int n = str.indexOf('<');
+    int n  = str.indexOf('<');
     int n2 = str.indexOf('>', n);
     ++n2;
-    *tagOpen = str.mid(n, n2-n);
-    n2 = str.lastIndexOf('>');
-    n = str.lastIndexOf('<');
+    *tagOpen = str.mid(n, n2 - n);
+    n2       = str.lastIndexOf('>');
+    n        = str.lastIndexOf('<');
     ++n2;
-    *tagClose = str.mid(n, n2-n);
+    *tagClose = str.mid(n, n2 - n);
 
     // generate a nice xml processing header
     *xmlHeader = "<?xml version=\"1.0\"?>";
@@ -156,21 +156,13 @@ static void createRootXmlTags(const QDomElement &root, QString *xmlHeader, QStri
 // [2] Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
 static inline bool validChar(const quint32 ch)
 {
-    return ch == 0x9 || ch == 0xA || ch == 0xD
-            || (ch >= 0x20 && ch <= 0xD7FF)
-            || (ch >= 0xE000 && ch <= 0xFFFD)
-            || (ch >= 0x10000 && ch <= 0x10FFFF);
+    return ch == 0x9 || ch == 0xA || ch == 0xD || (ch >= 0x20 && ch <= 0xD7FF) || (ch >= 0xE000 && ch <= 0xFFFD)
+        || (ch >= 0x10000 && ch <= 0x10FFFF);
 }
 
-static inline bool lowSurrogate(const quint32 ch)
-{
-    return  ch >= 0xDC00 && ch <= 0xDFFF;
-}
+static inline bool lowSurrogate(const quint32 ch) { return ch >= 0xDC00 && ch <= 0xDFFF; }
 
-static inline bool highSurrogate(const quint32 ch)
-{
-    return  ch >= 0xD800 && ch <= 0xDBFF;
-}
+static inline bool highSurrogate(const quint32 ch) { return ch >= 0xD800 && ch <= 0xDBFF; }
 
 // force encoding of '>'.  this function is needed for XMPP-Core, which
 //  requires the '>' character to be encoded as "&gt;" even though this is
@@ -180,63 +172,53 @@ static inline bool highSurrogate(const quint32 ch)
 static QString sanitizeForStream(const QString &in)
 {
     QString out;
-    bool intag = false;
-    bool inquote = false;
-    QChar quotechar;
-    int inlength = in.length();
-    for(int n = 0; n < inlength; ++n)
-    {
-        QChar c = in[n];
-        bool escape = false;
-        if(c == '<')
-        {
+    bool    intag   = false;
+    bool    inquote = false;
+    QChar   quotechar;
+    int     inlength = in.length();
+    for (int n = 0; n < inlength; ++n) {
+        QChar c      = in[n];
+        bool  escape = false;
+        if (c == '<') {
             intag = true;
-        }
-        else if(c == '>')
-        {
-            if(inquote) {
+        } else if (c == '>') {
+            if (inquote) {
                 escape = true;
-            } else if(!intag) {
+            } else if (!intag) {
                 escape = true;
             } else {
                 intag = false;
             }
-        }
-        else if(c == '\'' || c == '\"')
-        {
-            if(intag)
-            {
-                if(!inquote)
-                {
-                    inquote = true;
+        } else if (c == '\'' || c == '\"') {
+            if (intag) {
+                if (!inquote) {
+                    inquote   = true;
                     quotechar = c;
-                }
-                else
-                {
-                    if(quotechar == c) {
+                } else {
+                    if (quotechar == c) {
                         inquote = false;
                     }
                 }
             }
         }
 
-        if(escape) {
+        if (escape) {
             out += "&gt;";
-         } else {
+        } else {
             // don't silently drop invalid chars in element or attribute names,
             // because that's something that should not happen.
             if (intag && (!inquote)) {
                 out += c;
-            } else if (validChar(c.unicode()))  {
+            } else if (validChar(c.unicode())) {
                 out += c;
-            } else if (highSurrogate(c.unicode()) && (n+1 < inlength) && lowSurrogate(in[n+1].unicode())) {
-                //uint unicode = (c.unicode() & 0x3FF) << 10 | in[n+1].unicode() & 0x3FF + 0x10000;
+            } else if (highSurrogate(c.unicode()) && (n + 1 < inlength) && lowSurrogate(in[n + 1].unicode())) {
+                // uint unicode = (c.unicode() & 0x3FF) << 10 | in[n+1].unicode() & 0x3FF + 0x10000;
                 // we don't need to recheck this, because 0x10000 <= unicode <= 0x100000 is always true
                 out += c;
-                out += in[n+1];
+                out += in[n + 1];
                 ++n;
             } else {
-                qDebug("Dropping invalid XML char U+%04x",c.unicode());
+                qDebug("Dropping invalid XML char U+%04x", c.unicode());
             }
         }
     }
@@ -246,39 +228,26 @@ static QString sanitizeForStream(const QString &in)
 //----------------------------------------------------------------------------
 // Protocol
 //----------------------------------------------------------------------------
-XmlProtocol::TransferItem::TransferItem()
+XmlProtocol::TransferItem::TransferItem() {}
+
+XmlProtocol::TransferItem::TransferItem(const QString &_str, bool sent, bool external) :
+    isSent(sent), isString(true), isExternal(external), str(_str)
 {
 }
 
-XmlProtocol::TransferItem::TransferItem(const QString &_str, bool sent, bool external)
-    : isSent(sent)
-    , isString(true)
-    , isExternal(external)
-    , str(_str)
+XmlProtocol::TransferItem::TransferItem(const QDomElement &_elem, bool sent, bool external) :
+    isSent(sent), isString(false), isExternal(external), elem(_elem)
 {
 }
 
-XmlProtocol::TransferItem::TransferItem(const QDomElement &_elem, bool sent, bool external)
-    : isSent(sent)
-    , isString(false)
-    , isExternal(external)
-    , elem(_elem)
-{
-}
+XmlProtocol::XmlProtocol() { init(); }
 
-XmlProtocol::XmlProtocol()
-{
-    init();
-}
-
-XmlProtocol::~XmlProtocol()
-{
-}
+XmlProtocol::~XmlProtocol() {}
 
 void XmlProtocol::init()
 {
-    incoming = false;
-    peerClosed = false;
+    incoming     = false;
+    peerClosed   = false;
     closeWritten = false;
 }
 
@@ -286,9 +255,9 @@ void XmlProtocol::reset()
 {
     init();
 
-    elem = QDomElement();
-    elemDoc = QDomDocument();
-    tagOpen = QString();
+    elem     = QDomElement();
+    elemDoc  = QDomDocument();
+    tagOpen  = QString();
     tagClose = QString();
     xml.reset();
     outDataNormal.resize(0);
@@ -298,10 +267,7 @@ void XmlProtocol::reset()
     transferItemList.clear();
 }
 
-void XmlProtocol::addIncomingData(const QByteArray &a)
-{
-    xml.appendData(a);
-}
+void XmlProtocol::addIncomingData(const QByteArray &a) { xml.appendData(a); }
 
 QByteArray XmlProtocol::takeOutgoingData()
 {
@@ -328,60 +294,57 @@ bool XmlProtocol::processStep()
     notify = 0;
     transferItemList.clear();
 
-    if(state != Closing && (state == RecvOpen || stepAdvancesParser())) {
+    if (state != Closing && (state == RecvOpen || stepAdvancesParser())) {
         // if we get here, then it's because we're in some step that advances the parser
         pe = xml.readNext();
-        if(!pe.isNull()) {
+        if (!pe.isNull()) {
             // note: error/close events should be handled for ALL steps, so do them here
-            switch(pe.type()) {
-                case Parser::Event::DocumentOpen: {
-                    transferItemList += TransferItem(pe.actualString(), false);
+            switch (pe.type()) {
+            case Parser::Event::DocumentOpen: {
+                transferItemList += TransferItem(pe.actualString(), false);
 
-                    //stringRecv(pe.actualString());
-                    break;
+                // stringRecv(pe.actualString());
+                break;
+            }
+            case Parser::Event::DocumentClose: {
+                transferItemList += TransferItem(pe.actualString(), false);
+
+                // stringRecv(pe.actualString());
+                if (incoming) {
+                    sendTagClose();
+                    event      = ESend;
+                    peerClosed = true;
+                    state      = Closing;
+                } else {
+                    event = EPeerClosed;
                 }
-                case Parser::Event::DocumentClose: {
-                    transferItemList += TransferItem(pe.actualString(), false);
+                return true;
+            }
+            case Parser::Event::Element: {
+                QDomElement e = elemDoc.importNode(pe.element(), true).toElement();
+                transferItemList += TransferItem(e, false);
 
-                    //stringRecv(pe.actualString());
-                    if(incoming) {
-                        sendTagClose();
-                        event = ESend;
-                        peerClosed = true;
-                        state = Closing;
+                // elementRecv(pe.element());
+                break;
+            }
+            case Parser::Event::Error: {
+                if (incoming) {
+                    // If we get a parse error during the initial element exchange,
+                    // flip immediately into 'open' mode so that we can report an error.
+                    if (state == RecvOpen) {
+                        sendTagOpen();
+                        state = Open;
                     }
-                    else {
-                        event = EPeerClosed;
-                    }
+                    return handleError();
+                } else {
+                    event     = EError;
+                    errorCode = ErrParse;
                     return true;
                 }
-                case Parser::Event::Element: {
-                    QDomElement e = elemDoc.importNode(pe.element(),true).toElement();
-                    transferItemList += TransferItem(e, false);
-
-                    //elementRecv(pe.element());
-                    break;
-                }
-                case Parser::Event::Error: {
-                    if(incoming) {
-                        // If we get a parse error during the initial element exchange,
-                        // flip immediately into 'open' mode so that we can report an error.
-                        if(state == RecvOpen) {
-                            sendTagOpen();
-                            state = Open;
-                        }
-                        return handleError();
-                    }
-                    else {
-                        event = EError;
-                        errorCode = ErrParse;
-                        return true;
-                    }
-                }
             }
-        }
-        else {
-            if(state == RecvOpen || stepRequiresElement()) {
+            }
+        } else {
+            if (state == RecvOpen || stepRequiresElement()) {
                 need = NNotify;
                 notify |= NRecv;
                 return false;
@@ -392,14 +355,11 @@ bool XmlProtocol::processStep()
     return baseStep(pe);
 }
 
-QString XmlProtocol::xmlEncoding() const
-{
-    return xml.encoding();
-}
+QString XmlProtocol::xmlEncoding() const { return xml.encoding(); }
 
 QString XmlProtocol::elementToString(const QDomElement &e, bool clip)
 {
-    if(elem.isNull())
+    if (elem.isNull())
         elem = elemDoc.importNode(docElement(), true).toElement();
 
     // Determine the appropriate 'fakeNS' to use
@@ -407,29 +367,28 @@ QString XmlProtocol::elementToString(const QDomElement &e, bool clip)
 
     // first, check root namespace
     QString pre = e.prefix();
-    if(pre.isNull())
+    if (pre.isNull())
         pre = "";
-    if(pre == elem.prefix()) {
+    if (pre == elem.prefix()) {
         ns = elem.namespaceURI();
-    }
-    else {
+    } else {
         // scan the root attributes for 'xmlns' (oh joyous hacks)
         QDomNamedNodeMap al = elem.attributes();
-        int n;
-        for(n = 0; n < al.count(); ++n) {
+        int              n;
+        for (n = 0; n < al.count(); ++n) {
             QDomAttr a = al.item(n).toAttr();
-            QString s = a.name();
-            int x = s.indexOf(':');
-            if(x != -1)
-                s = s.mid(x+1);
+            QString  s = a.name();
+            int      x = s.indexOf(':');
+            if (x != -1)
+                s = s.mid(x + 1);
             else
                 s = "";
-            if(pre == s) {
+            if (pre == s) {
                 ns = a.value();
                 break;
             }
         }
-        if(n >= al.count()) {
+        if (n >= al.count()) {
             // if we get here, then no appropriate ns was found.  use root then..
             ns = elem.namespaceURI();
         }
@@ -437,7 +396,7 @@ QString XmlProtocol::elementToString(const QDomElement &e, bool clip)
 
     // build qName
     QString qn;
-    if(!elem.prefix().isEmpty())
+    if (!elem.prefix().isEmpty())
         qn = elem.prefix() + ':';
     qn += elem.localName();
 
@@ -479,13 +438,13 @@ void XmlProtocol::elementRecv(const QDomElement &)
 void XmlProtocol::startConnect()
 {
     incoming = false;
-    state = SendOpen;
+    state    = SendOpen;
 }
 
 void XmlProtocol::startAccept()
 {
     incoming = true;
-    state = RecvOpen;
+    state    = RecvOpen;
 }
 
 bool XmlProtocol::close()
@@ -504,11 +463,11 @@ int XmlProtocol::writeString(const QString &s, int id, bool external)
 
 int XmlProtocol::writeElement(const QDomElement &e, int id, bool external, bool clip, bool urgent)
 {
-    if(e.isNull())
+    if (e.isNull())
         return 0;
     transferItemList += TransferItem(e, true, external);
 
-    //elementSend(e);
+    // elementSend(e);
     QString out = sanitizeForStream(elementToString(e, clip));
     return internalWriteString(out, TrackItem::Custom, id, urgent);
 }
@@ -516,7 +475,7 @@ int XmlProtocol::writeElement(const QDomElement &e, int id, bool external, bool 
 QByteArray XmlProtocol::resetStream()
 {
     // reset the state
-    if(incoming)
+    if (incoming)
         state = RecvOpen;
     else
         state = SendOpen;
@@ -531,14 +490,13 @@ int XmlProtocol::internalWriteData(const QByteArray &a, TrackItem::Type t, int i
 {
     TrackItem i;
     i.type = t;
-    i.id = id;
+    i.id   = id;
     i.size = a.size();
 
     if (urgent) {
         trackQueueUrgent += i;
         outDataUrgent += a;
-    }
-    else {
+    } else {
         trackQueueNormal += i;
         outDataNormal += a;
     }
@@ -547,34 +505,32 @@ int XmlProtocol::internalWriteData(const QByteArray &a, TrackItem::Type t, int i
 
 int XmlProtocol::internalWriteString(const QString &s, TrackItem::Type t, int id, bool urgent)
 {
-    QString out=sanitizeForStream(s);
+    QString out = sanitizeForStream(s);
     return internalWriteData(s.toUtf8(), t, id, urgent);
 }
 
 int XmlProtocol::processTrackQueue(QList<TrackItem> &queue, int bytes)
 {
-    for(QList<TrackItem>::Iterator it = queue.begin(); it != queue.end();) {
+    for (QList<TrackItem>::Iterator it = queue.begin(); it != queue.end();) {
         TrackItem &i = *it;
 
         // enough bytes?
-        if(bytes < i.size) {
+        if (bytes < i.size) {
             i.size -= bytes;
             bytes = 0;
             break;
         }
         int type = i.type;
-        int id = i.id;
+        int id   = i.id;
         int size = i.size;
         bytes -= i.size;
         it = queue.erase(it);
 
-        if(type == TrackItem::Raw) {
+        if (type == TrackItem::Raw) {
             // do nothing
-        }
-        else if(type == TrackItem::Close) {
+        } else if (type == TrackItem::Close) {
             closeWritten = true;
-        }
-        else if(type == TrackItem::Custom) {
+        } else if (type == TrackItem::Custom) {
             itemWritten(id, size);
         }
         if (bytes == 0)
@@ -585,7 +541,7 @@ int XmlProtocol::processTrackQueue(QList<TrackItem> &queue, int bytes)
 
 void XmlProtocol::sendTagOpen()
 {
-    if(elem.isNull())
+    if (elem.isNull())
         elem = elemDoc.importNode(docElement(), true).toElement();
 
     QString xmlHeader;
@@ -598,8 +554,8 @@ void XmlProtocol::sendTagOpen()
     transferItemList += TransferItem(xmlHeader, true);
     transferItemList += TransferItem(tagOpen, true);
 
-    //stringSend(xmlHeader);
-    //stringSend(tagOpen);
+    // stringSend(xmlHeader);
+    // stringSend(tagOpen);
     internalWriteString(s, TrackItem::Raw);
 }
 
@@ -607,24 +563,23 @@ void XmlProtocol::sendTagClose()
 {
     transferItemList += TransferItem(tagClose, true);
 
-    //stringSend(tagClose);
+    // stringSend(tagClose);
     internalWriteString(tagClose, TrackItem::Close);
 }
 
 bool XmlProtocol::baseStep(const Parser::Event &pe)
 {
     // Basic
-    if(state == SendOpen) {
+    if (state == SendOpen) {
         sendTagOpen();
         event = ESend;
-        if(incoming)
+        if (incoming)
             state = Open;
         else
             state = RecvOpen;
         return true;
-    }
-    else if(state == RecvOpen) {
-        if(incoming)
+    } else if (state == RecvOpen) {
+        if (incoming)
             state = SendOpen;
         else
             state = Open;
@@ -633,25 +588,23 @@ bool XmlProtocol::baseStep(const Parser::Event &pe)
         handleDocOpen(pe);
         event = ERecvOpen;
         return true;
-    }
-    else if(state == Open) {
+    } else if (state == Open) {
         QDomElement e;
-        if(pe.type() == Parser::Event::Element)
+        if (pe.type() == Parser::Event::Element)
             e = pe.element();
         return doStep(e);
     }
     // Closing
     else {
-        if(closeWritten) {
-            if(peerClosed) {
+        if (closeWritten) {
+            if (peerClosed) {
                 event = EPeerClosed;
                 return true;
-            }
-            else
+            } else
                 return handleCloseFinished();
         }
 
-        need = NNotify;
+        need   = NNotify;
         notify = NSend;
         return false;
     }
@@ -659,11 +612,10 @@ bool XmlProtocol::baseStep(const Parser::Event &pe)
 
 void XmlProtocol::setIncomingAsExternal()
 {
-    for(QList<TransferItem>::Iterator it = transferItemList.begin(); it != transferItemList.end(); ++it) {
+    for (QList<TransferItem>::Iterator it = transferItemList.begin(); it != transferItemList.end(); ++it) {
         TransferItem &i = *it;
         // look for elements received
-        if(!i.isString && !i.isSent)
+        if (!i.isString && !i.isSent)
             i.isExternal = true;
     }
 }
-

@@ -25,58 +25,56 @@
 #include <QStringList>
 
 namespace XMPP {
-    class Subscription
-    {
-    public:
-        enum SubType { None, To, From, Both, Remove };
+class Subscription {
+public:
+    enum SubType { None, To, From, Both, Remove };
 
-        Subscription(SubType type=None);
+    Subscription(SubType type = None);
 
-        int type() const;
+    int type() const;
 
-        QString toString() const;
-        bool fromString(const QString &);
+    QString toString() const;
+    bool    fromString(const QString &);
 
-    private:
-        SubType value;
-    };
+private:
+    SubType value;
+};
 
-    class RosterItem
-    {
-    public:
-        RosterItem(const Jid &jid="");
-        RosterItem(const RosterItem &item);
-        virtual ~RosterItem();
-        RosterItem& operator=(const RosterItem& other) = default;
+class RosterItem {
+public:
+    RosterItem(const Jid &jid = "");
+    RosterItem(const RosterItem &item);
+    virtual ~RosterItem();
+    RosterItem &operator=(const RosterItem &other) = default;
 
-        const Jid & jid() const;
-        const QString & name() const;
-        const QStringList & groups() const;
-        const Subscription & subscription() const;
-        const QString & ask() const;
-        bool isPush() const;
-        bool inGroup(const QString &) const;
+    const Jid &         jid() const;
+    const QString &     name() const;
+    const QStringList & groups() const;
+    const Subscription &subscription() const;
+    const QString &     ask() const;
+    bool                isPush() const;
+    bool                inGroup(const QString &) const;
 
-        virtual void setJid(const Jid &);
-        void setName(const QString &);
-        void setGroups(const QStringList &);
-        void setSubscription(const Subscription &);
-        void setAsk(const QString &);
-        void setIsPush(bool);
-        bool addGroup(const QString &);
-        bool removeGroup(const QString &);
+    virtual void setJid(const Jid &);
+    void         setName(const QString &);
+    void         setGroups(const QStringList &);
+    void         setSubscription(const Subscription &);
+    void         setAsk(const QString &);
+    void         setIsPush(bool);
+    bool         addGroup(const QString &);
+    bool         removeGroup(const QString &);
 
-        QDomElement toXml(QDomDocument *) const;
-        bool fromXml(const QDomElement &);
+    QDomElement toXml(QDomDocument *) const;
+    bool        fromXml(const QDomElement &);
 
-    private:
-        Jid v_jid;
-        QString v_name;
-        QStringList v_groups;
-        Subscription v_subscription;
-        QString v_ask;
-        bool v_push;
-    };
+private:
+    Jid          v_jid;
+    QString      v_name;
+    QStringList  v_groups;
+    Subscription v_subscription;
+    QString      v_ask;
+    bool         v_push;
+};
 } // namespace XMPP
 
 #endif // XMPP_ROSTERITEM_H

@@ -28,37 +28,37 @@
 class QDomElement;
 
 namespace XMPP {
-    class Stanza;
+class Stanza;
 
-    class RosterExchangeItem
-    {
-    public:
-        enum Action { Add, Delete, Modify };
+class RosterExchangeItem {
+public:
+    enum Action { Add, Delete, Modify };
 
-        RosterExchangeItem(const Jid& jid, const QString& name = "", const QStringList& groups = QStringList(), Action = Add);
-        RosterExchangeItem(const QDomElement&);
+    RosterExchangeItem(const Jid &jid, const QString &name = "", const QStringList &groups = QStringList(),
+                       Action = Add);
+    RosterExchangeItem(const QDomElement &);
 
-        const Jid& jid() const;
-        Action action() const;
-        const QString& name() const;
-        const QStringList& groups() const;
-        bool isNull() const;
+    const Jid &        jid() const;
+    Action             action() const;
+    const QString &    name() const;
+    const QStringList &groups() const;
+    bool               isNull() const;
 
-        void setJid(const Jid&);
-        void setAction(Action);
-        void setName(const QString&);
-        void setGroups(const QStringList&);
+    void setJid(const Jid &);
+    void setAction(Action);
+    void setName(const QString &);
+    void setGroups(const QStringList &);
 
-        QDomElement toXml(Stanza&) const;
-        void fromXml(const QDomElement&);
+    QDomElement toXml(Stanza &) const;
+    void        fromXml(const QDomElement &);
 
-    private:
-        Jid jid_;
-        QString name_;
-        QStringList groups_;
-        Action action_;
-    };
-    typedef QList<RosterExchangeItem> RosterExchangeItems;
+private:
+    Jid         jid_;
+    QString     name_;
+    QStringList groups_;
+    Action      action_;
+};
+typedef QList<RosterExchangeItem> RosterExchangeItems;
 } // namespace XMPP
 
 #endif // XMPP_ROSTERX_H

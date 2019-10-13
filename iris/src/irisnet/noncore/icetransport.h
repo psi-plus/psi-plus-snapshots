@@ -25,33 +25,23 @@
 class QHostAddress;
 
 namespace XMPP {
-class IceTransport : public QObject
-{
+class IceTransport : public QObject {
     Q_OBJECT
 
 public:
-    enum Error
-    {
-        ErrorGeneric,
-        ErrorCustom
-    };
+    enum Error { ErrorGeneric, ErrorCustom };
 
-    enum DebugLevel
-    {
-        DL_None,
-        DL_Info,
-        DL_Packet
-    };
+    enum DebugLevel { DL_None, DL_Info, DL_Packet };
 
     IceTransport(QObject *parent = nullptr);
     ~IceTransport();
 
     virtual void stop() = 0;
 
-    virtual bool hasPendingDatagrams(int path) const = 0;
-    virtual QByteArray readDatagram(int path, QHostAddress *addr, int *port) = 0;
-    virtual void writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port) = 0;
-    virtual void addChannelPeer(const QHostAddress &addr, int port) = 0;
+    virtual bool       hasPendingDatagrams(int path) const                                                = 0;
+    virtual QByteArray readDatagram(int path, QHostAddress *addr, int *port)                              = 0;
+    virtual void       writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port) = 0;
+    virtual void       addChannelPeer(const QHostAddress &addr, int port)                                 = 0;
 
     virtual void setDebugLevel(DebugLevel level) = 0;
 

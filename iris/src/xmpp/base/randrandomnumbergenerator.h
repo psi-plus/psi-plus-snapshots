@@ -24,19 +24,14 @@
 #include <cstdlib>
 
 namespace XMPP {
-    class RandRandomNumberGenerator : public RandomNumberGenerator
-    {
-        public:
-            RandRandomNumberGenerator() {}
+class RandRandomNumberGenerator : public RandomNumberGenerator {
+public:
+    RandRandomNumberGenerator() {}
 
-            virtual double generateNumber() const {
-                return rand();
-            }
+    virtual double generateNumber() const { return rand(); }
 
-            virtual double getMaximumGeneratedNumber() const {
-                return RAND_MAX;
-            }
-    };
+    virtual double getMaximumGeneratedNumber() const { return RAND_MAX; }
+};
 } // namespace XMPP
 
 #endif // RANDRANDOMNUMBERGENERATOR_H

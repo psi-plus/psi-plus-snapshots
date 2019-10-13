@@ -31,8 +31,7 @@ namespace XMPP {
 //   (interfaces) and ports to reserve.  note that the port must be available
 //   on all addresses in order for it to get reserved.
 // note: you must return all sockets back to this class before destructing
-class UdpPortReserver : public QObject
-{
+class UdpPortReserver : public QObject {
     Q_OBJECT
 
 public:
@@ -57,9 +56,9 @@ public:
     //   able to bind to a port for it to be considered reserved, this
     //   function always returns a list with a size that is a multiple of
     //   the number of addresses.
-    QList<QUdpSocket*> borrowSockets(int portCount, QObject *parent = nullptr);
+    QList<QUdpSocket *> borrowSockets(int portCount, QObject *parent = nullptr);
 
-    void returnSockets(const QList<QUdpSocket*> &sockList);
+    void returnSockets(const QList<QUdpSocket *> &sockList);
 
 private:
     class Private;

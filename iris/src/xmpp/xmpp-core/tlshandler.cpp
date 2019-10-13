@@ -32,65 +32,51 @@ using namespace QCA;
 static QByteArray ipaddr_str2bin(const QString &str)
 {
     // ipv6
-    if(str.contains(':'))
-    {
+    if (str.contains(':')) {
         QStringList parts = str.split(':', QString::KeepEmptyParts);
-        if(parts.count() < 3 || parts.count() > 8)
+        if (parts.count() < 3 || parts.count() > 8)
             return QByteArray();
 
         QByteArray ipv6(16, 0);
-        int at = 16;
-        int fill = 9 - parts.count();
-        for(int n = parts.count() - 1; n >= 0; --n)
-        {
-            if(at <= 0)
+        int        at   = 16;
+        int        fill = 9 - parts.count();
+        for (int n = parts.count() - 1; n >= 0; --n) {
+            if (at <= 0)
                 return QByteArray();
 
-            if(parts[n].isEmpty())
-            {
-                if(n == parts.count() - 1)
-                {
-                    if(!parts[n - 1].isEmpty())
+            if (parts[n].isEmpty()) {
+                if (n == parts.count() - 1) {
+                    if (!parts[n - 1].isEmpty())
                         return QByteArray();
                     ipv6[--at] = 0;
                     ipv6[--at] = 0;
-                }
-                else if(n == 0)
-                {
-                    if(!parts[n + 1].isEmpty())
+                } else if (n == 0) {
+                    if (!parts[n + 1].isEmpty())
                         return QByteArray();
                     ipv6[--at] = 0;
                     ipv6[--at] = 0;
-                }
-                else
-                {
-                    for(int i = 0; i < fill; ++i)
-                    {
-                        if(at <= 0)
+                } else {
+                    for (int i = 0; i < fill; ++i) {
+                        if (at <= 0)
                             return QByteArray();
                         ipv6[--at] = 0;
                         ipv6[--at] = 0;
                     }
                 }
-            }
-            else
-            {
-                if(parts[n].indexOf('.') == -1)
-                {
+            } else {
+                if (parts[n].indexOf('.') == -1) {
                     bool ok;
-                    int x = parts[n].toInt(&ok, 16);
-                    if(!ok || x < 0 || x > 0xffff)
+                    int  x = parts[n].toInt(&ok, 16);
+                    if (!ok || x < 0 || x > 0xffff)
                         return QByteArray();
                     ipv6[--at] = x & 0xff;
                     ipv6[--at] = (x >> 8) & 0xff;
-                }
-                else
-                {
-                    if(n != parts.count() - 1)
+                } else {
+                    if (n != parts.count() - 1)
                         return QByteArray();
 
                     QByteArray buf = ipaddr_str2bin(parts[n]);
-                    if(buf.isEmpty())
+                    if (buf.isEmpty())
                         return QByteArray();
 
                     ipv6[--at] = buf[3];
@@ -103,25 +89,21 @@ static QByteArray ipaddr_str2bin(const QString &str)
         }
 
         return ipv6;
-    }
-    else if(str.contains('.'))
-    {
+    } else if (str.contains('.')) {
         QStringList parts = str.split('.', QString::KeepEmptyParts);
-        if(parts.count() != 4)
+        if (parts.count() != 4)
             return QByteArray();
 
         QByteArray out(4, 0);
-        for(int n = 0; n < 4; ++n)
-        {
+        for (int n = 0; n < 4; ++n) {
             bool ok;
-            int x = parts[n].toInt(&ok);
-            if(!ok || x < 0 || x > 0xff)
+            int  x = parts[n].toInt(&ok);
+            if (!ok || x < 0 || x > 0xff)
                 return QByteArray();
             out[n] = (unsigned char)x;
         }
         return out;
-    }
-    else
+    } else
         return QByteArray();
 }
 
@@ -134,47 +116,45 @@ static bool cert_match_domain(const QString &certname, const QString &acedomain)
 
     // KSSL strips trailing dot, even though the dot is probably not
     //   legal anyway. (compat)
-    if(name.length() > 0 && name[name.length()-1] == '.')
-        name.truncate(name.length()-1);
+    if (name.length() > 0 && name[name.length() - 1] == '.')
+        name.truncate(name.length() - 1);
 
     // after our compatibility modifications, make sure the name isn't
     //   empty.
-    if(name.isEmpty())
+    if (name.isEmpty())
         return false;
 
     // lowercase, for later performing case insensitive matching
     name = name.toLower();
 
     // ensure the cert field contains valid characters only
-    if(QRegExp("[^a-z0-9\\.\\*\\-]").indexIn(name) >= 0)
+    if (QRegExp("[^a-z0-9\\.\\*\\-]").indexIn(name) >= 0)
         return false;
 
     // hack into parts, and require at least 1 part
     QStringList parts_name = name.split('.', QString::KeepEmptyParts);
-    if(parts_name.isEmpty())
+    if (parts_name.isEmpty())
         return false;
 
     // KSSL checks to make sure the last two parts don't contain
     //   wildcards.  I don't know where it is written that this
     //   should be done, but for compat sake we'll do it.
-    if(parts_name[parts_name.count()-1].contains('*'))
+    if (parts_name[parts_name.count() - 1].contains('*'))
         return false;
-    if(parts_name.count() >= 2 && parts_name[parts_name.count()-2].contains('*'))
+    if (parts_name.count() >= 2 && parts_name[parts_name.count() - 2].contains('*'))
         return false;
 
     QStringList parts_compare = acedomain.split('.', QString::KeepEmptyParts);
-    if(parts_compare.isEmpty())
+    if (parts_compare.isEmpty())
         return false;
 
     // don't allow empty parts
-    foreach(const QString &s, parts_name)
-    {
-        if(s.isEmpty())
+    foreach (const QString &s, parts_name) {
+        if (s.isEmpty())
             return false;
     }
-    foreach(const QString &s, parts_compare)
-    {
-        if(s.isEmpty())
+    foreach (const QString &s, parts_compare) {
+        if (s.isEmpty())
             return false;
     }
 
@@ -189,16 +169,15 @@ static bool cert_match_domain(const QString &certname, const QString &acedomain)
     //   they reside in.
     //
     // First, make sure the number of parts is equal.
-    if(parts_name.count() != parts_compare.count())
+    if (parts_name.count() != parts_compare.count())
         return false;
 
     // Now compare each part
-    for(int n = 0; n < parts_name.count(); ++n)
-    {
+    for (int n = 0; n < parts_name.count(); ++n) {
         const QString &p1 = parts_name[n];
         const QString &p2 = parts_compare[n];
 
-        if(!QRegExp(p1, Qt::CaseSensitive, QRegExp::Wildcard).exactMatch(p2))
+        if (!QRegExp(p1, Qt::CaseSensitive, QRegExp::Wildcard).exactMatch(p2))
             return false;
     }
 
@@ -215,21 +194,21 @@ static bool cert_match_ipaddress(const QString &certname, const QByteArray &ipad
     // KSSL accepts IPv6 in brackets, which is usually done for URIs, but
     //   IMO sounds very strange for a certificate.  We'll follow this
     //   behavior anyway. (compat)
-    if(name.length() >= 2 && name[0] == '[' && name[name.length()-1] == ']')
+    if (name.length() >= 2 && name[0] == '[' && name[name.length() - 1] == ']')
         name = name.mid(1, name.length() - 2); // chop off brackets
 
     // after our compatibility modifications, make sure the name isn't
     //   empty.
-    if(name.isEmpty())
+    if (name.isEmpty())
         return false;
 
     // convert to binary form
     QByteArray addr = ipaddr_str2bin(name);
-    if(addr.isEmpty())
+    if (addr.isEmpty())
         return false;
 
     // not the same?
-    if(addr != ipaddress)
+    if (addr != ipaddress)
         return false;
 
     return true;
@@ -238,30 +217,26 @@ static bool cert_match_ipaddress(const QString &certname, const QByteArray &ipad
 static bool matchesHostName(const QCA::Certificate &cert, const QString &host)
 {
     QByteArray ipaddr = ipaddr_str2bin(host);
-    if(!ipaddr.isEmpty()) // ip address
+    if (!ipaddr.isEmpty()) // ip address
     {
         // check iPAddress
-        foreach(const QString &s, cert.subjectInfo().values(IPAddress))
-        {
-            if(cert_match_ipaddress(s, ipaddr))
+        foreach (const QString &s, cert.subjectInfo().values(IPAddress)) {
+            if (cert_match_ipaddress(s, ipaddr))
                 return true;
         }
 
         // check dNSName
-        foreach(const QString &s, cert.subjectInfo().values(DNS))
-        {
-            if(cert_match_ipaddress(s, ipaddr))
+        foreach (const QString &s, cert.subjectInfo().values(DNS)) {
+            if (cert_match_ipaddress(s, ipaddr))
                 return true;
         }
 
         // check commonName
-        foreach(const QString &s, cert.subjectInfo().values(CommonName))
-        {
-            if(cert_match_ipaddress(s, ipaddr))
+        foreach (const QString &s, cert.subjectInfo().values(CommonName)) {
+            if (cert_match_ipaddress(s, ipaddr))
                 return true;
         }
-    }
-    else // domain
+    } else // domain
     {
         // lowercase
         QString name = host.toLower();
@@ -270,28 +245,26 @@ static bool matchesHostName(const QCA::Certificate &cert, const QString &host)
         name = QString::fromLatin1(QUrl::toAce(name));
 
         // don't allow wildcards in the comparison host
-        if(name.contains('*'))
+        if (name.contains('*'))
             return false;
 
         // strip out trailing dot
-        if(name.length() > 0 && name[name.length()-1] == '.')
-            name.truncate(name.length()-1);
+        if (name.length() > 0 && name[name.length() - 1] == '.')
+            name.truncate(name.length() - 1);
 
         // make sure the name is not empty after our modifications
-        if(name.isEmpty())
+        if (name.isEmpty())
             return false;
 
         // check dNSName
-        foreach(const QString &s, cert.subjectInfo().values(DNS))
-        {
-            if(cert_match_domain(s, name))
+        foreach (const QString &s, cert.subjectInfo().values(DNS)) {
+            if (cert_match_domain(s, name))
                 return true;
         }
 
         // check commonName
-        foreach(const QString &s, cert.subjectInfo().values(CommonName))
-        {
-            if(cert_match_domain(s, name))
+        foreach (const QString &s, cert.subjectInfo().values(CommonName)) {
+            if (cert_match_domain(s, name))
                 return true;
         }
     }
@@ -302,58 +275,43 @@ static bool matchesHostName(const QCA::Certificate &cert, const QString &host)
 //----------------------------------------------------------------------------
 // TLSHandler
 //----------------------------------------------------------------------------
-TLSHandler::TLSHandler(QObject *parent)
-:QObject(parent)
-{
-}
+TLSHandler::TLSHandler(QObject *parent) : QObject(parent) {}
 
-TLSHandler::~TLSHandler()
-{
-}
+TLSHandler::~TLSHandler() {}
 
 //----------------------------------------------------------------------------
 // QCATLSHandler
 //----------------------------------------------------------------------------
-class QCATLSHandler::Private
-{
+class QCATLSHandler::Private {
 public:
     QCA::TLS *tls;
-    int state, err;
-    QString host;
-    bool internalHostMatch;
+    int       state, err;
+    QString   host;
+    bool      internalHostMatch;
 };
 
-QCATLSHandler::QCATLSHandler(QCA::TLS *parent)
-:TLSHandler(parent)
+QCATLSHandler::QCATLSHandler(QCA::TLS *parent) : TLSHandler(parent)
 {
-    d = new Private;
+    d      = new Private;
     d->tls = parent;
     connect(d->tls, SIGNAL(handshaken()), SLOT(tls_handshaken()));
     connect(d->tls, SIGNAL(readyRead()), SLOT(tls_readyRead()));
     connect(d->tls, SIGNAL(readyReadOutgoing()), SLOT(tls_readyReadOutgoing()));
     connect(d->tls, SIGNAL(closed()), SLOT(tls_closed()));
     connect(d->tls, SIGNAL(error()), SLOT(tls_error()));
-    d->state = 0;
-    d->err = -1;
+    d->state             = 0;
+    d->err               = -1;
     d->internalHostMatch = false;
 }
 
-QCATLSHandler::~QCATLSHandler()
-{
-    delete d;
-}
+QCATLSHandler::~QCATLSHandler() { delete d; }
 
-void QCATLSHandler::setXMPPCertCheck(bool enable)
-{
-    d->internalHostMatch = enable;
-}
-bool QCATLSHandler::XMPPCertCheck()
-{
-    return d->internalHostMatch;
-}
+void QCATLSHandler::setXMPPCertCheck(bool enable) { d->internalHostMatch = enable; }
+bool QCATLSHandler::XMPPCertCheck() { return d->internalHostMatch; }
 bool QCATLSHandler::certMatchesHostname()
 {
-    if (!d->internalHostMatch) return false;
+    if (!d->internalHostMatch)
+        return false;
     QCA::CertificateChain peerCert = d->tls->peerCertificateChain();
 
     if (matchesHostName(peerCert.primary(), d->host))
@@ -361,7 +319,7 @@ bool QCATLSHandler::certMatchesHostname()
 
     Jid host(d->host);
 
-    foreach( const QString &idOnXmppAddr, peerCert.primary().subjectInfo().values(QCA::XMPP) ) {
+    foreach (const QString &idOnXmppAddr, peerCert.primary().subjectInfo().values(QCA::XMPP)) {
         if (host.compare(Jid(idOnXmppAddr)))
             return true;
     }
@@ -369,15 +327,9 @@ bool QCATLSHandler::certMatchesHostname()
     return false;
 }
 
-QCA::TLS *QCATLSHandler::tls() const
-{
-    return d->tls;
-}
+QCA::TLS *QCATLSHandler::tls() const { return d->tls; }
 
-int QCATLSHandler::tlsError() const
-{
-    return d->err;
-}
+int QCATLSHandler::tlsError() const { return d->err; }
 
 void QCATLSHandler::reset()
 {
@@ -388,24 +340,19 @@ void QCATLSHandler::reset()
 void QCATLSHandler::startClient(const QString &host)
 {
     d->state = 0;
-    d->err = -1;
-    if (d->internalHostMatch) d->host = host;
+    d->err   = -1;
+    if (d->internalHostMatch)
+        d->host = host;
     d->tls->startClient(d->internalHostMatch ? QString() : host);
 }
 
-void QCATLSHandler::write(const QByteArray &a)
-{
-    d->tls->write(a);
-}
+void QCATLSHandler::write(const QByteArray &a) { d->tls->write(a); }
 
-void QCATLSHandler::writeIncoming(const QByteArray &a)
-{
-    d->tls->writeIncoming(a);
-}
+void QCATLSHandler::writeIncoming(const QByteArray &a) { d->tls->writeIncoming(a); }
 
 void QCATLSHandler::continueAfterHandshake()
 {
-    if(d->state == 2) {
+    if (d->state == 2) {
         d->tls->continueAfterStep();
         success();
         d->state = 3;
@@ -418,26 +365,20 @@ void QCATLSHandler::tls_handshaken()
     tlsHandshaken();
 }
 
-void QCATLSHandler::tls_readyRead()
-{
-    readyRead(d->tls->read());
-}
+void QCATLSHandler::tls_readyRead() { readyRead(d->tls->read()); }
 
 void QCATLSHandler::tls_readyReadOutgoing()
 {
-    int plainBytes;
+    int        plainBytes;
     QByteArray buf = d->tls->readOutgoing(&plainBytes);
     readyReadOutgoing(buf, plainBytes);
 }
 
-void QCATLSHandler::tls_closed()
-{
-    closed();
-}
+void QCATLSHandler::tls_closed() { closed(); }
 
 void QCATLSHandler::tls_error()
 {
-    d->err = d->tls->errorCode();
+    d->err   = d->tls->errorCode();
     d->state = 0;
     fail();
 }

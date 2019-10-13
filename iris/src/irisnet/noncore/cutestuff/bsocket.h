@@ -35,25 +35,26 @@ class QString;
 /*!
     Socket with automatic hostname lookups, using SRV, AAAA and A DNS queries.
 */
-class BSocket : public ByteStream
-{
+class BSocket : public ByteStream {
     Q_OBJECT
 public:
     enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound };
     enum State { Idle, HostLookup, Connecting, Connected, Closing };
-    BSocket(QObject *parent=nullptr);
+    BSocket(QObject *parent = nullptr);
     ~BSocket();
 
     /*! Connect to an already resolved host */
     void connectToHost(const QHostAddress &address, quint16 port);
     /*! Connect to a host via the specified protocol, or the default protocols if not specified */
-    void connectToHost(const QString &host, quint16 port, QAbstractSocket::NetworkLayerProtocol protocol = QAbstractSocket::UnknownNetworkLayerProtocol);
+    void connectToHost(const QString &host, quint16 port,
+                       QAbstractSocket::NetworkLayerProtocol protocol = QAbstractSocket::UnknownNetworkLayerProtocol);
     /*! Connect to the hosts for the specified service */
-    void connectToHost(const QString &service, const QString &transport, const QString &domain, quint16 port = std::numeric_limits<quint16>::max());
-    virtual QAbstractSocket* abstractSocket() const;
-    qintptr socket() const;
-    void setSocket(QTcpSocket *);
-    int state() const;
+    void                     connectToHost(const QString &service, const QString &transport, const QString &domain,
+                                           quint16 port = std::numeric_limits<quint16>::max());
+    virtual QAbstractSocket *abstractSocket() const;
+    qintptr                  socket() const;
+    void                     setSocket(QTcpSocket *);
+    int                      state() const;
 
     // from ByteStream
     bool isOpen() const;
@@ -64,11 +65,11 @@ public:
 
     // local
     QHostAddress address() const;
-    quint16 port() const;
+    quint16      port() const;
 
     // remote
     QHostAddress peerAddress() const;
-    quint16 peerPort() const;
+    quint16      peerPort() const;
 
 protected:
     qint64 writeData(const char *data, qint64 maxSize);
@@ -89,7 +90,7 @@ private:
     class Private;
     Private *d;
 
-    void resetConnection(bool clear=false);
+    void resetConnection(bool clear = false);
     void ensureConnector();
     void recreate_resolver();
     bool check_protocol_fallback();

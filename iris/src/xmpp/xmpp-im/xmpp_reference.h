@@ -26,54 +26,52 @@
 #include <QSharedPointer>
 
 namespace XMPP {
-    extern const QString MEDIASHARING_NS;
-    extern const QString REFERENCE_NS;
+extern const QString MEDIASHARING_NS;
+extern const QString REFERENCE_NS;
 
-    class MediaSharing
-    {
-    public:
-        Jingle::FileTransfer::File file;
-        QStringList sources;
+class MediaSharing {
+public:
+    Jingle::FileTransfer::File file;
+    QStringList                sources;
 
-        inline bool isValid() const { return file.isValid(); }
+    inline bool isValid() const { return file.isValid(); }
+};
+
+class Reference {
+public:
+    enum Type : char {
+
+        Mention,
+        Data
     };
 
-    class Reference
-    {
-    public:
-        enum Type : char {
+    Reference();
+    Reference(Type type, const QString &uri);
+    ~Reference();
+    Reference(const Reference &other);
+    Reference &operator=(const Reference &other);
 
-            Mention,
-            Data
-        };
+    bool           isValid() const { return d != nullptr; }
+    Type           type() const;
+    const QString &uri() const;
 
-        Reference();
-        Reference(Type type, const QString &uri);
-        ~Reference();
-        Reference(const Reference &other);
-        Reference &operator=(const Reference &other);
+    void setRange(int begin, int end);
+    int  begin() const;
+    int  end() const;
 
-        bool isValid() const { return d != nullptr; }
-        Type type() const;
-        const QString &uri() const;
+    const QString &anchor() const;
+    void           setAnchor(const QString &anchor);
 
-        void setRange(int begin, int end);
-        int begin() const;
-        int end() const;
+    void                setMediaSharing(const MediaSharing &);
+    const MediaSharing &mediaSharing() const;
 
-        const QString &anchor() const;
-        void setAnchor(const QString &anchor);
+    bool        fromXml(const QDomElement &e);
+    QDomElement toXml(QDomDocument *) const;
 
-        void setMediaSharing(const MediaSharing &);
-        const MediaSharing &mediaSharing() const;
-
-        bool fromXml(const QDomElement &e);
-        QDomElement toXml(QDomDocument *) const;
-
-    private:
-        class Private;
-        QSharedDataPointer<Private> d;
-    };
+private:
+    class Private;
+    QSharedDataPointer<Private> d;
+};
 } // namespace XMPP
 
 #endif // XMPPREFERENCE_H

@@ -35,23 +35,22 @@ static QString prompt(const QString &s)
 {
     printf("* %s ", qPrintable(s));
     fflush(stdout);
-    char line[256];
-    char *ret = fgets(line, 255, stdin);
+    char    line[256];
+    char *  ret = fgets(line, 255, stdin);
     QString result;
-    if(ret)
+    if (ret)
         result = QString::fromLocal8Bit(line);
-    if(result[result.length() - 1] == '\n')
+    if (result[result.length() - 1] == '\n')
         result.truncate(result.length() - 1);
     return result;
 }
 
-class NetMonitor : public QObject
-{
+class NetMonitor : public QObject {
     Q_OBJECT
 public:
-    NetInterfaceManager *man;
-    QList<NetInterface*> ifaces;
-    NetAvailability *netavail;
+    NetInterfaceManager * man;
+    QList<NetInterface *> ifaces;
+    NetAvailability *     netavail;
 
     ~NetMonitor()
     {
@@ -69,10 +68,9 @@ public slots:
         connect(ProcessQuit::instance(), SIGNAL(quit()), SIGNAL(quit()));
 
         man = new NetInterfaceManager;
-        connect(man, SIGNAL(interfaceAvailable(const QString &)),
-            SLOT(here(const QString &)));
+        connect(man, SIGNAL(interfaceAvailable(const QString &)), SLOT(here(const QString &)));
         QStringList list = man->interfaces();
-        for(int n = 0; n < list.count(); ++n)
+        for (int n = 0; n < list.count(); ++n)
             here(list[n]);
 
         netavail = new NetAvailability;
@@ -86,9 +84,9 @@ public slots:
         connect(iface, SIGNAL(unavailable()), SLOT(gone()));
         printf("HERE: %s name=[%s]\n", qPrintable(iface->id()), qPrintable(iface->name()));
         QList<QHostAddress> addrs = iface->addresses();
-        for(int n = 0; n < addrs.count(); ++n)
+        for (int n = 0; n < addrs.count(); ++n)
             printf("  address: %s\n", qPrintable(addrs[n].toString()));
-        if(!iface->gateway().isNull())
+        if (!iface->gateway().isNull())
             printf("  gateway: %s\n", qPrintable(iface->gateway().toString()));
         ifaces += iface;
     }
@@ -103,7 +101,7 @@ public slots:
 
     void avail(bool available)
     {
-        if(available)
+        if (available)
             printf("** Network available\n");
         else
             printf("** Network unavailable\n");
@@ -113,12 +111,11 @@ public slots:
 static QString dataToString(const QByteArray &buf)
 {
     QString out;
-    for(int n = 0; n < buf.size(); ++n)
-    {
+    for (int n = 0; n < buf.size(); ++n) {
         unsigned char c = (unsigned char)buf[n];
-        if(c == '\\')
+        if (c == '\\')
             out += "\\\\";
-        else if(c >= 0x20 || c < 0x7f)
+        else if (c >= 0x20 || c < 0x7f)
             out += c;
         else
             out += QString("\\x%1").arg((uint)c, 2, 16);
@@ -128,77 +125,75 @@ static QString dataToString(const QByteArray &buf)
 
 static void print_record(const NameRecord &r)
 {
-    switch(r.type())
-    {
-        case NameRecord::A:
-            printf("A: [%s] (ttl=%d)\n", qPrintable(r.address().toString()), r.ttl());
-            break;
-        case NameRecord::Aaaa:
-            printf("AAAA: [%s] (ttl=%d)\n", qPrintable(r.address().toString()), r.ttl());
-            break;
-        case NameRecord::Mx:
-            printf("MX: [%s] priority=%d (ttl=%d)\n", r.name().data(), r.priority(), r.ttl());
-            break;
-        case NameRecord::Srv:
-            printf("SRV: [%s] port=%d priority=%d weight=%d (ttl=%d)\n", r.name().data(), r.port(), r.priority(), r.weight(), r.ttl());
-            break;
-        case NameRecord::Ptr:
-            printf("PTR: [%s] (ttl=%d)\n", r.name().data(), r.ttl());
-            break;
-        case NameRecord::Txt:
-        {
-            QList<QByteArray> texts = r.texts();
-            printf("TXT: count=%d (ttl=%d)\n", texts.count(), r.ttl());
-            for(int n = 0; n < texts.count(); ++n)
-                printf("  len=%d [%s]\n", texts[n].size(), qPrintable(dataToString(texts[n])));
-            break;
-        }
-        case NameRecord::Hinfo:
-            printf("HINFO: [%s] [%s] (ttl=%d)\n", r.cpu().data(), r.os().data(), r.ttl());
-            break;
-        case NameRecord::Null:
-            printf("NULL: %d bytes (ttl=%d)\n", r.rawData().size(), r.ttl());
-            break;
-        default:
-            printf("(Unknown): type=%d (ttl=%d)\n", r.type(), r.ttl());
-            break;
+    switch (r.type()) {
+    case NameRecord::A:
+        printf("A: [%s] (ttl=%d)\n", qPrintable(r.address().toString()), r.ttl());
+        break;
+    case NameRecord::Aaaa:
+        printf("AAAA: [%s] (ttl=%d)\n", qPrintable(r.address().toString()), r.ttl());
+        break;
+    case NameRecord::Mx:
+        printf("MX: [%s] priority=%d (ttl=%d)\n", r.name().data(), r.priority(), r.ttl());
+        break;
+    case NameRecord::Srv:
+        printf("SRV: [%s] port=%d priority=%d weight=%d (ttl=%d)\n", r.name().data(), r.port(), r.priority(),
+               r.weight(), r.ttl());
+        break;
+    case NameRecord::Ptr:
+        printf("PTR: [%s] (ttl=%d)\n", r.name().data(), r.ttl());
+        break;
+    case NameRecord::Txt: {
+        QList<QByteArray> texts = r.texts();
+        printf("TXT: count=%d (ttl=%d)\n", texts.count(), r.ttl());
+        for (int n = 0; n < texts.count(); ++n)
+            printf("  len=%d [%s]\n", texts[n].size(), qPrintable(dataToString(texts[n])));
+        break;
+    }
+    case NameRecord::Hinfo:
+        printf("HINFO: [%s] [%s] (ttl=%d)\n", r.cpu().data(), r.os().data(), r.ttl());
+        break;
+    case NameRecord::Null:
+        printf("NULL: %d bytes (ttl=%d)\n", r.rawData().size(), r.ttl());
+        break;
+    default:
+        printf("(Unknown): type=%d (ttl=%d)\n", r.type(), r.ttl());
+        break;
     }
 }
 
 static int str2rtype(const QString &in)
 {
     QString str = in.toLower();
-    if(str == "a")
+    if (str == "a")
         return NameRecord::A;
-    else if(str == "aaaa")
+    else if (str == "aaaa")
         return NameRecord::Aaaa;
-    else if(str == "ptr")
+    else if (str == "ptr")
         return NameRecord::Ptr;
-    else if(str == "srv")
+    else if (str == "srv")
         return NameRecord::Srv;
-    else if(str == "mx")
+    else if (str == "mx")
         return NameRecord::Mx;
-    else if(str == "txt")
+    else if (str == "txt")
         return NameRecord::Txt;
-    else if(str == "hinfo")
+    else if (str == "hinfo")
         return NameRecord::Hinfo;
-    else if(str == "null")
+    else if (str == "null")
         return NameRecord::Null;
     else
         return -1;
 }
 
-class ResolveName : public QObject
-{
+class ResolveName : public QObject {
     Q_OBJECT
 public:
     ResolveName() = default;
 
-    QString name;
+    QString          name;
     NameRecord::Type type;
-    bool longlived = false;
-    NameResolver dns;
-    bool null_dump = false;
+    bool             longlived = false;
+    NameResolver     dns;
+    bool             null_dump = false;
 
 public slots:
     void start()
@@ -206,9 +201,8 @@ public slots:
         connect(ProcessQuit::instance(), SIGNAL(quit()), SIGNAL(quit()));
 
         connect(&dns, SIGNAL(resultsReady(const QList<XMPP::NameRecord> &)),
-            SLOT(dns_resultsReady(const QList<XMPP::NameRecord> &)));
-        connect(&dns, SIGNAL(error(XMPP::NameResolver::Error)),
-            SLOT(dns_error(XMPP::NameResolver::Error)));
+                SLOT(dns_resultsReady(const QList<XMPP::NameRecord> &)));
+        connect(&dns, SIGNAL(error(XMPP::NameResolver::Error)), SLOT(dns_error(XMPP::NameResolver::Error)));
 
         dns.start(name.toLatin1(), type, longlived ? NameResolver::LongLived : NameResolver::Single);
     }
@@ -219,11 +213,9 @@ signals:
 private slots:
     void dns_resultsReady(const QList<XMPP::NameRecord> &list)
     {
-        if(null_dump && list[0].type() == NameRecord::Null)
-        {
+        if (null_dump && list[0].type() == NameRecord::Null) {
             QByteArray buf = list[0].rawData();
-            if(fwrite(buf.data(), buf.size(), 1, stdout) != static_cast<size_t>(buf.size()))
-            {
+            if (fwrite(buf.data(), buf.size(), 1, stdout) != static_cast<size_t>(buf.size())) {
                 /* FIXME:
                  C89/Unix allows fwrite() to return without having written everything.
                  The application should retry in that case.
@@ -232,14 +224,11 @@ private slots:
                 emit quit();
                 return;
             }
-        }
-        else
-        {
-            for(int n = 0; n < list.count(); ++n)
+        } else {
+            for (int n = 0; n < list.count(); ++n)
                 print_record(list[n]);
         }
-        if(!longlived)
-        {
+        if (!longlived) {
             dns.stop();
             emit quit();
         }
@@ -248,13 +237,13 @@ private slots:
     void dns_error(XMPP::NameResolver::Error e)
     {
         QString str;
-        if(e == NameResolver::ErrorNoName)
+        if (e == NameResolver::ErrorNoName)
             str = "ErrorNoName";
-        else if(e == NameResolver::ErrorTimeout)
+        else if (e == NameResolver::ErrorTimeout)
             str = "ErrorTimeout";
-        else if(e == NameResolver::ErrorNoLocal)
+        else if (e == NameResolver::ErrorNoLocal)
             str = "ErrorNoLocal";
-        else if(e == NameResolver::ErrorNoLongLived)
+        else if (e == NameResolver::ErrorNoLongLived)
             str = "ErrorNoLongLived";
         else // ErrorGeneric, or anything else
             str = "ErrorGeneric";
@@ -264,11 +253,10 @@ private slots:
     }
 };
 
-class ResolveAddr : public QObject
-{
+class ResolveAddr : public QObject {
     Q_OBJECT
 public:
-    QString name;
+    QString         name;
     AddressResolver dns;
 
 public slots:
@@ -277,9 +265,8 @@ public slots:
         connect(ProcessQuit::instance(), SIGNAL(quit()), SIGNAL(quit()));
 
         connect(&dns, SIGNAL(resultsReady(const QList<QHostAddress> &)),
-            SLOT(dns_resultsReady(const QList<QHostAddress> &)));
-        connect(&dns, SIGNAL(error(XMPP::AddressResolver::Error)),
-            SLOT(dns_error(XMPP::AddressResolver::Error)));
+                SLOT(dns_resultsReady(const QList<QHostAddress> &)));
+        connect(&dns, SIGNAL(error(XMPP::AddressResolver::Error)), SLOT(dns_error(XMPP::AddressResolver::Error)));
 
         dns.start(name.toLatin1());
     }
@@ -290,7 +277,7 @@ signals:
 private slots:
     void dns_resultsReady(const QList<QHostAddress> &list)
     {
-        for(int n = 0; n < list.count(); ++n)
+        for (int n = 0; n < list.count(); ++n)
             printf("%s\n", qPrintable(list[n].toString()));
 
         emit quit();
@@ -301,19 +288,18 @@ private slots:
         Q_UNUSED(e);
 
         QString str;
-        //else // ErrorGeneric, or anything else
-            str = "ErrorGeneric";
+        // else // ErrorGeneric, or anything else
+        str = "ErrorGeneric";
 
         printf("Error: %s\n", qPrintable(str));
         emit quit();
     }
 };
 
-class BrowseServices : public QObject
-{
+class BrowseServices : public QObject {
     Q_OBJECT
 public:
-    QString type, domain;
+    QString        type, domain;
     ServiceBrowser browser;
 
 public slots:
@@ -322,9 +308,9 @@ public slots:
         connect(ProcessQuit::instance(), SIGNAL(quit()), SIGNAL(quit()));
 
         connect(&browser, SIGNAL(instanceAvailable(const XMPP::ServiceInstance &)),
-            SLOT(browser_instanceAvailable(const XMPP::ServiceInstance &)));
+                SLOT(browser_instanceAvailable(const XMPP::ServiceInstance &)));
         connect(&browser, SIGNAL(instanceUnavailable(const XMPP::ServiceInstance &)),
-            SLOT(browser_instanceUnavailable(const XMPP::ServiceInstance &)));
+                SLOT(browser_instanceUnavailable(const XMPP::ServiceInstance &)));
         connect(&browser, SIGNAL(error()), SLOT(browser_error()));
 
         browser.start(type, domain);
@@ -337,10 +323,9 @@ private slots:
     void browser_instanceAvailable(const XMPP::ServiceInstance &i)
     {
         printf("HERE: [%s] (%d attributes)\n", qPrintable(i.instance()), i.attributes().count());
-        QMap<QString,QByteArray> attribs = i.attributes();
-        QMapIterator<QString,QByteArray> it(attribs);
-        while(it.hasNext())
-        {
+        QMap<QString, QByteArray>         attribs = i.attributes();
+        QMapIterator<QString, QByteArray> it(attribs);
+        while (it.hasNext()) {
             it.next();
             printf("  [%s] = [%s]\n", qPrintable(it.key()), qPrintable(dataToString(it.value())));
         }
@@ -351,20 +336,17 @@ private slots:
         printf("GONE: [%s]\n", qPrintable(i.instance()));
     }
 
-    void browser_error()
-    {
-    }
+    void browser_error() {}
 };
 
-class ResolveService : public QObject
-{
+class ResolveService : public QObject {
     Q_OBJECT
 public:
-    int mode;
+    int     mode;
     QString instance;
     QString type;
     QString domain;
-    int port;
+    int     port;
 
     ServiceResolver dns;
 
@@ -374,13 +356,13 @@ public slots:
         connect(ProcessQuit::instance(), SIGNAL(quit()), SIGNAL(quit()));
 
         connect(&dns, SIGNAL(resultsReady(const QHostAddress &, int)),
-            SLOT(dns_resultsReady(const QHostAddress &, int)));
+                SLOT(dns_resultsReady(const QHostAddress &, int)));
         connect(&dns, SIGNAL(finished()), SLOT(dns_finished()));
         connect(&dns, SIGNAL(error()), SLOT(dns_error()));
 
-        if(mode == 0)
+        if (mode == 0)
             dns.startFromInstance(instance.toLatin1() + '.' + type.toLatin1() + ".local.");
-        else if(mode == 1)
+        else if (mode == 1)
             dns.startFromDomain(domain, type);
         else // 2
             dns.startFromPlain(domain, port);
@@ -396,10 +378,7 @@ private slots:
         dns.tryNext();
     }
 
-    void dns_finished()
-    {
-        emit quit();
-    }
+    void dns_finished() { emit quit(); }
 
     void dns_error()
     {
@@ -408,28 +387,27 @@ private slots:
     }
 };
 
-class PublishService : public QObject
-{
+class PublishService : public QObject {
     Q_OBJECT
 public:
-    QString instance;
-    QString type;
-    int port;
-    QMap<QString,QByteArray> attribs;
-    QByteArray extra_null;
+    QString                   instance;
+    QString                   type;
+    int                       port;
+    QMap<QString, QByteArray> attribs;
+    QByteArray                extra_null;
 
     ServiceLocalPublisher pub;
 
 public slots:
     void start()
     {
-        //NetInterfaceManager::instance();
+        // NetInterfaceManager::instance();
 
         connect(ProcessQuit::instance(), SIGNAL(quit()), SIGNAL(quit()));
 
         connect(&pub, SIGNAL(published()), SLOT(pub_published()));
         connect(&pub, SIGNAL(error(XMPP::ServiceLocalPublisher::Error)),
-            SLOT(pub_error(XMPP::ServiceLocalPublisher::Error)));
+                SLOT(pub_error(XMPP::ServiceLocalPublisher::Error)));
 
         pub.publish(instance, type, port, attribs);
     }
@@ -441,8 +419,7 @@ private slots:
     void pub_published()
     {
         printf("Published\n");
-        if(!extra_null.isEmpty())
-        {
+        if (!extra_null.isEmpty()) {
             NameRecord rec;
             rec.setNull(extra_null);
             pub.addRecord(rec);
@@ -456,17 +433,16 @@ private slots:
     }
 };
 
-class StunBind : public QObject
-{
+class StunBind : public QObject {
     Q_OBJECT
 public:
-    bool debug;
-    QHostAddress addr;
-    int port;
-    int localPort;
-    QUdpSocket *sock;
+    bool                 debug;
+    QHostAddress         addr;
+    int                  port;
+    int                  localPort;
+    QUdpSocket *         sock;
     StunTransactionPool *pool;
-    StunBinding *binding;
+    StunBinding *        binding;
 
     ~StunBind()
     {
@@ -481,15 +457,15 @@ public slots:
         connect(sock, SIGNAL(readyRead()), SLOT(sock_readyRead()));
 
         pool = new StunTransactionPool(StunTransaction::Udp, this);
-        if(debug)
+        if (debug)
             pool->setDebugLevel(StunTransactionPool::DL_Packet);
         else
             pool->setDebugLevel(StunTransactionPool::DL_Info);
-        connect(pool, SIGNAL(outgoingMessage(const QByteArray &, const QHostAddress &, int)), SLOT(pool_outgoingMessage(const QByteArray &, const QHostAddress &, int)));
+        connect(pool, SIGNAL(outgoingMessage(const QByteArray &, const QHostAddress &, int)),
+                SLOT(pool_outgoingMessage(const QByteArray &, const QHostAddress &, int)));
         connect(pool, SIGNAL(debugLine(const QString &)), SLOT(pool_debugLine(const QString &)));
 
-        if(!sock->bind(localPort != -1 ? localPort : 0))
-        {
+        if (!sock->bind(localPort != -1 ? localPort : 0)) {
             printf("Error binding to local port.\n");
             emit quit();
             return;
@@ -509,19 +485,15 @@ signals:
 private slots:
     void sock_readyRead()
     {
-        while(sock->hasPendingDatagrams())
-        {
-            QByteArray buf(sock->pendingDatagramSize(), 0);
+        while (sock->hasPendingDatagrams()) {
+            QByteArray   buf(sock->pendingDatagramSize(), 0);
             QHostAddress from;
-            quint16 fromPort;
+            quint16      fromPort;
 
             sock->readDatagram(buf.data(), buf.size(), &from, &fromPort);
-            if(from == addr && fromPort == port)
-            {
+            if (from == addr && fromPort == port) {
                 processDatagram(buf);
-            }
-            else
-            {
+            } else {
                 printf("Response from unknown sender %s:%d, dropping.\n", qPrintable(from.toString()), fromPort);
             }
         }
@@ -536,15 +508,12 @@ private slots:
         sock->writeDatagram(packet, addr, port);
     }
 
-    void pool_debugLine(const QString &line)
-    {
-        printf("%s\n", qPrintable(line));
-    }
+    void pool_debugLine(const QString &line) { printf("%s\n", qPrintable(line)); }
 
     void binding_success()
     {
         QHostAddress saddr = binding->reflexiveAddress();
-        quint16 sport = binding->reflexivePort();
+        quint16      sport = binding->reflexivePort();
         printf("Server says we are %s;%d\n", qPrintable(saddr.toString()), sport);
         emit quit();
     }
@@ -560,34 +529,32 @@ private:
     void processDatagram(const QByteArray &buf)
     {
         StunMessage message = StunMessage::fromBinary(buf);
-        if(message.isNull())
-        {
+        if (message.isNull()) {
             printf("Warning: server responded with what doesn't seem to be a STUN packet, skipping.\n");
             return;
         }
 
-        if(!pool->writeIncomingMessage(message))
+        if (!pool->writeIncomingMessage(message))
             printf("Warning: received unexpected message, skipping.\n");
     }
 };
 
-class TurnClientTest : public QObject
-{
+class TurnClientTest : public QObject {
     Q_OBJECT
 public:
-    int mode = 0;
-    bool debug = false;
-    QHostAddress relayAddr;
-    int relayPort = 0;
-    QString relayUser;
-    QString relayPass;
-    QString relayRealm;
-    QHostAddress peerAddr;
-    int peerPort = 0;
-    QUdpSocket *udp = nullptr;
-    StunTransactionPool *pool = nullptr;
-    QList<bool> writeItems; // true = turn-originated, false = external
-    TurnClient *turn = nullptr;
+    int                  mode  = 0;
+    bool                 debug = false;
+    QHostAddress         relayAddr;
+    int                  relayPort = 0;
+    QString              relayUser;
+    QString              relayPass;
+    QString              relayRealm;
+    QHostAddress         peerAddr;
+    int                  peerPort = 0;
+    QUdpSocket *         udp      = nullptr;
+    StunTransactionPool *pool     = nullptr;
+    QList<bool>          writeItems; // true = turn-originated, false = external
+    TurnClient *         turn = nullptr;
 
     TurnClientTest() = default;
 
@@ -603,7 +570,7 @@ public slots:
         connect(ProcessQuit::instance(), SIGNAL(quit()), SLOT(do_quit()));
 
         turn = new TurnClient(this);
-        if(debug)
+        if (debug)
             turn->setDebugLevel(TurnClient::DL_Packet);
         else
             turn->setDebugLevel(TurnClient::DL_Info);
@@ -615,56 +582,51 @@ public slots:
         connect(turn, SIGNAL(retrying()), SLOT(turn_retrying()));
         connect(turn, SIGNAL(activated()), SLOT(turn_activated()));
         connect(turn, SIGNAL(readyRead()), SLOT(turn_readyRead()));
-        connect(turn, SIGNAL(packetsWritten(int, const QHostAddress &, int)), SLOT(turn_packetsWritten(int, const QHostAddress &, int)));
+        connect(turn, SIGNAL(packetsWritten(int, const QHostAddress &, int)),
+                SLOT(turn_packetsWritten(int, const QHostAddress &, int)));
         connect(turn, SIGNAL(error(XMPP::TurnClient::Error)), SLOT(turn_error(XMPP::TurnClient::Error)));
         connect(turn, SIGNAL(outgoingDatagram(const QByteArray &)), SLOT(turn_outgoingDatagram(const QByteArray &)));
         connect(turn, SIGNAL(debugLine(const QString &)), SLOT(turn_debugLine(const QString &)));
 
         turn->setClientSoftwareNameAndVersion("nettool (Iris)");
 
-        if(mode == 0)
-        {
+        if (mode == 0) {
             udp = new QUdpSocket(this);
             connect(udp, SIGNAL(readyRead()), SLOT(udp_readyRead()));
 
             // QUdpSocket bytesWritten is not DOR-DS safe, so we queue
-            connect(udp, SIGNAL(bytesWritten(qint64)), SLOT(udp_bytesWritten(qint64)),
-                Qt::QueuedConnection);
+            connect(udp, SIGNAL(bytesWritten(qint64)), SLOT(udp_bytesWritten(qint64)), Qt::QueuedConnection);
 
             pool = new StunTransactionPool(StunTransaction::Udp, this);
-            if(debug)
+            if (debug)
                 pool->setDebugLevel(StunTransactionPool::DL_Packet);
             else
                 pool->setDebugLevel(StunTransactionPool::DL_Info);
-            connect(pool, SIGNAL(outgoingMessage(const QByteArray &, const QHostAddress &, int)), SLOT(pool_outgoingMessage(const QByteArray &, const QHostAddress &, int)));
+            connect(pool, SIGNAL(outgoingMessage(const QByteArray &, const QHostAddress &, int)),
+                    SLOT(pool_outgoingMessage(const QByteArray &, const QHostAddress &, int)));
             connect(pool, SIGNAL(needAuthParams()), SLOT(pool_needAuthParams()));
             connect(pool, SIGNAL(debugLine(const QString &)), SLOT(pool_debugLine(const QString &)));
 
             pool->setLongTermAuthEnabled(true);
-            if(!relayUser.isEmpty())
-            {
+            if (!relayUser.isEmpty()) {
                 pool->setUsername(relayUser);
                 pool->setPassword(relayPass.toUtf8());
-                if(!relayRealm.isEmpty())
+                if (!relayRealm.isEmpty())
                     pool->setRealm(relayRealm);
             }
 
-            if(!udp->bind())
-            {
+            if (!udp->bind()) {
                 printf("Error binding to local port.\n");
                 emit quit();
                 return;
             }
 
             turn->connectToHost(pool);
-        }
-        else
-        {
-            if(!relayUser.isEmpty())
-            {
+        } else {
+            if (!relayUser.isEmpty()) {
                 turn->setUsername(relayUser);
                 turn->setPassword(relayPass.toUtf8());
-                if(!relayRealm.isEmpty())
+                if (!relayRealm.isEmpty())
                     turn->setRealm(relayRealm);
             }
 
@@ -679,15 +641,14 @@ signals:
 private:
     void processDatagram(const QByteArray &buf)
     {
-        QByteArray data;
+        QByteArray   data;
         QHostAddress fromAddr;
-        int fromPort;
+        int          fromPort;
 
         bool notStun;
-        if(!pool->writeIncomingMessage(buf, &notStun))
-        {
+        if (!pool->writeIncomingMessage(buf, &notStun)) {
             data = turn->processIncomingDatagram(buf, notStun, &fromAddr, &fromPort);
-            if(!data.isNull())
+            if (!data.isNull())
                 processDataPacket(data, fromAddr, fromPort);
             else
                 printf("Warning: server responded with what doesn't seem to be a STUN or data packet, skipping.\n");
@@ -711,19 +672,15 @@ private slots:
 
     void udp_readyRead()
     {
-        while(udp->hasPendingDatagrams())
-        {
-            QByteArray buf(udp->pendingDatagramSize(), 0);
+        while (udp->hasPendingDatagrams()) {
+            QByteArray   buf(udp->pendingDatagramSize(), 0);
             QHostAddress from;
-            quint16 fromPort;
+            quint16      fromPort;
 
             udp->readDatagram(buf.data(), buf.size(), &from, &fromPort);
-            if(from == relayAddr && fromPort == relayPort)
-            {
+            if (from == relayAddr && fromPort == relayPort) {
                 processDatagram(buf);
-            }
-            else
-            {
+            } else {
                 printf("Response from unknown sender %s:%d, dropping.\n", qPrintable(from.toString()), fromPort);
             }
         }
@@ -733,7 +690,7 @@ private slots:
     {
         Q_UNUSED(bytes);
         bool wasTurnOriginated = writeItems.takeFirst();
-        if(wasTurnOriginated)
+        if (wasTurnOriginated)
             turn->outgoingDatagramsWritten(1);
     }
 
@@ -756,31 +713,20 @@ private slots:
         pool->setPassword(relayPass.toUtf8());
 
         QString str = prompt(QString("Realm: [%1]").arg(pool->realm()));
-        if(!str.isEmpty())
-        {
+        if (!str.isEmpty()) {
             relayRealm = str;
             pool->setRealm(relayRealm);
-        }
-        else
+        } else
             relayRealm = pool->realm();
 
         pool->continueAfterParams();
     }
 
-    void pool_debugLine(const QString &line)
-    {
-        turn_debugLine(line);
-    }
+    void pool_debugLine(const QString &line) { turn_debugLine(line); }
 
-    void turn_connected()
-    {
-        printf("TCP connected\n");
-    }
+    void turn_connected() { printf("TCP connected\n"); }
 
-    void turn_tlsHandshaken()
-    {
-        printf("TLS handshake completed\n");
-    }
+    void turn_tlsHandshaken() { printf("TLS handshake completed\n"); }
 
     void turn_closed()
     {
@@ -797,28 +743,23 @@ private slots:
         turn->setPassword(relayPass.toUtf8());
 
         QString str = prompt(QString("Realm: [%1]").arg(turn->realm()));
-        if(!str.isEmpty())
-        {
+        if (!str.isEmpty()) {
             relayRealm = str;
             turn->setRealm(relayRealm);
-        }
-        else
+        } else
             relayRealm = turn->realm();
 
         turn->continueAfterParams();
     }
 
-    void turn_retrying()
-    {
-        printf("Mismatch error, retrying...\n");
-    }
+    void turn_retrying() { printf("Mismatch error, retrying...\n"); }
 
     void turn_activated()
     {
         StunAllocate *allocate = turn->stunAllocate();
 
         QHostAddress saddr = allocate->reflexiveAddress();
-        quint16 sport = allocate->reflexivePort();
+        quint16      sport = allocate->reflexivePort();
         printf("Server says we are %s;%d\n", qPrintable(saddr.toString()), sport);
         saddr = allocate->relayedAddress();
         sport = allocate->relayedPort();
@@ -828,15 +769,16 @@ private slots:
         turn->addChannelPeer(peerAddr, peerPort);
 
         QByteArray buf = "Hello, world!";
-        printf("Relaying test packet of %d bytes [%s] to %s;%d...\n", buf.size(), buf.data(), qPrintable(peerAddr.toString()), peerPort);
+        printf("Relaying test packet of %d bytes [%s] to %s;%d...\n", buf.size(), buf.data(),
+               qPrintable(peerAddr.toString()), peerPort);
         turn->write(buf, peerAddr, peerPort);
     }
 
     void turn_readyRead()
     {
         QHostAddress addr;
-        int port;
-        QByteArray buf = turn->read(&addr, &port);
+        int          port;
+        QByteArray   buf = turn->read(&addr, &port);
 
         processDataPacket(buf, addr, port);
     }
@@ -862,10 +804,7 @@ private slots:
         udp->writeDatagram(buf, relayAddr, relayPort);
     }
 
-    void turn_debugLine(const QString &line)
-    {
-        printf("%s\n", qPrintable(line));
-    }
+    void turn_debugLine(const QString &line) { printf("%s\n", qPrintable(line)); }
 };
 
 void usage()
@@ -904,41 +843,36 @@ int main(int argc, char **argv)
     args.removeFirst();
 
     QString user, pass, realm;
-    bool debug = false;
+    bool    debug = false;
 
-    for(int n = 0; n < args.count(); ++n)
-    {
+    for (int n = 0; n < args.count(); ++n) {
         QString s = args[n];
-        if(!s.startsWith("--"))
+        if (!s.startsWith("--"))
             continue;
         QString var;
         QString val;
-        int x = s.indexOf('=');
-        if(x != -1)
-        {
+        int     x = s.indexOf('=');
+        if (x != -1) {
             var = s.mid(2, x - 2);
             val = s.mid(x + 1);
-        }
-        else
-        {
+        } else {
             var = s.mid(2);
         }
 
         bool known = true;
 
-        if(var == "debug")
+        if (var == "debug")
             debug = true;
-        else if(var == "user")
+        else if (var == "user")
             user = val;
-        else if(var == "pass")
+        else if (var == "pass")
             pass = val;
-        else if(var == "realm")
+        else if (var == "realm")
             realm = val;
         else
             known = false;
 
-        if(!known)
-        {
+        if (!known) {
             fprintf(stderr, "Unknown option '%s'.\n", qPrintable(var));
             return 1;
         }
@@ -947,66 +881,53 @@ int main(int argc, char **argv)
         --n; // adjust position
     }
 
-    if(args.isEmpty())
-    {
+    if (args.isEmpty()) {
         usage();
         return 1;
     }
 
-    if(args[0] == "netmon")
-    {
+    if (args[0] == "netmon") {
         NetMonitor a;
         QObject::connect(&a, SIGNAL(quit()), &qapp, SLOT(quit()));
         QTimer::singleShot(0, &a, SLOT(start()));
         qapp.exec();
-    }
-    else if(args[0] == "rname" || args[0] == "rnamel")
-    {
+    } else if (args[0] == "rname" || args[0] == "rnamel") {
         bool null_dump = false;
-        for(int n = 1; n < args.count(); ++n)
-        {
-            if(args[n] == "-r")
-            {
+        for (int n = 1; n < args.count(); ++n) {
+            if (args[n] == "-r") {
                 null_dump = true;
                 args.removeAt(n);
                 --n;
             }
         }
 
-        if(args.count() < 2)
-        {
+        if (args.count() < 2) {
             usage();
             return 1;
         }
-        if(args[0] == "rnamel" && args.count() < 3)
-        {
+        if (args[0] == "rnamel" && args.count() < 3) {
             usage();
             return 1;
         }
         int x = NameRecord::A;
-        if(args.count() >= 3)
-        {
+        if (args.count() >= 3) {
             x = str2rtype(args[2]);
-            if(x == -1)
-            {
+            if (x == -1) {
                 usage();
                 return 1;
             }
         }
         ResolveName a;
-        a.name = args[1];
-        a.type = (NameRecord::Type)x;
+        a.name      = args[1];
+        a.type      = (NameRecord::Type)x;
         a.longlived = (args[0] == "rnamel") ? true : false;
-        if(args[0] == "rname" && null_dump)
+        if (args[0] == "rname" && null_dump)
             a.null_dump = true;
         QObject::connect(&a, SIGNAL(quit()), &qapp, SLOT(quit()));
         QTimer::singleShot(0, &a, SLOT(start()));
         qapp.exec();
-    }
-    else if(args[0] == "raddr")
-    {
-        if(args.count() < 2)
-        {
+    } else if (args[0] == "raddr") {
+        if (args.count() < 2) {
             usage();
             return 1;
         }
@@ -1016,11 +937,8 @@ int main(int argc, char **argv)
         QObject::connect(&a, SIGNAL(quit()), &qapp, SLOT(quit()));
         QTimer::singleShot(0, &a, SLOT(start()));
         qapp.exec();
-    }
-    else if(args[0] == "browse")
-    {
-        if(args.count() < 2)
-        {
+    } else if (args[0] == "browse") {
+        if (args.count() < 2) {
             usage();
             return 1;
         }
@@ -1030,55 +948,41 @@ int main(int argc, char **argv)
         QObject::connect(&a, SIGNAL(quit()), &qapp, SLOT(quit()));
         QTimer::singleShot(0, &a, SLOT(start()));
         qapp.exec();
-    }
-    else if(args[0] == "rservi" || args[0] == "rservd" || args[0] == "rservp")
-    {
+    } else if (args[0] == "rservi" || args[0] == "rservd" || args[0] == "rservp") {
         // they all take 2 params
-        if(args.count() < 3)
-        {
+        if (args.count() < 3) {
             usage();
             return 1;
         }
 
         ResolveService a;
-        if(args[0] == "rservi")
-        {
-            a.mode = 0;
+        if (args[0] == "rservi") {
+            a.mode     = 0;
             a.instance = args[1];
-            a.type = args[2];
-        }
-        else if(args[0] == "rservd")
-        {
-            a.mode = 1;
+            a.type     = args[2];
+        } else if (args[0] == "rservd") {
+            a.mode   = 1;
             a.domain = args[1];
-            a.type = args[2];
-        }
-        else // rservp
+            a.type   = args[2];
+        } else // rservp
         {
-            a.mode = 2;
+            a.mode   = 2;
             a.domain = args[1];
-            a.port = args[2].toInt();
+            a.port   = args[2].toInt();
         }
         QObject::connect(&a, SIGNAL(quit()), &qapp, SLOT(quit()));
         QTimer::singleShot(0, &a, SLOT(start()));
         qapp.exec();
-    }
-    else if(args[0] == "pserv")
-    {
+    } else if (args[0] == "pserv") {
         QStringList addrecs;
-        for(int n = 1; n < args.count(); ++n)
-        {
-            if(args[n] == "-a")
-            {
-                if(n + 1 < args.count())
-                {
+        for (int n = 1; n < args.count(); ++n) {
+            if (args[n] == "-a") {
+                if (n + 1 < args.count()) {
                     addrecs += args[n + 1];
                     args.removeAt(n);
                     args.removeAt(n);
                     --n;
-                }
-                else
-                {
+                } else {
                     usage();
                     return 1;
                 }
@@ -1086,23 +990,19 @@ int main(int argc, char **argv)
         }
 
         QByteArray extra_null;
-        for(int n = 0; n < addrecs.count(); ++n)
-        {
+        for (int n = 0; n < addrecs.count(); ++n) {
             const QString &str = addrecs[n];
-            int x = str.indexOf(':');
-            if(x == -1 || str.mid(0, x) != "null")
-            {
+            int            x   = str.indexOf(':');
+            if (x == -1 || str.mid(0, x) != "null") {
                 usage();
                 return 1;
             }
 
             QString null_file = str.mid(x + 1);
 
-            if(!null_file.isEmpty())
-            {
+            if (!null_file.isEmpty()) {
                 QFile f(null_file);
-                if(!f.open(QFile::ReadOnly))
-                {
+                if (!f.open(QFile::ReadOnly)) {
                     printf("can't read file\n");
                     return 1;
                 }
@@ -1110,21 +1010,18 @@ int main(int argc, char **argv)
             }
         }
 
-        if(args.count() < 4)
-        {
+        if (args.count() < 4) {
             usage();
             return 1;
         }
 
-        QMap<QString,QByteArray> attribs;
-        if(args.count() > 4)
-        {
+        QMap<QString, QByteArray> attribs;
+        if (args.count() > 4) {
             QStringList parts = args[4].split(',');
-            for(int n = 0; n < parts.count(); ++n)
-            {
+            for (int n = 0; n < parts.count(); ++n) {
                 const QString &str = parts[n];
-                int x = str.indexOf('=');
-                if(x != -1)
+                int            x   = str.indexOf('=');
+                if (x != -1)
                     attribs.insert(str.mid(0, x), str.mid(x + 1).toUtf8());
                 else
                     attribs.insert(str, QByteArray());
@@ -1132,154 +1029,133 @@ int main(int argc, char **argv)
         }
 
         PublishService a;
-        a.instance = args[1];
-        a.type = args[2];
-        a.port = args[3].toInt();
-        a.attribs = attribs;
+        a.instance   = args[1];
+        a.type       = args[2];
+        a.port       = args[3].toInt();
+        a.attribs    = attribs;
         a.extra_null = extra_null;
         QObject::connect(&a, SIGNAL(quit()), &qapp, SLOT(quit()));
         QTimer::singleShot(0, &a, SLOT(start()));
         qapp.exec();
-    }
-    else if(args[0] == "stun")
-    {
-        if(args.count() < 2)
-        {
+    } else if (args[0] == "stun") {
+        if (args.count() < 2) {
             usage();
             return 1;
         }
 
         QString addrstr, portstr;
-        int x = args[1].indexOf(';');
-        if(x != -1)
-        {
+        int     x = args[1].indexOf(';');
+        if (x != -1) {
             addrstr = args[1].mid(0, x);
             portstr = args[1].mid(x + 1);
-        }
-        else
+        } else
             addrstr = args[1];
 
         QHostAddress addr = QHostAddress(addrstr);
-        if(addr.isNull())
-        {
+        if (addr.isNull()) {
             printf("Error: addr must be an IP address\n");
             return 1;
         }
 
         int port = 3478;
-        if(!portstr.isEmpty())
+        if (!portstr.isEmpty())
             port = portstr.toInt();
 
         int localPort = -1;
-        if(args.count() >= 3)
+        if (args.count() >= 3)
             localPort = args[2].toInt();
 
-        if(!QCA::isSupported("hmac(sha1)"))
-        {
+        if (!QCA::isSupported("hmac(sha1)")) {
             printf("Error: Need hmac(sha1) support to use STUN.\n");
             return 1;
         }
 
         StunBind a;
-        a.debug = debug;
+        a.debug     = debug;
         a.localPort = localPort;
-        a.addr = addr;
-        a.port = port;
+        a.addr      = addr;
+        a.port      = port;
         QObject::connect(&a, SIGNAL(quit()), &qapp, SLOT(quit()));
         QTimer::singleShot(0, &a, SLOT(start()));
         qapp.exec();
-    }
-    else if(args[0] == "turn")
-    {
-        if(args.count() < 4)
-        {
+    } else if (args[0] == "turn") {
+        if (args.count() < 4) {
             usage();
             return 1;
         }
 
         int mode;
-        if(args[1] == "udp")
+        if (args[1] == "udp")
             mode = 0;
-        else if(args[1] == "tcp")
+        else if (args[1] == "tcp")
             mode = 1;
-        else if(args[1] == "tcp-tls")
+        else if (args[1] == "tcp-tls")
             mode = 2;
-        else
-        {
+        else {
             usage();
             return 1;
         }
 
         QString addrstr, portstr;
-        int x = args[2].indexOf(';');
-        if(x != -1)
-        {
+        int     x = args[2].indexOf(';');
+        if (x != -1) {
             addrstr = args[2].mid(0, x);
             portstr = args[2].mid(x + 1);
-        }
-        else
+        } else
             addrstr = args[2];
 
         QHostAddress raddr = QHostAddress(addrstr);
-        if(raddr.isNull())
-        {
+        if (raddr.isNull()) {
             printf("Error: relayaddr must be an IP address\n");
             return 1;
         }
 
         int rport = 3478;
-        if(!portstr.isEmpty())
+        if (!portstr.isEmpty())
             rport = portstr.toInt();
 
         portstr.clear();
         x = args[3].indexOf(';');
-        if(x != -1)
-        {
+        if (x != -1) {
             addrstr = args[3].mid(0, x);
             portstr = args[3].mid(x + 1);
-        }
-        else
+        } else
             addrstr = args[3];
 
         QHostAddress paddr = QHostAddress(addrstr);
-        if(raddr.isNull())
-        {
+        if (raddr.isNull()) {
             printf("Error: peeraddr must be an IP address\n");
             return 1;
         }
 
         int pport = 4588;
-        if(!portstr.isEmpty())
+        if (!portstr.isEmpty())
             pport = portstr.toInt();
 
-        if(!QCA::isSupported("hmac(sha1)"))
-        {
+        if (!QCA::isSupported("hmac(sha1)")) {
             printf("Error: Need hmac(sha1) support to use TURN.\n");
             return 1;
         }
 
-        if(mode == 2 && !QCA::isSupported("tls"))
-        {
+        if (mode == 2 && !QCA::isSupported("tls")) {
             printf("Error: Need tls support to use tcp-tls mode.\n");
             return 1;
         }
 
         TurnClientTest a;
-        a.mode = mode;
-        a.debug = debug;
-        a.relayAddr = raddr;
-        a.relayPort = rport;
-        a.relayUser = user;
-        a.relayPass = pass;
+        a.mode       = mode;
+        a.debug      = debug;
+        a.relayAddr  = raddr;
+        a.relayPort  = rport;
+        a.relayUser  = user;
+        a.relayPass  = pass;
         a.relayRealm = realm;
-        a.peerAddr = paddr;
-        a.peerPort = pport;
+        a.peerAddr   = paddr;
+        a.peerPort   = pport;
         QObject::connect(&a, SIGNAL(quit()), &qapp, SLOT(quit()));
         QTimer::singleShot(0, &a, SLOT(start()));
         qapp.exec();
-    }
-    else
-    {
+    } else {
         usage();
         return 1;
     }

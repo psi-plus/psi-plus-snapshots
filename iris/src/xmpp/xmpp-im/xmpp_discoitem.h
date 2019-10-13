@@ -29,79 +29,76 @@
 #include <QString>
 
 namespace XMPP {
-    class DiscoItemPrivate;
+class DiscoItemPrivate;
 
-    class DiscoItem
-    {
-    public:
-        DiscoItem();
-        ~DiscoItem();
+class DiscoItem {
+public:
+    DiscoItem();
+    ~DiscoItem();
 
-        const Jid &jid() const;
-        const QString &node() const;
-        const QString &name() const;
+    const Jid &    jid() const;
+    const QString &node() const;
+    const QString &name() const;
 
-        void setJid(const Jid &);
-        void setName(const QString &);
-        void setNode(const QString &);
+    void setJid(const Jid &);
+    void setName(const QString &);
+    void setNode(const QString &);
 
-        enum Action {
-            None = 0,
-            Remove,
-            Update
-        };
+    enum Action { None = 0, Remove, Update };
 
-        Action action() const;
-        void setAction(Action);
+    Action action() const;
+    void   setAction(Action);
 
-        const Features &features() const;
-        void setFeatures(const Features &);
+    const Features &features() const;
+    void            setFeatures(const Features &);
 
-        struct Identity
+    struct Identity {
+        QString category;
+        QString type;
+        QString lang;
+        QString name;
+
+        inline Identity() {}
+        inline Identity(const QString &categoty, const QString &type, const QString &lang = QString(),
+                        const QString &name = QString()) :
+            category(categoty),
+            type(type), lang(lang), name(name)
         {
-            QString category;
-            QString type;
-            QString lang;
-            QString name;
-
-            inline Identity() {}
-            inline Identity(const QString &categoty, const QString &type,
-                            const QString &lang = QString(), const QString &name = QString()) :
-                category(categoty), type(type), lang(lang), name(name) {}
-            bool operator==(const Identity &other) const;
-        };
-
-        typedef QList<Identity> Identities;
-
-        const Identities &identities() const;
-        void setIdentities(const Identities &);
-        inline void setIdentities(const Identity &id) { setIdentities(Identities() << id); }
-
-        const QList<XData> &extensions() const;
-        void setExtensions(const QList<XData> &extlist);
-        XData registeredExtension(const QString &ns) const;
-
-        // some useful helper functions
-        static Action string2action(const QString &s);
-        static QString action2string(const Action a);
-
-        DiscoItem & operator= (const DiscoItem &);
-        DiscoItem(const DiscoItem &);
-
-        operator AgentItem() const { return toAgentItem(); }
-        AgentItem toAgentItem() const;
-        void fromAgentItem(const AgentItem &);
-
-        QString capsHash(QCryptographicHash::Algorithm algo) const;
-
-        static DiscoItem fromDiscoInfoResult(const QDomElement &x);
-        QDomElement toDiscoInfoResult(QDomDocument *doc) const;
-
-    private:
-        QSharedDataPointer<DiscoItemPrivate> d;
+        }
+        bool operator==(const Identity &other) const;
     };
 
-    bool operator<(const DiscoItem::Identity &a, const DiscoItem::Identity &b);
+    typedef QList<Identity> Identities;
+
+    const Identities &identities() const;
+    void              setIdentities(const Identities &);
+    inline void       setIdentities(const Identity &id) { setIdentities(Identities() << id); }
+
+    const QList<XData> &extensions() const;
+    void                setExtensions(const QList<XData> &extlist);
+    XData               registeredExtension(const QString &ns) const;
+
+    // some useful helper functions
+    static Action  string2action(const QString &s);
+    static QString action2string(const Action a);
+
+    DiscoItem &operator=(const DiscoItem &);
+    DiscoItem(const DiscoItem &);
+
+              operator AgentItem() const { return toAgentItem(); }
+    AgentItem toAgentItem() const;
+    void      fromAgentItem(const AgentItem &);
+
+    QString capsHash(QCryptographicHash::Algorithm algo) const;
+
+    static DiscoItem fromDiscoInfoResult(const QDomElement &x);
+    QDomElement      toDiscoInfoResult(QDomDocument *doc) const;
+
+private:
+    QSharedDataPointer<DiscoItemPrivate> d;
+};
+
+bool operator<(const DiscoItem::Identity &a, const DiscoItem::Identity &b);
 } // namespace XMPP
 
 #endif // XMPP_DISCOITEM

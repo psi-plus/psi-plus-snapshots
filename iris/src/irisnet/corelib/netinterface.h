@@ -29,9 +29,11 @@ class NetInterfacePrivate;
 /**
    \brief Provides information about a network interface
 
-   NetInterface provides information about a particular network interface.  Construct it by passing the interface id of interest (e.g. "eth0") and a NetInterfaceManager parent object.  Interface ids can be obtained from NetInterfaceManager.
+   NetInterface provides information about a particular network interface.  Construct it by passing the interface id of
+interest (e.g. "eth0") and a NetInterfaceManager parent object.  Interface ids can be obtained from NetInterfaceManager.
 
-   To test if a NetInterface is valid, call isValid().  Use name() to return a display-friendly name of the interface.  The addresses() function returns a list of IP addresses for this interface.
+   To test if a NetInterface is valid, call isValid().  Use name() to return a display-friendly name of the interface.
+The addresses() function returns a list of IP addresses for this interface.
 
    Here's an example of how to print the IP addresses of eth0:
    \code
@@ -48,14 +50,15 @@ if(iface.isValid())
 
    \sa NetInterfaceManager
 */
-class IRISNET_EXPORT NetInterface : public QObject
-{
+class IRISNET_EXPORT NetInterface : public QObject {
     Q_OBJECT
 public:
     /**
        \brief Constructs a new interface object with the given \a id and \a manager
 
-       If \a id is not a valid interface id, then the object will not be valid (isValid() will return false).  Normally it is not necessary to check for validity, since interface ids obtained from NetInterfaceManager are guaranteed to be valid until the event loop resumes.
+       If \a id is not a valid interface id, then the object will not be valid (isValid() will return false).  Normally
+       it is not necessary to check for validity, since interface ids obtained from NetInterfaceManager are guaranteed
+       to be valid until the event loop resumes.
 
        \sa isValid
     */
@@ -92,7 +95,8 @@ public:
     /**
        \brief Returns the addresses of this interface
 
-       There will always be at least one address.  In some cases there might be multiple, such as on Unix where it is possible for the same interface to have both an IPv4 and an IPv6 address.
+       There will always be at least one address.  In some cases there might be multiple, such as on Unix where it is
+       possible for the same interface to have both an IPv4 and an IPv6 address.
     */
     QList<QHostAddress> addresses() const;
 
@@ -100,7 +104,8 @@ signals:
     /**
        \brief Notifies when the interface becomes unavailable
 
-       Once this signal is emitted, the NetInterface object becomes invalid and is no longer very useful.  A new NetInterface object must be created if a valid object with current information is desired.
+       Once this signal is emitted, the NetInterface object becomes invalid and is no longer very useful.  A new
+       NetInterface object must be created if a valid object with current information is desired.
 
        \note If the interface information changes, the interface is considered to have become unavailable.
 
@@ -122,7 +127,8 @@ private:
 
    An interface is considered available if it exists, is "Up", has at least one IP address, and is non-Loopback.
 
-   The interfaces() function returns a list of available interface ids.  These ids can be used with NetInterface to get information about the interfaces.  For example, here is how you could print the names of the available interfaces:
+   The interfaces() function returns a list of available interface ids.  These ids can be used with NetInterface to get
+information about the interfaces.  For example, here is how you could print the names of the available interfaces:
 
    \code
 NetInterfaceManager netman;
@@ -134,14 +140,16 @@ for(int n = 0; n < id_list.count(); ++n)
 }
    \endcode
 
-   When a new network interface is available, the interfaceAvailable() signal will be emitted.  Note that interface unavailability is not notified by NetInterfaceManager.  Instead, use NetInterface to monitor a specific network interface for unavailability.
+   When a new network interface is available, the interfaceAvailable() signal will be emitted.  Note that interface
+unavailability is not notified by NetInterfaceManager.  Instead, use NetInterface to monitor a specific network
+interface for unavailability.
 
-   Interface ids obtained through NetInterfaceManager are guaranteed to be valid until the event loop resumes, or until the next call to interfaces() or interfaceForAddress().
+   Interface ids obtained through NetInterfaceManager are guaranteed to be valid until the event loop resumes, or until
+the next call to interfaces() or interfaceForAddress().
 
    \sa NetInterface
 */
-class IRISNET_EXPORT NetInterfaceManager : public QObject
-{
+class IRISNET_EXPORT NetInterfaceManager : public QObject {
     Q_OBJECT
 public:
     /**
@@ -165,7 +173,8 @@ public:
     /**
        \brief Looks up an interface id by IP address
 
-       This function looks for an interface that has the address \a a.  If there is no such interface, a null string is returned.
+       This function looks for an interface that has the address \a a.  If there is no such interface, a null string is
+returned.
 
        This is useful for determing the network interface associated with an outgoing QTcpSocket:
 
@@ -193,7 +202,7 @@ private:
     friend class NetInterfacePrivate;
 
     void *reg(const QString &id, NetInterface *i);
-    void unreg(NetInterface *i);
+    void  unreg(NetInterface *i);
 };
 } // namespace XMPP
 

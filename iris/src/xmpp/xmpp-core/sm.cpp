@@ -36,27 +36,23 @@ SMState::SMState()
 
 void SMState::resetCounters()
 {
-    received_count = 0;
+    received_count      = 0;
     server_last_handled = 0;
     send_queue.clear();
 }
 
-StreamManagement::StreamManagement(QObject *parent)
-    : QObject(parent)
-    , sm_started(false)
-    , sm_resumed(false)
-    , sm_stanzas_notify(0)
-    , sm_resend_pos(0)
+StreamManagement::StreamManagement(QObject *parent) :
+    QObject(parent), sm_started(false), sm_resumed(false), sm_stanzas_notify(0), sm_resend_pos(0)
 {
 }
 
 void StreamManagement::reset()
 {
-    sm_started = false;
-    sm_resumed = false;
-    sm_stanzas_notify = 0;
-    sm_resend_pos = 0;
-    sm_timeout_data.elapsed_timer = QElapsedTimer();
+    sm_started                     = false;
+    sm_resumed                     = false;
+    sm_stanzas_notify              = 0;
+    sm_resend_pos                  = 0;
+    sm_timeout_data.elapsed_timer  = QElapsedTimer();
     sm_timeout_data.waiting_answer = false;
 }
 
@@ -65,13 +61,13 @@ void StreamManagement::start(const QString &resumption_id)
     reset();
     state_.resetCounters();
     state_.resumption_id = resumption_id;
-    sm_started = true;
+    sm_started           = true;
     sm_timeout_data.elapsed_timer.start();
 }
 
 void StreamManagement::resume(quint32 last_handled)
 {
-    sm_resumed = true;
+    sm_resumed    = true;
     sm_resend_pos = 0;
     processAcknowledgement(last_handled);
     sm_timeout_data.waiting_answer = false;
@@ -90,7 +86,7 @@ int StreamManagement::lastAckElapsed() const
         return 0;
 
     int msecs = sm_timeout_data.elapsed_timer.elapsed();
-    int secs = msecs / 1000;
+    int secs  = msecs / 1000;
     if (msecs % 1000 != 0)
         ++secs;
     return secs;
@@ -98,7 +94,7 @@ int StreamManagement::lastAckElapsed() const
 
 int StreamManagement::takeAckedCount()
 {
-    int cnt = sm_stanzas_notify;
+    int cnt           = sm_stanzas_notify;
     sm_stanzas_notify = 0;
     return cnt;
 }
@@ -147,7 +143,8 @@ void StreamManagement::processAcknowledgement(quint32 last_handled)
     if (f) {
         qDebug() << "Stream Management: [INF] Send queue length is changed: " << state_.send_queue.length();
         if (state_.send_queue.isEmpty() && last_handled != state_.server_last_handled)
-            qDebug() << "Stream Management: [ERR] Send queue is empty but last_handled != server_last_handled " << last_handled << state_.server_last_handled;
+            qDebug() << "Stream Management: [ERR] Send queue is empty but last_handled != server_last_handled "
+                     << last_handled << state_.server_last_handled;
     }
 #endif
 }

@@ -23,12 +23,11 @@
 class QDomElement;
 
 namespace XMPP {
-    class EncryptionHandler
-    {
-    public:
-        virtual bool decryptMessageElement(QDomElement &) = 0;
-        virtual bool encryptMessageElement(QDomElement &) = 0;
-    };
+class EncryptionHandler {
+public:
+    virtual bool decryptMessageElement(QDomElement &) = 0;
+    virtual bool encryptMessageElement(QDomElement &) = 0;
+};
 } // namespace XMPP
 
-#endif //PSI_XMPP_ENCRYPTIONHANDLER_H
+#endif // PSI_XMPP_ENCRYPTIONHANDLER_H

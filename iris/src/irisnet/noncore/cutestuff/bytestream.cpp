@@ -55,41 +55,33 @@
 //! Also available are the static convenience functions ByteStream::appendArray()
 //! and ByteStream::takeArray(), which make dealing with byte queues very easy.
 
-class ByteStream::Private
-{
+class ByteStream::Private {
 public:
     Private() {}
 
     QByteArray readBuf, writeBuf;
-    int errorCode;
-    QString errorText;
+    int        errorCode;
+    QString    errorText;
 };
 
 //!
 //! Constructs a ByteStream object with parent \a parent.
-ByteStream::ByteStream(QObject *parent)
-:QIODevice(parent)
-{
-    d = new Private;
-}
+ByteStream::ByteStream(QObject *parent) : QIODevice(parent) { d = new Private; }
 
 //!
 //! Destroys the object and frees allocated resources.
-ByteStream::~ByteStream()
-{
-    delete d;
-}
+ByteStream::~ByteStream() { delete d; }
 
 //!
 //! Writes array \a a to the stream.
 qint64 ByteStream::writeData(const char *data, qint64 maxSize)
 {
-    if(!isOpen())
-        return - 1;
+    if (!isOpen())
+        return -1;
 
-    bool doWrite = bytesToWrite() == 0 ? true: false;
+    bool doWrite = bytesToWrite() == 0 ? true : false;
     d->writeBuf.append(data, maxSize);
-    if(doWrite)
+    if (doWrite)
         tryWrite();
     return maxSize;
 }
@@ -99,7 +91,7 @@ qint64 ByteStream::writeData(const char *data, qint64 maxSize)
 //! \a read will return all available data.
 qint64 ByteStream::readData(char *data, qint64 maxSize)
 {
-    maxSize = maxSize > d->readBuf.size()? d->readBuf.size() : maxSize;
+    maxSize = maxSize > d->readBuf.size() ? d->readBuf.size() : maxSize;
     memcpy(data, d->readBuf.constData(), maxSize);
     d->readBuf.remove(0, maxSize);
     return maxSize;
@@ -107,85 +99,52 @@ qint64 ByteStream::readData(char *data, qint64 maxSize)
 
 //!
 //! Returns the number of bytes available for reading.
-qint64 ByteStream::bytesAvailable() const
-{
-    return QIODevice::bytesAvailable() + d->readBuf.size();
-}
+qint64 ByteStream::bytesAvailable() const { return QIODevice::bytesAvailable() + d->readBuf.size(); }
 
 //!
 //! Returns the number of bytes that are waiting to be written.
-qint64 ByteStream::bytesToWrite() const
-{
-    return d->writeBuf.size();
-}
+qint64 ByteStream::bytesToWrite() const { return d->writeBuf.size(); }
 
 //!
 //! Clears the read buffer.
-void ByteStream::clearReadBuffer()
-{
-    d->readBuf.resize(0);
-}
+void ByteStream::clearReadBuffer() { d->readBuf.resize(0); }
 
 //!
 //! Clears the write buffer.
-void ByteStream::clearWriteBuffer()
-{
-    d->writeBuf.resize(0);
-}
+void ByteStream::clearWriteBuffer() { d->writeBuf.resize(0); }
 
 //!
 //! Appends \a block to the end of the read buffer.
-void ByteStream::appendRead(const QByteArray &block)
-{
-    d->readBuf += block;
-}
+void ByteStream::appendRead(const QByteArray &block) { d->readBuf += block; }
 
 //!
 //! Appends \a block to the end of the write buffer.
-void ByteStream::appendWrite(const QByteArray &block)
-{
-    d->writeBuf += block;
-}
+void ByteStream::appendWrite(const QByteArray &block) { d->writeBuf += block; }
 
 //!
 //! Returns \a size bytes from the start of the read buffer.
 //! If \a size is 0, then all available data will be returned.
 //! If \a del is TRUE, then the bytes are also removed.
-QByteArray ByteStream::takeRead(int size, bool del)
-{
-    return takeArray(d->readBuf, size, del);
-}
+QByteArray ByteStream::takeRead(int size, bool del) { return takeArray(d->readBuf, size, del); }
 
 //!
 //! Returns \a size bytes from the start of the write buffer.
 //! If \a size is 0, then all available data will be returned.
 //! If \a del is TRUE, then the bytes are also removed.
-QByteArray ByteStream::takeWrite(int size, bool del)
-{
-    return takeArray(d->writeBuf, size, del);
-}
+QByteArray ByteStream::takeWrite(int size, bool del) { return takeArray(d->writeBuf, size, del); }
 
 //!
 //! Returns a reference to the read buffer.
-QByteArray & ByteStream::readBuf()
-{
-    return d->readBuf;
-}
+QByteArray &ByteStream::readBuf() { return d->readBuf; }
 
 //!
 //! Returns a reference to the write buffer.
-QByteArray & ByteStream::writeBuf()
-{
-    return d->writeBuf;
-}
+QByteArray &ByteStream::writeBuf() { return d->writeBuf; }
 
 //!
 //! Attempts to try and write some bytes from the write buffer, and returns the number
 //! successfully written or -1 on error.  The default implementation returns -1.
-int ByteStream::tryWrite()
-{
-    return -1;
-}
+int ByteStream::tryWrite() { return -1; }
 
 //!
 //! Returns \a size bytes from the start of the array pointed to by \a from.
@@ -194,12 +153,11 @@ int ByteStream::tryWrite()
 QByteArray ByteStream::takeArray(QByteArray &from, int size, bool del)
 {
     QByteArray result;
-    if(size == 0) {
+    if (size == 0) {
         result = from;
-        if(del)
+        if (del)
             from.resize(0);
-    }
-    else {
+    } else {
         result = from.left(size);
         if (del) {
             from.remove(0, size);
@@ -210,17 +168,11 @@ QByteArray ByteStream::takeArray(QByteArray &from, int size, bool del)
 
 //!
 //! Returns last error code.
-int ByteStream::errorCode() const
-{
-    return d->errorCode;
-}
+int ByteStream::errorCode() const { return d->errorCode; }
 
 //!
 //! Returns last error string corresponding to last error code.
-QString &ByteStream::errorText() const
-{
-    return d->errorText;
-}
+QString &ByteStream::errorText() const { return d->errorText; }
 
 //!
 //! Sets last error with \a code and \a text and emit it
@@ -233,11 +185,11 @@ void ByteStream::setError(int code, const QString &text)
     }
 }
 
-    void connectionClosed();
-    void delayedCloseFinished();
-    void readyRead();
-    void bytesWritten(qint64);
-    void error(int);
+void connectionClosed();
+void delayedCloseFinished();
+void readyRead();
+void bytesWritten(qint64);
+void error(int);
 
 //! \fn void ByteStream::connectionClosed()
 //! This signal is emitted when the remote end of the stream closes.

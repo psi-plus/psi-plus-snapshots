@@ -25,21 +25,20 @@
 class QUrl;
 
 // CS_NAMESPACE_BEGIN
-class HttpPoll : public ByteStream
-{
+class HttpPoll : public ByteStream {
     Q_OBJECT
 public:
     enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
-    HttpPoll(QObject *parent=nullptr);
+    HttpPoll(QObject *parent = nullptr);
     ~HttpPoll();
 
-    virtual QAbstractSocket* abstractSocket() const;
+    virtual QAbstractSocket *abstractSocket() const;
 
-    void setAuth(const QString &user, const QString &pass="");
+    void setAuth(const QString &user, const QString &pass = "");
     void connectToUrl(const QUrl &url);
     void connectToHost(const QString &proxyHost, int proxyPort, const QUrl &url);
 
-    int pollInterval() const;
+    int  pollInterval() const;
     void setPollInterval(int seconds);
 
     // from ByteStream
@@ -63,29 +62,28 @@ private:
     class Private;
     Private *d;
 
-    void resetConnection(bool clear=false);
-    QByteArray makePacket(const QString &ident, const QString &key, const QString &newkey, const QByteArray &block);
-    void resetKey();
-    const QString & getKey(bool *);
+    void           resetConnection(bool clear = false);
+    QByteArray     makePacket(const QString &ident, const QString &key, const QString &newkey, const QByteArray &block);
+    void           resetKey();
+    const QString &getKey(bool *);
 };
 
-class HttpProxyPost : public QObject
-{
+class HttpProxyPost : public QObject {
     Q_OBJECT
 public:
     enum Error { ErrConnectionRefused, ErrHostNotFound, ErrSocket, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
-    HttpProxyPost(QObject *parent=nullptr);
+    HttpProxyPost(QObject *parent = nullptr);
     ~HttpProxyPost();
 
-    QAbstractSocket* abstractSocket() const;
+    QAbstractSocket *abstractSocket() const;
 
     void setUseSsl(bool state);
-    void setAuth(const QString &user, const QString &pass="");
+    void setAuth(const QString &user, const QString &pass = "");
     bool isActive() const;
-    void post(const QString &proxyHost, int proxyPort, const QUrl &url, const QByteArray &data, bool asProxy=true);
+    void post(const QString &proxyHost, int proxyPort, const QUrl &url, const QByteArray &data, bool asProxy = true);
     void stop();
     QByteArray body() const;
-    QString getHeader(const QString &) const;
+    QString    getHeader(const QString &) const;
 
 signals:
     void result();
@@ -104,24 +102,23 @@ private:
     class Private;
     Private *d;
 
-    void resetConnection(bool clear=false);
+    void resetConnection(bool clear = false);
     void processData(const QByteArray &block);
 };
 
-class HttpProxyGetStream : public QObject
-{
+class HttpProxyGetStream : public QObject {
     Q_OBJECT
 public:
     enum Error { ErrConnectionRefused, ErrHostNotFound, ErrSocket, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
-    HttpProxyGetStream(QObject *parent=nullptr);
+    HttpProxyGetStream(QObject *parent = nullptr);
     ~HttpProxyGetStream();
 
-    void setAuth(const QString &user, const QString &pass="");
-    bool isActive() const;
-    void get(const QString &proxyHost, int proxyPort, const QString &url, bool ssl=false, bool asProxy=false);
-    void stop();
+    void    setAuth(const QString &user, const QString &pass = "");
+    bool    isActive() const;
+    void    get(const QString &proxyHost, int proxyPort, const QString &url, bool ssl = false, bool asProxy = false);
+    void    stop();
     QString getHeader(const QString &) const;
-    int length() const; // -1 for unknown
+    int     length() const; // -1 for unknown
 
 signals:
     void handshaken();
@@ -143,7 +140,7 @@ private:
     class Private;
     Private *d;
 
-    void resetConnection(bool clear=false);
+    void resetConnection(bool clear = false);
     void processData(const QByteArray &block);
 };
 

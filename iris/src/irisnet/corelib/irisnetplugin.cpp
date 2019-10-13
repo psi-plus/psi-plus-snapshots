@@ -22,48 +22,24 @@ namespace XMPP {
 //----------------------------------------------------------------------------
 // IrisNetProvider
 //----------------------------------------------------------------------------
-NetInterfaceProvider *IrisNetProvider::createNetInterfaceProvider()
-{
-    return nullptr;
-}
+NetInterfaceProvider *IrisNetProvider::createNetInterfaceProvider() { return nullptr; }
 
-NetGatewayProvider *IrisNetProvider::createNetGatewayProvider()
-{
-    return nullptr;
-}
+NetGatewayProvider *IrisNetProvider::createNetGatewayProvider() { return nullptr; }
 
-NetAvailabilityProvider *IrisNetProvider::createNetAvailabilityProvider()
-{
-    return nullptr;
-}
+NetAvailabilityProvider *IrisNetProvider::createNetAvailabilityProvider() { return nullptr; }
 
-NameProvider *IrisNetProvider::createNameProviderInternet()
-{
-    return nullptr;
-}
+NameProvider *IrisNetProvider::createNameProviderInternet() { return nullptr; }
 
-NameProvider *IrisNetProvider::createNameProviderLocal()
-{
-    return nullptr;
-}
+NameProvider *IrisNetProvider::createNameProviderLocal() { return nullptr; }
 
-ServiceProvider *IrisNetProvider::createServiceProvider()
-{
-    return nullptr;
-}
+ServiceProvider *IrisNetProvider::createServiceProvider() { return nullptr; }
 
 //----------------------------------------------------------------------------
 // NameProvider
 //----------------------------------------------------------------------------
-bool NameProvider::supportsSingle() const
-{
-    return false;
-}
+bool NameProvider::supportsSingle() const { return false; }
 
-bool NameProvider::supportsLongLived() const
-{
-    return false;
-}
+bool NameProvider::supportsLongLived() const { return false; }
 
 bool NameProvider::supportsRecordType(int type) const
 {

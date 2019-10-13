@@ -24,51 +24,35 @@
 #include <QSharedDataPointer>
 
 namespace XMPP {
-class StunMessage
-{
+class StunMessage {
 public:
-    enum Class
-    {
-        Request,
-        SuccessResponse,
-        ErrorResponse,
-        Indication
-    };
+    enum Class { Request, SuccessResponse, ErrorResponse, Indication };
 
-    enum ValidationFlags
-    {
-        Fingerprint      = 0x01,
+    enum ValidationFlags {
+        Fingerprint = 0x01,
 
         // you must have the hmac(sha1) algorithm in QCA to use
         MessageIntegrity = 0x02
     };
 
-    enum ConvertResult
-    {
-        ConvertGood,
-        ErrorFormat,
-        ErrorFingerprint,
-        ErrorMessageIntegrity,
-        ErrorConvertUnknown = 64
-    };
+    enum ConvertResult { ConvertGood, ErrorFormat, ErrorFingerprint, ErrorMessageIntegrity, ErrorConvertUnknown = 64 };
 
-    class Attribute
-    {
+    class Attribute {
     public:
-        quint16 type;
+        quint16    type;
         QByteArray value;
     };
 
     StunMessage();
     StunMessage(const StunMessage &from);
     ~StunMessage();
-    StunMessage & operator=(const StunMessage &from);
+    StunMessage &operator=(const StunMessage &from);
 
-    bool isNull() const;
-    Class mclass() const;
-    quint16 method() const;
-    const quint8 *magic() const; // 4 bytes
-    const quint8 *id() const; // 12 bytes
+    bool             isNull() const;
+    Class            mclass() const;
+    quint16          method() const;
+    const quint8 *   magic() const; // 4 bytes
+    const quint8 *   id() const;    // 12 bytes
     QList<Attribute> attributes() const;
 
     // returns the first instance or null
@@ -77,11 +61,12 @@ public:
     void setClass(Class mclass);
     void setMethod(quint16 method);
     void setMagic(const quint8 *magic); // 4 bytes
-    void setId(const quint8 *id); // 12 bytes
+    void setId(const quint8 *id);       // 12 bytes
     void setAttributes(const QList<Attribute> &attribs);
 
-    QByteArray toBinary(int validationFlags = 0, const QByteArray &key = QByteArray()) const;
-    static StunMessage fromBinary(const QByteArray &a, ConvertResult *result = nullptr, int validationFlags = 0, const QByteArray &key = QByteArray());
+    QByteArray         toBinary(int validationFlags = 0, const QByteArray &key = QByteArray()) const;
+    static StunMessage fromBinary(const QByteArray &a, ConvertResult *result = nullptr, int validationFlags = 0,
+                                  const QByteArray &key = QByteArray());
 
     // minimal 3-field check
     static bool isProbablyStun(const QByteArray &a);

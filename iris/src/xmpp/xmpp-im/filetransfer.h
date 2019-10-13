@@ -23,167 +23,162 @@
 #include "im.h"
 
 namespace XMPP {
-    class BSConnection;
-    class BytestreamManager;
-    struct FTRequest;
+class BSConnection;
+class BytestreamManager;
+struct FTRequest;
 
-    /*class AbstractFileTransfer
-    {
-        public:
-            // Receive
-            virtual Jid peer() const = 0;
-            virtual QString fileName() const = 0;
-            virtual qlonglong fileSize() const = 0;
-            virtual QString description() const { return ""; }
-            virtual bool rangeSupported() const { return false; }
-            virtual void accept(qlonglong offset=0, qlonglong length=0) = 0;
-    };*/
-
-    class FileTransfer : public QObject /*, public AbstractFileTransfer */
-    {
-        Q_OBJECT
+/*class AbstractFileTransfer
+{
     public:
-        enum { ErrReject, ErrNeg, ErrConnect, ErrProxy, ErrStream, Err400 };
-        enum { Idle, Requesting, Connecting, WaitingForAccept, Active };
-        ~FileTransfer();
+        // Receive
+        virtual Jid peer() const = 0;
+        virtual QString fileName() const = 0;
+        virtual qlonglong fileSize() const = 0;
+        virtual QString description() const { return ""; }
+        virtual bool rangeSupported() const { return false; }
+        virtual void accept(qlonglong offset=0, qlonglong length=0) = 0;
+};*/
 
-        FileTransfer *copy() const;
+class FileTransfer : public QObject /*, public AbstractFileTransfer */
+{
+    Q_OBJECT
+public:
+    enum { ErrReject, ErrNeg, ErrConnect, ErrProxy, ErrStream, Err400 };
+    enum { Idle, Requesting, Connecting, WaitingForAccept, Active };
+    ~FileTransfer();
 
-        void setProxy(const Jid &proxy);
+    FileTransfer *copy() const;
 
-        // send
-        void sendFile(const Jid &to, const QString &fname, qlonglong size, const QString &desc, Thumbnail &thumb);
-        qlonglong offset() const;
-        qlonglong length() const;
-        int dataSizeNeeded() const;
-        void writeFileData(const QByteArray &a);
-        const Thumbnail &thumbnail() const;
+    void setProxy(const Jid &proxy);
 
-        // receive
-        Jid peer() const;
-        QString fileName() const;
-        qlonglong fileSize() const;
-        QString description() const;
-        bool rangeSupported() const;
-        void accept(qlonglong offset=0, qlonglong length=0);
+    // send
+    void      sendFile(const Jid &to, const QString &fname, qlonglong size, const QString &desc, Thumbnail &thumb);
+    qlonglong offset() const;
+    qlonglong length() const;
+    int       dataSizeNeeded() const;
+    void      writeFileData(const QByteArray &a);
+    const Thumbnail &thumbnail() const;
 
-        // both
-        void close(); // reject, or stop sending/receiving
-        BSConnection *bsConnection() const; // active link
+    // receive
+    Jid       peer() const;
+    QString   fileName() const;
+    qlonglong fileSize() const;
+    QString   description() const;
+    bool      rangeSupported() const;
+    void      accept(qlonglong offset = 0, qlonglong length = 0);
 
-    signals:
-        void accepted(); // indicates BSConnection has started
-        void connected();
-        void readyRead(const QByteArray &a);
-        void bytesWritten(qint64);
-        void error(int);
+    // both
+    void          close();              // reject, or stop sending/receiving
+    BSConnection *bsConnection() const; // active link
 
-    private slots:
-        void ft_finished();
-        void stream_connected();
-        void stream_connectionClosed();
-        void stream_readyRead();
-        void stream_bytesWritten(qint64);
-        void stream_error(int);
-        void doAccept();
-        void reset();
+signals:
+    void accepted(); // indicates BSConnection has started
+    void connected();
+    void readyRead(const QByteArray &a);
+    void bytesWritten(qint64);
+    void error(int);
 
-    private:
-        class Private;
-        Private *d;
+private slots:
+    void ft_finished();
+    void stream_connected();
+    void stream_connectionClosed();
+    void stream_readyRead();
+    void stream_bytesWritten(qint64);
+    void stream_error(int);
+    void doAccept();
+    void reset();
 
-        friend class FileTransferManager;
-        FileTransfer(FileTransferManager *, QObject *parent=nullptr);
-        FileTransfer(const FileTransfer& other);
-        void man_waitForAccept(const FTRequest &req, const QString &streamType);
-        void takeConnection(BSConnection *c);
-    };
+private:
+    class Private;
+    Private *d;
 
-    class FileTransferManager : public QObject
-    {
-        Q_OBJECT
-    public:
-        FileTransferManager(Client *);
-        ~FileTransferManager();
+    friend class FileTransferManager;
+    FileTransfer(FileTransferManager *, QObject *parent = nullptr);
+    FileTransfer(const FileTransfer &other);
+    void man_waitForAccept(const FTRequest &req, const QString &streamType);
+    void takeConnection(BSConnection *c);
+};
 
-        bool isActive(const FileTransfer *ft) const;
-        void setDisabled(const QString &ns, bool state = true);
+class FileTransferManager : public QObject {
+    Q_OBJECT
+public:
+    FileTransferManager(Client *);
+    ~FileTransferManager();
 
-        Client *client() const;
-        FileTransfer *createTransfer();
-        FileTransfer *takeIncoming();
+    bool isActive(const FileTransfer *ft) const;
+    void setDisabled(const QString &ns, bool state = true);
 
-    signals:
-        void incomingReady();
+    Client *      client() const;
+    FileTransfer *createTransfer();
+    FileTransfer *takeIncoming();
 
-    private slots:
-        void pft_incoming(const FTRequest &req);
+signals:
+    void incomingReady();
 
-    private:
-        class Private;
-        Private *d;
+private slots:
+    void pft_incoming(const FTRequest &req);
 
-        friend class Client;
-        void stream_incomingReady(BSConnection *);
+private:
+    class Private;
+    Private *d;
 
-        friend class FileTransfer;
-        BytestreamManager* streamManager(const QString &ns) const;
-        QStringList streamPriority() const;
-        QString link(FileTransfer *);
-        void con_accept(FileTransfer *);
-        void con_reject(FileTransfer *);
-        void unlink(FileTransfer *);
-    };
+    friend class Client;
+    void stream_incomingReady(BSConnection *);
 
-    class JT_FT : public Task
-    {
-        Q_OBJECT
-    public:
-        JT_FT(Task *parent);
-        ~JT_FT();
+    friend class FileTransfer;
+    BytestreamManager *streamManager(const QString &ns) const;
+    QStringList        streamPriority() const;
+    QString            link(FileTransfer *);
+    void               con_accept(FileTransfer *);
+    void               con_reject(FileTransfer *);
+    void               unlink(FileTransfer *);
+};
 
-        void request(const Jid &to, const QString &id, const QString &fname,
-                     qlonglong size, const QString &desc,
-                     const QStringList &streamTypes, Thumbnail &thumb);
-        qlonglong rangeOffset() const;
-        qlonglong rangeLength() const;
-        QString streamType() const;
+class JT_FT : public Task {
+    Q_OBJECT
+public:
+    JT_FT(Task *parent);
+    ~JT_FT();
 
-        void onGo();
-        bool take(const QDomElement &);
+    void      request(const Jid &to, const QString &id, const QString &fname, qlonglong size, const QString &desc,
+                      const QStringList &streamTypes, Thumbnail &thumb);
+    qlonglong rangeOffset() const;
+    qlonglong rangeLength() const;
+    QString   streamType() const;
 
-    private:
-        class Private;
-        Private *d;
-    };
+    void onGo();
+    bool take(const QDomElement &);
 
-    struct FTRequest
-    {
-        Jid from;
-        QString iq_id, id;
-        QString fname;
-        qlonglong size;
-        QString desc;
-        bool rangeSupported;
-        QStringList streamTypes;
-        Thumbnail thumbnail;
-    };
-    class JT_PushFT : public Task
-    {
-        Q_OBJECT
-    public:
-        JT_PushFT(Task *parent);
-        ~JT_PushFT();
+private:
+    class Private;
+    Private *d;
+};
 
-        void respondSuccess(const Jid &to, const QString &id, qlonglong rangeOffset, qlonglong rangeLength, const QString &streamType);
-        void respondError(const Jid &to, const QString &id,
-                          Stanza::Error::ErrorCond cond, const QString &str);
+struct FTRequest {
+    Jid         from;
+    QString     iq_id, id;
+    QString     fname;
+    qlonglong   size;
+    QString     desc;
+    bool        rangeSupported;
+    QStringList streamTypes;
+    Thumbnail   thumbnail;
+};
+class JT_PushFT : public Task {
+    Q_OBJECT
+public:
+    JT_PushFT(Task *parent);
+    ~JT_PushFT();
 
-        bool take(const QDomElement &);
+    void respondSuccess(const Jid &to, const QString &id, qlonglong rangeOffset, qlonglong rangeLength,
+                        const QString &streamType);
+    void respondError(const Jid &to, const QString &id, Stanza::Error::ErrorCond cond, const QString &str);
 
-    signals:
-        void incoming(const FTRequest &req);
-    };
+    bool take(const QDomElement &);
+
+signals:
+    void incoming(const FTRequest &req);
+};
 } // namespace XMPP
 
 #endif // XMPP_FILETRANSFER_H

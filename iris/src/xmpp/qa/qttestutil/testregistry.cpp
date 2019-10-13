@@ -21,23 +21,20 @@
 #include <QtTest/QtTest>
 
 namespace QtTestUtil {
-TestRegistry* TestRegistry::getInstance()
+TestRegistry *TestRegistry::getInstance()
 {
     static TestRegistry registry;
     return &registry;
 }
 
-void TestRegistry::registerTest(QObject* test)
-{
-    tests_ += test;
-}
+void TestRegistry::registerTest(QObject *test) { tests_ += test; }
 
-int TestRegistry::runTests(int argc, char* argv[])
+int TestRegistry::runTests(int argc, char *argv[])
 {
     int result = 0;
-    foreach(QObject* test, tests_) {
+    foreach (QObject *test, tests_) {
         result |= QTest::qExec(test, argc, argv);
     }
     return result;
 }
-} // namespace QtTestUtil 
+} // namespace QtTestUtil

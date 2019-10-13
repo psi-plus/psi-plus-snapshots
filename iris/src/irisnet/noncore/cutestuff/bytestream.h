@@ -28,24 +28,23 @@ class QAbstractSocket;
 
 // CS_NAMESPACE_BEGIN
 // CS_EXPORT_BEGIN
-class ByteStream : public QIODevice
-{
+class ByteStream : public QIODevice {
     Q_OBJECT
 public:
     enum Error { ErrOk, ErrRead, ErrWrite, ErrCustom = 10 };
-    ByteStream(QObject *parent=nullptr);
-    ~ByteStream()=0;
+    ByteStream(QObject *parent = nullptr);
+    ~ByteStream() = 0;
 
-    bool isSequential() const { return true; }
+    bool   isSequential() const { return true; }
     qint64 bytesAvailable() const;
     qint64 bytesToWrite() const;
 
-    static QByteArray takeArray(QByteArray &from, int size=0, bool del=true);
+    static QByteArray takeArray(QByteArray &from, int size = 0, bool del = true);
 
-    int errorCode() const;
+    int      errorCode() const;
     QString &errorText() const;
 
-    virtual QAbstractSocket* abstractSocket() const { return nullptr; }
+    virtual QAbstractSocket *abstractSocket() const { return nullptr; }
 
 signals:
     void connectionClosed();
@@ -56,22 +55,22 @@ protected:
     qint64 writeData(const char *data, qint64 maxSize);
     qint64 readData(char *data, qint64 maxSize);
 
-    void setError(int code = ErrOk, const QString &text = QString());
-    void clearReadBuffer();
-    void clearWriteBuffer();
-    void appendRead(const QByteArray &);
-    void appendWrite(const QByteArray &);
-    QByteArray takeRead(int size=0, bool del=true);
-    QByteArray takeWrite(int size=0, bool del=true);
-    QByteArray & readBuf();
-    QByteArray & writeBuf();
+    void        setError(int code = ErrOk, const QString &text = QString());
+    void        clearReadBuffer();
+    void        clearWriteBuffer();
+    void        appendRead(const QByteArray &);
+    void        appendWrite(const QByteArray &);
+    QByteArray  takeRead(int size = 0, bool del = true);
+    QByteArray  takeWrite(int size = 0, bool del = true);
+    QByteArray &readBuf();
+    QByteArray &writeBuf();
     virtual int tryWrite();
 
 private:
-//! \if _hide_doc_
+    //! \if _hide_doc_
     class Private;
     Private *d;
-//! \endif
+    //! \endif
 };
 // CS_EXPORT_END
 // CS_NAMESPACE_END

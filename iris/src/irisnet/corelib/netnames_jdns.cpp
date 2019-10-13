@@ -24,7 +24,7 @@
 //#define JDNS_DEBUG
 
 Q_DECLARE_METATYPE(XMPP::NameRecord)
-//Q_DECLARE_METATYPE(XMPP::NameResolver::Error)
+// Q_DECLARE_METATYPE(XMPP::NameResolver::Error)
 Q_DECLARE_METATYPE(XMPP::ServiceBrowser::Error)
 Q_DECLARE_METATYPE(XMPP::ServiceResolver::Error)
 Q_DECLARE_METATYPE(XMPP::ServiceLocalPublisher::Error)
@@ -33,20 +33,39 @@ namespace XMPP {
 static NameRecord importJDNSRecord(const QJDns::Record &in)
 {
     NameRecord out;
-    switch(in.type)
-    {
-        case QJDns::A:     out.setAddress(in.address); break;
-        case QJDns::Aaaa:  out.setAddress(in.address); break;
-        case QJDns::Mx:    out.setMx(in.name, in.priority); break;
-        case QJDns::Srv:   out.setSrv(in.name, in.port, in.priority, in.weight); break;
-        case QJDns::Cname: out.setCname(in.name); break;
-        case QJDns::Ptr:   out.setPtr(in.name); break;
-        case QJDns::Txt:   out.setTxt(in.texts); break;
-        case QJDns::Hinfo: out.setHinfo(in.cpu, in.os); break;
-        case QJDns::Ns:    out.setNs(in.name); break;
-        case 10:           out.setNull(in.rdata); break;
-        default:
-            return out;
+    switch (in.type) {
+    case QJDns::A:
+        out.setAddress(in.address);
+        break;
+    case QJDns::Aaaa:
+        out.setAddress(in.address);
+        break;
+    case QJDns::Mx:
+        out.setMx(in.name, in.priority);
+        break;
+    case QJDns::Srv:
+        out.setSrv(in.name, in.port, in.priority, in.weight);
+        break;
+    case QJDns::Cname:
+        out.setCname(in.name);
+        break;
+    case QJDns::Ptr:
+        out.setPtr(in.name);
+        break;
+    case QJDns::Txt:
+        out.setTxt(in.texts);
+        break;
+    case QJDns::Hinfo:
+        out.setHinfo(in.cpu, in.os);
+        break;
+    case QJDns::Ns:
+        out.setNs(in.name);
+        break;
+    case 10:
+        out.setNull(in.rdata);
+        break;
+    default:
+        return out;
     }
     out.setOwner(in.owner);
     out.setTtl(in.ttl);
@@ -56,90 +75,87 @@ static NameRecord importJDNSRecord(const QJDns::Record &in)
 static QJDns::Record exportJDNSRecord(const NameRecord &in)
 {
     QJDns::Record out;
-    switch(in.type())
-    {
-        case NameRecord::A:
-            out.type = QJDns::A;
-            out.haveKnown = true;
-            out.address = in.address();
-            break;
-        case NameRecord::Aaaa:
-            out.type = QJDns::Aaaa;
-            out.haveKnown = true;
-            out.address = in.address();
-            break;
-        case NameRecord::Mx:
-            out.type = QJDns::Mx;
-            out.haveKnown = true;
-            out.name = in.name();
-            out.priority = in.priority();
-            break;
-        case NameRecord::Srv:
-            out.type = QJDns::Srv;
-            out.haveKnown = true;
-            out.name = in.name();
-            out.port = in.port();
-            out.priority = in.priority();
-            out.weight = in.weight();
-            break;
-        case NameRecord::Cname:
-            out.type = QJDns::Cname;
-            out.haveKnown = true;
-            out.name = in.name();
-            break;
-        case NameRecord::Ptr:
-            out.type = QJDns::Ptr;
-            out.haveKnown = true;
-            out.name = in.name();
-            break;
-        case NameRecord::Txt:
-            out.type = QJDns::Txt;
-            out.haveKnown = true;
-            out.texts = in.texts();
-            break;
-        case NameRecord::Hinfo:
-            out.type = QJDns::Hinfo;
-            out.haveKnown = true;
-            out.cpu = in.cpu();
-            out.os = in.os();
-            break;
-        case NameRecord::Ns:
-            out.type = QJDns::Ns;
-            out.haveKnown = true;
-            out.name = in.name();
-            break;
-        case NameRecord::Null:
-            out.type = 10;
-            out.rdata = in.rawData();
-            break;
-        default:
-            return out;
+    switch (in.type()) {
+    case NameRecord::A:
+        out.type      = QJDns::A;
+        out.haveKnown = true;
+        out.address   = in.address();
+        break;
+    case NameRecord::Aaaa:
+        out.type      = QJDns::Aaaa;
+        out.haveKnown = true;
+        out.address   = in.address();
+        break;
+    case NameRecord::Mx:
+        out.type      = QJDns::Mx;
+        out.haveKnown = true;
+        out.name      = in.name();
+        out.priority  = in.priority();
+        break;
+    case NameRecord::Srv:
+        out.type      = QJDns::Srv;
+        out.haveKnown = true;
+        out.name      = in.name();
+        out.port      = in.port();
+        out.priority  = in.priority();
+        out.weight    = in.weight();
+        break;
+    case NameRecord::Cname:
+        out.type      = QJDns::Cname;
+        out.haveKnown = true;
+        out.name      = in.name();
+        break;
+    case NameRecord::Ptr:
+        out.type      = QJDns::Ptr;
+        out.haveKnown = true;
+        out.name      = in.name();
+        break;
+    case NameRecord::Txt:
+        out.type      = QJDns::Txt;
+        out.haveKnown = true;
+        out.texts     = in.texts();
+        break;
+    case NameRecord::Hinfo:
+        out.type      = QJDns::Hinfo;
+        out.haveKnown = true;
+        out.cpu       = in.cpu();
+        out.os        = in.os();
+        break;
+    case NameRecord::Ns:
+        out.type      = QJDns::Ns;
+        out.haveKnown = true;
+        out.name      = in.name();
+        break;
+    case NameRecord::Null:
+        out.type  = 10;
+        out.rdata = in.rawData();
+        break;
+    default:
+        return out;
     }
     out.owner = in.owner();
-    out.ttl = in.ttl();
+    out.ttl   = in.ttl();
     return out;
 }
 
 static bool validServiceType(const QByteArray &in)
 {
     // can't be empty, or start/end with a dot
-    if(in.isEmpty() || in[0] == '.' || in[in.length() - 1] == '.')
+    if (in.isEmpty() || in[0] == '.' || in[in.length() - 1] == '.')
         return false;
 
     // must contain exactly one dot
     int dotcount = 0;
-    for(int n = 0; n < in.length(); ++n)
-    {
-        if(in[n] == '.')
-        {
+    for (int n = 0; n < in.length(); ++n) {
+        if (in[n] == '.') {
             ++dotcount;
 
             // no need to count more than 2
-            if(dotcount >= 2)
+            if (dotcount >= 2)
                 break;
         }
     }
-    if(dotcount != 1)
+    if (dotcount != 1)
         return false;
 
     return true;
@@ -148,11 +164,10 @@ static bool validServiceType(const QByteArray &in)
 static QByteArray escapeDomainPart(const QByteArray &in)
 {
     QByteArray out;
-    for(int n = 0; n < in.length(); ++n)
-    {
-        if(in[n] == '\\')
+    for (int n = 0; n < in.length(); ++n) {
+        if (in[n] == '\\')
             out += "\\\\";
-        else if(in[n] == '.')
+        else if (in[n] == '.')
             out += "\\.";
         else
             out += in[n];
@@ -163,47 +178,38 @@ static QByteArray escapeDomainPart(const QByteArray &in)
 static QByteArray unescapeDomainPart(const QByteArray &in)
 {
     QByteArray out;
-    for(int n = 0; n < in.length(); ++n)
-    {
-        if(in[n] == '\\')
-        {
-            if(n + 1 >= in.length())
+    for (int n = 0; n < in.length(); ++n) {
+        if (in[n] == '\\') {
+            if (n + 1 >= in.length())
                 return QByteArray();
 
             out += in[n + 1];
-        }
-        else
+        } else
             out += in[n];
     }
     return out;
 }
 
-class IdManager
-{
+class IdManager {
 private:
     QSet<int> set;
-    int at;
+    int       at;
 
     inline void bump_at()
     {
-        if(at == 0x7fffffff)
+        if (at == 0x7fffffff)
             at = 0;
         else
             ++at;
     }
 
 public:
-    IdManager() :
-        at(0)
-    {
-    }
+    IdManager() : at(0) {}
 
     int reserveId()
     {
-        while(1)
-        {
-            if(!set.contains(at))
-            {
+        while (1) {
+            if (!set.contains(at)) {
                 int id = at;
                 set.insert(id);
                 bump_at();
@@ -214,10 +220,7 @@ public:
         }
     }
 
-    void releaseId(int id)
-    {
-        set.remove(id);
-    }
+    void releaseId(int id) { set.remove(id); }
 
     void clear()
     {
@@ -229,23 +232,22 @@ public:
 //----------------------------------------------------------------------------
 // JDnsGlobal
 //----------------------------------------------------------------------------
-class JDnsGlobal : public QObject
-{
+class JDnsGlobal : public QObject {
     Q_OBJECT
 
 public:
-    QJDnsSharedDebug db;
-    QJDnsShared *uni_net, *uni_local, *mul;
-    QHostAddress mul_addr4, mul_addr6;
-    NetInterfaceManager netman;
-    QList<NetInterface*> ifaces;
-    QTimer *updateTimer;
+    QJDnsSharedDebug      db;
+    QJDnsShared *         uni_net, *uni_local, *mul;
+    QHostAddress          mul_addr4, mul_addr6;
+    NetInterfaceManager   netman;
+    QList<NetInterface *> ifaces;
+    QTimer *              updateTimer;
 
     JDnsGlobal()
     {
-        uni_net = 0;
+        uni_net   = 0;
         uni_local = 0;
-        mul = 0;
+        mul       = 0;
 
         qRegisterMetaType<NameRecord>();
         qRegisterMetaType<NameResolver::Error>();
@@ -268,12 +270,12 @@ public:
 
         qDeleteAll(ifaces);
 
-        QList<QJDnsShared*> list;
-        if(uni_net)
+        QList<QJDnsShared *> list;
+        if (uni_net)
             list += uni_net;
-        if(uni_local)
+        if (uni_local)
             list += uni_local;
-        if(mul)
+        if (mul)
             list += mul;
 
         // calls shutdown on the list, waits for shutdownFinished, deletes
@@ -285,14 +287,12 @@ public:
 
     QJDnsShared *ensure_uni_net()
     {
-        if(!uni_net)
-        {
+        if (!uni_net) {
             uni_net = new QJDnsShared(QJDnsShared::UnicastInternet, this);
             uni_net->setDebug(&db, "U");
             bool ok4 = uni_net->addInterface(QHostAddress::Any);
             bool ok6 = uni_net->addInterface(QHostAddress::AnyIPv6);
-            if(!ok4 && !ok6)
-            {
+            if (!ok4 && !ok6) {
                 delete uni_net;
                 uni_net = 0;
             }
@@ -302,14 +302,12 @@ public:
 
     QJDnsShared *ensure_uni_local()
     {
-        if(!uni_local)
-        {
+        if (!uni_local) {
             uni_local = new QJDnsShared(QJDnsShared::UnicastLocal, this);
             uni_local->setDebug(&db, "L");
             bool ok4 = uni_local->addInterface(QHostAddress::Any);
             bool ok6 = uni_local->addInterface(QHostAddress::AnyIPv6);
-            if(!ok4 && !ok6)
-            {
+            if (!ok4 && !ok6) {
                 delete uni_local;
                 uni_local = 0;
             }
@@ -319,8 +317,7 @@ public:
 
     QJDnsShared *ensure_mul()
     {
-        if(!mul)
-        {
+        if (!mul) {
             mul = new QJDnsShared(QJDnsShared::Multicast, this);
             mul->setDebug(&db, "M");
 
@@ -330,8 +327,7 @@ public:
             //   fetching should not trigger any calls to
             //   updateMulticastInterfaces().  only future
             //   activity should do that.
-            foreach(const QString &id, netman.interfaces())
-            {
+            foreach (const QString &id, netman.interfaces()) {
                 NetInterface *iface = new NetInterface(id, &netman);
                 connect(iface, SIGNAL(unavailable()), SLOT(iface_unavailable()));
                 ifaces += iface;
@@ -342,15 +338,9 @@ public:
         return mul;
     }
 
-    bool haveMulticast4() const
-    {
-        return !mul_addr4.isNull();
-    }
+    bool haveMulticast4() const { return !mul_addr4.isNull(); }
 
-    bool haveMulticast6() const
-    {
-        return !mul_addr6.isNull();
-    }
+    bool haveMulticast6() const { return !mul_addr6.isNull(); }
 
 signals:
     void interfacesChanged();
@@ -360,7 +350,7 @@ private slots:
     {
         QStringList lines = db.readDebugLines();
 #ifdef JDNS_DEBUG
-        for(int n = 0; n < lines.count(); ++n)
+        for (int n = 0; n < lines.count(); ++n)
             qDebug("jdns: %s\n", qPrintable(lines[n]));
 #else
         Q_UNUSED(lines);
@@ -385,10 +375,7 @@ private slots:
         updateTimer->start(100);
     }
 
-    void doUpdateMulticastInterfaces()
-    {
-        updateMulticastInterfaces(true);
-    }
+    void doUpdateMulticastInterfaces() { updateMulticastInterfaces(true); }
 
 private:
     void updateMulticastInterfaces(bool useSignals)
@@ -406,23 +393,21 @@ private:
         bool have6 = !mul_addr6.isNull();
 
         // did we gain/lose something?
-        if(had4 != have4 || had6 != have6)
-        {
-            if(useSignals)
+        if (had4 != have4 || had6 != have6) {
+            if (useSignals)
                 emit interfacesChanged();
         }
     }
 
     void updateMulticastInterface(QHostAddress *curaddr, const QHostAddress &newaddr)
     {
-        if(!(newaddr == *curaddr)) // QHostAddress doesn't have operator!=
+        if (!(newaddr == *curaddr)) // QHostAddress doesn't have operator!=
         {
-            if(!curaddr->isNull())
+            if (!curaddr->isNull())
                 mul->removeInterface(*curaddr);
             *curaddr = newaddr;
-            if(!curaddr->isNull())
-            {
-                if(!mul->addInterface(*curaddr))
+            if (!curaddr->isNull()) {
+                if (!mul->addInterface(*curaddr))
                     *curaddr = QHostAddress();
             }
         }
@@ -432,81 +417,61 @@ private:
 //----------------------------------------------------------------------------
 // JDnsNameProvider
 //----------------------------------------------------------------------------
-class JDnsNameProvider : public NameProvider
-{
+class JDnsNameProvider : public NameProvider {
     Q_OBJECT
     Q_INTERFACES(XMPP::NameProvider)
 
 public:
     enum Mode { Internet, Local };
 
-    JDnsGlobal *global;
-    Mode mode;
-    IdManager idman;
+    JDnsGlobal *  global;
+    Mode          mode;
+    IdManager     idman;
     ObjectSession sess;
 
-    class Item
-    {
+    class Item {
     public:
-        int id;
+        int                 id;
         QJDnsSharedRequest *req;
-        int type;
-        bool longLived;
-        ObjectSession sess;
-        bool useLocal;
-        bool localResult;
+        int                 type;
+        bool                longLived;
+        ObjectSession       sess;
+        bool                useLocal;
+        bool                localResult;
         NameResolver::Error error;
         NameResolver::Error localError;
 
-        Item(QObject *parent = 0) :
-            id(-1),
-            req(0),
-            sess(parent),
-            useLocal(false),
-            localResult(false)
-        {
-        }
+        Item(QObject *parent = 0) : id(-1), req(0), sess(parent), useLocal(false), localResult(false) {}
 
-        ~Item()
-        {
-            delete req;
-        }
+        ~Item() { delete req; }
     };
-    QList<Item*> items;
+    QList<Item *> items;
 
     static JDnsNameProvider *create(JDnsGlobal *global, Mode mode, QObject *parent = 0)
     {
-        if(mode == Internet)
-        {
-            if(!global->ensure_uni_net())
+        if (mode == Internet) {
+            if (!global->ensure_uni_net())
                 return 0;
-        }
-        else
-        {
-            if(!global->ensure_uni_local())
+        } else {
+            if (!global->ensure_uni_local())
                 return 0;
         }
 
         return new JDnsNameProvider(global, mode, parent);
     }
 
-    JDnsNameProvider(JDnsGlobal *_global, Mode _mode, QObject *parent = 0) :
-        NameProvider(parent)
+    JDnsNameProvider(JDnsGlobal *_global, Mode _mode, QObject *parent = 0) : NameProvider(parent)
     {
         global = _global;
-        mode = _mode;
+        mode   = _mode;
     }
 
-    ~JDnsNameProvider()
-    {
-        qDeleteAll(items);
-    }
+    ~JDnsNameProvider() { qDeleteAll(items); }
 
     Item *getItemById(int id)
     {
-        for(int n = 0; n < items.count(); ++n)
-        {
-            if(items[n]->id == id)
+        for (int n = 0; n < items.count(); ++n) {
+            if (items[n]->id == id)
                 return items[n];
         }
 
@@ -515,9 +480,8 @@ public:
 
     Item *getItemByReq(QJDnsSharedRequest *req)
     {
-        for(int n = 0; n < items.count(); ++n)
-        {
-            if(items[n]->req == req)
+        for (int n = 0; n < items.count(); ++n) {
+            if (items[n]->req == req)
                 return items[n];
         }
 
@@ -534,24 +498,21 @@ public:
     void tryError(Item *i)
     {
         // if we are doing dual resolves, make sure both are done
-        if(!i->longLived && (i->req || (i->useLocal && !i->localResult)))
+        if (!i->longLived && (i->req || (i->useLocal && !i->localResult)))
             return;
 
-        int id = i->id;
+        int                 id    = i->id;
         NameResolver::Error error = i->error;
         releaseItem(i);
         emit resolve_error(id, error);
     }
 
-    virtual bool supportsSingle() const
-    {
-        return true;
-    }
+    virtual bool supportsSingle() const { return true; }
 
     virtual bool supportsLongLived() const
     {
-        if(mode == Local)
-            return true;  // we support long-lived local queries
+        if (mode == Local)
+            return true; // we support long-lived local queries
         else
             return false; // we do NOT support long-lived internet queries
     }
@@ -565,10 +526,9 @@ public:
 
     virtual int resolve_start(const QByteArray &name, int qType, bool longLived)
     {
-        if(mode == Internet)
-        {
+        if (mode == Internet) {
             bool isLocalName = false;
-            if(name.right(6) == ".local" || name.right(7) == ".local.")
+            if (name.right(6) == ".local" || name.right(7) == ".local.")
                 isLocalName = true;
 
             // if query ends in .local, switch to local resolver
@@ -583,65 +543,57 @@ public:
             }*/
 
             // we don't support long-lived internet queries
-            if(longLived)
-            {
+            if (longLived) {
                 // but we do support long-lived local queries
-                if(isLocalName)
-                {
-                    Item *i = new Item(this);
-                    i->id = idman.reserveId();
+                if (isLocalName) {
+                    Item *i      = new Item(this);
+                    i->id        = idman.reserveId();
                     i->longLived = longLived;
-                    i->useLocal = true;
+                    i->useLocal  = true;
                     items += i;
                     i->sess.defer(this, "do_local", Q_ARG(int, i->id), Q_ARG(QByteArray, name));
                     return i->id;
                 }
 
                 Item *i = new Item(this);
-                i->id = idman.reserveId();
+                i->id   = idman.reserveId();
                 items += i;
                 i->sess.defer(this, "do_error", Q_ARG(int, i->id),
-                    Q_ARG(XMPP::NameResolver::Error, NameResolver::ErrorNoLongLived));
+                              Q_ARG(XMPP::NameResolver::Error, NameResolver::ErrorNoLongLived));
                 return i->id;
             }
 
             // perform the query
             Item *i = new Item(this);
-            i->id = idman.reserveId();
-            i->req = new QJDnsSharedRequest(global->uni_net);
+            i->id   = idman.reserveId();
+            i->req  = new QJDnsSharedRequest(global->uni_net);
             connect(i->req, SIGNAL(resultsReady()), SLOT(req_resultsReady()));
-            i->type = qType;
+            i->type      = qType;
             i->longLived = false;
-            if(isLocalName)
+            if (isLocalName)
                 i->useLocal = true;
             items += i;
             i->req->query(name, qType);
             // if query ends in .local, simultaneously do local resolve
-            if(isLocalName)
+            if (isLocalName)
                 i->sess.defer(this, "do_local", Q_ARG(int, i->id), Q_ARG(QByteArray, name));
             return i->id;
-        }
-        else
-        {
+        } else {
             Item *i = new Item(this);
-            i->id = idman.reserveId();
+            i->id   = idman.reserveId();
             i->type = qType;
-            if(longLived)
-            {
-                if(!global->ensure_mul())
-                {
+            if (longLived) {
+                if (!global->ensure_mul()) {
                     items += i;
                     i->sess.defer(this, "do_error", Q_ARG(int, i->id),
-                        Q_ARG(XMPP::NameResolver::Error, NameResolver::ErrorNoLocal));
+                                  Q_ARG(XMPP::NameResolver::Error, NameResolver::ErrorNoLocal));
                     return i->id;
                 }
 
-                i->req = new QJDnsSharedRequest(global->mul);
+                i->req       = new QJDnsSharedRequest(global->mul);
                 i->longLived = true;
-            }
-            else
-            {
-                i->req = new QJDnsSharedRequest(global->uni_local);
+            } else {
+                i->req       = new QJDnsSharedRequest(global->uni_local);
                 i->longLived = false;
             }
             connect(i->req, SIGNAL(resultsReady()), SLOT(req_resultsReady()));
@@ -656,7 +608,7 @@ public:
         Item *i = getItemById(id);
         Q_ASSERT(i);
 
-        if(i->req)
+        if (i->req)
             i->req->cancel();
         releaseItem(i);
     }
@@ -668,8 +620,7 @@ public:
         Q_ASSERT(!i->localResult);
 
         i->localResult = true;
-        i->sess.defer(this, "do_local_ready", Q_ARG(int, id),
-            Q_ARG(QList<XMPP::NameRecord>, results));
+        i->sess.defer(this, "do_local_ready", Q_ARG(int, id), Q_ARG(QList<XMPP::NameRecord>, results));
     }
 
     virtual void resolve_localError(int id, XMPP::NameResolver::Error e)
@@ -679,71 +630,62 @@ public:
         Q_ASSERT(!i->localResult);
 
         i->localResult = true;
-        i->sess.defer(this, "do_local_error", Q_ARG(int, id),
-            Q_ARG(XMPP::NameResolver::Error, e));
+        i->sess.defer(this, "do_local_error", Q_ARG(int, id), Q_ARG(XMPP::NameResolver::Error, e));
     }
 
 private slots:
     void req_resultsReady()
     {
         QJDnsSharedRequest *req = static_cast<QJDnsSharedRequest *>(sender());
-        Item *i = getItemByReq(req);
+        Item *              i   = getItemByReq(req);
         Q_ASSERT(i);
 
         int id = i->id;
 
         NameResolver::Error error;
 
-        if(req->success())
-        {
+        if (req->success()) {
             QList<NameRecord> out;
-            foreach(const QJDns::Record &r, req->results())
-            {
+            foreach (const QJDns::Record &r, req->results()) {
                 // unless we are asking for all types, only
                 //   accept the type we asked for
-                if(i->type == QJDns::Any || r.type == i->type)
-                {
+                if (i->type == QJDns::Any || r.type == i->type) {
                     NameRecord rec = importJDNSRecord(r);
-                    if(!rec.isNull())
+                    if (!rec.isNull())
                         out += rec;
                 }
             }
 
             // don't report anything if long-lived gives no results
-            if(i->longLived && out.isEmpty())
+            if (i->longLived && out.isEmpty())
                 return;
 
             // only emit success if we have at least 1 result
-            if(!out.isEmpty())
-            {
+            if (!out.isEmpty()) {
                 // FIXME: need a way to cancel related local
                 //   query if still active
 
-                if(!i->longLived)
+                if (!i->longLived)
                     releaseItem(i);
                 emit resolve_resultsReady(id, out);
                 return;
-            }
-            else
-            {
+            } else {
                 error = NameResolver::ErrorGeneric;
             }
-        }
-        else
-        {
+        } else {
             QJDnsSharedRequest::Error e = req->error();
 
             error = NameResolver::ErrorGeneric;
-            if(e == QJDnsSharedRequest::ErrorNXDomain)
+            if (e == QJDnsSharedRequest::ErrorNXDomain)
                 error = NameResolver::ErrorNoName;
-            else if(e == QJDnsSharedRequest::ErrorTimeout)
+            else if (e == QJDnsSharedRequest::ErrorTimeout)
                 error = NameResolver::ErrorTimeout;
             else // ErrorGeneric or ErrorNoNet
                 error = NameResolver::ErrorGeneric;
         }
 
         delete i->req;
-        i->req = 0;
+        i->req   = 0;
         i->error = error;
         tryError(i);
     }
@@ -762,8 +704,8 @@ private slots:
 
     void do_local(int id, const QByteArray &name)
     {
-        //Item *i = getItemById(id);
-        //Q_ASSERT(i);
+        // Item *i = getItemById(id);
+        // Q_ASSERT(i);
 
         /*// resolve_useLocal has two behaviors:
         // - if longlived, then it indicates a hand-off
@@ -779,10 +721,9 @@ private slots:
         Item *i = getItemById(id);
         Q_ASSERT(i);
 
-        if(!i->longLived)
-        {
+        if (!i->longLived) {
             // stop any simultaneous internet resolve
-            if(i->req)
+            if (i->req)
                 i->req->cancel();
 
             // for non-longlived, we're done
@@ -805,17 +746,14 @@ private slots:
 //----------------------------------------------------------------------------
 // JDnsBrowse
 //----------------------------------------------------------------------------
-class JDnsBrowse : public QObject
-{
+class JDnsBrowse : public QObject {
     Q_OBJECT
 
 public:
-    QByteArray type, typeAndDomain;
+    QByteArray         type, typeAndDomain;
     QJDnsSharedRequest req;
 
-    JDnsBrowse(QJDnsShared *_jdns, QObject *parent = 0) :
-        QObject(parent),
-        req(_jdns, this)
+    JDnsBrowse(QJDnsShared *_jdns, QObject *parent = 0) : QObject(parent), req(_jdns, this)
     {
         connect(&req, SIGNAL(resultsReady()), SLOT(jdns_resultsReady()));
     }
@@ -836,19 +774,19 @@ private:
     QByteArray parseInstanceName(const QByteArray &name)
     {
         // needs to be at least X + '.' + typeAndDomain
-        if(name.length() < typeAndDomain.length() + 2)
+        if (name.length() < typeAndDomain.length() + 2)
             return QByteArray();
 
         // index of the '.' character
         int at = name.length() - typeAndDomain.length() - 1;
 
-        if(name[at] != '.')
+        if (name[at] != '.')
             return QByteArray();
-        if(name.mid(at + 1) != typeAndDomain)
+        if (name.mid(at + 1) != typeAndDomain)
             return QByteArray();
 
         QByteArray friendlyName = unescapeDomainPart(name.mid(0, at));
-        if(friendlyName.isEmpty())
+        if (friendlyName.isEmpty())
             return QByteArray();
 
         return friendlyName;
@@ -858,20 +796,19 @@ private slots:
     void jdns_resultsReady()
     {
         // ignore errors
-        if(!req.success())
+        if (!req.success())
             return;
 
         QJDns::Record rec = req.results().first();
 
         Q_ASSERT(rec.type == QJDns::Ptr);
 
-        QByteArray name = rec.name;
+        QByteArray name     = rec.name;
         QByteArray instance = parseInstanceName(name);
-        if(instance.isEmpty())
+        if (instance.isEmpty())
             return;
 
-        if(rec.ttl == 0)
-        {
+        if (rec.ttl == 0) {
             emit unavailable(instance);
             return;
         }
@@ -886,37 +823,28 @@ private slots:
 
 // 5 second timeout waiting for both A and AAAA
 // 8 second timeout waiting for at least one record
-class JDnsServiceResolve : public QObject
-{
+class JDnsServiceResolve : public QObject {
     Q_OBJECT
 
 public:
-    enum SrvState
-    {
-        Srv               = 0,
-        AddressWait       = 1,
-        AddressFirstCome  = 2
-    };
+    enum SrvState { Srv = 0, AddressWait = 1, AddressFirstCome = 2 };
 
     QJDnsSharedRequest reqtxt; // for TXT
     QJDnsSharedRequest req;    // for SRV/A
     QJDnsSharedRequest req6;   // for AAAA
-    bool haveTxt;
-    SrvState srvState;
-    QTimer *opTimer;
+    bool               haveTxt;
+    SrvState           srvState;
+    QTimer *           opTimer;
 
     // out
     QList<QByteArray> attribs;
-    QByteArray host;
-    int port;
-    bool have4, have6;
-    QHostAddress addr4, addr6;
+    QByteArray        host;
+    int               port;
+    bool              have4, have6;
+    QHostAddress      addr4, addr6;
 
     JDnsServiceResolve(QJDnsShared *_jdns, QObject *parent = 0) :
-        QObject(parent),
-        reqtxt(_jdns, this),
-        req(_jdns, this),
-        req6(_jdns, this)
+        QObject(parent), reqtxt(_jdns, this), req(_jdns, this), req6(_jdns, this)
     {
         connect(&reqtxt, SIGNAL(resultsReady()), SLOT(reqtxt_ready()));
         connect(&req, SIGNAL(resultsReady()), SLOT(req_ready()));
@@ -936,10 +864,10 @@ public:
 
     void start(const QByteArray name)
     {
-        haveTxt = false;
+        haveTxt  = false;
         srvState = Srv;
-        have4 = false;
-        have6 = false;
+        have4    = false;
+        have6    = false;
 
         opTimer->start(8000);
 
@@ -954,21 +882,20 @@ signals:
 private:
     void cleanup()
     {
-        if(opTimer->isActive())
+        if (opTimer->isActive())
             opTimer->stop();
-        if(!haveTxt)
+        if (!haveTxt)
             reqtxt.cancel();
-        if(srvState == Srv || !have4)
+        if (srvState == Srv || !have4)
             req.cancel();
-        if(srvState >= AddressWait && !have6)
+        if (srvState >= AddressWait && !have6)
             req6.cancel();
     }
 
     bool tryDone()
     {
         // we're done when we have txt and addresses
-        if(haveTxt && ( (have4 && have6) || (srvState == AddressFirstCome && (have4 || have6)) ))
-        {
+        if (haveTxt && ((have4 && have6) || (srvState == AddressFirstCome && (have4 || have6)))) {
             cleanup();
             emit finished();
             return true;
@@ -980,8 +907,7 @@ private:
 private slots:
     void reqtxt_ready()
     {
-        if(!reqtxt.success())
-        {
+        if (!reqtxt.success()) {
             cleanup();
             emit error(reqtxt.error());
             return;
@@ -993,11 +919,10 @@ private slots:
         Q_ASSERT(rec.type == QJDns::Txt);
 
         attribs.clear();
-        if(!rec.texts.isEmpty())
-        {
+        if (!rec.texts.isEmpty()) {
             // if there is only 1 text, it needs to be
             //   non-empty for us to care
-            if(rec.texts.count() != 1 || !rec.texts[0].isEmpty())
+            if (rec.texts.count() != 1 || !rec.texts[0].isEmpty())
                 attribs = rec.texts;
         }
 
@@ -1008,8 +933,7 @@ private slots:
 
     void req_ready()
     {
-        if(!req.success())
-        {
+        if (!req.success()) {
             cleanup();
             emit error(req.error());
             return;
@@ -1018,8 +942,7 @@ private slots:
         QJDns::Record rec = req.results().first();
         req.cancel();
 
-        if(srvState == Srv)
-        {
+        if (srvState == Srv) {
             // in Srv state, req is used for SRV records
 
             Q_ASSERT(rec.type == QJDns::Srv);
@@ -1032,9 +955,7 @@ private slots:
 
             req.query(host, QJDns::A);
             req6.query(host, QJDns::Aaaa);
-        }
-        else
-        {
+        } else {
             // in the other states, req is used for A records
 
             Q_ASSERT(rec.type == QJDns::A);
@@ -1048,8 +969,7 @@ private slots:
 
     void req6_ready()
     {
-        if(!req6.success())
-        {
+        if (!req6.success()) {
             cleanup();
             emit error(req6.error());
             return;
@@ -1068,17 +988,14 @@ private slots:
 
     void op_timeout()
     {
-        if(srvState == Srv)
-        {
+        if (srvState == Srv) {
             // timeout getting SRV.  it is possible that we could
             //   have obtained the TXT record, but if SRV times
             //   out then we consider the whole job to have
             //   failed.
             cleanup();
             emit error(QJDnsSharedRequest::ErrorTimeout);
-        }
-        else if(srvState == AddressWait)
-        {
+        } else if (srvState == AddressWait) {
             // timeout while waiting for both A and AAAA.  we now
             //   switch to the AddressFirstCome state, where an
             //   answer for either will do
@@ -1086,11 +1003,10 @@ private slots:
             srvState = AddressFirstCome;
 
             // if we have at least one of these, we're done
-            if(have4 || have6)
-            {
+            if (have4 || have6) {
                 // well, almost.  we might still be waiting
                 //   for the TXT record
-                if(tryDone())
+                if (tryDone())
                     return;
             }
 
@@ -1099,12 +1015,10 @@ private slots:
 
             // wait 3 more seconds
             opTimer->start(3000);
-        }
-        else // AddressFirstCome
+        } else // AddressFirstCome
         {
             // last chance!
-            if(!tryDone())
-            {
+            if (!tryDone()) {
                 cleanup();
                 emit error(QJDnsSharedRequest::ErrorTimeout);
             }
@@ -1117,27 +1031,20 @@ private slots:
 //----------------------------------------------------------------------------
 
 // helper class for JDnsPublishAddresses.  publishes A+PTR or AAAA+PTR pair.
-class JDnsPublishAddress : public QObject
-{
+class JDnsPublishAddress : public QObject {
     Q_OBJECT
 
 public:
-    enum Type
-    {
-        IPv4,
-        IPv6
-    };
+    enum Type { IPv4, IPv6 };
 
-    Type type;
-    QByteArray host;
+    Type               type;
+    QByteArray         host;
     QJDnsSharedRequest pub_addr;
     QJDnsSharedRequest pub_ptr;
-    bool success_;
+    bool               success_;
 
     JDnsPublishAddress(QJDnsShared *_jdns, QObject *parent = 0) :
-        QObject(parent),
-        pub_addr(_jdns, this),
-        pub_ptr(_jdns, this)
+        QObject(parent), pub_addr(_jdns, this), pub_ptr(_jdns, this)
     {
         connect(&pub_addr, SIGNAL(resultsReady()), SLOT(pub_addr_ready()));
         connect(&pub_ptr, SIGNAL(resultsReady()), SLOT(pub_ptr_ready()));
@@ -1145,19 +1052,19 @@ public:
 
     void start(Type _type, const QByteArray &_host)
     {
-        type = _type;
-        host = _host;
+        type     = _type;
+        host     = _host;
         success_ = false;
 
         QJDns::Record rec;
-        if(type == IPv6)
+        if (type == IPv6)
             rec.type = QJDns::Aaaa;
         else
             rec.type = QJDns::A;
-        rec.owner = host;
-        rec.ttl = 120;
+        rec.owner     = host;
+        rec.ttl       = 120;
         rec.haveKnown = true;
-        rec.address = QHostAddress(); // null address, will be filled in
+        rec.address   = QHostAddress(); // null address, will be filled in
         pub_addr.publish(QJDns::Unique, rec);
     }
 
@@ -1167,10 +1074,7 @@ public:
         pub_ptr.cancel();
     }
 
-    bool success() const
-    {
-        return success_;
-    }
+    bool success() const { return success_; }
 
 signals:
     void resultsReady();
@@ -1178,21 +1082,18 @@ signals:
 private slots:
     void pub_addr_ready()
     {
-        if(pub_addr.success())
-        {
+        if (pub_addr.success()) {
             QJDns::Record rec;
             rec.type = QJDns::Ptr;
-            if(type == IPv6)
+            if (type == IPv6)
                 rec.owner = ".ip6.arpa.";
             else
                 rec.owner = ".in-addr.arpa.";
-            rec.ttl = 120;
+            rec.ttl       = 120;
             rec.haveKnown = true;
-            rec.name = host;
+            rec.name      = host;
             pub_ptr.publish(QJDns::Shared, rec);
-        }
-        else
-        {
+        } else {
             pub_ptr.cancel(); // needed if addr fails during or after ptr
             success_ = false;
             emit resultsReady();
@@ -1201,12 +1102,9 @@ private slots:
 
     void pub_ptr_ready()
     {
-        if(pub_ptr.success())
-        {
+        if (pub_ptr.success()) {
             success_ = true;
-        }
-        else
-        {
+        } else {
             pub_addr.cancel();
             success_ = false;
         }
@@ -1226,29 +1124,22 @@ private slots:
 //   once the conflict is resolved.  A missing hostname is considered a
 //   temporary problem, and so other publish operations that depend on a
 //   hostname (SRV, etc) should block until a hostname is available.
-class JDnsPublishAddresses : public QObject
-{
+class JDnsPublishAddresses : public QObject {
     Q_OBJECT
 
 public:
-    bool started;
-    bool use6, use4;
+    bool               started;
+    bool               use6, use4;
     JDnsPublishAddress pub6;
     JDnsPublishAddress pub4;
-    int counter;
-    QByteArray host;
-    bool success;
-    bool have6, have4;
-    ObjectSession sess;
+    int                counter;
+    QByteArray         host;
+    bool               success;
+    bool               have6, have4;
+    ObjectSession      sess;
 
     JDnsPublishAddresses(QJDnsShared *_jdns, QObject *parent = 0) :
-        QObject(parent),
-        started(false),
-        use6(false),
-        use4(false),
-        pub6(_jdns, this),
-        pub4(_jdns, this),
-        sess(this)
+        QObject(parent), started(false), use6(false), use4(false), pub6(_jdns, this), pub4(_jdns, this), sess(this)
     {
         connect(&pub6, SIGNAL(resultsReady()), SLOT(pub6_ready()));
         connect(&pub4, SIGNAL(resultsReady()), SLOT(pub4_ready()));
@@ -1258,25 +1149,22 @@ public:
     {
         counter = 1;
         success = false;
-        have6 = false;
-        have4 = false;
+        have6   = false;
+        have4   = false;
         started = true;
         tryPublish();
     }
 
-    bool isStarted() const
-    {
-        return started;
-    }
+    bool isStarted() const { return started; }
 
     // comments in this method apply to setUseIPv4 as well.
     void setUseIPv6(bool b)
     {
-        if(b == use6)
+        if (b == use6)
             return;
 
         use6 = b;
-        if(!started)
+        if (!started)
             return;
 
         // a "deferred call to doDisable" and "publish operations"
@@ -1285,58 +1173,46 @@ public:
         //   deferred call is canceled if any of the publishes are
         //   reinstantiated.
 
-        if(use6)
-        {
-            if(use4)
-            {
+        if (use6) {
+            if (use4) {
                 // if the other is already active, then
                 //   just activate this one without
                 //   recomputing the hostname
                 tryPublish6();
-            }
-            else
-            {
+            } else {
                 sess.reset();
 
                 // otherwise, recompute the hostname
                 tryPublish();
             }
-        }
-        else
-        {
+        } else {
             pub6.cancel();
             have6 = false;
-            if(!use4)
+            if (!use4)
                 sess.defer(this, "doDisable");
         }
     }
 
     void setUseIPv4(bool b)
     {
-        if(b == use4)
+        if (b == use4)
             return;
 
         use4 = b;
-        if(!started)
+        if (!started)
             return;
 
-        if(use4)
-        {
-            if(use6)
-            {
+        if (use4) {
+            if (use6) {
                 tryPublish4();
-            }
-            else
-            {
+            } else {
                 sess.reset();
                 tryPublish();
             }
-        }
-        else
-        {
+        } else {
             pub4.cancel();
             have4 = false;
-            if(!use6)
+            if (!use6)
                 sess.defer(this, "doDisable");
         }
     }
@@ -1350,44 +1226,37 @@ private:
         QString me = QHostInfo::localHostName();
 
         // some hosts may already have ".local" in their name
-        if(me.endsWith(".local"))
+        if (me.endsWith(".local"))
             me.truncate(me.length() - 6);
 
         // prefix our hostname so we don't conflict with a system
         //   mdns daemon
         me.prepend("jdns-");
 
-        if(counter > 1)
+        if (counter > 1)
             me += QString("-%1").arg(counter);
 
         host = escapeDomainPart(me.toUtf8()) + ".local.";
 
-        if(use6)
+        if (use6)
             tryPublish6();
-        if(use4)
+        if (use4)
             tryPublish4();
     }
 
-    void tryPublish6()
-    {
-        pub6.start(JDnsPublishAddress::IPv6, host);
-    }
+    void tryPublish6() { pub6.start(JDnsPublishAddress::IPv6, host); }
 
-    void tryPublish4()
-    {
-        pub4.start(JDnsPublishAddress::IPv4, host);
-    }
+    void tryPublish4() { pub4.start(JDnsPublishAddress::IPv4, host); }
 
     void tryDone()
     {
         bool done = true;
-        if(use6 && !have6)
+        if (use6 && !have6)
             done = false;
-        if(use4 && !have4)
+        if (use4 && !have4)
             done = false;
 
-        if(done)
-        {
+        if (done) {
             success = true;
             emit hostName(host);
         }
@@ -1400,11 +1269,11 @@ private:
         //   latter case it means we "lost" our host records.
 
         bool lostHost = success; // as in earlier publish success
-        success = false;
+        success       = false;
 
         // if we lost a hostname with a suffix, or counter is
         //   at 99, then start counter over at 1 (no suffix).
-        if((lostHost && counter > 1) || counter >= 99)
+        if ((lostHost && counter > 1) || counter >= 99)
             counter = 1;
         else
             ++counter;
@@ -1412,7 +1281,7 @@ private:
         tryPublish();
 
         // only emit lost host signal once
-        if(lostHost)
+        if (lostHost)
             emit hostName(QByteArray());
     }
 
@@ -1420,21 +1289,18 @@ private slots:
     void doDisable()
     {
         bool lostHost = success;
-        success = false;
+        success       = false;
 
-        if(lostHost)
+        if (lostHost)
             emit hostName(QByteArray());
     }
 
     void pub6_ready()
     {
-        if(pub6.success())
-        {
+        if (pub6.success()) {
             have6 = true;
             tryDone();
-        }
-        else
-        {
+        } else {
             have6 = false;
             have4 = false;
             pub4.cancel();
@@ -1444,13 +1310,10 @@ private slots:
 
     void pub4_ready()
     {
-        if(pub4.success())
-        {
+        if (pub4.success()) {
             have4 = true;
             tryDone();
-        }
-        else
-        {
+        } else {
             have4 = false;
             have6 = false;
             pub6.cancel();
@@ -1464,8 +1327,7 @@ private slots:
 //----------------------------------------------------------------------------
 class JDnsPublish;
 
-class JDnsPublishExtra : public QObject
-{
+class JDnsPublishExtra : public QObject {
     Q_OBJECT
 
 public:
@@ -1482,12 +1344,12 @@ signals:
 private:
     friend class JDnsPublish;
 
-    JDnsPublish *jdnsPub;
-    bool started;
+    JDnsPublish *      jdnsPub;
+    bool               started;
     QJDnsSharedRequest pub;
-    QJDns::Record rec;
-    bool have;
-    bool need_update;
+    QJDns::Record      rec;
+    bool               have;
+    bool               need_update;
 };
 
 // This class publishes SRV/TXT/PTR for a service.  if a hostName is not
@@ -1503,12 +1365,11 @@ private:
 // It's important to note that published() is only emitted once ever, even
 //   if a hostName change causes a republishing.  this way, hostName changes
 //   are completely transparent.
-class JDnsPublish : public QObject
-{
+class JDnsPublish : public QObject {
     Q_OBJECT
 
 public:
-    QJDnsShared *jdns;
+    QJDnsShared *      jdns;
     QJDnsSharedRequest pub_srv;
     QJDnsSharedRequest pub_txt;
     QJDnsSharedRequest pub_ptr;
@@ -1516,62 +1377,55 @@ public:
     bool have_srv, have_txt, have_ptr;
     bool need_update_txt;
 
-    QByteArray fullname;
-    QByteArray instance;
-    QByteArray type;
-    QByteArray host;
-    int port;
+    QByteArray        fullname;
+    QByteArray        instance;
+    QByteArray        type;
+    QByteArray        host;
+    int               port;
     QList<QByteArray> attribs;
 
-    QSet<JDnsPublishExtra*> extraList;
+    QSet<JDnsPublishExtra *> extraList;
 
     JDnsPublish(QJDnsShared *_jdns, QObject *parent = 0) :
-        QObject(parent),
-        jdns(_jdns),
-        pub_srv(_jdns, this),
-        pub_txt(_jdns, this),
-        pub_ptr(_jdns, this)
+        QObject(parent), jdns(_jdns), pub_srv(_jdns, this), pub_txt(_jdns, this), pub_ptr(_jdns, this)
     {
         connect(&pub_srv, SIGNAL(resultsReady()), SLOT(pub_srv_ready()));
         connect(&pub_txt, SIGNAL(resultsReady()), SLOT(pub_txt_ready()));
         connect(&pub_ptr, SIGNAL(resultsReady()), SLOT(pub_ptr_ready()));
     }
 
-    ~JDnsPublish()
-    {
-        qDeleteAll(extraList);
-    }
+    ~JDnsPublish() { qDeleteAll(extraList); }
 
-    void start(const QString &_instance, const QByteArray &_type, const QByteArray &localHost, int _port, const QMap<QString,QByteArray> &attributes)
+    void start(const QString &_instance, const QByteArray &_type, const QByteArray &localHost, int _port,
+               const QMap<QString, QByteArray> &attributes)
     {
         type = _type;
         Q_ASSERT(validServiceType(type));
 
         instance = escapeDomainPart(_instance.toUtf8());
         fullname = instance + '.' + type + ".local.";
-        host = localHost;
-        port = _port;
-        attribs = makeTxtList(attributes);
+        host     = localHost;
+        port     = _port;
+        attribs  = makeTxtList(attributes);
 
-        have_srv = false;
-        have_txt = false;
-        have_ptr = false;
+        have_srv        = false;
+        have_txt        = false;
+        have_ptr        = false;
         need_update_txt = false;
 
         // no host?  defer publishing till we have one
-        if(host.isEmpty())
+        if (host.isEmpty())
             return;
 
         doPublish();
     }
 
-    void update(const QMap<QString,QByteArray> &attributes)
+    void update(const QMap<QString, QByteArray> &attributes)
     {
         attribs = makeTxtList(attributes);
 
         // still publishing the initial txt?
-        if(!have_txt)
-        {
+        if (!have_txt) {
             // flag that we want to update once the publish
             //   succeeds.
             need_update_txt = true;
@@ -1580,8 +1434,7 @@ public:
 
         // no SRV, but have TXT?  this means we lost SRV due to
         //   a hostname change.
-        if(!have_srv)
-        {
+        if (!have_srv) {
             // in that case, revoke the TXT.  it'll get
             //   republished after SRV then.
             have_txt = false;
@@ -1598,18 +1451,14 @@ public slots:
     {
         bool changed = (host != _host);
 
-        if(changed)
-        {
+        if (changed) {
             host = _host;
 
-            if(host.isEmpty())
-            {
+            if (host.isEmpty()) {
                 // cancel srv record momentarily
                 have_srv = false;
                 pub_srv.cancel();
-            }
-            else
-            {
+            } else {
                 // we now have a host, publish
                 doPublish();
             }
@@ -1623,17 +1472,16 @@ signals:
 private:
     friend class JDnsPublishExtra;
 
-    static QList<QByteArray> makeTxtList(const QMap<QString,QByteArray> &attributes)
+    static QList<QByteArray> makeTxtList(const QMap<QString, QByteArray> &attributes)
     {
         QList<QByteArray> out;
 
-        QMapIterator<QString,QByteArray> it(attributes);
-        while(it.hasNext())
-        {
+        QMapIterator<QString, QByteArray> it(attributes);
+        while (it.hasNext()) {
             it.next();
             out += it.key().toLatin1() + '=' + it.value();
         }
-        if(out.isEmpty())
+        if (out.isEmpty())
             out += QByteArray();
 
         return out;
@@ -1643,25 +1491,24 @@ private:
     {
         // SRV
         QJDns::Record rec;
-        rec.type = QJDns::Srv;
-        rec.owner = fullname;
-        rec.ttl = 120;
+        rec.type      = QJDns::Srv;
+        rec.owner     = fullname;
+        rec.ttl       = 120;
         rec.haveKnown = true;
-        rec.name = host;
-        rec.port = port;
-        rec.priority = 0;
-        rec.weight = 0;
+        rec.name      = host;
+        rec.port      = port;
+        rec.priority  = 0;
+        rec.weight    = 0;
         pub_srv.publish(QJDns::Unique, rec);
 
         // if we're just republishing SRV after losing/regaining
         //   our hostname, then TXT is already published
-        if(!have_txt)
+        if (!have_txt)
             doPublishTxt();
 
         // publish extra records as needed
-        foreach(JDnsPublishExtra *extra, extraList)
-        {
-            if(!extra->have)
+        foreach (JDnsPublishExtra *extra, extraList) {
+            if (!extra->have)
                 doPublishExtra(extra);
         }
     }
@@ -1670,13 +1517,13 @@ private:
     {
         // TXT
         QJDns::Record rec;
-        rec.type = QJDns::Txt;
-        rec.owner = fullname;
-        rec.ttl = 4500;
+        rec.type      = QJDns::Txt;
+        rec.owner     = fullname;
+        rec.ttl       = 4500;
         rec.haveKnown = true;
-        rec.texts = attribs;
+        rec.texts     = attribs;
 
-        if(!have_txt)
+        if (!have_txt)
             pub_txt.publish(QJDns::Unique, rec);
         else
             pub_txt.publishUpdate(rec);
@@ -1684,22 +1531,21 @@ private:
 
     void tryDone()
     {
-        if(have_srv && have_txt)
-        {
+        if (have_srv && have_txt) {
             // PTR
             QJDns::Record rec;
-            rec.type = QJDns::Ptr;
-            rec.owner = type + ".local.";
-            rec.ttl = 4500;
+            rec.type      = QJDns::Ptr;
+            rec.owner     = type + ".local.";
+            rec.ttl       = 4500;
             rec.haveKnown = true;
-            rec.name = fullname;
+            rec.name      = fullname;
             pub_ptr.publish(QJDns::Shared, rec);
         }
     }
 
     void cleanup()
     {
-        foreach(JDnsPublishExtra *extra, extraList)
+        foreach (JDnsPublishExtra *extra, extraList)
             cleanupExtra(extra);
         qDeleteAll(extraList);
         extraList.clear();
@@ -1720,7 +1566,7 @@ private:
         extraList += extra;
 
         // defer publishing until SRV is ready
-        if(!have_srv)
+        if (!have_srv)
             return;
 
         doPublishExtra(extra);
@@ -1728,14 +1574,12 @@ private:
 
     void publishExtraUpdate(JDnsPublishExtra *extra)
     {
-        if(!extra->have)
-        {
+        if (!extra->have) {
             extra->need_update = true;
             return;
         }
 
-        if(!have_srv)
-        {
+        if (!have_srv) {
             extra->have = false;
             extra->pub.cancel();
             return;
@@ -1744,14 +1588,11 @@ private:
         doPublishExtra(extra);
     }
 
-    void unpublishExtra(JDnsPublishExtra *extra)
-    {
-        extraList.remove(extra);
-    }
+    void unpublishExtra(JDnsPublishExtra *extra) { extraList.remove(extra); }
 
     void doPublishExtra(JDnsPublishExtra *extra)
     {
-        if(!extra->have)
+        if (!extra->have)
             extra->pub.publish(QJDns::Unique, extra->rec);
         else
             extra->pub.publishUpdate(extra->rec);
@@ -1762,19 +1603,16 @@ private:
         extra->pub.cancel();
         extra->disconnect(this);
         extra->started = false;
-        extra->have = false;
+        extra->have    = false;
     }
 
 private slots:
     void pub_srv_ready()
     {
-        if(pub_srv.success())
-        {
+        if (pub_srv.success()) {
             have_srv = true;
             tryDone();
-        }
-        else
-        {
+        } else {
             QJDnsSharedRequest::Error e = pub_srv.error();
             cleanup();
             emit error(e);
@@ -1783,20 +1621,16 @@ private slots:
 
     void pub_txt_ready()
     {
-        if(pub_txt.success())
-        {
+        if (pub_txt.success()) {
             have_txt = true;
 
-            if(need_update_txt)
-            {
+            if (need_update_txt) {
                 need_update_txt = false;
                 doPublishTxt();
             }
 
             tryDone();
-        }
-        else
-        {
+        } else {
             QJDnsSharedRequest::Error e = pub_txt.error();
             cleanup();
             emit error(e);
@@ -1805,13 +1639,10 @@ private slots:
 
     void pub_ptr_ready()
     {
-        if(pub_ptr.success())
-        {
+        if (pub_ptr.success()) {
             have_ptr = true;
             emit published();
-        }
-        else
-        {
+        } else {
             QJDnsSharedRequest::Error e = pub_ptr.error();
             cleanup();
             emit error(e);
@@ -1820,32 +1651,26 @@ private slots:
 
     void pub_extra_ready()
     {
-        QJDnsSharedRequest *req = static_cast<QJDnsSharedRequest *>(sender());
-        JDnsPublishExtra *extra = 0;
-        foreach(JDnsPublishExtra *e, extraList)
-        {
-            if(&e->pub == req)
-            {
+        QJDnsSharedRequest *req   = static_cast<QJDnsSharedRequest *>(sender());
+        JDnsPublishExtra *  extra = 0;
+        foreach (JDnsPublishExtra *e, extraList) {
+            if (&e->pub == req) {
                 extra = e;
                 break;
             }
         }
         Q_ASSERT(extra);
 
-        if(extra->pub.success())
-        {
+        if (extra->pub.success()) {
             extra->have = true;
 
-            if(extra->need_update)
-            {
+            if (extra->need_update) {
                 extra->need_update = false;
                 doPublishExtra(extra);
             }
 
             emit extra->published();
-        }
-        else
-        {
+        } else {
             QJDnsSharedRequest::Error e = extra->pub.error();
             cleanupExtra(extra);
             emit extra->error(e);
@@ -1854,24 +1679,21 @@ private slots:
 };
 
 JDnsPublishExtra::JDnsPublishExtra(JDnsPublish *_jdnsPub) :
-    QObject(_jdnsPub),
-    jdnsPub(_jdnsPub),
-    started(false),
-    pub(_jdnsPub->jdns, this)
+    QObject(_jdnsPub), jdnsPub(_jdnsPub), started(false), pub(_jdnsPub->jdns, this)
 {
 }
 
 JDnsPublishExtra::~JDnsPublishExtra()
 {
-    if(started)
+    if (started)
         jdnsPub->unpublishExtra(this);
 }
 
 void JDnsPublishExtra::start(const QJDns::Record &_rec)
 {
-    rec = _rec;
-    started = true;
-    have = false;
+    rec         = _rec;
+    started     = true;
+    have        = false;
     need_update = false;
     jdnsPub->publishExtra(this);
 }
@@ -1885,19 +1707,13 @@ void JDnsPublishExtra::update(const QJDns::Record &_rec)
 //----------------------------------------------------------------------------
 // JDnsServiceProvider
 //----------------------------------------------------------------------------
-class BrowseItem
-{
+class BrowseItem {
 public:
-    const int id;
-    JDnsBrowse * const browse;
-    ObjectSession *sess;
+    const int         id;
+    JDnsBrowse *const browse;
+    ObjectSession *   sess;
 
-    BrowseItem(int _id, JDnsBrowse *_browse) :
-        id(_id),
-        browse(_browse),
-        sess(0)
-    {
-    }
+    BrowseItem(int _id, JDnsBrowse *_browse) : id(_id), browse(_browse), sess(0) {}
 
     ~BrowseItem()
     {
@@ -1906,24 +1722,17 @@ public:
     }
 };
 
-class BrowseItemList
-{
+class BrowseItemList {
 private:
-    QSet<BrowseItem*> items;
-    QHash<int,BrowseItem*> indexById;
-    QHash<JDnsBrowse*,BrowseItem*> indexByBrowse;
-    IdManager idman;
+    QSet<BrowseItem *>                items;
+    QHash<int, BrowseItem *>          indexById;
+    QHash<JDnsBrowse *, BrowseItem *> indexByBrowse;
+    IdManager                         idman;
 
 public:
-    ~BrowseItemList()
-    {
-        qDeleteAll(items);
-    }
+    ~BrowseItemList() { qDeleteAll(items); }
 
-    int reserveId()
-    {
-        return idman.reserveId();
-    }
+    int reserveId() { return idman.reserveId(); }
 
     void insert(BrowseItem *item)
     {
@@ -1937,35 +1746,23 @@ public:
         indexById.remove(item->id);
         indexByBrowse.remove(item->browse);
         items.remove(item);
-        if(item->id != -1)
+        if (item->id != -1)
             idman.releaseId(item->id);
         delete item;
     }
 
-    BrowseItem *itemById(int id) const
-    {
-        return indexById.value(id);
-    }
+    BrowseItem *itemById(int id) const { return indexById.value(id); }
 
-    BrowseItem *itemByBrowse(JDnsBrowse *browse) const
-    {
-        return indexByBrowse.value(browse);
-    }
+    BrowseItem *itemByBrowse(JDnsBrowse *browse) const { return indexByBrowse.value(browse); }
 };
 
-class ResolveItem
-{
+class ResolveItem {
 public:
-    const int id;
-    JDnsServiceResolve * const resolve;
-    ObjectSession *sess;
+    const int                 id;
+    JDnsServiceResolve *const resolve;
+    ObjectSession *           sess;
 
-    ResolveItem(int _id, JDnsServiceResolve *_resolve) :
-        id(_id),
-        resolve(_resolve),
-        sess(0)
-    {
-    }
+    ResolveItem(int _id, JDnsServiceResolve *_resolve) : id(_id), resolve(_resolve), sess(0) {}
 
     ~ResolveItem()
     {
@@ -1974,24 +1771,17 @@ public:
     }
 };
 
-class ResolveItemList
-{
+class ResolveItemList {
 private:
-    QSet<ResolveItem*> items;
-    QHash<int,ResolveItem*> indexById;
-    QHash<JDnsServiceResolve*,ResolveItem*> indexByResolve;
-    IdManager idman;
+    QSet<ResolveItem *>                        items;
+    QHash<int, ResolveItem *>                  indexById;
+    QHash<JDnsServiceResolve *, ResolveItem *> indexByResolve;
+    IdManager                                  idman;
 
 public:
-    ~ResolveItemList()
-    {
-        qDeleteAll(items);
-    }
+    ~ResolveItemList() { qDeleteAll(items); }
 
-    int reserveId()
-    {
-        return idman.reserveId();
-    }
+    int reserveId() { return idman.reserveId(); }
 
     void insert(ResolveItem *item)
     {
@@ -2005,35 +1795,23 @@ public:
         indexById.remove(item->id);
         indexByResolve.remove(item->resolve);
         items.remove(item);
-        if(item->id != -1)
+        if (item->id != -1)
             idman.releaseId(item->id);
         delete item;
     }
 
-    ResolveItem *itemById(int id) const
-    {
-        return indexById.value(id);
-    }
+    ResolveItem *itemById(int id) const { return indexById.value(id); }
 
-    ResolveItem *itemByResolve(JDnsServiceResolve *resolve) const
-    {
-        return indexByResolve.value(resolve);
-    }
+    ResolveItem *itemByResolve(JDnsServiceResolve *resolve) const { return indexByResolve.value(resolve); }
 };
 
-class PublishItem
-{
+class PublishItem {
 public:
-    const int id;
-    JDnsPublish * const publish;
-    ObjectSession *sess;
+    const int          id;
+    JDnsPublish *const publish;
+    ObjectSession *    sess;
 
-    PublishItem(int _id, JDnsPublish *_publish) :
-        id(_id),
-        publish(_publish),
-        sess(0)
-    {
-    }
+    PublishItem(int _id, JDnsPublish *_publish) : id(_id), publish(_publish), sess(0) {}
 
     ~PublishItem()
     {
@@ -2042,26 +1820,19 @@ public:
     }
 };
 
-class PublishItemList
-{
+class PublishItemList {
 public:
-    QSet<PublishItem*> items;
+    QSet<PublishItem *> items;
 
 private:
-    QHash<int,PublishItem*> indexById;
-    QHash<JDnsPublish*,PublishItem*> indexByPublish;
-    IdManager idman;
+    QHash<int, PublishItem *>           indexById;
+    QHash<JDnsPublish *, PublishItem *> indexByPublish;
+    IdManager                           idman;
 
 public:
-    ~PublishItemList()
-    {
-        qDeleteAll(items);
-    }
+    ~PublishItemList() { qDeleteAll(items); }
 
-    int reserveId()
-    {
-        return idman.reserveId();
-    }
+    int reserveId() { return idman.reserveId(); }
 
     void insert(PublishItem *item)
     {
@@ -2075,35 +1846,23 @@ public:
         indexById.remove(item->id);
         indexByPublish.remove(item->publish);
         items.remove(item);
-        if(item->id != -1)
+        if (item->id != -1)
             idman.releaseId(item->id);
         delete item;
     }
 
-    PublishItem *itemById(int id) const
-    {
-        return indexById.value(id);
-    }
+    PublishItem *itemById(int id) const { return indexById.value(id); }
 
-    PublishItem *itemByPublish(JDnsPublish *publish) const
-    {
-        return indexByPublish.value(publish);
-    }
+    PublishItem *itemByPublish(JDnsPublish *publish) const { return indexByPublish.value(publish); }
 };
 
-class PublishExtraItem
-{
+class PublishExtraItem {
 public:
-    const int id;
-    JDnsPublishExtra * const publish;
-    ObjectSession *sess;
+    const int               id;
+    JDnsPublishExtra *const publish;
+    ObjectSession *         sess;
 
-    PublishExtraItem(int _id, JDnsPublishExtra *_publish) :
-        id(_id),
-        publish(_publish),
-        sess(0)
-    {
-    }
+    PublishExtraItem(int _id, JDnsPublishExtra *_publish) : id(_id), publish(_publish), sess(0) {}
 
     ~PublishExtraItem()
     {
@@ -2112,21 +1871,17 @@ public:
     }
 };
 
-class PublishExtraItemList
-{
+class PublishExtraItemList {
 public:
-    QSet<PublishExtraItem*> items;
+    QSet<PublishExtraItem *> items;
 
 private:
-    QHash<int,PublishExtraItem*> indexById;
-    QHash<JDnsPublishExtra*,PublishExtraItem*> indexByPublish;
-    IdManager idman;
+    QHash<int, PublishExtraItem *>                indexById;
+    QHash<JDnsPublishExtra *, PublishExtraItem *> indexByPublish;
+    IdManager                                     idman;
 
 public:
-    ~PublishExtraItemList()
-    {
-        qDeleteAll(items);
-    }
+    ~PublishExtraItemList() { qDeleteAll(items); }
 
     void clear()
     {
@@ -2137,10 +1892,7 @@ public:
         idman.clear();
     }
 
-    int reserveId()
-    {
-        return idman.reserveId();
-    }
+    int reserveId() { return idman.reserveId(); }
 
     void insert(PublishExtraItem *item)
     {
@@ -2154,50 +1906,41 @@ public:
         indexById.remove(item->id);
         indexByPublish.remove(item->publish);
         items.remove(item);
-        if(item->id != -1)
+        if (item->id != -1)
             idman.releaseId(item->id);
         delete item;
     }
 
-    PublishExtraItem *itemById(int id) const
-    {
-        return indexById.value(id);
-    }
+    PublishExtraItem *itemById(int id) const { return indexById.value(id); }
 
-    PublishExtraItem *itemByPublish(JDnsPublishExtra *publish) const
-    {
-        return indexByPublish.value(publish);
-    }
+    PublishExtraItem *itemByPublish(JDnsPublishExtra *publish) const { return indexByPublish.value(publish); }
 };
 
-class JDnsServiceProvider : public ServiceProvider
-{
+class JDnsServiceProvider : public ServiceProvider {
     Q_OBJECT
 
 public:
     JDnsGlobal *global;
 
     // browse
-    BrowseItemList browseItemList;
-    QHash<QByteArray,ServiceInstance> items;
+    BrowseItemList                     browseItemList;
+    QHash<QByteArray, ServiceInstance> items;
 
     // resolve
     ResolveItemList resolveItemList;
 
     // publish
     JDnsPublishAddresses *pub_addresses;
-    QByteArray localHost;
-    PublishItemList publishItemList;
-    PublishExtraItemList publishExtraItemList;
+    QByteArray            localHost;
+    PublishItemList       publishItemList;
+    PublishExtraItemList  publishExtraItemList;
 
     static JDnsServiceProvider *create(JDnsGlobal *global, QObject *parent = 0)
     {
         return new JDnsServiceProvider(global, parent);
     }
 
-    JDnsServiceProvider(JDnsGlobal *_global, QObject *parent = 0) :
-        ServiceProvider(parent),
-        pub_addresses(0)
+    JDnsServiceProvider(JDnsGlobal *_global, QObject *parent = 0) : ServiceProvider(parent), pub_addresses(0)
     {
         global = _global;
         connect(global, SIGNAL(interfacesChanged()), SLOT(interfacesChanged()));
@@ -2212,12 +1955,12 @@ public:
     virtual int browse_start(const QString &_type, const QString &_domain)
     {
         QString domain;
-        if(_domain.isEmpty() || _domain == ".")
+        if (_domain.isEmpty() || _domain == ".")
             domain = "local.";
         else
             domain = _domain;
 
-        if(domain[domain.length() - 1] != '.')
+        if (domain[domain.length() - 1] != '.')
             domain += '.';
 
         Q_ASSERT(domain.length() >= 2 && domain[domain.length() - 1] == '.');
@@ -2225,34 +1968,31 @@ public:
         int id = browseItemList.reserveId();
 
         // no support for non-local domains
-        if(domain != "local.")
-        {
+        if (domain != "local.") {
             BrowseItem *i = new BrowseItem(id, 0);
-            i->sess = new ObjectSession(this);
+            i->sess       = new ObjectSession(this);
             browseItemList.insert(i);
             i->sess->defer(this, "do_browse_error", Q_ARG(int, i->id),
-                Q_ARG(XMPP::ServiceBrowser::Error, ServiceBrowser::ErrorNoWide));
+                           Q_ARG(XMPP::ServiceBrowser::Error, ServiceBrowser::ErrorNoWide));
             return i->id;
         }
 
-        if(!global->ensure_mul())
-        {
+        if (!global->ensure_mul()) {
             BrowseItem *i = new BrowseItem(id, 0);
-            i->sess = new ObjectSession(this);
+            i->sess       = new ObjectSession(this);
             browseItemList.insert(i);
             i->sess->defer(this, "do_browse_error", Q_ARG(int, i->id),
-                Q_ARG(XMPP::ServiceBrowser::Error, ServiceBrowser::ErrorNoLocal));
+                           Q_ARG(XMPP::ServiceBrowser::Error, ServiceBrowser::ErrorNoLocal));
             return i->id;
         }
 
         QByteArray type = _type.toUtf8();
-        if(!validServiceType(type))
-        {
+        if (!validServiceType(type)) {
             BrowseItem *i = new BrowseItem(id, 0);
-            i->sess = new ObjectSession(this);
+            i->sess       = new ObjectSession(this);
             browseItemList.insert(i);
             i->sess->defer(this, "do_browse_error", Q_ARG(int, i->id),
-                Q_ARG(XMPP::ServiceBrowser::Error, ServiceBrowser::ErrorGeneric));
+                           Q_ARG(XMPP::ServiceBrowser::Error, ServiceBrowser::ErrorGeneric));
             return i->id;
         }
 
@@ -2276,13 +2016,12 @@ public:
     {
         int id = resolveItemList.reserveId();
 
-        if(!global->ensure_mul())
-        {
+        if (!global->ensure_mul()) {
             ResolveItem *i = new ResolveItem(id, 0);
-            i->sess = new ObjectSession(this);
+            i->sess        = new ObjectSession(this);
             resolveItemList.insert(i);
             i->sess->defer(this, "do_resolve_error", Q_ARG(int, i->id),
-                Q_ARG(XMPP::ServiceResolver::Error, ServiceResolver::ErrorNoLocal));
+                           Q_ARG(XMPP::ServiceResolver::Error, ServiceResolver::ErrorNoLocal));
             return i->id;
         }
 
@@ -2302,34 +2041,32 @@ public:
         resolveItemList.remove(i);
     }
 
-    virtual int publish_start(const QString &instance, const QString &_type, int port, const QMap<QString,QByteArray> &attributes)
+    virtual int publish_start(const QString &instance, const QString &_type, int port,
+                              const QMap<QString, QByteArray> &attributes)
     {
         int id = publishItemList.reserveId();
 
-        if(!global->ensure_mul())
-        {
+        if (!global->ensure_mul()) {
             PublishItem *i = new PublishItem(id, 0);
-            i->sess = new ObjectSession(this);
+            i->sess        = new ObjectSession(this);
             publishItemList.insert(i);
             i->sess->defer(this, "do_publish_error", Q_ARG(int, i->id),
-                Q_ARG(XMPP::ServiceLocalPublisher::Error, ServiceLocalPublisher::ErrorNoLocal));
+                           Q_ARG(XMPP::ServiceLocalPublisher::Error, ServiceLocalPublisher::ErrorNoLocal));
             return i->id;
         }
 
         QByteArray type = _type.toUtf8();
-        if(!validServiceType(type))
-        {
+        if (!validServiceType(type)) {
             PublishItem *i = new PublishItem(id, 0);
-            i->sess = new ObjectSession(this);
+            i->sess        = new ObjectSession(this);
             publishItemList.insert(i);
             i->sess->defer(this, "do_publish_error", Q_ARG(int, i->id),
-                Q_ARG(XMPP::ServiceLocalPublisher::Error, ServiceLocalPublisher::ErrorGeneric));
+                           Q_ARG(XMPP::ServiceLocalPublisher::Error, ServiceLocalPublisher::ErrorGeneric));
             return i->id;
         }
 
         // make sure A/AAAA records are published
-        if(!pub_addresses)
-        {
+        if (!pub_addresses) {
             pub_addresses = new JDnsPublishAddresses(global->mul, this);
             connect(pub_addresses, SIGNAL(hostName(QByteArray)), SLOT(pub_addresses_hostName(QByteArray)));
             pub_addresses->setUseIPv6(global->haveMulticast6());
@@ -2348,13 +2085,13 @@ public:
         return i->id;
     }
 
-    virtual void publish_update(int id, const QMap<QString,QByteArray> &attributes)
+    virtual void publish_update(int id, const QMap<QString, QByteArray> &attributes)
     {
         PublishItem *i = publishItemList.itemById(id);
         Q_ASSERT(i);
 
         // if we already have an error queued, do nothing
-        if(i->sess->isDeferred(this, "do_publish_error"))
+        if (i->sess->isDeferred(this, "do_publish_error"))
             return;
 
         i->publish->update(attributes);
@@ -2377,22 +2114,21 @@ public:
         int id = publishItemList.reserveId();
 
         QJDns::Record rec = exportJDNSRecord(name);
-        if(rec.type == -1)
-        {
+        if (rec.type == -1) {
             PublishExtraItem *i = new PublishExtraItem(id, 0);
-            i->sess = new ObjectSession(this);
+            i->sess             = new ObjectSession(this);
             publishExtraItemList.insert(i);
             i->sess->defer(this, "do_publish_extra_error", Q_ARG(int, i->id),
-                Q_ARG(XMPP::ServiceLocalPublisher::Error, ServiceLocalPublisher::ErrorGeneric));
+                           Q_ARG(XMPP::ServiceLocalPublisher::Error, ServiceLocalPublisher::ErrorGeneric));
             return i->id;
         }
 
         // fill in owner if necessary
-        if(rec.owner.isEmpty())
+        if (rec.owner.isEmpty())
             rec.owner = pi->publish->fullname;
 
         // fill in the ttl if necessary
-        if(rec.ttl == 0)
+        if (rec.ttl == 0)
             rec.ttl = 4500;
 
         PublishExtraItem *i = new PublishExtraItem(id, new JDnsPublishExtra(pi->publish));
@@ -2409,24 +2145,23 @@ public:
         Q_ASSERT(i);
 
         // if we already have an error queued, do nothing
-        if(i->sess->isDeferred(this, "do_publish_extra_error"))
+        if (i->sess->isDeferred(this, "do_publish_extra_error"))
             return;
 
         QJDns::Record rec = exportJDNSRecord(name);
-        if(rec.type == -1)
-        {
+        if (rec.type == -1) {
             i->sess = new ObjectSession(this);
             i->sess->defer(this, "do_publish_extra_error", Q_ARG(int, i->id),
-                Q_ARG(XMPP::ServiceLocalPublisher::Error, ServiceLocalPublisher::ErrorGeneric));
+                           Q_ARG(XMPP::ServiceLocalPublisher::Error, ServiceLocalPublisher::ErrorGeneric));
             return;
         }
 
         // fill in owner if necessary
-        if(rec.owner.isEmpty())
-            rec.owner = static_cast<JDnsPublish*>(i->publish->parent())->fullname;
+        if (rec.owner.isEmpty())
+            rec.owner = static_cast<JDnsPublish *>(i->publish->parent())->fullname;
 
         // fill in the ttl if necessary
-        if(rec.ttl == 0)
+        if (rec.ttl == 0)
             rec.ttl = 4500;
 
         i->publish->update(rec);
@@ -2445,22 +2180,20 @@ private:
     {
         // remove all extra publishes associated with this publish.
         //   the association can be checked via QObject parenting.
-        QSet<PublishExtraItem*> remove;
-        foreach(PublishExtraItem *i, publishExtraItemList.items)
-        {
-            if(static_cast<JDnsPublish*>(i->publish->parent()) == pi->publish)
+        QSet<PublishExtraItem *> remove;
+        foreach (PublishExtraItem *i, publishExtraItemList.items) {
+            if (static_cast<JDnsPublish *>(i->publish->parent()) == pi->publish)
                 remove += i;
         }
 
-        foreach(PublishExtraItem *i, remove)
+        foreach (PublishExtraItem *i, remove)
             publishExtraItemList.remove(i);
     }
 
 private slots:
     void interfacesChanged()
     {
-        if(pub_addresses)
-        {
+        if (pub_addresses) {
             pub_addresses->setUseIPv6(global->haveMulticast6());
             pub_addresses->setUseIPv4(global->haveMulticast4());
         }
@@ -2469,11 +2202,12 @@ private slots:
     void jb_available(const QByteArray &instance)
     {
         JDnsBrowse *jb = static_cast<JDnsBrowse *>(sender());
-        BrowseItem *i = browseItemList.itemByBrowse(jb);
+        BrowseItem *i  = browseItemList.itemByBrowse(jb);
         Q_ASSERT(i);
 
-        QByteArray name = instance + '.' + jb->typeAndDomain;
-        ServiceInstance si(QString::fromLatin1(instance), QString::fromLatin1(jb->type), "local.", QMap<QString,QByteArray>());
+        QByteArray      name = instance + '.' + jb->typeAndDomain;
+        ServiceInstance si(QString::fromLatin1(instance), QString::fromLatin1(jb->type), "local.",
+                           QMap<QString, QByteArray>());
         items.insert(name, si);
 
         emit browse_instanceAvailable(i->id, si);
@@ -2482,7 +2216,7 @@ private slots:
     void jb_unavailable(const QByteArray &instance)
     {
         JDnsBrowse *jb = static_cast<JDnsBrowse *>(sender());
-        BrowseItem *i = browseItemList.itemByBrowse(jb);
+        BrowseItem *i  = browseItemList.itemByBrowse(jb);
         Q_ASSERT(i);
 
         QByteArray name = instance + '.' + jb->typeAndDomain;
@@ -2506,24 +2240,20 @@ private slots:
     void jr_finished()
     {
         JDnsServiceResolve *jr = static_cast<JDnsServiceResolve *>(sender());
-        ResolveItem *i = resolveItemList.itemByResolve(jr);
+        ResolveItem *       i  = resolveItemList.itemByResolve(jr);
         Q_ASSERT(i);
 
         // parse TXT list into attribute map
-        QMap<QString,QByteArray> attribs;
-        for(int n = 0; n < jr->attribs.count(); ++n)
-        {
+        QMap<QString, QByteArray> attribs;
+        for (int n = 0; n < jr->attribs.count(); ++n) {
             const QByteArray &a = jr->attribs[n];
-            QString key;
-            QByteArray value;
-            int x = a.indexOf('=');
-            if(x != -1)
-            {
-                key = QString::fromLatin1(a.mid(0, x));
+            QString           key;
+            QByteArray        value;
+            int               x = a.indexOf('=');
+            if (x != -1) {
+                key   = QString::fromLatin1(a.mid(0, x));
                 value = a.mid(x + 1);
-            }
-            else
-            {
+            } else {
                 key = QString::fromLatin1(a);
             }
 
@@ -2534,22 +2264,20 @@ private slots:
         Q_ASSERT(jr->have4 || jr->have6);
 
         QList<ResolveResult> results;
-        if(jr->have6)
-        {
+        if (jr->have6) {
             ResolveResult r;
             r.attributes = attribs;
-            r.address = jr->addr6;
-            r.port = jr->port;
-            r.hostName = jr->host;
+            r.address    = jr->addr6;
+            r.port       = jr->port;
+            r.hostName   = jr->host;
             results += r;
         }
-        if(jr->have4)
-        {
+        if (jr->have4) {
             ResolveResult r;
             r.attributes = attribs;
-            r.address = jr->addr4;
-            r.port = jr->port;
-            r.hostName = jr->host;
+            r.address    = jr->addr4;
+            r.port       = jr->port;
+            r.hostName   = jr->host;
             results += r;
         }
 
@@ -2561,11 +2289,11 @@ private slots:
     void jr_error(QJDnsSharedRequest::Error e)
     {
         JDnsServiceResolve *jr = static_cast<JDnsServiceResolve *>(sender());
-        ResolveItem *i = resolveItemList.itemByResolve(jr);
+        ResolveItem *       i  = resolveItemList.itemByResolve(jr);
         Q_ASSERT(i);
 
         ServiceResolver::Error err;
-        if(e == QJDnsSharedRequest::ErrorTimeout)
+        if (e == QJDnsSharedRequest::ErrorTimeout)
             err = ServiceResolver::ErrorTimeout;
         else
             err = ServiceResolver::ErrorGeneric;
@@ -2587,14 +2315,14 @@ private slots:
     void pub_addresses_hostName(const QByteArray &name)
     {
         // tell all active publishes about the change
-        foreach(PublishItem *item, publishItemList.items)
+        foreach (PublishItem *item, publishItemList.items)
             item->publish->hostChanged(name);
     }
 
     void jp_published()
     {
         JDnsPublish *jp = static_cast<JDnsPublish *>(sender());
-        PublishItem *i = publishItemList.itemByPublish(jp);
+        PublishItem *i  = publishItemList.itemByPublish(jp);
         Q_ASSERT(i);
 
         emit publish_published(i->id);
@@ -2603,11 +2331,11 @@ private slots:
     void jp_error(QJDnsSharedRequest::Error e)
     {
         JDnsPublish *jp = static_cast<JDnsPublish *>(sender());
-        PublishItem *i = publishItemList.itemByPublish(jp);
+        PublishItem *i  = publishItemList.itemByPublish(jp);
         Q_ASSERT(i);
 
         ServiceLocalPublisher::Error err;
-        if(e == QJDnsSharedRequest::ErrorConflict)
+        if (e == QJDnsSharedRequest::ErrorConflict)
             err = ServiceLocalPublisher::ErrorConflict;
         else
             err = ServiceLocalPublisher::ErrorGeneric;
@@ -2631,7 +2359,7 @@ private slots:
     void jpe_published()
     {
         JDnsPublishExtra *jp = static_cast<JDnsPublishExtra *>(sender());
-        PublishExtraItem *i = publishExtraItemList.itemByPublish(jp);
+        PublishExtraItem *i  = publishExtraItemList.itemByPublish(jp);
         Q_ASSERT(i);
 
         emit publish_extra_published(i->id);
@@ -2640,11 +2368,11 @@ private slots:
     void jpe_error(QJDnsSharedRequest::Error e)
     {
         JDnsPublishExtra *jp = static_cast<JDnsPublishExtra *>(sender());
-        PublishExtraItem *i = publishExtraItemList.itemByPublish(jp);
+        PublishExtraItem *i  = publishExtraItemList.itemByPublish(jp);
         Q_ASSERT(i);
 
         ServiceLocalPublisher::Error err;
-        if(e == QJDnsSharedRequest::ErrorConflict)
+        if (e == QJDnsSharedRequest::ErrorConflict)
             err = ServiceLocalPublisher::ErrorConflict;
         else
             err = ServiceLocalPublisher::ErrorGeneric;
@@ -2667,27 +2395,20 @@ private slots:
 //----------------------------------------------------------------------------
 // JDnsProvider
 //----------------------------------------------------------------------------
-class JDnsProvider : public IrisNetProvider
-{
+class JDnsProvider : public IrisNetProvider {
     Q_OBJECT
     Q_INTERFACES(XMPP::IrisNetProvider)
 
 public:
     JDnsGlobal *global;
 
-    JDnsProvider()
-    {
-        global = 0;
-    }
+    JDnsProvider() { global = 0; }
 
-    ~JDnsProvider()
-    {
-        delete global;
-    }
+    ~JDnsProvider() { delete global; }
 
     void ensure_global()
     {
-        if(!global)
+        if (!global)
             global = new JDnsGlobal;
     }
 
@@ -2710,10 +2431,7 @@ public:
     }
 };
 
-IrisNetProvider *irisnet_createJDnsProvider()
-{
-        return new JDnsProvider;
-}
+IrisNetProvider *irisnet_createJDnsProvider() { return new JDnsProvider; }
 } // namespace XMPP
 
 #include "netnames_jdns.moc"

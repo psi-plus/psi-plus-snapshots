@@ -32,43 +32,28 @@ class BoBData::Private : public QSharedData {
 public:
     QByteArray data; // file data itself
     QString    type; // mime type. e.g. image/png
-    //QString cid;      // content identifier without "cid:"
+    // QString cid;      // content identifier without "cid:"
     Hash         hash;
     unsigned int maxAge; // seconds to live
 };
 
-BoBData::BoBData() :
-    d(new Private)
-{
-}
+BoBData::BoBData() : d(new Private) {}
 
-BoBData::BoBData(const BoBData &other) :
-    d(other.d)
-{
-}
+BoBData::BoBData(const BoBData &other) : d(other.d) {}
 
-BoBData::BoBData(const QDomElement &e) :
-    d(new Private)
-{
-    fromXml(e);
-}
+BoBData::BoBData(const QDomElement &e) : d(new Private) { fromXml(e); }
 
-BoBData::~BoBData()
-{
-}
+BoBData::~BoBData() {}
 
 BoBData &BoBData::operator=(const BoBData &other)
 {
     if (this == &other)
-        return *this; //Protect against self-assignment
+        return *this; // Protect against self-assignment
     d = other.d;
     return *this;
 }
 
-bool BoBData::isNull() const
-{
-    return !d->hash.isValid() || d->data.isNull();
-}
+bool BoBData::isNull() const { return !d->hash.isValid() || d->data.isNull(); }
 
 Hash BoBData::cidToHash(const QString &cid)
 {
@@ -84,50 +69,23 @@ QString BoBData::cid() const
     return QString("%1+%2@bob.xmpp.org").arg(d->hash.stringType(), QString::fromLatin1(d->hash.data().toHex()));
 }
 
-void BoBData::setCid(const QString &cid)
-{
-    d->hash = cidToHash(cid);
-}
+void BoBData::setCid(const QString &cid) { d->hash = cidToHash(cid); }
 
-const Hash &BoBData::hash() const
-{
-    return d->hash;
-}
+const Hash &BoBData::hash() const { return d->hash; }
 
-void BoBData::setHash(const Hash &hash)
-{
-    d->hash = hash;
-}
+void BoBData::setHash(const Hash &hash) { d->hash = hash; }
 
-QByteArray BoBData::data() const
-{
-    return d->data;
-}
+QByteArray BoBData::data() const { return d->data; }
 
-void BoBData::setData(const QByteArray &data)
-{
-    d->data = data;
-}
+void BoBData::setData(const QByteArray &data) { d->data = data; }
 
-QString BoBData::type() const
-{
-    return d->type;
-}
+QString BoBData::type() const { return d->type; }
 
-void BoBData::setType(const QString &type)
-{
-    d->type = type;
-}
+void BoBData::setType(const QString &type) { d->type = type; }
 
-unsigned int BoBData::maxAge() const
-{
-    return d->maxAge;
-}
+unsigned int BoBData::maxAge() const { return d->maxAge; }
 
-void BoBData::setMaxAge(unsigned int maxAge)
-{
-    d->maxAge = maxAge;
-}
+void BoBData::setMaxAge(unsigned int maxAge) { d->maxAge = maxAge; }
 
 void BoBData::fromXml(const QDomElement &data)
 {
@@ -150,24 +108,14 @@ QDomElement BoBData::toXml(QDomDocument *doc) const
 // ---------------------------------------------------------
 // BoBCache
 // ---------------------------------------------------------
-BoBCache::BoBCache(QObject *parent) :
-    QObject(parent)
-{
-}
+BoBCache::BoBCache(QObject *parent) : QObject(parent) {}
 
 //------------------------------------------------------------------------------
 // BoBManager
 //------------------------------------------------------------------------------
-BoBManager::BoBManager(Client *client) :
-    QObject(client), _cache(nullptr)
-{
-    new JT_BoBServer(client->rootTask());
-}
+BoBManager::BoBManager(Client *client) : QObject(client), _cache(nullptr) { new JT_BoBServer(client->rootTask()); }
 
-void BoBManager::setCache(BoBCache *cache)
-{
-    _cache = cache;
-}
+void BoBManager::setCache(BoBCache *cache) { _cache = cache; }
 
 BoBData BoBManager::bobData(const QString &cid)
 {
@@ -192,8 +140,7 @@ BoBData BoBManager::bobData(const QString &cid)
     return bd;
 }
 
-BoBData BoBManager::append(const QByteArray &data, const QString &type,
-                           unsigned int maxAge)
+BoBData BoBManager::append(const QByteArray &data, const QString &type, unsigned int maxAge)
 {
     BoBData b;
     b.setHash(Hash::from(Hash::Sha1, data));

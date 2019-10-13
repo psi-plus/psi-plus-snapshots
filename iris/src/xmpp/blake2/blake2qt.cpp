@@ -8,7 +8,7 @@ namespace XMPP {
 QByteArray computeBlake2Hash(const QByteArray &ba, Blake2DigestSize digestSize)
 {
     QByteArray ret;
-    int retCode;
+    int        retCode;
     if (digestSize == Blake2Digest256) {
         ret.reserve(BLAKE2S_OUTBYTES);
         retCode = blake2s(ret.data(), BLAKE2S_OUTBYTES, ba.data(), ba.size(), nullptr, 0);
@@ -26,7 +26,7 @@ QByteArray computeBlake2Hash(const QByteArray &ba, Blake2DigestSize digestSize)
 
 static QByteArray computeBlake2Hash256(QIODevice *dev)
 {
-    int retCode;
+    int           retCode;
     blake2s_state state;
 
     if (!dev->isOpen()) {
@@ -60,7 +60,7 @@ static QByteArray computeBlake2Hash256(QIODevice *dev)
 
 static QByteArray computeBlake2Hash512(QIODevice *dev)
 {
-    int retCode;
+    int           retCode;
     blake2b_state state;
 
     if (!dev->isOpen()) {
@@ -101,4 +101,4 @@ QByteArray computeBlake2Hash(QIODevice *dev, Blake2DigestSize digestSize)
         return computeBlake2Hash512(dev);
     }
 }
-} //namespace XMPP
+} // namespace XMPP

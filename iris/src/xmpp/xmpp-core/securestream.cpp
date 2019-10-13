@@ -39,11 +39,9 @@
 //----------------------------------------------------------------------------
 // LayerTracker
 //----------------------------------------------------------------------------
-class LayerTracker
-{
+class LayerTracker {
 public:
-    struct Item
-    {
+    struct Item {
         int plain;
         int encoded;
     };
@@ -53,16 +51,13 @@ public:
     void reset();
     void addPlain(int plain);
     void specifyEncoded(int encoded, int plain);
-    int finished(int encoded);
+    int  finished(int encoded);
 
-    int p;
+    int         p;
     QList<Item> list;
 };
 
-LayerTracker::LayerTracker()
-{
-    p = 0;
-}
+LayerTracker::LayerTracker() { p = 0; }
 
 void LayerTracker::reset()
 {
@@ -70,19 +65,16 @@ void LayerTracker::reset()
     list.clear();
 }
 
-void LayerTracker::addPlain(int plain)
-{
-    p += plain;
-}
+void LayerTracker::addPlain(int plain) { p += plain; }
 
 void LayerTracker::specifyEncoded(int encoded, int plain)
 {
     // can't specify more bytes than we have
-    if(plain > p)
+    if (plain > p)
         plain = p;
     p -= plain;
     Item i;
-    i.plain = plain;
+    i.plain   = plain;
     i.encoded = encoded;
     list += i;
 }
@@ -90,11 +82,11 @@ void LayerTracker::specifyEncoded(int encoded, int plain)
 int LayerTracker::finished(int encoded)
 {
     int plain = 0;
-    for(QList<Item>::Iterator it = list.begin(); it != list.end();) {
+    for (QList<Item>::Iterator it = list.begin(); it != list.end();) {
         Item &i = *it;
 
         // not enough?
-        if(encoded < i.encoded) {
+        if (encoded < i.encoded) {
             i.encoded -= encoded;
             break;
         }
@@ -109,14 +101,13 @@ int LayerTracker::finished(int encoded)
 //----------------------------------------------------------------------------
 // SecureStream
 //----------------------------------------------------------------------------
-class SecureLayer : public QObject
-{
+class SecureLayer : public QObject {
     Q_OBJECT
 public:
     enum { TLS, SASL, TLSH, Compression };
     int type;
     union {
-        QCA::TLS *tls;
+        QCA::TLS * tls;
         QCA::SASL *sasl;
 #ifdef USE_TLSHANDLER
         XMPP::TLSHandler *tlsHandler;
@@ -124,12 +115,12 @@ public:
         CompressionHandler *compressionHandler;
     } p;
     LayerTracker layer;
-    bool tls_done;
-    int prebytes;
+    bool         tls_done;
+    int          prebytes;
 
     SecureLayer(QCA::TLS *t)
     {
-        type = TLS;
+        type  = TLS;
         p.tls = t;
         init();
         connect(p.tls, SIGNAL(handshaken()), SLOT(tls_handshaken()));
@@ -141,7 +132,7 @@ public:
 
     SecureLayer(QCA::SASL *s)
     {
-        type = SASL;
+        type   = SASL;
         p.sasl = s;
         init();
         connect(p.sasl, SIGNAL(readyRead()), SLOT(sasl_readyRead()));
@@ -152,7 +143,7 @@ public:
     SecureLayer(CompressionHandler *t)
     {
         t->setParent(this); // automatically clean up CompressionHandler when SecureLayer is destroyed
-        type = Compression;
+        type                 = Compression;
         p.compressionHandler = t;
         init();
         connect(p.compressionHandler, SIGNAL(readyRead()), SLOT(compressionHandler_readyRead()));
@@ -163,14 +154,15 @@ public:
 #ifdef USE_TLSHANDLER
     SecureLayer(XMPP::TLSHandler *t)
     {
-        type = TLSH;
+        type         = TLSH;
         p.tlsHandler = t;
         init();
         connect(p.tlsHandler, SIGNAL(success()), SLOT(tlsHandler_success()));
         connect(p.tlsHandler, SIGNAL(fail()), SLOT(tlsHandler_fail()));
         connect(p.tlsHandler, SIGNAL(closed()), SLOT(tlsHandler_closed()));
         connect(p.tlsHandler, SIGNAL(readyRead(QByteArray)), SLOT(tlsHandler_readyRead(QByteArray)));
-        connect(p.tlsHandler, SIGNAL(readyReadOutgoing(QByteArray,int)), SLOT(tlsHandler_readyReadOutgoing(QByteArray,int)));
+        connect(p.tlsHandler, SIGNAL(readyReadOutgoing(QByteArray, int)),
+                SLOT(tlsHandler_readyReadOutgoing(QByteArray, int)));
     }
 #endif
 
@@ -183,25 +175,49 @@ public:
     void write(const QByteArray &a)
     {
         layer.addPlain(a.size());
-        switch(type) {
-            case TLS:  { p.tls->write(a); break; }
-            case SASL: { p.sasl->write(a); break; }
+        switch (type) {
+        case TLS: {
+            p.tls->write(a);
+            break;
+        }
+        case SASL: {
+            p.sasl->write(a);
+            break;
+        }
 #ifdef USE_TLSHANDLER
-            case TLSH: { p.tlsHandler->write(a); break; }
+        case TLSH: {
+            p.tlsHandler->write(a);
+            break;
+        }
 #endif
-            case Compression: { p.compressionHandler->write(a); break; }
+        case Compression: {
+            p.compressionHandler->write(a);
+            break;
+        }
         }
     }
 
     void writeIncoming(const QByteArray &a)
     {
-        switch(type) {
-            case TLS:  { p.tls->writeIncoming(a); break; }
-            case SASL: { p.sasl->writeIncoming(a); break; }
+        switch (type) {
+        case TLS: {
+            p.tls->writeIncoming(a);
+            break;
+        }
+        case SASL: {
+            p.sasl->writeIncoming(a);
+            break;
+        }
 #ifdef USE_TLSHANDLER
-            case TLSH: { p.tlsHandler->writeIncoming(a); break; }
+        case TLSH: {
+            p.tlsHandler->writeIncoming(a);
+            break;
+        }
 #endif
-            case Compression: { p.compressionHandler->writeIncoming(a); break; }
+        case Compression: {
+            p.compressionHandler->writeIncoming(a);
+            break;
+        }
         }
     }
 
@@ -210,13 +226,12 @@ public:
         int written = 0;
 
         // deal with prebytes (bytes sent prior to this security layer)
-        if(prebytes > 0) {
-            if(prebytes >= plain) {
+        if (prebytes > 0) {
+            if (prebytes >= plain) {
                 written += plain;
                 prebytes -= plain;
                 plain = 0;
-            }
-            else {
+            } else {
                 written += prebytes;
                 plain -= prebytes;
                 prebytes = 0;
@@ -224,7 +239,7 @@ public:
         }
 
         // put remainder into the layer tracker
-        if(type == SASL || tls_done)
+        if (type == SASL || tls_done)
             written += layer.finished(plain);
 
         return written;
@@ -253,7 +268,7 @@ private slots:
     void tls_readyReadOutgoing(int plainBytes)
     {
         QByteArray a = p.tls->readOutgoing();
-        if(tls_done)
+        if (tls_done)
             layer.specifyEncoded(a.size(), plainBytes);
         needWrite(a);
     }
@@ -264,10 +279,7 @@ private slots:
         tlsClosed(a);
     }
 
-    void tls_error(int x)
-    {
-        error(x);
-    }
+    void tls_error(int x) { error(x); }
 
     void sasl_readyRead()
     {
@@ -277,16 +289,13 @@ private slots:
 
     void sasl_readyReadOutgoing()
     {
-        int plainBytes;
+        int        plainBytes;
         QByteArray a = p.sasl->readOutgoing(&plainBytes);
         layer.specifyEncoded(a.size(), plainBytes);
         needWrite(a);
     }
 
-    void sasl_error()
-    {
-        error(p.sasl->errorCode());
-    }
+    void sasl_error() { error(p.sasl->errorCode()); }
 
     void compressionHandler_readyRead()
     {
@@ -296,16 +305,13 @@ private slots:
 
     void compressionHandler_readyReadOutgoing()
     {
-        int plainBytes;
+        int        plainBytes;
         QByteArray a = p.compressionHandler->readOutgoing(&plainBytes);
         layer.specifyEncoded(a.size(), plainBytes);
         needWrite(a);
     }
 
-    void compressionHandler_error()
-    {
-        error(p.compressionHandler->errorCode());
-    }
+    void compressionHandler_error() { error(p.compressionHandler->errorCode()); }
 
 #ifdef USE_TLSHANDLER
     void tlsHandler_success()
@@ -314,24 +320,15 @@ private slots:
         tlsHandshaken();
     }
 
-    void tlsHandler_fail()
-    {
-        error(0);
-    }
+    void tlsHandler_fail() { error(0); }
 
-    void tlsHandler_closed()
-    {
-        tlsClosed(QByteArray());
-    }
+    void tlsHandler_closed() { tlsClosed(QByteArray()); }
 
-    void tlsHandler_readyRead(const QByteArray &a)
-    {
-        readyRead(a);
-    }
+    void tlsHandler_readyRead(const QByteArray &a) { readyRead(a); }
 
     void tlsHandler_readyReadOutgoing(const QByteArray &a, int plainBytes)
     {
-        if(tls_done)
+        if (tls_done)
             layer.specifyEncoded(a.size(), plainBytes);
         needWrite(a);
     }
@@ -340,22 +337,21 @@ private slots:
 
 #include "securestream.moc"
 
-class SecureStream::Private
-{
+class SecureStream::Private {
 public:
-    ByteStream *bs;
-    QList<SecureLayer*> layers;
-    int pending;
-    int errorCode;
-    bool active;
-    bool topInProgress;
+    ByteStream *         bs;
+    QList<SecureLayer *> layers;
+    int                  pending;
+    int                  errorCode;
+    bool                 active;
+    bool                 topInProgress;
 
     bool haveTLS() const
     {
-        foreach(SecureLayer *s, layers) {
-            if(s->type == SecureLayer::TLS
+        foreach (SecureLayer *s, layers) {
+            if (s->type == SecureLayer::TLS
 #ifdef USE_TLSHANDLER
-            || s->type == SecureLayer::TLSH
+                || s->type == SecureLayer::TLSH
 #endif
             ) {
                 return true;
@@ -366,8 +362,8 @@ public:
 
     bool haveSASL() const
     {
-        foreach(SecureLayer *s, layers) {
-            if(s->type == SecureLayer::SASL)
+        foreach (SecureLayer *s, layers) {
+            if (s->type == SecureLayer::SASL)
                 return true;
         }
         return false;
@@ -375,8 +371,8 @@ public:
 
     bool haveCompress() const
     {
-        foreach(SecureLayer *s, layers) {
-            if(s->type == SecureLayer::Compression)
+        foreach (SecureLayer *s, layers) {
+            if (s->type == SecureLayer::Compression)
                 return true;
         }
         return false;
@@ -389,8 +385,7 @@ public:
     }
 };
 
-SecureStream::SecureStream(ByteStream *s)
-:ByteStream(nullptr)
+SecureStream::SecureStream(ByteStream *s) : ByteStream(nullptr)
 {
     d = new Private;
 
@@ -398,8 +393,8 @@ SecureStream::SecureStream(ByteStream *s)
     connect(d->bs, SIGNAL(readyRead()), SLOT(bs_readyRead()));
     connect(d->bs, SIGNAL(bytesWritten(qint64)), SLOT(bs_bytesWritten(qint64)));
 
-    d->pending = 0;
-    d->active = true;
+    d->pending       = 0;
+    d->active        = true;
     d->topInProgress = false;
     setOpenMode(QIODevice::ReadWrite);
 }
@@ -422,7 +417,7 @@ void SecureStream::linkLayer(QObject *s)
 int SecureStream::calcPrebytes() const
 {
     int x = 0;
-    foreach(SecureLayer *s, d->layers) {
+    foreach (SecureLayer *s, d->layers) {
         x += s->prebytes;
     }
     return (d->pending - x);
@@ -430,11 +425,11 @@ int SecureStream::calcPrebytes() const
 
 void SecureStream::startTLSClient(QCA::TLS *t, const QByteArray &spare)
 {
-    if(!d->active || d->topInProgress || d->haveTLS())
+    if (!d->active || d->topInProgress || d->haveTLS())
         return;
 
     SecureLayer *s = new SecureLayer(t);
-    s->prebytes = calcPrebytes();
+    s->prebytes    = calcPrebytes();
     linkLayer(s);
     d->layers.append(s);
     d->topInProgress = true;
@@ -444,11 +439,11 @@ void SecureStream::startTLSClient(QCA::TLS *t, const QByteArray &spare)
 
 void SecureStream::startTLSServer(QCA::TLS *t, const QByteArray &spare)
 {
-    if(!d->active || d->topInProgress || d->haveTLS())
+    if (!d->active || d->topInProgress || d->haveTLS())
         return;
 
     SecureLayer *s = new SecureLayer(t);
-    s->prebytes = calcPrebytes();
+    s->prebytes    = calcPrebytes();
     linkLayer(s);
     d->layers.append(s);
     d->topInProgress = true;
@@ -456,13 +451,13 @@ void SecureStream::startTLSServer(QCA::TLS *t, const QByteArray &spare)
     insertData(spare);
 }
 
-void SecureStream::setLayerCompress(const QByteArray& spare)
+void SecureStream::setLayerCompress(const QByteArray &spare)
 {
-    if(!d->active || d->topInProgress || d->haveCompress())
+    if (!d->active || d->topInProgress || d->haveCompress())
         return;
 
     SecureLayer *s = new SecureLayer(new CompressionHandler());
-    s->prebytes = calcPrebytes();
+    s->prebytes    = calcPrebytes();
     linkLayer(s);
     d->layers.append(s);
 
@@ -471,11 +466,11 @@ void SecureStream::setLayerCompress(const QByteArray& spare)
 
 void SecureStream::setLayerSASL(QCA::SASL *sasl, const QByteArray &spare)
 {
-    if(!d->active || d->topInProgress || d->haveSASL())
+    if (!d->active || d->topInProgress || d->haveSASL())
         return;
 
     SecureLayer *s = new SecureLayer(sasl);
-    s->prebytes = calcPrebytes();
+    s->prebytes    = calcPrebytes();
     linkLayer(s);
     d->layers.append(s);
 
@@ -485,11 +480,11 @@ void SecureStream::setLayerSASL(QCA::SASL *sasl, const QByteArray &spare)
 #ifdef USE_TLSHANDLER
 void SecureStream::startTLSClient(XMPP::TLSHandler *t, const QString &server, const QByteArray &spare)
 {
-    if(!d->active || d->topInProgress || d->haveTLS())
+    if (!d->active || d->topInProgress || d->haveTLS())
         return;
 
     SecureLayer *s = new SecureLayer(t);
-    s->prebytes = calcPrebytes();
+    s->prebytes    = calcPrebytes();
     linkLayer(s);
     d->layers.append(s);
     d->topInProgress = true;
@@ -505,25 +500,19 @@ void SecureStream::closeTLS()
 {
     if (!d->layers.isEmpty()) {
         SecureLayer *s = d->layers.last();
-        if(s->type == SecureLayer::TLS) {
+        if (s->type == SecureLayer::TLS) {
             s->p.tls->close();
         }
     }
 }
 
-int SecureStream::errorCode() const
-{
-    return d->errorCode;
-}
+int SecureStream::errorCode() const { return d->errorCode; }
 
-bool SecureStream::isOpen() const
-{
-    return d->active;
-}
+bool SecureStream::isOpen() const { return d->active; }
 
 void SecureStream::write(const QByteArray &a)
 {
-    if(!isOpen()) {
+    if (!isOpen()) {
         qDebug("Writing to closed stream!");
         return;
     }
@@ -534,16 +523,12 @@ void SecureStream::write(const QByteArray &a)
     if (!d->layers.isEmpty()) {
         SecureLayer *s = d->layers.last();
         s->write(a);
-    }
-    else {
+    } else {
         writeRawData(a);
     }
 }
 
-qint64 SecureStream::bytesToWrite() const
-{
-    return d->pending;
-}
+qint64 SecureStream::bytesToWrite() const { return d->pending; }
 
 void SecureStream::bs_readyRead()
 {
@@ -553,19 +538,18 @@ void SecureStream::bs_readyRead()
     if (!d->layers.isEmpty()) {
         SecureLayer *s = d->layers.first();
         s->writeIncoming(a);
-    }
-    else {
+    } else {
         incomingData(a);
     }
 }
 
 void SecureStream::bs_bytesWritten(qint64 bytes)
 {
-    foreach(SecureLayer *s, d->layers) {
+    foreach (SecureLayer *s, d->layers) {
         bytes = s->finished(bytes);
     }
 
-    if(bytes > 0) {
+    if (bytes > 0) {
         d->pending -= bytes;
         bytesWritten(bytes);
     }
@@ -587,9 +571,9 @@ void SecureStream::layer_tlsClosed(const QByteArray &)
 
 void SecureStream::layer_readyRead(const QByteArray &a)
 {
-    SecureLayer *s = static_cast<SecureLayer *>(sender());
-    QList<SecureLayer*>::Iterator it(d->layers.begin());
-    while((*it) != s) {
+    SecureLayer *                  s = static_cast<SecureLayer *>(sender());
+    QList<SecureLayer *>::Iterator it(d->layers.begin());
+    while ((*it) != s) {
         Q_ASSERT(it != d->layers.end());
         ++it;
     }
@@ -600,17 +584,16 @@ void SecureStream::layer_readyRead(const QByteArray &a)
     if (it != d->layers.end()) {
         s = (*it);
         s->writeIncoming(a);
-    }
-    else {
+    } else {
         incomingData(a);
     }
 }
 
 void SecureStream::layer_needWrite(const QByteArray &a)
 {
-    SecureLayer *s = static_cast<SecureLayer *>(sender());
-    QList<SecureLayer*>::Iterator it(d->layers.begin());
-    while((*it) != s) {
+    SecureLayer *                  s = static_cast<SecureLayer *>(sender());
+    QList<SecureLayer *>::Iterator it(d->layers.begin());
+    while ((*it) != s) {
         Q_ASSERT(it != d->layers.end());
         ++it;
     }
@@ -621,51 +604,46 @@ void SecureStream::layer_needWrite(const QByteArray &a)
         --it;
         s = (*it);
         s->write(a);
-    }
-    else {
+    } else {
         writeRawData(a);
     }
 }
 
 void SecureStream::layer_error(int x)
 {
-    SecureLayer *s = static_cast<SecureLayer *>(sender());
-    int type = s->type;
-    d->errorCode = x;
+    SecureLayer *s    = static_cast<SecureLayer *>(sender());
+    int          type = s->type;
+    d->errorCode      = x;
     setOpenMode(QIODevice::NotOpen);
     d->active = false;
     d->deleteLayers();
-    if(type == SecureLayer::TLS)
+    if (type == SecureLayer::TLS)
         setError(ErrTLS);
-    else if(type == SecureLayer::SASL)
+    else if (type == SecureLayer::SASL)
         setError(ErrSASL);
 #ifdef USE_TLSHANDLER
-    else if(type == SecureLayer::TLSH)
+    else if (type == SecureLayer::TLSH)
         setError(ErrTLS);
 #endif
 }
 
 void SecureStream::insertData(const QByteArray &a)
 {
-    if(!a.isEmpty()) {
+    if (!a.isEmpty()) {
         if (!d->layers.isEmpty()) {
             SecureLayer *s = d->layers.last();
             s->writeIncoming(a);
-        }
-        else {
+        } else {
             incomingData(a);
         }
     }
 }
 
-void SecureStream::writeRawData(const QByteArray &a)
-{
-    d->bs->write(a);
-}
+void SecureStream::writeRawData(const QByteArray &a) { d->bs->write(a); }
 
 void SecureStream::incomingData(const QByteArray &a)
 {
     appendRead(a);
-    if(bytesAvailable())
+    if (bytesAvailable())
         emit readyRead();
 }

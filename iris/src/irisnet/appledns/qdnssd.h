@@ -24,43 +24,32 @@
 #include <QObject>
 
 // DOR-compliant
-class QDnsSd : public QObject
-{
+class QDnsSd : public QObject {
     Q_OBJECT
 public:
-    class LowLevelError
-    {
+    class LowLevelError {
     public:
         QString func;
-        int code;
+        int     code;
 
-        LowLevelError() :
-            code(0)
-        {
-        }
+        LowLevelError() : code(0) {}
 
-        LowLevelError(const QString &_func, int _code) :
-            func(_func),
-            code(_code)
-        {
-        }
+        LowLevelError(const QString &_func, int _code) : func(_func), code(_code) {}
     };
 
-    class Record
-    {
+    class Record {
     public:
         bool added; // only used by QueryResult
 
         QByteArray name;
-        int rrtype;
+        int        rrtype;
         QByteArray rdata;
-        quint32 ttl;
+        quint32    ttl;
     };
 
-    class BrowseEntry
-    {
+    class BrowseEntry {
     public:
-        bool added;
+        bool       added;
         QByteArray serviceName;
 
         // these may be different from request, see dns_sd docs
@@ -68,47 +57,39 @@ public:
         QByteArray replyDomain;
     };
 
-    class QueryResult
-    {
+    class QueryResult {
     public:
-        bool success;
+        bool          success;
         LowLevelError lowLevelError;
 
         QList<Record> records;
     };
 
-    class BrowseResult
-    {
+    class BrowseResult {
     public:
-        bool success;
+        bool          success;
         LowLevelError lowLevelError;
 
         QList<BrowseEntry> entries;
     };
 
-    class ResolveResult
-    {
+    class ResolveResult {
     public:
-        bool success;
+        bool          success;
         LowLevelError lowLevelError;
 
         QByteArray fullName;
         QByteArray hostTarget;
-        int port; // host byte-order
+        int        port; // host byte-order
         QByteArray txtRecord;
     };
 
-    class RegResult
-    {
+    class RegResult {
     public:
-        enum Error
-        {
-            ErrorGeneric,
-            ErrorConflict
-        };
+        enum Error { ErrorGeneric, ErrorConflict };
 
-        bool success;
-        Error errorCode;
+        bool          success;
+        Error         errorCode;
         LowLevelError lowLevelError;
 
         QByteArray domain;
@@ -125,7 +106,8 @@ public:
     int resolve(const QByteArray &serviceName, const QByteArray &serviceType, const QByteArray &domain);
 
     // domain may be empty
-    int reg(const QByteArray &serviceName, const QByteArray &serviceType, const QByteArray &domain, int port, const QByteArray &txtRecord);
+    int reg(const QByteArray &serviceName, const QByteArray &serviceType, const QByteArray &domain, int port,
+            const QByteArray &txtRecord);
 
     // return -1 on error, else a record id
     int recordAdd(int reg_id, const Record &rec, LowLevelError *lowLevelError = 0);

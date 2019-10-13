@@ -23,80 +23,81 @@
 #include "jingle.h"
 
 namespace XMPP {
-    class IBBConnection;
+class IBBConnection;
 
-namespace Jingle {
-namespace IBB {
-extern const QString NS;
+namespace Jingle { namespace IBB {
+    extern const QString NS;
 
-class Transport : public XMPP::Jingle::Transport
-{
-    Q_OBJECT
-public:
-    Transport(const TransportManagerPad::Ptr &pad);
-    Transport(const TransportManagerPad::Ptr &pad, const QDomElement &transportEl);
-    ~Transport();
+    class Transport : public XMPP::Jingle::Transport {
+        Q_OBJECT
+    public:
+        Transport(const TransportManagerPad::Ptr &pad);
+        Transport(const TransportManagerPad::Ptr &pad, const QDomElement &transportEl);
+        ~Transport();
 
-    TransportManagerPad::Ptr pad() const override;
+        TransportManagerPad::Ptr pad() const override;
 
-    void prepare() override;
-    void start() override;
-    bool isInitialOfferReady() const override;
-    OutgoingTransportInfoUpdate takeInitialOffer() override;
-    bool update(const QDomElement &transportEl) override;
-    bool hasUpdates() const override;
-    OutgoingTransportInfoUpdate takeOutgoingUpdate() override;
-    bool isValid() const override;
-    Features features() const override;
+        void                        prepare() override;
+        void                        start() override;
+        bool                        isInitialOfferReady() const override;
+        OutgoingTransportInfoUpdate takeInitialOffer() override;
+        bool                        update(const QDomElement &transportEl) override;
+        bool                        hasUpdates() const override;
+        OutgoingTransportInfoUpdate takeOutgoingUpdate() override;
+        bool                        isValid() const override;
+        Features                    features() const override;
 
-    Connection::Ptr connection() const override;
+        Connection::Ptr connection() const override;
 
-private:
-    friend class Manager;
+    private:
+        friend class Manager;
 
-    class Private;
-    QScopedPointer<Private> d;
-};
+        class Private;
+        QScopedPointer<Private> d;
+    };
 
-class Manager;
-class Pad : public TransportManagerPad
-{
-    Q_OBJECT
-    // TODO
-public:
-    typedef QSharedPointer<Pad> Ptr;
+    class Manager;
+    class Pad : public TransportManagerPad {
+        Q_OBJECT
+        // TODO
+    public:
+        typedef QSharedPointer<Pad> Ptr;
 
-    Pad(Manager *manager, Session *session);
-    QString ns() const override;
-    Session *session() const override;
-    TransportManager *manager() const override;
+        Pad(Manager *manager, Session *session);
+        QString           ns() const override;
+        Session *         session() const override;
+        TransportManager *manager() const override;
 
-    Connection::Ptr makeConnection(const QString &sid, size_t blockSize);
-private:
-    Manager *_manager = nullptr;
-    Session *_session = nullptr;
-};
+        Connection::Ptr makeConnection(const QString &sid, size_t blockSize);
 
-class Manager : public TransportManager {
-    Q_OBJECT
-public:
-    Manager(QObject *parent = nullptr);
-    ~Manager();
+    private:
+        Manager *_manager = nullptr;
+        Session *_session = nullptr;
+    };
 
-    XMPP::Jingle::Transport::Features features() const override;
-    void setJingleManager(XMPP::Jingle::Manager *jm) override;
-    QSharedPointer<XMPP::Jingle::Transport> newTransport(const TransportManagerPad::Ptr &pad) override; // outgoing. one have to call Transport::start to collect candidates
-    QSharedPointer<XMPP::Jingle::Transport> newTransport(const TransportManagerPad::Ptr &pad, const QDomElement &transportEl) override; // incoming
-    TransportManagerPad* pad(Session *session) override;
+    class Manager : public TransportManager {
+        Q_OBJECT
+    public:
+        Manager(QObject *parent = nullptr);
+        ~Manager();
 
-    void closeAll() override;
+        XMPP::Jingle::Transport::Features       features() const override;
+        void                                    setJingleManager(XMPP::Jingle::Manager *jm) override;
+        QSharedPointer<XMPP::Jingle::Transport> newTransport(const TransportManagerPad::Ptr &pad)
+            override; // outgoing. one have to call Transport::start to collect candidates
+        QSharedPointer<XMPP::Jingle::Transport> newTransport(const TransportManagerPad::Ptr &pad,
+                                                             const QDomElement &transportEl) override; // incoming
+        TransportManagerPad *                   pad(Session *session) override;
 
-    Connection::Ptr makeConnection(const Jid &peer, const QString &sid, size_t blockSize);
-    bool handleIncoming(IBBConnection *c);
-private:
-    class Private;
-    QScopedPointer<Private> d;
-};
+        void closeAll() override;
+
+        Connection::Ptr makeConnection(const Jid &peer, const QString &sid, size_t blockSize);
+        bool            handleIncoming(IBBConnection *c);
+
+    private:
+        class Private;
+        QScopedPointer<Private> d;
+    };
 } // namespace IBB
 } // namespace Jingle
 } // namespace XMPP

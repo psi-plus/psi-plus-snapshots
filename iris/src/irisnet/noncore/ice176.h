@@ -26,83 +26,56 @@
 #include <QString>
 
 namespace QCA {
-    class SecureArray;
+class SecureArray;
 }
 
 namespace XMPP {
 class UdpPortReserver;
 
-class Ice176 : public QObject
-{
+class Ice176 : public QObject {
     Q_OBJECT
 
 public:
-    enum Error
-    {
-        ErrorGeneric
-    };
+    enum Error { ErrorGeneric };
 
-    enum Mode
-    {
-        Initiator,
-        Responder
-    };
+    enum Mode { Initiator, Responder };
 
-    class LocalAddress
-    {
+    class LocalAddress {
     public:
         QHostAddress addr;
-        int network; // -1 = unknown
-        bool isVpn;
+        int          network; // -1 = unknown
+        bool         isVpn;
 
-        LocalAddress() :
-            network(-1),
-            isVpn(false)
-        {
-        }
+        LocalAddress() : network(-1), isVpn(false) {}
     };
 
-    class ExternalAddress
-    {
+    class ExternalAddress {
     public:
         LocalAddress base;
         QHostAddress addr;
-        int portBase; // -1 = same as base
+        int          portBase; // -1 = same as base
 
-        ExternalAddress() :
-            portBase(-1)
-        {
-        }
+        ExternalAddress() : portBase(-1) {}
     };
 
-    class Candidate
-    {
+    class Candidate {
     public:
-        int component;
-        QString foundation;
-        int generation;
-        QString id;
+        int          component;
+        QString      foundation;
+        int          generation;
+        QString      id;
         QHostAddress ip;
-        int network; // -1 = unknown
-        int port;
-        int priority;
-        QString protocol;
+        int          network; // -1 = unknown
+        int          port;
+        int          priority;
+        QString      protocol;
         QHostAddress rel_addr;
-        int rel_port;
+        int          rel_port;
         QHostAddress rem_addr;
-        int rem_port;
-        QString type;
+        int          rem_port;
+        QString      type;
 
-        Candidate() :
-            component(-1),
-            generation(-1),
-            network(-1),
-            port(-1),
-            priority(-1),
-            rel_port(-1),
-            rem_port(-1)
-        {
-        }
+        Candidate() : component(-1), generation(-1), network(-1), port(-1), priority(-1), rel_port(-1), rem_port(-1) {}
     };
 
     Ice176(QObject *parent = nullptr);
@@ -147,9 +120,9 @@ public:
 
     void addRemoteCandidates(const QList<Candidate> &list);
 
-    bool hasPendingDatagrams(int componentIndex) const;
+    bool       hasPendingDatagrams(int componentIndex) const;
     QByteArray readDatagram(int componentIndex);
-    void writeDatagram(int componentIndex, const QByteArray &datagram);
+    void       writeDatagram(int componentIndex, const QByteArray &datagram);
 
     // this call will ensure that TURN headers are minimized on this
     //   component, with the drawback that packets might not be able to

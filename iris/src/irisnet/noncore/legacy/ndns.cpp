@@ -61,8 +61,7 @@
 
 //!
 //! Constructs an NDns object with parent \a parent.
-NDns::NDns(QObject *parent)
-:QObject(parent),dns(this)
+NDns::NDns(QObject *parent) : QObject(parent), dns(this)
 {
     busy = false;
 
@@ -72,10 +71,7 @@ NDns::NDns(QObject *parent)
 
 //!
 //! Destroys the object and frees allocated resources.
-NDns::~NDns()
-{
-    stop();
-}
+NDns::~NDns() { stop(); }
 
 //!
 //! Resolves hostname \a host (eg. psi.affinix.com)
@@ -98,25 +94,16 @@ void NDns::stop()
 //!
 //! Returns the IP address as a 32-bit integer in host-byte-order.  This will be 0 if the lookup failed.
 //! \sa resultsReady()
-QHostAddress NDns::result() const
-{
-    return addr;
-}
+QHostAddress NDns::result() const { return addr; }
 
 //!
 //! Returns the IP address as a string.  This will be an empty string if the lookup failed.
 //! \sa resultsReady()
-QString NDns::resultString() const
-{
-    return addr.toString();
-}
+QString NDns::resultString() const { return addr.toString(); }
 
 //!
 //! Returns TRUE if busy resolving a hostname.
-bool NDns::isBusy() const
-{
-    return busy;
-}
+bool NDns::isBusy() const { return busy; }
 
 void NDns::dns_resultsReady(const QList<XMPP::NameRecord> &results)
 {
@@ -133,4 +120,3 @@ void NDns::dns_error(XMPP::NameResolver::Error)
 }
 
 // CS_NAMESPACE_END
-

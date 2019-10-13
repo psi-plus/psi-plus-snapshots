@@ -29,46 +29,28 @@ namespace XMPP {
 class StunMessage;
 class StunTransactionPool;
 
-class StunAllocate : public QObject
-{
+class StunAllocate : public QObject {
     Q_OBJECT
 
 public:
-    enum Error
-    {
-        ErrorGeneric,
-        ErrorTimeout,
-        ErrorAuth,
-        ErrorRejected,
-        ErrorProtocol,
-        ErrorCapacity,
-        ErrorMismatch
-    };
+    enum Error { ErrorGeneric, ErrorTimeout, ErrorAuth, ErrorRejected, ErrorProtocol, ErrorCapacity, ErrorMismatch };
 
-    class Channel
-    {
+    class Channel {
     public:
         QHostAddress address;
-        int port;
+        int          port;
 
-        Channel(const QHostAddress &_address, int _port) :
-            address(_address),
-            port(_port)
-        {
-        }
+        Channel(const QHostAddress &_address, int _port) : address(_address), port(_port) {}
 
         inline bool operator==(const Channel &other)
         {
-            if(address == other.address && port == other.port)
+            if (address == other.address && port == other.port)
                 return true;
             else
                 return false;
         }
 
-        inline bool operator!=(const Channel &other)
-        {
-            return !operator==(other);
-        }
+        inline bool operator!=(const Channel &other) { return !operator==(other); }
     };
 
     StunAllocate(StunTransactionPool *pool);
@@ -83,16 +65,16 @@ public:
     QString serverSoftwareNameAndVersion() const;
 
     QHostAddress reflexiveAddress() const;
-    int reflexivePort() const;
+    int          reflexivePort() const;
 
     QHostAddress relayedAddress() const;
-    int relayedPort() const;
+    int          relayedPort() const;
 
     QList<QHostAddress> permissions() const;
-    void setPermissions(const QList<QHostAddress> &perms);
+    void                setPermissions(const QList<QHostAddress> &perms);
 
     QList<Channel> channels() const;
-    void setChannels(const QList<Channel> &channels);
+    void           setChannels(const QList<Channel> &channels);
 
     int packetHeaderOverhead(const QHostAddress &addr, int port) const;
 
@@ -102,7 +84,7 @@ public:
 
     QString errorString() const;
 
-    static bool containsChannelData(const quint8 *data, int size);
+    static bool       containsChannelData(const quint8 *data, int size);
     static QByteArray readChannelData(const quint8 *data, int size);
 
 signals:

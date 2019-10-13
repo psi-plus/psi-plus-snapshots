@@ -7,26 +7,25 @@
 
 class QIODevice;
 
-class ZLibDecompressor : public QObject
-{
+class ZLibDecompressor : public QObject {
     Q_OBJECT
 
 public:
-    ZLibDecompressor(QIODevice* device);
+    ZLibDecompressor(QIODevice *device);
     ~ZLibDecompressor();
 
-    qint64 write(const QByteArray&);
+    qint64 write(const QByteArray &);
 
 protected slots:
     void flush();
 
 protected:
-    qint64 write(const QByteArray&, bool flush);
+    qint64 write(const QByteArray &, bool flush);
 
 private:
-    QIODevice* device_;
-    z_stream* zlib_stream_;
-    bool flushed_;
+    QIODevice *device_;
+    z_stream * zlib_stream_;
+    bool       flushed_;
 };
 
 #endif // ZLIBDECOMPRESSOR_H

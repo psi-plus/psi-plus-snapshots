@@ -16,28 +16,28 @@
  *
  */
 
-#include "qttestutil/qttestutil.h"
 #include "xmpp/base/randrandomnumbergenerator.h"
+#include "qttestutil/qttestutil.h"
 
 #include <QObject>
 #include <QtTest/QtTest>
 
 using namespace XMPP;
 
-class RandRandomNumberGeneratorTest : public QObject
-{
-        Q_OBJECT
+class RandRandomNumberGeneratorTest : public QObject {
+    Q_OBJECT
 
-    private slots:
-        void testGenerateNumber() {
-            RandRandomNumberGenerator testling;
+private slots:
+    void testGenerateNumber()
+    {
+        RandRandomNumberGenerator testling;
 
-            double a = testling.generateNumberBetween(0.0,100.0);
-            double b = testling.generateNumberBetween(0.0,100.0);
+        double a = testling.generateNumberBetween(0.0, 100.0);
+        double b = testling.generateNumberBetween(0.0, 100.0);
 
-            QVERIFY(a != b);
-        }
- };
+        QVERIFY(a != b);
+    }
+};
 
 QTTESTUTIL_REGISTER_TEST(RandRandomNumberGeneratorTest);
 #include "randrandomnumbergeneratortest.moc"

@@ -28,15 +28,11 @@
 
 namespace XMPP {
 // for the turn transport, only path 0 is used
-class IceTurnTransport : public IceTransport
-{
+class IceTurnTransport : public IceTransport {
     Q_OBJECT
 
 public:
-    enum Error
-    {
-        ErrorTurn = ErrorCustom
-    };
+    enum Error { ErrorTurn = ErrorCustom };
 
     IceTurnTransport(QObject *parent = nullptr);
     ~IceTurnTransport();
@@ -52,17 +48,17 @@ public:
     void start(const QHostAddress &addr, int port, TurnClient::Mode mode = TurnClient::PlainMode);
 
     QHostAddress relayedAddress() const;
-    int relayedPort() const;
+    int          relayedPort() const;
 
     TurnClient::Error turnErrorCode() const;
 
     // reimplemented
-    virtual void stop();
-    virtual bool hasPendingDatagrams(int path) const;
+    virtual void       stop();
+    virtual bool       hasPendingDatagrams(int path) const;
     virtual QByteArray readDatagram(int path, QHostAddress *addr, int *port);
-    virtual void writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port);
-    virtual void addChannelPeer(const QHostAddress &addr, int port);
-    virtual void setDebugLevel(DebugLevel level);
+    virtual void       writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port);
+    virtual void       addChannelPeer(const QHostAddress &addr, int port);
+    virtual void       setDebugLevel(DebugLevel level);
 
 private:
     class Private;

@@ -20,14 +20,7 @@
 #define XMPP_CHATSTATE
 
 namespace XMPP {
-    typedef enum {
-        StateNone,
-        StateActive,
-        StateComposing,
-        StatePaused,
-        StateInactive,
-        StateGone
-    } ChatState;
+typedef enum { StateNone, StateActive, StateComposing, StatePaused, StateInactive, StateGone } ChatState;
 } // namespace XMPP
 
 #endif // XMPP_CHATSTATE

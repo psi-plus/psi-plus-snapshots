@@ -25,20 +25,18 @@
 #include <QString>
 
 namespace QCA {
-    class SecureArray;
+class SecureArray;
 }
 
 namespace XMPP {
 class StunAllocate;
 class StunTransactionPool;
 
-class TurnClient : public QObject
-{
+class TurnClient : public QObject {
     Q_OBJECT
 
 public:
-    enum Error
-    {
+    enum Error {
         ErrorGeneric,
         ErrorHostNotFound,
         ErrorConnect,
@@ -66,34 +64,19 @@ public:
         ErrorMismatch
     };
 
-    enum Mode
-    {
-        PlainMode,
-        TlsMode
-    };
+    enum Mode { PlainMode, TlsMode };
 
-    enum DebugLevel
-    {
-        DL_None,
-        DL_Info,
-        DL_Packet
-    };
+    enum DebugLevel { DL_None, DL_Info, DL_Packet };
 
     // adapted from XMPP::AdvancedConnector
-    class Proxy
-    {
+    class Proxy {
     public:
-        enum
-        {
-            None,
-            HttpConnect,
-            Socks
-        };
+        enum { None, HttpConnect, Socks };
 
         Proxy();
         ~Proxy();
 
-        int type() const;
+        int     type() const;
         QString host() const;
         quint16 port() const;
         QString user() const;
@@ -104,7 +87,7 @@ public:
         void setUserPass(const QString &user, const QString &pass);
 
     private:
-        int t;
+        int     t;
         QString v_host;
         quint16 v_port;
         QString v_user, v_pass;
@@ -135,10 +118,10 @@ public:
     void outgoingDatagramsWritten(int count);
 
     QString realm() const;
-    void setUsername(const QString &username);
-    void setPassword(const QCA::SecureArray &password);
-    void setRealm(const QString &realm);
-    void continueAfterParams();
+    void    setUsername(const QString &username);
+    void    setPassword(const QCA::SecureArray &password);
+    void    setRealm(const QString &realm);
+    void    continueAfterParams();
 
     void close();
 
@@ -165,7 +148,7 @@ signals:
     void tlsHandshaken();
     void closed();
     void needAuthParams();
-    void retrying(); // mismatch error received, starting all over
+    void retrying();  // mismatch error received, starting all over
     void activated(); // ready for read/write
 
     // TCP mode only

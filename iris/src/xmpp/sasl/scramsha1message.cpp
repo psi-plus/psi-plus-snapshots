@@ -27,7 +27,8 @@
 #include <QtCrypto>
 
 namespace XMPP {
-bool Normalize(const QString &username_in, QString &username_out ) {
+bool Normalize(const QString &username_in, QString &username_out)
+{
     // SASLprep
     if (StringPrepCache::saslprep(username_in, 1024, username_out)) {
         // '=' -> '=3D'     and ',' -> '=2C'
@@ -39,11 +40,13 @@ bool Normalize(const QString &username_in, QString &username_out ) {
     }
 }
 
-SCRAMSHA1Message::SCRAMSHA1Message(const QString& authzid, const QString& authcid, const QByteArray& cnonce, const RandomNumberGenerator& rand) : isValid_(true)
+SCRAMSHA1Message::SCRAMSHA1Message(const QString &authzid, const QString &authcid, const QByteArray &cnonce,
+                                   const RandomNumberGenerator &rand) :
+    isValid_(true)
 {
-    QString result;
+    QString    result;
     QByteArray clientnonce;
-    QString username;
+    QString    username;
 
     if (!Normalize(authcid, username)) {
         isValid_ = false;
@@ -54,11 +57,12 @@ SCRAMSHA1Message::SCRAMSHA1Message(const QString& authzid, const QString& authci
         // make a cnonce
         QByteArray a;
         a.resize(32);
-        for(int n = 0; n < (int)a.size(); ++n) {
-            a[n] = (char) rand.generateNumberBetween(0, 255);
+        for (int n = 0; n < (int)a.size(); ++n) {
+            a[n] = (char)rand.generateNumberBetween(0, 255);
         }
         clientnonce = a.toBase64();
-    } else clientnonce = cnonce;
+    } else
+        clientnonce = cnonce;
 
     QTextStream(&result) << "n,";
     if (authzid.size() > 0) {

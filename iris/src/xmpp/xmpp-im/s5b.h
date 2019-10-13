@@ -35,316 +35,301 @@ class SocksClient;
 class SocksUDP;
 
 namespace XMPP {
-    namespace Jingle {
-        namespace S5B {
-            class Manager;
-        }
-    }
+namespace Jingle { namespace S5B {
+    class Manager;
+}}
 
-    class Client;
-    class JT_PushS5B;
-    class S5BConnection;
-    class S5BManager;
-    class StreamHost;
-    class TcpPortReserver;
-    struct S5BRequest;
-    typedef QList<StreamHost> StreamHostList;
-    typedef QList<S5BConnection*> S5BConnectionList;
+class Client;
+class JT_PushS5B;
+class S5BConnection;
+class S5BManager;
+class StreamHost;
+class TcpPortReserver;
+struct S5BRequest;
+typedef QList<StreamHost>      StreamHostList;
+typedef QList<S5BConnection *> S5BConnectionList;
 
-    class S5BDatagram
-    {
-    public:
-        S5BDatagram();
-        S5BDatagram(int source, int dest, const QByteArray &data);
+class S5BDatagram {
+public:
+    S5BDatagram();
+    S5BDatagram(int source, int dest, const QByteArray &data);
 
-        int sourcePort() const;
-        int destPort() const;
-        QByteArray data() const;
+    int        sourcePort() const;
+    int        destPort() const;
+    QByteArray data() const;
 
-    private:
-        int _source = 0;
-        int _dest = 0;
-        QByteArray _buf;
-    };
+private:
+    int        _source = 0;
+    int        _dest   = 0;
+    QByteArray _buf;
+};
 
-    class S5BConnection : public BSConnection
-    {
-        Q_OBJECT
-    public:
-        enum Mode { Stream, Datagram };
+class S5BConnection : public BSConnection {
+    Q_OBJECT
+public:
+    enum Mode { Stream, Datagram };
 
-        ~S5BConnection();
+    ~S5BConnection();
 
-        Jid proxy() const;
-        void setProxy(const Jid &proxy);
+    Jid  proxy() const;
+    void setProxy(const Jid &proxy);
 
-        void connectToJid(const Jid &peer, const QString &sid, Mode m = Stream);
-        void connectToJid(const Jid &peer, const QString &sid) {
-            connectToJid(peer, sid, Stream);
-        }
+    void connectToJid(const Jid &peer, const QString &sid, Mode m = Stream);
+    void connectToJid(const Jid &peer, const QString &sid) { connectToJid(peer, sid, Stream); }
 
-        void accept();
-        void close();
+    void accept();
+    void close();
 
-        Jid peer() const;
-        QString sid() const;
-        BytestreamManager* manager() const;
-        bool isRemote() const;
-        Mode mode() const;
-        int state() const;
+    Jid                peer() const;
+    QString            sid() const;
+    BytestreamManager *manager() const;
+    bool               isRemote() const;
+    Mode               mode() const;
+    int                state() const;
 
-        qint64 bytesAvailable() const;
-        qint64 bytesToWrite() const;
+    qint64 bytesAvailable() const;
+    qint64 bytesToWrite() const;
 
-        void writeDatagram(const S5BDatagram &);
-        S5BDatagram readDatagram();
-        int datagramsAvailable() const;
+    void        writeDatagram(const S5BDatagram &);
+    S5BDatagram readDatagram();
+    int         datagramsAvailable() const;
 
-    protected:
-        qint64 writeData(const char *data, qint64 maxSize);
-        qint64 readData(char * data, qint64 maxSize);
+protected:
+    qint64 writeData(const char *data, qint64 maxSize);
+    qint64 readData(char *data, qint64 maxSize);
 
-    signals:
-        void proxyQuery();                             // querying proxy for streamhost information
-        void proxyResult(bool b);                      // query success / fail
-        void requesting();                             // sent actual S5B request (requester only)
-        void accepted();                               // target accepted (requester only
-        void tryingHosts(const StreamHostList &hosts); // currently connecting to these hosts
-        void proxyConnect();                           // connecting to proxy
-        void waitingForActivation();                   // waiting for activation (target only)
-        void connected();                              // connection active
-        void datagramReady();
+signals:
+    void proxyQuery();                             // querying proxy for streamhost information
+    void proxyResult(bool b);                      // query success / fail
+    void requesting();                             // sent actual S5B request (requester only)
+    void accepted();                               // target accepted (requester only
+    void tryingHosts(const StreamHostList &hosts); // currently connecting to these hosts
+    void proxyConnect();                           // connecting to proxy
+    void waitingForActivation();                   // waiting for activation (target only)
+    void connected();                              // connection active
+    void datagramReady();
 
-    private slots:
-        void doPending();
+private slots:
+    void doPending();
 
-        void sc_connectionClosed();
-        void sc_delayedCloseFinished();
-        void sc_readyRead();
-        void sc_bytesWritten(qint64);
-        void sc_error(int);
+    void sc_connectionClosed();
+    void sc_delayedCloseFinished();
+    void sc_readyRead();
+    void sc_bytesWritten(qint64);
+    void sc_error(int);
 
-        void su_packetReady(const QByteArray &buf);
+    void su_packetReady(const QByteArray &buf);
 
-    private:
-        class Private;
-        Private *d;
+private:
+    class Private;
+    Private *d;
 
-        void resetConnection(bool clear=false);
-        void handleUDP(const QByteArray &buf);
-        void sendUDP(const QByteArray &buf);
+    void resetConnection(bool clear = false);
+    void handleUDP(const QByteArray &buf);
+    void sendUDP(const QByteArray &buf);
 
-        friend class S5BManager;
-        void man_waitForAccept(const S5BRequest &r);
-        void man_clientReady(SocksClient *, SocksUDP *);
-        void man_udpReady(const QByteArray &buf);
-        void man_failed(int);
-        S5BConnection(S5BManager *, QObject *parent=nullptr);
-    };
+    friend class S5BManager;
+    void man_waitForAccept(const S5BRequest &r);
+    void man_clientReady(SocksClient *, SocksUDP *);
+    void man_udpReady(const QByteArray &buf);
+    void man_failed(int);
+    S5BConnection(S5BManager *, QObject *parent = nullptr);
+};
 
-    class S5BManager : public BytestreamManager
-    {
-        Q_OBJECT
-    public:
-        S5BManager(Client *);
-        ~S5BManager();
+class S5BManager : public BytestreamManager {
+    Q_OBJECT
+public:
+    S5BManager(Client *);
+    ~S5BManager();
 
-        static const char* ns();
-        Client *client() const;
-        JT_PushS5B *jtPush() const;
+    static const char *ns();
+    Client *           client() const;
+    JT_PushS5B *       jtPush() const;
 
-        bool isAcceptableSID(const Jid &peer, const QString &sid) const;
+    bool isAcceptableSID(const Jid &peer, const QString &sid) const;
 
-        BSConnection *createConnection();
-        S5BConnection *takeIncoming();
+    BSConnection * createConnection();
+    S5BConnection *takeIncoming();
 
-        class Item;
-        class Entry;
+    class Item;
+    class Entry;
 
-    protected:
-        const char* sidPrefix() const;
+protected:
+    const char *sidPrefix() const;
 
-    private slots:
-        void ps_incoming(const S5BRequest &req);
-        void ps_incomingUDPSuccess(const Jid &from, const QString &dstaddr);
-        void ps_incomingActivate(const Jid &from, const QString &sid, const Jid &streamHost);
-        void item_accepted();
-        void item_tryingHosts(const StreamHostList &list);
-        void item_proxyConnect();
-        void item_waitingForActivation();
-        void item_connected();
-        void item_error(int);
-        void query_finished();
+private slots:
+    void ps_incoming(const S5BRequest &req);
+    void ps_incomingUDPSuccess(const Jid &from, const QString &dstaddr);
+    void ps_incomingActivate(const Jid &from, const QString &sid, const Jid &streamHost);
+    void item_accepted();
+    void item_tryingHosts(const StreamHostList &list);
+    void item_proxyConnect();
+    void item_waitingForActivation();
+    void item_connected();
+    void item_error(int);
+    void query_finished();
 
-    private:
-        class Private;
-        Private *d;
+private:
+    class Private;
+    Private *d;
 
-        S5BConnection *findIncoming(const Jid &from, const QString &sid) const;
-        Entry *findEntry(S5BConnection *) const;
-        Entry *findEntry(Item *) const;
-        Entry *findEntryByHash(const QString &key) const;
-        Entry *findEntryBySID(const Jid &peer, const QString &sid) const;
+    S5BConnection *findIncoming(const Jid &from, const QString &sid) const;
+    Entry *        findEntry(S5BConnection *) const;
+    Entry *        findEntry(Item *) const;
+    Entry *        findEntryByHash(const QString &key) const;
+    Entry *        findEntryBySID(const Jid &peer, const QString &sid) const;
 
-        void entryContinue(Entry *e);
-        void queryProxy(Entry *e);
-        bool targetShouldOfferProxy(Entry *e);
+    void entryContinue(Entry *e);
+    void queryProxy(Entry *e);
+    bool targetShouldOfferProxy(Entry *e);
 
-        friend class S5BConnection;
-        void con_connect(S5BConnection *);
-        void con_accept(S5BConnection *);
-        void con_reject(S5BConnection *);
-        void con_unlink(S5BConnection *);
-        void con_sendUDP(S5BConnection *, const QByteArray &buf);
+    friend class S5BConnection;
+    void con_connect(S5BConnection *);
+    void con_accept(S5BConnection *);
+    void con_reject(S5BConnection *);
+    void con_unlink(S5BConnection *);
+    void con_sendUDP(S5BConnection *, const QByteArray &buf);
 
-        friend class S5BServer;
-        bool srv_ownsHash(const QString &key) const;
-        void srv_incomingReady(SocksClient *sc, const QString &key);
-        void srv_incomingUDP(bool init, const QHostAddress &addr, int port, const QString &key, const QByteArray &data);
+    friend class S5BServer;
+    bool srv_ownsHash(const QString &key) const;
+    void srv_incomingReady(SocksClient *sc, const QString &key);
+    void srv_incomingUDP(bool init, const QHostAddress &addr, int port, const QString &key, const QByteArray &data);
 
-        friend class Item;
-        void doSuccess(const Jid &peer, const QString &id, const Jid &streamHost);
-        void doError(const Jid &peer, const QString &id, Stanza::Error::ErrorCond, const QString &);
-        void doActivate(const Jid &peer, const QString &sid, const Jid &streamHost);
-    };
+    friend class Item;
+    void doSuccess(const Jid &peer, const QString &id, const Jid &streamHost);
+    void doError(const Jid &peer, const QString &id, Stanza::Error::ErrorCond, const QString &);
+    void doActivate(const Jid &peer, const QString &sid, const Jid &streamHost);
+};
 
-    class S5BConnector : public QObject
-    {
-        Q_OBJECT
-    public:
-        S5BConnector(QObject *parent=nullptr);
-        ~S5BConnector();
+class S5BConnector : public QObject {
+    Q_OBJECT
+public:
+    S5BConnector(QObject *parent = nullptr);
+    ~S5BConnector();
 
-        void resetConnection();
-        void start(const Jid &self, const StreamHostList &hosts, const QString &key, bool udp, int timeout);
-        SocksClient *takeClient();
-        SocksUDP *takeUDP();
-        StreamHost streamHostUsed() const;
+    void         resetConnection();
+    void         start(const Jid &self, const StreamHostList &hosts, const QString &key, bool udp, int timeout);
+    SocksClient *takeClient();
+    SocksUDP *   takeUDP();
+    StreamHost   streamHostUsed() const;
 
-        class Item;
+    class Item;
 
-    signals:
-        void result(bool);
+signals:
+    void result(bool);
 
-    private slots:
-        void item_result(bool);
-        void t_timeout();
+private slots:
+    void item_result(bool);
+    void t_timeout();
 
-    private:
-        class Private;
-        Private *d;
+private:
+    class Private;
+    Private *d;
 
-        friend class S5BManager;
-        void man_udpSuccess(const Jid &streamHost);
-    };
+    friend class S5BManager;
+    void man_udpSuccess(const Jid &streamHost);
+};
 
-    class S5BServersProducer : public TcpPortScope
-    {
-    protected:
-        TcpPortServer* makeServer(QTcpServer *socket); // in fact returns S5BServer
-    };
+class S5BServersProducer : public TcpPortScope {
+protected:
+    TcpPortServer *makeServer(QTcpServer *socket); // in fact returns S5BServer
+};
 
-    class S5BServer : public TcpPortServer
-    {
-        Q_OBJECT
+class S5BServer : public TcpPortServer {
+    Q_OBJECT
 
-    public:
-        S5BServer(QTcpServer *serverSocket);
-        ~S5BServer();
+public:
+    S5BServer(QTcpServer *serverSocket);
+    ~S5BServer();
 
-        void writeUDP(const QHostAddress &addr, int port, const QByteArray &data);
-        bool isActive() const;
-        bool hasKey(const QString &key);
-        void registerKey(const QString &key);
-        void unregisterKey(const QString &key);
+    void writeUDP(const QHostAddress &addr, int port, const QByteArray &data);
+    bool isActive() const;
+    bool hasKey(const QString &key);
+    void registerKey(const QString &key);
+    void unregisterKey(const QString &key);
 
-    signals:
-        void incomingConnection(SocksClient *c, const QString &key);
-        void incomingUdp(bool isInit, const QHostAddress &addr, int sourcePort, const QString &key, const QByteArray &data);
+signals:
+    void incomingConnection(SocksClient *c, const QString &key);
+    void incomingUdp(bool isInit, const QHostAddress &addr, int sourcePort, const QString &key, const QByteArray &data);
 
-    private:
-        class Private;
-        QScopedPointer<Private> d;
-    };
+private:
+    class Private;
+    QScopedPointer<Private> d;
+};
 
-    class JT_S5B : public Task
-    {
-        Q_OBJECT
-    public:
-        JT_S5B(Task *);
-        ~JT_S5B();
+class JT_S5B : public Task {
+    Q_OBJECT
+public:
+    JT_S5B(Task *);
+    ~JT_S5B();
 
-        void request(const Jid &to, const QString &sid, const QString &dstaddr,
-                     const StreamHostList &hosts, bool fast, bool udp=false);
-        void requestProxyInfo(const Jid &to);
-        void requestActivation(const Jid &to, const QString &sid, const Jid &target);
+    void request(const Jid &to, const QString &sid, const QString &dstaddr, const StreamHostList &hosts, bool fast,
+                 bool udp = false);
+    void requestProxyInfo(const Jid &to);
+    void requestActivation(const Jid &to, const QString &sid, const Jid &target);
 
-        void onGo();
-        void onDisconnect();
-        bool take(const QDomElement &);
+    void onGo();
+    void onDisconnect();
+    bool take(const QDomElement &);
 
-        Jid streamHostUsed() const;
-        StreamHost proxyInfo() const;
+    Jid        streamHostUsed() const;
+    StreamHost proxyInfo() const;
 
-    private slots:
-        void t_timeout();
+private slots:
+    void t_timeout();
 
-    private:
-        class Private;
-        Private *d;
-    };
+private:
+    class Private;
+    Private *d;
+};
 
-    struct S5BRequest
-    {
-        Jid from;
-        QString id, sid, dstaddr;
-        StreamHostList hosts;
-        bool fast;
-        bool udp;
-    };
-    class JT_PushS5B : public Task
-    {
-        Q_OBJECT
-    public:
-        JT_PushS5B(Task *);
-        ~JT_PushS5B();
+struct S5BRequest {
+    Jid            from;
+    QString        id, sid, dstaddr;
+    StreamHostList hosts;
+    bool           fast;
+    bool           udp;
+};
+class JT_PushS5B : public Task {
+    Q_OBJECT
+public:
+    JT_PushS5B(Task *);
+    ~JT_PushS5B();
 
-        int priority() const;
+    int priority() const;
 
-        void respondSuccess(const Jid &to, const QString &id, const Jid &streamHost);
-        void respondError(const Jid &to, const QString &id,
-                          Stanza::Error::ErrorCond cond, const QString &str);
-        void sendUDPSuccess(const Jid &to, const QString &dstaddr);
-        void sendActivate(const Jid &to, const QString &sid, const Jid &streamHost);
+    void respondSuccess(const Jid &to, const QString &id, const Jid &streamHost);
+    void respondError(const Jid &to, const QString &id, Stanza::Error::ErrorCond cond, const QString &str);
+    void sendUDPSuccess(const Jid &to, const QString &dstaddr);
+    void sendActivate(const Jid &to, const QString &sid, const Jid &streamHost);
 
-        bool take(const QDomElement &);
+    bool take(const QDomElement &);
 
-    signals:
-        void incoming(const S5BRequest &req);
-        void incomingUDPSuccess(const Jid &from, const QString &dstaddr);
-        void incomingActivate(const Jid &from, const QString &sid, const Jid &streamHost);
-    };
+signals:
+    void incoming(const S5BRequest &req);
+    void incomingUDPSuccess(const Jid &from, const QString &dstaddr);
+    void incomingActivate(const Jid &from, const QString &sid, const Jid &streamHost);
+};
 
-    class StreamHost
-    {
-    public:
-        StreamHost();
+class StreamHost {
+public:
+    StreamHost();
 
-        const Jid & jid() const;
-        const QString & host() const;
-        int port() const;
-        bool isProxy() const;
-        void setJid(const Jid &);
-        void setHost(const QString &);
-        void setPort(int);
-        void setIsProxy(bool);
+    const Jid &    jid() const;
+    const QString &host() const;
+    int            port() const;
+    bool           isProxy() const;
+    void           setJid(const Jid &);
+    void           setHost(const QString &);
+    void           setPort(int);
+    void           setIsProxy(bool);
 
-    private:
-        Jid j;
-        QString v_host;
-        int v_port;
-        bool proxy;
-    };
+private:
+    Jid     j;
+    QString v_host;
+    int     v_port;
+    bool    proxy;
+};
 } // namespace XMPP
 
 #endif // XMPP_S5B_H

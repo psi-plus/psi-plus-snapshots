@@ -35,14 +35,12 @@
 QString escapeOutput(const QByteArray &in)
 {
     QString out;
-    for(int n = 0; n < in.size(); ++n) {
-        if(in[n] == '\\') {
+    for (int n = 0; n < in.size(); ++n) {
+        if (in[n] == '\\') {
             out += QString("\\\\");
-        }
-        else if(in[n] >= 32 && in[n] < 127) {
+        } else if (in[n] >= 32 && in[n] < 127) {
             out += QChar::fromLatin1(in[n]);
-        }
-        else {
+        } else {
             out += QString().sprintf("\\x%02x", (unsigned char)in[n]);
         }
     }
@@ -53,14 +51,13 @@ QString escapeOutput(const QByteArray &in)
 static QString extractLine(QByteArray *buf, bool *found)
 {
     // Scan for newline
-    int index = buf->indexOf ("\r\n");
+    int index = buf->indexOf("\r\n");
     if (index == -1) {
         // Newline not found
         if (found)
             *found = false;
         return "";
-    }
-    else {
+    } else {
         // Found newline
         QString s = QString::fromLatin1(buf->left(index));
         buf->remove(0, index + 2);
@@ -74,48 +71,43 @@ static QString extractLine(QByteArray *buf, bool *found)
 static bool extractMainHeader(const QString &line, QString *proto, int *code, QString *msg)
 {
     int n = line.indexOf(' ');
-    if(n == -1)
+    if (n == -1)
         return false;
-    if(proto)
+    if (proto)
         *proto = line.mid(0, n);
     ++n;
     int n2 = line.indexOf(' ', n);
-    if(n2 == -1)
+    if (n2 == -1)
         return false;
-    if(code)
-        *code = line.mid(n, n2-n).toInt();
-    n = n2+1;
-    if(msg)
+    if (code)
+        *code = line.mid(n, n2 - n).toInt();
+    n = n2 + 1;
+    if (msg)
         *msg = line.mid(n);
     return true;
 }
 
-class HttpConnect::Private
-{
+class HttpConnect::Private {
 public:
-    Private(HttpConnect *_q) :
-        sock(_q)
-    {
-    }
+    Private(HttpConnect *_q) : sock(_q) {}
 
     BSocket sock;
     QString host;
-    int port;
+    int     port;
     QString user, pass;
     QString real_host;
-    int real_port;
+    int     real_port;
 
     QByteArray recvBuf;
 
-    bool inHeader;
+    bool        inHeader;
     QStringList headerLines;
 
-    int toWrite;
+    int  toWrite;
     bool active;
 };
 
-HttpConnect::HttpConnect(QObject *parent)
-:ByteStream(parent)
+HttpConnect::HttpConnect(QObject *parent) : ByteStream(parent)
 {
     d = new Private(this);
     connect(&d->sock, SIGNAL(connected()), SLOT(sock_connected()));
@@ -136,9 +128,9 @@ HttpConnect::~HttpConnect()
 
 void HttpConnect::resetConnection(bool clear)
 {
-    if(d->sock.state() != BSocket::Idle)
+    if (d->sock.state() != BSocket::Idle)
         d->sock.close();
-    if(clear) {
+    if (clear) {
         clearReadBuffer();
         d->recvBuf.resize(0);
     }
@@ -156,14 +148,14 @@ void HttpConnect::connectToHost(const QString &proxyHost, int proxyPort, const Q
 {
     resetConnection(true);
 
-    d->host = proxyHost;
-    d->port = proxyPort;
+    d->host      = proxyHost;
+    d->port      = proxyPort;
     d->real_host = host;
     d->real_port = port;
 
 #ifdef PROX_DEBUG
     fprintf(stderr, "HttpConnect: Connecting to %s:%d", qPrintable(proxyHost), proxyPort);
-    if(d->user.isEmpty())
+    if (d->user.isEmpty())
         fprintf(stderr, "\n");
     else
         fprintf(stderr, ", auth {%s,%s}\n", qPrintable(d->user), qPrintable(d->pass));
@@ -174,20 +166,20 @@ void HttpConnect::connectToHost(const QString &proxyHost, int proxyPort, const Q
 void HttpConnect::close()
 {
     d->sock.close();
-    if(d->sock.bytesToWrite() == 0)
+    if (d->sock.bytesToWrite() == 0)
         resetConnection();
 }
 
 qint64 HttpConnect::writeData(const char *data, qint64 maxSize)
 {
-    if(d->active)
+    if (d->active)
         return d->sock.write(data, maxSize);
     return 0;
 }
 
 qint64 HttpConnect::bytesToWrite() const
 {
-    if(d->active)
+    if (d->active)
         return d->sock.bytesToWrite();
     else
         return 0;
@@ -204,7 +196,7 @@ void HttpConnect::sock_connected()
     // connected, now send the request
     QString s;
     s += QString("CONNECT ") + d->real_host + ':' + QString::number(d->real_port) + " HTTP/1.0\r\n";
-    if(!d->user.isEmpty()) {
+    if (!d->user.isEmpty()) {
         QString str = d->user + ':' + d->pass;
         s += QString("Proxy-Authorization: Basic ") + QCA::Base64().encodeString(str) + "\r\n";
     }
@@ -221,18 +213,17 @@ void HttpConnect::sock_connected()
 
 void HttpConnect::sock_connectionClosed()
 {
-    if(d->active) {
+    if (d->active) {
         resetConnection();
         connectionClosed();
-    }
-    else {
+    } else {
         setError(ErrProxyNeg);
     }
 }
 
 void HttpConnect::sock_delayedCloseFinished()
 {
-    if(d->active) {
+    if (d->active) {
         resetConnection();
         delayedCloseFinished();
     }
@@ -242,17 +233,17 @@ void HttpConnect::sock_readyRead()
 {
     QByteArray block = d->sock.readAll();
 
-    if(!d->active) {
+    if (!d->active) {
         d->recvBuf += block;
 
-        if(d->inHeader) {
+        if (d->inHeader) {
             // grab available lines
-            while(1) {
-                bool found;
+            while (1) {
+                bool    found;
                 QString line = extractLine(&d->recvBuf, &found);
-                if(!found)
+                if (!found)
                     break;
-                if(line.isEmpty()) {
+                if (line.isEmpty()) {
                     d->inHeader = false;
                     break;
                 }
@@ -260,30 +251,30 @@ void HttpConnect::sock_readyRead()
             }
 
             // done with grabbing the header?
-            if(!d->inHeader) {
+            if (!d->inHeader) {
                 QString str = d->headerLines.first();
                 d->headerLines.takeFirst();
 
                 QString proto;
-                int code;
+                int     code;
                 QString msg;
-                if(!extractMainHeader(str, &proto, &code, &msg)) {
+                if (!extractMainHeader(str, &proto, &code, &msg)) {
 #ifdef PROX_DEBUG
                     fprintf(stderr, "HttpConnect: invalid header!\n");
 #endif
                     resetConnection(true);
                     setError(ErrProxyNeg);
                     return;
-                }
-                else {
+                } else {
 #ifdef PROX_DEBUG
-                    fprintf(stderr, "HttpConnect: header proto=[%s] code=[%d] msg=[%s]\n", qPrintable(proto), code, qPrintable(msg));
-                    for(QStringList::ConstIterator it = d->headerLines.begin(); it != d->headerLines.end(); ++it)
+                    fprintf(stderr, "HttpConnect: header proto=[%s] code=[%d] msg=[%s]\n", qPrintable(proto), code,
+                            qPrintable(msg));
+                    for (QStringList::ConstIterator it = d->headerLines.begin(); it != d->headerLines.end(); ++it)
                         fprintf(stderr, "HttpConnect: * [%s]\n", qPrintable(*it));
 #endif
                 }
 
-                if(code == 200) { // OK
+                if (code == 200) { // OK
 #ifdef PROX_DEBUG
                     fprintf(stderr, "HttpConnect: << Success >>\n");
 #endif
@@ -291,34 +282,29 @@ void HttpConnect::sock_readyRead()
                     setOpenMode(QIODevice::ReadWrite);
                     connected();
 
-                    if(!d->recvBuf.isEmpty()) {
+                    if (!d->recvBuf.isEmpty()) {
                         appendRead(d->recvBuf);
                         d->recvBuf.resize(0);
                         readyRead();
                         return;
                     }
-                }
-                else {
-                    int err;
+                } else {
+                    int     err;
                     QString errStr;
-                    if(code == 407) { // Authentication failed
-                        err = ErrProxyAuth;
+                    if (code == 407) { // Authentication failed
+                        err    = ErrProxyAuth;
                         errStr = tr("Authentication failed");
-                    }
-                    else if(code == 404) { // Host not found
-                        err = ErrHostNotFound;
+                    } else if (code == 404) { // Host not found
+                        err    = ErrHostNotFound;
                         errStr = tr("Host not found");
-                    }
-                    else if(code == 403) { // Access denied
-                        err = ErrProxyNeg;
+                    } else if (code == 403) { // Access denied
+                        err    = ErrProxyNeg;
                         errStr = tr("Access denied");
-                    }
-                    else if(code == 503) { // Connection refused
-                        err = ErrConnectionRefused;
+                    } else if (code == 503) { // Connection refused
+                        err    = ErrConnectionRefused;
                         errStr = tr("Connection refused");
-                    }
-                    else { // invalid reply
-                        err = ErrProxyNeg;
+                    } else { // invalid reply
+                        err    = ErrProxyNeg;
                         errStr = tr("Invalid reply");
                     }
 
@@ -331,8 +317,7 @@ void HttpConnect::sock_readyRead()
                 }
             }
         }
-    }
-    else {
+    } else {
         appendRead(block);
         readyRead();
         return;
@@ -341,31 +326,30 @@ void HttpConnect::sock_readyRead()
 
 void HttpConnect::sock_bytesWritten(qint64 x)
 {
-    if(d->toWrite > 0) {
+    if (d->toWrite > 0) {
         int size = x;
-        if(d->toWrite < x)
+        if (d->toWrite < x)
             size = d->toWrite;
         d->toWrite -= size;
         x -= size;
     }
 
-    if(d->active && x > 0)
+    if (d->active && x > 0)
         bytesWritten(x);
 }
 
 void HttpConnect::sock_error(int x)
 {
-    if(d->active) {
+    if (d->active) {
         resetConnection();
         setError(ErrRead);
-    }
-    else {
+    } else {
         resetConnection(true);
-        if(x == BSocket::ErrHostNotFound)
+        if (x == BSocket::ErrHostNotFound)
             setError(ErrProxyConnect);
-        else if(x == BSocket::ErrConnectionRefused)
+        else if (x == BSocket::ErrConnectionRefused)
             setError(ErrProxyConnect);
-        else if(x == BSocket::ErrRead)
+        else if (x == BSocket::ErrRead)
             setError(ErrProxyNeg);
     }
 }

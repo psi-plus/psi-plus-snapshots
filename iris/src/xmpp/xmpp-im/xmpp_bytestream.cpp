@@ -24,25 +24,17 @@
 #include <QTimer>
 
 namespace XMPP {
-BytestreamManager::BytestreamManager(Client *parent)
-    : QObject(parent)
-{
+BytestreamManager::BytestreamManager(Client *parent) : QObject(parent) {}
 
-}
-
-BytestreamManager::~BytestreamManager()
-{
-
-}
+BytestreamManager::~BytestreamManager() {}
 
 QString BytestreamManager::genUniqueSID(const Jid &peer) const
 {
     // get unused key
     QString sid;
     do {
-        sid = QString("%1%2").arg(sidPrefix())
-                             .arg(qrand() & 0xffff, 4, 16, QChar('0'));
-    } while(!isAcceptableSID(peer, sid));
+        sid = QString("%1%2").arg(sidPrefix()).arg(qrand() & 0xffff, 4, 16, QChar('0'));
+    } while (!isAcceptableSID(peer, sid));
     return sid;
 }
 
@@ -53,8 +45,7 @@ void BytestreamManager::deleteConnection(BSConnection *c, int msec)
 {
     if (msec) {
         QTimer::singleShot(msec, c, SLOT(deleteLater()));
-    }
-    else {
+    } else {
         delete c;
     }
 }

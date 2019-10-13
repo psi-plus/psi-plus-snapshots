@@ -26,7 +26,7 @@ namespace XMPP {
 typedef void (*IrisNetCleanUpFunction)();
 
 IRISNET_EXPORT void irisNetAddPostRoutine(IrisNetCleanUpFunction func);
-IRISNET_EXPORT QList<IrisNetProvider*> irisNetProviders();
+IRISNET_EXPORT QList<IrisNetProvider *> irisNetProviders();
 } // namespace XMPP
 
 #endif // IRISNETGLOBAL_P_H

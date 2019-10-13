@@ -86,15 +86,14 @@ public:
 
     BoBData bobData(const QString &);
     // file data, mime type, max age in seconds
-    BoBData append(const QByteArray &data, const QString &type,
-                   unsigned int maxAge = 0);
+    BoBData append(const QByteArray &data, const QString &type, unsigned int maxAge = 0);
     Hash    append(QFile &        file,
                    const QString &type = "application/octet-stream"); // this method adds just to runtime cache
     void    append(const BoBData &);
 
 private:
     BoBCache *                                 _cache;
-    QHash<XMPP::Hash, QPair<QString, QString>> _localFiles; //cid => (filename, mime)
+    QHash<XMPP::Hash, QPair<QString, QString>> _localFiles; // cid => (filename, mime)
 };
 } // namespace XMPP
 

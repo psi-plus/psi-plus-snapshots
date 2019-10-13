@@ -21,21 +21,19 @@
 #include <QObject>
 #include <QtTest/QtTest>
 
-class MyClassTest : public QObject
-{
-     Q_OBJECT
+class MyClassTest : public QObject {
+    Q_OBJECT
 
-    private slots:
-        void initTestCase() {
-        }
+private slots:
+    void initTestCase() {}
 
-        void cleanupTestCase() {
-        }
+    void cleanupTestCase() {}
 
-        void testMyMethod() {
-            //QCOMPARE(foo, bar);
-            //QVERIFY(baz);
-        }
+    void testMyMethod()
+    {
+        // QCOMPARE(foo, bar);
+        // QVERIFY(baz);
+    }
 };
 
 QTTESTUTIL_REGISTER_TEST(MyClassTest);

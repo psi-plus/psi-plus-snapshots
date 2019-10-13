@@ -25,31 +25,31 @@ class QDomDocument;
 class QDomElement;
 
 namespace XMPP {
-    class HttpAuthRequest
-    {
-    public:
-        HttpAuthRequest(const QString &m, const QString &u, const QString &i);
-        HttpAuthRequest(const QString &m = QString(), const QString &u = QString());
-        HttpAuthRequest(const QDomElement &);
+class HttpAuthRequest {
+public:
+    HttpAuthRequest(const QString &m, const QString &u, const QString &i);
+    HttpAuthRequest(const QString &m = QString(), const QString &u = QString());
+    HttpAuthRequest(const QDomElement &);
 
-        bool isEmpty() const;
+    bool isEmpty() const;
 
-        void setMethod(const QString&);
-        void setUrl(const QString&);
-        void setId(const QString&);
-        QString method() const;
-        QString url() const;
-        QString id() const;
-        bool hasId() const;
+    void    setMethod(const QString &);
+    void    setUrl(const QString &);
+    void    setId(const QString &);
+    QString method() const;
+    QString url() const;
+    QString id() const;
+    bool    hasId() const;
 
-        QDomElement toXml(QDomDocument &) const;
-        bool fromXml(const QDomElement &);
+    QDomElement toXml(QDomDocument &) const;
+    bool        fromXml(const QDomElement &);
 
-        static Stanza::Error denyError;
-    private:
-        QString method_, url_, id_;
-        bool hasId_;
-    };
+    static Stanza::Error denyError;
+
+private:
+    QString method_, url_, id_;
+    bool    hasId_;
+};
 } // namespace XMPP
 
 #endif // XMPP_AUTHREQUEST_H

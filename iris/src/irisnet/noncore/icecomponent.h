@@ -30,66 +30,46 @@ class QUdpSocket;
 namespace XMPP {
 class UdpPortReserver;
 
-class IceComponent : public QObject
-{
+class IceComponent : public QObject {
     Q_OBJECT
 
 public:
-    enum CandidateType
-    {
-        HostType,
-        PeerReflexiveType,
-        ServerReflexiveType,
-        RelayedType
-    };
+    enum CandidateType { HostType, PeerReflexiveType, ServerReflexiveType, RelayedType };
 
-    class TransportAddress
-    {
+    class TransportAddress {
     public:
         QHostAddress addr;
-        int port;
+        int          port;
 
-        TransportAddress() :
-            port(-1)
-        {
-        }
+        TransportAddress() : port(-1) {}
 
-        TransportAddress(const QHostAddress &_addr, int _port) :
-            addr(_addr),
-            port(_port)
-        {
-        }
+        TransportAddress(const QHostAddress &_addr, int _port) : addr(_addr), port(_port) {}
 
         bool operator==(const TransportAddress &other) const
         {
-            if(addr == other.addr && port == other.port)
+            if (addr == other.addr && port == other.port)
                 return true;
             else
                 return false;
         }
 
-        inline bool operator!=(const TransportAddress &other) const
-        {
-            return !operator==(other);
-        }
+        inline bool operator!=(const TransportAddress &other) const { return !operator==(other); }
     };
 
-    class CandidateInfo
-    {
+    class CandidateInfo {
     public:
         TransportAddress addr;
-        CandidateType type;
-        int priority;
-        QString foundation;
-        int componentId;
+        CandidateType    type;
+        int              priority;
+        QString          foundation;
+        int              componentId;
         TransportAddress base;
         TransportAddress related;
-        QString id;
-        int network;
+        QString          id;
+        int              network;
     };
 
-    class Candidate
-    {
+    class Candidate {
     public:
         // unique across all candidates within this component
         int id;
@@ -103,15 +83,10 @@ public:
 
         // note that these may be the same for multiple candidates
         IceTransport *iceTransport;
-        int path;
+        int           path;
     };
 
-    enum DebugLevel
-    {
-        DL_None,
-        DL_Info,
-        DL_Packet
-    };
+    enum DebugLevel { DL_None, DL_Info, DL_Packet };
 
     IceComponent(int id, QObject *parent = nullptr);
     ~IceComponent();
@@ -143,7 +118,7 @@ public:
     void setUseStunRelayTcp(bool enabled);
 
     // if socketList is not null then port reserver must be set
-    void update(QList<QUdpSocket*> *socketList = nullptr);
+    void update(QList<QUdpSocket *> *socketList = nullptr);
     void stop();
 
     // prflx priority to use when replying from this transport/path
@@ -180,6 +155,6 @@ inline uint qHash(const XMPP::IceComponent::TransportAddress &key, uint seed = 0
 {
     return ::qHash(key.addr, seed) ^ ::qHash(key.port, seed);
 }
-} //namespace XMPP
+} // namespace XMPP
 
 #endif // ICECOMPONENT_H

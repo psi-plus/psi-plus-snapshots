@@ -37,65 +37,59 @@ extern IrisNetProvider *irisnet_createAppleProvider();
 //----------------------------------------------------------------------------
 // internal
 //----------------------------------------------------------------------------
-class PluginInstance
-{
+class PluginInstance {
 private:
     QPluginLoader *_loader;
-    QObject *_instance;
-    bool _ownInstance;
+    QObject *      _instance;
+    bool           _ownInstance;
 
-    PluginInstance()
-    {
-    }
+    PluginInstance() {}
 
 public:
     static PluginInstance *fromFile(const QString &fname)
     {
         QPluginLoader *loader = new QPluginLoader(fname);
-        if(!loader->load())
-        {
+        if (!loader->load()) {
             delete loader;
             return nullptr;
         }
         QObject *obj = loader->instance();
-        if(!obj)
-        {
+        if (!obj) {
             loader->unload();
             delete loader;
             return nullptr;
         }
         PluginInstance *i = new PluginInstance;
-        i->_loader = loader;
-        i->_instance = obj;
-        i->_ownInstance = true;
+        i->_loader        = loader;
+        i->_instance      = obj;
+        i->_ownInstance   = true;
         return i;
     }
 
     static PluginInstance *fromStatic(QObject *obj)
     {
         PluginInstance *i = new PluginInstance;
-        i->_loader = nullptr;
-        i->_instance = obj;
-        i->_ownInstance = false;
+        i->_loader        = nullptr;
+        i->_instance      = obj;
+        i->_ownInstance   = false;
         return i;
     }
 
     static PluginInstance *fromInstance(QObject *obj)
     {
         PluginInstance *i = new PluginInstance;
-        i->_loader = nullptr;
-        i->_instance = obj;
-        i->_ownInstance = true;
+        i->_loader        = nullptr;
+        i->_instance      = obj;
+        i->_ownInstance   = true;
         return i;
     }
 
     ~PluginInstance()
     {
-        if(_ownInstance)
+        if (_ownInstance)
             delete _instance;
 
-        if(_loader)
-        {
+        if (_loader) {
             _loader->unload();
             delete _loader;
         }
@@ -103,64 +97,53 @@ public:
 
     void claim()
     {
-        if(_loader)
+        if (_loader)
             _loader->moveToThread(0);
-        if(_ownInstance)
+        if (_ownInstance)
             _instance->moveToThread(nullptr);
     }
 
-    QObject *instance()
-    {
-        return _instance;
-    }
+    QObject *instance() { return _instance; }
 
     bool sameType(const PluginInstance *other)
     {
-        if(!_instance || !other->_instance)
+        if (!_instance || !other->_instance)
             return false;
 
-        if(qstrcmp(_instance->metaObject()->className(), other->_instance->metaObject()->className()) != 0)
+        if (qstrcmp(_instance->metaObject()->className(), other->_instance->metaObject()->className()) != 0)
             return false;
 
         return true;
     }
 };
 
-class PluginManager
-{
+class PluginManager {
 public:
-    bool builtin_done;
-    QStringList paths;
-    QList<PluginInstance*> plugins;
-    QList<IrisNetProvider*> providers;
+    bool                     builtin_done;
+    QStringList              paths;
+    QList<PluginInstance *>  plugins;
+    QList<IrisNetProvider *> providers;
 
-    PluginManager()
-    {
-        builtin_done = false;
-    }
+    PluginManager() { builtin_done = false; }
 
-    ~PluginManager()
-    {
-        unload();
-    }
+    ~PluginManager() { unload(); }
 
     bool tryAdd(PluginInstance *i, bool lowPriority = false)
     {
         // is it the right kind of plugin?
-        IrisNetProvider *p = qobject_cast<IrisNetProvider*>(i->instance());
-        if(!p)
+        IrisNetProvider *p = qobject_cast<IrisNetProvider *>(i->instance());
+        if (!p)
             return false;
 
         // make sure we don't have it already
-        for(int n = 0; n < plugins.count(); ++n)
-        {
-            if(i->sameType(plugins[n]))
+        for (int n = 0; n < plugins.count(); ++n) {
+            if (i->sameType(plugins[n]))
                 return false;
         }
 
         i->claim();
         plugins += i;
-        if(lowPriority)
+        if (lowPriority)
             providers.append(p);
         else
             providers.prepend(p);
@@ -170,14 +153,13 @@ public:
     void addBuiltIn(IrisNetProvider *p)
     {
         PluginInstance *i = PluginInstance::fromInstance(p);
-        if(!tryAdd(i, true))
+        if (!tryAdd(i, true))
             delete i;
     }
 
     void scan()
     {
-        if(!builtin_done)
-        {
+        if (!builtin_done) {
             addBuiltIn(irisnet_createQtNetProvider()); // interfaces. crossplatform. no need to reimplement
 #ifdef Q_OS_UNIX
             addBuiltIn(irisnet_createUnixNetProvider()); // gateways
@@ -191,30 +173,27 @@ public:
         }
 
         QObjectList list = QPluginLoader::staticInstances();
-        for(int n = 0; n < list.count(); ++n)
-        {
+        for (int n = 0; n < list.count(); ++n) {
             PluginInstance *i = PluginInstance::fromStatic(list[n]);
-            if(!tryAdd(i))
+            if (!tryAdd(i))
                 delete i;
         }
-        for(int n = 0; n < paths.count(); ++n)
-        {
+        for (int n = 0; n < paths.count(); ++n) {
             QDir dir(paths[n]);
-            if(!dir.exists())
+            if (!dir.exists())
                 continue;
 
             QStringList entries = dir.entryList();
-            for(int k = 0; k < entries.count(); ++k)
-            {
+            for (int k = 0; k < entries.count(); ++k) {
                 QFileInfo fi(dir.filePath(entries[k]));
-                if(!fi.exists())
+                if (!fi.exists())
                     continue;
-                QString fname = fi.filePath();
-                PluginInstance *i = PluginInstance::fromFile(fname);
-                if(!i)
+                QString         fname = fi.filePath();
+                PluginInstance *i     = PluginInstance::fromFile(fname);
+                if (!i)
                     continue;
 
-                if(!tryAdd(i))
+                if (!tryAdd(i))
                     delete i;
             }
         }
@@ -223,8 +202,8 @@ public:
     void unload()
     {
         // unload in reverse order
-        QList<PluginInstance*> revlist;
-        for(int n = 0; n < plugins.count(); ++n)
+        QList<PluginInstance *> revlist;
+        for (int n = 0; n < plugins.count(); ++n)
             revlist.prepend(plugins[n]);
         qDeleteAll(revlist);
 
@@ -233,11 +212,10 @@ public:
     }
 };
 
-class IrisNetGlobal
-{
+class IrisNetGlobal {
 public:
-    QMutex m;
-    PluginManager pluginManager;
+    QMutex                        m;
+    PluginManager                 pluginManager;
     QList<IrisNetCleanUpFunction> cleanupList;
 };
 
@@ -249,7 +227,7 @@ static void deinit();
 static void init()
 {
     QMutexLocker locker(global_mutex());
-    if(global)
+    if (global)
         return;
 
     global = new IrisNetGlobal;
@@ -258,10 +236,10 @@ static void init()
 
 void deinit()
 {
-    if(!global)
+    if (!global)
         return;
 
-    while(!global->cleanupList.isEmpty())
+    while (!global->cleanupList.isEmpty())
         (global->cleanupList.takeFirst())();
 
     delete global;
@@ -293,7 +271,7 @@ void irisNetAddPostRoutine(IrisNetCleanUpFunction func)
     global->cleanupList.prepend(func);
 }
 
-QList<IrisNetProvider*> irisNetProviders()
+QList<IrisNetProvider *> irisNetProviders()
 {
     init();
 

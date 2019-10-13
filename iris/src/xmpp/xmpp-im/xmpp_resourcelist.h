@@ -26,18 +26,17 @@
 class QString;
 
 namespace XMPP {
-    class ResourceList : public QList<Resource>
-    {
-    public:
-        ResourceList();
-        ~ResourceList();
+class ResourceList : public QList<Resource> {
+public:
+    ResourceList();
+    ~ResourceList();
 
-        ResourceList::Iterator find(const QString &);
-        ResourceList::Iterator priority();
+    ResourceList::Iterator find(const QString &);
+    ResourceList::Iterator priority();
 
-        ResourceList::ConstIterator find(const QString &) const;
-        ResourceList::ConstIterator priority() const;
-    };
+    ResourceList::ConstIterator find(const QString &) const;
+    ResourceList::ConstIterator priority() const;
+};
 } // namespace XMPP
 
 #endif // XMPP_RESOURCELIST_H

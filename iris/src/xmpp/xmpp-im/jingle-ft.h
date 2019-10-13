@@ -60,6 +60,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         QDateTime   date() const;
         QString     description() const;
         QList<Hash> hashes() const;
+        QList<Hash> computedHashes() const;
         Hash        hash(Hash::Type t = Hash::Unknown) const;
         QString     mediaType() const;
         QString     name() const;

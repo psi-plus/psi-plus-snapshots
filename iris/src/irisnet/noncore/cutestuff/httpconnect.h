@@ -23,20 +23,20 @@
 #include "bytestream.h"
 
 // CS_NAMESPACE_BEGIN
-class HttpConnect : public ByteStream
-{
+class HttpConnect : public ByteStream {
     Q_OBJECT
 public:
     enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
-    HttpConnect(QObject *parent=nullptr);
+    HttpConnect(QObject *parent = nullptr);
     ~HttpConnect();
 
-    void setAuth(const QString &user, const QString &pass="");
+    void setAuth(const QString &user, const QString &pass = "");
     void connectToHost(const QString &proxyHost, int proxyPort, const QString &host, int port);
 
     // from ByteStream
-    void close();
+    void   close();
     qint64 bytesToWrite() const;
+
 protected:
     qint64 writeData(const char *data, qint64 maxSize);
 
@@ -55,7 +55,7 @@ private:
     class Private;
     Private *d;
 
-    void resetConnection(bool clear=false);
+    void resetConnection(bool clear = false);
 };
 
 // CS_NAMESPACE_END
