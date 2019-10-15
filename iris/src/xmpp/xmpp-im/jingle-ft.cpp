@@ -425,6 +425,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         QStringList               availableTransports;
         bool                      closeDeviceOnFinish = true;
         bool                      streamigMode        = false;
+        bool                      endlessRange        = false; // where range in accepted file doesn't have end
         QIODevice *               device              = nullptr;
         quint64                   bytesLeft           = 0;
 
@@ -450,27 +451,40 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
         void writeNextBlockToTransport()
         {
-            if (!bytesLeft) {
+            if (!(endlessRange || bytesLeft)) {
                 terminationReason = Reason(Reason::Condition::Success);
                 setState(State::Finished);
                 return; // everything is written
             }
             auto sz = connection->blockSize();
             sz      = sz ? sz : 8192;
-            if (sz > bytesLeft) {
+            if (!endlessRange && sz > bytesLeft) {
                 sz = bytesLeft;
             }
-            QByteArray data = device->read(sz);
+            QByteArray data;
+            if (device->isSequential()) {
+                if (!device->bytesAvailable())
+                    return; // we will come back on readyRead
+                data = device->read(qMin(qint64(sz), device->bytesAvailable()));
+            } else {
+                data = device->read(sz);
+            }
             if (data.isEmpty()) {
-                handleStreamFail();
+                if (endlessRange) {
+                    terminationReason = Reason(Reason::Condition::Success);
+                    setState(State::Finished);
+                } else {
+                    handleStreamFail();
+                }
                 return;
             }
+            qDebug("JINGLE-FT write %d bytes to connection", data.size());
             if (connection->write(data) == -1) {
                 handleStreamFail();
                 return;
             }
             emit q->progress(device->pos());
-            bytesLeft -= sz;
+            bytesLeft -= data.size();
         }
 
         void readNextBlockFromTransport()
@@ -592,6 +606,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             if (!d->streamigMode) {
                 if (d->acceptFile.range().isValid()) {
                     d->bytesLeft = d->acceptFile.range().length;
+                    if (!d->bytesLeft)
+                        d->endlessRange = true;
                     emit deviceRequested(d->acceptFile.range().offset, d->bytesLeft);
                 } else {
                     d->bytesLeft = d->acceptFile.size();
