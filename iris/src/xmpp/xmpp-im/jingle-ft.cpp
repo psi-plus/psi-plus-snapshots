@@ -594,7 +594,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                     d->bytesLeft = d->acceptFile.range().length;
                     emit deviceRequested(d->acceptFile.range().offset, d->bytesLeft);
                 } else {
-                    d->bytesLeft = d->file.size();
+                    d->bytesLeft = d->acceptFile.size();
                     emit deviceRequested(0, d->bytesLeft);
                 }
             } else {
@@ -774,6 +774,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             }
             contentEl.appendChild(doc->createElementNS(NS, QString::fromLatin1("description")))
                 .appendChild(d->file.toXml(doc));
+            d->acceptFile                      = d->file;
             std::tie(transportEl, transportCB) = d->transport->takeInitialOffer();
             contentEl.appendChild(transportEl);
 
