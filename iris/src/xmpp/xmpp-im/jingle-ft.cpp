@@ -478,7 +478,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 }
                 return;
             }
-            qDebug("JINGLE-FT write %d bytes to connection", data.size());
+            // qDebug("JINGLE-FT write %d bytes to connection", data.size());
             if (connection->write(data) == -1) {
                 handleStreamFail();
                 return;
@@ -499,6 +499,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                     sz = bytesAvail;
                 }
                 QByteArray data = connection->read(sz);
+                // qDebug("JINGLE-FT read %d bytes from connection", data.size());
                 if (data.isEmpty()) {
                     handleStreamFail();
                     return;
