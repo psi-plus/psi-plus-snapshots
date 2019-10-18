@@ -29,21 +29,20 @@ class MainWindow;
 class AudioRecorder;
 class ITEAudioController;
 
-class MainWindow : public QMainWindow
-{
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 private slots:
     void recordMic();
+
 private:
-    Ui::MainWindow *ui;
-    QAction *recordAction;
-    AudioRecorder *recorder = nullptr;
+    Ui::MainWindow *    ui;
+    QAction *           recordAction;
+    AudioRecorder *     recorder = nullptr;
     ITEAudioController *atc;
 };
 

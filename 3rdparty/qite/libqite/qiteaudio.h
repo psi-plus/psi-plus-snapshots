@@ -20,9 +20,9 @@ under the License.
 #ifndef QITEAUDIO_H
 #define QITEAUDIO_H
 
-#include <QObject>
 #include <QCursor>
 #include <QMediaPlayer>
+#include <QObject>
 
 #include "qite.h"
 
@@ -30,49 +30,49 @@ class QMediaPlayer;
 class QNetworkAccessManager;
 class AudioMessageFormat;
 
-class ITEAudioController : public InteractiveTextElementController
-{
+class ITEAudioController : public InteractiveTextElementController {
     Q_OBJECT
 
-    QCursor _cursor;
-    QMap<quint32,QMediaPlayer*> activePlayers;
-    QNetworkAccessManager *nam = nullptr;
+    QCursor                       _cursor;
+    QMap<quint32, QMediaPlayer *> activePlayers;
+    QNetworkAccessManager *       nam = nullptr;
 
     // geometry
-    QSize elementSize;
-    QRect bgRect;
-    QRect metaRect;
-    int bgOutlineWidth;
-    double baseSize;
-    double bgRectRadius;
+    QSize   elementSize;
+    QRect   bgRect;
+    QRect   metaRect;
+    int     bgOutlineWidth;
+    double  baseSize;
+    double  bgRectRadius;
     QPointF btnCenter;
-    int btnRadius;
-    int signSize;
-    int scaleOutlineWidth;
-    QRectF scaleRect, scaleFillRect;
-    int lastFontSize = 0;
-    bool autoFetchMetadata = false;
-
+    int     btnRadius;
+    int     signSize;
+    int     scaleOutlineWidth;
+    QRectF  scaleRect, scaleFillRect;
+    int     lastFontSize      = 0;
+    bool    autoFetchMetadata = false;
 
     bool isOnButton(const QPoint &pos, const QRect &rect);
     void updateGeomtry();
+
 public:
-    typedef QList<float> Histogram; // can be fetched via DeviceOpener::metadata()[amplitudes]
-    static const int HistogramCompressedSize = 100; // amount of drawn columns
+    typedef QList<float> Histogram;                     // can be fetched via DeviceOpener::metadata()[amplitudes]
+    static const int     HistogramCompressedSize = 100; // amount of drawn columns
 
     ITEAudioController(InteractiveText *itc);
 
     QSizeF intrinsicSize(QTextDocument *doc, int posInDocument, const QTextFormat &format);
-    void drawITE(QPainter *painter, const QRectF &rect, int posInDocument, const QTextFormat &format);
+    void   drawITE(QPainter *painter, const QRectF &rect, int posInDocument, const QTextFormat &format);
 
     QTextCharFormat makeFormat(const QUrl &audioSrc, ITEMediaOpener *mediaOpener) const;
-    void insert(const QUrl &audioSrc, ITEMediaOpener *mediaOpener = nullptr); // add new media to textedit. see QMediaPlayer::setMedia
-    QCursor cursor(); // cursor form after last mose events
+    void            insert(const QUrl &    audioSrc,
+                           ITEMediaOpener *mediaOpener = nullptr); // add new media to textedit. see QMediaPlayer::setMedia
+    QCursor         cursor();                                      // cursor form after last mose events
 
-    inline void setAutoFetchMetadata(bool fetch = true) { autoFetchMetadata=fetch; }
+    inline void setAutoFetchMetadata(bool fetch = true) { autoFetchMetadata = fetch; }
+
 protected:
-    bool mouseEvent(const InteractiveTextElementController::Event &event,
-                    const QRect &rect, QTextCursor &selected);
+    bool mouseEvent(const InteractiveTextElementController::Event &event, const QRect &rect, QTextCursor &selected);
     void hideEvent(QTextCursor &selected);
 private slots:
     void playerPositionChanged(qint64);

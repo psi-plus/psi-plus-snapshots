@@ -18,25 +18,23 @@ under the License.
 */
 
 #include "mainwindow.h"
-#include "ui_mainwindow.h"
 #include "qite.h"
 #include "qiteaudio.h"
 #include "qiteaudiorecorder.h"
+#include "ui_mainwindow.h"
 
-#include <QStandardPaths>
+#include <QAction>
+#include <QAudioRecorder>
+#include <QComboBox>
+#include <QDateTime>
 #include <QDir>
 #include <QDirIterator>
-#include <QAction>
 #include <QIcon>
-#include <QAudioRecorder>
+#include <QStandardPaths>
 #include <QStyle>
-#include <QDateTime>
-#include <QComboBox>
+#include <ctime>
 
-
-MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
@@ -50,21 +48,24 @@ MainWindow::MainWindow(QWidget *parent) :
         auto comboAct = ui->mainToolBar->addWidget(fontCombo);
         fontCombo->setCurrentText(QString::number(ui->textEdit->fontPointSize()));
         comboAct->setVisible(true);
-        connect(fontCombo, &QComboBox::currentTextChanged, this, [this](const QString &text){
-            ui->textEdit->setFontPointSize(text.toInt());
-        });
+        connect(fontCombo, &QComboBox::currentTextChanged, this,
+                [this](const QString &text) { ui->textEdit->setFontPointSize(text.toInt()); });
     }
 
     auto itc = new InteractiveText(ui->textEdit);
-    atc = new ITEAudioController(itc);
+    atc      = new ITEAudioController(itc);
     atc->setAutoFetchMetadata(true);
 
     auto musicDir = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
 
-    auto nameFilters = QStringList() << "*.aac" << "*.flac" << "*.mp3" << "*.ogg" << "*.webm";
+    auto nameFilters = QStringList() << "*.aac"
+                                     << "*.flac"
+                                     << "*.mp3"
+                                     << "*.ogg"
+                                     << "*.webm";
     QDirIterator it(musicDir, nameFilters, QDir::Files | QDir::NoSymLinks, QDirIterator::Subdirectories);
-    QStringList files;
-    int count = 2000;
+    QStringList  files;
+    int          count = 2000;
     while (it.hasNext() && count--)
         files << it.next();
 
@@ -72,25 +73,22 @@ MainWindow::MainWindow(QWidget *parent) :
     std::random_shuffle(files.begin(), files.end());
 
     while (files.size()) {
-        QString fileToPlay = files.takeLast();
+        QString   fileToPlay = files.takeLast();
         QFileInfo fi(fileToPlay);
-        auto url = QUrl::fromLocalFile(fileToPlay);
+        auto      url = QUrl::fromLocalFile(fileToPlay);
         ui->textEdit->append(fi.fileName() + "<br>");
         atc->insert(url);
     }
 }
 
-MainWindow::~MainWindow()
-{
-    delete ui;
-}
+MainWindow::~MainWindow() { delete ui; }
 
 void MainWindow::recordMic()
 {
     if (!recorder) {
         recorder = new AudioRecorder(this);
 
-        connect(recorder, &AudioRecorder::stateChanged, this, [this](){
+        connect(recorder, &AudioRecorder::stateChanged, this, [this]() {
             if (recorder->recorder()->state() == QAudioRecorder::StoppedState) {
                 recordAction->setIcon(QIcon(":/icon/recorder-microphone.png"));
             }
@@ -99,9 +97,11 @@ void MainWindow::recordMic()
             }
         });
 
-        connect(recorder, &AudioRecorder::recorded, this, [this](){
+        connect(recorder, &AudioRecorder::recorded, this, [this]() {
             if (recorder->maxVolume() / double(std::numeric_limits<decltype(recorder->maxVolume())>::max()) > 0.1) {
-                atc->insert(QUrl::fromLocalFile(QFileInfo(recorder->recorder()->outputLocation().toLocalFile()).absoluteFilePath()));
+                auto fileName = QFileInfo(recorder->recorder()->outputLocation().toLocalFile()).absoluteFilePath();
+                qDebug("file=%s", qPrintable(fileName));
+                atc->insert(QUrl::fromLocalFile(fileName));
             } else {
                 ui->textEdit->append("Prefer silence?");
             }

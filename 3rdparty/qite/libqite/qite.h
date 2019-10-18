@@ -27,110 +27,102 @@ class QTextEdit;
 class InteractiveText;
 
 #ifndef QITE_FIRST_USER_PROPERTY
-# define QITE_FIRST_USER_PROPERTY 0
+#define QITE_FIRST_USER_PROPERTY 0
 #endif
 
-class InteractiveTextFormat : public QTextCharFormat
-{
+class InteractiveTextFormat : public QTextCharFormat {
 public:
     using QTextCharFormat::QTextCharFormat;
 
-    enum Property {
-        Id =              QTextFormat::UserProperty + QITE_FIRST_USER_PROPERTY,
-        UserProperty
-    };
+    enum Property { Id = QTextFormat::UserProperty + QITE_FIRST_USER_PROPERTY, UserProperty };
 
     typedef quint32 ElementId;
 
     // just make it public. no reason to keep it protected
-    inline explicit InteractiveTextFormat(const QTextCharFormat &fmt) :
-        QTextCharFormat(fmt) {}
+    inline explicit InteractiveTextFormat(const QTextCharFormat &fmt) : QTextCharFormat(fmt) {}
 
     inline InteractiveTextFormat(int objectType, ElementId id)
-    { setObjectType(objectType); setProperty(Id, id); }
+    {
+        setObjectType(objectType);
+        setProperty(Id, id);
+    }
 
-    inline ElementId id() const
-    { return id(*this); }
+    inline ElementId id() const { return id(*this); }
 
-    static inline ElementId id(const QTextFormat &format)
-    { return ElementId(format.property(Id).toUInt()); }
+    static inline ElementId id(const QTextFormat &format) { return ElementId(format.property(Id).toUInt()); }
 };
 
-class InteractiveTextElementController : public QObject, public QTextObjectInterface
-{
+class InteractiveTextElementController : public QObject, public QTextObjectInterface {
     Q_OBJECT
     Q_INTERFACES(QTextObjectInterface)
 
 public:
-    enum class EventType {
-        Enter,
-        Leave,
-        Move,
-        Click
-    };
-    class Event
-    {
+    enum class EventType { Enter, Leave, Move, Click };
+    class Event {
     public:
-        QEvent *qevent;
+        QEvent *  qevent;
         EventType type;
-        QPoint pos; // relative to element. last position for "Leave"
+        QPoint    pos; // relative to element. last position for "Leave"
     };
 
     InteractiveTextElementController(InteractiveText *itc);
     virtual ~InteractiveTextElementController();
     virtual QCursor cursor();
 
-    void drawObject(QPainter *painter, const QRectF &rect, QTextDocument *doc, int posInDocument, const QTextFormat &format);
+    void drawObject(QPainter *painter, const QRectF &rect, QTextDocument *doc, int posInDocument,
+                    const QTextFormat &format);
 
     // subclasses should implement drawITE instead of drawObject
     virtual void drawITE(QPainter *painter, const QRectF &rect, int posInDocument, const QTextFormat &format) = 0;
+
 protected:
     friend class InteractiveText;
     InteractiveText *itc;
-    int objectType;
+    int              objectType;
 
     virtual bool mouseEvent(const Event &event, const QRect &rect, QTextCursor &selected);
     virtual void hideEvent(QTextCursor &selected);
 };
 
-class InteractiveText : public QObject
-{
+class InteractiveText : public QObject {
     Q_OBJECT
 public:
     InteractiveText(QTextEdit *_textEdit, int baseObjectType = QTextFormat::UserObject);
-    inline QTextEdit* textEdit() const { return _textEdit; }
+    inline QTextEdit *textEdit() const { return _textEdit; }
 
-    int registerController(InteractiveTextElementController *elementController);
-    void unregisterController(InteractiveTextElementController *elementController);
-    void insert(const InteractiveTextFormat &fmt);
-    QTextCursor findElement(quint32 elementId, int cursorPositionHint = 0);
-    void markVisible(const InteractiveTextFormat::ElementId &id);
+    int                              registerController(InteractiveTextElementController *elementController);
+    void                             unregisterController(InteractiveTextElementController *elementController);
+    void                             insert(const InteractiveTextFormat &fmt);
+    QTextCursor                      findElement(quint32 elementId, int cursorPositionHint = 0);
+    void                             markVisible(const InteractiveTextFormat::ElementId &id);
     InteractiveTextFormat::ElementId nextId();
+
 protected:
     bool eventFilter(QObject *obj, QEvent *event);
+
 private:
-    void checkAndGenerateLeaveEvent(QEvent *event);
+    void  checkAndGenerateLeaveEvent(QEvent *event);
     QRect elementRect(const QTextCursor &selected) const;
 private slots:
     void trackVisibility();
+
 private:
-    QTextEdit *_textEdit = nullptr;
-    int _baseObjectType;
-    int _objectType;
-    quint32 _uniqueElementId = 0; // just a sequence number
-    quint32 _lastElementId; // last which had mouse event
-    int _lastCursorPositionHint; // wrt mouse event
-    QMap<int,InteractiveTextElementController*> _controllers;
-    QSet<InteractiveTextFormat::ElementId> _visibleElements;
-    bool _lastMouseHandled = false;
+    QTextEdit *                                   _textEdit = nullptr;
+    int                                           _baseObjectType;
+    int                                           _objectType;
+    quint32                                       _uniqueElementId = 0;    // just a sequence number
+    quint32                                       _lastElementId;          // last which had mouse event
+    int                                           _lastCursorPositionHint; // wrt mouse event
+    QMap<int, InteractiveTextElementController *> _controllers;
+    QSet<InteractiveTextFormat::ElementId>        _visibleElements;
+    bool                                          _lastMouseHandled = false;
 };
 
-class ITEMediaOpener
-{
+class ITEMediaOpener {
 public:
-    virtual QIODevice *open(QUrl &url) = 0;
-    virtual void close(QIODevice *dev) = 0;
-    virtual QVariant metadata(const QUrl &url) = 0;
+    virtual QIODevice *open(QUrl &url)           = 0;
+    virtual void       close(QIODevice *dev)     = 0;
+    virtual QVariant   metadata(const QUrl &url) = 0;
 };
 
 #endif // QITE_H
