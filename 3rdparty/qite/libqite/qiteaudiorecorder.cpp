@@ -108,7 +108,8 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
     audioSettings.setCodec("audio/x-opus");
     audioSettings.setQuality(QMultimedia::HighQuality);
 
-    _recorder->setEncodingSettings(audioSettings, QVideoEncoderSettings(), "audio/ogg");
+    //_recorder->setEncodingSettings(audioSettings, QVideoEncoderSettings(), "audio/ogg");
+    _recorder->setEncodingSettings(audioSettings, QVideoEncoderSettings(), "video/quicktime, variant=(string)iso");
 
     connect(_recorder, &QAudioRecorder::durationChanged, this, [this](qint64 duration) { _duration = duration; });
 
