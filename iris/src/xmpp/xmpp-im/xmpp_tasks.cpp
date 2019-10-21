@@ -23,6 +23,8 @@
 #include "xmpp_bitsofbinary.h"
 #include "xmpp_caps.h"
 #include "xmpp_captcha.h"
+#include "xmpp_client.h"
+#include "xmpp_roster.h"
 #include "xmpp_vcard.h"
 #include "xmpp_xmlcommon.h"
 

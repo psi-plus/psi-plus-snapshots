@@ -20,7 +20,9 @@
 #include "filetransfer.h"
 
 #include "s5b.h"
+#include "xmpp_client.h"
 #include "xmpp_ibb.h"
+#include "xmpp_stream.h"
 #include "xmpp_xmlcommon.h"
 
 #include <QFileInfo>

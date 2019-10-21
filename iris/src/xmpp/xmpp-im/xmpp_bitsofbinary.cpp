@@ -92,7 +92,7 @@ void BoBData::fromXml(const QDomElement &data)
     setCid(data.attribute("cid"));
     d->maxAge = data.attribute("max-age").toInt();
     d->type   = data.attribute("type");
-    d->data   = QCA::Base64().stringToArray(data.text().replace("\n", "")).toByteArray();
+    d->data   = QByteArray::fromBase64(data.text().replace("\n", "").toLatin1());
 }
 
 QDomElement BoBData::toXml(QDomDocument *doc) const
@@ -101,7 +101,7 @@ QDomElement BoBData::toXml(QDomDocument *doc) const
     data.setAttribute("cid", cid());
     data.setAttribute("max-age", d->maxAge);
     data.setAttribute("type", d->type);
-    data.appendChild(doc->createTextNode(QCA::Base64().arrayToString(d->data)));
+    data.appendChild(doc->createTextNode(QString::fromLatin1(d->data.toBase64())));
     return data;
 }
 

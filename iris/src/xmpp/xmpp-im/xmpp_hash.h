@@ -21,6 +21,7 @@
 
 #include "xmpp_stanza.h"
 
+#include <QFileInfo>
 #include <QString>
 
 class QDomElement;
@@ -70,6 +71,7 @@ public:
     static void populateFeatures(XMPP::Features &);
     static Hash from(Type t, const QByteArray &fileData);
     static Hash from(XMPP::Hash::Type t, QIODevice *dev);
+    static Hash from(XMPP::Hash::Type t, const QFileInfo &file);
     static Hash from(const QStringRef &str); // e.g. sha1+aabccddeeffaabbcc232387539465923645
 
 private:

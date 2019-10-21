@@ -29,6 +29,7 @@ set(HEADERS
     xmpp-im/xmpp_chatstate.h
     xmpp-im/xmpp_discoitem.h
     xmpp-im/xmpp_features.h
+    xmpp-im/xmpp_form.h
     xmpp-im/xmpp_htmlelement.h
     xmpp-im/xmpp_httpauthrequest.h
     xmpp-im/xmpp_liveroster.h

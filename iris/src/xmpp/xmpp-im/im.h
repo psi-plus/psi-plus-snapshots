@@ -28,6 +28,7 @@
 #include "xmpp_client.h"
 #include "xmpp_discoitem.h"
 #include "xmpp_features.h"
+#include "xmpp_form.h"
 #include "xmpp_hash.h"
 #include "xmpp_htmlelement.h"
 #include "xmpp_httpauthrequest.h"
@@ -47,81 +48,5 @@
 #include "xmpp_thumbs.h"
 #include "xmpp_url.h"
 #include "xmpp_xdata.h"
-
-#include <QList>
-#include <qdatetime.h>
-
-namespace XMPP {
-typedef QList<AgentItem> AgentList;
-typedef QList<DiscoItem> DiscoList;
-
-class FormField {
-public:
-    enum { username, nick, password, name, first, last, email, address, city, state, zip, phone, url, date, misc };
-    FormField(const QString &type = "", const QString &value = "");
-    ~FormField();
-
-    int            type() const;
-    QString        fieldName() const;
-    QString        realName() const;
-    bool           isSecret() const;
-    const QString &value() const;
-    void           setType(int);
-    bool           setType(const QString &);
-    void           setValue(const QString &);
-
-private:
-    int     tagNameToType(const QString &) const;
-    QString typeToTagName(int) const;
-
-    int     v_type;
-    QString v_value;
-
-    class Private;
-    Private *d = nullptr;
-};
-
-class Form : public QList<FormField> {
-public:
-    Form(const Jid &j = "");
-    ~Form();
-
-    Jid     jid() const;
-    QString instructions() const;
-    QString key() const;
-    void    setJid(const Jid &);
-    void    setInstructions(const QString &);
-    void    setKey(const QString &);
-
-private:
-    Jid     v_jid;
-    QString v_instructions, v_key;
-
-    class Private;
-    Private *d = nullptr;
-};
-
-class SearchResult {
-public:
-    SearchResult(const Jid &jid = "");
-    ~SearchResult();
-
-    const Jid &    jid() const;
-    const QString &nick() const;
-    const QString &first() const;
-    const QString &last() const;
-    const QString &email() const;
-
-    void setJid(const Jid &);
-    void setNick(const QString &);
-    void setFirst(const QString &);
-    void setLast(const QString &);
-    void setEmail(const QString &);
-
-private:
-    Jid     v_jid;
-    QString v_nick, v_first, v_last, v_email;
-};
-} // namespace XMPP
 
 #endif // XMPP_IM_H

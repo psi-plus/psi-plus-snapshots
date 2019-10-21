@@ -20,9 +20,10 @@
 #ifndef XMPP_TASKS_H
 #define XMPP_TASKS_H
 
-#include "im.h"
 #include "xmpp_discoinfotask.h"
 #include "xmpp_encryptionhandler.h"
+#include "xmpp_form.h"
+#include "xmpp_message.h"
 #include "xmpp_subsets.h"
 #include "xmpp_vcard.h"
 

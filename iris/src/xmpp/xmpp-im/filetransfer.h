@@ -20,12 +20,17 @@
 #ifndef XMPP_FILETRANSFER_H
 #define XMPP_FILETRANSFER_H
 
-#include "im.h"
+#include "xmpp/jid/jid.h"
+#include "xmpp_task.h"
+#include "xmpp_thumbs.h"
 
 namespace XMPP {
 class BSConnection;
 class BytestreamManager;
+class Client;
+class FileTransferManager;
 struct FTRequest;
+class Thumbnail;
 
 /*class AbstractFileTransfer
 {

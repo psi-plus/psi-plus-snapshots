@@ -20,6 +20,7 @@
 #include "xmpp_serverinfomanager.h"
 
 #include "xmpp_caps.h"
+#include "xmpp_client.h"
 #include "xmpp_tasks.h"
 
 namespace XMPP {

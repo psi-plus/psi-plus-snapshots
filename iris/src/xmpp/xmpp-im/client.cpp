@@ -440,7 +440,7 @@ void Client::close(bool)
         d->stream = nullptr;
     }
     disconnected();
-    cleanup();
+    cleanup(); // TODO wait till stream writes all data to the socket
 }
 
 void Client::cleanup()

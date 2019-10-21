@@ -21,7 +21,6 @@
 #define XMPP_IBB_H
 
 #include "bytestream.h"
-#include "im.h"
 #include "xmpp_bytestream.h"
 #include "xmpp_task.h"
 

@@ -20,14 +20,17 @@
 #ifndef XMPP_HTTPFILEUPLOAD_H
 #define XMPP_HTTPFILEUPLOAD_H
 
-#include "im.h"
+#include "xmpp/jid/jid.h"
+#include "xmpp_task.h"
 
 #include <functional>
 #include <memory>
 
+class QIODevice;
 class QNetworkAccessManager;
 
 namespace XMPP {
+class Client;
 namespace XEP0363 {
     enum version { vUnknown, v0_2_5, v0_3_1 };
     struct HttpHeader {

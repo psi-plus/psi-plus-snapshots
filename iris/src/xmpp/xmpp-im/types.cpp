@@ -417,6 +417,16 @@ Hash Hash::from(XMPP::Hash::Type t, QIODevice *dev)
     return h;
 }
 
+Hash Hash::from(Hash::Type t, const QFileInfo &file)
+{
+    if (file.isReadable()) {
+        QFile f(file.filePath());
+        f.open(QIODevice::ReadOnly);
+        return from(t, &f);
+    }
+    return Hash();
+}
+
 Hash Hash::from(const QStringRef &str)
 {
     auto ind = str.indexOf('+');

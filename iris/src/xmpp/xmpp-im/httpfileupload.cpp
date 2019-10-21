@@ -19,6 +19,7 @@
 
 #include "httpfileupload.h"
 
+#include "xmpp_client.h"
 #include "xmpp_serverinfomanager.h"
 #include "xmpp_tasks.h"
 #include "xmpp_xmlcommon.h"
