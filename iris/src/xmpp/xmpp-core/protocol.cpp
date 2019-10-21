@@ -194,7 +194,11 @@ void BasicProtocol::sendWhitespace()
     sendList += i;
 }
 
-void BasicProtocol::clearSendQueue() { sendList.clear(); }
+void BasicProtocol::clearSendQueue()
+{
+    sendList.clear();
+    XmlProtocol::clearSendQueue();
+}
 
 QDomElement BasicProtocol::recvStanza()
 {

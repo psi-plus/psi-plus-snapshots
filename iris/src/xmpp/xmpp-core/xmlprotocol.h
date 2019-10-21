@@ -64,6 +64,7 @@ public:
     void       addIncomingData(const QByteArray &);
     QByteArray takeOutgoingData();
     void       outgoingDataWritten(int);
+    void       clearSendQueue();
 
     // advance the state machine
     bool processStep();

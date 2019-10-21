@@ -288,6 +288,12 @@ void XmlProtocol::outgoingDataWritten(int bytes)
         processTrackQueue(trackQueueNormal, b);
 }
 
+void XmlProtocol::clearSendQueue()
+{
+    outDataUrgent.clear();
+    outDataNormal.clear();
+}
+
 bool XmlProtocol::processStep()
 {
     Parser::Event pe;
@@ -505,7 +511,6 @@ int XmlProtocol::internalWriteData(const QByteArray &a, TrackItem::Type t, int i
 
 int XmlProtocol::internalWriteString(const QString &s, TrackItem::Type t, int id, bool urgent)
 {
-    QString out = sanitizeForStream(s);
     return internalWriteData(s.toUtf8(), t, id, urgent);
 }
 
