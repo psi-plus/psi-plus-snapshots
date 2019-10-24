@@ -253,11 +253,13 @@ void Address::setType(Type type) { v_type = type; }
 //----------------------------------------------------------------------------
 // Hash
 //----------------------------------------------------------------------------
+static const char *const sha1_synonims[] = { "sha1", nullptr };
 // NOTE: keep this in sync with enum. same order!
 static const struct {
-    const char *text;
-    Hash::Type  hashType;
-} hashTypes[] = { { "sha-1", Hash::Type::Sha1 },
+    const char *       text;
+    Hash::Type         hashType;
+    const char *const *synonims = nullptr;
+} hashTypes[] = { { "sha-1", Hash::Type::Sha1, sha1_synonims },
                   { "sha-256", Hash::Type::Sha256 },
                   { "sha-512", Hash::Type::Sha512 },
                   { "sha3-256", Hash::Type::Sha3_256 },
@@ -291,6 +293,15 @@ Hash::Type Hash::parseType(const QStringRef &algo)
         for (size_t n = 0; n < sizeof(hashTypes) / sizeof(hashTypes[0]); ++n) {
             if (algo == QLatin1String(hashTypes[n].text)) {
                 return hashTypes[n].hashType;
+            }
+            if (hashTypes[n].synonims) {
+                auto cur = hashTypes[n].synonims;
+                while (*cur) {
+                    if (algo == QLatin1String(*cur)) {
+                        return hashTypes[n].hashType;
+                    }
+                    cur++;
+                }
             }
         }
     }
