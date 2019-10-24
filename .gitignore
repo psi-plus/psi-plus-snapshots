@@ -1,0 +1,4 @@
+CMakeLists.txt.user*
+builddir/
+myspell/
+translations/

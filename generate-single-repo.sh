@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2019-04-29
+# Updated: 2019-10-24
 # Version: N/A
 
 set -e
@@ -130,7 +130,7 @@ find . -depth -type d -empty -exec rmdir {} \;
 echo "* Directory is cleaned."
 
 # Some paranoid checks:
-for FILE in generate-single-repo.sh configure README; do
+for FILE in generate-single-repo.sh configure README .gitignore; do
     if [ ! -e "${SNAPSHOTS_DIR}/${FILE}" ]; then
         wget -c "https://raw.github.com/psi-plus/psi-plus-snapshots/master/${FILE}"
     fi
@@ -139,6 +139,7 @@ chmod uog+x generate-single-repo.sh configure
 
 cp -f "${SNAPSHOTS_DIR}/configure" "${MAIN_DIR}/configure"
 cp -f "${SNAPSHOTS_DIR}/README" "${MAIN_DIR}/README"
+cp -f "${SNAPSHOTS_DIR}/.gitignore" "${MAIN_DIR}/.gitignore"
 rsync -a "${MAIN_DIR}/psi/" "${SNAPSHOTS_DIR}/" \
     --exclude=".git*" \
     --exclude="/configure" \
@@ -146,6 +147,7 @@ rsync -a "${MAIN_DIR}/psi/" "${SNAPSHOTS_DIR}/" \
     --exclude="/README"
 mv "${MAIN_DIR}/configure" "${SNAPSHOTS_DIR}/configure"
 mv "${MAIN_DIR}/README" "${SNAPSHOTS_DIR}/README"
+mv "${MAIN_DIR}/.gitignore" "${SNAPSHOTS_DIR}/.gitignore"
 echo "* Files from psi project are copied."
 
 failed_to_apply_patches()
