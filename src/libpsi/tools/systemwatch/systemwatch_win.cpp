@@ -52,26 +52,22 @@
 // WinSystemWatch
 // -----------------------------------------------------------------------------
 
-class WinSystemWatch::EventFilter : public QAbstractNativeEventFilter
-{
+class WinSystemWatch::EventFilter : public QAbstractNativeEventFilter {
     WinSystemWatch *syswatch;
 
 public:
-    EventFilter(WinSystemWatch *parent) : syswatch(parent) {qApp->installNativeEventFilter(this);}
+    EventFilter(WinSystemWatch *parent) : syswatch(parent) { qApp->installNativeEventFilter(this); }
 
     virtual bool nativeEventFilter(const QByteArray &eventType, void *m, long *result) Q_DECL_OVERRIDE
     {
         if (eventType == "windows_generic_MSG") {
-            return syswatch->processWinEvent(static_cast<MSG*>(m), result);
+            return syswatch->processWinEvent(static_cast<MSG *>(m), result);
         }
         return false;
     }
 };
 
-WinSystemWatch::WinSystemWatch()
-{
-    d = new EventFilter(this);
-}
+WinSystemWatch::WinSystemWatch() { d = new EventFilter(this); }
 
 WinSystemWatch::~WinSystemWatch()
 {
@@ -79,37 +75,36 @@ WinSystemWatch::~WinSystemWatch()
     d = 0;
 }
 
-bool WinSystemWatch::processWinEvent(MSG *m, long* result)
+bool WinSystemWatch::processWinEvent(MSG *m, long *result)
 {
     Q_UNUSED(result);
-    if(WM_POWERBROADCAST == m->message) {
+    if (WM_POWERBROADCAST == m->message) {
         switch (m->wParam) {
-            case PBT_APMSUSPEND:
-                emit sleep();
-                break;
+        case PBT_APMSUSPEND:
+            emit sleep();
+            break;
 
-            case PBT_APMRESUMESUSPEND:
-                emit wakeup();
-                break;
+        case PBT_APMRESUMESUSPEND:
+            emit wakeup();
+            break;
 
-            case PBT_APMRESUMECRITICAL:
-                // The system previously went into SUSPEND state (suddenly)
-                // without sending PBT_APMSUSPEND.  Net connections are
-                // probably invalid.  Not sure what to do about this.
-                // Maybe:
-                emit sleep();
-                emit wakeup();
-                break;
+        case PBT_APMRESUMECRITICAL:
+            // The system previously went into SUSPEND state (suddenly)
+            // without sending PBT_APMSUSPEND.  Net connections are
+            // probably invalid.  Not sure what to do about this.
+            // Maybe:
+            emit sleep();
+            emit wakeup();
+            break;
 
-            case PBT_APMQUERYSUSPEND:
-                // TODO: Check if file transfers are running, and don't go
-                // to sleep if there are.  To refuse to suspend, we somehow
-                // need to return BROADCAST_QUERY_DENY from the actual
-                // windows procedure.
-                break;
+        case PBT_APMQUERYSUSPEND:
+            // TODO: Check if file transfers are running, and don't go
+            // to sleep if there are.  To refuse to suspend, we somehow
+            // need to return BROADCAST_QUERY_DENY from the actual
+            // windows procedure.
+            break;
         }
-    }
-    else if (WM_QUERYENDSESSION == m->message) {
+    } else if (WM_QUERYENDSESSION == m->message) {
         // TODO : If we allow the user to cancel suspend if they
         // are doing a file transfer, we should probably also give
         // them the chance to cancel a shutdown or log-off

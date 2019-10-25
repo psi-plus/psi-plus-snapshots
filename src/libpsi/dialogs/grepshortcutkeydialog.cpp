@@ -20,9 +20,7 @@
 
 #include "grepshortcutkeydialog.h"
 
-GrepShortcutKeyDialog::GrepShortcutKeyDialog()
-    : QDialog()
-    , gotKey(false)
+GrepShortcutKeyDialog::GrepShortcutKeyDialog() : QDialog(), gotKey(false)
 {
     setAttribute(Qt::WA_DeleteOnClose);
     ui_.setupUi(this);
@@ -49,7 +47,7 @@ void GrepShortcutKeyDialog::closeEvent(QCloseEvent *event)
     event->accept();
 }
 
-void GrepShortcutKeyDialog::displayPressedKeys(const QKeySequence& keys)
+void GrepShortcutKeyDialog::displayPressedKeys(const QKeySequence &keys)
 {
     QString str = keys.toString(QKeySequence::NativeText);
     if (str.isEmpty())
@@ -57,13 +55,12 @@ void GrepShortcutKeyDialog::displayPressedKeys(const QKeySequence& keys)
     ui_.shortcutPreview->setText(str);
 }
 
-QKeySequence GrepShortcutKeyDialog::getKeySequence(QKeyEvent* event) const
+QKeySequence GrepShortcutKeyDialog::getKeySequence(QKeyEvent *event) const
 {
-    return QKeySequence((isValid(event->key()) ? event->key() : 0)
-                        + (event->modifiers() & ~Qt::KeypadModifier));
+    return QKeySequence((isValid(event->key()) ? event->key() : 0) + (event->modifiers() & ~Qt::KeypadModifier));
 }
 
-void GrepShortcutKeyDialog::keyPressEvent(QKeyEvent* event)
+void GrepShortcutKeyDialog::keyPressEvent(QKeyEvent *event)
 {
     displayPressedKeys(getKeySequence(event));
 
@@ -75,10 +72,7 @@ void GrepShortcutKeyDialog::keyPressEvent(QKeyEvent* event)
     close();
 }
 
-void GrepShortcutKeyDialog::keyReleaseEvent(QKeyEvent* event)
-{
-    displayPressedKeys(getKeySequence(event));
-}
+void GrepShortcutKeyDialog::keyReleaseEvent(QKeyEvent *event) { displayPressedKeys(getKeySequence(event)); }
 
 /**
  * Returns true if \param key could be used in a shortcut.

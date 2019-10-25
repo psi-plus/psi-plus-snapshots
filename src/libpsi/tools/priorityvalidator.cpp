@@ -19,22 +19,19 @@
 
 #include "priorityvalidator.h"
 
-QValidator::State PriorityValidator::validate(QString &input, int &/*pos*/) const
+QValidator::State PriorityValidator::validate(QString &input, int & /*pos*/) const
 {
-      if (input.isEmpty()) {
-              return QValidator::Acceptable;
-      }
-      else if (input == "-") {
-              return QValidator::Intermediate;
-      }
-      else {
-              bool ok = false;
-              int val = input.toInt(&ok);
-              if (ok && val >= -128 && val <= 127) {
-                      return QValidator::Acceptable;
-              }
-              else {
-                      return QValidator::Invalid;
-              }
-      }
+    if (input.isEmpty()) {
+        return QValidator::Acceptable;
+    } else if (input == "-") {
+        return QValidator::Intermediate;
+    } else {
+        bool ok  = false;
+        int  val = input.toInt(&ok);
+        if (ok && val >= -128 && val <= 127) {
+            return QValidator::Acceptable;
+        } else {
+            return QValidator::Invalid;
+        }
+    }
 }

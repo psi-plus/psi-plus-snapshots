@@ -24,39 +24,40 @@
 #include <QObject>
 #include <QStringList>
 
-class SimpleCli : public QObject
-{
+class SimpleCli : public QObject {
 public:
-    void defineSwitch(const QByteArray& name, const QString& help = QString());
-    void defineParam(const QByteArray &name, const QString& valueHelp = QString("ARG"), const QString& help = QString());
+    void defineSwitch(const QByteArray &name, const QString &help = QString());
+    void defineParam(const QByteArray &name, const QString &valueHelp = QString("ARG"),
+                     const QString &help = QString());
 
     void defineAlias(const QByteArray &alias, const QByteArray &originalName);
 
-    QHash<QByteArray, QByteArray> parse(int argc, char* argv[],
-                                       const QList<QByteArray> &terminalArgs = QList<QByteArray>(),
-                                       int* safeArgc = nullptr);
+    QHash<QByteArray, QByteArray>
+    parse(int argc, char *argv[], const QList<QByteArray> &terminalArgs = QList<QByteArray>(), int *safeArgc = nullptr);
 
-    QString optionsHelp(int textWidth);
+    QString        optionsHelp(int textWidth);
     static QString wrap(QString text, int width, int margin = 0, int firstMargin = -1);
 
 private:
     struct Arg {
-        QByteArray name;
+        QByteArray        name;
         QList<QByteArray> aliases;
-        QChar shortName;
+        QChar             shortName;
 
         bool needsValue;
 
         QString help;
         QString valueHelp;
 
-        Arg(const QByteArray& argName, const QString& argValueHelp, const QString& argHelp, bool argNeedsValue)
-                : name(argName), needsValue(argNeedsValue), help(argHelp), valueHelp(argValueHelp) {}
+        Arg(const QByteArray &argName, const QString &argValueHelp, const QString &argHelp, bool argNeedsValue) :
+            name(argName), needsValue(argNeedsValue), help(argHelp), valueHelp(argValueHelp)
+        {
+        }
 
-        Arg() : needsValue(false) {}    // needed only by QMap
+        Arg() : needsValue(false) {} // needed only by QMap
     };
 
-    QMap<QByteArray, Arg> argdefs;
+    QMap<QByteArray, Arg>        argdefs;
     QMap<QByteArray, QByteArray> aliases;
 };
 

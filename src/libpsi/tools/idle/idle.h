@@ -24,8 +24,7 @@
 
 class IdlePlatform;
 
-class Idle : public QObject
-{
+class Idle : public QObject {
     Q_OBJECT
 public:
     Idle();
@@ -47,14 +46,13 @@ private:
     Private *d;
 };
 
-class IdlePlatform
-{
+class IdlePlatform {
 public:
     IdlePlatform();
     ~IdlePlatform();
 
     bool init();
-    int secondsIdle();
+    int  secondsIdle();
 
 private:
     class Private;

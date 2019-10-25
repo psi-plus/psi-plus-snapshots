@@ -33,17 +33,16 @@
 #include <QSet>
 #include <QString>
 
-class SpellChecker : public QObject
-{
+class SpellChecker : public QObject {
 public:
-    static SpellChecker* instance();
-    virtual bool available() const;
-    virtual bool writable() const;
-    virtual QList<QString> suggestions(const QString&);
-    virtual bool isCorrect(const QString&);
-    virtual bool add(const QString&);
+    static SpellChecker *  instance();
+    virtual bool           available() const;
+    virtual bool           writable() const;
+    virtual QList<QString> suggestions(const QString &);
+    virtual bool           isCorrect(const QString &);
+    virtual bool           add(const QString &);
 
-    virtual void setActiveLanguages(const QSet<LanguageManager::LangId>& ) {}
+    virtual void                          setActiveLanguages(const QSet<LanguageManager::LangId> &) {}
     virtual QSet<LanguageManager::LangId> getAllLanguages() const { return QSet<LanguageManager::LangId>(); }
 
 protected:
@@ -51,7 +50,7 @@ protected:
     virtual ~SpellChecker();
 
 private:
-    static SpellChecker* instance_;
+    static SpellChecker *instance_;
 };
 
 #endif // SPELLCHECKER_H

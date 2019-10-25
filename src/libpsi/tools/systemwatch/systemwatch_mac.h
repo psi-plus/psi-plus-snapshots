@@ -22,8 +22,7 @@
 
 #include "systemwatch.h"
 
-class MacSystemWatch : public SystemWatch
-{
+class MacSystemWatch : public SystemWatch {
 public:
     MacSystemWatch();
 

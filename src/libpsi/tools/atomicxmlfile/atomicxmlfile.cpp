@@ -28,36 +28,26 @@
  * atomically save config file, so if application is terminated while
  * saving config file, data is not lost.
  */
-AtomicXmlFile::AtomicXmlFile(const QString &fileName)
-    : fileName_(fileName)
-{
-}
+AtomicXmlFile::AtomicXmlFile(const QString &fileName) : fileName_(fileName) {}
 
-QStringList AtomicXmlFile::loadCandidateList() const {
+QStringList AtomicXmlFile::loadCandidateList() const
+{
     QStringList fileNames;
-    fileNames << fileName_
-              << tempFileName()
-              << backupFileName();
+    fileNames << fileName_ << tempFileName() << backupFileName();
     return fileNames;
 }
 
 /**
  * Returns name of the file the config is first written to.
  */
-QString AtomicXmlFile::tempFileName() const
-{
-    return fileName_ + ".temp";
-}
+QString AtomicXmlFile::tempFileName() const { return fileName_ + ".temp"; }
 
 /**
  * Returns name of the back up file.
  */
-QString AtomicXmlFile::backupFileName() const
-{
-    return fileName_ + ".backup";
-}
+QString AtomicXmlFile::backupFileName() const { return fileName_ + ".backup"; }
 
-bool AtomicXmlFile::saveDocument(const QDomDocument& doc, QString fileName) const
+bool AtomicXmlFile::saveDocument(const QDomDocument &doc, QString fileName) const
 {
     QFile file(fileName);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
@@ -77,7 +67,7 @@ bool AtomicXmlFile::saveDocument(const QDomDocument& doc, QString fileName) cons
     return res;
 }
 
-bool AtomicXmlFile::loadDocument(QDomDocument* doc, QString fileName) const
+bool AtomicXmlFile::loadDocument(QDomDocument *doc, QString fileName) const
 {
     Q_ASSERT(doc);
     QFile file(fileName);
@@ -88,7 +78,7 @@ bool AtomicXmlFile::loadDocument(QDomDocument* doc, QString fileName) const
     return doc->setContent(&file);
 }
 
-bool AtomicXmlFile::saveDocument(AtomicXmlFileWriter* writer, QString fileName) const
+bool AtomicXmlFile::saveDocument(AtomicXmlFileWriter *writer, QString fileName) const
 {
     Q_ASSERT(writer);
     QFile file(fileName);
@@ -103,7 +93,7 @@ bool AtomicXmlFile::saveDocument(AtomicXmlFileWriter* writer, QString fileName) 
     return file.error() == QFile::NoError;
 }
 
-bool AtomicXmlFile::loadDocument(AtomicXmlFileReader* reader, QString fileName) const
+bool AtomicXmlFile::loadDocument(AtomicXmlFileReader *reader, QString fileName) const
 {
     Q_ASSERT(reader);
     QFile file(fileName);
@@ -112,8 +102,7 @@ bool AtomicXmlFile::loadDocument(AtomicXmlFileReader* reader, QString fileName) 
     }
 
     if (!reader->read(&file)) {
-        qWarning("Parse error in file %s at line %d, column %d:\n%s",
-                 qPrintable(fileName), (int)reader->lineNumber(),
+        qWarning("Parse error in file %s at line %d, column %d:\n%s", qPrintable(fileName), (int)reader->lineNumber(),
                  (int)reader->columnNumber(), qPrintable(reader->errorString()));
 
         return false;
@@ -127,10 +116,11 @@ bool AtomicXmlFile::loadDocument(AtomicXmlFileReader* reader, QString fileName) 
  * returns true if any of the files loadDocument tries to read exists,
  * it *doesn't* check that there is at least one uncorupted file.
  */
-bool AtomicXmlFile::exists(const QString &fileName) {
+bool AtomicXmlFile::exists(const QString &fileName)
+{
     AtomicXmlFile tmp(fileName);
 
-    foreach(QString fileName, tmp.loadCandidateList()) {
+    foreach (QString fileName, tmp.loadCandidateList()) {
         if (QFile::exists(fileName)) {
             return true;
         }

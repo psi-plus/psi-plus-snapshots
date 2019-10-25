@@ -37,7 +37,7 @@
 
 #include <QCoreApplication>
 
-SpellChecker* SpellChecker::instance()
+SpellChecker *SpellChecker::instance()
 {
     if (!instance_) {
 #if defined(Q_OS_MAC) && !defined(HAVE_HUNSPELL)
@@ -55,38 +55,18 @@ SpellChecker* SpellChecker::instance()
     return instance_;
 }
 
-SpellChecker::SpellChecker()
-    : QObject(QCoreApplication::instance())
-{
-}
+SpellChecker::SpellChecker() : QObject(QCoreApplication::instance()) {}
 
-SpellChecker::~SpellChecker()
-{
-}
+SpellChecker::~SpellChecker() {}
 
-bool SpellChecker::available() const
-{
-    return false;
-}
+bool SpellChecker::available() const { return false; }
 
-bool SpellChecker::writable() const
-{
-    return true;
-}
+bool SpellChecker::writable() const { return true; }
 
-bool SpellChecker::isCorrect(const QString&)
-{
-    return true;
-}
+bool SpellChecker::isCorrect(const QString &) { return true; }
 
-QList<QString> SpellChecker::suggestions(const QString&)
-{
-    return QList<QString>();
-}
+QList<QString> SpellChecker::suggestions(const QString &) { return QList<QString>(); }
 
-bool SpellChecker::add(const QString&)
-{
-    return false;
-}
+bool SpellChecker::add(const QString &) { return false; }
 
-SpellChecker* SpellChecker::instance_ = nullptr;
+SpellChecker *SpellChecker::instance_ = nullptr;

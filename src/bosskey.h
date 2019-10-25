@@ -23,8 +23,7 @@
 class MainWin;
 class PsiOptions;
 
-class BossKey : public QObject
-{
+class BossKey : public QObject {
     Q_OBJECT
 public:
     BossKey(QObject *p = nullptr);
@@ -38,9 +37,9 @@ private:
     void doShow();
 
 private:
-    bool isHidden_;
-    QList< QPointer<QWidget> > hiddenWidgets_;
-    QVariantHash tmpOptions_;
-    PsiOptions *psiOptions;
-    MainWin* win_;
+    bool                     isHidden_;
+    QList<QPointer<QWidget>> hiddenWidgets_;
+    QVariantHash             tmpOptions_;
+    PsiOptions *             psiOptions;
+    MainWin *                win_;
 };

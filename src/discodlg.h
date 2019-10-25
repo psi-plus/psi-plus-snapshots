@@ -30,15 +30,14 @@ class QString;
 
 using namespace XMPP;
 
-class DiscoDlg : public QDialog, public Ui::Disco
-{
+class DiscoDlg : public QDialog, public Ui::Disco {
     Q_OBJECT
 public:
     DiscoDlg(PsiAccount *, const Jid &, const QString &node = QString());
     ~DiscoDlg();
 
-    void doDisco(QString host = QString(), QString node = QString());
-    int  itemsPerPage() const;
+    void        doDisco(QString host = QString(), QString node = QString());
+    int         itemsPerPage() const;
     PsiAccount *account();
 
 signals:
@@ -47,6 +46,7 @@ signals:
 public:
     class Private;
     friend class Private;
+
 private:
     Private *d;
 };

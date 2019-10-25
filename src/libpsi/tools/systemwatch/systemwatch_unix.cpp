@@ -22,10 +22,10 @@
 #include "applicationinfo.h"
 
 #ifdef USE_DBUS
-# include <QDBusConnection>
-# include <QDBusInterface>
-# include <QDBusReply>
-# include <QDBusUnixFileDescriptor>
+#include <QDBusConnection>
+#include <QDBusInterface>
+#include <QDBusReply>
+#include <QDBusUnixFileDescriptor>
 #endif
 #include <unistd.h>
 
@@ -36,10 +36,13 @@ UnixSystemWatch::UnixSystemWatch()
     QDBusConnection conn = QDBusConnection::systemBus();
     // listen to systemd's logind
     // TODO: use delaying Inhibitor locks
-    conn.connect("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "PrepareForSleep", this, SLOT(prepareForSleep(bool)));
+    conn.connect("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager",
+                 "PrepareForSleep", this, SLOT(prepareForSleep(bool)));
     // listen to UPower
-    conn.connect("org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.UPower", "Sleeping", this, SLOT(sleeping()));
-    conn.connect("org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.UPower", "Resuming", this, SLOT(resuming()));
+    conn.connect("org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.UPower", "Sleeping", this,
+                 SLOT(sleeping()));
+    conn.connect("org.freedesktop.UPower", "/org/freedesktop/UPower", "org.freedesktop.UPower", "Resuming", this,
+                 SLOT(resuming()));
 
     takeSleepLock();
 #endif
@@ -52,8 +55,10 @@ void UnixSystemWatch::takeSleepLock()
        "org.freedesktop.login1.Manager.Inhibit" string:"sleep" string:"Psi" \
                                                                string:"Closing connections..." string:"delay"
     */
-    QDBusInterface login1iface("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", QDBusConnection::systemBus());
-    QDBusReply<QDBusUnixFileDescriptor> repl = login1iface.call("Inhibit", "sleep", ApplicationInfo::name(), "Closing connections...", "delay");
+    QDBusInterface login1iface("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager",
+                               QDBusConnection::systemBus());
+    QDBusReply<QDBusUnixFileDescriptor> repl
+        = login1iface.call("Inhibit", "sleep", ApplicationInfo::name(), "Closing connections...", "delay");
     // we could delay "shutdown" as well probably Qt session manager already can do this
     if (repl.isValid()) {
         lockFd = repl.value();
@@ -72,23 +77,14 @@ void UnixSystemWatch::proceedWithSleep()
 
 void UnixSystemWatch::prepareForSleep(bool beforeSleep)
 {
-    if (beforeSleep)
-    {
+    if (beforeSleep) {
         emit sleep();
-    }
-    else
-    {
+    } else {
         emit wakeup();
         takeSleepLock();
     }
 }
 
-void UnixSystemWatch::sleeping()
-{
-    emit sleep();
-}
+void UnixSystemWatch::sleeping() { emit sleep(); }
 
-void UnixSystemWatch::resuming()
-{
-    emit wakeup();
-}
+void UnixSystemWatch::resuming() { emit wakeup(); }

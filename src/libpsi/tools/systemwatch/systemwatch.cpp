@@ -20,20 +20,18 @@
 #include "systemwatch.h"
 
 #if defined(Q_OS_MAC)
-    #include "systemwatch_mac.h"
+#include "systemwatch_mac.h"
 #elif defined(Q_OS_WIN32)
-    #include "systemwatch_win.h"
+#include "systemwatch_win.h"
 #else
-    #include "systemwatch_unix.h"
+#include "systemwatch_unix.h"
 #endif
 
 #include <QApplication>
 
-SystemWatch::SystemWatch() : QObject(qApp)
-{
-}
+SystemWatch::SystemWatch() : QObject(qApp) {}
 
-SystemWatch* SystemWatch::instance()
+SystemWatch *SystemWatch::instance()
 {
     if (!instance_) {
 #if defined(Q_OS_MAC)
@@ -52,4 +50,4 @@ void SystemWatch::proceedWithSleep()
     // do nothing in base impl
 }
 
-SystemWatch* SystemWatch::instance_ = nullptr;
+SystemWatch *SystemWatch::instance_ = nullptr;

@@ -24,17 +24,13 @@
 
 #include <QObject>
 
-class GlobalShortcutManager::KeyTrigger : public QObject
-{
+class GlobalShortcutManager::KeyTrigger : public QObject {
     Q_OBJECT
 public:
     /**
      * Is there any slot connected to this hotkey?
      */
-    bool isUsed() const
-    {
-        return QObject::receivers(SIGNAL(triggered())) > 0;
-    }
+    bool isUsed() const { return QObject::receivers(SIGNAL(triggered())) > 0; }
 
 signals:
     void triggered();
@@ -43,7 +39,7 @@ private:
     /**
      * Registers the \a key.
      */
-    KeyTrigger(const QKeySequence& key);
+    KeyTrigger(const QKeySequence &key);
     /**
      * Unregisters the key.
      */
@@ -55,7 +51,7 @@ private:
      * Platform-specific helper
      */
     class Impl;
-    Impl* d;
+    Impl *d;
 };
 
 #endif // GLOBALSHORTCUTTRIGGER_H

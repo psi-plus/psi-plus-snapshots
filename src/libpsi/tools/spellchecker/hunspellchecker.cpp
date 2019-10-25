@@ -26,7 +26,7 @@
 #include "hunspellchecker.h"
 
 #ifdef Q_OS_WIN
-#    include "applicationinfo.h"
+#include "applicationinfo.h"
 #endif
 #include "languagemanager.h"
 
@@ -42,10 +42,10 @@
 #include <hunspell.hxx>
 
 #ifdef H_DEPRECATED
-# define NEW_HUNSPELL
-# define HS_STRING(text) li.codec->fromUnicode(text).toStdString()
+#define NEW_HUNSPELL
+#define HS_STRING(text) li.codec->fromUnicode(text).toStdString()
 #else
-# define HS_STRING(text) li.codec->fromUnicode(text)
+#define HS_STRING(text) li.codec->fromUnicode(text)
 #endif
 
 HunspellChecker::HunspellChecker()
@@ -54,15 +54,13 @@ HunspellChecker::HunspellChecker()
     getSupportedLanguages();
 }
 
-HunspellChecker::~HunspellChecker()
-{
-}
+HunspellChecker::~HunspellChecker() {}
 
 void HunspellChecker::getDictPaths()
 {
     if (dictPaths_.isEmpty()) {
         QSet<QString> dictPathSet;
-        QString pathFromEnv = QString::fromLocal8Bit(qgetenv("MYSPELL_DICT_DIR"));
+        QString       pathFromEnv = QString::fromLocal8Bit(qgetenv("MYSPELL_DICT_DIR"));
         if (!pathFromEnv.isEmpty())
             dictPathSet << pathFromEnv;
 #if defined(Q_OS_WIN)
@@ -70,15 +68,14 @@ void HunspellChecker::getDictPaths()
                     << ApplicationInfo::homeDir(ApplicationInfo::DataLocation) + QLatin1String("/myspell/dicts");
 
 #elif defined(Q_OS_MAC)
-        dictPathSet << QCoreApplication::applicationDirPath() + QLatin1String("/../Resources/myspell/dicts") // relative path to dictionaries inside app bundle
+        dictPathSet << QCoreApplication::applicationDirPath()
+                + QLatin1String("/../Resources/myspell/dicts")    // relative path to dictionaries inside app bundle
                     << QLatin1String("/opt/local/share/myspell"); // MacPorts standard paths
 #elif defined(Q_OS_HAIKU)
         dictPathSet << QLatin1String("/system/data/hunspell");
 #else
-        dictPathSet << QLatin1String("/usr/share/myspell")
-                    << QLatin1String("/usr/share/hunspell")
-                    << QLatin1String("/usr/local/share/myspell")
-                    << QLatin1String("/usr/local/share/hunspell")
+        dictPathSet << QLatin1String("/usr/share/myspell") << QLatin1String("/usr/share/hunspell")
+                    << QLatin1String("/usr/local/share/myspell") << QLatin1String("/usr/local/share/hunspell")
                     << QString("%1/.local/share/myspell").arg(QDir::home().absolutePath())
                     << QString("%1/.local/share/hunspell").arg(QDir::home().absolutePath());
 #endif
@@ -86,7 +83,7 @@ void HunspellChecker::getDictPaths()
     }
 }
 
-bool HunspellChecker::scanDictPaths(const QString &language, QFileInfo &aff , QFileInfo &dic)
+bool HunspellChecker::scanDictPaths(const QString &language, QFileInfo &aff, QFileInfo &dic)
 {
     foreach (const QString &dictPath, dictPaths_) {
         QDir dir(dictPath);
@@ -123,12 +120,12 @@ void HunspellChecker::getSupportedLanguages()
 
 void HunspellChecker::addLanguage(const LanguageManager::LangId &langId)
 {
-    QString language = LanguageManager::toString(langId).replace('-','_');
+    QString   language = LanguageManager::toString(langId).replace('-', '_');
     QFileInfo aff, dic;
     if (scanDictPaths(language, aff, dic)) {
         LangItem li;
-        li.hunspell_ = HunspellPtr(new Hunspell(aff.absoluteFilePath().toLocal8Bit(),
-                            dic.absoluteFilePath().toLocal8Bit()));
+        li.hunspell_
+            = HunspellPtr(new Hunspell(aff.absoluteFilePath().toLocal8Bit(), dic.absoluteFilePath().toLocal8Bit()));
         QByteArray codecName(li.hunspell_->get_dic_encoding());
         if (codecName.startsWith("microsoft-cp125")) {
             codecName.replace(0, sizeof("microsoft-cp") - 1, "Windows-");
@@ -137,7 +134,7 @@ void HunspellChecker::addLanguage(const LanguageManager::LangId &langId)
         }
         li.codec = QTextCodec::codecForName(codecName);
         if (li.codec) {
-            li.info.langId = langId;
+            li.info.langId   = langId;
             li.info.filename = dic.filePath();
             languages_.append(li);
         } else {
@@ -146,21 +143,21 @@ void HunspellChecker::addLanguage(const LanguageManager::LangId &langId)
     }
 }
 
-QList<QString> HunspellChecker::suggestions(const QString& word)
+QList<QString> HunspellChecker::suggestions(const QString &word)
 {
     QStringList qtResult;
     foreach (const LangItem &li, languages_) {
 #ifdef NEW_HUNSPELL
         std::vector<std::string> result = li.hunspell_->suggest(HS_STRING(word));
-        if(!result.empty()){
+        if (!result.empty()) {
             foreach (const std::string &item, result) {
                 qtResult << QString(li.codec->toUnicode(item.c_str()));
             }
         }
 #else
         char **result;
-        int sugNum = li.hunspell_->suggest(&result, HS_STRING(word));
-        for (int i=0; i < sugNum; i++) {
+        int    sugNum = li.hunspell_->suggest(&result, HS_STRING(word));
+        for (int i = 0; i < sugNum; i++) {
             qtResult << li.codec->toUnicode(result[i]);
         }
         li.hunspell_->free_list(&result, sugNum);
@@ -178,7 +175,7 @@ bool HunspellChecker::isCorrect(const QString &word)
     }
     return false;
 }
-bool HunspellChecker::add(const QString& word)
+bool HunspellChecker::add(const QString &word)
 {
     if (!word.isEmpty()) {
         QString trimmed_word = word.trimmed();
@@ -199,26 +196,20 @@ bool HunspellChecker::available() const
     }
     return false;
 }
-bool HunspellChecker::writable() const
-{
-    return false;
-}
+bool HunspellChecker::writable() const { return false; }
 
 void HunspellChecker::unloadLanguage(const LanguageManager::LangId &langId)
 {
     QMutableListIterator<LangItem> it(languages_);
-    while(it.hasNext()) {
+    while (it.hasNext()) {
         LangItem item = it.next();
-        if(item.info.langId == langId) {
+        if (item.info.langId == langId) {
             it.remove();
         }
     }
 }
 
-QSet<LanguageManager::LangId> HunspellChecker::getAllLanguages() const
-{
-    return supportedLangs_;
-}
+QSet<LanguageManager::LangId> HunspellChecker::getAllLanguages() const { return supportedLangs_; }
 
 void HunspellChecker::setActiveLanguages(const QSet<LanguageManager::LangId> &newLangs)
 {
@@ -226,14 +217,14 @@ void HunspellChecker::setActiveLanguages(const QSet<LanguageManager::LangId> &ne
     foreach (const LangItem &item, languages_) {
         loadedLangs << item.info.langId;
     }
-    QSet<LanguageManager::LangId> langsToUnload = loadedLangs - newLangs;
-    QSet<LanguageManager::LangId> langsToLoad = newLangs - loadedLangs;
+    QSet<LanguageManager::LangId>         langsToUnload = loadedLangs - newLangs;
+    QSet<LanguageManager::LangId>         langsToLoad   = newLangs - loadedLangs;
     QSetIterator<LanguageManager::LangId> it(langsToUnload);
-    while(it.hasNext()) {
+    while (it.hasNext()) {
         unloadLanguage(it.next());
     }
     it = langsToLoad;
-    while(it.hasNext()) {
+    while (it.hasNext()) {
         addLanguage(it.next());
     }
 }

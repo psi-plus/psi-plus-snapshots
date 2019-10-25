@@ -3,12 +3,11 @@
 
 #include <QString>
 
-class MacDock
-{
+class MacDock {
 public:
     static void startBounce();
     static void stopBounce();
-    static void overlay(const QString& text = QString());
+    static void overlay(const QString &text = QString());
 
 private:
     static bool isBouncing;

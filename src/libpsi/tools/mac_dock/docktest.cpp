@@ -33,12 +33,11 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-class DockTestWidget : public QWidget
-{
+class DockTestWidget : public QWidget {
     Q_OBJECT
 
 public:
-    DockTestWidget( QWidget *parent=0);
+    DockTestWidget(QWidget *parent = 0);
 
 public slots:
     void do_overlay();
@@ -47,32 +46,29 @@ private:
     QLineEdit *text;
 };
 
-DockTestWidget::DockTestWidget( QWidget *parent ) : QWidget(parent)
+DockTestWidget::DockTestWidget(QWidget *parent) : QWidget(parent)
 {
     // Initialize widgets
     QGridLayout *layout = new QGridLayout(this);
 
-    layout->addWidget(new QLabel("Text",this),0,0);
+    layout->addWidget(new QLabel("Text", this), 0, 0);
     text = new QLineEdit(this);
     text->setText("1");
-    layout->addWidget(text,0,1);
+    layout->addWidget(text, 0, 1);
 
-    QPushButton *overlay = new QPushButton( "Overlay", this );
+    QPushButton *overlay = new QPushButton("Overlay", this);
     connect(overlay, SIGNAL(clicked()), SLOT(do_overlay()));
-    layout->addWidget(overlay,1,0);
+    layout->addWidget(overlay, 1, 0);
 }
 
-int main( int argc, char **argv )
+int main(int argc, char **argv)
 {
-    QApplication a( argc, argv );
+    QApplication   a(argc, argv);
     DockTestWidget w;
     w.show();
     return a.exec();
 }
 
-void DockTestWidget::do_overlay()
-{
-    MacDock::overlay(text->text());
-}
+void DockTestWidget::do_overlay() { MacDock::overlay(text->text()); }
 
 #include "docktest.moc"

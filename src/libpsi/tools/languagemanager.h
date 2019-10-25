@@ -4,29 +4,25 @@
 #include <QAbstractTableModel>
 #include <QLocale>
 
-class LanguageManager
-{
+class LanguageManager {
 public:
     struct LangId {
         quint16 language = QLocale::AnyLanguage;
-        quint16 country = QLocale::AnyCountry;
-        quint8  script = QLocale::AnyScript; // in qt-5.9.2 it's less than 256
+        quint16 country  = QLocale::AnyCountry;
+        quint8  script   = QLocale::AnyScript; // in qt-5.9.2 it's less than 256
     };
 
-    static LangId fromString(const QString &langDesc);
-    static QString toString(const LangId &id);
+    static LangId                         fromString(const QString &langDesc);
+    static QString                        toString(const LangId &id);
     static QList<LanguageManager::LangId> bestUiMatch(const QSet<LanguageManager::LangId> &avail, bool justOne = false);
-    static QString bestUiMatch(QHash<QString,QString> langToText);
-    static QString languageName(const LangId &id);
-    static QString countryName(const LangId &id);
-    static QSet<LangId> deserializeLanguageSet(const QString &);
-    static QString serializeLanguageSet(const QSet<LanguageManager::LangId> &langs);
+    static QString                        bestUiMatch(QHash<QString, QString> langToText);
+    static QString                        languageName(const LangId &id);
+    static QString                        countryName(const LangId &id);
+    static QSet<LangId>                   deserializeLanguageSet(const QString &);
+    static QString                        serializeLanguageSet(const QSet<LanguageManager::LangId> &langs);
 };
 
-inline uint qHash(const LanguageManager::LangId &t)
-{
-    return qHash(t.language) ^ qHash(t.country) ^ qHash(t.script);
-}
+inline uint qHash(const LanguageManager::LangId &t) { return qHash(t.language) ^ qHash(t.country) ^ qHash(t.script); }
 
 // weird sorting operator
 inline bool operator<(const LanguageManager::LangId &a, const LanguageManager::LangId &b)

@@ -5,8 +5,7 @@
 
 #include <qt_windows.h>
 
-class WinSystemWatch : public SystemWatch
-{
+class WinSystemWatch : public SystemWatch {
 public:
     WinSystemWatch();
     ~WinSystemWatch();
@@ -14,7 +13,7 @@ public:
 private:
     class EventFilter;
     EventFilter *d;
-    bool processWinEvent(MSG *m, long* result);
+    bool         processWinEvent(MSG *m, long *result);
 };
 
 #endif // SYSTEMWATCH_WIN_H

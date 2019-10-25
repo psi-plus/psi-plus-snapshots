@@ -31,33 +31,30 @@
 #include <QStringList>
 
 namespace enchant {
-    class Dict;
+class Dict;
 }
 
-class EnchantChecker : public SpellChecker
-{
+class EnchantChecker : public SpellChecker {
 public:
     EnchantChecker();
     ~EnchantChecker();
-    virtual QList<QString> suggestions(const QString&);
-    virtual bool isCorrect(const QString&);
-    virtual bool add(const QString&);
-    virtual bool available() const;
-    virtual bool writable() const;
+    virtual QList<QString> suggestions(const QString &);
+    virtual bool           isCorrect(const QString &);
+    virtual bool           add(const QString &);
+    virtual bool           available() const;
+    virtual bool           writable() const;
 
-    virtual void setActiveLanguages(const QSet<LanguageManager::LangId> &langs);
+    virtual void                          setActiveLanguages(const QSet<LanguageManager::LangId> &langs);
     virtual QSet<LanguageManager::LangId> getAllLanguages() const;
 
 private:
-    static void enchantDictDescribeFn(const char *const lang_tag,
-                                      const char *const provider_name,
-                                      const char *const provider_desc,
-                                      const char *const provider_file,
+    static void enchantDictDescribeFn(const char *const lang_tag, const char *const provider_name,
+                                      const char *const provider_desc, const char *const provider_file,
                                       void *user_data);
-    void clearSpellers();
+    void        clearSpellers();
 
-    typedef QList<enchant::Dict*> EnchantDictList;
-    EnchantDictList spellers_;
+    typedef QList<enchant::Dict *>          EnchantDictList;
+    EnchantDictList                         spellers_;
     QHash<LanguageManager::LangId, QString> allLanguages_;
 };
 

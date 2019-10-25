@@ -35,35 +35,39 @@
 
 struct ReverseMappingEntry;
 
-extern NSString        * const NDKeyboardLayoutSelectedKeyboardInputSourceChangedNotification;
-extern NSString        * const NDKeyboardLayoutPreviousKeyboardLayoutUserInfoKey;
+extern NSString *const NDKeyboardLayoutSelectedKeyboardInputSourceChangedNotification;
+extern NSString *const NDKeyboardLayoutPreviousKeyboardLayoutUserInfoKey;
 
 /*!
     @function NDCocoaModifierFlagsForCarbonModifierFlags
     Convert Carbon modifer flags to Cocoa modifier flags.
-    @param modifierFlags one or more of the flags <tt>shiftKey</tt>, <tt>controlKey</tt>, <tt>optionKey</tt>, <tt>cmdKey</tt>
+    @param modifierFlags one or more of the flags <tt>shiftKey</tt>, <tt>controlKey</tt>, <tt>optionKey</tt>,
+   <tt>cmdKey</tt>
  */
-NSUInteger NDCocoaModifierFlagsForCarbonModifierFlags( NSUInteger modifierFlags );
+NSUInteger NDCocoaModifierFlagsForCarbonModifierFlags(NSUInteger modifierFlags);
 /*!
     @function NDCarbonModifierFlagsForCocoaModifierFlags
     Convert Cocoa modifer flags to Carbon modifier flags.
-    @param modifierFlags ￼one or more of the flags <tt>NSShiftKeyMask</tt>, <tt>NSControlKeyMask</tt>, <tt>NSAlternateKeyMask</tt>, <tt>NSCommandKeyMask</tt>
+    @param modifierFlags ￼one or more of the flags <tt>NSShiftKeyMask</tt>, <tt>NSControlKeyMask</tt>,
+   <tt>NSAlternateKeyMask</tt>, <tt>NSCommandKeyMask</tt>
  */
-NSUInteger NDCarbonModifierFlagsForCocoaModifierFlags( NSUInteger modifierFlags );
+NSUInteger NDCarbonModifierFlagsForCocoaModifierFlags(NSUInteger modifierFlags);
 
 /*!
     @class NDKeyboardLayout
     @abstract Class for translating between key codes and key characters.
-    @discussion The key code for each key character can change between hardware and with localisation, <tt>NDKeyboardLayout</tt> handles translation between key codes and key characters as well as for generating strings for display purposes.
+    @discussion The key code for each key character can change between hardware and with localisation,
+   <tt>NDKeyboardLayout</tt> handles translation between key codes and key characters as well as for generating strings
+   for display purposes.
     @helps Used by <tt>NDHotKeyEvent</tt>.
  */
 @interface NDKeyboardLayout : NSObject {
-    CFDataRef keyboardLayoutData;
+    CFDataRef                   keyboardLayoutData;
     struct ReverseMappingEntry *mappings;
-    NSUInteger numberOfMappings;
+    NSUInteger                  numberOfMappings;
 }
 
-@property(readonly, nonatomic) const UCKeyboardLayout *keyboardLayoutPtr;
+@property (readonly, nonatomic) const UCKeyboardLayout *keyboardLayoutPtr;
 
 /*!
     @method keyboardLayout
@@ -87,40 +91,49 @@ NSUInteger NDCarbonModifierFlagsForCocoaModifierFlags( NSUInteger modifierFlags 
 /*!
     @method initWithInputSource:
     @abstract initialise a keyboard layout.
-    @discussion Initialises a KeyboardLayout with an <tt>TISInputSourceRef</tt>, this method is called with the result from <tt>initWithInputSource:TISCopyCurrentKeyboardInputSource()</tt>.
+    @discussion Initialises a KeyboardLayout with an <tt>TISInputSourceRef</tt>, this method is called with the result
+   from <tt>initWithInputSource:TISCopyCurrentKeyboardInputSource()</tt>.
  */
 - (id)initWithInputSource:(TISInputSourceRef)source;
 
 /*!
     @method stringForCharacter:modifierFlags:
     @abstract Get a string for display purposes.
-    @discussion <tt>stringForCharacter:modifierFlags:</tt> returns a string that can be displayed to the user, For example command-z would produce &#x2318;Z, shift-T would produce &#x21E7;T.
+    @discussion <tt>stringForCharacter:modifierFlags:</tt> returns a string that can be displayed to the user, For
+   example command-z would produce &#x2318;Z, shift-T would produce &#x21E7;T.
     @param character The unmodified character on the keyboard.
-    @param modifierFlags Modifier flags <tt>NSControlKeyMask</tt>, <tt>NSAlternateKeyMask</tt>, <tt>NSShiftKeyMask</tt>, <tt>NSCommandKeyMask</tt> and <tt>NSNumericPadKeyMask</tt>.
+    @param modifierFlags Modifier flags <tt>NSControlKeyMask</tt>, <tt>NSAlternateKeyMask</tt>, <tt>NSShiftKeyMask</tt>,
+   <tt>NSCommandKeyMask</tt> and <tt>NSNumericPadKeyMask</tt>.
  */
-- (NSString*)stringForCharacter:(unichar)character modifierFlags:(UInt32)modifierFlags;
+- (NSString *)stringForCharacter:(unichar)character modifierFlags:(UInt32)modifierFlags;
 /*!
     @method stringForKeyCode:modifierFlags:
     @abstract Get a string for display purposes.
-    @discussion <tt>stringForKeyCode:modifierFlags:</tt> returns a string that can be displayed to the user. This method is called by <tt>stringForCharacter::modifierFlags</tt> and is problem more useful most of the time.
-    @param keyCode A value specifying the virtual key code that is to be translated. For ADB keyboards, virtual key codes are in the range from 0 to 127.
-    @param modifierFlags Modifier flags <tt>NSControlKeyMask</tt>, <tt>NSAlternateKeyMask</tt>, <tt>NSShiftKeyMask</tt>, <tt>NSCommandKeyMask</tt> and <tt>NSNumericPadKeyMask</tt>.
+    @discussion <tt>stringForKeyCode:modifierFlags:</tt> returns a string that can be displayed to the user. This method
+   is called by <tt>stringForCharacter::modifierFlags</tt> and is problem more useful most of the time.
+    @param keyCode A value specifying the virtual key code that is to be translated. For ADB keyboards, virtual key
+   codes are in the range from 0 to 127.
+    @param modifierFlags Modifier flags <tt>NSControlKeyMask</tt>, <tt>NSAlternateKeyMask</tt>, <tt>NSShiftKeyMask</tt>,
+   <tt>NSCommandKeyMask</tt> and <tt>NSNumericPadKeyMask</tt>.
  */
-- (NSString*)stringForKeyCode:(UInt16)keyCode modifierFlags:(UInt32)modifierFlags;
+- (NSString *)stringForKeyCode:(UInt16)keyCode modifierFlags:(UInt32)modifierFlags;
 /*!
     @method characterForKeyCode:
     @abstract Get the key character for a given key code.
     @discussion The character returned is the unmodified version on the keyboard.
-    @param keyCode A value specifying the virtual key code that is to be translated. For ADB keyboards, virtual key codes are in the range from 0 to 127.
+    @param keyCode A value specifying the virtual key code that is to be translated. For ADB keyboards, virtual key
+   codes are in the range from 0 to 127.
     @result The character for the unmodified version of the key.
  */
 - (unichar)characterForKeyCode:(UInt16)keyCode;
 /*!
     @method keyCodeForCharacter:numericPad:
     @abstract Get the key code for a given key character.
-    @discussion The character pass in must  be the unshifter character for the key, for example to get the key code for the '?' on keyboards where you type shift-/ to get '?' you should pass in the character '/"
+    @discussion The character pass in must  be the unshifter character for the key, for example to get the key code for
+   the '?' on keyboards where you type shift-/ to get '?' you should pass in the character '/"
     @param character The unmodified character on the keyboard.
-    @param numericPad For the keycode of a key on the keypad where the same character is also on the main keyboard this flag needs to be <tt>YES</tt>.
+    @param numericPad For the keycode of a key on the keypad where the same character is also on the main keyboard this
+   flag needs to be <tt>YES</tt>.
  */
 - (UInt16)keyCodeForCharacter:(unichar)character numericPad:(BOOL)numericPad;
 /*!
@@ -128,7 +141,8 @@ NSUInteger NDCarbonModifierFlagsForCocoaModifierFlags( NSUInteger modifierFlags 
     @abstract Get the key code for a given key character.
     @discussion Calls <tt>keyCodeForCharacter:numericPad:</tt> with the keypad flag set to <tt>NO</tt>
     @param character The unmodified character on the keyboard.
-    @result A value specifying the virtual key code that is to be translated. For ADB keyboards, virtual key codes are in the range from 0 to 127.
+    @result A value specifying the virtual key code that is to be translated. For ADB keyboards, virtual key codes are
+   in the range from 0 to 127.
  */
 - (UInt16)keyCodeForCharacter:(unichar)character;
 

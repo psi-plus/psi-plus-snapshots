@@ -27,8 +27,7 @@
 #include <QKeyEvent>
 #include <QKeySequence>
 
-class GrepShortcutKeyDialog : public QDialog
-{
+class GrepShortcutKeyDialog : public QDialog {
     Q_OBJECT
 public:
     GrepShortcutKeyDialog();
@@ -38,21 +37,21 @@ public:
 
 protected:
     // reimplemented
-    void keyPressEvent(QKeyEvent* event);
-    void keyReleaseEvent(QKeyEvent* event);
+    void keyPressEvent(QKeyEvent *event);
+    void keyReleaseEvent(QKeyEvent *event);
     void closeEvent(QCloseEvent *event);
 
 signals:
-    void newShortcutKey(const QKeySequence& key);
+    void newShortcutKey(const QKeySequence &key);
 
 private:
     Ui::GrepShortcutKeyDialog ui_;
-    bool gotKey;
+    bool                      gotKey;
 
-    void displayPressedKeys(const QKeySequence& keys);
-    QKeySequence getKeySequence(QKeyEvent* event) const;
-    bool isValid(int key) const;
-    bool isModifier(int key) const;
+    void         displayPressedKeys(const QKeySequence &keys);
+    QKeySequence getKeySequence(QKeyEvent *event) const;
+    bool         isValid(int key) const;
+    bool         isModifier(int key) const;
 };
 
 #endif // GREPSHORTCUTKEYDIALOG_H

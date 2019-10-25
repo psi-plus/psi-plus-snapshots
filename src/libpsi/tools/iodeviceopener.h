@@ -39,8 +39,7 @@
  *            ...
  *        }
  */
-class IODeviceOpener
-{
+class IODeviceOpener {
 public:
     /**
      * Opens an QIODevice in a specific mode if the device was not opened
@@ -48,7 +47,7 @@ public:
      * If the device was already open but in a different, non-compatible
      * mode than the one requested, isOpen() will return false.
      */
-    IODeviceOpener(QIODevice* device, QIODevice::OpenModeFlag mode);
+    IODeviceOpener(QIODevice *device, QIODevice::OpenModeFlag mode);
 
     /**
      * Closes the QIODevice passed to the constructor if the IODevice was not
@@ -64,8 +63,8 @@ public:
 
 private:
     QPointer<QIODevice> device_;
-    bool close_;
-    bool isOpen_;
+    bool                close_;
+    bool                isOpen_;
 };
 
 #endif // IODEVICEOPENER_H

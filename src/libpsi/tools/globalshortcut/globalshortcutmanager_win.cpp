@@ -25,19 +25,20 @@
 #include <QWidget>
 #include <windows.h>
 
-class GlobalShortcutManager::KeyTrigger::Impl : public QWidget
-{
-    class WinEventFilter : public QAbstractNativeEventFilter
-    {
+class GlobalShortcutManager::KeyTrigger::Impl : public QWidget {
+    class WinEventFilter : public QAbstractNativeEventFilter {
         GlobalShortcutManager::KeyTrigger::Impl *impl;
 
     public:
-        WinEventFilter(GlobalShortcutManager::KeyTrigger::Impl *parent) : impl(parent) {qApp->installNativeEventFilter(this);}
+        WinEventFilter(GlobalShortcutManager::KeyTrigger::Impl *parent) : impl(parent)
+        {
+            qApp->installNativeEventFilter(this);
+        }
 
         virtual bool nativeEventFilter(const QByteArray &eventType, void *m, long *result) Q_DECL_OVERRIDE
         {
             if (eventType == "windows_generic_MSG") {
-                return impl->nativeEvent(eventType, static_cast<MSG*>(m), result);
+                return impl->nativeEvent(eventType, static_cast<MSG *>(m), result);
             }
             return false;
         }
@@ -47,10 +48,8 @@ public:
     /**
      * Constructor registers the hotkey.
      */
-    Impl(GlobalShortcutManager::KeyTrigger* t, const QKeySequence& ks) :
-        filter(new WinEventFilter(this)),
-        trigger_(t),
-        id_(0)
+    Impl(GlobalShortcutManager::KeyTrigger *t, const QKeySequence &ks) :
+        filter(new WinEventFilter(this)), trigger_(t), id_(0)
     {
         UINT mod = 0, key = 0;
         if (convertKeySequence(ks, &mod, &key))
@@ -71,7 +70,7 @@ public:
     /**
      * Triggers triggered() signal when the hotkey is activated.
      */
-    bool nativeEvent(const QByteArray &eventType, MSG* m, long* result)
+    bool nativeEvent(const QByteArray &eventType, MSG *m, long *result)
     {
         Q_UNUSED(eventType);
         if (m->message == WM_HOTKEY && m->wParam == id_) {
@@ -84,19 +83,18 @@ public:
 
 private:
     WinEventFilter *filter;
-    KeyTrigger* trigger_;
-    WPARAM id_;
-    static WPARAM nextId;
+    KeyTrigger *    trigger_;
+    WPARAM          id_;
+    static WPARAM   nextId;
 
 private:
-    struct Qt_VK_Keymap
-    {
-        int key;
+    struct Qt_VK_Keymap {
+        int  key;
         UINT vk;
     };
     static Qt_VK_Keymap qt_vk_table[];
 
-    static bool convertKeySequence(const QKeySequence& ks, UINT* mod_, UINT* key_)
+    static bool convertKeySequence(const QKeySequence &ks, UINT *mod_, UINT *key_)
     {
         int code = ks[0];
 
@@ -134,88 +132,84 @@ private:
     }
 };
 
-GlobalShortcutManager::KeyTrigger::Impl::Qt_VK_Keymap
-GlobalShortcutManager::KeyTrigger::Impl::qt_vk_table[] = {
-    { Qt::Key_Escape,      VK_ESCAPE },
-    { Qt::Key_Tab,         VK_TAB },
-    { Qt::Key_Backtab,     0 },
-    { Qt::Key_Backspace,   VK_BACK },
-    { Qt::Key_Return,      VK_RETURN },
-    { Qt::Key_Enter,       VK_RETURN },
-    { Qt::Key_Insert,      VK_INSERT },
-    { Qt::Key_Delete,      VK_DELETE },
-    { Qt::Key_Pause,       VK_PAUSE },
-    { Qt::Key_Print,       VK_PRINT },
-    { Qt::Key_SysReq,      0 },
-    { Qt::Key_Clear,       VK_CLEAR },
-    { Qt::Key_Home,        VK_HOME },
-    { Qt::Key_End,         VK_END },
-    { Qt::Key_Left,        VK_LEFT },
-    { Qt::Key_Up,          VK_UP },
-    { Qt::Key_Right,       VK_RIGHT },
-    { Qt::Key_Down,        VK_DOWN },
-    { Qt::Key_PageUp,      VK_PRIOR },
-    { Qt::Key_PageDown,    VK_NEXT },
-    { Qt::Key_Shift,       VK_SHIFT },
-    { Qt::Key_Control,     VK_CONTROL },
-    { Qt::Key_Meta,        VK_LWIN },
-    { Qt::Key_Alt,         VK_MENU },
-    { Qt::Key_CapsLock,    VK_CAPITAL },
-    { Qt::Key_NumLock,     VK_NUMLOCK },
-    { Qt::Key_ScrollLock,  VK_SCROLL },
-    { Qt::Key_F1,          VK_F1 },
-    { Qt::Key_F2,          VK_F2 },
-    { Qt::Key_F3,          VK_F3 },
-    { Qt::Key_F4,          VK_F4 },
-    { Qt::Key_F5,          VK_F5 },
-    { Qt::Key_F6,          VK_F6 },
-    { Qt::Key_F7,          VK_F7 },
-    { Qt::Key_F8,          VK_F8 },
-    { Qt::Key_F9,          VK_F9 },
-    { Qt::Key_F10,         VK_F10 },
-    { Qt::Key_F11,         VK_F11 },
-    { Qt::Key_F12,         VK_F12 },
-    { Qt::Key_F13,         VK_F13 },
-    { Qt::Key_F14,         VK_F14 },
-    { Qt::Key_F15,         VK_F15 },
-    { Qt::Key_F16,         VK_F16 },
-    { Qt::Key_F17,         VK_F17 },
-    { Qt::Key_F18,         VK_F18 },
-    { Qt::Key_F19,         VK_F19 },
-    { Qt::Key_F20,         VK_F20 },
-    { Qt::Key_F21,         VK_F21 },
-    { Qt::Key_F22,         VK_F22 },
-    { Qt::Key_F23,         VK_F23 },
-    { Qt::Key_F24,         VK_F24 },
-    { Qt::Key_F25,         0 },
-    { Qt::Key_F26,         0 },
-    { Qt::Key_F27,         0 },
-    { Qt::Key_F28,         0 },
-    { Qt::Key_F29,         0 },
-    { Qt::Key_F30,         0 },
-    { Qt::Key_F31,         0 },
-    { Qt::Key_F32,         0 },
-    { Qt::Key_F33,         0 },
-    { Qt::Key_F34,         0 },
-    { Qt::Key_F35,         0 },
-    { Qt::Key_Super_L,     0 },
-    { Qt::Key_Super_R,     0 },
-    { Qt::Key_Menu,        0 },
-    { Qt::Key_Hyper_L,     0 },
-    { Qt::Key_Hyper_R,     0 },
-    { Qt::Key_Help,        0 },
+GlobalShortcutManager::KeyTrigger::Impl::Qt_VK_Keymap GlobalShortcutManager::KeyTrigger::Impl::qt_vk_table[] = {
+    { Qt::Key_Escape, VK_ESCAPE },
+    { Qt::Key_Tab, VK_TAB },
+    { Qt::Key_Backtab, 0 },
+    { Qt::Key_Backspace, VK_BACK },
+    { Qt::Key_Return, VK_RETURN },
+    { Qt::Key_Enter, VK_RETURN },
+    { Qt::Key_Insert, VK_INSERT },
+    { Qt::Key_Delete, VK_DELETE },
+    { Qt::Key_Pause, VK_PAUSE },
+    { Qt::Key_Print, VK_PRINT },
+    { Qt::Key_SysReq, 0 },
+    { Qt::Key_Clear, VK_CLEAR },
+    { Qt::Key_Home, VK_HOME },
+    { Qt::Key_End, VK_END },
+    { Qt::Key_Left, VK_LEFT },
+    { Qt::Key_Up, VK_UP },
+    { Qt::Key_Right, VK_RIGHT },
+    { Qt::Key_Down, VK_DOWN },
+    { Qt::Key_PageUp, VK_PRIOR },
+    { Qt::Key_PageDown, VK_NEXT },
+    { Qt::Key_Shift, VK_SHIFT },
+    { Qt::Key_Control, VK_CONTROL },
+    { Qt::Key_Meta, VK_LWIN },
+    { Qt::Key_Alt, VK_MENU },
+    { Qt::Key_CapsLock, VK_CAPITAL },
+    { Qt::Key_NumLock, VK_NUMLOCK },
+    { Qt::Key_ScrollLock, VK_SCROLL },
+    { Qt::Key_F1, VK_F1 },
+    { Qt::Key_F2, VK_F2 },
+    { Qt::Key_F3, VK_F3 },
+    { Qt::Key_F4, VK_F4 },
+    { Qt::Key_F5, VK_F5 },
+    { Qt::Key_F6, VK_F6 },
+    { Qt::Key_F7, VK_F7 },
+    { Qt::Key_F8, VK_F8 },
+    { Qt::Key_F9, VK_F9 },
+    { Qt::Key_F10, VK_F10 },
+    { Qt::Key_F11, VK_F11 },
+    { Qt::Key_F12, VK_F12 },
+    { Qt::Key_F13, VK_F13 },
+    { Qt::Key_F14, VK_F14 },
+    { Qt::Key_F15, VK_F15 },
+    { Qt::Key_F16, VK_F16 },
+    { Qt::Key_F17, VK_F17 },
+    { Qt::Key_F18, VK_F18 },
+    { Qt::Key_F19, VK_F19 },
+    { Qt::Key_F20, VK_F20 },
+    { Qt::Key_F21, VK_F21 },
+    { Qt::Key_F22, VK_F22 },
+    { Qt::Key_F23, VK_F23 },
+    { Qt::Key_F24, VK_F24 },
+    { Qt::Key_F25, 0 },
+    { Qt::Key_F26, 0 },
+    { Qt::Key_F27, 0 },
+    { Qt::Key_F28, 0 },
+    { Qt::Key_F29, 0 },
+    { Qt::Key_F30, 0 },
+    { Qt::Key_F31, 0 },
+    { Qt::Key_F32, 0 },
+    { Qt::Key_F33, 0 },
+    { Qt::Key_F34, 0 },
+    { Qt::Key_F35, 0 },
+    { Qt::Key_Super_L, 0 },
+    { Qt::Key_Super_R, 0 },
+    { Qt::Key_Menu, 0 },
+    { Qt::Key_Hyper_L, 0 },
+    { Qt::Key_Hyper_R, 0 },
+    { Qt::Key_Help, 0 },
     { Qt::Key_Direction_L, 0 },
     { Qt::Key_Direction_R, 0 },
 
-    { Qt::Key_unknown,     0 },
+    { Qt::Key_unknown, 0 },
 };
 
 WPARAM GlobalShortcutManager::KeyTrigger::Impl::nextId = 1;
 
-GlobalShortcutManager::KeyTrigger::KeyTrigger(const QKeySequence& key)
-{
-    d = new Impl(this, key);
-}
+GlobalShortcutManager::KeyTrigger::KeyTrigger(const QKeySequence &key) { d = new Impl(this, key); }
 
 GlobalShortcutManager::KeyTrigger::~KeyTrigger()
 {

@@ -28,22 +28,19 @@
 
 class QDomDocument;
 
-class AtomicXmlFileReader : public QXmlStreamReader
-{
+class AtomicXmlFileReader : public QXmlStreamReader {
 public:
     virtual ~AtomicXmlFileReader() {}
-    virtual bool read(QIODevice* device) = 0;
+    virtual bool read(QIODevice *device) = 0;
 };
 
-class AtomicXmlFileWriter : public QXmlStreamWriter
-{
+class AtomicXmlFileWriter : public QXmlStreamWriter {
 public:
     virtual ~AtomicXmlFileWriter() {}
-    virtual bool write(QIODevice* device) = 0;
+    virtual bool write(QIODevice *device) = 0;
 };
 
-class AtomicXmlFile
-{
+class AtomicXmlFile {
 public:
     AtomicXmlFile(const QString &fileName);
 
@@ -51,8 +48,8 @@ public:
      * Atomically save \a writer to specified name. Prior to saving, back up
      * of old config data is created, and only then data is saved.
      */
-    template<typename T>
-    bool saveDocument(T writer) const {
+    template <typename T> bool saveDocument(T writer) const
+    {
         if (!saveDocument(writer, tempFileName())) {
             qWarning("AtomicXmlFile::saveDocument(): Unable to save '%s'. Possibly drive is full.",
                      qPrintable(tempFileName()));
@@ -63,15 +60,15 @@ public:
             if (QFile::exists(backupFileName()))
                 QFile::remove(backupFileName());
             if (!QFile::rename(fileName_, backupFileName())) {
-                qWarning("AtomicXmlFile::saveDocument(): Unable to rename '%s' to '%s'.",
-                         qPrintable(fileName_), qPrintable(backupFileName()));
+                qWarning("AtomicXmlFile::saveDocument(): Unable to rename '%s' to '%s'.", qPrintable(fileName_),
+                         qPrintable(backupFileName()));
                 return false;
             }
         }
 
         if (!QFile::rename(tempFileName(), fileName_)) {
-            qWarning("AtomicXmlFile::saveDocument(): Unable to rename '%s' to '%s'.",
-                     qPrintable(tempFileName()), qPrintable(fileName_));
+            qWarning("AtomicXmlFile::saveDocument(): Unable to rename '%s' to '%s'.", qPrintable(tempFileName()),
+                     qPrintable(fileName_));
             return false;
         }
 
@@ -81,11 +78,11 @@ public:
     /**
      * Tries to load \a reader from config file, or if that fails, from a back up.
      */
-    template<typename T>
-    bool loadDocument(T reader) const {
+    template <typename T> bool loadDocument(T reader) const
+    {
         Q_ASSERT(reader);
 
-        foreach(QString fileName, loadCandidateList()) {
+        foreach (QString fileName, loadCandidateList()) {
             if (loadDocument(reader, fileName)) {
                 return true;
             }
@@ -103,13 +100,13 @@ public:
 private:
     QString fileName_;
 
-    QString tempFileName() const;
-    QString backupFileName() const;
+    QString     tempFileName() const;
+    QString     backupFileName() const;
     QStringList loadCandidateList() const;
-    bool saveDocument(const QDomDocument& doc, QString fileName) const;
-    bool loadDocument(QDomDocument* doc, QString fileName) const;
-    bool saveDocument(AtomicXmlFileWriter* writer, QString fileName) const;
-    bool loadDocument(AtomicXmlFileReader* reader, QString fileName) const;
+    bool        saveDocument(const QDomDocument &doc, QString fileName) const;
+    bool        loadDocument(QDomDocument *doc, QString fileName) const;
+    bool        saveDocument(AtomicXmlFileWriter *writer, QString fileName) const;
+    bool        loadDocument(AtomicXmlFileReader *reader, QString fileName) const;
 };
 
 #endif // ATOMICXMLFILE_H

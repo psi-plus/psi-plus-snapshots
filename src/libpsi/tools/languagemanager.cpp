@@ -5,15 +5,15 @@
 LanguageManager::LangId LanguageManager::fromString(const QString &langDesc)
 {
     QLocale loc(langDesc);
-    LangId id;
+    LangId  id;
     if (loc == QLocale::c()) {
         return id; // It's default initialized to any lang, any country, any script. consider as a error
     }
-    int cnt = langDesc.count(QRegExp("[_-]"));
+    int cnt     = langDesc.count(QRegExp("[_-]"));
     id.language = loc.language();
     if (cnt) {
         id.country = loc.country(); // supposing if there are two components then it's lways country and not script
-        if (cnt > 1) { // lang_script_country
+        if (cnt > 1) {              // lang_script_country
             id.script = loc.script();
         }
     }
@@ -23,7 +23,7 @@ LanguageManager::LangId LanguageManager::fromString(const QString &langDesc)
 // returns [lang][-script][-country]
 QString LanguageManager::toString(const LanguageManager::LangId &id)
 {
-    QLocale loc((QLocale::Language)id.language, (QLocale::Script)id.script, (QLocale::Country)id.country);
+    QLocale     loc((QLocale::Language)id.language, (QLocale::Script)id.script, (QLocale::Country)id.country);
     QStringList ret;
     QStringList langCountry = loc.name().split('_');
     if (id.language) {
@@ -69,10 +69,10 @@ QString LanguageManager::toString(const LanguageManager::LangId &id)
  */
 QList<LanguageManager::LangId> LanguageManager::bestUiMatch(const QSet<LanguageManager::LangId> &avail, bool justOne)
 {
-    QLocale def; // default locale (or system locale if default is not set). FIXME get from settings
+    QLocale             def; // default locale (or system locale if default is not set). FIXME get from settings
     static QSet<LangId> uiLangs;
     if (uiLangs.isEmpty()) {
-        for (auto const &l: QLocale::system().uiLanguages()) {
+        for (auto const &l : QLocale::system().uiLanguages()) {
             auto id = fromString(l);
             if (id.language) {
                 uiLangs.insert(id);
@@ -82,10 +82,11 @@ QList<LanguageManager::LangId> LanguageManager::bestUiMatch(const QSet<LanguageM
     QList<LangId> ret;
     QList<LangId> toCheck;
     toCheck.reserve(4);
-    for (auto uiId: uiLangs) {
+    for (auto uiId : uiLangs) {
         toCheck.clear();
         // check if ui locale looks like system locale and set missed parts
-        if (uiId.language == def.language()) { // matches with system. consider country and script from system to be preferred if not set in ui
+        if (uiId.language == def.language()) { // matches with system. consider country and script from system to be
+                                               // preferred if not set in ui
             if (!uiId.country && (!uiId.script || uiId.script == def.script())) {
                 uiId.country = def.country();
             }
@@ -117,12 +118,12 @@ QList<LanguageManager::LangId> LanguageManager::bestUiMatch(const QSet<LanguageM
         }
         // try to check any script and any country
         if (uiId.script != QLocale::AnyScript && uiId.country != QLocale::AnyCountry) {
-            uiId.script = QLocale::AnyScript;
+            uiId.script  = QLocale::AnyScript;
             uiId.country = QLocale::AnyCountry;
             toCheck.append(uiId);
         }
 
-        for (auto const &id: toCheck) {
+        for (auto const &id : toCheck) {
             if (avail.contains(id)) {
                 ret.append(id);
                 if (justOne) {
@@ -140,9 +141,10 @@ QList<LanguageManager::LangId> LanguageManager::bestUiMatch(const QSet<LanguageM
 
 QString LanguageManager::bestUiMatch(QHash<QString, QString> langToText)
 {
-    QHash<LangId,QString> langs;
+    QHash<LangId, QString> langs;
     for (auto l = langToText.constBegin(); l != langToText.constEnd(); ++l) {
-        langs.insert(LanguageManager::fromString(l.key()), l.value()); // FIXME: all unknown languages will be converted to C/default locale
+        langs.insert(LanguageManager::fromString(l.key()),
+                     l.value()); // FIXME: all unknown languages will be converted to C/default locale
     }
     auto preferred = LanguageManager::bestUiMatch(langs.keys().toSet(), true);
     if (preferred.count()) {
@@ -165,7 +167,7 @@ QString LanguageManager::languageName(const LanguageManager::LangId &id)
         if (id.country) {
             needCountry = false;
         } else {
-            name = loc.language() == QLocale::English? QStringLiteral("English") : QStringLiteral("Español");
+            name = loc.language() == QLocale::English ? QStringLiteral("English") : QStringLiteral("Español");
         }
     }
 
@@ -174,8 +176,9 @@ QString LanguageManager::languageName(const LanguageManager::LangId &id)
     }
     if (name.isEmpty()) {
         name = QLocale::languageToString(loc.language());
-    }
-    else if (loc.script() != QLocale::LatinScript && loc.script() != QLocale().script()) { // if not latin and not deafuls, then probaby it's somethingunreadable
+    } else if (loc.script() != QLocale::LatinScript
+               && loc.script()
+                   != QLocale().script()) { // if not latin and not deafuls, then probaby it's somethingunreadable
         name += (" [" + QLocale::languageToString(loc.language()) + "]");
     }
     if (id.script) {
@@ -199,9 +202,9 @@ QString LanguageManager::countryName(const LanguageManager::LangId &id)
 
 QSet<LanguageManager::LangId> LanguageManager::deserializeLanguageSet(const QString &str)
 {
-    QStringList langs = str.split(QRegExp("\\s+"), QString::SkipEmptyParts);
+    QStringList  langs = str.split(QRegExp("\\s+"), QString::SkipEmptyParts);
     QSet<LangId> ret;
-    for (auto const &l: langs) {
+    for (auto const &l : langs) {
         auto id = fromString(l);
         if (id.language) {
             ret.insert(id);
@@ -213,7 +216,7 @@ QSet<LanguageManager::LangId> LanguageManager::deserializeLanguageSet(const QStr
 QString LanguageManager::serializeLanguageSet(const QSet<LanguageManager::LangId> &langs)
 {
     QStringList ret;
-    for (auto const &l: langs) {
+    for (auto const &l : langs) {
         ret.append(toString(l));
     }
     return ret.join(' ');

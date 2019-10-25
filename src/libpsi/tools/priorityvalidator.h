@@ -22,12 +22,11 @@
 
 #include <QValidator>
 
-class PriorityValidator : public QValidator
-{
-      Q_OBJECT
+class PriorityValidator : public QValidator {
+    Q_OBJECT
 public:
-      PriorityValidator(QObject* parent = nullptr) : QValidator(parent) { };
-      virtual State validate(QString &input, int &pos) const;
+    PriorityValidator(QObject *parent = nullptr) : QValidator(parent){};
+    virtual State validate(QString &input, int &pos) const;
 };
 
 #endif // PRIORITYVALIDATOR_H

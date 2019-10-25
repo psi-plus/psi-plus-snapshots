@@ -32,48 +32,40 @@ Q_DECLARE_METATYPE(XMPP::Jid)
 Q_DECLARE_METATYPE(GroupChatBrowseWindow::RoomOptions)
 Q_DECLARE_METATYPE(GroupChatBrowseWindow::RoomInfo)
 
-enum Role
-{
-    RoomInfoRole = Qt::UserRole,
-    InternalRowRole
-};
+enum Role { RoomInfoRole = Qt::UserRole, InternalRowRole };
 
 // TODO: handle duplicate rooms somehow
-class RoomModel : public QStandardItemModel
-{
+class RoomModel : public QStandardItemModel {
     Q_OBJECT
 
 public:
     QList<GroupChatBrowseWindow::RoomInfo> list;
-    QPixmap icon;
+    QPixmap                                icon;
 
-    RoomModel(QObject *parent = 0) :
-        QStandardItemModel(parent)
+    RoomModel(QObject *parent = 0) : QStandardItemModel(parent)
     {
         QStringList headers;
         headers += tr("Groupchat name");
-        //headers += tr("Participants");
+        // headers += tr("Participants");
         headers += tr("Auto-join");
         setHorizontalHeaderLabels(headers);
-        //setSortRole(RoomItem::PositionRole);
+        // setSortRole(RoomItem::PositionRole);
     }
 
     void addRooms(const QList<GroupChatBrowseWindow::RoomInfo> &alist)
     {
-        for(int n = 0; n < alist.count(); ++n)
-        {
+        for (int n = 0; n < alist.count(); ++n) {
             const GroupChatBrowseWindow::RoomInfo &info = alist[n];
 
-            QList<QStandardItem*> clist;
+            QList<QStandardItem *> clist;
             clist.append(new QStandardItem(icon, info.roomName));
             clist.first()->setData(list.count(), InternalRowRole);
             clist.first()->setData(qVariantFromValue(info), RoomInfoRole);
-            //clist.append(new QStandardItem(QString::number(info.participants)));
+            // clist.append(new QStandardItem(QString::number(info.participants)));
             clist.append(new QStandardItem);
             clist.last()->setData(list.count(), InternalRowRole);
             clist.last()->setCheckable(true);
-            if(info.autoJoin)
-            {
+            if (info.autoJoin) {
                 clist.last()->setCheckState(Qt::Checked);
             }
             clist.first()->setEditable(false);
@@ -90,31 +82,27 @@ public:
         removeRow(at);
     }
 
-    GroupChatBrowseWindow::RoomInfo & roomInfo(const QModelIndex &index)
+    GroupChatBrowseWindow::RoomInfo &roomInfo(const QModelIndex &index)
     {
         QStandardItem *item = itemFromIndex(index);
         return list[item->data(InternalRowRole).toInt()];
     }
 };
 
-class PsiGroupChatBrowseWindow::Private : public QObject
-{
+class PsiGroupChatBrowseWindow::Private : public QObject {
     Q_OBJECT
 
 public:
-    PsiGroupChatBrowseWindow *q;
+    PsiGroupChatBrowseWindow *  q;
     Ui::GroupChatBrowseWindowUI ui;
-    XMPP::Jid server;
-    RoomModel *model;
-    QObject *controller; // FIXME: remove this
+    XMPP::Jid                   server;
+    RoomModel *                 model;
+    QObject *                   controller; // FIXME: remove this
 
-    XMPP::Jid roomBeingCreated, roomBeingDestroyed;
+    XMPP::Jid    roomBeingCreated, roomBeingDestroyed;
     QPushButton *pb_create, *pb_join;
 
-    Private(PsiGroupChatBrowseWindow *_q) :
-        QObject(_q),
-        q(_q),
-        controller(0)
+    Private(PsiGroupChatBrowseWindow *_q) : QObject(_q), q(_q), controller(0)
     {
         ui.setupUi(q);
 
@@ -129,19 +117,22 @@ public:
         ui.tv_rooms->setModel(model);
         ui.buttonBox->setStandardButtons(QDialogButtonBox::Close);
         pb_create = new QPushButton("Cre&ate...", q);
-        pb_join = new QPushButton("&Join", q);
+        pb_join   = new QPushButton("&Join", q);
         pb_join->setDefault(true);
         ui.buttonBox->addButton(pb_create, QDialogButtonBox::ActionRole);
         ui.buttonBox->addButton(pb_join, QDialogButtonBox::AcceptRole);
 
         ui.tv_rooms->setContextMenuPolicy(Qt::CustomContextMenu);
-        connect(ui.tv_rooms, SIGNAL(customContextMenuRequested(const QPoint &)), SLOT(rooms_contextMenuRequested(const QPoint &)));
+        connect(ui.tv_rooms, SIGNAL(customContextMenuRequested(const QPoint &)),
+                SLOT(rooms_contextMenuRequested(const QPoint &)));
         connect(ui.tv_rooms, SIGNAL(activated(const QModelIndex &)), SLOT(rooms_activated(const QModelIndex &)));
 
-        connect(ui.tv_rooms->selectionModel(), SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection &)), SLOT(rooms_selectionChanged(const QItemSelection &, const QItemSelection &)));
+        connect(ui.tv_rooms->selectionModel(), SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection &)),
+                SLOT(rooms_selectionChanged(const QItemSelection &, const QItemSelection &)));
         connect(ui.le_room, SIGNAL(textChanged(const QString &)), SLOT(room_textChanged(const QString &)));
 
-        connect(model, SIGNAL(dataChanged(const QModelIndex &, const QModelIndex &)), SLOT(model_dataChanged(const QModelIndex &, const QModelIndex &)));
+        connect(model, SIGNAL(dataChanged(const QModelIndex &, const QModelIndex &)),
+                SLOT(model_dataChanged(const QModelIndex &, const QModelIndex &)));
 
         connect(pb_create, SIGNAL(clicked()), SLOT(doCreate()));
         connect(pb_join, SIGNAL(clicked()), SLOT(doJoin()));
@@ -163,15 +154,13 @@ public:
     void roomDestroyed()
     {
         int at = -1;
-        for(int n = 0; n < model->list.count(); ++n)
-        {
-            if(model->list[n].jid == roomBeingDestroyed)
-            {
+        for (int n = 0; n < model->list.count(); ++n) {
+            if (model->list[n].jid == roomBeingDestroyed) {
                 at = n;
                 break;
             }
         }
-        if(at == -1)
+        if (at == -1)
             return;
 
         model->removeRoom(at);
@@ -182,7 +171,7 @@ public slots:
     {
         Q_UNUSED(deselected);
 
-        if(!selected.indexes().isEmpty() || !ui.le_room->text().isEmpty())
+        if (!selected.indexes().isEmpty() || !ui.le_room->text().isEmpty())
             pb_join->setEnabled(true);
         else
             pb_join->setEnabled(false);
@@ -192,18 +181,16 @@ public slots:
     {
         QItemSelection selected = ui.tv_rooms->selectionModel()->selection();
 
-        if(!selected.indexes().isEmpty())
-        {
-            QPoint gpos = ui.tv_rooms->viewport()->mapToGlobal(pos);
-            QMenu menu(q);
+        if (!selected.indexes().isEmpty()) {
+            QPoint   gpos = ui.tv_rooms->viewport()->mapToGlobal(pos);
+            QMenu    menu(q);
             QAction *destroyAction = menu.addAction(tr("Destroy"));
-            QAction *act = menu.exec(gpos);
-            if(act == destroyAction)
-            {
+            QAction *act           = menu.exec(gpos);
+            if (act == destroyAction) {
                 QModelIndex index = selected.indexes().first();
                 // ### async is bad
                 QMetaObject::invokeMethod(this, "destroyRoom", Qt::QueuedConnection,
-                    Q_ARG(XMPP::Jid, model->roomInfo(index).jid));
+                                          Q_ARG(XMPP::Jid, model->roomInfo(index).jid));
             }
         }
     }
@@ -212,8 +199,7 @@ public slots:
     {
         XMPP::Jid room = model->roomInfo(index).jid;
 
-        if(!room.isEmpty())
-        {
+        if (!room.isEmpty()) {
             setWidgetsEnabled(false);
 
             emit q->onJoin(room);
@@ -226,7 +212,7 @@ public slots:
 
         QItemSelection selected = ui.tv_rooms->selectionModel()->selection();
 
-        if(!selected.indexes().isEmpty() || !ui.le_room->text().isEmpty())
+        if (!selected.indexes().isEmpty() || !ui.le_room->text().isEmpty())
             pb_join->setEnabled(true);
         else
             pb_join->setEnabled(false);
@@ -236,26 +222,25 @@ public slots:
     {
         Q_UNUSED(bottomRight);
 
-        QModelIndex index = topLeft;
-        QStandardItem *i = model->itemFromIndex(index);
-        bool isChecked = false;
-        if(i->checkState() == Qt::Checked)
+        QModelIndex    index     = topLeft;
+        QStandardItem *i         = model->itemFromIndex(index);
+        bool           isChecked = false;
+        if (i->checkState() == Qt::Checked)
             isChecked = true;
 
-        bool previousState = model->roomInfo(index).autoJoin;
+        bool previousState              = model->roomInfo(index).autoJoin;
         model->roomInfo(index).autoJoin = isChecked;
 
-        if(previousState != isChecked)
+        if (previousState != isChecked)
             emit q->onSetAutoJoin(QList<XMPP::Jid>() << model->roomInfo(index).jid, isChecked);
     }
 
     void doCreate()
     {
         QString room = QInputDialog::getText(q, tr("Create Groupchat"),
-            tr("Choose a name for the groupchat you want to create:"));
+                                             tr("Choose a name for the groupchat you want to create:"));
 
-        if(!room.isEmpty())
-        {
+        if (!room.isEmpty()) {
             setWidgetsEnabled(false);
 
             roomBeingCreated = server.withNode(room);
@@ -268,35 +253,28 @@ public slots:
         XMPP::Jid room;
 
         QString manualRoom = ui.le_room->text();
-        if(!manualRoom.isEmpty())
-        {
-            if(manualRoom.indexOf('@') != -1)
+        if (!manualRoom.isEmpty()) {
+            if (manualRoom.indexOf('@') != -1)
                 room = manualRoom;
             else
                 room = server.withNode(manualRoom);
-        }
-        else
-        {
+        } else {
             QItemSelection selection = ui.tv_rooms->selectionModel()->selection();
-            if(selection.indexes().isEmpty())
+            if (selection.indexes().isEmpty())
                 return;
             QModelIndex index = selection.indexes().first();
 
             room = model->roomInfo(index).jid;
         }
 
-        if(!room.isEmpty())
-        {
+        if (!room.isEmpty()) {
             setWidgetsEnabled(false);
 
             emit q->onJoin(room);
         }
     }
 
-    void doClose()
-    {
-        q->close();
-    }
+    void doClose() { q->close(); }
 
     void createFinalize()
     {
@@ -312,8 +290,7 @@ public slots:
     }
 };
 
-PsiGroupChatBrowseWindow::PsiGroupChatBrowseWindow(QWidget *parent) :
-    GroupChatBrowseWindow(parent)
+PsiGroupChatBrowseWindow::PsiGroupChatBrowseWindow(QWidget *parent) : GroupChatBrowseWindow(parent)
 {
     qRegisterMetaType<XMPP::Jid>();
     qRegisterMetaType<GroupChatBrowseWindow::RoomOptions>();
@@ -321,41 +298,30 @@ PsiGroupChatBrowseWindow::PsiGroupChatBrowseWindow(QWidget *parent) :
     d = new Private(this);
 }
 
-PsiGroupChatBrowseWindow::~PsiGroupChatBrowseWindow()
-{
-    delete d;
-}
+PsiGroupChatBrowseWindow::~PsiGroupChatBrowseWindow() { delete d; }
 
 void PsiGroupChatBrowseWindow::resizeEvent(QResizeEvent *event)
 {
-    //int sort_margin = d->ui.tv_rooms->header()->style()->pixelMetric(QStyle::PM_HeaderMargin);
-    int grip_width = d->ui.tv_rooms->header()->style()->pixelMetric(QStyle::PM_HeaderGripMargin);
+    // int sort_margin = d->ui.tv_rooms->header()->style()->pixelMetric(QStyle::PM_HeaderMargin);
+    int grip_width  = d->ui.tv_rooms->header()->style()->pixelMetric(QStyle::PM_HeaderGripMargin);
     int frame_width = d->ui.tv_rooms->frameWidth();
-    //printf("s=%d,g=%d,f=%d,h=%d\n", sort_margin, grip_width, frame_width, d->ui.tv_rooms->header()->frameWidth());
-    grip_width *= 2; // HACK: this is certainly wrong, but some styles need extra pixel shifting
+    // printf("s=%d,g=%d,f=%d,h=%d\n", sort_margin, grip_width, frame_width, d->ui.tv_rooms->header()->frameWidth());
+    grip_width *= 2;  // HACK: this is certainly wrong, but some styles need extra pixel shifting
     frame_width *= 2; // frame on left and right side
     int widget_width = d->ui.tv_rooms->width();
-    //int right_column_ideal = qMax(d->ui.tv_rooms->header()->minimumSectionSize(), d->ui.tv_rooms->header()->sectionSizeHint(1));
-    int right_column_ideal = 132; //d->ui.tv_rooms->header()->sectionSizeHint(1);
+    // int right_column_ideal = qMax(d->ui.tv_rooms->header()->minimumSectionSize(),
+    // d->ui.tv_rooms->header()->sectionSizeHint(1));
+    int right_column_ideal = 132; // d->ui.tv_rooms->header()->sectionSizeHint(1);
     int left_column_width = widget_width - right_column_ideal - grip_width - frame_width;
     d->ui.tv_rooms->header()->resizeSection(0, left_column_width);
     GroupChatBrowseWindow::resizeEvent(event);
 }
 
-QObject *PsiGroupChatBrowseWindow::controller() const
-{
-    return d->controller;
-}
+QObject *PsiGroupChatBrowseWindow::controller() const { return d->controller; }
 
-void PsiGroupChatBrowseWindow::setController(QObject *controller)
-{
-    d->controller = controller;
-}
+void PsiGroupChatBrowseWindow::setController(QObject *controller) { d->controller = controller; }
 
-void PsiGroupChatBrowseWindow::setGroupChatIcon(const QPixmap &icon)
-{
-    d->model->icon = icon;
-}
+void PsiGroupChatBrowseWindow::setGroupChatIcon(const QPixmap &icon) { d->model->icon = icon; }
 
 void PsiGroupChatBrowseWindow::setServer(const XMPP::Jid &roomServer)
 {
@@ -364,8 +330,7 @@ void PsiGroupChatBrowseWindow::setServer(const XMPP::Jid &roomServer)
     d->ui.le_server->setCursorPosition(0);
 
     // FIXME: we shouldn't do this here
-    QMetaObject::invokeMethod(this, "onBrowse", Qt::QueuedConnection,
-        Q_ARG(XMPP::Jid, d->server));
+    QMetaObject::invokeMethod(this, "onBrowse", Qt::QueuedConnection, Q_ARG(XMPP::Jid, d->server));
 }
 
 void PsiGroupChatBrowseWindow::setServerVisible(bool b)
@@ -392,10 +357,7 @@ void PsiGroupChatBrowseWindow::handleBrowseError(const QString &reason)
     Q_UNUSED(reason);
 }
 
-void PsiGroupChatBrowseWindow::handleJoinSuccess()
-{
-    close();
-}
+void PsiGroupChatBrowseWindow::handleJoinSuccess() { close(); }
 
 void PsiGroupChatBrowseWindow::handleJoinError(const QString &reason)
 {
@@ -407,7 +369,7 @@ void PsiGroupChatBrowseWindow::handleJoinError(const QString &reason)
 void PsiGroupChatBrowseWindow::handleCreateSuccess(const GroupChatBrowseWindow::RoomOptions &defaultOptions)
 {
     QMetaObject::invokeMethod(this, "onCreateConfirm", Qt::QueuedConnection,
-        Q_ARG(GroupChatBrowseWindow::RoomOptions, defaultOptions));
+                              Q_ARG(GroupChatBrowseWindow::RoomOptions, defaultOptions));
 }
 
 void PsiGroupChatBrowseWindow::handleCreateConfirmed()

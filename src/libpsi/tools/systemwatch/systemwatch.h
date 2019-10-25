@@ -22,13 +22,12 @@
 
 #include <QObject>
 
-class SystemWatch : public QObject
-{
+class SystemWatch : public QObject {
     Q_OBJECT
 
 public:
-    static SystemWatch* instance();
-    virtual void proceedWithSleep();
+    static SystemWatch *instance();
+    virtual void        proceedWithSleep();
 
 signals:
     void sleep();
@@ -39,7 +38,7 @@ protected:
     SystemWatch();
 
 private:
-    static SystemWatch* instance_;
+    static SystemWatch *instance_;
 };
 
 #endif // SYSTEMWATCH_H

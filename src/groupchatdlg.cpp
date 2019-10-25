@@ -120,10 +120,7 @@ static const QString geometryOption = "options.ui.muc.size";
 class StatusPingTask : public Task {
     Q_OBJECT
 public:
-    StatusPingTask(const Jid &myjid, Task *parent) :
-        Task(parent), myjid_(myjid)
-    {
-    }
+    StatusPingTask(const Jid &myjid, Task *parent) : Task(parent), myjid_(myjid) {}
 
     void onGo()
     {
@@ -146,7 +143,7 @@ public:
             // something bad, we never reply to this stanza so someone
             // else got it.
             // FIXME seems to be no longer true
-            //emit result(NotUs, id());
+            // emit result(NotUs, id());
             emit result(LoggedIn, id());
             setSuccess();
         } else if (x.attribute("type") == "get") {
@@ -173,12 +170,7 @@ public:
         return true;
     }
 
-    enum Result { NotOccupant,
-                  Timeout,
-                  NotUs,
-                  NoSuch,
-                  LoggedIn,
-                  OtherErr };
+    enum Result { NotOccupant, Timeout, NotUs, NoSuch, LoggedIn, OtherErr };
 
 signals:
     void result(StatusPingTask::Result res, QString id);
@@ -203,17 +195,9 @@ private:
 class GCMainDlg::Private : public QObject, public MCmdProviderIface {
     Q_OBJECT
 public:
-    enum { Connecting,
-           Connected,
-           Idle,
-           ForcedLeave };
-    enum { TitleBM,
-           TitleDisco,
-           TitleVCard,
-           TitleJid,
-           TitleNone };
-    Private(GCMainDlg *d) :
-        mCmdManager(&mCmdSite), tabCompletion(this)
+    enum { Connecting, Connected, Idle, ForcedLeave };
+    enum { TitleBM, TitleDisco, TitleVCard, TitleJid, TitleNone };
+    Private(GCMainDlg *d) : mCmdManager(&mCmdSite), tabCompletion(this)
     {
         dlg           = d;
         nickSeparator = ":";
@@ -225,10 +209,7 @@ public:
         actions = new ActionList("", 0, false);
     }
 
-    ~Private()
-    {
-        delete actions;
-    }
+    ~Private() { delete actions; }
 
     GCMainDlg *                            dlg;
     int                                    state;
@@ -284,10 +265,7 @@ public:
     ChatView *te_log() const { return dlg->ui_.log; }
 
 public slots:
-    void addEmoticon(const PsiIcon *icon)
-    {
-        addEmoticon(icon->defaultText());
-    }
+    void addEmoticon(const PsiIcon *icon) { addEmoticon(icon->defaultText()); }
 
     void addEmoticon(QString text)
     {
@@ -299,7 +277,7 @@ public slots:
 
     void sp_result(StatusPingTask::Result res, QString id)
     {
-        //qDebug() << res;
+        // qDebug() << res;
         QString base = QString("Done Status ping (id=%1) ").arg(id);
         switch (res) {
         case StatusPingTask::NotOccupant:
@@ -327,7 +305,8 @@ public slots:
     {
         JT_ClientVersion *version = static_cast<JT_ClientVersion *>(sender());
         if (!version->success()) {
-            dlg->appendSysMsg(QString("No version information available for %1.").arg(version->jid().resource()), false);
+            dlg->appendSysMsg(QString("No version information available for %1.").arg(version->jid().resource()),
+                              false);
             return;
         }
         dlg->appendSysMsg(QString("Version response from %1: N: %2 V: %3 OS: %4")
@@ -345,9 +324,8 @@ public slots:
         }
 
         if (idle->status().isEmpty()) {
-            dlg->appendSysMsg(QString("Last activity from %1 at %2")
-                                  .arg(idle->jid().resource(), idle->time().toString()),
-                              false);
+            dlg->appendSysMsg(
+                QString("Last activity from %1 at %2").arg(idle->jid().resource(), idle->time().toString()), false);
         } else {
             dlg->appendSysMsg(QString("Last activity from %1 at %2 (%3)")
                                   .arg(idle->jid().resource(), idle->time().toString(), idle->status()),
@@ -378,7 +356,8 @@ public slots:
             if (!nick.isEmpty()) {
                 prev_self = self;
                 self      = nick;
-                dlg->account()->groupChatChangeNick(dlg->jid().domain(), dlg->jid().node(), self, dlg->account()->status());
+                dlg->account()->groupChatChangeNick(dlg->jid().domain(), dlg->jid().node(), self,
+                                                    dlg->account()->status());
             }
         }
         return true;
@@ -393,7 +372,8 @@ public slots:
     }
 
 public:
-    virtual bool mCmdTryStateTransit(MCmdStateIface *oldstate, QStringList command, MCmdStateIface *&newstate, QStringList &preset)
+    virtual bool mCmdTryStateTransit(MCmdStateIface *oldstate, QStringList command, MCmdStateIface *&newstate,
+                                     QStringList &preset)
     {
         if (oldstate->getName() == MCMDMUC) {
             QString cmd;
@@ -419,7 +399,8 @@ join <channel>{,<channel>} [pass{,<pass>}
                     // FIXME nick can't be empty....
                     prev_self = self;
                     self      = nick;
-                    dlg->account()->groupChatChangeNick(dlg->jid().domain(), dlg->jid().node(), self, dlg->account()->status());
+                    dlg->account()->groupChatChangeNick(dlg->jid().domain(), dlg->jid().node(), self,
+                                                        dlg->account()->status());
                     newstate = nullptr;
                 } else {
                     // FIXME DRY with doNick
@@ -494,7 +475,7 @@ join <channel>{,<channel>} [pass{,<pass>}
 
     virtual QStringList mCmdTryCompleteCommand(MCmdStateIface *state, QString query, QStringList partcommand, int item)
     {
-        //qDebug() << "mCmdTryCompleteCommand " << item << ":" << query;
+        // qDebug() << "mCmdTryCompleteCommand " << item << ":" << query;
         QStringList all;
         if (state->getName() == MCMDMUC) {
             QString spaceAtEnd = QString(QChar(0));
@@ -503,7 +484,8 @@ join <channel>{,<channel>} [pass{,<pass>}
                     << "ban" + spaceAtEnd << "sping" + spaceAtEnd << "version" + spaceAtEnd << "invite" + spaceAtEnd
                     << "idle" + spaceAtEnd << "quote" + spaceAtEnd << "topic" + spaceAtEnd;
             } else if (item == 1) {
-                if (partcommand[0] == "version" || partcommand[0] == "idle" || partcommand[0] == "kick" || partcommand[0] == "ban") {
+                if (partcommand[0] == "version" || partcommand[0] == "idle" || partcommand[0] == "kick"
+                    || partcommand[0] == "ban") {
                     all = usersModel->nickList();
                 } else if (partcommand[0] == "topic") {
                     LanguageManager::LangId id;
@@ -524,9 +506,7 @@ join <channel>{,<channel>} [pass{,<pass>}
         return res;
     }
 
-    virtual void mCmdSiteDestroyed()
-    {
-    }
+    virtual void mCmdSiteDestroyed() {}
 
 public:
     void doTrackBar()
@@ -610,8 +590,7 @@ public:
     class TabCompletionMUC : public TabCompletion {
     public:
         GCMainDlg::Private *p_;
-        TabCompletionMUC(GCMainDlg::Private *p) :
-            p_(p), nickSeparator(":") {};
+        TabCompletionMUC(GCMainDlg::Private *p) : p_(p), nickSeparator(":") {};
 
         virtual void setup(QString str, int pos, int &start, int &end)
         {
@@ -662,10 +641,7 @@ public:
             return all;
         };
 
-        QStringList allNicks()
-        {
-            return p_->dlg->d->usersModel->nickList();
-        }
+        QStringList allNicks() { return p_->dlg->d->usersModel->nickList(); }
 
         QStringList mCmdList_;
 
@@ -786,14 +762,16 @@ void GCMainDlg::doContactContextMenu(const QString &nick)
     act->setData(13);
     act->setCheckable(true);
     act->setChecked(lmi.role() == MUCItem::Participant);
-    act->setEnabled((!self || lmi.role() == MUCItem::Participant) && MUCManager::canSetRole(smi, lmi, MUCItem::Participant));
+    act->setEnabled((!self || lmi.role() == MUCItem::Participant)
+                    && MUCManager::canSetRole(smi, lmi, MUCItem::Participant));
 
     act = new QAction(tr("Moderator"), rm);
     rm->addAction(act);
     act->setData(14);
     act->setCheckable(true);
     act->setChecked(lmi.role() == MUCItem::Moderator);
-    act->setEnabled((!self || lmi.role() == MUCItem::Moderator) && MUCManager::canSetRole(smi, lmi, MUCItem::Moderator));
+    act->setEnabled((!self || lmi.role() == MUCItem::Moderator)
+                    && MUCManager::canSetRole(smi, lmi, MUCItem::Moderator));
     pm->addMenu(rm);
 
     QMenu *am = new QMenu(tr("Change Affiliation"), pm);
@@ -801,31 +779,35 @@ void GCMainDlg::doContactContextMenu(const QString &nick)
     act->setData(15);
     act->setCheckable(true);
     act->setChecked(lmi.affiliation() == MUCItem::NoAffiliation);
-    act->setEnabled((!self || lmi.affiliation() == MUCItem::NoAffiliation) && MUCManager::canSetAffiliation(smi, lmi, MUCItem::NoAffiliation));
+    act->setEnabled((!self || lmi.affiliation() == MUCItem::NoAffiliation)
+                    && MUCManager::canSetAffiliation(smi, lmi, MUCItem::NoAffiliation));
 
     act = am->addAction(tr("Member"));
     act->setData(16);
     act->setCheckable(true);
     act->setChecked(lmi.affiliation() == MUCItem::Member);
-    act->setEnabled((!self || lmi.affiliation() == MUCItem::Member) && MUCManager::canSetAffiliation(smi, lmi, MUCItem::Member));
+    act->setEnabled((!self || lmi.affiliation() == MUCItem::Member)
+                    && MUCManager::canSetAffiliation(smi, lmi, MUCItem::Member));
 
     act = am->addAction(tr("Administrator"));
     act->setData(17);
     act->setCheckable(true);
     act->setChecked(lmi.affiliation() == MUCItem::Admin);
-    act->setEnabled((!self || lmi.affiliation() == MUCItem::Admin) && MUCManager::canSetAffiliation(smi, lmi, MUCItem::Admin));
+    act->setEnabled((!self || lmi.affiliation() == MUCItem::Admin)
+                    && MUCManager::canSetAffiliation(smi, lmi, MUCItem::Admin));
 
     act = am->addAction(tr("Owner"));
     act->setData(18);
     act->setCheckable(true);
     act->setChecked(lmi.affiliation() == MUCItem::Owner);
-    act->setEnabled((!self || lmi.affiliation() == MUCItem::Owner) && MUCManager::canSetAffiliation(smi, lmi, MUCItem::Owner));
+    act->setEnabled((!self || lmi.affiliation() == MUCItem::Owner)
+                    && MUCManager::canSetAffiliation(smi, lmi, MUCItem::Owner));
 
     pm->addMenu(am);
     pm->addSeparator();
-    //pm->insertItem(tr("Send &File"), 4);
-    //pm->insertSeparator();
-    //pm->insertItem(tr("Check &Status"), 2);
+    // pm->insertItem(tr("Send &File"), 4);
+    // pm->insertSeparator();
+    // pm->insertItem(tr("Check &Status"), 2);
 
     act = new QAction(IconsetFactory::icon("psi/vCard").icon(), tr("User &Info"), pm);
     pm->addAction(act);
@@ -849,8 +831,7 @@ void GCMainDlg::doContactContextMenu(const QString &nick)
     lv_action(itm->name, itm->status, x);
 }
 
-GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager) :
-    TabbableWidget(j.bare(), pa, tabManager)
+GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager) : TabbableWidget(j.bare(), pa, tabManager)
 {
     setAttribute(Qt::WA_DeleteOnClose);
     d       = new Private(this);
@@ -865,13 +846,13 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager) :
     d->connecting = false;
 
     d->histAt = 0;
-    //d->findDlg = 0;
+    // d->findDlg = 0;
     d->configDlg  = nullptr;
     d->usersModel = new GCUserModel(pa, j, this);
 
     d->state = Private::Connected;
 
-    SendButtonTemplatesMenu* menu = getTemplateMenu();
+    SendButtonTemplatesMenu *menu = getTemplateMenu();
     if (menu) {
         connect(menu, SIGNAL(doPasteAndSend()), this, SLOT(doPasteAndSend()));
         connect(menu, SIGNAL(doEditTemplates()), this, SLOT(editTemplates()));
@@ -884,7 +865,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager) :
     d->tabmode = PsiOptions::instance()->getOption("options.ui.tabs.use-tabs").toBool();
     ui_.lb_ident->setAccount(account());
     ui_.lb_ident->setShowJid(false);
-    ui_.log->setSessionData(true, false, jid(), jid().full()); //FIXME change conference name
+    ui_.log->setSessionData(true, false, jid(), jid().full()); // FIXME change conference name
 #ifdef WEBKIT
     ui_.log->setAccount(account());
 #else
@@ -909,12 +890,13 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager) :
 
 #ifdef Q_OS_MAC
     // seems its useless hack
-    //connect(ui_.log, SIGNAL(selectionChanged()), SLOT(logSelectionChanged()));
+    // connect(ui_.log, SIGNAL(selectionChanged()), SLOT(logSelectionChanged()));
 #endif
 
     ui_.lv_users->setModel(d->usersModel);
     connect(ui_.lv_users, SIGNAL(contextMenuRequested(const QString &)), SLOT(doContactContextMenu(const QString &)));
-    connect(ui_.lv_users, SIGNAL(action(const QString &, const Status &, int)), SLOT(lv_action(const QString &, const Status &, int)));
+    connect(ui_.lv_users, SIGNAL(action(const QString &, const Status &, int)),
+            SLOT(lv_action(const QString &, const Status &, int)));
     connect(ui_.lv_users, SIGNAL(insertNick(const QString &)), d, SLOT(insertNick(const QString &)));
     for (int i = 0; i < GCUserModel::LastGroupRole; i++) {
         ui_.lv_users->setExpanded(d->usersModel->index(i, 0), true);
@@ -950,14 +932,12 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager) :
             connect(action, SIGNAL(triggered()), SLOT(doInfo()));
         } else if (name == QString::fromLatin1("gchat_share_files")) {
             connect(action, &QAction::triggered, account(), [this]() {
-                account()->shareFiles(this, [this](const QList<Reference> &refs, const QString &desc) {
-                    d->doFileShare(refs, desc);
-                });
+                account()->shareFiles(
+                    this, [this](const QList<Reference> &refs, const QString &desc) { d->doFileShare(refs, desc); });
             });
         } else if (name == "gchat_pin_tab") {
             connect(action, SIGNAL(triggered()), SLOT(pinTab()));
-        }
-        else if (name == QLatin1String("gchat_templates")) {
+        } else if (name == QLatin1String("gchat_templates")) {
             action->setMenu(getTemplateMenu());
         }
     }
@@ -970,8 +950,8 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager) :
     }
 
     //#ifdef WHITEBOARDING
-    //    d->act_whiteboard = new IconAction(tr("Open a Whiteboard"), "psi/whiteboard", tr("Open a &Whiteboard"), 0, this);
-    //    connect(d->act_whiteboard, SIGNAL(triggered()), SLOT(openWhiteboard()));
+    //    d->act_whiteboard = new IconAction(tr("Open a Whiteboard"), "psi/whiteboard", tr("Open a &Whiteboard"), 0,
+    //    this); connect(d->act_whiteboard, SIGNAL(triggered()), SLOT(openWhiteboard()));
     //#endif
 
     d->act_nick = new QAction(this);
@@ -1040,7 +1020,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager) :
     ui_.mini_prompt->hide();
     connect(ui_.mle, SIGNAL(textEditCreated(QTextEdit *)), SLOT(chatEditCreated()));
     chatEditCreated();
-    ui_.log->init(); //we are ready to do that now. chatEditCreated() inited last pieces required for this init
+    ui_.log->init(); // we are ready to do that now. chatEditCreated() inited last pieces required for this init
 
     d->pm_settings = new QMenu(this);
     connect(d->pm_settings, SIGNAL(aboutToShow()), SLOT(buildMenu()));
@@ -1049,7 +1029,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager) :
     ui_.tb_actions->setStyleSheet(" QToolButton::menu-indicator { image:none } ");
 
     connect(ui_.hsplitter, SIGNAL(splitterMoved(int, int)), this, SLOT(horizSplitterMoved()));
-    connect(ui_.vsplitter, SIGNAL(splitterMoved(int,int)), this, SLOT(verticalSplitterMoved(int,int)));
+    connect(ui_.vsplitter, SIGNAL(splitterMoved(int, int)), this, SLOT(verticalSplitterMoved(int, int)));
 
     // resize the horizontal splitter
     d->logSize    = PsiOptions::instance()->getOption("options.ui.muc.log-width").toInt();
@@ -1067,7 +1047,7 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager) :
         ui_.hsplitter->insertWidget(0, ui_.lv_users); // Swap widgets
 
     // resize the vertical splitter
-    d->logHeight = PsiOptions::instance()->getOption("options.ui.chat.log-height").toInt();
+    d->logHeight      = PsiOptions::instance()->getOption("options.ui.chat.log-height").toInt();
     d->chateditHeight = PsiOptions::instance()->getOption("options.ui.chat.chatedit-height").toInt();
     setVSplitterPosition(d->logHeight, d->chateditHeight);
 
@@ -1077,14 +1057,16 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager) :
     ui_.log->realTextWidget()->installEventFilter(d);
 
     // Connect signals from MUC manager
-    connect(d->mucManager, SIGNAL(action_error(MUCManager::Action, int, const QString &)), SLOT(action_error(MUCManager::Action, int, const QString &)));
+    connect(d->mucManager, SIGNAL(action_error(MUCManager::Action, int, const QString &)),
+            SLOT(action_error(MUCManager::Action, int, const QString &)));
     connect(d->mucManager, SIGNAL(action_success(MUCManager::Action)), d->usersModel, SLOT(updateAll()));
 
     updateMucName();
     updateGCVCard();
-    JT_DiscoInfo *disco = new JT_DiscoInfo(account()->client()->rootTask()); // FIXME in fact xep says we should do this before entering.
-    connect(disco, SIGNAL(finished()), SLOT(discoInfoFinished()));           // but we need this just for name for now.
-    disco->get(jid());                                                       // From other side we could provide the name outside.
+    JT_DiscoInfo *disco = new JT_DiscoInfo(
+        account()->client()->rootTask()); // FIXME in fact xep says we should do this before entering.
+    connect(disco, SIGNAL(finished()), SLOT(discoInfoFinished())); // but we need this just for name for now.
+    disco->get(jid());                                             // From other side we could provide the name outside.
     disco->go(true);
 
     setLooks();
@@ -1093,7 +1075,8 @@ GCMainDlg::GCMainDlg(PsiAccount *pa, const Jid &j, TabManager *tabManager) :
     invalidateTab();
     setConnecting();
 
-    connect(ui_.log->textWidget(), SIGNAL(quote(const QString &)), ui_.mle->chatEdit(), SLOT(insertAsQuote(const QString &)));
+    connect(ui_.log->textWidget(), SIGNAL(quote(const QString &)), ui_.mle->chatEdit(),
+            SLOT(insertAsQuote(const QString &)));
     connect(pa->avatarFactory(), SIGNAL(avatarChanged(Jid)), SLOT(avatarUpdated(Jid)));
 
 #ifdef PSI_PLUGINS
@@ -1112,15 +1095,15 @@ GCMainDlg::~GCMainDlg()
         account()->groupChatLeave(jid().domain(), jid().node());
     }
 
-    //QMimeSourceFactory *m = ui_.log->mimeSourceFactory();
-    //ui_.log->setMimeSourceFactory(0);
-    //delete m;
+    // QMimeSourceFactory *m = ui_.log->mimeSourceFactory();
+    // ui_.log->setMimeSourceFactory(0);
+    // delete m;
 
     account()->dialogUnregister(this);
     delete d->mucManager;
     delete d;
 
-    SendButtonTemplatesMenu* menu = getTemplateMenu();
+    SendButtonTemplatesMenu *menu = getTemplateMenu();
     if (menu) {
         disconnect(menu, SIGNAL(doPasteAndSend()), this, SLOT(doPasteAndSend()));
         disconnect(menu, SIGNAL(doEditTemplates()), this, SLOT(editTemplates()));
@@ -1141,8 +1124,8 @@ void GCMainDlg::horizSplitterMoved()
 
 void GCMainDlg::verticalSplitterMoved(int, int)
 {
-    QList<int> list = ui_.vsplitter->sizes();
-    d->logHeight = list.first();
+    QList<int> list   = ui_.vsplitter->sizes();
+    d->logHeight      = list.first();
     d->chateditHeight = list.last();
     PsiOptions::instance()->setOption("options.ui.chat.log-height", d->logHeight);
     PsiOptions::instance()->setOption("options.ui.chat.chatedit-height", d->chateditHeight);
@@ -1150,19 +1133,16 @@ void GCMainDlg::verticalSplitterMoved(int, int)
     emit vSplitterMoved(d->logHeight, d->chateditHeight);
 }
 
-void GCMainDlg::setVSplitterPosition(int log,int chat)
+void GCMainDlg::setVSplitterPosition(int log, int chat)
 {
     QList<int> list;
-    d->logHeight = log;
+    d->logHeight      = log;
     d->chateditHeight = chat;
     list << log << chat;
     ui_.vsplitter->setSizes(list);
 }
 
-void GCMainDlg::doMinimize()
-{
-    window()->showMinimized();
-}
+void GCMainDlg::doMinimize() { window()->showMinimized(); }
 
 void GCMainDlg::ensureTabbedCorrectly()
 {
@@ -1209,15 +1189,9 @@ void GCMainDlg::setShortcuts()
     d->act_minimize->setShortcuts(ShortcutManager::instance()->shortcuts("chat.minimize"));
 }
 
-void GCMainDlg::scrollUp()
-{
-    ui_.log->scrollUp();
-}
+void GCMainDlg::scrollUp() { ui_.log->scrollUp(); }
 
-void GCMainDlg::scrollDown()
-{
-    ui_.log->scrollDown();
-}
+void GCMainDlg::scrollDown() { ui_.log->scrollDown(); }
 
 void GCMainDlg::closeEvent(QCloseEvent *e)
 {
@@ -1315,21 +1289,12 @@ void GCMainDlg::updateBookmarkIcon()
 }
 
 #ifdef WHITEBOARDING
-void GCMainDlg::openWhiteboard()
-{
-    account()->actionOpenWhiteboardSpecific(jid(), jid().withResource(d->self), true);
-}
+void GCMainDlg::openWhiteboard() { account()->actionOpenWhiteboardSpecific(jid(), jid().withResource(d->self), true); }
 #endif
 
-void GCMainDlg::unsetConnecting()
-{
-    d->connecting = false;
-}
+void GCMainDlg::unsetConnecting() { d->connecting = false; }
 
-void GCMainDlg::action_error(MUCManager::Action, int, const QString &err)
-{
-    appendSysMsg(err, false);
-}
+void GCMainDlg::action_error(MUCManager::Action, int, const QString &err) { appendSysMsg(err, false); }
 
 void GCMainDlg::updateMucName()
 {
@@ -1398,7 +1363,7 @@ void GCMainDlg::updateGCVCard()
         }
         avatar.loadFromData(vcard.photo());
     }
-    //setMucSelfAvatar(avatar);
+    // setMucSelfAvatar(avatar);
 }
 
 void MiniCommand_Depreciation_Message(const QString &old, const QString &newCmd, QString &line1, QString &line2)
@@ -1406,7 +1371,9 @@ void MiniCommand_Depreciation_Message(const QString &old, const QString &newCmd,
     line1                    = QObject::tr("Warning: %1 is deprecated and will be removed in the future").arg(old);
     QList<QKeySequence> keys = ShortcutManager::instance()->shortcuts("chat.quick-command");
     if (keys.isEmpty()) {
-        line2 = QObject::tr("Please set a shortcut for 'Change to quick command mode', use that shortcut and enter '%1'.").arg(newCmd);
+        line2
+            = QObject::tr("Please set a shortcut for 'Change to quick command mode', use that shortcut and enter '%1'.")
+                  .arg(newCmd);
     } else {
         line2 = QObject::tr("Please instead press %1 and enter '%2'.").arg(keys.at(0).toString(), newCmd);
     }
@@ -1513,9 +1480,8 @@ void GCMainDlg::openTopic()
         d->topicDlg->setSubjectMap(d->subjectMap);
         d->topicDlg->setAttribute(Qt::WA_DeleteOnClose);
         d->topicDlg->show();
-        QObject::connect(d->topicDlg, &GroupchatTopicDlg::accepted, this, [=]() {
-            sendNewTopic(d->topicDlg->subjectMap());
-        });
+        QObject::connect(d->topicDlg, &GroupchatTopicDlg::accepted, this,
+                         [=]() { sendNewTopic(d->topicDlg->subjectMap()); });
     }
 }
 
@@ -1530,20 +1496,15 @@ void GCMainDlg::sendNewTopic(const QMap<LanguageManager::LangId, QString> &topic
     aSend(m);
 }
 
-void GCMainDlg::doClear()
-{
-    ui_.log->clear();
-}
+void GCMainDlg::doClear() { ui_.log->clear(); }
 
 void GCMainDlg::doClearButton()
 {
     if (PsiOptions::instance()->getOption("options.ui.chat.warn-before-clear").toBool()) {
-        switch (
-            QMessageBox::warning(
-                this,
-                tr("Warning"),
-                tr("Are you sure you want to clear the chat window?\n(note: does not affect saved history)"),
-                QMessageBox::Yes, QMessageBox::YesAll, QMessageBox::No)) {
+        switch (QMessageBox::warning(
+            this, tr("Warning"),
+            tr("Are you sure you want to clear the chat window?\n(note: does not affect saved history)"),
+            QMessageBox::Yes, QMessageBox::YesAll, QMessageBox::No)) {
         case QMessageBox::No:
             break;
         case QMessageBox::YesAll:
@@ -1578,12 +1539,14 @@ void GCMainDlg::doBookmark()
     QFormLayout *       formLayout = new QFormLayout;
     QLineEdit *         txtName    = new QLineEdit;
     QLineEdit *         txtNick    = new QLineEdit;
-    //QCheckBox *chkAJoin = new QCheckBox;
+    // QCheckBox *chkAJoin = new QCheckBox;
     QComboBox *cbAutoJoin = new QComboBox;
     cbAutoJoin->addItems(ConferenceBookmark::joinTypeNames());
-    QPushButton *saveBtn   = new QPushButton(dlg->style()->standardIcon(QStyle::SP_DialogSaveButton), tr("Save"), dlg);
-    QPushButton *deleteBtn = new QPushButton(dlg->style()->standardIcon(QStyle::SP_DialogDiscardButton), tr("Delete"), dlg);
-    QPushButton *cancelBtn = new QPushButton(dlg->style()->standardIcon(QStyle::SP_DialogCancelButton), tr("Cancel"), dlg);
+    QPushButton *saveBtn = new QPushButton(dlg->style()->standardIcon(QStyle::SP_DialogSaveButton), tr("Save"), dlg);
+    QPushButton *deleteBtn
+        = new QPushButton(dlg->style()->standardIcon(QStyle::SP_DialogDiscardButton), tr("Delete"), dlg);
+    QPushButton *cancelBtn
+        = new QPushButton(dlg->style()->standardIcon(QStyle::SP_DialogCancelButton), tr("Cancel"), dlg);
 
     blayout->insertStretch(0);
     blayout->addWidget(saveBtn);
@@ -1608,10 +1571,10 @@ void GCMainDlg::doBookmark()
 
     dlg->setWindowTitle(tr("Bookmark conference"));
     dlg->adjustSize();
-    dlg->move(ui_.le_topic->mapToGlobal(QPoint(
-        ui_.le_topic->width() - dlg->width(), ui_.le_topic->height())));
+    dlg->move(ui_.le_topic->mapToGlobal(QPoint(ui_.le_topic->width() - dlg->width(), ui_.le_topic->height())));
     if (dlg->exec() == QDialog::Accepted) {
-        ConferenceBookmark conf(txtName->text(), jid(), ConferenceBookmark::JoinType(cbAutoJoin->currentIndex()), txtNick->text(), d->password);
+        ConferenceBookmark conf(txtName->text(), jid(), ConferenceBookmark::JoinType(cbAutoJoin->currentIndex()),
+                                txtNick->text(), d->password);
         confs[confInd] = conf;
         bm->setBookmarks(confs);
 
@@ -1621,10 +1584,7 @@ void GCMainDlg::doBookmark()
     delete dlg;
 }
 
-void GCMainDlg::copyMucJid()
-{
-    QApplication::clipboard()->setText(jid().bare());
-}
+void GCMainDlg::copyMucJid() { QApplication::clipboard()->setText(jid().bare()); }
 
 void GCMainDlg::doRemoveBookmark()
 {
@@ -1678,10 +1638,7 @@ void GCMainDlg::goForcedLeave()
     }
 }
 
-bool GCMainDlg::isInactive() const
-{
-    return d->state == Private::ForcedLeave;
-}
+bool GCMainDlg::isInactive() const { return d->state == Private::ForcedLeave; }
 
 void GCMainDlg::reactivate()
 {
@@ -1751,10 +1708,7 @@ void GCMainDlg::pa_updatedActivity()
     }
 }
 
-PsiAccount *GCMainDlg::account() const
-{
-    return TabbableWidget::account();
-}
+PsiAccount *GCMainDlg::account() const { return TabbableWidget::account(); }
 
 void GCMainDlg::error(int, const QString &str)
 {
@@ -1858,21 +1812,27 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
 
         auto contact = d->usersModel->findEntry(nick);
         if (contact == nullptr) {
-            //contact joining
-            //ui_.log->updateAvatar(jid().withResource(nick), isSelf? ChatViewCommon::LocalParty: ChatViewCommon::Participant);
+            // contact joining
+            // ui_.log->updateAvatar(jid().withResource(nick), isSelf? ChatViewCommon::LocalParty:
+            // ChatViewCommon::Participant);
 
             MessageView mv(MessageView::MUCJoin);
-            if ((!d->connecting || options_->getOption("options.ui.muc.show-initial-joins").toBool()) && options_->getOption("options.muc.show-joins").toBool()) {
+            if ((!d->connecting || options_->getOption("options.ui.muc.show-initial-joins").toBool())
+                && options_->getOption("options.muc.show-joins").toBool()) {
                 QString message = tr("%1 has joined the room");
                 if (options_->getOption("options.muc.show-role-affiliation").toBool()) {
                     if (s.mucItem().role() != MUCItem::NoRole) {
                         if (s.mucItem().affiliation() != MUCItem::NoAffiliation) {
-                            message = tr("%3 has joined the room as %1 and %2").arg(MUCManager::roleToString(s.mucItem().role(), true), MUCManager::affiliationToString(s.mucItem().affiliation(), true));
+                            message = tr("%3 has joined the room as %1 and %2")
+                                          .arg(MUCManager::roleToString(s.mucItem().role(), true),
+                                               MUCManager::affiliationToString(s.mucItem().affiliation(), true));
                         } else {
-                            message = tr("%2 has joined the room as %1").arg(MUCManager::roleToString(s.mucItem().role(), true));
+                            message = tr("%2 has joined the room as %1")
+                                          .arg(MUCManager::roleToString(s.mucItem().role(), true));
                         }
                     } else if (s.mucItem().affiliation() != MUCItem::NoAffiliation) {
-                        message = tr("%2 has joined the room as %1").arg(MUCManager::affiliationToString(s.mucItem().affiliation(), true));
+                        message = tr("%2 has joined the room as %1")
+                                      .arg(MUCManager::affiliationToString(s.mucItem().affiliation(), true));
                     }
                 }
                 if (!s.mucItem().jid().isEmpty()) {
@@ -1902,13 +1862,16 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
                 QString reason;
                 if (contact->status.mucItem().role() != s.mucItem().role() && s.mucItem().role() != MUCItem::NoRole) {
                     if (contact->status.mucItem().affiliation() != s.mucItem().affiliation()) {
-                        message = tr("%1 is now %2 and %3").arg(nick, MUCManager::roleToString(s.mucItem().role(), true), MUCManager::affiliationToString(s.mucItem().affiliation(), true));
+                        message = tr("%1 is now %2 and %3")
+                                      .arg(nick, MUCManager::roleToString(s.mucItem().role(), true),
+                                           MUCManager::affiliationToString(s.mucItem().affiliation(), true));
                     } else {
                         message = tr("%1 is now %2").arg(nick, MUCManager::roleToString(s.mucItem().role(), true));
                     }
                     reason = s.mucItem().reason();
                 } else if (contact->status.mucItem().affiliation() != s.mucItem().affiliation()) {
-                    message += tr("%1 is now %2").arg(nick, MUCManager::affiliationToString(s.mucItem().affiliation(), true));
+                    message += tr("%1 is now %2")
+                                   .arg(nick, MUCManager::affiliationToString(s.mucItem().affiliation(), true));
                     reason = s.mucItem().reason();
                 }
 
@@ -1922,14 +1885,14 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
             }
             if (!d->connecting && options_->getOption("options.muc.show-status-changes").toBool()) {
                 bool statusWithPriority = options_->getOption("options.ui.muc.status-with-priority").toBool();
-                if (s.status() != contact->status.status() || s.show() != contact->status.show() || (statusWithPriority && s.priority() != contact->status.priority())) {
-                    ui_.log->dispatchMessage(MessageView::statusMessage(
-                        nick, int(s.type()), s.status(), s.priority()));
+                if (s.status() != contact->status.status() || s.show() != contact->status.show()
+                    || (statusWithPriority && s.priority() != contact->status.priority())) {
+                    ui_.log->dispatchMessage(MessageView::statusMessage(nick, int(s.type()), s.status(), s.priority()));
                 }
             }
         }
         d->usersModel->updateEntry(nick, s);
-        //if(!nick.isEmpty())
+        // if(!nick.isEmpty())
         //    avatarUpdated(jidForNick(nick)); // only by event from AvatarFactory we should do this
     } else {
         // Unavailable
@@ -1946,7 +1909,8 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
             if (!s.mucDestroy().jid().isEmpty()) {
                 message += "\n";
                 message += tr("Do you want to join the alternate venue '%1'?").arg(s.mucDestroy().jid().full());
-                int ret = QMessageBox::information(this, tr("Room Destroyed"), message, QMessageBox::Yes, QMessageBox::No);
+                int ret
+                    = QMessageBox::information(this, tr("Room Destroyed"), message, QMessageBox::Yes, QMessageBox::No);
                 if (ret == QMessageBox::Yes) {
                     account()->actionJoin(s.mucDestroy().jid().full());
                 }
@@ -1971,8 +1935,7 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
         if (s.getMUCStatuses().contains(301)) {
             // Ban
             mucKickMsgHelper(nick, s, nickJid, tr("Banned"), tr("You have been banned from the room"),
-                             tr("You have been banned from the room by %1"),
-                             tr("%1 has been banned"),
+                             tr("You have been banned from the room by %1"), tr("%1 has been banned"),
                              tr("%1 has been banned by %2"));
             suppressDefault = true;
         }
@@ -1987,8 +1950,7 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
             if (s.getMUCStatuses().contains(307)) {
             // Kick
             mucKickMsgHelper(nick, s, nickJid, tr("Kicked"), tr("You have been kicked from the room"),
-                             tr("You have been kicked from the room by %1"),
-                             tr("%1 has been kicked"),
+                             tr("You have been kicked from the room by %1"), tr("%1 has been kicked"),
                              tr("%1 has been kicked by %2"));
             suppressDefault = true;
         }
@@ -2016,7 +1978,7 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
                 d->usersModel->updateEntry(s.mucItem().nick(), s);
                 dispatchMessage(MessageView::nickChangeMessage(nick, s.mucItem().nick()));
             } else {
-                //contact leaving
+                // contact leaving
                 message = tr("%1 has left the room").arg(nickJid);
                 if (!s.status().isEmpty()) {
                     message += QString(" (%1)").arg(s.status());
@@ -2032,7 +1994,8 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
     }
 
     if (s.caps().isValid()) {
-        Jid caps_jid(s.mucItem().jid().isEmpty() || !d->nonAnonymous ? Jid(jid()).withResource(nick) : s.mucItem().jid());
+        Jid caps_jid(s.mucItem().jid().isEmpty() || !d->nonAnonymous ? Jid(jid()).withResource(nick)
+                                                                     : s.mucItem().jid());
         account()->client()->capsManager()->updateCaps(caps_jid, s.caps());
     }
 
@@ -2040,10 +2003,7 @@ void GCMainDlg::presence(const QString &nick, const Status &s)
         account()->avatarFactory()->newMucItem(jidForNick(nick), s);
 }
 
-XMPP::Jid GCMainDlg::jidForNick(const QString &nick) const
-{
-    return Jid(jid()).withResource(nick);
-}
+XMPP::Jid GCMainDlg::jidForNick(const QString &nick) const { return Jid(jid()).withResource(nick); }
 
 void GCMainDlg::avatarUpdated(const Jid &jid_)
 {
@@ -2054,7 +2014,8 @@ void GCMainDlg::avatarUpdated(const Jid &jid_)
             return;
         }
         d->usersModel->updateAvatar(jid_.resource());
-        ui_.log->updateAvatar(jid_, jid_.resource() == d->self ? ChatViewCommon::LocalParty : ChatViewCommon::Participant);
+        ui_.log->updateAvatar(jid_,
+                              jid_.resource() == d->self ? ChatViewCommon::LocalParty : ChatViewCommon::Participant);
     }
 }
 
@@ -2119,7 +2080,8 @@ void GCMainDlg::message(const Message &_m, const PsiEvent::Ptr &e)
         MessageView tv = MessageView::subjectMessage(topic, sysMsg);
         tv.setDateTime(m.timeStamp());
 
-        ui_.le_topic->setText(topic.replace("\n\n", " || ").replace("\n", " | ").replace("\t", " ").replace(QRegExp("\\s{2,}"), " "));
+        ui_.le_topic->setText(
+            topic.replace("\n\n", " || ").replace("\n", " | ").replace("\t", " ").replace(QRegExp("\\s{2,}"), " "));
         ui_.le_topic->setCursorPosition(0);
         ui_.le_topic->setToolTip(QString("<qt><p>%1</p></qt>").arg(subjectTooltip));
 
@@ -2151,15 +2113,20 @@ void GCMainDlg::message(const Message &_m, const PsiEvent::Ptr &e)
         if (!m.spooled())
             account()->playSound(PsiAccount::eSend);
     } else {
-        if (d->alert || (options->getOption("options.ui.notifications.sounds.notify-every-muc-message").toBool() && !m.spooled() && !from.isEmpty()))
+        if (d->alert
+            || (options->getOption("options.ui.notifications.sounds.notify-every-muc-message").toBool() && !m.spooled()
+                && !from.isEmpty()))
             account()->playSound(PsiAccount::eGroupChat);
 
-        if (d->alert || (options->getOption("options.ui.notifications.passive-popups.notify-every-muc-message").toBool() && !m.spooled() && !from.isEmpty())) {
+        if (d->alert
+            || (options->getOption("options.ui.notifications.passive-popups.notify-every-muc-message").toBool()
+                && !m.spooled() && !from.isEmpty())) {
             if (!m.spooled() && !isActiveTab() && !m.from().resource().isEmpty()) {
                 XMPP::Jid    jid = m.from() /*.withDomain("")*/;
                 UserListItem i;
                 i.setPrivate(true);
-                account()->psi()->popupManager()->doPopup(account(), PopupManager::AlertGcHighlight, jid, m.from().resource(), &i, e);
+                account()->psi()->popupManager()->doPopup(account(), PopupManager::AlertGcHighlight, jid,
+                                                          m.from().resource(), &i, e);
             }
         }
     }
@@ -2186,25 +2153,13 @@ void GCMainDlg::joined()
     account()->addMucItem(d->dlg->jid().bare());
 }
 
-void GCMainDlg::setPassword(const QString &p)
-{
-    d->password = p;
-}
+void GCMainDlg::setPassword(const QString &p) { d->password = p; }
 
-const QString &GCMainDlg::nick() const
-{
-    return d->self;
-}
+const QString &GCMainDlg::nick() const { return d->self; }
 
-const QDateTime &GCMainDlg::lastMsgTime() const
-{
-    return d->te_log()->lastMsgTime();
-}
+const QDateTime &GCMainDlg::lastMsgTime() const { return d->te_log()->lastMsgTime(); }
 
-bool GCMainDlg::isLastMessageAlert() const
-{
-    return d->alert;
-}
+bool GCMainDlg::isLastMessageAlert() const { return d->alert; }
 
 void GCMainDlg::appendSysMsg(const QString &str, bool alert)
 {
@@ -2226,7 +2181,8 @@ void GCMainDlg::dispatchMessage(const MessageView &mv)
 void GCMainDlg::appendMessage(const Message &m, bool alert)
 {
     MessageView mv(MessageView::Message);
-    if (m.containsHTML() && PsiOptions::instance()->getOption("options.html.muc.render").toBool() && !m.html().text().isEmpty()) {
+    if (m.containsHTML() && PsiOptions::instance()->getOption("options.html.muc.render").toBool()
+        && !m.html().text().isEmpty()) {
         mv.setHtml(m.html().toString("span"));
     } else {
         mv.setPlainText(m.body());
@@ -2258,8 +2214,8 @@ void GCMainDlg::appendMessage(const Message &m, bool alert)
         invalidateTab();
     }
 
-    //if the message spoke to us, alert the user before closing this window
-    //except that keepopen doesn't seem to be implemented for this class yet.
+    // if the message spoke to us, alert the user before closing this window
+    // except that keepopen doesn't seem to be implemented for this class yet.
     /*if(alert) {
         d->keepOpen = true;
         QTimer::singleShot(1000, this, SLOT(setKeepOpenFalse()));
@@ -2274,10 +2230,7 @@ void GCMainDlg::doAlert()
             doFlash(true);
 }
 
-const QString &GCMainDlg::getDisplayName() const
-{
-    return d->mucName;
-}
+const QString &GCMainDlg::getDisplayName() const { return d->mucName; }
 
 QString GCMainDlg::desiredCaption() const
 {
@@ -2329,14 +2282,18 @@ void GCMainDlg::setLooks()
         ui_.pb_send->show();
     }
 
-    setWindowOpacity(double(qMax(MINIMUM_OPACITY, PsiOptions::instance()->getOption("options.ui.chat.opacity").toInt())) / 100);
+    setWindowOpacity(double(qMax(MINIMUM_OPACITY, PsiOptions::instance()->getOption("options.ui.chat.opacity").toInt()))
+                     / 100);
 
     // update the widget icon
 #ifndef Q_OS_MAC
     setWindowIcon(IconsetFactory::icon("psi/start-chat").icon());
 #endif
 
-    ui_.lv_users->setVerticalScrollBarPolicy(PsiOptions::instance()->getOption("options.ui.muc.userlist.disable-scrollbar").toBool() ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAsNeeded);
+    ui_.lv_users->setVerticalScrollBarPolicy(
+        PsiOptions::instance()->getOption("options.ui.muc.userlist.disable-scrollbar").toBool()
+            ? Qt::ScrollBarAlwaysOff
+            : Qt::ScrollBarAsNeeded);
     ui_.lv_users->setLooks();
     setMucSelfAvatar();
 }
@@ -2366,7 +2323,8 @@ void GCMainDlg::setToolbuttons()
         if (action) {
             action->addTo(ui_.toolbar);
             if (actionName == "gchat_icon" || actionName == "gchat_templates") {
-                static_cast<QToolButton *>(ui_.toolbar->widgetForAction(action))->setPopupMode(QToolButton::InstantPopup);
+                static_cast<QToolButton *>(ui_.toolbar->widgetForAction(action))
+                    ->setPopupMode(QToolButton::InstantPopup);
             }
         }
     }
@@ -2487,10 +2445,7 @@ void GCMainDlg::lv_action(const QString &nick, const Status &s, int x)
     }
 }
 
-void GCMainDlg::contextMenuEvent(QContextMenuEvent *)
-{
-    d->pm_settings->exec(QCursor::pos());
-}
+void GCMainDlg::contextMenuEvent(QContextMenuEvent *) { d->pm_settings->exec(QCursor::pos()); }
 
 void GCMainDlg::buildMenu()
 {
@@ -2532,9 +2487,8 @@ void GCMainDlg::chatEditCreated()
 
     ui_.mle->chatEdit()->installEventFilter(d);
     connect(ui_.mle->chatEdit(), &ChatEdit::fileSharingRequested, this, [this](const QMimeData *data) {
-        account()->shareFiles(this, data, [this](const QList<Reference> &refs, const QString &desc) {
-            d->doFileShare(refs, desc);
-        });
+        account()->shareFiles(
+            this, data, [this](const QList<Reference> &refs, const QString &desc) { d->doFileShare(refs, desc); });
     });
 }
 
@@ -2543,15 +2497,9 @@ TabbableWidget::State GCMainDlg::state() const
     return d->hPending ? TabbableWidget::State::Highlighted : TabbableWidget::State::None;
 }
 
-int GCMainDlg::unreadMessageCount() const
-{
-    return d->pending;
-}
+int GCMainDlg::unreadMessageCount() const { return d->pending; }
 
-void GCMainDlg::setStatusTabIcon(int status)
-{
-    setTabIcon(PsiIconset::instance()->statusPtr(jid(), status)->icon());
-}
+void GCMainDlg::setStatusTabIcon(int status) { setTabIcon(PsiIconset::instance()->statusPtr(jid(), status)->icon()); }
 
 void GCMainDlg::resizeEvent(QResizeEvent *e)
 {
@@ -2577,14 +2525,11 @@ void GCMainDlg::resizeEvent(QResizeEvent *e)
     QTimer::singleShot(0, this, SLOT(horizSplitterMoved()));
 }
 
-QStringList GCMainDlg::mucRosterContent() const
-{
-    return d->usersModel->nickList();
-}
+QStringList GCMainDlg::mucRosterContent() const { return d->usersModel->nickList(); }
 
 void GCMainDlg::sendButtonMenu()
 {
-    SendButtonTemplatesMenu* menu = getTemplateMenu();
+    SendButtonTemplatesMenu *menu = getTemplateMenu();
     if (menu) {
         menu->setParams(true);
         menu->exec(QCursor::pos());
@@ -2595,14 +2540,14 @@ void GCMainDlg::sendButtonMenu()
 
 void GCMainDlg::editTemplates()
 {
-    if(TabbableWidget::isActiveTab()) {
+    if (TabbableWidget::isActiveTab()) {
         showTemplateEditor();
     }
 }
 
 void GCMainDlg::doPasteAndSend()
 {
-    if(TabbableWidget::isActiveTab()) {
+    if (TabbableWidget::isActiveTab()) {
         d->mle()->paste();
         mle_returnPressed();
         d->act_pastesend->setEnabled(false);
@@ -2610,14 +2555,11 @@ void GCMainDlg::doPasteAndSend()
     }
 }
 
-void GCMainDlg::psButtonEnabled()
-{
-    d->act_pastesend->setEnabled(true);
-}
+void GCMainDlg::psButtonEnabled() { d->act_pastesend->setEnabled(true); }
 
 void GCMainDlg::sendTemp(const QString &templText)
 {
-    if(TabbableWidget::isActiveTab()) {
+    if (TabbableWidget::isActiveTab()) {
         if (!templText.isEmpty()) {
             d->mle()->textCursor().insertText(templText);
             if (!PsiOptions::instance()->getOption("options.ui.chat.only-paste-template").toBool())

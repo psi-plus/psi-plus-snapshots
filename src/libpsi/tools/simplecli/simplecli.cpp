@@ -33,32 +33,32 @@
  */
 
 /**
-  * \brief Define a switch (option that does not have a value)
-  */
-void SimpleCli::defineSwitch(const QByteArray& name, const QString& help)
+ * \brief Define a switch (option that does not have a value)
+ */
+void SimpleCli::defineSwitch(const QByteArray &name, const QString &help)
 {
     argdefs[name] = Arg(name, "", help, false);
     aliases[name] = name;
 }
 
 /**
-  * \brief Define a parameter (option that requires a value)
-  */
-void SimpleCli::defineParam(const QByteArray& name, const QString& valueHelp, const QString& help)
+ * \brief Define a parameter (option that requires a value)
+ */
+void SimpleCli::defineParam(const QByteArray &name, const QString &valueHelp, const QString &help)
 {
     argdefs[name] = Arg(name, valueHelp, help, true);
     aliases[name] = name;
 }
 
 /**
-  * \brief Add alias for already existing option.
-  * \a alias will be mapped to \a originalName in parse() result.
-  */
-void SimpleCli::defineAlias(const QByteArray& alias, const QByteArray& originalName)
+ * \brief Add alias for already existing option.
+ * \a alias will be mapped to \a originalName in parse() result.
+ */
+void SimpleCli::defineAlias(const QByteArray &alias, const QByteArray &originalName)
 {
     if (!argdefs.contains(originalName)) {
-        qDebug("CLI: cannot add alias '%s' because name '%s' does not exist",
-               alias.constData(), originalName.constData());
+        qDebug("CLI: cannot add alias '%s' because name '%s' does not exist", alias.constData(),
+               originalName.constData());
         return;
     }
     argdefs[originalName].aliases.append(alias);
@@ -69,18 +69,20 @@ void SimpleCli::defineAlias(const QByteArray& alias, const QByteArray& originalN
 }
 
 /**
-  * \brief Parse \a argv into a name,value map.
-  * \param terminalArgs stop parsing when one of these options is found (it will be included in result)
-  * \param safeArgs if not NULL, will be used to pass number of arguments before terminal argument (or argc if there was no terminal argument)
-  *
-  * Supported options syntax: --switch; --param=value; --param value; -switch; -param=value; -param value.
-  * Additionally on Windows: /switch; /param:value; /param value.
-  *
-  * When creating the map, alias names are converted to original option names.
-  *
-  * Use \a terminalArgs if you want need to stop parsing after certain options for security reasons, etc.
-  */
-QHash<QByteArray, QByteArray> SimpleCli::parse(int argc, char* argv[], const QList<QByteArray>& terminalArgs, int* safeArgc)
+ * \brief Parse \a argv into a name,value map.
+ * \param terminalArgs stop parsing when one of these options is found (it will be included in result)
+ * \param safeArgs if not NULL, will be used to pass number of arguments before terminal argument (or argc if there was
+ * no terminal argument)
+ *
+ * Supported options syntax: --switch; --param=value; --param value; -switch; -param=value; -param value.
+ * Additionally on Windows: /switch; /param:value; /param value.
+ *
+ * When creating the map, alias names are converted to original option names.
+ *
+ * Use \a terminalArgs if you want need to stop parsing after certain options for security reasons, etc.
+ */
+QHash<QByteArray, QByteArray> SimpleCli::parse(int argc, char *argv[], const QList<QByteArray> &terminalArgs,
+                                               int *safeArgc)
 {
 #ifdef Q_OS_WIN
     const bool winmode = true;
@@ -89,42 +91,42 @@ QHash<QByteArray, QByteArray> SimpleCli::parse(int argc, char* argv[], const QLi
 #endif
 
     QHash<QByteArray, QByteArray> map;
-    int safe = 1;
-    int n = 1;
+    int                           safe = 1;
+    int                           n    = 1;
     for (; n < argc; ++n) {
         QByteArray str = QByteArray(argv[n]);
         QByteArray left, right;
-        int sep = str.indexOf('=');
-        bool explicitValue = false;
+        int        sep           = str.indexOf('=');
+        bool       explicitValue = false;
         if (sep == -1) {
             left = str;
         } else {
-            left = str.mid(0, sep);
-            right = str.mid(sep + 1);
+            left          = str.mid(0, sep);
+            right         = str.mid(sep + 1);
             explicitValue = true;
         }
 
         bool unnamedArgument = true;
         if (left.startsWith("--")) {
-            left = left.mid(2);
+            left            = left.mid(2);
             unnamedArgument = false;
-        } else if (left.startsWith('-')  ||  (left.startsWith('/') && winmode)) {
-            left = left.mid(1);
+        } else if (left.startsWith('-') || (left.startsWith('/') && winmode)) {
+            left            = left.mid(1);
             unnamedArgument = false;
         } else if (n == 1 && left.startsWith("xmpp:")) {
             unnamedArgument = false;
-            left = "uri";
-            right = str;
+            left            = "uri";
+            right           = str;
         }
 
         QByteArray name, value;
         if (unnamedArgument) {
             value = left;
         } else {
-            name = left;
+            name  = left;
             value = right;
             if (aliases.contains(name)) {
-                name = argdefs[aliases[name]].name;
+                name            = argdefs[aliases[name]].name;
                 bool needsValue = argdefs[name].needsValue;
                 if (!needsValue && explicitValue) {
                     continue; // ignore strange switch with value
@@ -133,12 +135,10 @@ QHash<QByteArray, QByteArray> SimpleCli::parse(int argc, char* argv[], const QLi
                     value = QByteArray(argv[++n]);
                 }
             }
-
         }
 
         if (map.contains(name)) {
-            qDebug("CLI: Ignoring next value ('%s') for '%s' arg.",
-                   value.constData(), name.constData());
+            qDebug("CLI: Ignoring next value ('%s') for '%s' arg.", value.constData(), name.constData());
         } else {
             map[name] = value;
         }
@@ -157,16 +157,16 @@ QHash<QByteArray, QByteArray> SimpleCli::parse(int argc, char* argv[], const QLi
 }
 
 /**
-  * \brief Produce options description, for use in --help.
-  * \param textWidth wrap text when wider than \a textWidth
-  */
+ * \brief Produce options description, for use in --help.
+ * \param textWidth wrap text when wider than \a textWidth
+ */
 QString SimpleCli::optionsHelp(int textWidth)
 {
     QString ret;
 
     int margin = 2;
 
-    int longest = -1;
+    int  longest    = -1;
     bool foundShort = false;
 
     foreach (Arg arg, argdefs) {
@@ -178,10 +178,10 @@ QString SimpleCli::optionsHelp(int textWidth)
 
         foundShort = foundShort || !arg.shortName.isNull();
     }
-    longest += 2;    // 2 = length("--")
-    int helpPadding = longest + 6;    // 6 = 2 (left margin) + 2 (space before help) + 2 (next line indent)
+    longest += 2;                  // 2 = length("--")
+    int helpPadding = longest + 6; // 6 = 2 (left margin) + 2 (space before help) + 2 (next line indent)
     if (foundShort) {
-        helpPadding += 4;    // 4 = length("-x, ")
+        helpPadding += 4; // 4 = length("-x, ")
     }
 
     foreach (Arg arg, argdefs) {
@@ -209,14 +209,14 @@ QString SimpleCli::optionsHelp(int textWidth)
 }
 
 /**
-  * \brief Wrap text for printing on console.
-  * \param text text to be wrapped
-  * \param width width of the text
-  * \param margin left margin (filled with spaces)
-  * \param firstMargin margin in first line
-  * Note: This function is designed for text that do not contain tabs or line breaks.
-  * Results may be not pretty if such \a text is passed.
-  */
+ * \brief Wrap text for printing on console.
+ * \param text text to be wrapped
+ * \param width width of the text
+ * \param margin left margin (filled with spaces)
+ * \param firstMargin margin in first line
+ * Note: This function is designed for text that do not contain tabs or line breaks.
+ * Results may be not pretty if such \a text is passed.
+ */
 QString SimpleCli::wrap(QString text, int width, int margin, int firstMargin)
 {
     if (firstMargin < 0) {
@@ -225,7 +225,7 @@ QString SimpleCli::wrap(QString text, int width, int margin, int firstMargin)
 
     QString output;
 
-    int prevBreak = -1;
+    int prevBreak     = -1;
     int currentMargin = firstMargin;
     int nextBreak;
 
@@ -250,7 +250,7 @@ QString SimpleCli::wrap(QString text, int width, int margin, int firstMargin)
         output += text.mid(prevBreak + 1, nextBreak - prevBreak - 1);
         output += '\n';
 
-        prevBreak = nextBreak;
+        prevBreak     = nextBreak;
         currentMargin = margin;
     } while (nextBreak < text.length());
 

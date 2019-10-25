@@ -40,37 +40,37 @@ class QTextCodec;
 
 typedef QSharedPointer<Hunspell> HunspellPtr;
 
-class HunspellChecker : public SpellChecker
-{
+class HunspellChecker : public SpellChecker {
 public:
     HunspellChecker();
     ~HunspellChecker();
-    virtual QList<QString> suggestions(const QString&);
-    virtual bool isCorrect(const QString &word);
-    virtual bool add(const QString &word);
-    virtual bool available() const;
-    virtual bool writable() const;
-    virtual void setActiveLanguages(const QSet<LanguageManager::LangId> &langs);
+    virtual QList<QString>                suggestions(const QString &);
+    virtual bool                          isCorrect(const QString &word);
+    virtual bool                          add(const QString &word);
+    virtual bool                          available() const;
+    virtual bool                          writable() const;
+    virtual void                          setActiveLanguages(const QSet<LanguageManager::LangId> &langs);
     virtual QSet<LanguageManager::LangId> getAllLanguages() const;
+
 private:
-    struct DictInfo
-    {
+    struct DictInfo {
         LanguageManager::LangId langId;
-        QString filename;
+        QString                 filename;
     };
     struct LangItem {
         HunspellPtr hunspell_;
-        DictInfo info;
+        DictInfo    info;
         QTextCodec *codec;
     };
     void getSupportedLanguages();
     void addLanguage(const LanguageManager::LangId &langId);
     void getDictPaths();
-    bool scanDictPaths(const QString &language, QFileInfo &aff , QFileInfo &dic);
+    bool scanDictPaths(const QString &language, QFileInfo &aff, QFileInfo &dic);
     void unloadLanguage(const LanguageManager::LangId &langId);
+
 private:
-    QList<LangItem> languages_;
-    QStringList dictPaths_;
+    QList<LangItem>               languages_;
+    QStringList                   dictPaths_;
     QSet<LanguageManager::LangId> supportedLangs_;
 };
 

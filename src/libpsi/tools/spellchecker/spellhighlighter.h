@@ -5,12 +5,11 @@
 
 class QString;
 
-class SpellHighlighter : public QSyntaxHighlighter
-{
+class SpellHighlighter : public QSyntaxHighlighter {
 public:
-    SpellHighlighter(QTextDocument*);
+    SpellHighlighter(QTextDocument *);
 
-    virtual void highlightBlock(const QString& text);
+    virtual void highlightBlock(const QString &text);
 };
 
 #endif // SPELLHIGHLIGHTER_H

@@ -264,8 +264,8 @@ bool InfoWidget::aboutToClose()
             this, tr("Warning"),
             d->type == MucAdm
                 ? tr("You have not published conference information changes.\nAre you sure you want to discard them?")
-                : tr(
-                    "You have not published your account information changes.\nAre you sure you want to discard them?"),
+                : tr("You have not published your account information changes.\nAre you sure you want to discard "
+                     "them?"),
             tr("Close and discard"), tr("Don't close"));
         if (n != 0) {
             return false;

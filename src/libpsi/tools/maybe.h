@@ -35,8 +35,7 @@
  * }
  * \endcode
  */
-template<class T> class Maybe
-{
+template <class T> class Maybe {
 public:
     /**
      * \brief Constructs a Maybe container with no value.
@@ -46,7 +45,7 @@ public:
     /**
      * \brief Constructs a Maybe container with a value.
      */
-    Maybe(const T& value) : value_(value), hasValue_(true) {}
+    Maybe(const T &value) : value_(value), hasValue_(true) {}
 
     /**
      * \brief Checks whether this container has a value.
@@ -56,10 +55,10 @@ public:
     /**
      * \brief Returns the value of the container.
      */
-    const T& value() const { return value_; }
+    const T &value() const { return value_; }
 
 private:
-    T value_;
+    T    value_;
     bool hasValue_;
 };
 

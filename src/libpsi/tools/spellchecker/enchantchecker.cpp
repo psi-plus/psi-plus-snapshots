@@ -41,12 +41,9 @@ EnchantChecker::EnchantChecker()
 #else
     broker = enchant::Broker::instance();
 #endif
-    if (broker)
-    {
-        broker->list_dicts(enchantDictDescribeFn, static_cast<void*>(this));
-        QTimer::singleShot(1000, [=]() {
-            this->setActiveLanguages(getAllLanguages());
-        });
+    if (broker) {
+        broker->list_dicts(enchantDictDescribeFn, static_cast<void *>(this));
+        QTimer::singleShot(1000, [=]() { this->setActiveLanguages(getAllLanguages()); });
     }
 }
 
@@ -58,23 +55,23 @@ EnchantChecker::~EnchantChecker()
 #endif
 }
 
-bool EnchantChecker::isCorrect(const QString& word)
+bool EnchantChecker::isCorrect(const QString &word)
 {
     if (spellers_.isEmpty())
         return true;
 
-    foreach (enchant::Dict* speller, spellers_) {
+    foreach (enchant::Dict *speller, spellers_) {
         if (speller->check(word.toUtf8().constData()))
             return true;
     }
     return false;
 }
 
-QList<QString> EnchantChecker::suggestions(const QString& word)
+QList<QString> EnchantChecker::suggestions(const QString &word)
 {
     QList<QString> words;
 
-    foreach(enchant::Dict* speller, spellers_) {
+    foreach (enchant::Dict *speller, spellers_) {
         std::vector<std::string> out_suggestions;
         speller->suggest(word.toUtf8().constData(), out_suggestions);
         std::vector<std::string>::iterator aE = out_suggestions.end();
@@ -85,12 +82,12 @@ QList<QString> EnchantChecker::suggestions(const QString& word)
     return words;
 }
 
-bool EnchantChecker::add(const QString& word)
+bool EnchantChecker::add(const QString &word)
 {
     bool result = false;
     if (!spellers_.isEmpty()) {
         QString trimmed_word = word.trimmed();
-        if(!word.isEmpty()) {
+        if (!word.isEmpty()) {
 #ifdef HAVE_ENCHANT2
             spellers_.first()->add(word.toUtf8().constData());
 #else
@@ -102,26 +99,17 @@ bool EnchantChecker::add(const QString& word)
     return result;
 }
 
-bool EnchantChecker::available() const
-{
-    return (spellers_.isEmpty() != true);
-}
+bool EnchantChecker::available() const { return (spellers_.isEmpty() != true); }
 
-bool EnchantChecker::writable() const
-{
-    return false;
-}
+bool EnchantChecker::writable() const { return false; }
 
-QSet<LanguageManager::LangId> EnchantChecker::getAllLanguages() const
-{
-    return allLanguages_.keys().toSet();
-}
+QSet<LanguageManager::LangId> EnchantChecker::getAllLanguages() const { return allLanguages_.keys().toSet(); }
 
-void EnchantChecker::setActiveLanguages(const QSet<LanguageManager::LangId>& langs)
+void EnchantChecker::setActiveLanguages(const QSet<LanguageManager::LangId> &langs)
 {
     clearSpellers();
 
-    for (auto const &lang: langs) {
+    for (auto const &lang : langs) {
         auto it = allLanguages_.constFind(lang);
         if (it == allLanguages_.constEnd())
             continue;
@@ -140,19 +128,17 @@ void EnchantChecker::clearSpellers()
     spellers_.clear();
 }
 
-void EnchantChecker::enchantDictDescribeFn(const char *const lang_tag,
-                                           const char *const provider_name,
-                                           const char *const provider_desc,
-                                           const char *const provider_file,
+void EnchantChecker::enchantDictDescribeFn(const char *const lang_tag, const char *const provider_name,
+                                           const char *const provider_desc, const char *const provider_file,
                                            void *user_data)
 {
     Q_UNUSED(provider_name);
     Q_UNUSED(provider_desc);
     Q_UNUSED(provider_file);
-    EnchantChecker *enchantChecker = static_cast<EnchantChecker*>(user_data);
+    EnchantChecker *enchantChecker = static_cast<EnchantChecker *>(user_data);
 
     QString lang(QString::fromLatin1(lang_tag));
-    auto id = LanguageManager::fromString(lang);
+    auto    id = LanguageManager::fromString(lang);
     if (!id.language) {
         id = LanguageManager::fromString(lang.section(QLatin1Char('_'), 0, 0));
     }

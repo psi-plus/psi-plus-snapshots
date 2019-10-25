@@ -31,16 +31,15 @@
 #include <QList>
 #include <QString>
 
-class MacSpellChecker : public SpellChecker
-{
+class MacSpellChecker : public SpellChecker {
 public:
     MacSpellChecker();
     ~MacSpellChecker();
-    virtual QList<QString> suggestions(const QString&);
-    virtual bool isCorrect(const QString&);
-    virtual bool add(const QString&);
-    virtual bool available() const;
-    virtual bool writable() const;
+    virtual QList<QString> suggestions(const QString &);
+    virtual bool           isCorrect(const QString &);
+    virtual bool           add(const QString &);
+    virtual bool           available() const;
+    virtual bool           writable() const;
 };
 
 #endif // MACSPELLCHECKER_H

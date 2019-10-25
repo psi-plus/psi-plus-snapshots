@@ -26,14 +26,14 @@
 #include <QDBusUnixFileDescriptor>
 #endif
 
-class UnixSystemWatch : public SystemWatch
-{
+class UnixSystemWatch : public SystemWatch {
     Q_OBJECT
 
 #ifdef USE_DBUS
     QDBusUnixFileDescriptor lockFd; // systemd inhibitor for sleep. system goes to sleep as soon as lock is closed
 #endif
     void takeSleepLock();
+
 public:
     UnixSystemWatch();
     void proceedWithSleep();

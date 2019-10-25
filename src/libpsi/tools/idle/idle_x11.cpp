@@ -24,7 +24,7 @@
 IdlePlatform::IdlePlatform() { d = nullptr; }
 IdlePlatform::~IdlePlatform() {}
 bool IdlePlatform::init() { return false; }
-int IdlePlatform::secondsIdle() { return 0; }
+int  IdlePlatform::secondsIdle() { return 0; }
 
 #else
 
@@ -41,32 +41,28 @@ int IdlePlatform::secondsIdle() { return 0; }
 #include <X11/extensions/scrnsaver.h>
 
 static XErrorHandler old_handler = 0;
-extern "C" int xerrhandler(Display* dpy, XErrorEvent* err)
+extern "C" int       xerrhandler(Display *dpy, XErrorEvent *err)
 {
-    if(err->error_code == BadDrawable)
+    if (err->error_code == BadDrawable)
         return 0;
 
     return (*old_handler)(dpy, err);
 }
 
-class IdlePlatform::Private
-{
+class IdlePlatform::Private {
 public:
     Private() {}
 
     XScreenSaverInfo *ss_info = nullptr;
 };
 
-IdlePlatform::IdlePlatform()
-{
-    d = new Private;
-}
+IdlePlatform::IdlePlatform() { d = new Private; }
 
 IdlePlatform::~IdlePlatform()
 {
-    if(d->ss_info)
+    if (d->ss_info)
         XFree(d->ss_info);
-    if(old_handler) {
+    if (old_handler) {
         XSetErrorHandler(old_handler);
         old_handler = 0;
     }
@@ -75,16 +71,16 @@ IdlePlatform::~IdlePlatform()
 
 bool IdlePlatform::init()
 {
-    if(!QX11Info::isPlatformX11())
+    if (!QX11Info::isPlatformX11())
         return false;
 
-    if(d->ss_info)
+    if (d->ss_info)
         return true;
 
     old_handler = XSetErrorHandler(xerrhandler);
 
     int event_base, error_base;
-    if(XScreenSaverQueryExtension(QX11Info::display(), &event_base, &error_base)) {
+    if (XScreenSaverQueryExtension(QX11Info::display(), &event_base, &error_base)) {
         d->ss_info = XScreenSaverAllocInfo();
         return true;
     }
@@ -93,9 +89,9 @@ bool IdlePlatform::init()
 
 int IdlePlatform::secondsIdle()
 {
-    if(!d->ss_info)
+    if (!d->ss_info)
         return 0;
-    if(!XScreenSaverQueryInfo(QX11Info::display(), QX11Info::appRootWindow(), d->ss_info))
+    if (!XScreenSaverQueryInfo(QX11Info::display(), QX11Info::appRootWindow(), d->ss_info))
         return 0;
     return d->ss_info->idle / 1000;
 }

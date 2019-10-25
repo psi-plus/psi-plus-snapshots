@@ -22,17 +22,19 @@
 #include <Carbon/Carbon.h>
 
 // Why does Apple have to make this so complicated?
-static OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef *bundlePtr) {
-    OSStatus  err;
-    FSRef   frameworksFolderRef;
+static OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef *bundlePtr)
+{
+    OSStatus err;
+    FSRef    frameworksFolderRef;
     CFURLRef baseURL;
     CFURLRef bundleURL;
 
-    if ( bundlePtr == nil ) return( -1 );
+    if (bundlePtr == nil)
+        return (-1);
 
     *bundlePtr = nil;
 
-    baseURL = nil;
+    baseURL   = nil;
     bundleURL = nil;
 
     err = FSFindFolder(kOnAppropriateDisk, kFrameworksFolderType, true, &frameworksFolderRef);
@@ -55,7 +57,7 @@ static OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef *bundlePt
         }
     }
     if (err == noErr) {
-        if ( ! CFBundleLoadExecutable( *bundlePtr ) ) {
+        if (!CFBundleLoadExecutable(*bundlePtr)) {
             err = coreFoundationUnknownErr;
         }
     }
@@ -78,47 +80,45 @@ static OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef *bundlePt
 class IdlePlatform::Private {
 public:
     EventLoopTimerRef mTimerRef;
-    int mSecondsIdle;
+    int               mSecondsIdle;
 
     Private() : mTimerRef(0), mSecondsIdle(0) {}
 
-    static pascal void IdleTimerAction(EventLoopTimerRef, EventLoopIdleTimerMessage inState, void* inUserData);
-
+    static pascal void IdleTimerAction(EventLoopTimerRef, EventLoopIdleTimerMessage inState, void *inUserData);
 };
 
-pascal void IdlePlatform::Private::IdleTimerAction(EventLoopTimerRef, EventLoopIdleTimerMessage inState, void* inUserData) {
+pascal void IdlePlatform::Private::IdleTimerAction(EventLoopTimerRef, EventLoopIdleTimerMessage inState,
+                                                   void *inUserData)
+{
     switch (inState) {
-        case kEventLoopIdleTimerStarted:
-        case kEventLoopIdleTimerStopped:
-            // Get invoked with this constant at the start of the idle period,
-            // or whenever user activity cancels the idle.
-           ((IdlePlatform::Private*)inUserData)->mSecondsIdle = 0;
-            break;
-        case kEventLoopIdleTimerIdling:
-            // Called every time the timer fires (i.e. every second).
-           ((IdlePlatform::Private*)inUserData)->mSecondsIdle++;
-            break;
+    case kEventLoopIdleTimerStarted:
+    case kEventLoopIdleTimerStopped:
+        // Get invoked with this constant at the start of the idle period,
+        // or whenever user activity cancels the idle.
+        ((IdlePlatform::Private *)inUserData)->mSecondsIdle = 0;
+        break;
+    case kEventLoopIdleTimerIdling:
+        // Called every time the timer fires (i.e. every second).
+        ((IdlePlatform::Private *)inUserData)->mSecondsIdle++;
+        break;
     }
 }
 
-IdlePlatform::IdlePlatform() {
-    d = new Private();
-}
+IdlePlatform::IdlePlatform() { d = new Private(); }
 
-IdlePlatform::~IdlePlatform() {
+IdlePlatform::~IdlePlatform()
+{
     RemoveEventLoopTimer(d->mTimerRef);
     delete d;
 }
 
 // Typedef for the function we're getting back from CFBundleGetFunctionPointerForName.
-typedef OSStatus (*InstallEventLoopIdleTimerPtr)(EventLoopRef inEventLoop,
-                                                                 EventTimerInterval   inFireDelay,
-                                                                 EventTimerInterval   inInterval,
-                                                                 EventLoopIdleTimerUPP    inTimerProc,
-                                                                 void *               inTimerData,
-                                                                 EventLoopTimerRef *  outTimer);
+typedef OSStatus (*InstallEventLoopIdleTimerPtr)(EventLoopRef inEventLoop, EventTimerInterval inFireDelay,
+                                                 EventTimerInterval inInterval, EventLoopIdleTimerUPP inTimerProc,
+                                                 void *inTimerData, EventLoopTimerRef *outTimer);
 
-bool IdlePlatform::init() {
+bool IdlePlatform::init()
+{
     // May already be init'ed.
     if (d->mTimerRef) {
         return true;
@@ -130,24 +130,25 @@ bool IdlePlatform::init() {
 
     // Load the "Carbon.framework" bundle.
     CFBundleRef carbonBundle;
-    if (LoadFrameworkBundle( CFSTR("Carbon.framework"), &carbonBundle ) != noErr) {
+    if (LoadFrameworkBundle(CFSTR("Carbon.framework"), &carbonBundle) != noErr) {
         return false;
     }
 
     // Load the Mach-O function pointers for the routine we will be using.
-    InstallEventLoopIdleTimerPtr myInstallEventLoopIdleTimer = (InstallEventLoopIdleTimerPtr)CFBundleGetFunctionPointerForName(carbonBundle, CFSTR("InstallEventLoopIdleTimer"));
+    InstallEventLoopIdleTimerPtr myInstallEventLoopIdleTimer
+        = (InstallEventLoopIdleTimerPtr)CFBundleGetFunctionPointerForName(carbonBundle,
+                                                                          CFSTR("InstallEventLoopIdleTimer"));
     if (myInstallEventLoopIdleTimer == 0) {
         return false;
     }
 
     EventLoopIdleTimerUPP timerUPP = NewEventLoopIdleTimerUPP(Private::IdleTimerAction);
-    if ((*myInstallEventLoopIdleTimer)(GetMainEventLoop(), kEventDurationSecond, kEventDurationSecond, timerUPP, 0, &d->mTimerRef)) {
+    if ((*myInstallEventLoopIdleTimer)(GetMainEventLoop(), kEventDurationSecond, kEventDurationSecond, timerUPP, 0,
+                                       &d->mTimerRef)) {
         return true;
     }
 
     return false;
 }
 
-int IdlePlatform::secondsIdle() {
-    return d->mSecondsIdle;
-}
+int IdlePlatform::secondsIdle() { return d->mSecondsIdle; }

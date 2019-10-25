@@ -24,65 +24,50 @@
 #include <QString>
 #include <QWidget>
 
-class GroupChatBrowseWindow : public QWidget
-{
+class GroupChatBrowseWindow : public QWidget {
     Q_OBJECT
 
 public:
-    class RoomOptions
-    {
+    class RoomOptions {
     public:
         XMPP::Jid jid;
-        QString roomName;
-        bool visible;
+        QString   roomName;
+        bool      visible;
 
-        RoomOptions() :
-            visible(false)
-        {
-        }
+        RoomOptions() : visible(false) {}
     };
 
-    class RoomInfo
-    {
+    class RoomInfo {
     public:
         XMPP::Jid jid;
-        bool remove;
+        bool      remove;
 
         // the following are only valid if 'remove' is false
         QString roomName;
-        bool autoJoin;
-        bool owner;
-        int participants;
+        bool    autoJoin;
+        bool    owner;
+        int     participants;
 
-        RoomInfo() :
-            remove(false),
-            autoJoin(false),
-            owner(false),
-            participants(-1)
-        {
-        }
+        RoomInfo() : remove(false), autoJoin(false), owner(false), participants(-1) {}
     };
 
-    GroupChatBrowseWindow(QWidget *parent = 0) :
-        QWidget(parent)
-    {
-    }
+    GroupChatBrowseWindow(QWidget *parent = 0) : QWidget(parent) {}
 
     // FIXME: remove this
-    virtual QObject *controller() const = 0;
-    virtual void setController(QObject *controller) = 0;
+    virtual QObject *controller() const                 = 0;
+    virtual void     setController(QObject *controller) = 0;
 
-    virtual void setGroupChatIcon(const QPixmap &icon) = 0;
+    virtual void setGroupChatIcon(const QPixmap &icon)  = 0;
     virtual void setServer(const XMPP::Jid &roomServer) = 0;
-    virtual void setServerVisible(bool b) = 0;
-    virtual void setNicknameVisible(bool b) = 0;
+    virtual void setServerVisible(bool b)               = 0;
+    virtual void setNicknameVisible(bool b)             = 0;
 
 signals:
     void onBrowse(const XMPP::Jid &roomServer);
     void onJoin(const XMPP::Jid &room);
     void onCreate(const XMPP::Jid &room);
     void onCreateConfirm(const GroupChatBrowseWindow::RoomOptions &options);
-    void onCreateCancel(const XMPP::Jid &room); // no ack
+    void onCreateCancel(const XMPP::Jid &room);              // no ack
     void onCreateFinalize(const XMPP::Jid &room, bool join); // no-ack if join=false
     void onDestroy(const XMPP::Jid &room);
     void onSetAutoJoin(const QList<XMPP::Jid> &rooms, bool enabled);
@@ -90,10 +75,10 @@ signals:
 public slots:
     // onBrowse
     virtual void handleBrowseResultsReady(const QList<GroupChatBrowseWindow::RoomInfo> &list) = 0;
-    virtual void handleBrowseError(const QString &reason) = 0;
+    virtual void handleBrowseError(const QString &reason)                                     = 0;
 
     // onJoin or onCreateFinalize
-    virtual void handleJoinSuccess() = 0;
+    virtual void handleJoinSuccess()                    = 0;
     virtual void handleJoinError(const QString &reason) = 0;
 
     // from onCreate
@@ -106,12 +91,11 @@ public slots:
     virtual void handleCreateError(const QString &reason) = 0;
 
     // from onDestroy
-    virtual void handleDestroySuccess() = 0;
+    virtual void handleDestroySuccess()                    = 0;
     virtual void handleDestroyError(const QString &reason) = 0;
 };
 
-class PsiGroupChatBrowseWindow : public GroupChatBrowseWindow
-{
+class PsiGroupChatBrowseWindow : public GroupChatBrowseWindow {
     Q_OBJECT
 
 public:
@@ -120,7 +104,7 @@ public:
 
     // FIXME: remove this
     virtual QObject *controller() const;
-    virtual void setController(QObject *controller);
+    virtual void     setController(QObject *controller);
 
     // from qwidget
     virtual void resizeEvent(QResizeEvent *event);
