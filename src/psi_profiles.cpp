@@ -87,7 +87,7 @@ void UserAccount::reset()
     port = 5222;
     opt_host = false;
     host = "";
-    opt_automatic_resource = false;
+    opt_automatic_resource = true;
     priority_dep_on_status = true;
     ignore_global_actions = false;
     resource = ApplicationInfo::name();
