@@ -759,9 +759,6 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 mnc.connectToHost(
                     key, Candidate::Pending, q,
                     [this, mnc](bool success) {
-                        if (mnc.state() == Candidate::Discarded)
-                            return;
-
                         // candidate's status had to be changed by connectToHost, so we don't set it again
                         if (success) {
                             // let's reject candidates which are meaningless to try
