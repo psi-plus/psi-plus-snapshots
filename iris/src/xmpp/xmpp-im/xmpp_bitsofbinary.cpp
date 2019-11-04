@@ -64,7 +64,7 @@ Hash BoBData::cidToHash(const QString &cid)
 
 QString BoBData::cid() const
 {
-    if (!isNull())
+    if (isNull())
         return QString();
     return QString("%1+%2@bob.xmpp.org").arg(d->hash.stringType(), QString::fromLatin1(d->hash.data().toHex()));
 }

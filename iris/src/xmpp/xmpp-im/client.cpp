@@ -662,7 +662,11 @@ void Client::send(const QString &str)
 }
 
 /* drops any pending outgoing xml elements */
-void Client::clearSendQueue() { d->stream->clearSendQueue(); }
+void Client::clearSendQueue()
+{
+    if (d->stream)
+        d->stream->clearSendQueue();
+}
 
 bool Client::hasStream() const { return !!d->stream; }
 

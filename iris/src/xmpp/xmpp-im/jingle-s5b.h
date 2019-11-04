@@ -53,6 +53,7 @@ namespace Jingle { namespace S5B {
          *   Unacked      - candidate is sent to remote but no iq ack yet
          *   Pending      - canidate sent to remote. we have iq ack but no "used" or "error"
          *   Accepted     - we got "candidate-used" for this candidate
+         *   Activating   - only for proxy: we activate the proxy
          *   Active       - use this candidate for actual data transfer
          *   Discarded    - we got "candidate-error" so all pending were marked Discarded
          *
@@ -62,6 +63,7 @@ namespace Jingle { namespace S5B {
          *   Pending      - connection was successful, but we didn't send candidate-used to remote
          *   Unacked      - connection was successful and we sent candidate-used to remote but no iq ack yet
          *   Accepted     - we sent candidate-used and got iq ack
+         *   Activating   - [not used]
          *   Active       - use this candidate for actual data transfer
          *   Discarded    - failed to connect to all remote candidates
          */
@@ -71,6 +73,7 @@ namespace Jingle { namespace S5B {
             Pending,
             Unacked,
             Accepted,
+            Activating,
             Active,
             Discarded,
         };
@@ -86,6 +89,7 @@ namespace Jingle { namespace S5B {
         inline bool        isValid() const { return d != nullptr; }
         inline             operator bool() const { return isValid(); }
         Type               type() const;
+        static const char *typeText(Type t);
         QString            cid() const;
         Jid                jid() const;
         QString            host() const;
@@ -100,6 +104,7 @@ namespace Jingle { namespace S5B {
         quint32            priority() const;
 
         QDomElement toXml(QDomDocument *doc) const;
+        QString     toString() const;
 
         void               connectToHost(const QString &key, State successState, QObject *callbackContext,
                                          std::function<void(bool)> callback, bool isUdp = false);
