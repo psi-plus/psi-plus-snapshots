@@ -443,6 +443,7 @@ HttpFileUpload *HttpFileUploadManager::upload(const QString &srcFilename, const 
     auto f = new QFile(srcFilename);
     f->open(QIODevice::ReadOnly);
     auto hfu = upload(f, f->size(), dstFilename, mType);
+    connect(hfu, &HttpFileUpload::finished, this, [f](){f->close();});
     f->setParent(hfu);
     return hfu;
 }
