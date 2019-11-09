@@ -97,7 +97,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         QString     mediaType;
         QString     name;
         QString     desc;
-        size_t      size           = 0;
+        qint64      size           = 0;
         bool        rangeSupported = false;
         bool        hasSize        = false;
         Range       range;
@@ -122,22 +122,22 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 name = ce.text();
 
             } else if (ce.tagName() == SIZE_TAG) {
-                size = ce.text().toULongLong(&ok);
-                if (!ok) {
+                size = ce.text().toLongLong(&ok);
+                if (!ok || size < 0) {
                     return;
                 }
                 hasSize = true;
 
             } else if (ce.tagName() == RANGE_TAG) {
                 if (ce.hasAttribute(QLatin1String("offset"))) {
-                    range.offset = ce.attribute(QLatin1String("offset")).toULongLong(&ok);
-                    if (!ok) {
+                    range.offset = ce.attribute(QLatin1String("offset")).toLongLong(&ok);
+                    if (!ok || range.offset < 0) {
                         return;
                     }
                 }
                 if (ce.hasAttribute(QLatin1String("length"))) {
-                    range.length = ce.attribute(QLatin1String("length")).toULongLong(&ok);
-                    if (!ok || !range.length) { // length should absent if we need to read till end of file. 0-length is
+                    range.length = ce.attribute(QLatin1String("length")).toLongLong(&ok);
+                    if (!ok || range.length <= 0) { // length should absent if we need to read till end of file. 0-length is
                                                 // nonsense
                         return;
                     }
@@ -299,7 +299,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     QString File::name() const { return d ? d->name : QString(); }
 
-    quint64 File::size() const { return d ? d->size : 0; }
+    qint64 File::size() const { return d ? d->size : 0; }
 
     Range File::range() const { return d ? d->range : Range(); }
 
@@ -317,7 +317,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     void File::setName(const QString &name) { ensureD()->name = name; }
 
-    void File::setSize(quint64 size)
+    void File::setSize(qint64 size)
     {
         ensureD()->size = size;
         d->hasSize      = true;
@@ -427,7 +427,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         bool                      streamigMode        = false;
         bool                      endlessRange        = false; // where range in accepted file doesn't have end
         QIODevice *               device              = nullptr;
-        quint64                   bytesLeft           = 0;
+        qint64                    bytesLeft           = 0;
 
         void setState(State s)
         {
@@ -456,7 +456,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 setState(State::Finished);
                 return; // everything is written
             }
-            auto sz = connection->blockSize();
+            auto sz = qint64(connection->blockSize());
             sz      = sz ? sz : 8192;
             if (!endlessRange && sz > bytesLeft) {
                 sz = bytesLeft;
@@ -489,9 +489,9 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
         void readNextBlockFromTransport()
         {
-            quint64 bytesAvail;
+            qint64 bytesAvail;
             while (bytesLeft && (bytesAvail = connection->bytesAvailable())) {
-                quint64 sz = 65536; // shall we respect transport->blockSize() ?
+                qint64 sz = 65536; // shall we respect transport->blockSize() ?
                 if (sz > bytesLeft) {
                     sz = bytesLeft;
                 }

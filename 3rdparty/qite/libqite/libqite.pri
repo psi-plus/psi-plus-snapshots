@@ -3,11 +3,13 @@
 SOURCES += \
     $$PWD/qite.cpp \
     $$PWD/qiteaudio.cpp \
+    $$PWD/qiteprogress.cpp \
     $$PWD/qiteaudiorecorder.cpp
 
 HEADERS += \
     $$PWD/qite.h \
     $$PWD/qiteaudio.h \
+    $$PWD/qiteprogress.h \
     $$PWD/qiteaudiorecorder.h
 
 INCLUDEPATH += $$PWD

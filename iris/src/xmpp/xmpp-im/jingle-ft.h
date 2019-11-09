@@ -64,7 +64,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         Hash        hash(Hash::Type t = Hash::Unknown) const;
         QString     mediaType() const;
         QString     name() const;
-        quint64     size() const;
+        qint64      size() const;
         Range       range() const;
         Thumbnail   thumbnail() const;
         QByteArray  amplitudes() const;
@@ -74,7 +74,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         void addHash(const Hash &hash);
         void setMediaType(const QString &mediaType);
         void setName(const QString &name);
-        void setSize(quint64 size);
+        void setSize(qint64 size);
         void setRange(const Range &range = Range()); // default empty just to indicate it's supported
         void setThumbnail(const Thumbnail &thumb);
         void setAmplitudes(const QByteArray &amplitudes);
@@ -122,7 +122,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         Q_OBJECT
     public:
         Application(const QSharedPointer<Pad> &pad, const QString &contentName, Origin creator, Origin senders);
-        ~Application();
+        ~Application() override;
 
         ApplicationManagerPad::Ptr pad() const override;
         State                      state() const override;
@@ -176,8 +176,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         void connectionReady(); // streaming mode only
 
         // if size = 0 then it's reamaining part of the file (non-streaming mode only)
-        void deviceRequested(quint64 offset, quint64 size);
-        void progress(quint64 offset);
+        void deviceRequested(qint64 offset, qint64 size);
+        void progress(qint64 offset);
 
     private:
         class Private;
