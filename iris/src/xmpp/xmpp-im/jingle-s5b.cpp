@@ -1406,7 +1406,10 @@ namespace XMPP { namespace Jingle { namespace S5B {
             }
             if (!candidatesToSend.isEmpty()) {
                 d->waitingAck = true;
-                upd           = OutgoingTransportInfoUpdate { tel, [this, candidatesToSend]() mutable {
+                QPointer<Transport> trptr(d->q);
+                upd = OutgoingTransportInfoUpdate { tel, [this, candidatesToSend, trptr = std::move(trptr)]() mutable {
+                                                       if (!trptr)
+                                                           return;
                                                        d->waitingAck= false;
                                                        for (auto &c : candidatesToSend) {
                                                            if (c.state() == Candidate::Unacked) {
@@ -1434,7 +1437,10 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 c.setState(Candidate::Unacked);
 
                 d->waitingAck = true;
-                upd           = OutgoingTransportInfoUpdate { tel, [this, c]() mutable {
+                QPointer<Transport> trptr(d->q);
+                upd = OutgoingTransportInfoUpdate { tel, [this, c, trptr = std::move(trptr)]() mutable {
+                                                       if (!trptr)
+                                                           return;
                                                        d->waitingAck= false;
                                                        if (c.state() == Candidate::Unacked) {
                                                            c.setState(Candidate::Accepted);
@@ -1456,7 +1462,10 @@ namespace XMPP { namespace Jingle { namespace S5B {
             // we are here because all remote are already in Discardd state
             tel.appendChild(doc->createElement(QStringLiteral("candidate-error")));
             d->waitingAck = true;
-            upd           = OutgoingTransportInfoUpdate { tel, [this]() mutable {
+            QPointer<Transport> trptr(d->q);
+            upd = OutgoingTransportInfoUpdate { tel, [this, trptr = std::move(trptr)]() mutable {
+                                                   if (!trptr)
+                                                       return;
                                                    d->waitingAck= false;
                                                    d->localReportedCandidateError= true;
                                                    d->checkAndFinishNegotiation();
@@ -1469,9 +1478,11 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 auto el = tel.appendChild(doc->createElement(QStringLiteral("activated"))).toElement();
                 el.setAttribute(QStringLiteral("cid"), cand.cid());
                 d->waitingAck = true;
-                upd           = OutgoingTransportInfoUpdate { tel, [this, cand]() mutable {
+                QPointer<Transport> trptr(d->q);
+                upd = OutgoingTransportInfoUpdate { tel, [this, cand, trptr = std::move(trptr)]() mutable {
                                                        qDebug("ack: sending activated: cid=%s", qPrintable(cand.cid()));
-                                                       d->waitingAck= false;
+                                                       if (trptr)
+                                                           d->waitingAck = false;
                                                    } };
             }
         } else if (d->pendingActions & Private::ProxyError) {
@@ -1482,9 +1493,12 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 tel.appendChild(doc->createElement(QStringLiteral("proxy-error")));
                 d->waitingAck = true;
                 qDebug("sending proxy error: cid=%s", qPrintable(cand.cid()));
+                QPointer<Transport> trptr(d->q);
                 upd = OutgoingTransportInfoUpdate {
                     tel,
-                    [this, cand]() mutable {
+                    [this, cand, trptr = std::move(trptr)]() mutable {
+                        if (!trptr)
+                            return;
                         d->waitingAck = false;
                         qDebug("ack: sending proxy error: cid=%s", qPrintable(cand.cid()));
                         if (cand.state() != Candidate::Accepted || d->localUsedCandidate != cand) {
@@ -1501,7 +1515,11 @@ namespace XMPP { namespace Jingle { namespace S5B {
         } else {
             qDebug("sending empty transport-info");
             d->waitingAck = true;
-            upd           = OutgoingTransportInfoUpdate { tel, [this]() mutable { d->waitingAck = false; } };
+            QPointer<Transport> trptr(d->q);
+            upd = OutgoingTransportInfoUpdate { tel, [this, trptr = std::move(trptr)]() mutable {
+                                                   if (trptr)
+                                                       d->waitingAck = false;
+                                               } };
         }
 
         return upd; // TODO

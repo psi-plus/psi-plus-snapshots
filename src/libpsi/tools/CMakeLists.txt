@@ -234,6 +234,20 @@ elseif(APPLE)
     list(APPEND HEADERS
         spellchecker/macspellchecker.h
         )
+elseif(USE_ASPELL)
+    add_definitions(-DHAVE_ASPELL)
+    include_directories(
+        ${ASPELL_INCLUDE_DIR}
+        )
+    list(APPEND EXTRA_LDFLAGS
+        ${ASPELL_LIBRARIES}
+        )
+    list(APPEND HEADERS
+        spellchecker/aspellchecker.h
+        )
+    list(APPEND SOURCES
+        spellchecker/aspellchecker.cpp
+        )
 endif()
 
 qt5_wrap_ui(UI_FORMS ${FORMS})
