@@ -161,6 +161,8 @@ public:
         bool internet;
         bool x400;
 
+        bool pref;
+
         QString userid;
     };
     typedef QList<Email> EmailList;
