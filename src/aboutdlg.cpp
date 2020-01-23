@@ -29,7 +29,11 @@ AboutDlg::AboutDlg(QWidget *parent) : QDialog(parent)
 {
     setAttribute(Qt::WA_DeleteOnClose);
     ui_.setupUi(this);
+#ifdef PSI_PLUS
     setWindowIcon(IconsetFactory::icon("psi/psiplus_logo").icon());
+#else
+    setWindowIcon(IconsetFactory::icon("psi/logo_32").icon());
+#endif
 
     setModal(false);
 
@@ -58,6 +62,8 @@ AboutDlg::AboutDlg(QWidget *parent) : QDialog(parent)
     authors += details(QString::fromUtf8("Boris Pek"), "tehnick-8@yandex.ru", "", "", tr("Developer and Maintainer"));
     ui_.te_authors->setText(authors);
 
+#ifdef PSI_PLUS
+
     // fill in About Psi+ tab...
     QString psiplus;
     psiplus += details(QString::fromUtf8("Psi+ Project"), "", "psi-dev@conference.jabber.ru", "https://psi-plus.com/",
@@ -83,6 +89,15 @@ AboutDlg::AboutDlg(QWidget *parent) : QDialog(parent)
                        tr("Patcher and former Russian translator"));
     psiplus += details(QString::fromUtf8("Z_God"), "", "", "", tr("Psimedia Patcher and Wiki English localization"));
     ui_.te_psiplus->setText(psiplus);
+    PsiIcon _icon = IconsetFactory::icon("psi/psiplus_logo");
+    ui_.lb_icon->setPsiIcon(&_icon, true);
+#else
+    for (int i = 0; i < ui_.tw_tabs->count(); ++i) {
+        if (ui_.tw_tabs->tabText(i).contains("psi+", Qt::CaseInsensitive))
+            ui_.tw_tabs->removeTab(i);
+    }
+    setWindowTitle(tr("About Psi"));
+#endif
 
     // fill in Thanks To tab...
     QString thanks;
@@ -161,7 +176,11 @@ QString AboutDlg::details(QString name, QString email, QString jabber, QString w
     if (!email.isEmpty())
         ret += nbsp + "E-mail: " + "<a href=\"mailto:" + email + "\">" + email + "</a><br>\n";
     if (!jabber.isEmpty())
+#ifndef PSI_PLUS
+        ret += nbsp + "XMPP: " + "<a href=\"xmpp:" + jabber + "\">" + jabber + "</a><br>\n";
+#else
         ret += nbsp + "XMPP: " + "<a href=\"xmpp:" + jabber + "?join\">" + jabber + "</a><br>\n";
+#endif
     if (!www.isEmpty())
         ret += nbsp + "WWW: " + "<a href=\"" + www + "\">" + www + "</a><br>\n";
     if (!desc.isEmpty())

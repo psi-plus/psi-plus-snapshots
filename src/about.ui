@@ -49,7 +49,7 @@
      <item>
       <widget class="IconLabel" name="lb_icon" native="true">
        <property name="psiIconName" stdset="0">
-        <string>psi/psiplus_logo</string>
+        <string>psi/logo_48</string>
        </property>
       </widget>
      </item>

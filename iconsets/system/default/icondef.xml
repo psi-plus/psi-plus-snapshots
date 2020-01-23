@@ -352,7 +352,7 @@
 
 	<icon>
 		<x xmlns='name'>psi/logo</x>
-		<object mime='image/png'>psiplus/psilogo.png</object>
+		<object mime='image/png'>psilogo.png</object>
 	</icon>
 
 	<icon>
@@ -739,72 +739,4 @@
 		<x xmlns='name'>psi/mic_rec</x>
 		<object mime='image/png'>mic_rec.png</object>
 	</icon>
-
-	<!-- conferenceloggerplugin icon -->
-	<icon>
-		<x xmlns='name'>loggerplugin/openlog</x>
-		<object mime='image/png'>history.png</object>
-	</icon>
-	<!-- End conferenceloggerplugin icon -->
-
-	<!-- Psi Plus icons -->
-
-	<icon>
-		<x xmlns='name'>psi/action_vcard_restore</x>
-		<object mime='image/png'>psiplus/action_vcard_restore.png</object>
-	</icon>
-
-	<icon>
-		<x xmlns='name'>psi/action_vcard_save_as</x>
-		<object mime='image/png'>psiplus/action_vcard_save_as.png</object>
-	</icon>
-
-	<icon>
-		<x xmlns='name'>psi/psiplus_logo</x>
-		<object mime='image/png'>psiplus/psiplus_logo.png</object>
-	</icon>
-
-	<icon>
-		<x xmlns='name'>psi/doubleNextArrow</x>
-		<object mime='image/png'>psiplus/doublenextarrow.png</object>
-	</icon>
-
-	<icon>
-		<x xmlns='name'>psi/doubleBackArrow</x>
-		<object mime='image/png'>psiplus/doublebackarrow.png</object>
-	</icon>
-	<!-- End psi Plus icons -->
-
-	<!-- Icons for screenshot-plugin -->
-	<icon>
-		<x xmlns='name'>psi/crop</x>
-		<object mime='image/png'>psiplus/crop.png</object>
-	</icon>
-
-	<icon>
-		<x xmlns='name'>psi/draw</x>
-		<object mime='image/png'>psiplus/draw.png</object>
-	</icon>
-
-	<icon>
-		<x xmlns='name'>psi/frame</x>
-		<object mime='image/png'>psiplus/frame.png</object>
-	</icon>
-
-	<icon>
-		<x xmlns='name'>psi/palette</x>
-		<object mime='image/png'>psiplus/palette.png</object>
-	</icon>
-
-	<icon>
-		<x xmlns='name'>psi/undo</x>
-		<object mime='image/png'>psiplus/undo.png</object>
-	</icon>
-
-	<icon>
-		<x xmlns='name'>psi/print</x>
-		<object mime='image/png'>psiplus/print.png</object>
-	</icon>
-	<!-- End icons for screenshot-plugin -->
-
 </icondef>

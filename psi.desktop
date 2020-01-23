@@ -2,15 +2,15 @@
 # This is the spec version, *not* the application version
 Version=1.1
 Type=Application
-Name=Psi+
+Name=Psi
 GenericName=XMPP Client
 Comment=Communicate over the XMPP network
-Icon=psi-plus
-Exec=psi-plus %U
+Icon=psi
+Exec=psi %U
 MimeType=x-scheme-handler/xmpp;
 Terminal=false
 X-KDE-StartupNotify=true
-StartupWMClass=Psi-plus
+StartupWMClass=Psi
 Categories=Network;InstantMessaging;Qt;
 Keywords=XMPP;Jabber;Chat;InstantMessaging;
 Actions=SelectProfile
