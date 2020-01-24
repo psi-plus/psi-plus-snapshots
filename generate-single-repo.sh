@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2019-10-24
+# Updated: 2020-01-24
 # Version: N/A
 
 set -e
@@ -169,6 +169,9 @@ remove_trash()
 cat "${MAIN_DIR}/main/patches"/*.diff | \
     patch -d "${SNAPSHOTS_DIR}" -p1 2>&1 > \
     "${MAIN_DIR}/applying-patches.log" || failed_to_apply_patches
+FROM_STR="option(PSI_PLUS .*$"
+TO_STR="option(PSI_PLUS \"Build Psi+ client instead of Psi\" ON)"
+sed -i "s|${FROM_STR}|${TO_STR}|g" CMakeLists.txt
 echo "* Patches from Psi+ project are applied."
 
 mkdir -p "${SNAPSHOTS_DIR}/patches"
