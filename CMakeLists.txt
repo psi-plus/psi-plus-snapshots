@@ -19,7 +19,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 #Psi or Psi+ detection
-option(PSI_PLUS "Build Psi+ client instead of Psi" OFF)
+option(PSI_PLUS "Build Psi+ client instead of Psi" ON)
 if(PSI_PLUS)
     add_definitions(-DPSI_PLUS)
     set(IS_PSIPLUS ON)
