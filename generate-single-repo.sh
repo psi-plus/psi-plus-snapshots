@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2020-01-24
+# Updated: 2020-01-25
 # Version: N/A
 
 set -e
@@ -181,9 +181,6 @@ echo "* Plugins from Psi project are copied."
 
 rsync -a "${MAIN_DIR}/main/admin/" "${SNAPSHOTS_DIR}/admin/"
 echo "* Extra scripts from Psi+ project are copied."
-
-rsync -a "${MAIN_DIR}/main/iconsets/system/" "${SNAPSHOTS_DIR}/iconsets/system/"
-echo "* Iconsets from Psi+ project are copied."
 
 rsync -a "${MAIN_DIR}/resources/sound/" "${SNAPSHOTS_DIR}/sound/"
 echo "* Sound files from Psi+ project are copied."
