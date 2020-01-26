@@ -203,7 +203,8 @@ cp -a "${MAIN_DIR}/psi/win32"/*.cmake "${SNAPSHOTS_DIR}/win32/"
 cp -a "${MAIN_DIR}/psi/win32"/*.manifest "${SNAPSHOTS_DIR}/win32/"
 echo "* Some files for MS Windows builds are copied."
 
-cp -a "${MAIN_DIR}/main/application.icns" "${SNAPSHOTS_DIR}/mac/"
+cp -a "${SNAPSHOTS_DIR}/mac/application-plus.icns" \
+      "${SNAPSHOTS_DIR}/mac/application.icns"
 echo "* Some files for macOS builds are copied."
 
 echo;
