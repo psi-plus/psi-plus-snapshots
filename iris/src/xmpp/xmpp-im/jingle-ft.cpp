@@ -18,6 +18,7 @@
  */
 
 #include "jingle-ft.h"
+#include "jingle-session.h"
 
 #include "xmpp_client.h"
 #include "xmpp_hash.h"
@@ -66,14 +67,14 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     //----------------------------------------------------------------------------
     class File::Private : public QSharedData {
     public:
+        bool        rangeSupported = false;
+        bool        hasSize        = false;
         QDateTime   date;
         QString     mediaType;
         QString     name;
         QString     desc;
         qint64      size = 0;
         Range       range;
-        bool        rangeSupported = false;
-        bool        hasSize        = false;
         QList<Hash> hashes;
         Thumbnail   thumbnail;
         QByteArray  amplitudes;
@@ -137,8 +138,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 }
                 if (ce.hasAttribute(QLatin1String("length"))) {
                     range.length = ce.attribute(QLatin1String("length")).toLongLong(&ok);
-                    if (!ok || range.length <= 0) { // length should absent if we need to read till end of file. 0-length is
-                                                // nonsense
+                    if (!ok || range.length <= 0) { // length should absent if we need to read till end of file.
+                                                    // 0-length is nonsense
                         return;
                     }
                 }
@@ -313,6 +314,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     void File::addHash(const Hash &hash) { ensureD()->hashes.append(hash); }
 
+    void File::setHashes(const QList<Hash> &hashes) { ensureD()->hashes = hashes; }
+
     void File::setMediaType(const QString &mediaType) { ensureD()->mediaType = mediaType; }
 
     void File::setName(const QString &name) { ensureD()->name = name; }
@@ -400,38 +403,44 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         return nullptr;
     }
 
-    QStringList Manager::availableTransports() const { return jingleManager->availableTransports(Transport::Reliable); }
+    QStringList Manager::availableTransports() const
+    {
+        return jingleManager->availableTransports(TransportFeature::Reliable);
+    }
 
     //----------------------------------------------------------------------------
     // Application
     //----------------------------------------------------------------------------
     class Application::Private {
     public:
-        Application *             q                     = nullptr;
-        State                     state                 = State::Created;
-        State                     transportReplaceState = State::Finished;
-        Action                    updateToSend          = Action::NoAction;
-        QSharedPointer<Pad>       pad;
-        QString                   contentName;
-        File                      file;
-        File                      acceptFile; // as it comes with "accept" response
-        Origin                    creator;
-        Origin                    senders;
-        Origin                    transportReplaceOrigin = Origin::None;
-        XMPP::Stanza::Error       lastError;
-        Reason                    terminationReason;
-        QSharedPointer<Transport> transport;
-        Connection::Ptr           connection;
-        QStringList               availableTransports;
-        bool                      closeDeviceOnFinish = true;
-        bool                      streamigMode        = false;
-        bool                      endlessRange        = false; // where range in accepted file doesn't have end
-        QIODevice *               device              = nullptr;
-        qint64                    bytesLeft           = 0;
+        struct TransportDesc {
+            Origin                    creator = Origin::None;
+            State                     state   = State::Created;
+            QSharedPointer<Transport> transport;
+        };
+
+        Application *q = nullptr;
+
+        Reason updateReason;
+        // Action              updateToSend            = Action::NoAction;
+        bool                closeDeviceOnFinish = true;
+        bool                streamingMode       = false;
+        bool                endlessRange        = false; // where range in accepted file doesn't have end
+        bool                outgoingReceived    = false;
+        File                file;
+        File                acceptFile; // as it comes with "accept" response
+        XMPP::Stanza::Error lastError;
+        Reason              lastReason;
+        Connection::Ptr     connection;
+        QStringList         availableTransports;
+        QIODevice *         device    = nullptr;
+        qint64              bytesLeft = 0;
+        QList<Hash>         outgoingChecksum;
+        qint64              outgoingChecksumRangeOffset = 0, outgoingChecksumRangeLength = 0;
 
         void setState(State s)
         {
-            state = s;
+            q->_state = s;
             if (s == State::Finished) {
                 if (device && closeDeviceOnFinish) {
                     device->close();
@@ -439,20 +448,26 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 if (connection) {
                     connection->close();
                 }
+                q->disconnect(q->transport().data(), &Transport::updated, q, nullptr);
+            }
+            if (s >= State::Finishing) {
+                q->disconnect(q->transport().data(), &Transport::failed, q, nullptr);
+                q->disconnect(q->transport().data(), &Transport::connected, q, nullptr);
+                // we can still try to send transport updates
             }
             emit q->stateChanged(s);
         }
 
         void handleStreamFail()
         {
-            terminationReason = Reason(Reason::Condition::FailedApplication, QString::fromLatin1("stream failed"));
+            lastReason = Reason(Reason::Condition::FailedApplication, QString::fromLatin1("stream failed"));
             setState(State::Finished);
         }
 
         void writeNextBlockToTransport()
         {
             if (!(endlessRange || bytesLeft)) {
-                terminationReason = Reason(Reason::Condition::Success);
+                lastReason = Reason(Reason::Condition::Success);
                 setState(State::Finished);
                 return; // everything is written
             }
@@ -471,7 +486,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             }
             if (data.isEmpty()) {
                 if (endlessRange) {
-                    terminationReason = Reason(Reason::Condition::Success);
+                    lastReason = Reason(Reason::Condition::Success);
                     setState(State::Finished);
                 } else {
                     handleStreamFail();
@@ -513,7 +528,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             }
             if (!bytesLeft) {
                 // TODO send <received>
-                terminationReason = Reason(Reason::Condition::Success);
+                lastReason = Reason(Reason::Condition::Success);
                 setState(State::Finished);
             }
         }
@@ -524,37 +539,92 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         d(new Private)
     {
         d->q                   = this;
-        d->pad                 = pad;
-        d->contentName         = contentName;
-        d->creator             = creator;
-        d->senders             = senders;
+        _pad                   = pad;
+        _contentName           = contentName;
+        _creator               = creator;
+        _senders               = senders;
         d->availableTransports = static_cast<Manager *>(pad->manager())->availableTransports();
     }
 
     Application::~Application() {}
 
-    ApplicationManagerPad::Ptr Application::pad() const { return d->pad.staticCast<ApplicationManagerPad>(); }
-
-    State Application::state() const { return d->state; }
-
     void Application::setState(State state) { d->setState(state); }
 
     Stanza::Error Application::lastError() const { return d->lastError; }
 
-    Reason Application::terminationReason() const { return d->terminationReason; }
+    Reason Application::lastReason() const { return d->lastReason; }
 
-    QString Application::contentName() const { return d->contentName; }
-
-    Origin Application::creator() const { return d->creator; }
-
-    Origin Application::senders() const { return d->senders; }
-
-    Application::SetDescError Application::setDescription(const QDomElement &description)
+    static Application::SetDescError parseDescription(const QDomElement &description, File &file)
     {
-        d->file = File(description.firstChildElement("file"));
-        // d->state = State::Pending; // basically it's incomming  content. so if we parsed it it's pending. if not
-        // parsed if will rejected anyway.
-        return d->file.isValid() ? Ok : Unparsed;
+        auto el = description.firstChildElement("file");
+        if (el.isNull())
+            return Application::Unparsed;
+
+        auto f = File(el);
+        if (!f.isValid())
+            return Application::IncompatibleParameters;
+
+        file = f;
+        return Application::Ok;
+    }
+
+    Application::SetDescError Application::setRemoteOffer(const QDomElement &description)
+    {
+        File f;
+        auto ret = parseDescription(description, f);
+        if (ret == Application::Ok)
+            d->file = f;
+        return ret;
+    }
+
+    Application::SetDescError Application::setRemoteAnswer(const QDomElement &description)
+    {
+        File f;
+        auto ret = parseDescription(description, f);
+        if (ret == Application::Ok) {
+            d->acceptFile = f;
+            setState(State::Accepted);
+        }
+        return ret;
+    }
+
+    void Application::prepareThumbnail(File &file)
+    {
+        if (file.thumbnail().data.size()) {
+            auto    client = _pad->session()->manager()->client();
+            auto    thumb  = file.thumbnail();
+            auto    bm     = client->bobManager();
+            BoBData data   = bm->append(thumb.data, thumb.mimeType);
+            thumb.uri      = QLatin1String("cid:") + data.cid();
+            d->file.setThumbnail(thumb);
+        }
+    }
+
+    QDomElement Application::makeLocalOffer()
+    {
+        if (!d->file.isValid()) {
+            return QDomElement();
+        }
+        auto doc = _pad->doc();
+        auto el  = doc->createElementNS(NS, "description");
+
+        prepareThumbnail(d->file);
+        el.appendChild(d->file.toXml(doc));
+        return el;
+    }
+
+    QDomElement Application::makeLocalAnswer()
+    {
+        if (!d->file.isValid()) {
+            return QDomElement();
+        }
+        if (!d->acceptFile.isValid()) {
+            d->acceptFile = d->file;
+        }
+        auto doc = _pad->doc();
+        auto el  = doc->createElementNS(NS, "description");
+        el.appendChild(d->acceptFile.toXml(doc));
+        return el;
     }
 
     void Application::setFile(const File &file) { d->file = file; }
@@ -563,48 +633,115 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     File Application::acceptFile() const { return d->acceptFile; }
 
-    // incoming one? or we have to check real direction
-    bool Application::setTransport(const QSharedPointer<Transport> &transport)
+    bool Application::canReplaceTransport() const { return !d->availableTransports.isEmpty(); }
+
+    bool Application::wantBetterTransport(const QSharedPointer<Transport> &t) const
     {
-        if (!(transport->features() & Transport::Reliable))
+        Q_UNUSED(t)
+        return true; // TODO check
+    }
+
+    bool Application::selectNextTransport(const QString preferredNS)
+    {
+        if (d->availableTransports.isEmpty()) {
+            emit updated(); // will be evaluated to content-remove
+            return false;
+        }
+
+        int idx = d->availableTransports.indexOf(preferredNS);
+        if (idx == -1)
+            idx = d->availableTransports.size() - 1;
+
+        do {
+            auto t = _pad->session()->newOutgoingTransport(d->availableTransports[idx]);
+            if (t && setTransport(t)) {
+                return true;
+            }
+            d->availableTransports.removeAt(idx);
+            idx = d->availableTransports.size() - 1;
+        } while (idx != -1);
+
+        /*if (_transport) {
+            disconnect(_transport.data());
+            _transport.reset();
+        }*/
+        emit updated(); // will be evaluated to content-remove
+        return false;
+    }
+
+    // incoming one? or we have to check real direction
+    bool Application::setTransport(const QSharedPointer<Transport> &transport, const Reason &reason)
+    {
+        if (transport.isNull() || !(transport->features() & TransportFeature::Reliable))
             return false;
 
-        int nsIndex = d->availableTransports.indexOf(transport->pad()->ns());
-        if (nsIndex == -1) {
+        // check if ns is registered or matches current
+        int  nsIndex = d->availableTransports.indexOf(transport->pad()->ns());
+        auto curNs   = _transport ? _transport->pad()->ns() : QString();
+        if (nsIndex == -1 && curNs != transport->pad()->ns()) {
             return false;
         }
 
         // in case we automatically select a new transport on our own we definitely will come up to this point
-        if (d->transport) {
-            d->transport->disconnect(this);
-            d->transport.reset();
+        if (_transport) {
+            if (_transport->state() < State::Unacked && _transport->creator() == _pad->session()->role()
+                && _transport->pad()->ns() != transport->pad()->ns()) {
+                // the transport will be reused later since the remote doesn't know about it yet
+                d->availableTransports.push_back(_transport->pad()->ns());
+            }
+
+            if (transport->creator() == _pad->session()->role()) {
+                auto ts = _transport->state() == State::Finished ? _transport->prevState() : _transport->state();
+                if (_transport->creator() != _pad->session()->role() || ts > State::Unacked) {
+                    // if remote knows of the current transport
+                    _pendingTransportReplace = PendingTransportReplace::InProgress;
+                } else if (_transport->creator() == _pad->session()->role() && ts == State::Unacked) {
+                    // if remote may know but we don't know yet about it
+                    _pendingTransportReplace = PendingTransportReplace::NeedAck;
+                }
+            } else {
+                _pendingTransportReplace = PendingTransportReplace::InProgress;
+            }
+
+            if (_pendingTransportReplace != PendingTransportReplace::None) {
+                if (_transport->state() == State::Finished) { // initiate replace?
+                    _transportReplaceReason = reason.isValid() ? reason : _transport->lastReason();
+                } else {
+                    _transportReplaceReason = reason;
+                }
+            }
+            _transport->disconnect(this);
+            _transport.reset();
         }
 
-        d->availableTransports.removeAt(nsIndex);
-        d->transport = transport;
+        if (nsIndex != -1)
+            d->availableTransports.removeAt(nsIndex);
+
+        _transport = transport;
         connect(transport.data(), &Transport::updated, this, &Application::updated);
         connect(transport.data(), &Transport::connected, this, [this]() {
-            d->transportReplaceOrigin = Origin::None;
-            d->transportReplaceState  = State::Finished; // not needed here probably
-            d->connection             = d->transport->connection();
-            if (!d->streamigMode) {
+            d->lastReason = Reason();
+            d->lastError.reset();
+            d->connection = _transport->connection();
+            if (!d->streamingMode) {
                 connect(d->connection.data(), &Connection::readyRead, this, [this]() {
                     if (!d->device) {
                         return;
                     }
-                    if (d->pad->session()->role() != d->senders) {
+                    if (_pad->session()->role() != _senders) {
                         d->readNextBlockFromTransport();
                     }
                 });
                 connect(d->connection.data(), &Connection::bytesWritten, this, [this](qint64 bytes) {
                     Q_UNUSED(bytes)
-                    if (d->pad->session()->role() == d->senders && !d->connection->bytesToWrite()) {
+                    if (_pad->session()->role() == _senders && !d->connection->bytesToWrite()) {
                         d->writeNextBlockToTransport();
                     }
                 });
             }
+
             d->setState(State::Active);
-            if (!d->streamigMode) {
+            if (!d->streamingMode) {
                 if (d->acceptFile.range().isValid()) {
                     d->bytesLeft = d->acceptFile.range().length;
                     if (!d->bytesLeft)
@@ -619,329 +756,160 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             }
         });
 
-        connect(transport.data(), &Transport::failed, this, [this]() {
-            d->transportReplaceOrigin = d->pad->session()->role();
-            if (d->state >= State::Active) {
-                emit updated(); // late failure are unhandled. just notify the remote
-                return;
-            }
-            // we can try to replace the transport
-            if (!selectNextTransport()) { // we can do transport-replace here
-                if (d->state == State::PrepareLocalOffer && d->creator == d->pad->session()->role()) {
-                    // we were unable to send even initial offer
-                    d->setState(State::Finished);
-                } else {
-                    emit updated(); // we have to notify our peer about failure
-                }
-            } else {
-                d->transportReplaceState = State::PrepareLocalOffer;
-            }
-        });
+        connect(transport.data(), &Transport::failed, this, [this]() { selectNextTransport(); });
 
-        if (d->state >= State::Unacked) {
+        if (_state >= State::Unacked) {
             // seems like we are in transport failure recovery. d->transportFailed may confirm this
-            d->transport->prepare();
+            _transport->prepare();
         }
         return true;
     }
 
-    Origin Application::transportReplaceOrigin() const { return d->transportReplaceOrigin; }
-
     bool Application::incomingTransportReplace(const QSharedPointer<Transport> &transport)
     {
-        auto prev = d->transportReplaceOrigin;
-        if (d->pad->session()->role() == Origin::Responder && prev == Origin::Responder && d->transport) {
-            // if I'm a responder and tried to send transport-replace too, then push ns back
-            d->availableTransports.append(d->transport->pad()->ns());
-        }
-        d->transportReplaceOrigin = d->pad->session()->peerRole();
-        auto ret                  = setTransport(transport);
-        if (ret)
-            d->transportReplaceState = State::PrepareLocalOffer;
-        else {
-            d->transportReplaceOrigin = prev;
-            d->lastError.reset();
-            // REVIEW We have to fail application here on tie-break or propose another transport
+        if (_state >= State::Active) { // impossible case. needs full app renegotiation to continue
+            d->lastError = ErrorUtil::makeOutOfOrder(*_pad->doc());
+            return false;
         }
 
-        return ret;
+        Q_ASSERT(_transport != nullptr);
+
+        auto newns = transport->pad()->ns();
+        if (!(d->availableTransports.contains(newns) || _transport->pad()->ns() == newns)) {
+            return false; // unknown ns. TODO return reason for the reject
+        }
+
+        bool curIsLocal = _transport->creator() == _pad->session()->role();
+        if (curIsLocal && _transport->state() == State::Unacked && _pad->session()->role() == Origin::Initiator) {
+            d->lastError = ErrorUtil::makeTieBreak(*_pad->doc());
+            return false;
+        }
+        return setTransport(transport);
     }
-
-    QSharedPointer<Transport> Application::transport() const { return d->transport; }
 
     void Application::setStreamingMode(bool mode)
     {
-        if (d->state <= State::Connecting) {
-            d->streamigMode = mode;
+        if (_state <= State::Connecting) {
+            d->streamingMode = mode;
         }
     }
 
-    Action Application::evaluateOutgoingUpdate()
+    XMPP::Jingle::Application::Update Application::evaluateOutgoingUpdate()
     {
-        d->updateToSend = Action::NoAction;
-        if (!isValid() || d->state == State::Created || d->state == State::Finished) {
-            return d->updateToSend;
+        if (!isValid()) {
+            _update = { Action::NoAction, Reason() };
+            return _update;
         }
 
-        auto evaluateTransportReplaceAction = [this]() {
-            if (d->transportReplaceState != State::PrepareLocalOffer || !d->transport->isInitialOfferReady())
-                return Action::NoAction;
-
-            return d->transportReplaceOrigin == d->pad->session()->role() ? Action::TransportReplace
-                                                                          : Action::TransportAccept;
-        };
-
-        switch (d->state) {
-        case State::Created:
-            break;
-        case State::PrepareLocalOffer:
-            if (d->transportReplaceOrigin != Origin::None) {
-                if (!d->transport) {
-                    d->updateToSend
-                        = Action::ContentReject; // case me=creator was already handled by this momemnt in case of
-                                                 // app.PrepareLocalOffer. see Transport::failed above
-                }
-                d->updateToSend = evaluateTransportReplaceAction();
-                if (d->updateToSend == Action::TransportAccept) {
-                    d->updateToSend = Action::ContentAccept;
-                }
-                return d->updateToSend;
-            }
-
-            if (d->transport->isInitialOfferReady())
-                d->updateToSend = d->creator == d->pad->session()->role() ? Action::ContentAdd : Action::ContentAccept;
-
-            break;
-        case State::Connecting:
-        case State::Pending:
-        case State::Active:
-            if (d->transportReplaceOrigin != Origin::None) {
-                if (d->state == State::Active || !d->transport)
-                    d->updateToSend = Action::ContentRemove;
-                else
-                    d->updateToSend = evaluateTransportReplaceAction();
-                return d->updateToSend;
-            }
-
-            if (d->terminationReason.isValid() && d->terminationReason.condition() != Reason::Condition::Success) {
-                d->updateToSend = Action::ContentRemove;
-            } else if (d->transport->hasUpdates())
-                d->updateToSend = Action::TransportInfo;
-
-            break;
-        case State::Finishing:
-            if (d->transportReplaceOrigin != Origin::None || d->terminationReason.isValid()) {
-                d->updateToSend = Action::ContentRemove;
-            } else {
-                d->updateToSend = Action::SessionInfo; // to send checksum
-            }
-            break;
-        default:
-            break;
-        }
-        return d->updateToSend; // TODO
+        if (_state == State::Active && (d->outgoingChecksum.size() > 0 || d->outgoingReceived))
+            _update = { Action::SessionInfo, Reason() };
+        else
+            return XMPP::Jingle::Application::evaluateOutgoingUpdate();
+        return _update;
     }
 
     OutgoingUpdate Application::takeOutgoingUpdate()
     {
-        if (d->updateToSend == Action::NoAction) {
+        if (_update.action == Action::NoAction) {
             return OutgoingUpdate();
         }
 
-        auto client = d->pad->session()->manager()->client();
+        auto client = _pad->session()->manager()->client();
         auto doc    = client->doc();
 
-        if (d->updateToSend == Action::SessionInfo) {
-            if (d->state != State::Finishing) {
-                // TODO implement
-                return OutgoingUpdate();
+        if (_update.action == Action::SessionInfo && (d->outgoingChecksum.size() > 0 || d->outgoingReceived)) {
+            if (d->outgoingReceived) {
+                d->outgoingReceived = false;
+                ContentBase cb(_pad->session()->role(), _contentName);
+                return OutgoingUpdate { QList<QDomElement>() << cb.toXml(doc, "received", NS),
+                                        [this](bool) { d->setState(State::Finished); } };
             }
-            ContentBase cb(d->pad->session()->role(), d->contentName);
-            return OutgoingUpdate { QList<QDomElement>() << cb.toXml(doc, "received"),
-                                    [this]() { d->setState(State::Finished); } };
-        }
-
-        QDomElement      transportEl;
-        OutgoingUpdateCB transportCB;
-
-        ContentBase cb(d->creator, d->contentName);
-        if (d->state == State::PrepareLocalOffer)
-            cb.senders = d->senders;
-        QList<QDomElement> updates;
-        auto               contentEl = cb.toXml(doc, "content");
-        updates << contentEl;
-
-        switch (d->updateToSend) {
-        case Action::ContentReject:
-        case Action::ContentRemove:
-            if (d->transportReplaceOrigin != Origin::None)
-                d->terminationReason = Reason(Reason::Condition::FailedTransport);
-            if (d->terminationReason.isValid())
-                updates << d->terminationReason.toXml(doc);
-            return OutgoingUpdate { updates, [this]() { d->setState(State::Finished); } };
-        case Action::ContentAdd:
-        case Action::ContentAccept:
-            Q_ASSERT(d->transport->isInitialOfferReady());
-            if (d->file.thumbnail().data.size()) {
-                auto    thumb = d->file.thumbnail();
-                auto    bm    = client->bobManager();
-                BoBData data  = bm->append(thumb.data, thumb.mimeType);
-                thumb.uri     = QLatin1String("cid:") + data.cid();
-                d->file.setThumbnail(thumb);
-            }
-            contentEl.appendChild(doc->createElementNS(NS, QString::fromLatin1("description")))
-                .appendChild(d->file.toXml(doc));
-            d->acceptFile                      = d->file;
-            std::tie(transportEl, transportCB) = d->transport->takeInitialOffer();
-            contentEl.appendChild(transportEl);
-
-            d->setState(State::Unacked);
-            return OutgoingUpdate { updates, [this, transportCB]() {
-                                       if (transportCB) {
-                                           transportCB();
-                                       }
-                                       d->setState(d->pad->session()->role() == Origin::Initiator ? State::Pending
-                                                                                                  : State::Connecting);
-                                   } };
-        case Action::TransportInfo:
-            Q_ASSERT(d->transport->hasUpdates());
-            std::tie(transportEl, transportCB) = d->transport->takeOutgoingUpdate();
-            contentEl.appendChild(transportEl);
-            return OutgoingUpdate { updates, transportCB };
-        case Action::TransportReplace:
-        case Action::TransportAccept: {
-            Q_ASSERT(d->transport->isInitialOfferReady());
-            d->transportReplaceState           = State::Unacked;
-            std::tie(transportEl, transportCB) = d->transport->takeInitialOffer();
-            contentEl.appendChild(transportEl);
-            auto action = d->updateToSend;
-            return OutgoingUpdate { updates, [this, transportCB, action]() {
-                                       if (transportCB) {
-                                           transportCB();
-                                       }
-                                       d->transportReplaceState
-                                           = action == Action::TransportReplace ? State::Pending : State::Finished;
-                                   } };
-        }
-        default:
-            break;
-        }
-
-        return OutgoingUpdate(); // TODO
-    }
-
-    bool Application::wantBetterTransport(const QSharedPointer<Transport> &t) const
-    {
-        Q_UNUSED(t)
-        return true; // TODO check
-    }
-
-    bool Application::selectNextTransport()
-    {
-        while (d->availableTransports.size()) {
-            auto t = d->pad->session()->newOutgoingTransport(d->availableTransports.last());
-            if (t && setTransport(t)) {
-                return true;
-            } else {
-                d->availableTransports.removeLast();
+            if (!d->outgoingChecksum.isEmpty()) {
+                ContentBase cb(_pad->session()->role(), _contentName);
+                File        f;
+                if (d->outgoingChecksumRangeOffset || d->outgoingChecksumRangeLength) {
+                    Range r;
+                    r.hashes = d->outgoingChecksum;
+                    r.offset = d->outgoingChecksumRangeOffset;
+                    r.length = d->outgoingChecksumRangeLength;
+                    f.setRange(r);
+                } else {
+                    f.setHashes(d->outgoingChecksum);
+                }
+                auto el = cb.toXml(doc, "checksum", NS);
+                el.appendChild(f.toXml(doc));
+                d->outgoingChecksum.clear();
+                return OutgoingUpdate { QList<QDomElement>() << el, [this](bool) { d->setState(State::Finished); } };
             }
         }
-        return false;
+        if (_update.action == Action::ContentAdd && _creator == _pad->session()->role()) {
+            // we are doing outgoing file transfer request. so need thumbnail
+        }
+
+        return XMPP::Jingle::Application::takeOutgoingUpdate();
     }
 
     void Application::prepare()
     {
-        if (!d->transport) {
+        if (!_transport) {
             selectNextTransport();
         }
-        if (d->transport) {
-            d->setState(State::PrepareLocalOffer);
-            d->transport->prepare();
+        if (_transport) {
+            d->setState(State::ApprovedToSend);
+            _transport->prepare();
         }
     }
 
     void Application::start()
     {
-        if (d->transport) {
+        if (_transport) {
             d->setState(State::Connecting);
-            d->transport->start();
+            _transport->start();
         }
         // TODO we need QIODevice somewhere here
     }
 
-    bool Application::accept(const QDomElement &el)
-    {
-        File f(el.firstChildElement("file"));
-        if (!f.isValid()) {
-            return false;
-        }
-        d->acceptFile = f;
-        // TODO validate if accept file matches to the offer
-        setState(State::Accepted);
-        return true;
-    }
-
     void Application::remove(Reason::Condition cond, const QString &comment)
     {
-        if (d->state >= State::Finishing)
+        if (_state >= State::Finishing)
             return;
 
-        d->terminationReason      = Reason(cond, comment);
-        d->transportReplaceOrigin = Origin::None; // just in case
-        d->transport->disconnect(this);
-        d->transport.reset();
+        _terminationReason = Reason(cond, comment);
+        _transport->disconnect(this);
+        _transport.reset();
 
-        if (d->creator == d->pad->session()->role() && d->state <= State::PrepareLocalOffer) {
+        if (_creator == _pad->session()->role() && _state <= State::ApprovedToSend) {
             // local content, not yet sent to remote
             setState(State::Finished);
             return;
         }
 
-        setState(State::Finishing);
         emit updated();
-    }
-
-    bool Application::incomingTransportAccept(const QDomElement &transportEl)
-    {
-        if (d->transportReplaceOrigin != d->pad->session()->role()) {
-            d->lastError = ErrorUtil::makeOutOfOrder(*d->pad->doc());
-            return false;
-        }
-        if (d->transport->update(transportEl)) {
-            d->transportReplaceOrigin = Origin::None;
-            d->transportReplaceState  = State::Finished;
-            if (d->state >= State::Connecting) {
-                d->transport->start();
-            }
-            emit updated();
-            return true;
-        }
-        return false;
     }
 
     void Application::incomingRemove(const Reason &r)
     {
-        d->terminationReason = r;
+        d->lastReason = r;
         d->setState(State::Finished);
     }
 
     bool Application::isValid() const
     {
-        return d->file.isValid() && d->contentName.size() > 0
-            && (d->senders == Origin::Initiator || d->senders == Origin::Responder);
+        return d->file.isValid() && _contentName.size() > 0
+            && (_senders == Origin::Initiator || _senders == Origin::Responder);
     }
 
     void Application::setDevice(QIODevice *dev, bool closeOnFinish)
     {
         if (!dev) { // failed to provide proper device
-            d->terminationReason
+            _terminationReason
                 = Reason(Reason::Condition::FailedApplication, QString::fromLatin1("No destination device"));
             emit updated();
             return;
         }
         d->device              = dev;
         d->closeDeviceOnFinish = closeOnFinish;
-        if (d->senders == d->pad->session()->role()) {
+        if (_senders == _pad->session()->role()) {
             d->writeNextBlockToTransport();
         } else {
             d->readNextBlockFromTransport();

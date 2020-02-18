@@ -20,17 +20,11 @@
 #ifndef JINGLE_H
 #define JINGLE_H
 
-#include "bytestream.h"
 #include "xmpp_stanza.h"
 
 #include <QSharedDataPointer>
 #include <QSharedPointer>
 #include <functional>
-#if QT_VERSION >= QT_VERSION_CHECK(5, 8, 0)
-#include <QNetworkDatagram>
-#else
-#include <QHostAddress>
-#endif
 
 class QDomDocument;
 class QDomElement;
@@ -51,29 +45,58 @@ namespace Jingle {
     /*
      Session states:
       * Created           - new session
-      * PrepareLocalOffer - user accepted session but it's not yet ready for session-initiate/accept message
+      * ApprovedToSend    - user accepted session but it's not yet ready for session-initiate/accept message
       * Unacked           - session-initiate/accept was sent. wait for IQ ack
-      * Pending           - session-initiate was acknowledged. awaits session-accept.
+      * Pending           - local only: session-initiate was acknowledged. awaits session-accept.
       * Active            - session was accepted and now active.
       * Finihed           - session-terminate was sent/received
 
+     Local app states:
+      * Created           - after constructor till local user initiates the sending
+      * ApprovedToSend    - user already clicked "send" but our offer is not ready yet (collecting candidates)
+      * Unacked           - initial offer is sent but no iq result yet
+      * Pending           - got iq result but no accept (answer) request yet
+      * Accepted          - remote accepted the app. waiting for start() (for example when all session is accepted)
+      * Connecting        - session was accepted (or content-accepted for early-session). negotiating connection
+      * Active            - connection was established. now real data passes.
+      * Finishing         - need to send some final statuses over signalling
+      * Finished          - app was removed from session
+
+     Remote app states:
+      * Created           - after constructor till local user accepts the app
+      * ApprovedToSend    - user already accepted but our answer is not ready yet (collecting candidates)
+      * Unacked           - the answer is sent but no iq result yet
+      * Accepted          - waiting for start() (for example when all session is accepted)
+      * Connecting        - session was accepted (or content-accepted for early-session). negotiating connection
+      * Active            - connection was established. now real data passes.
+      * Finishing         - need to send some final statuses over signalling
+      * Finished          - app was removed from session
+
+     Local transport states (our initial offer or our outgoing transport-replace):
+      * Created           - initial: just after constructor but before "send" button was pushed.
+      *                     replace: if previous was > Created then replace will start right from ApprovedToSend
+      * ApprovedToSend    - initial: we are preparing initial offer ("send" was pushed already)
+      *                     replace: we are going to replace previously sent trasport offer. preparing new one
+      * Unacked           - no iq "result" yet
+      * Pending           - got iq result but no any kind of transport accept
+      * Accepted          - session/content/transport-replace accepted. app should start negotiation explicitly
+      * Connecting        - connetion negotiation
+      * Active            - traferring data
+      * Finished          - In failure case: Needs to report transport failure / replace / reject
+
+     Remote transport states (remote initial offer or remote transport-replace):
+      * Created           - initial: local user hasn't accepted yet the offer
+      *                     replace: remote changes its own offer before local accepted anything
+      * ApprovedToSend    - initial/replace: user accepted the offer. we are preparing our response
+      * Unacked           - no iq "result" yet
+      * Accepted          - session/content/transport-replace accepted. app should start negotiation explicitly
+      * Connecting        - connetion negotiation
+      * Active            - traferring data
+      * Finished          - In failure case: Needs to report transport failure / replace / reject
+
      Locally initiated session passes all the above and remotely initiated skips Pending.
     */
-    enum class State {
-        Created,           // just after constructor
-        PrepareLocalOffer, // content accepted by local user but we are not ready yet to send content-accept or
-                           // session-accept. same for content-add/session-initiate, where user already already
-                           // sent/added in ui and it's network turn.
-        Unacked,           // local content offer is sent to remote but no IQ ack yet
-        Pending,           // waits for session-accept or content-accept from remote
-        Accepted,   // app only: local: "accept" received, waits for start(). remote: "accept" sent and acknowledged,
-                    // waits for start()
-        Connecting, // app only: s5b/ice probes etc (particular application state. can be omited for other entities)
-        Active,     // active transfer. transport is connected. For session it means it was accepted
-        Finishing,  // app only: basically it's finished but has some pending operations. like sending
-                    // content-reject/remove to remote
-        Finished    // transfering is finished for whatever reason. no more signals/state changes etc. can be deleted
-    };
+    enum class State { Created, ApprovedToSend, Unacked, Pending, Accepted, Connecting, Active, Finishing, Finished };
 
     enum class Action {
         NoAction, // non-standard, just a default
@@ -96,8 +119,39 @@ namespace Jingle {
 
     inline uint qHash(const XMPP::Jingle::Action &o, uint seed = 0) { return ::qHash(int(o), seed); }
 
-    typedef QPair<QString, Origin> ContentKey;
-    typedef std::function<void()>  OutgoingUpdateCB;
+    /*
+    Categorization by speed, reliability and connectivity
+    - speed: realtim, fast, slow
+    - reliability: reliable, not reliable (some transport can both modes)
+    - connectivity: always connect, hard to connect
+
+    Some transports may change their qualities, so we have to consider worst case.
+
+    ICE-UDP: RealTime, Not Reliable, Hard To Connect
+    S5B:     Fast,     Reliable,     Hard To Connect
+    IBB:     Slow,     Reliable,     Always Connect
+
+    Also most of transports may add extra features but it's matter of configuration.
+    For example all of them can enable p2p crypto mode (<security/> should work here)
+    */
+    enum class TransportFeature {
+        // connection establishment
+        HardToConnect = 0x01, // anything else but ibb
+        AlwaysConnect = 0x02, // ibb. basically it's always connected
+
+        // reliability
+        NotReliable = 0x10, // datagram-oriented
+        Reliable    = 0x20, // connection-orinted
+
+        // speed.
+        Slow     = 0x100, // only ibb is here probably
+        Fast     = 0x200, // basically all tcp-based and reliable part of sctp
+        RealTime = 0x400  // it's rather about synchronization of frames with time which implies fast
+    };
+    Q_DECLARE_FLAGS(TransportFeatures, TransportFeature)
+
+    typedef QPair<QString, Origin>            ContentKey;
+    typedef std::function<void(bool success)> OutgoingUpdateCB;
     typedef std::tuple<QList<QDomElement>, OutgoingUpdateCB>
         OutgoingUpdate; // list of elements to b inserted to <jingle> and success callback
     typedef std::tuple<QDomElement, OutgoingUpdateCB>
@@ -203,7 +257,7 @@ namespace Jingle {
 
         inline bool isValid() const { return creator != Origin::None && !name.isEmpty(); }
 
-        QDomElement   toXml(QDomDocument *doc, const char *tagName) const;
+        QDomElement   toXml(QDomDocument *doc, const char *tagName, const QString &ns = QString()) const;
         static Origin creatorAttr(const QDomElement &el);
         static bool   setCreatorAttr(QDomElement &el, Origin creator);
 
@@ -241,319 +295,10 @@ namespace Jingle {
         QDomDocument *      doc() const;
     };
 
-    class TransportManager;
-    class TransportManagerPad : public SessionManagerPad {
-        Q_OBJECT
-    public:
-        typedef QSharedPointer<TransportManagerPad> Ptr;
-
-        virtual TransportManager *manager() const = 0;
-    };
-
     class ApplicationManager;
-    class ApplicationManagerPad : public SessionManagerPad {
-        Q_OBJECT
-    public:
-        typedef QSharedPointer<ApplicationManagerPad> Ptr;
-
-        using SessionManagerPad::SessionManagerPad;
-
-        virtual ApplicationManager *manager() const = 0;
-
-        /*
-         * for example we transfer a file
-         * then first file may generate name "file1", next "file2" etc
-         * As result it will be sent as <content name="file1" ... >
-         */
-        virtual QString generateContentName(Origin senders) = 0;
-    };
-
-#if QT_VERSION < QT_VERSION_CHECK(5, 8, 0)
-    // stub implementation
-    class NetworkDatagram {
-    public:
-        bool       _valid = false;
-        QByteArray _data;
-        inline NetworkDatagram(const QByteArray &data, const QHostAddress &destinationAddress = QHostAddress(),
-                               quint16 port = 0) :
-            _valid(true),
-            _data(data)
-        {
-            Q_UNUSED(destinationAddress);
-            Q_UNUSED(port)
-        }
-        inline NetworkDatagram() {}
-
-        inline bool       isValid() const { return _valid; }
-        inline QByteArray data() const { return _data; }
-    };
-#else
-    typedef QNetworkDatagram NetworkDatagram;
-#endif
-
-    class Connection : public ByteStream {
-        Q_OBJECT
-    public:
-        using Ptr = QSharedPointer<Connection>; // will be shared between transport and application
-        virtual bool            hasPendingDatagrams() const;
-        virtual NetworkDatagram receiveDatagram(qint64 maxSize = -1);
-        virtual size_t          blockSize() const;
-    };
-
-    class Application;
-    class Transport : public QObject {
-        Q_OBJECT
-    public:
-        /*
-        Categorization by speed, reliability and connectivity
-        - speed: realtim, fast, slow
-        - reliability: reliable, not reliable (some transport can both modes)
-        - connectivity: always connect, hard to connect
-
-        Some transports may change their qualities, so we have to consider worst case.
-
-        ICE-UDP: RealTime, Not Reliable, Hard To Connect
-        S5B:     Fast,     Reliable,     Hard To Connect
-        IBB:     Slow,     Reliable,     Always Connect
-
-        Also most of transports may add extra features but it's matter of configuration.
-        For example all of them can enable p2p crypto mode (<security/> should work here)
-        */
-        enum Feature {
-            // connection establishment
-            HardToConnect = 0x01, // anything else but ibb
-            AlwaysConnect = 0x02, // ibb. basically it's always connected
-
-            // reliability
-            NotReliable = 0x10, // datagram-oriented
-            Reliable    = 0x20, // connection-orinted
-
-            // speed.
-            Slow     = 0x100, // only ibb is here probably
-            Fast     = 0x200, // basically all tcp-based and reliable part of sctp
-            RealTime = 0x400  // it's rather about synchronization of frames with time which implies fast
-        };
-        Q_DECLARE_FLAGS(Features, Feature)
-
-        using QObject::QObject;
-
-        enum Direction { // incoming or outgoing file/data transfer.
-            Outgoing,
-            Incoming
-        };
-
-        /**
-         * @brief prepare to send content-add/session-initiate
-         *  When ready, the application first set update type to ContentAdd and then emit updated()
-         */
-        virtual void prepare() = 0;
-
-        /**
-         * @brief start really transfer data. starting with connection to remote candidates for example
-         */
-        virtual void start() = 0; // for local transport start searching for candidates (including probing proxy,stun
-                                  // etc) for remote transport try to connect to all proposed hosts in order their
-                                  // priority. in-band transport may just emit updated() here
-        virtual bool update(const QDomElement &el) = 0; // accepts transport element on incoming transport-info
-        virtual bool isInitialOfferReady() const   = 0;
-        virtual bool hasUpdates() const            = 0;
-        virtual OutgoingTransportInfoUpdate takeInitialOffer()   = 0;
-        virtual OutgoingTransportInfoUpdate takeOutgoingUpdate() = 0;
-        virtual bool                        isValid() const      = 0;
-        virtual Features                    features() const     = 0;
-        virtual TransportManagerPad::Ptr    pad() const          = 0;
-        virtual Connection::Ptr             connection() const   = 0; // returns established QIODevice-based connection
-    signals:
-        void updated(); // found some candidates and they have to be sent. takeUpdate has to be called from this signal
-                        // handler. if it's just always ready then signal has to be sent at least once otherwise
-                        // session-initiate won't be sent.
-        void connected(); // this signal is for app logic. maybe to finally start drawing some progress bar
-        void failed();    // transport ailed for whatever reason. aborted for example
-    };
-
-    class Application : public QObject {
-        Q_OBJECT
-    public:
-        enum SetDescError {
-            Ok,
-            Unparsed,
-            IncompatibleParameters // this one is for <reason>
-        };
-
-        virtual ApplicationManagerPad::Ptr pad() const   = 0;
-        virtual State                      state() const = 0;
-        virtual void setState(State state) = 0; // likely just remember the state and not generate any signals
-        virtual XMPP::Stanza::Error lastError() const         = 0;
-        virtual Reason              terminationReason() const = 0;
-
-        virtual Origin  creator() const     = 0;
-        virtual Origin  senders() const     = 0;
-        virtual QString contentName() const = 0;
-
-        // returns Origin::None if no transport-replace in progress or the side triggered the replace.
-        virtual Origin       transportReplaceOrigin() const                 = 0;
-        virtual SetDescError setDescription(const QDomElement &description) = 0;
-
-        /**
-         * @brief setTransport checks if transport is compatible and stores it
-         * @param transport
-         * @return false if not compatible
-         */
-        virtual bool                      setTransport(const QSharedPointer<Transport> &transport) = 0;
-        virtual QSharedPointer<Transport> transport() const                                        = 0;
-
-        /**
-         * @brief evaluateOutgoingUpdate computes and prepares next update which will be taken with takeOutgoingUpdate
-         *   The updated will be taked immediately if considered to be most preferred among other updates types of
-         *   other applications.
-         * @return update type
-         */
-        virtual Action evaluateOutgoingUpdate() = 0;
-        // this may return something only when evaluateOutgoingUpdate() != NoAction
-        virtual OutgoingUpdate takeOutgoingUpdate() = 0;
-
-        /**
-         * @brief wantBetterTransport checks if the transport is a better match for the application
-         * @return
-         */
-        virtual bool wantBetterTransport(const QSharedPointer<Transport> &) const = 0;
-
-        /**
-         * @brief selectNextTransport selects next transport from compatible transports list.
-         *   The list is usually store in the application
-         * @return
-         */
-        virtual bool selectNextTransport() = 0;
-
-        /**
-         * @brief prepare to send content-add/session-initiate
-         *  When ready, the application first set update type to ContentAdd and then emit updated()
-         */
-        virtual void prepare()                     = 0;
-        virtual bool accept(const QDomElement &el) = 0; // remote accepted our content
-        virtual void start()                       = 0;
-        virtual void remove(Reason::Condition cond = Reason::Success, const QString &comment = QString()) = 0;
-
-        /**
-         * @brief incomingTransportReplace it's jingle transport-replace
-         * @param transport
-         * @return
-         */
-        virtual bool incomingTransportReplace(const QSharedPointer<Transport> &transport) = 0;
-        virtual bool incomingTransportAccept(const QDomElement &transportEl)              = 0;
-        virtual void incomingRemove(const Reason &r)                                      = 0;
-
-    signals:
-        void updated(); // signal for session it has to send updates to remote. so it will follow with
-                        // takeOutgoingUpdate() eventually
-        void stateChanged(State);
-    };
-
-    class Session : public QObject {
-        Q_OBJECT
-    public:
-        // Note incoming session are not registered in Jingle Manager until validated.
-        // and then either rejected or registered in Pending state.
-
-        Session(Manager *manager, const Jid &peer, Origin role = Origin::Initiator);
-        ~Session();
-
-        Manager *manager() const;
-        State    state() const;
-
-        Jid     me() const;
-        Jid     peer() const;
-        Jid     initiator() const;
-        Jid     responder() const;
-        QString sid() const;
-
-        Origin role() const; // my role in session: initiator or responder
-        Origin peerRole() const;
-
-        XMPP::Stanza::Error lastError() const;
-
-        // make new local content but do not add it to session yet
-        Application *newContent(const QString &ns, Origin senders = Origin::Both);
-        // get registered content if any
-        Application *                          content(const QString &contentName, Origin creator);
-        void                                   addContent(Application *content);
-        const QMap<ContentKey, Application *> &contentList() const;
-
-        ApplicationManagerPad::Ptr applicationPad(const QString &ns);
-        TransportManagerPad::Ptr   transportPad(const QString &ns);
-
-        QSharedPointer<Transport> newOutgoingTransport(const QString &ns);
-
-        QString     preferredApplication() const;
-        QStringList allApplicationTypes() const;
-
-        void setLocalJid(const Jid &jid); // w/o real use case the implementation is rather stub
-
-        void accept();
-        void initiate();
-        void terminate(Reason::Condition cond, const QString &comment = QString());
-
-        // allocates or returns existing pads
-        ApplicationManagerPad::Ptr applicationPadFactory(const QString &ns);
-        TransportManagerPad::Ptr   transportPadFactory(const QString &ns);
-    signals:
-        void managerPadAdded(const QString &ns);
-        void initiated();
-        void activated();
-        void terminated();
-        void newContentReceived();
-
-    private:
-        friend class Manager;
-        friend class JTPush;
-        bool incomingInitiate(const Jingle &jingle, const QDomElement &jingleEl);
-        bool updateFromXml(Action action, const QDomElement &jingleEl);
-
-        class Private;
-        QScopedPointer<Private> d;
-    };
-
-    class ApplicationManager : public QObject {
-        Q_OBJECT
-    public:
-        ApplicationManager(QObject *parent = nullptr);
-
-        virtual void         setJingleManager(Manager *jm) = 0;
-        virtual Application *startApplication(const ApplicationManagerPad::Ptr &pad, const QString &contentName,
-                                              Origin creator, Origin senders)
-            = 0;
-        virtual ApplicationManagerPad *pad(Session *session) = 0;
-
-        // this method is supposed to gracefully close all related sessions as a preparation for plugin unload for
-        // example
-        virtual void closeAll() = 0;
-    };
-
-    class TransportManager : public QObject {
-        Q_OBJECT
-    public:
-        TransportManager(QObject *parent = nullptr);
-
-        // may show more features than Transport instance. For example some transports may work in both reliable and not
-        // reliable modes
-        virtual Transport::Features features() const              = 0;
-        virtual void                setJingleManager(Manager *jm) = 0;
-
-        // FIXME rename methods
-        virtual QSharedPointer<Transport> newTransport(const TransportManagerPad::Ptr &pad)
-            = 0; // outgoing. one have to call Transport::start to collect candidates
-        virtual QSharedPointer<Transport> newTransport(const TransportManagerPad::Ptr &pad,
-                                                       const QDomElement &             transportEl)
-            = 0; // incoming
-        virtual TransportManagerPad *pad(Session *session) = 0;
-
-        // this method is supposed to gracefully close all related sessions as a preparation for plugin unload for
-        // example
-        virtual void closeAll() = 0;
-    signals:
-        void abortAllRequested(); // mostly used by transport instances to abort immediately
-    };
-
+    class ApplicationManagerPad;
+    class TransportManager;
+    class TransportManagerPad;
     class Manager : public QObject {
         Q_OBJECT
 
@@ -583,7 +328,7 @@ namespace Jingle {
         bool                 isRegisteredTransport(const QString &ns);
         TransportManagerPad *transportPad(Session *      session,
                                           const QString &ns); // allocates new pad on transport manager
-        QStringList          availableTransports(const Transport::Features &features = Transport::Features()) const;
+        QStringList          availableTransports(const TransportFeatures &features = TransportFeatures()) const;
 
         /**
          * @brief isAllowedParty checks if the remote jid allowed to initiate a session
@@ -615,6 +360,6 @@ namespace Jingle {
 } // namespace Jingle
 } // namespace XMPP
 
-Q_DECLARE_OPERATORS_FOR_FLAGS(XMPP::Jingle::Transport::Features)
+Q_DECLARE_OPERATORS_FOR_FLAGS(XMPP::Jingle::TransportFeatures)
 
 #endif // JINGLE_H

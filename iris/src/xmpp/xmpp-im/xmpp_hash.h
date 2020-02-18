@@ -53,6 +53,7 @@ public:
     inline bool operator==(const Hash &other) const { return v_type == other.v_type && v_data == other.v_data; }
 
     inline bool isValid() const { return v_type > Unknown && v_type <= LastType; }
+    inline      operator bool() const { return isValid(); }
 
     inline Type type() const { return v_type; }
     inline void setType(Type t) { v_type = t; }

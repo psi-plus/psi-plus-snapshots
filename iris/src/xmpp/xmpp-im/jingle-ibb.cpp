@@ -18,6 +18,7 @@
  */
 
 #include "jingle-ibb.h"
+#include "jingle-session.h"
 
 #include "xmpp/jid/jid.h"
 #include "xmpp_client.h"
@@ -37,11 +38,13 @@ namespace XMPP { namespace Jingle { namespace IBB {
         QString        sid;
         size_t         _blockSize;
         IBBConnection *connection = nullptr;
+        State          state      = State::Created;
+        Origin         creator    = Origin::None;
 
-        bool offerSent     = false;
-        bool offerReceived = false;
-        bool closing       = false;
-        bool finished      = false;
+        //        bool offerSent     = false;
+        //        bool offerReceived = false;
+        //        bool closing       = false;
+        //        bool finished      = false;
 
         Connection(Client *client, const Jid &jid, const QString &sid, size_t blockSize) :
             client(client), peer(jid), sid(sid), _blockSize(blockSize)
@@ -50,16 +53,21 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
         void setConnection(IBBConnection *c)
         {
+            c->setParent(this);
             connection = c;
             connect(c, &IBBConnection::readyRead, this, &Connection::readyRead);
             connect(c, &IBBConnection::bytesWritten, this, &Connection::bytesWritten);
             connect(c, &IBBConnection::connectionClosed, this, &Connection::handleIBBClosed);
             connect(c, &IBBConnection::delayedCloseFinished, this, &Connection::handleIBBClosed);
             connect(c, &IBBConnection::aboutToClose, this, &Connection::aboutToClose);
-            connect(c, &IBBConnection::connected, this, [this]() {
-                setOpenMode(connection->openMode());
-                emit connected();
-            });
+            connect(c, &IBBConnection::connected, this, &Connection::handleConnnected);
+        }
+
+        void handleConnnected()
+        {
+            state = State::Active;
+            setOpenMode(connection->openMode());
+            emit connected();
         }
 
         size_t blockSize() const { return _blockSize; }
@@ -83,6 +91,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
                 XMPP::Jingle::Connection::close();
                 emit connectionClosed();
             }
+            state = State::Finished;
         }
 
     signals:
@@ -93,8 +102,8 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
         qint64 readData(char *data, qint64 maxSize)
         {
-            quint64 ret = connection->read(data, maxSize);
-            if (closing && !bytesAvailable()) {
+            qint64 ret = connection->read(data, maxSize);
+            if (state == State::Finishing && !bytesAvailable()) {
                 postCloseAllDataRead();
             }
             return ret;
@@ -103,7 +112,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
     private:
         void handleIBBClosed()
         {
-            closing = true;
+            state = State::Finishing;
             if (bytesAvailable())
                 setOpenMode(QIODevice::ReadOnly);
             else
@@ -112,8 +121,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
         void postCloseAllDataRead()
         {
-            closing  = false;
-            finished = true;
+            state = State::Finished;
             connection->deleteLater();
             connection = nullptr;
             setOpenMode(QIODevice::NotOpen);
@@ -123,109 +131,45 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
     struct Transport::Private {
         Transport *                               q = nullptr;
-        Pad::Ptr                                  pad;
         QMap<QString, QSharedPointer<Connection>> connections;
         QList<QSharedPointer<Connection>>         readyConnections;
-        QSharedPointer<Connection>                lastOfferedConnection;
         size_t                                    defaultBlockSize = 4096;
         bool                                      started          = false;
-        bool                                      initialOfferSent = false; // if we ever sent anything
 
         void checkAndStartConnection(const QSharedPointer<Connection> &c)
         {
-            if (!c->connection && !c->finished && c->offerReceived && c->offerSent
-                && pad->session()->role() == Origin::Initiator) {
-                auto con    = pad->session()->manager()->client()->ibbManager()->createConnection();
+            if (c->connection || c->state != State::Accepted)
+                return;
+
+            c->state = State::Connecting;
+            if (q->_pad->session()->role() == Origin::Initiator) {
+                auto con    = q->_pad->session()->manager()->client()->ibbManager()->createConnection();
                 auto ibbcon = static_cast<IBBConnection *>(con);
-                ibbcon->setPacketSize(defaultBlockSize);
+                ibbcon->setPacketSize(int(c->blockSize()));
                 c->setConnection(ibbcon);
-                ibbcon->connectToJid(pad->session()->peer(), c->sid);
-            }
+                ibbcon->connectToJid(q->_pad->session()->peer(), c->sid);
+            } // else we are waiting for incoming open
         }
 
-        void handleConnected(const QSharedPointer<Connection> &c)
+        QSharedPointer<Connection> newStream(const QString &sid, std::size_t blockSize, Origin creator)
         {
-            if (c) {
-                readyConnections.append(c);
-                emit q->connected();
-            }
-        }
-
-        OutgoingTransportInfoUpdate makeOffer(const QSharedPointer<Connection> &connection)
-        {
-            OutgoingTransportInfoUpdate upd;
-            if (!connection) {
-                return upd;
-            }
-
-            auto doc = pad->session()->manager()->client()->doc();
-
-            QDomElement tel = doc->createElementNS(NS, "transport");
-            tel.setAttribute(QStringLiteral("sid"), connection->sid);
-            tel.setAttribute(QString::fromLatin1("block-size"), qulonglong(connection->_blockSize));
-
-            upd = OutgoingTransportInfoUpdate { tel, [this, connection]() mutable {
-                                                   if (started)
-                                                       checkAndStartConnection(connection);
-                                               } };
-
-            lastOfferedConnection = connection;
-            connection->offerSent = true;
-            return upd;
-        }
-    };
-
-    Transport::Transport(const TransportManagerPad::Ptr &pad) : d(new Private)
-    {
-        d->q   = this;
-        d->pad = pad.staticCast<Pad>();
-        connect(pad->manager(), &TransportManager::abortAllRequested, this, [this]() {
-            for (auto &c : d->connections) {
-                c->close();
-            }
-            // d->aborted = true;
-            emit failed();
-        });
-    }
-
-    Transport::Transport(const TransportManagerPad::Ptr &pad, const QDomElement &transportEl) : d(new Private)
-    {
-        d->q   = this;
-        d->pad = pad.staticCast<Pad>();
-        update(transportEl);
-        if (d->connections.isEmpty()) {
-            d.reset();
-            return;
-        }
-    }
-
-    Transport::~Transport()
-    {
-        // we have to mark all of them as finished just in case they are captured somewhere else
-        if (d) {
-            for (auto &c : d->connections) {
-                c->finished = true;
-            }
-        }
-    }
-
-    TransportManagerPad::Ptr Transport::pad() const { return d->pad; }
-
-    void Transport::prepare()
-    {
-        if (d->connections.isEmpty()) { // seems like outgoing
-            auto conn    = d->pad->makeConnection(QString(), d->defaultBlockSize);
+            auto conn    = q->_pad.staticCast<Pad>()->makeConnection(sid, blockSize);
             auto ibbConn = conn.staticCast<Connection>();
-            connect(ibbConn.data(), &Connection::connected, this, [this]() {
-                auto c = static_cast<Connection *>(sender());
-                d->handleConnected(d->connections.value(c->sid));
+            if (!ibbConn)
+                return ibbConn;
+            ibbConn->creator = creator;
+            QObject::connect(ibbConn.data(), &Connection::connected, q, [this]() {
+                if (q->_state == State::Connecting) {
+                    q->setState(State::Active);
+                    emit q->connected();
+                }
             });
-            d->connections.insert(ibbConn->sid, ibbConn);
+            connections.insert(ibbConn->sid, ibbConn);
 
-            connect(ibbConn.data(), &Connection::connectionClosed, this, [this]() {
-                Connection *c = static_cast<Connection *>(sender());
-                d->connections.remove(c->sid);
-                QMutableListIterator<QSharedPointer<Connection>> it(d->readyConnections);
+            QObject::connect(ibbConn.data(), &Connection::connectionClosed, q, [this]() {
+                Connection *c = static_cast<Connection *>(q->sender());
+                connections.remove(c->sid);
+                QMutableListIterator<QSharedPointer<Connection>> it(readyConnections);
                 while (it.hasNext()) {
                     auto &p = it.next();
                     if (p.data() == c) {
@@ -234,13 +178,51 @@ namespace XMPP { namespace Jingle { namespace IBB {
                     }
                 }
             });
+
+            return ibbConn;
+        }
+    };
+
+    Transport::Transport(const TransportManagerPad::Ptr &pad, Origin creator) :
+        XMPP::Jingle::Transport(pad, creator), d(new Private)
+    {
+        d->q = this;
+        connect(pad->manager(), &TransportManager::abortAllRequested, this, [this]() {
+            for (auto &c : d->connections) {
+                c->close();
+            }
+            // d->aborted = true;
+            emit failed(); // TODO review if necessary. likely it's not
+        });
+    }
+
+    Transport::~Transport()
+    {
+        // we have to mark all of them as finished just in case they are captured somewhere else
+        if (d) {
+            for (auto &c : d->connections) {
+                c->close();
+            }
+        }
+    }
+
+    void Transport::prepare()
+    {
+        setState(State::ApprovedToSend);
+        if (_creator == _pad->session()->role()) { // outgoing
+            auto c   = d->newStream(QString(), d->defaultBlockSize, _pad->session()->role());
+            c->state = State::ApprovedToSend;
+        } else {
+            for (auto &c : d->connections) {
+                c->state = State::ApprovedToSend;
+            }
         }
         emit updated();
     }
 
     void Transport::start()
     {
-        d->started = true;
+        setState(State::Connecting);
 
         for (auto &c : d->connections) {
             d->checkAndStartConnection(c);
@@ -249,8 +231,14 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
     bool Transport::update(const QDomElement &transportEl)
     {
+        if (_state == State::Finished) {
+            qWarning("The IBB transport has finished already");
+            return false;
+        }
+
         QString sid = transportEl.attribute(QString::fromLatin1("sid"));
         if (sid.isEmpty()) {
+            qWarning("empty SID");
             return false;
         }
 
@@ -264,48 +252,43 @@ namespace XMPP { namespace Jingle { namespace IBB {
         }
 
         auto it = d->connections.find(sid);
-        if (it == d->connections.end()) {
-            auto c = d->pad->makeConnection(sid, bs_final);
-            if (c) {
-                auto ibbc = c.staticCast<Connection>();
-                it        = d->connections.insert(ibbc->sid, ibbc);
-                connect(ibbc.data(), &Connection::connected, this, [this]() {
-                    auto c = static_cast<Connection *>(sender());
-                    d->handleConnected(d->connections.value(c->sid));
-                });
-            } else {
+        if (it == d->connections.end()) { // new sid = new stream according to xep
+            auto c = d->newStream(sid, bs_final, _pad->session()->peerRole());
+            if (!c) {
                 qWarning("failed to create IBB connection");
                 return false;
             }
+            c->state = State::Pending;
+            if (_state == State::Created && _creator != _pad->session()->role()) {
+                // seems like we are just initing remote transport
+                setState(State::Pending);
+            }
         } else {
+            if ((*it)->creator != _pad->session()->role() || (*it)->state != State::Pending) {
+                qWarning("Unexpected IBB answer");
+                return false; // out of order or something like this
+            }
+
             if (bs_final < (*it)->_blockSize) {
                 (*it)->_blockSize = bs_final;
             }
+            if (_creator == _pad->session()->role()) {
+                setState(State::Accepted);
+            }
+            (*it)->state = State::Accepted;
         }
 
-        (*it)->offerReceived = true;
-        if (d->started) {
+        if (_state >= State::Connecting) {
             auto c = it.value();
             QTimer::singleShot(0, this, [this, c]() mutable { d->checkAndStartConnection(c); });
         }
         return true;
     }
 
-    bool Transport::isInitialOfferReady() const { return isValid() && (hasUpdates() || d->initialOfferSent); }
-
-    OutgoingTransportInfoUpdate Transport::takeInitialOffer()
-    {
-        auto upd = takeOutgoingUpdate();
-        if (std::get<0>(upd).isNull() && d->lastOfferedConnection) {
-            return d->makeOffer(d->lastOfferedConnection);
-        }
-        return upd;
-    }
-
     bool Transport::hasUpdates() const
     {
         for (auto &c : d->connections) {
-            if (!c->offerSent) {
+            if (c->state == State::ApprovedToSend) {
                 return true;
             }
         }
@@ -321,17 +304,52 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
         QSharedPointer<Connection> connection;
         for (auto &c : d->connections) {
-            if (!c->offerSent) {
+            if (c->state == State::ApprovedToSend) {
                 connection = c;
                 break;
             }
         }
-        return d->makeOffer(connection);
+
+        if (!connection)
+            return upd;
+
+        connection->state = State::Unacked;
+        auto doc          = _pad->session()->manager()->client()->doc();
+
+        QDomElement tel = doc->createElementNS(NS, "transport");
+        tel.setAttribute(QStringLiteral("sid"), connection->sid);
+        tel.setAttribute(QString::fromLatin1("block-size"), qulonglong(connection->_blockSize));
+
+        if (_state == State::ApprovedToSend) {
+            setState(State::Unacked);
+        }
+        upd = OutgoingTransportInfoUpdate { tel, [this, connection](bool success) mutable {
+                                               if (!success || connection->state != State::Unacked)
+                                                   return;
+
+                                               if (connection->creator == _pad->session()->role()) {
+                                                   connection->state = State::Pending;
+                                               } else {
+                                                   connection->state = State::Accepted;
+                                               }
+
+                                               if (_state == State::Unacked) {
+                                                   setState(_creator == _pad->session()->role() ? State::Pending
+                                                                                                : State::Accepted);
+                                               }
+                                               if (_state >= State::Connecting)
+                                                   d->checkAndStartConnection(connection);
+                                           } };
+
+        return upd;
     }
 
     bool Transport::isValid() const { return d; }
 
-    Transport::Features Transport::features() const { return AlwaysConnect | Reliable | Slow; }
+    TransportFeatures Transport::features() const
+    {
+        return TransportFeature::AlwaysConnect | TransportFeature::Reliable | TransportFeature::Slow;
+    }
 
     Connection::Ptr Transport::connection() const
     {
@@ -369,27 +387,16 @@ namespace XMPP { namespace Jingle { namespace IBB {
             d->jingleManager->unregisterTransport(NS);
     }
 
-    Transport::Features Manager::features() const
+    TransportFeatures Manager::features() const
     {
-        return Transport::AlwaysConnect | Transport::Reliable | Transport::Slow;
+        return TransportFeature::AlwaysConnect | TransportFeature::Reliable | TransportFeature::Slow;
     }
 
     void Manager::setJingleManager(XMPP::Jingle::Manager *jm) { d->jingleManager = jm; }
 
-    QSharedPointer<XMPP::Jingle::Transport> Manager::newTransport(const TransportManagerPad::Ptr &pad)
+    QSharedPointer<XMPP::Jingle::Transport> Manager::newTransport(const TransportManagerPad::Ptr &pad, Origin creator)
     {
-        return QSharedPointer<XMPP::Jingle::Transport>(new Transport(pad));
-    }
-
-    QSharedPointer<XMPP::Jingle::Transport> Manager::newTransport(const TransportManagerPad::Ptr &pad,
-                                                                  const QDomElement &             transportEl)
-    {
-        auto                                    t = new Transport(pad, transportEl);
-        QSharedPointer<XMPP::Jingle::Transport> ret(t);
-        if (t->isValid()) {
-            return ret;
-        }
-        return QSharedPointer<XMPP::Jingle::Transport>();
+        return QSharedPointer<Transport>::create(pad, creator).staticCast<XMPP::Jingle::Transport>();
     }
 
     TransportManagerPad *Manager::pad(Session *session) { return new Pad(this, session); }

@@ -41,8 +41,11 @@ HEADERS += \
     $$PWD/xmpp-im/filetransfer.h \
     $$PWD/xmpp-im/httpfileupload.h \
     $$PWD/xmpp-im/im.h \
-    $$PWD/xmpp-im/jingle-ft.h \
     $$PWD/xmpp-im/jingle.h \
+    $$PWD/xmpp-im/jingle-transport.h \
+    $$PWD/xmpp-im/jingle-application.h \
+    $$PWD/xmpp-im/jingle-session.h \
+    $$PWD/xmpp-im/jingle-ft.h \
     $$PWD/xmpp-im/jingle-ibb.h \
     $$PWD/xmpp-im/jingle-s5b.h \
     $$PWD/xmpp-im/s5b.h \
@@ -118,6 +121,9 @@ SOURCES += \
     $$PWD/xmpp-im/xmpp_caps.cpp \
     $$PWD/xmpp-im/xmpp_serverinfomanager.cpp \
     $$PWD/xmpp-im/jingle.cpp \
+    $$PWD/xmpp-im/jingle-transport.cpp \
+    $$PWD/xmpp-im/jingle-application.cpp \
+    $$PWD/xmpp-im/jingle-session.cpp \
     $$PWD/xmpp-im/jingle-ft.cpp \
     $$PWD/xmpp-im/jingle-s5b.cpp \
     $$PWD/xmpp-im/jingle-ibb.cpp

@@ -20,6 +20,7 @@
 #ifndef JINGLEFT_H
 #define JINGLEFT_H
 
+#include "jingle-application.h"
 #include "jingle.h"
 #include "xmpp_hash.h"
 
@@ -41,6 +42,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         inline Range() {}
         inline Range(qint64 offset, qint64 length) : offset(offset), length(length) {}
         inline bool isValid() const { return hashes.size() || offset || length; }
+        inline      operator bool() const { return isValid(); }
         QDomElement toXml(QDomDocument *doc) const;
     };
 
@@ -72,6 +74,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         void setDate(const QDateTime &date);
         void setDescription(const QString &desc);
         void addHash(const Hash &hash);
+        void setHashes(const QList<Hash> &hashes);
         void setMediaType(const QString &mediaType);
         void setName(const QString &name);
         void setSize(qint64 size);
@@ -124,22 +127,29 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         Application(const QSharedPointer<Pad> &pad, const QString &contentName, Origin creator, Origin senders);
         ~Application() override;
 
-        ApplicationManagerPad::Ptr pad() const override;
-        State                      state() const override;
-        void                       setState(State state) override;
-        XMPP::Stanza::Error        lastError() const override;
-        Reason                     terminationReason() const override;
+        void                setState(State state) override;
+        XMPP::Stanza::Error lastError() const override;
+        Reason              lastReason() const override;
 
-        QString                   contentName() const override;
-        Origin                    creator() const override;
-        Origin                    senders() const override;
-        Origin                    transportReplaceOrigin() const override;
-        SetDescError              setDescription(const QDomElement &description) override;
-        void                      setFile(const File &file);
-        File                      file() const;
-        File                      acceptFile() const;
-        bool                      setTransport(const QSharedPointer<Transport> &transport) override;
-        QSharedPointer<Transport> transport() const override;
+        SetDescError setRemoteOffer(const QDomElement &description) override;
+        SetDescError setRemoteAnswer(const QDomElement &description) override;
+        QDomElement  makeLocalOffer() override;
+        QDomElement  makeLocalAnswer() override;
+
+        bool canReplaceTransport() const override;
+        bool setTransport(const QSharedPointer<Transport> &transport, const Reason &reason = Reason()) override;
+        void remove(Reason::Condition cond = Reason::Success, const QString &comment = QString()) override;
+
+        XMPP::Jingle::Application::Update evaluateOutgoingUpdate() override;
+        OutgoingUpdate                    takeOutgoingUpdate() override;
+        bool wantBetterTransport(const QSharedPointer<XMPP::Jingle::Transport> &) const override;
+        bool selectNextTransport(const QString preferredNS = QString()) override;
+        void prepare() override;
+        void start() override;
+
+        void setFile(const File &file);
+        File file() const;
+        File acceptFile() const;
 
         /**
          * @brief setStreamingMode enables external download control.
@@ -152,16 +162,6 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
          * @param mode
          */
         void setStreamingMode(bool mode = true);
-
-        Action         evaluateOutgoingUpdate() override;
-        OutgoingUpdate takeOutgoingUpdate() override;
-        bool           wantBetterTransport(const QSharedPointer<XMPP::Jingle::Transport> &) const override;
-        bool           selectNextTransport() override;
-        void           prepare() override;
-        void           start() override;
-        bool           accept(const QDomElement &el) override;
-        void           remove(Reason::Condition cond = Reason::Success, const QString &comment = QString()) override;
-
         bool isValid() const;
 
         void            setDevice(QIODevice *dev, bool closeOnFinish = true);
@@ -169,8 +169,10 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     protected:
         bool incomingTransportReplace(const QSharedPointer<Transport> &transport) override;
-        bool incomingTransportAccept(const QDomElement &transportEl) override;
         void incomingRemove(const Reason &r) override;
+
+    private:
+        void prepareThumbnail(File &file);
 
     signals:
         void connectionReady(); // streaming mode only
