@@ -353,17 +353,17 @@ namespace XMPP { namespace Jingle {
             auto    tel = contentEl.firstChildElement(QLatin1String("transport"));
             QString transportNS;
             if (tel.isNull() || (transportNS = tel.namespaceURI()).isEmpty()) {
-                TransportResult { false, Reason::NoReason, nullptr };
+                TransportResult { false, Reason::NoReason, QSharedPointer<Transport>() };
             }
             auto trPad = q->transportPadFactory(transportNS);
             if (!trPad) {
-                return TransportResult { true, Reason::UnsupportedTransports, nullptr };
+                return TransportResult { true, Reason::UnsupportedTransports, QSharedPointer<Transport>() };
             }
             auto transport = trPad->manager()->newTransport(trPad, negateOrigin(role));
             if (transport && transport->update(tel)) {
                 return TransportResult { true, Reason::NoReason, transport };
             }
-            return TransportResult { false, Reason::NoReason, nullptr };
+            return TransportResult { false, Reason::NoReason, QSharedPointer<Transport>() };
         }
 
         void addAndInitContent(Origin creator, Application *content)

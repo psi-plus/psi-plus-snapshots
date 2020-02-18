@@ -126,6 +126,30 @@ namespace XMPP { namespace Jingle {
         Reason                              _lastReason;
     };
 
+    struct TransportSelector {
+        virtual ~TransportSelector();
+        // allocate the most preferred transport from the set
+        virtual QSharedPointer<Transport> getNextTransport(QSharedPointer<Transport> alike
+                                                           = QSharedPointer<Transport>())
+            = 0;
+
+        // put transport back to the set for future use
+        virtual void backupTransport(QSharedPointer<Transport>) = 0;
+
+        // where we can allocate another transport for a replacement
+        virtual bool hasMoreTransports() const = 0;
+
+        // check where we can (still) use this transport for the application
+        virtual bool hasTransport(QSharedPointer<Transport>) const = 0;
+
+        /*
+            >0: transport `a` is more preferred than `b`
+            <0: transport `a` is less preferred
+            =0: it's essentially the same transport, so hardly a replacement.
+        */
+        virtual int compare(QSharedPointer<Transport> a, QSharedPointer<Transport> b) const = 0;
+    };
+
     class TransportManager : public QObject {
         Q_OBJECT
     public:

@@ -55,4 +55,7 @@ namespace XMPP { namespace Jingle {
     {
         return 0; // means "block" is not applicable for this kind of connection
     }
+
+    TransportSelector::~TransportSelector() {}
+
 }}
