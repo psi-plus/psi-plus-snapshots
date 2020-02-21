@@ -200,7 +200,6 @@ private slots:
     void streamIncomingXml(const QString &);
     void streamOutgoingXml(const QString &);
 
-    void slotRosterDelimiterRequestFinished();
     void slotRosterRequestFinished();
 
     // basic daemons

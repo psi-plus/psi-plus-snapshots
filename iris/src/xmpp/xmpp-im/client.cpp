@@ -890,12 +890,22 @@ void Client::rosterRequest(bool withGroupsDelimiter)
     if (!d->active)
         return;
 
-    JT_Roster *r       = new JT_Roster(rootTask());
-    int        timeout = 0;
+    JT_Roster *r = new JT_Roster(rootTask());
     if (withGroupsDelimiter) {
-        connect(r, SIGNAL(finished()), SLOT(slotRosterDelimiterRequestFinished()));
+        connect(r, &JT_Roster::finished, this, [this, r]() mutable {
+            if (r->success()) {
+                d->roster.setGroupsDelimiter(r->groupsDelimiter());
+                emit rosterGroupsDelimiterRequestFinished(r->groupsDelimiter());
+            }
+
+            r = new JT_Roster(rootTask());
+            connect(r, SIGNAL(finished()), SLOT(slotRosterRequestFinished()));
+            r->get();
+            d->roster.flagAllForDelete(); // mod_groups patch
+            r->go(true);
+        });
         r->getGroupsDelimiter();
-        // WORKAROUND: Some bad servers (Facebook for example) don't response
+        // WORKAROUND: Some bad servers (Facebook for example) don't respond
         // on groups delimiter request. Wait timeout and go ahead.
         r->setTimeout(GROUPS_DELIMITER_TIMEOUT);
     } else {
@@ -904,21 +914,6 @@ void Client::rosterRequest(bool withGroupsDelimiter)
         d->roster.flagAllForDelete(); // mod_groups patch
     }
 
-    r->go(true);
-}
-
-void Client::slotRosterDelimiterRequestFinished()
-{
-    JT_Roster *r = qobject_cast<JT_Roster *>(sender());
-    if (r->success()) {
-        d->roster.setGroupsDelimiter(r->groupsDelimiter());
-        emit rosterGroupsDelimiterRequestFinished(r->groupsDelimiter());
-    }
-
-    r = new JT_Roster(rootTask());
-    connect(r, SIGNAL(finished()), SLOT(slotRosterRequestFinished()));
-    r->get();
-    d->roster.flagAllForDelete(); // mod_groups patch
     r->go(true);
 }
 

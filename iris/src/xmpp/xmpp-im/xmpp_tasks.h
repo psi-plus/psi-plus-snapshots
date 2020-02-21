@@ -111,6 +111,8 @@ public:
     bool take(const QDomElement &x);
 
 private:
+    enum Type { Get, Set, Remove, GetDelimiter, SetDelimiter, Unknown = -1 };
+
     int         type;
     QDomElement iq;
     Jid         to;
