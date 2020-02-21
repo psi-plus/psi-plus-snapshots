@@ -24,15 +24,24 @@
 
 namespace XMPP { namespace Jingle {
 
+    class Session;
     class NSTransportsList : public TransportSelector {
     public:
-        QSharedPointer<Transport> getNextTransport(QSharedPointer<Transport> alike) override;
-        QSharedPointer<Transport> getNextTransport(const QString &preferredNS);
+        inline NSTransportsList(Session *session, const QStringList &transports) :
+            _session(session), _transports(transports)
+        {
+        }
+
+        QSharedPointer<Transport> getNextTransport() override;
+        QSharedPointer<Transport> getAlikeTransport(QSharedPointer<Transport> alike) override;
+
+        QSharedPointer<Transport> getNextNSTransport(const QString &preferredNS = QString());
 
         void backupTransport(QSharedPointer<Transport>) override;
         bool hasMoreTransports() const override;
         bool hasTransport(QSharedPointer<Transport>) const override;
         int  compare(QSharedPointer<Transport> a, QSharedPointer<Transport> b) const override;
+        bool replace(QSharedPointer<Transport> old, QSharedPointer<Transport> newer) override;
 
     private:
         Session *   _session = nullptr;

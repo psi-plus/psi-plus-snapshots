@@ -462,9 +462,8 @@ namespace XMPP { namespace Jingle {
                 }
 
                 rejectSet.remove(contentName);
-                if (it == addSet.end()
-                    || (*it)->wantBetterTransport(
-                        app->transport())) { // probably not wantBetterTransport but wantBetterApplication
+                // REVIEW probably not wantBetterTransport but wantBetterApplication
+                if (it == addSet.end() || (*it)->wantBetterTransport(app->transport())) {
                     if (it == addSet.end()) {
                         addSet.insert(contentName, app);
                     } else {
@@ -761,8 +760,20 @@ namespace XMPP { namespace Jingle {
                 auto old = app->transport();
                 Q_ASSERT(old != nullptr);
                 // if it's my transport and it's sent but unacknowledged but has to be accepted
-                if (old->creator() == q->peerRole() && old->state() == State::Unacked && role == Origin::Initiator) {
+                if (old->isLocal() && old->state() == State::Unacked && role == Origin::Initiator) {
                     doTieBreak = true;
+                    continue;
+                }
+
+                if (!app->transportSelector()->canReplace(app->transport(), transport)) {
+                    qDebug("incoming unsupported or already used transport");
+                    toReject.append(ce);
+                    continue;
+                }
+
+                if (!app->isTransportReplaceEnabled()) {
+                    qDebug("transport replace is disabled for %s", qPrintable(app->contentName()));
+                    toReject.append(ce);
                     continue;
                 }
 
@@ -777,8 +788,8 @@ namespace XMPP { namespace Jingle {
                 if (doTieBreak) {
                     if (app->transport()->creator() == role && app->transport()->state() < State::Unacked)
                         continue; // it will send transport soon
-                    app->selectNextTransport(transport->pad()->ns());
-                } else if (!app->incomingTransportReplace(transport)) {
+                    app->selectNextTransport(transport);
+                } else if (!app->setTransport(transport)) {
                     // app should generate transport accept eventually. content-accept will
                     // work too if the content wasn't accepted yet
                     toReject.append(ce);

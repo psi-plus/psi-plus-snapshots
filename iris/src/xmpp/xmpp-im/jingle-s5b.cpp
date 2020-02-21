@@ -36,8 +36,10 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
     static QString makeKey(const QString &sid, const Jid &j1, const Jid &j2)
     {
-        return QString::fromLatin1(
+        auto data = QString::fromLatin1(
             QCryptographicHash::hash((sid + j1.full() + j2.full()).toUtf8(), QCryptographicHash::Sha1).toHex());
+        qDebug() << "Generated key from:" << sid << j1.full() << j2.full() << " = " << data;
+        return data;
     }
 
     class Connection : public XMPP::Jingle::Connection {
@@ -217,6 +219,18 @@ namespace XMPP { namespace Jingle { namespace S5B {
         QSharedPointer<S5BServer> server;
         SocksClient *             socksClient = nullptr;
 
+        QString toString() const
+        {
+            QString extra;
+            if (type == Tunnel || type == Assisted || type == Direct) {
+                extra = QString("host=%1:%2").arg(host, QString::number(port));
+            } else if (type == Proxy) {
+                extra = QString("proxy=%1 host=%2:%3").arg(jid.full(), host, QString::number(port));
+            }
+            return QString("Cadidate(type=%1 cid=%2 state=%3 %4)")
+                .arg(typeText(type), cid, Candidate::stateText(state), extra);
+        }
+
         void connectToHost(const QString &key, State successState, QObject *callbackContext,
                            std::function<void(bool)> callback, bool isUdp)
         {
@@ -228,8 +242,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 XMPP::Ice176::isIPv6LinkLocalAddress(ha)
 #endif
             ) {
-                qDebug() << "connect to host with cid=" << cid << "and key=" << key
-                         << "candidate using V6LinkLocalSocksConnector";
+                qDebug() << "connect to " << toString() << "with key=" << key << "using V6LinkLocalSocksConnector";
                 // we have link local address without scope. We have to enumerate all possible scopes.
                 auto v6llConnector = new V6LinkLocalSocksConnector(this);
                 connect(v6llConnector, &V6LinkLocalSocksConnector::ready, callbackContext,
@@ -242,24 +255,24 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
                             if (socksClient) {
                                 state = successState;
-                                qDebug() << "connected: cid=" << cid << "socks client (ipv6)" << socksClient;
+                                qDebug() << "connected: " << toString() << "socks client (ipv6)" << socksClient;
                                 callback(true);
                                 return;
                             }
                             state = Candidate::Discarded;
-                            qDebug() << "failed to connect: cid=" << cid << "no socks client (ipv6)";
+                            qDebug() << "failed to connect: " << toString() << "no socks client (ipv6)";
                             callback(false);
                         });
                 v6llConnector->connectToHost(ha, port, key, isUdp);
             } else {
                 socksClient = new SocksClient;
-                qDebug() << "connect to host with cid=" << cid << ", key=" << key << " and socks client" << socksClient;
+                qDebug() << "connect to " << toString() << "with key=" << key << " and socks client" << socksClient;
                 connect(socksClient, &SocksClient::connected, callbackContext, [this, callback, successState]() {
                     if (state == Candidate::Discarded) {
                         return;
                     }
                     state = successState;
-                    qDebug() << "connected: cid=" << cid << "socks client" << socksClient;
+                    qDebug() << "connected: " << toString() << "socks client" << socksClient;
                     callback(true);
                 });
                 connect(socksClient, &SocksClient::error, callbackContext, [this, callback](int error) {
@@ -268,7 +281,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                         return;
                     }
                     state = Candidate::Discarded;
-                    qDebug() << "failed to connect: cid=" << cid << "socks client" << socksClient;
+                    qDebug() << "failed to connect: " << toString() << "socks client" << socksClient;
                     callback(false);
                 });
                 // connect(&t, SIGNAL(timeout()), SLOT(trySendUDP()));
@@ -491,14 +504,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
     QString Candidate::toString() const
     {
         if (d) {
-            QString extra;
-            if (d->type == Tunnel || d->type == Assisted || d->type == Direct) {
-                extra = QString("host=%1:%2").arg(d->host, QString::number(d->port));
-            } else if (d->type == Proxy) {
-                extra = QString("proxy=%1 host=%2:%3").arg(d->jid.full(), d->host, QString::number(d->port));
-            }
-            return QString("Cadidate(type=%1 cid=%2 state=%3 %4)")
-                .arg(typeText(d->type), d->cid, stateText(d->state), extra);
+            return d->toString();
         } else
             return QString("Candidate(null)");
     }
@@ -932,11 +938,12 @@ namespace XMPP { namespace Jingle { namespace S5B {
             // if we are here then neither candidate-used nor candidate-error was sent to remote,
             // but we can send it now.
             // first let's check if we can send candidate-used
-            bool allRemoteDiscarded          = true;
-            bool hasConnectedRemoteCandidate = false;
+            bool    allRemoteDiscarded          = true;
+            bool    hasConnectedRemoteCandidate = false;
+            QString states;
             for (const auto &c : remoteCandidates) {
                 auto s = c.state();
-                qDebug() << "  candidate " << c.cid() << " is " << Candidate::stateText(s);
+                states += QString("\n%1").arg(c.toString());
                 if (s != Candidate::Discarded) {
                     allRemoteDiscarded = false;
                 }
@@ -944,6 +951,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                     hasConnectedRemoteCandidate = true;
                 }
             }
+            qDebug().noquote() << "Candidates dump:" << states;
 
             // if we have connection to remote candidate it's time to send it
             if (hasConnectedRemoteCandidate) {
@@ -1371,6 +1379,9 @@ namespace XMPP { namespace Jingle { namespace S5B {
             if (bsn && bsn <= d->blockSize) {
                 d->blockSize = bsn;
             }
+        }
+        if (_state == State::Created && isRemote() && d->sid.isEmpty()) {
+            d->sid = transportEl.attribute(QStringLiteral("sid"));
         }
         auto dstaddr = transportEl.attribute(QStringLiteral("dstaddr"));
         if (!dstaddr.isEmpty()) {

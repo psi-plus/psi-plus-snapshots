@@ -69,6 +69,7 @@ namespace XMPP { namespace Jingle {
         inline Origin                     senders() const { return _senders; }
         inline QString                    contentName() const { return _contentName; }
         inline QSharedPointer<Transport>  transport() const { return _transport; }
+        inline TransportSelector *        transportSelector() const { return _transportSelector.data(); }
 
         virtual SetDescError setRemoteOffer(const QDomElement &description)  = 0;
         virtual SetDescError setRemoteAnswer(const QDomElement &description) = 0;
@@ -90,27 +91,27 @@ namespace XMPP { namespace Jingle {
          * @param transport
          * @return false if not compatible
          */
-        virtual bool setTransport(const QSharedPointer<Transport> &transport, const Reason &reason = Reason()) = 0;
-
-        /**
-         * @brief canReplaceTransport returns true if the application has some spare transports to try
-         * @return
-         */
-        virtual bool canReplaceTransport() const = 0;
+        bool setTransport(const QSharedPointer<Transport> &transport, const Reason &reason = Reason());
 
         /**
          * @brief selectNextTransport selects next transport from compatible transports list.
          *   The list is usually stored in the application
          * @return
          */
-        virtual bool selectNextTransport(const QString preferredNS = QString()) = 0;
+        bool selectNextTransport(const QSharedPointer<Transport> alikeTransport = QSharedPointer<Transport>());
+
+        /**
+         * @brief Checks where transport-replace is possible atm
+         * @return
+         */
+        virtual bool isTransportReplaceEnabled() const;
 
         /**
          * @brief wantBetterTransport checks if the transport is a better match for the application
          * Used in content is provided twice with two different transports
          * @return
          */
-        virtual bool wantBetterTransport(const QSharedPointer<Transport> &) const = 0;
+        virtual bool wantBetterTransport(const QSharedPointer<Transport> &) const;
 
         /**
          * @brief prepare to send content-add/session-initiate
@@ -120,17 +121,18 @@ namespace XMPP { namespace Jingle {
         virtual void start()                                                                              = 0;
         virtual void remove(Reason::Condition cond = Reason::Success, const QString &comment = QString()) = 0;
 
-        /**
-         * @brief incomingTransportReplace it's jingle transport-replace
-         * @param transport
-         * @return
-         */
-        virtual bool incomingTransportReplace(const QSharedPointer<Transport> &transport) = 0;
-        virtual void incomingRemove(const Reason &r)                                      = 0;
+        virtual void incomingRemove(const Reason &r) = 0;
 
     protected:
-        // wraps transport update so transport can be safely-deleted before callback is triggered
+        /**
+         * @brief wraps transport update so transport can be safely-deleted before callback is triggered
+         */
         OutgoingTransportInfoUpdate wrapOutgoingTransportUpdate();
+
+        /**
+         * @brief initTransport in general connects any necessary for the application transport signals
+         */
+        virtual void initTransport() = 0;
 
     signals:
         void updated(); // signal for session it has to send updates to remote. so it will follow with
@@ -154,18 +156,17 @@ namespace XMPP { namespace Jingle {
         Origin  _senders;
 
         // current transport. either local or remote. has info about origin and state
-        QSharedPointer<Transport> _transport;
-
-        // when set the content will be removed with this reason
-        Reason _terminationReason;
-
-        State _prevTransportState = State::Created;
+        QSharedPointer<Transport>         _transport;
+        QScopedPointer<TransportSelector> _transportSelector;
 
         // if transport-replace is in progress. will be set to true when accepted by both sides.
         PendingTransportReplace _pendingTransportReplace = PendingTransportReplace::None;
 
         // while it's valid - we are in unaccepted yet transport-replace
         Reason _transportReplaceReason;
+
+        // when set the content will be removed with this reason
+        Reason _terminationReason;
 
         // evaluated update to be sent
         Update _update;

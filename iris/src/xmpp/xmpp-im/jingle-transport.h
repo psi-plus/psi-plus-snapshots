@@ -126,20 +126,30 @@ namespace XMPP { namespace Jingle {
         Reason                              _lastReason;
     };
 
+    // It's an available transports collection per application
     struct TransportSelector {
         virtual ~TransportSelector();
-        // allocate the most preferred transport from the set
-        virtual QSharedPointer<Transport> getNextTransport(QSharedPointer<Transport> alike
-                                                           = QSharedPointer<Transport>())
-            = 0;
+        // Allocate the most preferred transport from the set
+        // Returned transport is removed from the list of available.
+        virtual QSharedPointer<Transport> getNextTransport() = 0;
 
-        // put transport back to the set for future use
+        // Allocate alike transport (e.g. we have remote transport but instead want to use our
+        // own of the same type and similar parameters)
+        // Returned transport is removed from the list of available.
+        virtual QSharedPointer<Transport> getAlikeTransport(QSharedPointer<Transport> alike) = 0;
+
+        // Checks if replacement old with newer is possible (e.g. calls canReplace) and removes
+        // the newer transport from the list of available.
+        // Returns false if impossible.
+        virtual bool replace(QSharedPointer<Transport> old, QSharedPointer<Transport> newer) = 0;
+
+        // Put transport back to the set for future use
         virtual void backupTransport(QSharedPointer<Transport>) = 0;
 
-        // where we can allocate another transport for a replacement
+        // Where we can allocate another transport for a replacement
         virtual bool hasMoreTransports() const = 0;
 
-        // check where we can (still) use this transport for the application
+        // Check where we can (still) use this transport for the application
         virtual bool hasTransport(QSharedPointer<Transport>) const = 0;
 
         /*
@@ -148,6 +158,11 @@ namespace XMPP { namespace Jingle {
             =0: it's essentially the same transport, so hardly a replacement.
         */
         virtual int compare(QSharedPointer<Transport> a, QSharedPointer<Transport> b) const = 0;
+
+        // Returns false if it's impossible to replace old with newer for example if the newer is
+        // not supported or already proven to be useless.
+        // Default implementation checks is thew newer transport is among remaining or same as old
+        virtual bool canReplace(QSharedPointer<Transport> old, QSharedPointer<Transport> newer);
     };
 
     class TransportManager : public QObject {

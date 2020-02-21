@@ -22,12 +22,14 @@
 
 namespace XMPP { namespace Jingle {
 
-    QSharedPointer<Transport> NSTransportsList::getNextTransport(QSharedPointer<Transport> alike)
+    QSharedPointer<Transport> NSTransportsList::getNextTransport() { return getNextNSTransport(); }
+
+    QSharedPointer<Transport> NSTransportsList::getAlikeTransport(QSharedPointer<Transport> alike)
     {
-        return getNextTransport(alike->pad()->ns());
+        return getNextNSTransport(alike->pad()->ns());
     }
 
-    QSharedPointer<Transport> NSTransportsList::getNextTransport(const QString &preferredNS)
+    QSharedPointer<Transport> NSTransportsList::getNextNSTransport(const QString &preferredNS)
     {
         if (_transports.isEmpty()) {
             return QSharedPointer<Transport>();
@@ -53,13 +55,28 @@ namespace XMPP { namespace Jingle {
 
     bool NSTransportsList::hasMoreTransports() const { return !_transports.isEmpty(); }
 
-    bool NSTransportsList::hasTransport(QSharedPointer<Transport>) const { return false; }
+    bool NSTransportsList::hasTransport(QSharedPointer<Transport> t) const
+    {
+        return t && _transports.indexOf(t->pad()->ns()) != -1;
+    }
 
     int NSTransportsList::compare(QSharedPointer<Transport> a, QSharedPointer<Transport> b) const
     {
-        auto idxA = _transports.indexOf(a->pad()->ns());
-        auto idxB = _transports.indexOf(b->pad()->ns());
+        int idxA = -1;
+        if (a)
+            idxA = _transports.indexOf(a->pad()->ns());
+        int idxB = -1;
+        if (b)
+            idxB = _transports.indexOf(b->pad()->ns());
         return idxA < idxB ? -1 : idxA > idxB ? 1 : 0;
+    }
+
+    bool NSTransportsList::replace(QSharedPointer<Transport> old, QSharedPointer<Transport> newer)
+    {
+        if (!newer || !canReplace(old, newer))
+            return false;
+        _transports.removeAll(newer->pad()->ns());
+        return true;
     }
 
 }}

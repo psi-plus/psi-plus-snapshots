@@ -136,16 +136,13 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         QDomElement  makeLocalOffer() override;
         QDomElement  makeLocalAnswer() override;
 
-        bool canReplaceTransport() const override;
-        bool setTransport(const QSharedPointer<Transport> &transport, const Reason &reason = Reason()) override;
+        bool isTransportReplaceEnabled() const override;
         void remove(Reason::Condition cond = Reason::Success, const QString &comment = QString()) override;
 
         XMPP::Jingle::Application::Update evaluateOutgoingUpdate() override;
         OutgoingUpdate                    takeOutgoingUpdate() override;
-        bool wantBetterTransport(const QSharedPointer<XMPP::Jingle::Transport> &) const override;
-        bool selectNextTransport(const QString preferredNS = QString()) override;
-        void prepare() override;
-        void start() override;
+        void                              prepare() override;
+        void                              start() override;
 
         void setFile(const File &file);
         File file() const;
@@ -168,8 +165,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         Connection::Ptr connection() const;
 
     protected:
-        bool incomingTransportReplace(const QSharedPointer<Transport> &transport) override;
         void incomingRemove(const Reason &r) override;
+        void initTransport() override;
 
     private:
         void prepareThumbnail(File &file);

@@ -31,7 +31,7 @@ namespace XMPP { namespace Jingle {
     //----------------------------------------------------------------------------
     Transport::Transport(TransportManagerPad::Ptr pad, Origin creator) : _creator(creator), _pad(pad) {}
 
-    bool Transport::isRemote() const { return _pad->session()->role() == _creator; }
+    bool Transport::isRemote() const { return _pad->session()->role() != _creator; }
 
     void Transport::setState(State newState)
     {
@@ -56,6 +56,13 @@ namespace XMPP { namespace Jingle {
         return 0; // means "block" is not applicable for this kind of connection
     }
 
+    //----------------------------------------------------------------------------
+    // TransportSelector
+    //----------------------------------------------------------------------------
     TransportSelector::~TransportSelector() {}
 
+    bool TransportSelector::canReplace(QSharedPointer<Transport> old, QSharedPointer<Transport> newer)
+    {
+        return newer && (hasTransport(newer) || compare(old, newer) == 0);
+    }
 }}

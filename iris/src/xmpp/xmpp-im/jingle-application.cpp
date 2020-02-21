@@ -54,7 +54,7 @@ namespace XMPP { namespace Jingle {
             if (inTrReplace && _transport->creator() != _pad->session()->role())
                 _update = { Action::TransportReject, _transport->lastReason() };
             else
-                _update = { canReplaceTransport() ? Action::TransportReplace : Action::ContentRemove,
+                _update = { _transportSelector->hasMoreTransports() ? Action::TransportReplace : Action::ContentRemove,
                             _transport->lastReason() };
             return _update;
         }
@@ -87,7 +87,8 @@ namespace XMPP { namespace Jingle {
                 if (_transport->creator() == _pad->session()->role()) {
                     if (_transport->state() == State::Finished)
                         // replace over unconfirmed replace (2nd transport failed shortly)
-                        _update = { canReplaceTransport() ? Action::TransportReplace : Action::ContentRemove,
+                        _update = { _transportSelector->hasMoreTransports() ? Action::TransportReplace
+                                                                            : Action::ContentRemove,
                                     _transport->lastReason() };
                     break;
                 }
@@ -106,7 +107,7 @@ namespace XMPP { namespace Jingle {
                 if (_transport->state() == State::Connecting)
                     _update = { Action::TransportInfo, Reason() };
             } else if (_transport->state() == State::Finished) {
-                _update = { canReplaceTransport() ? Action::TransportReplace : Action::ContentRemove,
+                _update = { _transportSelector->hasMoreTransports() ? Action::TransportReplace : Action::ContentRemove,
                             _transport->lastReason() };
             }
             break;
@@ -199,5 +200,86 @@ namespace XMPP { namespace Jingle {
             }
         };
         return OutgoingTransportInfoUpdate { transportEl, wrapCB };
+    }
+
+    bool Application::selectNextTransport(const QSharedPointer<Transport> alikeTransport)
+    {
+        if (!_transportSelector->hasMoreTransports()) {
+            emit updated(); // will be evaluated to content-remove
+            return false;
+        }
+
+        if (alikeTransport) {
+            auto tr = _transportSelector->getAlikeTransport(alikeTransport);
+            if (tr && setTransport(tr))
+                return true;
+        }
+
+        QSharedPointer<Transport> t;
+        while ((t = _transportSelector->getNextTransport()))
+            if (setTransport(t))
+                return true;
+
+        emit updated(); // will be evaluated to content-remove
+        return false;
+    }
+
+    bool Application::wantBetterTransport(const QSharedPointer<Transport> &t) const
+    {
+        if (!_transportSelector->hasTransport(t))
+            return false;
+
+        return !_transport || _transportSelector->compare(t, _transport) > 0;
+    }
+
+    bool Application::isTransportReplaceEnabled() const { return true; }
+
+    bool Application::setTransport(const QSharedPointer<Transport> &transport, const Reason &reason)
+    {
+        if (!isTransportReplaceEnabled() || !_transportSelector->replace(_transport, transport))
+            return false;
+
+        // in case we automatically select a new transport on our own we definitely will come up to this point
+        if (_transport) {
+            if (_transport->state() < State::Unacked && _transport->creator() == _pad->session()->role()
+                && _transport->pad()->ns() != transport->pad()->ns()) {
+                // the transport will be reused later since the remote doesn't know about it yet
+                _transportSelector->backupTransport(_transport);
+            }
+
+            if (transport->creator() == _pad->session()->role()) {
+                auto ts = _transport->state() == State::Finished ? _transport->prevState() : _transport->state();
+                if (_transport->creator() != _pad->session()->role() || ts > State::Unacked) {
+                    // if remote knows of the current transport
+                    _pendingTransportReplace = PendingTransportReplace::InProgress;
+                } else if (_transport->creator() == _pad->session()->role() && ts == State::Unacked) {
+                    // if remote may know but we don't know yet about it
+                    _pendingTransportReplace = PendingTransportReplace::NeedAck;
+                }
+            } else {
+                _pendingTransportReplace = PendingTransportReplace::InProgress;
+            }
+
+            if (_pendingTransportReplace != PendingTransportReplace::None) {
+                if (_transport->state() == State::Finished) { // initiate replace?
+                    _transportReplaceReason = reason.isValid() ? reason : _transport->lastReason();
+                } else {
+                    _transportReplaceReason = reason;
+                }
+            }
+            _transport->disconnect(this);
+            _transport.reset();
+        }
+
+        _transport = transport;
+        connect(transport.data(), &Transport::updated, this, &Application::updated);
+        connect(transport.data(), &Transport::failed, this, [this]() { selectNextTransport(); });
+
+        initTransport();
+
+        if (_state >= State::Unacked) {
+            _transport->prepare();
+        }
+        return true;
     }
 }}

@@ -18,6 +18,7 @@
  */
 
 #include "jingle-ft.h"
+#include "jingle-nstransportslist.h"
 #include "jingle-session.h"
 
 #include "xmpp_client.h"
@@ -432,7 +433,6 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         XMPP::Stanza::Error lastError;
         Reason              lastReason;
         Connection::Ptr     connection;
-        QStringList         availableTransports;
         QIODevice *         device    = nullptr;
         qint64              bytesLeft = 0;
         QList<Hash>         outgoingChecksum;
@@ -538,12 +538,13 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                              Origin senders) :
         d(new Private)
     {
-        d->q                   = this;
-        _pad                   = pad;
-        _contentName           = contentName;
-        _creator               = creator;
-        _senders               = senders;
-        d->availableTransports = static_cast<Manager *>(pad->manager())->availableTransports();
+        d->q         = this;
+        _pad         = pad;
+        _contentName = contentName;
+        _creator     = creator;
+        _senders     = senders;
+        _transportSelector.reset(
+            new NSTransportsList(pad->session(), static_cast<Manager *>(pad->manager())->availableTransports()));
     }
 
     Application::~Application() {}
@@ -633,93 +634,11 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     File Application::acceptFile() const { return d->acceptFile; }
 
-    bool Application::canReplaceTransport() const { return !d->availableTransports.isEmpty(); }
+    bool Application::isTransportReplaceEnabled() const { return _state < State::Active; }
 
-    bool Application::wantBetterTransport(const QSharedPointer<Transport> &t) const
+    void Application::initTransport()
     {
-        Q_UNUSED(t)
-        return true; // TODO check
-    }
-
-    bool Application::selectNextTransport(const QString preferredNS)
-    {
-        if (d->availableTransports.isEmpty()) {
-            emit updated(); // will be evaluated to content-remove
-            return false;
-        }
-
-        int idx = d->availableTransports.indexOf(preferredNS);
-        if (idx == -1)
-            idx = d->availableTransports.size() - 1;
-
-        do {
-            auto t = _pad->session()->newOutgoingTransport(d->availableTransports[idx]);
-            if (t && setTransport(t)) {
-                return true;
-            }
-            d->availableTransports.removeAt(idx);
-            idx = d->availableTransports.size() - 1;
-        } while (idx != -1);
-
-        /*if (_transport) {
-            disconnect(_transport.data());
-            _transport.reset();
-        }*/
-        emit updated(); // will be evaluated to content-remove
-        return false;
-    }
-
-    // incoming one? or we have to check real direction
-    bool Application::setTransport(const QSharedPointer<Transport> &transport, const Reason &reason)
-    {
-        if (transport.isNull() || !(transport->features() & TransportFeature::Reliable))
-            return false;
-
-        // check if ns is registered or matches current
-        int  nsIndex = d->availableTransports.indexOf(transport->pad()->ns());
-        auto curNs   = _transport ? _transport->pad()->ns() : QString();
-        if (nsIndex == -1 && curNs != transport->pad()->ns()) {
-            return false;
-        }
-
-        // in case we automatically select a new transport on our own we definitely will come up to this point
-        if (_transport) {
-            if (_transport->state() < State::Unacked && _transport->creator() == _pad->session()->role()
-                && _transport->pad()->ns() != transport->pad()->ns()) {
-                // the transport will be reused later since the remote doesn't know about it yet
-                d->availableTransports.push_back(_transport->pad()->ns());
-            }
-
-            if (transport->creator() == _pad->session()->role()) {
-                auto ts = _transport->state() == State::Finished ? _transport->prevState() : _transport->state();
-                if (_transport->creator() != _pad->session()->role() || ts > State::Unacked) {
-                    // if remote knows of the current transport
-                    _pendingTransportReplace = PendingTransportReplace::InProgress;
-                } else if (_transport->creator() == _pad->session()->role() && ts == State::Unacked) {
-                    // if remote may know but we don't know yet about it
-                    _pendingTransportReplace = PendingTransportReplace::NeedAck;
-                }
-            } else {
-                _pendingTransportReplace = PendingTransportReplace::InProgress;
-            }
-
-            if (_pendingTransportReplace != PendingTransportReplace::None) {
-                if (_transport->state() == State::Finished) { // initiate replace?
-                    _transportReplaceReason = reason.isValid() ? reason : _transport->lastReason();
-                } else {
-                    _transportReplaceReason = reason;
-                }
-            }
-            _transport->disconnect(this);
-            _transport.reset();
-        }
-
-        if (nsIndex != -1)
-            d->availableTransports.removeAt(nsIndex);
-
-        _transport = transport;
-        connect(transport.data(), &Transport::updated, this, &Application::updated);
-        connect(transport.data(), &Transport::connected, this, [this]() {
+        connect(_transport.data(), &Transport::connected, this, [this]() {
             d->lastReason = Reason();
             d->lastError.reset();
             d->connection = _transport->connection();
@@ -755,36 +674,6 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 emit connectionReady();
             }
         });
-
-        connect(transport.data(), &Transport::failed, this, [this]() { selectNextTransport(); });
-
-        if (_state >= State::Unacked) {
-            // seems like we are in transport failure recovery. d->transportFailed may confirm this
-            _transport->prepare();
-        }
-        return true;
-    }
-
-    bool Application::incomingTransportReplace(const QSharedPointer<Transport> &transport)
-    {
-        if (_state >= State::Active) { // impossible case. needs full app renegotiation to continue
-            d->lastError = ErrorUtil::makeOutOfOrder(*_pad->doc());
-            return false;
-        }
-
-        Q_ASSERT(_transport != nullptr);
-
-        auto newns = transport->pad()->ns();
-        if (!(d->availableTransports.contains(newns) || _transport->pad()->ns() == newns)) {
-            return false; // unknown ns. TODO return reason for the reject
-        }
-
-        bool curIsLocal = _transport->creator() == _pad->session()->role();
-        if (curIsLocal && _transport->state() == State::Unacked && _pad->session()->role() == Origin::Initiator) {
-            d->lastError = ErrorUtil::makeTieBreak(*_pad->doc());
-            return false;
-        }
-        return setTransport(transport);
     }
 
     void Application::setStreamingMode(bool mode)
