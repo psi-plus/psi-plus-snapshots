@@ -250,6 +250,12 @@ elseif(USE_ASPELL)
         )
 endif()
 
+if(LINUX AND USE_XSS)
+    find_package(X11 REQUIRED)
+    include_directories(${X11_Xscreensaver_INCLUDE_PATH})
+    list(APPEND EXTRA_LDFLAGS ${X11_Xscreensaver_LIB})
+endif()
+
 qt5_wrap_ui(UI_FORMS ${FORMS})
 add_library(libpsi_tools STATIC  ${SOURCES} ${HEADERS} ${UI_FORMS})
 target_link_libraries(libpsi_tools ${QT_LIBRARIES} tools ${EXTRA_LDFLAGS})
