@@ -992,6 +992,7 @@ void S5BManager::Item::resetConnection()
         s->unregisterKey(key);
         s.reset();
     }
+    relatedServers.clear();
 
     delete task;
     task = nullptr;
