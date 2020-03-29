@@ -49,7 +49,10 @@ if(USE_KEYCHAIN)
 endif()
 
 if(LINUX)
-    find_package(Qt5 COMPONENTS DBus X11Extras REQUIRED)
+    find_package(Qt5 COMPONENTS X11Extras REQUIRED)
+    if(USE_DBUS)
+        find_package(Qt5 COMPONENTS DBus REQUIRED)
+    endif()
     find_package(XCB REQUIRED)
     set(EXTRA_LIBS
         ${XCB_LIBRARY}
@@ -77,7 +80,10 @@ endif()
 set(QT_LIBRARIES Qt5::Widgets Qt5::Core Qt5::Network Qt5::Xml ${WEBKIT_LIBS} Qt5::Concurrent Qt5::Multimedia Qt5::Svg Qt5::Sql ${KEYCHAIN_LIBS})
 
 if(LINUX)
-    list(APPEND QT_LIBRARIES Qt5::DBus Qt5::X11Extras ${LIBXCB_LIBRARIES})
+    list(APPEND QT_LIBRARIES Qt5::X11Extras ${LIBXCB_LIBRARIES})
+    if(USE_DBUS)
+        list(APPEND QT_LIBRARIES Qt5::DBus)
+    endif()
 endif()
 if(UNIX OR IS_WEBENGINE)
     list(APPEND EXTRA_LIBS qhttp)
