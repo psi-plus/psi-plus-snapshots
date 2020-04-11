@@ -38,6 +38,7 @@ set(SOURCES
     corelib/netnames.cpp
     corelib/objectsession.cpp
 
+    noncore/iceagent.cpp
     noncore/ice176.cpp
     noncore/icecomponent.cpp
     noncore/icelocaltransport.cpp
@@ -79,6 +80,7 @@ set(HEADERS
     corelib/netnames.h
     corelib/objectsession.h
 
+    noncore/iceagent.h
     noncore/ice176.h
     noncore/icecomponent.h
     noncore/icelocaltransport.h
