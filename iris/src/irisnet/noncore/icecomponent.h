@@ -54,19 +54,26 @@ public:
         }
 
         inline bool operator!=(const TransportAddress &other) const { return !operator==(other); }
+        inline      operator QString() const { return QString("%1:%2").arg(addr.toString(), QString::number(port)); }
     };
 
     class CandidateInfo {
     public:
-        TransportAddress addr;
-        CandidateType    type;
-        int              priority;
-        QString          foundation;
-        int              componentId;
-        TransportAddress base;
-        TransportAddress related;
-        QString          id;
-        int              network;
+        CandidateType type;
+        int           priority;
+        int           componentId;
+        int           network;
+
+        TransportAddress addr;    // address according to candidate type
+        TransportAddress base;    // network interface address
+        TransportAddress related; // not used in agent but usefule for diagnostics
+
+        QString foundation;
+        QString id;
+
+        static CandidateInfo makeRemotePrflx(int componentId, const QHostAddress &fromAddr, quint16 fromPort,
+                                             quint32 priority);
+        inline bool isSame(const CandidateInfo &o) const { return addr == o.addr && componentId == o.componentId; }
     };
 
     class Candidate {
@@ -82,8 +89,8 @@ public:
         CandidateInfo info;
 
         // note that these may be the same for multiple candidates
-        IceTransport *iceTransport;
-        int           path;
+        QSharedPointer<IceTransport> iceTransport;
+        int                          path;
     };
 
     enum DebugLevel { DL_None, DL_Info, DL_Packet };
@@ -91,12 +98,14 @@ public:
     IceComponent(int id, QObject *parent = nullptr);
     ~IceComponent();
 
-    int id() const;
+    int  id() const;
+    bool isGatheringComplete() const;
 
     void setClientSoftwareNameAndVersion(const QString &str);
     void setProxy(const TurnClient::Proxy &proxy);
 
-    void setPortReserver(UdpPortReserver *portReserver);
+    void             setPortReserver(UdpPortReserver *portReserver);
+    UdpPortReserver *portReserver() const;
 
     // can be set once, but later changes are ignored
     void setLocalAddresses(const QList<Ice176::LocalAddress> &addrs);
@@ -112,17 +121,24 @@ public:
 
     // these all start out enabled, but can be disabled for diagnostic
     //   purposes
-    void setUseLocal(bool enabled);
+    void setUseLocal(bool enabled); // where to make local host candidates
     void setUseStunBind(bool enabled);
     void setUseStunRelayUdp(bool enabled);
     void setUseStunRelayTcp(bool enabled);
 
-    // if socketList is not null then port reserver must be set
+    /**
+     * @brief update component with local listening sockets
+     * @param socketList
+     * If socketList is not null then port reserver must be set.
+     * If the pool doesn't have enough sockets, the component will allocate its own.
+     */
     void update(QList<QUdpSocket *> *socketList = nullptr);
     void stop();
 
     // prflx priority to use when replying from this transport/path
-    int peerReflexivePriority(const IceTransport *iceTransport, int path) const;
+    int peerReflexivePriority(QSharedPointer<IceTransport> iceTransport, int path) const;
+
+    void addLocalPeerReflexiveCandidate(const TransportAddress &addr, const CandidateInfo &base, quint32 priority);
 
     void flagPathAsLowOverhead(int id, const QHostAddress &addr, int port);
 
@@ -139,6 +155,9 @@ signals:
     // indicates all the initial HostType candidates have been pushed.
     //   note that it is possible there are no HostType candidates.
     void localFinished();
+
+    // no more candidates will be emitted unless network candidition changes
+    void gatheringComplete();
 
     void stopped();
 

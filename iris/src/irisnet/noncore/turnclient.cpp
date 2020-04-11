@@ -886,6 +886,8 @@ void TurnClient::connectToHost(const QHostAddress &addr, int port, Mode mode)
     d->do_connect();
 }
 
+QHostAddress TurnClient::serverAddress() const { return d->serverAddr; }
+
 QByteArray TurnClient::processIncomingDatagram(const QByteArray &buf, bool notStun, QHostAddress *addr, int *port)
 {
     return d->processNonPoolPacket(buf, notStun, addr, port);

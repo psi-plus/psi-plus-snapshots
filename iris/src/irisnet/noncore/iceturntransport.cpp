@@ -36,8 +36,9 @@ public:
     QHostAddress      relayAddr;
     int               relayPort;
     TurnClient        turn;
-    int               turnErrorCode;
+    int               turnErrorCode = 0;
     int               debugLevel;
+    bool              started = false;
 
     Private(IceTurnTransport *_q) : QObject(_q), q(_q), turn(this), debugLevel(IceTransport::DL_None)
     {
@@ -114,6 +115,7 @@ private slots:
 
         relayAddr = saddr;
         relayPort = sport;
+        started   = true;
 
         emit q->started();
     }
@@ -164,6 +166,8 @@ QHostAddress IceTurnTransport::relayedAddress() const { return d->relayAddr; }
 
 int IceTurnTransport::relayedPort() const { return d->relayPort; }
 
+bool IceTurnTransport::isStarted() const { return d->started; }
+
 void IceTurnTransport::addChannelPeer(const QHostAddress &addr, int port) { d->turn.addChannelPeer(addr, port); }
 
 TurnClient::Error IceTurnTransport::turnErrorCode() const { return (TurnClient::Error)d->turnErrorCode; }
@@ -173,7 +177,7 @@ void IceTurnTransport::stop() { d->stop(); }
 bool IceTurnTransport::hasPendingDatagrams(int path) const
 {
     Q_ASSERT(path == 0);
-    Q_UNUSED(path);
+    Q_UNUSED(path)
 
     return (d->turn.packetsToRead() > 0 ? true : false);
 }
@@ -181,7 +185,7 @@ bool IceTurnTransport::hasPendingDatagrams(int path) const
 QByteArray IceTurnTransport::readDatagram(int path, QHostAddress *addr, int *port)
 {
     Q_ASSERT(path == 0);
-    Q_UNUSED(path);
+    Q_UNUSED(path)
 
     return d->turn.read(addr, port);
 }
@@ -189,7 +193,7 @@ QByteArray IceTurnTransport::readDatagram(int path, QHostAddress *addr, int *por
 void IceTurnTransport::writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port)
 {
     Q_ASSERT(path == 0);
-    Q_UNUSED(path);
+    Q_UNUSED(path)
 
     d->turn.write(buf, addr, port);
 }

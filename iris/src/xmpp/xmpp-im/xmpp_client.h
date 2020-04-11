@@ -63,6 +63,9 @@ namespace Jingle {
     namespace IBB {
         class Manager;
     }
+    namespace ICE {
+        class Manager;
+    }
 }
 }
 
@@ -147,6 +150,7 @@ public:
     Jingle::Manager *      jingleManager() const;
     Jingle::S5B::Manager * jingleS5BManager() const;
     Jingle::IBB::Manager * jingleIBBManager() const;
+    Jingle::ICE::Manager * jingleICEManager() const;
 
     void                 setFileTransferEnabled(bool b);
     FileTransferManager *fileTransferManager() const;

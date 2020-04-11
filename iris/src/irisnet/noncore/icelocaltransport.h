@@ -22,6 +22,7 @@
 #include "icetransport.h"
 
 #include <QByteArray>
+#include <QEnableSharedFromThis>
 #include <QObject>
 
 class QHostAddress;
@@ -36,7 +37,7 @@ namespace XMPP {
 //   relationship with an associated STUN/TURN server.  if TURN is used, this
 //   class offers two paths (0=direct and 1=relayed), otherwise it offers
 //   just one path (0=direct)
-class IceLocalTransport : public IceTransport {
+class IceLocalTransport : public IceTransport, public QEnableSharedFromThis<IceLocalTransport> {
     Q_OBJECT
 
 public:
@@ -58,6 +59,9 @@ public:
     void setStunBindService(const QHostAddress &addr, int port);
     void setStunRelayService(const QHostAddress &addr, int port, const QString &user, const QCA::SecureArray &pass);
 
+    QHostAddress stunBindServiceAddress() const;
+    QHostAddress stunRelayServiceAddress() const;
+
     // obtain relay / reflexive
     void stunStart();
 
@@ -66,17 +70,18 @@ public:
 
     QHostAddress serverReflexiveAddress() const;
     int          serverReflexivePort() const;
+    QHostAddress reflexiveAddressSource() const; // address of stun/turn server provided the srflx
 
     QHostAddress relayedAddress() const;
     int          relayedPort() const;
 
     // reimplemented
-    virtual void       stop();
-    virtual bool       hasPendingDatagrams(int path) const;
-    virtual QByteArray readDatagram(int path, QHostAddress *addr, int *port);
-    virtual void       writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port);
-    virtual void       addChannelPeer(const QHostAddress &addr, int port);
-    virtual void       setDebugLevel(DebugLevel level);
+    void       stop() override;
+    bool       hasPendingDatagrams(int path) const override;
+    QByteArray readDatagram(int path, QHostAddress *addr, int *port) override;
+    void       writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port) override;
+    void       addChannelPeer(const QHostAddress &addr, int port) override;
+    void       setDebugLevel(DebugLevel level) override;
 
 signals:
     // may be emitted multiple times.

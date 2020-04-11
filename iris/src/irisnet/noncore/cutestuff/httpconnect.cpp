@@ -41,7 +41,7 @@ QString escapeOutput(const QByteArray &in)
         } else if (in[n] >= 32 && in[n] < 127) {
             out += QChar::fromLatin1(in[n]);
         } else {
-            out += QString().sprintf("\\x%02x", (unsigned char)in[n]);
+            out += QString::asprintf("\\x%02x", (unsigned char)in[n]);
         }
     }
     return out;

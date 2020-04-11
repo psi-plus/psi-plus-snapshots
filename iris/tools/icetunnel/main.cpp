@@ -100,7 +100,7 @@ static QString urlishEncode(const QString &in)
     for (int n = 0; n < in.length(); ++n) {
         if (in[n] == '%' || in[n] == ',' || in[n] == ';' || in[n] == ' ' || in[n] == '\n') {
             unsigned char c = (unsigned char)in[n].toLatin1();
-            out += QString().sprintf("%%%02x", c);
+            out += QString::asprintf("%%%02x", c);
         } else
             out += in[n];
     }
@@ -522,6 +522,8 @@ public:
                 }
             }*/
             foreach (const QNetworkInterface &ni, QNetworkInterface::allInterfaces()) {
+                if (!(ni.flags() & QNetworkInterface::IsUp))
+                    continue;
                 QList<QNetworkAddressEntry> entries = ni.addressEntries();
                 foreach (const QNetworkAddressEntry &na, entries) {
                     QHostAddress h = na.ip();
@@ -581,6 +583,8 @@ public:
 
         ice->setComponentCount(opt_channels);
         ice->setLocalCandidateTrickle(false);
+        ice->setAggressiveNomination(true);          // TODO
+        ice->setExpectRemoteCandidatesSignal(false); // TODO
 
         if (!stunAddr.isNull()) {
             if (opt_stunType == Basic || opt_stunType == Auto)

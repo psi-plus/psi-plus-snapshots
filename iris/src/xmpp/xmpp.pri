@@ -41,6 +41,7 @@ HEADERS += \
     $$PWD/xmpp-im/filetransfer.h \
     $$PWD/xmpp-im/httpfileupload.h \
     $$PWD/xmpp-im/im.h \
+    $$PWD/xmpp-im/jingle-ice.h \
     $$PWD/xmpp-im/jingle.h \
     $$PWD/xmpp-im/jingle-transport.h \
     $$PWD/xmpp-im/jingle-nstransportslist.h \
@@ -101,6 +102,7 @@ SOURCES += \
     $$PWD/xmpp-core/stream.cpp \
     $$PWD/xmpp-core/simplesasl.cpp \
     $$PWD/xmpp-core/xmpp_stanza.cpp \
+    $$PWD/xmpp-im/jingle-ice.cpp \
     $$PWD/xmpp-im/types.cpp \
     $$PWD/xmpp-im/client.cpp \
     $$PWD/xmpp-im/xmpp_features.cpp \
@@ -130,3 +132,4 @@ SOURCES += \
     $$PWD/xmpp-im/jingle-s5b.cpp \
     $$PWD/xmpp-im/jingle-ibb.cpp
 
+OTHER_FILES += $$PWD/CMakeLists.txt

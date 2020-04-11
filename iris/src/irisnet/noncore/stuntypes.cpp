@@ -487,7 +487,7 @@ namespace StunTypes {
                 if (!typeList.isEmpty()) {
                     QStringList strList;
                     foreach (quint16 i, typeList)
-                        strList += QString().sprintf("0x%04x", i);
+                        strList += QString::asprintf("0x%04x", i);
                     return strList.join(", ");
                 } else
                     return "(None)";
@@ -516,7 +516,7 @@ namespace StunTypes {
         case CHANNEL_NUMBER: {
             quint16 i;
             if (parseChannelNumber(val, &i))
-                return QString().sprintf("0x%04x", (int)i);
+                return QString::asprintf("0x%04x", (int)i);
             break;
         }
         case LIFETIME: {
@@ -634,7 +634,7 @@ namespace StunTypes {
                     if (!val.isEmpty())
                         out += QString(" = %1").arg(val);
                 } else
-                    out += QString().sprintf("  Unknown attribute (0x%04x) of %d bytes", a.type, a.value.size());
+                    out += QString::asprintf("  Unknown attribute (0x%04x) of %d bytes", a.type, a.value.size());
             }
         } else
             out += "\n  (None)";

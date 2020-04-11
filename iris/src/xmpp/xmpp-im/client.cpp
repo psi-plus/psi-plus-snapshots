@@ -70,6 +70,7 @@
 #include "im.h"
 #include "jingle-ft.h"
 #include "jingle-ibb.h"
+#include "jingle-ice.h"
 #include "jingle-s5b.h"
 #include "jingle.h"
 #include "protocol.h"
@@ -135,6 +136,7 @@ public:
     S5BManager *           s5bman                = nullptr;
     Jingle::S5B::Manager * jingleS5BManager      = nullptr;
     Jingle::IBB::Manager * jingleIBBManager      = nullptr;
+    Jingle::ICE::Manager * jingleICEManager      = nullptr;
     IBBManager *           ibbman                = nullptr;
     BoBManager *           bobman                = nullptr;
     FileTransferManager *  ftman                 = nullptr;
@@ -175,8 +177,10 @@ Client::Client(QObject *par) : QObject(par)
     d->jingleManager->registerApp(Jingle::FileTransfer::NS, ft);
     d->jingleS5BManager = new Jingle::S5B::Manager(d->jingleManager);
     d->jingleIBBManager = new Jingle::IBB::Manager(d->jingleManager);
+    d->jingleICEManager = new Jingle::ICE::Manager(d->jingleManager);
     d->jingleManager->registerTransport(Jingle::S5B::NS, d->jingleS5BManager);
     d->jingleManager->registerTransport(Jingle::IBB::NS, d->jingleIBBManager);
+    d->jingleManager->registerTransport(Jingle::ICE::NS, d->jingleICEManager);
 }
 
 Client::~Client()
@@ -263,6 +267,8 @@ S5BManager *Client::s5bManager() const { return d->s5bman; }
 Jingle::S5B::Manager *Client::jingleS5BManager() const { return d->jingleS5BManager; }
 
 Jingle::IBB::Manager *Client::jingleIBBManager() const { return d->jingleIBBManager; }
+
+Jingle::ICE::Manager *Client::jingleICEManager() const { return d->jingleICEManager; }
 
 IBBManager *Client::ibbManager() const { return d->ibbman; }
 
@@ -573,8 +579,7 @@ void Client::debug(const QString &str) { emit debugText(str); }
 
 QString Client::genUniqueId()
 {
-    QString s;
-    s.sprintf("a%x", d->id_seed);
+    QString s = QString::asprintf("a%x", d->id_seed);
     d->id_seed += 0x10;
     return s;
 }
@@ -975,8 +980,7 @@ void Client::importRosterItem(const RosterItem &item)
         break;
     }
 
-    QString dstr, str;
-    str.sprintf("  %s %-32s", qPrintable(substr), qPrintable(item.jid().full()));
+    QString dstr, str = QString::asprintf("  %s %-32s", qPrintable(substr), qPrintable(item.jid().full()));
     if (!item.name().isEmpty())
         str += QString(" [") + item.name() + "]";
     str += '\n';

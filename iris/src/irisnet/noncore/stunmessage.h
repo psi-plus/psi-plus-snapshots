@@ -57,6 +57,7 @@ public:
 
     // returns the first instance or null
     QByteArray attribute(quint16 type) const;
+    bool       hasAttribute(quint16 type) const;
 
     void setClass(Class mclass);
     void setMethod(quint16 method);

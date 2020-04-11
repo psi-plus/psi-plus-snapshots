@@ -41,8 +41,9 @@ namespace Jingle { namespace IBB {
         OutgoingTransportInfoUpdate takeOutgoingUpdate() override;
         bool                        isValid() const override;
         TransportFeatures           features() const override;
+        int                         maxSupportedChannels() const override;
 
-        Connection::Ptr connection() const override;
+        Connection::Ptr addChannel() const override;
 
     private:
         friend class Manager;

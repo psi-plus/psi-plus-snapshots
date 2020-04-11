@@ -79,7 +79,11 @@ void HunspellChecker::getDictPaths()
                     << QString("%1/.local/share/myspell").arg(QDir::home().absolutePath())
                     << QString("%1/.local/share/hunspell").arg(QDir::home().absolutePath());
 #endif
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+        dictPaths_ = dictPathSet.values();
+#else
         dictPaths_ = dictPathSet.toList();
+#endif
     }
 }
 

@@ -33,6 +33,8 @@ namespace XMPP { namespace Jingle {
 
     bool Transport::isRemote() const { return _pad->session()->role() != _creator; }
 
+    int Transport::maxSupportedChannels() const { return 1; }
+
     void Transport::setState(State newState)
     {
         _prevState = _state;

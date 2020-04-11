@@ -110,6 +110,8 @@ public:
     // for TCP and TCP-TLS
     void connectToHost(const QHostAddress &addr, int port, Mode mode = PlainMode);
 
+    QHostAddress serverAddress() const;
+
     // for UDP, use this function to process incoming packets instead of
     //   read().
     QByteArray processIncomingDatagram(const QByteArray &buf, bool notStun, QHostAddress *addr, int *port);

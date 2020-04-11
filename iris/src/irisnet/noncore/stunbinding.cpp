@@ -29,28 +29,24 @@ class StunBinding::Private : public QObject {
     Q_OBJECT
 
 public:
-    StunBinding *        q;
-    StunTransactionPool *pool;
-    StunTransaction *    trans;
-    QHostAddress         stunAddr;
-    int                  stunPort;
-    QHostAddress         addr;
-    int                  port;
-    QString              errorString;
-    bool                 use_extPriority, use_extIceControlling, use_extIceControlled;
-    quint32              extPriority;
-    bool                 extUseCandidate;
-    quint64              extIceControlling, extIceControlled;
-    QString              stuser, stpass;
-    bool                 fpRequired;
+    StunBinding *                   q;
+    StunTransactionPool *           pool = nullptr;
+    QScopedPointer<StunTransaction> trans;
+    QHostAddress                    stunAddr;
+    int                             stunPort = 0;
+    QHostAddress                    addr;
+    int                             port = 0;
+    QString                         errorString;
+    bool    use_extPriority = false, use_extIceControlling = false, use_extIceControlled = false;
+    quint32 extPriority       = 0;
+    bool    extUseCandidate   = false;
+    quint64 extIceControlling = 0, extIceControlled = 0;
+    QString stuser, stpass;
+    bool    fpRequired = false;
 
-    Private(StunBinding *_q) :
-        QObject(_q), q(_q), pool(nullptr), trans(nullptr), use_extPriority(false), use_extIceControlling(false),
-        use_extIceControlled(false), extUseCandidate(false), fpRequired(false)
-    {
-    }
+    Private(StunBinding *_q) : QObject(_q), q(_q) {}
 
-    ~Private() { delete trans; }
+    ~Private() {}
 
     void start(const QHostAddress &_addr = QHostAddress(), int _port = -1)
     {
@@ -59,10 +55,11 @@ public:
         stunAddr = _addr;
         stunPort = _port;
 
-        trans = new StunTransaction(this);
-        connect(trans, SIGNAL(createMessage(QByteArray)), SLOT(trans_createMessage(QByteArray)));
-        connect(trans, SIGNAL(finished(XMPP::StunMessage)), SLOT(trans_finished(XMPP::StunMessage)));
-        connect(trans, SIGNAL(error(XMPP::StunTransaction::Error)), SLOT(trans_error(XMPP::StunTransaction::Error)));
+        trans.reset(new StunTransaction());
+        connect(trans.data(), SIGNAL(createMessage(QByteArray)), SLOT(trans_createMessage(QByteArray)));
+        connect(trans.data(), SIGNAL(finished(XMPP::StunMessage)), SLOT(trans_finished(XMPP::StunMessage)));
+        connect(trans.data(), SIGNAL(error(XMPP::StunTransaction::Error)),
+                SLOT(trans_error(XMPP::StunTransaction::Error)));
 
         if (!stuser.isEmpty()) {
             trans->setShortTermUsername(stuser);
@@ -117,8 +114,7 @@ private slots:
 
     void trans_finished(const XMPP::StunMessage &response)
     {
-        delete trans;
-        trans = nullptr;
+        trans.reset();
 
         bool    error = false;
         int     code;
@@ -175,8 +171,7 @@ private slots:
 
     void trans_error(XMPP::StunTransaction::Error e)
     {
-        delete trans;
-        trans = nullptr;
+        trans.reset();
 
         if (e == StunTransaction::ErrorTimeout) {
             errorString = "Request timed out.";
@@ -202,7 +197,11 @@ void StunBinding::setPriority(quint32 i)
     d->extPriority     = i;
 }
 
+quint32 StunBinding::priority() const { return d->extPriority; }
+
 void StunBinding::setUseCandidate(bool enabled) { d->extUseCandidate = enabled; }
+
+bool StunBinding::useCandidate() const { return d->extUseCandidate; }
 
 void StunBinding::setIceControlling(quint64 i)
 {
@@ -225,6 +224,13 @@ void StunBinding::setFingerprintRequired(bool enabled) { d->fpRequired = enabled
 void StunBinding::start() { d->start(); }
 
 void StunBinding::start(const QHostAddress &addr, int port) { d->start(addr, port); }
+
+void StunBinding::cancel()
+{
+    if (d->trans) {
+        d->trans.take()->cancel(); // will self-delete
+    }
+}
 
 QHostAddress StunBinding::reflexiveAddress() const { return d->addr; }
 

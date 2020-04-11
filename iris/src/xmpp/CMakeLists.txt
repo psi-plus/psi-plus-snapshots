@@ -95,6 +95,7 @@ set(HEADERS
     xmpp-im/jingle-application.h
     xmpp-im/jingle-session.h
     xmpp-im/jingle-ft.h
+    xmpp-im/jingle-ice.h
     xmpp-im/jingle-s5b.h
     xmpp-im/jingle-ibb.h
 
@@ -137,6 +138,7 @@ set(SOURCES
     xmpp-im/jingle-transport.cpp
     xmpp-im/jingle-nstransportslist.cpp
     xmpp-im/jingle-ft.cpp
+    xmpp-im/jingle-ice.cpp
     xmpp-im/jingle-s5b.cpp
     xmpp-im/jingle-ibb.cpp
 

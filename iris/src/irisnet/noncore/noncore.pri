@@ -14,6 +14,7 @@ INCLUDEPATH += $$PWD/../corelib
 include($$PWD/cutestuff/cutestuff.pri)
 
 HEADERS += \
+    $$PWD/iceagent.h \
     $$PWD/processquit.h \
     $$PWD/stunutil.h \
     $$PWD/stunmessage.h \
@@ -31,6 +32,7 @@ HEADERS += \
     $$PWD/tcpportreserver.h
 
 SOURCES += \
+    $$PWD/iceagent.cpp \
     $$PWD/processquit.cpp \
     $$PWD/stunutil.cpp \
     $$PWD/stunmessage.cpp \

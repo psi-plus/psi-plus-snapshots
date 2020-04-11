@@ -36,17 +36,15 @@ class Ice176 : public QObject {
     Q_OBJECT
 
 public:
-    enum Error { ErrorGeneric };
+    enum Error { ErrorGeneric, ErrorDisconnected };
 
     enum Mode { Initiator, Responder };
 
     class LocalAddress {
     public:
         QHostAddress addr;
-        int          network; // -1 = unknown
-        bool         isVpn;
-
-        LocalAddress() : network(-1), isVpn(false) {}
+        int          network = -1; // -1 = unknown
+        bool         isVpn   = false;
     };
 
     class ExternalAddress {
@@ -60,22 +58,20 @@ public:
 
     class Candidate {
     public:
-        int          component;
+        int          component = -1;
         QString      foundation;
-        int          generation;
+        int          generation = -1;
         QString      id;
         QHostAddress ip;
-        int          network; // -1 = unknown
-        int          port;
-        int          priority;
+        int          network  = -1; // -1 = unknown
+        int          port     = -1;
+        int          priority = -1;
         QString      protocol;
         QHostAddress rel_addr;
-        int          rel_port;
+        int          rel_port = -1;
         QHostAddress rem_addr;
-        int          rem_port;
+        int          rem_port = -1;
         QString      type;
-
-        Candidate() : component(-1), generation(-1), network(-1), port(-1), priority(-1), rel_port(-1), rem_port(-1) {}
     };
 
     Ice176(QObject *parent = nullptr);
@@ -107,7 +103,26 @@ public:
     void setUseStunRelayTcp(bool enabled);
 
     void setComponentCount(int count);
-    void setLocalCandidateTrickle(bool enabled); // default false
+    void setLocalCandidateTrickle(bool enabled); // default true
+
+    /**
+     * @brief setAggressiveNomination - local will use aggressive nomination technique of rfc5245 when enabled.
+     *   Note, agressive nomination was deprecated in rfc8445.
+     *   default: false.
+     *
+     * If remote doesn't support "urn:xmpp:jingle:transports:ice:1" this has to be set to true.
+     * @param enabled
+     */
+    void setAggressiveNomination(bool enabled); // agressive nomination was deprecated in rfc8445 (default false)
+
+    /**
+     * @brief setExpectRemoteCandidatesSignal - where remote MUST send remote-candidates.
+     *   default: true
+     *
+     * If remote doesn't support "urn:xmpp:jingle:transports:ice:1" this has to be set to false.
+     * @param enabled
+     */
+    void setExpectRemoteCandidatesSignal(bool enabled);
 
     void start(Mode mode);
     void stop();
@@ -119,6 +134,7 @@ public:
     void setPeerPassword(const QString &pass);
 
     void addRemoteCandidates(const QList<Candidate> &list);
+    void setRemoteGatheringComplete();
 
     bool       hasPendingDatagrams(int componentIndex) const;
     QByteArray readDatagram(int componentIndex);
@@ -144,6 +160,7 @@ signals:
     void error(XMPP::Ice176::Error e);
 
     void localCandidatesReady(const QList<XMPP::Ice176::Candidate> &list);
+    void localGatheringComplete();
     void componentReady(int index);
 
     void readyRead(int componentIndex);

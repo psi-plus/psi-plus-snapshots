@@ -162,6 +162,7 @@ public:
     int                  port;
     QHostAddress         refAddr;
     int                  refPort;
+    QHostAddress         refAddrSource;
     QHostAddress         relAddr;
     int                  relPort;
     QHostAddress         stunBindAddr;
@@ -198,9 +199,9 @@ public:
         turn          = nullptr;
         turnActivated = false;
 
-        if (sock) {
+        if (sock) { // if started
             if (extSock) {
-                sock->release();
+                sock->release(); // detaches the socket but doesn't destroy
                 extSock = nullptr;
             }
 
@@ -211,8 +212,9 @@ public:
         addr = QHostAddress();
         port = -1;
 
-        refAddr = QHostAddress();
-        refPort = -1;
+        refAddr       = QHostAddress();
+        refPort       = -1;
+        refAddrSource = QHostAddress();
 
         relAddr = QHostAddress();
         relPort = -1;
@@ -240,7 +242,7 @@ public:
         stopping = true;
 
         if (turn)
-            turn->close();
+            turn->close(); // will emit stopped() eventually calling postStop()
         else
             sess.defer(this, "postStop");
     }
@@ -262,21 +264,38 @@ public:
             pool->setPassword(stunPass);
         }
 
-        if (!stunBindAddr.isNull()) {
-            stunBinding = new StunBinding(pool);
-            connect(stunBinding, SIGNAL(success()), SLOT(binding_success()));
-            connect(stunBinding, SIGNAL(error(XMPP::StunBinding::Error)),
-                    SLOT(binding_error(XMPP::StunBinding::Error)));
-            stunBinding->start(stunBindAddr, stunBindPort);
-        }
+        do_stun();
+        do_turn();
+    }
 
-        if (!stunRelayAddr.isNull()) {
-            do_turn();
+    void do_stun()
+    {
+        if (stunBindAddr.isNull()) {
+            return;
         }
+        stunBinding = new StunBinding(pool);
+        connect(stunBinding, &StunBinding::success, this, [&]() {
+            refAddr       = stunBinding->reflexiveAddress();
+            refPort       = stunBinding->reflexivePort();
+            refAddrSource = stunBindAddr;
+
+            delete stunBinding;
+            stunBinding = nullptr;
+
+            emit q->addressesChanged();
+        });
+        connect(stunBinding, &StunBinding::error, this, [&](XMPP::StunBinding::Error) {
+            delete stunBinding;
+            stunBinding = nullptr;
+        });
+        stunBinding->start(stunBindAddr, stunBindPort);
     }
 
     void do_turn()
     {
+        if (stunRelayAddr.isNull()) {
+            return;
+        }
         turn = new TurnClient(this);
         turn->setDebugLevel((TurnClient::DebugLevel)debugLevel);
         connect(turn, SIGNAL(connected()), SLOT(turn_connected()));
@@ -347,8 +366,9 @@ private:
 
             prepareSocket();
 
-            refAddr = QHostAddress();
-            refPort = -1;
+            refAddr       = QHostAddress();
+            refPort       = -1;
+            refAddrSource = QHostAddress();
 
             relAddr = QHostAddress();
             relPort = -1;
@@ -422,8 +442,8 @@ private slots:
     {
         ObjectSessionWatcher watch(&sess);
 
-        QList<Datagram> dreads;
-        QList<Datagram> rreads;
+        QList<Datagram> dreads; // direct
+        QList<Datagram> rreads; // relayed
 
         while (sock->hasPendingDatagrams()) {
             QHostAddress from;
@@ -537,29 +557,6 @@ private slots:
 
     void pool_debugLine(const QString &line) { emit q->debugLine(line); }
 
-    void binding_success()
-    {
-        refAddr = stunBinding->reflexiveAddress();
-        refPort = stunBinding->reflexivePort();
-
-        delete stunBinding;
-        stunBinding = nullptr;
-
-        emit q->addressesChanged();
-    }
-
-    void binding_error(XMPP::StunBinding::Error e)
-    {
-        Q_UNUSED(e);
-
-        delete stunBinding;
-        stunBinding = nullptr;
-
-        // don't report any error
-        // if(stunType == IceLocalTransport::Basic || (stunType == IceLocalTransport::Auto && !turn))
-        //    emit q->addressesChanged();
-    }
-
     void turn_connected()
     {
         if (debugLevel >= IceTransport::DL_Info)
@@ -591,8 +588,9 @@ private slots:
         // take reflexive address from TURN only if we are not using a
         //   separate STUN server
         if (stunBindAddr.isNull() || stunBindAddr == stunRelayAddr) {
-            refAddr = allocate->reflexiveAddress();
-            refPort = allocate->reflexivePort();
+            refAddr       = allocate->reflexiveAddress();
+            refPort       = allocate->reflexivePort();
+            refAddrSource = stunRelayAddr;
         }
 
         if (debugLevel >= IceTransport::DL_Info)
@@ -685,6 +683,10 @@ void IceLocalTransport::setStunRelayService(const QHostAddress &addr, int port, 
     d->stunPass      = pass;
 }
 
+QHostAddress IceLocalTransport::stunBindServiceAddress() const { return d->stunBindAddr; }
+
+QHostAddress IceLocalTransport::stunRelayServiceAddress() const { return d->stunRelayAddr; }
+
 void IceLocalTransport::stunStart() { d->stunStart(); }
 
 QHostAddress IceLocalTransport::localAddress() const { return d->addr; }
@@ -694,6 +696,8 @@ int IceLocalTransport::localPort() const { return d->port; }
 QHostAddress IceLocalTransport::serverReflexiveAddress() const { return d->refAddr; }
 
 int IceLocalTransport::serverReflexivePort() const { return d->refPort; }
+
+QHostAddress IceLocalTransport::reflexiveAddressSource() const { return d->refAddrSource; }
 
 QHostAddress IceLocalTransport::relayedAddress() const { return d->relAddr; }
 

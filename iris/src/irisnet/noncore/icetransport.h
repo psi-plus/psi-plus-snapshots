@@ -21,6 +21,7 @@
 
 #include <QByteArray>
 #include <QObject>
+#include <QWeakPointer>
 
 class QHostAddress;
 
@@ -47,7 +48,7 @@ public:
 
 signals:
     void started();
-    void stopped();
+    void stopped(); // emitted when stop() finished cleaning up
     void error(int e);
 
     void readyRead(int path);
@@ -56,6 +57,9 @@ signals:
     // not DOR-SS/DS safe
     void debugLine(const QString &str);
 };
+
+inline uint qHash(const QWeakPointer<IceTransport> &p) { return qHash(p.data()); }
+
 } // namespace XMPP
 
 #endif // ICETRANSPORT_H

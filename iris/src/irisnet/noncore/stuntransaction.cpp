@@ -124,6 +124,7 @@ public:
 
     StunTransactionPool * pool;
     bool                  active;
+    bool                  cancelling = false;
     StunTransaction::Mode mode;
     StunMessage           origMessage;
     QByteArray            id;
@@ -282,6 +283,10 @@ public:
 private slots:
     void t_timeout()
     {
+        if (cancelling) {
+            q->deleteLater();
+            return;
+        }
         if (mode == StunTransaction::Tcp || tries == rc) {
             pool->d->remove(q);
             emit q->error(StunTransaction::ErrorTimeout);
@@ -330,6 +335,10 @@ private:
     {
         active = false;
         t->stop();
+        if (cancelling) {
+            q->deleteLater();
+            return;
+        }
 
         if (pool->d->debugLevel >= StunTransactionPool::DL_Packet)
             emit pool->debugLine(QString("matched incoming response to existing request.  elapsed=")
@@ -430,7 +439,12 @@ public:
     }
 
 public slots:
-    void continueAfterParams() { retry(); }
+    void continueAfterParams()
+    {
+        if (cancelling)
+            return;
+        retry();
+    }
 };
 
 StunTransaction::StunTransaction(QObject *parent) : QObject(parent) { d = new StunTransactionPrivate(this); }
@@ -442,6 +456,8 @@ void StunTransaction::start(StunTransactionPool *pool, const QHostAddress &toAdd
     Q_ASSERT(!d->active);
     d->start(pool, toAddress, toPort);
 }
+
+void StunTransaction::cancel() { d->cancelling = true; }
 
 void StunTransaction::setMessage(const StunMessage &request) { d->setMessage(request); }
 
@@ -629,7 +645,7 @@ void StunTransactionPool::continueAfterParams()
     foreach (StunTransaction *trans, d->transactions) {
         // the only reason an inactive transaction would be in the
         //   list is if it is waiting for an auth retry
-        if (!trans->d->active) {
+        if (!trans->d->active && !trans->d->cancelling) {
             // use queued call to prevent all sorts of DOR-SS
             //   nastiness
             QMetaObject::invokeMethod(trans->d, "continueAfterParams", Qt::QueuedConnection);

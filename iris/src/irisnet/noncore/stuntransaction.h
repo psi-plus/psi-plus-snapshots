@@ -76,6 +76,7 @@ public:
     // note: not DOR-DS safe.  this function will cause the pool's
     //   outgoingMessage() signal to be emitted.
     void start(StunTransactionPool *pool, const QHostAddress &toAddress = QHostAddress(), int toPort = -1);
+    void cancel();
 
     // pass message with class unset.  use transaction id from the
     //   createMessage signal.

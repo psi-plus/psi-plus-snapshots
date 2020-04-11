@@ -55,8 +55,16 @@ public:
 
     UdpPortReserver *   q;
     QList<QHostAddress> addrs;
-    QList<int>          ports; // sorted
-    QList<Item>         items; // in order sorted by port
+    QList<int>          ports; // sorted.
+
+    // addrs * ports = all available sockets
+
+    /**
+     * @brief items kind of ports slice over all provided addresses.
+     * When we request binding on one port it means it will be bound on one item (all its addresses).
+     * The items are sorted by port.
+     */
+    QList<Item> items;
 
     Private(UdpPortReserver *_q) : QObject(_q), q(_q) {}
 

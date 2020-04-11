@@ -1,5 +1,5 @@
 /*
- * jignle-s5b.h - Jingle SOCKS5 transport
+ * jignle-ice.h - Jingle SOCKS5 transport
  * Copyright (C) 2019  Sergey Ilinykh
  *
  * This library is free software; you can redistribute it and/or
@@ -17,23 +17,23 @@
  *
  */
 
-#ifndef JINGLE_S5B_H
-#define JINGLE_S5B_H
+#ifndef JINGLE_ICE_H
+#define JINGLE_ICE_H
 
 #include "jingle-transport.h"
 #include "tcpportreserver.h"
+#include "xmpp.h"
 
 class QHostAddress;
-class SocksClient;
 
 namespace XMPP {
 class Client;
 
-namespace Jingle { namespace S5B {
+namespace Jingle { namespace ICE {
     extern const QString NS;
 
     class Transport;
-
+#if 0
     class Candidate {
     public:
         enum Type {
@@ -106,11 +106,11 @@ namespace Jingle { namespace S5B {
         QDomElement toXml(QDomDocument *doc) const;
         QString     toString() const;
 
-        void               connectToHost(const QString &key, State successState, QObject *callbackContext,
-                                         std::function<void(bool)> callback, bool isUdp = false);
-        bool               incomingConnection(SocksClient *sc);
-        SocksClient *      takeSocksClient();
-        void               deleteSocksClient();
+        void connectToHost(const QString &key, State successState, QObject *callbackContext,
+                           std::function<void(bool)> callback, bool isUdp = false);
+        // bool               incomingConnection(SocksClient *sc);
+        // SocksClient *      takeSocksClient();
+        // void               deleteSocksClient();
         TcpPortServer::Ptr server() const;
 
         bool        operator==(const Candidate &other) const;
@@ -121,7 +121,7 @@ namespace Jingle { namespace S5B {
         friend class Transport;
         QExplicitlySharedDataPointer<Private> d;
     };
-
+#endif
     class Manager;
     class Transport : public XMPP::Jingle::Transport {
         Q_OBJECT
@@ -138,9 +138,8 @@ namespace Jingle { namespace S5B {
         OutgoingTransportInfoUpdate takeOutgoingUpdate() override;
         bool                        isValid() const override;
         TransportFeatures           features() const override;
+        int                         maxSupportedChannels() const override;
 
-        QString         sid() const;
-        QString         directAddr() const;
         Connection::Ptr addChannel() const override;
 
     private:
@@ -160,9 +159,6 @@ namespace Jingle { namespace S5B {
         QString           ns() const override;
         Session *         session() const override;
         TransportManager *manager() const override;
-
-        QString generateSid() const;
-        void    registerSid(const QString &sid);
 
         inline TcpPortScope *discoScope() const { return _discoScope; }
 
@@ -186,15 +182,12 @@ namespace Jingle { namespace S5B {
 
         void closeAll() override;
 
-        QString generateSid(const Jid &remote);
-        void    registerSid(const Jid &remote, const QString &sid);
-
         /**
          * @brief userProxy returns custom (set by user) SOCKS proxy JID
          * @return
          */
-        Jid  userProxy() const;
-        void setUserProxy(const Jid &jid);
+        // Jid  userProxy() const;
+        // void setUserProxy(const Jid &jid);
 
         /**
          * @brief addKeyMapping sets mapping between key/socks hostname used for direct connection and transport.
@@ -205,12 +198,22 @@ namespace Jingle { namespace S5B {
         void addKeyMapping(const QString &key, Transport *transport);
         void removeKeyMapping(const QString &key);
 
+        void setBasePort(int port);
+        void setExternalAddress(const QString &host);
+        void setSelfAddress(const QHostAddress &addr);
+        void setStunBindService(const QString &host, int port);
+        void setStunRelayUdpService(const QString &host, int port, const QString &user, const QString &pass);
+        void setStunRelayTcpService(const QString &host, int port, const XMPP::AdvancedConnector::Proxy &proxy,
+                                    const QString &user, const QString &pass);
+        // stunProxy() const;
+
     private:
+        friend class Transport;
         class Private;
         QScopedPointer<Private> d;
     };
-} // namespace S5B
+} // namespace Ice
 } // namespace Jingle
 } // namespace XMPP
 
-#endif // JINGLE_S5B_H
+#endif // JINGLE_ICE_H

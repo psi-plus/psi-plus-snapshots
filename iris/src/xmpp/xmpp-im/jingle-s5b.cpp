@@ -21,6 +21,7 @@
 
 #include "ice176.h"
 #include "jingle-session.h"
+#include "jingle.h"
 #include "s5b.h"
 #include "socks.h"
 #include "xmpp/jid/jid.h"
@@ -1570,14 +1571,14 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
     TransportFeatures Transport::features() const
     {
-        return TransportFeatures(TransportFeature::HardToConnect | TransportFeature::Reliable | TransportFeature::Fast);
+        return TransportFeatures(TransportFeature::HardToConnect) | TransportFeature::Reliable | TransportFeature::Fast;
     }
 
     QString Transport::sid() const { return d->sid; }
 
     QString Transport::directAddr() const { return d->directAddr; }
 
-    Connection::Ptr Transport::connection() const { return d->connection.staticCast<XMPP::Jingle::Connection>(); }
+    Connection::Ptr Transport::addChannel() const { return d->connection.staticCast<XMPP::Jingle::Connection>(); }
 
     //----------------------------------------------------------------
     // Manager
@@ -1602,7 +1603,10 @@ namespace XMPP { namespace Jingle { namespace S5B {
             d->jingleManager->unregisterTransport(NS);
     }
 
-    TransportFeatures Manager::features() const { return TransportFeature::Reliable | TransportFeature::Fast; }
+    TransportFeatures Manager::features() const
+    {
+        return TransportFeatures(TransportFeature::Reliable) | TransportFeature::Fast;
+    }
 
     void Manager::setJingleManager(XMPP::Jingle::Manager *jm)
     {

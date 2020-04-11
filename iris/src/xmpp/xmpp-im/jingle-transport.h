@@ -56,11 +56,24 @@ namespace XMPP { namespace Jingle {
     class Connection : public ByteStream {
         Q_OBJECT
     public:
+        enum Hint { AvoidRelays = 1 };
+        Q_DECLARE_FLAGS(Hints, Hint)
+
         using Ptr = QSharedPointer<Connection>; // will be shared between transport and application
         virtual bool            hasPendingDatagrams() const;
         virtual NetworkDatagram receiveDatagram(qint64 maxSize = -1);
         virtual size_t          blockSize() const;
+
+        inline void  setHints(Hints hints) { _hints = hints; }
+        inline Hints hints() const { return _hints; }
+
+    signals:
+        void connected();
+
+    protected:
+        Hints _hints;
     };
+    Q_DECLARE_OPERATORS_FOR_FLAGS(Connection::Hints)
 
     class TransportManager;
     class TransportManagerPad : public SessionManagerPad {
@@ -106,7 +119,8 @@ namespace XMPP { namespace Jingle {
         virtual OutgoingTransportInfoUpdate takeOutgoingUpdate() = 0;
         virtual bool                        isValid() const      = 0;
         virtual TransportFeatures           features() const     = 0;
-        virtual Connection::Ptr             connection() const   = 0; // returns established QIODevice-based connection
+        virtual int                         maxSupportedChannels() const;
+        virtual Connection::Ptr             addChannel() const = 0; // returns established QIODevice-based connection
     signals:
         void updated(); // found some candidates and they have to be sent. takeUpdate has to be called from this signal
                         // handler. if it's just always ready then signal has to be sent at least once otherwise
@@ -124,6 +138,7 @@ namespace XMPP { namespace Jingle {
         Origin                              _creator   = Origin::None;
         QSharedPointer<TransportManagerPad> _pad;
         Reason                              _lastReason;
+        int                                 _channelCount = 1;
     };
 
     // It's an available transports collection per application

@@ -45,8 +45,7 @@ static QString printArray(const QByteArray &a)
     for (int n = 0; n < a.size(); ++n) {
         unsigned char c = (unsigned char)a[(int)n];
         if (c < 32 || c >= 127) {
-            QString str;
-            str.sprintf("[%02x]", c);
+            QString str = QString::asprintf("[%02x]", c);
             s += str;
         } else
             s += c;

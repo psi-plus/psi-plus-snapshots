@@ -391,6 +391,17 @@ QByteArray StunMessage::attribute(quint16 type) const
     return QByteArray();
 }
 
+bool StunMessage::hasAttribute(quint16 type) const
+{
+    Q_ASSERT(d);
+
+    foreach (const Attribute &i, d->attribs) {
+        if (i.type == type)
+            return true;
+    }
+    return false;
+}
+
 void StunMessage::setClass(Class mclass)
 {
     ENSURE_D
