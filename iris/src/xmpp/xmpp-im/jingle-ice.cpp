@@ -338,7 +338,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         QHostAddress addr;
         int          port;
 
-        JingleRtpRemoteCandidate() : component(-1), port(-1) {}
+        JingleRtpRemoteCandidate() : component(-1), port(-1) { }
     };
 
     class JingleRtpTrans {
@@ -716,7 +716,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             // RTP+RTCP
             ice->setComponentCount(channels.count());
 
-            ice->setLocalCandidateTrickle(true);
+            ice->setLocalFeatures(Ice176::Trickle);
 
             auto mode = q->creator() == q->pad()->session()->role() ? XMPP::Ice176::Initiator : XMPP::Ice176::Responder;
             ice->start(mode);
@@ -736,8 +736,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
     Transport::~Transport()
     {
-        if (d) {
-        }
+        if (d) { }
     }
 
     void Transport::prepare()
@@ -948,7 +947,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
     //----------------------------------------------------------------
     // Manager
     //----------------------------------------------------------------
-    Manager::Manager(QObject *parent) : TransportManager(parent), d(new Private) {}
+    Manager::Manager(QObject *parent) : TransportManager(parent), d(new Private) { }
 
     Manager::~Manager()
     {

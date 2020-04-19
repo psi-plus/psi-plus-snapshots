@@ -135,7 +135,7 @@ public:
     bool gatheringComplete = false;
     int  debugLevel        = DL_None;
 
-    Private(IceComponent *_q) : QObject(_q), q(_q), sess(this) {}
+    Private(IceComponent *_q) : QObject(_q), q(_q), sess(this) { }
 
     ~Private() { qDeleteAll(udpTransports); }
 
@@ -464,10 +464,9 @@ private:
             c.iceTransport = lt->sock;
             c.path         = 0;
 
-            localCandidates += c;
             lt->ext_finished = true;
 
-            emit q->candidateAdded(c);
+            storeLocalNotReduntantCandidate(c);
         }
     }
 
@@ -488,6 +487,19 @@ private:
                 if (!watch.isValid())
                     return;
             }
+        }
+    }
+
+    void storeLocalNotReduntantCandidate(const Candidate &c)
+    {
+        ObjectSessionWatcher watch(&sess);
+        // RFC8445 5.1.3.  Eliminating Redundant Candidates
+        auto it = std::find_if(localCandidates.begin(), localCandidates.end(), [&](const Candidate &cc) {
+            return cc.info.addr == c.info.addr && cc.info.base == c.info.base && cc.info.priority >= c.info.priority;
+        });
+        if (it == localCandidates.end()) { // not reduntant
+            localCandidates += c;
+            emit q->candidateAdded(c);
         }
     }
 
@@ -680,12 +692,9 @@ private slots:
             c.iceTransport = sock->sharedFromThis();
             c.path         = 0;
 
-            localCandidates += c;
             lt->stun_finished = true;
 
-            emit q->candidateAdded(c);
-            if (!watch.isValid())
-                return;
+            storeLocalNotReduntantCandidate(c);
         }
 
         if (!lt->sock->relayedAddress().isNull() && !lt->turn_finished) {
@@ -707,11 +716,12 @@ private slots:
             c.iceTransport = sock->sharedFromThis();
             c.path         = 1;
 
-            localCandidates += c;
             lt->turn_finished = true;
 
-            emit q->candidateAdded(c);
+            storeLocalNotReduntantCandidate(c);
         }
+        if (!watch.isValid())
+            return;
 
         tryGatheringComplete();
     }

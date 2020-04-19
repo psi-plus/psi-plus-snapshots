@@ -422,7 +422,7 @@ public:
     EnterPrompt *                     prompt  = nullptr;
     IceOffer                          inOffer;
 
-    App() : portReserver(this) {}
+    App() : portReserver(this) { }
 
     ~App()
     {
@@ -582,8 +582,7 @@ public:
         }
 
         ice->setComponentCount(opt_channels);
-        ice->setLocalCandidateTrickle(false);
-        ice->setAggressiveNomination(true);          // TODO
+        ice->setLocalFeatures(XMPP::Ice176::Trickle | XMPP::Ice176::AggressiveNomination);
         ice->setExpectRemoteCandidatesSignal(false); // TODO
 
         if (!stunAddr.isNull()) {

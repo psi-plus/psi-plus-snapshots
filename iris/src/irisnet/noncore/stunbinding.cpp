@@ -44,9 +44,9 @@ public:
     QString stuser, stpass;
     bool    fpRequired = false;
 
-    Private(StunBinding *_q) : QObject(_q), q(_q) {}
+    Private(StunBinding *_q) : QObject(_q), q(_q) { }
 
-    ~Private() {}
+    ~Private() { }
 
     void start(const QHostAddress &_addr = QHostAddress(), int _port = -1)
     {
@@ -69,6 +69,21 @@ public:
         trans->setFingerprintRequired(fpRequired);
 
         trans->start(pool, stunAddr, stunPort);
+    }
+
+    void cancel()
+    {
+        if (!trans)
+            return;
+        auto t = trans.take();
+        t->disconnect(this);
+        t->cancel(); // will self-delete the transaction either on incoming or timeout
+        // just in case those too
+        addr = QHostAddress();
+        port = 0;
+        errorString.clear();
+
+        // now the binding can be reused
     }
 
 private slots:
@@ -225,12 +240,7 @@ void StunBinding::start() { d->start(); }
 
 void StunBinding::start(const QHostAddress &addr, int port) { d->start(addr, port); }
 
-void StunBinding::cancel()
-{
-    if (d->trans) {
-        d->trans.take()->cancel(); // will self-delete
-    }
-}
+void StunBinding::cancel() { d->cancel(); }
 
 QHostAddress StunBinding::reflexiveAddress() const { return d->addr; }
 

@@ -168,15 +168,14 @@ public:
     QSet<QWeakPointer<IceTransport>>   iceTransports;
     CheckList                          checkList;
     QList<QList<QByteArray>>           in;
-    bool                               useLocal                     = true;
-    bool                               useStunBind                  = true;
-    bool                               useStunRelayUdp              = true;
-    bool                               useStunRelayTcp              = true;
-    bool                               useTrickle                   = true;
-    bool                               aggressiveNomination         = false; // RFC8445 compliant de default
-    bool                               localGatheringComplete       = false;
-    bool                               remoteGatheringComplete      = false;
-    bool                               expectRemoteCandidatesSignal = true;
+    Features                           remoteFeatures;
+    Features                           localFeatures;
+    bool                               useLocal                = true;
+    bool                               useStunBind             = true;
+    bool                               useStunRelayUdp         = true;
+    bool                               useStunRelayTcp         = true;
+    bool                               localGatheringComplete  = false;
+    bool                               remoteGatheringComplete = false;
 
     Private(Ice176 *_q) : QObject(_q), q(_q)
     {
@@ -522,7 +521,7 @@ public:
 
         if (mode == Ice176::Initiator) {
             pair->binding->setIceControlling(0);
-            if (aggressiveNomination)
+            if (localFeatures & AggressiveNomination)
                 pair->binding->setUseCandidate(true);
         } else
             pair->binding->setIceControlled(0);
@@ -560,19 +559,15 @@ public:
 
     void write(int componentIndex, const QByteArray &datagram)
     {
-        int at = -1;
-        for (int n = 0; n < checkList.pairs.count(); ++n) {
-            if (checkList.pairs[n]->local.componentId - 1 == componentIndex && checkList.pairs[n]->isValid) {
-                at = n;
-                break;
-            }
-        }
-        if (at == -1)
+        auto it = std::find_if(checkList.validPairs.begin(), checkList.validPairs.end(),
+                               [&](const auto &p) { return p->local.componentId - 1 == componentIndex; });
+        if (it == checkList.validPairs.end()) {
+            qDebug("An attempt to write to an ICE component w/o valid sockets");
             return;
+        }
 
-        auto &pair = *checkList.pairs[at];
-
-        at = findLocalCandidate(pair.local.addr.addr, pair.local.addr.port);
+        auto &pair = *it;
+        int   at   = findLocalCandidate(pair->local.addr.addr, pair->local.addr.port);
         if (at == -1) // FIXME: assert?
             return;
 
@@ -580,7 +575,7 @@ public:
 
         int path = lc.path;
 
-        lc.iceTransport->writeDatagram(path, datagram, pair.remote.addr.addr, pair.remote.addr.port);
+        lc.iceTransport->writeDatagram(path, datagram, pair->remote.addr.addr, pair->remote.addr.port);
 
         // DOR-SR?
         QMetaObject::invokeMethod(q, "datagramsWritten", Qt::QueuedConnection, Q_ARG(int, componentIndex),
@@ -638,45 +633,43 @@ public:
     void doTriggeredCheck(const IceComponent::Candidate &locCand, const IceComponent::CandidateInfo &remCand,
                           bool nominated)
     {
-        // let's figure out of this pair already in the check list
+        // let's figure out if this pair already in the check list
         auto it = std::find_if(checkList.pairs.begin(), checkList.pairs.end(), [&](auto const &p) {
             return p->local.isSame(locCand.info) && p->remote.isSame(remCand);
         });
-        if (it == checkList.pairs.end()) {
-            auto pair = makeCandidatesPair(locCand.info, remCand);
+        QSharedPointer<CandidatePair> pair = (it == checkList.pairs.end()) ? QSharedPointer<CandidatePair>() : *it;
+        if (pair) {
+            if (pair->state == CandidatePairState::PSucceeded) {
+                // Check nominated here?
+                printf("Don't do triggered check since pair is already in success state\n");
+                if (mode == Responder && nominated)
+                    tryComponentSuccess(pair);
+                return; // nothing todo. rfc 8445 7.3.1.4
+            }
+            pair->isNominated = false;
+            if (pair->state == CandidatePairState::PInProgress) {
+                pair->binding->cancel();
+            }
+            if (pair->state == PFailed) {
+                // if (state == Stopped) {
+                // TODO Stopped? maybe Failed? and we have to notify the outer world
+                //}
+            }
+        } else {
+            // RFC8445 7.3.1.4.  Triggered Checks / "If the pair is not already on the checklist"
+            pair = makeCandidatesPair(locCand.info, remCand);
             if (pair.isNull()) {
                 return;
             }
-            pair->isTriggeredForNominated = nominated;
-            pair->state                   = PWaiting;
             addChecklistPairs(QList<QSharedPointer<CandidatePair>>() << pair);
-            checkList.triggeredPairs.enqueue(pair.toWeakRef());
-            if (!checkTimer.isActive())
-                checkTimer.start();
-            return;
         }
 
-        QSharedPointer<CandidatePair> p = *it;
-        if (p->state == CandidatePairState::PSucceeded) {
-            // Check nominated here?
-            printf("Don't do triggered check since pair is already in success state\n");
-            if (mode == Responder && nominated)
-                tryComponentSuccess(p);
-            return; // nothing todo. rfc 8445 7.3.1.4
-        }
-        p->isNominated = false;
-        if (p->state == CandidatePairState::PInProgress) {
-            p->binding->cancel();
-        }
-        if (p->state == PFailed) {
-            // if (state == Stopped) {
-            // TODO Stopped? maybe Failed? and we have to notify the outer world
-            //}
-        }
+        pair->state                   = PWaiting;
+        pair->isTriggeredForNominated = nominated;
+        checkList.triggeredPairs.enqueue(pair);
 
-        p->state                   = PWaiting;
-        p->isTriggeredForNominated = nominated;
-        checkList.triggeredPairs.append(p);
+        if (!checkTimer.isActive())
+            checkTimer.start();
     }
 
 private:
@@ -841,7 +834,7 @@ private slots:
             iceTransports += cc.iceTransport;
         }
 
-        if (useTrickle) {
+        if (localFeatures & Trickle) {
             QList<Ice176::Candidate> list;
 
             Ice176::Candidate c;
@@ -919,7 +912,7 @@ private slots:
             }
         }
 
-        if (allLocalFinished && useTrickle) {
+        if (allLocalFinished && (localFeatures & Trickle)) {
             state = Started;
             emit q->started();
         }
@@ -937,7 +930,7 @@ private slots:
         }
         localGatheringComplete = true;
 
-        if (useTrickle) { // It was already started
+        if (localFeatures & Trickle) { // It was already started
             emit q->localGatheringComplete();
             return;
         }
@@ -1074,7 +1067,7 @@ private slots:
                     StunTypes::parsePriority(msg.attribute(StunTypes::PRIORITY), &priority);
                     auto remCand = IceComponent::CandidateInfo::makeRemotePrflx(locCand.info.componentId, fromAddr,
                                                                                 fromPort, priority);
-                    remoteCandidates += remCand;
+                    // remoteCandidates += remCand; // RFC8445 7.2.5.3.2.3 hints we shouldn't do that
                     doTriggeredCheck(locCand, remCand, nominated);
                 } else {
                     doTriggeredCheck(locCand, *it, nominated);
@@ -1195,19 +1188,22 @@ private slots:
 
         // RFC8445 7.2.5.3.1.  Discovering Peer-Reflexive Candidates
         auto mappedAddr = IceComponent::TransportAddress(binding->reflexiveAddress(), binding->reflexivePort());
-        if (pair->local.addr != mappedAddr) {
+        if (pair->local.addr != mappedAddr) { // skip "If the valid pair equals the pair that generated the check"
+
             // so mapped address doesn't match with local candidate sending binding request.
             // gotta find/create one
             auto locIt = std::find_if(localCandidates.begin(), localCandidates.end(), [&](const auto &c) {
                 return c.info.base == mappedAddr || c.info.addr == mappedAddr;
             });
             if (locIt == localCandidates.end()) {
+                // RFC8445 7.2.5.3.1.  Discovering Peer-Reflexive Candidates
                 // new peer-reflexive local candidate discovered
                 components[pair->local.componentId].ic->addLocalPeerReflexiveCandidate(mappedAddr, pair->local,
                                                                                        binding->priority());
                 locIt = std::find_if(localCandidates.begin(), localCandidates.end(),
                                      [&](const auto &c) { return c.info.addr == mappedAddr; }); // just inserted
                 Q_ASSERT(locIt != localCandidates.end());
+                // local candidate wasn't found, so it wasn't on the checklist  RFC8445 7.2.5.3.1.3
                 pair = makeCandidatesPair(locIt->info, pair->remote);
                 // TODO start media flow on valid pair
             } else {
@@ -1232,8 +1228,6 @@ private slots:
         pair->state   = PSucceeded; // what if it was in progress?
         checkList.validPairs.append(pair);
 
-        // TODO add *locIt and pair.remote to valid list
-
         if (mode == Ice176::Initiator) {
             if (!binding->useCandidate())
                 return;
@@ -1241,9 +1235,6 @@ private slots:
             if (!pair->isTriggeredForNominated)
                 return;
         }
-
-        // TODO: if we were cool, we'd do something with the peer
-        //   reflexive address received
 
         // check if component already has nominated pair
         it = std::find_if(checkList.pairs.begin(), checkList.pairs.end(), [&](auto const &p) {
@@ -1347,11 +1338,9 @@ void Ice176::setComponentCount(int count)
     d->componentCount = count;
 }
 
-void Ice176::setLocalCandidateTrickle(bool enabled) { d->useTrickle = enabled; }
+void Ice176::setLocalFeatures(const Features &features) { d->localFeatures = features; }
 
-void Ice176::setAggressiveNomination(bool enabled) { d->aggressiveNomination = enabled; }
-
-void Ice176::setExpectRemoteCandidatesSignal(bool enabled) { d->expectRemoteCandidatesSignal = enabled; }
+void Ice176::setRemoteFeatures(const Features &features) { d->remoteFeatures = features; }
 
 void Ice176::start(Mode mode)
 {

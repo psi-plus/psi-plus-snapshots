@@ -53,7 +53,7 @@ public:
         QHostAddress addr;
         int          portBase; // -1 = same as base
 
-        ExternalAddress() : portBase(-1) {}
+        ExternalAddress() : portBase(-1) { }
     };
 
     class Candidate {
@@ -103,26 +103,17 @@ public:
     void setUseStunRelayTcp(bool enabled);
 
     void setComponentCount(int count);
-    void setLocalCandidateTrickle(bool enabled); // default true
 
-    /**
-     * @brief setAggressiveNomination - local will use aggressive nomination technique of rfc5245 when enabled.
-     *   Note, agressive nomination was deprecated in rfc8445.
-     *   default: false.
-     *
-     * If remote doesn't support "urn:xmpp:jingle:transports:ice:1" this has to be set to true.
-     * @param enabled
-     */
-    void setAggressiveNomination(bool enabled); // agressive nomination was deprecated in rfc8445 (default false)
+    enum Feature {
+        Trickle              = 0x1, // additional candidates will be sent later when discovered
+        AggressiveNomination = 0x2, // all the candidates are nominated. so select by priority
+        NotNominatedData     = 0x4, // Data on valid but not nominated candidates is allowed
+        RTPOptimization      = 0x8, // Different formula for RTO, not used in RFC8445
+    };
+    Q_DECLARE_FLAGS(Features, Feature)
 
-    /**
-     * @brief setExpectRemoteCandidatesSignal - where remote MUST send remote-candidates.
-     *   default: true
-     *
-     * If remote doesn't support "urn:xmpp:jingle:transports:ice:1" this has to be set to false.
-     * @param enabled
-     */
-    void setExpectRemoteCandidatesSignal(bool enabled);
+    void setLocalFeatures(const Features &features);
+    void setRemoteFeatures(const Features &features);
 
     void start(Mode mode);
     void stop();
@@ -171,6 +162,8 @@ private:
     friend class Private;
     Private *d;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(Ice176::Features)
 } // namespace XMPP
 
 #endif // ICE176_H
