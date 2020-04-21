@@ -30,6 +30,7 @@ fi
 SNAPSHOTS_URL="$(git remote -v | grep '(fetch)')"
 if [ "$(echo ${SNAPSHOTS_URL} | grep 'https://' | wc -l)" = "1" ]; then
     echo "Updating ${SNAPSHOTS_DIR}"
+    git checkout HEAD .
     git pull --all --prune -f
     echo;
 fi
