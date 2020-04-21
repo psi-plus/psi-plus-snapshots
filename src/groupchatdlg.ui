@@ -88,13 +88,6 @@
            <number>0</number>
           </property>
           <item>
-           <widget class="QPushButton" name="pb_topic">
-            <property name="text">
-             <string>Topic:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="ActionLineEdit" name="le_topic">
             <property name="readOnly">
              <bool>true</bool>
@@ -109,8 +102,11 @@
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
+            <property name="lineWidth">
+             <number>0</number>
+            </property>
             <property name="text">
-             <string>AccountLabel</string>
+             <string notr="true"/>
             </property>
            </widget>
           </item>
@@ -282,11 +278,11 @@
              <height>16777215</height>
             </size>
            </property>
+           <property name="contextMenuPolicy">
+            <enum>Qt::CustomContextMenu</enum>
+           </property>
            <property name="toolTip">
             <string>Send</string>
-           </property>
-           <property name="contextMenuPolicy" >
-            <enum>Qt::CustomContextMenu</enum>
            </property>
           </widget>
          </item>
