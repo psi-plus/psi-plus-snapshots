@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2020-01-26
+# Updated: 2020-04-22
 # Version: N/A
 
 set -e
@@ -188,9 +188,6 @@ echo "* Sound files from Psi+ project are copied."
 mkdir -p "${SNAPSHOTS_DIR}/skins/"
 rsync -a "${MAIN_DIR}/resources/skins/" "${SNAPSHOTS_DIR}/skins/"
 echo "* Skins from Psi+ project are copied."
-
-rsync -a "${MAIN_DIR}/resources/themes/" "${SNAPSHOTS_DIR}/themes/"
-echo "* Themes from Psi+ project are copied."
 
 cp "${MAIN_DIR}/main/ChangeLog.Psi+.txt" "${SNAPSHOTS_DIR}/ChangeLog.Psi+.txt"
 echo "* ChangeLog from Psi+ project is copied."
