@@ -49,7 +49,7 @@ IceAgent *IceAgent::instance()
     return i;
 }
 
-IceAgent::~IceAgent() {}
+IceAgent::~IceAgent() { }
 
 QString IceAgent::foundation(IceComponent::CandidateType type, const QHostAddress baseAddr,
                              const QHostAddress &stunServAddr, QAbstractSocket::SocketType stunRequestProto)
@@ -75,6 +75,6 @@ QString IceAgent::randomCredential(int len)
     return out;
 }
 
-IceAgent::IceAgent(QObject *parent) : QObject(parent) {}
+IceAgent::IceAgent(QObject *parent) : QObject(parent), d(new Private) { }
 
 } // namespace XMPP

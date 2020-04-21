@@ -58,7 +58,7 @@ signals:
     void debugLine(const QString &str);
 };
 
-inline uint qHash(const QWeakPointer<IceTransport> &p) { return qHash(p.data()); }
+inline uint qHash(const QWeakPointer<IceTransport> &p) { return qHash(p.toStrongRef().data()); }
 
 } // namespace XMPP
 

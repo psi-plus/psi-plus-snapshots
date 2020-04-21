@@ -99,7 +99,7 @@ public:
     public:
         IceComponent::CandidateInfo local, remote;
         bool                        isDefault               = false; // not used in xmpp
-        bool                        isValid                 = false;
+        bool                        isValid                 = false; // a pair which is also in valid list
         bool                        isNominated             = false;
         bool                        isTriggeredForNominated = false;
         CandidatePairState          state                   = CandidatePairState::PFrozen;
@@ -170,12 +170,13 @@ public:
     QList<QList<QByteArray>>           in;
     Features                           remoteFeatures;
     Features                           localFeatures;
-    bool                               useLocal                = true;
-    bool                               useStunBind             = true;
-    bool                               useStunRelayUdp         = true;
-    bool                               useStunRelayTcp         = true;
-    bool                               localGatheringComplete  = false;
-    bool                               remoteGatheringComplete = false;
+    bool                               useLocal                   = true;
+    bool                               useStunBind                = true;
+    bool                               useStunRelayUdp            = true;
+    bool                               useStunRelayTcp            = true;
+    bool                               localHostGatheringFinished = false;
+    bool                               localGatheringComplete     = false;
+    bool                               remoteGatheringComplete    = false;
 
     Private(Ice176 *_q) : QObject(_q), q(_q)
     {
@@ -796,6 +797,22 @@ private:
         out.type     = candidateType_to_string(cc.info.type);
     }
 
+    void dumpCandidatesAndStart()
+    {
+        QList<Ice176::Candidate> list;
+        for (auto const &cc : localCandidates) {
+            Ice176::Candidate c;
+            toOutCandidate(cc, c);
+            list += c;
+        }
+        if (list.size())
+            emit q->localCandidatesReady(list);
+
+        state = Started;
+        emit q->started();
+        doPairing(localCandidates, remoteCandidates);
+    }
+
     QString generateIdForCandidate()
     {
         QString id;
@@ -833,6 +850,9 @@ private slots:
 
             iceTransports += cc.iceTransport;
         }
+
+        if (!localHostGatheringFinished)
+            return; // all local IPs will be reported at once
 
         if (localFeatures & Trickle) {
             QList<Ice176::Candidate> list;
@@ -901,21 +921,19 @@ private slots:
         IceComponent *ic = static_cast<IceComponent *>(sender());
         int           at = findComponent(ic);
         Q_ASSERT(at != -1);
+        Q_ASSERT(!components[at].localFinished);
 
         components[at].localFinished = true;
 
-        bool allLocalFinished = true;
-        foreach (const Component &c, components) {
+        for (const Component &c : components) {
             if (!c.localFinished) {
-                allLocalFinished = false;
-                break;
+                return;
             }
         }
 
-        if (allLocalFinished && (localFeatures & Trickle)) {
-            state = Started;
-            emit q->started();
-        }
+        localHostGatheringFinished = true;
+        if (localFeatures & Trickle)
+            dumpCandidatesAndStart();
     }
 
     void ic_gatheringComplete()
@@ -935,17 +953,7 @@ private slots:
             return;
         }
 
-        QList<Ice176::Candidate> list;
-        foreach (const IceComponent::Candidate &cc, localCandidates) {
-            Ice176::Candidate c;
-            toOutCandidate(cc, c);
-            list += c;
-        }
-        if (!list.isEmpty())
-            emit q->localCandidatesReady(list);
-
-        state = Started;
-        emit q->started();
+        dumpCandidatesAndStart();
     }
 
     void ic_stopped()
