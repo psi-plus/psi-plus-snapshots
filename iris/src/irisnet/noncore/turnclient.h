@@ -89,7 +89,7 @@ public:
     private:
         int     t;
         QString v_host;
-        quint16 v_port;
+        quint16 v_port = 0;
         QString v_user, v_pass;
     };
 

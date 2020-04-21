@@ -34,9 +34,9 @@ namespace XMPP {
 //----------------------------------------------------------------------------
 // TurnClient::Proxy
 //----------------------------------------------------------------------------
-TurnClient::Proxy::Proxy() { t = None; }
+TurnClient::Proxy::Proxy() : t(None) { }
 
-TurnClient::Proxy::~Proxy() {}
+TurnClient::Proxy::~Proxy() { }
 
 int TurnClient::Proxy::type() const { return t; }
 
@@ -78,24 +78,24 @@ public:
     TurnClient *         q;
     Proxy                proxy;
     QString              clientSoftware;
-    TurnClient::Mode     mode;
+    TurnClient::Mode     mode = PlainMode;
     QHostAddress         serverAddr;
-    int                  serverPort;
+    int                  serverPort = 0;
     ObjectSession        sess;
-    ByteStream *         bs;
-    QCA::TLS *           tls;
-    bool                 tlsHandshaken;
+    ByteStream *         bs            = nullptr;
+    QCA::TLS *           tls           = nullptr;
+    bool                 tlsHandshaken = false;
     QByteArray           inStream;
-    bool                 udp;
-    StunTransactionPool *pool;
-    StunAllocate *       allocate;
-    bool                 allocateStarted;
+    bool                 udp             = false;
+    StunTransactionPool *pool            = nullptr;
+    StunAllocate *       allocate        = nullptr;
+    bool                 allocateStarted = false;
     QString              user;
     QCA::SecureArray     pass;
     QString              realm;
-    int                  retryCount;
+    int                  retryCount = 0;
     QString              errorString;
-    int                  debugLevel;
+    int                  debugLevel = 0;
 
     class WriteItem {
     public:
@@ -106,7 +106,7 @@ public:
         QHostAddress addr;
         int          port;
 
-        WriteItem(int _size) : type(Other), size(_size), port(-1) {}
+        WriteItem(int _size) : type(Other), size(_size), port(-1) { }
 
         WriteItem(int _size, const QHostAddress &_addr, int _port) : type(Data), size(_size), addr(_addr), port(_port)
         {
@@ -126,7 +126,7 @@ public:
         // for outbound
         bool requireChannel;
 
-        Packet() : port(-1), requireChannel(false) {}
+        Packet() : port(-1), requireChannel(false) { }
     };
 
     QList<Packet>                in;

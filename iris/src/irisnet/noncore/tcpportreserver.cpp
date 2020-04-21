@@ -26,7 +26,7 @@
 #include <QTcpSocket>
 
 namespace XMPP {
-TcpPortDiscoverer::TcpPortDiscoverer(TcpPortScope *scope) : QObject(scope), scope(scope) {}
+TcpPortDiscoverer::TcpPortDiscoverer(TcpPortScope *scope) : QObject(scope), scope(scope) { }
 
 bool TcpPortDiscoverer::setExternalHost(const QString &extHost, quint16 extPort, const QHostAddress &localAddr,
                                         quint16 localPort)
@@ -62,7 +62,8 @@ TcpPortServer::PortTypes TcpPortDiscoverer::setTypeMask(TcpPortServer::PortTypes
 {
     this->typeMask = mask;
     // drop ready ports if any
-    std::remove_if(servers.begin(), servers.end(), [mask](auto &s) { return !(s->portType() & mask); });
+    auto it = std::remove_if(servers.begin(), servers.end(), [mask](auto &s) { return !(s->portType() & mask); });
+    servers.erase(it, servers.end());
 
     TcpPortServer::PortTypes pendingTypes;
     for (auto &s : servers)
@@ -148,9 +149,9 @@ struct TcpPortScope::Private {
     QHash<QPair<QHostAddress, quint16>, QWeakPointer<TcpPortServer>> servers;
 };
 
-TcpPortScope::TcpPortScope() : d(new Private) {}
+TcpPortScope::TcpPortScope() : d(new Private) { }
 
-TcpPortScope::~TcpPortScope() {}
+TcpPortScope::~TcpPortScope() { }
 
 TcpPortDiscoverer *TcpPortScope::disco()
 {
@@ -206,9 +207,9 @@ TcpPortServer::Ptr TcpPortScope::bind(const QHostAddress &addr, quint16 port)
 // --------------------------------------------------------------------------
 // TcpPortScope
 // --------------------------------------------------------------------------
-TcpPortReserver::TcpPortReserver(QObject *parent) : QObject(parent) {}
+TcpPortReserver::TcpPortReserver(QObject *parent) : QObject(parent) { }
 
-TcpPortReserver::~TcpPortReserver() {}
+TcpPortReserver::~TcpPortReserver() { }
 
 TcpPortScope *TcpPortReserver::scope(const QString &id)
 {

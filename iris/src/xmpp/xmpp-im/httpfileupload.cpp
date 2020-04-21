@@ -255,7 +255,7 @@ const QString &HttpFileUpload::statusString() const { return d->result.statusStr
 
 HttpFileUpload::HttpSlot HttpFileUpload::getHttpSlot()
 {
-    HttpSlot slot;
+    HttpSlot slot {};
     if (d->state == State::Success) {
         slot.get.url         = d->result.getUrl;
         slot.put.url         = d->result.putUrl;
@@ -443,7 +443,7 @@ HttpFileUpload *HttpFileUploadManager::upload(const QString &srcFilename, const 
     auto f = new QFile(srcFilename);
     f->open(QIODevice::ReadOnly);
     auto hfu = upload(f, f->size(), dstFilename, mType);
-    connect(hfu, &HttpFileUpload::finished, this, [f](){f->close();});
+    connect(hfu, &HttpFileUpload::finished, this, [f]() { f->close(); });
     f->setParent(hfu);
     return hfu;
 }
