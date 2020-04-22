@@ -141,7 +141,7 @@ void Task::safeDelete()
         deleteLater();
 }
 
-void Task::onGo() {}
+void Task::onGo() { }
 
 void Task::onDisconnect()
 {
@@ -236,8 +236,7 @@ void Task::debug(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    QString str;
-    str.vsprintf(fmt, ap);
+    QString str = QString::vasprintf(fmt, ap);
     va_end(ap);
     debug(str);
 }

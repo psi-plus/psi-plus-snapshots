@@ -172,11 +172,11 @@ private:
 
 private:
     QWaitCondition startCond;
-    QMutex *       startMutex;
+    QMutex *       startMutex = nullptr;
     // these are all protected by global nettracker_mutex.
-    int                      refs;
+    int                      refs = 0;
     static NetTrackerThread *self;
-    NetTracker *             nettracker;
+    NetTracker *             nettracker = nullptr;
 };
 
 NetTrackerThread *NetTrackerThread::self = nullptr;

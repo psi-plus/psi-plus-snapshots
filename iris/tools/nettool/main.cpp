@@ -115,7 +115,7 @@ static QString dataToString(const QByteArray &buf)
         unsigned char c = (unsigned char)buf[n];
         if (c == '\\')
             out += "\\\\";
-        else if (c >= 0x20 || c < 0x7f)
+        else if (c >= 0x20 && c < 0x7f)
             out += c;
         else
             out += QString("\\x%1").arg((uint)c, 2, 16);
@@ -336,7 +336,7 @@ private slots:
         printf("GONE: [%s]\n", qPrintable(i.instance()));
     }
 
-    void browser_error() {}
+    void browser_error() { }
 };
 
 class ResolveService : public QObject {
