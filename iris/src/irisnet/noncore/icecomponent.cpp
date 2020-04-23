@@ -366,8 +366,9 @@ public:
         ci.componentId = base.componentId;
         ci.network     = base.network;
 
-        auto baseCand = std::find_if(localCandidates.begin(), localCandidates.end(),
-                                     [&](auto const &c) { return c.info.id == base.id; });
+        auto baseCand = std::find_if(localCandidates.begin(), localCandidates.end(), [&](auto const &c) {
+            return c.info.base == base.base && c.info.type == HostType;
+        });
         Q_ASSERT(baseCand != localCandidates.end());
 
         Candidate c;
@@ -590,21 +591,21 @@ private slots:
         // setup stun/turn
         bool bind  = useStunBind && !config.stunBindAddr.isNull();
         bool relay = useStunRelayUdp && !config.stunRelayUdpAddr.isNull() && !config.stunRelayUdpUser.isEmpty();
-        if (lt->stun_started || !(bind || relay) || lt->addr.protocol() == QAbstractSocket::IPv6Protocol)
-            return;
-
-        lt->sock->setClientSoftwareNameAndVersion(clientSoftware);
-        if (bind) {
-            lt->sock->setStunBindService(config.stunBindAddr, config.stunBindPort);
+        // if need to start stun/turn
+        if (!lt->stun_started && (bind || relay) && lt->addr.protocol() != QAbstractSocket::IPv6Protocol) {
+            lt->sock->setClientSoftwareNameAndVersion(clientSoftware);
+            if (bind) {
+                lt->sock->setStunBindService(config.stunBindAddr, config.stunBindPort);
+            }
+            if (relay) {
+                lt->sock->setStunRelayService(config.stunRelayUdpAddr, config.stunRelayUdpPort, config.stunRelayUdpUser,
+                                              config.stunRelayUdpPass);
+            }
+            lt->stun_started = true;
+            lt->sock->stunStart();
+            if (!watch.isValid())
+                return;
         }
-        if (relay) {
-            lt->sock->setStunRelayService(config.stunRelayUdpAddr, config.stunRelayUdpPort, config.stunRelayUdpUser,
-                                          config.stunRelayUdpPass);
-        }
-        lt->stun_started = true;
-        lt->sock->stunStart();
-        if (!watch.isValid())
-            return;
 
         // check completeness of various stuff
         if (!localFinished) {
