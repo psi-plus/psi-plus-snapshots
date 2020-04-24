@@ -643,8 +643,10 @@ public:
             if (pair->state == CandidatePairState::PSucceeded) {
                 // Check nominated here?
                 printf("Don't do triggered check since pair is already in success state\n");
-                if (mode == Responder && nominated)
+                if (mode == Responder && !pair->isNominated && nominated) {
+                    pair->isNominated = true;
                     tryComponentSuccess(pair);
+                }
                 return; // nothing todo. rfc 8445 7.3.1.4
             }
             pair->isNominated = false;
@@ -1212,6 +1214,11 @@ private slots:
                     }
                 }
             }
+        }
+
+        if (!pair) {
+            qWarning("binding success but failed to build a pair with mapped address %s!", qPrintable(mappedAddr));
+            return;
         }
 
         pair->isValid = true;
