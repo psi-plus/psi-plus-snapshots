@@ -3,7 +3,7 @@
 #include "common.h"
 #include "spellchecker.h"
 
-SpellHighlighter::SpellHighlighter(QTextDocument *d) : QSyntaxHighlighter(d) {}
+SpellHighlighter::SpellHighlighter(QTextDocument *d) : QSyntaxHighlighter(d) { }
 
 void SpellHighlighter::highlightBlock(const QString &text)
 {

@@ -32,9 +32,9 @@ public:
         QString func;
         int     code;
 
-        LowLevelError() : code(0) {}
+        LowLevelError() : code(0) { }
 
-        LowLevelError(const QString &_func, int _code) : func(_func), code(_code) {}
+        LowLevelError(const QString &_func, int _code) : func(_func), code(_code) { }
     };
 
     class Record {

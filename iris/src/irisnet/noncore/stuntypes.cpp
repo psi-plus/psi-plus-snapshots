@@ -621,7 +621,7 @@ namespace StunTypes {
         out += "Attributes:";
         QList<StunMessage::Attribute> attribs = message.attributes();
         if (!attribs.isEmpty()) {
-            foreach (const StunMessage::Attribute &a, attribs) {
+            for (const StunMessage::Attribute &a : attribs) {
                 out += '\n';
 
                 QString name = attributeTypeToString(a.type);

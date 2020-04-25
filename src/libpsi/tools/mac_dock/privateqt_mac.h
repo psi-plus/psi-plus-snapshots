@@ -27,7 +27,7 @@
 
 template <typename T> class QtCFType {
 public:
-    inline QtCFType(const T &t = 0) : type(t) {}
+    inline QtCFType(const T &t = 0) : type(t) { }
     inline QtCFType(const QtCFType &helper) : type(helper.type)
     {
         if (type)
@@ -62,9 +62,9 @@ protected:
 
 class QtCFString : public QtCFType<CFStringRef> {
 public:
-    inline QtCFString(const QString &str) : QtCFType<CFStringRef>(0), string(str) {}
-    inline QtCFString(const CFStringRef cfstr = 0) : QtCFType<CFStringRef>(cfstr) {}
-    inline QtCFString(const QtCFType<CFStringRef> &other) : QtCFType<CFStringRef>(other) {}
+    inline QtCFString(const QString &str) : QtCFType<CFStringRef>(0), string(str) { }
+    inline QtCFString(const CFStringRef cfstr = 0) : QtCFType<CFStringRef>(cfstr) { }
+    inline QtCFString(const QtCFType<CFStringRef> &other) : QtCFType<CFStringRef>(other) { }
                        operator QString() const;
                        operator CFStringRef() const;
     static QString     toQString(CFStringRef cfstr);

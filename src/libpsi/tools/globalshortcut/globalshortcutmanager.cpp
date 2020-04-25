@@ -26,7 +26,7 @@
 /**
  * \brief Constructs new GlobalShortcutManager.
  */
-GlobalShortcutManager::GlobalShortcutManager() : QObject(QCoreApplication::instance()) {}
+GlobalShortcutManager::GlobalShortcutManager() : QObject(QCoreApplication::instance()) { }
 
 GlobalShortcutManager::~GlobalShortcutManager() { clear(); }
 

@@ -95,7 +95,7 @@ static Roster xmlReadRoster(const QDomElement &q, bool push)
 //
 #include "protocol.h"
 
-JT_Session::JT_Session(Task *parent) : Task(parent) {}
+JT_Session::JT_Session(Task *parent) : Task(parent) { }
 
 void JT_Session::onGo()
 {
@@ -526,9 +526,9 @@ bool JT_Roster::take(const QDomElement &x)
 //----------------------------------------------------------------------------
 // JT_PushRoster
 //----------------------------------------------------------------------------
-JT_PushRoster::JT_PushRoster(Task *parent) : Task(parent) {}
+JT_PushRoster::JT_PushRoster(Task *parent) : Task(parent) { }
 
-JT_PushRoster::~JT_PushRoster() {}
+JT_PushRoster::~JT_PushRoster() { }
 
 bool JT_PushRoster::take(const QDomElement &e)
 {
@@ -548,9 +548,9 @@ bool JT_PushRoster::take(const QDomElement &e)
 //----------------------------------------------------------------------------
 // JT_Presence
 //----------------------------------------------------------------------------
-JT_Presence::JT_Presence(Task *parent) : Task(parent) {}
+JT_Presence::JT_Presence(Task *parent) : Task(parent) { }
 
-JT_Presence::~JT_Presence() {}
+JT_Presence::~JT_Presence() { }
 
 void JT_Presence::pres(const Status &s)
 {
@@ -615,7 +615,7 @@ void JT_Presence::pres(const Status &s)
         }
 
         // bits of binary
-        foreach (const BoBData &bd, s.bobDataList()) {
+        for (const BoBData &bd : s.bobDataList()) {
             tag.appendChild(bd.toXml(doc()));
         }
     }
@@ -660,9 +660,9 @@ void JT_Presence::onGo()
 //----------------------------------------------------------------------------
 // JT_PushPresence
 //----------------------------------------------------------------------------
-JT_PushPresence::JT_PushPresence(Task *parent) : Task(parent) {}
+JT_PushPresence::JT_PushPresence(Task *parent) : Task(parent) { }
 
-JT_PushPresence::~JT_PushPresence() {}
+JT_PushPresence::~JT_PushPresence() { }
 
 bool JT_PushPresence::take(const QDomElement &e)
 {
@@ -830,7 +830,7 @@ JT_Message::JT_Message(Task *parent, Message &msg) : Task(parent), m(msg)
         msg.setId(id());
 }
 
-JT_Message::~JT_Message() {}
+JT_Message::~JT_Message() { }
 
 void JT_Message::onGo()
 {
@@ -1176,7 +1176,7 @@ bool JT_Search::take(const QDomElement &x)
 //----------------------------------------------------------------------------
 // JT_ClientVersion
 //----------------------------------------------------------------------------
-JT_ClientVersion::JT_ClientVersion(Task *parent) : Task(parent) {}
+JT_ClientVersion::JT_ClientVersion(Task *parent) : Task(parent) { }
 
 void JT_ClientVersion::get(const Jid &jid)
 {
@@ -1225,7 +1225,7 @@ const QString &JT_ClientVersion::os() const { return v_os; }
 //----------------------------------------------------------------------------
 // JT_EntityTime
 //----------------------------------------------------------------------------
-JT_EntityTime::JT_EntityTime(Task *parent) : Task(parent) {}
+JT_EntityTime::JT_EntityTime(Task *parent) : Task(parent) { }
 
 /**
  * \brief Queried entity's JID.
@@ -1285,9 +1285,9 @@ int JT_EntityTime::timezoneOffset() const { return tzo; }
 //----------------------------------------------------------------------------
 // JT_ServInfo
 //----------------------------------------------------------------------------
-JT_ServInfo::JT_ServInfo(Task *parent) : Task(parent) {}
+JT_ServInfo::JT_ServInfo(Task *parent) : Task(parent) { }
 
-JT_ServInfo::~JT_ServInfo() {}
+JT_ServInfo::~JT_ServInfo() { }
 
 bool JT_ServInfo::take(const QDomElement &e)
 {
@@ -1444,7 +1444,7 @@ bool JT_Gateway::take(const QDomElement &x)
 //----------------------------------------------------------------------------
 class JT_DiscoItems::Private {
 public:
-    Private() {}
+    Private() { }
 
     QDomElement iq;
     Jid         jid;
@@ -1531,7 +1531,7 @@ bool JT_DiscoItems::take(const QDomElement &x)
 //----------------------------------------------------------------------------
 class JT_DiscoPublish::Private {
 public:
-    Private() {}
+    Private() { }
 
     QDomElement iq;
     Jid         jid;
@@ -1590,7 +1590,7 @@ bool JT_DiscoPublish::take(const QDomElement &x)
 // ---------------------------------------------------------
 // JT_BoBServer
 // ---------------------------------------------------------
-JT_BoBServer::JT_BoBServer(Task *parent) : Task(parent) {}
+JT_BoBServer::JT_BoBServer(Task *parent) : Task(parent) { }
 
 bool JT_BoBServer::take(const QDomElement &e)
 {
@@ -1620,7 +1620,7 @@ bool JT_BoBServer::take(const QDomElement &e)
 //----------------------------------------------------------------------------
 class JT_BitsOfBinary::Private {
 public:
-    Private() {}
+    Private() { }
 
     QDomElement iq;
     Jid         jid;
@@ -1687,7 +1687,7 @@ BoBData &JT_BitsOfBinary::data() { return d->data; }
  * \brief Answers XMPP Pings
  */
 
-JT_PongServer::JT_PongServer(Task *parent) : Task(parent) {}
+JT_PongServer::JT_PongServer(Task *parent) : Task(parent) { }
 
 bool JT_PongServer::take(const QDomElement &e)
 {
@@ -1712,7 +1712,7 @@ public:
     CaptchaChallenge challenge;
 };
 
-JT_CaptchaChallenger::JT_CaptchaChallenger(Task *parent) : Task(parent), d(new Private) {}
+JT_CaptchaChallenger::JT_CaptchaChallenger(Task *parent) : Task(parent), d(new Private) { }
 
 JT_CaptchaChallenger::~JT_CaptchaChallenger() { delete d; }
 
@@ -1796,7 +1796,7 @@ bool JT_CaptchaChallenger::take(const QDomElement &x)
 //---------------------------------------------------------------------------
 // JT_CaptchaSender
 //---------------------------------------------------------------------------
-JT_CaptchaSender::JT_CaptchaSender(Task *parent) : Task(parent) {}
+JT_CaptchaSender::JT_CaptchaSender(Task *parent) : Task(parent) { }
 
 void JT_CaptchaSender::set(const Jid &j, const XData &xd)
 {
@@ -1826,7 +1826,7 @@ bool JT_CaptchaSender::take(const QDomElement &x)
 //----------------------------------------------------------------------------
 // JT_MessageCarbons
 //----------------------------------------------------------------------------
-JT_MessageCarbons::JT_MessageCarbons(Task *parent) : Task(parent) {}
+JT_MessageCarbons::JT_MessageCarbons(Task *parent) : Task(parent) { }
 
 void JT_MessageCarbons::enable()
 {

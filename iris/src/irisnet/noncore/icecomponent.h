@@ -41,9 +41,9 @@ public:
         QHostAddress addr;
         int          port;
 
-        TransportAddress() : port(-1) {}
+        TransportAddress() : port(-1) { }
 
-        TransportAddress(const QHostAddress &_addr, int _port) : addr(_addr), port(_port) {}
+        TransportAddress(const QHostAddress &_addr, int _port) : addr(_addr), port(_port) { }
 
         bool operator==(const TransportAddress &other) const
         {
@@ -59,6 +59,8 @@ public:
 
     class CandidateInfo {
     public:
+        using Ptr = QSharedPointer<CandidateInfo>;
+
         CandidateType type;
         int           priority;
         int           componentId;
@@ -71,9 +73,9 @@ public:
         QString foundation;
         QString id;
 
-        static CandidateInfo makeRemotePrflx(int componentId, const QHostAddress &fromAddr, quint16 fromPort,
-                                             quint32 priority);
-        inline bool isSame(const CandidateInfo &o) const { return addr == o.addr && componentId == o.componentId; }
+        static Ptr  makeRemotePrflx(int componentId, const QHostAddress &fromAddr, quint16 fromPort, quint32 priority);
+        inline bool operator==(const CandidateInfo &o) const { return addr == o.addr && componentId == o.componentId; }
+        inline bool operator==(CandidateInfo::Ptr o) const { return *this == *o; }
     };
 
     class Candidate {
@@ -86,7 +88,7 @@ public:
         //   is up to the user to create the candidate id.
         // info.foundation is also unset, since awareness of all
         //   components and candidates is needed to calculate it.
-        CandidateInfo info;
+        CandidateInfo::Ptr info;
 
         // note that these may be the same for multiple candidates
         QSharedPointer<IceTransport> iceTransport;
@@ -138,7 +140,7 @@ public:
     // prflx priority to use when replying from this transport/path
     int peerReflexivePriority(QSharedPointer<IceTransport> iceTransport, int path) const;
 
-    void addLocalPeerReflexiveCandidate(const TransportAddress &addr, const CandidateInfo &base, quint32 priority);
+    void addLocalPeerReflexiveCandidate(const TransportAddress &addr, CandidateInfo::Ptr base, quint32 priority);
 
     void flagPathAsLowOverhead(int id, const QHostAddress &addr, int port);
 

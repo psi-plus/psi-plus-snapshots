@@ -28,7 +28,7 @@
 namespace XMPP {
 class CapsInfo {
 public:
-    inline CapsInfo() {}
+    inline CapsInfo() { }
     inline CapsInfo(const XMPP::DiscoItem &disco, const QDateTime &lastSeen = QDateTime()) :
         _lastSeen(lastSeen.isNull() ? QDateTime::currentDateTime() : lastSeen), _disco(disco)
     {

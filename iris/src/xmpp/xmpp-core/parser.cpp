@@ -328,7 +328,7 @@ private:
 namespace XMPP {
 class ParserHandler : public QXmlDefaultHandler {
 public:
-    explicit ParserHandler(StreamInput *_in, QDomDocument *_doc) : in(_in), doc(_doc) {}
+    explicit ParserHandler(StreamInput *_in, QDomDocument *_doc) : in(_in), doc(_doc) { }
 
     ~ParserHandler()
     {

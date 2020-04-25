@@ -336,11 +336,11 @@ public:
     }
 };
 
-StunMessage::StunMessage() : d(nullptr) {}
+StunMessage::StunMessage() : d(nullptr) { }
 
-StunMessage::StunMessage(const StunMessage &from) : d(from.d) {}
+StunMessage::StunMessage(const StunMessage &from) : d(from.d) { }
 
-StunMessage::~StunMessage() {}
+StunMessage::~StunMessage() { }
 
 StunMessage &StunMessage::operator=(const StunMessage &from)
 {
@@ -384,7 +384,7 @@ QByteArray StunMessage::attribute(quint16 type) const
 {
     Q_ASSERT(d);
 
-    foreach (const Attribute &i, d->attribs) {
+    for (const Attribute &i : d->attribs) {
         if (i.type == type)
             return i.value;
     }
@@ -395,7 +395,7 @@ bool StunMessage::hasAttribute(quint16 type) const
 {
     Q_ASSERT(d);
 
-    foreach (const Attribute &i, d->attribs) {
+    for (const Attribute &i : d->attribs) {
         if (i.type == type)
             return true;
     }
@@ -473,7 +473,7 @@ QByteArray StunMessage::toBinary(int validationFlags, const QByteArray &key) con
     memcpy(p + 4, d->magic, 4);
     memcpy(p + 8, d->id, 12);
 
-    foreach (const Attribute &i, d->attribs) {
+    for (const Attribute &i : d->attribs) {
         int at = append_attribute_uninitialized(&buf, i.type, i.value.size());
         if (at == -1)
             return QByteArray();

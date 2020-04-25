@@ -34,8 +34,8 @@ class IBBManager;
 
 class IBBData {
 public:
-    IBBData() : seq(0) {}
-    IBBData(const QString &sid, quint16 seq, const QByteArray &data) : sid(sid), seq(seq), data(data) {}
+    IBBData() : seq(0) { }
+    IBBData(const QString &sid, quint16 seq, const QByteArray &data) : sid(sid), seq(seq), data(data) { }
 
     IBBData &   fromXml(const QDomElement &e);
     QDomElement toXml(QDomDocument *) const;

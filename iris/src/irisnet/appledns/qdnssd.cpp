@@ -149,7 +149,7 @@ private:
     }
 
 public:
-    IdManager() : at(0) {}
+    IdManager() : at(0) { }
 
     int reserveId()
     {
@@ -185,7 +185,7 @@ public:
         int        _id;
         RecordRef *_sdref;
 
-        SubRecord(Private *self) : _self(self), _id(-1), _sdref(0) {}
+        SubRecord(Private *self) : _self(self), _id(-1), _sdref(0) { }
 
         ~SubRecord()
         {
@@ -249,7 +249,7 @@ public:
     QHash<SafeTimer *, Request *>          _requestsByTimer;
     QHash<int, Request *>                  _requestsByRecId;
 
-    Private(QDnsSd *_q) : QObject(_q), q(_q) {}
+    Private(QDnsSd *_q) : QObject(_q), q(_q) { }
 
     ~Private() { qDeleteAll(_requestsById); }
 
@@ -837,7 +837,7 @@ QByteArray QDnsSd::createTxtRecord(const QList<QByteArray> &strings)
     // split into var/val and validate
     QList<QByteArray> vars;
     QList<QByteArray> vals; // null = no value, empty = empty value
-    foreach (const QByteArray &i, strings) {
+    for (const QByteArray &i : strings) {
         QByteArray var;
         QByteArray val;
         int        n = i.indexOf('=');

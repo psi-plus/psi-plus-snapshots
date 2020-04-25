@@ -57,7 +57,7 @@ static QString hpk(int n, const QString &s)
 
 class HttpPoll::Private {
 public:
-    Private(HttpPoll *_q) : http(_q) {}
+    Private(HttpPoll *_q) : http(_q) { }
 
     HttpProxyPost http;
     QString       host;
@@ -415,7 +415,7 @@ static bool extractMainHeader(const QString &line, QString *proto, int *code, QS
 
 class HttpProxyPost::Private {
 public:
-    Private(HttpProxyPost *_q) : sock(_q), tls(nullptr) {}
+    Private(HttpProxyPost *_q) : sock(_q), tls(nullptr) { }
 
     ~Private() { delete tls; }
 
@@ -500,7 +500,7 @@ QByteArray HttpProxyPost::body() const { return d->body; }
 
 QString HttpProxyPost::getHeader(const QString &var) const
 {
-    foreach (const QString &s, d->headerLines) {
+    for (const QString &s : d->headerLines) {
         int n = s.indexOf(": ");
         if (n == -1)
             continue;
@@ -695,7 +695,7 @@ void HttpProxyPost::sock_error(int x)
 //----------------------------------------------------------------------------
 class HttpProxyGetStream::Private {
 public:
-    Private(HttpProxyGetStream *_q) : sock(_q) {}
+    Private(HttpProxyGetStream *_q) : sock(_q) { }
 
     BSocket     sock;
     QByteArray  recvBuf;
@@ -773,7 +773,7 @@ void HttpProxyGetStream::stop() { resetConnection(); }
 
 QString HttpProxyGetStream::getHeader(const QString &var) const
 {
-    foreach (const QString &s, d->headerLines) {
+    for (const QString &s : d->headerLines) {
         int n = s.indexOf(": ");
         if (n == -1)
             continue;

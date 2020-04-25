@@ -37,13 +37,13 @@ public:
     unsigned int maxAge; // seconds to live
 };
 
-BoBData::BoBData() : d(new Private) {}
+BoBData::BoBData() : d(new Private) { }
 
-BoBData::BoBData(const BoBData &other) : d(other.d) {}
+BoBData::BoBData(const BoBData &other) : d(other.d) { }
 
 BoBData::BoBData(const QDomElement &e) : d(new Private) { fromXml(e); }
 
-BoBData::~BoBData() {}
+BoBData::~BoBData() { }
 
 BoBData &BoBData::operator=(const BoBData &other)
 {
@@ -108,7 +108,7 @@ QDomElement BoBData::toXml(QDomDocument *doc) const
 // ---------------------------------------------------------
 // BoBCache
 // ---------------------------------------------------------
-BoBCache::BoBCache(QObject *parent) : QObject(parent) {}
+BoBCache::BoBCache(QObject *parent) : QObject(parent) { }
 
 //------------------------------------------------------------------------------
 // BoBManager

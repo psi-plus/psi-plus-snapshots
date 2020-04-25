@@ -24,9 +24,9 @@
 #include <QTimer>
 
 namespace XMPP {
-BytestreamManager::BytestreamManager(Client *parent) : QObject(parent) {}
+BytestreamManager::BytestreamManager(Client *parent) : QObject(parent) { }
 
-BytestreamManager::~BytestreamManager() {}
+BytestreamManager::~BytestreamManager() { }
 
 QString BytestreamManager::genUniqueSID(const Jid &peer) const
 {

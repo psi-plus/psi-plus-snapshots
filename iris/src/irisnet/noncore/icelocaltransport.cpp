@@ -522,7 +522,7 @@ private slots:
         ObjectSessionWatcher watch(&sess);
 
         if (!dwrites.isEmpty()) {
-            foreach (const Written &wr, dwrites) {
+            for (const Written &wr : dwrites) {
                 emit q->datagramsWritten(Direct, wr.count, wr.addr, wr.port);
                 if (!watch.isValid())
                     return;

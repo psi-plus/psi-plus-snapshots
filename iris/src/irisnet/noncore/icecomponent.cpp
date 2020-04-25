@@ -354,20 +354,20 @@ public:
     }
 
     void addLocalPeerReflexiveCandidate(const IceComponent::TransportAddress &addr,
-                                        const IceComponent::CandidateInfo &base, quint32 priority)
+                                        IceComponent::CandidateInfo::Ptr base, quint32 priority)
     {
-        IceComponent::CandidateInfo ci;
-        ci.addr = addr;
-        ci.addr.addr.setScopeId(QString());
-        ci.base        = base.addr;
-        ci.type        = IceComponent::PeerReflexiveType;
-        ci.priority    = priority;
-        ci.foundation  = IceAgent::instance()->foundation(IceComponent::PeerReflexiveType, ci.base.addr);
-        ci.componentId = base.componentId;
-        ci.network     = base.network;
+        auto ci  = IceComponent::CandidateInfo::Ptr::create();
+        ci->addr = addr;
+        ci->addr.addr.setScopeId(QString());
+        ci->base        = base->addr;
+        ci->type        = IceComponent::PeerReflexiveType;
+        ci->priority    = priority;
+        ci->foundation  = IceAgent::instance()->foundation(IceComponent::PeerReflexiveType, ci->base.addr);
+        ci->componentId = base->componentId;
+        ci->network     = base->network;
 
         auto baseCand = std::find_if(localCandidates.begin(), localCandidates.end(), [&](auto const &c) {
-            return c.info.base == base.base && c.info.type == HostType;
+            return c.info->base == base->base && c.info->type == HostType;
         });
         Q_ASSERT(baseCand != localCandidates.end());
 
@@ -423,7 +423,7 @@ private:
     {
         for (int n = 0;; ++n) {
             bool found = false;
-            foreach (const Candidate &c, localCandidates) {
+            for (const Candidate &c : localCandidates) {
                 if (c.id == n) {
                     found = true;
                     break;
@@ -448,16 +448,16 @@ private:
     void ensureExt(LocalTransport *lt, int addrAt)
     {
         if (!lt->extAddr.isNull() && !lt->ext_finished) {
-            CandidateInfo ci;
-            ci.addr.addr   = lt->extAddr;
-            ci.addr.port   = lt->sock->localPort();
-            ci.type        = ServerReflexiveType;
-            ci.componentId = id;
-            ci.priority    = choose_default_priority(ci.type, 65535 - addrAt, lt->isVpn, ci.componentId);
-            ci.base.addr   = lt->sock->localAddress();
-            ci.base.port   = lt->sock->localPort();
-            ci.network     = lt->network;
-            ci.foundation  = IceAgent::instance()->foundation(ServerReflexiveType, ci.base.addr);
+            auto ci         = CandidateInfo::Ptr::create();
+            ci->addr.addr   = lt->extAddr;
+            ci->addr.port   = lt->sock->localPort();
+            ci->type        = ServerReflexiveType;
+            ci->componentId = id;
+            ci->priority    = choose_default_priority(ci->type, 65535 - addrAt, lt->isVpn, ci->componentId);
+            ci->base.addr   = lt->sock->localAddress();
+            ci->base.port   = lt->sock->localPort();
+            ci->network     = lt->network;
+            ci->foundation  = IceAgent::instance()->foundation(ServerReflexiveType, ci->base.addr);
 
             Candidate c;
             c.id           = getId();
@@ -496,7 +496,8 @@ private:
         ObjectSessionWatcher watch(&sess);
         // RFC8445 5.1.3.  Eliminating Redundant Candidates
         auto it = std::find_if(localCandidates.begin(), localCandidates.end(), [&](const Candidate &cc) {
-            return cc.info.addr == c.info.addr && cc.info.base == c.info.base && cc.info.priority >= c.info.priority;
+            return cc.info->addr == c.info->addr && cc.info->base == c.info->base
+                && cc.info->priority >= c.info->priority;
         });
         if (it == localCandidates.end()) { // not reduntant
             localCandidates += c;
@@ -561,15 +562,15 @@ private slots:
         ObjectSessionWatcher watch(&sess);
 
         if (useLocal) {
-            CandidateInfo ci;
-            ci.addr.addr   = lt->sock->localAddress();
-            ci.addr.port   = lt->sock->localPort();
-            ci.type        = HostType;
-            ci.componentId = id;
-            ci.priority    = choose_default_priority(ci.type, 65535 - addrAt, lt->isVpn, ci.componentId);
-            ci.base        = ci.addr;
-            ci.network     = lt->network;
-            ci.foundation  = IceAgent::instance()->foundation(HostType, ci.base.addr);
+            auto ci         = CandidateInfo::Ptr::create();
+            ci->addr.addr   = lt->sock->localAddress();
+            ci->addr.port   = lt->sock->localPort();
+            ci->type        = HostType;
+            ci->componentId = id;
+            ci->priority    = choose_default_priority(ci->type, 65535 - addrAt, lt->isVpn, ci->componentId);
+            ci->base        = ci->addr;
+            ci->network     = lt->network;
+            ci->foundation  = IceAgent::instance()->foundation(HostType, ci->base.addr);
 
             Candidate c;
             c.id           = getId();
@@ -675,17 +676,17 @@ private slots:
                 }
             }
 
-            CandidateInfo ci;
-            ci.addr.addr   = lt->sock->serverReflexiveAddress();
-            ci.addr.port   = lt->sock->serverReflexivePort();
-            ci.base.addr   = lt->sock->localAddress();
-            ci.base.port   = lt->sock->localPort();
-            ci.type        = ServerReflexiveType;
-            ci.componentId = id;
-            ci.priority    = choose_default_priority(ci.type, 65535 - addrAt, lt->isVpn, ci.componentId);
-            ci.network     = lt->network;
-            ci.foundation  = IceAgent::instance()->foundation(
-                ServerReflexiveType, ci.base.addr, lt->sock->reflexiveAddressSource(), QAbstractSocket::UdpSocket);
+            auto ci         = CandidateInfo::Ptr::create();
+            ci->addr.addr   = lt->sock->serverReflexiveAddress();
+            ci->addr.port   = lt->sock->serverReflexivePort();
+            ci->base.addr   = lt->sock->localAddress();
+            ci->base.port   = lt->sock->localPort();
+            ci->type        = ServerReflexiveType;
+            ci->componentId = id;
+            ci->priority    = choose_default_priority(ci->type, 65535 - addrAt, lt->isVpn, ci->componentId);
+            ci->network     = lt->network;
+            ci->foundation  = IceAgent::instance()->foundation(
+                ServerReflexiveType, ci->base.addr, lt->sock->reflexiveAddressSource(), QAbstractSocket::UdpSocket);
 
             Candidate c;
             c.id           = getId();
@@ -699,17 +700,17 @@ private slots:
         }
 
         if (!lt->sock->relayedAddress().isNull() && !lt->turn_finished) {
-            CandidateInfo ci;
-            ci.addr.addr   = lt->sock->relayedAddress();
-            ci.addr.port   = lt->sock->relayedPort();
-            ci.base.addr   = lt->sock->relayedAddress();
-            ci.base.port   = lt->sock->relayedPort();
-            ci.type        = RelayedType;
-            ci.componentId = id;
-            ci.priority    = choose_default_priority(ci.type, 65535 - addrAt, lt->isVpn, ci.componentId);
-            ci.network     = lt->network;
-            ci.foundation  = IceAgent::instance()->foundation(
-                RelayedType, ci.base.addr, lt->sock->stunRelayServiceAddress(), QAbstractSocket::UdpSocket);
+            auto ci         = CandidateInfo::Ptr::create();
+            ci->addr.addr   = lt->sock->relayedAddress();
+            ci->addr.port   = lt->sock->relayedPort();
+            ci->base.addr   = lt->sock->relayedAddress();
+            ci->base.port   = lt->sock->relayedPort();
+            ci->type        = RelayedType;
+            ci->componentId = id;
+            ci->priority    = choose_default_priority(ci->type, 65535 - addrAt, lt->isVpn, ci->componentId);
+            ci->network     = lt->network;
+            ci->foundation  = IceAgent::instance()->foundation(
+                RelayedType, ci->base.addr, lt->sock->stunRelayServiceAddress(), QAbstractSocket::UdpSocket);
 
             Candidate c;
             c.id           = getId();
@@ -759,16 +760,16 @@ private slots:
         // lower priority by making it seem like the last nic
         int addrAt = 1024;
 
-        CandidateInfo ci;
-        ci.addr.addr   = tcpTurn->relayedAddress();
-        ci.addr.port   = tcpTurn->relayedPort();
-        ci.type        = RelayedType;
-        ci.componentId = id;
-        ci.priority    = choose_default_priority(ci.type, 65535 - addrAt, false, ci.componentId);
-        ci.base        = ci.addr;
-        ci.network     = 0; // not relevant
-        ci.foundation  = IceAgent::instance()->foundation(RelayedType, ci.base.addr, config.stunRelayTcpAddr,
-                                                         QAbstractSocket::TcpSocket);
+        auto ci         = CandidateInfo::Ptr::create();
+        ci->addr.addr   = tcpTurn->relayedAddress();
+        ci->addr.port   = tcpTurn->relayedPort();
+        ci->type        = RelayedType;
+        ci->componentId = id;
+        ci->priority    = choose_default_priority(ci->type, 65535 - addrAt, false, ci->componentId);
+        ci->base        = ci->addr;
+        ci->network     = 0; // not relevant
+        ci->foundation  = IceAgent::instance()->foundation(RelayedType, ci->base.addr, config.stunRelayTcpAddr,
+                                                          QAbstractSocket::TcpSocket);
 
         Candidate c;
         c.id           = getId();
@@ -881,7 +882,7 @@ int IceComponent::peerReflexivePriority(QSharedPointer<IceTransport> iceTranspor
 }
 
 void IceComponent::addLocalPeerReflexiveCandidate(const IceComponent::TransportAddress &addr,
-                                                  const IceComponent::CandidateInfo &base, quint32 priority)
+                                                  IceComponent::CandidateInfo::Ptr base, quint32 priority)
 {
     d->addLocalPeerReflexiveCandidate(addr, base, priority);
 }
@@ -900,17 +901,18 @@ void IceComponent::setDebugLevel(DebugLevel level)
         d->tcpTurn->setDebugLevel((IceTransport::DebugLevel)level);
 }
 
-IceComponent::CandidateInfo IceComponent::CandidateInfo::makeRemotePrflx(int componentId, const QHostAddress &fromAddr,
-                                                                         quint16 fromPort, quint32 priority)
+IceComponent::CandidateInfo::Ptr IceComponent::CandidateInfo::makeRemotePrflx(int                 componentId,
+                                                                              const QHostAddress &fromAddr,
+                                                                              quint16 fromPort, quint32 priority)
 {
-    IceComponent::CandidateInfo c;
-    c.addr = TransportAddress(fromAddr, fromPort);
-    c.addr.addr.setScopeId(QString());
-    c.type        = PeerReflexiveType;
-    c.priority    = priority;
-    c.foundation  = QUuid::createUuid().toString();
-    c.componentId = componentId;
-    c.network     = -1;
+    auto c  = IceComponent::CandidateInfo::Ptr::create();
+    c->addr = TransportAddress(fromAddr, fromPort);
+    c->addr.addr.setScopeId(QString());
+    c->type        = PeerReflexiveType;
+    c->priority    = priority;
+    c->foundation  = QUuid::createUuid().toString();
+    c->componentId = componentId;
+    c->network     = -1;
     return c;
 }
 

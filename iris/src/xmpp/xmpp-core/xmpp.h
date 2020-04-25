@@ -107,7 +107,7 @@ public:
     public:
         enum { None, HttpConnect, HttpPoll, Socks };
         Proxy() = default;
-        ~Proxy() {}
+        ~Proxy() { }
 
         int     type() const;
         QString host() const;

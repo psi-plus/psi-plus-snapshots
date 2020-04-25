@@ -24,12 +24,12 @@ namespace XMPP { namespace Jingle {
     //----------------------------------------------------------------------------
     // TransportManager
     //----------------------------------------------------------------------------
-    TransportManager::TransportManager(QObject *parent) : QObject(parent) {}
+    TransportManager::TransportManager(QObject *parent) : QObject(parent) { }
 
     //----------------------------------------------------------------------------
     // Transport
     //----------------------------------------------------------------------------
-    Transport::Transport(TransportManagerPad::Ptr pad, Origin creator) : _creator(creator), _pad(pad) {}
+    Transport::Transport(TransportManagerPad::Ptr pad, Origin creator) : _creator(creator), _pad(pad) { }
 
     bool Transport::isRemote() const { return _pad->session()->role() != _creator; }
 
@@ -61,7 +61,7 @@ namespace XMPP { namespace Jingle {
     //----------------------------------------------------------------------------
     // TransportSelector
     //----------------------------------------------------------------------------
-    TransportSelector::~TransportSelector() {}
+    TransportSelector::~TransportSelector() { }
 
     bool TransportSelector::canReplace(QSharedPointer<Transport> old, QSharedPointer<Transport> newer)
     {

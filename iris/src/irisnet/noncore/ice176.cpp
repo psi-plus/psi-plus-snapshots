@@ -47,15 +47,6 @@ static qint64 calc_pair_priority(int a, int b)
     return priority;
 }
 
-// see if candidates are considered the same for pruning purposes
-static bool compare_candidates(const IceComponent::CandidateInfo &a, const IceComponent::CandidateInfo &b)
-{
-    if (a.addr == b.addr && a.componentId == b.componentId)
-        return true;
-    else
-        return false;
-}
-
 // scope values: 0 = local, 1 = link-local, 2 = private, 3 = public
 // FIXME: dry (this is in psi avcall also)
 static int getAddressScope(const QHostAddress &a)
@@ -97,12 +88,14 @@ public:
 
     class CandidatePair {
     public:
-        IceComponent::CandidateInfo local, remote;
-        bool                        isDefault               = false; // not used in xmpp
-        bool                        isValid                 = false; // a pair which is also in valid list
-        bool                        isNominated             = false;
-        bool                        isTriggeredForNominated = false;
-        CandidatePairState          state                   = CandidatePairState::PFrozen;
+        using Ptr = QSharedPointer<CandidatePair>;
+
+        IceComponent::CandidateInfo::Ptr local, remote;
+        bool                             isDefault               = false; // not used in xmpp
+        bool                             isValid                 = false; // a pair which is also in valid list
+        bool                             isNominated             = false;
+        bool                             isTriggeredForNominated = false;
+        CandidatePairState               state                   = CandidatePairState::PFrozen;
 
         qint64  priority = 0;
         QString foundation; // rfc8445 6.1.2.6 (combination of foundations)
@@ -113,14 +106,14 @@ public:
         //   or such, to multiplex ids
         StunTransactionPool *pool = nullptr;
 
-        inline bool isNull() const { return local.addr.addr.isNull() || remote.addr.addr.isNull(); }
+        inline bool isNull() const { return local->addr.addr.isNull() || remote->addr.addr.isNull(); }
         inline      operator QString() const
         {
             if (isNull())
                 return QLatin1String("null pair");
             return QString(QLatin1String("%1 %2 -> %3 %4"))
-                .arg(candidateType_to_string(local.type), QString(local.addr), candidateType_to_string(remote.type),
-                     QString(remote.addr));
+                .arg(candidateType_to_string(local->type), QString(local->addr), candidateType_to_string(remote->type),
+                     QString(remote->addr));
         }
     };
 
@@ -141,42 +134,42 @@ public:
         bool          lowOverhead   = false;
     };
 
-    Ice176 *                           q;
-    Ice176::Mode                       mode;
-    State                              state = Stopped;
-    QTimer                             checkTimer;
-    TurnClient::Proxy                  proxy;
-    UdpPortReserver *                  portReserver   = nullptr;
-    int                                componentCount = 0;
-    QList<Ice176::LocalAddress>        localAddrs;
-    QList<Ice176::ExternalAddress>     extAddrs;
-    QHostAddress                       stunBindAddr;
-    int                                stunBindPort;
-    QHostAddress                       stunRelayUdpAddr;
-    int                                stunRelayUdpPort;
-    QString                            stunRelayUdpUser;
-    QCA::SecureArray                   stunRelayUdpPass;
-    QHostAddress                       stunRelayTcpAddr;
-    int                                stunRelayTcpPort;
-    QString                            stunRelayTcpUser;
-    QCA::SecureArray                   stunRelayTcpPass;
-    QString                            localUser, localPass;
-    QString                            peerUser, peerPass;
-    QList<Component>                   components;
-    QList<IceComponent::Candidate>     localCandidates;
-    QList<IceComponent::CandidateInfo> remoteCandidates;
-    QSet<QWeakPointer<IceTransport>>   iceTransports;
-    CheckList                          checkList;
-    QList<QList<QByteArray>>           in;
-    Features                           remoteFeatures;
-    Features                           localFeatures;
-    bool                               useLocal                   = true;
-    bool                               useStunBind                = true;
-    bool                               useStunRelayUdp            = true;
-    bool                               useStunRelayTcp            = true;
-    bool                               localHostGatheringFinished = false;
-    bool                               localGatheringComplete     = false;
-    bool                               remoteGatheringComplete    = false;
+    Ice176 *                                q;
+    Ice176::Mode                            mode;
+    State                                   state = Stopped;
+    QTimer                                  checkTimer;
+    TurnClient::Proxy                       proxy;
+    UdpPortReserver *                       portReserver   = nullptr;
+    int                                     componentCount = 0;
+    QList<Ice176::LocalAddress>             localAddrs;
+    QList<Ice176::ExternalAddress>          extAddrs;
+    QHostAddress                            stunBindAddr;
+    int                                     stunBindPort;
+    QHostAddress                            stunRelayUdpAddr;
+    int                                     stunRelayUdpPort;
+    QString                                 stunRelayUdpUser;
+    QCA::SecureArray                        stunRelayUdpPass;
+    QHostAddress                            stunRelayTcpAddr;
+    int                                     stunRelayTcpPort;
+    QString                                 stunRelayTcpUser;
+    QCA::SecureArray                        stunRelayTcpPass;
+    QString                                 localUser, localPass;
+    QString                                 peerUser, peerPass;
+    QList<Component>                        components;
+    QList<IceComponent::Candidate>          localCandidates;
+    QList<IceComponent::CandidateInfo::Ptr> remoteCandidates;
+    QSet<QWeakPointer<IceTransport>>        iceTransports;
+    CheckList                               checkList;
+    QList<QList<QByteArray>>                in;
+    Features                                remoteFeatures;
+    Features                                localFeatures;
+    bool                                    useLocal                   = true;
+    bool                                    useStunBind                = true;
+    bool                                    useStunRelayUdp            = true;
+    bool                                    useStunRelayTcp            = true;
+    bool                                    localHostGatheringFinished = false;
+    bool                                    localGatheringComplete     = false;
+    bool                                    remoteGatheringComplete    = false;
 
     Private(Ice176 *_q) : QObject(_q), q(_q)
     {
@@ -247,7 +240,7 @@ public:
             return;
 
         extAddrs.clear();
-        foreach (const ExternalAddress &ea, addrs) {
+        for (const ExternalAddress &ea : addrs) {
             int at = findLocalAddress(ea.base.addr);
             if (at != -1)
                 extAddrs += ea;
@@ -335,39 +328,39 @@ public:
 
     void addRemoteCandidates(const QList<Candidate> &list)
     {
-        QList<IceComponent::CandidateInfo> remoteCandidates;
+        QList<IceComponent::CandidateInfo::Ptr> remoteCandidates;
         for (const Candidate &c : list) {
-            IceComponent::CandidateInfo ci;
-            ci.addr.addr = c.ip;
-            ci.addr.addr.setScopeId(QString());
-            ci.addr.port   = c.port;
-            ci.type        = (IceComponent::CandidateType)string_to_candidateType(c.type); // TODO: handle error
-            ci.componentId = c.component;
-            ci.priority    = c.priority;
-            ci.foundation  = c.foundation;
+            auto ci       = IceComponent::CandidateInfo::Ptr::create();
+            ci->addr.addr = c.ip;
+            ci->addr.addr.setScopeId(QString());
+            ci->addr.port   = c.port;
+            ci->type        = (IceComponent::CandidateType)string_to_candidateType(c.type); // TODO: handle error
+            ci->componentId = c.component;
+            ci->priority    = c.priority;
+            ci->foundation  = c.foundation;
             if (!c.rel_addr.isNull()) {
-                ci.base.addr = c.rel_addr;
-                ci.base.addr.setScopeId(QString());
-                ci.base.port = c.rel_port;
+                ci->base.addr = c.rel_addr;
+                ci->base.addr.setScopeId(QString());
+                ci->base.port = c.rel_port;
             }
-            ci.network = c.network;
-            ci.id      = c.id;
+            ci->network = c.network;
+            ci->id      = c.id;
 
-            // find remote prflx with same addr. we have to replace them instead adding new one. RFC8445 7.3.1.3
+            // find remote prflx with same addr. we have to update them instead adding new one. RFC8445 7.3.1.3
             auto it = std::find_if(this->remoteCandidates.begin(), this->remoteCandidates.end(),
-                                   [&](const IceComponent::CandidateInfo &rc) {
-                                       return ci.addr.addr == rc.addr.addr && ci.addr.port == rc.addr.port
-                                           && ci.componentId == rc.componentId
-                                           && rc.type == IceComponent::PeerReflexiveType;
+                                   [&](IceComponent::CandidateInfo::Ptr rc) {
+                                       return ci->addr == rc->addr && ci->componentId == rc->componentId
+                                           && rc->type == IceComponent::PeerReflexiveType;
                                    });
             if (it != this->remoteCandidates.end()) {
-                it->type       = ci.type;
-                it->foundation = ci.foundation;
-                it->base       = ci.base;
-                it->network    = ci.network;
-                it->id         = ci.id;
-                printf("Previously known remote prflx was updated from signalling: %s:%d",
-                       qPrintable(it->addr.addr.toString()), it->addr.port);
+                (*it)->type = ci->type; // RFC8445 5.1.2.1.  Recommended Formula (peer-reflexive are preferred)
+                                        // B.7.  Why Prefer Peer-Reflexive Candidates?
+                                        // if srflx == prflx -> set srflx because not secure anyway
+                (*it)->foundation = ci->foundation;
+                (*it)->base       = ci->base;
+                (*it)->network    = ci->network;
+                (*it)->id         = ci->id;
+                printf("Previously known remote prflx was updated from signalling: %s", qPrintable((*it)->addr));
             } else {
                 remoteCandidates += ci;
             }
@@ -379,14 +372,14 @@ public:
     }
 
     // returns a pair is pairable or null
-    QSharedPointer<CandidatePair> makeCandidatesPair(const IceComponent::CandidateInfo &lc,
-                                                     const IceComponent::CandidateInfo &rc)
+    QSharedPointer<CandidatePair> makeCandidatesPair(IceComponent::CandidateInfo::Ptr lc,
+                                                     IceComponent::CandidateInfo::Ptr rc)
     {
-        if (lc.componentId != rc.componentId)
+        if (lc->componentId != rc->componentId)
             return {};
 
         // don't pair ipv4 with ipv6.  FIXME: is this right?
-        if (lc.addr.addr.protocol() != rc.addr.addr.protocol())
+        if (lc->addr.addr.protocol() != rc->addr.addr.protocol())
             return {};
 
         // don't relay to localhost.  turnserver
@@ -394,19 +387,19 @@ public:
         //   should qualify as a HACK or not.
         //   trying to relay to localhost is pretty
         //   stupid anyway
-        if (lc.type == IceComponent::RelayedType && getAddressScope(rc.addr.addr) == 0)
+        if (lc->type == IceComponent::RelayedType && getAddressScope(rc->addr.addr) == 0)
             return {};
 
         auto pair    = QSharedPointer<CandidatePair>::create();
         pair->local  = lc;
         pair->remote = rc;
-        if (pair->local.addr.addr.protocol() == QAbstractSocket::IPv6Protocol
-            && isIPv6LinkLocalAddress(pair->local.addr.addr))
-            pair->remote.addr.addr.setScopeId(pair->local.addr.addr.scopeId());
+        if (pair->local->addr.addr.protocol() == QAbstractSocket::IPv6Protocol
+            && isIPv6LinkLocalAddress(pair->local->addr.addr))
+            pair->remote->addr.addr.setScopeId(pair->local->addr.addr.scopeId());
         if (mode == Ice176::Initiator)
-            pair->priority = calc_pair_priority(lc.priority, rc.priority);
+            pair->priority = calc_pair_priority(lc->priority, rc->priority);
         else
-            pair->priority = calc_pair_priority(rc.priority, lc.priority);
+            pair->priority = calc_pair_priority(rc->priority, lc->priority);
 
         return pair;
     }
@@ -420,33 +413,26 @@ public:
         checkList.pairs += pairs;
         std::sort(checkList.pairs.begin(), checkList.pairs.end(),
                   [&](const QSharedPointer<CandidatePair> &a, const QSharedPointer<CandidatePair> &b) {
-                      return a->priority == b->priority ? a->local.componentId < b->local.componentId
+                      return a->priority == b->priority ? a->local->componentId < b->local->componentId
                                                         : a->priority > b->priority;
                   });
 
         // pruning
-        for (auto &pair : checkList.pairs) {
-            if (pair->local.type == IceComponent::ServerReflexiveType)
-                pair->local.addr = pair->local.base;
-        }
-
         for (int n = 0; n < checkList.pairs.count(); ++n) {
             auto &pair = checkList.pairs[n];
-            printf("%d, %s -> %s\n", pair->local.componentId, qPrintable(pair->local.addr),
-                   qPrintable(pair->remote.addr));
+            printf("%d, %s -> %s\n", pair->local->componentId, qPrintable(pair->local->addr),
+                   qPrintable(pair->remote->addr));
 
-            bool found = false;
             for (int i = n - 1; i >= 0; --i) {
-                if (compare_candidates(pair->local, checkList.pairs[i]->local)
-                    && compare_candidates(pair->remote, checkList.pairs[i]->remote)) {
-                    found = true;
+                // RFC8445 says to use base only for reflexive. but base is set properly for host and relayed too.
+                if (pair->local->componentId == checkList.pairs[i]->local->componentId
+                    && pair->local->base == checkList.pairs[i]->local->base
+                    && pair->remote->addr == checkList.pairs[i]->remote->addr) {
+
+                    checkList.pairs.removeAt(n);
+                    --n; // adjust position
                     break;
                 }
-            }
-
-            if (found) {
-                checkList.pairs.removeAt(n);
-                --n; // adjust position
             }
         }
 
@@ -497,15 +483,15 @@ public:
 
     void checkPair(QSharedPointer<CandidatePair> pair)
     {
-        pair->foundation = pair->local.foundation + pair->remote.foundation;
+        pair->foundation = pair->local->foundation + pair->remote->foundation;
         pair->state      = PInProgress;
 
-        int at = findLocalCandidate(pair->local.addr.addr, pair->local.addr.port);
+        int at = findLocalCandidate(pair->local->addr.addr, pair->local->addr.port);
         Q_ASSERT(at != -1);
 
         auto &lc = localCandidates[at];
 
-        Component &c = components[findComponent(lc.info.componentId)];
+        Component &c = components[findComponent(lc.info->componentId)];
 
         pair->pool = new StunTransactionPool(StunTransaction::Udp, this);
         connect(pair->pool, SIGNAL(outgoingMessage(QByteArray, QHostAddress, int)),
@@ -533,19 +519,19 @@ public:
         pair->binding->start();
     }
 
-    void doPairing(const QList<IceComponent::Candidate> &    localCandidates,
-                   const QList<IceComponent::CandidateInfo> &remoteCandidates)
+    void doPairing(const QList<IceComponent::Candidate> &         localCandidates,
+                   const QList<IceComponent::CandidateInfo::Ptr> &remoteCandidates)
     {
         QList<QSharedPointer<CandidatePair>> pairs;
         for (const IceComponent::Candidate &cc : localCandidates) {
-            const IceComponent::CandidateInfo &lc = cc.info;
-            if (lc.type == IceComponent::PeerReflexiveType) {
-                printf("not pairing local prflx. %s\n", qPrintable(lc.addr));
+            auto lc = cc.info;
+            if (lc->type == IceComponent::PeerReflexiveType) {
+                printf("not pairing local prflx. %s\n", qPrintable(lc->addr));
                 // see RFC8445 7.2.5.3.1.  Discovering Peer-Reflexive Candidates
                 continue;
             }
 
-            for (const IceComponent::CandidateInfo &rc : remoteCandidates) {
+            for (IceComponent::CandidateInfo::Ptr rc : remoteCandidates) {
                 auto pair = makeCandidatesPair(lc, rc);
                 if (!pair.isNull())
                     pairs += pair;
@@ -561,14 +547,14 @@ public:
     void write(int componentIndex, const QByteArray &datagram)
     {
         auto it = std::find_if(checkList.validPairs.begin(), checkList.validPairs.end(),
-                               [&](const auto &p) { return p->local.componentId - 1 == componentIndex; });
+                               [&](const auto &p) { return p->local->componentId - 1 == componentIndex; });
         if (it == checkList.validPairs.end()) {
             qDebug("An attempt to write to an ICE component w/o valid sockets");
             return;
         }
 
         auto &pair = *it;
-        int   at   = findLocalCandidate(pair->local.addr.addr, pair->local.addr.port);
+        int   at   = findLocalCandidate(pair->local->addr.addr, pair->local->addr.port);
         if (at == -1) // FIXME: assert?
             return;
 
@@ -576,7 +562,7 @@ public:
 
         int path = lc.path;
 
-        lc.iceTransport->writeDatagram(path, datagram, pair->remote.addr.addr, pair->remote.addr.port);
+        lc.iceTransport->writeDatagram(path, datagram, pair->remote->addr.addr, pair->remote->addr.port);
 
         // DOR-SR?
         QMetaObject::invokeMethod(q, "datagramsWritten", Qt::QueuedConnection, Q_ARG(int, componentIndex),
@@ -597,16 +583,16 @@ public:
         // TODO the pair can change with aggressive validation (?)
         pair->isNominated = true;
 
-        int        at = findComponent(pair->local.componentId);
+        int        at = findComponent(pair->local->componentId);
         Component &c  = components[at];
         if (c.lowOverhead) {
             printf("component is flagged for low overhead.  setting up for %s\n", qPrintable(*pair));
-            at                          = findLocalCandidate(pair->local.addr.addr, pair->local.addr.port);
+            at                          = findLocalCandidate(pair->local->addr.addr, pair->local->addr.port);
             IceComponent::Candidate &cc = localCandidates[at];
-            c.ic->flagPathAsLowOverhead(cc.id, pair->remote.addr.addr, pair->remote.addr.port);
+            c.ic->flagPathAsLowOverhead(cc.id, pair->remote->addr.addr, pair->remote->addr.port);
         }
 
-        emit q->componentReady(pair->local.componentId - 1);
+        emit q->componentReady(pair->local->componentId - 1);
     }
 
     // ice negotiation failed. either initial or on ICE restart
@@ -619,7 +605,7 @@ public:
 
         if (std::find_if(checkList.pairs.begin(), checkList.pairs.end(),
                          [&](auto const &p) mutable {
-                             return p->local.componentId == componentId
+                             return p->local->componentId == componentId
                                  && (p->state != CandidatePairState::PSucceeded
                                      && p->state != CandidatePairState::PFailed);
                          })
@@ -631,20 +617,19 @@ public:
     }
 
     // nominated - out side=responder. and remote request had USE_CANDIDATE
-    void doTriggeredCheck(const IceComponent::Candidate &locCand, const IceComponent::CandidateInfo &remCand,
+    void doTriggeredCheck(const IceComponent::Candidate &locCand, IceComponent::CandidateInfo::Ptr remCand,
                           bool nominated)
     {
         // let's figure out if this pair already in the check list
-        auto it = std::find_if(checkList.pairs.begin(), checkList.pairs.end(), [&](auto const &p) {
-            return p->local.isSame(locCand.info) && p->remote.isSame(remCand);
-        });
-        QSharedPointer<CandidatePair> pair = (it == checkList.pairs.end()) ? QSharedPointer<CandidatePair>() : *it;
+        auto it = std::find_if(checkList.pairs.begin(), checkList.pairs.end(),
+                               [&](auto const &p) { return *(p->local) == locCand.info && *(p->remote) == remCand; });
+
+        CandidatePair::Ptr pair = (it == checkList.pairs.end()) ? CandidatePair::Ptr() : *it;
         if (pair) {
             if (pair->state == CandidatePairState::PSucceeded) {
                 // Check nominated here?
                 printf("Don't do triggered check since pair is already in success state\n");
                 if (mode == Responder && !pair->isNominated && nominated) {
-                    pair->isNominated = true;
                     tryComponentSuccess(pair);
                 }
                 return; // nothing todo. rfc 8445 7.3.1.4
@@ -664,7 +649,7 @@ public:
             if (pair.isNull()) {
                 return;
             }
-            addChecklistPairs(QList<QSharedPointer<CandidatePair>>() << pair);
+            addChecklistPairs(QList<CandidatePair::Ptr>() << pair);
         }
 
         pair->state                   = PWaiting;
@@ -701,7 +686,7 @@ private:
         for (int n = 0; n < localCandidates.count(); ++n) {
             const IceComponent::Candidate &cc = localCandidates[n];
             if (cc.iceTransport == iceTransport && cc.path == path
-                && (withSrvRflx || cc.info.type != IceComponent::ServerReflexiveType))
+                && (withSrvRflx || cc.info->type != IceComponent::ServerReflexiveType))
                 return n;
         }
 
@@ -712,7 +697,7 @@ private:
     {
         for (int n = 0; n < localCandidates.count(); ++n) {
             const IceComponent::Candidate &cc = localCandidates[n];
-            if (cc.info.addr.addr == fromAddr && cc.info.addr.port == fromPort)
+            if (cc.info->addr.addr == fromAddr && cc.info->addr.port == fromPort)
                 return n;
         }
 
@@ -755,48 +740,29 @@ private:
             return -1;
     }
 
-    static int compare_pair(const CandidatePair &a, const CandidatePair &b)
-    {
-        // prefer remote srflx, for leap
-        if (a.remote.type == IceComponent::ServerReflexiveType && b.remote.type != IceComponent::ServerReflexiveType
-            && b.remote.addr.addr.protocol() != QAbstractSocket::IPv6Protocol)
-            return -1;
-        else if (b.remote.type == IceComponent::ServerReflexiveType
-                 && a.remote.type != IceComponent::ServerReflexiveType
-                 && a.remote.addr.addr.protocol() != QAbstractSocket::IPv6Protocol)
-            return 1;
-
-        if (a.priority > b.priority)
-            return -1;
-        else if (b.priority > a.priority)
-            return 1;
-
-        return 0;
-    }
-
     static void toOutCandidate(const IceComponent::Candidate &cc, Ice176::Candidate &out)
     {
-        out.component  = cc.info.componentId;
-        out.foundation = cc.info.foundation;
+        out.component  = cc.info->componentId;
+        out.foundation = cc.info->foundation;
         out.generation = 0; // TODO
-        out.id         = cc.info.id;
-        out.ip         = cc.info.addr.addr;
+        out.id         = cc.info->id;
+        out.ip         = cc.info->addr.addr;
         out.ip.setScopeId(QString());
-        out.network  = cc.info.network;
-        out.port     = cc.info.addr.port;
-        out.priority = cc.info.priority;
+        out.network  = cc.info->network;
+        out.port     = cc.info->addr.port;
+        out.priority = cc.info->priority;
         out.protocol = "udp";
-        if (cc.info.type != IceComponent::HostType) {
-            out.rel_addr = cc.info.base.addr;
+        if (cc.info->type != IceComponent::HostType) {
+            out.rel_addr = cc.info->base.addr;
             out.rel_addr.setScopeId(QString());
-            out.rel_port = cc.info.base.port;
+            out.rel_port = cc.info->base.port;
         } else {
             out.rel_addr = QHostAddress();
             out.rel_port = -1;
         }
         out.rem_addr = QHostAddress();
         out.rem_port = -1;
-        out.type     = candidateType_to_string(cc.info.type);
+        out.type     = candidateType_to_string(cc.info->type);
     }
 
     void dumpCandidatesAndStart()
@@ -822,7 +788,7 @@ private:
         do {
             id = IceAgent::randomCredential(10);
         } while (std::find_if(localCandidates.begin(), localCandidates.end(),
-                              [&id](auto const &c) { return c.info.id == id; })
+                              [&id](auto const &c) { return c.info->id == id; })
                  != localCandidates.end());
         return id;
     }
@@ -838,13 +804,13 @@ private slots:
     {
         IceComponent::Candidate cc = _cc;
 
-        cc.info.id = generateIdForCandidate();
+        cc.info->id = generateIdForCandidate();
 
         localCandidates += cc;
 
-        printf("C%d: candidate added: %s %s;%d\n", cc.info.componentId,
-               qPrintable(candidateType_to_string(cc.info.type)), qPrintable(cc.info.addr.addr.toString()),
-               cc.info.addr.port);
+        printf("C%d: candidate added: %s %s;%d\n", cc.info->componentId,
+               qPrintable(candidateType_to_string(cc.info->type)), qPrintable(cc.info->addr.addr.toString()),
+               cc.info->addr.port);
 
         if (!iceTransports.contains(cc.iceTransport)) {
             connect(cc.iceTransport.data(), SIGNAL(readyRead(int)), SLOT(it_readyRead(int)));
@@ -874,14 +840,14 @@ private slots:
     void ic_candidateRemoved(const XMPP::IceComponent::Candidate &cc)
     {
         // TODO
-        printf("C%d: candidate removed: %s;%d\n", cc.info.componentId, qPrintable(cc.info.addr.addr.toString()),
-               cc.info.addr.port);
+        printf("C%d: candidate removed: %s;%d\n", cc.info->componentId, qPrintable(cc.info->addr.addr.toString()),
+               cc.info->addr.port);
 
         QStringList idList;
         for (int n = 0; n < localCandidates.count(); ++n) {
-            if (localCandidates[n].id == cc.id && localCandidates[n].info.componentId == cc.info.componentId) {
+            if (localCandidates[n].id == cc.id && localCandidates[n].info->componentId == cc.info->componentId) {
                 // FIXME: this is rather ridiculous I think
-                idList += localCandidates[n].info.id;
+                idList += localCandidates[n].info->id;
 
                 localCandidates.removeAt(n);
                 --n; // adjust position
@@ -889,7 +855,7 @@ private slots:
         }
 
         bool iceTransportInUse = false;
-        foreach (const IceComponent::Candidate &lc, localCandidates) {
+        for (const IceComponent::Candidate &lc : localCandidates) {
             if (lc.iceTransport == cc.iceTransport) {
                 iceTransportInUse = true;
                 break;
@@ -901,7 +867,7 @@ private slots:
         }
 
         for (int n = 0; n < checkList.pairs.count(); ++n) {
-            if (idList.contains(checkList.pairs[n]->local.id)) {
+            if (idList.contains(checkList.pairs[n]->local->id)) {
                 StunBinding *        binding = checkList.pairs[n]->binding;
                 StunTransactionPool *pool    = checkList.pairs[n]->pool;
 
@@ -968,7 +934,7 @@ private slots:
         components[at].stopped = true;
 
         bool allStopped = true;
-        foreach (const Component &c, components) {
+        for (const Component &c : components) {
             if (!c.stopped) {
                 allStopped = false;
                 break;
@@ -1016,14 +982,14 @@ private slots:
             if (!msg.isNull() && (msg.mclass() == StunMessage::Request || msg.mclass() == StunMessage::Indication)) {
                 printf("received validated request or indication from %s:%d\n", qPrintable(fromAddr.toString()),
                        fromPort);
-                QString user = QString::fromUtf8(msg.attribute(0x0006)); // USERNAME
+                QString user = QString::fromUtf8(msg.attribute(StunTypes::USERNAME));
                 if (requser != user) {
                     printf("user [%s] is wrong.  it should be [%s].  skipping\n", qPrintable(user),
                            qPrintable(requser));
                     continue;
                 }
 
-                if (msg.method() != 0x001) {
+                if (msg.method() != StunTypes::Binding) {
                     printf("not a binding request.  skipping\n");
                     continue;
                 }
@@ -1046,20 +1012,21 @@ private slots:
                 sock->writeDatagram(path, packet, fromAddr, fromPort);
 
                 auto it        = std::find_if(remoteCandidates.begin(), remoteCandidates.end(),
-                                       [&](const IceComponent::CandidateInfo &remCand) {
-                                           return remCand.componentId == locCand.info.componentId
-                                               && remCand.addr.addr == fromAddr && remCand.addr.port == fromPort;
+                                       [&](IceComponent::CandidateInfo::Ptr remCand) {
+                                           return remCand->componentId == locCand.info->componentId
+                                               && remCand->addr.addr == fromAddr && remCand->addr.port == fromPort;
                                        });
                 bool nominated = false;
                 if (mode == Responder)
                     nominated = msg.hasAttribute(StunTypes::USE_CANDIDATE);
                 if (it == remoteCandidates.end()) {
+                    // RFC8445 7.3.1.3.  Learning Peer-Reflexive Candidates
                     printf("found NEW remote prflx! %s:%d\n", qPrintable(fromAddr.toString()), fromPort);
                     quint32 priority;
                     StunTypes::parsePriority(msg.attribute(StunTypes::PRIORITY), &priority);
-                    auto remCand = IceComponent::CandidateInfo::makeRemotePrflx(locCand.info.componentId, fromAddr,
+                    auto remCand = IceComponent::CandidateInfo::makeRemotePrflx(locCand.info->componentId, fromAddr,
                                                                                 fromPort, priority);
-                    // remoteCandidates += remCand; // RFC8445 7.2.5.3.2.3 hints we shouldn't do that
+                    remoteCandidates += remCand;
                     doTriggeredCheck(locCand, remCand, nominated);
                 } else {
                     doTriggeredCheck(locCand, *it, nominated);
@@ -1071,13 +1038,13 @@ private slots:
                 if (!msg.isNull()
                     && (msg.mclass() == StunMessage::SuccessResponse || msg.mclass() == StunMessage::ErrorResponse)) {
                     printf("received validated response from %s:%d to %s\n", qPrintable(fromAddr.toString()), fromPort,
-                           qPrintable(locCand.info.addr));
+                           qPrintable(locCand.info->addr));
 
                     // FIXME: this is so gross and completely defeats the point of having pools
                     for (int n = 0; n < checkList.pairs.count(); ++n) {
                         CandidatePair &pair = *checkList.pairs[n];
-                        if (pair.state == PInProgress && pair.local.addr.addr == locCand.info.addr.addr
-                            && pair.local.addr.port == locCand.info.addr.port)
+                        if (pair.state == PInProgress && pair.local->addr.addr == locCand.info->addr.addr
+                            && pair.local->addr.port == locCand.info->addr.port)
                             pair.pool->writeIncomingMessage(msg);
                     }
                 } else {
@@ -1092,8 +1059,8 @@ private slots:
                     int at = -1;
                     for (int n = 0; n < checkList.pairs.count(); ++n) {
                         CandidatePair &pair = *checkList.pairs[n];
-                        if (pair.local.addr.addr == locCand.info.addr.addr
-                            && pair.local.addr.port == locCand.info.addr.port) {
+                        if (pair.local->addr.addr == locCand.info->addr.addr
+                            && pair.local->addr.port == locCand.info->addr.port) {
                             at = n;
                             break;
                         }
@@ -1103,7 +1070,7 @@ private slots:
                         continue;
                     }
 
-                    int componentIndex = checkList.pairs[at]->local.componentId - 1;
+                    int componentIndex = checkList.pairs[at]->local->componentId - 1;
                     // printf("packet is considered to be application data for component index %d\n", componentIndex);
 
                     // FIXME: this assumes components are ordered by id in our local arrays
@@ -1141,7 +1108,7 @@ private slots:
 
         CandidatePair &pair = *checkList.pairs[at];
 
-        at = findLocalCandidate(pair.local.addr.addr, pair.local.addr.port);
+        at = findLocalCandidate(pair.local->addr.addr, pair.local->addr.port);
         if (at == -1) // FIXME: assert?
             return;
 
@@ -1149,10 +1116,10 @@ private slots:
 
         int path = lc.path;
 
-        printf("connectivity check from %s:%d to %s:%d %s\n", qPrintable(pair.local.addr.addr.toString()),
-               pair.local.addr.port, qPrintable(pair.remote.addr.addr.toString()), pair.remote.addr.port,
+        printf("connectivity check from %s:%d to %s:%d %s\n", qPrintable(pair.local->addr.addr.toString()),
+               pair.local->addr.port, qPrintable(pair.remote->addr.addr.toString()), pair.remote->addr.port,
                pair.isNominated ? (mode == Initiator ? "(nominating)" : "(triggered check for nominated)") : "");
-        lc.iceTransport->writeDatagram(path, packet, pair.remote.addr.addr, pair.remote.addr.port);
+        lc.iceTransport->writeDatagram(path, packet, pair.remote->addr.addr, pair.remote->addr.port);
     }
 
     void binding_success()
@@ -1180,20 +1147,20 @@ private slots:
 
         // RFC8445 7.2.5.3.1.  Discovering Peer-Reflexive Candidates
         auto mappedAddr = IceComponent::TransportAddress(binding->reflexiveAddress(), binding->reflexivePort());
-        if (pair->local.addr != mappedAddr) { // skip "If the valid pair equals the pair that generated the check"
+        if (pair->local->addr != mappedAddr) { // skip "If the valid pair equals the pair that generated the check"
 
             // so mapped address doesn't match with local candidate sending binding request.
             // gotta find/create one
             auto locIt = std::find_if(localCandidates.begin(), localCandidates.end(), [&](const auto &c) {
-                return c.info.base == mappedAddr || c.info.addr == mappedAddr;
+                return c.info->base == mappedAddr || c.info->addr == mappedAddr;
             });
             if (locIt == localCandidates.end()) {
                 // RFC8445 7.2.5.3.1.  Discovering Peer-Reflexive Candidates
                 // new peer-reflexive local candidate discovered
-                components[findComponent(pair->local.componentId)].ic->addLocalPeerReflexiveCandidate(
+                components[findComponent(pair->local->componentId)].ic->addLocalPeerReflexiveCandidate(
                     mappedAddr, pair->local, binding->priority());
                 locIt = std::find_if(localCandidates.begin(), localCandidates.end(),
-                                     [&](const auto &c) { return c.info.addr == mappedAddr; }); // just inserted
+                                     [&](const auto &c) { return c.info->addr == mappedAddr; }); // just inserted
                 Q_ASSERT(locIt != localCandidates.end());
                 // local candidate wasn't found, so it wasn't on the checklist  RFC8445 7.2.5.3.1.3
                 pair = makeCandidatesPair(locIt->info, pair->remote);
@@ -1202,7 +1169,7 @@ private slots:
                 // local candidate found. If it's a part of a pair on checklist, we have to add this pair to valid list,
                 // otherwise we have to create a new pair and add it to valid list
                 it = std::find_if(checkList.pairs.begin(), checkList.pairs.end(), [&](auto const &p) {
-                    return p->local.id == locIt->info.id && p->remote.addr == pair->remote.addr;
+                    return p->local->id == locIt->info->id && p->remote->addr == pair->remote->addr;
                 });
                 if (it == checkList.pairs.constEnd()) {
                     pair = makeCandidatesPair(locIt->info, pair->remote);
@@ -1235,11 +1202,11 @@ private slots:
 
         // check if component already has nominated pair
         it = std::find_if(checkList.pairs.begin(), checkList.pairs.end(), [&](auto const &p) {
-            return p->local.componentId == pair->local.componentId && p->isNominated;
+            return p->local->componentId == pair->local->componentId && p->isNominated;
         });
 
         if (it != checkList.pairs.end()) {
-            printf("component %d already active, not signalling\n", pair->local.componentId);
+            printf("component %d already active, not signalling\n", pair->local->componentId);
             return;
         }
         tryComponentSuccess(pair);
@@ -1273,7 +1240,7 @@ private slots:
             return;
         }
 
-        tryComponentFailed(pair.local.componentId);
+        tryComponentFailed(pair.local->componentId);
     }
 };
 

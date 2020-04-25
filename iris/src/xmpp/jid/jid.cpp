@@ -170,7 +170,7 @@ StringPrepCache *StringPrepCache::instance()
     return _instance.data();
 }
 
-StringPrepCache::StringPrepCache() {}
+StringPrepCache::StringPrepCache() { }
 
 //----------------------------------------------------------------------------
 // Jid
@@ -191,7 +191,7 @@ Jid::Jid()
     null  = true;
 }
 
-Jid::~Jid() {}
+Jid::~Jid() { }
 
 Jid::Jid(const QString &s) { set(s); }
 

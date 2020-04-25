@@ -58,7 +58,7 @@ public:
         QString lang;
         QString name;
 
-        inline Identity() {}
+        inline Identity() { }
         inline Identity(const QString &categoty, const QString &type, const QString &lang = QString(),
                         const QString &name = QString()) :
             category(categoty),

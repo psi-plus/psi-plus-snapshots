@@ -19,8 +19,8 @@
 #include "icetransport.h"
 
 namespace XMPP {
-IceTransport::IceTransport(QObject *parent) : QObject(parent) {}
+IceTransport::IceTransport(QObject *parent) : QObject(parent) { }
 
-IceTransport::~IceTransport() {}
+IceTransport::~IceTransport() { }
 
 } // namespace XMPP

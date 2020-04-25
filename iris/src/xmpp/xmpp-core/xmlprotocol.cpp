@@ -228,7 +228,7 @@ static QString sanitizeForStream(const QString &in)
 //----------------------------------------------------------------------------
 // Protocol
 //----------------------------------------------------------------------------
-XmlProtocol::TransferItem::TransferItem() {}
+XmlProtocol::TransferItem::TransferItem() { }
 
 XmlProtocol::TransferItem::TransferItem(const QString &_str, bool sent, bool external) :
     isSent(sent), isString(true), isExternal(external), str(_str)
@@ -242,7 +242,7 @@ XmlProtocol::TransferItem::TransferItem(const QDomElement &_elem, bool sent, boo
 
 XmlProtocol::XmlProtocol() { init(); }
 
-XmlProtocol::~XmlProtocol() {}
+XmlProtocol::~XmlProtocol() { }
 
 void XmlProtocol::init()
 {

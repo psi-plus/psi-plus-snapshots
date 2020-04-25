@@ -67,7 +67,7 @@ CapsRegistry *CapsRegistry::instance_ = nullptr;
 /**
  * \brief Default constructor.
  */
-CapsRegistry::CapsRegistry(QObject *parent) : QObject(parent) {}
+CapsRegistry::CapsRegistry(QObject *parent) : QObject(parent) { }
 
 CapsRegistry *CapsRegistry::instance()
 {
@@ -202,9 +202,9 @@ DiscoItem CapsRegistry::disco(const QString &spec) const
 /**
  * \brief Default constructor.
  */
-CapsManager::CapsManager(Client *client) : QObject(client), client_(client), isEnabled_(true) {}
+CapsManager::CapsManager(Client *client) : QObject(client), client_(client), isEnabled_(true) { }
 
-CapsManager::~CapsManager() {}
+CapsManager::~CapsManager() { }
 
 /**
  * \brief Checks whether the caps manager is enabled (and does lookups).
@@ -322,7 +322,7 @@ void CapsManager::updateDisco(const Jid &jid, const DiscoItem &item)
 void CapsManager::capsRegistered(const CapsSpec &cs)
 {
     // Notify affected jids.
-    foreach (const QString &s, capsJids_[cs.flatten()]) {
+    for (const QString &s : capsJids_[cs.flatten()]) {
         // qDebug() << QString("caps.cpp: Notifying %1.").arg(s.replace('%',"%%"));
         emit capsChanged(s);
     }

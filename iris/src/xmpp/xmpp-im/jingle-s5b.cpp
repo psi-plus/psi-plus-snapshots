@@ -127,7 +127,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
         void connectToHost(const QHostAddress &proxyHost, int proxyPort, const QString &host, bool udpMode)
         {
-            foreach (const QNetworkInterface &ni, QNetworkInterface::allInterfaces()) {
+            for (const QNetworkInterface &ni : QNetworkInterface::allInterfaces()) {
                 if (!(ni.flags() & (QNetworkInterface::IsUp | QNetworkInterface::IsRunning))) {
                     continue;
                 }
@@ -135,7 +135,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                     continue;
                 }
                 QList<QNetworkAddressEntry> entries = ni.addressEntries();
-                foreach (const QNetworkAddressEntry &na, entries) {
+                for (const QNetworkAddressEntry &na : entries) {
                     QHostAddress ha = na.ip();
                     if (ha.protocol() == QAbstractSocket::IPv6Protocol &&
 #if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
@@ -300,7 +300,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
         }
     };
 
-    Candidate::Candidate() {}
+    Candidate::Candidate() { }
 
     Candidate::Candidate(Transport *transport, const QDomElement &el)
     {
@@ -357,7 +357,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
         this->d      = d;
     }
 
-    Candidate::Candidate(const Candidate &other) : d(other.d) {}
+    Candidate::Candidate(const Candidate &other) : d(other.d) { }
 
     Candidate::Candidate(Transport *transport, const Jid &proxy, const QString &cid, quint16 localPreference) :
         d(new Private)
@@ -411,7 +411,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
         d->state = New;
     }
 
-    Candidate::~Candidate() {}
+    Candidate::~Candidate() { }
 
     Candidate::Type Candidate::type() const { return d->type; }
 
@@ -1595,7 +1595,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
         Jid                         proxy;
     };
 
-    Manager::Manager(QObject *parent) : TransportManager(parent), d(new Private) {}
+    Manager::Manager(QObject *parent) : TransportManager(parent), d(new Private) { }
 
     Manager::~Manager()
     {

@@ -39,8 +39,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         qint64      length = 0; // 0 - from offset to the end of the file
         QList<Hash> hashes;
 
-        inline Range() {}
-        inline Range(qint64 offset, qint64 length) : offset(offset), length(length) {}
+        inline Range() { }
+        inline Range(qint64 offset, qint64 length) : offset(offset), length(length) { }
         inline bool isValid() const { return hashes.size() || offset || length; }
         inline      operator bool() const { return isValid(); }
         QDomElement toXml(QDomDocument *doc) const;
@@ -89,7 +89,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     };
 
     class Checksum : public ContentBase {
-        inline Checksum() {}
+        inline Checksum() { }
         Checksum(const QDomElement &file);
         bool        isValid() const;
         QDomElement toXml(QDomDocument *doc) const;

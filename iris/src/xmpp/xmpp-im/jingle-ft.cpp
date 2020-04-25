@@ -81,9 +81,9 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         QByteArray  amplitudes;
     };
 
-    File::File() {}
+    File::File() { }
 
-    File::~File() {}
+    File::~File() { }
 
     File &File::operator=(const File &other)
     {
@@ -91,7 +91,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         return *this;
     }
 
-    File::File(const File &other) : d(other.d) {}
+    File::File(const File &other) : d(other.d) { }
 
     File::File(const QDomElement &file)
     {
@@ -372,7 +372,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     //----------------------------------------------------------------------------
     // ApplicationManager
     //----------------------------------------------------------------------------
-    Manager::Manager(QObject *parent) : XMPP::Jingle::ApplicationManager(parent) {}
+    Manager::Manager(QObject *parent) : XMPP::Jingle::ApplicationManager(parent) { }
 
     Manager::~Manager()
     {
@@ -394,7 +394,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     ApplicationManagerPad *Manager::pad(Session *session) { return new Pad(this, session); }
 
-    void Manager::closeAll() {}
+    void Manager::closeAll() { }
 
     Client *Manager::client()
     {
@@ -547,7 +547,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             new NSTransportsList(pad->session(), static_cast<Manager *>(pad->manager())->availableTransports()));
     }
 
-    Application::~Application() {}
+    Application::~Application() { }
 
     void Application::setState(State state) { d->setState(state); }
 
@@ -807,7 +807,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     Connection::Ptr Application::connection() const { return d->connection.staticCast<XMPP::Jingle::Connection>(); }
 
-    Pad::Pad(Manager *manager, Session *session) : _manager(manager), _session(session) {}
+    Pad::Pad(Manager *manager, Session *session) : _manager(manager), _session(session) { }
 
     QDomElement Pad::takeOutgoingSessionInfoUpdate()
     {

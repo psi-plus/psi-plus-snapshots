@@ -79,7 +79,7 @@ namespace XMPP { namespace Jingle {
         Jid     responder;
     };
 
-    Jingle::Jingle() {}
+    Jingle::Jingle() { }
 
     Jingle::Jingle(Action action, const QString &sid) : d(new Private)
     {
@@ -126,9 +126,9 @@ namespace XMPP { namespace Jingle {
         d->responder = responder;
     }
 
-    Jingle::Jingle(const Jingle &other) : d(other.d) {}
+    Jingle::Jingle(const Jingle &other) : d(other.d) { }
 
-    Jingle::~Jingle() {}
+    Jingle::~Jingle() { }
 
     Jingle::Private *Jingle::ensureD()
     {
@@ -202,9 +202,9 @@ namespace XMPP { namespace Jingle {
         QString           text;
     };
 
-    Reason::Reason() {}
+    Reason::Reason() { }
 
-    Reason::~Reason() {}
+    Reason::~Reason() { }
 
     Reason::Reason(Reason::Condition cond, const QString &text) : d(new Private)
     {
@@ -238,7 +238,7 @@ namespace XMPP { namespace Jingle {
         }
     }
 
-    Reason::Reason(const Reason &other) : d(other.d) {}
+    Reason::Reason(const Reason &other) : d(other.d) { }
 
     Reason &Reason::operator=(const Reason &other)
     {
@@ -292,7 +292,7 @@ namespace XMPP { namespace Jingle {
     //----------------------------------------------------------------------------
     // ContentBase
     //----------------------------------------------------------------------------
-    ContentBase::ContentBase(Origin creator, const QString &name) : creator(creator), name(name) {}
+    ContentBase::ContentBase(Origin creator, const QString &name) : creator(creator), name(name) { }
 
     ContentBase::ContentBase(const QDomElement &el)
     {
@@ -378,9 +378,9 @@ namespace XMPP { namespace Jingle {
         QList<QString> externalSessions;
 
     public:
-        JTPush(Task *parent) : Task(parent) {}
+        JTPush(Task *parent) : Task(parent) { }
 
-        ~JTPush() {}
+        ~JTPush() { }
 
         inline void addExternalManager(const QString &ns) { externalManagers.append(ns); }
         inline void forgetExternalSession(const QString &sid) { externalSessions.removeOne(sid); }

@@ -36,7 +36,7 @@ public:
     MediaSharing    mediaSharing;
 };
 
-Reference::Reference() {}
+Reference::Reference() { }
 
 Reference::Reference(Type type, const QString &uri) : d(new Private)
 {
@@ -44,9 +44,9 @@ Reference::Reference(Type type, const QString &uri) : d(new Private)
     d->uri  = uri;
 }
 
-Reference::~Reference() {}
+Reference::~Reference() { }
 
-Reference::Reference(const Reference &other) : d(other.d) {}
+Reference::Reference(const Reference &other) : d(other.d) { }
 
 Reference &Reference::operator=(const Reference &other)
 {

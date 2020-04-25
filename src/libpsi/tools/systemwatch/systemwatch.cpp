@@ -29,7 +29,7 @@
 
 #include <QApplication>
 
-SystemWatch::SystemWatch() : QObject(qApp) {}
+SystemWatch::SystemWatch() : QObject(qApp) { }
 
 SystemWatch *SystemWatch::instance()
 {

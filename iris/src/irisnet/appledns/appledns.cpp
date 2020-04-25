@@ -44,7 +44,7 @@ static QByteArray nameToDottedString(const QByteArray &in)
 static QMap<QString, QByteArray> textsToAttribs(const QList<QByteArray> &texts)
 {
     QMap<QString, QByteArray> out;
-    foreach (const QByteArray &a, texts) {
+    for (const QByteArray &a : texts) {
         QString    key;
         QByteArray value;
         int        x = a.indexOf('=');
@@ -140,7 +140,7 @@ static XMPP::NameRecord importQDnsSdRecord(const QDnsSd::Record &in)
 namespace {
 class QDnsSdDelegate {
 public:
-    virtual ~QDnsSdDelegate() {}
+    virtual ~QDnsSdDelegate() { }
 
     virtual void dns_queryResult(int id, const QDnsSd::QueryResult &result)
     {
@@ -181,7 +181,7 @@ private:
     }
 
 public:
-    IdManager() : at(0) {}
+    IdManager() : at(0) { }
 
     int reserveId()
     {
@@ -335,7 +335,7 @@ protected:
             return;
         }
 
-        foreach (const QDnsSd::BrowseEntry &e, result.entries) {
+        for (const QDnsSd::BrowseEntry &e : result.entries) {
             XMPP::ServiceInstance si(e.serviceName, e.serviceType, e.replyDomain, QMap<QString, QByteArray>());
 
             if (e.added) {
@@ -400,7 +400,7 @@ protected:
 
         // does qdnssd guarantee we won't receive dups?
         bool found = false;
-        foreach (const XMPP::ServiceInstance &i, instances) {
+        for (const XMPP::ServiceInstance &i : instances) {
             if (i.name() == si.name()) {
                 found = true;
                 break;
@@ -556,7 +556,7 @@ class AppleNameProvider : public XMPP::NameProvider, public QDnsSdDelegate {
 public:
     AppleProvider *global;
 
-    AppleNameProvider(AppleProvider *parent) : NameProvider(parent), global(parent) {}
+    AppleNameProvider(AppleProvider *parent) : NameProvider(parent), global(parent) { }
 
     ~AppleNameProvider() { global->stop_all(this); }
 
@@ -586,7 +586,7 @@ protected:
         }
 
         QList<XMPP::NameRecord> results;
-        foreach (const QDnsSd::Record &rec, result.records) {
+        for (const QDnsSd::Record &rec : result.records) {
             XMPP::NameRecord nr = importQDnsSdRecord(rec);
 
             // unsupported type
@@ -616,7 +616,7 @@ public:
         int                   id;
         AppleBrowse *         browse;
 
-        Browse(AppleServiceProvider *_parent) : parent(_parent), id(-1), browse(0) {}
+        Browse(AppleServiceProvider *_parent) : parent(_parent), id(-1), browse(0) { }
 
         ~Browse()
         {
@@ -631,7 +631,7 @@ public:
         int                   id;
         AppleBrowseLookup *   resolve;
 
-        Resolve(AppleServiceProvider *_parent) : parent(_parent), id(-1), resolve(0) {}
+        Resolve(AppleServiceProvider *_parent) : parent(_parent), id(-1), resolve(0) { }
 
         ~Resolve()
         {
@@ -645,7 +645,7 @@ public:
     QList<Resolve *> resolveList;
     IdManager        idManager;
 
-    AppleServiceProvider(AppleProvider *parent) : ServiceProvider(parent), global(parent) {}
+    AppleServiceProvider(AppleProvider *parent) : ServiceProvider(parent), global(parent) { }
 
     ~AppleServiceProvider()
     {
@@ -856,7 +856,7 @@ private slots:
         delete r;
 
         QList<ResolveResult> results;
-        foreach (const QHostAddress &addr, addrs) {
+        for (const QHostAddress &addr : addrs) {
             ResolveResult r;
             r.address = addr;
             r.port    = port;

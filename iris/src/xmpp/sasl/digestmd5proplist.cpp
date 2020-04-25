@@ -19,7 +19,7 @@
 #include "xmpp/sasl/digestmd5proplist.h"
 
 namespace XMPP {
-DIGESTMD5PropList::DIGESTMD5PropList() : QList<DIGESTMD5Prop>() {}
+DIGESTMD5PropList::DIGESTMD5PropList() : QList<DIGESTMD5Prop>() { }
 
 void DIGESTMD5PropList::set(const QByteArray &var, const QByteArray &val)
 {

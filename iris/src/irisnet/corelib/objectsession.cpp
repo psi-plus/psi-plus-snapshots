@@ -48,7 +48,7 @@ public:
         };
         QList<Argument> args;
 
-        MethodCall(QObject *_obj, const char *_method) : obj(_obj), method(_method) {}
+        MethodCall(QObject *_obj, const char *_method) : obj(_obj), method(_method) { }
 
         ~MethodCall() { clearArgs(); }
 
@@ -124,7 +124,7 @@ public:
 
     bool havePendingCall(QObject *obj, const char *method) const
     {
-        foreach (const MethodCall *call, pendingCalls) {
+        for (const MethodCall *call : pendingCalls) {
             if (call->obj == obj && qstrcmp(call->method.data(), method) == 0)
                 return true;
         }

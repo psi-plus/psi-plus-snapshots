@@ -251,7 +251,7 @@ namespace Jingle {
 
     class ContentBase {
     public:
-        inline ContentBase() {}
+        inline ContentBase() { }
         ContentBase(Origin creator, const QString &name);
         ContentBase(const QDomElement &el);
 

@@ -54,7 +54,7 @@ HunspellChecker::HunspellChecker()
     getSupportedLanguages();
 }
 
-HunspellChecker::~HunspellChecker() {}
+HunspellChecker::~HunspellChecker() { }
 
 void HunspellChecker::getDictPaths()
 {
@@ -89,7 +89,7 @@ void HunspellChecker::getDictPaths()
 
 bool HunspellChecker::scanDictPaths(const QString &language, QFileInfo &aff, QFileInfo &dic)
 {
-    foreach (const QString &dictPath, dictPaths_) {
+    for (const QString &dictPath : dictPaths_) {
         QDir dir(dictPath);
         if (dir.exists()) {
             QFileInfo affInfo(dir.filePath(language + QLatin1String(".aff")));
@@ -107,7 +107,7 @@ bool HunspellChecker::scanDictPaths(const QString &language, QFileInfo &aff, QFi
 void HunspellChecker::getSupportedLanguages()
 {
     QSet<LanguageManager::LangId> retHash;
-    foreach (const QString &dictPath, dictPaths_) {
+    for (const QString &dictPath : dictPaths_) {
         QDir dir(dictPath);
         if (!dir.exists()) {
             continue;
@@ -150,11 +150,11 @@ void HunspellChecker::addLanguage(const LanguageManager::LangId &langId)
 QList<QString> HunspellChecker::suggestions(const QString &word)
 {
     QStringList qtResult;
-    foreach (const LangItem &li, languages_) {
+    for (const LangItem &li : languages_) {
 #ifdef NEW_HUNSPELL
         std::vector<std::string> result = li.hunspell_->suggest(HS_STRING(word));
         if (!result.empty()) {
-            foreach (const std::string &item, result) {
+            for (const std::string &item : result) {
                 qtResult << QString(li.codec->toUnicode(item.c_str()));
             }
         }
@@ -172,7 +172,7 @@ QList<QString> HunspellChecker::suggestions(const QString &word)
 
 bool HunspellChecker::isCorrect(const QString &word)
 {
-    foreach (const LangItem &li, languages_) {
+    for (const LangItem &li : languages_) {
         if (li.hunspell_->spell(HS_STRING(word)) != 0) {
             return true;
         }
@@ -183,7 +183,7 @@ bool HunspellChecker::add(const QString &word)
 {
     if (!word.isEmpty()) {
         QString trimmed_word = word.trimmed();
-        foreach (const LangItem &li, languages_) {
+        for (const LangItem &li : languages_) {
             if (li.hunspell_->add(HS_STRING(trimmed_word)) != 0) {
                 return true;
             }
@@ -193,7 +193,7 @@ bool HunspellChecker::add(const QString &word)
 }
 bool HunspellChecker::available() const
 {
-    foreach (const LangItem &li, languages_) {
+    for (const LangItem &li : languages_) {
         if (li.hunspell_) {
             return true;
         }
@@ -218,7 +218,7 @@ QSet<LanguageManager::LangId> HunspellChecker::getAllLanguages() const { return 
 void HunspellChecker::setActiveLanguages(const QSet<LanguageManager::LangId> &newLangs)
 {
     QSet<LanguageManager::LangId> loadedLangs;
-    foreach (const LangItem &item, languages_) {
+    for (const LangItem &item : languages_) {
         loadedLangs << item.info.langId;
     }
     QSet<LanguageManager::LangId>         langsToUnload = loadedLangs - newLangs;

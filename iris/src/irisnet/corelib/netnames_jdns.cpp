@@ -327,7 +327,7 @@ public:
             //   fetching should not trigger any calls to
             //   updateMulticastInterfaces().  only future
             //   activity should do that.
-            foreach (const QString &id, netman.interfaces()) {
+            for (const QString &id: netman.interfaces()) {
                 NetInterface *iface = new NetInterface(id, &netman);
                 connect(iface, SIGNAL(unavailable()), SLOT(iface_unavailable()));
                 ifaces += iface;
@@ -646,7 +646,7 @@ private slots:
 
         if (req->success()) {
             QList<NameRecord> out;
-            foreach (const QJDns::Record &r, req->results()) {
+            for (const QJDns::Record &r: req->results()) {
                 // unless we are asking for all types, only
                 //   accept the type we asked for
                 if (i->type == QJDns::Any || r.type == i->type) {
@@ -1507,7 +1507,7 @@ private:
             doPublishTxt();
 
         // publish extra records as needed
-        foreach (JDnsPublishExtra *extra, extraList) {
+        for (JDnsPublishExtra *extra: extraList) {
             if (!extra->have)
                 doPublishExtra(extra);
         }
@@ -1653,7 +1653,7 @@ private slots:
     {
         QJDnsSharedRequest *req   = static_cast<QJDnsSharedRequest *>(sender());
         JDnsPublishExtra *  extra = 0;
-        foreach (JDnsPublishExtra *e, extraList) {
+        for (JDnsPublishExtra *e: extraList) {
             if (&e->pub == req) {
                 extra = e;
                 break;
@@ -2181,7 +2181,7 @@ private:
         // remove all extra publishes associated with this publish.
         //   the association can be checked via QObject parenting.
         QSet<PublishExtraItem *> remove;
-        foreach (PublishExtraItem *i, publishExtraItemList.items) {
+        for (PublishExtraItem *i: publishExtraItemList.items) {
             if (static_cast<JDnsPublish *>(i->publish->parent()) == pi->publish)
                 remove += i;
         }

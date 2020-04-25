@@ -109,7 +109,7 @@ void Url::setDesc(const QString &desc) { d->desc = desc; }
 //! \param Type - type (default: Unknown)
 //! \param Jid - specify address (default: empty string)
 //! \sa setType() setJid()
-Address::Address(Type type, const Jid &jid) : v_jid(jid), v_delivered(false), v_type(type) {}
+Address::Address(Type type, const Jid &jid) : v_jid(jid), v_delivered(false), v_type(type) { }
 
 Address::Address(const QDomElement &e) : v_delivered(false) { fromXml(e); }
 
@@ -500,7 +500,7 @@ QDomElement RosterExchangeItem::toXml(Stanza &s) const
         e.setAttribute("action", "modify");
         break;
     }
-    foreach (QString group, groups_) {
+    for (QString group : groups_) {
         e.appendChild(s.createTextElement("http://jabber.org/protocol/rosterx", "group", group));
     }
     return e;
@@ -529,7 +529,7 @@ void RosterExchangeItem::fromXml(const QDomElement &e)
 //----------------------------------------------------------------------------
 // MUCItem
 //----------------------------------------------------------------------------
-MUCItem::MUCItem(Role r, Affiliation a) : affiliation_(a), role_(r) {}
+MUCItem::MUCItem(Role r, Affiliation a) : affiliation_(a), role_(r) { }
 
 MUCItem::MUCItem(const QDomElement &el) : affiliation_(UnknownAffiliation), role_(UnknownRole) { fromXml(el); }
 
@@ -664,9 +664,9 @@ bool MUCItem::operator==(const MUCItem &o)
 // MUCInvite
 //----------------------------------------------------------------------------
 
-MUCInvite::MUCInvite() : cont_(false) {}
+MUCInvite::MUCInvite() : cont_(false) { }
 
-MUCInvite::MUCInvite(const Jid &to, const QString &reason) : to_(to), reason_(reason), cont_(false) {}
+MUCInvite::MUCInvite(const Jid &to, const QString &reason) : to_(to), reason_(reason), cont_(false) { }
 
 MUCInvite::MUCInvite(const QDomElement &e) : cont_(false) { fromXml(e); }
 
@@ -729,7 +729,7 @@ bool MUCInvite::isNull() const { return to_.isEmpty() && from_.isEmpty(); }
 // MUCDecline
 //----------------------------------------------------------------------------
 
-MUCDecline::MUCDecline() {}
+MUCDecline::MUCDecline() { }
 
 MUCDecline::MUCDecline(const QDomElement &e) { fromXml(e); }
 
@@ -783,7 +783,7 @@ bool MUCDecline::isNull() const { return to_.isEmpty() && from_.isEmpty(); }
 // MUCDestroy
 //----------------------------------------------------------------------------
 
-MUCDestroy::MUCDestroy() {}
+MUCDestroy::MUCDestroy() { }
 
 MUCDestroy::MUCDestroy(const QDomElement &e) { fromXml(e); }
 
@@ -826,7 +826,7 @@ QDomElement MUCDestroy::toXml(QDomDocument &d) const
 //----------------------------------------------------------------------------
 // HTMLElement
 //----------------------------------------------------------------------------
-HTMLElement::HTMLElement() {}
+HTMLElement::HTMLElement() { }
 
 HTMLElement::HTMLElement(const QDomElement &body) { setBody(body); }
 
@@ -888,7 +888,7 @@ void HTMLElement::filterOutUnwantedRecursive(QDomElement &el, bool strict)
                         attrs.append(name);
                     }
                 }
-                foreach (const QString &name, attrs) {
+                for (const QString &name : attrs) {
                     domAttrs.removeNamedItem(name);
                 }
                 filterOutUnwantedRecursive(childEl, strict);
@@ -958,7 +958,7 @@ public:
 //!
 //! This function will construct a Message container.
 //! \param to - specify receiver (default: empty string)
-Message::Message() {}
+Message::Message() { }
 
 Message::Message(const Jid &to) : d(new Private) { d->to = to; }
 
@@ -967,7 +967,7 @@ Message::Message(const Jid &to) : d(new Private) { d->to = to; }
 //! Overloaded constructor which will constructs a exact copy of the Message
 //! object that was passed to the constructor.
 //! \param from - Message object you want to copy
-Message::Message(const Message &from) : d(from.d) {}
+Message::Message(const Message &from) : d(from.d) { }
 
 //! \brief Required for internel use.
 Message &Message::operator=(const Message &from)
@@ -977,7 +977,7 @@ Message &Message::operator=(const Message &from)
 }
 
 //! \brief Destroy Message object.
-Message::~Message() {}
+Message::~Message() { }
 
 //! \brief Check if it's exactly the same instance.
 bool Message::operator==(const Message &from) const { return d == from.d; }
@@ -1180,7 +1180,7 @@ AddressList Message::findAddresses(Address::Type t) const
         return AddressList();
     }
     AddressList matches;
-    foreach (Address a, d->addressList) {
+    for (Address a : d->addressList) {
         if (a.type() == t)
             matches.append(a);
     }
@@ -1355,7 +1355,7 @@ Stanza Message::toStanza(Stream *stream) const
     if (containsHTML()) {
         QDomElement html = s.createElement("http://jabber.org/protocol/xhtml-im", "html");
         s.appendChild(html);
-        foreach (HTMLElement el, d->htmlElements) {
+        for (HTMLElement el : d->htmlElements) {
             html.appendChild(s.doc().importNode(el.body(), true).toElement());
         }
     }
@@ -1381,7 +1381,7 @@ Stanza Message::toStanza(Stream *stream) const
     }
 
     // urls
-    foreach (const Url &uit, d->urlList) {
+    for (const Url &uit : d->urlList) {
         QDomElement x = s.createElement("jabber:x:oob", "x");
         x.appendChild(s.createTextElement("jabber:x:oob", "url", uit.url()));
         if (!uit.desc().isEmpty())
@@ -1400,7 +1400,7 @@ Stanza Message::toStanza(Stream *stream) const
                 x.appendChild(s.createTextElement("jabber:x:event", "id", d->eventId));
         }
 
-        foreach (const MsgEvent &ev, d->eventList) {
+        for (const MsgEvent &ev : d->eventList) {
             switch (ev) {
             case OfflineEvent:
                 x.appendChild(s.createElement("jabber:x:event", "offline"));
@@ -1476,7 +1476,7 @@ Stanza Message::toStanza(Stream *stream) const
     // addresses
     if (!d->addressList.isEmpty()) {
         QDomElement as = s.createElement("http://jabber.org/protocol/address", "addresses");
-        foreach (Address a, d->addressList) {
+        for (Address a : d->addressList) {
             as.appendChild(a.toXml(s));
         }
         s.appendChild(as);
@@ -1485,7 +1485,7 @@ Stanza Message::toStanza(Stream *stream) const
     // roster item exchange
     if (!d->rosterExchangeItems.isEmpty()) {
         QDomElement rx = s.createElement("http://jabber.org/protocol/rosterx", "x");
-        foreach (RosterExchangeItem r, d->rosterExchangeItems) {
+        for (RosterExchangeItem r : d->rosterExchangeItems) {
             rx.appendChild(r.toXml(s));
         }
         s.appendChild(rx);
@@ -1511,7 +1511,7 @@ Stanza Message::toStanza(Stream *stream) const
     // muc
     if (!d->mucInvites.isEmpty()) {
         QDomElement e = s.createElement("http://jabber.org/protocol/muc#user", "x");
-        foreach (MUCInvite i, d->mucInvites) {
+        for (MUCInvite i : d->mucInvites) {
             e.appendChild(i.toXml(s.doc()));
         }
         if (!d->mucPassword.isEmpty()) {
@@ -1540,7 +1540,7 @@ Stanza Message::toStanza(Stream *stream) const
     }
 
     // bits of binary
-    foreach (const BoBData &bd, d->bobDataList) {
+    for (const BoBData &bd : d->bobDataList) {
         s.appendChild(bd.toXml(&s.doc()));
     }
 
@@ -1948,7 +1948,7 @@ HttpAuthRequest::HttpAuthRequest(const QString &m, const QString &u, const QStri
 /*!
         Constructs request of resource URL \a u, made by method \a m, without transaction id.
 */
-HttpAuthRequest::HttpAuthRequest(const QString &m, const QString &u) : method_(m), url_(u), hasId_(false) {}
+HttpAuthRequest::HttpAuthRequest(const QString &m, const QString &u) : method_(m), url_(u), hasId_(false) { }
 
 /*!
     Constructs request object by reading XML <confirm/> element \a e.
@@ -2086,7 +2086,7 @@ bool Subscription::fromString(const QString &s)
 /**
  * Default constructor.
  */
-CapsSpec::CapsSpec() : hashAlgo_(CapsSpec::invalidAlgo) {}
+CapsSpec::CapsSpec() : hashAlgo_(CapsSpec::invalidAlgo) { }
 
 /**
  * \brief Basic constructor.
@@ -2256,7 +2256,7 @@ Status::Status(Type type, const QString &status, int priority) : d(new StatusPri
     setType(type);
 }
 
-Status::Status(const Status &other) : d(other.d) {}
+Status::Status(const Status &other) : d(other.d) { }
 
 Status &Status::operator=(const Status &other)
 {
@@ -2264,7 +2264,7 @@ Status &Status::operator=(const Status &other)
     return *this;
 }
 
-Status::~Status() {}
+Status::~Status() { }
 
 bool Status::hasError() const { return (d->ecode != -1); }
 
@@ -2496,7 +2496,7 @@ const QString &Status::errorString() const { return d->estr; }
 //---------------------------------------------------------------------------
 // Resource
 //---------------------------------------------------------------------------
-Resource::Resource(const QString &name, const Status &stat) : v_name(name), v_status(stat) {}
+Resource::Resource(const QString &name, const Status &stat) : v_name(name), v_status(stat) { }
 
 const QString &Resource::name() const { return v_name; }
 
@@ -2511,9 +2511,9 @@ void Resource::setStatus(const Status &_status) { v_status = _status; }
 //---------------------------------------------------------------------------
 // ResourceList
 //---------------------------------------------------------------------------
-ResourceList::ResourceList() : QList<Resource>() {}
+ResourceList::ResourceList() : QList<Resource>() { }
 
-ResourceList::~ResourceList() {}
+ResourceList::~ResourceList() { }
 
 ResourceList::Iterator ResourceList::find(const QString &_find)
 {
@@ -2562,7 +2562,7 @@ ResourceList::ConstIterator ResourceList::priority() const
 //---------------------------------------------------------------------------
 // RosterItem
 //---------------------------------------------------------------------------
-RosterItem::RosterItem(const Jid &_jid) : v_jid(_jid), v_push(false) {}
+RosterItem::RosterItem(const Jid &_jid) : v_jid(_jid), v_push(false) { }
 
 RosterItem::RosterItem(const RosterItem &item) :
     v_jid(item.v_jid), v_name(item.v_name), v_groups(item.v_groups), v_subscription(item.v_subscription),
@@ -2570,7 +2570,7 @@ RosterItem::RosterItem(const RosterItem &item) :
 {
 }
 
-RosterItem::~RosterItem() {}
+RosterItem::~RosterItem() { }
 
 const Jid &RosterItem::jid() const { return v_jid; }
 
@@ -2682,7 +2682,7 @@ public:
     QString groupsDelimiter;
 };
 
-Roster::Roster() : QList<RosterItem>(), d(new Roster::Private) {}
+Roster::Roster() : QList<RosterItem>(), d(new Roster::Private) { }
 
 Roster::~Roster() { delete d; }
 
@@ -2736,7 +2736,7 @@ FormField::FormField(const QString &type, const QString &value)
     v_value = value;
 }
 
-FormField::~FormField() {}
+FormField::~FormField() { }
 
 int FormField::type() const { return v_type; }
 
@@ -2877,7 +2877,7 @@ QString FormField::typeToTagName(int type) const
 //---------------------------------------------------------------------------
 Form::Form(const Jid &j) : QList<FormField>() { setJid(j); }
 
-Form::~Form() {}
+Form::~Form() { }
 
 Jid Form::jid() const { return v_jid; }
 
@@ -2896,7 +2896,7 @@ void Form::setKey(const QString &s) { v_key = s; }
 //---------------------------------------------------------------------------
 SearchResult::SearchResult(const Jid &jid) { setJid(jid); }
 
-SearchResult::~SearchResult() {}
+SearchResult::~SearchResult() { }
 
 const Jid &SearchResult::jid() const { return v_jid; }
 
@@ -2918,17 +2918,17 @@ void SearchResult::setLast(const QString &last) { v_last = last; }
 
 void SearchResult::setEmail(const QString &email) { v_email = email; }
 
-PubSubItem::PubSubItem() {}
+PubSubItem::PubSubItem() { }
 
-PubSubItem::PubSubItem(const QString &id, const QDomElement &payload) : id_(id), payload_(payload) {}
+PubSubItem::PubSubItem(const QString &id, const QDomElement &payload) : id_(id), payload_(payload) { }
 
 const QString &PubSubItem::id() const { return id_; }
 
 const QDomElement &PubSubItem::payload() const { return payload_; }
 
-PubSubRetraction::PubSubRetraction() {}
+PubSubRetraction::PubSubRetraction() { }
 
-PubSubRetraction::PubSubRetraction(const QString &id) : id_(id) {}
+PubSubRetraction::PubSubRetraction(const QString &id) : id_(id) { }
 
 const QString &PubSubRetraction::id() const { return id_; }
 
@@ -2937,7 +2937,7 @@ const QString &PubSubRetraction::id() const { return id_; }
 // =========================================
 class CaptchaChallengePrivate : public QSharedData {
 public:
-    CaptchaChallengePrivate() : state(CaptchaChallenge::New) {}
+    CaptchaChallengePrivate() : state(CaptchaChallenge::New) { }
 
     CaptchaChallenge::State state;
     Jid                     arbiter;
@@ -2948,9 +2948,9 @@ public:
     UrlList                 urls;
 };
 
-CaptchaChallenge::CaptchaChallenge() : d(new CaptchaChallengePrivate) {}
+CaptchaChallenge::CaptchaChallenge() : d(new CaptchaChallengePrivate) { }
 
-CaptchaChallenge::CaptchaChallenge(const CaptchaChallenge &other) : d(other.d) {}
+CaptchaChallenge::CaptchaChallenge(const CaptchaChallenge &other) : d(other.d) { }
 
 CaptchaChallenge::CaptchaChallenge(const Message &m) : d(new CaptchaChallengePrivate)
 {
@@ -2979,7 +2979,7 @@ CaptchaChallenge::CaptchaChallenge(const Message &m) : d(new CaptchaChallengePri
     d->offendedJid = Jid(m.getForm().getField("from").value().value(0));
 }
 
-CaptchaChallenge::~CaptchaChallenge() {}
+CaptchaChallenge::~CaptchaChallenge() { }
 
 CaptchaChallenge &CaptchaChallenge::operator=(const CaptchaChallenge &from)
 {

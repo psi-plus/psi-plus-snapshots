@@ -40,12 +40,12 @@ public:
     /**
      * \brief Constructs a Maybe container with no value.
      */
-    Maybe() : hasValue_(false) {}
+    Maybe() : hasValue_(false) { }
 
     /**
      * \brief Constructs a Maybe container with a value.
      */
-    Maybe(const T &value) : value_(value), hasValue_(true) {}
+    Maybe(const T &value) : value_(value), hasValue_(true) { }
 
     /**
      * \brief Checks whether this container has a value.

@@ -137,7 +137,7 @@ BasicProtocol::StreamCondEntry BasicProtocol::streamCondTable[] = {
 
 BasicProtocol::BasicProtocol() : XmlProtocol() { init(); }
 
-BasicProtocol::~BasicProtocol() {}
+BasicProtocol::~BasicProtocol() { }
 
 void BasicProtocol::init()
 {
@@ -1279,7 +1279,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
             }
         } else {
             QDomElement mechs = doc.createElementNS(NS_SASL, "mechanisms");
-            foreach (const QString &it, sasl_mechlist) {
+            for (const QString &it : sasl_mechlist) {
                 QDomElement m = doc.createElement("mechanism");
                 m.appendChild(doc.createTextNode(it));
                 mechs.appendChild(m);

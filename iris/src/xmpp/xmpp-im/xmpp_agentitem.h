@@ -28,7 +28,7 @@
 namespace XMPP {
 class AgentItem {
 public:
-    AgentItem() {}
+    AgentItem() { }
 
     const Jid &     jid() const { return v_jid; }
     const QString & name() const { return v_name; }

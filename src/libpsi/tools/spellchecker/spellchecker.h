@@ -42,7 +42,7 @@ public:
     virtual bool           isCorrect(const QString &);
     virtual bool           add(const QString &);
 
-    virtual void                          setActiveLanguages(const QSet<LanguageManager::LangId> &) {}
+    virtual void                          setActiveLanguages(const QSet<LanguageManager::LangId> &) { }
     virtual QSet<LanguageManager::LangId> getAllLanguages() const { return QSet<LanguageManager::LangId>(); }
 
 protected:

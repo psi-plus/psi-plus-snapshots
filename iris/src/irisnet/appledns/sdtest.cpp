@@ -44,7 +44,7 @@ public:
     bool error;
     bool done; // for resolve
 
-    Command() : error(false), done(false) {}
+    Command() : error(false), done(false) { }
 };
 
 static QString nameToString(const QByteArray &in)

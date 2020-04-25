@@ -112,7 +112,7 @@ public:
 
 class Client::ClientPrivate {
 public:
-    ClientPrivate() {}
+    ClientPrivate() { }
 
     QPointer<ClientStream>  stream;
     QDomDocument            doc;
@@ -287,7 +287,7 @@ bool Client::isActive() const { return d->active; }
 QString Client::groupChatPassword(const QString &host, const QString &room) const
 {
     Jid jid(room + "@" + host);
-    foreach (const GroupChat &i, d->groupChatList) {
+    for (const GroupChat &i : d->groupChatList) {
         if (i.j.compare(jid, false)) {
             return i.password;
         }
@@ -355,7 +355,7 @@ void Client::groupChatSetStatus(const QString &host, const QString &room, const 
 {
     Jid  jid(room + "@" + host);
     bool found = false;
-    foreach (const GroupChat &i, d->groupChatList) {
+    for (const GroupChat &i : d->groupChatList) {
         if (i.j.compare(jid, false)) {
             found = true;
             jid   = i.j;
@@ -414,7 +414,7 @@ void Client::groupChatLeaveAll(const QString &statusStr)
 QString Client::groupChatNick(const QString &host, const QString &room) const
 {
     Jid jid(room + "@" + host);
-    foreach (const GroupChat &gc, d->groupChatList) {
+    for (const GroupChat &gc : d->groupChatList) {
         if (gc.j.compare(jid, false)) {
             return gc.j.resource();
         }
@@ -565,7 +565,7 @@ void Client::streamOutgoingXml(const QString &s)
 void Client::parseUnhandledStreamFeatures()
 {
     QList<QDomElement> nl = d->stream->unhandledFeatures();
-    foreach (const QDomElement &e, nl) {
+    for (const QDomElement &e : nl) {
         if (e.localName() == "c" && e.namespaceURI() == NS_CAPS) {
             d->serverCaps = CapsSpec::fromXml(e);
             if (d->capsman->isEnabled()) {
@@ -866,7 +866,7 @@ void Client::pmMessage(const Message &m)
     debug(QString("Client: Message from %1\n").arg(m.from().full()));
 
     // bits of binary. we can't do this in Message, since it knows nothing about Client
-    foreach (const BoBData &b, m.bobDataList()) {
+    for (const BoBData &b : m.bobDataList()) {
         d->bobman->append(b);
     }
 
@@ -1151,7 +1151,7 @@ DiscoItem Client::makeDiscoResult(const QString &node) const
     Hash::populateFeatures(features);
 
     // Client-specific features
-    foreach (const QString &i, d->features.list()) {
+    for (const QString &i : d->features.list()) {
         features.addFeature(i);
     }
 
@@ -1237,7 +1237,7 @@ LiveRosterItem::LiveRosterItem(const RosterItem &i)
     setFlagForDelete(false);
 }
 
-LiveRosterItem::~LiveRosterItem() {}
+LiveRosterItem::~LiveRosterItem() { }
 
 void LiveRosterItem::setRosterItem(const RosterItem &i)
 {
@@ -1280,7 +1280,7 @@ public:
     QString groupsDelimiter;
 };
 
-LiveRoster::LiveRoster() : QList<LiveRosterItem>(), d(new LiveRoster::Private) {}
+LiveRoster::LiveRoster() : QList<LiveRosterItem>(), d(new LiveRoster::Private) { }
 LiveRoster::LiveRoster(const LiveRoster &other) : QList<LiveRosterItem>(other), d(new LiveRoster::Private)
 {
     d->groupsDelimiter = other.d->groupsDelimiter;

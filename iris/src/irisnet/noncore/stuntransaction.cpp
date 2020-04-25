@@ -23,6 +23,7 @@
 #include "stuntypes.h"
 #include "stunutil.h"
 
+#include <QElapsedTimer>
 #include <QHash>
 #include <QMetaType>
 #include <QTime>
@@ -137,11 +138,11 @@ public:
     int     last_interval;
     QTimer *t;
 
-    QString    stuser;
-    QString    stpass;
-    bool       fpRequired;
-    QByteArray key;
-    QTime      time;
+    QString       stuser;
+    QString       stpass;
+    bool          fpRequired;
+    QByteArray    key;
+    QElapsedTimer time;
 
     StunTransactionPrivate(StunTransaction *_q) : QObject(_q), q(_q), pool(nullptr), fpRequired(false)
     {
@@ -642,7 +643,7 @@ void StunTransactionPool::continueAfterParams()
     d->needLongTermAuth  = false;
     d->triedLongTermAuth = true;
 
-    foreach (StunTransaction *trans, d->transactions) {
+    for (StunTransaction *trans : d->transactions) {
         // the only reason an inactive transaction would be in the
         //   list is if it is waiting for an auth retry
         if (!trans->d->active && !trans->d->cancelling) {

@@ -50,7 +50,7 @@ public:
     int runTests(int argc, char *argv[]);
 
 private:
-    TestRegistry() {}
+    TestRegistry() { }
 
 private:
     QList<QObject *> tests_;

@@ -348,7 +348,7 @@ public:
 
     bool haveTLS() const
     {
-        foreach (SecureLayer *s, layers) {
+        for (SecureLayer *s : layers) {
             if (s->type == SecureLayer::TLS
 #ifdef USE_TLSHANDLER
                 || s->type == SecureLayer::TLSH
@@ -362,7 +362,7 @@ public:
 
     bool haveSASL() const
     {
-        foreach (SecureLayer *s, layers) {
+        for (SecureLayer *s : layers) {
             if (s->type == SecureLayer::SASL)
                 return true;
         }
@@ -371,7 +371,7 @@ public:
 
     bool haveCompress() const
     {
-        foreach (SecureLayer *s, layers) {
+        for (SecureLayer *s : layers) {
             if (s->type == SecureLayer::Compression)
                 return true;
         }
@@ -417,7 +417,7 @@ void SecureStream::linkLayer(QObject *s)
 int SecureStream::calcPrebytes() const
 {
     int x = 0;
-    foreach (SecureLayer *s, d->layers) {
+    for (SecureLayer *s : d->layers) {
         x += s->prebytes;
     }
     return (d->pending - x);
@@ -545,7 +545,7 @@ void SecureStream::bs_readyRead()
 
 void SecureStream::bs_bytesWritten(qint64 bytes)
 {
-    foreach (SecureLayer *s, d->layers) {
+    for (SecureLayer *s : d->layers) {
         bytes = s->finished(bytes);
     }
 

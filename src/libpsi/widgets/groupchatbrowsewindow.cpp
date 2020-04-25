@@ -312,7 +312,7 @@ void PsiGroupChatBrowseWindow::resizeEvent(QResizeEvent *event)
     // int right_column_ideal = qMax(d->ui.tv_rooms->header()->minimumSectionSize(),
     // d->ui.tv_rooms->header()->sectionSizeHint(1));
     int right_column_ideal = 132; // d->ui.tv_rooms->header()->sectionSizeHint(1);
-    int left_column_width = widget_width - right_column_ideal - grip_width - frame_width;
+    int left_column_width  = widget_width - right_column_ideal - grip_width - frame_width;
     d->ui.tv_rooms->header()->resizeSection(0, left_column_width);
     GroupChatBrowseWindow::resizeEvent(event);
 }

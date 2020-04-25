@@ -37,7 +37,7 @@ const int XKeyRelease = KeyRelease;
 
 class X11KeyTrigger {
 public:
-    virtual ~X11KeyTrigger() {}
+    virtual ~X11KeyTrigger() { }
     virtual void activate()                                 = 0;
     virtual bool isAccepted(const QKeySequence &qkey) const = 0;
 };
@@ -76,7 +76,7 @@ protected:
             if (k->modifiers() & Qt::MetaModifier)
                 qkey |= Qt::META;
 
-            foreach (X11KeyTrigger *trigger, triggers_) {
+            for (X11KeyTrigger *trigger : triggers_) {
                 if (trigger->isAccepted(QKeySequence(qkey))) {
                     trigger->activate();
                     return true;
@@ -272,7 +272,7 @@ private:
         failed                          = false;
         XErrorHandler savedErrorHandler = XSetErrorHandler(XGrabErrorHandler);
         WId           w                 = QX11Info::appRootWindow();
-        foreach (long mask_mod, X11KeyTriggerManager::ignModifiersList()) {
+        for (long mask_mod : X11KeyTriggerManager::ignModifiersList()) {
             XGrabKey(QX11Info::display(), code, mod | mask_mod, w, False, GrabModeAsync, GrabModeAsync);
             GrabbedKey grabbedKey;
             grabbedKey.code = code;

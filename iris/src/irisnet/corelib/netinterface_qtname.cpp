@@ -36,7 +36,7 @@ class IrisQtName : public NameProvider {
                                 // is way better)
 
 public:
-    IrisQtName(QObject *parent = nullptr) : NameProvider(parent), currentId(0) {}
+    IrisQtName(QObject *parent = nullptr) : NameProvider(parent), currentId(0) { }
 
     ~IrisQtName()
     {

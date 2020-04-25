@@ -60,7 +60,7 @@ bool ASpellChecker::isCorrect(const QString &word)
     if (spellers_.isEmpty())
         return true;
 
-    foreach (AspellSpeller *speller, spellers_) {
+    for (AspellSpeller *speller : spellers_) {
         if (aspell_speller_check(speller, word.toUtf8().constData(), -1) != 0)
             return true;
     }
@@ -71,7 +71,7 @@ QList<QString> ASpellChecker::suggestions(const QString &word)
 {
     QList<QString> words;
 
-    foreach (AspellSpeller *speller, spellers_) {
+    for (AspellSpeller *speller : spellers_) {
         const AspellWordList *   list     = aspell_speller_suggest(speller, word.toUtf8(), -1);
         AspellStringEnumeration *elements = aspell_word_list_elements(list);
         const char *             c_word;

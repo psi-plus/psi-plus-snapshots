@@ -28,7 +28,7 @@
 namespace XMPP {
 class Thumbnail {
 public:
-    inline Thumbnail() : width(0), height(0) {}
+    inline Thumbnail() : width(0), height(0) { }
     // data - for outgoing it's actual image data. for incoming - cid
     inline Thumbnail(const QByteArray &data, const QString &mimeType = QString(), quint32 width = 0,
                      quint32 height = 0) :

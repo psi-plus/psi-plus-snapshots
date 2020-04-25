@@ -39,9 +39,9 @@ namespace XMPP { namespace Jingle {
         Jid         to_;
 
     public:
-        JT(Task *parent) : Task(parent) {}
+        JT(Task *parent) : Task(parent) { }
 
-        ~JT() {}
+        ~JT() { }
 
         void request(const Jid &to, const QDomElement &jingleEl)
         {

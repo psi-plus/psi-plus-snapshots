@@ -400,7 +400,7 @@ void FileTransferManager::setDisabled(const QString &ns, bool state)
 void FileTransferManager::pft_incoming(const FTRequest &req)
 {
     QString streamType;
-    foreach (const QString &ns, d->streamPriority) {
+    for (const QString &ns : d->streamPriority) {
         if (req.streamTypes.contains(ns)) {
             BytestreamManager *manager = streamManager(ns);
             if (manager && manager->isAcceptableSID(req.from, req.id)) {
@@ -432,7 +432,7 @@ BytestreamManager *FileTransferManager::streamManager(const QString &ns) const
 QStringList FileTransferManager::streamPriority() const
 {
     QStringList ret;
-    foreach (const QString &ns, d->streamPriority) {
+    for (const QString &ns : d->streamPriority) {
         if (!d->disabledStreamTypes.contains(ns)) {
             ret.append(ns);
         }
@@ -442,7 +442,7 @@ QStringList FileTransferManager::streamPriority() const
 
 void FileTransferManager::stream_incomingReady(BSConnection *c)
 {
-    foreach (FileTransfer *ft, d->list) {
+    for (FileTransfer *ft : d->list) {
         if (ft->d->needStream && ft->d->peer.compare(c->peer()) && ft->d->id == c->sid()) {
             ft->takeConnection(c);
             return;
@@ -459,7 +459,7 @@ QString FileTransferManager::link(FileTransfer *ft)
     do {
         found = false;
         id    = QString("ft_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
-        foreach (FileTransfer *ft, d->list) {
+        for (FileTransfer *ft : d->list) {
             if (ft->d->peer.compare(ft->d->peer) && ft->d->id == id) {
                 found = true;
                 break;
@@ -642,9 +642,9 @@ bool JT_FT::take(const QDomElement &x)
 //----------------------------------------------------------------------------
 // JT_PushFT
 //----------------------------------------------------------------------------
-JT_PushFT::JT_PushFT(Task *parent) : Task(parent) {}
+JT_PushFT::JT_PushFT(Task *parent) : Task(parent) { }
 
-JT_PushFT::~JT_PushFT() {}
+JT_PushFT::~JT_PushFT() { }
 
 void JT_PushFT::respondSuccess(const Jid &to, const QString &id, qlonglong rangeOffset, qlonglong rangeLength,
                                const QString &streamType)

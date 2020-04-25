@@ -505,7 +505,7 @@ public:
     void ensureChannels(const QList<StunAllocate::Channel> &channels)
     {
         bool changed = false;
-        foreach (const StunAllocate::Channel &c, channels) {
+        for (const StunAllocate::Channel &c : channels) {
             if (!desiredChannels.contains(c)) {
                 if (debugLevel >= TurnClient::DL_Info)
                     emit q->debugLine(
@@ -568,7 +568,7 @@ public:
     void emitPacketsWritten(const QList<Written> &writtenDests)
     {
         ObjectSessionWatcher watch(&sess);
-        foreach (const Written &wr, writtenDests) {
+        for (const Written &wr : writtenDests) {
             emit q->packetsWritten(wr.count, wr.addr, wr.port);
             if (!watch.isValid())
                 return;

@@ -44,7 +44,7 @@ public:
         QList<IrisNetProvider *> list = irisNetProviders();
 
         c = nullptr;
-        foreach (IrisNetProvider *p, list) {
+        for (IrisNetProvider *p : list) {
             c = p->createNetInterfaceProvider();
             if (c)
                 break;

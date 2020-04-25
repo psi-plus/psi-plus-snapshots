@@ -49,8 +49,8 @@ public:
     QString registrarType() const;
 
     struct ReportField {
-        ReportField() {}
-        ReportField(const QString &_label, const QString &_name) : label(_label), name(_name) {}
+        ReportField() { }
+        ReportField(const QString &_label, const QString &_name) : label(_label), name(_name) { }
         QString label;
         QString name;
     };
@@ -67,7 +67,7 @@ public:
     class Field {
     public:
         explicit Field() = default;
-        ~Field() {}
+        ~Field() { }
 
         QString desc() const;
         void    setDesc(const QString &);

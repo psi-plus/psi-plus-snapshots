@@ -25,7 +25,7 @@ class NetAvailability::Private : public QObject {
 public:
     NetAvailability *q;
 
-    Private(NetAvailability *_q) : QObject(_q), q(_q) {}
+    Private(NetAvailability *_q) : QObject(_q), q(_q) { }
 };
 
 NetAvailability::NetAvailability(QObject *parent) : QObject(parent) { d = new Private(this); }

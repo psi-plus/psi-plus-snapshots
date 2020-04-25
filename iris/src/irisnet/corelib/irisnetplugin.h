@@ -54,7 +54,7 @@ public:
         QList<QHostAddress> addresses;
     };
 
-    NetInterfaceProvider(QObject *parent = nullptr) : QObject(parent) {}
+    NetInterfaceProvider(QObject *parent = nullptr) : QObject(parent) { }
 
     // calling start should populate an initial list that can be
     //   immediately fetched.  do not signal updated() for this.
@@ -75,7 +75,7 @@ public:
         QHostAddress gateway;
     };
 
-    NetGatewayProvider(QObject *parent = nullptr) : QObject(parent) {}
+    NetGatewayProvider(QObject *parent = nullptr) : QObject(parent) { }
 
     // calling start should populate an initial list that can be
     //   immediately fetched.  do not signal updated() for this.
@@ -90,7 +90,7 @@ class IRISNET_EXPORT NetAvailabilityProvider : public QObject {
     Q_OBJECT
 
 public:
-    NetAvailabilityProvider(QObject *parent = nullptr) : QObject(parent) {}
+    NetAvailabilityProvider(QObject *parent = nullptr) : QObject(parent) { }
 
     // calling start should populate an initial value that can be
     //   immediately fetched.  do not signal updated() for this.
@@ -105,7 +105,7 @@ class IRISNET_EXPORT NameProvider : public QObject {
     Q_OBJECT
 
 public:
-    NameProvider(QObject *parent = nullptr) : QObject(parent) {}
+    NameProvider(QObject *parent = nullptr) : QObject(parent) { }
 
     virtual bool supportsSingle() const;
     virtual bool supportsLongLived() const;
@@ -138,7 +138,7 @@ public:
         QByteArray                hostName; // optional
     };
 
-    ServiceProvider(QObject *parent = nullptr) : QObject(parent) {}
+    ServiceProvider(QObject *parent = nullptr) : QObject(parent) { }
 
     virtual int  browse_start(const QString &type, const QString &domain) = 0;
     virtual void browse_stop(int id)                                      = 0;

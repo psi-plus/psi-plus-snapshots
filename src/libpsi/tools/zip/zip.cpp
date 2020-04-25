@@ -31,7 +31,7 @@
 
 class UnZipPrivate {
 public:
-    UnZipPrivate() : caseSensitive(UnZip::CS_Default) {}
+    UnZipPrivate() : caseSensitive(UnZip::CS_Default) { }
 
     QString                name;
     unzFile                uf;

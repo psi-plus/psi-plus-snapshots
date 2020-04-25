@@ -44,7 +44,7 @@ namespace XMPP { namespace Jingle {
             Q_UNUSED(destinationAddress);
             Q_UNUSED(port)
         }
-        inline NetworkDatagram() {}
+        inline NetworkDatagram() { }
 
         inline bool       isValid() const { return _valid; }
         inline QByteArray data() const { return _data; }

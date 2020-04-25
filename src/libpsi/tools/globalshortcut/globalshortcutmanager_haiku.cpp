@@ -30,7 +30,7 @@
 
 class HKeyTrigger {
 public:
-    virtual ~HKeyTrigger() {}
+    virtual ~HKeyTrigger() { }
     virtual void activate()                 = 0;
     virtual bool isAccepted(int qkey) const = 0;
 };

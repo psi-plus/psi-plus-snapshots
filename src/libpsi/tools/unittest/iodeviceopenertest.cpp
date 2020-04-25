@@ -110,7 +110,7 @@ private slots:
 private:
     class UnopenableBuffer : public QBuffer {
     public:
-        UnopenableBuffer() : QBuffer() {}
+        UnopenableBuffer() : QBuffer() { }
 
         bool open(QIODevice::OpenMode) { return false; }
     };

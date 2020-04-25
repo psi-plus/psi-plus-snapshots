@@ -141,7 +141,7 @@ public:
 
 VCardPrivate::VCardPrivate() { privacyClass = VCard::pcNone; }
 
-VCardPrivate::~VCardPrivate() {}
+VCardPrivate::~VCardPrivate() { }
 
 bool VCardPrivate::isEmpty() const
 {
@@ -159,9 +159,9 @@ bool VCardPrivate::isEmpty() const
     return true;
 }
 
-VCard::VCard() {}
+VCard::VCard() { }
 
-VCard::VCard(const VCard &from) : d(from.d) {}
+VCard::VCard(const VCard &from) : d(from.d) { }
 
 VCard &VCard::operator=(const VCard &from)
 {
@@ -169,7 +169,7 @@ VCard &VCard::operator=(const VCard &from)
     return *this;
 }
 
-VCard::~VCard() {}
+VCard::~VCard() { }
 
 QDomElement VCard::toXml(QDomDocument *doc) const
 {
@@ -746,9 +746,9 @@ VCard::Phone::Phone()
 
 VCard::Email::Email() { home = work = internet = x400 = pref = false; }
 
-VCard::Geo::Geo() {}
+VCard::Geo::Geo() { }
 
-VCard::Org::Org() {}
+VCard::Org::Org() { }
 
 // vCard properties...
 

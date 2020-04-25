@@ -25,7 +25,7 @@ namespace XMPP { namespace Jingle {
     //----------------------------------------------------------------------------
     // Application
     //----------------------------------------------------------------------------
-    ApplicationManager::ApplicationManager(QObject *parent) : QObject(parent) {}
+    ApplicationManager::ApplicationManager(QObject *parent) : QObject(parent) { }
 
     //----------------------------------------------------------------------------
     // Application

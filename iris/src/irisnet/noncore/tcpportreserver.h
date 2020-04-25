@@ -41,7 +41,7 @@ public:
         QVariant meta;
     };
 
-    inline TcpPortServer(QTcpServer *serverSocket) : serverSocket(serverSocket) {}
+    inline TcpPortServer(QTcpServer *serverSocket) : serverSocket(serverSocket) { }
     inline void            setPortInfo(const Port &port) { this->port = port; }
     inline QHostAddress    serverAddress() const { return serverSocket->serverAddress(); }
     inline quint16         serverPort() const { return serverSocket->serverPort(); }

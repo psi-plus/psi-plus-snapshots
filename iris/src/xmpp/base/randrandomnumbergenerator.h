@@ -26,7 +26,7 @@
 namespace XMPP {
 class RandRandomNumberGenerator : public RandomNumberGenerator {
 public:
-    RandRandomNumberGenerator() {}
+    RandRandomNumberGenerator() { }
 
     virtual double generateNumber() const { return rand(); }
 

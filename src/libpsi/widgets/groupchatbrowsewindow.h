@@ -34,7 +34,7 @@ public:
         QString   roomName;
         bool      visible;
 
-        RoomOptions() : visible(false) {}
+        RoomOptions() : visible(false) { }
     };
 
     class RoomInfo {
@@ -48,10 +48,10 @@ public:
         bool    owner;
         int     participants;
 
-        RoomInfo() : remove(false), autoJoin(false), owner(false), participants(-1) {}
+        RoomInfo() : remove(false), autoJoin(false), owner(false), participants(-1) { }
     };
 
-    GroupChatBrowseWindow(QWidget *parent = 0) : QWidget(parent) {}
+    GroupChatBrowseWindow(QWidget *parent = 0) : QWidget(parent) { }
 
     // FIXME: remove this
     virtual QObject *controller() const                 = 0;

@@ -22,7 +22,7 @@
 #ifndef HAVE_XSS
 
 IdlePlatform::IdlePlatform() { d = nullptr; }
-IdlePlatform::~IdlePlatform() {}
+IdlePlatform::~IdlePlatform() { }
 bool IdlePlatform::init() { return false; }
 int  IdlePlatform::secondsIdle() { return 0; }
 
@@ -51,7 +51,7 @@ extern "C" int       xerrhandler(Display *dpy, XErrorEvent *err)
 
 class IdlePlatform::Private {
 public:
-    Private() {}
+    Private() { }
 
     XScreenSaverInfo *ss_info = nullptr;
 };

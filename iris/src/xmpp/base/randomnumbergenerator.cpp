@@ -21,7 +21,7 @@
 #include <cassert>
 
 namespace XMPP {
-RandomNumberGenerator::~RandomNumberGenerator() {}
+RandomNumberGenerator::~RandomNumberGenerator() { }
 
 double RandomNumberGenerator::generateNumberBetween(double a, double b) const
 {

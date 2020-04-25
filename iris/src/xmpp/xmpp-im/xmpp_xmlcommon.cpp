@@ -32,9 +32,9 @@
 //----------------------------------------------------------------------------
 // XDomNodeList
 //----------------------------------------------------------------------------
-XDomNodeList::XDomNodeList() {}
+XDomNodeList::XDomNodeList() { }
 
-XDomNodeList::XDomNodeList(const XDomNodeList &from) : list(from.list) {}
+XDomNodeList::XDomNodeList(const XDomNodeList &from) : list(from.list) { }
 
 XDomNodeList::XDomNodeList(const QDomNodeList &from)
 {
@@ -42,7 +42,7 @@ XDomNodeList::XDomNodeList(const QDomNodeList &from)
         list += from.item(n);
 }
 
-XDomNodeList::~XDomNodeList() {}
+XDomNodeList::~XDomNodeList() { }
 
 XDomNodeList &XDomNodeList::operator=(const XDomNodeList &from)
 {
@@ -100,8 +100,8 @@ bool stamp2TS(const QString &ts, QDateTime *d)
 
 QString TS2stamp(const QDateTime &d)
 {
-    QString str = QString::asprintf("%04d%02d%02dT%02d:%02d:%02d", d.date().year(), d.date().month(),
-                                    d.date().day(), d.time().hour(), d.time().minute(), d.time().second());
+    QString str = QString::asprintf("%04d%02d%02dT%02d:%02d:%02d", d.date().year(), d.date().month(), d.date().day(),
+                                    d.time().hour(), d.time().minute(), d.time().second());
 
     return str;
 }

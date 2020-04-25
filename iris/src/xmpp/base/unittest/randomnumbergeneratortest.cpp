@@ -30,7 +30,7 @@ class RandomNumberGeneratorTest : public QObject {
 private:
     class DummyRandomNumberGenerator : public RandomNumberGenerator {
     public:
-        DummyRandomNumberGenerator(double value, double maximum) : value_(value), maximum_(maximum) {}
+        DummyRandomNumberGenerator(double value, double maximum) : value_(value), maximum_(maximum) { }
 
         double generateNumber() const { return value_; }
         double getMaximumGeneratedNumber() const { return maximum_; }

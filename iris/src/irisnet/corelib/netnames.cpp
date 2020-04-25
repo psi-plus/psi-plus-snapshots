@@ -55,7 +55,7 @@ public:
             d = new Private;                                                                                           \
     }
 
-NameRecord::NameRecord() : d(nullptr) {}
+NameRecord::NameRecord() : d(nullptr) { }
 
 NameRecord::NameRecord(const QByteArray &owner, int ttl) : d(nullptr)
 {
@@ -65,7 +65,7 @@ NameRecord::NameRecord(const QByteArray &owner, int ttl) : d(nullptr)
 
 NameRecord::NameRecord(const NameRecord &from) : d(nullptr) { *this = from; }
 
-NameRecord::~NameRecord() {}
+NameRecord::~NameRecord() { }
 
 NameRecord &NameRecord::operator=(const NameRecord &from)
 {
@@ -357,7 +357,7 @@ public:
     QByteArray                name;
 };
 
-ServiceInstance::ServiceInstance() : d(new Private) {}
+ServiceInstance::ServiceInstance() : d(new Private) { }
 
 ServiceInstance::ServiceInstance(const QString &instance, const QString &type, const QString &domain,
                                  const QMap<QString, QByteArray> &attribs) :
@@ -374,7 +374,7 @@ ServiceInstance::ServiceInstance(const QString &instance, const QString &type, c
 
 ServiceInstance::ServiceInstance(const ServiceInstance &from) : d(nullptr) { *this = from; }
 
-ServiceInstance::~ServiceInstance() {}
+ServiceInstance::~ServiceInstance() { }
 
 ServiceInstance &ServiceInstance::operator=(const ServiceInstance &from)
 {
@@ -408,7 +408,7 @@ public:
     bool longLived;
     int  id;
 
-    Private(NameResolver *_q) : q(_q) {}
+    Private(NameResolver *_q) : q(_q) { }
 };
 
 class ServiceBrowser::Private {
@@ -417,7 +417,7 @@ public:
 
     int id;
 
-    Private(ServiceBrowser *_q) : q(_q) {}
+    Private(ServiceBrowser *_q) : q(_q) { }
 };
 
 class ServiceResolver::Private : public QObject {
@@ -466,7 +466,7 @@ WeightedNameRecordList &WeightedNameRecordList::operator=(const WeightedNameReco
     return *this;
 }
 
-WeightedNameRecordList::~WeightedNameRecordList() {}
+WeightedNameRecordList::~WeightedNameRecordList() { }
 
 bool WeightedNameRecordList::isEmpty() const
 {
@@ -489,7 +489,7 @@ XMPP::NameRecord WeightedNameRecordList::takeNext()
 
     /* Find the new total weight of this priority group */
     int totalWeight = 0;
-    foreach (const XMPP::NameRecord &record, *currentPriorityGroup) {
+    for (const XMPP::NameRecord &record : *currentPriorityGroup) {
         totalWeight += record.weight();
     }
 
@@ -506,8 +506,7 @@ XMPP::NameRecord WeightedNameRecordList::takeNext()
 
     /* Iterate through the priority group until we found the randomly selected entry */
     WeightedNameRecordPriorityGroup::iterator it(currentPriorityGroup->begin());
-    for (int currentWeight = it->weight(); currentWeight < randomWeight; currentWeight += (++it)->weight()) {
-    }
+    for (int currentWeight = it->weight(); currentWeight < randomWeight; currentWeight += (++it)->weight()) { }
     Q_ASSERT(it != currentPriorityGroup->end());
 
     /* We are going to delete the entry in the list, so save it */
@@ -537,8 +536,8 @@ void WeightedNameRecordList::clear()
 void WeightedNameRecordList::append(const XMPP::WeightedNameRecordList &list)
 {
     /* Copy over all records from all groups */
-    foreach (const WeightedNameRecordPriorityGroup &group, list.priorityGroups) {
-        foreach (const NameRecord &record, group) {
+    for (const WeightedNameRecordPriorityGroup &group : list.priorityGroups) {
+        for (const NameRecord &record : group) {
             append(record);
         }
     }
@@ -549,7 +548,7 @@ void WeightedNameRecordList::append(const XMPP::WeightedNameRecordList &list)
 
 void WeightedNameRecordList::append(const QList<XMPP::NameRecord> &list)
 {
-    foreach (const XMPP::NameRecord &record, list) {
+    for (const XMPP::NameRecord &record : list) {
         if (record.type() != XMPP::NameRecord::Srv) {
             continue;
         }
@@ -622,7 +621,7 @@ QDebug operator<<(QDebug dbg, const XMPP::WeightedNameRecordList &list)
 
     dbg.nospace() << "{";
 
-    foreach (int priority, list.priorityGroups.keys()) {
+    for (int priority : list.priorityGroups.keys()) {
         dbg.nospace() << "\t" << priority << "->" << list.priorityGroups.value(priority) << endl;
     }
 
@@ -636,7 +635,7 @@ public:
 
     int id;
 
-    Private(ServiceLocalPublisher *_q) : q(_q) {}
+    Private(ServiceLocalPublisher *_q) : q(_q) { }
 };
 
 class NameManager : public QObject {
@@ -734,7 +733,7 @@ public:
                 sub_instances_to_remove += it.key();
         }
 
-        foreach (int res_sub_id, sub_instances_to_remove) {
+        for (int res_sub_id : sub_instances_to_remove) {
             res_sub_instances.remove(res_sub_id);
             p_local->resolve_stop(res_sub_id);
         }
@@ -1076,7 +1075,7 @@ void ServiceBrowser::start(const QString &type, const QString &domain)
     NameManager::instance()->browse_start(d, type, domain);
 }
 
-void ServiceBrowser::stop() {}
+void ServiceBrowser::stop() { }
 
 //----------------------------------------------------------------------------
 // ServiceResolver
@@ -1099,7 +1098,7 @@ void ServiceResolver::clear_resolvers()
 #endif
 
     /* cleanup all resolvers */
-    foreach (XMPP::NameResolver *resolver, d->resolverList) {
+    for (XMPP::NameResolver *resolver : d->resolverList) {
         cleanup_resolver(resolver);
     }
 }
@@ -1405,7 +1404,7 @@ void ServiceLocalPublisher::updateAttributes(const QMap<QString, QByteArray> &at
 
 void ServiceLocalPublisher::addRecord(const NameRecord &rec) { NameManager::instance()->publish_extra_start(d, rec); }
 
-void ServiceLocalPublisher::cancel() {}
+void ServiceLocalPublisher::cancel() { }
 
 //----------------------------------------------------------------------------
 // NetNames

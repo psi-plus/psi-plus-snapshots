@@ -61,7 +61,7 @@ Connector::Connector(QObject *parent) : QObject(parent)
     setPeerAddressNone();
 }
 
-Connector::~Connector() {}
+Connector::~Connector() { }
 
 bool Connector::useSSL() const { return ssl; }
 

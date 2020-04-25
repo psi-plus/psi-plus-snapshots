@@ -55,9 +55,9 @@ SpellChecker *SpellChecker::instance()
     return instance_;
 }
 
-SpellChecker::SpellChecker() : QObject(QCoreApplication::instance()) {}
+SpellChecker::SpellChecker() : QObject(QCoreApplication::instance()) { }
 
-SpellChecker::~SpellChecker() {}
+SpellChecker::~SpellChecker() { }
 
 bool SpellChecker::available() const { return false; }
 

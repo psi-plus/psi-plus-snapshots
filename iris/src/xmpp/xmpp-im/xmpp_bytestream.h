@@ -34,7 +34,7 @@ public:
     enum Error { ErrRefused = ErrCustom, ErrConnect, ErrProxy, ErrSocket };
     enum State { Idle, Requesting, Connecting, WaitingForAccept, Active };
 
-    BSConnection(QObject *parent = nullptr) : ByteStream(parent) {}
+    BSConnection(QObject *parent = nullptr) : ByteStream(parent) { }
 
     virtual void connectToJid(const Jid &peer, const QString &sid) = 0;
     virtual void accept()                                          = 0;

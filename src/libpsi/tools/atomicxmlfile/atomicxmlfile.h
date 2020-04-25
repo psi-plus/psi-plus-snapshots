@@ -30,13 +30,13 @@ class QDomDocument;
 
 class AtomicXmlFileReader : public QXmlStreamReader {
 public:
-    virtual ~AtomicXmlFileReader() {}
+    virtual ~AtomicXmlFileReader() { }
     virtual bool read(QIODevice *device) = 0;
 };
 
 class AtomicXmlFileWriter : public QXmlStreamWriter {
 public:
-    virtual ~AtomicXmlFileWriter() {}
+    virtual ~AtomicXmlFileWriter() { }
     virtual bool write(QIODevice *device) = 0;
 };
 
@@ -82,7 +82,7 @@ public:
     {
         Q_ASSERT(reader);
 
-        foreach (QString fileName, loadCandidateList()) {
+        for (QString fileName : loadCandidateList()) {
             if (loadDocument(reader, fileName)) {
                 return true;
             }

@@ -54,7 +54,7 @@ private:
         {
         }
 
-        Arg() : needsValue(false) {} // needed only by QMap
+        Arg() : needsValue(false) { } // needed only by QMap
     };
 
     QMap<QByteArray, Arg>        argdefs;

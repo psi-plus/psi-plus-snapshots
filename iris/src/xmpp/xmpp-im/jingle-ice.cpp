@@ -89,7 +89,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
     {
         QList<QHostAddress> out;
 
-        foreach (const QHostAddress &a, in) {
+        for (const QHostAddress &a : in) {
             int at;
             for (at = 0; at < out.count(); ++at) {
                 if (comparePriority(a, out[at]) < 0)
@@ -270,7 +270,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             }
             left = iceList;
 
-            foreach (XMPP::Ice176 *ice, left) {
+            for (XMPP::Ice176 *ice : left) {
                 ice->setParent(this);
 
                 // TODO: error() also?
@@ -582,7 +582,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             QList<QHostAddress> listenAddrs;
             for (const QNetworkInterface &ni : QNetworkInterface::allInterfaces()) {
                 QList<QNetworkAddressEntry> entries = ni.addressEntries();
-                foreach (const QNetworkAddressEntry &na, entries) {
+                for (const QNetworkAddressEntry &na : entries) {
                     QHostAddress h = na.ip();
 
                     // skip localhost
@@ -608,7 +608,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             QList<XMPP::Ice176::LocalAddress> localAddrs;
 
             QStringList strList;
-            foreach (const QHostAddress &h, listenAddrs) {
+            for (const QHostAddress &h : listenAddrs) {
                 XMPP::Ice176::LocalAddress addr;
                 addr.addr = h;
                 localAddrs += addr;
@@ -695,7 +695,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 eaddr.base = addr;
                 eaddr.addr = extAddr;
                 extAddrs += eaddr;*/
-                foreach (const XMPP::Ice176::LocalAddress &la, localAddrs) {
+                for (const XMPP::Ice176::LocalAddress &la : localAddrs) {
                     XMPP::Ice176::ExternalAddress ea;
                     ea.base = la;
                     ea.addr = extAddr;

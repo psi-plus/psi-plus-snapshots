@@ -17,7 +17,7 @@
  *
  */
 
-#pragma once 
+#pragma once
 
 #include <QList>
 #include <qdatetime.h>

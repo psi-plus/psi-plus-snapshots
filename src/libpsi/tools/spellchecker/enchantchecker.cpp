@@ -60,7 +60,7 @@ bool EnchantChecker::isCorrect(const QString &word)
     if (spellers_.isEmpty())
         return true;
 
-    foreach (enchant::Dict *speller, spellers_) {
+    for (enchant::Dict *speller : spellers_) {
         if (speller->check(word.toUtf8().constData()))
             return true;
     }
@@ -71,7 +71,7 @@ QList<QString> EnchantChecker::suggestions(const QString &word)
 {
     QList<QString> words;
 
-    foreach (enchant::Dict *speller, spellers_) {
+    for (enchant::Dict *speller : spellers_) {
         std::vector<std::string> out_suggestions;
         speller->suggest(word.toUtf8().constData(), out_suggestions);
         std::vector<std::string>::iterator aE = out_suggestions.end();

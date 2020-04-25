@@ -140,7 +140,7 @@ public:
         Q_UNUSED(allowClientSendFirst);
 
         mechanism_ = QString();
-        foreach (QString mech, mechlist) {
+        for (QString mech : mechlist) {
             if (mech == "SCRAM-SHA-1") {
                 mechanism_ = "SCRAM-SHA-1";
                 break;
@@ -413,10 +413,10 @@ public:
 
 class QCASimpleSASL : public QCA::Provider {
 public:
-    QCASimpleSASL() {}
-    ~QCASimpleSASL() {}
+    QCASimpleSASL() { }
+    ~QCASimpleSASL() { }
 
-    void init() {}
+    void init() { }
 
     QString name() const { return "simplesasl"; }
 

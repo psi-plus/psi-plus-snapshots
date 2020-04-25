@@ -7,9 +7,9 @@ class MyFirstClassTest : public QObject {
     Q_OBJECT
 
 private slots:
-    void initTestCase() {}
+    void initTestCase() { }
 
-    void cleanupTestCase() {}
+    void cleanupTestCase() { }
 
     void testMyMethod()
     {

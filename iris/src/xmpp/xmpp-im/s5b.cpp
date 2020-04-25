@@ -139,9 +139,9 @@ private:
 //----------------------------------------------------------------------------
 // S5BDatagram
 //----------------------------------------------------------------------------
-S5BDatagram::S5BDatagram() {}
+S5BDatagram::S5BDatagram() { }
 
-S5BDatagram::S5BDatagram(int source, int dest, const QByteArray &data) : _source(source), _dest(dest), _buf(data) {}
+S5BDatagram::S5BDatagram(int source, int dest, const QByteArray &data) : _source(source), _dest(dest), _buf(data) { }
 
 int S5BDatagram::sourcePort() const { return _source; }
 
@@ -652,7 +652,7 @@ bool S5BManager::isAcceptableSID(const Jid &peer, const QString &sid) const
     QString key     = makeKey(sid, d->client->jid(), peer);
     QString key_out = makeKey(sid, peer, d->client->jid()); // not valid in muc via proxy
 
-    foreach (Entry *e, d->activeList) {
+    for (Entry *e : d->activeList) {
         if (e->i) {
             if (e->i->key == key || e->i->key == key_out)
                 return false;
@@ -673,7 +673,7 @@ const char *S5BManager::sidPrefix() const { return "s5b_"; }
 
 S5BConnection *S5BManager::findIncoming(const Jid &from, const QString &sid) const
 {
-    foreach (S5BConnection *c, d->incomingConns) {
+    for (S5BConnection *c : d->incomingConns) {
         if (c->d->peer.compare(from) && c->d->sid == sid)
             return c;
     }
@@ -682,7 +682,7 @@ S5BConnection *S5BManager::findIncoming(const Jid &from, const QString &sid) con
 
 S5BManager::Entry *S5BManager::findEntry(S5BConnection *c) const
 {
-    foreach (Entry *e, d->activeList) {
+    for (Entry *e : d->activeList) {
         if (e->c == c)
             return e;
     }
@@ -691,7 +691,7 @@ S5BManager::Entry *S5BManager::findEntry(S5BConnection *c) const
 
 S5BManager::Entry *S5BManager::findEntry(Item *i) const
 {
-    foreach (Entry *e, d->activeList) {
+    for (Entry *e : d->activeList) {
         if (e->i == i)
             return e;
     }
@@ -700,7 +700,7 @@ S5BManager::Entry *S5BManager::findEntry(Item *i) const
 
 S5BManager::Entry *S5BManager::findEntryByHash(const QString &key) const
 {
-    foreach (Entry *e, d->activeList) {
+    for (Entry *e : d->activeList) {
         if (e->i && e->i->key == key)
             return e;
     }
@@ -709,7 +709,7 @@ S5BManager::Entry *S5BManager::findEntryByHash(const QString &key) const
 
 S5BManager::Entry *S5BManager::findEntryBySID(const Jid &peer, const QString &sid) const
 {
-    foreach (Entry *e, d->activeList) {
+    for (Entry *e : d->activeList) {
         if (e->i && e->i->peer.compare(peer) && e->sid == sid)
             return e;
     }
@@ -928,7 +928,7 @@ void S5BManager::query_finished()
 {
     JT_S5B *query = static_cast<JT_S5B *>(sender());
     Entry * e     = nullptr;
-    foreach (Entry *i, d->activeList) {
+    for (Entry *i : d->activeList) {
         if (i->query == query) {
             e = i;
             break;
@@ -1096,7 +1096,7 @@ void S5BManager::Item::doOutgoing()
     StreamHostList hosts;
     auto           disco = m->client()->tcpPortReserver()->scope(QString::fromLatin1("s5b"))->disco();
     if (!haveHost(in_hosts, self)) {
-        foreach (auto &c, disco->takeServers()) {
+        for (auto &c : disco->takeServers()) {
             auto server = c.staticCast<S5BServer>();
             server->registerKey(key);
             relatedServers.append(server);
@@ -1150,7 +1150,7 @@ void S5BManager::Item::doIncoming()
     StreamHostList list;
     if (lateProxy) {
         // take just the proxy streamhosts
-        foreach (const StreamHost &it, in_hosts) {
+        for (const StreamHost &it : in_hosts) {
             if (it.isProxy())
                 list += it;
         }
@@ -1160,7 +1160,7 @@ void S5BManager::Item::doIncoming()
         if ((state == Requester || (state == Target && fast)) && !proxy.jid().isValid()) {
             // take just the non-proxy streamhosts
             bool hasProxies = false;
-            foreach (const StreamHost &it, in_hosts) {
+            for (const StreamHost &it : in_hosts) {
                 if (it.isProxy())
                     hasProxies = true;
                 else
@@ -1496,7 +1496,7 @@ void S5BManager::Item::checkForActivation()
         clientList.append(client);
     if (client_out)
         clientList.append(client_out);
-    foreach (SocksClient *sc, clientList) {
+    for (SocksClient *sc : clientList) {
 #ifdef S5B_DEBUG
         qDebug("checking for activation\n");
 #endif
@@ -1819,7 +1819,7 @@ void S5BConnector::t_timeout()
 void S5BConnector::man_udpSuccess(const Jid &streamHost)
 {
     // was anyone sending to this streamhost?
-    foreach (Item *i, d->itemList) {
+    for (Item *i : d->itemList) {
         if (i->host.jid().compare(streamHost) && i->client_udp) {
             i->udpSuccess();
             return;
@@ -1986,9 +1986,9 @@ StreamHost JT_S5B::proxyInfo() const { return d->proxyInfo; }
 //----------------------------------------------------------------------------
 // JT_PushS5B
 //----------------------------------------------------------------------------
-JT_PushS5B::JT_PushS5B(Task *parent) : Task(parent) {}
+JT_PushS5B::JT_PushS5B(Task *parent) : Task(parent) { }
 
-JT_PushS5B::~JT_PushS5B() {}
+JT_PushS5B::~JT_PushS5B() { }
 
 int JT_PushS5B::priority() const { return 1; }
 

@@ -265,10 +265,10 @@ QDomElement XData::Field::toXml(QDomDocument *doc, bool submitForm) const
             media.setAttribute("width", s.width());
             media.setAttribute("height", s.height());
         }
-        foreach (const MediaUri &uri, _mediaElement) {
+        for (const MediaUri &uri : _mediaElement) {
             QDomElement uriEl = doc->createElement("uri");
             QString     type  = uri.mimeType;
-            foreach (const QString &k, uri.params.keys()) {
+            for (const QString &k : uri.params.keys()) {
                 type += ";" + k + "=" + uri.params[k];
             }
             uriEl.setAttribute("type", type);
@@ -300,8 +300,8 @@ QSize XData::Field::MediaElement::mediaSize() const { return _size; }
 
 bool XData::Field::MediaElement::checkSupport(const QStringList &wildcards)
 {
-    foreach (const XData::Field::MediaUri &uri, *this) {
-        foreach (const QString &wildcard, wildcards) {
+    for (const XData::Field::MediaUri &uri : *this) {
+        for (const QString &wildcard : wildcards) {
             if (QRegExp(wildcard, Qt::CaseSensitive, QRegExp::Wildcard).exactMatch(uri.mimeType)) {
                 return true;
             }
@@ -358,7 +358,7 @@ XData::Field &XData::fieldRef(const QString &var)
 void XData::setFields(const FieldList &fl)
 {
     d->fields = fl;
-    foreach (const Field &f, fl) {
+    for (const Field &f : fl) {
         if (f.type() == Field::Field_Hidden && f.var() == "FORM_TYPE") {
             d->registrarType = f.value().value(0);
         }
@@ -468,7 +468,7 @@ const QList<XData::ReportItem> &XData::reportItems() const { return d->reportIte
 
 bool XData::isValid() const
 {
-    foreach (const Field &f, d->fields) {
+    for (const Field &f : d->fields) {
         if (!f.isValid())
             return false;
     }

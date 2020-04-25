@@ -45,9 +45,9 @@ public:
         LastType = Blake2b512
     };
 
-    inline Hash(Type type = Type::Unknown) : v_type(type) {}
-    inline Hash(Type type, const QByteArray &data) : v_type(type), v_data(data) {}
-    inline Hash(const QStringRef &algo) : v_type(parseType(algo)) {}
+    inline Hash(Type type = Type::Unknown) : v_type(type) { }
+    inline Hash(Type type, const QByteArray &data) : v_type(type), v_data(data) { }
+    inline Hash(const QStringRef &algo) : v_type(parseType(algo)) { }
     Hash(const QDomElement &);
 
     inline bool operator==(const Hash &other) const { return v_type == other.v_type && v_data == other.v_data; }

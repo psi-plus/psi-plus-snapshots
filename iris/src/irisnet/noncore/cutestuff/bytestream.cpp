@@ -57,7 +57,7 @@
 
 class ByteStream::Private {
 public:
-    Private() {}
+    Private() { }
 
     QByteArray readBuf, writeBuf;
     int        errorCode;

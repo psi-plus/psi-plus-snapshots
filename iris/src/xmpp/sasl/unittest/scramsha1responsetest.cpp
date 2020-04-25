@@ -31,7 +31,7 @@ class SCRAMSHA1ResponseTest : public QObject {
     Q_OBJECT
 
 private slots:
-    void testConstructor_WithAuthzid() {}
+    void testConstructor_WithAuthzid() { }
 
     void testConstructor_WithoutAuthzid()
     {

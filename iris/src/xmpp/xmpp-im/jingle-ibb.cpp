@@ -381,7 +381,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
         XMPP::Jingle::Manager *                                jingleManager = nullptr;
     };
 
-    Manager::Manager(QObject *parent) : TransportManager(parent), d(new Private) {}
+    Manager::Manager(QObject *parent) : TransportManager(parent), d(new Private) { }
 
     Manager::~Manager()
     {

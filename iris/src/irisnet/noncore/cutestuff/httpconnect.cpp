@@ -89,7 +89,7 @@ static bool extractMainHeader(const QString &line, QString *proto, int *code, QS
 
 class HttpConnect::Private {
 public:
-    Private(HttpConnect *_q) : sock(_q) {}
+    Private(HttpConnect *_q) : sock(_q) { }
 
     BSocket sock;
     QString host;

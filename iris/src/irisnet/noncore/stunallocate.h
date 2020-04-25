@@ -40,7 +40,7 @@ public:
         QHostAddress address;
         int          port;
 
-        Channel(const QHostAddress &_address, int _port) : address(_address), port(_port) {}
+        Channel(const QHostAddress &_address, int _port) : address(_address), port(_port) { }
 
         inline bool operator==(const Channel &other)
         {

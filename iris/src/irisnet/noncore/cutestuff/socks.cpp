@@ -389,7 +389,7 @@ enum { StepVersion, StepAuth, StepRequest };
 
 class SocksClient::Private {
 public:
-    Private(SocksClient *_q) : sock(_q) {}
+    Private(SocksClient *_q) : sock(_q) { }
 
     BSocket sock;
     QString host;

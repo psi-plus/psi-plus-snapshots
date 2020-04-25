@@ -91,9 +91,9 @@ static QString genId()
 // Stream
 //----------------------------------------------------------------------------
 static XmlProtocol *foo = nullptr;
-Stream::Stream(QObject *parent) : QObject(parent) {}
+Stream::Stream(QObject *parent) : QObject(parent) { }
 
-Stream::~Stream() {}
+Stream::~Stream() { }
 
 Stanza Stream::createStanza(Stanza::Kind k, const Jid &to, const QString &type, const QString &id)
 {
@@ -272,7 +272,7 @@ void ClientStream::reset(bool all)
         }
     } else {
         QSharedPointer<QDomDocument> sd;
-        foreach (Stanza *s, d->in) {
+        for (Stanza *s : d->in) {
             sd = s->unboundDocument(sd);
         }
     }
@@ -883,7 +883,7 @@ void ClientStream::processNext()
 #endif
         bool ok = d->client.processStep();
         // deal with send/received items
-        foreach (const XmlProtocol::TransferItem &i, d->client.transferItemList) {
+        for (const XmlProtocol::TransferItem &i : d->client.transferItemList) {
             if (i.isExternal)
                 continue;
             QString str;
@@ -1125,7 +1125,7 @@ bool ClientStream::handleNeed()
 
         // ensure simplesasl provider is installed
         bool found = false;
-        foreach (QCA::Provider *p, QCA::providers()) {
+        for (QCA::Provider *p : QCA::providers()) {
             if (p->name() == "simplesasl") {
                 found = true;
                 break;
@@ -1160,7 +1160,7 @@ bool ClientStream::handleNeed()
         }
 
         QString saslProvider;
-        foreach (const QString &mech, d->mechProviders.keys()) {
+        for (const QString &mech : d->mechProviders.keys()) {
             if (ml.contains(mech)) {
                 saslProvider = d->mechProviders[mech];
                 break;
@@ -1523,12 +1523,12 @@ QList<QDomElement> ClientStream::unhandledFeatures() const { return d->client.un
 //----------------------------------------------------------------------------
 // Debug
 //----------------------------------------------------------------------------
-Debug::~Debug() {}
+Debug::~Debug() { }
 
 #ifdef XMPP_TEST
-TD::TD() {}
+TD::TD() { }
 
-TD::~TD() {}
+TD::~TD() { }
 
 void TD::msg(const QString &s)
 {

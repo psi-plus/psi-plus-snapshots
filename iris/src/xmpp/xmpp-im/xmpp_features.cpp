@@ -29,7 +29,7 @@
 
 using namespace XMPP;
 
-Features::Features() {}
+Features::Features() { }
 
 Features::Features(const QStringList &l) { setList(l); }
 
@@ -43,17 +43,39 @@ Features::Features(const QString &str)
     setList(l);
 }
 
-Features::~Features() {}
+Features::~Features() { }
 
-QStringList Features::list() const { return _list.toList(); }
+QStringList Features::list() const
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    return QStringList(_list.begin(), _list.end());
+#else
+    return _list.toList();
+#endif
+}
 
-void Features::setList(const QStringList &l) { _list = QSet<QString>::fromList(l); }
+void Features::setList(const QStringList &l)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    _list = QSet<QString>(l.begin(), l.end());
+#else
+    _list   = QSet<QString>::fromList(l);
+#endif
+}
 
 void Features::setList(const QSet<QString> &l) { _list = l; }
 
 void Features::addFeature(const QString &s) { _list += s; }
 
-bool Features::test(const QStringList &ns) const { return _list.contains(QSet<QString>::fromList(ns)); }
+bool Features::test(const QStringList &ns) const
+{
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+    auto ss = QSet<QString>(ns.begin(), ns.end());
+#else
+    auto ss = QSet<QString>::fromList(ns);
+#endif
+    return _list.contains(ss);
+}
 
 bool Features::test(const QSet<QString> &ns) const { return _list.contains(ns); }
 

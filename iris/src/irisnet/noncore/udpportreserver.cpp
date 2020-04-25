@@ -40,11 +40,11 @@ public:
         // keep track of which addresses we lent out
         QList<QHostAddress> lentAddrs;
 
-        Item() : port(-1), lent(false) {}
+        Item() : port(-1), lent(false) { }
 
         bool haveAddress(const QHostAddress &addr) const
         {
-            foreach (const QUdpSocket *sock, sockList) {
+            for (const QUdpSocket *sock : sockList) {
                 if (sock->localAddress() == addr)
                     return true;
             }
@@ -66,12 +66,12 @@ public:
      */
     QList<Item> items;
 
-    Private(UdpPortReserver *_q) : QObject(_q), q(_q) {}
+    Private(UdpPortReserver *_q) : QObject(_q), q(_q) { }
 
     ~Private()
     {
         bool lendingAny = false;
-        foreach (const Item &i, items) {
+        for (const Item &i : items) {
             if (i.lent) {
                 lendingAny = true;
                 break;
@@ -82,7 +82,7 @@ public:
         if (lendingAny)
             abort();
 
-        foreach (const Item &i, items) {
+        for (const Item &i : items) {
             foreach (QUdpSocket *sock, i.sockList)
                 sock->deleteLater();
         }
@@ -99,9 +99,9 @@ public:
     void updatePorts(const QList<int> &newPorts)
     {
         QList<int> added;
-        foreach (int x, newPorts) {
+        for (int x : newPorts) {
             bool found = false;
-            foreach (const Item &i, items) {
+            for (const Item &i : items) {
                 if (i.port == x) {
                     found = true;
                     break;
@@ -117,7 +117,7 @@ public:
         // keep ports in sorted order
         std::sort(ports.begin(), ports.end());
 
-        foreach (int x, added) {
+        for (int x : added) {
             int insert_before = items.count();
             for (int n = 0; n < items.count(); ++n) {
                 if (x < items[n].port) {
@@ -138,7 +138,7 @@ public:
     bool reservedAll() const
     {
         bool ok = true;
-        foreach (const Item &i, items) {
+        for (const Item &i : items) {
             // skip ports we don't care about
             if (!ports.contains(i.port))
                 continue;
@@ -192,7 +192,7 @@ public:
 
     void returnSockets(const QList<QUdpSocket *> &sockList)
     {
-        foreach (QUdpSocket *sock, sockList) {
+        for (QUdpSocket *sock : sockList) {
             int at = -1;
             for (int n = 0; n < items.count(); ++n) {
                 if (items[n].sockList.contains(sock)) {
@@ -245,12 +245,12 @@ private:
                 continue;
 
             QList<QHostAddress> neededAddrs;
-            foreach (const QHostAddress &a, addrs) {
+            for (const QHostAddress &a : addrs) {
                 if (!i.haveAddress(a))
                     neededAddrs += a;
             }
 
-            foreach (const QHostAddress &a, neededAddrs) {
+            for (const QHostAddress &a : neededAddrs) {
                 QUdpSocket *sock = new QUdpSocket(q);
 
                 if (!sock->bind(a, i.port)) {
@@ -302,7 +302,7 @@ private:
         if (addrs.isEmpty())
             return false;
 
-        foreach (const QHostAddress &a, addrs) {
+        for (const QHostAddress &a : addrs) {
             if (!i.haveAddress(a))
                 return false;
         }
@@ -343,7 +343,7 @@ private:
         QList<QUdpSocket *> out;
 
         i->lent = true;
-        foreach (QUdpSocket *sock, i->sockList) {
+        for (QUdpSocket *sock : i->sockList) {
             i->lentAddrs += sock->localAddress();
             sock->disconnect(this);
             sock->setParent(parent);

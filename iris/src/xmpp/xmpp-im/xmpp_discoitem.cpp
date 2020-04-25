@@ -37,7 +37,7 @@ public:
     QList<XData>          exts;
 };
 
-DiscoItem::DiscoItem() : d(new DiscoItemPrivate) {}
+DiscoItem::DiscoItem() : d(new DiscoItemPrivate) { }
 
 DiscoItem::DiscoItem(const DiscoItem &from) : d(new DiscoItemPrivate) { *this = from; }
 
@@ -54,7 +54,7 @@ DiscoItem &DiscoItem::operator=(const DiscoItem &from)
     return *this;
 }
 
-DiscoItem::~DiscoItem() {}
+DiscoItem::~DiscoItem() { }
 
 AgentItem DiscoItem::toAgentItem() const
 {
@@ -99,7 +99,7 @@ QString DiscoItem::capsHash(QCryptographicHash::Algorithm algo) const
     DiscoItem::Identities idents = d->identities;
     std::sort(idents.begin(), idents.end());
 
-    foreach (const DiscoItem::Identity &id, idents) {
+    for (const DiscoItem::Identity &id : idents) {
         prep << QString("%1/%2/%3/%4").arg(id.category, id.type, id.lang, id.name);
     }
 
@@ -108,7 +108,7 @@ QString DiscoItem::capsHash(QCryptographicHash::Algorithm algo) const
     prep += fl;
 
     QMap<QString, XData> forms;
-    foreach (const XData &xd, d->exts) {
+    for (const XData &xd : d->exts) {
         if (xd.registrarType().isEmpty()) {
             continue;
         }
@@ -117,10 +117,10 @@ QString DiscoItem::capsHash(QCryptographicHash::Algorithm algo) const
         }
         forms.insert(xd.registrarType(), xd);
     }
-    foreach (const XData &xd, forms.values()) {
+    for (const XData &xd : forms.values()) {
         prep << xd.registrarType();
         QMap<QString, QStringList> values;
-        foreach (const XData::Field &f, xd.fields()) {
+        for (const XData::Field &f : xd.fields()) {
             if (f.var() == QLatin1String("FORM_TYPE")) {
                 continue;
             }
@@ -193,7 +193,7 @@ QDomElement DiscoItem::toDiscoInfoResult(QDomDocument *doc) const
         = doc->createElementNS(QLatin1String("http://jabber.org/protocol/disco#info"), QLatin1String("query"));
     q.setAttribute("node", d->node);
 
-    foreach (const Identity &id, d->identities) {
+    for (const Identity &id : d->identities) {
         QDomElement idel = q.appendChild(doc->createElement(QLatin1String("identity"))).toElement();
         idel.setAttribute("category", id.category);
         idel.setAttribute("type", id.type);
@@ -205,12 +205,12 @@ QDomElement DiscoItem::toDiscoInfoResult(QDomDocument *doc) const
         }
     }
 
-    foreach (const QString &f, d->features.list()) {
+    for (const QString &f : d->features.list()) {
         QDomElement fel = q.appendChild(doc->createElement(QLatin1String("feature"))).toElement();
         fel.setAttribute("var", f);
     }
 
-    foreach (const XData &f, d->exts) {
+    for (const XData &f : d->exts) {
         q.appendChild(f.toXml(doc));
     }
 
@@ -253,7 +253,7 @@ void DiscoItem::setExtensions(const QList<XData> &extlist) { d->exts = extlist; 
 
 XData DiscoItem::registeredExtension(const QString &ns) const
 {
-    foreach (const XData &xd, d->exts) {
+    for (const XData &xd : d->exts) {
         if (xd.registrarType() == ns) {
             return xd;
         }
