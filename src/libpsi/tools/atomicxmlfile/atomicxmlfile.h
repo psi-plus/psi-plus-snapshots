@@ -82,7 +82,7 @@ public:
     {
         Q_ASSERT(reader);
 
-        for (QString fileName : loadCandidateList()) {
+        for (const QString &fileName : loadCandidateList()) {
             if (loadDocument(reader, fileName)) {
                 return true;
             }

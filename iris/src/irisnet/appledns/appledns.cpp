@@ -272,7 +272,7 @@ public:
             if (it.value() == p)
                 ids += it.key();
         }
-        foreach (int id, ids)
+        for (int id : ids)
             stop(id);
     }
 

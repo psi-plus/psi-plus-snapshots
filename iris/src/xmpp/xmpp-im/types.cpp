@@ -500,7 +500,7 @@ QDomElement RosterExchangeItem::toXml(Stanza &s) const
         e.setAttribute("action", "modify");
         break;
     }
-    for (QString group : groups_) {
+    for (const QString &group : groups_) {
         e.appendChild(s.createTextElement("http://jabber.org/protocol/rosterx", "group", group));
     }
     return e;

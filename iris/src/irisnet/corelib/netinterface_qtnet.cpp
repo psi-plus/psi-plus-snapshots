@@ -43,7 +43,8 @@ public:
     {
         QList<Info> ifaces;
 
-        for (auto &iface : QNetworkInterface::allInterfaces()) {
+        auto const interfaces = QNetworkInterface::allInterfaces();
+        for (auto &iface : interfaces) {
             Info i;
             i.id         = iface.name();
             i.name       = iface.humanReadableName();

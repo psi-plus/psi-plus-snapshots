@@ -305,7 +305,7 @@ public:
     {
         X11KeyTriggerManager::instance()->removeTrigger(this);
 
-        foreach (GrabbedKey key, grabbedKeys_)
+        for (GrabbedKey key : grabbedKeys_)
             XUngrabKey(QX11Info::display(), key.code, key.mod, QX11Info::appRootWindow());
     }
 

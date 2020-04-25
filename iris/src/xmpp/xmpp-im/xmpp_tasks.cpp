@@ -431,7 +431,7 @@ void JT_Roster::onGo()
         iq                = createIQ(doc(), "set", to.full(), id());
         QDomElement query = doc()->createElementNS("jabber:iq:roster", "query");
         iq.appendChild(query);
-        foreach (const QDomElement &it, d->itemList)
+        for (const QDomElement &it : d->itemList)
             query.appendChild(it);
         send(iq);
     } else if (type == GetDelimiter) {
@@ -452,7 +452,7 @@ QString JT_Roster::toString() const
 
     QDomElement i = doc()->createElement("request");
     i.setAttribute("type", "JT_Roster");
-    foreach (const QDomElement &it, d->itemList)
+    for (const QDomElement &it : d->itemList)
         i.appendChild(it);
     return lineEncode(Stream::xmlToString(i));
 }

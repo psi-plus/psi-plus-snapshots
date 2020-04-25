@@ -1545,7 +1545,7 @@ private:
 
     void cleanup()
     {
-        foreach (JDnsPublishExtra *extra, extraList)
+        for (JDnsPublishExtra *extra : extraList)
             cleanupExtra(extra);
         qDeleteAll(extraList);
         extraList.clear();
@@ -2186,7 +2186,7 @@ private:
                 remove += i;
         }
 
-        foreach (PublishExtraItem *i, remove)
+        for (PublishExtraItem *i : remove)
             publishExtraItemList.remove(i);
     }
 
@@ -2315,7 +2315,7 @@ private slots:
     void pub_addresses_hostName(const QByteArray &name)
     {
         // tell all active publishes about the change
-        foreach (PublishItem *item, publishItemList.items)
+        for (PublishItem *item : publishItemList.items)
             item->publish->hostChanged(name);
     }
 

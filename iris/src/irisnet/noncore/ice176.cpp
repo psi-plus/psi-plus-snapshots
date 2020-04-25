@@ -184,7 +184,7 @@ public:
 
     ~Private()
     {
-        foreach (const Component &c, components)
+        for (const Component &c : components)
             delete c.ic;
 
         // no need to delete pools and bindings since pools already deleted here

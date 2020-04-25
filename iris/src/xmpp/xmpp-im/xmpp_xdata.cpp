@@ -330,7 +330,7 @@ void XData::setType(Type t) { d->type = t; }
 
 QString XData::registrarType() const { return d->registrarType; }
 
-XData::FieldList XData::fields() const { return d->fields; }
+const XData::FieldList &XData::fields() const { return d->fields; }
 
 XData::Field XData::getField(const QString &var) const
 {

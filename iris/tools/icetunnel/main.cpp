@@ -226,7 +226,7 @@ static QStringList iceblock_create(const IceOffer &in)
         userpass += urlishEncode(in.user);
         userpass += urlishEncode(in.pass);
         body += userpass.join(",");
-        foreach (const XMPP::Ice176::Candidate &c, in.candidates)
+        for (const XMPP::Ice176::Candidate &c : in.candidates)
             body += candidate_to_line(c);
         out += line_wrap(body.join(";"), 78);
     }
@@ -527,7 +527,8 @@ public:
                     strList += addr.addr.toString();
                 }
             }*/
-            for (const QNetworkInterface &ni : QNetworkInterface::allInterfaces()) {
+            auto const interfaces = QNetworkInterface::allInterfaces();
+            for (const QNetworkInterface &ni : interfaces) {
                 if (!(ni.flags() & QNetworkInterface::IsUp))
                     continue;
                 QList<QNetworkAddressEntry> entries = ni.addressEntries();
@@ -564,7 +565,7 @@ public:
         listenAddrs = sortAddrs(listenAddrs);
 
         QStringList strList;
-        foreach (const QHostAddress &h, listenAddrs) // QNetworkInterface::allAddresses())
+        for (const QHostAddress &h : listenAddrs) // QNetworkInterface::allAddresses())
         {
             XMPP::Ice176::LocalAddress addr;
             addr.addr = h;
@@ -583,7 +584,7 @@ public:
 
         if (!strList.isEmpty()) {
             printf("Host addresses:\n");
-            foreach (const QString &s, strList)
+            for (const QString &s : strList)
                 printf("  %s\n", qPrintable(s));
         }
 
@@ -669,7 +670,7 @@ private slots:
         out.pass          = ice->localPassword();
         out.candidates    = list;
         QStringList block = iceblock_create(out);
-        foreach (const QString &s, block)
+        for (const QString &s : block)
             printf("%s\n", qPrintable(s));
 
         printf("Give above ICE block to peer.  Obtain peer ICE block and paste below...\n");

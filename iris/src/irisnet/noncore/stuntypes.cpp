@@ -486,7 +486,7 @@ namespace StunTypes {
             if (parseUnknownAttributes(val, &typeList)) {
                 if (!typeList.isEmpty()) {
                     QStringList strList;
-                    foreach (quint16 i, typeList)
+                    for (quint16 i : typeList)
                         strList += QString::asprintf("0x%04x", i);
                     return strList.join(", ");
                 } else

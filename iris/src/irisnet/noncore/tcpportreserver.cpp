@@ -76,7 +76,8 @@ TcpPortServer::PortTypes TcpPortDiscoverer::setTypeMask(TcpPortServer::PortTypes
 void TcpPortDiscoverer::start()
 {
     QList<QHostAddress> listenAddrs;
-    for (const QNetworkInterface &ni : QNetworkInterface::allInterfaces()) {
+    auto const          interfaces = QNetworkInterface::allInterfaces();
+    for (const QNetworkInterface &ni : interfaces) {
         if (!(ni.flags() & (QNetworkInterface::IsUp | QNetworkInterface::IsRunning))) {
             continue;
         }

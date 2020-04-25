@@ -271,7 +271,7 @@ public:
 
     void removeRequest(Request *req)
     {
-        foreach (const SubRecord *srec, req->_subRecords)
+        for (const SubRecord *srec : req->_subRecords)
             _requestsByRecId.remove(srec->_id);
         if (req->_errorTrigger)
             _requestsByTimer.remove(req->_errorTrigger);

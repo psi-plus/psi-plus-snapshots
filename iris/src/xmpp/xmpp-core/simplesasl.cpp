@@ -140,7 +140,7 @@ public:
         Q_UNUSED(allowClientSendFirst);
 
         mechanism_ = QString();
-        for (QString mech : mechlist) {
+        for (const QString &mech : mechlist) {
             if (mech == "SCRAM-SHA-1") {
                 mechanism_ = "SCRAM-SHA-1";
                 break;

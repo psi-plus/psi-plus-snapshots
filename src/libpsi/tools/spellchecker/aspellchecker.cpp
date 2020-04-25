@@ -147,7 +147,7 @@ void ASpellChecker::setActiveLanguages(const QSet<LanguageManager::LangId> &lang
 
 void ASpellChecker::clearSpellers()
 {
-    foreach (AspellSpeller *speller, spellers_)
+    for (AspellSpeller *speller : spellers_)
         delete_aspell_speller(speller);
 
     spellers_.clear();

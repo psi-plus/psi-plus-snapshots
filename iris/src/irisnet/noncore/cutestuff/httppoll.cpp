@@ -636,7 +636,7 @@ void HttpProxyPost::processData(const QByteArray &block)
 #ifdef PROX_DEBUG
                 fprintf(stderr, "HttpProxyPost: header proto=[%s] code=[%d] msg=[%s]\n", proto.latin1(), code,
                         msg.latin1());
-                foreach (const QString &s, d->headerLines)
+                for (const QString &s : d->headerLines)
                     fprintf(stderr, "HttpProxyPost: * [%s]\n", qPrintable(s));
 #endif
             }
@@ -888,7 +888,7 @@ void HttpProxyGetStream::processData(const QByteArray &block)
 #ifdef PROX_DEBUG
                 fprintf(stderr, "HttpProxyGetStream: header proto=[%s] code=[%d] msg=[%s]\n", proto.latin1(), code,
                         msg.latin1());
-                foreach (const QString &s, d->headerLines)
+                for (const QString &s : d->headerLines)
                     fprintf(stderr, "HttpProxyGetStream: * [%s]\n", qPrintable(s));
 #endif
             }

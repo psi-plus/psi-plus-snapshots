@@ -895,7 +895,7 @@ void IceComponent::flagPathAsLowOverhead(int id, const QHostAddress &addr, int p
 void IceComponent::setDebugLevel(DebugLevel level)
 {
     d->debugLevel = level;
-    foreach (const Private::LocalTransport *lt, d->udpTransports)
+    for (const Private::LocalTransport *lt : d->udpTransports)
         lt->sock->setDebugLevel(IceTransport::DebugLevel(level));
     if (d->tcpTurn)
         d->tcpTurn->setDebugLevel((IceTransport::DebugLevel)level);

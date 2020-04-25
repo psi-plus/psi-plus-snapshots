@@ -112,7 +112,7 @@ void HunspellChecker::getSupportedLanguages()
         if (!dir.exists()) {
             continue;
         }
-        foreach (const QFileInfo &fi, dir.entryInfoList(QStringList() << "*.dic", QDir::Files)) {
+        for (const QFileInfo &fi : dir.entryInfoList(QStringList() << "*.dic", QDir::Files)) {
             auto id = LanguageManager::fromString(fi.baseName());
             if (id.language) {
                 retHash.insert(id);

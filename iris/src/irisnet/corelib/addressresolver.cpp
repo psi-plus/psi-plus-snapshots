@@ -124,7 +124,7 @@ private:
 private slots:
     void req6_resultsReady(const QList<XMPP::NameRecord> &results)
     {
-        foreach (const NameRecord &rec, results)
+        for (const NameRecord &rec : results)
             addrs6 += rec.address();
 
         done6 = true;
@@ -141,7 +141,7 @@ private slots:
 
     void req4_resultsReady(const QList<XMPP::NameRecord> &results)
     {
-        foreach (const NameRecord &rec, results)
+        for (const NameRecord &rec : results)
             addrs4 += rec.address();
 
         done4 = true;

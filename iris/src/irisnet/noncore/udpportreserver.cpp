@@ -83,7 +83,7 @@ public:
             abort();
 
         for (const Item &i : items) {
-            foreach (QUdpSocket *sock, i.sockList)
+            for (QUdpSocket *sock : i.sockList)
                 sock->deleteLater();
         }
     }
@@ -272,7 +272,7 @@ private:
 
             // don't care about this port anymore?
             if (!i.lent && !ports.contains(i.port)) {
-                foreach (QUdpSocket *sock, i.sockList)
+                for (QUdpSocket *sock : i.sockList)
                     sock->deleteLater();
 
                 items.removeAt(n);
