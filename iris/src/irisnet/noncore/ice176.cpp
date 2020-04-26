@@ -80,7 +80,14 @@ class Ice176::Private : public QObject {
 
 public:
     // note, Nominating state is skipped when aggressive nomination is enabled.
-    enum State { Stopped, Starting, Started, Nominating, Stopping };
+    enum State {
+        Stopped,
+        Starting,   // preparing local candidates right after start() call
+        Started,    // local candidates ready. ready for pairing with remote
+        Nominating, // for ice2 it's a state when we decided to nominate one of active pairs
+        Active,     // all components have a nominated pair and media transferred over them
+        Stopping    // when received a command from the user to stop
+    };
 
     enum CandidatePairState { PWaiting, PInProgress, PSucceeded, PFailed, PFrozen };
 
@@ -121,17 +128,19 @@ public:
     public:
         QList<QSharedPointer<CandidatePair>> pairs;
         QQueue<QWeakPointer<CandidatePair>>  triggeredPairs;
-        QList<QSharedPointer<CandidatePair>> validPairs;
+        QList<QSharedPointer<CandidatePair>> validPairs; // highest priority and nominated come first
         CheckListState                       state;
     };
 
     class Component {
     public:
-        int           id            = 0;
-        IceComponent *ic            = nullptr;
-        bool          localFinished = false;
-        bool          stopped       = false;
-        bool          lowOverhead   = false;
+        int           id                = 0;
+        IceComponent *ic                = nullptr;
+        bool          localFinished     = false;
+        bool          hasValidPairs     = false;
+        bool          hasNominatedPairs = false;
+        bool          stopped           = false;
+        bool          lowOverhead       = false;
     };
 
     Ice176 *                                q;
@@ -170,6 +179,7 @@ public:
     bool                                    localHostGatheringFinished = false;
     bool                                    localGatheringComplete     = false;
     bool                                    remoteGatheringComplete    = false;
+    bool                                    readyToSendMedia           = false;
 
     Private(Ice176 *_q) : QObject(_q), q(_q)
     {
@@ -255,6 +265,9 @@ public:
 
         localUser = IceAgent::randomCredential(4);
         localPass = IceAgent::randomCredential(22);
+
+        if (!useLocal)
+            useStunBind = false;
 
         QList<QUdpSocket *> socketList;
         if (portReserver)
@@ -578,6 +591,19 @@ public:
         // FIXME: actually do something
     }
 
+    void tryIceSuccess()
+    {
+        if (!readyToSendMedia || !(state == Nominating || state == Started))
+            return;
+        if (!(localFeatures & AggressiveNomination)) {
+            state = Active;
+            emit q->iceFinished(); // nominated won't change anymore
+            return;
+        }
+        // Otherwise we are going to cease checks as soon as we have any "host" or "reflexive" local
+        // valid candidate.
+    }
+
     void tryComponentSuccess(QSharedPointer<CandidatePair> &pair)
     {
         // TODO the pair can change with aggressive validation (?)
@@ -593,6 +619,16 @@ public:
         }
 
         emit q->componentReady(pair->local->componentId - 1);
+
+        if (!readyToSendMedia && !(localFeatures & NotNominatedData && remoteFeatures & NotNominatedData)) {
+            // if both follow RFC8445 and allow to send data on any valid pair
+            components[findComponent(pair->local->componentId)].hasNominatedPairs = true;
+            if (std::all_of(components.begin(), components.end(), [](auto &c) { return c.hasNominatedPairs; })) {
+                readyToSendMedia = true;
+                emit q->readyToSendMedia();
+            }
+        }
+        tryIceSuccess();
     }
 
     // ice negotiation failed. either initial or on ICE restart
@@ -1190,7 +1226,24 @@ private slots:
 
         pair->isValid = true;
         pair->state   = PSucceeded; // what if it was in progress?
-        checkList.validPairs.append(pair);
+        auto insIt    = std::upper_bound(
+            checkList.validPairs.begin(), checkList.validPairs.end(), pair, [](auto &item, auto &toins) {
+                if (toins->isNominated ^ item->isNominated)
+                    return item->isNominated;
+                return item->priority == toins->priority
+                    ? item->local->componentId < toins->local->componentId
+                    : item->priority >= toins->priority; // inverted since we need high priority first
+            });
+        checkList.validPairs.insert(insIt, pair); // nominated and highest priority first
+
+        if (!readyToSendMedia && localFeatures & NotNominatedData && remoteFeatures & NotNominatedData) {
+            // if both follow RFC8445 and allow to send data on any valid pair
+            components[findComponent(pair->local->componentId)].hasValidPairs = true;
+            if (std::all_of(components.begin(), components.end(), [](auto &c) { return c.hasValidPairs; })) {
+                readyToSendMedia = true;
+                emit q->readyToSendMedia();
+            }
+        }
 
         if (mode == Ice176::Initiator) {
             if (!binding->useCandidate())

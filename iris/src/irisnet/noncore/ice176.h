@@ -152,7 +152,9 @@ signals:
 
     void localCandidatesReady(const QList<XMPP::Ice176::Candidate> &list);
     void localGatheringComplete();
-    void componentReady(int index);
+    void readyToSendMedia();        // Has at least one valid candidate for each component
+    void componentReady(int index); // has valid nominated candidate for component with index
+    void iceFinished();             // Final nominated candidates are selected for all components
 
     void readyRead(int componentIndex);
     void datagramsWritten(int componentIndex, int count);
