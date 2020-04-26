@@ -161,7 +161,9 @@ public:
         Q_ASSERT(!stopping);
 
         // only allow setting stun stuff once
-        if (!pending.stunBindAddr.isNull() && config.stunBindAddr.isNull()) {
+        if ((!pending.stunBindAddr.isNull() && config.stunBindAddr.isNull())
+            || (!pending.stunRelayUdpAddr.isNull() && config.stunRelayUdpAddr.isNull())
+            || (!pending.stunRelayTcpAddr.isNull() && config.stunRelayTcpAddr.isNull())) {
             config.stunBindAddr     = pending.stunBindAddr;
             config.stunBindPort     = pending.stunBindPort;
             config.stunRelayUdpAddr = pending.stunRelayUdpAddr;
@@ -200,12 +202,15 @@ public:
                 auto lt = createLocalTransport(IceSocket::Ptr::create(qsock, borrowedSocket, this), la);
                 udpTransports += lt;
 
-                if (useStunBind && !config.stunBindAddr.isNull()) {
-                    lt->sock->setStunBindService(config.stunBindAddr, config.stunBindPort);
-                }
-                if (useStunRelayUdp && !config.stunRelayUdpAddr.isNull() && !config.stunRelayUdpUser.isEmpty()) {
-                    lt->sock->setStunRelayService(config.stunRelayUdpAddr, config.stunRelayUdpPort,
-                                                  config.stunRelayUdpUser, config.stunRelayUdpPass);
+                if (lt->addr.protocol() != QAbstractSocket::IPv6Protocol) {
+                    lt->sock->setClientSoftwareNameAndVersion(clientSoftware);
+                    if (useStunBind && !config.stunBindAddr.isNull()) {
+                        lt->sock->setStunBindService(config.stunBindAddr, config.stunBindPort);
+                    }
+                    if (useStunRelayUdp && !config.stunRelayUdpAddr.isNull() && !config.stunRelayUdpUser.isEmpty()) {
+                        lt->sock->setStunRelayService(config.stunRelayUdpAddr, config.stunRelayUdpPort,
+                                                      config.stunRelayUdpUser, config.stunRelayUdpPass);
+                    }
                 }
 
                 int port = qsock->localPort();
@@ -589,19 +594,8 @@ private slots:
                 return;
         }
 
-        // setup stun/turn
-        bool bind  = useStunBind && !config.stunBindAddr.isNull();
-        bool relay = useStunRelayUdp && !config.stunRelayUdpAddr.isNull() && !config.stunRelayUdpUser.isEmpty();
-        // if need to start stun/turn
-        if (!lt->stun_started && (bind || relay) && lt->addr.protocol() != QAbstractSocket::IPv6Protocol) {
-            lt->sock->setClientSoftwareNameAndVersion(clientSoftware);
-            if (bind) {
-                lt->sock->setStunBindService(config.stunBindAddr, config.stunBindPort);
-            }
-            if (relay) {
-                lt->sock->setStunRelayService(config.stunRelayUdpAddr, config.stunRelayUdpPort, config.stunRelayUdpUser,
-                                              config.stunRelayUdpPass);
-            }
+        if (!lt->stun_started
+            && (!lt->sock->stunBindServiceAddress().isNull() || !lt->sock->stunRelayServiceAddress().isNull())) {
             lt->stun_started = true;
             lt->sock->stunStart();
             if (!watch.isValid())

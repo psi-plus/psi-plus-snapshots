@@ -415,6 +415,7 @@ public:
     QHostAddress                      stunAddr;
     XMPP::UdpPortReserver             portReserver;
     XMPP::Ice176 *                    ice = nullptr;
+    QList<XMPP::Ice176::Candidate>    localCandidates;
     QList<XMPP::Ice176::LocalAddress> localAddrs;
     QList<Channel>                    channels;
     QCA::Console *                    console = nullptr;
@@ -477,8 +478,9 @@ public:
         connect(ice, SIGNAL(started()), SLOT(ice_started()));
         connect(ice, SIGNAL(stopped()), SLOT(ice_stopped()));
         connect(ice, SIGNAL(error(XMPP::Ice176::Error)), SLOT(ice_error(XMPP::Ice176::Error)));
-        connect(ice, SIGNAL(localCandidatesReady(const QList<XMPP::Ice176::Candidate> &)),
-                SLOT(ice_localCandidatesReady(const QList<XMPP::Ice176::Candidate> &)));
+        connect(ice, &XMPP::Ice176::localCandidatesReady, this,
+                [this](const QList<XMPP::Ice176::Candidate> &cs) { localCandidates += cs; });
+        connect(ice, &XMPP::Ice176::localGatheringComplete, this, &App::ice_localGatheringComplete);
         connect(ice, SIGNAL(componentReady(int)), SLOT(ice_componentReady(int)));
         connect(ice, SIGNAL(readyRead(int)), SLOT(ice_readyRead(int)));
         connect(ice, SIGNAL(datagramsWritten(int, int)), SLOT(ice_datagramsWritten(int, int)));
@@ -663,12 +665,12 @@ private slots:
         emit quit();
     }
 
-    void ice_localCandidatesReady(const QList<XMPP::Ice176::Candidate> &list)
+    void ice_localGatheringComplete()
     {
         IceOffer out;
         out.user          = ice->localUfrag();
         out.pass          = ice->localPassword();
-        out.candidates    = list;
+        out.candidates    = localCandidates;
         QStringList block = iceblock_create(out);
         for (const QString &s : block)
             printf("%s\n", qPrintable(s));
