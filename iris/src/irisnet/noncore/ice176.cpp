@@ -642,7 +642,7 @@ public:
                                      return false;
                                  });
         checkList.validPairs.erase(it, checkList.validPairs.end());
-        Q_ASSERT(selected.get() != nullptr);
+        Q_ASSERT(selected.data() != nullptr);
 
         auto &sa = selected->local->addr;
         auto &t  = localCandidates[findLocalCandidate(sa.addr, sa.port)].iceTransport;
