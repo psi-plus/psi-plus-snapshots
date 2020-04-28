@@ -109,6 +109,7 @@ public:
         AggressiveNomination = 0x2, // all the candidates are nominated. so select by priority
         NotNominatedData     = 0x4, // Data on valid but not nominated candidates is allowed
         RTPOptimization      = 0x8, // Different formula for RTO, not used in RFC8445
+        GatheringComplete    = 0x10 // Looks MUST in XEP-0371 but missed in XEP-0176
     };
     Q_DECLARE_FLAGS(Features, Feature)
 
@@ -127,6 +128,7 @@ public:
     void addRemoteCandidates(const QList<Candidate> &list);
     void setRemoteGatheringComplete();
 
+    bool       canSendMedia() const;
     bool       hasPendingDatagrams(int componentIndex) const;
     QByteArray readDatagram(int componentIndex);
     void       writeDatagram(int componentIndex, const QByteArray &datagram);

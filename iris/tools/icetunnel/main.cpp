@@ -484,6 +484,9 @@ public:
         connect(ice, SIGNAL(componentReady(int)), SLOT(ice_componentReady(int)));
         connect(ice, SIGNAL(readyRead(int)), SLOT(ice_readyRead(int)));
         connect(ice, SIGNAL(datagramsWritten(int, int)), SLOT(ice_datagramsWritten(int, int)));
+        connect(ice, &XMPP::Ice176::readyToSendMedia, this, []() { printf("ICE ready to send media.\n"); });
+        connect(ice, &XMPP::Ice176::iceFinished, this,
+                []() { printf("ICE negotiation has finished and media stream is active now.\n"); });
 
         // set up local ports for forwarding
         for (int n = 0; n < opt_channels; ++n) {
@@ -591,7 +594,7 @@ public:
         }
 
         ice->setComponentCount(opt_channels);
-        ice->setLocalFeatures(XMPP::Ice176::Trickle | XMPP::Ice176::AggressiveNomination);
+        ice->setLocalFeatures(XMPP::Ice176::Trickle | XMPP::Ice176::NotNominatedData);
 
         if (!stunAddr.isNull()) {
             if (opt_stunType == Basic || opt_stunType == Auto)
