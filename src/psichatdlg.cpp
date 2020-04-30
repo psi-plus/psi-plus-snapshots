@@ -1,3 +1,28 @@
+/*
+ * psiaccount.cpp - handles a Psi account
+ * Copyright (C) 2001-2005  Justin Karneges
+ * Copyright (C) 2020  Boris Pek <tehnick-8@yandex.ru>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * You can also redistribute and/or modify this program under the
+ * terms of the Psi License, specified in the accompanied COPYING
+ * file, as published by the Psi Project; either dated January 1st,
+ * 2005, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
 #include "psichatdlg.h"
 
 #include "accountlabel.h"
@@ -8,6 +33,7 @@
 #include "coloropt.h"
 #include "fancylabel.h"
 #include "filesharingmanager.h"
+#include "gpgprocess.h"
 #include "iconaction.h"
 #include "iconlabel.h"
 #include "iconselect.h"
@@ -16,6 +42,7 @@
 #include "lastactivitytask.h"
 #include "messageview.h"
 #include "msgmle.h"
+#include "pgputil.h"
 #include "psiaccount.h"
 #include "psiactionlist.h"
 #include "psicon.h"
@@ -604,6 +631,36 @@ void PsiChatDlg::setContactToolTip(QString text)
     ui_.avatar->setToolTip(text);
 }
 
+void PsiChatDlg::showOwnFingerprint()
+{
+    const QStringList arguments = { "--with-colons", "--fingerprint", "0x" + account()->pgpKeyId() };
+
+    GpgProcess gpg;
+    gpg.start(arguments);
+    gpg.waitForFinished();
+
+    QString             fingerprint;
+    const QString &&    out   = QString::fromUtf8(gpg.readAllStandardOutput());
+    const QStringList &&lines = out.split("\n");
+    for (const QString &line : lines) {
+        const QString &&type = line.section(':', 0, 0);
+        if (type == "fpr") {
+            fingerprint = line.section(':', 9, 9);
+            break;
+        }
+    }
+
+    if (fingerprint.size() == 40) {
+        for (int k = fingerprint.size() - 4; k >= 3; k -= 4) {
+            fingerprint.insert(k, ' ');
+        }
+        fingerprint.insert(24, ' ');
+
+        const QString &&msg = tr("Fingerprint for account \"%1\": %2").arg(account()->name()).arg(fingerprint);
+        appendSysMsg(msg);
+    }
+}
+
 void PsiChatDlg::updateJidWidget(const QList<UserListItem *> &ul, int status, bool fromPresence)
 {
     static bool internal_change = false;
@@ -826,7 +883,7 @@ void PsiChatDlg::updatePGP()
 {
     if (account()->hasPGP()) {
         actions_->action("chat_pgp")->setEnabled(true);
-        actions_->action("chat_pgp")->setToolTip(tr("Enable OpenPGP encryption"));
+        actions_->action("chat_pgp")->setToolTip(tr("OpenPGP encryption"));
     } else {
         setPGPEnabled(false);
         actions_->action("chat_pgp")->setEnabled(false);
@@ -863,8 +920,59 @@ void PsiChatDlg::checkPGPAutostart()
 
 void PsiChatDlg::actPgpToggled(bool b)
 {
-    autoPGP_ = false;
-    ui_.log->setEncryptionEnabled(b);
+#ifdef HAVE_PGPUTIL
+    actions_->action("chat_pgp")->setChecked(!b);
+
+    if (!account()->hasPGP() || !PGPUtil::instance().pgpAvailable())
+        return;
+
+    QMenu *  menu                  = new QMenu();
+    QAction *actEnableGpg          = new QAction(tr("Enable OpenPGP encryption"), this);
+    QAction *actDisableGpg         = new QAction(tr("Disable OpenPGP encryption"), this);
+    QAction *actAssignKey          = new QAction(tr("Assign Open&PGP Key"), this);
+    QAction *actUnassignKey        = new QAction(tr("Unassign Open&PGP Key"), this);
+    QAction *actShowOwnFingerprint = new QAction(tr("Show own &fingerprint"), this);
+
+    actEnableGpg->setVisible(b);
+    actDisableGpg->setVisible(!b);
+
+    menu->addAction(actEnableGpg);
+    menu->addAction(actDisableGpg);
+
+    UserListItem *item = account()->findFirstRelevant(jid());
+    if (item) {
+        actAssignKey->setVisible(item->publicKeyID().isEmpty());
+        actUnassignKey->setVisible(!item->publicKeyID().isEmpty());
+
+        menu->addSeparator();
+        menu->addAction(actAssignKey);
+        menu->addAction(actUnassignKey);
+    }
+    menu->addAction(actShowOwnFingerprint);
+
+    QAction *act = menu->exec(QCursor::pos());
+    if (act == actEnableGpg) {
+        autoPGP_ = false;
+        ui_.log->setEncryptionEnabled(true);
+        actions_->action("chat_pgp")->setChecked(true);
+    } else if (act == actDisableGpg) {
+        autoPGP_ = false;
+        ui_.log->setEncryptionEnabled(false);
+        actions_->action("chat_pgp")->setChecked(false);
+    } else if (act == actAssignKey) {
+        if (item) {
+            account()->actionAssignKey(jid());
+        }
+    } else if (act == actUnassignKey) {
+        if (item) {
+            account()->actionUnassignKey(jid());
+        }
+    } else if (act == actShowOwnFingerprint) {
+        showOwnFingerprint();
+    }
+
+    delete menu;
+#endif // HAVE_PGPUTIL
 }
 
 void PsiChatDlg::doClearButton()
