@@ -436,13 +436,13 @@ private slots:
 class StunBind : public QObject {
     Q_OBJECT
 public:
-    bool                 debug;
-    QHostAddress         addr;
-    int                  port;
-    int                  localPort;
-    QUdpSocket *         sock;
-    StunTransactionPool *pool;
-    StunBinding *        binding;
+    bool                     debug;
+    QHostAddress             addr;
+    int                      port;
+    int                      localPort;
+    QUdpSocket *             sock;
+    StunTransactionPool::Ptr pool;
+    StunBinding *            binding;
 
     ~StunBind()
     {
@@ -542,19 +542,19 @@ private:
 class TurnClientTest : public QObject {
     Q_OBJECT
 public:
-    int                  mode  = 0;
-    bool                 debug = false;
-    QHostAddress         relayAddr;
-    int                  relayPort = 0;
-    QString              relayUser;
-    QString              relayPass;
-    QString              relayRealm;
-    QHostAddress         peerAddr;
-    int                  peerPort = 0;
-    QUdpSocket *         udp      = nullptr;
-    StunTransactionPool *pool     = nullptr;
-    QList<bool>          writeItems; // true = turn-originated, false = external
-    TurnClient *         turn = nullptr;
+    int                      mode  = 0;
+    bool                     debug = false;
+    QHostAddress             relayAddr;
+    int                      relayPort = 0;
+    QString                  relayUser;
+    QString                  relayPass;
+    QString                  relayRealm;
+    QHostAddress             peerAddr;
+    int                      peerPort = 0;
+    QUdpSocket *             udp      = nullptr;
+    StunTransactionPool::Ptr pool;
+    QList<bool>              writeItems; // true = turn-originated, false = external
+    TurnClient *             turn = nullptr;
 
     TurnClientTest() = default;
 

@@ -121,13 +121,15 @@ private:
 //   emitted as a direct result of calling certain member functions of this
 //   class as well as any other class that might use it (such as StunBinding).
 //   so, be careful with what you do in your retransmit slot.
-class StunTransactionPool : public QObject {
+class StunTransactionPool : public QObject, public QEnableSharedFromThis<StunTransactionPool> {
     Q_OBJECT
 
 public:
+    using Ptr = QSharedPointer<StunTransactionPool>;
+
     enum DebugLevel { DL_None, DL_Info, DL_Packet };
 
-    StunTransactionPool(StunTransaction::Mode mode, QObject *parent = nullptr);
+    StunTransactionPool(StunTransaction::Mode mode);
     ~StunTransactionPool();
 
     StunTransaction::Mode mode() const;

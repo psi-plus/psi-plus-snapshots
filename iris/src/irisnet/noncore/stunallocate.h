@@ -53,7 +53,7 @@ public:
         inline bool operator!=(const Channel &other) { return !operator==(other); }
     };
 
-    StunAllocate(StunTransactionPool *pool);
+    StunAllocate(XMPP::StunTransactionPool *pool);
     ~StunAllocate();
 
     void setClientSoftwareNameAndVersion(const QString &str);

@@ -116,7 +116,7 @@ public:
 
         // FIXME: this is wrong i think, it should be in LocalTransport
         //   or such, to multiplex ids
-        StunTransactionPool *pool = nullptr;
+        StunTransactionPool::Ptr pool;
 
         inline bool isNull() const { return local->addr.addr.isNull() || remote->addr.addr.isNull(); }
         inline      operator QString() const
@@ -205,25 +205,6 @@ public:
     {
         for (const Component &c : components)
             delete c.ic;
-
-        // no need to delete pools and bindings since pools already deleted here
-        // by QObject destructor as children of this(Ice176::Private) object.
-        // Bindings deleted too as children of pool
-        // should be reviewed by Justin =)
-        /*for(int n = 0; n < checkList.pairs.count(); ++n)
-        {
-            StunBinding *binding = checkList.pairs[n].binding;
-            StunTransactionPool *pool = checkList.pairs[n].pool;
-
-            delete binding;
-
-            if(pool)
-            {
-                pool->disconnect(this);
-                pool->setParent(0);
-                pool->deleteLater();
-            }
-        }*/
     }
 
     void reset() { checkTimer.stop(); /*TODO*/ }
@@ -532,13 +513,31 @@ public:
 
         Component &c = *findComponent(lc.info->componentId);
 
-        pair->pool = new StunTransactionPool(StunTransaction::Udp, this);
-        connect(pair->pool, SIGNAL(outgoingMessage(QByteArray, QHostAddress, int)),
-                SLOT(pool_outgoingMessage(QByteArray, QHostAddress, int)));
+        // read comment to the pool member how wrong it is
+        pair->pool = StunTransactionPool::Ptr::create(StunTransaction::Udp);
+        connect(pair->pool.data(), &StunTransactionPool::outgoingMessage, this,
+                [this, weakPair = pair.toWeakRef()](const QByteArray &packet, const QHostAddress &, int) {
+                    auto pair = weakPair.toStrongRef();
+                    if (!pair)
+                        return;
+                    int at = findLocalCandidate(pair->local->addr.addr, pair->local->addr.port);
+                    if (at == -1) // FIXME: assert?
+                        return;
+
+                    IceComponent::Candidate &lc   = localCandidates[at];
+                    int                      path = lc.path;
+
+                    printf("connectivity check for pair %s%s\n", qPrintable(*pair),
+                           (mode == Initiator
+                                ? (pair->binding->useCandidate() ? " (nominating)" : "")
+                                : (pair->isTriggeredForNominated ? " (triggered check for nominated)" : "")));
+                    lc.iceTransport->writeDatagram(path, packet, pair->remote->addr.addr, pair->remote->addr.port);
+                });
+
         // pair->pool->setUsername(peerUser + ':' + localUser);
         // pair->pool->setPassword(peerPass.toUtf8());
 
-        pair->binding = new StunBinding(pair->pool);
+        pair->binding = new StunBinding(pair->pool.data());
         connect(pair->binding, &StunBinding::success, this, [this, wpair = pair.toWeakRef()]() {
             auto pair = wpair.lock();
             if (pair)
@@ -1193,16 +1192,15 @@ private slots:
 
         for (int n = 0; n < checkList.pairs.count(); ++n) {
             if (idList.contains(checkList.pairs[n]->local->id)) {
-                StunBinding *        binding = checkList.pairs[n]->binding;
-                StunTransactionPool *pool    = checkList.pairs[n]->pool;
+                StunBinding *binding = checkList.pairs[n]->binding;
+                auto         pool    = checkList.pairs[n]->pool;
 
                 delete binding;
 
                 if (pool) {
                     pool->disconnect(this);
-                    pool->setParent(nullptr);
-                    pool->deleteLater();
                 }
+                checkList.pairs[n]->pool.reset();
 
                 checkList.pairs.removeAt(n);
                 --n; // adjust position
@@ -1413,38 +1411,6 @@ private slots:
         Q_UNUSED(count);
         Q_UNUSED(addr);
         Q_UNUSED(port);
-    }
-
-    void pool_outgoingMessage(const QByteArray &packet, const QHostAddress &addr, int port)
-    {
-        Q_UNUSED(addr);
-        Q_UNUSED(port);
-
-        StunTransactionPool *pool = static_cast<StunTransactionPool *>(sender());
-        int                  at   = -1;
-        for (int n = 0; n < checkList.pairs.count(); ++n) {
-            if (checkList.pairs[n]->pool == pool) {
-                at = n;
-                break;
-            }
-        }
-        if (at == -1) // FIXME: assert?
-            return;
-
-        CandidatePair &pair = *checkList.pairs[at];
-
-        at = findLocalCandidate(pair.local->addr.addr, pair.local->addr.port);
-        if (at == -1) // FIXME: assert?
-            return;
-
-        IceComponent::Candidate &lc = localCandidates[at];
-
-        int path = lc.path;
-
-        printf("connectivity check for pair %s%s\n", qPrintable(pair),
-               (mode == Initiator ? (pair.binding->useCandidate() ? " (nominating)" : "")
-                                  : (pair.isTriggeredForNominated ? " (triggered check for nominated)" : "")));
-        lc.iceTransport->writeDatagram(path, packet, pair.remote->addr.addr, pair.remote->addr.port);
     }
 };
 

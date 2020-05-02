@@ -150,34 +150,34 @@ public:
         QByteArray   buf;
     };
 
-    IceLocalTransport *  q;
-    ObjectSession        sess;
-    QUdpSocket *         extSock;
-    SafeUdpSocket *      sock;
-    StunTransactionPool *pool;
-    StunBinding *        stunBinding;
-    TurnClient *         turn;
-    bool                 turnActivated;
-    QHostAddress         addr;
-    int                  port;
-    QHostAddress         refAddr;
-    int                  refPort;
-    QHostAddress         refAddrSource;
-    QHostAddress         relAddr;
-    int                  relPort;
-    QHostAddress         stunBindAddr;
-    int                  stunBindPort;
-    QHostAddress         stunRelayAddr;
-    int                  stunRelayPort;
-    QString              stunUser;
-    QCA::SecureArray     stunPass;
-    QString              clientSoftware;
-    QList<Datagram>      in;
-    QList<Datagram>      inRelayed;
-    QList<WriteItem>     pendingWrites;
-    int                  retryCount;
-    bool                 stopping;
-    int                  debugLevel;
+    IceLocalTransport *      q;
+    ObjectSession            sess;
+    QUdpSocket *             extSock;
+    SafeUdpSocket *          sock;
+    StunTransactionPool::Ptr pool;
+    StunBinding *            stunBinding;
+    TurnClient *             turn;
+    bool                     turnActivated;
+    QHostAddress             addr;
+    int                      port;
+    QHostAddress             refAddr;
+    int                      refPort;
+    QHostAddress             refAddrSource;
+    QHostAddress             relAddr;
+    int                      relPort;
+    QHostAddress             stunBindAddr;
+    int                      stunBindPort;
+    QHostAddress             stunRelayAddr;
+    int                      stunRelayPort;
+    QString                  stunUser;
+    QCA::SecureArray         stunPass;
+    QString                  clientSoftware;
+    QList<Datagram>          in;
+    QList<Datagram>          inRelayed;
+    QList<WriteItem>         pendingWrites;
+    int                      retryCount;
+    bool                     stopping;
+    int                      debugLevel;
 
     Private(IceLocalTransport *_q) :
         QObject(_q), q(_q), sess(this), extSock(nullptr), sock(nullptr), pool(nullptr), stunBinding(nullptr),
@@ -251,12 +251,12 @@ public:
     {
         Q_ASSERT(!pool);
 
-        pool = new StunTransactionPool(StunTransaction::Udp, this);
+        pool = StunTransactionPool::Ptr::create(StunTransaction::Udp);
         pool->setDebugLevel((StunTransactionPool::DebugLevel)debugLevel);
-        connect(pool, SIGNAL(outgoingMessage(QByteArray, QHostAddress, int)),
+        connect(pool.data(), SIGNAL(outgoingMessage(QByteArray, QHostAddress, int)),
                 SLOT(pool_outgoingMessage(QByteArray, QHostAddress, int)));
-        connect(pool, SIGNAL(needAuthParams()), SLOT(pool_needAuthParams()));
-        connect(pool, SIGNAL(debugLine(QString)), SLOT(pool_debugLine(QString)));
+        connect(pool.data(), SIGNAL(needAuthParams()), SLOT(pool_needAuthParams()));
+        connect(pool.data(), SIGNAL(debugLine(QString)), SLOT(pool_debugLine(QString)));
 
         pool->setLongTermAuthEnabled(true);
         if (!stunUser.isEmpty()) {
@@ -273,7 +273,7 @@ public:
         if (stunBindAddr.isNull()) {
             return;
         }
-        stunBinding = new StunBinding(pool);
+        stunBinding = new StunBinding(pool.data());
         connect(stunBinding, &StunBinding::success, this, [&]() {
             refAddr       = stunBinding->reflexiveAddress();
             refPort       = stunBinding->reflexivePort();
@@ -310,7 +310,7 @@ public:
 
         turn->setClientSoftwareNameAndVersion(clientSoftware);
 
-        turn->connectToHost(pool, stunRelayAddr, stunRelayPort);
+        turn->connectToHost(pool.data(), stunRelayAddr, stunRelayPort);
     }
 
 private:

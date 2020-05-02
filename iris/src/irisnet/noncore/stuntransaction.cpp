@@ -123,15 +123,15 @@ class StunTransactionPrivate : public QObject {
 public:
     StunTransaction *q;
 
-    StunTransactionPool * pool;
-    bool                  active;
-    bool                  cancelling = false;
-    StunTransaction::Mode mode;
-    StunMessage           origMessage;
-    QByteArray            id;
-    QByteArray            packet;
-    QHostAddress          to_addr;
-    int                   to_port;
+    StunTransactionPool::Ptr pool;
+    bool                     active;
+    bool                     cancelling = false;
+    StunTransaction::Mode    mode;
+    StunMessage              origMessage;
+    QByteArray               id;
+    QByteArray               packet;
+    QHostAddress             to_addr;
+    int                      to_port;
 
     int     rto, rc, rm, ti;
     int     tries;
@@ -171,7 +171,7 @@ public:
         t->deleteLater();
     }
 
-    void start(StunTransactionPool *_pool, const QHostAddress &toAddress, int toPort)
+    void start(StunTransactionPool::Ptr _pool, const QHostAddress &toAddress, int toPort)
     {
         pool    = _pool;
         mode    = pool->d->mode;
@@ -455,7 +455,7 @@ StunTransaction::~StunTransaction() { delete d; }
 void StunTransaction::start(StunTransactionPool *pool, const QHostAddress &toAddress, int toPort)
 {
     Q_ASSERT(!d->active);
-    d->start(pool, toAddress, toPort);
+    d->start(pool->sharedFromThis(), toAddress, toPort);
 }
 
 void StunTransaction::cancel() { d->cancelling = true; }
@@ -531,7 +531,7 @@ void StunTransactionPoolPrivate::transmit(StunTransaction *trans)
     emit q->outgoingMessage(trans->d->packet, trans->d->to_addr, trans->d->to_port);
 }
 
-StunTransactionPool::StunTransactionPool(StunTransaction::Mode mode, QObject *parent) : QObject(parent)
+StunTransactionPool::StunTransactionPool(StunTransaction::Mode mode)
 {
     d       = new StunTransactionPoolPrivate(this);
     d->mode = mode;

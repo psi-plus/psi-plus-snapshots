@@ -75,27 +75,27 @@ class TurnClient::Private : public QObject {
     Q_OBJECT
 
 public:
-    TurnClient *         q;
-    Proxy                proxy;
-    QString              clientSoftware;
-    TurnClient::Mode     mode = PlainMode;
-    QHostAddress         serverAddr;
-    int                  serverPort = 0;
-    ObjectSession        sess;
-    ByteStream *         bs            = nullptr;
-    QCA::TLS *           tls           = nullptr;
-    bool                 tlsHandshaken = false;
-    QByteArray           inStream;
-    bool                 udp             = false;
-    StunTransactionPool *pool            = nullptr;
-    StunAllocate *       allocate        = nullptr;
-    bool                 allocateStarted = false;
-    QString              user;
-    QCA::SecureArray     pass;
-    QString              realm;
-    int                  retryCount = 0;
-    QString              errorString;
-    int                  debugLevel = 0;
+    TurnClient *             q;
+    Proxy                    proxy;
+    QString                  clientSoftware;
+    TurnClient::Mode         mode = PlainMode;
+    QHostAddress             serverAddr;
+    int                      serverPort = 0;
+    ObjectSession            sess;
+    ByteStream *             bs            = nullptr;
+    QCA::TLS *               tls           = nullptr;
+    bool                     tlsHandshaken = false;
+    QByteArray               inStream;
+    bool                     udp             = false;
+    StunTransactionPool::Ptr pool            = nullptr;
+    StunAllocate *           allocate        = nullptr;
+    bool                     allocateStarted = false;
+    QString                  user;
+    QCA::SecureArray         pass;
+    QString                  realm;
+    int                      retryCount = 0;
+    QString                  errorString;
+    int                      debugLevel = 0;
 
     class WriteItem {
     public:
@@ -150,15 +150,21 @@ public:
 
     ~Private() { cleanup(); }
 
+    void unsetPool()
+    {
+        pool->disconnect(this);
+        pool.reset();
+    }
+
     void cleanup()
     {
         delete allocate;
         allocate = nullptr;
 
         // in udp mode, we don't own the pool
-        if (!udp)
-            delete pool;
-        pool = nullptr;
+        if (!udp) {
+            unsetPool();
+        }
 
         delete tls;
         tls = nullptr;
@@ -233,8 +239,7 @@ public:
 
             // in udp mode, we don't own the pool
             if (!udp)
-                delete pool;
-            pool = nullptr;
+                unsetPool();
 
             if (udp)
                 sess.defer(q, "closed");
@@ -272,12 +277,12 @@ public:
     {
         // when retrying, pool will be non-null because we reuse it
         if (!udp && !pool) {
-            pool = new StunTransactionPool(StunTransaction::Tcp, this);
+            pool = StunTransactionPool::Ptr::create(StunTransaction::Tcp);
             pool->setDebugLevel((StunTransactionPool::DebugLevel)debugLevel);
-            connect(pool, SIGNAL(outgoingMessage(QByteArray, QHostAddress, int)),
+            connect(pool.data(), SIGNAL(outgoingMessage(QByteArray, QHostAddress, int)),
                     SLOT(pool_outgoingMessage(QByteArray, QHostAddress, int)));
-            connect(pool, SIGNAL(needAuthParams()), SLOT(pool_needAuthParams()));
-            connect(pool, SIGNAL(debugLine(QString)), SLOT(pool_debugLine(QString)));
+            connect(pool.data(), SIGNAL(needAuthParams()), SLOT(pool_needAuthParams()));
+            connect(pool.data(), SIGNAL(debugLine(QString)), SLOT(pool_debugLine(QString)));
 
             pool->setLongTermAuthEnabled(true);
             if (!user.isEmpty()) {
@@ -288,7 +293,7 @@ public:
             }
         }
 
-        allocate = new StunAllocate(pool);
+        allocate = new StunAllocate(pool.data());
         connect(allocate, SIGNAL(started()), SLOT(allocate_started()));
         connect(allocate, SIGNAL(stopped()), SLOT(allocate_stopped()));
         connect(allocate, SIGNAL(error(XMPP::StunAllocate::Error)), SLOT(allocate_error(XMPP::StunAllocate::Error)));
@@ -586,9 +591,9 @@ public:
             // start completely over, but retain the same pool
             //   so the user isn't asked to auth again
 
-            int                  tmp_retryCount = retryCount;
-            StunTransactionPool *tmp_pool       = pool;
-            pool                                = nullptr;
+            int                      tmp_retryCount = retryCount;
+            StunTransactionPool::Ptr tmp_pool       = pool;
+            pool.reset();
 
             cleanup();
 
@@ -803,8 +808,7 @@ private slots:
 
         // in udp mode, we don't own the pool
         if (!udp)
-            delete pool;
-        pool = nullptr;
+            unsetPool();
 
         if (udp)
             emit q->closed();
@@ -871,7 +875,7 @@ void TurnClient::connectToHost(StunTransactionPool *pool, const QHostAddress &ad
     d->serverAddr = addr;
     d->serverPort = port;
     d->udp        = true;
-    d->pool       = pool;
+    d->pool       = pool->sharedFromThis();
     d->in.clear();
     d->do_connect();
 }

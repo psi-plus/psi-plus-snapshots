@@ -74,18 +74,18 @@ class StunAllocatePermission : public QObject {
     Q_OBJECT
 
 public:
-    QTimer *             timer;
-    StunTransactionPool *pool;
-    StunTransaction *    trans;
-    QHostAddress         stunAddr;
-    int                  stunPort;
-    QHostAddress         addr;
-    bool                 active;
+    QTimer *                 timer;
+    StunTransactionPool::Ptr pool;
+    StunTransaction *        trans;
+    QHostAddress             stunAddr;
+    int                      stunPort;
+    QHostAddress             addr;
+    bool                     active;
 
     enum Error { ErrorGeneric, ErrorProtocol, ErrorCapacity, ErrorForbidden, ErrorRejected, ErrorTimeout };
 
-    StunAllocatePermission(StunTransactionPool *_pool, const QHostAddress &_addr) :
-        QObject(_pool), pool(_pool), trans(nullptr), addr(_addr), active(false)
+    StunAllocatePermission(StunTransactionPool::Ptr _pool, const QHostAddress &_addr) :
+        QObject(_pool.data()), pool(_pool), trans(nullptr), addr(_addr), active(false)
     {
         timer = new QTimer(this);
         connect(timer, SIGNAL(timeout()), SLOT(timer_timeout()));
@@ -149,7 +149,7 @@ private:
         connect(trans, SIGNAL(createMessage(QByteArray)), SLOT(trans_createMessage(QByteArray)));
         connect(trans, SIGNAL(finished(XMPP::StunMessage)), SLOT(trans_finished(XMPP::StunMessage)));
         connect(trans, SIGNAL(error(XMPP::StunTransaction::Error)), SLOT(trans_error(XMPP::StunTransaction::Error)));
-        trans->start(pool, stunAddr, stunPort);
+        trans->start(pool.data(), stunAddr, stunPort);
     }
 
     void restartTimer() { timer->start(); }
@@ -236,20 +236,21 @@ class StunAllocateChannel : public QObject {
     Q_OBJECT
 
 public:
-    QTimer *             timer;
-    StunTransactionPool *pool;
-    StunTransaction *    trans;
-    QHostAddress         stunAddr;
-    int                  stunPort;
-    int                  channelId;
-    QHostAddress         addr;
-    int                  port;
-    bool                 active;
+    QTimer *                 timer;
+    StunTransactionPool::Ptr pool;
+    StunTransaction *        trans;
+    QHostAddress             stunAddr;
+    int                      stunPort;
+    int                      channelId;
+    QHostAddress             addr;
+    int                      port;
+    bool                     active;
 
     enum Error { ErrorGeneric, ErrorProtocol, ErrorCapacity, ErrorForbidden, ErrorRejected, ErrorTimeout };
 
-    StunAllocateChannel(StunTransactionPool *_pool, int _channelId, const QHostAddress &_addr, int _port) :
-        QObject(_pool), pool(_pool), trans(nullptr), channelId(_channelId), addr(_addr), port(_port), active(false)
+    StunAllocateChannel(StunTransactionPool::Ptr _pool, int _channelId, const QHostAddress &_addr, int _port) :
+        QObject(_pool.data()), pool(_pool), trans(nullptr), channelId(_channelId), addr(_addr), port(_port),
+        active(false)
     {
         timer = new QTimer(this);
         connect(timer, SIGNAL(timeout()), SLOT(timer_timeout()));
@@ -314,7 +315,7 @@ private:
         connect(trans, SIGNAL(createMessage(QByteArray)), SLOT(trans_createMessage(QByteArray)));
         connect(trans, SIGNAL(finished(XMPP::StunMessage)), SLOT(trans_finished(XMPP::StunMessage)));
         connect(trans, SIGNAL(error(XMPP::StunTransaction::Error)), SLOT(trans_error(XMPP::StunTransaction::Error)));
-        trans->start(pool, stunAddr, stunPort);
+        trans->start(pool.data(), stunAddr, stunPort);
     }
 
     void restartTimer() { timer->start(); }
@@ -417,7 +418,7 @@ public:
 
     StunAllocate *                  q;
     ObjectSession                   sess;
-    StunTransactionPool *           pool;
+    StunTransactionPool::Ptr        pool;
     StunTransaction *               trans;
     QHostAddress                    stunAddr;
     int                             stunPort;
@@ -725,7 +726,7 @@ private:
         connect(trans, SIGNAL(createMessage(QByteArray)), SLOT(trans_createMessage(QByteArray)));
         connect(trans, SIGNAL(finished(XMPP::StunMessage)), SLOT(trans_finished(XMPP::StunMessage)));
         connect(trans, SIGNAL(error(XMPP::StunTransaction::Error)), SLOT(trans_error(XMPP::StunTransaction::Error)));
-        trans->start(pool, stunAddr, stunPort);
+        trans->start(pool.data(), stunAddr, stunPort);
     }
 
     void restartRefreshTimer()
@@ -1088,7 +1089,7 @@ private slots:
 StunAllocate::StunAllocate(StunTransactionPool *pool) : QObject(pool)
 {
     d       = new Private(this);
-    d->pool = pool;
+    d->pool = pool->sharedFromThis();
 }
 
 StunAllocate::~StunAllocate() { delete d; }
