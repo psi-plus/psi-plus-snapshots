@@ -256,7 +256,7 @@ private:
     static bool failed;
     static int  XGrabErrorHandler(Display *, XErrorEvent *)
     {
-        qWarning("failed to grab key");
+        qDebug("failed to grab key");
         failed = true;
         return 0;
     }

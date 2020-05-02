@@ -60,7 +60,12 @@ class IceComponent::Private : public QObject {
             sock->disconnect(ic);
             if (borrowed) {
                 Q_ASSERT(ic->portReserver);
-                ic->portReserver->returnSockets(QList<QUdpSocket *>() << sock);
+                // It's quite common to move Ice176 to another thread, but port reserver is not moved anywhere,
+                // so we still need to carefully return not needed sockets.
+                QTimer::singleShot(0, ic->portReserver->thread(), [pr = ic->portReserver, sock = sock]() {
+                    sock->moveToThread(pr->thread());
+                    pr->returnSockets(QList<QUdpSocket *>() << sock);
+                });
             } else {
                 sock->deleteLater();
             }
