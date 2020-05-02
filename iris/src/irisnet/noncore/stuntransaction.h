@@ -20,6 +20,7 @@
 #define STUNTRANSACTION_H
 
 #include <QByteArray>
+#include <QEnableSharedFromThis>
 #include <QHostAddress>
 #include <QObject>
 

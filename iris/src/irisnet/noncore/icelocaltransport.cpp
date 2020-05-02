@@ -237,7 +237,11 @@ public:
     void stop()
     {
         Q_ASSERT(sock);
-        Q_ASSERT(!stopping);
+        if (stopping) {
+            auto as = QString("%1:%2").arg(addr.toString(), QString::number(port));
+            emit q->debugLine(QString("local transport %1 is already stopping. just wait...").arg(as));
+            return;
+        }
 
         stopping = true;
 
