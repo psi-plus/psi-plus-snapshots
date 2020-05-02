@@ -103,7 +103,14 @@ bool EnchantChecker::available() const { return (spellers_.isEmpty() != true); }
 
 bool EnchantChecker::writable() const { return false; }
 
-QSet<LanguageManager::LangId> EnchantChecker::getAllLanguages() const { return allLanguages_.keys().toSet(); }
+QSet<LanguageManager::LangId> EnchantChecker::getAllLanguages() const
+{
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+    return allLanguages_.keys().toSet();
+#else
+    return QSet<LanguageManager::LangId>(allLanguages_.keyBegin(), allLanguages_.keyEnd());
+#endif
+}
 
 void EnchantChecker::setActiveLanguages(const QSet<LanguageManager::LangId> &langs)
 {

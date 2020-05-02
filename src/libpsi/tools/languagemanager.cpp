@@ -146,7 +146,11 @@ QString LanguageManager::bestUiMatch(QHash<QString, QString> langToText)
         langs.insert(LanguageManager::fromString(l.key()),
                      l.value()); // FIXME: all unknown languages will be converted to C/default locale
     }
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
     auto preferred = LanguageManager::bestUiMatch(langs.keys().toSet(), true);
+#else
+    auto preferred = LanguageManager::bestUiMatch(QSet<LangId>(langs.keyBegin(), langs.keyEnd()), true);
+#endif
     if (preferred.count()) {
         return langs.value(preferred.first());
     }
