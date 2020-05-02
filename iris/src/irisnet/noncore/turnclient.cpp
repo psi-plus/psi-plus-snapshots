@@ -86,8 +86,8 @@ public:
     QCA::TLS *               tls           = nullptr;
     bool                     tlsHandshaken = false;
     QByteArray               inStream;
-    bool                     udp             = false;
-    StunTransactionPool::Ptr pool            = nullptr;
+    bool                     udp = false;
+    StunTransactionPool::Ptr pool;
     StunAllocate *           allocate        = nullptr;
     bool                     allocateStarted = false;
     QString                  user;
