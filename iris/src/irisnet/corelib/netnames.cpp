@@ -798,7 +798,6 @@ public:
             p_serv = c;
 
             // use queued connections
-            qRegisterMetaType<QHostAddress>("QHostAddress");
             qRegisterMetaType<QList<XMPP::ServiceProvider::ResolveResult>>(
                 "QList<XMPP::ServiceProvider::ResolveResult>");
             connect(p_serv, SIGNAL(resolve_resultsReady(int, QList<XMPP::ServiceProvider::ResolveResult>)),

@@ -601,8 +601,11 @@ public:
 
         auto &pair = *it;
         int   at   = findLocalCandidate(pair->local->addr.addr, pair->local->addr.port);
-        if (at == -1) // FIXME: assert?
+        if (at == -1) { // FIXME: assert?
+            qDebug("FIXME! Failed to find local candidate for componentId=%d, addr=%s", componentIndex + 1,
+                   qPrintable(pair->local->addr));
             return;
+        }
 
         IceComponent::Candidate &lc = localCandidates[at];
 
@@ -655,7 +658,8 @@ public:
         // stop not used transports
         for (auto &c : localCandidates) {
             if (c.info->componentId == componentId && c.iceTransport != t) {
-                c.iceTransport->stop();
+                // FIXME! it cleanups more candidates than it should (particularly ones from selected pairs)
+                // c.iceTransport->stop();
             }
         }
     }
@@ -1048,7 +1052,7 @@ private:
             });
         checkList.validPairs.insert(insIt, pair); // nominated and highest priority first
 
-        if (!readyToSendMedia && localFeatures & NotNominatedData && remoteFeatures & NotNominatedData) {
+        if (!readyToSendMedia && (localFeatures & NotNominatedData) && (remoteFeatures & NotNominatedData)) {
             // if both follow RFC8445 and allow to send data on any valid pair
             findComponent(pair->local->componentId)->hasValidPairs = true;
             if (std::all_of(components.begin(), components.end(), [](auto &c) { return c.hasValidPairs; })) {

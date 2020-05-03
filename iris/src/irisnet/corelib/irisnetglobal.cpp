@@ -230,6 +230,7 @@ static void init()
     if (global)
         return;
 
+    qRegisterMetaType<QHostAddress>("QHostAddress");
     global = new IrisNetGlobal;
     qAddPostRoutine(deinit);
 }
