@@ -241,6 +241,9 @@ public:
             auto as = QString("%1:%2").arg(addr.toString(), QString::number(port));
             emit q->debugLine(QString("local transport %1 is already stopping. just wait...").arg(as));
             return;
+        } else {
+            auto as = QString("%1:%2").arg(addr.toString(), QString::number(port));
+            emit q->debugLine(QString("stopping local transport %1.").arg(as));
         }
 
         stopping = true;

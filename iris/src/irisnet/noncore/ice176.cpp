@@ -142,11 +142,11 @@ public:
         int                     id              = 0;
         IceComponent *          ic              = nullptr;
         std::unique_ptr<QTimer> nominationTimer = std::unique_ptr<QTimer>();
-        bool                    localFinished   = false;
-        bool                    hasValidPairs   = false;
-        bool                    finalSelected   = false;
-        bool                    stopped         = false;
-        bool                    lowOverhead     = false;
+        CandidatePair::Ptr      selectedPair;
+        bool                    localFinished = false;
+        bool                    hasValidPairs = false;
+        bool                    stopped       = false;
+        bool                    lowOverhead   = false;
     };
 
     Ice176 *                                q;
@@ -592,18 +592,22 @@ public:
 
     void write(int componentIndex, const QByteArray &datagram)
     {
-        auto it = std::find_if(checkList.validPairs.begin(), checkList.validPairs.end(),
-                               [&](const auto &p) { return p->local->componentId - 1 == componentIndex; });
-        if (it == checkList.validPairs.end()) {
-            qDebug("An attempt to write to an ICE component w/o valid sockets");
-            return;
+        auto cIt = findComponent(componentIndex + 1);
+        Q_ASSERT(cIt != components.end());
+
+        auto pair = cIt->selectedPair;
+        if (!pair) {
+            pair = chooseSelectedPair(componentIndex + 1);
+            if (!pair) {
+                qDebug("An attempt to write to an ICE component w/o valid sockets");
+                return;
+            }
         }
 
-        auto &pair = *it;
-        int   at   = findLocalCandidate(pair->local->addr.addr, pair->local->addr.port);
+        int at = findLocalCandidate(pair->local->addr.addr, pair->local->addr.port);
         if (at == -1) { // FIXME: assert?
-            qDebug("FIXME! Failed to find local candidate for componentId=%d, addr=%s", componentIndex + 1,
-                   qPrintable(pair->local->addr));
+            // qDebug("FIXME! Failed to find local candidate for componentId=%d, addr=%s", componentIndex + 1,
+            //       qPrintable(pair->local->addr));
             return;
         }
 
@@ -629,49 +633,55 @@ public:
 
     void cleanupButSelectedPair(int componentId)
     {
-        CandidatePair::Ptr selected;
+        CandidatePair::Ptr selected = findComponent(componentId)->selectedPair;
+        Q_ASSERT(selected);
+        decltype(checkList.validPairs) newValid;
+        newValid.push_back(selected);
+        for (auto &p : checkList.validPairs)
+            if (p->local->componentId != componentId)
+                newValid.push_back(p);
+        checkList.validPairs = newValid;
 
-        auto it = std::remove_if(checkList.validPairs.begin(), checkList.validPairs.end(),
-                                 [&, keep = true](auto &pair) mutable {
-                                     if (pair->local->componentId == componentId) {
-                                         if (keep) {
-                                             selected = pair;
-                                             keep     = false;
-                                             return false;
-                                         }
-                                         return true;
-                                     }
-                                     return false;
-                                 });
-        checkList.validPairs.erase(it, checkList.validPairs.end());
-        Q_ASSERT(selected.data() != nullptr);
+        qDebug("C%d: selected pair: %s", componentId, qPrintable(*selected));
 
-        auto &sa = selected->local->addr;
+        auto &sa = selected->local->base;
         auto &t  = localCandidates[findLocalCandidate(sa.addr, sa.port)].iceTransport;
+        Q_ASSERT(t.data() != nullptr);
         // cancel active transactions
         for (auto &p : checkList.pairs) {
             if (p->local->componentId == componentId && p->state == PInProgress) {
                 p->binding->cancel();
                 p->state = PFailed;
+                qDebug("Cancel %s setting it to failed state", qPrintable(*p));
             }
         }
         // stop not used transports
         for (auto &c : localCandidates) {
             if (c.info->componentId == componentId && c.iceTransport != t) {
                 // FIXME! it cleanups more candidates than it should (particularly ones from selected pairs)
-                // c.iceTransport->stop();
+                c.iceTransport->stop();
             }
         }
     }
 
+    CandidatePair::Ptr chooseSelectedPair(int componentId)
+    {
+        auto it = std::find_if(checkList.validPairs.begin(), checkList.validPairs.end(),
+                               [&](auto &pair) mutable { return pair->local->componentId == componentId; });
+        return it == checkList.validPairs.end() ? CandidatePair::Ptr() : *it;
+    }
+
     bool canHaveMoreRemoteCandidates() const { return remoteGatheringComplete || !(remoteFeatures & Trickle); }
 
-    void tryNominateSelectedPair()
+    void tryNominateSelectedPair(int componentId)
     {
         if (mode != Initiator || state != Started || checkList.validPairs.isEmpty())
             return;
-        Q_ASSERT(!checkList.validPairs.first()->isNominated);
-        if (checkList.validPairs.first()->local->type == IceComponent::RelayedType) {
+        auto pair = chooseSelectedPair(componentId);
+        if (!pair)
+            return;
+        Q_ASSERT(!pair->isNominated);
+        if (pair->local->type == IceComponent::RelayedType) {
             if (!(localGatheringComplete && canHaveMoreRemoteCandidates())) {
                 printf("Wiating for gathering complete on both sides before nomination of relayed pair");
                 return; // maybe we gonna have a non-relayed pair. RFC8445 anyway allows to send data on any valid.
@@ -686,7 +696,6 @@ public:
             }
         }
         state                 = Nominating;
-        auto pair             = checkList.validPairs.first();
         pair->finalNomination = true;
         printf("Nominating valid pair: %s\n", qPrintable(*pair));
         checkList.triggeredPairs.prepend(pair);
@@ -694,11 +703,10 @@ public:
 
     void tryIceFinished()
     {
-        if (!std::all_of(components.begin(), components.end(), [](auto &c) { return c.finalSelected; }))
+        if (!std::all_of(components.begin(), components.end(), [](auto &c) { return c.selectedPair != nullptr; }))
             return;
         if (!readyToSendMedia) {
-            readyToSendMedia = true;
-            emit q->readyToSendMedia();
+            onReadyToSendMedia();
         }
         state = Active;
         emit q->iceFinished();
@@ -729,17 +737,17 @@ public:
             connect(timer, &QTimer::timeout, this, [this, componentId = pair->local->componentId]() {
                 if (state != Started && state != Nominating)
                     return; // likely user stopped or it's alreday active
-                auto &finalSelected = findComponent(componentId)->finalSelected;
-                if (finalSelected)
+                auto &selectedPair = findComponent(componentId)->selectedPair;
+                if (selectedPair)
                     return;
+                selectedPair = chooseSelectedPair(componentId);
                 cleanupButSelectedPair(componentId);
-                finalSelected = true;
                 tryIceFinished();
             });
             timer->start();
         } else {
+            c.selectedPair = chooseSelectedPair(pair->local->componentId);
             cleanupButSelectedPair(pair->local->componentId);
-            c.finalSelected = true;
             tryIceFinished();
         }
     }
@@ -821,7 +829,8 @@ public:
             return;
 
         if (!checkList.validPairs.isEmpty() && mode == Initiator && !(localFeatures & AggressiveNomination))
-            tryNominateSelectedPair();
+            for (auto &c : components)
+                tryNominateSelectedPair(c.id);
     }
 
     void updateRemoteGatheringTimeout()
@@ -971,6 +980,17 @@ private:
         return id;
     }
 
+    void onReadyToSendMedia()
+    {
+        qDebug("Ready to send media!");
+        for (auto &c : components) {
+            qDebug("  Selected pair for component %d: %s (base: %s)", c.id, qPrintable(*c.selectedPair),
+                   qPrintable(c.selectedPair->local->base));
+        }
+        readyToSendMedia = true;
+        emit q->readyToSendMedia();
+    }
+
     void handlePairBindingSuccess(CandidatePair::Ptr pair)
     {
         /*
@@ -983,9 +1003,10 @@ private:
 
         StunBinding *binding = pair->binding;
         // pair->isValid = true;
-        pair->state                  = CandidatePairState::PSucceeded;
-        bool isTriggeredForNominated = pair->isTriggeredForNominated;
-        bool finalNomination         = pair->finalNomination;
+        pair->state                   = CandidatePairState::PSucceeded;
+        bool  isTriggeredForNominated = pair->isTriggeredForNominated;
+        bool  finalNomination         = pair->finalNomination;
+        auto &component               = *findComponent(pair->local->componentId);
 
         printf("check success for %s\n", qPrintable(QString(*pair)));
 
@@ -1041,30 +1062,37 @@ private:
             if (p->state == PFrozen && p->foundation == pair->foundation)
                 p->state = PWaiting;
 
-        // find position to insert in sorted list of valid pairs
-        auto insIt = std::upper_bound(
-            checkList.validPairs.begin(), checkList.validPairs.end(), pair, [](auto &item, auto &toins) {
-                if (toins->isNominated ^ item->isNominated)
-                    return item->isNominated;
-                return item->priority == toins->priority
-                    ? item->local->componentId < toins->local->componentId
-                    : item->priority >= toins->priority; // inverted since we need high priority first
-            });
-        checkList.validPairs.insert(insIt, pair); // nominated and highest priority first
+        if (!component.selectedPair) {
+            // find position to insert in sorted list of valid pairs
+            auto insIt = std::upper_bound(
+                checkList.validPairs.begin(), checkList.validPairs.end(), pair, [](auto &item, auto &toins) {
+                    if (toins->isNominated ^ item->isNominated)
+                        return item->isNominated;
+                    return item->priority == toins->priority
+                        ? item->local->componentId < toins->local->componentId
+                        : item->priority >= toins->priority; // inverted since we need high priority first
+                });
+
+            checkList.validPairs.insert(insIt, pair); // nominated and highest priority first
+            qDebug("C%d: insert to valid list %s", component.id, qPrintable(*pair));
+            qDebug("Current valid list state:");
+            for (auto &p : checkList.validPairs) {
+                qDebug("  C%d: %s", component.id, qPrintable(*p));
+            }
+        }
 
         if (!readyToSendMedia && (localFeatures & NotNominatedData) && (remoteFeatures & NotNominatedData)) {
             // if both follow RFC8445 and allow to send data on any valid pair
             findComponent(pair->local->componentId)->hasValidPairs = true;
             if (std::all_of(components.begin(), components.end(), [](auto &c) { return c.hasValidPairs; })) {
-                readyToSendMedia = true;
-                emit q->readyToSendMedia();
+                onReadyToSendMedia();
             }
         }
 
         if (mode == Ice176::Initiator) {
             if (!binding->useCandidate()) {
                 if (!(localFeatures & AggressiveNomination))
-                    tryNominateSelectedPair();
+                    tryNominateSelectedPair(component.id);
                 return;
             }
         } else {
