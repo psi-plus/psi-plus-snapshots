@@ -24,7 +24,7 @@ NotesController::NotesController(StorageNotesPlugin *plugin) : QObject(nullptr),
 
 NotesController::~NotesController()
 {
-    foreach (Notes *n, notesList_.values()) {
+    for (Notes *n : notesList_.values()) {
         delete n;
         n = nullptr;
     }
@@ -52,7 +52,7 @@ void NotesController::start(int account)
         note->raise();
     } else {
         note = new Notes(plugin_, account);
-        connect(note, SIGNAL(notesDeleted(int)), this, SLOT(notesDeleted(int)));
+        connect(note, &Notes::notesDeleted, this, &NotesController::notesDeleted);
 
         notesList_.insert(account, note);
         note->load();

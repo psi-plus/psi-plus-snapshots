@@ -39,7 +39,7 @@ QPixmap Skin::previewPixmap()
     QDir    dir(skinFolder());
     QString skinName = name();
     QPixmap pix      = QPixmap();
-    foreach (QString fileName, dir.entryList(QDir::Files)) {
+    for (auto fileName : dir.entryList(QDir::Files)) {
         if ((fileName.endsWith(".png", Qt::CaseInsensitive) || fileName.endsWith(".jpg", Qt::CaseInsensitive))
             && skinName.left(skinName.length() - 4) == fileName.left(fileName.length() - 4)) {
             pix = QPixmap(dir.absolutePath() + "/" + fileName);
@@ -67,8 +67,8 @@ Previewer::Previewer(Skin *skin, QWidget *parent) : QDialog(parent), skin_(skin)
     setModal(true);
     ui_.setupUi(this);
 
-    connect(ui_.pb_close, SIGNAL(released()), this, SLOT(close()));
-    connect(ui_.pb_apply, SIGNAL(released()), this, SIGNAL(applySkin()));
+    connect(ui_.pb_close, &QPushButton::released, this, &Previewer::close);
+    connect(ui_.pb_apply, &QPushButton::released, this, &Previewer::applySkin);
 }
 
 bool Previewer::loadSkinInformation()
@@ -103,8 +103,8 @@ GetSkinName::GetSkinName(QString name, QString author, QString version, QWidget 
     setModal(true);
     ui_.setupUi(this);
 
-    connect(ui_.pb_cancel, SIGNAL(released()), this, SLOT(close()));
-    connect(ui_.pb_ok, SIGNAL(released()), this, SLOT(okPressed()));
+    connect(ui_.pb_cancel, &QPushButton::released, this, &GetSkinName::close);
+    connect(ui_.pb_ok, &QPushButton::released, this, &GetSkinName::okPressed);
 
     ui_.le_name->setText(name);
     ui_.le_author->setText(author);

@@ -38,14 +38,15 @@ void ClearingViewer::init(IconFactoryAccessingHost *iconHost)
     horizontalHeader()->setSortIndicator(-1, Qt::AscendingOrder);
     verticalHeader()->setDefaultAlignment(Qt::AlignHCenter);
 
+    // TODO: update after stopping support of Ubuntu Xenial:
     connect(horizontalHeader(), SIGNAL(sectionClicked(int)), this, SLOT(sortByColumn(int)));
-    connect(this, SIGNAL(clicked(QModelIndex)), this, SLOT(itemClicked(QModelIndex)));
+    connect(this, &ClearingViewer::clicked, this, &ClearingViewer::itemClicked);
 }
 
 void ClearingViewer::keyPressEvent(QKeyEvent *e)
 {
     if (e->key() == Qt::Key_Space) {
-        foreach (const QModelIndex &check, selectionModel()->selectedRows(0)) {
+        for (const QModelIndex &check : selectionModel()->selectedRows(0)) {
             model()->setData(check, 3); // invert
         }
         e->accept();
@@ -67,7 +68,7 @@ void ClearingViewer::contextMenuEvent(QContextMenuEvent *e)
     int      iresult;
     if (result) {
         iresult = actions.indexOf(result);
-        foreach (const QModelIndex &check, selectionModel()->selectedRows(0)) {
+        for (const QModelIndex &check : selectionModel()->selectedRows(0)) {
             switch (iresult) {
             case 0: // check
                 model()->setData(check, QVariant(2));

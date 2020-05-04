@@ -212,11 +212,11 @@ QWidget *Reminder::options()
     ui_.tb_get->setIcon(icoHost->getIcon("psi/browse"));
     ui_.tb_check->setIcon(icoHost->getIcon("psi/play"));
 
-    connect(ui_.pb_update, SIGNAL(clicked()), SLOT(updateVCard()));
-    connect(ui_.pb_check, SIGNAL(clicked()), SLOT(check()));
-    connect(ui_.pb_clear_cache, SIGNAL(clicked()), SLOT(clearCache()));
-    connect(ui_.tb_check, SIGNAL(clicked()), SLOT(checkSound()));
-    connect(ui_.tb_get, SIGNAL(clicked()), SLOT(getSound()));
+    connect(ui_.pb_update, &QPushButton::clicked, this, &Reminder::updateVCard);
+    connect(ui_.pb_check, &QPushButton::clicked, this, &Reminder::check);
+    connect(ui_.pb_clear_cache, &QPushButton::clicked, this, &Reminder::clearCache);
+    connect(ui_.tb_check, &QPushButton::clicked, this, &Reminder::checkSound);
+    connect(ui_.tb_get, &QPushButton::clicked, this, &Reminder::getSound);
 
     restoreOptions();
 
@@ -319,7 +319,7 @@ void Reminder::updateVCard()
         updateInProgress   = true;
         const QString path = appInfoHost->appVCardDir();
         QDir          dir(path);
-        foreach (QString filename, dir.entryList(QDir::Files)) {
+        for (auto filename : dir.entryList(QDir::Files)) {
             QFile file(path + QDir::separator() + filename);
             if (file.open(QIODevice::ReadOnly)) {
                 QTextStream in(&file);
@@ -357,7 +357,7 @@ void Reminder::updateVCard()
                 } else if (accInfoHost->getStatus(accs) != "offline") {
                     QString text = "<iq type=\"get\" to=\"%1\" id=\"%2\">"
                                    "<vCard xmlns=\"vcard-temp\" /></iq>";
-                    foreach (const QString &Jid, Jids) {
+                    for (const QString &Jid : Jids) {
                         stanzaHost->sendStanza(accs, text.arg(Jid, id));
                     }
                 }
@@ -391,7 +391,7 @@ QString Reminder::checkBirthdays()
     }
 
     QString CheckResult;
-    foreach (QString jid, QDir(bdaysDir()).entryList(QDir::Files)) {
+    for (auto jid : QDir(bdaysDir()).entryList(QDir::Files)) {
         if (jid.contains("_at_")) {
             QFile file(bdaysDir() + QDir::separator() + jid);
             if (file.open(QIODevice::ReadOnly)) {
@@ -466,7 +466,7 @@ bool Reminder::check()
 void Reminder::clearCache()
 {
     QDir dir(bdaysDir());
-    foreach (const QString &file, dir.entryList(QDir::Files)) {
+    for (const QString &file : dir.entryList(QDir::Files)) {
         QFile File(bdaysDir() + QDir::separator() + file);
         if (File.open(QIODevice::ReadWrite)) {
             File.remove();

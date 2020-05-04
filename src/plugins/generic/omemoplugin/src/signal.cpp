@@ -112,7 +112,7 @@ Bundle Signal::collectBundle()
         bundle.signedPreKeyPublic = signedPreKeyPublicKey;
         bundle.identityKeyPublic  = getIdentityPublicKey();
 
-        foreach (auto preKey, m_storage.loadAllPreKeys()) {
+        for (auto preKey : m_storage.loadAllPreKeys()) {
             session_pre_key *pre_key = nullptr;
             if (session_pre_key_deserialize(&pre_key, reinterpret_cast<const uint8_t *>(preKey.second.data()),
                                             static_cast<size_t>(preKey.second.size()), m_signalContext)
@@ -197,7 +197,7 @@ QVector<uint32_t> Signal::invalidSessions(const QString &recipient)
     QVector<uint32_t> result;
     const QByteArray &recipientUtf8    = recipient.toUtf8();
     QSet<uint32_t>    recipientDevices = m_storage.getDeviceList(recipient, false);
-    foreach (uint32_t deviceId, recipientDevices) {
+    for (auto deviceId : recipientDevices) {
         if (!sessionIsValid(getAddress(deviceId, recipientUtf8))) {
             result.append(deviceId);
         }
@@ -226,7 +226,7 @@ QList<EncryptedKey> Signal::encryptKey(const QString &ownJid, const QString &rec
     QSet<uint32_t> devices;
     devices.unite(ownDevices).unite(recipientDevices).remove(m_deviceId);
 
-    foreach (uint32_t deviceId, devices) {
+    for (auto deviceId : devices) {
         const QByteArray &      name = recipientDevices.contains(deviceId) ? recipientUtf8 : ownJidUtf8;
         signal_protocol_address addr = getAddress(deviceId, name);
         if (!sessionIsValid(addr))
@@ -323,7 +323,7 @@ uint32_t Signal::preKeyCount() { return m_storage.preKeyCount(); }
 void Signal::processUndecidedDevices(const QString &user, bool ownJid)
 {
     QSet<uint32_t> devices = m_storage.getUndecidedDeviceList(user);
-    foreach (uint32_t deviceId, devices) {
+    for (auto deviceId : devices) {
         askDeviceTrust(user, deviceId, false, ownJid);
     }
 }
@@ -336,10 +336,12 @@ void Signal::askDeviceTrust(const QString &user, uint32_t deviceId, bool skipNew
         message += QObject::tr("New OMEMO device has been discovered for \"%1\".").arg(user) + "<br/><br/>";
     }
     if (ownJid) {
-        message += QObject::tr("Do you want to trust this device and allow it to decrypt copies of your messages?") + "<br/><br/>";
-    }
-    else {
-        message += QObject::tr("Do you want to trust this device and allow it to receive the encrypted messages from you?") + "<br/><br/>";
+        message += QObject::tr("Do you want to trust this device and allow it to decrypt copies of your messages?")
+            + "<br/><br/>";
+    } else {
+        message
+            += QObject::tr("Do you want to trust this device and allow it to receive the encrypted messages from you?")
+            + "<br/><br/>";
     }
     message += QObject::tr("Device public key:") + QString("<br/><code>%1</code>").arg(publicKey);
 
@@ -349,8 +351,7 @@ void Signal::askDeviceTrust(const QString &user, uint32_t deviceId, bool skipNew
 
     if (messageBox.exec() == 0) {
         confirmDeviceTrust(user, deviceId);
-    }
-    else {
+    } else {
         revokeDeviceTrust(user, deviceId);
     }
 }
@@ -358,9 +359,8 @@ void Signal::askDeviceTrust(const QString &user, uint32_t deviceId, bool skipNew
 void Signal::removeDevice(const QString &user, uint32_t deviceId)
 {
     const QString publicKey = getFingerprint(m_storage.loadDeviceIdentity(user, deviceId));
-    const QString message = QObject::tr("Delete selected device from list of known devices of user \"%1\"?").arg(user) + "<br/><br/>"
-            + QObject::tr("Device public key:")
-            + QString("<br/><code>%1</code>").arg(publicKey);
+    const QString message   = QObject::tr("Delete selected device from list of known devices of user \"%1\"?").arg(user)
+        + "<br/><br/>" + QObject::tr("Device public key:") + QString("<br/><code>%1</code>").arg(publicKey);
 
     QMessageBox messageBox(QMessageBox::Question, QObject::tr("Confirm action"), message);
     messageBox.addButton(QObject::tr("Delete"), QMessageBox::AcceptRole);
@@ -420,7 +420,7 @@ QByteArray Signal::getIdentityPublicKey() const
 QList<Fingerprint> Signal::getKnownFingerprints()
 {
     QList<Fingerprint> res;
-    foreach (auto item, m_storage.getKnownFingerprints()) {
+    for (auto item : m_storage.getKnownFingerprints()) {
         Fingerprint fp(std::get<0>(item), getFingerprint(std::get<1>(item)), std::get<2>(item), std::get<3>(item));
         res.append(fp);
     }

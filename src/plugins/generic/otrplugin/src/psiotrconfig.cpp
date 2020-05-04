@@ -119,9 +119,10 @@ ConfigOtrWidget::ConfigOtrWidget(OptionAccessingHost *optionHost, OtrMessaging *
 
     updateOptions();
 
-    connect(m_policy, SIGNAL(buttonClicked(int)), SLOT(updateOptions()));
+    // TODO: update after stopping support of Ubuntu Xenial:
+    connect(m_policy, SIGNAL(buttonClicked(int)), this, SLOT(updateOptions()));
 
-    connect(m_endWhenOffline, SIGNAL(stateChanged(int)), SLOT(updateOptions()));
+    connect(m_endWhenOffline, &QCheckBox::stateChanged, this, &ConfigOtrWidget::updateOptions);
 }
 
 // ---------------------------------------------------------------------------
@@ -149,14 +150,14 @@ FingerprintWidget::FingerprintWidget(OtrMessaging *otr, QWidget *parent) :
     m_table->setContextMenuPolicy(Qt::CustomContextMenu);
     m_table->setSortingEnabled(true);
 
-    connect(m_table, SIGNAL(customContextMenuRequested(const QPoint &)), SLOT(contextMenu(const QPoint &)));
+    connect(m_table, &QTableView::customContextMenuRequested, this, &FingerprintWidget::contextMenu);
 
     mainLayout->addWidget(m_table);
 
     QPushButton *deleteButton = new QPushButton(tr("Delete fingerprint"), this);
     QPushButton *verifyButton = new QPushButton(tr("Verify fingerprint"), this);
-    connect(deleteButton, SIGNAL(clicked()), SLOT(deleteFingerprint()));
-    connect(verifyButton, SIGNAL(clicked()), SLOT(verifyFingerprint()));
+    connect(deleteButton, &QPushButton::clicked, this, &FingerprintWidget::deleteFingerprint);
+    connect(verifyButton, &QPushButton::clicked, this, &FingerprintWidget::verifyFingerprint);
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(deleteButton);
     buttonLayout->addWidget(verifyButton);
@@ -218,7 +219,7 @@ void FingerprintWidget::deleteFingerprint()
     if (!m_table->selectionModel()->hasSelection()) {
         return;
     }
-    foreach (QModelIndex selectIndex, m_table->selectionModel()->selectedRows()) {
+    for (auto selectIndex : m_table->selectionModel()->selectedRows()) {
         int fpIndex = m_tableModel->item(selectIndex.row(), 0)->data().toInt();
 
         QString msg(tr("Are you sure you want to delete the following fingerprint?") + "\n\n" + tr("Account: ")
@@ -243,7 +244,7 @@ void FingerprintWidget::verifyFingerprint()
     if (!m_table->selectionModel()->hasSelection()) {
         return;
     }
-    foreach (QModelIndex selectIndex, m_table->selectionModel()->selectedRows()) {
+    for (auto selectIndex : m_table->selectionModel()->selectedRows()) {
         int fpIndex = m_tableModel->item(selectIndex.row(), 0)->data().toInt();
 
         QString msg(tr("Have you verified that this is in fact the correct fingerprint?") + "\n\n" + tr("Account: ")
@@ -267,7 +268,7 @@ void FingerprintWidget::copyFingerprint()
         return;
     }
     QString text;
-    foreach (QModelIndex selectIndex, m_table->selectionModel()->selectedRows(1)) {
+    for (auto selectIndex : m_table->selectionModel()->selectedRows(1)) {
         int fpIndex = m_tableModel->item(selectIndex.row(), 0)->data().toInt();
 
         if (!text.isEmpty()) {
@@ -315,7 +316,7 @@ PrivKeyWidget::PrivKeyWidget(AccountInfoAccessingHost *accountInfo, OtrMessaging
     }
 
     QPushButton *generateButton = new QPushButton(tr("Generate new key"), this);
-    connect(generateButton, SIGNAL(clicked()), SLOT(generateKey()));
+    connect(generateButton, &QPushButton::clicked, this, &PrivKeyWidget::generateKey);
 
     QHBoxLayout *generateLayout = new QHBoxLayout();
     generateLayout->addWidget(m_accountBox);
@@ -325,7 +326,7 @@ PrivKeyWidget::PrivKeyWidget(AccountInfoAccessingHost *accountInfo, OtrMessaging
     mainLayout->addWidget(m_table);
 
     QPushButton *deleteButton = new QPushButton(tr("Delete key"), this);
-    connect(deleteButton, SIGNAL(clicked()), SLOT(deleteKey()));
+    connect(deleteButton, &QPushButton::clicked, this, &PrivKeyWidget::deleteKey);
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(deleteButton);
@@ -339,7 +340,7 @@ PrivKeyWidget::PrivKeyWidget(AccountInfoAccessingHost *accountInfo, OtrMessaging
     m_table->setSortingEnabled(true);
 
     m_table->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(m_table, SIGNAL(customContextMenuRequested(const QPoint &)), SLOT(contextMenu(const QPoint &)));
+    connect(m_table, &QTableView::customContextMenuRequested, this, &PrivKeyWidget::contextMenu);
 
     updateData();
 }
@@ -385,7 +386,7 @@ void PrivKeyWidget::deleteKey()
     if (!m_table->selectionModel()->hasSelection()) {
         return;
     }
-    foreach (QModelIndex selectIndex, m_table->selectionModel()->selectedRows(1)) {
+    for (auto selectIndex : m_table->selectionModel()->selectedRows(1)) {
         QString fpr(m_tableModel->item(selectIndex.row(), 1)->text());
         QString account(m_tableModel->item(selectIndex.row(), 0)->data().toString());
 
@@ -440,7 +441,7 @@ void PrivKeyWidget::copyFingerprint()
         return;
     }
     QString text;
-    foreach (QModelIndex selectIndex, m_table->selectionModel()->selectedRows(1)) {
+    for (auto selectIndex : m_table->selectionModel()->selectedRows(1)) {
         if (!text.isEmpty()) {
             text += "\n";
         }

@@ -157,7 +157,7 @@ QWidget *ConferenceLogger::options()
     path->setEnabled(false);
     FilesBox = new QComboBox();
     QDir dir(HistoryDir);
-    foreach (QString file, dir.entryList(QDir::Files)) {
+    for (auto file : dir.entryList(QDir::Files)) {
         if (file.contains("_in_")) {
             FilesBox->addItem(file);
         }
@@ -172,7 +172,7 @@ QWidget *ConferenceLogger::options()
     filesLayout->addWidget(FilesBox);
     filesLayout->addStretch();
     viewButton = new QPushButton(IcoHost->getIcon("psi/search"), tr("View Log"));
-    connect(viewButton, SIGNAL(released()), SLOT(viewFromOpt()));
+    connect(viewButton, &QPushButton::released, this, &ConferenceLogger::viewFromOpt);
     QLabel *wikiLink
         = new QLabel(tr("<a href=\"https://psi-plus.com/wiki/en:plugins#conference_logger_plugin\">Wiki (Online)</a>"));
     wikiLink->setOpenExternalLinks(true);
@@ -274,7 +274,7 @@ void ConferenceLogger::view()
     YourJid          = YourJid.replace("@", "_at_");
     QString FName    = YourJid + "_in_" + Jid + ".conferencehistory";
     QDir    dir(HistoryDir);
-    foreach (QString file, dir.entryList(QDir::Files)) {
+    for (auto file : dir.entryList(QDir::Files)) {
         if (file == FName) {
             showLog(file);
             break;
@@ -291,7 +291,7 @@ void ConferenceLogger::showLog(QString filename)
         delete (v);
         return;
     }
-    connect(v, SIGNAL(onClose(int, int)), this, SLOT(onClose(int, int)));
+    connect(v, &Viewer::onClose, this, &ConferenceLogger::onClose);
     v->show();
 }
 

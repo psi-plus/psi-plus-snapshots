@@ -45,13 +45,13 @@ void Viewer::init(IconFactoryAccessingHost *iconHost)
                      + header->sectionSize(4) + verticalHeader()->width() + 5,
                  300); //не очень красиво, но по-другому не получилось %)
 
-    connect(this, SIGNAL(clicked(QModelIndex)), this, SLOT(itemClicked(QModelIndex)));
+    connect(this, &Viewer::clicked, this, &Viewer::itemClicked);
 }
 
 void Viewer::keyPressEvent(QKeyEvent *e)
 {
     if (e->key() == Qt::Key_Space) {
-        foreach (const QModelIndex &check, selectionModel()->selectedRows(0)) {
+        for (const QModelIndex &check : selectionModel()->selectedRows(0)) {
             model()->setData(check, 3); // invert
         }
     } else {
@@ -72,7 +72,7 @@ void Viewer::contextMenuEvent(QContextMenuEvent *e)
     int      iresult;
     if (result) {
         iresult = actions.indexOf(result);
-        foreach (const QModelIndex &check, selectionModel()->selectedRows(0)) {
+        for (const QModelIndex &check : selectionModel()->selectedRows(0)) {
             switch (iresult) {
             case 0: // check
                 model()->setData(check, QVariant(2));

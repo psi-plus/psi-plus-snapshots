@@ -82,8 +82,8 @@ QWidget *JabberDiskPlugin::options()
 
     restoreOptions();
 
-    connect(ui_.pb_add, SIGNAL(clicked()), SLOT(addJid()));
-    connect(ui_.pb_delete, SIGNAL(clicked()), SLOT(removeJid()));
+    connect(ui_.pb_add, &QPushButton::clicked, this, &JabberDiskPlugin::addJid);
+    connect(ui_.pb_delete, &QPushButton::clicked, this, &JabberDiskPlugin::removeJid);
 
     return options_;
 }
@@ -99,7 +99,7 @@ bool JabberDiskPlugin::incomingStanza(int account, const QDomElement &xml)
     if (xml.tagName() == "message" && !xml.firstChildElement("body").isNull()) {
         const QString from = xml.attribute("from");
         bool          find = false;
-        foreach (const QString &jid, jids_) {
+        for (const QString &jid : jids_) {
             if (from.contains(jid, Qt::CaseInsensitive)) {
                 find = true;
                 break;
@@ -168,12 +168,12 @@ QList<QVariantHash> JabberDiskPlugin::getContactMenuParam() { return QList<QVari
 
 QAction *JabberDiskPlugin::getContactAction(QObject *p, int acc, const QString &jid)
 {
-    foreach (const QString &j, jids_) {
+    for (const QString &j : jids_) {
         if (jid.contains(j)) {
             QAction *act = new QAction(iconHost->getIcon("psi/save"), tr("Jabber Disk"), p);
             act->setProperty("account", acc);
             act->setProperty("jid", jid.toLower().split("/").at(0));
-            connect(act, SIGNAL(triggered()), JabberDiskController::instance(), SLOT(initSession()));
+            connect(act, &QAction::triggered, JabberDiskController::instance(), &JabberDiskController::initSession);
             return act;
         }
     }

@@ -164,7 +164,7 @@ void OMEMOPlugin::processEncryptedFile(int account, QDomElement &xml)
 
     QNetworkReply *reply = m_networkManager.get(QNetworkRequest(url));
 
-    connect(reply, SIGNAL(finished()), SLOT(onFileDownloadFinished()));
+    connect(reply, &QNetworkReply::finished, this, &OMEMOPlugin::onFileDownloadFinished);
     reply->setProperty("keyData", keyData);
     reply->setProperty("account", account);
     reply->setProperty("filePath", f.fileName());
@@ -294,12 +294,11 @@ void OMEMOPlugin::onEnableOMEMOAction(bool checked)
         updateAction(account, jid);
     } else if (act == actManageFingerprints) {
         auto screen = QGuiApplication::primaryScreen();
-        auto w = new KnownFingerprints(account, &m_omemo, nullptr);
+        auto w      = new KnownFingerprints(account, &m_omemo, nullptr);
         w->filterContacts(jid);
         w->setWindowTitle(tr("Manage contact fingerprints"));
         w->resize(1000, 500);
-        w->move((screen->geometry().width() / 2) - 500,
-                (screen->geometry().height() / 2) - 250);
+        w->move((screen->geometry().width() / 2) - 500, (screen->geometry().height() / 2) - 250);
         w->show();
         w->raise();
     } else if (act == actShowOwnFingerprint) {
@@ -322,8 +321,8 @@ QAction *OMEMOPlugin::createAction(QObject *parent, int account, const QString &
     QAction *action  = new QAction(getIcon(), tr("OMEMO encryption"), parent);
     action->setCheckable(true);
     action->setProperty("isGroup", QVariant(isGroup));
-    connect(action, SIGNAL(triggered(bool)), SLOT(onEnableOMEMOAction(bool)));
-    connect(action, SIGNAL(destroyed(QObject *)), SLOT(onActionDestroyed(QObject *)));
+    connect(action, &QAction::triggered, this, &OMEMOPlugin::onEnableOMEMOAction);
+    connect(action, &QAction::destroyed, this, &OMEMOPlugin::onActionDestroyed);
     m_actions.insert(bareJid, action);
     updateAction(account, bareJid);
     return action;
@@ -344,7 +343,7 @@ void OMEMOPlugin::onActionDestroyed(QObject *action)
 void OMEMOPlugin::updateAction(int account, const QString &user)
 {
     QString bareJid = m_contactInfo->realJid(account, user).split("/").first();
-    foreach (QAction *action, m_actions.values(bareJid)) {
+    for (QAction *action : m_actions.values(bareJid)) {
         bool isGroup   = action->property("isGroup").toBool();
         bool available = isGroup
             ? m_omemo.isAvailableForGroup(account, m_accountInfo->getJid(account).split("/").first(), bareJid)

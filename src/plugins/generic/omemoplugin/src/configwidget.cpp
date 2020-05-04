@@ -46,6 +46,7 @@ ConfigWidget::ConfigWidget(OMEMO *omemo, AccountInfoAccessingHost *accountInfo) 
     mainLayout->addWidget(m_tabWidget);
     setLayout(mainLayout);
 
+    // TODO: update after stopping support of Ubuntu Xenial:
     connect(accountBox, SIGNAL(currentIndexChanged(int)), SLOT(currentAccountChanged(int)));
 }
 
@@ -107,7 +108,8 @@ OwnFingerprint::OwnFingerprint(int account, OMEMO *omemo, QWidget *parent) : Con
 void OwnFingerprint::updateData()
 {
     m_deviceLabel->setText(tr("Device ID: ") + QString::number(m_omemo->getDeviceId(m_account)));
-    m_fingerprintLabel->setText(tr("Fingerprint: ") + QString("<code>%1</code>").arg(m_omemo->getOwnFingerprint(m_account)));
+    m_fingerprintLabel->setText(tr("Fingerprint: ")
+                                + QString("<code>%1</code>").arg(m_omemo->getOwnFingerprint(m_account)));
 }
 
 KnownFingerprints::KnownFingerprints(int account, OMEMO *omemo, QWidget *parent) :
@@ -122,7 +124,7 @@ KnownFingerprints::KnownFingerprints(int account, OMEMO *omemo, QWidget *parent)
     auto revokeButton  = new QPushButton(tr("Revoke"), this);
 
     connect(removeButton, &QPushButton::clicked, this, &KnownFingerprints::removeFingerprint);
-    connect(trustButton,  &QPushButton::clicked, this, &KnownFingerprints::trustFingerprint);
+    connect(trustButton, &QPushButton::clicked, this, &KnownFingerprints::trustFingerprint);
     connect(revokeButton, &QPushButton::clicked, this, &KnownFingerprints::revokeFingerprint);
 
     buttonsLayout->addWidget(removeButton);
@@ -151,7 +153,8 @@ void KnownFingerprints::doUpdateData()
         contact->setData(QVariant(fingerprint.deviceId));
         row.append(contact);
         TRUST_STATE state = fingerprint.trust;
-        row.append(new QStandardItem(state == TRUSTED ? tr("trusted") : state == UNTRUSTED ? tr("untrusted") : QString()));
+        row.append(
+            new QStandardItem(state == TRUSTED ? tr("trusted") : state == UNTRUSTED ? tr("untrusted") : QString()));
         auto fpItem = new QStandardItem(fingerprint.fingerprint);
         fpItem->setData(QColor(state == TRUSTED ? Qt::darkGreen : state == UNTRUSTED ? Qt::darkRed : Qt::darkYellow),
                         Qt::ForegroundRole);
@@ -180,7 +183,7 @@ void KnownFingerprints::trustFingerprint()
     QStandardItem *item = m_tableModel->item(m_table->selectionModel()->selectedRows(0).at(0).row(), 0);
     m_omemo->confirmDeviceTrust(m_account, item->text(), item->data().toUInt());
 
-    const int index = item->row();
+    const int index    = item->row();
     const int rowCount = m_tableModel->rowCount();
     updateData();
 
@@ -196,7 +199,7 @@ void KnownFingerprints::revokeFingerprint()
     QStandardItem *item = m_tableModel->item(m_table->selectionModel()->selectedRows(0).at(0).row(), 0);
     m_omemo->revokeDeviceTrust(m_account, item->text(), item->data().toUInt());
 
-    const int index = item->row();
+    const int index    = item->row();
     const int rowCount = m_tableModel->rowCount();
     updateData();
 
@@ -212,14 +215,13 @@ ManageDevices::ManageDevices(int account, OMEMO *omemo, QWidget *parent) :
     auto mainLayout = new QVBoxLayout(this);
     mainLayout->addWidget(m_table);
 
-    connect(m_table->selectionModel(), SIGNAL(selectionChanged(const QItemSelection &, const QItemSelection &)),
-            SLOT(selectionChanged(const QItemSelection &, const QItemSelection &)));
+    connect(m_table->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ManageDevices::selectionChanged);
 
-    connect(m_omemo, SIGNAL(deviceListUpdated(int)), SLOT(deviceListUpdated(int)));
+    connect(m_omemo, &OMEMO::deviceListUpdated, this, &ManageDevices::deviceListUpdated);
 
     m_deleteButton = new QPushButton(tr("Delete"), this);
     m_deleteButton->setEnabled(false);
-    connect(m_deleteButton, SIGNAL(clicked()), SLOT(deleteDevice()));
+    connect(m_deleteButton, &QPushButton::clicked, this, &ManageDevices::deleteDevice);
     mainLayout->addWidget(m_deleteButton);
 
     setLayout(mainLayout);
@@ -243,7 +245,7 @@ void ManageDevices::doUpdateData()
 {
     m_tableModel->setColumnCount(1);
     m_tableModel->setHorizontalHeaderLabels({ tr("Device ID") });
-    foreach (auto deviceId, m_omemo->getOwnDeviceList(m_account)) {
+    for (auto deviceId : m_omemo->getOwnDeviceList(m_account)) {
         QStandardItem *item = new QStandardItem(QString::number(deviceId));
         item->setData(deviceId);
         m_tableModel->appendRow(item);

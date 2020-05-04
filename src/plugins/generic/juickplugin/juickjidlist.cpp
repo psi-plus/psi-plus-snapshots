@@ -30,10 +30,10 @@ JuickJidList::JuickJidList(const QStringList &jids, QWidget *p) :
     ui_->listWidget->addItems(jidList_);
     ui_->pb_del->setEnabled(false);
 
-    connect(ui_->pb_add, SIGNAL(released()), SLOT(addPressed()));
-    connect(ui_->pb_del, SIGNAL(released()), SLOT(delPressed()));
-    connect(ui_->pb_ok, SIGNAL(released()), SLOT(okPressed()));
-    connect(ui_->listWidget, SIGNAL(clicked(QModelIndex)), SLOT(enableButtons()));
+    connect(ui_->pb_add, &QPushButton::released, this, &JuickJidList::addPressed);
+    connect(ui_->pb_del, &QPushButton::released, this, &JuickJidList::delPressed);
+    connect(ui_->pb_ok, &QPushButton::released, this, &JuickJidList::okPressed);
+    connect(ui_->listWidget, &QListWidget::clicked, this, &JuickJidList::enableButtons);
 }
 
 JuickJidList::~JuickJidList() { delete ui_; }
@@ -53,7 +53,7 @@ void JuickJidList::addPressed()
 void JuickJidList::delPressed()
 {
     QList<QListWidgetItem *> list = ui_->listWidget->selectedItems();
-    foreach (QListWidgetItem *i, list) {
+    for (auto i : list) {
         QString jid = i->text();
         jidList_.removeAll(jid);
         ui_->listWidget->removeItemWidget(i);

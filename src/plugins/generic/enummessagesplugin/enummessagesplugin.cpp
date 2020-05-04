@@ -63,8 +63,8 @@ QWidget *EnumMessagesPlugin::options()
 
     _ui.hack->hide();
 
-    connect(_ui.tb_inColor, SIGNAL(clicked()), SLOT(getColor()));
-    connect(_ui.tb_outColor, SIGNAL(clicked()), SLOT(getColor()));
+    connect(_ui.tb_inColor, &QToolButton::clicked, this, &EnumMessagesPlugin::getColor);
+    connect(_ui.tb_outColor, &QToolButton::clicked, this, &EnumMessagesPlugin::getColor);
 
     restoreOptions();
 
@@ -239,7 +239,7 @@ QAction *EnumMessagesPlugin::getAction(QObject *parent, int account, const QStri
     const QString jid = contact.split("/").first();
     act->setProperty("account", account);
     act->setProperty("contact", jid);
-    connect(act, SIGNAL(triggered(bool)), SLOT(onActionActivated(bool)));
+    connect(act, &QAction::triggered, this, &EnumMessagesPlugin::onActionActivated);
 
     act->setChecked(_defaultAction);
 
@@ -257,7 +257,7 @@ void EnumMessagesPlugin::setupChatTab(QWidget *tab, int account, const QString &
 {
     tab->setProperty(propAcc, account);
     tab->setProperty(propJid, contact);
-    connect(tab, SIGNAL(destroyed()), SLOT(removeWidget()));
+    connect(tab, &QWidget::destroyed, this, &EnumMessagesPlugin::removeWidget);
 }
 
 bool EnumMessagesPlugin::appendingChatMessage(int account, const QString &contact, QString &body, QDomElement &html,
@@ -396,7 +396,7 @@ QString EnumMessagesPlugin::numToFormatedStr(int number) { return QString("%1").
 
 void EnumMessagesPlugin::nl2br(QDomElement *body, QDomDocument *doc, const QString &msg)
 {
-    foreach (const QString &str, msg.split("\n")) {
+    for (const QString &str : msg.split("\n")) {
         body->appendChild(doc->createTextNode(str));
         body->appendChild(doc->createElement("br"));
     }
