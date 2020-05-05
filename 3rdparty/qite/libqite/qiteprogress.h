@@ -42,7 +42,7 @@ class ITEProgressController : public InteractiveTextElementController {
     int     signSize;
     int     scaleOutlineWidth;
     QRectF  scaleRect, scaleFillRect;
-    int     lastFontSize      = 0;
+    int     lastFontSize = 0;
 
     bool isOnButton(const QPoint &pos, const QRect &rect);
     void updateGeomtry();

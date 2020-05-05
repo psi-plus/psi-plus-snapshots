@@ -31,7 +31,8 @@ under the License.
 //----------------------------------//
 // InteractiveTextElementController //
 //----------------------------------//
-InteractiveTextElementController::InteractiveTextElementController(InteractiveText *it) : itc(it)
+InteractiveTextElementController::InteractiveTextElementController(InteractiveText *it, QObject *parent) :
+    QObject(parent), itc(it)
 {
     objectType = itc->registerController(this);
 }

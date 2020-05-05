@@ -35,6 +35,13 @@
 #include <QUdpSocket>
 #include <QtCrypto>
 
+#define ICE_DEBUG
+#ifdef ICE_DEBUG
+#define iceDebug qDebug
+#else
+#define iceDebug(...)
+#endif
+
 namespace XMPP {
 enum { Direct, Relayed };
 
@@ -367,14 +374,14 @@ public:
                 (*it)->base       = ci->base;
                 (*it)->network    = ci->network;
                 (*it)->id         = ci->id;
-                printf("Previously known remote prflx was updated from signalling: %s", qPrintable((*it)->addr));
+                iceDebug("Previously known remote prflx was updated from signalling: %s", qPrintable((*it)->addr));
             } else {
                 remoteCandidates += ci;
             }
         }
         this->remoteCandidates += remoteCandidates;
 
-        printf("adding %d remote candidates. total=%d\n", remoteCandidates.count(), this->remoteCandidates.count());
+        iceDebug("adding %d remote candidates. total=%d", remoteCandidates.count(), this->remoteCandidates.count());
         doPairing(localCandidates, remoteCandidates);
     }
 
@@ -383,7 +390,7 @@ public:
         remoteGatheringComplete = true;
         remoteGatheringCompleteTimer.reset();
 
-        printf("Got remote gathering complete signal");
+        iceDebug("Got remote gathering complete signal");
         onRemoteGatheringCompleted();
     }
 
@@ -423,7 +430,7 @@ public:
     // adds new pairs, sorts, prunes
     void addChecklistPairs(const QList<QSharedPointer<CandidatePair>> &pairs)
     {
-        printf("%d pairs\n", pairs.count());
+        iceDebug("%d pairs", pairs.count());
 
         // combine pairs with existing, and sort
         checkList.pairs += pairs;
@@ -436,7 +443,7 @@ public:
         // pruning
         for (int n = 0; n < checkList.pairs.count(); ++n) {
             auto &pair = checkList.pairs[n];
-            printf("%d, %s\n", pair->local->componentId, qPrintable(*pair));
+            iceDebug("%d, %s", pair->local->componentId, qPrintable(*pair));
 
             for (int i = n - 1; i >= 0; --i) {
                 // RFC8445 says to use base only for reflexive. but base is set properly for host and relayed too.
@@ -455,11 +462,12 @@ public:
         int max_pairs = 100 * components.size();
         while (checkList.pairs.count() > max_pairs)
             checkList.pairs.removeLast();
-
-        printf("%d after pruning\n", checkList.pairs.count());
+#ifdef ICE_DEBUG
+        iceDebug("%d after pruning", checkList.pairs.count());
         for (auto &p : checkList.pairs) {
-            printf("%d, %s\n", p->local->componentId, qPrintable(*p));
+            iceDebug("%d, %s", p->local->componentId, qPrintable(*p));
         }
+#endif
     }
 
     QSharedPointer<CandidatePair> selectNextPairToCheck()
@@ -472,7 +480,7 @@ public:
         if (pair) {
             pair->isTriggered = true;
             // according to rfc - check just this one
-            printf("next check from triggered list: %s\n", qPrintable(*pair));
+            iceDebug("next check from triggered list: %s", qPrintable(*pair));
             return pair;
         }
 
@@ -483,14 +491,14 @@ public:
         });
         if (it != checkList.pairs.end()) { // found waiting
             // the list was sorted already by priority and componentId. So first one is Ok
-            printf("next check for already waiting: %s\n", qPrintable(**it));
+            iceDebug("next check for already waiting: %s", qPrintable(**it));
             (*it)->isTriggered = false;
             return *it;
         }
 
         if (pair) { // now it's frozen highest-priority pair
             pair->isTriggered = false;
-            printf("next check for a frozen pair: %s\n", qPrintable(*pair));
+            iceDebug("next check for a frozen pair: %s", qPrintable(*pair));
         }
 
         // FIXME real algo should be (but is requires significant refactoring)
@@ -527,10 +535,10 @@ public:
                     IceComponent::Candidate &lc   = localCandidates[at];
                     int                      path = lc.path;
 
-                    printf("connectivity check for pair %s%s\n", qPrintable(*pair),
-                           (mode == Initiator
-                                ? (pair->binding->useCandidate() ? " (nominating)" : "")
-                                : (pair->isTriggeredForNominated ? " (triggered check for nominated)" : "")));
+                    iceDebug("connectivity check for pair %s%s", qPrintable(*pair),
+                             (mode == Initiator
+                                  ? (pair->binding->useCandidate() ? " (nominating)" : "")
+                                  : (pair->isTriggeredForNominated ? " (triggered check for nominated)" : "")));
                     lc.iceTransport->writeDatagram(path, packet, pair->remote->addr.addr, pair->remote->addr.port);
                 });
 
@@ -572,7 +580,7 @@ public:
         for (const IceComponent::Candidate &cc : localCandidates) {
             auto lc = cc.info;
             if (lc->type == IceComponent::PeerReflexiveType) {
-                printf("not pairing local prflx. %s\n", qPrintable(lc->addr));
+                iceDebug("not pairing local prflx. %s", qPrintable(lc->addr));
                 // see RFC8445 7.2.5.3.1.  Discovering Peer-Reflexive Candidates
                 continue;
             }
@@ -599,15 +607,15 @@ public:
         if (!pair) {
             pair = chooseSelectedPair(componentIndex + 1);
             if (!pair) {
-                qDebug("An attempt to write to an ICE component w/o valid sockets");
+                iceDebug("An attempt to write to an ICE component w/o valid sockets");
                 return;
             }
         }
 
         int at = findLocalCandidate(pair->local->addr.addr, pair->local->addr.port);
         if (at == -1) { // FIXME: assert?
-            // qDebug("FIXME! Failed to find local candidate for componentId=%d, addr=%s", componentIndex + 1,
-            //       qPrintable(pair->local->addr));
+            iceDebug("FIXME! Failed to find local candidate for componentId=%d, addr=%s", componentIndex + 1,
+                     qPrintable(pair->local->addr));
             return;
         }
 
@@ -642,7 +650,8 @@ public:
                 newValid.push_back(p);
         checkList.validPairs = newValid;
 
-        qDebug("C%d: selected pair: %s", componentId, qPrintable(*selected));
+        iceDebug("C%d: selected pair: %s (base: %s)", componentId, qPrintable(*selected),
+                 qPrintable(selected->local->base));
 
         auto &sa = selected->local->base;
         auto &t  = localCandidates[findLocalCandidate(sa.addr, sa.port)].iceTransport;
@@ -652,13 +661,12 @@ public:
             if (p->local->componentId == componentId && p->state == PInProgress) {
                 p->binding->cancel();
                 p->state = PFailed;
-                qDebug("Cancel %s setting it to failed state", qPrintable(*p));
+                iceDebug("Cancel %s setting it to failed state", qPrintable(*p));
             }
         }
         // stop not used transports
         for (auto &c : localCandidates) {
             if (c.info->componentId == componentId && c.iceTransport != t) {
-                // FIXME! it cleanups more candidates than it should (particularly ones from selected pairs)
                 c.iceTransport->stop();
             }
         }
@@ -683,7 +691,7 @@ public:
         Q_ASSERT(!pair->isNominated);
         if (pair->local->type == IceComponent::RelayedType) {
             if (!(localGatheringComplete && canHaveMoreRemoteCandidates())) {
-                printf("Wiating for gathering complete on both sides before nomination of relayed pair");
+                iceDebug("Wiating for gathering complete on both sides before nomination of relayed pair");
                 return; // maybe we gonna have a non-relayed pair. RFC8445 anyway allows to send data on any valid.
             }
 
@@ -691,13 +699,13 @@ public:
             if (std::any_of(checkList.pairs.begin(), checkList.pairs.end(), [](auto &p) {
                     return p->state != PSucceeded && p->state != PFailed && p->local->type != IceComponent::RelayedType;
                 })) {
-                printf("There are some non-relayed pairs to check before relayed nomination");
+                iceDebug("There are some non-relayed pairs to check before relayed nomination");
                 return; // either till checked or remote gathering timeout
             }
         }
         state                 = Nominating;
         pair->finalNomination = true;
-        printf("Nominating valid pair: %s\n", qPrintable(*pair));
+        iceDebug("Nominating valid pair: %s", qPrintable(*pair));
         checkList.triggeredPairs.prepend(pair);
     }
 
@@ -718,7 +726,7 @@ public:
         Component &c      = *findComponent(pair->local->componentId);
         pair->isNominated = true;
         if (c.lowOverhead) {
-            printf("component is flagged for low overhead.  setting up for %s\n", qPrintable(*pair));
+            iceDebug("component is flagged for low overhead.  setting up for %s", qPrintable(*pair));
             auto &cc = localCandidates[findLocalCandidate(pair->local->addr.addr, pair->local->addr.port)];
             c.ic->flagPathAsLowOverhead(cc.id, pair->remote->addr.addr, pair->remote->addr.port);
         }
@@ -785,7 +793,7 @@ public:
         if (pair) {
             if (pair->state == CandidatePairState::PSucceeded) {
                 // Check nominated here?
-                printf("Don't do triggered check since pair is already in success state\n");
+                iceDebug("Don't do triggered check since pair is already in success state");
                 if (mode == Responder && !pair->isNominated && nominated) {
                     tryComponentSuccess(pair);
                 }
@@ -794,8 +802,9 @@ public:
             pair->isNominated = false;
             if (pair->state == CandidatePairState::PInProgress) {
                 if (pair->isTriggered) {
-                    printf("Current in-progress check is already triggered. Don't cancel it while have to according to "
-                           "RFC8445\n");
+                    iceDebug(
+                        "Current in-progress check is already triggered. Don't cancel it while have to according to "
+                        "RFC8445\n");
                     return;
                 }
                 pair->binding->cancel();
@@ -837,10 +846,10 @@ public:
     {
         if (remoteFeatures & GatheringComplete || !(remoteFeatures & Trickle)) {
             remoteGatheringCompleteTimer.reset();
-            printf("Don't use Remote Gatherging Complete timeout\n");
+            iceDebug("Don't use Remote Gatherging Complete timeout");
             return;
         } else if (remoteGatheringCompleteTimer) {
-            printf("Remote Gatherging Complete was restarted\n");
+            iceDebug("Remote Gatherging Complete was restarted");
             remoteGatheringCompleteTimer->start(); // restart
             return;
         }
@@ -849,10 +858,10 @@ public:
         remoteGatheringCompleteTimer->setInterval(remoteGatheringCompleteTimeout);
         connect(remoteGatheringCompleteTimer.get(), &QTimer::timeout, this, [this]() {
             remoteGatheringCompleteTimer.release()->deleteLater();
-            printf("Timeout waiting for Gathering Complete signal\n");
+            iceDebug("Timeout waiting for Gathering Complete signal");
             onRemoteGatheringCompleted();
         });
-        printf("Start Remote Gatherging Complete timer\n");
+        iceDebug("Start Remote Gatherging Complete timer");
         remoteGatheringCompleteTimer->start();
     }
 
@@ -982,11 +991,13 @@ private:
 
     void onReadyToSendMedia()
     {
-        qDebug("Ready to send media!");
+#ifdef ICE_DEBUG
+        iceDebug("Ready to send media!");
         for (auto &c : components) {
-            qDebug("  Selected pair for component %d: %s (base: %s)", c.id, qPrintable(*c.selectedPair),
-                   qPrintable(c.selectedPair->local->base));
+            iceDebug("  C%d: selected pair: %s (base: %s)", c.id, qPrintable(*c.selectedPair),
+                     qPrintable(c.selectedPair->local->base));
         }
+#endif
         readyToSendMedia = true;
         emit q->readyToSendMedia();
     }
@@ -1008,7 +1019,7 @@ private:
         bool  finalNomination         = pair->finalNomination;
         auto &component               = *findComponent(pair->local->componentId);
 
-        printf("check success for %s\n", qPrintable(QString(*pair)));
+        iceDebug("check success for %s", qPrintable(QString(*pair)));
 
         // RFC8445 7.2.5.3.1.  Discovering Peer-Reflexive Candidates
         auto mappedAddr = IceComponent::TransportAddress(binding->reflexiveAddress(), binding->reflexivePort());
@@ -1039,7 +1050,7 @@ private:
                     pair = makeCandidatesPair(locIt->info, pair->remote);
                 } else {
                     pair = *it;
-                    printf("mapped address belongs to another pair on checklist %s\n", qPrintable(QString(*pair)));
+                    iceDebug("mapped address belongs to another pair on checklist %s", qPrintable(QString(*pair)));
                     if (pair->isValid) { // already valid as result of previous checks probably
                         return;
                     }
@@ -1074,11 +1085,13 @@ private:
                 });
 
             checkList.validPairs.insert(insIt, pair); // nominated and highest priority first
-            qDebug("C%d: insert to valid list %s", component.id, qPrintable(*pair));
-            qDebug("Current valid list state:");
+#ifdef ICE_DEBUG
+            iceDebug("C%d: insert to valid list %s", component.id, qPrintable(*pair));
+            iceDebug("Current valid list state:");
             for (auto &p : checkList.validPairs) {
-                qDebug("  C%d: %s", component.id, qPrintable(*p));
+                iceDebug("  C%d: %s", component.id, qPrintable(*p));
             }
+#endif
         }
 
         if (!readyToSendMedia && (localFeatures & NotNominatedData) && (remoteFeatures & NotNominatedData)) {
@@ -1106,7 +1119,7 @@ private:
         });
 
         if (it != checkList.pairs.end()) {
-            printf("component %d already active, not signalling\n", pair->local->componentId);
+            iceDebug("component %d already active, not signalling", pair->local->componentId);
             return;
         }
         tryComponentSuccess(pair);
@@ -1118,7 +1131,7 @@ private:
         if (state == Stopping)
             return; // we don't care about late errors
 
-        printf("check failed for %s\n", qPrintable(*pair));
+        iceDebug("check failed for %s", qPrintable(*pair));
         pair->state = CandidatePairState::PFailed;
         if (pair->isValid) { // RFC8445 7.2.5.3.4.  Updating the Nominated Flag /  about failure
             checkList.validPairs.removeOne(pair);
@@ -1131,7 +1144,7 @@ private:
         if (state == Started) {
             // oops, already-started ICE reports errors. keep-alive checks?
             if (pair->isNominated) {
-                printf("check failed on nominated candidate. set ICE status to failed");
+                iceDebug("check failed on nominated candidate. set ICE status to failed");
                 stop();
                 emit q->error(ErrorDisconnected);
             }
@@ -1139,7 +1152,7 @@ private:
         }
         if (state == Nominating) {
             if (pair->finalNomination) {
-                printf("Failed to nominate selected pair. set ICE status to failed");
+                iceDebug("Failed to nominate selected pair. set ICE status to failed");
                 stop();
                 emit q->error(ErrorDisconnected);
             }
@@ -1164,9 +1177,9 @@ private slots:
 
         localCandidates += cc;
 
-        printf("C%d: candidate added: %s %s;%d\n", cc.info->componentId,
-               qPrintable(candidateType_to_string(cc.info->type)), qPrintable(cc.info->addr.addr.toString()),
-               cc.info->addr.port);
+        iceDebug("C%d: candidate added: %s %s;%d", cc.info->componentId,
+                 qPrintable(candidateType_to_string(cc.info->type)), qPrintable(cc.info->addr.addr.toString()),
+                 cc.info->addr.port);
 
         if (!iceTransports.contains(cc.iceTransport)) {
             connect(cc.iceTransport.data(), SIGNAL(readyRead(int)), SLOT(it_readyRead(int)));
@@ -1196,8 +1209,8 @@ private slots:
     void ic_candidateRemoved(const XMPP::IceComponent::Candidate &cc)
     {
         // TODO
-        printf("C%d: candidate removed: %s;%d\n", cc.info->componentId, qPrintable(cc.info->addr.addr.toString()),
-               cc.info->addr.port);
+        iceDebug("C%d: candidate removed: %s;%d", cc.info->componentId, qPrintable(cc.info->addr.addr.toString()),
+                 cc.info->addr.port);
 
         QStringList idList;
         for (int n = 0; n < localCandidates.count(); ++n) {
@@ -1302,12 +1315,16 @@ private slots:
 
     void ic_debugLine(const QString &line)
     {
+#ifdef ICE_DEBUG
         IceComponent *ic = static_cast<IceComponent *>(sender());
         auto          it = findComponent(ic);
         Q_ASSERT(it != components.end());
 
         // FIXME: components are always sorted?
-        printf("C%d: %s\n", it->id, qPrintable(line));
+        iceDebug("C%d: %s", it->id, qPrintable(line));
+#else
+        Q_UNUSED(line)
+#endif
     }
 
     // path is either direct or relayed
@@ -1326,7 +1343,7 @@ private slots:
             int          fromPort;
             QByteArray   buf = sock->readDatagram(path, &fromAddr, &fromPort);
 
-            // printf("port %d: received packet (%d bytes)\n", lt->sock->localPort(), buf.size());
+            // iceDebug("port %d: received packet (%d bytes)", lt->sock->localPort(), buf.size());
 
             QString    requser = localUser + ':' + peerUser;
             QByteArray reqkey  = localPass.toUtf8();
@@ -1335,17 +1352,17 @@ private slots:
             StunMessage                msg = StunMessage::fromBinary(buf, &result,
                                                       StunMessage::MessageIntegrity | StunMessage::Fingerprint, reqkey);
             if (!msg.isNull() && (msg.mclass() == StunMessage::Request || msg.mclass() == StunMessage::Indication)) {
-                printf("received validated request or indication from %s:%d\n", qPrintable(fromAddr.toString()),
-                       fromPort);
+                iceDebug("received validated request or indication from %s:%d", qPrintable(fromAddr.toString()),
+                         fromPort);
                 QString user = QString::fromUtf8(msg.attribute(StunTypes::USERNAME));
                 if (requser != user) {
-                    printf("user [%s] is wrong.  it should be [%s].  skipping\n", qPrintable(user),
-                           qPrintable(requser));
+                    iceDebug("user [%s] is wrong.  it should be [%s].  skipping", qPrintable(user),
+                             qPrintable(requser));
                     continue;
                 }
 
                 if (msg.method() != StunTypes::Binding) {
-                    printf("not a binding request.  skipping\n");
+                    iceDebug("not a binding request.  skipping");
                     continue;
                 }
 
@@ -1376,7 +1393,7 @@ private slots:
                     nominated = msg.hasAttribute(StunTypes::USE_CANDIDATE);
                 if (it == remoteCandidates.end()) {
                     // RFC8445 7.3.1.3.  Learning Peer-Reflexive Candidates
-                    printf("found NEW remote prflx! %s:%d\n", qPrintable(fromAddr.toString()), fromPort);
+                    iceDebug("found NEW remote prflx! %s:%d", qPrintable(fromAddr.toString()), fromPort);
                     quint32 priority;
                     StunTypes::parsePriority(msg.attribute(StunTypes::PRIORITY), &priority);
                     auto remCand = IceComponent::CandidateInfo::makeRemotePrflx(locCand.info->componentId, fromAddr,
@@ -1392,8 +1409,8 @@ private slots:
                     buf, &result, StunMessage::MessageIntegrity | StunMessage::Fingerprint, reskey);
                 if (!msg.isNull()
                     && (msg.mclass() == StunMessage::SuccessResponse || msg.mclass() == StunMessage::ErrorResponse)) {
-                    printf("received validated response from %s:%d to %s\n", qPrintable(fromAddr.toString()), fromPort,
-                           qPrintable(locCand.info->addr));
+                    iceDebug("received validated response from %s:%d to %s", qPrintable(fromAddr.toString()), fromPort,
+                             qPrintable(locCand.info->addr));
 
                     // FIXME: this is so gross and completely defeats the point of having pools
                     for (int n = 0; n < checkList.pairs.count(); ++n) {
@@ -1403,11 +1420,11 @@ private slots:
                             pair.pool->writeIncomingMessage(msg);
                     }
                 } else {
-                    // printf("received some non-stun or invalid stun packet\n");
+                    // iceDebug("received some non-stun or invalid stun packet");
 
                     // FIXME: i don't know if this is good enough
                     if (StunMessage::isProbablyStun(buf)) {
-                        printf("unexpected stun packet (loopback?), skipping.\n");
+                        iceDebug("unexpected stun packet (loopback?), skipping.");
                         continue;
                     }
 
@@ -1421,12 +1438,12 @@ private slots:
                         }
                     }
                     if (at == -1) {
-                        printf("the local transport does not seem to be associated with a candidate?!\n");
+                        iceDebug("the local transport does not seem to be associated with a candidate?!");
                         continue;
                     }
 
                     int componentIndex = checkList.pairs[at]->local->componentId - 1;
-                    // printf("packet is considered to be application data for component index %d\n", componentIndex);
+                    // iceDebug("packet is considered to be application data for component index %d", componentIndex);
 
                     // FIXME: this assumes components are ordered by id in our local arrays
                     in[componentIndex] += buf;

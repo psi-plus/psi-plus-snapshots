@@ -39,7 +39,7 @@ public:
     typedef quint32 ElementId;
 
     // just make it public. no reason to keep it protected
-    inline explicit InteractiveTextFormat(const QTextCharFormat &fmt) : QTextCharFormat(fmt) {}
+    inline explicit InteractiveTextFormat(const QTextCharFormat &fmt) : QTextCharFormat(fmt) { }
 
     inline InteractiveTextFormat(int objectType, ElementId id)
     {
@@ -65,7 +65,7 @@ public:
         QPoint    pos; // relative to element. last position for "Leave"
     };
 
-    InteractiveTextElementController(InteractiveText *itc);
+    InteractiveTextElementController(InteractiveText *itc, QObject *parent = nullptr);
     virtual ~InteractiveTextElementController();
     virtual QCursor cursor();
 

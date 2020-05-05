@@ -4,4 +4,3 @@ CONFIG += c++14 static
 TARGET = qite
 
 include($$PWD/libqite.pri)
-

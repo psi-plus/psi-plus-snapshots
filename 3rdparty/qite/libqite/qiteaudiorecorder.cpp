@@ -39,9 +39,9 @@ template <typename T> struct SoloFrameDefault {
 
 template <typename T> struct SoloFrame {
 
-    SoloFrame() : data(T(SoloFrameDefault<T>::Default)) {}
+    SoloFrame() : data(T(SoloFrameDefault<T>::Default)) { }
 
-    SoloFrame(T sample) : data(sample) {}
+    SoloFrame(T sample) : data(sample) { }
 
     SoloFrame &operator=(const SoloFrame &other)
     {

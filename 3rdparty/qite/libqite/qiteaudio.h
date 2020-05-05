@@ -59,7 +59,7 @@ public:
     typedef QList<float> Histogram;                     // can be fetched via DeviceOpener::metadata()[amplitudes]
     static const int     HistogramCompressedSize = 100; // amount of drawn columns
 
-    ITEAudioController(InteractiveText *itc);
+    ITEAudioController(InteractiveText *itc, QObject *parent);
 
     QSizeF intrinsicSize(QTextDocument *doc, int posInDocument, const QTextFormat &format);
     void   drawITE(QPainter *painter, const QRectF &rect, int posInDocument, const QTextFormat &format);

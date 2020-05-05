@@ -587,6 +587,9 @@ void ITEAudioController::playerStateChanged(QMediaPlayer::State state)
     }
 }
 
-ITEAudioController::ITEAudioController(InteractiveText *itc) : InteractiveTextElementController(itc) {}
+ITEAudioController::ITEAudioController(InteractiveText *itc, QObject *parent) :
+    InteractiveTextElementController(itc, parent)
+{
+}
 
 QCursor ITEAudioController::cursor() { return _cursor; }

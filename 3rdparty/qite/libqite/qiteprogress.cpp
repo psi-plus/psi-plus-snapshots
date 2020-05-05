@@ -37,7 +37,6 @@ public:
         State,
     };
 
-
     enum Flag { Playing = 0x1, MouseOnButton = 0x2, MouseOnTrackbar = 0x4 };
     Q_DECLARE_FLAGS(Flags, Flag)
 
@@ -50,20 +49,17 @@ public:
 
     QString text() const { return property(ProgressMessageFormat::Text).toString(); }
 
-    Flags state() const
-    {
-        return Flags(property(ProgressMessageFormat::State).toInt());
-    }
+    Flags state() const { return Flags(property(ProgressMessageFormat::State).toInt()); }
     void  setState(const Flags &state) { setProperty(State, int(state)); }
 
     double currentValue() const { return property(ProgressMessageFormat::CurrentValue).toDouble(); }
     void   setCurrentValue(double position) { setProperty(ProgressMessageFormat::CurrentValue, position); }
 
     double minValue() const { return property(ProgressMessageFormat::MinValue).toDouble(); }
-    void setMinValue(double position) { setProperty(ProgressMessageFormat::MinValue, position); }
+    void   setMinValue(double position) { setProperty(ProgressMessageFormat::MinValue, position); }
 
     double maxValue() const { return property(ProgressMessageFormat::MaxValue).toDouble(); }
-    void setMaxValue(double position) { setProperty(ProgressMessageFormat::MaxValue, position); }
+    void   setMaxValue(double position) { setProperty(ProgressMessageFormat::MaxValue, position); }
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(ProgressMessageFormat::Flags)
 
@@ -218,10 +214,10 @@ bool ITEProgressController::mouseEvent(const Event &event, const QRect &rect, QT
 
     ProgressMessageFormat        format            = ProgressMessageFormat::fromCharFormat(selected.charFormat());
     ProgressMessageFormat::Flags state             = format.state();
-    bool                      onButtonChanged   = bool(state & ProgressMessageFormat::MouseOnButton) != onButton;
-    bool                      onTrackbarChanged = bool(state & ProgressMessageFormat::MouseOnTrackbar) != onTrackbar;
-    bool                      playStateChanged  = false;
-    bool                      positionSet       = false;
+    bool                         onButtonChanged   = bool(state & ProgressMessageFormat::MouseOnButton) != onButton;
+    bool                         onTrackbarChanged = bool(state & ProgressMessageFormat::MouseOnTrackbar) != onTrackbar;
+    bool                         playStateChanged  = false;
+    bool                         positionSet       = false;
 
     if (onButtonChanged) {
         state ^= ProgressMessageFormat::MouseOnButton;
@@ -377,7 +373,7 @@ bool ITEProgressController::mouseEvent(const Event &event, const QRect &rect, QT
 
 void ITEProgressController::hideEvent(QTextCursor &selected)
 {
-    auto fmt    = ProgressMessageFormat::fromCharFormat(selected.charFormat());
+    auto fmt = ProgressMessageFormat::fromCharFormat(selected.charFormat());
 #if 0
     auto player = activePlayers.value(fmt.id());
     // qDebug() << "hiding player" << fmt.id();
@@ -393,6 +389,6 @@ bool ITEProgressController::isOnButton(const QPoint &pos, const QRect &rect)
     return QVector2D(btnCenter).distanceToPoint(QVector2D(rel)) <= btnRadius;
 }
 
-ITEProgressController::ITEProgressController(InteractiveText *itc) : InteractiveTextElementController(itc) {}
+ITEProgressController::ITEProgressController(InteractiveText *itc) : InteractiveTextElementController(itc) { }
 
 QCursor ITEProgressController::cursor() { return _cursor; }
