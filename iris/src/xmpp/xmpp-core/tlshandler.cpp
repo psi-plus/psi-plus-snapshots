@@ -220,19 +220,22 @@ static bool matchesHostName(const QCA::Certificate &cert, const QString &host)
     if (!ipaddr.isEmpty()) // ip address
     {
         // check iPAddress
-        for (const QString &s : cert.subjectInfo().values(IPAddress)) {
+        const auto ipAddresses = cert.subjectInfo().values(IPAddress);
+        for (const QString &s : ipAddresses) {
             if (cert_match_ipaddress(s, ipaddr))
                 return true;
         }
 
         // check dNSName
-        for (const QString &s : cert.subjectInfo().values(DNS)) {
+        const auto dnsNames = cert.subjectInfo().values(DNS);
+        for (const QString &s : dnsNames) {
             if (cert_match_ipaddress(s, ipaddr))
                 return true;
         }
 
         // check commonName
-        for (const QString &s : cert.subjectInfo().values(CommonName)) {
+        const auto commonNames = cert.subjectInfo().values(CommonName);
+        for (const QString &s : commonNames) {
             if (cert_match_ipaddress(s, ipaddr))
                 return true;
         }
@@ -257,13 +260,15 @@ static bool matchesHostName(const QCA::Certificate &cert, const QString &host)
             return false;
 
         // check dNSName
-        for (const QString &s : cert.subjectInfo().values(DNS)) {
+        const auto dnsNames = cert.subjectInfo().values(DNS);
+        for (const QString &s : dnsNames) {
             if (cert_match_domain(s, name))
                 return true;
         }
 
         // check commonName
-        for (const QString &s : cert.subjectInfo().values(CommonName)) {
+        const auto commonNames = cert.subjectInfo().values(CommonName);
+        for (const QString &s : commonNames) {
             if (cert_match_domain(s, name))
                 return true;
         }
@@ -319,7 +324,8 @@ bool QCATLSHandler::certMatchesHostname()
 
     Jid host(d->host);
 
-    for (const QString &idOnXmppAddr : peerCert.primary().subjectInfo().values(QCA::XMPP)) {
+    const auto hosts = peerCert.primary().subjectInfo().values(QCA::XMPP);
+    for (const QString &idOnXmppAddr : hosts) {
         if (host.compare(Jid(idOnXmppAddr)))
             return true;
     }

@@ -295,7 +295,8 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
                     if (!cursor.isNull()) {
                         Histogram hm;
                         hm.reserve(HistogramCompressedSize);
-                        for (auto v : QString::fromLatin1(reply->readAll()).split(',')) {
+                        auto amplitudes = QString::fromLatin1(reply->readAll()).split(',');
+                        for (auto v : amplitudes) {
                             auto fv = v.toFloat() / 255.0f;
                             hm.push_back(fv > 1.0f ? 1.0f : fv);
                         }

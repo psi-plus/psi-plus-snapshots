@@ -72,7 +72,8 @@ QList<LanguageManager::LangId> LanguageManager::bestUiMatch(const QSet<LanguageM
     QLocale             def; // default locale (or system locale if default is not set). FIXME get from settings
     static QSet<LangId> uiLangs;
     if (uiLangs.isEmpty()) {
-        for (auto const &l : QLocale::system().uiLanguages()) {
+        const auto languages = QLocale::system().uiLanguages();
+        for (auto const &l : languages) {
             auto id = fromString(l);
             if (id.language) {
                 uiLangs.insert(id);
