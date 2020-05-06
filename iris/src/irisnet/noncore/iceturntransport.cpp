@@ -204,6 +204,12 @@ void IceTurnTransport::setDebugLevel(DebugLevel level)
     d->turn.setDebugLevel((TurnClient::DebugLevel)level);
 }
 
+void IceTurnTransport::changeThread(QThread *thread)
+{
+    d->turn.changeThread(thread);
+    moveToThread(thread);
+}
+
 } // namespace XMPP
 
 #include "iceturntransport.moc"

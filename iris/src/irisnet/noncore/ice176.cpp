@@ -29,6 +29,7 @@
 #include "stuntypes.h"
 #include "udpportreserver.h"
 
+#include <QEvent>
 #include <QQueue>
 #include <QSet>
 #include <QTimer>
@@ -1570,6 +1571,19 @@ bool Ice176::isIPv6LinkLocalAddress(const QHostAddress &addr)
         return true;
     else
         return false;
+}
+
+void Ice176::changeThread(QThread *thread)
+{
+    for (auto &c : d->localCandidates) {
+        if (c.iceTransport)
+            c.iceTransport->changeThread(thread);
+    }
+    for (auto &p : d->checkList.pairs) {
+        if (p->pool)
+            p->pool->moveToThread(thread);
+    }
+    moveToThread(thread);
 }
 
 } // namespace XMPP

@@ -144,6 +144,8 @@ public:
     // FIXME: this should probably be in netinterface.h or such
     static bool isIPv6LinkLocalAddress(const QHostAddress &addr);
 
+    void changeThread(QThread *thread);
+
 signals:
     // indicates that the ice engine is started and is ready to receive
     //   peer creds and remote candidates

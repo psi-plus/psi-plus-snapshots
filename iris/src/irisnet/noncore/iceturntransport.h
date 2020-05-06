@@ -61,6 +61,7 @@ public:
     virtual void       writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port);
     virtual void       addChannelPeer(const QHostAddress &addr, int port);
     virtual void       setDebugLevel(DebugLevel level);
+    virtual void       changeThread(QThread *thread) override;
 
 private:
     class Private;

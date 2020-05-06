@@ -82,6 +82,7 @@ public:
     void       writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port) override;
     void       addChannelPeer(const QHostAddress &addr, int port) override;
     void       setDebugLevel(DebugLevel level) override;
+    void       changeThread(QThread *thread) override;
 
 signals:
     // may be emitted multiple times.

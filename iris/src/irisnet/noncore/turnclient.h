@@ -144,6 +144,7 @@ public:
     QString errorString() const;
 
     void setDebugLevel(DebugLevel level); // default DL_None
+    void changeThread(QThread *thread);
 
 signals:
     void connected(); // tcp connected

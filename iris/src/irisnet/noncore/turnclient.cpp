@@ -965,6 +965,13 @@ void TurnClient::setDebugLevel(DebugLevel level)
     if (d->pool)
         d->pool->setDebugLevel((StunTransactionPool::DebugLevel)level);
 }
+
+void TurnClient::changeThread(QThread *thread)
+{
+    if (d->pool)
+        d->pool->moveToThread(thread);
+    moveToThread(thread);
+}
 } // namespace XMPP
 
 #include "turnclient.moc"

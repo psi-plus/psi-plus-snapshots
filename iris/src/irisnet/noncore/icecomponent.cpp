@@ -46,36 +46,6 @@ static int calc_priority(int typePref, int localPref, int componentId)
 class IceComponent::Private : public QObject {
     Q_OBJECT
 
-    struct IceSocket {
-        using Ptr = QSharedPointer<IceSocket>;
-
-        IceSocket(QUdpSocket *sock, bool borrowed, IceComponent::Private *ic) : sock(sock), ic(ic), borrowed(borrowed)
-        {
-        }
-        ~IceSocket()
-        {
-            if (!sock)
-                return;
-
-            sock->disconnect(ic);
-            if (borrowed) {
-                Q_ASSERT(ic->portReserver);
-                // It's quite common to move Ice176 to another thread, but port reserver is not moved anywhere,
-                // so we still need to carefully return not needed sockets.
-                QTimer::singleShot(0, ic->portReserver->thread(), [pr = ic->portReserver, sock = sock]() {
-                    sock->moveToThread(pr->thread());
-                    pr->returnSockets(QList<QUdpSocket *>() << sock);
-                });
-            } else {
-                sock->deleteLater();
-            }
-        }
-
-        QUdpSocket *           sock = nullptr;
-        IceComponent::Private *ic   = nullptr;
-        bool                   borrowed;
-    };
-
 public:
     class Config {
     public:
@@ -100,7 +70,7 @@ public:
 
     class LocalTransport {
     public:
-        IceSocket::Ptr                    qsock;
+        QUdpSocket *                      qsock;
         QHostAddress                      addr;
         QSharedPointer<IceLocalTransport> sock;
         int                               network;
@@ -110,6 +80,7 @@ public:
         bool                              stun_finished, turn_finished; // candidates emitted
         QHostAddress                      extAddr;
         bool                              ext_finished;
+        bool                              borrowed = false;
 
         LocalTransport() :
             network(-1), isVpn(false), started(false), stun_started(false), stun_finished(false), turn_finished(false),
@@ -144,7 +115,7 @@ public:
 
     ~Private() { qDeleteAll(udpTransports); }
 
-    LocalTransport *createLocalTransport(IceSocket::Ptr socket, const Ice176::LocalAddress &la)
+    LocalTransport *createLocalTransport(QUdpSocket *socket, const Ice176::LocalAddress &la)
     {
         auto lt   = new LocalTransport;
         lt->qsock = socket;
@@ -154,9 +125,15 @@ public:
         lt->network = la.network;
         lt->isVpn   = la.isVpn;
         connect(lt->sock.data(), SIGNAL(started()), SLOT(lt_started()));
-        connect(lt->sock.data(), SIGNAL(stopped()), SLOT(lt_stopped()));
+        connect(lt->sock.data(), &IceLocalTransport::stopped, this, [this, lt]() {
+            if (eraseLocalTransport(lt))
+                tryStopped();
+        });
         connect(lt->sock.data(), SIGNAL(addressesChanged()), SLOT(lt_addressesChanged()));
-        connect(lt->sock.data(), SIGNAL(error(int)), SLOT(lt_error(int)));
+        connect(lt->sock.data(), &IceLocalTransport::error, this, [this, lt](int) {
+            if (eraseLocalTransport(lt))
+                tryGatheringComplete();
+        });
         connect(lt->sock.data(), SIGNAL(debugLine(QString)), SLOT(lt_debugLine(QString)));
         return lt;
     }
@@ -204,7 +181,8 @@ public:
                 }
 
                 config.localAddrs += la;
-                auto lt = createLocalTransport(IceSocket::Ptr::create(qsock, borrowedSocket, this), la);
+                auto lt      = createLocalTransport(qsock, la);
+                lt->borrowed = borrowedSocket;
                 udpTransports += lt;
 
                 if (lt->addr.protocol() != QAbstractSocket::IPv6Protocol) {
@@ -523,6 +501,25 @@ private:
             postStop();
     }
 
+    // return true if component is still alive after transport removal
+    bool eraseLocalTransport(LocalTransport *lt)
+    {
+        ObjectSessionWatcher watch(&sess);
+
+        removeLocalCandidates(lt->sock);
+        if (!watch.isValid())
+            return false;
+
+        lt->sock->disconnect(this);
+        if (lt->borrowed) {
+            lt->qsock->disconnect(this);
+            portReserver->returnSockets({ lt->qsock });
+        }
+        delete lt;
+        udpTransports.removeOne(lt);
+        return true;
+    }
+
 private slots:
     void tryGatheringComplete()
     {
@@ -627,27 +624,6 @@ private slots:
         tryGatheringComplete();
     }
 
-    void lt_stopped()
-    {
-        IceLocalTransport *sock = static_cast<IceLocalTransport *>(sender());
-        auto               it
-            = std::find_if(udpTransports.begin(), udpTransports.end(), [&](auto const &a) { return a->sock == sock; });
-        Q_ASSERT(it != udpTransports.end());
-        LocalTransport *lt = *it;
-
-        ObjectSessionWatcher watch(&sess);
-
-        removeLocalCandidates(lt->sock);
-        if (!watch.isValid())
-            return;
-
-        lt->sock->disconnect(this);
-        delete lt;
-
-        udpTransports.erase(it);
-        tryStopped();
-    }
-
     void lt_addressesChanged()
     {
         IceLocalTransport *sock = static_cast<IceLocalTransport *>(sender());
@@ -723,31 +699,6 @@ private slots:
         }
         if (!watch.isValid())
             return;
-
-        tryGatheringComplete();
-    }
-
-    void lt_error(int e)
-    {
-        Q_UNUSED(e)
-
-        IceLocalTransport *sock = static_cast<IceLocalTransport *>(sender());
-        auto               it
-            = std::find_if(udpTransports.begin(), udpTransports.end(), [&](auto const &a) { return a->sock == sock; });
-
-        Q_ASSERT(it != udpTransports.end());
-        LocalTransport *lt = *it;
-
-        ObjectSessionWatcher watch(&sess);
-
-        removeLocalCandidates(lt->sock);
-        if (!watch.isValid())
-            return;
-
-        lt->sock->disconnect(this);
-        delete lt;
-
-        udpTransports.erase(it);
 
         tryGatheringComplete();
     }

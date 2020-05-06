@@ -45,6 +45,7 @@ public:
     virtual void       addChannelPeer(const QHostAddress &addr, int port)                                 = 0;
 
     virtual void setDebugLevel(DebugLevel level) = 0;
+    virtual void changeThread(QThread *thread)   = 0;
 
 signals:
     void started();

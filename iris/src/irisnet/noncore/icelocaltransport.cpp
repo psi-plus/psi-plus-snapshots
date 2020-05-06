@@ -772,6 +772,13 @@ void IceLocalTransport::setDebugLevel(DebugLevel level)
         d->turn->setDebugLevel((TurnClient::DebugLevel)level);
 }
 
+void IceLocalTransport::changeThread(QThread *thread)
+{
+    if (d->pool)
+        d->pool->moveToThread(thread);
+    moveToThread(thread);
+}
+
 } // namespace XMPP
 
 #include "icelocaltransport.moc"
