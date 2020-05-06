@@ -152,8 +152,11 @@ public:
 
     void unsetPool()
     {
-        pool->disconnect(this);
-        pool.reset();
+        // in udp mode, we don't own the pool
+        if (!udp && pool) {
+            pool->disconnect(this);
+            pool.reset();
+        }
     }
 
     void cleanup()
@@ -161,10 +164,7 @@ public:
         delete allocate;
         allocate = nullptr;
 
-        // in udp mode, we don't own the pool
-        if (!udp) {
-            unsetPool();
-        }
+        unsetPool();
 
         delete tls;
         tls = nullptr;
@@ -237,9 +237,7 @@ public:
             delete allocate;
             allocate = nullptr;
 
-            // in udp mode, we don't own the pool
-            if (!udp)
-                unsetPool();
+            unsetPool();
 
             if (udp)
                 sess.defer(q, "closed");
@@ -806,9 +804,7 @@ private slots:
         delete allocate;
         allocate = nullptr;
 
-        // in udp mode, we don't own the pool
-        if (!udp)
-            unsetPool();
+        unsetPool();
 
         if (udp)
             emit q->closed();
