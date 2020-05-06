@@ -984,7 +984,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             // more local candidates are expected to be discovered
 
             if (q->_state != State::Connecting) { // if not started or already finished
-                qWarning("checkAndFinishNegotiation not finished: !connectionStarted || connection");
+                qDebug("checkAndFinishNegotiation not finished: !connectionStarted || connection");
                 return;
             }
 
