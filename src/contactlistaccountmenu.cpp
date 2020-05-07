@@ -146,7 +146,7 @@ public:
         menu->addAction(moodAction_);
         menu->addAction(activityAction_);
         menu->addAction(geolocationAction_);
-        avatarMenu_ = menu->addMenu(IconsetFactory::icon("psi/avatar.svgz").icon(), tr("Avatar"));
+        avatarMenu_ = menu->addMenu(IconsetFactory::icon("psi/default_avatar").icon(), tr("Avatar"));
         avatarMenu_->addAction(setAvatarAction_);
         avatarMenu_->addAction(unsetAvatarAction_);
         bookmarksMenu_ = menu->addMenu(IconsetFactory::icon("psi/groupChat").icon(), tr("Groupchats"));
