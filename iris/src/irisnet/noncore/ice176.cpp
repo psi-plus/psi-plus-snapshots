@@ -746,10 +746,20 @@ public:
             connect(timer, &QTimer::timeout, this, [this, componentId = pair->local->componentId]() {
                 if (state != Started && state != Nominating)
                     return; // likely user stopped or it's alreday active
+                Component &c = *findComponent(componentId);
+                if (c.stopped)
+                    return; // already queue signal likely
                 auto &selectedPair = findComponent(componentId)->selectedPair;
                 if (selectedPair)
                     return;
                 selectedPair = chooseSelectedPair(componentId);
+                if (!selectedPair) {
+                    qWarning("failed to find selected pair for previously nominated component. Candidates removed "
+                             "without ICE restart?");
+                    stop();
+                    emit q->error(ErrorGeneric);
+                    return;
+                }
                 cleanupButSelectedPair(componentId);
                 tryIceFinished();
             });
@@ -1301,6 +1311,7 @@ private slots:
         Q_ASSERT(it != components.end());
 
         it->stopped = true;
+        it->nominationTimer.reset();
 
         bool allStopped = true;
         for (const Component &c : components) {
