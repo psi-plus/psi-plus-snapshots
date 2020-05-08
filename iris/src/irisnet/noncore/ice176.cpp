@@ -153,7 +153,7 @@ public:
         int                     id              = 0;
         IceComponent *          ic              = nullptr;
         std::unique_ptr<QTimer> nominationTimer = std::unique_ptr<QTimer>();
-        CandidatePair::Ptr      selectedPair;
+        CandidatePair::Ptr      selectedPair; // final selected pair. won't be changed
         bool                    localFinished     = false;
         bool                    hasValidPairs     = false;
         bool                    hasNominatedPairs = false;
@@ -1027,8 +1027,11 @@ private:
 #ifdef ICE_DEBUG
         iceDebug("Ready to send media!");
         for (auto &c : components) {
-            iceDebug("  C%d: selected pair: %s (base: %s)", c.id, qPrintable(*c.selectedPair),
-                     qPrintable(c.selectedPair->local->base));
+            if (c.selectedPair)
+                iceDebug("  C%d: selected pair: %s (base: %s)", c.id, qPrintable(*c.selectedPair),
+                         qPrintable(c.selectedPair->local->base));
+            else
+                iceDebug("  C%d: any pair from valid list", c.id);
         }
 #endif
         readyToSendMedia = true;
