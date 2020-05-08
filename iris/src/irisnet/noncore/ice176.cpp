@@ -397,22 +397,27 @@ public:
 
     // returns a pair is pairable or null
     QSharedPointer<CandidatePair> makeCandidatesPair(IceComponent::CandidateInfo::Ptr lc,
-                                                     IceComponent::CandidateInfo::Ptr rc)
+                                                     IceComponent::CandidateInfo::Ptr rc,
+                                                     bool                             allowProtoMismatch = false)
     {
         if (lc->componentId != rc->componentId)
             return {};
 
         // don't pair ipv4 with ipv6.  FIXME: is this right?
-        if (lc->addr.addr.protocol() != rc->addr.addr.protocol())
+        if (!allowProtoMismatch && lc->addr.addr.protocol() != rc->addr.addr.protocol()) {
+            qDebug("Skip building pair: %s - %s (protocol mismatch)", qPrintable(lc->addr), qPrintable(rc->addr));
             return {};
+        }
 
         // don't relay to localhost.  turnserver
         //   doesn't like it.  i don't know if this
         //   should qualify as a HACK or not.
         //   trying to relay to localhost is pretty
         //   stupid anyway
-        if (lc->type == IceComponent::RelayedType && getAddressScope(rc->addr.addr) == 0)
+        if (lc->type == IceComponent::RelayedType && getAddressScope(rc->addr.addr) == 0) {
+            qDebug("Skip building pair: %s - %s (relay to localhost)", qPrintable(lc->addr), qPrintable(rc->addr));
             return {};
+        }
 
         auto pair    = QSharedPointer<CandidatePair>::create();
         pair->local  = lc;
@@ -1039,26 +1044,30 @@ private:
             // so mapped address doesn't match with local candidate sending binding request.
             // gotta find/create one
             auto locIt = std::find_if(localCandidates.begin(), localCandidates.end(), [&](const auto &c) {
-                return c.info->base == mappedAddr || c.info->addr == mappedAddr;
+                return (c.info->base == mappedAddr || c.info->addr == mappedAddr)
+                    && c.info->componentId == component.id;
             });
             if (locIt == localCandidates.end()) {
                 // RFC8445 7.2.5.3.1.  Discovering Peer-Reflexive Candidates
                 // new peer-reflexive local candidate discovered
-                findComponent(pair->local->componentId)
-                    ->ic->addLocalPeerReflexiveCandidate(mappedAddr, pair->local, binding->priority());
+                component.ic->addLocalPeerReflexiveCandidate(mappedAddr, pair->local, binding->priority());
+                // find just inserted prflx candidate
                 locIt = std::find_if(localCandidates.begin(), localCandidates.end(),
-                                     [&](const auto &c) { return c.info->addr == mappedAddr; }); // just inserted
+                                     [&](const auto &c) { return c.info->addr == mappedAddr; });
                 Q_ASSERT(locIt != localCandidates.end());
                 // local candidate wasn't found, so it wasn't on the checklist  RFC8445 7.2.5.3.1.3
-                pair = makeCandidatesPair(locIt->info, pair->remote);
+                // allow v4/v6 proto mismatch in case NAT does magic
+                pair = makeCandidatesPair(locIt->info, pair->remote, true);
             } else {
                 // local candidate found. If it's a part of a pair on checklist, we have to add this pair to valid list,
                 // otherwise we have to create a new pair and add it to valid list
                 auto it = std::find_if(checkList.pairs.begin(), checkList.pairs.end(), [&](auto const &p) {
-                    return p->local->id == locIt->info->id && p->remote->addr == pair->remote->addr;
+                    return p->local->base == locIt->info->base && p->remote->addr == pair->remote->addr
+                        && p->local->componentId == locIt->info->componentId;
                 });
                 if (it == checkList.pairs.constEnd()) {
-                    pair = makeCandidatesPair(locIt->info, pair->remote);
+                    // allow v4/v6 proto mismatch in case NAT does magic
+                    pair = makeCandidatesPair(locIt->info, pair->remote, true);
                 } else {
                     pair = *it;
                     iceDebug("mapped address belongs to another pair on checklist %s", qPrintable(QString(*pair)));
