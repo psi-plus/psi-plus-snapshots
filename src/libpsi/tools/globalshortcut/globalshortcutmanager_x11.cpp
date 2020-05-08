@@ -254,9 +254,11 @@ private:
     QList<GrabbedKey> grabbedKeys_;
 
     static bool failed;
-    static int  XGrabErrorHandler(Display *, XErrorEvent *)
+    static int  XGrabErrorHandler(Display *, XErrorEvent *e)
     {
-        qDebug("failed to grab key");
+        char answ[256];
+        XGetErrorText(e->display, e->error_code, answ, sizeof(answ));
+        qDebug("failed to grab key, Code: %d, %s", e->error_code, answ);
         failed = true;
         return 0;
     }

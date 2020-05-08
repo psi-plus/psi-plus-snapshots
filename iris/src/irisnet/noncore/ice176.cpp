@@ -114,6 +114,9 @@ public:
         bool isTriggered             = false; // last scheduled check was a triggered check
         bool isTriggeredForNominated = false;
         bool finalNomination         = false;
+#ifdef ICE_DEBUG
+        bool logNew = false;
+#endif
 
         CandidatePairState state = CandidatePairState::PFrozen;
 
@@ -151,10 +154,11 @@ public:
         IceComponent *          ic              = nullptr;
         std::unique_ptr<QTimer> nominationTimer = std::unique_ptr<QTimer>();
         CandidatePair::Ptr      selectedPair;
-        bool                    localFinished = false;
-        bool                    hasValidPairs = false;
-        bool                    stopped       = false;
-        bool                    lowOverhead   = false;
+        bool                    localFinished     = false;
+        bool                    hasValidPairs     = false;
+        bool                    hasNominatedPairs = false;
+        bool                    stopped           = false;
+        bool                    lowOverhead       = false;
     };
 
     Ice176 *                                q;
@@ -436,7 +440,13 @@ public:
     // adds new pairs, sorts, prunes
     void addChecklistPairs(const QList<QSharedPointer<CandidatePair>> &pairs)
     {
-        iceDebug("%d pairs", pairs.count());
+#ifdef ICE_DEBUG
+        iceDebug("%d new pairs", pairs.count());
+        for (auto &p : pairs)
+            p->logNew = true;
+#endif
+        if (!pairs.count())
+            return;
 
         // combine pairs with existing, and sort
         checkList.pairs += pairs;
@@ -449,7 +459,10 @@ public:
         // pruning
         for (int n = 0; n < checkList.pairs.count(); ++n) {
             auto &pair = checkList.pairs[n];
-            iceDebug("%d, %s", pair->local->componentId, qPrintable(*pair));
+#ifdef ICE_DEBUG
+            if (pair->logNew)
+                iceDebug("%d, %s", pair->local->componentId, qPrintable(*pair));
+#endif
 
             for (int i = n - 1; i >= 0; --i) {
                 // RFC8445 says to use base only for reflexive. but base is set properly for host and relayed too.
@@ -469,9 +482,11 @@ public:
         while (checkList.pairs.count() > max_pairs)
             checkList.pairs.removeLast();
 #ifdef ICE_DEBUG
-        iceDebug("%d after pruning", checkList.pairs.count());
+        iceDebug("%d after pruning (just new below):", checkList.pairs.count());
         for (auto &p : checkList.pairs) {
-            iceDebug("%d, %s", p->local->componentId, qPrintable(*p));
+            if (p->logNew)
+                iceDebug("%d, %s", p->local->componentId, qPrintable(*p));
+            p->logNew = false;
         }
 #endif
     }
@@ -598,8 +613,10 @@ public:
             }
         }
 
-        addChecklistPairs(pairs);
+        if (!pairs.count())
+            return;
 
+        addChecklistPairs(pairs);
         if (!checkTimer.isActive())
             checkTimer.start();
     }
@@ -1088,6 +1105,10 @@ private:
         pair->isTriggeredForNominated = isTriggeredForNominated;
         pair->finalNomination         = finalNomination;
 
+        component.hasValidPairs = true;
+        if (isTriggeredForNominated || binding->useCandidate())
+            component.hasNominatedPairs = true;
+
         // mark all with same foundation as Waiting to prioritize them
         for (auto &p : checkList.pairs)
             if (p->state == PFrozen && p->foundation == pair->foundation)
@@ -1114,10 +1135,12 @@ private:
 #endif
         }
 
-        if (!readyToSendMedia && (localFeatures & NotNominatedData) && (remoteFeatures & NotNominatedData)) {
+        if (!readyToSendMedia) {
+            bool allowNotNominatedData = (localFeatures & NotNominatedData) && (remoteFeatures & NotNominatedData);
             // if both follow RFC8445 and allow to send data on any valid pair
-            findComponent(pair->local->componentId)->hasValidPairs = true;
-            if (std::all_of(components.begin(), components.end(), [](auto &c) { return c.hasValidPairs; })) {
+            if (std::all_of(components.begin(), components.end(), [&](auto &c) {
+                    return (allowNotNominatedData && c.hasValidPairs) || c.hasNominatedPairs;
+                })) {
                 onReadyToSendMedia();
             }
         }
