@@ -90,11 +90,10 @@ public:
     // note, Nominating state is skipped when aggressive nomination is enabled.
     enum State {
         Stopped,
-        Starting,   // preparing local candidates right after start() call
-        Started,    // local candidates ready. ready for pairing with remote
-        Nominating, // for ice2 it's a state when we decided to nominate one of active pairs
-        Active,     // all components have a nominated pair and media transferred over them
-        Stopping    // when received a command from the user to stop
+        Starting, // preparing local candidates right after start() call
+        Started,  // local candidates ready. ready for pairing with remote
+        Active,   // all components have a nominated pair and media transferred over them
+        Stopping  // when received a command from the user to stop
     };
 
     enum CandidatePairState { PWaiting, PInProgress, PSucceeded, PFailed, PFrozen };
@@ -159,6 +158,9 @@ public:
         bool                    hasNominatedPairs = false;
         bool                    stopped           = false;
         bool                    lowOverhead       = false;
+
+        // initiator is nominating the final pair (will be set as `selectePair` when ready)
+        bool nominating = false; // with aggressive nomination it's always false
     };
 
     Ice176 *                                q;
@@ -326,7 +328,7 @@ public:
 
     void stop()
     {
-        Q_ASSERT(state == Starting || state == Started || state == Nominating || state == Active);
+        Q_ASSERT(state == Starting || state == Started || state == Active);
 
         state = Stopping;
         remoteGatheringCompleteTimer.reset();
@@ -702,11 +704,30 @@ public:
         return it == checkList.validPairs.end() ? CandidatePair::Ptr() : *it;
     }
 
+    void setSelectedPair(int componentId)
+    {
+        auto &selectedPair = findComponent(componentId)->selectedPair;
+        if (selectedPair)
+            return;
+        selectedPair = chooseSelectedPair(componentId);
+        if (!selectedPair) {
+            qWarning("failed to find selected pair for previously nominated component. Candidates removed "
+                     "without ICE restart?");
+            stop();
+            emit q->error(ErrorGeneric);
+            return;
+        }
+        cleanupButSelectedPair(componentId);
+        emit q->componentReady(componentId - 1);
+        tryIceFinished();
+    }
+
     bool canHaveMoreRemoteCandidates() const { return remoteGatheringComplete || !(remoteFeatures & Trickle); }
 
     void tryNominateSelectedPair(int componentId)
     {
-        if (mode != Initiator || state != Started || checkList.validPairs.isEmpty())
+        auto &c = *findComponent(componentId);
+        if (mode != Initiator || state != Started || checkList.validPairs.isEmpty() || c.nominating)
             return;
         auto pair = chooseSelectedPair(componentId);
         if (!pair)
@@ -726,7 +747,7 @@ public:
                 return; // either till checked or remote gathering timeout
             }
         }
-        state                 = Nominating;
+        c.nominating          = true;
         pair->finalNomination = true;
         iceDebug("Nominating valid pair: %s", qPrintable(*pair));
         checkList.triggeredPairs.prepend(pair);
@@ -736,25 +757,30 @@ public:
     {
         if (!std::all_of(components.begin(), components.end(), [](auto &c) { return c.selectedPair != nullptr; }))
             return;
-        if (!readyToSendMedia) {
-            onReadyToSendMedia();
+        tryReadyToSendMedia();
+#ifdef ICE_DEBUG
+        iceDebug("ICE selected final pairs!");
+        for (auto &c : components) {
+            iceDebug("  C%d: %s", c.id, qPrintable(*c.selectedPair));
         }
+        iceDebug("Signalling iceFinished now");
+#endif
         state = Active;
         emit q->iceFinished();
     }
 
     // execute when new nominated pair
-    void tryComponentSuccess(QSharedPointer<CandidatePair> &pair)
+    void onComponentNominatedPair(QSharedPointer<CandidatePair> &pair)
     {
-        Component &c      = *findComponent(pair->local->componentId);
-        pair->isNominated = true;
-        if (c.lowOverhead) {
-            iceDebug("component is flagged for low overhead.  setting up for %s", qPrintable(*pair));
-            auto &cc = localCandidates[findLocalCandidate(pair->local->addr.addr, pair->local->addr.port)];
-            c.ic->flagPathAsLowOverhead(cc.id, pair->remote->addr.addr, pair->remote->addr.port);
-        }
+        Component &c        = *findComponent(pair->local->componentId);
+        pair->isNominated   = true;
+        c.hasNominatedPairs = true;
 
-        emit q->componentReady(pair->local->componentId - 1);
+        // if (c.lowOverhead) { // commented out since we need turn permissions for all components
+        iceDebug("component is flagged for low overhead.  setting up for %s", qPrintable(*pair));
+        auto &cc = localCandidates[findLocalCandidate(pair->local->addr.addr, pair->local->addr.port)];
+        c.ic->flagPathAsLowOverhead(cc.id, pair->remote->addr.addr, pair->remote->addr.port);
+        //}
 
         bool agrNom = (mode == Initiator ? localFeatures : remoteFeatures) & AggressiveNomination;
         if (agrNom) {
@@ -766,30 +792,16 @@ public:
             timer->setSingleShot(true);
             timer->setInterval(agressiveNominationTimeout);
             connect(timer, &QTimer::timeout, this, [this, componentId = pair->local->componentId]() {
-                if (state != Started && state != Nominating)
+                if (state != Started)
                     return; // likely user stopped or it's alreday active
                 Component &c = *findComponent(componentId);
                 if (c.stopped)
                     return; // already queue signal likely
-                auto &selectedPair = findComponent(componentId)->selectedPair;
-                if (selectedPair)
-                    return;
-                selectedPair = chooseSelectedPair(componentId);
-                if (!selectedPair) {
-                    qWarning("failed to find selected pair for previously nominated component. Candidates removed "
-                             "without ICE restart?");
-                    stop();
-                    emit q->error(ErrorGeneric);
-                    return;
-                }
-                cleanupButSelectedPair(componentId);
-                tryIceFinished();
+                setSelectedPair(componentId);
             });
             timer->start();
         } else {
-            c.selectedPair = chooseSelectedPair(pair->local->componentId);
-            cleanupButSelectedPair(pair->local->componentId);
-            tryIceFinished();
+            setSelectedPair(pair->local->componentId);
         }
     }
 
@@ -801,6 +813,7 @@ public:
             return; // if we have something to gather then we still have a chance for success
         }
 
+        // TODO implement ICE-PAC
         if (std::find_if(checkList.pairs.begin(), checkList.pairs.end(),
                          [&](auto const &p) mutable {
                              return p->local->componentId == componentId
@@ -828,7 +841,8 @@ public:
                 // Check nominated here?
                 iceDebug("Don't do triggered check since pair is already in success state");
                 if (mode == Responder && !pair->isNominated && nominated) {
-                    tryComponentSuccess(pair);
+                    onComponentNominatedPair(pair);
+                    tryReadyToSendMedia();
                 }
                 return; // nothing todo. rfc 8445 7.3.1.4
             }
@@ -1022,8 +1036,17 @@ private:
         return id;
     }
 
-    void onReadyToSendMedia()
+    void tryReadyToSendMedia()
     {
+        if (readyToSendMedia) {
+            return;
+        }
+        bool allowNotNominatedData = (localFeatures & NotNominatedData) && (remoteFeatures & NotNominatedData);
+        // if both follow RFC8445 and allow to send data on any valid pair
+        if (!std::all_of(components.begin(), components.end(),
+                         [&](auto &c) { return (allowNotNominatedData && c.hasValidPairs) || c.hasNominatedPairs; })) {
+            return;
+        }
 #ifdef ICE_DEBUG
         iceDebug("Ready to send media!");
         for (auto &c : components) {
@@ -1108,16 +1131,23 @@ private:
         pair->isTriggeredForNominated = isTriggeredForNominated;
         pair->finalNomination         = finalNomination;
 
-        component.hasValidPairs = true;
-        if (isTriggeredForNominated || binding->useCandidate())
+        bool signalCompValidPairs = false;
+        if (!component.hasValidPairs) {
+            component.hasValidPairs = true;
+            signalCompValidPairs    = true;
+        }
+        bool signalCompNominated = false;
+        if (!component.hasNominatedPairs && (isTriggeredForNominated || binding->useCandidate())) {
             component.hasNominatedPairs = true;
+            signalCompNominated         = true;
+        }
 
         // mark all with same foundation as Waiting to prioritize them
         for (auto &p : checkList.pairs)
             if (p->state == PFrozen && p->foundation == pair->foundation)
                 p->state = PWaiting;
 
-        if (!component.selectedPair) {
+        if (!component.selectedPair) { // no final pair yet
             // find position to insert in sorted list of valid pairs
             auto insIt = std::upper_bound(
                 checkList.validPairs.begin(), checkList.validPairs.end(), pair, [](auto &item, auto &toins) {
@@ -1138,15 +1168,9 @@ private:
 #endif
         }
 
-        if (!readyToSendMedia) {
-            bool allowNotNominatedData = (localFeatures & NotNominatedData) && (remoteFeatures & NotNominatedData);
-            // if both follow RFC8445 and allow to send data on any valid pair
-            if (std::all_of(components.begin(), components.end(), [&](auto &c) {
-                    return (allowNotNominatedData && c.hasValidPairs) || c.hasNominatedPairs;
-                })) {
-                onReadyToSendMedia();
-            }
-        }
+        if (signalCompNominated || signalCompValidPairs) {
+            tryReadyToSendMedia();
+        } // else nothing changed so nothing to try
 
         if (mode == Ice176::Initiator) {
             if (!binding->useCandidate()) {
@@ -1159,16 +1183,12 @@ private:
                 return;
         }
 
-        // check if component already has nominated pair
-        auto it = std::find_if(checkList.pairs.begin(), checkList.pairs.end(), [&](auto const &p) {
-            return p->local->componentId == pair->local->componentId && p->isNominated;
-        });
-
-        if (it != checkList.pairs.end()) {
+        // we have nomination success.
+        if (!signalCompNominated) {
             iceDebug("component %d already active, not signalling", pair->local->componentId);
             return;
         }
-        tryComponentSuccess(pair);
+        onComponentNominatedPair(pair);
     }
 
     void handlePairBindingError(CandidatePair::Ptr pair, XMPP::StunBinding::Error)
@@ -1187,23 +1207,21 @@ private:
             return; // TODO hadle keep-alive binding properly
         }
 
-        if (state == Started) {
-            // oops, already-started ICE reports errors. keep-alive checks?
-            if (pair->isNominated) {
-                iceDebug("check failed on nominated candidate. set ICE status to failed");
-                stop();
-                emit q->error(ErrorDisconnected);
-            }
+        auto &c = *findComponent(pair->local->componentId);
+        if ((c.nominating && pair->finalNomination)
+            || (!(remoteFeatures & AggressiveNomination) && pair->isTriggeredForNominated)) {
+
+            if (pair->isTriggeredForNominated)
+                qInfo("Failed to do triggered check for nominated selectedPair. set ICE status to failed");
+            else
+                qInfo("Failed to nominate selected pair. set ICE status to failed");
+            stop();
+            emit q->error(ErrorDisconnected);
             return;
         }
-        if (state == Nominating) {
-            if (pair->finalNomination) {
-                iceDebug("Failed to nominate selected pair. set ICE status to failed");
-                stop();
-                emit q->error(ErrorDisconnected);
-            }
-            return;
-        }
+
+        // if not nominating but use-candidate then I'm initiator with aggressive nomination. It's Ok to fail.
+        // if nominating but not use-candidate then I'm initiator and something not important failed
 
         tryComponentFailed(pair->local->componentId);
     }

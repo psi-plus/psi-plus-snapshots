@@ -481,12 +481,16 @@ public:
         connect(ice, &XMPP::Ice176::localCandidatesReady, this,
                 [this](const QList<XMPP::Ice176::Candidate> &cs) { localCandidates += cs; });
         connect(ice, &XMPP::Ice176::localGatheringComplete, this, &App::ice_localGatheringComplete);
-        connect(ice, SIGNAL(componentReady(int)), SLOT(ice_componentReady(int)));
+        connect(ice, &XMPP::Ice176::componentReady, this, [this](int componentIndex) {
+            printf("Channel %d ready.\n", componentIndex);
+            channels[componentIndex].ready = true;
+        });
+
         connect(ice, SIGNAL(readyRead(int)), SLOT(ice_readyRead(int)));
         connect(ice, SIGNAL(datagramsWritten(int, int)), SLOT(ice_datagramsWritten(int, int)));
         connect(ice, &XMPP::Ice176::readyToSendMedia, this, []() { printf("ICE ready to send media.\n"); });
         connect(ice, &XMPP::Ice176::iceFinished, this,
-                []() { printf("ICE negotiation has finished and media stream is active now.\n"); });
+                []() { printf("ICE negotiation has finished and media stream is active now!\n"); });
 
         // set up local ports for forwarding
         for (int n = 0; n < opt_channels; ++n) {
@@ -685,24 +689,6 @@ private slots:
         reader = new IceBlockReader(this);
         connect(reader, SIGNAL(finished(const QStringList &)), SLOT(reader_finished(const QStringList &)));
         connect(reader, SIGNAL(error()), SLOT(reader_error()));
-    }
-
-    void ice_componentReady(int index)
-    {
-        printf("Channel %d ready.\n", index);
-        channels[index].ready = true;
-
-        bool allReady = true;
-        for (int n = 0; n < channels.count(); ++n) {
-            if (!channels[n].ready) {
-                allReady = false;
-                break;
-            }
-        }
-
-        if (allReady) {
-            printf("Tunnel established!\n");
-        }
     }
 
     void ice_readyRead(int componentIndex)
