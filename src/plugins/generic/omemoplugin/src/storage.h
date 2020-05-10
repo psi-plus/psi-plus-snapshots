@@ -37,9 +37,9 @@ public:
     void deinit();
 
     QMap<uint32_t, QByteArray> getKeysMap(const QString &user);
-    QSet<uint32_t> getDeviceList(const QString &user, bool onlyTrusted = true);
-    QSet<uint32_t> getUndecidedDeviceList(const QString &user);
-    void           updateDeviceList(const QString &user, const QSet<uint32_t> &actualIds, QMap<uint32_t, QString> &deviceLabels);
+    QSet<uint32_t>             getDeviceList(const QString &user, bool onlyTrusted = true);
+    QSet<uint32_t>             getUndecidedDeviceList(const QString &user);
+    void updateDeviceList(const QString &user, const QSet<uint32_t> &actualIds, QMap<uint32_t, QString> &deviceLabels);
 
     QVector<QPair<uint32_t, QByteArray>> loadAllPreKeys(int limit = 100);
     uint32_t                             preKeyCount();
@@ -56,7 +56,9 @@ public:
     bool                           identityExists(const signal_protocol_address *addr_p) const;
     uint32_t                       signedPreKeyid();
     bool                           isEnabledForUser(const QString &user);
-    void                           setEnabledForUser(const QString &user, bool enabled);
+    bool                           isDisabledForUser(const QString &user);
+    void                           setEnabledForUser(const QString &user, bool value);
+    void                           setDisabledForUser(const QString &user, bool value);
 
 private:
     QString m_databaseConnectionName;

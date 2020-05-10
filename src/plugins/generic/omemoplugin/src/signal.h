@@ -63,26 +63,28 @@ public:
 
 class Signal {
 public:
-    void                    init(const QString &dataPath, const QString &accountId);
-    void                    deinit();
-    Bundle                  collectBundle();
-    void                    processBundle(const QString &from, uint32_t deviceId, const Bundle &bundle);
-    uint32_t                getDeviceId();
-    void                    updateDeviceList(const QString &user, const QSet<uint32_t> &actualIds, QMap<uint32_t, QString> &deviceLabels);
+    void     init(const QString &dataPath, const QString &accountId);
+    void     deinit();
+    Bundle   collectBundle();
+    void     processBundle(const QString &from, uint32_t deviceId, const Bundle &bundle);
+    uint32_t getDeviceId();
+    void updateDeviceList(const QString &user, const QSet<uint32_t> &actualIds, QMap<uint32_t, QString> &deviceLabels);
     QList<EncryptedKey>     encryptKey(const QString &ownJid, const QString &recipient, const QByteArray &key);
     QPair<QByteArray, bool> decryptKey(const QString &sender, const EncryptedKey &encryptedKey);
     QVector<uint32_t>       invalidSessions(const QString &recipient);
     uint32_t                preKeyCount();
     bool                    isTrusted(const QString &user, uint32_t deviceId);
-    void                    processUndecidedDevices(const QString &user, bool ownJid);
+    void                    processUndecidedDevices(const QString &user, const bool ownJid, const bool trusted);
     bool                    isAvailableForUser(const QString &user);
     bool                    isEnabledForUser(const QString &user);
-    void                    setEnabledForUser(const QString &user, bool enabled);
+    bool                    isDisabledForUser(const QString &user);
+    void                    setEnabledForUser(const QString &user, bool value);
+    void                    setDisabledForUser(const QString &user, bool value);
 
-    QString            getOwnFingerprint();
-    QSet<uint32_t>     getDeviceList(const QString &user);
+    QString                 getOwnFingerprint();
+    QSet<uint32_t>          getDeviceList(const QString &user);
     QMap<uint32_t, QString> getFingerprintsMap(const QString &user);
-    QList<Fingerprint> getKnownFingerprints();
+    QList<Fingerprint>      getKnownFingerprints();
 
     void askDeviceTrust(const QString &user, uint32_t deviceId, bool skipNewDevicePart, bool ownJid = false);
     void removeDevice(const QString &user, uint32_t deviceId);

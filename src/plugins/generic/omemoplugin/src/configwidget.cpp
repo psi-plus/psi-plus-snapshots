@@ -41,16 +41,20 @@ ConfigWidget::ConfigWidget(OMEMO *omemo, AccountInfoAccessingHost *accountInfo) 
 
     int account = accountBox->itemData(accountBox->currentIndex()).toInt();
 
-    auto knownFingerprintsTab = new KnownFingerprints(account, omemo, this);
-    auto manageDevicesTab     = new ManageDevices(account, omemo, this);
+    auto knownFingerprintsTab  = new KnownFingerprints(account, omemo, this);
+    auto manageDevicesTab      = new ManageDevices(account, omemo, this);
+    auto omemoConfigurationTab = new OmemoConfiguration(account, omemo, this);
 
     m_tabWidget = new QTabWidget(this);
     m_tabWidget->addTab(knownFingerprintsTab, tr("Fingerprints"));
     m_tabWidget->addTab(manageDevicesTab, tr("Manage Devices"));
+    m_tabWidget->addTab(omemoConfigurationTab, tr("Configuration"));
     mainLayout->addWidget(m_tabWidget);
     setLayout(mainLayout);
 
-    connect(manageDevicesTab, &ManageDevices::updateKnownFingerprints, knownFingerprintsTab, &KnownFingerprints::updateData);
+    connect(manageDevicesTab, &ManageDevices::updateKnownFingerprints, knownFingerprintsTab,
+            &KnownFingerprints::updateData);
+    connect(this, &ConfigWidget::applySettings, omemoConfigurationTab, &OmemoConfiguration::saveSettings);
 
     // TODO: update after stopping support of Ubuntu Xenial:
     connect(accountBox, SIGNAL(currentIndexChanged(int)), SLOT(currentAccountChanged(int)));
@@ -138,8 +142,8 @@ void KnownFingerprints::doUpdateData()
         contact->setData(QVariant(fingerprint.deviceId));
         row.append(contact);
         TRUST_STATE state = fingerprint.trust;
-        row.append(
-            new QStandardItem(state == TRUSTED ? tr("trusted") : state == UNTRUSTED ? tr("untrusted") : tr("not decided")));
+        row.append(new QStandardItem(state == TRUSTED ? tr("trusted")
+                                                      : state == UNTRUSTED ? tr("untrusted") : tr("not decided")));
         auto fpItem = new QStandardItem(fingerprint.fingerprint);
         fpItem->setData(QColor(state == TRUSTED ? Qt::darkGreen : state == UNTRUSTED ? Qt::darkRed : Qt::darkYellow),
                         Qt::ForegroundRole);
@@ -198,7 +202,7 @@ ManageDevices::ManageDevices(int account, OMEMO *omemo, QWidget *parent) :
     m_currentDeviceId = m_omemo->getDeviceId(account);
 
     auto currentDevice = new QGroupBox(tr("Current device"), this);
-    auto infoLabel = new QLabel(tr("Fingerprint: "), currentDevice);
+    auto infoLabel     = new QLabel(tr("Fingerprint: "), currentDevice);
     infoLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     m_fingerprintLabel = new QLabel(currentDevice);
     m_fingerprintLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -222,10 +226,9 @@ ManageDevices::ManageDevices(int account, OMEMO *omemo, QWidget *parent) :
     currentDevice->setLayout(currentDeviceLayout);
     currentDevice->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 
-
-    auto otherDevices = new QGroupBox(tr("Other devices"), this);
+    auto otherDevices  = new QGroupBox(tr("Other devices"), this);
     auto buttonsLayout = new QHBoxLayout();
-    m_deleteButton = new QPushButton(tr("Delete"), this);
+    m_deleteButton     = new QPushButton(tr("Delete"), this);
     m_deleteButton->setEnabled(false);
     connect(m_deleteButton, &QPushButton::clicked, this, &ManageDevices::deleteDevice);
     buttonsLayout->addWidget(m_deleteButton);
@@ -279,7 +282,7 @@ void ManageDevices::doUpdateData()
             continue;
 
         QList<QStandardItem *> row;
-        auto item = new QStandardItem(QString::number(deviceId));
+        auto                   item = new QStandardItem(QString::number(deviceId));
         item->setData(deviceId);
         row.append(item);
         if (fingerprintsMap.contains(deviceId)) {
@@ -293,19 +296,17 @@ void ManageDevices::doUpdateData()
 
 void ManageDevices::deleteCurrentDevice()
 {
-    const QString &message =
-            tr("Deleting of all OMEMO data for current device will cause "
-               "to a number of consequences:\n"
-               "1) All started OMEMO sessions will be forgotten.\n"
-               "2) You will lose access to encrypted history stored for "
-               "current device on server side.\n"
-               "3) New device ID and keys pair will be generated.\n"
-               "4) You will need to verify keys for all devices of your "
-               "contacts again.\n"
-               "5) Your contacts will need to verify new device before "
-               "you start receive messages from them.\n")
-            + "\n"
-            + tr("Delete current device?");
+    const QString &message = tr("Deleting of all OMEMO data for current device will cause "
+                                "to a number of consequences:\n"
+                                "1) All started OMEMO sessions will be forgotten.\n"
+                                "2) You will lose access to encrypted history stored for "
+                                "current device on server side.\n"
+                                "3) New device ID and keys pair will be generated.\n"
+                                "4) You will need to verify keys for all devices of your "
+                                "contacts again.\n"
+                                "5) Your contacts will need to verify new device before "
+                                "you start receive messages from them.\n")
+        + "\n" + tr("Delete current device?");
 
     QMessageBox messageBox(QMessageBox::Question, QObject::tr("Confirm action"), message);
     messageBox.addButton(QObject::tr("Delete"), QMessageBox::AcceptRole);
@@ -324,13 +325,11 @@ void ManageDevices::deleteDevice()
 {
     QModelIndexList selection = m_table->selectionModel()->selectedIndexes();
     if (!selection.isEmpty()) {
-        const QString &message =
-                tr("After deleting of device from list of available devices "
-                   "it stops receiving offline messages from your contacts "
-                   "until it will become online and your contacts mark it "
-                   "as trusted.")
-                + "\n\n"
-                + tr("Delete selected device?");
+        const QString &message = tr("After deleting of device from list of available devices "
+                                    "it stops receiving offline messages from your contacts "
+                                    "until it will become online and your contacts mark it "
+                                    "as trusted.")
+            + "\n\n" + tr("Delete selected device?");
 
         QMessageBox messageBox(QMessageBox::Question, QObject::tr("Confirm action"), message);
         messageBox.addButton(QObject::tr("Delete"), QMessageBox::AcceptRole);
@@ -349,4 +348,63 @@ void ManageDevices::deviceListUpdated(int account)
         updateData();
     }
 }
+
+OmemoConfiguration::OmemoConfiguration(int account, OMEMO *omemo, QWidget *parent) :
+    ConfigWidgetTab(account, omemo, parent)
+{
+    auto omemoPolicy    = new QGroupBox(tr("OMEMO encryption policy"), this);
+    m_alwaysEnabled     = new QRadioButton(tr("Always enabled"), omemoPolicy);
+    m_enabledByDefault  = new QRadioButton(tr("Enabled by default"), omemoPolicy);
+    m_disabledByDefault = new QRadioButton(tr("Disabled by default"), omemoPolicy);
+
+    auto omemoPolicyLayout = new QVBoxLayout(omemoPolicy);
+    omemoPolicyLayout->addWidget(m_alwaysEnabled);
+    omemoPolicyLayout->addWidget(m_enabledByDefault);
+    omemoPolicyLayout->addWidget(m_disabledByDefault);
+    omemoPolicy->setLayout(omemoPolicyLayout);
+    omemoPolicy->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+
+    m_trustOwnDevices     = new QCheckBox(tr("Automatically mark new own devices as trusted"), this);
+    m_trustContactDevices = new QCheckBox(tr("Automatically mark new interlocutors devices as trusted"), this);
+
+    auto spacerLabel = new QLabel(this);
+    spacerLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    auto mainLayout = new QVBoxLayout(this);
+    mainLayout->addWidget(omemoPolicy);
+    mainLayout->addWidget(m_trustOwnDevices);
+    mainLayout->addWidget(m_trustContactDevices);
+    mainLayout->addWidget(spacerLabel);
+    setLayout(mainLayout);
+
+    loadSettings();
+}
+
+void OmemoConfiguration::updateData()
+{
+    ; // Nothing to do...
+}
+
+void OmemoConfiguration::loadSettings()
+{
+    if (m_omemo->isAlwaysEnabled())
+        m_alwaysEnabled->setChecked(true);
+    else if (m_omemo->isEnabledByDefault())
+        m_enabledByDefault->setChecked(true);
+    else
+        m_disabledByDefault->setChecked(true);
+
+    m_trustOwnDevices->setChecked(m_omemo->trustNewOwnDevices());
+    m_trustContactDevices->setChecked(m_omemo->trustNewContactDevices());
+}
+
+void OmemoConfiguration::saveSettings()
+{
+    m_omemo->setAlwaysEnabled(m_alwaysEnabled->isChecked());
+    m_omemo->setEnabledByDefault(m_enabledByDefault->isChecked());
+    m_omemo->setTrustNewOwnDevices(m_trustOwnDevices->isChecked());
+    m_omemo->setTrustNewContactDevices(m_trustContactDevices->isChecked());
+    m_omemo->saveSettings();
+}
+
 }

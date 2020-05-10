@@ -22,8 +22,10 @@
 #define PSI_CONFIGWIDGET_H
 
 #include "omemo.h"
+#include <QCheckBox>
 #include <QLabel>
 #include <QPushButton>
+#include <QRadioButton>
 #include <QTableView>
 #include <QWidget>
 #include <QtGui>
@@ -31,6 +33,7 @@
 namespace psiomemo {
 class ConfigWidgetTab : public QWidget {
     Q_OBJECT
+
 public:
     ConfigWidgetTab(int account, OMEMO *omemo, QWidget *parent) :
         QWidget(parent), m_account(account), m_omemo(omemo) { }
@@ -91,7 +94,7 @@ protected:
     void updateData() override;
 
 private:
-    QLabel      *m_fingerprintLabel;
+    QLabel *     m_fingerprintLabel;
     uint32_t     m_currentDeviceId;
     QPushButton *m_deleteButton;
     uint32_t     selectedDeviceId(const QModelIndexList &selection) const;
@@ -106,18 +109,39 @@ private slots:
     void deviceListUpdated(int account);
 };
 
+class OmemoConfiguration : public ConfigWidgetTab {
+    Q_OBJECT
+
+public:
+    OmemoConfiguration(int account, OMEMO *omemo, QWidget *parent);
+
+    void updateData() override;
+    void loadSettings();
+    void saveSettings();
+
+private:
+    QRadioButton *m_alwaysEnabled;
+    QRadioButton *m_enabledByDefault;
+    QRadioButton *m_disabledByDefault;
+    QCheckBox *   m_trustOwnDevices;
+    QCheckBox *   m_trustContactDevices;
+};
+
 class ConfigWidget : public QWidget {
     Q_OBJECT
 
 public:
     ConfigWidget(OMEMO *omemo, AccountInfoAccessingHost *accountInfo);
 
-private:
-    AccountInfoAccessingHost *m_accountInfo;
-    QTabWidget *              m_tabWidget;
+signals:
+    void applySettings();
 
 private slots:
     void currentAccountChanged(int index);
+
+private:
+    AccountInfoAccessingHost *m_accountInfo;
+    QTabWidget *              m_tabWidget;
 };
 }
 
