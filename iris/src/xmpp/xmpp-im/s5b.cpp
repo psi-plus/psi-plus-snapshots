@@ -37,6 +37,7 @@
 #endif
 
 #define MAXSTREAMHOSTS 5
+//#define S5B_DEBUG
 
 static const char *S5B_NS = "http://jabber.org/protocol/bytestreams";
 
@@ -2200,8 +2201,8 @@ S5BServer::S5BServer(QTcpServer *serverSocket) : TcpPortServer(serverSocket), d(
     connect(&d->serv, &SocksServer::incomingReady, this, [this]() {
         S5BIncomingConnection *inConn = new S5BIncomingConnection(d->serv.takeIncoming());
 #ifdef S5B_DEBUG
-        qDebug("S5BServer: incoming connection from %s:%d\n", qPrintable(i->client->peerAddress().toString()),
-               i->client->peerPort());
+        qDebug("S5BServer: incoming connection from %s:%d\n", qPrintable(inConn->client->peerAddress().toString()),
+               inConn->client->peerPort());
 #endif
         connect(inConn, &S5BIncomingConnection::result, this, [this, inConn](bool success) {
 #ifdef S5B_DEBUG

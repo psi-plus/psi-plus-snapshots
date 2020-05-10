@@ -1102,7 +1102,8 @@ namespace XMPP { namespace Jingle { namespace S5B {
                                                  sc->grantConnect();
                                              return;
                                          }
-
+                                         qDebug("Reject incoming socks5 connection with key %s (%s)", qPrintable(key),
+                                                connection ? "already has connection" : "key mismatch");
                                          sc->requestDeny();
                                          sc->deleteLater();
                                      });
