@@ -409,6 +409,8 @@ namespace XMPP { namespace Jingle {
                                 nullptr };
             }
             QScopedPointer<Application> app(appPad->manager()->startApplication(appPad, c.name, c.creator, c.senders));
+            if (!app)
+                return result { Unparsed, Reason::Success, nullptr };
 
             auto descErr = app->setRemoteOffer(descriptionEl);
             if (descErr == Application::IncompatibleParameters) {
