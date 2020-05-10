@@ -20,6 +20,7 @@
 #include "jingle-application.h"
 #include "jingle-session.h"
 #include "xmpp_client.h"
+#include "xmpp_task.h"
 
 namespace XMPP { namespace Jingle {
     //----------------------------------------------------------------------------
@@ -150,9 +151,10 @@ namespace XMPP { namespace Jingle {
             contentEl.appendChild(transportEl);
 
             setState(State::Unacked);
-            return OutgoingUpdate { updates, [this, transportCB](bool success) {
-                                       transportCB(success);
-                                       setState(State::Pending);
+            return OutgoingUpdate { updates, [this, transportCB](Task *task) {
+                                       transportCB(task);
+                                       if (task->success())
+                                           setState(State::Pending);
                                    } };
 
         case Action::ContentAccept:
@@ -161,9 +163,10 @@ namespace XMPP { namespace Jingle {
             contentEl.appendChild(transportEl);
 
             setState(State::Unacked);
-            return OutgoingUpdate { updates, [this, transportCB](bool success) {
-                                       transportCB(success);
-                                       setState(State::Connecting);
+            return OutgoingUpdate { updates, [this, transportCB](Task *task) {
+                                       transportCB(task);
+                                       if (task->success())
+                                           setState(State::Connecting);
                                    } };
         case Action::TransportInfo:
             Q_ASSERT(_transport->hasUpdates());
@@ -189,13 +192,13 @@ namespace XMPP { namespace Jingle {
         QDomElement      transportEl;
         OutgoingUpdateCB transportCB;
         std::tie(transportEl, transportCB) = _transport->takeOutgoingUpdate();
-        auto wrapCB = [this, tr = _transport.toWeakRef(), cb = std::move(transportCB)](bool success) {
+        auto wrapCB = [this, tr = _transport.toWeakRef(), cb = std::move(transportCB)](Task *task) {
             auto transport = tr.lock();
             if (transport && cb)
-                cb(success);
+                cb(task);
             if (_pendingTransportReplace == PendingTransportReplace::NeedAck) {
                 _pendingTransportReplace
-                    = success ? PendingTransportReplace::InProgress : PendingTransportReplace::None;
+                    = task->success() ? PendingTransportReplace::InProgress : PendingTransportReplace::None;
                 emit updated();
             }
         };

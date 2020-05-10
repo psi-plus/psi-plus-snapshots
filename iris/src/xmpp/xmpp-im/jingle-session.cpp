@@ -114,7 +114,7 @@ namespace XMPP { namespace Jingle {
         }
 
         void sendJingle(Action action, QList<QDomElement> update,
-                        std::function<void(bool)> callback = std::function<void(bool)>())
+                        std::function<void(JT *)> callback = std::function<void(JT *)>())
         {
             QDomDocument &doc = *manager->client()->doc();
             Jingle        jingle(action, sid);
@@ -135,17 +135,12 @@ namespace XMPP { namespace Jingle {
             QObject::connect(jt, &JT::finished, q, [jt, jingle, callback, this]() {
                 waitingAck = false;
                 if (callback) {
-                    callback(jt->success());
+                    callback(jt);
                 }
-                if (jt->success()) {
-                    planStep();
-                } else {
+                if (!jt->success()) {
                     lastError = jt->error();
-                    if (ErrorUtil::jingleCondition(lastError) != ErrorUtil::TieBreak)
-                        setSessionFinished();
-                    else
-                        planStep();
                 }
+                planStep();
             });
             waitingAck = true;
             jt->go(true);
@@ -187,12 +182,7 @@ namespace XMPP { namespace Jingle {
                 auto elements = std::get<0>(updates);
                 auto cb       = std::get<1>(updates);
                 outgoingUpdates.erase(it);
-                sendJingle(action, elements, [this, cb](bool success) {
-                    if (cb) {
-                        cb(success);
-                    }
-                    planStep();
-                });
+                sendJingle(action, elements, cb);
                 return;
             }
 
@@ -257,16 +247,15 @@ namespace XMPP { namespace Jingle {
                     }
                 }
                 state = State::Unacked;
-                sendJingle(actionToSend, contents, [this, acceptApps, finalState](bool success) {
-                    if (!success)
-                        return; // TODO any error means session error. but for content-add error handling has to be
-                                // moved out of sendJingle
+                sendJingle(actionToSend, contents, [this, acceptApps, finalState](JT *jt) {
+                    if (!jt->success())
+                        return;
                     state = finalState;
                     for (const auto &h : acceptApps) {
                         auto app      = std::get<0>(h);
                         auto callback = std::get<1>(h);
                         if (app) {
-                            callback(true);
+                            callback(jt);
                             if (role == Origin::Responder) {
                                 app->start();
                             }
@@ -290,10 +279,9 @@ namespace XMPP { namespace Jingle {
                 if (!el.isNull()) {
                     updateXml.append(el);
                     // we can send session-info for just one application. so stop processing
-                    sendJingle(Action::SessionInfo, updateXml, [this](bool success) {
-                        if (!success)
+                    sendJingle(Action::SessionInfo, updateXml, [](JT *jt) {
+                        if (!jt->success())
                             qWarning("failure for session-info is ignored");
-                        planStep();
                     });
                     return;
                 }
@@ -321,12 +309,12 @@ namespace XMPP { namespace Jingle {
                         acceptApps.append(AckHndl { app, callback });
                     }
                 }
-                sendJingle(upd.action, updateXml, [this, acceptApps](bool success) {
+                sendJingle(upd.action, updateXml, [this, acceptApps](JT *jt) {
                     for (const auto &h : acceptApps) {
                         auto app      = std::get<0>(h);
                         auto callback = std::get<1>(h);
                         if (app) {
-                            callback(success);
+                            callback(jt);
                         }
                     }
                     planStep();
@@ -865,7 +853,10 @@ namespace XMPP { namespace Jingle {
             }
 
             for (auto &u : updates) {
-                u.first->update(u.second); // failure should trigger transport replace
+                if (!u.first->update(u.second)) {
+                    lastError = u.first->lastError();
+                    return false; // failure should trigger transport replace
+                }
             }
 
             return true;

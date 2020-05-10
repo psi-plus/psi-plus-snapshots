@@ -112,6 +112,7 @@ namespace Jingle { namespace S5B {
         SocksClient *      takeSocksClient();
         void               deleteSocksClient();
         TcpPortServer::Ptr server() const;
+        bool               isConnected() const;
 
         bool        operator==(const Candidate &other) const;
         inline bool operator!=(const Candidate &other) const { return !(*this == other); }

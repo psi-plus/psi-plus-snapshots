@@ -98,6 +98,7 @@ namespace XMPP { namespace Jingle {
         inline State                    state() const { return _state; }
         inline State                    prevState() const { return _prevState; }
         inline Reason                   lastReason() const { return _lastReason; }
+        inline XMPP::Stanza::Error      lastError() const { return _lastError; }
         inline TransportManagerPad::Ptr pad() const { return _pad; }
         bool                            isRemote() const;
         inline bool                     isLocal() const { return !isRemote(); }
@@ -138,6 +139,7 @@ namespace XMPP { namespace Jingle {
         Origin                              _creator   = Origin::None;
         QSharedPointer<TransportManagerPad> _pad;
         Reason                              _lastReason;
+        XMPP::Stanza::Error                 _lastError;
         int                                 _channelCount = 1;
     };
 

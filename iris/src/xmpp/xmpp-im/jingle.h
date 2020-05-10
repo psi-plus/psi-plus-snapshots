@@ -31,6 +31,7 @@ class QDomElement;
 
 namespace XMPP {
 class Client;
+class Task;
 
 namespace Jingle {
     extern const QString NS;
@@ -150,8 +151,8 @@ namespace Jingle {
     };
     Q_DECLARE_FLAGS(TransportFeatures, TransportFeature)
 
-    typedef QPair<QString, Origin>            ContentKey;
-    typedef std::function<void(bool success)> OutgoingUpdateCB;
+    typedef QPair<QString, Origin>      ContentKey;
+    typedef std::function<void(Task *)> OutgoingUpdateCB;
     typedef std::tuple<QList<QDomElement>, OutgoingUpdateCB>
         OutgoingUpdate; // list of elements to b inserted to <jingle> and success callback
     typedef std::tuple<QDomElement, OutgoingUpdateCB>
