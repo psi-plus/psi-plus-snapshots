@@ -411,7 +411,7 @@ public:
 
         // don't pair ipv4 with ipv6.  FIXME: is this right?
         if (!allowProtoMismatch && lc->addr.addr.protocol() != rc->addr.addr.protocol()) {
-            qDebug("Skip building pair: %s - %s (protocol mismatch)", qPrintable(lc->addr), qPrintable(rc->addr));
+            iceDebug("Skip building pair: %s - %s (protocol mismatch)", qPrintable(lc->addr), qPrintable(rc->addr));
             return {};
         }
 
@@ -1447,6 +1447,9 @@ private slots:
 
                 QByteArray packet = response.toBinary(StunMessage::MessageIntegrity | StunMessage::Fingerprint, reqkey);
                 sock->writeDatagram(path, packet, fromAddr, fromPort);
+
+                if (state != Started) // only in started state we do triggered checks
+                    return;
 
                 auto it        = std::find_if(remoteCandidates.begin(), remoteCandidates.end(),
                                        [&](IceComponent::CandidateInfo::Ptr remCand) {

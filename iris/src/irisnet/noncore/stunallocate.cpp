@@ -433,6 +433,7 @@ public:
     QTimer *                        allocateRefreshTimer;
     QList<StunAllocatePermission *> perms;
     QList<StunAllocateChannel *>    channels;
+    QList<QHostAddress>             permQueue;
     QList<QHostAddress>             permsOut;
     QList<StunAllocate::Channel>    channelsOut;
     int                             erroringCode;
@@ -494,6 +495,11 @@ public:
         // if currently erroring out, skip
         if (state == Erroring)
             return;
+
+        if (state == Starting) {
+            permQueue += newPerms;
+            return;
+        }
 
         Q_ASSERT(state == Started);
 
@@ -969,6 +975,9 @@ private slots:
 
             state = Started;
             restartRefreshTimer();
+
+            setPermissions(permQueue);
+            permQueue.clear();
 
             emit q->started();
         } else if (state == Stopping || state == Erroring) {
