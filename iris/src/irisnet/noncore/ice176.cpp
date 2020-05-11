@@ -210,6 +210,8 @@ public:
             auto pair = selectNextPairToCheck();
             if (pair)
                 checkPair(pair);
+            else
+                checkTimer.stop();
         });
         checkTimer.setInterval(20);
         checkTimer.setSingleShot(false);
@@ -675,13 +677,17 @@ public:
                 newValid.push_back(p);
         checkList.validPairs = newValid;
 
-        iceDebug("C%d: selected pair: %s (base: %s)", componentId, qPrintable(*selected),
-                 qPrintable(selected->local->base));
-
         auto &sa = selected->local->base;
         auto &t  = localCandidates[findLocalCandidate(sa.addr, sa.port)].iceTransport;
         Q_ASSERT(t.data() != nullptr);
-        // cancel active transactions
+
+        // cancel planned/active transactions
+        QMutableListIterator<QWeakPointer<CandidatePair>> it(checkList.triggeredPairs);
+        while (it.hasNext()) {
+            auto p = it.next().toStrongRef();
+            if (!p || p->local->componentId == componentId)
+                it.remove();
+        }
         for (auto &p : checkList.pairs) {
             if (p->local->componentId == componentId && p->state == PInProgress) {
                 p->binding->cancel();
@@ -709,14 +715,23 @@ public:
         auto &selectedPair = findComponent(componentId)->selectedPair;
         if (selectedPair)
             return;
+#ifdef ICE_DEBUG
+        iceDebug("Current valid list state:");
+        for (auto &p : checkList.validPairs) {
+            iceDebug("  C%d: %s", p->local->componentId, qPrintable(*p));
+        }
+#endif
         selectedPair = chooseSelectedPair(componentId);
         if (!selectedPair) {
-            qWarning("failed to find selected pair for previously nominated component. Candidates removed "
-                     "without ICE restart?");
+            qWarning("C%d: failed to find selected pair for previously nominated component. Candidates removed "
+                     "without ICE restart?",
+                     componentId);
             stop();
             emit q->error(ErrorGeneric);
             return;
         }
+        iceDebug("C%d: selected pair: %s (base: %s)", componentId, qPrintable(*selectedPair),
+                 qPrintable(selectedPair->local->base));
         cleanupButSelectedPair(componentId);
         emit q->componentReady(componentId - 1);
         tryIceFinished();
@@ -1159,13 +1174,7 @@ private:
                 });
 
             checkList.validPairs.insert(insIt, pair); // nominated and highest priority first
-#ifdef ICE_DEBUG
             iceDebug("C%d: insert to valid list %s", component.id, qPrintable(*pair));
-            iceDebug("Current valid list state:");
-            for (auto &p : checkList.validPairs) {
-                iceDebug("  C%d: %s", component.id, qPrintable(*p));
-            }
-#endif
         }
 
         if (signalCompNominated || signalCompValidPairs) {
