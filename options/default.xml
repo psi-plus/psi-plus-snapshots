@@ -291,7 +291,6 @@ QLineEdit#le_status_text {
                 <contact comment="Options for the contact-specific menu">
                     <active-chats comment="Show the 'active chats' menu" type="bool">true</active-chats>
                     <custom-picture comment="Show the 'picture' menu" type="bool">true</custom-picture>
-                    <custom-pgp-key comment="Show the 'assign pgp key' menu" type="bool">true</custom-pgp-key>
                 </contact>
                 <main comment="Options for the main menu">
                     <change-profile comment="Show the 'change profile' menu" type="bool">true</change-profile>
@@ -580,7 +579,6 @@ QLineEdit#le_status_text {
                 <chat_icon type="QKeySequence"></chat_icon>
                 <chat_info type="QKeySequence"></chat_info>
                 <chat_pin_tab type="QKeySequence"></chat_pin_tab>
-                <chat_pgp type="QKeySequence"></chat_pgp>
                 <chat_ps type="QKeySequence"></chat_ps>
                 <chat_share_files type="QKeySequence"></chat_share_files>
                 <chat_templates type="QKeySequence"></chat_templates>
