@@ -195,6 +195,7 @@ public:
     QList<QList<QByteArray>>                in;
     Features                                remoteFeatures;
     Features                                localFeatures;
+    bool                                    allowIpExposure            = true;
     bool                                    useLocal                   = true;
     bool                                    useStunBind                = true;
     bool                                    useStunRelayUdp            = true;
@@ -309,8 +310,8 @@ public:
             if (!stunRelayTcpAddr.isNull())
                 c.ic->setStunRelayTcpService(stunRelayTcpAddr, stunRelayTcpPort, stunRelayTcpUser, stunRelayTcpPass);
 
-            c.ic->setUseLocal(useLocal);
-            c.ic->setUseStunBind(useStunBind);
+            c.ic->setUseLocal(useLocal && allowIpExposure);
+            c.ic->setUseStunBind(useStunBind && allowIpExposure);
             c.ic->setUseStunRelayUdp(useStunRelayUdp);
             c.ic->setUseStunRelayTcp(useStunRelayTcp);
 
@@ -334,6 +335,7 @@ public:
 
         state = Stopping;
         remoteGatheringCompleteTimer.reset();
+        checkTimer.stop();
 
         // will trigger candidateRemoved events and result pairs cleanup.
         if (!components.empty()) {
@@ -350,6 +352,7 @@ public:
 
     void addRemoteCandidates(const QList<Candidate> &list)
     {
+        Q_ASSERT(state == Started || state == Starting);
         updateRemoteGatheringTimeout();
         QList<IceComponent::CandidateInfo::Ptr> remoteCandidates;
         for (const Candidate &c : list) {
@@ -405,14 +408,13 @@ public:
 
     // returns a pair is pairable or null
     QSharedPointer<CandidatePair> makeCandidatesPair(IceComponent::CandidateInfo::Ptr lc,
-                                                     IceComponent::CandidateInfo::Ptr rc,
-                                                     bool                             allowProtoMismatch = false)
+                                                     IceComponent::CandidateInfo::Ptr rc)
     {
         if (lc->componentId != rc->componentId)
             return {};
 
         // don't pair ipv4 with ipv6.  FIXME: is this right?
-        if (!allowProtoMismatch && lc->addr.addr.protocol() != rc->addr.addr.protocol()) {
+        if (lc->addr.addr.protocol() != rc->addr.addr.protocol()) {
             iceDebug("Skip building pair: %s - %s (protocol mismatch)", qPrintable(lc->addr), qPrintable(rc->addr));
             return {};
         }
@@ -465,7 +467,7 @@ public:
             auto &pair = checkList.pairs[n];
 #ifdef ICE_DEBUG
             if (pair->logNew)
-                iceDebug("%d, %s", pair->local->componentId, qPrintable(*pair));
+                iceDebug("C%d, %s", pair->local->componentId, qPrintable(*pair));
 #endif
 
             for (int i = n - 1; i >= 0; --i) {
@@ -739,6 +741,50 @@ public:
 
     bool canHaveMoreRemoteCandidates() const { return remoteGatheringComplete || !(remoteFeatures & Trickle); }
 
+    void optimizeCheckList(int componentId)
+    {
+        bool hasHost  = false;
+        bool hasPrflx = false;
+        bool hasSrflx = false;
+        bool hasRelay = false;
+
+        for (auto &p : checkList.validPairs) {
+            if (p->local->componentId != componentId)
+                continue;
+            switch (p->local->type) {
+            case IceComponent::HostType:
+                hasHost = true;
+                break;
+            case IceComponent::PeerReflexiveType:
+                hasPrflx = true;
+                break;
+            case IceComponent::ServerReflexiveType:
+                hasSrflx = true;
+                break;
+            case IceComponent::RelayedType:
+                hasRelay = true;
+                break;
+            }
+        }
+        // TODO figureout if those are highest priority too
+
+        bool stopRelay = hasRelay || hasSrflx || hasPrflx || hasHost;
+        bool stopSrflx = hasPrflx || hasHost; // || hasSrflx but who knows about the priority
+        bool stopPrflx = hasHost;
+        // we don't stop other hosts since they are quite cheap and maybe highest priority is on the way
+
+        for (auto &p : checkList.pairs) {
+            bool toStop = p->local->componentId == componentId && (p->state == PFrozen || p->state == PWaiting)
+                && ((stopRelay && p->local->type == IceComponent::RelayedType)
+                    || (stopSrflx && p->local->type == IceComponent::ServerReflexiveType)
+                    || (stopPrflx && p->local->type == IceComponent::PeerReflexiveType));
+            if (toStop) {
+                iceDebug("Disable checks for %s since we already have better valid pairs", qPrintable(*p));
+                p->state = PFailed;
+            }
+        }
+    }
+
     void tryNominateSelectedPair(int componentId)
     {
         auto &c = *findComponent(componentId);
@@ -823,7 +869,7 @@ public:
     // ice negotiation failed. either initial or on ICE restart
     void tryComponentFailed(int componentId)
     {
-        Q_ASSERT(state == Starting);
+        Q_ASSERT(state == Starting || state == Started);
         if (!(localGatheringComplete && canHaveMoreRemoteCandidates())) {
             return; // if we have something to gather then we still have a chance for success
         }
@@ -908,7 +954,8 @@ public:
     {
         if (remoteFeatures & GatheringComplete || !(remoteFeatures & Trickle)) {
             remoteGatheringCompleteTimer.reset();
-            iceDebug("Don't use Remote Gatherging Complete timeout");
+            iceDebug("Don't use Remote Gatherging Complete timeout: %s",
+                     (remoteFeatures & GatheringComplete) ? "remote will notify" : "non-trickle mode");
             return;
         } else if (remoteGatheringCompleteTimer) {
             iceDebug("Remote Gatherging Complete was restarted");
@@ -1115,7 +1162,7 @@ private:
                 Q_ASSERT(locIt != localCandidates.end());
                 // local candidate wasn't found, so it wasn't on the checklist  RFC8445 7.2.5.3.1.3
                 // allow v4/v6 proto mismatch in case NAT does magic
-                pair = makeCandidatesPair(locIt->info, pair->remote, true);
+                pair = makeCandidatesPair(locIt->info, pair->remote);
             } else {
                 // local candidate found. If it's a part of a pair on checklist, we have to add this pair to valid list,
                 // otherwise we have to create a new pair and add it to valid list
@@ -1125,7 +1172,7 @@ private:
                 });
                 if (it == checkList.pairs.constEnd()) {
                     // allow v4/v6 proto mismatch in case NAT does magic
-                    pair = makeCandidatesPair(locIt->info, pair->remote, true);
+                    pair = makeCandidatesPair(locIt->info, pair->remote);
                 } else {
                     pair = *it;
                     iceDebug("mapped address belongs to another pair on checklist %s", qPrintable(QString(*pair)));
@@ -1176,6 +1223,8 @@ private:
             checkList.validPairs.insert(insIt, pair); // nominated and highest priority first
             iceDebug("C%d: insert to valid list %s", component.id, qPrintable(*pair));
         }
+
+        optimizeCheckList(component.id);
 
         if (signalCompNominated || signalCompValidPairs) {
             tryReadyToSendMedia();
@@ -1582,6 +1631,8 @@ void Ice176::setStunRelayTcpService(const QHostAddress &addr, int port, const QS
     d->stunRelayTcpUser = user;
     d->stunRelayTcpPass = pass;
 }
+
+void Ice176::setAllowIpExposure(bool enabled) { d->allowIpExposure = enabled; }
 
 void Ice176::setUseLocal(bool enabled) { d->useLocal = enabled; }
 

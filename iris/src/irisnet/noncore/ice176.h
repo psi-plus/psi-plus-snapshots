@@ -101,6 +101,7 @@ public:
     void setUseStunBind(bool enabled);
     void setUseStunRelayUdp(bool enabled);
     void setUseStunRelayTcp(bool enabled);
+    void setAllowIpExposure(bool enabled);
 
     void setComponentCount(int count);
 
