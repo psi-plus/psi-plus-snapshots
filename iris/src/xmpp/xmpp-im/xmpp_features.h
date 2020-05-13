@@ -54,6 +54,8 @@ public:
     bool        hasVCard() const;
     bool        hasMessageCarbons() const;
     bool        hasJingleFT() const;
+    bool        hasJingleIceUdp() const;
+    bool        hasJingleIce() const;
 
     [[deprecated]] inline bool canRegister() const { return hasRegister(); }
     [[deprecated]] inline bool canSearch() const { return hasSearch(); }

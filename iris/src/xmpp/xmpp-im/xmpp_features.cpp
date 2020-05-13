@@ -197,6 +197,12 @@ bool Features::hasJingleFT() const
     return test(ns);
 }
 
+#define FID_JINGLEICEUDP "urn:xmpp:jingle:transports:ice-udp:1"
+bool Features::hasJingleIceUdp() const { return test(QStringList() << QLatin1String(FID_JINGLEICEUDP)); }
+
+#define FID_JINGLEICE "urn:xmpp:jingle:transports:ice:0"
+bool Features::hasJingleIce() const { return test(QStringList() << QLatin1String(FID_JINGLEICE)); }
+
 // custom Psi actions
 #define FID_ADD "psi:add"
 
