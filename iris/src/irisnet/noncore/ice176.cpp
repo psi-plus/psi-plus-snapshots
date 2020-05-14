@@ -491,7 +491,7 @@ public:
         iceDebug("%d after pruning (just new below):", checkList.pairs.count());
         for (auto &p : checkList.pairs) {
             if (p->logNew)
-                iceDebug("%d, %s", p->local->componentId, qPrintable(*p));
+                iceDebug("C%d, %s", p->local->componentId, qPrintable(*p));
             p->logNew = false;
         }
 #endif
