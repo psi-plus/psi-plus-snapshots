@@ -156,9 +156,10 @@ chmod uog+x generate-single-repo.sh
 
 cp -f "${SNAPSHOTS_DIR}/README" "${MAIN_DIR}/README"
 cp -f "${SNAPSHOTS_DIR}/.gitignore" "${MAIN_DIR}/.gitignore"
-rsync -a "${MAIN_DIR}/psi/" "${SNAPSHOTS_DIR}/" \
+rsync -a --del "${MAIN_DIR}/psi/" "${SNAPSHOTS_DIR}/" \
     --exclude=".git*" \
     --exclude="/builddir*" \
+    --exclude="/generate-single-repo.sh" \
     --exclude="/README.md" \
     --exclude="/README"
 mv "${MAIN_DIR}/README" "${SNAPSHOTS_DIR}/README"
