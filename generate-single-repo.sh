@@ -158,7 +158,7 @@ cp -f "${SNAPSHOTS_DIR}/README" "${MAIN_DIR}/README"
 cp -f "${SNAPSHOTS_DIR}/.gitignore" "${MAIN_DIR}/.gitignore"
 rsync -a "${MAIN_DIR}/psi/" "${SNAPSHOTS_DIR}/" \
     --exclude=".git*" \
-    --exclude="/builddir" \
+    --exclude="/builddir*" \
     --exclude="/README.md" \
     --exclude="/README"
 mv "${MAIN_DIR}/README" "${SNAPSHOTS_DIR}/README"
@@ -196,12 +196,12 @@ echo "* Extra patches from Psi+ project are copied."
 
 rsync -a "${MAIN_DIR}/plugins" "${SNAPSHOTS_DIR}/" \
     --exclude=".git*" \
-    --exclude="/builddir"
+    --exclude="/builddir*"
 rsync -a "${MAIN_DIR}/psimedia" "${SNAPSHOTS_DIR}/plugins/generic/" \
     --exclude=".git*" \
-    --exclude="/builddir" \
-    --exclude="/demo" \
-    --exclude="/gstplugin"
+    --exclude="/builddir*" \
+    --exclude="/demo*" \
+    --exclude="/gstplugin*"
 echo "* Plugins from Psi project are copied."
 
 rsync -a "${MAIN_DIR}/main/admin/" "${SNAPSHOTS_DIR}/admin/"
