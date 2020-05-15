@@ -77,8 +77,7 @@ public:
     };
     QMap<QString, GroupData> groupState;
 
-    QCA::PGPKey pgpSecretKey;
-    QString     pgpPassPhrase;
+    QString     pgpSecretKey;
 
     VarList     keybind;
     QStringList pgpEnabledChats;

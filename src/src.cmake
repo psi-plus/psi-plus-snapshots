@@ -54,7 +54,6 @@ list(APPEND FORMS
     mucjoin.ui
     mucreasonseditor.ui
     optioneditor.ui
-    passphrase.ui
     pgpkey.ui
     profilemanage.ui
     profilenew.ui
@@ -134,6 +133,7 @@ list(APPEND HEADERS
     globaleventqueue.h
     globalstatusmenu.h
     gpgprocess.h
+    gpgtransaction.h
     groupchatdlg.h
     groupchattopicdlg.h
     groupmenu.h
@@ -161,10 +161,8 @@ list(APPEND HEADERS
     mucreasonseditor.h
     networkaccessmanager.h
     passdialog.h
-    passphrasedlg.h
     pepmanager.h
     pgpkeydlg.h
-    pgptransaction.h
     pgputil.h
     pluginhost.h
     pluginmanager.h
@@ -410,6 +408,7 @@ list(APPEND SOURCES
     globaleventqueue.cpp
     globalstatusmenu.cpp
     gpgprocess.cpp
+    gpgtransaction.cpp
     groupchattopicdlg.cpp
     groupmenu.cpp
     httputil.cpp
@@ -443,10 +442,8 @@ list(APPEND SOURCES
     multifiletransferdlg.cpp
     networkaccessmanager.cpp
     passdialog.cpp
-    passphrasedlg.cpp
     pepmanager.cpp
     pgpkeydlg.cpp
-    pgptransaction.cpp
     pgputil.cpp
     pixmaputil.cpp
     pluginhost.cpp

@@ -26,7 +26,6 @@
 #include "ui_accountmodify.h"
 
 #include <QDialog>
-#include <QtCrypto>
 
 class ProxyChooser;
 class PsiAccount;
@@ -80,8 +79,8 @@ private:
     PsiCon *      psi;
     PsiAccount *  pa;
     ProxyChooser *pc;
-    QCA::PGPKey   key;
     UserAccount   acc;
+    QString       pgpKeyId;
 
     // Privacy
     PrivacyListModel        privacyModel;
