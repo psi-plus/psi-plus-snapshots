@@ -101,8 +101,8 @@ set(PROVIDERLIB gstprovidersrc)
 add_library(${PROVIDERLIB} STATIC ${SOURCES})
 target_include_directories(${PROVIDERLIB} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/psimedia ${GST_INCLUDES})
 target_link_libraries(${PROVIDERLIB}
-                      ${GSTMODULES_LIBRARIES}
-                      ${GLIBMODULES_LIBRARIES}
+                      ${GSTMODULES_LINK_LIBRARIES}
+                      ${GLIBMODULES_LINK_LIBRARIES}
                       ${PROJECT_LDFLAGS}
 )
 

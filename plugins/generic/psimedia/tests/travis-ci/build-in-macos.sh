@@ -16,7 +16,8 @@ TOOLCHAIN_FILE="${CUR_DIR}/homebrew-toolchain.cmake"
 
 [ -z "${BUILD_DEMO}" ] && BUILD_DEMO="OFF"
 
-BUILD_OPTIONS="-DCMAKE_BUILD_TYPE=Release \
+BUILD_OPTIONS="-DCMAKE_INSTALL_PREFIX=/usr \
+               -DCMAKE_BUILD_TYPE=Release \
                -DBUILD_DEMO=${BUILD_DEMO}"
 
 mkdir -p builddir
