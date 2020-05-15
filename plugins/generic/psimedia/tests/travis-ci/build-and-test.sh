@@ -21,6 +21,16 @@ then
     ./tests/travis-ci/build-in-macos.sh
 fi
 
-ls -alp ./builddir/plugins/*
-du -shc ./builddir/plugins/*
+cd builddir/
+make install DESTDIR="${PWD}/../out"
+
+cd ..
+echo ;
+echo "Installed files:"
+find out/ -type f
+
+echo ;
+echo "Check mandatory files:"
+ls -alp out/usr/lib/psi/plugins/libmediaplugin.so
+du -shc out/usr/lib/psi/plugins/libmediaplugin.so
 

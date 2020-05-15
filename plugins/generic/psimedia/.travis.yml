@@ -7,34 +7,34 @@ if: tag IS blank
 
 jobs:
   include:
-    - env: TARGET=linux64 BUILD_DEV_PLUGINS=ON DIST=xenial
+    - env: TARGET=linux64 BUILD_DEMO=ON DIST=xenial
       os: linux
       dist: xenial
-    - env: TARGET=linux64 BUILD_DEV_PLUGINS=ON DIST=bionic
+    - env: TARGET=linux64 BUILD_DEMO=ON DIST=bionic
       os: linux
       dist: bionic
-    - env: TARGET=linux64 BUILD_DEV_PLUGINS=OFF DIST=xenial
+    - env: TARGET=linux64 BUILD_DEMO=OFF DIST=xenial
       os: linux
       dist: xenial
-    - env: TARGET=linux64 BUILD_DEV_PLUGINS=OFF DIST=bionic
+    - env: TARGET=linux64 BUILD_DEMO=OFF DIST=bionic
       os: linux
       dist: bionic
-    - env: TARGET=macos64 BUILD_DEV_PLUGINS=ON
+    - env: TARGET=macos64 BUILD_DEMO=ON
       os: osx
       osx_image: xcode10
-    - env: TARGET=macos64 BUILD_DEV_PLUGINS=ON
+    - env: TARGET=macos64 BUILD_DEMO=ON
       os: osx
       osx_image: xcode10.3
-    - env: TARGET=macos64 BUILD_DEV_PLUGINS=ON
+    - env: TARGET=macos64 BUILD_DEMO=ON
       os: osx
       osx_image: xcode11.3
-    - env: TARGET=macos64 BUILD_DEV_PLUGINS=OFF
+    - env: TARGET=macos64 BUILD_DEMO=OFF
       os: osx
       osx_image: xcode10
-    - env: TARGET=macos64 BUILD_DEV_PLUGINS=OFF
+    - env: TARGET=macos64 BUILD_DEMO=OFF
       os: osx
       osx_image: xcode10.3
-    - env: TARGET=macos64 BUILD_DEV_PLUGINS=OFF
+    - env: TARGET=macos64 BUILD_DEMO=OFF
       os: osx
       osx_image: xcode11.3
 
