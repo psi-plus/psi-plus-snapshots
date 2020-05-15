@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2020-04-22
+# Updated: 2020-05-15
 # Version: N/A
 
 set -e
@@ -13,6 +13,7 @@ export MAIN_DIR="$(realpath -s ${SNAPSHOTS_DIR}/..)"
 
 PSI_URL=https://github.com/psi-im/psi.git
 PLUGINS_URL=https://github.com/psi-im/plugins.git
+PSIMEDIA_URL=https://github.com/psi-im/psimedia.git
 PATCHES_URL=https://github.com/psi-plus/main.git
 RESOURCES_URL=https://github.com/psi-plus/resources.git
 
@@ -79,6 +80,19 @@ else
     echo;
 fi
 
+MOD=psimedia
+if [ -d "${MAIN_DIR}/${MOD}" ]; then
+    echo "Updating ${MAIN_DIR}/${MOD}"
+    cd "${MAIN_DIR}/${MOD}"
+    git pull --all --prune -f
+    echo;
+else
+    echo "Creating ${MAIN_DIR}/${MOD}"
+    cd "${MAIN_DIR}"
+    git clone "${PSIMEDIA_URL}"
+    echo;
+fi
+
 MOD=resources
 if [ -d "${MAIN_DIR}/${MOD}" ]; then
     echo "Updating ${MAIN_DIR}/${MOD}"
@@ -98,16 +112,19 @@ echo "Checking for updates..."
 PSI_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* psi: \(.*\)$/\1/p')
 PATCHES_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* patches: \(.*\)$/\1/p')
 PLUGINS_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* plugins: \(.*\)$/\1/p')
+PSIMEDIA_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* psimedia: \(.*\)$/\1/p')
 RESOURCES_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* resources: \(.*\)$/\1/p')
 
 PSI_NEW_HASH=$(cd "${MAIN_DIR}/psi" && git show -s --pretty='format:%h')
 PATCHES_NEW_HASH=$(cd "${MAIN_DIR}/main" && git show -s --pretty='format:%h')
 PLUGINS_NEW_HASH=$(cd "${MAIN_DIR}/plugins" && git show -s --pretty='format:%h')
+PSIMEDIA_NEW_HASH=$(cd "${MAIN_DIR}/psimedia" && git show -s --pretty='format:%h')
 RESOURCES_NEW_HASH=$(cd "${MAIN_DIR}/resources" && git show -s --pretty='format:%h')
 
 if [ "${PSI_OLD_HASH}"       = "${PSI_NEW_HASH}" ] && \
    [ "${PATCHES_OLD_HASH}"   = "${PATCHES_NEW_HASH}" ] && \
    [ "${PLUGINS_OLD_HASH}"   = "${PLUGINS_NEW_HASH}" ] && \
+   [ "${PSIMEDIA_OLD_HASH}"   = "${PSIMEDIA_NEW_HASH}" ] && \
    [ "${RESOURCES_OLD_HASH}" = "${RESOURCES_NEW_HASH}" ]; then
     echo "Updating is not required!";
     git checkout HEAD .
@@ -141,6 +158,7 @@ cp -f "${SNAPSHOTS_DIR}/README" "${MAIN_DIR}/README"
 cp -f "${SNAPSHOTS_DIR}/.gitignore" "${MAIN_DIR}/.gitignore"
 rsync -a "${MAIN_DIR}/psi/" "${SNAPSHOTS_DIR}/" \
     --exclude=".git*" \
+    --exclude="/builddir" \
     --exclude="/README.md" \
     --exclude="/README"
 mv "${MAIN_DIR}/README" "${SNAPSHOTS_DIR}/README"
@@ -163,9 +181,9 @@ remove_trash()
     find . -type f -name "*.orig" -delete
 }
 
-cat "${MAIN_DIR}/main/patches"/*.diff | \
-    patch -d "${SNAPSHOTS_DIR}" -p1 2>&1 > \
-    "${MAIN_DIR}/applying-patches.log" || failed_to_apply_patches
+# cat "${MAIN_DIR}/main/patches"/*.diff | \
+#     patch -d "${SNAPSHOTS_DIR}" -p1 2>&1 > \
+#     "${MAIN_DIR}/applying-patches.log" || failed_to_apply_patches
 FROM_STR="option(PSI_PLUS .*$"
 TO_STR="option(PSI_PLUS \"Build Psi+ client instead of Psi\" ON)"
 sed -i "s|${FROM_STR}|${TO_STR}|g" CMakeLists.txt
@@ -176,8 +194,14 @@ rsync -a "${MAIN_DIR}/main/patches/dev" "${SNAPSHOTS_DIR}/patches/"
 rsync -a "${MAIN_DIR}/main/patches/mac" "${SNAPSHOTS_DIR}/patches/"
 echo "* Extra patches from Psi+ project are copied."
 
-rsync -a "${MAIN_DIR}/plugins" "${SNAPSHOTS_DIR}/src/" \
-    --exclude=".git*"
+rsync -a "${MAIN_DIR}/plugins" "${SNAPSHOTS_DIR}/" \
+    --exclude=".git*" \
+    --exclude="/builddir"
+rsync -a "${MAIN_DIR}/psimedia" "${SNAPSHOTS_DIR}/plugins/generic/" \
+    --exclude=".git*" \
+    --exclude="/builddir" \
+    --exclude="/demo" \
+    --exclude="/gstplugin"
 echo "* Plugins from Psi project are copied."
 
 rsync -a "${MAIN_DIR}/main/admin/" "${SNAPSHOTS_DIR}/admin/"
