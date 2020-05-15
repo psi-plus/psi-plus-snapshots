@@ -1,0 +1,76 @@
+<h1>PsiMedia</h1>
+
+<p>PsiMedia is a thick abstraction layer for providing audio and video RTP services to Psi-like IM clients. The implementation is based on GStreamer.</p>
+
+<p>For more information, see <a href="http://jblog.andbit.net/2008/07/03/introducing-psimedia/">this article</a>.</p>
+
+<p>Currently it is used for video- and audio-calls support in <a href="https://psi-im.org/">Psi IM</a> and <a href="https://psi-plus.com/">Psi+</a> projects.</p>
+
+<h2>License</h2>
+
+<p>This library is licensed under the Lesser GNU General Public License. See the <a href="https://github.com/psi-im/psimedia/blob/master/COPYING">COPYING</a> file for more information.</p>
+
+<h2>Versions history</h2>
+
+<p>See <a href="https://github.com/psi-im/psimedia/blob/master/CHANGELOG">CHANGELOG</a> file.</p>
+
+<h2>Build dependencies</h2>
+
+<ul>
+<li><a href="https://github.com/psi-plus/qconf">qconf</a> (optional)</li>
+<li>qtbase >= 5.6</li>
+<li>glib >= 2.0</li>
+<li>gobject >= 2.0</li>
+<li>gthread >= 2.0</li>
+<li>gstreamer >= 1.10.4</li>
+<li>gst-plugins-base >= 1.10.4</li>
+</ul>
+
+<h2>Installation</h2>
+
+<p>Contents:</p>
+
+<p><code>
+psimedia/      API and plugin shim
+gstprovider/   provider plugin based on GStreamer
+demo/          demonstration GUI program
+</code></p>
+
+<p>To build the plugin and demo program, run:</p>
+
+<p><code>sh
+qt-qconf
+./configure
+make
+</code></p>
+
+<p>There is no <code>make install</code> target in this case. The compiled plugin may be found under the <code>gstprovider</code> directory. An application that uses PsiMedia should have instructions on what to do with the plugin.</p>
+
+<p>For example, in Psi+ program <code>gstprovider</code> plugin should be placed into:</p>
+
+<ul>
+<li><code>/usr/lib/psi-plus/plugins/</code> in GNU/Linux systems</li>
+<li>the root Psi+ directory on MS Windows systems (for example, <code>C:\\Program Files\Psi+\</code>)</li>
+</ul>
+
+<p>If you want to test demo program, use environment variable <code>PSI_MEDIA_PLUGIN</code> for setting the path to gstprovider plugin. For example:</p>
+
+<p><code>
+PSI_MEDIA_PLUGIN=/usr/lib/psi-plus/plugins/libgstprovider.so ./demo
+</code></p>
+
+<p>Alternatively you may build plugin and demo using <code>cmake</code>:</p>
+
+<p><code>sh
+mkdir -p builddir
+cd builddir
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+make
+</code></p>
+
+<p>There is special "make install" target in this case oriented to Psi IM users, see:</p>
+
+<p><code>
+make install DESTDIR=./out
+tree ./out
+</code></p>

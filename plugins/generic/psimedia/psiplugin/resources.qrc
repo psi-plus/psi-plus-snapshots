@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file>avcall.png</file>
+    </qresource>
+</RCC>

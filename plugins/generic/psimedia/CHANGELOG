@@ -1,0 +1,23 @@
+2014-04-14
+v1.0.4 Justin Karneges, Sergey Ilinyh (aka rion), Ivan Romanov, Boris Pek
+  * Use properly parent objects so that moveToThread works.
+  * Fix fix the license headers in some files.
+  * Update osxaudio to gst-plugins-good.
+  * Remove v4l1 support: fix build with new Linux kernels (>= 2.6.38).
+  * Remove bundled rtpmanager and audioresample elements.
+  * Fix build with latest gcc.
+  * Fix build with glib >= 2.32.
+  * Fix FSF address in license headers of all files.
+  * Fix audio rate for Asterisk.
+  * Fix build in MS Windows.
+  * Fix uvcvideo.
+  * Fix non-latin audio device name on Mac OS X.
+  * Fix all errors and warnings found by cppcheck.
+  * Use compiler options from the build environment.
+  * Update documentation.
+
+2009-06-11
+v1.0.3 Justin Karneges
+  * This is the last stable release which was done by Justin Karneges.
+    Unfortunately, there was no change log in it and git log looks too long
+    and not enough informative for using it as change log.

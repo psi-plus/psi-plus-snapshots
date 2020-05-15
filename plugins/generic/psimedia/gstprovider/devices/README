@@ -1,0 +1,6 @@
+DeviceEnum looks up devices using platform-specific APIs and approaches.  It
+does not depend on GStreamer, but the results can be used with GStreamer.
+
+GStreamer does actually support device detection on its own, but results are
+spotty.  If the day comes where detection through GStreamer works 100% then we
+can deprecate DeviceEnum.
