@@ -200,9 +200,7 @@ rsync -a "${MAIN_DIR}/plugins" "${SNAPSHOTS_DIR}/" \
     --exclude="/builddir*"
 rsync -a "${MAIN_DIR}/psimedia" "${SNAPSHOTS_DIR}/plugins/generic/" \
     --exclude=".git*" \
-    --exclude="/builddir*" \
-    --exclude="/demo*" \
-    --exclude="/gstplugin*"
+    --exclude="/builddir*"
 echo "* Plugins from Psi project are copied."
 
 rsync -a "${MAIN_DIR}/main/admin/" "${SNAPSHOTS_DIR}/admin/"
