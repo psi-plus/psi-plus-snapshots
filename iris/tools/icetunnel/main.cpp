@@ -747,6 +747,7 @@ private slots:
         ice->setPeerUfrag(inOffer.user);
         ice->setPeerPassword(inOffer.pass);
         ice->addRemoteCandidates(inOffer.candidates);
+        ice->startChecks();
     }
 
     void prompt_error()

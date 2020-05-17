@@ -302,6 +302,7 @@ private slots:
             rto *= 2;
         }
 
+        emit pool->debugLine("stun transaction timeout. retransmitting..");
         transmit();
     }
 
