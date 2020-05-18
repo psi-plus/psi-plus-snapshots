@@ -749,7 +749,6 @@ gboolean RtpWorker::bus_call(GstBus *bus, GstMessage *msg)
                state_to_str(newstate));
         if (pending != GST_STATE_VOID_PENDING)
             qDebug(" (%s)", state_to_str(pending));
-        qDebug("");
         break;
     }
     case GST_MESSAGE_ASYNC_DONE: {
