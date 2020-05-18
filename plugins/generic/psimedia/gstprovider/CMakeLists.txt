@@ -12,6 +12,8 @@ set(CMAKE_AUTOMOC ON)
 # to always look for includes there:
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+get_filename_component(ABS_GST_PARENT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+
 #search Glib modules
 pkg_check_modules(GLIBMODULES REQUIRED
                     glib-2.0
@@ -28,20 +30,34 @@ pkg_check_modules(GSTMODULES REQUIRED
 )
 
 set(SOURCES
-    devices.cpp
-    modes.cpp
-    payloadinfo.cpp
-    pipeline.cpp
-    bins.cpp
-    rtpworker.cpp
-    gstthread.cpp
-    rwcontrol.cpp
-    gstprovider.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/devices.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/modes.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/payloadinfo.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/pipeline.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/bins.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rtpworker.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/gstthread.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rwcontrol.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/gstprovider.cpp
 )
 
 if(UNIX AND NOT APPLE)
-    list(APPEND SOURCES devices/deviceenum_unix.cpp)
+    list(APPEND SOURCES ${CMAKE_CURRENT_LIST_DIR}/devices/deviceenum_unix.cpp)
 endif()
+
+if(NOT BUILD_PSIPLUGIN)
+    set(PSIMEDIA_INCDIR ${ABS_GST_PARENT_DIR}/psimedia)
+    include_directories(${PSIMEDIA_INCDIR})
+else()
+    find_package(PsiPluginsApi REQUIRED)
+    include_directories(
+        ${PsiPluginsApi_INCLUDE_DIR}
+    )
+endif()
+
+include_directories(
+    ${CMAKE_CURRENT_LIST_DIR}/devices
+)
 
 add_definitions(
     ${GLIBMODULES_CFLAGS}
@@ -86,20 +102,17 @@ if(WIN32)
             dxerr9
         )
     endif()
-    if(MSVC)
-        set(CompilerFlags
-                CMAKE_CXX_FLAGS_DEBUG
-                CMAKE_C_FLAGS_DEBUG
-                )
-        foreach(CompilerFlag ${CompilerFlags})
-          string(REPLACE "/MTd" "/MDd" ${CompilerFlag} "${${CompilerFlag}}")
-        endforeach()
-    endif()
 endif()
 
 set(PROVIDERLIB gstprovidersrc)
 add_library(${PROVIDERLIB} STATIC ${SOURCES})
-target_include_directories(${PROVIDERLIB} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/psimedia ${GST_INCLUDES})
+target_include_directories(${PROVIDERLIB}
+                           PUBLIC
+                           ${CMAKE_CURRENT_SOURCE_DIR}
+                           ${CMAKE_CURRENT_SOURCE_DIR}/devices
+                           ${PSIMEDIA_INCDIR}
+                           ${GST_INCLUDES}
+)
 target_link_libraries(${PROVIDERLIB}
                       ${GSTMODULES_LINK_LIBRARIES}
                       ${GLIBMODULES_LINK_LIBRARIES}

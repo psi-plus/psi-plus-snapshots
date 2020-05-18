@@ -61,7 +61,7 @@ class PipelineDeviceOptions {
 public:
     QSize   videoSize;
     int     fps = 0;
-    bool    aec = false; // echo cancelation (will be enabled when prober is available)
+    bool    aec = false; // echo cancellation (will be enabled when prober is available)
     QString echoProberName;
 
     PipelineDeviceOptions() : fps(-1) { }

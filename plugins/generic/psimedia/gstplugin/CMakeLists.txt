@@ -13,10 +13,13 @@ endif()
 find_package(Qt5 COMPONENTS Core REQUIRED)
 set( CMAKE_AUTOMOC TRUE )
 
+get_filename_component(ABS_GPLUG_PARENT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+
 include_directories(
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_LIST_DIR}
+    ${ABS_GPLUG_PARENT_DIR}/psimedia
 )
 
 set(SOURCES

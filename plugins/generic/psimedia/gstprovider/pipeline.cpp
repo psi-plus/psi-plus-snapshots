@@ -305,7 +305,7 @@ private:
                 webrtcEchoProbeName = QString::fromLatin1(name_value);
                 g_free(name_value);
             } else {
-                qWarning("Failed to create GStreamer webrtcechoprobe element instance. Echo cancelation was disabled");
+                qWarning("Failed to create GStreamer webrtcechoprobe element instance. Echo cancellation was disabled");
             }
 
             // build resampler caps

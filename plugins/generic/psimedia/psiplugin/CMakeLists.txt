@@ -14,26 +14,29 @@ set( CMAKE_AUTOMOC TRUE )
 
 get_filename_component(ABS_PLUGINS_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 set(PLUGINS_ROOT_DIR "${ABS_PLUGINS_ROOT_DIR}" CACHE STRING "Plugins root path. Path where include directory placed")
+
+if(NOT BUILD_DEMO)
+    include(${ABS_PLUGINS_ROOT_DIR}/gstprovider/CMakeLists.txt)
+    include_directories(
+        ${ABS_PLUGINS_ROOT_DIR}/gstprovider
+        ${ABS_PLUGINS_ROOT_DIR}/gstprovider/devices`
+    )
+endif()
+
 set( CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH}
     ${ABS_PLUGINS_ROOT_DIR}/cmake/modules
     ${PLUGINS_ROOT_DIR}/cmake/modules
 )
+
 find_package(PsiPluginsApi REQUIRED)
 include(${PsiPluginsApi_DIR}/variables.cmake)
 include_directories(
     ${CMAKE_SOURCE_DIR}
-    ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_LIST_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
     ${PsiPluginsApi_INCLUDE_DIR}
 )
-
-if(PsiPluginsApi_FOUND)
-    include_directories(${PsiPluginsApi_INCLUDE_DIR})
-    include(${PsiPluginsApi_DIR}/variables.cmake)
-else()
-    message(FATAL_ERROR "PsiPluginsApi is not found")
-endif()
 
 if(NOT PLUGINS_INSTALL_PATH)
     set(PLUGINS_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/${PLUGINS_PATH}")
@@ -63,16 +66,6 @@ else()
     set(LIB_TYPE "SHARED")
 endif()
 
-if(MSVC)
-    set(CompilerFlags
-            CMAKE_CXX_FLAGS_DEBUG
-            CMAKE_C_FLAGS_DEBUG
-            )
-    foreach(CompilerFlag ${CompilerFlags})
-      string(REPLACE "/MTd" "/MDd" ${CompilerFlag} "${${CompilerFlag}}")
-    endforeach()
-endif()
-
 add_library(
     ${PLUGIN}
     ${LIB_TYPE}
@@ -80,11 +73,14 @@ add_library(
     ${UIS}
     ${RSCS}
 )
+
+add_dependencies(${PLUGIN} gstprovidersrc)
+
 target_link_libraries(
     ${PLUGIN}
     ${QT_DEPLIBS}
+    gstprovidersrc
 )
-target_link_libraries(${PLUGIN} gstprovidersrc)
 
 install(
     TARGETS
