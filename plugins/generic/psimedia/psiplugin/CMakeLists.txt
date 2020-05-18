@@ -19,7 +19,7 @@ if(NOT BUILD_DEMO)
     include(${ABS_PLUGINS_ROOT_DIR}/gstprovider/CMakeLists.txt)
     include_directories(
         ${ABS_PLUGINS_ROOT_DIR}/gstprovider
-        ${ABS_PLUGINS_ROOT_DIR}/gstprovider/devices`
+        ${ABS_PLUGINS_ROOT_DIR}/gstprovider/devices
     )
 endif()
 
