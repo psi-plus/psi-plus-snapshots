@@ -68,8 +68,6 @@ set(HEADERS
     sasl/scramsha1signature.h
 
     blake2/blake2qt.h
-    blake2/blake2.h
-    blake2/blake2-impl.h
 
     xmpp-core/compressionhandler.h
     xmpp-core/securestream.h
@@ -149,8 +147,6 @@ set(SOURCES
     zlib/zlibdecompressor.cpp
 
     blake2/blake2qt.cpp
-    blake2/blake2b-ref.c
-    blake2/blake2s-ref.c
 
     jid/jid.cpp
 
@@ -173,6 +169,20 @@ add_library(iris
     ${HEADERS}
     ${SOURCES}
 )
+
+if (B2_FOUND)
+    message(STATUS "Building with system blake2 library")
+    target_compile_definitions(iris PUBLIC IRIS_SYSTEM_BLAKE2)
+else (B2_FOUND)
+    message(STATUS "Building with slow blake2 reference implementation")
+    target_sources(iris PRIVATE
+            blake2/blake2b-ref.c
+            blake2/blake2s-ref.c
+            blake2/blake2.h
+            blake2/blake2-impl.h)
+    target_include_directories(iris PRIVATE blake2)
+endif (B2_FOUND)
+
 
 if( SEPARATE_QJDNS AND WIN32)
     set(EXTRA_LDFLAGS ws2_32)

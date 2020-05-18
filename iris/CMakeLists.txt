@@ -118,6 +118,7 @@ elseif(USE_QJDNS)
 endif()
 
 find_package(IDN REQUIRED)
+find_package(B2)
 
 add_definitions(-DIRISNET_STATIC)
 

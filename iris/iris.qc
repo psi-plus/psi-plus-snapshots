@@ -28,4 +28,7 @@
  <dep type='qjdns'>
   <required/>
  </dep>
+ <dep type='b2'>
+  <required/>
+ </dep>
 </qconf>
