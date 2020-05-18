@@ -58,10 +58,6 @@ option(BUILD_GSTPLUGIN "Build a standalone plugin" OFF)
 
 if(BUILD_PSIPLUGIN)
     find_package(PsiPluginsApi REQUIRED)
-    if(PsiPluginsApi_FOUND)
-        include_directories(${PsiPluginsApi_INCLUDE_DIR})
-        include(${PsiPluginsApi_DIR}/variables.cmake)
-    endif()
 endif()
 
 if(NOT DEFINED USE_PSI)

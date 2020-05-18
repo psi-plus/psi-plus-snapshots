@@ -28,6 +28,13 @@ include_directories(
     ${PsiPluginsApi_INCLUDE_DIR}
 )
 
+if(PsiPluginsApi_FOUND)
+    include_directories(${PsiPluginsApi_INCLUDE_DIR})
+    include(${PsiPluginsApi_DIR}/variables.cmake)
+else()
+    message(FATAL_ERROR "PsiPluginsApi is not found")
+endif()
+
 if(NOT PLUGINS_INSTALL_PATH)
     set(PLUGINS_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/${PLUGINS_PATH}")
 endif()
