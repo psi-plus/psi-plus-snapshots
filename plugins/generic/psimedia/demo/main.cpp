@@ -496,7 +496,7 @@ MainWin::MainWin() :
     ui.setupUi(this);
     setWindowTitle(tr("PsiMedia Demo"));
 
-    creditName = PsiMedia::creditName();
+    // creditName = PsiMedia::creditName();
     if (!creditName.isEmpty()) {
         action_AboutProvider = new QAction(this);
         action_AboutProvider->setText(tr("About %1").arg(creditName));
@@ -689,7 +689,10 @@ void MainWin::doAbout()
                           "Copyright (C) 2008  Barracuda Networks, Inc."));
 }
 
-void MainWin::doAboutProvider() { QMessageBox::about(this, tr("About %1").arg(creditName), PsiMedia::creditText()); }
+void MainWin::doAboutProvider()
+{
+    QMessageBox::about(this, tr("About %1").arg(creditName), QString("Some text about GStreamer have to be here"));
+}
 
 void MainWin::start_send()
 {

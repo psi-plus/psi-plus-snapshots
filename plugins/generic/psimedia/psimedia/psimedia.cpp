@@ -199,10 +199,6 @@ void cleanupProvider()
 
 void unloadPlugin() { cleanupProvider(); }
 
-QString creditName() { return provider()->creditName(); }
-
-QString creditText() { return provider()->creditText(); }
-
 class Device::Private {
 public:
     Device::Type type;

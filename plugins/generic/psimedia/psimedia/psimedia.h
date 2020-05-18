@@ -42,8 +42,6 @@ enum PluginResult { PluginSuccess, ErrorLoad, ErrorVersion, ErrorInit };
 bool         isSupported();
 PluginResult loadPlugin(const QString &fname, const QString &resourcePath);
 void         unloadPlugin();
-QString      creditName();
-QString      creditText();
 
 class Device {
 public:
