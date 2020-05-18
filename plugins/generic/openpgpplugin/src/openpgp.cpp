@@ -33,9 +33,11 @@
 #include <QMenu>
 #include <QMessageBox>
 
+using OpenPgpPluginNamespace::GpgProcess;
+
 OpenPGP::OpenPGP() :
-    m_optionsForm(nullptr), m_accountHost(nullptr), m_optionHost(nullptr),
-    m_menu(nullptr), m_stanzaSending(nullptr), m_activeTab(nullptr), m_accountInfo(nullptr)
+    m_optionsForm(nullptr), m_accountHost(nullptr), m_optionHost(nullptr), m_menu(nullptr), m_stanzaSending(nullptr),
+    m_activeTab(nullptr), m_accountInfo(nullptr)
 {
 }
 
@@ -45,37 +47,25 @@ QWidget *OpenPGP::options()
 {
     m_optionsForm = new Options();
     m_optionsForm->setOptionAccessingHost(m_optionHost);
+    m_optionsForm->setAccountInfoAccessingHost(m_accountInfo);
+    m_optionsForm->setPsiAccountControllingHost(m_accountHost);
     m_optionsForm->loadSettings();
     return qobject_cast<QWidget *>(m_optionsForm);
 }
 
-bool OpenPGP::enable()
-{
-    return true;
-}
+bool OpenPGP::enable() { return true; }
 
-bool OpenPGP::disable()
-{
-    return true;
-}
+bool OpenPGP::disable() { return true; }
 
-void OpenPGP::applyOptions()
-{
-    m_optionsForm->saveSettings();
-}
+void OpenPGP::applyOptions() { m_optionsForm->saveSettings(); }
 
 void OpenPGP::restoreOptions() { }
 
-QPixmap OpenPGP::icon() const
-{
-    return QPixmap(":/icons/openpgp.png");
-}
+QPixmap OpenPGP::icon() const { return QPixmap(":/icons/openpgp.png"); }
 
 QString OpenPGP::pluginInfo()
 {
-    return name() + "\n\n"
-        + tr("Authors: ")
-        + "Boris Pek, Ivan Romanov\n\n"
+    return name() + "\n\n" + tr("Authors: ") + "Boris Pek, Ivan Romanov\n\n"
         + tr("OpenPGP is the most widely used encryption standard. "
              "It is extremely simple in usage:\n"
              "* Generate a key pair (public key + secret key) or "
@@ -120,7 +110,7 @@ bool OpenPGP::incomingStanza(int account, const QDomElement &stanza)
 
     QString key = body.mid(start, end - start);
 
-    GpgProcess  gpg;
+    GpgProcess        gpg;
     const QStringList arguments { "--batch", "--import" };
     gpg.start(arguments);
     gpg.waitForStarted();
@@ -149,10 +139,7 @@ bool OpenPGP::incomingStanza(int account, const QDomElement &stanza)
     }
 }
 
-QList<QVariantHash> OpenPGP::getButtonParam()
-{
-    return QList<QVariantHash>();
-}
+QList<QVariantHash> OpenPGP::getButtonParam() { return QList<QVariantHash>(); }
 
 QAction *OpenPGP::getAction(QObject *parent, int, const QString &)
 {
@@ -167,58 +154,13 @@ QAction *OpenPGP::getAction(QObject *parent, int, const QString &)
 
 void OpenPGP::actionActivated()
 {
-    if (m_menu) {
-        delete m_menu;
-    }
-
-    m_menu = new QMenu();
-
-    Model *model = new Model(m_menu);
-    model->listKeys();
-
-    for (int i = 0; i < model->rowCount(); i++) {
-        if (model->item(i, Model::Type)->text() != "sec") {
-            continue;
-        }
-
-        QString str;
-        // User name
-        if (!model->item(i, Model::Name)->text().isEmpty()) {
-            str += model->item(i, Model::Name)->text();
-        }
-
-        // Comment
-        if (!model->item(i, Model::Comment)->text().isEmpty()) {
-            if (!str.isEmpty()) {
-                str += " ";
-            }
-            str += QString("(%1)").arg(model->item(i, Model::Comment)->text());
-        }
-
-        // Email
-        if (!model->item(i, Model::Email)->text().isEmpty()) {
-            if (!str.isEmpty()) {
-                str += " ";
-            }
-            str += QString("<%1>").arg(model->item(i, Model::Email)->text());
-        }
-
-        // Short ID
-        if (!str.isEmpty()) {
-            str += " ";
-        }
-        str += model->item(i, Model::ShortId)->text();
-
-        QAction *action = m_menu->addAction(str);
-        action->setData(model->item(i, Model::Fingerprint)->text());
-        connect(action, &QAction::triggered, this, &OpenPGP::sendPublicKey);
-    }
-
-    m_menu->popup(QCursor::pos());
+    ; // This is temporary, until code is moved from Psi core
 }
 
 void OpenPGP::sendPublicKey()
 {
+    return; // This is temporary, until code is moved from Psi core
+
     QAction *action      = qobject_cast<QAction *>(sender());
     QString  fingerprint = "0x" + action->data().toString();
 
@@ -256,10 +198,7 @@ void OpenPGP::sendPublicKey()
     m_accountHost->appendSysMsg(account, jidToSend, res);
 }
 
-void OpenPGP::actionDestroyed(QObject *)
-{
-    m_action = nullptr;
-}
+void OpenPGP::actionDestroyed(QObject *) { m_action = nullptr; }
 
 bool OpenPGP::isEnabled() const
 {
@@ -268,4 +207,3 @@ bool OpenPGP::isEnabled() const
 
     return m_action->isChecked();
 }
-

@@ -27,6 +27,8 @@
 #include <windows.h>
 #endif
 
+namespace OpenPgpPluginNamespace {
+
 QString GpgProcess::m_bin = QString();
 
 GpgProcess::GpgProcess(QObject *parent) : QProcess(parent)
@@ -41,15 +43,9 @@ void GpgProcess::start(const QStringList &arguments, QIODevice::OpenMode mode)
     QProcess::start(m_bin, arguments, mode);
 }
 
-void GpgProcess::start(QIODevice::OpenMode mode)
-{
-    QProcess::start(m_bin, mode);
-}
+void GpgProcess::start(QIODevice::OpenMode mode) { QProcess::start(m_bin, mode); }
 
-bool GpgProcess::success() const
-{
-    return (exitCode() == 0);
-}
+bool GpgProcess::success() const { return (exitCode() == 0); }
 
 inline bool checkBin(const QString &bin)
 {
@@ -178,3 +174,5 @@ bool GpgProcess::info(QString &message)
 
     return res;
 }
+
+} // namespace OpenPgpPluginNamespace

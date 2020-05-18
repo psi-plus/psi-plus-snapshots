@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef CS_SHOWTEXTDLG_H
-#define CS_SHOWTEXTDLG_H
+#pragma once
 
 #include <QDialog>
 
@@ -29,5 +28,3 @@ public:
     ShowTextDlg(const QString &fname, bool rich = false, QWidget *parent = nullptr);
     ShowTextDlg(const QString &text, bool nonfile, bool rich, QWidget *parent);
 };
-
-#endif // CS_SHOWTEXTDLG_H

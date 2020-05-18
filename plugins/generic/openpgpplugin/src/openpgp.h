@@ -18,8 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef OPENPGP_H
-#define OPENPGP_H
+#pragma once
 
 #include "accountinfoaccessor.h"
 #include "activetabaccessor.h"
@@ -36,25 +35,25 @@ class Options;
 class QMenu;
 
 class OpenPGP : public QObject,
-              public PsiPlugin,
-              public PluginInfoProvider,
-              public StanzaFilter,
-              public PsiAccountController,
-              public OptionAccessor,
-              public StanzaSender,
-              public ActiveTabAccessor,
-              public AccountInfoAccessor {
+                public PsiPlugin,
+                public PluginInfoProvider,
+                public StanzaFilter,
+                public PsiAccountController,
+                public OptionAccessor,
+                public StanzaSender,
+                public ActiveTabAccessor,
+                public AccountInfoAccessor {
     Q_OBJECT
     Q_PLUGIN_METADATA(IID "com.psi-plus.OpenPGP" FILE "psiplugin.json")
-    Q_INTERFACES(PsiPlugin PluginInfoProvider StanzaFilter PsiAccountController OptionAccessor
-                     StanzaSender ActiveTabAccessor AccountInfoAccessor)
+    Q_INTERFACES(PsiPlugin PluginInfoProvider StanzaFilter PsiAccountController OptionAccessor StanzaSender
+                     ActiveTabAccessor AccountInfoAccessor)
 
 public:
     OpenPGP();
     ~OpenPGP();
 
     // from PsiPlugin
-    QString version() const { return "1.2"; }
+    QString version() const { return "1.3"; }
     QString shortName() const { return "openpgp"; }
     QString name() const { return "OpenPGP Plugin"; }
 
@@ -84,7 +83,7 @@ public:
 
     // from ToolbarIconAccessor
     QList<QVariantHash> getButtonParam();
-    QAction            *getAction(QObject *parent, int account, const QString &contact);
+    QAction *           getAction(QObject *parent, int account, const QString &contact);
 
     // from ActiveTabAccessor
     void setActiveTabAccessingHost(ActiveTabAccessingHost *host) { m_activeTab = host; }
@@ -101,14 +100,12 @@ private:
     bool isEnabled() const;
 
 private:
-    QAction                   *m_action = nullptr;
-    Options *                  m_optionsForm = nullptr;
-    PsiAccountControllingHost *m_accountHost = nullptr;
-    OptionAccessingHost *      m_optionHost = nullptr;
-    QMenu *                    m_menu = nullptr;
+    QAction *                  m_action        = nullptr;
+    Options *                  m_optionsForm   = nullptr;
+    PsiAccountControllingHost *m_accountHost   = nullptr;
+    OptionAccessingHost *      m_optionHost    = nullptr;
+    QMenu *                    m_menu          = nullptr;
     StanzaSendingHost *        m_stanzaSending = nullptr;
-    ActiveTabAccessingHost *   m_activeTab = nullptr;
-    AccountInfoAccessingHost * m_accountInfo = nullptr;
+    ActiveTabAccessingHost *   m_activeTab     = nullptr;
+    AccountInfoAccessingHost * m_accountInfo   = nullptr;
 };
-
-#endif // OPENPGP_H

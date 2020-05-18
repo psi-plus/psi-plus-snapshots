@@ -2,6 +2,7 @@
  * model.cpp - key view model
  *
  * Copyright (C) 2013  Ivan Romanov <drizt@land.ru>
+ * Copyright (C) 2020  Boris Pek <tehnick-8@yandex.ru>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,8 +19,10 @@
  */
 
 #include "model.h"
-#include "gpgprocess.h"
+#include "gpgtransaction.h"
 #include <QDateTime>
+
+using OpenPgpPluginNamespace::GpgTransaction;
 
 inline QString epochToHuman(const QString &seconds)
 {
@@ -115,14 +118,32 @@ QList<QStandardItem *> parseLine(const QString &line)
     return rows;
 }
 
-Model::Model(QObject *parent) : QStandardItemModel(parent) { }
+Model::Model(QObject *parent) : QStandardItemModel(parent) { ; }
 
-void Model::listKeys()
+void Model::updateAllKeys()
+{
+    GpgTransaction *transaction = new GpgTransaction(GpgTransaction::Type::ListAllKeys, QString());
+    connect(transaction, &GpgTransaction::transactionFinished, this, &Model::transactionFinished);
+    transaction->start();
+}
+
+void Model::transactionFinished()
+{
+    GpgTransaction *transaction = dynamic_cast<GpgTransaction *>(sender());
+    if (!transaction)
+        return;
+
+    showKeys(transaction->stdOutString());
+    emit keysListUpdated();
+
+    transaction->deleteLater();
+}
+
+void Model::showKeys(const QString &keysRaw)
 {
     clear();
 
     static QStringList headerLabels;
-
     if (headerLabels.isEmpty()) {
         for (int i = 0; i < Model::Count; ++i) {
             headerLabels << QString();
@@ -139,45 +160,20 @@ void Model::listKeys()
         headerLabels[ShortId]     = tr("Short ID");
         headerLabels[Fingerprint] = tr("Fingerprint");
     }
-
     setHorizontalHeaderLabels(headerLabels);
 
-    QStringList arguments;
+    if (keysRaw.isEmpty())
+        return;
 
-    arguments = QStringList{
-        "--with-fingerprint",
-        "--list-secret-keys",
-        "--with-colons",
-        "--fixed-list-mode"
-    };
-
-    GpgProcess process;
-    process.start(arguments);
-    process.waitForFinished();
-    QString keysRaw = QString::fromUtf8(process.readAll());
-
-    arguments.clear();
-    arguments = QStringList{
-        "--with-fingerprint",
-        "--list-public-keys",
-        "--with-colons",
-        "--fixed-list-mode"
-    };
-
-    process.start(arguments);
-    process.waitForFinished();
-    keysRaw += QString::fromUtf8(process.readAll());
-
-    showKeys(keysRaw);
-}
-
-void Model::showKeys(const QString &keysRaw)
-{
-    QStringList            list = keysRaw.split("\n");
+    QStringList            list = keysRaw.split("\n", QString::SkipEmptyParts);
     QList<QStandardItem *> lastRow;
     QList<QStandardItem *> row;
     QStringList            secretKeys;
+
     for (auto line : list) {
+        if (line.count(':') < 1)
+            continue;
+
         QString type = line.section(':', 0, 0);
         if (type == "pub" || type == "sec") {
             row = parseLine(line);
@@ -201,7 +197,9 @@ void Model::showKeys(const QString &keysRaw)
                 lastRow.at(Comment)->setText(row.at(Comment)->text());
             }
         } else if (type == "fpr") {
-            row.at(Fingerprint)->setText(line.section(':', Fingerprint, Fingerprint));
+            if (!row.isEmpty()) {
+                row.at(Fingerprint)->setText(line.section(':', Fingerprint, Fingerprint));
+            }
         }
     }
 }

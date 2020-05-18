@@ -19,10 +19,14 @@
  */
 
 #include "options.h"
+#include "accountinfoaccessinghost.h"
 #include "addkeydlg.h"
 #include "gpgprocess.h"
 #include "model.h"
 #include "optionaccessinghost.h"
+#include "pgpkeydlg.h"
+#include "pgputil.h"
+#include "psiaccountcontrollinghost.h"
 #include "showtextdlg.h"
 #include "ui_options.h"
 #include <QAction>
@@ -40,13 +44,16 @@
 #include <QStandardItemModel>
 #include <QTimer>
 
+using OpenPgpPluginNamespace::GpgProcess;
+
 Options::Options(QWidget *parent) : QWidget(parent), m_ui(new Ui::Options)
 {
     m_ui->setupUi(this);
 
     {
-        Model *model = new Model(this);
-        m_ui->keys->setModel(model);
+        m_allKeysTableModel = new Model(this);
+        m_ui->allKeysTable->setModel(m_allKeysTableModel);
+        connect(m_allKeysTableModel, &Model::keysListUpdated, this, &Options::allKeysTableModelUpdated);
 
         // Delayed init
         QTimer::singleShot(500, this, &Options::updateAllKeys);
@@ -76,51 +83,70 @@ Options::Options(QWidget *parent) : QWidget(parent), m_ui(new Ui::Options)
         m_ui->btnExport->setMenu(menu);
     }
     {
+        m_ui->knownKeysTable->setShowGrid(true);
+        m_ui->knownKeysTable->setEditTriggers(nullptr);
+        m_ui->knownKeysTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+        m_ui->knownKeysTable->setSortingEnabled(true);
+
+        m_ui->knownKeysTable->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(m_ui->knownKeysTable, &QTableView::customContextMenuRequested, this, &Options::contextMenuKnownKeys);
+
+        m_knownKeysTableModel = new QStandardItemModel(this);
+        m_ui->knownKeysTable->setModel(m_knownKeysTableModel);
+
+        connect(m_ui->deleteKnownKey, &QPushButton::clicked, this, &Options::deleteKnownKey);
+    }
+    {
         m_ui->ownKeysTable->setShowGrid(true);
         m_ui->ownKeysTable->setEditTriggers(nullptr);
         m_ui->ownKeysTable->setSelectionBehavior(QAbstractItemView::SelectRows);
         m_ui->ownKeysTable->setSortingEnabled(true);
 
         m_ui->ownKeysTable->setContextMenuPolicy(Qt::CustomContextMenu);
-        connect(m_ui->ownKeysTable, &QTableView::customContextMenuRequested, this, &Options::contextMenu);
+        connect(m_ui->ownKeysTable, &QTableView::customContextMenuRequested, this, &Options::contextMenuOwnKeys);
 
         m_ownKeysTableModel = new QStandardItemModel(this);
         m_ui->ownKeysTable->setModel(m_ownKeysTableModel);
 
-        updateOwnKeys();
+        connect(m_ui->chooseKey, &QPushButton::clicked, this, &Options::chooseKey);
+        connect(m_ui->deleteOwnKey, &QPushButton::clicked, this, &Options::deleteOwnKey);
     }
 
-    m_ui->tabWidget->removeTab(1); // Temporary!!!
+    m_ui->tabWidget->setCurrentWidget(m_ui->knownKeysTab);
 }
 
-Options::~Options()
-{
-    delete m_ui;
-}
-
-void Options::updateOwnKeys()
-{
-    ; // TODO
-}
+Options::~Options() { delete m_ui; }
 
 void Options::setOptionAccessingHost(OptionAccessingHost *host) { m_optionHost = host; }
 
+void Options::setAccountInfoAccessingHost(AccountInfoAccessingHost *host)
+{
+    m_accountInfo = host;
+
+    updateAccountsList();
+    updateKnownKeys();
+    updateOwnKeys();
+}
+
+void Options::setPsiAccountControllingHost(PsiAccountControllingHost *host) { m_accountHost = host; }
+
 void Options::loadSettings()
 {
-    {   // Encryption policy
+    { // Encryption policy
         m_ui->alwaysEnabled->setChecked(m_optionHost->getGlobalOption("options.pgp.always-enabled").toBool());
         m_ui->enabledByDefault->setChecked(m_optionHost->getGlobalOption("options.pgp.enabled-by-default").toBool());
         m_ui->disabledByDefault->setChecked(!m_ui->enabledByDefault->isChecked());
     }
     m_ui->autoAssign->setChecked(m_optionHost->getGlobalOption("options.pgp.auto-assign").toBool());
-    m_ui->showPgpInfoInTooltips->setChecked(m_optionHost->getGlobalOption("options.ui.contactlist.tooltip.pgp").toBool());
+    m_ui->showPgpInfoInTooltips->setChecked(
+        m_optionHost->getGlobalOption("options.ui.contactlist.tooltip.pgp").toBool());
     m_ui->autoImportPgpKeyFromMessage->setChecked(m_optionHost->getPluginOption("auto-import", true).toBool());
     m_ui->hideMessagesWithPgpKeys->setChecked(m_optionHost->getPluginOption("hide-key-message", true).toBool());
 }
 
 void Options::saveSettings()
 {
-    {   // Encryption policy
+    { // Encryption policy
         m_optionHost->setGlobalOption("options.pgp.always-enabled", m_ui->alwaysEnabled->isChecked());
         m_optionHost->setGlobalOption("options.pgp.enabled-by-default", m_ui->enabledByDefault->isChecked());
     }
@@ -234,7 +260,7 @@ void Options::addKey()
 
 void Options::deleteKey()
 {
-    QItemSelectionModel *selModel = m_ui->keys->selectionModel();
+    QItemSelectionModel *selModel = m_ui->allKeysTable->selectionModel();
 
     if (!selModel->hasSelection()) {
         return;
@@ -260,21 +286,17 @@ void Options::deleteKey()
     }
 
     if (!pkeys.isEmpty()) {
-        if (QMessageBox::question(this, tr("Delete"), tr("Do you want to delete the selected keys?"),
-                                  QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
-            == QMessageBox::No) {
+        const auto result = QMessageBox::question(this, tr("Delete"), tr("Do you want to delete the selected keys?"),
+                                                  QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        if (result == QMessageBox::No) {
             return;
         }
     }
 
     // Remove primary keys
     for (auto key : pkeys) {
-        const QStringList &&arguments = {
-            "--yes",
-            "--batch",
-            "--delete-secret-and-public-key",
-            "0x" + key.sibling(key.row(), Model::Fingerprint).data().toString()
-        };
+        const QStringList &&arguments = { "--yes", "--batch", "--delete-secret-and-public-key",
+                                          "0x" + key.sibling(key.row(), Model::Fingerprint).data().toString() };
 
         GpgProcess gpg;
         gpg.start(arguments);
@@ -309,7 +331,7 @@ void Options::importKeyFromFile()
 
 void Options::exportKeyToFile()
 {
-    QItemSelectionModel *selModel = m_ui->keys->selectionModel();
+    QItemSelectionModel *selModel = m_ui->allKeysTable->selectionModel();
 
     if (!selModel->hasSelection()) {
         return;
@@ -354,15 +376,8 @@ void Options::exportKeyToFile()
             filename += ".asc";
         }
 
-
-        const QString &&fingerprint = "0x" + key.sibling(key.row(), 8).data().toString();
-        const QStringList &&arguments = {
-            "--output",
-            filename,
-            "--armor",
-            "--export",
-            fingerprint
-        };
+        const QString &&    fingerprint = "0x" + key.sibling(key.row(), 8).data().toString();
+        const QStringList &&arguments   = { "--output", filename, "--armor", "--export", fingerprint };
 
         GpgProcess gpg;
         gpg.start(arguments);
@@ -394,7 +409,7 @@ void Options::importKeyFromClipboard()
 
 void Options::exportKeyToClipboard()
 {
-    QItemSelectionModel *selModel = m_ui->keys->selectionModel();
+    QItemSelectionModel *selModel = m_ui->allKeysTable->selectionModel();
 
     if (!selModel->hasSelection()) {
         return;
@@ -422,12 +437,8 @@ void Options::exportKeyToClipboard()
     // Remove primary keys
     QString strKey = "";
     for (auto key : pkeys) {
-        const QString &&fingerprint = "0x" + key.sibling(key.row(), 8).data().toString();
-        const QStringList &&arguments = {
-            "--armor",
-            "--export",
-            fingerprint
-        };
+        const QString &&    fingerprint = "0x" + key.sibling(key.row(), 8).data().toString();
+        const QStringList &&arguments   = { "--armor", "--export", fingerprint };
 
         GpgProcess gpg;
         gpg.start(arguments);
@@ -440,36 +451,213 @@ void Options::exportKeyToClipboard()
     clipboard->setText(strKey.toUtf8().trimmed());
 }
 
-void Options::showInfo()
-{
-    GpgProcess gpg;
-    QString    info;
+void Options::showInfo() { PGPKeyDlg::showInfoDialog(this); }
 
-    gpg.info(info);
-    ShowTextDlg *w = new ShowTextDlg(info, true, false, this);
-    w->setWindowTitle(tr("GnuPG info"));
-    w->resize(560, 240);
-    w->show();
+void Options::updateAllKeys() { m_allKeysTableModel->updateAllKeys(); }
+
+void Options::allKeysTableModelUpdated()
+{
+    const int columns = m_ui->allKeysTable->model()->columnCount();
+    for (int i = 0; i < columns; ++i) {
+        m_ui->allKeysTable->resizeColumnToContents(i);
+    }
 }
 
-void Options::updateAllKeys()
+void Options::updateAccountsList()
 {
-    qobject_cast<Model *>(m_ui->keys->model())->listKeys();
+    if (!m_accountInfo)
+        return;
 
-    int columns = m_ui->keys->model()->columnCount();
-    for (int i = 0; i < columns; i++) {
-        m_ui->keys->resizeColumnToContents(i);
+    QString currAccount;
+    if (m_ui->accounts->count() > 0) {
+        currAccount = m_ui->accounts->currentText();
+        m_ui->accounts->clear();
     }
+
+    for (int idx = 0; m_accountInfo->getId(idx) != "-1"; ++idx) {
+        m_ui->accounts->addItem(m_accountInfo->getName(idx), QVariant(idx));
+    }
+
+    if (!currAccount.isEmpty()) {
+        m_ui->accounts->setCurrentText(currAccount);
+    } else {
+        m_ui->accounts->setCurrentIndex(0);
+    }
+}
+
+void Options::updateKnownKeys()
+{
+    if (!m_accountInfo)
+        return;
+
+    const int           sortSection = m_ui->knownKeysTable->horizontalHeader()->sortIndicatorSection();
+    const Qt::SortOrder sortOrder   = m_ui->knownKeysTable->horizontalHeader()->sortIndicatorOrder();
+
+    {
+        const QStringList &&headerLabels = { tr("Account"), tr("User"), tr("Key ID"), tr("Fingerprint") };
+
+        m_knownKeysTableModel->clear();
+        m_knownKeysTableModel->setColumnCount(4);
+        m_knownKeysTableModel->setHorizontalHeaderLabels(headerLabels);
+    }
+
+    for (int idx = 0; m_accountInfo->getId(idx) != "-1"; ++idx) {
+        const auto knownKeysMap = m_accountInfo->getKnownPgpKeys(idx);
+        if (knownKeysMap.isEmpty())
+            continue;
+
+        for (const QString &user : knownKeysMap.keys()) {
+            QStandardItem *accItem = new QStandardItem(m_accountInfo->getName(idx));
+            accItem->setData(QVariant(idx));
+
+            QStandardItem *userItem = new QStandardItem(user);
+            QStandardItem *keyItem  = new QStandardItem(knownKeysMap[user]);
+
+            const QString &&fingerprint     = PGPUtil::getFingerprint(knownKeysMap[user]);
+            QStandardItem * fingerprintItem = new QStandardItem(fingerprint);
+
+            const QList<QStandardItem *> &&row = { accItem, userItem, keyItem, fingerprintItem };
+            m_knownKeysTableModel->appendRow(row);
+        }
+    }
+
+    m_ui->knownKeysTable->sortByColumn(sortSection, sortOrder);
+    m_ui->knownKeysTable->resizeColumnsToContents();
+}
+
+void Options::updateOwnKeys()
+{
+    if (!m_accountInfo)
+        return;
+
+    const int           sortSection = m_ui->ownKeysTable->horizontalHeader()->sortIndicatorSection();
+    const Qt::SortOrder sortOrder   = m_ui->ownKeysTable->horizontalHeader()->sortIndicatorOrder();
+
+    {
+        const QStringList &&headerLabels = { tr("Account"), tr("Key ID"), tr("Fingerprint") };
+
+        m_ownKeysTableModel->clear();
+        m_ownKeysTableModel->setColumnCount(3);
+        m_ownKeysTableModel->setHorizontalHeaderLabels(headerLabels);
+    }
+
+    for (int idx = 0; m_accountInfo->getId(idx) != "-1"; ++idx) {
+        const QString &&keyId = m_accountInfo->getPgpKey(idx);
+        if (keyId.isEmpty())
+            continue;
+
+        QStandardItem *accItem = new QStandardItem(m_accountInfo->getName(idx));
+        accItem->setData(QVariant(idx));
+
+        QStandardItem *keyItem = new QStandardItem(keyId);
+
+        const QString &&fingerprint     = PGPUtil::getFingerprint(keyId);
+        QStandardItem * fingerprintItem = new QStandardItem(fingerprint);
+
+        const QList<QStandardItem *> &&row = { accItem, keyItem, fingerprintItem };
+        m_ownKeysTableModel->appendRow(row);
+    }
+
+    m_ui->ownKeysTable->sortByColumn(sortSection, sortOrder);
+    m_ui->ownKeysTable->resizeColumnsToContents();
+}
+
+void Options::deleteKnownKey()
+{
+    if (!m_accountInfo || !m_accountHost)
+        return;
+
+    if (!m_ui->knownKeysTable->selectionModel()->hasSelection())
+        return;
+
+    bool keyRemoved = false;
+    for (auto selectIndex : m_ui->knownKeysTable->selectionModel()->selectedRows(0)) {
+        const QVariant &accountId = m_knownKeysTableModel->item(selectIndex.row(), 0)->data();
+        if (accountId.isNull())
+            continue;
+
+        const QString &jid = m_knownKeysTableModel->item(selectIndex.row(), 1)->text();
+        if (jid.isEmpty())
+            continue;
+
+        const QString &accountName = m_knownKeysTableModel->item(selectIndex.row(), 0)->text();
+        const QString &userName    = m_knownKeysTableModel->item(selectIndex.row(), 1)->text();
+        const QString &fingerprint = m_knownKeysTableModel->item(selectIndex.row(), 3)->text();
+
+        const QString msg(tr("Are you sure you want to delete the following key?") + "\n\n" + tr("Account: ")
+                          + accountName + "\n" + tr("User: ") + userName + "\n" + tr("Fingerprint: ") + fingerprint);
+
+        QMessageBox mb(QMessageBox::Question, tr("Confirm action"), msg, QMessageBox::Yes | QMessageBox::No, this);
+        if (mb.exec() == QMessageBox::Yes) {
+            m_accountHost->removeKnownPgpKey(accountId.toInt(), jid);
+            keyRemoved = true;
+        }
+    }
+
+    if (keyRemoved)
+        updateKnownKeys();
 }
 
 void Options::deleteOwnKey()
 {
+    if (!m_accountInfo || !m_accountHost)
+        return;
+
     if (!m_ui->ownKeysTable->selectionModel()->hasSelection())
         return;
 
-    ; // TODO
+    bool keyRemoved = false;
+    for (auto selectIndex : m_ui->ownKeysTable->selectionModel()->selectedRows(0)) {
+        const QVariant &accountId = m_ownKeysTableModel->item(selectIndex.row(), 0)->data().toString();
+        if (accountId.isNull())
+            continue;
 
+        const QString &accountName = m_ownKeysTableModel->item(selectIndex.row(), 0)->text();
+        const QString &fingerprint = m_ownKeysTableModel->item(selectIndex.row(), 2)->text();
+
+        const QString msg(tr("Are you sure you want to delete the following key?") + "\n\n" + tr("Account: ")
+                          + accountName + "\n" + tr("Fingerprint: ") + fingerprint);
+
+        QMessageBox mb(QMessageBox::Question, tr("Confirm action"), msg, QMessageBox::Yes | QMessageBox::No, this);
+        if (mb.exec() == QMessageBox::Yes) {
+            m_accountHost->setPgpKey(accountId.toInt(), QString());
+            keyRemoved = true;
+        }
+    }
+
+    if (keyRemoved)
+        updateOwnKeys();
+}
+
+void Options::chooseKey()
+{
+    if (!m_accountInfo || !m_accountHost)
+        return;
+
+    const QVariant &accountId = m_ui->accounts->currentData();
+    if (accountId.isNull())
+        return;
+
+    const int idx = accountId.toInt();
+    if (m_accountInfo->getId(idx) == "-1")
+        return;
+
+    const QString &&pgpKeyId = m_accountInfo->getPgpKey(idx);
+    const QString &&newKeyId = PGPUtil::chooseKey(PGPKeyDlg::Secret, pgpKeyId, tr("Choose Secret Key"));
+
+    if (newKeyId.isEmpty())
+        return;
+
+    m_accountHost->setPgpKey(idx, newKeyId);
     updateOwnKeys();
+}
+
+void Options::copyKnownFingerprint()
+{
+    if (!m_ui->knownKeysTable->selectionModel()->hasSelection())
+        return;
+
+    copyFingerprintFromTable(m_knownKeysTableModel, m_ui->knownKeysTable->selectionModel()->selectedRows(3), 3);
 }
 
 void Options::copyOwnFingerprint()
@@ -477,18 +665,25 @@ void Options::copyOwnFingerprint()
     if (!m_ui->ownKeysTable->selectionModel()->hasSelection())
         return;
 
-    QString text;
-    for (auto selectIndex : m_ui->ownKeysTable->selectionModel()->selectedRows(1)) {
-        if (!text.isEmpty()) {
-            text += "\n";
-        }
-        text += m_ownKeysTableModel->item(selectIndex.row(), 1)->text();
-    }
-    QClipboard *clipboard = QApplication::clipboard();
-    clipboard->setText(text);
+    copyFingerprintFromTable(m_ownKeysTableModel, m_ui->ownKeysTable->selectionModel()->selectedRows(2), 2);
 }
 
-void Options::contextMenu(const QPoint &pos)
+void Options::contextMenuKnownKeys(const QPoint &pos)
+{
+    QModelIndex index = m_ui->knownKeysTable->indexAt(pos);
+    if (!index.isValid())
+        return;
+
+    QMenu *menu = new QMenu(this);
+
+    // TODO: update after stopping support of Ubuntu Xenial:
+    menu->addAction(QIcon::fromTheme("edit-delete"), tr("Delete"), this, SLOT(deleteKnownKey()));
+    menu->addAction(QIcon::fromTheme("edit-copy"), tr("Copy fingerprint"), this, SLOT(copyKnownFingerprint()));
+
+    menu->exec(QCursor::pos());
+}
+
+void Options::contextMenuOwnKeys(const QPoint &pos)
 {
     QModelIndex index = m_ui->ownKeysTable->indexAt(pos);
     if (!index.isValid())
@@ -503,3 +698,16 @@ void Options::contextMenu(const QPoint &pos)
     menu->exec(QCursor::pos());
 }
 
+void Options::copyFingerprintFromTable(QStandardItemModel *tableModel, const QModelIndexList &indexesList,
+                                       const int column)
+{
+    QString text;
+    for (auto selectIndex : indexesList) {
+        if (!text.isEmpty()) {
+            text += "\n";
+        }
+        text += tableModel->item(selectIndex.row(), column)->text();
+    }
+    QClipboard *clipboard = QApplication::clipboard();
+    clipboard->setText(text);
+}
