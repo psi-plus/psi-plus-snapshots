@@ -33,8 +33,6 @@ class GstPlugin : public QObject, public Plugin {
 
 public:
     virtual Provider *createProvider(const QVariantMap &vm) { return new GstProvider(vm); }
-
-    QString creditName() const { return GstProvider::creditName(); }
 };
 
 }

@@ -952,9 +952,9 @@ bool GstProvider::init()
 
 bool GstProvider::isInitialized() const { return gstEventLoop && gstEventLoop->isInitialized(); }
 
-QString GstProvider::creditName() { return "GStreamer"; }
+QString GstProvider::creditName() const { return "GStreamer"; }
 
-QString GstProvider::creditText()
+QString GstProvider::creditText() const
 {
     QString str = QString("This application uses GStreamer %1, a comprehensive "
                           "open-source and cross-platform multimedia framework.  For "

@@ -143,6 +143,24 @@ Provider *provider()
 
 bool isSupported() { return provider() != nullptr; }
 
+QString creditName()
+{
+    auto p = provider();
+    if (p) {
+        return p->creditName();
+    }
+    return QString();
+}
+
+QString creditText()
+{
+    auto p = provider();
+    if (p) {
+        return p->creditText();
+    }
+    return QString();
+}
+
 PluginResult loadPlugin(const QString &fname, const QString &resourcePath)
 {
     if (g_provider)

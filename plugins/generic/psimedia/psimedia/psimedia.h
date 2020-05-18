@@ -43,6 +43,9 @@ bool         isSupported();
 PluginResult loadPlugin(const QString &fname, const QString &resourcePath);
 void         unloadPlugin();
 
+QString creditName();
+QString creditText();
+
 class Device {
 public:
     enum Type {
