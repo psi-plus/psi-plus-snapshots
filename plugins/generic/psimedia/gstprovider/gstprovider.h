@@ -42,8 +42,8 @@ public:
     QObject *          qobject() override;
     bool               init() override;
     bool               isInitialized() const override;
-    QString            creditName() override;
-    QString            creditText() override;
+    QString            creditName();
+    QString            creditText();
     FeaturesContext *  createFeatures() override;
     RtpSessionContext *createRtpSession() override;
 
