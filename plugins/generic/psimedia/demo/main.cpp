@@ -1097,9 +1097,8 @@ int main(int argc, char **argv)
 //----------------------------------------------------
 // FeaturesWatcher
 //----------------------------------------------------
-FeaturesWatcher::FeaturesWatcher(QObject *parent)
+FeaturesWatcher::FeaturesWatcher(QObject *parent) : QObject(parent)
 {
-    Q_UNUSED(parent);
     QSettings s;
 
     connect(&_features, &PsiMedia::Features::updated, this, &FeaturesWatcher::featuresUpdated);
