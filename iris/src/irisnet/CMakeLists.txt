@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.1.0)
+get_filename_component(ABS_PARENT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     corelib
@@ -11,7 +12,7 @@ include_directories(
 set( CMAKE_MODULE_PATH
     "${CMAKE_MODULE_PATH}"
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/modules"
+    "${ABS_PARENT_DIR}/cmake/modules"
 )
 
 set(SOURCES

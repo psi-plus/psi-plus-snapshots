@@ -31,15 +31,15 @@ endif()
 if( B2_INCLUDE_DIR AND B2_LIBRARY )
     # in cache already
     set(B2_FIND_QUIETLY TRUE)
-endif( B2_INCLUDE_DIR AND B2_LIBRARY )
+endif()
 
 if( UNIX AND NOT( APPLE OR CYGWIN ) )
     find_package( PkgConfig QUIET )
     pkg_check_modules( PC_B2 QUIET libb2 )
     if( PC_B2_FOUND )
         set( B2_DEFINITIONS ${PC_B2_CFLAGS} ${PC_B2_CFLAGS_OTHER} )
-    endif( PC_B2_FOUND )
-endif( UNIX AND NOT( APPLE OR CYGWIN ) )
+    endif()
+endif()
 
 set( B2_ROOT "" CACHE STRING "Path to libb2 library" )
 
@@ -52,7 +52,6 @@ find_path(
 )
 set(B2_NAMES
     b2${D}
-    libb2${D}
 )
 find_library(
     B2_LIBRARY
@@ -73,6 +72,6 @@ find_package_handle_standard_args(
 if( B2_FOUND )
     set( B2_LIBRARIES ${B2_LIBRARY} )
     set( B2_INCLUDE_DIRS ${B2_INCLUDE_DIR} )
-endif( B2_FOUND )
+endif()
 
 mark_as_advanced( B2_INCLUDE_DIR B2_LIBRARY )

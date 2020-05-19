@@ -1,11 +1,14 @@
+cmake_minimum_required(VERSION 3.1.0)
 add_definitions(-DXMPP_TEST)
 
 find_package(ZLIB REQUIRED)
+get_filename_component(ABS_PARENT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+get_filename_component(ABS_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_LIST_DIR}
-    ..
-    ../irisnet/corelib
+    ${ABS_PARENT_DIR}
+    ${ABS_PARENT_DIR}/irisnet/corelib
     xmpp-core
     xmpp-im
     ${IDN_INCLUDE_DIRS}
@@ -170,11 +173,11 @@ add_library(iris
     ${SOURCES}
 )
 
-if (B2_FOUND)
+if(B2_FOUND)
     message(STATUS "Building with system blake2 library")
     target_compile_definitions(iris PUBLIC IRIS_SYSTEM_BLAKE2)
     target_link_libraries(iris ${B2_LIBRARY})
-else (B2_FOUND)
+else()
     message(STATUS "Building with slow blake2 reference implementation")
     target_sources(iris PRIVATE
             blake2/blake2b-ref.c
@@ -182,7 +185,7 @@ else (B2_FOUND)
             blake2/blake2.h
             blake2/blake2-impl.h)
     target_include_directories(iris PRIVATE blake2)
-endif (B2_FOUND)
+endif()
 
 
 if( SEPARATE_QJDNS AND WIN32)
@@ -192,4 +195,4 @@ endif()
 target_link_libraries(iris ${IDN_LIBRARY} ${ZLIB_LIBRARY} ${EXTRA_LDFLAGS})
 target_link_libraries(iris irisnet Qt5::Core Qt5::Gui Qt5::Network Qt5::Xml ${qca_LIB})
 target_compile_definitions(iris INTERFACE IRISNET_STATIC)
-target_include_directories(iris INTERFACE ../../include ../../include/iris ..)
+target_include_directories(iris INTERFACE ${ABS_ROOT_DIR}/include ${ABS_ROOT_DIR}/include/iris ${ABS_PARENT_DIR})

@@ -5,11 +5,19 @@ endif()
 project(iris)
 cmake_minimum_required(VERSION 3.1.0)
 
+#Set automoc and autouic policy
 if(POLICY CMP0071)
-    cmake_policy(SET CMP0071 OLD)
+    if(${CMAKE_VERSION} VERSION_LESS "3.10.0")
+        cmake_policy(SET CMP0071 OLD)
+        message(STATUS "CMP0071 policy set to OLD")
+    else()
+        cmake_policy(SET CMP0071 NEW)
+        message(STATUS "CMP0071 policy set to NEW")
+    endif()
 endif()
 if(POLICY CMP0074)
     cmake_policy(SET CMP0074 NEW)
+    message(STATUS "CMP0074 policy set to NEW")
 endif()
 
 set( IRIS_LIB_VERSION_MAJOR 1 )
@@ -19,12 +27,13 @@ set( IRIS_LIB_VERSION_STRING
     ${IRIS_LIB_VERSION_MAJOR}.${IRIS_LIB_VERSION_MINOR}.${IRIS_LIB_VERSION_PATCH}
     )
 
+get_filename_component(ABS_PARENT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+
 set( CMAKE_MODULE_PATH
     "${CMAKE_MODULE_PATH}"
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/modules"
+    "${ABS_PARENT_DIR}/cmake/modules"
     "${PROJECT_SOURCE_DIR}/cmake/modules"
-    "${PROJECT_SOURCE_DIR}/../cmake/modules"
     )
 
 option( USE_QJDNS "Use qjdns/jdns library. Disabled by default for Qt5" OFF )
@@ -55,8 +64,7 @@ include_directories(
 )
 
 if(NOT USE_QJDNS AND SEPARATE_QJDNS)
-    message(WARNING "SEPARATE_QJDNS flag enabled, but USE_QJDNS flag disabled. Both flags will be disabled")
-    set(SEPARATE_QJDNS OFF)
+    message(FATAL_ERROR "SEPARATE_QJDNS flag enabled, but USE_QJDNS flag disabled.\nPlease enable flag USE_QJDNS or disable both flags")
 endif()
 
 if(USE_QJDNS AND (NOT SEPARATE_QJDNS))
@@ -118,7 +126,10 @@ elseif(USE_QJDNS)
 endif()
 
 find_package(IDN REQUIRED)
-find_package(B2)
+find_package(B2 QUIET)
+if(B2_FOUND)
+    message(STATUS "Found B2: ${B2_LIBRARY}")
+endif()
 
 add_definitions(-DIRISNET_STATIC)
 
