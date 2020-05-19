@@ -173,6 +173,7 @@ add_library(iris
 if (B2_FOUND)
     message(STATUS "Building with system blake2 library")
     target_compile_definitions(iris PUBLIC IRIS_SYSTEM_BLAKE2)
+    target_link_libraries(iris ${B2_LIBRARY})
 else (B2_FOUND)
     message(STATUS "Building with slow blake2 reference implementation")
     target_sources(iris PRIVATE
