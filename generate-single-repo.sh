@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2020-05-15
+# Updated: 2020-05-19
 # Version: N/A
 
 set -e
@@ -124,7 +124,7 @@ RESOURCES_NEW_HASH=$(cd "${MAIN_DIR}/resources" && git show -s --pretty='format:
 if [ "${PSI_OLD_HASH}"       = "${PSI_NEW_HASH}" ] && \
    [ "${PATCHES_OLD_HASH}"   = "${PATCHES_NEW_HASH}" ] && \
    [ "${PLUGINS_OLD_HASH}"   = "${PLUGINS_NEW_HASH}" ] && \
-   [ "${PSIMEDIA_OLD_HASH}"   = "${PSIMEDIA_NEW_HASH}" ] && \
+   [ "${PSIMEDIA_OLD_HASH}"  = "${PSIMEDIA_NEW_HASH}" ] && \
    [ "${RESOURCES_OLD_HASH}" = "${RESOURCES_NEW_HASH}" ]; then
     echo "Updating is not required!";
     git checkout HEAD .
@@ -278,6 +278,7 @@ It is based on:
 * psi: ${PSI_NEW_HASH}
 * patches: ${PATCHES_NEW_HASH}
 * plugins: ${PLUGINS_NEW_HASH}
+* psimedia: ${PSIMEDIA_NEW_HASH}
 * resources: ${RESOURCES_NEW_HASH}
 "
 echo "${COMMENT}"
