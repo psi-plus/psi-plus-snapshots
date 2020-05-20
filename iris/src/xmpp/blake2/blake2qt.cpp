@@ -7,28 +7,20 @@
 namespace XMPP {
 QByteArray computeBlake2Hash(const QByteArray &ba, Blake2DigestSize digestSize)
 {
-    QByteArray ret;
-    int        retCode;
-    if (digestSize == Blake2Digest256) {
-        ret.reserve(BLAKE2S_OUTBYTES);
-        retCode = blake2s(ret.data(), BLAKE2S_OUTBYTES, ba.data(), ba.size(), nullptr, 0);
-    } else {
-        ret.reserve(BLAKE2B_OUTBYTES);
-        retCode = blake2b(ret.data(), BLAKE2B_OUTBYTES, ba.data(), ba.size(), nullptr, 0);
-    }
+    // otherwise try to libb2 or bundled reference implementation depending on which is available
 
-    if (retCode != 0) {
+    size_t     digestSizeBytes = digestSize == Blake2Digest256 ? 32 : 64;
+    QByteArray ret(digestSizeBytes, Qt::Uninitialized);
+
+    if (blake2b(ret.data(), digestSizeBytes, ba.data(), ba.size(), nullptr, 0) != 0) {
         ret.clear();
     }
 
     return ret;
 }
 
-static QByteArray computeBlake2Hash256(QIODevice *dev)
+QByteArray computeBlake2Hash(QIODevice *dev, Blake2DigestSize digestSize)
 {
-    int           retCode;
-    blake2s_state state;
-
     if (!dev->isOpen()) {
         dev->open(QIODevice::ReadOnly);
     }
@@ -36,46 +28,17 @@ static QByteArray computeBlake2Hash256(QIODevice *dev)
         return QByteArray();
     }
 
-    retCode = blake2s_init(&state, BLAKE2S_OUTBYTES);
-    if (retCode != 0) {
-        return QByteArray();
-    }
-    QByteArray buf;
-    while ((buf = dev->read(64 * 1024 * 1024)).size() > 0) {
-        retCode = blake2s_update(&state, buf.data(), buf.size());
-        if (retCode != 0) {
-            return QByteArray();
-        }
-    }
+    // otherwise try to libb2 or bundled reference implementation depending on which is available
 
-    QByteArray ret;
-    ret.reserve(BLAKE2S_OUTBYTES);
-    retCode = blake2s_final(&state, ret.data(), ret.size());
-    if (retCode != 0) {
-        return QByteArray();
-    }
-
-    return ret;
-}
-
-static QByteArray computeBlake2Hash512(QIODevice *dev)
-{
-    int           retCode;
+    size_t        digestSizeBytes = digestSize == Blake2Digest256 ? 32 : 64;
     blake2b_state state;
-
-    if (!dev->isOpen()) {
-        dev->open(QIODevice::ReadOnly);
-    }
-    if (!dev->isOpen()) {
-        return QByteArray();
-    }
-
-    retCode = blake2b_init(&state, BLAKE2B_OUTBYTES);
+    int           retCode = blake2b_init(&state, digestSizeBytes);
     if (retCode != 0) {
         return QByteArray();
     }
     QByteArray buf;
-    while ((buf = dev->read(64 * 1024 * 1024)).size() > 0) {
+    // reading by 1Mb should work well with disk caches
+    while ((buf = dev->read(1024 * 1024)).size() > 0) {
         retCode = blake2b_update(&state, buf.data(), buf.size());
         if (retCode != 0) {
             return QByteArray();
@@ -83,7 +46,7 @@ static QByteArray computeBlake2Hash512(QIODevice *dev)
     }
 
     QByteArray ret;
-    ret.reserve(BLAKE2B_OUTBYTES);
+    ret.resize(digestSizeBytes);
     retCode = blake2b_final(&state, ret.data(), ret.size());
     if (retCode != 0) {
         return QByteArray();
@@ -92,13 +55,4 @@ static QByteArray computeBlake2Hash512(QIODevice *dev)
     return ret;
 }
 
-QByteArray computeBlake2Hash(QIODevice *dev, Blake2DigestSize digestSize)
-{
-    QByteArray ret;
-    if (digestSize == Blake2Digest256) {
-        return computeBlake2Hash256(dev);
-    } else {
-        return computeBlake2Hash512(dev);
-    }
-}
 } // namespace XMPP

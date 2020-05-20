@@ -343,48 +343,65 @@ bool Hash::compute(const QByteArray &ba)
 
 bool Hash::compute(QIODevice *dev)
 {
+    QString                       qcaType;
+    QCryptographicHash::Algorithm qtType  = QCryptographicHash::Algorithm(-1);
+    Blake2DigestSize              blakeDS = Blake2DigestSize(-1);
+
+    v_data.clear();
+
     switch (v_type) {
-    case Type::Sha1: {
-        QCryptographicHash h(QCryptographicHash::Sha1);
-        h.addData(dev);
-        v_data = h.result();
+    case Type::Sha1:
+        qtType  = QCryptographicHash::Sha1;
+        qcaType = "sha1";
         break;
-    }
-    case Type::Sha256: {
-        QCryptographicHash h(QCryptographicHash::Sha256);
-        h.addData(dev);
-        v_data = h.result();
+    case Type::Sha256:
+        qtType  = QCryptographicHash::Sha256;
+        qcaType = "sha256";
         break;
-    }
-    case Type::Sha512: {
-        QCryptographicHash h(QCryptographicHash::Sha512);
-        h.addData(dev);
-        v_data = h.result();
+    case Type::Sha512:
+        qtType  = QCryptographicHash::Sha512;
+        qcaType = "sha512";
         break;
-    }
-    case Type::Sha3_256: {
-        QCryptographicHash h(QCryptographicHash::Sha3_256);
-        h.addData(dev);
-        v_data = h.result();
+    case Type::Sha3_256:
+        qtType  = QCryptographicHash::Sha3_256;
+        qcaType = "sha3_256";
         break;
-    }
-    case Type::Sha3_512: {
-        QCryptographicHash h(QCryptographicHash::Sha3_512);
-        h.addData(dev);
-        v_data = h.result();
+    case Type::Sha3_512:
+        qtType  = QCryptographicHash::Sha3_512;
+        qcaType = "sha3_512";
         break;
-    }
     case Type::Blake2b256:
-        v_data = computeBlake2Hash(dev, Blake2Digest256);
+        qcaType = "blake2b_256";
+        blakeDS = Blake2Digest256;
         break;
     case Type::Blake2b512:
-        v_data = computeBlake2Hash(dev, Blake2Digest512);
+        qcaType = "blake2b_512";
+        blakeDS = Blake2Digest512;
         break;
     case Type::Unknown:
     default:
         qDebug("invalid hash type");
         return false;
     }
+
+    if (!qcaType.isEmpty()) {
+        QCA::Hash hashObj(qcaType);
+        if (hashObj.context()) {
+            hashObj.update(dev);
+            v_data = hashObj.final().toByteArray();
+            if (!v_data.isEmpty())
+                return true;
+        }
+    }
+
+    if (qtType != QCryptographicHash::Algorithm(-1)) {
+        QCryptographicHash h(QCryptographicHash::Sha1);
+        h.addData(dev);
+        v_data = h.result();
+    } else if (blakeDS != Blake2DigestSize(-1)) {
+        v_data = computeBlake2Hash(dev, blakeDS);
+    }
+
     return !v_data.isEmpty();
 }
 
