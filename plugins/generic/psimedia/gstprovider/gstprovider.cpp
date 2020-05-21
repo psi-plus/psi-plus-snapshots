@@ -147,7 +147,7 @@ public:
                 deviceMonitor = new DeviceMonitor(gstLoop);
                 // we should set flags which exactly devices were 'updated'. will be implemenented later
                 connect(deviceMonitor, &DeviceMonitor::updated, [this]() { updateDevices(); });
-                QTimer::singleShot(0, this, SIGNAL(updateDevices())); // queue signal to other thread
+                QTimer::singleShot(0, deviceMonitor, [this]() { updateDevices(); }); // queue signal to other thread
             },
             this);
     }
