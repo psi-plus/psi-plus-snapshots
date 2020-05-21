@@ -287,8 +287,11 @@ public:
             if (exist)
                 p = d->bridgeQueue.dequeue();
             d->queueMutex.unlock();
+            bool stopping = d->stopping.load();
             if (exist)
                 p.first(p.second);
+            if (stopping) // REVIEW if it's possible to not have anything else at all on the queue during stop
+                return FALSE;
         }
 
         return d->mainLoop == nullptr ? FALSE : TRUE;
