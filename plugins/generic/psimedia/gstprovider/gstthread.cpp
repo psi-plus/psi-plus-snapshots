@@ -255,7 +255,6 @@ public:
     QString                                             pluginPath;
     GstSession *                                        gstSession = nullptr;
     std::atomic_bool                                    success;
-    bool                                                stopping;
     GMainContext *                                      mainContext = nullptr;
     GMainLoop *                                         mainLoop    = nullptr;
     QMutex                                              queueMutex;
@@ -265,7 +264,7 @@ public:
     guint                                               bridgeId     = 0;
     QQueue<QPair<GstMainLoop::ContextCallback, void *>> bridgeQueue;
 
-    Private(GstMainLoop *q) : q(q), success(false), stopping(false) { }
+    Private(GstMainLoop *q) : q(q), success(false) { }
 
     static gboolean cb_loop_started(gpointer data) { return static_cast<Private *>(data)->loop_started(); }
 
@@ -273,6 +272,7 @@ public:
     {
         success = true;
         emit q->started();
+        stateMutex.unlock();
         return FALSE;
     }
 
@@ -354,9 +354,9 @@ GstMainLoop::~GstMainLoop()
 
 void GstMainLoop::stop()
 {
-    if (d->stopping || !d->success)
+    // executed only in thread of gstprovider (not in gst event loop thread)
+    if (!d->success.exchange(false))
         return;
-    d->stopping = true;
 
     bool stopped = execInContext(
         [this](void *) {
@@ -370,9 +370,7 @@ void GstMainLoop::stop()
         d->stateMutex.lock();
         d->waitCond.wait(&d->stateMutex);
         d->stateMutex.unlock();
-        d->success = false;
     }
-    d->stopping = false;
     qDebug("GstMainLoop::stop() finished");
 }
 
@@ -398,7 +396,7 @@ bool GstMainLoop::start()
     qDebug("GStreamer thread started");
 
     // this will be unlocked as soon as the mainloop runs
-    // d->stateMutex.lock();
+    d->stateMutex.lock();
 
     d->gstSession = new GstSession(d->pluginPath);
 
@@ -408,7 +406,7 @@ bool GstMainLoop::start()
         delete d->gstSession;
         d->gstSession = nullptr;
         qWarning("GStreamer thread completed (error)");
-        // d->stateMutex.unlock();
+        d->stateMutex.unlock();
         return false;
     }
 

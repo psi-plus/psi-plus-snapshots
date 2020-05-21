@@ -921,7 +921,7 @@ GstProvider::GstProvider(const QVariantMap &params)
         &gstEventLoopThread, &QThread::started, gstEventLoop,
         [this]() {
             Q_ASSERT(QThread::currentThread() == &gstEventLoopThread);
-            connect(&gstEventLoopThread, &QThread::finished, gstEventLoop, &QObject::deleteLater);
+            // connect(&gstEventLoopThread, &QThread::finished, gstEventLoop, &QObject::deleteLater);
             connect(gstEventLoop, &GstMainLoop::started, this, &GstProvider::initialized, Qt::QueuedConnection);
             // do any custom stuff here before glib event loop started. it's already initialized
             if (!gstEventLoop->start()) {
@@ -939,6 +939,7 @@ GstProvider::~GstProvider()
         gstEventLoop->stop();      // stop glib event loop
         gstEventLoopThread.quit(); // stop qt even loop in its thread
         gstEventLoopThread.wait(); // wait till everything is eventually stopped
+        delete gstEventLoop;
     }
 }
 
