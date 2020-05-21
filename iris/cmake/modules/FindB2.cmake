@@ -41,8 +41,6 @@ if( UNIX AND NOT( APPLE OR CYGWIN ) )
     endif()
 endif()
 
-set( B2_ROOT "" CACHE STRING "Path to libb2 library" )
-
 find_path(
     B2_INCLUDE_DIR blake2.h
     HINTS
