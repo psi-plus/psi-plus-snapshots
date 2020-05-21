@@ -255,6 +255,7 @@ public:
     QString                                             pluginPath;
     GstSession *                                        gstSession = nullptr;
     std::atomic_bool                                    success;
+    std::atomic_bool                                    stopping;
     GMainContext *                                      mainContext = nullptr;
     GMainLoop *                                         mainLoop    = nullptr;
     QMutex                                              queueMutex;
@@ -264,7 +265,7 @@ public:
     guint                                               bridgeId     = 0;
     QQueue<QPair<GstMainLoop::ContextCallback, void *>> bridgeQueue;
 
-    Private(GstMainLoop *q) : q(q), success(false) { }
+    Private(GstMainLoop *q) : q(q), success(false), stopping(false) { }
 
     static gboolean cb_loop_started(gpointer data) { return static_cast<Private *>(data)->loop_started(); }
 
@@ -355,23 +356,25 @@ GstMainLoop::~GstMainLoop()
 void GstMainLoop::stop()
 {
     // executed only in thread of gstprovider (not in gst event loop thread)
-    if (!d->success.exchange(false))
-        return;
 
-    bool stopped = execInContext(
-        [this](void *) {
-            g_main_loop_quit(d->mainLoop);
-            qDebug("g_main_loop_quit");
-            d->waitCond.wakeOne();
-        },
-        this);
+    d->stateMutex.lock(); // if we are still starting then it will lock till success or failure
+    d->stopping = true;
+    // with locked mutex we come here even after complete or otherwise we don't need to deinit anything
+    if (d->success.exchange(false)) {
+        bool stopped = execInContext(
+            [this](void *) {
+                g_main_loop_quit(d->mainLoop);
+                qDebug("g_main_loop_quit");
+                d->waitCond.wakeOne();
+            },
+            this);
 
-    if (stopped) {
-        d->stateMutex.lock();
-        d->waitCond.wait(&d->stateMutex);
-        d->stateMutex.unlock();
+        if (stopped) // if stop event really was scheduled to glib main loop.
+            d->waitCond.wait(&d->stateMutex);
+
+        qDebug("GstMainLoop::stop() finished");
     }
-    qDebug("GstMainLoop::stop() finished");
+    d->stateMutex.unlock();
 }
 
 QString GstMainLoop::gstVersion() const { return d->gstSession->version; }
@@ -397,6 +400,10 @@ bool GstMainLoop::start()
 
     // this will be unlocked as soon as the mainloop runs
     d->stateMutex.lock();
+    if (d->stopping) { // seem stop() was caller right after start
+        d->stateMutex.unlock();
+        return false;
+    }
 
     d->gstSession = new GstSession(d->pluginPath);
 

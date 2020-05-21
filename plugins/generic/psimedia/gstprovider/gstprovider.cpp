@@ -136,6 +136,7 @@ public:
     PFeatures             features;
     bool                  updated = false;
     std::list<Watcher>    watchers;
+    QMutex                updateMutex;
 
     explicit GstFeaturesContext(GstMainLoop *_gstLoop, QObject *parent = nullptr) : QObject(parent), gstLoop(_gstLoop)
     {
@@ -145,20 +146,10 @@ public:
                 Q_UNUSED(userData);
                 deviceMonitor = new DeviceMonitor(gstLoop);
                 // we should set flags which exactly devices were 'updated'. will be implemenented later
-                connect(deviceMonitor, &DeviceMonitor::updated, this, &GstFeaturesContext::devicesUpdated,
-                        Qt::QueuedConnection);
-                QTimer::singleShot(0, this, SIGNAL(devicesUpdated())); // queue signal to other thread
+                connect(deviceMonitor, &DeviceMonitor::updated, [this]() { updateDevices(); });
+                QTimer::singleShot(0, this, SIGNAL(updateDevices())); // queue signal to other thread
             },
             this);
-    }
-
-    ~GstFeaturesContext() override
-    {
-        if (gstLoop) {
-            disconnect(deviceMonitor);
-            gstLoop->execInContext([](void *userData) { delete reinterpret_cast<DeviceMonitor *>(userData); },
-                                   deviceMonitor);
-        } // else gstLoop was already destroyed??
     }
 
     QObject *qobject() override { return this; }
@@ -173,9 +164,10 @@ public:
         watchers.emplace_back(types, false, QPointer<QObject>(receiver), std::move(callback));
     }
 
-private:
+private slots:
     void watch()
     {
+        QMutexLocker locker(&updateMutex);
         if (!updated)
             return;
         auto it = watchers.cbegin();
@@ -194,6 +186,7 @@ private:
         }
     }
 
+private:
     QList<PDevice> audioOutputDevices()
     {
         QList<PDevice> list;
@@ -230,16 +223,16 @@ private:
         return list;
     }
 
-private slots:
-    void devicesUpdated()
+    void updateDevices()
     {
+        QMutexLocker locker(&updateMutex);
         updated                      = true;
         features.audioInputDevices   = audioInputDevices();
         features.audioOutputDevices  = audioOutputDevices();
         features.videoInputDevices   = videoInputDevices();
         features.supportedAudioModes = modes_supportedAudio();
         features.supportedVideoModes = modes_supportedVideo();
-        watch();
+        QMetaObject::invokeMethod(this, "watch", Qt::QueuedConnection);
     }
 };
 
@@ -926,7 +919,7 @@ GstProvider::GstProvider(const QVariantMap &params)
             // do any custom stuff here before glib event loop started. it's already initialized
             if (!gstEventLoop->start()) {
                 qWarning("glib event loop failed to initialize");
-                gstEventLoopThread.exit(1);
+                gstEventLoopThread.exit(1); // noop if ~GstProvider() was called first?
                 return;
             }
         },
