@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2020-05-19
+# Updated: 2020-05-22
 # Version: N/A
 
 set -e
@@ -14,8 +14,8 @@ export MAIN_DIR="$(realpath -s ${SNAPSHOTS_DIR}/..)"
 PSI_URL=https://github.com/psi-im/psi.git
 PLUGINS_URL=https://github.com/psi-im/plugins.git
 PSIMEDIA_URL=https://github.com/psi-im/psimedia.git
+RESOURCES_URL=https://github.com/psi-im/resources.git
 PATCHES_URL=https://github.com/psi-plus/main.git
-RESOURCES_URL=https://github.com/psi-plus/resources.git
 
 # Test Internet connection:
 host github.com > /dev/null
@@ -164,7 +164,7 @@ rsync -a --del "${MAIN_DIR}/psi/" "${SNAPSHOTS_DIR}/" \
     --exclude="/README"
 mv "${MAIN_DIR}/README" "${SNAPSHOTS_DIR}/README"
 mv "${MAIN_DIR}/.gitignore" "${SNAPSHOTS_DIR}/.gitignore"
-echo "* Files from psi project are copied."
+echo "* Files from Psi project are copied."
 
 failed_to_apply_patches()
 {
@@ -207,11 +207,7 @@ rsync -a "${MAIN_DIR}/main/admin/" "${SNAPSHOTS_DIR}/admin/"
 echo "* Extra scripts from Psi+ project are copied."
 
 rsync -a "${MAIN_DIR}/resources/sound/" "${SNAPSHOTS_DIR}/sound/"
-echo "* Sound files from Psi+ project are copied."
-
-mkdir -p "${SNAPSHOTS_DIR}/skins/"
-rsync -a "${MAIN_DIR}/resources/skins/" "${SNAPSHOTS_DIR}/skins/"
-echo "* Skins from Psi+ project are copied."
+echo "* Extra sound files from Psi project are copied."
 
 cp "${MAIN_DIR}/main/ChangeLog.Psi+.txt" "${SNAPSHOTS_DIR}/ChangeLog.Psi+.txt"
 echo "* ChangeLog from Psi+ project is copied."
