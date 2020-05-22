@@ -26,6 +26,7 @@
 #include <QLibrary>
 #include <QMutex>
 #include <QQueue>
+#include <QSemaphore>
 #include <QStringList>
 #include <QWaitCondition>
 #include <gst/gst.h>
@@ -364,16 +365,17 @@ void GstMainLoop::stop()
     d->stopping = true;
     // with locked mutex we come here even after complete or otherwise we don't need to deinit anything
     if (d->success.exchange(false)) {
-        bool stopped = execInContext(
-            [this](void *) {
+        QSemaphore stopSem;
+        bool       stopped = execInContext(
+            [this, &stopSem](void *) {
                 g_main_loop_quit(d->mainLoop);
                 qDebug("g_main_loop_quit");
-                d->waitCond.wakeOne();
+                stopSem.release(1);
             },
             this);
 
         if (stopped) // if stop event really was scheduled to glib main loop.
-            d->waitCond.wait(&d->stateMutex);
+            stopSem.acquire(1);
 
         qDebug("GstMainLoop::stop() finished");
     }
