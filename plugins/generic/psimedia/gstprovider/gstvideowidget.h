@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2008  Barracuda Networks, Inc.
- * Copyright (C) 2020  Sergey Ilinykh
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,37 +18,34 @@
  *
  */
 
+#ifndef PSIMEDIA_GSTVIDEOWIDGET_H
+#define PSIMEDIA_GSTVIDEOWIDGET_H
+
 #include "psimediaprovider.h"
 
-#include <QPointer>
-#include <QThread>
-#include <QVariantMap>
+#include <QImage>
 
 namespace PsiMedia {
 
-class GstMainLoop;
-
-class GstProvider : public QObject, public Provider {
+//----------------------------------------------------------------------------
+// GstVideoWidget
+//----------------------------------------------------------------------------
+class GstVideoWidget : public QObject {
     Q_OBJECT
-    Q_INTERFACES(PsiMedia::Provider)
 
 public:
-    QThread               gstEventLoopThread;
-    QPointer<GstMainLoop> gstEventLoop;
+    VideoWidgetContext *context;
+    QImage              curImage;
 
-    GstProvider(const QVariantMap &params = QVariantMap());
-    ~GstProvider() override;
-    QObject *             qobject() override;
-    bool                  init() override;
-    bool                  isInitialized() const override;
-    QString               creditName() const override;
-    QString               creditText() const override;
-    FeaturesContext *     createFeatures() override;
-    RtpSessionContext *   createRtpSession() override;
-    AudioRecorderContext *createAudioRecorder() override;
+    explicit GstVideoWidget(VideoWidgetContext *_context, QObject *parent = nullptr);
 
-signals:
-    void initialized();
+    void show_frame(const QImage &image);
+
+private Q_SLOTS:
+    void context_resized(const QSize &newSize);
+    void context_paintEvent(QPainter *p);
 };
 
-}
+} // namespace PsiMedia
+
+#endif // PSIMEDIA_GSTVIDEOWIDGET_H

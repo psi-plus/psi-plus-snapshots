@@ -39,6 +39,18 @@ set(SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/gstthread.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rwcontrol.cpp
     ${CMAKE_CURRENT_LIST_DIR}/gstprovider.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/gstrtpsessioncontext.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/gstrtpsessioncontext.h
+    ${CMAKE_CURRENT_LIST_DIR}/gstvideowidget.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/gstvideowidget.h
+    ${CMAKE_CURRENT_LIST_DIR}/gstrtpchannel.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/gstrtpchannel.h
+    ${CMAKE_CURRENT_LIST_DIR}/gstrecorder.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/gstrecorder.h
+    ${CMAKE_CURRENT_LIST_DIR}/gstfeaturescontext.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/gstfeaturescontext.h
+    ${CMAKE_CURRENT_LIST_DIR}/gstaudiorecordercontext.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/gstaudiorecordercontext.h
 )
 
 if(UNIX AND NOT APPLE)
