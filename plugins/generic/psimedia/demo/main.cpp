@@ -1051,30 +1051,33 @@ int main(int argc, char **argv)
     QString resourcePath;
 
     pluginFile = qgetenv("PSI_MEDIA_PLUGIN");
-    if (pluginFile.isEmpty()) {
+
 #if defined(Q_OS_WIN)
+    if (pluginFile.isEmpty()) {
         pluginFile = findPlugin(".", "gstprovider" DEBUG_POSTFIX);
         if (!pluginFile.isEmpty())
             resourcePath = QCoreApplication::applicationDirPath() + "/gstreamer-1.0";
+    }
 #elif defined(Q_OS_MAC)
+    if (pluginFile.isEmpty()) {
         pluginFile = findPlugin("../PlugIns", "gstprovider" DEBUG_POSTFIX);
         // codesign can't sign gstreamer-1.0 folder
         if (!pluginFile.isEmpty())
             resourcePath = QCoreApplication::applicationDirPath() + "/../PlugIns/gstreamer";
+    }
 #endif
 
-        if (pluginFile.isEmpty())
-            pluginFile = findPlugin("../gstprovider", "gstprovider" DEBUG_POSTFIX);
+    if (pluginFile.isEmpty())
+        pluginFile = findPlugin("../gstprovider", "gstprovider" DEBUG_POSTFIX);
 
 #ifdef PLUGIN_INSTALL_PATH
-        if (pluginFile.isEmpty())
-            pluginFile = findPlugin(PLUGIN_INSTALL_PATH, "gstprovider" DEBUG_POSTFIX);
+    if (pluginFile.isEmpty())
+        pluginFile = findPlugin(PLUGIN_INSTALL_PATH, "gstprovider" DEBUG_POSTFIX);
 #endif
 #ifdef PLUGIN_INSTALL_PATH_DEBUG
-        if (pluginFile.isEmpty())
-            pluginFile = findPlugin(PLUGIN_INSTALL_PATH_DEBUG, "gstprovider" DEBUG_POSTFIX);
+    if (pluginFile.isEmpty())
+        pluginFile = findPlugin(PLUGIN_INSTALL_PATH_DEBUG, "gstprovider" DEBUG_POSTFIX);
 #endif
-    }
 
     PsiMedia::loadPlugin(pluginFile, resourcePath);
 #endif

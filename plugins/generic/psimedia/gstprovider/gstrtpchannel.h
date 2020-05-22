@@ -35,16 +35,16 @@ class GstRtpChannel : public QObject, public RtpChannelContext {
     Q_INTERFACES(PsiMedia::RtpChannelContext)
 
 public:
-    bool                  enabled;
+    bool                  enabled = false;
     QMutex                m;
-    GstRtpSessionContext *session;
+    GstRtpSessionContext *session = nullptr;
     QList<PRtpPacket>     in;
 
     // QTime wake_time;
-    bool              wake_pending;
+    bool              wake_pending = false;
     QList<PRtpPacket> pending_in;
 
-    int written_pending;
+    int written_pending = 0;
 
     GstRtpChannel();
 

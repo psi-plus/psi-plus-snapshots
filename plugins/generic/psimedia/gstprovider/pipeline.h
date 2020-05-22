@@ -35,6 +35,9 @@ public:
     PipelineContext();
     ~PipelineContext();
 
+    PipelineContext(const PipelineContext &) = delete;
+    PipelineContext &operator=(const PipelineContext &) = delete;
+
     // set the pipeline to playing (activate) or to null (deactivate)
     // FIXME: when we make dynamic pipelines work, we can remove these
     //   functions.
@@ -72,6 +75,9 @@ public:
     static PipelineDeviceContext *create(PipelineContext *pipeline, const QString &id, PDevice::Type type,
                                          const PipelineDeviceOptions &opts = PipelineDeviceOptions());
     ~PipelineDeviceContext();
+
+    PipelineDeviceContext(const PipelineDeviceContext &) = delete;
+    PipelineDeviceContext &operator=(const PipelineDeviceContext &) = delete;
 
     // after creation, the device element is in the NULL state, and
     //   potentially not linked to dependent internal elements.  call

@@ -319,6 +319,9 @@ public:
     RwControlRemote(GMainContext *mainContext, RwControlLocal *local);
     ~RwControlRemote();
 
+    RwControlRemote(const RwControlRemote &) = delete;
+    RwControlRemote &operator=(const RwControlRemote &) = delete;
+
 private:
     GSource *       timer;
     GMainContext *  mainContext_;

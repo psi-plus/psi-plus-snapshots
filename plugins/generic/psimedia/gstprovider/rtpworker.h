@@ -73,6 +73,9 @@ public:
     explicit RtpWorker(GMainContext *mainContext);
     ~RtpWorker();
 
+    RtpWorker(const RtpWorker &) = delete;
+    RtpWorker &operator=(const RtpWorker &) = delete;
+
     void start();  // must wait until cb_updated before calling update
     void update(); // must wait until cb_updated before calling update
     void transmitAudio();

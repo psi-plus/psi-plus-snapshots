@@ -38,7 +38,7 @@
 
 namespace PsiMedia {
 
-GstRtpChannel::GstRtpChannel() : QObject(), enabled(false), wake_pending(false), written_pending(0) { }
+GstRtpChannel::GstRtpChannel() { }
 
 QObject *GstRtpChannel::qobject() { return this; }
 
