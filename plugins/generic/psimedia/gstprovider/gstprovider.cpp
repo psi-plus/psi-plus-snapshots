@@ -102,5 +102,3 @@ RtpSessionContext *GstProvider::createRtpSession() { return new GstRtpSessionCon
 AudioRecorderContext *GstProvider::createAudioRecorder() { return new GstAudioRecorderContext(gstEventLoop); }
 
 }
-
-#include "gstprovider.moc"
