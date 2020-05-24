@@ -4,5 +4,8 @@
     "shortname": "psimedia",
     "version": "0.1",
     "priority": 2,
+    "description": "A framework providing multimedia capabilities to Psi like audio/video calls, audio/video broadcast or just audio/video messages.",
+    "description:ru": "Средство обеспечивающее мультимедийные звонки, трансляции и сообщения",
+    "vendor": "Justin Karneges <justin@karneges.com>, Sergey Ilinykh <rion4ik@gmail.com>",
     "icon": "base64:iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABz0lEQVQ4y2NgAIJyYWGGKw4ObVdNTIIlmZgYSAJW7OwMD1xcZu6Tl/9/ysjoZ5ekJGkGFIuI8B3X1v6/TVz8/w4Zmf8XDAyCSDIgh4+Pc4+ExP8tkpL/N4iJ/T+trr5KkpGReAMsgV7YJyl5ZD3QkE2ioqv6hIRYmRlIBJvFxR3XCAv/P2ZgEMBADvDn5GTYKCx8dp+Fxdu5GhpkmcGwSEhIbgEf3/9z3t6L4oHRSjKQAAbcBiGhxIXAsLjo65uqz8LC0GxmxrDZ1tYkkJ+fOEPMWVkZVggINC8EpolLMTE1J4KDly1SVv5/Jjh4VZ+yMnGGOANjZTE/f0s/N/f/Hi6u/908PP87ODj+7/fyuj9RV5ePKENMgC6Zy8+f2gsMk06QAUDcwsr6v1lRUZDoMBEB4jZ2ds0+dvYNXezsU7s4Ob0l8GlgY2NjEBcXZ1BQUGDQ1tZm0NDRYVAG0ja6ugz6enoMnWJiBnUMDG5Aw5zU0DWnpKQw7Ny5U3/Dhg1RQJy7fv36snXr1rUAcetaEF6/vmrJ6tV5i2bNiu/Q1t46U07OGMWA0NBQhtWrV+stWbIkHIizgbgMiOuRcBUQ5y1ZtixmxaZN5r2VlfDUDgCDr5s1hhPBxAAAAABJRU5ErkJggg=="
 }
