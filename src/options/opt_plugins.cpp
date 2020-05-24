@@ -108,10 +108,12 @@ void OptionsTabPlugins::listPlugins()
     plugins.sort();
     const QSize buttonSize = QSize(21, 21);
     for (const QString &plugin : plugins) {
-        QIcon            icon                = pm->icon(plugin);
-        bool             enabled             = pm->isEnabled(plugin);
-        const QString    path                = pm->pathToPlugin(plugin);
-        QString          toolTip             = tr("Plugin Path:\n%1").arg(path);
+        QIcon         icon    = pm->icon(plugin);
+        bool          enabled = pm->isEnabled(plugin);
+        const QString path    = pm->pathToPlugin(plugin);
+        QString       toolTip = QString("<b>%1</b><br/><br/>%2<br/><br/><b>%3:</b><br/>%4")
+                              .arg(plugin, pm->pluginInfo(plugin), tr("Plugin Path"), path);
+
         Qt::CheckState   state               = enabled ? Qt::Checked : Qt::Unchecked;
         QTreeWidgetItem *item                = new QTreeWidgetItem(d->tw_Plugins, QTreeWidgetItem::Type);
         auto             truncatedPluginName = QString(plugin).replace(" Plugin", "");
@@ -202,11 +204,13 @@ void OptionsTabPlugins::showPluginInfo(int item)
 
         auto vendors = PluginManager::instance()->vendor(name).split(',');
         for (auto &v : vendors) {
-            v = TextUtil::escape(v.trimmed());
+            v = TextUtil::linkify(TextUtil::escape(v.trimmed()));
         }
         QString vendor = vendors.mid(0, vendors.size() - 1).join(", ");
         vendor         = vendor.isEmpty() ? vendors.last() : tr("%1 and %2").arg(vendor, vendors.last());
 
+        int iconSize = ui_.lbl_icon->fontInfo().pixelSize() * 1.2;
+        ui_.lbl_icon->setPixmap(PluginManager::instance()->icon(name).pixmap(iconSize, QIcon::Normal, QIcon::On));
         ui_.lbl_meta->setText(tr("<b>%1</b> %2 by %3").arg(name, PluginManager::instance()->version(name), vendor));
         infoDialog->resize(dialogSize);
         infoDialog->show();
