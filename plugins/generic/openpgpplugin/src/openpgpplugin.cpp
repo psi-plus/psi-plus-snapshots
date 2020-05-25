@@ -71,10 +71,7 @@ QPixmap OpenPgpPlugin::icon() const { return QPixmap(":/icons/openpgp.png"); }
 
 QString OpenPgpPlugin::pluginInfo()
 {
-    QString out = "<strong>" + name() + "</strong><br/><br/>";
-
-    out += tr("Authors: ") + "Boris Pek, Ivan Romanov<br/><br/>";
-    out += tr("OpenPGP is the most widely used encryption standard. "
+    QString out = tr("OpenPGP is the most widely used encryption standard. "
               "It is extremely simple in usage:<br/>"
               "* Generate a key pair (public key + secret key) or "
               "choose existing one and set it in program settings.<br/>"
@@ -104,11 +101,12 @@ QString OpenPgpPlugin::pluginInfo()
               "complicated cases use special software.");
     out += "<br/><br/>";
     out += tr("OpenPGP plugin uses standard command-line tool GnuPG, so "
-             "attentively check that you properly installed and configured "
-             "gpg and gpg-agent. For example, in your system:") + "<br/>";
+              "attentively check that you properly installed and configured "
+              "gpg and gpg-agent. For example, in your system:")
+        + "<br/>";
 #if defined(Q_OS_WIN)
-    out += tr("1) Download and install \"%1\" from official website:")
-            .arg("Simple installer for the current GnuPG") + " ";
+    out += tr("1) Download and install \"%1\" from official website:").arg("Simple installer for the current GnuPG")
+        + " ";
     out += QString("<a href=\"https://gnupg.org/download/#binary\">"
                    "https://gnupg.org/download/#binary</a><br/>");
 #elif defined(Q_OS_MAC)
@@ -119,18 +117,15 @@ QString OpenPgpPlugin::pluginInfo()
 #endif
     out += tr("2) Edit configuration file %1 if necessary.")
 #if defined(Q_OS_WIN)
-            .arg(QDir::toNativeSeparators(GpgProcess().gpgAgentConfig())) + "<br/><br/>";
+               .arg(QDir::toNativeSeparators(GpgProcess().gpgAgentConfig()));
 #else
-            .arg(GpgProcess().gpgAgentConfig()) + "<br/><br/>";
+               .arg(GpgProcess().gpgAgentConfig());
 #endif
 
     return out;
 }
 
-void OpenPgpPlugin::setStanzaSendingHost(StanzaSendingHost *host)
-{
-     m_pgpMessaging->setStanzaSendingHost(host);
-}
+void OpenPgpPlugin::setStanzaSendingHost(StanzaSendingHost *host) { m_pgpMessaging->setStanzaSendingHost(host); }
 
 bool OpenPgpPlugin::incomingStanza(int account, const QDomElement &stanza)
 {
@@ -188,7 +183,7 @@ void OpenPgpPlugin::sendPublicKey()
     const QString &&jid       = m_activeTab->getYourJid();
     const QString &&jidToSend = m_activeTab->getJid();
 
-    int     account   = 0;
+    int     account = 0;
     QString tmpJid;
     while (jid != (tmpJid = m_accountInfo->getJid(account))) {
         ++account;
@@ -197,7 +192,7 @@ void OpenPgpPlugin::sendPublicKey()
         }
     }
 
-    const QString &&keyId = action->data().toString();
+    const QString &&keyId  = action->data().toString();
     const QString &&userId = action->text();
 
     m_pgpMessaging->sendPublicKey(account, jidToSend, keyId, userId);
