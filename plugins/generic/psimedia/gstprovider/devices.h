@@ -38,6 +38,12 @@ public:
     QString       name;
     bool          isDefault = false; // TODO assign true somewhere
     QString       id;
+
+    void updateFrom(const GstDevice &dev)
+    {
+        name      = dev.name;
+        isDefault = dev.isDefault;
+    }
 };
 
 class PlatformDeviceMonitor {
@@ -57,6 +63,7 @@ class DeviceMonitor : public QObject {
 private slots:
     void onDeviceAdded(GstDevice dev);
     void onDeviceRemoved(const GstDevice &dev);
+    void onDeviceChanged(const GstDevice &dev);
 
 signals:
     void updated();

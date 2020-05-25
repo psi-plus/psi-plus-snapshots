@@ -152,7 +152,6 @@ public:
     GstDeviceMonitor *       _monitor = nullptr;
     QMap<QString, GstDevice> _devices;
     PlatformDeviceMonitor *  _platform = nullptr;
-    QMutex                   m;
 
     bool videoSrcFirst  = true;
     bool audioSrcFirst  = true;
@@ -219,6 +218,17 @@ public:
             if (!d.id.isEmpty())
                 monObj->q->onDeviceRemoved(d);
             break;
+#if 0
+        case GST_MESSAGE_DEVICE_CHANGED: {
+            gst_message_parse_device_changed(message, &device, nullptr);
+            d = gstDevConvert(device);
+            gst_object_unref(device);
+            if (!d.id.isEmpty())
+                monObj->q->onDeviceChanged(d);
+            break;
+
+        }
+#endif
         default:
             break;
         }
@@ -230,16 +240,20 @@ public:
 void DeviceMonitor::updateDevList()
 {
     d->_devices.clear();
-    GList *devs = gst_device_monitor_get_devices(d->_monitor);
-    GList *dev  = devs;
+    GList *devices = gst_device_monitor_get_devices(d->_monitor);
 
-    for (; dev != nullptr; dev = dev->next) {
-        PsiMedia::GstDevice pdev = Private::gstDevConvert(static_cast<::GstDevice *>(dev->data));
-        if (pdev.id.isEmpty())
-            continue;
-        d->_devices.insert(pdev.id, pdev);
+    if (devices != NULL) {
+        while (devices != NULL) {
+            ::GstDevice *       device = static_cast<::GstDevice *>(devices->data);
+            PsiMedia::GstDevice pdev   = Private::gstDevConvert(device);
+            if (!pdev.id.isEmpty())
+                d->_devices.insert(pdev.id, pdev);
+            gst_object_unref(device);
+            devices = g_list_delete_link(devices, devices);
+        }
+    } else {
+        qDebug("No devices found!");
     }
-    g_list_free(devs);
 
     if (d->_platform) {
         auto l = d->_platform->getDevices();
@@ -257,7 +271,6 @@ void DeviceMonitor::updateDevList()
 
 void DeviceMonitor::onDeviceAdded(GstDevice dev)
 {
-    QMutexLocker locker(&d->m);
     if (d->_devices.contains(dev.id)) {
         qWarning("Double added of device %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
     } else {
@@ -283,13 +296,25 @@ void DeviceMonitor::onDeviceAdded(GstDevice dev)
 
 void DeviceMonitor::onDeviceRemoved(const GstDevice &dev)
 {
-    QMutexLocker locker(&d->m);
     if (d->_devices.remove(dev.id)) {
         qDebug("removed dev: %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
         emit updated();
     } else {
         qWarning("Double remove of device %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
     }
+}
+
+void DeviceMonitor::onDeviceChanged(const GstDevice &dev)
+{
+    auto it = d->_devices.find(dev.id);
+    if (it == d->_devices.end()) {
+        qDebug("Changed unknown previously device '%s'. Try to add it", qPrintable(dev.id));
+        onDeviceAdded(dev);
+        return;
+    }
+    qDebug("Changed device '%s'", qPrintable(dev.id));
+    it->updateFrom(dev);
+    emit updated();
 }
 
 DeviceMonitor::DeviceMonitor(GstMainLoop *mainLoop) : QObject(mainLoop), d(new Private(this))
@@ -338,7 +363,6 @@ DeviceMonitor::~DeviceMonitor()
 QList<GstDevice> DeviceMonitor::devices(PDevice::Type type)
 {
     QList<GstDevice> ret;
-    QMutexLocker     locker(&d->m);
 
     bool hasPulsesrc         = false;
     bool hasDefaultPulsesrc  = false;
@@ -388,5 +412,4 @@ GstElement *devices_makeElement(const QString &id, PDevice::Type type, QSize *ca
     // TODO check if it correponds to passed type.
     // TODO drop captureSize
 }
-
 }
