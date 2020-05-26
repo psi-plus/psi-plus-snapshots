@@ -93,6 +93,7 @@ public:
 
     void recordStart();
     void recordStop();
+    void dumpPipeline(std::function<void(const QStringList &)>);
 
     // callbacks
 

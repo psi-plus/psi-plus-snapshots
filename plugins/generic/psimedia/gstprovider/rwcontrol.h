@@ -183,7 +183,18 @@ public:
 // internal
 class RwControlMessage {
 public:
-    enum Type { Start, Stop, UpdateDevices, UpdateCodecs, Transmit, Record, Status, AudioIntensity, Frame };
+    enum Type {
+        Start,
+        Stop,
+        UpdateDevices,
+        UpdateCodecs,
+        Transmit,
+        Record,
+        Status,
+        AudioIntensity,
+        Frame,
+        DumpPileline
+    };
 
     Type type;
 
@@ -203,6 +214,13 @@ public:
 class RwControlStopMessage : public RwControlMessage {
 public:
     RwControlStopMessage() : RwControlMessage(RwControlMessage::Stop) { }
+};
+
+class RwControlDumpPipelineMessage : public RwControlMessage {
+public:
+    RwControlDumpPipelineMessage() : RwControlMessage(RwControlMessage::DumpPileline) { }
+
+    std::function<void(const QStringList &)> callback;
 };
 
 class RwControlUpdateDevicesMessage : public RwControlMessage {
@@ -281,6 +299,7 @@ public:
     void (*cb_rtpVideoOut)(const PRtpPacket &packet, void *app);
     void (*cb_recordData)(const QByteArray &packet, void *app);
 
+    void dumpPipeline(std::function<void(const QStringList &)> callback);
 signals:
     // response to start, stop, updateCodecs, or it could be spontaneous
     void statusReady(const RwControlStatus &status);

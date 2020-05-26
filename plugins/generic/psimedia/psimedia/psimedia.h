@@ -293,6 +293,7 @@ public:
 #ifdef QT_GUI_LIB
     void setVideoPreviewWidget(VideoWidget *widget);
 #endif
+    void dumpPipeline(std::function<void(const QStringList &)>);
 
     // pass a QIODevice to record to.  if a device is set before starting
     //   the session, then recording will wait until it starts.

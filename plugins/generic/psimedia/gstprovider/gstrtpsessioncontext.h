@@ -111,6 +111,7 @@ public:
     Error               errorCode() const override;
     RtpChannelContext * audioRtpChannel() override;
     RtpChannelContext * videoRtpChannel() override;
+    void                dumpPipeline(std::function<void(const QStringList &)> callback) override;
 
     // channel calls this, which may be in another thread
     void push_packet_for_write(GstRtpChannel *from, const PRtpPacket &rtp);

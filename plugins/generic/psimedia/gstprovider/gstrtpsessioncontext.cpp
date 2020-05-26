@@ -294,6 +294,14 @@ RtpChannelContext *GstRtpSessionContext::audioRtpChannel() { return &audioRtp; }
 
 RtpChannelContext *GstRtpSessionContext::videoRtpChannel() { return &videoRtp; }
 
+void GstRtpSessionContext::dumpPipeline(std::function<void(const QStringList &)> callback)
+{
+    if (control)
+        control->dumpPipeline(callback);
+    else
+        callback(QStringList());
+}
+
 void GstRtpSessionContext::push_packet_for_write(GstRtpChannel *from, const PRtpPacket &rtp)
 {
     QMutexLocker locker(&write_mutex);

@@ -1,71 +1,72 @@
-<ui version="4.0" >
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
  <class>MainWin</class>
- <widget class="QMainWindow" name="MainWin" >
-  <property name="geometry" >
+ <widget class="QMainWindow" name="MainWin">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>464</width>
-    <height>447</height>
+    <width>473</width>
+    <height>451</height>
    </rect>
   </property>
-  <property name="windowTitle" >
+  <property name="windowTitle">
    <string>MainWin</string>
   </property>
-  <widget class="QWidget" name="centralwidget" >
-   <layout class="QGridLayout" >
-    <item row="0" column="0" >
-     <widget class="QGroupBox" name="gb_send" >
-      <property name="title" >
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout">
+    <item row="0" column="0">
+     <widget class="QGroupBox" name="gb_send">
+      <property name="title">
        <string>Send</string>
       </property>
-      <layout class="QGridLayout" >
-       <item row="0" column="0" >
-        <widget class="QLabel" name="lb_remoteAddress" >
-         <property name="text" >
+      <layout class="QGridLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="lb_remoteAddress">
+         <property name="text">
           <string>IP address:</string>
          </property>
         </widget>
        </item>
-       <item row="0" column="1" >
-        <widget class="QLineEdit" name="le_remoteAddress" />
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="le_remoteAddress"/>
        </item>
-       <item row="1" column="0" >
-        <widget class="QLabel" name="lb_remoteAudioPort" >
-         <property name="text" >
+       <item row="1" column="0">
+        <widget class="QLabel" name="lb_remoteAudioPort">
+         <property name="text">
           <string>Audio base port:</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="1" >
-        <widget class="QLineEdit" name="le_remoteAudioPort" />
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="le_remoteAudioPort"/>
        </item>
-       <item row="2" column="0" >
-        <widget class="QLabel" name="lb_remoteVideoPort" >
-         <property name="text" >
+       <item row="2" column="0">
+        <widget class="QLabel" name="lb_remoteVideoPort">
+         <property name="text">
           <string>Video base port:</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="1" >
-        <widget class="QLineEdit" name="le_remoteVideoPort" />
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="le_remoteVideoPort"/>
        </item>
-       <item row="3" column="0" >
-        <widget class="QLabel" name="lb_sendConfig" >
-         <property name="text" >
+       <item row="3" column="0">
+        <widget class="QLabel" name="lb_sendConfig">
+         <property name="text">
           <string>Codec config:</string>
          </property>
         </widget>
        </item>
-       <item row="3" column="1" >
-        <widget class="QLineEdit" name="le_sendConfig" />
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="le_sendConfig"/>
        </item>
-       <item row="4" column="0" colspan="2" >
+       <item row="4" column="0" colspan="2">
         <spacer>
-         <property name="orientation" >
+         <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
-         <property name="sizeHint" >
+         <property name="sizeHint" stdset="0">
           <size>
            <width>261</width>
            <height>16</height>
@@ -73,35 +74,35 @@
          </property>
         </spacer>
        </item>
-       <item row="5" column="0" colspan="2" >
-        <layout class="QHBoxLayout" >
+       <item row="5" column="0" colspan="2">
+        <layout class="QHBoxLayout">
          <item>
-          <widget class="QPushButton" name="pb_startSend" >
-           <property name="text" >
+          <widget class="QPushButton" name="pb_startSend">
+           <property name="text">
             <string>&amp;Start</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pb_transmit" >
-           <property name="text" >
+          <widget class="QPushButton" name="pb_transmit">
+           <property name="text">
             <string>&amp;Transmit</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pb_stopSend" >
-           <property name="text" >
+          <widget class="QPushButton" name="pb_stopSend">
+           <property name="text">
             <string>St&amp;op</string>
            </property>
           </widget>
          </item>
          <item>
           <spacer>
-           <property name="orientation" >
+           <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
-           <property name="sizeHint" >
+           <property name="sizeHint" stdset="0">
             <size>
              <width>21</width>
              <height>28</height>
@@ -114,21 +115,21 @@
       </layout>
      </widget>
     </item>
-    <item row="0" column="1" >
-     <widget class="QGroupBox" name="groupBox_4" >
-      <property name="title" >
+    <item row="0" column="1">
+     <widget class="QGroupBox" name="groupBox_4">
+      <property name="title">
        <string>Local video</string>
       </property>
-      <layout class="QVBoxLayout" >
+      <layout class="QVBoxLayout">
        <item>
-        <widget class="PsiMedia::VideoWidget" native="1" name="vw_self" >
-         <property name="sizePolicy" >
-          <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
+        <widget class="PsiMedia::VideoWidget" name="vw_self" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="minimumSize" >
+         <property name="minimumSize">
           <size>
            <width>96</width>
            <height>96</height>
@@ -139,72 +140,72 @@
       </layout>
      </widget>
     </item>
-    <item row="0" column="2" >
-     <layout class="QVBoxLayout" >
+    <item row="0" column="2">
+     <layout class="QVBoxLayout">
       <item>
-       <widget class="QLabel" name="label" >
-        <property name="text" >
+       <widget class="QLabel" name="label">
+        <property name="text">
          <string>Mic</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QSlider" name="sl_mic" >
-        <property name="minimumSize" >
+       <widget class="QSlider" name="sl_mic">
+        <property name="minimumSize">
          <size>
           <width>0</width>
           <height>96</height>
          </size>
         </property>
-        <property name="orientation" >
+        <property name="orientation">
          <enum>Qt::Vertical</enum>
         </property>
        </widget>
       </item>
      </layout>
     </item>
-    <item row="1" column="0" >
-     <widget class="QGroupBox" name="gb_receive" >
-      <property name="title" >
+    <item row="1" column="0">
+     <widget class="QGroupBox" name="gb_receive">
+      <property name="title">
        <string>Receive</string>
       </property>
-      <layout class="QGridLayout" >
-       <item row="0" column="0" >
-        <widget class="QLabel" name="lb_localAudioPort" >
-         <property name="text" >
+      <layout class="QGridLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="lb_localAudioPort">
+         <property name="text">
           <string>Audio base port:</string>
          </property>
         </widget>
        </item>
-       <item row="0" column="1" >
-        <widget class="QLineEdit" name="le_localAudioPort" />
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="le_localAudioPort"/>
        </item>
-       <item row="1" column="0" >
-        <widget class="QLabel" name="lb_localVideoPort" >
-         <property name="text" >
+       <item row="1" column="0">
+        <widget class="QLabel" name="lb_localVideoPort">
+         <property name="text">
           <string>Video base port:</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="1" >
-        <widget class="QLineEdit" name="le_localVideoPort" />
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="le_localVideoPort"/>
        </item>
-       <item row="2" column="0" >
-        <widget class="QLabel" name="lb_receiveConfig" >
-         <property name="text" >
+       <item row="2" column="0">
+        <widget class="QLabel" name="lb_receiveConfig">
+         <property name="text">
           <string>Codec config:</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="1" >
-        <widget class="QLineEdit" name="le_receiveConfig" />
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="le_receiveConfig"/>
        </item>
-       <item row="3" column="0" colspan="2" >
+       <item row="3" column="0" colspan="2">
         <spacer>
-         <property name="orientation" >
+         <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
-         <property name="sizeHint" >
+         <property name="sizeHint" stdset="0">
           <size>
            <width>261</width>
            <height>16</height>
@@ -212,35 +213,35 @@
          </property>
         </spacer>
        </item>
-       <item row="4" column="0" colspan="2" >
-        <layout class="QHBoxLayout" >
+       <item row="4" column="0" colspan="2">
+        <layout class="QHBoxLayout">
          <item>
-          <widget class="QPushButton" name="pb_startReceive" >
-           <property name="text" >
+          <widget class="QPushButton" name="pb_startReceive">
+           <property name="text">
             <string>St&amp;art</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pb_stopReceive" >
-           <property name="text" >
+          <widget class="QPushButton" name="pb_stopReceive">
+           <property name="text">
             <string>Sto&amp;p</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pb_record" >
-           <property name="text" >
+          <widget class="QPushButton" name="pb_record">
+           <property name="text">
             <string>&amp;Record</string>
            </property>
           </widget>
          </item>
          <item>
           <spacer>
-           <property name="orientation" >
+           <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
-           <property name="sizeHint" >
+           <property name="sizeHint" stdset="0">
             <size>
              <width>20</width>
              <height>28</height>
@@ -253,21 +254,21 @@
       </layout>
      </widget>
     </item>
-    <item row="1" column="1" >
-     <widget class="QGroupBox" name="groupBox_3" >
-      <property name="title" >
+    <item row="1" column="1">
+     <widget class="QGroupBox" name="groupBox_3">
+      <property name="title">
        <string>Remote video</string>
       </property>
-      <layout class="QVBoxLayout" >
+      <layout class="QVBoxLayout">
        <item>
-        <widget class="PsiMedia::VideoWidget" native="1" name="vw_remote" >
-         <property name="sizePolicy" >
-          <sizepolicy vsizetype="Expanding" hsizetype="Expanding" >
+        <widget class="PsiMedia::VideoWidget" name="vw_remote" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="minimumSize" >
+         <property name="minimumSize">
           <size>
            <width>96</width>
            <height>96</height>
@@ -278,24 +279,24 @@
       </layout>
      </widget>
     </item>
-    <item row="1" column="2" >
-     <layout class="QVBoxLayout" >
+    <item row="1" column="2">
+     <layout class="QVBoxLayout">
       <item>
-       <widget class="QLabel" name="label_2" >
-        <property name="text" >
+       <widget class="QLabel" name="label_2">
+        <property name="text">
          <string>Spk</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QSlider" name="sl_spk" >
-        <property name="minimumSize" >
+       <widget class="QSlider" name="sl_spk">
+        <property name="minimumSize">
          <size>
           <width>0</width>
           <height>96</height>
          </size>
         </property>
-        <property name="orientation" >
+        <property name="orientation">
          <enum>Qt::Vertical</enum>
         </property>
        </widget>
@@ -304,52 +305,58 @@
     </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar" >
-   <property name="geometry" >
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>464</width>
-     <height>30</height>
+     <width>473</width>
+     <height>21</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menu_Help" >
-    <property name="title" >
+   <widget class="QMenu" name="menu_Help">
+    <property name="title">
      <string>&amp;Help</string>
     </property>
-    <addaction name="action_About" />
+    <addaction name="action_About"/>
    </widget>
-   <widget class="QMenu" name="menu_File" >
-    <property name="title" >
+   <widget class="QMenu" name="menu_File">
+    <property name="title">
      <string>&amp;File</string>
     </property>
-    <addaction name="action_Configure" />
-    <addaction name="separator" />
-    <addaction name="action_Quit" />
+    <addaction name="action_Configure"/>
+    <addaction name="action_ShowPipeline"/>
+    <addaction name="separator"/>
+    <addaction name="action_Quit"/>
    </widget>
-   <addaction name="menu_File" />
-   <addaction name="menu_Help" />
+   <addaction name="menu_File"/>
+   <addaction name="menu_Help"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar" />
-  <action name="action_About" >
-   <property name="text" >
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="action_About">
+   <property name="text">
     <string>&amp;About</string>
    </property>
   </action>
-  <action name="action_Quit" >
-   <property name="text" >
+  <action name="action_Quit">
+   <property name="text">
     <string>&amp;Quit</string>
    </property>
-   <property name="shortcut" >
+   <property name="shortcut">
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="action_Configure" >
-   <property name="text" >
+  <action name="action_Configure">
+   <property name="text">
     <string>Co&amp;nfigure Audio/Video...</string>
    </property>
-   <property name="shortcut" >
+   <property name="shortcut">
     <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="action_ShowPipeline">
+   <property name="text">
+    <string>Show pipeline</string>
    </property>
   </action>
  </widget>

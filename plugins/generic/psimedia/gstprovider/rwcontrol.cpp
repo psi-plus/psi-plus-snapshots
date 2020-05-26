@@ -184,6 +184,13 @@ void RwControlLocal::stop()
     remote_->postMessage(msg);
 }
 
+void RwControlLocal::dumpPipeline(std::function<void(const QStringList &)> callback)
+{
+    auto msg      = new RwControlDumpPipelineMessage;
+    msg->callback = callback;
+    remote_->postMessage(msg);
+}
+
 void RwControlLocal::updateDevices(const RwControlConfigDevices &devices)
 {
     auto msg     = new RwControlUpdateDevicesMessage;
@@ -530,6 +537,9 @@ bool RwControlRemote::processMessage(RwControlMessage *msg)
             worker->recordStart();
         else
             worker->recordStop();
+    } else if (msg->type == RwControlMessage::DumpPileline) {
+        auto rmsg = static_cast<RwControlDumpPipelineMessage *>(msg);
+        worker->dumpPipeline(rmsg->callback);
     }
 
     return true;

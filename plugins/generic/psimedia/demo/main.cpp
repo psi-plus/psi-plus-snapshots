@@ -532,6 +532,7 @@ MainWin::MainWin() :
     connect(ui.action_Quit, SIGNAL(triggered()), SLOT(close()));
     connect(ui.action_Configure, SIGNAL(triggered()), SLOT(doConfigure()));
     connect(ui.action_About, SIGNAL(triggered()), SLOT(doAbout()));
+    connect(ui.action_ShowPipeline, SIGNAL(triggered()), SLOT(doShowPipeline()));
     connect(ui.pb_startSend, SIGNAL(clicked()), SLOT(start_send()));
     connect(ui.pb_transmit, SIGNAL(clicked()), SLOT(transmit()));
     connect(ui.pb_stopSend, SIGNAL(clicked()), SLOT(stop_send()));
@@ -687,6 +688,14 @@ void MainWin::doAbout()
                           "A simple test application for the PsiMedia system.\n"
                           "\n"
                           "Copyright (C) 2008  Barracuda Networks, Inc."));
+}
+
+void MainWin::doShowPipeline()
+{
+    producer.dumpPipeline([this](const QStringList &fileName) {
+        QMetaObject::invokeMethod(
+            this, [this, fileName]() { QMessageBox::information(this, tr("Dumped pipelines"), fileName.join("\n")); });
+    });
 }
 
 void MainWin::doAboutProvider() { QMessageBox::about(this, tr("About %1").arg(creditName), PsiMedia::creditText()); }

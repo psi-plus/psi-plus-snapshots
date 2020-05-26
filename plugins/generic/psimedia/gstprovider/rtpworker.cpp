@@ -475,6 +475,23 @@ void RtpWorker::recordStop()
     // FIXME: don't just do nothing
 }
 
+void RtpWorker::dumpPipeline(std::function<void(const QStringList &)> callback)
+{
+    QStringList ret;
+    auto        dir = QString::fromLocal8Bit(qgetenv("GST_DEBUG_DUMP_DOT_DIR"));
+    if (!dir.isEmpty()) {
+        if (spipeline) {
+            GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(spipeline), GST_DEBUG_GRAPH_SHOW_ALL, "psimedia_send");
+            ret << QString("/tmp/psimedia_send.dot");
+        }
+        if (rpipeline) {
+            GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(rpipeline), GST_DEBUG_GRAPH_SHOW_ALL, "psimedia_recv");
+            ret << QString("/tmp/psimedia_recv.dot");
+        }
+    }
+    callback(ret);
+}
+
 gboolean RtpWorker::cb_doStart(gpointer data) { return static_cast<RtpWorker *>(data)->doStart(); }
 
 gboolean RtpWorker::cb_doUpdate(gpointer data) { return static_cast<RtpWorker *>(data)->doUpdate(); }

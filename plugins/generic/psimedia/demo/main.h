@@ -186,4 +186,5 @@ private slots:
     void receiver_error();
     void record_toggle();
     void featuresUpdated();
+    void doShowPipeline();
 };

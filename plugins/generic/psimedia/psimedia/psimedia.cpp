@@ -665,6 +665,8 @@ void RtpSession::setVideoPreviewWidget(VideoWidget *widget)
 }
 #endif
 
+void RtpSession::dumpPipeline(std::function<void(const QStringList &)> callback) { d->c->dumpPipeline(callback); }
+
 void RtpSession::setRecordingQIODevice(QIODevice *dev) { d->c->setRecorder(dev); }
 
 void RtpSession::stopRecording() { d->c->stopRecording(); }
