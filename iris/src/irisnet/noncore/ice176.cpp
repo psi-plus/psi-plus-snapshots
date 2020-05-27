@@ -571,8 +571,11 @@ public:
                     if (!pair)
                         return;
                     int at = findLocalCandidate(pair->local->addr.addr, pair->local->addr.port);
-                    if (at == -1) // FIXME: assert?
+                    if (at == -1) { // FIXME: assert?
+                        qDebug("Failed to find local candidate %s:%d", qPrintable(pair->local->addr.addr.toString()),
+                               pair->local->addr.port);
                         return;
+                    }
 
                     IceComponent::Candidate &lc   = localCandidates[at];
                     int                      path = lc.path;

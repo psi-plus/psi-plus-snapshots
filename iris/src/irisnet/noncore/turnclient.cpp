@@ -780,6 +780,9 @@ private slots:
 
         writeItems += WriteItem(packet.size());
 
+        // emit q->debugLine(QString("Sending turn packet to: %1:%2")
+        //                      .arg(bs->abstractSocket()->peerAddress().toString())
+        //                      .arg(bs->abstractSocket()->peerPort()));
         if (tls)
             tls->write(packet);
         else

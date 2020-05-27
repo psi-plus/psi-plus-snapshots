@@ -550,6 +550,12 @@ private slots:
         WriteItem wi;
         wi.type = WriteItem::Pool;
         pendingWrites += wi;
+        // emit q->debugLine(QString("Sending udp packet from: %1:%2 to: %3:%4")
+        //                      .arg(sock->localAddress().toString())
+        //                      .arg(sock->localPort())
+        //                      .arg(toAddress.toString())
+        //                      .arg(toPort));
+
         sock->writeDatagram(packet, toAddress, toPort);
     }
 

@@ -302,7 +302,11 @@ private slots:
             rto *= 2;
         }
 
-        emit pool->debugLine("stun transaction timeout. retransmitting..");
+        QString dbg;
+        if (!to_addr.isNull())
+            dbg += QString("to=(") + to_addr.toString() + ';' + QString::number(to_port) + ')';
+
+        emit pool->debugLine(QString("stun transaction %1 timeout. retransmitting..").arg(dbg));
         transmit();
     }
 
