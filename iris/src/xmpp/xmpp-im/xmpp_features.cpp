@@ -203,6 +203,15 @@ bool Features::hasJingleIceUdp() const { return test(QStringList() << QLatin1Str
 #define FID_JINGLEICE "urn:xmpp:jingle:transports:ice:0"
 bool Features::hasJingleIce() const { return test(QStringList() << QLatin1String(FID_JINGLEICE)); }
 
+#define NS_CAPS "http://jabber.org/protocol/caps"
+bool Features::hasCaps() const { return test(QStringList() << QLatin1String(NS_CAPS)); }
+
+#define NS_CAPS_OPTIMIZE "http://jabber.org/protocol/caps#optimize"
+bool Features::hasCapsOptimize() const { return test(QStringList() << QLatin1String(NS_CAPS_OPTIMIZE)); }
+
+#define NS_DIRECT_MUC_INVITE "jabber:x:conference"
+bool Features::hasDirectMucInvite() const { return test(QStringList() << QLatin1String(NS_DIRECT_MUC_INVITE)); }
+
 // custom Psi actions
 #define FID_ADD "psi:add"
 

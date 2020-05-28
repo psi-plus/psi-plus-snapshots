@@ -56,6 +56,9 @@ public:
     bool        hasJingleFT() const;
     bool        hasJingleIceUdp() const;
     bool        hasJingleIce() const;
+    bool        hasCaps() const;
+    bool        hasCapsOptimize() const;
+    bool        hasDirectMucInvite() const;
 
     [[deprecated]] inline bool canRegister() const { return hasRegister(); }
     [[deprecated]] inline bool canSearch() const { return hasSearch(); }

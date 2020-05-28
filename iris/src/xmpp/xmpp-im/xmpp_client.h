@@ -137,6 +137,8 @@ public:
     void            setFeatures(const Features &f);
     const Features &features() const;
     DiscoItem       makeDiscoResult(const QString &node = QString()) const;
+    void            setCapsOptimizationAllowed(bool allowed);
+    bool            capsOptimizationAllowed() const;
 
     void                   setTcpPortReserver(TcpPortReserver *portReserver);
     TcpPortReserver *      tcpPortReserver() const;

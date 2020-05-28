@@ -581,7 +581,7 @@ void JT_Presence::pres(const Status &s)
             tag.appendChild(x);
         }
 
-        if (client()->capsManager()->isEnabled()) {
+        if (client()->capsManager()->isEnabled() && !client()->capsOptimizationAllowed()) {
             CapsSpec cs = client()->caps();
             if (cs.isValid()) {
                 tag.appendChild(cs.toXml(doc()));

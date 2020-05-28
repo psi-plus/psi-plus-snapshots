@@ -1413,7 +1413,7 @@ void PsiAccount::setKnownPgpKeys(const VarList &list)
 {
     for (VarList::ConstIterator kit = list.begin(); kit != list.end(); ++kit) {
         const VarListItem &i = *kit;
-        UserListItem      *u = find(Jid(i.key()));
+        UserListItem *     u = find(Jid(i.key()));
         if (u) {
             u->setPublicKeyID(i.data());
             cpUpdate(*u);
@@ -1537,6 +1537,8 @@ void PsiAccount::updateFeatures()
         features << "urn:xmpp:jingle:apps:rtp:audio";
         features << "urn:xmpp:jingle:apps:rtp:video";
     }
+
+    features << "jabber:x:conference"; // allow direct invites
 
     // TODO reset hash
     d->client->setFeatures(Features(features));

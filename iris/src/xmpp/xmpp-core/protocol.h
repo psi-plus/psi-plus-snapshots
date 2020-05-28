@@ -40,6 +40,7 @@
 #define NS_STANZAS "urn:ietf:params:xml:ns:xmpp-stanzas"
 #define NS_BIND "urn:ietf:params:xml:ns:xmpp-bind"
 #define NS_CAPS "http://jabber.org/protocol/caps"
+#define NS_CAPS_OPTIMIZE "http://jabber.org/protocol/caps#optimize"
 #define NS_COMPRESS_FEATURE "http://jabber.org/features/compress"
 #define NS_COMPRESS_PROTOCOL "http://jabber.org/protocol/compress"
 #define NS_HOSTS "http://barracuda.com/xmppextensions/hosts"

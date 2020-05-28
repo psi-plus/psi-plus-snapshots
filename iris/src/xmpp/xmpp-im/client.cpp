@@ -125,9 +125,10 @@ public:
     DiscoItem::Identity     identity;
     Features                features;
     QMap<QString, Features> extension_features;
-    int                     tzoffset    = 0;
-    bool                    useTzoffset = false; // manual tzoffset is old way of doing utc<->local translations
-    bool                    active      = false;
+    int                     tzoffset         = 0;
+    bool                    useTzoffset      = false; // manual tzoffset is old way of doing utc<->local translations
+    bool                    active           = false;
+    bool                    capsOptimization = false; // don't send caps every time
 
     LiveRoster             roster;
     ResourceList           resourceList;
@@ -275,6 +276,17 @@ IBBManager *Client::ibbManager() const { return d->ibbman; }
 BoBManager *Client::bobManager() const { return d->bobman; }
 
 CapsManager *Client::capsManager() const { return d->capsman; }
+
+void Client::setCapsOptimizationAllowed(bool allowed) { d->capsOptimization = allowed; }
+
+bool Client::capsOptimizationAllowed() const
+{
+    if (d->capsOptimization && d->active && d->serverInfoManager->features().hasCapsOptimize()) {
+        auto it = d->resourceList.find(d->resource);
+        return it != d->resourceList.end() && it->status().isAvailable();
+    }
+    return false;
+}
 
 ServerInfoManager *Client::serverInfoManager() const { return d->serverInfoManager; }
 
@@ -1146,9 +1158,10 @@ DiscoItem Client::makeDiscoResult(const QString &node) const
     // TODO rather do foreach for all registered jingle apps and transports
     features.addFeature("urn:xmpp:jingle:transports:s5b:1");
     features.addFeature("urn:xmpp:jingle:transports:ibb:1");
-    features.addFeature(
-        "urn:xmpp:jingle:apps:file-transfer:5"); // TODO: since it depends on UI it needs a way to be disabled
+    // TODO: since it depends on UI it needs a way to be disabled
+    features.addFeature("urn:xmpp:jingle:apps:file-transfer:5");
     Hash::populateFeatures(features);
+    features.addFeature(NS_CAPS);
 
     // Client-specific features
     for (const QString &i : d->features.list()) {
