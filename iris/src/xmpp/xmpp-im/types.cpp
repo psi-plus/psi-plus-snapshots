@@ -424,6 +424,7 @@ QDomElement Hash::toXml(QDomDocument *doc) const
 
 void Hash::populateFeatures(Features &features)
 {
+    features.addFeature("urn:xmpp:hashes:2");
     for (size_t n = 0; n < sizeof(hashTypes) / sizeof(hashTypes[0]); ++n) {
         features.addFeature(QLatin1String("urn:xmpp:hash-function-text-names:") + QLatin1String(hashTypes[n].text));
     }
@@ -1562,7 +1563,7 @@ Stanza Message::toStanza(Stream *stream) const
     }
 
     // Avoiding Carbons
-    if (isDisabledCarbons() || wasEncrypted()) {
+    if (isDisabledCarbons()) {
         QDomElement e = s.createElement("urn:xmpp:carbons:2", "private");
         s.appendChild(e);
     }
