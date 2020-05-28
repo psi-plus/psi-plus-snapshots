@@ -1487,9 +1487,20 @@ Stanza Message::toStanza(Stream *stream) const
     if (!d->xsigned.isEmpty())
         s.appendChild(s.createTextElement("jabber:x:signed", "x", d->xsigned));
 
-    // xencrypted
-    if (!d->xencrypted.isEmpty())
+    // OpenPGP encrypted message
+    if (!d->xencrypted.isEmpty()) {
+        // See: XEP-0027: Current Jabber OpenPGP Usage
         s.appendChild(s.createTextElement("jabber:x:encrypted", "x", d->xencrypted));
+        // See: XEP-0280: Message Carbons
+        QDomElement nc = s.createElement("urn:xmpp:hints", "no-copy");
+        QDomElement pr = s.createElement("urn:xmpp:carbons:2", "private");
+        s.appendChild(nc);
+        s.appendChild(pr);
+        // See: XEP-0380: Explicit Message Encryption
+        QDomElement en = s.createElement("urn:xmpp:eme:0", "encryption");
+        en.setAttribute("namespace", "jabber:x:encrypted");
+        s.appendChild(en);
+    }
 
     // addresses
     if (!d->addressList.isEmpty()) {
