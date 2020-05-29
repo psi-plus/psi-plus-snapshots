@@ -31,6 +31,8 @@
 #include "menuaccessor.h"
 #include "optionaccessinghost.h"
 #include "optionaccessor.h"
+#include "pluginaccessinghost.h"
+#include "pluginaccessor.h"
 #include "plugininfoprovider.h"
 #include "popupaccessinghost.h"
 #include "popupaccessor.h"
@@ -65,39 +67,41 @@ class AttentionPlugin : public QObject,
                         public StanzaSender,
                         public MenuAccessor,
                         public PluginInfoProvider,
-                        public SoundAccessor {
+                        public SoundAccessor,
+                        public PluginAccessor {
     Q_OBJECT
     Q_PLUGIN_METADATA(IID "com.psi-plus.AttentionPlugin" FILE "psiplugin.json")
     Q_INTERFACES(PsiPlugin StanzaFilter AccountInfoAccessor OptionAccessor ActiveTabAccessor ApplicationInfoAccessor
                      ToolbarIconAccessor IconFactoryAccessor PopupAccessor StanzaSender MenuAccessor PluginInfoProvider
-                         SoundAccessor)
+                         SoundAccessor PluginAccessor)
 
 public:
     AttentionPlugin();
-    virtual QString             name() const;
-    virtual QWidget *           options();
-    virtual bool                enable();
-    virtual bool                disable();
-    virtual void                applyOptions();
-    virtual void                restoreOptions();
-    virtual bool                incomingStanza(int account, const QDomElement &xml);
-    virtual bool                outgoingStanza(int account, QDomElement &xml);
-    virtual void                setAccountInfoAccessingHost(AccountInfoAccessingHost *host);
-    virtual void                setOptionAccessingHost(OptionAccessingHost *host);
-    virtual void                optionChanged(const QString &option);
-    virtual void                setActiveTabAccessingHost(ActiveTabAccessingHost *host);
-    virtual void                setIconFactoryAccessingHost(IconFactoryAccessingHost *host);
-    virtual void                setPopupAccessingHost(PopupAccessingHost *host);
-    virtual void                setStanzaSendingHost(StanzaSendingHost *host);
-    virtual QList<QVariantHash> getButtonParam();
-    virtual QAction *           getAction(QObject *, int, const QString &) { return nullptr; };
-    virtual QList<QVariantHash> getAccountMenuParam();
-    virtual QList<QVariantHash> getContactMenuParam();
-    virtual QAction *           getContactAction(QObject *, int, const QString &) { return nullptr; };
-    virtual QAction *           getAccountAction(QObject *, int) { return nullptr; };
-    virtual void                setApplicationInfoAccessingHost(ApplicationInfoAccessingHost *host);
-    virtual void                setSoundAccessingHost(SoundAccessingHost *host);
-    virtual QString             pluginInfo();
+    QString             name() const override;
+    QWidget *           options() override;
+    bool                enable() override;
+    bool                disable() override;
+    void                applyOptions() override;
+    void                restoreOptions() override;
+    bool                incomingStanza(int account, const QDomElement &xml) override;
+    bool                outgoingStanza(int account, QDomElement &xml) override;
+    void                setAccountInfoAccessingHost(AccountInfoAccessingHost *host) override;
+    void                setOptionAccessingHost(OptionAccessingHost *host) override;
+    void                optionChanged(const QString &option) override;
+    void                setActiveTabAccessingHost(ActiveTabAccessingHost *host) override;
+    void                setIconFactoryAccessingHost(IconFactoryAccessingHost *host) override;
+    void                setPopupAccessingHost(PopupAccessingHost *host) override;
+    void                setStanzaSendingHost(StanzaSendingHost *host) override;
+    void                setPluginAccessingHost(PluginAccessingHost *host) override;
+    QList<QVariantHash> getButtonParam() override;
+    QAction *           getAction(QObject *, int, const QString &) override { return nullptr; };
+    QList<QVariantHash> getAccountMenuParam() override;
+    QList<QVariantHash> getContactMenuParam() override;
+    QAction *           getContactAction(QObject *, int, const QString &) override { return nullptr; };
+    QAction *           getAccountAction(QObject *, int) override { return nullptr; };
+    void                setApplicationInfoAccessingHost(ApplicationInfoAccessingHost *host) override;
+    void                setSoundAccessingHost(SoundAccessingHost *host) override;
+    QString             pluginInfo() override;
 
 private:
     bool                          enabled;
@@ -117,6 +121,7 @@ private:
     QPoint                        oldPoint_;
     QPointer<QWidget>             options_;
     int                           popupId;
+    QIcon                         pluginIcon;
 
     struct Blocked {
         int       Acc;
@@ -154,11 +159,13 @@ QString AttentionPlugin::name() const { return "Attention Plugin"; }
 
 bool AttentionPlugin::enable()
 {
-    QFile file(":/attentionplugin/attention.png");
-    if (file.open(QIODevice::ReadOnly)) {
-        QByteArray image = file.readAll();
-        icoHost->addIcon("attentionplugin/attention", image);
-        file.close();
+    QPixmap    pixmap = pluginIcon.pixmap(32);
+    QByteArray bytes;
+    QBuffer    buffer(&bytes);
+    buffer.open(QIODevice::WriteOnly);
+    pixmap.save(&buffer, "PNG");
+    if (!bytes.isEmpty()) {
+        icoHost->addIcon("attentionplugin/attention", bytes); // FIXME better pass icon as is
     } else {
         enabled = false;
         return enabled;
@@ -366,6 +373,11 @@ void AttentionPlugin::setApplicationInfoAccessingHost(ApplicationInfoAccessingHo
 
 void AttentionPlugin::setSoundAccessingHost(SoundAccessingHost *host) { sound_ = host; }
 
+void AttentionPlugin::setPluginAccessingHost(PluginAccessingHost *host)
+{
+    pluginIcon = host->selfMetadata().value("icon").value<QIcon>();
+}
+
 QList<QVariantHash> AttentionPlugin::getButtonParam()
 {
     QList<QVariantHash> l;
@@ -503,6 +515,5 @@ QString AttentionPlugin::pluginInfo()
         "To work correctly, the plugin requires that the client of the other part supports XEP-0224 (for example: "
         "Pidgin, Miranda IM with Nudge plugin).");
 }
-
 
 #include "attentionplugin.moc"
