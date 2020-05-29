@@ -64,7 +64,7 @@ static QStringList read_proc_as_lines(const char *procfile)
     fclose(f);
 
     QString str = QString::fromLocal8Bit(buf);
-    out         = str.split('\n', QString::KeepEmptyParts);
+    out         = str.split('\n', Qt::KeepEmptyParts);
     return out;
 }
 

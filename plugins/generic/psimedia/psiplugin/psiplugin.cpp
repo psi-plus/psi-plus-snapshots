@@ -26,14 +26,14 @@
 #include "opt_avcall.h"
 #include "optionaccessinghost.h"
 #include "optionaccessor.h"
+#include "pluginaccessinghost.h"
+#include "pluginaccessor.h"
 #include "plugininfoprovider.h"
 #include "psimediaaccessor.h"
 #include "psimediahost.h"
 #include "psimediaprovider.h"
 
 #include <QIcon>
-
-#define constVersion "0.1"
 
 class PsiMediaPlugin : public QObject,
                        public PsiPlugin,
@@ -42,29 +42,28 @@ class PsiMediaPlugin : public QObject,
                        public IconFactoryAccessor,
                        public PluginInfoProvider,
                        public PsiMedia::Plugin,
-                       public PsiMediaAccessor {
+                       public PsiMediaAccessor,
+                       public PluginAccessor {
     Q_OBJECT
     Q_PLUGIN_METADATA(IID "org.psi-im.PsiMediaPlugin" FILE "psiplugin.json")
     Q_INTERFACES(PsiPlugin OptionAccessor ApplicationInfoAccessor PluginInfoProvider IconFactoryAccessor
-                     PsiMedia::Plugin PsiMediaAccessor)
+                     PsiMedia::Plugin PsiMediaAccessor PluginAccessor)
 
 public:
     PsiMediaPlugin() = default;
     QString             name() const override;
-    QString             shortName() const override;
-    QString             version() const override;
     QWidget *           options() override;
     bool                enable() override;
     bool                disable() override;
     void                optionChanged(const QString &option) override;
     void                applyOptions() override;
     void                restoreOptions() override;
+    void                setPluginAccessingHost(PluginAccessingHost *host) override;
     void                setOptionAccessingHost(OptionAccessingHost *host) override;
     void                setApplicationInfoAccessingHost(ApplicationInfoAccessingHost *host) override;
     void                setIconFactoryAccessingHost(IconFactoryAccessingHost *host) override;
     void                setPsiMediaHost(PsiMediaHost *host) override;
     QString             pluginInfo() override;
-    QPixmap             icon() const override;
     PsiMedia::Provider *createProvider(const QVariantMap &) override;
 
 private:
@@ -72,6 +71,7 @@ private:
     IconFactoryAccessingHost *    iconHost   = nullptr;
     ApplicationInfoAccessingHost *appInfo    = nullptr;
     PsiMediaHost *                mediaHost  = nullptr;
+    PluginAccessingHost *         pluginHost = nullptr;
     bool                          enabled    = false;
     QPointer<QWidget>             options_;
 
@@ -81,13 +81,9 @@ private:
 
 QString PsiMediaPlugin::name() const { return "Psi Multimedia Plugin"; }
 
-QString PsiMediaPlugin::shortName() const { return "psimedia"; }
-
-QString PsiMediaPlugin::version() const { return constVersion; }
-
 bool PsiMediaPlugin::enable()
 {
-    if (!psiOptions || !mediaHost || !appInfo)
+    if (!psiOptions || !mediaHost || !appInfo || !pluginHost)
         return false;
     enabled = true;
 
@@ -100,7 +96,8 @@ bool PsiMediaPlugin::enable()
         connect(provider, &PsiMedia::GstProvider::initialized, this, [this]() {
             mediaHost->setMediaProvider(provider);
 
-            tab = new OptionsTabAvCall(provider, psiOptions, mediaHost, icon());
+            tab = new OptionsTabAvCall(provider, psiOptions, mediaHost,
+                                       pluginHost->selfMetadata()["icon"].value<QIcon>());
             psiOptions->addSettingPage(tab);
 
             auto ain  = psiOptions->getPluginOption("devices.audio-input", QString()).toString();
@@ -138,6 +135,7 @@ void PsiMediaPlugin::applyOptions() { return; }
 
 void PsiMediaPlugin::restoreOptions() { return; }
 
+void PsiMediaPlugin::setPluginAccessingHost(PluginAccessingHost *host) { pluginHost = host; }
 void PsiMediaPlugin::setOptionAccessingHost(OptionAccessingHost *host) { psiOptions = host; }
 void PsiMediaPlugin::setIconFactoryAccessingHost(IconFactoryAccessingHost *host) { iconHost = host; }
 
@@ -154,8 +152,6 @@ QString PsiMediaPlugin::pluginInfo()
         + ":<br/>"
           "  Vitaly Tonkacheyev <thetvg@gmail.com>";
 }
-
-QPixmap PsiMediaPlugin::icon() const { return QPixmap(":/icons/avcall.png"); }
 
 PsiMedia::Provider *PsiMediaPlugin::createProvider(const QVariantMap &)
 {

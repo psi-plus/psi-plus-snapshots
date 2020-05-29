@@ -47,9 +47,6 @@ set( _SRCS
     opt_avcall.cpp
     opt_avcall.h
 )
-set( _RSCS
-    resources.qrc
-)
 
 set(FORMS opt_avcall.ui)
 
@@ -57,7 +54,6 @@ find_package( Qt5 COMPONENTS Widgets REQUIRED )
 set(QT_DEPLIBS
     Qt5::Widgets
 )
-qt5_add_resources(RSCS ${_RSCS})
 qt5_wrap_ui(UIS ${FORMS})
 
 if(WIN32)
