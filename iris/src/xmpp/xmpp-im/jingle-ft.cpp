@@ -26,6 +26,9 @@
 #include "xmpp_thumbs.h"
 #include "xmpp_xmlcommon.h"
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+#include <QRandomGenerator>
+#endif
 #include <cmath>
 #include <functional>
 
@@ -825,7 +828,11 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         QString prefix = senders == _session->role() ? "fileoffer" : "filereq";
         QString name;
         do {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+            name = prefix + QString("_%1").arg(QRandomGenerator::global()->generate() & 0xffff, 4, 16, QChar('0'));
+#else
             name = prefix + QString("_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
+#endif
         } while (_session->content(name, _session->role()));
         return name;
     }

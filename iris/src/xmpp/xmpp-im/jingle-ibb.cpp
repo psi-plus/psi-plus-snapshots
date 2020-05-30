@@ -25,6 +25,9 @@
 #include "xmpp_ibb.h"
 
 #include <QTimer>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+#include <QRandomGenerator>
+#endif
 
 namespace XMPP { namespace Jingle { namespace IBB {
     const QString NS(QStringLiteral("urn:xmpp:jingle:transports:ibb:1"));
@@ -415,7 +418,11 @@ namespace XMPP { namespace Jingle { namespace IBB {
         if (s.isEmpty()) {
             QPair<Jid, QString> key;
             do {
-                s   = QString("ibb_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+                s = QString("ibb_%1").arg(QRandomGenerator::global()->generate() & 0xffff, 4, 16, QChar('0'));
+#else
+                s = QString("ibb_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
+#endif
                 key = qMakePair(peer, s);
             } while (d->connections.contains(key));
         }

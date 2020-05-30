@@ -23,6 +23,9 @@
 #include "irisnetglobal_p.h"
 #include "irisnetplugin.h"
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+#include <QRandomGenerator>
+#endif
 //#include <idna.h>
 #include <limits>
 
@@ -498,7 +501,11 @@ XMPP::NameRecord WeightedNameRecordList::takeNext()
 #endif
 
     /* Pick a random entry */
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+    int randomWeight = totalWeight ? QRandomGenerator::global()->bounded(totalWeight) : 0;
+#else
     int randomWeight = qrand() / static_cast<float>(RAND_MAX) * totalWeight;
+#endif
 
 #ifdef NETNAMES_DEBUG
     NNDEBUG << "Picked weight:" << randomWeight;
@@ -616,13 +623,13 @@ QDebug operator<<(QDebug dbg, const XMPP::WeightedNameRecordList &list)
     /* operator(QDebug, QMap const&) has a bug which makes it crash when trying to print the dereferenced end() iterator
      */
     if (!list.isEmpty()) {
-        dbg.nospace() << "current=" << *list.currentPriorityGroup << endl;
+        dbg.nospace() << "current=" << *list.currentPriorityGroup << Qt::endl;
     }
 
     dbg.nospace() << "{";
 
     for (int priority : list.priorityGroups.keys()) {
-        dbg.nospace() << "\t" << priority << "->" << list.priorityGroups.value(priority) << endl;
+        dbg.nospace() << "\t" << priority << "->" << list.priorityGroups.value(priority) << Qt::endl;
     }
 
     dbg.nospace() << "})";

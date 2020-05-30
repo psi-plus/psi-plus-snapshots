@@ -22,6 +22,9 @@
 #include "xmpp_client.h"
 
 #include <QTimer>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+#include <QRandomGenerator>
+#endif
 
 namespace XMPP {
 BytestreamManager::BytestreamManager(Client *parent) : QObject(parent) { }
@@ -33,7 +36,11 @@ QString BytestreamManager::genUniqueSID(const Jid &peer) const
     // get unused key
     QString sid;
     do {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+        sid = QString("%1%2").arg(sidPrefix()).arg(QRandomGenerator::global()->generate() & 0xffff, 4, 16, QChar('0'));
+#else
         sid = QString("%1%2").arg(sidPrefix()).arg(qrand() & 0xffff, 4, 16, QChar('0'));
+#endif
     } while (!isAcceptableSID(peer, sid));
     return sid;
 }

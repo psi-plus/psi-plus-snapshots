@@ -31,6 +31,9 @@
 #include <QElapsedTimer>
 #include <QNetworkInterface>
 #include <QTimer>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+#include <QRandomGenerator>
+#endif
 
 namespace XMPP { namespace Jingle { namespace S5B {
     const QString NS(QStringLiteral("urn:xmpp:jingle:transports:s5b:1"));
@@ -600,7 +603,11 @@ namespace XMPP { namespace Jingle { namespace S5B {
         {
             QString cid;
             do {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+                cid = QString("%1").arg(QRandomGenerator::global()->generate() & 0xffff, 4, 16, QChar('0'));
+#else
                 cid = QString("%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
+#endif
             } while (localCandidates.contains(cid) || remoteCandidates.contains(cid));
             return cid;
         }

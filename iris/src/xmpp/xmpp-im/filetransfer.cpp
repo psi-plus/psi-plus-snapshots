@@ -30,6 +30,9 @@
 #include <QPointer>
 #include <QSet>
 #include <QTimer>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+#include <QRandomGenerator>
+#endif
 
 #define SENDBUFSIZE 65536
 
@@ -458,7 +461,11 @@ QString FileTransferManager::link(FileTransfer *ft)
     bool    found;
     do {
         found = false;
-        id    = QString("ft_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+        id = QString("ft_%1").arg(QRandomGenerator::global()->generate() & 0xffff, 4, 16, QChar('0'));
+#else
+        id = QString("ft_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
+#endif
         for (FileTransfer *ft : d->list) {
             if (ft->d->peer.compare(ft->d->peer) && ft->d->id == id) {
                 found = true;

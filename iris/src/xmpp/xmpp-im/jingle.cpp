@@ -35,6 +35,9 @@
 #include <QPointer>
 #include <QTimer>
 #include <functional>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+#include <QRandomGenerator>
+#endif
 
 namespace XMPP { namespace Jingle {
     const QString NS(QStringLiteral("urn:xmpp:jingle:1"));
@@ -697,7 +700,11 @@ namespace XMPP { namespace Jingle {
         QString id;
         auto    peer = session->peer();
         do {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+            id = QString("%1").arg(QRandomGenerator::global()->generate(), 6, 32, QChar('0'));
+#else
             id = QString("%1").arg(quint32(qrand()), 6, 32, QChar('0'));
+#endif
         } while (d->sessions.contains(qMakePair(peer, id)));
         d->sessions.insert(qMakePair(peer, id), session);
         return id;
