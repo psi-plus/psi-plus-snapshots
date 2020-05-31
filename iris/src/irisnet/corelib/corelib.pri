@@ -16,7 +16,6 @@ SOURCES += \
     $$PWD/irisnetplugin.cpp \
     $$PWD/irisnetglobal.cpp \
     $$PWD/netinterface.cpp \
-    $$PWD/netinterface_qtnet.cpp \
     $$PWD/netavailability.cpp \
     $$PWD/netnames.cpp \
     $$PWD/addressresolver.cpp
@@ -38,6 +37,11 @@ need_jdns|lessThan(QT_MAJOR_VERSION, 5) {
     DEFINES += NEED_JDNS
 } else {
     SOURCES += $$PWD/netinterface_qtname.cpp \
+}
+
+equals(QT_MAJOR_VERSION, 5):lessThan(QT_MINOR_VERSION, 15) {
+    SOURCES += $$PWD/netinterface_qtnet.cpp
+    DEFINES += HAVE_QTNET
 }
 
 #include(legacy/legacy.pri)

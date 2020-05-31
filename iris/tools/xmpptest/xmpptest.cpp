@@ -476,7 +476,11 @@ private slots:
         QString      errMsg;
         int          errLine, errCol;
         if (!doc.setContent(str, true, &errMsg, &errLine, &errCol)) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+            int lines = str.split('\n', Qt::KeepEmptyParts).count();
+#else
             int lines = str.split('\n', QString::KeepEmptyParts).count();
+#endif
             --errLine; // skip the first line
             if (errLine == lines - 1) {
                 errLine = lines - 2;
@@ -850,9 +854,13 @@ public:
 
     void appendXmlOut(const QString &s)
     {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+        QStringList lines = s.split('\n', Qt::KeepEmptyParts);
+#else
         QStringList lines = s.split('\n', QString::KeepEmptyParts);
-        QString     str;
-        bool        first = true;
+#endif
+        QString str;
+        bool    first = true;
         for (QStringList::ConstIterator it = lines.begin(); it != lines.end(); ++it) {
             if (!first)
                 str += "<br>";
@@ -864,9 +872,13 @@ public:
 
     void appendXmlIn(const QString &s)
     {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+        QStringList lines = s.split('\n', Qt::KeepEmptyParts);
+#else
         QStringList lines = s.split('\n', QString::KeepEmptyParts);
-        QString     str;
-        bool        first = true;
+#endif
+        QString str;
+        bool    first = true;
         for (QStringList::ConstIterator it = lines.begin(); it != lines.end(); ++it) {
             if (!first)
                 str += "<br>";

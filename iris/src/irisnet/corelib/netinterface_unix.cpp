@@ -58,7 +58,11 @@ static QStringList read_proc_as_lines(const char *procfile)
     fclose(f);
 
     QString str = QString::fromLocal8Bit(buf);
-    out         = str.split('\n', QString::SkipEmptyParts);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    out = str.split('\n', Qt::SkipEmptyParts);
+#else
+    out = str.split('\n', QString::SkipEmptyParts);
+#endif
     return out;
 }
 
@@ -104,8 +108,12 @@ static QList<XMPP::NetGatewayProvider::Info> get_linux_gateways()
     QStringList lines = read_proc_as_lines("/proc/net/route");
     // skip the first line, so we start at 1
     for (int n = 1; n < lines.count(); ++n) {
-        const QString &line  = lines[n];
-        QStringList    parts = line.simplified().split(' ', QString::SkipEmptyParts);
+        const QString &line = lines[n];
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+        QStringList parts = line.simplified().split(' ', Qt::SkipEmptyParts);
+#else
+        QStringList parts = line.simplified().split(' ', QString::SkipEmptyParts);
+#endif
         if (parts.count() < 10) // net-tools does 10, but why not 11?
             continue;
 
@@ -128,8 +136,12 @@ static QList<XMPP::NetGatewayProvider::Info> get_linux_gateways()
 
     lines = read_proc_as_lines("/proc/net/ipv6_route");
     for (int n = 0; n < lines.count(); ++n) {
-        const QString &line  = lines[n];
-        QStringList    parts = line.simplified().split(' ', QString::SkipEmptyParts);
+        const QString &line = lines[n];
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+        QStringList parts = line.simplified().split(' ', Qt::SkipEmptyParts);
+#else
+        QStringList parts = line.simplified().split(' ', QString::SkipEmptyParts);
+#endif
         if (parts.count() < 10)
             continue;
 

@@ -2177,7 +2177,11 @@ CapsSpec CapsSpec::fromXml(const QDomElement &e)
         }
         cs = CapsSpec(node, algo, ver);
         if (!ext.isEmpty()) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+            cs.ext_ = ext.split(" ", Qt::SkipEmptyParts);
+#else
             cs.ext_ = ext.split(" ", QString::SkipEmptyParts);
+#endif
         }
     }
     return cs;

@@ -35,7 +35,6 @@ set(SOURCES
     corelib/addressresolver.cpp
     corelib/netavailability.cpp
     corelib/netinterface.cpp
-    corelib/netinterface_qtnet.cpp
     corelib/netnames.cpp
     corelib/objectsession.cpp
 
@@ -63,6 +62,9 @@ if(NOT USE_QJDNS)
     list(APPEND SOURCES corelib/netinterface_qtname.cpp)
 else()
     list(APPEND SOURCES corelib/netnames_jdns.cpp)
+endif()
+if (Qt5Network_VERSION VERSION_LESS 5.15.0)
+    list(APPEND SOURCES corelib/netinterface_qtnet.cpp)
 endif()
 
 set(HEADERS
@@ -113,6 +115,10 @@ endif()
 
 if(NOT USE_QJDNS)
     set(QJDns_LIBRARY "")
+endif()
+
+if (Qt5Network_VERSION VERSION_LESS 5.15.0)
+    target_compile_definitions(irisnet PRIVATE HAVE_QTNET)
 endif()
 
 target_link_libraries(irisnet ${QJDns_LIBRARY} ${EXTRA_LDFLAGS})

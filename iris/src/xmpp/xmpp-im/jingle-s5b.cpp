@@ -1702,7 +1702,11 @@ namespace XMPP { namespace Jingle { namespace S5B {
         };
 
         do {
-            sid  = QString("s5b_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
+#if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
+            sid = QString("s5b_%1").arg(QRandomGenerator::global()->bounded(0x10000), 4, 16, QChar('0'));
+#else
+            sid = QString("s5b_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
+#endif
             key  = qMakePair(remote, sid);
             key1 = makeKey(sid, remote, d->jingleManager->client()->jid());
             key2 = makeKey(sid, d->jingleManager->client()->jid(), remote);

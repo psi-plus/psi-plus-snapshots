@@ -21,7 +21,9 @@
 
 namespace XMPP {
 // built-in providers
+#ifdef HAVE_QTNET
 extern IrisNetProvider *irisnet_createQtNetProvider();
+#endif
 #ifdef Q_OS_UNIX
 extern IrisNetProvider *irisnet_createUnixNetProvider();
 #endif
@@ -160,7 +162,9 @@ public:
     void scan()
     {
         if (!builtin_done) {
+#ifdef HAVE_QTNET
             addBuiltIn(irisnet_createQtNetProvider()); // interfaces. crossplatform. no need to reimplement
+#endif
 #ifdef Q_OS_UNIX
             addBuiltIn(irisnet_createUnixNetProvider()); // gateways
 #endif

@@ -150,7 +150,7 @@ QString LanguageManager::bestUiMatch(QHash<QString, QString> langToText)
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
     auto preferred = LanguageManager::bestUiMatch(langs.keys().toSet(), true);
 #else
-    auto preferred = LanguageManager::bestUiMatch(QSet<LangId>(langs.keyBegin(), langs.keyEnd()), true);
+    auto        preferred = LanguageManager::bestUiMatch(QSet<LangId>(langs.keyBegin(), langs.keyEnd()), true);
 #endif
     if (preferred.count()) {
         return langs.value(preferred.first());
@@ -207,7 +207,11 @@ QString LanguageManager::countryName(const LanguageManager::LangId &id)
 
 QSet<LanguageManager::LangId> LanguageManager::deserializeLanguageSet(const QString &str)
 {
-    QStringList  langs = str.split(QRegExp("\\s+"), QString::SkipEmptyParts);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    QStringList langs = str.split(QRegExp("\\s+"), Qt::SkipEmptyParts);
+#else
+    QStringList langs     = str.split(QRegExp("\\s+"), QString::SkipEmptyParts);
+#endif
     QSet<LangId> ret;
     for (auto const &l : langs) {
         auto id = fromString(l);
