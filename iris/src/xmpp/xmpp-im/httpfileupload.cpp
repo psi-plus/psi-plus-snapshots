@@ -417,12 +417,12 @@ bool JT_HTTPFileUpload::take(const QDomElement &e)
 
 class HttpFileUploadManager::Private {
 public:
-    Client *                              client = nullptr;
-    QPointer<QNetworkAccessManager>       qnam;
-    int                                   discoStatus = 0;
-    QList<HttpFileUpload::HttpHost>       discoHosts;
-    bool                                  externalQnam = false;
-    QLinkedList<HttpFileUpload::HttpHost> hosts;
+    Client *                            client = nullptr;
+    QPointer<QNetworkAccessManager>     qnam;
+    int                                 discoStatus = 0;
+    QList<HttpFileUpload::HttpHost>     discoHosts;
+    bool                                externalQnam = false;
+    std::list<HttpFileUpload::HttpHost> hosts;
 };
 
 HttpFileUploadManager::HttpFileUploadManager(Client *parent) : QObject(parent), d(new Private) { d->client = parent; }

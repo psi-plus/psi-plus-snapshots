@@ -114,19 +114,19 @@ void ServerInfoManager::checkPendingServiceQueries()
                 si.next();
                 if (!sqIt->nameHint.isEmpty()) {
                     if (sqIt->nameHint.isEmpty() || sqIt->nameHint.exactMatch(si.key())) {
-                        sqIt->servicesToQuery.append(si.key());
+                        sqIt->servicesToQuery.push_back(si.key());
                     } else if (sqIt->options & SQ_CheckAllOnNoMatch) {
-                        sqIt->spareServicesToQuery.append(si.key());
+                        sqIt->spareServicesToQuery.push_back(si.key());
                     }
                 } else {
-                    sqIt->servicesToQuery.append(si.key());
+                    sqIt->servicesToQuery.push_back(si.key());
                 }
             }
-            if (sqIt->servicesToQuery.isEmpty()) {
+            if (sqIt->servicesToQuery.empty()) {
                 sqIt->servicesToQuery = sqIt->spareServicesToQuery;
                 sqIt->spareServicesToQuery.clear();
             }
-            if (sqIt->servicesToQuery.isEmpty()) {
+            if (sqIt->servicesToQuery.empty()) {
                 sqIt->callback(QList<DiscoItem>());
                 _serviceQueries.erase(sqIt++);
                 continue;
@@ -194,7 +194,7 @@ void ServerInfoManager::checkPendingServiceQueries()
             ++jidIt;
         }
 
-        if (sqIt->result.isEmpty() && !hasInProgress && !sqIt->spareServicesToQuery.isEmpty()) {
+        if (sqIt->result.isEmpty() && !hasInProgress && !sqIt->spareServicesToQuery.empty()) {
             // we don't check sqIt->servicesToQuery.isEmpty() since it comes from other conditions
             // (sqIt->result.isEmpty() && !hasInProgress)
             sqIt->servicesToQuery = sqIt->spareServicesToQuery;

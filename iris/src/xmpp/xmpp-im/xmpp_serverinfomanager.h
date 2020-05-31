@@ -23,11 +23,12 @@
 #include "xmpp_caps.h"
 #include "xmpp_discoitem.h"
 
-#include <QLinkedList>
 #include <QObject>
 #include <QString>
 #include <QVariant>
 #include <functional>
+
+#include <list>
 
 namespace XMPP {
 class Client;
@@ -52,10 +53,10 @@ private:
         const QRegExp                                           nameHint;
         const SQOptions                                         options;
         const std::function<void(const QList<DiscoItem> &item)> callback;
-        QLinkedList<QString>                                    servicesToQuery;
-        QLinkedList<QString> spareServicesToQuery; // usually a fallback when the above is not matched
-        bool                 servicesToQueryDefined = false;
-        QList<DiscoItem>     result;
+        std::list<QString>                                      servicesToQuery;
+        std::list<QString> spareServicesToQuery; // usually a fallback when the above is not matched
+        bool               servicesToQueryDefined = false;
+        QList<DiscoItem>   result;
 
         ServiceQuery(const QString &type, const QString &category, const QList<QSet<QString>> &features,
                      const QRegExp &nameHint, const SQOptions &options,

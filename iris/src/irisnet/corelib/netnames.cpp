@@ -623,13 +623,21 @@ QDebug operator<<(QDebug dbg, const XMPP::WeightedNameRecordList &list)
     /* operator(QDebug, QMap const&) has a bug which makes it crash when trying to print the dereferenced end() iterator
      */
     if (!list.isEmpty()) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
         dbg.nospace() << "current=" << *list.currentPriorityGroup << Qt::endl;
+#else
+        dbg.nospace() << "current=" << *list.currentPriorityGroup << endl;
+#endif
     }
 
     dbg.nospace() << "{";
 
     for (int priority : list.priorityGroups.keys()) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
         dbg.nospace() << "\t" << priority << "->" << list.priorityGroups.value(priority) << Qt::endl;
+#else
+        dbg.nospace() << "\t" << priority << "->" << list.priorityGroups.value(priority) << endl;
+#endif
     }
 
     dbg.nospace() << "})";
