@@ -105,6 +105,7 @@ namespace Jingle { namespace S5B {
 
         QDomElement toXml(QDomDocument *doc) const;
         QString     toString() const;
+        inline      operator QString() const { return toString(); }
 
         void               connectToHost(const QString &key, State successState, QObject *callbackContext,
                                          std::function<void(bool)> callback, bool isUdp = false);

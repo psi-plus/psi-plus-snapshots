@@ -561,11 +561,15 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
     bool Candidate::operator==(const Candidate &other) const { return d.data() == other.d.data(); }
 
+    // ------------------------------------------------------------------
+    // Transport::Private
+    // ------------------------------------------------------------------
     class Transport::Private {
     public:
         enum PendingActions { NewCandidate = 1, CandidateUsed = 2, CandidateError = 4, Activated = 8, ProxyError = 16 };
 
         Transport *              q                            = nullptr;
+        bool                     p2pAllowed                   = true;
         bool                     offerSent                    = false;
         bool                     waitingAck                   = true;
         bool                     aborted                      = false;
@@ -822,12 +826,15 @@ namespace XMPP { namespace Jingle { namespace S5B {
             if (!disco) {
                 return;
             }
-            TcpPortServer::PortTypes types = TcpPortServer::Direct;
-            if (preference >= Candidate::AssistedPreference) {
-                types |= TcpPortServer::NatAssited;
-            }
-            if (preference >= Candidate::TunnelPreference) {
-                types |= TcpPortServer::Tunneled;
+            TcpPortServer::PortTypes types = TcpPortServer::NoType;
+            if (p2pAllowed) {
+                types |= TcpPortServer::Direct;
+                if (preference >= Candidate::AssistedPreference) {
+                    types |= TcpPortServer::NatAssited;
+                }
+                if (preference >= Candidate::TunnelPreference) {
+                    types |= TcpPortServer::Tunneled;
+                }
             }
             if (!disco->setTypeMask(types)) {
                 delete disco;
@@ -1036,6 +1043,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             if (localUsedCandidate && localUsedCandidate.state() != Candidate::Discarded) {
                 prio = localUsedCandidate.priority();
             }
+            // find highest priority withing connected remote candidates
             for (const auto &c : remoteCandidates) {
                 if (c.state() != Candidate::Discarded && c.state() >= Candidate::Pending && c.priority() > prio) {
                     prio = c.priority();
@@ -1199,39 +1207,47 @@ namespace XMPP { namespace Jingle { namespace S5B {
         bool handleIncomingCandidate(const QDomElement &transportEl)
         {
             QString candidateTag(QStringLiteral("candidate"));
-            int     candidatesAdded = 0;
+            bool    handled     = false;
+            bool    reallyAdded = false;
             for (QDomElement ce = transportEl.firstChildElement(candidateTag); !ce.isNull();
                  ce             = ce.nextSiblingElement(candidateTag)) {
                 Candidate c(q, ce);
                 if (!c) {
                     throw Stanza::Error(Stanza::Error::Cancel, Stanza::Error::BadRequest);
                 }
-                qDebug("new remote candidate: %s", qPrintable(c.toString()));
-                remoteCandidates.insert(c.cid(), c); // TODO check for collisions!
-                candidatesAdded++;
+                if (!p2pAllowed && c.type() != Candidate::Proxy) {
+                    qDebug("new remote candidate discarded with forbidden p2p: %s", qPrintable(c));
+                } else {
+                    qDebug("new remote candidate: %s", qPrintable(c.toString()));
+                    remoteCandidates.insert(c.cid(), c); // TODO check for collisions!
+                    reallyAdded = true;
+                }
+                handled = true;
             }
-            if (candidatesAdded) {
+            if (reallyAdded) {
                 pendingActions &= ~CandidateError;
                 localReportedCandidateError = false;
                 QTimer::singleShot(0, q, [this]() { tryConnectToRemoteCandidate(); });
-                return true;
             }
-            return false;
+            return handled;
         }
 
         bool handleIncomingCandidateUsed(const QDomElement &transportEl)
         {
             QDomElement el = transportEl.firstChildElement(QStringLiteral("candidate-used"));
             if (!el.isNull()) {
-                auto cUsed = localCandidates.value(el.attribute(QStringLiteral("cid")));
+                auto cid   = QStringLiteral("cid");
+                auto cUsed = localCandidates.value(el.attribute(cid));
                 if (!cUsed) {
                     throw Stanza::Error(Stanza::Error::Cancel, Stanza::Error::ItemNotFound,
-                                        "failed to find incoming candidate-used candidate");
+                                        QString("failed to find incoming candidate-used candidate %1").arg(cid));
                 }
                 if (cUsed.state() == Candidate::Pending) {
-                    if (!cUsed.isConnected()) {
-                        throw Stanza::Error(Stanza::Error::Cancel, Stanza::Error::NotAcceptable,
-                                            "incoming candidate-used refers a candidate w/o active socks connection");
+                    if (cUsed.type() != Candidate::Proxy && !cUsed.isConnected()) {
+                        throw Stanza::Error(
+                            Stanza::Error::Cancel, Stanza::Error::NotAcceptable,
+                            QString("incoming candidate-used refers a candidate w/o active socks connection: %1")
+                                .arg(QString(cUsed)));
                     }
                     cUsed.setState(Candidate::Accepted);
                     localUsedCandidate = cUsed;
@@ -1373,10 +1389,10 @@ namespace XMPP { namespace Jingle { namespace S5B {
         m->addKeyMapping(d->directAddr, this);
 
         auto scope = _pad.staticCast<Pad>()->discoScope();
-        d->disco   = scope->disco(); // FIXME store and handle signale. delete when not needed
+        d->disco   = scope->disco(); // FIXME store and handle signal. delete when not needed
 
         connect(d->disco, &TcpPortDiscoverer::portAvailable, this, [this]() { d->onLocalServerDiscovered(); });
-        d->onLocalServerDiscovered();
+        d->setLocalProbingMinimalPreference(0); // allow all on start
 
         d->discoS5BProxy();
 
@@ -1710,7 +1726,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             key  = qMakePair(remote, sid);
             key1 = makeKey(sid, remote, d->jingleManager->client()->jid());
             key2 = makeKey(sid, d->jingleManager->client()->jid(), remote);
-        } while (d->sids.contains(key) || std::find_if(servers.begin(), servers.end(), servChecker) != servers.end());
+        } while (d->sids.contains(key) || std::any_of(servers.begin(), servers.end(), servChecker));
         return sid;
     }
 
