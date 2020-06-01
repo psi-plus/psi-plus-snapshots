@@ -28,6 +28,7 @@
 #ifdef Q_OS_WIN
 #include "applicationinfo.h"
 #endif
+#include "config.h"
 #include "languagemanager.h"
 
 #include <QCoreApplication>
@@ -83,6 +84,13 @@ void HunspellChecker::getDictPaths()
         dictPaths_ = dictPathSet.values();
 #else
         dictPaths_ = dictPathSet.toList();
+#endif
+#if defined(Q_OS_LINUX) && defined(SHARE_SUFF)
+    // Special hack for correct work of AppImage, snap and flatpak builds
+    static const QString &&additionalPath =
+            QDir().absoluteFilePath(qApp->applicationDirPath() + "/../share/" SHARE_SUFF);
+    dictPaths_.prepend(additionalPath + "/hunspell");
+    dictPaths_.prepend(additionalPath + "/myspell");
 #endif
     }
 }
