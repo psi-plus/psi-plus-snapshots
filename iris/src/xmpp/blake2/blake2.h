@@ -124,12 +124,6 @@ typedef struct blake2xb_state__ {
     blake2b_param P[1];
 } blake2xb_state;
 
-/* Padded structs result in a compile-time error */
-enum {
-    BLAKE2_DUMMY_1 = 1 / (sizeof(blake2s_param) == BLAKE2S_OUTBYTES),
-    BLAKE2_DUMMY_2 = 1 / (sizeof(blake2b_param) == BLAKE2B_OUTBYTES)
-};
-
 /* Streaming API */
 int blake2s_init(blake2s_state *S, size_t outlen);
 int blake2s_init_key(blake2s_state *S, size_t outlen, const void *key, size_t keylen);

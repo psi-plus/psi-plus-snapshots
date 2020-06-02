@@ -499,7 +499,7 @@ public:
         }
 
         // max pairs is 100 * number of components
-        int max_pairs = 100 * components.size();
+        int max_pairs = 100 * int(components.size());
         while (checkList.pairs.count() > max_pairs)
             checkList.pairs.removeLast();
 #ifdef ICE_DEBUG

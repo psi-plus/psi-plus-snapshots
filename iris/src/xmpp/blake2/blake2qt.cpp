@@ -5,6 +5,10 @@
 #include <QIODevice>
 
 namespace XMPP {
+/* Padded structs result in a compile-time error */
+static_assert(sizeof(blake2s_param) == BLAKE2S_OUTBYTES, "sizeof(blake2s_param) != BLAKE2S_OUTBYTES");
+static_assert(sizeof(blake2b_param) == BLAKE2B_OUTBYTES, "sizeof(blake2b_param) != BLAKE2B_OUTBYTES");
+
 QByteArray computeBlake2Hash(const QByteArray &ba, Blake2DigestSize digestSize)
 {
     // otherwise try to libb2 or bundled reference implementation depending on which is available
