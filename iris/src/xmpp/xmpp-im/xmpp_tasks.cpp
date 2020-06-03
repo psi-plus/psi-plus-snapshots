@@ -845,6 +845,7 @@ void JT_Message::onGo()
     // See: XEP-0380: Explicit Message Encryption
     const bool wasEncrypted = !e.firstChildElement("encryption").isNull();
     m.setWasEncrypted(wasEncrypted);
+    m.setEncryptionProtocol(encryptionProtocol(e));
 
     // if the element is null, then the encryption is happening asynchronously
     if (!e.isNull()) {
@@ -936,6 +937,7 @@ bool JT_PushMessage::take(const QDomElement &e)
     // See: XEP-0380: Explicit Message Encryption
     const bool wasEncrypted = !e1.firstChildElement("encryption").isNull();
     m.setWasEncrypted(wasEncrypted);
+    m.setEncryptionProtocol(encryptionProtocol(e));
 
     emit message(m);
     return true;

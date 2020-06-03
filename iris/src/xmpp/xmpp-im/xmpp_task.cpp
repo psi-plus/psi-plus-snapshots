@@ -296,3 +296,27 @@ bool Task::iqVerify(const QDomElement &x, const Jid &to, const QString &id, cons
 
     return true;
 }
+
+QString Task::encryptionProtocol(const QDomElement &e) const
+{
+    if (e.elementsByTagNameNS("urn:xmpp:eme:0", "encryption").isEmpty())
+        return QString();
+
+    QDomElement encryption = e.elementsByTagNameNS("urn:xmpp:eme:0", "encryption").at(0).toElement();
+    const QString &&ns = encryption.attribute("namespace");
+
+    // https://xmpp.org/extensions/xep-0380.html#protocols
+    QString protocol;
+    if (ns == "urn:xmpp:otr:0") {
+        protocol = "OTR";
+    } else if (ns == "jabber:x:encrypted") {
+        protocol = "Legacy OpenPGP";
+    } else if (ns == "urn:xmpp:openpgp:0") {
+        protocol = "OpenPGP for XMPP";
+    } else if (ns == "eu.siacs.conversations.axolotl") {
+        protocol = "OMEMO";
+    } else if (encryption.attribute("name").isEmpty()) {
+        protocol = encryption.attribute("name");
+    }
+    return protocol;
+}

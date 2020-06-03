@@ -71,6 +71,7 @@ protected:
     void         debug(const char *, ...);
     void         debug(const QString &);
     bool         iqVerify(const QDomElement &x, const Jid &to, const QString &id, const QString &xmlns = "");
+    QString      encryptionProtocol(const QDomElement &) const;
 
 private slots:
     void clientDisconnected();

@@ -207,6 +207,10 @@ public:
     QString  originId() const;
     void     setOriginId(const QString &id);
 
+    // XEP-0380
+    QString  encryptionProtocol() const;
+    void     setEncryptionProtocol(const QString &protocol);
+
     // XEP-0385 and XEP-0372
     QList<Reference> references() const;
     void             addReference(const Reference &r);

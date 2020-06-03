@@ -967,6 +967,7 @@ public:
     Message::ProcessingHints processingHints;
     QString                  replaceId;
     QString                  originId;   // XEP-0359
+    QString                  encryptionProtocol; // XEP-0380
     Message::StanzaId        stanzaId;   // XEP-0359
     QList<Reference>         references; // XEP-0385 and XEP-0372
 };
@@ -1276,6 +1277,10 @@ void Message::setStanzaId(const Message::StanzaId &id) { MessageD()->stanzaId = 
 QString Message::originId() const { return d ? d->originId : QString(); }
 
 void Message::setOriginId(const QString &id) { MessageD()->originId = id; }
+
+QString Message::encryptionProtocol() const { return d ? d->encryptionProtocol : QString(); }
+
+void Message::setEncryptionProtocol(const QString &protocol) { MessageD()->encryptionProtocol = protocol; }
 
 QList<Reference> Message::references() const { return d ? d->references : QList<Reference>(); }
 
