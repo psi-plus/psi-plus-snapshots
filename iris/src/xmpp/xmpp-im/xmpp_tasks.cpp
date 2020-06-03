@@ -842,7 +842,8 @@ void JT_Message::onGo()
         Q_UNUSED(encryptionHandler->encryptMessageElement(e));
     }
 
-    const bool wasEncrypted = !e.firstChildElement("encrypted").isNull();
+    // See: XEP-0380: Explicit Message Encryption
+    const bool wasEncrypted = !e.firstChildElement("encryption").isNull();
     m.setWasEncrypted(wasEncrypted);
 
     // if the element is null, then the encryption is happening asynchronously
@@ -932,7 +933,8 @@ bool JT_PushMessage::take(const QDomElement &e)
         m.setCarbonDirection(cd);
     }
 
-    const bool wasEncrypted = !e1.firstChildElement("encrypted").isNull();
+    // See: XEP-0380: Explicit Message Encryption
+    const bool wasEncrypted = !e1.firstChildElement("encryption").isNull();
     m.setWasEncrypted(wasEncrypted);
 
     emit message(m);
