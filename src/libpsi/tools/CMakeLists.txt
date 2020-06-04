@@ -158,7 +158,7 @@ elseif(HAIKU)
         # globalshortcut
         globalshortcut/globalshortcutmanager_haiku.cpp
         )
-else()
+elseif(USE_X11)
     list(APPEND HEADERS
         # systemwatch
         systemwatch/systemwatch_unix.h
@@ -173,6 +173,22 @@ else()
 
         # globalshortcut
         globalshortcut/globalshortcutmanager_x11.cpp
+        )
+else()
+    list(APPEND HEADERS
+        # systemwatch
+        systemwatch/systemwatch_unix.h
+        )
+
+    list(APPEND SOURCES
+        #idle
+        idle/idle_x11.cpp
+
+        # systemwatch
+        systemwatch/systemwatch_unix.cpp
+
+        # globalshortcut
+        globalshortcut/globalshortcutmanager_stub.cpp
         )
 endif()
 
