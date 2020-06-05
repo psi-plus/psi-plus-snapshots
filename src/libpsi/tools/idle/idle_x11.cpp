@@ -80,10 +80,12 @@ bool IdlePlatform::init()
     old_handler = XSetErrorHandler(xerrhandler);
 
     int event_base, error_base;
+#if !defined(LIMIT_X11_USAGE)
     if (XScreenSaverQueryExtension(QX11Info::display(), &event_base, &error_base)) {
         d->ss_info = XScreenSaverAllocInfo();
         return true;
     }
+#endif
     return false;
 }
 
