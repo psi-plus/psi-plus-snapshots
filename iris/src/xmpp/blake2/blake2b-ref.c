@@ -22,8 +22,8 @@
 #include <string.h>
 
 /* Padded structs result in a compile-time error */
-static_assert(sizeof(blake2s_param) == BLAKE2S_OUTBYTES, "sizeof(blake2s_param) != BLAKE2S_OUTBYTES");
-static_assert(sizeof(blake2b_param) == BLAKE2B_OUTBYTES, "sizeof(blake2b_param) != BLAKE2B_OUTBYTES");
+_Static_assert(sizeof(blake2s_param) == BLAKE2S_OUTBYTES, "sizeof(blake2s_param) != BLAKE2S_OUTBYTES");
+_Static_assert(sizeof(blake2b_param) == BLAKE2B_OUTBYTES, "sizeof(blake2b_param) != BLAKE2B_OUTBYTES");
 
 static const uint64_t blake2b_IV[8] =
 {

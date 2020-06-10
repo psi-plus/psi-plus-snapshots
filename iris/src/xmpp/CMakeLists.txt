@@ -172,11 +172,17 @@ set(SOURCES
     xmpp-im/xmpp_features.cpp
     )
 
+if(NOT MSVC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11")
+endif()
+
 add_library(iris
     STATIC
     ${HEADERS}
     ${SOURCES}
 )
+
+set_property(TARGET iris PROPERTY C_STANDARD 11)
 
 if(B2_FOUND)
     message(STATUS "Building with system blake2 library")
