@@ -361,7 +361,7 @@ bool XmlProtocol::processStep()
     return baseStep(pe);
 }
 
-QString XmlProtocol::xmlEncoding() const { return xml.encoding(); }
+QString XmlProtocol::xmlEncoding() const { return xml.encoding().toString(); }
 
 QString XmlProtocol::elementToString(const QDomElement &e, bool clip)
 {

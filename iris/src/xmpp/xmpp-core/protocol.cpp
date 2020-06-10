@@ -419,12 +419,12 @@ void BasicProtocol::handleDocOpen(const Parser::Event &pe)
     }
 
     if (pe.namespaceURI() == NS_ETHERX && pe.localName() == "stream") {
-        QXmlAttributes atts = pe.atts();
+        auto atts = pe.atts();
 
         // grab the version
-        int     major  = 0;
-        int     minor  = 0;
-        QString verstr = atts.value("version");
+        int  major  = 0;
+        int  minor  = 0;
+        auto verstr = atts.value("version");
         if (!verstr.isEmpty()) {
             int n = verstr.indexOf('.');
             if (n != -1) {
@@ -438,16 +438,16 @@ void BasicProtocol::handleDocOpen(const Parser::Event &pe)
         version = Version(major, minor);
 
         if (isIncoming()) {
-            to               = atts.value("to");
-            QString peerLang = atts.value(NS_XML, "lang");
+            to            = atts.value("to").toString();
+            auto peerLang = atts.value(NS_XML, "lang");
             if (!peerLang.isEmpty())
-                lang = peerLang;
+                lang = peerLang.toString();
         }
         // outgoing
         else {
-            from = atts.value("from");
-            lang = atts.value(NS_XML, "lang");
-            id   = atts.value("id");
+            from = atts.value("from").toString();
+            lang = atts.value(NS_XML, "lang").toString();
+            id   = atts.value("id").toString();
         }
 
         handleStreamOpen(pe);

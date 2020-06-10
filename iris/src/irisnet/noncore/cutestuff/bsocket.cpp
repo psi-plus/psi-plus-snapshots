@@ -112,8 +112,8 @@ public:
         sd.sock->setReadBufferSize(READBUFSIZE);
         sd.relay    = new QTcpSocketSignalRelay(sd.sock, this);
         sd.resolver = nullptr;
-        connect(sd.relay, SIGNAL(connected()), SLOT(qs_connected()));
-        connect(sd.relay, SIGNAL(error(QAbstractSocket::SocketError)), SLOT(qs_error(QAbstractSocket::SocketError)));
+        connect(sd.relay, &QTcpSocketSignalRelay::connected, this, &HappyEyeballsConnector::qs_connected);
+        connect(sd.relay, &QTcpSocketSignalRelay::error, this, &HappyEyeballsConnector::qs_error);
         sockets.append(sd);
         return sockets[sockets.count() - 1];
     }
@@ -259,6 +259,7 @@ private slots:
 #ifdef BS_DEBUG
         BSDEBUG;
 #endif
+        QPointer<HappyEyeballsConnector> valid(this);
         setCurrentByRelay(static_cast<QTcpSocketSignalRelay *>(sender()));
         for (int i = 0; i < sockets.count(); i++) {
             if (i != lastIndex) {
@@ -268,6 +269,8 @@ private slots:
                 sockets[i].state = Connected;
             }
             emit connected();
+            if (!valid)
+                return;
         }
     }
 
@@ -408,7 +411,9 @@ void BSocket::resetConnection(bool clear)
     BSDEBUG << clear;
 #endif
     if (d->connector) {
-        delete d->connector; // fixme: deleteLater?
+        d->connector->deleteLater();
+        disconnect(d->connector);
+        d->connector = nullptr;
     }
 
     if (d->qsock) {
@@ -446,9 +451,8 @@ void BSocket::ensureConnector()
 {
     if (!d->connector) {
         d->connector = new HappyEyeballsConnector(this);
-        connect(d->connector, SIGNAL(connected()), SLOT(qs_connected()));
-        connect(d->connector, SIGNAL(error(QAbstractSocket::SocketError)),
-                SLOT(qs_error(QAbstractSocket::SocketError)));
+        connect(d->connector, &HappyEyeballsConnector::connected, this, &BSocket::qs_connected);
+        connect(d->connector, &HappyEyeballsConnector::error, this, &BSocket::qs_error);
     }
 }
 
@@ -634,11 +638,12 @@ void BSocket::qs_connected_step2(bool signalConnected)
 #ifdef BS_DEBUG
     BSDEBUG << "Connected";
 #endif
+    QPointer<BSocket> valid(this);
     if (signalConnected) {
         emit connected();
     }
 
-    if (d->qsock->bytesAvailable()) {
+    if (valid && d->qsock->bytesAvailable()) {
         qs_readyRead();
     }
 }

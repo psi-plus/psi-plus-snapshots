@@ -1,6 +1,6 @@
 /*
  * parser.h - parse an XMPP "document"
- * Copyright (C) 2003  Justin Karneges
+ * Copyright (C) 2003-2020  Justin Karneges, Sergey Ilinykh
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,14 +20,20 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include <qdom.h>
-#include <qxml.h>
+#include <QDomElement>
+#include <QExplicitlySharedDataPointer>
+#include <QXmlStreamAttributes>
+
+#include <memory>
 
 namespace XMPP {
+
 class Parser {
 public:
-    Parser();
-    ~Parser();
+    struct NSPrefix {
+        QString name;
+        QString value;
+    };
 
     class Event {
     public:
@@ -44,10 +50,10 @@ public:
         QString nsprefix(const QString &s = QString()) const;
 
         // for document open / close
-        QString        namespaceURI() const;
-        QString        localName() const;
-        QString        qName() const;
-        QXmlAttributes atts() const;
+        QString              namespaceURI() const;
+        QString              localName() const;
+        QString              qName() const;
+        QXmlStreamAttributes atts() const;
 
         // for element
         QDomElement element() const;
@@ -57,27 +63,32 @@ public:
 
         // setup
         void setDocumentOpen(const QString &namespaceURI, const QString &localName, const QString &qName,
-                             const QXmlAttributes &atts, const QStringList &nsnames, const QStringList &nsvalues);
+                             const QXmlStreamAttributes &atts, const QXmlStreamNamespaceDeclarations &nsPrefixes);
         void setDocumentClose(const QString &namespaceURI, const QString &localName, const QString &qName);
         void setElement(const QDomElement &elem);
         void setError();
         void setActualString(const QString &);
 
     private:
+        void ensureD();
         class Private;
-        Private *d;
+        QExplicitlySharedDataPointer<Private> d;
     };
+
+    Parser();
+    ~Parser();
 
     void       reset();
     void       appendData(const QByteArray &a);
     Event      readNext();
     QByteArray unprocessed() const;
-    QString    encoding() const;
+    QStringRef encoding() const;
 
 private:
     class Private;
-    Private *d;
+    std::unique_ptr<Private> d;
 };
+
 } // namespace XMPP
 
 #endif // PARSER_H
