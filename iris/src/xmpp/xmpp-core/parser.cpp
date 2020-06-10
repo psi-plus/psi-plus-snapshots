@@ -245,7 +245,8 @@ public:
             qPrintable(
                 QString("XML reader hasn't reported open/close tags mismatch. expected close for <%1 xmlns=\"%2\"> "
                         "but got close for <%3 xmlns=\"%4\">")
-                    .arg(curElement.tagName(), curElement.namespaceURI(), reader.name(), reader.namespaceUri())));
+                    .arg(curElement.tagName(), curElement.namespaceURI(), reader.name().toString(),
+                         reader.namespaceUri().toString())));
 #if 0
         if (element.isNull()) {
             Event e;
