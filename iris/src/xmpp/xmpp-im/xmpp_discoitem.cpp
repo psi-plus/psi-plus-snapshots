@@ -249,6 +249,16 @@ void DiscoItem::setIdentities(const Identities &i)
 
 const QList<XData> &DiscoItem::extensions() const { return d->exts; }
 
+XData DiscoItem::findExtension(XData::Type xdataType, const QString &formType) const
+{
+    for (const auto &x : d->exts) {
+        if (x.type() == xdataType && (formType.isEmpty() || x.registrarType() == formType)) {
+            return x;
+        }
+    }
+    return XData(XData::Data_Invalid);
+}
+
 void DiscoItem::setExtensions(const QList<XData> &extlist) { d->exts = extlist; }
 
 XData DiscoItem::registeredExtension(const QString &ns) const

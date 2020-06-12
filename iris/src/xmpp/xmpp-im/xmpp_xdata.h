@@ -34,15 +34,15 @@ class QDomElement;
 namespace XMPP {
 class XData {
 public:
-    XData();
+    enum Type { Data_Form, Data_Result, Data_Submit, Data_Cancel, Data_Invalid };
+
+    XData(Type type = Data_Form);
 
     QString title() const;
     void    setTitle(const QString &);
 
     QString instructions() const;
     void    setInstructions(const QString &);
-
-    enum Type { Data_Form, Data_Result, Data_Submit, Data_Cancel };
 
     Type    type() const;
     void    setType(Type);
@@ -151,9 +151,9 @@ public:
     typedef QList<Field> FieldList;
 
     const FieldList &fields() const;
-    Field     getField(const QString &var) const;
-    Field &   fieldRef(const QString &var);
-    void      setFields(const FieldList &fl);
+    Field            getField(const QString &var) const;
+    Field &          fieldRef(const QString &var);
+    void             setFields(const FieldList &fl);
 
 private:
     class Private : public QSharedData {

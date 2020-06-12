@@ -271,13 +271,12 @@ void ServerInfoManager::disco_finished()
                 _hasPEP = true;
         }
 
-        for (const auto &x : jt->item().extensions()) {
-            if (x.type() == XData::Data_Result
-                && x.registrarType() == QLatin1String("http://jabber.org/network/serverinfo")) {
-                for (const auto &f : x.fields()) {
-                    if (f.type() == XData::Field::Field_ListMulti) {
-                        _extraServerInfo.insert(f.var(), f.value()); // covers XEP-0157
-                    }
+        auto servInfo
+            = jt->item().findExtension(XData::Data_Result, QLatin1String("http://jabber.org/network/serverinfo"));
+        if (servInfo.isValid()) {
+            for (const auto &f : servInfo.fields()) {
+                if (f.type() == XData::Field::Field_ListMulti) {
+                    _extraServerInfo.insert(f.var(), f.value()); // covers XEP-0157
                 }
             }
         }

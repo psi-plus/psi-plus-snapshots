@@ -75,6 +75,7 @@ public:
     inline void       setIdentities(const Identity &id) { setIdentities(Identities() << id); }
 
     const QList<XData> &extensions() const;
+    XData               findExtension(XData::Type xdataType, const QString &formType = QString()) const;
     void                setExtensions(const QList<XData> &extlist);
     XData               registeredExtension(const QString &ns) const;
 

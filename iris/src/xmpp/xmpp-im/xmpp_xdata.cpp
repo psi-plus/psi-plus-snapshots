@@ -314,7 +314,7 @@ bool XData::Field::MediaElement::checkSupport(const QStringList &wildcards)
 // XData
 //----------------------------------------------------------------------------
 
-XData::XData() : d(new Private) { d->type = Data_Form; }
+XData::XData(Type type) : d(new Private) { d->type = type; }
 
 QString XData::title() const { return d->title; }
 
@@ -468,6 +468,9 @@ const QList<XData::ReportItem> &XData::reportItems() const { return d->reportIte
 
 bool XData::isValid() const
 {
+    if (d->type == Data_Invalid)
+        return false;
+
     for (const Field &f : d->fields) {
         if (!f.isValid())
             return false;
