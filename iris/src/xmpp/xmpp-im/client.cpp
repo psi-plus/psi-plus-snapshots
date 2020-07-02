@@ -504,43 +504,6 @@ void Client::streamCloseFinished()
     closeFinished();
 }*/
 
-static QDomElement oldStyleNS(const QDomElement &e)
-{
-    // find closest parent with a namespace
-    QDomNode par = e.parentNode();
-    while (!par.isNull() && par.namespaceURI().isNull())
-        par = par.parentNode();
-    bool noShowNS = false;
-    if (!par.isNull() && par.namespaceURI() == e.namespaceURI())
-        noShowNS = true;
-
-    QDomElement i;
-    int         x;
-    // if(noShowNS)
-    i = e.ownerDocument().createElement(e.tagName());
-    // else
-    //    i = e.ownerDocument().createElementNS(e.namespaceURI(), e.tagName());
-
-    // copy attributes
-    QDomNamedNodeMap al = e.attributes();
-    for (x = 0; x < al.count(); ++x)
-        i.setAttributeNode(al.item(x).cloneNode().toAttr());
-
-    if (!noShowNS)
-        i.setAttribute("xmlns", e.namespaceURI());
-
-    // copy children
-    QDomNodeList nl = e.childNodes();
-    for (x = 0; x < nl.count(); ++x) {
-        QDomNode n = nl.item(x);
-        if (n.isElement())
-            i.appendChild(oldStyleNS(n.toElement()));
-        else
-            i.appendChild(n.cloneNode());
-    }
-    return i;
-}
-
 void Client::streamReadyRead()
 {
     // fprintf(stderr, "\tClientStream::streamReadyRead\n");
@@ -1088,9 +1051,19 @@ CapsSpec Client::caps() const { return d->caps; }
 
 CapsSpec Client::serverCaps() const { return d->serverCaps; }
 
-void Client::setOSName(const QString &name) { d->osName = name; }
+void Client::setOSName(const QString &name)
+{
+    if (d->osName != name)
+        d->caps.resetVersion();
+    d->osName = name;
+}
 
-void Client::setOSVersion(const QString &version) { d->osVersion = version; }
+void Client::setOSVersion(const QString &version)
+{
+    if (d->osVersion != version)
+        d->caps.resetVersion();
+    d->osVersion = version;
+}
 
 void Client::setTimeZone(const QString &name, int offset)
 {
@@ -1099,9 +1072,19 @@ void Client::setTimeZone(const QString &name, int offset)
     d->useTzoffset = true;
 }
 
-void Client::setClientName(const QString &s) { d->clientName = s; }
+void Client::setClientName(const QString &s)
+{
+    if (d->clientName != s)
+        d->caps.resetVersion();
+    d->clientName = s;
+}
 
-void Client::setClientVersion(const QString &s) { d->clientVersion = s; }
+void Client::setClientVersion(const QString &s)
+{
+    if (d->clientVersion != s)
+        d->caps.resetVersion();
+    d->clientVersion = s;
+}
 
 void Client::setCaps(const CapsSpec &s) { d->caps = s; }
 

@@ -20,6 +20,7 @@
 #ifndef CS_ZIP_H
 #define CS_ZIP_H
 
+#include <QHash>
 #include <QString>
 
 class QByteArray;
@@ -44,14 +45,16 @@ public:
     bool open();
     void close();
 
-    const QStringList &list() const;
-    bool               readFile(const QString &, QByteArray *, int max = 0);
-    bool               fileExists(const QString &);
+    QHash<QString, QByteArray> unpackAll();
+    const QStringList &        list() const;
+    bool                       readFile(const QString &, QByteArray *, int max = 0);
+    bool                       fileExists(const QString &);
 
 private:
     class UnZipPrivate *d;
 
     bool getList();
+    bool readCurrentFile(QByteArray *buf, int max = 0);
 };
 
 #endif // CS_ZIP_H
