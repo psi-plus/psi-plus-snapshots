@@ -125,7 +125,6 @@ elseif(USE_QJDNS)
     include_directories( ${QJDns_INCLUDE_DIR} )
 endif()
 
-find_package(IDN REQUIRED)
 find_package(B2 QUIET)
 if(B2_FOUND)
     message(STATUS "Found B2: ${B2_LIBRARY}")
@@ -133,5 +132,6 @@ endif()
 
 add_definitions(-DIRISNET_STATIC)
 
+add_subdirectory(3rdparty/stringprep)
 add_subdirectory(src/irisnet)
 add_subdirectory(src/xmpp)

@@ -31,11 +31,6 @@ windows {
         LIBS += -lqcad
     }
 
-    contains(LIBS, -lidn) {
-        LIBS -= -lidn
-        LIBS += -lidn
-    }
-
     contains(LIBS, -lz) {
         LIBS -= -lz
         LIBS += -lz

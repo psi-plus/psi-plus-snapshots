@@ -16,7 +16,6 @@ include_directories(
     ${ABS_PARENT_DIR}/irisnet/corelib
     xmpp-core
     xmpp-im
-    ${IDN_INCLUDE_DIRS}
     ${ZLIB_INCLUDE_DIRS}
     ${QCA_INCLUDES}
     )
@@ -203,7 +202,7 @@ if( SEPARATE_QJDNS AND WIN32)
     set(EXTRA_LDFLAGS ws2_32)
 endif()
 
-target_link_libraries(iris ${IDN_LIBRARY} ${ZLIB_LIBRARY} ${EXTRA_LDFLAGS})
+target_link_libraries(iris ${ZLIB_LIBRARY} ${EXTRA_LDFLAGS} stringprep)
 target_link_libraries(iris irisnet Qt5::Core Qt5::Gui Qt5::Network Qt5::Xml ${qca_LIB})
 target_compile_definitions(iris INTERFACE IRISNET_STATIC)
 target_include_directories(iris INTERFACE ${ABS_ROOT_DIR}/include ${ABS_ROOT_DIR}/include/iris ${ABS_PARENT_DIR})

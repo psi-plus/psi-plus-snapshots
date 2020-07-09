@@ -4,7 +4,7 @@ TEMPLATE = lib
 QT      -= gui
 TARGET   = irisnet
 DESTDIR  = $$IRIS_BASE/lib
-CONFIG  += staticlib create_prl
+CONFIG  += staticlib create_prl crypto
 
 VERSION = 1.0.0
 

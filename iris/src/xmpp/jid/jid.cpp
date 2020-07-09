@@ -23,8 +23,8 @@
 #include "irisnetglobal_p.h"
 #endif
 
+#include "qstringprep.h"
 #include <QCoreApplication>
-#include <stringprep.h>
 
 using namespace XMPP;
 
@@ -51,16 +51,13 @@ bool StringPrepCache::nameprep(const QString &in, int maxbytes, QString &out)
         return true;
     }
 
-    QByteArray cs = in.toUtf8();
-    cs.resize(maxbytes);
-    if (stringprep(cs.data(), maxbytes, (Stringprep_profile_flags)0, stringprep_nameprep) != 0) {
+    out = in;
+    if (stringprep(out, (Stringprep_profile_flags)0, stringprep_nameprep) != 0 || out.size() > maxbytes) {
         that->nameprep_table.insert(in, QString());
         return false;
     }
 
-    QString norm = QString::fromUtf8(cs);
-    that->nameprep_table.insert(in, norm);
-    out = norm;
+    that->nameprep_table.insert(in, out);
     return true;
 }
 
@@ -82,16 +79,13 @@ bool StringPrepCache::nodeprep(const QString &in, int maxbytes, QString &out)
         return true;
     }
 
-    QByteArray cs = in.toUtf8();
-    cs.resize(maxbytes);
-    if (stringprep(cs.data(), maxbytes, (Stringprep_profile_flags)0, stringprep_xmpp_nodeprep) != 0) {
+    out = in;
+    if (stringprep(out, (Stringprep_profile_flags)0, stringprep_xmpp_nodeprep) != 0 || out.size() > maxbytes) {
         that->nodeprep_table.insert(in, QString());
         return false;
     }
 
-    QString norm = QString::fromUtf8(cs);
-    that->nodeprep_table.insert(in, norm);
-    out = norm;
+    that->nodeprep_table.insert(in, out);
     return true;
 }
 
@@ -113,16 +107,13 @@ bool StringPrepCache::resourceprep(const QString &in, int maxbytes, QString &out
         return true;
     }
 
-    QByteArray cs = in.toUtf8();
-    cs.resize(maxbytes);
-    if (stringprep(cs.data(), maxbytes, (Stringprep_profile_flags)0, stringprep_xmpp_resourceprep) != 0) {
+    out = in;
+    if (stringprep(out, (Stringprep_profile_flags)0, stringprep_xmpp_resourceprep) != 0 || out.size() > maxbytes) {
         that->resourceprep_table.insert(in, QString());
         return false;
     }
 
-    QString norm = QString::fromUtf8(cs);
-    that->resourceprep_table.insert(in, norm);
-    out = norm;
+    that->resourceprep_table.insert(in, out);
     return true;
 }
 
@@ -144,16 +135,13 @@ bool StringPrepCache::saslprep(const QString &in, int maxbytes, QString &out)
         return true;
     }
 
-    QByteArray cs = in.toUtf8();
-    cs.resize(maxbytes);
-    if (stringprep(cs.data(), maxbytes, (Stringprep_profile_flags)0, stringprep_saslprep) != 0) {
+    out = in;
+    if (stringprep(out, (Stringprep_profile_flags)0, stringprep_saslprep) != 0 || out.size() > maxbytes) {
         that->saslprep_table.insert(in, QString());
         return false;
     }
 
-    QString norm = QString::fromUtf8(cs);
-    that->saslprep_table.insert(in, norm);
-    out = norm;
+    that->saslprep_table.insert(in, out);
     return true;
 }
 
