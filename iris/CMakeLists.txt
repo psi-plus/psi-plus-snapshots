@@ -130,7 +130,7 @@ if(B2_FOUND)
     message(STATUS "Found B2: ${B2_LIBRARY}")
 endif()
 
-add_definitions(-DIRISNET_STATIC)
+add_definitions(-DIRISNET_STATIC -DQSTRINGPREP_BUILDING)
 
 add_subdirectory(3rdparty/stringprep)
 add_subdirectory(src/irisnet)

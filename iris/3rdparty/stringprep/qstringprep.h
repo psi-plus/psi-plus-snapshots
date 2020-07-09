@@ -32,7 +32,7 @@
 
 #include <QtCore/QtGlobal>
 
-#if defined(LIBIDN_BUILDING)
+#if defined(QSTRINGPREP_BUILDING)
 #define IDNAPI Q_DECL_EXPORT
 #else
 #define IDNAPI Q_DECL_IMPORT

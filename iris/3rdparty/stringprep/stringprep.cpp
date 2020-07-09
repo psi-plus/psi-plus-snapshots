@@ -80,10 +80,10 @@ static std::ptrdiff_t stringprep_find_character_in_table(uint32_t ucs4, const St
     return p ? (p - table) : -1;
 }
 
-static std::ptrdiff_t stringprep_find_string_in_table(uint *ucs4, int len, size_t *tablepos,
+static std::ptrdiff_t stringprep_find_string_in_table(uint *ucs4, size_t len, size_t *tablepos,
                                                       const Stringprep_table_element *table, size_t table_size)
 {
-    int            j;
+    size_t         j;
     std::ptrdiff_t pos;
 
     for (j = 0; j < len; j++)
@@ -109,7 +109,7 @@ static int stringprep_apply_table_to_string(QVector<uint> &ucs4, const Stringpre
             ;
 
         if (maplen > 1) {
-            ucs4.resize(ucs4.size() + maplen - 1);
+            ucs4.resize(ucs4.size() + int(maplen) - 1);
         }
 
         memmove(src + pos + maplen, src + pos + 1, sizeof(uint32_t) * (srclen - pos - 1));

@@ -18,7 +18,7 @@ add_library(stringprep STATIC
   profiles.cpp
   rfc3454.cpp
 )
-target_compile_definitions(stringprep PRIVATE LIBIDN_BUILDING)
+target_compile_definitions(stringprep PRIVATE QSTRINGPREP_BUILDING)
 target_include_directories(stringprep PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
