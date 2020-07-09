@@ -30,6 +30,7 @@
 #include <QString>
 #include <QVector>
 
+#include <cstddef>
 #include <stdlib.h>
 
 #include "qstringprep.h"
@@ -43,8 +44,8 @@ static int _compare_table_element(const uint32_t *c, const Stringprep_table_elem
     return 0;
 }
 
-static qsizetype stringprep_find_character_in_table(uint32_t ucs4, const Stringprep_table_element *table,
-                                                    size_t table_size)
+static std::ptrdiff_t stringprep_find_character_in_table(uint32_t ucs4, const Stringprep_table_element *table,
+                                                         size_t table_size)
 {
     /* This is where typical uses of Libidn spends very close to all CPU
        time and causes most cache misses.  One could easily do a binary
@@ -64,7 +65,7 @@ static qsizetype stringprep_find_character_in_table(uint32_t ucs4, const Stringp
      * There are still ~2 million calls to bsearch() which make ~30% of CPU time used.
      * Most time is spent in _g_utf8_normalize_wc().
 
-    qsizetype i;
+    std::ptrdiff_t i;
 
     for (i = 0; table[i].start || table[i].end; i++)
       if (ucs4 >= table[i].start &&
@@ -79,11 +80,11 @@ static qsizetype stringprep_find_character_in_table(uint32_t ucs4, const Stringp
     return p ? (p - table) : -1;
 }
 
-static qsizetype stringprep_find_string_in_table(uint *ucs4, int len, size_t *tablepos,
-                                                 const Stringprep_table_element *table, size_t table_size)
+static std::ptrdiff_t stringprep_find_string_in_table(uint *ucs4, int len, size_t *tablepos,
+                                                      const Stringprep_table_element *table, size_t table_size)
 {
-    int       j;
-    qsizetype pos;
+    int            j;
+    std::ptrdiff_t pos;
 
     for (j = 0; j < len; j++)
         if ((pos = stringprep_find_character_in_table(ucs4[j], table, table_size)) != -1) {
@@ -98,10 +99,10 @@ static qsizetype stringprep_find_string_in_table(uint *ucs4, int len, size_t *ta
 static int stringprep_apply_table_to_string(QVector<uint> &ucs4, const Stringprep_table_element *table,
                                             size_t table_size)
 {
-    qsizetype pos;
-    size_t    i, maplen;
-    uint32_t *src    = ucs4.data(); /* points to unprocessed data */
-    size_t    srclen = ucs4.size(); /* length of unprocessed data */
+    std::ptrdiff_t pos;
+    size_t         i, maplen;
+    uint32_t *     src    = ucs4.data(); /* points to unprocessed data */
+    size_t         srclen = ucs4.size(); /* length of unprocessed data */
 
     while ((pos = stringprep_find_string_in_table(src, srclen, &i, table, table_size)) != -1) {
         for (maplen = STRINGPREP_MAX_MAP_CHARS; maplen > 0 && table[i].map[maplen - 1] == 0; maplen--)
@@ -158,9 +159,9 @@ static int stringprep_apply_table_to_string(QVector<uint> &ucs4, const Stringpre
  **/
 int stringprep_4i(QString &input, Stringprep_profile_flags flags, const Stringprep_profile *profile)
 {
-    size_t        i, j;
-    qsizetype     k;
-    QVector<uint> ucs4vector = input.toUcs4();
+    size_t         i, j;
+    std::ptrdiff_t k;
+    QVector<uint>  ucs4vector = input.toUcs4();
     // size_t        ucs4len    = ucs4vector.size();
     ucs4vector.reserve(ucs4vector.size() * 2); // to pass nfkc
     // uint32_t *ucs4 = ucs4vector.data();
