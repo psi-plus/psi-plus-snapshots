@@ -187,4 +187,5 @@ private slots:
     void record_toggle();
     void featuresUpdated();
     void doShowPipeline();
+    void doShowPipeline2(const QStringList &fileName);
 };

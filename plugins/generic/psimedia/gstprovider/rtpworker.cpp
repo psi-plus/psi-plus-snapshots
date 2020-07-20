@@ -22,6 +22,7 @@
 
 #include <QElapsedTimer>
 #include <QStringList>
+#include <QDir>
 #include <cstring>
 #include <gst/app/gstappsrc.h>
 
@@ -482,11 +483,11 @@ void RtpWorker::dumpPipeline(std::function<void(const QStringList &)> callback)
     if (!dir.isEmpty()) {
         if (spipeline) {
             GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(spipeline), GST_DEBUG_GRAPH_SHOW_ALL, "psimedia_send");
-            ret << QString("/tmp/psimedia_send.dot");
+            ret << QDir::toNativeSeparators(dir + "/psimedia_send.dot");
         }
         if (rpipeline) {
             GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(rpipeline), GST_DEBUG_GRAPH_SHOW_ALL, "psimedia_recv");
-            ret << QString("/tmp/psimedia_recv.dot");
+            ret << QDir::toNativeSeparators(dir + "/psimedia_recv.dot");
         }
     }
     callback(ret);

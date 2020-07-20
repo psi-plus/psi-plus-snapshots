@@ -40,8 +40,6 @@
 
 #define WEBRTCDSP_RATE 48000
 
-//#define USE_LIVEADDER
-
 namespace PsiMedia {
 
 static int get_fixed_rate()
@@ -198,10 +196,12 @@ public:
     bool        webrtcdspInitialized = false;
 
     // for sinks (audio only, video sinks are always unshared)
+#if 0  // test
     GstElement *adder         = nullptr;
+    GstElement *capsfilter    = nullptr;
+#endif
     GstElement *audioconvert  = nullptr;
     GstElement *audioresample = nullptr;
-    GstElement *capsfilter    = nullptr;
     GstElement *webrtcprobe   = nullptr;
 
 private:
@@ -308,27 +308,29 @@ private:
                 qWarning("Failed to create GStreamer webrtcechoprobe element instance. Echo cancellation was disabled");
             }
 
-            // build resampler caps
-            GstStructure *cs;
-            GstCaps *     caps = gst_caps_new_empty();
-            cs = gst_structure_new("audio/x-raw", "rate", G_TYPE_INT, WEBRTCDSP_RATE, "format", G_TYPE_STRING, "S16LE",
-                                   "channels", G_TYPE_INT, 1, "channel-mask", GST_TYPE_BITMASK, 1, nullptr);
-            gst_caps_append_structure(caps, cs);
-            GstElement *capsfilter = gst_element_factory_make("capsfilter", nullptr);
-            g_object_set(G_OBJECT(capsfilter), "caps", caps, nullptr);
-            gst_caps_unref(caps);
-
+            GstElement *capsfilter = nullptr;
             gst_bin_add(GST_BIN(bin), audioconvert);
             gst_bin_add(GST_BIN(bin), audioresample);
-            gst_bin_add(GST_BIN(bin), capsfilter);
-            if (webrtcprobe)
+            if (webrtcprobe) {
+                // build resampler caps
+                GstStructure *cs;
+                GstCaps *     caps = gst_caps_new_empty();
+                cs = gst_structure_new("audio/x-raw", "rate", G_TYPE_INT, WEBRTCDSP_RATE, "format", G_TYPE_STRING, "S16LE",
+                                       "channels", G_TYPE_INT, 1, "channel-mask", GST_TYPE_BITMASK, 1, nullptr);
+                gst_caps_append_structure(caps, cs);
+                capsfilter = gst_element_factory_make("capsfilter", nullptr);
+                g_object_set(G_OBJECT(capsfilter), "caps", caps, nullptr);
+                gst_caps_unref(caps);
+
+                gst_bin_add(GST_BIN(bin), capsfilter);
                 gst_bin_add(GST_BIN(bin), webrtcprobe);
+            }
             gst_bin_add(GST_BIN(bin), e);
 
             if (webrtcprobe)
                 gst_element_link_many(audioconvert, audioresample, capsfilter, webrtcprobe, e, nullptr);
             else
-                gst_element_link_many(audioconvert, audioresample, capsfilter, e, nullptr);
+                gst_element_link_many(audioconvert, audioresample, e, nullptr);
 
             GstPad *pad = gst_element_get_static_pad(audioconvert, "sink");
             gst_element_add_pad(bin, gst_ghost_pad_new("sink", pad));
@@ -362,49 +364,8 @@ public:
             gst_element_link(device_bin, tee);
         } else // AudioOut
         {
-#ifdef USE_LIVEADDER
-            adder = gst_element_factory_make("audiomixer", nullptr);
-
-            audioconvert  = gst_element_factory_make("audioconvert", nullptr);
-            audioresample = gst_element_factory_make("audioresample", nullptr);
-#endif
-
-            capsfilter         = gst_element_factory_make("capsfilter", nullptr);
-            GstCaps *     caps = gst_caps_new_empty();
-            int           rate = get_fixed_rate();
-            GstStructure *cs;
-            if (rate > 0) {
-                cs = gst_structure_new("audio/x-raw", "rate", G_TYPE_INT, rate, "width", G_TYPE_INT, 16, "channels",
-                                       G_TYPE_INT, 1, "channel-mask", GST_TYPE_BITMASK, 1, nullptr);
-            } else {
-                cs = gst_structure_new("audio/x-raw", "width", G_TYPE_INT, 16, "channels", G_TYPE_INT, 1,
-                                       "channel-mask", GST_TYPE_BITMASK, 1, nullptr);
-            }
-
-            gst_caps_append_structure(caps, cs);
-            g_object_set(G_OBJECT(capsfilter), "caps", caps, nullptr);
-            gst_caps_unref(caps);
-
-            // get element to ous decoder here? REVIEW
-
             gst_bin_add(GST_BIN(pipeline), device_bin);
-#ifdef USE_LIVEADDER
-            gst_bin_add(GST_BIN(pipeline), adder);
-            gst_bin_add(GST_BIN(pipeline), audioconvert);
-            gst_bin_add(GST_BIN(pipeline), audioresample);
-#endif
-            gst_bin_add(GST_BIN(pipeline), capsfilter);
 
-#ifdef USE_LIVEADDER
-            gst_element_link_many(adder, audioconvert, audioresample, capsfilter, nullptr);
-#endif
-
-            gst_element_link(capsfilter, device_bin);
-
-#ifndef USE_LIVEADDER
-            // HACK
-            adder = capsfilter;
-#endif
             // sink starts out activated
             activated = true;
         }
@@ -426,34 +387,7 @@ public:
                 gst_bin_remove(GST_BIN(pipeline), tee);
         } else // AudioOut
         {
-            if (adder) {
-#ifdef USE_LIVEADDER
-                gst_element_set_state(adder, GST_STATE_NULL);
-                gst_element_set_state(audioconvert, GST_STATE_NULL);
-                gst_element_set_state(audioresample, GST_STATE_NULL);
-#endif
-
-                gst_element_set_state(capsfilter, GST_STATE_NULL);
-            }
-
             gst_element_set_state(device_bin, GST_STATE_NULL);
-
-            if (adder) {
-                /*gst_element_get_state(adder, nullptr, nullptr, GST_CLOCK_TIME_NONE);
-                gst_bin_remove(GST_BIN(pipeline), adder);
-
-                gst_element_get_state(audioconvert, nullptr, nullptr, GST_CLOCK_TIME_NONE);
-                gst_bin_remove(GST_BIN(pipeline), audioconvert);
-
-                gst_element_get_state(audioresample, nullptr, nullptr, GST_CLOCK_TIME_NONE);
-                gst_bin_remove(GST_BIN(pipeline), audioresample);*/
-
-                gst_element_get_state(capsfilter, nullptr, nullptr, GST_CLOCK_TIME_NONE);
-                gst_bin_remove(GST_BIN(pipeline), capsfilter);
-
-                // deinit opus decoder? REVIEW
-            }
-
             gst_bin_remove(GST_BIN(pipeline), device_bin);
         }
     }
@@ -475,8 +409,7 @@ public:
             gst_element_link(tee, queue);
         } else // AudioOut
         {
-            context->element = adder;
-
+            context->element = device_bin;
             // sink starts out activated
             context->activated = true;
         }

@@ -693,9 +693,18 @@ void MainWin::doAbout()
 void MainWin::doShowPipeline()
 {
     producer.dumpPipeline([this](const QStringList &fileName) {
-        QMetaObject::invokeMethod(
-            this, [this, fileName]() { QMessageBox::information(this, tr("Dumped pipelines"), fileName.join("\n")); });
+        QMetaObject::invokeMethod(this, "doShowPipeline2",
+                                      Qt::QueuedConnection, Q_ARG(QStringList, fileName));
     });
+}
+
+void MainWin::doShowPipeline2(const QStringList &fileName)
+{
+    if (fileName.isEmpty())
+        QMessageBox::warning(this, tr("Pipelines dump error"),
+                             tr("Empty files list. Probably need to set GST_DEBUG_DUMP_DOT_DIR env var"));
+    else
+        QMessageBox::information(this, tr("Dumped pipelines"), fileName.join("\n"));
 }
 
 void MainWin::doAboutProvider() { QMessageBox::about(this, tr("About %1").arg(creditName), PsiMedia::creditText()); }
