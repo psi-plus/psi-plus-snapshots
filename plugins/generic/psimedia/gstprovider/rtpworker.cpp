@@ -20,9 +20,9 @@
 
 #include "rtpworker.h"
 
+#include <QDir>
 #include <QElapsedTimer>
 #include <QStringList>
-#include <QDir>
 #include <cstring>
 #include <gst/app/gstappsrc.h>
 
@@ -1417,7 +1417,7 @@ bool RtpWorker::addAudioChain(int rate)
     // TODO: support other codecs.  for now, we only support opus 16khz
     QString codec    = "opus";
     int     size     = 16;
-    int     channels = 1;
+    int     channels = 2;
     // QString codec = localAudioParams[0].codec;
     // int rate = localAudioParams[0].sampleRate;
     // int size = localAudioParams[0].sampleSize;

@@ -196,10 +196,6 @@ public:
     bool        webrtcdspInitialized = false;
 
     // for sinks (audio only, video sinks are always unshared)
-#if 0  // test
-    GstElement *adder         = nullptr;
-    GstElement *capsfilter    = nullptr;
-#endif
     GstElement *audioconvert  = nullptr;
     GstElement *audioresample = nullptr;
     GstElement *webrtcprobe   = nullptr;
@@ -315,8 +311,9 @@ private:
                 // build resampler caps
                 GstStructure *cs;
                 GstCaps *     caps = gst_caps_new_empty();
-                cs = gst_structure_new("audio/x-raw", "rate", G_TYPE_INT, WEBRTCDSP_RATE, "format", G_TYPE_STRING, "S16LE",
-                                       "channels", G_TYPE_INT, 1, "channel-mask", GST_TYPE_BITMASK, 1, nullptr);
+                cs = gst_structure_new("audio/x-raw", "rate", G_TYPE_INT, WEBRTCDSP_RATE, "format", G_TYPE_STRING,
+                                       "S16LE", "channels", G_TYPE_INT, 2, "channel-mask", GST_TYPE_BITMASK, 3,
+                                       nullptr);
                 gst_caps_append_structure(caps, cs);
                 capsfilter = gst_element_factory_make("capsfilter", nullptr);
                 g_object_set(G_OBJECT(capsfilter), "caps", caps, nullptr);
