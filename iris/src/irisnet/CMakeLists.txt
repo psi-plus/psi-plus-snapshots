@@ -123,3 +123,6 @@ endif()
 
 target_link_libraries(irisnet ${QJDns_LIBRARY} ${EXTRA_LDFLAGS})
 target_link_libraries(irisnet Qt5::Core Qt5::Network Qt5::Xml ${qca_LIB})
+if (BUNDLED_QCA)
+    add_dependencies(irisnet qca)
+endif()

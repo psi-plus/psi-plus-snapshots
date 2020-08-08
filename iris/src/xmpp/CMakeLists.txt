@@ -188,7 +188,9 @@ if(B2_FOUND)
     target_compile_definitions(iris PUBLIC IRIS_SYSTEM_BLAKE2)
     target_link_libraries(iris ${B2_LIBRARY})
 else()
-    message(STATUS "Building with slow blake2 reference implementation")
+    if (NOT BUNDLED_QCA)
+        message(STATUS "No system blake2 and bundled QCA is disabled. Expect slow hashing.")
+    endif()
     target_sources(iris PRIVATE
             blake2/blake2b-ref.c
             blake2/blake2s-ref.c
@@ -204,5 +206,9 @@ endif()
 
 target_link_libraries(iris ${ZLIB_LIBRARY} ${EXTRA_LDFLAGS} stringprep)
 target_link_libraries(iris irisnet Qt5::Core Qt5::Gui Qt5::Network Qt5::Xml ${qca_LIB})
+if (BUNDLED_QCA)
+    add_dependencies(iris qca)
+    target_include_directories(iris INTERFACE ${Qca_INCLUDE_DIR})
+endif()
 target_compile_definitions(iris INTERFACE IRISNET_STATIC)
 target_include_directories(iris INTERFACE ${ABS_ROOT_DIR}/include ${ABS_ROOT_DIR}/include/iris ${ABS_PARENT_DIR})

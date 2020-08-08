@@ -38,6 +38,7 @@ set( CMAKE_MODULE_PATH
 
 option( USE_QJDNS "Use qjdns/jdns library. Disabled by default for Qt5" OFF )
 option( SEPARATE_QJDNS "Build qjdns with iris library" OFF )
+option( BUNDLED_QCA "Adds: DTLS, Blake2b and other useful for XMPP crypto-stuff" ON)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -49,13 +50,34 @@ set(CMAKE_AUTOMOC ON)
 find_package(Qt5 COMPONENTS Core Gui Xml Network REQUIRED)
 if(USE_QJDNS)
     message(WARNING "USE_QJDNS flag is enabled with Qt5. If you have problems with connection please disable this flag")
-endif()
-
-if(USE_QJDNS)
     add_definitions(-DNEED_JDNS)
 endif()
 
-find_package(Qca REQUIRED)
+if(BUNDLED_QCA)
+    message(STATUS "QCA: using bundled")
+    set(QCA_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/qca)
+    set(Qca_INCLUDE_DIR ${QCA_PREFIX}/include/Qca-qt5/QtCrypto)
+    set(Qca_LIBRARY ${QCA_PREFIX}/lib/libqca-qt5.a
+        ${QCA_PREFIX}/lib/qca-qt5/crypto/libqca-ossl.a)
+
+    include(ExternalProject)
+    set(QCA_BUILD_OPTIONS -DBUILD_SHARED_LIBS=OFF -DBUILD_PLUGINS=ossl
+        -DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF
+        -DCMAKE_INSTALL_PREFIX=${QCA_PREFIX})
+    if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdpaty/qca)
+        ExternalProject_Add(qca
+            SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdpaty/qca
+            CMAKE_ARGS ${QCA_BUILD_OPTIONS})
+    else()
+        ExternalProject_Add(qca
+            GIT_REPOSITORY https://github.com/psi-im/qca.git
+            CMAKE_ARGS ${QCA_BUILD_OPTIONS})
+    endif()
+else()
+    message(STATUS "QCA: using system")
+    find_package(Qca REQUIRED)
+endif()
+
 set(QCA_INCLUDES ${Qca_INCLUDE_DIR})
 set(qca_LIB ${Qca_LIBRARY})
 
@@ -125,9 +147,11 @@ elseif(USE_QJDNS)
     include_directories( ${QJDns_INCLUDE_DIR} )
 endif()
 
-find_package(B2 QUIET)
-if(B2_FOUND)
-    message(STATUS "Found B2: ${B2_LIBRARY}")
+if (NOT BUNDLED_QCA)
+    find_package(B2 QUIET)
+    if(B2_FOUND)
+        message(STATUS "Found B2: ${B2_LIBRARY}")
+    endif()
 endif()
 
 add_definitions(-DIRISNET_STATIC -DQSTRINGPREP_BUILDING)

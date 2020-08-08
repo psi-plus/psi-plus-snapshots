@@ -18,3 +18,5 @@ sub_tools.depends = sub_src
 build_src:SUBDIRS += sub_src
 
 iris_tests:SUBDIRS += sub_tools
+
+OTHER_FILES += README.md CMakeLists.txt
