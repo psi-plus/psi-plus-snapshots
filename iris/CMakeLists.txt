@@ -57,22 +57,27 @@ if(BUNDLED_QCA)
     message(STATUS "QCA: using bundled")
     set(QCA_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/qca)
     set(Qca_INCLUDE_DIR ${QCA_PREFIX}/include/Qca-qt5/QtCrypto)
-    set(Qca_LIBRARY ${QCA_PREFIX}/lib/libqca-qt5.a
-        ${QCA_PREFIX}/lib/qca-qt5/crypto/libqca-ossl.a)
+    set(Qca_CORE_LIB ${QCA_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}qca-qt5${CMAKE_STATIC_LIBRARY_SUFFIX})
+    set(Qca_LIBRARY ${Qca_CORE_LIB}
+        ${QCA_PREFIX}/lib/qca-qt5/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${CMAKE_STATIC_LIBRARY_SUFFIX})
 
     include(ExternalProject)
     set(QCA_BUILD_OPTIONS -DBUILD_SHARED_LIBS=OFF -DBUILD_PLUGINS=ossl
         -DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF
         -DCMAKE_INSTALL_PREFIX=${QCA_PREFIX})
     if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdpaty/qca)
-        ExternalProject_Add(qca
+        ExternalProject_Add(QcaProject
             SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdpaty/qca
-            CMAKE_ARGS ${QCA_BUILD_OPTIONS})
+            CMAKE_ARGS ${QCA_BUILD_OPTIONS}
+            BUILD_BYPRODUCTS ${Qca_LIBRARY})
     else()
-        ExternalProject_Add(qca
+        ExternalProject_Add(QcaProject
             GIT_REPOSITORY https://github.com/psi-im/qca.git
-            CMAKE_ARGS ${QCA_BUILD_OPTIONS})
+            CMAKE_ARGS ${QCA_BUILD_OPTIONS}
+            BUILD_BYPRODUCTS ${Qca_LIBRARY})
     endif()
+    add_library(Qca STATIC IMPORTED)
+    set_target_properties(Qca PROPERTIES IMPORTED_LOCATION ${Qca_CORE_LIB})
 else()
     message(STATUS "QCA: using system")
     find_package(Qca REQUIRED)
