@@ -122,7 +122,7 @@ if (Qt5Network_VERSION VERSION_LESS 5.15.0)
 endif()
 
 target_link_libraries(irisnet ${QJDns_LIBRARY} ${EXTRA_LDFLAGS})
-target_link_libraries(irisnet Qt5::Core Qt5::Network Qt5::Xml Qca)
+target_link_libraries(irisnet Qt5::Core Qt5::Network Qt5::Xml)
 if (BUNDLED_QCA)
     target_link_libraries(irisnet Qca)
     add_dependencies(irisnet QcaProject)

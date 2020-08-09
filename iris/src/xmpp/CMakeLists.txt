@@ -205,7 +205,7 @@ if( SEPARATE_QJDNS AND WIN32)
 endif()
 
 target_link_libraries(iris ${ZLIB_LIBRARY} ${EXTRA_LDFLAGS} stringprep)
-target_link_libraries(iris irisnet Qt5::Core Qt5::Gui Qt5::Network Qt5::Xml ${Qca})
+target_link_libraries(iris irisnet Qt5::Core Qt5::Gui Qt5::Network Qt5::Xml)
 if (BUNDLED_QCA)
     add_dependencies(iris QcaProject)
     target_link_libraries(iris Qca)
