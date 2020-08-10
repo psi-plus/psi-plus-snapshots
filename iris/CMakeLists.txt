@@ -3,7 +3,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 project(iris)
-cmake_minimum_required(VERSION 3.1.0)
+cmake_minimum_required(VERSION 3.2.0)
 
 #Set automoc and autouic policy
 if(POLICY CMP0071)
@@ -48,6 +48,15 @@ include_directories(include/iris)
 set(CMAKE_AUTOMOC ON)
 
 find_package(Qt5 COMPONENTS Core Gui Xml Network REQUIRED)
+
+if(Qt5Core_FOUND)
+    message(STATUS "Qt5 found, version ${Qt5Core_VERSION}")
+    if("${Qt5Core_VERSION}" VERSION_LESS "5.6")
+        message(WARNING "Version of Qt is less than needed to build bundled qca.\nBUNDLED_QCA flag will be disabled")
+        set(BUNDLED_QCA OFF)
+    endif()
+endif()
+
 if(USE_QJDNS)
     message(WARNING "USE_QJDNS flag is enabled with Qt5. If you have problems with connection please disable this flag")
     add_definitions(-DNEED_JDNS)
@@ -63,8 +72,8 @@ if(BUNDLED_QCA)
 
     include(ExternalProject)
     set(QCA_BUILD_OPTIONS -DBUILD_SHARED_LIBS=OFF -DBUILD_PLUGINS=ossl
-        -DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF
-        -DCMAKE_INSTALL_PREFIX=${QCA_PREFIX})
+        -DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        -DCMAKE_INSTALL_PREFIX=${QCA_PREFIX} -DQt5_DIR=${Qt5_DIR})
     if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdpaty/qca)
         ExternalProject_Add(QcaProject
             SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdpaty/qca

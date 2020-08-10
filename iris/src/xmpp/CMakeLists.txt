@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1.0)
+cmake_minimum_required(VERSION 3.2.0)
 if(POLICY CMP0074)
     cmake_policy(SET CMP0074 NEW)
     message(STATUS "CMP0074 policy set to NEW")
