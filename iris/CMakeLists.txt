@@ -38,7 +38,7 @@ set( CMAKE_MODULE_PATH
 
 option( USE_QJDNS "Use qjdns/jdns library. Disabled by default for Qt5" OFF )
 option( SEPARATE_QJDNS "Build qjdns with iris library" OFF )
-option( BUNDLED_QCA "Adds: DTLS, Blake2b and other useful for XMPP crypto-stuff" ON)
+option( BUNDLED_QCA "Adds: DTLS, Blake2b and other useful for XMPP crypto-stuff" OFF)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -51,9 +51,8 @@ find_package(Qt5 COMPONENTS Core Gui Xml Network REQUIRED)
 
 if(Qt5Core_FOUND)
     message(STATUS "Qt5 found, version ${Qt5Core_VERSION}")
-    if("${Qt5Core_VERSION}" VERSION_LESS "5.6")
-        message(WARNING "Version of Qt is less than needed to build bundled qca.\nBUNDLED_QCA flag will be disabled")
-        set(BUNDLED_QCA OFF)
+    if(BUNDLED_QCA AND("${Qt5Core_VERSION}" VERSION_LESS "5.6"))
+        message(FATAL_ERROR "Minimal Qt version for bundled Qca is 5.6. Please disable BUNDLED_QCA option")
     endif()
 endif()
 
@@ -69,14 +68,16 @@ if(BUNDLED_QCA)
     set(Qca_CORE_LIB ${QCA_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}qca-qt5${CMAKE_STATIC_LIBRARY_SUFFIX})
     set(Qca_LIBRARY ${Qca_CORE_LIB}
         ${QCA_PREFIX}/lib/qca-qt5/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${CMAKE_STATIC_LIBRARY_SUFFIX})
+    set(QCA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/qca)
 
     include(ExternalProject)
     set(QCA_BUILD_OPTIONS -DBUILD_SHARED_LIBS=OFF -DBUILD_PLUGINS=ossl
         -DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-        -DCMAKE_INSTALL_PREFIX=${QCA_PREFIX} -DQt5_DIR=${Qt5_DIR})
-    if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdpaty/qca)
+        -DCMAKE_INSTALL_PREFIX=${QCA_PREFIX} -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH})
+    if (EXISTS ${QCA_SOURCE_DIR})
+        message(STATUS "QCA: found bundled sources")
         ExternalProject_Add(QcaProject
-            SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdpaty/qca
+            SOURCE_DIR ${QCA_SOURCE_DIR}
             CMAKE_ARGS ${QCA_BUILD_OPTIONS}
             BUILD_BYPRODUCTS ${Qca_LIBRARY})
     else()
@@ -88,6 +89,7 @@ if(BUNDLED_QCA)
     add_library(Qca STATIC IMPORTED)
     set_target_properties(Qca PROPERTIES IMPORTED_LOCATION ${Qca_CORE_LIB})
 else()
+    message(WARNING "Disabling BUNDLED_QCA option makes impossible to use DTLS and PsiMedia")
     message(STATUS "QCA: using system")
     find_package(Qca REQUIRED)
 endif()
