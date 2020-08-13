@@ -69,11 +69,13 @@ if(BUNDLED_QCA)
     set(Qca_LIBRARY ${Qca_CORE_LIB}
         ${QCA_PREFIX}/lib/qca-qt5/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${CMAKE_STATIC_LIBRARY_SUFFIX})
     set(QCA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/qca)
+    find_package(OpenSSL REQUIRED)
 
     include(ExternalProject)
     set(QCA_BUILD_OPTIONS -DBUILD_SHARED_LIBS=OFF -DBUILD_PLUGINS=ossl
         -DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-        -DCMAKE_INSTALL_PREFIX=${QCA_PREFIX} -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH})
+        -DCMAKE_INSTALL_PREFIX=${QCA_PREFIX} -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
+        -DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR})
     if (EXISTS ${QCA_SOURCE_DIR})
         message(STATUS "QCA: found bundled sources")
         ExternalProject_Add(QcaProject
@@ -81,6 +83,11 @@ if(BUNDLED_QCA)
             CMAKE_ARGS ${QCA_BUILD_OPTIONS}
             BUILD_BYPRODUCTS ${Qca_LIBRARY})
     else()
+        include(FindGit)
+        find_package(Git)
+        if(NOT Git_FOUND)
+            message(FATAL_ERROR "Git not found! Bundled Qca needs Git utility.\nPlease set GIT_EXECUTABLE variable or add git to PATH")
+        endif()
         ExternalProject_Add(QcaProject
             GIT_REPOSITORY https://github.com/psi-im/qca.git
             CMAKE_ARGS ${QCA_BUILD_OPTIONS}
