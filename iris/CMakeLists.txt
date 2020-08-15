@@ -72,10 +72,11 @@ if(BUNDLED_QCA)
     find_package(OpenSSL REQUIRED)
 
     include(ExternalProject)
+    #set CMake options and transfer the environment to an external project
     set(QCA_BUILD_OPTIONS -DBUILD_SHARED_LIBS=OFF -DBUILD_PLUGINS=ossl
         -DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         -DCMAKE_INSTALL_PREFIX=${QCA_PREFIX} -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
-        -DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR})
+        -DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
     if (EXISTS ${QCA_SOURCE_DIR})
         message(STATUS "QCA: found bundled sources")
         ExternalProject_Add(QcaProject
