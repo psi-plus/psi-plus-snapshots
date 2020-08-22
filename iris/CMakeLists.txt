@@ -66,14 +66,14 @@ if(BUNDLED_QCA)
     set(QCA_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/qca)
     set(Qca_INCLUDE_DIR ${QCA_PREFIX}/include/Qca-qt5/QtCrypto)
     set(Qca_CORE_LIB ${QCA_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}qca-qt5${CMAKE_STATIC_LIBRARY_SUFFIX})
-    set(Qca_LIBRARY ${Qca_CORE_LIB}
-        ${QCA_PREFIX}/lib/qca-qt5/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${CMAKE_STATIC_LIBRARY_SUFFIX})
+    set(Qca_OSSL_LIB ${QCA_PREFIX}/lib/qca-qt5/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${CMAKE_STATIC_LIBRARY_SUFFIX})
+    set(Qca_LIBRARY ${Qca_CORE_LIB} ${Qca_OSSL_LIB})
     set(QCA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/qca)
     find_package(OpenSSL REQUIRED)
 
     include(ExternalProject)
     #set CMake options and transfer the environment to an external project
-    set(QCA_BUILD_OPTIONS -DBUILD_SHARED_LIBS=OFF -DBUILD_PLUGINS=ossl
+    set(QCA_BUILD_OPTIONS -DBUILD_SHARED_LIBS=OFF -DBUILD_PLUGINS=ossl -DLOAD_SHARED_PLUGINS=OFF
         -DBUILD_TESTS=OFF -DBUILD_TOOLS=OFF -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         -DCMAKE_INSTALL_PREFIX=${QCA_PREFIX} -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
         -DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
@@ -96,6 +96,10 @@ if(BUNDLED_QCA)
     endif()
     add_library(Qca STATIC IMPORTED)
     set_target_properties(Qca PROPERTIES IMPORTED_LOCATION ${Qca_CORE_LIB})
+    set_target_properties(Qca
+        PROPERTIES IMPORTED_LINK_INTERFACE_LIBRARIES
+        ${Qca_OSSL_LIB} OpenSSL::SSL OpenSSL::Crypto
+        )
 else()
     message(WARNING "Disabling BUNDLED_QCA option makes impossible to use DTLS and PsiMedia")
     message(STATUS "QCA: using system")
