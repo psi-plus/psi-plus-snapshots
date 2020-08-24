@@ -65,10 +65,11 @@ if(BUNDLED_QCA)
     message(STATUS "QCA: using bundled")
     set(QCA_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/qca)
     set(Qca_INCLUDE_DIR ${QCA_PREFIX}/include/Qca-qt5/QtCrypto)
+    set(Qca_INCLUDE_DIR_EXPORT ${Qca_INCLUDE_DIR} PARENT_SCOPE)
     set(Qca_CORE_LIB ${QCA_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}qca-qt5${CMAKE_STATIC_LIBRARY_SUFFIX})
     set(Qca_OSSL_LIB ${QCA_PREFIX}/lib/qca-qt5/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${CMAKE_STATIC_LIBRARY_SUFFIX})
-    set(Qca_OSSL_LIB_EXPORT ${Qca_OSSL_LIB} PARENT_SCOPE)
-    set(Qca_LIBRARY ${Qca_CORE_LIB} ${Qca_OSSL_LIB})
+    set(Qca_LIBRARY ${Qca_OSSL_LIB} ${Qca_CORE_LIB})
+    set(Qca_LIBRARY_EXPORT ${Qca_LIBRARY} PARENT_SCOPE)
     set(QCA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/qca)
     find_package(OpenSSL REQUIRED)
 
@@ -111,7 +112,7 @@ set(QCA_INCLUDES ${Qca_INCLUDE_DIR})
 set(qca_LIB ${Qca_LIBRARY})
 
 include_directories(
-    ${QCA_INCLUDES}
+    ${Qca_INCLUDE_DIR}
 )
 
 if(NOT USE_QJDNS AND SEPARATE_QJDNS)
