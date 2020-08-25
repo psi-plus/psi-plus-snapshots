@@ -2,6 +2,8 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
 
+get_directory_property(IS_SUBPROJECT PARENT_DIRECTORY)
+
 project(iris)
 cmake_minimum_required(VERSION 3.2.0)
 
@@ -65,11 +67,13 @@ if(BUNDLED_QCA)
     message(STATUS "QCA: using bundled")
     set(QCA_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/qca)
     set(Qca_INCLUDE_DIR ${QCA_PREFIX}/include/Qca-qt5/QtCrypto)
-    set(Qca_INCLUDE_DIR_EXPORT ${Qca_INCLUDE_DIR} PARENT_SCOPE)
     set(Qca_CORE_LIB ${QCA_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}qca-qt5${CMAKE_STATIC_LIBRARY_SUFFIX})
     set(Qca_OSSL_LIB ${QCA_PREFIX}/lib/qca-qt5/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${CMAKE_STATIC_LIBRARY_SUFFIX})
     set(Qca_LIBRARY ${Qca_OSSL_LIB} ${Qca_CORE_LIB})
-    set(Qca_LIBRARY_EXPORT ${Qca_LIBRARY} PARENT_SCOPE)
+    if(IS_SUBPROJECT)
+        set(Qca_LIBRARY_EXPORT ${Qca_LIBRARY} PARENT_SCOPE)
+        set(Qca_INCLUDE_DIR_EXPORT ${Qca_INCLUDE_DIR} PARENT_SCOPE)
+    endif()
     set(QCA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/qca)
     find_package(OpenSSL REQUIRED)
 
@@ -84,7 +88,8 @@ if(BUNDLED_QCA)
         ExternalProject_Add(QcaProject
             SOURCE_DIR ${QCA_SOURCE_DIR}
             CMAKE_ARGS ${QCA_BUILD_OPTIONS}
-            BUILD_BYPRODUCTS ${Qca_LIBRARY})
+            BUILD_BYPRODUCTS ${Qca_LIBRARY}
+            EXCLUDE_FROM_ALL TRUE)
     else()
         include(FindGit)
         find_package(Git)
@@ -94,7 +99,8 @@ if(BUNDLED_QCA)
         ExternalProject_Add(QcaProject
             GIT_REPOSITORY https://github.com/psi-im/qca.git
             CMAKE_ARGS ${QCA_BUILD_OPTIONS}
-            BUILD_BYPRODUCTS ${Qca_LIBRARY})
+            BUILD_BYPRODUCTS ${Qca_LIBRARY}
+            EXCLUDE_FROM_ALL TRUE)
     endif()
     add_library(Qca STATIC IMPORTED)
     set_target_properties(Qca PROPERTIES IMPORTED_LOCATION ${Qca_CORE_LIB})
@@ -120,56 +126,7 @@ if(NOT USE_QJDNS AND SEPARATE_QJDNS)
 endif()
 
 if(USE_QJDNS AND (NOT SEPARATE_QJDNS))
-    add_definitions(-DJDNS_STATIC)
-    set(QJDns_LIBRARY qjdns)
-    include_directories(
-        src/jdns/include/jdns
-        )
-    set(jdns_SRCS
-        src/jdns/src/jdns/jdns.c
-        src/jdns/src/jdns/jdns_mdnsd.c
-        src/jdns/src/jdns/jdns_packet.c
-        src/jdns/src/jdns/jdns_sys.c
-        src/jdns/src/jdns/jdns_util.c
-        )
-    set(jdns_PUBLIC_HEADERS
-        src/jdns/include/jdns/jdns.h
-        src/jdns/include/jdns/jdns_export.h
-        )
-    set(jdns_HEADERS
-        src/jdns/src/jdns/jdns_packet.h
-        src/jdns/src/jdns/jdns_mdnsd.h
-        src/jdns/src/jdns/jdns_p.h
-        )
-    add_library(jdns STATIC ${jdns_SRCS} ${jdns_HEADERS} ${jdns_PUBLIC_HEADERS})
-    if(WIN32)
-        target_link_libraries(jdns ws2_32 advapi32)
-    endif()
-    set(qjdns_MOC_HDRS
-        src/jdns/include/jdns/qjdns.h
-        src/jdns/include/jdns/qjdnsshared.h
-        src/jdns/src/qjdns/qjdns_p.h
-        src/jdns/src/qjdns/qjdnsshared_p.h
-        )
-
-    qt_wrap_cpp(qjdns_MOC_SRCS ${qjdns_MOC_HDRS})
-
-    set(qjdns_SRCS
-        src/jdns/src/qjdns/qjdns.cpp
-        src/jdns/src/qjdns/qjdns_sock.cpp
-        src/jdns/src/qjdns/qjdnsshared.cpp
-        )
-
-    set(qjdns_PUBLIC_HEADERS
-        src/jdns/include/jdns/qjdns.h
-        src/jdns/include/jdns/qjdnsshared.h
-        )
-    set(qjdns_HEADERS
-        src/jdns/src/qjdns/qjdns_sock.h
-        )
-    add_library(${QJDns_LIBRARY} STATIC ${qjdns_SRCS} ${qjdns_MOC_SRCS} ${qjdns_MOC_HDRS} ${qjdns_PUBLIC_HEADERS})
-    target_link_libraries(${QJDns_LIBRARY} Qt5::Core Qt5::Network)
-    target_link_libraries(${QJDns_LIBRARY} jdns)
+    include(src/jdns.cmake)
 elseif(USE_QJDNS)
     set(QJDns_SUFFIX -qt5)
     find_package(QJDns REQUIRED)
