@@ -105,8 +105,7 @@ static int check_and_get_length(const QByteArray &buf)
 
     // minimal 3-field check
 
-    // top 2 bits of packet must be 0
-    if (buf[0] & 0xC0)
+    if (buf[0] < 0 || buf[0] > 3) // rfc7983 p.7
         return -1;
 
     const quint8 *p    = (const quint8 *)buf.data();

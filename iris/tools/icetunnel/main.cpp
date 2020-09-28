@@ -21,7 +21,14 @@
 #include <QNetworkInterface>
 #include <QTimer>
 #include <QUdpSocket>
+
 #include <QtCrypto>
+#ifdef QCA_STATIC
+#include <QtPlugin>
+Q_IMPORT_PLUGIN(qca_ossl)
+#endif
+
+#include <iris/dtls.h>
 #include <iris/ice176.h>
 #include <iris/netinterface.h>
 #include <iris/netnames.h>
@@ -198,29 +205,41 @@ class IceOffer {
 public:
     QString                        user, pass;
     QList<XMPP::Ice176::Candidate> candidates;
+    QList<XMPP::Hash>              dtlsFingerprint;
 };
 
-static QStringList line_wrap(const QString &in, int maxlen)
+static QStringList line_wrap(const QString &prefix, const QString &in, int maxlen)
 {
     Q_ASSERT(maxlen >= 1);
 
     QStringList out;
     int         at = 0;
     while (at < in.length()) {
-        int takeAmount = qMin(maxlen, in.length() - at);
-        out += in.mid(at, takeAmount);
+        int takeAmount = qMin(maxlen - prefix.size() - 1, in.length() - at);
+        out += QString("%1:%2").arg(prefix, in.mid(at, takeAmount));
         at += takeAmount;
     }
     return out;
 }
 
-static QString lines_unwrap(const QStringList &in) { return in.join(QString()); }
+static QMap<QString, QString> lines_unwrap(const QStringList &in)
+{
+    QMap<QString, QString> prefix2body;
+    for (auto const &l : in) {
+        auto prefix = l.section(':', 0, 0);
+        auto body   = l.section(':', 1, 1);
+        prefix2body[prefix] += body;
+    }
+
+    return prefix2body;
+}
 
 static QStringList iceblock_create(const IceOffer &in)
 {
     QStringList out;
-    out += "-----BEGIN ICE-----";
+    out += "-----BEGIN SESSION-----";
     {
+        // ice
         QStringList body;
         QStringList userpass;
         userpass += urlishEncode(in.user);
@@ -228,19 +247,28 @@ static QStringList iceblock_create(const IceOffer &in)
         body += userpass.join(",");
         for (const XMPP::Ice176::Candidate &c : in.candidates)
             body += candidate_to_line(c);
-        out += line_wrap(body.join(";"), 78);
+        out += line_wrap(QLatin1String("ice"), body.join(";"), 78);
+
+        // dtls
+        body.clear();
+        for (auto const &h : in.dtlsFingerprint) {
+            body += h.toString();
+        }
+        out += line_wrap(QLatin1String("dtls"), body.join(";"), 78);
     }
-    out += "-----END ICE-----";
+    out += "-----END SESSION-----";
     return out;
 }
 
 static IceOffer iceblock_parse(const QStringList &in)
 {
     IceOffer out;
-    if (in.count() < 3 || in[0] != "-----BEGIN ICE-----" || in[in.count() - 1] != "-----END ICE-----")
+    if (in.count() < 3 || in[0] != "-----BEGIN SESSION-----" || in[in.count() - 1] != "-----END SESSION-----")
         return IceOffer();
 
-    QStringList body = lines_unwrap(in.mid(1, in.count() - 2)).split(';');
+    QMap<QString, QString> lines = lines_unwrap(in.mid(1, in.count() - 2));
+
+    QStringList body = lines.value(QLatin1String("ice")).split(';');
     if (body.count() < 2)
         return IceOffer();
 
@@ -261,6 +289,12 @@ static IceOffer iceblock_parse(const QStringList &in)
             return IceOffer();
         out.candidates += c;
     }
+
+    body = lines.value(QLatin1String("dtls")).split(';');
+    for (auto const &b : body) {
+        out.dtlsFingerprint += XMPP::Hash::from(QStringRef(&b));
+    }
+
     return out;
 }
 
@@ -290,7 +324,7 @@ private slots:
     void con_readyRead()
     {
         in += con->read();
-        if (in.contains("-----END ICE-----")) {
+        if (in.contains("-----END SESSION-----")) {
             delete con;
             con = 0;
 
@@ -415,6 +449,7 @@ public:
     QHostAddress                      stunAddr;
     XMPP::UdpPortReserver             portReserver;
     XMPP::Ice176 *                    ice = nullptr;
+    QList<XMPP::Dtls *>               dtls;
     QList<XMPP::Ice176::Candidate>    localCandidates;
     QList<XMPP::Ice176::LocalAddress> localAddrs;
     QList<Channel>                    channels;
@@ -462,7 +497,7 @@ public slots:
         connect(&dns, &XMPP::NameResolver::error, this, [this](XMPP::NameResolver::Error e) {
             Q_UNUSED(e);
             printf("Unable to resolve stun host.\n");
-            emit quit();
+            Q_EMIT quit();
         });
 
         if (!opt_stunHost.isEmpty())
@@ -488,7 +523,7 @@ public:
 
         connect(ice, SIGNAL(readyRead(int)), SLOT(ice_readyRead(int)));
         connect(ice, SIGNAL(datagramsWritten(int, int)), SLOT(ice_datagramsWritten(int, int)));
-        connect(ice, &XMPP::Ice176::readyToSendMedia, this, []() { printf("ICE ready to send media.\n"); });
+        connect(ice, &XMPP::Ice176::readyToSendMedia, this, &App::ice_readToSendMedia);
         connect(ice, &XMPP::Ice176::iceFinished, this,
                 []() { printf("ICE negotiation has finished and media stream is active now!\n"); });
 
@@ -621,12 +656,49 @@ public:
             ice->start(XMPP::Ice176::Initiator);
         else
             ice->start(XMPP::Ice176::Responder);
+
+        if (QCA::isSupported("dtls")) {
+            start_dtls();
+        }
     }
 
-signals:
+Q_SIGNALS:
     void quit();
 
 private:
+    void proxyNet2App(int componentIndex, const QByteArray &buf)
+    {
+        if (channels[componentIndex].sock6)
+            channels[componentIndex].sock6->writeDatagram(buf, QHostAddress::LocalHostIPv6,
+                                                          opt_localBase + componentIndex);
+        if (channels[componentIndex].sock4)
+            channels[componentIndex].sock4->writeDatagram(buf, QHostAddress::LocalHost, opt_localBase + componentIndex);
+    }
+
+    void start_dtls()
+    {
+        dtls.clear();
+        dtls.reserve(opt_channels);
+        for (int componentIndex = 0; componentIndex < opt_channels; componentIndex++) {
+            dtls.append(new XMPP::Dtls(this));
+            dtls[componentIndex]->generateCertificate();
+            auto h = dtls[componentIndex]->fingerprint();
+            printf("fingerprint[%d]:%s:%s\n", componentIndex, qPrintable(h.stringType()), h.data().toHex(':').data());
+            connect(dtls[componentIndex], &XMPP::Dtls::readyRead, this,
+                    [this, dtls = dtls[componentIndex], componentIndex]() {
+                        proxyNet2App(componentIndex, dtls->readDatagram());
+                    });
+            connect(dtls[componentIndex], &XMPP::Dtls::readyReadOutgoing, this,
+                    [this, dtls = dtls[componentIndex], componentIndex]() {
+                        ice->writeDatagram(componentIndex, dtls->readOutgoingDatagram());
+                    });
+            connect(dtls[componentIndex], &XMPP::Dtls::connected, this, []() { printf("DTLS connected\n"); });
+            connect(dtls[componentIndex], &XMPP::Dtls::closed, this, []() { printf("DTLS closed\n"); });
+            connect(dtls[componentIndex], &XMPP::Dtls::errorOccurred, this,
+                    [](QAbstractSocket::SocketError err) { printf("DTLS error: %d\n", int(err)); });
+        }
+    }
+
     QUdpSocket *setupSocket(const QHostAddress &addr, int port)
     {
         QUdpSocket *sock = new QUdpSocket(this);
@@ -640,7 +712,7 @@ private:
         return sock;
     }
 
-private slots:
+private Q_SLOTS:
     void do_quit()
     {
         // a good idea
@@ -675,14 +747,18 @@ private slots:
     void ice_localGatheringComplete()
     {
         IceOffer out;
-        out.user          = ice->localUfrag();
-        out.pass          = ice->localPassword();
-        out.candidates    = localCandidates;
+        out.user       = ice->localUfrag();
+        out.pass       = ice->localPassword();
+        out.candidates = localCandidates;
+        for (const auto d : dtls) {
+            out.dtlsFingerprint += d->fingerprint();
+        }
         QStringList block = iceblock_create(out);
+
         for (const QString &s : block)
             printf("%s\n", qPrintable(s));
 
-        printf("Give above ICE block to peer.  Obtain peer ICE block and paste below...\n");
+        printf("Give above SESSION block to peer.  Obtain peer ICE block and paste below...\n");
 
         console = new QCA::Console(QCA::Console::Stdio, QCA::Console::Read, QCA::Console::Default, this);
 
@@ -695,12 +771,11 @@ private slots:
     {
         while (ice->hasPendingDatagrams(componentIndex)) {
             QByteArray buf = ice->readDatagram(componentIndex);
-            if (channels[componentIndex].sock6)
-                channels[componentIndex].sock6->writeDatagram(buf, QHostAddress::LocalHostIPv6,
-                                                              opt_localBase + componentIndex);
-            if (channels[componentIndex].sock4)
-                channels[componentIndex].sock4->writeDatagram(buf, QHostAddress::LocalHost,
-                                                              opt_localBase + componentIndex);
+            if (componentIndex < dtls.size()) {
+                dtls[componentIndex]->writeIncomingDatagram(buf);
+            } else {
+                proxyNet2App(componentIndex, buf);
+            }
         }
     }
 
@@ -722,6 +797,14 @@ private slots:
             printf("Error parsing ICE block.\n");
             emit quit();
             return;
+        }
+
+        if (dtls.size() != inOffer.dtlsFingerprint.size()) {
+            printf("DTLS disabled due to mismatch in amount of dtls instances and remote fingerprints (not yet "
+                   "unsupported).\n");
+            qDeleteAll(dtls);
+            dtls.clear();
+            inOffer.dtlsFingerprint.clear();
         }
 
         printf("Press enter to begin.\n");
@@ -778,8 +861,13 @@ private slots:
             // note: we don't care who sent it
             sock->readDatagram(buf.data(), buf.size());
 
-            if (channels[at].ready)
-                ice->writeDatagram(at, buf);
+            if (channels[at].ready) {
+                if (at < dtls.size()) {
+                    dtls[at]->writeDatagram(buf);
+                } else {
+                    ice->writeDatagram(at, buf);
+                }
+            }
         }
     }
 
@@ -788,6 +876,18 @@ private slots:
         Q_UNUSED(bytes);
 
         // do nothing
+    }
+
+    void ice_readToSendMedia()
+    {
+        printf("ICE ready to send media.\n");
+        for (int i = 0; i < dtls.size(); i++) {
+            dtls[i]->setRemoteFingerprint(inOffer.dtlsFingerprint[i]);
+            if (opt_mode == 0)
+                dtls[i]->startClient();
+            else
+                dtls[i]->startServer();
+        }
     }
 };
 
@@ -813,6 +913,7 @@ void usage()
 
 int main(int argc, char **argv)
 {
+
     QCA::Initializer qcaInit;
     QCoreApplication qapp(argc, argv);
 
@@ -829,6 +930,7 @@ int main(int argc, char **argv)
     bool                 ipv6_only      = false;
     bool                 relay_udp_only = false;
     bool                 relay_tcp_only = false;
+    bool                 enable_dtls    = true;
 
     for (int n = 0; n < args.count(); ++n) {
         QString s = args[n];
@@ -881,6 +983,8 @@ int main(int argc, char **argv)
             relay_udp_only = true;
         else if (var == "relay-tcp-only")
             relay_tcp_only = true;
+        else if (var == "dtls")
+            enable_dtls = true;
         else
             known = false;
 

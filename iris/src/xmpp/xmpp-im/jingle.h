@@ -153,8 +153,9 @@ namespace Jingle {
 
     typedef QPair<QString, Origin>      ContentKey;
     typedef std::function<void(Task *)> OutgoingUpdateCB;
-    typedef std::tuple<QList<QDomElement>, OutgoingUpdateCB>
-        OutgoingUpdate; // list of elements to b inserted to <jingle> and success callback
+
+    // list of elements to b inserted to <jingle> and success callback
+    typedef std::tuple<QList<QDomElement>, OutgoingUpdateCB> OutgoingUpdate;
     typedef std::tuple<QDomElement, OutgoingUpdateCB>
         OutgoingTransportInfoUpdate; // transport element and success callback
 

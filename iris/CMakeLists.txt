@@ -41,6 +41,7 @@ set( CMAKE_MODULE_PATH
 option( USE_QJDNS "Use qjdns/jdns library. Disabled by default for Qt5" OFF )
 option( SEPARATE_QJDNS "Build qjdns with iris library" OFF )
 option( BUNDLED_QCA "Adds: DTLS, Blake2b and other useful for XMPP crypto-stuff" OFF)
+option( BUILD_IRIS_TOOLS "Build tools and examples" OFF)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -116,12 +117,6 @@ if(BUNDLED_QCA)
             INSTALL_COMMAND ""
             )
     endif()
-    add_library(Qca STATIC IMPORTED)
-    set_target_properties(Qca PROPERTIES IMPORTED_LOCATION ${Qca_CORE_LIB})
-    set_target_properties(Qca
-        PROPERTIES IMPORTED_LINK_INTERFACE_LIBRARIES
-        ${Qca_OSSL_LIB} OpenSSL::SSL OpenSSL::Crypto
-        )
 else()
     message(WARNING "Disabling BUNDLED_QCA option makes impossible to use DTLS and PsiMedia")
     message(STATUS "QCA: using system")
@@ -160,3 +155,6 @@ add_definitions(-DIRISNET_STATIC -DQSTRINGPREP_BUILDING)
 add_subdirectory(3rdparty/stringprep)
 add_subdirectory(src/irisnet)
 add_subdirectory(src/xmpp)
+if(BUILD_IRIS_TOOLS)
+    add_subdirectory(tools)
+endif()

@@ -50,6 +50,7 @@ set(SOURCES
     noncore/turnclient.cpp
     noncore/udpportreserver.cpp
     noncore/tcpportreserver.cpp
+    noncore/dtls.cpp
 
     noncore/cutestuff/bsocket.cpp
 )
@@ -96,6 +97,7 @@ set(HEADERS
     noncore/turnclient.h
     noncore/udpportreserver.h
     noncore/tcpportreserver.h
+    noncore/dtls.h
 
     noncore/cutestuff/bsocket.h
     noncore/cutestuff/bytestream.h

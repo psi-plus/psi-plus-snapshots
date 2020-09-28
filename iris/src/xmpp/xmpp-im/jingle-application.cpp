@@ -285,4 +285,7 @@ namespace XMPP { namespace Jingle {
         }
         return true;
     }
+
+    bool ApplicationManagerPad::incomingSessionInfo(const QDomElement &) { return false; /* unsupported by default */ }
+
 }}

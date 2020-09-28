@@ -47,6 +47,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     static const QString SIZE_TAG       = QStringLiteral("size");
     static const QString RANGE_TAG      = QStringLiteral("range");
     static const QString THUMBNAIL_TAG  = QStringLiteral("thumbnail");
+    static const QString CHECKSUM_TAG   = QStringLiteral("checksum");
+    static const QString RECEIVED_TAG   = QStringLiteral("received");
 
     QDomElement Range::toXml(QDomDocument *doc) const
     {
@@ -810,6 +812,18 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     Connection::Ptr Application::connection() const { return d->connection.staticCast<XMPP::Jingle::Connection>(); }
 
+    void Application::incomingChecksum(const QList<Hash> &hashes)
+    {
+        // TODO
+        qDebug("got checksum: %s", qPrintable(hashes.value(0).toString()));
+    }
+
+    void Application::incomingReceived()
+    {
+        // TODO
+        qDebug("got received");
+    }
+
     Pad::Pad(Manager *manager, Session *session) : _manager(manager), _session(session) { }
 
     QDomElement Pad::takeOutgoingSessionInfoUpdate()
@@ -835,6 +849,26 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 #endif
         } while (_session->content(name, _session->role()));
         return name;
+    }
+
+    bool Pad::incomingSessionInfo(const QDomElement &el)
+    {
+        if (el.tagName() == CHECKSUM_TAG) {
+            Checksum checksum(el);
+            auto     app = session()->content(checksum.name, checksum.creator);
+            if (app) {
+                static_cast<Application *>(app)->incomingChecksum(checksum.file.hashes());
+            }
+            return true;
+        } else if (el.tagName() == RECEIVED_TAG) {
+            Received received(el);
+            auto     app = session()->content(received.name, received.creator);
+            if (app) {
+                static_cast<Application *>(app)->incomingReceived();
+            }
+            return true;
+        }
+        return false;
     }
 
     void Pad::addOutgoingOffer(const File &file)

@@ -89,12 +89,12 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     };
 
     class Checksum : public ContentBase {
+    public:
         inline Checksum() { }
         Checksum(const QDomElement &file);
         bool        isValid() const;
         QDomElement toXml(QDomDocument *doc) const;
 
-    private:
         File file;
     };
 
@@ -113,6 +113,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         Session *           session() const override;
         ApplicationManager *manager() const override;
         QString             generateContentName(Origin senders) override;
+        bool                incomingSessionInfo(const QDomElement &el) override;
 
         void addOutgoingOffer(const File &file);
 
@@ -163,6 +164,9 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
         void            setDevice(QIODevice *dev, bool closeOnFinish = true);
         Connection::Ptr connection() const;
+
+        void incomingChecksum(const QList<Hash> &hashes);
+        void incomingReceived();
 
     protected:
         void incomingRemove(const Reason &r) override;

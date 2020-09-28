@@ -40,6 +40,8 @@ namespace XMPP { namespace Jingle {
          * As result it will be sent as <content name="file1" ... >
          */
         virtual QString generateContentName(Origin senders) = 0;
+
+        virtual bool incomingSessionInfo(const QDomElement &el);
     };
 
     // Represents a session for single application. for example a single file in a file transfer session.

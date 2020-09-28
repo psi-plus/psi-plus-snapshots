@@ -831,6 +831,25 @@ namespace XMPP { namespace Jingle {
             return true;
         }
 
+        bool handleIncomingSessionInfo(const QDomElement &jingleEl)
+        {
+            bool hasElements = false;
+            for (QDomElement child = jingleEl.firstChildElement(); !child.isNull();
+                 child             = child.nextSiblingElement()) {
+                hasElements = true;
+                auto pad    = q->applicationPad(child.namespaceURI());
+                if (pad) {
+                    return pad->incomingSessionInfo(jingleEl); // should return true if supported
+                }
+            }
+            if (!hasElements) {
+                // TODO implement session ping
+                outgoingUpdates.insert(Action::SessionInfo, {});
+                return true;
+            }
+            return false;
+        }
+
         bool handleIncomingTransportInfo(const QDomElement &jingleEl)
         {
             QString                                              contentTag(QStringLiteral("content"));
@@ -1090,7 +1109,7 @@ namespace XMPP { namespace Jingle {
         case Action::SessionAccept:
             return d->handleIncomingSessionAccept(jingleEl);
         case Action::SessionInfo:
-            break;
+            return d->handleIncomingSessionInfo(jingleEl);
         case Action::SessionInitiate: // impossible case. but let compiler be happy
             break;
         case Action::SessionTerminate:
