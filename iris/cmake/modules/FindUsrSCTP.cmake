@@ -6,14 +6,14 @@ if (NOT TARGET SctpLab::UsrSCTP)
     find_library(USRSCTP_LIBRARY NAMES usrsctp libusrsctp HINTS ${USRSCTP_LIB_DIR})
 
     include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(Usrsctp DEFAULT_MSG USRSCTP_LIBRARY USRSCTP_INCLUDE)
+    find_package_handle_standard_args(UsrSCTP DEFAULT_MSG USRSCTP_LIBRARY USRSCTP_INCLUDE)
 
     mark_as_advanced(USRSCTP_INCLUDE USRSCTP_LIBRARY)
 
     set(USRSCTP_LIBRARIES ${USRSCTP_LIBRARY})
     set(USRSCTP_INCLUDES ${USRSCTP_INCLUDE})
 
-    if (USRSCTP_FOUND)
+    if (UsrSCTP_FOUND)
         add_library(SctpLab::UsrSCTP UNKNOWN IMPORTED)
         set_target_properties(SctpLab::UsrSCTP PROPERTIES
                 IMPORTED_LOCATION "${USRSCTP_LIBRARY}"

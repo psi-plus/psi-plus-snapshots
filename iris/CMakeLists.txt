@@ -133,11 +133,11 @@ include_directories(
 
 if(NOT BUNDLED_USRSCTP)
     find_package(UsrSCTP)
-    if (USRSCTP_FOUND)
+    if (UsrSCTP_FOUND)
         message(STATUS "USRSCTP: using system")
     endif()
 endif()
-if (NOT USRSCTP_FOUND)
+if (NOT UsrSCTP_FOUND)
     message(STATUS "USRSCTP: using bundled")
     set(USRSCTP_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/usrsctp)
     set(USRSCTP_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/usrsctp)
