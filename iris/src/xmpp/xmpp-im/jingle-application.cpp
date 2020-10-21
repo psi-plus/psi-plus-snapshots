@@ -242,6 +242,7 @@ namespace XMPP { namespace Jingle {
         if (!isTransportReplaceEnabled() || !_transportSelector->replace(_transport, transport))
             return false;
 
+        qDebug("setting transport %s", qPrintable(transport->pad()->ns()));
         // in case we automatically select a new transport on our own we definitely will come up to this point
         if (_transport) {
             if (_transport->state() < State::Unacked && _transport->creator() == _pad->session()->role()
