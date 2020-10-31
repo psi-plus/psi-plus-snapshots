@@ -7,6 +7,7 @@
 #include "RTC/DataProducer.hpp"
 #include "usrsctp.h"
 #include <QJsonObject>
+#include <QObject>
 #include <QtEndian>
 
 // using json = nlohmann::json;
