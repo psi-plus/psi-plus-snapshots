@@ -9,6 +9,7 @@
 #include <QJsonObject>
 #include <QObject>
 #include <QtEndian>
+#include <functional>
 
 // using json = nlohmann::json;
 
