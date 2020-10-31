@@ -514,6 +514,12 @@ namespace XMPP { namespace Jingle {
     //----------------------------------------------------------------------------
     QDomElement SessionManagerPad::takeOutgoingSessionInfoUpdate() { return QDomElement(); }
 
+    void SessionManagerPad::populateOutgoing(Action action, QDomElement &el)
+    {
+        Q_UNUSED(action);
+        Q_UNUSED(el);
+    }
+
     QDomDocument *SessionManagerPad::doc() const { return session()->manager()->client()->doc(); }
 
     //----------------------------------------------------------------------------

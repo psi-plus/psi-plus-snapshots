@@ -43,7 +43,7 @@ namespace Jingle { namespace IBB {
         TransportFeatures           features() const override;
         int                         maxSupportedChannels() const override;
 
-        Connection::Ptr addChannel() const override;
+        Connection::Ptr addChannel(TransportFeatures features = TransportFeatures()) const override;
 
     private:
         friend class Manager;

@@ -646,7 +646,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         connect(_transport.data(), &Transport::connected, this, [this]() {
             d->lastReason = Reason();
             d->lastError.reset();
-            d->connection = _transport->addChannel();
+            d->connection = _transport->addChannel(TransportFeature::Reliable | TransportFeature::DataOriented);
             if (!d->streamingMode) {
                 connect(d->connection.data(), &Connection::readyRead, this, [this]() {
                     if (!d->device) {

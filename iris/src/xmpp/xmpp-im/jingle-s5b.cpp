@@ -1634,16 +1634,16 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
     bool Transport::isValid() const { return d != nullptr; }
 
-    TransportFeatures Transport::features() const
-    {
-        return TransportFeatures(TransportFeature::HardToConnect) | TransportFeature::Reliable | TransportFeature::Fast;
-    }
+    TransportFeatures Transport::features() const { return _pad->manager()->features(); }
 
     QString Transport::sid() const { return d->sid; }
 
     QString Transport::directAddr() const { return d->directAddr; }
 
-    Connection::Ptr Transport::addChannel() const { return d->connection.staticCast<XMPP::Jingle::Connection>(); }
+    Connection::Ptr Transport::addChannel(TransportFeatures features) const
+    {
+        return d->connection.staticCast<XMPP::Jingle::Connection>();
+    }
 
     //----------------------------------------------------------------
     // Manager
@@ -1670,7 +1670,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
     TransportFeatures Manager::features() const
     {
-        return TransportFeatures(TransportFeature::Reliable) | TransportFeature::Fast;
+        return TransportFeature::Reliable | TransportFeature::Fast | TransportFeature::DataOriented;
     }
 
     void Manager::setJingleManager(XMPP::Jingle::Manager *jm)

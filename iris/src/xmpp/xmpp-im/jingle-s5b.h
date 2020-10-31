@@ -143,7 +143,7 @@ namespace Jingle { namespace S5B {
 
         QString         sid() const;
         QString         directAddr() const;
-        Connection::Ptr addChannel() const override;
+        Connection::Ptr addChannel(TransportFeatures features = TransportFeatures()) const override;
 
     private:
         friend class Manager;

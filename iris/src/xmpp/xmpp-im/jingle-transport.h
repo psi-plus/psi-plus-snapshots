@@ -119,9 +119,11 @@ namespace XMPP { namespace Jingle {
         virtual bool hasUpdates() const            = 0;
         virtual OutgoingTransportInfoUpdate takeOutgoingUpdate() = 0;
         virtual bool                        isValid() const      = 0;
-        virtual TransportFeatures           features() const     = 0;
-        virtual int                         maxSupportedChannels() const;
-        virtual Connection::Ptr             addChannel() const = 0; // returns established QIODevice-based connection
+
+        // returns all the available transport features while addChannel() can use just a subset of them
+        virtual TransportFeatures features() const = 0;
+        virtual int               maxSupportedChannels() const;
+        virtual Connection::Ptr   addChannel(TransportFeatures features = TransportFeatures()) const = 0;
     signals:
         void updated(); // found some candidates and they have to be sent. takeUpdate has to be called from this signal
                         // handler. if it's just always ready then signal has to be sent at least once otherwise

@@ -136,20 +136,25 @@ namespace Jingle {
     For example all of them can enable p2p crypto mode (<security/> should work here)
     */
     enum class TransportFeature {
-        // connection establishment
-        HardToConnect = 0x01, // anything else but ibb
-        AlwaysConnect = 0x02, // ibb. basically it's always connected
+        HighProbableConnect = 0x01, // e.g ICE. ICE will have priority over others thanks to Fast|MessageOriented
+        AlwaysConnect       = 0x02, // e.g. IBB. basically it's always connected
 
-        // reliability
-        NotReliable = 0x10, // datagram-oriented
-        Reliable    = 0x20, // connection-orinted
+        // exclusive
+        Unreliable = 0x04, // losses are acceptable
+        Reliable   = 0x08, // losses are unacceptable
 
-        // speed.
-        Slow     = 0x100, // only ibb is here probably
-        Fast     = 0x200, // basically all tcp-based and reliable part of sctp
-        RealTime = 0x400  // it's rather about synchronization of frames with time which implies fast
+        Fast = 0x20, // assumes p2p or some light proxies like TURN/S5B (likely everything but IBB)
+
+        // exclusive
+        StreamOriented  = 0x200,
+        MessageOriented = 0x400, // if not set then it's stream oriented
+
+        // exclusive
+        DataOriented = 0x800, // the goal is to deliver data
+        TimeOriented = 0x1000 // the goal is keep data synchronized with time (e.g. for rtp)
     };
     Q_DECLARE_FLAGS(TransportFeatures, TransportFeature)
+    Q_DECLARE_OPERATORS_FOR_FLAGS(TransportFeatures)
 
     typedef QPair<QString, Origin>      ContentKey;
     typedef std::function<void(Task *)> OutgoingUpdateCB;
@@ -294,6 +299,7 @@ namespace Jingle {
         virtual QDomElement takeOutgoingSessionInfoUpdate();
         virtual QString     ns() const      = 0;
         virtual Session *   session() const = 0;
+        virtual void        populateOutgoing(Action action, QDomElement &el);
         QDomDocument *      doc() const;
     };
 
@@ -361,7 +367,5 @@ namespace Jingle {
 
 } // namespace Jingle
 } // namespace XMPP
-
-Q_DECLARE_OPERATORS_FOR_FLAGS(XMPP::Jingle::TransportFeatures)
 
 #endif // JINGLE_H

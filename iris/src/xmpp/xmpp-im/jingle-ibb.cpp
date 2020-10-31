@@ -351,12 +351,12 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
     TransportFeatures Transport::features() const
     {
-        return TransportFeatures(TransportFeature::AlwaysConnect) | TransportFeature::Reliable | TransportFeature::Slow;
+        return TransportFeature::AlwaysConnect | TransportFeature::Reliable | TransportFeature::DataOriented;
     }
 
     int Transport::maxSupportedChannels() const { return -1; }
 
-    Connection::Ptr Transport::addChannel() const
+    Connection::Ptr Transport::addChannel(TransportFeatures features) const
     {
         return d->readyConnections.isEmpty() ? Connection::Ptr()
                                              : d->readyConnections.takeFirst().staticCast<XMPP::Jingle::Connection>();
@@ -394,7 +394,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
     TransportFeatures Manager::features() const
     {
-        return TransportFeatures(TransportFeature::AlwaysConnect) | TransportFeature::Reliable | TransportFeature::Slow;
+        return TransportFeature::AlwaysConnect | TransportFeature::Reliable | TransportFeature::DataOriented;
     }
 
     void Manager::setJingleManager(XMPP::Jingle::Manager *jm) { d->jingleManager = jm; }

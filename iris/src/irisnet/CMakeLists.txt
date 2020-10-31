@@ -53,6 +53,9 @@ set(SOURCES
     noncore/dtls.cpp
 
     noncore/cutestuff/bsocket.cpp
+
+    noncore/sctp/SctpAssociation.cpp
+    noncore/sctp/DepUsrSCTP.cpp
 )
 
 if(UNIX)
@@ -64,9 +67,9 @@ if(NOT USE_QJDNS)
 else()
     list(APPEND SOURCES corelib/netnames_jdns.cpp)
 endif()
-if (Qt5Network_VERSION VERSION_LESS 5.15.0)
+#if (Qt5Network_VERSION VERSION_LESS 5.15.0)
     list(APPEND SOURCES corelib/netinterface_qtnet.cpp)
-endif()
+#endif()
 
 set(HEADERS
     corelib/irisnetexport.h
@@ -107,6 +110,12 @@ set(HEADERS
 
     noncore/legacy/ndns.h
     noncore/legacy/srvresolver.h
+
+    noncore/sctp/SctpAssociation.hpp
+    noncore/sctp/DepUsrSCTP.hpp
+    noncore/sctp/RTC/DataConsumer.hpp
+    noncore/sctp/RTC/DataProducer.hpp
+    noncore/sctp/RTC/SctpParameters.hpp
 )
 
 add_library(irisnet STATIC ${SOURCES} ${HEADERS} )
@@ -119,9 +128,9 @@ if(NOT USE_QJDNS)
     set(QJDns_LIBRARY "")
 endif()
 
-if (Qt5Network_VERSION VERSION_LESS 5.15.0)
+#if (Qt5Network_VERSION VERSION_LESS 5.15.0)
     target_compile_definitions(irisnet PRIVATE HAVE_QTNET)
-endif()
+#endif()
 target_link_libraries(irisnet Qt5::Core Qt5::Network Qt5::Xml)
 if (BUNDLED_QCA)
     add_dependencies(irisnet QcaProject)
@@ -129,3 +138,9 @@ endif()
 target_link_libraries(irisnet ${qca_LIB})
 target_link_libraries(irisnet ${USRSCTP_LIBRARY})
 target_link_libraries(irisnet ${QJDns_LIBRARY} ${EXTRA_LDFLAGS})
+
+# usrsctp requires pthread
+if(NOT WIN32)
+    find_package(Threads)
+    target_link_libraries(irisnet Threads::Threads)
+endif()

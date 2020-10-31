@@ -140,7 +140,7 @@ namespace Jingle { namespace ICE {
         TransportFeatures           features() const override;
         int                         maxSupportedChannels() const override;
 
-        Connection::Ptr addChannel() const override;
+        Connection::Ptr addChannel(TransportFeatures features = TransportFeatures()) const override;
 
     private:
         friend class Manager;
@@ -159,6 +159,7 @@ namespace Jingle { namespace ICE {
         QString           ns() const override;
         Session *         session() const override;
         TransportManager *manager() const override;
+        void              populateOutgoing(Action action, QDomElement &el) override;
 
         inline TcpPortScope *discoScope() const { return _discoScope; }
 
