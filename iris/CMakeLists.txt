@@ -40,6 +40,7 @@ set( CMAKE_MODULE_PATH
 
 option( USE_QJDNS "Use qjdns/jdns library. Disabled by default for Qt5" OFF )
 option( SEPARATE_QJDNS "Build qjdns with iris library" OFF )
+option( JINGLE_ICE "Enable ICE Jingle transport for p2p file transfer" ON )
 option( BUNDLED_QCA "Adds: DTLS, Blake2b and other useful for XMPP crypto-stuff" OFF)
 option( BUNDLED_USRSCTP "Compile compatible usrsctp lib when system one is not available or uncompatible (required for datachannel jingle transport)" OFF)
 option( BUILD_IRIS_TOOLS "Build tools and examples" OFF)
@@ -139,10 +140,10 @@ if(NOT BUNDLED_USRSCTP)
 endif()
 if (NOT UsrSCTP_FOUND)
     message(STATUS "USRSCTP: using bundled")
-    set(USRSCTP_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/usrsctp)
+    set(USRSCTP_SOURCE_DIR usrsctplib${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/usrsctp)
     set(USRSCTP_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/usrsctp)
     set(USRSCTP_BUILD_DIR ${USRSCTP_PREFIX}/build)
-    set(USRSCTP_INCLUDE_DIR ${USRSCTP_SOURCE_DIR}/include)
+    set(USRSCTP_INCLUDE_DIR ${USRSCTP_PREFIX}/include)
     set(USRSCTP_LIBRARY ${USRSCTP_BUILD_DIR}/usrsctplib/${CMAKE_STATIC_LIBRARY_PREFIX}usrsctp${CMAKE_STATIC_LIBRARY_SUFFIX})
 
     include(ExternalProject)
@@ -159,7 +160,6 @@ if (NOT UsrSCTP_FOUND)
             SOURCE_DIR ${USRSCTP_SOURCE_DIR}
             CMAKE_ARGS ${USRSCTP_BUILD_OPTIONS}
             BUILD_BYPRODUCTS ${USRSCTP_LIBRARY}
-            INSTALL_COMMAND ""
             )
     else()
         include(FindGit)
@@ -174,7 +174,6 @@ if (NOT UsrSCTP_FOUND)
             GIT_TAG f4925bd5ebb2db38263eef0ec816bf393293cf9c
             CMAKE_ARGS ${USRSCTP_BUILD_OPTIONS}
             BUILD_BYPRODUCTS ${USRSCTP_LIBRARY}
-            INSTALL_COMMAND ""
             )
     endif()
     add_library(SctpLab::UsrSCTP UNKNOWN IMPORTED)
