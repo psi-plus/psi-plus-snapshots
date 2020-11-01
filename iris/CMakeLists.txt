@@ -164,7 +164,6 @@ if (NOT UsrSCTP_FOUND AND BUNDLED_USRSCTP)
             SOURCE_DIR ${USRSCTP_SOURCE_DIR}
             CMAKE_ARGS ${USRSCTP_BUILD_OPTIONS}
             BUILD_BYPRODUCTS ${USRSCTP_LIBRARY}
-            PATCH_COMMAND ${Patch_EXECUTABLE} ${USRSCTP_SOURCE_DIR}/usrsctplib/CMakeLists.txt ${CMAKE_CURRENT_SOURCE_DIR}/usrsctp_remove_shared.patch
             INSTALL_COMMAND ""
             )
     else()
@@ -179,7 +178,6 @@ if (NOT UsrSCTP_FOUND AND BUNDLED_USRSCTP)
             GIT_REPOSITORY https://github.com/sctplab/usrsctp.git
             GIT_TAG f4925bd5ebb2db38263eef0ec816bf393293cf9c
             CMAKE_ARGS ${USRSCTP_BUILD_OPTIONS}
-            PATCH_COMMAND ${Patch_EXECUTABLE} ${USRSCTP_PREFIX}/src/UsrSCTPProject/usrsctplib/CMakeLists.txt ${CMAKE_CURRENT_SOURCE_DIR}/usrsctp_remove_shared.patch
             INSTALL_COMMAND ""
             )
     endif()
