@@ -148,7 +148,6 @@ if (NOT UsrSCTP_FOUND AND BUNDLED_USRSCTP)
         list(APPEND USRSCTP_INCLUDE_DIR ${USRSCTP_SOURCE_DIR}/usrsctplib)
     endif()
     set(USRSCTP_LIBRARY ${USRSCTP_BUILD_DIR}/usrsctplib/${CMAKE_STATIC_LIBRARY_PREFIX}usrsctp${CMAKE_STATIC_LIBRARY_SUFFIX})
-    find_package(Patch REQUIRED) #Temporary. Needed for patching usrsctp sources to disable shared libraries creation
 
     include(ExternalProject)
     #set CMake options and transfer the environment to an external project
