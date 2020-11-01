@@ -132,19 +132,23 @@ include_directories(
     ${Qca_INCLUDE_DIR}
 )
 
-if(NOT BUNDLED_USRSCTP)
-    find_package(UsrSCTP)
-    if (UsrSCTP_FOUND)
-        message(STATUS "USRSCTP: using system")
-    endif()
+find_package(UsrSCTP)
+if (NOT UsrSCTP_FOUND AND (NOT BUNDLED_USRSCTP))
+    message(FATAL_ERROR "UsrSCTP library not found. Try to install usrsctp library or enable BUNDLED_USRSCTP flag")
 endif()
-if (NOT UsrSCTP_FOUND)
+
+if (NOT UsrSCTP_FOUND AND BUNDLED_USRSCTP)
     message(STATUS "USRSCTP: using bundled")
-    set(USRSCTP_SOURCE_DIR usrsctplib${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/usrsctp)
+    set(USRSCTP_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/usrsctp)
     set(USRSCTP_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/usrsctp)
     set(USRSCTP_BUILD_DIR ${USRSCTP_PREFIX}/build)
-    set(USRSCTP_INCLUDE_DIR ${USRSCTP_PREFIX}/include)
+    if(NOT EXISTS ${USRSCTP_SOURCE_DIR})
+        list(APPEND USRSCTP_INCLUDE_DIR ${USRSCTP_PREFIX}/src/UsrSCTPProject/usrsctplib)
+    else()
+        list(APPEND USRSCTP_INCLUDE_DIR ${USRSCTP_SOURCE_DIR}/usrsctplib)
+    endif()
     set(USRSCTP_LIBRARY ${USRSCTP_BUILD_DIR}/usrsctplib/${CMAKE_STATIC_LIBRARY_PREFIX}usrsctp${CMAKE_STATIC_LIBRARY_SUFFIX})
+    find_package(Patch REQUIRED) #Temporary. Needed for patching usrsctp sources to disable shared libraries creation
 
     include(ExternalProject)
     #set CMake options and transfer the environment to an external project
@@ -160,6 +164,8 @@ if (NOT UsrSCTP_FOUND)
             SOURCE_DIR ${USRSCTP_SOURCE_DIR}
             CMAKE_ARGS ${USRSCTP_BUILD_OPTIONS}
             BUILD_BYPRODUCTS ${USRSCTP_LIBRARY}
+            PATCH_COMMAND ${Patch_EXECUTABLE} ${USRSCTP_SOURCE_DIR}/usrsctplib/CMakeLists.txt ${CMAKE_CURRENT_SOURCE_DIR}/usrsctp_remove_shared.patch
+            INSTALL_COMMAND ""
             )
     else()
         include(FindGit)
@@ -173,17 +179,27 @@ if (NOT UsrSCTP_FOUND)
             GIT_REPOSITORY https://github.com/sctplab/usrsctp.git
             GIT_TAG f4925bd5ebb2db38263eef0ec816bf393293cf9c
             CMAKE_ARGS ${USRSCTP_BUILD_OPTIONS}
-            BUILD_BYPRODUCTS ${USRSCTP_LIBRARY}
+            PATCH_COMMAND ${Patch_EXECUTABLE} ${USRSCTP_PREFIX}/src/UsrSCTPProject/usrsctplib/CMakeLists.txt ${CMAKE_CURRENT_SOURCE_DIR}/usrsctp_remove_shared.patch
+            INSTALL_COMMAND ""
             )
     endif()
     add_library(SctpLab::UsrSCTP UNKNOWN IMPORTED)
     set_target_properties(SctpLab::UsrSCTP PROPERTIES
             IMPORTED_LOCATION "${USRSCTP_LIBRARY}"
             INTERFACE_COMPILE_DEFINITIONS "${USRSCTP_DEFINITIONS}"
-            INTERFACE_INCLUDE_DIRECTORIES "${USRSCTP_INCLUDE_DIR}"
             IMPORTED_LINK_INTERFACE_LANGUAGES "C")
     add_dependencies(SctpLab::UsrSCTP ${USRSCTP_LIBRARY})
 endif()
+
+set(sctpLab_LIBRARY ${USRSCTP_LIBRARY})
+if(USRSCTP_INCLUDES)
+    set(sctpLab_INCLUDES ${USRSCTP_INCLUDES})
+else()
+    set(sctpLab_INCLUDES ${USRSCTP_INCLUDE_DIR})
+endif()
+include_directories(
+    ${sctpLab_INCLUDES}
+)
 
 if(NOT USE_QJDNS AND SEPARATE_QJDNS)
     message(FATAL_ERROR "SEPARATE_QJDNS flag enabled, but USE_QJDNS flag disabled.\nPlease enable flag USE_QJDNS or disable both flags")
