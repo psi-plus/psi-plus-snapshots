@@ -120,7 +120,7 @@ set(HEADERS
 add_library(irisnet STATIC ${SOURCES} ${HEADERS} )
 
 if(WIN32 AND (SEPARATE_QJDNS OR (NOT USE_QJDNS)))
-    set(EXTRA_LDFLAGS ws2_32)
+    set(EXTRA_LDFLAGS ws2_32 iphlpapi)
 endif()
 
 if(NOT USE_QJDNS)
