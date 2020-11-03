@@ -48,6 +48,8 @@ namespace XMPP { namespace Jingle {
 
         Origin role() const; // my role in session: initiator or responder
         Origin peerRole() const;
+        bool   checkPeerCaps(const QString &ns) const;
+        bool   isGroupingAllowed() const;
 
         XMPP::Stanza::Error lastError() const;
 
@@ -57,6 +59,7 @@ namespace XMPP { namespace Jingle {
         Application *                          content(const QString &contentName, Origin creator);
         void                                   addContent(Application *content);
         const QMap<ContentKey, Application *> &contentList() const;
+        void                                   setGrouping(const QString &groupType, const QStringList &group);
 
         ApplicationManagerPad::Ptr applicationPad(const QString &ns);
         TransportManagerPad::Ptr   transportPad(const QString &ns);

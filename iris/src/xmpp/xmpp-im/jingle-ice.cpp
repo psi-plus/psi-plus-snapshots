@@ -17,10 +17,11 @@
  *
  */
 
+#include "irisnet/noncore/sctp/DepUsrSCTP.hpp" //Do not move to avoid warnings with MinGW
+
 #include "jingle-ice.h"
 
 #include "ice176.h"
-#include "irisnet/noncore/sctp/DepUsrSCTP.hpp"
 #include "jingle-session.h"
 #include "netnames.h"
 #include "udpportreserver.h"
@@ -961,7 +962,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
     Pad::Pad(Manager *manager, Session *session) : _manager(manager), _session(session)
     {
         auto reserver = _session->manager()->client()->tcpPortReserver();
-        _discoScope   = reserver->scope(QString::fromLatin1("s5b"));
+        _discoScope   = reserver->scope(QString::fromLatin1("ice"));
     }
 
     QString Pad::ns() const { return NS; }
@@ -970,16 +971,20 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
     TransportManager *Pad::manager() const { return _manager; }
 
-    void Pad::populateOutgoing(Action action, QDomElement &jingle)
+    void Pad::onLocalAccepted()
     {
-        if (action == Action::SessionInitiate || action == Action::SessionAccept) {
-            for (auto app : session()->contentList()) {
-                auto transport = app->transport();
-                if (transport && transport.dynamicCast<Transport>()) {
-                    // do grouping stuff
-                }
+        if (!_session->isGroupingAllowed() && _session->role() != Origin::Initiator)
+            return;
+        QStringList bundle;
+        for (auto app : session()->contentList()) {
+            auto transport = app->transport();
+            if (transport && transport.dynamicCast<Transport>()) {
+                // do grouping stuff
+                bundle.append(app->contentName());
             }
         }
+        if (bundle.size() > 1)
+            _session->setGrouping(QLatin1String("BUNDLE"), bundle);
     }
 
 } // namespace Ice

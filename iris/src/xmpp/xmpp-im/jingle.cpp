@@ -520,6 +520,9 @@ namespace XMPP { namespace Jingle {
         Q_UNUSED(el);
     }
 
+    void SessionManagerPad::onLocalAccepted() { }
+    void SessionManagerPad::onSend() { }
+
     QDomDocument *SessionManagerPad::doc() const { return session()->manager()->client()->doc(); }
 
     //----------------------------------------------------------------------------

@@ -299,8 +299,12 @@ namespace Jingle {
         virtual QDomElement takeOutgoingSessionInfoUpdate();
         virtual QString     ns() const      = 0;
         virtual Session *   session() const = 0;
-        virtual void        populateOutgoing(Action action, QDomElement &el);
-        QDomDocument *      doc() const;
+
+        virtual void onLocalAccepted(); // changing to prepare state
+        virtual void onSend();          // local stuff is prepared we are going to send it to remote
+
+        virtual void  populateOutgoing(Action action, QDomElement &el);
+        QDomDocument *doc() const;
     };
 
     class ApplicationManager;

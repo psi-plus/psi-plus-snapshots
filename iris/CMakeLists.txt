@@ -132,6 +132,13 @@ include_directories(
     ${Qca_INCLUDE_DIR}
 )
 
+if((CMAKE_CROSSCOMPILING) AND (DEFINED MSYS) AND (EXISTS ${CMAKE_PREFIX_PATH}/include/stdint.h))
+    #Add SCTP_STDINT_INCLUDE definition to compile irisnet with usrsctp with MinGW
+    add_definitions(
+        -DSCTP_STDINT_INCLUDE="${CMAKE_PREFIX_PATH}/include/stdint.h"
+    )
+endif()
+
 find_package(UsrSCTP)
 if (NOT UsrSCTP_FOUND AND (NOT BUNDLED_USRSCTP))
     message(FATAL_ERROR "UsrSCTP library not found. Try to install usrsctp library or enable BUNDLED_USRSCTP flag")

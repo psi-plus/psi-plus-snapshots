@@ -21,6 +21,7 @@
 
 #include "jingle-application.h"
 #include "xmpp/jid/jid.h"
+#include "xmpp_caps.h"
 #include "xmpp_client.h"
 #include "xmpp_task.h"
 #include "xmpp_xmlcommon.h"
@@ -83,8 +84,10 @@ namespace XMPP { namespace Jingle {
         QMap<QString, QWeakPointer<TransportManagerPad>>   transportPads;
         QMap<ContentKey, Application *>                    contentList;
         QSet<Application *>                                signalingContent;
-        QList<Application *>
-            initialIncomingUnacceptedContent; // not yet acccepted applications from initial incoming request
+        QHash<QString, QStringList>                        groups;
+
+        // not yet acccepted applications from initial incoming request
+        QList<Application *> initialIncomingUnacceptedContent;
 
         // session level updates. session-info for example or some rejected apps
         QHash<Action, OutgoingUpdate> outgoingUpdates;
@@ -93,7 +96,9 @@ namespace XMPP { namespace Jingle {
         Jid     origFrom;   // "from" attr of IQ.
         Jid     otherParty; // either "from" or initiator/responder. it's where to send all requests.
         Jid     localParty; // that one will be set as initiator/responder if provided
-        bool    waitingAck = false;
+        bool    waitingAck      = false;
+        bool    needNotifyGroup = false; // whenever grouping info changes
+        bool    groupingAllowed = false;
 
         void setSessionFinished()
         {
@@ -113,6 +118,45 @@ namespace XMPP { namespace Jingle {
             q->deleteLater();
         }
 
+        QList<QDomElement> genGroupingXML()
+        {
+            QList<QDomElement> ret;
+            if (!groupingAllowed)
+                return ret;
+
+            QDomDocument &doc = *manager->client()->doc();
+
+            QHashIterator<QString, QStringList> it(groups);
+            while (it.hasNext()) {
+                it.next();
+                auto g = doc.createElementNS(QLatin1String("urn:xmpp:jingle:apps:grouping:0"), QLatin1String("group"));
+                g.setAttribute(QLatin1String("semantics"), it.key());
+                for (auto const &name : it.value()) {
+                    auto c = doc.createElement(QLatin1String("content"));
+                    c.setAttribute(QLatin1String("name"), name);
+                    g.appendChild(c);
+                }
+                ret.append(g);
+            }
+            return ret;
+        }
+
+        template <void (SessionManagerPad::*func)()> void notifyPads()
+        {
+            for (auto &weakPad : transportPads) {
+                auto pad = weakPad.lock();
+                if (pad) {
+                    (pad.get()->*func)(); // just calls pad's method
+                }
+            }
+            for (auto &weakPad : applicationPads) {
+                auto pad = weakPad.lock();
+                if (pad) {
+                    (pad.get()->*func)();
+                }
+            }
+        }
+
         void sendJingle(Action action, QList<QDomElement> update,
                         std::function<void(JT *)> callback = std::function<void(JT *)>())
         {
@@ -128,6 +172,13 @@ namespace XMPP { namespace Jingle {
 
             for (const QDomElement &e : update) {
                 xml.appendChild(e);
+            }
+            if (needNotifyGroup
+                && (action == Action::SessionInitiate || action == Action::SessionAccept || action == Action::ContentAdd
+                    || action == Action::ContentAccept)) {
+                for (auto const &g : genGroupingXML())
+                    xml.appendChild(g);
+                needNotifyGroup = false;
             }
 
             auto jt = new JT(manager->client()->rootTask());
@@ -234,6 +285,8 @@ namespace XMPP { namespace Jingle {
                     finalState   = State::Pending;
                 }
 
+                notifyPads<&SessionManagerPad::onSend>();
+
                 QList<QDomElement> contents;
                 QList<AckHndl>     acceptApps;
                 for (const auto &app : contentList) {
@@ -246,6 +299,7 @@ namespace XMPP { namespace Jingle {
                         acceptApps.append(AckHndl { app, callback });
                     }
                 }
+
                 state = State::Unacked;
                 sendJingle(actionToSend, contents, [this, acceptApps, finalState](JT *jt) {
                     if (!jt->success())
@@ -884,10 +938,11 @@ namespace XMPP { namespace Jingle {
 
     Session::Session(Manager *manager, const Jid &peer, Origin role) : d(new Private)
     {
-        d->q          = this;
-        d->role       = role;
-        d->manager    = manager;
-        d->otherParty = peer;
+        d->q               = this;
+        d->role            = role;
+        d->manager         = manager;
+        d->otherParty      = peer;
+        d->groupingAllowed = checkPeerCaps(QLatin1String("urn:ietf:rfc:5888"));
         d->stepTimer.setSingleShot(true);
         d->stepTimer.setInterval(0);
         connect(&d->stepTimer, &QTimer::timeout, this, [this]() { d->doStep(); });
@@ -920,6 +975,13 @@ namespace XMPP { namespace Jingle {
 
     Origin Session::peerRole() const { return negateOrigin(d->role); }
 
+    bool Session::checkPeerCaps(const QString &ns) const
+    {
+        return d->manager->client()->capsManager()->disco(peer()).features().test(QStringList() << ns);
+    }
+
+    bool Session::isGroupingAllowed() const { return d->groupingAllowed; }
+
     XMPP::Stanza::Error Session::lastError() const { return d->lastError; }
 
     Application *Session::newContent(const QString &ns, Origin senders)
@@ -948,6 +1010,12 @@ namespace XMPP { namespace Jingle {
     }
 
     const QMap<ContentKey, Application *> &Session::contentList() const { return d->contentList; }
+
+    void Session::setGrouping(const QString &groupType, const QStringList &group)
+    {
+        d->groups.insert(groupType, group);
+        d->needNotifyGroup = true;
+    }
 
     ApplicationManagerPad::Ptr Session::applicationPad(const QString &ns)
     {
@@ -989,6 +1057,7 @@ namespace XMPP { namespace Jingle {
         for (auto &c : d->contentList) {
             c->prepare();
         }
+        d->notifyPads<&SessionManagerPad::onLocalAccepted>();
         d->planStep();
     }
 
@@ -1000,6 +1069,7 @@ namespace XMPP { namespace Jingle {
             for (auto &c : d->contentList) {
                 c->prepare();
             }
+            d->notifyPads<&SessionManagerPad::onLocalAccepted>();
             d->planStep();
         }
     }
