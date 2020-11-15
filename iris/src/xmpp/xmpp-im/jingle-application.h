@@ -22,6 +22,8 @@
 
 #include "jingle-transport.h"
 
+class QTimer;
+
 namespace XMPP { namespace Jingle {
 
     class ApplicationManager;
@@ -72,6 +74,8 @@ namespace XMPP { namespace Jingle {
         inline QString                    contentName() const { return _contentName; }
         inline QSharedPointer<Transport>  transport() const { return _transport; }
         inline TransportSelector *        transportSelector() const { return _transportSelector.data(); }
+        bool                              isRemote() const;
+        inline bool                       isLocal() const { return !isRemote(); }
 
         virtual SetDescError setRemoteOffer(const QDomElement &description)  = 0;
         virtual SetDescError setRemoteAnswer(const QDomElement &description) = 0;
@@ -172,6 +176,8 @@ namespace XMPP { namespace Jingle {
 
         // evaluated update to be sent
         Update _update;
+
+        QTimer *transportInitTimer = nullptr;
     };
 
     inline bool operator<(const Application::Update &a, const Application::Update &b)
@@ -193,6 +199,8 @@ namespace XMPP { namespace Jingle {
         // this method is supposed to gracefully close all related sessions as a preparation for plugin unload for
         // example
         virtual void closeAll() = 0;
+
+        virtual QStringList discoFeatures() const = 0;
     };
 
 }}

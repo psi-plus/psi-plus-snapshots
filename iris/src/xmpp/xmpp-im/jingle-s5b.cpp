@@ -50,20 +50,25 @@ namespace XMPP { namespace Jingle { namespace S5B {
         Q_OBJECT
 
         QList<NetworkDatagram> datagrams;
-        SocksClient *          client;
-        Transport::Mode        mode;
+        SocksClient *          client = nullptr;
+        Transport::Mode        mode   = Transport::Tcp;
 
     public:
-        Connection(SocksClient *client, Transport::Mode mode) : client(client), mode(mode)
+        void setSocksClient(SocksClient *client, Transport::Mode mode)
         {
+            if (!client->isOpen()) {
+                qCritical("Failed to set closed SockClient connection %p", client);
+                return;
+            }
+
+            this->client = client;
+            this->mode   = mode;
+
             connect(client, &SocksClient::readyRead, this, &Connection::readyRead);
             connect(client, &SocksClient::bytesWritten, this, &Connection::bytesWritten);
             connect(client, &SocksClient::aboutToClose, this, &Connection::aboutToClose);
-            if (client->isOpen()) {
-                setOpenMode(client->openMode());
-            } else {
-                qWarning("Creating S5B Transport connection on closed SockClient connection %p", client);
-            }
+            setOpenMode(client->openMode());
+            emit connected();
         }
 
         bool hasPendingDatagrams() const { return datagrams.size() > 0; }
@@ -82,13 +87,15 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 return 0;
         }
 
-        qint64 bytesToWrite() const { return client->bytesToWrite(); }
+        qint64 bytesToWrite() const { return client ? client->bytesToWrite() : 0; }
 
         void close()
         {
-            if (client) {
-                client->disconnect(this);
+            if (!client) {
+                // was never opened
+                return;
             }
+            client->disconnect(this);
             XMPP::Jingle::Connection::close();
             client->deleteLater();
             client = nullptr;
@@ -601,6 +608,8 @@ namespace XMPP { namespace Jingle { namespace S5B {
         quint16      udpPort;
         QHostAddress udpAddress;
 
+        Private() : connection(QSharedPointer<Connection>::create()) { }
+
         inline Jid remoteJid() const { return q->_pad->session()->peer(); }
 
         QString generateCid() const
@@ -1107,7 +1116,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 if (c.isValid() && !isDup(c) && c.priority()) {
                     QObject::connect(s5bserv.data(), &S5BServer::incomingConnection, q,
                                      [this, c](SocksClient *sc, const QString &key) mutable {
-                                         if (!connection && key == directAddr
+                                         if (!connection->client && key == directAddr
                                              && (c.state() == Candidate::Pending || c.state() == Candidate::Unacked)) {
                                              c.incomingConnection(sc);
                                              c.server().data()->disconnect(q); // drop this connection.
@@ -1118,7 +1127,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                                              return;
                                          }
                                          qDebug("Reject incoming socks5 connection with key %s (%s)", qPrintable(key),
-                                                connection ? "already has connection" : "key mismatch");
+                                                connection->client ? "already has connection" : "key mismatch");
                                          sc->requestDeny();
                                          sc->deleteLater();
                                      });
@@ -1126,7 +1135,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                         s5bserv.data(), &S5BServer::incomingUdp, q,
                         [this, c](bool isInit, const QHostAddress &addr, int sourcePort, const QString &key,
                                   const QByteArray &data) {
-                            if (mode != Transport::Mode::Udp || !connection) {
+                            if (mode != Transport::Mode::Udp || !connection->client) {
                                 return false;
                             }
 
@@ -1170,7 +1179,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
         void handleConnected(Candidate &connCand)
         {
-            connection.reset(new Connection(connCand.takeSocksClient(), mode));
+            connection->setSocksClient(connCand.takeSocksClient(), mode);
             probingTimer.stop();
             negotiationFinishTimer.stop();
             proxyDiscoveryInProgress = false;
@@ -1640,9 +1649,16 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
     QString Transport::directAddr() const { return d->directAddr; }
 
-    Connection::Ptr Transport::addChannel(TransportFeatures features) const
+    XMPP::Jingle::Connection::Ptr Transport::addChannel(TransportFeatures features) const
     {
-        return d->connection.staticCast<XMPP::Jingle::Connection>();
+        Q_UNUSED(features); // no way create something depending on features
+        return d->connection;
+    }
+
+    std::vector<XMPP::Jingle::Connection::Ptr> Transport::channels() const
+    {
+        // return {}; // good to test transport failure
+        return { { d->connection } };
     }
 
     //----------------------------------------------------------------
@@ -1701,6 +1717,8 @@ namespace XMPP { namespace Jingle { namespace S5B {
     TransportManagerPad *Manager::pad(Session *session) { return new Pad(this, session); }
 
     void Manager::closeAll() { emit abortAllRequested(); }
+
+    QStringList Manager::discoFeatures() const { return { NS }; }
 
     void Manager::addKeyMapping(const QString &key, Transport *transport) { d->key2transport.insert(key, transport); }
 

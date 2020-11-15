@@ -663,11 +663,24 @@ namespace XMPP { namespace Jingle {
 
     QStringList Manager::availableTransports(const TransportFeatures &features) const
     {
-        QStringList ret;
+        QMap<int, QString> ret;
         for (auto it = d->transportManagers.cbegin(); it != d->transportManagers.cend(); ++it) {
             if (((*it)->features() & features) == features) {
-                ret.append(it.key());
+                ret.insert((*it)->features(), it.key());
             }
+        }
+        // sorting by features is totally unreliable, so we have TransportSelector to do better job
+        return ret.values();
+    }
+
+    QStringList Manager::discoFeatures() const
+    {
+        QStringList ret;
+        for (auto const &mgr : d->applicationManagers) {
+            ret += mgr->discoFeatures();
+        }
+        for (auto const &mgr : d->transportManagers) {
+            ret += mgr->discoFeatures();
         }
         return ret;
     }

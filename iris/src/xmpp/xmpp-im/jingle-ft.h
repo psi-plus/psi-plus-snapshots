@@ -197,7 +197,10 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                                       Origin senders);
         ApplicationManagerPad *pad(Session *session); // pad factory
         void                   closeAll();
-        Client *               client();
+
+        QStringList discoFeatures() const override;
+
+        Client *client();
 
         QStringList availableTransports() const;
 

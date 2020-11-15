@@ -115,15 +115,17 @@ namespace XMPP { namespace Jingle {
         virtual void start() = 0; // for local transport start searching for candidates (including probing proxy,stun
                                   // etc) for remote transport try to connect to all proposed hosts in order their
                                   // priority. in-band transport may just emit updated() here
+        virtual void stop();
         virtual bool update(const QDomElement &el) = 0; // accepts transport element on incoming transport-info
         virtual bool hasUpdates() const            = 0;
         virtual OutgoingTransportInfoUpdate takeOutgoingUpdate() = 0;
         virtual bool                        isValid() const      = 0;
 
         // returns all the available transport features while addChannel() can use just a subset of them
-        virtual TransportFeatures features() const = 0;
-        virtual int               maxSupportedChannels() const;
-        virtual Connection::Ptr   addChannel(TransportFeatures features = TransportFeatures()) const = 0;
+        virtual TransportFeatures            features() const = 0;
+        virtual int                          maxSupportedChannels() const;
+        virtual Connection::Ptr              addChannel(TransportFeatures features = TransportFeatures()) const = 0;
+        virtual std::vector<Connection::Ptr> channels() const                                                   = 0;
     signals:
         void updated(); // found some candidates and they have to be sent. takeUpdate has to be called from this signal
                         // handler. if it's just always ready then signal has to be sent at least once otherwise
@@ -201,6 +203,8 @@ namespace XMPP { namespace Jingle {
         // this method is supposed to gracefully close all related sessions as a preparation for plugin unload for
         // example
         virtual void closeAll() = 0;
+
+        virtual QStringList discoFeatures() const = 0;
     signals:
         void abortAllRequested(); // mostly used by transport instances to abort immediately
     };

@@ -210,10 +210,11 @@ namespace XMPP { namespace Jingle {
 
         void doStep()
         {
-            if (waitingAck) { // we will return here when ack is received. Session::Unacked is possible also only with
-                              // waitingAck
+            if (waitingAck || state == State::Finished) {
+                // in waitingAck we will return here later
                 return;
             }
+
             if (terminateReason.condition() && state != State::Finished) {
                 if (state != State::Created || role == Origin::Responder) {
                     sendJingle(Action::SessionTerminate,
@@ -222,8 +223,35 @@ namespace XMPP { namespace Jingle {
                 setSessionFinished();
                 return;
             }
-            if (state == State::Created || state == State::Finished) {
-                return; // we will start doing something when initiate() is called
+
+            if (state == State::Created && role == Origin::Responder) {
+                // we could fail very early if something went wrong with transports init for example
+                Reason reason;
+                bool   all = true;
+                for (auto const &c : contentList) {
+                    if (c->state() < State::Finishing) {
+                        all = false;
+                        break;
+                    }
+
+                    if (c->state() == State::Finishing) {
+                        auto upd = c->evaluateOutgoingUpdate();
+                        if (upd.action == Action::ContentRemove && upd.reason.condition()) {
+                            reason = upd.reason;
+                        }
+                    }
+                }
+                if (all) {
+                    terminateReason = reason;
+                    sendJingle(Action::SessionTerminate,
+                               QList<QDomElement>() << terminateReason.toXml(manager->client()->doc()));
+                    setSessionFinished();
+                    return;
+                }
+            }
+
+            if (state == State::Created) {
+                return; // should wait for user approval of send/accept
             }
 
             if (outgoingUpdates.size()) {
@@ -896,9 +924,7 @@ namespace XMPP { namespace Jingle {
                     return pad->incomingSessionInfo(jingleEl); // should return true if supported
                 }
             }
-            if (!hasElements) {
-                // TODO implement session ping
-                outgoingUpdates.insert(Action::SessionInfo, {});
+            if (!hasElements && state >= State::ApprovedToSend) {
                 return true;
             }
             return false;

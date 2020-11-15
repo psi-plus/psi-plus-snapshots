@@ -140,7 +140,8 @@ namespace Jingle { namespace ICE {
         TransportFeatures           features() const override;
         int                         maxSupportedChannels() const override;
 
-        Connection::Ptr addChannel(TransportFeatures features = TransportFeatures()) const override;
+        Connection::Ptr              addChannel(TransportFeatures features = TransportFeatures()) const override;
+        std::vector<Connection::Ptr> channels() const override;
 
     private:
         friend class Manager;
@@ -183,6 +184,8 @@ namespace Jingle { namespace ICE {
         TransportManagerPad *                   pad(Session *session) override;
 
         void closeAll() override;
+
+        QStringList discoFeatures() const override;
 
         /**
          * @brief userProxy returns custom (set by user) SOCKS proxy JID

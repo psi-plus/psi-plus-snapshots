@@ -74,6 +74,12 @@ public:
         QString      type;
     };
 
+    struct SelectedCandidate {
+        QHostAddress ip;
+        int          port        = -1;
+        int          componentId = -1;
+    };
+
     Ice176(QObject *parent = nullptr);
     ~Ice176();
 
@@ -148,6 +154,11 @@ public:
     static bool isIPv6LinkLocalAddress(const QHostAddress &addr);
 
     void changeThread(QThread *thread);
+
+    bool isLocalGatheringComplete() const;
+    bool isActive() const;
+
+    QList<SelectedCandidate> selectedCandidates() const;
 
 signals:
     // indicates that the ice engine is started and is ready to receive

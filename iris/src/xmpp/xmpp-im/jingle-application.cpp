@@ -22,6 +22,8 @@
 #include "xmpp_client.h"
 #include "xmpp_task.h"
 
+#include <QTimer>
+
 namespace XMPP { namespace Jingle {
     //----------------------------------------------------------------------------
     // Application
@@ -205,9 +207,17 @@ namespace XMPP { namespace Jingle {
         return OutgoingTransportInfoUpdate { transportEl, wrapCB };
     }
 
+    bool Application::isRemote() const { return _pad->session()->role() != _creator; }
+
     bool Application::selectNextTransport(const QSharedPointer<Transport> alikeTransport)
     {
         if (!_transportSelector->hasMoreTransports()) {
+            if (_transport) {
+                _transport->disconnect(this);
+                _transport.reset();
+            }
+            _state             = (isRemote() || _state > State::ApprovedToSend) ? State::Finishing : State::Finished;
+            _terminationReason = Reason(Reason::FailedTransport);
             emit updated(); // will be evaluated to content-remove
             return false;
         }
@@ -276,14 +286,24 @@ namespace XMPP { namespace Jingle {
         }
 
         _transport = transport;
-        connect(transport.data(), &Transport::updated, this, &Application::updated);
-        connect(transport.data(), &Transport::failed, this, [this]() { selectNextTransport(); });
 
-        initTransport();
+        if (!transportInitTimer) {
+            transportInitTimer = new QTimer(this);
+            transportInitTimer->setSingleShot(true);
+            transportInitTimer->setInterval(0);
+            connect(transportInitTimer, &QTimer::timeout, this, [this]() {
+                connect(_transport.data(), &Transport::updated, this, &Application::updated);
+                connect(_transport.data(), &Transport::failed, this, [this]() { selectNextTransport(); });
 
-        if (_state >= State::Unacked) {
-            _transport->prepare();
+                initTransport();
+
+                if (_transport && _transport->state() < State::Finishing && _state >= State::ApprovedToSend) {
+                    _transport->prepare();
+                }
+            });
         }
+        transportInitTimer->start();
+
         return true;
     }
 

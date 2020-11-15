@@ -141,9 +141,11 @@ namespace Jingle { namespace S5B {
         bool                        isValid() const override;
         TransportFeatures           features() const override;
 
-        QString         sid() const;
-        QString         directAddr() const;
-        Connection::Ptr addChannel(TransportFeatures features = TransportFeatures()) const override;
+        QString sid() const;
+        QString directAddr() const;
+
+        Connection::Ptr              addChannel(TransportFeatures features = TransportFeatures()) const override;
+        std::vector<Connection::Ptr> channels() const override;
 
     private:
         friend class Manager;
@@ -186,7 +188,8 @@ namespace Jingle { namespace S5B {
                                                              Origin                          creator) override;
         TransportManagerPad *                   pad(Session *session) override;
 
-        void closeAll() override;
+        void        closeAll() override;
+        QStringList discoFeatures() const override;
 
         QString generateSid(const Jid &remote);
         void    registerSid(const Jid &remote, const QString &sid);

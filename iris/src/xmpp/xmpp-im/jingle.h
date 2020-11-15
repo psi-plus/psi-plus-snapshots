@@ -86,7 +86,8 @@ namespace Jingle {
       * Finished          - In failure case: Needs to report transport failure / replace / reject
 
      Remote transport states (remote initial offer or remote transport-replace):
-      * Created           - initial: local user hasn't accepted yet the offer
+      * Created           - short-term state before the initial offer has been parsed
+      * Pending           - initial: local user hasn't accepted yet the offer
       *                     replace: remote changes its own offer before local accepted anything
       * ApprovedToSend    - initial/replace: user accepted the offer. we are preparing our response
       * Unacked           - no iq "result" yet
@@ -147,7 +148,7 @@ namespace Jingle {
 
         // exclusive
         StreamOriented  = 0x200,
-        MessageOriented = 0x400, // if not set then it's stream oriented
+        MessageOriented = 0x400,
 
         // exclusive
         DataOriented = 0x800, // the goal is to deliver data
@@ -341,6 +342,8 @@ namespace Jingle {
         TransportManagerPad *transportPad(Session *      session,
                                           const QString &ns); // allocates new pad on transport manager
         QStringList          availableTransports(const TransportFeatures &features = TransportFeatures()) const;
+
+        QStringList discoFeatures() const;
 
         /**
          * @brief isAllowedParty checks if the remote jid allowed to initiate a session
