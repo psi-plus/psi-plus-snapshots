@@ -31,6 +31,8 @@
 #include "xmpp_serverinfomanager.h"
 #include "xmpp_xmlcommon.h"
 
+#include <array>
+
 #include <QElapsedTimer>
 #include <QNetworkInterface>
 #include <QTimer>
