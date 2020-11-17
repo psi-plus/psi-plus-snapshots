@@ -192,11 +192,11 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     public:
         Manager(QObject *parent = nullptr);
         ~Manager();
-        void         setJingleManager(XMPP::Jingle::Manager *jm);
+        void         setJingleManager(XMPP::Jingle::Manager *jm) override;
         Application *startApplication(const ApplicationManagerPad::Ptr &pad, const QString &contentName, Origin creator,
-                                      Origin senders);
-        ApplicationManagerPad *pad(Session *session); // pad factory
-        void                   closeAll();
+                                      Origin senders) override;
+        ApplicationManagerPad *pad(Session *session) override; // pad factory
+        void                   closeAll() override;
 
         QStringList discoFeatures() const override;
 
