@@ -11,8 +11,8 @@
 #include <cstring>
 
 #define MS_TRACE()
-#define MS_WARN_TAG(args...)
-#define MS_DEBUG_TAG(args...)
+#define MS_WARN_TAG(args, ...)
+#define MS_DEBUG_TAG(args, ...)
 #define MS_ASSERT(cond, what) Q_ASSERT_X(cond, "sctp", what)
 
 /* Static. */
