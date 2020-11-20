@@ -146,10 +146,18 @@ include_directories(
     ${Qca_INCLUDE_DIR}
 )
 
-if((CMAKE_CROSSCOMPILING) AND (DEFINED MSYS) AND (EXISTS ${CMAKE_PREFIX_PATH}/include/stdint.h))
+set(STDINT_FOUND OFF)
+find_file(STDINT_INCLUDE stdint.h)
+
+if(NOT ${STDINT_INCLUDE} STREQUAL "STDINT_INCLUDE-NOTFOUND")
+    message(STATUS "StdInt include found: ${STDINT_INCLUDE}")
+    set(STDINT_FOUND ON)
+endif()
+
+if((CMAKE_CROSSCOMPILING AND DEFINED MSYS) AND STDINT_FOUND)
     #Add SCTP_STDINT_INCLUDE definition to compile irisnet with usrsctp with MinGW
     add_definitions(
-        -DSCTP_STDINT_INCLUDE="${CMAKE_PREFIX_PATH}/include/stdint.h"
+        -DSCTP_STDINT_INCLUDE="${STDINT_INCLUDE}"
     )
 endif()
 
