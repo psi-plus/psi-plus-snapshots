@@ -26,6 +26,6 @@ then
                      gst-plugins-bad \
                      gst-plugins-good \
                     "
-    brew install "${PACKAGES}"
+    brew install ${PACKAGES}
 fi
 
