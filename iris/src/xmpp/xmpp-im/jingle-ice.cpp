@@ -152,7 +152,19 @@ namespace XMPP { namespace Jingle { namespace ICE {
         }
         QDomElement toXml(QDomDocument *doc) const
         {
-            auto fingerprint = XMLHelper::textTagNS(doc, NS_DTLS, QLatin1String("fingerprint"), hash.data().toHex(':'));
+            auto binToHex = [](const QByteArray &in) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
+                return in.toHex(':');
+#else
+                QByteArray out = in.toHex();
+                int size = out.size();
+                for (int k = 2; k < size; k+=3, ++size) {
+                    out.insert(k, ':');
+                }
+                return out;
+#endif
+            };
+            auto fingerprint = XMLHelper::textTagNS(doc, NS_DTLS, QLatin1String("fingerprint"), binToHex(hash.data()));
             fingerprint.setAttribute(QLatin1String("hash"), hash.stringType());
             fingerprint.setAttribute(QLatin1String("setup"), QLatin1String(fpRoles[setup]));
             return fingerprint;
