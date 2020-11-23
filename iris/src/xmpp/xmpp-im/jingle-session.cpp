@@ -146,13 +146,13 @@ namespace XMPP { namespace Jingle {
             for (auto &weakPad : transportPads) {
                 auto pad = weakPad.lock();
                 if (pad) {
-                    (pad.get()->*func)(); // just calls pad's method
+                    (pad.data()->*func)(); // just calls pad's method
                 }
             }
             for (auto &weakPad : applicationPads) {
                 auto pad = weakPad.lock();
                 if (pad) {
-                    (pad.get()->*func)();
+                    (pad.data()->*func)();
                 }
             }
         }

@@ -19,15 +19,13 @@ fi
 
 if [ "${TARGET}" = "macos64" ]
 then
-    HOMEBREW_NO_AUTO_UPDATE=1
-    PACKAGES="ccache \
-              gstreamer \
-              gst-plugins-base \
-              gst-plugins-bad \
-              gst-plugins-good"
-    for PKG in ${PACKAGES}
-    do
-        brew ls --versions "${PKG}" > /dev/null || brew install "${PKG}"
-    done
+    export HOMEBREW_NO_AUTO_UPDATE=1
+    export PACKAGES="ccache \
+                     gstreamer \
+                     gst-plugins-base \
+                     gst-plugins-bad \
+                     gst-plugins-good \
+                    "
+    brew install "${PACKAGES}"
 fi
 

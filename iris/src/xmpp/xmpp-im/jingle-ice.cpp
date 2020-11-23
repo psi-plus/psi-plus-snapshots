@@ -32,6 +32,7 @@
 #include "xmpp_xmlcommon.h"
 
 #include <array>
+#include <memory>
 
 #include <QElapsedTimer>
 #include <QNetworkInterface>
