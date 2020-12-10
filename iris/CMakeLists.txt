@@ -181,10 +181,11 @@ else()
     include(ExternalProject)
     #set CMake options and transfer the environment to an external project
     set(USRSCTP_BUILD_OPTIONS
-        -DBUILD_SHARED_LIBS=OFF -Dsctp_build_programs=OFF -Dsctp_debug=OFF -Dsctp_inet=OFF -Dsctp_inet6=OFF
-        -DCMAKE_INSTALL_PREFIX=${USRSCTP_PREFIX} -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
-        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
-        -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM} -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER})
+        -DBUILD_SHARED_LIBS=OFF -Dsctp_build_programs=OFF -Dsctp_build_shared_lib=OFF -Dsctp_debug=OFF
+        -Dsctp_inet=OFF -Dsctp_inet6=OFF -DCMAKE_INSTALL_PREFIX=${USRSCTP_PREFIX}
+        -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER})
     if (EXISTS ${USRSCTP_SOURCE_DIR})
         message(STATUS "USRSCTP: found bundled sources")
         ExternalProject_Add(UsrSCTPProject
@@ -205,7 +206,7 @@ else()
             PREFIX ${USRSCTP_PREFIX}
             BINARY_DIR ${USRSCTP_BUILD_DIR}
             GIT_REPOSITORY https://github.com/sctplab/usrsctp.git
-            GIT_TAG f4925bd5ebb2db38263eef0ec816bf393293cf9c
+            GIT_TAG a17109528c75d01f6372d5c30851a639684c6e99
             CMAKE_ARGS ${USRSCTP_BUILD_OPTIONS}
             BUILD_BYPRODUCTS ${USRSCTP_LIBRARY}
             INSTALL_COMMAND ""
