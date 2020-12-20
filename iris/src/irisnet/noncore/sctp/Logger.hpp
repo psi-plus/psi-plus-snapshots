@@ -3,11 +3,11 @@
 #include <QtGlobal>
 #include <cinttypes>
 
-#define MS_WARN_TAG(tag, args, ...) qWarning("sctp:" args)
-#define MS_DEBUG_TAG(tag, args, ...) qDebug("sctp:" args)
+#define MS_WARN_TAG(tag, ...) qWarning("sctp:" __VA_ARGS__)
+#define MS_DEBUG_TAG(tag, ...) qDebug("sctp:" __VA_ARGS__)
 #define MS_TRACE()
-#define MS_ERROR(args, ...) qCritical(args)
-#define MS_DEBUG_DEV(args, ...) qDebug(args)
+#define MS_ERROR(...) qCritical(__VA_ARGS__)
+#define MS_DEBUG_DEV(...) qDebug(__VA_ARGS__)
 #define MS_HAS_DEBUG_TAG(tag) false
 
 #define MS_ABORT(desc, ...)                                                                                            \

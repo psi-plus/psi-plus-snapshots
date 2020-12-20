@@ -100,8 +100,13 @@ namespace Jingle {
     */
     enum class State { Created, ApprovedToSend, Unacked, Pending, Accepted, Connecting, Active, Finishing, Finished };
 
-    enum class Action {
-        NoAction, // non-standard, just a default
+    enum class Action { // ordered by priority. first sent first
+        NoAction,       // non-standard, just a default
+        TransportAccept,
+        TransportInfo,
+        TransportReject,
+        TransportReplace,
+        SessionInfo,
         ContentAccept,
         ContentAdd,
         ContentModify,
@@ -110,13 +115,8 @@ namespace Jingle {
         DescriptionInfo,
         SecurityInfo,
         SessionAccept,
-        SessionInfo,
         SessionInitiate,
-        SessionTerminate,
-        TransportAccept,
-        TransportInfo,
-        TransportReject,
-        TransportReplace
+        SessionTerminate
     };
 
     inline uint qHash(const XMPP::Jingle::Action &o, uint seed = 0) { return ::qHash(int(o), seed); }
@@ -157,13 +157,14 @@ namespace Jingle {
     Q_DECLARE_FLAGS(TransportFeatures, TransportFeature)
     Q_DECLARE_OPERATORS_FOR_FLAGS(TransportFeatures)
 
-    typedef QPair<QString, Origin>      ContentKey;
-    typedef std::function<void(Task *)> OutgoingUpdateCB;
+    using ContentKey       = QPair<QString, Origin>;
+    using OutgoingUpdateCB = std::function<void(Task *)>;
 
     // list of elements to b inserted to <jingle> and success callback
-    typedef std::tuple<QList<QDomElement>, OutgoingUpdateCB> OutgoingUpdate;
-    typedef std::tuple<QDomElement, OutgoingUpdateCB>
-        OutgoingTransportInfoUpdate; // transport element and success callback
+    using OutgoingUpdate = std::tuple<QList<QDomElement>, OutgoingUpdateCB>;
+
+    // transport element and success callback
+    using OutgoingTransportInfoUpdate = std::tuple<QDomElement, OutgoingUpdateCB>;
 
     class ErrorUtil {
     public:

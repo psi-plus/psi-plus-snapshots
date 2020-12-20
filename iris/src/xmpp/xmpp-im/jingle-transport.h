@@ -118,8 +118,16 @@ namespace XMPP { namespace Jingle {
         virtual void stop();
         virtual bool update(const QDomElement &el) = 0; // accepts transport element on incoming transport-info
         virtual bool hasUpdates() const            = 0;
-        virtual OutgoingTransportInfoUpdate takeOutgoingUpdate() = 0;
-        virtual bool                        isValid() const      = 0;
+
+        /**
+         * @brief Get an session update from the transport which looks most appropriate
+         * @param ensureTransportElement - return minimal transport element even if no updates.
+         *                                 The parameters is mostly required to satisfy XEP-0166 requirement
+         *                                 for <transport/> element in the <content/> element
+         * @return dom element and optional task completion callback
+         */
+        virtual OutgoingTransportInfoUpdate takeOutgoingUpdate(bool ensureTransportElement = false) = 0;
+        virtual bool                        isValid() const                                         = 0;
 
         // returns all the available transport features while addChannel() can use just a subset of them
         virtual TransportFeatures            features() const = 0;
@@ -127,9 +135,12 @@ namespace XMPP { namespace Jingle {
         virtual Connection::Ptr              addChannel(TransportFeatures features = TransportFeatures()) const = 0;
         virtual std::vector<Connection::Ptr> channels() const                                                   = 0;
     signals:
-        void updated(); // found some candidates and they have to be sent. takeUpdate has to be called from this signal
-                        // handler. if it's just always ready then signal has to be sent at least once otherwise
-                        // session-initiate won't be sent.
+        /**
+         * found some candidates and they have to be sent. takeUpdate has to be called from this signal
+         * handler. if it's just always ready then signal has to be sent at least once otherwise
+         * session-initiate won't be sent.
+         */
+        void updated();
         void connected(); // this signal is for app logic. maybe to finally start drawing some progress bar
         void failed();    // transport ailed for whatever reason. aborted for example. _state will be State::Finished
         void stateChanged();

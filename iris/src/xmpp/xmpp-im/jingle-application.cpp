@@ -64,12 +64,14 @@ namespace XMPP { namespace Jingle {
 
         switch (_state) {
         case State::ApprovedToSend:
-            if (_transport->hasUpdates() && _transport->state() == State::ApprovedToSend) {
-                if (inTrReplace) {
-                    // either we are waiting for incoming transport-accept or local confirmation of remote
-                    // transport-replace
-                    bool localTranport = _pad->session()->role() == _transport->creator();
-                    _update            = { localTranport ? Action::TransportInfo : Action::TransportAccept, Reason() };
+            if (_transport->state() >= State::Accepted) {
+                _update
+                    = { _pad->session()->role() == _creator ? Action::ContentAdd : Action::ContentAccept, Reason() };
+            } else if (_transport->hasUpdates() && _transport->state() == State::ApprovedToSend) {
+                if (_pendingTransportReplace == PendingTransportReplace::Planned) {
+                    _update = { Action::TransportReplace, _transportReplaceReason };
+                } else if (inTrReplace) { // both sides already know it's replace. but not accepted yet.
+                    _update = { _transport->isLocal() ? Action::TransportInfo : Action::TransportAccept, Reason() };
                 } else
                     _update = { _pad->session()->role() == _creator ? Action::ContentAdd : Action::ContentAccept,
                                 Reason() };
@@ -161,7 +163,7 @@ namespace XMPP { namespace Jingle {
 
         case Action::ContentAccept:
             contentEl.appendChild(makeLocalAnswer());
-            std::tie(transportEl, transportCB) = wrapOutgoingTransportUpdate();
+            std::tie(transportEl, transportCB) = wrapOutgoingTransportUpdate(true);
             contentEl.appendChild(transportEl);
 
             setState(State::Unacked);
@@ -176,12 +178,28 @@ namespace XMPP { namespace Jingle {
             contentEl.appendChild(transportEl);
             return OutgoingUpdate { updates, transportCB };
         case Action::TransportReplace:
-        case Action::TransportAccept: {
             Q_ASSERT(_transport->hasUpdates());
             std::tie(transportEl, transportCB) = wrapOutgoingTransportUpdate();
             contentEl.appendChild(transportEl);
-            return OutgoingUpdate { updates, transportCB };
-        }
+            if (_pendingTransportReplace == PendingTransportReplace::Planned) {
+                _pendingTransportReplace = PendingTransportReplace::NeedAck;
+            }
+            return OutgoingUpdate { updates, [this, transportCB](Task *task) {
+                                       transportCB(task);
+                                       if (task->success())
+                                           _pendingTransportReplace = PendingTransportReplace::InProgress;
+                                       // else transport will report failure from its callback => select next tran.
+                                   } };
+        case Action::TransportAccept:
+            Q_ASSERT(_transport->hasUpdates());
+            std::tie(transportEl, transportCB) = wrapOutgoingTransportUpdate();
+            contentEl.appendChild(transportEl);
+            return OutgoingUpdate { updates, [this, transportCB](Task *task) {
+                                       transportCB(task);
+                                       if (task->success())
+                                           _pendingTransportReplace = PendingTransportReplace::None;
+                                       // else transport will report failure from its callback => select next tran.
+                                   } };
         default:
             break;
         }
@@ -189,20 +207,18 @@ namespace XMPP { namespace Jingle {
         return OutgoingUpdate(); // TODO
     }
 
-    OutgoingTransportInfoUpdate Application::wrapOutgoingTransportUpdate()
+    OutgoingTransportInfoUpdate Application::wrapOutgoingTransportUpdate(bool ensureTransportElement)
     {
         QDomElement      transportEl;
         OutgoingUpdateCB transportCB;
-        std::tie(transportEl, transportCB) = _transport->takeOutgoingUpdate();
-        auto wrapCB = [this, tr = _transport.toWeakRef(), cb = std::move(transportCB)](Task *task) {
+        std::tie(transportEl, transportCB) = _transport->takeOutgoingUpdate(ensureTransportElement);
+        auto wrapCB                        = [tr = _transport.toWeakRef(), cb = std::move(transportCB)](Task *task) {
             auto transport = tr.lock();
-            if (transport && cb)
-                cb(task);
-            if (_pendingTransportReplace == PendingTransportReplace::NeedAck) {
-                _pendingTransportReplace
-                    = task->success() ? PendingTransportReplace::InProgress : PendingTransportReplace::None;
-                emit updated();
+            if (!transport) {
+                return;
             }
+            if (cb)
+                cb(task);
         };
         return OutgoingTransportInfoUpdate { transportEl, wrapCB };
     }
@@ -261,11 +277,11 @@ namespace XMPP { namespace Jingle {
                 _transportSelector->backupTransport(_transport);
             }
 
-            if (transport->creator() == _pad->session()->role()) {
+            if (transport->creator() == _pad->session()->role()) { // if new transport is locally created
                 auto ts = _transport->state() == State::Finished ? _transport->prevState() : _transport->state();
                 if (_transport->creator() != _pad->session()->role() || ts > State::Unacked) {
                     // if remote knows of the current transport
-                    _pendingTransportReplace = PendingTransportReplace::InProgress;
+                    _pendingTransportReplace = PendingTransportReplace::Planned;
                 } else if (_transport->creator() == _pad->session()->role() && ts == State::Unacked) {
                     // if remote may know but we don't know yet about it
                     _pendingTransportReplace = PendingTransportReplace::NeedAck;

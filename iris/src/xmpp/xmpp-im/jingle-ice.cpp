@@ -156,9 +156,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 9, 0)
                 return in.toHex(':');
 #else
-                QByteArray out = in.toHex();
-                int size = out.size();
-                for (int k = 2; k < size; k+=3, ++size) {
+                QByteArray out  = in.toHex();
+                int        size = out.size();
+                for (int k = 2; k < size; k += 3, ++size) {
                     out.insert(k, ':');
                 }
                 return out;
@@ -817,7 +817,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
     bool Transport::hasUpdates() const { return isValid() && d->pendingActions; }
 
-    OutgoingTransportInfoUpdate Transport::takeOutgoingUpdate()
+    OutgoingTransportInfoUpdate Transport::takeOutgoingUpdate([[maybe_unused]] bool ensureTransportElement = false)
     {
         OutgoingTransportInfoUpdate upd;
         if (!hasUpdates() || _state < State::ApprovedToSend || (isRemote() && _state == State::Pending)) {

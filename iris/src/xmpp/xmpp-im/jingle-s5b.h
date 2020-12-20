@@ -137,7 +137,7 @@ namespace Jingle { namespace S5B {
         void                        start() override;
         bool                        update(const QDomElement &transportEl) override;
         bool                        hasUpdates() const override;
-        OutgoingTransportInfoUpdate takeOutgoingUpdate() override;
+        OutgoingTransportInfoUpdate takeOutgoingUpdate(bool ensureTransportElement) override;
         bool                        isValid() const override;
         TransportFeatures           features() const override;
 

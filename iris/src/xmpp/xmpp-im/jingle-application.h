@@ -63,6 +63,12 @@ namespace XMPP { namespace Jingle {
             IncompatibleParameters // this one is for <reason>
         };
 
+        enum ApplicationFlag {
+            InitialApplication = 0x1, // the app came with session-initiate
+            UserFlag           = 0x100
+        };
+        Q_DECLARE_FLAGS(ApplicationFlags, ApplicationFlag)
+
         virtual void setState(State state) = 0; // likely just remember the state and not generate any signals
         virtual XMPP::Stanza::Error lastError() const  = 0;
         virtual Reason              lastReason() const = 0;
@@ -76,6 +82,14 @@ namespace XMPP { namespace Jingle {
         inline TransportSelector *        transportSelector() const { return _transportSelector.data(); }
         bool                              isRemote() const;
         inline bool                       isLocal() const { return !isRemote(); }
+        inline ApplicationFlags           flags() const { return _flags; }
+        inline void                       markInitialApplication(bool state)
+        {
+            if (state)
+                _flags |= InitialApplication;
+            else
+                _flags &= ~InitialApplication;
+        }
 
         virtual SetDescError setRemoteOffer(const QDomElement &description)  = 0;
         virtual SetDescError setRemoteAnswer(const QDomElement &description) = 0;
@@ -133,7 +147,7 @@ namespace XMPP { namespace Jingle {
         /**
          * @brief wraps transport update so transport can be safely-deleted before callback is triggered
          */
-        OutgoingTransportInfoUpdate wrapOutgoingTransportUpdate();
+        OutgoingTransportInfoUpdate wrapOutgoingTransportUpdate(bool ensureTransportElement = false);
 
         /**
          * @brief initTransport in general connects any necessary for the application transport signals
@@ -146,9 +160,15 @@ namespace XMPP { namespace Jingle {
         void stateChanged(State);
 
     protected:
-        State _state = State::Created;
+        State            _state = State::Created;
+        ApplicationFlags _flags;
 
-        enum class PendingTransportReplace { None, NeedAck, InProgress };
+        enum class PendingTransportReplace {
+            None,      // not in the replace mode
+            Planned,   // didn't send a replacement yet. working on it.
+            NeedAck,   // we sent replacement. waiting for iq ack
+            InProgress // not yet accepted but acknowledged
+        };
 
         // has to be set when whatever way remote knows about the current transport
         // bool _remoteKnowsOfTheTransport = false;

@@ -252,6 +252,10 @@ namespace XMPP { namespace Jingle { namespace IBB {
             }
         } else {
             if ((*it)->creator != _pad->session()->role() || (*it)->state != State::Pending) {
+                if ((*it)->state >= State::Accepted && (*it)->state <= State::Active) {
+                    qWarning("Ignoring IBB transport in state: %d", int((*it)->state));
+                    return true;
+                }
                 qWarning("Unexpected IBB answer");
                 return false; // out of order or something like this
             }
@@ -282,26 +286,36 @@ namespace XMPP { namespace Jingle { namespace IBB {
         return false;
     }
 
-    OutgoingTransportInfoUpdate Transport::takeOutgoingUpdate()
+    OutgoingTransportInfoUpdate Transport::takeOutgoingUpdate(bool ensureTransportElement)
     {
         OutgoingTransportInfoUpdate upd;
         if (!isValid()) {
             return upd;
         }
 
-        QSharedPointer<Connection> connection;
-        for (auto &c : d->connections) {
-            if (c->state == State::ApprovedToSend) {
-                connection = c;
-                break;
+        auto doc = _pad->session()->manager()->client()->doc();
+        auto it  = std::find_if(d->connections.begin(), d->connections.end(),
+                               [](auto &c) { return c->state == State::ApprovedToSend; });
+
+        if (it == d->connections.end()) {
+            if (ensureTransportElement) {
+                // a really dirty workaround here which ignore the fact IBB may have more then one transport for
+                // a single content
+                it = std::find_if(d->connections.begin(), d->connections.end(),
+                                  [](auto &c) { return c->state > State::ApprovedToSend; });
+                if (it == d->connections.end()) {
+                    return upd;
+                }
+                QDomElement tel = doc->createElementNS(NS, "transport");
+                tel.setAttribute(QStringLiteral("sid"), it.value()->sid);
+                tel.setAttribute(QString::fromLatin1("block-size"), qulonglong(it.value()->_blockSize));
+                std::get<0>(upd) = tel;
             }
+            return upd;
         }
 
-        if (!connection)
-            return upd;
-
+        auto connection   = it.value();
         connection->state = State::Unacked;
-        auto doc          = _pad->session()->manager()->client()->doc();
 
         QDomElement tel = doc->createElementNS(NS, "transport");
         tel.setAttribute(QStringLiteral("sid"), connection->sid);

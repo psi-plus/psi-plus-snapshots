@@ -38,7 +38,7 @@ namespace Jingle { namespace IBB {
         void                        start() override;
         bool                        update(const QDomElement &transportEl) override;
         bool                        hasUpdates() const override;
-        OutgoingTransportInfoUpdate takeOutgoingUpdate() override;
+        OutgoingTransportInfoUpdate takeOutgoingUpdate(bool ensureTransportElement = false) override;
         bool                        isValid() const override;
         TransportFeatures           features() const override;
         int                         maxSupportedChannels() const override;
@@ -49,7 +49,7 @@ namespace Jingle { namespace IBB {
     private:
         friend class Manager;
 
-        class Private;
+        struct Private;
         QScopedPointer<Private> d;
     };
 

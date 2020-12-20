@@ -1465,7 +1465,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
     bool Transport::hasUpdates() const { return isValid() && d->pendingActions; }
 
-    OutgoingTransportInfoUpdate Transport::takeOutgoingUpdate()
+    OutgoingTransportInfoUpdate Transport::takeOutgoingUpdate(bool ensureTransportElement = false)
     {
         qDebug("taking outgoing update");
         OutgoingTransportInfoUpdate upd;
@@ -1636,6 +1636,11 @@ namespace XMPP { namespace Jingle { namespace S5B {
                     _state = _creator == _pad->session()->role() ? State::Pending : State::Accepted;
                 }
             });
+        }
+
+        auto &atel = std::get<0>(upd);
+        if (atel.isNull() && ensureTransportElement) {
+            atel = tel;
         }
 
         return upd; // TODO

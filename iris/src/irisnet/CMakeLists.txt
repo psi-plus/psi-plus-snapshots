@@ -58,6 +58,7 @@ set(SOURCES
 
     noncore/sctp/SctpAssociation.cpp
     noncore/sctp/DepUsrSCTP.cpp
+    noncore/sctp/Logger.hpp
 )
 
 if(UNIX)
