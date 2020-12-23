@@ -34,7 +34,6 @@ Main features of this repository:
    - https://github.com/psi-im/plugins (officially supported plugins)
    - https://github.com/psi-im/psimedia (multimedia plugin)
    - https://github.com/psi-im/resources (additional resources)
-   - https://github.com/psi-plus/main (additional patches)
 2) Trash is removed. (MS Windows executables, non-free icons, etc.)
 
 More details see in file generate-single-repo.sh
@@ -60,9 +59,12 @@ free content in this case:
   https://www.debian.org/social_contract#guidelines
   https://en.wikipedia.org/wiki/Debian_Free_Software_Guidelines
 
-If you find bugs or problems in Psi+ program you may report about them here:
+If you find bugs or problems in Psi+ program you may report here:
   https://github.com/psi-im/psi/issues
 
-Even if bugs came from psi-im/plugins or psi-plus/main repositories, developers
-prefer to get bug reports at above link.
+If you find bugs or problems in official Psi plugins you may report here:
+  https://github.com/psi-im/plugins/issues
+
+If you find bugs or problems in Psi Multimedia Plugin you may report here:
+  https://github.com/psi-im/psimedia/issues
 
