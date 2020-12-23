@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2020-05-22
+# Updated: 2020-12-23
 # Version: N/A
 
 set -e
@@ -15,7 +15,6 @@ PSI_URL=https://github.com/psi-im/psi.git
 PLUGINS_URL=https://github.com/psi-im/plugins.git
 PSIMEDIA_URL=https://github.com/psi-im/psimedia.git
 RESOURCES_URL=https://github.com/psi-im/resources.git
-PATCHES_URL=https://github.com/psi-plus/main.git
 
 # Test Internet connection:
 host github.com > /dev/null
@@ -51,19 +50,6 @@ else
     cd "${MAIN_DIR}/${MOD}"
     git submodule init
     git submodule update
-    echo;
-fi
-
-MOD=main
-if [ -d "${MAIN_DIR}/${MOD}" ]; then
-    echo "Updating ${MAIN_DIR}/${MOD}"
-    cd "${MAIN_DIR}/${MOD}"
-    git pull --all --prune -f
-    echo;
-else
-    echo "Creating ${MAIN_DIR}/${MOD}"
-    cd "${MAIN_DIR}"
-    git clone "${PATCHES_URL}"
     echo;
 fi
 
@@ -110,19 +96,16 @@ cd "${SNAPSHOTS_DIR}"
 echo "Checking for updates..."
 
 PSI_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* psi: \(.*\)$/\1/p')
-PATCHES_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* patches: \(.*\)$/\1/p')
 PLUGINS_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* plugins: \(.*\)$/\1/p')
 PSIMEDIA_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* psimedia: \(.*\)$/\1/p')
 RESOURCES_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* resources: \(.*\)$/\1/p')
 
 PSI_NEW_HASH=$(cd "${MAIN_DIR}/psi" && git show -s --pretty='format:%h')
-PATCHES_NEW_HASH=$(cd "${MAIN_DIR}/main" && git show -s --pretty='format:%h')
 PLUGINS_NEW_HASH=$(cd "${MAIN_DIR}/plugins" && git show -s --pretty='format:%h')
 PSIMEDIA_NEW_HASH=$(cd "${MAIN_DIR}/psimedia" && git show -s --pretty='format:%h')
 RESOURCES_NEW_HASH=$(cd "${MAIN_DIR}/resources" && git show -s --pretty='format:%h')
 
 if [ "${PSI_OLD_HASH}"       = "${PSI_NEW_HASH}" ] && \
-   [ "${PATCHES_OLD_HASH}"   = "${PATCHES_NEW_HASH}" ] && \
    [ "${PLUGINS_OLD_HASH}"   = "${PLUGINS_NEW_HASH}" ] && \
    [ "${PSIMEDIA_OLD_HASH}"  = "${PSIMEDIA_NEW_HASH}" ] && \
    [ "${RESOURCES_OLD_HASH}" = "${RESOURCES_NEW_HASH}" ]; then
@@ -166,14 +149,6 @@ mv "${MAIN_DIR}/README" "${SNAPSHOTS_DIR}/README"
 mv "${MAIN_DIR}/.gitignore" "${SNAPSHOTS_DIR}/.gitignore"
 echo "* Files from Psi project are copied."
 
-failed_to_apply_patches()
-{
-    remove_trash
-    git checkout HEAD .
-    echo "* Failed to apply patches from Psi+ project!"
-    exit 1
-}
-
 remove_trash()
 {
     rm -rf *.exe
@@ -182,18 +157,10 @@ remove_trash()
     find . -type f -name "*.orig" -delete
 }
 
-# cat "${MAIN_DIR}/main/patches"/*.diff | \
-#     patch -d "${SNAPSHOTS_DIR}" -p1 2>&1 > \
-#     "${MAIN_DIR}/applying-patches.log" || failed_to_apply_patches
-FROM_STR="option(PSI_PLUS .*$"
+FROM_STR="option(PSI_PLUS .*\$"
 TO_STR="option(PSI_PLUS \"Build Psi+ client instead of Psi\" ON)"
 sed -i "s|${FROM_STR}|${TO_STR}|g" CMakeLists.txt
-echo "* Patches from Psi+ project are applied."
-
-mkdir -p "${SNAPSHOTS_DIR}/patches"
-rsync -a "${MAIN_DIR}/main/patches/dev" "${SNAPSHOTS_DIR}/patches/"
-rsync -a "${MAIN_DIR}/main/patches/mac" "${SNAPSHOTS_DIR}/patches/"
-echo "* Extra patches from Psi+ project are copied."
+echo "* Psi+ specific options are enabled."
 
 rsync -a "${MAIN_DIR}/plugins" "${SNAPSHOTS_DIR}/" \
     --exclude=".git*" \
@@ -203,14 +170,8 @@ rsync -a "${MAIN_DIR}/psimedia" "${SNAPSHOTS_DIR}/plugins/generic/" \
     --exclude="/builddir*"
 echo "* Plugins from Psi project are copied."
 
-rsync -a "${MAIN_DIR}/main/admin/" "${SNAPSHOTS_DIR}/admin/"
-echo "* Extra scripts from Psi+ project are copied."
-
 rsync -a "${MAIN_DIR}/resources/sound/" "${SNAPSHOTS_DIR}/sound/"
 echo "* Extra sound files from Psi project are copied."
-
-cp "${MAIN_DIR}/main/ChangeLog.Psi+.txt" "${SNAPSHOTS_DIR}/ChangeLog.Psi+.txt"
-echo "* ChangeLog from Psi+ project is copied."
 
 remove_trash
 echo "* Trash is removed."
@@ -243,27 +204,21 @@ if [ "${TEST_ALL}" = "0" ]; then
 fi
 
 REVISION_DATE_LIST="$(cd ${MAIN_DIR}/psi        && git log -n1 --date=short --pretty=format:'%ad')
-$(cd ${MAIN_DIR}/main       && git log -n1 --date=short --pretty=format:'%ad')
 $(cd ${MAIN_DIR}/plugins    && git log -n1 --date=short --pretty=format:'%ad')
 $(cd ${MAIN_DIR}/resources  && git log -n1 --date=short --pretty=format:'%ad')"
 LAST_REVISION_DATE=$(echo "${REVISION_DATE_LIST}" | sort -r | head -n1)
 
-PATCHES_VERSION="$(cd ${MAIN_DIR}/main && git describe --tags | cut -d - -f1)"
-PATCHES_NUM="$(cd ${MAIN_DIR}/main && git describe --tags | cut -d - -f2)"
-PSI_NUM="0"
+PSI_VERSION="$(cd ${MAIN_DIR}/psi && git describe --tags | cut -d - -f1)"
+PATCHES_NUM="$(cd ${MAIN_DIR}/psi && git rev-list --count ${PSI_VERSION}..HEAD)"
 
-if [ "$(cd ${MAIN_DIR}/psi && git tag | grep -x "^${PATCHES_VERSION}$" | wc -l)" = "1" ]; then
-    PSI_NUM="$(cd ${MAIN_DIR}/psi && git rev-list --count ${PATCHES_VERSION}..HEAD)"
-fi
-
-NEW_VER="${PATCHES_VERSION}.$(expr ${PSI_NUM} + ${PATCHES_NUM})"
+NEW_VER="${PSI_VERSION}.${PATCHES_NUM}"
 OLD_VER=$(cd "${SNAPSHOTS_DIR}" && git tag -l | sort -V | tail -n1)
 
 echo "OLD_VER = ${OLD_VER}"
 echo "NEW_VER = ${NEW_VER}"
 echo;
 
-echo "${NEW_VER} (${LAST_REVISION_DATE}, Psi:${PSI_NEW_HASH}, Psi+:${PATCHES_NEW_HASH})" > version
+echo "${NEW_VER} (${LAST_REVISION_DATE}, ${PSI_NEW_HASH})" > version
 echo "Version file is created:"
 cat  version
 echo;
@@ -272,7 +227,6 @@ COMMENT="Current version of Psi+ is ${NEW_VER}
 
 It is based on:
 * psi: ${PSI_NEW_HASH}
-* patches: ${PATCHES_NEW_HASH}
 * plugins: ${PLUGINS_NEW_HASH}
 * psimedia: ${PSIMEDIA_NEW_HASH}
 * resources: ${RESOURCES_NEW_HASH}
