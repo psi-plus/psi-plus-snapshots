@@ -261,6 +261,16 @@ namespace XMPP { namespace Jingle {
         return !_transport || _transportSelector->compare(t, _transport) > 0;
     }
 
+    void Application::incomingTransportAccept(const QDomElement &el)
+    {
+        if (_pendingTransportReplace != PendingTransportReplace::InProgress) {
+            return; // ignore out of order
+        }
+        _pendingTransportReplace = PendingTransportReplace::None;
+        if (_transport->update(el) && _state >= State::Connecting)
+            _transport->start();
+    }
+
     bool Application::isTransportReplaceEnabled() const { return true; }
 
     bool Application::setTransport(const QSharedPointer<Transport> &transport, const Reason &reason)
@@ -303,22 +313,17 @@ namespace XMPP { namespace Jingle {
 
         _transport = transport;
 
-        if (!transportInitTimer) {
-            transportInitTimer = new QTimer(this);
-            transportInitTimer->setSingleShot(true);
-            transportInitTimer->setInterval(0);
-            connect(transportInitTimer, &QTimer::timeout, this, [this]() {
-                connect(_transport.data(), &Transport::updated, this, &Application::updated);
-                connect(_transport.data(), &Transport::failed, this, [this]() { selectNextTransport(); });
+        connect(_transport.data(), &Transport::updated, this, &Application::updated);
+        connect(_transport.data(), &Transport::failed, this, [this]() { selectNextTransport(); });
 
-                initTransport();
-
-                if (_transport && _transport->state() < State::Finishing && _state >= State::ApprovedToSend) {
-                    _transport->prepare();
+        if (_transport && _transport->state() < State::Finishing && _state >= State::ApprovedToSend) {
+            QTimer::singleShot(0, this, [this, wp = _transport.toWeakRef()]() {
+                auto p = wp.lock();
+                if (p && p == _transport) {
+                    prepareTransport();
                 }
             });
         }
-        transportInitTimer->start();
 
         return true;
     }

@@ -89,6 +89,9 @@ signals:
     void portAvailable();
 
 private:
+    void addLocalServers();
+
+    bool                     started = false;
     TcpPortServer::PortTypes typeMask
         = TcpPortServer::PortTypes(TcpPortServer::Direct | TcpPortServer::NatAssited | TcpPortServer::Tunneled);
     TcpPortScope *            scope = nullptr;

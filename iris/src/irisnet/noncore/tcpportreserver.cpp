@@ -44,7 +44,8 @@ bool TcpPortDiscoverer::setExternalHost(const QString &extHost, quint16 extPort,
     p.publishPort = extPort;
     server->setPortInfo(p);
     servers.append(server);
-    emit portAvailable();
+    if (started)
+        emit portAvailable();
     return true;
 }
 
@@ -55,12 +56,16 @@ TcpPortServer::PortTypes TcpPortDiscoverer::inProgressPortTypes() const
 
 bool TcpPortDiscoverer::isDepleted() const
 {
-    return servers.size() == 0; // TODO and no active subdiscoveries
+    if (started) {
+        return servers.size() == 0; // TODO and no active subdiscoveries
+    } else {
+        return typeMask == 0; // otherwise we will tell after start
+    }
 }
 
 TcpPortServer::PortTypes TcpPortDiscoverer::setTypeMask(TcpPortServer::PortTypes mask)
 {
-    this->typeMask = mask;
+    typeMask = mask;
     // drop ready ports if any
     auto it = std::remove_if(servers.begin(), servers.end(), [mask](auto &s) { return !(s->portType() & mask); });
     servers.erase(it, servers.end());
@@ -73,7 +78,7 @@ TcpPortServer::PortTypes TcpPortDiscoverer::setTypeMask(TcpPortServer::PortTypes
     return pendingTypes;
 }
 
-void TcpPortDiscoverer::start()
+void TcpPortDiscoverer::addLocalServers()
 {
     QList<QHostAddress> listenAddrs;
     auto const          interfaces = QNetworkInterface::allInterfaces();
@@ -84,8 +89,7 @@ void TcpPortDiscoverer::start()
         if (ni.flags() & QNetworkInterface::IsLoopBack) {
             continue;
         }
-        QList<QNetworkAddressEntry> entries = ni.addressEntries();
-        for (const QNetworkAddressEntry &na : entries) {
+        for (const QNetworkAddressEntry &na : ni.addressEntries()) {
             QHostAddress h = na.ip();
             if (h.isLoopback()) {
                 continue;
@@ -122,10 +126,16 @@ void TcpPortDiscoverer::start()
         server->setPortInfo(p);
         servers.append(server);
     }
+}
 
-    if (listenAddrs.size()) {
+void TcpPortDiscoverer::start()
+{
+    started = true;
+    if (typeMask & TcpPortServer::Direct)
+        addLocalServers();
+
+    if (servers.size())
         emit portAvailable();
-    }
 }
 
 void TcpPortDiscoverer::stop()
@@ -158,7 +168,7 @@ TcpPortDiscoverer *TcpPortScope::disco()
 {
     auto discoverer = new TcpPortDiscoverer(this);
     QMetaObject::invokeMethod(parent(), "newDiscoverer", Q_ARG(TcpPortDiscoverer *, discoverer));
-    QMetaObject::invokeMethod(discoverer, "start", Qt::QueuedConnection);
+    QMetaObject::invokeMethod(discoverer, &TcpPortDiscoverer::start, Qt::QueuedConnection);
     return discoverer;
 }
 

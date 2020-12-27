@@ -1,6 +1,6 @@
 ﻿/*
- * jignle-s5b.cpp - Jingle SOCKS5 transport
- * Copyright (C) 2019  Sergey Ilinykh
+ * jignle-ice.cpp - Jingle ICE transport
+ * Copyright (C) 2020  Sergey Ilinykh
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public

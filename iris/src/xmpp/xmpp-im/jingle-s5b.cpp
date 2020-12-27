@@ -845,7 +845,8 @@ namespace XMPP { namespace Jingle { namespace S5B {
                     types |= TcpPortServer::Tunneled;
                 }
             }
-            if (!disco->setTypeMask(types)) {
+            disco->setTypeMask(types);
+            if (disco->isDepleted()) {
                 delete disco;
                 disco = nullptr;
             }

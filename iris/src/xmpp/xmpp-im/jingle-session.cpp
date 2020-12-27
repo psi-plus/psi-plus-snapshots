@@ -915,17 +915,16 @@ namespace XMPP { namespace Jingle {
 
                 Application *app = contentList.value(ContentKey { cb.name, cb.creator });
                 if (!app || !app->transport() || app->transport()->creator() != role
-                    || app->transport()->state() != State::Pending) {
+                    || app->transport()->state() != State::Pending || transportNS != app->transport()->pad()->ns()) {
                     // ignore out of order
+                    qInfo("ignore out of order transport-accept");
                     continue;
                 }
                 updates.append(qMakePair(app, transportEl));
             }
 
             for (auto &u : updates) {
-                if (u.first->transport()->update(u.second) && u.first->state() >= State::Connecting) {
-                    u.first->transport()->start();
-                }
+                u.first->incomingTransportAccept(u.second);
                 // if update fails transport should trigger replace procedure
             }
 

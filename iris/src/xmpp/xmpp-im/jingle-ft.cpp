@@ -644,7 +644,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     bool Application::isTransportReplaceEnabled() const { return _state < State::Active; }
 
-    void Application::initTransport()
+    void Application::prepareTransport()
     {
         if (_transport->creator() == _pad->session()->role()) {
             d->connection = _transport->addChannel(TransportFeature::Reliable | TransportFeature::DataOriented);
@@ -696,6 +696,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 emit connectionReady();
             }
         });
+        _transport->prepare();
     }
 
     void Application::setStreamingMode(bool mode)
@@ -767,7 +768,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         }
         if (_transport) {
             d->setState(State::ApprovedToSend);
-            _transport->prepare();
+            prepareTransport();
         }
     }
 

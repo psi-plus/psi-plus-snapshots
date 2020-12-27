@@ -142,6 +142,7 @@ namespace XMPP { namespace Jingle {
         virtual void remove(Reason::Condition cond = Reason::Success, const QString &comment = QString()) = 0;
 
         virtual void incomingRemove(const Reason &r) = 0;
+        void         incomingTransportAccept(const QDomElement &el);
 
     protected:
         /**
@@ -152,7 +153,7 @@ namespace XMPP { namespace Jingle {
         /**
          * @brief initTransport in general connects any necessary for the application transport signals
          */
-        virtual void initTransport() = 0;
+        virtual void prepareTransport() = 0;
 
     signals:
         void updated(); // signal for session it has to send updates to remote. so it will follow with

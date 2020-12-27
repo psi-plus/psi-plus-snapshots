@@ -170,7 +170,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     protected:
         void incomingRemove(const Reason &r) override;
-        void initTransport() override;
+        void prepareTransport() override;
 
     private:
         void prepareThumbnail(File &file);
