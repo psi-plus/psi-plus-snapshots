@@ -168,7 +168,7 @@ TcpPortDiscoverer *TcpPortScope::disco()
 {
     auto discoverer = new TcpPortDiscoverer(this);
     QMetaObject::invokeMethod(parent(), "newDiscoverer", Q_ARG(TcpPortDiscoverer *, discoverer));
-    QMetaObject::invokeMethod(discoverer, &TcpPortDiscoverer::start, Qt::QueuedConnection);
+    QMetaObject::invokeMethod(discoverer, "start", Qt::QueuedConnection);
     return discoverer;
 }
 

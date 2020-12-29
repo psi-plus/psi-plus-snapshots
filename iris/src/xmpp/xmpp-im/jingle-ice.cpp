@@ -41,6 +41,7 @@
 namespace XMPP { namespace Jingle { namespace ICE {
     const QString NS(QStringLiteral("urn:xmpp:jingle:transports:ice:0"));
     const QString NS_DTLS(QStringLiteral("urn:xmpp:jingle:apps:dtls:0"));
+    const QString NS_SCTP(QStringLiteral("urn:xmpp:jingle:transports:dtls-sctp:1"));
 
     // TODO: reject offers that don't contain at least one of audio or video
     // TODO: support candidate negotiations over the JingleRtpChannel thread
@@ -127,6 +128,36 @@ namespace XMPP { namespace Jingle { namespace ICE {
         }
     };
     std::weak_ptr<SctpKeeper> SctpKeeper::instance;
+
+    enum class SctpProtocol { None, WebRTCDataChannel };
+
+    struct SctpElement {
+        SctpProtocol protocol = SctpProtocol::None;
+        uint16_t     number   = 0;
+
+        QDomElement toXml(QDomDocument *doc)
+        {
+            QDomElement ret;
+            if (protocol == SctpProtocol::None)
+                return ret;
+            ret = doc->createElementNS(NS_SCTP, QLatin1String("sctpmap"));
+            ret.setAttribute(QLatin1String("protocol"), QLatin1String("webrtc-datachannel"));
+            ret.setAttribute(QLatin1String("number"), number);
+            return ret;
+        }
+
+        bool parse(const QDomElement &el)
+        {
+            if (el.namespaceURI() != NS_SCTP) {
+                return false;
+            }
+            auto p = el.attribute(QLatin1String("protocol"));
+            protocol
+                = (p == QLatin1String("webrtc-datachannel")) ? SctpProtocol::WebRTCDataChannel : SctpProtocol::None;
+            number = el.attribute(QLatin1String("number")).toInt();
+            return protocol != SctpProtocol::None && number > 0;
+        }
+    };
 
     static std::array<const char *, 4> fpRoles { { "active", "passive", "actpass", "holdconn" } };
     struct FingerPrint {
@@ -302,23 +333,6 @@ namespace XMPP { namespace Jingle { namespace ICE {
         //        Jid                         proxy;
     };
 
-    class JingleRtpRemoteCandidate {
-    public:
-        int          component;
-        QHostAddress addr;
-        int          port;
-
-        JingleRtpRemoteCandidate() : component(-1), port(-1) { }
-    };
-
-    class JingleRtpTrans {
-    public:
-        QString                         user;
-        QString                         pass;
-        QList<XMPP::Ice176::Candidate>  candidates;
-        QList<JingleRtpRemoteCandidate> remoteCandidates;
-    };
-
     static XMPP::Ice176::Candidate elementToCandidate(const QDomElement &e)
     {
         if (e.tagName() != "candidate")
@@ -447,6 +461,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         QList<XMPP::Ice176::Candidate> remoteCandidates;
         QString                        remoteUfrag;
         QString                        remotePassword;
+        SctpElement                    sctp;
 
         // QString            sid;
         // Transport::Mode    mode = Transport::Tcp;
@@ -481,10 +496,30 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 return;
             ice->setPeerUfrag(remoteUfrag);
             ice->setPeerPassword(remotePassword);
-            if (!remoteCandidates.isEmpty()) {
-                ice->addRemoteCandidates(remoteCandidates);
-                remoteCandidates.clear();
+            if (remoteCandidates.isEmpty())
+                return;
+            ice->addRemoteCandidates(remoteCandidates);
+
+            /*
+             * The channels split topic is somewhat complicated.
+             * We can talk about multiplexed rtp/rtcp channels, about sctp channels or maybe plain ICE components.
+             * In general it's upto the application controlling the transport to request proper amount of components.
+             *
+             */
+            for (auto const &c : remoteCandidates) {
+                if (std::none_of(channels.begin(), channels.end(),
+                                 [&c](auto const &channel) { return c.component == channel->channelIndex; })) {
+                    TransportFeatures features;
+                    if (sctp.protocol != SctpProtocol::None)
+                        features |= TransportFeature::DataOriented;
+                    channels.insert(c.component, QSharedPointer<Connection>::create(c.component, features));
+                }
             }
+
+            remoteCandidates.clear();
+
+            std::sort(remoteCandidates.begin(), remoteCandidates.end(),
+                      [](const auto &a, const auto &b) { return a.component < b.component; });
         }
 
         bool handleIncomingCandidate(const QDomElement &transportEl)
@@ -808,7 +843,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 return true;
             }
         } catch (std::runtime_error &e) {
-            qWarning("Transport updated failed: %s", e.what());
+            qWarning("Transport update failed: %s", e.what());
             return false;
         }
 
