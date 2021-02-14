@@ -152,7 +152,7 @@ namespace Jingle {
 
         // exclusive
         DataOriented = 0x800, // the goal is to deliver data
-        TimeOriented = 0x1000 // the goal is keep data synchronized with time (e.g. for rtp)
+        LiveOriented = 0x1000 // the goal is keep data synchronized with time (e.g. for rtp)
     };
     Q_DECLARE_FLAGS(TransportFeatures, TransportFeature)
     Q_DECLARE_OPERATORS_FOR_FLAGS(TransportFeatures)

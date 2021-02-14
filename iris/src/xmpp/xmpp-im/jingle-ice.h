@@ -138,10 +138,11 @@ namespace Jingle { namespace ICE {
         OutgoingTransportInfoUpdate takeOutgoingUpdate(bool ensureTransportElement) override;
         bool                        isValid() const override;
         TransportFeatures           features() const override;
-        int                         maxSupportedChannels() const override;
+        int                         maxSupportedChannelsPerComponent(TransportFeatures features) const override;
 
-        Connection::Ptr              addChannel(TransportFeatures features = TransportFeatures()) const override;
-        std::vector<Connection::Ptr> channels() const override;
+        int                    addComponent() override;
+        Connection::Ptr        addChannel(TransportFeatures features, int component = 0) const override;
+        QList<Connection::Ptr> channels() const override;
 
     private:
         friend class Manager;

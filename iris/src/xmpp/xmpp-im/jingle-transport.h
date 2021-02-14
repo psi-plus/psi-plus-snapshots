@@ -63,6 +63,7 @@ namespace XMPP { namespace Jingle {
         virtual bool            hasPendingDatagrams() const;
         virtual NetworkDatagram receiveDatagram(qint64 maxSize = -1);
         virtual size_t          blockSize() const;
+        virtual int             component() const;
 
         inline void  setHints(Hints hints) { _hints = hints; }
         inline Hints hints() const { return _hints; }
@@ -130,10 +131,62 @@ namespace XMPP { namespace Jingle {
         virtual bool                        isValid() const                                         = 0;
 
         // returns all the available transport features while addChannel() can use just a subset of them
-        virtual TransportFeatures            features() const = 0;
-        virtual int                          maxSupportedChannels() const;
-        virtual Connection::Ptr              addChannel(TransportFeatures features = TransportFeatures()) const = 0;
-        virtual std::vector<Connection::Ptr> channels() const                                                   = 0;
+        virtual TransportFeatures features() const = 0;
+
+        // a component is basically is a subconnection usually with a dedicated IP port. A component may have one or
+        // more channels. Components are pretty much generic but channels aren't. Channels give connection objects,
+        // wbile components are rather indexes.
+
+        /**
+         * @brief maxSupportedComponents
+         * @return max number of components >=1.
+         *
+         * If the function returns -1 then it assumes number of components is unlimited. Even so it may depend on some
+         * factors like number of still available udp ports for example for udp based transport.
+         */
+        virtual int maxSupportedComponents() const;
+
+        /**
+         * @brief addComponent add another component to the transport connection
+         * @return index of the component (starting from 1 - second component. see below)
+         *
+         * Note, component with index 0 is considered to be always added since it doesn't make sense to have a transport
+         * w/o any component. So if the transport has just one component, the application should avoid calling this
+         * function.
+         */
+        virtual int addComponent();
+
+        /**
+         * @brief maxSupportedChannelsPerComponent returns max number supported channels for specific features set
+         * @param features - required features
+         * @return number of channel. 0 if not supported for given features set or non-zero if suported.
+         *
+         * Transports MUST reimplement this method, otherwise by default it's 0 (the transport won't work)
+         *
+         * Channels transfer some specific data. For example if those are DataOriented channels then for ICE transport
+         * we can assume max SCTP channels. Again for ICE and time-oriented channels it's 1 since the transport doesn't
+         * handle any channel protocols in this case and it's up to the application to do any multiplexing.
+         */
+        virtual int maxSupportedChannelsPerComponent(TransportFeatures features) const;
+
+        /**
+         * @brief addChannel adds a channel to the component.
+         * @param features   - required channel features. like DataOriented for example
+         * @param component  - index of component to add the channel to.
+         * @return connection object which eventually will fire `connected()` signal
+         *
+         * It's necessary to add components in advance since we always have at least one component.
+         * For example a file transfer transport may just call `addChannel(TransportFeature::DataOriented)` to have
+         * reliable connection object on the component 0. Transports not supporting components notation are considered
+         * to support just one component with index 0
+         */
+        virtual Connection::Ptr addChannel(TransportFeatures features, int component = 0) const = 0;
+
+        /**
+         * @brief channels
+         * @return the list of all added channels both local and remote
+         */
+        virtual QList<Connection::Ptr> channels() const = 0;
     signals:
         /**
          * found some candidates and they have to be sent. takeUpdate has to be called from this signal

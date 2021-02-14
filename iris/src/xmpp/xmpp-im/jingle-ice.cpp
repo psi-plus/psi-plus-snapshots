@@ -391,10 +391,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
     public:
         QList<NetworkDatagram> datagrams;
         void *                 client;
-        int                    channelIndex;
+        int                    component; // starting from 0
         TransportFeatures      features;
 
-        Connection(int channelIndex, TransportFeatures features) : channelIndex(channelIndex), features(features)
+        Connection(int component, TransportFeatures features) : component(component), features(features)
         {
             /*connect(client, &SocksClient::readyRead, this, &Connection::readyRead);
             connect(client, &SocksClient::bytesWritten, this, &Connection::bytesWritten);
@@ -457,7 +457,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
         bool                           iceStarted                      = false;
         quint16                        pendingActions                  = 0;
         int                            proxiesInDiscoCount             = 0;
-        QList<XMPP::Ice176::Candidate> localCandidates; // cid to candidate mapping
+        int                            components                      = 0;
+        QList<XMPP::Ice176::Candidate> pendingLocalCandidates; // cid to candidate mapping
         QList<XMPP::Ice176::Candidate> remoteCandidates;
         QString                        remoteUfrag;
         QString                        remotePassword;
@@ -481,7 +482,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         int          stunRelayUdpPort;
         int          stunRelayTcpPort;
 
-        QMap<int, QSharedPointer<Connection>> channels;
+        QList<QSharedPointer<Connection>> channels;
 
         // udp stuff
         bool         udpInitialized;
@@ -499,23 +500,6 @@ namespace XMPP { namespace Jingle { namespace ICE {
             if (remoteCandidates.isEmpty())
                 return;
             ice->addRemoteCandidates(remoteCandidates);
-
-            /*
-             * The channels split topic is somewhat complicated.
-             * We can talk about multiplexed rtp/rtcp channels, about sctp channels or maybe plain ICE components.
-             * In general it's upto the application controlling the transport to request proper amount of components.
-             *
-             */
-            for (auto const &c : remoteCandidates) {
-                if (std::none_of(channels.begin(), channels.end(),
-                                 [&c](auto const &channel) { return c.component == channel->channelIndex; })) {
-                    TransportFeatures features;
-                    if (sctp.protocol != SctpProtocol::None)
-                        features |= TransportFeature::DataOriented;
-                    channels.insert(c.component, QSharedPointer<Connection>::create(c.component, features));
-                }
-            }
-
             remoteCandidates.clear();
 
             std::sort(remoteCandidates.begin(), remoteCandidates.end(),
@@ -538,15 +522,43 @@ namespace XMPP { namespace Jingle { namespace ICE {
                     if (remoteUfrag.isEmpty() || remotePassword.isEmpty())
                         throw std::runtime_error("user fragment or password can't be empty");
                 }
+                if (ic.component > components) {
+                    if (q->_state >= State::ApprovedToSend) {
+                        throw std::runtime_error("too late to add components");
+                    }
+                    components = ic.component;
+                }
                 // qDebug("new remote candidate: %s", qPrintable(c.toString()));
                 remoteCandidates.append(ic); // TODO check for collisions!
                 candidatesAdded++;
             }
-            if (candidatesAdded && ice) {
-                QTimer::singleShot(0, q, [this]() { flushRemoteCandidates(); });
-                return true;
+            if (!candidatesAdded) {
+                return false;
             }
-            return false;
+            if (q->isRemote() && channels.empty()) {
+                /*
+                 * seems like initial offer
+                 *
+                 * The channels split topic is somewhat complicated.
+                 * We can talk about multiplexed rtp/rtcp channels, about sctp channels or maybe plain ICE components.
+                 * In general logic is as following:
+                 *  - no datachannels - amount of channels = amount of components
+                 *  - with datachannels - one channel for datachannel on component 1. one channel per component with
+                 *                        filtered out datachannel
+                 */
+                TransportFeatures features(TransportFeature::HighProbableConnect | TransportFeature::Fast
+                                           | TransportFeature::MessageOriented);
+                if (sctp.protocol != SctpProtocol::None) {
+                    channels.append(QSharedPointer<Connection>::create(0, features | TransportFeature::DataOriented));
+                }
+                for (int i = 0; i < components; i++) {
+                    channels.append(QSharedPointer<Connection>::create(i, features));
+                }
+            }
+            if (ice) {
+                QTimer::singleShot(0, q, [this]() { flushRemoteCandidates(); });
+            }
+            return true;
         }
 
         bool handleIncomingRemoteCandidate(const QDomElement &transportEl)
@@ -561,7 +573,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 if (!(ok && ok2 && !ip.isNull()))
                     throw std::runtime_error("failed to parse remote-candidate");
                 /*
-                                auto cUsed = localCandidates.value(el.attribute(QStringLiteral("cid")));
+                                auto cUsed = pendingLocalCandidates.value(el.attribute(QStringLiteral("cid")));
                                 if (!cUsed) {
                                     throw std::runtime_error("failed to find incoming candidate-used candidate");
                                 }
@@ -592,7 +604,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             if (!el.isNull()) {
                 remoteReportedGatheringComplete = true;
                 /*
-                for (auto &c : localCandidates) {
+                for (auto &c : pendingLocalCandidates) {
                     if (c.state() == Candidate::Pending) {
                         c.setState(Candidate::Discarded);
                     }
@@ -679,7 +691,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 QSet<int> lowOverhead;
                 for (auto &c : channels) {
                     if (!(c->hints() & Connection::AvoidRelays)) {
-                        lowOverhead.insert(c->channelIndex);
+                        lowOverhead.insert(c->component);
                     }
                 }
                 for (auto componentIndex : lowOverhead) {
@@ -695,7 +707,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             q->connect(ice, &XMPP::Ice176::localCandidatesReady,
                        [this](const QList<XMPP::Ice176::Candidate> &candidates) {
                            pendingActions |= NewCandidate;
-                           localCandidates += candidates;
+                           pendingLocalCandidates += candidates;
                            emit q->updated();
                        });
             q->connect(ice, &XMPP::Ice176::localGatheringComplete, [this]() {
@@ -763,7 +775,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                                             manager->stunRelayTcpPass.toUtf8());
 
             // RTP+RTCP
-            ice->setComponentCount(channels.count());
+            ice->setComponentCount(components);
 
             ice->setLocalFeatures(Ice176::Trickle);
 
@@ -871,9 +883,11 @@ namespace XMPP { namespace Jingle { namespace ICE {
                     .toXml(doc));
         }
 
-        for (auto const &cand : d->localCandidates) {
+        for (auto const &cand : d->pendingLocalCandidates) {
             tel.appendChild(candidateToElement(doc, cand));
         }
+        d->pendingLocalCandidates.clear();
+        d->pendingActions &= ~Private::NewCandidate;
 
         if (d->pendingActions & Private::GatheringComplete) {
             tel.appendChild(doc->createElement(QLatin1String("gathering-complete")));
@@ -903,11 +917,24 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
     TransportFeatures Transport::features() const { return _pad->manager()->features(); }
 
-    int Transport::maxSupportedChannels() const { return -1; };
+    int Transport::maxSupportedChannelsPerComponent(TransportFeatures features) const
+    {
+        return features & TransportFeature::DataOriented ? 65536 : 1;
+    };
+
+    int Transport::addComponent()
+    {
+        if (_state >= State::ApprovedToSend) {
+            qWarning("adding component after ICE started is not supported");
+            return 0;
+        }
+        d->components++;
+        return d->components;
+    }
 
     // adding ice components (for rtp, rtcp, datachannel etc)
     // but those are rather abstract channels and it's up to ice manager in TransportPad to decide
-    Connection::Ptr Transport::addChannel(TransportFeatures features) const
+    Connection::Ptr Transport::addChannel(TransportFeatures features, int component) const
     {
         // features define type of channel. reliable channels infer sctp
         // if time-oriented - likely rtp
@@ -918,27 +945,22 @@ namespace XMPP { namespace Jingle { namespace ICE {
             return Connection::Ptr();
         }
 
-        // find a gap in the list of channel indexes or just take last one
-        int  channelIdx = 0;
-        auto it         = d->channels.constBegin();
-        while (it != d->channels.constEnd()) {
-            if (it.key() != channelIdx)
-                break;
-            channelIdx++;
-            ++it;
+        if (component >= d->components) {
+            d->components = component + 1;
         }
-        auto conn = QSharedPointer<Connection>::create(channelIdx, features);
-        d->channels.insert(it, channelIdx, conn);
+        // find a gap in the list of channel indexes or just take last one
+        auto conn
+            = QSharedPointer<Connection>::create(features & TransportFeature::DataOriented ? 0 : component, features);
+        d->channels.append(conn);
 
         return conn.staticCast<XMPP::Jingle::Connection>();
     }
 
-    std::vector<XMPP::Jingle::Connection::Ptr> Transport::channels() const
+    QList<XMPP::Jingle::Connection::Ptr> Transport::channels() const
     {
-        std::vector<Connection::Ptr> ret;
-        ret.reserve(d->channels.size());
-        for (auto const &v : d->channels) {
-            ret.push_back(v);
+        QList<XMPP::Jingle::Connection::Ptr> ret;
+        for (auto &c : d->channels) {
+            ret.append(c.staticCast<XMPP::Jingle::Connection>());
         }
         return ret;
     }
@@ -961,7 +983,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
     TransportFeatures Manager::features() const
     {
         return TransportFeature::HighProbableConnect | TransportFeature::Reliable | TransportFeature::Unreliable
-            | TransportFeature::MessageOriented | TransportFeature::DataOriented | TransportFeature::TimeOriented;
+            | TransportFeature::MessageOriented | TransportFeature::DataOriented | TransportFeature::LiveOriented;
     }
 
     void Manager::setJingleManager(XMPP::Jingle::Manager *jm) { d->jingleManager = jm; }

@@ -29,6 +29,8 @@
 #include <QRandomGenerator>
 #endif
 
+template <class T> constexpr std::add_const_t<T> &as_const(T &t) noexcept { return t; }
+
 namespace XMPP { namespace Jingle { namespace IBB {
     const QString NS(QStringLiteral("urn:xmpp:jingle:transports:ibb:1"));
 
@@ -353,20 +355,21 @@ namespace XMPP { namespace Jingle { namespace IBB {
             | TransportFeature::DataOriented;
     }
 
-    int Transport::maxSupportedChannels() const { return -1; }
+    int Transport::maxSupportedChannelsPerComponent(TransportFeatures) const { return -1; }
 
-    Connection::Ptr Transport::addChannel(TransportFeatures features) const
+    Connection::Ptr Transport::addChannel(TransportFeatures features, int) const
     {
-        Q_UNUSED(features); // IBB can't build different channels depending on features
+        if (features & TransportFeature::LiveOriented)
+            return {};
         return d->newStream(QString(), d->defaultBlockSize, _pad->session()->role());
     }
 
-    std::vector<XMPP::Jingle::Connection::Ptr> Transport::channels() const
+    QList<XMPP::Jingle::Connection::Ptr> Transport::channels() const
     {
-        std::vector<Connection::Ptr> ret;
+        QList<Connection::Ptr> ret;
         ret.reserve(d->connections.size());
-        for (auto const &v : d->connections) {
-            ret.push_back(v);
+        for (auto const &v : as_const(d->connections)) {
+            ret.append(v);
         }
         return ret;
     }

@@ -35,7 +35,11 @@ namespace XMPP { namespace Jingle {
 
     void Transport::stop() { _state = State::Finished; }
 
-    int Transport::maxSupportedChannels() const { return 1; }
+    int Transport::maxSupportedComponents() const { return 1; }
+
+    int Transport::addComponent() { return 0; }
+
+    int Transport::maxSupportedChannelsPerComponent(TransportFeatures) const { return 0; }
 
     void Transport::setState(State newState)
     {
@@ -59,6 +63,8 @@ namespace XMPP { namespace Jingle {
     {
         return 0; // means "block" is not applicable for this kind of connection
     }
+
+    int Connection::component() const { return 0; }
 
     //----------------------------------------------------------------------------
     // TransportSelector

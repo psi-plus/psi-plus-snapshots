@@ -41,10 +41,10 @@ namespace Jingle { namespace IBB {
         OutgoingTransportInfoUpdate takeOutgoingUpdate(bool ensureTransportElement = false) override;
         bool                        isValid() const override;
         TransportFeatures           features() const override;
-        int                         maxSupportedChannels() const override;
+        int                         maxSupportedChannelsPerComponent(TransportFeatures features) const override;
 
-        Connection::Ptr              addChannel(TransportFeatures features = TransportFeatures()) const override;
-        std::vector<Connection::Ptr> channels() const override;
+        Connection::Ptr        addChannel(TransportFeatures features, int component = 0) const override;
+        QList<Connection::Ptr> channels() const override;
 
     private:
         friend class Manager;
@@ -91,7 +91,7 @@ namespace Jingle { namespace IBB {
         bool            handleIncoming(IBBConnection *c);
 
     private:
-        class Private;
+        struct Private;
         QScopedPointer<Private> d;
     };
 } // namespace IBB

@@ -1655,13 +1655,16 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
     QString Transport::directAddr() const { return d->directAddr; }
 
-    XMPP::Jingle::Connection::Ptr Transport::addChannel(TransportFeatures features) const
+    int Transport::maxSupportedChannelsPerComponent(TransportFeatures) const { return 1; }
+
+    XMPP::Jingle::Connection::Ptr Transport::addChannel(TransportFeatures features, int) const
     {
+        // TODO consider features and create connections here.
         Q_UNUSED(features); // no way create something depending on features
         return d->connection;
     }
 
-    std::vector<XMPP::Jingle::Connection::Ptr> Transport::channels() const
+    QList<XMPP::Jingle::Connection::Ptr> Transport::channels() const
     {
         // return {}; // good to test transport failure
         return { { d->connection } };

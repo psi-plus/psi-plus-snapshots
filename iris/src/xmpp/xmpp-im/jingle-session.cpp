@@ -539,7 +539,7 @@ namespace XMPP { namespace Jingle {
                     return ParseContentListResult(Unparsed, cond, QList<Application *>(), QList<QDomElement>());
                 }
 
-                auto contentName = app->contentName();
+                auto contentName = ce.attribute(QLatin1String("name"));
                 auto it          = addSet.find(contentName);
                 if (err != Private::AddContentError::Ok) {
                     // can't continue as well
@@ -991,6 +991,11 @@ namespace XMPP { namespace Jingle {
         d->stepTimer.setSingleShot(true);
         d->stepTimer.setInterval(0);
         connect(&d->stepTimer, &QTimer::timeout, this, [this]() { d->doStep(); });
+        connect(manager->client(), &Client::disconnected, this, [this]() {
+            d->waitingAck      = false;
+            d->terminateReason = Reason(Reason::ConnectivityError, QLatin1String("local side disconnected"));
+            d->setSessionFinished();
+        });
     }
 
     Session::~Session()
