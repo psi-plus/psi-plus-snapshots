@@ -86,7 +86,7 @@ public:
             return QByteArray();
 
         QByteArray buf;
-        buf.resize(sock->pendingDatagramSize());
+        buf.resize(int(sock->pendingDatagramSize()));
         sock->readDatagram(buf.data(), buf.size(), address, port);
         return buf;
     }
@@ -146,7 +146,7 @@ public:
     class Datagram {
     public:
         QHostAddress addr;
-        int          port;
+        quint16      port;
         QByteArray   buf;
     };
 
@@ -260,8 +260,8 @@ public:
 
         pool = StunTransactionPool::Ptr::create(StunTransaction::Udp);
         pool->setDebugLevel((StunTransactionPool::DebugLevel)debugLevel);
-        connect(pool.data(), SIGNAL(outgoingMessage(QByteArray, QHostAddress, int)),
-                SLOT(pool_outgoingMessage(QByteArray, QHostAddress, int)));
+        connect(pool.data(), SIGNAL(outgoingMessage(QByteArray, QHostAddress, quint16)),
+                SLOT(pool_outgoingMessage(QByteArray, QHostAddress, quint16)));
         connect(pool.data(), SIGNAL(needAuthParams()), SLOT(pool_needAuthParams()));
         connect(pool.data(), SIGNAL(debugLine(QString)), SLOT(pool_debugLine(QString)));
 
@@ -294,6 +294,7 @@ public:
         connect(stunBinding, &StunBinding::error, this, [&](XMPP::StunBinding::Error) {
             delete stunBinding;
             stunBinding = nullptr;
+            emit q->error(IceLocalTransport::ErrorStun);
         });
         stunBinding->start(stunBindAddr, stunBindPort);
     }
@@ -459,6 +460,8 @@ private slots:
             Datagram dg;
 
             QByteArray buf = sock->readDatagram(&from, &fromPort);
+            if (buf.isEmpty()) // it's weird we ever came here, but should relax static analyzer
+                break;
             if ((from == stunBindAddr && fromPort == stunBindPort)
                 || (from == stunRelayAddr && fromPort == stunRelayPort)) {
                 bool haveData = processIncomingStun(buf, from, fromPort, &dg);
@@ -542,7 +545,7 @@ private slots:
         }
     }
 
-    void pool_outgoingMessage(const QByteArray &packet, const QHostAddress &toAddress, int toPort)
+    void pool_outgoingMessage(const QByteArray &packet, const QHostAddress &toAddress, quint16 toPort)
     {
         // warning: read StunTransactionPool docs before modifying
         //   this function
@@ -645,6 +648,7 @@ private slots:
         if (wasActivated)
             return;
 
+        emit q->error(IceLocalTransport::ErrorTurn);
         // don't report any error
         // if(stunType == IceLocalTransport::Relay || (stunType == IceLocalTransport::Auto && !stunBinding))
         //    emit q->addressesChanged();
@@ -655,7 +659,7 @@ private slots:
         WriteItem wi;
         wi.type = WriteItem::Turn;
         pendingWrites += wi;
-        sock->writeDatagram(buf, stunRelayAddr, stunRelayPort);
+        sock->writeDatagram(buf, stunRelayAddr, quint16(stunRelayPort));
     }
 
     void turn_debugLine(const QString &line) { emit q->debugLine(line); }
@@ -716,6 +720,10 @@ QHostAddress IceLocalTransport::relayedAddress() const { return d->relAddr; }
 
 int IceLocalTransport::relayedPort() const { return d->relPort; }
 
+bool IceLocalTransport::isStunAlive() const { return d->stunBinding != nullptr; }
+
+bool IceLocalTransport::isTurnAlive() const { return d->turn != nullptr; }
+
 void IceLocalTransport::addChannelPeer(const QHostAddress &addr, int port)
 {
     if (d->turn)
@@ -734,7 +742,7 @@ bool IceLocalTransport::hasPendingDatagrams(int path) const
     }
 }
 
-QByteArray IceLocalTransport::readDatagram(int path, QHostAddress *addr, int *port)
+QByteArray IceLocalTransport::readDatagram(int path, QHostAddress *addr, quint16 *port)
 {
     QList<Private::Datagram> *in = nullptr;
     if (path == Direct)
@@ -761,7 +769,7 @@ void IceLocalTransport::writeDatagram(int path, const QByteArray &buf, const QHo
         wi.addr = addr;
         wi.port = port;
         d->pendingWrites += wi;
-        d->sock->writeDatagram(buf, addr, port);
+        d->sock->writeDatagram(buf, addr, quint16(port));
     } else if (path == Relayed) {
         if (d->turn && d->turnActivated)
             d->turn->write(buf, addr, port);

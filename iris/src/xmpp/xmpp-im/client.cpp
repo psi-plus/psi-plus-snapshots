@@ -175,13 +175,13 @@ Client::Client(QObject *par) : QObject(par)
 
     d->jingleManager = new Jingle::Manager(this);
     auto ft          = new Jingle::FileTransfer::Manager(this);
-    d->jingleManager->registerApp(Jingle::FileTransfer::NS, ft);
+    d->jingleManager->registerApplication(ft);
     d->jingleS5BManager = new Jingle::S5B::Manager(d->jingleManager);
     d->jingleIBBManager = new Jingle::IBB::Manager(d->jingleManager);
     d->jingleICEManager = new Jingle::ICE::Manager(d->jingleManager);
-    d->jingleManager->registerTransport(Jingle::S5B::NS, d->jingleS5BManager);
-    d->jingleManager->registerTransport(Jingle::IBB::NS, d->jingleIBBManager);
-    // d->jingleManager->registerTransport(Jingle::ICE::NS, d->jingleICEManager);
+    d->jingleManager->registerTransport(d->jingleS5BManager);
+    d->jingleManager->registerTransport(d->jingleIBBManager);
+    // d->jingleManager->registerTransport(d->jingleICEManager);
 }
 
 Client::~Client()
@@ -457,7 +457,7 @@ void Client::close(bool)
         d->stream->close();
         d->stream = nullptr;
     }
-    disconnected();
+    emit disconnected();
     cleanup(); // TODO wait till stream writes all data to the socket
 }
 
@@ -489,7 +489,7 @@ void Client::streamError(int)
     // error(e);
 
     // if(!e.isWarning()) {
-    disconnected();
+    emit disconnected();
     cleanup();
     //}
 } // namespace XMPP
@@ -702,9 +702,9 @@ void Client::ppPresence(const Jid &j, const Status &s)
         GroupChat &i = *it;
 
         if (i.j.compare(j, false)) {
-            bool us = (i.j.resource() == j.resource() || j.resource().isEmpty()) ? true : false;
+            bool us = i.j.resource() == j.resource() || j.resource().isEmpty();
 
-            debug(QString("for groupchat i=[%1] pres=[%2], [us=%3].\n").arg(i.j.full()).arg(j.full()).arg(us));
+            debug(QString("for groupchat i=[%1] pres=[%2], [us=%3].\n").arg(i.j.full(), j.full()).arg(us));
             switch (i.status) {
             case GroupChat::Connecting:
                 if (us && s.hasError()) {
@@ -768,7 +768,7 @@ void Client::ppPresence(const Jid &j, const Status &s)
 void Client::updateSelfPresence(const Jid &j, const Status &s)
 {
     ResourceList::Iterator rit   = d->resourceList.find(j.resource());
-    bool                   found = (rit == d->resourceList.end()) ? false : true;
+    bool                   found = rit != d->resourceList.end();
 
     // unavailable?  remove the resource
     if (!s.isAvailable()) {
@@ -799,13 +799,13 @@ void Client::updateSelfPresence(const Jid &j, const Status &s)
 void Client::updatePresence(LiveRosterItem *i, const Jid &j, const Status &s)
 {
     ResourceList::Iterator rit   = i->resourceList().find(j.resource());
-    bool                   found = (rit == i->resourceList().end()) ? false : true;
+    bool                   found = rit != i->resourceList().end();
 
     // unavailable?  remove the resource
     if (!s.isAvailable()) {
         if (found) {
             (*rit).setStatus(s);
-            debug(QString("Client: Removing resource from [%1]: name=[%2]\n").arg(i->jid().full()).arg(j.resource()));
+            debug(QString("Client: Removing resource from [%1]: name=[%2]\n").arg(i->jid().full(), j.resource()));
             emit resourceUnavailable(j, *rit);
             i->resourceList().erase(rit);
             i->setLastUnavailableStatus(s);
@@ -825,11 +825,11 @@ void Client::updatePresence(LiveRosterItem *i, const Jid &j, const Status &s)
         if (!found) {
             r = Resource(j.resource(), s);
             i->resourceList() += r;
-            debug(QString("Client: Adding resource to [%1]: name=[%2]\n").arg(i->jid().full()).arg(j.resource()));
+            debug(QString("Client: Adding resource to [%1]: name=[%2]\n").arg(i->jid().full(), j.resource()));
         } else {
             (*rit).setStatus(s);
             r = *rit;
-            debug(QString("Client: Updating resource to [%1]: name=[%2]\n").arg(i->jid().full()).arg(j.resource()));
+            debug(QString("Client: Updating resource to [%1]: name=[%2]\n").arg(i->jid().full(), j.resource()));
         }
 
         emit resourceAvailable(j, r);
@@ -857,10 +857,10 @@ void Client::pmMessage(const Message &m)
                 continue;
 
             if (i.status == GroupChat::Connected)
-                messageReceived(m);
+                emit messageReceived(m);
         }
     } else
-        messageReceived(m);
+        emit messageReceived(m);
 }
 
 void Client::prRoster(const Roster &r) { importRoster(r); }
@@ -1254,12 +1254,7 @@ const ResourceList &LiveRosterItem::resourceList() const { return v_resourceList
 
 ResourceList::ConstIterator LiveRosterItem::priority() const { return v_resourceList.priority(); }
 
-bool LiveRosterItem::isAvailable() const
-{
-    if (v_resourceList.count() > 0)
-        return true;
-    return false;
-}
+bool LiveRosterItem::isAvailable() const { return v_resourceList.count() > 0; }
 
 const Status &LiveRosterItem::lastUnavailableStatus() const { return v_lastUnavailableStatus; }
 

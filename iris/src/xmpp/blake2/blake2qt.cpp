@@ -14,9 +14,9 @@ QByteArray computeBlake2Hash(const QByteArray &ba, Blake2DigestSize digestSize)
     // otherwise try to libb2 or bundled reference implementation depending on which is available
 
     size_t     digestSizeBytes = digestSize == Blake2Digest256 ? 32 : 64;
-    QByteArray ret(digestSizeBytes, Qt::Uninitialized);
+    QByteArray ret(int(digestSizeBytes), Qt::Uninitialized);
 
-    if (blake2b(ret.data(), digestSizeBytes, ba.data(), ba.size(), nullptr, 0) != 0) {
+    if (blake2b(ret.data(), digestSizeBytes, ba.data(), size_t(ba.size()), nullptr, 0) != 0) {
         ret.clear();
     }
 
@@ -43,15 +43,15 @@ QByteArray computeBlake2Hash(QIODevice *dev, Blake2DigestSize digestSize)
     QByteArray buf;
     // reading by 1Mb should work well with disk caches
     while ((buf = dev->read(1024 * 1024)).size() > 0) {
-        retCode = blake2b_update(&state, buf.data(), buf.size());
+        retCode = blake2b_update(&state, buf.data(), size_t(buf.size()));
         if (retCode != 0) {
             return QByteArray();
         }
     }
 
     QByteArray ret;
-    ret.resize(digestSizeBytes);
-    retCode = blake2b_final(&state, ret.data(), ret.size());
+    ret.resize(int(digestSizeBytes));
+    retCode = blake2b_final(&state, ret.data(), size_t(ret.size()));
     if (retCode != 0) {
         return QByteArray();
     }

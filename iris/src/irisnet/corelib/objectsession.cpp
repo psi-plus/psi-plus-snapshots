@@ -177,13 +177,7 @@ ObjectSessionWatcher::~ObjectSessionWatcher()
     delete d;
 }
 
-bool ObjectSessionWatcher::isValid() const
-{
-    if (d->sess)
-        return true;
-    else
-        return false;
-}
+bool ObjectSessionWatcher::isValid() const { return d->sess != nullptr; }
 
 ObjectSession::ObjectSession(QObject *parent) : QObject(parent) { d = new ObjectSessionPrivate(this); }
 

@@ -57,7 +57,7 @@ public:
     // reimplemented
     virtual void       stop();
     virtual bool       hasPendingDatagrams(int path) const;
-    virtual QByteArray readDatagram(int path, QHostAddress *addr, int *port);
+    virtual QByteArray readDatagram(int path, QHostAddress *addr, quint16 *port);
     virtual void       writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port);
     virtual void       addChannelPeer(const QHostAddress &addr, int port);
     virtual void       setDebugLevel(DebugLevel level);

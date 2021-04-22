@@ -95,6 +95,7 @@ set(HEADERS
     xmpp-im/xmpp_task.h
     xmpp-im/xmpp_tasks.h
     xmpp-im/jingle.h
+    xmpp-im/jingle-connection.h
     xmpp-im/jingle-transport.h
     xmpp-im/jingle-nstransportslist.h
     xmpp-im/jingle-application.h
@@ -103,6 +104,9 @@ set(HEADERS
     xmpp-im/jingle-ice.h
     xmpp-im/jingle-s5b.h
     xmpp-im/jingle-ibb.h
+    xmpp-im/jingle-sctp.h
+    xmpp-im/jingle-sctp-association_p.h
+    xmpp-im/jingle-webrtc-datachannel_p.h
 
     zlib/zlibcompressor.h
     zlib/zlibdecompressor.h
@@ -138,6 +142,7 @@ set(SOURCES
     xmpp-im/xmpp_xdata.cpp
     xmpp-im/xmpp_xmlcommon.cpp
     xmpp-im/jingle.cpp
+    xmpp-im/jingle-connection.cpp
     xmpp-im/jingle-session.cpp
     xmpp-im/jingle-application.cpp
     xmpp-im/jingle-transport.cpp
@@ -146,6 +151,9 @@ set(SOURCES
     xmpp-im/jingle-ice.cpp
     xmpp-im/jingle-s5b.cpp
     xmpp-im/jingle-ibb.cpp
+    xmpp-im/jingle-sctp.cpp
+    xmpp-im/jingle-sctp-association_p.cpp
+    xmpp-im/jingle-webrtc-datachannel_p.cpp
 
     base/randomnumbergenerator.cpp
     base/timezone.cpp

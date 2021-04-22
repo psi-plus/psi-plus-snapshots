@@ -71,6 +71,12 @@ namespace XMPP { namespace Jingle { namespace S5B {
             emit connected();
         }
 
+        TransportFeatures features() const
+        {
+            return TransportFeature::Fast | TransportFeature::DataOriented | TransportFeature::StreamOriented
+                | TransportFeature::Ordered | TransportFeature::Reliable;
+        }
+
         bool hasPendingDatagrams() const { return datagrams.size() > 0; }
 
         NetworkDatagram receiveDatagram(qint64 maxSize = -1)
@@ -455,7 +461,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
     void Candidate::setPort(quint16 port) { d->port = port; }
 
-    quint16 Candidate::localPort() const { return d->server ? d->server->serverPort() : 0; }
+    quint16 Candidate::localPort() const { return quint16(d->server ? d->server->serverPort() : 0); }
 
     QHostAddress Candidate::localAddress() const { return d->server ? d->server->serverAddress() : QHostAddress(); }
 
@@ -1193,7 +1199,6 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 localCandidates.clear();
                 remoteCandidates.clear();
                 q->setState(State::Active);
-                emit q->connected();
             });
         }
 
@@ -1359,7 +1364,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
         d->probingTimer.setSingleShot(true);
         d->negotiationFinishTimer.setSingleShot(true);
         d->negotiationFinishTimer.setInterval(5000); // TODO select the value smart way
-        connect(&d->probingTimer, &QTimer::timeout, [this]() { d->tryConnectToRemoteCandidate(); });
+        connect(&d->probingTimer, &QTimer::timeout, this, [this]() { d->tryConnectToRemoteCandidate(); });
         connect(&d->negotiationFinishTimer, &QTimer::timeout, this, [this]() { d->handleNegotiationTimeout(); });
         connect(_pad->manager(), &TransportManager::abortAllRequested, this, [this]() {
             d->aborted = true;
@@ -1406,6 +1411,14 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
         d->discoS5BProxy();
 
+        if (isRemote() && !notifyIncomingConnection(d->connection)) {
+            // our the only connection wasn't accepted
+            _state      = State::Finished;
+            _lastReason = { Reason::IncompatibleParameters,
+                            QLatin1String("Application didn't accept the only incoming connection") };
+            emit failed();
+            return;
+        }
         emit updated();
     }
 
@@ -1430,7 +1443,8 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 d->blockSize = bsn;
             }
         }
-        if (_state == State::Created && isRemote() && d->sid.isEmpty()) {
+        bool isNewIncoming = _state == State::Created && isRemote();
+        if (isNewIncoming && d->sid.isEmpty()) {
             d->sid = transportEl.attribute(QStringLiteral("sid"));
         }
         auto dstaddr = transportEl.attribute(QStringLiteral("dstaddr"));
@@ -1442,8 +1456,8 @@ namespace XMPP { namespace Jingle { namespace S5B {
             if (d->handleIncomingCandidate(transportEl) || d->handleIncomingCandidateUsed(transportEl)
                 || d->handleIncomingCandidateError(transportEl) || d->handleIncomingActivated(transportEl)
                 || d->handleIncomingProxyError(transportEl)) {
-                if (_state == State::Created && _creator != _pad->session()->role()) {
-                    // initial incoming transport
+                if (isNewIncoming) {
+                    d->connection->setRemote(true);
                     setState(State::Pending);
                 }
                 if (_state == State::Pending && _creator == _pad->session()->role()) {
@@ -1657,10 +1671,11 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
     int Transport::maxSupportedChannelsPerComponent(TransportFeatures) const { return 1; }
 
-    XMPP::Jingle::Connection::Ptr Transport::addChannel(TransportFeatures features, int) const
+    XMPP::Jingle::Connection::Ptr Transport::addChannel(TransportFeatures features, const QString &id, int)
     {
         // TODO consider features and create connections here.
         Q_UNUSED(features); // no way create something depending on features
+        d->connection->setId(id);
         return d->connection;
     }
 
@@ -1724,8 +1739,6 @@ namespace XMPP { namespace Jingle { namespace S5B {
     }
 
     TransportManagerPad *Manager::pad(Session *session) { return new Pad(this, session); }
-
-    void Manager::closeAll() { emit abortAllRequested(); }
 
     QStringList Manager::discoFeatures() const { return { NS }; }
 

@@ -135,7 +135,7 @@ public:
     int packetsToWrite() const;
 
     // TCP mode only
-    QByteArray read(QHostAddress *addr, int *port);
+    QByteArray read(QHostAddress *addr, quint16 *port);
 
     // for UDP, this call may emit outgoingDatagram() immediately (not
     //   DOR-DS safe)

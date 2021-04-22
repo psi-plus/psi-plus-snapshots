@@ -41,7 +41,7 @@ class IceLocalTransport : public IceTransport, public QEnableSharedFromThis<IceL
     Q_OBJECT
 
 public:
-    enum Error { ErrorBind = ErrorCustom };
+    enum Error { ErrorBind = ErrorCustom, ErrorStun, ErrorTurn };
 
     IceLocalTransport(QObject *parent = nullptr);
     ~IceLocalTransport();
@@ -75,10 +75,13 @@ public:
     QHostAddress relayedAddress() const;
     int          relayedPort() const;
 
+    bool isStunAlive() const;
+    bool isTurnAlive() const;
+
     // reimplemented
     void       stop() override;
     bool       hasPendingDatagrams(int path) const override;
-    QByteArray readDatagram(int path, QHostAddress *addr, int *port) override;
+    QByteArray readDatagram(int path, QHostAddress *addr, quint16 *port) override;
     void       writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port) override;
     void       addChannelPeer(const QHostAddress &addr, int port) override;
     void       setDebugLevel(DebugLevel level) override;

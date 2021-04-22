@@ -30,7 +30,7 @@ static QChar randomPrintableChar()
     // 26-51 = A-Z
     // 52-61 = 0-9
 
-    uchar c = QCA::Random::randomChar() % 62;
+    uchar c = static_cast<uchar>(QCA::Random::randomChar() % 62);
     if (c <= 25)
         return 'a' + c;
     else if (c <= 51)

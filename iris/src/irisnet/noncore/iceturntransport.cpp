@@ -105,11 +105,11 @@ private slots:
         StunAllocate *allocate = turn.stunAllocate();
 
         QHostAddress saddr = allocate->reflexiveAddress();
-        quint16      sport = allocate->reflexivePort();
+        quint16      sport = quint16(allocate->reflexivePort());
         if (debugLevel >= IceTransport::DL_Info)
             emit q->debugLine(QString("Server says we are ") + saddr.toString() + ';' + QString::number(sport));
         saddr = allocate->relayedAddress();
-        sport = allocate->relayedPort();
+        sport = quint16(allocate->relayedPort());
         if (debugLevel >= IceTransport::DL_Info)
             emit q->debugLine(QString("Server relays via ") + saddr.toString() + ';' + QString::number(sport));
 
@@ -179,10 +179,10 @@ bool IceTurnTransport::hasPendingDatagrams(int path) const
     Q_ASSERT(path == 0);
     Q_UNUSED(path)
 
-    return (d->turn.packetsToRead() > 0 ? true : false);
+    return d->turn.packetsToRead() > 0;
 }
 
-QByteArray IceTurnTransport::readDatagram(int path, QHostAddress *addr, int *port)
+QByteArray IceTurnTransport::readDatagram(int path, QHostAddress *addr, quint16 *port)
 {
     Q_ASSERT(path == 0);
     Q_UNUSED(path)

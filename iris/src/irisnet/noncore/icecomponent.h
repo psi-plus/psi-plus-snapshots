@@ -45,13 +45,7 @@ public:
 
         TransportAddress(const QHostAddress &_addr, int _port) : addr(_addr), port(_port) { }
 
-        bool operator==(const TransportAddress &other) const
-        {
-            if (addr == other.addr && port == other.port)
-                return true;
-            else
-                return false;
-        }
+        bool operator==(const TransportAddress &other) const { return addr == other.addr && port == other.port; }
 
         inline bool operator!=(const TransportAddress &other) const { return !operator==(other); }
         inline      operator QString() const { return QString("%1:%2").arg(addr.toString(), QString::number(port)); }

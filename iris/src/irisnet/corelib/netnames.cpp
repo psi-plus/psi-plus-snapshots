@@ -966,7 +966,7 @@ private slots:
     void provider_resolve_resultsReady(int id, const QList<XMPP::ServiceProvider::ResolveResult> &results)
     {
         ServiceResolver::Private *np = sres_instances.value(id);
-        emit                      np->q->resultReady(results[0].address, results[0].port);
+        emit                      np->q->resultReady(results[0].address, quint16(results[0].port));
     }
 
     void provider_publish_published(int id)
@@ -1039,7 +1039,7 @@ void NameResolver::start(const QByteArray &name, NameRecord::Type type, Mode mod
     int qType = recordType2Rtype(type);
     if (qType == -1)
         qType = JDNS_RTYPE_A;
-    NameManager::instance()->resolve_start(d, name, qType, mode == NameResolver::LongLived ? true : false);
+    NameManager::instance()->resolve_start(d, name, qType, mode == NameResolver::LongLived);
 }
 
 void NameResolver::stop()
@@ -1190,7 +1190,7 @@ void ServiceResolver::start(const QString &service, const QString &transport, co
 
     /* after we tried all SRV hosts, we shall connect directly (if requested) */
     if (port < std::numeric_limits<quint16>::max()) {
-        d->srvList.append(domain.toLocal8Bit(), port);
+        d->srvList.append(domain.toLocal8Bit(), quint16(port));
     } else {
         /* The only "valid" port above the valid port range is our specification of an invalid port */
         Q_ASSERT(port == std::numeric_limits<int>::max());
@@ -1361,7 +1361,7 @@ void ServiceResolver::try_next_srv()
     if (!d->srvList.isEmpty()) {
         XMPP::NameRecord record(d->srvList.takeNext());
         /* lookup host by name and specify port for later use */
-        start(record.name(), record.port());
+        start(record.name(), quint16(record.port()));
     } else {
 #ifdef NETNAMES_DEBUG
         NNDEBUG << "SRV list empty, failing";

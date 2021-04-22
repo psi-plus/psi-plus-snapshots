@@ -8,42 +8,38 @@ arg: mac-sdk=[path],Path to Mac universal SDK (PPC host only).
 */
 
 #define QC_UNIVERSAL
-bool qc_universal_enabled = false;
+bool    qc_universal_enabled = false;
 QString qc_universal_sdk;
 
 //----------------------------------------------------------------------------
 // qc_universal
 //----------------------------------------------------------------------------
-class qc_universal : public ConfObj
-{
+class qc_universal : public ConfObj {
 public:
-	qc_universal(Conf *c) : ConfObj(c) {}
-	QString name() const { return "Mac universal binary support"; }
-	QString shortname() const { return "universal"; }
-	QString checkString() const { return QString(); }
+    qc_universal(Conf *c) : ConfObj(c) { }
+    QString name() const { return "Mac universal binary support"; }
+    QString shortname() const { return "universal"; }
+    QString checkString() const { return QString(); }
 
-	bool exec()
-	{
+    bool exec()
+    {
 #ifdef Q_OS_MAC
-		if(qc_getenv("QC_UNIVERSAL") == "Y")
-		{
-			qc_universal_enabled = true;
+        if (qc_getenv("QC_UNIVERSAL") == "Y") {
+            qc_universal_enabled = true;
 
-			QString str =
-			"contains(QT_CONFIG,x86):contains(QT_CONFIG,ppc) {\n"
-			"	CONFIG += x86 ppc\n"
-			"}\n";
+            QString str = "contains(QT_CONFIG,x86):contains(QT_CONFIG,ppc) {\n"
+                          "	CONFIG += x86 ppc\n"
+                          "}\n";
 
-			QString sdk = qc_getenv("QC_MAC_SDK");
-			if(!sdk.isEmpty())
-			{
-				str += QString("QMAKE_MAC_SDK = %1\n").arg(sdk);
-				qc_universal_sdk = sdk;
-			}
+            QString sdk = qc_getenv("QC_MAC_SDK");
+            if (!sdk.isEmpty()) {
+                str += QString("QMAKE_MAC_SDK = %1\n").arg(sdk);
+                qc_universal_sdk = sdk;
+            }
 
-			conf->addExtra(str);
-		}
+            conf->addExtra(str);
+        }
 #endif
-		return true;
-	}
+        return true;
+    }
 };

@@ -333,14 +333,14 @@ private slots:
         {
             StunMessage::Attribute a;
             a.type  = StunTypes::CHANNEL_NUMBER;
-            a.value = StunTypes::createChannelNumber(channelId);
+            a.value = StunTypes::createChannelNumber(quint16(channelId));
             list += a;
         }
 
         {
             StunMessage::Attribute a;
             a.type  = StunTypes::XOR_PEER_ADDRESS;
-            a.value = StunTypes::createXorPeerAddress(addr, port, message.magic(), message.id());
+            a.value = StunTypes::createXorPeerAddress(addr, quint16(port), message.magic(), message.id());
             list += a;
         }
 
@@ -1161,8 +1161,8 @@ QByteArray StunAllocate::encode(const QByteArray &datagram, const QHostAddress &
         if (datagram.size() > 65535)
             return QByteArray();
 
-        quint16 num = channelId;
-        quint16 len = datagram.size();
+        quint16 num = quint16(channelId);
+        quint16 len = quint16(datagram.size());
 
         int plen = len;
 
@@ -1176,7 +1176,7 @@ QByteArray StunAllocate::encode(const QByteArray &datagram, const QHostAddress &
         QByteArray out(4 + plen, 0);
         StunUtil::write16((quint8 *)out.data(), num);
         StunUtil::write16((quint8 *)out.data() + 2, len);
-        memcpy(out.data() + 4, datagram.data(), datagram.size());
+        memcpy(out.data() + 4, datagram.data(), size_t(datagram.size()));
 
         return out;
     } else {
@@ -1191,7 +1191,7 @@ QByteArray StunAllocate::encode(const QByteArray &datagram, const QHostAddress &
         {
             StunMessage::Attribute a;
             a.type  = StunTypes::XOR_PEER_ADDRESS;
-            a.value = StunTypes::createXorPeerAddress(addr, port, message.magic(), message.id());
+            a.value = StunTypes::createXorPeerAddress(addr, quint16(port), message.magic(), message.id());
             list += a;
         }
 
@@ -1250,10 +1250,7 @@ QByteArray StunAllocate::decode(const StunMessage &encoded, QHostAddress *addr, 
 
 QString StunAllocate::errorString() const { return d->errorString; }
 
-bool StunAllocate::containsChannelData(const quint8 *data, int size)
-{
-    return (check_channelData(data, size) != -1 ? true : false);
-}
+bool StunAllocate::containsChannelData(const quint8 *data, int size) { return check_channelData(data, size) != -1; }
 
 QByteArray StunAllocate::readChannelData(const quint8 *data, int size)
 {

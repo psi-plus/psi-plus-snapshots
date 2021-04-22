@@ -31,7 +31,7 @@ public:
     ~HttpConnect();
 
     void setAuth(const QString &user, const QString &pass = "");
-    void connectToHost(const QString &proxyHost, int proxyPort, const QString &host, int port);
+    void connectToHost(const QString &proxyHost, quint16 proxyPort, const QString &host, int port);
 
     // from ByteStream
     void   close();

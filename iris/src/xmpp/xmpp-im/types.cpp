@@ -966,10 +966,10 @@ public:
     Message::CarbonDir       carbonDir         = Message::NoCarbon; // it's a forwarded message
     Message::ProcessingHints processingHints;
     QString                  replaceId;
-    QString                  originId;   // XEP-0359
+    QString                  originId;           // XEP-0359
     QString                  encryptionProtocol; // XEP-0380
-    Message::StanzaId        stanzaId;   // XEP-0359
-    QList<Reference>         references; // XEP-0385 and XEP-0372
+    Message::StanzaId        stanzaId;           // XEP-0359
+    QList<Reference>         references;         // XEP-0385 and XEP-0372
 };
 
 #define MessageD() (d ? d : (d = new Private))

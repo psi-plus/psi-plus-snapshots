@@ -30,6 +30,8 @@
 #include <QtCrypto>
 #include <stdlib.h>
 
+template <class T> constexpr std::add_const_t<T> &as_const(T &t) noexcept { return t; }
+
 namespace XMPP {
 static int calc_priority(int typePref, int localPref, int componentId)
 {
@@ -130,8 +132,14 @@ public:
                 tryStopped();
         });
         connect(lt->sock.data(), SIGNAL(addressesChanged()), SLOT(lt_addressesChanged()));
-        connect(lt->sock.data(), &IceLocalTransport::error, this, [this, lt](int) {
-            if (eraseLocalTransport(lt))
+        connect(lt->sock.data(), &IceLocalTransport::error, this, [this, lt](int error) {
+            if (error == IceLocalTransport::ErrorStun) {
+                lt->stun_finished = true;
+                tryGatheringComplete();
+            } else if (error == IceLocalTransport::ErrorTurn) {
+                lt->turn_finished = true;
+                tryGatheringComplete();
+            } else if (eraseLocalTransport(lt))
                 tryGatheringComplete();
         });
         connect(lt->sock.data(), SIGNAL(debugLine(QString)), SLOT(lt_debugLine(QString)));
@@ -160,7 +168,7 @@ public:
 
         // for now, only allow setting localAddrs once
         if (!pending.localAddrs.isEmpty() && config.localAddrs.isEmpty()) {
-            for (const Ice176::LocalAddress &la : pending.localAddrs) {
+            for (const Ice176::LocalAddress &la : as_const(pending.localAddrs)) {
                 // skip duplicate addrs
                 if (findLocalAddr(la.addr) != -1)
                     continue;
@@ -209,7 +217,7 @@ public:
 
             bool need_doExt = false;
 
-            for (auto lt : udpTransports) {
+            for (auto lt : as_const(udpTransports)) {
                 // already assigned an ext address?  skip
                 if (!lt->extAddr.isNull())
                     continue;
@@ -239,7 +247,7 @@ public:
 
                     ObjectSessionWatcher watch(&sess);
 
-                    for (auto lt : udpTransports) {
+                    for (auto lt : as_const(udpTransports)) {
                         if (lt->started) {
                             int addrAt = findLocalAddr(lt->addr);
                             Q_ASSERT(addrAt != -1);
@@ -288,7 +296,7 @@ public:
             return;
         }
 
-        for (LocalTransport *lt : udpTransports)
+        for (LocalTransport *lt : as_const(udpTransports))
             lt->sock->stop();
 
         if (tcpTurn)
@@ -303,7 +311,7 @@ public:
             auto it = std::find_if(udpTransports.begin(), udpTransports.end(),
                                    [&](auto const &a) { return a->sock == lt; });
             Q_ASSERT(it != udpTransports.end());
-            addrAt = std::distance(udpTransports.begin(), it);
+            addrAt = int(std::distance(udpTransports.begin(), it));
             if (path == 1) {
                 // lower priority, but not as far as IceTurnTransport
                 addrAt += 512;
@@ -532,7 +540,7 @@ private slots:
         };
 
         bool allFinished = true;
-        for (const LocalTransport *lt : udpTransports) {
+        for (const LocalTransport *lt : as_const(udpTransports)) {
             if (!checkFinished(lt)) {
                 allFinished = false;
                 break;
@@ -596,18 +604,23 @@ private slots:
                 return;
         }
 
-        if (!lt->stun_started
-            && (!lt->sock->stunBindServiceAddress().isNull() || !lt->sock->stunRelayServiceAddress().isNull())) {
+        if (!lt->stun_started) {
             lt->stun_started = true;
-            lt->sock->stunStart();
-            if (!watch.isValid())
-                return;
+            if (useStunBind
+                && (!lt->sock->stunBindServiceAddress().isNull() || !lt->sock->stunRelayServiceAddress().isNull())) {
+                lt->sock->stunStart();
+                if (!watch.isValid())
+                    return;
+            } else {
+                lt->stun_finished = true;
+                lt->turn_finished = true;
+            }
         }
 
         // check completeness of various stuff
         if (!localFinished) {
             bool allStarted = true;
-            for (const LocalTransport *lt : udpTransports) {
+            for (const LocalTransport *lt : as_const(udpTransports)) {
                 if (!lt->started) {
                     allStarted = false;
                     break;
@@ -640,7 +653,7 @@ private slots:
 
         if (useStunBind && !lt->sock->serverReflexiveAddress().isNull() && !lt->stun_finished) {
             // automatically assign ext to related leaps, if possible
-            for (LocalTransport *i : udpTransports) {
+            for (LocalTransport *i : as_const(udpTransports)) {
                 if (i->extAddr.isNull() && i->sock->localAddress() == lt->sock->localAddress()) {
                     i->extAddr = lt->sock->serverReflexiveAddress();
                     if (i->started) {
@@ -672,6 +685,8 @@ private slots:
             lt->stun_finished = true;
 
             storeLocalNotReduntantCandidate(c);
+        } else if (useStunBind && !lt->sock->isStunAlive() && !lt->stun_finished) {
+            lt->stun_finished = true;
         }
 
         if (!lt->sock->relayedAddress().isNull() && !lt->turn_finished) {
@@ -696,6 +711,8 @@ private slots:
             lt->turn_finished = true;
 
             storeLocalNotReduntantCandidate(c);
+        } else if (!lt->sock->isTurnAlive() && !lt->turn_finished) {
+            lt->turn_finished = true;
         }
         if (!watch.isValid())
             return;
@@ -845,7 +862,7 @@ void IceComponent::flagPathAsLowOverhead(int id, const QHostAddress &addr, int p
 void IceComponent::setDebugLevel(DebugLevel level)
 {
     d->debugLevel = level;
-    for (const Private::LocalTransport *lt : d->udpTransports)
+    for (const Private::LocalTransport *lt : as_const(d->udpTransports))
         lt->sock->setDebugLevel(IceTransport::DebugLevel(level));
     if (d->tcpTurn)
         d->tcpTurn->setDebugLevel((IceTransport::DebugLevel)level);

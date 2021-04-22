@@ -131,11 +131,10 @@ public:
     QString localUfrag() const;
     QString localPassword() const;
 
-    void setPeerUfrag(const QString &ufrag);
-    void setPeerPassword(const QString &pass);
-
+    void setRemoteCredentials(const QString &ufrag, const QString &pass);
     void addRemoteCandidates(const QList<Candidate> &list);
     void setRemoteGatheringComplete();
+    void setRemoteSelectedCandidadates(const QList<SelectedCandidate> &list);
 
     bool       canSendMedia() const;
     bool       hasPendingDatagrams(int componentIndex) const;

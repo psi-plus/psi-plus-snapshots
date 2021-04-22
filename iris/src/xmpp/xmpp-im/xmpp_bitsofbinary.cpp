@@ -90,7 +90,7 @@ void BoBData::setMaxAge(unsigned int maxAge) { d->maxAge = maxAge; }
 void BoBData::fromXml(const QDomElement &data)
 {
     setCid(data.attribute("cid"));
-    d->maxAge = data.attribute("max-age").toInt();
+    d->maxAge = data.attribute("max-age").toUInt();
     d->type   = data.attribute("type");
     d->data   = QByteArray::fromBase64(data.text().replace("\n", "").toLatin1());
 }

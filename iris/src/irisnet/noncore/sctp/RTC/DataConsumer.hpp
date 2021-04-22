@@ -5,9 +5,9 @@
 namespace RTC {
 
 class DataConsumer {
-    SctpParameters sctpParameters;
 
 public:
+    SctpParameters        sctpParameters;
     const SctpParameters &GetSctpStreamParameters() const { return sctpParameters; }
 };
 

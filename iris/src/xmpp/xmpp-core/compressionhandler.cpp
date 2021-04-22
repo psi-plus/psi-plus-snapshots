@@ -24,7 +24,7 @@ void CompressionHandler::writeIncoming(const QByteArray &a)
 {
     // qDebug("CompressionHandler::writeIncoming");
     // qDebug() << QString("Incoming %1 bytes").arg(a.size());
-    errorCode_ = decompressor_->write(a);
+    errorCode_ = int(decompressor_->write(a));
     if (!errorCode_)
         QTimer::singleShot(0, this, SIGNAL(readyRead()));
     else

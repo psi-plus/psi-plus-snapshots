@@ -352,8 +352,5 @@ bool Jid::compare(const Jid &a, bool compareRes) const
     if (!valid || !a.valid)
         return false;
 
-    if (compareRes ? (f != a.f) : (b != a.b))
-        return false;
-
-    return true;
+    return !(compareRes ? (f != a.f) : (b != a.b));
 }

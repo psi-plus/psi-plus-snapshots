@@ -120,7 +120,7 @@ public:
     class Packet {
     public:
         QHostAddress addr;
-        int          port;
+        quint16      port;
         QByteArray   data;
 
         // for outbound
@@ -216,7 +216,7 @@ public:
             bs         = s;
             connect(s, SIGNAL(connected()), SLOT(bs_connected()));
             connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
-            s->connectToHost(serverAddr.toString(), serverPort);
+            s->connectToHost(serverAddr.toString(), quint16(serverPort));
         }
 
         connect(bs, SIGNAL(connectionClosed()), SLOT(bs_connectionClosed()));
@@ -943,7 +943,7 @@ int TurnClient::packetsToRead() const { return d->in.count(); }
 
 int TurnClient::packetsToWrite() const { return d->outPending.count() + d->outPendingWrite; }
 
-QByteArray TurnClient::read(QHostAddress *addr, int *port)
+QByteArray TurnClient::read(QHostAddress *addr, quint16 *port)
 {
     if (!d->in.isEmpty()) {
         Private::Packet p = d->in.takeFirst();

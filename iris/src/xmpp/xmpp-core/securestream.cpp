@@ -256,13 +256,13 @@ private slots:
     void tls_handshaken()
     {
         tls_done = true;
-        tlsHandshaken();
+        emit tlsHandshaken();
     }
 
     void tls_readyRead()
     {
         QByteArray a = p.tls->read();
-        readyRead(a);
+        emit       readyRead(a);
     }
 
     void tls_readyReadOutgoing(int plainBytes)
@@ -270,21 +270,21 @@ private slots:
         QByteArray a = p.tls->readOutgoing();
         if (tls_done)
             layer.specifyEncoded(a.size(), plainBytes);
-        needWrite(a);
+        emit needWrite(a);
     }
 
     void tls_closed()
     {
         QByteArray a = p.tls->readUnprocessed();
-        tlsClosed(a);
+        emit       tlsClosed(a);
     }
 
-    void tls_error(int x) { error(x); }
+    void tls_error(int x) { emit error(x); }
 
     void sasl_readyRead()
     {
         QByteArray a = p.sasl->read();
-        readyRead(a);
+        emit       readyRead(a);
     }
 
     void sasl_readyReadOutgoing()
@@ -292,15 +292,15 @@ private slots:
         int        plainBytes;
         QByteArray a = p.sasl->readOutgoing(&plainBytes);
         layer.specifyEncoded(a.size(), plainBytes);
-        needWrite(a);
+        emit needWrite(a);
     }
 
-    void sasl_error() { error(p.sasl->errorCode()); }
+    void sasl_error() { emit error(p.sasl->errorCode()); }
 
     void compressionHandler_readyRead()
     {
         QByteArray a = p.compressionHandler->read();
-        readyRead(a);
+        emit       readyRead(a);
     }
 
     void compressionHandler_readyReadOutgoing()
@@ -308,29 +308,29 @@ private slots:
         int        plainBytes;
         QByteArray a = p.compressionHandler->readOutgoing(&plainBytes);
         layer.specifyEncoded(a.size(), plainBytes);
-        needWrite(a);
+        emit needWrite(a);
     }
 
-    void compressionHandler_error() { error(p.compressionHandler->errorCode()); }
+    void compressionHandler_error() { emit error(p.compressionHandler->errorCode()); }
 
 #ifdef USE_TLSHANDLER
     void tlsHandler_success()
     {
         tls_done = true;
-        tlsHandshaken();
+        emit tlsHandshaken();
     }
 
-    void tlsHandler_fail() { error(0); }
+    void tlsHandler_fail() { emit error(0); }
 
-    void tlsHandler_closed() { tlsClosed(QByteArray()); }
+    void tlsHandler_closed() { emit tlsClosed(QByteArray()); }
 
-    void tlsHandler_readyRead(const QByteArray &a) { readyRead(a); }
+    void tlsHandler_readyRead(const QByteArray &a) { emit readyRead(a); }
 
     void tlsHandler_readyReadOutgoing(const QByteArray &a, int plainBytes)
     {
         if (tls_done)
             layer.specifyEncoded(a.size(), plainBytes);
-        needWrite(a);
+        emit needWrite(a);
     }
 #endif
 };
@@ -546,19 +546,19 @@ void SecureStream::bs_readyRead()
 void SecureStream::bs_bytesWritten(qint64 bytes)
 {
     for (SecureLayer *s : d->layers) {
-        bytes = s->finished(bytes);
+        bytes = s->finished(int(bytes));
     }
 
     if (bytes > 0) {
         d->pending -= bytes;
-        bytesWritten(bytes);
+        emit bytesWritten(bytes);
     }
 }
 
 void SecureStream::layer_tlsHandshaken()
 {
     d->topInProgress = false;
-    tlsHandshaken();
+    emit tlsHandshaken();
 }
 
 void SecureStream::layer_tlsClosed(const QByteArray &)
@@ -566,7 +566,7 @@ void SecureStream::layer_tlsClosed(const QByteArray &)
     setOpenMode(QIODevice::NotOpen);
     d->active = false;
     d->deleteLayers();
-    tlsClosed();
+    emit tlsClosed();
 }
 
 void SecureStream::layer_readyRead(const QByteArray &a)

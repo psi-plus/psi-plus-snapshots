@@ -312,11 +312,8 @@ namespace StunTypes {
         if (val.size() != 1)
             return false;
 
-        unsigned char c = val[0];
-        if (c & 0x80)
-            *reserve = true;
-        else
-            *reserve = false;
+        unsigned char c = static_cast<unsigned char>(val[0]);
+        *reserve        = (c & 0x80) != 0;
 
         return true;
     }
@@ -326,7 +323,7 @@ namespace StunTypes {
         if (val.size() != 4)
             return false;
 
-        *proto = val[0];
+        *proto = quint8(val[0]);
         return true;
     }
 

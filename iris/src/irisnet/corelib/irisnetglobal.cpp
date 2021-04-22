@@ -112,10 +112,7 @@ public:
         if (!_instance || !other->_instance)
             return false;
 
-        if (qstrcmp(_instance->metaObject()->className(), other->_instance->metaObject()->className()) != 0)
-            return false;
-
-        return true;
+        return qstrcmp(_instance->metaObject()->className(), other->_instance->metaObject()->className()) == 0;
     }
 };
 

@@ -20,61 +20,10 @@
 #ifndef JINGLE_TRANSPORT_H
 #define JINGLE_TRANSPORT_H
 
-#include "bytestream.h"
+#include "jingle-connection.h"
 #include "jingle.h"
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 8, 0)
-#include <QNetworkDatagram>
-#else
-#include <QHostAddress>
-#endif
-
 namespace XMPP { namespace Jingle {
-#if QT_VERSION < QT_VERSION_CHECK(5, 8, 0)
-    // stub implementation
-    class NetworkDatagram {
-    public:
-        bool       _valid = false;
-        QByteArray _data;
-        inline NetworkDatagram(const QByteArray &data, const QHostAddress &destinationAddress = QHostAddress(),
-                               quint16 port = 0) :
-            _valid(true),
-            _data(data)
-        {
-            Q_UNUSED(destinationAddress);
-            Q_UNUSED(port)
-        }
-        inline NetworkDatagram() { }
-
-        inline bool       isValid() const { return _valid; }
-        inline QByteArray data() const { return _data; }
-    };
-#else
-    typedef QNetworkDatagram NetworkDatagram;
-#endif
-
-    class Connection : public ByteStream {
-        Q_OBJECT
-    public:
-        enum Hint { AvoidRelays = 1 };
-        Q_DECLARE_FLAGS(Hints, Hint)
-
-        using Ptr = QSharedPointer<Connection>; // will be shared between transport and application
-        virtual bool            hasPendingDatagrams() const;
-        virtual NetworkDatagram receiveDatagram(qint64 maxSize = -1);
-        virtual size_t          blockSize() const;
-        virtual int             component() const;
-
-        inline void  setHints(Hints hints) { _hints = hints; }
-        inline Hints hints() const { return _hints; }
-
-    signals:
-        void connected();
-
-    protected:
-        Hints _hints;
-    };
-    Q_DECLARE_OPERATORS_FOR_FLAGS(Connection::Hints)
 
     class TransportManager;
     class TransportManagerPad : public SessionManagerPad {
@@ -135,7 +84,7 @@ namespace XMPP { namespace Jingle {
 
         // a component is basically is a subconnection usually with a dedicated IP port. A component may have one or
         // more channels. Components are pretty much generic but channels aren't. Channels give connection objects,
-        // wbile components are rather indexes.
+        // while components are rather indexes.
 
         /**
          * @brief maxSupportedComponents
@@ -147,14 +96,13 @@ namespace XMPP { namespace Jingle {
         virtual int maxSupportedComponents() const;
 
         /**
-         * @brief addComponent add another component to the transport connection
-         * @return index of the component (starting from 1 - second component. see below)
+         * @brief setComponentsCount set desired amount of components
          *
-         * Note, component with index 0 is considered to be always added since it doesn't make sense to have a transport
-         * w/o any component. So if the transport has just one component, the application should avoid calling this
-         * function.
+         * Note, by default there there is 1 component. So if 1 is enough for an application this function can be
+         * ignored. The function is not allowed to be called after negotiation has been started. In other words call
+         * it before `prepare()` call.
          */
-        virtual int addComponent();
+        virtual void setComponentsCount(int count);
 
         /**
          * @brief maxSupportedChannelsPerComponent returns max number supported channels for specific features set
@@ -172,7 +120,8 @@ namespace XMPP { namespace Jingle {
         /**
          * @brief addChannel adds a channel to the component.
          * @param features   - required channel features. like DataOriented for example
-         * @param component  - index of component to add the channel to.
+         * @param id         - channel id. can be used for demultiplexed incoming negotiations
+         * @param component  - index of component to add the channel to. If -1 then into the most appropriate.
          * @return connection object which eventually will fire `connected()` signal
          *
          * It's necessary to add components in advance since we always have at least one component.
@@ -180,13 +129,31 @@ namespace XMPP { namespace Jingle {
          * reliable connection object on the component 0. Transports not supporting components notation are considered
          * to support just one component with index 0
          */
-        virtual Connection::Ptr addChannel(TransportFeatures features, int component = 0) const = 0;
+        virtual Connection::Ptr addChannel(TransportFeatures features, const QString &id, int componentIndex = -1) = 0;
 
         /**
          * @brief channels
          * @return the list of all added channels both local and remote
          */
         virtual QList<Connection::Ptr> channels() const = 0;
+
+        /**
+         * @brief addAcceptor adds a connection acceptor for incoming connections
+         * @param features minimal required set of features of the connection
+         * @param acceptor a callback function which returns true is connection was accepted
+         * @param componentIndex index of component to catch connections on or -1 to catch on all components
+         *
+         * It's up to the application what to do with connecteion passed to the callback. If the callback returns true
+         * it mean application accepted the conenction and likely attached some signals to it and prepared for any use.
+         */
+        void addAcceptor(TransportFeatures features, ConnectionAcceptorCallback &&acceptor, int componentIndex = -1);
+
+        /**
+         * @brief acceptors returns all registered connection acceptors
+         * @return list of acceptors
+         */
+        const QList<ConnectionAcceptor> &acceptors() const;
+
     signals:
         /**
          * found some candidates and they have to be sent. takeUpdate has to be called from this signal
@@ -194,13 +161,21 @@ namespace XMPP { namespace Jingle {
          * session-initiate won't be sent.
          */
         void updated();
-        void connected(); // this signal is for app logic. maybe to finally start drawing some progress bar
-        void failed();    // transport ailed for whatever reason. aborted for example. _state will be State::Finished
+        void failed(); // transport ailed for whatever reason. aborted for example. _state will be State::Finished
         void stateChanged();
 
     protected:
         // just updates state and signals about the change. No any loggic attached to the new state
         void setState(State newState);
+
+        // Where the user already gave his consent to transfer data. (one exception: State::Finished)
+        bool wasAccepted() const;
+
+        /**
+         * @brief notifyIncomingConnection checks all acceptors and return true if any accepted the connection
+         * @return acceptance status
+         */
+        bool notifyIncomingConnection(Connection::Ptr) const;
 
         State                               _state     = State::Created;
         State                               _prevState = State::Created;
@@ -208,7 +183,8 @@ namespace XMPP { namespace Jingle {
         QSharedPointer<TransportManagerPad> _pad;
         Reason                              _lastReason;
         XMPP::Stanza::Error                 _lastError;
-        int                                 _channelCount = 1;
+        int                                 _componentsCount = 1;
+        QList<ConnectionAcceptor>           _connectionAcceptors;
     };
 
     // It's an available transports collection per application
@@ -266,8 +242,9 @@ namespace XMPP { namespace Jingle {
 
         // this method is supposed to gracefully close all related sessions as a preparation for plugin unload for
         // example
-        virtual void closeAll() = 0;
+        virtual void closeAll(const QString &ns = QString());
 
+        virtual QStringList ns() const;
         virtual QStringList discoFeatures() const = 0;
     signals:
         void abortAllRequested(); // mostly used by transport instances to abort immediately

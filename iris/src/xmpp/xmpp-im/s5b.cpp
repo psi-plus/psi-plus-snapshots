@@ -320,12 +320,12 @@ void S5BConnection::writeDatagram(const S5BDatagram &i)
 {
     QByteArray buf;
     buf.resize(i.data().size() + 4);
-    ushort     ssp  = htons(i.sourcePort());
-    ushort     sdp  = htons(i.destPort());
+    ushort     ssp  = htons(uint16_t(i.sourcePort()));
+    ushort     sdp  = htons(uint16_t(i.destPort()));
     QByteArray data = i.data();
     memcpy(buf.data(), &ssp, 2);
     memcpy(buf.data() + 2, &sdp, 2);
-    memcpy(buf.data() + 4, data.data(), data.size());
+    memcpy(buf.data() + 4, data.data(), size_t(data.size()));
     sendUDP(buf);
 }
 
@@ -427,7 +427,7 @@ void S5BConnection::sc_connectionClosed()
     }
     d->notifyClose = false;
     resetConnection();
-    connectionClosed();
+    emit connectionClosed();
 }
 
 void S5BConnection::sc_delayedCloseFinished()
@@ -452,7 +452,7 @@ void S5BConnection::sc_readyRead()
 void S5BConnection::sc_bytesWritten(qint64 x)
 {
     // echo
-    bytesWritten(x);
+    emit bytesWritten(x);
 }
 
 void S5BConnection::sc_error(int)
@@ -476,10 +476,10 @@ void S5BConnection::handleUDP(const QByteArray &buf)
     int        dest   = ntohs(sdp);
     QByteArray data;
     data.resize(buf.size() - 4);
-    memcpy(data.data(), buf.data() + 4, data.size());
+    memcpy(data.data(), buf.data() + 4, size_t(data.size()));
     d->dglist.append(new S5BDatagram(source, dest, data));
 
-    datagramReady();
+    emit datagramReady();
 }
 
 void S5BConnection::sendUDP(const QByteArray &buf)
@@ -717,12 +717,7 @@ S5BManager::Entry *S5BManager::findEntryBySID(const Jid &peer, const QString &si
     return nullptr;
 }
 
-bool S5BManager::srv_ownsHash(const QString &key) const
-{
-    if (findEntryByHash(key))
-        return true;
-    return false;
-}
+bool S5BManager::srv_ownsHash(const QString &key) const { return findEntryByHash(key) != nullptr; }
 
 void S5BManager::srv_incomingReady(SocksClient *sc, const QString &key)
 {
@@ -845,7 +840,7 @@ void S5BManager::item_tryingHosts(const StreamHostList &list)
     Item * i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
-    e->c->tryingHosts(list); // signal
+    emit e->c->tryingHosts(list); // signal
 }
 
 void S5BManager::item_proxyConnect()
@@ -853,7 +848,7 @@ void S5BManager::item_proxyConnect()
     Item * i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
-    e->c->proxyConnect(); // signal
+    emit e->c->proxyConnect(); // signal
 }
 
 void S5BManager::item_waitingForActivation()
@@ -861,7 +856,7 @@ void S5BManager::item_waitingForActivation()
     Item * i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
-    e->c->waitingForActivation(); // signal
+    emit e->c->waitingForActivation(); // signal
 }
 
 void S5BManager::item_connected()
@@ -903,16 +898,15 @@ void S5BManager::entryContinue(Entry *e)
         const S5BRequest &req = e->c->d->req;
         e->i->startTarget(e->sid, d->client->jid(), e->c->d->peer, req.dstaddr, req.hosts, req.id, req.fast, req.udp);
     } else {
-        e->i->startRequester(e->sid, d->client->jid(), e->c->d->peer, true,
-                             e->c->d->mode == S5BConnection::Datagram ? true : false);
-        e->c->requesting(); // signal
+        e->i->startRequester(e->sid, d->client->jid(), e->c->d->peer, true, e->c->d->mode == S5BConnection::Datagram);
+        emit e->c->requesting(); // signal
     }
 }
 
 void S5BManager::queryProxy(Entry *e)
 {
     QPointer<QObject> self = this;
-    e->c->proxyQuery(); // signal
+    emit              e->c->proxyQuery(); // signal
     if (!self)
         return;
 
@@ -954,7 +948,7 @@ void S5BManager::query_finished()
     }
 
     QPointer<QObject> self = this;
-    e->c->proxyResult(query->success()); // signal
+    emit              e->c->proxyResult(query->success()); // signal
     if (!self)
         return;
 
@@ -974,10 +968,7 @@ bool S5BManager::targetShouldOfferProxy(Entry *e)
     }
 
     // ensure we don't offer the same proxy as the requester
-    if (haveHost(hosts, e->c->d->proxy))
-        return false;
-
-    return true;
+    return !haveHost(hosts, e->c->d->proxy);
 }
 
 //----------------------------------------------------------------------------
@@ -1182,7 +1173,7 @@ void S5BManager::Item::doIncoming()
     connect(conn, SIGNAL(result(bool)), SLOT(conn_result(bool)));
 
     QPointer<QObject> self = this;
-    tryingHosts(list);
+    emit              tryingHosts(list);
     if (!self)
         return;
 
@@ -1261,7 +1252,7 @@ void S5BManager::Item::jt_finished()
                        qPrintable(peer.full()));
 #endif
                 resetConnection();
-                error(ErrWrongHost);
+                emit error(ErrWrongHost);
             }
         } else if (streamHost.compare(proxy.jid())) {
             // toss out any direct incoming, since it won't be used
@@ -1279,7 +1270,7 @@ void S5BManager::Item::jt_finished()
             list += proxy;
 
             QPointer<QObject> self = this;
-            proxyConnect();
+            emit              proxyConnect();
             if (!self)
                 return;
 
@@ -1290,7 +1281,7 @@ void S5BManager::Item::jt_finished()
                    qPrintable(peer.full()));
 #endif
             resetConnection();
-            error(ErrWrongHost);
+            emit error(ErrWrongHost);
         }
     } else {
 #ifdef S5B_DEBUG
@@ -1393,7 +1384,7 @@ void S5BManager::Item::proxy_result(bool b)
         delete proxy_conn;
         proxy_conn = nullptr;
         resetConnection();
-        error(ErrProxy);
+        emit error(ErrProxy);
     }
 }
 
@@ -1413,7 +1404,7 @@ void S5BManager::Item::proxy_finished()
             checkForActivation();
     } else {
         resetConnection();
-        error(ErrProxy);
+        emit error(ErrProxy);
     }
 }
 
@@ -1442,7 +1433,7 @@ void S5BManager::Item::sc_error(int)
     qDebug("sc_error\n");
 #endif
     resetConnection();
-    error(ErrConnect);
+    emit error(ErrConnect);
 }
 
 void S5BManager::Item::doConnectError()
@@ -1570,7 +1561,7 @@ void S5BManager::Item::checkForActivation()
     } else {
         // only emit waitingForActivation if there is nothing left to do
         if ((connSuccess || localFailed) && !proxy_task && !proxy_conn)
-            waitingForActivation();
+            emit waitingForActivation();
     }
 }
 
@@ -1593,12 +1584,12 @@ void S5BManager::Item::checkFailure()
         if (state == Requester) {
             resetConnection();
             if (statusCode == 404)
-                error(ErrConnect);
+                emit error(ErrConnect);
             else
-                error(ErrRefused);
+                emit error(ErrRefused);
         } else {
             resetConnection();
-            error(ErrConnect);
+            emit error(ErrConnect);
         }
     }
 }
@@ -1673,7 +1664,7 @@ private slots:
         qDebug("S5BConnector[%s]: error\n", qPrintable(host.host()));
 #endif
         cleanup();
-        result(false);
+        emit result(false);
     }
 
     void trySendUDP()
@@ -1681,7 +1672,7 @@ private slots:
         if (udp_tries == 5) {
             t.stop();
             cleanup();
-            result(false);
+            emit result(false);
             return;
         }
 
@@ -1706,7 +1697,7 @@ private:
         qDebug("S5BConnector[%s]: success\n", qPrintable(host.host()));
 #endif
         client->disconnect(this);
-        result(true);
+        emit result(true);
     }
 };
 
@@ -1814,7 +1805,7 @@ void S5BConnector::t_timeout()
 #ifdef S5B_DEBUG
     qDebug("S5BConnector: failed! (timeout)\n");
 #endif
-    result(false);
+    emit result(false);
 }
 
 void S5BConnector::man_udpSuccess(const Jid &streamHost)
@@ -1999,12 +1990,12 @@ bool JT_PushS5B::take(const QDomElement &e)
     if (e.tagName() == "message") {
         QDomElement x = e.elementsByTagName("udpsuccess").item(0).toElement();
         if (!x.isNull() && x.namespaceURI() == S5B_NS) {
-            incomingUDPSuccess(Jid(x.attribute("from")), x.attribute("dstaddr"));
+            emit incomingUDPSuccess(Jid(x.attribute("from")), x.attribute("dstaddr"));
             return true;
         }
         x = e.elementsByTagName("activate").item(0).toElement();
         if (!x.isNull() && x.namespaceURI() == "http://affinix.com/jabber/stream") {
-            incomingActivate(Jid(x.attribute("from")), x.attribute("sid"), Jid(x.attribute("jid")));
+            emit incomingActivate(Jid(x.attribute("from")), x.attribute("sid"), Jid(x.attribute("jid")));
             return true;
         }
         return false;
@@ -2061,7 +2052,7 @@ bool JT_PushS5B::take(const QDomElement &e)
     r.dstaddr = q.attribute("dstaddr"); // special case for muc as in xep-0065rc3
     r.hosts   = hosts;
     r.fast    = fast;
-    r.udp     = q.attribute("mode") == "udp" ? true : false;
+    r.udp     = q.attribute("mode") == "udp";
 
     emit incoming(r);
     return true;
@@ -2183,7 +2174,7 @@ private slots:
         expire.stop();
         delete client;
         client = nullptr;
-        result(false);
+        emit result(false);
     }
 };
 
@@ -2238,7 +2229,7 @@ S5BServer::~S5BServer()
     // basically to make QScopedPointer happy
 }
 
-void S5BServer::writeUDP(const QHostAddress &addr, int port, const QByteArray &data)
+void S5BServer::writeUDP(const QHostAddress &addr, quint16 port, const QByteArray &data)
 {
     d->serv.writeUDP(addr, port, data);
 }

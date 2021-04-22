@@ -77,7 +77,7 @@ void StreamManagement::resume(quint32 last_handled)
 void StreamManagement::setLocation(const QString &host, int port)
 {
     state_.resumption_location.host = host;
-    state_.resumption_location.port = port;
+    state_.resumption_location.port = quint16(port);
 }
 
 int StreamManagement::lastAckElapsed() const
@@ -85,7 +85,7 @@ int StreamManagement::lastAckElapsed() const
     if (!sm_timeout_data.elapsed_timer.isValid())
         return 0;
 
-    int msecs = sm_timeout_data.elapsed_timer.elapsed();
+    int msecs = int(sm_timeout_data.elapsed_timer.elapsed());
     int secs  = msecs / 1000;
     if (msecs % 1000 != 0)
         ++secs;

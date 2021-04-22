@@ -49,7 +49,7 @@ static QStringList read_proc_as_lines(const char *procfile)
     while (!feof(f)) {
         // max read on a proc is 4K
         QByteArray block(4096, 0);
-        int        ret = fread(block.data(), 1, block.size(), f);
+        int        ret = int(fread(block.data(), 1, size_t(block.size()), f));
         if (ret <= 0)
             break;
         block.resize(ret);
@@ -74,7 +74,7 @@ static QHostAddress linux_ipv6_to_qaddr(const QString &in)
     quint8 raw[16];
     for (int n = 0; n < 16; ++n) {
         bool ok;
-        int  x = in.mid(n * 2, 2).toInt(&ok, 16);
+        int  x = in.midRef(n * 2, 2).toInt(&ok, 16);
         if (!ok)
             return out;
         raw[n] = (quint8)x;
@@ -92,7 +92,7 @@ static QHostAddress linux_ipv4_to_qaddr(const QString &in)
     unsigned char *rawp = (unsigned char *)&raw;
     for (int n = 0; n < 4; ++n) {
         bool ok;
-        int  x = in.mid(n * 2, 2).toInt(&ok, 16);
+        int  x = in.midRef(n * 2, 2).toInt(&ok, 16);
         if (!ok)
             return out;
         rawp[n] = (unsigned char)x;

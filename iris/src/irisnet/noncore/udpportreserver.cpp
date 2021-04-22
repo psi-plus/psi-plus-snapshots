@@ -253,7 +253,7 @@ private:
             for (const QHostAddress &a : neededAddrs) {
                 QUdpSocket *sock = new QUdpSocket(q);
 
-                if (!sock->bind(a, i.port)) {
+                if (!sock->bind(a, quint16(i.port))) {
                     delete sock;
                     continue;
                 }

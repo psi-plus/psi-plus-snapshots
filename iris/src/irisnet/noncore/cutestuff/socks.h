@@ -74,7 +74,7 @@ public:
     void authGrant(bool);
     void requestDeny();
     void grantConnect();
-    void grantUDPAssociate(const QString &relayHost, int relayPort);
+    void grantUDPAssociate(const QString &relayHost, quint16 relayPort);
 
     // from ByteStream
     void   close();
@@ -140,7 +140,7 @@ public:
     QHostAddress address() const;
     SocksClient *takeIncoming();
 
-    void writeUDP(const QHostAddress &addr, int port, const QByteArray &data);
+    void writeUDP(const QHostAddress &addr, quint16 port, const QByteArray &data);
 
 signals:
     void incomingReady();

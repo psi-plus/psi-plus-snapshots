@@ -221,6 +221,7 @@ namespace XMPP { namespace Jingle {
         {
             if (waitingAck || state == State::Finished) {
                 // in waitingAck we will return here later
+                qDebug("jingle-doStep: skip step: %s", waitingAck ? "waitingAck" : "session already finished");
                 return;
             }
 
@@ -230,6 +231,7 @@ namespace XMPP { namespace Jingle {
                                QList<QDomElement>() << terminateReason.toXml(manager->client()->doc()));
                 }
                 setSessionFinished();
+                qDebug("jingle-doStep: the step finished the session due to terminationReason previously set");
                 return;
             }
 
@@ -255,11 +257,13 @@ namespace XMPP { namespace Jingle {
                     sendJingle(Action::SessionTerminate,
                                QList<QDomElement>() << terminateReason.toXml(manager->client()->doc()));
                     setSessionFinished();
+                    qDebug("jingle-doStep: all apps finished -> session finished");
                     return;
                 }
             }
 
             if (state == State::Created) {
+                qDebug("jingle-doStep: still in Created state. exit");
                 return; // should wait for user approval of send/accept
             }
 
@@ -271,6 +275,7 @@ namespace XMPP { namespace Jingle {
                 auto cb       = std::get<1>(updates);
                 outgoingUpdates.erase(it);
                 sendJingle(action, elements, cb);
+                qDebug("jingle-doStep: sent outgoingUpdates");
                 return;
             }
 
@@ -285,6 +290,7 @@ namespace XMPP { namespace Jingle {
                         if (!jt->success())
                             qWarning("failure for session-info is ignored");
                     });
+                    qDebug("jingle-doStep: sent session info");
                     return;
                 }
             }
@@ -293,11 +299,13 @@ namespace XMPP { namespace Jingle {
             if (state == State::ApprovedToSend) { // we are going to send session-initiate/accept (already accepted
                                                   // by the user but not sent yet)
                 if (trySendSessionAcceptOrInitiate()) {
+                    qDebug("jingle-doStep: session is not yet ready to be accepted/initiated");
                     return; // accepted / initiated or finished with a failure
                 }
             }
 
             QMultiMap<Application::Update, Application *> updates;
+            qDebug("jingle-doStep: %d applications have updates", signalingContent.size());
             for (auto app : qAsConst(signalingContent)) {
                 auto updateType = app->evaluateOutgoingUpdate();
                 if (updateType.action != Action::NoAction) {
@@ -402,8 +410,11 @@ namespace XMPP { namespace Jingle {
             state = State::Unacked;
             initialIncomingUnacceptedContent.clear();
             sendJingle(actionToSend, contents, [this, acceptApps, finalState](JT *jt) {
-                if (!jt->success())
+                if (!jt->success()) {
+                    qDebug("Seesion accept/initiate returned iq error");
+                    emit q->terminated();
                     return;
+                }
                 state = finalState;
                 for (const auto &h : acceptApps) {
                     auto app      = std::get<0>(h);

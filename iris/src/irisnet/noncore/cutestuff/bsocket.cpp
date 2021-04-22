@@ -663,11 +663,10 @@ void BSocket::qs_readyRead() { emit readyRead(); }
 
 void BSocket::qs_bytesWritten(qint64 x64)
 {
-    int x = x64;
 #ifdef BS_DEBUG_EXTRA
-    BSDEBUG << "BytesWritten [" << x << "]";
+    BSDEBUG << "BytesWritten [" << x64 << "]";
 #endif
-    emit bytesWritten(x);
+    emit bytesWritten(x64);
 }
 
 void BSocket::qs_error(QAbstractSocket::SocketError x)

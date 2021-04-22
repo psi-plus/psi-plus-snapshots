@@ -139,7 +139,7 @@ static quint16 round_up_length(quint16 in)
 {
     Q_ASSERT(in <= ATTRIBUTE_VALUE_MAX);
     quint16 out       = in;
-    quint16 remainder = out % 4;
+    quint16 remainder = quint16(out % 4);
     if (remainder != 0)
         out += (4 - remainder);
     return out;
@@ -263,10 +263,7 @@ static bool fingerprint_check(const QByteArray &buf)
     const quint8 *p      = (const quint8 *)buf.data();
     quint32       fpval  = read32(p + at + 4);
     quint32       fpcalc = fingerprint_calc(p, at);
-    if (fpval == fpcalc)
-        return true;
-    else
-        return false;
+    return fpval == fpcalc;
 }
 
 // copy the input buffer and prepare for message integrity checking.  the
@@ -312,10 +309,7 @@ static bool message_integrity_check(const QByteArray &buf, int offset, const QBy
 {
     QByteArray mival  = QByteArray::fromRawData(buf.data() + offset + 4, 20);
     QByteArray micalc = message_integrity_calc((const quint8 *)buf.data(), offset, key);
-    if (mival == micalc)
-        return true;
-    else
-        return false;
+    return mival == micalc;
 }
 
 class StunMessage::Private : public QSharedData {
@@ -453,17 +447,17 @@ QByteArray StunMessage::toBinary(int validationFlags, const QByteArray &key) con
 
     // method bits are split into 3 sections
     quint16 m1, m2, m3;
-    m1 = d->method & 0x0f80; // M7-11
+    m1 = quint16(d->method & 0x0f80); // M7-11
     m1 <<= 2;
-    m2 = d->method & 0x0070; // M4-6
+    m2 = quint16(d->method & 0x0070); // M4-6
     m2 <<= 1;
-    m3 = d->method & 0x000f; // M0-3
+    m3 = quint16(d->method & 0x000f); // M0-3
 
     // class bits are split into 2 sections
     quint16 c1, c2;
-    c1 = classbits & 0x02; // C1
+    c1 = quint16(classbits & 0x02); // C1
     c1 <<= 7;
-    c2 = classbits & 0x01; // C0
+    c2 = quint16(classbits & 0x01); // C0
     c2 <<= 4;
 
     quint16 type = m1 | m2 | m3 | c1 | c2;
@@ -479,11 +473,11 @@ QByteArray StunMessage::toBinary(int validationFlags, const QByteArray &key) con
 
         p = (quint8 *)buf.data(); // follow the resize
 
-        memcpy(buf.data() + at + 4, i.value.data(), i.value.size());
+        memcpy(buf.data() + at + 4, i.value.data(), size_t(i.value.size()));
     }
 
     // set attribute area size
-    write16(p + 2, buf.size() - ATTRIBUTE_AREA_START);
+    write16(p + 2, quint16(buf.size() - ATTRIBUTE_AREA_START));
 
     if (validationFlags & MessageIntegrity) {
         quint16 alen = 20; // size of hmac(sha1)
@@ -494,7 +488,7 @@ QByteArray StunMessage::toBinary(int validationFlags, const QByteArray &key) con
         p = (quint8 *)buf.data(); // follow the resize
 
         // set attribute area size to include the new attribute
-        write16(p + 2, buf.size() - ATTRIBUTE_AREA_START);
+        write16(p + 2, quint16(buf.size() - ATTRIBUTE_AREA_START));
 
         // now calculate the hash and fill in the value
         QByteArray result = message_integrity_calc(p, at, key);
@@ -511,7 +505,7 @@ QByteArray StunMessage::toBinary(int validationFlags, const QByteArray &key) con
         p = (quint8 *)buf.data(); // follow the resize
 
         // set attribute area size to include the new attribute
-        write16(p + 2, buf.size() - ATTRIBUTE_AREA_START);
+        write16(p + 2, quint16(buf.size() - ATTRIBUTE_AREA_START));
 
         // now calculate the fingerprint and fill in the value
         quint32 fpcalc = fingerprint_calc(p, at);
@@ -563,17 +557,17 @@ StunMessage StunMessage::fromBinary(const QByteArray &a, ConvertResult *result, 
 
     // method bits are split into 3 sections
     quint16 m1, m2, m3;
-    m1 = p[0] & 0x3e; // M7-11
+    m1 = quint16(p[0] & 0x3e); // M7-11
     m1 <<= 6;
-    m2 = p[1] & 0xe0; // M4-6
+    m2 = quint16(p[1] & 0xe0); // M4-6
     m2 >>= 1;
-    m3 = p[1] & 0x0f; // M0-3
+    m3 = quint16(p[1] & 0x0f); // M0-3
 
     // class bits are split into 2 sections
     quint8 c1, c2;
-    c1 = p[0] & 0x01; // C1
+    c1 = quint8(p[0] & 0x01); // C1
     c1 <<= 1;
-    c2 = p[1] & 0x10; // C0
+    c2 = quint8(p[1] & 0x10); // C0
     c2 >>= 4;
 
     quint16 method    = m1 | m2 | m3;
@@ -620,7 +614,7 @@ StunMessage StunMessage::fromBinary(const QByteArray &a, ConvertResult *result, 
     return out;
 }
 
-bool StunMessage::isProbablyStun(const QByteArray &a) { return (check_and_get_length(a) != -1 ? true : false); }
+bool StunMessage::isProbablyStun(const QByteArray &a) { return check_and_get_length(a) != -1; }
 
 StunMessage::Class StunMessage::extractClass(const QByteArray &in)
 {
@@ -628,9 +622,9 @@ StunMessage::Class StunMessage::extractClass(const QByteArray &in)
 
     // class bits are split into 2 sections
     quint8 c1, c2;
-    c1 = p[0] & 0x01; // C1
+    c1 = quint8(p[0] & 0x01); // C1
     c1 <<= 1;
-    c2 = p[1] & 0x10; // C0
+    c2 = quint8(p[1] & 0x10); // C0
     c2 >>= 4;
 
     quint8 classbits = c1 | c2;
@@ -651,7 +645,7 @@ StunMessage::Class StunMessage::extractClass(const QByteArray &in)
 bool StunMessage::containsStun(const quint8 *data, int size)
 {
     // check_and_get_length does a full packet check so it works even on a stream
-    return (check_and_get_length(QByteArray::fromRawData((const char *)data, size)) != -1 ? true : false);
+    return check_and_get_length(QByteArray::fromRawData((const char *)data, size)) != -1;
 }
 
 QByteArray StunMessage::readStun(const quint8 *data, int size)

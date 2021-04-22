@@ -539,7 +539,7 @@ bool JT_PushRoster::take(const QDomElement &e)
     if (!iqVerify(e, client()->host(), "", "jabber:iq:roster"))
         return false;
 
-    roster(xmlReadRoster(queryTag(e), true));
+    emit roster(xmlReadRoster(queryTag(e), true));
     send(createIQ(doc(), "result", e.attribute("from"), e.attribute("id")));
 
     return true;
@@ -688,7 +688,7 @@ bool JT_PushPresence::take(const QDomElement &e)
             if (!tag.isNull() && tag.namespaceURI() == "http://jabber.org/protocol/nick") {
                 nick = tagContent(tag);
             }
-            subscription(j, type, nick);
+            emit subscription(j, type, nick);
             return true;
         }
     }
@@ -779,7 +779,7 @@ bool JT_PushPresence::take(const QDomElement &e)
         p.setTimeStamp(stamp);
     }
 
-    presence(j, p);
+    emit presence(j, p);
 
     return true;
 }

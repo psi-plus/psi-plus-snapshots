@@ -58,7 +58,7 @@ public:
     }
 
     bool                  isEnabled() const { return sn->isEnabled(); }
-    int                   socket() const { return sn->socket(); }
+    int                   socket() const { return int(sn->socket()); }
     QSocketNotifier::Type type() const { return sn->type(); }
 
 public slots:

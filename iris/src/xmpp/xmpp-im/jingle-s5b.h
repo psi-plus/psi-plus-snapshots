@@ -145,7 +145,7 @@ namespace Jingle { namespace S5B {
         QString directAddr() const;
 
         int                    maxSupportedChannelsPerComponent(TransportFeatures features) const override;
-        Connection::Ptr        addChannel(TransportFeatures features, int component = 0) const override;
+        Connection::Ptr        addChannel(TransportFeatures features, const QString &id, int component = 0) override;
         QList<Connection::Ptr> channels() const override;
 
     private:
@@ -189,7 +189,6 @@ namespace Jingle { namespace S5B {
                                                              Origin                          creator) override;
         TransportManagerPad *                   pad(Session *session) override;
 
-        void        closeAll() override;
         QStringList discoFeatures() const override;
 
         QString generateSid(const Jid &remote);

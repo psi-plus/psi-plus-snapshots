@@ -198,8 +198,8 @@ void SrvResolver::nndns_resultsReady(const QList<XMPP::NameRecord> &results)
         // grab the server list and destroy the qdns object
         QList<Q3Dns::Server> list;
         for (int n = 0; n < results.count(); ++n) {
-            list += Q3Dns::Server(QString::fromLatin1(results[n].name()), results[n].priority(), results[n].weight(),
-                                  results[n].port());
+            list += Q3Dns::Server(QString::fromLatin1(results[n].name()), quint16(results[n].priority()),
+                                  quint16(results[n].weight()), quint16(results[n].port()));
         }
 
         d->nndns_busy = false;
@@ -207,14 +207,14 @@ void SrvResolver::nndns_resultsReady(const QList<XMPP::NameRecord> &results)
 
         if (list.isEmpty()) {
             stop();
-            resultsReady();
+            emit resultsReady();
             return;
         }
         sortSRVList(list);
         d->servers = list;
 
         if (d->srvonly)
-            resultsReady();
+            emit resultsReady();
         else {
             // kick it off
             d->aaaa = true;
@@ -237,8 +237,8 @@ void SrvResolver::nndns_resultsReady(const QList<XMPP::NameRecord> &results)
             d->aaaa = true;
 
             d->resultAddress = list.first();
-            d->resultPort    = port;
-            resultsReady();
+            d->resultPort    = quint16(port);
+            emit resultsReady();
         } else {
             if (!d->aaaa)
                 d->servers.removeFirst();
@@ -247,7 +247,7 @@ void SrvResolver::nndns_resultsReady(const QList<XMPP::NameRecord> &results)
             // failed?  bail if last one
             if (d->servers.isEmpty()) {
                 stop();
-                resultsReady();
+                emit resultsReady();
                 return;
             }
 
@@ -268,13 +268,13 @@ void SrvResolver::ndns_done()
 
     if (!r.isNull()) {
         d->resultAddress = d->ndns.result();
-        d->resultPort    = port;
-        resultsReady();
+        d->resultPort    = quint16(port);
+        emit resultsReady();
     } else {
         // failed?  bail if last one
         if (d->servers.isEmpty()) {
             stop();
-            resultsReady();
+            emit resultsReady();
             return;
         }
 
@@ -287,7 +287,7 @@ void SrvResolver::ndns_done()
 void SrvResolver::t_timeout()
 {
     stop();
-    resultsReady();
+    emit resultsReady();
 }
 
 // CS_NAMESPACE_END

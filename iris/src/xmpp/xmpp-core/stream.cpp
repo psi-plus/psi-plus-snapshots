@@ -328,7 +328,7 @@ void ClientStream::continueAfterWarning()
         if (!d->tls_warned && !d->using_tls) {
             d->tls_warned = true;
             d->state      = WaitTLS;
-            warning(WarnNoTLS);
+            emit warning(WarnNoTLS);
             return;
         }
         d->state = Connecting;
@@ -345,9 +345,9 @@ void ClientStream::accept()
     processNext();
 }
 
-bool ClientStream::isActive() const { return (d->state != Idle) ? true : false; }
+bool ClientStream::isActive() const { return d->state != Idle; }
 
-bool ClientStream::isAuthenticated() const { return (d->state == Active) ? true : false; }
+bool ClientStream::isAuthenticated() const { return d->state == Active; }
 
 void ClientStream::setUsername(const QString &s)
 {
@@ -545,7 +545,7 @@ void ClientStream::cr_connected()
     // d->client.startServerOut(d->server);
 
     d->client.startClientOut(d->jid, d->oldOnly, d->conn->useSSL(), d->doAuth, d->doCompress);
-    d->client.setAllowTLS(d->tlsHandler ? true : false);
+    d->client.setAllowTLS(d->tlsHandler != nullptr);
     d->client.setAllowBind(d->doBinding);
     d->client.setAllowPlain(d->allowPlain == AllowPlain || (d->allowPlain == AllowPlainOverTLS && d->conn->useSSL()));
     d->client.setLang(d->lang);
@@ -577,13 +577,13 @@ void ClientStream::cr_connected()
 void ClientStream::cr_error()
 {
     reset();
-    error(ErrConnection);
+    emit error(ErrConnection);
 }
 
 void ClientStream::bs_connectionClosed()
 {
     reset();
-    connectionClosed();
+    emit connectionClosed();
 }
 
 void ClientStream::bs_delayedCloseFinished()
@@ -622,9 +622,9 @@ void ClientStream::ss_readyRead()
 void ClientStream::ss_bytesWritten(qint64 bytes)
 {
     if (d->mode == Client)
-        d->client.outgoingDataWritten(bytes);
+        d->client.outgoingDataWritten(int(bytes));
     else
-        d->srv.outgoingDataWritten(bytes);
+        d->srv.outgoingDataWritten(int(bytes));
 
     if (d->notify & CoreProtocol::NSend) {
 #ifdef XMPP_DEBUG
@@ -638,7 +638,7 @@ void ClientStream::ss_tlsHandshaken()
 {
     QPointer<QObject> self = this;
     if (!d->quiet_reconnection)
-        securityLayerActivated(LayerTLS);
+        emit securityLayerActivated(LayerTLS);
     if (!self)
         return;
     d->client.setAllowPlain(d->allowPlain == AllowPlain || d->allowPlain == AllowPlainOverTLS);
@@ -648,7 +648,7 @@ void ClientStream::ss_tlsHandshaken()
 void ClientStream::ss_tlsClosed()
 {
     reset();
-    connectionClosed();
+    emit connectionClosed();
 }
 
 void ClientStream::ss_error(int x)
@@ -656,10 +656,10 @@ void ClientStream::ss_error(int x)
     if (x == SecureStream::ErrTLS) {
         reset();
         d->errCond = TLSFail;
-        error(ErrTLS);
+        emit error(ErrTLS);
     } else {
         reset();
-        error(ErrSecurityLayer);
+        emit error(ErrSecurityLayer);
     }
 }
 
@@ -697,7 +697,7 @@ void ClientStream::sasl_needParams(const QCA::SASL::Params &p)
     }*/
     if (p.needUsername() || p.needPassword() || p.canSendRealm()) {
         d->state = NeedParams;
-        needAuthParams(p.needUsername(), p.needPassword(), p.canSendRealm());
+        emit needAuthParams(p.needUsername(), p.needPassword(), p.canSendRealm());
     } else
         d->sasl->continueAfterParams();
 }
@@ -738,7 +738,7 @@ void ClientStream::sasl_error()
     d->errText = tr("Offered mechanisms: ") + d->client.features.sasl_mechs.join(", ");
     reset();
     d->errCond = x;
-    error(ErrAuth);
+    emit error(ErrAuth);
 }
 
 void ClientStream::srvProcessNext()
@@ -806,7 +806,7 @@ void ClientStream::srvProcessNext()
         case CoreProtocol::EError: {
             qDebug("Error! Code=%d\n", d->srv.errorCode);
             reset();
-            error(ErrProtocol);
+            emit error(ErrProtocol);
             // handleError();
             return;
         }
@@ -851,7 +851,7 @@ void ClientStream::srvProcessNext()
             // TODO: this isn' an error
             qDebug("peer closed\n");
             reset();
-            error(ErrProtocol);
+            emit error(ErrProtocol);
             return;
         }
         }
@@ -968,7 +968,7 @@ void ClientStream::processNext()
 
             if (d->client.old) {
                 d->state = WaitVersion;
-                warning(WarnOldVersion);
+                emit warning(WarnOldVersion);
                 return;
             }
             break;
@@ -983,7 +983,7 @@ void ClientStream::processNext()
             if (!d->tls_warned && !d->using_tls && !d->client.features.tls_supported) {
                 d->tls_warned = true;
                 d->state      = WaitTLS;
-                warning(WarnNoTLS);
+                emit warning(WarnNoTLS);
                 return;
             }
             break;
@@ -1003,7 +1003,7 @@ void ClientStream::processNext()
             d->state = Active;
             setNoopTime(d->noop_time);
             if (!d->quiet_reconnection)
-                authenticated();
+                emit authenticated();
             if (!self)
                 return;
             break;
@@ -1013,7 +1013,7 @@ void ClientStream::processNext()
             qDebug("DocumentClosed\n");
 #endif
             reset();
-            connectionClosed();
+            emit connectionClosed();
             return;
         }
         case CoreProtocol::EStanzaReady: {
@@ -1034,7 +1034,7 @@ void ClientStream::processNext()
 #ifdef XMPP_DEBUG
             qDebug("StanzasSent\n");
 #endif
-            stanzaWritten();
+            emit stanzaWritten();
             if (!self)
                 return;
             break;
@@ -1044,7 +1044,7 @@ void ClientStream::processNext()
             qDebug("Closed\n");
 #endif
             reset();
-            delayedCloseFinished();
+            emit delayedCloseFinished();
             return;
         }
         case CoreProtocol::EAck: {
@@ -1214,7 +1214,7 @@ bool ClientStream::handleNeed()
         if (d->sasl_ssf > 0) {
             QPointer<QObject> self = this;
             if (!d->quiet_reconnection)
-                securityLayerActivated(LayerSASL);
+                emit securityLayerActivated(LayerSASL);
             if (!self)
                 return false;
         }
@@ -1225,7 +1225,7 @@ bool ClientStream::handleNeed()
         qDebug("Need Password\n");
 #endif
         d->state = NeedParams;
-        needAuthParams(false, true, false);
+        emit needAuthParams(false, true, false);
         return false;
     }
     }
@@ -1290,10 +1290,10 @@ void ClientStream::handleError()
     int c = d->client.errorCode;
     if (c == CoreProtocol::ErrParse) {
         reset();
-        error(ErrParse);
+        emit error(ErrParse);
     } else if (c == CoreProtocol::ErrProtocol) {
         reset();
-        error(ErrProtocol);
+        emit error(ErrProtocol);
     } else if (c == CoreProtocol::ErrStream) {
         int         x        = d->client.errCond;
         QString     text     = d->client.errText;
@@ -1404,18 +1404,18 @@ void ClientStream::handleError()
         d->errAppSpec  = appSpec;
         if (connErr != -1) {
             d->errCond = connErr;
-            error(ErrNeg);
+            emit error(ErrNeg);
         } else {
             if (strErr != -1)
                 d->errCond = strErr;
             else
                 d->errCond = GenericStreamError;
-            error(ErrStream);
+            emit error(ErrStream);
         }
     } else if (c == CoreProtocol::ErrStartTLS) {
         reset();
         d->errCond = TLSStart;
-        error(ErrTLS);
+        emit error(ErrTLS);
     } else if (c == CoreProtocol::ErrAuth) {
         int x = d->client.errCond;
         int r = GenericAuthError;
@@ -1477,11 +1477,11 @@ void ClientStream::handleError()
         reset();
         d->errCond     = r;
         d->errLangText = d->client.errLangText;
-        error(ErrAuth);
+        emit error(ErrAuth);
     } else if (c == CoreProtocol::ErrPlain) {
         reset();
         d->errCond = NoMech;
-        error(ErrAuth);
+        emit error(ErrAuth);
     } else if (c == CoreProtocol::ErrBind) {
         int r = -1;
         if (d->client.errCond == CoreProtocol::BindBadRequest) {
@@ -1495,10 +1495,10 @@ void ClientStream::handleError()
         if (r != -1) {
             reset();
             d->errCond = r;
-            error(ErrBind);
+            emit error(ErrBind);
         } else {
             reset();
-            error(ErrProtocol);
+            emit error(ErrProtocol);
         }
     }
 }

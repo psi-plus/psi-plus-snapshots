@@ -204,7 +204,7 @@ private:
     }
 
 public:
-    IdManager() : at(0) {}
+    IdManager() : at(0) { }
 
     int reserveId()
     {
@@ -327,7 +327,7 @@ public:
             //   fetching should not trigger any calls to
             //   updateMulticastInterfaces().  only future
             //   activity should do that.
-            for (const QString &id: netman.interfaces()) {
+            for (const QString &id : netman.interfaces()) {
                 NetInterface *iface = new NetInterface(id, &netman);
                 connect(iface, SIGNAL(unavailable()), SLOT(iface_unavailable()));
                 ifaces += iface;
@@ -441,7 +441,7 @@ public:
         NameResolver::Error error;
         NameResolver::Error localError;
 
-        Item(QObject *parent = 0) : id(-1), req(0), sess(parent), useLocal(false), localResult(false) {}
+        Item(QObject *parent = 0) : id(-1), req(0), sess(parent), useLocal(false), localResult(false) { }
 
         ~Item() { delete req; }
     };
@@ -646,7 +646,7 @@ private slots:
 
         if (req->success()) {
             QList<NameRecord> out;
-            for (const QJDns::Record &r: req->results()) {
+            for (const QJDns::Record &r : req->results()) {
                 // unless we are asking for all types, only
                 //   accept the type we asked for
                 if (i->type == QJDns::Any || r.type == i->type) {
@@ -1507,7 +1507,7 @@ private:
             doPublishTxt();
 
         // publish extra records as needed
-        for (JDnsPublishExtra *extra: extraList) {
+        for (JDnsPublishExtra *extra : extraList) {
             if (!extra->have)
                 doPublishExtra(extra);
         }
@@ -1653,7 +1653,7 @@ private slots:
     {
         QJDnsSharedRequest *req   = static_cast<QJDnsSharedRequest *>(sender());
         JDnsPublishExtra *  extra = 0;
-        for (JDnsPublishExtra *e: extraList) {
+        for (JDnsPublishExtra *e : extraList) {
             if (&e->pub == req) {
                 extra = e;
                 break;
@@ -1713,7 +1713,7 @@ public:
     JDnsBrowse *const browse;
     ObjectSession *   sess;
 
-    BrowseItem(int _id, JDnsBrowse *_browse) : id(_id), browse(_browse), sess(0) {}
+    BrowseItem(int _id, JDnsBrowse *_browse) : id(_id), browse(_browse), sess(0) { }
 
     ~BrowseItem()
     {
@@ -1762,7 +1762,7 @@ public:
     JDnsServiceResolve *const resolve;
     ObjectSession *           sess;
 
-    ResolveItem(int _id, JDnsServiceResolve *_resolve) : id(_id), resolve(_resolve), sess(0) {}
+    ResolveItem(int _id, JDnsServiceResolve *_resolve) : id(_id), resolve(_resolve), sess(0) { }
 
     ~ResolveItem()
     {
@@ -1811,7 +1811,7 @@ public:
     JDnsPublish *const publish;
     ObjectSession *    sess;
 
-    PublishItem(int _id, JDnsPublish *_publish) : id(_id), publish(_publish), sess(0) {}
+    PublishItem(int _id, JDnsPublish *_publish) : id(_id), publish(_publish), sess(0) { }
 
     ~PublishItem()
     {
@@ -1862,7 +1862,7 @@ public:
     JDnsPublishExtra *const publish;
     ObjectSession *         sess;
 
-    PublishExtraItem(int _id, JDnsPublishExtra *_publish) : id(_id), publish(_publish), sess(0) {}
+    PublishExtraItem(int _id, JDnsPublishExtra *_publish) : id(_id), publish(_publish), sess(0) { }
 
     ~PublishExtraItem()
     {
@@ -2181,7 +2181,7 @@ private:
         // remove all extra publishes associated with this publish.
         //   the association can be checked via QObject parenting.
         QSet<PublishExtraItem *> remove;
-        for (PublishExtraItem *i: publishExtraItemList.items) {
+        for (PublishExtraItem *i : publishExtraItemList.items) {
             if (static_cast<JDnsPublish *>(i->publish->parent()) == pi->publish)
                 remove += i;
         }

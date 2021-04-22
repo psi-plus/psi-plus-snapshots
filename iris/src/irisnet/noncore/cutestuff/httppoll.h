@@ -77,11 +77,12 @@ public:
 
     QAbstractSocket *abstractSocket() const;
 
-    void setUseSsl(bool state);
-    void setAuth(const QString &user, const QString &pass = "");
-    bool isActive() const;
-    void post(const QString &proxyHost, int proxyPort, const QUrl &url, const QByteArray &data, bool asProxy = true);
-    void stop();
+    void       setUseSsl(bool state);
+    void       setAuth(const QString &user, const QString &pass = "");
+    bool       isActive() const;
+    void       post(const QString &proxyHost, quint16 proxyPort, const QUrl &url, const QByteArray &data,
+                    bool asProxy = true);
+    void       stop();
     QByteArray body() const;
     QString    getHeader(const QString &) const;
 

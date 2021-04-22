@@ -79,8 +79,8 @@ qint64 ByteStream::writeData(const char *data, qint64 maxSize)
     if (!isOpen())
         return -1;
 
-    bool doWrite = bytesToWrite() == 0 ? true : false;
-    d->writeBuf.append(data, maxSize);
+    bool doWrite = bytesToWrite() == 0;
+    d->writeBuf.append(data, int(maxSize));
     if (doWrite)
         tryWrite();
     return maxSize;
@@ -92,8 +92,8 @@ qint64 ByteStream::writeData(const char *data, qint64 maxSize)
 qint64 ByteStream::readData(char *data, qint64 maxSize)
 {
     maxSize = maxSize > d->readBuf.size() ? d->readBuf.size() : maxSize;
-    memcpy(data, d->readBuf.constData(), maxSize);
-    d->readBuf.remove(0, maxSize);
+    memcpy(data, d->readBuf.constData(), size_t(maxSize));
+    d->readBuf.remove(0, int(maxSize));
     return maxSize;
 }
 

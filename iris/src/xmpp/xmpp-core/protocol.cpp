@@ -839,10 +839,7 @@ void CoreProtocol::handleStreamOpen(const Parser::Event &pe)
         }
     } else {
         if (!dialback) {
-            if (version.major >= 1 && !oldOnly)
-                old = false;
-            else
-                old = true;
+            old = version.major < 1 || oldOnly;
         }
     }
 }
@@ -873,11 +870,8 @@ bool CoreProtocol::isValidStanza(const QDomElement &e) const
 {
     QString      s    = e.tagName();
     Stanza::Kind kind = Stanza::kind(s);
-    if (e.namespaceURI() == (server ? NS_SERVER : NS_CLIENT)
-        && (kind == Stanza::Message || kind == Stanza::Presence || kind == Stanza::IQ))
-        return true;
-    else
-        return false;
+    return e.namespaceURI() == (server ? NS_SERVER : NS_CLIENT)
+        && (kind == Stanza::Message || kind == Stanza::Presence || kind == Stanza::IQ);
 }
 
 bool CoreProtocol::streamManagementHandleStanza(const QDomElement &e)
@@ -891,7 +885,7 @@ bool CoreProtocol::streamManagementHandleStanza(const QDomElement &e)
         event = ESend;
         return true;
     } else if (s == "a") {
-        quint32 last_id = e.attribute("h").toULong();
+        quint32 last_id = e.attribute("h").toUInt();
 #ifdef IRIS_SM_DEBUG
         qDebug() << "Stream Management: [<--] Received ack response from server with h =" << last_id;
 #endif
@@ -998,7 +992,7 @@ bool CoreProtocol::dialbackStep(const QDomElement &e)
                     QString key = e.text();
                     // TODO: report event
                 } else {
-                    bool   ok = (e.attribute("type") == "valid") ? true : false;
+                    bool   ok = e.attribute("type") == "valid";
                     DBItem i;
                     if (grabPendingItem(from, to, DBItem::ResultRequest, &i)) {
                         if (ok) {
@@ -1019,7 +1013,7 @@ bool CoreProtocol::dialbackStep(const QDomElement &e)
                     QString key = e.text();
                     // TODO: report event
                 } else {
-                    bool   ok = (e.attribute("type") == "valid") ? true : false;
+                    bool   ok = e.attribute("type") == "valid";
                     DBItem i;
                     if (grabPendingItem(from, to, DBItem::VerifyRequest, &i)) {
                         if (ok) {
@@ -1712,14 +1706,14 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                             if (port_off != -1) { // looks valid
                                 sm_host = location.midRef(1, port_off - 1);
                                 if (location.length() > port_off + 2 && location.at(port_off + 1) == ':')
-                                    sm_port = location.mid(port_off + 2).toUInt();
+                                    sm_port = location.midRef(port_off + 2).toUInt();
                             }
                         }
                         if (port_off == 0) {
                             port_off = location.indexOf(':');
                             if (port_off != -1) {
                                 sm_host = location.leftRef(port_off);
-                                sm_port = location.mid(port_off + 1).toUInt();
+                                sm_port = location.midRef(port_off + 1).toUInt();
                             } else {
                                 sm_host = location.midRef(0);
                             }
@@ -1732,7 +1726,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                 step  = Done;
                 return true;
             } else if (e.localName() == "resumed") {
-                sm.resume(e.attribute("h").toULong());
+                sm.resume(e.attribute("h").toUInt());
                 while (true) {
                     QDomElement st = sm.getUnacknowledgedStanza();
                     if (st.isNull())

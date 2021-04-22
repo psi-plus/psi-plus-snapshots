@@ -145,18 +145,16 @@ VCardPrivate::~VCardPrivate() { }
 
 bool VCardPrivate::isEmpty() const
 {
-    if (!version.isEmpty() || !fullName.isEmpty() || !familyName.isEmpty() || !givenName.isEmpty()
-        || !middleName.isEmpty() || !prefixName.isEmpty() || !suffixName.isEmpty() || !nickName.isEmpty()
-        || !photo.isEmpty() || !photoURI.isEmpty() || !bday.isEmpty() || !addressList.isEmpty() || !labelList.isEmpty()
-        || !phoneList.isEmpty() || !emailList.isEmpty() || !jid.isEmpty() || !mailer.isEmpty() || !timezone.isEmpty()
-        || !geo.lat.isEmpty() || !geo.lon.isEmpty() || !title.isEmpty() || !role.isEmpty() || !logo.isEmpty()
-        || !logoURI.isEmpty() || (agent && !agent->isEmpty()) || !agentURI.isEmpty() || !org.name.isEmpty()
-        || !org.unit.isEmpty() || !categories.isEmpty() || !note.isEmpty() || !prodId.isEmpty() || !rev.isEmpty()
-        || !sortString.isEmpty() || !sound.isEmpty() || !soundURI.isEmpty() || !soundPhonetic.isEmpty()
-        || !uid.isEmpty() || !url.isEmpty() || !desc.isEmpty() || (privacyClass != VCard::pcNone) || !key.isEmpty()) {
-        return false;
-    }
-    return true;
+    return !(!version.isEmpty() || !fullName.isEmpty() || !familyName.isEmpty() || !givenName.isEmpty()
+             || !middleName.isEmpty() || !prefixName.isEmpty() || !suffixName.isEmpty() || !nickName.isEmpty()
+             || !photo.isEmpty() || !photoURI.isEmpty() || !bday.isEmpty() || !addressList.isEmpty()
+             || !labelList.isEmpty() || !phoneList.isEmpty() || !emailList.isEmpty() || !jid.isEmpty()
+             || !mailer.isEmpty() || !timezone.isEmpty() || !geo.lat.isEmpty() || !geo.lon.isEmpty() || !title.isEmpty()
+             || !role.isEmpty() || !logo.isEmpty() || !logoURI.isEmpty() || (agent && !agent->isEmpty())
+             || !agentURI.isEmpty() || !org.name.isEmpty() || !org.unit.isEmpty() || !categories.isEmpty()
+             || !note.isEmpty() || !prodId.isEmpty() || !rev.isEmpty() || !sortString.isEmpty() || !sound.isEmpty()
+             || !soundURI.isEmpty() || !soundPhonetic.isEmpty() || !uid.isEmpty() || !url.isEmpty() || !desc.isEmpty()
+             || (privacyClass != VCard::pcNone) || !key.isEmpty());
 }
 
 VCard::VCard() { }

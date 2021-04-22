@@ -29,6 +29,7 @@
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QRandomGenerator>
 #endif
+#include <QPointer>
 #include <cmath>
 #include <functional>
 
@@ -399,7 +400,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     ApplicationManagerPad *Manager::pad(Session *session) { return new Pad(this, session); }
 
-    void Manager::closeAll() { }
+    void Manager::closeAll(const QString &) { }
 
     QStringList Manager::discoFeatures() const { return { NS }; }
 
@@ -460,7 +461,6 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             }
             if (s >= State::Finishing && q->transport()) {
                 q->disconnect(q->transport().data(), &Transport::failed, q, nullptr);
-                q->disconnect(q->transport().data(), &Transport::connected, q, nullptr);
                 // we can still try to send transport updates
             }
             emit q->stateChanged(s);
@@ -539,6 +539,46 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 lastReason = Reason(Reason::Condition::Success);
                 setState(State::Finished);
             }
+        }
+
+        void setupConnection()
+        {
+            QObject::connect(connection.data(), &Connection::connected, q, [this]() {
+                lastReason = Reason();
+                lastError.reset();
+
+                if (!streamingMode) {
+                    connect(connection.data(), &Connection::readyRead, q, [this]() {
+                        if (!device) {
+                            return;
+                        }
+                        if (q->pad()->session()->role() != q->senders()) {
+                            readNextBlockFromTransport();
+                        }
+                    });
+                    connect(connection.data(), &Connection::bytesWritten, q, [this](qint64 bytes) {
+                        Q_UNUSED(bytes)
+                        if (q->pad()->session()->role() == q->senders() && !connection->bytesToWrite()) {
+                            writeNextBlockToTransport();
+                        }
+                    });
+                }
+
+                setState(State::Active);
+                if (!streamingMode) {
+                    if (acceptFile.range().isValid()) {
+                        bytesLeft = acceptFile.range().length;
+                        if (!bytesLeft)
+                            endlessRange = true;
+                        emit q->deviceRequested(acceptFile.range().offset, bytesLeft);
+                    } else {
+                        bytesLeft = acceptFile.size();
+                        emit q->deviceRequested(0, bytesLeft);
+                    }
+                } else {
+                    emit q->connectionReady();
+                }
+            });
         }
     };
 
@@ -646,56 +686,27 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     void Application::prepareTransport()
     {
-        if (_transport->creator() == _pad->session()->role()) {
-            d->connection = _transport->addChannel(TransportFeature::Reliable | TransportFeature::DataOriented);
+        if (_transport->isLocal()) {
+            d->connection
+                = _transport->addChannel(TransportFeature::Reliable | TransportFeature::DataOriented, contentName());
+            if (!d->connection) {
+                _transport->stop();
+                qWarning("No channel on %s transport", qPrintable(_transport->pad()->ns()));
+                selectNextTransport();
+                return;
+            }
+            d->setupConnection();
         } else {
-            auto const &channels = _transport->channels();
-            if (channels.size()) {
-                d->connection = channels[0];
-            }
+            _transport->addAcceptor(TransportFeature::Reliable | TransportFeature::Ordered
+                                        | TransportFeature::DataOriented,
+                                    [this, self = QPointer<Application>(this)](Connection::Ptr connection) {
+                                        if (!self || d->connection)
+                                            return false;
+                                        d->connection = connection;
+                                        d->setupConnection();
+                                        return true;
+                                    });
         }
-        if (!d->connection) {
-            _transport->stop();
-            qWarning("No channel on %s transport", qPrintable(_transport->pad()->ns()));
-            selectNextTransport();
-            return;
-        }
-        connect(d->connection.data(), &Connection::connected, this, [this]() {
-            d->lastReason = Reason();
-            d->lastError.reset();
-
-            if (!d->streamingMode) {
-                connect(d->connection.data(), &Connection::readyRead, this, [this]() {
-                    if (!d->device) {
-                        return;
-                    }
-                    if (_pad->session()->role() != _senders) {
-                        d->readNextBlockFromTransport();
-                    }
-                });
-                connect(d->connection.data(), &Connection::bytesWritten, this, [this](qint64 bytes) {
-                    Q_UNUSED(bytes)
-                    if (_pad->session()->role() == _senders && !d->connection->bytesToWrite()) {
-                        d->writeNextBlockToTransport();
-                    }
-                });
-            }
-
-            d->setState(State::Active);
-            if (!d->streamingMode) {
-                if (d->acceptFile.range().isValid()) {
-                    d->bytesLeft = d->acceptFile.range().length;
-                    if (!d->bytesLeft)
-                        d->endlessRange = true;
-                    emit deviceRequested(d->acceptFile.range().offset, d->bytesLeft);
-                } else {
-                    d->bytesLeft = d->acceptFile.size();
-                    emit deviceRequested(0, d->bytesLeft);
-                }
-            } else {
-                emit connectionReady();
-            }
-        });
         _transport->prepare();
     }
 
@@ -722,6 +733,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     OutgoingUpdate Application::takeOutgoingUpdate()
     {
+        qDebug("jingle-ft: take outgoing update");
         if (_update.action == Action::NoAction) {
             return OutgoingUpdate();
         }

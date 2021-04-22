@@ -43,7 +43,7 @@ int ZLibCompressor::write(const QByteArray &input) { return write(input, false);
 int ZLibCompressor::write(const QByteArray &input, bool flush)
 {
     int result;
-    zlib_stream_->avail_in = input.size();
+    zlib_stream_->avail_in = uInt(input.size());
     zlib_stream_->next_in  = (Bytef *)input.data();
     QByteArray output;
 

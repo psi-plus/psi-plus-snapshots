@@ -5,9 +5,9 @@
 namespace RTC {
 
 class DataProducer {
+public:
     SctpParameters sctpParameters;
 
-public:
     const SctpParameters &GetSctpStreamParameters() const { return sctpParameters; }
 };
 

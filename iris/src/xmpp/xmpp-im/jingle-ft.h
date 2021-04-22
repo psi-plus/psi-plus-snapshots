@@ -196,7 +196,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         Application *startApplication(const ApplicationManagerPad::Ptr &pad, const QString &contentName, Origin creator,
                                       Origin senders) override;
         ApplicationManagerPad *pad(Session *session) override; // pad factory
-        void                   closeAll() override;
+        void                   closeAll(const QString &ns = QString()) override;
 
         QStringList discoFeatures() const override;
 

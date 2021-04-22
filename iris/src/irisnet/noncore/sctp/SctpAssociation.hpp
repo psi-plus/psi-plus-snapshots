@@ -14,8 +14,7 @@
 // using json = nlohmann::json;
 
 namespace RTC {
-class SctpAssociation : public QObject {
-    Q_OBJECT
+class SctpAssociation {
 public:
     enum class SctpState { NEW = 1, CONNECTING, CONNECTED, FAILED, CLOSED };
 
@@ -38,6 +37,7 @@ public:
                                                       uint32_t ppid, const uint8_t *msg, size_t len)
             = 0;
         virtual void OnSctpAssociationBufferedAmount(RTC::SctpAssociation *sctpAssociation, uint32_t len) = 0;
+        virtual void OnSctpStreamClosed(RTC::SctpAssociation *sctpAssociation, uint16_t streamId)         = 0;
     };
 
 public:
@@ -64,6 +64,7 @@ public:
     void      HandleDataConsumer(RTC::DataConsumer *dataConsumer);
     void      DataProducerClosed(RTC::DataProducer *dataProducer);
     void      DataConsumerClosed(RTC::DataConsumer *dataConsumer);
+    bool      isSendBufferFull() const { return sendBufferFull; }
 
 private:
     void ResetSctpStream(uint16_t streamId, StreamDirection);
@@ -77,9 +78,6 @@ public:
     void OnUsrSctpReceiveSctpNotification(union sctp_notification *notification, size_t len);
     void OnUsrSctpSentData(uint32_t freeBuffer);
 
-signals:
-    void sctpSendBufferFull();
-
 public:
     uintptr_t id { 0u };
 
@@ -92,6 +90,7 @@ private:
     size_t    sctpSendBufferSize { 262144u };
     size_t    sctpBufferedAmount { 0u };
     bool      isDataChannel { false };
+    bool      sendBufferFull { false };
     // Allocated by this.
     uint8_t *messageBuffer { nullptr };
     // Others.

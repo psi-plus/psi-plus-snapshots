@@ -242,7 +242,7 @@ public:
     S5BServer(QTcpServer *serverSocket);
     ~S5BServer();
 
-    void writeUDP(const QHostAddress &addr, int port, const QByteArray &data);
+    void writeUDP(const QHostAddress &addr, quint16 port, const QByteArray &data);
     bool isActive() const;
     bool hasKey(const QString &key);
     void registerKey(const QString &key);

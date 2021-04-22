@@ -587,9 +587,11 @@ namespace XMPP { namespace Jingle {
 
     const Jid &Manager::redirectionJid() const { return d->redirectionJid; }
 
-    void Manager::registerApp(const QString &ns, ApplicationManager *app)
+    void Manager::registerApplication(ApplicationManager *app)
     {
-        d->applicationManagers.insert(ns, app);
+        auto const &nss = app->ns();
+        for (auto const &ns : nss)
+            d->applicationManagers.insert(ns, app);
         app->setJingleManager(this);
     }
 
@@ -597,7 +599,7 @@ namespace XMPP { namespace Jingle {
     {
         auto appManager = d->applicationManagers.value(ns);
         if (appManager) {
-            appManager->closeAll();
+            appManager->closeAll(ns);
             d->applicationManagers.remove(ns);
         }
     }
@@ -613,9 +615,11 @@ namespace XMPP { namespace Jingle {
         return am->pad(session);
     }
 
-    void Manager::registerTransport(const QString &ns, TransportManager *transport)
+    void Manager::registerTransport(TransportManager *transport)
     {
-        d->transportManagers.insert(ns, transport);
+        auto const &nss = transport->ns();
+        for (auto const &ns : nss)
+            d->transportManagers.insert(ns, transport);
         transport->setJingleManager(this);
     }
 
@@ -623,7 +627,7 @@ namespace XMPP { namespace Jingle {
     {
         auto trManager = d->transportManagers.value(ns);
         if (trManager) {
-            trManager->closeAll();
+            trManager->closeAll(ns);
             d->transportManagers.remove(ns);
         }
     }

@@ -375,34 +375,30 @@ void SctpAssociation::SendSctpMessage(RTC::DataConsumer *dataConsumer, uint32_t 
 
     this->sctpBufferedAmount += len;
 
+    // Notify the listener about the buffered amount increase regardless
+    // usrsctp_sendv result.
+    // In case of failure the correct value will be later provided by usrsctp
+    // via onSendSctpData.
+    this->listener->OnSctpAssociationBufferedAmount(this, this->sctpBufferedAmount);
+
     int ret = usrsctp_sendv(this->socket, msg, len, nullptr, 0, &spa, static_cast<socklen_t>(sizeof(spa)),
                             SCTP_SENDV_SPA, 0);
 
-    if (ret > 0) {
-        // NOTE: 'usrsctp_sendv' returns the number of bytes sent.
-        this->listener->OnSctpAssociationBufferedAmount(this, this->sctpBufferedAmount);
-    }
-
     if (ret < 0) {
-        this->sctpBufferedAmount -= ret;
-
+        auto errno_copy = errno;
         MS_WARN_TAG(sctp, "error sending SCTP message [sid:%" PRIu16 ", ppid:%" PRIu32 ", message size:%zu]: %s",
                     parameters.streamId, ppid, len, std::strerror(errno));
-
+        errno = errno_copy;
         if (cb) {
             (*cb)(false);
-
             delete cb;
         }
     } else if (cb) {
         (*cb)(true);
-
         delete cb;
     }
 
-    if (errno == EWOULDBLOCK || errno == EAGAIN) {
-        emit sctpSendBufferFull();
-    }
+    this->sendBufferFull = errno == EWOULDBLOCK || errno == EAGAIN;
 }
 
 void SctpAssociation::HandleDataConsumer(RTC::DataConsumer *dataConsumer)
@@ -841,6 +837,7 @@ void SctpAssociation::OnUsrSctpReceiveSctpNotification(union sctp_notification *
                 auto streamId = notification->sn_strreset_event.strreset_stream_list[i];
 
                 ResetSctpStream(streamId, StreamDirection::OUTGOING);
+                this->listener->OnSctpStreamClosed(this, streamId);
             }
         }
 

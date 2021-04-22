@@ -61,28 +61,28 @@ namespace XMPP { namespace StunUtil {
 
     void write16(quint8 *out, quint16 i)
     {
-        out[0] = (i >> 8) & 0xff;
-        out[1] = i & 0xff;
+        out[0] = quint8((i >> 8) & 0xff);
+        out[1] = quint8(i & 0xff);
     }
 
     void write32(quint8 *out, quint32 i)
     {
-        out[0] = (i >> 24) & 0xff;
-        out[1] = (i >> 16) & 0xff;
-        out[2] = (i >> 8) & 0xff;
-        out[3] = i & 0xff;
+        out[0] = quint8((i >> 24) & 0xff);
+        out[1] = quint8((i >> 16) & 0xff);
+        out[2] = quint8((i >> 8) & 0xff);
+        out[3] = quint8(i & 0xff);
     }
 
     void write64(quint8 *out, quint64 i)
     {
-        out[0] = (i >> 56) & 0xff;
-        out[1] = (i >> 48) & 0xff;
-        out[2] = (i >> 40) & 0xff;
-        out[3] = (i >> 32) & 0xff;
-        out[4] = (i >> 24) & 0xff;
-        out[5] = (i >> 16) & 0xff;
-        out[6] = (i >> 8) & 0xff;
-        out[7] = i & 0xff;
+        out[0] = quint8((i >> 56) & 0xff);
+        out[1] = quint8((i >> 48) & 0xff);
+        out[2] = quint8((i >> 40) & 0xff);
+        out[3] = quint8((i >> 32) & 0xff);
+        out[4] = quint8((i >> 24) & 0xff);
+        out[5] = quint8((i >> 16) & 0xff);
+        out[6] = quint8((i >> 8) & 0xff);
+        out[7] = quint8(i & 0xff);
     }
 
     QCA::SecureArray saslPrep(const QCA::SecureArray &in)

@@ -920,7 +920,7 @@ int main(int argc, char **argv)
         ResolveName a;
         a.name      = args[1];
         a.type      = (NameRecord::Type)x;
-        a.longlived = (args[0] == "rnamel") ? true : false;
+        a.longlived = args[0] == "rnamel";
         if (args[0] == "rname" && null_dump)
             a.null_dump = true;
         QObject::connect(&a, SIGNAL(quit()), &qapp, SLOT(quit()));

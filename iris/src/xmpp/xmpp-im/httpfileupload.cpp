@@ -448,7 +448,7 @@ HttpFileUpload *HttpFileUploadManager::upload(const QString &srcFilename, const 
     return hfu;
 }
 
-HttpFileUpload *HttpFileUploadManager::upload(QIODevice *source, size_t fsize, const QString &dstFilename,
+HttpFileUpload *HttpFileUploadManager::upload(QIODevice *source, quint64 fsize, const QString &dstFilename,
                                               const QString &mType)
 {
     auto                   hfu  = new HttpFileUpload(d->client, source, fsize, dstFilename, mType);

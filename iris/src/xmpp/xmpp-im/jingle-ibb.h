@@ -43,7 +43,7 @@ namespace Jingle { namespace IBB {
         TransportFeatures           features() const override;
         int                         maxSupportedChannelsPerComponent(TransportFeatures features) const override;
 
-        Connection::Ptr        addChannel(TransportFeatures features, int component = 0) const override;
+        Connection::Ptr        addChannel(TransportFeatures features, const QString &id, int component = 0) override;
         QList<Connection::Ptr> channels() const override;
 
     private:
@@ -84,7 +84,6 @@ namespace Jingle { namespace IBB {
                                                              Origin                          creator) override;
         TransportManagerPad *                   pad(Session *session) override;
 
-        void        closeAll() override;
         QStringList discoFeatures() const override;
 
         Connection::Ptr makeConnection(const Jid &peer, const QString &sid, size_t blockSize);

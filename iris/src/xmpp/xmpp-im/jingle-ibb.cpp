@@ -75,6 +75,12 @@ namespace XMPP { namespace Jingle { namespace IBB {
             emit connected();
         }
 
+        TransportFeatures features() const
+        {
+            return TransportFeature::DataOriented | TransportFeature::StreamOriented | TransportFeature::Ordered
+                | TransportFeature::Reliable;
+        }
+
         size_t blockSize() const { return _blockSize; }
 
         qint64 bytesAvailable() const
@@ -162,11 +168,8 @@ namespace XMPP { namespace Jingle { namespace IBB {
             QObject::connect(ibbConn.data(), &Connection::connected, q, [this]() {
                 if (q->_state == State::Connecting) {
                     q->setState(State::Active);
-                    emit q->connected();
                 }
             });
-            connections.insert(ibbConn->sid, ibbConn);
-
             QObject::connect(ibbConn.data(), &Connection::connectionClosed, q, [this]() {
                 Connection *c = static_cast<Connection *>(q->sender());
                 connections.remove(c->sid);
@@ -203,10 +206,21 @@ namespace XMPP { namespace Jingle { namespace IBB {
     void Transport::prepare()
     {
         setState(State::ApprovedToSend);
-        for (auto &c : d->connections) {
+        auto it = d->connections.begin();
+        while (it != d->connections.end()) {
+            auto &c = it.value();
+            if (c->isRemote() && !notifyIncomingConnection(c)) {
+                it = d->connections.erase(it);
+                continue;
+            }
             c->state = State::ApprovedToSend;
+            ++it;
         }
-        emit updated();
+        if (d->connections.isEmpty()) {
+            _state = State::Finished;
+            emit failed();
+        } else
+            emit updated();
     }
 
     void Transport::start()
@@ -247,11 +261,14 @@ namespace XMPP { namespace Jingle { namespace IBB {
                 qWarning("failed to create IBB connection");
                 return false;
             }
+            c->setRemote(true);
             c->state = State::Pending;
-            if (_state == State::Created && _creator != _pad->session()->role()) {
+            if (_state == State::Created && isRemote()) {
                 // seems like we are just initing remote transport
                 setState(State::Pending);
-            }
+                d->connections.insert(sid, c);
+            } else if (!wasAccepted() || notifyIncomingConnection(c))
+                d->connections.insert(sid, c);
         } else {
             if ((*it)->creator != _pad->session()->role() || (*it)->state != State::Pending) {
                 if ((*it)->state >= State::Accepted && (*it)->state <= State::Active) {
@@ -347,7 +364,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
         return upd;
     }
 
-    bool Transport::isValid() const { return d; }
+    bool Transport::isValid() const { return bool(d); }
 
     TransportFeatures Transport::features() const
     {
@@ -357,11 +374,14 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
     int Transport::maxSupportedChannelsPerComponent(TransportFeatures) const { return -1; }
 
-    Connection::Ptr Transport::addChannel(TransportFeatures features, int) const
+    Connection::Ptr Transport::addChannel(TransportFeatures features, const QString &id, int)
     {
         if (features & TransportFeature::LiveOriented)
             return {};
-        return d->newStream(QString(), d->defaultBlockSize, _pad->session()->role());
+        auto ibbConn = d->newStream(QString(), d->defaultBlockSize, _pad->session()->role());
+        ibbConn->setId(id);
+        d->connections.insert(ibbConn->sid, ibbConn);
+        return ibbConn;
     }
 
     QList<XMPP::Jingle::Connection::Ptr> Transport::channels() const
@@ -417,8 +437,6 @@ namespace XMPP { namespace Jingle { namespace IBB {
     }
 
     TransportManagerPad *Manager::pad(Session *session) { return new Pad(this, session); }
-
-    void Manager::closeAll() { emit abortAllRequested(); }
 
     QStringList Manager::discoFeatures() const { return { NS }; }
 

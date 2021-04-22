@@ -123,7 +123,7 @@ public:
             Info i;
             i.id         = iface.name();
             i.name       = iface.humanReadableName();
-            i.isLoopback = (iface.flags() & QNetworkInterface::IsLoopBack);
+            i.isLoopback = bool(iface.flags() & QNetworkInterface::IsLoopBack);
             for (auto &ae : iface.addressEntries()) {
                 i.addresses.append(ae.ip());
             }

@@ -119,12 +119,10 @@ public:
 
     virtual void setConstraints(QCA::SASL::AuthFlags flags, int ssfMin, int)
     {
-        if (flags
+        capable = !(
+            flags
                 & (QCA::SASL::RequireForwardSecrecy | QCA::SASL::RequirePassCredentials | QCA::SASL::RequireMutualAuth)
-            || ssfMin > 0)
-            capable = false;
-        else
-            capable = true;
+            || ssfMin > 0);
         allow_plain = flags & QCA::SASL::AllowPlain;
     }
 

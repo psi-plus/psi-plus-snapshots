@@ -263,9 +263,7 @@ void CapsManager::updateCaps(const Jid &jid, const CapsSpec &c)
         } else {
             // Remove all caps specifications
             qWarning() << QString("caps.cpp: Illegal caps info from %1: node=%2, ver=%3")
-                              .arg(QString(jid.full()).replace('%', "%%"))
-                              .arg(fullNode)
-                              .arg(c.version());
+                              .arg(QString(jid.full()).replace('%', "%%"), fullNode, c.version());
             capsSpecs_.remove(jid.full());
         }
     } else {

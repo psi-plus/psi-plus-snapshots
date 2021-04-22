@@ -190,7 +190,7 @@ public:
      * @param mType - meta type
      * @return returns a handler object which will signal "finished" when ready
      */
-    HttpFileUpload *upload(QIODevice *source, size_t fsize, const QString &dstFilename,
+    HttpFileUpload *upload(QIODevice *source, quint64 fsize, const QString &dstFilename,
                            const QString &mType = QString());
 
 private:

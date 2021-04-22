@@ -25,6 +25,8 @@ namespace XMPP { namespace Jingle {
     // TransportManager
     //----------------------------------------------------------------------------
     TransportManager::TransportManager(QObject *parent) : QObject(parent) { }
+    QStringList TransportManager::ns() const { return discoFeatures(); }
+    void        TransportManager::closeAll(const QString &) { emit abortAllRequested(); }
 
     //----------------------------------------------------------------------------
     // Transport
@@ -37,7 +39,7 @@ namespace XMPP { namespace Jingle {
 
     int Transport::maxSupportedComponents() const { return 1; }
 
-    int Transport::addComponent() { return 0; }
+    void Transport::setComponentsCount(int) { }
 
     int Transport::maxSupportedChannelsPerComponent(TransportFeatures) const { return 0; }
 
@@ -48,23 +50,30 @@ namespace XMPP { namespace Jingle {
         emit stateChanged();
     }
 
-    //----------------------------------------------------------------------------
-    // Connection
-    //----------------------------------------------------------------------------
-    bool Connection::hasPendingDatagrams() const { return false; }
-
-    NetworkDatagram Connection::receiveDatagram(qint64 maxSize)
+    bool Transport::wasAccepted() const
     {
-        Q_UNUSED(maxSize)
-        return NetworkDatagram();
+        if (isRemote())
+            return _state >= State::ApprovedToSend && _state != State::Pending;
+        return _state >= State::ApprovedToSend;
     }
 
-    size_t Connection::blockSize() const
+    void Transport::addAcceptor(TransportFeatures features, ConnectionAcceptorCallback &&acceptor, int componentIndex)
     {
-        return 0; // means "block" is not applicable for this kind of connection
+        _connectionAcceptors.append({ features, std::move(acceptor), componentIndex });
     }
 
-    int Connection::component() const { return 0; }
+    const QList<ConnectionAcceptor> &Transport::acceptors() const { return _connectionAcceptors; }
+
+    bool Transport::notifyIncomingConnection(Connection::Ptr connection) const
+    {
+        for (auto const &acceptor : _connectionAcceptors) {
+            if ((connection->features() & acceptor.features) == acceptor.features
+                && (acceptor.componentIndex < 0 || acceptor.componentIndex == connection->component())
+                && acceptor.callback(connection))
+                return true;
+        }
+        return false;
+    }
 
     //----------------------------------------------------------------------------
     // TransportSelector

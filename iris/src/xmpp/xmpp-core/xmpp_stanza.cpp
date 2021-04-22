@@ -536,7 +536,7 @@ Stanza &Stanza::operator=(const Stanza &from)
 
 Stanza::~Stanza() { delete d; }
 
-bool Stanza::isNull() const { return (d ? false : true); }
+bool Stanza::isNull() const { return d == nullptr; }
 
 QDomElement Stanza::element() const { return d->e; }
 

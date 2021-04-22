@@ -29,6 +29,7 @@ namespace XMPP { namespace Jingle {
     // Application
     //----------------------------------------------------------------------------
     ApplicationManager::ApplicationManager(QObject *parent) : QObject(parent) { }
+    QStringList ApplicationManager::ns() const { return discoFeatures(); }
 
     //----------------------------------------------------------------------------
     // Application
@@ -109,7 +110,7 @@ namespace XMPP { namespace Jingle {
             }
 
             if (_transport->hasUpdates()) {
-                if (_transport->state() == State::Connecting)
+                if (_transport->state() >= State::ApprovedToSend && _transport->state() < State::Finished)
                     _update = { Action::TransportInfo, Reason() };
             } else if (_transport->state() == State::Finished) {
                 _update = { _transportSelector->hasMoreTransports() ? Action::TransportReplace : Action::ContentRemove,

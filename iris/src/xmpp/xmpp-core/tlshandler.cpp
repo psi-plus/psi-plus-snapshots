@@ -223,10 +223,7 @@ static bool cert_match_ipaddress(const QString &certname, const QByteArray &ipad
         return false;
 
     // not the same?
-    if (addr != ipaddress)
-        return false;
-
-    return true;
+    return addr == ipaddress;
 }
 
 static bool matchesHostName(const QCA::Certificate &cert, const QString &host)
@@ -375,7 +372,7 @@ void QCATLSHandler::continueAfterHandshake()
 {
     if (d->state == 2) {
         d->tls->continueAfterStep();
-        success();
+        emit success();
         d->state = 3;
     }
 }
@@ -383,23 +380,23 @@ void QCATLSHandler::continueAfterHandshake()
 void QCATLSHandler::tls_handshaken()
 {
     d->state = 2;
-    tlsHandshaken();
+    emit tlsHandshaken();
 }
 
-void QCATLSHandler::tls_readyRead() { readyRead(d->tls->read()); }
+void QCATLSHandler::tls_readyRead() { emit readyRead(d->tls->read()); }
 
 void QCATLSHandler::tls_readyReadOutgoing()
 {
     int        plainBytes;
     QByteArray buf = d->tls->readOutgoing(&plainBytes);
-    readyReadOutgoing(buf, plainBytes);
+    emit       readyReadOutgoing(buf, plainBytes);
 }
 
-void QCATLSHandler::tls_closed() { closed(); }
+void QCATLSHandler::tls_closed() { emit closed(); }
 
 void QCATLSHandler::tls_error()
 {
     d->err   = d->tls->errorCode();
     d->state = 0;
-    fail();
+    emit fail();
 }
