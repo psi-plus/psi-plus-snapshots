@@ -1,6 +1,8 @@
 #include "dtls.h"
 #include "xmpp_xmlcommon.h"
 
+#include <array>
+
 #include <QtCrypto>
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QRandomGenerator>

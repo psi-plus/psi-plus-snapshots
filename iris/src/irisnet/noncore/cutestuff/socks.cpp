@@ -42,6 +42,9 @@
 
 #ifdef Q_OS_WIN32
 #include <windows.h>
+#ifdef _MSC_VER
+#include <winsock2.h>
+#endif
 #endif
 
 // CS_NAMESPACE_BEGIN

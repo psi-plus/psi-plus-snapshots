@@ -32,6 +32,9 @@
 #include <stdlib.h>
 #ifdef Q_OS_WIN
 #include <windows.h>
+#ifdef _MSC_VER
+#include <winsock2.h>
+#endif
 #else
 #include <netinet/in.h>
 #endif
