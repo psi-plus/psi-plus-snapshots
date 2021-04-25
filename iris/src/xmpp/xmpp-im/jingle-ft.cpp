@@ -502,9 +502,16 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 return;
             }
             // qDebug("JINGLE-FT write %d bytes to connection", data.size());
-            if (connection->write(data) == -1) {
-                handleStreamFail();
-                return;
+            if (connection->features() & TransportFeature::MessageOriented) {
+                if (!connection->sendDatagram(data)) {
+                    handleStreamFail();
+                    return;
+                }
+            } else {
+                if (connection->write(data) == -1) {
+                    handleStreamFail();
+                    return;
+                }
             }
             emit q->progress(device->pos());
             bytesLeft -= data.size();
@@ -513,15 +520,20 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         void readNextBlockFromTransport()
         {
             qint64 bytesAvail;
-            while (bytesLeft && (bytesAvail = connection->bytesAvailable())) {
-                qint64 sz = 65536; // shall we respect transport->blockSize() ?
-                if (sz > bytesLeft) {
-                    sz = bytesLeft;
+            while (bytesLeft && ((bytesAvail = connection->bytesAvailable()) || (connection->hasPendingDatagrams()))) {
+                QByteArray data;
+                if (connection->features() & TransportFeature::MessageOriented) {
+                    data = connection->receiveDatagram().data();
+                } else {
+                    qint64 sz = 65536; // shall we respect transport->blockSize() ?
+                    if (sz > bytesLeft) {
+                        sz = bytesLeft;
+                    }
+                    if (sz > bytesAvail) {
+                        sz = bytesAvail;
+                    }
+                    data = connection->read(sz);
                 }
-                if (sz > bytesAvail) {
-                    sz = bytesAvail;
-                }
-                QByteArray data = connection->read(sz);
                 // qDebug("JINGLE-FT read %d bytes from connection", data.size());
                 if (data.isEmpty()) {
                     handleStreamFail();
@@ -532,7 +544,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                     return;
                 }
                 emit q->progress(device->pos());
-                bytesLeft -= sz;
+                bytesLeft -= data.size();
             }
             if (!bytesLeft) {
                 // TODO send <received>
@@ -541,44 +553,44 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             }
         }
 
-        void setupConnection()
+        void onConnectionConnected(Connection::Ptr newConnection)
         {
-            QObject::connect(connection.data(), &Connection::connected, q, [this]() {
-                lastReason = Reason();
-                lastError.reset();
+            qDebug("jingle-ft: connected. ready to send user data");
+            connection = newConnection;
+            lastReason = Reason();
+            lastError.reset();
 
-                if (!streamingMode) {
-                    connect(connection.data(), &Connection::readyRead, q, [this]() {
-                        if (!device) {
-                            return;
-                        }
-                        if (q->pad()->session()->role() != q->senders()) {
-                            readNextBlockFromTransport();
-                        }
-                    });
-                    connect(connection.data(), &Connection::bytesWritten, q, [this](qint64 bytes) {
-                        Q_UNUSED(bytes)
-                        if (q->pad()->session()->role() == q->senders() && !connection->bytesToWrite()) {
-                            writeNextBlockToTransport();
-                        }
-                    });
-                }
-
-                setState(State::Active);
-                if (!streamingMode) {
-                    if (acceptFile.range().isValid()) {
-                        bytesLeft = acceptFile.range().length;
-                        if (!bytesLeft)
-                            endlessRange = true;
-                        emit q->deviceRequested(acceptFile.range().offset, bytesLeft);
-                    } else {
-                        bytesLeft = acceptFile.size();
-                        emit q->deviceRequested(0, bytesLeft);
+            if (!streamingMode) {
+                connect(connection.data(), &Connection::readyRead, q, [this]() {
+                    if (!device) {
+                        return;
                     }
+                    if (q->pad()->session()->role() != q->senders()) {
+                        readNextBlockFromTransport();
+                    }
+                });
+                connect(connection.data(), &Connection::bytesWritten, q, [this](qint64 bytes) {
+                    Q_UNUSED(bytes)
+                    if (q->pad()->session()->role() == q->senders() && !connection->bytesToWrite()) {
+                        writeNextBlockToTransport();
+                    }
+                });
+            }
+
+            setState(State::Active);
+            if (!streamingMode) {
+                if (acceptFile.range().isValid()) {
+                    bytesLeft = acceptFile.range().length;
+                    if (!bytesLeft)
+                        endlessRange = true;
+                    emit q->deviceRequested(acceptFile.range().offset, bytesLeft);
                 } else {
-                    emit q->connectionReady();
+                    bytesLeft = acceptFile.size();
+                    emit q->deviceRequested(0, bytesLeft);
                 }
-            });
+            } else {
+                emit q->connectionReady();
+            }
         }
     };
 
@@ -686,27 +698,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     void Application::prepareTransport()
     {
-        if (_transport->isLocal()) {
-            d->connection
-                = _transport->addChannel(TransportFeature::Reliable | TransportFeature::DataOriented, contentName());
-            if (!d->connection) {
-                _transport->stop();
-                qWarning("No channel on %s transport", qPrintable(_transport->pad()->ns()));
-                selectNextTransport();
-                return;
-            }
-            d->setupConnection();
-        } else {
-            _transport->addAcceptor(TransportFeature::Reliable | TransportFeature::Ordered
-                                        | TransportFeature::DataOriented,
-                                    [this, self = QPointer<Application>(this)](Connection::Ptr connection) {
-                                        if (!self || d->connection)
-                                            return false;
-                                        d->connection = connection;
-                                        d->setupConnection();
-                                        return true;
-                                    });
-        }
+        expectSingleConnection(TransportFeature::Reliable | TransportFeature::DataOriented | TransportFeature::Ordered,
+                               [this](Connection::Ptr connection) { d->onConnectionConnected(connection); });
         _transport->prepare();
     }
 

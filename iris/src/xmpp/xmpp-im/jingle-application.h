@@ -155,6 +155,8 @@ namespace XMPP { namespace Jingle {
          */
         virtual void prepareTransport() = 0;
 
+        void expectSingleConnection(TransportFeatures features, std::function<void(Connection::Ptr)> &&ready);
+
     signals:
         void updated(); // signal for session it has to send updates to remote. so it will follow with
                         // takeOutgoingUpdate() eventually

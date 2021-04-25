@@ -52,7 +52,7 @@ option( BUNDLED_QCA "Adds: DTLS, Blake2b and other useful for XMPP crypto-stuff"
 option( BUNDLED_USRSCTP "Compile compatible usrsctp lib when system one is not available or uncompatible (required for datachannel jingle transport)" OFF)
 option( BUILD_IRIS_TOOLS "Build tools and examples" OFF)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 include_directories(include/iris)

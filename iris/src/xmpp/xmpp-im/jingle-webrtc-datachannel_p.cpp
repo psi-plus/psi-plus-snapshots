@@ -77,6 +77,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         auto channel       = QSharedPointer<WebRTCDataChannel>::create(assoc, channelType, priority, reliability, label,
                                                                  protocol, DcepNegotiated);
         channel->_isRemote = true;
+        channel->setOpenMode(QIODevice::ReadWrite);
         return channel;
     }
 
@@ -132,7 +133,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     {
         // FIXME return proper featuers
         return TransportFeature::DataOriented | TransportFeature::Reliable | TransportFeature::Ordered
-            | TransportFeature::Fast;
+            | TransportFeature::Fast | TransportFeature::MessageOriented;
     }
 
     void WebRTCDataChannel::onConnected()
@@ -167,6 +168,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
                 qWarning("jingle-sctp: unexpected DCEP. ignoring");
                 return;
             }
+            setOpenMode(QIODevice::ReadWrite);
             emit connected();
             return;
         }

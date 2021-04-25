@@ -939,8 +939,14 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 auto  buf = c.sctp->readOutgoing();
                 c.dtls->writeDatagram(buf);
             });
-            q->connect(c.sctp, &SCTP::Association::newIncomingChannel, q,
-                       [this, componentIndex]() { qDebug("new incoming sctp channel"); });
+            q->connect(c.sctp, &SCTP::Association::newIncomingChannel, q, [this, componentIndex]() {
+                qDebug("new incoming sctp channel");
+                auto assoc   = components[componentIndex].sctp;
+                auto channel = assoc->nextChannel();
+                if (!q->notifyIncomingConnection(channel)) {
+                    channel->close();
+                }
+            });
         }
 
         Connection::Ptr addDataChannel(TransportFeatures channelFeatures, const QString &label, int &componentIndex)

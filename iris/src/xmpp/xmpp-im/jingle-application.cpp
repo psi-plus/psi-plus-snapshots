@@ -22,9 +22,87 @@
 #include "xmpp_client.h"
 #include "xmpp_task.h"
 
+#include <QPointer>
 #include <QTimer>
 
 namespace XMPP { namespace Jingle {
+
+    class ConnectionWaiter : public QObject {
+        Q_OBJECT
+
+        std::function<void(Connection::Ptr)> ready;
+        std::function<void()>                failed;
+        Connection::Ptr                      connection;
+        QWeakPointer<Transport>              transport;
+
+        void waitConnected()
+        {
+            connect(connection.data(), &Connection::error, this,
+                    [this](int code) { onFailed(QString("error=%1").arg(code)); });
+            connect(connection.data(), &Connection::connected, this, &ConnectionWaiter::onReady);
+        }
+
+        void onFailed(const QString &errorMessage = QString())
+        {
+            if (!errorMessage.isEmpty())
+                qWarning("ConnectionWaiter: error: %s", qPrintable(errorMessage));
+            if (connection)
+                connection->disconnect(this); // qt signals
+            if (auto t = transport.lock()) {
+                t->disconnect(this);
+            }
+            failed();
+            deleteLater();
+        }
+
+        void onReady()
+        {
+            connection->disconnect(this); // qt signals
+            transport.lock()->disconnect(this);
+            ready(connection);
+            deleteLater();
+        }
+
+    public:
+        ConnectionWaiter(TransportFeatures features, std::function<void(Connection::Ptr)> &&ready,
+                         std::function<void()> &&failed, Application *app) :
+            QObject(app),
+            ready(std::move(ready)), failed(std::move(failed))
+        {
+            auto tr   = app->transport();
+            transport = tr;
+            Q_ASSERT(!tr.isNull());
+
+            connect(tr.data(), &Transport::stateChanged, this, [this]() {
+                if (transport.lock()->state() == State::Finished) {
+                    onFailed(QLatin1String("Transport is dead but no connection"));
+                }
+            });
+            if (tr->isLocal()) {
+                connection = tr->addChannel(features, app->contentName());
+                if (!connection) {
+                    onFailed(QString("No channel on %1 transport").arg(tr->pad()->ns()));
+                    return;
+                }
+                waitConnected();
+            } else {
+                app->transport()->addAcceptor(
+                    features, [this, self = QPointer<ConnectionWaiter>(this)](Connection::Ptr newConnection) {
+                        if (!self || connection)
+                            return false;
+                        connection = newConnection;
+                        if (connection->isOpen())
+                            onReady();
+                        else
+                            waitConnected();
+                        return true;
+                    });
+            }
+        }
+
+        ~ConnectionWaiter() { qDebug("~ConnectionWaiter"); }
+    };
+
     //----------------------------------------------------------------------------
     // Application
     //----------------------------------------------------------------------------
@@ -185,6 +263,8 @@ namespace XMPP { namespace Jingle {
             if (_pendingTransportReplace == PendingTransportReplace::Planned) {
                 _pendingTransportReplace = PendingTransportReplace::NeedAck;
             }
+            if (_update.reason.isValid())
+                updates << _update.reason.toXml(doc);
             return OutgoingUpdate { updates, [this, transportCB](Task *task) {
                                        transportCB(task);
                                        if (task->success())
@@ -222,6 +302,17 @@ namespace XMPP { namespace Jingle {
                 cb(task);
         };
         return OutgoingTransportInfoUpdate { transportEl, wrapCB };
+    }
+
+    void Application::expectSingleConnection(TransportFeatures features, std::function<void(Connection::Ptr)> &&ready)
+    {
+        new ConnectionWaiter(
+            features, std::move(ready),
+            [this]() {
+                _transport->stop();
+                selectNextTransport();
+            },
+            this);
     }
 
     bool Application::isRemote() const { return _pad->session()->role() != _creator; }
@@ -288,12 +379,12 @@ namespace XMPP { namespace Jingle {
                 _transportSelector->backupTransport(_transport);
             }
 
-            if (transport->creator() == _pad->session()->role()) { // if new transport is locally created
+            if (transport->isLocal()) {
                 auto ts = _transport->state() == State::Finished ? _transport->prevState() : _transport->state();
-                if (_transport->creator() != _pad->session()->role() || ts > State::Unacked) {
+                if (_transport->isRemote() || ts > State::Unacked) {
                     // if remote knows of the current transport
                     _pendingTransportReplace = PendingTransportReplace::Planned;
-                } else if (_transport->creator() == _pad->session()->role() && ts == State::Unacked) {
+                } else if (_transport->isLocal() && ts == State::Unacked) {
                     // if remote may know but we don't know yet about it
                     _pendingTransportReplace = PendingTransportReplace::NeedAck;
                 }
@@ -332,3 +423,5 @@ namespace XMPP { namespace Jingle {
     bool ApplicationManagerPad::incomingSessionInfo(const QDomElement &) { return false; /* unsupported by default */ }
 
 }}
+
+#include "jingle-application.moc"

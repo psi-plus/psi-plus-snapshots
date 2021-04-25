@@ -556,13 +556,6 @@ void SctpAssociation::OnUsrSctpSendSctpData(void *buffer, size_t len)
 void SctpAssociation::OnUsrSctpReceiveSctpData(uint16_t streamId, uint16_t ssn, uint32_t ppid, int flags,
                                                const uint8_t *data, size_t len)
 {
-    // Ignore WebRTC DataChannel Control DATA chunks.
-    if (ppid == 50) {
-        MS_WARN_TAG(sctp, "ignoring SCTP data with ppid:50 (WebRTC DataChannel Control)");
-
-        return;
-    }
-
     if (this->messageBufferLen != 0 && ssn != this->lastSsnReceived) {
         MS_WARN_TAG(sctp,
                     "message chunk received with different SSN while buffer not empty, buffer discarded [ssn:%" PRIu16

@@ -143,6 +143,8 @@ namespace XMPP { namespace Jingle { namespace IBB {
         size_t                                    defaultBlockSize = 4096;
         bool                                      started          = false;
 
+        ~Private() { qDebug("destroying ibb private"); }
+
         void checkAndStartConnection(const QSharedPointer<Connection> &c)
         {
             if (c->connection || c->state != State::Accepted)
@@ -184,8 +186,8 @@ namespace XMPP { namespace Jingle { namespace IBB {
     {
         d->q = this;
         connect(pad->manager(), &TransportManager::abortAllRequested, this, [this]() {
-            for (auto &c : d->connections) {
-                c->close();
+            while (d->connections.size()) {
+                d->connections.first()->close();
             }
             // d->aborted = true;
             emit failed(); // TODO review if necessary. likely it's not
@@ -196,10 +198,8 @@ namespace XMPP { namespace Jingle { namespace IBB {
     {
         // we have to mark all of them as finished just in case they are captured somewhere else
         qDebug("jingle-ibb: destroy");
-        if (d) {
-            for (auto &c : d->connections) {
-                c->close();
-            }
+        while (d->connections.size()) {
+            d->connections.first()->close();
         }
     }
 
