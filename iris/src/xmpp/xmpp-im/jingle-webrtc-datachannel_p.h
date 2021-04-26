@@ -17,6 +17,8 @@
  *
  */
 
+#pragma once
+
 #include "jingle-connection.h"
 
 namespace XMPP { namespace Jingle { namespace SCTP {
@@ -37,9 +39,21 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         enum DisconnectReason { TransportClosed, SctpClosed, ChannelClosed, ChannelReplaced };
         enum DcepState { NoDcep, DcepOpening, DcepNegotiated };
 
+        struct OutgoingDatagram {
+            quint16    streamId;
+            quint8     channelType;
+            quint8     ppid;
+            quint32    reliability;
+            QByteArray data;
+        };
+
+        using OutgoingCallback = std::function<void(const OutgoingDatagram &)>;
+
         AssociationPrivate *   association;
         QList<NetworkDatagram> datagrams;
         DisconnectReason       disconnectReason = ChannelClosed;
+        std::size_t            outgoingBufSize  = 0;
+        OutgoingCallback       outgoingCallback;
 
         quint8    channelType = 0;
         quint32   reliability = 0;
@@ -56,10 +70,11 @@ namespace XMPP { namespace Jingle { namespace SCTP {
 
         void setStreamId(quint16 id) { streamId = id; }
         void connect();
+        void setOutgoingCallback(OutgoingCallback &&callback);
 
         bool              hasPendingDatagrams() const override;
-        NetworkDatagram   receiveDatagram(qint64 maxSize = -1) override;
-        bool              sendDatagram(const NetworkDatagram &data) override;
+        NetworkDatagram   readDatagram(qint64 maxSize = -1) override;
+        bool              writeDatagram(const NetworkDatagram &data) override;
         qint64            bytesAvailable() const override;
         qint64            bytesToWrite() const override;
         void              close() override;
@@ -70,6 +85,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         void onError(QAbstractSocket::SocketError error);
         void onDisconnected(DisconnectReason reason);
         void onIncomingData(const QByteArray &data, quint32 ppid);
+        void onMessageWritten(size_t size);
     };
 
 }}}

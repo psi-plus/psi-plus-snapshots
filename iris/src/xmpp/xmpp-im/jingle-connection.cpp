@@ -23,14 +23,14 @@ namespace XMPP { namespace Jingle {
 
     bool Connection::hasPendingDatagrams() const { return false; }
 
-    NetworkDatagram Connection::receiveDatagram(qint64 maxSize)
+    NetworkDatagram Connection::readDatagram(qint64 maxSize)
     {
         qCritical("Calling unimplemented function receiveDatagram");
         Q_UNUSED(maxSize)
         return NetworkDatagram();
     }
 
-    bool Connection::sendDatagram(const NetworkDatagram &)
+    bool Connection::writeDatagram(const NetworkDatagram &)
     {
         qCritical("Calling unimplemented function sendDatagram");
         return false;

@@ -6,6 +6,7 @@
 //#include "Logger.hpp"
 #include <usrsctp.h>
 
+#include <QCoreApplication>
 #include <QTimer>
 
 #include <cstring>
@@ -158,6 +159,7 @@ DepUsrSCTP::Checker::Checker()
     MS_TRACE();
 
     this->timer = new QTimer();
+    QObject::connect(this->timer, &QTimer::timeout, qApp, [this]() { OnTimer(); });
 }
 
 DepUsrSCTP::Checker::~Checker()

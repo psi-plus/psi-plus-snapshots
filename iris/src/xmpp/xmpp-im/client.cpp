@@ -181,7 +181,7 @@ Client::Client(QObject *par) : QObject(par)
     d->jingleICEManager = new Jingle::ICE::Manager(d->jingleManager);
     d->jingleManager->registerTransport(d->jingleS5BManager);
     d->jingleManager->registerTransport(d->jingleIBBManager);
-    // d->jingleManager->registerTransport(d->jingleICEManager);
+    d->jingleManager->registerTransport(d->jingleICEManager);
 }
 
 Client::~Client()
@@ -1138,9 +1138,8 @@ DiscoItem Client::makeDiscoResult(const QString &node) const
     features.addFeature("urn:xmpp:time");
     features.addFeature("urn:xmpp:message-correct:0");
     features.addFeature("urn:xmpp:jingle:1");
-    for (auto const &feature : d->jingleManager->discoFeatures()) {
-        features.addFeature(feature);
-    }
+    features += d->jingleManager->discoFeatures();
+
     // TODO rather do foreach for all registered jingle apps and transports
     // TODO: since it depends on UI it needs a way to be disabled
     features.addFeature("urn:xmpp:jingle:apps:file-transfer:5");
@@ -1148,9 +1147,7 @@ DiscoItem Client::makeDiscoResult(const QString &node) const
     features.addFeature(NS_CAPS);
 
     // Client-specific features
-    for (const QString &i : d->features.list()) {
-        features.addFeature(i);
-    }
+    features += d->features;
 
     item.setFeatures(features);
 

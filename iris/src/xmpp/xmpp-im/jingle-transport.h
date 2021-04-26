@@ -233,8 +233,11 @@ namespace XMPP { namespace Jingle {
 
         // may show more features than Transport instance. For example some transports may work in both reliable and not
         // reliable modes
-        virtual TransportFeatures features() const              = 0;
-        virtual void              setJingleManager(Manager *jm) = 0;
+        virtual TransportFeatures features() const = 0;
+
+        /// checks where the transport can make a connection with desired features while serving namespace `ns`
+        virtual bool canMakeConnection(TransportFeatures desiredFeatures, const QString &ns = QString());
+        virtual void setJingleManager(Manager *jm) = 0;
 
         // FIXME rename methods
         virtual QSharedPointer<Transport> newTransport(const TransportManagerPad::Ptr &pad, Origin creator) = 0;

@@ -79,7 +79,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
         bool hasPendingDatagrams() const { return datagrams.size() > 0; }
 
-        NetworkDatagram receiveDatagram(qint64 maxSize = -1)
+        NetworkDatagram readDatagram(qint64 maxSize = -1)
         {
             Q_UNUSED(maxSize) // TODO or not?
             return datagrams.size() ? datagrams.takeFirst() : NetworkDatagram();
@@ -1710,7 +1710,8 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
     TransportFeatures Manager::features() const
     {
-        return TransportFeature::Reliable | TransportFeature::Fast | TransportFeature::DataOriented;
+        return TransportFeature::Reliable | TransportFeature::Fast | TransportFeature::DataOriented
+            | TransportFeature::Ordered;
     }
 
     void Manager::setJingleManager(XMPP::Jingle::Manager *jm)

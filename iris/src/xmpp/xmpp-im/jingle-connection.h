@@ -63,8 +63,8 @@ namespace XMPP { namespace Jingle {
     public:
         using Ptr = QSharedPointer<Connection>; // will be shared between transport and application
         virtual bool              hasPendingDatagrams() const;
-        virtual NetworkDatagram   receiveDatagram(qint64 maxSize = -1);
-        virtual bool              sendDatagram(const NetworkDatagram &data);
+        virtual NetworkDatagram   readDatagram(qint64 maxSize = -1);
+        virtual bool              writeDatagram(const NetworkDatagram &data);
         virtual size_t            blockSize() const;
         virtual int               component() const;
         virtual TransportFeatures features() const = 0;

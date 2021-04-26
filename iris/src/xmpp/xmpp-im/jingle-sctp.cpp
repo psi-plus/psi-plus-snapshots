@@ -111,7 +111,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     {
         SCTP_DEBUG("read outgoing");
         std::lock_guard<std::mutex> lock(d->mutex);
-        return d->outgoingQueue.isEmpty() ? QByteArray() : d->outgoingQueue.dequeue();
+        return d->outgoingPacketsQueue.isEmpty() ? QByteArray() : d->outgoingPacketsQueue.dequeue();
     }
 
     void Association::writeIncoming(const QByteArray &data)
@@ -120,7 +120,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         d->assoc.ProcessSctpData(reinterpret_cast<const uint8_t *>(data.data()), data.size());
     }
 
-    int Association::pendingOutgoingDatagrams() const { return d->outgoingQueue.size(); }
+    int Association::pendingOutgoingDatagrams() const { return d->outgoingPacketsQueue.size(); }
 
     int Association::pendingChannels() const { return d->pendingChannels.size(); }
 

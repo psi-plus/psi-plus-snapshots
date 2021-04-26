@@ -96,6 +96,8 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         qDebug("jignle-sctp: on buffered data: %d", len);
         Q_UNUSED(sctpAssociation);
         Q_UNUSED(len);
+        if (!dumpingOutogingBuffer)
+            procesOutgoingMessageQueue();
         // TODO control buffering to reduce memory consumption
     }
 
@@ -115,9 +117,11 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         auto it = channels.constFind(streamId);
         if (it != channels.constEnd()) {
             qWarning("datachannel %u was replaced", streamId);
+            (*it)->disconnect(this);
             (*it).staticCast<WebRTCDataChannel>()->onDisconnected(WebRTCDataChannel::ChannelReplaced);
         }
         channels.insert(streamId, channel);
+        connectChannelSignals(channel);
 
         // acknowledge channel open instantly
         QByteArray reply(4, 0);
@@ -157,6 +161,36 @@ namespace XMPP { namespace Jingle { namespace SCTP {
             &consumer, ppid, reinterpret_cast<const uint8_t *>(data.data()), data.size(),
             new std::function<void(bool)>([this, &success](bool cb_success) { success = cb_success; }));
         return success;
+    }
+
+    void AssociationPrivate::procesOutgoingMessageQueue()
+    {
+        dumpingOutogingBuffer = true;
+        // keep going while we can fit the buffer
+        while (outgoingMessageQueue.size()) {
+
+            auto const &[connection, message] = outgoingMessageQueue.first();
+            if (int(MAX_SEND_BUFFER_SIZE - assoc.GetSctpBufferedAmount()) < message.data.size())
+                break;
+
+            bool        ordered  = !(message.channelType & 0x80);
+            Reliability reliable = ordered         ? Reliable
+                : (message.channelType & 0x3) == 1 ? PartialRexmit
+                : (message.channelType & 0x3) == 2 ? PartialTimers
+                                                   : Reliable;
+
+            if (write(message.data, message.streamId, PPID_BINARY, reliable, ordered, message.reliability)) {
+                int sz = message.data.size();
+                connection.staticCast<WebRTCDataChannel>()->onMessageWritten(sz);
+            } else if (assoc.isSendBufferFull())
+                break;
+            else {
+                qWarning("unexpected sctp write error");
+                connection.staticCast<WebRTCDataChannel>()->onError(QAbstractSocket::SocketResourceError);
+            }
+            outgoingMessageQueue.removeFirst();
+        }
+        dumpingOutogingBuffer = false;
     }
 
     void AssociationPrivate::close(quint16 streamId)
@@ -201,6 +235,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         } else {
             pendingLocalChannels.enqueue(channel);
         }
+        connectChannelSignals(channel);
 
         return channel;
     }
@@ -257,7 +292,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
 
     void AssociationPrivate::onOutgoingData(const QByteArray &data)
     {
-        outgoingQueue.enqueue(data);
+        outgoingPacketsQueue.enqueue(data);
         emit q->readyReadOutgoing();
     }
 
@@ -286,6 +321,15 @@ namespace XMPP { namespace Jingle { namespace SCTP {
             return;
         }
         it->staticCast<WebRTCDataChannel>()->onDisconnected(WebRTCDataChannel::ChannelClosed);
+    }
+
+    void AssociationPrivate::connectChannelSignals(Connection::Ptr channel)
+    {
+        auto dc = channel.staticCast<WebRTCDataChannel>();
+        dc->setOutgoingCallback([this, weakDc = dc.toWeakRef()](const WebRTCDataChannel::OutgoingDatagram &dg) {
+            outgoingMessageQueue.enqueue({ weakDc.lock(), dg });
+            procesOutgoingMessageQueue();
+        });
     }
 
 }}}

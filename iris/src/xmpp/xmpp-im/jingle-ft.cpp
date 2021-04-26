@@ -30,13 +30,18 @@
 #include <QRandomGenerator>
 #endif
 #include <QPointer>
+#include <QTimer>
+#include <chrono>
 #include <cmath>
 #include <functional>
 
+using namespace std::chrono_literals;
+
 namespace XMPP { namespace Jingle { namespace FileTransfer {
 
-    const QString NS            = QStringLiteral("urn:xmpp:jingle:apps:file-transfer:5");
-    const QString AMPLITUDES_NS = QStringLiteral("urn:audio:amplitudes");
+    const QString  NS               = QStringLiteral("urn:xmpp:jingle:apps:file-transfer:5");
+    const QString  AMPLITUDES_NS    = QStringLiteral("urn:audio:amplitudes");
+    constexpr auto RECEIVED_TIMEOUT = 30s;
 
     // tags
     static const QString AMPLITUDES_TAG = QStringLiteral("amplitudes");
@@ -414,7 +419,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     QStringList Manager::availableTransports() const
     {
-        return jingleManager->availableTransports(TransportFeature::Reliable | TransportFeature::DataOriented);
+        return jingleManager->availableTransports(TransportFeature::Reliable | TransportFeature::Ordered
+                                                  | TransportFeature::DataOriented);
     }
 
     //----------------------------------------------------------------------------
@@ -445,6 +451,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         qint64              bytesLeft = 0;
         QList<Hash>         outgoingChecksum;
         qint64              outgoingChecksumRangeOffset = 0, outgoingChecksumRangeLength = 0;
+        QTimer *            receivedTimer = nullptr;
 
         void setState(State s)
         {
@@ -466,17 +473,35 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             emit q->stateChanged(s);
         }
 
+        void onReceived()
+        {
+            lastReason = Reason(Reason::Condition::Success);
+            setState(State::Finished);
+        }
+
         void handleStreamFail()
         {
             lastReason = Reason(Reason::Condition::FailedApplication, QString::fromLatin1("stream failed"));
             setState(State::Finished);
         }
 
+        void expectReceived()
+        {
+            if (receivedTimer || q->state() == State::Finished)
+                return;
+            receivedTimer = new QTimer(q);
+            receivedTimer->setSingleShot(true);
+            receivedTimer->setInterval(RECEIVED_TIMEOUT);
+            q->connect(receivedTimer, &QTimer::timeout, q, [this]() {
+                qDebug("Waiting for <received> timed out. But likely succeded anyway");
+                onReceived();
+            });
+        }
+
         void writeNextBlockToTransport()
         {
             if (!(endlessRange || bytesLeft)) {
-                lastReason = Reason(Reason::Condition::Success);
-                setState(State::Finished);
+                expectReceived();
                 return; // everything is written
             }
             auto sz = qint64(connection->blockSize());
@@ -501,9 +526,9 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 }
                 return;
             }
-            // qDebug("JINGLE-FT write %d bytes to connection", data.size());
+            qDebug("JINGLE-FT write %d bytes to connection", data.size());
             if (connection->features() & TransportFeature::MessageOriented) {
-                if (!connection->sendDatagram(data)) {
+                if (!connection->writeDatagram(data)) {
                     handleStreamFail();
                     return;
                 }
@@ -523,7 +548,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             while (bytesLeft && ((bytesAvail = connection->bytesAvailable()) || (connection->hasPendingDatagrams()))) {
                 QByteArray data;
                 if (connection->features() & TransportFeature::MessageOriented) {
-                    data = connection->receiveDatagram().data();
+                    data = connection->readDatagram().data();
                 } else {
                     qint64 sz = 65536; // shall we respect transport->blockSize() ?
                     if (sz > bytesLeft) {
@@ -534,7 +559,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                     }
                     data = connection->read(sz);
                 }
-                // qDebug("JINGLE-FT read %d bytes from connection", data.size());
+                qDebug("JINGLE-FT read %d bytes from connection", data.size());
                 if (data.isEmpty()) {
                     handleStreamFail();
                     return;
@@ -845,8 +870,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     void Application::incomingReceived()
     {
-        // TODO
         qDebug("got received");
+        d->onReceived();
     }
 
     Pad::Pad(Manager *manager, Session *session) : _manager(manager), _session(session) { }

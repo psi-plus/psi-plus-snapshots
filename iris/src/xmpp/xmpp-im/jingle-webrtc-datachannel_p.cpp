@@ -105,22 +105,22 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         association->write(data, streamId, PPID_DCEP);
     }
 
+    void WebRTCDataChannel::setOutgoingCallback(OutgoingCallback &&callback) { outgoingCallback = std::move(callback); }
+
     bool WebRTCDataChannel::hasPendingDatagrams() const { return datagrams.size() > 0; }
 
-    NetworkDatagram WebRTCDataChannel::receiveDatagram(qint64 maxSize)
+    NetworkDatagram WebRTCDataChannel::readDatagram(qint64 maxSize)
     {
         Q_UNUSED(maxSize) // TODO or not?
         return datagrams.size() ? datagrams.takeFirst() : NetworkDatagram();
     }
 
-    bool WebRTCDataChannel::sendDatagram(const NetworkDatagram &data)
+    bool WebRTCDataChannel::writeDatagram(const NetworkDatagram &data)
     {
-        bool        ordered  = !(channelType & 0x80);
-        Reliability reliable = ordered ? Reliable
-            : (channelType & 0x3) == 1 ? PartialRexmit
-            : (channelType & 0x3) == 2 ? PartialTimers
-                                       : Reliable;
-        return association->write(data.data(), streamId, PPID_BINARY, reliable, ordered, reliability);
+        Q_ASSERT(bool(outgoingCallback));
+        outgoingBufSize += data.data().size();
+        outgoingCallback({ quint16(streamId), channelType, PPID_BINARY, reliability, data.data() });
+        return true;
     }
 
     qint64 WebRTCDataChannel::bytesAvailable() const { return 0; }
@@ -175,5 +175,11 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         // check other PPIDs.
         datagrams.append(NetworkDatagram { data });
         emit readyRead();
+    }
+
+    void WebRTCDataChannel::onMessageWritten(size_t size)
+    {
+        outgoingBufSize -= size;
+        emit bytesWritten(size);
     }
 }}}

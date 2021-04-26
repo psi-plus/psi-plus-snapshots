@@ -426,7 +426,8 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
     TransportFeatures Manager::features() const
     {
-        return TransportFeature::AlwaysConnect | TransportFeature::Reliable | TransportFeature::DataOriented;
+        return TransportFeature::AlwaysConnect | TransportFeature::Reliable | TransportFeature::Ordered
+            | TransportFeature::DataOriented;
     }
 
     void Manager::setJingleManager(XMPP::Jingle::Manager *jm) { d->jingleManager = jm; }

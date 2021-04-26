@@ -104,6 +104,11 @@ public:
 
     Features &  operator<<(const QString &feature);
     inline bool operator==(const Features &other) { return _list == other._list; }
+    Features &  operator+=(const Features &other)
+    {
+        _list += other._list;
+        return *this;
+    }
 
     class FeatureName;
 

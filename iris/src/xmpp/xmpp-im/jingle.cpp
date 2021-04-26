@@ -38,6 +38,7 @@
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QRandomGenerator>
 #endif
+#include <QCoreApplication>
 
 namespace XMPP { namespace Jingle {
     const QString NS(QStringLiteral("urn:xmpp:jingle:1"));
@@ -179,25 +180,34 @@ namespace XMPP { namespace Jingle {
     //----------------------------------------------------------------------------
     // Reason
     //----------------------------------------------------------------------------
-    static const QMap<QString, Reason::Condition> reasonConditions = {
-        { QStringLiteral("alternative-session"), Reason::AlternativeSession },
-        { QStringLiteral("busy"), Reason::Busy },
-        { QStringLiteral("cancel"), Reason::Cancel },
-        { QStringLiteral("connectivity-error"), Reason::ConnectivityError },
-        { QStringLiteral("decline"), Reason::Decline },
-        { QStringLiteral("expired"), Reason::Expired },
-        { QStringLiteral("failed-application"), Reason::FailedApplication },
-        { QStringLiteral("failed-transport"), Reason::FailedTransport },
-        { QStringLiteral("general-error"), Reason::GeneralError },
-        { QStringLiteral("gone"), Reason::Gone },
-        { QStringLiteral("incompatible-parameters"), Reason::IncompatibleParameters },
-        { QStringLiteral("media-error"), Reason::MediaError },
-        { QStringLiteral("security-error"), Reason::SecurityError },
-        { QStringLiteral("success"), Reason::Success },
-        { QStringLiteral("timeout"), Reason::Timeout },
-        { QStringLiteral("unsupported-applications"), Reason::UnsupportedApplications },
-        { QStringLiteral("unsupported-transports"), Reason::UnsupportedTransports },
-    };
+    using ReasonMap = QMap<QString, Reason::Condition>;
+    const ReasonMap &reasonConditions()
+    {
+        static std::unique_ptr<ReasonMap> conditions;
+        if (!conditions) {
+            conditions.reset(new ReasonMap({
+                { QStringLiteral("alternative-session"), Reason::AlternativeSession },
+                { QStringLiteral("busy"), Reason::Busy },
+                { QStringLiteral("cancel"), Reason::Cancel },
+                { QStringLiteral("connectivity-error"), Reason::ConnectivityError },
+                { QStringLiteral("decline"), Reason::Decline },
+                { QStringLiteral("expired"), Reason::Expired },
+                { QStringLiteral("failed-application"), Reason::FailedApplication },
+                { QStringLiteral("failed-transport"), Reason::FailedTransport },
+                { QStringLiteral("general-error"), Reason::GeneralError },
+                { QStringLiteral("gone"), Reason::Gone },
+                { QStringLiteral("incompatible-parameters"), Reason::IncompatibleParameters },
+                { QStringLiteral("media-error"), Reason::MediaError },
+                { QStringLiteral("security-error"), Reason::SecurityError },
+                { QStringLiteral("success"), Reason::Success },
+                { QStringLiteral("timeout"), Reason::Timeout },
+                { QStringLiteral("unsupported-applications"), Reason::UnsupportedApplications },
+                { QStringLiteral("unsupported-transports"), Reason::UnsupportedTransports },
+            }));
+            QObject::connect(qApp, &QCoreApplication::destroyed, []() { conditions.release(); });
+        }
+        return *conditions;
+    }
 
     class Reason::Private : public QSharedData {
     public:
@@ -230,7 +240,7 @@ namespace XMPP { namespace Jingle {
             } else if (c.namespaceURI() != rns) {
                 // TODO add here all the extensions to reason.
             } else {
-                condition = reasonConditions.value(c.tagName());
+                condition = reasonConditions().value(c.tagName());
             }
         }
 
@@ -270,7 +280,7 @@ namespace XMPP { namespace Jingle {
     QDomElement Reason::toXml(QDomDocument *doc) const
     {
         if (d && d->cond != NoReason) {
-            for (auto r = reasonConditions.cbegin(); r != reasonConditions.cend(); ++r) {
+            for (auto r = reasonConditions().cbegin(); r != reasonConditions().cend(); ++r) {
                 if (r.value() == d->cond) {
                     QDomElement e = doc->createElement(QLatin1String("reason"));
                     e.appendChild(doc->createElement(r.key()));
@@ -534,10 +544,10 @@ namespace XMPP { namespace Jingle {
         Manager *              manager;
         QScopedPointer<JTPush> pushTask;
         // ns -> application
-        QMap<QString, QPointer<ApplicationManager>> applicationManagers;
+        std::map<QString, QPointer<ApplicationManager>> applicationManagers;
         // ns -> parser function
-        QMap<QString, QPointer<TransportManager>> transportManagers;
-        std::function<bool(const Jid &)>          remoteJidCecker;
+        std::map<QString, QPointer<TransportManager>> transportManagers;
+        std::function<bool(const Jid &)>              remoteJidCecker;
 
         // when set/valid any incoming session initiate will be replied with redirection error
         Jid                                   redirectionJid;
@@ -568,10 +578,10 @@ namespace XMPP { namespace Jingle {
     Manager::~Manager()
     {
         for (auto &m : d->transportManagers) {
-            m->setJingleManager(nullptr);
+            m.second->setJingleManager(nullptr);
         }
         for (auto &m : d->applicationManagers) {
-            m->setJingleManager(nullptr);
+            m.second->setJingleManager(nullptr);
         }
     }
 
@@ -591,48 +601,46 @@ namespace XMPP { namespace Jingle {
     {
         auto const &nss = app->ns();
         for (auto const &ns : nss)
-            d->applicationManagers.insert(ns, app);
+            d->applicationManagers.emplace(ns, app);
         app->setJingleManager(this);
     }
 
     void Manager::unregisterApp(const QString &ns)
     {
-        auto appManager = d->applicationManagers.value(ns);
-        if (appManager) {
-            appManager->closeAll(ns);
-            d->applicationManagers.remove(ns);
+        auto node = d->applicationManagers.extract(ns);
+        if (node) {
+            node.mapped()->closeAll(ns);
         }
     }
 
-    bool Manager::isRegisteredApplication(const QString &ns) { return d->applicationManagers.contains(ns); }
+    bool Manager::isRegisteredApplication(const QString &ns) { return d->applicationManagers.count(ns); }
 
     ApplicationManagerPad *Manager::applicationPad(Session *session, const QString &ns)
     {
-        auto am = d->applicationManagers.value(ns);
-        if (!am) {
+        auto it = d->applicationManagers.find(ns);
+        if (it == d->applicationManagers.end()) {
             return nullptr;
         }
-        return am->pad(session);
+        return it->second->pad(session);
     }
 
     void Manager::registerTransport(TransportManager *transport)
     {
         auto const &nss = transport->ns();
         for (auto const &ns : nss)
-            d->transportManagers.insert(ns, transport);
+            d->transportManagers.emplace(ns, transport);
         transport->setJingleManager(this);
     }
 
     void Manager::unregisterTransport(const QString &ns)
     {
-        auto trManager = d->transportManagers.value(ns);
+        auto trManager = d->transportManagers.extract(ns);
         if (trManager) {
-            trManager->closeAll(ns);
-            d->transportManagers.remove(ns);
+            trManager.mapped()->closeAll(ns);
         }
     }
 
-    bool Manager::isRegisteredTransport(const QString &ns) { return d->transportManagers.contains(ns); }
+    bool Manager::isRegisteredTransport(const QString &ns) { return d->transportManagers.count(ns); }
 
     bool Manager::isAllowedParty(const Jid &jid) const
     {
@@ -658,33 +666,36 @@ namespace XMPP { namespace Jingle {
 
     TransportManagerPad *Manager::transportPad(Session *session, const QString &ns)
     {
-        auto transportManager = d->transportManagers.value(ns);
-        if (!transportManager) {
+        auto transportManager = d->transportManagers.find(ns);
+        if (transportManager == d->transportManagers.end()) {
             return nullptr;
         }
-        return transportManager->pad(session);
+        return transportManager->second->pad(session);
     }
 
     QStringList Manager::availableTransports(const TransportFeatures &features) const
     {
-        QMap<int, QString> ret;
-        for (auto it = d->transportManagers.cbegin(); it != d->transportManagers.cend(); ++it) {
-            if (((*it)->features() & features) == features) {
-                ret.insert((*it)->features(), it.key());
-            }
+        std::vector<std::pair<int, QString>> prio;
+        prio.reserve(d->transportManagers.size());
+        for (auto const &[ns, m] : d->transportManagers) {
+            if (m->canMakeConnection(features, ns))
+                prio.emplace_back(m->features(), ns);
         }
+        std::sort(prio.begin(), prio.end(), [](auto const &a, auto const &b) { return a.first < b.first; });
+        QStringList nss;
+        std::transform(prio.begin(), prio.end(), std::back_inserter(nss), [](auto const &p) { return p.second; });
+        return nss;
         // sorting by features is totally unreliable, so we have TransportSelector to do better job
-        return ret.values();
     }
 
     QStringList Manager::discoFeatures() const
     {
         QStringList ret;
         for (auto const &mgr : d->applicationManagers) {
-            ret += mgr->discoFeatures();
+            ret += mgr.second->discoFeatures();
         }
         for (auto const &mgr : d->transportManagers) {
-            ret += mgr->discoFeatures();
+            ret += mgr.second->discoFeatures();
         }
         return ret;
     }

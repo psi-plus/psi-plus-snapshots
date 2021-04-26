@@ -17,11 +17,14 @@
  *
  */
 
+#pragma once
+
 #include "jingle-connection.h"
 
 #include "irisnet/noncore/sctp/DepUsrSCTP.hpp"
 #include "irisnet/noncore/sctp/SctpAssociation.hpp"
 #include "jingle-sctp.h"
+#include "jingle-webrtc-datachannel_p.h"
 
 #include <QHash>
 #include <QQueue>
@@ -43,19 +46,23 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     class AssociationPrivate : public QObject, RTC::SctpAssociation::Listener {
         Q_OBJECT
     public:
-        Association *                   q;
-        Keeper::Ptr                     keeper;
-        QQueue<QByteArray>              outgoingQueue;
-        std::mutex                      mutex;
-        QHash<quint16, Connection::Ptr> channels; // streamId -> WebRTCDataChannel
-        QQueue<Connection::Ptr>         pendingChannels;
-        QQueue<Connection::Ptr>         pendingLocalChannels;
-        RTC::SctpAssociation            assoc;
+        using QualifiedOutgoingMessage = std::pair<Connection::Ptr, WebRTCDataChannel::OutgoingDatagram>;
 
-        bool    transportConnected = false;
-        bool    useOddStreamId     = false;
-        quint16 nextStreamId       = 0;
-        quint16 channelsLeft       = 32768;
+        Association *                    q;
+        Keeper::Ptr                      keeper;
+        QQueue<QByteArray>               outgoingPacketsQueue; // ready to be sent over dtls
+        QQueue<QualifiedOutgoingMessage> outgoingMessageQueue; // ready to be processed by sctp stack
+        std::mutex                       mutex;
+        QHash<quint16, Connection::Ptr>  channels; // streamId -> WebRTCDataChannel
+        QQueue<Connection::Ptr>          pendingChannels;
+        QQueue<Connection::Ptr>          pendingLocalChannels;
+        RTC::SctpAssociation             assoc;
+
+        bool    dumpingOutogingBuffer = false;
+        bool    transportConnected    = false;
+        bool    useOddStreamId        = false;
+        quint16 nextStreamId          = 0;
+        quint16 channelsLeft          = 32768;
 
         AssociationPrivate(Association *q);
 
@@ -88,6 +95,10 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         void onOutgoingData(const QByteArray &data);
         void onIncomingData(const QByteArray &data, quint16 streamId, quint32 ppid);
         void onStreamClosed(quint16 streamId);
+
+    private:
+        void connectChannelSignals(Connection::Ptr channel);
+        void procesOutgoingMessageQueue();
     };
 
 }}}

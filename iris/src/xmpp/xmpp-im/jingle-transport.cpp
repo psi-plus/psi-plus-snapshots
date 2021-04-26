@@ -25,6 +25,11 @@ namespace XMPP { namespace Jingle {
     // TransportManager
     //----------------------------------------------------------------------------
     TransportManager::TransportManager(QObject *parent) : QObject(parent) { }
+
+    bool TransportManager::canMakeConnection(TransportFeatures desiredFeatures, const QString &)
+    {
+        return (features() & desiredFeatures) == desiredFeatures;
+    }
     QStringList TransportManager::ns() const { return discoFeatures(); }
     void        TransportManager::closeAll(const QString &) { emit abortAllRequested(); }
 
