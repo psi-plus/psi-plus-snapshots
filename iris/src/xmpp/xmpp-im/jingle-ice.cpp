@@ -545,6 +545,13 @@ namespace XMPP { namespace Jingle { namespace ICE {
         quint16      udpPort;
         QHostAddress udpAddress;
 
+        ~Private()
+        {
+            if (ice) {
+                ice->disconnect(q);
+            }
+        }
+
         inline Jid remoteJid() const { return q->_pad->session()->peer(); }
 
         Component &addComponent()
@@ -698,9 +705,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 }
             });
             q->connect(ice, &XMPP::Ice176::error, q, [this](XMPP::Ice176::Error err) {
-                q->_lastReason = Reason(Reason::Condition::FailedTransport, QString("ICE failed: %1").arg(err));
-                q->setState(State::Finished);
-                emit q->failed();
+                q->onFinish(Reason::Condition::FailedTransport, QString("ICE failed: %1").arg(err));
             });
             q->connect(ice, &XMPP::Ice176::localCandidatesReady, q,
                        [this](const QList<XMPP::Ice176::Candidate> &candidates) {
@@ -985,8 +990,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         d->remoteState.reset(new Element {});
         connect(_pad->manager(), &TransportManager::abortAllRequested, this, [this]() {
             d->aborted = true;
-            _state     = State::Finished;
-            emit failed();
+            onFinish(Reason::Cancel);
         });
     }
 

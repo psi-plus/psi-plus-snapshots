@@ -966,8 +966,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 } else
                     qDebug("checkAndFinishNegotiation not finished: preferred is not Active");
             } else { // both sides reported candidate error
-                q->setState(State::Finished);
-                emit q->failed();
+                q->onFinish(Reason::Condition::ConnectivityError, QLatin1String("both sides reported candidate error"));
             }
         }
 
@@ -1348,8 +1347,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 delete disco;
 
                 QTimer::singleShot(0, q, [this]() {
-                    q->setState(State::Finished);
-                    emit q->failed();
+                    q->onFinish(Reason::Condition::ConnectivityError, QLatin1String("got proxy error from the peer"));
                 });
                 return true;
             }
@@ -1368,8 +1366,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
         connect(&d->negotiationFinishTimer, &QTimer::timeout, this, [this]() { d->handleNegotiationTimeout(); });
         connect(_pad->manager(), &TransportManager::abortAllRequested, this, [this]() {
             d->aborted = true;
-            _state     = State::Finished;
-            emit failed();
+            onFinish(Reason::Condition::Cancel);
         });
     }
 
@@ -1413,10 +1410,8 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
         if (isRemote() && !notifyIncomingConnection(d->connection)) {
             // our the only connection wasn't accepted
-            _state      = State::Finished;
-            _lastReason = { Reason::IncompatibleParameters,
-                            QLatin1String("Application didn't accept the only incoming connection") };
-            emit failed();
+            onFinish(Reason::IncompatibleParameters,
+                     QLatin1String("Application didn't accept the only incoming connection"));
             return;
         }
         emit updated();
@@ -1491,20 +1486,20 @@ namespace XMPP { namespace Jingle { namespace S5B {
         auto makeUpdate = [&](QDomElement tel, bool expectedSuccess = false,
                               std::function<void(Task *)> cb = std::function<void(Task *)>()) {
             d->waitingAck = true;
-            return OutgoingTransportInfoUpdate { tel,
-                                                 [this, cb, expectedSuccess,
-                                                  trptr = QPointer<Transport>(d->q)](Task *task) {
-                                                     if (!trptr)
-                                                         return;
-                                                     d->waitingAck = false;
-                                                     if (expectedSuccess && !task->success()) {
-                                                         _state = State::Finished;
-                                                         d->localCandidates.clear();
-                                                         d->remoteCandidates.clear();
-                                                         emit failed();
-                                                     } else if (cb)
-                                                         cb(task);
-                                                 } };
+            return OutgoingTransportInfoUpdate {
+                tel,
+                [this, cb, expectedSuccess, trptr = QPointer<Transport>(d->q)](Task *task) {
+                    if (!trptr)
+                        return;
+                    d->waitingAck = false;
+                    if (expectedSuccess && !task->success()) {
+                        d->localCandidates.clear();
+                        d->remoteCandidates.clear();
+                        onFinish(Reason::Condition::FailedTransport, QLatin1String("iq error"));
+                    } else if (cb)
+                        cb(task);
+                }
+            };
         };
 
         auto doc = _pad.staticCast<Pad>()->session()->manager()->client()->doc();

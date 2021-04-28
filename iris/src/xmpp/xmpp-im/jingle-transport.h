@@ -165,11 +165,14 @@ namespace XMPP { namespace Jingle {
         void stateChanged();
 
     protected:
-        // just updates state and signals about the change. No any loggic attached to the new state
+        /// just updates state and signals about the change. No any loggic attached to the new state
         void setState(State newState);
 
-        // Where the user already gave his consent to transfer data. (one exception: State::Finished)
+        /// Where the user already gave his consent to transfer data. (one exception: State::Finished)
         bool wasAccepted() const;
+
+        /// Called in the end of life to trigger final events
+        void onFinish(Reason::Condition condition, const QString &message = QString());
 
         /**
          * @brief notifyIncomingConnection checks all acceptors and return true if any accepted the connection

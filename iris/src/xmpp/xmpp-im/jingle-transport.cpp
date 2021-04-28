@@ -20,6 +20,8 @@
 #include "jingle-transport.h"
 #include "jingle-session.h"
 
+#include <QPointer>
+
 namespace XMPP { namespace Jingle {
     //----------------------------------------------------------------------------
     // TransportManager
@@ -60,6 +62,18 @@ namespace XMPP { namespace Jingle {
         if (isRemote())
             return _state >= State::ApprovedToSend && _state != State::Pending;
         return _state >= State::ApprovedToSend;
+    }
+
+    void Transport::onFinish(Reason::Condition condition, const QString &message)
+    {
+        _lastReason = Reason(condition, message);
+        _prevState  = _state;
+        _state      = State::Finished;
+        QPointer<Transport> p(this);
+        if (condition != Reason::Condition::Success && condition != Reason::Condition::NoReason)
+            emit failed();
+        if (p)
+            emit stateChanged();
     }
 
     void Transport::addAcceptor(TransportFeatures features, ConnectionAcceptorCallback &&acceptor, int componentIndex)

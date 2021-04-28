@@ -45,7 +45,7 @@ namespace XMPP { namespace Jingle {
         void onFailed(const QString &errorMessage = QString())
         {
             if (!errorMessage.isEmpty())
-                qWarning("ConnectionWaiter: error: %s", qPrintable(errorMessage));
+                qDebug("ConnectionWaiter: error: %s", qPrintable(errorMessage));
             if (connection)
                 connection->disconnect(this); // qt signals
             if (auto t = transport.lock()) {

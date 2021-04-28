@@ -190,7 +190,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
                 d->connections.first()->close();
             }
             // d->aborted = true;
-            emit failed(); // TODO review if necessary. likely it's not
+            onFinish(Reason::Cancel);
         });
     }
 
@@ -217,8 +217,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
             ++it;
         }
         if (d->connections.isEmpty()) {
-            _state = State::Finished;
-            emit failed();
+            onFinish(Reason::GeneralError, QLatin1String("no connections registered"));
         } else
             emit updated();
     }

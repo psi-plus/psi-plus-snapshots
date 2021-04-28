@@ -183,7 +183,7 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
     const AudioMessageFormat audioFormat = AudioMessageFormat::fromCharFormat(format.toCharFormat());
     // qDebug() << audioFormat.id();
 
-    painter->setRenderHints(QPainter::HighQualityAntialiasing);
+    painter->setRenderHints(QPainter::Antialiasing);
 
     QPen bgPen(QColor(100, 200, 100)); // TODO name all the magic colors
     bgPen.setWidth(bgOutlineWidth);
@@ -295,8 +295,8 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
                     if (!cursor.isNull()) {
                         Histogram hm;
                         hm.reserve(HistogramCompressedSize);
-                        auto amplitudes = QString::fromLatin1(reply->readAll()).split(',');
-                        for (auto v : amplitudes) {
+                        auto const &amplitudes = QString::fromLatin1(reply->readAll()).split(',');
+                        for (auto const &v : amplitudes) {
                             auto fv = v.toFloat() / 255.0f;
                             hm.push_back(fv > 1.0f ? 1.0f : fv);
                         }
@@ -344,7 +344,7 @@ QTextCharFormat ITEAudioController::makeFormat(const QUrl &audioSrc, ITEMediaOpe
 {
     AudioMessageFormat fmt(objectType, itc->nextId(), audioSrc, mediaOpener);
     fmt.setFontPointSize(itc->textEdit()->currentFont().pointSize());
-    return fmt;
+    return std::move(fmt);
 }
 
 void ITEAudioController::insert(const QUrl &audioSrc, ITEMediaOpener *mediaOpener)
@@ -411,7 +411,7 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                     } else {
                         connect(player, &QMediaPlayer::durationChanged, [player, part, this](qint64 duration) {
                             // the timer is a workaround for some Qt bug
-                            QTimer::singleShot(0, [player, part, this, duration]() {
+                            QTimer::singleShot(0, player, [this, player, part, duration]() {
                                 if (part > 0) { // don't jump back if event came quite late
                                     player->setPosition(qint64(duration * part));
                                 }
