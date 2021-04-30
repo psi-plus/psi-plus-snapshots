@@ -45,10 +45,15 @@ set( CMAKE_MODULE_PATH
     "${PROJECT_SOURCE_DIR}/cmake/modules"
     )
 
+set( DEFAULT_BUNDLED_QCA OFF )
+if (APPLE)
+    set( DEFAULT_BUNDLED_QCA ON )
+endif()
+
 option( USE_QJDNS "Use qjdns/jdns library. Disabled by default for Qt5" OFF )
 option( SEPARATE_QJDNS "Build qjdns with iris library" OFF )
 option( JINGLE_ICE "Enable ICE Jingle transport for p2p file transfer" ON )
-option( BUNDLED_QCA "Adds: DTLS, Blake2b and other useful for XMPP crypto-stuff" OFF)
+option( BUNDLED_QCA "Adds: DTLS, Blake2b and other useful for XMPP crypto-stuff" ${DEFAULT_BUNDLED_QCA})
 option( BUNDLED_USRSCTP "Compile compatible usrsctp lib when system one is not available or uncompatible (required for datachannel jingle transport)" OFF)
 option( BUILD_IRIS_TOOLS "Build tools and examples" OFF)
 
@@ -97,6 +102,9 @@ if(BUNDLED_QCA)
         set(Qca_INCLUDE_DIR_EXPORT ${Qca_INCLUDE_DIR} PARENT_SCOPE)
     endif()
 
+    if ("${OPENSSL_ROOT_DIR}" STREQUAL "" AND APPLE)
+        set(OPENSSL_ROOT_DIR /usr/local/opt/openssl)
+    endif()
     find_package(OpenSSL REQUIRED)
 
     include(ExternalProject)
