@@ -81,6 +81,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         if (!c.id.isEmpty())
             e.setAttribute("id", c.id);
         e.setAttribute("ip", c.ip.toString());
+        // e.setAttribute("ip", "192.168.0.99");
         if (c.network != -1)
             e.setAttribute("network", QString::number(c.network));
         else // weird?
@@ -450,14 +451,6 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
         void close() override { XMPP::Jingle::Connection::close(); }
 
-    protected:
-        qint64 writeData(const char *data, qint64 maxSize) override
-        {
-            return 0; // client->write(data, maxSize);
-        }
-
-        qint64 readData(char *data, qint64 maxSize) override { return 0; }
-
     private:
         friend class Transport;
 
@@ -705,7 +698,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 }
             });
             q->connect(ice, &XMPP::Ice176::error, q, [this](XMPP::Ice176::Error err) {
-                q->onFinish(Reason::Condition::FailedTransport, QString("ICE failed: %1").arg(err));
+                q->onFinish(Reason::Condition::ConnectivityError, QString("ICE failed: %1").arg(err));
             });
             q->connect(ice, &XMPP::Ice176::localCandidatesReady, q,
                        [this](const QList<XMPP::Ice176::Candidate> &candidates) {
