@@ -55,12 +55,12 @@ public:
     TurnClient::Error turnErrorCode() const;
 
     // reimplemented
-    virtual void       stop();
-    virtual bool       hasPendingDatagrams(int path) const;
-    virtual QByteArray readDatagram(int path, QHostAddress *addr, quint16 *port);
-    virtual void       writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port);
-    virtual void       addChannelPeer(const QHostAddress &addr, int port);
-    virtual void       setDebugLevel(DebugLevel level);
+    virtual void       stop() override;
+    virtual bool       hasPendingDatagrams(int path) const override;
+    virtual QByteArray readDatagram(int path, QHostAddress *addr, quint16 *port) override;
+    virtual void       writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port) override;
+    virtual void       addChannelPeer(const QHostAddress &addr, int port) override;
+    virtual void       setDebugLevel(DebugLevel level) override;
     virtual void       changeThread(QThread *thread) override;
 
 private:
