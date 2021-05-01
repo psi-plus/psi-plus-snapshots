@@ -126,7 +126,7 @@ namespace XMPP { namespace Jingle {
 
         // missing transport means it's an incoming application with invalid transport,
         // but basically it shouldn't happen
-        if ((_creator != _pad->session()->role() && _state == State::Pending) || !_transport) {
+        if ((isRemote() && _state == State::Pending) || !_transport) {
             return _update;
         }
 
@@ -168,28 +168,22 @@ namespace XMPP { namespace Jingle {
         case State::Connecting:
             if (inTrReplace) {
                 // for transport replace we handle just replace until it's finished
-                if (_transport->creator() == _pad->session()->role()) {
-                    if (_transport->state() == State::Finished)
-                        // replace over unconfirmed replace (2nd transport failed shortly)
-                        _update = { _transportSelector->hasMoreTransports() ? Action::TransportReplace
-                                                                            : Action::ContentRemove,
-                                    _transport->lastReason() };
-                    break;
-                }
-
-                if (_transport->hasUpdates() && _transport->state() == State::ApprovedToSend) {
-                    _update = { Action::TransportAccept, Reason() };
-                    break;
-                }
-                if (_transport->state() == State::Finished) {
-                    _update = { Action::TransportReject, _transport->lastReason() };
+                if (_transport->state() == State::Finished) { // 2nd transport failed shortly
+                    _update = { _transportSelector->hasMoreTransports()
+                                    ? (_transport->isLocal() ? Action::TransportReplace : Action::TransportReject)
+                                    : Action::ContentRemove,
+                                _transport->lastReason() };
+                } else if (_transport->hasUpdates() && _transport->state() == State::ApprovedToSend) {
+                    _update = { _transport->isLocal() ? Action::TransportInfo : Action::TransportAccept, Reason() };
                 }
                 break;
             }
 
             if (_transport->hasUpdates()) {
                 if (_transport->state() >= State::ApprovedToSend && _transport->state() < State::Finished)
-                    _update = { Action::TransportInfo, Reason() };
+                    _update = { _pendingTransportReplace == PendingTransportReplace::Planned ? Action::TransportReplace
+                                                                                             : Action::TransportInfo,
+                                Reason() };
             } else if (_transport->state() == State::Finished) {
                 _update = { _transportSelector->hasMoreTransports() ? Action::TransportReplace : Action::ContentRemove,
                             _transport->lastReason() };
@@ -277,8 +271,11 @@ namespace XMPP { namespace Jingle {
             contentEl.appendChild(transportEl);
             return OutgoingUpdate { updates, [this, transportCB](Task *task) {
                                        transportCB(task);
-                                       if (task->success())
+                                       if (task->success()) {
                                            _pendingTransportReplace = PendingTransportReplace::None;
+                                           if (_state == State::Connecting || _state == State::Active)
+                                               _transport->start();
+                                       }
                                        // else transport will report failure from its callback => select next tran.
                                    } };
         default:

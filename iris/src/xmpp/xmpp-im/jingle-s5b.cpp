@@ -581,18 +581,19 @@ namespace XMPP { namespace Jingle { namespace S5B {
     public:
         enum PendingActions { NewCandidate = 1, CandidateUsed = 2, CandidateError = 4, Activated = 8, ProxyError = 16 };
 
-        Transport *              q                            = nullptr;
-        bool                     p2pAllowed                   = true;
-        bool                     offerSent                    = false;
-        bool                     waitingAck                   = true;
-        bool                     aborted                      = false;
-        bool                     remoteReportedCandidateError = false;
-        bool                     localReportedCandidateError  = false;
-        bool                     proxyDiscoveryInProgress     = false; // if we have valid proxy requests
-        quint16                  pendingActions               = 0;
-        int                      proxiesInDiscoCount          = 0;
-        QMap<QString, Candidate> localCandidates; // cid to candidate mapping
-        QMap<QString, Candidate> remoteCandidates;
+        Transport *                  q                            = nullptr;
+        bool                         p2pAllowed                   = true;
+        bool                         offerSent                    = false;
+        bool                         waitingAck                   = true;
+        bool                         aborted                      = false;
+        bool                         remoteReportedCandidateError = false;
+        bool                         localReportedCandidateError  = false;
+        bool                         proxyDiscoveryInProgress     = false; // if we have valid proxy requests
+        quint16                      pendingActions               = 0;
+        int                          proxiesInDiscoCount          = 0;
+        QStringList                  localCandidatesTrack;
+        std::map<QString, Candidate> localCandidates; // cid to candidate mapping
+        std::map<QString, Candidate> remoteCandidates;
         Candidate localUsedCandidate;  // we received "candidate-used" for this candidate from localCandidates list
         Candidate remoteUsedCandidate; // we sent "candidate-used" for this candidate from remoteCandidates list
         QString   dstaddr;  // an address for xmpp proxy as it comes from remote. each side calculates it like sha1(sid
@@ -627,13 +628,13 @@ namespace XMPP { namespace Jingle { namespace S5B {
 #else
                 cid = QString("%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
 #endif
-            } while (localCandidates.contains(cid) || remoteCandidates.contains(cid));
+            } while (localCandidates.count(cid) || remoteCandidates.count(cid));
             return cid;
         }
 
         bool isDup(const Candidate &c) const
         {
-            for (auto const &rc : remoteCandidates) {
+            for (auto const &[_, rc] : remoteCandidates) {
                 if (c.host() == rc.host() && c.port() == rc.port()) {
                     return true;
                 }
@@ -651,9 +652,10 @@ namespace XMPP { namespace Jingle { namespace S5B {
                     return;
                 }
                 bool candidateUpdated = false;
-                auto c                = localCandidates.value(cid);
-                if (c && c.state() == Candidate::Probing) {
-                    auto sh = query->proxyInfo();
+                auto it               = localCandidates.find(cid);
+                if (it != localCandidates.end() && it->second.state() == Candidate::Probing) {
+                    auto &c  = it->second;
+                    auto  sh = query->proxyInfo();
                     if (query->success() && !sh.host().isEmpty() && sh.port()) {
                         // it can be discarded by this moment (e.g. got success on a higher priority
                         // candidate). so we have to check.
@@ -689,7 +691,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 Candidate c(q, proxy, generateCid());
                 if (!isDup(c)) {
                     qDebug("new local candidate: %s", qPrintable(c.toString()));
-                    localCandidates.insert(c.cid(), c);
+                    localCandidates.emplace(c.cid(), c);
                     queryS5BProxy(c.jid(), c.cid());
                 }
             }
@@ -717,13 +719,13 @@ namespace XMPP { namespace Jingle { namespace S5B {
                             continue;
                         }
                         Candidate c(q, i.jid(), generateCid(), localPref);
-                        localCandidates.insert(c.cid(), c);
+                        localCandidates.emplace(c.cid(), c);
                         qDebug("new local candidate: %s", qPrintable(c.toString()));
                         queryS5BProxy(i.jid(), c.cid());
                     }
                     if (!userProxyFound) {
                         Candidate c(q, userProxy, generateCid(), 1);
-                        localCandidates.insert(c.cid(), c);
+                        localCandidates.emplace(c.cid(), c);
                         qDebug("new local candidate: %s", qPrintable(c.toString()));
                         queryS5BProxy(userProxy, c.cid());
                     } else if (items.count() == 0) {
@@ -755,7 +757,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             */
 
             qDebug("tryConnectToRemoteCandidate()");
-            for (auto &c : remoteCandidates) {
+            for (auto &[cid, c] : remoteCandidates) {
                 if (c.state() == Candidate::New) {
                     if (c.priority() > maxNewPrio) {
                         maxNew = QList<Candidate>();
@@ -804,7 +806,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                         if (success) {
                             // let's reject candidates which are meaningless to try
                             bool hasUnckeckedNew = false;
-                            for (auto &c : remoteCandidates) {
+                            for (auto &[cid, c] : remoteCandidates) {
                                 if (c.state() == Candidate::New) {
                                     if (c.priority() <= mnc.priority()) {
                                         c.setState(Candidate::Discarded);
@@ -867,7 +869,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             }
 
             // now local candidates
-            for (const auto &c : localCandidates) {
+            for (const auto &[_, c] : localCandidates) {
                 auto s = c.state();
                 if (s == Candidate::Probing || s == Candidate::New || s == Candidate::Unacked) {
                     qDebug("still has: a local candidte cid=%s in %s state", qPrintable(c.cid()),
@@ -979,7 +981,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             bool    allRemoteDiscarded          = true;
             bool    hasConnectedRemoteCandidate = false;
             QString states;
-            for (const auto &c : remoteCandidates) {
+            for (const auto &[_, c] : remoteCandidates) {
                 auto s = c.state();
                 states += QString("\n%1").arg(c.toString());
                 if (s != Candidate::Discarded) {
@@ -1020,7 +1022,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             // more local candidates are expected to be discovered
 
             if (q->_state != State::Connecting) { // if not started or already finished
-                qDebug("checkAndFinishNegotiation not finished: !connectionStarted || connection");
+                qDebug("checkAndFinishNegotiation not finished: q->_state != State::Connecting");
                 return;
             }
 
@@ -1059,18 +1061,18 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 prio = localUsedCandidate.priority();
             }
             // find highest priority withing connected remote candidates
-            for (const auto &c : remoteCandidates) {
+            for (const auto &[_, c] : remoteCandidates) {
                 if (c.state() != Candidate::Discarded && c.state() >= Candidate::Pending && c.priority() > prio) {
                     prio = c.priority();
                 }
             }
 
-            for (auto &c : localCandidates) {
+            for (auto &[_, c] : localCandidates) {
                 if (c.priority() < prio && c.state() != Candidate::Discarded) {
                     c.setState(Candidate::Discarded);
                 }
             }
-            for (auto &c : remoteCandidates) {
+            for (auto &[_, c] : remoteCandidates) {
                 if (c.priority() < prio && c.state() != Candidate::Discarded) {
                     c.setState(Candidate::Discarded);
                 }
@@ -1099,7 +1101,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
             // now check and reset NewCandidate pending action
             bool haveNewCandidates = false;
-            for (auto &c : remoteCandidates) {
+            for (auto &[_, c] : remoteCandidates) {
                 if (c.state() == Candidate::New) {
                     haveNewCandidates = true;
                     break;
@@ -1172,7 +1174,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                             connection->enqueueIncomingUDP(data); // man_udpReady
                             return true;
                         });
-                    localCandidates.insert(c.cid(), c);
+                    localCandidates.emplace(c.cid(), c);
                     qDebug("new local candidate: %s", qPrintable(c.toString()));
                     pendingActions |= NewCandidate;
                     hasNewCandidates = true;
@@ -1189,12 +1191,16 @@ namespace XMPP { namespace Jingle { namespace S5B {
             probingTimer.stop();
             negotiationFinishTimer.stop();
             proxyDiscoveryInProgress = false;
-            for (auto &rc : remoteCandidates) {
+            for (auto &[_, rc] : remoteCandidates) {
                 if (rc != connCand && rc.state() == Candidate::Probing) {
                     rc.deleteSocksClient();
                 }
             }
             QTimer::singleShot(0, q, [this]() {
+                for (const auto &[cid, candidate] : localCandidates) {
+                    if (candidate.state() == Candidate::Discarded)
+                        localCandidatesTrack.append(cid);
+                }
                 localCandidates.clear();
                 remoteCandidates.clear();
                 q->setState(State::Active);
@@ -1205,12 +1211,12 @@ namespace XMPP { namespace Jingle { namespace S5B {
         {
             // probingTimer.stop();
             proxyDiscoveryInProgress = false;
-            for (auto &rc : remoteCandidates) {
+            for (auto &[_, rc] : remoteCandidates) {
                 if (rc.state() <= Candidate::Probing) {
                     rc.setState(Candidate::Discarded);
                 }
             }
-            for (auto &rc : localCandidates) {
+            for (auto &[_, rc] : localCandidates) {
                 if (rc.state() <= Candidate::Probing) {
                     rc.setState(Candidate::Discarded);
                 }
@@ -1233,7 +1239,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                     qDebug("new remote candidate discarded with forbidden p2p: %s", qPrintable(c));
                 } else {
                     qDebug("new remote candidate: %s", qPrintable(c.toString()));
-                    remoteCandidates.insert(c.cid(), c); // TODO check for collisions!
+                    remoteCandidates.emplace(c.cid(), c); // TODO check for collisions!
                     reallyAdded = true;
                 }
                 handled = true;
@@ -1250,12 +1256,15 @@ namespace XMPP { namespace Jingle { namespace S5B {
         {
             QDomElement el = transportEl.firstChildElement(QStringLiteral("candidate-used"));
             if (!el.isNull()) {
-                auto cid   = QStringLiteral("cid");
-                auto cUsed = localCandidates.value(el.attribute(cid));
-                if (!cUsed) {
+                auto cid = QStringLiteral("cid");
+                auto it  = localCandidates.find(el.attribute(cid));
+                if (it == localCandidates.end()) {
+                    if (localCandidatesTrack.contains(cid))
+                        return true; // likely discarded as not needed anymore
                     throw Stanza::Error(Stanza::Error::Cancel, Stanza::Error::ItemNotFound,
                                         QString("failed to find incoming candidate-used candidate %1").arg(cid));
                 }
+                auto &cUsed = it->second;
                 if (cUsed.state() == Candidate::Pending) {
                     if (cUsed.type() != Candidate::Proxy && !cUsed.isConnected()) {
                         throw Stanza::Error(
@@ -1285,7 +1294,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             auto el = transportEl.firstChildElement(QStringLiteral("candidate-error"));
             if (!el.isNull()) {
                 remoteReportedCandidateError = true;
-                for (auto &c : localCandidates) {
+                for (auto &[_, c] : localCandidates) {
                     if (c.state() == Candidate::Pending) {
                         c.setState(Candidate::Discarded);
                     }
@@ -1322,11 +1331,12 @@ namespace XMPP { namespace Jingle { namespace S5B {
         {
             auto el = transportEl.firstChildElement(QStringLiteral("proxy-error"));
             if (!el.isNull()) {
-                auto c = localCandidates.value(el.attribute(QStringLiteral("cid")));
-                if (!c) {
+                auto it = localCandidates.find(el.attribute(QStringLiteral("cid")));
+                if (it == localCandidates.end()) {
                     throw Stanza::Error(Stanza::Error::Cancel, Stanza::Error::ItemNotFound,
                                         "failed to find incoming proxy-error candidate");
                 }
+                auto &c = it->second;
                 if (c != localUsedCandidate || c.state() != Candidate::Accepted) {
                     qDebug("Received <proxy-error> on a candidate in an inappropriate state. Ignored.");
                     return true;
@@ -1337,10 +1347,10 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 // but we have to follow the standard.
 
                 // Discard everything
-                for (auto &c : localCandidates) {
+                for (auto &[_, c] : localCandidates) {
                     c.setState(Candidate::Discarded);
                 }
-                for (auto &c : remoteCandidates) {
+                for (auto &[_, c] : remoteCandidates) {
                     c.setState(Candidate::Discarded);
                 }
                 proxyDiscoveryInProgress = false;
@@ -1375,10 +1385,10 @@ namespace XMPP { namespace Jingle { namespace S5B {
         if (d) {
             // TODO unregister sid too
             static_cast<Manager *>(_pad.staticCast<Pad>()->manager())->removeKeyMapping(d->directAddr);
-            for (auto &c : d->remoteCandidates) {
+            for (auto &[_, c] : d->remoteCandidates) {
                 c.deleteSocksClient();
             }
-            for (auto &c : d->remoteCandidates) {
+            for (auto &[_, c] : d->remoteCandidates) {
                 auto srv = c.server();
                 if (srv) {
                     srv.staticCast<S5BServer>()->unregisterKey(d->directAddr);
@@ -1483,12 +1493,21 @@ namespace XMPP { namespace Jingle { namespace S5B {
             return upd;
         }
 
-        auto makeUpdate = [&](QDomElement tel, bool expectedSuccess = false,
-                              std::function<void(Task *)> cb = std::function<void(Task *)>()) {
+        // check where we make initial offer
+        bool noPending = (d->localCandidates.empty() && !d->proxyDiscoveryInProgress
+                          && !(d->disco && d->disco->inProgressPortTypes()));
+        bool initial   = _state == State::ApprovedToSend && !d->offerSent
+            && ((!d->pendingActions && noPending) || d->pendingActions & Private::NewCandidate);
+
+        auto makeUpdate = [this, initial](QDomElement tel, bool expectedSuccess = false,
+                                          std::function<void(Task *)> cb = std::function<void(Task *)>()) {
             d->waitingAck = true;
+            if (initial) {
+                _state = State::Unacked;
+            }
             return OutgoingTransportInfoUpdate {
                 tel,
-                [this, cb, expectedSuccess, trptr = QPointer<Transport>(d->q)](Task *task) {
+                [this, cb, expectedSuccess, trptr = QPointer<Transport>(d->q), initial](Task *task) {
                     if (!trptr)
                         return;
                     d->waitingAck = false;
@@ -1496,8 +1515,12 @@ namespace XMPP { namespace Jingle { namespace S5B {
                         d->localCandidates.clear();
                         d->remoteCandidates.clear();
                         onFinish(Reason::Condition::FailedTransport, QLatin1String("iq error"));
-                    } else if (cb)
+                    } else if (cb) {
+                        if (initial) {
+                            _state = isLocal() ? State::Pending : State::Accepted;
+                        }
                         cb(task);
+                    }
                 }
             };
         };
@@ -1506,12 +1529,6 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
         QDomElement tel = doc->createElementNS(NS, "transport");
         tel.setAttribute(QStringLiteral("sid"), d->sid);
-
-        // check where we make initial offer
-        bool noPending = (d->localCandidates.isEmpty() && !d->proxyDiscoveryInProgress
-                          && !(d->disco && d->disco->inProgressPortTypes()));
-        bool initial   = _state == State::ApprovedToSend && !d->offerSent
-            && ((!d->pendingActions && noPending) || d->pendingActions & Private::NewCandidate);
 
         if (initial) {
             if (_creator == _pad->session()->role() && d->mode != Tcp) {
@@ -1525,7 +1542,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             d->pendingActions &= ~Private::NewCandidate;
             bool             useProxy = false;
             QList<Candidate> candidatesToSend;
-            for (auto &c : d->localCandidates) {
+            for (auto &[_, c] : d->localCandidates) {
                 if (c.state() != Candidate::New) {
                     continue;
                 }
@@ -1545,9 +1562,6 @@ namespace XMPP { namespace Jingle { namespace S5B {
             if (!candidatesToSend.isEmpty()) {
                 upd = makeUpdate(tel, false, [this, candidatesToSend, initial](Task *jt) mutable {
                     if (jt->success()) {
-                        if (initial) {
-                            _state = _creator == _pad->session()->role() ? State::Pending : State::Accepted;
-                        }
                         for (auto &c : candidatesToSend) {
                             if (c.state() == Candidate::Unacked) {
                                 c.setState(Candidate::Pending);
@@ -1572,7 +1586,8 @@ namespace XMPP { namespace Jingle { namespace S5B {
             d->pendingActions &= ~Private::CandidateUsed;
             // we should have the only remote candidate in Pending state.
             // all other has to be discarded by priority check
-            for (auto &c : d->remoteCandidates) {
+            for (auto &it : d->remoteCandidates) {
+                auto &c = it.second;
                 if (c.state() != Candidate::Pending) {
                     continue;
                 }
@@ -1636,14 +1651,10 @@ namespace XMPP { namespace Jingle { namespace S5B {
             qDebug("sending empty transport-info");
             upd = makeUpdate(tel, false, [this, initial](Task *jt) mutable {
                 if (!jt->success()) {
-                    if (initial) {
-                        _state = State::Finished;
-                        emit failed();
-                    } else
+                    if (initial)
+                        onFinish(Reason::FailedTransport, QLatin1String("got it error for initial"));
+                    else
                         qWarning("Ignored failed IQ response");
-                }
-                if (initial) {
-                    _state = _creator == _pad->session()->role() ? State::Pending : State::Accepted;
                 }
             });
         }
