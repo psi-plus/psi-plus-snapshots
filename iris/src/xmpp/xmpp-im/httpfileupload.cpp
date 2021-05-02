@@ -222,9 +222,11 @@ void HttpFileUpload::tryNextServer()
             setState(State::HttpRequest);
             // time for a http request
             QNetworkRequest req(d->result.putUrl);
-            for (auto &h : d->result.putHeaders) {
+            for (auto &h : d->result.putHeaders)
                 req.setRawHeader(h.name.toLatin1(), h.value.toLatin1());
-            }
+            if (!d->mediaType.isEmpty())
+                req.setHeader(QNetworkRequest::ContentTypeHeader, d->mediaType);
+
             auto reply = d->qnam->put(req, d->sourceDevice);
             connect(reply, &QNetworkReply::uploadProgress, this, &HttpFileUpload::progress);
             connect(reply, &QNetworkReply::finished, this, [this, reply]() {
