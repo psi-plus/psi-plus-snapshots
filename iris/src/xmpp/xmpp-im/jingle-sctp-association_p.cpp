@@ -165,6 +165,9 @@ namespace XMPP { namespace Jingle { namespace SCTP {
 
     void AssociationPrivate::procesOutgoingMessageQueue()
     {
+        if (dumpingOutogingBuffer)
+            return; // we don't need recursion here
+
         dumpingOutogingBuffer = true;
         // keep going while we can fit the buffer
         while (outgoingMessageQueue.size()) {
