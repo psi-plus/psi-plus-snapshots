@@ -14,6 +14,8 @@ get_directory_property(IS_SUBPROJECT PARENT_DIRECTORY)
 project(iris)
 cmake_minimum_required(VERSION 3.2.0)
 
+include(CMakeDependentOption)
+
 #Set automoc and autouic policy
 if(POLICY CMP0071)
     if(${CMAKE_VERSION} VERSION_LESS "3.10.0")
@@ -52,9 +54,8 @@ endif()
 
 option( USE_QJDNS "Use qjdns/jdns library. Disabled by default for Qt5" OFF )
 option( SEPARATE_QJDNS "Build qjdns with iris library" OFF )
-option( JINGLE_ICE "Enable ICE Jingle transport for p2p file transfer" ON )
+option( JINGLE_SCTP "Enable SCTP over ICE Jingle transport / data channels" ON )
 option( BUNDLED_QCA "Adds: DTLS, Blake2b and other useful for XMPP crypto-stuff" ${DEFAULT_BUNDLED_QCA})
-option( BUNDLED_USRSCTP "Compile compatible usrsctp lib when system one is not available or uncompatible (required for datachannel jingle transport)" OFF)
 option( BUILD_IRIS_TOOLS "Build tools and examples" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -162,84 +163,9 @@ if(NOT ${STDINT_INCLUDE} STREQUAL "STDINT_INCLUDE-NOTFOUND")
     set(STDINT_FOUND ON)
 endif()
 
-if((CMAKE_CROSSCOMPILING AND DEFINED MSYS) AND STDINT_FOUND)
-    #Add SCTP_STDINT_INCLUDE definition to compile irisnet with usrsctp with MinGW
-    add_definitions(
-        -DSCTP_STDINT_INCLUDE="${STDINT_INCLUDE}"
-    )
+if(JINGLE_SCTP)
+    include(IrisSCTP)
 endif()
-
-if(NOT BUNDLED_USRSCTP)
-    find_package(UsrSCTP)
-    if (NOT UsrSCTP_FOUND)
-        message(FATAL_ERROR "UsrSCTP library not found. Try to install usrsctp library or enable BUNDLED_USRSCTP flag")
-    endif()
-else()
-    message(STATUS "USRSCTP: using bundled")
-    set(USRSCTP_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/usrsctp)
-    set(USRSCTP_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/usrsctp)
-    set(USRSCTP_BUILD_DIR ${USRSCTP_PREFIX}/build)
-    if(NOT EXISTS ${USRSCTP_SOURCE_DIR})
-        list(APPEND USRSCTP_INCLUDE_DIR ${USRSCTP_PREFIX}/src/UsrSCTPProject/usrsctplib)
-    else()
-        list(APPEND USRSCTP_INCLUDE_DIR ${USRSCTP_SOURCE_DIR}/usrsctplib)
-    endif()
-    set(USRSCTP_LIBRARY ${USRSCTP_BUILD_DIR}/usrsctplib/${CMAKE_STATIC_LIBRARY_PREFIX}usrsctp${CMAKE_STATIC_LIBRARY_SUFFIX})
-    if(WIN32 AND MSVC)
-        add_definitions(-DWIN32_LEAN_AND_MEAN)
-    endif()
-
-    include(ExternalProject)
-    #set CMake options and transfer the environment to an external project
-    set(USRSCTP_BUILD_OPTIONS
-        -DBUILD_SHARED_LIBS=OFF -Dsctp_build_programs=OFF -Dsctp_build_shared_lib=OFF -Dsctp_debug=OFF
-        -Dsctp_inet=OFF -Dsctp_inet6=OFF -DCMAKE_INSTALL_PREFIX=${USRSCTP_PREFIX}
-        -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
-        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER})
-    if (EXISTS ${USRSCTP_SOURCE_DIR})
-        message(STATUS "USRSCTP: found bundled sources")
-        ExternalProject_Add(UsrSCTPProject
-            PREFIX ${USRSCTP_PREFIX}
-            BINARY_DIR ${USRSCTP_BUILD_DIR}
-            SOURCE_DIR ${USRSCTP_SOURCE_DIR}
-            CMAKE_ARGS ${USRSCTP_BUILD_OPTIONS}
-            BUILD_BYPRODUCTS ${USRSCTP_LIBRARY}
-            INSTALL_COMMAND ""
-            )
-    else()
-        include(FindGit)
-        find_package(Git)
-        if(NOT Git_FOUND)
-            message(FATAL_ERROR "Git not found! Bundled UsrSCTP needs Git utility.\nPlease set GIT_EXECUTABLE variable or add git to PATH")
-        endif()
-        ExternalProject_Add(UsrSCTPProject
-            PREFIX ${USRSCTP_PREFIX}
-            BINARY_DIR ${USRSCTP_BUILD_DIR}
-            GIT_REPOSITORY https://github.com/sctplab/usrsctp.git
-            GIT_TAG a17109528c75d01f6372d5c30851a639684c6e99
-            CMAKE_ARGS ${USRSCTP_BUILD_OPTIONS}
-            BUILD_BYPRODUCTS ${USRSCTP_LIBRARY}
-            INSTALL_COMMAND ""
-            )
-    endif()
-    add_library(SctpLab::UsrSCTP UNKNOWN IMPORTED)
-    set_target_properties(SctpLab::UsrSCTP PROPERTIES
-            IMPORTED_LOCATION "${USRSCTP_LIBRARY}"
-            INTERFACE_COMPILE_DEFINITIONS "${USRSCTP_DEFINITIONS}"
-            IMPORTED_LINK_INTERFACE_LANGUAGES "C")
-    add_dependencies(SctpLab::UsrSCTP ${USRSCTP_LIBRARY})
-endif()
-
-set(sctpLab_LIBRARY ${USRSCTP_LIBRARY})
-if(USRSCTP_INCLUDES)
-    set(sctpLab_INCLUDES ${USRSCTP_INCLUDES})
-else()
-    set(sctpLab_INCLUDES ${USRSCTP_INCLUDE_DIR})
-endif()
-include_directories(
-    ${sctpLab_INCLUDES}
-)
 
 if(NOT USE_QJDNS AND SEPARATE_QJDNS)
     message(FATAL_ERROR "SEPARATE_QJDNS flag enabled, but USE_QJDNS flag disabled.\nPlease enable flag USE_QJDNS or disable both flags")

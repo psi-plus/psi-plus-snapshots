@@ -104,9 +104,6 @@ set(HEADERS
     xmpp-im/jingle-ice.h
     xmpp-im/jingle-s5b.h
     xmpp-im/jingle-ibb.h
-    xmpp-im/jingle-sctp.h
-    xmpp-im/jingle-sctp-association_p.h
-    xmpp-im/jingle-webrtc-datachannel_p.h
 
     zlib/zlibcompressor.h
     zlib/zlibdecompressor.h
@@ -151,9 +148,6 @@ set(SOURCES
     xmpp-im/jingle-ice.cpp
     xmpp-im/jingle-s5b.cpp
     xmpp-im/jingle-ibb.cpp
-    xmpp-im/jingle-sctp.cpp
-    xmpp-im/jingle-sctp-association_p.cpp
-    xmpp-im/jingle-webrtc-datachannel_p.cpp
 
     base/randomnumbergenerator.cpp
     base/timezone.cpp
@@ -178,6 +172,20 @@ set(SOURCES
     xmpp-im/s5b.cpp
     xmpp-im/xmpp_features.cpp
     )
+
+if(JINGLE_SCTP)
+    list(APPEND SOURCES
+        xmpp-im/jingle-sctp.cpp
+        xmpp-im/jingle-sctp-association_p.cpp
+        xmpp-im/jingle-webrtc-datachannel_p.cpp
+        )
+
+    list(APPEND HEADERS
+        xmpp-im/jingle-sctp.h
+        xmpp-im/jingle-sctp-association_p.h
+        xmpp-im/jingle-webrtc-datachannel_p.h
+        )
+endif()
 
 if(NOT MSVC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11")

@@ -17,13 +17,14 @@
  *
  */
 
+#ifdef JINGLE_SCTP
 #include "jingle-sctp.h" //Do not move to avoid warnings with MinGW
+#endif
 
 #include "jingle-ice.h"
 
 #include "dtls.h"
 #include "ice176.h"
-#include "jingle-sctp.h"
 #include "jingle-session.h"
 #include "netnames.h"
 #include "udpportreserver.h"
@@ -127,11 +128,13 @@ namespace XMPP { namespace Jingle { namespace ICE {
     }
 
     struct Element {
-        QString                          pwd;
-        QString                          ufrag;
-        Dtls::FingerPrint                fingerprint;
-        SCTP::MapElement                 sctpMap;
-        QList<SCTP::ChannelElement>      sctpChannels;
+        QString           pwd;
+        QString           ufrag;
+        Dtls::FingerPrint fingerprint;
+#ifdef JINGLE_SCTP
+        SCTP::MapElement            sctpMap;
+        QList<SCTP::ChannelElement> sctpChannels;
+#endif
         QList<Ice176::Candidate>         candidates;
         QList<Ice176::SelectedCandidate> remoteCandidates;
         bool                             gatheringComplete = false;
@@ -152,10 +155,12 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 tel.setAttribute(QLatin1String("ufrag"), ufrag);
             if (fingerprint.isValid())
                 tel.appendChild(fingerprint.toXml(doc));
+#ifdef JINGLE_SCTP
             if (sctpMap.isValid())
                 tel.appendChild(sctpMap.toXml(doc));
             for (auto const &c : sctpChannels)
                 tel.appendChild(c.toXml(doc));
+#endif
             for (auto const &c : candidates)
                 tel.appendChild(candidateToElement(doc, c));
             for (auto const &c : remoteCandidates) {
@@ -180,7 +185,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
             if (fingerprint.isValid() && !Dtls::isSupported())
                 qWarning("Remote requested DTLS but it's not supported by used crypto libraries.");
-
+#ifdef JINGLE_SCTP
             e = el.firstChildElement(QLatin1String("sctpmap"));
             if (!e.isNull() && !sctpMap.parse(e))
                 throw std::runtime_error("invalid sctpmap");
@@ -193,6 +198,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 ;
                 sctpChannels.append(channel);
             }
+#endif
             QString candTag(QStringLiteral("candidate"));
             for (e = el.firstChildElement(candTag); !e.isNull(); e = e.nextSiblingElement(candTag)) {
                 auto c = elementToCandidate(e);
@@ -479,12 +485,14 @@ namespace XMPP { namespace Jingle { namespace ICE {
     };
 
     struct Component {
-        int                           componentIndex  = 0;
-        bool                          initialized     = false;
-        bool                          lowOverhead     = false;
-        bool                          needDatachannel = false;
-        Dtls *                        dtls            = nullptr;
-        SCTP::Association *           sctp            = nullptr;
+        int   componentIndex  = 0;
+        bool  initialized     = false;
+        bool  lowOverhead     = false;
+        bool  needDatachannel = false;
+        Dtls *dtls            = nullptr;
+#ifdef JINGLE_SCTP
+        SCTP::Association *sctp = nullptr;
+#endif
         QSharedPointer<RawConnection> rawConnection;
         // QHash<quint16, Connection::Ptr> dataChannels;
     };
@@ -521,9 +529,11 @@ namespace XMPP { namespace Jingle { namespace ICE {
         Resolver           resolver;
         XMPP::Ice176 *     ice = nullptr;
 
-        Dtls::Setup      localDtlsRole  = Dtls::ActPass;
-        Dtls::Setup      remoteDtlsRole = Dtls::ActPass;
+        Dtls::Setup localDtlsRole  = Dtls::ActPass;
+        Dtls::Setup remoteDtlsRole = Dtls::ActPass;
+#ifdef JINGLE_SCTP
         SCTP::MapElement sctp;
+#endif
 
         QHostAddress extAddr;
         QHostAddress stunBindAddr, stunRelayUdpAddr, stunRelayTcpAddr;
@@ -586,29 +596,35 @@ namespace XMPP { namespace Jingle { namespace ICE {
             dtls->connect(dtls, &Dtls::readyRead, q, [this, componentIndex]() {
                 auto &component = components[componentIndex];
                 auto  d         = component.dtls->readDatagram();
+#ifdef JINGLE_SCTP
                 if (component.sctp) {
                     component.sctp->writeIncoming(d);
                 }
+#endif
             });
             dtls->connect(dtls, &Dtls::readyReadOutgoing, q, [this, componentIndex]() {
                 ice->writeDatagram(componentIndex, components[componentIndex].dtls->readOutgoingDatagram());
             });
             dtls->connect(dtls, &Dtls::connected, q, [this, componentIndex, dtls]() {
                 auto &c = components[componentIndex];
+#ifdef JINGLE_SCTP
                 if (c.sctp) {
                     // see rfc8864 (6.1) and rfc8832 (6)
                     c.sctp->setIdSelector(dtls->localFingerprint().setup == Dtls::Active ? SCTP::IdSelector::Even
                                                                                          : SCTP::IdSelector::Odd);
                     c.sctp->onTransportConnected();
                 }
+#endif
                 if (c.rawConnection)
                     c.rawConnection->onConnected();
             });
             dtls->connect(dtls, &Dtls::errorOccurred, q, [this, componentIndex](QAbstractSocket::SocketError error) {
                 qDebug("dtls failed for component %d", componentIndex);
                 auto &c = components[componentIndex];
+#ifdef JINGLE_SCTP
                 if (c.sctp)
                     c.sctp->onTransportError(error);
+#endif
                 if (c.rawConnection)
                     c.rawConnection->onError(error);
             });
@@ -617,8 +633,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 auto &c = components[componentIndex];
                 if (c.rawConnection)
                     c.rawConnection->onDisconnected(RawConnection::DtlsClosed);
+#ifdef JINGLE_SCTP
                 if (c.sctp)
                     c.sctp->onTransportClosed();
+#endif
             });
         }
 
@@ -844,12 +862,12 @@ namespace XMPP { namespace Jingle { namespace ICE {
                     }
                 }
             }
-
+#ifdef JINGLE_SCTP
             if (e.sctpMap.isValid()) {
                 remoteState->sctpMap = e.sctpMap;
                 remoteState->sctpChannels += e.sctpChannels;
             }
-
+#endif
             if (q->state() == State::Created && q->isRemote()) {
                 // initial incoming transport
                 q->setState(State::Pending);
@@ -920,7 +938,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 components[index].rawConnection.reset();
             // Do we need anything else to do here? connect signals for example?
         }
-
+#ifdef JINGLE_SCTP
         void initSctpAssociation(int componentIndex)
         {
             auto &c = components[componentIndex];
@@ -973,6 +991,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             Q_UNUSED(channelFeatures); // TODO
             return c.sctp->newChannel(SCTP::Reliable, true, 0, 256, label);
         }
+#endif
     };
 
     Transport::Transport(const TransportManagerPad::Ptr &pad, Origin creator) :
@@ -990,7 +1009,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
     Transport::~Transport()
     {
         for (auto &c : d->components) {
+#ifdef JINGLE_SCTP
             delete c.sctp;
+#endif
             delete c.dtls;
         }
         qDebug("jingle-ice: destroyed");
@@ -1015,9 +1036,11 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
             for (auto &c : d->components) {
                 d->setupDtls(c.componentIndex);
+#ifdef JINGLE_SCTP
                 if (isRemote() && c.needDatachannel && !c.sctp) {
                     d->initSctpAssociation(c.componentIndex);
                 }
+#endif
             }
         }
 
@@ -1125,9 +1148,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
     // adding ice channels/components (for rtp, rtcp, datachannel etc)
     Connection::Ptr Transport::addChannel(TransportFeatures features, const QString &id, int componentIndex)
     {
+#ifdef JINGLE_SCTP
         if (features & TransportFeature::DataOriented)
             return d->addDataChannel(features, id, componentIndex);
-
+#endif
         componentIndex = d->ensureComponentExist(componentIndex, features & TransportFeature::LowOverhead);
         if (componentIndex < 0)
             return {}; // failed to add component for the features
@@ -1143,8 +1167,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
         for (auto &c : d->components) {
             if (c.rawConnection)
                 ret.append(c.rawConnection.staticCast<XMPP::Jingle::Connection>());
+#ifdef JINGLE_SCTP
             if (c.sctp)
                 ret += c.sctp->channels();
+#endif
         }
         return ret;
     }
@@ -1165,8 +1191,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
     {
         return TransportFeature::HighProbableConnect | TransportFeature::Reliable | TransportFeature::Unreliable
             | TransportFeature::MessageOriented | TransportFeature::LiveOriented
-            | (Dtls::isSupported() ? (TransportFeature::DataOriented | TransportFeature::Ordered)
-                                   : TransportFeature(0));
+#ifdef JINGLE_SCTP
+            | (Dtls::isSupported() ? (TransportFeature::DataOriented | TransportFeature::Ordered) : TransportFeature(0))
+#endif
+            ;
     }
 
     void Manager::setJingleManager(XMPP::Jingle::Manager *jm) { d->jingleManager = jm; }
@@ -1179,7 +1207,15 @@ namespace XMPP { namespace Jingle { namespace ICE {
     TransportManagerPad *Manager::pad(Session *session) { return new Pad(this, session); }
 
     QStringList Manager::ns() const { return { NS }; }
-    QStringList Manager::discoFeatures() const { return { NS, NS_DTLS, SCTP::ns() }; }
+    QStringList Manager::discoFeatures() const
+    {
+        return { NS, NS_DTLS
+#ifdef JINGLE_SCTP
+                 ,
+                 SCTP::ns()
+#endif
+        };
+    }
 
     void Manager::setBasePort(int port) { d->basePort = port; }
 

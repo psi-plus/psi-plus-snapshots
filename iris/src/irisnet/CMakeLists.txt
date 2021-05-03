@@ -55,10 +55,6 @@ set(SOURCES
     noncore/dtls.cpp
 
     noncore/cutestuff/bsocket.cpp
-
-    noncore/sctp/SctpAssociation.cpp
-    noncore/sctp/DepUsrSCTP.cpp
-    noncore/sctp/Logger.hpp
 )
 
 if(UNIX)
@@ -110,13 +106,23 @@ set(HEADERS
 
     noncore/legacy/ndns.h
     noncore/legacy/srvresolver.h
-
-    noncore/sctp/SctpAssociation.hpp
-    noncore/sctp/DepUsrSCTP.hpp
-    noncore/sctp/RTC/DataConsumer.hpp
-    noncore/sctp/RTC/DataProducer.hpp
-    noncore/sctp/RTC/SctpParameters.hpp
 )
+
+if(JINGLE_SCTP)
+    list(APPEND SOURCES
+        noncore/sctp/SctpAssociation.cpp
+        noncore/sctp/DepUsrSCTP.cpp
+        )
+
+    list(APPEND HEADERS
+        noncore/sctp/Logger.hpp
+        noncore/sctp/SctpAssociation.hpp
+        noncore/sctp/DepUsrSCTP.hpp
+        noncore/sctp/RTC/DataConsumer.hpp
+        noncore/sctp/RTC/DataProducer.hpp
+        noncore/sctp/RTC/SctpParameters.hpp
+        )
+endif()
 
 add_library(irisnet STATIC ${SOURCES} ${HEADERS} )
 
