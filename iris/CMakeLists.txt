@@ -14,8 +14,6 @@ get_directory_property(IS_SUBPROJECT PARENT_DIRECTORY)
 project(iris)
 cmake_minimum_required(VERSION 3.2.0)
 
-include(CMakeDependentOption)
-
 #Set automoc and autouic policy
 if(POLICY CMP0071)
     if(${CMAKE_VERSION} VERSION_LESS "3.10.0")

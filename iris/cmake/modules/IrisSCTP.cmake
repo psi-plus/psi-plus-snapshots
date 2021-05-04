@@ -1,3 +1,6 @@
+cmake_minimum_required(VERSION 3.2.0)
+
+include(CMakeDependentOption)
 cmake_dependent_option( BUNDLED_USRSCTP
     "Compile compatible usrsctp lib when system one is not available or uncompatible (required for datachannel jingle transport)"
     OFF "JINGLE_SCTP" OFF)
@@ -80,4 +83,4 @@ endif()
 include_directories(
     ${sctpLab_INCLUDES}
 )
-add_compile_definitions(-DJINGLE_SCTP)
+add_definitions(-DJINGLE_SCTP)
