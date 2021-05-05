@@ -411,7 +411,7 @@ namespace XMPP { namespace Jingle {
             initialIncomingUnacceptedContent.clear();
             sendJingle(actionToSend, contents, [this, acceptApps, finalState](JT *jt) {
                 if (!jt->success()) {
-                    qDebug("Seesion accept/initiate returned iq error");
+                    qDebug("Session accept/initiate returned iq error");
                     emit q->terminated();
                     return;
                 }

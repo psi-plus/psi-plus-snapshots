@@ -493,7 +493,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             receivedTimer->setSingleShot(true);
             receivedTimer->setInterval(RECEIVED_TIMEOUT);
             q->connect(receivedTimer, &QTimer::timeout, q, [this]() {
-                qDebug("Waiting for <received> timed out. But likely succeded anyway");
+                qDebug("Waiting for <received> timed out. But likely succeeded anyway");
                 onReceived();
             });
         }
