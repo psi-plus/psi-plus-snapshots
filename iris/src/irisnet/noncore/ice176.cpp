@@ -630,7 +630,7 @@ public:
                 continue;
             }
 
-            for (IceComponent::CandidateInfo::Ptr rc : remoteCandidates) {
+            for (IceComponent::CandidateInfo::Ptr rc : qAsConst(remoteCandidates)) {
                 auto pair = makeCandidatesPair(lc, rc);
                 if (!pair.isNull())
                     pairs += pair;
