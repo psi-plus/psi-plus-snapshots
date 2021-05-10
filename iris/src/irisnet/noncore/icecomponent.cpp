@@ -514,6 +514,9 @@ private:
     {
         ObjectSessionWatcher watch(&sess);
 
+        emit q->debugLine(QString("Stopping local transport: %1:%2")
+                              .arg(lt->sock->localAddress().toString(), QString::number(lt->sock->localPort())));
+
         removeLocalCandidates(lt->sock);
         if (!watch.isValid())
             return false;

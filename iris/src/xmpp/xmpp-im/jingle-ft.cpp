@@ -594,12 +594,15 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                         readNextBlockFromTransport();
                     }
                 });
-                connect(connection.data(), &Connection::bytesWritten, q, [this](qint64 bytes) {
-                    Q_UNUSED(bytes)
-                    if (q->pad()->session()->role() == q->senders() && !connection->bytesToWrite()) {
-                        writeNextBlockToTransport();
-                    }
-                });
+                connect(
+                    connection.data(), &Connection::bytesWritten, q,
+                    [this](qint64 bytes) {
+                        Q_UNUSED(bytes)
+                        if (q->pad()->session()->role() == q->senders() && !connection->bytesToWrite()) {
+                            writeNextBlockToTransport();
+                        }
+                    },
+                    Qt::QueuedConnection);
             }
 
             setState(State::Active);

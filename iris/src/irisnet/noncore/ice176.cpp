@@ -630,7 +630,7 @@ public:
                 continue;
             }
 
-            for (IceComponent::CandidateInfo::Ptr rc : qAsConst(remoteCandidates)) {
+            for (const IceComponent::CandidateInfo::Ptr &rc : qAsConst(remoteCandidates)) {
                 auto pair = makeCandidatesPair(lc, rc);
                 if (!pair.isNull())
                     pairs += pair;
@@ -1276,9 +1276,8 @@ private slots:
                  cc.info->addr.port);
 
         if (!iceTransports.contains(cc.iceTransport)) {
-            connect(cc.iceTransport.data(), SIGNAL(readyRead(int)), SLOT(it_readyRead(int)));
-            connect(cc.iceTransport.data(), SIGNAL(datagramsWritten(int, int, QHostAddress, int)),
-                    SLOT(it_datagramsWritten(int, int, QHostAddress, int)));
+            connect(cc.iceTransport.data(), &IceTransport::readyRead, this, &Private::it_readyRead);
+            connect(cc.iceTransport.data(), &IceTransport::datagramsWritten, this, &Private::it_datagramsWritten);
 
             iceTransports += cc.iceTransport;
         }
