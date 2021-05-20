@@ -198,8 +198,9 @@ namespace XMPP { namespace Jingle { namespace IBB {
     {
         // we have to mark all of them as finished just in case they are captured somewhere else
         qDebug("jingle-ibb: destroy");
-        while (d->connections.size()) {
-            d->connections.first()->close();
+        auto connections = d->connections.values();
+        for (auto &c : connections) {
+            c->close();
         }
     }
 
