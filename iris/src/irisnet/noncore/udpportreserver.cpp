@@ -70,19 +70,14 @@ public:
 
     ~Private()
     {
-        bool lendingAny = false;
-        for (const Item &i : items) {
-            if (i.lent) {
-                lendingAny = true;
-                break;
-            }
-        }
+
+        bool lendingAny = std::any_of(items.begin(), items.end(), [](auto const &i) { return i.lent; });
 
         Q_ASSERT(!lendingAny);
         if (lendingAny)
             abort();
 
-        for (const Item &i : items) {
+        for (const Item &i : qAsConst(items)) {
             for (QUdpSocket *sock : i.sockList)
                 sock->deleteLater();
         }
@@ -101,7 +96,7 @@ public:
         QList<int> added;
         for (int x : newPorts) {
             bool found = false;
-            for (const Item &i : items) {
+            for (const Item &i : qAsConst(items)) {
                 if (i.port == x) {
                     found = true;
                     break;
@@ -117,7 +112,7 @@ public:
         // keep ports in sorted order
         std::sort(ports.begin(), ports.end());
 
-        for (int x : added) {
+        for (int x : qAsConst(added)) {
             int insert_before = items.count();
             for (int n = 0; n < items.count(); ++n) {
                 if (x < items[n].port) {
@@ -272,7 +267,7 @@ private:
 
             // don't care about this port anymore?
             if (!i.lent && !ports.contains(i.port)) {
-                for (QUdpSocket *sock : i.sockList)
+                for (QUdpSocket *sock : qAsConst(i.sockList))
                     sock->deleteLater();
 
                 items.removeAt(n);
@@ -343,7 +338,7 @@ private:
         QList<QUdpSocket *> out;
 
         i->lent = true;
-        for (QUdpSocket *sock : i->sockList) {
+        for (QUdpSocket *sock : qAsConst(i->sockList)) {
             i->lentAddrs += sock->localAddress();
             sock->disconnect(this);
             sock->setParent(parent);

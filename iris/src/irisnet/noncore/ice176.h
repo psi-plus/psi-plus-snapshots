@@ -159,6 +159,8 @@ public:
 
     QList<SelectedCandidate> selectedCandidates() const;
 
+    static QList<QHostAddress> availableNetworkAddresses();
+
 signals:
     // indicates that the ice engine is started and is ready to receive
     //   peer creds and remote candidates

@@ -30,6 +30,7 @@
 #include "udpportreserver.h"
 
 #include <QEvent>
+#include <QNetworkInterface>
 #include <QQueue>
 #include <QSet>
 #include <QTimer>
@@ -59,18 +60,16 @@ static qint64 calc_pair_priority(int a, int b)
 // FIXME: dry (this is in psi avcall also)
 static int getAddressScope(const QHostAddress &a)
 {
+    if (a.isLoopback())
+        return 0;
     if (a.protocol() == QAbstractSocket::IPv6Protocol) {
-        if (a == QHostAddress(QHostAddress::LocalHostIPv6))
-            return 0;
-        else if (XMPP::Ice176::isIPv6LinkLocalAddress(a))
+        if (XMPP::Ice176::isIPv6LinkLocalAddress(a))
             return 1;
     } else if (a.protocol() == QAbstractSocket::IPv4Protocol) {
         quint32 v4 = a.toIPv4Address();
         quint8  a0 = quint8(v4 >> 24);
         quint8  a1 = quint8((v4 >> 16) & 0xff);
-        if (a0 == 127)
-            return 0;
-        else if (a0 == 169 && a1 == 254)
+        if (a0 == 169 && a1 == 254)
             return 1;
         else if (a0 == 10)
             return 2;
@@ -81,6 +80,43 @@ static int getAddressScope(const QHostAddress &a)
     }
 
     return 3;
+}
+
+// -1 = a is higher priority, 1 = b is higher priority, 0 = equal
+static int comparePriority(const QHostAddress &a, const QHostAddress &b)
+{
+    // prefer closer scope
+    int a_scope = getAddressScope(a);
+    int b_scope = getAddressScope(b);
+    if (a_scope < b_scope)
+        return -1;
+    else if (a_scope > b_scope)
+        return 1;
+
+    // prefer ipv6
+    if (a.protocol() == QAbstractSocket::IPv6Protocol && b.protocol() != QAbstractSocket::IPv6Protocol)
+        return -1;
+    else if (b.protocol() == QAbstractSocket::IPv6Protocol && a.protocol() != QAbstractSocket::IPv6Protocol)
+        return 1;
+
+    return 0;
+}
+
+static QList<QHostAddress> sortAddrs(const QList<QHostAddress> &in)
+{
+    QList<QHostAddress> out;
+
+    for (const QHostAddress &a : in) {
+        int at;
+        for (at = 0; at < out.count(); ++at) {
+            if (comparePriority(a, out[at]) < 0)
+                break;
+        }
+
+        out.insert(at, a);
+    }
+
+    return out;
 }
 
 class Ice176::Private : public QObject {
@@ -1707,6 +1743,55 @@ QList<Ice176::SelectedCandidate> Ice176::selectedCandidates() const
         }
     }
     return ret;
+}
+
+QList<QHostAddress> Ice176::availableNetworkAddresses()
+{
+    QList<QHostAddress> listenAddrs;
+    auto const          interfaces = QNetworkInterface::allInterfaces();
+#ifdef Q_OS_UNIX
+    static const auto ignored
+        = QStringList { QStringLiteral("vmnet"), QStringLiteral("vnic"), QStringLiteral("vboxnet") };
+#endif
+    for (const QNetworkInterface &ni : interfaces) {
+        if ((ni.flags() & (QNetworkInterface::IsRunning | QNetworkInterface::IsUp))
+                != (QNetworkInterface::IsRunning | QNetworkInterface::IsUp)
+            || ni.flags() & QNetworkInterface::IsLoopBack
+#ifdef Q_OS_UNIX
+            || std::any_of(ignored.begin(), ignored.end(), [&ni](auto const &ign) { return ni.name().startsWith(ign); })
+#elif Q_OS_WIN
+            || ni.humanReadableName().contains(QStringLiteral("VMnet"))
+#endif
+        )
+            continue;
+
+        QList<QNetworkAddressEntry> entries = ni.addressEntries();
+        for (const QNetworkAddressEntry &na : qAsConst(entries)) {
+            if (na.preferredLifetime().hasExpired() || na.netmask().isNull())
+                continue;
+
+            QHostAddress h = na.ip();
+            if (h.isNull() || h.isLoopback()
+                || !(h.protocol() == QAbstractSocket::IPv4Protocol || h.protocol() == QAbstractSocket::IPv6Protocol)
+                || (h.protocol() == QAbstractSocket::IPv4Protocol && h.toIPv4Address() < 0x01000000))
+                continue;
+
+            // don't put the same address in twice.
+            //   this also means that if there are
+            //   two link-local ipv6 interfaces
+            //   with the exact same address, we
+            //   only use the first one
+            if (listenAddrs.contains(h))
+                continue;
+
+            // TODO review if the next condition is needed (and the above too)
+            if (h.protocol() == QAbstractSocket::IPv6Protocol && XMPP::Ice176::isIPv6LinkLocalAddress(h))
+                h.setScopeId(ni.name());
+            listenAddrs += h;
+        }
+    }
+
+    return sortAddrs(listenAddrs);
 }
 
 } // namespace XMPP
