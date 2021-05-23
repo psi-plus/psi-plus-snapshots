@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019  Sergey Ilinykh
+ * Copyright (C) 2019-2021  Sergey Ilinykh
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -19,12 +19,15 @@
 #ifndef XMPP_HASH_H
 #define XMPP_HASH_H
 
-#include "xmpp_stanza.h"
-
-#include <QFileInfo>
+#include <QHash>
 #include <QString>
 
+#include <memory>
+
 class QDomElement;
+class QFileInfo;
+class QIODevice;
+class QDomDocument;
 
 namespace XMPP {
 
@@ -66,7 +69,7 @@ public:
     inline QByteArray toBase64() const { return v_data.toBase64(); }
     inline QString toString() const { return QString("%1+%2").arg(stringType(), QString::fromLatin1(v_data.toHex())); }
     bool           compute(const QByteArray &); // computes hash from passed data
-    bool           compute(QIODevice *dev);
+    bool           compute(QIODevice *dev);     // reads all the device and computes hash from the data
 
     QDomElement toXml(QDomDocument *doc) const;
     static void populateFeatures(XMPP::Features &);
@@ -78,6 +81,20 @@ public:
 private:
     Type       v_type = Type::Unknown;
     QByteArray v_data;
+};
+
+class StreamHashPrivate;
+class StreamHash {
+public:
+    StreamHash(Hash::Type type);
+    ~StreamHash();
+    bool addData(const QByteArray &data);
+    Hash final();
+    void restart();
+
+private:
+    friend class StreamHashPrivate;
+    std::unique_ptr<StreamHashPrivate> d;
 };
 
 Q_DECL_PURE_FUNCTION inline uint qHash(const Hash &hash, uint seed = 0) Q_DECL_NOTHROW

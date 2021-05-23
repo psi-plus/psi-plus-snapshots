@@ -3,13 +3,33 @@
 
 #include <QByteArray>
 
+#include <memory>
+
 class QIODevice;
 
 namespace XMPP {
-enum Blake2DigestSize { Blake2Digest256, Blake2Digest512 };
 
-QByteArray computeBlake2Hash(const QByteArray &ba, Blake2DigestSize digestSize);
-QByteArray computeBlake2Hash(QIODevice *dev, Blake2DigestSize digestSize);
+class Blake2Hash {
+public:
+    enum DigestSize { Digest256, Digest512 };
+
+    Blake2Hash(DigestSize digestSize);
+    Blake2Hash(Blake2Hash &&other);
+    ~Blake2Hash();
+
+    bool       addData(const QByteArray &data);
+    bool       addData(QIODevice *dev);
+    QByteArray final();
+    bool       isValid() const { return d != nullptr; }
+
+    static QByteArray compute(const QByteArray &ba, DigestSize digestSize);
+    static QByteArray compute(QIODevice *dev, DigestSize digestSize);
+
+private:
+    class Private;
+    std::unique_ptr<Private> d;
+};
+
 } // namespace XMPP
 
 #endif // BLAKE2QT_H

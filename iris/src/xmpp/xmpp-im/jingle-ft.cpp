@@ -29,7 +29,11 @@
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QRandomGenerator>
 #endif
+#include <QDeadlineTimer>
+#include <QMetaObject>
 #include <QPointer>
+#include <QSemaphore>
+#include <QThread>
 #include <QTimer>
 #include <chrono>
 #include <cmath>
@@ -421,6 +425,65 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     {
         return jingleManager->availableTransports(TransportFeature::Reliable | TransportFeature::Ordered
                                                   | TransportFeature::DataOriented);
+    }
+
+    //----------------------------------------------------------------------------
+    // FileHasher
+    //----------------------------------------------------------------------------
+    class FileHasher::Private {
+    public:
+        std::uint64_t  startPos;
+        std::uint64_t  size;
+        QDeadlineTimer timer;
+        QThread        thread;
+        StreamHash     streamHash;
+
+        Private(std::uint64_t startPos, Hash::Type hashType) : startPos(startPos), streamHash(hashType) { }
+    };
+
+    FileHasher::FileHasher(std::uint64_t startPos, Hash::Type type) : d(new Private(startPos, type))
+    {
+        QSemaphore sem;
+        moveToThread(&d->thread);
+        QObject::connect(&d->thread, &QThread::started, this, [&sem]() { sem.release(); });
+        d->thread.start();
+        sem.acquire();
+    }
+
+    FileHasher::~FileHasher()
+    {
+        if (d->thread.isRunning()) {
+            addData(); // ensure exit called
+            d->thread.wait();
+        }
+    }
+
+    void FileHasher::addData(const QByteArray &data)
+    {
+        QTimer::singleShot(0, this, [data, this]() {
+            // executed in a thread
+            bool needDump = data.isEmpty() || d->timer.hasExpired();
+            d->size += data.size();
+            d->streamHash.addData(data);
+            if (needDump) {
+                auto h = d->streamHash.final();
+                if (!h.isValid())
+                    return;
+
+                Range range(d->startPos, d->size);
+                range.hashes << h;
+                emit hashReady(range);
+                d->startPos += d->size;
+                d->size = 0;
+                if (!data.isEmpty())
+                    d->streamHash.restart();
+            }
+
+            if (data.isEmpty()) // finalizing data
+                thread()->exit();
+        });
+        if (data.isEmpty())
+            d->thread.wait();
     }
 
     //----------------------------------------------------------------------------

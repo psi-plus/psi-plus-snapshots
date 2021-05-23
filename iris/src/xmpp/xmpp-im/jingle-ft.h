@@ -88,6 +88,26 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         QSharedDataPointer<Private> d;
     };
 
+    class FileHasher : public QObject {
+        Q_OBJECT
+    public:
+        FileHasher(std::uint64_t startPos, Hash::Type type);
+        ~FileHasher();
+
+        /**
+         * @brief addData add next portion of data for hash computation.
+         * @param data to be added to hash function. if empty it will signal hashing thread to exit
+         */
+        void addData(const QByteArray &data = QByteArray());
+
+    signals:
+        void hashReady(const XMPP::Jingle::FileTransfer::Range &range);
+
+    private:
+        class Private;
+        std::unique_ptr<Private> d;
+    };
+
     class Checksum : public ContentBase {
     public:
         inline Checksum() { }

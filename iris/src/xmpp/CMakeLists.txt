@@ -130,6 +130,7 @@ set(SOURCES
     xmpp-im/xmpp_caps.cpp
     xmpp-im/xmpp_discoinfotask.cpp
     xmpp-im/xmpp_discoitem.cpp
+    xmpp-im/xmpp_hash.cpp
     xmpp-im/xmpp_ibb.cpp
     xmpp-im/xmpp_reference.cpp
     xmpp-im/xmpp_serverinfomanager.cpp
