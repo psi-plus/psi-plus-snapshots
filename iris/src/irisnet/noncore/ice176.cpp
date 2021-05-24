@@ -29,6 +29,7 @@
 #include "stuntypes.h"
 #include "udpportreserver.h"
 
+#include <QDeadlineTimer>
 #include <QEvent>
 #include <QNetworkInterface>
 #include <QQueue>
@@ -1767,7 +1768,11 @@ QList<QHostAddress> Ice176::availableNetworkAddresses()
 
         QList<QNetworkAddressEntry> entries = ni.addressEntries();
         for (const QNetworkAddressEntry &na : qAsConst(entries)) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
             if (na.preferredLifetime().hasExpired() || na.netmask().isNull())
+#else
+            if (na.netmask().isNull())
+#endif
                 continue;
 
             QHostAddress h = na.ip();
