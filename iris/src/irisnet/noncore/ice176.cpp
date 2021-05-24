@@ -1759,7 +1759,7 @@ QList<QHostAddress> Ice176::availableNetworkAddresses()
             || ni.flags() & QNetworkInterface::IsLoopBack
 #ifdef Q_OS_UNIX
             || std::any_of(ignored.begin(), ignored.end(), [&ni](auto const &ign) { return ni.name().startsWith(ign); })
-#elif Q_OS_WIN
+#elif defined(Q_OS_WIN)
             || ni.humanReadableName().contains(QStringLiteral("VMnet"))
 #endif
         )
