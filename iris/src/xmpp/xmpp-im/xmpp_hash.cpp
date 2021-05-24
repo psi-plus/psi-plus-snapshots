@@ -26,6 +26,8 @@
 #include <QFileInfo>
 #include <qca.h>
 
+#include <variant>
+
 namespace XMPP {
 
 //----------------------------------------------------------------------------
