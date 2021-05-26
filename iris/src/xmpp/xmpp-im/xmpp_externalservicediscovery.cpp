@@ -92,7 +92,7 @@ bool ExternalService::parse(QDomElement &el)
         return false;
 
     if (!expiresOpt.isEmpty()) {
-        expires = QDateTime::fromString(el.text().left(19), Qt::ISODate);
+        expires = QDateTime::fromString(expiresOpt.left(19), Qt::ISODate);
         if (!expires.isValid())
             return false;
     }
@@ -107,9 +107,9 @@ bool ExternalService::parse(QDomElement &el)
         return false;
 
     if (!restrictedOpt.isEmpty()) {
-        if (restrictedOpt == QLatin1String("true"))
+        if (restrictedOpt == QLatin1String("true") || restrictedOpt == QLatin1String("1"))
             restricted = true;
-        if (restrictedOpt != QLatin1String("false"))
+        else if (restrictedOpt != QLatin1String("false") && restrictedOpt != QLatin1String("0"))
             return false;
     }
 
@@ -137,6 +137,7 @@ void ExternalServiceDiscovery::services(QObject *ctx, ServicesCallback &&callbac
         cb(services_);
     });
     task->getServices(type);
+    task->go(true);
 }
 
 } // namespace XMPP
