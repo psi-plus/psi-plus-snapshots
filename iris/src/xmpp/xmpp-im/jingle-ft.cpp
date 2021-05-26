@@ -395,7 +395,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                     } else {
                         qDebug("failure! checksum mismatch! expected %s != %s", qPrintable(expectedHash.toString()),
                                qPrintable(h.toString()));
-                        lastReason = Reason(Reason::Condition::MediaError, "checksum mismatch");
+                        q->remove(Reason::Condition::MediaError, "checksum mismatch");
+                        return;
                     }
                     found = true;
                     break;
