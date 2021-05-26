@@ -59,6 +59,7 @@ set(HEADERS
     xmpp-im/xmpp_xdata.h
     xmpp-im/xmpp_xmlcommon.h
     xmpp-im/xmpp_encryption.h
+    xmpp-im/xmpp_externalservicediscovery.h
 
     base/randomnumbergenerator.h
     base/randrandomnumbergenerator.h
@@ -142,6 +143,8 @@ set(SOURCES
     xmpp-im/xmpp_xdata.cpp
     xmpp-im/xmpp_xmlcommon.cpp
     xmpp-im/xmpp_encryption.cpp
+    xmpp-im/xmpp_externalservicediscovery.cpp
+
     xmpp-im/jingle.cpp
     xmpp-im/jingle-connection.cpp
     xmpp-im/jingle-session.cpp

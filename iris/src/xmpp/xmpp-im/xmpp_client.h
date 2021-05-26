@@ -55,6 +55,8 @@ class ServerInfoManager;
 class Stream;
 class Task;
 class TcpPortReserver;
+class ExternalServiceDiscovery;
+
 namespace Jingle {
     class Manager;
     namespace S5B {
@@ -140,19 +142,20 @@ public:
     void            setCapsOptimizationAllowed(bool allowed);
     bool            capsOptimizationAllowed() const;
 
-    void                   setTcpPortReserver(TcpPortReserver *portReserver);
-    TcpPortReserver *      tcpPortReserver() const;
-    S5BManager *           s5bManager() const;
-    IBBManager *           ibbManager() const;
-    BoBManager *           bobManager() const;
-    JidLinkManager *       jidLinkManager() const;
-    CapsManager *          capsManager() const;
-    ServerInfoManager *    serverInfoManager() const;
-    HttpFileUploadManager *httpFileUploadManager() const;
-    Jingle::Manager *      jingleManager() const;
-    Jingle::S5B::Manager * jingleS5BManager() const;
-    Jingle::IBB::Manager * jingleIBBManager() const;
-    Jingle::ICE::Manager * jingleICEManager() const;
+    void                      setTcpPortReserver(TcpPortReserver *portReserver);
+    TcpPortReserver *         tcpPortReserver() const;
+    S5BManager *              s5bManager() const;
+    IBBManager *              ibbManager() const;
+    BoBManager *              bobManager() const;
+    JidLinkManager *          jidLinkManager() const;
+    CapsManager *             capsManager() const;
+    ServerInfoManager *       serverInfoManager() const;
+    ExternalServiceDiscovery *externalServiceDiscovery() const;
+    HttpFileUploadManager *   httpFileUploadManager() const;
+    Jingle::Manager *         jingleManager() const;
+    Jingle::S5B::Manager *    jingleS5BManager() const;
+    Jingle::IBB::Manager *    jingleIBBManager() const;
+    Jingle::ICE::Manager *    jingleICEManager() const;
 
     void                 setFileTransferEnabled(bool b);
     FileTransferManager *fileTransferManager() const;

@@ -78,6 +78,7 @@
 #include "tcpportreserver.h"
 #include "xmpp_bitsofbinary.h"
 #include "xmpp_caps.h"
+#include "xmpp_externalservicediscovery.h"
 #include "xmpp_hash.h"
 #include "xmpp_ibb.h"
 #include "xmpp_serverinfomanager.h"
@@ -130,22 +131,23 @@ public:
     bool                    active           = false;
     bool                    capsOptimization = false; // don't send caps every time
 
-    LiveRoster             roster;
-    ResourceList           resourceList;
-    CapsManager *          capsman               = nullptr;
-    TcpPortReserver *      tcpPortReserver       = nullptr;
-    S5BManager *           s5bman                = nullptr;
-    Jingle::S5B::Manager * jingleS5BManager      = nullptr;
-    Jingle::IBB::Manager * jingleIBBManager      = nullptr;
-    Jingle::ICE::Manager * jingleICEManager      = nullptr;
-    IBBManager *           ibbman                = nullptr;
-    BoBManager *           bobman                = nullptr;
-    FileTransferManager *  ftman                 = nullptr;
-    ServerInfoManager *    serverInfoManager     = nullptr;
-    HttpFileUploadManager *httpFileUploadManager = nullptr;
-    Jingle::Manager *      jingleManager         = nullptr;
-    QList<GroupChat>       groupChatList;
-    EncryptionHandler *    encryptionHandler = nullptr;
+    LiveRoster                roster;
+    ResourceList              resourceList;
+    CapsManager *             capsman                  = nullptr;
+    TcpPortReserver *         tcpPortReserver          = nullptr;
+    S5BManager *              s5bman                   = nullptr;
+    Jingle::S5B::Manager *    jingleS5BManager         = nullptr;
+    Jingle::IBB::Manager *    jingleIBBManager         = nullptr;
+    Jingle::ICE::Manager *    jingleICEManager         = nullptr;
+    IBBManager *              ibbman                   = nullptr;
+    BoBManager *              bobman                   = nullptr;
+    FileTransferManager *     ftman                    = nullptr;
+    ServerInfoManager *       serverInfoManager        = nullptr;
+    ExternalServiceDiscovery *externalServiceDiscovery = nullptr;
+    HttpFileUploadManager *   httpFileUploadManager    = nullptr;
+    Jingle::Manager *         jingleManager            = nullptr;
+    QList<GroupChat>          groupChatList;
+    EncryptionHandler *       encryptionHandler = nullptr;
 };
 
 Client::Client(QObject *par) : QObject(par)
@@ -170,8 +172,9 @@ Client::Client(QObject *par) : QObject(par)
 
     d->capsman = new CapsManager(this);
 
-    d->serverInfoManager     = new ServerInfoManager(this);
-    d->httpFileUploadManager = new HttpFileUploadManager(this);
+    d->serverInfoManager        = new ServerInfoManager(this);
+    d->externalServiceDiscovery = new ExternalServiceDiscovery(this);
+    d->httpFileUploadManager    = new HttpFileUploadManager(this);
 
     d->jingleManager = new Jingle::Manager(this);
     auto ft          = new Jingle::FileTransfer::Manager(this);
@@ -290,6 +293,8 @@ bool Client::capsOptimizationAllowed() const
 
 ServerInfoManager *Client::serverInfoManager() const { return d->serverInfoManager; }
 
+ExternalServiceDiscovery *Client::externalServiceDiscovery() const { return d->externalServiceDiscovery; }
+
 HttpFileUploadManager *Client::httpFileUploadManager() const { return d->httpFileUploadManager; }
 
 Jingle::Manager *Client::jingleManager() const { return d->jingleManager; }
@@ -299,7 +304,7 @@ bool Client::isActive() const { return d->active; }
 QString Client::groupChatPassword(const QString &host, const QString &room) const
 {
     Jid jid(room + "@" + host);
-    for (const GroupChat &i : d->groupChatList) {
+    for (const GroupChat &i : qAsConst(d->groupChatList)) {
         if (i.j.compare(jid, false)) {
             return i.password;
         }
@@ -367,7 +372,7 @@ void Client::groupChatSetStatus(const QString &host, const QString &room, const 
 {
     Jid  jid(room + "@" + host);
     bool found = false;
-    for (const GroupChat &i : d->groupChatList) {
+    for (const GroupChat &i : qAsConst(d->groupChatList)) {
         if (i.j.compare(jid, false)) {
             found = true;
             jid   = i.j;
@@ -426,7 +431,7 @@ void Client::groupChatLeaveAll(const QString &statusStr)
 QString Client::groupChatNick(const QString &host, const QString &room) const
 {
     Jid jid(room + "@" + host);
-    for (const GroupChat &gc : d->groupChatList) {
+    for (const GroupChat &gc : qAsConst(d->groupChatList)) {
         if (gc.j.compare(jid, false)) {
             return gc.j.resource();
         }
@@ -841,7 +846,8 @@ void Client::pmMessage(const Message &m)
     debug(QString("Client: Message from %1\n").arg(m.from().full()));
 
     // bits of binary. we can't do this in Message, since it knows nothing about Client
-    for (const BoBData &b : m.bobDataList()) {
+    auto const &dataList = m.bobDataList();
+    for (const BoBData &b : dataList) {
         d->bobman->append(b);
     }
 
