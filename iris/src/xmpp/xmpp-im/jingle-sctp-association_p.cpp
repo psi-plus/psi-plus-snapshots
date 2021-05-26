@@ -77,7 +77,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
 
     void AssociationPrivate::OnSctpAssociationSendData(RTC::SctpAssociation *, const uint8_t *data, size_t len)
     {
-        qDebug("jignle-sctp: on outgoing data");
+        // qDebug("jignle-sctp: on outgoing data");
         QByteArray bytes((char *)data, len);
         QMetaObject::invokeMethod(this, "onOutgoingData", Q_ARG(QByteArray, bytes));
     }
@@ -85,7 +85,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     void AssociationPrivate::OnSctpAssociationMessageReceived(RTC::SctpAssociation *, uint16_t streamId, uint32_t ppid,
                                                               const uint8_t *msg, size_t len)
     {
-        qDebug("jignle-sctp: on incoming data");
+        // qDebug("jignle-sctp: on incoming data");
         QByteArray bytes((char *)msg, len);
         QMetaObject::invokeMethod(this, "onIncomingData", Q_ARG(QByteArray, bytes), Q_ARG(quint16, streamId),
                                   Q_ARG(quint32, ppid));
@@ -93,7 +93,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
 
     void AssociationPrivate::OnSctpAssociationBufferedAmount(RTC::SctpAssociation *sctpAssociation, uint32_t len)
     {
-        qDebug("jignle-sctp: on buffered data: %d", len);
+        // qDebug("jignle-sctp: on buffered data: %d", len);
         Q_UNUSED(sctpAssociation);
         Q_UNUSED(len);
         if (!dumpingOutogingBuffer)
@@ -150,7 +150,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     bool AssociationPrivate::write(const QByteArray &data, quint16 streamId, quint32 ppid, Reliability reliable,
                                    bool ordered, quint32 reliability)
     {
-        qDebug("jignle-sctp: write %d bytes on stream %u with ppid %u", data.size(), streamId, ppid);
+        // qDebug("jignle-sctp: write %d bytes on stream %u with ppid %u", data.size(), streamId, ppid);
         RTC::DataConsumer consumer;
         consumer.sctpParameters.streamId          = streamId;
         consumer.sctpParameters.ordered           = ordered; // ordered=true also enables reliability

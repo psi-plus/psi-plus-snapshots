@@ -680,7 +680,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 },
                 Qt::QueuedConnection); // signal is not DOR-SS
             q->connect(ice, &Ice176::readyRead, q, [this](int componentIndex) {
-                qDebug("ICE readyRead");
+                // qDebug("ICE readyRead");
                 auto  buf       = ice->readDatagram(componentIndex);
                 auto &component = components[componentIndex];
                 if (component.dtls) {

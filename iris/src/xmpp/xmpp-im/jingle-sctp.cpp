@@ -109,14 +109,14 @@ namespace XMPP { namespace Jingle { namespace SCTP {
 
     QByteArray Association::readOutgoing()
     {
-        SCTP_DEBUG("read outgoing");
+        // SCTP_DEBUG("read outgoing");
         std::lock_guard<std::mutex> lock(d->mutex);
         return d->outgoingPacketsQueue.isEmpty() ? QByteArray() : d->outgoingPacketsQueue.dequeue();
     }
 
     void Association::writeIncoming(const QByteArray &data)
     {
-        SCTP_DEBUG("write incoming");
+        // SCTP_DEBUG("write incoming");
         d->assoc.ProcessSctpData(reinterpret_cast<const uint8_t *>(data.data()), data.size());
     }
 

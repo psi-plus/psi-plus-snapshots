@@ -21,6 +21,7 @@
 #define JINGLEFT_H
 
 #include "jingle-application.h"
+#include "jingle-file.h"
 #include "jingle.h"
 #include "xmpp_hash.h"
 
@@ -34,80 +35,6 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     extern const QString NS;
     class Manager;
 
-    struct Range {
-        qint64      offset = 0;
-        qint64      length = 0; // 0 - from offset to the end of the file
-        QList<Hash> hashes;
-
-        inline Range() { }
-        inline Range(qint64 offset, qint64 length) : offset(offset), length(length) { }
-        inline bool isValid() const { return hashes.size() || offset || length; }
-        inline      operator bool() const { return isValid(); }
-        QDomElement toXml(QDomDocument *doc) const;
-    };
-
-    class File {
-    public:
-        File();
-        File(const File &other);
-        File(const QDomElement &file);
-        ~File();
-        File &      operator=(const File &other);
-        inline bool isValid() const { return d != nullptr; }
-        QDomElement toXml(QDomDocument *doc) const;
-        bool        merge(const File &other);
-        bool        hasComputedHashes() const;
-        bool        hasSize() const;
-
-        QDateTime   date() const;
-        QString     description() const;
-        QList<Hash> hashes() const;
-        QList<Hash> computedHashes() const;
-        Hash        hash(Hash::Type t = Hash::Unknown) const;
-        QString     mediaType() const;
-        QString     name() const;
-        qint64      size() const;
-        Range       range() const;
-        Thumbnail   thumbnail() const;
-        QByteArray  amplitudes() const;
-
-        void setDate(const QDateTime &date);
-        void setDescription(const QString &desc);
-        void addHash(const Hash &hash);
-        void setHashes(const QList<Hash> &hashes);
-        void setMediaType(const QString &mediaType);
-        void setName(const QString &name);
-        void setSize(qint64 size);
-        void setRange(const Range &range = Range()); // default empty just to indicate it's supported
-        void setThumbnail(const Thumbnail &thumb);
-        void setAmplitudes(const QByteArray &amplitudes);
-
-    private:
-        class Private;
-        Private *                   ensureD();
-        QSharedDataPointer<Private> d;
-    };
-
-    class FileHasher : public QObject {
-        Q_OBJECT
-    public:
-        FileHasher(std::uint64_t startPos, Hash::Type type);
-        ~FileHasher();
-
-        /**
-         * @brief addData add next portion of data for hash computation.
-         * @param data to be added to hash function. if empty it will signal hashing thread to exit
-         */
-        void addData(const QByteArray &data = QByteArray());
-
-    signals:
-        void hashReady(const XMPP::Jingle::FileTransfer::Range &range);
-
-    private:
-        class Private;
-        std::unique_ptr<Private> d;
-    };
-
     class Checksum : public ContentBase {
     public:
         inline Checksum() { }
@@ -119,6 +46,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     };
 
     class Received : public ContentBase {
+    public:
         using ContentBase::ContentBase;
         QDomElement toXml(QDomDocument *doc) const;
     };
@@ -166,6 +94,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         void                              start() override;
 
         void setFile(const File &file);
+        void setFile(const QFileInfo &fi, const QString &description, const Thumbnail &thumb);
         File file() const;
         File acceptFile() const;
 

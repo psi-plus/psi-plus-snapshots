@@ -79,6 +79,8 @@ bool Features::test(const QStringList &ns) const
 
 bool Features::test(const QSet<QString> &ns) const { return _list.contains(ns); }
 
+bool Features::test(const QString &ns) const { return _list.contains(ns); }
+
 #define FID_MULTICAST "http://jabber.org/protocol/address"
 bool Features::hasMulticast() const
 {

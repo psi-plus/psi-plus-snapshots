@@ -366,7 +366,7 @@ QByteArray Dtls::readDatagram()
         return {};
     }
     QByteArray a = d->tls->read();
-    DTLS_DEBUG("read %d bytes of decrypted data", a.size());
+    // DTLS_DEBUG("read %d bytes of decrypted data", a.size());
     return a;
 }
 
@@ -377,13 +377,13 @@ QByteArray Dtls::readOutgoingDatagram()
         return {};
     }
     auto ba = d->tls->readOutgoing();
-    DTLS_DEBUG("read outgoing packet of %d bytes", ba.size());
+    // DTLS_DEBUG("read outgoing packet of %d bytes", ba.size());
     return ba;
 }
 
 void Dtls::writeDatagram(const QByteArray &data)
 {
-    DTLS_DEBUG("write %d bytes for encryption\n", data.size());
+    // DTLS_DEBUG("write %d bytes for encryption\n", data.size());
     if (!d->tls) {
         DTLS_DEBUG("negotiation hasn't started yet. ignore writeDatagram");
         return;
@@ -393,7 +393,7 @@ void Dtls::writeDatagram(const QByteArray &data)
 
 void Dtls::writeIncomingDatagram(const QByteArray &data)
 {
-    DTLS_DEBUG("write incoming %d bytes for decryption\n", data.size());
+    // DTLS_DEBUG("write incoming %d bytes for decryption\n", data.size());
     if (!d->tls) {
         DTLS_DEBUG("negotiation hasn't started yet. ignore incoming datagram");
         return;

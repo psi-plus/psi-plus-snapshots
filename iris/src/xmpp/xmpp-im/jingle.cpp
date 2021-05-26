@@ -312,13 +312,12 @@ namespace XMPP { namespace Jingle {
         disposition = el.attribute(QLatin1String("disposition")); // if empty, it's "session"
     }
 
-    QDomElement ContentBase::toXml(QDomDocument *doc, const char *tagName, const QString &ns) const
+    QDomElement ContentBase::toXml(QDomDocument *doc, const QString &tagName, const QString &ns) const
     {
         if (!isValid()) {
             return QDomElement();
         }
-        auto el = ns.isEmpty() ? doc->createElement(QLatin1String(tagName))
-                               : doc->createElementNS(ns, QLatin1String(tagName));
+        auto el = ns.isEmpty() ? doc->createElement(tagName) : doc->createElementNS(ns, tagName);
         setCreatorAttr(el, creator);
         el.setAttribute(QLatin1String("name"), name);
 

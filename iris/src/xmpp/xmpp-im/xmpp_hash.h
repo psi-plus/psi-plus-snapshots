@@ -77,6 +77,7 @@ public:
     static Hash from(XMPP::Hash::Type t, QIODevice *dev);
     static Hash from(XMPP::Hash::Type t, const QFileInfo &file);
     static Hash from(const QStringRef &str); // e.g. sha1+aabccddeeffaabbcc232387539465923645
+    static Hash fastestHash(const Features &features);
 
 private:
     Type       v_type = Type::Unknown;

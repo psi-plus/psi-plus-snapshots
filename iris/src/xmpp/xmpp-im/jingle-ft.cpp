@@ -30,7 +30,9 @@
 #include <QRandomGenerator>
 #endif
 #include <QDeadlineTimer>
+#include <QFileInfo>
 #include <QMetaObject>
+#include <QMimeDatabase>
 #include <QPointer>
 #include <QSemaphore>
 #include <QThread>
@@ -44,321 +46,11 @@ using namespace std::chrono_literals;
 namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     const QString  NS               = QStringLiteral("urn:xmpp:jingle:apps:file-transfer:5");
-    const QString  AMPLITUDES_NS    = QStringLiteral("urn:audio:amplitudes");
-    constexpr auto RECEIVED_TIMEOUT = 30s;
+    constexpr auto FINALIZE_TIMEOUT = 30s;
 
     // tags
-    static const QString AMPLITUDES_TAG = QStringLiteral("amplitudes");
-    static const QString FILETAG        = QStringLiteral("file");
-    static const QString DATE_TAG       = QStringLiteral("date");
-    static const QString DESC_TAG       = QStringLiteral("desc");
-    static const QString MEDIA_TYPE_TAG = QStringLiteral("media-type");
-    static const QString NAME_TAG       = QStringLiteral("name");
-    static const QString SIZE_TAG       = QStringLiteral("size");
-    static const QString RANGE_TAG      = QStringLiteral("range");
-    static const QString THUMBNAIL_TAG  = QStringLiteral("thumbnail");
-    static const QString CHECKSUM_TAG   = QStringLiteral("checksum");
-    static const QString RECEIVED_TAG   = QStringLiteral("received");
-
-    QDomElement Range::toXml(QDomDocument *doc) const
-    {
-        auto r = doc->createElement(RANGE_TAG);
-        if (length) {
-            r.setAttribute(QStringLiteral("length"), QString::number(length));
-        }
-        if (offset) {
-            r.setAttribute(QStringLiteral("offset"), QString::number(offset));
-        }
-        for (auto const &h : hashes) {
-            auto hel = h.toXml(doc);
-            if (!hel.isNull()) {
-                r.appendChild(hel);
-            }
-        }
-        return r;
-    }
-
-    //----------------------------------------------------------------------------
-    // File
-    //----------------------------------------------------------------------------
-    class File::Private : public QSharedData {
-    public:
-        bool        rangeSupported = false;
-        bool        hasSize        = false;
-        QDateTime   date;
-        QString     mediaType;
-        QString     name;
-        QString     desc;
-        qint64      size = 0;
-        Range       range;
-        QList<Hash> hashes;
-        Thumbnail   thumbnail;
-        QByteArray  amplitudes;
-    };
-
-    File::File() { }
-
-    File::~File() { }
-
-    File &File::operator=(const File &other)
-    {
-        d = other.d;
-        return *this;
-    }
-
-    File::File(const File &other) : d(other.d) { }
-
-    File::File(const QDomElement &file)
-    {
-        QDateTime   date;
-        QString     mediaType;
-        QString     name;
-        QString     desc;
-        qint64      size           = 0;
-        bool        rangeSupported = false;
-        bool        hasSize        = false;
-        Range       range;
-        QList<Hash> hashes;
-        Thumbnail   thumbnail;
-        QByteArray  amplitudes;
-
-        bool ok;
-
-        for (QDomElement ce = file.firstChildElement(); !ce.isNull(); ce = ce.nextSiblingElement()) {
-
-            if (ce.tagName() == DATE_TAG) {
-                date = QDateTime::fromString(ce.text().left(19), Qt::ISODate);
-                if (!date.isValid()) {
-                    return;
-                }
-
-            } else if (ce.tagName() == MEDIA_TYPE_TAG) {
-                mediaType = ce.text();
-
-            } else if (ce.tagName() == NAME_TAG) {
-                name = ce.text();
-
-            } else if (ce.tagName() == SIZE_TAG) {
-                size = ce.text().toLongLong(&ok);
-                if (!ok || size < 0) {
-                    return;
-                }
-                hasSize = true;
-
-            } else if (ce.tagName() == RANGE_TAG) {
-                if (ce.hasAttribute(QLatin1String("offset"))) {
-                    range.offset = ce.attribute(QLatin1String("offset")).toLongLong(&ok);
-                    if (!ok || range.offset < 0) {
-                        return;
-                    }
-                }
-                if (ce.hasAttribute(QLatin1String("length"))) {
-                    range.length = ce.attribute(QLatin1String("length")).toLongLong(&ok);
-                    if (!ok || range.length <= 0) { // length should absent if we need to read till end of file.
-                                                    // 0-length is nonsense
-                        return;
-                    }
-                }
-                QDomElement hashEl = ce.firstChildElement(QLatin1String("hash"));
-                for (; !hashEl.isNull(); hashEl = hashEl.nextSiblingElement(QLatin1String("hash"))) {
-                    if (hashEl.namespaceURI() == HASH_NS) {
-                        auto hash = Hash(hashEl);
-                        if (hash.type() == Hash::Type::Unknown) {
-                            continue;
-                        }
-                        range.hashes.append(hash);
-                    }
-                }
-                rangeSupported = true;
-
-            } else if (ce.tagName() == DESC_TAG) {
-                desc = ce.text();
-
-            } else if (ce.tagName() == QLatin1String("hash")) {
-                if (ce.namespaceURI() == HASH_NS) {
-                    Hash h(ce);
-                    if (h.type() == Hash::Type::Unknown) {
-                        return;
-                    }
-                    hashes.append(h);
-                }
-
-            } else if (ce.tagName() == QLatin1String("hash-used")) {
-                if (ce.namespaceURI() == HASH_NS) {
-                    Hash h(ce);
-                    if (h.type() == Hash::Type::Unknown) {
-                        return;
-                    }
-                    hashes.append(h);
-                }
-
-            } else if (ce.tagName() == THUMBNAIL_TAG) {
-                thumbnail = Thumbnail(ce);
-            } else if (ce.tagName() == AMPLITUDES_TAG && ce.namespaceURI() == AMPLITUDES_NS) {
-                amplitudes = QByteArray::fromBase64(ce.text().toLatin1());
-            }
-        }
-
-        auto p            = new Private;
-        p->date           = date;
-        p->mediaType      = mediaType;
-        p->name           = name;
-        p->desc           = desc;
-        p->size           = size;
-        p->rangeSupported = rangeSupported;
-        p->hasSize        = hasSize;
-        p->range          = range;
-        p->hashes         = hashes;
-        p->thumbnail      = thumbnail;
-        p->amplitudes     = amplitudes;
-
-        d = p;
-    }
-
-    QDomElement File::toXml(QDomDocument *doc) const
-    {
-        if (!isValid() || d->hashes.isEmpty()) {
-            return QDomElement();
-        }
-        QDomElement el = doc->createElementNS(NS, QStringLiteral("file"));
-        if (d->date.isValid()) {
-            el.appendChild(XMLHelper::textTag(*doc, DATE_TAG, d->date.toString(Qt::ISODate)));
-        }
-        if (d->desc.size()) {
-            el.appendChild(XMLHelper::textTag(*doc, DESC_TAG, d->desc));
-        }
-        for (const auto &h : d->hashes) {
-            el.appendChild(h.toXml(doc));
-        }
-        if (d->mediaType.size()) {
-            el.appendChild(XMLHelper::textTag(*doc, MEDIA_TYPE_TAG, d->mediaType));
-        }
-        if (d->name.size()) {
-            el.appendChild(XMLHelper::textTag(*doc, NAME_TAG, d->name));
-        }
-        if (d->hasSize) {
-            el.appendChild(XMLHelper::textTag(*doc, SIZE_TAG, d->size));
-        }
-        if (d->rangeSupported || d->range.isValid()) {
-            el.appendChild(d->range.toXml(doc));
-        }
-        if (d->thumbnail.isValid()) {
-            el.appendChild(d->thumbnail.toXml(doc));
-        }
-        if (d->amplitudes.size()) {
-            el.appendChild(XMLHelper::textTagNS(doc, AMPLITUDES_NS, AMPLITUDES_TAG, d->amplitudes));
-        }
-        return el;
-    }
-
-    bool File::merge(const File &other)
-    {
-        if (!d->thumbnail.isValid()) {
-            d->thumbnail = other.thumbnail();
-        }
-        for (auto const &h : other.d->hashes) {
-            auto it = std::find_if(d->hashes.constBegin(), d->hashes.constEnd(),
-                                   [&h](auto const &v) { return h.type() == v.type(); });
-            if (it == d->hashes.constEnd()) {
-                d->hashes.append(h);
-            } else if (h.data() != it->data()) {
-                return false; // hashes are different
-            }
-        }
-        return true;
-    }
-
-    bool File::hasComputedHashes() const
-    {
-        if (!d)
-            return false;
-        for (auto const &h : d->hashes) {
-            if (h.data().size())
-                return true;
-        }
-        return false;
-    }
-
-    bool File::hasSize() const { return d->hasSize; }
-
-    QDateTime File::date() const { return d ? d->date : QDateTime(); }
-
-    QString File::description() const { return d ? d->desc : QString(); }
-
-    QList<Hash> File::hashes() const { return d ? d->hashes : QList<Hash>(); }
-    QList<Hash> File::computedHashes() const
-    {
-        QList<Hash> ret;
-        if (!d)
-            return ret;
-        for (auto const &h : d->hashes) {
-            if (h.data().size())
-                ret.append(h);
-        }
-        return ret;
-    }
-
-    Hash File::hash(Hash::Type t) const
-    {
-        if (d && d->hashes.count()) {
-            if (t == Hash::Unknown)
-                return d->hashes.at(0);
-            for (auto const &h : d->hashes) {
-                if (h.type() == t) {
-                    return h;
-                }
-            }
-        }
-        return Hash();
-    }
-
-    QString File::mediaType() const { return d ? d->mediaType : QString(); }
-
-    QString File::name() const { return d ? d->name : QString(); }
-
-    qint64 File::size() const { return d ? d->size : 0; }
-
-    Range File::range() const { return d ? d->range : Range(); }
-
-    Thumbnail File::thumbnail() const { return d ? d->thumbnail : Thumbnail(); }
-
-    QByteArray File::amplitudes() const { return d ? d->amplitudes : QByteArray(); }
-
-    void File::setDate(const QDateTime &date) { ensureD()->date = date; }
-
-    void File::setDescription(const QString &desc) { ensureD()->desc = desc; }
-
-    void File::addHash(const Hash &hash) { ensureD()->hashes.append(hash); }
-
-    void File::setHashes(const QList<Hash> &hashes) { ensureD()->hashes = hashes; }
-
-    void File::setMediaType(const QString &mediaType) { ensureD()->mediaType = mediaType; }
-
-    void File::setName(const QString &name) { ensureD()->name = name; }
-
-    void File::setSize(qint64 size)
-    {
-        ensureD()->size = size;
-        d->hasSize      = true;
-    }
-
-    void File::setRange(const Range &range)
-    {
-        ensureD()->range  = range;
-        d->rangeSupported = true;
-    }
-
-    void File::setThumbnail(const Thumbnail &thumb) { ensureD()->thumbnail = thumb; }
-
-    void File::setAmplitudes(const QByteArray &amplitudes) { d->amplitudes = amplitudes; }
-
-    File::Private *File::ensureD()
-    {
-        if (!d) {
-            d = new Private;
-        }
-        return d.data();
-    }
+    static const QString CHECKSUM_TAG = QStringLiteral("checksum");
+    static const QString RECEIVED_TAG = QStringLiteral("received");
 
     //----------------------------------------------------------------------------
     // Checksum
@@ -372,7 +64,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     QDomElement Checksum::toXml(QDomDocument *doc) const
     {
-        auto el = ContentBase::toXml(doc, "checksum");
+        auto el = ContentBase::toXml(doc, "checksum", NS);
         if (!el.isNull()) {
             el.appendChild(file.toXml(doc));
         }
@@ -382,7 +74,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     //----------------------------------------------------------------------------
     // Received
     //----------------------------------------------------------------------------
-    QDomElement Received::toXml(QDomDocument *doc) const { return ContentBase::toXml(doc, "received"); }
+    QDomElement Received::toXml(QDomDocument *doc) const { return ContentBase::toXml(doc, RECEIVED_TAG, NS); }
 
     //----------------------------------------------------------------------------
     // ApplicationManager
@@ -428,65 +120,6 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     }
 
     //----------------------------------------------------------------------------
-    // FileHasher
-    //----------------------------------------------------------------------------
-    class FileHasher::Private {
-    public:
-        std::uint64_t  startPos;
-        std::uint64_t  size;
-        QDeadlineTimer timer;
-        QThread        thread;
-        StreamHash     streamHash;
-
-        Private(std::uint64_t startPos, Hash::Type hashType) : startPos(startPos), streamHash(hashType) { }
-    };
-
-    FileHasher::FileHasher(std::uint64_t startPos, Hash::Type type) : d(new Private(startPos, type))
-    {
-        QSemaphore sem;
-        moveToThread(&d->thread);
-        QObject::connect(&d->thread, &QThread::started, this, [&sem]() { sem.release(); });
-        d->thread.start();
-        sem.acquire();
-    }
-
-    FileHasher::~FileHasher()
-    {
-        if (d->thread.isRunning()) {
-            addData(); // ensure exit called
-            d->thread.wait();
-        }
-    }
-
-    void FileHasher::addData(const QByteArray &data)
-    {
-        QTimer::singleShot(0, this, [data, this]() {
-            // executed in a thread
-            bool needDump = data.isEmpty() || d->timer.hasExpired();
-            d->size += data.size();
-            d->streamHash.addData(data);
-            if (needDump) {
-                auto h = d->streamHash.final();
-                if (!h.isValid())
-                    return;
-
-                Range range(d->startPos, d->size);
-                range.hashes << h;
-                emit hashReady(range);
-                d->startPos += d->size;
-                d->size = 0;
-                if (!data.isEmpty())
-                    d->streamHash.restart();
-            }
-
-            if (data.isEmpty()) // finalizing data
-                thread()->exit();
-        });
-        if (data.isEmpty())
-            d->thread.wait();
-    }
-
-    //----------------------------------------------------------------------------
     // Application
     //----------------------------------------------------------------------------
     class Application::Private {
@@ -513,8 +146,9 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         QIODevice *         device    = nullptr;
         qint64              bytesLeft = 0;
         QList<Hash>         outgoingChecksum;
-        qint64              outgoingChecksumRangeOffset = 0, outgoingChecksumRangeLength = 0;
-        QTimer *            receivedTimer = nullptr;
+        QList<Hash>         incomingChecksum;
+        QTimer *            finalizeTimer = nullptr;
+        FileHasher *        hasher        = nullptr;
 
         void setState(State s)
         {
@@ -550,20 +184,49 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
         void expectReceived()
         {
-            if (receivedTimer || q->state() == State::Finished)
-                return;
-            receivedTimer = new QTimer(q);
-            receivedTimer->setSingleShot(true);
-            receivedTimer->setInterval(RECEIVED_TIMEOUT);
-            q->connect(receivedTimer, &QTimer::timeout, q, [this]() {
+            qDebug("waiting for <received>");
+            expectFinalize([this]() {
                 qDebug("Waiting for <received> timed out. But likely succeeded anyway");
                 onReceived();
             });
         }
 
+        void expectFinalize(std::function<void()> &&timeoutCallback)
+        {
+            if (finalizeTimer || q->state() == State::Finished)
+                return;
+            finalizeTimer = new QTimer(q);
+            finalizeTimer->setSingleShot(true);
+            finalizeTimer->setInterval(FINALIZE_TIMEOUT);
+            q->connect(finalizeTimer, &QTimer::timeout, q, timeoutCallback);
+        }
+
+        void setDevice(QIODevice *dev, bool closeOnFinish)
+        {
+            device              = dev;
+            closeDeviceOnFinish = closeOnFinish;
+            if (file.hash().isValid() && file.hash().data().isEmpty() && file.range().hashes.isEmpty()) {
+                // no precomputated hashes
+                hasher = new FileHasher(file.hash().type());
+            }
+            if (q->senders() == q->pad()->session()->role()) {
+                writeNextBlockToTransport();
+            } else {
+                readNextBlockFromTransport();
+            }
+        }
+
         void writeNextBlockToTransport()
         {
             if (!(endlessRange || bytesLeft)) {
+                if (hasher) {
+                    auto hash = hasher->result();
+                    if (hash.isValid()) {
+                        outgoingChecksum << hash;
+                        emit q->updated();
+                        return;
+                    }
+                }
                 expectReceived();
                 return; // everything is written
             }
@@ -583,13 +246,24 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             if (data.isEmpty()) {
                 if (endlessRange) {
                     lastReason = Reason(Reason::Condition::Success);
+                    if (hasher) {
+                        auto hash = hasher->result();
+                        if (hash.isValid()) {
+                            outgoingChecksum << hash;
+                            emit q->updated();
+                            return;
+                        }
+                    }
                     setState(State::Finished);
                 } else {
                     handleStreamFail();
                 }
                 return;
             }
-            qDebug("JINGLE-FT write %d bytes to connection", data.size());
+            // qDebug("JINGLE-FT write %d bytes to connection", data.size());
+            if (hasher) {
+                hasher->addData(data);
+            }
             if (connection->features() & TransportFeature::MessageOriented) {
                 if (!connection->writeDatagram(data)) {
                     handleStreamFail();
@@ -622,10 +296,13 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                     }
                     data = connection->read(sz);
                 }
-                qDebug("JINGLE-FT read %d bytes from connection", data.size());
+                // qDebug("JINGLE-FT read %d bytes from connection", data.size());
                 if (data.isEmpty()) {
                     handleStreamFail();
                     return;
+                }
+                if (hasher) {
+                    hasher->addData(data);
                 }
                 if (device->write(data) == -1) {
                     handleStreamFail();
@@ -635,11 +312,12 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 bytesLeft -= data.size();
             }
             if (!bytesLeft) {
-                // TODO send <received>
-                lastReason = Reason(Reason::Condition::Success);
-                setState(State::Finished);
+                tryFinalizeIncoming();
             }
         }
+
+        bool amISender() const { return q->senders() == q->pad()->session()->role(); }
+        bool amIReceiver() const { return q->senders() != q->pad()->session()->role(); }
 
         void onConnectionConnected(Connection::Ptr newConnection)
         {
@@ -648,40 +326,86 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             lastReason = Reason();
             lastError.reset();
 
-            if (!streamingMode) {
-                connect(connection.data(), &Connection::readyRead, q, [this]() {
-                    if (!device) {
-                        return;
+            if (streamingMode) {
+                setState(State::Active);
+                emit q->connectionReady();
+                return;
+            }
+
+            connect(connection.data(), &Connection::readyRead, q, [this]() {
+                if (!device) {
+                    return;
+                }
+                if (q->pad()->session()->role() != q->senders()) {
+                    readNextBlockFromTransport();
+                }
+            });
+            connect(
+                connection.data(), &Connection::bytesWritten, q,
+                [this](qint64 bytes) {
+                    Q_UNUSED(bytes)
+                    if (q->pad()->session()->role() == q->senders() && !connection->bytesToWrite()) {
+                        writeNextBlockToTransport();
                     }
-                    if (q->pad()->session()->role() != q->senders()) {
-                        readNextBlockFromTransport();
-                    }
-                });
-                connect(
-                    connection.data(), &Connection::bytesWritten, q,
-                    [this](qint64 bytes) {
-                        Q_UNUSED(bytes)
-                        if (q->pad()->session()->role() == q->senders() && !connection->bytesToWrite()) {
-                            writeNextBlockToTransport();
-                        }
-                    },
-                    Qt::QueuedConnection);
+                },
+                Qt::QueuedConnection);
+
+            if (amIReceiver()) {
+                connect(connection.data(), &Connection::disconnected, q, [this]() { tryFinalizeIncoming(); });
             }
 
             setState(State::Active);
-            if (!streamingMode) {
-                if (acceptFile.range().isValid()) {
-                    bytesLeft = acceptFile.range().length;
-                    if (!bytesLeft)
-                        endlessRange = true;
-                    emit q->deviceRequested(acceptFile.range().offset, bytesLeft);
-                } else {
-                    bytesLeft = acceptFile.size();
-                    emit q->deviceRequested(0, bytesLeft);
-                }
+            if (acceptFile.range().isValid()) {
+                bytesLeft = acceptFile.range().length;
+                if (!bytesLeft)
+                    endlessRange = true;
+                emit q->deviceRequested(acceptFile.range().offset, bytesLeft);
             } else {
-                emit q->connectionReady();
+                bytesLeft = acceptFile.size();
+                emit q->deviceRequested(0, bytesLeft);
             }
+        }
+
+        void tryFinalizeIncoming()
+        {
+            if (q->_state == State::Finished || outgoingReceived || streamingMode)
+                return;
+            if (connection->isOpen() && bytesLeft)
+                return;
+
+            // data read finished. check other stuff
+            if (hasher && incomingChecksum.isEmpty()) {
+                qDebug("waiting for <checksum>");
+                expectFinalize([this]() {
+                    qDebug("Waiting for <checksum> timed out. But likely succeeded anyway");
+                    lastReason = Reason(Reason::Condition::Success);
+                    setState(State::Finished);
+                });
+                return;
+            }
+            if (hasher) {
+                auto expectedHash = hasher->result();
+                bool found        = false;
+                for (auto const &h : qAsConst(incomingChecksum)) {
+                    if (h.type() != expectedHash.type())
+                        continue;
+                    if (h == expectedHash) {
+                        qDebug("hurray! checksum matched!");
+                        lastReason = Reason(Reason::Condition::Success);
+                    } else {
+                        qDebug("failure! checksum mismatch! expected %s != %s", qPrintable(expectedHash.toString()),
+                               qPrintable(h.toString()));
+                        lastReason = Reason(Reason::Condition::MediaError, "checksum mismatch");
+                    }
+                    found = true;
+                    break;
+                }
+                if (!found)
+                    qDebug("haven't found %s checksum withing received checksums",
+                           qPrintable(expectedHash.stringType()));
+            }
+            outgoingReceived = true;
+            emit q->updated();
         }
     };
 
@@ -698,7 +422,11 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             new NSTransportsList(pad->session(), static_cast<Manager *>(pad->manager())->availableTransports()));
     }
 
-    Application::~Application() { qDebug("jingle-ft: destroyed"); }
+    Application::~Application()
+    {
+        delete d->hasher;
+        qDebug("jingle-ft: destroyed");
+    }
 
     void Application::setState(State state) { d->setState(state); }
 
@@ -781,6 +509,30 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     void Application::setFile(const File &file) { d->file = file; }
 
+    void Application::setFile(const QFileInfo &fi, const QString &description, const Thumbnail &thumb)
+    {
+        QMimeDatabase mimeDb;
+
+        auto hash = Hash::fastestHash(pad()->session()->peerFeatures());
+        if (hash.isValid() && fi.size() < 10e6) { // compute hash dynamically (in a thread) for large files
+            QFile f(fi.absoluteFilePath());
+            f.open(QIODevice::ReadOnly);
+            hash.compute(&f);
+            f.close();
+        }
+
+        File file;
+        file.setDate(fi.lastModified());
+        file.setDescription(description);
+        file.addHash(hash);
+        file.setMediaType(mimeDb.mimeTypeForFile(fi).name());
+        file.setName(fi.fileName());
+        file.setRange(); // indicate range support
+        file.setSize(quint64(fi.size()));
+        file.setThumbnail(thumb);
+        d->file = file;
+    }
+
     File Application::file() const { return d->file; }
 
     File Application::acceptFile() const { return d->acceptFile; }
@@ -796,6 +548,12 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     void Application::setStreamingMode(bool mode)
     {
+        Q_ASSERT(_senders != _pad->session()->role());
+        if (_senders == _pad->session()->role()) {
+            qCritical("streaming mode is implmented only for receiving, not sending");
+            remove(Reason::GeneralError, "unsupported file sender streaming mode");
+            return;
+        }
         if (_state <= State::Connecting) {
             d->streamingMode = mode;
         }
@@ -828,18 +586,16 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         if (_update.action == Action::SessionInfo && (d->outgoingChecksum.size() > 0 || d->outgoingReceived)) {
             if (d->outgoingReceived) {
                 d->outgoingReceived = false;
-                ContentBase cb(_pad->session()->role(), _contentName);
-                return OutgoingUpdate { QList<QDomElement>() << cb.toXml(doc, "received", NS),
+                Received received(creator(), _contentName);
+                return OutgoingUpdate { QList<QDomElement>() << received.toXml(doc),
                                         [this](bool) { d->setState(State::Finished); } };
             }
             if (!d->outgoingChecksum.isEmpty()) {
                 ContentBase cb(_pad->session()->role(), _contentName);
                 File        f;
-                if (d->outgoingChecksumRangeOffset || d->outgoingChecksumRangeLength) {
-                    Range r;
+                if (d->file.range().isValid()) {
+                    Range r  = d->file.range();
                     r.hashes = d->outgoingChecksum;
-                    r.offset = d->outgoingChecksumRangeOffset;
-                    r.length = d->outgoingChecksumRangeLength;
                     f.setRange(r);
                 } else {
                     f.setHashes(d->outgoingChecksum);
@@ -847,7 +603,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 auto el = cb.toXml(doc, "checksum", NS);
                 el.appendChild(f.toXml(doc));
                 d->outgoingChecksum.clear();
-                return OutgoingUpdate { QList<QDomElement>() << el, [this](bool) { d->setState(State::Finished); } };
+                return OutgoingUpdate { QList<QDomElement>() << el, [this](bool) { d->expectReceived(); } };
             }
         }
         if (_update.action == Action::ContentAdd && _creator == _pad->session()->role()) {
@@ -917,21 +673,20 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             emit updated();
             return;
         }
-        d->device              = dev;
-        d->closeDeviceOnFinish = closeOnFinish;
-        if (_senders == _pad->session()->role()) {
-            d->writeNextBlockToTransport();
-        } else {
-            d->readNextBlockFromTransport();
-        }
+        d->setDevice(dev, closeOnFinish);
     }
 
     Connection::Ptr Application::connection() const { return d->connection.staticCast<XMPP::Jingle::Connection>(); }
 
     void Application::incomingChecksum(const QList<Hash> &hashes)
     {
-        // TODO
         qDebug("got checksum: %s", qPrintable(hashes.value(0).toString()));
+        if (!d->hasher || _senders != _pad->session()->peerRole()) {
+            qDebug("unexpected incoming checksum. was it negotiated?");
+            return;
+        }
+        d->incomingChecksum = hashes;
+        d->tryFinalizeIncoming();
     }
 
     void Application::incomingReceived()
@@ -967,22 +722,27 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         return name;
     }
 
-    bool Pad::incomingSessionInfo(const QDomElement &el)
+    bool Pad::incomingSessionInfo(const QDomElement &jingle)
     {
-        if (el.tagName() == CHECKSUM_TAG) {
-            Checksum checksum(el);
-            auto     app = session()->content(checksum.name, checksum.creator);
-            if (app) {
-                static_cast<Application *>(app)->incomingChecksum(checksum.file.hashes());
+        for (auto el = jingle.firstChildElement(); !el.isNull(); el = el.nextSiblingElement()) {
+            if (el.tagName() == CHECKSUM_TAG) {
+                Checksum checksum(el);
+                auto     app = session()->content(checksum.name, checksum.creator);
+                if (app) {
+                    static_cast<Application *>(app)->incomingChecksum(checksum.file.hashes());
+                }
+                return true;
+            } else if (el.tagName() == RECEIVED_TAG) {
+                Received received(el);
+                auto     app = session()->content(received.name, received.creator);
+                if (app) {
+                    static_cast<Application *>(app)->incomingReceived();
+                }
+                return true;
+            } else {
+                // TODO report actual error
+                qDebug("unknown session-info: %s", qPrintable(el.tagName()));
             }
-            return true;
-        } else if (el.tagName() == RECEIVED_TAG) {
-            Received received(el);
-            auto     app = session()->content(received.name, received.creator);
-            if (app) {
-                static_cast<Application *>(app)->incomingReceived();
-            }
-            return true;
         }
         return false;
     }

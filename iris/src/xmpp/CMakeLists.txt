@@ -105,6 +105,7 @@ set(HEADERS
     xmpp-im/jingle-ice.h
     xmpp-im/jingle-s5b.h
     xmpp-im/jingle-ibb.h
+    xmpp-im/jingle-file.h
 
     zlib/zlibcompressor.h
     zlib/zlibdecompressor.h
@@ -151,6 +152,7 @@ set(SOURCES
     xmpp-im/jingle-ice.cpp
     xmpp-im/jingle-s5b.cpp
     xmpp-im/jingle-ibb.cpp
+    xmpp-im/jingle-file.cpp
 
     base/randomnumbergenerator.cpp
     base/timezone.cpp

@@ -90,7 +90,8 @@ public:
     };
 
     // useful functions
-    inline bool test(const char *ns) const { return test(QSet<QString>() << QLatin1String(ns)); }
+    inline bool test(const char *ns) const { return test(QLatin1String(ns)); }
+    bool        test(const QString &) const;
     bool        test(const QStringList &) const;
     bool        test(const QSet<QString> &) const;
 

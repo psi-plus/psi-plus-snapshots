@@ -270,7 +270,11 @@ namespace Jingle {
 
         inline bool isValid() const { return creator != Origin::None && !name.isEmpty(); }
 
-        QDomElement   toXml(QDomDocument *doc, const char *tagName, const QString &ns = QString()) const;
+        inline QDomElement toXml(QDomDocument *doc, const char *tagName, const QString &ns = QString()) const
+        {
+            return toXml(doc, QLatin1String(tagName), ns);
+        }
+        QDomElement   toXml(QDomDocument *doc, const QString &tagName, const QString &ns = QString()) const;
         static Origin creatorAttr(const QDomElement &el);
         static bool   setCreatorAttr(QDomElement &el, Origin creator);
 

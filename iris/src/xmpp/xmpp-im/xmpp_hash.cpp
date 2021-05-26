@@ -26,6 +26,7 @@
 #include <QFileInfo>
 #include <qca.h>
 
+#include <array>
 #include <variant>
 
 namespace XMPP {
@@ -267,6 +268,25 @@ Hash Hash::from(const QStringRef &str)
             hash = Hash();
     }
     return hash;
+}
+
+Hash Hash::fastestHash(const Features &features)
+{
+    std::array  qcaAlgos = { "blake2b_512", "blake2b_256", "sha1", "sha512", "sha256", "sha3_256", "sha3_512" };
+    std::array  qcaMap   = { Blake2b512, Blake2b256, Sha1, Sha512, Sha256, Sha3_256, Sha3_512 };
+    QStringList priorityFeatures;
+    priorityFeatures.reserve(qcaAlgos.size());
+    for (auto t : qcaMap) {
+        priorityFeatures.append(QString(QLatin1String("urn:xmpp:hash-function-text-names:"))
+                                + QLatin1String(hashTypes[int(t)].text));
+        // REVIEW modify hashTypes with priority info instead?
+    }
+    for (std::size_t i = 0; i < qcaAlgos.size(); i++) {
+        if (QCA::isSupported(qcaAlgos[i]) && features.test(priorityFeatures[i])) {
+            return Hash(qcaMap[i]);
+        }
+    }
+    return Hash(); // qca is the fastest and it defintiely has sha1. so no reason to use qt or custom blake
 }
 
 class StreamHashPrivate {

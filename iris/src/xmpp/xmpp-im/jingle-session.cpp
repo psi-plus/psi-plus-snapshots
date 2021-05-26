@@ -1036,6 +1036,8 @@ namespace XMPP { namespace Jingle {
 
     Origin Session::peerRole() const { return negateOrigin(d->role); }
 
+    Features Session::peerFeatures() const { return d->manager->client()->capsManager()->disco(peer()).features(); }
+
     bool Session::checkPeerCaps(const QString &ns) const
     {
         return d->manager->client()->capsManager()->disco(peer()).features().test(QStringList() << ns);

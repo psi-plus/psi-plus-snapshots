@@ -22,6 +22,7 @@
 
 #include "jingle-application.h"
 #include "jingle-transport.h"
+#include "xmpp_features.h"
 
 namespace XMPP { namespace Jingle {
 
@@ -46,10 +47,12 @@ namespace XMPP { namespace Jingle {
         Jid     responder() const;
         QString sid() const;
 
-        Origin role() const; // my role in session: initiator or responder
-        Origin peerRole() const;
-        bool   checkPeerCaps(const QString &ns) const;
-        bool   isGroupingAllowed() const;
+        Origin   role() const; // my role in session: initiator or responder
+        Origin   peerRole() const;
+        bool     checkPeerCaps(const QString &ns) const;
+        Features peerFeatures() const;
+
+        bool isGroupingAllowed() const;
 
         XMPP::Stanza::Error lastError() const;
 
