@@ -38,6 +38,7 @@ set(SOURCES
     corelib/netinterface.cpp
     corelib/netnames.cpp
     corelib/objectsession.cpp
+    corelib/netinterface_qtname.cpp
     corelib/netinterface_qtnet.cpp
 
     noncore/iceagent.cpp
@@ -59,12 +60,6 @@ set(SOURCES
 
 if(UNIX)
     list(APPEND SOURCES corelib/netinterface_unix.cpp)
-endif()
-
-if(NOT USE_QJDNS)
-    list(APPEND SOURCES corelib/netinterface_qtname.cpp)
-else()
-    list(APPEND SOURCES corelib/netnames_jdns.cpp)
 endif()
 
 set(HEADERS
@@ -130,10 +125,6 @@ if(WIN32)
     set(EXTRA_LDFLAGS ws2_32 iphlpapi)
 endif()
 
-if(NOT USE_QJDNS)
-    set(QJDns_LIBRARY "")
-endif()
-
 target_compile_definitions(irisnet PRIVATE HAVE_QTNET)
 target_link_libraries(irisnet Qt5::Core Qt5::Network Qt5::Xml)
 if (BUNDLED_QCA)
@@ -141,7 +132,7 @@ if (BUNDLED_QCA)
 endif()
 target_link_libraries(irisnet ${qca_LIB})
 target_link_libraries(irisnet ${sctpLab_LIBRARY})
-target_link_libraries(irisnet ${QJDns_LIBRARY} ${EXTRA_LDFLAGS})
+target_link_libraries(irisnet ${EXTRA_LDFLAGS})
 
 # usrsctp requires pthread
 if(NOT WIN32)

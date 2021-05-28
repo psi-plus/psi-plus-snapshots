@@ -224,10 +224,6 @@ else()
 endif()
 
 
-if( SEPARATE_QJDNS AND WIN32)
-    set(EXTRA_LDFLAGS ws2_32)
-endif()
-
 target_link_libraries(iris PRIVATE ${EXTRA_LDFLAGS} stringprep irisnet)
 target_link_libraries(iris PUBLIC ${ZLIB_LIBRARY} Qt5::Core Qt5::Gui Qt5::Network Qt5::Xml)
 target_link_libraries(iris PUBLIC ${qca_LIB})
