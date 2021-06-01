@@ -33,4 +33,3 @@ echo ;
 echo "Check mandatory files:"
 ls -alp out/usr/lib/psi/plugins/libmediaplugin.*
 du -shc out/usr/lib/psi/plugins/libmediaplugin.*
-

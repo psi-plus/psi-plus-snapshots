@@ -21,6 +21,7 @@
 
 #include "psimediaprovider.h"
 
+#include "devices.h"
 #include "gstaudiorecordercontext.h"
 #include "gstfeaturescontext.h"
 #include "gstprovider.h"
@@ -94,7 +95,9 @@ QString GstProvider::creditText() const
 FeaturesContext *GstProvider::createFeatures()
 {
     qDebug("GstProvider::createFeatures DeviceMonitor will be allocated now");
-    return new GstFeaturesContext(gstEventLoop);
+    if (!deviceMonitor)
+        deviceMonitor = new DeviceMonitor(gstEventLoop);
+    return new GstFeaturesContext(gstEventLoop, deviceMonitor);
 }
 
 RtpSessionContext *GstProvider::createRtpSession() { return new GstRtpSessionContext(gstEventLoop); }

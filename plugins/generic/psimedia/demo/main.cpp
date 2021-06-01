@@ -693,8 +693,7 @@ void MainWin::doAbout()
 void MainWin::doShowPipeline()
 {
     producer.dumpPipeline([this](const QStringList &fileName) {
-        QMetaObject::invokeMethod(this, "doShowPipeline2",
-                                      Qt::QueuedConnection, Q_ARG(QStringList, fileName));
+        QMetaObject::invokeMethod(this, "doShowPipeline2", Qt::QueuedConnection, Q_ARG(QStringList, fileName));
     });
 }
 
@@ -1145,15 +1144,15 @@ void FeaturesWatcher::updateDefaults()
     QString audioParams      = s.value("audioParams").toString();
     QString videoParams      = s.value("videoParams").toString();
 
-    _configuration.audioInDeviceId = (hasAudioIn && userPrefAudioIn.isEmpty())
-        ? QString()
-        : defaultDeviceId(_features.audioInputDevices(), userPrefAudioIn);
+    _configuration.audioInDeviceId  = (hasAudioIn && userPrefAudioIn.isEmpty())
+         ? QString()
+         : defaultDeviceId(_features.audioInputDevices(), userPrefAudioIn);
     _configuration.audioOutDeviceId = (hasAudioOut && userPrefAudioOut.isEmpty())
         ? QString()
         : defaultDeviceId(_features.audioOutputDevices(), userPrefAudioOut);
-    _configuration.videoInDeviceId = (hasVideoIn && userPrefVideoIn.isEmpty())
-        ? QString()
-        : defaultDeviceId(_features.videoInputDevices(), userPrefVideoIn);
+    _configuration.videoInDeviceId  = (hasVideoIn && userPrefVideoIn.isEmpty())
+         ? QString()
+         : defaultDeviceId(_features.videoInputDevices(), userPrefVideoIn);
 
     bool found = false;
     for (auto const &d : _features.supportedAudioModes()) {

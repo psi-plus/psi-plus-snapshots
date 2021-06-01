@@ -126,4 +126,3 @@ endif()
 if(BUILD_PSIPLUGIN)
     add_subdirectory(psiplugin)
 endif()
-

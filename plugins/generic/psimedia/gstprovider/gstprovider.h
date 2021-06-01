@@ -28,6 +28,7 @@
 namespace PsiMedia {
 
 class GstMainLoop;
+class DeviceMonitor;
 
 class GstProvider : public QObject, public Provider {
     Q_OBJECT
@@ -36,6 +37,7 @@ class GstProvider : public QObject, public Provider {
 public:
     QThread               gstEventLoopThread;
     QPointer<GstMainLoop> gstEventLoop;
+    DeviceMonitor *       deviceMonitor = nullptr;
 
     GstProvider(const QVariantMap &params = QVariantMap());
     ~GstProvider() override;

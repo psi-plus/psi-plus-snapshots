@@ -37,7 +37,7 @@ public:
     std::list<Watcher>    watchers;
     QMutex                updateMutex;
 
-    explicit GstFeaturesContext(GstMainLoop *_gstLoop, QObject *parent = nullptr);
+    explicit GstFeaturesContext(GstMainLoop *_gstLoop, DeviceMonitor *deviceMonitor, QObject *parent = nullptr);
 
     QObject *qobject() override;
 
@@ -49,9 +49,7 @@ private slots:
 
 private:
     QList<PDevice> audioOutputDevices();
-
     QList<PDevice> audioInputDevices();
-
     QList<PDevice> videoInputDevices();
 
     void updateDevices();

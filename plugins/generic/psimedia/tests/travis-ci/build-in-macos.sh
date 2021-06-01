@@ -27,4 +27,3 @@ which nproc > /dev/null && JOBS=$(nproc) || JOBS=4
 
 cmake .. -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" ${BUILD_OPTIONS}
 make -k -j ${JOBS} VERBOSE=1
-

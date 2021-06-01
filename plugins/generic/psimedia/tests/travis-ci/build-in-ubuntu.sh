@@ -27,4 +27,3 @@ cmake .. ${BUILD_OPTIONS} \
       -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS}" \
       -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}"
 make -k -j $(nproc) VERBOSE=1
-

@@ -25,6 +25,7 @@
 #include <QMutex>
 #include <QSize>
 #include <QStringList>
+#include <QTimer>
 #include <gst/gst.h>
 
 namespace PsiMedia {
@@ -152,12 +153,18 @@ public:
     GstDeviceMonitor *       _monitor = nullptr;
     QMap<QString, GstDevice> _devices;
     PlatformDeviceMonitor *  _platform = nullptr;
+    QTimer                   timer;
 
     bool videoSrcFirst  = true;
     bool audioSrcFirst  = true;
     bool audioSinkFirst = true;
 
-    explicit Private(DeviceMonitor *q) : q(q) { }
+    explicit Private(DeviceMonitor *q) : q(q)
+    {
+        timer.setSingleShot(true);
+        timer.setInterval(50); // an interval to emit updated() signal on dev discovery since the may come in row
+        QObject::connect(&timer, &QTimer::timeout, q, &DeviceMonitor::updated);
+    }
 
     static GstDevice gstDevConvert(::GstDevice *gdev)
     {
@@ -240,6 +247,8 @@ public:
 void DeviceMonitor::updateDevList()
 {
     d->_devices.clear();
+#if GST_VERSION_MAJOR == 1 && GST_VERSION_MINOR < 18
+    // with newer versions the devices events seem replayed, so we don't need this
     GList *devices = gst_device_monitor_get_devices(d->_monitor);
 
     if (devices != NULL) {
@@ -254,17 +263,18 @@ void DeviceMonitor::updateDevList()
     } else {
         qDebug("No devices found!");
     }
+#endif
 
     if (d->_platform) {
         auto l = d->_platform->getDevices();
-        for (auto const &pdev : l) {
+        for (auto const &pdev : qAsConst(l)) {
             if (!d->_devices.contains(pdev.id)) {
                 d->_devices.insert(pdev.id, pdev);
             }
         }
     }
 
-    for (auto const &pdev : d->_devices) {
+    for (auto const &pdev : qAsConst(d->_devices)) {
         qDebug("found dev: %s (%s)", qPrintable(pdev.name), qPrintable(pdev.id));
     }
 }
@@ -290,7 +300,9 @@ void DeviceMonitor::onDeviceAdded(GstDevice dev)
         }
         d->_devices.insert(dev.id, dev);
         qDebug("added dev: %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
-        emit updated();
+        // wait quite a bit since updates may come in row with latest gstreamer
+        if (!d->timer.isActive())
+            d->timer.start();
     }
 }
 
@@ -368,7 +380,7 @@ QList<GstDevice> DeviceMonitor::devices(PDevice::Type type)
     bool hasDefaultPulsesrc  = false;
     bool hasPulsesink        = false;
     bool hasDefaultPulsesink = false;
-    for (auto const &dev : d->_devices) {
+    for (auto const &dev : qAsConst(d->_devices)) {
         if (dev.type == type)
             ret.append(dev);
         // hack for pulsesrc

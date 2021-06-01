@@ -16,15 +16,15 @@ static PDevice gstDeviceToPDevice(const GstDevice &dev, PDevice::Type type)
     return out;
 }
 
-GstFeaturesContext::GstFeaturesContext(GstMainLoop *_gstLoop, QObject *parent) : QObject(parent), gstLoop(_gstLoop)
+GstFeaturesContext::GstFeaturesContext(GstMainLoop *_gstLoop, DeviceMonitor *deviceMonitor, QObject *parent) :
+    QObject(parent), gstLoop(_gstLoop), deviceMonitor(deviceMonitor)
 {
     Q_ASSERT(!gstLoop.isNull());
     gstLoop->execInContext(
         [this](void *userData) {
             Q_UNUSED(userData);
-            deviceMonitor = new DeviceMonitor(gstLoop);
             // we should set flags which exactly devices were 'updated'. will be implemenented later
-            connect(deviceMonitor, &DeviceMonitor::updated, [this]() { updateDevices(); });
+            connect(this->deviceMonitor, &DeviceMonitor::updated, this, [this]() { updateDevices(); });
             updateDevices();
         },
         this);
