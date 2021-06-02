@@ -27,12 +27,12 @@
 
 namespace XMPP {
 
-class StunDiscoMonitor : public AbstractStunDiscoMonitor {
+class StunDiscoMonitor : public AbstractStunDisco {
     Q_OBJECT
 public:
-    using StunList = QList<AbstractStunDiscoMonitor::Service::Ptr>;
+    using StunList = QList<AbstractStunDisco::Service::Ptr>;
 
-    StunDiscoMonitor(StunDiscoManager *manager) : AbstractStunDiscoMonitor(manager), manager_(manager)
+    StunDiscoMonitor(StunDiscoManager *manager) : AbstractStunDisco(manager), manager_(manager)
     {
         auto extdisco = manager->client()->externalServiceDiscovery();
         connect(extdisco, &ExternalServiceDiscovery::serviceAdded, this,
@@ -66,23 +66,22 @@ private:
         StunList needCreds;
         StunList needResolve;
         for (auto const &l : list) {
-            auto s = std::make_shared<AbstractStunDiscoMonitor::Service>();
+            auto s = std::make_shared<AbstractStunDisco::Service>();
             if (l->type.startsWith(QLatin1String("turn")))
-                s->flags |= AbstractStunDiscoMonitor::Relay;
+                s->flags |= AbstractStunDisco::Relay;
             else if (!l->type.startsWith(QLatin1String("stun")))
                 continue;
             if (l->type.endsWith(QLatin1Char('s')))
-                s->flags |= AbstractStunDiscoMonitor::Tls;
+                s->flags |= AbstractStunDisco::Tls;
             if (l->restricted)
-                s->flags |= AbstractStunDiscoMonitor::Restricted;
-            s->transport
-                = l->transport == QLatin1String("tcp") ? AbstractStunDiscoMonitor::Tcp : AbstractStunDiscoMonitor::Udp;
-            s->expires  = l->expires; // it's definitely not expired. no need to check
-            s->port     = l->port;
-            s->name     = l->name;
-            s->username = l->username;
-            s->password = l->password;
-            s->host     = l->host;
+                s->flags |= AbstractStunDisco::Restricted;
+            s->transport = l->transport == QLatin1String("tcp") ? AbstractStunDisco::Tcp : AbstractStunDisco::Udp;
+            s->expires   = l->expires; // it's definitely not expired. no need to check
+            s->port      = l->port;
+            s->name      = l->name;
+            s->username  = l->username;
+            s->password  = l->password;
+            s->host      = l->host;
             QHostAddress addr(l->host);
             if (addr.isNull())
                 needResolve.append(s);
@@ -117,11 +116,11 @@ private:
         // TODO
     }
 
-    static QString extType(AbstractStunDiscoMonitor::Service::Ptr s)
+    static QString extType(AbstractStunDisco::Service::Ptr s)
     {
-        bool isTls = s->flags & AbstractStunDiscoMonitor::Tls;
-        return QLatin1String(s->flags & AbstractStunDiscoMonitor::Relay ? (isTls ? "turns" : "turn")
-                                                                        : (isTls ? "stuns" : "stun"));
+        bool isTls = s->flags & AbstractStunDisco::Tls;
+        return QLatin1String(s->flags & AbstractStunDisco::Relay ? (isTls ? "turns" : "turn")
+                                                                 : (isTls ? "stuns" : "stun"));
     }
 
     void resolve(const StunList &services)
@@ -205,7 +204,7 @@ private:
                 it = pendingWork_.erase(it);
                 continue;
             }
-            if (s.addresses.isEmpty() || (s.flags & AbstractStunDiscoMonitor::Restricted && s.password.isEmpty())) {
+            if (s.addresses.isEmpty() || (s.flags & AbstractStunDisco::Restricted && s.password.isEmpty())) {
                 ++it;
                 continue; // in progress yet.
             }
@@ -218,16 +217,16 @@ private:
         }
     }
 
-    StunDiscoManager *                            manager_;
-    bool                                          inProgress_ = false; // initial disco
-    QList<AbstractStunDiscoMonitor::Service::Ptr> pendingWork_;
+    StunDiscoManager *                     manager_;
+    bool                                   inProgress_ = false; // initial disco
+    QList<AbstractStunDisco::Service::Ptr> pendingWork_;
 };
 
 StunDiscoManager::StunDiscoManager(Client *client) : QObject(client) { client_ = client; }
 
 StunDiscoManager::~StunDiscoManager() { }
 
-AbstractStunDiscoMonitor *StunDiscoManager::createMonitor() { return new StunDiscoMonitor(this); }
+AbstractStunDisco *StunDiscoManager::createMonitor() { return new StunDiscoMonitor(this); }
 
 } // namespace XMPP
 

@@ -49,7 +49,9 @@ public:
     void start(const QHostAddress &addr, int port, TurnClient::Mode mode = TurnClient::PlainMode);
 
     QHostAddress relayedAddress() const;
-    int          relayedPort() const;
+    quint16      relayedPort() const;
+    QHostAddress reflexiveAddress() const;
+    quint16      reflexivePort() const;
     bool         isStarted() const;
 
     TurnClient::Error turnErrorCode() const;

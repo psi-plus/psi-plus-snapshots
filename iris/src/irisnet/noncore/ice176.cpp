@@ -19,6 +19,7 @@
 
 #include "ice176.h"
 
+#include "iceabstractstundisco.h"
 #include "iceagent.h"
 #include "icecomponent.h"
 #include "icelocaltransport.h"
@@ -32,6 +33,7 @@
 #include <QDeadlineTimer>
 #include <QEvent>
 #include <QNetworkInterface>
+#include <QPointer>
 #include <QQueue>
 #include <QSet>
 #include <QTimer>
@@ -223,6 +225,7 @@ public:
     int                                     stunRelayTcpPort;
     QString                                 stunRelayTcpUser;
     QCA::SecureArray                        stunRelayTcpPass;
+    QPointer<AbstractStunDisco>             stunDiscoverer;
     QString                                 localUser, localPass;
     QString                                 peerUser, peerPass;
     std::vector<Component>                  components;
@@ -302,6 +305,17 @@ public:
                 extAddrs += ea;
         }
     }
+
+    void stunFound(AbstractStunDisco::Service::Ptr service)
+    {
+        qDebug("found %s: %s:%hu %s %s", (service->flags & AbstractStunDisco::Relay) ? "TURN" : "STUN",
+               qPrintable(service->host), service->port ? service->port : std::uint16_t(3478),
+               service->transport == AbstractStunDisco::Tcp ? "tcp" : "udp",
+               (service->flags & AbstractStunDisco::Tls) ? "tls" : "insecure");
+    }
+    void stunModified(AbstractStunDisco::Service::Ptr) { }
+    void stunRemoved(AbstractStunDisco::Service::Ptr) { }
+    void stunDiscoFinished() { }
 
     void start()
     {
@@ -1058,9 +1072,9 @@ private:
         out.priority = cc.info->priority;
         out.protocol = "udp";
         if (cc.info->type != IceComponent::HostType) {
-            out.rel_addr = cc.info->base.addr;
+            out.rel_addr = cc.info->related.addr;
             out.rel_addr.setScopeId(QString());
-            out.rel_port = cc.info->base.port;
+            out.rel_port = cc.info->related.port;
         } else {
             out.rel_addr = QHostAddress();
             out.rel_port = -1;
@@ -1073,7 +1087,7 @@ private:
     void dumpCandidatesAndStart()
     {
         QList<Ice176::Candidate> list;
-        for (auto const &cc : localCandidates) {
+        for (auto const &cc : qAsConst(localCandidates)) {
             Ice176::Candidate c;
             toOutCandidate(cc, c);
             list += c;
@@ -1354,7 +1368,7 @@ private slots:
         }
 
         bool iceTransportInUse = false;
-        for (const IceComponent::Candidate &lc : localCandidates) {
+        for (const IceComponent::Candidate &lc : qAsConst(localCandidates)) {
             if (lc.iceTransport == cc.iceTransport) {
                 iceTransportInUse = true;
                 break;
@@ -1640,6 +1654,16 @@ void Ice176::setStunRelayTcpService(const QHostAddress &addr, int port, const QS
 }
 
 void Ice176::setAllowIpExposure(bool enabled) { d->allowIpExposure = enabled; }
+
+void Ice176::setStunDiscoverer(AbstractStunDisco *discoverer)
+{
+    discoverer->setParent(this);
+    d->stunDiscoverer = discoverer;
+    connect(d->stunDiscoverer, &AbstractStunDisco::serviceAdded, d, &Private::stunFound);
+    connect(d->stunDiscoverer, &AbstractStunDisco::serviceModified, d, &Private::stunModified);
+    connect(d->stunDiscoverer, &AbstractStunDisco::serviceRemoved, d, &Private::stunRemoved);
+    connect(d->stunDiscoverer, &AbstractStunDisco::discoFinished, d, &Private::stunDiscoFinished);
+}
 
 void Ice176::setUseLocal(bool enabled) { d->useLocal = enabled; }
 

@@ -27,6 +27,7 @@
 #include "ice176.h"
 #include "jingle-session.h"
 #include "netnames.h"
+#include "stundisco.h"
 #include "udpportreserver.h"
 #include "xmpp/jid/jid.h"
 #include "xmpp_client.h"
@@ -788,6 +789,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             if (!stunRelayTcpAddr.isNull() && !stunRelayTcpUser.isEmpty())
                 ice->setStunRelayTcpService(stunRelayTcpAddr, stunRelayTcpPort, stunRelayTcpUser,
                                             stunRelayTcpPass.toUtf8());
+            ice->setStunDiscoverer(q->pad()->session()->manager()->client()->stunDiscoManager()->createMonitor());
 
             ice->setComponentCount(components.count());
             ice->setLocalFeatures(Ice176::Trickle);
@@ -1054,7 +1056,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
     bool Transport::hasUpdates() const
     {
         return isValid() && d->pendingActions && d->ice && _state >= State::ApprovedToSend
-            && !(isRemote() && _state == State::Pending);
+            && !(isRemote() && _state == State::Pending)
+            && (d->ice->isLocalGatheringComplete() || d->pendingLocalCandidates.size());
     }
 
     OutgoingTransportInfoUpdate Transport::takeOutgoingUpdate([[maybe_unused]] bool ensureTransportElement = false)

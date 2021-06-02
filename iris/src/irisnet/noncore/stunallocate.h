@@ -62,7 +62,7 @@ public:
     int          reflexivePort() const;
 
     QHostAddress relayedAddress() const;
-    int          relayedPort() const;
+    quint16      relayedPort() const;
 
     QList<QHostAddress> permissions() const;
     void                setPermissions(const QList<QHostAddress> &perms);

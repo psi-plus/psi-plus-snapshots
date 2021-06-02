@@ -13,7 +13,7 @@ namespace XMPP {
 /**
  * Monitors if new STUN services are available, changed or not available anymore.
  */
-class AbstractStunDiscoMonitor : public QObject {
+class AbstractStunDisco : public QObject {
     Q_OBJECT
 public:
     enum Transport : std::uint8_t { Tcp, Udp };
@@ -49,6 +49,6 @@ Q_SIGNALS:
 
 } // namespace XMPP
 
-Q_DECLARE_OPERATORS_FOR_FLAGS(XMPP::AbstractStunDiscoMonitor::Flags)
+Q_DECLARE_OPERATORS_FOR_FLAGS(XMPP::AbstractStunDisco::Flags)
 
 #endif // XMPP_ABSTRACTSTUNDISCO_H

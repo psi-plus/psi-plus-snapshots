@@ -56,6 +56,7 @@ class Stream;
 class Task;
 class TcpPortReserver;
 class ExternalServiceDiscovery;
+class StunDiscoManager;
 
 namespace Jingle {
     class Manager;
@@ -151,6 +152,7 @@ public:
     CapsManager *             capsManager() const;
     ServerInfoManager *       serverInfoManager() const;
     ExternalServiceDiscovery *externalServiceDiscovery() const;
+    StunDiscoManager *        stunDiscoManager() const;
     HttpFileUploadManager *   httpFileUploadManager() const;
     Jingle::Manager *         jingleManager() const;
     Jingle::S5B::Manager *    jingleS5BManager() const;

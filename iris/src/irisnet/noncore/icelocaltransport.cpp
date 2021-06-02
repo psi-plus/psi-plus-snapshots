@@ -306,15 +306,14 @@ public:
         }
         turn = new TurnClient(this);
         turn->setDebugLevel((TurnClient::DebugLevel)debugLevel);
-        connect(turn, SIGNAL(connected()), SLOT(turn_connected()));
-        connect(turn, SIGNAL(tlsHandshaken()), SLOT(turn_tlsHandshaken()));
-        connect(turn, SIGNAL(closed()), SLOT(turn_closed()));
-        connect(turn, SIGNAL(activated()), SLOT(turn_activated()));
-        connect(turn, SIGNAL(packetsWritten(int, QHostAddress, int)),
-                SLOT(turn_packetsWritten(int, QHostAddress, int)));
-        connect(turn, SIGNAL(error(XMPP::TurnClient::Error)), SLOT(turn_error(XMPP::TurnClient::Error)));
-        connect(turn, SIGNAL(outgoingDatagram(QByteArray)), SLOT(turn_outgoingDatagram(QByteArray)));
-        connect(turn, SIGNAL(debugLine(QString)), SLOT(turn_debugLine(QString)));
+        connect(turn, &TurnClient::connected, this, &Private::turn_connected);
+        connect(turn, &TurnClient::tlsHandshaken, this, &Private::turn_tlsHandshaken);
+        connect(turn, &TurnClient::closed, this, &Private::turn_closed);
+        connect(turn, &TurnClient::activated, this, &Private::turn_activated);
+        connect(turn, &TurnClient::packetsWritten, this, &Private::turn_packetsWritten);
+        connect(turn, &TurnClient::error, this, &Private::turn_error);
+        connect(turn, &TurnClient::outgoingDatagram, this, &Private::turn_outgoingDatagram);
+        connect(turn, &TurnClient::debugLine, this, &Private::turn_debugLine);
 
         turn->setClientSoftwareNameAndVersion(clientSoftware);
 

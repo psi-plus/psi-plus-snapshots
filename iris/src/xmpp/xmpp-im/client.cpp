@@ -75,6 +75,7 @@
 #include "jingle.h"
 #include "protocol.h"
 #include "s5b.h"
+#include "stundisco.h"
 #include "tcpportreserver.h"
 #include "xmpp_bitsofbinary.h"
 #include "xmpp_caps.h"
@@ -144,6 +145,7 @@ public:
     FileTransferManager *     ftman                    = nullptr;
     ServerInfoManager *       serverInfoManager        = nullptr;
     ExternalServiceDiscovery *externalServiceDiscovery = nullptr;
+    StunDiscoManager *        stunDiscoManager         = nullptr;
     HttpFileUploadManager *   httpFileUploadManager    = nullptr;
     Jingle::Manager *         jingleManager            = nullptr;
     QList<GroupChat>          groupChatList;
@@ -174,6 +176,7 @@ Client::Client(QObject *par) : QObject(par)
 
     d->serverInfoManager        = new ServerInfoManager(this);
     d->externalServiceDiscovery = new ExternalServiceDiscovery(this);
+    d->stunDiscoManager         = new StunDiscoManager(this);
     d->httpFileUploadManager    = new HttpFileUploadManager(this);
 
     d->jingleManager = new Jingle::Manager(this);
@@ -294,6 +297,8 @@ bool Client::capsOptimizationAllowed() const
 ServerInfoManager *Client::serverInfoManager() const { return d->serverInfoManager; }
 
 ExternalServiceDiscovery *Client::externalServiceDiscovery() const { return d->externalServiceDiscovery; }
+
+StunDiscoManager *Client::stunDiscoManager() const { return d->stunDiscoManager; }
 
 HttpFileUploadManager *Client::httpFileUploadManager() const { return d->httpFileUploadManager; }
 

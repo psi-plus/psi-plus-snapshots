@@ -355,6 +355,7 @@ public:
         auto ci  = IceComponent::CandidateInfo::Ptr::create();
         ci->addr = addr;
         ci->addr.addr.setScopeId(QString());
+        ci->related     = base->addr;
         ci->base        = base->addr;
         ci->type        = IceComponent::PeerReflexiveType;
         ci->priority    = priority;
@@ -452,6 +453,7 @@ private:
             ci->priority    = choose_default_priority(ci->type, 65535 - addrAt, lt->isVpn, ci->componentId);
             ci->base.addr   = lt->sock->localAddress();
             ci->base.port   = lt->sock->localPort();
+            ci->related     = ci->base;
             ci->network     = lt->network;
             ci->foundation  = IceAgent::instance()->foundation(ServerReflexiveType, ci->base.addr);
 
@@ -672,6 +674,7 @@ private slots:
             ci->addr.port   = lt->sock->serverReflexivePort();
             ci->base.addr   = lt->sock->localAddress();
             ci->base.port   = lt->sock->localPort();
+            ci->related     = ci->base;
             ci->type        = ServerReflexiveType;
             ci->componentId = id;
             ci->priority    = choose_default_priority(ci->type, 65535 - addrAt, lt->isVpn, ci->componentId);
@@ -693,16 +696,17 @@ private slots:
         }
 
         if (!lt->sock->relayedAddress().isNull() && !lt->turn_finished) {
-            auto ci         = CandidateInfo::Ptr::create();
-            ci->addr.addr   = lt->sock->relayedAddress();
-            ci->addr.port   = lt->sock->relayedPort();
-            ci->base.addr   = lt->sock->relayedAddress();
-            ci->base.port   = lt->sock->relayedPort();
-            ci->type        = RelayedType;
-            ci->componentId = id;
-            ci->priority    = choose_default_priority(ci->type, 65535 - addrAt, lt->isVpn, ci->componentId);
-            ci->network     = lt->network;
-            ci->foundation  = IceAgent::instance()->foundation(
+            auto ci          = CandidateInfo::Ptr::create();
+            ci->addr.addr    = lt->sock->relayedAddress();
+            ci->addr.port    = lt->sock->relayedPort();
+            ci->base         = ci->addr;
+            ci->related.addr = lt->sock->serverReflexiveAddress();
+            ci->related.port = lt->sock->serverReflexivePort();
+            ci->type         = RelayedType;
+            ci->componentId  = id;
+            ci->priority     = choose_default_priority(ci->type, 65535 - addrAt, lt->isVpn, ci->componentId);
+            ci->network      = lt->network;
+            ci->foundation   = IceAgent::instance()->foundation(
                 RelayedType, ci->base.addr, lt->sock->stunRelayServiceAddress(), QAbstractSocket::UdpSocket);
 
             Candidate c;
@@ -730,15 +734,17 @@ private slots:
         // lower priority by making it seem like the last nic
         int addrAt = 1024;
 
-        auto ci         = CandidateInfo::Ptr::create();
-        ci->addr.addr   = tcpTurn->relayedAddress();
-        ci->addr.port   = tcpTurn->relayedPort();
-        ci->type        = RelayedType;
-        ci->componentId = id;
-        ci->priority    = choose_default_priority(ci->type, 65535 - addrAt, false, ci->componentId);
-        ci->base        = ci->addr;
-        ci->network     = 0; // not relevant
-        ci->foundation  = IceAgent::instance()->foundation(RelayedType, ci->base.addr, config.stunRelayTcpAddr,
+        auto ci          = CandidateInfo::Ptr::create();
+        ci->addr.addr    = tcpTurn->relayedAddress();
+        ci->addr.port    = tcpTurn->relayedPort();
+        ci->related.addr = tcpTurn->reflexiveAddress();
+        ci->related.port = tcpTurn->reflexivePort();
+        ci->type         = RelayedType;
+        ci->componentId  = id;
+        ci->priority     = choose_default_priority(ci->type, 65535 - addrAt, false, ci->componentId);
+        ci->base         = ci->addr;
+        ci->network      = 0; // not relevant
+        ci->foundation   = IceAgent::instance()->foundation(RelayedType, ci->base.addr, config.stunRelayTcpAddr,
                                                           QAbstractSocket::TcpSocket);
 
         Candidate c;

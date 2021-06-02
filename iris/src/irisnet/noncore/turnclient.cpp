@@ -277,10 +277,9 @@ public:
         if (!udp && !pool) {
             pool = StunTransactionPool::Ptr::create(StunTransaction::Tcp);
             pool->setDebugLevel((StunTransactionPool::DebugLevel)debugLevel);
-            connect(pool.data(), SIGNAL(outgoingMessage(QByteArray, QHostAddress, int)),
-                    SLOT(pool_outgoingMessage(QByteArray, QHostAddress, int)));
-            connect(pool.data(), SIGNAL(needAuthParams()), SLOT(pool_needAuthParams()));
-            connect(pool.data(), SIGNAL(debugLine(QString)), SLOT(pool_debugLine(QString)));
+            connect(pool.data(), &StunTransactionPool::outgoingMessage, this, &Private::pool_outgoingMessage);
+            connect(pool.data(), &StunTransactionPool::needAuthParams, this, &Private::pool_needAuthParams);
+            connect(pool.data(), &StunTransactionPool::debugLine, this, &Private::pool_debugLine);
 
             pool->setLongTermAuthEnabled(true);
             if (!user.isEmpty()) {
@@ -292,12 +291,12 @@ public:
         }
 
         allocate = new StunAllocate(pool.data());
-        connect(allocate, SIGNAL(started()), SLOT(allocate_started()));
-        connect(allocate, SIGNAL(stopped()), SLOT(allocate_stopped()));
-        connect(allocate, SIGNAL(error(XMPP::StunAllocate::Error)), SLOT(allocate_error(XMPP::StunAllocate::Error)));
-        connect(allocate, SIGNAL(permissionsChanged()), SLOT(allocate_permissionsChanged()));
-        connect(allocate, SIGNAL(channelsChanged()), SLOT(allocate_channelsChanged()));
-        connect(allocate, SIGNAL(debugLine(QString)), SLOT(allocate_debugLine(QString)));
+        connect(allocate, &StunAllocate::started, this, &Private::allocate_started);
+        connect(allocate, &StunAllocate::stopped, this, &Private::allocate_stopped);
+        connect(allocate, &StunAllocate::error, this, &Private::allocate_error);
+        connect(allocate, &StunAllocate::permissionsChanged, this, &Private::allocate_permissionsChanged);
+        connect(allocate, &StunAllocate::channelsChanged, this, &Private::allocate_channelsChanged);
+        connect(allocate, &StunAllocate::debugLine, this, &Private::allocate_debugLine);
 
         allocate->setClientSoftwareNameAndVersion(clientSoftware);
 
@@ -772,7 +771,7 @@ private slots:
         emit q->error(TurnClient::ErrorTls);
     }
 
-    void pool_outgoingMessage(const QByteArray &packet, const QHostAddress &toAddress, int toPort)
+    void pool_outgoingMessage(const QByteArray &packet, const QHostAddress &toAddress, quint16 toPort)
     {
         // we aren't using IP-associated transactions
         Q_UNUSED(toAddress);

@@ -35,6 +35,8 @@ public:
     QCA::SecureArray  relayPass;
     QHostAddress      relayAddr;
     int               relayPort;
+    QHostAddress      refAddr;
+    int               refPort;
     TurnClient        turn;
     int               turnErrorCode = 0;
     int               debugLevel;
@@ -115,6 +117,8 @@ private slots:
 
         relayAddr = saddr;
         relayPort = sport;
+        refAddr   = allocate->reflexiveAddress();
+        refPort   = allocate->reflexivePort();
         started   = true;
 
         emit q->started();
@@ -164,7 +168,11 @@ void IceTurnTransport::start(const QHostAddress &addr, int port, TurnClient::Mod
 
 QHostAddress IceTurnTransport::relayedAddress() const { return d->relayAddr; }
 
-int IceTurnTransport::relayedPort() const { return d->relayPort; }
+quint16 IceTurnTransport::relayedPort() const { return d->relayPort; }
+
+QHostAddress IceTurnTransport::reflexiveAddress() const { return d->refAddr; }
+
+quint16 IceTurnTransport::reflexivePort() const { return d->refPort; }
 
 bool IceTurnTransport::isStarted() const { return d->started; }
 

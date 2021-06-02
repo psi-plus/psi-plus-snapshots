@@ -427,7 +427,7 @@ public:
     DontFragmentState               dfState;
     QString                         clientSoftware, serverSoftware;
     QHostAddress                    reflexiveAddress, relayedAddress;
-    int                             reflexivePort, relayedPort;
+    quint16                         reflexivePort, relayedPort;
     StunMessage                     msg;
     int                             allocateLifetime;
     QTimer *                        allocateRefreshTimer;
@@ -1119,7 +1119,7 @@ int StunAllocate::reflexivePort() const { return d->reflexivePort; }
 
 QHostAddress StunAllocate::relayedAddress() const { return d->relayedAddress; }
 
-int StunAllocate::relayedPort() const { return d->relayedPort; }
+quint16 StunAllocate::relayedPort() const { return d->relayedPort; }
 
 QList<QHostAddress> StunAllocate::permissions() const { return d->permsOut; }
 

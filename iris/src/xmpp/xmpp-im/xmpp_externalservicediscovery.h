@@ -51,6 +51,7 @@ struct ExternalService {
     QString        username;           // optional
 
     bool parse(QDomElement &el);
+         operator QString() const;
 };
 
 struct ExternalServiceId {

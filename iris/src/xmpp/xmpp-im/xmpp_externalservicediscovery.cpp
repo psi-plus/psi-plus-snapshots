@@ -112,7 +112,10 @@ bool ExternalService::parse(QDomElement &el)
         auto curUtc = QDateTime::currentDateTimeUtc();
         if (!date.isValid() || date < curUtc)
             return false;
-        expires.setDeadline(curUtc.msecsTo(date));
+        expires = QDeadlineTimer(curUtc.msecsTo(date));
+        if (expires.hasExpired())
+            qInfo("Server returned already expired service %s expired at %s UTC", qPrintable(*this),
+                  qPrintable(expiresOpt));
     } else {
         expires = QDeadlineTimer(QDeadlineTimer::Forever);
     }
@@ -134,6 +137,12 @@ bool ExternalService::parse(QDomElement &el)
     }
 
     return true;
+}
+
+ExternalService::operator QString() const
+{
+    return QString(QLatin1String("ExternalService<name=%1 host=%2 port=%3 type=%4 transport=%5>"))
+        .arg(name, host, QString::number(port), type, transport);
 }
 
 ExternalServiceDiscovery::ExternalServiceDiscovery(Client *client) : client_(client) { }

@@ -31,6 +31,7 @@ class SecureArray;
 
 namespace XMPP {
 class UdpPortReserver;
+class AbstractStunDisco;
 
 class Ice176 : public QObject {
     Q_OBJECT
@@ -108,6 +109,7 @@ public:
     void setUseStunRelayUdp(bool enabled);
     void setUseStunRelayTcp(bool enabled);
     void setAllowIpExposure(bool enabled);
+    void setStunDiscoverer(AbstractStunDisco *discoverer);
 
     void setComponentCount(int count);
 
