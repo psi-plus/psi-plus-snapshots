@@ -1,3 +1,22 @@
+/*
+ * xmpp_externalservicedisco.cpp - Implementation of XEP-0215
+ * Copyright (C) 2021  Sergey Ilinykh
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
 #include "xmpp_externalservicediscovery.h"
 
 #include "xmpp_client.h"
@@ -12,32 +31,29 @@ JT_ExternalServiceDiscovery::JT_ExternalServiceDiscovery(Task *parent) : Task(pa
 void JT_ExternalServiceDiscovery::getServices(const QString &type)
 {
     type_ = type;
-    credHost_.clear(); // to indicate it's services request, not creds
+    creds_.clear(); // to indicate it's services request, not creds
 }
 
-void JT_ExternalServiceDiscovery::getCredentials(const QString &host, const QString &type, uint16_t port)
-{
-    Q_ASSERT(!host.isEmpty());
-    Q_ASSERT(!type.isEmpty());
-    credHost_ = host;
-    type_     = type;
-    credPort_ = port;
-}
+void JT_ExternalServiceDiscovery::getCredentials(const QSet<ExternalServiceId> &ids) { creds_ = ids; }
 
 void JT_ExternalServiceDiscovery::onGo()
 {
     QDomElement iq    = createIQ(doc(), "get", client()->jid().domain(), id());
     QDomElement query = doc()->createElementNS(QLatin1String("urn:xmpp:extdisco:2"),
-                                               QLatin1String(credHost_.isEmpty() ? "services" : "credentials"));
-    if (credHost_.isEmpty()) {
+                                               QLatin1String(creds_.isEmpty() ? "services" : "credentials"));
+    if (creds_.isEmpty()) {
         if (!type_.isEmpty()) {
             query.setAttribute(QLatin1String("type"), type_);
         }
     } else {
-        QDomElement service = doc()->createElement(QLatin1String("service"));
-        service.setAttribute(QLatin1String("host"), credHost_);
-        service.setAttribute(QLatin1String("type"), type_);
-        query.appendChild(service);
+        for (auto const &c : qAsConst(creds_)) {
+            QDomElement service = doc()->createElement(QLatin1String("service"));
+            service.setAttribute(QLatin1String("host"), c.host);
+            service.setAttribute(QLatin1String("type"), c.type);
+            if (c.port)
+                service.setAttribute(QLatin1String("port"), c.port);
+            query.appendChild(service);
+        }
     }
     iq.appendChild(query);
     send(iq);
@@ -49,7 +65,7 @@ bool JT_ExternalServiceDiscovery::take(const QDomElement &x)
         return false;
 
     if (x.attribute("type") == "result") {
-        auto query = x.firstChildElement(QLatin1String(credHost_.isEmpty() ? "services" : "credentials"));
+        auto query = x.firstChildElement(QLatin1String(creds_.isEmpty() ? "services" : "credentials"));
         if (query.namespaceURI() != QLatin1String("urn:xmpp:extdisco:2")) {
             setError(0, QLatin1String("invalid namespace"));
             return true;
@@ -92,9 +108,13 @@ bool ExternalService::parse(QDomElement &el)
         return false;
 
     if (!expiresOpt.isEmpty()) {
-        expires = QDateTime::fromString(expiresOpt.left(19), Qt::ISODate);
-        if (!expires.isValid())
+        auto date   = QDateTime::fromString(expiresOpt.left(19), Qt::ISODate);
+        auto curUtc = QDateTime::currentDateTimeUtc();
+        if (!date.isValid() || date < curUtc)
             return false;
+        expires.setDeadline(curUtc.msecsTo(date));
+    } else {
+        expires = QDeadlineTimer(QDeadlineTimer::Forever);
     }
 
     if (actionOpt.isEmpty() || actionOpt == QLatin1String("add"))
@@ -123,20 +143,78 @@ bool ExternalServiceDiscovery::isSupported() const
     return client_->serverInfoManager()->features().test("urn:xmpp:extdisco:2");
 }
 
-void ExternalServiceDiscovery::services(QObject *ctx, ServicesCallback &&callback, const QString &type)
+void ExternalServiceDiscovery::services(QObject *ctx, ServicesCallback &&callback, std::chrono::minutes minTtl,
+                                        const QStringList &types)
 {
     if (!isSupported()) {
         callback({});
         return;
     }
 
-    // TODO optimize me (get cache, check action, etc)
+    // check if cache is valid (no expired or ready to expire items)
+    ExternalServiceList ret;
+    bool                cacheValid = true;
+    for (auto const &s : qAsConst(services_)) {
+        if (!(types.isEmpty() || types.contains(s->type)))
+            continue; // not interesting for us
+        if (!(s->expires.isForever() || s->expires.remainingTimeAsDuration() > minTtl)) {
+            cacheValid = false;
+            break;
+        }
+        ret += s;
+    }
+
+    if (cacheValid && !ret.isEmpty()) {
+        callback(ret);
+        return;
+    }
+
+    if (currentTask) {
+        connect(currentTask, &Task::finished, ctx,
+                [this, types, cb = std::move(callback)]() { cb(cachedServices(types)); });
+    } else {
+        if (types.isEmpty() || types.size() > 1) {
+            currentTask = new JT_ExternalServiceDiscovery(client_->rootTask());
+            connect(currentTask, &Task::finished, ctx, [this, types, cb = std::move(callback)]() {
+                services_   = currentTask->services();
+                currentTask = nullptr; // it will self-delete anyway
+                cb(cachedServices(types));
+            });
+            currentTask->getServices();
+            currentTask->go(true);
+        } else {
+            auto task = new JT_ExternalServiceDiscovery(client_->rootTask());
+            auto type = types[0];
+            connect(task, &Task::finished, ctx,
+                    [this, task, type, cb = std::move(callback)]() { cb(task->services()); });
+            task->getServices(type);
+            task->go(true);
+            // in fact we can improve caching even more if start remembering specific repviously requested types,
+            // even if the result was negative.
+        }
+    }
+}
+
+ExternalServiceList ExternalServiceDiscovery::cachedServices(const QStringList &types)
+{
+    if (types.isEmpty())
+        return services_;
+
+    ExternalServiceList ret;
+    for (auto const &s : qAsConst(services_)) {
+        if (types.contains(s->type))
+            ret += s;
+    }
+    return ret;
+}
+
+void ExternalServiceDiscovery::credentials(QObject *ctx, ServicesCallback &&callback,
+                                           const QSet<ExternalServiceId> &ids)
+{
     auto task = new JT_ExternalServiceDiscovery(client_->rootTask());
-    connect(task, &Task::finished, ctx, [this, task, cb = std::move(callback)]() {
-        services_ = task->services();
-        cb(services_);
-    });
-    task->getServices(type);
+    connect(task, &Task::finished, ctx ? ctx : this,
+            [this, task, cb = std::move(callback)]() { cb(task->services()); });
+    task->getCredentials(ids);
     task->go(true);
 }
 

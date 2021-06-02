@@ -35,6 +35,7 @@
 #include "xmpp_xmlcommon.h"
 
 #include <array>
+#include <chrono>
 #include <memory>
 
 #include <QElapsedTimer>
@@ -582,54 +583,57 @@ namespace XMPP { namespace Jingle { namespace ICE {
         void findStunAndTurn()
         {
             auto extDisco = q->pad()->session()->manager()->client()->externalServiceDiscovery();
-
+            using namespace std::chrono_literals;
             if (extDisco->isSupported()) {
-                extDisco->services(q, [this](const ExternalServiceList &services) {
-                    ExternalService::Ptr stun;
-                    ExternalService::Ptr turnUdp;
-                    ExternalService::Ptr turnTcp;
-                    for (auto const &s : qAsConst(services)) {
-                        if (s->type == QLatin1String("stun"))
-                            stun = s;
-                        else if (s->type == QLatin1String("turn")) {
-                            if (s->transport == QLatin1String("tcp"))
-                                turnTcp = s;
-                            else
-                                turnUdp = s;
-                        }
-                    }
-                    Resolver::ResolveList resList;
-                    if (stun) {
-                        stunBindAddr.setAddress(stun->host);
-                        stunBindPort = stun->port;
-                        if (stunBindAddr.isNull())
-                            resList.emplace_back(stun->host, std::ref(stunBindAddr));
-                    }
-                    if (turnTcp) {
-                        stunRelayTcpAddr.setAddress(turnTcp->host);
-                        stunRelayTcpPort = turnTcp->port;
-                        stunRelayTcpUser = turnTcp->username;
-                        stunRelayTcpPass = turnTcp->password;
-                        if (stunRelayTcpAddr.isNull())
-                            resList.emplace_back(turnTcp->host, std::ref(stunRelayTcpAddr));
-                    }
-                    if (turnUdp) {
-                        stunRelayUdpAddr.setAddress(turnUdp->host);
-                        stunRelayUdpPort = turnUdp->port;
-                        stunRelayUdpUser = turnUdp->username;
-                        stunRelayUdpPass = turnUdp->password;
-                        if (stunRelayUdpAddr.isNull())
-                            resList.emplace_back(turnUdp->host, std::ref(stunRelayUdpAddr));
-                    }
-                    if (resList.empty()) {
-                        startIce();
-                    } else {
-                        Resolver::resolve(q, resList, [this]() {
-                            qDebug("resolver finished");
-                            startIce();
-                        });
-                    }
-                });
+                extDisco->services(q,
+                                   [this](const ExternalServiceList &services) {
+                                       ExternalService::Ptr stun;
+                                       ExternalService::Ptr turnUdp;
+                                       ExternalService::Ptr turnTcp;
+                                       for (auto const &s : qAsConst(services)) {
+                                           if (s->type == QLatin1String("stun")
+                                               && (s->transport.isEmpty() || s->transport == QLatin1String("udp")))
+                                               stun = s;
+                                           else if (s->type == QLatin1String("turn")) {
+                                               if (s->transport == QLatin1String("tcp"))
+                                                   turnTcp = s;
+                                               else
+                                                   turnUdp = s;
+                                           }
+                                       }
+                                       Resolver::ResolveList resList;
+                                       if (stun) {
+                                           stunBindAddr.setAddress(stun->host);
+                                           stunBindPort = stun->port;
+                                           if (stunBindAddr.isNull())
+                                               resList.emplace_back(stun->host, std::ref(stunBindAddr));
+                                       }
+                                       if (turnTcp) {
+                                           stunRelayTcpAddr.setAddress(turnTcp->host);
+                                           stunRelayTcpPort = turnTcp->port;
+                                           stunRelayTcpUser = turnTcp->username;
+                                           stunRelayTcpPass = turnTcp->password;
+                                           if (stunRelayTcpAddr.isNull())
+                                               resList.emplace_back(turnTcp->host, std::ref(stunRelayTcpAddr));
+                                       }
+                                       if (turnUdp) {
+                                           stunRelayUdpAddr.setAddress(turnUdp->host);
+                                           stunRelayUdpPort = turnUdp->port;
+                                           stunRelayUdpUser = turnUdp->username;
+                                           stunRelayUdpPass = turnUdp->password;
+                                           if (stunRelayUdpAddr.isNull())
+                                               resList.emplace_back(turnUdp->host, std::ref(stunRelayUdpAddr));
+                                       }
+                                       if (resList.empty()) {
+                                           startIce();
+                                       } else {
+                                           Resolver::resolve(q, resList, [this]() {
+                                               qDebug("resolver finished");
+                                               startIce();
+                                           });
+                                       }
+                                   },
+                                   5min, { "stun", "turn" });
                 return;
             }
 

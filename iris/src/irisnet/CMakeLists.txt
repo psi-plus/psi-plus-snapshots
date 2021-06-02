@@ -92,6 +92,7 @@ set(HEADERS
     noncore/udpportreserver.h
     noncore/tcpportreserver.h
     noncore/dtls.h
+    noncore/iceabstractstundisco.h
 
     noncore/cutestuff/bsocket.h
     noncore/cutestuff/bytestream.h
