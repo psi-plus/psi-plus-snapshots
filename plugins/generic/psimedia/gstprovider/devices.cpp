@@ -153,7 +153,9 @@ public:
     GstDeviceMonitor *       _monitor = nullptr;
     QMap<QString, GstDevice> _devices;
     PlatformDeviceMonitor *  _platform = nullptr;
-    QTimer                   timer;
+    QTimer *                 timer;
+    QMutex                   devListMutex;
+    bool                     started = false;
 
     bool videoSrcFirst  = true;
     bool audioSrcFirst  = true;
@@ -161,9 +163,10 @@ public:
 
     explicit Private(DeviceMonitor *q) : q(q)
     {
-        timer.setSingleShot(true);
-        timer.setInterval(50); // an interval to emit updated() signal on dev discovery since the may come in row
-        QObject::connect(&timer, &QTimer::timeout, q, &DeviceMonitor::updated);
+        timer = new QTimer(q); // we need it to go another thread together with q
+        timer->setSingleShot(true);
+        timer->setInterval(50); // an interval to emit updated() signal on dev discovery since the may come in row
+        QObject::connect(timer, &QTimer::timeout, q, &DeviceMonitor::updated);
     }
 
     static GstDevice gstDevConvert(::GstDevice *gdev)
@@ -246,6 +249,7 @@ public:
 
 void DeviceMonitor::updateDevList()
 {
+    QMutexLocker(&d->devListMutex);
     d->_devices.clear();
 #if GST_VERSION_MAJOR == 1 && GST_VERSION_MINOR < 18
     // with newer versions the devices events seem replayed, so we don't need this
@@ -281,6 +285,7 @@ void DeviceMonitor::updateDevList()
 
 void DeviceMonitor::onDeviceAdded(GstDevice dev)
 {
+    QMutexLocker(&d->devListMutex);
     if (d->_devices.contains(dev.id)) {
         qWarning("Double added of device %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
     } else {
@@ -301,13 +306,14 @@ void DeviceMonitor::onDeviceAdded(GstDevice dev)
         d->_devices.insert(dev.id, dev);
         qDebug("added dev: %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
         // wait quite a bit since updates may come in row with latest gstreamer
-        if (!d->timer.isActive())
-            d->timer.start();
+        if (!d->timer->isActive())
+            d->timer->start();
     }
 }
 
 void DeviceMonitor::onDeviceRemoved(const GstDevice &dev)
 {
+    QMutexLocker(&d->devListMutex);
     if (d->_devices.remove(dev.id)) {
         qDebug("removed dev: %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
         emit updated();
@@ -318,6 +324,7 @@ void DeviceMonitor::onDeviceRemoved(const GstDevice &dev)
 
 void DeviceMonitor::onDeviceChanged(const GstDevice &dev)
 {
+    QMutexLocker(&d->devListMutex);
     auto it = d->_devices.find(dev.id);
     if (it == d->_devices.end()) {
         qDebug("Changed unknown previously device '%s'. Try to add it", qPrintable(dev.id));
@@ -329,8 +336,22 @@ void DeviceMonitor::onDeviceChanged(const GstDevice &dev)
     emit updated();
 }
 
-DeviceMonitor::DeviceMonitor(GstMainLoop *mainLoop) : QObject(mainLoop), d(new Private(this))
+DeviceMonitor::DeviceMonitor(GstMainLoop *mainLoop) : QObject(mainLoop), d(new Private(this)) { }
+
+DeviceMonitor::~DeviceMonitor()
 {
+    delete d->_platform;
+    gst_device_monitor_stop(d->_monitor);
+    g_object_unref(d->_monitor);
+    delete d;
+}
+
+void DeviceMonitor::start()
+{
+    if (d->started)
+        return;
+    d->started = true;
+
     qRegisterMetaType<GstDevice>("GstDevice");
 
     // auto context = mainLoop->mainContext();
@@ -364,14 +385,6 @@ DeviceMonitor::DeviceMonitor(GstMainLoop *mainLoop) : QObject(mainLoop), d(new P
     }
 }
 
-DeviceMonitor::~DeviceMonitor()
-{
-    delete d->_platform;
-    gst_device_monitor_stop(d->_monitor);
-    g_object_unref(d->_monitor);
-    delete d;
-}
-
 QList<GstDevice> DeviceMonitor::devices(PDevice::Type type)
 {
     QList<GstDevice> ret;
@@ -380,6 +393,7 @@ QList<GstDevice> DeviceMonitor::devices(PDevice::Type type)
     bool hasDefaultPulsesrc  = false;
     bool hasPulsesink        = false;
     bool hasDefaultPulsesink = false;
+    d->devListMutex.lock();
     for (auto const &dev : qAsConst(d->_devices)) {
         if (dev.type == type)
             ret.append(dev);
@@ -395,6 +409,7 @@ QList<GstDevice> DeviceMonitor::devices(PDevice::Type type)
                 hasDefaultPulsesink = true;
         }
     }
+    d->devListMutex.unlock();
 
     std::sort(ret.begin(), ret.end(), [](const GstDevice &a, const GstDevice &b) { return a.name < b.name; });
     if (hasPulsesrc && !hasDefaultPulsesrc) {

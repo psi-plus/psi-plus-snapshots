@@ -41,6 +41,7 @@ GstProvider::GstProvider(const QVariantMap &params)
 
     auto resourcePath = params.value("resourcePath").toString();
     gstEventLoop      = new GstMainLoop(resourcePath);
+    deviceMonitor     = new DeviceMonitor(gstEventLoop);
     gstEventLoop->moveToThread(&gstEventLoopThread);
 
     connect(
@@ -92,13 +93,7 @@ QString GstProvider::creditText() const
     return str;
 }
 
-FeaturesContext *GstProvider::createFeatures()
-{
-    qDebug("GstProvider::createFeatures DeviceMonitor will be allocated now");
-    if (!deviceMonitor)
-        deviceMonitor = new DeviceMonitor(gstEventLoop);
-    return new GstFeaturesContext(gstEventLoop, deviceMonitor);
-}
+FeaturesContext *GstProvider::createFeatures() { return new GstFeaturesContext(gstEventLoop, deviceMonitor); }
 
 RtpSessionContext *GstProvider::createRtpSession() { return new GstRtpSessionContext(gstEventLoop); }
 

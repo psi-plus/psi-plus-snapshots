@@ -72,6 +72,7 @@ public:
     explicit DeviceMonitor(GstMainLoop *mainLoop);
     ~DeviceMonitor() override;
 
+    void             start();
     QList<GstDevice> devices(PDevice::Type type);
 };
 

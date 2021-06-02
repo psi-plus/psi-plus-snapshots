@@ -20,14 +20,10 @@ GstFeaturesContext::GstFeaturesContext(GstMainLoop *_gstLoop, DeviceMonitor *dev
     QObject(parent), gstLoop(_gstLoop), deviceMonitor(deviceMonitor)
 {
     Q_ASSERT(!gstLoop.isNull());
-    gstLoop->execInContext(
-        [this](void *userData) {
-            Q_UNUSED(userData);
-            // we should set flags which exactly devices were 'updated'. will be implemenented later
-            connect(this->deviceMonitor, &DeviceMonitor::updated, this, [this]() { updateDevices(); });
-            updateDevices();
-        },
-        this);
+    // note deviceMonitor works in gstloop's thread
+    connect(this->deviceMonitor, &DeviceMonitor::updated, this, &GstFeaturesContext::updateDevices);
+    updateDevices();
+    gstLoop->execInContext([this](void *) { this->deviceMonitor->start(); }, nullptr);
 }
 
 QObject *GstFeaturesContext::qobject() { return this; }
@@ -45,7 +41,6 @@ void GstFeaturesContext::monitor(int types, QObject *receiver, std::function<voi
 
 void GstFeaturesContext::watch()
 {
-    QMutexLocker locker(&updateMutex);
     if (!updated)
         return;
     auto it = watchers.cbegin();
@@ -102,14 +97,13 @@ QList<PDevice> GstFeaturesContext::videoInputDevices()
 
 void GstFeaturesContext::updateDevices()
 {
-    QMutexLocker locker(&updateMutex);
     updated                      = true;
     features.audioInputDevices   = audioInputDevices();
     features.audioOutputDevices  = audioOutputDevices();
     features.videoInputDevices   = videoInputDevices();
     features.supportedAudioModes = modes_supportedAudio();
     features.supportedVideoModes = modes_supportedVideo();
-    QMetaObject::invokeMethod(this, "watch", Qt::QueuedConnection);
+    watch();
 }
 
 } // namespace PsiMedia

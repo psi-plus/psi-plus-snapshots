@@ -35,7 +35,6 @@ public:
     PFeatures             features;
     bool                  updated = false;
     std::list<Watcher>    watchers;
-    QMutex                updateMutex;
 
     explicit GstFeaturesContext(GstMainLoop *_gstLoop, DeviceMonitor *deviceMonitor, QObject *parent = nullptr);
 
