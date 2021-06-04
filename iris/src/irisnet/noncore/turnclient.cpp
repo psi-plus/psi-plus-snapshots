@@ -79,8 +79,7 @@ public:
     Proxy                    proxy;
     QString                  clientSoftware;
     TurnClient::Mode         mode = PlainMode;
-    QHostAddress             serverAddr;
-    int                      serverPort = 0;
+    TransportAddress         serverAddr;
     ObjectSession            sess;
     ByteStream *             bs            = nullptr;
     QCA::TLS *               tls           = nullptr;
@@ -101,16 +100,13 @@ public:
     public:
         enum Type { Data, Other };
 
-        Type         type;
-        int          size;
-        QHostAddress addr;
-        int          port;
+        Type             type;
+        int              size;
+        TransportAddress addr;
 
-        WriteItem(int _size) : type(Other), size(_size), port(-1) { }
+        WriteItem(int _size) : type(Other), size(_size) { }
 
-        WriteItem(int _size, const QHostAddress &_addr, int _port) : type(Data), size(_size), addr(_addr), port(_port)
-        {
-        }
+        WriteItem(int _size, const TransportAddress &_addr) : type(Data), size(_size), addr(_addr) { }
     };
 
     QList<WriteItem> writeItems;
@@ -119,14 +115,13 @@ public:
 
     class Packet {
     public:
-        QHostAddress addr;
-        quint16      port;
-        QByteArray   data;
+        TransportAddress addr;
+        QByteArray       data;
 
         // for outbound
         bool requireChannel;
 
-        Packet() : port(-1), requireChannel(false) { }
+        Packet() : requireChannel(false) { }
     };
 
     QList<Packet>                in;
@@ -137,9 +132,8 @@ public:
 
     class Written {
     public:
-        QHostAddress addr;
-        int          port;
-        int          count;
+        TransportAddress addr;
+        int              count;
     };
 
     Private(TurnClient *_q) :
@@ -198,31 +192,31 @@ public:
         if (proxy.type() == Proxy::HttpConnect) {
             HttpConnect *s = new HttpConnect(this);
             bs             = s;
-            connect(s, SIGNAL(connected()), SLOT(bs_connected()));
-            connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
+            connect(s, &HttpConnect::connected, this, &Private::bs_connected);
+            connect(s, &HttpConnect::error, this, &Private::bs_error);
             if (!proxy.user().isEmpty())
                 s->setAuth(proxy.user(), proxy.pass());
-            s->connectToHost(proxy.host(), proxy.port(), serverAddr.toString(), serverPort);
+            s->connectToHost(proxy.host(), proxy.port(), serverAddr.addr.toString(), serverAddr.port);
         } else if (proxy.type() == Proxy::Socks) {
             SocksClient *s = new SocksClient(this);
             bs             = s;
-            connect(s, SIGNAL(connected()), SLOT(bs_connected()));
-            connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
+            connect(s, &SocksClient::connected, this, &Private::bs_connected);
+            connect(s, &SocksClient::error, this, &Private::bs_error);
             if (!proxy.user().isEmpty())
                 s->setAuth(proxy.user(), proxy.pass());
-            s->connectToHost(proxy.host(), proxy.port(), serverAddr.toString(), serverPort);
+            s->connectToHost(proxy.host(), proxy.port(), serverAddr.addr.toString(), serverAddr.port);
         } else {
             BSocket *s = new BSocket(this);
             bs         = s;
-            connect(s, SIGNAL(connected()), SLOT(bs_connected()));
-            connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
-            s->connectToHost(serverAddr.toString(), quint16(serverPort));
+            connect(s, &BSocket::connected, this, &Private::bs_connected);
+            connect(s, &BSocket::error, this, &Private::bs_error);
+            s->connectToHost(serverAddr.addr.toString(), serverAddr.port);
         }
 
-        connect(bs, SIGNAL(connectionClosed()), SLOT(bs_connectionClosed()));
-        connect(bs, SIGNAL(delayedCloseFinished()), SLOT(bs_delayedCloseFinished()));
-        connect(bs, SIGNAL(readyRead()), SLOT(bs_readyRead()));
-        connect(bs, SIGNAL(bytesWritten(qint64)), SLOT(bs_bytesWritten(qint64)));
+        connect(bs, &ByteStream::connectionClosed, this, &Private::bs_connectionClosed);
+        connect(bs, &ByteStream::delayedCloseFinished, this, &Private::bs_delayedCloseFinished);
+        connect(bs, &ByteStream::readyRead, this, &Private::bs_readyRead);
+        connect(bs, &ByteStream::bytesWritten, this, &Private::bs_bytesWritten);
     }
 
     void do_close()
@@ -305,7 +299,7 @@ public:
             emit q->debugLine("Allocating...");
         // only use addr association in udp mode
         if (udp)
-            allocate->start(serverAddr, serverPort);
+            allocate->start(serverAddr);
         else
             allocate->start();
     }
@@ -341,21 +335,20 @@ public:
     {
         bool notStun;
         if (!pool->writeIncomingMessage(buf, &notStun)) {
-            QByteArray   data;
-            QHostAddress fromAddr;
-            int          fromPort;
+            QByteArray       data;
+            TransportAddress fromAddr;
 
-            data = processNonPoolPacket(buf, notStun, &fromAddr, &fromPort);
+            data = processNonPoolPacket(buf, notStun, fromAddr);
             if (!data.isNull())
-                processDataPacket(data, fromAddr, fromPort);
+                processDataPacket(data, fromAddr);
         }
     }
 
-    QByteArray processNonPoolPacket(const QByteArray &buf, bool notStun, QHostAddress *addr, int *port)
+    QByteArray processNonPoolPacket(const QByteArray &buf, bool notStun, TransportAddress &addr)
     {
         if (notStun) {
             // not stun?  maybe it is a data packet
-            QByteArray data = allocate->decode(buf, addr, port);
+            QByteArray data = allocate->decode(buf, addr);
             if (!data.isNull()) {
                 if (debugLevel >= TurnClient::DL_Packet)
                     emit q->debugLine("Received ChannelData-based data packet");
@@ -366,7 +359,7 @@ public:
             //   let's see
             StunMessage message = StunMessage::fromBinary(buf);
             if (!message.isNull()) {
-                QByteArray data = allocate->decode(message, addr, port);
+                QByteArray data = allocate->decode(message, addr);
 
                 if (!data.isNull()) {
                     if (debugLevel >= TurnClient::DL_Packet)
@@ -387,27 +380,26 @@ public:
         return QByteArray();
     }
 
-    void processDataPacket(const QByteArray &buf, const QHostAddress &addr, int port)
+    void processDataPacket(const QByteArray &buf, const TransportAddress &addr)
     {
         Packet p;
         p.addr = addr;
-        p.port = port;
         p.data = buf;
         in += p;
 
         emit q->readyRead();
     }
 
-    void writeOrQueue(const QByteArray &buf, const QHostAddress &addr, int port)
+    void writeOrQueue(const QByteArray &buf, const TransportAddress &addr)
     {
         Q_ASSERT(allocateStarted);
 
-        StunAllocate::Channel c(addr, port);
+        StunAllocate::Channel c(addr);
         bool                  writeImmediately = false;
         bool                  requireChannel   = pendingChannels.contains(c) || desiredChannels.contains(c);
 
         QList<QHostAddress> actualPerms = allocate->permissions();
-        if (actualPerms.contains(addr)) {
+        if (actualPerms.contains(addr.addr)) {
             if (requireChannel) {
                 QList<StunAllocate::Channel> actualChannels = allocate->channels();
                 if (actualChannels.contains(c))
@@ -417,16 +409,15 @@ public:
         }
 
         if (writeImmediately) {
-            write(buf, addr, port);
+            write(buf, addr);
         } else {
             Packet p;
             p.addr           = addr;
-            p.port           = port;
             p.data           = buf;
             p.requireChannel = requireChannel;
             outPending += p;
 
-            ensurePermission(addr);
+            ensurePermission(addr.addr);
         }
     }
 
@@ -436,14 +427,14 @@ public:
         QList<StunAllocate::Channel> actualChannels = allocate->channels();
         for (int n = 0; n < outPending.count(); ++n) {
             const Packet &p = outPending[n];
-            if (actualPerms.contains(p.addr)) {
-                StunAllocate::Channel c(p.addr, p.port);
+            if (actualPerms.contains(p.addr.addr)) {
+                StunAllocate::Channel c(p.addr);
                 if (!p.requireChannel || actualChannels.contains(c)) {
                     Packet po = outPending[n];
                     outPending.removeAt(n);
                     --n; // adjust position
 
-                    write(po.data, po.addr, po.port);
+                    write(po.data, po.addr);
                 }
             }
         }
@@ -455,7 +446,7 @@ public:
             QList<QHostAddress>          actualPerms = allocate->permissions();
             QList<StunAllocate::Channel> list;
             for (int n = 0; n < pendingChannels.count(); ++n) {
-                if (actualPerms.contains(pendingChannels[n].address)) {
+                if (actualPerms.contains(pendingChannels[n].address.addr)) {
                     list += pendingChannels[n];
                     pendingChannels.removeAt(n);
                     --n; // adjust position
@@ -467,9 +458,9 @@ public:
         }
     }
 
-    void write(const QByteArray &buf, const QHostAddress &addr, int port)
+    void write(const QByteArray &buf, const TransportAddress &addr)
     {
-        QByteArray packet = allocate->encode(buf, addr, port);
+        QByteArray packet = allocate->encode(buf, addr);
 
         if (debugLevel >= TurnClient::DL_Packet) {
             StunMessage msg = StunMessage::fromBinary(packet);
@@ -480,7 +471,7 @@ public:
                 emit q->debugLine("Sending ChannelData-based data packet");
         }
 
-        writeItems += WriteItem(packet.size(), addr, port);
+        writeItems += WriteItem(packet.size(), addr);
         ++outPendingWrite;
         if (udp) {
             emit q->outgoingDatagram(packet);
@@ -510,8 +501,7 @@ public:
         for (const StunAllocate::Channel &c : channels) {
             if (!desiredChannels.contains(c)) {
                 if (debugLevel >= TurnClient::DL_Info)
-                    emit q->debugLine(
-                        QString("Setting channel for peer address/port %1;%2").arg(c.address.toString()).arg(c.port));
+                    emit q->debugLine(QString("Setting channel for peer address/port %1").arg(c.address));
 
                 desiredChannels += c;
                 changed = true;
@@ -522,11 +512,11 @@ public:
             allocate->setChannels(desiredChannels);
     }
 
-    void addChannelPeer(const QHostAddress &addr, int port)
+    void addChannelPeer(const TransportAddress &addr)
     {
-        ensurePermission(addr);
+        ensurePermission(addr.addr);
 
-        StunAllocate::Channel c(addr, port);
+        StunAllocate::Channel c(addr);
         if (!pendingChannels.contains(c) && !desiredChannels.contains(c)) {
             pendingChannels += c;
 
@@ -546,7 +536,7 @@ public:
             if (wi.type == WriteItem::Data) {
                 int at = -1;
                 for (int n = 0; n < writtenDests.count(); ++n) {
-                    if (writtenDests[n].addr == wi.addr && writtenDests[n].port == wi.port) {
+                    if (writtenDests[n].addr == wi.addr) {
                         at = n;
                         break;
                     }
@@ -557,7 +547,6 @@ public:
                 } else {
                     Written wr;
                     wr.addr  = wi.addr;
-                    wr.port  = wi.port;
                     wr.count = 1;
                     writtenDests += wr;
                 }
@@ -571,7 +560,7 @@ public:
     {
         ObjectSessionWatcher watch(&sess);
         for (const Written &wr : writtenDests) {
-            emit q->packetsWritten(wr.count, wr.addr, wr.port);
+            emit q->packetsWritten(wr.count, wr.addr);
             if (!watch.isValid())
                 return;
         }
@@ -614,10 +603,10 @@ private slots:
 
         if (mode == TurnClient::TlsMode) {
             tls = new QCA::TLS(this);
-            connect(tls, SIGNAL(handshaken()), SLOT(tls_handshaken()));
-            connect(tls, SIGNAL(readyRead()), SLOT(tls_readyRead()));
-            connect(tls, SIGNAL(readyReadOutgoing()), SLOT(tls_readyReadOutgoing()));
-            connect(tls, SIGNAL(error()), SLOT(tls_error()));
+            connect(tls, &QCA::TLS::handshaken, this, &Private::tls_handshaken);
+            connect(tls, &QCA::TLS::readyRead, this, &Private::tls_readyRead);
+            connect(tls, &QCA::TLS::readyReadOutgoing, this, &Private::tls_readyReadOutgoing);
+            connect(tls, &QCA::TLS::error, this, &Private::tls_error);
             tlsHandshaken = false;
             if (debugLevel >= TurnClient::DL_Info)
                 emit q->debugLine("TLS handshaking...");
@@ -675,7 +664,7 @@ private slots:
             if (wi.type == WriteItem::Data) {
                 int at = -1;
                 for (int n = 0; n < writtenDests.count(); ++n) {
-                    if (writtenDests[n].addr == wi.addr && writtenDests[n].port == wi.port) {
+                    if (writtenDests[n].addr == wi.addr) {
                         at = n;
                         break;
                     }
@@ -686,7 +675,6 @@ private slots:
                 } else {
                     Written wr;
                     wr.addr  = wi.addr;
-                    wr.port  = wi.port;
                     wr.count = 1;
                     writtenDests += wr;
                 }
@@ -771,11 +759,10 @@ private slots:
         emit q->error(TurnClient::ErrorTls);
     }
 
-    void pool_outgoingMessage(const QByteArray &packet, const QHostAddress &toAddress, quint16 toPort)
+    void pool_outgoingMessage(const QByteArray &packet, const XMPP::TransportAddress &toAddress)
     {
         // we aren't using IP-associated transactions
         Q_UNUSED(toAddress);
-        Q_UNUSED(toPort);
 
         writeItems += WriteItem(packet.size());
 
@@ -868,31 +855,29 @@ void TurnClient::setProxy(const Proxy &proxy) { d->proxy = proxy; }
 
 void TurnClient::setClientSoftwareNameAndVersion(const QString &str) { d->clientSoftware = str; }
 
-void TurnClient::connectToHost(StunTransactionPool *pool, const QHostAddress &addr, int port)
+void TurnClient::connectToHost(StunTransactionPool *pool, const TransportAddress &addr)
 {
     d->serverAddr = addr;
-    d->serverPort = port;
     d->udp        = true;
     d->pool       = pool->sharedFromThis();
     d->in.clear();
     d->do_connect();
 }
 
-void TurnClient::connectToHost(const QHostAddress &addr, int port, Mode mode)
+void TurnClient::connectToHost(const TransportAddress &addr, Mode mode)
 {
     d->serverAddr = addr;
-    d->serverPort = port;
     d->udp        = false;
     d->mode       = mode;
     d->in.clear();
     d->do_connect();
 }
 
-QHostAddress TurnClient::serverAddress() const { return d->serverAddr; }
+const TransportAddress &TurnClient::serverAddress() const { return d->serverAddr; }
 
-QByteArray TurnClient::processIncomingDatagram(const QByteArray &buf, bool notStun, QHostAddress *addr, int *port)
+QByteArray TurnClient::processIncomingDatagram(const QByteArray &buf, bool notStun, TransportAddress &addr)
 {
-    return d->processNonPoolPacket(buf, notStun, addr, port);
+    return d->processNonPoolPacket(buf, notStun, addr);
 }
 
 void TurnClient::outgoingDatagramsWritten(int count) { d->udp_datagramsWritten(count); }
@@ -936,24 +921,23 @@ void TurnClient::close() { d->do_close(); }
 
 StunAllocate *TurnClient::stunAllocate() { return d->allocate; }
 
-void TurnClient::addChannelPeer(const QHostAddress &addr, int port) { d->addChannelPeer(addr, port); }
+void TurnClient::addChannelPeer(const TransportAddress &addr) { d->addChannelPeer(addr); }
 
 int TurnClient::packetsToRead() const { return d->in.count(); }
 
 int TurnClient::packetsToWrite() const { return d->outPending.count() + d->outPendingWrite; }
 
-QByteArray TurnClient::read(QHostAddress *addr, quint16 *port)
+QByteArray TurnClient::read(TransportAddress &addr)
 {
     if (!d->in.isEmpty()) {
         Private::Packet p = d->in.takeFirst();
-        *addr             = p.addr;
-        *port             = p.port;
+        addr              = p.addr;
         return p.data;
     } else
         return QByteArray();
 }
 
-void TurnClient::write(const QByteArray &buf, const QHostAddress &addr, int port) { d->writeOrQueue(buf, addr, port); }
+void TurnClient::write(const QByteArray &buf, const TransportAddress &addr) { d->writeOrQueue(buf, addr); }
 
 QString TurnClient::errorString() const { return d->errorString; }
 

@@ -36,21 +36,6 @@ class IceComponent : public QObject {
 public:
     enum CandidateType { HostType, PeerReflexiveType, ServerReflexiveType, RelayedType };
 
-    class TransportAddress {
-    public:
-        QHostAddress addr;
-        int          port;
-
-        TransportAddress() : port(-1) { }
-
-        TransportAddress(const QHostAddress &_addr, int _port) : addr(_addr), port(_port) { }
-
-        bool operator==(const TransportAddress &other) const { return addr == other.addr && port == other.port; }
-
-        inline bool operator!=(const TransportAddress &other) const { return !operator==(other); }
-        inline      operator QString() const { return QString("%1:%2").arg(addr.toString(), QString::number(port)); }
-    };
-
     class CandidateInfo {
     public:
         using Ptr = QSharedPointer<CandidateInfo>;
@@ -67,7 +52,7 @@ public:
         QString foundation;
         QString id;
 
-        static Ptr  makeRemotePrflx(int componentId, const QHostAddress &fromAddr, quint16 fromPort, quint32 priority);
+        static Ptr  makeRemotePrflx(int componentId, const TransportAddress &fromAddr, quint32 priority);
         inline bool operator==(const CandidateInfo &o) const { return addr == o.addr && componentId == o.componentId; }
         inline bool operator==(CandidateInfo::Ptr o) const { return *this == *o; }
     };
@@ -111,9 +96,9 @@ public:
     void setExternalAddresses(const QList<Ice176::ExternalAddress> &addrs);
 
     // can be set at any time, but only once.  later changes are ignored
-    void setStunBindService(const QHostAddress &addr, int port);
-    void setStunRelayUdpService(const QHostAddress &addr, int port, const QString &user, const QCA::SecureArray &pass);
-    void setStunRelayTcpService(const QHostAddress &addr, int port, const QString &user, const QCA::SecureArray &pass);
+    void setStunBindService(const TransportAddress &addr);
+    void setStunRelayUdpService(const TransportAddress &addr, const QString &user, const QCA::SecureArray &pass);
+    void setStunRelayTcpService(const TransportAddress &addr, const QString &user, const QCA::SecureArray &pass);
 
     // these all start out enabled, but can be disabled for diagnostic
     //   purposes
@@ -136,7 +121,7 @@ public:
 
     void addLocalPeerReflexiveCandidate(const TransportAddress &addr, CandidateInfo::Ptr base, quint32 priority);
 
-    void flagPathAsLowOverhead(int id, const QHostAddress &addr, int port);
+    void flagPathAsLowOverhead(int id, const TransportAddress &addr);
 
     void setDebugLevel(DebugLevel level);
 
@@ -166,10 +151,6 @@ private:
     Private *d;
 };
 
-inline uint qHash(const XMPP::IceComponent::TransportAddress &key, uint seed = 0)
-{
-    return ::qHash(key.addr, seed) ^ ::qHash(key.port, seed);
-}
 } // namespace XMPP
 
 #endif // ICECOMPONENT_H

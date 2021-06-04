@@ -102,6 +102,7 @@ set(HEADERS
 
     noncore/legacy/ndns.h
     noncore/legacy/srvresolver.h
+    noncore/transportaddress.h
 )
 
 if(JINGLE_SCTP)

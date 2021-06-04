@@ -21,10 +21,9 @@
 
 #include <QObject>
 
-class QHostAddress;
-
 namespace XMPP {
 class StunTransactionPool;
+class TransportAddress;
 
 class StunBinding : public QObject {
     Q_OBJECT
@@ -49,11 +48,10 @@ public:
     void setFingerprintRequired(bool enabled);
 
     void start();
-    void start(const QHostAddress &addr, int port); // use addr association
+    void start(const XMPP::TransportAddress &addr); // use addr association
     void cancel();
 
-    QHostAddress reflexiveAddress() const;
-    int          reflexivePort() const;
+    const TransportAddress &reflexiveAddress() const;
 
     // non-translatable diagnostic string for convenience
     QString errorString() const;

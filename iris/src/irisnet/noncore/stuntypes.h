@@ -26,7 +26,9 @@
 #include <QList>
 #include <QString>
 
-namespace XMPP { namespace StunTypes {
+namespace XMPP {
+class TransportAddress;
+namespace StunTypes {
     enum Method {
         Binding          = 0x001,
         Allocate         = 0x003,
@@ -85,46 +87,43 @@ namespace XMPP { namespace StunTypes {
         RoleConflict = 487
     };
 
-    QByteArray createMappedAddress(const QHostAddress &addr, quint16 port);
+    QByteArray createMappedAddress(const XMPP::TransportAddress &addr);
     QByteArray createUsername(const QString &username);
     QByteArray createErrorCode(int code, const QString &reason);
     QByteArray createUnknownAttributes(const QList<quint16> &typeList);
     QByteArray createRealm(const QString &realm);
     QByteArray createNonce(const QString &nonce);
-    QByteArray createXorMappedAddress(const QHostAddress &addr, quint16 port, const quint8 *magic, const quint8 *id);
+    QByteArray createXorMappedAddress(const XMPP::TransportAddress &addr, const quint8 *magic, const quint8 *id);
     QByteArray createChannelNumber(quint16 i);
     QByteArray createLifetime(quint32 i);
-    QByteArray createXorPeerAddress(const QHostAddress &addr, quint16 port, const quint8 *magic, const quint8 *id);
-    QByteArray createXorRelayedAddress(const QHostAddress &addr, quint16 port, const quint8 *magic, const quint8 *id);
+    QByteArray createXorPeerAddress(const XMPP::TransportAddress &addr, const quint8 *magic, const quint8 *id);
+    QByteArray createXorRelayedAddress(const XMPP::TransportAddress &addr, const quint8 *magic, const quint8 *id);
     QByteArray createEvenPort(bool reserve);
     QByteArray createRequestedTransport(quint8 proto);
     QByteArray createReservationToken(const QByteArray &token);
     QByteArray createPriority(quint32 i);
     QByteArray createSoftware(const QString &str);
-    QByteArray createAlternateServer(const QHostAddress &addr, quint16 port);
+    QByteArray createAlternateServer(const XMPP::TransportAddress &addr);
     QByteArray createIceControlled(quint64 i);
     QByteArray createIceControlling(quint64 i);
 
-    bool parseMappedAddress(const QByteArray &val, QHostAddress *addr, quint16 *port);
+    bool parseMappedAddress(const QByteArray &val, TransportAddress &addr);
     bool parseUsername(const QByteArray &val, QString *username);
     bool parseErrorCode(const QByteArray &val, int *code, QString *reason);
     bool parseUnknownAttributes(const QByteArray &val, QList<quint16> *typeList);
     bool parseRealm(const QByteArray &val, QString *realm);
     bool parseNonce(const QByteArray &val, QString *nonce);
-    bool parseXorMappedAddress(const QByteArray &val, const quint8 *magic, const quint8 *id, QHostAddress *addr,
-                               quint16 *port);
+    bool parseXorMappedAddress(const QByteArray &val, const quint8 *magic, const quint8 *id, TransportAddress &addr);
     bool parseChannelNumber(const QByteArray &val, quint16 *i);
     bool parseLifetime(const QByteArray &val, quint32 *i);
-    bool parseXorPeerAddress(const QByteArray &val, const quint8 *magic, const quint8 *id, QHostAddress *addr,
-                             quint16 *port);
-    bool parseXorRelayedAddress(const QByteArray &val, const quint8 *magic, const quint8 *id, QHostAddress *addr,
-                                quint16 *port);
+    bool parseXorPeerAddress(const QByteArray &val, const quint8 *magic, const quint8 *id, TransportAddress &addr);
+    bool parseXorRelayedAddress(const QByteArray &val, const quint8 *magic, const quint8 *id, TransportAddress &addr);
     bool parseEvenPort(const QByteArray &val, bool *reserve);
     bool parseRequestedTransport(const QByteArray &val, quint8 *proto);
     bool parseReservationToken(const QByteArray &val, QByteArray *token);
     bool parsePriority(const QByteArray &val, quint32 *i);
     bool parseSoftware(const QByteArray &val, QString *str);
-    bool parseAlternateServer(const QByteArray &val, QHostAddress *addr, quint16 *port);
+    bool parseAlternateServer(const QByteArray &val, TransportAddress &addr);
     bool parseIceControlled(const QByteArray &val, quint64 *i);
     bool parseIceControlling(const QByteArray &val, quint64 *i);
 

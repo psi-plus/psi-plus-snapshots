@@ -215,14 +215,11 @@ public:
     int                                     componentCount = 0;
     QList<Ice176::LocalAddress>             localAddrs;
     QList<Ice176::ExternalAddress>          extAddrs;
-    QHostAddress                            stunBindAddr;
-    int                                     stunBindPort;
-    QHostAddress                            stunRelayUdpAddr;
-    int                                     stunRelayUdpPort;
+    TransportAddress                        stunBindAddr;
+    TransportAddress                        stunRelayUdpAddr;
     QString                                 stunRelayUdpUser;
     QCA::SecureArray                        stunRelayUdpPass;
-    QHostAddress                            stunRelayTcpAddr;
-    int                                     stunRelayTcpPort;
+    TransportAddress                        stunRelayTcpAddr;
     QString                                 stunRelayTcpUser;
     QCA::SecureArray                        stunRelayTcpPass;
     QPointer<AbstractStunDisco>             stunDiscoverer;
@@ -308,9 +305,9 @@ public:
 
     void stunFound(AbstractStunDisco::Service::Ptr service)
     {
+        quint16 port = service->port ? service->port : ((service->flags & AbstractStunDisco::Tls) ? 5349 : 3478);
         qDebug("found %s: %s:%hu %s %s", (service->flags & AbstractStunDisco::Relay) ? "TURN" : "STUN",
-               qPrintable(service->host), service->port ? service->port : std::uint16_t(3478),
-               service->transport == AbstractStunDisco::Tcp ? "tcp" : "udp",
+               qPrintable(service->host), port, service->transport == AbstractStunDisco::Tcp ? "tcp" : "udp",
                (service->flags & AbstractStunDisco::Tls) ? "tls" : "insecure");
     }
     void stunModified(AbstractStunDisco::Service::Ptr) { }
@@ -340,15 +337,13 @@ public:
             Component &c = components.back();
             c.id         = n + 1;
             c.ic         = new IceComponent(c.id, this);
-            c.ic->setDebugLevel(IceComponent::DL_Info);
-            connect(c.ic, SIGNAL(candidateAdded(XMPP::IceComponent::Candidate)),
-                    SLOT(ic_candidateAdded(XMPP::IceComponent::Candidate)));
-            connect(c.ic, SIGNAL(candidateRemoved(XMPP::IceComponent::Candidate)),
-                    SLOT(ic_candidateRemoved(XMPP::IceComponent::Candidate)));
-            connect(c.ic, SIGNAL(localFinished()), SLOT(ic_localFinished()));
+            c.ic->setDebugLevel(IceComponent::DL_Packet);
+            connect(c.ic, &IceComponent::candidateAdded, this, &Private::ic_candidateAdded);
+            connect(c.ic, &IceComponent::candidateRemoved, this, &Private::ic_candidateRemoved);
+            connect(c.ic, &IceComponent::localFinished, this, &Private::ic_localFinished);
             connect(c.ic, &IceComponent::gatheringComplete, this, &Private::ic_gatheringComplete);
-            connect(c.ic, SIGNAL(stopped()), SLOT(ic_stopped()));
-            connect(c.ic, SIGNAL(debugLine(QString)), SLOT(ic_debugLine(QString)));
+            connect(c.ic, &IceComponent::stopped, this, &Private::ic_stopped);
+            connect(c.ic, &IceComponent::debugLine, this, &Private::ic_debugLine);
 
             c.ic->setClientSoftwareNameAndVersion("Iris");
             c.ic->setProxy(proxy);
@@ -356,12 +351,12 @@ public:
                 c.ic->setPortReserver(portReserver);
             c.ic->setLocalAddresses(localAddrs);
             c.ic->setExternalAddresses(extAddrs);
-            if (!stunBindAddr.isNull())
-                c.ic->setStunBindService(stunBindAddr, stunBindPort);
-            if (!stunRelayUdpAddr.isNull())
-                c.ic->setStunRelayUdpService(stunRelayUdpAddr, stunRelayUdpPort, stunRelayUdpUser, stunRelayUdpPass);
-            if (!stunRelayTcpAddr.isNull())
-                c.ic->setStunRelayTcpService(stunRelayTcpAddr, stunRelayTcpPort, stunRelayTcpUser, stunRelayTcpPass);
+            if (stunBindAddr.isValid())
+                c.ic->setStunBindService(stunBindAddr);
+            if (stunRelayUdpAddr.isValid())
+                c.ic->setStunRelayUdpService(stunRelayUdpAddr, stunRelayUdpUser, stunRelayUdpPass);
+            if (stunRelayTcpAddr.isValid())
+                c.ic->setStunRelayTcpService(stunRelayTcpAddr, stunRelayTcpUser, stunRelayTcpPass);
 
             c.ic->setUseLocal(useLocal && allowIpExposure);
             c.ic->setUseStunBind(useStunBind && allowIpExposure);
@@ -607,7 +602,7 @@ public:
         pair->foundation = pair->local->foundation + pair->remote->foundation;
         pair->state      = PInProgress;
 
-        int at = findLocalCandidate(pair->local->addr.addr, pair->local->addr.port);
+        int at = findLocalCandidate(pair->local->addr);
         Q_ASSERT(at != -1);
 
         auto &lc = localCandidates[at];
@@ -617,14 +612,13 @@ public:
         // read comment to the pool member how wrong it is
         pair->pool = StunTransactionPool::Ptr::create(StunTransaction::Udp);
         connect(pair->pool.data(), &StunTransactionPool::outgoingMessage, this,
-                [this, weakPair = pair.toWeakRef()](const QByteArray &packet, const QHostAddress &, int) {
+                [this, weakPair = pair.toWeakRef()](const QByteArray &packet, const TransportAddress &) {
                     auto pair = weakPair.toStrongRef();
                     if (!pair)
                         return;
-                    int at = findLocalCandidate(pair->local->addr.addr, pair->local->addr.port);
+                    int at = findLocalCandidate(pair->local->addr);
                     if (at == -1) { // FIXME: assert?
-                        qDebug("Failed to find local candidate %s:%d", qPrintable(pair->local->addr.addr.toString()),
-                               pair->local->addr.port);
+                        qDebug("Failed to find local candidate %s", qPrintable(pair->local->addr));
                         return;
                     }
 
@@ -635,7 +629,7 @@ public:
                              (mode == Initiator
                                   ? (pair->binding->useCandidate() ? " (nominating)" : "")
                                   : (pair->isTriggeredForNominated ? " (triggered check for nominated)" : "")));
-                    lc.iceTransport->writeDatagram(path, packet, pair->remote->addr.addr, pair->remote->addr.port);
+                    lc.iceTransport->writeDatagram(path, packet, pair->remote->addr);
                 });
 
         // pair->pool->setUsername(peerUser + ':' + localUser);
@@ -710,7 +704,7 @@ public:
             }
         }
 
-        int at = findLocalCandidate(pair->local->addr.addr, pair->local->addr.port);
+        int at = findLocalCandidate(pair->local->addr);
         if (at == -1) { // FIXME: assert?
             iceDebug("FIXME! Failed to find local candidate for componentId=%d, addr=%s", componentIndex + 1,
                      qPrintable(pair->local->addr));
@@ -721,7 +715,7 @@ public:
 
         int path = lc.path;
 
-        lc.iceTransport->writeDatagram(path, datagram, pair->remote->addr.addr, pair->remote->addr.port);
+        lc.iceTransport->writeDatagram(path, datagram, pair->remote->addr);
 
         // DOR-SR?
         QMetaObject::invokeMethod(q, "datagramsWritten", Qt::QueuedConnection, Q_ARG(int, componentIndex),
@@ -749,8 +743,7 @@ public:
                 newValid.push_back(p);
         checkList.validPairs = newValid;
 
-        auto &sa = selected->local->base;
-        auto &t  = localCandidates[findLocalCandidate(sa.addr, sa.port)].iceTransport;
+        auto t = findTransport(selected->local->base);
         Q_ASSERT(t.data() != nullptr);
 
         // cancel planned/active transactions
@@ -1012,15 +1005,22 @@ private:
         return -1;
     }
 
-    int findLocalCandidate(const QHostAddress &fromAddr, int fromPort)
+    int findLocalCandidate(const TransportAddress &fromAddr)
     {
         for (int n = 0; n < localCandidates.count(); ++n) {
-            const IceComponent::Candidate &cc = localCandidates[n];
-            if (cc.info->addr.addr == fromAddr && cc.info->addr.port == fromPort)
+            if (localCandidates[n].info->addr == fromAddr)
                 return n;
         }
 
         return -1;
+    }
+
+    QSharedPointer<IceTransport> findTransport(const TransportAddress &addr)
+    {
+        auto c = findLocalCandidate(addr);
+        if (c >= 0)
+            return localCandidates[c].iceTransport;
+        return {};
     }
 
     static QString candidateType_to_string(IceComponent::CandidateType type)
@@ -1183,8 +1183,8 @@ private:
 
         // if (c.lowOverhead) { // commented out since we need turn permissions for all components
         iceDebug("component is flagged for low overhead.  setting up for %s", qPrintable(*pair));
-        auto &cc = localCandidates[findLocalCandidate(pair->local->addr.addr, pair->local->addr.port)];
-        component.ic->flagPathAsLowOverhead(cc.id, pair->remote->addr.addr, pair->remote->addr.port);
+        auto &cc = localCandidates[findLocalCandidate(pair->local->addr)];
+        component.ic->flagPathAsLowOverhead(cc.id, pair->remote->addr);
         //}
 
         if (pair->isNominated) {
@@ -1220,9 +1220,9 @@ private:
         iceDebug("check success for %s", qPrintable(QString(*pair)));
 
         // RFC8445 7.2.5.3.1.  Discovering Peer-Reflexive Candidates
-        auto mappedAddr = IceComponent::TransportAddress(binding->reflexiveAddress(), binding->reflexivePort());
-        if (pair->local->addr != mappedAddr) { // skip "If the valid pair equals the pair that generated the check"
-
+        auto mappedAddr = binding->reflexiveAddress();
+        // skip "If the valid pair equals the pair that generated the check"
+        if (pair->local->addr != binding->reflexiveAddress()) {
             // so mapped address doesn't match with local candidate sending binding request.
             // gotta find/create one
             auto locIt = std::find_if(localCandidates.begin(), localCandidates.end(), [&](const auto &c) {
@@ -1484,9 +1484,8 @@ private slots:
         IceTransport *sock = it;
 
         while (sock->hasPendingDatagrams(path)) {
-            QHostAddress fromAddr;
-            quint16      fromPort;
-            QByteArray   buf = sock->readDatagram(path, &fromAddr, &fromPort);
+            TransportAddress fromAddr;
+            QByteArray       buf = sock->readDatagram(path, fromAddr);
 
             // iceDebug("port %d: received packet (%d bytes)", lt->sock->localPort(), buf.size());
 
@@ -1497,8 +1496,7 @@ private slots:
             StunMessage                msg = StunMessage::fromBinary(buf, &result,
                                                       StunMessage::MessageIntegrity | StunMessage::Fingerprint, reqkey);
             if (!msg.isNull() && (msg.mclass() == StunMessage::Request || msg.mclass() == StunMessage::Indication)) {
-                iceDebug("received validated request or indication from %s:%d", qPrintable(fromAddr.toString()),
-                         fromPort);
+                iceDebug("received validated request or indication from %s", qPrintable(fromAddr));
                 QString user = QString::fromUtf8(msg.attribute(StunTypes::USERNAME));
                 if (requser != user) {
                     iceDebug("user [%s] is wrong.  it should be [%s].  skipping", qPrintable(user),
@@ -1519,32 +1517,31 @@ private slots:
                 QList<StunMessage::Attribute> list;
                 StunMessage::Attribute        attr;
                 attr.type  = StunTypes::XOR_MAPPED_ADDRESS;
-                attr.value = StunTypes::createXorPeerAddress(fromAddr, fromPort, response.magic(), response.id());
+                attr.value = StunTypes::createXorPeerAddress(fromAddr, response.magic(), response.id());
                 list += attr;
 
                 response.setAttributes(list);
 
                 QByteArray packet = response.toBinary(StunMessage::MessageIntegrity | StunMessage::Fingerprint, reqkey);
-                sock->writeDatagram(path, packet, fromAddr, fromPort);
+                sock->writeDatagram(path, packet, fromAddr);
 
                 if (state != Started) // only in started state we do triggered checks
                     return;
 
-                auto it        = std::find_if(remoteCandidates.begin(), remoteCandidates.end(),
-                                       [&](IceComponent::CandidateInfo::Ptr remCand) {
-                                           return remCand->componentId == locCand.info->componentId
-                                               && remCand->addr.addr == fromAddr && remCand->addr.port == fromPort;
-                                       });
+                auto it = std::find_if(
+                    remoteCandidates.begin(), remoteCandidates.end(), [&](IceComponent::CandidateInfo::Ptr remCand) {
+                        return remCand->componentId == locCand.info->componentId && remCand->addr == fromAddr;
+                    });
                 bool nominated = false;
                 if (mode == Responder)
                     nominated = msg.hasAttribute(StunTypes::USE_CANDIDATE);
                 if (it == remoteCandidates.end()) {
                     // RFC8445 7.3.1.3.  Learning Peer-Reflexive Candidates
-                    iceDebug("found NEW remote prflx! %s:%d", qPrintable(fromAddr.toString()), fromPort);
+                    iceDebug("found NEW remote prflx! %s", qPrintable(fromAddr));
                     quint32 priority;
                     StunTypes::parsePriority(msg.attribute(StunTypes::PRIORITY), &priority);
-                    auto remCand = IceComponent::CandidateInfo::makeRemotePrflx(locCand.info->componentId, fromAddr,
-                                                                                fromPort, priority);
+                    auto remCand
+                        = IceComponent::CandidateInfo::makeRemotePrflx(locCand.info->componentId, fromAddr, priority);
                     remoteCandidates += remCand;
                     doTriggeredCheck(locCand, remCand, nominated);
                 } else {
@@ -1556,7 +1553,7 @@ private slots:
                     buf, &result, StunMessage::MessageIntegrity | StunMessage::Fingerprint, reskey);
                 if (!msg.isNull()
                     && (msg.mclass() == StunMessage::SuccessResponse || msg.mclass() == StunMessage::ErrorResponse)) {
-                    iceDebug("received validated response from %s:%d to %s", qPrintable(fromAddr.toString()), fromPort,
+                    iceDebug("received validated response from %s to %s", qPrintable(fromAddr),
                              qPrintable(locCand.info->addr));
 
                     // FIXME: this is so gross and completely defeats the point of having pools
@@ -1600,13 +1597,12 @@ private slots:
         }
     }
 
-    void it_datagramsWritten(int path, int count, const QHostAddress &addr, int port)
+    void it_datagramsWritten(int path, int count, const TransportAddress &addr)
     {
         // TODO
         Q_UNUSED(path);
         Q_UNUSED(count);
         Q_UNUSED(addr);
-        Q_UNUSED(port);
     }
 };
 
@@ -1629,26 +1625,20 @@ void Ice176::setLocalAddresses(const QList<LocalAddress> &addrs) { d->updateLoca
 
 void Ice176::setExternalAddresses(const QList<ExternalAddress> &addrs) { d->updateExternalAddresses(addrs); }
 
-void Ice176::setStunBindService(const QHostAddress &addr, int port)
-{
-    d->stunBindAddr = addr;
-    d->stunBindPort = port;
-}
+void Ice176::setStunBindService(const QHostAddress &addr, quint16 port) { d->stunBindAddr = { addr, port }; }
 
-void Ice176::setStunRelayUdpService(const QHostAddress &addr, int port, const QString &user,
+void Ice176::setStunRelayUdpService(const QHostAddress &addr, quint16 port, const QString &user,
                                     const QCA::SecureArray &pass)
 {
-    d->stunRelayUdpAddr = addr;
-    d->stunRelayUdpPort = port;
+    d->stunRelayUdpAddr = { addr, port };
     d->stunRelayUdpUser = user;
     d->stunRelayUdpPass = pass;
 }
 
-void Ice176::setStunRelayTcpService(const QHostAddress &addr, int port, const QString &user,
+void Ice176::setStunRelayTcpService(const QHostAddress &addr, quint16 port, const QString &user,
                                     const QCA::SecureArray &pass)
 {
-    d->stunRelayTcpAddr = addr;
-    d->stunRelayTcpPort = port;
+    d->stunRelayTcpAddr = { addr, port };
     d->stunRelayTcpUser = user;
     d->stunRelayTcpPass = pass;
 }

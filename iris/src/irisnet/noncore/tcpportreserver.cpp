@@ -89,7 +89,8 @@ void TcpPortDiscoverer::addLocalServers()
         if (ni.flags() & QNetworkInterface::IsLoopBack) {
             continue;
         }
-        for (const QNetworkAddressEntry &na : ni.addressEntries()) {
+        auto const &addrs = ni.addressEntries();
+        for (const QNetworkAddressEntry &na : addrs) {
             QHostAddress h = na.ip();
             if (h.isLoopback()) {
                 continue;
@@ -167,7 +168,9 @@ TcpPortScope::~TcpPortScope() { }
 TcpPortDiscoverer *TcpPortScope::disco()
 {
     auto discoverer = new TcpPortDiscoverer(this);
-    QMetaObject::invokeMethod(parent(), "newDiscoverer", Q_ARG(TcpPortDiscoverer *, discoverer));
+    // clang-format off
+    QMetaObject::invokeMethod(parent(), "newDiscoverer", Q_ARG(TcpPortDiscoverer*,discoverer));
+    // clang-format on
     QMetaObject::invokeMethod(discoverer, "start", Qt::QueuedConnection);
     return discoverer;
 }

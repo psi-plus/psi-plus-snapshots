@@ -56,24 +56,19 @@ public:
     //   retries
     void start(const QHostAddress &addr);
 
-    void setStunBindService(const QHostAddress &addr, int port);
-    void setStunRelayService(const QHostAddress &addr, int port, const QString &user, const QCA::SecureArray &pass);
+    void setStunBindService(const TransportAddress &addr);
+    void setStunRelayService(const TransportAddress &addr, const QString &user, const QCA::SecureArray &pass);
 
-    QHostAddress stunBindServiceAddress() const;
-    QHostAddress stunRelayServiceAddress() const;
+    const TransportAddress &stunBindServiceAddress() const;
+    const TransportAddress &stunRelayServiceAddress() const;
 
     // obtain relay / reflexive
     void stunStart();
 
-    QHostAddress localAddress() const;
-    int          localPort() const;
-
-    QHostAddress serverReflexiveAddress() const;
-    int          serverReflexivePort() const;
-    QHostAddress reflexiveAddressSource() const; // address of stun/turn server provided the srflx
-
-    QHostAddress relayedAddress() const;
-    int          relayedPort() const;
+    const TransportAddress &localAddress() const;
+    const TransportAddress &serverReflexiveAddress() const;
+    QHostAddress            reflexiveAddressSource() const; // address of stun/turn server provided the srflx
+    const TransportAddress &relayedAddress() const;
 
     bool isStunAlive() const;
     bool isTurnAlive() const;
@@ -81,9 +76,9 @@ public:
     // reimplemented
     void       stop() override;
     bool       hasPendingDatagrams(int path) const override;
-    QByteArray readDatagram(int path, QHostAddress *addr, quint16 *port) override;
-    void       writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port) override;
-    void       addChannelPeer(const QHostAddress &addr, int port) override;
+    QByteArray readDatagram(int path, TransportAddress &addr) override;
+    void       writeDatagram(int path, const QByteArray &buf, const TransportAddress &addr) override;
+    void       addChannelPeer(const TransportAddress &addr) override;
     void       setDebugLevel(DebugLevel level) override;
     void       changeThread(QThread *thread) override;
 

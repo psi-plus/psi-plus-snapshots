@@ -29,14 +29,11 @@ class IceTurnTransport::Private : public QObject {
 public:
     IceTurnTransport *q;
     int               mode;
-    QHostAddress      serverAddr;
-    int               serverPort;
+    TransportAddress  serverAddr;
     QString           relayUser;
     QCA::SecureArray  relayPass;
-    QHostAddress      relayAddr;
-    int               relayPort;
-    QHostAddress      refAddr;
-    int               refPort;
+    TransportAddress  relayAddr;
+    TransportAddress  refAddr;
     TurnClient        turn;
     int               turnErrorCode = 0;
     int               debugLevel;
@@ -44,24 +41,23 @@ public:
 
     Private(IceTurnTransport *_q) : QObject(_q), q(_q), turn(this), debugLevel(IceTransport::DL_None)
     {
-        connect(&turn, SIGNAL(connected()), SLOT(turn_connected()));
-        connect(&turn, SIGNAL(tlsHandshaken()), SLOT(turn_tlsHandshaken()));
-        connect(&turn, SIGNAL(closed()), SLOT(turn_closed()));
-        connect(&turn, SIGNAL(needAuthParams()), SLOT(turn_needAuthParams()));
-        connect(&turn, SIGNAL(retrying()), SLOT(turn_retrying()));
-        connect(&turn, SIGNAL(activated()), SLOT(turn_activated()));
-        connect(&turn, SIGNAL(readyRead()), SLOT(turn_readyRead()));
-        connect(&turn, SIGNAL(packetsWritten(int, QHostAddress, int)),
-                SLOT(turn_packetsWritten(int, QHostAddress, int)));
-        connect(&turn, SIGNAL(error(XMPP::TurnClient::Error)), SLOT(turn_error(XMPP::TurnClient::Error)));
-        connect(&turn, SIGNAL(debugLine(QString)), SLOT(turn_debugLine(QString)));
+        connect(&turn, &TurnClient::connected, this, &Private::turn_connected);
+        connect(&turn, &TurnClient::tlsHandshaken, this, &Private::turn_tlsHandshaken);
+        connect(&turn, &TurnClient::closed, this, &Private::turn_closed);
+        connect(&turn, &TurnClient::needAuthParams, this, &Private::turn_needAuthParams);
+        connect(&turn, &TurnClient::retrying, this, &Private::turn_retrying);
+        connect(&turn, &TurnClient::activated, this, &Private::turn_activated);
+        connect(&turn, &TurnClient::readyRead, this, &Private::turn_readyRead);
+        connect(&turn, &TurnClient::packetsWritten, this, &Private::turn_packetsWritten);
+        connect(&turn, &TurnClient::error, this, &Private::turn_error);
+        connect(&turn, &TurnClient::debugLine, this, &Private::turn_debugLine);
     }
 
     void start()
     {
         turn.setUsername(relayUser);
         turn.setPassword(relayPass);
-        turn.connectToHost(serverAddr, serverPort, (TurnClient::Mode)mode);
+        turn.connectToHost(serverAddr, (TurnClient::Mode)mode);
     }
 
     void stop() { turn.close(); }
@@ -106,19 +102,15 @@ private slots:
     {
         StunAllocate *allocate = turn.stunAllocate();
 
-        QHostAddress saddr = allocate->reflexiveAddress();
-        quint16      sport = quint16(allocate->reflexivePort());
+        auto saddr = allocate->reflexiveAddress();
         if (debugLevel >= IceTransport::DL_Info)
-            emit q->debugLine(QString("Server says we are ") + saddr.toString() + ';' + QString::number(sport));
+            emit q->debugLine(QLatin1String("Server says we are ") + saddr);
         saddr = allocate->relayedAddress();
-        sport = quint16(allocate->relayedPort());
         if (debugLevel >= IceTransport::DL_Info)
-            emit q->debugLine(QString("Server relays via ") + saddr.toString() + ';' + QString::number(sport));
+            emit q->debugLine(QLatin1String("Server relays via ") + saddr);
 
         relayAddr = saddr;
-        relayPort = sport;
         refAddr   = allocate->reflexiveAddress();
-        refPort   = allocate->reflexivePort();
         started   = true;
 
         emit q->started();
@@ -126,10 +118,7 @@ private slots:
 
     void turn_readyRead() { emit q->readyRead(0); }
 
-    void turn_packetsWritten(int count, const QHostAddress &addr, int port)
-    {
-        emit q->datagramsWritten(0, count, addr, port);
-    }
+    void turn_packetsWritten(int count, const TransportAddress &addr) { emit q->datagramsWritten(0, count, addr); }
 
     void turn_error(XMPP::TurnClient::Error e)
     {
@@ -158,25 +147,20 @@ void IceTurnTransport::setPassword(const QCA::SecureArray &pass) { d->relayPass 
 
 void IceTurnTransport::setProxy(const TurnClient::Proxy &proxy) { d->turn.setProxy(proxy); }
 
-void IceTurnTransport::start(const QHostAddress &addr, int port, TurnClient::Mode mode)
+void IceTurnTransport::start(const TransportAddress &addr, TurnClient::Mode mode)
 {
     d->serverAddr = addr;
-    d->serverPort = port;
     d->mode       = mode;
     d->start();
 }
 
-QHostAddress IceTurnTransport::relayedAddress() const { return d->relayAddr; }
+const TransportAddress &IceTurnTransport::relayedAddress() const { return d->relayAddr; }
 
-quint16 IceTurnTransport::relayedPort() const { return d->relayPort; }
-
-QHostAddress IceTurnTransport::reflexiveAddress() const { return d->refAddr; }
-
-quint16 IceTurnTransport::reflexivePort() const { return d->refPort; }
+const TransportAddress &IceTurnTransport::reflexiveAddress() const { return d->refAddr; }
 
 bool IceTurnTransport::isStarted() const { return d->started; }
 
-void IceTurnTransport::addChannelPeer(const QHostAddress &addr, int port) { d->turn.addChannelPeer(addr, port); }
+void IceTurnTransport::addChannelPeer(const TransportAddress &addr) { d->turn.addChannelPeer(addr); }
 
 TurnClient::Error IceTurnTransport::turnErrorCode() const { return (TurnClient::Error)d->turnErrorCode; }
 
@@ -190,20 +174,20 @@ bool IceTurnTransport::hasPendingDatagrams(int path) const
     return d->turn.packetsToRead() > 0;
 }
 
-QByteArray IceTurnTransport::readDatagram(int path, QHostAddress *addr, quint16 *port)
+QByteArray IceTurnTransport::readDatagram(int path, TransportAddress &addr)
 {
     Q_ASSERT(path == 0);
     Q_UNUSED(path)
 
-    return d->turn.read(addr, port);
+    return d->turn.read(addr);
 }
 
-void IceTurnTransport::writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port)
+void IceTurnTransport::writeDatagram(int path, const QByteArray &buf, const TransportAddress &addr)
 {
     Q_ASSERT(path == 0);
     Q_UNUSED(path)
 
-    d->turn.write(buf, addr, port);
+    d->turn.write(buf, addr);
 }
 
 void IceTurnTransport::setDebugLevel(DebugLevel level)

@@ -21,8 +21,7 @@
 #include "stunmessage.h"
 #include "stuntransaction.h"
 #include "stuntypes.h"
-
-#include <QHostAddress>
+#include "transportaddress.h"
 
 namespace XMPP {
 class StunBinding::Private : public QObject {
@@ -32,10 +31,8 @@ public:
     StunBinding *                   q;
     StunTransactionPool::Ptr        pool;
     QScopedPointer<StunTransaction> trans;
-    QHostAddress                    stunAddr;
-    int                             stunPort = 0;
-    QHostAddress                    addr;
-    int                             port = 0;
+    TransportAddress                stunAddr;
+    TransportAddress                addr;
     QString                         errorString;
     bool    use_extPriority = false, use_extIceControlling = false, use_extIceControlled = false;
     quint32 extPriority       = 0;
@@ -48,18 +45,16 @@ public:
 
     ~Private() { }
 
-    void start(const QHostAddress &_addr = QHostAddress(), int _port = -1)
+    void start(const TransportAddress &_addr = TransportAddress())
     {
         Q_ASSERT(!trans);
 
         stunAddr = _addr;
-        stunPort = _port;
 
         trans.reset(new StunTransaction());
-        connect(trans.data(), SIGNAL(createMessage(QByteArray)), SLOT(trans_createMessage(QByteArray)));
-        connect(trans.data(), SIGNAL(finished(XMPP::StunMessage)), SLOT(trans_finished(XMPP::StunMessage)));
-        connect(trans.data(), SIGNAL(error(XMPP::StunTransaction::Error)),
-                SLOT(trans_error(XMPP::StunTransaction::Error)));
+        connect(trans.data(), &StunTransaction::createMessage, this, &Private::trans_createMessage);
+        connect(trans.data(), &StunTransaction::finished, this, &Private::trans_finished);
+        connect(trans.data(), &StunTransaction::error, this, &Private::trans_error);
 
         if (!stuser.isEmpty()) {
             trans->setShortTermUsername(stuser);
@@ -68,7 +63,7 @@ public:
 
         trans->setFingerprintRequired(fpRequired);
 
-        trans->start(pool.data(), stunAddr, stunPort);
+        trans->start(pool.data(), stunAddr);
     }
 
     void cancel()
@@ -79,8 +74,7 @@ public:
         t->disconnect(this);
         t->cancel(); // will self-delete the transaction either on incoming or timeout
         // just in case those too
-        addr = QHostAddress();
-        port = 0;
+        addr = TransportAddress();
         errorString.clear();
 
         // now the binding can be reused
@@ -153,13 +147,12 @@ private slots:
             return;
         }
 
-        QHostAddress saddr;
-        quint16      sport = 0;
+        TransportAddress saddr;
 
         QByteArray val;
         val = response.attribute(StunTypes::XOR_MAPPED_ADDRESS);
         if (!val.isNull()) {
-            if (!StunTypes::parseXorMappedAddress(val, response.magic(), response.id(), &saddr, &sport)) {
+            if (!StunTypes::parseXorMappedAddress(val, response.magic(), response.id(), saddr)) {
                 errorString = "Unable to parse XOR-MAPPED-ADDRESS response.";
                 emit q->error(StunBinding::ErrorProtocol);
                 return;
@@ -167,7 +160,7 @@ private slots:
         } else {
             val = response.attribute(StunTypes::MAPPED_ADDRESS);
             if (!val.isNull()) {
-                if (!StunTypes::parseMappedAddress(val, &saddr, &sport)) {
+                if (!StunTypes::parseMappedAddress(val, saddr)) {
                     errorString = "Unable to parse MAPPED-ADDRESS response.";
                     emit q->error(StunBinding::ErrorProtocol);
                     return;
@@ -180,7 +173,6 @@ private slots:
         }
 
         addr = saddr;
-        port = sport;
         emit q->success();
     }
 
@@ -238,13 +230,11 @@ void StunBinding::setFingerprintRequired(bool enabled) { d->fpRequired = enabled
 
 void StunBinding::start() { d->start(); }
 
-void StunBinding::start(const QHostAddress &addr, int port) { d->start(addr, port); }
+void StunBinding::start(const TransportAddress &addr) { d->start(addr); }
 
 void StunBinding::cancel() { d->cancel(); }
 
-QHostAddress StunBinding::reflexiveAddress() const { return d->addr; }
-
-int StunBinding::reflexivePort() const { return d->port; }
+const TransportAddress &StunBinding::reflexiveAddress() const { return d->addr; }
 
 QString StunBinding::errorString() const { return d->errorString; }
 } // namespace XMPP

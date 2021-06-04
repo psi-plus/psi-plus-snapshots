@@ -23,11 +23,14 @@
 #include <QList>
 #include <QObject>
 
+#include "transportaddress.h"
+
 class QByteArray;
 
 namespace XMPP {
 class StunMessage;
 class StunTransactionPool;
+class TransportAddress;
 
 class StunAllocate : public QObject {
     Q_OBJECT
@@ -37,13 +40,11 @@ public:
 
     class Channel {
     public:
-        QHostAddress address;
-        int          port;
+        TransportAddress address;
 
-        Channel(const QHostAddress &_address, int _port) : address(_address), port(_port) { }
+        Channel(const TransportAddress &_address) : address(_address) { }
 
-        inline bool operator==(const Channel &other) { return address == other.address && port == other.port; }
-
+        inline bool operator==(const Channel &other) { return address == other.address; }
         inline bool operator!=(const Channel &other) { return !operator==(other); }
     };
 
@@ -53,16 +54,13 @@ public:
     void setClientSoftwareNameAndVersion(const QString &str);
 
     void start();
-    void start(const QHostAddress &addr, int port); // use addr association
+    void start(const TransportAddress &addr); // use addr association
     void stop();
 
     QString serverSoftwareNameAndVersion() const;
 
-    QHostAddress reflexiveAddress() const;
-    int          reflexivePort() const;
-
-    QHostAddress relayedAddress() const;
-    quint16      relayedPort() const;
+    const TransportAddress &reflexiveAddress() const;
+    const TransportAddress &relayedAddress() const;
 
     QList<QHostAddress> permissions() const;
     void                setPermissions(const QList<QHostAddress> &perms);
@@ -70,11 +68,11 @@ public:
     QList<Channel> channels() const;
     void           setChannels(const QList<Channel> &channels);
 
-    int packetHeaderOverhead(const QHostAddress &addr, int port) const;
+    int packetHeaderOverhead(const TransportAddress &addr) const;
 
-    QByteArray encode(const QByteArray &datagram, const QHostAddress &addr, int port);
-    QByteArray decode(const QByteArray &encoded, QHostAddress *addr = nullptr, int *port = nullptr);
-    QByteArray decode(const StunMessage &encoded, QHostAddress *addr = nullptr, int *port = nullptr);
+    QByteArray encode(const QByteArray &datagram, const TransportAddress &addr);
+    QByteArray decode(const QByteArray &encoded, TransportAddress &addr);
+    QByteArray decode(const StunMessage &encoded, TransportAddress &addr);
 
     QString errorString() const;
 

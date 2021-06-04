@@ -19,6 +19,7 @@
 #include "stuntypes.h"
 
 #include "stunutil.h"
+#include "transportaddress.h"
 
 #include <QtCrypto>
 #include <stdio.h>
@@ -62,23 +63,23 @@ namespace StunTypes {
         return false;
     }
 
-    QByteArray createMappedAddress(const QHostAddress &addr, quint16 port)
+    QByteArray createMappedAddress(const TransportAddress &addr)
     {
         QByteArray out;
 
-        if (addr.protocol() == QAbstractSocket::IPv6Protocol) {
+        if (addr.addr.protocol() == QAbstractSocket::IPv6Protocol) {
             out              = QByteArray(20, 0);
             out[1]           = 0x02; // IPv6
-            Q_IPV6ADDR addr6 = addr.toIPv6Address();
+            Q_IPV6ADDR addr6 = addr.addr.toIPv6Address();
             memcpy(out.data() + 4, addr6.c, 16);
-        } else if (addr.protocol() == QAbstractSocket::IPv4Protocol) {
+        } else if (addr.addr.protocol() == QAbstractSocket::IPv4Protocol) {
             out    = QByteArray(8, 0);
             out[1] = 0x01; // IPv4
-            write32((quint8 *)out.data() + 4, addr.toIPv4Address());
+            write32((quint8 *)out.data() + 4, addr.addr.toIPv4Address());
         } else
             Q_ASSERT(0);
 
-        write16((quint8 *)out.data() + 2, port);
+        write16((quint8 *)out.data() + 2, addr.port);
         return out;
     }
 
@@ -115,10 +116,10 @@ namespace StunTypes {
 
     QByteArray createNonce(const QString &nonce) { return nonce.left(STRING_MAX_CHARS).toUtf8(); }
 
-    QByteArray createXorMappedAddress(const QHostAddress &addr, quint16 port, const quint8 *magic, const quint8 *id)
+    QByteArray createXorMappedAddress(const TransportAddress &addr, const quint8 *magic, const quint8 *id)
     {
-        QByteArray out = createMappedAddress(addr, port);
-        if (addr.protocol() == QAbstractSocket::IPv6Protocol)
+        QByteArray out = createMappedAddress(addr);
+        if (addr.addr.protocol() == QAbstractSocket::IPv6Protocol)
             xorIPv6(&out, magic, id);
         else // IPv4
             xorIPv4(&out, magic);
@@ -140,14 +141,14 @@ namespace StunTypes {
         return val;
     }
 
-    QByteArray createXorPeerAddress(const QHostAddress &addr, quint16 port, const quint8 *magic, const quint8 *id)
+    QByteArray createXorPeerAddress(const TransportAddress &addr, const quint8 *magic, const quint8 *id)
     {
-        return createXorMappedAddress(addr, port, magic, id);
+        return createXorMappedAddress(addr, magic, id);
     }
 
-    QByteArray createXorRelayedAddress(const QHostAddress &addr, quint16 port, const quint8 *magic, const quint8 *id)
+    QByteArray createXorRelayedAddress(const TransportAddress &addr, const quint8 *magic, const quint8 *id)
     {
-        return createXorMappedAddress(addr, port, magic, id);
+        return createXorMappedAddress(addr, magic, id);
     }
 
     QByteArray createEvenPort(bool reserve)
@@ -183,7 +184,7 @@ namespace StunTypes {
 
     QByteArray createSoftware(const QString &str) { return str.left(STRING_MAX_CHARS).toUtf8(); }
 
-    QByteArray createAlternateServer(const QHostAddress &addr, quint16 port) { return createMappedAddress(addr, port); }
+    QByteArray createAlternateServer(const TransportAddress &addr) { return createMappedAddress(addr); }
 
     QByteArray createIceControlled(quint64 i)
     {
@@ -199,18 +200,18 @@ namespace StunTypes {
         return val;
     }
 
-    bool parseMappedAddress(const QByteArray &val, QHostAddress *addr, quint16 *port)
+    bool parseMappedAddress(const QByteArray &val, TransportAddress &addr)
     {
         if (val[1] == 0x02 && val.size() == 20) // IPv6
         {
-            *port          = read16((const quint8 *)val.data() + 2);
+            addr.port      = read16((const quint8 *)val.data() + 2);
             QByteArray buf = val.mid(4);
-            *addr          = QHostAddress((quint8 *)buf.data());
+            addr.addr      = QHostAddress((quint8 *)buf.data());
             return true;
         } else if (val[1] == 0x01 && val.size() == 8) // IPv4
         {
-            *port = read16((const quint8 *)val.data() + 2);
-            *addr = QHostAddress(read32((const quint8 *)val.data() + 4));
+            addr.port = read16((const quint8 *)val.data() + 2);
+            addr.addr = QHostAddress(read32((const quint8 *)val.data() + 4));
             return true;
         } else
             return false;
@@ -254,8 +255,7 @@ namespace StunTypes {
 
     bool parseNonce(const QByteArray &val, QString *nonce) { return validateString(val, nonce); }
 
-    bool parseXorMappedAddress(const QByteArray &val, const quint8 *magic, const quint8 *id, QHostAddress *addr,
-                               quint16 *port)
+    bool parseXorMappedAddress(const QByteArray &val, const quint8 *magic, const quint8 *id, TransportAddress &addr)
     {
         if (val.size() < 4)
             return false;
@@ -272,7 +272,7 @@ namespace StunTypes {
         } else
             return false;
 
-        return parseMappedAddress(buf, addr, port);
+        return parseMappedAddress(buf, addr);
     }
 
     bool parseChannelNumber(const QByteArray &val, quint16 *i)
@@ -295,16 +295,14 @@ namespace StunTypes {
         return true;
     }
 
-    bool parseXorPeerAddress(const QByteArray &val, const quint8 *magic, const quint8 *id, QHostAddress *addr,
-                             quint16 *port)
+    bool parseXorPeerAddress(const QByteArray &val, const quint8 *magic, const quint8 *id, TransportAddress &addr)
     {
-        return parseXorMappedAddress(val, magic, id, addr, port);
+        return parseXorMappedAddress(val, magic, id, addr);
     }
 
-    bool parseXorRelayedAddress(const QByteArray &val, const quint8 *magic, const quint8 *id, QHostAddress *addr,
-                                quint16 *port)
+    bool parseXorRelayedAddress(const QByteArray &val, const quint8 *magic, const quint8 *id, TransportAddress &addr)
     {
-        return parseXorMappedAddress(val, magic, id, addr, port);
+        return parseXorMappedAddress(val, magic, id, addr);
     }
 
     bool parseEvenPort(const QByteArray &val, bool *reserve)
@@ -352,10 +350,7 @@ namespace StunTypes {
         return true;
     }
 
-    bool parseAlternateServer(const QByteArray &val, QHostAddress *addr, quint16 *port)
-    {
-        return parseMappedAddress(val, addr, port);
-    }
+    bool parseAlternateServer(const QByteArray &val, TransportAddress &addr) { return parseMappedAddress(val, addr); }
 
     bool parseIceControlled(const QByteArray &val, quint64 *i)
     {
@@ -452,10 +447,9 @@ namespace StunTypes {
     {
         switch ((Attribute)type) {
         case MAPPED_ADDRESS: {
-            QHostAddress addr;
-            quint16      port;
-            if (parseMappedAddress(val, &addr, &port))
-                return addr.toString() + ';' + QString::number(port);
+            TransportAddress addr;
+            if (parseMappedAddress(val, addr))
+                return QString(addr);
             break;
         }
         case USERNAME: {
@@ -483,7 +477,7 @@ namespace StunTypes {
             if (parseUnknownAttributes(val, &typeList)) {
                 if (!typeList.isEmpty()) {
                     QStringList strList;
-                    for (quint16 i : typeList)
+                    for (quint16 i : qAsConst(typeList))
                         strList += QString::asprintf("0x%04x", i);
                     return strList.join(", ");
                 } else
@@ -504,10 +498,9 @@ namespace StunTypes {
             break;
         }
         case XOR_MAPPED_ADDRESS: {
-            QHostAddress addr;
-            quint16      port;
-            if (parseXorMappedAddress(val, magic, id, &addr, &port))
-                return addr.toString() + ';' + QString::number(port);
+            TransportAddress addr;
+            if (parseXorMappedAddress(val, magic, id, addr))
+                return QString(addr);
             break;
         }
         case CHANNEL_NUMBER: {

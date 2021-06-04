@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009  Barracuda Networks, Inc.
+ * Copyright (C) 2013-2021 Psi IM team
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,6 +23,7 @@
 #include "stunmessage.h"
 #include "stuntypes.h"
 #include "stunutil.h"
+#include "transportaddress.h"
 
 #include <QElapsedTimer>
 #include <QHash>
@@ -104,7 +106,7 @@ public:
 
     StunTransactionPoolPrivate(StunTransactionPool *_q) :
         QObject(_q), q(_q), useLongTermAuth(false), needLongTermAuth(false), triedLongTermAuth(false),
-        debugLevel(StunTransactionPool::DL_None)
+        debugLevel(StunTransactionPool::DL_Packet)
     {
     }
 
@@ -124,41 +126,33 @@ public:
     StunTransaction *q;
 
     StunTransactionPool::Ptr pool;
-    bool                     active;
+    bool                     active     = false;
     bool                     cancelling = false;
     StunTransaction::Mode    mode;
     StunMessage              origMessage;
     QByteArray               id;
     QByteArray               packet;
-    QHostAddress             to_addr;
-    quint16                  to_port;
+    TransportAddress         to_addr;
 
-    int     rto, rc, rm, ti;
+    // defaults from RFC 5389
+    int     rto = 500, rc = 7, rm = 16, ti = 39500;
     int     tries;
     int     last_interval;
     QTimer *t;
 
     QString       stuser;
     QString       stpass;
-    bool          fpRequired;
+    bool          fpRequired = false;
     QByteArray    key;
     QElapsedTimer time;
 
-    StunTransactionPrivate(StunTransaction *_q) : QObject(_q), q(_q), pool(nullptr), fpRequired(false)
+    StunTransactionPrivate(StunTransaction *_q) : QObject(_q), q(_q)
     {
         qRegisterMetaType<StunTransaction::Error>();
 
-        active = false;
-
         t = new QTimer(this);
-        connect(t, SIGNAL(timeout()), SLOT(t_timeout()));
+        connect(t, &QTimer::timeout, this, &StunTransactionPrivate::t_timeout);
         t->setSingleShot(true);
-
-        // defaults from RFC 5389
-        rto = 500;
-        rc  = 7;
-        rm  = 16;
-        ti  = 39500;
     }
 
     ~StunTransactionPrivate()
@@ -171,12 +165,11 @@ public:
         t->deleteLater();
     }
 
-    void start(StunTransactionPool::Ptr _pool, const QHostAddress &toAddress, quint16 toPort)
+    void start(StunTransactionPool::Ptr _pool, const TransportAddress &toAddress)
     {
         pool    = _pool;
         mode    = pool->d->mode;
         to_addr = toAddress;
-        to_port = toPort;
 
         tryRequest();
     }
@@ -303,8 +296,8 @@ private slots:
         }
 
         QString dbg;
-        if (!to_addr.isNull())
-            dbg += QString("to=(") + to_addr.toString() + ';' + QString::number(to_port) + ')';
+        if (to_addr.isValid())
+            dbg += QString("to=(%1)").arg(to_addr);
 
         emit pool->debugLine(QString("stun transaction %1 timeout. retransmitting..").arg(dbg));
         transmit();
@@ -315,8 +308,8 @@ private:
     {
         if (pool->d->debugLevel >= StunTransactionPool::DL_Packet) {
             QString str = QString("STUN SEND: elapsed=") + QString::number(time.elapsed());
-            if (!to_addr.isNull())
-                str += QString(" to=(") + to_addr.toString() + ';' + QString::number(to_port) + ')';
+            if (to_addr.isValid())
+                str += QString(" to=(%1)").arg(to_addr);
             emit pool->debugLine(str);
 
             StunMessage msg = StunMessage::fromBinary(packet);
@@ -326,12 +319,12 @@ private:
         pool->d->transmit(q);
     }
 
-    bool checkActiveAndFrom(const QHostAddress &from_addr, quint16 from_port)
+    bool checkActiveAndFrom(const TransportAddress &from_addr)
     {
         if (!active)
             return false;
 
-        return to_addr.isNull() || (to_addr == from_addr && to_port == from_port);
+        return !to_addr.isValid() || (to_addr == from_addr);
     }
 
     void processIncoming(const StunMessage &msg, bool authed)
@@ -403,9 +396,9 @@ private:
     }
 
 public:
-    bool writeIncomingMessage(const StunMessage &msg, const QHostAddress &from_addr, int from_port)
+    bool writeIncomingMessage(const StunMessage &msg, const TransportAddress &from_addr)
     {
-        if (!checkActiveAndFrom(from_addr, from_port))
+        if (!checkActiveAndFrom(from_addr))
             return false;
 
         // if a StunMessage is passed directly to us then we assume
@@ -414,9 +407,9 @@ public:
         return true;
     }
 
-    bool writeIncomingMessage(const QByteArray &packet, bool *notStun, const QHostAddress &from_addr, int from_port)
+    bool writeIncomingMessage(const QByteArray &packet, bool *notStun, const TransportAddress &from_addr)
     {
-        if (!checkActiveAndFrom(from_addr, from_port)) {
+        if (!checkActiveAndFrom(from_addr)) {
             // could be STUN, don't really know for sure
             *notStun = false;
             return false;
@@ -454,10 +447,10 @@ StunTransaction::StunTransaction(QObject *parent) : QObject(parent) { d = new St
 
 StunTransaction::~StunTransaction() { delete d; }
 
-void StunTransaction::start(StunTransactionPool *pool, const QHostAddress &toAddress, int toPort)
+void StunTransaction::start(StunTransactionPool *pool, const TransportAddress &toAddress)
 {
     Q_ASSERT(!d->active);
-    d->start(pool->sharedFromThis(), toAddress, toPort);
+    d->start(pool->sharedFromThis(), toAddress);
 }
 
 void StunTransaction::cancel() { d->cancelling = true; }
@@ -530,7 +523,7 @@ void StunTransactionPoolPrivate::remove(StunTransaction *trans)
 
 void StunTransactionPoolPrivate::transmit(StunTransaction *trans)
 {
-    emit q->outgoingMessage(trans->d->packet, trans->d->to_addr, trans->d->to_port);
+    emit q->outgoingMessage(trans->d->packet, trans->d->to_addr);
 }
 
 StunTransactionPool::StunTransactionPool(StunTransaction::Mode mode)
@@ -548,12 +541,12 @@ StunTransactionPool::~StunTransactionPool()
 
 StunTransaction::Mode StunTransactionPool::mode() const { return d->mode; }
 
-bool StunTransactionPool::writeIncomingMessage(const StunMessage &msg, const QHostAddress &addr, int port)
+bool StunTransactionPool::writeIncomingMessage(const StunMessage &msg, const TransportAddress &addr)
 {
     if (d->debugLevel >= DL_Packet) {
         QString str = "STUN RECV";
-        if (!addr.isNull())
-            str += QString(" from=(") + addr.toString() + ';' + QString::number(port) + ')';
+        if (addr.isValid())
+            str += QString(" from=(%1)").arg(addr);
         emit debugLine(str);
         emit debugLine(StunTypes::print_packet_str(msg));
     }
@@ -568,11 +561,10 @@ bool StunTransactionPool::writeIncomingMessage(const StunMessage &msg, const QHo
     if (!trans)
         return false;
 
-    return trans->d->writeIncomingMessage(msg, addr, port);
+    return trans->d->writeIncomingMessage(msg, addr);
 }
 
-bool StunTransactionPool::writeIncomingMessage(const QByteArray &packet, bool *notStun, const QHostAddress &addr,
-                                               int port)
+bool StunTransactionPool::writeIncomingMessage(const QByteArray &packet, bool *notStun, const TransportAddress &addr)
 {
     if (!StunMessage::isProbablyStun(packet)) {
         // basic stun check failed?  surely not STUN
@@ -584,8 +576,8 @@ bool StunTransactionPool::writeIncomingMessage(const QByteArray &packet, bool *n
     if (d->debugLevel >= DL_Packet) {
         StunMessage msg = StunMessage::fromBinary(packet);
         QString     str = "STUN RECV";
-        if (!addr.isNull())
-            str += QString(" from=(") + addr.toString() + ';' + QString::number(port) + ')';
+        if (addr.isValid())
+            str += QString(" from=(%1)").arg(addr);
         emit debugLine(str);
         emit debugLine(StunTypes::print_packet_str(msg));
     }
@@ -612,7 +604,7 @@ bool StunTransactionPool::writeIncomingMessage(const QByteArray &packet, bool *n
     }
 
     bool _notStun = false;
-    bool ret      = trans->d->writeIncomingMessage(packet, &_notStun, addr, port);
+    bool ret      = trans->d->writeIncomingMessage(packet, &_notStun, addr);
     if (!ret && notStun)
         *notStun = _notStun;
     return ret;
@@ -645,7 +637,7 @@ void StunTransactionPool::continueAfterParams()
     d->needLongTermAuth  = false;
     d->triedLongTermAuth = true;
 
-    for (StunTransaction *trans : d->transactions) {
+    for (StunTransaction *trans : qAsConst(d->transactions)) {
         // the only reason an inactive transaction would be in the
         //   list is if it is waiting for an auth retry
         if (!trans->d->active && !trans->d->cancelling) {

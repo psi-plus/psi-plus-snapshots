@@ -21,8 +21,9 @@
 
 #include <QByteArray>
 #include <QEnableSharedFromThis>
-#include <QHostAddress>
 #include <QObject>
+
+#include "transportaddress.h"
 
 namespace QCA {
 class SecureArray;
@@ -76,7 +77,7 @@ public:
     //   specific endpoint
     // note: not DOR-DS safe.  this function will cause the pool's
     //   outgoingMessage() signal to be emitted.
-    void start(StunTransactionPool *pool, const QHostAddress &toAddress = QHostAddress(), int toPort = -1);
+    void start(StunTransactionPool *pool, const TransportAddress &toAddress = TransportAddress());
     void cancel();
 
     // pass message with class unset.  use transaction id from the
@@ -139,7 +140,7 @@ public:
     //   may cause a transaction to emit finished() or error() signals.
 
     // returns true if the message is owned by the pool, else false.
-    bool writeIncomingMessage(const StunMessage &msg, const QHostAddress &addr = QHostAddress(), int port = -1);
+    bool writeIncomingMessage(const StunMessage &msg, const TransportAddress &addr = TransportAddress());
 
     // returns true if the packet is surely a STUN message and owned by the
     //   pool, else false.  a packet must be owned by the pool to be
@@ -148,7 +149,7 @@ public:
     //   is surely not STUN, or set to false if it is unclear whether the
     //   packet is STUN or not.
     bool writeIncomingMessage(const QByteArray &packet, bool *notStun = nullptr,
-                              const QHostAddress &addr = QHostAddress(), int port = -1);
+                              const TransportAddress &addr = TransportAddress());
 
     void setLongTermAuthEnabled(bool enabled);
 
@@ -174,7 +175,7 @@ signals:
     //   writeIncomingMessage() during outgoingMessage() could cause
     //   a transaction's finished() or error() signals to emit during
     //   start(), which would violate DOR-DS.
-    void outgoingMessage(const QByteArray &packet, const QHostAddress &addr, quint16 port);
+    void outgoingMessage(const QByteArray &packet, const TransportAddress &addr);
 
     void needAuthParams();
 

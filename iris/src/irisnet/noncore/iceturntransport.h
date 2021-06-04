@@ -46,22 +46,20 @@ public:
 
     void setProxy(const TurnClient::Proxy &proxy);
 
-    void start(const QHostAddress &addr, int port, TurnClient::Mode mode = TurnClient::PlainMode);
+    void start(const TransportAddress &addr, TurnClient::Mode mode = TurnClient::PlainMode);
 
-    QHostAddress relayedAddress() const;
-    quint16      relayedPort() const;
-    QHostAddress reflexiveAddress() const;
-    quint16      reflexivePort() const;
-    bool         isStarted() const;
+    const TransportAddress &relayedAddress() const;
+    const TransportAddress &reflexiveAddress() const;
+    bool                    isStarted() const;
 
     TurnClient::Error turnErrorCode() const;
 
     // reimplemented
     virtual void       stop() override;
     virtual bool       hasPendingDatagrams(int path) const override;
-    virtual QByteArray readDatagram(int path, QHostAddress *addr, quint16 *port) override;
-    virtual void       writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port) override;
-    virtual void       addChannelPeer(const QHostAddress &addr, int port) override;
+    virtual QByteArray readDatagram(int path, TransportAddress &addr) override;
+    virtual void       writeDatagram(int path, const QByteArray &buf, const TransportAddress &addr) override;
+    virtual void       addChannelPeer(const TransportAddress &addr) override;
     virtual void       setDebugLevel(DebugLevel level) override;
     virtual void       changeThread(QThread *thread) override;
 

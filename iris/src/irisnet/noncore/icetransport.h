@@ -26,6 +26,7 @@
 class QHostAddress;
 
 namespace XMPP {
+class TransportAddress;
 class IceTransport : public QObject {
     Q_OBJECT
 
@@ -39,10 +40,10 @@ public:
 
     virtual void stop() = 0;
 
-    virtual bool       hasPendingDatagrams(int path) const                                                = 0;
-    virtual QByteArray readDatagram(int path, QHostAddress *addr, quint16 *port)                          = 0;
-    virtual void       writeDatagram(int path, const QByteArray &buf, const QHostAddress &addr, int port) = 0;
-    virtual void       addChannelPeer(const QHostAddress &addr, int port)                                 = 0;
+    virtual bool       hasPendingDatagrams(int path) const                                          = 0;
+    virtual QByteArray readDatagram(int path, TransportAddress &addr)                               = 0;
+    virtual void       writeDatagram(int path, const QByteArray &buf, const TransportAddress &addr) = 0;
+    virtual void       addChannelPeer(const TransportAddress &addr)                                 = 0;
 
     virtual void setDebugLevel(DebugLevel level) = 0;
     virtual void changeThread(QThread *thread)   = 0;
@@ -53,7 +54,7 @@ signals:
     void error(int e);
 
     void readyRead(int path);
-    void datagramsWritten(int path, int count, const QHostAddress &addr, int port);
+    void datagramsWritten(int path, int count, const TransportAddress &addr);
 
     // not DOR-SS/DS safe
     void debugLine(const QString &str);

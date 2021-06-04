@@ -122,7 +122,7 @@ private:
     TcpPortServer::Ptr bind(const QHostAddress &addr, quint16 port);
 
 private:
-    class Private;
+    struct Private;
     QScopedPointer<Private> d;
 };
 

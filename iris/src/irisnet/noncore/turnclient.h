@@ -24,6 +24,8 @@
 #include <QObject>
 #include <QString>
 
+#include "transportaddress.h"
+
 namespace QCA {
 class SecureArray;
 }
@@ -105,16 +107,16 @@ public:
     //   outgoingDatagramsWritten().  authentication happens through the
     //   pool and not through this class.  the turn addr/port is optional,
     //   and used only for addr association with the pool
-    void connectToHost(StunTransactionPool *pool, const QHostAddress &addr = QHostAddress(), int port = -1);
+    void connectToHost(StunTransactionPool *pool, const TransportAddress &addr = TransportAddress());
 
     // for TCP and TCP-TLS
-    void connectToHost(const QHostAddress &addr, int port, Mode mode = PlainMode);
+    void connectToHost(const TransportAddress &addr, Mode mode = PlainMode);
 
-    QHostAddress serverAddress() const;
+    const TransportAddress &serverAddress() const;
 
     // for UDP, use this function to process incoming packets instead of
     //   read().
-    QByteArray processIncomingDatagram(const QByteArray &buf, bool notStun, QHostAddress *addr, int *port);
+    QByteArray processIncomingDatagram(const QByteArray &buf, bool notStun, TransportAddress &addr);
 
     // call after writing datagrams from outgoingDatagram.  not DOR-DS safe
     void outgoingDatagramsWritten(int count);
@@ -129,17 +131,17 @@ public:
 
     StunAllocate *stunAllocate();
 
-    void addChannelPeer(const QHostAddress &addr, int port);
+    void addChannelPeer(const TransportAddress &addr);
 
     int packetsToRead() const;
     int packetsToWrite() const;
 
     // TCP mode only
-    QByteArray read(QHostAddress *addr, quint16 *port);
+    QByteArray read(TransportAddress &addr);
 
     // for UDP, this call may emit outgoingDatagram() immediately (not
     //   DOR-DS safe)
-    void write(const QByteArray &buf, const QHostAddress &addr, int port);
+    void write(const QByteArray &buf, const TransportAddress &addr);
 
     QString errorString() const;
 
@@ -157,7 +159,7 @@ signals:
     // TCP mode only
     void readyRead();
 
-    void packetsWritten(int count, const QHostAddress &addr, int port);
+    void packetsWritten(int count, const TransportAddress &addr);
     void error(XMPP::TurnClient::Error e);
 
     // data packets to be sent to the TURN server, UDP mode only

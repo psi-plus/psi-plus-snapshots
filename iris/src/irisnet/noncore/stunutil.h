@@ -33,6 +33,7 @@ namespace XMPP { namespace StunUtil {
     QCA::SecureArray saslPrep(const QCA::SecureArray &in);
 
 } // namespace StunUtil
+
 } // namespace XMPP
 
 #endif // STUNUTIL_H
