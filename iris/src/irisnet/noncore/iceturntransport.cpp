@@ -83,13 +83,13 @@ private slots:
         emit q->stopped();
     }
 
-    void turn_needAuthParams()
+    void turn_needAuthParams(const TransportAddress &addr)
     {
         // we can get this signal if the user did not provide
         //   creds to us.  however, since this class doesn't support
         //   prompting just continue on as if we had a blank
         //   user/pass
-        turn.continueAfterParams();
+        turn.continueAfterParams(addr);
     }
 
     void turn_retrying()

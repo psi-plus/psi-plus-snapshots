@@ -532,13 +532,13 @@ private slots:
         sock->writeDatagram(packet, toAddress);
     }
 
-    void pool_needAuthParams()
+    void pool_needAuthParams(const TransportAddress &addr)
     {
         // we can get this signal if the user did not provide
         //   creds to us.  however, since this class doesn't support
         //   prompting just continue on as if we had a blank
         //   user/pass
-        pool->continueAfterParams();
+        pool->continueAfterParams(addr);
     }
 
     void pool_debugLine(const QString &line) { emit q->debugLine(line); }

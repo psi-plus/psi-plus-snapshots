@@ -95,20 +95,16 @@ public:
     QSet<StunTransaction *>              transactions;
     QHash<StunTransaction *, QByteArray> transToId;
     QHash<QByteArray, StunTransaction *> idToTrans;
-    bool                                 useLongTermAuth;
-    bool                                 needLongTermAuth;
-    bool                                 triedLongTermAuth;
+    bool                                 useLongTermAuth  = false;
+    bool                                 needLongTermAuth = false;
+    QSet<TransportAddress>               triedLongTermAuth;
     QString                              user;
     QCA::SecureArray                     pass;
     QString                              realm;
     QString                              nonce;
-    int                                  debugLevel;
+    int                                  debugLevel = StunTransactionPool::DL_None;
 
-    StunTransactionPoolPrivate(StunTransactionPool *_q) :
-        QObject(_q), q(_q), useLongTermAuth(false), needLongTermAuth(false), triedLongTermAuth(false),
-        debugLevel(StunTransactionPool::DL_Packet)
-    {
-    }
+    StunTransactionPoolPrivate(StunTransactionPool *_q) : QObject(_q), q(_q) { }
 
     QByteArray generateId() const;
     void       insert(StunTransaction *trans);
@@ -327,7 +323,7 @@ private:
         return !to_addr.isValid() || (to_addr == from_addr);
     }
 
-    void processIncoming(const StunMessage &msg, bool authed)
+    void processIncoming(const StunMessage &msg, bool authed, const TransportAddress &from_addr)
     {
         active = false;
         t->stop();
@@ -343,6 +339,7 @@ private:
         // will be set to true when receiving an Unauthorized error
         bool unauthError = false;
 
+        bool triedLongTermAuth = pool->d->triedLongTermAuth.contains(from_addr);
         if (msg.mclass() == StunMessage::ErrorResponse && pool->d->useLongTermAuth) {
             // we'll handle certain error codes at this layer
             int     code;
@@ -351,7 +348,7 @@ private:
                 if (code == StunTypes::Unauthorized)
                     unauthError = true;
 
-                if (unauthError && !pool->d->triedLongTermAuth) {
+                if (unauthError && !triedLongTermAuth) {
                     QString realm;
                     QString nonce;
                     if (StunTypes::parseRealm(msg.attribute(StunTypes::REALM), &realm)
@@ -366,17 +363,17 @@ private:
                         if (!pool->d->needLongTermAuth) {
                             if (!pool->d->user.isEmpty()) {
                                 // creds already set?  use them
-                                pool->d->triedLongTermAuth = true;
+                                pool->d->triedLongTermAuth.insert(from_addr);
                                 retry();
                             } else {
                                 // else ask the user
-                                pool->d->needLongTermAuth = true;
-                                emit pool->needAuthParams();
+                                pool->d->triedLongTermAuth.insert(from_addr);
+                                emit pool->needAuthParams(from_addr);
                             }
                         }
                         return;
                     }
-                } else if (code == StunTypes::StaleNonce && pool->d->triedLongTermAuth) {
+                } else if (code == StunTypes::StaleNonce && triedLongTermAuth) {
                     QString nonce;
                     if (StunTypes::parseNonce(msg.attribute(StunTypes::NONCE), &nonce) && nonce != pool->d->nonce) {
                         pool->d->nonce = nonce;
@@ -388,7 +385,7 @@ private:
         }
 
         // require message integrity when auth is used
-        if (!unauthError && (!stuser.isEmpty() || pool->d->triedLongTermAuth) && !authed)
+        if (!unauthError && (!stuser.isEmpty() || triedLongTermAuth) && !authed)
             return;
 
         pool->d->remove(q);
@@ -403,7 +400,7 @@ public:
 
         // if a StunMessage is passed directly to us then we assume
         //   the user has authenticated the message as necessary
-        processIncoming(msg, true);
+        processIncoming(msg, true, from_addr);
         return true;
     }
 
@@ -430,7 +427,7 @@ public:
             return false;
         }
 
-        processIncoming(msg, (validationFlags & StunMessage::MessageIntegrity) != 0);
+        processIncoming(msg, (validationFlags & StunMessage::MessageIntegrity) != 0, from_addr);
         return true;
     }
 
@@ -620,7 +617,7 @@ void StunTransactionPool::setPassword(const QCA::SecureArray &password) { d->pas
 
 void StunTransactionPool::setRealm(const QString &realm) { d->realm = realm; }
 
-void StunTransactionPool::continueAfterParams()
+void StunTransactionPool::continueAfterParams(const TransportAddress &addr)
 {
     if (d->debugLevel >= DL_Info) {
         emit debugLine("continue after params:");
@@ -632,10 +629,10 @@ void StunTransactionPool::continueAfterParams()
 
     Q_ASSERT(d->useLongTermAuth);
     Q_ASSERT(d->needLongTermAuth);
-    Q_ASSERT(!d->triedLongTermAuth);
+    Q_ASSERT(!d->triedLongTermAuth.contains(addr));
 
-    d->needLongTermAuth  = false;
-    d->triedLongTermAuth = true;
+    d->needLongTermAuth = false;
+    d->triedLongTermAuth.insert(addr);
 
     for (StunTransaction *trans : qAsConst(d->transactions)) {
         // the only reason an inactive transaction would be in the

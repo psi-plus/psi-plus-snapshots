@@ -125,7 +125,7 @@ public:
     void    setUsername(const QString &username);
     void    setPassword(const QCA::SecureArray &password);
     void    setRealm(const QString &realm);
-    void    continueAfterParams();
+    void    continueAfterParams(const TransportAddress &addr);
 
     void close();
 
@@ -152,7 +152,7 @@ signals:
     void connected(); // tcp connected
     void tlsHandshaken();
     void closed();
-    void needAuthParams();
+    void needAuthParams(const TransportAddress &addr);
     void retrying();  // mismatch error received, starting all over
     void activated(); // ready for read/write
 

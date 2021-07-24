@@ -775,7 +775,7 @@ private slots:
             bs->write(packet);
     }
 
-    void pool_needAuthParams() { emit q->needAuthParams(); }
+    void pool_needAuthParams(const TransportAddress &addr) { emit q->needAuthParams(addr); }
 
     void pool_debugLine(const QString &line) { emit q->debugLine(line); }
 
@@ -911,10 +911,10 @@ void TurnClient::setRealm(const QString &realm)
         d->pool->setRealm(d->realm);
 }
 
-void TurnClient::continueAfterParams()
+void TurnClient::continueAfterParams(const TransportAddress &addr)
 {
     Q_ASSERT(d->pool);
-    d->pool->continueAfterParams();
+    d->pool->continueAfterParams(addr);
 }
 
 void TurnClient::close() { d->do_close(); }

@@ -28,6 +28,7 @@
 #include <QObject>
 #include <QPointer>
 #include <QSet>
+#include <QVector>
 
 #include <chrono>
 #include <functional>

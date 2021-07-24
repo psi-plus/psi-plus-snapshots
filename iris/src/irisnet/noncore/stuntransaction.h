@@ -157,7 +157,7 @@ public:
     void    setUsername(const QString &username);
     void    setPassword(const QCA::SecureArray &password);
     void    setRealm(const QString &realm);
-    void    continueAfterParams();
+    void    continueAfterParams(const TransportAddress &addr);
 
     // for use with stun indications
     QByteArray generateId() const;
@@ -177,7 +177,7 @@ signals:
     //   start(), which would violate DOR-DS.
     void outgoingMessage(const QByteArray &packet, const TransportAddress &addr);
 
-    void needAuthParams();
+    void needAuthParams(const TransportAddress &);
 
     // not DOR-SS/DS safe
     void debugLine(const QString &line);

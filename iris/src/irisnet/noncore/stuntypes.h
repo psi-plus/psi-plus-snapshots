@@ -40,33 +40,55 @@ namespace StunTypes {
     };
 
     enum Attribute {
-        MAPPED_ADDRESS      = 0x0001,
-        USERNAME            = 0x0006,
-        MESSAGE_INTEGRITY   = 0x0008,
-        ERROR_CODE          = 0x0009,
-        UNKNOWN_ATTRIBUTES  = 0x000a,
-        REALM               = 0x0014,
-        NONCE               = 0x0015,
-        XOR_MAPPED_ADDRESS  = 0x0020,
-        CHANNEL_NUMBER      = 0x000c,
-        LIFETIME            = 0x000d,
-        XOR_PEER_ADDRESS    = 0x0012,
-        DATA                = 0x0013,
-        XOR_RELAYED_ADDRESS = 0x0016,
-        EVEN_PORT           = 0x0018,
-        REQUESTED_TRANSPORT = 0x0019,
-        DONT_FRAGMENT       = 0x001a,
-        RESERVATION_TOKEN   = 0x0022,
+        MAPPED_ADDRESS           = 0x0001,
+        USERNAME                 = 0x0006,
+        MESSAGE_INTEGRITY        = 0x0008,
+        ERROR_CODE               = 0x0009,
+        UNKNOWN_ATTRIBUTES       = 0x000a,
+        CHANNEL_NUMBER           = 0x000c,
+        LIFETIME                 = 0x000d,
+        XOR_PEER_ADDRESS         = 0x0012,
+        DATA                     = 0x0013, /* rfc8656 */
+        REALM                    = 0x0014,
+        NONCE                    = 0x0015,
+        XOR_RELAYED_ADDRESS      = 0x0016,
+        REQUESTED_ADDRESS_FAMILY = 0x0017, /* not implemented [RFC8656] */
+        EVEN_PORT                = 0x0018,
+        REQUESTED_TRANSPORT      = 0x0019,
+        DONT_FRAGMENT            = 0x001a,
+        ACCESS_TOKEN             = 0x001b, /* not implemented rfc7635 */
+        MESSAGE_INTEGRITY_SHA256 = 0x001c, /* not implemented [RFC8489] */
+        PASSWORD_ALGORITHM       = 0x001d, /* not implemented [RFC8489] */
+        USERHASH                 = 0x001e, /* not implemented [RFC8489] */
+        XOR_MAPPED_ADDRESS       = 0x0020,
+        RESERVATION_TOKEN        = 0x0022,
 
         PRIORITY      = 0x0024,
         USE_CANDIDATE = 0x0025,
 
-        SOFTWARE         = 0x8022,
-        ALTERNATE_SERVER = 0x8023,
-        FINGERPRINT      = 0x8028,
+        RESPONSE_PORT = 0x0027, /* not implemented */
+        CONNECTION_ID = 0x002a, /* not implemented rfc6062 */
+
+        ADDITIONAL_ADDRESS_FAMILY = 0x8000, /* not implemented [RFC8656] */
+        ADDRESS_ERROR_CODE        = 0x8001, /* not implemented [RFC8656] */
+        PASSWORD_ALGORITHMS       = 0x8002, /* not implemented [RFC8489] */
+        ALTERNATE_DOMAIN          = 0x8003, /* not implemented [RFC8489] */
+        ICMP                      = 0x8004, /* not implemented [RFC8656] */
+
+        SOFTWARE                     = 0x8022,
+        ALTERNATE_SERVER             = 0x8023,
+        TRANSACTION_TRANSMIT_COUNTER = 0x8025, /* not implemented [RFC7982] */
+        CACHE_TIMEOUT                = 0x8027, /* not implemented [RFC5780] */
+        FINGERPRINT                  = 0x8028,
 
         ICE_CONTROLLED  = 0x8029,
-        ICE_CONTROLLING = 0x802a
+        ICE_CONTROLLING = 0x802a,
+
+        RESPONSE_ORIGIN           = 0x802b, /* not implemented [RFC5780] */
+        OTHER_ADDRESS             = 0x802c, /* not implemented [RFC5780] */
+        ECN_CHECK                 = 0x802d, /* not implemented [RFC6679] */
+        THIRD_PARTY_AUTHORIZATION = 0x802e, /* not implemented [RFC7635] */
+        MOBILITY_TICKET           = 0x8030  /* not implemented [RFC8016] */
     };
 
     enum Error {
