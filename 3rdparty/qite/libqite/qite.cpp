@@ -163,7 +163,7 @@ bool InteractiveText::eventFilter(QObject *obj, QEvent *event)
             cursor.setPosition(docLPos);
             cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor);
             const auto &selection = cursor.selectedText();
-            if (selection[0] == QChar::ObjectReplacementCharacter) {
+            if ((!selection.isEmpty()) && (selection[0] == QChar::ObjectReplacementCharacter)) {
 
                 auto  format            = cursor.charFormat();
                 auto  elementId         = format.property(InteractiveTextFormat::Id).toUInt();

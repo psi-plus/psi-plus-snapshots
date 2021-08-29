@@ -56,7 +56,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
     public:
         void setSocksClient(SocksClient *client, Transport::Mode mode)
         {
-            if (!client->isOpen()) {
+            if (!client || !client->isOpen()) {
                 qCritical("Failed to set closed SockClient connection %p", client);
                 return;
             }
