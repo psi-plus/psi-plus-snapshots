@@ -403,7 +403,7 @@ void FileTransferManager::setDisabled(const QString &ns, bool state)
 void FileTransferManager::pft_incoming(const FTRequest &req)
 {
     QString streamType;
-    for (const QString &ns : d->streamPriority) {
+    for (const QString &ns : qAsConst(d->streamPriority)) {
         if (req.streamTypes.contains(ns)) {
             BytestreamManager *manager = streamManager(ns);
             if (manager && manager->isAcceptableSID(req.from, req.id)) {
@@ -435,7 +435,7 @@ BytestreamManager *FileTransferManager::streamManager(const QString &ns) const
 QStringList FileTransferManager::streamPriority() const
 {
     QStringList ret;
-    for (const QString &ns : d->streamPriority) {
+    for (const QString &ns : qAsConst(d->streamPriority)) {
         if (!d->disabledStreamTypes.contains(ns)) {
             ret.append(ns);
         }
@@ -445,7 +445,7 @@ QStringList FileTransferManager::streamPriority() const
 
 void FileTransferManager::stream_incomingReady(BSConnection *c)
 {
-    for (FileTransfer *ft : d->list) {
+    for (FileTransfer *ft : qAsConst(d->list)) {
         if (ft->d->needStream && ft->d->peer.compare(c->peer()) && ft->d->id == c->sid()) {
             ft->takeConnection(c);
             return;
@@ -466,7 +466,7 @@ QString FileTransferManager::link(FileTransfer *ft)
 #else
         id = QString("ft_%1").arg(qrand() & 0xffff, 4, 16, QChar('0'));
 #endif
-        for (FileTransfer *ft : d->list) {
+        for (FileTransfer *ft : qAsConst(d->list)) {
             if (ft->d->peer.compare(ft->d->peer) && ft->d->id == id) {
                 found = true;
                 break;
@@ -542,10 +542,10 @@ void JT_FT::request(const Jid &to, const QString &_id, const QString &fname, qlo
     QDomElement field = doc()->createElement("field");
     field.setAttribute("var", "stream-method");
     field.setAttribute("type", "list-single");
-    for (QStringList::ConstIterator it = streamTypes.begin(); it != streamTypes.end(); ++it) {
+    for (const auto &streamType : streamTypes) {
         QDomElement option = doc()->createElement("option");
         QDomElement value  = doc()->createElement("value");
-        value.appendChild(doc()->createTextNode(*it));
+        value.appendChild(doc()->createTextNode(streamType));
         option.appendChild(value);
         field.appendChild(option);
     }
@@ -581,7 +581,7 @@ bool JT_FT::take(const QDomElement &x)
             return true;
         }
 
-        QString id = si.attribute("id");
+        [[maybe_unused]] QString id = si.attribute("id");
 
         qlonglong range_offset = 0;
         qlonglong range_length = 0;

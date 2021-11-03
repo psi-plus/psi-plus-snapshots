@@ -240,12 +240,12 @@ private:
                 continue;
 
             QList<QHostAddress> neededAddrs;
-            for (const QHostAddress &a : addrs) {
+            for (const QHostAddress &a : qAsConst(addrs)) {
                 if (!i.haveAddress(a))
                     neededAddrs += a;
             }
 
-            for (const QHostAddress &a : neededAddrs) {
+            for (const QHostAddress &a : qAsConst(neededAddrs)) {
                 QUdpSocket *sock = new QUdpSocket(q);
 
                 if (!sock->bind(a, quint16(i.port))) {

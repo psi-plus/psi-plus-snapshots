@@ -207,8 +207,7 @@ void JT_Register::setForm(const Form &form)
         query.appendChild(textTag(doc(), "key", form.key()));
 
     // fields
-    for (Form::ConstIterator it = form.begin(); it != form.end(); ++it) {
-        const FormField &f = *it;
+    for (const auto &f : form) {
         query.appendChild(textTag(doc(), f.realName(), f.value()));
     }
 }
@@ -372,8 +371,8 @@ void JT_Roster::set(const Jid &jid, const QString &name, const QStringList &grou
     item.setAttribute("jid", jid.full());
     if (!name.isEmpty())
         item.setAttribute("name", name);
-    for (QStringList::ConstIterator it = groups.begin(); it != groups.end(); ++it)
-        item.appendChild(textTag(doc(), "group", *it));
+    for (const auto &group : groups)
+        item.appendChild(textTag(doc(), "group", group));
     d->itemList += item;
 }
 
@@ -431,7 +430,7 @@ void JT_Roster::onGo()
         iq                = createIQ(doc(), "set", to.full(), id());
         QDomElement query = doc()->createElementNS("jabber:iq:roster", "query");
         iq.appendChild(query);
-        for (const QDomElement &it : d->itemList)
+        for (const QDomElement &it : qAsConst(d->itemList))
             query.appendChild(it);
         send(iq);
     } else if (type == GetDelimiter) {
@@ -452,7 +451,7 @@ QString JT_Roster::toString() const
 
     QDomElement i = doc()->createElement("request");
     i.setAttribute("type", "JT_Roster");
-    for (const QDomElement &it : d->itemList)
+    for (const QDomElement &it : qAsConst(d->itemList))
         i.appendChild(it);
     return lineEncode(Stream::xmlToString(i));
 }
@@ -615,7 +614,8 @@ void JT_Presence::pres(const Status &s)
         }
 
         // bits of binary
-        for (const BoBData &bd : s.bobDataList()) {
+        const auto &bdlist = s.bobDataList();
+        for (const BoBData &bd : bdlist) {
             tag.appendChild(bd.toXml(doc()));
         }
     }
@@ -1082,8 +1082,7 @@ void JT_Search::set(const Form &form)
         query.appendChild(textTag(doc(), "key", form.key()));
 
     // fields
-    for (Form::ConstIterator it = form.begin(); it != form.end(); ++it) {
-        const FormField &f = *it;
+    for (const auto &f : form) {
         query.appendChild(textTag(doc(), f.realName(), f.value()));
     }
 }
@@ -1565,16 +1564,15 @@ void JT_DiscoPublish::set(const Jid &j, const DiscoList &list)
     // if ( !node.isEmpty() )
     //    query.setAttribute("node", node);
 
-    DiscoList::ConstIterator it = list.begin();
-    for (; it != list.end(); ++it) {
+    for (const auto &discoItem : list) {
         QDomElement w = doc()->createElement("item");
 
-        w.setAttribute("jid", (*it).jid().full());
-        if (!(*it).name().isEmpty())
-            w.setAttribute("name", (*it).name());
-        if (!(*it).node().isEmpty())
-            w.setAttribute("node", (*it).node());
-        w.setAttribute("action", DiscoItem::action2string((*it).action()));
+        w.setAttribute("jid", discoItem.jid().full());
+        if (!discoItem.name().isEmpty())
+            w.setAttribute("name", discoItem.name());
+        if (!discoItem.node().isEmpty())
+            w.setAttribute("node", discoItem.node());
+        w.setAttribute("action", DiscoItem::action2string(discoItem.action()));
 
         query.appendChild(w);
     }

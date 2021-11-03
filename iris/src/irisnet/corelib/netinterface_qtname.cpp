@@ -40,7 +40,7 @@ public:
 
     ~IrisQtName()
     {
-        for (auto const &l : lookups) {
+        for (auto const &l : qAsConst(lookups)) {
             if (!l.isHostInfo) {
                 delete reinterpret_cast<QDnsLookup *>(l.handle);
             }
@@ -127,7 +127,8 @@ private slots:
             return;
         }
         QList<XMPP::NameRecord> results;
-        for (const auto &a : info.addresses()) {
+        const auto &            addresses = info.addresses();
+        for (const auto &a : addresses) {
             XMPP::NameRecord ir(info.hostName().toLatin1(), 5 * 60); // ttl = 5 mins
             ir.setAddress(a);
             results += ir;

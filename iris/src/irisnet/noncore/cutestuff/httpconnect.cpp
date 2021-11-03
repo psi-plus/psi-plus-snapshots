@@ -269,8 +269,8 @@ void HttpConnect::sock_readyRead()
 #ifdef PROX_DEBUG
                     fprintf(stderr, "HttpConnect: header proto=[%s] code=[%d] msg=[%s]\n", qPrintable(proto), code,
                             qPrintable(msg));
-                    for (QStringList::ConstIterator it = d->headerLines.begin(); it != d->headerLines.end(); ++it)
-                        fprintf(stderr, "HttpConnect: * [%s]\n", qPrintable(*it));
+                    for (const auto &it : qAsConst(d->headerLines))
+                        fprintf(stderr, "HttpConnect: * [%s]\n", qPrintable(it));
 #endif
                 }
 

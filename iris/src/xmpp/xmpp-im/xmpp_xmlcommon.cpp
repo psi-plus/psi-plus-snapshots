@@ -347,8 +347,8 @@ QDomElement textTag(QDomDocument &doc, const QString &name, QRect &r)
 QDomElement stringListToXml(QDomDocument &doc, const QString &name, const QStringList &l)
 {
     QDomElement tag = doc.createElement(name);
-    for (QStringList::ConstIterator it = l.begin(); it != l.end(); ++it)
-        tag.appendChild(textTag(doc, "item", *it));
+    for (const auto &it : l)
+        tag.appendChild(textTag(doc, "item", it));
 
     return tag;
 }

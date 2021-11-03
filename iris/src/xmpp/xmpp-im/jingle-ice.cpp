@@ -296,7 +296,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             }
             left = iceList;
 
-            for (Ice176 *ice : left) {
+            for (Ice176 *ice : qAsConst(left)) {
                 ice->setParent(this);
 
                 // TODO: error() also?

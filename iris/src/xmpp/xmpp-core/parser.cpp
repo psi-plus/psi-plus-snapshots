@@ -209,7 +209,8 @@ public:
                 curElement = curElement.appendChild(newEl).toElement();
             }
 
-            for (auto const &a : reader.attributes()) {
+            const auto &attrs = reader.attributes();
+            for (auto const &a : attrs) {
                 QDomAttr da;
                 if (a.namespaceUri().isEmpty())
                     da = doc.createAttribute(a.name().toString());

@@ -102,10 +102,9 @@ bool XData::Field::isValid() const
         return j.isValid();
     }
     if (_type == Field_JidMulti) {
-        QStringList::ConstIterator it       = _value.begin();
-        bool                       allValid = true;
-        for (; it != _value.end(); ++it) {
-            Jid j(*it);
+        bool allValid = true;
+        for (const auto &it : _value) {
+            Jid j(it);
             if (!j.isValid()) {
                 allValid = false;
                 break;
@@ -242,20 +241,19 @@ QDomElement XData::Field::toXml(QDomDocument *doc, bool submitForm) const
         f.appendChild(textTag(doc, "desc", _desc));
 
     if (!submitForm && !_options.isEmpty()) {
-        OptionList::ConstIterator it = _options.begin();
-        for (; it != _options.end(); ++it) {
+        for (const auto &it : _options) {
             QDomElement o = doc->createElement("option");
-            o.appendChild(textTag(doc, "value", (*it).value));
-            if (!(*it).label.isEmpty())
-                o.setAttribute("label", (*it).label);
+            o.appendChild(textTag(doc, "value", it.value));
+            if (!it.label.isEmpty())
+                o.setAttribute("label", it.label);
             f.appendChild(o);
         }
     }
 
     if (!_value.isEmpty()) {
-        QStringList::ConstIterator it = _value.begin();
-        for (; it != _value.end(); ++it)
-            f.appendChild(textTag(doc, "value", *it));
+
+        for (const auto &it : _value)
+            f.appendChild(textTag(doc, "value", it));
     }
 
     if (!_mediaElement.isEmpty()) {
@@ -266,9 +264,10 @@ QDomElement XData::Field::toXml(QDomDocument *doc, bool submitForm) const
             media.setAttribute("height", s.height());
         }
         for (const MediaUri &uri : _mediaElement) {
-            QDomElement uriEl = doc->createElement("uri");
-            QString     type  = uri.mimeType;
-            for (const QString &k : uri.params.keys()) {
+            QDomElement        uriEl = doc->createElement("uri");
+            QString            type  = uri.mimeType;
+            const QStringList &klist = uri.params.keys();
+            for (const QString &k : klist) {
                 type += ";" + k + "=" + uri.params[k];
             }
             uriEl.setAttribute("type", type);
@@ -300,7 +299,7 @@ QSize XData::Field::MediaElement::mediaSize() const { return _size; }
 
 bool XData::Field::MediaElement::checkSupport(const QStringList &wildcards)
 {
-    for (const XData::Field::MediaUri &uri : *this) {
+    for (const XData::Field::MediaUri &uri : qAsConst(*this)) {
         for (const QString &wildcard : wildcards) {
             if (QRegExp(wildcard, Qt::CaseSensitive, QRegExp::Wildcard).exactMatch(uri.mimeType)) {
                 return true;
@@ -451,9 +450,7 @@ QDomElement XData::toXml(QDomDocument *doc, bool submitForm) const
         x.appendChild(textTag(doc, "instructions", d->instructions));
 
     if (!d->fields.isEmpty()) {
-        FieldList::ConstIterator it = d->fields.begin();
-        for (; it != d->fields.end(); ++it) {
-            Field f = *it;
+        for (const auto &f : qAsConst(d->fields)) {
             if (!(submitForm && f.var().isEmpty()))
                 x.appendChild(f.toXml(doc, submitForm));
         }

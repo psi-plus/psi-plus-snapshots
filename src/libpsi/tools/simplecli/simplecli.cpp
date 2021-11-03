@@ -169,7 +169,7 @@ QString SimpleCli::optionsHelp(int textWidth)
     int  longest    = -1;
     bool foundShort = false;
 
-    for (Arg arg : argdefs) {
+    for (const Arg &arg : qAsConst(argdefs)) {
         if (arg.needsValue) {
             longest = qMax(arg.name.length() + arg.valueHelp.length() + 1, longest);
         } else {
@@ -184,7 +184,7 @@ QString SimpleCli::optionsHelp(int textWidth)
         helpPadding += 4; // 4 = length("-x, ")
     }
 
-    for (Arg arg : argdefs) {
+    for (const Arg &arg : qAsConst(argdefs)) {
         QString line;
         line.fill(' ', margin);
         if (foundShort) {
@@ -247,7 +247,7 @@ QString SimpleCli::wrap(QString text, int width, int margin, int firstMargin)
         }
 
         output += QString().fill(' ', currentMargin);
-        output += text.mid(prevBreak + 1, nextBreak - prevBreak - 1);
+        output += text.midRef(prevBreak + 1, nextBreak - prevBreak - 1);
         output += '\n';
 
         prevBreak     = nextBreak;

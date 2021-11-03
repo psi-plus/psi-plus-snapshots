@@ -120,7 +120,8 @@ bool AtomicXmlFile::exists(const QString &fileName)
 {
     AtomicXmlFile tmp(fileName);
 
-    for (const QString &fileName : tmp.loadCandidateList()) {
+    const QStringList &fileNames(tmp.loadCandidateList());
+    for (const QString &fileName : fileNames) {
         if (QFile::exists(fileName)) {
             return true;
         }

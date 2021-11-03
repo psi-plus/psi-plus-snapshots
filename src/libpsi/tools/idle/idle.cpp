@@ -123,5 +123,5 @@ void Idle::doCheck()
     // how long have we been idle?
     int idleTime = d->startTime.secsTo(QDateTime::currentDateTime());
 
-    secondsIdle(idleTime);
+    emit secondsIdle(idleTime);
 }

@@ -58,8 +58,8 @@ static QString makeKey(const QString &sid, const Jid &requester, const Jid &targ
 
 static bool haveHost(const StreamHostList &list, const Jid &j)
 {
-    for (StreamHostList::ConstIterator it = list.begin(); it != list.end(); ++it) {
-        if ((*it).jid().compare(j))
+    for (const auto &streamHost : list) {
+        if (streamHost.jid().compare(j))
             return true;
     }
     return false;
@@ -656,7 +656,7 @@ bool S5BManager::isAcceptableSID(const Jid &peer, const QString &sid) const
     QString key     = makeKey(sid, d->client->jid(), peer);
     QString key_out = makeKey(sid, peer, d->client->jid()); // not valid in muc via proxy
 
-    for (Entry *e : d->activeList) {
+    for (Entry *e : qAsConst(d->activeList)) {
         if (e->i) {
             if (e->i->key == key || e->i->key == key_out)
                 return false;
@@ -677,7 +677,7 @@ const char *S5BManager::sidPrefix() const { return "s5b_"; }
 
 S5BConnection *S5BManager::findIncoming(const Jid &from, const QString &sid) const
 {
-    for (S5BConnection *c : d->incomingConns) {
+    for (S5BConnection *c : qAsConst(d->incomingConns)) {
         if (c->d->peer.compare(from) && c->d->sid == sid)
             return c;
     }
@@ -686,7 +686,7 @@ S5BConnection *S5BManager::findIncoming(const Jid &from, const QString &sid) con
 
 S5BManager::Entry *S5BManager::findEntry(S5BConnection *c) const
 {
-    for (Entry *e : d->activeList) {
+    for (Entry *e : qAsConst(d->activeList)) {
         if (e->c == c)
             return e;
     }
@@ -695,7 +695,7 @@ S5BManager::Entry *S5BManager::findEntry(S5BConnection *c) const
 
 S5BManager::Entry *S5BManager::findEntry(Item *i) const
 {
-    for (Entry *e : d->activeList) {
+    for (Entry *e : qAsConst(d->activeList)) {
         if (e->i == i)
             return e;
     }
@@ -704,7 +704,7 @@ S5BManager::Entry *S5BManager::findEntry(Item *i) const
 
 S5BManager::Entry *S5BManager::findEntryByHash(const QString &key) const
 {
-    for (Entry *e : d->activeList) {
+    for (Entry *e : qAsConst(d->activeList)) {
         if (e->i && e->i->key == key)
             return e;
     }
@@ -713,7 +713,7 @@ S5BManager::Entry *S5BManager::findEntryByHash(const QString &key) const
 
 S5BManager::Entry *S5BManager::findEntryBySID(const Jid &peer, const QString &sid) const
 {
-    for (Entry *e : d->activeList) {
+    for (Entry *e : qAsConst(d->activeList)) {
         if (e->i && e->i->peer.compare(peer) && e->sid == sid)
             return e;
     }
@@ -926,7 +926,7 @@ void S5BManager::query_finished()
 {
     JT_S5B *query = static_cast<JT_S5B *>(sender());
     Entry * e     = nullptr;
-    for (Entry *i : d->activeList) {
+    for (Entry *i : qAsConst(d->activeList)) {
         if (i->query == query) {
             e = i;
             break;
@@ -965,8 +965,8 @@ bool S5BManager::targetShouldOfferProxy(Entry *e)
 
     // if target, don't offer any proxy if the requester already did
     const StreamHostList &hosts = e->c->d->req.hosts;
-    for (StreamHostList::ConstIterator it = hosts.begin(); it != hosts.end(); ++it) {
-        if ((*it).isProxy())
+    for (const auto &host : hosts) {
+        if (host.isProxy())
             return false;
     }
 
@@ -1145,7 +1145,7 @@ void S5BManager::Item::doIncoming()
     StreamHostList list;
     if (lateProxy) {
         // take just the proxy streamhosts
-        for (const StreamHost &it : in_hosts) {
+        for (const StreamHost &it : qAsConst(in_hosts)) {
             if (it.isProxy())
                 list += it;
         }
@@ -1155,7 +1155,7 @@ void S5BManager::Item::doIncoming()
         if ((state == Requester || (state == Target && fast)) && !proxy.jid().isValid()) {
             // take just the non-proxy streamhosts
             bool hasProxies = false;
-            for (const StreamHost &it : in_hosts) {
+            for (const StreamHost &it : qAsConst(in_hosts)) {
                 if (it.isProxy())
                     hasProxies = true;
                 else
@@ -1747,8 +1747,8 @@ void S5BConnector::start(const Jid &self, const StreamHostList &hosts, const QSt
 #ifdef S5B_DEBUG
     qDebug("S5BConnector: starting [%p]!\n", this);
 #endif
-    for (StreamHostList::ConstIterator it = hosts.begin(); it != hosts.end(); ++it) {
-        Item *i = new Item(self, *it, key, udp);
+    for (const auto &host : hosts) {
+        Item *i = new Item(self, host, key, udp);
         connect(i, SIGNAL(result(bool)), SLOT(item_result(bool)));
         d->itemList.append(i);
         i->start();
@@ -1814,7 +1814,7 @@ void S5BConnector::t_timeout()
 void S5BConnector::man_udpSuccess(const Jid &streamHost)
 {
     // was anyone sending to this streamhost?
-    for (Item *i : d->itemList) {
+    for (Item *i : qAsConst(d->itemList)) {
         if (i->host.jid().compare(streamHost) && i->client_udp) {
             i->udpSuccess();
             return;
@@ -1859,12 +1859,12 @@ void JT_S5B::request(const Jid &to, const QString &sid, const QString &dstaddr, 
     }
     query.setAttribute("mode", udp ? "udp" : "tcp");
     iq.appendChild(query);
-    for (StreamHostList::ConstIterator it = hosts.begin(); it != hosts.end(); ++it) {
+    for (const auto &host : hosts) {
         QDomElement shost = doc()->createElement("streamhost");
-        shost.setAttribute("jid", (*it).jid().full());
-        shost.setAttribute("host", (*it).host());
-        shost.setAttribute("port", QString::number((*it).port()));
-        if ((*it).isProxy()) {
+        shost.setAttribute("jid", host.jid().full());
+        shost.setAttribute("host", host.host());
+        shost.setAttribute("port", QString::number(host.port()));
+        if (host.isProxy()) {
             QDomElement p = doc()->createElementNS("http://affinix.com/jabber/stream", "proxy");
             shost.appendChild(p);
         }
@@ -2144,13 +2144,13 @@ public:
     S5BIncomingConnection(SocksClient *c) : QObject(nullptr)
     {
         client = c;
-        connect(client, &SocksClient::incomingMethods, [this](int methods) {
+        connect(client, &SocksClient::incomingMethods, this, [this](int methods) {
             if (methods & SocksClient::AuthNone)
                 client->chooseMethod(SocksClient::AuthNone);
             else
                 doError();
         });
-        connect(client, &SocksClient::incomingConnectRequest, [this](const QString &_host, int port) {
+        connect(client, &SocksClient::incomingConnectRequest, this, [this](const QString &_host, int port) {
             if (port == 0) {
                 host = _host;
                 client->disconnect(this);
@@ -2159,7 +2159,7 @@ public:
             } else
                 doError();
         });
-        connect(client, &SocksClient::error, [this]() { doError(); });
+        connect(client, &SocksClient::error, this, [this]() { doError(); });
         connect(&expire, SIGNAL(timeout()), SLOT(doError()));
         resetExpiration();
     }

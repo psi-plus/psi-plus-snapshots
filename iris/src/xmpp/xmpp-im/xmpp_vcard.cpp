@@ -215,10 +215,8 @@ QDomElement VCard::toXml(QDomDocument *doc) const
         v.appendChild(textTag(doc, "BDAY", d->bday));
 
     if (!d->addressList.isEmpty()) {
-        AddressList::ConstIterator it = d->addressList.constBegin();
-        for (; it != d->addressList.end(); ++it) {
-            QDomElement    w = doc->createElement("ADR");
-            const Address &a = *it;
+        for (const auto &a : qAsConst(d->addressList)) {
+            QDomElement w = doc->createElement("ADR");
 
             if (a.home)
                 w.appendChild(emptyTag(doc, "HOME"));
@@ -255,10 +253,8 @@ QDomElement VCard::toXml(QDomDocument *doc) const
     }
 
     if (!d->labelList.isEmpty()) {
-        LabelList::ConstIterator it = d->labelList.constBegin();
-        for (; it != d->labelList.end(); ++it) {
-            QDomElement  w = doc->createElement("LABEL");
-            const Label &l = *it;
+        for (const auto &l : qAsConst(d->labelList)) {
+            QDomElement w = doc->createElement("LABEL");
 
             if (l.home)
                 w.appendChild(emptyTag(doc, "HOME"));
@@ -276,9 +272,8 @@ QDomElement VCard::toXml(QDomDocument *doc) const
                 w.appendChild(emptyTag(doc, "PREF"));
 
             if (!l.lines.isEmpty()) {
-                QStringList::ConstIterator it = l.lines.constBegin();
-                for (; it != l.lines.end(); ++it)
-                    w.appendChild(textTag(doc, "LINE", *it));
+                for (const auto &it : qAsConst(l.lines))
+                    w.appendChild(textTag(doc, "LINE", it));
             }
 
             v.appendChild(w);
@@ -286,10 +281,8 @@ QDomElement VCard::toXml(QDomDocument *doc) const
     }
 
     if (!d->phoneList.isEmpty()) {
-        PhoneList::ConstIterator it = d->phoneList.constBegin();
-        for (; it != d->phoneList.end(); ++it) {
-            QDomElement  w = doc->createElement("TEL");
-            const Phone &p = *it;
+        for (const auto &p : qAsConst(d->phoneList)) {
+            QDomElement w = doc->createElement("TEL");
 
             if (p.home)
                 w.appendChild(emptyTag(doc, "HOME"));
@@ -326,10 +319,8 @@ QDomElement VCard::toXml(QDomDocument *doc) const
     }
 
     if (!d->emailList.isEmpty()) {
-        EmailList::ConstIterator it = d->emailList.constBegin();
-        for (; it != d->emailList.end(); ++it) {
-            QDomElement  w = doc->createElement("EMAIL");
-            const Email &e = *it;
+        for (const auto &e : qAsConst(d->emailList)) {
+            QDomElement w = doc->createElement("EMAIL");
 
             if (e.pref)
                 w.appendChild(emptyTag(doc, "PREF"));
@@ -402,9 +393,8 @@ QDomElement VCard::toXml(QDomDocument *doc) const
             w.appendChild(textTag(doc, "ORGNAME", d->org.name));
 
         if (!d->org.unit.isEmpty()) {
-            QStringList::ConstIterator it = d->org.unit.constBegin();
-            for (; it != d->org.unit.end(); ++it)
-                w.appendChild(textTag(doc, "ORGUNIT", *it));
+            for (const auto &unit : qAsConst(d->org.unit))
+                w.appendChild(textTag(doc, "ORGUNIT", unit));
         }
 
         v.appendChild(w);
@@ -413,9 +403,8 @@ QDomElement VCard::toXml(QDomDocument *doc) const
     if (!d->categories.isEmpty()) {
         QDomElement w = doc->createElement("CATEGORIES");
 
-        QStringList::ConstIterator it = d->categories.constBegin();
-        for (; it != d->categories.end(); ++it)
-            w.appendChild(textTag(doc, "KEYWORD", *it));
+        for (const auto &c : qAsConst(d->categories))
+            w.appendChild(textTag(doc, "KEYWORD", c));
 
         v.appendChild(w);
     }

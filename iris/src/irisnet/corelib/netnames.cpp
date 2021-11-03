@@ -461,7 +461,7 @@ WeightedNameRecordList &WeightedNameRecordList::operator=(const WeightedNameReco
 {
     priorityGroups = other.priorityGroups;
     if (other.currentPriorityGroup != other.priorityGroups.end()) {
-        currentPriorityGroup = priorityGroups.find(other.currentPriorityGroup.key());
+        currentPriorityGroup = priorityGroups.find(other.currentPriorityGroup->first);
     } else {
         currentPriorityGroup = priorityGroups.end();
     }
@@ -478,7 +478,7 @@ bool WeightedNameRecordList::isEmpty() const
 XMPP::NameRecord WeightedNameRecordList::takeNext()
 {
     /* Find the next useful priority group */
-    while (currentPriorityGroup != priorityGroups.end() && currentPriorityGroup->empty()) {
+    while (currentPriorityGroup != priorityGroups.end() && currentPriorityGroup->second.empty()) {
         ++currentPriorityGroup;
     }
     /* There are no priority groups left, return failure */
@@ -491,7 +491,7 @@ XMPP::NameRecord WeightedNameRecordList::takeNext()
 
     /* Find the new total weight of this priority group */
     int totalWeight = 0;
-    for (const XMPP::NameRecord &record : *currentPriorityGroup) {
+    for (const auto &record : qAsConst(currentPriorityGroup->second)) {
         totalWeight += record.weight();
     }
 
@@ -511,9 +511,9 @@ XMPP::NameRecord WeightedNameRecordList::takeNext()
 #endif
 
     /* Iterate through the priority group until we found the randomly selected entry */
-    WeightedNameRecordPriorityGroup::iterator it(currentPriorityGroup->begin());
+    WeightedNameRecordPriorityGroup::iterator it(currentPriorityGroup->second.begin());
     for (int currentWeight = it->weight(); currentWeight < randomWeight; currentWeight += (++it)->weight()) { }
-    Q_ASSERT(it != currentPriorityGroup->end());
+    Q_ASSERT(it != currentPriorityGroup->second.end());
 
     /* We are going to delete the entry in the list, so save it */
     XMPP::NameRecord result(*it);
@@ -523,8 +523,8 @@ XMPP::NameRecord WeightedNameRecordList::takeNext()
 #endif
 
     /* Delete the entry from list, to prevent it from being tried multiple times */
-    currentPriorityGroup->remove(it->weight(), *it);
-    if (currentPriorityGroup->isEmpty()) {
+    currentPriorityGroup->second.remove(it->weight(), *it);
+    if (currentPriorityGroup->second.isEmpty()) {
         priorityGroups.erase(currentPriorityGroup++);
     }
 
@@ -542,10 +542,9 @@ void WeightedNameRecordList::clear()
 void WeightedNameRecordList::append(const XMPP::WeightedNameRecordList &list)
 {
     /* Copy over all records from all groups */
-    for (const WeightedNameRecordPriorityGroup &group : list.priorityGroups) {
-        for (const NameRecord &record : group) {
+    for (const auto &group : list.priorityGroups) {
+        for (const NameRecord &record : group.second)
             append(record);
-        }
     }
 
     /* Reset to beginning */
@@ -554,18 +553,8 @@ void WeightedNameRecordList::append(const XMPP::WeightedNameRecordList &list)
 
 void WeightedNameRecordList::append(const QList<XMPP::NameRecord> &list)
 {
-    for (const XMPP::NameRecord &record : list) {
-        if (record.type() != XMPP::NameRecord::Srv) {
-            continue;
-        }
-        WeightedNameRecordPriorityGroup group(priorityGroups.value(record.priority()));
-
-        group.insert(record.weight(), record);
-
-        if (!priorityGroups.contains(record.priority())) {
-            priorityGroups.insert(record.priority(), group);
-        }
-    }
+    for (const XMPP::NameRecord &record : list)
+        append(record);
 
     /* Reset to beginning */
     currentPriorityGroup = priorityGroups.begin();
@@ -573,14 +562,9 @@ void WeightedNameRecordList::append(const QList<XMPP::NameRecord> &list)
 
 void WeightedNameRecordList::append(const XMPP::NameRecord &record)
 {
-    WeightedNameRecordPriorityGroup group(priorityGroups.value(record.priority()));
-
     Q_ASSERT(record.type() == XMPP::NameRecord::Srv);
-    group.insert(record.weight(), record);
-
-    if (!priorityGroups.contains(record.priority())) {
-        priorityGroups.insert(record.priority(), group);
-    }
+    auto [it, _] = priorityGroups.try_emplace(record.priority(), WeightedNameRecordPriorityGroup {});
+    it->second.insert(record.weight(), record);
 
     /* Reset to beginning */
     currentPriorityGroup = priorityGroups.begin();
@@ -622,20 +606,22 @@ QDebug operator<<(QDebug dbg, const XMPP::WeightedNameRecordList &list)
     /* operator(QDebug, QMap const&) has a bug which makes it crash when trying to print the dereferenced end() iterator
      */
     if (!list.isEmpty()) {
+        dbg.nospace() << "current=" << *list.currentPriorityGroup
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-        dbg.nospace() << "current=" << *list.currentPriorityGroup << Qt::endl;
+                      << Qt::endl;
 #else
-        dbg.nospace() << "current=" << *list.currentPriorityGroup << endl;
+                      << endl;
 #endif
     }
 
     dbg.nospace() << "{";
 
-    for (int priority : list.priorityGroups.keys()) {
+    for (const auto &[priority, group] : list.priorityGroups) {
+        dbg.nospace() << "\t" << priority << "->" << group
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-        dbg.nospace() << "\t" << priority << "->" << list.priorityGroups.value(priority) << Qt::endl;
+                      << Qt::endl;
 #else
-        dbg.nospace() << "\t" << priority << "->" << list.priorityGroups.value(priority) << endl;
+                      << endl;
 #endif
     }
 
@@ -747,7 +733,7 @@ public:
                 sub_instances_to_remove += it.key();
         }
 
-        for (int res_sub_id : sub_instances_to_remove) {
+        for (int res_sub_id : qAsConst(sub_instances_to_remove)) {
             res_sub_instances.remove(res_sub_id);
             p_local->resolve_stop(res_sub_id);
         }
@@ -1111,7 +1097,7 @@ void ServiceResolver::clear_resolvers()
 #endif
 
     /* cleanup all resolvers */
-    for (XMPP::NameResolver *resolver : d->resolverList) {
+    for (XMPP::NameResolver *resolver : qAsConst(d->resolverList)) {
         cleanup_resolver(resolver);
     }
 }

@@ -119,7 +119,7 @@ void HttpFileUpload::start()
                     xmlns = xmlns_v0_2_5;
                 }
                 if (ver != XEP0363::vUnknown) {
-                    QList<std::pair<HttpHost, int>> hosts;
+                    QVector<std::pair<HttpHost, int>> hosts;
                     const XData::Field field = item.registeredExtension(xmlns).getField(QLatin1String("max-file-size"));
                     if (field.isValid() && field.type() == XData::Field::Field_TextSingle)
                         sizeLimit = field.value().at(0).toULongLong();

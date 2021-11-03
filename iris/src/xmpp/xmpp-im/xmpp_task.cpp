@@ -118,8 +118,7 @@ bool Task::take(const QDomElement &x)
 
     // pass along the xml
     Task *t;
-    for (QObjectList::ConstIterator it = p.begin(); it != p.end(); ++it) {
-        QObject *obj = *it;
+    for (QObject *obj : p) {
         if (!obj->inherits("XMPP::Task"))
             continue;
 

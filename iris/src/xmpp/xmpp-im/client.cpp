@@ -938,8 +938,8 @@ void Client::slotRosterRequestFinished()
 void Client::importRoster(const Roster &r)
 {
     emit beginImportRoster();
-    for (Roster::ConstIterator it = r.begin(); it != r.end(); ++it) {
-        importRosterItem(*it);
+    for (const auto &item : r) {
+        importRosterItem(item);
     }
     emit endImportRoster();
 }

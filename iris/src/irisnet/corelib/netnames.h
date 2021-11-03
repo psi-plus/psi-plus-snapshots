@@ -25,6 +25,7 @@
 #include <QtCore>
 #include <QtNetwork>
 #include <limits>
+#include <memory>
 
 // it seems visual studio defines it somewhere
 #ifdef max
@@ -523,8 +524,8 @@ public:
     WeightedNameRecordList &operator<<(const NameRecord &);
 
 private:
-    typedef QMultiMap<int /* weight */, NameRecord>                   WeightedNameRecordPriorityGroup;
-    typedef QMap<int /* priority */, WeightedNameRecordPriorityGroup> WNRL;
+    typedef QMultiMap<int /* weight */, NameRecord>                       WeightedNameRecordPriorityGroup;
+    typedef std::map<int /* priority */, WeightedNameRecordPriorityGroup> WNRL;
 
     WNRL           priorityGroups;
     WNRL::iterator currentPriorityGroup;

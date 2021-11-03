@@ -117,7 +117,8 @@ QString DiscoItem::capsHash(QCryptographicHash::Algorithm algo) const
         }
         forms.insert(xd.registrarType(), xd);
     }
-    for (const XData &xd : forms.values()) {
+    const auto &xds = forms.values();
+    for (const XData &xd : xds) {
         prep << xd.registrarType();
         QMap<QString, QStringList> values;
         for (const XData::Field &f : xd.fields()) {
@@ -205,7 +206,8 @@ QDomElement DiscoItem::toDiscoInfoResult(QDomDocument *doc) const
         }
     }
 
-    for (const QString &f : d->features.list()) {
+    const QStringList &features = d->features.list();
+    for (const QString &f : features) {
         QDomElement fel = q.appendChild(doc->createElement(QLatin1String("feature"))).toElement();
         fel.setAttribute("var", f);
     }

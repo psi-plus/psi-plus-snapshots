@@ -219,7 +219,7 @@ ClientStream::ClientStream(const QString &host, const QString &defRealm, ByteStr
     connect(d->bs, SIGNAL(delayedCloseFinished()), SLOT(bs_delayedCloseFinished()));
     connect(d->bs, SIGNAL(error(int)), SLOT(bs_error(int)));
 
-    QByteArray spare = d->bs->readAll();
+    [[maybe_unused]] QByteArray spare = d->bs->readAll();
 
     d->ss = new SecureStream(d->bs);
     connect(d->ss, SIGNAL(readyRead()), SLOT(ss_readyRead()));
@@ -272,7 +272,7 @@ void ClientStream::reset(bool all)
         }
     } else {
         QSharedPointer<QDomDocument> sd;
-        for (Stanza *s : d->in) {
+        for (Stanza *s : qAsConst(d->in)) {
             sd = s->unboundDocument(sd);
         }
     }
@@ -883,7 +883,7 @@ void ClientStream::processNext()
 #endif
         bool ok = d->client.processStep();
         // deal with send/received items
-        for (const XmlProtocol::TransferItem &i : d->client.transferItemList) {
+        for (const XmlProtocol::TransferItem &i : qAsConst(d->client.transferItemList)) {
             if (i.isExternal)
                 continue;
             QString str;
@@ -1124,8 +1124,9 @@ bool ClientStream::handleNeed()
 #endif
 
         // ensure simplesasl provider is installed
-        bool found = false;
-        for (QCA::Provider *p : QCA::providers()) {
+        bool        found     = false;
+        const auto &providers = QCA::providers();
+        for (QCA::Provider *p : providers) {
             if (p->name() == "simplesasl") {
                 found = true;
                 break;
@@ -1148,7 +1149,7 @@ bool ClientStream::handleNeed()
         else {
             QMap<int, QString> prefOrdered;
             QStringList        unpreferred;
-            for (auto const &m : d->client.features.sasl_mechs) {
+            for (auto const &m : qAsConst(d->client.features.sasl_mechs)) {
                 int i = preference.indexOf(m);
                 if (i != -1) {
                     prefOrdered.insert(i, m);
@@ -1159,8 +1160,9 @@ bool ClientStream::handleNeed()
             ml = prefOrdered.values() + unpreferred;
         }
 
-        QString saslProvider;
-        for (const QString &mech : d->mechProviders.keys()) {
+        QString     saslProvider;
+        const auto &meches = d->mechProviders.keys();
+        for (const QString &mech : meches) {
             if (ml.contains(mech)) {
                 saslProvider = d->mechProviders[mech];
                 break;

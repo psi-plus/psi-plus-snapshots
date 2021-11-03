@@ -1247,7 +1247,7 @@ private:
                     return p->local->base == locIt->info->base && p->remote->addr == pair->remote->addr
                         && p->local->componentId == locIt->info->componentId;
                 });
-                if (it == checkList.pairs.constEnd()) {
+                if (it == checkList.pairs.end()) {
                     // allow v4/v6 proto mismatch in case NAT does magic
                     pair = makeCandidatesPair(locIt->info, pair->remote);
                 } else {

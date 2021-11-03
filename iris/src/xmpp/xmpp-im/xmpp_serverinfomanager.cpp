@@ -266,7 +266,7 @@ void ServerInfoManager::disco_finished()
 
         // Identities
         DiscoItem::Identities is = jt->item().identities();
-        for (DiscoItem::Identity i : is) {
+        for (const DiscoItem::Identity &i : is) {
             if (i.category == "pubsub" && i.type == "pep")
                 _hasPEP = true;
         }

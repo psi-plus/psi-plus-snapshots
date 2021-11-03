@@ -976,7 +976,7 @@ AddressList Message::findAddresses(Address::Type t) const
         return AddressList();
     }
     AddressList matches;
-    for (Address a : d->addressList) {
+    for (const Address &a : qAsConst(d->addressList)) {
         if (a.type() == t)
             matches.append(a);
     }
@@ -1155,7 +1155,7 @@ Stanza Message::toStanza(Stream *stream) const
     if (containsHTML()) {
         QDomElement html = s.createElement("http://jabber.org/protocol/xhtml-im", "html");
         s.appendChild(html);
-        for (HTMLElement el : d->htmlElements) {
+        for (const HTMLElement &el : qAsConst(d->htmlElements)) {
             html.appendChild(s.doc().importNode(el.body(), true).toElement());
         }
     }
@@ -1181,7 +1181,7 @@ Stanza Message::toStanza(Stream *stream) const
     }
 
     // urls
-    for (const Url &uit : d->urlList) {
+    for (const Url &uit : qAsConst(d->urlList)) {
         QDomElement x = s.createElement("jabber:x:oob", "x");
         x.appendChild(s.createTextElement("jabber:x:oob", "url", uit.url()));
         if (!uit.desc().isEmpty())
@@ -1200,7 +1200,7 @@ Stanza Message::toStanza(Stream *stream) const
                 x.appendChild(s.createTextElement("jabber:x:event", "id", d->eventId));
         }
 
-        for (const MsgEvent &ev : d->eventList) {
+        for (const MsgEvent &ev : qAsConst(d->eventList)) {
             switch (ev) {
             case OfflineEvent:
                 x.appendChild(s.createElement("jabber:x:event", "offline"));
@@ -1287,7 +1287,7 @@ Stanza Message::toStanza(Stream *stream) const
     // addresses
     if (!d->addressList.isEmpty()) {
         QDomElement as = s.createElement("http://jabber.org/protocol/address", "addresses");
-        for (Address a : d->addressList) {
+        for (const Address &a : qAsConst(d->addressList)) {
             as.appendChild(a.toXml(s));
         }
         s.appendChild(as);
@@ -1296,7 +1296,7 @@ Stanza Message::toStanza(Stream *stream) const
     // roster item exchange
     if (!d->rosterExchangeItems.isEmpty()) {
         QDomElement rx = s.createElement("http://jabber.org/protocol/rosterx", "x");
-        for (RosterExchangeItem r : d->rosterExchangeItems) {
+        for (const RosterExchangeItem &r : qAsConst(d->rosterExchangeItems)) {
             rx.appendChild(r.toXml(s));
         }
         s.appendChild(rx);
@@ -1322,7 +1322,7 @@ Stanza Message::toStanza(Stream *stream) const
     // muc
     if (!d->mucInvites.isEmpty()) {
         QDomElement e = s.createElement("http://jabber.org/protocol/muc#user", "x");
-        for (MUCInvite i : d->mucInvites) {
+        for (const MUCInvite &i : qAsConst(d->mucInvites)) {
             e.appendChild(i.toXml(s.doc()));
         }
         if (!d->mucPassword.isEmpty()) {
@@ -1351,7 +1351,7 @@ Stanza Message::toStanza(Stream *stream) const
     }
 
     // bits of binary
-    for (const BoBData &bd : d->bobDataList) {
+    for (const BoBData &bd : qAsConst(d->bobDataList)) {
         s.appendChild(bd.toXml(&s.doc()));
     }
 
@@ -1397,7 +1397,7 @@ Stanza Message::toStanza(Stream *stream) const
     }
 
     // XEP-0372 and XEP-0385
-    for (auto const &r : d->references) {
+    for (auto const &r : qAsConst(d->references)) {
         s.appendChild(r.toXml(&s.doc()));
     }
 
@@ -2401,8 +2401,8 @@ bool RosterItem::isPush() const { return v_push; }
 
 bool RosterItem::inGroup(const QString &g) const
 {
-    for (QStringList::ConstIterator it = v_groups.begin(); it != v_groups.end(); ++it) {
-        if (*it == g)
+    for (const auto &vgroup : v_groups) {
+        if (vgroup == g)
             return true;
     }
     return false;
@@ -2449,8 +2449,8 @@ QDomElement RosterItem::toXml(QDomDocument *doc) const
     item.setAttribute("subscription", v_subscription.toString());
     if (!v_ask.isEmpty())
         item.setAttribute("ask", v_ask);
-    for (QStringList::ConstIterator it = v_groups.begin(); it != v_groups.end(); ++it)
-        item.appendChild(textTag(doc, "group", *it));
+    for (const auto &vgroup : v_groups)
+        item.appendChild(textTag(doc, "group", vgroup));
 
     return item;
 }

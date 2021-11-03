@@ -89,7 +89,7 @@ void CapsRegistry::save()
     QDomElement  capabilities = doc.createElement("capabilities");
     doc.appendChild(capabilities);
     QHash<QString, CapsInfo>::ConstIterator i = capsInfo_.constBegin();
-    for (; i != capsInfo_.end(); i++) {
+    for (; i != capsInfo_.constEnd(); i++) {
         QDomElement info = i.value().toXml(&doc);
         info.setAttribute("node", i.key());
         capabilities.appendChild(info);
@@ -320,7 +320,7 @@ void CapsManager::updateDisco(const Jid &jid, const DiscoItem &item)
 void CapsManager::capsRegistered(const CapsSpec &cs)
 {
     // Notify affected jids.
-    for (const QString &s : capsJids_[cs.flatten()]) {
+    for (const QString &s : qAsConst(capsJids_[cs.flatten()])) {
         // qDebug() << QString("caps.cpp: Notifying %1.").arg(s.replace('%',"%%"));
         emit capsChanged(s);
     }

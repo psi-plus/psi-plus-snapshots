@@ -164,7 +164,7 @@ static bool cert_match_domain(const QString &certname, const QString &acedomain)
         return false;
 
     // don't allow empty parts
-    for (const QString &s : parts_name) {
+    for (const QString &s : qAsConst(parts_name)) {
         if (s.isEmpty())
             return false;
     }
