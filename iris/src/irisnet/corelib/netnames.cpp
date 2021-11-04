@@ -525,7 +525,7 @@ XMPP::NameRecord WeightedNameRecordList::takeNext()
     /* Delete the entry from list, to prevent it from being tried multiple times */
     currentPriorityGroup->second.remove(it->weight(), *it);
     if (currentPriorityGroup->second.isEmpty()) {
-        priorityGroups.erase(currentPriorityGroup++);
+        currentPriorityGroup = priorityGroups.erase(currentPriorityGroup);
     }
 
     return result;
@@ -554,7 +554,8 @@ void WeightedNameRecordList::append(const XMPP::WeightedNameRecordList &list)
 void WeightedNameRecordList::append(const QList<XMPP::NameRecord> &list)
 {
     for (const XMPP::NameRecord &record : list)
-        append(record);
+        if (record.type() == XMPP::NameRecord::Srv)
+            append(record);
 
     /* Reset to beginning */
     currentPriorityGroup = priorityGroups.begin();
@@ -641,8 +642,8 @@ public:
 class NameManager : public QObject {
     Q_OBJECT
 public:
-    NameProvider *                      p_net, *p_local;
-    ServiceProvider *                   p_serv;
+    NameProvider                       *p_net, *p_local;
+    ServiceProvider                    *p_serv;
     QHash<int, NameResolver::Private *> res_instances;
     QHash<int, int>                     res_sub_instances;
 
@@ -687,7 +688,7 @@ public:
         np->type      = qType;
         np->longLived = longLived;
         if (!p_net) {
-            NameProvider *           c    = 0;
+            NameProvider            *c    = 0;
             QList<IrisNetProvider *> list = irisNetProviders();
             for (int n = 0; n < list.count(); ++n) {
                 IrisNetProvider *p = list[n];
@@ -751,7 +752,7 @@ public:
         QMutexLocker locker(nman_mutex());
 
         if (!p_serv) {
-            ServiceProvider *        c    = nullptr;
+            ServiceProvider         *c    = nullptr;
             QList<IrisNetProvider *> list = irisNetProviders();
             for (int n = 0; n < list.count(); ++n) {
                 IrisNetProvider *p = list[n];
@@ -786,7 +787,7 @@ public:
         QMutexLocker locker(nman_mutex());
 
         if (!p_serv) {
-            ServiceProvider *        c    = nullptr;
+            ServiceProvider         *c    = nullptr;
             QList<IrisNetProvider *> list = irisNetProviders();
             for (int n = 0; n < list.count(); ++n) {
                 IrisNetProvider *p = list[n];
@@ -817,7 +818,7 @@ public:
         QMutexLocker locker(nman_mutex());
 
         if (!p_serv) {
-            ServiceProvider *        c    = nullptr;
+            ServiceProvider         *c    = nullptr;
             QList<IrisNetProvider *> list = irisNetProviders();
             for (int n = 0; n < list.count(); ++n) {
                 IrisNetProvider *p = list[n];
@@ -852,7 +853,7 @@ private slots:
     void provider_resolve_resultsReady(int id, const QList<XMPP::NameRecord> &results)
     {
         NameResolver::Private *np = res_instances.value(id);
-        NameResolver *         q  = np->q; // resolve_cleanup deletes np
+        NameResolver          *q  = np->q; // resolve_cleanup deletes np
         if (!np->longLived)
             resolve_cleanup(np);
         emit q->resultsReady(results);
@@ -861,7 +862,7 @@ private slots:
     void provider_resolve_error(int id, XMPP::NameResolver::Error e)
     {
         NameResolver::Private *np = res_instances.value(id);
-        NameResolver *         q  = np->q; // resolve_cleanup deletes np
+        NameResolver          *q  = np->q; // resolve_cleanup deletes np
         resolve_cleanup(np);
         emit q->error(e);
     }
@@ -886,7 +887,7 @@ private slots:
     {
         // transfer to local
         if (!p_local) {
-            NameProvider *           c    = nullptr;
+            NameProvider            *c    = nullptr;
             QList<IrisNetProvider *> list = irisNetProviders();
             for (int n = 0; n < list.count(); ++n) {
                 IrisNetProvider *p = list[n];
@@ -1344,8 +1345,8 @@ void ServiceResolver::try_next_srv()
 #endif
 
     /* if there are still hosts we did not try */
-    if (!d->srvList.isEmpty()) {
-        XMPP::NameRecord record(d->srvList.takeNext());
+    XMPP::NameRecord record = d->srvList.takeNext();
+    if (!record.isNull()) {
         /* lookup host by name and specify port for later use */
         start(record.name(), quint16(record.port()));
     } else {
