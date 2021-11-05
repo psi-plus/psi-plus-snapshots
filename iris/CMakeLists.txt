@@ -46,7 +46,7 @@ set( CMAKE_MODULE_PATH
     )
 
 set( DEFAULT_BUNDLED_QCA OFF )
-if (APPLE OR MSVC)
+if (APPLE OR (MSVC OR USE_MXE))
     set( DEFAULT_BUNDLED_QCA ON )
 endif()
 
@@ -60,6 +60,10 @@ include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 include_directories(include/iris)
 
 set(CMAKE_AUTOMOC ON)
+
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo"))
+    include(cmake/modules/debug-definitions.cmake)
+endif()
 
 find_package(Qt5 COMPONENTS Core Gui Xml Network REQUIRED)
 

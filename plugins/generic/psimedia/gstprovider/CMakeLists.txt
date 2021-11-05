@@ -14,6 +14,17 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 get_filename_component(ABS_GST_PARENT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo"))
+    option(PSIMEDIA_PIPELINE_DEBUG "Add -DPIPELINE_DEBUG definition" OFF)
+    option(PSIMEDIA_RTPWORKER_DEBUG "Add -DRTPWORKER_DEBUG definition" OFF)
+    if(PSIMEDIA_PIPELINE_DEBUG)
+        add_definitions(-DPIPELINE_DEBUG)
+    endif()
+    if(PSIMEDIA_RTPWORKER_DEBUG)
+        add_definitions(-DRTPWORKER_DEBUG)
+    endif()
+endif()
+
 #search Glib modules
 pkg_check_modules(GLIBMODULES REQUIRED
                     glib-2.0
