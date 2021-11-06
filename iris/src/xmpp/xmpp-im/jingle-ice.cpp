@@ -248,7 +248,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         static void resolve(QObject *parent, ResolveList list, std::function<void()> &&callback)
         {
             auto resolver      = new Resolver(parent); // will be deleted when all finished. see onOneFinished
-            resolver->counter  = list.size();
+            resolver->counter  = int(list.size());
             resolver->callback = callback;
             for (auto &item : list) {
                 // FIXME hosts may dup in the list. needs optimization

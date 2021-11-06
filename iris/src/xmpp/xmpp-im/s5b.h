@@ -253,7 +253,7 @@ signals:
     void incomingUdp(bool isInit, const QHostAddress &addr, int sourcePort, const QString &key, const QByteArray &data);
 
 private:
-    class Private;
+    struct Private;
     QScopedPointer<Private> d;
 };
 

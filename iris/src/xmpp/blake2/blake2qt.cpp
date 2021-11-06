@@ -58,7 +58,7 @@ bool Blake2Hash::addData(QIODevice *dev)
 QByteArray Blake2Hash::final()
 {
     QByteArray ret;
-    ret.resize(d->state.outlen);
+    ret.resize(int(d->state.outlen));
     if (blake2b_final(&d->state, ret.data(), size_t(ret.size())) == 0)
         return ret;
     return QByteArray();

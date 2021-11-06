@@ -78,7 +78,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     void AssociationPrivate::OnSctpAssociationSendData(RTC::SctpAssociation *, const uint8_t *data, size_t len)
     {
         // qDebug("jignle-sctp: on outgoing data");
-        QByteArray bytes((char *)data, len);
+        QByteArray bytes((char *)data, int(len));
         QMetaObject::invokeMethod(this, "onOutgoingData", Q_ARG(QByteArray, bytes));
     }
 
@@ -86,7 +86,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
                                                               const uint8_t *msg, size_t len)
     {
         // qDebug("jignle-sctp: on incoming data");
-        QByteArray bytes((char *)msg, len);
+        QByteArray bytes((char *)msg, int(len));
         QMetaObject::invokeMethod(this, "onIncomingData", Q_ARG(QByteArray, bytes), Q_ARG(quint16, streamId),
                                   Q_ARG(quint32, ppid));
     }
