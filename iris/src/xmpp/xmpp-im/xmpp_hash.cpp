@@ -36,17 +36,17 @@ namespace XMPP {
 //----------------------------------------------------------------------------
 static const char *const sha1_synonims[] = { "sha1", nullptr };
 // NOTE: keep this in sync with enum. same order!
-static const struct {
-    const char *       text;
+struct HashDesc {
+    const char        *text;
     Hash::Type         hashType;
     const char *const *synonims = nullptr;
-} hashTypes[] = { { "sha-1", Hash::Type::Sha1, sha1_synonims },
-                  { "sha-256", Hash::Type::Sha256 },
-                  { "sha-512", Hash::Type::Sha512 },
-                  { "sha3-256", Hash::Type::Sha3_256 },
-                  { "sha3-512", Hash::Type::Sha3_512 },
-                  { "blake2b-256", Hash::Type::Blake2b256 },
-                  { "blake2b-512", Hash::Type::Blake2b512 } };
+};
+static const std::array hashTypes {
+    HashDesc { "unknown", Hash::Type::Unknown },        HashDesc { "sha-1", Hash::Type::Sha1, sha1_synonims },
+    HashDesc { "sha-256", Hash::Type::Sha256 },         HashDesc { "sha-512", Hash::Type::Sha512 },
+    HashDesc { "sha3-256", Hash::Type::Sha3_256 },      HashDesc { "sha3-512", Hash::Type::Sha3_512 },
+    HashDesc { "blake2b-256", Hash::Type::Blake2b256 }, HashDesc { "blake2b-512", Hash::Type::Blake2b512 }
+};
 
 using HashVariant = std::variant<std::nullptr_t, QCryptographicHash, QCA::Hash, Blake2Hash>;
 HashVariant findHasher(Hash::Type hashType)
@@ -122,24 +122,24 @@ Hash::Hash(const QDomElement &el)
 
 QString Hash::stringType() const
 {
-    if (!v_type)
-        return QString();
-    static_assert(LastType == (sizeof(hashTypes) / sizeof(hashTypes[0])), "hashType and enum are not in sync");
-    return QLatin1String(hashTypes[int(v_type) - 1].text);
+    if (!v_type || int(v_type) > LastType)
+        return QString(); // must be empty. other code relies on it
+    static_assert(LastType + 1 == hashTypes.size(), "hashType and enum are not in sync");
+    return QLatin1String(hashTypes[int(v_type)].text);
 }
 
 Hash::Type Hash::parseType(const QStringRef &algo)
 {
     if (!algo.isEmpty()) {
-        for (size_t n = 0; n < sizeof(hashTypes) / sizeof(hashTypes[0]); ++n) {
-            if (algo == QLatin1String(hashTypes[n].text)) {
-                return hashTypes[n].hashType;
+        for (auto const &hash : hashTypes) {
+            if (algo == QLatin1String(hash.text)) {
+                return hash.hashType;
             }
-            if (hashTypes[n].synonims) {
-                auto cur = hashTypes[n].synonims;
+            if (hash.synonims) {
+                auto cur = hash.synonims;
                 while (*cur) {
                     if (algo == QLatin1String(*cur)) {
-                        return hashTypes[n].hashType;
+                        return hash.hashType;
                     }
                     cur++;
                 }
@@ -205,17 +205,14 @@ bool Hash::compute(QIODevice *dev)
 
 QDomElement Hash::toXml(QDomDocument *doc) const
 {
-    if (v_type != Type::Unknown) {
-        for (size_t n = 0; n < sizeof(hashTypes) / sizeof(hashTypes[0]); ++n) {
-            if (v_type == hashTypes[n].hashType) {
-                auto el = doc->createElementNS(HASH_NS, QLatin1String(v_data.isEmpty() ? "hash-used" : "hash"));
-                el.setAttribute(QLatin1String("algo"), QLatin1String(hashTypes[n].text));
-                if (!v_data.isEmpty()) {
-                    XMLHelper::setTagText(el, v_data.toBase64());
-                }
-                return el;
-            }
+    auto stype = stringType();
+    if (!stype.isEmpty()) {
+        auto el = doc->createElementNS(HASH_NS, QLatin1String(v_data.isEmpty() ? "hash-used" : "hash"));
+        el.setAttribute(QLatin1String("algo"), stype);
+        if (!v_data.isEmpty()) {
+            XMLHelper::setTagText(el, v_data.toBase64());
         }
+        return el;
     }
     return QDomElement();
 }
@@ -223,8 +220,8 @@ QDomElement Hash::toXml(QDomDocument *doc) const
 void Hash::populateFeatures(Features &features)
 {
     features.addFeature("urn:xmpp:hashes:2");
-    for (size_t n = 0; n < sizeof(hashTypes) / sizeof(hashTypes[0]); ++n) {
-        features.addFeature(QLatin1String("urn:xmpp:hash-function-text-names:") + QLatin1String(hashTypes[n].text));
+    for (auto const &hash : hashTypes) {
+        features.addFeature(QLatin1String("urn:xmpp:hash-function-text-names:") + QLatin1String(hash.text));
     }
 }
 
@@ -307,7 +304,7 @@ bool StreamHash::addData(const QByteArray &data)
 
     bool ret = true;
     std::visit(
-        [&data, &ret, this](auto &&arg) {
+        [&data, &ret](auto &&arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, QCA::Hash>) {
                 arg.update(data);
@@ -325,7 +322,7 @@ bool StreamHash::addData(const QByteArray &data)
 Hash StreamHash::final()
 {
     auto data = std::visit(
-        [this](auto &&arg) {
+        [](auto &&arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, QCA::Hash>) {
                 return arg.final().toByteArray();
