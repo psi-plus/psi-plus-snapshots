@@ -143,12 +143,12 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         XMPP::Stanza::Error lastError;
         Reason              lastReason;
         Connection::Ptr     connection;
-        QIODevice *         device    = nullptr;
+        QIODevice          *device    = nullptr;
         qint64              bytesLeft = 0;
         QList<Hash>         outgoingChecksum;
         QList<Hash>         incomingChecksum;
-        QTimer *            finalizeTimer = nullptr;
-        FileHasher *        hasher        = nullptr;
+        QTimer             *finalizeTimer = nullptr;
+        FileHasher         *hasher        = nullptr;
 
         void setState(State s)
         {
@@ -642,7 +642,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         _terminationReason = Reason(cond, comment);
         if (_transport) {
             _transport->disconnect(this);
-            _transport.reset();
+            _transport->stop();
         }
 
         if (_creator == _pad->session()->role() && _state <= State::ApprovedToSend) {

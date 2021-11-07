@@ -306,6 +306,8 @@ namespace XMPP { namespace Jingle {
         new ConnectionWaiter(
             features, std::move(ready),
             [this]() {
+                qDebug("Application::expectSingleConnection: stopping failed %s transport",
+                       qPrintable(_transport->pad()->ns()));
                 _transport->stop();
                 selectNextTransport();
             },
@@ -318,8 +320,9 @@ namespace XMPP { namespace Jingle {
     {
         if (!_transportSelector->hasMoreTransports()) {
             if (_transport) {
+                qDebug("Application::selectNextTransport: stopping %s transport", qPrintable(_transport->pad()->ns()));
                 _transport->disconnect(this);
-                _transport.reset();
+                _transport->stop();
             }
             _state             = (isRemote() || _state > State::ApprovedToSend) ? State::Finishing : State::Finished;
             _terminationReason = Reason(Reason::FailedTransport);
@@ -396,6 +399,8 @@ namespace XMPP { namespace Jingle {
                     _transportReplaceReason = reason;
                 }
             }
+            qDebug("Application::setTransport: resetting %s transport in favor of %s",
+                   qPrintable(_transport->pad()->ns()), qPrintable(transport->pad()->ns()));
             _transport->disconnect(this);
             _transport.reset();
         }
