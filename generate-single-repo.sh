@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2020-12-23
+# Updated: 2021-11-15
 # Version: N/A
 
 set -e
@@ -178,7 +178,7 @@ echo "* Trash is removed."
 
 cp -a "${MAIN_DIR}/psi/win32"/*.rc* "${SNAPSHOTS_DIR}/win32/"
 cp -a "${MAIN_DIR}/psi/win32"/*.cmake "${SNAPSHOTS_DIR}/win32/"
-cp -a "${MAIN_DIR}/psi/win32"/*.manifest "${SNAPSHOTS_DIR}/win32/"
+cp -a "${MAIN_DIR}/psi/win32"/*.manifest* "${SNAPSHOTS_DIR}/win32/"
 echo "* Some files for MS Windows builds are copied."
 
 cp -a "${SNAPSHOTS_DIR}/mac/application-plus.icns" \
