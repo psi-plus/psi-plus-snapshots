@@ -985,7 +985,7 @@ void JT_VCard::set(const VCard &card)
     d->iq.appendChild(card.toXml(doc()));
 }
 
-// isTarget is when we setting target's vcard. for example in case of muc own vcard
+// isTarget is when we setting target's vCard. for example in case of muc own vCard
 void JT_VCard::set(const Jid &j, const VCard &card, bool isTarget)
 {
     type     = 1;
@@ -1021,7 +1021,7 @@ bool JT_VCard::take(const QDomElement &x)
                 }
             }
 
-            setError(ErrDisc + 1, tr("No VCard available"));
+            setError(ErrDisc + 1, tr("No vCard available"));
             return true;
         } else {
             setSuccess();

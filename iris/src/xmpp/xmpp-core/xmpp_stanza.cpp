@@ -55,7 +55,7 @@ using namespace XMPP;
     both type/condition and code.
     Error text in output XML is always presented in XMPP-style only.
 
-    All functions will always try to guess missing information based on mappings defined in the JEP.
+    All functions will always try to guess missing information based on mappings defined in the XEP.
 */
 
 /**

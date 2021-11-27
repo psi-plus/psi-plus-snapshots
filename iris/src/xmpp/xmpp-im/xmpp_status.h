@@ -131,7 +131,7 @@ public:
     void setXSigned(const QString &);
     void setSongTitle(const QString &);
 
-    // XEP-153: VCard-based Avatars
+    // XEP-0153: vCard-Based Avatars
     const QByteArray &photoHash() const;
     void              setPhotoHash(const QByteArray &);
     bool              hasPhotoHash() const;

@@ -230,7 +230,7 @@ public:
         id2s[FID_Groupchat]      = tr("Groupchat");
         id2s[FID_Gateway]        = tr("Gateway");
         id2s[FID_Disco]          = tr("Service Discovery");
-        id2s[FID_VCard]          = tr("VCard");
+        id2s[FID_VCard]          = tr("vCard");
         id2s[FID_AHCommand]      = tr("Execute command");
         id2s[FID_QueryVersion]   = tr("Query version");
         id2s[FID_MessageCarbons] = tr("Message Carbons");

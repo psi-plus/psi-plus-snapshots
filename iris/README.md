@@ -31,13 +31,13 @@ Iris depends on Qt and QCA.
   * Roster management
   * Subscriptions
 
-* JEP extensions:
+* XEP extensions:
   * Version/Time requests
   * Service Discovery (disco, browse, and older ‘agents’ modes)
   * Account registration
   * Password changing
   * Agent/Transport registration
-  * VCards
+  * vCards
   * Basic Groupchat
   * OpenPGP capable
   * S5B Direct Connections
