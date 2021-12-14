@@ -137,6 +137,12 @@ void AdvancedConnector::Proxy::setUserPass(const QString &user, const QString &p
 
 void AdvancedConnector::Proxy::setPollInterval(int secs) { v_poll = secs; }
 
+AdvancedConnector::Proxy::operator QNetworkProxy()
+{
+    return QNetworkProxy(t == Socks ? QNetworkProxy::Socks5Proxy : QNetworkProxy::HttpProxy, v_host, v_port, v_user,
+                         v_pass);
+}
+
 //----------------------------------------------------------------------------
 // AdvancedConnector
 //----------------------------------------------------------------------------

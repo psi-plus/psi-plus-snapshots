@@ -123,6 +123,8 @@ public:
         void setUserPass(const QString &user, const QString &pass);
         void setPollInterval(int secs);
 
+        operator QNetworkProxy();
+
     private:
         int     t = None;
         QUrl    v_url;

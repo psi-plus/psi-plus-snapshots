@@ -41,8 +41,8 @@ static QLatin1String xmlns_v0_3_1("urn:xmpp:http:upload:0");
 class HttpFileUpload::Private {
 public:
     HttpFileUpload::State           state        = State::None;
-    XMPP::Client *                  client       = nullptr;
-    QIODevice *                     sourceDevice = nullptr;
+    XMPP::Client                   *client       = nullptr;
+    QIODevice                      *sourceDevice = nullptr;
     QPointer<QNetworkAccessManager> qnam         = nullptr;
     quint64                         fileSize     = 0;
     QString                         fileName;
@@ -369,7 +369,7 @@ bool JT_HTTPFileUpload::take(const QDomElement &e)
     bool                 correct_xmlns = false;
     QString              getUrl, putUrl;
     XEP0363::HttpHeaders headers;
-    const QDomElement &  slot = e.firstChildElement("slot");
+    const QDomElement   &slot = e.firstChildElement("slot");
     if (!slot.isNull()) {
         const QDomElement &get = slot.firstChildElement("get");
         const QDomElement &put = slot.firstChildElement("put");
@@ -419,11 +419,10 @@ bool JT_HTTPFileUpload::take(const QDomElement &e)
 
 class HttpFileUploadManager::Private {
 public:
-    Client *                            client = nullptr;
-    QPointer<QNetworkAccessManager>     qnam;
+    Client                             *client = nullptr;
+    QPointer<QNetworkAccessManager>     externalQnam;
     int                                 discoStatus = 0;
     QList<HttpFileUpload::HttpHost>     discoHosts;
-    bool                                externalQnam = false;
     std::list<HttpFileUpload::HttpHost> hosts;
 };
 
@@ -433,11 +432,7 @@ HttpFileUploadManager::~HttpFileUploadManager() { delete d; }
 
 int HttpFileUploadManager::discoveryStatus() const { return d->discoStatus; }
 
-void HttpFileUploadManager::setNetworkAccessManager(QNetworkAccessManager *qnam)
-{
-    d->externalQnam = true;
-    d->qnam         = qnam;
-}
+void HttpFileUploadManager::setNetworkAccessManager(QNetworkAccessManager *qnam) { d->externalQnam = qnam; }
 
 HttpFileUpload *HttpFileUploadManager::upload(const QString &srcFilename, const QString &dstFilename,
                                               const QString &mType)
@@ -454,7 +449,7 @@ HttpFileUpload *HttpFileUploadManager::upload(QIODevice *source, quint64 fsize, 
                                               const QString &mType)
 {
     auto                   hfu  = new HttpFileUpload(d->client, source, fsize, dstFilename, mType);
-    QNetworkAccessManager *qnam = d->externalQnam ? d->qnam.data() : d->client->networkAccessManager();
+    QNetworkAccessManager *qnam = d->externalQnam ? d->externalQnam.data() : d->client->networkAccessManager();
     hfu->setNetworkAccessManager(qnam);
     QMetaObject::invokeMethod(hfu, "start", Qt::QueuedConnection);
     return hfu;
