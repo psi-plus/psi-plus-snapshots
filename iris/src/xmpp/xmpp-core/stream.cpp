@@ -157,11 +157,11 @@ public:
 
     bool in_rrsig = false;
 
-    Connector *   conn       = nullptr;
-    ByteStream *  bs         = nullptr;
-    TLSHandler *  tlsHandler = nullptr;
-    QCA::TLS *    tls        = nullptr;
-    QCA::SASL *   sasl       = nullptr;
+    Connector    *conn       = nullptr;
+    ByteStream   *bs         = nullptr;
+    TLSHandler   *tlsHandler = nullptr;
+    QCA::TLS     *tls        = nullptr;
+    QCA::SASL    *sasl       = nullptr;
     SecureStream *ss         = nullptr;
     CoreProtocol  client;
     CoreProtocol  srv;
@@ -1108,7 +1108,11 @@ bool ClientStream::handleNeed()
         qDebug("Need StartTLS\n");
 #endif
         d->using_tls = true;
-        d->ss->startTLSClient(d->tlsHandler, d->server, d->client.spare);
+        auto tlsHost = d->server;
+        if (!d->connectHost.isEmpty() && QHostAddress(d->connectHost).isNull()) {
+            tlsHost = d->connectHost;
+        }
+        d->ss->startTLSClient(d->tlsHandler, tlsHost, d->client.spare);
         return false;
     }
     case CoreProtocol::NCompress: {

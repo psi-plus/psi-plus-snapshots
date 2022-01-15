@@ -128,7 +128,7 @@ public:
        For the record to be usable, call an appropriate set<em>X</em> function (where <em>X</em> is the desired type)
        afterwards.
     */
-    NameRecord(const QByteArray &owner, int ttl);
+    NameRecord(const QString &owner, int ttl);
 
     /**
        \brief Constructs a copy of \a from
@@ -167,7 +167,7 @@ public:
 
        \sa setOwner
     */
-    QByteArray owner() const;
+    QString owner() const;
 
     /**
        \brief Returns the TTL (time-to-live) of this record
@@ -255,7 +255,7 @@ public:
 
        \sa owner
     */
-    void setOwner(const QByteArray &name);
+    void setOwner(const QString &name);
 
     /**
        \brief Sets the TTL (time-to-live) of this record to \a ttl seconds
@@ -649,8 +649,9 @@ signals:
      * The lookup succeeded
      * \param address Resolved IP address
      * \param port Port the service resides on
+     * \param hostname Hostname form DNS reply with address:port
      */
-    void resultReady(const QHostAddress &address, quint16 port);
+    void resultReady(const QHostAddress &address, quint16 port, const QString &hostname);
     /*! The lookup failed */
     void error(XMPP::ServiceResolver::Error);
     /*! SRV domain:port records received. No IP yet. */

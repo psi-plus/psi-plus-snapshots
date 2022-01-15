@@ -267,7 +267,7 @@ elseif(USE_ASPELL)
 endif()
 
 if(LINUX AND USE_XSS)
-    find_package(X11 REQUIRED)
+    find_package(X11 COMPONENTS Xss REQUIRED)
     include_directories(${X11_Xscreensaver_INCLUDE_PATH})
     list(APPEND EXTRA_LDFLAGS ${X11_Xscreensaver_LIB})
 endif()

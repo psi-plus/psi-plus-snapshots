@@ -39,7 +39,7 @@ namespace XMPP {
 //----------------------------------------------------------------------------
 class NameRecord::Private : public QSharedData {
 public:
-    QByteArray       owner;
+    QString          owner; // de-ACE-ed version of domain name from dns reply
     NameRecord::Type type;
     int              ttl;
 
@@ -59,7 +59,7 @@ public:
 
 NameRecord::NameRecord() : d(nullptr) { }
 
-NameRecord::NameRecord(const QByteArray &owner, int ttl) : d(nullptr)
+NameRecord::NameRecord(const QString &owner, int ttl) : d(nullptr)
 {
     setOwner(owner);
     setTtl(ttl);
@@ -108,7 +108,7 @@ bool NameRecord::operator==(const NameRecord &o)
 
 bool NameRecord::isNull() const { return (d ? false : true); }
 
-QByteArray NameRecord::owner() const
+QString NameRecord::owner() const
 {
     Q_ASSERT(d);
     return d->owner;
@@ -180,7 +180,7 @@ QByteArray NameRecord::rawData() const
     return d->rawData;
 }
 
-void NameRecord::setOwner(const QByteArray &name)
+void NameRecord::setOwner(const QString &name)
 {
     ENSURE_D
     d->owner = name;
@@ -702,8 +702,14 @@ public:
             // use queued connections
             qRegisterMetaType<QList<XMPP::NameRecord>>("QList<XMPP::NameRecord>");
             qRegisterMetaType<XMPP::NameResolver::Error>("XMPP::NameResolver::Error");
-            connect(p_net, SIGNAL(resolve_resultsReady(int, QList<XMPP::NameRecord>)),
-                    SLOT(provider_resolve_resultsReady(int, QList<XMPP::NameRecord>)));
+            connect(p_net, &NameProvider::resolve_resultsReady, this,
+                    [this](int id, const QList<XMPP::NameRecord> &results) {
+                        NameResolver::Private *np = res_instances.value(id);
+                        NameResolver          *q  = np->q; // resolve_cleanup deletes np
+                        if (!np->longLived)
+                            resolve_cleanup(np);
+                        emit q->resultsReady(results);
+                    });
             connect(p_net, SIGNAL(resolve_error(int, XMPP::NameResolver::Error)),
                     SLOT(provider_resolve_error(int, XMPP::NameResolver::Error)));
             connect(p_net, SIGNAL(resolve_useLocal(int, QByteArray)), SLOT(provider_resolve_useLocal(int, QByteArray)));
@@ -801,9 +807,13 @@ public:
             // use queued connections
             qRegisterMetaType<QList<XMPP::ServiceProvider::ResolveResult>>(
                 "QList<XMPP::ServiceProvider::ResolveResult>");
-            connect(p_serv, SIGNAL(resolve_resultsReady(int, QList<XMPP::ServiceProvider::ResolveResult>)),
-                    SLOT(provider_resolve_resultsReady(int, QList<XMPP::ServiceProvider::ResolveResult>)),
-                    Qt::QueuedConnection);
+            connect(
+                p_serv, &ServiceProvider::resolve_resultsReady, this,
+                [this](int id, const QList<XMPP::ServiceProvider::ResolveResult> &results) {
+                    ServiceResolver::Private *np = sres_instances.value(id);
+                    emit np->q->resultReady(results[0].address, quint16(results[0].port), results[0].hostName);
+                },
+                Qt::QueuedConnection);
         }
 
         /* store the id so we can stop it later */
@@ -850,14 +860,6 @@ public:
     }
 
 private slots:
-    void provider_resolve_resultsReady(int id, const QList<XMPP::NameRecord> &results)
-    {
-        NameResolver::Private *np = res_instances.value(id);
-        NameResolver          *q  = np->q; // resolve_cleanup deletes np
-        if (!np->longLived)
-            resolve_cleanup(np);
-        emit q->resultsReady(results);
-    }
 
     void provider_resolve_error(int id, XMPP::NameResolver::Error e)
     {
@@ -948,12 +950,6 @@ private slots:
         ServiceBrowser::Private *np = br_instances.value(id);
         // TODO
         emit np->q->error();
-    }
-
-    void provider_resolve_resultsReady(int id, const QList<XMPP::ServiceProvider::ResolveResult> &results)
-    {
-        ServiceResolver::Private *np = sres_instances.value(id);
-        emit                      np->q->resultReady(results[0].address, quint16(results[0].port));
     }
 
     void provider_publish_published(int id)
@@ -1329,7 +1325,7 @@ bool ServiceResolver::try_next_host()
     if (!d->hostList.empty()) {
         XMPP::NameRecord record(d->hostList.takeFirst());
         /* emit found address and the port specified earlier */
-        emit resultReady(record.address(), d->port);
+        emit resultReady(record.address(), d->port, record.owner());
         return true;
     }
 

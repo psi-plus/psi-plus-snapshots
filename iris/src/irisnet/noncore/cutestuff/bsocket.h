@@ -55,6 +55,7 @@ public:
     qintptr                  socket() const;
     void                     setSocket(QTcpSocket *);
     int                      state() const;
+    const QString           &host() const;
 
     // from ByteStream
     bool isOpen() const;

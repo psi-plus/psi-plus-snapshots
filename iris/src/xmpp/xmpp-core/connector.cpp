@@ -380,6 +380,9 @@ void AdvancedConnector::bs_connected()
         setUseSSL(true);
     }
 
+    if (auto bs = qobject_cast<BSocket *>(d->bs); bs && !bs->host().isEmpty()) {
+        d->host = bs->host();
+    }
     d->mode = Connected;
     emit connected();
 }

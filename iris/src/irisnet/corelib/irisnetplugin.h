@@ -35,12 +35,12 @@ class IRISNET_EXPORT IrisNetProvider : public QObject {
     Q_OBJECT
 
 public:
-    virtual NetInterfaceProvider *   createNetInterfaceProvider();
-    virtual NetGatewayProvider *     createNetGatewayProvider();
+    virtual NetInterfaceProvider    *createNetInterfaceProvider();
+    virtual NetGatewayProvider      *createNetGatewayProvider();
     virtual NetAvailabilityProvider *createNetAvailabilityProvider();
-    virtual NameProvider *           createNameProviderInternet();
-    virtual NameProvider *           createNameProviderLocal();
-    virtual ServiceProvider *        createServiceProvider();
+    virtual NameProvider            *createNameProviderInternet();
+    virtual NameProvider            *createNameProviderLocal();
+    virtual ServiceProvider         *createServiceProvider();
 };
 
 class IRISNET_EXPORT NetInterfaceProvider : public QObject {
@@ -135,7 +135,7 @@ public:
         QMap<QString, QByteArray> attributes;
         QHostAddress              address;
         int                       port;
-        QByteArray                hostName; // optional
+        QString                   hostName; // optional
     };
 
     ServiceProvider(QObject *parent = nullptr) : QObject(parent) { }

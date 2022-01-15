@@ -59,12 +59,15 @@ public:
 class EncryptionManager : public QObject {
     Q_OBJECT
 public:
+    using MethodId   = QString;
+    using MethodName = QString;
+
     ~EncryptionManager();
-    using MethodsMap = std::map<QString, QString>; // id to title
+    using MethodsMap = std::map<MethodId, MethodName>;
 
     void       registerMethod(EncryptionMethod *algo);
     void       unregisterMethod(EncryptionMethod *algo);
-    MethodsMap methods() const;
+    MethodsMap methods(EncryptionMethod::Capabilities caps = EncryptionMethod::Capabilities(0xff)) const;
 
 private:
     class Private;

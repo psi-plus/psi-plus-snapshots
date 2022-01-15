@@ -127,7 +127,7 @@ private slots:
             return;
         }
         QList<XMPP::NameRecord> results;
-        const auto &            addresses = info.addresses();
+        const auto             &addresses = info.addresses();
         for (const auto &a : addresses) {
             XMPP::NameRecord ir(info.hostName().toLatin1(), 5 * 60); // ttl = 5 mins
             ir.setAddress(a);
@@ -168,37 +168,37 @@ private slots:
 
         QList<XMPP::NameRecord> results;
         for (auto &qtr : lookup->hostAddressRecords()) {
-            XMPP::NameRecord ir(qtr.name().toLatin1(), qtr.timeToLive());
+            XMPP::NameRecord ir(qtr.name(), qtr.timeToLive());
             ir.setAddress(qtr.value());
             results += ir;
         }
         for (auto &qtr : lookup->mailExchangeRecords()) {
-            XMPP::NameRecord ir(qtr.name().toLatin1(), qtr.timeToLive());
+            XMPP::NameRecord ir(qtr.name(), qtr.timeToLive());
             ir.setMx(qtr.exchange().toLatin1(), qtr.preference());
             results += ir;
         }
         for (auto &qtr : lookup->nameServerRecords()) {
-            XMPP::NameRecord ir(qtr.name().toLatin1(), qtr.timeToLive());
+            XMPP::NameRecord ir(qtr.name(), qtr.timeToLive());
             ir.setNs(qtr.value().toLatin1());
             results += ir;
         }
         for (auto &qtr : lookup->pointerRecords()) {
-            XMPP::NameRecord ir(qtr.name().toLatin1(), qtr.timeToLive());
+            XMPP::NameRecord ir(qtr.name(), qtr.timeToLive());
             ir.setPtr(qtr.value().toLatin1());
             results += ir;
         }
         for (auto &qtr : lookup->canonicalNameRecords()) {
-            XMPP::NameRecord ir(qtr.name().toLatin1(), qtr.timeToLive());
+            XMPP::NameRecord ir(qtr.name(), qtr.timeToLive());
             ir.setCname(qtr.value().toLatin1());
             results += ir;
         }
         for (auto &qtr : lookup->serviceRecords()) {
-            XMPP::NameRecord ir(qtr.name().toLatin1(), qtr.timeToLive());
+            XMPP::NameRecord ir(qtr.name(), qtr.timeToLive());
             ir.setSrv(qtr.target().toLatin1(), qtr.port(), qtr.priority(), qtr.weight());
             results += ir;
         }
         for (auto &qtr : lookup->textRecords()) {
-            XMPP::NameRecord ir(qtr.name().toLatin1(), qtr.timeToLive());
+            XMPP::NameRecord ir(qtr.name(), qtr.timeToLive());
             ir.setTxt(qtr.values());
             results += ir;
         }

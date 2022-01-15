@@ -76,9 +76,10 @@ public:
     enum State { Failure, Created, Resolve, Connecting, Connected };
 
     struct SockData {
-        QTcpSocket *           sock;
+        QTcpSocket            *sock;
         QTcpSocketSignalRelay *relay;
         State                  state;
+        QString                hostname; // last resolved name
         XMPP::ServiceResolver *resolver;
     };
 
@@ -222,10 +223,8 @@ private:
     void initResolver(XMPP::ServiceResolver *resolver)
     {
         resolver->setParent(this);
-        connect(resolver, SIGNAL(resultReady(QHostAddress, quint16)), this,
-                SLOT(handleDnsReady(QHostAddress, quint16)));
-        connect(resolver, SIGNAL(error(XMPP::ServiceResolver::Error)), this,
-                SLOT(handleDnsError(XMPP::ServiceResolver::Error)));
+        connect(resolver, &XMPP::ServiceResolver::resultReady, this, &HappyEyeballsConnector::handleDnsReady);
+        connect(resolver, &XMPP::ServiceResolver::error, this, &HappyEyeballsConnector::handleDnsError);
     }
 
     void setCurrentByResolver(XMPP::ServiceResolver *resolver)
@@ -298,8 +297,8 @@ private slots:
         BSDEBUG << "splitting resolvers";
 #endif
         setCurrentByResolver(static_cast<XMPP::ServiceResolver *>(sender()));
-        SockData &                        sdv4 = sockets[lastIndex];
-        SockData &                        sdv6 = addSocket();
+        SockData                         &sdv4 = sockets[lastIndex];
+        SockData                         &sdv6 = addSocket();
         XMPP::ServiceResolver::ProtoSplit ps   = sdv4.resolver->happySplit();
         initResolver(ps.ipv4);
         initResolver(ps.ipv6);
@@ -322,13 +321,14 @@ private slots:
     }
 
     /* host resolved, now try to connect to it */
-    void handleDnsReady(const QHostAddress &address, quint16 port)
+    void handleDnsReady(const QHostAddress &address, quint16 port, const QString &hostname)
     {
 #ifdef BS_DEBUG
         BSDEBUG << "a:" << address << "p:" << port;
 #endif
         setCurrentByResolver(static_cast<XMPP::ServiceResolver *>(sender()));
-        sockets[lastIndex].state = Connecting;
+        sockets[lastIndex].state    = Connecting;
+        sockets[lastIndex].hostname = hostname;
         sockets[lastIndex].sock->connectToHost(address, port);
     }
 
@@ -381,7 +381,7 @@ public:
         qsock_relay = nullptr;
     }
 
-    QTcpSocket *           qsock;
+    QTcpSocket            *qsock;
     QTcpSocketSignalRelay *qsock_relay;
     int                    state;
 
@@ -512,6 +512,8 @@ void BSocket::setSocket(QTcpSocket *s)
 
 int BSocket::state() const { return d->state; }
 
+const QString &BSocket::host() const { return d->host; }
+
 bool BSocket::isOpen() const
 {
     if (d->state == Connected)
@@ -622,6 +624,7 @@ void BSocket::qs_connected()
     HappyEyeballsConnector::SockData sd = d->connector->takeCurrent(this);
     d->qsock                            = sd.sock;
     d->qsock_relay                      = sd.relay;
+    d->host                             = sd.hostname;
     d->connector->deleteLater();
     qs_connected_step2(true);
 }

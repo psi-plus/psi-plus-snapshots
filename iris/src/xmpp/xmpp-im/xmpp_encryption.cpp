@@ -31,11 +31,12 @@ void EncryptionManager::registerMethod(EncryptionMethod *algo) { d->methods.appe
 
 void EncryptionManager::unregisterMethod(EncryptionMethod *algo) { d->methods.removeOne(algo); }
 
-EncryptionManager::MethodsMap EncryptionManager::methods() const
+EncryptionManager::MethodsMap EncryptionManager::methods(EncryptionMethod::Capabilities caps) const
 {
     MethodsMap ret;
     for (auto const &m : qAsConst(d->methods)) {
-        ret[m->id()] = m->name();
+        if (caps & m->capabilities())
+            ret[m->id()] = m->name();
     }
     return ret;
 }
