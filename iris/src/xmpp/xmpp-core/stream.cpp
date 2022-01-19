@@ -1108,11 +1108,7 @@ bool ClientStream::handleNeed()
         qDebug("Need StartTLS\n");
 #endif
         d->using_tls = true;
-        auto tlsHost = d->server;
-        if (!d->connectHost.isEmpty() && QHostAddress(d->connectHost).isNull()) {
-            tlsHost = d->connectHost;
-        }
-        d->ss->startTLSClient(d->tlsHandler, tlsHost, d->client.spare);
+        d->ss->startTLSClient(d->tlsHandler, d->server, d->client.spare);
         return false;
     }
     case CoreProtocol::NCompress: {
