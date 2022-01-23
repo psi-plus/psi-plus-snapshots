@@ -1060,7 +1060,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             if (localUsedCandidate && localUsedCandidate.state() != Candidate::Discarded) {
                 prio = localUsedCandidate.priority();
             }
-            // find highest priority withing connected remote candidates
+            // find highest priority within connected remote candidates
             for (const auto &[_, c] : remoteCandidates) {
                 if (c.state() != Candidate::Discarded && c.state() >= Candidate::Pending && c.priority() > prio) {
                     prio = c.priority();

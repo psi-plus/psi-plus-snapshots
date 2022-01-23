@@ -402,7 +402,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                     break;
                 }
                 if (!found)
-                    qDebug("haven't found %s checksum withing received checksums",
+                    qDebug("haven't found %s checksum within received checksums",
                            qPrintable(expectedHash.stringType()));
             }
             outgoingReceived = true;
@@ -551,7 +551,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     {
         Q_ASSERT(_senders != _pad->session()->role());
         if (_senders == _pad->session()->role()) {
-            qCritical("streaming mode is implmented only for receiving, not sending");
+            qCritical("streaming mode is implemented only for receiving, not sending");
             remove(Reason::GeneralError, "unsupported file sender streaming mode");
             return;
         }
