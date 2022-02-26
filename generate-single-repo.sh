@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2021-11-15
+# Updated: 2022-02-26
 # Version: N/A
 
 set -e
@@ -172,6 +172,9 @@ echo "* Plugins from Psi project are copied."
 
 rsync -a "${MAIN_DIR}/resources/sound/" "${SNAPSHOTS_DIR}/sound/"
 echo "* Extra sound files from Psi project are copied."
+
+rsync -a "${MAIN_DIR}/resources/skins" "${SNAPSHOTS_DIR}/"
+echo "* Extra skins from Psi project are copied."
 
 remove_trash
 echo "* Trash is removed."
