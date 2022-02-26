@@ -1,0 +1,1214 @@
+<skin version="1.1" author="VitoZz" name="Breath_Dark" path="/home/vitaly/.local/share/psi+/skins/universal/breath">
+    <options>
+        <options.ui.look.colors.chat.link-color type="QColor">#0000ff</options.ui.look.colors.chat.link-color>
+        <options.ui.look.colors.chat.mailto-color type="QColor">#2c9dff</options.ui.look.colors.chat.mailto-color>
+        <options.ui.look.colors.contactlist.background type="QColor">#18191d</options.ui.look.colors.contactlist.background>
+        <options.ui.look.colors.contactlist.grouping.header-background type="QColor">#32383e</options.ui.look.colors.contactlist.grouping.header-background>
+        <options.ui.look.colors.contactlist.grouping.header-foreground type="QColor">#c0c0c0</options.ui.look.colors.contactlist.grouping.header-foreground>
+        <options.ui.look.colors.contactlist.profile.header-background type="QColor">#a0a0a0</options.ui.look.colors.contactlist.profile.header-background>
+        <options.ui.look.colors.contactlist.profile.header-foreground type="QColor">#c0c0c0</options.ui.look.colors.contactlist.profile.header-foreground>
+        <options.ui.look.colors.contactlist.status.away type="QColor">#777d7f</options.ui.look.colors.contactlist.status.away>
+        <options.ui.look.colors.contactlist.status.do-not-disturb type="QColor">#7f8587</options.ui.look.colors.contactlist.status.do-not-disturb>
+        <options.ui.look.colors.contactlist.status.offline type="QColor">#5b5b5b</options.ui.look.colors.contactlist.status.offline>
+        <options.ui.look.colors.contactlist.status.online type="QColor">#c0c0c0</options.ui.look.colors.contactlist.status.online>
+        <options.ui.look.colors.contactlist.status-messages type="QColor">#aeb7ba</options.ui.look.colors.contactlist.status-messages>
+        <options.ui.look.colors.messages.highlighting type="QColor">#ff0000</options.ui.look.colors.messages.highlighting>
+        <options.ui.look.colors.messages.informational type="QColor">#2da883</options.ui.look.colors.messages.informational>
+        <options.ui.look.colors.messages.received type="QColor">#c0c0c0</options.ui.look.colors.messages.received>
+        <options.ui.look.colors.messages.sent type="QColor">#c0c0c0</options.ui.look.colors.messages.sent>
+        <options.ui.look.colors.messages.usertext type="QColor">#c0c0c0</options.ui.look.colors.messages.usertext>
+        <options.ui.look.colors.muc.role-moderator type="QColor">#910000</options.ui.look.colors.muc.role-moderator>
+        <options.ui.look.colors.muc.role-norole type="QColor">#000000</options.ui.look.colors.muc.role-norole>
+        <options.ui.look.colors.muc.role-participant type="QColor">#00008a</options.ui.look.colors.muc.role-participant>
+        <options.ui.look.colors.muc.role-visitor type="QColor">#336600</options.ui.look.colors.muc.role-visitor>
+        <options.ui.look.colors.passive-popup.border type="QColor">#53575b</options.ui.look.colors.passive-popup.border>
+        <options.ui.look.colors.tooltip.background type="QColor">#282e33</options.ui.look.colors.tooltip.background>
+        <options.ui.look.colors.tooltip.text type="QColor">#c0c0c0</options.ui.look.colors.tooltip.text>
+        <options.ui.look.contactlist.status-change-animation.color1 type="QColor">#000000</options.ui.look.contactlist.status-change-animation.color1>
+        <options.ui.look.contactlist.status-change-animation.color2 type="QColor">#969696</options.ui.look.contactlist.status-change-animation.color2>
+        <options.ui.contactlist.disable-scrollbar type="bool">true</options.ui.contactlist.disable-scrollbar>
+        <options.ui.contactlist.avatars.avatars-at-left type="bool">true</options.ui.contactlist.avatars.avatars-at-left>
+        <options.ui.contactlist.avatars.radius type="int">5</options.ui.contactlist.avatars.radius>
+        <options.ui.contactlist.avatars.show type="bool">true</options.ui.contactlist.avatars.show>
+        <options.ui.contactlist.avatars.size type="int">22</options.ui.contactlist.avatars.size>
+        <options.ui.contactlist.avatars.use-default-avatar type="bool">true</options.ui.contactlist.avatars.use-default-avatar>
+        <options.ui.contactlist.show-client-icons type="bool">true</options.ui.contactlist.show-client-icons>
+        <options.ui.chat.css type="QString">
+TabDlg {
+    background-color: #282e33;
+}
+
+/* common frame */
+QFrame {
+    color: #c0c0c0;
+    background-color: #18191d;
+    border: 1px solid #53575b;
+    padding: 0px;
+}
+
+/* top frame */
+QFrame#topFrame {
+    margin: 0px;
+    margin-bottom: 1px;
+    background-color: #282e33;
+    border: 1px solid #53575b;
+    border-radius: 3px
+}
+
+/* topic button */
+QPushButton#pb_topic {
+    margin: 0px;
+    height: 16px;
+    color: #c0c0c0;
+    background-color: #282e33;
+    font-weight: bold;
+    border: 1px solid #53575b;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+QPushButton#pb_topic:hover {
+    color: #c0c0c0;
+    background-color: #284245;
+}
+
+QPushButton#pb_topic:pressed {
+    background-color: #1a4e4c;
+}
+
+/* topic dialog */
+QWidget#pte_topic {
+    color: #c0c0c0;
+    background-color: #282e33;
+    border: 1px inset #53575b;
+    border-radius: 3px;
+}
+
+/* status icon */
+QLabel#lb_status {
+    border: 0px;
+    background: #282e33;
+}
+
+/* topic / JID */
+ActionLineEdit#le_topic,#le_jid {
+    color: #c0c0c0;
+    background-color: #18191d;
+    font-weight: bold;
+    border: 1px solid #53575b;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+/* JID - dropdown menu */
+QComboBox::drop-down#le_jid {
+    height: 20px;
+    border: 1px solid #53575b;
+    background-color: #18191d;
+}
+
+QComboBox::down-arrow#le_jid {
+    width: 9px;
+}
+
+QComboBox#le_jid QAbstractItemView {
+    color: #c0c0c0;
+    selection-background-color: #00655a;
+    background-color: #18191d;
+    show-decoration-selected: 0;
+    border: 1px outset #53575b;
+}
+
+QComboBox::focus#le_jid QAbstractItemView {
+    border-color: black;
+    border: 1px;
+}
+
+/* bookmark dialog box */
+QDialog {
+    background-color: #282e33;
+}
+
+QDialog>QFrame {
+    color: #c0c0c0;
+    background: #18191d;
+}
+
+QDialog>QLineEdit {
+    color: #c0c0c0;
+    background: #18191d;
+    border: 1px inset #53575b;
+    border-radius: 3px;
+}
+
+QDialog>QCheckBox {
+    background: #282e33;
+}
+
+/* client icon */
+QLabel#lb_client {
+    border: 0px;
+    background: #282e33;
+}
+
+/* character counter */
+QLabel#lb_count {
+    color: #c0c0c0;
+    background: #282e33;
+    background-color: #18191d;
+    font-weight: bold;
+    border: 1px solid #53575b;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+/* account name */
+QLabel#lb_ident {
+    color: #c0c0c0;
+    background: #282e33;
+    background-color: #18191d;
+    font-weight: bold;
+    border: 1px solid #53575b;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+/* chatlog */
+QFrame#log * {
+    color: #c0c0c0;
+    background-color: #18191d;
+    border: 1px inset #53575b;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+/* conference roster */
+QFrame#lv_users {
+    border: 1px upset #53575b;
+    border-radius: 3px;
+    padding: 2px;
+    background-color: #18191d;
+    selection-color: #fcfbf8;
+    selection-background-color: #006e62;
+}
+
+/* bottom frame */
+QFrame#bottomFrame {
+    margin: 0px;
+    background: #282e33;
+    border: 1px;
+}
+
+/* command input field */
+QWidget#mini_prompt {
+    margin-top: -8px;
+    margin-left: 1px;
+    margin-right: -5px;
+    color: #c0c0c0;
+    background: #18191d;
+}
+
+/* input line */
+QWidget#bottomFrame>QWidget>QTextEdit {
+    margin: 0px;
+    margin-top: 0px;
+    color: #c0c0c0;
+    background-color: #18191d;
+    border: 1px inset #53575b;
+    border-radius: 3px;
+}
+
+/* send message button */
+QPushButton#pb_send {
+    margin: 0px;
+    background-color: #282e33;
+    border: 1px outset #53575b;
+    border-radius: 3px;
+}
+
+QPushButton#pb_send:hover {
+    background-color: #284245;
+}
+
+QPushButton#pb_send:hover:pressed {
+    background-color: #1a4e4c;
+}
+
+/* avatar */
+QLabel#avatar {
+    margin: 0px;
+    background: #282e33;
+}
+
+/* central bar */
+QToolBar { 
+    background-color: #282e33;
+    border: 1px solid #53575b;
+    border-radius: 4px;
+    padding: 2px;
+}
+
+/* central bar buttons and more */
+QToolButton {
+    margin-left: 0px;
+    margin-right: 0px;
+    background-color: #282e33;
+    border: 1px outset #53575b;
+    border-radius: 3px;
+    padding: 0px;
+}
+
+QToolButton:hover {
+    background-color: #284245;
+}
+
+QToolButton:pressed {
+    background-color: #1a4e4c;
+}
+
+QToolButton:checked {
+    background-color: #000000;
+    border: 1px solid #53575b;
+}
+
+QToolButton::menu-indicator {
+    image: none;
+}
+
+/* vertical splitter */
+QSplitter::handle:vertical {
+    background-color: #282e33;
+    border-left: 1px outset #53575b;
+    border-right: 1px outset #53575b;
+}
+
+QSplitter::handle:vertical:hover {
+    background: #1a4e4c;
+}
+
+QSplitter::handle:vertical:pressed {
+    background-color: #14635c;
+}
+
+/* horizontal splitter */
+QSplitter::handle:horizontal {
+    background-color: #282e33;
+    border: 1px;
+}
+
+QSplitter::handle:horizontal:hover {
+    background-color: #1a4e4c;
+    border-left: 1px outset #282e33;
+    border-right: 1px outset #282e33;
+}
+
+QSplitter::handle:horizontal:pressed {
+    background-color: #14635c;
+}
+
+/* tab bar */
+PsiTabBar {
+    background: #282e33;
+    background-color: #282e33;
+    border: 1px solid #53575b;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    alignment: center;
+}
+
+/* tab bar - main font color */
+TabDlg {
+    color: #c0c0c0;
+    background-color: #282e33;
+}
+
+/* Inactive tab */
+QTabBar::tab {
+    border: 2px solid #53575b;
+    border-bottom-color: #282e33;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    min-width: 8ex;
+    padding: 2px;
+}
+
+QTabBar::tab:selected, QTabBar::tab:hover {
+    color: #c0c0c0;
+    border: 2px outset #53575b;
+    border-bottom-color: #282e33;
+    background: #282e33;
+    background-color: #282e33;
+}
+
+QTabBar::tab:!selected {
+    color: #5b5b5b;
+    border: 2px outset #53575b;
+    border-bottom-color: #282e33;
+    background-color: 53575b;
+}
+
+/* conference settings window - tabs, frame, buttons, list of JIDs */
+QWidget#MUCConfig>QTabBar::tab {
+    color: #c0c0c0;
+    margin-bottom: 3px;
+    width: 100%;
+    background: #282e33;
+    border: 1px outset #53575b;
+    border-radius: 3px;
+}
+
+QWidget#MUCConfig>QTabBar::tab:selected {
+    font: bold;
+    background-color: #282e33;
+}
+
+QWidget#MUCConfig>QTabBar::tab:hover {
+    background-color: #282e33;
+}
+
+QWidget#MUCConfig>QWidget {
+    color: #c0c0c0;
+    background-color: #282e33;
+}
+
+QWidget#MUCConfig>QPushButton {
+    color: #c0c0c0;
+    height: 25px;
+    background-color: #32383e;
+    border: 1px outset #53575b;
+    border-radius: 3px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+QWidget#MUCConfig>QPushButton:hover {
+    background-color: #284245;
+}
+
+QWidget#MUCConfig>QPushButton:pressed {
+    background-color: #14635c;
+}
+
+QFrame#tv_affiliations {
+    color: #c0c0c0;
+    background: #282e33;
+    selection-background-color: #2d2d2d;
+    border: 1px inset #53575b;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+/* conference settings window - filter */
+QLabel#label {
+    color: #c0c0c0;
+    background: #282e33;
+}
+
+QLineEdit#le_filter {
+    color: #c0c0c0;
+    background: #282e33;
+    border: 1px inset #53575b;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+/* conference settings window - getting settings */
+QFrame#lb_general_message {
+    color: #c0c0c0;
+    font-size: 18px;
+    background-color: #282e33;
+}
+
+/* conference settings window - settings, external and internal frame */
+QWidget#tab_general QWidget {
+    background: #282e33;
+}
+
+/* conference settings window - settings, internal frame */
+QStackedWidget#sw_general {
+    border: 1px inset #53575b;
+    border-radius: 3px;
+    padding: 1px;
+}
+
+/* conference settings window - button to delete the conference */
+QWidget#tab_general QPushButton#pb_destroy {
+    background: #32383e;
+    border: 1px outset #53575b;
+    border-radius: 3px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+QWidget#tab_general QPushButton#pb_destroy:hover {
+    font-weight: bold;
+    background-color: #284245;
+}
+
+QWidget#tab_general QPushButton#pb_destroy:pressed {
+    background-color: #14635c;
+}
+
+/* conference settings window - settings, option names */
+QWidget#tab_general QLabel {
+    background: #282e33;
+}
+
+/* conference settings window - settings, input fields */
+QWidget#tab_general QLineEdit {
+    color: #c0c0c0;
+    background: #282e33;
+    border: 1px inset #53575b;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+/* conference settings window - settings, drop-down menus */
+QWidget#tab_general QComboBox {
+    color: #c0c0c0;
+    background: #282e33;
+    border: 1px outset #53575b;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+QWidget#tab_general QComboBox::drop-down {
+    height: 20px;
+    border-left: 1px solid #53575b;
+    background-color: #18191d;
+}
+
+QWidget#tab_general QComboBox::down-arrow {
+    image: none;
+}
+
+QWidget#tab_general QComboBox QAbstractItemView {
+    color: #c0c0c0;
+    selection-background-color: #00655a;
+    background-color: #282e33;
+    border: 1px outset #53575b;
+}
+
+/* scroll bars */
+QScrollBar {
+    background-color: #18191d;
+    border: 1px solid #18191d;
+    border-radius: 5px;
+}
+
+QScrollBar:vertical {
+    width: 17px;
+    margin-left: 3px;
+    margin-right: 3px;
+}
+
+QScrollBar:horizontal {
+    height: 17px;
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+QScrollBar:vertical:hover, QScrollBar:horizontal:hover {
+    background-color: #29292d;
+    border: 1px solid #3d3e42;
+}
+
+QScrollBar::handle {
+    background-color: #1a4e4c;
+    border: 1px solid #076f65;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:hover {
+    background-color: #14635c;
+    border: 1px solid #009886;
+    border-radius: 4px;
+}
+
+/* scroll bar, vertical arrows */
+QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {
+    height: 0px;
+}
+
+/* scroll bar, horizontal arrows */
+QScrollBar::sub-line:horizontal, QScrollBar::add-line:horizontal {
+    width: 0px;
+}
+
+/* scroll bar - background */
+QScrollBar::sub-page, QScrollBar::add-page {
+    background: none;
+}
+
+Q3ListView * {
+    background-color: #282e33;
+}
+
+/* tooltips */
+QToolTip {
+    color: #c0c0c0;
+    background-color: #282e33;
+    border: 1px solid #53575b;
+}
+
+/* dialogs for warning clearing chat and closing when unread message */
+QMessageBox {
+    color: #c0c0c0;
+    background-color: #282e33;
+}
+
+/* dialog box buttons */
+QPushButton {
+    color: #c0c0c0;
+    height: 25px;
+    background-color: #32383e;
+    border: 1px outset #53575b;
+    border-radius: 3px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+QPushButton:hover {
+    background-color: #284245;
+}
+
+QPushButton:pressed {
+    background-color: #14635c;
+    border: 1px inset #53575b;
+}
+
+QCheckBox {
+    color: #c0c0c0;
+}
+
+QLabel {
+    color: #c0c0c0;
+}
+
+/* search bar */
+TypeAheadFindBar {
+    margin: 0px;
+    color: #c0c0c0;
+    padding: 2px;
+    background: #282e33;
+    border: 1px outset #53575b;
+    border-radius: 3px;
+}
+
+TypeAheadFindBar>QLineEdit {
+    margin-left: 1px;
+    margin-right: 1px;
+    color: #c0c0c0;
+    background: #18191d;
+    border: 1px inset #53575b;
+    border-radius: 3px;
+}
+
+TypeAheadFindBar>QCheckBox {
+    margin-left: 3px;
+    color: #c0c0c0;
+    background-color: #18191d;
+}
+
+TypeAheadFindBar>QToolButton, TypeAheadFindBar>QToolButton:hover {
+    color: #c0c0c0;
+    background-color: #284245;
+    border: 0px;
+}
+
+/* Kick and ban Reason Editor */
+MUCReasonsEditor>QWidget {
+    color: #c0c0c0;
+    background-color: #282e33;
+}
+
+QLineEdit#txtReason {
+    color: #c0c0c0;
+    background: #18191d;
+    border: 1px inset #53575b;
+    border-radius: 3px;
+}
+
+QListWidget#lstReasons {
+    background: #282e33;
+    selection-background-color: #18191d;
+    border: 1px inset #53575b;
+    border-radius: 3px;
+}
+
+MUCReasonsEditor>QPushButton#btnOk, MUCReasonsEditor>QPushButton#btnCancel {
+    color: #c0c0c0;
+    height: 25px;
+    background: #32383e;
+    border: 1px outset #53575b;
+    border-radius: 3px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+MUCReasonsEditor>QPushButton:hover#btnOk, MUCReasonsEditor>QPushButton:hover#btnCancel {
+    background-color: #284245;
+}
+
+MUCReasonsEditor>QPushButton:pressed#btnOk, MUCReasonsEditor>QPushButton:pressed#btnCancel {
+    background-color: #32383e;
+    border: 1px inset #53575b;
+}
+
+/* quick insert/send template editor */
+SendButtonTemplatesEditor>QWidget {
+    color: #c0c0c0;
+    background-color: #282e33;
+}
+
+QLineEdit#txtTemplate {
+    color: #c0c0c0;
+    background: #282e33;
+    border: 1px inset #53575b;
+    border-radius: 3px;
+}
+
+QListWidget#lstTemplates {
+    background-color: #282e33;
+    selection-background-color: #18191d;
+    border: 1px inset #53575b;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+SendButtonTemplatesEditor>QPushButton#btnOk, SendButtonTemplatesEditor>QPushButton#btnCancel {
+    color: #c0c0c0;
+    height: 25px;
+    background: #32383e;
+    border: 1px outset #53575b;
+    border-radius: 3px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+SendButtonTemplatesEditor>QPushButton:hover#btnOk, SendButtonTemplatesEditor>QPushButton:hover#btnCancel {
+    background-color: #284245;
+}
+
+SendButtonTemplatesEditor>QPushButton:pressed#btnOk, SendButtonTemplatesEditor>QPushButton:pressed#btnCancel {
+    background-color: #32383e;
+    border: 1px inset #53575b;
+}
+
+/* menu */
+QMenu {
+    margin: 1px;
+    color: #c0c0c0;
+    background-color: #282e33;
+    border: 1px outset #53575b;
+    border-radius: 3px;
+    padding: 1px;
+}
+
+QMenu::disabled, QMenu::item:disabled:selected {
+    color: #53575b;
+}
+
+QMenu::item {
+    padding: 2px 24px 2px 24px;
+    border: 1px solid transparent;
+}
+
+QMenu::item:selected {
+    color: #c0c0c0;
+    background-color: #006e62;
+}
+
+QMenu::icon {
+    background: #282e33;
+    padding: 1px;
+}
+
+QMenu::icon:selected {
+    background: #006e62;
+}
+
+QMenu::icon:selected:disabled {
+    background: #282e33;
+}
+
+QMenu::icon:checked {
+    background: #282e33;
+}
+
+QMenu::indicator:checked {
+    margin-left: 2px;
+}
+
+QMenu::indicator:unchecked {
+    margin-left: 2px;
+}
+
+QMenu::separator {
+    background-color: #53575b;
+    height: 1px;
+}
+
+/* emoji menu - background */
+IconSelect {
+    background-color: #282e33;
+}
+
+IconSelectPopup>QScrollArea {
+    margin: 0px;
+    color: #c0c0c0;
+    background-color: #282e33;
+    border: 1px outset #53575b;
+}
+
+/* emoji menu - icons */
+IconSelectButton {
+    background-color: #282e33;
+}
+
+/* Last message correction */
+QWidget#bottomFrame>QWidget>QTextEdit[correction="true"] {
+    background-color: #1a4e4c;
+}
+
+        </options.ui.chat.css>
+        <options.ui.look.contactlist.use-outlined-group-headings type="bool">false</options.ui.look.contactlist.use-outlined-group-headings>
+        <options.ui.look.contactlist.use-slim-group-headings type="bool">false</options.ui.look.contactlist.use-slim-group-headings>
+        <options.ui.tabs.grouping type="QString">ACM</options.ui.tabs.grouping>
+        <options.iconsets.clients type="QString">default</options.iconsets.clients>
+        <options.iconsets.custom-status type=""></options.iconsets.custom-status>
+        <options.iconsets.status type="QString">oxygen.jisp</options.iconsets.status>
+        <options.iconsets.system type="QString">default</options.iconsets.system>
+        <options.ui.chat.avatars.show type="bool">true</options.ui.chat.avatars.show>
+        <options.ui.chat.avatars.size type="int">48</options.ui.chat.avatars.size>
+        <options.ui.chat.central-toolbar type="bool">true</options.ui.chat.central-toolbar>
+        <options.ui.chat.disable-paste-send type="bool">true</options.ui.chat.disable-paste-send>
+        <options.ui.chat.use-expanding-line-edit type="bool">true</options.ui.chat.use-expanding-line-edit>
+        <options.ui.chat.use-message-icons type="bool">true</options.ui.chat.use-message-icons>
+        <options.ui.contactlist.css type="QString">
+/* the whole window */
+QMainWindow {
+    background: #282e33;
+    background-color: #282e33;
+}
+
+/* avatar frame - general settings */
+RosterAvatarFrame * {
+    border: 1px outset #53575b;
+    border-radius: 3px;
+}
+
+/* avatar frame - avatar */
+QLabel#lb_avatar {
+    margin-left: 1px;
+    margin-right: -1px;
+    margin-bottom: 0px;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+}
+
+/* avatar frame - nick */
+QLabel#lb_nick {
+    margin-bottom: 0px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #c0c0c0;
+    background-color: #282e33;
+    border-radius: 3px;
+    border: 1px solid #53575b
+}
+
+/* avatar frame - buttons of PEP and status */
+QToolButton#tb_mood, #tb_activity {
+    background-color: #282e33;
+    border: 1px outset #53575b;
+}
+
+QToolButton#tb_mood {
+    border-radius: 3px;
+    border: 1px outset #53575b;
+}
+
+QToolButton#tb_activity {
+    border-radius: 3px;
+    border: 1px outset #53575b;
+}
+
+QToolButton#tb_status {
+    margin-top: 3px;
+    background-color: #282e33;
+    border: 1px outset #53575b;
+}
+
+QToolButton#tb_mood:hover, #tb_activity:hover {
+    background-color: #284245;
+}
+
+QToolButton#tb_status:hover {
+    background-color: #284245;
+}
+
+QToolButton#tb_mood:pressed, #tb_activity:pressed {
+    background-color: #1a4e4c;
+}
+
+QToolButton#tb_status:pressed {
+    background-color: #1a4e4c;
+}
+
+/* avatar frame - button of status, arrow */
+/* hack to hide an arrow */
+QToolButton#tb_status::menu-indicator {
+    image: none;
+}
+
+/* avatar frame - field of status message */
+QLineEdit#le_status_text {
+    margin-left: 0px;
+    margin-right: 2px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    font-size: 13px;
+    font-style: italic;
+    color: #c0c0c0;
+    background-color: #18191d;
+    border: 1px inset #53575b;
+    border-radius: 3px;
+    border-bottom-right-radius: 3px;
+    min-height: 21px;
+}
+
+QLineEdit#le_status_text:hover {
+    color: #c0c0c0;
+    background-color: #29292d;
+}
+
+/* frame with contacts - external */
+QStackedWidget {
+    margin-top: 1px;
+    margin-left: 1px;
+    margin-right: 1px;
+    background-color: #282e33;
+    border: 1px inset #53575b;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+/* frame with contacts - internal */
+ContactListView {
+    background-color: #18191d;
+    border: 0px;
+}
+
+/* frame with contacts - filtered */
+PsiFilteredContactListView { }
+
+/* missed events */
+QFrame#EventNotifier {
+    margin-left: 1px;
+    margin-right: 1px;
+    color: #c0c0c0;
+    background-color: #18191d;
+    border: 1px solid #53575b;
+    border-radius: 3px;
+    padding: 0px;
+}
+
+EventNotifier>QLabel {
+    color: #c0c0c0;
+}
+
+/* tool bars (option QToolBar) */
+PsiToolBar {
+    margin: 2px;
+    border: 0px;
+}
+
+/* buttons on tool bar */
+QToolButton {
+    margin: 1px;
+    background-color: #282e33;
+    border: 1px outset #53575b;
+    border-radius: 3px;
+    padding: 1px;
+}
+
+QToolButton:hover {
+    background-color: #284245;
+}
+
+QToolButton:pressed {
+    background-color: #1a4e4c;
+}
+
+QToolButton:checked {
+    background-color: #000000;
+    border: 1px solid #53575b;
+}
+
+/* status button */
+PopupActionButton {
+    color: #bcbcbc;
+    margin-left: 1px;
+    margin-right: 1px;
+    min-width: 42px;
+    max-height: 48px;
+    min-height: 32px;
+    background-color: #282e33;
+    border: 1px outset #53575b;
+    border-radius: 3px;
+    padding: -5px;
+}
+
+PopupActionButton::menu-indicator {
+    image: none;
+}
+
+PopupActionButton:hover {
+    background-color: #284245;
+}
+
+PopupActionButton:hover:pressed {
+    background-color: #1a4e4c;
+}
+
+/* tooltips */
+QToolTip {
+    color: #c0c0c0;
+    background-color: #252b30;
+    border: 1px solid #53575b;
+}
+
+/* scroll bars */
+QScrollBar {
+    background-color: #18191d;
+    border: 1px solid #18191d;
+    border-radius: 5px;
+}
+
+QScrollBar:vertical {
+    width: 17px;
+    margin-left: 3px;
+    margin-right: 3px;
+}
+
+QScrollBar:horizontal {
+    height: 17px;
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+QScrollBar:vertical:hover, QScrollBar:horizontal:hover {
+    background-color: #29292d;
+    border: 1px solid #3d3e42;
+}
+
+QScrollBar::handle {
+    background-color: #1a4e4c;
+    border: 1px solid #076f65;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:hover {
+    background-color: #14635c;
+    border: 1px solid #009886;
+    border-radius: 4px;
+}
+
+/* scroll bar, vertical arrows */
+QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {
+    height: 0px;
+}
+
+/* scroll bar, horizontal arrows */
+QScrollBar::sub-line:horizontal, QScrollBar::add-line:horizontal {
+    width: 0px;
+}
+
+/* scroll bar - background */
+QScrollBar::sub-page, QScrollBar::add-page {
+    background: none;
+}
+
+/* selected roster element */
+QTreeView {
+    selection-color: #fcfbf8;
+    selection-background-color: #006e62;
+}
+
+/* menu
+ContactListItemMenu { } */
+
+/* menu indicator */
+QToolButton::menu-indicator {
+    image: none;
+}
+
+/* renaming a contact */
+QLineEdit {
+    color: #c0c0c0;
+    background-color: #282e33;
+    selection-background-color: #373c41;
+    border: 1px solid #53575b;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+/* filter */
+QStackedWidget>QWidget>QLineEdit {
+    color: #c0c0c0;
+    background-color: #282e33;
+}
+
+/* menu */
+QMenu {
+    margin: 1px;
+    color: #fcfbf8;
+    selection-color: #006e62;
+    background-color: #282e33;
+    border: 1px solid #53575b;
+    border-radius: 3px;
+    padding: 1px;
+}
+
+QMenu::disabled, QMenu::item:disabled:selected {
+    color: #53575b;
+}
+
+QMenu::item {
+    padding: 2px 24px 2px 24px;
+    border: 1px solid transparent;
+}
+
+QMenu::item:selected {
+    color: #fcfbf8;
+    background-color: #006e62;
+}
+
+QMenu::icon {
+    background: #282e33;
+    border: 0px;
+    padding: 1px;
+}
+
+QMenu::icon:selected {
+    background: #006e62;
+}
+
+QMenu::icon:selected:disabled {
+    background: #282e33;
+}
+
+QMenu::icon:checked {
+    background: #282e33;
+}
+
+QMenu::indicator:checked {
+    margin-left: 2px;
+}
+
+QMenu::indicator:unchecked {
+    margin-left: 2px;
+}
+
+QMenu::separator {
+    background-color: #53575b;
+    height: 1px;
+}
+
+QSplitter::handle:horizontal {
+    background-color: #282e33;
+}
+
+QSplitter::handle:horizontal:hover {
+    background-color: #1a4e4c;
+}
+
+QSplitter::handle:horizontal:pressed {
+    background-color: #14635c;
+}
+        </options.ui.contactlist.css>
+        <options.ui.contactlist.enable-groups type="bool">true</options.ui.contactlist.enable-groups>
+        <options.ui.contactlist.show-activity-icons type="bool">true</options.ui.contactlist.show-activity-icons>
+        <options.ui.contactlist.show-all-client-icons type="bool">false</options.ui.contactlist.show-all-client-icons>
+        <options.ui.contactlist.show-client-icons type="bool">true</options.ui.contactlist.show-client-icons>
+        <options.ui.contactlist.show-geolocation-icons type="bool">true</options.ui.contactlist.show-geolocation-icons>
+        <options.ui.contactlist.show-group-counts type="bool">true</options.ui.contactlist.show-group-counts>
+        <options.ui.contactlist.show-menubar type="bool">false</options.ui.contactlist.show-menubar>
+        <options.ui.contactlist.show-mood-icons type="bool">true</options.ui.contactlist.show-mood-icons>
+        <options.ui.contactlist.show-status-icons type="bool">true</options.ui.contactlist.show-status-icons>
+        <options.ui.contactlist.show-tune-icons type="bool">true</options.ui.contactlist.show-tune-icons>
+        <options.ui.contactlist.status-icon-over-avatar type="bool">true</options.ui.contactlist.status-icon-over-avatar>
+        <options.ui.contactlist.status-messages.show type="bool">true</options.ui.contactlist.status-messages.show>
+        <options.ui.contactlist.status-messages.single-line type="bool">false</options.ui.contactlist.status-messages.single-line>
+        <options.ui.contactlist.tooltip.avatar type="bool">true</options.ui.contactlist.tooltip.avatar>
+        <options.ui.contactlist.tooltip.client-version type="bool">true</options.ui.contactlist.tooltip.client-version>
+        <options.ui.contactlist.tooltip.css type="QString">
+QFrame {
+    color: #c0c0c0;
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #32383e, stop: 1 #282e33);
+    border: 1px solid #32383e;
+}
+        </options.ui.contactlist.tooltip.css>
+        <options.ui.contactlist.tooltip.geolocation type="bool">true</options.ui.contactlist.tooltip.geolocation>
+        <options.ui.contactlist.tooltip.last-status type="bool">true</options.ui.contactlist.tooltip.last-status>
+        <options.ui.contactlist.tooltip.pgp type="bool">true</options.ui.contactlist.tooltip.pgp>
+        <options.ui.contactlist.use-status-change-animation type="bool">false</options.ui.contactlist.use-status-change-animation>
+        <options.ui.contactlist.use-transport-icons type="bool">true</options.ui.contactlist.use-transport-icons>
+        <options.ui.mac.use-brushed-metal-windows type="bool">false</options.ui.mac.use-brushed-metal-windows>
+        <options.ui.muc.colored-history type="bool">true</options.ui.muc.colored-history>
+        <options.ui.save.splitter-state type="QByteArray">AAAA/wAAAAAAAAABAAABJwEAAAAGAQAAAAE=</options.ui.save.splitter-state>
+        <options.ui.save.tabs-geometry type=""></options.ui.save.tabs-geometry>
+        <options.ui.tabs.show-tab-buttons type="bool">false</options.ui.tabs.show-tab-buttons>
+        <options.ui.tabs.show-tab-close-buttons type="bool">true</options.ui.tabs.show-tab-close-buttons>
+        <options.ui.tabs.use-tabs type="bool">true</options.ui.tabs.use-tabs>
+        <options.ui.contactlist.show.self-contact type="bool">false</options.ui.contactlist.show.self-contact>
+        <options.ui.notifications.passive-popups.css type="QString">
+QFrame {
+    background-color: #282e33;
+}
+
+QToolButton {
+    background-color: #53575b;
+    border: 1px solid blue;
+    border-radius: 2px;
+}
+
+QToolButton:hover {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #53575b, stop: 1 black);
+}
+
+QToolButton:pressed {
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 black, stop: 1 #53575b);
+}
+        </options.ui.notifications.passive-popups.css>
+        <options.ui.contactlist.show-roster-avatar-frame type="bool">true</options.ui.contactlist.show-roster-avatar-frame>
+        <options.ui.tabs.show-tab-icons type="bool">true</options.ui.tabs.show-tab-icons>
+        <options.ui.muc.show-client-icons type="bool">true</options.ui.muc.show-client-icons>
+        <options.ui.contactlist.aio-left-roster type="bool">false</options.ui.contactlist.aio-left-roster>
+        <options.ui.tabs.put-tabs-at-bottom type="bool">false</options.ui.tabs.put-tabs-at-bottom>
+        <options.ui.look.colors.muc.nick-colors type="QStringList">
+            <item></item>
+            <item>#aa0000</item>
+            <item>#5500ff</item>
+        </options.ui.look.colors.muc.nick-colors>
+        <options.ui.disable-send-button type="bool">true</options.ui.disable-send-button>
+        <options.ui.muc.roster-nick-coloring type="bool">true</options.ui.muc.roster-nick-coloring>
+        <options.ui.contactlist.roster-avatar-frame.avatar.size type="int">56</options.ui.contactlist.roster-avatar-frame.avatar.size>
+        <options.ui.contactlist.roster-avatar-frame.avatar.margin type="int">0</options.ui.contactlist.roster-avatar-frame.avatar.margin>
+        <options.ui.chat.use-small-chats type="bool">false</options.ui.chat.use-small-chats>
+        <options.iconsets.affiliations type="QString">futurama-robots-affiliations.jisp</options.iconsets.affiliations>
+        <options.ui.chat.scaled-message-icons type="bool">false</options.ui.chat.scaled-message-icons>
+        <options.ui.chat.theme type="QString">psi/dark_new_classic</options.ui.chat.theme>
+        <options.ui.message.show-character-count type="bool">true</options.ui.message.show-character-count>
+        <options.ui.muc.show-affiliation-icons type="bool">true</options.ui.muc.show-affiliation-icons>
+        <options.ui.muc.show-groups type="bool">true</options.ui.muc.show-groups>
+        <options.ui.muc.use-hash-nick-coloring type="bool">true</options.ui.muc.use-hash-nick-coloring>
+        <options.ui.muc.use-highlighting type="bool">true</options.ui.muc.use-highlighting>
+        <options.ui.muc.use-nick-coloring type="bool">true</options.ui.muc.use-nick-coloring>
+        <options.ui.look.colors.chat.composing-color type="QColor">#c0c0c0</options.ui.look.colors.chat.composing-color>
+        <options.ui.look.colors.chat.unread-message-color type="QColor">#c0c0c0</options.ui.look.colors.chat.unread-message-color>
+        <options.ui.look.colors.contactlist.status-change-animation1 type="QColor">#c6c6c6</options.ui.look.colors.contactlist.status-change-animation1>
+        <options.ui.look.colors.contactlist.status-change-animation2 type="QColor">#32383e</options.ui.look.colors.contactlist.status-change-animation2>
+    </options>
+</skin>
