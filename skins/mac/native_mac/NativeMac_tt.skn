@@ -1,4 +1,4 @@
-<skin version="0.2" author="tux-den" name="Native Mac (Top tabs)" path="/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac">
+<skin version="0.3" author="tux-den" name="Native Mac (Top tabs)" path="/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac">
     <options>
         <options.ui.look.colors.chat.link-color type="QColor">#0000ff</options.ui.look.colors.chat.link-color>
         <options.ui.look.colors.chat.mailto-color type="QColor">#0000ff</options.ui.look.colors.chat.mailto-color>
@@ -71,7 +71,7 @@ QFrame:!active#headerFrame {
 
 /* ------------------------ QToolButton#hideButton */
 QToolButton#hideButton {
-    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/c_toolbutton/c_tb_hide.png) center center no-repeat;
+    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/images/c_toolbutton/c_tb_hide.png) center center no-repeat;
     border-bottom: 0px solid #d0d0d0;
     icon-size: 0px;
     margin: 0px;
@@ -82,22 +82,22 @@ QToolButton#hideButton {
 }
 
 QToolButton:hover#hideButton {
-    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/c_toolbutton/c_tb_hide_hover.png) center no-repeat argb(0,0,0,0);
+    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/images/c_toolbutton/c_tb_hide_hover.png) center no-repeat argb(0,0,0,0);
 }
 
 QToolButton:hover#hideButton:!active {
-    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/c_toolbutton/c_tb_hide_hover.png) center no-repeat argb(0,0,0,0);
+    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/images/c_toolbutton/c_tb_hide_hover.png) center no-repeat argb(0,0,0,0);
 }
 
 QToolButton:pressed#hideButton {
-    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/c_toolbutton/c_tb_hide_pressed.png) center no-repeat argb(0,0,0,0);
+    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/images/c_toolbutton/c_tb_hide_pressed.png) center no-repeat argb(0,0,0,0);
 }
 /* ------------------------ */
 
 
 /* ------------------------ QToolButton#maximizeButton */
 QToolButton#maximizeButton {
-    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/c_toolbutton/c_tb_maximize.png) center center no-repeat;
+    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/images/c_toolbutton/c_tb_maximize.png) center center no-repeat;
     icon-size: 0px;
     margin: 0px;
     margin-top: 0px;
@@ -106,22 +106,22 @@ QToolButton#maximizeButton {
 }
 
 QToolButton:hover#maximizeButton {
-    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/c_toolbutton/c_tb_maximize_hover.png) center no-repeat argb(0,0,0,0);
+    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/images/c_toolbutton/c_tb_maximize_hover.png) center no-repeat argb(0,0,0,0);
 }
 
 QToolButton:!active:hover#maximizeButton {
-    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/c_toolbutton/c_tb_maximize_hover.png) center no-repeat argb(0,0,0,0);
+    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/images/c_toolbutton/c_tb_maximize_hover.png) center no-repeat argb(0,0,0,0);
 }
 
 QToolButton:pressed#maximizeButton {
-    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/c_toolbutton/c_tb_maximize_pressed.png) center no-repeat argb(0,0,0,0);
+    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/images/c_toolbutton/c_tb_maximize_pressed.png) center no-repeat argb(0,0,0,0);
 }
 /* ------------------------ */
 
 
 /* ------------------------ QToolButton#closeButton */
 QToolButton#closeButton {
-    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/c_toolbutton/c_tb_close.png) center center no-repeat;
+    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/images/c_toolbutton/c_tb_close.png) center center no-repeat;
     icon-size: 0px;
     margin: 0px;
     margin-left: 2px;
@@ -131,25 +131,25 @@ QToolButton#closeButton {
 }
 
 QToolButton:hover#closeButton {
-    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/c_toolbutton/c_tb_close_hover.png) center no-repeat argb(0,0,0,0);
+    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/images/c_toolbutton/c_tb_close_hover.png) center no-repeat argb(0,0,0,0);
     min-width: 14px;
     min-height: 15px;
 }
 
 QToolButton:!active:hover#closeButton {
-    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/c_toolbutton/c_tb_close_hover.png) center no-repeat argb(0,0,0,0);
+    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/images/c_toolbutton/c_tb_close_hover.png) center no-repeat argb(0,0,0,0);
     min-width: 14px;
     min-height: 15px;
 }
 
 QToolButton:pressed#closeButton {
-    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/c_toolbutton/c_tb_close_pressed.png) center no-repeat argb(0,0,0,0);
+    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/images/c_toolbutton/c_tb_close_pressed.png) center no-repeat argb(0,0,0,0);
 }
 
 /* ------------------------ */
 
 QToolButton:!active#hideButton, QToolButton:!active#closeButton, QToolButton:!active#maximizeButton {
-    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/c_toolbutton/c_tb_all_no_active.png) center no-repeat argb(0,0,0,0);
+    background: url(/Applications/Psi+.app/Contents/Resources/skins/mac/native_mac/images/c_toolbutton/c_tb_all_no_active.png) center no-repeat argb(0,0,0,0);
 }
 /* ------------------------ */
 /* End HeaderFrame--------- */

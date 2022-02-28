@@ -1,4 +1,4 @@
-<skin version="0.8" author="tux-den" name="The Orange" path="C:/Program Files/Psi+/skins/universal/orange">
+<skin version="0.9" author="tux-den" name="The Orange" path="C:/Program Files/Psi+/skins/universal/orange">
     <options>
         <options.ui.look.colors.chat.link-color type="QColor">#0000ff</options.ui.look.colors.chat.link-color>
         <options.ui.look.colors.chat.mailto-color type="QColor">#0000ff</options.ui.look.colors.chat.mailto-color>
@@ -55,7 +55,7 @@ QToolBar {
 }
 
 QFrame#topFrame {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/chat.png) repeat-x #ffffff;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/chat.png) repeat-x #ffffff;
     border-right: 3px;
 }
 
@@ -106,17 +106,17 @@ QFrame#lv_users {
 }
 
 QSplitter::handle:horizontall {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/splitter_ver.png) center no-repeat #ffffff;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/splitter_ver.png) center no-repeat #ffffff;
     height: 10px;
 }
 
 QSplitter::handle:vertical {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/splitter_hor.png) center no-repeat #ffffff;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/splitter_hor.png) center no-repeat #ffffff;
     height: 10px;
 }
 
 PsiTabBar {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/tbar.png) repeat-x #ffffff;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/tbar.png) repeat-x #ffffff;
     border: 2px solid argb(20,100,160,180);
     border-left: 0px;
     border-right: 0px;
@@ -296,7 +296,7 @@ QScrollBar::handle:vertical {
 }
 
 QScrollBar::add-line:vertical {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/down.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/down.png) center no-repeat;
     border: 1px solid grey;
     height: 24px;
     width: 13px;
@@ -311,7 +311,7 @@ QScrollBar::add-line:vertical {
 }
 
 QScrollBar::sub-line:vertical {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/up.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/up.png) center no-repeat;
     border: 1px solid grey;
     height: 23px;
     width: 13px;
@@ -326,7 +326,7 @@ QScrollBar::sub-line:vertical {
 }
 
 QScrollBar::add-line:vertical:pressed {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/down_pres.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/down_pres.png) center no-repeat;
     border: 1px solid grey;
     height: 24px;
     width: 13px;
@@ -341,7 +341,7 @@ QScrollBar::add-line:vertical:pressed {
 }
 
 QScrollBar::sub-line:vertical:pressed {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/up_pres.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/up_pres.png) center no-repeat;
     border: 1px solid grey;
     height: 23px;
     width: 13px;
@@ -370,14 +370,14 @@ QScrollBar::handle:horizontal {
 }
 
 QScrollBar::add-line:horizontal {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/right.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/right.png) center no-repeat;
     width: 26px;
     subcontrol-position: right;
     subcontrol-origin: margin;
 }
 
 QScrollBar::sub-line:horizontal {
-    background: white url(C:/Program Files/Psi+/skins/universal/orange/left.png) center no-repeat;
+    background: white url(C:/Program Files/Psi+/skins/universal/orange/images/left.png) center no-repeat;
     width: 25px;
     subcontrol-position: left;
     subcontrol-origin: margin;
@@ -385,14 +385,14 @@ QScrollBar::sub-line:horizontal {
 }
 
 QScrollBar::add-line:horizontal:pressed {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/right_pres.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/right_pres.png) center no-repeat;
     width: 26px;
     subcontrol-position: right;
     subcontrol-origin: margin;
 }
 
 QScrollBar::sub-line:horizontal:pressed {
-    background: white url(C:/Program Files/Psi+/skins/universal/orange/left_pres.png) center no-repeat;
+    background: white url(C:/Program Files/Psi+/skins/universal/orange/images/left_pres.png) center no-repeat;
     width: 25px;
     subcontrol-position: left;
     subcontrol-origin: margin;
@@ -400,7 +400,7 @@ QScrollBar::sub-line:horizontal:pressed {
 }
 
 QMenu {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/menu.png) repeat-x #ffffff;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/menu.png) repeat-x #ffffff;
     border: 0px solid #ffffff;
     border-radius: 4px;
 }
@@ -425,7 +425,7 @@ QMenu::menu-indicator {
 
 QDialog {
 
-    background: url(C:/Program Files/Psi+/skins/universal/orange/orange.png) repeat-x #ffffff;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/orange.png) repeat-x #ffffff;
     margin-top: -7px;
 }
 
@@ -509,7 +509,7 @@ QWidget#bottomFrame>QWidget>QTextEdit[correction="true"] {
         <options.ui.chat.use-message-icons type="bool">true</options.ui.chat.use-message-icons>
         <options.ui.contactlist.css type="QString">
 QMainWindow {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/orange.png) repeat-x #ffffff;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/orange.png) repeat-x #ffffff;
     margin-top: -7px;
 }
 
@@ -554,7 +554,7 @@ QLineEdit {
 }
 
 PsiContactListView {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/psi.png) center no-repeat buttom #ffffff;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/psi.png) center no-repeat buttom #ffffff;
     padding: 3px;
 }
 
@@ -583,7 +583,7 @@ PopupActionButton {
 }
 
 QToolBar {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/tbar.png) repeat-x;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/tbar.png) repeat-x;
     border: 0px solid #ffe89b;
     min-height: 30px;
     padding-bottom: 5px;
@@ -624,7 +624,7 @@ QScrollBar::handle:vertical {
 
 QScrollBar::add-line:vertical {
     border: 1px solid grey;
-    background: url(C:/Program Files/Psi+/skins/universal/orange/down.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/down.png) center no-repeat;
     height: 24px;width: 11px;
     subcontrol-position: bottom;
     subcontrol-origin: margin;
@@ -638,7 +638,7 @@ QScrollBar::add-line:vertical {
 
 QScrollBar::sub-line:vertical {
     border: 1px solid grey;
-    background: url(C:/Program Files/Psi+/skins/universal/orange/up.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/up.png) center no-repeat;
     height: 23px;
     width: 11px;
     subcontrol-position: top;
@@ -653,7 +653,7 @@ QScrollBar::sub-line:vertical {
 
 QScrollBar::add-line:vertical:pressed {
     border: 1px solid grey;
-    background: url(C:/Program Files/Psi+/skins/universal/orange/down_pres.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/down_pres.png) center no-repeat;
     height: 24px;
     width: 11px;
     subcontrol-position: bottom;
@@ -668,7 +668,7 @@ QScrollBar::add-line:vertical:pressed {
 
 QScrollBar::sub-line:vertical:pressed {
     border: 1px solid grey;
-    background: url(C:/Program Files/Psi+/skins/universal/orange/up_pres.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/up_pres.png) center no-repeat;
     height: 23px;width: 11px;
     subcontrol-position: top;
     subcontrol-origin: margin;
@@ -688,7 +688,7 @@ QTreeView {
 }
 
 QMenu {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/menu.png) repeat-x #ffffff;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/menu.png) repeat-x #ffffff;
     border: 0px solid #ffffff;
     border-radius: 4px;
 }
@@ -746,7 +746,7 @@ QStackedWidget {
 }
 
 QDialog {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/orange.png) repeat-x #ffffff;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/orange.png) repeat-x #ffffff;
     margin-top: -7px;
 }
 
@@ -806,7 +806,7 @@ PopupActionButton::menu-indicator {
         <options.ui.contactlist.tooltip.client-version type="bool">true</options.ui.contactlist.tooltip.client-version>
         <options.ui.contactlist.tooltip.css type="QString">
 QFrame {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/tooltip.png) repeat-x #ffffff bottom;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/tooltip.png) repeat-x #ffffff bottom;
 }
         </options.ui.contactlist.tooltip.css>
         <options.ui.contactlist.tooltip.geolocation type="bool">true</options.ui.contactlist.tooltip.geolocation>
@@ -825,7 +825,7 @@ QFrame {
         <options.ui.contactlist.show.self-contact type="bool">false</options.ui.contactlist.show.self-contact>
         <options.ui.notifications.passive-popups.css type="QString">
 QFrame {
-    background: url(C:/Program Files/Psi+/skins/universal/orange/tooltip.png) repeat-x #ffffff bottom;
+    background: url(C:/Program Files/Psi+/skins/universal/orange/images/tooltip.png) repeat-x #ffffff bottom;
 }
         </options.ui.notifications.passive-popups.css>
         <options.ui.contactlist.show-roster-avatar-frame type="bool">true</options.ui.contactlist.show-roster-avatar-frame>

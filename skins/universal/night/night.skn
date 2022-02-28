@@ -1,4 +1,4 @@
-﻿<skin version="0.5" author="tux-den" name="Night" path="C:/Program Files/Psi+/skins/universal/night">
+﻿<skin version="0.6" author="tux-den" name="Night" path="C:/Program Files/Psi+/skins/universal/night">
     <options>
         <options.ui.look.colors.chat.link-color type="QColor">#b1ad84</options.ui.look.colors.chat.link-color>
         <options.ui.look.colors.chat.mailto-color type="QColor">#c7caae</options.ui.look.colors.chat.mailto-color>
@@ -40,7 +40,7 @@ TabDlg {
 }
 
 PsiTabBar {
-    background: url(C:/Program Files/Psi+/skins/universal/night/gr.png) repeat-x qlineargradient(x1: 0, y1: 0, x1: 0, y2: 1, stop: 0 #11140f, stop: 1.0 #000000);
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/gr.png) repeat-x qlineargradient(x1: 0, y1: 0, x1: 0, y2: 1, stop: 0 #11140f, stop: 1.0 #000000);
     padding-top: 20px;
     border-left: 3px solid #777777;
     border-right: 3px solid #777777;
@@ -55,7 +55,7 @@ QToolBar {
 }
 
 QToolBar#toolbar {
-    background: url(C:/Program Files/Psi+/skins/universal/night/gr.png) repeat-x;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/gr.png) repeat-x;
     border: 1px solid argb(0,0,100,150);
     border-radius: 3px;
     border-bottom-left-radius: 3px;
@@ -310,7 +310,7 @@ QLineEdit#le_jid {
 }
 
 QPushButton#pb_topic {
-    background: url(C:/Program Files/Psi+/skins/universal/night/gree.png);
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/gree.png);
     border: 1px solid #cccccc;
     border-radius: 3px;
     width: 60px;
@@ -323,7 +323,7 @@ QPushButton#pb_topic {
 }
 
 QPushButton {
-    background: url(C:/Program Files/Psi+/skins/universal/night/gree.png);
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/gree.png);
     border: 1px solid #cccccc;
     border-radius: 7px;
     width: 120px;
@@ -385,7 +385,7 @@ QScrollBar::handle:vertical {
 
 QScrollBar::add-line:vertical {
     border: 1px solid grey;
-    background: url(C:/Program Files/Psi+/skins/universal/night/bottom.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/bottom.png) center no-repeat;
     height: 24px;
     width: 13px;
     subcontrol-position: bottom;
@@ -400,7 +400,7 @@ QScrollBar::add-line:vertical {
 
 QScrollBar::sub-line:vertical {
     border: 1px solid grey;
-    background: url(C:/Program Files/Psi+/skins/universal/night/top.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/top.png) center no-repeat;
     height: 23px;
     width: 13px;
     subcontrol-position: top;
@@ -415,7 +415,7 @@ QScrollBar::sub-line:vertical {
 
 QScrollBar::add-line:vertical:pressed {
     border: 1px solid grey;
-    background: url(C:/Program Files/Psi+/skins/universal/night/bottom_press.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/bottom_press.png) center no-repeat;
     height: 24px;
     width: 13px;
     subcontrol-position: bottom;
@@ -430,7 +430,7 @@ QScrollBar::add-line:vertical:pressed {
 
 QScrollBar::sub-line:vertical:pressed {
     border: 1px solid grey;
-    background: url(C:/Program Files/Psi+/skins/universal/night/top_press.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/top_press.png) center no-repeat;
     height: 23px;
     width: 13px;
     subcontrol-position: top;
@@ -458,14 +458,14 @@ QScrollBar::handle:horizontal {
 }
 
 QScrollBar::add-line:horizontal {
-    background: url(C:/Program Files/Psi+/skins/universal/night/right.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/right.png) center no-repeat;
     width: 26px;
     subcontrol-position: right;
     subcontrol-origin: margin;
 }
 
 QScrollBar::sub-line:horizontal {
-    background: white url(C:/Program Files/Psi+/skins/universal/night/left.png) center no-repeat;
+    background: white url(C:/Program Files/Psi+/skins/universal/night/images/left.png) center no-repeat;
     width: 25px;
     subcontrol-position: left;
     subcontrol-origin: margin;
@@ -473,14 +473,14 @@ QScrollBar::sub-line:horizontal {
 }
 
 QScrollBar::add-line:horizontal:pressed {
-    background: url(C:/Program Files/Psi+/skins/universal/night/right_press.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/right_press.png) center no-repeat;
     width: 26px;
     subcontrol-position: right;
     subcontrol-origin: margin;
 }
 
 QScrollBar::sub-line:horizontal:pressed {
-    background: white url(C:/Program Files/Psi+/skins/universal/night/left_press.png) center no-repeat;
+    background: white url(C:/Program Files/Psi+/skins/universal/night/images/left_press.png) center no-repeat;
     width: 25px;
     subcontrol-position: left;
     subcontrol-origin: margin;
@@ -506,14 +506,14 @@ QMenu::separator {
 }
 
 QFrame#headerFrame {
-    background: url(C:/Program Files/Psi+/skins/universal/night/logo.png) no-repeat top center qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #000000, stop: 0.7 #575857, stop: 1.0 #b0b1b0);
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/logo.png) no-repeat top center qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #000000, stop: 0.7 #575857, stop: 1.0 #b0b1b0);
     border: 2px solid #777777;
     border-bottom: 0px;
     padding: 4px;
 }
 
 QToolButton#hideButton {
-    background: url(C:/Program Files/Psi+/skins/universal/night/tb_hide.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/tb_hide.png) center no-repeat;
     border: 2px solid #555555;
     border-radius: 4px;
     icon-size: 0px;
@@ -525,21 +525,21 @@ QToolButton#hideButton {
 }
 
 QToolButton:hover#hideButton {
-    background: url(C:/Program Files/Psi+/skins/universal/night/tb_hide_hover.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/tb_hide_hover.png) center no-repeat;
     border: 2px solid #555555;
     height: 14px;
     width: 15px;
 }
 
 QToolButton:pressed#hideButton {
-    background: url(C:/Program Files/Psi+/skins/universal/night/tb_hide_pressed.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/tb_hide_pressed.png) center no-repeat;
     border: 2px solid #444444;
     height: 14px;
     width: 15px;
 }
 
 QToolButton#maximizeButton {
-    background: url(C:/Program Files/Psi+/skins/universal/night/tb_maximize.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/tb_maximize.png) center no-repeat;
     border: 2px solid #555555;
     border-radius: 4px;
     icon-size: 0px;
@@ -551,21 +551,21 @@ QToolButton#maximizeButton {
 }
 
 QToolButton:hover#maximizeButton {
-    background: url(C:/Program Files/Psi+/skins/universal/night/tb_maximize_hover.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/tb_maximize_hover.png) center no-repeat;
     border: 2px solid #555555;
     height: 14px;
     width: 15px;
 }
 
 QToolButton:pressed#maximizeButton {
-    background: url(C:/Program Files/Psi+/skins/universal/night/tb_maximize_pressed.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/tb_maximize_pressed.png) center no-repeat;
     border: 2px solid #444444;
     height: 14px;
     width: 15px;
 }
 
 QToolButton#closeButton {
-    background: url(C:/Program Files/Psi+/skins/universal/night/tb_close.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/tb_close.png) center no-repeat;
     border: 2px solid #555555;
     border-radius: 4px;
     icon-size: 0px;
@@ -577,14 +577,14 @@ QToolButton#closeButton {
 }
 
 QToolButton:hover#closeButton {
-    background: url(C:/Program Files/Psi+/skins/universal/night/tb_close_hover.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/tb_close_hover.png) center no-repeat;
     border: 2px solid #555555;
     height: 14px;
     width: 15px;
 }
 
 QToolButton:pressed#closeButton {
-    background: url(C:/Program Files/Psi+/skins/universal/night/tb_close_pressed.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/tb_close_pressed.png) center no-repeat;
     border: 2px solid #444444;
     height: 14px;
     width: 15px;
@@ -615,7 +615,7 @@ QWidget#bottomFrame>QWidget>QTextEdit[correction="true"] {
         <options.ui.chat.use-message-icons type="bool">true</options.ui.chat.use-message-icons>
         <options.ui.contactlist.css type="QString">
 QMainWindow {
-    background: url(C:/Program Files/Psi+/skins/universal/night/green.png) repeat-x qlineargradient(x1: 0, y1: 0, x1: 0, y2: 1, stop: 0 #11140f, stop: 1.0 #000000);
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/green.png) repeat-x qlineargradient(x1: 0, y1: 0, x1: 0, y2: 1, stop: 0 #11140f, stop: 1.0 #000000);
     margin-top: -15px;
 }
 
@@ -629,7 +629,7 @@ PsiContactListView {
 }
 
 QToolBar {
-    background: url(C:/Program Files/Psi+/skins/universal/night/gree.png) repeat-x;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/gree.png) repeat-x;
     border: 1px solid argb(0,0,100,150);
     border-radius: 8px;
     border-bottom-left-radius: 0px;
@@ -784,7 +784,7 @@ QScrollBar::handle:vertical {
 
 QScrollBar::add-line:vertical {
     border: 1px solid grey;
-    background: url(C:/Program Files/Psi+/skins/universal/night/bottom.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/bottom.png) center no-repeat;
     height: 24px;
     width: 11px;
     subcontrol-position: bottom;
@@ -799,7 +799,7 @@ QScrollBar::add-line:vertical {
 
 QScrollBar::sub-line:vertical {
     border: 1px solid grey;
-    background: url(C:/Program Files/Psi+/skins/universal/night/top.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/top.png) center no-repeat;
     height: 23px;
     width: 11px;
     subcontrol-position: top;
@@ -814,7 +814,7 @@ QScrollBar::sub-line:vertical {
 
 QScrollBar::add-line:vertical:pressed {
     border: 1px solid grey;
-    background: url(C:/Program Files/Psi+/skins/universal/night/bottom_press.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/bottom_press.png) center no-repeat;
     height: 24px;
     width: 11px;
     subcontrol-position: bottom;
@@ -829,7 +829,7 @@ QScrollBar::add-line:vertical:pressed {
 
 QScrollBar::sub-line:vertical:pressed {
     border: 1px solid grey;
-    background: url(C:/Program Files/Psi+/skins/universal/night/top_press.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/top_press.png) center no-repeat;
     height: 23px;
     width: 11px;
     subcontrol-position: top;
@@ -919,7 +919,7 @@ QFrame {
 }
 
 QToolButton {
-    background: url(C:/Program Files/Psi+/skins/universal/night/tb_close.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/tb_close.png) center no-repeat;
     border: 2px solid #555555;
     border-radius: 4px;
     icon-size: 0px;
@@ -930,7 +930,7 @@ QToolButton {
 }
 
 QToolButton:hover {
-    background: url(C:/Program Files/Psi+/skins/universal/night/tb_close_hover.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/tb_close_hover.png) center no-repeat;
     border: 2px solid #555555;
     min-height: 14px;
     min-width: 15px;
@@ -938,7 +938,7 @@ QToolButton:hover {
 }
 
 QToolButton:pressed {
-    background: url(C:/Program Files/Psi+/skins/universal/night/tb_close_pressed.png) center no-repeat;
+    background: url(C:/Program Files/Psi+/skins/universal/night/images/tb_close_pressed.png) center no-repeat;
     border: 2px solid #444444;
     min-height: 14px;
     min-width: 15px;
