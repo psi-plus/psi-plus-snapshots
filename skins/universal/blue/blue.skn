@@ -1,4 +1,4 @@
-<skin version="1.2" author="Dealer_WeARE" name="Blue skin">
+<skin version="1.3" author="Dealer_WeARE" name="Blue">
     <options>
         <options.ui.look.colors.chat.link-color type="QColor">#0000ff</options.ui.look.colors.chat.link-color>
         <options.ui.look.colors.chat.mailto-color type="QColor">#2c9dff</options.ui.look.colors.chat.mailto-color>
