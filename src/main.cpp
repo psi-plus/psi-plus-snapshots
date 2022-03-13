@@ -18,6 +18,9 @@
  */
 
 #include "main.h"
+#include "mainwin.h"
+#include "psievent.h"
+#include <qdbusconnection.h>
 
 #ifdef Q_OS_MAC
 #include "CocoaUtilities/CocoaInitializer.h"
@@ -125,6 +128,9 @@ bool PsiMain::useActiveInstance()
             ActiveProfiles::instance()->setStatus(cmdline.value("profile"), cmdline.value("status"),
                                                   cmdline.value("status-message"));
             raise = false;
+        }
+        if (cmdline.contains("receive-next-event")) {
+            ActiveProfiles::instance()->recvNextEvent(cmdline.value("profile"));
         }
 
         if (raise) {
