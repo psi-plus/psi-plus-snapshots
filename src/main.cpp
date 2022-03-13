@@ -18,9 +18,6 @@
  */
 
 #include "main.h"
-#include "mainwin.h"
-#include "psievent.h"
-#include <qdbusconnection.h>
 
 #ifdef Q_OS_MAC
 #include "CocoaUtilities/CocoaInitializer.h"
