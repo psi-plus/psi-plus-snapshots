@@ -126,9 +126,6 @@ bool PsiMain::useActiveInstance()
                                                   cmdline.value("status-message"));
             raise = false;
         }
-        if (cmdline.contains("receive-next-event")) {
-            ActiveProfiles::instance()->recvNextEvent(cmdline.value("profile"));
-        }
 
         if (raise) {
             ActiveProfiles::instance()->raise(cmdline.value("profile"), true);
