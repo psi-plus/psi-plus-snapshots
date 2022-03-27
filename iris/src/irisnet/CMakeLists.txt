@@ -10,8 +10,7 @@ include_directories(
     ${sctpLab_INCLUDES}
 )
 
-set( CMAKE_MODULE_PATH
-    "${CMAKE_MODULE_PATH}"
+list(APPEND CMAKE_MODULE_PATH
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
     "${ABS_PARENT_DIR}/cmake/modules"
 )

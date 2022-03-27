@@ -38,8 +38,7 @@ set( IRIS_LIB_VERSION_STRING
 
 get_filename_component(ABS_PARENT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 
-set( CMAKE_MODULE_PATH
-    "${CMAKE_MODULE_PATH}"
+list(APPEND CMAKE_MODULE_PATH
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
     "${ABS_PARENT_DIR}/cmake/modules"
     "${PROJECT_SOURCE_DIR}/cmake/modules"
@@ -62,7 +61,7 @@ include_directories(include/iris)
 set(CMAKE_AUTOMOC ON)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo"))
-    include(cmake/modules/debug-definitions.cmake)
+    include(debug-definitions)
 endif()
 
 find_package(Qt5 COMPONENTS Core Gui Xml Network REQUIRED)
@@ -179,5 +178,5 @@ if(BUILD_IRIS_TOOLS)
     add_subdirectory(tools)
 endif()
 if(NOT IS_SUBPROJECT)
-    include(cmake/modules/fix-codestyle.cmake)
+    include(fix-codestyle)
 endif()
