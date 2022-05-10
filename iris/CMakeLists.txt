@@ -64,6 +64,20 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR ("${CMAKE_BUILD_TYPE}" STREQUAL "Re
     include(debug-definitions)
 endif()
 
+# Detect MXE cross-compilation
+if(NOT DEFINED USE_MXE AND (EXISTS "${CMAKE_TOOLCHAIN_FILE}"))
+    option( USE_MXE "Use MXE (cross-compilation build environment for MS Windows)" OFF )
+    string(TOLOWER ${CMAKE_TOOLCHAIN_FILE} TOOLCHAIN_FILE)
+    string(REGEX MATCH "mxe-conf" MXE_DETECTED "${TOOLCHAIN_FILE}")
+    if(MXE_DETECTED)
+        message(STATUS "MXE environment detected")
+        message(STATUS "MXE toolchain: ${CMAKE_TOOLCHAIN_FILE}")
+        message(STATUS "MXE root path: ${CMAKE_PREFIX_PATH}")
+        set(USE_MXE ON)
+        set(BUNDLED_USRSCTP ON)
+    endif()
+endif()
+
 find_package(Qt5 COMPONENTS Core Gui Xml Network REQUIRED)
 
 if(Qt5Core_FOUND)

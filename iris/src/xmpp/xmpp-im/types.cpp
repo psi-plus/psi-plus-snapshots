@@ -868,7 +868,11 @@ void Message::setFrom(const Jid &j)
     // d->flag = false;
 }
 
-void Message::setId(const QString &s) { MessageD()->id = s; }
+void Message::setId(const QString &s)
+{
+    MessageD()->id = s;
+    MessageD()->originId = s;
+}
 
 //! \brief Set Type of message
 //!

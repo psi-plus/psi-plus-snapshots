@@ -5,7 +5,7 @@ cmake_dependent_option( BUNDLED_USRSCTP
     "Compile compatible usrsctp lib when system one is not available or uncompatible (required for datachannel jingle transport)"
     OFF "JINGLE_SCTP" OFF)
 
-if((CMAKE_CROSSCOMPILING AND DEFINED MSYS) AND STDINT_FOUND)
+if(USE_MXE AND STDINT_FOUND)
     #Add SCTP_STDINT_INCLUDE definition to compile irisnet with usrsctp with MinGW
     add_definitions(
         -DSCTP_STDINT_INCLUDE="${STDINT_INCLUDE}"

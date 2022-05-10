@@ -118,7 +118,6 @@ public:
 
     QPointer<ClientStream>  stream;
     QDomDocument            doc;
-    int                     id_seed = 0xaaaa;
     Task *                  root    = nullptr;
     QNetworkAccessManager * qnam    = nullptr;
     QString                 host, user, pass, resource;
@@ -564,9 +563,7 @@ void Client::debug(const QString &str) { emit debugText(str); }
 
 QString Client::genUniqueId()
 {
-    QString s = QString::asprintf("a%x", d->id_seed);
-    d->id_seed += 0x10;
-    return s;
+    return QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
 
 Task *Client::rootTask() { return d->root; }
