@@ -1,9 +1,11 @@
-cmake_minimum_required(VERSION 3.2.0)
+cmake_minimum_required(VERSION 3.10.0)
 
 include(CMakeDependentOption)
 cmake_dependent_option( BUNDLED_USRSCTP
     "Compile compatible usrsctp lib when system one is not available or uncompatible (required for datachannel jingle transport)"
     OFF "JINGLE_SCTP" OFF)
+
+set(IrisSCTPGitRepo "https://github.com/sctplab/usrsctp.git")
 
 if(USE_MXE AND STDINT_FOUND)
     #Add SCTP_STDINT_INCLUDE definition to compile irisnet with usrsctp with MinGW
@@ -62,7 +64,7 @@ else()
         ExternalProject_Add(UsrSCTPProject
             PREFIX ${USRSCTP_PREFIX}
             BINARY_DIR ${USRSCTP_BUILD_DIR}
-            GIT_REPOSITORY https://github.com/sctplab/usrsctp.git
+            GIT_REPOSITORY ${IrisSCTPGitRepo}
             GIT_TAG a17109528c75d01f6372d5c30851a639684c6e99
             CMAKE_ARGS ${USRSCTP_BUILD_OPTIONS}
             BUILD_BYPRODUCTS ${USRSCTP_LIBRARY}

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2.0)
+cmake_minimum_required(VERSION 3.10.0)
 option(IRIS_NETNAMES_DEBUG "Add -DNETNAMES_DEBUG definition" OFF)
 option(IRIS_PSI_ENABLE_SCTP_DEBUG "Add -DPSI_ENABLE_SCTP_DEBUG definition" OFF)
 option(IRIS_ICE_DEBUG "Add -DICE_DEBUG definition" OFF)
