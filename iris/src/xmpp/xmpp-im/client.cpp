@@ -563,7 +563,12 @@ void Client::debug(const QString &str) { emit debugText(str); }
 
 QString Client::genUniqueId()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5,11,0)
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
+#else
+    auto s = QUuid::createUuid().toString();
+    return s.mid(1, s.size() - 2);
+#endif
 }
 
 Task *Client::rootTask() { return d->root; }
