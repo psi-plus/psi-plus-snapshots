@@ -1,4 +1,4 @@
-<skin name="Dark" version="1.4" path="/home/vitaly/.local/share/psi+/skins/universal/dark" author="VitoZz">
+<skin name="Dark" version="1.5" path="/home/vitaly/.local/share/psi+/skins/universal/dark" author="VitoZz">
     <options>
         <options.ui.look.colors.chat.link-color type="QColor">#0000ff</options.ui.look.colors.chat.link-color>
         <options.ui.look.colors.chat.mailto-color type="QColor">#2c9dff</options.ui.look.colors.chat.mailto-color>
@@ -152,7 +152,7 @@ QLabel#lb_client {
 /* character counter */
 QLabel#lb_count {
     color: #bcbcbc;
-    background:#212121;
+    background: #212121;
     background-color: #2d2d2d;
     font-weight: bold;
     border: 1px solid #5b5b5b;
@@ -164,7 +164,7 @@ QLabel#lb_count {
 QLabel#lb_ident {
     color: #bcbcbc;
     background: #212121;
-    background-color:#2d2d2d;
+    background-color: #2d2d2d;
     font-weight: bold;
     border: 1px solid #5b5b5b;
     border-radius: 3px;
@@ -288,7 +288,7 @@ QSplitter::handle:vertical:pressed {
 
 /* horizontal splitter */
 QSplitter::handle:horizontal {
-    background-color:#212121;
+    background-color: #212121;
     border: 1px;
 }
 
@@ -322,7 +322,7 @@ QTabBar::tab {
     border-bottom-color: #212121;
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;
-    min-width: 8ex;
+    min-width: 8px;
     padding: 2px;
 }
 
@@ -338,7 +338,7 @@ QTabBar::tab:!selected {
     color: #5b5b5b;
     border: 2px outset #2d2d2d;
     border-bottom-color: #212121;
-    background-color: 2d2d2d;
+    background-color: #2d2d2d;
 }
 
 /* conference settings window - tabs, frame, buttons, list of JIDs */
@@ -395,7 +395,7 @@ QFrame#tv_affiliations {
 /* conference settings window - filter */
 QLabel#label {
     color: #bcbcbc;
-    background:#212121;
+    background: #212121;
 }
 
 QLineEdit#le_filter {
@@ -828,11 +828,11 @@ QToolButton#tb_status {
 }
 
 QToolButton#tb_mood:hover, #tb_activity:hover {
-    background-color:#5b5b5b;
+    background-color: #5b5b5b;
 }
 
 QToolButton#tb_status:hover {
-    background-color:#5b5b5b;
+    background-color: #5b5b5b;
 }
 
 QToolButton#tb_mood:pressed, #tb_activity:pressed {
@@ -935,7 +935,7 @@ QToolButton:checked {
 
 /* status button */
 PopupActionButton {
-    color:#bcbcbc;
+    color: #bcbcbc;
     margin-left: 1px;
     margin-right: 1px;
     min-width: 42px;
@@ -1181,7 +1181,7 @@ QToolButton:pressed {
         <options.ui.chat.use-small-chats type="bool">false</options.ui.chat.use-small-chats>
         <options.iconsets.affiliations type="QString">futurama-robots-affiliations.jisp</options.iconsets.affiliations>
         <options.ui.chat.scaled-message-icons type="bool">false</options.ui.chat.scaled-message-icons>
-        <options.ui.chat.theme type="QString">psi/new_classic</options.ui.chat.theme>
+        <options.ui.chat.theme type="QString">psi/stylized_classic</options.ui.chat.theme>
         <options.ui.message.show-character-count type="bool">true</options.ui.message.show-character-count>
         <options.ui.muc.show-affiliation-icons type="bool">true</options.ui.muc.show-affiliation-icons>
         <options.ui.muc.show-groups type="bool">true</options.ui.muc.show-groups>
