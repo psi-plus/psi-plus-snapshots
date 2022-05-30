@@ -36,9 +36,9 @@
         <options.ui.chat.css type="QString">
 QPushButton#pb_topic {
     width: 50px;
-    height:15px;
+    height: 15px;
     border: 0px solid #C4C4C3;
-    min-width:3ex;
+    min-width: 3ex;
     padding: 3px;
     margin: 1px;
 }

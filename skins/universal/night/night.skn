@@ -296,7 +296,7 @@ QLineEdit#le_topic {
     color: argb(0,0,230,250);
     font-weight: bold;
     padding-left: 2px;
-    margin-right: 2xp;
+    margin-right: 2px;
 }
 
 QLineEdit#le_jid {

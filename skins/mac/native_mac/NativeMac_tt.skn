@@ -182,7 +182,7 @@ QFrame:!active#topFrame {
 /* ------------------------ QWidget#avatar */
 QWidget#avatar {
     min-width: 60px;
-    min-height:25px;
+    min-height: 25px;
 }
 /* ------------------------ */
 
