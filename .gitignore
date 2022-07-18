@@ -3,3 +3,6 @@ builddir/
 myspell/
 translations/
 compile_commands.json
+
+# Nix build artifacts
+result*
