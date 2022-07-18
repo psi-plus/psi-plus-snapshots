@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
+        chatType: [basic, webkit, webengine]
 
     runs-on: ${{ matrix.os }}
 
@@ -24,8 +25,11 @@ jobs:
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
             system-features = nixos-test benchmark big-parallel kvm
 
-      - name: Test Nix build on ${{ matrix.os }}
+      - name: Test Nix build for “${{ matrix.chatType }}” chat type on ${{ matrix.os }}
         run: |
           ver=$(git tag --contains "$(git rev-parse @)" | head -1)
           if [[ -z $ver ]]; then ver=git-$(git rev-parse --short @); fi
-          nix-build --argstr version "$ver" -o result-ci-test-"$ver"-build-on-${{ matrix.os }}
+          nix-build .github/psi-plus-config.nix \
+            --argstr version "$ver" \
+            --argstr chatType ${{ matrix.chatType }} \
+            -o result-ci-test-"$ver"-${{ matrix.chatType }}-built-on-${{ matrix.os }}
