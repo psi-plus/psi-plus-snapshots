@@ -37,5 +37,6 @@ jobs:
             --argstr chatType ${{ matrix.chatType }} \
             -o result-ci-test-"$ver"-${{ matrix.chatType }}-built-on-${{ matrix.os }}
 
-          # Smoke test
-          result-ci-test-"$ver"-${{ matrix.chatType }}-built-on-${{ matrix.os }}/bin/psi-plus --version
+          # Final check
+          set -o xtrace
+          [[ -x result-ci-test-"$ver"-${{ matrix.chatType }}-built-on-${{ matrix.os }}/bin/psi-plus ]]
