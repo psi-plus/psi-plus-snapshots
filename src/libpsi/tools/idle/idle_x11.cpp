@@ -19,19 +19,78 @@
 
 #include "idle.h"
 
-#ifndef HAVE_XSS
+#if !defined(HAVE_XSS) && !defined(USE_DBUS)
 
 IdlePlatform::IdlePlatform() { d = nullptr; }
 IdlePlatform::~IdlePlatform() { }
 bool IdlePlatform::init() { return false; }
 int  IdlePlatform::secondsIdle() { return 0; }
 
-#else
+#elif defined(USE_DBUS) && !defined(HAVE_X11) && !defined(LIMIT_X11_USAGE)
 
-// gajim uses 'org.gnome.Mutter.IdleMonitor'.
-// we can also use https://blog.sleeplessbeastie.eu/2013/02/26/how-to-automate-kde-using-d-bus/
-//   in short qdbus org.kde.screensaver /ScreenSaver GetSessionIdleTime
-//   but on kde it returns in ms while gnome is in secs https://bugs.kde.org/show_bug.cgi?id=313571
+#include <QDBusConnection>
+#include <QDBusConnectionInterface>
+#include <QDBusInterface>
+#include <QDBusMessage>
+#include <QDBusReply>
+
+// Screen Saver dbus services
+static const QLatin1String COMMON_SS_SERV("org.freedesktop.ScreenSaver");
+static const QLatin1String COMMON_SS_PATH("/ScreenSaver");
+static const QLatin1String KDE_SS_SERV("org.kde.screensaver");
+static const QLatin1String GNOME_SS_SERV("org.gnome.Mutter.IdleMonitor");
+static const QLatin1String GNOME_SS_PATH("/org/gnome/Mutter/IdleMonitor/Core");
+// Screen saver functions
+static const QLatin1String GNOME_SS_F("GetIdletime");
+static const QLatin1String COMMON_SS_F("GetSessionIdleTime");
+
+class IdlePlatform::Private {
+public:
+    Private() { }
+    QString getServicesAvailable() const
+    {
+        const auto        services     = QDBusConnection::sessionBus().interface()->registeredServiceNames().value();
+        const QStringList idleServices = { COMMON_SS_SERV, KDE_SS_SERV, GNOME_SS_SERV };
+        // find first available dbus-service
+        for (const auto &service : idleServices) {
+            if (services.contains(service)) {
+                return service;
+            }
+        }
+        return QString();
+    }
+    int sendDBusCall() const
+    {
+        const auto serviceName = getServicesAvailable();
+        if (!serviceName.isEmpty()) {
+            // KDE and freedesktop uses the same path interface and method but gnome uses other
+            bool                isNotGnome = serviceName == COMMON_SS_SERV || serviceName == KDE_SS_SERV;
+            const QLatin1String iface      = isNotGnome ? COMMON_SS_SERV : GNOME_SS_SERV;
+            const QLatin1String path       = isNotGnome ? COMMON_SS_PATH : GNOME_SS_PATH;
+            const QLatin1String method     = isNotGnome ? COMMON_SS_F : GNOME_SS_F;
+            auto                interface  = QDBusInterface(serviceName, path, iface);
+            if (interface.isValid()) {
+                QDBusReply<int> reply = interface.call(method);
+                // probably reply value for freedesktop and kde need to be converted to seconds
+                if (reply.isValid())
+                    return isNotGnome ? reply.value() / 1000 : reply.value();
+            }
+        }
+        return -1;
+    }
+};
+
+IdlePlatform::IdlePlatform() { d = new Private; }
+IdlePlatform::~IdlePlatform() { delete d; }
+bool IdlePlatform::init() { return d->sendDBusCall() > 0; }
+
+int IdlePlatform::secondsIdle()
+{
+    const int result = d->sendDBusCall();
+    return (result > 0) ? result : 0;
+}
+
+#else
 
 #include <QApplication>
 #include <QDesktopWidget>
