@@ -139,7 +139,7 @@ bool IdlePlatform::init()
     old_handler = XSetErrorHandler(xerrhandler);
 
     int event_base, error_base;
-#if !defined(LIMIT_X11_USAGE)
+#if defined(HAVE_XSS) && !defined(LIMIT_X11_USAGE)
     if (XScreenSaverQueryExtension(QX11Info::display(), &event_base, &error_base)) {
         d->ss_info = XScreenSaverAllocInfo();
         return true;
@@ -152,9 +152,11 @@ int IdlePlatform::secondsIdle()
 {
     if (!d->ss_info)
         return 0;
+#if defined(HAVE_XSS)
     if (!XScreenSaverQueryInfo(QX11Info::display(), QX11Info::appRootWindow(), d->ss_info))
         return 0;
+#endif
     return d->ss_info->idle / 1000;
 }
 
-#endif // HAVE_XSS
+#endif // ! ( defined(USE_DBUS) && !defined(HAVE_X11) && !defined(LIMIT_X11_USAGE) )
