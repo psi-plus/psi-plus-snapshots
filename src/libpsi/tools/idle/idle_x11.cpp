@@ -70,7 +70,7 @@ public:
             const QLatin1String method     = isNotGnome ? COMMON_SS_F : GNOME_SS_F;
             auto                interface  = QDBusInterface(serviceName, path, iface);
             if (interface.isValid()) {
-                QDBusReply<int> reply = interface.call(method);
+                QDBusReply<uint> reply = interface.call(method);
                 // probably reply value for freedesktop and kde need to be converted to seconds
                 if (reply.isValid())
                     return isNotGnome ? reply.value() / 1000 : reply.value();
