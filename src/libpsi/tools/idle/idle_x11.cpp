@@ -82,7 +82,7 @@ public:
 
 IdlePlatform::IdlePlatform() { d = new Private; }
 IdlePlatform::~IdlePlatform() { delete d; }
-bool IdlePlatform::init() { return d->sendDBusCall() > 0; }
+bool IdlePlatform::init() { return d->sendDBusCall() >= 0; }
 
 int IdlePlatform::secondsIdle()
 {
