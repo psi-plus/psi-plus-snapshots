@@ -1,6 +1,6 @@
-project(psimedia-demo LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.10.0)
 
-cmake_minimum_required(VERSION 3.1.0)
+project(psimedia-demo LANGUAGES CXX)
 
 add_definitions(-DDEBUG_POSTFIX=\"\")
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

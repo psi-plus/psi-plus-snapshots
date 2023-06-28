@@ -1,6 +1,6 @@
-project(gstprovider LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.10.0)
 
-cmake_minimum_required(VERSION 3.1.0)
+project(gstprovider LANGUAGES CXX)
 
 get_directory_property(IS_SUBPROJECT PARENT_DIRECTORY)
 
