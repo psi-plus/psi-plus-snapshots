@@ -19,7 +19,7 @@
 #include "processquit.h"
 
 #ifndef NO_IRISNET
-#include "irisnetglobal_p.h"
+#include "corelib/irisnetglobal_p.h"
 #endif
 
 #ifdef QT_GUI_LIB

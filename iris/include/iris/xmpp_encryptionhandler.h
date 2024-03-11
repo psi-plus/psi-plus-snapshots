@@ -1,1 +1,1 @@
-#include "../../src/xmpp/xmpp-im/xmpp_encryptionhandler.h"
+#include "xmpp/xmpp-im/xmpp_encryptionhandler.h"

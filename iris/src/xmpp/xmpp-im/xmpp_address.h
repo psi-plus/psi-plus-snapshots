@@ -20,7 +20,7 @@
 #define XMPP_ADDRESS_H
 
 #include "xmpp/jid/jid.h"
-#include "xmpp_stanza.h"
+#include "iris/xmpp_stanza.h"
 
 #include <QString>
 

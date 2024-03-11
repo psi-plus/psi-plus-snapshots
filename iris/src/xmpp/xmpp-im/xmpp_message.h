@@ -25,7 +25,7 @@
 #include "xmpp_receipts.h"
 #include "xmpp_reference.h"
 #include "xmpp_rosterx.h"
-#include "xmpp_stanza.h"
+#include "iris/xmpp_stanza.h"
 #include "xmpp_url.h"
 
 #include <QExplicitlySharedDataPointer>

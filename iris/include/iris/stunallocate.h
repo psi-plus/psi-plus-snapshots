@@ -1,1 +1,1 @@
-#include "../../src/irisnet/noncore/stunallocate.h"
+#include "irisnet/noncore/stunallocate.h"

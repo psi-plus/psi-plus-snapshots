@@ -1,1 +1,1 @@
-#include "../../src/irisnet/noncore/legacy/srvresolver.h"
+#include "irisnet/noncore/legacy/srvresolver.h"

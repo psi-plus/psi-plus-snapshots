@@ -1,1 +1,1 @@
-#include "../../src/xmpp/xmpp-im/xmpp_serverinfomanager.h"
+#include "xmpp/xmpp-im/xmpp_serverinfomanager.h"

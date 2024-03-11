@@ -20,7 +20,7 @@
 #ifndef XMPP_TASK_H
 #define XMPP_TASK_H
 
-#include "xmpp_stanza.h"
+#include "iris/xmpp_stanza.h"
 
 #include <QObject>
 #include <QString>

@@ -20,9 +20,13 @@
 
 #include "bsocket.h"
 
+#include "netnames.h"
+
 #include <QHostAddress>
 #include <QMetaType>
 #include <QTcpSocket>
+#include <QTimer>
+
 #include <limits>
 
 //#define BS_DEBUG

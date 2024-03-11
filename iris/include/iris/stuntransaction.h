@@ -1,1 +1,1 @@
-#include "../../src/irisnet/noncore/stuntransaction.h"
+#include "irisnet/noncore/stuntransaction.h"

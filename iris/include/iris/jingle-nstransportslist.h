@@ -1,1 +1,1 @@
-#include "../../src/xmpp/xmpp-im/jingle-nstransportslist.h"
+#include "xmpp/xmpp-im/jingle-nstransportslist.h"

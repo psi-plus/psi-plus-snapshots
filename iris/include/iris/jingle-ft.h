@@ -1,1 +1,1 @@
-#include "../../src/xmpp/xmpp-im/jingle-ft.h"
+#include "xmpp/xmpp-im/jingle-ft.h"

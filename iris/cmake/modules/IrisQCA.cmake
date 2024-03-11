@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10.0)
 
 set(IrisQCAGitRepo "https://github.com/psi-im/qca.git")
 
-if(BUNDLED_QCA)
+if(IRIS_BUNDLED_QCA)
     message(STATUS "QCA: using bundled")
     set(QCA_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/qca)
     set(QCA_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/qca)
@@ -66,14 +66,7 @@ if(BUNDLED_QCA)
             )
     endif()
 else()
-    message(WARNING "Disabling BUNDLED_QCA option makes impossible to use DTLS and PsiMedia")
+    message(WARNING "Disabling IRIS_BUNDLED_QCA option makes impossible to use DTLS and PsiMedia")
     message(STATUS "QCA: using system")
     find_package(Qca REQUIRED)
 endif()
-
-set(QCA_INCLUDES ${Qca_INCLUDE_DIR})
-set(qca_LIB ${Qca_LIBRARY})
-
-include_directories(
-    ${Qca_INCLUDE_DIR}
-)

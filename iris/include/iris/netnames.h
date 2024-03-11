@@ -1,1 +1,1 @@
-#include "../../src/irisnet/corelib/netnames.h"
+#include "irisnet/corelib/netnames.h"

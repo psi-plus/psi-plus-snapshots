@@ -1,1 +1,1 @@
-#include "../../src/xmpp/jid/jid.h"
+#include "xmpp/jid/jid.h"

@@ -1,1 +1,1 @@
-#include "../../src/xmpp/xmpp-im/xmpp_httpauthrequest.h"
+#include "xmpp/xmpp-im/xmpp_httpauthrequest.h"

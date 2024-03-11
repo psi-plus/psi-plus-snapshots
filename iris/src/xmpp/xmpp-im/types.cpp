@@ -18,7 +18,7 @@
  */
 
 #include "im.h"
-#include "protocol.h"
+#include "xmpp/xmpp-core/protocol.h"
 #include "xmpp_bitsofbinary.h"
 #include "xmpp_captcha.h"
 #include "xmpp_features.h"

@@ -1,1 +1,1 @@
-#include "../../src/xmpp/xmpp-core/xmpp_stanza.h"
+#include "xmpp/xmpp-core/xmpp_stanza.h"

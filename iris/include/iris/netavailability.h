@@ -1,1 +1,1 @@
-#include "../../src/irisnet/corelib/netavailability.h"
+#include "irisnet/corelib/netavailability.h"

@@ -25,7 +25,7 @@
  * For example an ICE transport may have up to 65537 connections (65535 data/sctp-channels + 2 raw)
  */
 
-#include "bytestream.h"
+#include "iris/bytestream.h"
 #include "jingle.h"
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 8, 0)

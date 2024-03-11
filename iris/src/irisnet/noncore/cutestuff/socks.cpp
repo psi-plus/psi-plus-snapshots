@@ -27,6 +27,9 @@
 #include <QSocketNotifier>
 #include <QStringList>
 #include <QTimer>
+#include <QUdpSocket>
+#include <QTcpSocket>
+#include <QTcpServer>
 
 //#define PROX_DEBUG
 #ifdef PROX_DEBUG

@@ -6,7 +6,6 @@
 #include <QList>
 #include <QObject>
 
-#include <functional>
 #include <memory>
 
 namespace XMPP {

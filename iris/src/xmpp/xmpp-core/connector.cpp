@@ -38,6 +38,7 @@
 #include <QPointer>
 #include <QTimer>
 #include <QUrl>
+#include <QNetworkProxy>
 #include <qca.h>
 
 //#define XMPP_DEBUG

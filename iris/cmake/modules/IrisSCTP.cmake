@@ -1,23 +1,18 @@
 cmake_minimum_required(VERSION 3.10.0)
 
-include(CMakeDependentOption)
-cmake_dependent_option( BUNDLED_USRSCTP
-    "Compile compatible usrsctp lib when system one is not available or uncompatible (required for datachannel jingle transport)"
-    OFF "JINGLE_SCTP" OFF)
-
 set(IrisSCTPGitRepo "https://github.com/sctplab/usrsctp.git")
 
 if(USE_MXE AND STDINT_FOUND)
-    #Add SCTP_STDINT_INCLUDE definition to compile irisnet with usrsctp with MinGW
+    # Add SCTP_STDINT_INCLUDE definition to compile irisnet with usrsctp with MinGW
     add_definitions(
         -DSCTP_STDINT_INCLUDE="${STDINT_INCLUDE}"
     )
 endif()
 
-if(NOT BUNDLED_USRSCTP)
+if(NOT IRIS_BUNDLED_USRSCTP)
     find_package(UsrSCTP)
-    if (NOT UsrSCTP_FOUND)
-        message(FATAL_ERROR "UsrSCTP library not found. Try to install usrsctp library or enable BUNDLED_USRSCTP flag")
+    if(NOT UsrSCTP_FOUND)
+        message(FATAL_ERROR "UsrSCTP library not found. Try to install usrsctp library or enable IRIS_BUNDLED_USRSCTP flag")
     endif()
 else()
     message(STATUS "USRSCTP: using bundled")
@@ -25,9 +20,9 @@ else()
     set(USRSCTP_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/usrsctp)
     set(USRSCTP_BUILD_DIR ${USRSCTP_PREFIX}/build)
     if(NOT EXISTS ${USRSCTP_SOURCE_DIR})
-        list(APPEND USRSCTP_INCLUDE_DIR ${USRSCTP_PREFIX}/src/UsrSCTPProject/usrsctplib)
+        set(USRSCTP_INCLUDES ${USRSCTP_PREFIX}/src/UsrSCTPProject/usrsctplib)
     else()
-        list(APPEND USRSCTP_INCLUDE_DIR ${USRSCTP_SOURCE_DIR}/usrsctplib)
+        set(USRSCTP_INCLUDES ${USRSCTP_SOURCE_DIR}/usrsctplib)
     endif()
     set(USRSCTP_LIBRARY ${USRSCTP_BUILD_DIR}/usrsctplib/${CMAKE_STATIC_LIBRARY_PREFIX}usrsctp${CMAKE_STATIC_LIBRARY_SUFFIX})
     if(WIN32 AND MSVC)
@@ -78,14 +73,3 @@ else()
             IMPORTED_LINK_INTERFACE_LANGUAGES "C")
     add_dependencies(SctpLab::UsrSCTP ${USRSCTP_LIBRARY})
 endif()
-
-set(sctpLab_LIBRARY ${USRSCTP_LIBRARY})
-if(USRSCTP_INCLUDES)
-    set(sctpLab_INCLUDES ${USRSCTP_INCLUDES})
-else()
-    set(sctpLab_INCLUDES ${USRSCTP_INCLUDE_DIR})
-endif()
-include_directories(
-    ${sctpLab_INCLUDES}
-)
-add_definitions(-DJINGLE_SCTP)

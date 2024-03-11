@@ -20,16 +20,16 @@
 #ifndef XMPP_S5B_H
 #define XMPP_S5B_H
 
-#include "bytestream.h"
+#include "iris/bytestream.h"
 #include "xmpp/jid/jid.h"
-#include "xmpp_bytestream.h"
-#include "xmpp_stanza.h"
-#include "xmpp_task.h"
+#include "iris/xmpp_bytestream.h"
+#include "iris/xmpp_stanza.h"
+#include "iris/xmpp_task.h"
+#include "iris/tcpportreserver.h"
 
 #include <QHostAddress>
 #include <QList>
 #include <QObject>
-#include <tcpportreserver.h>
 
 class SocksClient;
 class SocksUDP;

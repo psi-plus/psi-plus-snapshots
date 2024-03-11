@@ -1,1 +1,1 @@
-#include "../../src/irisnet/noncore/stunmessage.h"
+#include "irisnet/noncore/stunmessage.h"

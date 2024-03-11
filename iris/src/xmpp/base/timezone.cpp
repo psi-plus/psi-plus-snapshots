@@ -18,90 +18,19 @@
 
 #include "timezone.h"
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 2, 0)
-#include <QByteArray>
-#include <QTime>
-#ifdef Q_OS_UNIX
-#include <time.h>
-#endif
-#ifdef Q_OS_WIN
-#include <windows.h>
-#endif
-#else
+
 #include <QTimeZone>
-#endif
 #include <QtGlobal>
 
-#if QT_VERSION < QT_VERSION_CHECK(5, 2, 0)
-static bool    inited = false;
-static int     timezone_offset_;
-static QString timezone_str_;
-
-static void init()
-{
-#if defined(Q_OS_UNIX)
-    time_t x;
-    time(&x);
-    char str[256];
-    char fmt[32];
-    int  size;
-    strcpy(fmt, "%z");
-    size = strftime(str, 256, fmt, localtime(&x));
-    if (size && strncmp(fmt, str, size)) {
-        timezone_offset_
-            = QByteArray::fromRawData(str + 1, 2).toInt() * 60 + QByteArray::fromRawData(str + 3, 2).toInt();
-        if (str[0] == '-')
-            timezone_offset_ = -timezone_offset_;
-    }
-    strcpy(fmt, "%Z");
-    strftime(str, 256, fmt, localtime(&x));
-    if (strcmp(fmt, str))
-        timezone_str_ = str;
-
-#elif defined(Q_OS_WIN)
-    TIME_ZONE_INFORMATION i;
-    memset(&i, 0, sizeof(i));
-    bool inDST = (GetTimeZoneInformation(&i) == TIME_ZONE_ID_DAYLIGHT);
-    int  bias  = i.Bias;
-    if (inDST)
-        bias += i.DaylightBias;
-    timezone_offset_ = -bias;
-    timezone_str_    = "";
-    for (int n = 0; n < 32; ++n) {
-        int w = inDST ? i.DaylightName[n] : i.StandardName[n];
-        if (w == 0)
-            break;
-        timezone_str_ += QChar(w);
-    }
-
-#else
-    qWarning("Failed to properly init timezone data. Use UTC offset instead");
-    inited           = true;
-    timezone_offset_ = 0;
-    timezone_str_    = QLatin1String("N/A");
-#endif
-}
-#endif
 
 int TimeZone::offsetFromUtc()
 {
-#if QT_VERSION < QT_VERSION_CHECK(5, 2, 0)
-    if (!inited) {
-        init();
-    }
-    return timezone_offset_;
-#else
     return QTimeZone::systemTimeZone().offsetFromUtc(QDateTime::currentDateTime()) / 60;
-#endif
 }
 
 QString TimeZone::abbreviation()
 {
-#if QT_VERSION < QT_VERSION_CHECK(5, 2, 0)
-    return timezone_str_;
-#else
     return QTimeZone::systemTimeZone().abbreviation(QDateTime::currentDateTime());
-#endif
 }
 
 int TimeZone::tzdToInt(const QString &tzd)

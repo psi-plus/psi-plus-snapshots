@@ -1,1 +1,1 @@
-#include "../../src/irisnet/noncore/cutestuff/socks.h"
+#include "irisnet/noncore/cutestuff/socks.h"

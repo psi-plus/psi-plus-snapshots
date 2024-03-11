@@ -24,7 +24,7 @@
 #include <cstdlib>
 
 namespace XMPP {
-class RandRandomNumberGenerator : public RandomNumberGenerator {
+class [[deprecated]] RandRandomNumberGenerator : public RandomNumberGenerator {
 public:
     RandRandomNumberGenerator() { }
 

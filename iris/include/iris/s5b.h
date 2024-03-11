@@ -1,1 +1,1 @@
-#include "../../src/xmpp/xmpp-im/s5b.h"
+#include "xmpp/xmpp-im/s5b.h"

@@ -93,7 +93,7 @@ static Roster xmlReadRoster(const QDomElement &q, bool push)
 // JT_Session
 //----------------------------------------------------------------------------
 //
-#include "protocol.h"
+#include "xmpp/xmpp-core/protocol.h"
 
 JT_Session::JT_Session(Task *parent) : Task(parent) { }
 

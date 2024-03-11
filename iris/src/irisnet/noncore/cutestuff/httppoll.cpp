@@ -24,9 +24,11 @@
 #include <QByteArray>
 #include <QUrl>
 #include <QtCrypto>
-#include <qpointer.h>
-#include <qstringlist.h>
-#include <qtimer.h>
+#include <QPointer>
+#include <QHostAddress>
+#include <QStringList>
+#include <QTimer>
+
 #ifdef PROX_DEBUG
 #include <stdio.h>
 #endif

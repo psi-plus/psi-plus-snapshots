@@ -43,7 +43,7 @@
 
 #include "bytestream.h"
 #ifndef NO_IRISNET
-#include "irisnetglobal_p.h"
+#include "irisnet/corelib/irisnetglobal_p.h"
 #endif
 #include "protocol.h"
 #include "securestream.h"

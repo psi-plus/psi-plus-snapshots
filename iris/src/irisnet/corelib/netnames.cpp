@@ -20,7 +20,7 @@
 #include "netnames.h"
 
 #include "addressresolver.h"
-#include "irisnetglobal_p.h"
+#include "corelib/irisnetglobal_p.h"
 #include "irisnetplugin.h"
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)

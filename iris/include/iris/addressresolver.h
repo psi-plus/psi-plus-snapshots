@@ -1,1 +1,1 @@
-#include "../../src/irisnet/corelib/addressresolver.h"
+#include "irisnet/corelib/addressresolver.h"

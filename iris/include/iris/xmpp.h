@@ -1,1 +1,1 @@
-#include "../../src/xmpp/xmpp-core/xmpp.h"
+#include "xmpp/xmpp-core/xmpp.h"

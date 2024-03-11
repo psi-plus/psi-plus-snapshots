@@ -21,8 +21,8 @@
 #define JINGLE_ICE_H
 
 #include "jingle-transport.h"
-#include "tcpportreserver.h"
-#include "xmpp.h"
+#include "iris/tcpportreserver.h"
+#include "iris/xmpp.h"
 
 class QHostAddress;
 

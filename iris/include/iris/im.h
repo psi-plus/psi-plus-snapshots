@@ -1,1 +1,1 @@
-#include "../../src/xmpp/xmpp-im/im.h"
+#include "xmpp/xmpp-im/im.h"

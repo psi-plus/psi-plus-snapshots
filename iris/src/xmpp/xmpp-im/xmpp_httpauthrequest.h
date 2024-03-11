@@ -21,7 +21,7 @@
 
 #include <QString>
 
-#include "xmpp_stanza.h"
+#include "iris/xmpp_stanza.h"
 
 class QDomDocument;
 class QDomElement;

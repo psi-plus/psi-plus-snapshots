@@ -1,1 +1,1 @@
-#include "../../src/irisnet/noncore/iceabstractstundisco.h"
+#include "irisnet/noncore/iceabstractstundisco.h"

@@ -20,7 +20,7 @@
 #ifndef JINGLE_H
 #define JINGLE_H
 
-#include "xmpp_stanza.h"
+#include "iris/xmpp_stanza.h"
 
 #include <QSharedDataPointer>
 #include <QSharedPointer>

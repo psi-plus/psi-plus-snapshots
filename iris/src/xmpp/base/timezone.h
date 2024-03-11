@@ -19,6 +19,8 @@
 #ifndef IRIS_TIMEZONE_H
 #define IRIS_TIMEZONE_H
 
+// TODO <5.2.0 code was stripped away. remaining has to be put to some common utils
+
 #include <QObject>
 
 class TimeZone {

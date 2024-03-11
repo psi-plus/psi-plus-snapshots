@@ -1,1 +1,1 @@
-#include "../../src/irisnet/noncore/legacy/ndns.h"
+#include "irisnet/noncore/legacy/ndns.h"

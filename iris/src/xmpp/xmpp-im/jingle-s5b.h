@@ -21,7 +21,7 @@
 #define JINGLE_S5B_H
 
 #include "jingle-transport.h"
-#include "tcpportreserver.h"
+#include "iris/tcpportreserver.h"
 
 class QHostAddress;
 class SocksClient;

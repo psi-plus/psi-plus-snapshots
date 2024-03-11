@@ -23,7 +23,7 @@
 #include <QtCore>
 #define IRISNET_EXPORT
 #else
-#include "irisnetglobal.h"
+#include "../corelib/irisnetglobal.h"
 #endif
 
 #ifndef NO_IRISNET

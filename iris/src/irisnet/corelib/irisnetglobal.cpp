@@ -16,7 +16,7 @@
  *
  */
 
-#include "irisnetglobal_p.h"
+#include "corelib/irisnetglobal_p.h"
 #include "irisnetplugin.h"
 
 namespace XMPP {

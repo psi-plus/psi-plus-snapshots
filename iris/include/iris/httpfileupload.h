@@ -1,1 +1,1 @@
-#include "../../src/xmpp/xmpp-im/httpfileupload.h"
+#include "xmpp/xmpp-im/httpfileupload.h"

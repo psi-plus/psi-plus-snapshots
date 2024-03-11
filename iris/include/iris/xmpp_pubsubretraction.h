@@ -1,1 +1,1 @@
-#include "../../src/xmpp/xmpp-im/xmpp_pubsubretraction.h"
+#include "xmpp/xmpp-im/xmpp_pubsubretraction.h"

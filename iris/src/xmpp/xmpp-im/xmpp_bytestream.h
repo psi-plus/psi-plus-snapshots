@@ -20,7 +20,7 @@
 #ifndef BYTESTREAM_MANAGER_H
 #define BYTESTREAM_MANAGER_H
 
-#include "bytestream.h"
+#include "iris/bytestream.h"
 #include "xmpp/jid/jid.h"
 
 #include <QObject>

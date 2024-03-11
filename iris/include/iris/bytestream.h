@@ -1,1 +1,1 @@
-#include "../../src/irisnet/noncore/cutestuff/bytestream.h"
+#include "irisnet/noncore/cutestuff/bytestream.h"

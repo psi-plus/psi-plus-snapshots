@@ -22,7 +22,6 @@
 #define CS_BSOCKET_H
 
 #include "bytestream.h"
-#include "netnames.h"
 
 #include <QAbstractSocket>
 #include <limits>
@@ -30,6 +29,7 @@
 class QByteArray;
 class QObject;
 class QString;
+class QTcpSocket;
 
 // CS_NAMESPACE_BEGIN
 /*!
