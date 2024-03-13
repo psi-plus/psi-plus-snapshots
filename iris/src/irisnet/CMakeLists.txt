@@ -113,10 +113,10 @@ target_include_directories(irisnet
         ${USRSCTP_INCLUDES}
 )
 
-target_compile_definitions(irisnet PRIVATE HAVE_QTNET)
+target_compile_definitions(irisnet PRIVATE IRISNET_STATIC HAVE_QTNET)
 
 if(WIN32)
-    target_link_libraries(irisnet PUBLIC ws2_32 iphlpapi)
+    set(EXTRA_LDFLAGS ws2_32 iphlpapi)
 endif()
 
 # UsrSCTP requires pthread
@@ -128,6 +128,7 @@ endif()
 target_link_libraries(irisnet PUBLIC
     ${Qca_LIBRARY} ${USRSCTP_LIBRARY}
     Qt5::Core Qt5::Network Qt5::Xml
+    ${EXTRA_LDFLAGS}
 )
 
 if(IRIS_ENABLE_INSTALL)

@@ -2,7 +2,11 @@ cmake_minimum_required(VERSION 3.10.0)
 
 find_package(ZLIB REQUIRED)
 
-add_library(iris)
+if(IS_SUBPROJECT)
+    add_library(iris STATIC)
+else()
+    add_library(iris)
+endif()
 
 set(XMPP_JID_HEADERS jid/jid.h)
 
@@ -216,7 +220,7 @@ if(IRIS_ENABLE_DEBUG)
     target_compile_definitions(iris PRIVATE XMPP_TEST)
 endif()
 
-target_compile_definitions(iris PUBLIC IRISNET_STATIC)
+target_compile_definitions(iris PUBLIC IRISNET_STATIC QSTRINGPREP_BUILDING)
 
 if(IS_SUBPROJECT)
     target_include_directories(iris
