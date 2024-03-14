@@ -34,6 +34,10 @@
 #include <QSharedPointer>
 #include <QString>
 #include <QStringList>
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+# include <QStringEncoder>
+# include <QStringDecoder>
+#endif
 
 class Hunspell;
 class QTextCodec;
@@ -60,7 +64,12 @@ private:
     struct LangItem {
         HunspellPtr hunspell_;
         DictInfo    info;
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
         QTextCodec *codec;
+#else
+        QStringEncoder encoder;
+        QStringDecoder decoder;
+#endif
     };
     void getSupportedLanguages();
     void addLanguage(const LanguageManager::LangId &langId);
@@ -69,7 +78,7 @@ private:
     void unloadLanguage(const LanguageManager::LangId &langId);
 
 private:
-    QList<LangItem>               languages_;
+    std::list<LangItem>           languages_;
     QStringList                   dictPaths_;
     QSet<LanguageManager::LangId> supportedLangs_;
 };

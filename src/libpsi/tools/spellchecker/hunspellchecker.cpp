@@ -39,14 +39,17 @@
 #include <QMutableListIterator>
 #include <QSet>
 #include <QString>
-#include <QTextCodec>
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+# include <QTextCodec>
+#endif
 #include <hunspell.hxx>
 
-#ifdef H_DEPRECATED
-#define NEW_HUNSPELL
-#define HS_STRING(text) li.codec->fromUnicode(text).toStdString()
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#  define HS_STRING(text) li.codec->fromUnicode(text).toStdString()
+#  define QT_STRING(text) QString(li.codec->toUnicode(item.c_str()))
 #else
-#define HS_STRING(text) li.codec->fromUnicode(text)
+#  define HS_STRING(text) QByteArray(li.encoder(text)).toStdString()
+#  define QT_STRING(text) li.decoder(QByteArray::fromStdString(item))
 #endif
 
 HunspellChecker::HunspellChecker()
@@ -137,19 +140,26 @@ void HunspellChecker::addLanguage(const LanguageManager::LangId &langId)
     QFileInfo aff, dic;
     if (scanDictPaths(language, aff, dic)) {
         LangItem li;
+        // TODO on windows it makes sense to use "\\\\?\\" prefix to paths
         li.hunspell_
-            = HunspellPtr(new Hunspell(aff.absoluteFilePath().toLocal8Bit(), dic.absoluteFilePath().toLocal8Bit()));
+            = HunspellPtr(new Hunspell(aff.absoluteFilePath().toUtf8(), dic.absoluteFilePath().toLocal8Bit()));
         QByteArray codecName(li.hunspell_->get_dic_encoding());
         if (codecName.startsWith("microsoft-cp125")) {
             codecName.replace(0, sizeof("microsoft-cp") - 1, "Windows-");
         } else if (codecName.startsWith("TIS620-2533")) {
             codecName.resize(sizeof("TIS620") - 1);
         }
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
         li.codec = QTextCodec::codecForName(codecName);
         if (li.codec) {
+#else
+        li.encoder = QStringEncoder(codecName.data());
+        li.decoder = QStringDecoder(codecName.data());
+        if (li.encoder.isValid()) {
+#endif
             li.info.langId   = langId;
             li.info.filename = dic.filePath();
-            languages_.append(li);
+            languages_.push_back(std::move(li));
         } else {
             qDebug("Unsupported myspell dict encoding: \"%s\" for %s", codecName.data(), qPrintable(dic.fileName()));
         }
@@ -159,29 +169,20 @@ void HunspellChecker::addLanguage(const LanguageManager::LangId &langId)
 QList<QString> HunspellChecker::suggestions(const QString &word)
 {
     QStringList qtResult;
-    for (const LangItem &li : std::as_const(languages_)) {
-#ifdef NEW_HUNSPELL
+    for (LangItem &li : languages_) {
         std::vector<std::string> result = li.hunspell_->suggest(HS_STRING(word));
         if (!result.empty()) {
             for (const std::string &item : result) {
-                qtResult << QString(li.codec->toUnicode(item.c_str()));
+                qtResult << QT_STRING(item); // QString(li.codec->toUnicode(item.c_str()));
             }
         }
-#else
-        char **result;
-        int    sugNum = li.hunspell_->suggest(&result, HS_STRING(word));
-        for (int i = 0; i < sugNum; i++) {
-            qtResult << li.codec->toUnicode(result[i]);
-        }
-        li.hunspell_->free_list(&result, sugNum);
-#endif
     }
     return std::move(qtResult);
 }
 
 bool HunspellChecker::isCorrect(const QString &word)
 {
-    for (const LangItem &li : std::as_const(languages_)) {
+    for (LangItem &li : languages_) {
         if (li.hunspell_->spell(HS_STRING(word)) != 0) {
             return true;
         }
@@ -192,7 +193,7 @@ bool HunspellChecker::add(const QString &word)
 {
     if (!word.isEmpty()) {
         QString trimmed_word = word.trimmed();
-        for (const LangItem &li : std::as_const(languages_)) {
+        for (LangItem &li : languages_) {
             if (li.hunspell_->add(HS_STRING(trimmed_word)) != 0) {
                 return true;
             }
@@ -213,12 +214,12 @@ bool HunspellChecker::writable() const { return false; }
 
 void HunspellChecker::unloadLanguage(const LanguageManager::LangId &langId)
 {
-    QMutableListIterator<LangItem> it(languages_);
-    while (it.hasNext()) {
-        LangItem item = it.next();
-        if (item.info.langId == langId) {
-            it.remove();
-        }
+    for (auto it = languages_.begin(); it != languages_.end();)
+    {
+        if ((*it).info.langId == langId)
+            it = languages_.erase(it);
+        else
+            ++it;
     }
 }
 
