@@ -24,13 +24,11 @@
 #include <QtCrypto>
 
 namespace XMPP {
-class RandomNumberGenerator;
 
 class SCRAMSHA1Response {
 public:
     SCRAMSHA1Response(const QByteArray &server_first_message, const QByteArray &password,
-                      const QByteArray &client_first_message, const QString &salted_password_base64,
-                      const RandomNumberGenerator &rand);
+                      const QByteArray &client_first_message, const QString &salted_password_base64);
 
     const QByteArray &getValue() const { return value_; }
 

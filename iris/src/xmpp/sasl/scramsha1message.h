@@ -19,16 +19,13 @@
 #ifndef SCRAMSHA1MESSAGE_H
 #define SCRAMSHA1MESSAGE_H
 
-#include "xmpp/base/randomnumbergenerator.h"
-
 #include <QByteArray>
 #include <QString>
 
 namespace XMPP {
 class SCRAMSHA1Message {
 public:
-    SCRAMSHA1Message(const QString &authzid, const QString &authcid, const QByteArray &cnonce,
-                     const RandomNumberGenerator &rand);
+    SCRAMSHA1Message(const QString &authzid, const QString &authcid, const QByteArray &cnonce);
 
     const QByteArray &getValue() { return value_; }
 

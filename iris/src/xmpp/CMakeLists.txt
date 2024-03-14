@@ -96,9 +96,6 @@ set(XMPP_HEADERS_PRIVATE
     zlib/zlibcompressor.h
     zlib/zlibdecompressor.h
     blake2/blake2qt.h
-
-    base/randomnumbergenerator.h
-    base/randrandomnumbergenerator.h
     base/timezone.h
 )
 
@@ -152,7 +149,6 @@ target_sources(iris PRIVATE
     xmpp-im/jingle-ibb.cpp
     xmpp-im/jingle-file.cpp
 
-    base/randomnumbergenerator.cpp
     base/timezone.cpp
 
     zlib/zlibcompressor.cpp

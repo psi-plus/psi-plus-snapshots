@@ -18,11 +18,12 @@
 
 #include "xmpp/sasl/scramsha1message.h"
 #include "qttestutil/qttestutil.h"
-#include "xmpp/base/unittest/incrementingrandomnumbergenerator.h"
 
 #include <QObject>
 #include <QtCrypto>
 #include <QtTest/QtTest>
+
+// TODO fix test adfter random generator removal
 
 using namespace XMPP;
 
@@ -34,12 +35,12 @@ private slots:
 
     void testConstructor_WithoutAuthzid()
     {
-        SCRAMSHA1Message msg1("", "testuser", QByteArray(0, ' '), IncrementingRandomNumberGenerator(255));
+        SCRAMSHA1Message msg1("", "testuser", QByteArray(0, ' '));
         QByteArray       msg1_good("n,,n=testuser,r=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=");
         QVERIFY(msg1.isValid());
         QCOMPARE(msg1.getValue(), msg1_good);
 
-        SCRAMSHA1Message msg2("", "username=test,man", QByteArray(0, ' '), IncrementingRandomNumberGenerator(255));
+        SCRAMSHA1Message msg2("", "username=test,man", QByteArray(0, ' '));
         QByteArray       msg2_good("n,,n=username=3Dtest=2Cman,r=AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=");
         QVERIFY(msg2.isValid());
         QCOMPARE(msg2.getValue(), msg2_good);

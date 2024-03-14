@@ -18,11 +18,12 @@
 
 #include "xmpp/sasl/digestmd5response.h"
 #include "qttestutil/qttestutil.h"
-#include "xmpp/base/unittest/incrementingrandomnumbergenerator.h"
 
 #include <QObject>
 #include <QtCrypto>
 #include <QtTest/QtTest>
+
+// TODO fix test adfter random generator removal
 
 using namespace XMPP;
 
@@ -35,8 +36,7 @@ private slots:
         DIGESTMD5Response response("realm=\"example.com\","
                                    "nonce=\"O6skKPuaCZEny3hteI19qXMBXSadoWs840MchORo\","
                                    "qop=\"auth\",charset=\"utf-8\",algorithm=\"md5-sess\"",
-                                   "xmpp", "jabber.example.com", "example.com", "myuser", "myuser_authz", "mypass",
-                                   IncrementingRandomNumberGenerator(255));
+                                   "xmpp", "jabber.example.com", "example.com", "myuser", "myuser_authz", "mypass");
         QByteArray        expectedValue("username=\"myuser\",realm=\"example.com\","
                                                "nonce=\"O6skKPuaCZEny3hteI19qXMBXSadoWs840MchORo\","
                                                "cnonce=\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=\","
@@ -54,8 +54,7 @@ private slots:
         DIGESTMD5Response response("realm=\"example.com\","
                                    "nonce=\"O6skKPuaCZEny3hteI19qXMBXSadoWs840MchORo\","
                                    "qop=\"auth\",charset=\"utf-8\",algorithm=\"md5-sess\"",
-                                   "xmpp", "jabber.example.com", "example.com", "myuser", "", "mypass",
-                                   IncrementingRandomNumberGenerator(255));
+                                   "xmpp", "jabber.example.com", "example.com", "myuser", "", "mypass");
         QByteArray        expectedValue("username=\"myuser\",realm=\"example.com\","
                                                "nonce=\"O6skKPuaCZEny3hteI19qXMBXSadoWs840MchORo\","
                                                "cnonce=\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=\","

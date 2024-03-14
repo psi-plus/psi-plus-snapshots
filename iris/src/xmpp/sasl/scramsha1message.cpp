@@ -18,10 +18,10 @@
 
 #include "xmpp/sasl/scramsha1message.h"
 
-#include "xmpp/base/randomnumbergenerator.h"
 #include "xmpp/jid/jid.h"
 
 #include <QDebug>
+#include <QRandomGenerator>
 #include <QString>
 #include <QTextStream>
 #include <QtCrypto>
@@ -40,8 +40,8 @@ bool Normalize(const QString &username_in, QString &username_out)
     }
 }
 
-SCRAMSHA1Message::SCRAMSHA1Message(const QString &authzid, const QString &authcid, const QByteArray &cnonce,
-                                   const RandomNumberGenerator &rand) : isValid_(true)
+SCRAMSHA1Message::SCRAMSHA1Message(const QString &authzid, const QString &authcid, const QByteArray &cnonce) :
+    isValid_(true)
 {
     QString    result;
     QByteArray clientnonce;
@@ -57,7 +57,7 @@ SCRAMSHA1Message::SCRAMSHA1Message(const QString &authzid, const QString &authci
         QByteArray a;
         a.resize(32);
         for (int n = 0; n < (int)a.size(); ++n) {
-            a[n] = (char)rand.generateNumberBetween(0, 255);
+            a[n] = (char)QRandomGenerator::global()->bounded(0, 256);
         }
         clientnonce = a.toBase64();
     } else

@@ -74,7 +74,7 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR ("${CMAKE_BUILD_TYPE}" STREQUAL "Re
     include(debug-definitions)
 endif()
 
-if(QT_DEFAULT_MAJOR_VERSION STREQUAL "")
+if("${QT_DEFAULT_MAJOR_VERSION}" STREQUAL "")
     set(QT_DEFAULT_MAJOR_VERSION 5)
 endif()
 

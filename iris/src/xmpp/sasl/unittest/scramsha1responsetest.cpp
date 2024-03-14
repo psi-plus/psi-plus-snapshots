@@ -18,12 +18,13 @@
 
 #include "xmpp/sasl/scramsha1response.h"
 #include "qttestutil/qttestutil.h"
-#include "xmpp/base/unittest/incrementingrandomnumbergenerator.h"
 #include "xmpp/sasl/scramsha1signature.h"
 
 #include <QObject>
 #include <QtCrypto>
 #include <QtTest/QtTest>
+
+// TODO fix test adfter random generator removal
 
 using namespace XMPP;
 
@@ -37,7 +38,7 @@ private slots:
     {
         if (QCA::isSupported("hmac(sha1)")) {
             SCRAMSHA1Response resp1("r=fyko+d2lbbFgONRv9qkxdawL3rfcNHYJY1ZVvWVs7j,s=QSXCR+Q6sek8bf92,i=4096", "pencil",
-                                    "n,,n=user,r=fyko+d2lbbFgONRv9qkxdawL", "", IncrementingRandomNumberGenerator(255));
+                                    "n,,n=user,r=fyko+d2lbbFgONRv9qkxdawL", "");
             const QCA::SecureArray sig = resp1.getServerSignature();
             QByteArray             resp_sig("v=rmF9pqV8S7suAoZWja4dJRkFsKQ=");
             SCRAMSHA1Signature     sig1(resp_sig, sig);

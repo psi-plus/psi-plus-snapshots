@@ -19,7 +19,6 @@
 
 #include "simplesasl.h"
 
-#include "xmpp/base/randrandomnumbergenerator.h"
 #include "xmpp/sasl/digestmd5response.h"
 #include "xmpp/sasl/plainmessage.h"
 #include "xmpp/sasl/scramsha1message.h"
@@ -28,13 +27,12 @@
 
 #include <QByteArray>
 #include <QDebug>
+#include <QHostAddress>
 #include <QList>
 #include <QObject>
+#include <QStringList>
 #include <QtCrypto>
 #include <qca.h>
-#include <qhostaddress.h>
-#include <qstringlist.h>
-#include <stdlib.h>
 
 namespace XMPP {
 class SimpleSASLContext : public QCA::SASLContext {
@@ -202,7 +200,7 @@ public:
                 out_buf = PLAINMessage(authz, user, pass.toByteArray()).getValue();
             } else if (out_mech == "SCRAM-SHA-1") {
                 // send client-first-message
-                SCRAMSHA1Message msg(authz, user, QByteArray(0, ' '), RandRandomNumberGenerator());
+                SCRAMSHA1Message msg(authz, user, QByteArray(0, ' '));
                 if (msg.isValid()) {
                     out_buf              = msg.getValue();
                     client_first_message = out_buf;
@@ -239,8 +237,7 @@ public:
                     goto ready;
                 }
 
-                DIGESTMD5Response response(in_buf, service, host, realm, user, authz, pass.toByteArray(),
-                                           RandRandomNumberGenerator());
+                DIGESTMD5Response response(in_buf, service, host, realm, user, authz, pass.toByteArray());
                 if (!response.isValid()) {
                     authCondition_ = QCA::SASL::BadProtocol;
                     result_        = Error;
@@ -274,8 +271,7 @@ public:
                 if (prop.isValid()) {
                     salted_password_base64 = prop.toString();
                 }
-                SCRAMSHA1Response response(in_buf, pass.toByteArray(), client_first_message, salted_password_base64,
-                                           RandRandomNumberGenerator());
+                SCRAMSHA1Response response(in_buf, pass.toByteArray(), client_first_message, salted_password_base64);
                 if (!response.isValid()) {
                     authCondition_ = QCA::SASL::BadProtocol;
                     result_        = Error;
