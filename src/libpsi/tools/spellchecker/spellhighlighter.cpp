@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "spellchecker.h"
+#include <QRegularExpression>
 
 SpellHighlighter::SpellHighlighter(QTextDocument *d) : QSyntaxHighlighter(d) { }
 
