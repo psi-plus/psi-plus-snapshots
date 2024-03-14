@@ -80,7 +80,7 @@ static bool extractMainHeader(const QString &line, QString *proto, int *code, QS
     if (n2 == -1)
         return false;
     if (code)
-        *code = line.midRef(n, n2 - n).toInt();
+        *code = QStringView{line}.mid(n, n2 - n).toInt();
     n = n2 + 1;
     if (msg)
         *msg = line.mid(n);
@@ -269,7 +269,7 @@ void HttpConnect::sock_readyRead()
 #ifdef PROX_DEBUG
                     fprintf(stderr, "HttpConnect: header proto=[%s] code=[%d] msg=[%s]\n", qPrintable(proto), code,
                             qPrintable(msg));
-                    for (const auto &it : qAsConst(d->headerLines))
+                    for (const auto &it : std::as_const(d->headerLines))
                         fprintf(stderr, "HttpConnect: * [%s]\n", qPrintable(it));
 #endif
                 }

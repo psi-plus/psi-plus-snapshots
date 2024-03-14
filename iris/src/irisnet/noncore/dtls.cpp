@@ -62,7 +62,7 @@ bool Dtls::FingerPrint::parse(const QDomElement &el)
                  qPrintable(ns()));
     }
     auto ht = el.attribute(QLatin1String("hash"));
-    hash    = QStringRef(&ht);
+    hash    = QStringView{ht};
     hash.setData(QByteArray::fromHex(el.text().toLatin1()));
     auto setupIt = std::find(fpRoles.begin(), fpRoles.end(), el.attribute(QLatin1String("setup")).toLatin1());
     setup        = Setup(setupIt == fpRoles.end() ? NotSet : std::distance(fpRoles.begin(), setupIt) + 1);

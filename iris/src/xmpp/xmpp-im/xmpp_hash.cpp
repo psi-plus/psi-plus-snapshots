@@ -111,7 +111,7 @@ HashVariant findHasher(Hash::Type hashType)
 Hash::Hash(const QDomElement &el)
 {
     QString algo = el.attribute(QLatin1String("algo"));
-    v_type       = parseType(QStringRef(&algo));
+    v_type       = parseType(QStringView{algo});
     if (v_type != Unknown && el.tagName() == QLatin1String("hash")) {
         v_data = QByteArray::fromBase64(el.text().toLatin1());
         if (v_data.isEmpty()) {
@@ -128,7 +128,7 @@ QString Hash::stringType() const
     return QLatin1String(hashTypes[int(v_type)].text);
 }
 
-Hash::Type Hash::parseType(const QStringRef &algo)
+Hash::Type Hash::parseType(const QStringView &algo)
 {
     if (!algo.isEmpty()) {
         for (auto const &hash : hashTypes) {
@@ -251,7 +251,7 @@ Hash Hash::from(Hash::Type t, const QFileInfo &file)
     return Hash();
 }
 
-Hash Hash::from(const QStringRef &str)
+Hash Hash::from(const QStringView &str)
 {
     auto ind = str.indexOf('+');
     if (ind <= 0)

@@ -20,14 +20,13 @@
 #ifndef XMPP_XMLCOMMON_H
 #define XMPP_XMLCOMMON_H
 
-#include <qdom.h>
-#include <qlist.h>
+#include <QDomNode>
+#include <QList>
 
 class QColor;
 class QDateTime;
 class QRect;
 class QSize;
-class QStringList;
 
 class XDomNodeList {
 public:

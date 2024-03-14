@@ -308,7 +308,7 @@ bool Client::isActive() const { return d->active; }
 QString Client::groupChatPassword(const QString &host, const QString &room) const
 {
     Jid jid(room + "@" + host);
-    for (const GroupChat &i : qAsConst(d->groupChatList)) {
+    for (const GroupChat &i : std::as_const(d->groupChatList)) {
         if (i.j.compare(jid, false)) {
             return i.password;
         }
@@ -376,7 +376,7 @@ void Client::groupChatSetStatus(const QString &host, const QString &room, const 
 {
     Jid  jid(room + "@" + host);
     bool found = false;
-    for (const GroupChat &i : qAsConst(d->groupChatList)) {
+    for (const GroupChat &i : std::as_const(d->groupChatList)) {
         if (i.j.compare(jid, false)) {
             found = true;
             jid   = i.j;
@@ -435,7 +435,7 @@ void Client::groupChatLeaveAll(const QString &statusStr)
 QString Client::groupChatNick(const QString &host, const QString &room) const
 {
     Jid jid(room + "@" + host);
-    for (const GroupChat &gc : qAsConst(d->groupChatList)) {
+    for (const GroupChat &gc : std::as_const(d->groupChatList)) {
         if (gc.j.compare(jid, false)) {
             return gc.j.resource();
         }

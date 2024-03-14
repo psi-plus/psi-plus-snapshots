@@ -20,8 +20,9 @@
 #include "qca.h"
 #include "xmpp.h"
 
-#include <qtimer.h>
-#include <qurl.h>
+#include <QRegularExpression>
+#include <QTimer>
+#include <QUrl>
 
 using namespace XMPP;
 // FIXME: remove this code once qca cert host checking works ...
@@ -136,7 +137,7 @@ static bool cert_match_domain(const QString &certname, const QString &acedomain)
     name = name.toLower();
 
     // ensure the cert field contains valid characters only
-    if (QRegExp("[^a-z0-9\\.\\*\\-]").indexIn(name) >= 0)
+    if (QRegularExpression("[^a-z0-9\\.\\*\\-]").match(name).hasMatch())
         return false;
 
         // hack into parts, and require at least 1 part
@@ -164,7 +165,7 @@ static bool cert_match_domain(const QString &certname, const QString &acedomain)
         return false;
 
     // don't allow empty parts
-    for (const QString &s : qAsConst(parts_name)) {
+    for (const QString &s : std::as_const(parts_name)) {
         if (s.isEmpty())
             return false;
     }
@@ -191,8 +192,11 @@ static bool cert_match_domain(const QString &certname, const QString &acedomain)
     for (int n = 0; n < parts_name.count(); ++n) {
         const QString &p1 = parts_name[n];
         const QString &p2 = parts_compare[n];
-
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         if (!QRegExp(p1, Qt::CaseSensitive, QRegExp::Wildcard).exactMatch(p2))
+#else
+        if (!QRegularExpression::fromWildcard(QLatin1Char('^') + p1 + QLatin1Char('$'), Qt::CaseSensitive).match(p2).hasMatch())
+#endif
             return false;
     }
 

@@ -112,8 +112,8 @@ void ServerInfoManager::checkPendingServiceQueries()
             QMapIterator<QString, ServiceInfo> si(_servicesInfo);
             while (si.hasNext()) {
                 si.next();
-                if (!sqIt->nameHint.isEmpty()) {
-                    if (sqIt->nameHint.isEmpty() || sqIt->nameHint.exactMatch(si.key())) {
+                if (sqIt->nameHint.isValid()) {
+                    if (!sqIt->nameHint.isValid() || sqIt->nameHint.match(si.key()).hasMatch()) {
                         sqIt->servicesToQuery.push_back(si.key());
                     } else if (sqIt->options & SQ_CheckAllOnNoMatch) {
                         sqIt->spareServicesToQuery.push_back(si.key());
@@ -230,7 +230,7 @@ void ServerInfoManager::appendQuery(const ServiceQuery &q)
 }
 
 void ServerInfoManager::queryServiceInfo(const QString &category, const QString &type,
-                                         const QList<QSet<QString>> &features, const QRegExp &nameHint,
+                                         const QList<QSet<QString>> &features, const QRegularExpression &nameHint,
                                          SQOptions options, std::function<void(const QList<DiscoItem> &items)> callback)
 {
     appendQuery(ServiceQuery(type, category, features, nameHint, options, std::move(callback)));

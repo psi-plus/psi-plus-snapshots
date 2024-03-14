@@ -44,8 +44,8 @@ public:
 
         Channel(const TransportAddress &_address) : address(_address) { }
 
-        inline bool operator==(const Channel &other) { return address == other.address; }
-        inline bool operator!=(const Channel &other) { return !operator==(other); }
+        inline bool operator==(const Channel &other) const { return address == other.address; }
+        inline bool operator!=(const Channel &other) const { return !operator==(other); }
     };
 
     StunAllocate(XMPP::StunTransactionPool *pool);

@@ -215,7 +215,7 @@ QDomElement VCard::toXml(QDomDocument *doc) const
         v.appendChild(textTag(doc, "BDAY", d->bday));
 
     if (!d->addressList.isEmpty()) {
-        for (const auto &a : qAsConst(d->addressList)) {
+        for (const auto &a : std::as_const(d->addressList)) {
             QDomElement w = doc->createElement("ADR");
 
             if (a.home)
@@ -253,7 +253,7 @@ QDomElement VCard::toXml(QDomDocument *doc) const
     }
 
     if (!d->labelList.isEmpty()) {
-        for (const auto &l : qAsConst(d->labelList)) {
+        for (const auto &l : std::as_const(d->labelList)) {
             QDomElement w = doc->createElement("LABEL");
 
             if (l.home)
@@ -272,7 +272,7 @@ QDomElement VCard::toXml(QDomDocument *doc) const
                 w.appendChild(emptyTag(doc, "PREF"));
 
             if (!l.lines.isEmpty()) {
-                for (const auto &it : qAsConst(l.lines))
+                for (const auto &it : std::as_const(l.lines))
                     w.appendChild(textTag(doc, "LINE", it));
             }
 
@@ -281,7 +281,7 @@ QDomElement VCard::toXml(QDomDocument *doc) const
     }
 
     if (!d->phoneList.isEmpty()) {
-        for (const auto &p : qAsConst(d->phoneList)) {
+        for (const auto &p : std::as_const(d->phoneList)) {
             QDomElement w = doc->createElement("TEL");
 
             if (p.home)
@@ -319,7 +319,7 @@ QDomElement VCard::toXml(QDomDocument *doc) const
     }
 
     if (!d->emailList.isEmpty()) {
-        for (const auto &e : qAsConst(d->emailList)) {
+        for (const auto &e : std::as_const(d->emailList)) {
             QDomElement w = doc->createElement("EMAIL");
 
             if (e.pref)
@@ -393,7 +393,7 @@ QDomElement VCard::toXml(QDomDocument *doc) const
             w.appendChild(textTag(doc, "ORGNAME", d->org.name));
 
         if (!d->org.unit.isEmpty()) {
-            for (const auto &unit : qAsConst(d->org.unit))
+            for (const auto &unit : std::as_const(d->org.unit))
                 w.appendChild(textTag(doc, "ORGUNIT", unit));
         }
 
@@ -403,7 +403,7 @@ QDomElement VCard::toXml(QDomDocument *doc) const
     if (!d->categories.isEmpty()) {
         QDomElement w = doc->createElement("CATEGORIES");
 
-        for (const auto &c : qAsConst(d->categories))
+        for (const auto &c : std::as_const(d->categories))
             w.appendChild(textTag(doc, "KEYWORD", c));
 
         v.appendChild(w);
@@ -495,8 +495,9 @@ VCard VCard::fromXml(const QDomElement &q)
         } else if (tag == "NICKNAME")
             v.d->nickName = i.text().trimmed();
         else if (tag == "PHOTO") {
+            static QRegularExpression newlines("[\r\n]+");
             v.d->photo
-                = QCA::Base64().stringToArray(subTagText(i, "BINVAL").replace(QRegExp("[\r\n]+"), "")).toByteArray();
+                = QCA::Base64().stringToArray(subTagText(i, "BINVAL").replace(newlines, "")).toByteArray();
             v.d->photoURI = subTagText(i, "EXTVAL");
         } else if (tag == "BDAY")
             v.d->bday = i.text().trimmed();

@@ -32,11 +32,11 @@ static QChar randomPrintableChar()
 
     uchar c = static_cast<uchar>(QCA::Random::randomChar() % 62);
     if (c <= 25)
-        return 'a' + c;
+        return QChar::fromLatin1('a' + c);
     else if (c <= 51)
-        return 'A' + (c - 26);
+        return QChar::fromLatin1('A' + (c - 26));
     else
-        return '0' + (c - 52);
+        return QChar::fromLatin1('0' + (c - 52));
 }
 
 struct IceAgent::Private {

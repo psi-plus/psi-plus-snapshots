@@ -20,14 +20,15 @@
 #ifndef SERVERINFOMANAGER_H
 #define SERVERINFOMANAGER_H
 
-#include "xmpp_caps.h"
 #include "xmpp_discoitem.h"
+#include "xmpp_status.h"
 
 #include <QObject>
 #include <QString>
 #include <QVariant>
-#include <functional>
+#include <QRegularExpression>
 
+#include <functional>
 #include <list>
 
 namespace XMPP {
@@ -50,7 +51,7 @@ private:
         const QString                                           type;
         const QString                                           category;
         const QList<QSet<QString>>                              features;
-        const QRegExp                                           nameHint;
+        const QRegularExpression                                nameHint;
         const SQOptions                                         options;
         const std::function<void(const QList<DiscoItem> &item)> callback;
         std::list<QString>                                      servicesToQuery;
@@ -59,7 +60,7 @@ private:
         QList<DiscoItem>   result;
 
         ServiceQuery(const QString &type, const QString &category, const QList<QSet<QString>> &features,
-                     const QRegExp &nameHint, const SQOptions &options,
+                     const QRegularExpression &nameHint, const SQOptions &options,
                      const std::function<void(const QList<DiscoItem> &item)> &&callback) :
             type(type),
             category(category), features(features), nameHint(nameHint), options(options), callback(callback)
@@ -102,7 +103,7 @@ public:
      Result: disco info for upload.jabber.ru will be returned.
     */
     void     queryServiceInfo(const QString &category, const QString &type, const QList<QSet<QString>> &features,
-                              const QRegExp &nameHint, SQOptions options,
+                              const QRegularExpression &nameHint, SQOptions options,
                               std::function<void(const QList<DiscoItem> &items)> callback);
     void     setServiceMeta(const Jid &service, const QString &key, const QVariant &value);
     QVariant serviceMeta(const Jid &service, const QString &key);

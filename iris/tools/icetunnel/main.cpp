@@ -292,7 +292,7 @@ static IceOffer iceblock_parse(const QStringList &in)
 
     body = lines.value(QLatin1String("dtls")).split(';');
     for (auto const &b : body) {
-        out.dtlsFingerprint += XMPP::Hash::from(QStringRef(&b));
+        out.dtlsFingerprint += XMPP::Hash::from(b);
     }
 
     return out;

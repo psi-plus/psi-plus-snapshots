@@ -84,7 +84,7 @@ public:
                     return false;
                 }
 
-                arg.data = QMetaType::create(arg.type, arg_data[n]);
+                arg.data = QMetaType(arg.type).create(arg_data[n]);
                 args += arg;
             }
 

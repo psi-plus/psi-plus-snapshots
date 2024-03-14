@@ -24,6 +24,7 @@
 
 #include <QList>
 #include <QSharedDataPointer>
+#include <QRegularExpression>
 
 using namespace XMLHelper;
 using namespace XMPP;
@@ -299,9 +300,13 @@ QSize XData::Field::MediaElement::mediaSize() const { return _size; }
 
 bool XData::Field::MediaElement::checkSupport(const QStringList &wildcards)
 {
-    for (const XData::Field::MediaUri &uri : qAsConst(*this)) {
+    for (const XData::Field::MediaUri &uri : std::as_const(*this)) {
         for (const QString &wildcard : wildcards) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             if (QRegExp(wildcard, Qt::CaseSensitive, QRegExp::Wildcard).exactMatch(uri.mimeType)) {
+#else
+            if (QRegularExpression::fromWildcard(QLatin1Char('^') + wildcard + QLatin1Char('$'), Qt::CaseSensitive).match(uri.mimeType).hasMatch()) {
+#endif
                 return true;
             }
         }
@@ -450,7 +455,7 @@ QDomElement XData::toXml(QDomDocument *doc, bool submitForm) const
         x.appendChild(textTag(doc, "instructions", d->instructions));
 
     if (!d->fields.isEmpty()) {
-        for (const auto &f : qAsConst(d->fields)) {
+        for (const auto &f : std::as_const(d->fields)) {
             if (!(submitForm && f.var().isEmpty()))
                 x.appendChild(f.toXml(doc, submitForm));
         }

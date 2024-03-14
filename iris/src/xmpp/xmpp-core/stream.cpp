@@ -272,7 +272,7 @@ void ClientStream::reset(bool all)
         }
     } else {
         QSharedPointer<QDomDocument> sd;
-        for (Stanza *s : qAsConst(d->in)) {
+        for (Stanza *s : std::as_const(d->in)) {
             sd = s->unboundDocument(sd);
         }
     }
@@ -883,7 +883,7 @@ void ClientStream::processNext()
 #endif
         bool ok = d->client.processStep();
         // deal with send/received items
-        for (const XmlProtocol::TransferItem &i : qAsConst(d->client.transferItemList)) {
+        for (const XmlProtocol::TransferItem &i : std::as_const(d->client.transferItemList)) {
             if (i.isExternal)
                 continue;
             QString str;
@@ -1149,7 +1149,7 @@ bool ClientStream::handleNeed()
         else {
             QMap<int, QString> prefOrdered;
             QStringList        unpreferred;
-            for (auto const &m : qAsConst(d->client.features.sasl_mechs)) {
+            for (auto const &m : std::as_const(d->client.features.sasl_mechs)) {
                 int i = preference.indexOf(m);
                 if (i != -1) {
                     prefOrdered.insert(i, m);

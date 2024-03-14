@@ -16,12 +16,13 @@
  *
  */
 
+#include "xmpp_features.h"
+
 #include <QObject>
 
 #include <map>
 #include <memory>
 
-#include "xmpp_features.h"
 
 class QDomElement;
 
@@ -62,6 +63,7 @@ public:
     using MethodId   = QString;
     using MethodName = QString;
 
+    EncryptionManager();
     ~EncryptionManager();
     using MethodsMap = std::map<MethodId, MethodName>;
 

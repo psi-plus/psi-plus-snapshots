@@ -502,7 +502,7 @@ private slots:
         ObjectSessionWatcher watch(&sess);
 
         if (!dwrites.isEmpty()) {
-            for (const Written &wr : qAsConst(dwrites)) {
+            for (const Written &wr : std::as_const(dwrites)) {
                 emit q->datagramsWritten(Direct, wr.count, wr.addr);
                 if (!watch.isValid())
                     return;

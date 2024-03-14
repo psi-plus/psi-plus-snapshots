@@ -51,7 +51,7 @@ public:
 
     inline Hash(Type type = Type::Unknown) : v_type(type) { }
     inline Hash(Type type, const QByteArray &data) : v_type(type), v_data(data) { }
-    inline Hash(const QStringRef &algo) : v_type(parseType(algo)) { }
+    inline Hash(const QStringView &algo) : v_type(parseType(algo)) { }
     Hash(const QDomElement &);
 
     inline bool operator==(const Hash &other) const { return v_type == other.v_type && v_data == other.v_data; }
@@ -62,7 +62,7 @@ public:
     inline Type type() const { return v_type; }
     inline void setType(Type t) { v_type = t; }
     QString     stringType() const;
-    static Type parseType(const QStringRef &algo);
+    static Type parseType(const QStringView &algo);
 
     inline QByteArray data() const { return v_data; }
     inline void       setData(const QByteArray &d) { v_data = d; } // sets already computed hash
@@ -77,7 +77,7 @@ public:
     static Hash from(Type t, const QByteArray &fileData);
     static Hash from(XMPP::Hash::Type t, QIODevice *dev);
     static Hash from(XMPP::Hash::Type t, const QFileInfo &file);
-    static Hash from(const QStringRef &str); // e.g. sha1+aabccddeeffaabbcc232387539465923645
+    static Hash from(const QStringView &str); // e.g. sha1+aabccddeeffaabbcc232387539465923645
     static Hash fastestHash(const Features &features);
 
 private:

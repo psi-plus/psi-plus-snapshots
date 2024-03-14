@@ -33,9 +33,9 @@ template <class T> constexpr std::add_const_t<T> &as_const(T &t) noexcept { retu
 
 #if QT_VERSION < QT_VERSION_CHECK(5, 7, 0)
 // this adds const to non-const objects (like std::as_const)
-template <typename T> Q_DECL_CONSTEXPR typename std::add_const<T>::type &qAsConst(T &t) noexcept { return t; }
+template <typename T> Q_DECL_CONSTEXPR typename std::add_const<T>::type &std::as_const(T &t) noexcept { return t; }
 // prevent rvalue arguments:
-template <typename T> void qAsConst(const T &&) = delete;
+template <typename T> void std::as_const(const T &&) = delete;
 #endif
 
 namespace XMPP { namespace Jingle {
@@ -240,7 +240,7 @@ namespace XMPP { namespace Jingle {
                 // we could fail very early if something went wrong with transports init for example
                 Reason reason;
                 bool   all = true;
-                for (auto const &c : qAsConst(contentList)) {
+                for (auto const &c : std::as_const(contentList)) {
                     if (c->state() < State::Finishing) {
                         all = false;
                         break;
@@ -307,7 +307,7 @@ namespace XMPP { namespace Jingle {
 
             QMultiMap<Application::Update, Application *> updates;
             qDebug("jingle-doStep: %d applications have updates", signalingContent.size());
-            for (auto app : qAsConst(signalingContent)) {
+            for (auto app : std::as_const(signalingContent)) {
                 auto updateType = app->evaluateOutgoingUpdate();
                 if (updateType.action != Action::NoAction) {
                     if (state == State::ApprovedToSend && app->flags() & Application::InitialApplication) {
@@ -360,7 +360,7 @@ namespace XMPP { namespace Jingle {
              */
             typedef std::tuple<QPointer<Application>, OutgoingUpdateCB> AckHndl;
             if (role == Origin::Responder) {
-                for (const auto &c : qAsConst(initialIncomingUnacceptedContent)) {
+                for (const auto &c : std::as_const(initialIncomingUnacceptedContent)) {
                     auto out = c->evaluateOutgoingUpdate();
                     if (out.action == Action::ContentReject) {
                         lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
@@ -372,7 +372,7 @@ namespace XMPP { namespace Jingle {
                     }
                 }
             } else {
-                for (const auto &c : qAsConst(contentList)) {
+                for (const auto &c : std::as_const(contentList)) {
                     auto out = c->evaluateOutgoingUpdate();
                     if (out.action == Action::ContentRemove) {
                         lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
@@ -397,7 +397,7 @@ namespace XMPP { namespace Jingle {
 
             QList<QDomElement> contents;
             QList<AckHndl>     acceptApps;
-            for (const auto &app : qAsConst(contentList)) {
+            for (const auto &app : std::as_const(contentList)) {
                 QList<QDomElement> xml;
                 OutgoingUpdateCB   callback;
                 std::tie(xml, callback) = app->takeOutgoingUpdate();
@@ -687,7 +687,7 @@ namespace XMPP { namespace Jingle {
                 QTimer::singleShot(0, q, [this, rejectSet]() mutable {
                     auto               cond = rejectSet.first().second;
                     QList<QDomElement> rejects;
-                    for (auto const &i : qAsConst(rejectSet)) {
+                    for (auto const &i : std::as_const(rejectSet)) {
                         rejects.append(i.first);
                     }
                     rejects += Reason(cond).toXml(manager->client()->doc());
@@ -734,7 +734,7 @@ namespace XMPP { namespace Jingle {
 
             if (apps.size()) {
                 Origin remoteRole = negateOrigin(role);
-                for (auto app : qAsConst(apps)) {
+                for (auto app : std::as_const(apps)) {
                     addAndInitContent(remoteRole, app); // TODO check conflicts
                 }
                 QTimer::singleShot(0, q, [this]() { emit q->newContentReceived(); });
@@ -798,7 +798,7 @@ namespace XMPP { namespace Jingle {
 
             state = State::Connecting;
             if (apps.size()) {
-                for (auto app : qAsConst(apps)) {
+                for (auto app : std::as_const(apps)) {
                     app->start();
                 }
             }
@@ -820,7 +820,7 @@ namespace XMPP { namespace Jingle {
             }
 
             if (apps.size() && state >= State::Active) {
-                for (auto app : qAsConst(apps)) {
+                for (auto app : std::as_const(apps)) {
                     app->start(); // start accepted app. connection establishing and data transfer are inside
                 }
             }
@@ -1208,7 +1208,7 @@ namespace XMPP { namespace Jingle {
             if (!apps.size())
                 return false;
             d->initialIncomingUnacceptedContent = apps;
-            for (auto app : qAsConst(apps)) {
+            for (auto app : std::as_const(apps)) {
                 app->markInitialApplication(true);
                 d->addAndInitContent(Origin::Initiator, app);
             }

@@ -477,7 +477,7 @@ namespace StunTypes {
             if (parseUnknownAttributes(val, &typeList)) {
                 if (!typeList.isEmpty()) {
                     QStringList strList;
-                    for (quint16 i : qAsConst(typeList))
+                    for (quint16 i : std::as_const(typeList))
                         strList += QString::asprintf("0x%04x", i);
                     return strList.join(", ");
                 } else

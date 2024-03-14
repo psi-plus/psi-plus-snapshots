@@ -77,7 +77,7 @@ public:
         if (lendingAny)
             abort();
 
-        for (const Item &i : qAsConst(items)) {
+        for (const Item &i : std::as_const(items)) {
             for (QUdpSocket *sock : i.sockList)
                 sock->deleteLater();
         }
@@ -96,7 +96,7 @@ public:
         QList<int> added;
         for (int x : newPorts) {
             bool found = false;
-            for (const Item &i : qAsConst(items)) {
+            for (const Item &i : std::as_const(items)) {
                 if (i.port == x) {
                     found = true;
                     break;
@@ -112,7 +112,7 @@ public:
         // keep ports in sorted order
         std::sort(ports.begin(), ports.end());
 
-        for (int x : qAsConst(added)) {
+        for (int x : std::as_const(added)) {
             int insert_before = items.count();
             for (int n = 0; n < items.count(); ++n) {
                 if (x < items[n].port) {
@@ -240,12 +240,12 @@ private:
                 continue;
 
             QList<QHostAddress> neededAddrs;
-            for (const QHostAddress &a : qAsConst(addrs)) {
+            for (const QHostAddress &a : std::as_const(addrs)) {
                 if (!i.haveAddress(a))
                     neededAddrs += a;
             }
 
-            for (const QHostAddress &a : qAsConst(neededAddrs)) {
+            for (const QHostAddress &a : std::as_const(neededAddrs)) {
                 QUdpSocket *sock = new QUdpSocket(q);
 
                 if (!sock->bind(a, quint16(i.port))) {
@@ -267,7 +267,7 @@ private:
 
             // don't care about this port anymore?
             if (!i.lent && !ports.contains(i.port)) {
-                for (QUdpSocket *sock : qAsConst(i.sockList))
+                for (QUdpSocket *sock : std::as_const(i.sockList))
                     sock->deleteLater();
 
                 items.removeAt(n);
@@ -338,7 +338,7 @@ private:
         QList<QUdpSocket *> out;
 
         i->lent = true;
-        for (QUdpSocket *sock : qAsConst(i->sockList)) {
+        for (QUdpSocket *sock : std::as_const(i->sockList)) {
             i->lentAddrs += sock->localAddress();
             sock->disconnect(this);
             sock->setParent(parent);

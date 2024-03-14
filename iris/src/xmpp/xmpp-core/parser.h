@@ -82,7 +82,7 @@ public:
     void       appendData(const QByteArray &a);
     Event      readNext();
     QByteArray unprocessed() const;
-    QStringRef encoding() const;
+    QStringView encoding() const;
 
 private:
     class Private;

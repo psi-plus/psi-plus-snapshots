@@ -57,7 +57,7 @@ void GrepShortcutKeyDialog::displayPressedKeys(const QKeySequence &keys)
 
 QKeySequence GrepShortcutKeyDialog::getKeySequence(QKeyEvent *event) const
 {
-    return QKeySequence((isValid(event->key()) ? event->key() : 0) + (event->modifiers() & ~Qt::KeypadModifier));
+    return QKeySequence((isValid(event->key()) ? event->key() : 0) | (event->modifiers() & ~Qt::KeypadModifier));
 }
 
 void GrepShortcutKeyDialog::keyPressEvent(QKeyEvent *event)

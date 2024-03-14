@@ -417,7 +417,7 @@ void SecureStream::linkLayer(QObject *s)
 int SecureStream::calcPrebytes() const
 {
     int x = 0;
-    for (SecureLayer *s : qAsConst(d->layers)) {
+    for (SecureLayer *s : std::as_const(d->layers)) {
         x += s->prebytes;
     }
     return (d->pending - x);
@@ -545,7 +545,7 @@ void SecureStream::bs_readyRead()
 
 void SecureStream::bs_bytesWritten(qint64 bytes)
 {
-    for (SecureLayer *s : qAsConst(d->layers)) {
+    for (SecureLayer *s : std::as_const(d->layers)) {
         bytes = s->finished(int(bytes));
     }
 

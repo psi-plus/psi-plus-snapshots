@@ -656,7 +656,7 @@ bool S5BManager::isAcceptableSID(const Jid &peer, const QString &sid) const
     QString key     = makeKey(sid, d->client->jid(), peer);
     QString key_out = makeKey(sid, peer, d->client->jid()); // not valid in muc via proxy
 
-    for (Entry *e : qAsConst(d->activeList)) {
+    for (Entry *e : std::as_const(d->activeList)) {
         if (e->i) {
             if (e->i->key == key || e->i->key == key_out)
                 return false;
@@ -677,7 +677,7 @@ const char *S5BManager::sidPrefix() const { return "s5b_"; }
 
 S5BConnection *S5BManager::findIncoming(const Jid &from, const QString &sid) const
 {
-    for (S5BConnection *c : qAsConst(d->incomingConns)) {
+    for (S5BConnection *c : std::as_const(d->incomingConns)) {
         if (c->d->peer.compare(from) && c->d->sid == sid)
             return c;
     }
@@ -686,7 +686,7 @@ S5BConnection *S5BManager::findIncoming(const Jid &from, const QString &sid) con
 
 S5BManager::Entry *S5BManager::findEntry(S5BConnection *c) const
 {
-    for (Entry *e : qAsConst(d->activeList)) {
+    for (Entry *e : std::as_const(d->activeList)) {
         if (e->c == c)
             return e;
     }
@@ -695,7 +695,7 @@ S5BManager::Entry *S5BManager::findEntry(S5BConnection *c) const
 
 S5BManager::Entry *S5BManager::findEntry(Item *i) const
 {
-    for (Entry *e : qAsConst(d->activeList)) {
+    for (Entry *e : std::as_const(d->activeList)) {
         if (e->i == i)
             return e;
     }
@@ -704,7 +704,7 @@ S5BManager::Entry *S5BManager::findEntry(Item *i) const
 
 S5BManager::Entry *S5BManager::findEntryByHash(const QString &key) const
 {
-    for (Entry *e : qAsConst(d->activeList)) {
+    for (Entry *e : std::as_const(d->activeList)) {
         if (e->i && e->i->key == key)
             return e;
     }
@@ -713,7 +713,7 @@ S5BManager::Entry *S5BManager::findEntryByHash(const QString &key) const
 
 S5BManager::Entry *S5BManager::findEntryBySID(const Jid &peer, const QString &sid) const
 {
-    for (Entry *e : qAsConst(d->activeList)) {
+    for (Entry *e : std::as_const(d->activeList)) {
         if (e->i && e->i->peer.compare(peer) && e->sid == sid)
             return e;
     }
@@ -926,7 +926,7 @@ void S5BManager::query_finished()
 {
     JT_S5B *query = static_cast<JT_S5B *>(sender());
     Entry * e     = nullptr;
-    for (Entry *i : qAsConst(d->activeList)) {
+    for (Entry *i : std::as_const(d->activeList)) {
         if (i->query == query) {
             e = i;
             break;
@@ -1145,7 +1145,7 @@ void S5BManager::Item::doIncoming()
     StreamHostList list;
     if (lateProxy) {
         // take just the proxy streamhosts
-        for (const StreamHost &it : qAsConst(in_hosts)) {
+        for (const StreamHost &it : std::as_const(in_hosts)) {
             if (it.isProxy())
                 list += it;
         }
@@ -1155,7 +1155,7 @@ void S5BManager::Item::doIncoming()
         if ((state == Requester || (state == Target && fast)) && !proxy.jid().isValid()) {
             // take just the non-proxy streamhosts
             bool hasProxies = false;
-            for (const StreamHost &it : qAsConst(in_hosts)) {
+            for (const StreamHost &it : std::as_const(in_hosts)) {
                 if (it.isProxy())
                     hasProxies = true;
                 else
@@ -1814,7 +1814,7 @@ void S5BConnector::t_timeout()
 void S5BConnector::man_udpSuccess(const Jid &streamHost)
 {
     // was anyone sending to this streamhost?
-    for (Item *i : qAsConst(d->itemList)) {
+    for (Item *i : std::as_const(d->itemList)) {
         if (i->host.jid().compare(streamHost) && i->client_udp) {
             i->udpSuccess();
             return;

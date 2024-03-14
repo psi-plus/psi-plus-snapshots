@@ -296,7 +296,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             }
             left = iceList;
 
-            for (Ice176 *ice : qAsConst(left)) {
+            for (Ice176 *ice : std::as_const(left)) {
                 ice->setParent(this);
 
                 // TODO: error() also?
@@ -591,7 +591,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                                        ExternalService::Ptr stun;
                                        ExternalService::Ptr turnUdp;
                                        ExternalService::Ptr turnTcp;
-                                       for (auto const &s : qAsConst(services)) {
+                                       for (auto const &s : std::as_const(services)) {
                                            if (s->type == QLatin1String("stun")
                                                && (s->transport.isEmpty() || s->transport == QLatin1String("udp")))
                                                stun = s;

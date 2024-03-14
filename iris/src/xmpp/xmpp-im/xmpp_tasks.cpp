@@ -29,16 +29,19 @@
 #include "xmpp_xmlcommon.h"
 
 #include <QList>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QTimer>
 
 using namespace XMPP;
 
 static QString lineEncode(QString str)
 {
-    str.replace(QRegExp("\\\\"), "\\\\"); // backslash to double-backslash
-    str.replace(QRegExp("\\|"), "\\p");   // pipe to \p
-    str.replace(QRegExp("\n"), "\\n");    // newline to \n
+    static QRegularExpression backslash("\\\\");
+    static QRegularExpression pipe("\\|");
+    static QRegularExpression newline("\n");
+    str.replace(backslash, "\\\\"); // backslash to double-backslash
+    str.replace(pipe, "\\p");       // pipe to \p
+    str.replace(newline, "\\n");    // newline to \n
     return str;
 }
 
@@ -430,7 +433,7 @@ void JT_Roster::onGo()
         iq                = createIQ(doc(), "set", to.full(), id());
         QDomElement query = doc()->createElementNS("jabber:iq:roster", "query");
         iq.appendChild(query);
-        for (const QDomElement &it : qAsConst(d->itemList))
+        for (const QDomElement &it : std::as_const(d->itemList))
             query.appendChild(it);
         send(iq);
     } else if (type == GetDelimiter) {
@@ -451,7 +454,7 @@ QString JT_Roster::toString() const
 
     QDomElement i = doc()->createElement("request");
     i.setAttribute("type", "JT_Roster");
-    for (const QDomElement &it : qAsConst(d->itemList))
+    for (const QDomElement &it : std::as_const(d->itemList))
         i.appendChild(it);
     return lineEncode(Stream::xmlToString(i));
 }

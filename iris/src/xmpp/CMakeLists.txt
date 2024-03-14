@@ -207,7 +207,7 @@ target_link_libraries(iris
         ZLIB::ZLIB
     PUBLIC
         ${Qca_LIBRARY}
-        Qt5::Core Qt5::Gui Qt5::Network Qt5::Xml
+        Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Gui Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Xml
 )
 
 if(IRIS_BUNDLED_QCA)
@@ -237,6 +237,7 @@ else()
     target_include_directories(iris
         PRIVATE
             ${iris_SOURCE_DIR}/include
+            ${iris_SOURCE_DIR}/include/iris
             ${iris_SOURCE_DIR}/src
             ${Qca_INCLUDE_DIR}
         )

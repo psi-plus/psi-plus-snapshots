@@ -386,7 +386,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             if (hasher) {
                 auto expectedHash = hasher->result();
                 bool found        = false;
-                for (auto const &h : qAsConst(incomingChecksum)) {
+                for (auto const &h : std::as_const(incomingChecksum)) {
                     if (h.type() != expectedHash.type())
                         continue;
                     if (h == expectedHash) {

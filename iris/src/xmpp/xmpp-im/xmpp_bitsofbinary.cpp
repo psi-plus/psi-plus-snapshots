@@ -59,7 +59,7 @@ Hash BoBData::cidToHash(const QString &cid)
 {
     if (!cid.endsWith(QLatin1String("@bob.xmpp.org")))
         return Hash();
-    return Hash::from(cid.leftRef(cid.size() - sizeof("@bob.xmpp.org") + 1));
+    return Hash::from(QStringView{cid}.left(cid.size() - sizeof("@bob.xmpp.org") + 1));
 }
 
 QString BoBData::cid() const

@@ -751,7 +751,7 @@ private:
                 newList += StunAllocate::Channel(channels[n]->addr);
         }
 
-        if (newList == channelsOut)
+        if (std::as_const(newList) == std::as_const(channelsOut))
             return false;
 
         channelsOut = newList;

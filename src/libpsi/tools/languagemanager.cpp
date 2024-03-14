@@ -9,7 +9,7 @@ LanguageManager::LangId LanguageManager::fromString(const QString &langDesc)
     if (loc == QLocale::c()) {
         return id; // It's default initialized to any lang, any country, any script. consider as a error
     }
-    int cnt     = langDesc.count(QRegExp("[_-]"));
+    int cnt     = langDesc.count(QRegularExpression("[_-]"));
     id.language = loc.language();
     if (cnt) {
         id.country = loc.country(); // supposing if there are two components then it's lways country and not script
@@ -30,7 +30,7 @@ QString LanguageManager::toString(const LanguageManager::LangId &id)
         ret.append(langCountry[0]); // language
     }
     if (id.script) {
-        QStringList items = loc.bcp47Name().split(QRegExp("[.@]"))[0].split('-');
+        QStringList items = loc.bcp47Name().split(QRegularExpression("[.@]"))[0].split('-');
         if (items.count() == 3) { // we have script
             ret.append(items[1]);
         }
@@ -208,9 +208,9 @@ QString LanguageManager::countryName(const LanguageManager::LangId &id)
 QSet<LanguageManager::LangId> LanguageManager::deserializeLanguageSet(const QString &str)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-    QStringList langs = str.split(QRegExp("\\s+"), Qt::SkipEmptyParts);
+    QStringList langs = str.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
 #else
-    QStringList langs     = str.split(QRegExp("\\s+"), QString::SkipEmptyParts);
+    QStringList langs     = str.split(QRegularExpression("\\s+"), QString::SkipEmptyParts);
 #endif
     QSet<LangId> ret;
     for (auto const &l : langs) {

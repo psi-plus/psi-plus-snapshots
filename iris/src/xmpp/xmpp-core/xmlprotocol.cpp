@@ -97,14 +97,6 @@ static QString xmlToString(const QDomElement &e, const QString &fakeNS, const QS
     QString out;
     {
         QTextStream ts(&out, QIODevice::WriteOnly);
-        // NOTE: Workaround for bug in QtXML https://bugreports.qt.io/browse/QTBUG-25291 (Qt4 only):
-        // Qt by default convert low surrogate to XML notation &#x....; and let high in binary!
-        //
-        // Qt is calling encode function per UTF-16 codepoint, which means that high and low
-        // surrogate pairs are encoded separately. So all encoding except UTF-16 will leads
-        // to damaged Unicode characters above 0xFFFF. Internal QString encoding is UTF-16
-        // so this should be safe as QString still contains valid Unicode characters.
-        ts.setCodec("UTF-16");
         fake.firstChild().save(ts, 0);
     }
     // 'clip' means to remove any unwanted (and unneeded) characters, such as a trailing newline

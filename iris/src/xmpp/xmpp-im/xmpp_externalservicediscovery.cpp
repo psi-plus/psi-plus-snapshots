@@ -46,7 +46,7 @@ void JT_ExternalServiceDiscovery::onGo()
             query.setAttribute(QLatin1String("type"), type_);
         }
     } else {
-        for (auto const &c : qAsConst(creds_)) {
+        for (auto const &c : std::as_const(creds_)) {
             QDomElement service = doc()->createElement(QLatin1String("service"));
             service.setAttribute(QLatin1String("host"), c.host);
             service.setAttribute(QLatin1String("type"), c.type);
@@ -163,7 +163,7 @@ void ExternalServiceDiscovery::services(QObject *ctx, ServicesCallback &&callbac
     // check if cache is valid (no expired or ready to expire items)
     ExternalServiceList ret;
     bool                cacheValid = true;
-    for (auto const &s : qAsConst(services_)) {
+    for (auto const &s : std::as_const(services_)) {
         if (!(types.isEmpty() || types.contains(s->type)))
             continue; // not interesting for us
         if (!(s->expires.isForever() || s->expires.remainingTimeAsDuration() > minTtl)) {
@@ -210,7 +210,7 @@ ExternalServiceList ExternalServiceDiscovery::cachedServices(const QStringList &
         return services_;
 
     ExternalServiceList ret;
-    for (auto const &s : qAsConst(services_)) {
+    for (auto const &s : std::as_const(services_)) {
         if (types.contains(s->type))
             ret += s;
     }

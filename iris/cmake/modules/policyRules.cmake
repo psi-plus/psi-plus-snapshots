@@ -9,6 +9,6 @@ if(NOT POLICY_SET)
         cmake_policy(SET CMP0074 NEW)
         message(STATUS "CMP0074 policy set to NEW")
     endif()
-    set(POLICY_SET ON PARENT_SCOPE)
+    set(POLICY_SET ON)
 endif()
 

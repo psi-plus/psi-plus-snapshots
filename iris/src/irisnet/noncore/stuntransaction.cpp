@@ -634,7 +634,7 @@ void StunTransactionPool::continueAfterParams(const TransportAddress &addr)
     d->needLongTermAuth = false;
     d->triedLongTermAuth.insert(addr);
 
-    for (StunTransaction *trans : qAsConst(d->transactions)) {
+    for (StunTransaction *trans : std::as_const(d->transactions)) {
         // the only reason an inactive transaction would be in the
         //   list is if it is waiting for an auth retry
         if (!trans->d->active && !trans->d->cancelling) {

@@ -35,7 +35,6 @@
 #include <QDebug>
 #include <QDomElement>
 #include <QFile>
-#include <QTextCodec>
 
 namespace XMPP {
 QDomElement CapsInfo::toXml(QDomDocument *doc) const
@@ -320,7 +319,7 @@ void CapsManager::updateDisco(const Jid &jid, const DiscoItem &item)
 void CapsManager::capsRegistered(const CapsSpec &cs)
 {
     // Notify affected jids.
-    for (const QString &s : qAsConst(capsJids_[cs.flatten()])) {
+    for (const QString &s : std::as_const(capsJids_[cs.flatten()])) {
         // qDebug() << QString("caps.cpp: Notifying %1.").arg(s.replace('%',"%%"));
         emit capsChanged(s);
     }
@@ -391,7 +390,7 @@ QString CapsManager::clientName(const Jid &jid) const
                 ds = 5;
             }
 
-            name = QStringRef(&node, startPos, node.size() - startPos - ds).toString();
+            name = QStringView{node}.mid(startPos, node.size() - startPos - ds).toString();
         }
 
         return name;

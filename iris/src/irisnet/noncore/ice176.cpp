@@ -675,7 +675,7 @@ public:
                 continue;
             }
 
-            for (const IceComponent::CandidateInfo::Ptr &rc : qAsConst(remoteCandidates)) {
+            for (const IceComponent::CandidateInfo::Ptr &rc : std::as_const(remoteCandidates)) {
                 auto pair = makeCandidatesPair(lc, rc);
                 if (!pair.isNull())
                     pairs += pair;
@@ -1087,7 +1087,7 @@ private:
     void dumpCandidatesAndStart()
     {
         QList<Ice176::Candidate> list;
-        for (auto const &cc : qAsConst(localCandidates)) {
+        for (auto const &cc : std::as_const(localCandidates)) {
             Ice176::Candidate c;
             toOutCandidate(cc, c);
             list += c;
@@ -1368,7 +1368,7 @@ private slots:
         }
 
         bool iceTransportInUse = false;
-        for (const IceComponent::Candidate &lc : qAsConst(localCandidates)) {
+        for (const IceComponent::Candidate &lc : std::as_const(localCandidates)) {
             if (lc.iceTransport == cc.iceTransport) {
                 iceTransportInUse = true;
                 break;
@@ -1781,7 +1781,7 @@ QList<QHostAddress> Ice176::availableNetworkAddresses()
             continue;
 
         QList<QNetworkAddressEntry> entries = ni.addressEntries();
-        for (const QNetworkAddressEntry &na : qAsConst(entries)) {
+        for (const QNetworkAddressEntry &na : std::as_const(entries)) {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
             if (na.preferredLifetime().hasExpired() || na.netmask().isNull())
 #else

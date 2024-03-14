@@ -24,7 +24,6 @@
 #include <QString>
 
 class QByteArray;
-class QStringList;
 
 class UnZip {
 public:

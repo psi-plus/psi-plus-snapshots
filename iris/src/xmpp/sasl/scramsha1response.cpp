@@ -22,7 +22,7 @@
 #include "xmpp/jid/jid.h"
 
 #include <QByteArray>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QString>
 #include <QTextStream>
 #include <QtCrypto>
@@ -43,12 +43,11 @@ SCRAMSHA1Response::SCRAMSHA1Response(const QByteArray &server_first_message, con
     QString pass_in = QString::fromUtf8(password_in);
     QString pass_out;
 
-    QRegExp pattern("r=(.*),s=(.+),i=(\\d+)");
-    int     pos = pattern.indexIn(QString(server_first_message));
-    isValid_    = true;
-    if (pos < 0) {
+    QRegularExpression pattern("r=(.*),s=(.+),i=(\\d+)");
+    auto match = pattern.match(QString(server_first_message));
+    isValid_    = match.hasMatch();
+    if (!isValid_) {
         qWarning("SASL/SCRAM-SHA-1: Failed to match pattern for server-final-message.");
-        isValid_ = false;
         return;
     }
     QCA::PBKDF2 hi("sha1");
@@ -58,9 +57,9 @@ SCRAMSHA1Response::SCRAMSHA1Response(const QByteArray &server_first_message, con
         return;
     }
 
-    QString clientservernonce = pattern.cap(1);
-    QString salt              = pattern.cap(2);
-    QString icount            = pattern.cap(3);
+    QString clientservernonce = match.captured(1);
+    QString salt              = match.captured(2);
+    QString icount            = match.captured(3);
 
     unsigned int dkLen;
 
@@ -96,9 +95,8 @@ SCRAMSHA1Response::SCRAMSHA1Response(const QByteArray &server_first_message, con
 
     QString gs2_header;
     {
-        QRegExp pattern("(.+)n=.+");
-        pattern.indexIn(QString(client_first_message));
-        gs2_header = pattern.cap(1);
+        QRegularExpression pattern("(.+)n=.+");
+        gs2_header = pattern.match(QString(client_first_message)).captured(1);
     }
 
     QString     client_final_message;
@@ -108,13 +106,14 @@ SCRAMSHA1Response::SCRAMSHA1Response(const QByteArray &server_first_message, con
 
     // AuthMessage     := client-first-message-bare + "," + server-first-message + "," +
     // client-final-message-without-proof
-    QRegExp extract_cfmb_pattern("(n=.+)");
-    if (extract_cfmb_pattern.indexIn(QString(client_first_message)) < 0) {
-        isValid_ = false;
+    QRegularExpression extract_cfmb_pattern("(n=.+)");
+    match = extract_cfmb_pattern.match(QString(client_first_message));
+    isValid_ = match.hasMatch();
+    if (!isValid_) {
         return;
     }
 
-    QString client_first_message_bare = extract_cfmb_pattern.cap(1);
+    QString client_first_message_bare = match.captured(1);
 
     QCA::SecureArray auth_message = QCA::SecureArray(client_first_message_bare.toUtf8());
     auth_message += QCA::SecureArray(",") + QCA::SecureArray(server_first_message);

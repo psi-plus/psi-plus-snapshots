@@ -34,6 +34,7 @@
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QRandomGenerator>
 #endif
+#include <QPointer>
 
 namespace XMPP { namespace Jingle { namespace S5B {
     const QString NS(QStringLiteral("urn:xmpp:jingle:transports:s5b:1"));
@@ -700,7 +701,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             QList<QSet<QString>> featureOptions = { { "http://jabber.org/protocol/bytestreams" } };
             q->_pad->session()->manager()->client()->serverInfoManager()->queryServiceInfo(
                 QStringLiteral("proxy"), QStringLiteral("bytestreams"), featureOptions,
-                QRegExp("proxy.*|socks.*|stream.*|s5b.*"), ServerInfoManager::SQ_CheckAllOnNoMatch,
+                QRegularExpression("proxy.*|socks.*|stream.*|s5b.*"), ServerInfoManager::SQ_CheckAllOnNoMatch,
                 [this](const QList<DiscoItem> &items) {
                     if (!proxyDiscoveryInProgress) { // check if new results are ever/still expected
                         // seems like we have successful connection via higher priority channel. so nobody cares

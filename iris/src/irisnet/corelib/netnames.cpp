@@ -491,7 +491,7 @@ XMPP::NameRecord WeightedNameRecordList::takeNext()
 
     /* Find the new total weight of this priority group */
     int totalWeight = 0;
-    for (const auto &record : qAsConst(currentPriorityGroup->second)) {
+    for (const auto &record : std::as_const(currentPriorityGroup->second)) {
         totalWeight += record.weight();
     }
 
@@ -740,7 +740,7 @@ public:
                 sub_instances_to_remove += it.key();
         }
 
-        for (int res_sub_id : qAsConst(sub_instances_to_remove)) {
+        for (int res_sub_id : std::as_const(sub_instances_to_remove)) {
             res_sub_instances.remove(res_sub_id);
             p_local->resolve_stop(res_sub_id);
         }
@@ -1094,7 +1094,7 @@ void ServiceResolver::clear_resolvers()
 #endif
 
     /* cleanup all resolvers */
-    for (XMPP::NameResolver *resolver : qAsConst(d->resolverList)) {
+    for (XMPP::NameResolver *resolver : std::as_const(d->resolverList)) {
         cleanup_resolver(resolver);
     }
 }

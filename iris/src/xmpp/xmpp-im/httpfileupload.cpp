@@ -28,7 +28,6 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QRegExp>
 
 using namespace XMPP;
 
@@ -103,7 +102,7 @@ void HttpFileUpload::start()
         featureOptions << (QSet<QString>() << xmlns_v0_2_5) << (QSet<QString>() << xmlns_v0_3_1);
     }
     d->client->serverInfoManager()->queryServiceInfo(
-        QLatin1String("store"), QLatin1String("file"), featureOptions, QRegExp("^(upload|http|stor|file|dis|drive).*"),
+        QLatin1String("store"), QLatin1String("file"), featureOptions, QRegularExpression("^(upload|http|stor|file|dis|drive).*"),
         ServerInfoManager::SQ_CheckAllOnNoMatch, [this](const QList<DiscoItem> &items) {
             d->httpHosts.clear();
             for (const auto &item : items) {

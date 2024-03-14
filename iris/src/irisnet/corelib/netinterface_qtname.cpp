@@ -40,7 +40,7 @@ public:
 
     ~IrisQtName()
     {
-        for (auto const &l : qAsConst(lookups)) {
+        for (auto const &l : std::as_const(lookups)) {
             if (!l.isHostInfo) {
                 delete reinterpret_cast<QDnsLookup *>(l.handle);
             }

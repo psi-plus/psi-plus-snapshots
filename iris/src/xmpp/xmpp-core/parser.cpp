@@ -355,6 +355,6 @@ QByteArray Parser::unprocessed() const
     return ret;
 }
 
-QStringRef Parser::encoding() const { return d->reader.documentEncoding(); }
+QStringView Parser::encoding() const { return d->reader.documentEncoding(); }
 
 }

@@ -48,7 +48,7 @@ static QString printArray(const QByteArray &a)
             QString str = QString::asprintf("[%02x]", c);
             s += str;
         } else
-            s += c;
+            s += QChar::fromLatin1(c);
     }
     return s;
 }
@@ -1273,7 +1273,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
             }
         } else {
             QDomElement mechs = doc.createElementNS(NS_SASL, "mechanisms");
-            for (const QString &it : qAsConst(sasl_mechlist)) {
+            for (const QString &it : std::as_const(sasl_mechlist)) {
                 QDomElement m = doc.createElement("mechanism");
                 m.appendChild(doc.createTextNode(it));
                 mechs.appendChild(m);
@@ -1363,7 +1363,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
             if (f.sasl_supported) {
 #ifdef XMPP_TEST
                 QString s = "SASL mechs:";
-                for (const auto &saslMech : qAsConst(f.sasl_mechs))
+                for (const auto &saslMech : std::as_const(f.sasl_mechs))
                     s += QString(" [%1]").arg(saslMech);
                 TD::msg(s);
 #endif
@@ -1371,7 +1371,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
             if (f.compress_supported) {
 #ifdef XMPP_TEST
                 QString s = "Compression mechs:";
-                for (const auto &comprMech : qAsConst(f.compression_mechs))
+                for (const auto &comprMech : std::as_const(f.compression_mechs))
                     s += QString(" [%1]").arg(comprMech);
                 TD::msg(s);
 #endif
@@ -1698,24 +1698,25 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 #endif
                     QString location = e.attribute("location").trimmed();
                     if (!location.isEmpty()) {
-                        int        port_off = 0;
-                        QStringRef sm_host;
-                        int        sm_port = 0;
+                        int         port_off = 0;
+                        QStringView sm_host;
+                        int         sm_port = 0;
+                        auto location_view = QStringView{location};
                         if (location.startsWith('[')) { // ipv6
                             port_off = location.indexOf(']');
                             if (port_off != -1) { // looks valid
-                                sm_host = location.midRef(1, port_off - 1);
+                                sm_host = location_view.mid(1, port_off - 1);
                                 if (location.length() > port_off + 2 && location.at(port_off + 1) == ':')
-                                    sm_port = location.midRef(port_off + 2).toUInt();
+                                    sm_port = location_view.mid(port_off + 2).toUInt();
                             }
                         }
                         if (port_off == 0) {
                             port_off = location.indexOf(':');
                             if (port_off != -1) {
-                                sm_host = location.leftRef(port_off);
-                                sm_port = location.midRef(port_off + 1).toUInt();
+                                sm_host = location_view.left(port_off);
+                                sm_port = location_view.mid(port_off + 1).toUInt();
                             } else {
-                                sm_host = location.midRef(0);
+                                sm_host = location_view.mid(0);
                             }
                         }
                         sm.setLocation(sm_host.toString(), sm_port);

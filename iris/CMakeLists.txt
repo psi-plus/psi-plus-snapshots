@@ -74,14 +74,16 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR ("${CMAKE_BUILD_TYPE}" STREQUAL "Re
     include(debug-definitions)
 endif()
 
-find_package(Qt5 COMPONENTS Core Gui Xml Network REQUIRED)
-
-if(Qt5Core_FOUND)
-    message(STATUS "Qt5 found, version ${Qt5Core_VERSION}")
-    if(IRIS_BUNDLED_QCA AND ("${Qt5Core_VERSION}" VERSION_LESS "5.6"))
-        message(FATAL_ERROR "Minimal Qt version for bundled Qca is 5.6. Please disable IRIS_BUNDLED_QCA option")
-    endif()
+if(QT_DEFAULT_MAJOR_VERSION STREQUAL "")
+    set(QT_DEFAULT_MAJOR_VERSION 5)
 endif()
+
+if(QT_DEFAULT_MAJOR_VERSION LESS 6)
+    find_package(Qt5 5.10 REQUIRED COMPONENTS Core Gui Xml Network)
+else()
+    find_package(Qt6 REQUIRED COMPONENTS Core Gui Xml Network)
+endif()
+message(STATUS "Qt${QT_DEFAULT_MAJOR_VERSION} found, version ${Qt${QT_DEFAULT_MAJOR_VERSION}Core_VERSION}")
 
 # Find QCA package or use bundled if enabled
 include(IrisQCA)

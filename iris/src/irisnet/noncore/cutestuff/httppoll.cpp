@@ -408,7 +408,7 @@ static bool extractMainHeader(const QString &line, QString *proto, int *code, QS
     if (n2 == -1)
         return false;
     if (code)
-        *code = line.midRef(n, n2 - n).toInt();
+        *code = QStringView{line}.mid(n, n2 - n).toInt();
     n = n2 + 1;
     if (msg)
         *msg = line.mid(n);
@@ -503,7 +503,7 @@ QByteArray HttpProxyPost::body() const { return d->body; }
 
 QString HttpProxyPost::getHeader(const QString &var) const
 {
-    for (const QString &s : qAsConst(d->headerLines)) {
+    for (const QString &s : std::as_const(d->headerLines)) {
         int n = s.indexOf(": ");
         if (n == -1)
             continue;
@@ -776,7 +776,7 @@ void HttpProxyGetStream::stop() { resetConnection(); }
 
 QString HttpProxyGetStream::getHeader(const QString &var) const
 {
-    for (const QString &s : qAsConst(d->headerLines)) {
+    for (const QString &s : std::as_const(d->headerLines)) {
         int n = s.indexOf(": ");
         if (n == -1)
             continue;

@@ -272,9 +272,9 @@ if(LINUX AND USE_XSS)
     list(APPEND EXTRA_LDFLAGS ${X11_Xscreensaver_LIB})
 endif()
 
-qt5_wrap_ui(UI_FORMS ${FORMS})
+qt_wrap_ui(UI_FORMS ${FORMS})
 add_library(libpsi_tools STATIC  ${SOURCES} ${HEADERS} ${UI_FORMS})
-target_link_libraries(libpsi_tools ${QT_LIBRARIES} tools ${EXTRA_LDFLAGS})
+target_link_libraries(libpsi_tools iris ${QT_LIBRARIES} tools ${EXTRA_LDFLAGS})
 target_include_directories(libpsi_tools PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(zip)

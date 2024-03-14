@@ -147,7 +147,7 @@ private:
 
     void setAddresses(const QString &host, const QList<QHostAddress> &addresses)
     {
-        for (auto const &s : qAsConst(pendingWork_)) {
+        for (auto const &s : std::as_const(pendingWork_)) {
             if (s->host == host && s->addresses.isEmpty()) {
                 if (addresses.isEmpty())
                     s->expires = QDeadlineTimer(); // expired

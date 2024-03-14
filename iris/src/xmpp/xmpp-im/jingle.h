@@ -24,6 +24,8 @@
 
 #include <QSharedDataPointer>
 #include <QSharedPointer>
+#include <QObject>
+
 #include <functional>
 
 class QDomDocument;

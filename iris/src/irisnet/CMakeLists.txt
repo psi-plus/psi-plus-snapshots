@@ -127,9 +127,14 @@ endif()
 
 target_link_libraries(irisnet PUBLIC
     ${Qca_LIBRARY} ${USRSCTP_LIBRARY}
-    Qt5::Core Qt5::Network Qt5::Xml
-    ${EXTRA_LDFLAGS}
 )
+
+if(QT_DEFAULT_MAJOR_VERSION LESS 6)
+    target_link_libraries(irisnet PUBLIC Qt5::Core Qt5::Network Qt5::Xml)
+else()
+    target_link_libraries(irisnet PUBLIC Qt6::Core Qt6::Network Qt6::Xml)
+endif()
+target_link_libraries(irisnet PUBLIC ${EXTRA_LDFLAGS})
 
 if(IRIS_ENABLE_INSTALL)
     install(FILES ${IRISNET_CORELIB_HEADERS}

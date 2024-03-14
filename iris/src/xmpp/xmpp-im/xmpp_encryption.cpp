@@ -25,6 +25,8 @@ public:
     QList<EncryptionMethod *> methods;
 };
 
+EncryptionManager::EncryptionManager() : d(new Private) { }
+
 EncryptionManager::~EncryptionManager() { }
 
 void EncryptionManager::registerMethod(EncryptionMethod *algo) { d->methods.append(algo); }
@@ -34,7 +36,7 @@ void EncryptionManager::unregisterMethod(EncryptionMethod *algo) { d->methods.re
 EncryptionManager::MethodsMap EncryptionManager::methods(EncryptionMethod::Capabilities caps) const
 {
     MethodsMap ret;
-    for (auto const &m : qAsConst(d->methods)) {
+    for (auto const &m : std::as_const(d->methods)) {
         if (caps & m->capabilities())
             ret[m->id()] = m->name();
     }
