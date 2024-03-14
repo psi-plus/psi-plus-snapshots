@@ -77,7 +77,7 @@ public:
     SearchResult(const Jid &jid = "");
     ~SearchResult();
 
-    const Jid &    jid() const;
+    const Jid     &jid() const;
     const QString &nick() const;
     const QString &first() const;
     const QString &last() const;

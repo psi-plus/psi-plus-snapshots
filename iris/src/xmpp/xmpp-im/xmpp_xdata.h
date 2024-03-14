@@ -57,7 +57,7 @@ public:
     const QList<ReportField> &report() const;
 
     typedef QMap<QString, QString> ReportItem;
-    const QList<ReportItem> &      reportItems() const;
+    const QList<ReportItem>       &reportItems() const;
 
     void        fromXml(const QDomElement &);
     QDomElement toXml(QDomDocument *, bool submitForm = true) const;
@@ -152,7 +152,7 @@ public:
 
     const FieldList &fields() const;
     Field            getField(const QString &var) const;
-    Field &          fieldRef(const QString &var);
+    Field           &fieldRef(const QString &var);
     void             setFields(const FieldList &fl);
 
 private:

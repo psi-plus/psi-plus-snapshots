@@ -44,8 +44,8 @@ SCRAMSHA1Response::SCRAMSHA1Response(const QByteArray &server_first_message, con
     QString pass_out;
 
     QRegularExpression pattern("r=(.*),s=(.+),i=(\\d+)");
-    auto match = pattern.match(QString(server_first_message));
-    isValid_    = match.hasMatch();
+    auto               match = pattern.match(QString(server_first_message));
+    isValid_                 = match.hasMatch();
     if (!isValid_) {
         qWarning("SASL/SCRAM-SHA-1: Failed to match pattern for server-final-message.");
         return;
@@ -107,7 +107,7 @@ SCRAMSHA1Response::SCRAMSHA1Response(const QByteArray &server_first_message, con
     // AuthMessage     := client-first-message-bare + "," + server-first-message + "," +
     // client-final-message-without-proof
     QRegularExpression extract_cfmb_pattern("(n=.+)");
-    match = extract_cfmb_pattern.match(QString(client_first_message));
+    match    = extract_cfmb_pattern.match(QString(client_first_message));
     isValid_ = match.hasMatch();
     if (!isValid_) {
         return;

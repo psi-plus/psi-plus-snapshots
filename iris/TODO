@@ -43,4 +43,3 @@ questions:
 goal:
   support xmpp-core for tcp/httpbind
   xmpp-core should be "just another protocol"
-

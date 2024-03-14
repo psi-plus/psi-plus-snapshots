@@ -88,7 +88,7 @@ private slots:
 
 private:
     // this are all protected by m
-    NetInterfaceProvider *            c;
+    NetInterfaceProvider             *c;
     QMutex                            m;
     QList<NetInterfaceProvider::Info> info;
 };
@@ -172,11 +172,11 @@ private:
 
 private:
     QWaitCondition startCond;
-    QMutex *       startMutex = nullptr;
+    QMutex        *startMutex = nullptr;
     // these are all protected by global nettracker_mutex.
     int                      refs = 0;
     static NetTrackerThread *self;
-    NetTracker *             nettracker = nullptr;
+    NetTracker              *nettracker = nullptr;
 };
 
 NetTrackerThread *NetTrackerThread::self = nullptr;
@@ -250,7 +250,7 @@ public:
 
     QList<NetInterfaceProvider::Info> info;
     QList<NetInterface *>             listeners;
-    NetTrackerThread *                tracker;
+    NetTrackerThread                 *tracker;
 
     bool pending;
 

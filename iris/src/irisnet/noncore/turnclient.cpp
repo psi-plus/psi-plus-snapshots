@@ -75,19 +75,19 @@ class TurnClient::Private : public QObject {
     Q_OBJECT
 
 public:
-    TurnClient *             q;
+    TurnClient              *q;
     Proxy                    proxy;
     QString                  clientSoftware;
     TurnClient::Mode         mode = PlainMode;
     TransportAddress         serverAddr;
     ObjectSession            sess;
-    ByteStream *             bs            = nullptr;
-    QCA::TLS *               tls           = nullptr;
+    ByteStream              *bs            = nullptr;
+    QCA::TLS                *tls           = nullptr;
     bool                     tlsHandshaken = false;
     QByteArray               inStream;
     bool                     udp = false;
     StunTransactionPool::Ptr pool;
-    StunAllocate *           allocate        = nullptr;
+    StunAllocate            *allocate        = nullptr;
     bool                     allocateStarted = false;
     QString                  user;
     QCA::SecureArray         pass;

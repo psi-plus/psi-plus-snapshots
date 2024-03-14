@@ -26,12 +26,12 @@
 #include <QPointer>
 #include <QSocketNotifier>
 #include <QStringList>
+#include <QTcpServer>
+#include <QTcpSocket>
 #include <QTimer>
 #include <QUdpSocket>
-#include <QTcpSocket>
-#include <QTcpServer>
 
-//#define PROX_DEBUG
+// #define PROX_DEBUG
 #ifdef PROX_DEBUG
 #include <stdio.h>
 #endif
@@ -58,7 +58,7 @@
 
 class SocksUDP::Private {
 public:
-    QUdpSocket * sd;
+    QUdpSocket  *sd;
     SocksClient *sc;
     QHostAddress routeAddr;
     quint16      routePort;
@@ -963,9 +963,9 @@ SocksUDP *SocksClient::createUDP(const QString &host, int port, const QHostAddre
 //----------------------------------------------------------------------------
 class SocksServer::Private {
 public:
-    QTcpServer *         serv = nullptr;
+    QTcpServer          *serv = nullptr;
     QList<SocksClient *> incomingConns;
-    QUdpSocket *         sd = nullptr;
+    QUdpSocket          *sd = nullptr;
 };
 
 SocksServer::SocksServer(QObject *parent) : QObject(parent) { d = new Private; }

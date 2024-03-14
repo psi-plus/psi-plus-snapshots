@@ -111,7 +111,7 @@ HashVariant findHasher(Hash::Type hashType)
 Hash::Hash(const QDomElement &el)
 {
     QString algo = el.attribute(QLatin1String("algo"));
-    v_type       = parseType(QStringView{algo});
+    v_type       = parseType(QStringView { algo });
     if (v_type != Unknown && el.tagName() == QLatin1String("hash")) {
         v_data = QByteArray::fromBase64(el.text().toLatin1());
         if (v_data.isEmpty()) {

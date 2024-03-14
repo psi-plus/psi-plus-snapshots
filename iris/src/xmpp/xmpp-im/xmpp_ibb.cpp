@@ -47,7 +47,7 @@ public:
     Jid         peer;
     QString     sid;
     IBBManager *m = nullptr;
-    JT_IBB *    j = nullptr;
+    JT_IBB     *j = nullptr;
     QString     iq_id;
     QString     stanza;
 
@@ -325,10 +325,10 @@ class IBBManager::Private {
 public:
     Private() = default;
 
-    Client *          client = nullptr;
+    Client           *client = nullptr;
     IBBConnectionList activeConns;
     IBBConnectionList incomingConns;
-    JT_IBB *          ibb = nullptr;
+    JT_IBB           *ibb = nullptr;
 };
 
 IBBManager::IBBManager(Client *parent) : BytestreamManager(parent)

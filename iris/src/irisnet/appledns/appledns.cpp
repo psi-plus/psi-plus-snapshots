@@ -223,8 +223,8 @@ public:
         connect(&dns, SIGNAL(regResult(int, QDnsSd::RegResult)), SLOT(dns_regResult(int, QDnsSd::RegResult)));
     }
 
-    virtual XMPP::NameProvider *   createNameProviderInternet();
-    virtual XMPP::NameProvider *   createNameProviderLocal();
+    virtual XMPP::NameProvider    *createNameProviderInternet();
+    virtual XMPP::NameProvider    *createNameProviderLocal();
     virtual XMPP::ServiceProvider *createServiceProvider();
 
     int query(QDnsSdDelegate *p, const QByteArray &name, int qType)
@@ -300,7 +300,7 @@ private slots:
 class AppleBrowse : public QObject, public QDnsSdDelegate {
     Q_OBJECT
 public:
-    AppleProvider *              global;
+    AppleProvider               *global;
     int                          browse_id;
     QList<XMPP::ServiceInstance> instances;
     QHash<int, QByteArray>       pendingByQueryId; // waiting for TXT
@@ -421,7 +421,7 @@ protected:
 class AppleBrowseLookup : public QObject, public QDnsSdDelegate {
     Q_OBJECT
 public:
-    AppleProvider *    global;
+    AppleProvider     *global;
     int                resolve_id;
     XMPP::NameResolver nameResolverAaaa;
     XMPP::NameResolver nameResolverA;
@@ -614,7 +614,7 @@ public:
     public:
         AppleServiceProvider *parent;
         int                   id;
-        AppleBrowse *         browse;
+        AppleBrowse          *browse;
 
         Browse(AppleServiceProvider *_parent) : parent(_parent), id(-1), browse(0) { }
 
@@ -629,7 +629,7 @@ public:
     public:
         AppleServiceProvider *parent;
         int                   id;
-        AppleBrowseLookup *   resolve;
+        AppleBrowseLookup    *resolve;
 
         Resolve(AppleServiceProvider *_parent) : parent(_parent), id(-1), resolve(0) { }
 
@@ -640,7 +640,7 @@ public:
         }
     };
 
-    AppleProvider *  global;
+    AppleProvider   *global;
     QList<Browse *>  browseList;
     QList<Resolve *> resolveList;
     IdManager        idManager;

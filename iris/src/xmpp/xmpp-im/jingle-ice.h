@@ -20,9 +20,9 @@
 #ifndef JINGLE_ICE_H
 #define JINGLE_ICE_H
 
-#include "jingle-transport.h"
 #include "iris/tcpportreserver.h"
 #include "iris/xmpp.h"
+#include "jingle-transport.h"
 
 class QHostAddress;
 
@@ -71,15 +71,15 @@ namespace Jingle { namespace ICE {
 
         Pad(Manager *manager, Session *session);
         QString           ns() const override;
-        Session *         session() const override;
+        Session          *session() const override;
         TransportManager *manager() const override;
         void              onLocalAccepted() override;
 
         inline TcpPortScope *discoScope() const { return _discoScope; }
 
     private:
-        Manager *     _manager;
-        Session *     _session;
+        Manager      *_manager;
+        Session      *_session;
         TcpPortScope *_discoScope;
         bool          _allowGrouping = false;
     };
@@ -94,7 +94,7 @@ namespace Jingle { namespace ICE {
         void                                    setJingleManager(XMPP::Jingle::Manager *jm) override;
         QSharedPointer<XMPP::Jingle::Transport> newTransport(const TransportManagerPad::Ptr &pad,
                                                              Origin                          creator) override;
-        TransportManagerPad *                   pad(Session *session) override;
+        TransportManagerPad                    *pad(Session *session) override;
 
         QStringList ns() const override;
         QStringList discoFeatures() const override;

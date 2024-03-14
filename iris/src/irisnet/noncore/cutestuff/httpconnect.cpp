@@ -25,7 +25,7 @@
 #include <QStringList>
 #include <QtCrypto>
 
-//#define PROX_DEBUG
+// #define PROX_DEBUG
 #ifdef PROX_DEBUG
 #include <stdio.h>
 #endif
@@ -80,7 +80,7 @@ static bool extractMainHeader(const QString &line, QString *proto, int *code, QS
     if (n2 == -1)
         return false;
     if (code)
-        *code = QStringView{line}.mid(n, n2 - n).toInt();
+        *code = QStringView { line }.mid(n, n2 - n).toInt();
     n = n2 + 1;
     if (msg)
         *msg = line.mid(n);

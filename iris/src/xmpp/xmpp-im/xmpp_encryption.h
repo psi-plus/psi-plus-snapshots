@@ -23,7 +23,6 @@
 #include <map>
 #include <memory>
 
-
 class QDomElement;
 
 namespace XMPP {

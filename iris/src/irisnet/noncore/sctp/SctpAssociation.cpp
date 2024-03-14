@@ -5,7 +5,7 @@
 #include "DepUsrSCTP.hpp"
 #include "Logger.hpp"
 #include "MediaSoupErrors.hpp"
-//#include "Channel/Notifier.hpp"
+// #include "Channel/Notifier.hpp"
 #include <cstdlib> // std::malloc(), std::free()
 #include <cstring> // std::memset(), std::memcpy()
 #include <string>
@@ -89,9 +89,8 @@ static constexpr uint16_t MaxSctpStreams { 65535 };
 
 SctpAssociation::SctpAssociation(Listener *listener, uint16_t os, uint16_t mis, size_t maxSctpMessageSize,
                                  size_t sctpSendBufferSize, bool isDataChannel) :
-    listener(listener),
-    os(os), mis(mis), maxSctpMessageSize(maxSctpMessageSize), sctpSendBufferSize(sctpSendBufferSize),
-    isDataChannel(isDataChannel)
+    listener(listener), os(os), mis(mis), maxSctpMessageSize(maxSctpMessageSize),
+    sctpSendBufferSize(sctpSendBufferSize), isDataChannel(isDataChannel)
 {
     MS_TRACE();
 

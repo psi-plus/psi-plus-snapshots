@@ -473,7 +473,7 @@ public:
             return QLatin1String("iq");
     }
 
-    Stream *                     s;
+    Stream                      *s;
     QDomElement                  e;
     QSharedPointer<QDomDocument> sharedDoc;
 };

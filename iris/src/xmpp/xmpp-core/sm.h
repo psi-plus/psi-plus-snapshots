@@ -28,7 +28,7 @@
 #define NS_STREAM_MANAGEMENT "urn:xmpp:sm:3"
 #define SM_TIMER_INTERVAL_SECS 40
 
-//#define IRIS_SM_DEBUG
+// #define IRIS_SM_DEBUG
 
 namespace XMPP {
 class SMState {
@@ -55,7 +55,7 @@ public:
 class StreamManagement : QObject {
 public:
     StreamManagement(QObject *parent = nullptr);
-    XMPP::SMState &      state() { return state_; }
+    XMPP::SMState       &state() { return state_; }
     const XMPP::SMState &state() const { return state_; }
     bool                 isActive() const { return sm_started || sm_resumed; }
     bool                 isResumed() const { return sm_resumed; }

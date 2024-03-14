@@ -36,7 +36,7 @@ public:
     ~StunDiscoManager();
 
     AbstractStunDisco *createMonitor();
-    inline Client *    client() const { return client_; }
+    inline Client     *client() const { return client_; }
 
 private:
     Client *client_;

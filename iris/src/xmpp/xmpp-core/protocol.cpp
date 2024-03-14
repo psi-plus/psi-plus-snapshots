@@ -1700,8 +1700,8 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                     if (!location.isEmpty()) {
                         int         port_off = 0;
                         QStringView sm_host;
-                        int         sm_port = 0;
-                        auto location_view = QStringView{location};
+                        int         sm_port       = 0;
+                        auto        location_view = QStringView { location };
                         if (location.startsWith('[')) { // ipv6
                             port_off = location.indexOf(']');
                             if (port_off != -1) { // looks valid

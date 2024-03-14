@@ -30,7 +30,7 @@ public:
 
     const QString &name() const;
     int            priority() const;
-    const Status & status() const;
+    const Status  &status() const;
 
     void setName(const QString &);
     void setStatus(const Status &);

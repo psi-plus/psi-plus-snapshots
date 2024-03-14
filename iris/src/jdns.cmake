@@ -49,4 +49,4 @@ set(qjdns_HEADERS
 add_library(${QJDns_LIBRARY} STATIC ${qjdns_SRCS} ${qjdns_MOC_SRCS} ${qjdns_MOC_HDRS} ${qjdns_PUBLIC_HEADERS})
 
 target_link_libraries(${QJDns_LIBRARY} Qt5::Core Qt5::Network)
-target_link_libraries(${QJDns_LIBRARY} jdns) 
+target_link_libraries(${QJDns_LIBRARY} jdns)

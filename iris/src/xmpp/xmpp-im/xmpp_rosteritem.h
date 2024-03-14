@@ -47,11 +47,11 @@ public:
     virtual ~RosterItem();
     RosterItem &operator=(const RosterItem &other) = default;
 
-    const Jid &         jid() const;
-    const QString &     name() const;
-    const QStringList & groups() const;
+    const Jid          &jid() const;
+    const QString      &name() const;
+    const QStringList  &groups() const;
     const Subscription &subscription() const;
-    const QString &     ask() const;
+    const QString      &ask() const;
     bool                isPush() const;
     bool                inGroup(const QString &) const;
 

@@ -105,7 +105,7 @@ public:
         QString country;
     };
     typedef QList<Address> AddressList;
-    const AddressList &    addressList() const;
+    const AddressList     &addressList() const;
     void                   setAddressList(const AddressList &);
 
     class Label {
@@ -125,7 +125,7 @@ public:
         QStringList lines;
     };
     typedef QList<Label> LabelList;
-    const LabelList &    labelList() const;
+    const LabelList     &labelList() const;
     void                 setLabelList(const LabelList &);
 
     class Phone {
@@ -149,7 +149,7 @@ public:
         QString number;
     };
     typedef QList<Phone> PhoneList;
-    const PhoneList &    phoneList() const;
+    const PhoneList     &phoneList() const;
     void                 setPhoneList(const PhoneList &);
 
     class Email {
@@ -166,7 +166,7 @@ public:
         QString userid;
     };
     typedef QList<Email> EmailList;
-    const EmailList &    emailList() const;
+    const EmailList     &emailList() const;
     void                 setEmailList(const EmailList &);
 
     const QString &jid() const;

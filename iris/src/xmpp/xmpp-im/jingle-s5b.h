@@ -20,8 +20,8 @@
 #ifndef JINGLE_S5B_H
 #define JINGLE_S5B_H
 
-#include "jingle-transport.h"
 #include "iris/tcpportreserver.h"
+#include "jingle-transport.h"
 
 class QHostAddress;
 class SocksClient;
@@ -85,7 +85,7 @@ namespace Jingle { namespace S5B {
         Candidate(Transport *transport, const TcpPortServer::Ptr &server, const QString &cid,
                   quint16 localPreference = 0);
         ~Candidate();
-        Candidate &        operator=(const Candidate &other) = default;
+        Candidate         &operator=(const Candidate &other) = default;
         inline bool        isValid() const { return d != nullptr; }
         inline             operator bool() const { return isValid(); }
         Type               type() const;
@@ -110,7 +110,7 @@ namespace Jingle { namespace S5B {
         void               connectToHost(const QString &key, State successState, QObject *callbackContext,
                                          std::function<void(bool)> callback, bool isUdp = false);
         bool               incomingConnection(SocksClient *sc);
-        SocksClient *      takeSocksClient();
+        SocksClient       *takeSocksClient();
         void               deleteSocksClient();
         TcpPortServer::Ptr server() const;
         bool               isConnected() const;
@@ -163,7 +163,7 @@ namespace Jingle { namespace S5B {
 
         Pad(Manager *manager, Session *session);
         QString           ns() const override;
-        Session *         session() const override;
+        Session          *session() const override;
         TransportManager *manager() const override;
 
         QString generateSid() const;
@@ -172,8 +172,8 @@ namespace Jingle { namespace S5B {
         inline TcpPortScope *discoScope() const { return _discoScope; }
 
     private:
-        Manager *     _manager;
-        Session *     _session;
+        Manager      *_manager;
+        Session      *_session;
         TcpPortScope *_discoScope;
     };
 
@@ -187,7 +187,7 @@ namespace Jingle { namespace S5B {
         void                                    setJingleManager(XMPP::Jingle::Manager *jm) override;
         QSharedPointer<XMPP::Jingle::Transport> newTransport(const TransportManagerPad::Ptr &pad,
                                                              Origin                          creator) override;
-        TransportManagerPad *                   pad(Session *session) override;
+        TransportManagerPad                    *pad(Session *session) override;
 
         QStringList discoFeatures() const override;
 

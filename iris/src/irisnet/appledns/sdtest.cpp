@@ -105,7 +105,7 @@ class App : public QObject {
     Q_OBJECT
 public:
     QList<Command> commands;
-    QDnsSd *       dns;
+    QDnsSd        *dns;
 
     App()
     {

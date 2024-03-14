@@ -51,7 +51,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
         Q_OBJECT
 
         QList<NetworkDatagram> datagrams;
-        SocksClient *          client = nullptr;
+        SocksClient           *client = nullptr;
         Transport::Mode        mode   = Transport::Tcp;
 
     public:
@@ -137,7 +137,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
         Q_OBJECT
 
         QMap<QString, SocksClient *> clients;
-        SocksClient *                client = nullptr;
+        SocksClient                 *client = nullptr;
 
     public:
         using QObject::QObject;
@@ -236,7 +236,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
         Candidate::State    state    = Candidate::New;
 
         QSharedPointer<S5BServer> server;
-        SocksClient *             socksClient = nullptr;
+        SocksClient              *socksClient = nullptr;
 
         QString toString() const
         {
@@ -389,8 +389,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
     }
 
     Candidate::Candidate(Transport *transport, const TcpPortServer::Ptr &server, const QString &cid,
-                         quint16 localPreference) :
-        d(new Private)
+                         quint16 localPreference) : d(new Private)
     {
         Type type = None;
         switch (server->portType()) {
@@ -582,7 +581,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
     public:
         enum PendingActions { NewCandidate = 1, CandidateUsed = 2, CandidateError = 4, Activated = 8, ProxyError = 16 };
 
-        Transport *                  q                            = nullptr;
+        Transport                   *q                            = nullptr;
         bool                         p2pAllowed                   = true;
         bool                         offerSent                    = false;
         bool                         waitingAck                   = true;

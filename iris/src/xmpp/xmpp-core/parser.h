@@ -78,10 +78,10 @@ public:
     Parser();
     ~Parser();
 
-    void       reset();
-    void       appendData(const QByteArray &a);
-    Event      readNext();
-    QByteArray unprocessed() const;
+    void        reset();
+    void        appendData(const QByteArray &a);
+    Event       readNext();
+    QByteArray  unprocessed() const;
     QStringView encoding() const;
 
 private:

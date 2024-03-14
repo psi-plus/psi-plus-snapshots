@@ -36,7 +36,7 @@ static QString prompt(const QString &s)
     printf("* %s ", qPrintable(s));
     fflush(stdout);
     char    line[256];
-    char *  ret = fgets(line, 255, stdin);
+    char   *ret = fgets(line, 255, stdin);
     QString result;
     if (ret)
         result = QString::fromLocal8Bit(line);
@@ -48,9 +48,9 @@ static QString prompt(const QString &s)
 class NetMonitor : public QObject {
     Q_OBJECT
 public:
-    NetInterfaceManager * man;
+    NetInterfaceManager  *man;
     QList<NetInterface *> ifaces;
-    NetAvailability *     netavail;
+    NetAvailability      *netavail;
 
     ~NetMonitor()
     {
@@ -440,9 +440,9 @@ public:
     QHostAddress             addr;
     int                      port;
     int                      localPort;
-    QUdpSocket *             sock;
+    QUdpSocket              *sock;
     StunTransactionPool::Ptr pool;
-    StunBinding *            binding;
+    StunBinding             *binding;
 
     ~StunBind()
     {
@@ -551,10 +551,10 @@ public:
     QString                  relayRealm;
     QHostAddress             peerAddr;
     int                      peerPort = 0;
-    QUdpSocket *             udp      = nullptr;
+    QUdpSocket              *udp      = nullptr;
     StunTransactionPool::Ptr pool;
     QList<bool>              writeItems; // true = turn-originated, false = external
-    TurnClient *             turn = nullptr;
+    TurnClient              *turn = nullptr;
 
     TurnClientTest() = default;
 

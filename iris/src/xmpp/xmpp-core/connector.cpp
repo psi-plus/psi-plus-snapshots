@@ -35,13 +35,13 @@
 #include "xmpp.h"
 
 #include <QList>
+#include <QNetworkProxy>
 #include <QPointer>
 #include <QTimer>
 #include <QUrl>
-#include <QNetworkProxy>
 #include <qca.h>
 
-//#define XMPP_DEBUG
+// #define XMPP_DEBUG
 #ifdef XMPP_DEBUG
 #define XDEBUG (qDebug() << this << "#" << __FUNCTION__ << ":")
 #endif

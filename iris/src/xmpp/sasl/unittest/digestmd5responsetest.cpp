@@ -38,12 +38,12 @@ private slots:
                                    "xmpp", "jabber.example.com", "example.com", "myuser", "myuser_authz", "mypass",
                                    IncrementingRandomNumberGenerator(255));
         QByteArray        expectedValue("username=\"myuser\",realm=\"example.com\","
-                                 "nonce=\"O6skKPuaCZEny3hteI19qXMBXSadoWs840MchORo\","
-                                 "cnonce=\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=\","
-                                 "nc=00000001,"
-                                 "digest-uri=\"xmpp/jabber.example.com\","
-                                 "qop=auth,response=8fe15bc2aa31956b62d9de831b21a5d4,"
-                                 "charset=utf-8,authzid=\"myuser_authz\"");
+                                               "nonce=\"O6skKPuaCZEny3hteI19qXMBXSadoWs840MchORo\","
+                                               "cnonce=\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=\","
+                                               "nc=00000001,"
+                                               "digest-uri=\"xmpp/jabber.example.com\","
+                                               "qop=auth,response=8fe15bc2aa31956b62d9de831b21a5d4,"
+                                               "charset=utf-8,authzid=\"myuser_authz\"");
 
         QVERIFY(response.isValid());
         QCOMPARE(response.getValue(), expectedValue);
@@ -57,11 +57,11 @@ private slots:
                                    "xmpp", "jabber.example.com", "example.com", "myuser", "", "mypass",
                                    IncrementingRandomNumberGenerator(255));
         QByteArray        expectedValue("username=\"myuser\",realm=\"example.com\","
-                                 "nonce=\"O6skKPuaCZEny3hteI19qXMBXSadoWs840MchORo\","
-                                 "cnonce=\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=\","
-                                 "nc=00000001,"
-                                 "digest-uri=\"xmpp/jabber.example.com\","
-                                 "qop=auth,response=564b1c1cc16d97b019f18b14c979964b,charset=utf-8");
+                                               "nonce=\"O6skKPuaCZEny3hteI19qXMBXSadoWs840MchORo\","
+                                               "cnonce=\"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=\","
+                                               "nc=00000001,"
+                                               "digest-uri=\"xmpp/jabber.example.com\","
+                                               "qop=auth,response=564b1c1cc16d97b019f18b14c979964b,charset=utf-8");
 
         QVERIFY(response.isValid());
         QCOMPARE(response.getValue(), expectedValue);

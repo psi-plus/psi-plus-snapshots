@@ -542,7 +542,7 @@ namespace XMPP { namespace Jingle {
 
                 Private::AddContentError err;
                 Reason::Condition        cond;
-                Application *            app;
+                Application             *app;
 
                 std::tie(err, cond, app) = parseContentAdd(ce);
                 if (err == Private::AddContentError::Unparsed) {
@@ -640,7 +640,7 @@ namespace XMPP { namespace Jingle {
 
                 Private::AddContentError err;
                 Reason::Condition        cond;
-                Application *            app;
+                Application             *app;
 
                 std::tie(err, cond, app) = parseContentAccept(ce);
                 if (err == Private::AddContentError::Unparsed || err == Private::AddContentError::Unexpected) {
@@ -885,7 +885,7 @@ namespace XMPP { namespace Jingle {
             }
 
             for (auto &v : passed) {
-                Application *             app;
+                Application              *app;
                 QSharedPointer<Transport> transport;
                 QDomElement               ce;
                 std::tie(app, transport, ce) = v;

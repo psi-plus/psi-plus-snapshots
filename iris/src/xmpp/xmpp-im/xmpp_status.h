@@ -43,10 +43,10 @@ public:
     CapsSpec(const DiscoItem &disco, QCryptographicHash::Algorithm hashAlgo = QCryptographicHash::Sha1);
 
     bool                          isValid() const;
-    const QString &               node() const;
-    const QString &               version() const;
+    const QString                &node() const;
+    const QString                &version() const;
     QCryptographicHash::Algorithm hashAlgorithm() const;
-    inline const QStringList &    ext() const { return ext_; }
+    inline const QStringList     &ext() const { return ext_; }
     QString                       flatten() const;
 
     void resetVersion();
@@ -90,22 +90,22 @@ public:
     int            errorCode() const;
     const QString &errorString() const;
 
-    const QString & xsigned() const;
-    const QString & songTitle() const;
+    const QString  &xsigned() const;
+    const QString  &songTitle() const;
     const CapsSpec &caps() const;
 
     bool              isMUC() const;
     bool              hasMUCItem() const;
-    const MUCItem &   mucItem() const;
+    const MUCItem    &mucItem() const;
     bool              hasMUCDestroy() const;
     const MUCDestroy &mucDestroy() const;
     const QList<int> &getMUCStatuses() const;
-    const QString &   mucPassword() const;
+    const QString    &mucPassword() const;
     bool              hasMUCHistory() const;
     int               mucHistoryMaxChars() const;
     int               mucHistoryMaxStanzas() const;
     int               mucHistorySeconds() const;
-    const QDateTime & mucHistorySince() const;
+    const QDateTime  &mucHistorySince() const;
 
     static Type txt2type(const QString &stat);
 

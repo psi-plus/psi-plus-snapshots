@@ -86,9 +86,9 @@ public:
     void close(bool fast = false);
 
     bool                hasStream() const;
-    Stream &            stream();
+    Stream             &stream();
     QString             streamBaseNS() const;
-    const LiveRoster &  roster() const;
+    const LiveRoster   &roster() const;
     const ResourceList &resourceList() const;
     bool                isSessionRequired() const;
 
@@ -112,7 +112,7 @@ public:
 
     void          debug(const QString &);
     QString       genUniqueId();
-    Task *        rootTask();
+    Task         *rootTask();
     QDomDocument *doc() const;
 
     QString  OSName() const;
@@ -144,20 +144,20 @@ public:
     bool            capsOptimizationAllowed() const;
 
     void                      setTcpPortReserver(TcpPortReserver *portReserver);
-    TcpPortReserver *         tcpPortReserver() const;
-    S5BManager *              s5bManager() const;
-    IBBManager *              ibbManager() const;
-    BoBManager *              bobManager() const;
-    JidLinkManager *          jidLinkManager() const;
-    CapsManager *             capsManager() const;
-    ServerInfoManager *       serverInfoManager() const;
+    TcpPortReserver          *tcpPortReserver() const;
+    S5BManager               *s5bManager() const;
+    IBBManager               *ibbManager() const;
+    BoBManager               *bobManager() const;
+    JidLinkManager           *jidLinkManager() const;
+    CapsManager              *capsManager() const;
+    ServerInfoManager        *serverInfoManager() const;
     ExternalServiceDiscovery *externalServiceDiscovery() const;
-    StunDiscoManager *        stunDiscoManager() const;
-    HttpFileUploadManager *   httpFileUploadManager() const;
-    Jingle::Manager *         jingleManager() const;
-    Jingle::S5B::Manager *    jingleS5BManager() const;
-    Jingle::IBB::Manager *    jingleIBBManager() const;
-    Jingle::ICE::Manager *    jingleICEManager() const;
+    StunDiscoManager         *stunDiscoManager() const;
+    HttpFileUploadManager    *httpFileUploadManager() const;
+    Jingle::Manager          *jingleManager() const;
+    Jingle::S5B::Manager     *jingleS5BManager() const;
+    Jingle::IBB::Manager     *jingleIBBManager() const;
+    Jingle::ICE::Manager     *jingleICEManager() const;
 
     void                 setFileTransferEnabled(bool b);
     FileTransferManager *fileTransferManager() const;
@@ -165,7 +165,7 @@ public:
     QString groupChatPassword(const QString &host, const QString &room) const;
     bool    groupChatJoin(const QString &host, const QString &room, const QString &nick,
                           const QString &password = QString(), int maxchars = -1, int maxstanzas = -1, int seconds = -1,
-                          const QDateTime &since = QDateTime(), const Status & = Status());
+                          const QDateTime &since = QDateTime(), const Status    & = Status());
     void    groupChatSetStatus(const QString &host, const QString &room, const Status &);
     void    groupChatChangeNick(const QString &host, const QString &room, const QString &nick, const Status &);
     void    groupChatLeave(const QString &host, const QString &room, const QString &statusStr = QString());

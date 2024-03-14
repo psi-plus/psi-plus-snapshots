@@ -59,7 +59,7 @@ namespace XMPP { namespace Jingle {
         // make new local content but do not add it to session yet
         Application *newContent(const QString &ns, Origin senders = Origin::Both);
         // get registered content if any
-        Application *                          content(const QString &contentName, Origin creator);
+        Application                           *content(const QString &contentName, Origin creator);
         void                                   addContent(Application *content);
         const QMap<ContentKey, Application *> &contentList() const;
         void                                   setGrouping(const QString &groupType, const QStringList &group);

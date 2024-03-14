@@ -21,7 +21,7 @@
 #include "objectsession.h"
 #include "qjdnsshared.h"
 
-//#define JDNS_DEBUG
+// #define JDNS_DEBUG
 
 Q_DECLARE_METATYPE(XMPP::NameRecord)
 // Q_DECLARE_METATYPE(XMPP::NameResolver::Error)
@@ -237,11 +237,11 @@ class JDnsGlobal : public QObject {
 
 public:
     QJDnsSharedDebug      db;
-    QJDnsShared *         uni_net, *uni_local, *mul;
+    QJDnsShared          *uni_net, *uni_local, *mul;
     QHostAddress          mul_addr4, mul_addr6;
     NetInterfaceManager   netman;
     QList<NetInterface *> ifaces;
-    QTimer *              updateTimer;
+    QTimer               *updateTimer;
 
     JDnsGlobal()
     {
@@ -424,7 +424,7 @@ class JDnsNameProvider : public NameProvider {
 public:
     enum Mode { Internet, Local };
 
-    JDnsGlobal *  global;
+    JDnsGlobal   *global;
     Mode          mode;
     IdManager     idman;
     ObjectSession sess;
@@ -637,7 +637,7 @@ private slots:
     void req_resultsReady()
     {
         QJDnsSharedRequest *req = static_cast<QJDnsSharedRequest *>(sender());
-        Item *              i   = getItemByReq(req);
+        Item               *i   = getItemByReq(req);
         Q_ASSERT(i);
 
         int id = i->id;
@@ -834,7 +834,7 @@ public:
     QJDnsSharedRequest req6;   // for AAAA
     bool               haveTxt;
     SrvState           srvState;
-    QTimer *           opTimer;
+    QTimer            *opTimer;
 
     // out
     QList<QByteArray> attribs;
@@ -1344,7 +1344,7 @@ signals:
 private:
     friend class JDnsPublish;
 
-    JDnsPublish *      jdnsPub;
+    JDnsPublish       *jdnsPub;
     bool               started;
     QJDnsSharedRequest pub;
     QJDns::Record      rec;
@@ -1369,7 +1369,7 @@ class JDnsPublish : public QObject {
     Q_OBJECT
 
 public:
-    QJDnsShared *      jdns;
+    QJDnsShared       *jdns;
     QJDnsSharedRequest pub_srv;
     QJDnsSharedRequest pub_txt;
     QJDnsSharedRequest pub_ptr;
@@ -1652,7 +1652,7 @@ private slots:
     void pub_extra_ready()
     {
         QJDnsSharedRequest *req   = static_cast<QJDnsSharedRequest *>(sender());
-        JDnsPublishExtra *  extra = 0;
+        JDnsPublishExtra   *extra = 0;
         for (JDnsPublishExtra *e : extraList) {
             if (&e->pub == req) {
                 extra = e;
@@ -1711,7 +1711,7 @@ class BrowseItem {
 public:
     const int         id;
     JDnsBrowse *const browse;
-    ObjectSession *   sess;
+    ObjectSession    *sess;
 
     BrowseItem(int _id, JDnsBrowse *_browse) : id(_id), browse(_browse), sess(0) { }
 
@@ -1760,7 +1760,7 @@ class ResolveItem {
 public:
     const int                 id;
     JDnsServiceResolve *const resolve;
-    ObjectSession *           sess;
+    ObjectSession            *sess;
 
     ResolveItem(int _id, JDnsServiceResolve *_resolve) : id(_id), resolve(_resolve), sess(0) { }
 
@@ -1809,7 +1809,7 @@ class PublishItem {
 public:
     const int          id;
     JDnsPublish *const publish;
-    ObjectSession *    sess;
+    ObjectSession     *sess;
 
     PublishItem(int _id, JDnsPublish *_publish) : id(_id), publish(_publish), sess(0) { }
 
@@ -1860,7 +1860,7 @@ class PublishExtraItem {
 public:
     const int               id;
     JDnsPublishExtra *const publish;
-    ObjectSession *         sess;
+    ObjectSession          *sess;
 
     PublishExtraItem(int _id, JDnsPublishExtra *_publish) : id(_id), publish(_publish), sess(0) { }
 
@@ -2240,7 +2240,7 @@ private slots:
     void jr_finished()
     {
         JDnsServiceResolve *jr = static_cast<JDnsServiceResolve *>(sender());
-        ResolveItem *       i  = resolveItemList.itemByResolve(jr);
+        ResolveItem        *i  = resolveItemList.itemByResolve(jr);
         Q_ASSERT(i);
 
         // parse TXT list into attribute map
@@ -2289,7 +2289,7 @@ private slots:
     void jr_error(QJDnsSharedRequest::Error e)
     {
         JDnsServiceResolve *jr = static_cast<JDnsServiceResolve *>(sender());
-        ResolveItem *       i  = resolveItemList.itemByResolve(jr);
+        ResolveItem        *i  = resolveItemList.itemByResolve(jr);
         Q_ASSERT(i);
 
         ServiceResolver::Error err;

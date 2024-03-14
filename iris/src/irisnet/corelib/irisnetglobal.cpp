@@ -42,7 +42,7 @@ extern IrisNetProvider *irisnet_createAppleProvider();
 class PluginInstance {
 private:
     QPluginLoader *_loader      = nullptr;
-    QObject *      _instance    = nullptr;
+    QObject       *_instance    = nullptr;
     bool           _ownInstance = false;
 
     PluginInstance() { }

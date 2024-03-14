@@ -448,14 +448,14 @@ public:
     XMPP::NameResolver                dns;
     QHostAddress                      stunAddr;
     XMPP::UdpPortReserver             portReserver;
-    XMPP::Ice176 *                    ice = nullptr;
+    XMPP::Ice176                     *ice = nullptr;
     QList<XMPP::Dtls *>               dtls;
     QList<XMPP::Ice176::Candidate>    localCandidates;
     QList<XMPP::Ice176::LocalAddress> localAddrs;
     QList<Channel>                    channels;
-    QCA::Console *                    console = nullptr;
-    IceBlockReader *                  reader  = nullptr;
-    EnterPrompt *                     prompt  = nullptr;
+    QCA::Console                     *console = nullptr;
+    IceBlockReader                   *reader  = nullptr;
+    EnterPrompt                      *prompt  = nullptr;
     IceOffer                          inOffer;
 
     App() : portReserver(this) { }

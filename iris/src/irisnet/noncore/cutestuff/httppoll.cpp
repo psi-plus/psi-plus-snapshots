@@ -22,12 +22,12 @@
 #include "bsocket.h"
 
 #include <QByteArray>
-#include <QUrl>
-#include <QtCrypto>
-#include <QPointer>
 #include <QHostAddress>
+#include <QPointer>
 #include <QStringList>
 #include <QTimer>
+#include <QUrl>
+#include <QtCrypto>
 
 #ifdef PROX_DEBUG
 #include <stdio.h>
@@ -408,7 +408,7 @@ static bool extractMainHeader(const QString &line, QString *proto, int *code, QS
     if (n2 == -1)
         return false;
     if (code)
-        *code = QStringView{line}.mid(n, n2 - n).toInt();
+        *code = QStringView { line }.mid(n, n2 - n).toInt();
     n = n2 + 1;
     if (msg)
         *msg = line.mid(n);
@@ -431,7 +431,7 @@ public:
     bool         asProxy;
     bool         useSsl;
     QString      host;
-    QCA::TLS *   tls;
+    QCA::TLS    *tls;
 };
 
 HttpProxyPost::HttpProxyPost(QObject *parent) : QObject(parent)

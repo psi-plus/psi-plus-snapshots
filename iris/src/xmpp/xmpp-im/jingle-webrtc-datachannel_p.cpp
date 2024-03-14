@@ -27,14 +27,13 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     WebRTCDataChannel::WebRTCDataChannel(AssociationPrivate *association, quint8 channelType, quint32 reliability,
                                          quint16 priority, const QString &label, const QString &protocol,
                                          DcepState state) :
-        association(association),
-        channelType(channelType), reliability(reliability), priority(priority), label(label), protocol(protocol),
-        dcepState(state)
+        association(association), channelType(channelType), reliability(reliability), priority(priority), label(label),
+        protocol(protocol), dcepState(state)
     {
     }
 
     QSharedPointer<WebRTCDataChannel> WebRTCDataChannel::fromChannelOpen(AssociationPrivate *assoc,
-                                                                         const QByteArray &  data)
+                                                                         const QByteArray   &data)
     {
         /*
           0                   1                   2                   3
@@ -75,7 +74,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         QString protocol = QString::fromUtf8(data.data() + protoOff, protocolLength);
         // start with DcepNegotiated since caller will ack asap
         auto channel       = QSharedPointer<WebRTCDataChannel>::create(assoc, channelType, priority, reliability, label,
-                                                                 protocol, DcepNegotiated);
+                                                                       protocol, DcepNegotiated);
         channel->_isRemote = true;
         channel->setOpenMode(QIODevice::ReadWrite);
         return channel;

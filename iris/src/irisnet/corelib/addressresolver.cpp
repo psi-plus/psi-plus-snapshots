@@ -28,7 +28,7 @@ class AddressResolver::Private : public QObject {
 public:
     enum State { AddressWait, AddressFirstCome };
 
-    AddressResolver *   q;
+    AddressResolver    *q;
     ObjectSession       sess;
     State               state;
     NameResolver        req6;
@@ -37,7 +37,7 @@ public:
     bool                done4;
     QList<QHostAddress> addrs6;
     QList<QHostAddress> addrs4;
-    QTimer *            opTimer;
+    QTimer             *opTimer;
 
     Private(AddressResolver *_q) : QObject(_q), q(_q), sess(this), req6(this), req4(this)
     {

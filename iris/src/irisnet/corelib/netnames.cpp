@@ -28,7 +28,7 @@
 #endif
 #include <limits>
 
-//#define NETNAMES_DEBUG
+// #define NETNAMES_DEBUG
 #ifdef NETNAMES_DEBUG
 #define NNDEBUG (qDebug() << this << "#" << __FUNCTION__ << ":")
 #endif
@@ -308,8 +308,8 @@ QDebug operator<<(QDebug dbg, XMPP::NameRecord::Type type)
 
 QDebug operator<<(QDebug dbg, const XMPP::NameRecord &record)
 {
-    dbg.nospace() << "XMPP::NameRecord("
-                  << "owner=" << record.owner() << ", ttl=" << record.ttl() << ", type=" << record.type();
+    dbg.nospace() << "XMPP::NameRecord(" << "owner=" << record.owner() << ", ttl=" << record.ttl()
+                  << ", type=" << record.type();
 
     switch (record.type()) {
     case XMPP::NameRecord::A:
@@ -362,8 +362,7 @@ public:
 ServiceInstance::ServiceInstance() : d(new Private) { }
 
 ServiceInstance::ServiceInstance(const QString &instance, const QString &type, const QString &domain,
-                                 const QMap<QString, QByteArray> &attribs) :
-    d(new Private)
+                                 const QMap<QString, QByteArray> &attribs) : d(new Private)
 {
     d->instance = instance;
     d->type     = type;

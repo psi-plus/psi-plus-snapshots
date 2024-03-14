@@ -37,7 +37,7 @@ public:
     int                 statusCode = 0;
     QString             statusString;
     XMPP::Stanza::Error error;
-    Client *            client     = nullptr;
+    Client             *client     = nullptr;
     bool                insig      = false;
     bool                deleteme   = false;
     bool                autoDelete = false;

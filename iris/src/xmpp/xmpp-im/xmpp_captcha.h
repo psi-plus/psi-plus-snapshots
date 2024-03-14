@@ -45,9 +45,9 @@ public:
     CaptchaChallenge &operator=(const CaptchaChallenge &);
 
     bool           isValid() const;
-    const Jid &    offendedJid() const;
-    const Jid &    arbiter() const;
-    const XData &  form() const;
+    const Jid     &offendedJid() const;
+    const Jid     &arbiter() const;
+    const XData   &form() const;
     QString        explanation() const;
     const UrlList &urls() const;
     State          state() const;

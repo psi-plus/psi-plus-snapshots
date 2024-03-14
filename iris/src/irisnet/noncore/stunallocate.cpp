@@ -74,9 +74,9 @@ class StunAllocatePermission : public QObject {
     Q_OBJECT
 
 public:
-    QTimer *                 timer;
+    QTimer                  *timer;
     StunTransactionPool::Ptr pool;
-    StunTransaction *        trans;
+    StunTransaction         *trans;
     TransportAddress         stunAddr;
     QHostAddress             addr;
     bool                     active;
@@ -233,9 +233,9 @@ class StunAllocateChannel : public QObject {
     Q_OBJECT
 
 public:
-    QTimer *                 timer;
+    QTimer                  *timer;
     StunTransactionPool::Ptr pool;
-    StunTransaction *        trans = nullptr;
+    StunTransaction         *trans = nullptr;
     TransportAddress         stunAddr;
     int                      channelId;
     TransportAddress         addr;
@@ -408,10 +408,10 @@ public:
         Erroring // like stopping, but emits error when finished
     };
 
-    StunAllocate *                  q;
+    StunAllocate                   *q;
     ObjectSession                   sess;
     StunTransactionPool::Ptr        pool;
-    StunTransaction *               trans;
+    StunTransaction                *trans;
     TransportAddress                stunAddr;
     State                           state;
     QString                         errorString;
@@ -420,7 +420,7 @@ public:
     TransportAddress                reflexiveAddress, relayedAddress;
     StunMessage                     msg;
     int                             allocateLifetime;
-    QTimer *                        allocateRefreshTimer;
+    QTimer                         *allocateRefreshTimer;
     QList<StunAllocatePermission *> perms;
     QList<StunAllocateChannel *>    channels;
     QList<QHostAddress>             permQueue;

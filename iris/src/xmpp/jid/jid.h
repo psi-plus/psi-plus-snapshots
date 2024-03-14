@@ -42,7 +42,7 @@ private:
     QHash<QString, QString> saslprep_table;
 
     static QScopedPointer<StringPrepCache> _instance;
-    static StringPrepCache *               instance();
+    static StringPrepCache                *instance();
 
     StringPrepCache();
 };

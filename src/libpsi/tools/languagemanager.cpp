@@ -1,6 +1,7 @@
 #include "languagemanager.h"
 
 #include <QSet>
+#include <QRegularExpression>
 
 LanguageManager::LangId LanguageManager::fromString(const QString &langDesc)
 {

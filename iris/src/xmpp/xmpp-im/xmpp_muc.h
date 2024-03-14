@@ -42,10 +42,10 @@ public:
     void setReason(const QString &);
 
     const QString &nick() const;
-    const Jid &    jid() const; // real jid of muc participant
+    const Jid     &jid() const; // real jid of muc participant
     Affiliation    affiliation() const;
     Role           role() const;
-    const Jid &    actor() const;
+    const Jid     &actor() const;
     const QString &reason() const;
 
     void        fromXml(const QDomElement &);
@@ -67,9 +67,9 @@ public:
     MUCInvite(const QDomElement &);
     MUCInvite(const Jid &to, const QString &reason = QString());
 
-    const Jid &    to() const;
+    const Jid     &to() const;
     void           setTo(const Jid &);
-    const Jid &    from() const;
+    const Jid     &from() const;
     void           setFrom(const Jid &);
     const QString &reason() const;
     void           setReason(const QString &);
@@ -92,9 +92,9 @@ public:
     MUCDecline(const Jid &to, const QString &reason);
     MUCDecline(const QDomElement &);
 
-    const Jid &    to() const;
+    const Jid     &to() const;
     void           setTo(const Jid &);
-    const Jid &    from() const;
+    const Jid     &from() const;
     void           setFrom(const Jid &);
     const QString &reason() const;
     void           setReason(const QString &);
@@ -113,7 +113,7 @@ public:
     MUCDestroy();
     MUCDestroy(const QDomElement &);
 
-    const Jid &    jid() const;
+    const Jid     &jid() const;
     void           setJid(const Jid &);
     const QString &reason() const;
     void           setReason(const QString &);

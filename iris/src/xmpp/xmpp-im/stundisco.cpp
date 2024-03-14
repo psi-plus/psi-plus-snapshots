@@ -217,7 +217,7 @@ private:
         }
     }
 
-    StunDiscoManager *                     manager_;
+    StunDiscoManager                      *manager_;
     bool                                   inProgress_ = false; // initial disco
     QList<AbstractStunDisco::Service::Ptr> pendingWork_;
 };

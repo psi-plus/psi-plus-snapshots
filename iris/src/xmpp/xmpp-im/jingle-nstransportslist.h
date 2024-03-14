@@ -44,7 +44,7 @@ namespace XMPP { namespace Jingle {
         bool replace(QSharedPointer<Transport> old, QSharedPointer<Transport> newer) override;
 
     private:
-        Session *   _session = nullptr;
+        Session    *_session = nullptr;
         QStringList _transports;
     };
 

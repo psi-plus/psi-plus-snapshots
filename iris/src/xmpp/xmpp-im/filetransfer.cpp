@@ -56,7 +56,7 @@ static QDomElement firstChildElement(const QDomElement &e)
 class FileTransfer::Private {
 public:
     FileTransferManager *m;
-    JT_FT *              ft;
+    JT_FT               *ft;
     Jid                  peer;
     QString              fname;
     qlonglong            size;
@@ -68,7 +68,7 @@ public:
     Thumbnail            thumbnail;
     bool                 needStream;
     QString              id, iq_id;
-    BSConnection *       c;
+    BSConnection        *c;
     Jid                  proxy;
     int                  state;
     bool                 sender;
@@ -332,12 +332,12 @@ void FileTransfer::doAccept() { d->c->accept(); }
 //----------------------------------------------------------------------------
 class FileTransferManager::Private {
 public:
-    Client *                            client;
+    Client                             *client;
     QList<FileTransfer *>               list, incoming;
     QStringList                         streamPriority;
     QHash<QString, BytestreamManager *> streamMap;
     QSet<QString>                       disabledStreamTypes;
-    JT_PushFT *                         pft;
+    JT_PushFT                          *pft;
 };
 
 FileTransferManager::FileTransferManager(Client *client) : QObject(client)

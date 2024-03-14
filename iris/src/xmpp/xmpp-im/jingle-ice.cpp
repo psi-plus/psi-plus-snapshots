@@ -443,7 +443,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             NewSctpAssociation = 16
         };
 
-        Transport *                    q                         = nullptr;
+        Transport                     *q                         = nullptr;
         bool                           offerSent                 = false;
         bool                           aborted                   = false;
         bool                           initialOfferReady         = false;
@@ -461,9 +461,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
         // QElapsedTimer      lastConnectionStart;
         // size_t             blockSize    = 8192;
         TcpPortDiscoverer *disco        = nullptr;
-        UdpPortReserver *  portReserver = nullptr;
+        UdpPortReserver   *portReserver = nullptr;
         Resolver           resolver;
-        XMPP::Ice176 *     ice = nullptr;
+        XMPP::Ice176      *ice = nullptr;
 
         Dtls::Setup localDtlsRole  = Dtls::ActPass;
         Dtls::Setup remoteDtlsRole = Dtls::ActPass;

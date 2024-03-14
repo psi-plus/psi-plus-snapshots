@@ -69,7 +69,7 @@ public:
 
     class LocalTransport {
     public:
-        QUdpSocket *                      qsock;
+        QUdpSocket                       *qsock;
         QHostAddress                      addr;
         QSharedPointer<IceLocalTransport> sock;
         int                               network;
@@ -88,12 +88,12 @@ public:
         }
     };
 
-    IceComponent *                     q;
+    IceComponent                      *q;
     ObjectSession                      sess;
     int                                id;
     QString                            clientSoftware;
     TurnClient::Proxy                  proxy;
-    UdpPortReserver *                  portReserver = nullptr;
+    UdpPortReserver                   *portReserver = nullptr;
     Config                             pending;
     Config                             config;
     bool                               stopping = false;
@@ -726,7 +726,7 @@ private slots:
         ci->base        = ci->addr;
         ci->network     = 0; // not relevant
         ci->foundation  = IceAgent::instance()->foundation(RelayedType, ci->base.addr, config.stunRelayTcpAddr.addr,
-                                                          QAbstractSocket::TcpSocket);
+                                                           QAbstractSocket::TcpSocket);
 
         Candidate c;
         c.id           = getId();

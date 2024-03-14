@@ -90,7 +90,7 @@ class StunTransactionPoolPrivate : public QObject {
     Q_OBJECT
 
 public:
-    StunTransactionPool *                q;
+    StunTransactionPool                 *q;
     StunTransaction::Mode                mode;
     QSet<StunTransaction *>              transactions;
     QHash<StunTransaction *, QByteArray> transToId;

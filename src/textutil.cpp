@@ -301,7 +301,7 @@ static void emojiconifyPlainText(RTParse &p, const QString &in)
             QLatin1String(
                 R"html(<span style="font-family: 'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji'; font-size:1.5em">)html")
 #endif
-                  + in.midRef(emojisStartIdx, idx - emojisStartIdx) + QLatin1String("</span>"));
+                  + QStringView{in}.mid(emojisStartIdx, idx - emojisStartIdx) + QLatin1String("</span>"));
     };
     while (!(ref = reg.findEmoji(in, idx)).isEmpty()) {
         if (emojisStartIdx == -1) {
@@ -513,7 +513,7 @@ QString TextUtil::emoticonify(const QString &in)
 
             int foundPos = -1, foundLen = -1;
 
-            for (const Iconset *iconset : qAsConst(PsiIconset::instance()->emoticons)) {
+            for (const Iconset *iconset : std::as_const(PsiIconset::instance()->emoticons)) {
                 QListIterator<PsiIcon *> it = iconset->iterator();
                 while (it.hasNext()) {
                     PsiIcon *icon = it.next();

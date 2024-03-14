@@ -21,11 +21,11 @@
 #define XMPP_S5B_H
 
 #include "iris/bytestream.h"
-#include "xmpp/jid/jid.h"
+#include "iris/tcpportreserver.h"
 #include "iris/xmpp_bytestream.h"
 #include "iris/xmpp_stanza.h"
 #include "iris/xmpp_task.h"
-#include "iris/tcpportreserver.h"
+#include "xmpp/jid/jid.h"
 
 #include <QHostAddress>
 #include <QList>
@@ -143,12 +143,12 @@ public:
     ~S5BManager();
 
     static const char *ns();
-    Client *           client() const;
-    JT_PushS5B *       jtPush() const;
+    Client            *client() const;
+    JT_PushS5B        *jtPush() const;
 
     bool isAcceptableSID(const Jid &peer, const QString &sid) const;
 
-    BSConnection * createConnection();
+    BSConnection  *createConnection();
     S5BConnection *takeIncoming();
 
     class Item;
@@ -174,10 +174,10 @@ private:
     Private *d;
 
     S5BConnection *findIncoming(const Jid &from, const QString &sid) const;
-    Entry *        findEntry(S5BConnection *) const;
-    Entry *        findEntry(Item *) const;
-    Entry *        findEntryByHash(const QString &key) const;
-    Entry *        findEntryBySID(const Jid &peer, const QString &sid) const;
+    Entry         *findEntry(S5BConnection *) const;
+    Entry         *findEntry(Item *) const;
+    Entry         *findEntryByHash(const QString &key) const;
+    Entry         *findEntryBySID(const Jid &peer, const QString &sid) const;
 
     void entryContinue(Entry *e);
     void queryProxy(Entry *e);
@@ -210,7 +210,7 @@ public:
     void         resetConnection();
     void         start(const Jid &self, const StreamHostList &hosts, const QString &key, bool udp, int timeout);
     SocksClient *takeClient();
-    SocksUDP *   takeUDP();
+    SocksUDP    *takeUDP();
     StreamHost   streamHostUsed() const;
 
     class Item;
@@ -315,7 +315,7 @@ class StreamHost {
 public:
     StreamHost();
 
-    const Jid &    jid() const;
+    const Jid     &jid() const;
     const QString &host() const;
     int            port() const;
     bool           isProxy() const;

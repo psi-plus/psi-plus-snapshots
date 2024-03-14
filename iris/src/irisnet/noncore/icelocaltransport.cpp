@@ -44,7 +44,7 @@ class SafeUdpSocket : public QObject {
 
 private:
     ObjectSession sess;
-    QUdpSocket *  sock;
+    QUdpSocket   *sock;
     int           writtenCount;
 
 public:
@@ -149,13 +149,13 @@ public:
         QByteArray       buf;
     };
 
-    IceLocalTransport *      q;
+    IceLocalTransport       *q;
     ObjectSession            sess;
-    QUdpSocket *             extSock = nullptr;
-    SafeUdpSocket *          sock    = nullptr;
+    QUdpSocket              *extSock = nullptr;
+    SafeUdpSocket           *sock    = nullptr;
     StunTransactionPool::Ptr pool;
-    StunBinding *            stunBinding   = nullptr;
-    TurnClient *             turn          = nullptr;
+    StunBinding             *stunBinding   = nullptr;
+    TurnClient              *turn          = nullptr;
     bool                     turnActivated = false;
     TransportAddress         addr;
     TransportAddress         refAddr;

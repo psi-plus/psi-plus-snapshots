@@ -24,9 +24,9 @@
 #include "xmpp_status.h"
 
 #include <QObject>
+#include <QRegularExpression>
 #include <QString>
 #include <QVariant>
-#include <QRegularExpression>
 
 #include <functional>
 #include <list>
@@ -62,8 +62,7 @@ private:
         ServiceQuery(const QString &type, const QString &category, const QList<QSet<QString>> &features,
                      const QRegularExpression &nameHint, const SQOptions &options,
                      const std::function<void(const QList<DiscoItem> &item)> &&callback) :
-            type(type),
-            category(category), features(features), nameHint(nameHint), options(options), callback(callback)
+            type(type), category(category), features(features), nameHint(nameHint), options(options), callback(callback)
         {
         }
     };
@@ -79,9 +78,9 @@ private:
 public:
     ServerInfoManager(XMPP::Client *client);
 
-    const QString &                          multicastService() const;
+    const QString                           &multicastService() const;
     bool                                     hasPEP() const;
-    inline const Features &                  features() const { return _features; }
+    inline const Features                   &features() const { return _features; }
     bool                                     canMessageCarbons() const;
     inline const QMap<QString, QStringList> &extraServerInfo() const { return _extraServerInfo; }
 
@@ -124,7 +123,7 @@ private:
     void appendQuery(const ServiceQuery &q);
 
 private:
-    XMPP::Client *             _client = nullptr;
+    XMPP::Client              *_client = nullptr;
     CapsSpec                   _caps;
     Features                   _features;
     QString                    _multicastService;

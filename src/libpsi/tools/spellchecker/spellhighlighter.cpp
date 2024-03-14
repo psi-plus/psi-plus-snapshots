@@ -18,14 +18,15 @@ void SpellHighlighter::highlightBlock(const QString &text)
 
     // Match words (minimally)
     QRegularExpression expression("\\b\\w+\\b");
-    QRegularExpression digit("\\d+");
+    QRegularExpression digit("^\\d+$");
 
     // Iterate through all words
-    int index = text.indexOf(expression);
+    QRegularExpressionMatch match;
+    int index = text.indexOf(expression, 0, &match);
     while (index >= 0) {
-        int     length = expression.matchedLength();
-        QString word   = expression.cap();
-        if (!digit.exactMatch(word) && !SpellChecker::instance()->isCorrect(word))
+        int     length = match.capturedLength();
+        QString word   = match.captured();
+        if (!digit.match(word).hasMatch() && !SpellChecker::instance()->isCorrect(word))
             setFormat(index, length, tcf);
         index = text.indexOf(expression, index + length);
     }

@@ -45,7 +45,7 @@ public:
     File(const File &other);
     File(const QDomElement &file);
     ~File();
-    File &      operator=(const File &other);
+    File       &operator=(const File &other);
     inline bool isValid() const { return d != nullptr; }
     QDomElement toXml(QDomDocument *doc) const;
     bool        merge(const File &other);
@@ -77,7 +77,7 @@ public:
 
 private:
     class Private;
-    Private *                   ensureD();
+    Private                    *ensureD();
     QSharedDataPointer<Private> d;
 };
 

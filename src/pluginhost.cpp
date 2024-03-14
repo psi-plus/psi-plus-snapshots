@@ -214,7 +214,7 @@ void PluginHost::updateMetadata()
 
     QString data = md.value(QLatin1String("icon")).toString();
     if (data.startsWith("base64:")) {
-        rawIcon_ = QByteArray::fromBase64(data.midRef(6).toLatin1());
+        rawIcon_ = QByteArray::fromBase64(QStringView{data}.mid(6).toLatin1());
         QPixmap pix;
         pix.loadFromData(rawIcon_);
         icon_ = QIcon(pix);
@@ -1358,7 +1358,7 @@ bool PluginHost::encryptMessageElement(int account, QDomElement &message)
 
 QObject *PluginHost::getPlugin(const QString &shortName)
 {
-    for (PluginHost *plugin : qAsConst(manager_->pluginsByPriority_)) {
+    for (PluginHost *plugin : std::as_const(manager_->pluginsByPriority_)) {
         if (plugin->shortName() == shortName || plugin->name() == shortName) {
             return plugin->plugin_;
         }

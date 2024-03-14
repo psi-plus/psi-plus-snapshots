@@ -48,7 +48,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     public:
         using QualifiedOutgoingMessage = std::pair<Connection::Ptr, WebRTCDataChannel::OutgoingDatagram>;
 
-        Association *                    q;
+        Association                     *q;
         Keeper::Ptr                      keeper;
         QQueue<QByteArray>               outgoingPacketsQueue; // ready to be sent over dtls
         QQueue<QualifiedOutgoingMessage> outgoingMessageQueue; // ready to be processed by sctp stack

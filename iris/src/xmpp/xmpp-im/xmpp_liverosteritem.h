@@ -33,10 +33,10 @@ public:
 
     void setRosterItem(const RosterItem &);
 
-    ResourceList &         resourceList();
+    ResourceList          &resourceList();
     ResourceList::Iterator priority();
 
-    const ResourceList &        resourceList() const;
+    const ResourceList         &resourceList() const;
     ResourceList::ConstIterator priority() const;
 
     bool          isAvailable() const;

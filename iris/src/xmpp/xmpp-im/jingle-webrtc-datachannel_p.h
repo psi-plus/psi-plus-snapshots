@@ -49,7 +49,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
 
         using OutgoingCallback = std::function<void(const OutgoingDatagram &)>;
 
-        AssociationPrivate *   association;
+        AssociationPrivate    *association;
         QList<NetworkDatagram> datagrams;
         DisconnectReason       disconnectReason = ChannelClosed;
         std::size_t            outgoingBufSize  = 0;

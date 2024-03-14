@@ -27,7 +27,7 @@ class PubSubItem {
 public:
     PubSubItem();
     PubSubItem(const QString &id, const QDomElement &payload);
-    const QString &    id() const;
+    const QString     &id() const;
     const QDomElement &payload() const;
 
 private:

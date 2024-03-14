@@ -41,8 +41,8 @@ public:
     void get(const DiscoItem &);
 
     const DiscoItem &item() const;
-    const Jid &      jid() const;
-    const QString &  node() const;
+    const Jid       &jid() const;
+    const QString   &node() const;
 
     void onGo();
     bool take(const QDomElement &);

@@ -54,10 +54,14 @@ bool AtomicXmlFile::saveDocument(const QDomDocument &doc, QString fileName) cons
         return false;
     }
 
-    QTextStream *text = new QTextStream(&file);
-    text->setCodec("UTF-8");
-    *text << doc.toString();
-    delete text;
+    QTextStream text(&file);
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+    text.setCodec("UTF-8");
+#else
+    text.setEncoding(QStringConverter::Utf8);
+#endif
+    text << doc.toString();
+    text.flush();
 
     bool res = (file.error() == QFile::NoError);
     if (res)
@@ -75,7 +79,7 @@ bool AtomicXmlFile::loadDocument(QDomDocument *doc, QString fileName) const
         return false;
     }
 
-    return doc->setContent(&file);
+    return bool(doc->setContent(&file));
 }
 
 bool AtomicXmlFile::saveDocument(AtomicXmlFileWriter *writer, QString fileName) const

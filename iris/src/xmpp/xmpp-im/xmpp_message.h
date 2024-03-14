@@ -19,13 +19,13 @@
 #ifndef XMPP_MESSAGE_H
 #define XMPP_MESSAGE_H
 
+#include "iris/xmpp_stanza.h"
 #include "xmpp_address.h"
 #include "xmpp_chatstate.h"
 #include "xmpp_muc.h"
 #include "xmpp_receipts.h"
 #include "xmpp_reference.h"
 #include "xmpp_rosterx.h"
-#include "iris/xmpp_stanza.h"
 #include "xmpp_url.h"
 
 #include <QExplicitlySharedDataPointer>

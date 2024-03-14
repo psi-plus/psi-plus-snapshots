@@ -52,7 +52,7 @@ struct ExternalService {
     QString        username;           // optional
 
     bool parse(QDomElement &el);
-         operator QString() const;
+    operator QString() const;
 };
 
 struct ExternalServiceId {
@@ -133,7 +133,7 @@ signals:
     void serviceModified(ExternalServiceList &);
 
 private:
-    Client *                              client_;
+    Client                               *client_;
     QPointer<JT_ExternalServiceDiscovery> currentTask = nullptr; // for all services (no type)
     ExternalServiceList                   services_;
 };

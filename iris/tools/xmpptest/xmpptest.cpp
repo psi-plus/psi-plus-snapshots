@@ -203,9 +203,9 @@ class TestDlg : public QDialog, public Ui::TestUI {
 public:
     bool                     active, connected;
     XMPP::AdvancedConnector *conn;
-    QCA::TLS *               tls;
-    XMPP::QCATLSHandler *    tlsHandler;
-    XMPP::ClientStream *     stream;
+    QCA::TLS                *tls;
+    XMPP::QCATLSHandler     *tlsHandler;
+    XMPP::ClientStream      *stream;
     XMPP::Jid                jid;
 
     TestDlg(QWidget *parent = 0) : QDialog(parent)

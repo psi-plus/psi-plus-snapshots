@@ -23,8 +23,8 @@
 #include "xmpp_xmlcommon.h"
 
 #include <QList>
-#include <QSharedDataPointer>
 #include <QRegularExpression>
+#include <QSharedDataPointer>
 
 using namespace XMLHelper;
 using namespace XMPP;
@@ -305,7 +305,9 @@ bool XData::Field::MediaElement::checkSupport(const QStringList &wildcards)
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             if (QRegExp(wildcard, Qt::CaseSensitive, QRegExp::Wildcard).exactMatch(uri.mimeType)) {
 #else
-            if (QRegularExpression::fromWildcard(QLatin1Char('^') + wildcard + QLatin1Char('$'), Qt::CaseSensitive).match(uri.mimeType).hasMatch()) {
+            if (QRegularExpression::fromWildcard(QLatin1Char('^') + wildcard + QLatin1Char('$'), Qt::CaseSensitive)
+                    .match(uri.mimeType)
+                    .hasMatch()) {
 #endif
                 return true;
             }

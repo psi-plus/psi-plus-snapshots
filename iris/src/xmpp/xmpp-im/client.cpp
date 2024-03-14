@@ -118,8 +118,8 @@ public:
 
     QPointer<ClientStream>  stream;
     QDomDocument            doc;
-    Task *                  root    = nullptr;
-    QNetworkAccessManager * qnam    = nullptr;
+    Task                   *root = nullptr;
+    QNetworkAccessManager  *qnam = nullptr;
     QString                 host, user, pass, resource;
     QString                 osName, osVersion, tzname, clientName, clientVersion;
     CapsSpec                caps, serverCaps;
@@ -133,22 +133,22 @@ public:
 
     LiveRoster                roster;
     ResourceList              resourceList;
-    CapsManager *             capsman                  = nullptr;
-    TcpPortReserver *         tcpPortReserver          = nullptr;
-    S5BManager *              s5bman                   = nullptr;
-    Jingle::S5B::Manager *    jingleS5BManager         = nullptr;
-    Jingle::IBB::Manager *    jingleIBBManager         = nullptr;
-    Jingle::ICE::Manager *    jingleICEManager         = nullptr;
-    IBBManager *              ibbman                   = nullptr;
-    BoBManager *              bobman                   = nullptr;
-    FileTransferManager *     ftman                    = nullptr;
-    ServerInfoManager *       serverInfoManager        = nullptr;
+    CapsManager              *capsman                  = nullptr;
+    TcpPortReserver          *tcpPortReserver          = nullptr;
+    S5BManager               *s5bman                   = nullptr;
+    Jingle::S5B::Manager     *jingleS5BManager         = nullptr;
+    Jingle::IBB::Manager     *jingleIBBManager         = nullptr;
+    Jingle::ICE::Manager     *jingleICEManager         = nullptr;
+    IBBManager               *ibbman                   = nullptr;
+    BoBManager               *bobman                   = nullptr;
+    FileTransferManager      *ftman                    = nullptr;
+    ServerInfoManager        *serverInfoManager        = nullptr;
     ExternalServiceDiscovery *externalServiceDiscovery = nullptr;
-    StunDiscoManager *        stunDiscoManager         = nullptr;
-    HttpFileUploadManager *   httpFileUploadManager    = nullptr;
-    Jingle::Manager *         jingleManager            = nullptr;
+    StunDiscoManager         *stunDiscoManager         = nullptr;
+    HttpFileUploadManager    *httpFileUploadManager    = nullptr;
+    Jingle::Manager          *jingleManager            = nullptr;
     QList<GroupChat>          groupChatList;
-    EncryptionHandler *       encryptionHandler = nullptr;
+    EncryptionHandler        *encryptionHandler = nullptr;
 };
 
 Client::Client(QObject *par) : QObject(par)
@@ -563,7 +563,7 @@ void Client::debug(const QString &str) { emit debugText(str); }
 
 QString Client::genUniqueId()
 {
-#if QT_VERSION >= QT_VERSION_CHECK(5,11,0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
 #else
     auto s = QUuid::createUuid().toString();
@@ -1294,7 +1294,7 @@ LiveRoster::~LiveRoster() { delete d; }
 LiveRoster &LiveRoster::operator=(const LiveRoster &other)
 {
     QList<LiveRosterItem>::operator=(other);
-    d->groupsDelimiter             = other.d->groupsDelimiter;
+    d->groupsDelimiter = other.d->groupsDelimiter;
     return *this;
 }
 void LiveRoster::flagAllForDelete()

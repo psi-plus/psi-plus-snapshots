@@ -51,8 +51,8 @@ public:
     bool             isNull() const;
     Class            mclass() const;
     quint16          method() const;
-    const quint8 *   magic() const; // 4 bytes
-    const quint8 *   id() const;    // 12 bytes
+    const quint8    *magic() const; // 4 bytes
+    const quint8    *id() const;    // 12 bytes
     QList<Attribute> attributes() const;
 
     // returns the first instance or null

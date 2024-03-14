@@ -107,7 +107,7 @@ public:
     enum { TLS, SASL, TLSH, Compression };
     int type;
     union {
-        QCA::TLS * tls;
+        QCA::TLS  *tls;
         QCA::SASL *sasl;
 #ifdef USE_TLSHANDLER
         XMPP::TLSHandler *tlsHandler;
@@ -339,7 +339,7 @@ private slots:
 
 class SecureStream::Private {
 public:
-    ByteStream *         bs;
+    ByteStream          *bs;
     QList<SecureLayer *> layers;
     int                  pending;
     int                  errorCode;
@@ -571,7 +571,7 @@ void SecureStream::layer_tlsClosed(const QByteArray &)
 
 void SecureStream::layer_readyRead(const QByteArray &a)
 {
-    SecureLayer *                  s = static_cast<SecureLayer *>(sender());
+    SecureLayer                   *s = static_cast<SecureLayer *>(sender());
     QList<SecureLayer *>::Iterator it(d->layers.begin());
     while ((*it) != s) {
         Q_ASSERT(it != d->layers.end());
@@ -591,7 +591,7 @@ void SecureStream::layer_readyRead(const QByteArray &a)
 
 void SecureStream::layer_needWrite(const QByteArray &a)
 {
-    SecureLayer *                  s = static_cast<SecureLayer *>(sender());
+    SecureLayer                   *s = static_cast<SecureLayer *>(sender());
     QList<SecureLayer *>::Iterator it(d->layers.begin());
     while ((*it) != s) {
         Q_ASSERT(it != d->layers.end());

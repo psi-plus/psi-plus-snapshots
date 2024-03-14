@@ -66,8 +66,7 @@ namespace XMPP { namespace Jingle {
     public:
         ConnectionWaiter(TransportFeatures features, std::function<void(Connection::Ptr)> &&ready,
                          std::function<void()> &&failed, Application *app) :
-            QObject(app),
-            ready(std::move(ready)), failed(std::move(failed))
+            QObject(app), ready(std::move(ready)), failed(std::move(failed))
         {
             auto tr   = app->transport();
             transport = tr;

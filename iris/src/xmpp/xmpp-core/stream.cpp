@@ -59,10 +59,10 @@
 #include <QTimer>
 #include <QUrl>
 #include <QtCrypto>
-//#include <stdio.h>
+// #include <stdio.h>
 #include <stdlib.h>
 
-//#define XMPP_DEBUG
+// #define XMPP_DEBUG
 
 using namespace XMPP;
 
@@ -209,8 +209,7 @@ ClientStream::ClientStream(Connector *conn, TLSHandler *tlsHandler, QObject *par
 }
 
 ClientStream::ClientStream(const QString &host, const QString &defRealm, ByteStream *bs, QCA::TLS *tls,
-                           QObject *parent) :
-    Stream(parent)
+                           QObject *parent) : Stream(parent)
 {
     d       = new Private;
     d->mode = Server;
@@ -704,9 +703,9 @@ void ClientStream::sasl_needParams(const QCA::SASL::Params &p)
 
 void ClientStream::sasl_authCheck(const QString &user, const QString &)
 {
-    //#ifdef XMPP_DEBUG
-    //    qDebug("authcheck: [%s], [%s]\n", user.latin1(), authzid.latin1());
-    //#endif
+    // #ifdef XMPP_DEBUG
+    //     qDebug("authcheck: [%s], [%s]\n", user.latin1(), authzid.latin1());
+    // #endif
     QString u = user;
     int     n = u.indexOf('@');
     if (n != -1)

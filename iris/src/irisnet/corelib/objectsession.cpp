@@ -39,7 +39,7 @@ public:
 
     class MethodCall {
     public:
-        QObject *  obj;
+        QObject   *obj;
         QByteArray method;
         class Argument {
         public:
@@ -93,7 +93,7 @@ public:
     };
 
     QList<MethodCall *>                  pendingCalls;
-    QTimer *                             callTrigger;
+    QTimer                              *callTrigger;
     bool                                 paused;
     QList<ObjectSessionWatcherPrivate *> watchers;
 

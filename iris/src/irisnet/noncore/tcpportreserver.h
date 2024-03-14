@@ -45,7 +45,7 @@ public:
     inline void            setPortInfo(const Port &port) { this->port = port; }
     inline QHostAddress    serverAddress() const { return serverSocket->serverAddress(); }
     inline quint16         serverPort() const { return serverSocket->serverPort(); }
-    inline const QString & publishHost() const { return port.publishHost; }
+    inline const QString  &publishHost() const { return port.publishHost; }
     inline quint16         publishPort() const { return port.publishPort; }
     inline PortType        portType() const { return port.portType; }
     inline const QVariant &meta() const { return port.meta; }
@@ -94,7 +94,7 @@ private:
     bool                     started = false;
     TcpPortServer::PortTypes typeMask
         = TcpPortServer::PortTypes(TcpPortServer::Direct | TcpPortServer::NatAssited | TcpPortServer::Tunneled);
-    TcpPortScope *            scope = nullptr;
+    TcpPortScope             *scope = nullptr;
     QList<TcpPortServer::Ptr> servers;
 };
 
@@ -110,7 +110,7 @@ class TcpPortScope : public QObject {
 public:
     TcpPortScope();
     ~TcpPortScope();
-    TcpPortDiscoverer *       disco();
+    TcpPortDiscoverer        *disco();
     QList<TcpPortServer::Ptr> allServers() const;
 
 protected:

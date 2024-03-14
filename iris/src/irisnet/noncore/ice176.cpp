@@ -189,7 +189,7 @@ public:
     class Component {
     public:
         int                     id              = 0;
-        IceComponent *          ic              = nullptr;
+        IceComponent           *ic              = nullptr;
         std::unique_ptr<QTimer> nominationTimer = std::unique_ptr<QTimer>();
         CandidatePair::Ptr      selectedPair; // final selected pair. won't be changed
         CandidatePair::Ptr      highestPair;  // current highest priority pair to send data
@@ -203,12 +203,12 @@ public:
         bool nominating = false; // with aggressive nomination it's always false
     };
 
-    Ice176 *                                q;
+    Ice176                                 *q;
     Ice176::Mode                            mode;
     State                                   state = Stopped;
     QTimer                                  checkTimer;
     TurnClient::Proxy                       proxy;
-    UdpPortReserver *                       portReserver = nullptr;
+    UdpPortReserver                        *portReserver = nullptr;
     std::unique_ptr<QTimer>                 pacTimer;
     int                                     nominationTimeout = 3000; // 3s
     int                                     pacTimeout = 30000; // 30s todo: compute from rto. see draft-ietf-ice-pac-06
@@ -663,7 +663,7 @@ public:
         pair->binding->start();
     }
 
-    void doPairing(const QList<IceComponent::Candidate> &         localCandidates,
+    void doPairing(const QList<IceComponent::Candidate>          &localCandidates,
                    const QList<IceComponent::CandidateInfo::Ptr> &remoteCandidates)
     {
         QList<QSharedPointer<CandidatePair>> pairs;
@@ -918,7 +918,7 @@ public:
                                [&](auto const &p) { return *(p->local) == locCand.info && *(p->remote) == remCand; });
 
         CandidatePair::Ptr pair        = (it == checkList.pairs.end()) ? CandidatePair::Ptr() : *it;
-        Component &        component   = *findComponent(locCand.info->componentId);
+        Component         &component   = *findComponent(locCand.info->componentId);
         qint64             minPriority = component.highestPair ? component.highestPair->priority : 0;
         if (pair) {
             if (pair->priority < minPriority) {
@@ -1494,7 +1494,7 @@ private slots:
 
             StunMessage::ConvertResult result;
             StunMessage                msg = StunMessage::fromBinary(buf, &result,
-                                                      StunMessage::MessageIntegrity | StunMessage::Fingerprint, reqkey);
+                                                                     StunMessage::MessageIntegrity | StunMessage::Fingerprint, reqkey);
             if (!msg.isNull() && (msg.mclass() == StunMessage::Request || msg.mclass() == StunMessage::Indication)) {
                 iceDebug("received validated request or indication from %s", qPrintable(fromAddr));
                 QString user = QString::fromUtf8(msg.attribute(StunTypes::USERNAME));

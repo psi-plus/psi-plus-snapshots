@@ -390,7 +390,7 @@ QString CapsManager::clientName(const Jid &jid) const
                 ds = 5;
             }
 
-            name = QStringView{node}.mid(startPos, node.size() - startPos - ds).toString();
+            name = QStringView { node }.mid(startPos, node.size() - startPos - ds).toString();
         }
 
         return name;

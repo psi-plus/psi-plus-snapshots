@@ -42,9 +42,7 @@ namespace XMPP { namespace Jingle {
         bool       _valid = false;
         QByteArray _data;
         inline NetworkDatagram(const QByteArray &data, const QHostAddress &destinationAddress = QHostAddress(),
-                               quint16 port = 0) :
-            _valid(true),
-            _data(data)
+                               quint16 port = 0) : _valid(true), _data(data)
         {
             Q_UNUSED(destinationAddress);
             Q_UNUSED(port)

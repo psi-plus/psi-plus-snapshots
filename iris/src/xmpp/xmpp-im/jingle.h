@@ -22,9 +22,9 @@
 
 #include "iris/xmpp_stanza.h"
 
+#include <QObject>
 #include <QSharedDataPointer>
 #include <QSharedPointer>
-#include <QObject>
 
 #include <functional>
 
@@ -208,15 +208,15 @@ namespace Jingle {
         inline bool    isValid() const { return d != nullptr; }
         Action         action() const;
         const QString &sid() const;
-        const Jid &    initiator() const;
+        const Jid     &initiator() const;
         void           setInitiator(const Jid &jid);
-        const Jid &    responder() const;
+        const Jid     &responder() const;
         void           setResponder(const Jid &jid);
 
     private:
         class Private;
         QSharedDataPointer<Private> d;
-        Jingle::Private *           ensureD();
+        Jingle::Private            *ensureD();
     };
 
     class Reason {
@@ -249,7 +249,7 @@ namespace Jingle {
         Reason(Condition cond, const QString &text = QString());
         Reason(const QDomElement &el);
         Reason(const Reason &other);
-        Reason &    operator=(const Reason &);
+        Reason     &operator=(const Reason &);
         inline bool isValid() const { return d != nullptr; }
         Condition   condition() const;
         void        setCondition(Condition cond);
@@ -286,8 +286,7 @@ namespace Jingle {
         QString disposition; // default "session"
     };
 
-    class Security {
-    };
+    class Security { };
 
     /**
      * @brief The SessionManagerPad class - TransportManager/AppManager PAD
@@ -310,7 +309,7 @@ namespace Jingle {
     public:
         virtual QDomElement takeOutgoingSessionInfoUpdate();
         virtual QString     ns() const      = 0;
-        virtual Session *   session() const = 0;
+        virtual Session    *session() const = 0;
 
         virtual void onLocalAccepted(); // changing to prepare state
         virtual void onSend();          // local stuff is prepared we are going to send it to remote
@@ -344,13 +343,13 @@ namespace Jingle {
         void                   registerApplication(ApplicationManager *app);
         void                   unregisterApp(const QString &ns);
         bool                   isRegisteredApplication(const QString &ns);
-        ApplicationManagerPad *applicationPad(Session *      session,
+        ApplicationManagerPad *applicationPad(Session       *session,
                                               const QString &ns); // allocates new pad on application manager
 
         void                 registerTransport(TransportManager *transport);
         void                 unregisterTransport(const QString &ns);
         bool                 isRegisteredTransport(const QString &ns);
-        TransportManagerPad *transportPad(Session *      session,
+        TransportManagerPad *transportPad(Session       *session,
                                           const QString &ns); // allocates new pad on transport manager
         QStringList          availableTransports(const TransportFeatures &features = TransportFeatures()) const;
 
@@ -364,8 +363,8 @@ namespace Jingle {
         bool isAllowedParty(const Jid &jid) const;
         void setRemoteJidChecker(std::function<bool(const Jid &)> checker);
 
-        Session *           session(const Jid &remoteJid, const QString &sid);
-        Session *           newSession(const Jid &j);
+        Session            *session(const Jid &remoteJid, const QString &sid);
+        Session            *newSession(const Jid &j);
         QString             registerSession(Session *session);
         XMPP::Stanza::Error lastError() const;
 

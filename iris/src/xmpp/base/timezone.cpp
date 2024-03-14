@@ -18,20 +18,12 @@
 
 #include "timezone.h"
 
-
 #include <QTimeZone>
 #include <QtGlobal>
 
+int TimeZone::offsetFromUtc() { return QTimeZone::systemTimeZone().offsetFromUtc(QDateTime::currentDateTime()) / 60; }
 
-int TimeZone::offsetFromUtc()
-{
-    return QTimeZone::systemTimeZone().offsetFromUtc(QDateTime::currentDateTime()) / 60;
-}
-
-QString TimeZone::abbreviation()
-{
-    return QTimeZone::systemTimeZone().abbreviation(QDateTime::currentDateTime());
-}
+QString TimeZone::abbreviation() { return QTimeZone::systemTimeZone().abbreviation(QDateTime::currentDateTime()); }
 
 int TimeZone::tzdToInt(const QString &tzd)
 {

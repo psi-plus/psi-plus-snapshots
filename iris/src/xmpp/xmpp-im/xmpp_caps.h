@@ -34,7 +34,7 @@ public:
     {
     }
     inline bool                   isValid() const { return _lastSeen.isValid(); }
-    inline const QDateTime &      lastSeen() const { return _lastSeen; }
+    inline const QDateTime       &lastSeen() const { return _lastSeen; }
     inline const XMPP::DiscoItem &disco() const { return _disco; }
     QDomElement                   toXml(QDomDocument *doc) const;
     static CapsInfo               fromXml(const QDomElement &ci);
@@ -69,7 +69,7 @@ protected:
     virtual QByteArray loadData();                       // to have permanent cache
 
 private:
-    static CapsRegistry *    instance_;
+    static CapsRegistry     *instance_;
     QHash<QString, CapsInfo> capsInfo_;
 };
 
@@ -107,7 +107,7 @@ protected slots:
     void capsRegistered(const CapsSpec &);
 
 private:
-    Client *                      client_;
+    Client                       *client_;
     bool                          isEnabled_;
     QMap<QString, CapsSpec>       capsSpecs_;
     QMap<QString, QList<QString>> capsJids_;

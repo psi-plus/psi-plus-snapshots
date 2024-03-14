@@ -1,9 +1,9 @@
 #ifndef MS_DEP_USRSCTP_HPP
 #define MS_DEP_USRSCTP_HPP
 
-//#include "common.hpp"
+// #include "common.hpp"
 #include "SctpAssociation.hpp"
-//#include "handles/Timer.hpp"
+// #include "handles/Timer.hpp"
 #include <unordered_map>
 
 #include <QElapsedTimer>
@@ -26,7 +26,7 @@ private:
         void OnTimer();
 
     private:
-        QTimer *      timer { nullptr };
+        QTimer       *timer { nullptr };
         QElapsedTimer elapsedTimer;
     };
 
@@ -39,7 +39,7 @@ public:
     static RTC::SctpAssociation *RetrieveSctpAssociation(uintptr_t id);
 
 private:
-    static Checker *                                             checker;
+    static Checker                                              *checker;
     static uint64_t                                              numSctpAssociations;
     static uintptr_t                                             nextSctpAssociationId;
     static std::unordered_map<uintptr_t, RTC::SctpAssociation *> mapIdSctpAssociation;

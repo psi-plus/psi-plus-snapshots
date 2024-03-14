@@ -29,7 +29,7 @@
 
 #include <limits>
 
-//#define BS_DEBUG
+// #define BS_DEBUG
 #ifdef BS_DEBUG
 #define BSDEBUG (qDebug() << this << "#" << __FUNCTION__ << ":")
 #endif

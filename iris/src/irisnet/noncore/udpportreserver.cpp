@@ -53,7 +53,7 @@ public:
         }
     };
 
-    UdpPortReserver *   q;
+    UdpPortReserver    *q;
     QList<QHostAddress> addrs;
     QList<int>          ports; // sorted.
 

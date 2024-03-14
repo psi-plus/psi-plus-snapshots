@@ -321,7 +321,7 @@ int main(void)
         for (i = 0; i < BLAKE2_KAT_LENGTH; ++i) {
             uint8_t       hash[BLAKE2S_OUTBYTES];
             blake2s_state S;
-            uint8_t *     p    = buf;
+            uint8_t      *p    = buf;
             size_t        mlen = i;
             int           err  = 0;
 

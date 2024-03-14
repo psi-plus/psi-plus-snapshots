@@ -62,7 +62,7 @@ namespace Jingle { namespace IBB {
 
         Pad(Manager *manager, Session *session);
         QString           ns() const override;
-        Session *         session() const override;
+        Session          *session() const override;
         TransportManager *manager() const override;
 
         Connection::Ptr makeConnection(const QString &sid, size_t blockSize);
@@ -82,7 +82,7 @@ namespace Jingle { namespace IBB {
         void                                    setJingleManager(XMPP::Jingle::Manager *jm) override;
         QSharedPointer<XMPP::Jingle::Transport> newTransport(const TransportManagerPad::Ptr &pad,
                                                              Origin                          creator) override;
-        TransportManagerPad *                   pad(Session *session) override;
+        TransportManagerPad                    *pad(Session *session) override;
 
         QStringList discoFeatures() const override;
 

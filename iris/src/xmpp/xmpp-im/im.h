@@ -21,7 +21,6 @@
 #define XMPP_IM_H
 
 #include "iris/xmpp.h"
-#include "iris/xmpp_jid.h"
 #include "iris/xmpp_address.h"
 #include "iris/xmpp_agentitem.h"
 #include "iris/xmpp_chatstate.h"
@@ -32,6 +31,7 @@
 #include "iris/xmpp_hash.h"
 #include "iris/xmpp_htmlelement.h"
 #include "iris/xmpp_httpauthrequest.h"
+#include "iris/xmpp_jid.h"
 #include "iris/xmpp_liveroster.h"
 #include "iris/xmpp_liverosteritem.h"
 #include "iris/xmpp_message.h"

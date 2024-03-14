@@ -36,7 +36,7 @@ public:
     DiscoItem();
     ~DiscoItem();
 
-    const Jid &    jid() const;
+    const Jid     &jid() const;
     const QString &node() const;
     const QString &name() const;
 
@@ -60,9 +60,7 @@ public:
 
         inline Identity() { }
         inline Identity(const QString &categoty, const QString &type, const QString &lang = QString(),
-                        const QString &name = QString()) :
-            category(categoty),
-            type(type), lang(lang), name(name)
+                        const QString &name = QString()) : category(categoty), type(type), lang(lang), name(name)
         {
         }
         bool operator==(const Identity &other) const;
@@ -86,7 +84,7 @@ public:
     DiscoItem &operator=(const DiscoItem &);
     DiscoItem(const DiscoItem &);
 
-              operator AgentItem() const { return toAgentItem(); }
+    operator AgentItem() const { return toAgentItem(); }
     AgentItem toAgentItem() const;
     void      fromAgentItem(const AgentItem &);
 

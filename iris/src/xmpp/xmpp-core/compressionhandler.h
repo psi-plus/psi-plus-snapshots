@@ -25,7 +25,7 @@ signals:
     void error();
 
 private:
-    ZLibCompressor *  compressor_;
+    ZLibCompressor   *compressor_;
     ZLibDecompressor *decompressor_;
     QBuffer           outgoing_buffer_, incoming_buffer_;
     int               errorCode_;

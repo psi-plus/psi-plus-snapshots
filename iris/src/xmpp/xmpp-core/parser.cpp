@@ -160,7 +160,7 @@ public:
     QDomElement           element; // root part
     std::list<QByteArray> in;
     QXmlStreamReader      reader;
-    const char *          completeTag    = nullptr; // this is basically a workaround for bugs like QTBUG-14661
+    const char           *completeTag    = nullptr; // this is basically a workaround for bugs like QTBUG-14661
     int                   completeOffset = 0;
     bool                  streamOpened   = false;
     bool                  readerStarted  = false;

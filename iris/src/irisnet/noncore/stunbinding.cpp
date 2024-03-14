@@ -28,7 +28,7 @@ class StunBinding::Private : public QObject {
     Q_OBJECT
 
 public:
-    StunBinding *                   q;
+    StunBinding                    *q;
     StunTransactionPool::Ptr        pool;
     QScopedPointer<StunTransaction> trans;
     TransportAddress                stunAddr;

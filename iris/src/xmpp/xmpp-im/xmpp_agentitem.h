@@ -30,10 +30,10 @@ class AgentItem {
 public:
     AgentItem() { }
 
-    const Jid &     jid() const { return v_jid; }
-    const QString & name() const { return v_name; }
-    const QString & category() const { return v_category; }
-    const QString & type() const { return v_type; }
+    const Jid      &jid() const { return v_jid; }
+    const QString  &name() const { return v_name; }
+    const QString  &category() const { return v_category; }
+    const QString  &type() const { return v_type; }
     const Features &features() const { return v_features; }
 
     void setJid(const Jid &j) { v_jid = j; }

@@ -19,19 +19,19 @@
 #include "xmpp/sasl/scramsha1signature.h"
 
 #include <QByteArray>
+#include <QRegularExpression>
 #include <QString>
 #include <QTextStream>
 #include <QtCrypto>
-#include <QRegularExpression>
 #include <QtDebug>
 
 namespace XMPP {
-SCRAMSHA1Signature::SCRAMSHA1Signature(const QByteArray &      server_final_message,
+SCRAMSHA1Signature::SCRAMSHA1Signature(const QByteArray       &server_final_message,
                                        const QCA::SecureArray &server_signature_should)
 {
     QRegularExpression pattern("v=([^,]*)");
-    auto match = pattern.match(QString(server_final_message));
-    isValid_    = match.hasMatch();
+    auto               match = pattern.match(QString(server_final_message));
+    isValid_                 = match.hasMatch();
     if (isValid_) {
         QString          server_signature = match.captured(1);
         QCA::SecureArray server_sig(QCA::Base64().stringToArray(server_signature));

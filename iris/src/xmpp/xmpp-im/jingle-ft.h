@@ -58,7 +58,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         Pad(Manager *manager, Session *session);
         QDomElement         takeOutgoingSessionInfoUpdate() override;
         QString             ns() const override;
-        Session *           session() const override;
+        Session            *session() const override;
         ApplicationManager *manager() const override;
         QString             generateContentName(Origin senders) override;
         bool                incomingSessionInfo(const QDomElement &el) override;

@@ -11,4 +11,3 @@ if(NOT POLICY_SET)
     endif()
     set(POLICY_SET ON)
 endif()
-

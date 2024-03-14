@@ -431,7 +431,7 @@ QByteArray StunMessage::toBinary(int validationFlags, const QByteArray &key) con
 
     // header
     QByteArray buf(20, 0);
-    quint8 *   p = (quint8 *)buf.data();
+    quint8    *p = (quint8 *)buf.data();
 
     quint8 classbits = 0;
     if (d->mclass == Request)

@@ -40,14 +40,14 @@ public:
     Task(Client *, bool isRoot);
     virtual ~Task();
 
-    Task *        parent() const;
-    Client *      client() const;
+    Task         *parent() const;
+    Client       *client() const;
     QDomDocument *doc() const;
     QString       id() const;
 
     bool                 success() const;
     int                  statusCode() const;
-    const QString &      statusString() const;
+    const QString       &statusString() const;
     const Stanza::Error &error() const;
 
     void setTimeout(int seconds) const;

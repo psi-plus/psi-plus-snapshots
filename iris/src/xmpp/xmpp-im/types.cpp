@@ -664,9 +664,8 @@ void HTMLElement::filterOutUnwantedRecursive(QDomElement &el, bool strict)
 {
     Q_UNUSED(strict) // TODO filter out not xhtml-im elements
 
-    static QSet<QString> unwanted = QSet<QString>() << "script"
-                                                    << "iframe";
-    QDomNode child = el.firstChild();
+    static QSet<QString> unwanted = QSet<QString>() << "script" << "iframe";
+    QDomNode             child    = el.firstChild();
     while (!child.isNull()) {
         QDomNode sibling = child.nextSibling();
         if (child.isElement()) {
@@ -870,7 +869,7 @@ void Message::setFrom(const Jid &j)
 
 void Message::setId(const QString &s)
 {
-    MessageD()->id = s;
+    MessageD()->id       = s;
     MessageD()->originId = s;
 }
 
@@ -2513,7 +2512,7 @@ Roster::Roster(const Roster &other) : QList<RosterItem>(other), d(new Roster::Pr
 Roster &Roster::operator=(const Roster &other)
 {
     QList<RosterItem>::operator=(other);
-    d->groupsDelimiter         = other.d->groupsDelimiter;
+    d->groupsDelimiter = other.d->groupsDelimiter;
     return *this;
 }
 

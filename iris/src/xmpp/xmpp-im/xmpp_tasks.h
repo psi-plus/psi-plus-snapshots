@@ -49,7 +49,7 @@ public:
     void changepw(const QString &pass);
     void unreg(const Jid &j = "");
 
-    const Form & form() const;
+    const Form  &form() const;
     bool         hasXData() const;
     const XData &xdata() const;
     bool         isRegistered() const;
@@ -223,7 +223,7 @@ public:
     void set(const VCard &);
     void set(const Jid &, const VCard &, bool isTarget = false);
 
-    const Jid &  jid() const;
+    const Jid   &jid() const;
     const VCard &vcard() const;
 
     void onGo();
@@ -242,7 +242,7 @@ public:
     JT_Search(Task *parent);
     ~JT_Search();
 
-    const Form &               form() const;
+    const Form                &form() const;
     const QList<SearchResult> &results() const;
 
     bool         hasXData() const;
@@ -272,7 +272,7 @@ public:
     void onGo();
     bool take(const QDomElement &);
 
-    const Jid &    jid() const;
+    const Jid     &jid() const;
     const QString &name() const;
     const QString &version() const;
     const QString &os() const;

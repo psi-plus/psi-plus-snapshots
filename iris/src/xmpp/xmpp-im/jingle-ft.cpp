@@ -411,8 +411,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     };
 
     Application::Application(const QSharedPointer<Pad> &pad, const QString &contentName, Origin creator,
-                             Origin senders) :
-        d(new Private)
+                             Origin senders) : d(new Private)
     {
         d->q         = this;
         _pad         = pad;

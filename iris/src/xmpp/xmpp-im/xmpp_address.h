@@ -19,8 +19,8 @@
 #ifndef XMPP_ADDRESS_H
 #define XMPP_ADDRESS_H
 
-#include "xmpp/jid/jid.h"
 #include "iris/xmpp_stanza.h"
+#include "xmpp/jid/jid.h"
 
 #include <QString>
 
@@ -34,7 +34,7 @@ public:
     Address(Type type = Unknown, const Jid &jid = Jid());
     Address(const QDomElement &);
 
-    const Jid &    jid() const;
+    const Jid     &jid() const;
     const QString &uri() const;
     const QString &node() const;
     const QString &desc() const;

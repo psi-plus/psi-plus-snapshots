@@ -79,7 +79,7 @@ namespace XMPP { namespace Jingle {
         inline Origin                     senders() const { return _senders; }
         inline QString                    contentName() const { return _contentName; }
         inline QSharedPointer<Transport>  transport() const { return _transport; }
-        inline TransportSelector *        transportSelector() const { return _transportSelector.data(); }
+        inline TransportSelector         *transportSelector() const { return _transportSelector.data(); }
         bool                              isRemote() const;
         inline bool                       isLocal() const { return !isRemote(); }
         inline ApplicationFlags           flags() const { return _flags; }

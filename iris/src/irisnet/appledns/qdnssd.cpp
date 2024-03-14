@@ -176,12 +176,12 @@ public:
 class QDnsSd::Private : public QObject {
     Q_OBJECT
 public:
-    QDnsSd *  q;
+    QDnsSd   *q;
     IdManager idManager;
 
     class SubRecord {
     public:
-        Private *  _self;
+        Private   *_self;
         int        _id;
         RecordRef *_sdref;
 
@@ -198,13 +198,13 @@ public:
     public:
         enum Type { Query, Browse, Resolve, Reg };
 
-        Private *           _self;
+        Private            *_self;
         int                 _type;
         int                 _id;
-        ServiceRef *        _sdref;
+        ServiceRef         *_sdref;
         int                 _sockfd;
         SafeSocketNotifier *_sn_read;
-        SafeTimer *         _errorTrigger;
+        SafeTimer          *_errorTrigger;
 
         bool                       _doSignal;
         LowLevelError              _lowLevelError;
@@ -522,7 +522,7 @@ private slots:
     void sn_activated()
     {
         SafeSocketNotifier *sn_read = static_cast<SafeSocketNotifier *>(sender());
-        Request *           req     = _requestsBySocket.value(sn_read);
+        Request            *req     = _requestsBySocket.value(sn_read);
         if (!req)
             return;
 
@@ -627,7 +627,7 @@ private slots:
     void doError()
     {
         SafeTimer *t   = static_cast<SafeTimer *>(sender());
-        Request *  req = _requestsByTimer.value(t);
+        Request   *req = _requestsByTimer.value(t);
         if (!req)
             return;
 
@@ -886,7 +886,7 @@ QList<QByteArray> QDnsSd::parseTxtRecord(const QByteArray &txtRecord)
     for (int n = 0; n < count; ++n) {
         QByteArray          keyBuf(256, 0);
         uint8_t             valueLen;
-        const void *        value;
+        const void         *value;
         DNSServiceErrorType err = TXTRecordGetItemAtIndex(txtRecord.size(), txtRecord.data(), n, keyBuf.size(),
                                                           keyBuf.data(), &valueLen, &value);
         if (err != kDNSServiceErr_NoError)

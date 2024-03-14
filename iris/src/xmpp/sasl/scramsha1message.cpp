@@ -41,8 +41,7 @@ bool Normalize(const QString &username_in, QString &username_out)
 }
 
 SCRAMSHA1Message::SCRAMSHA1Message(const QString &authzid, const QString &authcid, const QByteArray &cnonce,
-                                   const RandomNumberGenerator &rand) :
-    isValid_(true)
+                                   const RandomNumberGenerator &rand) : isValid_(true)
 {
     QString    result;
     QByteArray clientnonce;

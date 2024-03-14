@@ -59,7 +59,7 @@ void Features::setList(const QStringList &l)
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     _list = QSet<QString>(l.begin(), l.end());
 #else
-    _list   = QSet<QString>::fromList(l);
+    _list = QSet<QString>::fromList(l);
 #endif
 }
 

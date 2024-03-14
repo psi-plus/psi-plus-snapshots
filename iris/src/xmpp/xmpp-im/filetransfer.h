@@ -113,7 +113,7 @@ public:
     bool isActive(const FileTransfer *ft) const;
     void setDisabled(const QString &ns, bool state = true);
 
-    Client *      client() const;
+    Client       *client() const;
     FileTransfer *createTransfer();
     FileTransfer *takeIncoming();
 

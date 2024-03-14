@@ -38,7 +38,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
         Q_OBJECT
 
     public:
-        Client *       client;
+        Client        *client;
         Jid            peer;
         QString        sid;
         size_t         _blockSize;
@@ -138,7 +138,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
     };
 
     struct Transport::Private {
-        Transport *                               q = nullptr;
+        Transport                                *q = nullptr;
         QMap<QString, QSharedPointer<Connection>> connections;
         size_t                                    defaultBlockSize = 4096;
         bool                                      started          = false;
@@ -314,7 +314,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
         auto doc = _pad->session()->manager()->client()->doc();
         auto it  = std::find_if(d->connections.begin(), d->connections.end(),
-                               [](auto &c) { return c->state == State::ApprovedToSend; });
+                                [](auto &c) { return c->state == State::ApprovedToSend; });
 
         if (it == d->connections.end()) {
             if (ensureTransportElement) {
@@ -413,7 +413,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
     struct Manager::Private {
         QHash<QPair<Jid, QString>, QSharedPointer<Connection>> connections;
-        XMPP::Jingle::Manager *                                jingleManager = nullptr;
+        XMPP::Jingle::Manager                                 *jingleManager = nullptr;
     };
 
     Manager::Manager(QObject *parent) : TransportManager(parent), d(new Private) { }

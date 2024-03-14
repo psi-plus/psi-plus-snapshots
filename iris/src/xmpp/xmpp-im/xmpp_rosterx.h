@@ -38,9 +38,9 @@ public:
                        Action = Add);
     RosterExchangeItem(const QDomElement &);
 
-    const Jid &        jid() const;
+    const Jid         &jid() const;
     Action             action() const;
-    const QString &    name() const;
+    const QString     &name() const;
     const QStringList &groups() const;
     bool               isNull() const;
 

@@ -37,7 +37,7 @@ public:
     IBBData() : seq(0) { }
     IBBData(const QString &sid, quint16 seq, const QByteArray &data) : sid(sid), seq(seq), data(data) { }
 
-    IBBData &   fromXml(const QDomElement &e);
+    IBBData    &fromXml(const QDomElement &e);
     QDomElement toXml(QDomDocument *) const;
 
     QString    sid;
@@ -98,10 +98,10 @@ public:
     ~IBBManager();
 
     static const char *ns();
-    Client *           client() const;
+    Client            *client() const;
 
     bool           isAcceptableSID(const Jid &peer, const QString &sid) const;
-    BSConnection * createConnection();
+    BSConnection  *createConnection();
     IBBConnection *takeIncoming();
 
 public slots:

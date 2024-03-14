@@ -28,8 +28,7 @@
 namespace XMPP {
 DIGESTMD5Response::DIGESTMD5Response(const QByteArray &challenge, const QString &service, const QString &host,
                                      const QString &arealm, const QString &user, const QString &authz,
-                                     const QByteArray &password, const RandomNumberGenerator &rand) :
-    isValid_(true)
+                                     const QByteArray &password, const RandomNumberGenerator &rand) : isValid_(true)
 {
     QString realm = arealm;
 

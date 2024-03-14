@@ -40,7 +40,7 @@
 #endif
 
 #define MAXSTREAMHOSTS 5
-//#define S5B_DEBUG
+// #define S5B_DEBUG
 
 static const char *S5B_NS = "http://jabber.org/protocol/bytestreams";
 
@@ -73,20 +73,20 @@ public:
     enum { ErrRefused, ErrConnect, ErrWrongHost, ErrProxy };
     enum { Unknown, Fast, NotFast };
 
-    S5BManager *                     m     = nullptr;
+    S5BManager                      *m     = nullptr;
     int                              state = 0;
     QString                          sid, key, out_key, out_id, in_id;
     Jid                              self, peer;
     StreamHostList                   in_hosts;
-    JT_S5B *                         task       = nullptr;
-    JT_S5B *                         proxy_task = nullptr;
+    JT_S5B                          *task       = nullptr;
+    JT_S5B                          *proxy_task = nullptr;
     QList<QSharedPointer<S5BServer>> relatedServers;
-    SocksClient *                    client         = nullptr;
-    SocksClient *                    client_out     = nullptr;
-    SocksUDP *                       client_udp     = nullptr;
-    SocksUDP *                       client_out_udp = nullptr;
-    S5BConnector *                   conn           = nullptr;
-    S5BConnector *                   proxy_conn     = nullptr;
+    SocksClient                     *client         = nullptr;
+    SocksClient                     *client_out     = nullptr;
+    SocksUDP                        *client_udp     = nullptr;
+    SocksUDP                        *client_out_udp = nullptr;
+    S5BConnector                    *conn           = nullptr;
+    S5BConnector                    *proxy_conn     = nullptr;
     // S5BServersManager::S5BLocalServers *localServ = nullptr;
     bool       wantFast = false;
     StreamHost proxy;
@@ -158,9 +158,9 @@ QByteArray S5BDatagram::data() const { return _buf; }
 //----------------------------------------------------------------------------
 class S5BConnection::Private {
 public:
-    S5BManager *         m;
-    SocksClient *        sc;
-    SocksUDP *           su;
+    S5BManager          *m;
+    SocksClient         *sc;
+    SocksUDP            *su;
     int                  state;
     Jid                  peer;
     QString              sid;
@@ -503,9 +503,9 @@ public:
     ~Entry() { delete query; }
 
     S5BConnection *c = nullptr;
-    Item *         i = nullptr;
+    Item          *i = nullptr;
     QString        sid;
-    JT_S5B *       query = nullptr;
+    JT_S5B        *query = nullptr;
     StreamHost     proxyInfo;
 
     bool         udp_init = false;
@@ -515,10 +515,10 @@ public:
 
 class S5BManager::Private {
 public:
-    Client *          client;
+    Client           *client;
     QList<Entry *>    activeList;
     S5BConnectionList incomingConns;
-    JT_PushS5B *      ps;
+    JT_PushS5B       *ps;
 };
 
 S5BManager::S5BManager(Client *parent) : BytestreamManager(parent)
@@ -832,7 +832,7 @@ void S5BManager::con_sendUDP(S5BConnection *c, const QByteArray &buf)
 
 void S5BManager::item_accepted()
 {
-    Item * i = static_cast<Item *>(sender());
+    Item  *i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
     emit e->c->accepted(); // signal
@@ -840,7 +840,7 @@ void S5BManager::item_accepted()
 
 void S5BManager::item_tryingHosts(const StreamHostList &list)
 {
-    Item * i = static_cast<Item *>(sender());
+    Item  *i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
     emit e->c->tryingHosts(list); // signal
@@ -848,7 +848,7 @@ void S5BManager::item_tryingHosts(const StreamHostList &list)
 
 void S5BManager::item_proxyConnect()
 {
-    Item * i = static_cast<Item *>(sender());
+    Item  *i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
     emit e->c->proxyConnect(); // signal
@@ -856,7 +856,7 @@ void S5BManager::item_proxyConnect()
 
 void S5BManager::item_waitingForActivation()
 {
-    Item * i = static_cast<Item *>(sender());
+    Item  *i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
     emit e->c->waitingForActivation(); // signal
@@ -864,7 +864,7 @@ void S5BManager::item_waitingForActivation()
 
 void S5BManager::item_connected()
 {
-    Item * i = static_cast<Item *>(sender());
+    Item  *i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
     // grab the client
@@ -879,7 +879,7 @@ void S5BManager::item_connected()
 
 void S5BManager::item_error(int x)
 {
-    Item * i = static_cast<Item *>(sender());
+    Item  *i = static_cast<Item *>(sender());
     Entry *e = findEntry(i);
 
     e->c->man_failed(x);
@@ -925,7 +925,7 @@ void S5BManager::queryProxy(Entry *e)
 void S5BManager::query_finished()
 {
     JT_S5B *query = static_cast<JT_S5B *>(sender());
-    Entry * e     = nullptr;
+    Entry  *e     = nullptr;
     for (Entry *i : std::as_const(d->activeList)) {
         if (i->query == query) {
             e = i;
@@ -1310,7 +1310,7 @@ void S5BManager::Item::conn_result(bool b)
 {
     if (b) {
         SocksClient *sc     = conn->takeClient();
-        SocksUDP *   sc_udp = conn->takeUDP();
+        SocksUDP    *sc_udp = conn->takeUDP();
         StreamHost   h      = conn->streamHostUsed();
         delete conn;
         conn        = nullptr;
@@ -1364,7 +1364,7 @@ void S5BManager::Item::proxy_result(bool b)
 #endif
     if (b) {
         SocksClient *sc     = proxy_conn->takeClient();
-        SocksUDP *   sc_udp = proxy_conn->takeUDP();
+        SocksUDP    *sc_udp = proxy_conn->takeUDP();
         delete proxy_conn;
         proxy_conn = nullptr;
 
@@ -1614,7 +1614,7 @@ class S5BConnector::Item : public QObject {
     Q_OBJECT
 public:
     SocksClient *client;
-    SocksUDP *   client_udp;
+    SocksUDP    *client_udp;
     StreamHost   host;
     QString      key;
     bool         udp;
@@ -1706,8 +1706,8 @@ private:
 
 class S5BConnector::Private {
 public:
-    SocksClient * active;
-    SocksUDP *    active_udp;
+    SocksClient  *active;
+    SocksUDP     *active_udp;
     QList<Item *> itemList;
     QString       key;
     StreamHost    activeHost;

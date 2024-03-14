@@ -2,8 +2,8 @@
 // #define MS_LOG_DEV_LEVEL 3
 
 #include "DepUsrSCTP.hpp"
-//#include "DepLibUV.hpp"
-//#include "Logger.hpp"
+// #include "DepLibUV.hpp"
+// #include "Logger.hpp"
 #include <usrsctp.h>
 
 #include <QCoreApplication>
@@ -58,7 +58,7 @@ inline static void sctpDebug(const char *format, ...)
 
 /* Static variables. */
 
-DepUsrSCTP::Checker *                                 DepUsrSCTP::checker { nullptr };
+DepUsrSCTP::Checker                                  *DepUsrSCTP::checker { nullptr };
 uint64_t                                              DepUsrSCTP::numSctpAssociations { 0u };
 uintptr_t                                             DepUsrSCTP::nextSctpAssociationId { 0u };
 std::unordered_map<uintptr_t, RTC::SctpAssociation *> DepUsrSCTP::mapIdSctpAssociation;

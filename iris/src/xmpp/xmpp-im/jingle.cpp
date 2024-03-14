@@ -486,7 +486,7 @@ namespace XMPP { namespace Jingle {
                           const QString &text = QString(), const QDomElement &jingleErr = QDomElement())
         {
             auto          resp = createIQ(client()->doc(), "error", iq.attribute(QStringLiteral("from")),
-                                 iq.attribute(QStringLiteral("id")));
+                                          iq.attribute(QStringLiteral("id")));
             Stanza::Error error(errType, errCond, text);
             auto          errEl = error.toXml(*client()->doc(), client()->stream().baseNS());
             if (!jingleErr.isNull()) {
@@ -533,8 +533,8 @@ namespace XMPP { namespace Jingle {
     //----------------------------------------------------------------------------
     class Manager::Private {
     public:
-        XMPP::Client *         client;
-        Manager *              manager;
+        XMPP::Client          *client;
+        Manager               *manager;
         QScopedPointer<JTPush> pushTask;
         // ns -> application
         std::map<QString, QPointer<ApplicationManager>> applicationManagers;

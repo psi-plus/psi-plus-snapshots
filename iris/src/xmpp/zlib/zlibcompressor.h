@@ -24,7 +24,7 @@ protected:
 
 private:
     QIODevice *device_;
-    z_stream * zlib_stream_;
+    z_stream  *zlib_stream_;
     bool       flushed_;
 };
 
