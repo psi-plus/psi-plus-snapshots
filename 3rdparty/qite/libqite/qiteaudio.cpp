@@ -330,7 +330,11 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
                 painter->drawRect(hcolRect);
             }
         }
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
     } else if (hg.type() == QVariant::String) {
+#else
+    } else if (hg.typeId() == QVariant::String) {
+#endif
         painter->setPen(QColor(70, 150, 70));
         painter->drawText(metaRect.translated(rect.topLeft().toPoint()), hg.toString());
     }
@@ -401,7 +405,11 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                     QIODevice *     stream = opener ? opener->open(url) : nullptr;
                     if (stream)
                         connect(player, &QMediaPlayer::destroyed, this, [opener, stream]() { opener->close(stream); });
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
                     player->setMedia(url, stream);
+#else
+                    player->setSourceDevice(stream, url);
+#endif
                     auto part = double(format.playPosition()) / double(scaleFillRect.width());
 
                     if (player->duration() > 0) {
@@ -485,8 +493,8 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                                 cursor.setCharFormat(format);
                             });
 
-                    connect(player, SIGNAL(stateChanged(QMediaPlayer::State)), this,
-                            SLOT(playerStateChanged(QMediaPlayer::State)));
+                    connect(player, SIGNAL(stateChanged(ITEAudioController::PlaybackState)), this,
+                            SLOT(playerStateChanged(ITEAudioController::PlaybackState)));
                     QObject::connect(player, &QMediaPlayer::mediaStatusChanged,
                                      [=]() { qDebug() << "Media status changed:" << player->mediaStatus(); });
                     QObject::connect(player,
@@ -570,7 +578,7 @@ void ITEAudioController::playerPositionChanged(qint64 newPos)
     }
 }
 
-void ITEAudioController::playerStateChanged(QMediaPlayer::State state)
+void ITEAudioController::playerStateChanged(PlaybackState state)
 {
     if (state == QMediaPlayer::StoppedState) {
         auto        player        = static_cast<QMediaPlayer *>(sender());

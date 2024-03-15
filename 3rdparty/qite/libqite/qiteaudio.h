@@ -56,6 +56,12 @@ class ITEAudioController : public InteractiveTextElementController {
     void updateGeomtry();
 
 public:
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+    using PlaybackState = QMediaPlayer::State;
+#else
+    using PlaybackState = QMediaPlayer::PlaybackState;
+#endif
+
     typedef QList<float> Histogram;                     // can be fetched via DeviceOpener::metadata()[amplitudes]
     static const int     HistogramCompressedSize = 100; // amount of drawn columns
 
@@ -76,7 +82,7 @@ protected:
     void hideEvent(QTextCursor &selected);
 private slots:
     void playerPositionChanged(qint64);
-    void playerStateChanged(QMediaPlayer::State);
+    void playerStateChanged(PlaybackState);
 };
 
 #endif // QITEAUDIO_H
