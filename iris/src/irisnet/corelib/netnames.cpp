@@ -75,7 +75,7 @@ NameRecord &NameRecord::operator=(const NameRecord &from)
     return *this;
 }
 
-bool NameRecord::operator==(const NameRecord &o)
+bool NameRecord::operator==(const NameRecord &o) const
 {
     if (isNull() != o.isNull() || owner() != o.owner() || ttl() != o.ttl() || type() != o.type()) {
         return false;

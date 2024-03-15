@@ -51,7 +51,7 @@ public:
     void        fromXml(const QDomElement &);
     QDomElement toXml(QDomDocument &);
 
-    bool operator==(const MUCItem &o);
+    bool operator==(const MUCItem &o) const;
 
 private:
     QString     nick_;

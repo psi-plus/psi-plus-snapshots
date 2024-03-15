@@ -104,7 +104,7 @@ public:
     static QString feature(long id);
 
     Features   &operator<<(const QString &feature);
-    inline bool operator==(const Features &other) { return _list == other._list; }
+    inline bool operator==(const Features &other) const { return _list == other._list; }
     Features   &operator+=(const Features &other)
     {
         _list += other._list;

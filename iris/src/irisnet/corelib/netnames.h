@@ -148,7 +148,7 @@ public:
     /**
        \brief Compares \a other with this object
     */
-    bool operator==(const NameRecord &other);
+    bool operator==(const NameRecord &other) const;
 
     /**
        \brief Returns true if this record object is null, otherwise returns false

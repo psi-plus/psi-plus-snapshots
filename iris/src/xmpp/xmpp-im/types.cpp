@@ -448,7 +448,7 @@ QDomElement MUCItem::toXml(QDomDocument &d)
     return e;
 }
 
-bool MUCItem::operator==(const MUCItem &o)
+bool MUCItem::operator==(const MUCItem &o) const
 {
     return !nick_.compare(o.nick_) && ((!jid_.isValid() && !o.jid_.isValid()) || jid_.compare(o.jid_, true))
         && ((!actor_.isValid() && !o.actor_.isValid()) || actor_.compare(o.actor_, true))
