@@ -30,7 +30,9 @@ under the License.
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
+#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
 #include <QMediaFormat>
+#endif
 #include <QMediaMetaData>
 #include <QTemporaryFile>
 #include <QTimer>

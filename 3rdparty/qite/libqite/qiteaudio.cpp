@@ -477,7 +477,7 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                                 if (key != QMediaMetaData::Comment) {
                                     return;
                                 }
-                                auto comment = comment = value.toString();
+                                auto comment = value.toString();
 #else
                     connect(player, &QMediaPlayer::metaDataChanged, this, [=]() {
                         auto comment = player->metaData().value(QMediaMetaData::Comment).toString();
