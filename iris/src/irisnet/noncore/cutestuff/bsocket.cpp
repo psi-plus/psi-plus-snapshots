@@ -43,13 +43,12 @@ public:
     QTcpSocketSignalRelay(QTcpSocket *sock, QObject *parent = nullptr) : QObject(parent)
     {
         qRegisterMetaType<QAbstractSocket::SocketError>("QAbstractSocket::SocketError");
-        connect(sock, SIGNAL(hostFound()), SLOT(sock_hostFound()), Qt::QueuedConnection);
-        connect(sock, SIGNAL(connected()), SLOT(sock_connected()), Qt::QueuedConnection);
-        connect(sock, SIGNAL(disconnected()), SLOT(sock_disconnected()), Qt::QueuedConnection);
-        connect(sock, SIGNAL(readyRead()), SLOT(sock_readyRead()), Qt::QueuedConnection);
-        connect(sock, SIGNAL(bytesWritten(qint64)), SLOT(sock_bytesWritten(qint64)), Qt::QueuedConnection);
-        connect(sock, SIGNAL(error(QAbstractSocket::SocketError)), SLOT(sock_error(QAbstractSocket::SocketError)),
-                Qt::QueuedConnection);
+        connect(sock, &QTcpSocket::hostFound, this, &QTcpSocketSignalRelay::sock_hostFound, Qt::QueuedConnection);
+        connect(sock, &QTcpSocket::connected, this, &QTcpSocketSignalRelay::sock_connected, Qt::QueuedConnection);
+        connect(sock, &QTcpSocket::disconnected, this, &QTcpSocketSignalRelay::sock_disconnected, Qt::QueuedConnection);
+        connect(sock, &QTcpSocket::readyRead, this, &QTcpSocketSignalRelay::sock_readyRead, Qt::QueuedConnection);
+        connect(sock, &QTcpSocket::bytesWritten, this, &QTcpSocketSignalRelay::sock_bytesWritten, Qt::QueuedConnection);
+        connect(sock, &QTcpSocket::errorOccurred, this, &QTcpSocketSignalRelay::sock_error, Qt::QueuedConnection);
     }
 
 signals:
