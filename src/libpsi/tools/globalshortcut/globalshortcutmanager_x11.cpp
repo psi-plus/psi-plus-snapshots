@@ -23,7 +23,7 @@
 #include <QGuiApplication>
 #include <QKeyEvent>
 #include <QWidget>
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QX11Info>
 #else
 #include <xcb/xcb.h>
@@ -40,8 +40,9 @@ const int XKeyRelease = KeyRelease;
 #endif
 
 namespace {
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
-unsigned long getRootWindow() {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+unsigned long getRootWindow()
+{
     auto x11app = qApp->nativeInterface<QNativeInterface::QX11Application>();
     if (!x11app) {
         return -1; // wayland?
@@ -136,7 +137,7 @@ private:
     {
         if (haveMods)
             return;
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         if (!QX11Info::isPlatformX11()) {
             return; // wayland?
         }
@@ -278,7 +279,7 @@ X11KeyTriggerManager *X11KeyTriggerManager::instance_ = nullptr;
 
 class GlobalShortcutManager::KeyTrigger::Impl : public X11KeyTrigger {
 private:
-    KeyTrigger * trigger_;
+    KeyTrigger  *trigger_;
     QKeySequence qkey_;
 
     struct GrabbedKey {
@@ -302,20 +303,20 @@ private:
 #if defined(LIMIT_X11_USAGE)
         return;
 #endif
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         if (!QX11Info::isPlatformX11()) {
             return; // wayland?
         }
 
-        Display *appDpy = QX11Info::display();
-        auto rootWindow = QX11Info::appRootWindow();
+        Display *appDpy     = QX11Info::display();
+        auto     rootWindow = QX11Info::appRootWindow();
 #else
         auto x11app = qApp->nativeInterface<QNativeInterface::QX11Application>();
         if (!x11app) {
             return; // wayland?
         }
-        Display *appDpy = x11app->display();
-        auto rootWindow = getRootWindow();
+        Display *appDpy     = x11app->display();
+        auto     rootWindow = getRootWindow();
 #endif
 
         int code = XKeysymToKeycode(appDpy, keysym);
@@ -326,7 +327,7 @@ private:
 
         failed                          = false;
         XErrorHandler savedErrorHandler = XSetErrorHandler(XGrabErrorHandler);
-        const auto &  modifiers         = X11KeyTriggerManager::ignModifiersList();
+        const auto   &modifiers         = X11KeyTriggerManager::ignModifiersList();
         for (long mask_mod : modifiers) {
             XGrabKey(appDpy, code, mod | mask_mod, rootWindow, False, GrabModeAsync, GrabModeAsync);
             GrabbedKey grabbedKey;
@@ -360,20 +361,20 @@ public:
     {
         X11KeyTriggerManager::instance()->removeTrigger(this);
 
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         if (!QX11Info::isPlatformX11()) {
             return; // wayland?
         }
 
-        Display *appDpy = QX11Info::display();
-        auto rootWindow = QX11Info::appRootWindow();
+        Display *appDpy     = QX11Info::display();
+        auto     rootWindow = QX11Info::appRootWindow();
 #else
         auto x11app = qApp->nativeInterface<QNativeInterface::QX11Application>();
         if (!x11app) {
             return; // wayland?
         }
-        Display *appDpy = x11app->display();
-        auto rootWindow = getRootWindow();
+        Display *appDpy     = x11app->display();
+        auto     rootWindow = getRootWindow();
 #endif
 
         for (GrabbedKey key : std::as_const(grabbedKeys_))

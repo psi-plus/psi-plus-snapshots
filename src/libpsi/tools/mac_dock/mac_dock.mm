@@ -6,20 +6,17 @@
 
 static NSInteger requestType = 0;
 
-void MacDock::startBounce()
-{
-	requestType = [NSApp requestUserAttention:NSCriticalRequest];
-}
+void MacDock::startBounce() { requestType = [NSApp requestUserAttention:NSCriticalRequest]; }
 
 void MacDock::stopBounce()
 {
-	if (requestType) {
-		[NSApp cancelUserAttentionRequest:requestType];
-		requestType = 0;
-	}
+    if (requestType) {
+        [NSApp cancelUserAttentionRequest:requestType];
+        requestType = 0;
+    }
 }
 
-void MacDock::overlay(const QString& text)
+void MacDock::overlay(const QString &text)
 {
-	[[NSApp dockTile] setBadgeLabel:(NSString *)QtCFString::toCFStringRef(text)];
+    [[NSApp dockTile] setBadgeLabel:(NSString *)QtCFString::toCFStringRef(text)];
 }

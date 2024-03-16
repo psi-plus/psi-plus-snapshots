@@ -32,24 +32,24 @@
 #include "languagemanager.h"
 
 #include <QCoreApplication>
-//#include <QDebug>
+// #include <QDebug>
 #include <QDir>
 #include <QLibraryInfo>
 #include <QLocale>
 #include <QMutableListIterator>
 #include <QSet>
 #include <QString>
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
-# include <QTextCodec>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QTextCodec>
 #endif
 #include <hunspell.hxx>
 
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
-#  define HS_STRING(text) li.codec->fromUnicode(text).toStdString()
-#  define QT_STRING(text) QString(li.codec->toUnicode(item.c_str()))
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#define HS_STRING(text) li.codec->fromUnicode(text).toStdString()
+#define QT_STRING(text) QString(li.codec->toUnicode(item.c_str()))
 #else
-#  define HS_STRING(text) QByteArray(li.encoder(text)).toStdString()
-#  define QT_STRING(text) li.decoder(QByteArray::fromStdString(item))
+#define HS_STRING(text) QByteArray(li.encoder(text)).toStdString()
+#define QT_STRING(text) li.decoder(QByteArray::fromStdString(item))
 #endif
 
 HunspellChecker::HunspellChecker()
@@ -89,11 +89,11 @@ void HunspellChecker::getDictPaths()
         dictPaths_ = dictPathSet.toList();
 #endif
 #if defined(Q_OS_LINUX) && defined(SHARE_SUFF)
-    // Special hack for correct work of AppImage, snap and flatpak builds
-    static const QString &&additionalPath =
-            QDir().absoluteFilePath(qApp->applicationDirPath() + "/../share/" SHARE_SUFF);
-    dictPaths_.prepend(additionalPath + "/hunspell");
-    dictPaths_.prepend(additionalPath + "/myspell");
+        // Special hack for correct work of AppImage, snap and flatpak builds
+        static const QString &&additionalPath
+            = QDir().absoluteFilePath(qApp->applicationDirPath() + "/../share/" SHARE_SUFF);
+        dictPaths_.prepend(additionalPath + "/hunspell");
+        dictPaths_.prepend(additionalPath + "/myspell");
 #endif
     }
 }
@@ -141,21 +141,20 @@ void HunspellChecker::addLanguage(const LanguageManager::LangId &langId)
     if (scanDictPaths(language, aff, dic)) {
         LangItem li;
         // TODO on windows it makes sense to use "\\\\?\\" prefix to paths
-        li.hunspell_
-            = HunspellPtr(new Hunspell(aff.absoluteFilePath().toUtf8(), dic.absoluteFilePath().toLocal8Bit()));
+        li.hunspell_ = HunspellPtr(new Hunspell(aff.absoluteFilePath().toUtf8(), dic.absoluteFilePath().toLocal8Bit()));
         QByteArray codecName(li.hunspell_->get_dic_encoding());
         if (codecName.startsWith("microsoft-cp125")) {
             codecName.replace(0, sizeof("microsoft-cp") - 1, "Windows-");
         } else if (codecName.startsWith("TIS620-2533")) {
             codecName.resize(sizeof("TIS620") - 1);
         }
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         li.codec = QTextCodec::codecForName(codecName);
         if (li.codec) {
 #else
         li.encoder = QStringEncoder(codecName.data());
         li.decoder = QStringDecoder(codecName.data());
-        if (li.encoder.isValid()) {
+        if (li.encoder.isValid() && li.decoder.isValid()) {
 #endif
             li.info.langId   = langId;
             li.info.filename = dic.filePath();
@@ -214,8 +213,7 @@ bool HunspellChecker::writable() const { return false; }
 
 void HunspellChecker::unloadLanguage(const LanguageManager::LangId &langId)
 {
-    for (auto it = languages_.begin(); it != languages_.end();)
-    {
+    for (auto it = languages_.begin(); it != languages_.end();) {
         if ((*it).info.langId == langId)
             it = languages_.erase(it);
         else

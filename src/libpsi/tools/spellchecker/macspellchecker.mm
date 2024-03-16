@@ -27,46 +27,33 @@
 
 #include <Cocoa/Cocoa.h>
 
-MacSpellChecker::MacSpellChecker()
+MacSpellChecker::MacSpellChecker() { }
+
+MacSpellChecker::~MacSpellChecker() { }
+
+bool MacSpellChecker::isCorrect(const QString &word)
 {
+    NSString *ns_word = [NSString stringWithUTF8String:word.toUtf8().data()];
+    NSRange   range   = { 0, 0 };
+    range             = [[NSSpellChecker sharedSpellChecker] checkSpellingOfString:ns_word startingAt:0];
+    return (range.length == 0);
 }
 
-MacSpellChecker::~MacSpellChecker()
+QList<QString> MacSpellChecker::suggestions(const QString &word)
 {
+    QList<QString> s;
+
+    NSString *ns_word        = [NSString stringWithUTF8String:word.toUtf8().data()];
+    NSArray  *ns_suggestions = [[NSSpellChecker sharedSpellChecker] guessesForWord:ns_word];
+    for (unsigned int i = 0; i < [ns_suggestions count]; i++) {
+        s += QString::fromUtf8([[ns_suggestions objectAtIndex:i] UTF8String]);
+    }
+
+    return s;
 }
 
-bool MacSpellChecker::isCorrect(const QString& word)
-{
-	NSString* ns_word = [NSString stringWithUTF8String: word.toUtf8().data()];
-	NSRange range = {0,0};
-	range = [[NSSpellChecker sharedSpellChecker] checkSpellingOfString:ns_word startingAt:0];
-	return (range.length == 0);
-}
+bool MacSpellChecker::add(const QString & /*word*/) { return false; }
 
-QList<QString> MacSpellChecker::suggestions(const QString& word)
-{
-	QList<QString> s;
+bool MacSpellChecker::available() const { return true; }
 
-	NSString* ns_word = [NSString stringWithUTF8String: word.toUtf8().data()];
-	NSArray* ns_suggestions = [[NSSpellChecker sharedSpellChecker] guessesForWord:ns_word];
-	for(unsigned int i = 0; i < [ns_suggestions count]; i++) {
-		s += QString::fromUtf8([[ns_suggestions objectAtIndex:i] UTF8String]);
-	}
-
-	return s;
-}
-
-bool MacSpellChecker::add(const QString& /*word*/)
-{
-	return false;
-}
-
-bool MacSpellChecker::available() const
-{
-	return true;
-}
-
-bool MacSpellChecker::writable() const
-{
-	return false;
-}
+bool MacSpellChecker::writable() const { return false; }

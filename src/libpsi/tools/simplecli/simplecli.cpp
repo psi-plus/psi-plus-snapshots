@@ -247,7 +247,7 @@ QString SimpleCli::wrap(QString text, int width, int margin, int firstMargin)
         }
 
         output += QString().fill(' ', currentMargin);
-        output += QStringView{text}.mid(prevBreak + 1, nextBreak - prevBreak - 1);
+        output += QStringView { text }.mid(prevBreak + 1, nextBreak - prevBreak - 1);
         output += '\n';
 
         prevBreak     = nextBreak;

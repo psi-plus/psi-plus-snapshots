@@ -48,8 +48,8 @@ public slots:
     void notification_clicked();
 
 private:
-    QLineEdit *    text, *title;
-    QCheckBox *    sticky;
+    QLineEdit     *text, *title;
+    QCheckBox     *sticky;
     GrowlNotifier *growlNotifier;
 };
 
@@ -83,8 +83,7 @@ GrowlTestWidget::GrowlTestWidget(QWidget *parent) : QWidget(parent)
 
     // Initialize GrowlNotifier
     QStringList nots, defaults;
-    nots << "Notification 1"
-         << "Notification 2";
+    nots << "Notification 1" << "Notification 2";
     defaults << "Notification 1";
     growlNotifier = new GrowlNotifier(nots, defaults, "GrowlNotifierTest");
 }

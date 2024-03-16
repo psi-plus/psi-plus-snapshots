@@ -1,7 +1,7 @@
 #include "languagemanager.h"
 
-#include <QSet>
 #include <QRegularExpression>
+#include <QSet>
 
 LanguageManager::LangId LanguageManager::fromString(const QString &langDesc)
 {
@@ -151,7 +151,7 @@ QString LanguageManager::bestUiMatch(QHash<QString, QString> langToText)
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
     auto preferred = LanguageManager::bestUiMatch(langs.keys().toSet(), true);
 #else
-    auto        preferred = LanguageManager::bestUiMatch(QSet<LangId>(langs.keyBegin(), langs.keyEnd()), true);
+    auto preferred = LanguageManager::bestUiMatch(QSet<LangId>(langs.keyBegin(), langs.keyEnd()), true);
 #endif
     if (preferred.count()) {
         return langs.value(preferred.first());
@@ -211,7 +211,7 @@ QSet<LanguageManager::LangId> LanguageManager::deserializeLanguageSet(const QStr
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     QStringList langs = str.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
 #else
-    QStringList langs     = str.split(QRegularExpression("\\s+"), QString::SkipEmptyParts);
+    QStringList langs = str.split(QRegularExpression("\\s+"), QString::SkipEmptyParts);
 #endif
     QSet<LangId> ret;
     for (auto const &l : langs) {

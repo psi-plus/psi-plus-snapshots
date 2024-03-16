@@ -55,7 +55,7 @@ bool AtomicXmlFile::saveDocument(const QDomDocument &doc, QString fileName) cons
     }
 
     QTextStream text(&file);
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     text.setCodec("UTF-8");
 #else
     text.setEncoding(QStringConverter::Utf8);

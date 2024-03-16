@@ -83,7 +83,7 @@ public:
 
 private:
     WinEventFilter *filter;
-    KeyTrigger *    trigger_;
+    KeyTrigger     *trigger_;
     WPARAM          id_;
     static WPARAM   nextId;
 

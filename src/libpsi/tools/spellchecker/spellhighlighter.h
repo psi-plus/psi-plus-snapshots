@@ -7,7 +7,7 @@ class QString;
 
 class SpellHighlighter : public QSyntaxHighlighter {
 public:
-    SpellHighlighter(QTextDocument *);
+    using QSyntaxHighlighter::QSyntaxHighlighter;
 
     virtual void highlightBlock(const QString &text);
 };

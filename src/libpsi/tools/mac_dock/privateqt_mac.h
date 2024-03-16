@@ -49,7 +49,7 @@ public:
             CFRelease(type2);
         return *this;
     }
-    inline T *      operator&() { return &type; }
+    inline T       *operator&() { return &type; }
     static QtCFType constructFromGet(const T &t)
     {
         CFRetain(t);
@@ -65,8 +65,8 @@ public:
     inline QtCFString(const QString &str) : QtCFType<CFStringRef>(0), string(str) { }
     inline QtCFString(const CFStringRef cfstr = 0) : QtCFType<CFStringRef>(cfstr) { }
     inline QtCFString(const QtCFType<CFStringRef> &other) : QtCFType<CFStringRef>(other) { }
-                       operator QString() const;
-                       operator CFStringRef() const;
+    operator QString() const;
+    operator CFStringRef() const;
     static QString     toQString(CFStringRef cfstr);
     static CFStringRef toCFStringRef(const QString &str);
 

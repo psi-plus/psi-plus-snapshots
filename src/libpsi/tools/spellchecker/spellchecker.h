@@ -35,7 +35,7 @@
 
 class SpellChecker : public QObject {
 public:
-    static SpellChecker *  instance();
+    static SpellChecker   *instance();
     virtual bool           available() const;
     virtual bool           writable() const;
     virtual QList<QString> suggestions(const QString &);

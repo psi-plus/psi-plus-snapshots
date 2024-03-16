@@ -45,7 +45,7 @@ public:
     void close();
 
     QHash<QString, QByteArray> unpackAll();
-    const QStringList &        list() const;
+    const QStringList         &list() const;
     bool                       readFile(const QString &, QByteArray *, int max = 0);
     bool                       fileExists(const QString &);
 

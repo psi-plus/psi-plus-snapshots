@@ -42,7 +42,7 @@ public:
     typedef DWORD(__stdcall *IdleUIGetLastInputTimeFunc)(void);
     GetLastInputInfoFunc       GetLastInputInfo;
     IdleUIGetLastInputTimeFunc IdleUIGetLastInputTime;
-    QLibrary *                 lib;
+    QLibrary                  *lib;
 };
 
 IdlePlatform::IdlePlatform() { d = new Private; }

@@ -93,11 +93,11 @@ class PsiGroupChatBrowseWindow::Private : public QObject {
     Q_OBJECT
 
 public:
-    PsiGroupChatBrowseWindow *  q;
+    PsiGroupChatBrowseWindow   *q;
     Ui::GroupChatBrowseWindowUI ui;
     XMPP::Jid                   server;
-    RoomModel *                 model;
-    QObject *                   controller; // FIXME: remove this
+    RoomModel                  *model;
+    QObject                    *controller; // FIXME: remove this
 
     XMPP::Jid    roomBeingCreated, roomBeingDestroyed;
     QPushButton *pb_create, *pb_join;
