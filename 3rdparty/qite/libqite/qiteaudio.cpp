@@ -333,7 +333,7 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
 #if QT_VERSION < QT_VERSION_CHECK(6,0,0)
     } else if (hg.type() == QVariant::String) {
 #else
-    } else if (hg.typeId() == QVariant::String) {
+    } else if (hg.typeId() == QMetaType::QString) {
 #endif
         painter->setPen(QColor(70, 150, 70));
         painter->drawText(metaRect.translated(rect.topLeft().toPoint()), hg.toString());
@@ -414,7 +414,9 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
 
                     if (player->duration() > 0) {
                         player->setPosition(qint64(player->duration() * part));
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
                         player->setNotifyInterval(int(player->duration() / double(metaRect.width()) * 3.0)); // 3 px
+#endif
                         connect(player, SIGNAL(positionChanged(qint64)), this, SLOT(playerPositionChanged(qint64)));
                     } else {
                         connect(player, &QMediaPlayer::durationChanged, [player, part, this](qint64 duration) {
@@ -424,18 +426,28 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                                     player->setPosition(qint64(duration * part));
                                 }
                                 // qDebug() << int(duration / double(metaRect.width()));
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
                                 player->setNotifyInterval(int(duration / 1000.0 / double(metaRect.width()) * 3.0));
+#endif
                                 connect(player, SIGNAL(positionChanged(qint64)), this,
                                         SLOT(playerPositionChanged(qint64)));
                             });
                         });
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
                         player->setNotifyInterval(50); // while we don't know duration, lets use quite small value
+#endif
                     }
 
                     // check for title in metadata
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
                     connect(player, &QMediaPlayer::metaDataAvailableChanged, this, [this, player](bool available) {
                         if (available) {
                             auto title = player->metaData(QMediaMetaData::Title).toString();
+#else
+                    connect(player, &QMediaPlayer::metaDataChanged, this, [this, player]() {
+                            auto title = player->metaData().value(QMediaMetaData::Title).toString();
+#endif
+
                             if (title.isEmpty()) {
                                 return;
                             }
@@ -451,17 +463,27 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                             }
                             format.setMetaData(title);
                             cursor.setCharFormat(format);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
                         }
+#endif
                     });
 
                     // try to extract from metadata and store amplitudes
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
                     connect(player,
                             static_cast<void (QMediaPlayer::*)(const QString &, const QVariant &)>(
                                 &QMediaPlayer::metaDataChanged),
-                            [=](const QString &key, const QVariant &value) {
-                                QString comment;
+                        [=](const QString &key, const QVariant &value) {
+                                if (key != QMediaMetaData::Comment) {
+                                    return;
+                                }
+                                auto comment = comment = value.toString();
+#else
+                    connect(player, &QMediaPlayer::metaDataChanged, this, [=]() {
+                        auto comment = player->metaData().value(QMediaMetaData::Comment).toString();
+#endif
                                 int     index = 0;
-                                if (key != QMediaMetaData::Comment || (comment = value.toString()).isEmpty()
+                                if (comment.isEmpty()
                                     || !comment.startsWith(QLatin1String("AMPLDIAGSTART"))
                                     || (index = comment.indexOf("AMPLDIAGEND")) == -1) {
                                     return; // In comment we keep amplitudes. We don't expect anything else
@@ -497,9 +519,14 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                             SLOT(playerStateChanged(ITEAudioController::PlaybackState)));
                     QObject::connect(player, &QMediaPlayer::mediaStatusChanged,
                                      [=]() { qDebug() << "Media status changed:" << player->mediaStatus(); });
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
                     QObject::connect(player,
                                      static_cast<void (QMediaPlayer::*)(QMediaPlayer::Error)>(&QMediaPlayer::error),
                                      [=](QMediaPlayer::Error error) { qDebug() << "Error occurred:" << error; });
+#else
+                    QObject::connect(player, &QMediaPlayer::errorOccurred, this,
+                                     [=](QMediaPlayer::Error error, const QString &errorString) { qDebug() << "Error occurred:" << errorString; });
+#endif
                 }
                 // player->setVolume(0);
                 player->play();

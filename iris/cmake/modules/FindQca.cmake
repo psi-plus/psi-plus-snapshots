@@ -34,11 +34,11 @@ if (Qca_INCLUDE_DIR AND Qca_LIBRARY)
 endif()
 
 set(EXTRA_PATH_SUFFIXES
-    qt5/Qca-qt5/QtCrypto
-    Qca-qt5/QtCrypto
+    qt5/Qca-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto
+    Qca-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto
     qt5/QtCrypto
-    qt/Qca-qt5/QtCrypto
-    lib/qca-qt5.framework/Versions/2/Headers
+    qt/Qca-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto
+    lib/qca-qt${QT_DEFAULT_MAJOR_VERSION}.framework/Versions/2/Headers
 )
 
 find_path(
@@ -52,7 +52,7 @@ find_path(
 
 find_library(
     Qca_LIBRARY
-    NAMES qca-qt5${D}
+    NAMES qca-qt${QT_DEFAULT_MAJOR_VERSION}${D}
     HINTS
     ${QCA_DIR}/lib
     ${QCA_DIR}/bin

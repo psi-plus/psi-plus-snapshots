@@ -22,7 +22,14 @@ under the License.
 
 #include <QObject>
 
+
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
 class QAudioRecorder;
+#else
+class QMediaRecorder;
+class QMediaCaptureSession;
+class QAudioInput;
+#endif
 class QAudioProbe;
 class QTemporaryFile;
 class QTimer;
@@ -64,8 +71,14 @@ signals:
 public slots:
 
 private:
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
     QAudioRecorder *_recorder = nullptr;
-    QAudioProbe *   _probe;
+#else
+    QAudioInput *_audioInput = nullptr;
+    QMediaCaptureSession *_captureSession = nullptr;
+    QMediaRecorder *_recorder = nullptr;
+#endif
+    //QAudioProbe *   _probe;
     Quantum         _quantum;
     QByteArray      _amplitudes;
     QByteArray      _compressedHistorgram;

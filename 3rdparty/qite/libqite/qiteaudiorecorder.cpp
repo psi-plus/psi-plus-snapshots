@@ -22,17 +22,32 @@ under the License.
 
 #include <cmath>
 
-#include <QAudioProbe>
-#include <QAudioRecorder>
+#include <QAudioFormat>
+//#include <QAudioProbe>
+#include <QAudioBuffer>
+//#include <QAudioRecorder>
 #include <QByteArray>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
+#include <QMediaFormat>
 #include <QMediaMetaData>
 #include <QTemporaryFile>
 #include <QTimer>
 #include <QUrl>
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+# include <QAudioRecorder>
+# define QtRecorder QAudioRecorder
+#else
+# include <QMediaCaptureSession>
+# include <QMediaRecorder>
+# include <QAudioInput>
+# include <QAudioDevice>
+# include <QMediaDevices>
+# define QtRecorder QMediaRecorder
+#endif
 
+#if 0
 template <typename T> struct SoloFrameDefault {
     enum { Default = 0 };
 };
@@ -67,7 +82,7 @@ template <class T>
 void handle(const QAudioBuffer &buffer, AudioRecorder::Quantum &quantum, QByteArray &collector, quint8 &maxVal)
 {
     const T *data      = buffer.constData<T>();
-    auto     peakvalue = qreal(PeakValue<decltype(data[0].average())>::value);
+    auto     peakvalue = qreal(PeakValue<typename std::decay_t<decltype(data[0])>::value_type>::value);
 
     auto format    = buffer.format();
     int  countLeft = format.framesForDuration(quantum.timeLeft);
@@ -94,27 +109,54 @@ void handle(const QAudioBuffer &buffer, AudioRecorder::Quantum &quantum, QByteAr
         quantum.timeLeft = format.durationForFrames(countLeft);
     }
 }
-
+#endif
 AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
 {
-    _recorder = new QAudioRecorder(this);
+    _recorder = new QtRecorder(this);
     // qDebug() << "supported codecs for recorder:" << _recorder->supportedAudioCodecs();
     // qDebug() << "supported containers for recorder:" << _recorder->supportedContainers();
 
-    _probe = new QAudioProbe(this);
-    _probe->setSource(_recorder);
+    //_probe = new QAudioProbe(this);
+    //_probe->setSource(_recorder);
 
+
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
     QAudioEncoderSettings audioSettings;
     audioSettings.setCodec("audio/x-opus");
     audioSettings.setQuality(QMultimedia::HighQuality);
 
     //_recorder->setEncodingSettings(audioSettings, QVideoEncoderSettings(), "audio/ogg");
     _recorder->setEncodingSettings(audioSettings, QVideoEncoderSettings(), "video/quicktime, variant=(string)iso");
+#else
+    QMediaFormat mediaFormat(QMediaFormat::MPEG4);
+    mediaFormat.setAudioCodec(QMediaFormat::AudioCodec::AAC);
 
-    connect(_recorder, &QAudioRecorder::durationChanged, this, [this](qint64 duration) { _duration = duration; });
+    _audioInput = new QAudioInput(this);
+    _audioInput->setDevice(QMediaDevices::defaultAudioInput());
+    _audioInput->setMuted(false);
 
-    connect(_recorder, &QAudioRecorder::stateChanged, this, [this]() {
-        if (_recorder->state() == QAudioRecorder::StoppedState && _maxVolume) {
+    _recorder->setQuality(QMediaRecorder::HighQuality);
+    _recorder->setAudioChannelCount(1);
+    _recorder->setMediaFormat(mediaFormat);
+
+    _captureSession = new QMediaCaptureSession(this);
+    _captureSession->setAudioInput(_audioInput);
+    _captureSession->setRecorder(_recorder);
+#endif
+
+    connect(_recorder, &QtRecorder::durationChanged, this, [this](qint64 duration) { _duration = duration; });
+
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+    connect(_recorder, &QtRecorder::stateChanged, this, [this]() {
+        auto recorderState = _recorder->state();
+#else
+    connect(_recorder, &QtRecorder::recorderStateChanged, this, [this](QMediaRecorder::RecorderState recorderState) {
+        if (recorderState == QtRecorder::RecordingState) {
+            emit recordingStarted();
+            return;
+        }
+#endif
+        if (recorderState == QtRecorder::StoppedState && _maxVolume) {
             // compress amplitudes..
             auto volumeK = 255.0 / double(_maxVolume); // amplificator
             if (volumeK > 8) {
@@ -186,7 +228,7 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
             emit recorded();
         }
 
-        if (_recorder->state() == QAudioRecorder::StoppedState && _maxDurationTimer && _maxDurationTimer->isActive()) {
+        if (recorderState == QtRecorder::StoppedState && _maxDurationTimer && _maxDurationTimer->isActive()) {
             delete _maxDurationTimer;
             _maxDurationTimer = nullptr;
         }
@@ -194,7 +236,7 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
         if (!_destroying)
             emit stateChanged();
     });
-
+#if 0
     connect(_probe, &QAudioProbe::audioBufferProbed, this, [this](const QAudioBuffer &buffer) {
         auto format = buffer.format();
         if (format.channelCount() > 2) {
@@ -241,12 +283,12 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
             qWarning("unsupported audio sample type: %d", int(format.sampleType()));
         }
     });
+#endif
 
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
     connect(_recorder, static_cast<void (QMediaRecorder::*)(QMediaRecorder::Error error)>(&QMediaRecorder::error), this,
             [this](QMediaRecorder::Error error) {
-                if (error != QMediaRecorder::Error::NoError) {
-                    emit this->error(_recorder->errorString());
-                }
+                emit this->error(_recorder->errorString());
             });
 
     connect(_recorder, &QMediaRecorder::statusChanged, this, [this](QMediaRecorder::Status status) {
@@ -254,6 +296,12 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
             emit recordingStarted();
         }
     });
+#else
+    connect(_recorder, &QMediaRecorder::errorOccurred, this,
+            [this](QMediaRecorder::Error error, const QString &errorString) {
+                emit this->error(errorString);
+            });
+#endif
 }
 
 void AudioRecorder::record()
@@ -308,7 +356,11 @@ void AudioRecorder::stop()
 void AudioRecorder::cleanup()
 {
     _destroying = true;
-    if (_recorder->state() == QAudioRecorder::RecordingState)
+#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+    if (_recorder->state() == QtRecorder::RecordingState)
+#else
+    if (_recorder->recorderState() == QtRecorder::RecordingState)
+#endif
         _recorder->stop();
     _destroying = false;
     _isTmpFile  = false;
