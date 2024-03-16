@@ -16,7 +16,7 @@ void SpellHighlighter::highlightBlock(const QString &text)
     }
 
     // Match words (minimally)
-    QRegularExpression expression("\\b\\w+\\b");
+    QRegularExpression expression("\\b\\w+\\b", QRegularExpression::UseUnicodePropertiesOption);
     QRegularExpression digit("^\\d+$");
 
     // Iterate through all words
