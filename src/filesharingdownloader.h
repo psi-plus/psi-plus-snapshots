@@ -20,6 +20,7 @@
 #pragma once
 
 #include <QIODevice>
+#include <memory>
 
 class PsiAccount;
 
@@ -71,5 +72,5 @@ signals:
 
 private:
     class Private;
-    QScopedPointer<Private> d;
+    std::unique_ptr<Private> d;
 };

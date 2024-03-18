@@ -445,8 +445,12 @@ void readColorEntry(const QDomElement &e, const QString &name, QColor *v)
     QDomElement tag = e.firstChildElement(name);
     if (tag.isNull())
         return;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QColor c;
     c.setNamedColor(tagContent(tag));
+#else
+    auto c = QColor::fromString(tagContent(tag));
+#endif
     if (c.isValid())
         *v = c;
 }

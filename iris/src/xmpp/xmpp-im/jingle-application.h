@@ -79,7 +79,7 @@ namespace XMPP { namespace Jingle {
         inline Origin                     senders() const { return _senders; }
         inline QString                    contentName() const { return _contentName; }
         inline QSharedPointer<Transport>  transport() const { return _transport; }
-        inline TransportSelector         *transportSelector() const { return _transportSelector.data(); }
+        inline TransportSelector         *transportSelector() const { return _transportSelector.get(); }
         bool                              isRemote() const;
         inline bool                       isLocal() const { return !isRemote(); }
         inline ApplicationFlags           flags() const { return _flags; }
@@ -185,8 +185,8 @@ namespace XMPP { namespace Jingle {
         Origin  _senders;
 
         // current transport. either local or remote. has info about origin and state
-        QSharedPointer<Transport>         _transport;
-        QScopedPointer<TransportSelector> _transportSelector;
+        QSharedPointer<Transport>          _transport;
+        std::unique_ptr<TransportSelector> _transportSelector;
 
         // if transport-replace is in progress. will be set to true when accepted by both sides.
         PendingTransportReplace _pendingTransportReplace = PendingTransportReplace::None;

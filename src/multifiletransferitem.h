@@ -21,8 +21,7 @@
 #define MULTIFILETRANSFERITEM_H
 
 #include "multifiletransfermodel.h"
-
-#include <QScopedPointer>
+#include <memory>
 
 class MultiFileTransferItem : public QObject {
     Q_OBJECT
@@ -71,7 +70,7 @@ signals:
 private:
     friend class MultiFileTransferModel;
     struct Private;
-    QScopedPointer<Private> d;
+    std::unique_ptr<Private> d;
 };
 
 #endif // MULTIFILETRANSFERITEM_H

@@ -133,7 +133,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     private:
         class Private;
-        QScopedPointer<Private> d;
+        std::unique_ptr<Private> d;
     };
 
     class Manager : public XMPP::Jingle::ApplicationManager {

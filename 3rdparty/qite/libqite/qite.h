@@ -60,7 +60,7 @@ public:
     enum class EventType { Enter, Leave, Move, Click };
     class Event {
     public:
-        QEvent *  qevent;
+        QEvent   *qevent;
         EventType type;
         QPoint    pos; // relative to element. last position for "Leave"
     };
@@ -107,7 +107,7 @@ private slots:
     void trackVisibility();
 
 private:
-    QTextEdit *                                   _textEdit = nullptr;
+    QTextEdit                                    *_textEdit = nullptr;
     int                                           _baseObjectType;
     int                                           _objectType;
     quint32                                       _uniqueElementId = 0;    // just a sequence number

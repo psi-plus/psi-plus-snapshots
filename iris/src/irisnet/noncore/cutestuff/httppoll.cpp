@@ -848,7 +848,7 @@ void HttpProxyGetStream::sock_readyRead()
 
 void HttpProxyGetStream::processData(const QByteArray &block)
 {
-    printf("processData: %d bytes\n", block.size());
+    printf("processData: %lld bytes\n", qsizetype(block.size()));
     if (!d->inHeader) {
         emit dataReady(block);
         return;

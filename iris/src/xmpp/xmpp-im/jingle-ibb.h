@@ -50,7 +50,7 @@ namespace Jingle { namespace IBB {
         friend class Manager;
 
         struct Private;
-        QScopedPointer<Private> d;
+        std::unique_ptr<Private> d;
     };
 
     class Manager;
@@ -91,7 +91,7 @@ namespace Jingle { namespace IBB {
 
     private:
         struct Private;
-        QScopedPointer<Private> d;
+        std::unique_ptr<Private> d;
     };
 } // namespace IBB
 } // namespace Jingle

@@ -13,8 +13,12 @@ LanguageManager::LangId LanguageManager::fromString(const QString &langDesc)
     int cnt     = langDesc.count(QRegularExpression("[_-]"));
     id.language = loc.language();
     if (cnt) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         id.country = loc.country(); // supposing if there are two components then it's lways country and not script
-        if (cnt > 1) {              // lang_script_country
+#else
+        id.country = loc.territory();
+#endif
+        if (cnt > 1) { // lang_script_country
             id.script = loc.script();
         }
     }
@@ -89,10 +93,15 @@ QList<LanguageManager::LangId> LanguageManager::bestUiMatch(const QSet<LanguageM
         // check if ui locale looks like system locale and set missed parts
         if (uiId.language == def.language()) { // matches with system. consider country and script from system to be
                                                // preferred if not set in ui
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            auto country = def.country();
+#else
+            auto country = def.territory();
+#endif
             if (!uiId.country && (!uiId.script || uiId.script == def.script())) {
-                uiId.country = def.country();
+                uiId.country = country;
             }
-            if (!uiId.script && (!uiId.country || uiId.country == def.country())) {
+            if (!uiId.script && (!uiId.country || uiId.country == country)) {
                 uiId.script = def.script();
             }
         }
@@ -191,7 +200,11 @@ QString LanguageManager::languageName(const LanguageManager::LangId &id)
         name += " - " + QLocale::scriptToString(loc.script());
     }
     if (needCountry && id.country) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         name += " - " + loc.nativeCountryName();
+#else
+        name += " - " + loc.nativeTerritoryName();
+#endif
     }
     return name;
 }
@@ -199,9 +212,17 @@ QString LanguageManager::languageName(const LanguageManager::LangId &id)
 QString LanguageManager::countryName(const LanguageManager::LangId &id)
 {
     QLocale loc((QLocale::Language)id.language, (QLocale::Script)id.script, (QLocale::Country)id.country);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QString ret = loc.nativeCountryName();
+#else
+    QString ret = loc.nativeTerritoryName();
+#endif
     if (loc.language() != QLocale().language() && loc.script() != QLocale::LatinScript) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         ret += " (" + loc.countryToString(loc.country()) + ")";
+#else
+        ret += " (" + loc.territoryToString(loc.territory()) + ")";
+#endif
     }
     return ret;
 }

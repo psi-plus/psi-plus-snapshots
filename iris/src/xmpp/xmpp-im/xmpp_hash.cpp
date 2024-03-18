@@ -172,7 +172,7 @@ bool Hash::compute(const QByteArray &ba)
     if (!v_data.isEmpty())
         return true;
 
-    qDebug("failed to compute %s hash for %d bytes", qPrintable(stringType()), ba.size());
+    qDebug("failed to compute %s hash for %lld bytes", qPrintable(stringType()), qsizetype(ba.size()));
     return false;
 }
 

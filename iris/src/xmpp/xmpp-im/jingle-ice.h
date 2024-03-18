@@ -60,7 +60,7 @@ namespace Jingle { namespace ICE {
         friend class Manager;
 
         class Private;
-        QScopedPointer<Private> d;
+        std::unique_ptr<Private> d;
     };
 
     class Pad : public TransportManagerPad {
@@ -129,7 +129,7 @@ namespace Jingle { namespace ICE {
     private:
         friend class Transport;
         class Private;
-        QScopedPointer<Private> d;
+        std::unique_ptr<Private> d;
     };
 } // namespace Ice
 } // namespace Jingle

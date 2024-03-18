@@ -58,11 +58,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     auto musicDir = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
 
-    auto nameFilters = QStringList() << "*.aac"
-                                     << "*.flac"
-                                     << "*.mp3"
-                                     << "*.ogg"
-                                     << "*.webm";
+    auto         nameFilters = QStringList() << "*.aac" << "*.flac" << "*.mp3" << "*.ogg" << "*.webm";
     QDirIterator it(musicDir, nameFilters, QDir::Files | QDir::NoSymLinks, QDirIterator::Subdirectories);
     QStringList  files;
     int          count = 2000;

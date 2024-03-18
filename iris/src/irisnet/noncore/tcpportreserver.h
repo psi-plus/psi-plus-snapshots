@@ -123,7 +123,7 @@ private:
 
 private:
     struct Private;
-    QScopedPointer<Private> d;
+    std::unique_ptr<Private> d;
 };
 
 /**

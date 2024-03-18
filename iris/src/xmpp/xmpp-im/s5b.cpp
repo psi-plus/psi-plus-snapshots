@@ -2229,7 +2229,7 @@ S5BServer::S5BServer(QTcpServer *serverSocket) : TcpPortServer(serverSocket), d(
 
 S5BServer::~S5BServer()
 {
-    // basically to make QScopedPointer happy
+    // basically to make std::unique_ptr happy
 }
 
 void S5BServer::writeUDP(const QHostAddress &addr, quint16 port, const QByteArray &data)

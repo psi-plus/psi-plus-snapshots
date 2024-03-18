@@ -22,8 +22,7 @@ under the License.
 
 #include <QObject>
 
-
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 class QAudioRecorder;
 #else
 class QMediaRecorder;
@@ -71,24 +70,24 @@ signals:
 public slots:
 
 private:
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QAudioRecorder *_recorder = nullptr;
 #else
-    QAudioInput *_audioInput = nullptr;
+    QAudioInput          *_audioInput     = nullptr;
     QMediaCaptureSession *_captureSession = nullptr;
-    QMediaRecorder *_recorder = nullptr;
+    QMediaRecorder       *_recorder       = nullptr;
 #endif
-    //QAudioProbe *   _probe;
-    Quantum         _quantum;
-    QByteArray      _amplitudes;
-    QByteArray      _compressedHistorgram;
-    QByteArray      _audioData;
-    QTimer *        _maxDurationTimer = nullptr;
-    qint64          _duration;
-    int             _maxDuration = -1;
-    quint8          _maxVolume;
-    bool            _destroying = false;
-    bool            _isTmpFile  = false;
+    // QAudioProbe *   _probe;
+    Quantum    _quantum;
+    QByteArray _amplitudes;
+    QByteArray _compressedHistorgram;
+    QByteArray _audioData;
+    QTimer    *_maxDurationTimer = nullptr;
+    qint64     _duration;
+    int        _maxDuration = -1;
+    quint8     _maxVolume;
+    bool       _destroying = false;
+    bool       _isTmpFile  = false;
 };
 
 #endif // QITEAUDIORECORDER_H

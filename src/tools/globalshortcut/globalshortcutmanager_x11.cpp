@@ -216,7 +216,13 @@ private:
 public:
     static bool convertKeySequence(const QKeySequence &ks, unsigned int *_mod, Qt_XK_Keygroup *_kg)
     {
-        int            code = ks[0];
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        auto modifiers = Qt::KeyboardModifiers(ks[0] & Qt::KeyboardModifierMask);
+        int  code      = modifiers & ~Qt::KeyboardModifierMask;
+#else
+        auto modifiers = ks[0].keyboardModifiers();
+        int  code      = ks[0].key();
+#endif
         Qt_XK_Keygroup kg;
         kg.num    = 0;
         kg.sym[0] = 0;
@@ -224,16 +230,14 @@ public:
         ensureModifiers();
 
         unsigned int mod = 0;
-        if (code & Qt::META)
+        if (modifiers & Qt::MetaModifier)
             mod |= meta_mask;
-        if (code & Qt::SHIFT)
+        if (modifiers & Qt::ShiftModifier)
             mod |= ShiftMask;
-        if (code & Qt::CTRL)
+        if (modifiers & Qt::ControlModifier)
             mod |= ControlMask;
-        if (code & Qt::ALT)
+        if (modifiers & Qt::AltModifier)
             mod |= alt_mask;
-
-        code &= ~Qt::KeyboardModifierMask;
 
         bool found = false;
         for (int n = 0; qt_xk_table[n].key != Qt::Key_unknown; ++n) {

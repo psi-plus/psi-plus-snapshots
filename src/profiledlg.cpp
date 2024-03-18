@@ -22,7 +22,6 @@
 #include "applicationinfo.h"
 #include "common.h"
 #include "iconset.h"
-#include "iconwidget.h"
 #include "profiles.h"
 #include "psioptions.h"
 
@@ -264,26 +263,28 @@ void ProfileManageDlg::slotProfileDelete()
     }
 
     // prompt first
-    int r = QMessageBox::warning(
-        this, CAP(tr("Delete Profile")),
-        tr("<qt>Are you sure you want to delete the \"<b>%1</b>\" profile?  "
-           "This will delete all of the profile's message history as well as associated settings!</qt>")
-            .arg(name),
-        tr("No, I changed my mind"), tr("Delete it!"));
+    auto msgBox
+        = QMessageBox(QMessageBox::Warning, CAP(tr("Delete Profile")),
+                      tr("<qt>Are you sure you want to delete the \"<b>%1</b>\" profile?  "
+                         "This will delete all of the profile's message history as well as associated settings!</qt>")
+                          .arg(name));
+    auto rejectButton = msgBox.addButton(tr("No, I changed my mind"), QMessageBox::RejectRole);
+    auto acceptButton = msgBox.addButton(tr("Delete it!"), QMessageBox::AcceptRole);
+    msgBox.exec();
 
-    if (r != 1)
+    if (msgBox.clickedButton() != acceptButton)
         return;
 
-    r = QMessageBox::information(
+    auto r = QMessageBox::information(
         this, CAP(tr("Delete Profile")),
         tr("<qt>As a precaution, you are being asked one last time if this is what you really want.  "
            "The following folders will be deleted!<br><br>\n"
            "<b>%1</b><br><br>\n"
            "Proceed?")
             .arg(paths.join("\n")),
-        tr("&No"), tr("&Yes"));
+        QMessageBox::Yes | QMessageBox::No);
 
-    if (r == 1) {
+    if (r == QMessageBox::Yes) {
         if (!profileDelete(paths)) {
             QMessageBox::critical(
                 this, CAP("Error"),

@@ -306,7 +306,7 @@ namespace XMPP { namespace Jingle {
             }
 
             QMultiMap<Application::Update, Application *> updates;
-            qDebug("jingle-doStep: %d applications have updates", signalingContent.size());
+            qDebug("jingle-doStep: %lld applications have updates", qsizetype(signalingContent.size()));
             for (auto app : std::as_const(signalingContent)) {
                 auto updateType = app->evaluateOutgoingUpdate();
                 if (updateType.action != Action::NoAction) {
@@ -510,7 +510,7 @@ namespace XMPP { namespace Jingle {
                 return result { Unsupported, trReason == Reason::NoReason ? Reason::UnsupportedApplications : trReason,
                                 nullptr };
             }
-            QScopedPointer<Application> app(appPad->manager()->startApplication(appPad, c.name, c.creator, c.senders));
+            std::unique_ptr<Application> app(appPad->manager()->startApplication(appPad, c.name, c.creator, c.senders));
             if (!app)
                 return result { Unparsed, Reason::Success, nullptr };
 
@@ -522,10 +522,10 @@ namespace XMPP { namespace Jingle {
             }
 
             if (app->setTransport(std::get<2>(trpr))) {
-                return result { Ok, Reason::Success, app.take() };
+                return result { Ok, Reason::Success, app.release() };
             }
             // TODO We can do transport-replace in all cases where std::get<1>(trpr) != NoReason
-            return result { Unsupported, Reason::IncompatibleParameters, app.take() };
+            return result { Unsupported, Reason::IncompatibleParameters, app.release() };
         }
 
         typedef std::tuple<AddContentError, Reason::Condition, QList<Application *>, QList<QDomElement>>

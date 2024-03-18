@@ -624,7 +624,8 @@ namespace StunTypes {
                     if (!val.isEmpty())
                         out += QString(" = %1").arg(val);
                 } else
-                    out += QString::asprintf("  Unknown attribute (0x%04x) of %d bytes", a.type, a.value.size());
+                    out += QString::asprintf("  Unknown attribute (0x%04x) of %lld bytes", a.type,
+                                             qsizetype(a.value.size()));
             }
         } else
             out += "\n  (None)";

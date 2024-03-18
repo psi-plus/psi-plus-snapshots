@@ -254,7 +254,7 @@ signals:
 
 private:
     struct Private;
-    QScopedPointer<Private> d;
+    std::unique_ptr<Private> d;
 };
 
 class JT_S5B : public Task {

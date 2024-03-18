@@ -31,7 +31,7 @@ using namespace XMPP;
 //----------------------------------------------------------------------------
 // StringPrepCache
 //----------------------------------------------------------------------------
-QScopedPointer<StringPrepCache> StringPrepCache::_instance;
+std::unique_ptr<StringPrepCache> StringPrepCache::_instance;
 
 bool StringPrepCache::nameprep(const QString &in, int maxbytes, QString &out)
 {
@@ -155,7 +155,7 @@ StringPrepCache *StringPrepCache::instance()
         irisNetAddPostRoutine(cleanup); // REVIEW probably not necessary since heap will be deallocated with destructors
 #endif
     }
-    return _instance.data();
+    return _instance.get();
 }
 
 StringPrepCache::StringPrepCache() { }

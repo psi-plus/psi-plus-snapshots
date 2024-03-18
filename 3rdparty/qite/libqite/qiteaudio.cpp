@@ -74,8 +74,7 @@ public:
 Q_DECLARE_OPERATORS_FOR_FLAGS(AudioMessageFormat::Flags)
 
 AudioMessageFormat::AudioMessageFormat(int objectType, ElementId id, const QUrl &url, ITEMediaOpener *mediaOpener,
-                                       quint32 position, const Flags &state) :
-    InteractiveTextFormat(objectType, id)
+                                       quint32 position, const Flags &state) : InteractiveTextFormat(objectType, id)
 {
     setProperty(Url, url);
     setProperty(MediaOpener, QVariant::fromValue<void *>(mediaOpener));
@@ -330,7 +329,7 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
                 painter->drawRect(hcolRect);
             }
         }
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     } else if (hg.type() == QVariant::String) {
 #else
     } else if (hg.typeId() == QMetaType::QString) {
@@ -402,10 +401,10 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                     activePlayers.insert(playerId, player);
                     ITEMediaOpener *opener = format.mediaOpener();
                     QUrl            url    = format.url();
-                    QIODevice *     stream = opener ? opener->open(url) : nullptr;
+                    QIODevice      *stream = opener ? opener->open(url) : nullptr;
                     if (stream)
                         connect(player, &QMediaPlayer::destroyed, this, [opener, stream]() { opener->close(stream); });
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
                     player->setMedia(url, stream);
 #else
                     player->setSourceDevice(stream, url);
@@ -445,7 +444,7 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                             auto title = player->metaData(QMediaMetaData::Title).toString();
 #else
                     connect(player, &QMediaPlayer::metaDataChanged, this, [this, player]() {
-                            auto title = player->metaData().value(QMediaMetaData::Title).toString();
+                        auto title = player->metaData().value(QMediaMetaData::Title).toString();
 #endif
 
                             if (title.isEmpty()) {
@@ -458,7 +457,12 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                                 return;
                             }
                             auto format = AudioMessageFormat::fromCharFormat(cursor.charFormat().toCharFormat());
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
                             if (format.metaData().type() == QVariant::List) {
+#else
+                        if (format.metaData().typeId() == QMetaType::QVariantList) {
+#endif
                                 return; // seems we have amplitudes already
                             }
                             format.setMetaData(title);
@@ -473,7 +477,7 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                     connect(player,
                             static_cast<void (QMediaPlayer::*)(const QString &, const QVariant &)>(
                                 &QMediaPlayer::metaDataChanged),
-                        [=](const QString &key, const QVariant &value) {
+                            [=](const QString &key, const QVariant &value) {
                                 if (key != QMediaMetaData::Comment) {
                                     return;
                                 }
@@ -482,9 +486,8 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                     connect(player, &QMediaPlayer::metaDataChanged, this, [=]() {
                         auto comment = player->metaData().value(QMediaMetaData::Comment).toString();
 #endif
-                                int     index = 0;
-                                if (comment.isEmpty()
-                                    || !comment.startsWith(QLatin1String("AMPLDIAGSTART"))
+                                int index = 0;
+                                if (comment.isEmpty() || !comment.startsWith(QLatin1String("AMPLDIAGSTART"))
                                     || (index = comment.indexOf("AMPLDIAGEND")) == -1) {
                                     return; // In comment we keep amplitudes. We don't expect anything else
                                 }
@@ -525,7 +528,9 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                                      [=](QMediaPlayer::Error error) { qDebug() << "Error occurred:" << error; });
 #else
                     QObject::connect(player, &QMediaPlayer::errorOccurred, this,
-                                     [=](QMediaPlayer::Error error, const QString &errorString) { qDebug() << "Error occurred:" << errorString; });
+                                     [=](QMediaPlayer::Error error, const QString &errorString) {
+                                         qDebug() << "Error occurred:" << errorString;
+                                     });
 #endif
                 }
                 // player->setVolume(0);

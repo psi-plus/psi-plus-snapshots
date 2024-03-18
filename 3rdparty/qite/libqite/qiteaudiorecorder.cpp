@@ -23,30 +23,30 @@ under the License.
 #include <cmath>
 
 #include <QAudioFormat>
-//#include <QAudioProbe>
+// #include <QAudioProbe>
 #include <QAudioBuffer>
-//#include <QAudioRecorder>
+// #include <QAudioRecorder>
 #include <QByteArray>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
-#if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QMediaFormat>
 #endif
 #include <QMediaMetaData>
 #include <QTemporaryFile>
 #include <QTimer>
 #include <QUrl>
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
-# include <QAudioRecorder>
-# define QtRecorder QAudioRecorder
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QAudioRecorder>
+#define QtRecorder QAudioRecorder
 #else
-# include <QMediaCaptureSession>
-# include <QMediaRecorder>
-# include <QAudioInput>
-# include <QAudioDevice>
-# include <QMediaDevices>
-# define QtRecorder QMediaRecorder
+#include <QAudioDevice>
+#include <QAudioInput>
+#include <QMediaCaptureSession>
+#include <QMediaDevices>
+#include <QMediaRecorder>
+#define QtRecorder QMediaRecorder
 #endif
 
 #if 0
@@ -121,8 +121,7 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
     //_probe = new QAudioProbe(this);
     //_probe->setSource(_recorder);
 
-
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QAudioEncoderSettings audioSettings;
     audioSettings.setCodec("audio/x-opus");
     audioSettings.setQuality(QMultimedia::HighQuality);
@@ -148,7 +147,7 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
 
     connect(_recorder, &QtRecorder::durationChanged, this, [this](qint64 duration) { _duration = duration; });
 
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     connect(_recorder, &QtRecorder::stateChanged, this, [this]() {
         auto recorderState = _recorder->state();
 #else
@@ -214,13 +213,13 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
 #else
             if (_isTmpFile) {
                 QString fn = _recorder->outputLocation().toLocalFile();
-                QFile f(fn);
+                QFile   f(fn);
                 f.open(QIODevice::ReadOnly);
                 _audioData = f.readAll();
                 f.close();
                 f.remove();
             } else {
-                QFile metaFile(_recorder->outputLocation().toLocalFile()+".amplitudes");
+                QFile metaFile(_recorder->outputLocation().toLocalFile() + ".amplitudes");
                 if (metaFile.open(QIODevice::WriteOnly)) {
                     metaFile.write(columns.join(",").toLatin1());
                     metaFile.close();
@@ -287,11 +286,9 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
     });
 #endif
 
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     connect(_recorder, static_cast<void (QMediaRecorder::*)(QMediaRecorder::Error error)>(&QMediaRecorder::error), this,
-            [this](QMediaRecorder::Error error) {
-                emit this->error(_recorder->errorString());
-            });
+            [this](QMediaRecorder::Error error) { emit this->error(_recorder->errorString()); });
 
     connect(_recorder, &QMediaRecorder::statusChanged, this, [this](QMediaRecorder::Status status) {
         if (status == QMediaRecorder::RecordingStatus) {
@@ -300,9 +297,7 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
     });
 #else
     connect(_recorder, &QMediaRecorder::errorOccurred, this,
-            [this](QMediaRecorder::Error error, const QString &errorString) {
-                emit this->error(errorString);
-            });
+            [this](QMediaRecorder::Error error, const QString &errorString) { emit this->error(errorString); });
 #endif
 }
 
@@ -358,7 +353,7 @@ void AudioRecorder::stop()
 void AudioRecorder::cleanup()
 {
     _destroying = true;
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (_recorder->state() == QtRecorder::RecordingState)
 #else
     if (_recorder->recorderState() == QtRecorder::RecordingState)

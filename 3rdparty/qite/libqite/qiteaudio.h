@@ -35,7 +35,7 @@ class ITEAudioController : public InteractiveTextElementController {
 
     QCursor                       _cursor;
     QMap<quint32, QMediaPlayer *> activePlayers;
-    QNetworkAccessManager *       nam = nullptr;
+    QNetworkAccessManager        *nam = nullptr;
 
     // geometry
     QSize   elementSize;
@@ -56,7 +56,7 @@ class ITEAudioController : public InteractiveTextElementController {
     void updateGeomtry();
 
 public:
-#if QT_VERSION < QT_VERSION_CHECK(6,0,0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     using PlaybackState = QMediaPlayer::State;
 #else
     using PlaybackState = QMediaPlayer::PlaybackState;
@@ -71,7 +71,7 @@ public:
     void   drawITE(QPainter *painter, const QRectF &rect, int posInDocument, const QTextFormat &format);
 
     QTextCharFormat makeFormat(const QUrl &audioSrc, ITEMediaOpener *mediaOpener) const;
-    void            insert(const QUrl &    audioSrc,
+    void            insert(const QUrl     &audioSrc,
                            ITEMediaOpener *mediaOpener = nullptr); // add new media to textedit. see QMediaPlayer::setMedia
     QCursor         cursor();                                      // cursor form after last mose events
 

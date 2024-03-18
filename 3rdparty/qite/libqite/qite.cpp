@@ -151,7 +151,11 @@ bool InteractiveText::eventFilter(QObject *obj, QEvent *event)
     if (event->type() == QEvent::MouseButtonPress) {
         pos = static_cast<QMouseEvent *>(event)->pos();
     } else {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         pos = static_cast<QHoverEvent *>(event)->pos();
+#else
+        pos = static_cast<QHoverEvent *>(event)->position().toPoint();
+#endif
     }
 
     if (event->type() == QEvent::HoverEnter || event->type() == QEvent::HoverMove

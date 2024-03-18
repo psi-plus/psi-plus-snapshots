@@ -55,7 +55,11 @@ public:
         void clearArgs()
         {
             for (int n = 0; n < args.count(); ++n)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
                 QMetaType::destroy(args[n].type, args[n].data);
+#else
+                QMetaType(args[n].type).destroy(args[n].data);
+#endif
             args.clear();
         }
 
@@ -78,7 +82,11 @@ public:
                     break;
 
                 Argument arg;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
                 arg.type = QMetaType::type(arg_name[n]);
+#else
+                arg.type = QMetaType::fromName(arg_name[n]).id();
+#endif
                 if (!arg.type) {
                     clearArgs();
                     return false;
@@ -149,7 +157,11 @@ private slots:
 
         QGenericArgument arg[10];
         for (int n = 0; n < call->args.count(); ++n)
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             arg[n] = QGenericArgument(QMetaType::typeName(call->args[n].type), call->args[n].data);
+#else
+            arg[n] = QGenericArgument(QMetaType(call->args[n].type).name(), call->args[n].data);
+#endif
 
         bool ok;
         ok = QMetaObject::invokeMethod(call->obj, call->method.data(), Qt::DirectConnection, arg[0], arg[1], arg[2],

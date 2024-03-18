@@ -33,10 +33,7 @@
 #include "xmpp_client.h"
 #include "xmpp_externalservicediscovery.h"
 #include "xmpp_serverinfomanager.h"
-#include "xmpp_xmlcommon.h"
 
-#include <array>
-#include <chrono>
 #include <memory>
 
 #include <QElapsedTimer>
@@ -452,7 +449,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         int                            proxiesInDiscoCount       = 0;
         QVector<Component>             components;
         QList<XMPP::Ice176::Candidate> pendingLocalCandidates; // cid to candidate mapping
-        QScopedPointer<Element>        remoteState;
+        std::unique_ptr<Element>       remoteState;
 
         // QString            sid;
         // Transport::Mode    mode = Transport::Tcp;
@@ -638,7 +635,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 return;
             }
 
-            auto manager     = dynamic_cast<Manager *>(q->pad()->manager())->d.data();
+            auto manager     = dynamic_cast<Manager *>(q->pad()->manager())->d.get();
             stunBindPort     = manager->stunBindPort;
             stunRelayUdpPort = manager->stunRelayUdpPort;
             stunRelayTcpPort = manager->stunRelayTcpPort;
@@ -659,7 +656,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
         void startIce()
         {
-            auto manager = dynamic_cast<Manager *>(q->_pad->manager())->d.data();
+            auto manager = dynamic_cast<Manager *>(q->_pad->manager())->d.get();
 
             if (!stunBindAddr.isNull() && stunBindPort > 0)
                 qDebug("STUN service: %s;%d", qPrintable(stunBindAddr.toString()), stunBindPort);
@@ -707,7 +704,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                        [this](const QList<XMPP::Ice176::Candidate> &candidates) {
                            pendingActions |= NewCandidate;
                            pendingLocalCandidates += candidates;
-                           qDebug("discovered %d local candidates", candidates.size());
+                           qDebug("discovered %lld local candidates", qsizetype(candidates.size()));
                            for (auto const &c : candidates) {
                                qDebug(" - %s:%d", qPrintable(c.ip.toString()), c.port);
                            }

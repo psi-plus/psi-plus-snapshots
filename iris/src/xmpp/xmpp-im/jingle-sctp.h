@@ -25,7 +25,6 @@
 #include <QAbstractSocket>
 #include <QDomElement>
 #include <QObject>
-#include <QScopedPointer>
 
 #include <memory>
 
@@ -95,7 +94,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         void newIncomingChannel();
 
     private:
-        QScopedPointer<AssociationPrivate> d;
+        std::unique_ptr<AssociationPrivate> d;
     };
 
 }}}

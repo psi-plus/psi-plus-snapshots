@@ -22,8 +22,8 @@
 
 #include <QByteArray>
 #include <QHash>
-#include <QScopedPointer>
 #include <QString>
+#include <memory>
 
 namespace XMPP {
 class StringPrepCache {
@@ -41,8 +41,8 @@ private:
     QHash<QString, QString> resourceprep_table;
     QHash<QString, QString> saslprep_table;
 
-    static QScopedPointer<StringPrepCache> _instance;
-    static StringPrepCache                *instance();
+    static std::unique_ptr<StringPrepCache> _instance;
+    static StringPrepCache                 *instance();
 
     StringPrepCache();
 };

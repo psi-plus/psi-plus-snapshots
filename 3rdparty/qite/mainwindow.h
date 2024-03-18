@@ -40,9 +40,9 @@ private slots:
     void recordMic();
 
 private:
-    Ui::MainWindow *    ui;
-    QAction *           recordAction;
-    AudioRecorder *     recorder = nullptr;
+    Ui::MainWindow     *ui;
+    QAction            *recordAction;
+    AudioRecorder      *recorder = nullptr;
     ITEAudioController *atc;
 };
 

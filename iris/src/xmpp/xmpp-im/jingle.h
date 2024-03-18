@@ -377,7 +377,7 @@ namespace Jingle {
         Session *incomingSessionInitiate(const Jid &from, const Jingle &jingle, const QDomElement &jingleEl);
 
         class Private;
-        QScopedPointer<Private> d;
+        std::unique_ptr<Private> d;
     };
 
     Origin negateOrigin(Origin o);

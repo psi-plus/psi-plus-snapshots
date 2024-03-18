@@ -195,7 +195,7 @@ static bool cert_match_domain(const QString &certname, const QString &acedomain)
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         if (!QRegExp(p1, Qt::CaseSensitive, QRegExp::Wildcard).exactMatch(p2))
 #else
-        // note, wildcards a by default anchored. so exact match
+        // note, wildcards are by default anchored. so exact match
         if (!QRegularExpression::fromWildcard(p1, Qt::CaseSensitive).match(p2).hasMatch())
 #endif
             return false;

@@ -95,7 +95,7 @@ namespace XMPP { namespace Jingle {
         bool updateFromXml(Action action, const QDomElement &jingleEl);
 
         class Private;
-        QScopedPointer<Private> d;
+        std::unique_ptr<Private> d;
     };
 }}
 

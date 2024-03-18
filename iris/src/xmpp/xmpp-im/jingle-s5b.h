@@ -152,7 +152,7 @@ namespace Jingle { namespace S5B {
         friend class Manager;
 
         class Private;
-        QScopedPointer<Private> d;
+        std::unique_ptr<Private> d;
     };
 
     class Pad : public TransportManagerPad {
@@ -212,7 +212,7 @@ namespace Jingle { namespace S5B {
 
     private:
         class Private;
-        QScopedPointer<Private> d;
+        std::unique_ptr<Private> d;
     };
 } // namespace S5B
 } // namespace Jingle

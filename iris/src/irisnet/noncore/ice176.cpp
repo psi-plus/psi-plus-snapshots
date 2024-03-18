@@ -453,7 +453,8 @@ public:
         }
         this->remoteCandidates += remoteCandidates;
 
-        iceDebug("adding %d remote candidates. total=%d", remoteCandidates.count(), this->remoteCandidates.count());
+        iceDebug("adding %lld remote candidates. total=%lld", qsizetype(remoteCandidates.count()),
+                 qsizetype(this->remoteCandidates.count()));
         doPairing(localCandidates, remoteCandidates);
     }
 
@@ -508,7 +509,7 @@ public:
     void addChecklistPairs(const QList<QSharedPointer<CandidatePair>> &pairs)
     {
 #ifdef ICE_DEBUG
-        iceDebug("%d new pairs", pairs.count());
+        iceDebug("%lld new pairs", qsizetype(pairs.count()));
         for (auto &p : pairs)
             p->logNew = true;
 #endif
@@ -549,7 +550,7 @@ public:
         while (checkList.pairs.count() > max_pairs)
             checkList.pairs.removeLast();
 #ifdef ICE_DEBUG
-        iceDebug("%d after pruning (just new below):", checkList.pairs.count());
+        iceDebug("%lld after pruning (just new below):", qsizetype(checkList.pairs.count()));
         for (auto &p : checkList.pairs) {
             if (p->logNew)
                 iceDebug("C%d, %s", p->local->componentId, qPrintable(*p));

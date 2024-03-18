@@ -28,12 +28,12 @@ class StunBinding::Private : public QObject {
     Q_OBJECT
 
 public:
-    StunBinding                    *q;
-    StunTransactionPool::Ptr        pool;
-    QScopedPointer<StunTransaction> trans;
-    TransportAddress                stunAddr;
-    TransportAddress                addr;
-    QString                         errorString;
+    StunBinding                     *q;
+    StunTransactionPool::Ptr         pool;
+    std::unique_ptr<StunTransaction> trans;
+    TransportAddress                 stunAddr;
+    TransportAddress                 addr;
+    QString                          errorString;
     bool    use_extPriority = false, use_extIceControlling = false, use_extIceControlled = false;
     quint32 extPriority       = 0;
     bool    extUseCandidate   = false;
@@ -52,9 +52,9 @@ public:
         stunAddr = _addr;
 
         trans.reset(new StunTransaction());
-        connect(trans.data(), &StunTransaction::createMessage, this, &Private::trans_createMessage);
-        connect(trans.data(), &StunTransaction::finished, this, &Private::trans_finished);
-        connect(trans.data(), &StunTransaction::error, this, &Private::trans_error);
+        connect(trans.get(), &StunTransaction::createMessage, this, &Private::trans_createMessage);
+        connect(trans.get(), &StunTransaction::finished, this, &Private::trans_finished);
+        connect(trans.get(), &StunTransaction::error, this, &Private::trans_error);
 
         if (!stuser.isEmpty()) {
             trans->setShortTermUsername(stuser);
@@ -70,7 +70,7 @@ public:
     {
         if (!trans)
             return;
-        auto t = trans.take();
+        auto t = trans.release();
         t->disconnect(this);
         t->cancel(); // will self-delete the transaction either on incoming or timeout
         // just in case those too

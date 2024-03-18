@@ -101,7 +101,7 @@ static int stringprep_apply_table_to_string(QVector<uint> &ucs4, const Stringpre
 {
     std::ptrdiff_t pos;
     size_t         i, maplen;
-    uint32_t *     src    = ucs4.data(); /* points to unprocessed data */
+    uint32_t      *src    = ucs4.data(); /* points to unprocessed data */
     size_t         srclen = ucs4.size(); /* length of unprocessed data */
 
     while ((pos = stringprep_find_string_in_table(src, srclen, &i, table, table_size)) != -1) {
@@ -177,7 +177,8 @@ int stringprep_4i(QString &input, Stringprep_profile_flags flags, const Stringpr
                 /* Profile requires NFKC, but callee asked for no NFKC. */
                 return STRINGPREP_FLAG_ERROR;
 
-            ucs4vector = QString::fromUcs4(ucs4vector.data(), ucs4vector.length())
+            static_assert(sizeof(char32_t) == sizeof(uint));
+            ucs4vector = QString::fromUcs4(reinterpret_cast<char32_t *>(ucs4vector.data()), ucs4vector.length())
                              .normalized(QString::NormalizationForm_KC)
                              .toUcs4();
             break;
@@ -264,7 +265,8 @@ int stringprep_4i(QString &input, Stringprep_profile_flags flags, const Stringpr
         }
     }
 
-    input = QString::fromUcs4(ucs4vector.data(), ucs4vector.size());
+    static_assert(sizeof(char32_t) == sizeof(uint));
+    input = QString::fromUcs4(reinterpret_cast<char32_t *>(ucs4vector.data()), ucs4vector.size());
 
     return STRINGPREP_OK;
 }

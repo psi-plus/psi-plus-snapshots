@@ -21,6 +21,7 @@
 #define OPTIONSTREE_H
 
 #include "varianttree.h"
+
 #include <optional>
 
 /**
@@ -35,8 +36,8 @@ public:
     OptionsTree(QObject *parent = nullptr);
     ~OptionsTree();
 
-    QVariant        getOption(const QString &name, const QVariant &defaultValue = QVariant::Invalid) const;
-    inline QVariant getOption(const char *name, const QVariant &defaultValue = QVariant::Invalid) const
+    QVariant        getOption(const QString &name, const QVariant &defaultValue = {}) const;
+    inline QVariant getOption(const char *name, const QVariant &defaultValue = {}) const
     {
         return getOption(QString(QString::fromLatin1(name)), defaultValue);
     }

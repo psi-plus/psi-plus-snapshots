@@ -533,9 +533,9 @@ namespace XMPP { namespace Jingle {
     //----------------------------------------------------------------------------
     class Manager::Private {
     public:
-        XMPP::Client          *client;
-        Manager               *manager;
-        QScopedPointer<JTPush> pushTask;
+        XMPP::Client           *client;
+        Manager                *manager;
+        std::unique_ptr<JTPush> pushTask;
         // ns -> application
         std::map<QString, QPointer<ApplicationManager>> applicationManagers;
         // ns -> parser function
