@@ -20,19 +20,13 @@ under the License.
 #include "qiteaudiorecorder.h"
 #include "qiteaudio.h"
 
-#include <cmath>
-
-#include <QAudioFormat>
-// #include <QAudioProbe>
 #include <QAudioBuffer>
-// #include <QAudioRecorder>
+#include <QAudioDecoder>
+#include <QAudioFormat>
 #include <QByteArray>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-#include <QMediaFormat>
-#endif
 #include <QMediaMetaData>
 #include <QTemporaryFile>
 #include <QTimer>
@@ -45,11 +39,24 @@ under the License.
 #include <QAudioInput>
 #include <QMediaCaptureSession>
 #include <QMediaDevices>
+#include <QMediaFormat>
 #include <QMediaRecorder>
 #define QtRecorder QMediaRecorder
 #endif
 
-#if 0
+// #define QITE_DEBUG
+
+namespace {
+const qint64 HistogramQuantumSize = 10000;
+const int    HistogramMemSize     = int(1e6) / HistogramQuantumSize * 20; // for 20 secs. ~ 2Kb
+
+struct Quantum {
+    qint64 timeLeft = HistogramQuantumSize; // to generate next value for aplitude amplitudes
+    qreal  sum      = 0.0;
+    int    count    = 0;
+};
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 template <typename T> struct SoloFrameDefault {
     enum { Default = 0 };
 };
@@ -79,47 +86,194 @@ template <class T> struct PeakValue {
 template <> struct PeakValue<float> {
     static constexpr float value = float(1.00003);
 };
+#endif
 
-template <class T>
-void handle(const QAudioBuffer &buffer, AudioRecorder::Quantum &quantum, QByteArray &collector, quint8 &maxVal)
-{
-    const T *data      = buffer.constData<T>();
-    auto     peakvalue = qreal(PeakValue<typename std::decay_t<decltype(data[0])>::value_type>::value);
+}
 
-    auto format    = buffer.format();
-    int  countLeft = format.framesForDuration(quantum.timeLeft);
-    Q_ASSERT(countLeft > 0);
-    for (int i = 0; i < buffer.frameCount(); i++) {
-        quantum.sum += qreal(qAbs(data[i].average())) / peakvalue;
-        quantum.count++;
-        countLeft--;
-        if (!countLeft) {
-            auto value = quint8((quantum.sum / qreal(quantum.count)) * 255.0);
-            if (value > maxVal) {
-                maxVal = value;
+class HistogramExtractor : public QObject {
+    Q_OBJECT
+public:
+    HistogramExtractor(const QUrl &sourceUrl, QObject *parent) : QObject(parent)
+    {
+#ifdef QITE_DEBUG
+        qDebug("Creating histogram extractor for %s", qPrintable(sourceUrl.toString()));
+#endif
+        auto localFile = sourceUrl.toLocalFile();
+        if (!QFileInfo(localFile).exists()) {
+            qFatal("Local file %s doesn't exist", qPrintable(localFile));
+        }
+        _amplitudes.reserve(HistogramMemSize);
+        _decoder = new QAudioDecoder(this);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        _decoder->setSourceFilename(sourceUrl.toLocalFile());
+#else
+        _decoder->setSource(sourceUrl);
+#endif
+        connect(_decoder, &QAudioDecoder::bufferReady, this, &HistogramExtractor::bufferReady);
+        connect(_decoder, &QAudioDecoder::finished, this, &HistogramExtractor::finished);
+        connect(_decoder, &QAudioDecoder::finished, this, &HistogramExtractor::deleteLater);
+    }
+
+    void              start() { _decoder->start(); }
+    inline quint8     maxVolume() const { return _maxVolume; }
+    inline QByteArray amplitudes() const { return _amplitudes; }
+
+signals:
+    void finished();
+
+private:
+    template <class T> void handle(const QAudioBuffer &buffer)
+    {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        const T *data      = buffer.constData<T>();
+        auto     peakvalue = qreal(PeakValue<decltype(data[0].average())>::value);
+#else
+        const T *data       = buffer.constData<T>();
+        using FrameDataType = typename std::decay_t<decltype(data[0])>::value_type;
+
+        double peakvalue; // unreachable value
+        if constexpr (std::is_floating_point_v<FrameDataType>) {
+            peakvalue = 1.0003;
+        } else { // integer
+            if constexpr (std::is_signed_v<FrameDataType>) {
+                peakvalue = double(std::numeric_limits<FrameDataType>::max()) + 1;
+            } else {
+                peakvalue = (double(std::numeric_limits<FrameDataType>::max()) + 1) / 2;
             }
-            // qDebug() << int((quantum.sum / qreal(quantum.count)) * 255.0);
-            collector.append(char(value));
-            if (collector.size() == collector.capacity()) {
-                collector.reserve(collector.capacity() + AudioRecorder::HistogramMemSize);
+        }
+#endif
+
+        auto format    = buffer.format();
+        int  countLeft = format.framesForDuration(_quantum.timeLeft);
+        Q_ASSERT(countLeft > 0);
+        for (int i = 0; i < buffer.frameCount(); i++) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            auto average = qreal(qAbs(data[i].average()));
+#else
+            double sum = 0.0;
+            for (auto value : data[i].channels) {
+                if constexpr (std::is_floating_point_v<FrameDataType> || std::is_signed_v<FrameDataType>) {
+                    sum += std::abs(double(value));
+                } else {
+                    sum += std::abs(double(value) - peakvalue);
+                }
             }
-            quantum   = AudioRecorder::Quantum();
-            countLeft = format.framesForDuration(quantum.timeLeft);
+            auto average = sum / double(std::size(data[i].channels)); // average over all channels
+#endif
+
+            _quantum.sum += average / peakvalue;
+            _quantum.count++;
+            countLeft--;
+            if (!countLeft) {
+                auto value = quint8((_quantum.sum / qreal(_quantum.count)) * 255.0);
+                if (value > _maxVolume) {
+                    _maxVolume = value;
+                }
+                // qDebug() << int((quantum.sum / qreal(quantum.count)) * 255.0);
+                _amplitudes.append(char(value));
+                if (_amplitudes.size() == _amplitudes.capacity()) {
+                    _amplitudes.reserve(_amplitudes.capacity() + HistogramMemSize);
+                }
+                _quantum  = Quantum();
+                countLeft = format.framesForDuration(_quantum.timeLeft);
+            }
+        }
+        if (countLeft) {
+            _quantum.timeLeft = format.durationForFrames(countLeft);
         }
     }
-    if (countLeft) {
-        quantum.timeLeft = format.durationForFrames(countLeft);
-    }
-}
+
+private slots:
+    void bufferReady()
+    {
+        auto buffer = _decoder->read();
+        auto format = buffer.format();
+        if (format.channelCount() > 2) {
+            qWarning("unsupported amount of channels: %d", format.channelCount());
+            return;
+        }
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        if (format.sampleType() == QAudioFormat::SignedInt) {
+            switch (format.sampleSize()) {
+            case 8:
+                if (format.channelCount() == 2)
+                    handle<QAudioBuffer::S8S>(buffer);
+                else
+                    handle<SoloFrame<signed char>>(buffer);
+                break;
+            case 16:
+                if (format.channelCount() == 2)
+                    handle<QAudioBuffer::S16S>(buffer);
+                else
+                    handle<SoloFrame<signed short>>(buffer);
+                break;
+            }
+        } else if (format.sampleType() == QAudioFormat::UnSignedInt) {
+            switch (format.sampleSize()) {
+            case 8:
+                if (format.channelCount() == 2)
+                    handle<QAudioBuffer::S8U>(buffer);
+                else
+                    handle<SoloFrame<unsigned char>>(buffer);
+                break;
+            case 16:
+                if (format.channelCount() == 2)
+                    handle<QAudioBuffer::S16U>(buffer);
+                else
+                    handle<SoloFrame<unsigned short>>(buffer);
+                break;
+            }
+        } else if (format.sampleType() == QAudioFormat::Float) {
+            if (format.channelCount() == 2)
+                handle<QAudioBuffer::S32F>(buffer);
+            else
+                handle<SoloFrame<float>>(buffer);
+        } else {
+            qWarning("unsupported audio sample type: %d", int(format.sampleType()));
+        }
+
+#else
+        switch (format.sampleFormat()) {
+        case QAudioFormat::UInt8:
+            if (format.channelCount() == 2)
+                handle<QAudioBuffer::U8S>(buffer);
+            else
+                handle<QAudioBuffer::U8M>(buffer);
+            break;
+        case QAudioFormat::Int16:
+            if (format.channelCount() == 2)
+                handle<QAudioBuffer::S16S>(buffer);
+            else
+                handle<QAudioBuffer::S16M>(buffer);
+            break;
+        case QAudioFormat::Int32:
+            if (format.channelCount() == 2)
+                handle<QAudioBuffer::S32S>(buffer);
+            else
+                handle<QAudioBuffer::S32M>(buffer);
+            break;
+        case QAudioFormat::Float:
+            if (format.channelCount() == 2)
+                handle<QAudioBuffer::F32S>(buffer);
+            else
+                handle<QAudioBuffer::F32M>(buffer);
+            break;
+        default:
+            qWarning("unsupported audio sample type: %d", int(format.sampleFormat()));
+        }
 #endif
+    }
+
+private:
+    QAudioDecoder *_decoder;
+    quint8         _maxVolume = 0;
+    Quantum        _quantum;
+    QByteArray     _amplitudes;
+};
+
 AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
 {
     _recorder = new QtRecorder(this);
-    // qDebug() << "supported codecs for recorder:" << _recorder->supportedAudioCodecs();
-    // qDebug() << "supported containers for recorder:" << _recorder->supportedContainers();
-
-    //_probe = new QAudioProbe(this);
-    //_probe->setSource(_recorder);
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QAudioEncoderSettings audioSettings;
@@ -150,83 +304,23 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     connect(_recorder, &QtRecorder::stateChanged, this, [this]() {
         auto recorderState = _recorder->state();
+        _state             = recorderState == QAudioRecorder::StoppedState ? StoppedState : RecordingState;
 #else
     connect(_recorder, &QtRecorder::recorderStateChanged, this, [this](QMediaRecorder::RecorderState recorderState) {
+#ifdef QITE_DEBUG
+        qDebug("State changed %d", recorderState);
+#endif
+        _state = recorderState == QtRecorder::StoppedState ? StoppedState : RecordingState;
         if (recorderState == QtRecorder::RecordingState) {
-            emit recordingStarted();
+            emit stateChanged();
             return;
         }
 #endif
-        if (recorderState == QtRecorder::StoppedState && _maxVolume) {
-            // compress amplitudes..
-            auto volumeK = 255.0 / double(_maxVolume); // amplificator
-            if (volumeK > 8) {
-                volumeK = 8; // don't be mad on showing silence
-            }
-            auto step = _amplitudes.size() / double(ITEAudioController::HistogramCompressedSize);
-            _compressedHistorgram.reserve(ITEAudioController::HistogramCompressedSize);
-
-            for (int i = 0; i < ITEAudioController::HistogramCompressedSize; i++) {
-                int prev = int(step * i);
-                int curr = int(step * (i + 1));
-                if (curr == _amplitudes.size()) {
-                    curr = _amplitudes.size() - 1;
-                }
-
-                int sum = 0;
-                for (int j = prev; j <= curr; j++) {
-                    sum += quint8(_amplitudes[j]);
-                }
-                _compressedHistorgram.append(int(sum / double(curr - prev + 1) * volumeK));
-            }
-
-            QStringList columns;
-            std::transform(_compressedHistorgram.begin(), _compressedHistorgram.end(), std::back_inserter(columns),
-                           [](auto const &v) { return QString::number(v); });
-
-            // qDebug() << columns.join(",");
-            _amplitudes.clear();
-            _amplitudes.squeeze();
-#ifdef ITE_EMBED_HISTOGRAM // it's somewhat buggy with Qt since it not always writes metainfo at least in 5.11.2
-            QFile      f(_recorder->outputLocation().toLocalFile());
-            QByteArray buffer;
-            buffer.resize(4096 + 1024);
-            qint64 lastPos = 0;
-            if (f.open(QIODevice::ReadWrite)) {
-                qint64 bytes;
-                while ((bytes = f.read(buffer.data(), qint64(buffer.size()))) > 0) {
-                    auto index = QByteArray::fromRawData(buffer.data(), int(bytes)).indexOf("AMPLDIAGSTART");
-                    if (index >= 0) {
-                        f.seek(
-                            lastPos + index
-                            + int(sizeof("AMPLDIAGSTART["))); // it's not a mistake with sizeof. It's [ is just escaped
-                        f.write(columns.join(",").toLatin1().replace(',', "\\,"));
-                        f.write("\\]AMPLDIAGEND");
-                        f.flush();
-                        break;
-                    }
-                    lastPos += 4096;
-                    f.seek(lastPos);
-                }
-                f.close();
-            }
-#else
-            if (_isTmpFile) {
-                QString fn = _recorder->outputLocation().toLocalFile();
-                QFile   f(fn);
-                f.open(QIODevice::ReadOnly);
-                _audioData = f.readAll();
-                f.close();
-                f.remove();
-            } else {
-                QFile metaFile(_recorder->outputLocation().toLocalFile() + ".amplitudes");
-                if (metaFile.open(QIODevice::WriteOnly)) {
-                    metaFile.write(columns.join(",").toLatin1());
-                    metaFile.close();
-                }
-            }
-#endif
-            emit recorded();
+        if (recorderState == QtRecorder::StoppedState) {
+            auto he = new HistogramExtractor(_recorder->outputLocation(), this); // it's self deletable
+            connect(he, &HistogramExtractor::finished, this,
+                    [he, this]() { postProcess(he->maxVolume(), he->amplitudes()); });
+            he->start();
         }
 
         if (recorderState == QtRecorder::StoppedState && _maxDurationTimer && _maxDurationTimer->isActive()) {
@@ -237,67 +331,22 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
         if (!_destroying)
             emit stateChanged();
     });
-#if 0
-    connect(_probe, &QAudioProbe::audioBufferProbed, this, [this](const QAudioBuffer &buffer) {
-        auto format = buffer.format();
-        if (format.channelCount() > 2) {
-            qWarning("unsupported amount of channels: %d", format.channelCount());
-            return;
-        }
-
-        if (format.sampleType() == QAudioFormat::SignedInt) {
-            switch (format.sampleSize()) {
-            case 8:
-                if (format.channelCount() == 2)
-                    handle<QAudioBuffer::S8S>(buffer, _quantum, _amplitudes, _maxVolume);
-                else
-                    handle<SoloFrame<signed char>>(buffer, _quantum, _amplitudes, _maxVolume);
-                break;
-            case 16:
-                if (format.channelCount() == 2)
-                    handle<QAudioBuffer::S16S>(buffer, _quantum, _amplitudes, _maxVolume);
-                else
-                    handle<SoloFrame<signed short>>(buffer, _quantum, _amplitudes, _maxVolume);
-                break;
-            }
-        } else if (format.sampleType() == QAudioFormat::UnSignedInt) {
-            switch (format.sampleSize()) {
-            case 8:
-                if (format.channelCount() == 2)
-                    handle<QAudioBuffer::S8U>(buffer, _quantum, _amplitudes, _maxVolume);
-                else
-                    handle<SoloFrame<unsigned char>>(buffer, _quantum, _amplitudes, _maxVolume);
-                break;
-            case 16:
-                if (format.channelCount() == 2)
-                    handle<QAudioBuffer::S16U>(buffer, _quantum, _amplitudes, _maxVolume);
-                else
-                    handle<SoloFrame<unsigned short>>(buffer, _quantum, _amplitudes, _maxVolume);
-                break;
-            }
-        } else if (format.sampleType() == QAudioFormat::Float) {
-            if (format.channelCount() == 2)
-                handle<QAudioBuffer::S32F>(buffer, _quantum, _amplitudes, _maxVolume);
-            else
-                handle<SoloFrame<float>>(buffer, _quantum, _amplitudes, _maxVolume);
-        } else {
-            qWarning("unsupported audio sample type: %d", int(format.sampleType()));
-        }
-    });
-#endif
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     connect(_recorder, static_cast<void (QMediaRecorder::*)(QMediaRecorder::Error error)>(&QMediaRecorder::error), this,
-            [this](QMediaRecorder::Error error) { emit this->error(_recorder->errorString()); });
-
-    connect(_recorder, &QMediaRecorder::statusChanged, this, [this](QMediaRecorder::Status status) {
-        if (status == QMediaRecorder::RecordingStatus) {
-            emit recordingStarted();
-        }
-    });
+            [this](QMediaRecorder::Error error) {
+                Q_UNUSED(error);
+                emit this->error(_recorder->errorString());
+            });
 #else
     connect(_recorder, &QMediaRecorder::errorOccurred, this,
-            [this](QMediaRecorder::Error error, const QString &errorString) { emit this->error(errorString); });
+            [this](QMediaRecorder::Error error, const QString &errorString) {
+                Q_UNUSED(error);
+#ifdef QITE_DEBUG
+                qDebug("Error: %s", qPrintable(errorString));
+#endif
+                emit this->error(errorString);
+            });
 #endif
 }
 
@@ -318,15 +367,12 @@ void AudioRecorder::record()
 void AudioRecorder::record(const QString &fileName)
 {
     cleanup();
-    recordToFile(fileName);
+    _fileName = QFileInfo(fileName).absoluteFilePath();
+    recordToFile(_fileName);
 }
 
 void AudioRecorder::recordToFile(const QString &fileName)
 {
-    _quantum = Quantum();
-    _amplitudes.clear();
-    _amplitudes.reserve(HistogramMemSize);
-    _maxVolume = 0;
     _recorder->setOutputLocation(QUrl::fromLocalFile(fileName));
 #ifdef ITE_EMBED_HISTOGRAM
     if (_recorder->isMetaDataWritable()) {
@@ -341,6 +387,9 @@ void AudioRecorder::recordToFile(const QString &fileName)
         _maxDurationTimer->setInterval(_maxDuration);
         connect(_maxDurationTimer, &QTimer::timeout, this, &AudioRecorder::stop);
     }
+#ifdef QITE_DEBUG
+    qDebug("start recording to %s", qPrintable(fileName));
+#endif
     _recorder->record();
 }
 
@@ -369,3 +418,76 @@ void AudioRecorder::cleanup()
         _maxDurationTimer = nullptr;
     }
 }
+
+void AudioRecorder::postProcess(quint8 maxValume, const QByteArray &amplitudes)
+{
+    _maxVolume = maxValume;
+    // compress amplitudes..
+    auto volumeK = 255.0 / double(_maxVolume); // amplificator
+    if (volumeK > 8) {
+        volumeK = 8; // don't be mad on showing silence
+    }
+    auto step = amplitudes.size() / double(ITEAudioController::HistogramCompressedSize);
+    _compressedHistorgram.reserve(ITEAudioController::HistogramCompressedSize);
+
+    for (int i = 0; i < ITEAudioController::HistogramCompressedSize; i++) {
+        int prev = int(step * i);
+        int curr = int(step * (i + 1));
+        if (curr == amplitudes.size()) {
+            curr = amplitudes.size() - 1;
+        }
+
+        int sum = 0;
+        for (int j = prev; j <= curr; j++) {
+            sum += quint8(amplitudes[j]);
+        }
+        _compressedHistorgram.append(int(sum / double(curr - prev + 1) * volumeK));
+    }
+
+    QStringList columns;
+    std::transform(_compressedHistorgram.begin(), _compressedHistorgram.end(), std::back_inserter(columns),
+                   [](auto const &v) { return QString::number(v); });
+
+    // qDebug() << columns.join(",");
+#ifdef ITE_EMBED_HISTOGRAM // it's somewhat buggy with Qt since it not always writes metainfo at least in 5.11.2
+    QFile      f(_recorder->outputLocation().toLocalFile());
+    QByteArray buffer;
+    buffer.resize(4096 + 1024);
+    qint64 lastPos = 0;
+    if (f.open(QIODevice::ReadWrite)) {
+        qint64 bytes;
+        while ((bytes = f.read(buffer.data(), qint64(buffer.size()))) > 0) {
+            auto index = QByteArray::fromRawData(buffer.data(), int(bytes)).indexOf("AMPLDIAGSTART");
+            if (index >= 0) {
+                f.seek(lastPos + index
+                       + int(sizeof("AMPLDIAGSTART["))); // it's not a mistake with sizeof. It's [ is just escaped
+                f.write(columns.join(",").toLatin1().replace(',', "\\,"));
+                f.write("\\]AMPLDIAGEND");
+                f.flush();
+                break;
+            }
+            lastPos += 4096;
+            f.seek(lastPos);
+        }
+        f.close();
+    }
+#else
+    if (_isTmpFile) {
+        QString fn = _recorder->outputLocation().toLocalFile();
+        QFile   f(fn);
+        f.open(QIODevice::ReadOnly);
+        _audioData = f.readAll();
+        f.close();
+        f.remove();
+    } else {
+        QFile metaFile(_recorder->outputLocation().toLocalFile() + ".amplitudes");
+        if (metaFile.open(QIODevice::WriteOnly)) {
+            metaFile.write(columns.join(",").toLatin1());
+            metaFile.close();
+        }
+    }
+    emit recorded();
+#endif
+}
+
+#include "qiteaudiorecorder.moc"

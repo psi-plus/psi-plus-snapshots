@@ -24,7 +24,6 @@ under the License.
 #include "ui_mainwindow.h"
 
 #include <QAction>
-#include <QAudioRecorder>
 #include <QComboBox>
 #include <QDateTime>
 #include <QDir>
@@ -32,7 +31,7 @@ under the License.
 #include <QIcon>
 #include <QStandardPaths>
 #include <QStyle>
-#include <ctime>
+#include <random>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
 {
@@ -52,8 +51,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
                 [this](const QString &text) { ui->textEdit->setFontPointSize(text.toInt()); });
     }
 
-    auto itc = new InteractiveText(ui->textEdit);
-    atc      = new ITEAudioController(itc);
+    connect(ui->textEdit, &QTextEdit::destroyed, [](QObject *) { qDebug("QTextEdit destoryed"); });
+    auto itc = new InteractiveText(ui->textEdit); // global thing to handle all kinds of ITEs
+
+    atc = new ITEAudioController(itc, this);
     atc->setAutoFetchMetadata(true);
 
     auto musicDir = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
@@ -65,8 +66,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     while (it.hasNext() && count--)
         files << it.next();
 
-    std::srand(unsigned(std::time(nullptr)));
-    std::random_shuffle(files.begin(), files.end());
+    std::random_device rd;
+    std::mt19937       g(rd());
+    std::shuffle(files.begin(), files.end(), g);
 
     while (files.size()) {
         QString   fileToPlay = files.takeLast();
@@ -77,7 +79,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     }
 }
 
-MainWindow::~MainWindow() { delete ui; }
+MainWindow::~MainWindow()
+{
+    delete ui;
+    qDebug("ui destroyed");
+}
 
 void MainWindow::recordMic()
 {
@@ -85,17 +91,17 @@ void MainWindow::recordMic()
         recorder = new AudioRecorder(this);
 
         connect(recorder, &AudioRecorder::stateChanged, this, [this]() {
-            if (recorder->recorder()->state() == QAudioRecorder::StoppedState) {
+            if (recorder->state() == AudioRecorder::StoppedState) {
                 recordAction->setIcon(QIcon(":/icon/recorder-microphone.png"));
             }
-            if (recorder->recorder()->state() == QAudioRecorder::RecordingState) {
+            if (recorder->state() == AudioRecorder::RecordingState) {
                 recordAction->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
             }
         });
 
         connect(recorder, &AudioRecorder::recorded, this, [this]() {
             if (recorder->maxVolume() / double(std::numeric_limits<decltype(recorder->maxVolume())>::max()) > 0.1) {
-                auto fileName = QFileInfo(recorder->recorder()->outputLocation().toLocalFile()).absoluteFilePath();
+                auto fileName = QFileInfo(recorder->fileName()).absoluteFilePath();
                 qDebug("file=%s", qPrintable(fileName));
                 atc->insert(QUrl::fromLocalFile(fileName));
             } else {
@@ -104,8 +110,8 @@ void MainWindow::recordMic()
         });
     }
 
-    if (recorder->recorder()->state() == QAudioRecorder::StoppedState) {
-        recorder->record(QString("test-%1.ogg").arg(QDateTime::currentSecsSinceEpoch()));
+    if (recorder->state() == AudioRecorder::StoppedState) {
+        recorder->record(QString("test-%1.mp4").arg(QDateTime::currentSecsSinceEpoch()));
     } else {
         recorder->stop();
     }

@@ -19,6 +19,7 @@ under the License.
 
 #include "qiteaudio.h"
 
+#include <QAudioOutput>
 #include <QEvent>
 #include <QHoverEvent>
 #include <QMediaMetaData>
@@ -30,6 +31,8 @@ under the License.
 #include <QTimer>
 #include <QVector2D>
 #include <QtGlobal>
+
+#define QITE_DEBUG
 
 class AudioMessageFormat : public InteractiveTextFormat {
 public:
@@ -124,6 +127,10 @@ QSizeF ITEAudioController::intrinsicSize(QTextDocument *doc, int posInDocument, 
     Q_UNUSED(posInDocument)
     const QTextCharFormat charFormat = format.toCharFormat();
     auto                  psize      = QFontMetrics(charFormat.font()).height();
+#ifdef QITE_DEBUG
+    // qDebug("Audio controller size is computed from font \"%s\" with size %d", qPrintable(charFormat.font().family()),
+    //        charFormat.font().pointSize());
+#endif
     if (lastFontSize != psize) {
         lastFontSize = psize;
         updateGeomtry();
@@ -347,7 +354,7 @@ QTextCharFormat ITEAudioController::makeFormat(const QUrl &audioSrc, ITEMediaOpe
 {
     AudioMessageFormat fmt(objectType, itc->nextId(), audioSrc, mediaOpener);
     fmt.setFontPointSize(itc->textEdit()->currentFont().pointSize());
-    return std::move(fmt);
+    return fmt;
 }
 
 void ITEAudioController::insert(const QUrl &audioSrc, ITEMediaOpener *mediaOpener)
@@ -396,6 +403,9 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
             if (state & AudioMessageFormat::Playing) {
                 if (!player) {
                     player = new QMediaPlayer(this);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                    player->setAudioOutput(new QAudioOutput(player));
+#endif
                     player->setProperty("playerId", playerId);
                     player->setProperty("cursorPos", selected.anchor());
                     activePlayers.insert(playerId, player);
@@ -518,17 +528,22 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                                 cursor.setCharFormat(format);
                             });
 
-                    connect(player, SIGNAL(stateChanged(ITEAudioController::PlaybackState)), this,
-                            SLOT(playerStateChanged(ITEAudioController::PlaybackState)));
-                    QObject::connect(player, &QMediaPlayer::mediaStatusChanged,
-                                     [=]() { qDebug() << "Media status changed:" << player->mediaStatus(); });
+                    QObject::connect(player, &QMediaPlayer::mediaStatusChanged, [=]() {
+#ifdef QITE_DEBUG
+                        qDebug() << "Media status changed:" << player->mediaStatus();
+#endif
+                    });
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+                    connect(player, &QMediaPlayer::stateChanged, this, &ITEAudioController::playerStateChanged);
                     QObject::connect(player,
                                      static_cast<void (QMediaPlayer::*)(QMediaPlayer::Error)>(&QMediaPlayer::error),
                                      [=](QMediaPlayer::Error error) { qDebug() << "Error occurred:" << error; });
 #else
+                    QObject::connect(player, &QMediaPlayer::playbackStateChanged, this,
+                                     &ITEAudioController::playerStateChanged);
                     QObject::connect(player, &QMediaPlayer::errorOccurred, this,
                                      [=](QMediaPlayer::Error error, const QString &errorString) {
+                                         Q_UNUSED(error);
                                          qDebug() << "Error occurred:" << errorString;
                                      });
 #endif

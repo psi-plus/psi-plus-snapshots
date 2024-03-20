@@ -21,9 +21,10 @@ under the License.
 #define QITE_H
 
 #include <QObject>
+#include <QPointer>
+#include <QTextEdit>
 #include <QTextObjectInterface>
 
-class QTextEdit;
 class InteractiveText;
 
 #ifndef QITE_FIRST_USER_PROPERTY
@@ -77,8 +78,8 @@ public:
 
 protected:
     friend class InteractiveText;
-    InteractiveText *itc;
-    int              objectType;
+    QPointer<InteractiveText> itc;
+    int                       objectType;
 
     virtual bool mouseEvent(const Event &event, const QRect &rect, QTextCursor &selected);
     virtual void hideEvent(QTextCursor &selected);
@@ -88,7 +89,8 @@ class InteractiveText : public QObject {
     Q_OBJECT
 public:
     InteractiveText(QTextEdit *_textEdit, int baseObjectType = QTextFormat::UserObject);
-    inline QTextEdit *textEdit() const { return _textEdit; }
+    ~InteractiveText();
+    inline QTextEdit *textEdit() const { return _textEdit.data(); }
 
     int                              registerController(InteractiveTextElementController *elementController);
     void                             unregisterController(InteractiveTextElementController *elementController);
@@ -107,7 +109,7 @@ private slots:
     void trackVisibility();
 
 private:
-    QTextEdit                                    *_textEdit = nullptr;
+    QPointer<QTextEdit>                           _textEdit;
     int                                           _baseObjectType;
     int                                           _objectType;
     quint32                                       _uniqueElementId = 0;    // just a sequence number

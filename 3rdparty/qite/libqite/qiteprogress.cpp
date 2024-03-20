@@ -187,7 +187,7 @@ QTextCharFormat ITEProgressController::makeFormat() const
 {
     ProgressMessageFormat fmt(objectType, itc->nextId());
     fmt.setFontPointSize(itc->textEdit()->currentFont().pointSize());
-    return std::move(fmt);
+    return fmt;
 }
 
 void ITEProgressController::insert([[maybe_unused]] double min, [[maybe_unused]] double max,
