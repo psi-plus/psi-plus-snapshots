@@ -355,7 +355,7 @@ void AudioRecorder::record()
     cleanup();
     _isTmpFile = true;
 
-    QTemporaryFile *tmpFile = new QTemporaryFile(QDir::tempPath() + QLatin1String("/qite-record-XXXXXX.ogg"), this);
+    QTemporaryFile *tmpFile = new QTemporaryFile(QDir::tempPath() + QLatin1String("/qite-record-XXXXXX.mp4"), this);
     tmpFile->setAutoRemove(false);
     tmpFile->open();
     QString fn = tmpFile->fileName();

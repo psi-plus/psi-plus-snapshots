@@ -32,7 +32,7 @@ under the License.
 #include <QVector2D>
 #include <QtGlobal>
 
-#define QITE_DEBUG
+// #define QITE_DEBUG
 
 class AudioMessageFormat : public InteractiveTextFormat {
 public:
