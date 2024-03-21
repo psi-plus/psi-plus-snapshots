@@ -100,20 +100,57 @@ public:
         _decoder->setSourceFilename(sourceUrl.toLocalFile());
 #else
         _decoder->setSource(sourceUrl);
+
+        // A workaround for a bug https://bugreports.qt.io/browse/QTBUG-123597 (crash if no audio track)
+        _player = new QMediaPlayer(this);
+        QObject::connect(_player, &QMediaPlayer::tracksChanged, this, [this]() {
+            bool hasAudio = _player->audioTracks().size() > 0;
+            _player->stop();
+            if (hasAudio) {
+                _player->deleteLater();
+                startDecoder();
+            } else {
+                doFinish(false, tr("Recorded media lacks audio tracks"));
+            }
+        });
+        _player->setSource(sourceUrl);
 #endif
-        connect(_decoder, &QAudioDecoder::bufferReady, this, &HistogramExtractor::bufferReady);
-        connect(_decoder, &QAudioDecoder::finished, this, &HistogramExtractor::finished);
-        connect(_decoder, &QAudioDecoder::finished, this, &HistogramExtractor::deleteLater);
     }
 
-    void              start() { _decoder->start(); }
+    void start()
+    {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        startDecoder();
+#else
+        _player->play();
+#endif
+    }
     inline quint8     maxVolume() const { return _maxVolume; }
     inline QByteArray amplitudes() const { return _amplitudes; }
-
+    inline QString    errorString() const { return _errorString; }
 signals:
-    void finished();
+    void finished(bool success);
 
 private:
+    void doFinish(bool success, const QString &errorMessage = QString())
+    {
+        _errorString = errorMessage;
+        deleteLater();
+        emit finished(success);
+    }
+
+    void startDecoder()
+    {
+        connect(_decoder, &QAudioDecoder::bufferReady, this, &HistogramExtractor::bufferReady);
+        connect(_decoder, &QAudioDecoder::finished, this, [this]() { doFinish(true); });
+        connect(_decoder, qOverload<QAudioDecoder::Error>(&QAudioDecoder::error), this,
+                [this](QAudioDecoder::Error error) {
+                    Q_UNUSED(error);
+                    doFinish(false, _decoder->errorString());
+                });
+        _decoder->start();
+    }
+
     template <class T> void handle(const QAudioBuffer &buffer)
     {
         auto     format = buffer.format();
@@ -255,6 +292,10 @@ private slots:
     }
 
 private:
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QMediaPlayer *_player;
+#endif
+    QString        _errorString;
     QAudioDecoder *_decoder;
     quint8         _maxVolume = 0;
     Quantum        _quantum;
@@ -267,10 +308,9 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QAudioEncoderSettings audioSettings;
+    // audioSettings.setCodec("audio/mpeg, mpegversion=(int)4");  // needs some grstreamer plugin?
     audioSettings.setCodec("audio/x-opus");
     audioSettings.setQuality(QMultimedia::HighQuality);
-
-    //_recorder->setEncodingSettings(audioSettings, QVideoEncoderSettings(), "audio/ogg");
     _recorder->setEncodingSettings(audioSettings, QVideoEncoderSettings(), "video/quicktime, variant=(string)iso");
 #else
     QMediaFormat mediaFormat(QMediaFormat::MPEG4);
@@ -307,8 +347,15 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
             }
             if (_recorder->error() == QtRecorder::NoError) {
                 auto he = new HistogramExtractor(_recorder->outputLocation(), this); // it's self deletable
-                connect(he, &HistogramExtractor::finished, this,
-                        [he, this]() { postProcess(he->maxVolume(), he->amplitudes()); });
+                connect(he, &HistogramExtractor::finished, this, [he, this](bool success) {
+                    if (success) {
+                        postProcess(he->maxVolume(), he->amplitudes());
+                    } else {
+                        _errorString = he->errorString();
+                        _state       = StoppedState;
+                        emit finished(false);
+                    }
+                });
                 he->start();
                 return;
             }

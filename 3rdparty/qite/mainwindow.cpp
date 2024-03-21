@@ -94,15 +94,16 @@ void MainWindow::recordMic()
             recordAction->setIcon(QIcon(":/icon/recorder-microphone.png"));
             if (success) {
                 auto fileName = QFileInfo(recorder->fileName()).absoluteFilePath();
-                qDebug("file=%s", qPrintable(fileName));
                 atc->insert(QUrl::fromLocalFile(fileName));
-                ui->textEdit->append(QString("\nmax volume=") + QString::number(recorder->maxVolume()));
+                ui->textEdit->append(QString("file=") + fileName);
+                ui->textEdit->append(QString("max volume=") + QString::number(recorder->maxVolume()));
             } else {
-                ui->textEdit->append("\n" + recorder->errorString());
+                ui->textEdit->append(recorder->errorString());
             }
         });
     }
 
+    ui->textEdit->append("");
     if (recorder->state() == AudioRecorder::StoppedState) {
         recordAction->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
         recorder->record(QString("test-%1.mp4").arg(QDateTime::currentSecsSinceEpoch()));
