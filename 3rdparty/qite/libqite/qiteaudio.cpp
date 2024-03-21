@@ -21,6 +21,7 @@ under the License.
 
 #include <QAudioOutput>
 #include <QEvent>
+#include <QFile>
 #include <QHoverEvent>
 #include <QMediaMetaData>
 #include <QMediaPlayer>
@@ -33,6 +34,20 @@ under the License.
 #include <QtGlobal>
 
 // #define QITE_DEBUG
+
+namespace {
+ITEAudioController::Histogram histogramFromDevice(QIODevice *dev)
+{
+    ITEAudioController::Histogram hm;
+    hm.reserve(ITEAudioController::HistogramCompressedSize);
+    auto const &amplitudes = QString::fromLatin1(dev->readAll()).split(',');
+    for (auto const &v : amplitudes) {
+        auto fv = v.toUInt() / 256.0f;
+        hm.push_back(fv > 1.0f ? 1.0f : fv);
+    }
+    return hm;
+}
+}
 
 class AudioMessageFormat : public InteractiveTextFormat {
 public:
@@ -273,7 +288,7 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
         }
 
         // we need t query amplitudes. Let's check if it makes sense first.
-        if (audioFormat.url().path().endsWith(".mka")) { // we use mka for audio messages. so it may have amplitudes
+        if (audioFormat.url().path().endsWith(".mp4")) { // we use mp4 for audio messages. so it may have amplitudes
             auto id = audioFormat.id();
             // use deleayed call since it's not that good to chage docs from drawing func.
             QTimer::singleShot(0, this, [this, id, posInDocument]() {
@@ -292,6 +307,14 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
                 }
                 QUrl metaUrl(audioFormat.url());
                 metaUrl.setPath(metaUrl.path() + ".amplitudes");
+                if (metaUrl.isLocalFile()) {
+                    QFile file(metaUrl.toLocalFile());
+                    if (file.open(QIODevice::ReadOnly)) {
+                        audioFormat.setMetaData(QVariant::fromValue<Histogram>(histogramFromDevice(&file)));
+                        cursor.setCharFormat(audioFormat);
+                    }
+                    return;
+                }
                 auto reply = nam->get(QNetworkRequest(metaUrl));
                 audioFormat.setMetaDataState(AudioMessageFormat::RequestInProgress);
                 cursor.setCharFormat(audioFormat);
@@ -299,15 +322,8 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
                 connect(reply, &QNetworkReply::finished, this, [this, id, pos, reply]() {
                     QTextCursor cursor = itc->findElement(id, pos);
                     if (!cursor.isNull()) {
-                        Histogram hm;
-                        hm.reserve(HistogramCompressedSize);
-                        auto const &amplitudes = QString::fromLatin1(reply->readAll()).split(',');
-                        for (auto const &v : amplitudes) {
-                            auto fv = v.toFloat() / 255.0f;
-                            hm.push_back(fv > 1.0f ? 1.0f : fv);
-                        }
                         auto afmt = AudioMessageFormat::fromCharFormat(cursor.charFormat());
-                        afmt.setMetaData(QVariant::fromValue<Histogram>(hm));
+                        afmt.setMetaData(QVariant::fromValue<Histogram>(histogramFromDevice(reply)));
                         cursor.setCharFormat(afmt);
                     }
                     reply->close();

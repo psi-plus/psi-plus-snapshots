@@ -90,27 +90,21 @@ void MainWindow::recordMic()
     if (!recorder) {
         recorder = new AudioRecorder(this);
 
-        connect(recorder, &AudioRecorder::stateChanged, this, [this]() {
-            if (recorder->state() == AudioRecorder::StoppedState) {
-                recordAction->setIcon(QIcon(":/icon/recorder-microphone.png"));
-            }
-            if (recorder->state() == AudioRecorder::RecordingState) {
-                recordAction->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
-            }
-        });
-
-        connect(recorder, &AudioRecorder::recorded, this, [this]() {
-            if (recorder->maxVolume() / double(std::numeric_limits<decltype(recorder->maxVolume())>::max()) > 0.1) {
+        connect(recorder, &AudioRecorder::finished, this, [this](bool success) {
+            recordAction->setIcon(QIcon(":/icon/recorder-microphone.png"));
+            if (success) {
                 auto fileName = QFileInfo(recorder->fileName()).absoluteFilePath();
                 qDebug("file=%s", qPrintable(fileName));
                 atc->insert(QUrl::fromLocalFile(fileName));
+                ui->textEdit->append(QString("\nmax volume=") + QString::number(recorder->maxVolume()));
             } else {
-                ui->textEdit->append("Prefer silence?");
+                ui->textEdit->append("\n" + recorder->errorString());
             }
         });
     }
 
     if (recorder->state() == AudioRecorder::StoppedState) {
+        recordAction->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
         recorder->record(QString("test-%1.mp4").arg(QDateTime::currentSecsSinceEpoch()));
     } else {
         recorder->stop();

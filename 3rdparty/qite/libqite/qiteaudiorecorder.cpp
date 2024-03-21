@@ -78,14 +78,6 @@ template <typename T> struct SoloFrame {
     T    average() const { return data; }
     void clear() { data = T(SoloFrameDefault<T>::Default); }
 };
-
-template <class T> struct PeakValue {
-    static const T value = std::numeric_limits<T>::max();
-};
-
-template <> struct PeakValue<float> {
-    static constexpr float value = float(1.00003);
-};
 #endif
 
 }
@@ -124,14 +116,14 @@ signals:
 private:
     template <class T> void handle(const QAudioBuffer &buffer)
     {
+        auto     format = buffer.format();
+        double   peakvalue; // unreachable value
+        const T *data = buffer.constData<T>();
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        const T *data      = buffer.constData<T>();
-        auto     peakvalue = qreal(PeakValue<decltype(data[0].average())>::value);
+        using FrameDataType = decltype(data[0].average());
 #else
-        const T *data       = buffer.constData<T>();
         using FrameDataType = typename std::decay_t<decltype(data[0])>::value_type;
-
-        double peakvalue; // unreachable value
+#endif
         if constexpr (std::is_floating_point_v<FrameDataType>) {
             peakvalue = 1.0003;
         } else { // integer
@@ -141,10 +133,8 @@ private:
                 peakvalue = (double(std::numeric_limits<FrameDataType>::max()) + 1) / 2;
             }
         }
-#endif
 
-        auto format    = buffer.format();
-        int  countLeft = format.framesForDuration(_quantum.timeLeft);
+        int countLeft = format.framesForDuration(_quantum.timeLeft);
         Q_ASSERT(countLeft > 0);
         for (int i = 0; i < buffer.frameCount(); i++) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -160,7 +150,7 @@ private:
             }
             auto average = sum / double(std::size(data[i].channels)); // average over all channels
 #endif
-
+            // qDebug("%f / %f", average, peakvalue);
             _quantum.sum += average / peakvalue;
             _quantum.count++;
             countLeft--;
@@ -304,50 +294,48 @@ AudioRecorder::AudioRecorder(QObject *parent) : QObject(parent)
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     connect(_recorder, &QtRecorder::stateChanged, this, [this]() {
         auto recorderState = _recorder->state();
-        _state             = recorderState == QAudioRecorder::StoppedState ? StoppedState : RecordingState;
 #else
     connect(_recorder, &QtRecorder::recorderStateChanged, this, [this](QMediaRecorder::RecorderState recorderState) {
+#endif
 #ifdef QITE_DEBUG
         qDebug("State changed %d", recorderState);
 #endif
-        _state = recorderState == QtRecorder::StoppedState ? StoppedState : RecordingState;
-        if (recorderState == QtRecorder::RecordingState) {
-            emit stateChanged();
-            return;
-        }
-#endif
         if (recorderState == QtRecorder::StoppedState) {
-            auto he = new HistogramExtractor(_recorder->outputLocation(), this); // it's self deletable
-            connect(he, &HistogramExtractor::finished, this,
-                    [he, this]() { postProcess(he->maxVolume(), he->amplitudes()); });
-            he->start();
+            if (_maxDurationTimer && _maxDurationTimer->isActive()) {
+                delete _maxDurationTimer;
+                _maxDurationTimer = nullptr;
+            }
+            if (_recorder->error() == QtRecorder::NoError) {
+                auto he = new HistogramExtractor(_recorder->outputLocation(), this); // it's self deletable
+                connect(he, &HistogramExtractor::finished, this,
+                        [he, this]() { postProcess(he->maxVolume(), he->amplitudes()); });
+                he->start();
+                return;
+            }
+            _errorString = _recorder->errorString();
+            _state       = StoppedState;
+            emit finished(false);
+        } else if (recorderState == QtRecorder::RecordingState) {
+            _state = RecordingState;
         }
-
-        if (recorderState == QtRecorder::StoppedState && _maxDurationTimer && _maxDurationTimer->isActive()) {
-            delete _maxDurationTimer;
-            _maxDurationTimer = nullptr;
-        }
-
-        if (!_destroying)
-            emit stateChanged();
     });
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     connect(_recorder, static_cast<void (QMediaRecorder::*)(QMediaRecorder::Error error)>(&QMediaRecorder::error), this,
             [this](QMediaRecorder::Error error) {
-                Q_UNUSED(error);
-                emit this->error(_recorder->errorString());
-            });
+                _errorString = _recorder->errorString();
 #else
     connect(_recorder, &QMediaRecorder::errorOccurred, this,
             [this](QMediaRecorder::Error error, const QString &errorString) {
+                _errorString = errorString;
+#endif
                 Q_UNUSED(error);
-#ifdef QITE_DEBUG
-                qDebug("Error: %s", qPrintable(errorString));
-#endif
-                emit this->error(errorString);
+                if (_state == RecordingState) {
+                    return; // will report error on StoppedState
+                }
+                _state = StoppedState;
+                emit this->finished(false);
             });
-#endif
 }
 
 void AudioRecorder::record()
@@ -401,15 +389,13 @@ void AudioRecorder::stop()
 
 void AudioRecorder::cleanup()
 {
-    _destroying = true;
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (_recorder->state() == QtRecorder::RecordingState)
 #else
     if (_recorder->recorderState() == QtRecorder::RecordingState)
 #endif
         _recorder->stop();
-    _destroying = false;
-    _isTmpFile  = false;
+    _isTmpFile = false;
     _compressedHistorgram.clear();
     _audioData.clear();
     _audioData.squeeze();
@@ -417,11 +403,20 @@ void AudioRecorder::cleanup()
         delete _maxDurationTimer;
         _maxDurationTimer = nullptr;
     }
+    _state = StoppedState;
+    _errorString.clear();
+    _maxVolume = 0;
 }
 
-void AudioRecorder::postProcess(quint8 maxValume, const QByteArray &amplitudes)
+void AudioRecorder::postProcess(quint8 maxVolume, const QByteArray &amplitudes)
 {
-    _maxVolume = maxValume;
+    _maxVolume = maxVolume;
+    if (!_maxVolume) {
+        _errorString = QLatin1String("Silence recorded");
+        _state       = StoppedState;
+        emit finished(false);
+        return;
+    }
     // compress amplitudes..
     auto volumeK = 255.0 / double(_maxVolume); // amplificator
     if (volumeK > 8) {
@@ -486,7 +481,8 @@ void AudioRecorder::postProcess(quint8 maxValume, const QByteArray &amplitudes)
             metaFile.close();
         }
     }
-    emit recorded();
+    _state = StoppedState;
+    emit finished(true);
 #endif
 }
 

@@ -51,16 +51,15 @@ public:
     inline auto    data() const { return _audioData; }
     inline quint64 duration() const { return _duration; }
     inline State   state() const { return _state; }
+    inline QString errorString() const { return _errorString; }
 
 private:
     void cleanup();
-    void postProcess(quint8 maxValume, const QByteArray &amplitudes);
+    void postProcess(quint8 maxVolume, const QByteArray &amplitudes);
     void recordToFile(const QString &fileName);
 
 signals:
-    void stateChanged();
-    void recorded();
-    void error(const QString &message);
+    void finished(bool success);
 public slots:
 
 private:
@@ -77,10 +76,10 @@ private:
     QTimer    *_maxDurationTimer = nullptr;
     qint64     _duration;
     int        _maxDuration = -1;
-    bool       _destroying  = false;
     bool       _isTmpFile   = false;
     quint8     _maxVolume   = 0;
     State      _state       = StoppedState;
+    QString    _errorString;
 };
 
 #endif // QITEAUDIORECORDER_H
