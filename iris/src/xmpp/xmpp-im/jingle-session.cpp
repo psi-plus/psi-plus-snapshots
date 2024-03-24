@@ -904,7 +904,12 @@ namespace XMPP { namespace Jingle {
                 lastError = ErrorUtil::makeTieBreak(*manager->client()->doc());
                 return false;
             } else if (toReject.size()) {
-                outgoingUpdates.insert(Action::TransportReject, OutgoingUpdate { toReject, OutgoingUpdateCB() });
+                QList<QDomElement> rejectImported;
+                std::transform(toReject.begin(), toReject.end(), std::back_inserter(rejectImported),
+                               [this](const QDomElement &e) {
+                                   return manager->client()->doc()->importNode(e.cloneNode(true), true).toElement();
+                               });
+                outgoingUpdates.insert(Action::TransportReject, OutgoingUpdate { rejectImported, OutgoingUpdateCB() });
             }
 
             planStep();
