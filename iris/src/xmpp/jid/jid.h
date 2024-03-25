@@ -91,10 +91,18 @@ private:
     bool    valid, null;
 };
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 Q_DECL_PURE_FUNCTION inline uint qHash(const XMPP::Jid &key, uint seed = 0) Q_DECL_NOTHROW
 {
     return qHash(key.full(), seed);
 }
+#else
+Q_DECL_PURE_FUNCTION inline uint qHash(const XMPP::Jid &key, size_t seed = 0) Q_DECL_NOTHROW
+{
+    return qHash(key.full(), seed);
+}
+#endif
+
 } // namespace XMPP
 
 #endif // XMPP_JID_H
