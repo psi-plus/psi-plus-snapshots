@@ -60,7 +60,11 @@ signals:
     void debugLine(const QString &str);
 };
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 inline uint qHash(const QWeakPointer<IceTransport> &p) { return qHash(p.toStrongRef().data()); }
+#else
+inline size_t qHash(const QWeakPointer<IceTransport> &p) { return qHash(p.toStrongRef().data()); }
+#endif
 
 } // namespace XMPP
 

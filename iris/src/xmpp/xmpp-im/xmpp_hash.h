@@ -99,7 +99,11 @@ private:
     std::unique_ptr<StreamHashPrivate> d;
 };
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 Q_DECL_PURE_FUNCTION inline uint qHash(const Hash &hash, uint seed = 0) Q_DECL_NOTHROW
+#else
+Q_DECL_PURE_FUNCTION inline size_t qHash(const Hash &hash, size_t seed = 0) Q_DECL_NOTHROW
+#endif
 {
     return qHash(hash.data(), seed);
 }

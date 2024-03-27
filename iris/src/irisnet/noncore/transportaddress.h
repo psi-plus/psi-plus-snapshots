@@ -23,7 +23,12 @@ public:
     }
 };
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+
 inline uint qHash(const TransportAddress &key, uint seed = 0)
+#else
+inline size_t qHash(const TransportAddress &key, size_t seed = 0)
+#endif
 {
     return ::qHash(key.addr, seed) ^ ::qHash(key.port, seed);
 }

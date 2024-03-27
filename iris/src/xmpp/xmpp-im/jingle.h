@@ -43,7 +43,11 @@ namespace Jingle {
 
     enum class Origin { None, Both, Initiator, Responder };
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     inline uint qHash(const XMPP::Jingle::Origin &o, uint seed = 0) { return ::qHash(int(o), seed); }
+#else
+    inline size_t qHash(const XMPP::Jingle::Origin &o, size_t seed = 0) { return ::qHash(int(o), seed); }
+#endif
 
     /*
      Session states:
@@ -121,7 +125,11 @@ namespace Jingle {
         SessionTerminate
     };
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     inline uint qHash(const XMPP::Jingle::Action &o, uint seed = 0) { return ::qHash(int(o), seed); }
+#else
+    inline size_t qHash(const XMPP::Jingle::Action &o, size_t seed = 0) { return ::qHash(int(o), seed); }
+#endif
 
     /*
     Categorization by speed, reliability and connectivity

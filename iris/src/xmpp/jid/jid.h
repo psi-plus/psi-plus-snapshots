@@ -97,7 +97,7 @@ Q_DECL_PURE_FUNCTION inline uint qHash(const XMPP::Jid &key, uint seed = 0) Q_DE
     return qHash(key.full(), seed);
 }
 #else
-Q_DECL_PURE_FUNCTION inline uint qHash(const XMPP::Jid &key, size_t seed = 0) Q_DECL_NOTHROW
+Q_DECL_PURE_FUNCTION inline size_t qHash(const XMPP::Jid &key, size_t seed = 0) Q_DECL_NOTHROW
 {
     return qHash(key.full(), seed);
 }

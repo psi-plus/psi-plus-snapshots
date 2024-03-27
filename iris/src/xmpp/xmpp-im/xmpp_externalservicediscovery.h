@@ -66,7 +66,11 @@ struct ExternalServiceId {
     }
 };
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 inline uint qHash(const ExternalServiceId &id, uint seed = 0)
+#else
+inline size_t qHash(const ExternalServiceId &id, size_t seed = 0)
+#endif
 {
     return ::qHash(id.host, seed) ^ ::qHash(id.type, seed) ^ ::qHash(id.port, seed);
 }
