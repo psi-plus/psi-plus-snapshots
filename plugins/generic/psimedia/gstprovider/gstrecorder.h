@@ -23,6 +23,9 @@
 
 #include <QMutex>
 #include <QPointer>
+#include <QObject>
+#include <QList>
+#include <QByteArray>
 
 class QIODevice;
 

@@ -160,12 +160,12 @@ public:
     explicit Features(QObject *parent = nullptr);
     ~Features() override;
 
-    QList<Device> audioOutputDevices();
-    QList<Device> audioInputDevices();
-    QList<Device> videoInputDevices();
+    const QList<Device> &audioOutputDevices();
+    const QList<Device> &audioInputDevices();
+    const QList<Device> &videoInputDevices();
 
-    QList<AudioParams> supportedAudioModes();
-    QList<VideoParams> supportedVideoModes();
+    const QList<AudioParams> &supportedAudioModes();
+    const QList<VideoParams> &supportedVideoModes();
 
 signals:
     void updated();

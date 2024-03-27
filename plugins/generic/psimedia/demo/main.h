@@ -53,13 +53,13 @@ class FeaturesWatcher : public QObject {
 public:
     explicit FeaturesWatcher(QObject *parent);
     ~FeaturesWatcher() override;
-    inline const Configuration &        configuration() const { return _configuration; }
-    inline const PsiMedia::Features &   features() const { return _features; }
-    inline QList<PsiMedia::Device>      audioInputDevices() { return _features.audioInputDevices(); }
-    inline QList<PsiMedia::Device>      audioOutputDevices() { return _features.audioOutputDevices(); }
-    inline QList<PsiMedia::Device>      videoInputDevices() { return _features.videoInputDevices(); }
-    inline QList<PsiMedia::AudioParams> supportedAudioModes() { return _features.supportedAudioModes(); }
-    inline QList<PsiMedia::VideoParams> supportedVideoModes() { return _features.supportedVideoModes(); }
+    inline const Configuration                &configuration() const { return _configuration; }
+    inline const PsiMedia::Features           &features() const { return _features; }
+    inline const QList<PsiMedia::Device>      &audioInputDevices() { return _features.audioInputDevices(); }
+    inline const QList<PsiMedia::Device>      &audioOutputDevices() { return _features.audioOutputDevices(); }
+    inline const QList<PsiMedia::Device>      &videoInputDevices() { return _features.videoInputDevices(); }
+    inline const QList<PsiMedia::AudioParams> &supportedAudioModes() { return _features.supportedAudioModes(); }
+    inline const QList<PsiMedia::VideoParams> &supportedVideoModes() { return _features.supportedVideoModes(); }
 
     void updateDefaults();
 private slots:
@@ -125,7 +125,7 @@ public:
 
     Mode                  mode;
     PsiMedia::RtpChannel *channel;
-    RtpSocketGroup *      socketGroup;
+    RtpSocketGroup       *socketGroup;
     QHostAddress          sendAddress;
     int                   sendBasePort;
 
@@ -143,17 +143,17 @@ class MainWin : public QMainWindow {
 
 public:
     Ui::MainWin          ui;
-    QAction *            action_AboutProvider;
+    QAction             *action_AboutProvider;
     QString              creditName;
     PsiMedia::RtpSession producer;
     PsiMedia::RtpSession receiver;
     bool                 transmitAudio, transmitVideo, transmitting;
     bool                 receiveAudio, receiveVideo;
-    RtpBinding *         sendAudioRtp, *sendVideoRtp;
-    RtpBinding *         receiveAudioRtp, *receiveVideoRtp;
+    RtpBinding          *sendAudioRtp, *sendVideoRtp;
+    RtpBinding          *receiveAudioRtp, *receiveVideoRtp;
     bool                 recording;
-    QFile *              recordFile;
-    FeaturesWatcher *    featureWatcher;
+    QFile               *recordFile;
+    FeaturesWatcher     *featureWatcher;
 
     MainWin();
     ~MainWin() override;

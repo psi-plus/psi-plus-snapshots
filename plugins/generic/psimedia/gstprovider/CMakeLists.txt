@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.10.0)
 
-find_package(Qt5 COMPONENTS Core Widgets REQUIRED)
+find_package(Qt${QT_DEFAULT_MAJOR_VERSION} COMPONENTS Core Widgets REQUIRED)
 
-if(Qt5Core_FOUND)
-    message(STATUS "Qt5 found, version ${Qt5Core_VERSION}")
+if(Qt${QT_DEFAULT_MAJOR_VERSION}Core_FOUND)
+    message(STATUS "Qt${QT_DEFAULT_MAJOR_VERSION} found, version ${Qt${QT_DEFAULT_MAJOR_VERSION}Core_VERSION}")
 endif()
 
 # Tell CMake to run moc when necessary:
@@ -50,6 +50,7 @@ set(SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/gstthread.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rwcontrol.cpp
     ${CMAKE_CURRENT_LIST_DIR}/gstprovider.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/gstprovider.h
     ${CMAKE_CURRENT_LIST_DIR}/gstrtpsessioncontext.cpp
     ${CMAKE_CURRENT_LIST_DIR}/gstrtpsessioncontext.h
     ${CMAKE_CURRENT_LIST_DIR}/gstvideowidget.cpp
@@ -78,10 +79,6 @@ else()
     )
 endif()
 
-include_directories(
-    ${CMAKE_CURRENT_LIST_DIR}
-    ${CMAKE_CURRENT_LIST_DIR}/devices
-)
 
 add_definitions(
     ${GLIBMODULES_CFLAGS}
@@ -130,6 +127,7 @@ endif()
 
 set(PROVIDERLIB gstprovidersrc)
 add_library(${PROVIDERLIB} STATIC ${SOURCES})
+
 target_include_directories(${PROVIDERLIB}
                            PUBLIC
                            ${CMAKE_CURRENT_SOURCE_DIR}
@@ -137,15 +135,20 @@ target_include_directories(${PROVIDERLIB}
                            ${PSIMEDIA_INCDIR}
                            ${GST_INCLUDES}
 )
-target_link_libraries(${PROVIDERLIB}
+target_link_libraries(${PROVIDERLIB} PUBLIC
                       ${GSTMODULES_LINK_LIBRARIES}
                       ${GLIBMODULES_LINK_LIBRARIES}
-                      ${PROJECT_LDFLAGS}
 )
 
+target_link_libraries(${PROVIDERLIB} PRIVATE ${PROJECT_LDFLAGS})
+
 if(APPLE)
-    target_link_libraries(${PROVIDERLIB} "-framework CoreAudio")
+    target_link_libraries(${PROVIDERLIB} PRIVATE "-framework CoreAudio")
     set_property(TARGET ${PROVIDERLIB}  PROPERTY SUFFIX ".dylib")
 endif()
 
-target_link_libraries(${PROVIDERLIB} Qt5::Core Qt5::Gui Qt5::Widgets)
+target_link_libraries(${PROVIDERLIB} PRIVATE
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Gui
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Widgets
+)

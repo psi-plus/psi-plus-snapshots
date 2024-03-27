@@ -35,7 +35,6 @@ set( CMAKE_MODULE_PATH
 find_package(PsiPluginsApi REQUIRED)
 include(${PsiPluginsApi_DIR}/variables.cmake)
 include_directories(
-    ${CMAKE_SOURCE_DIR}
     ${CMAKE_CURRENT_LIST_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
     ${PsiPluginsApi_INCLUDE_DIR}
@@ -53,11 +52,11 @@ set( _SRCS
 
 set(FORMS opt_avcall.ui)
 
-find_package( Qt5 COMPONENTS Widgets REQUIRED )
-set(QT_DEPLIBS
-    Qt5::Widgets
+find_package( Qt${QT_DEFAULT_MAJOR_VERSION} COMPONENTS Widgets REQUIRED )
+list(APPEND QT_DEPLIBS
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Widgets
 )
-qt5_wrap_ui(UIS ${FORMS})
+qt_wrap_ui(UIS ${FORMS})
 
 if(WIN32)
     set(LIB_TYPE "MODULE")
@@ -70,16 +69,18 @@ add_library(
     ${LIB_TYPE}
     ${_SRCS}
     ${UIS}
-    ${RSCS}
+    #${RSCS}
 )
 
 add_dependencies(${PLUGIN} gstprovidersrc)
 
 target_link_libraries(
     ${PLUGIN}
-    ${QT_DEPLIBS}
+    PRIVATE
     gstprovidersrc
 )
+
+target_link_libraries(${PLUGIN} PRIVATE ${QT_DEPLIBS})
 
 install(
     TARGETS

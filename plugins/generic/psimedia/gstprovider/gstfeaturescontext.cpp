@@ -6,16 +6,6 @@
 
 namespace PsiMedia {
 
-static PDevice gstDeviceToPDevice(const GstDevice &dev, PDevice::Type type)
-{
-    PDevice out;
-    out.type      = type;
-    out.name      = dev.name;
-    out.id        = dev.id;
-    out.isDefault = dev.isDefault;
-    return out;
-}
-
 GstFeaturesContext::GstFeaturesContext(GstMainLoop *_gstLoop, DeviceMonitor *deviceMonitor, QObject *parent) :
     QObject(parent), gstLoop(_gstLoop), deviceMonitor(deviceMonitor)
 {
@@ -66,8 +56,8 @@ QList<PDevice> GstFeaturesContext::audioOutputDevices()
         qCritical("device monitor is not initialized or destroyed");
         return list;
     }
-    foreach (const GstDevice &i, deviceMonitor->devices(PDevice::AudioOut))
-        list += gstDeviceToPDevice(i, PDevice::AudioOut);
+    for (const GstDevice &i : deviceMonitor->devices(PDevice::AudioOut))
+        list += i.toPDevice();
     return list;
 }
 
@@ -78,8 +68,8 @@ QList<PDevice> GstFeaturesContext::audioInputDevices()
         qCritical("device monitor is not initialized or destroyed");
         return list;
     }
-    foreach (const GstDevice &i, deviceMonitor->devices(PDevice::AudioIn))
-        list += gstDeviceToPDevice(i, PDevice::AudioIn);
+    for (const GstDevice &i : deviceMonitor->devices(PDevice::AudioIn))
+        list += i.toPDevice();
     return list;
 }
 
@@ -90,8 +80,8 @@ QList<PDevice> GstFeaturesContext::videoInputDevices()
         qCritical("device monitor is not initialized or destroyed");
         return list;
     }
-    foreach (const GstDevice &i, deviceMonitor->devices(PDevice::VideoIn))
-        list += gstDeviceToPDevice(i, PDevice::VideoIn);
+    for (const GstDevice &i : deviceMonitor->devices(PDevice::VideoIn))
+        list += i.toPDevice();
     return list;
 }
 

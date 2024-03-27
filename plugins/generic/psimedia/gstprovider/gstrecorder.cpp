@@ -22,6 +22,8 @@
 
 #include "rwcontrol.h"
 
+#include <QIODevice>
+
 namespace PsiMedia {
 
 GstRecorder::GstRecorder(QObject *parent) :

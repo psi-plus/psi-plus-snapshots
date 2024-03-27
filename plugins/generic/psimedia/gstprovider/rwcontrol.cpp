@@ -65,7 +65,7 @@ static RwControlFrameMessage *getLatestFrameAndRemoveOthers(QList<RwControlMessa
     return fmsg;
 }
 
-static RwControlAudioIntensityMessage *getLatestAudioIntensityAndRemoveOthers(QList<RwControlMessage *> *   list,
+static RwControlAudioIntensityMessage *getLatestAudioIntensityAndRemoveOthers(QList<RwControlMessage *>    *list,
                                                                               RwControlAudioIntensity::Type type)
 {
     RwControlAudioIntensityMessage *amsg = nullptr;
@@ -165,6 +165,7 @@ RwControlLocal::~RwControlLocal()
     timer = g_timeout_source_new(0);
     g_source_set_callback(timer, cb_doDestroyRemote, this, nullptr);
     g_source_attach(timer, thread_->mainContext());
+    g_source_unref(timer);
     w.wait(&m);
 
     qDeleteAll(in);

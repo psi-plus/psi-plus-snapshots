@@ -12,7 +12,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_definitions(-DPLUGIN_INSTALL_PATH_DEBUG=\"${CMAKE_BINARY_DIR}/psimedia\")
 endif()
 
-find_package(Qt5 COMPONENTS Core Widgets Gui Network REQUIRED)
+find_package(Qt${QT_DEFAULT_MAJOR_VERSION} COMPONENTS Core Widgets Gui Network REQUIRED)
 
 set(CMAKE_AUTOMOC ON)
 
@@ -37,7 +37,7 @@ set(SOURCES
 )
 set(FORMS config.ui mainwin.ui)
 
-qt5_wrap_ui(UI_SOURCES ${FORMS})
+qt_wrap_ui(UI_SOURCES ${FORMS})
 
 add_executable(${PROJECT_NAME} WIN32 ${SOURCES} ${UI_SOURCES})
 
@@ -45,7 +45,7 @@ if(NOT "${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
     add_dependencies( ${PROJECT_NAME} gstprovider )
 endif()
 
-target_link_libraries(${PROJECT_NAME} Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Network)
+target_link_libraries(${PROJECT_NAME} Qt${QT_DEFAULT_MAJOR_VERSION}::Core Qt${QT_DEFAULT_MAJOR_VERSION}::Gui Qt${QT_DEFAULT_MAJOR_VERSION}::Widgets Qt${QT_DEFAULT_MAJOR_VERSION}::Network)
 
 install(TARGETS ${PROJECT_NAME}
         RUNTIME DESTINATION ${BIN_INSTALL_DIR})

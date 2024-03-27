@@ -65,14 +65,14 @@ static bool test_element(const QString &element_name)
 static gchar *get_launch_line(::GstDevice *device)
 {
     static const char *const ignored_propnames[] = { "name", "parent", "direction", "template", "caps", nullptr };
-    GString *                launch_line;
-    GstElement *             element;
-    GstElement *             pureelement;
-    GParamSpec **            properties, *property;
+    GString                 *launch_line;
+    GstElement              *element;
+    GstElement              *pureelement;
+    GParamSpec             **properties, *property;
     GValue                   value  = G_VALUE_INIT;
     GValue                   pvalue = G_VALUE_INIT;
     guint                    i, number_of_properties;
-    GstElementFactory *      factory;
+    GstElementFactory       *factory;
 
     element = gst_device_create_element(device, nullptr);
 
@@ -149,11 +149,11 @@ static gchar *get_launch_line(::GstDevice *device)
 
 class DeviceMonitor::Private {
 public:
-    DeviceMonitor *          q;
-    GstDeviceMonitor *       _monitor = nullptr;
+    DeviceMonitor           *q;
+    GstDeviceMonitor        *_monitor = nullptr;
     QMap<QString, GstDevice> _devices;
-    PlatformDeviceMonitor *  _platform = nullptr;
-    QTimer *                 timer;
+    PlatformDeviceMonitor   *_platform = nullptr;
+    QTimer                  *timer;
     QMutex                   devListMutex;
     bool                     started = false;
 
@@ -201,6 +201,20 @@ public:
 
         if (gst_device_has_classes(gdev, "Video/Source")) {
             d.type = PDevice::VideoIn;
+
+            auto caps = gst_device_get_caps(gdev);
+            for (guint i = 0; i < gst_caps_get_size(caps); i++) {
+                auto                    structure = gst_caps_get_structure(caps, i);
+                auto                    mime_type = gst_structure_get_name(structure);
+                PsiMedia::PDevice::Caps mediaCaps;
+                mediaCaps.mime = QString::fromLatin1(mime_type);
+                if (gst_structure_get_int(structure, "width", &mediaCaps.video.width)
+                    && gst_structure_get_int(structure, "height", &mediaCaps.video.height)
+                    && gst_structure_get_fraction(structure, "framerate", &mediaCaps.video.framerate_numerator,
+                                                  &mediaCaps.video.framerate_denominator)) {
+                    d.caps.append(mediaCaps);
+                }
+            }
         }
 
         return d;
@@ -211,7 +225,7 @@ public:
         Q_UNUSED(bus)
         auto                monObj = reinterpret_cast<DeviceMonitor::Private *>(user_data);
         PsiMedia::GstDevice d;
-        ::GstDevice *       device;
+        ::GstDevice        *device;
 
         switch (GST_MESSAGE_TYPE(message)) {
         case GST_MESSAGE_DEVICE_ADDED:
@@ -249,7 +263,7 @@ public:
 
 void DeviceMonitor::updateDevList()
 {
-    QMutexLocker(&d->devListMutex);
+    QMutexLocker locker(&d->devListMutex);
     d->_devices.clear();
 #if GST_VERSION_MAJOR == 1 && GST_VERSION_MINOR < 18
     // with newer versions the devices events seem replayed, so we don't need this
@@ -257,7 +271,7 @@ void DeviceMonitor::updateDevList()
 
     if (devices != NULL) {
         while (devices != NULL) {
-            ::GstDevice *       device = static_cast<::GstDevice *>(devices->data);
+            ::GstDevice        *device = static_cast<::GstDevice *>(devices->data);
             PsiMedia::GstDevice pdev   = Private::gstDevConvert(device);
             if (!pdev.id.isEmpty())
                 d->_devices.insert(pdev.id, pdev);
@@ -271,21 +285,21 @@ void DeviceMonitor::updateDevList()
 
     if (d->_platform) {
         auto l = d->_platform->getDevices();
-        for (auto const &pdev : qAsConst(l)) {
+        for (auto const &pdev : std::as_const(l)) {
             if (!d->_devices.contains(pdev.id)) {
                 d->_devices.insert(pdev.id, pdev);
             }
         }
     }
 
-    for (auto const &pdev : qAsConst(d->_devices)) {
+    for (auto const &pdev : std::as_const(d->_devices)) {
         qDebug("found dev: %s (%s)", qPrintable(pdev.name), qPrintable(pdev.id));
     }
 }
 
 void DeviceMonitor::onDeviceAdded(GstDevice dev)
 {
-    QMutexLocker(&d->devListMutex);
+    QMutexLocker locker(&d->devListMutex);
     if (d->_devices.contains(dev.id)) {
         qWarning("Double added of device %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
     } else {
@@ -313,7 +327,7 @@ void DeviceMonitor::onDeviceAdded(GstDevice dev)
 
 void DeviceMonitor::onDeviceRemoved(const GstDevice &dev)
 {
-    QMutexLocker(&d->devListMutex);
+    QMutexLocker locker(&d->devListMutex);
     if (d->_devices.remove(dev.id)) {
         qDebug("removed dev: %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
         emit updated();
@@ -324,8 +338,8 @@ void DeviceMonitor::onDeviceRemoved(const GstDevice &dev)
 
 void DeviceMonitor::onDeviceChanged(const GstDevice &dev)
 {
-    QMutexLocker(&d->devListMutex);
-    auto it = d->_devices.find(dev.id);
+    QMutexLocker locker(&d->devListMutex);
+    auto         it = d->_devices.find(dev.id);
     if (it == d->_devices.end()) {
         qDebug("Changed unknown previously device '%s'. Try to add it", qPrintable(dev.id));
         onDeviceAdded(dev);
@@ -394,7 +408,7 @@ QList<GstDevice> DeviceMonitor::devices(PDevice::Type type)
     bool hasPulsesink        = false;
     bool hasDefaultPulsesink = false;
     d->devListMutex.lock();
-    for (auto const &dev : qAsConst(d->_devices)) {
+    for (auto const &dev : std::as_const(d->_devices)) {
         if (dev.type == type)
             ret.append(dev);
         // hack for pulsesrc

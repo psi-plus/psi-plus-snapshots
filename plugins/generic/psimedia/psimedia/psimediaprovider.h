@@ -72,10 +72,30 @@ public:
         VideoIn   // video hw to get video packets from
     };
 
-    Type    type;
-    QString name;
-    QString id;
-    bool    isDefault = false;
+    struct _VideoCaps {
+        int width;
+        int height;
+        int framerate_numerator;
+        int framerate_denominator;
+    };
+    struct _AudioCaps {
+        int rate;
+        int channels;
+    };
+
+    struct Caps {
+        QString mime;
+        union {
+            _VideoCaps video;
+            _AudioCaps audio;
+        };
+    };
+
+    Type        type;
+    bool        isDefault = false;
+    QString     name;
+    QString     id;
+    QList<Caps> caps;
 };
 
 class PAudioParams {
@@ -141,8 +161,8 @@ public:
     virtual QString creditName() const = 0;
     virtual QString creditText() const = 0;
 
-    virtual FeaturesContext *     createFeatures()      = 0;
-    virtual RtpSessionContext *   createRtpSession()    = 0;
+    virtual FeaturesContext      *createFeatures()      = 0;
+    virtual RtpSessionContext    *createRtpSession()    = 0;
     virtual AudioRecorderContext *createAudioRecorder() = 0;
 
     HINT_SIGNALS : HINT_METHOD(initialized())

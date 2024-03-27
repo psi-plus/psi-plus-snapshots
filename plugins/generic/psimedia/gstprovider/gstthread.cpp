@@ -199,23 +199,19 @@ public:
 #endif
 
 #if defined(Q_OS_MAC)
-        reqelem << "osxaudiosrc"
-                << "osxaudiosink";
+        reqelem << "osxaudiosrc" << "osxaudiosink";
 #ifdef HAVE_OSXVIDIO
         reqelem << "osxvideosrc";
 #endif
 #elif defined(Q_OS_LINUX)
         reqelem << "v4l2src";
 #elif defined(Q_OS_UNIX)
-        reqelem << "osssrc"
-                << "osssink";
+        reqelem << "osssrc" << "osssink";
 #elif defined(Q_OS_WIN)
-        reqelem << "directsoundsrc"
-                << "directsoundsink"
-                << "ksvideosrc";
+        reqelem << "directsoundsrc" << "directsoundsink" << "ksvideosrc";
 #endif
 
-        foreach (const QString &name, reqelem) {
+        for (const QString &name : std::as_const(reqelem)) {
             GstElement *e = gst_element_factory_make(name.toLatin1().data(), nullptr);
             if (!e) {
                 qDebug("Unable to load element '%s'.", qPrintable(name));
@@ -252,17 +248,17 @@ public:
         GstMainLoop::Private *d = nullptr;
     } BridgeQueueSource;
 
-    GstMainLoop *                                       q = nullptr;
+    GstMainLoop                                        *q = nullptr;
     QString                                             pluginPath;
-    GstSession *                                        gstSession = nullptr;
+    GstSession                                         *gstSession = nullptr;
     std::atomic_bool                                    success;
     std::atomic_bool                                    stopping;
-    GMainContext *                                      mainContext = nullptr;
-    GMainLoop *                                         mainLoop    = nullptr;
+    GMainContext                                       *mainContext = nullptr;
+    GMainLoop                                          *mainLoop    = nullptr;
     QMutex                                              queueMutex;
     QMutex                                              stateMutex;
     QWaitCondition                                      waitCond;
-    BridgeQueueSource *                                 bridgeSource = nullptr;
+    BridgeQueueSource                                  *bridgeSource = nullptr;
     guint                                               bridgeId     = 0;
     QQueue<QPair<GstMainLoop::ContextCallback, void *>> bridgeQueue;
 
@@ -391,7 +387,7 @@ bool GstMainLoop::isInitialized() const { return d->success; }
 bool GstMainLoop::execInContext(const ContextCallback &cb, void *userData)
 {
     if (d->mainLoop) {
-        QMutexLocker(&d->queueMutex);
+        QMutexLocker locker(&d->queueMutex);
         d->bridgeQueue.enqueue({ cb, userData });
         g_main_context_wakeup(d->mainContext);
         return true;

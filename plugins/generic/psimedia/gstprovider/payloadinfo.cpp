@@ -72,8 +72,8 @@ static QByteArray hexDecode(const QString &in)
 
 class my_foreach_state {
 public:
-    PPayloadInfo *                  out;
-    QStringList *                   whitelist;
+    PPayloadInfo                   *out;
+    QStringList                    *whitelist;
     QList<PPayloadInfo::Parameter> *list;
 };
 
@@ -156,7 +156,7 @@ GstStructure *payloadInfoToStructure(const PPayloadInfo &info, const QString &me
         gst_structure_set_value(out, "encoding-params", &gv);
     }
 
-    foreach (const PPayloadInfo::Parameter &i, info.parameters) {
+    for (const PPayloadInfo::Parameter &i : std::as_const(info.parameters)) {
         QString value = i.value;
 
         // FIXME: is there a better way to detect when we should do this conversion?
@@ -230,11 +230,7 @@ PPayloadInfo structureToPayloadInfo(GstStructure *structure, QString *media)
     //   not to grab the earlier static fields (e.g. clock-rate) as
     //   dynamic parameters
     QStringList whitelist;
-    whitelist << "sampling"
-              << "width"
-              << "height"
-              << "delivery-method"
-              << "configuration";
+    whitelist << "sampling" << "width" << "height" << "delivery-method" << "configuration";
 
     QList<PPayloadInfo::Parameter> list;
 

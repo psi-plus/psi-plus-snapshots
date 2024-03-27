@@ -104,7 +104,7 @@ static PPayloadInfo exportPayloadInfo(const PayloadInfo &p)
 //----------------------------------------------------------------------------
 // Global
 //----------------------------------------------------------------------------
-static Provider *     g_provider     = nullptr;
+static Provider      *g_provider     = nullptr;
 static QPluginLoader *g_pluginLoader = nullptr;
 
 static void cleanupProvider();
@@ -113,7 +113,7 @@ Provider *provider()
 {
     if (!g_provider) {
         // static plugin around?
-        Provider *  provider = nullptr;
+        Provider   *provider = nullptr;
         QObjectList list     = QPluginLoader::staticInstances();
         for (QObject *obj : list) {
             Plugin *instance = qobject_cast<Plugin *>(obj);
@@ -435,15 +435,15 @@ Features::Features(QObject *parent) : QObject(parent) { d = new Private(this); }
 
 Features::~Features() { delete d; }
 
-QList<Device> Features::audioOutputDevices() { return d->audioOutputDevices; }
+const QList<Device> &Features::audioOutputDevices() { return d->audioOutputDevices; }
 
-QList<Device> Features::audioInputDevices() { return d->audioInputDevices; }
+const QList<Device> &Features::audioInputDevices() { return d->audioInputDevices; }
 
-QList<Device> Features::videoInputDevices() { return d->videoInputDevices; }
+const QList<Device> &Features::videoInputDevices() { return d->videoInputDevices; }
 
-QList<AudioParams> Features::supportedAudioModes() { return d->supportedAudioModes; }
+const QList<AudioParams> &Features::supportedAudioModes() { return d->supportedAudioModes; }
 
-QList<VideoParams> Features::supportedVideoModes() { return d->supportedVideoModes; }
+const QList<VideoParams> &Features::supportedVideoModes() { return d->supportedVideoModes; }
 
 //----------------------------------------------------------------------------
 // RtpPacket

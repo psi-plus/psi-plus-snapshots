@@ -4,7 +4,7 @@ project(gstprovider LANGUAGES CXX)
 
 get_directory_property(IS_SUBPROJECT PARENT_DIRECTORY)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 set( CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH}
@@ -58,7 +58,7 @@ if(WIN32)
     endif()
 elseif(APPLE)
     set(CMAKE_DEBUG_POSTFIX "_debug")
-endif(WIN32)
+endif()
 
 include(FindPkgConfig)
 find_package(PkgConfig REQUIRED)
@@ -116,6 +116,10 @@ if(NOT IS_SUBPROJECT)
             VERBATIM
         )
     endif()
+endif()
+
+if("${QT_DEFAULT_MAJOR_VERSION}" STREQUAL "")
+    set(QT_DEFAULT_MAJOR_VERSION 5)
 endif()
 
 if(BUILD_DEMO)

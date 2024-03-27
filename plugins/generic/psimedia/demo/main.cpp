@@ -80,7 +80,7 @@ static QString payloadInfoToString(const PsiMedia::PayloadInfo &info)
     list += QString::number(info.channels());
     list += QString::number(info.ptime());
     list += QString::number(info.maxptime());
-    foreach (const PsiMedia::PayloadInfo::Parameter &p, info.parameters())
+    for (const PsiMedia::PayloadInfo::Parameter &p : std::as_const(info.parameters()))
         list += p.name + '=' + p.value;
 
     for (int n = 0; n < list.count(); ++n)
@@ -159,8 +159,7 @@ static QString payloadInfoToCodecString(const PsiMedia::PayloadInfo *audio, cons
 
 static bool codecStringToPayloadInfo(const QString &in, PsiMedia::PayloadInfo *audio, PsiMedia::PayloadInfo *video)
 {
-    QStringList list = in.split(';');
-    foreach (const QString &s, list) {
+    for (const QString &s : in.split(';')) {
         int x = s.indexOf(':');
         if (x == -1)
             return false;
@@ -248,7 +247,7 @@ void ConfigDlg::featuresUpdated()
         ui.cb_videoInDevice->addItem(dev.name(), dev.id());
 
     ui.cb_audioMode->clear();
-    foreach (const PsiMedia::AudioParams &params, featuresWatcher->supportedAudioModes()) {
+    for (const PsiMedia::AudioParams &params : std::as_const(featuresWatcher->supportedAudioModes())) {
         QString codec = params.codec();
         if (codec == "vorbis" || codec == "opus")
             codec[0] = codec[0].toUpper();
@@ -268,7 +267,7 @@ void ConfigDlg::featuresUpdated()
     }
 
     ui.cb_videoMode->clear();
-    foreach (const PsiMedia::VideoParams &params, featuresWatcher->supportedVideoModes()) {
+    for (const PsiMedia::VideoParams &params : std::as_const(featuresWatcher->supportedVideoModes())) {
         QString codec = params.codec();
         if (codec == "theora")
             codec[0] = codec[0].toUpper();
@@ -1045,7 +1044,7 @@ static QString findPlugin(const QString &relpath, const QString &basename)
     QDir dir(QCoreApplication::applicationDirPath());
     if (!dir.cd(relpath))
         return QString();
-    foreach (const QString &fileName, dir.entryList()) {
+    for (const QString &fileName : dir.entryList()) {
         if (fileName.contains(basename)) {
             QString filePath = dir.filePath(fileName);
             if (QLibrary::isLibrary(filePath))

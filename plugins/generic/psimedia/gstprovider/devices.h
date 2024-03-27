@@ -34,15 +34,28 @@ class GstMainLoop;
 
 class GstDevice {
 public:
-    PDevice::Type type;
-    QString       name;
-    bool          isDefault = false; // TODO assign true somewhere
-    QString       id;
+    PDevice::Type        type;
+    bool                 isDefault = false; // TODO assign true somewhere
+    QString              name;
+    QString              id;
+    QList<PDevice::Caps> caps;
 
     void updateFrom(const GstDevice &dev)
     {
         name      = dev.name;
         isDefault = dev.isDefault;
+        caps      = dev.caps;
+    }
+
+    PDevice toPDevice() const
+    {
+        PDevice out;
+        out.type      = type;
+        out.name      = name;
+        out.id        = id;
+        out.isDefault = isDefault;
+        out.caps      = caps;
+        return out;
     }
 };
 

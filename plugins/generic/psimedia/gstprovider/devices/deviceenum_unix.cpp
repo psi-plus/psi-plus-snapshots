@@ -18,22 +18,22 @@
  *
  */
 
-//#include <QDir>
+// #include <QDir>
 #include <QFile>
-//#include <QFileInfo>
+// #include <QFileInfo>
 #include <QStringList>
 
 #include <cerrno>
 #include <fcntl.h>
-//#include <sys/stat.h>
-//#include <sys/types.h>
+// #include <sys/stat.h>
+// #include <sys/types.h>
 #include <unistd.h>
 
 #ifdef Q_OS_LINUX
 #include <dirent.h>
-//#include <linux/videodev2.h>
-//#include <sys/ioctl.h>
-//#include <sys/stat.h>
+// #include <linux/videodev2.h>
+// #include <sys/ioctl.h>
+// #include <sys/stat.h>
 #endif
 #include "devices.h"
 
@@ -144,16 +144,16 @@ static QList<GstDevice> get_oss_items(int type)
         else
             possible += QString("/dev/dsp%1").arg(num);
 
-        // if we're looking for the 0 item, this might be "dsp"
+        // if we're looking for the 0 item, this might be "dsp"c
         //   without a number on it
         if (num == 0 && !bsd)
             possible += "/dev/dsp";
 
-        QString dev;
-        foreach (dev, possible) {
-            if (QFile::exists(dev))
-                break;
+        auto itf = std::find_if(possible.begin(), possible.end(), [](auto const &d) { return QFile::exists(d); });
+        if (itf == possible.end()) {
+            continue;
         }
+        QString dev = *itf;
 
         if (type & DIR_INPUT && check_oss(dev, true)) {
             GstDevice i;
@@ -201,7 +201,7 @@ static QList<GstDevice> get_alsa_items(int type)
 
     QList<AlsaItem> items;
     QStringList     devices_lines = read_proc_as_lines("/proc/asound/devices");
-    foreach (QString line, devices_lines) {
+    for (QString line : std::as_const(devices_lines)) {
         // get the fields we care about
         QString devbracket, devtype;
         int     x = line.indexOf(": ");
@@ -260,7 +260,7 @@ static QList<GstDevice> get_alsa_items(int type)
 
     // try to get the friendly names
     QStringList pcm_lines = read_proc_as_lines("/proc/asound/pcm");
-    foreach (QString line, pcm_lines) {
+    for (QString line : std::as_const(pcm_lines)) {
         QString devnumbers, devname;
         int     x = line.indexOf(": ");
         if (x == -1)

@@ -62,7 +62,7 @@ signals:
 
 #endif
 
-Provider *         provider();
+Provider          *provider();
 QList<Device>      importDevices(const QList<PDevice> &in);
 QList<AudioParams> importAudioModes(const QList<PAudioParams> &in);
 QList<VideoParams> importVideoModes(const QList<PVideoParams> &in);
@@ -71,7 +71,7 @@ class Features::Private : public QObject {
     Q_OBJECT
 
 public:
-    Features *       q;
+    Features        *q;
     FeaturesContext *c = nullptr;
 
     QList<Device>      audioOutputDevices;
@@ -93,11 +93,11 @@ public:
 
     void clearResults()
     {
-        audioOutputDevices.clear();
-        audioInputDevices.clear();
-        videoInputDevices.clear();
-        supportedAudioModes.clear();
-        supportedVideoModes.clear();
+        audioOutputDevices  = {}; // detach copy
+        audioInputDevices   = {};
+        videoInputDevices   = {};
+        supportedAudioModes = {};
+        supportedVideoModes = {};
     }
 
     void importResults(const PFeatures &in)
@@ -127,7 +127,7 @@ class RtpChannelPrivate : public QObject {
     Q_OBJECT
 
 public:
-    RtpChannel *       q;
+    RtpChannel        *q;
     RtpChannelContext *c;
     bool               enabled;
     int                readyReadListeners;
@@ -177,7 +177,7 @@ class RtpSessionPrivate : public QObject {
     Q_OBJECT
 
 public:
-    RtpSession *       q;
+    RtpSession        *q;
     RtpSessionContext *c;
     RtpChannel         audioRtpChannel;
     RtpChannel         videoRtpChannel;
