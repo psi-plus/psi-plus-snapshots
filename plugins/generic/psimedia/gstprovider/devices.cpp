@@ -25,6 +25,7 @@
 #include <QMutex>
 #include <QSize>
 #include <QStringList>
+#include <QThread>
 #include <QTimer>
 #include <gst/gst.h>
 
@@ -153,20 +154,21 @@ public:
     GstDeviceMonitor        *_monitor = nullptr;
     QMap<QString, GstDevice> _devices;
     PlatformDeviceMonitor   *_platform = nullptr;
-    QTimer                  *timer;
+    std::shared_ptr<QTimer>  timer;
     QMutex                   devListMutex;
+    QThread                 *qtThread;
     bool                     started = false;
 
     bool videoSrcFirst  = true;
     bool audioSrcFirst  = true;
     bool audioSinkFirst = true;
 
-    explicit Private(DeviceMonitor *q) : q(q)
+    explicit Private(DeviceMonitor *q) : q(q), qtThread(q->thread())
     {
-        timer = new QTimer(q); // we need it to go another thread together with q
+        timer = std::make_shared<QTimer>(); // we need it to go another thread together with q
         timer->setSingleShot(true);
         timer->setInterval(50); // an interval to emit updated() signal on dev discovery since the may come in row
-        QObject::connect(timer, &QTimer::timeout, q, &DeviceMonitor::updated);
+        QObject::connect(timer.get(), &QTimer::timeout, q, &DeviceMonitor::updated);
     }
 
     static GstDevice gstDevConvert(::GstDevice *gdev)
@@ -259,6 +261,25 @@ public:
 
         return TRUE;
     }
+
+    void triggerUpdated()
+    {
+        // the current thread doesn't have full working event loop
+        // so we need to throw event from a valid thread. We hade one at moment of
+        // DeviceMonitor creation and preserved it in qtThread
+        qtThread->metaObject()->invokeMethod(
+            qtThread,
+            [this, weakTimer = std::weak_ptr<QTimer>(timer)]() {
+                auto sharedTimer = weakTimer.lock();
+                if (!sharedTimer) {
+                    return; // destructor is already executed. nothing todo
+                }
+                // wait quite a bit since updates may come in row with latest gstreamer
+                if (!sharedTimer->isActive())
+                    sharedTimer->start();
+            },
+            Qt::QueuedConnection);
+    }
 };
 
 void DeviceMonitor::updateDevList()
@@ -319,9 +340,7 @@ void DeviceMonitor::onDeviceAdded(GstDevice dev)
         }
         d->_devices.insert(dev.id, dev);
         qDebug("added dev: %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
-        // wait quite a bit since updates may come in row with latest gstreamer
-        if (!d->timer->isActive())
-            d->timer->start(); // REVIEW starting from another thread. does it work? is it safe?
+        d->triggerUpdated();
     }
 }
 
@@ -330,7 +349,7 @@ void DeviceMonitor::onDeviceRemoved(const GstDevice &dev)
     QMutexLocker locker(&d->devListMutex);
     if (d->_devices.remove(dev.id)) {
         qDebug("removed dev: %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
-        emit updated();
+        d->triggerUpdated();
     } else {
         qWarning("Double remove of device %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
     }
@@ -347,7 +366,7 @@ void DeviceMonitor::onDeviceChanged(const GstDevice &dev)
     }
     qDebug("Changed device '%s'", qPrintable(dev.id));
     it->updateFrom(dev);
-    emit updated();
+    d->triggerUpdated();
 }
 
 DeviceMonitor::DeviceMonitor(GstMainLoop *mainLoop) : QObject(mainLoop), d(new Private(this)) { }
