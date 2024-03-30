@@ -52,7 +52,7 @@ class PsiMediaPlugin : public QObject,
 public:
     PsiMediaPlugin() = default;
     QString             name() const override;
-    QWidget *           options() override;
+    QWidget            *options() override;
     bool                enable() override;
     bool                disable() override;
     void                optionChanged(const QString &option) override;
@@ -67,15 +67,15 @@ public:
     PsiMedia::Provider *createProvider(const QVariantMap &) override;
 
 private:
-    OptionAccessingHost *         psiOptions = nullptr;
-    IconFactoryAccessingHost *    iconHost   = nullptr;
+    OptionAccessingHost          *psiOptions = nullptr;
+    IconFactoryAccessingHost     *iconHost   = nullptr;
     ApplicationInfoAccessingHost *appInfo    = nullptr;
-    PsiMediaHost *                mediaHost  = nullptr;
-    PluginAccessingHost *         pluginHost = nullptr;
+    PsiMediaHost                 *mediaHost  = nullptr;
+    PluginAccessingHost          *pluginHost = nullptr;
     bool                          enabled    = false;
     QPointer<QWidget>             options_;
 
-    OAH_PluginOptionsTab * tab      = nullptr;
+    OAH_PluginOptionsTab  *tab      = nullptr;
     PsiMedia::GstProvider *provider = nullptr;
 };
 
@@ -85,7 +85,6 @@ bool PsiMediaPlugin::enable()
 {
     if (!psiOptions || !mediaHost || !appInfo || !pluginHost)
         return false;
-    enabled = true;
 
     if (!provider) {
         QVariantMap params;
@@ -93,21 +92,22 @@ bool PsiMediaPlugin::enable()
         params["resourcePath"] = QDir::toNativeSeparators(appInfo->appResourcesDir() + "/gstreamer-1.0");
 #endif
         provider = new PsiMedia::GstProvider(params);
-        connect(provider, &PsiMedia::GstProvider::initialized, this, [this]() {
-            mediaHost->setMediaProvider(provider);
+        if (!provider->isInitialized()) {
+            delete provider;
+            return false;
+        }
+        mediaHost->setMediaProvider(provider);
 
-            tab = new OptionsTabAvCall(provider, psiOptions, mediaHost,
-                                       pluginHost->selfMetadata()["icon"].value<QIcon>());
-            psiOptions->addSettingPage(tab);
+        tab = new OptionsTabAvCall(provider, psiOptions, mediaHost, pluginHost->selfMetadata()["icon"].value<QIcon>());
+        psiOptions->addSettingPage(tab);
 
-            auto ain  = psiOptions->getPluginOption("devices.audio-input", QString()).toString();
-            auto aout = psiOptions->getPluginOption("devices.audio-output", QString()).toString();
-            auto vin  = psiOptions->getPluginOption("devices.video-input", QString()).toString();
-            mediaHost->selectMediaDevices(ain, aout, vin);
-        });
-        provider->init();
+        auto ain  = psiOptions->getPluginOption("devices.audio-input", QString()).toString();
+        auto aout = psiOptions->getPluginOption("devices.audio-output", QString()).toString();
+        auto vin  = psiOptions->getPluginOption("devices.video-input", QString()).toString();
+        mediaHost->selectMediaDevices(ain, aout, vin);
     }
 
+    enabled = true;
     return enabled;
 }
 
