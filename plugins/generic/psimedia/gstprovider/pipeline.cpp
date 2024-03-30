@@ -210,11 +210,14 @@ private:
 
         // explicitly set audio devices to be low-latency
         if (/*type == PDevice::AudioIn ||*/ type == PDevice::AudioOut) {
-            int latency_ms = get_latency_time();
-            if (latency_ms > 0) {
-                gint64 lt = latency_ms * 1000; // microseconds
-                g_object_set(G_OBJECT(deviceElement), "latency-time", lt, nullptr);
-                // g_object_set(G_OBJECT(e), "buffer-time", 2 * lt, nullptr);
+            auto name = gst_element_get_name(deviceElement);
+            if (QLatin1String { name }.contains(QLatin1String { "alsa" })) {
+                int latency_ms = get_latency_time();
+                if (latency_ms > 0) {
+                    gint64 lt = latency_ms * 1000; // microseconds
+                    g_object_set(G_OBJECT(deviceElement), "latency-time", lt, nullptr);
+                    // g_object_set(G_OBJECT(e), "buffer-time", 2 * lt, nullptr);
+                }
             }
         }
 

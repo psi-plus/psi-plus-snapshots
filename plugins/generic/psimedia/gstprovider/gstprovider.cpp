@@ -37,7 +37,7 @@ namespace PsiMedia {
 //----------------------------------------------------------------------------
 GstProvider::GstProvider(const QVariantMap &params)
 {
-    qDebug("GstProvider::GstProvider thread=%p", QThread::currentThreadId());
+    // qDebug("GstProvider::GstProvider thread=%p", QThread::currentThreadId());
     gstEventLoopThread.setObjectName("GstEventLoop");
 
     auto resourcePath = params.value("resourcePath").toString();

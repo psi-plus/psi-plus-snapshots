@@ -89,7 +89,7 @@ QList<PDevice> GstFeaturesContext::videoInputDevices()
 
 void GstFeaturesContext::updateDevices()
 {
-    qDebug("GstFeaturesContext::updateDevices thread=%p", QThread::currentThreadId());
+    // qDebug("GstFeaturesContext::updateDevices thread=%p", QThread::currentThreadId());
     updated                      = true;
     features.audioInputDevices   = audioInputDevices();
     features.audioOutputDevices  = audioOutputDevices();
