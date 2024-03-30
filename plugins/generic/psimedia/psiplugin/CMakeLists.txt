@@ -19,7 +19,6 @@ get_filename_component(ABS_PLUGINS_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOL
 set(PLUGINS_ROOT_DIR "${ABS_PLUGINS_ROOT_DIR}" CACHE STRING "Plugins root path. Path where include directory placed")
 
 if(NOT BUILD_DEMO)
-    include(${ABS_PLUGINS_ROOT_DIR}/gstprovider/CMakeLists.txt)
     include_directories(
         ${ABS_PLUGINS_ROOT_DIR}/gstprovider
         ${ABS_PLUGINS_ROOT_DIR}/gstprovider/devices

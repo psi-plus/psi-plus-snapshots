@@ -128,6 +128,10 @@ endif()
 set(PROVIDERLIB gstprovidersrc)
 add_library(${PROVIDERLIB} STATIC ${SOURCES})
 
+if(${QT_DEFAULT_MAJOR_VERSION} GREATER_EQUAL 6)
+    set_target_properties(${PROVIDERLIB} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+
 target_include_directories(${PROVIDERLIB}
                            PUBLIC
                            ${CMAKE_CURRENT_SOURCE_DIR}

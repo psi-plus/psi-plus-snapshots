@@ -242,10 +242,10 @@ public:
 
 class GstMainLoop::Private {
 public:
-    typedef struct {
+    struct BridgeQueueSource{
         GSource               parent;
         GstMainLoop::Private *d = nullptr;
-    } BridgeQueueSource;
+    };
 
     GstMainLoop                                        *q = nullptr;
     QString                                             pluginPath;

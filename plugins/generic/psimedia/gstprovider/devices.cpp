@@ -188,7 +188,7 @@ public:
         }
 
         gchar *name = gst_device_get_display_name(gdev);
-        d.name      = QString::fromUtf8(name);
+        d.name      = QString::fromLocal8Bit(name);
         g_free(name);
 
         if (gst_device_has_classes(gdev, "Audio/Source")) {

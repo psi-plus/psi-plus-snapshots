@@ -21,6 +21,8 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_LIST_DIR}
     ${ABS_GPLUG_PARENT_DIR}/psimedia
+    ${ABS_GPLUG_PARENT_DIR}/gstprovider
+    ${ABS_GPLUG_PARENT_DIR}/gstprovider/devices
 )
 
 set(SOURCES
@@ -42,5 +44,7 @@ target_link_libraries(
     ${PLUGIN}
     ${QT_DEPLIBS}
 )
+add_dependencies(${PLUGIN} gstprovidersrc)
 target_link_libraries(${PLUGIN} gstprovidersrc)
 install(TARGETS ${PLUGIN} LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+
