@@ -20,7 +20,7 @@
 
 #include "modes.h"
 
-//#include <gst/gst.h>
+// #include <gst/gst.h>
 
 namespace PsiMedia {
 
@@ -54,7 +54,7 @@ static bool have_h263p()
     return have_codec("ffenc_h263p", "ffdec_h263", "rtph263ppay", "rtph263pdepay");
 }*/
 
-// opus, theora, and vorbis are guaranteed to exist
+// opus, vp8 are guaranteed to exist
 
 QList<PAudioParams> modes_supportedAudio()
 {
@@ -106,49 +106,15 @@ QList<PAudioParams> modes_supportedAudio()
 QList<PVideoParams> modes_supportedVideo()
 {
     QList<PVideoParams> list;
-    /*if(have_h263p())
+
     {
         PVideoParams p;
-        p.codec = "h263p";
-        p.size = QSize(160, 120);
-        p.fps = 30;
-        list += p;
-    }
-    {
-        PVideoParams p;
-        p.codec = "theora";
-        p.size = QSize(160, 120);
-        p.fps = 30;
-        list += p;
-    }
-    {
-        PVideoParams p;
-        p.codec = "theora";
-        p.size = QSize(640, 480);
-        p.fps = 15;
-        list += p;
-    }*/
-    {
-        PVideoParams p;
-        p.codec = "theora";
+        p.codec = "vp8";
         p.size  = QSize(640, 480);
         p.fps   = 30;
         list += p;
     }
-    /*{
-        PVideoParams p;
-        p.codec = "theora";
-        p.size = QSize(640, 480);
-        p.fps = 15;
-        list += p;
-    }
-    {
-        PVideoParams p;
-        p.codec = "theora";
-        p.size = QSize(640, 480);
-        p.fps = 30;
-        list += p;
-    }*/
+
     return list;
 }
 

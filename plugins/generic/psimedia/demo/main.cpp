@@ -269,7 +269,7 @@ void ConfigDlg::featuresUpdated()
     ui.cb_videoMode->clear();
     for (const PsiMedia::VideoParams &params : std::as_const(featuresWatcher->supportedVideoModes())) {
         QString codec = params.codec();
-        if (codec == "theora")
+        if (codec == "vp8")
             codec[0] = codec[0].toUpper();
         else
             codec = codec.toUpper();

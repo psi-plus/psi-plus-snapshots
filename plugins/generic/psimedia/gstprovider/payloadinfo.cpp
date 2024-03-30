@@ -86,7 +86,7 @@ gboolean my_foreach_func(GQuark field_id, const GValue *value, gpointer user_dat
         QString svalue = QString::fromLatin1(g_value_get_string(value));
 
         // FIXME: is there a better way to detect when we should do this conversion?
-        if (name == "configuration" && (state.out->name == "THEORA" || state.out->name == "VORBIS")) {
+        if (name == "configuration" && (state.out->name == "VP8" || state.out->name == "VORBIS")) {
             QByteArray config = QByteArray::fromBase64(svalue.toLatin1());
             svalue            = hexEncode(config);
         }
@@ -160,7 +160,7 @@ GstStructure *payloadInfoToStructure(const PPayloadInfo &info, const QString &me
         QString value = i.value;
 
         // FIXME: is there a better way to detect when we should do this conversion?
-        if (i.name == "configuration" && (info.name.toUpper() == "THEORA" || info.name.toUpper() == "VORBIS")) {
+        if (i.name == "configuration" && (info.name.toUpper() == "VP8" || info.name.toUpper() == "VORBIS")) {
             QByteArray config = hexDecode(value);
             if (config.isEmpty()) {
                 gst_structure_free(out);

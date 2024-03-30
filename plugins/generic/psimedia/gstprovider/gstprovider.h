@@ -37,21 +37,17 @@ class GstProvider : public QObject, public Provider {
 public:
     QThread               gstEventLoopThread;
     QPointer<GstMainLoop> gstEventLoop;
-    DeviceMonitor *       deviceMonitor = nullptr;
+    DeviceMonitor        *deviceMonitor = nullptr;
 
     GstProvider(const QVariantMap &params = QVariantMap());
     ~GstProvider() override;
-    QObject *             qobject() override;
-    bool                  init() override;
+    QObject              *qobject() override;
     bool                  isInitialized() const override;
     QString               creditName() const override;
     QString               creditText() const override;
-    FeaturesContext *     createFeatures() override;
-    RtpSessionContext *   createRtpSession() override;
+    FeaturesContext      *createFeatures() override;
+    RtpSessionContext    *createRtpSession() override;
     AudioRecorderContext *createAudioRecorder() override;
-
-signals:
-    void initialized();
 };
 
 }

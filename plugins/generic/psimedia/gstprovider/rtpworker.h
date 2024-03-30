@@ -32,7 +32,7 @@
 namespace PsiMedia {
 
 class PipelineDeviceContext;
-
+class DeviceMonitor;
 class Stats;
 
 // Note: do not destruct this class during one of its callbacks
@@ -61,19 +61,19 @@ public:
     QList<PPayloadInfo> localVideoPayloadInfo;
     QList<PPayloadInfo> remoteAudioPayloadInfo;
     QList<PPayloadInfo> remoteVideoPayloadInfo;
-    int                 maxbitrate = 0;
+    int                 maxbitrate = -1;
 
     // read-only
-    bool canTransmitAudio;
-    bool canTransmitVideo;
-    int  outputVolume;
-    int  inputVolume;
-    int  error;
+    bool canTransmitAudio = false;
+    bool canTransmitVideo = false;
+    int  outputVolume     = 100;
+    int  inputVolume      = 100;
+    int  error            = 0;
 
-    explicit RtpWorker(GMainContext *mainContext);
+    explicit RtpWorker(GMainContext *mainContext, DeviceMonitor *hardwareDeviceMonitor);
     ~RtpWorker();
 
-    RtpWorker(const RtpWorker &) = delete;
+    RtpWorker(const RtpWorker &)            = delete;
     RtpWorker &operator=(const RtpWorker &) = delete;
 
     void start();  // must wait until cb_updated before calling update
@@ -93,35 +93,36 @@ public:
 
     void recordStart();
     void recordStop();
-    void dumpPipeline(std::function<void(const QStringList &)>);
+    void dumpPipeline(std::function<void(const QStringList &)> = {});
 
     // callbacks
 
-    void (*cb_started)(void *app);
-    void (*cb_updated)(void *app);
-    void (*cb_stopped)(void *app);
-    void (*cb_finished)(void *app);
-    void (*cb_error)(void *app);
-    void (*cb_audioOutputIntensity)(int value, void *app);
-    void (*cb_audioInputIntensity)(int value, void *app);
+    void (*cb_started)(void *app)                         = nullptr;
+    void (*cb_updated)(void *app)                         = nullptr;
+    void (*cb_stopped)(void *app)                         = nullptr;
+    void (*cb_finished)(void *app)                        = nullptr;
+    void (*cb_error)(void *app)                           = nullptr;
+    void (*cb_audioOutputIntensity)(int value, void *app) = nullptr;
+    void (*cb_audioInputIntensity)(int value, void *app)  = nullptr;
 
     // callbacks - from alternate thread, be safe!
     //   also, it is not safe to assign callbacks except before starting
 
-    void (*cb_previewFrame)(const Frame &frame, void *app);
-    void (*cb_outputFrame)(const Frame &frame, void *app);
-    void (*cb_rtpAudioOut)(const PRtpPacket &packet, void *app);
-    void (*cb_rtpVideoOut)(const PRtpPacket &packet, void *app);
+    void (*cb_previewFrame)(const Frame &frame, void *app)      = nullptr;
+    void (*cb_outputFrame)(const Frame &frame, void *app)       = nullptr;
+    void (*cb_rtpAudioOut)(const PRtpPacket &packet, void *app) = nullptr;
+    void (*cb_rtpVideoOut)(const PRtpPacket &packet, void *app) = nullptr;
 
     // empty record packet = EOF/error
-    void (*cb_recordData)(const QByteArray &packet, void *app);
+    void (*cb_recordData)(const QByteArray &packet, void *app) = nullptr;
 
 private:
-    GMainContext *mainContext_ = nullptr;
-    GSource *     timer        = nullptr;
+    GMainContext  *mainContext_           = nullptr;
+    DeviceMonitor *hardwareDeviceMonitor_ = nullptr;
+    GSource       *timer                  = nullptr;
 
     PipelineDeviceContext *pd_audiosrc = nullptr, *pd_videosrc = nullptr, *pd_audiosink = nullptr;
-    GstElement *           sendbin = nullptr, *recvbin = nullptr;
+    GstElement            *sendbin = nullptr, *recvbin = nullptr;
 
     GstElement *fileDemux   = nullptr;
     GstElement *audiosrc    = nullptr;
@@ -166,6 +167,7 @@ private:
     static GstFlowReturn cb_packet_ready_rtp_video(GstAppSink *appsink, gpointer data);
     static GstFlowReturn cb_packet_ready_preroll_stub(GstAppSink *appsink, gpointer data);
     static void          cb_packet_ready_eos_stub(GstAppSink *appsink, gpointer data);
+    static gboolean      cb_packet_ready_event_stub(GstAppSink *appsink, gpointer data);
     static gboolean      cb_fileReady(gpointer data);
 
     gboolean      doStart();
@@ -189,7 +191,7 @@ private:
     bool        addAudioChain(int rate);
     bool        addVideoChain();
     bool        getCaps();
-    bool        updateTheoraConfig();
+    bool        updateVp8Config();
     GstAppSink *makeVideoPlayAppSink(const gchar *name);
 };
 

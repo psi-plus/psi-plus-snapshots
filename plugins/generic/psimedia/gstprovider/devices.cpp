@@ -321,7 +321,7 @@ void DeviceMonitor::onDeviceAdded(GstDevice dev)
         qDebug("added dev: %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
         // wait quite a bit since updates may come in row with latest gstreamer
         if (!d->timer->isActive())
-            d->timer->start();
+            d->timer->start(); // REVIEW starting from another thread. does it work? is it safe?
     }
 }
 
@@ -401,6 +401,7 @@ void DeviceMonitor::start()
 
 QList<GstDevice> DeviceMonitor::devices(PDevice::Type type)
 {
+    // Called not from gst thread. other can deadlock
     QList<GstDevice> ret;
 
     bool hasPulsesrc         = false;
@@ -443,6 +444,16 @@ QList<GstDevice> DeviceMonitor::devices(PDevice::Type type)
         ret.prepend(defalt);
     }
     return ret;
+}
+
+GstDevice *DeviceMonitor::device(const QString &id)
+{
+    // to be called from gst thread
+    auto it = d->_devices.find(id);
+    if (it == d->_devices.end()) {
+        return nullptr;
+    }
+    return &it.value();
 }
 
 GstElement *devices_makeElement(const QString &id, PDevice::Type type, QSize *captureSize)

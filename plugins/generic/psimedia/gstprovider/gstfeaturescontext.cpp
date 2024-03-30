@@ -4,6 +4,8 @@
 #include "gstthread.h"
 #include "modes.h"
 
+#include <QThread>
+
 namespace PsiMedia {
 
 GstFeaturesContext::GstFeaturesContext(GstMainLoop *_gstLoop, DeviceMonitor *deviceMonitor, QObject *parent) :
@@ -87,6 +89,7 @@ QList<PDevice> GstFeaturesContext::videoInputDevices()
 
 void GstFeaturesContext::updateDevices()
 {
+    qDebug("GstFeaturesContext::updateDevices thread=%p", QThread::currentThreadId());
     updated                      = true;
     features.audioInputDevices   = audioInputDevices();
     features.audioOutputDevices  = audioOutputDevices();

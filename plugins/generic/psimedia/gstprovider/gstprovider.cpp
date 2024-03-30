@@ -37,6 +37,7 @@ namespace PsiMedia {
 //----------------------------------------------------------------------------
 GstProvider::GstProvider(const QVariantMap &params)
 {
+    qDebug("GstProvider::GstProvider thread=%p", QThread::currentThreadId());
     gstEventLoopThread.setObjectName("GstEventLoop");
 
     auto resourcePath = params.value("resourcePath").toString();
@@ -44,20 +45,36 @@ GstProvider::GstProvider(const QVariantMap &params)
     deviceMonitor     = new DeviceMonitor(gstEventLoop);
     gstEventLoop->moveToThread(&gstEventLoopThread);
 
+    QMutex waitMutex;
+    waitMutex.lock();
+    QWaitCondition   wait;
+    std::atomic_bool success { false };
     connect(
         &gstEventLoopThread, &QThread::started, gstEventLoop,
-        [this]() {
+        [this, &wait, &success]() {
             Q_ASSERT(QThread::currentThread() == &gstEventLoopThread);
             // connect(&gstEventLoopThread, &QThread::finished, gstEventLoop, &QObject::deleteLater);
-            connect(gstEventLoop, &GstMainLoop::started, this, &GstProvider::initialized, Qt::QueuedConnection);
+            connect(gstEventLoop, &GstMainLoop::started, [&wait, &success]() {
+                // faired by timer from gst loop. means complete success in starting.
+                success.store(true);
+                wait.wakeOne();
+            });
             // do any custom stuff here before glib event loop started. it's already initialized
-            if (!gstEventLoop->start()) {
+            if (!gstEventLoop->start()) { // this call won't return while event loop is still running
                 qWarning("glib event loop failed to initialize");
                 gstEventLoopThread.exit(1); // noop if ~GstProvider() was called first?
+                wait.wakeOne();
                 return;
             }
         },
         Qt::QueuedConnection);
+    gstEventLoopThread.start();
+    wait.wait(&waitMutex);
+    waitMutex.unlock();
+    if (!success.load()) {
+        gstEventLoopThread.wait();
+        delete gstEventLoop; // will null it coz QPointer
+    }
 }
 
 GstProvider::~GstProvider()
@@ -71,12 +88,6 @@ GstProvider::~GstProvider()
 }
 
 QObject *GstProvider::qobject() { return this; }
-
-bool GstProvider::init()
-{
-    gstEventLoopThread.start();
-    return true;
-}
 
 bool GstProvider::isInitialized() const { return gstEventLoop && gstEventLoop->isInitialized(); }
 
@@ -95,7 +106,7 @@ QString GstProvider::creditText() const
 
 FeaturesContext *GstProvider::createFeatures() { return new GstFeaturesContext(gstEventLoop, deviceMonitor); }
 
-RtpSessionContext *GstProvider::createRtpSession() { return new GstRtpSessionContext(gstEventLoop); }
+RtpSessionContext *GstProvider::createRtpSession() { return new GstRtpSessionContext(gstEventLoop, deviceMonitor); }
 
 AudioRecorderContext *GstProvider::createAudioRecorder() { return new GstAudioRecorderContext(gstEventLoop); }
 

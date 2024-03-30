@@ -81,6 +81,7 @@ namespace PsiMedia {
 
 class GstMainLoop;
 class RwControlRemote;
+class DeviceMonitor;
 
 class RwControlConfigDevices {
 public:
@@ -276,7 +277,7 @@ class RwControlLocal : public QObject {
     Q_OBJECT
 
 public:
-    explicit RwControlLocal(GstMainLoop *thread, QObject *parent = nullptr);
+    explicit RwControlLocal(GstMainLoop *thread, DeviceMonitor *hardwareDeviceMonitor, QObject *parent = nullptr);
     ~RwControlLocal() override;
 
     void start(const RwControlConfigDevices &devices, const RwControlConfigCodecs &codecs);
@@ -294,10 +295,10 @@ public:
     // note that it is only safe to assign callbacks prior to starting.
     // note if the stream is stopped while recording is active, then
     //   stopped status will not be reported until EOF is delivered.
-    void *app;
-    void (*cb_rtpAudioOut)(const PRtpPacket &packet, void *app);
-    void (*cb_rtpVideoOut)(const PRtpPacket &packet, void *app);
-    void (*cb_recordData)(const QByteArray &packet, void *app);
+    void *app                                                   = nullptr;
+    void (*cb_rtpAudioOut)(const PRtpPacket &packet, void *app) = nullptr;
+    void (*cb_rtpVideoOut)(const PRtpPacket &packet, void *app) = nullptr;
+    void (*cb_recordData)(const QByteArray &packet, void *app)  = nullptr;
 
     void dumpPipeline(std::function<void(const QStringList &)> callback);
 signals:
@@ -313,12 +314,13 @@ private slots:
     void processMessages();
 
 private:
-    GstMainLoop *    thread_;
-    GSource *        timer;
+    GstMainLoop     *thread_                = nullptr;
+    DeviceMonitor   *hardwareDeviceMonitor_ = nullptr;
+    GSource         *timer                  = nullptr;
     QMutex           m;
     QWaitCondition   w;
-    RwControlRemote *remote_;
-    bool             wake_pending;
+    RwControlRemote *remote_      = nullptr;
+    bool             wake_pending = false;
 
     QMutex                    in_mutex;
     QList<RwControlMessage *> in;
@@ -335,22 +337,22 @@ private:
 
 class RwControlRemote {
 public:
-    RwControlRemote(GMainContext *mainContext, RwControlLocal *local);
+    RwControlRemote(GMainContext *mainContext, DeviceMonitor *hardwareDeviceMonitor, RwControlLocal *local);
     ~RwControlRemote();
 
-    RwControlRemote(const RwControlRemote &) = delete;
+    RwControlRemote(const RwControlRemote &)            = delete;
     RwControlRemote &operator=(const RwControlRemote &) = delete;
 
 private:
-    GSource *       timer;
-    GMainContext *  mainContext_;
+    GSource        *timer        = nullptr;
+    GMainContext   *mainContext_ = nullptr;
     QMutex          m;
-    RwControlLocal *local_;
+    RwControlLocal *local_ = nullptr;
     bool            start_requested;
     bool            blocking;
     bool            pending_status;
 
-    RtpWorker *               worker;
+    RtpWorker                *worker = nullptr;
     QList<RwControlMessage *> in;
 
     static gboolean cb_processMessages(gpointer data);

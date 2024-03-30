@@ -31,6 +31,7 @@ namespace PsiMedia {
 
 class GstMainLoop;
 class GstVideoWidget;
+class DeviceMonitor;
 
 //----------------------------------------------------------------------------
 // GstRtpSessionContext
@@ -42,11 +43,12 @@ class GstRtpSessionContext : public QObject, public RtpSessionContext {
 public:
     GstMainLoop *gstLoop;
 
-    RwControlLocal *       control;
+    RwControlLocal        *control;
     RwControlConfigDevices devices;
     RwControlConfigCodecs  codecs;
     RwControlTransmit      transmit;
     RwControlStatus        lastStatus;
+    DeviceMonitor         *hardwareDeviceMonitor;
     bool                   isStarted;
     bool                   isStopping;
     bool                   pending_status;
@@ -63,7 +65,7 @@ public:
     QMutex        write_mutex;
     bool          allow_writes;
 
-    explicit GstRtpSessionContext(GstMainLoop *_gstLoop, QObject *parent = nullptr);
+    explicit GstRtpSessionContext(GstMainLoop *_gstLoop, DeviceMonitor *deviceMonitor, QObject *parent = nullptr);
 
     ~GstRtpSessionContext() override;
 
@@ -109,8 +111,8 @@ public:
     int                 inputVolume() const override;
     void                setInputVolume(int level) override;
     Error               errorCode() const override;
-    RtpChannelContext * audioRtpChannel() override;
-    RtpChannelContext * videoRtpChannel() override;
+    RtpChannelContext  *audioRtpChannel() override;
+    RtpChannelContext  *videoRtpChannel() override;
     void                dumpPipeline(std::function<void(const QStringList &)> callback) override;
 
     // channel calls this, which may be in another thread

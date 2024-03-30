@@ -106,10 +106,8 @@ static GstElement *audio_codec_to_rtpdepay_element(const QString &name)
 static GstElement *video_codec_to_enc_element(const QString &name)
 {
     QString ename;
-    if (name == "theora")
-        ename = "theoraenc";
-    else if (name == "h263p")
-        ename = "ffenc_h263p";
+    if (name == QLatin1String("vp8"))
+        ename = QLatin1String("vp8enc");
     else
         return nullptr;
 
@@ -119,10 +117,8 @@ static GstElement *video_codec_to_enc_element(const QString &name)
 static GstElement *video_codec_to_dec_element(const QString &name)
 {
     QString ename;
-    if (name == "theora")
-        ename = "theoradec";
-    else if (name == "h263p")
-        ename = "ffdec_h263";
+    if (name == QLatin1String("vp8"))
+        ename = QLatin1String("vp8dec");
     else
         return nullptr;
 
@@ -132,10 +128,8 @@ static GstElement *video_codec_to_dec_element(const QString &name)
 static GstElement *video_codec_to_rtppay_element(const QString &name)
 {
     QString ename;
-    if (name == "theora")
-        ename = "rtptheorapay";
-    else if (name == "h263p")
-        ename = "rtph263ppay";
+    if (name == "vp8")
+        ename = "rtpvp8pay";
     else
         return nullptr;
 
@@ -145,10 +139,8 @@ static GstElement *video_codec_to_rtppay_element(const QString &name)
 static GstElement *video_codec_to_rtpdepay_element(const QString &name)
 {
     QString ename;
-    if (name == "theora")
-        ename = "rtptheoradepay";
-    else if (name == "h263p")
-        ename = "rtph263pdepay";
+    if (name == "vp8")
+        ename = "rtpvp8depay";
     else
         return nullptr;
 
@@ -227,7 +219,7 @@ GstElement *bins_videoprep_create(const QSize &size, int fps, bool is_live)
 
         ratefilter = gst_element_factory_make("capsfilter", nullptr);
 
-        GstCaps *     caps = gst_caps_new_empty();
+        GstCaps      *caps = gst_caps_new_empty();
         GstStructure *cs   = gst_structure_new("video/x-raw", "framerate", GST_TYPE_FRACTION, fps, 1, NULL);
 
         gst_caps_append_structure(caps, cs);
@@ -242,9 +234,9 @@ GstElement *bins_videoprep_create(const QSize &size, int fps, bool is_live)
         videoscale  = gst_element_factory_make("videoscale", nullptr);
         scalefilter = gst_element_factory_make("capsfilter", nullptr);
 
-        GstCaps *     caps = gst_caps_new_empty();
+        GstCaps      *caps = gst_caps_new_empty();
         GstStructure *cs   = gst_structure_new("video/x-raw", "width", G_TYPE_INT, size.width(), "height", G_TYPE_INT,
-                                             size.height(), NULL);
+                                               size.height(), NULL);
 
         gst_caps_append_structure(caps, cs);
 
@@ -319,7 +311,7 @@ GstElement *bins_audioenc_create(const QString &codec, int id, int rate, int siz
     }
 
     GstStructure *cs;
-    GstCaps *     caps         = gst_caps_new_empty();
+    GstCaps      *caps         = gst_caps_new_empty();
     guint64       channel_mask = 0;
     channel_mask |= G_GUINT64_CONSTANT(1) << GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
     channel_mask |= G_GUINT64_CONSTANT(1) << GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
@@ -377,9 +369,6 @@ GstElement *bins_videoenc_create(const QString &codec, int id, int maxkbps)
 
     if (id != -1)
         g_object_set(G_OBJECT(videortppay), "pt", id, NULL);
-
-    if (codec == "theora")
-        g_object_set(G_OBJECT(videoenc), "bitrate", maxkbps, NULL);
 
     GstElement *videoconvert = gst_element_factory_make("videoconvert", nullptr);
 

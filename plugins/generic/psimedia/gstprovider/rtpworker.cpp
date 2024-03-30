@@ -27,7 +27,7 @@
 #include <gst/app/gstappsrc.h>
 
 #include "bins.h"
-//#include "devices.h"
+// #include "devices.h"
 #include "payloadinfo.h"
 #include "pipeline.h"
 
@@ -140,8 +140,8 @@ static void dump_pipeline(GstElement *in, int indent)
 static int              worker_refs          = 0;
 static PipelineContext *send_pipelineContext = nullptr;
 static PipelineContext *recv_pipelineContext = nullptr;
-static GstElement *     spipeline            = nullptr;
-static GstElement *     rpipeline            = nullptr;
+static GstElement      *spipeline            = nullptr;
+static GstElement      *rpipeline            = nullptr;
 // static GstBus *sbus = 0;
 static bool send_in_use = false;
 static bool recv_in_use = false;
@@ -151,20 +151,10 @@ static GstClock *shared_clock         = nullptr;
 static bool      send_clock_is_shared = false;
 // static bool recv_clock_is_shared = false;
 
-RtpWorker::RtpWorker(GMainContext *mainContext) :
-    app(nullptr), loopFile(false), maxbitrate(-1), canTransmitAudio(false), canTransmitVideo(false), outputVolume(100),
-    inputVolume(100), error(0), cb_started(nullptr), cb_updated(nullptr), cb_stopped(nullptr), cb_finished(nullptr),
-    cb_error(nullptr), cb_audioOutputIntensity(nullptr), cb_audioInputIntensity(nullptr), cb_previewFrame(nullptr),
-    cb_outputFrame(nullptr), cb_rtpAudioOut(nullptr), cb_rtpVideoOut(nullptr), cb_recordData(nullptr),
-    mainContext_(mainContext), timer(nullptr), pd_audiosrc(nullptr), pd_videosrc(nullptr), pd_audiosink(nullptr),
-    sendbin(nullptr), recvbin(nullptr), fileDemux(nullptr), audiosrc(nullptr), videosrc(nullptr), audiortpsrc(nullptr),
-    videortpsrc(nullptr), audiortppay(nullptr), videortppay(nullptr), volumein(nullptr), volumeout(nullptr),
-    rtpaudioout(false), rtpvideoout(false)
-// recordTimer(0)
+RtpWorker::RtpWorker(GMainContext *mainContext, DeviceMonitor *hardwareDeviceMonitor) :
+    mainContext_(mainContext), hardwareDeviceMonitor_(hardwareDeviceMonitor), audioStats(new Stats("audio")),
+    videoStats(new Stats("video"))
 {
-    audioStats = new Stats("audio");
-    videoStats = new Stats("video");
-
     if (worker_refs == 0) {
         send_pipelineContext = new PipelineContext;
         recv_pipelineContext = new PipelineContext;
@@ -490,7 +480,9 @@ void RtpWorker::dumpPipeline(std::function<void(const QStringList &)> callback)
             ret << QDir::toNativeSeparators(dir + "/psimedia_recv.dot");
         }
     }
-    callback(ret);
+    if (callback) {
+        callback(ret);
+    }
 }
 
 gboolean RtpWorker::cb_doStart(gpointer data) { return static_cast<RtpWorker *>(data)->doStart(); }
@@ -545,6 +537,14 @@ GstFlowReturn RtpWorker::cb_packet_ready_preroll_stub(GstAppSink *appsink, gpoin
     Q_UNUSED(data)
     qDebug("RtpWorker::cb_packet_ready_preroll_stub");
     return GST_FLOW_OK;
+}
+
+gboolean RtpWorker::cb_packet_ready_event_stub(GstAppSink *appsink, gpointer data)
+{
+    Q_UNUSED(appsink)
+    Q_UNUSED(data)
+    qDebug("RtpWorker::cb_packet_ready_event_stub");
+    return FALSE;
 }
 
 void RtpWorker::cb_packet_ready_eos_stub(GstAppSink *appsink, gpointer data)
@@ -636,7 +636,7 @@ void RtpWorker::fileDemux_pad_added(GstElement *element, GstPad *pad)
 
     GstCaps *caps = gst_pad_query_caps(pad, nullptr);
 #ifdef RTPWORKER_DEBUG
-    gchar * gstr       = gst_caps_to_string(caps);
+    gchar  *gstr       = gst_caps_to_string(caps);
     QString capsString = QString::fromUtf8(gstr);
     g_free(gstr);
     qDebug("  caps: [%s]", qPrintable(capsString));
@@ -668,8 +668,8 @@ void RtpWorker::fileDemux_pad_added(GstElement *element, GstPad *pad)
         } else if (type == "video") {
             isAudio = false;
 
-            if (subtype == "x-theora")
-                decoder = gst_element_factory_make("theoradec", nullptr);
+            if (subtype == "x-vp8")
+                decoder = gst_element_factory_make("vp8dec", nullptr);
         }
 
         if (decoder) {
@@ -726,7 +726,7 @@ gboolean RtpWorker::bus_call(GstBus *bus, GstMessage *msg)
         break;
     }
     case GST_MESSAGE_ERROR: {
-        gchar * debug;
+        gchar  *debug;
         GError *err;
 
         gst_message_parse_error(msg, &err, &debug);
@@ -747,7 +747,7 @@ gboolean RtpWorker::bus_call(GstBus *bus, GstMessage *msg)
         break;
     }
     case GST_MESSAGE_WARNING: {
-        gchar * debug;
+        gchar  *debug;
         GError *err;
 
         gst_message_parse_warning(msg, &err, &debug);
@@ -894,11 +894,11 @@ bool RtpWorker::setupSendRecv()
     //   - the only control you have over quality is maxbitrate
     //   - input device/file indicates desire to send
     //   - remote payloadinfo indicates desire to receive (we need this
-    //     to support theora)
+    //     to support vp8)
     //   - once sending or receiving is started, media types cannot
     //     be added or removed (doing so will throw an error)
     //   - once sending or receiving is started, codecs can't be changed
-    //     (changes will be rejected).  one exception: remote theora
+    //     (changes will be rejected).  one exception: remote  vp8
     //     config can be updated.
     //   - once sending or receiving is started, devices can't be changed
     //     (changes will be ignored)
@@ -927,8 +927,8 @@ bool RtpWorker::setupSendRecv()
     } else {
         // TODO: support adding/removing audio/video to existing session
 
-        // see if theora was updated in the remote config
-        updateTheoraConfig();
+        // see if vp8 was updated in the remote config
+        updateVp8Config();
     }
 
     // apply actual settings back to these variables, so the user can
@@ -978,7 +978,8 @@ bool RtpWorker::startSend(int rate)
                 options.aec = !options.echoProberName.isEmpty();
             }
 
-            pd_audiosrc = PipelineDeviceContext::create(send_pipelineContext, ain, PDevice::AudioIn, options);
+            pd_audiosrc = PipelineDeviceContext::create(send_pipelineContext, ain, PDevice::AudioIn,
+                                                        hardwareDeviceMonitor_, options);
             if (!pd_audiosrc) {
 #ifdef RTPWORKER_DEBUG
                 qDebug("Failed to create audio input element '%s'.", qPrintable(ain));
@@ -998,7 +999,8 @@ bool RtpWorker::startSend(int rate)
             opts.videoSize = QSize(640, 480);
             opts.fps       = 30;
 
-            pd_videosrc = PipelineDeviceContext::create(send_pipelineContext, vin, PDevice::VideoIn, opts);
+            pd_videosrc = PipelineDeviceContext::create(send_pipelineContext, vin, PDevice::VideoIn,
+                                                        hardwareDeviceMonitor_, opts);
             if (!pd_videosrc) {
 #ifdef RTPWORKER_DEBUG
                 qDebug("Failed to create video input element '%s'.", qPrintable(vin));
@@ -1094,6 +1096,7 @@ bool RtpWorker::startSend(int rate)
 
         // gst_element_set_state(pipeline, GST_STATE_PLAYING);
         // gst_element_get_state(pipeline, nullptr, nullptr, GST_CLOCK_TIME_NONE);
+        dumpPipeline();
         send_pipelineContext->activate();
 
         // 10 seconds ought to be enough time to init (video devices probing may take considerable time)
@@ -1161,20 +1164,19 @@ bool RtpWorker::startRecv()
         }
     }
 
-    // TODO: support more than theora
-    int theora_at = -1;
+    // TODO: support more than vp8
+    int vp8_at = -1;
     for (int n = 0; n < remoteVideoPayloadInfo.count(); ++n) {
         const PPayloadInfo &ri = remoteVideoPayloadInfo[n];
-        if (ri.name.toUpper() == "THEORA" && ri.clockrate == 90000) {
-            theora_at = n;
+        if (ri.name.toUpper() == "VP8" && ri.clockrate == 90000) {
+            vp8_at = n;
             break;
         }
     }
 
     // if remote does not support our codecs, error out
-    // FIXME: again, support more than opus/theora
-    if ((!remoteAudioPayloadInfo.isEmpty() && opus_at == -1)
-        || (!remoteVideoPayloadInfo.isEmpty() && theora_at == -1)) {
+    // FIXME: again, support more than opus/vp8
+    if ((!remoteAudioPayloadInfo.isEmpty() && opus_at == -1) || (!remoteVideoPayloadInfo.isEmpty() && vp8_at == -1)) {
         return false;
     }
 
@@ -1215,12 +1217,12 @@ bool RtpWorker::startRecv()
         acodec = remoteAudioPayloadInfo[at].name.toLower();
     }
 
-    if (!remoteVideoPayloadInfo.isEmpty() && theora_at != -1) {
+    if (!remoteVideoPayloadInfo.isEmpty() && vp8_at != -1) {
 #ifdef RTPWORKER_DEBUG
         qDebug("setting up video recv");
 #endif
 
-        int at = theora_at;
+        int at = vp8_at;
 
         GstStructure *cs = payloadInfoToStructure(remoteVideoPayloadInfo[at], "video");
         if (!cs) {
@@ -1246,7 +1248,7 @@ bool RtpWorker::startRecv()
         gst_caps_unref(caps);
 
         // FIXME: what if we don't have a name and just id?
-        //   it's okay, for now we only really support theora which
+        //   it's okay, for now we only really support vp8 which
         //   requires the name..
         vcodec = remoteVideoPayloadInfo[at].name;
         if (vcodec == "H263-1998") // FIXME: gross
@@ -1271,7 +1273,8 @@ bool RtpWorker::startRecv()
             qDebug("creating audioout");
 #endif
 
-            pd_audiosink = PipelineDeviceContext::create(recv_pipelineContext, aout, PDevice::AudioOut);
+            pd_audiosink
+                = PipelineDeviceContext::create(recv_pipelineContext, aout, PDevice::AudioOut, hardwareDeviceMonitor_);
             if (!pd_audiosink) {
 #ifdef RTPWORKER_DEBUG
                 qDebug("failed to create audio output element");
@@ -1328,6 +1331,7 @@ bool RtpWorker::startRecv()
         sinkVideoCb.new_sample  = cb_show_frame_output;
         sinkVideoCb.eos         = cb_packet_ready_eos_stub;     // TODO
         sinkVideoCb.new_preroll = cb_packet_ready_preroll_stub; // TODO
+        sinkVideoCb.new_event   = cb_packet_ready_event_stub;   // TODO
         gst_app_sink_set_callbacks(appVideoSink, &sinkVideoCb, this, nullptr);
 
         gst_bin_add(GST_BIN(recvbin), videortpsrc);
@@ -1459,11 +1463,12 @@ bool RtpWorker::addAudioChain(int rate)
     sinkCb.new_sample  = cb_packet_ready_rtp_audio;
     sinkCb.eos         = cb_packet_ready_eos_stub;     // TODO
     sinkCb.new_preroll = cb_packet_ready_preroll_stub; // TODO
+    sinkCb.new_event   = cb_packet_ready_event_stub;   // TODO
     gst_app_sink_set_callbacks(appRtpSink, &sinkCb, this, nullptr);
 
     GstElement *queue = nullptr;
     if (fileDemux)
-        queue = gst_element_factory_make("queue", nullptr);
+        queue = gst_element_factory_make("queue", "queue_filedemuxaudio");
 
     if (queue)
         gst_bin_add(GST_BIN(sendbin), queue);
@@ -1499,8 +1504,8 @@ bool RtpWorker::addAudioChain(int rate)
 
 bool RtpWorker::addVideoChain()
 {
-    // TODO: support other codecs.  for now, we only support theora
-    QString codec = "theora";
+    // TODO: support other codecs.  for now, we only support vp8
+    QString codec = "vp8";
     QSize   size  = QSize(640, 480);
     int     fps   = 30;
     // QString codec = localVideoParams[0].codec;
@@ -1514,7 +1519,7 @@ bool RtpWorker::addVideoChain()
     int pt = -1;
     for (int n = 0; n < remoteVideoPayloadInfo.count(); ++n) {
         const PPayloadInfo &ri = remoteVideoPayloadInfo[n];
-        if (ri.name.toUpper() == "THEORA" && ri.clockrate == 90000) {
+        if (ri.name.toUpper() == "VP8" && ri.clockrate == 90000) {
             pt = ri.id;
             break;
         }
@@ -1540,7 +1545,7 @@ bool RtpWorker::addVideoChain()
 
     GstElement *videotee = gst_element_factory_make("tee", nullptr);
 
-    GstElement *playqueue        = gst_element_factory_make("queue", nullptr);
+    GstElement *playqueue        = gst_element_factory_make("queue", "queue_play");
     GstElement *videoconvertplay = gst_element_factory_make("videoconvert", nullptr);
     GstAppSink *appVideoSink     = makeVideoPlayAppSink("sourcevideoplay");
 
@@ -1548,9 +1553,10 @@ bool RtpWorker::addVideoChain()
     sinkPreviewCb.new_sample  = cb_show_frame_preview;
     sinkPreviewCb.eos         = cb_packet_ready_eos_stub;     // TODO
     sinkPreviewCb.new_preroll = cb_packet_ready_preroll_stub; // TODO
+    sinkPreviewCb.new_event   = cb_packet_ready_event_stub;   // TODO
     gst_app_sink_set_callbacks(appVideoSink, &sinkPreviewCb, this, nullptr);
 
-    GstElement *rtpqueue     = gst_element_factory_make("queue", nullptr);
+    GstElement *rtpqueue     = gst_element_factory_make("queue", "queue_rtp");
     GstElement *videortpsink = gst_element_factory_make("appsink", nullptr); // was apprtpsink
     auto        appRtpSink   = reinterpret_cast<GstAppSink *>(videortpsink);
     if (!fileDemux)
@@ -1560,11 +1566,12 @@ bool RtpWorker::addVideoChain()
     sinkCb.new_sample  = cb_packet_ready_rtp_video;
     sinkCb.eos         = cb_packet_ready_eos_stub;     // TODO
     sinkCb.new_preroll = cb_packet_ready_preroll_stub; // TODO
+    sinkCb.new_event   = cb_packet_ready_event_stub;   // TODO
     gst_app_sink_set_callbacks(appRtpSink, &sinkCb, this, nullptr);
 
     GstElement *queue = nullptr;
     if (fileDemux)
-        queue = gst_element_factory_make("queue", nullptr);
+        queue = gst_element_factory_make("queue", "queue_filedemuxvideo");
 
     if (queue)
         gst_bin_add(GST_BIN(sendbin), queue);
@@ -1624,7 +1631,7 @@ bool RtpWorker::addVideoChain()
 bool RtpWorker::getCaps()
 {
     if (audiortppay) {
-        GstPad * pad  = gst_element_get_static_pad(audiortppay, "src");
+        GstPad  *pad  = gst_element_get_static_pad(audiortppay, "src");
         GstCaps *caps = gst_pad_get_current_caps(pad);
         if (!caps) {
 #ifdef RTPWORKER_DEBUG
@@ -1634,7 +1641,7 @@ bool RtpWorker::getCaps()
         }
 
 #ifdef RTPWORKER_DEBUG
-        gchar * gstr       = gst_caps_to_string(caps);
+        gchar  *gstr       = gst_caps_to_string(caps);
         QString capsString = QString::fromUtf8(gstr);
         g_free(gstr);
         qDebug("rtppay caps audio: [%s]", qPrintable(capsString));
@@ -1657,7 +1664,7 @@ bool RtpWorker::getCaps()
     }
 
     if (videortppay) {
-        GstPad * pad  = gst_element_get_static_pad(videortppay, "src");
+        GstPad  *pad  = gst_element_get_static_pad(videortppay, "src");
         GstCaps *caps = gst_pad_get_current_caps(pad);
         if (!caps) {
 #ifdef RTPWORKER_DEBUG
@@ -1667,7 +1674,7 @@ bool RtpWorker::getCaps()
         }
 
 #ifdef RTPWORKER_DEBUG
-        gchar * gstr       = gst_caps_to_string(caps);
+        gchar  *gstr       = gst_caps_to_string(caps);
         QString capsString = QString::fromUtf8(gstr);
         g_free(gstr);
         qDebug("rtppay caps video: [%s]", qPrintable(capsString));
@@ -1692,25 +1699,24 @@ bool RtpWorker::getCaps()
     return true;
 }
 
-bool RtpWorker::updateTheoraConfig()
+bool RtpWorker::updateVp8Config()
 {
-    // first, are we using theora currently?
-    int theora_at = -1;
+    // first, are we using vp8 currently?
+    int vp8_at = -1;
     for (int n = 0; n < actual_remoteVideoPayloadInfo.count(); ++n) {
         const PPayloadInfo &ri = actual_remoteVideoPayloadInfo[n];
-        if (ri.name.toUpper() == "THEORA" && ri.clockrate == 90000) {
-            theora_at = n;
+        if (ri.name.toUpper() == "VP8" && ri.clockrate == 90000) {
+            vp8_at = n;
             break;
         }
     }
-    if (theora_at == -1)
+    if (vp8_at == -1)
         return false;
 
     // if so, update the videortpsrc caps
     for (int n = 0; n < remoteVideoPayloadInfo.count(); ++n) {
         const PPayloadInfo &ri = remoteVideoPayloadInfo[n];
-        if (ri.name.toUpper() == "THEORA" && ri.clockrate == 90000
-            && ri.id == actual_remoteVideoPayloadInfo[theora_at].id) {
+        if (ri.name.toUpper() == "VP8" && ri.clockrate == 90000 && ri.id == actual_remoteVideoPayloadInfo[vp8_at].id) {
             GstStructure *cs = payloadInfoToStructure(remoteVideoPayloadInfo[n], "video");
             if (!cs) {
 #ifdef RTPWORKER_DEBUG
@@ -1729,7 +1735,7 @@ bool RtpWorker::updateTheoraConfig()
             g_object_set(G_OBJECT(videortpsrc), "caps", caps, nullptr);
             gst_caps_unref(caps);
 
-            actual_remoteVideoPayloadInfo[theora_at] = ri;
+            actual_remoteVideoPayloadInfo[vp8_at] = ri;
             return true;
         }
     }
@@ -1742,7 +1748,7 @@ RtpWorker::Frame RtpWorker::Frame::pullFromSink(GstAppSink *appsink)
     Frame      frame;
     int        width, height;
     GstSample *sample = gst_app_sink_pull_sample(appsink);
-    GstCaps *  caps   = gst_sample_get_caps(sample);
+    GstCaps   *caps   = gst_sample_get_caps(sample);
     GstBuffer *buffer = gst_sample_get_buffer(sample);
 
     /*

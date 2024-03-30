@@ -4,12 +4,13 @@
 #ifdef QT_GUI_LIB
 #include "gstvideowidget.h"
 #endif
+#include "devices.h"
 
 namespace PsiMedia {
 
-GstRtpSessionContext::GstRtpSessionContext(GstMainLoop *_gstLoop, QObject *parent) :
-    QObject(parent), gstLoop(_gstLoop), control(nullptr), isStarted(false), isStopping(false), pending_status(false),
-    recorder(this), allow_writes(false)
+GstRtpSessionContext::GstRtpSessionContext(GstMainLoop *_gstLoop, DeviceMonitor *deviceMonitor, QObject *parent) :
+    QObject(parent), gstLoop(_gstLoop), control(nullptr), hardwareDeviceMonitor(deviceMonitor), isStarted(false),
+    isStopping(false), pending_status(false), recorder(this), allow_writes(false)
 {
 #ifdef QT_GUI_LIB
     outputWidget  = nullptr;
@@ -186,7 +187,7 @@ void GstRtpSessionContext::start()
 
     write_mutex.lock();
 
-    control = new RwControlLocal(gstLoop, this);
+    control = new RwControlLocal(gstLoop, hardwareDeviceMonitor, this);
     connect(control, SIGNAL(statusReady(const RwControlStatus &)), SLOT(control_statusReady(const RwControlStatus &)));
     connect(control, SIGNAL(previewFrame(const QImage &)), SLOT(control_previewFrame(const QImage &)));
     connect(control, SIGNAL(outputFrame(const QImage &)), SLOT(control_outputFrame(const QImage &)));

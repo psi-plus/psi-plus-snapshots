@@ -113,28 +113,17 @@ Provider *provider()
 {
     if (!g_provider) {
         // static plugin around?
-        Provider   *provider = nullptr;
-        QObjectList list     = QPluginLoader::staticInstances();
+        QObjectList list = QPluginLoader::staticInstances();
         for (QObject *obj : list) {
             Plugin *instance = qobject_cast<Plugin *>(obj);
             if (!instance)
                 continue;
 
-            Provider *p = instance->createProvider();
-            if (p) {
-                provider = p;
+            g_provider = instance->createProvider();
+            if (g_provider) {
+                qAddPostRoutine(cleanupProvider);
                 break;
             }
-        }
-
-        if (provider) {
-            if (!provider->init()) {
-                delete provider;
-                return nullptr;
-            }
-
-            g_provider = provider;
-            qAddPostRoutine(cleanupProvider);
         }
     }
 
@@ -180,21 +169,13 @@ PluginResult loadPlugin(const QString &fname, const QString &resourcePath)
 
     QVariantMap params;
     params["resourcePath"] = resourcePath;
-    Provider *provider     = instance->createProvider(params);
-    if (!provider) {
+    g_provider             = instance->createProvider(params);
+    if (!g_provider) {
         loader->unload();
         delete loader;
         return ErrorInit;
     }
 
-    if (!provider->init()) {
-        delete provider;
-        loader->unload();
-        delete loader;
-        return ErrorInit;
-    }
-
-    g_provider     = provider;
     g_pluginLoader = loader;
     qAddPostRoutine(cleanupProvider);
     return PluginSuccess;

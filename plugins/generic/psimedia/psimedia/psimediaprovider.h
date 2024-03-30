@@ -155,7 +155,6 @@ public:
 
 class Provider : public QObjectInterface {
 public:
-    virtual bool init()                = 0;
     virtual bool isInitialized() const = 0;
 
     virtual QString creditName() const = 0;

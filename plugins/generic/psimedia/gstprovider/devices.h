@@ -87,6 +87,7 @@ public:
 
     void             start();
     QList<GstDevice> devices(PDevice::Type type);
+    GstDevice       *device(const QString &id);
 };
 
 GstElement *devices_makeElement(const QString &id, PDevice::Type type, QSize *captureSize = nullptr);

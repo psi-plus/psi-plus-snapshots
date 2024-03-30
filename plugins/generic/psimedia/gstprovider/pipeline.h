@@ -29,13 +29,14 @@ namespace PsiMedia {
 
 class PipelineDeviceContext;
 class PipelineDeviceContextPrivate;
+class DeviceMonitor;
 
 class PipelineContext {
 public:
     PipelineContext();
     ~PipelineContext();
 
-    PipelineContext(const PipelineContext &) = delete;
+    PipelineContext(const PipelineContext &)            = delete;
     PipelineContext &operator=(const PipelineContext &) = delete;
 
     // set the pipeline to playing (activate) or to null (deactivate)
@@ -63,20 +64,19 @@ private:
 class PipelineDeviceOptions {
 public:
     QSize   videoSize;
-    int     fps = 0;
+    int     fps = -1;
     bool    aec = false; // echo cancellation (will be enabled when prober is available)
     QString echoProberName;
-
-    PipelineDeviceOptions() : fps(-1) { }
 };
 
 class PipelineDeviceContext {
 public:
     static PipelineDeviceContext *create(PipelineContext *pipeline, const QString &id, PDevice::Type type,
-                                         const PipelineDeviceOptions &opts = PipelineDeviceOptions());
+                                         DeviceMonitor               *deviceMonitor = 0,
+                                         const PipelineDeviceOptions &opts          = PipelineDeviceOptions());
     ~PipelineDeviceContext();
 
-    PipelineDeviceContext(const PipelineDeviceContext &) = delete;
+    PipelineDeviceContext(const PipelineDeviceContext &)            = delete;
     PipelineDeviceContext &operator=(const PipelineDeviceContext &) = delete;
 
     // after creation, the device element is in the NULL state, and
@@ -97,7 +97,7 @@ public:
     // FIXME: this function currently does nothing
     void deactivate();
 
-    GstElement *          element();
+    GstElement           *element();
     void                  setOptions(const PipelineDeviceOptions &opts);
     PipelineDeviceOptions options() const;
 

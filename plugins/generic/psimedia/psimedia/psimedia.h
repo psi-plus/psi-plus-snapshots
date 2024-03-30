@@ -298,7 +298,7 @@ public:
 
     // pass a QIODevice to record to.  if a device is set before starting
     //   the session, then recording will wait until it starts.
-    // records in ogg theora+vorbis format
+    // records in mp4 vp8+opus format
     void setRecordingQIODevice(QIODevice *dev);
 
     // stop recording operation.  wait for stoppedRecording signal before
@@ -408,7 +408,7 @@ public:
     //   local/remote values for each media type (during negotiation there
     //   may be a mismatch).  however, the payloadinfo for each won't
     //   necessarily match exactly.  for example, both sides could be
-    //   using theora, but they'll almost certainly have different
+    //   using vp8, but they'll almost certainly have different
     //   parameters.
     QList<PayloadInfo> localAudioPayloadInfo() const;
     QList<PayloadInfo> localVideoPayloadInfo() const;

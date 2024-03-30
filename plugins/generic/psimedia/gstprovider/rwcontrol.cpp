@@ -20,6 +20,7 @@
 
 #include "rwcontrol.h"
 
+#include "devices.h"
 #include "gstthread.h"
 #include "rtpworker.h"
 #include <QPointer>
@@ -143,13 +144,9 @@ static void applyCodecsToWorker(RtpWorker *worker, const RwControlConfigCodecs &
 //----------------------------------------------------------------------------
 // RwControlLocal
 //----------------------------------------------------------------------------
-RwControlLocal::RwControlLocal(GstMainLoop *thread, QObject *parent) :
-    QObject(parent), app(nullptr), cb_rtpAudioOut(nullptr), cb_rtpVideoOut(nullptr), cb_recordData(nullptr),
-    wake_pending(false)
+RwControlLocal::RwControlLocal(GstMainLoop *thread, DeviceMonitor *hardwareDeviceMonitor, QObject *parent) :
+    QObject(parent), thread_(thread), hardwareDeviceMonitor_(hardwareDeviceMonitor)
 {
-    thread_ = thread;
-    remote_ = nullptr;
-
     // create RwControlRemote, block until ready
     QMutexLocker locker(&m);
     timer = g_timeout_source_new(0);
@@ -235,7 +232,7 @@ gboolean RwControlLocal::doCreateRemote()
 {
     QMutexLocker locker(&m);
     timer   = nullptr;
-    remote_ = new RwControlRemote(thread_->mainContext(), this);
+    remote_ = new RwControlRemote(thread_->mainContext(), hardwareDeviceMonitor_, this);
     w.wakeOne();
     return FALSE;
 }
@@ -358,12 +355,13 @@ void RwControlLocal::postMessage(RwControlMessage *msg)
 //----------------------------------------------------------------------------
 // RwControlRemote
 //----------------------------------------------------------------------------
-RwControlRemote::RwControlRemote(GMainContext *mainContext, RwControlLocal *local) :
+RwControlRemote::RwControlRemote(GMainContext *mainContext, DeviceMonitor *hardwareDeviceMonitor,
+                                 RwControlLocal *local) :
     timer(nullptr), start_requested(false), blocking(false), pending_status(false)
 {
     mainContext_                    = mainContext;
     local_                          = local;
-    worker                          = new RtpWorker(mainContext_);
+    worker                          = new RtpWorker(mainContext_, hardwareDeviceMonitor);
     worker->app                     = this;
     worker->cb_started              = cb_worker_started;
     worker->cb_updated              = cb_worker_updated;

@@ -188,12 +188,11 @@ public:
         // gstcustomelements_register();
         // gstelements_register();
 
-        QStringList reqelem
-            = { "opusenc",         "opusdec",      "vorbisenc",    "vorbisdec",      "theoraenc",    "theoradec",
-                "rtpopuspay",      "rtpopusdepay", "rtpvorbispay", "rtpvorbisdepay", "rtptheorapay", "rtptheoradepay",
-                "filesrc",         "decodebin",    "jpegdec",      "oggmux",         "oggdemux",     "audioconvert",
-                "audioresample",   "volume",       "level",        "videoconvert",   "videorate",    "videoscale",
-                "rtpjitterbuffer", "audiomixer",   "appsink" };
+        QStringList reqelem = { "opusenc",      "opusdec",       "vorbisenc",       "vorbisdec",  "vp8enc",
+                                "vp8dec",       "rtpopuspay",    "rtpopusdepay",    "rtpvp8pay",  "rtpvp8depay",
+                                "filesrc",      "decodebin",     "jpegdec",         "oggmux",     "oggdemux",
+                                "audioconvert", "audioresample", "volume",          "level",      "videoconvert",
+                                "videorate",    "videoscale",    "rtpjitterbuffer", "audiomixer", "appsink" };
 #ifndef Q_OS_WIN
         reqelem << "webrtcechoprobe";
 #endif

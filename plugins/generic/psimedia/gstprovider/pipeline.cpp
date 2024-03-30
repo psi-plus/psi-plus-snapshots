@@ -21,9 +21,9 @@
 #include "pipeline.h"
 
 #include "devices.h"
+
 #include <QList>
 #include <QSet>
-#include <cstdio>
 #include <gst/gst.h>
 
 // FIXME: this file is heavily commented out and a mess, mainly because
@@ -112,41 +112,41 @@ static GstCaps *filter_for_capture_size(const QSize &size)
                                                size.height(), nullptr),
                              gst_structure_new("image/jpeg", "width", G_TYPE_INT, size.width(), "height", G_TYPE_INT,
                                                size.height(), nullptr),
+                             gst_structure_new("video/h264", "width", G_TYPE_INT, size.width(), "height", G_TYPE_INT,
+                                               size.height(), nullptr),
                              nullptr);
 }
 
 static GstCaps *filter_for_desired_size(const QSize &size)
 {
     Q_UNUSED(size)
-    //    QList<int> widths;
-    //    widths << 160 << 320 << 640 << 800 << 1024;
-    //    for(int n = 0; n < widths.count(); ++n)
-    //    {
-    //        if(widths[n] < size.width())
-    //        {
-    //            widths.removeAt(n);
-    //            --n; // adjust position
-    //        }
-    //    }
+    QList<int> widths;
+    widths << 160 << 320 << 640 << 800 << 1024 << 1280 << 1920;
+    for (int n = 0; n < widths.count(); ++n) {
+        if (widths[n] < size.width()) {
+            widths.removeAt(n);
+            --n; // adjust position
+        }
+    }
 
-    //    GstElement *capsfilter = gst_element_factory_make("capsfilter", nullptr);
-    //    GstCaps *caps = gst_caps_new_empty();
+    // GstElement *capsfilter = gst_element_factory_make("capsfilter", nullptr);
+    GstCaps *caps = gst_caps_new_empty();
 
-    //     for(int n = 0; n < widths.count(); ++n)
-    //     {
-    //         GstStructure *cs;
-    //         cs = gst_structure_new("video/x-raw-yuv",
-    //             "width", GST_TYPE_INT_RANGE, 1, widths[n],
-    //             "height", GST_TYPE_INT_RANGE, 1, G_MAXINT, nullptr);
-    //         gst_caps_append_structure(caps, cs);
-    //
-    //         cs = gst_structure_new("video/x-raw-rgb",
-    //             "width", GST_TYPE_INT_RANGE, 1, widths[n],
-    //             "height", GST_TYPE_INT_RANGE, 1, G_MAXINT, nullptr);
-    //         gst_caps_append_structure(caps, cs);
-    //     }
-    return gst_caps_new_simple("video/x-raw", "width", G_TYPE_INT, 640, "height", G_TYPE_INT, 480, "framerate",
-                               GST_TYPE_FRACTION, 30, 1, nullptr);
+    for (int n = 0; n < widths.count(); ++n) {
+        GstStructure *cs;
+        cs = gst_structure_new("image/jpeg", "width", GST_TYPE_INT_RANGE, 1, widths[n], "height", GST_TYPE_INT_RANGE, 1,
+                               G_MAXINT, "framerate", GST_TYPE_FRACTION, 30, 1, nullptr);
+        gst_caps_append_structure(caps, cs);
+
+        cs = gst_structure_new("video/h264", "width", GST_TYPE_INT_RANGE, 1, widths[n], "height", GST_TYPE_INT_RANGE, 1,
+                               G_MAXINT, "framerate", GST_TYPE_FRACTION, 30, 1, nullptr);
+        gst_caps_append_structure(caps, cs);
+
+        cs = gst_structure_new("video/x-raw", "width", GST_TYPE_INT_RANGE, 1, widths[n], "height", GST_TYPE_INT_RANGE,
+                               1, G_MAXINT, "framerate", GST_TYPE_FRACTION, 30, 1, nullptr);
+        gst_caps_append_structure(caps, cs);
+    }
+    return caps;
 }
 
 static GstElement *make_webrtcdsp_filter()
@@ -169,13 +169,13 @@ class PipelineDevice;
 
 class PipelineDeviceContextPrivate {
 public:
-    PipelineContext      *pipeline;
-    PipelineDevice       *device;
+    PipelineContext      *pipeline = nullptr;
+    PipelineDevice       *device   = nullptr;
     PipelineDeviceOptions opts;
-    bool                  activated;
+    bool                  activated = false;
 
     // queue for srcs, adder for sinks
-    GstElement *element;
+    GstElement *element = nullptr;
 };
 
 class PipelineDevice {
@@ -201,7 +201,7 @@ public:
     GstElement *webrtcprobe   = nullptr;
 
 private:
-    GstElement *makeDeviceBin(const PipelineDeviceOptions &options)
+    GstElement *makeDeviceBin(const PipelineDeviceOptions &options, DeviceMonitor *deviceMonitor)
     {
         QSize       captureSize;
         GstElement *deviceElement = devices_makeElement(id, type, &captureSize);
@@ -249,7 +249,12 @@ private:
             gst_element_add_pad(bin, gst_ghost_pad_new("src", pad));
             gst_object_unref(GST_OBJECT(pad));
         } else if (type == PDevice::VideoIn) {
-            GstCaps *capsfilter = nullptr;
+
+            auto device = deviceMonitor->device(id);
+            if (!device) {
+                gst_object_unref(deviceElement);
+                return nullptr;
+            }
 
 #ifdef Q_OS_MAC
             // FIXME: hardcode resolution because filter_for_desired_size
@@ -275,6 +280,7 @@ path2::caps="video/x-raw" \
 ! videoconvert ! autovideosink
 */
 
+            GstCaps *capsfilter = nullptr;
             if (captureSize.isValid())
                 capsfilter = filter_for_capture_size(captureSize);
             else if (options.videoSize.isValid())
@@ -282,20 +288,54 @@ path2::caps="video/x-raw" \
 
             gst_bin_add(GST_BIN(bin), deviceElement);
 
-            GstElement *decodebin = gst_element_factory_make("decodebin", nullptr);
-            gst_bin_add(GST_BIN(bin), decodebin);
-
-            GstPad *pad
+            GstPad *binPad
                 = gst_ghost_pad_new_no_target_from_template("src", gst_static_pad_template_get(&videosrcbin_template));
-            gst_element_add_pad(bin, pad);
+            gst_element_add_pad(bin, binPad);
 
-            g_signal_connect(G_OBJECT(decodebin), "pad-added", G_CALLBACK(videosrcbin_pad_added), pad);
+            QList<GstElement *> toLink;
+            // find best suitable caps
+            if (std::any_of(device->caps.begin(), device->caps.end(),
+                            [](const auto &c) { return c.mime == QStringLiteral("image/jpeg"); })) {
+                GstElement *jpegdec = gst_element_factory_make("jpegdec", nullptr);
+                Q_ASSERT(gst_bin_add(GST_BIN(bin), jpegdec));
+                toLink.append(jpegdec);
+                Q_ASSERT(gst_ghost_pad_set_target(GST_GHOST_PAD(binPad), gst_element_get_static_pad(jpegdec, "src")));
+
+            } else if (std::any_of(device->caps.begin(), device->caps.end(),
+                                   [](const auto &c) { return c.mime == QStringLiteral("video/x-h264"); })) {
+                GstElement *h264parse = gst_element_factory_make("h264parse", nullptr);
+                gst_bin_add(GST_BIN(bin), h264parse);
+                toLink.append(h264parse);
+                GstElement *avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
+                gst_bin_add(GST_BIN(bin), avdec_h264);
+                toLink.append(avdec_h264);
+                gst_ghost_pad_set_target(GST_GHOST_PAD(binPad), gst_element_get_static_pad(avdec_h264, "src"));
+
+            } else {
+                GstElement *decodebin = gst_element_factory_make("decodebin", nullptr);
+                gst_bin_add(GST_BIN(bin), decodebin);
+                toLink.append(decodebin);
+
+                g_signal_connect(G_OBJECT(decodebin), "pad-added", G_CALLBACK(videosrcbin_pad_added), binPad);
+            }
+
+            //             GstElement *switchbin = gst_parse_launch(R"GST(switchbin num-paths=3
+            // path0::caps="video/x-h264" path0::element="h264parse ! avdec_h264"
+            // path1::caps="image/jpeg"   path1::element="jpegdec"
+            // path2::caps="video/x-raw")GST",
+            //                                                      nullptr);
+            //             gst_bin_add(GST_BIN(bin), switchbin);
 
             if (capsfilter) {
-                gst_element_link_filtered(deviceElement, decodebin, capsfilter);
+                Q_ASSERT(gst_element_link_filtered(deviceElement, toLink[0], capsfilter));
                 gst_caps_unref(capsfilter);
             } else {
-                gst_element_link(deviceElement, decodebin);
+                gst_element_link(deviceElement, toLink[0]);
+            }
+            if (toLink.size() > 1) {
+                for (int i = 1; i < toLink.size(); i++) {
+                    Q_ASSERT(gst_element_link(toLink[i - 1], toLink[i]));
+                }
             }
         } else // AudioOut
         {
@@ -346,12 +386,12 @@ path2::caps="video/x-raw" \
     }
 
 public:
-    PipelineDevice(const QString &_id, PDevice::Type _type, PipelineDeviceContextPrivate *context) :
-        refs(0), id(_id), type(_type)
+    PipelineDevice(const QString &_id, PDevice::Type _type, PipelineDeviceContextPrivate *context,
+                   DeviceMonitor *deviceMonitor) : refs(0), id(_id), type(_type)
     {
         pipeline = context->pipeline->element();
 
-        device_bin = makeDeviceBin(context->opts);
+        device_bin = makeDeviceBin(context->opts, deviceMonitor);
         if (!device_bin) {
             qWarning("Failed to create device");
             return;
@@ -407,8 +447,9 @@ public:
             // create a queue from the tee, and hand it off.  app
             //   uses this queue element as if it were the actual
             //   device
-            GstElement *queue = gst_element_factory_make("queue", nullptr);
-            context->element  = queue;
+            GstElement *queue
+                = gst_element_factory_make("queue", type == PDevice::AudioIn ? "queue_audioin" : "queue_videoin");
+            context->element = queue;
             // gst_element_set_locked_state(queue, TRUE);
             gst_bin_add(GST_BIN(pipeline), queue);
             gst_element_link(tee, queue);
@@ -647,14 +688,10 @@ GstElement *PipelineContext::element() { return d->pipeline; }
 //----------------------------------------------------------------------------
 // PipelineDeviceContext
 //----------------------------------------------------------------------------
-PipelineDeviceContext::PipelineDeviceContext()
-{
-    d         = new PipelineDeviceContextPrivate;
-    d->device = nullptr;
-}
+PipelineDeviceContext::PipelineDeviceContext() : d(new PipelineDeviceContextPrivate) { }
 
 PipelineDeviceContext *PipelineDeviceContext::create(PipelineContext *pipeline, const QString &id, PDevice::Type type,
-                                                     const PipelineDeviceOptions &opts)
+                                                     DeviceMonitor *deviceMonitor, const PipelineDeviceOptions &opts)
 {
     auto that = new PipelineDeviceContext;
 
@@ -672,7 +709,7 @@ PipelineDeviceContext *PipelineDeviceContext::create(PipelineContext *pipeline, 
     }
 
     if (!dev) {
-        dev = new PipelineDevice(id, type, that->d);
+        dev = new PipelineDevice(id, type, that->d, deviceMonitor);
         if (!dev->device_bin) {
             delete dev;
             delete that;
