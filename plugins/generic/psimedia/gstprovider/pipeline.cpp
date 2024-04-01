@@ -26,6 +26,9 @@
 #include <QSet>
 #include <gst/gst.h>
 
+#include <algorithm>
+#include <ranges>
+
 // FIXME: this file is heavily commented out and a mess, mainly because
 //   all of my attempts at a dynamic pipeline were futile.  someday we
 //   can uncomment and clean this up...
@@ -117,36 +120,37 @@ static GstCaps *filter_for_capture_size(const QSize &size)
                              nullptr);
 }
 
-static GstCaps *filter_for_desired_size(const QSize &size)
+static GstCaps *filter_for_desired_size(GstDevice *dev, const QSize &size)
 {
-    Q_UNUSED(size)
-    QList<int> widths;
-    widths << 160 << 320 << 640 << 800 << 1024 << 1280 << 1920;
-    for (int n = 0; n < widths.count(); ++n) {
-        if (widths[n] < size.width()) {
-            widths.removeAt(n);
-            --n; // adjust position
-        }
-    }
+    static std::array mime_prioriry { QLatin1String { "video/x-raw" }, QLatin1String { "image/jpeg" },
+                                      QLatin1String("video/h264") };
+    namespace views   = std::ranges::views;
+    auto desiredScore = double(size.width()) * size.height();
+    auto capsScore    = [&desiredScore](const auto &c) { // less is better
+        auto it = std::find(mime_prioriry.begin(), mime_prioriry.end(), c.mime);
+        return std::abs(double(c.video.width) * c.video.height - desiredScore)
+            + (it == mime_prioriry.end() ? mime_prioriry.size()
+                                            : std::distance(mime_prioriry.begin(), mime_prioriry.end()));
+    };
 
-    // GstElement *capsfilter = gst_element_factory_make("capsfilter", nullptr);
+    std::vector<std::pair<double, PDevice::Caps>> srcCaps;
+    std::ranges::copy(dev->caps | views::filter([](auto const &c) { return c.video.framerate_numerator >= 24; })
+                          | views::transform([&](auto const &c) { return std::make_pair(capsScore(c), c); }),
+                      std::back_inserter(srcCaps));
+    std::ranges::sort(srcCaps, [](const auto &a, const auto &b) { return a.first < b.first; });
+
     GstCaps *caps = gst_caps_new_empty();
-
-    for (int n = 0; n < widths.count(); ++n) {
-        GstStructure *cs;
-        cs = gst_structure_new("image/jpeg", "width", GST_TYPE_INT_RANGE, 1, widths[n], "height", GST_TYPE_INT_RANGE, 1,
-                               G_MAXINT, "framerate", GST_TYPE_FRACTION, 30, 1, nullptr);
-        gst_caps_append_structure(caps, cs);
-
-        cs = gst_structure_new("video/h264", "width", GST_TYPE_INT_RANGE, 1, widths[n], "height", GST_TYPE_INT_RANGE, 1,
-                               G_MAXINT, "framerate", GST_TYPE_FRACTION, 30, 1, nullptr);
-        gst_caps_append_structure(caps, cs);
-
-        cs = gst_structure_new("video/x-raw", "width", GST_TYPE_INT_RANGE, 1, widths[n], "height", GST_TYPE_INT_RANGE,
-                               1, G_MAXINT, "framerate", GST_TYPE_FRACTION, 30, 1, nullptr);
-        gst_caps_append_structure(caps, cs);
+    if (srcCaps.empty()) {
+        // try to get at least something starting from those usually having good bitrate
+        gst_caps_append_structure(caps, gst_structure_new_empty("image/jpeg"));
+        gst_caps_append_structure(caps, gst_structure_new_empty("video/h264"));
+        gst_caps_append_structure(caps, gst_structure_new_empty("video/x-raw"));
+        return caps;
+    } else {
+        auto const &selected = srcCaps[0].second;
+        return gst_caps_new_simple(selected.mime.toLatin1().constData(), "width", G_TYPE_INT, selected.video.width,
+                                   "height", G_TYPE_INT, selected.video.height, nullptr);
     }
-    return caps;
 }
 
 static GstElement *make_webrtcdsp_filter()
@@ -287,7 +291,7 @@ path2::caps="video/x-raw" \
             if (captureSize.isValid())
                 capsfilter = filter_for_capture_size(captureSize);
             else if (options.videoSize.isValid())
-                capsfilter = filter_for_desired_size(options.videoSize);
+                capsfilter = filter_for_desired_size(device, options.videoSize);
 
             gst_bin_add(GST_BIN(bin), deviceElement);
 
