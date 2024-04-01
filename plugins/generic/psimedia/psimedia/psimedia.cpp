@@ -157,6 +157,7 @@ PluginResult loadPlugin(const QString &fname, const QString &resourcePath)
 
     QPluginLoader *loader = new QPluginLoader(fname);
     if (!loader->load()) {
+        qWarning("Failed to load %s. %s", qUtf8Printable(fname), qUtf8Printable(loader->errorString()));
         delete loader;
         return ErrorLoad;
     }

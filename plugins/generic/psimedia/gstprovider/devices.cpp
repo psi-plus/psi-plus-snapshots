@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008  Barracuda Networks, Inc.
+ * Copyright (C) 2009-2024  Psi IM team
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -23,6 +23,7 @@
 #include "gstthread.h"
 #include <QMap>
 #include <QMutex>
+#include <QPointer>
 #include <QSize>
 #include <QStringList>
 #include <QThread>
@@ -35,30 +36,6 @@ namespace PsiMedia {
 // add more platforms to the ifdef when ready
 // below is a default impl
 QList<GstDevice> PlatformDeviceMonitor::getDevices() { return QList<GstDevice>(); }
-#endif
-
-#if 0
-// for elements that we can't enumerate devices for, we need a way to ensure
-//   that at least the default device works
-// FIXME: why do we have both this function and test_video() ?
-static bool test_element(const QString &element_name)
-{
-    GstElement *e = gst_element_factory_make(element_name.toLatin1().data(), nullptr);
-    if(!e)
-        return 0;
-
-    gst_element_set_state(e, GST_STATE_READY);
-    int ret = gst_element_get_state(e, nullptr, nullptr, GST_CLOCK_TIME_NONE);
-
-    gst_element_set_state(e, GST_STATE_NULL);
-    gst_element_get_state(e, nullptr, nullptr, GST_CLOCK_TIME_NONE);
-    g_object_unref(G_OBJECT(e));
-
-    if(ret != GST_STATE_CHANGE_SUCCESS)
-        return false;
-
-    return true;
-}
 #endif
 
 // copied from gst-inspect-1.0. perfect for identifying devices
@@ -148,27 +125,106 @@ static gchar *get_launch_line(::GstDevice *device)
     return g_string_free(launch_line, FALSE);
 }
 
+class GlibTimer {
+    GMainContext         *ctx;
+    guint                 timer = 0;
+    guint                 interval;
+    std::function<bool()> callback; // return true to continue, false to stop
+    bool                  stopRequested    = false;
+    bool                  restartRequested = false;
+    bool                  inHandler        = false;
+
+public:
+    GlibTimer(GMainContext *ctx, guint interval, std::function<bool()> callback) :
+        ctx(ctx), interval(interval), callback(callback)
+    {
+    }
+
+    ~GlibTimer() { stop(); }
+
+    inline bool isActive() const { return !!timer; }
+
+    void start()
+    {
+        stopRequested = false;
+        if (timer) {
+            stop();
+            if (inHandler) {
+                restartRequested = true;
+                return;
+            }
+        }
+        // qDebug("starting timer");
+        struct TimerCallback {
+            static gboolean call(gpointer data)
+            {
+                auto priv       = reinterpret_cast<GlibTimer *>(data);
+                priv->inHandler = true;
+                auto ret        = priv->callback();
+                if (!ret) {
+                    priv->timer = 0;
+                }
+                priv->inHandler        = false;
+                auto restartRequested  = priv->restartRequested;
+                auto stopRequested     = priv->stopRequested;
+                priv->restartRequested = false;
+                priv->stopRequested    = false;
+                return restartRequested ? TRUE : stopRequested ? FALSE : ret;
+            }
+        };
+        timer = g_timeout_add(interval, &TimerCallback::call, this);
+    }
+
+    void stop()
+    {
+        // qDebug("stopping timer");
+        restartRequested = false;
+        if (!timer) {
+            return;
+        }
+        if (inHandler) {
+            stopRequested = true;
+            return;
+        }
+        auto source = g_main_context_find_source_by_id(ctx, timer);
+        if (source) {
+            g_source_destroy(source);
+            g_source_unref(source);
+        }
+        timer = 0;
+    }
+};
+
 class DeviceMonitor::Private {
 public:
     DeviceMonitor           *q;
+    GstMainLoop             *mainLoop;
     GstDeviceMonitor        *_monitor = nullptr;
-    QMap<QString, GstDevice> _devices;
+    QMap<QString, GstDevice> _monitorDevices;
+    QMap<QString, GstDevice> _platformDevices;
     PlatformDeviceMonitor   *_platform = nullptr;
-    std::shared_ptr<QTimer>  timer;
-    QMutex                   devListMutex;
-    QThread                 *qtThread;
-    bool                     started = false;
+    GlibTimer                timer;
+
+    QMutex   devListMutex;
+    QThread *qtThread;
+    bool     started = false;
 
     bool videoSrcFirst  = true;
     bool audioSrcFirst  = true;
     bool audioSinkFirst = true;
+    bool hasUpdates     = false;
 
-    explicit Private(DeviceMonitor *q) : q(q), qtThread(q->thread())
+    explicit Private(DeviceMonitor *q, GstMainLoop *mainLoop) :
+        q(q), mainLoop(mainLoop), timer(mainLoop->mainContext(), 50, [this]() { return triggerUpdated(); }),
+        qtThread(q->thread())
     {
-        timer = std::make_shared<QTimer>(); // we need it to go another thread together with q
-        timer->setSingleShot(true);
-        timer->setInterval(50); // an interval to emit updated() signal on dev discovery since the may come in row
-        QObject::connect(timer.get(), &QTimer::timeout, q, &DeviceMonitor::updated);
+    }
+
+    ~Private()
+    {
+        delete _platform;
+        gst_device_monitor_stop(_monitor);
+        g_object_unref(_monitor);
     }
 
     static GstDevice gstDevConvert(::GstDevice *gdev)
@@ -190,7 +246,7 @@ public:
         }
 
         gchar *name = gst_device_get_display_name(gdev);
-        d.name      = QString::fromLocal8Bit(name);
+        d.name      = QString::fromUtf8(name);
         g_free(name);
 
         if (gst_device_has_classes(gdev, "Audio/Source")) {
@@ -235,14 +291,14 @@ public:
             d = gstDevConvert(device);
             gst_object_unref(device);
             if (!d.id.isEmpty())
-                monObj->q->onDeviceAdded(d);
+                monObj->onDeviceAdded(d);
             break;
         case GST_MESSAGE_DEVICE_REMOVED:
             gst_message_parse_device_removed(message, &device);
             d = gstDevConvert(device);
             gst_object_unref(device);
             if (!d.id.isEmpty())
-                monObj->q->onDeviceRemoved(d);
+                monObj->onDeviceRemoved(d);
             break;
 #if 0
         case GST_MESSAGE_DEVICE_CHANGED: {
@@ -250,7 +306,7 @@ public:
             d = gstDevConvert(device);
             gst_object_unref(device);
             if (!d.id.isEmpty())
-                monObj->q->onDeviceChanged(d);
+                monObj->onDeviceChanged(d);
             break;
 
         }
@@ -262,161 +318,177 @@ public:
         return TRUE;
     }
 
-    void triggerUpdated()
+    void onDeviceAdded(GstDevice dev)
     {
-        // the current thread doesn't have full working event loop
-        // so we need to throw event from a valid thread. We hade one at moment of
-        // DeviceMonitor creation and preserved it in qtThread
-        qtThread->metaObject()->invokeMethod(
-            qtThread,
-            [this, weakTimer = std::weak_ptr<QTimer>(timer)]() {
-                auto sharedTimer = weakTimer.lock();
-                if (!sharedTimer) {
-                    return; // destructor is already executed. nothing todo
-                }
-                // wait quite a bit since updates may come in row with latest gstreamer
-                if (!sharedTimer->isActive())
-                    sharedTimer->start();
-            },
-            Qt::QueuedConnection);
-    }
-};
-
-void DeviceMonitor::updateDevList()
-{
-    QMutexLocker locker(&d->devListMutex);
-    d->_devices.clear();
-#if GST_VERSION_MAJOR == 1 && GST_VERSION_MINOR < 18
-    // with newer versions the devices events seem replayed, so we don't need this
-    GList *devices = gst_device_monitor_get_devices(d->_monitor);
-
-    if (devices != NULL) {
-        while (devices != NULL) {
-            ::GstDevice        *device = static_cast<::GstDevice *>(devices->data);
-            PsiMedia::GstDevice pdev   = Private::gstDevConvert(device);
-            if (!pdev.id.isEmpty())
-                d->_devices.insert(pdev.id, pdev);
-            gst_object_unref(device);
-            devices = g_list_delete_link(devices, devices);
-        }
-    } else {
-        qDebug("No devices found!");
-    }
-#endif
-
-    if (d->_platform) {
-        auto l = d->_platform->getDevices();
-        for (auto const &pdev : std::as_const(l)) {
-            if (!d->_devices.contains(pdev.id)) {
-                d->_devices.insert(pdev.id, pdev);
+        QMutexLocker locker(&devListMutex);
+        _platformDevices.remove(dev.id);
+        if (_monitorDevices.contains(dev.id)) {
+            qWarning("Double added of device %s (%s)", qUtf8Printable(dev.name), qUtf8Printable(dev.id));
+        } else {
+            switch (dev.type) {
+            case PDevice::AudioIn:
+                dev.isDefault = audioSrcFirst;
+                audioSrcFirst = false;
+                break;
+            case PDevice::AudioOut:
+                dev.isDefault  = audioSinkFirst;
+                audioSinkFirst = false;
+                break;
+            case PDevice::VideoIn:
+                dev.isDefault = videoSrcFirst;
+                videoSrcFirst = false;
+                break;
             }
+            _monitorDevices.insert(dev.id, dev);
+            qDebug("added dev: %s (%s)", qUtf8Printable(dev.name), qUtf8Printable(dev.id));
+            startUpdatedTimer();
         }
     }
 
-    for (auto const &pdev : std::as_const(d->_devices)) {
-        qDebug("found dev: %s (%s)", qPrintable(pdev.name), qPrintable(pdev.id));
-    }
-}
-
-void DeviceMonitor::onDeviceAdded(GstDevice dev)
-{
-    QMutexLocker locker(&d->devListMutex);
-    if (d->_devices.contains(dev.id)) {
-        qWarning("Double added of device %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
-    } else {
-        switch (dev.type) {
-        case PDevice::AudioIn:
-            dev.isDefault    = d->audioSrcFirst;
-            d->audioSrcFirst = false;
-            break;
-        case PDevice::AudioOut:
-            dev.isDefault     = d->audioSinkFirst;
-            d->audioSinkFirst = false;
-            break;
-        case PDevice::VideoIn:
-            dev.isDefault    = d->videoSrcFirst;
-            d->videoSrcFirst = false;
-            break;
+    void onDeviceRemoved(const GstDevice &dev)
+    {
+        QMutexLocker locker(&devListMutex);
+        if (_monitorDevices.remove(dev.id) || _platformDevices.remove(dev.id)) {
+            qDebug("removed dev: %s (%s)", qUtf8Printable(dev.name), qUtf8Printable(dev.id));
+            startUpdatedTimer();
+        } else {
+            qWarning("Double remove of device %s (%s)", qUtf8Printable(dev.name), qUtf8Printable(dev.id));
         }
-        d->_devices.insert(dev.id, dev);
-        qDebug("added dev: %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
-        d->triggerUpdated();
     }
-}
 
-void DeviceMonitor::onDeviceRemoved(const GstDevice &dev)
-{
-    QMutexLocker locker(&d->devListMutex);
-    if (d->_devices.remove(dev.id)) {
-        qDebug("removed dev: %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
-        d->triggerUpdated();
-    } else {
-        qWarning("Double remove of device %s (%s)", qPrintable(dev.name), qPrintable(dev.id));
-    }
-}
-
-void DeviceMonitor::onDeviceChanged(const GstDevice &dev)
-{
-    QMutexLocker locker(&d->devListMutex);
-    auto         it = d->_devices.find(dev.id);
-    if (it == d->_devices.end()) {
-        qDebug("Changed unknown previously device '%s'. Try to add it", qPrintable(dev.id));
+    void onDeviceChanged(const GstDevice &dev)
+    {
+        QMutexLocker locker(&devListMutex);
+        auto         it = _monitorDevices.find(dev.id);
+        if (it != _monitorDevices.end() || (it = _platformDevices.find(dev.id)) != _platformDevices.end()) {
+            qDebug("Changed device '%s'", qUtf8Printable(dev.id));
+            it->updateFrom(dev);
+            startUpdatedTimer();
+            return;
+        }
+        qDebug("Changed unknown previously device '%s'. Try to add it", qUtf8Printable(dev.id));
         onDeviceAdded(dev);
         return;
     }
-    qDebug("Changed device '%s'", qPrintable(dev.id));
-    it->updateFrom(dev);
-    d->triggerUpdated();
-}
 
-DeviceMonitor::DeviceMonitor(GstMainLoop *mainLoop) : QObject(mainLoop), d(new Private(this)) { }
-
-DeviceMonitor::~DeviceMonitor()
-{
-    delete d->_platform;
-    gst_device_monitor_stop(d->_monitor);
-    g_object_unref(d->_monitor);
-    delete d;
-}
-
-void DeviceMonitor::start()
-{
-    if (d->started)
-        return;
-    d->started = true;
-
-    qRegisterMetaType<GstDevice>("GstDevice");
-
-    // auto context = mainLoop->mainContext();
-    d->_platform = new PlatformDeviceMonitor;
-    d->_monitor  = gst_device_monitor_new();
-
-    GstBus *bus = gst_device_monitor_get_bus(d->_monitor);
-    gst_bus_add_watch(bus, Private::onChangeGstCB, d);
-
-    // GSource *source = gst_bus_create_watch(bus);
-    // g_source_set_callback (source, (GSourceFunc)Private::onChangeGstCB, d, nullptr);
-    // g_source_attach(source, context);
-    // g_source_unref(source);
-
-    gst_object_unref(bus);
-
-    gst_device_monitor_add_filter(d->_monitor, "Audio/Sink", nullptr);
-    gst_device_monitor_add_filter(d->_monitor, "Audio/Source", nullptr);
-
-    GstCaps *caps;
-    caps = gst_caps_new_empty_simple("video/x-raw");
-    gst_device_monitor_add_filter(d->_monitor, "Video/Source", caps);
-    gst_caps_unref(caps);
-    caps = gst_caps_new_empty_simple("image/jpeg");
-    gst_device_monitor_add_filter(d->_monitor, "Video/Source", caps);
-    gst_caps_unref(caps);
-
-    updateDevList();
-    if (!gst_device_monitor_start(d->_monitor)) {
-        qWarning("failed to start device monitor");
+    bool triggerUpdated()
+    {
+        if (hasUpdates) {
+            hasUpdates = false;
+        } else {
+            return false;
+        }
+        qDebug("emitting devices updated");
+        // the current thread doesn't have full working event loop
+        // so we need to throw event from a valid thread. We had one at moment of
+        // DeviceMonitor creation and preserved it in qtThread
+        qtThread->metaObject()->invokeMethod(
+            qtThread,
+            [this, q = QPointer<DeviceMonitor>(q)]() {
+                if (q) // race condition is still possible though...
+                    emit q->updated();
+            },
+            Qt::QueuedConnection);
+        return true;
     }
-}
+
+    inline void startUpdatedTimer()
+    {
+        hasUpdates = true;
+        if (!timer.isActive()) {
+            timer.start();
+        }
+    }
+
+    void start()
+    {
+        if (started)
+            return;
+        started = true;
+
+        qRegisterMetaType<GstDevice>("GstDevice");
+
+        // auto context = mainLoop->mainContext();
+        _platform = new PlatformDeviceMonitor;
+        _monitor  = gst_device_monitor_new();
+
+        GstBus *bus = gst_device_monitor_get_bus(_monitor);
+        gst_bus_add_watch(bus, Private::onChangeGstCB, this);
+
+        // GSource *source = gst_bus_create_watch(bus);
+        // g_source_set_callback (source, (GSourceFunc)Private::onChangeGstCB, d, nullptr);
+        // g_source_attach(source, context);
+        // g_source_unref(source);
+
+        gst_object_unref(bus);
+
+        gst_device_monitor_add_filter(_monitor, "Audio/Sink", nullptr);
+        gst_device_monitor_add_filter(_monitor, "Audio/Source", nullptr);
+
+        GstCaps *caps;
+        caps = gst_caps_new_empty_simple("video/x-raw");
+        gst_device_monitor_add_filter(_monitor, "Video/Source", caps);
+        gst_caps_unref(caps);
+        caps = gst_caps_new_empty_simple("video/h264");
+        gst_device_monitor_add_filter(_monitor, "Video/Source", caps);
+        gst_caps_unref(caps);
+        caps = gst_caps_new_empty_simple("image/jpeg");
+        gst_device_monitor_add_filter(_monitor, "Video/Source", caps);
+        gst_caps_unref(caps);
+
+        updateDevList();
+        if (!gst_device_monitor_start(_monitor)) {
+            qWarning("failed to start device monitor");
+        }
+        if (_platformDevices.size() || _monitorDevices.size()) {
+            hasUpdates = true;
+            triggerUpdated();
+        }
+    }
+
+    void updateDevList()
+    {
+        QMutexLocker locker(&devListMutex);
+
+#if GST_VERSION_MAJOR == 1 && GST_VERSION_MINOR < 18
+        //  with newer versions the devices events seem replayed, so we don't need this
+        _monitorDevices.clear();
+        GList *devices = gst_device_monitor_get_devices(_monitor);
+
+        if (devices != NULL) {
+            while (devices != NULL) {
+                ::GstDevice        *device = static_cast<::GstDevice *>(devices->data);
+                PsiMedia::GstDevice pdev   = Private::gstDevConvert(device);
+                if (!pdev.id.isEmpty()) {
+                    _monitorDevices.insert(pdev.id, pdev);
+                    qDebug("found dev: %s (%s)", qUtf8Printable(pdev.name), qUtf8Printable(pdev.id));
+                }
+                gst_object_unref(device);
+                devices = g_list_delete_link(devices, devices);
+            }
+        } else {
+            qDebug("No devices found!");
+        }
+#endif
+
+        if (_platform) {
+            _platformDevices.clear();
+            auto l = _platform->getDevices();
+            for (auto const &pdev : std::as_const(l)) {
+                if (!_platformDevices.contains(pdev.id)) {
+                    _platformDevices.insert(pdev.id, pdev);
+                    qDebug("found dev: %s (%s)", qUtf8Printable(pdev.name), qUtf8Printable(pdev.id));
+                }
+            }
+        }
+    }
+};
+
+DeviceMonitor::DeviceMonitor(GstMainLoop *mainLoop) : QObject(mainLoop), d(new Private(this, mainLoop)) { }
+
+DeviceMonitor::~DeviceMonitor() = default;
+
+void DeviceMonitor::start() { d->start(); }
 
 QList<GstDevice> DeviceMonitor::devices(PDevice::Type type)
 {
@@ -427,10 +499,12 @@ QList<GstDevice> DeviceMonitor::devices(PDevice::Type type)
     bool hasDefaultPulsesrc  = false;
     bool hasPulsesink        = false;
     bool hasDefaultPulsesink = false;
-    d->devListMutex.lock();
-    for (auto const &dev : std::as_const(d->_devices)) {
-        if (dev.type == type)
-            ret.append(dev);
+
+    auto add = [&](auto const &dev) {
+        if (dev.type != type)
+            return;
+
+        ret.append(dev);
         // hack for pulsesrc
         if (type == PDevice::AudioIn && dev.id.startsWith(QLatin1String("pulsesrc"))) {
             hasPulsesrc = true;
@@ -442,6 +516,14 @@ QList<GstDevice> DeviceMonitor::devices(PDevice::Type type)
             if (dev.id == QLatin1String("pulsesink"))
                 hasDefaultPulsesink = true;
         }
+    };
+
+    d->devListMutex.lock();
+    for (auto const &dev : std::as_const(d->_monitorDevices)) {
+        add(dev);
+    }
+    for (auto const &dev : std::as_const(d->_platformDevices)) {
+        add(dev);
     }
     d->devListMutex.unlock();
 
@@ -468,11 +550,15 @@ QList<GstDevice> DeviceMonitor::devices(PDevice::Type type)
 GstDevice *DeviceMonitor::device(const QString &id)
 {
     // to be called from gst thread
-    auto it = d->_devices.find(id);
-    if (it == d->_devices.end()) {
-        return nullptr;
+    auto it = d->_monitorDevices.find(id);
+    if (it != d->_monitorDevices.end()) {
+        return &it.value();
     }
-    return &it.value();
+    it = d->_platformDevices.find(id);
+    if (it != d->_platformDevices.end()) {
+        return &it.value();
+    }
+    return nullptr;
 }
 
 GstElement *devices_makeElement(const QString &id, PDevice::Type type, QSize *captureSize)

@@ -18,13 +18,16 @@
  *
  */
 
-#ifndef DEVICES_H
-#define DEVICES_H
+#ifndef PSIMEDIA_DEVICES_H
+#define PSIMEDIA_DEVICES_H
 
 #include "psimediaprovider.h"
+
 #include <QList>
 #include <QString>
 #include <gst/gstelement.h>
+
+#include <memory>
 
 class QSize;
 
@@ -69,14 +72,7 @@ class DeviceMonitor : public QObject {
 
     class Private;
     // friend class Private;
-    Private *d;
-
-    void updateDevList();
-
-private slots:
-    void onDeviceAdded(GstDevice dev);
-    void onDeviceRemoved(const GstDevice &dev);
-    void onDeviceChanged(const GstDevice &dev);
+    std::unique_ptr<Private> d;
 
 signals:
     void updated();
@@ -96,4 +92,4 @@ GstElement *devices_makeElement(const QString &id, PDevice::Type type, QSize *ca
 
 Q_DECLARE_METATYPE(PsiMedia::GstDevice)
 
-#endif
+#endif // PSIMEDIA_DEVICES_H

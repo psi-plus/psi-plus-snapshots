@@ -1084,6 +1084,9 @@ int main(int argc, char **argv)
 #endif
 
     if (pluginFile.isEmpty())
+        pluginFile = findPlugin(".", "gstprovider" DEBUG_POSTFIX);
+
+    if (pluginFile.isEmpty())
         pluginFile = findPlugin("../gstprovider", "gstprovider" DEBUG_POSTFIX);
 
 #ifdef PLUGIN_INSTALL_PATH
