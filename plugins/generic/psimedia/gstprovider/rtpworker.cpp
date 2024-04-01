@@ -1344,7 +1344,7 @@ bool RtpWorker::startRecv()
         sinkVideoCb.new_event = cb_packet_ready_event_stub; // TODO
 #endif
 #if GST_CHECK_VERSION(1, 24, 0)
-        sinkVideoCb.propose_allocation = cb_packet_ready_event_stub; // TODO
+        sinkVideoCb.propose_allocation = cb_packet_ready_allocation_stub; // TODO
 #endif
         gst_app_sink_set_callbacks(appVideoSink, &sinkVideoCb, this, nullptr);
 
@@ -1481,7 +1481,7 @@ bool RtpWorker::addAudioChain(int rate)
     sinkCb.new_event = cb_packet_ready_event_stub; // TODO
 #endif
 #if GST_CHECK_VERSION(1, 24, 0)
-    sinkCb.propose_allocation = cb_packet_ready_event_stub; // TODO
+    sinkCb.propose_allocation = cb_packet_ready_allocation_stub; // TODO
 #endif
     gst_app_sink_set_callbacks(appRtpSink, &sinkCb, this, nullptr);
 
@@ -1576,7 +1576,7 @@ bool RtpWorker::addVideoChain()
     sinkPreviewCb.new_event = cb_packet_ready_event_stub; // TODO
 #endif
 #if GST_CHECK_VERSION(1, 24, 0)
-    sinkPreviewCb.propose_allocation = cb_packet_ready_event_stub; // TODO
+    sinkPreviewCb.propose_allocation = cb_packet_ready_allocation_stub; // TODO
 #endif
     gst_app_sink_set_callbacks(appVideoSink, &sinkPreviewCb, this, nullptr);
 
@@ -1594,7 +1594,7 @@ bool RtpWorker::addVideoChain()
     sinkCb.new_event = cb_packet_ready_event_stub; // TODO
 #endif
 #if GST_CHECK_VERSION(1, 24, 0)
-    sinkCb.propose_allocation = cb_packet_ready_event_stub; // TODO
+    sinkCb.propose_allocation = cb_packet_ready_allocation_stub; // TODO
 #endif
     gst_app_sink_set_callbacks(appRtpSink, &sinkCb, this, nullptr);
 
