@@ -408,7 +408,7 @@ static GstBuffer *makeGstBuffer(const PRtpPacket &packet)
 GstAppSink *RtpWorker::makeVideoPlayAppSink(const gchar *name)
 {
     GstElement *videoplaysink = gst_element_factory_make("appsink", name); // was appvideosink
-    auto        appVideoSink  = reinterpret_cast<GstAppSink *>(videoplaysink);
+    auto        appVideoSink  = GST_APP_SINK(videoplaysink);
 
     GstCaps *videoplaycaps;
     videoplaycaps = gst_caps_new_simple("video/x-raw", "format", G_TYPE_STRING, "BGRx", nullptr);
@@ -544,6 +544,15 @@ gboolean RtpWorker::cb_packet_ready_event_stub(GstAppSink *appsink, gpointer dat
     Q_UNUSED(appsink)
     Q_UNUSED(data)
     qDebug("RtpWorker::cb_packet_ready_event_stub");
+    return FALSE;
+}
+
+gboolean RtpWorker::cb_packet_ready_allocation_stub(GstAppSink *appsink, GstQuery *query, gpointer user_data)
+{
+    Q_UNUSED(appsink)
+    Q_UNUSED(query)
+    Q_UNUSED(user_data)
+    qDebug("RtpWorker::cb_packet_ready_allocation_stub");
     return FALSE;
 }
 
@@ -1331,7 +1340,12 @@ bool RtpWorker::startRecv()
         sinkVideoCb.new_sample  = cb_show_frame_output;
         sinkVideoCb.eos         = cb_packet_ready_eos_stub;     // TODO
         sinkVideoCb.new_preroll = cb_packet_ready_preroll_stub; // TODO
-        sinkVideoCb.new_event   = cb_packet_ready_event_stub;   // TODO
+#if GST_CHECK_VERSION(1, 22, 0)
+        sinkVideoCb.new_event = cb_packet_ready_event_stub; // TODO
+#endif
+#if GST_CHECK_VERSION(1, 24, 0)
+        sinkVideoCb.propose_allocation = cb_packet_ready_event_stub; // TODO
+#endif
         gst_app_sink_set_callbacks(appVideoSink, &sinkVideoCb, this, nullptr);
 
         gst_bin_add(GST_BIN(recvbin), videortpsrc);
@@ -1454,7 +1468,7 @@ bool RtpWorker::addAudioChain(int rate)
     }
 
     GstElement *audiortpsink = gst_element_factory_make("appsink", nullptr);
-    GstAppSink *appRtpSink   = reinterpret_cast<GstAppSink *>(audiortpsink);
+    auto        appRtpSink   = GST_APP_SINK(audiortpsink);
 
     if (!fileDemux)
         g_object_set(G_OBJECT(appRtpSink), "sync", FALSE, nullptr);
@@ -1463,7 +1477,12 @@ bool RtpWorker::addAudioChain(int rate)
     sinkCb.new_sample  = cb_packet_ready_rtp_audio;
     sinkCb.eos         = cb_packet_ready_eos_stub;     // TODO
     sinkCb.new_preroll = cb_packet_ready_preroll_stub; // TODO
-    sinkCb.new_event   = cb_packet_ready_event_stub;   // TODO
+#if GST_CHECK_VERSION(1, 22, 0)
+    sinkCb.new_event = cb_packet_ready_event_stub; // TODO
+#endif
+#if GST_CHECK_VERSION(1, 24, 0)
+    sinkCb.propose_allocation = cb_packet_ready_event_stub; // TODO
+#endif
     gst_app_sink_set_callbacks(appRtpSink, &sinkCb, this, nullptr);
 
     GstElement *queue = nullptr;
@@ -1553,12 +1572,17 @@ bool RtpWorker::addVideoChain()
     sinkPreviewCb.new_sample  = cb_show_frame_preview;
     sinkPreviewCb.eos         = cb_packet_ready_eos_stub;     // TODO
     sinkPreviewCb.new_preroll = cb_packet_ready_preroll_stub; // TODO
-    sinkPreviewCb.new_event   = cb_packet_ready_event_stub;   // TODO
+#if GST_CHECK_VERSION(1, 22, 0)
+    sinkPreviewCb.new_event = cb_packet_ready_event_stub; // TODO
+#endif
+#if GST_CHECK_VERSION(1, 24, 0)
+    sinkPreviewCb.propose_allocation = cb_packet_ready_event_stub; // TODO
+#endif
     gst_app_sink_set_callbacks(appVideoSink, &sinkPreviewCb, this, nullptr);
 
     GstElement *rtpqueue     = gst_element_factory_make("queue", "queue_rtp");
     GstElement *videortpsink = gst_element_factory_make("appsink", nullptr); // was apprtpsink
-    auto        appRtpSink   = reinterpret_cast<GstAppSink *>(videortpsink);
+    auto        appRtpSink   = GST_APP_SINK(videortpsink);
     if (!fileDemux)
         g_object_set(G_OBJECT(appRtpSink), "sync", FALSE, nullptr);
 
@@ -1566,7 +1590,12 @@ bool RtpWorker::addVideoChain()
     sinkCb.new_sample  = cb_packet_ready_rtp_video;
     sinkCb.eos         = cb_packet_ready_eos_stub;     // TODO
     sinkCb.new_preroll = cb_packet_ready_preroll_stub; // TODO
-    sinkCb.new_event   = cb_packet_ready_event_stub;   // TODO
+#if GST_CHECK_VERSION(1, 22, 0)
+    sinkCb.new_event = cb_packet_ready_event_stub; // TODO
+#endif
+#if GST_CHECK_VERSION(1, 24, 0)
+    sinkCb.propose_allocation = cb_packet_ready_event_stub; // TODO
+#endif
     gst_app_sink_set_callbacks(appRtpSink, &sinkCb, this, nullptr);
 
     GstElement *queue = nullptr;

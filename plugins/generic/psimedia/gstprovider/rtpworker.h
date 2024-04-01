@@ -168,6 +168,7 @@ private:
     static GstFlowReturn cb_packet_ready_preroll_stub(GstAppSink *appsink, gpointer data);
     static void          cb_packet_ready_eos_stub(GstAppSink *appsink, gpointer data);
     static gboolean      cb_packet_ready_event_stub(GstAppSink *appsink, gpointer data);
+    static gboolean      cb_packet_ready_allocation_stub(GstAppSink *appsink, GstQuery *query, gpointer user_data);
     static gboolean      cb_fileReady(gpointer data);
 
     gboolean      doStart();
