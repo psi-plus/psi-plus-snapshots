@@ -113,6 +113,9 @@ QList<PVideoParams> modes_supportedVideo()
         p.size  = QSize(640, 480);
         p.fps   = 30;
         list += p;
+
+        p.size = { 1280, 720 };
+        list += p;
     }
 
     return list;
