@@ -450,7 +450,7 @@ public:
     {
         QMutexLocker locker(&devListMutex);
 
-#if GST_VERSION_MAJOR == 1 && GST_VERSION_MINOR < 18
+#if !GST_CHECK_VERSION(1, 18, 0)
         //  with newer versions the devices events seem replayed, so we don't need this
         _monitorDevices.clear();
         GList *devices = gst_device_monitor_get_devices(_monitor);
