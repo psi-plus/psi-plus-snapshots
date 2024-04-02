@@ -18,7 +18,11 @@ struct Foundation {
     };
 };
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 inline uint qHash(const Foundation &f, uint seed = 0)
+#else
+inline size_t qHash(const Foundation &f, size_t seed = 0)
+#endif
 {
     auto tmp = uint(f.stunRequestProto) & (uint(f.type) << 8);
     return qHash(f.baseAddr, seed) ^ qHash(f.stunServAddr, seed) ^ tmp;
