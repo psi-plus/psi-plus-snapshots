@@ -1,4 +1,4 @@
-<skin version="1.3" author="VitoZz" name="Breath Dark" path="/home/vitaly/.local/share/psi+/skins/universal/breath">
+<skin version="1.4" author="VitoZz" name="Breath Dark" path="/home/vitaly/.local/share/psi+/skins/universal/breath">
     <options>
         <options.ui.look.colors.chat.link-color type="QColor">#0000ff</options.ui.look.colors.chat.link-color>
         <options.ui.look.colors.chat.mailto-color type="QColor">#2c9dff</options.ui.look.colors.chat.mailto-color>
@@ -310,10 +310,11 @@ QSplitter::handle:horizontal:pressed {
 PsiTabBar {
     background: #282e33;
     background-color: #282e33;
-    border: 1px solid #53575b;
+    border: 0px solid #282e33;
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;
-    alignment: center;
+    qproperty-expanding: false;
+    qproperty-position: begining;
 }
 
 /* tab bar - main font color */
