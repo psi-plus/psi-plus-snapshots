@@ -314,7 +314,11 @@ PsiTabBar {
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;
     qproperty-expanding: false;
-    qproperty-position: begining;
+}
+
+/* Try to place tabs at left side of tab bar */
+QStyleOptionTab {
+    position: begining;
 }
 
 /* tab bar - main font color */
