@@ -31,6 +31,13 @@ public:
     enum Affiliation { UnknownAffiliation, Outcast, NoAffiliation, Member, Admin, Owner };
     enum Role { UnknownRole, NoRole, Visitor, Participant, Moderator };
 
+    struct Actor {
+        Jid     jid;
+        QString nick;
+
+        bool operator==(const Actor &o) const;
+    };
+
     MUCItem(Role = UnknownRole, Affiliation = UnknownAffiliation);
     MUCItem(const QDomElement &);
 
@@ -38,14 +45,14 @@ public:
     void setJid(const Jid &);
     void setAffiliation(Affiliation);
     void setRole(Role);
-    void setActor(const Jid &);
+    void setActor(const Actor &);
     void setReason(const QString &);
 
     const QString &nick() const;
     const Jid     &jid() const; // real jid of muc participant
     Affiliation    affiliation() const;
     Role           role() const;
-    const Jid     &actor() const;
+    const Actor   &actor() const;
     const QString &reason() const;
 
     void        fromXml(const QDomElement &);
@@ -55,7 +62,8 @@ public:
 
 private:
     QString     nick_;
-    Jid         jid_, actor_;
+    Jid         jid_;
+    Actor       actor_;
     Affiliation affiliation_;
     Role        role_;
     QString     reason_;

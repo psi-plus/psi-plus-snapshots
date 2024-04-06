@@ -753,11 +753,7 @@ bool JT_PushPresence::take(const QDomElement &e)
                     QByteArray::fromHex(tagContent(t).toLatin1())); // if hash is empty this may mean photo removal
             // else vcard.hasPhotoHash() returns false and that's mean user is not yet ready to advertise his image
         } else if (i.tagName() == "x" && i.namespaceURI() == "http://jabber.org/protocol/muc#user") {
-            for (QDomNode muc_n = i.firstChild(); !muc_n.isNull(); muc_n = muc_n.nextSibling()) {
-                QDomElement muc_e = muc_n.toElement();
-                if (muc_e.isNull())
-                    continue;
-
+            for (QDomElement muc_e = i.firstChildElement(); !muc_e.isNull(); muc_e = muc_e.nextSiblingElement()) {
                 if (muc_e.tagName() == "item")
                     p.setMUCItem(MUCItem(muc_e));
                 else if (muc_e.tagName() == "status")

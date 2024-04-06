@@ -46,7 +46,7 @@ public:
 };
 
 // this is an IBB connection.  use it much like a qsocket
-class IBBConnection : public BSConnection {
+class IBBConnection final : public BSConnection {
     Q_OBJECT
 public:
     static const int PacketSize = 4096;

@@ -28,7 +28,6 @@
 
 #include <QList>
 #include <QMap>
-#include <type_traits>
 
 #define NS_XML "http://www.w3.org/XML/1998/namespace"
 
@@ -336,7 +335,7 @@ void MUCItem::setAffiliation(Affiliation a) { affiliation_ = a; }
 
 void MUCItem::setRole(Role r) { role_ = r; }
 
-void MUCItem::setActor(const Jid &a) { actor_ = a; }
+void MUCItem::setActor(const Actor &a) { actor_ = a; }
 
 void MUCItem::setReason(const QString &r) { reason_ = r; }
 
@@ -348,7 +347,7 @@ MUCItem::Affiliation MUCItem::affiliation() const { return affiliation_; }
 
 MUCItem::Role MUCItem::role() const { return role_; }
 
-const Jid &MUCItem::actor() const { return actor_; }
+const MUCItem::Actor &MUCItem::actor() const { return actor_; }
 
 const QString &MUCItem::reason() const { return reason_; }
 
@@ -384,14 +383,11 @@ void MUCItem::fromXml(const QDomElement &e)
         role_ = NoRole;
     }
 
-    for (QDomNode n = e.firstChild(); !n.isNull(); n = n.nextSibling()) {
-        QDomElement i = n.toElement();
-        if (i.isNull())
-            continue;
-
-        if (i.tagName() == QLatin1String("actor"))
-            actor_ = Jid(i.attribute(QLatin1String("jid")));
-        else if (i.tagName() == QLatin1String("reason"))
+    for (QDomElement i = e.firstChildElement(); !i.isNull(); i = i.nextSiblingElement()) {
+        if (i.tagName() == QLatin1String("actor")) {
+            actor_.jid  = Jid(i.attribute(QLatin1String("jid")));
+            actor_.nick = i.attribute(QLatin1String("nick"));
+        } else if (i.tagName() == QLatin1String("reason"))
             reason_ = i.text();
     }
 }
@@ -448,11 +444,15 @@ QDomElement MUCItem::toXml(QDomDocument &d)
     return e;
 }
 
+bool MUCItem::Actor::operator==(const Actor &o) const
+{
+    return ((!jid.isValid() && !o.jid.isValid()) || jid.compare(o.jid, true)) && (nick == o.nick);
+}
+
 bool MUCItem::operator==(const MUCItem &o) const
 {
     return !nick_.compare(o.nick_) && ((!jid_.isValid() && !o.jid_.isValid()) || jid_.compare(o.jid_, true))
-        && ((!actor_.isValid() && !o.actor_.isValid()) || actor_.compare(o.actor_, true))
-        && affiliation_ == o.affiliation_ && role_ == o.role_ && !reason_.compare(o.reason_);
+        && (actor_ == o.actor_) && affiliation_ == o.affiliation_ && role_ == o.role_ && !reason_.compare(o.reason_);
 }
 
 //----------------------------------------------------------------------------

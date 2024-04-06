@@ -23,9 +23,8 @@
 #include "xmpp_stream.h"
 #include "xmpp_xmlcommon.h"
 
+#include <QTimer>
 #include <QtCrypto>
-#include <qtimer.h>
-#include <stdlib.h>
 
 #define IBB_PACKET_DELAY 0
 
