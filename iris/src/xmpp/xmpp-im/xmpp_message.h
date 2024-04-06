@@ -71,6 +71,7 @@ public:
     ~Message();
     bool        operator==(const Message &from) const;
     inline bool isNull() const { return d == nullptr; }
+    bool        isPureSubject() const;
 
     Jid           to() const;
     Jid           from() const;

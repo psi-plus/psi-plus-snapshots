@@ -702,7 +702,8 @@ public:
 
     StringMap     subject, body;
     QString       thread;
-    bool          threadSend = false;
+    bool          threadSend  = false;
+    bool          pureSubject = false; // set during parsing is subject exists body doesn't
     Stanza::Error error;
 
     // extensions
@@ -776,6 +777,8 @@ Message::~Message() { }
 
 //! \brief Check if it's exactly the same instance.
 bool Message::operator==(const Message &from) const { return d == from.d; }
+
+bool Message::isPureSubject() const { return d && d->pureSubject; }
 
 //! \brief Return receiver's Jid information.
 Jid Message::to() const { return d ? d->to : Jid(); }
@@ -890,6 +893,7 @@ void Message::setLang(const QString &s) { MessageD()->lang = s; }
 void Message::setSubject(const QString &s, const QString &lang)
 {
     MessageD()->subject[lang] = s;
+    d->pureSubject            = !d->subject.isEmpty() && d->thread.isEmpty() && d->body.isEmpty();
     // d->flag = false;
 }
 
@@ -901,6 +905,7 @@ void Message::setSubject(const QString &s, const QString &lang)
 void Message::setBody(const QString &s, const QString &lang)
 {
     MessageD()->body[lang] = s;
+    d->pureSubject         = !d->subject.isEmpty() && d->thread.isEmpty() && d->body.isEmpty();
     // d->flag = false;
 }
 
@@ -915,6 +920,7 @@ void Message::setThread(const QString &s, bool send)
 {
     MessageD()->threadSend = send;
     d->thread              = s;
+    d->pureSubject         = !d->subject.isEmpty() && d->thread.isEmpty() && d->body.isEmpty();
 }
 
 void Message::setError(const Stanza::Error &err) { MessageD()->error = err; }
@@ -1446,69 +1452,70 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 
     XDomNodeList nl = root.childNodes();
     int          n;
-    for (n = 0; n < nl.count(); ++n) {
-        QDomNode i = nl.item(n);
-        if (i.isElement()) {
-            QDomElement e = i.toElement();
-            if (e.namespaceURI() == s.baseNS()) {
-                if (e.tagName() == QLatin1String("subject")) {
-                    QString lang = e.attributeNS(NS_XML, "lang", "");
-                    if (lang.isEmpty() || !(lang = XMLHelper::sanitizedLang(lang)).isEmpty()) {
-                        d->subject[lang] = e.text();
-                    }
-                } else if (e.tagName() == QLatin1String("body")) {
-                    QString lang = e.attributeNS(NS_XML, "lang", "");
-                    if (lang.isEmpty() || !(lang = XMLHelper::sanitizedLang(lang)).isEmpty()) {
-                        d->body[lang] = e.text();
-                    }
-                } else if (e.tagName() == QLatin1String("thread"))
-                    d->thread = e.text();
-            } else if (e.tagName() == QLatin1String("event")
-                       && e.namespaceURI() == QLatin1String("http://jabber.org/protocol/pubsub#event")) {
-                for (QDomNode enode = e.firstChild(); !enode.isNull(); enode = enode.nextSibling()) {
-                    QDomElement eel = enode.toElement();
-                    if (eel.tagName() == QLatin1String("items")) {
-                        d->pubsubNode = eel.attribute("node");
-                        for (QDomNode inode = eel.firstChild(); !inode.isNull(); inode = inode.nextSibling()) {
-                            QDomElement o = inode.toElement();
-                            if (o.tagName() == QLatin1String("item")) {
-                                for (QDomNode j = o.firstChild(); !j.isNull(); j = j.nextSibling()) {
-                                    QDomElement item = j.toElement();
-                                    if (!item.isNull()) {
-                                        d->pubsubItems += PubSubItem(o.attribute("id"), item);
-                                    }
+    bool         hasBodyOrThread = false;
+    bool         hasSubject      = false;
+    for (QDomElement e = root.firstChildElement(); !e.isNull(); e = e.nextSiblingElement()) {
+        if (e.namespaceURI() == s.baseNS()) {
+            if (e.tagName() == QLatin1String("subject")) {
+                hasSubject   = true;
+                QString lang = e.attributeNS(NS_XML, "lang", "");
+                if (lang.isEmpty() || !(lang = XMLHelper::sanitizedLang(lang)).isEmpty()) {
+                    d->subject[lang] = e.text();
+                }
+            } else if (e.tagName() == QLatin1String("body")) {
+                hasBodyOrThread = true;
+                QString lang    = e.attributeNS(NS_XML, "lang", "");
+                if (lang.isEmpty() || !(lang = XMLHelper::sanitizedLang(lang)).isEmpty()) {
+                    d->body[lang] = e.text();
+                }
+            } else if (e.tagName() == QLatin1String("thread")) {
+                hasBodyOrThread = true;
+                d->thread       = e.text();
+            }
+        } else if (e.tagName() == QLatin1String("event")
+                   && e.namespaceURI() == QLatin1String("http://jabber.org/protocol/pubsub#event")) {
+            for (QDomNode enode = e.firstChild(); !enode.isNull(); enode = enode.nextSibling()) {
+                QDomElement eel = enode.toElement();
+                if (eel.tagName() == QLatin1String("items")) {
+                    d->pubsubNode = eel.attribute("node");
+                    for (QDomNode inode = eel.firstChild(); !inode.isNull(); inode = inode.nextSibling()) {
+                        QDomElement o = inode.toElement();
+                        if (o.tagName() == QLatin1String("item")) {
+                            for (QDomNode j = o.firstChild(); !j.isNull(); j = j.nextSibling()) {
+                                QDomElement item = j.toElement();
+                                if (!item.isNull()) {
+                                    d->pubsubItems += PubSubItem(o.attribute("id"), item);
                                 }
                             }
-                            if (o.tagName() == "retract") {
-                                d->pubsubRetractions += PubSubRetraction(o.attribute("id"));
-                            }
+                        }
+                        if (o.tagName() == "retract") {
+                            d->pubsubRetractions += PubSubRetraction(o.attribute("id"));
                         }
                     }
                 }
-            } else if (e.tagName() == QLatin1String("no-permanent-store")
-                       && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
-                d->processingHints |= NoPermanentStore;
-            } else if (e.tagName() == QLatin1String("no-store")
-                       && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
-                d->processingHints |= NoStore;
-            } else if (e.tagName() == QLatin1String("no-copy") && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
-                d->processingHints |= NoCopy;
-            } else if (e.tagName() == QLatin1String("store") && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
-                d->processingHints |= Store;
-            } else if (e.tagName() == QLatin1String("origin-id")
-                       && e.namespaceURI() == QLatin1String("urn:xmpp:sid:0")) {
-                d->originId = e.attribute(QStringLiteral("id"));
-            } else if (e.tagName() == QLatin1String("stanza-id")
-                       && e.namespaceURI() == QLatin1String("urn:xmpp:sid:0")) {
-                d->stanzaId.id = e.attribute(QStringLiteral("id"));
-                d->stanzaId.by = Jid(e.attribute(QStringLiteral("by")));
             }
+        } else if (e.tagName() == QLatin1String("no-permanent-store")
+                   && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
+            d->processingHints |= NoPermanentStore;
+        } else if (e.tagName() == QLatin1String("no-store") && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
+            d->processingHints |= NoStore;
+        } else if (e.tagName() == QLatin1String("no-copy") && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
+            d->processingHints |= NoCopy;
+        } else if (e.tagName() == QLatin1String("store") && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
+            d->processingHints |= Store;
+        } else if (e.tagName() == QLatin1String("origin-id") && e.namespaceURI() == QLatin1String("urn:xmpp:sid:0")) {
+            d->originId = e.attribute(QStringLiteral("id"));
+        } else if (e.tagName() == QLatin1String("stanza-id") && e.namespaceURI() == QLatin1String("urn:xmpp:sid:0")) {
+            d->stanzaId.id = e.attribute(QStringLiteral("id"));
+            d->stanzaId.by = Jid(e.attribute(QStringLiteral("by")));
+        }
 
-            else {
-                // printf("extension element: [%s]\n", e.tagName().latin1());
-            }
+        else {
+            // printf("extension element: [%s]\n", e.tagName().latin1());
         }
     }
+
+    d->pureSubject = hasSubject && !hasBodyOrThread; // this is somewhat important for muc
 
     if (s.type() == "error")
         d->error = s.error();

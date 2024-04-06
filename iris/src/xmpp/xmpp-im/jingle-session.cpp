@@ -831,6 +831,7 @@ namespace XMPP { namespace Jingle {
 
         bool handleIncomingTransportReplace(const QDomElement &jingleEl)
         {
+            qDebug("handle incoming transport replace");
             QVector<std::tuple<Application *, QSharedPointer<Transport>, QDomElement>> passed;
             QList<QDomElement>                                                         toReject;
             QString contentTag(QStringLiteral("content"));

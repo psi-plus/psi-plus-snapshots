@@ -66,6 +66,7 @@ namespace XMPP { namespace Jingle {
 
     void Transport::onFinish(Reason::Condition condition, const QString &message)
     {
+        qDebug("Transport::onFinish: %s", qPrintable(_pad->ns()));
         _lastReason = Reason(condition, message);
         _prevState  = _state;
         _state      = State::Finished;

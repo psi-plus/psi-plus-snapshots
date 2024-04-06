@@ -73,8 +73,10 @@ namespace XMPP { namespace Jingle {
             Q_ASSERT(!tr.isNull());
 
             connect(tr.data(), &Transport::stateChanged, this, [this]() {
-                if (transport.lock()->state() == State::Finished) {
-                    onFailed(QLatin1String("Transport is dead but no connection"));
+                auto locked = transport.lock();
+                if (locked->state() == State::Finished) {
+                    onFailed(QLatin1String("Transport") + locked->pad()->ns()
+                             + QLatin1String(" is in finished state and no connection => transport failure"));
                 }
             });
             if (tr->isLocal()) {
@@ -317,6 +319,7 @@ namespace XMPP { namespace Jingle {
 
     bool Application::selectNextTransport(const QSharedPointer<Transport> alikeTransport)
     {
+        qDebug("selecting next transport");
         if (!_transportSelector->hasMoreTransports()) {
             if (_transport) {
                 qDebug("Application::selectNextTransport: stopping %s transport", qPrintable(_transport->pad()->ns()));
@@ -369,7 +372,6 @@ namespace XMPP { namespace Jingle {
         if (!isTransportReplaceEnabled() || !_transportSelector->replace(_transport, transport))
             return false;
 
-        qDebug("setting transport %s", qPrintable(transport->pad()->ns()));
         // in case we automatically select a new transport on our own we definitely will come up to this point
         if (_transport) {
             if (_transport->state() < State::Unacked && _transport->creator() == _pad->session()->role()
@@ -402,6 +404,8 @@ namespace XMPP { namespace Jingle {
                    qPrintable(_transport->pad()->ns()), qPrintable(transport->pad()->ns()));
             _transport->disconnect(this);
             _transport.reset();
+        } else {
+            qDebug("setting transport %s", qPrintable(transport->pad()->ns()));
         }
 
         _transport = transport;
