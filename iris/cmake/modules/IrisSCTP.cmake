@@ -60,6 +60,10 @@ else()
         if(NOT Git_FOUND)
             message(FATAL_ERROR "Git not found! Bundled UsrSCTP needs Git utility.\nPlease set GIT_EXECUTABLE variable or add git to PATH")
         endif()
+        set(patch_command
+        ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/usrsctp.patch <SOURCE_DIR> &&
+        ${GIT_EXECUTABLE} checkout <SOURCE_DIR>/usrsctplib/netinet/sctp_output.c &&
+        ${GIT_EXECUTABLE} apply <SOURCE_DIR>/usrsctp.patch)
         ExternalProject_Add(UsrSCTPProject
             PREFIX ${USRSCTP_PREFIX}
             BINARY_DIR ${USRSCTP_BUILD_DIR}
@@ -68,6 +72,7 @@ else()
             CMAKE_ARGS ${USRSCTP_BUILD_OPTIONS}
             BUILD_BYPRODUCTS ${USRSCTP_LIBRARY}
             INSTALL_COMMAND ""
+            PATCH_COMMAND ${patch_command}
             )
     endif()
     add_library(SctpLab::UsrSCTP UNKNOWN IMPORTED)
