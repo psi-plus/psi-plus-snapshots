@@ -37,9 +37,13 @@ else()
         -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER})
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        list(APPEND USRSCTP_BUILD_OPTIONS -DCMAKE_C_FLAGS="-Wno-maybe-uninitialized")
-    endif()
+    # Setting these options seems to have no any effect because those prepended and not appended
+    # if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    #     list(APPEND USRSCTP_BUILD_OPTIONS "-DCMAKE_C_FLAGS=-Wno-maybe-uninitialized")
+    # endif()
+    # if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    #     list(APPEND USRSCTP_BUILD_OPTIONS "-DCMAKE_C_FLAGS=-Wno-uninitialized -Wno-unused-but-set-variable")
+    # endif()
     if (EXISTS ${USRSCTP_SOURCE_DIR})
         message(STATUS "USRSCTP: found bundled sources")
         ExternalProject_Add(UsrSCTPProject
@@ -60,7 +64,7 @@ else()
             PREFIX ${USRSCTP_PREFIX}
             BINARY_DIR ${USRSCTP_BUILD_DIR}
             GIT_REPOSITORY ${IrisSCTPGitRepo}
-            GIT_TAG a17109528c75d01f6372d5c30851a639684c6e99
+            GIT_TAG 848eca82f92273af9a79687a90343a2ebcf3481d
             CMAKE_ARGS ${USRSCTP_BUILD_OPTIONS}
             BUILD_BYPRODUCTS ${USRSCTP_LIBRARY}
             INSTALL_COMMAND ""
