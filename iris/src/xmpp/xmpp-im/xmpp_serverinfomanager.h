@@ -112,7 +112,8 @@ signals:
     void servicesChanged();
 
 private slots:
-    void disco_finished();
+    void server_disco_finished();
+    void account_disco_finished();
     void initialize();
     void deinitialize();
     void reset();

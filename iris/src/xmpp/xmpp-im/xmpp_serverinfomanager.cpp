@@ -43,12 +43,21 @@ void ServerInfoManager::reset()
 
 void ServerInfoManager::initialize()
 {
-    connect(_client, SIGNAL(disconnected()), SLOT(deinitialize()));
-    JT_DiscoInfo *jt = new JT_DiscoInfo(_client->rootTask());
-    connect(jt, SIGNAL(finished()), SLOT(disco_finished()));
-    jt->get(_client->jid().domain());
-    jt->go(true);
+    connect(_client, &XMPP::Client::disconnected, this, &ServerInfoManager::deinitialize);
 
+    {
+        JT_DiscoInfo *jt = new JT_DiscoInfo(_client->rootTask());
+        connect(jt, &JT_DiscoInfo::finished, this, &ServerInfoManager::server_disco_finished);
+        jt->get(_client->jid().domain());
+        jt->go(true);
+    }
+
+    {
+        JT_DiscoInfo *jt = new JT_DiscoInfo(_client->rootTask());
+        connect(jt, &JT_DiscoInfo::finished, this, &ServerInfoManager::account_disco_finished);
+        jt->get(_client->jid().bare());
+        jt->go(true);
+    }
     queryServicesList();
 }
 
@@ -253,7 +262,7 @@ QVariant ServerInfoManager::serviceMeta(const Jid &service, const QString &key)
     return QVariant();
 }
 
-void ServerInfoManager::disco_finished()
+void ServerInfoManager::server_disco_finished()
 {
     JT_DiscoInfo *jt = static_cast<JT_DiscoInfo *>(sender());
     if (jt->success()) {
@@ -264,13 +273,6 @@ void ServerInfoManager::disco_finished()
 
         _canMessageCarbons = _features.hasMessageCarbons();
 
-        // Identities
-        DiscoItem::Identities is = jt->item().identities();
-        for (const DiscoItem::Identity &i : is) {
-            if (i.category == "pubsub" && i.type == "pep")
-                _hasPEP = true;
-        }
-
         auto servInfo
             = jt->item().findExtension(XData::Data_Result, QLatin1String("http://jabber.org/network/serverinfo"));
         if (servInfo.isValid()) {
@@ -279,6 +281,21 @@ void ServerInfoManager::disco_finished()
                     _extraServerInfo.insert(f.var(), f.value()); // covers XEP-0157
                 }
             }
+        }
+
+        emit featuresChanged();
+    }
+}
+
+void ServerInfoManager::account_disco_finished()
+{
+    JT_DiscoInfo *jt = static_cast<JT_DiscoInfo *>(sender());
+    if (jt->success()) {
+        // Identities
+        DiscoItem::Identities is = jt->item().identities();
+        for (const DiscoItem::Identity &i : is) {
+            if (i.category == "pubsub" && i.type == "pep")
+                _hasPEP = true;
         }
 
         emit featuresChanged();
