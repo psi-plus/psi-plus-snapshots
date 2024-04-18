@@ -22,6 +22,8 @@
 
 #include <QtEndian>
 
+#include <cstring>
+
 namespace XMPP { namespace Jingle { namespace SCTP {
 
     WebRTCDataChannel::WebRTCDataChannel(AssociationPrivate *association, quint8 channelType, quint32 reliability,
@@ -127,34 +129,36 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         return true;
     }
 
-    qint64 WebRTCDataChannel::bytesAvailable() const { return _bytesAvailable; }
+    qint64 WebRTCDataChannel::bytesAvailable() const
+    {
+        return tail.size() + _bytesAvailable + Connection::bytesAvailable();
+    }
 
     qint64 WebRTCDataChannel::bytesToWrite() const { return 0; /*client->bytesToWrite();*/ }
 
     qint64 WebRTCDataChannel::readData(char *buf, qint64 sz)
     {
-        if (sz <= tail.size()) {
-            std::memcpy(buf, tail.data(), sz);
-            tail.remove(0, sz);
-            return sz;
-        }
-        sz -= tail.size();
-        qint64 actualRet = tail.size();
-        std::memcpy(buf, tail.data(), tail.size());
-        while (sz > 0 && !datagrams.isEmpty()) {
-            auto dg     = datagrams.takeFirst();
-            auto data   = dg.data();
-            auto dataSz = std::min(sz, data.size());
-            std::memcpy(buf + actualRet, data.data(), dataSz);
-            actualRet += dataSz;
-            data.remove(0, dataSz);
-            if (data.size()) {
-                tail = data;
-                return actualRet;
+        qint64 actualSz = 0;
+        do {
+            if (tail.isEmpty() && !datagrams.isEmpty()) {
+                tail = datagrams.takeFirst().data();
             }
+            auto dataSz = std::min(sz, qint64(tail.size()));
+            std::memcpy(buf + actualSz, tail.data(), dataSz);
+            if (dataSz == qint64(tail.size())) {
+                tail.clear();
+            } else {
+                tail.remove(0, dataSz);
+                if (!tail.isEmpty()) {
+                    break;
+                }
+            }
+            actualSz += dataSz;
             sz -= dataSz;
-        }
-        return actualRet;
+        } while (sz > 0 && !datagrams.isEmpty());
+        _bytesAvailable -= actualSz;
+        // qDebug("read %lld bytes. more %lld is available", actualSz, _bytesAvailable);
+        return actualSz;
     }
 
     void WebRTCDataChannel::close() { XMPP::Jingle::Connection::close(); }
@@ -205,6 +209,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         // check other PPIDs.
         datagrams.append(QNetworkDatagram { data });
         _bytesAvailable += data.size();
+        // qDebug("datachannel readyread");
         emit readyRead();
     }
 

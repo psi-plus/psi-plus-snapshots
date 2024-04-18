@@ -26,6 +26,8 @@
 #include <QDateTime>
 #include <QObject>
 
+#include <optional>
+
 namespace XMPP::Jingle::FileTransfer {
 struct Range {
     std::uint64_t offset = 0; // 0 - default value from spec even when not set.
