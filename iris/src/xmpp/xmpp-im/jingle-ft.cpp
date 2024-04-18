@@ -136,7 +136,9 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         bool closeDeviceOnFinish = true;
         bool streamingMode       = false;
         // bool                endlessRange        = false; // where range in accepted file doesn't have end
-        bool                   outgoingReceived = false;
+        bool                   outgoingReceived    = false;
+        bool                   writeLoggingStarted = false;
+        bool                   readLoggingStarted  = false;
         File                   file;
         File                   acceptFile; // as it comes with "accept" response
         XMPP::Stanza::Error    lastError;
@@ -183,9 +185,9 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
         void expectReceived()
         {
-            qDebug("waiting for <received>");
+            qDebug("jingle-ft: waiting for <received>");
             expectFinalize([this]() {
-                qDebug("Waiting for <received> timed out. But likely succeeded anyway");
+                qDebug("jingle-ft: Waiting for <received> timed out. But likely succeeded anyway");
                 onReceived();
             });
         }
@@ -325,20 +327,25 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
         void onConnectionConnected(Connection::Ptr newConnection)
         {
-            qDebug("jingle-ft: connected. ready to transfer user data");
+            qDebug("jingle-ft: connected. ready to transfer user data with %s",
+                   qUtf8Printable(q->pad()->session()->peer().full()));
             connection = newConnection;
             lastReason = Reason();
             lastError.reset();
 
             if (streamingMode) {
-                qDebug("streaming mode is active. giving up with handling on our own");
+                qDebug("jingle-ft: streaming mode is active. giving up with handling on our own with %s",
+                       qUtf8Printable(q->pad()->session()->peer().full()));
                 setState(State::Active);
                 emit q->connectionReady();
                 return;
             }
 
             connect(connection.data(), &Connection::readyRead, q, [this]() {
-                qDebug("Connection::readyRead");
+                if (!readLoggingStarted) {
+                    qDebug("jingle-ft: got first readRead for %s", qUtf8Printable(q->pad()->session()->peer().full()));
+                    readLoggingStarted = true;
+                }
                 if (!device) {
                     return;
                 }
@@ -349,7 +356,11 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             connect(
                 connection.data(), &Connection::bytesWritten, q,
                 [this](qint64 bytes) {
-                    qDebug("Connection::bytesWritten");
+                    if (!writeLoggingStarted) {
+                        qDebug("jingle-ft: wrote first %lld bytes for %s.", bytes,
+                               qUtf8Printable(q->pad()->session()->peer().full()));
+                        writeLoggingStarted = true;
+                    }
                     Q_UNUSED(bytes)
                     if (q->pad()->session()->role() == q->senders() && !connection->bytesToWrite()) {
                         writeNextBlockToTransport();
@@ -382,9 +393,10 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
             // data read finished. check other stuff
             if (hasher && incomingChecksum.isEmpty()) {
-                qDebug("waiting for <checksum>");
+                qDebug("jignle-ft: waiting for <checksum> with %s", qUtf8Printable(q->pad()->session()->peer().full()));
                 expectFinalize([this]() {
-                    qDebug("Waiting for <checksum> timed out. But likely succeeded anyway");
+                    qDebug("jingle-ft: Waiting for <checksum> timed out. But likely succeeded anyway. %s",
+                           qUtf8Printable(q->pad()->session()->peer().full()));
                     lastReason = Reason(Reason::Condition::Success);
                     setState(State::Finished);
                 });
@@ -409,8 +421,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                     break;
                 }
                 if (!found)
-                    qDebug("haven't found %s checksum within received checksums",
-                           qPrintable(expectedHash.stringType()));
+                    qDebug("jignle-ft: haven't found %s checksum within received checksums with %s",
+                           qPrintable(expectedHash.stringType()), qUtf8Printable(q->pad()->session()->peer().full()));
             }
             outgoingReceived = true;
             emit q->updated();
@@ -432,7 +444,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     Application::~Application()
     {
         delete d->hasher;
-        qDebug("jingle-ft: destroyed");
+        qDebug("jingle-ft: destroyed for %s", qUtf8Printable(pad()->session()->peer().full()));
     }
 
     void Application::setState(State state) { d->setState(state); }
@@ -582,7 +594,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     OutgoingUpdate Application::takeOutgoingUpdate()
     {
-        qDebug("jingle-ft: take outgoing update");
+        qDebug("jingle-ft: take outgoing update for %s", qUtf8Printable(pad()->session()->peer().full()));
         if (_update.action == Action::NoAction) {
             return OutgoingUpdate();
         }
@@ -687,9 +699,11 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     void Application::incomingChecksum(const QList<Hash> &hashes)
     {
-        qDebug("got checksum: %s", qPrintable(hashes.value(0).toString()));
+        qDebug("jignle-ft: got checksum: %s for %s", qPrintable(hashes.value(0).toString()),
+               qUtf8Printable(pad()->session()->peer().full()));
         if (!d->hasher || _senders != _pad->session()->peerRole()) {
-            qDebug("unexpected incoming checksum. was it negotiated?");
+            qDebug("jignle-ft: unexpected incoming checksum. was it negotiated? %s",
+                   qUtf8Printable(pad()->session()->peer().full()));
             return;
         }
         d->incomingChecksum = hashes;
@@ -748,7 +762,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 return true;
             } else {
                 // TODO report actual error
-                qDebug("unknown session-info: %s", qPrintable(el.tagName()));
+                qDebug("jingle-ft: unknown session-info: %s", qPrintable(el.tagName()));
             }
         }
         return false;
