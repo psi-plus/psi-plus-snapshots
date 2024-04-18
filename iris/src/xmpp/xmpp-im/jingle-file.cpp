@@ -65,17 +65,16 @@ QDomElement Range::toXml(QDomDocument *doc) const
 //----------------------------------------------------------------------------
 class File::Private : public QSharedData {
 public:
-    bool          rangeSupported = false;
-    bool          hasSize        = false;
-    QDateTime     date;
-    QString       mediaType;
-    QString       name;
-    QString       desc;
-    std::uint64_t size = 0;
-    Range         range;
-    QList<Hash>   hashes;
-    Thumbnail     thumbnail;
-    QByteArray    amplitudes;
+    bool                         rangeSupported = false;
+    QDateTime                    date;
+    QString                      mediaType;
+    QString                      name;
+    QString                      desc;
+    std::optional<std::uint64_t> size = 0;
+    Range                        range;
+    QList<Hash>                  hashes;
+    Thumbnail                    thumbnail;
+    QByteArray                   amplitudes;
 };
 
 File::File() { }
@@ -92,17 +91,16 @@ File::File(const File &other) : d(other.d) { }
 
 File::File(const QDomElement &file)
 {
-    QDateTime     date;
-    QString       mediaType;
-    QString       name;
-    QString       desc;
-    std::uint64_t size           = 0;
-    bool          rangeSupported = false;
-    bool          hasSize        = false;
-    Range         range;
-    QList<Hash>   hashes;
-    Thumbnail     thumbnail;
-    QByteArray    amplitudes;
+    QDateTime                    date;
+    QString                      mediaType;
+    QString                      name;
+    QString                      desc;
+    std::optional<std::uint64_t> size           = 0;
+    bool                         rangeSupported = false;
+    Range                        range;
+    QList<Hash>                  hashes;
+    Thumbnail                    thumbnail;
+    QByteArray                   amplitudes;
 
     bool ok;
 
@@ -125,7 +123,6 @@ File::File(const QDomElement &file)
             if (!ok) {
                 return;
             }
-            hasSize = true;
 
         } else if (ce.tagName() == RANGE_TAG) {
             if (ce.hasAttribute(QLatin1String("offset"))) {
@@ -188,7 +185,6 @@ File::File(const QDomElement &file)
     p->desc           = desc;
     p->size           = size;
     p->rangeSupported = rangeSupported;
-    p->hasSize        = hasSize;
     p->range          = range;
     p->hashes         = hashes;
     p->thumbnail      = thumbnail;
@@ -218,8 +214,8 @@ QDomElement File::toXml(QDomDocument *doc) const
     if (d->name.size()) {
         el.appendChild(XMLHelper::textTag(*doc, NAME_TAG, d->name));
     }
-    if (d->hasSize) {
-        el.appendChild(XMLHelper::textTag(*doc, SIZE_TAG, qint64(d->size)));
+    if (d->size) {
+        el.appendChild(XMLHelper::textTag(*doc, SIZE_TAG, qint64(*d->size)));
     }
     if (d->rangeSupported || d->range.isValid()) {
         el.appendChild(d->range.toXml(doc));
@@ -261,8 +257,6 @@ bool File::hasComputedHashes() const
     return false;
 }
 
-bool File::hasSize() const { return d->hasSize; }
-
 QDateTime File::date() const { return d ? d->date : QDateTime(); }
 
 QString File::description() const { return d ? d->desc : QString(); }
@@ -298,7 +292,7 @@ QString File::mediaType() const { return d ? d->mediaType : QString(); }
 
 QString File::name() const { return d ? d->name : QString(); }
 
-std::uint64_t File::size() const { return d ? d->size : 0; }
+std::optional<std::uint64_t> File::size() const { return d ? d->size : std::optional<std::uint64_t> {}; }
 
 Range File::range() const { return d ? d->range : Range(); }
 
@@ -318,11 +312,7 @@ void File::setMediaType(const QString &mediaType) { ensureD()->mediaType = media
 
 void File::setName(const QString &name) { ensureD()->name = name; }
 
-void File::setSize(std::uint64_t size)
-{
-    ensureD()->size = size;
-    d->hasSize      = true;
-}
+void File::setSize(std::uint64_t size) { ensureD()->size = size; }
 
 void File::setRange(const Range &range)
 {

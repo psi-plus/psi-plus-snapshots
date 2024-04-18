@@ -128,8 +128,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         void connectionReady(); // streaming mode only
 
         // if size = 0 then it's reamaining part of the file (non-streaming mode only)
-        void deviceRequested(qint64 offset, qint64 size);
-        void progress(qint64 offset);
+        void deviceRequested(quint64 offset, std::optional<quint64> size);
+        void progress(quint64 offset);
 
     private:
         class Private;

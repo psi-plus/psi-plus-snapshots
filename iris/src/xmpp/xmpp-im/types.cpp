@@ -1054,7 +1054,7 @@ QString Message::mucPassword() const { return d ? d->mucPassword : QString(); }
 
 void Message::setMUCPassword(const QString &p) { MessageD()->mucPassword = p; }
 
-bool Message::hasMUCUser() const { return d & d->hasMUCUser; }
+bool Message::hasMUCUser() const { return d && d->hasMUCUser; }
 
 Message::StanzaId Message::stanzaId() const { return d ? d->stanzaId : StanzaId(); }
 

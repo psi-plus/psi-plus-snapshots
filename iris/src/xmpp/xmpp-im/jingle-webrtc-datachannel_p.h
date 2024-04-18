@@ -49,11 +49,15 @@ namespace XMPP { namespace Jingle { namespace SCTP {
 
         using OutgoingCallback = std::function<void(const OutgoingDatagram &)>;
 
-        AssociationPrivate    *association;
-        QList<NetworkDatagram> datagrams;
-        DisconnectReason       disconnectReason = ChannelClosed;
-        std::size_t            outgoingBufSize  = 0;
-        OutgoingCallback       outgoingCallback;
+        AssociationPrivate *association;
+
+        QList<QNetworkDatagram> datagrams;
+        quint64                 _bytesAvailable = 0;
+        QByteArray              tail;
+
+        DisconnectReason disconnectReason = ChannelClosed;
+        std::size_t      outgoingBufSize  = 0;
+        OutgoingCallback outgoingCallback;
 
         quint8    channelType = 0;
         quint32   reliability = 0;
@@ -73,9 +77,10 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         void setOutgoingCallback(OutgoingCallback &&callback);
 
         bool              hasPendingDatagrams() const override;
-        NetworkDatagram   readDatagram(qint64 maxSize = -1) override;
-        bool              writeDatagram(const NetworkDatagram &data) override;
+        QNetworkDatagram  readDatagram(qint64 maxSize = -1) override;
+        bool              writeDatagram(const QNetworkDatagram &data) override;
         qint64            bytesAvailable() const override;
+        qint64            readData(char *buf, qint64 sz);
         qint64            bytesToWrite() const override;
         void              close() override;
         TransportFeatures features() const override;

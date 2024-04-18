@@ -24,7 +24,6 @@
 #include "xmpp_client.h"
 #include "xmpp_hash.h"
 #include "xmpp_thumbs.h"
-#include "xmpp_xmlcommon.h"
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QRandomGenerator>
@@ -37,8 +36,8 @@
 #include <QSemaphore>
 #include <QThread>
 #include <QTimer>
+
 #include <chrono>
-#include <cmath>
 #include <functional>
 
 using namespace std::chrono_literals;
@@ -134,21 +133,21 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
         Reason updateReason;
         // Action              updateToSend            = Action::NoAction;
-        bool                closeDeviceOnFinish = true;
-        bool                streamingMode       = false;
-        bool                endlessRange        = false; // where range in accepted file doesn't have end
-        bool                outgoingReceived    = false;
-        File                file;
-        File                acceptFile; // as it comes with "accept" response
-        XMPP::Stanza::Error lastError;
-        Reason              lastReason;
-        Connection::Ptr     connection;
-        QIODevice          *device    = nullptr;
-        qint64              bytesLeft = 0;
-        QList<Hash>         outgoingChecksum;
-        QList<Hash>         incomingChecksum;
-        QTimer             *finalizeTimer = nullptr;
-        FileHasher         *hasher        = nullptr;
+        bool closeDeviceOnFinish = true;
+        bool streamingMode       = false;
+        // bool                endlessRange        = false; // where range in accepted file doesn't have end
+        bool                   outgoingReceived = false;
+        File                   file;
+        File                   acceptFile; // as it comes with "accept" response
+        XMPP::Stanza::Error    lastError;
+        Reason                 lastReason;
+        Connection::Ptr        connection;
+        QIODevice             *device = nullptr;
+        std::optional<quint64> bytesLeft;
+        QList<Hash>            outgoingChecksum;
+        QList<Hash>            incomingChecksum;
+        QTimer                *finalizeTimer = nullptr;
+        FileHasher            *hasher        = nullptr;
 
         void setState(State s)
         {
@@ -218,7 +217,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
         void writeNextBlockToTransport()
         {
-            if (!(endlessRange || bytesLeft)) {
+            if (bytesLeft && *bytesLeft == 0) {
                 if (hasher) {
                     auto hash = hasher->result();
                     if (hash.isValid()) {
@@ -232,8 +231,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             }
             auto sz = qint64(connection->blockSize());
             sz      = sz ? sz : 8192;
-            if (!endlessRange && sz > bytesLeft) {
-                sz = bytesLeft;
+            if (bytesLeft && sz > *bytesLeft) {
+                sz = *bytesLeft;
             }
             QByteArray data;
             if (device->isSequential()) {
@@ -244,7 +243,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 data = device->read(sz);
             }
             if (data.isEmpty()) {
-                if (endlessRange) {
+                if (!bytesLeft) {
                     lastReason = Reason(Reason::Condition::Success);
                     if (hasher) {
                         auto hash = hasher->result();
@@ -276,20 +275,23 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                 }
             }
             emit q->progress(device->pos());
-            bytesLeft -= data.size();
+            if (bytesLeft) {
+                *bytesLeft -= data.size();
+            }
         }
 
         void readNextBlockFromTransport()
         {
             qint64 bytesAvail;
-            while (bytesLeft && ((bytesAvail = connection->bytesAvailable()) || (connection->hasPendingDatagrams()))) {
+            while ((!bytesLeft || *bytesLeft > 0)
+                   && ((bytesAvail = connection->bytesAvailable()) || (connection->hasPendingDatagrams()))) {
                 QByteArray data;
                 if (connection->features() & TransportFeature::MessageOriented) {
                     data = connection->readDatagram().data();
                 } else {
                     qint64 sz = 65536; // shall we respect transport->blockSize() ?
-                    if (sz > bytesLeft) {
-                        sz = bytesLeft;
+                    if (bytesLeft && sz > *bytesLeft) {
+                        sz = *bytesLeft;
                     }
                     if (sz > bytesAvail) {
                         sz = bytesAvail;
@@ -309,9 +311,11 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                     return;
                 }
                 emit q->progress(device->pos());
-                bytesLeft -= data.size();
+                if (bytesLeft) {
+                    *bytesLeft -= data.size();
+                }
             }
-            if (!bytesLeft) {
+            if (bytesLeft && *bytesLeft == 0) {
                 tryFinalizeIncoming();
             }
         }
@@ -321,18 +325,20 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
         void onConnectionConnected(Connection::Ptr newConnection)
         {
-            qDebug("jingle-ft: connected. ready to send user data");
+            qDebug("jingle-ft: connected. ready to transfer user data");
             connection = newConnection;
             lastReason = Reason();
             lastError.reset();
 
             if (streamingMode) {
+                qDebug("streaming mode is active. giving up with handling on our own");
                 setState(State::Active);
                 emit q->connectionReady();
                 return;
             }
 
             connect(connection.data(), &Connection::readyRead, q, [this]() {
+                qDebug("Connection::readyRead");
                 if (!device) {
                     return;
                 }
@@ -343,6 +349,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
             connect(
                 connection.data(), &Connection::bytesWritten, q,
                 [this](qint64 bytes) {
+                    qDebug("Connection::bytesWritten");
                     Q_UNUSED(bytes)
                     if (q->pad()->session()->role() == q->senders() && !connection->bytesToWrite()) {
                         writeNextBlockToTransport();
@@ -356,9 +363,9 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
             setState(State::Active);
             if (acceptFile.range().isValid()) {
-                bytesLeft = acceptFile.range().length;
-                if (!bytesLeft)
-                    endlessRange = true;
+                if (acceptFile.range().length) {
+                    bytesLeft = acceptFile.range().length;
+                }
                 emit q->deviceRequested(acceptFile.range().offset, bytesLeft);
             } else {
                 bytesLeft = acceptFile.size();
@@ -370,7 +377,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         {
             if (q->_state == State::Finished || outgoingReceived || streamingMode)
                 return;
-            if (connection->isOpen() && bytesLeft)
+            if (connection->isOpen() && (!bytesLeft || *bytesLeft > 0))
                 return;
 
             // data read finished. check other stuff

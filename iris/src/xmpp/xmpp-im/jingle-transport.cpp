@@ -86,6 +86,7 @@ namespace XMPP { namespace Jingle {
 
     bool Transport::notifyIncomingConnection(Connection::Ptr connection) const
     {
+        qDebug("Transport::notifyIncomingConnection");
         for (auto const &acceptor : _connectionAcceptors) {
             if ((connection->features() & acceptor.features) == acceptor.features
                 && (acceptor.componentIndex < 0 || acceptor.componentIndex == connection->component())

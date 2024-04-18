@@ -194,8 +194,7 @@ void ExternalServiceDiscovery::services(QObject *ctx, ServicesCallback &&callbac
         } else {
             auto task = new JT_ExternalServiceDiscovery(client_->rootTask());
             auto type = types[0];
-            connect(task, &Task::finished, ctx,
-                    [this, task, type, cb = std::move(callback)]() { cb(task->services()); });
+            connect(task, &Task::finished, ctx, [task, type, cb = std::move(callback)]() { cb(task->services()); });
             task->getServices(type);
             task->go(true);
             // in fact we can improve caching even more if start remembering specific repviously requested types,
@@ -221,8 +220,7 @@ void ExternalServiceDiscovery::credentials(QObject *ctx, ServicesCallback &&call
                                            const QSet<ExternalServiceId> &ids)
 {
     auto task = new JT_ExternalServiceDiscovery(client_->rootTask());
-    connect(task, &Task::finished, ctx ? ctx : this,
-            [this, task, cb = std::move(callback)]() { cb(task->services()); });
+    connect(task, &Task::finished, ctx ? ctx : this, [task, cb = std::move(callback)]() { cb(task->services()); });
     task->getCredentials(ids);
     task->go(true);
 }

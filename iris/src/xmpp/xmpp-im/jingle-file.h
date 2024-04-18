@@ -28,13 +28,13 @@
 
 namespace XMPP::Jingle::FileTransfer {
 struct Range {
-    std::int64_t offset = 0;
-    std::int64_t length = 0; // 0 - from offset to the end of the file
-    QList<Hash>  hashes;
+    std::uint64_t offset = 0; // 0 - default value from spec even when not set.
+    std::uint64_t length = 0; // 0 - from offset to the end of the file
+    QList<Hash>   hashes;
 
     inline Range() { }
-    inline Range(std::int64_t offset, std::int64_t length) : offset(offset), length(length) { }
-    inline bool isValid() const { return hashes.size() || offset || length; }
+    inline Range(std::uint64_t offset, std::uint64_t length) : offset(offset), length(length) { }
+    inline bool isValid() const { return offset || length; }
     inline      operator bool() const { return isValid(); }
     QDomElement toXml(QDomDocument *doc) const;
 };
@@ -50,19 +50,18 @@ public:
     QDomElement toXml(QDomDocument *doc) const;
     bool        merge(const File &other);
     bool        hasComputedHashes() const;
-    bool        hasSize() const;
 
-    QDateTime   date() const;
-    QString     description() const;
-    QList<Hash> hashes() const;
-    QList<Hash> computedHashes() const;
-    Hash        hash(Hash::Type t = Hash::Unknown) const;
-    QString     mediaType() const;
-    QString     name() const;
-    uint64_t    size() const;
-    Range       range() const;
-    Thumbnail   thumbnail() const;
-    QByteArray  amplitudes() const;
+    QDateTime                    date() const;
+    QString                      description() const;
+    QList<Hash>                  hashes() const;
+    QList<Hash>                  computedHashes() const;
+    Hash                         hash(Hash::Type t = Hash::Unknown) const;
+    QString                      mediaType() const;
+    QString                      name() const;
+    std::optional<std::uint64_t> size() const;
+    Range                        range() const;
+    Thumbnail                    thumbnail() const;
+    QByteArray                   amplitudes() const;
 
     void setDate(const QDateTime &date);
     void setDescription(const QString &desc);

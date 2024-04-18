@@ -278,7 +278,7 @@ Hash Hash::fastestHash(const Features &features)
                                 + QLatin1String(hashTypes[int(t)].text));
         // REVIEW modify hashTypes with priority info instead?
     }
-    for (int i = 0; i < qcaAlgos.size(); i++) {
+    for (std::size_t i = 0; i < qcaAlgos.size(); i++) {
         if (QCA::isSupported(qcaAlgos[i]) && features.test(priorityFeatures[i])) {
             return Hash(qcaMap[i]);
         }

@@ -50,9 +50,9 @@ namespace XMPP { namespace Jingle { namespace S5B {
     class Connection : public XMPP::Jingle::Connection {
         Q_OBJECT
 
-        QList<NetworkDatagram> datagrams;
-        SocksClient           *client = nullptr;
-        Transport::Mode        mode   = Transport::Tcp;
+        QList<QNetworkDatagram> datagrams;
+        SocksClient            *client = nullptr;
+        Transport::Mode         mode   = Transport::Tcp;
 
     public:
         void setSocksClient(SocksClient *client, Transport::Mode mode)
@@ -80,10 +80,10 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
         bool hasPendingDatagrams() const { return datagrams.size() > 0; }
 
-        NetworkDatagram readDatagram(qint64 maxSize = -1)
+        QNetworkDatagram readDatagram(qint64 maxSize = -1)
         {
             Q_UNUSED(maxSize) // TODO or not?
-            return datagrams.size() ? datagrams.takeFirst() : NetworkDatagram();
+            return datagrams.size() ? datagrams.takeFirst() : QNetworkDatagram();
         }
 
         qint64 bytesAvailable() const
@@ -128,7 +128,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
         friend class Transport;
         void enqueueIncomingUDP(const QByteArray &data)
         {
-            datagrams.append(NetworkDatagram { data });
+            datagrams.append(QNetworkDatagram { data });
             emit readyRead();
         }
     };
@@ -1561,7 +1561,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 tel.setAttribute(QStringLiteral("dstaddr"), dstaddr);
             }
             if (!candidatesToSend.isEmpty()) {
-                upd = makeUpdate(tel, false, [this, candidatesToSend, initial](Task *jt) mutable {
+                upd = makeUpdate(tel, false, [this, candidatesToSend](Task *jt) mutable {
                     if (jt->success()) {
                         for (auto &c : candidatesToSend) {
                             if (c.state() == Candidate::Unacked) {

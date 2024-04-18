@@ -434,7 +434,7 @@ private slots:
             QByteArray buf = sock->readDatagram(from);
             if (buf.isEmpty()) // it's weird we ever came here, but should relax static analyzer
                 break;
-            qDebug("got packet from %s", qPrintable(from));
+            // qDebug("got packet from %s", qPrintable(from));
             if (from == stunBindAddr || from == stunRelayAddr) {
                 bool haveData = processIncomingStun(buf, from, &dg);
 

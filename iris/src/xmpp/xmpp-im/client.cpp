@@ -525,7 +525,7 @@ void Client::streamReadyRead()
         debug(QString("Client: incoming: [\n%1]\n").arg(out));
         emit xmlIncoming(out);
 
-        QDomElement x = s.element(); // oldStyleNS(s.element());
+        QDomElement x = s.element();
         distribute(x);
     }
 }

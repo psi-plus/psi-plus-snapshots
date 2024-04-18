@@ -157,9 +157,8 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         consumer.sctpParameters.maxPacketLifeTime = reliable == PartialTimers ? reliability : 0;
         consumer.sctpParameters.maxRetransmits    = reliable == PartialRexmit ? reliability : 0;
         bool success;
-        assoc.SendSctpMessage(
-            &consumer, ppid, reinterpret_cast<const uint8_t *>(data.data()), data.size(),
-            new std::function<void(bool)>([this, &success](bool cb_success) { success = cb_success; }));
+        assoc.SendSctpMessage(&consumer, ppid, reinterpret_cast<const uint8_t *>(data.data()), data.size(),
+                              new std::function<void(bool)>([&success](bool cb_success) { success = cb_success; }));
         return success;
     }
 

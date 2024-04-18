@@ -34,6 +34,7 @@
 
 using namespace XMPP;
 
+#ifdef XMPP_TEST
 // printArray
 //
 // This function prints out an array of bytes as latin characters, converting
@@ -52,6 +53,7 @@ static QString printArray(const QByteArray &a)
     }
     return s;
 }
+#endif
 
 // firstChildElement
 //
@@ -787,6 +789,8 @@ void CoreProtocol::stringSend(const QString &s)
 {
 #ifdef XMPP_TEST
     TD::outgoingTag(s);
+#else
+    Q_UNUSED(s)
 #endif
 }
 
@@ -794,6 +798,8 @@ void CoreProtocol::stringRecv(const QString &s)
 {
 #ifdef XMPP_TEST
     TD::incomingTag(s);
+#else
+    Q_UNUSED(s)
 #endif
 }
 
@@ -848,6 +854,8 @@ void CoreProtocol::elementSend(const QDomElement &e)
 {
 #ifdef XMPP_TEST
     TD::outgoingXml(e);
+#else
+    Q_UNUSED(e)
 #endif
 }
 
@@ -855,6 +863,8 @@ void CoreProtocol::elementRecv(const QDomElement &e)
 {
 #ifdef XMPP_TEST
     TD::incomingXml(e);
+#else
+    Q_UNUSED(e)
 #endif
 }
 

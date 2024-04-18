@@ -28,41 +28,17 @@
 #include "iris/bytestream.h"
 #include "jingle.h"
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 8, 0)
 #include <QNetworkDatagram>
-#else
-#include <QHostAddress>
-#endif
 
 namespace XMPP { namespace Jingle {
-#if QT_VERSION < QT_VERSION_CHECK(5, 8, 0)
-    // stub implementation
-    class NetworkDatagram {
-    public:
-        bool       _valid = false;
-        QByteArray _data;
-        inline NetworkDatagram(const QByteArray &data, const QHostAddress &destinationAddress = QHostAddress(),
-                               quint16 port = 0) : _valid(true), _data(data)
-        {
-            Q_UNUSED(destinationAddress);
-            Q_UNUSED(port)
-        }
-        inline NetworkDatagram() { }
-
-        inline bool       isValid() const { return _valid; }
-        inline QByteArray data() const { return _data; }
-    };
-#else
-    typedef QNetworkDatagram NetworkDatagram;
-#endif
 
     class Connection : public ByteStream {
         Q_OBJECT
     public:
         using Ptr = QSharedPointer<Connection>; // will be shared between transport and application
         virtual bool              hasPendingDatagrams() const;
-        virtual NetworkDatagram   readDatagram(qint64 maxSize = -1);
-        virtual bool              writeDatagram(const NetworkDatagram &data);
+        virtual QNetworkDatagram  readDatagram(qint64 maxSize = -1);
+        virtual bool              writeDatagram(const QNetworkDatagram &data);
         virtual size_t            blockSize() const;
         virtual int               component() const;
         virtual TransportFeatures features() const = 0;
