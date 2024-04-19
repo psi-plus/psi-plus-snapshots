@@ -185,9 +185,10 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
         void expectReceived()
         {
-            qDebug("jingle-ft: waiting for <received>");
+            qDebug("jingle-ft: waiting for <received> for %s", qUtf8Printable(q->pad()->session()->peer().full()));
             expectFinalize([this]() {
-                qDebug("jingle-ft: Waiting for <received> timed out. But likely succeeded anyway");
+                qDebug("jingle-ft: Waiting for <received> timed out. But likely succeeded anyway. %s",
+                       qUtf8Printable(q->pad()->session()->peer().full()));
                 onReceived();
             });
         }
@@ -712,7 +713,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     void Application::incomingReceived()
     {
-        qDebug("got received");
+        qDebug("jingle-ft: got received for %s", qUtf8Printable(pad()->session()->peer().full()));
         d->onReceived();
     }
 
