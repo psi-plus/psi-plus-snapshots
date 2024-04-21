@@ -1,6 +1,6 @@
 /*
  * jignle-ft.h - Jingle file transfer
- * Copyright (C) 2019  Sergey Ilinykh
+ * Copyright (C) 2019-2024  Sergey Ilinykh
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -35,22 +35,6 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     extern const QString NS;
     class Manager;
 
-    class Checksum : public ContentBase {
-    public:
-        inline Checksum() { }
-        Checksum(const QDomElement &file);
-        bool        isValid() const;
-        QDomElement toXml(QDomDocument *doc) const;
-
-        File file;
-    };
-
-    class Received : public ContentBase {
-    public:
-        using ContentBase::ContentBase;
-        QDomElement toXml(QDomDocument *doc) const;
-    };
-
     class Pad : public ApplicationManagerPad {
         Q_OBJECT
         // TODO
@@ -76,62 +60,61 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         Application(const QSharedPointer<Pad> &pad, const QString &contentName, Origin creator, Origin senders);
         ~Application() override;
 
+        bool                isValid() const;
         void                setState(State state) override;
         XMPP::Stanza::Error lastError() const override;
         Reason              lastReason() const override;
 
-        SetDescError setRemoteOffer(const QDomElement &description) override;
-        SetDescError setRemoteAnswer(const QDomElement &description) override;
-        QDomElement  makeLocalOffer() override;
-        QDomElement  makeLocalAnswer() override;
-
         bool isTransportReplaceEnabled() const override;
         void remove(Reason::Condition cond = Reason::Success, const QString &comment = QString()) override;
-
-        XMPP::Jingle::Application::Update evaluateOutgoingUpdate() override;
-        OutgoingUpdate                    takeOutgoingUpdate() override;
-        void                              prepare() override;
-        void                              start() override;
 
         void setFile(const File &file);
         void setFile(const QFileInfo &fi, const QString &description, const Thumbnail &thumb);
         File file() const;
-        File acceptFile() const;
+        File acceptFile() const; // either local or remote File as an answer to the offer
 
         /**
          * @brief setStreamingMode enables external download control.
-         *  So Jingle-FT won't request output device but instead underlying established
-         *  connection will be emitted (see connectionReady() signal).
-         *  The connection is an XMPP::Jingle::Connection::Ptr instance.
-         *  When the connection is not needed anymore, one can just destroy jingle
-         *  session or remove the Application from the session.
+         *
+         * When streaming mode is enabled:
+         *   - `connectionReady()` signal to understand when to get ready to use connection
+         *   - `Connection::Ptr connection()` to get connection
+         * When streaming mode is disabled:
+         *   - `deviceRequested(quint64 offset, optional<quint64> size)` signal to use `setDevice()`
+         *   - `setDevice(QIODevice *dev, bool closeOnFinish)` to set input/output device
+         *
          *  Make sure to set the mode before connection is established.
          * @param mode
          */
         void setStreamingMode(bool mode = true);
-        bool isValid() const;
 
         void            setDevice(QIODevice *dev, bool closeOnFinish = true);
         Connection::Ptr connection() const;
 
-        void incomingChecksum(const QList<Hash> &hashes);
-        void incomingReceived();
+        // next method are used by Jingle::Session and usually shouldn't be called manually
+        XMPP::Jingle::Application::Update evaluateOutgoingUpdate() override;
+        OutgoingUpdate                    takeOutgoingUpdate() override;
+        void                              prepare() override;
+        void                              start() override;
+        SetDescError                      setRemoteOffer(const QDomElement &description) override;
+        SetDescError                      setRemoteAnswer(const QDomElement &description) override;
 
     protected:
+        QDomElement makeLocalOffer() override;
+        QDomElement makeLocalAnswer() override;
+
         void incomingRemove(const Reason &r) override;
         void prepareTransport() override;
-
-    private:
-        void prepareThumbnail(File &file);
 
     signals:
         void connectionReady(); // streaming mode only
 
-        // if size = 0 then it's reamaining part of the file (non-streaming mode only)
+        // if size is not set then it's reamaining part of the file (non-streaming mode only)
         void deviceRequested(quint64 offset, std::optional<quint64> size);
         void progress(quint64 offset);
 
     private:
+        friend class Pad;
         class Private;
         std::unique_ptr<Private> d;
     };

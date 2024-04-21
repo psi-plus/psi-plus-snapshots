@@ -134,9 +134,9 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         return tail.size() + _bytesAvailable + Connection::bytesAvailable();
     }
 
-    qint64 WebRTCDataChannel::bytesToWrite() const { return 0; /*client->bytesToWrite();*/ }
+    qint64 WebRTCDataChannel::bytesToWrite() const { return outgoingBufSize + Connection::bytesToWrite(); }
 
-    qint64 WebRTCDataChannel::readData(char *buf, qint64 sz)
+    qint64 WebRTCDataChannel::readDataInternal(char *buf, qint64 sz)
     {
         qint64 actualSz = 0;
         do {

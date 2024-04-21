@@ -35,7 +35,9 @@ namespace XMPP { namespace Jingle {
     class Connection : public ByteStream {
         Q_OBJECT
     public:
-        using Ptr = QSharedPointer<Connection>; // will be shared between transport and application
+        using Ptr      = QSharedPointer<Connection>; // will be shared between transport and application
+        using ReadHook = std::function<void(char *, qint64)>;
+
         virtual bool              hasPendingDatagrams() const;
         virtual QNetworkDatagram  readDatagram(qint64 maxSize = -1);
         virtual bool              writeDatagram(const QNetworkDatagram &data);
@@ -46,6 +48,7 @@ namespace XMPP { namespace Jingle {
         inline void setId(const QString &id) { _id = id; }
         inline bool isRemote() const { return _isRemote; }
         inline void setRemote(bool value) { _isRemote = value; }
+        inline void setReadHook(ReadHook hook) { _readHook = hook; }
 
     signals:
         void connected();
@@ -53,10 +56,14 @@ namespace XMPP { namespace Jingle {
 
     protected:
         qint64 writeData(const char *data, qint64 maxSize);
-        qint64 readData(char *data, qint64 maxSize);
+        qint64 readData(char *buf, qint64 maxSize) final;
 
-        bool    _isRemote = false;
-        QString _id;
+        // same rules as for QIOdevice::readData. It was just necessary to wrap it.
+        virtual qint64 readDataInternal(char *data, qint64 maxSize) = 0;
+
+        bool     _isRemote = false;
+        QString  _id;
+        ReadHook _readHook;
     };
 
     using ConnectionAcceptorCallback = std::function<bool(Connection::Ptr)>;

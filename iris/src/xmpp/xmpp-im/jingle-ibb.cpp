@@ -108,7 +108,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
     protected:
         qint64 writeData(const char *data, qint64 maxSize) { return connection->write(data, maxSize); }
 
-        qint64 readData(char *data, qint64 maxSize)
+        qint64 readDataInternal(char *data, qint64 maxSize)
         {
             qint64 ret = connection->read(data, maxSize);
             if (state == State::Finishing && !bytesAvailable()) {

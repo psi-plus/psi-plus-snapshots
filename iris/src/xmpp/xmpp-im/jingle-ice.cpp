@@ -390,6 +390,12 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
         void close() override { XMPP::Jingle::Connection::close(); }
 
+        qint64 readDataInternal(char *, qint64) override
+        {
+            qWarning("jingle-ice: called unsupported RawConnection::readDataInternal");
+            return -1;
+        }
+
     private:
         friend class Transport;
 

@@ -80,7 +80,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         QNetworkDatagram  readDatagram(qint64 maxSize = -1) override;
         bool              writeDatagram(const QNetworkDatagram &data) override;
         qint64            bytesAvailable() const override;
-        qint64            readData(char *buf, qint64 sz);
+        qint64            readDataInternal(char *buf, qint64 sz) override;
         qint64            bytesToWrite() const override;
         void              close() override;
         TransportFeatures features() const override;

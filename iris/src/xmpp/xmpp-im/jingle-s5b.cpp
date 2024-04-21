@@ -113,15 +113,15 @@ namespace XMPP { namespace Jingle { namespace S5B {
         {
             if (mode == Transport::Tcp)
                 return client->write(data, maxSize);
-            return 0;
+            return -1;
         }
 
-        qint64 readData(char *data, qint64 maxSize)
+        qint64 readDataInternal(char *data, qint64 maxSize)
         {
-            if (client)
+            if (client) {
                 return client->read(data, maxSize);
-            else
-                return 0;
+            } else
+                return -1;
         }
 
     private:

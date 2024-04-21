@@ -91,6 +91,11 @@ namespace XMPP { namespace Jingle { namespace SCTP {
                                   Q_ARG(quint32, ppid));
     }
 
+    /**
+     * @brief AssociationPrivate::OnSctpAssociationBufferedAmount
+     * @param sctpAssociation
+     * @param len - number of bytes currently buffered in usrsctp. not more than MAX_SEND_BUFFER_SIZE
+     */
     void AssociationPrivate::OnSctpAssociationBufferedAmount(RTC::SctpAssociation *sctpAssociation, uint32_t len)
     {
         // qDebug("jignle-sctp: on buffered data: %d", len);

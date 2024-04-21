@@ -48,12 +48,18 @@ static const std::array hashTypes {
     HashDesc { "blake2b-256", Hash::Type::Blake2b256 }, HashDesc { "blake2b-512", Hash::Type::Blake2b512 }
 };
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 using HashVariant = std::variant<std::nullptr_t, QCryptographicHash, QCA::Hash, Blake2Hash>;
+#else
+using HashVariant = std::variant<std::nullptr_t, QCryptographicHash, QCA::Hash>;
+#endif
 HashVariant findHasher(Hash::Type hashType)
 {
     QString                       qcaType;
-    QCryptographicHash::Algorithm qtType  = QCryptographicHash::Algorithm(-1);
-    Blake2Hash::DigestSize        blakeDS = Blake2Hash::DigestSize(-1);
+    QCryptographicHash::Algorithm qtType = QCryptographicHash::Algorithm(-1);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    Blake2Hash::DigestSize blakeDS = Blake2Hash::DigestSize(-1);
+#endif
 
     switch (hashType) {
     case Hash::Type::Sha1:
@@ -76,6 +82,7 @@ HashVariant findHasher(Hash::Type hashType)
         qtType  = QCryptographicHash::Sha3_512;
         qcaType = "sha3_512";
         break;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     case Hash::Type::Blake2b256:
         qcaType = "blake2b_256";
         blakeDS = Blake2Hash::Digest256;
@@ -84,6 +91,16 @@ HashVariant findHasher(Hash::Type hashType)
         qcaType = "blake2b_512";
         blakeDS = Blake2Hash::Digest512;
         break;
+#else
+    case Hash::Type::Blake2b256:
+        qtType  = QCryptographicHash::Blake2b_256;
+        qcaType = "blake2b_256";
+        break;
+    case Hash::Type::Blake2b512:
+        qtType  = QCryptographicHash::Blake2b_512;
+        qcaType = "blake2b_512";
+        break;
+#endif
     case Hash::Type::Unknown:
     default:
         qDebug("invalid hash type");
@@ -99,12 +116,15 @@ HashVariant findHasher(Hash::Type hashType)
 
     if (qtType != QCryptographicHash::Algorithm(-1)) {
         return HashVariant { std::in_place_type<QCryptographicHash>, qtType };
-    } else if (blakeDS != Blake2Hash::DigestSize(-1)) {
+    }
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    else if (blakeDS != Blake2Hash::DigestSize(-1)) {
         Blake2Hash bh(blakeDS);
         if (bh.isValid()) {
             return HashVariant { std::in_place_type<Blake2Hash>, std::move(bh) };
         }
     }
+#endif
     return nullptr;
 }
 
@@ -156,6 +176,7 @@ bool Hash::compute(const QByteArray &ba)
     std::visit(
         [&ba, this](auto &&arg) {
             using T = std::decay_t<decltype(arg)>;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             if constexpr (std::is_same_v<T, QCA::Hash>) {
                 arg.update(ba);
                 v_data = arg.final().toByteArray();
@@ -166,6 +187,16 @@ bool Hash::compute(const QByteArray &ba)
                 if (arg.addData(ba))
                     v_data = arg.final();
             }
+#else
+            // Qt6 claims to have openssl backend and it doesn't copy data (?)
+            if constexpr (std::is_same_v<T, QCryptographicHash>) {
+                arg.addData(ba);
+                v_data = arg.result();
+            } else if constexpr (std::is_same_v<T, QCA::Hash>) {
+                arg.update(ba);
+                v_data = arg.final().toByteArray();
+            }
+#endif
         },
         hasher);
 
@@ -183,6 +214,7 @@ bool Hash::compute(QIODevice *dev)
     std::visit(
         [dev, this](auto &&arg) {
             using T = std::decay_t<decltype(arg)>;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             if constexpr (std::is_same_v<T, QCA::Hash>) {
                 arg.update(dev);
                 v_data = arg.final().toByteArray();
@@ -193,6 +225,15 @@ bool Hash::compute(QIODevice *dev)
                 if (arg.addData(dev))
                     v_data = arg.final();
             }
+#else
+            if constexpr (std::is_same_v<T, QCryptographicHash>) {
+                arg.addData(dev);
+                v_data = arg.result();
+            } else if constexpr (std::is_same_v<T, QCA::Hash>) {
+                arg.update(dev);
+                v_data = arg.final().toByteArray();
+            }
+#endif
         },
         hasher);
 
@@ -306,13 +347,22 @@ bool StreamHash::addData(const QByteArray &data)
     std::visit(
         [&data, &ret](auto &&arg) {
             using T = std::decay_t<decltype(arg)>;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             if constexpr (std::is_same_v<T, QCA::Hash>) {
                 arg.update(data);
             } else if constexpr (std::is_same_v<T, QCryptographicHash>) {
                 arg.addData(data);
             } else if constexpr (std::is_same_v<T, Blake2Hash>) {
                 ret = arg.addData(data);
-            } else
+            }
+#else
+            if constexpr (std::is_same_v<T, QCryptographicHash>) {
+                arg.addData(data);
+            } else if constexpr (std::is_same_v<T, QCA::Hash>) {
+                arg.update(data);
+            }
+#endif
+            else
                 ret = false;
         },
         d->hasher);
@@ -324,6 +374,7 @@ Hash StreamHash::final()
     auto data = std::visit(
         [](auto &&arg) {
             using T = std::decay_t<decltype(arg)>;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             if constexpr (std::is_same_v<T, QCA::Hash>) {
                 return arg.final().toByteArray();
             } else if constexpr (std::is_same_v<T, QCryptographicHash>) {
@@ -331,6 +382,13 @@ Hash StreamHash::final()
             } else if constexpr (std::is_same_v<T, Blake2Hash>) {
                 return arg.final();
             }
+#else
+            if constexpr (std::is_same_v<T, QCryptographicHash>) {
+                return arg.result();
+            } else if constexpr (std::is_same_v<T, QCA::Hash>) {
+                return arg.final().toByteArray();
+            }
+#endif
             return QByteArray();
         },
         d->hasher);
