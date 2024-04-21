@@ -181,7 +181,7 @@ if(IRIS_ENABLE_JINGLE_SCTP)
 endif()
 
 if(QT_DEFAULT_MAJOR_VERSION LESS 6)
-    target_sources(iris blake2/blake2qt.cpp blake2/blake2qt.h)
+    target_sources(iris PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/blake2/blake2qt.cpp ${CMAKE_CURRENT_SOURCE_DIR}/blake2/blake2qt.h)
     if(B2_FOUND)
         message(STATUS "Building with system blake2 library")
         target_link_libraries(iris PRIVATE ${B2_LIBRARY})
