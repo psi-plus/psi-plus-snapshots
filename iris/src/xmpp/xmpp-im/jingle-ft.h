@@ -72,6 +72,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         void setFile(const QFileInfo &fi, const QString &description, const Thumbnail &thumb);
         File file() const;
         File acceptFile() const; // either local or remote File as an answer to the offer
+        void setAcceptFile(const File &file) const;
 
         /**
          * @brief setStreamingMode enables external download control.

@@ -248,7 +248,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
         inline std::size_t getBlockSize()
         {
-            auto sz = qint64(connection->blockSize());
+            auto sz = connection->blockSize();
             return sz ? sz : 8192;
         }
 
@@ -322,7 +322,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
         void readNextBlockFromTransport()
         {
-            qint64 bytesAvail;
+            quint64 bytesAvail;
             while ((!bytesLeft || *bytesLeft > 0)
                    && ((bytesAvail = connection->bytesAvailable()) || (connection->hasPendingDatagrams()))) {
                 QByteArray data;
@@ -390,7 +390,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                             hasher->addData(QByteArray::fromRawData(buf, size));
                         }
                         if (bytesLeft) {
-                            *bytesLeft -= size;
+                            *bytesLeft -= quint64(size);
                         }
                         if (bytesLeft && *bytesLeft == 0) {
                             tryFinalizeIncoming();
@@ -611,6 +611,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     File Application::file() const { return d->file; }
 
     File Application::acceptFile() const { return d->acceptFile; }
+
+    void Application::setAcceptFile(const File &file) const { d->acceptFile = file; }
 
     bool Application::isTransportReplaceEnabled() const { return _state < State::Active; }
 
