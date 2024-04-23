@@ -73,7 +73,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         void OnSctpAssociationSendData(RTC::SctpAssociation *, const uint8_t *data, size_t len) override;
         void OnSctpAssociationMessageReceived(RTC::SctpAssociation *, uint16_t streamId, uint32_t ppid,
                                               const uint8_t *msg, size_t len) override;
-        void OnSctpAssociationBufferedAmount(RTC::SctpAssociation *sctpAssociation, uint32_t len) override;
+        void OnSctpAssociationBufferedAmount(RTC::SctpAssociation *sctpAssociation, size_t len) override;
         void OnSctpStreamClosed(RTC::SctpAssociation *sctpAssociation, uint16_t streamId) override;
 
         void            handleIncomingDataChannelOpen(const QByteArray &data, quint16 streamId);

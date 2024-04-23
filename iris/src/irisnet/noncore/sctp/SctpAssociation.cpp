@@ -789,8 +789,8 @@ void SctpAssociation::OnUsrSctpReceiveSctpNotification(union sctp_notification *
     case SCTP_STREAM_RESET_EVENT: {
         bool     incoming { false };
         bool     outgoing { false };
-        uint16_t numStreams = (notification->sn_strreset_event.strreset_length - sizeof(struct sctp_stream_reset_event))
-            / sizeof(uint16_t);
+        uint16_t numStreams = uint16_t((notification->sn_strreset_event.strreset_length - sizeof(struct sctp_stream_reset_event))
+                                       / sizeof(uint16_t));
 
         if (notification->sn_strreset_event.strreset_flags & SCTP_STREAM_RESET_INCOMING_SSN)
             incoming = true;

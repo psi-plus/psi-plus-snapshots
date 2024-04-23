@@ -36,7 +36,7 @@ public:
         virtual void OnSctpAssociationMessageReceived(RTC::SctpAssociation *sctpAssociation, uint16_t streamId,
                                                       uint32_t ppid, const uint8_t *msg, size_t len)
             = 0;
-        virtual void OnSctpAssociationBufferedAmount(RTC::SctpAssociation *sctpAssociation, uint32_t len) = 0;
+        virtual void OnSctpAssociationBufferedAmount(RTC::SctpAssociation *sctpAssociation, size_t len) = 0;
         virtual void OnSctpStreamClosed(RTC::SctpAssociation *sctpAssociation, uint16_t streamId)         = 0;
     };
 
