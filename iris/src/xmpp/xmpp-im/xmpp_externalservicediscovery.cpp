@@ -74,7 +74,7 @@ bool JT_ExternalServiceDiscovery::take(const QDomElement &x)
         for (auto el = query.firstChildElement(serviceTag); !el.isNull(); el = el.nextSiblingElement(serviceTag)) {
             // services_.append(ExternalService {});
             auto s = std::make_shared<ExternalService>();
-            if (s->parse(el)) {
+            if (s->parse(el, !creds_.isEmpty(), false)) {
                 services_.append(s);
             }
         }
@@ -86,7 +86,43 @@ bool JT_ExternalServiceDiscovery::take(const QDomElement &x)
     return true;
 }
 
-bool ExternalService::parse(QDomElement &el)
+//----------------------------------------------------------------------------
+// JT_PushMessage
+//----------------------------------------------------------------------------
+class JT_PushExternalService : public Task {
+
+    Q_OBJECT
+
+    ExternalServiceList services_;
+
+public:
+    using Task::Task;
+    bool take(const QDomElement &e)
+    {
+        if (e.tagName() != QStringLiteral("iq") || e.attribute("type") != QStringLiteral("set"))
+            return false;
+        auto query = e.firstChildElement(QLatin1String("services"));
+        if (query.isNull() || query.namespaceURI() != QLatin1String("urn:xmpp:extdisco:2")) {
+            return false;
+        }
+        QString serviceTag { QStringLiteral("service") };
+        for (auto el = query.firstChildElement(serviceTag); !el.isNull(); el = el.nextSiblingElement(serviceTag)) {
+            // services_.append(ExternalService {});
+            auto s = std::make_shared<ExternalService>();
+            if (s->parse(el, false, true)) {
+                services_.append(s);
+            }
+        }
+        emit received(services_);
+
+        return true;
+    }
+
+signals:
+    void received(const ExternalServiceList &);
+};
+
+bool ExternalService::parse(QDomElement &el, bool isCreds, bool isPush)
 {
     QString actionOpt     = el.attribute(QLatin1String("action"));
     QString expiresOpt    = el.attribute(QLatin1String("expires"));
@@ -104,7 +140,7 @@ bool ExternalService::parse(QDomElement &el)
         return false;
 
     port = portReq.toUShort(&ok);
-    if (!ok)
+    if (!ok && !portReq.isEmpty())
         return false;
 
     if (!expiresOpt.isEmpty()) {
@@ -116,23 +152,36 @@ bool ExternalService::parse(QDomElement &el)
         if (expires.hasExpired())
             qInfo("Server returned already expired service %s expired at %s UTC", qPrintable(*this),
                   qPrintable(expiresOpt));
-    } else {
-        expires = QDeadlineTimer(QDeadlineTimer::Forever);
+    } // else never expires
+
+    if (isCreds) {
+        return true; // just host/type/username/password/expires and optional port
     }
 
-    if (actionOpt.isEmpty() || actionOpt == QLatin1String("add"))
-        action = Action::Add;
-    else if (actionOpt == QLatin1String("modify"))
-        action = Action::Modify;
-    else if (actionOpt == QLatin1String("delete"))
-        action = Action::Delete;
-    else
-        return false;
-
+    restricted = !username.isEmpty() || !password.isEmpty();
     if (!restrictedOpt.isEmpty()) {
         if (restrictedOpt == QLatin1String("true") || restrictedOpt == QLatin1String("1"))
             restricted = true;
         else if (restrictedOpt != QLatin1String("false") && restrictedOpt != QLatin1String("0"))
+            return false;
+    }
+    if (restricted && username.isEmpty() && password.isEmpty() && expiresOpt.isEmpty()) {
+        expires = QDeadlineTimer(); // restricted but creds invalid. make expired
+    }
+
+    auto formEl = childElementsByTagNameNS(el, "jabber:x:data", "x").item(0).toElement();
+    if (!formEl.isNull()) {
+        form.fromXml(formEl);
+    }
+
+    if (isPush) {
+        if (actionOpt.isEmpty() || actionOpt == QLatin1String("add"))
+            action = Action::Add;
+        else if (actionOpt == QLatin1String("modify"))
+            action = Action::Modify;
+        else if (actionOpt == QLatin1String("delete"))
+            action = Action::Delete;
+        else
             return false;
     }
 
@@ -145,7 +194,59 @@ ExternalService::operator QString() const
         .arg(name, host, QString::number(port), type, transport);
 }
 
-ExternalServiceDiscovery::ExternalServiceDiscovery(Client *client) : client_(client) { }
+bool ExternalService::needsNewCreds(std::chrono::minutes minTtl) const
+{
+    return restricted || !(expires.isForever() || expires.remainingTimeAsDuration() > minTtl);
+}
+
+ExternalServiceDiscovery::ExternalServiceDiscovery(Client *client) : client_(client)
+{
+    JT_PushExternalService *push = new JT_PushExternalService(client->rootTask());
+    connect(push, &JT_PushExternalService::received, this, [this](const ExternalServiceList &services) {
+        ExternalServiceList deleted;
+        ExternalServiceList modified;
+        ExternalServiceList added;
+        for (auto const &service : services) {
+            auto cachedServiceIt = findCachedService({ service->host, service->type, service->port });
+            if (cachedServiceIt != services_.end()) {
+                switch (service->action) {
+                case ExternalService::Add: // weird..
+                    modified << service;
+                    **cachedServiceIt = *service;
+                    break;
+                case ExternalService::Modify:
+                    modified << service;
+                    **cachedServiceIt = *service;
+                    break;
+                case ExternalService::Delete:
+                    deleted << *cachedServiceIt;
+                    services_.erase(cachedServiceIt);
+                    break;
+                }
+            } else {
+                switch (service->action) {
+                case ExternalService::Add:
+                case ExternalService::Modify: // weird..
+                    added << service;
+                    services_ << service;
+                    break;
+                case ExternalService::Delete:
+                    // we never knew it
+                    break;
+                }
+            }
+        }
+        if (!added.empty()) {
+            emit serviceAdded(added);
+        }
+        if (!modified.empty()) {
+            emit serviceModified(modified);
+        }
+        if (!deleted.empty()) {
+            emit serviceDeleted(deleted);
+        }
+    });
+}
 
 bool ExternalServiceDiscovery::isSupported() const
 {
@@ -194,11 +295,20 @@ void ExternalServiceDiscovery::services(QObject *ctx, ServicesCallback &&callbac
         } else {
             auto task = new JT_ExternalServiceDiscovery(client_->rootTask());
             auto type = types[0];
-            connect(task, &Task::finished, ctx, [task, type, cb = std::move(callback)]() { cb(task->services()); });
+            connect(task, &Task::finished, ctx, [task, type, cb = std::move(callback), this]() {
+                for (auto const &service : std::as_const(task->services())) {
+                    auto cachedServiceIt = findCachedService({ service->host, service->type, service->port });
+                    if (cachedServiceIt != services_.end()) {
+                        **cachedServiceIt = *service;
+                    } // else we can't add to the cache coz it can make the cache incomplete. see
+                      // comment below.
+                }
+                cb(task->services());
+            });
             task->getServices(type);
             task->go(true);
-            // in fact we can improve caching even more if start remembering specific repviously requested types,
-            // even if the result was negative.
+            // in fact we can improve caching even more if start remembering specific pveviously
+            // requested types, even if the result was negative.
         }
     }
 }
@@ -217,12 +327,57 @@ ExternalServiceList ExternalServiceDiscovery::cachedServices(const QStringList &
 }
 
 void ExternalServiceDiscovery::credentials(QObject *ctx, ServicesCallback &&callback,
-                                           const QSet<ExternalServiceId> &ids)
+                                           const QSet<ExternalServiceId> &ids, std::chrono::minutes minTtl)
 {
+    bool                cacheValid = true;
+    ExternalServiceList ret;
+    for (auto const &id : ids) {
+        auto cachedServiceIt = findCachedService(id);
+        if (cachedServiceIt != services_.end()) {
+            auto const &s = **cachedServiceIt;
+            if (s.username.isEmpty() || s.password.isEmpty()
+                || !(s.expires.isForever() || s.expires.remainingTimeAsDuration() > minTtl)) {
+                cacheValid = false;
+                break;
+            }
+            ret << *cachedServiceIt;
+        }
+    }
+    if (cacheValid) {
+        callback(ret);
+        return;
+    }
+
     auto task = new JT_ExternalServiceDiscovery(client_->rootTask());
-    connect(task, &Task::finished, ctx ? ctx : this, [task, cb = std::move(callback)]() { cb(task->services()); });
+    connect(task, &Task::finished, ctx ? ctx : this, [task, cb = std::move(callback), this]() {
+        ExternalServiceList ret;
+        for (auto const &service : std::as_const(task->services())) {
+            auto cachedServiceIt = findCachedService({ service->host, service->type, service->port });
+            if (cachedServiceIt != services_.end()) {
+                auto &cache    = **cachedServiceIt;
+                cache.username = service->username;
+                cache.password = service->password;
+                cache.expires  = service->expires;
+                ret << *cachedServiceIt;
+            } else {
+                qDebug("credentials request returned creds not previously cached service. adding to "
+                       "the result as is.");
+                ret << service;
+            }
+        }
+        cb(ret);
+    });
     task->getCredentials(ids);
     task->go(true);
 }
 
+ExternalServiceList::iterator ExternalServiceDiscovery::findCachedService(const ExternalServiceId &id)
+{
+    return std::find_if(services_.begin(), services_.end(), [&id](auto const &s) {
+        return s->type == id.type && s->host == id.host && (id.port == 0 || s->port == id.port);
+    });
+}
+
 } // namespace XMPP
+
+#include "xmpp_externalservicediscovery.moc"
