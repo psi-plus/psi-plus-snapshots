@@ -203,6 +203,7 @@ Stanza::Error::Private::ErrorCondEntry Stanza::Error::Private::errorCondTable[] 
     { "not-acceptable", NotAcceptable },
     { "not-allowed", NotAllowed },
     { "not-authorized", NotAuthorized },
+    { "policy-violation", PolicyViolation },
     { "recipient-unavailable", RecipientUnavailable },
     { "redirect", Redirect },
     { "registration-required", RegistrationRequired },
@@ -228,6 +229,7 @@ Stanza::Error::Private::ErrorCodeEntry Stanza::Error::Private::errorCodeTable[] 
     { NotAcceptable, Modify, 406 },
     { NotAllowed, Cancel, 405 },
     { NotAuthorized, Auth, 401 },
+    { PolicyViolation, Modify, 405 }, // it can be Wait too according to rfc6120
     { RecipientUnavailable, Wait, 404 },
     { Redirect, Modify, 302 }, // temporary
     { RegistrationRequired, Auth, 407 },
@@ -270,6 +272,7 @@ Stanza::Error::Private::ErrorDescEntry Stanza::Error::Private::errorDescriptions
     { NotAuthorized, QT_TR_NOOP("Not authorized"),
       QT_TR_NOOP("The sender must provide proper credentials before being allowed to perform the action, or has "
                  "provided improper credentials.") },
+    { PolicyViolation, QT_TR_NOOP("Policy violation"), QT_TR_NOOP("The sender has violated some service policy.") },
     { RecipientUnavailable, QT_TR_NOOP("Recipient unavailable"),
       QT_TR_NOOP("The intended recipient is temporarily unavailable.") },
     { Redirect, QT_TR_NOOP("Redirect"),

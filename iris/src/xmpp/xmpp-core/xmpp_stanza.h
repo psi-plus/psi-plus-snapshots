@@ -54,7 +54,7 @@ public:
             NotAcceptable,
             NotAllowed,
             NotAuthorized,
-            PaymentRequired,
+            PolicyViolation,
             RecipientUnavailable,
             Redirect,
             RegistrationRequired,

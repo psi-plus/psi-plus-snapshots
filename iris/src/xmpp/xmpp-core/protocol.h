@@ -29,6 +29,8 @@
 #include <QPair>
 #include <QTimer>
 
+#include <optional>
+
 #define NS_ETHERX "http://etherx.jabber.org/streams"
 #define NS_CLIENT "jabber:client"
 #define NS_SERVER "jabber:server"
@@ -70,20 +72,20 @@ public:
 class BasicProtocol : public XmlProtocol {
 public:
     // xmpp 1.0 error conditions // rfc6120
-    enum SASLCond {
+    enum class SASLCond {
         Aborted,              // server confirms auth abort
         AccountDisabled,      // account temporrily disabled
         CredentialsExpired,   // credential expired
         EncryptionRequired,   // can't use mech without TLS
         IncorrectEncoding,    // Incorrect encoding. should not happen
         InvalidAuthzid,       // bad input JID
-        InvalidMech,          // bad mechanism
+        InvalidMechanism,     // bad mechanism
         MalformedRequest,     // malformded request
-        MechTooWeak,          // can't use mech with this authzid
+        MechanismTooWeak,     // can't use mech with this authzid
         NotAuthorized,        // bad user, bad password, bad creditials
         TemporaryAuthFailure, // please try again later!
     };
-    enum StreamCond {
+    enum class StreamCond {
         BadFormat,
         BadNamespacePrefix,
         Conflict,
@@ -95,10 +97,11 @@ public:
         InvalidFrom,
         InvalidNamespace,
         InvalidXml,
-        StreamNotAuthorized,
+        NotAuthorized,
+        NotWellFormed,
         PolicyViolation,
         RemoteConnectionFailed,
-        StreamReset,
+        Reset,
         ResourceConstraint,
         RestrictedXml,
         SeeOtherHost,
@@ -107,9 +110,8 @@ public:
         UnsupportedEncoding,
         UnsupportedStanzaType,
         UnsupportedVersion,
-        NotWellFormed
     };
-    enum BindCond { BindBadRequest, BindNotAllowed, BindConflict };
+    enum class BindCond { BindBadRequest, BindNotAllowed, BindConflict };
 
     // extend the XmlProtocol enums
     enum Need {
@@ -165,18 +167,19 @@ public:
 
     // shutdown
     void shutdown();
-    void shutdownWithError(int cond, const QString &otherHost = "");
+    void shutdownWithError(StreamCond cond, const QString &otherHost = "");
 
     // <stream> information
     QString to, from, id, lang;
     Version version;
 
     // error output
-    int                     errCond;
-    QString                 errText;
-    QHash<QString, QString> errLangText;
-    QDomElement             errAppSpec;
-    QString                 otherHost;
+    using ErrorCond = std::variant<StreamCond, SASLCond, BindCond, int>; // int for old/deprecated error codes
+    std::optional<ErrorCond> errCond;
+    QString                  errText;
+    QHash<QString, QString>  errLangText;
+    QDomElement              errAppSpec;
+    QString                  otherHost;
 
     QByteArray spare; // filled with unprocessed data on NStartTLS and NSASLLayer
 
@@ -185,19 +188,19 @@ public:
     enum { TypeElement, TypeStanza, TypeDirect, TypePing };
 
 protected:
-    static int     stringToSASLCond(const QString &s);
-    static int     stringToStreamCond(const QString &s);
-    static QString saslCondToString(int);
-    static QString streamCondToString(int);
+    static std::optional<SASLCond>   stringToSASLCond(const QString &s);
+    static std::optional<StreamCond> stringToStreamCond(const QString &s);
+    static QString                   saslCondToString(SASLCond);
+    static QString                   streamCondToString(StreamCond);
 
     void send(const QDomElement &e, bool clip = false);
     void sendUrgent(const QDomElement &e, bool clip = false);
-    void sendStreamError(int cond, const QString &text = "", const QDomElement &appSpec = QDomElement());
+    void sendStreamError(StreamCond cond, const QString &text = "", const QDomElement &appSpec = QDomElement());
     void sendStreamError(const QString &text); // old-style
 
-    bool errorAndClose(int cond, const QString &text = "", const QDomElement &appSpec = QDomElement());
+    bool errorAndClose(StreamCond cond, const QString &text = "", const QDomElement &appSpec = QDomElement());
     bool error(int code);
-    void delayErrorAndClose(int cond, const QString &text = "", const QDomElement &appSpec = QDomElement());
+    void delayErrorAndClose(StreamCond cond, const QString &text = "", const QDomElement &appSpec = QDomElement());
     void delayError(int code);
 
     // reimplemented
@@ -225,13 +228,13 @@ protected:
 private:
     struct SASLCondEntry {
         const char *str;
-        int         cond;
+        SASLCond    cond;
     };
     static SASLCondEntry saslCondTable[];
 
     struct StreamCondEntry {
         const char *str;
-        int         cond;
+        StreamCond  cond;
     };
     static StreamCondEntry streamCondTable[];
 
