@@ -404,7 +404,7 @@ namespace XMPP { namespace Jingle {
 
             Jingle jingle(jingleEl);
             if (!jingle.isValid()) {
-                respondError(iq, Stanza::Error::Cancel, Stanza::Error::BadRequest);
+                respondError(iq, Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
                 return true;
             }
 
@@ -433,13 +433,13 @@ namespace XMPP { namespace Jingle {
                 if (!client()->jingleManager()->isAllowedParty(from)
                     || (!jingle.initiator().isEmpty()
                         && !client()->jingleManager()->isAllowedParty(jingle.initiator()))) {
-                    respondError(iq, Stanza::Error::Cancel, Stanza::Error::ServiceUnavailable);
+                    respondError(iq, Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::ServiceUnavailable);
                     return true;
                 }
 
                 Jid redirection(client()->jingleManager()->redirectionJid());
                 if (redirection.isValid()) {
-                    respondError(iq, Stanza::Error::Modify, Stanza::Error::Redirect,
+                    respondError(iq, Stanza::Error::ErrorType::Modify, Stanza::Error::ErrorCond::Redirect,
                                  QStringLiteral("xmpp:") + redirection.full());
                     return true;
                 }
@@ -450,13 +450,13 @@ namespace XMPP { namespace Jingle {
                         respondTieBreak(iq);
                     } else {
                         // second session from this peer with the same sid.
-                        respondError(iq, Stanza::Error::Cancel, Stanza::Error::BadRequest);
+                        respondError(iq, Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
                     }
                     return true;
                 }
                 session = client()->jingleManager()->incomingSessionInitiate(from, jingle, jingleEl);
                 if (!session) {
-                    respondError(iq, client()->jingleManager()->lastError());
+                    respondError(iq, *client()->jingleManager()->lastError());
                     return true;
                 }
             } else {
@@ -467,12 +467,13 @@ namespace XMPP { namespace Jingle {
                         client()->send(resp);
                     } else {
                         auto el = client()->doc()->createElementNS(ERROR_NS, QStringLiteral("unknown-session"));
-                        respondError(iq, Stanza::Error::Cancel, Stanza::Error::ItemNotFound, QString(), el);
+                        respondError(iq, Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::ItemNotFound,
+                                     QString(), el);
                     }
                     return true;
                 }
                 if (!session->updateFromXml(jingle.action(), jingleEl)) {
-                    respondError(iq, session->lastError());
+                    respondError(iq, *session->lastError());
                     return true;
                 }
             }
@@ -498,7 +499,7 @@ namespace XMPP { namespace Jingle {
 
         void respondTieBreak(const QDomElement &iq)
         {
-            Stanza::Error error(Stanza::Error::Cancel, Stanza::Error::Conflict);
+            Stanza::Error error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::Conflict);
             ErrorUtil::fill(*client()->doc(), error, ErrorUtil::TieBreak);
             respondError(iq, error);
         }
@@ -544,7 +545,7 @@ namespace XMPP { namespace Jingle {
 
         // when set/valid any incoming session initiate will be replied with redirection error
         Jid                                   redirectionJid;
-        XMPP::Stanza::Error                   lastError;
+        std::optional<XMPP::Stanza::Error>    lastError;
         QHash<QPair<Jid, QString>, Session *> sessions;
         int                                   maxSessions = -1; // no limit
 
@@ -696,7 +697,8 @@ namespace XMPP { namespace Jingle {
     Session *Manager::incomingSessionInitiate(const Jid &from, const Jingle &jingle, const QDomElement &jingleEl)
     {
         if (d->maxSessions > 0 && d->sessions.size() == d->maxSessions) {
-            d->lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Wait, XMPP::Stanza::Error::ResourceConstraint);
+            d->lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Wait,
+                                               XMPP::Stanza::Error::ErrorCond::ResourceConstraint);
             return nullptr;
         }
         auto key = qMakePair(from, jingle.sid());
@@ -708,7 +710,9 @@ namespace XMPP { namespace Jingle {
             // transports
             // QTimer::singleShot(0,[s, this](){ emit incomingSession(s); });
             // QMetaObject::invokeMethod(this, "incomingSession", Qt::QueuedConnection, Q_ARG(Session *, s));
-            QTimer::singleShot(0, this, [s, this]() { emit incomingSession(s); });
+            if (!s->contentList().empty()) {
+                QTimer::singleShot(0, this, [s, this]() { emit incomingSession(s); });
+            }
             return s;
         }
         d->lastError = s->lastError();
@@ -716,7 +720,7 @@ namespace XMPP { namespace Jingle {
         return nullptr;
     }
 
-    XMPP::Stanza::Error Manager::lastError() const { return d->lastError; }
+    const std::optional<XMPP::Stanza::Error> &Manager::lastError() const { return d->lastError; }
 
     Session *Manager::newSession(const Jid &j)
     {
@@ -746,7 +750,8 @@ namespace XMPP { namespace Jingle {
     const char *ErrorUtil::names[ErrorUtil::Last]
         = { "out-of-order", "tie-break", "unknown-session", "unsupported-info" };
 
-    Stanza::Error ErrorUtil::make(QDomDocument &doc, int jingleCond, int type, int condition, const QString &text)
+    Stanza::Error ErrorUtil::make(QDomDocument &doc, int jingleCond, Stanza::Error::ErrorType type,
+                                  Stanza::Error::ErrorCond condition, const QString &text)
     {
         auto el = doc.createElementNS(ERROR_NS, QString::fromLatin1(names[jingleCond - 1]));
         return Stanza::Error(type, condition, text, el);
@@ -773,12 +778,13 @@ namespace XMPP { namespace Jingle {
 
     Stanza::Error ErrorUtil::makeTieBreak(QDomDocument &doc)
     {
-        return make(doc, TieBreak, XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::Conflict);
+        return make(doc, TieBreak, XMPP::Stanza::Error::ErrorType::Cancel, XMPP::Stanza::Error::ErrorCond::Conflict);
     }
 
     Stanza::Error ErrorUtil::makeOutOfOrder(QDomDocument &doc)
     {
-        return make(doc, OutOfOrder, XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::UnexpectedRequest);
+        return make(doc, OutOfOrder, XMPP::Stanza::Error::ErrorType::Cancel,
+                    XMPP::Stanza::Error::ErrorCond::UnexpectedRequest);
     }
 
 } // namespace Jingle

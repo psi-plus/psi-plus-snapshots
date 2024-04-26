@@ -60,10 +60,11 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         Application(const QSharedPointer<Pad> &pad, const QString &contentName, Origin creator, Origin senders);
         ~Application() override;
 
-        bool                isValid() const;
-        void                setState(State state) override;
-        XMPP::Stanza::Error lastError() const override;
-        Reason              lastReason() const override;
+        bool isValid() const;
+        void setState(State state) override;
+
+        const std::optional<XMPP::Stanza::Error> &lastError() const override;
+        Reason                                    lastReason() const override;
 
         bool isTransportReplaceEnabled() const override;
         void remove(Reason::Condition cond = Reason::Success, const QString &comment = QString()) override;

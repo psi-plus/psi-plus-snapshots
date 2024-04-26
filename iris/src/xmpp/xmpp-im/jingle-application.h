@@ -21,6 +21,7 @@
 #define JINGLE_APPLICATION_H
 
 #include "jingle-transport.h"
+#include <optional>
 
 class QTimer;
 
@@ -70,8 +71,8 @@ namespace XMPP { namespace Jingle {
         Q_DECLARE_FLAGS(ApplicationFlags, ApplicationFlag)
 
         virtual void setState(State state) = 0; // likely just remember the state and not generate any signals
-        virtual XMPP::Stanza::Error lastError() const  = 0;
-        virtual Reason              lastReason() const = 0;
+        virtual const std::optional<XMPP::Stanza::Error> &lastError() const  = 0;
+        virtual Reason                                    lastReason() const = 0;
 
         inline ApplicationManagerPad::Ptr pad() const { return _pad; }
         inline State                      state() const { return _state; }

@@ -1756,7 +1756,7 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 /*!
     Error object used to deny a request.
 */
-Stanza::Error HttpAuthRequest::denyError(Stanza::Error::Auth, Stanza::Error::NotAuthorized);
+Stanza::Error HttpAuthRequest::denyError(Stanza::Error::ErrorType::Auth, Stanza::Error::ErrorCond::NotAuthorized);
 
 /*!
     Constructs request of resource URL \a u, made by method \a m, with transaction id \a i.

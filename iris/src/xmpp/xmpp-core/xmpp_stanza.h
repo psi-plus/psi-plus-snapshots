@@ -41,8 +41,8 @@ public:
 
     class Error {
     public:
-        enum ErrorType { Cancel = 1, Continue, Modify, Auth, Wait };
-        enum ErrorCond {
+        enum class ErrorType { Cancel = 1, Continue, Modify, Auth, Wait };
+        enum class ErrorCond {
             BadRequest = 1,
             Conflict,
             FeatureNotImplemented,
@@ -67,16 +67,14 @@ public:
             UnexpectedRequest
         };
 
-        Error(int type = Cancel, int condition = UndefinedCondition, const QString &text = QString(),
-              const QDomElement &appSpec = QDomElement());
+        Error(ErrorType type = ErrorType::Cancel, ErrorCond condition = ErrorCond::UndefinedCondition,
+              const QString &text = QString(), const QDomElement &appSpec = QDomElement());
 
-        int         type;
-        int         condition;
+        ErrorType   type;
+        ErrorCond   condition;
         QString     text;
         QString     by;
         QDomElement appSpec;
-
-        void reset();
 
         int  code() const;
         bool fromCode(int code);

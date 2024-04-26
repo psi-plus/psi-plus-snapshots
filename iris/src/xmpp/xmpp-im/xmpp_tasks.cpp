@@ -1574,7 +1574,7 @@ bool JT_BoBServer::take(const QDomElement &e)
         BoBData     bd = client()->bobManager()->bobData(data.attribute("cid"));
         if (bd.isNull()) {
             iq = createIQ(client()->doc(), "error", e.attribute("from"), e.attribute("id"));
-            Stanza::Error error(Stanza::Error::Cancel, Stanza::Error::ItemNotFound);
+            Stanza::Error error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::ItemNotFound);
             iq.appendChild(error.toXml(*doc(), client()->stream().baseNS()));
         } else {
             iq = createIQ(doc(), "result", e.attribute("from"), e.attribute("id"));
@@ -1749,12 +1749,12 @@ bool JT_CaptchaChallenger::take(const QDomElement &x)
     } else {
         Stanza::Error::ErrorCond ec;
         if (r == CaptchaChallenge::Unavailable) {
-            ec = Stanza::Error::ServiceUnavailable;
+            ec = Stanza::Error::ErrorCond::ServiceUnavailable;
         } else {
-            ec = Stanza::Error::NotAcceptable;
+            ec = Stanza::Error::ErrorCond::NotAcceptable;
         }
         iq = createIQ(doc(), "error", d->j.full(), rid);
-        Stanza::Error error(Stanza::Error::Cancel, ec);
+        Stanza::Error error(Stanza::Error::ErrorType::Cancel, ec);
         iq.appendChild(error.toXml(*doc(), client()->stream().baseNS()));
     }
     send(iq);

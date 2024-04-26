@@ -146,7 +146,7 @@ void IBBConnection::close()
         return;
 
     if (d->state == WaitingForAccept) {
-        d->m->doReject(this, d->iq_id, Stanza::Error::Forbidden, "Rejected");
+        d->m->doReject(this, d->iq_id, Stanza::Error::ErrorCond::Forbidden, "Rejected");
         resetConnection();
         return;
     }
@@ -207,11 +207,11 @@ void IBBConnection::waitForAccept(const Jid &peer, const QString &iq_id, const Q
 void IBBConnection::takeIncomingData(const IBBData &ibbData)
 {
     if (ibbData.seq != d->seq) {
-        d->m->doReject(this, d->iq_id, Stanza::Error::UnexpectedRequest, "Invalid sequence");
+        d->m->doReject(this, d->iq_id, Stanza::Error::ErrorCond::UnexpectedRequest, "Invalid sequence");
         return;
     }
     if (ibbData.data.size() > d->blockSize) {
-        d->m->doReject(this, d->iq_id, Stanza::Error::BadRequest, "Too much data");
+        d->m->doReject(this, d->iq_id, Stanza::Error::ErrorCond::BadRequest, "Too much data");
         return;
     }
     d->seq++;
@@ -377,7 +377,7 @@ void IBBManager::takeIncomingData(const Jid &from, const QString &id, const IBBD
     IBBConnection *c = findConnection(data.sid, from);
     if (!c) {
         if (sKind == Stanza::IQ) {
-            d->ibb->respondError(from, id, Stanza::Error::ItemNotFound, "No such stream");
+            d->ibb->respondError(from, id, Stanza::Error::ErrorCond::ItemNotFound, "No such stream");
         }
         // TODO imeplement xep-0079 error processing in case of Stanza::Message
     } else {
@@ -392,7 +392,7 @@ void IBBManager::ibb_closeRequest(const Jid &from, const QString &id, const QStr
 {
     IBBConnection *c = findConnection(sid, from);
     if (!c) {
-        d->ibb->respondError(from, id, Stanza::Error::ItemNotFound, "No such stream");
+        d->ibb->respondError(from, id, Stanza::Error::ErrorCond::ItemNotFound, "No such stream");
     } else {
         d->ibb->respondAck(from, id);
         c->setRemoteClosed();
@@ -490,7 +490,7 @@ void JT_IBB::close(const Jid &to, const QString &sid)
 void JT_IBB::respondError(const Jid &to, const QString &id, Stanza::Error::ErrorCond cond, const QString &text)
 {
     QDomElement   iq = createIQ(doc(), "error", to.full(), id);
-    Stanza::Error error(Stanza::Error::Cancel, cond, text);
+    Stanza::Error error(Stanza::Error::ErrorType::Cancel, cond, text);
     iq.appendChild(error.toXml(*client()->doc(), client()->stream().baseNS()));
     send(iq);
 }
