@@ -227,16 +227,16 @@ protected:
 
 private:
     struct SASLCondEntry {
-        const char *str;
-        SASLCond    cond;
+        QString  str;
+        SASLCond cond;
     };
-    static SASLCondEntry saslCondTable[];
+    static std::array<BasicProtocol::SASLCondEntry, 11> saslCondTable;
 
     struct StreamCondEntry {
-        const char *str;
-        StreamCond  cond;
+        QString    str;
+        StreamCond cond;
     };
-    static StreamCondEntry streamCondTable[];
+    static std::array<BasicProtocol::StreamCondEntry, 24> streamCondTable;
 
     struct SendItem {
         QDomElement stanzaToSend;

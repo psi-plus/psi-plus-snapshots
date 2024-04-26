@@ -1232,9 +1232,9 @@ namespace XMPP { namespace Jingle {
             }
             d->planStep();
             return true;
-        default:
-            Q_ASSERT(false);
         }
+        Q_ASSERT(false);
+        return false; // unreachable
     }
 
     bool Session::updateFromXml(Action action, const QDomElement &jingleEl)
