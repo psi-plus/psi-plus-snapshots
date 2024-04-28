@@ -68,6 +68,7 @@ if(IRIS_BUNDLED_QCA)
             CMAKE_ARGS ${QCA_BUILD_OPTIONS}
             BUILD_BYPRODUCTS ${Qca_LIBRARY}
             INSTALL_COMMAND ""
+            UPDATE_COMMAND ""
             )
     endif()
 else()
