@@ -137,6 +137,9 @@ static void createRootXmlTags(const QDomElement &root, QString *xmlHeader, QStri
     QString str;
     {
         QTextStream ts(&str, QIODevice::WriteOnly);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        ts.setCodec("UTF-16");
+#endif
         e.save(ts, 0);
     }
 
