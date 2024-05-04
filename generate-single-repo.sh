@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2022-02-26
+# Updated: 2024-05-04
 # Version: N/A
 
 set -e
@@ -15,6 +15,8 @@ PSI_URL=https://github.com/psi-im/psi.git
 PLUGINS_URL=https://github.com/psi-im/plugins.git
 PSIMEDIA_URL=https://github.com/psi-im/psimedia.git
 RESOURCES_URL=https://github.com/psi-im/resources.git
+SNAPSHOTS_URL=https://github.com/psi-plus/psi-plus-snapshots.git
+SNAPSHOTS_RAW_URL=https://raw.github.com/psi-plus/psi-plus-snapshots
 
 # Test Internet connection:
 host github.com > /dev/null
@@ -27,70 +29,65 @@ if [ "${1}" = "push" ]; then
     exit 0
 fi
 
-SNAPSHOTS_URL="$(git remote -v | grep '(fetch)')"
-if [ "$(echo ${SNAPSHOTS_URL} | grep 'https://' | wc -l)" = "1" ]; then
-    echo "Updating ${SNAPSHOTS_DIR}"
+DownloadRepo()
+{
+    echo "Downloading ${MAIN_DIR}/${MOD}"
+    cd "${MAIN_DIR}"
+    git clone "${URL}"
+    echo
+}
+
+UpdateRepo()
+{
+    echo "Updating ${MAIN_DIR}/${MOD}"
+    cd "${MAIN_DIR}/${MOD}"
     git checkout HEAD .
     git pull --all --prune -f
-    echo;
+    echo
+}
+
+UpdateSubmodules()
+{
+    cd "${MAIN_DIR}/${MOD}"
+    git submodule init
+    git submodule update
+    echo
+}
+
+UpdateOrDownloadRepo()
+{
+    if [ -d "${MAIN_DIR}/${MOD}" ]; then
+        UpdateRepo
+    else
+        DownloadRepo
+    fi
+}
+
+MOD=$(basename "${SNAPSHOTS_DIR}")
+URL="$(git remote -v | grep '(fetch)' | awk '{ print $2 }')"
+if [ "${URL}" = "${SNAPSHOTS_URL}" ]; then
+    UpdateRepo
+else
+    echo "Error! Unknown URL = ${URL}"
+    exit 1
 fi
 
 MOD=psi
-if [ -d "${MAIN_DIR}/${MOD}" ]; then
-    echo "Updating ${MAIN_DIR}/${MOD}"
-    cd "${MAIN_DIR}/${MOD}"
-    git pull --all --prune -f
-    git submodule init
-    git submodule update
-    echo;
-else
-    echo "Creating ${MAIN_DIR}/${MOD}"
-    cd "${MAIN_DIR}"
-    git clone "${PSI_URL}"
-    cd "${MAIN_DIR}/${MOD}"
-    git submodule init
-    git submodule update
-    echo;
-fi
+URL="${PSI_URL}"
+UpdateOrDownloadRepo
+UpdateSubmodules
 
 MOD=plugins
-if [ -d "${MAIN_DIR}/${MOD}" ]; then
-    echo "Updating ${MAIN_DIR}/${MOD}"
-    cd "${MAIN_DIR}/${MOD}"
-    git pull --all --prune -f
-    echo;
-else
-    echo "Creating ${MAIN_DIR}/${MOD}"
-    cd "${MAIN_DIR}"
-    git clone "${PLUGINS_URL}"
-    echo;
-fi
+URL="${PLUGINS_URL}"
+UpdateOrDownloadRepo
 
 MOD=psimedia
-if [ -d "${MAIN_DIR}/${MOD}" ]; then
-    echo "Updating ${MAIN_DIR}/${MOD}"
-    cd "${MAIN_DIR}/${MOD}"
-    git pull --all --prune -f
-    echo;
-else
-    echo "Creating ${MAIN_DIR}/${MOD}"
-    cd "${MAIN_DIR}"
-    git clone "${PSIMEDIA_URL}"
-    echo;
-fi
+URL="${PSIMEDIA_URL}"
+UpdateOrDownloadRepo
 
 MOD=resources
-if [ -d "${MAIN_DIR}/${MOD}" ]; then
-    echo "Updating ${MAIN_DIR}/${MOD}"
-    cd "${MAIN_DIR}/${MOD}"
-    git pull --all --prune -f
-    echo;
-else
-    echo "Creating ${MAIN_DIR}/${MOD}"
-    cd "${MAIN_DIR}"
-    git clone "${RESOURCES_URL}"
-    echo;
-fi
+URL="${RESOURCES_URL}"
+UpdateOrDownloadRepo
 
 cd "${SNAPSHOTS_DIR}"
 echo "Checking for updates..."
@@ -109,14 +106,14 @@ if [ "${PSI_OLD_HASH}"       = "${PSI_NEW_HASH}" ] && \
    [ "${PLUGINS_OLD_HASH}"   = "${PLUGINS_NEW_HASH}" ] && \
    [ "${PSIMEDIA_OLD_HASH}"  = "${PSIMEDIA_NEW_HASH}" ] && \
    [ "${RESOURCES_OLD_HASH}" = "${RESOURCES_NEW_HASH}" ]; then
-    echo "Updating is not required!";
+    echo "Updating is not required!"
     git checkout HEAD .
-    echo;
-    exit 0;
+    echo
+    exit 0
 fi
 
-echo "Updating is required!";
-echo;
+echo "Updating is required!"
+echo
 
 cd "${SNAPSHOTS_DIR}"
 echo "Starting Psi+ update..."
@@ -129,10 +126,10 @@ find . -type f | \
 find . -depth -type d -empty -exec rmdir {} \;
 echo "* Directory is cleaned."
 
-# Some paranoid checks:
+# Some paranoid checks
 for FILE in generate-single-repo.sh README .gitignore; do
     if [ ! -e "${SNAPSHOTS_DIR}/${FILE}" ]; then
-        wget -c "https://raw.github.com/psi-plus/psi-plus-snapshots/master/${FILE}"
+        wget -c "${SNAPSHOTS_RAW_URL}/master/${FILE}"
     fi
 done
 chmod uog+x generate-single-repo.sh
@@ -149,18 +146,14 @@ mv "${MAIN_DIR}/README" "${SNAPSHOTS_DIR}/README"
 mv "${MAIN_DIR}/.gitignore" "${SNAPSHOTS_DIR}/.gitignore"
 echo "* Files from Psi project are copied."
 
-remove_trash()
-{
-    rm -rf *.exe
-    rm -rf */*.exe
-    rm -rf src/libpsi/tools/idle/win32/
-    find . -type f -name "*.orig" -delete
-}
-
 FROM_STR="option(PSI_PLUS .*\$"
 TO_STR="option(PSI_PLUS \"Build Psi+ client instead of Psi\" ON)"
 sed -i "s|${FROM_STR}|${TO_STR}|g" CMakeLists.txt
 echo "* Psi+ specific options are enabled."
+
+cp -a "${SNAPSHOTS_DIR}/mac/application-plus.icns" \
+      "${SNAPSHOTS_DIR}/mac/application.icns"
+echo "* Psi+ specific icons are set."
 
 rsync -a "${MAIN_DIR}/plugins" "${SNAPSHOTS_DIR}/" \
     --exclude=".git*" \
@@ -168,7 +161,7 @@ rsync -a "${MAIN_DIR}/plugins" "${SNAPSHOTS_DIR}/" \
 rsync -a "${MAIN_DIR}/psimedia" "${SNAPSHOTS_DIR}/plugins/generic/" \
     --exclude=".git*" \
     --exclude="/builddir*"
-echo "* Plugins from Psi project are copied."
+echo "* All plugins from Psi project are copied."
 
 rsync -a "${MAIN_DIR}/resources/sound/" "${SNAPSHOTS_DIR}/sound/"
 echo "* Extra sound files from Psi project are copied."
@@ -176,21 +169,15 @@ echo "* Extra sound files from Psi project are copied."
 rsync -a "${MAIN_DIR}/resources/skins" "${SNAPSHOTS_DIR}/"
 echo "* Extra skins from Psi project are copied."
 
-remove_trash
+# rm -rf *.exe
+# rm -rf */*.exe
+# rm -rf src/libpsi/tools/idle/win32/
+find . -type f -name "*.orig" -delete
 echo "* Trash is removed."
 
-cp -a "${MAIN_DIR}/psi/win32"/*.rc* "${SNAPSHOTS_DIR}/win32/"
-cp -a "${MAIN_DIR}/psi/win32"/*.cmake "${SNAPSHOTS_DIR}/win32/"
-cp -a "${MAIN_DIR}/psi/win32"/*.manifest* "${SNAPSHOTS_DIR}/win32/"
-echo "* Some files for MS Windows builds are copied."
+echo
 
-cp -a "${SNAPSHOTS_DIR}/mac/application-plus.icns" \
-      "${SNAPSHOTS_DIR}/mac/application.icns"
-echo "* Some files for macOS builds are copied."
-
-echo;
-
-# Update repo and make analysis
+# Update repo and run an analysis
 git add -A .
 
 TEST_ALL=$(LC_ALL=C git status | grep ":   " |
@@ -200,10 +187,10 @@ TEST_ALL=$(LC_ALL=C git status | grep ":   " |
              wc -l)
 
 if [ "${TEST_ALL}" = "0" ]; then
-    echo "Updating is not required!";
+    echo "Updating is not required!"
     git checkout HEAD .
-    echo;
-    exit 0;
+    echo
+    exit 0
 fi
 
 REVISION_DATE_LIST="$(cd ${MAIN_DIR}/psi        && git log -n1 --date=short --pretty=format:'%ad')
@@ -219,12 +206,12 @@ OLD_VER=$(cd "${SNAPSHOTS_DIR}" && git tag -l | sort -V | tail -n1)
 
 echo "OLD_VER = ${OLD_VER}"
 echo "NEW_VER = ${NEW_VER}"
-echo;
+echo
 
 echo "${NEW_VER} (${LAST_REVISION_DATE}, ${PSI_NEW_HASH})" > version
 echo "Version file is created:"
-cat  version
-echo;
+cat   version
+echo
 
 COMMENT="Current version of Psi+ is ${NEW_VER}
 
@@ -243,5 +230,5 @@ if [ "${NEW_VER}" != "${OLD_VER}" ]; then
     echo "Git tag \"${NEW_VER}\" is created."
 fi
 
-echo;
+echo
 
