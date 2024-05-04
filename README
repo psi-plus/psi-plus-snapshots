@@ -16,7 +16,7 @@ Description:
   Psi+ on daily basis. Users who do not care about new trends and prefer
   constancy may choose Psi as it uses classical development model and its
   releases are quite rare.
-* Psi plugins are developed separately. Plugins API in guaranteed to be
+* Psi plugins are developed separately. Plugins API is guaranteed to be
   compatible only for git tags. In master branches of psi, plugins and psimedia
   repos they may be not in sync during development. Psi+ solves this problem by
   providing all-in-one tarballs in this special git repository.
@@ -25,7 +25,6 @@ Main features of this repository:
 1) Source tree is aggregated from independent git repositories:
    - https://github.com/psi-im/psi (main repo of Psi)
    - https://github.com/psi-im/iris (XMPP library)
-   - https://github.com/psi-im/libpsi (tools library)
    - https://github.com/nodejs/http-parser (3rdparty library)
    - https://github.com/psi-im/qhttp (3rdparty library)
      This is a fork of dead project
