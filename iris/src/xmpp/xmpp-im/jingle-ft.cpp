@@ -277,13 +277,13 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                     return; // we will come back on readyRead
             }
             data.resize(sz);
-            sz = device->read(data.data(), sz);
-            if (sz == -1) {
+            auto readSz = device->read(data.data(), sz);
+            if (readSz < 0) {
                 handleStreamFail(QString::fromLatin1("source device failed"));
                 return;
             }
-            data.resize(sz);
-            if (sz == 0) {
+            data.resize(readSz);
+            if (readSz == 0) {
                 if (!bytesLeft) {
                     lastReason = Reason(Reason::Condition::Success);
                     if (hasher) {
@@ -423,7 +423,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                         writeLoggingStarted = true;
                     }
                     auto bs = getBlockSize();
-                    if (q->pad()->session()->role() == q->senders() && connection->bytesToWrite() < bs) {
+                    if (q->pad()->session()->role() == q->senders() && quint64(connection->bytesToWrite()) < bs) {
                         writeNextBlockToTransport();
                     }
                 },
