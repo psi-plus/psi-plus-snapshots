@@ -208,7 +208,10 @@ target_link_libraries(iris
 
 if(IRIS_BUNDLED_QCA)
     add_dependencies(iris QcaProject)
-    target_include_directories(iris PUBLIC ${Qca_INCLUDE_DIR})
+    target_include_directories(iris PUBLIC
+        "$<BUILD_INTERFACE:${Qca_INCLUDE_DIR}>"
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/iris/qca>"
+    )
     target_link_libraries(iris PUBLIC OpenSSL::SSL)
 endif()
 

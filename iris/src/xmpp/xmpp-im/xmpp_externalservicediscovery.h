@@ -21,6 +21,7 @@
 #define XMPP_EXTERNALSERVICEDISCOVERY_H
 
 #include "xmpp_task.h"
+#include "xmpp_xdata.h"
 
 #include <QDateTime>
 #include <QDeadlineTimer>
@@ -40,19 +41,22 @@ struct ExternalService {
     using Ptr = std::shared_ptr<ExternalService>;
     enum Action { Add, Delete, Modify };
 
-    Action         action = Action::Add;
-    QDeadlineTimer expires;            // optional
-    QString        host;               // required
-    QString        name;               // optional
-    QString        password;           // optional
-    std::uint16_t  port;               // required
-    bool           restricted = false; // optional
-    QString        transport;          // optional
-    QString        type;               // required
-    QString        username;           // optional
+    Action         action  = Action::Add;             // required only for pushes
+    QDeadlineTimer expires = QDeadlineTimer::Forever; // optional
+    QString        host;                              // required
+    QString        name;                              // optional
+    QString        password;                          // optional
+    std::uint16_t  port;                              // required
+    bool           restricted = false;                // optional
+    QString        transport;                         // optional
+    QString        type;                              // required
+    QString        username;                          // optional
+    XData          form;                              // optional
 
-    bool parse(QDomElement &el);
+    bool parse(QDomElement &el, bool isCreds, bool isPush);
     operator QString() const;
+
+    bool needsNewCreds(std::chrono::minutes minTtl = std::chrono::minutes(1)) const;
 };
 
 struct ExternalServiceId {
@@ -122,6 +126,7 @@ public:
      * @param ctx           - if ctx dies, the request will be aborted
      * @param callback      - callback to call when ready
      * @param ids           - identifier of services
+     * @param minTtl        - if service expires in less than minTtl it will be re-requested
      *
      * The credentials won't be cached since it's assumed if crdentials are returned with services request then
      * the creds are constant values until the service is expired.
@@ -129,7 +134,8 @@ public:
      * Most likely with `restricted` flag those are going to be temporal credentials. Even so the caller may cache them
      * on its own risk.
      */
-    void credentials(QObject *ctx, ServicesCallback &&callback, const QSet<ExternalServiceId> &ids);
+    void credentials(QObject *ctx, ServicesCallback &&callback, const QSet<ExternalServiceId> &ids,
+                     std::chrono::minutes minTtl = std::chrono::minutes(1));
 signals:
     // server push signals only
     void serviceAdded(const ExternalServiceList &);
@@ -137,6 +143,8 @@ signals:
     void serviceModified(ExternalServiceList &);
 
 private:
+    ExternalServiceList::iterator findCachedService(const ExternalServiceId &id = {});
+
     Client                               *client_;
     QPointer<JT_ExternalServiceDiscovery> currentTask = nullptr; // for all services (no type)
     ExternalServiceList                   services_;

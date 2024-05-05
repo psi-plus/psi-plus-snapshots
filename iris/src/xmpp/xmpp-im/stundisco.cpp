@@ -87,7 +87,7 @@ private:
                 needResolve.append(s);
             else
                 s->addresses.append(addr);
-            if (l->restricted && s->password.isEmpty()) {
+            if (l->needsNewCreds()) {
                 needCreds.append(s);
             } else if (!s->addresses.isEmpty()) {
                 emit serviceAdded(s);
@@ -179,13 +179,14 @@ private:
                     QString etype = extType(s);
                     auto    it
                         = std::find_if(resolved.begin(), resolved.end(), [&s, &etype](ExternalService::Ptr const &r) {
-                              return s->host == r->host && etype == r->type && s->port == r->port;
+                              return s->host == r->host && etype == r->type && (r->port == 0 || s->port == r->port);
                           });
                     if (it == resolved.end()) {
                         s->expires = QDeadlineTimer(); // expired timer
                         qDebug("no creds from server for %s:%hu %s", qPrintable(s->host), s->port, qPrintable(etype));
                         continue; // failed to get creds? weird
                     }
+                    s->expires  = (*it)->expires;
                     s->username = (*it)->username;
                     s->password = (*it)->password;
                 }

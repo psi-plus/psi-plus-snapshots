@@ -607,7 +607,7 @@ void S5BManager::ps_incoming(const S5BRequest &req)
         }
     }
     if (!ok) {
-        d->ps->respondError(req.from, req.id, Stanza::Error::NotAcceptable, "SID in use");
+        d->ps->respondError(req.from, req.id, Stanza::Error::ErrorCond::NotAcceptable, "SID in use");
         return;
     }
 
@@ -801,7 +801,7 @@ void S5BManager::con_accept(S5BConnection *c)
 
 void S5BManager::con_reject(S5BConnection *c)
 {
-    d->ps->respondError(c->d->peer, c->d->req.id, Stanza::Error::NotAcceptable, "Not acceptable");
+    d->ps->respondError(c->d->peer, c->d->req.id, Stanza::Error::ErrorCond::NotAcceptable, "Not acceptable");
 }
 
 void S5BManager::con_unlink(S5BConnection *c)
@@ -812,7 +812,7 @@ void S5BManager::con_unlink(S5BConnection *c)
 
     // active incoming request?  cancel it
     if (e->i && e->i->conn)
-        d->ps->respondError(e->i->peer, e->i->out_id, Stanza::Error::NotAcceptable, "Not acceptable");
+        d->ps->respondError(e->i->peer, e->i->out_id, Stanza::Error::ErrorCond::NotAcceptable, "Not acceptable");
     delete e->i;
     d->activeList.removeAll(e);
     delete e;
@@ -1078,7 +1078,7 @@ void S5BManager::Item::handleFast(const StreamHostList &hosts, const QString &iq
 
     // if we already have a stream, then bounce this request
     if (client) {
-        m->doError(peer, iq_id, Stanza::Error::NotAcceptable, "Not acceptable");
+        m->doError(peer, iq_id, Stanza::Error::ErrorCond::NotAcceptable, "Not acceptable");
     } else {
         in_hosts = hosts;
         in_id    = iq_id;
@@ -1442,7 +1442,7 @@ void S5BManager::Item::sc_error(int)
 void S5BManager::Item::doConnectError()
 {
     localFailed = true;
-    m->doError(peer, in_id, Stanza::Error::RemoteServerNotFound, "Could not connect to given hosts");
+    m->doError(peer, in_id, Stanza::Error::ErrorCond::RemoteServerNotFound, "Could not connect to given hosts");
     checkFailure();
 }
 
@@ -2075,7 +2075,7 @@ void JT_PushS5B::respondSuccess(const Jid &to, const QString &id, const Jid &str
 void JT_PushS5B::respondError(const Jid &to, const QString &id, Stanza::Error::ErrorCond cond, const QString &str)
 {
     QDomElement   iq = createIQ(doc(), "error", to.full(), id);
-    Stanza::Error error(Stanza::Error::Cancel, cond, str);
+    Stanza::Error error(Stanza::Error::ErrorType::Cancel, cond, str);
     iq.appendChild(error.toXml(*client()->doc(), client()->stream().baseNS()));
     send(iq);
 }

@@ -54,7 +54,7 @@ namespace XMPP { namespace Jingle {
 
         bool isGroupingAllowed() const;
 
-        XMPP::Stanza::Error lastError() const;
+        std::optional<Stanza::Error> lastError() const;
 
         // make new local content but do not add it to session yet
         Application *newContent(const QString &ns, Origin senders = Origin::Both);

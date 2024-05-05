@@ -73,6 +73,7 @@ else()
             BUILD_BYPRODUCTS ${USRSCTP_LIBRARY}
             INSTALL_COMMAND ""
             PATCH_COMMAND ${patch_command}
+            UPDATE_COMMAND ""
             )
     endif()
     add_library(SctpLab::UsrSCTP UNKNOWN IMPORTED)

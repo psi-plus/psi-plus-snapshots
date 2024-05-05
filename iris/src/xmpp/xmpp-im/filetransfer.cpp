@@ -414,7 +414,7 @@ void FileTransferManager::pft_incoming(const FTRequest &req)
     }
 
     if (streamType.isEmpty()) {
-        d->pft->respondError(req.from, req.iq_id, Stanza::Error::NotAcceptable, "No valid stream types");
+        d->pft->respondError(req.from, req.iq_id, Stanza::Error::ErrorCond::NotAcceptable, "No valid stream types");
         return;
     }
 
@@ -485,7 +485,7 @@ void FileTransferManager::con_accept(FileTransfer *ft)
 
 void FileTransferManager::con_reject(FileTransfer *ft)
 {
-    d->pft->respondError(ft->d->peer, ft->d->iq_id, Stanza::Error::Forbidden, "Declined");
+    d->pft->respondError(ft->d->peer, ft->d->iq_id, Stanza::Error::ErrorCond::Forbidden, "Declined");
 }
 
 void FileTransferManager::unlink(FileTransfer *ft) { d->list.removeAll(ft); }
@@ -691,7 +691,7 @@ void JT_PushFT::respondSuccess(const Jid &to, const QString &id, qlonglong range
 void JT_PushFT::respondError(const Jid &to, const QString &id, Stanza::Error::ErrorCond cond, const QString &str)
 {
     QDomElement   iq = createIQ(doc(), "error", to.full(), id);
-    Stanza::Error error(Stanza::Error::Cancel, cond, str);
+    Stanza::Error error(Stanza::Error::ErrorType::Cancel, cond, str);
     iq.appendChild(error.toXml(*client()->doc(), client()->stream().baseNS()));
     send(iq);
 }
@@ -719,7 +719,7 @@ bool JT_PushFT::take(const QDomElement &e)
 
     QString fname = file.attribute("name");
     if (fname.isEmpty()) {
-        respondError(from, id, Stanza::Error::BadRequest, "Bad file name");
+        respondError(from, id, Stanza::Error::ErrorCond::BadRequest, "Bad file name");
         return true;
     }
 
@@ -732,7 +732,7 @@ bool JT_PushFT::take(const QDomElement &e)
     bool      ok;
     qlonglong size = file.attribute("size").toLongLong(&ok);
     if (!ok || size < 0) {
-        respondError(from, id, Stanza::Error::BadRequest, "Bad file size");
+        respondError(from, id, Stanza::Error::ErrorCond::BadRequest, "Bad file size");
         return true;
     }
 

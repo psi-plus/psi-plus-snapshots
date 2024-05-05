@@ -30,6 +30,7 @@
 #include <QByteArray>
 #include <QList>
 #include <QtCrypto>
+#include <optional>
 #include <qca.h>
 
 using namespace XMPP;
@@ -94,48 +95,46 @@ StreamFeatures::StreamFeatures()
 //----------------------------------------------------------------------------
 // BasicProtocol
 //----------------------------------------------------------------------------
-BasicProtocol::SASLCondEntry BasicProtocol::saslCondTable[] = {
-    { "aborted", Aborted },
-    { "account-disabled", AccountDisabled },
-    { "credentials-expired", CredentialsExpired },
-    { "encryption-required", EncryptionRequired },
-    { "incorrect-encoding", IncorrectEncoding },
-    { "invalid-authzid", InvalidAuthzid },
-    { "invalid-mechanism", InvalidMech },
-    { "malformed-request", MalformedRequest },
-    { "mechanism-too-weak", MechTooWeak },
-    { "not-authorized", NotAuthorized },
-    { "temporary-auth-failure", TemporaryAuthFailure },
-    { nullptr, 0 },
-};
+std::array<BasicProtocol::SASLCondEntry, 11> BasicProtocol::saslCondTable { {
+    { QStringLiteral("aborted"), SASLCond::Aborted },
+    { QStringLiteral("account-disabled"), SASLCond::AccountDisabled },
+    { QStringLiteral("credentials-expired"), SASLCond::CredentialsExpired },
+    { QStringLiteral("encryption-required"), SASLCond::EncryptionRequired },
+    { QStringLiteral("incorrect-encoding"), SASLCond::IncorrectEncoding },
+    { QStringLiteral("invalid-authzid"), SASLCond::InvalidAuthzid },
+    { QStringLiteral("invalid-mechanism"), SASLCond::InvalidMechanism },
+    { QStringLiteral("malformed-request"), SASLCond::MalformedRequest },
+    { QStringLiteral("mechanism-too-weak"), SASLCond::MechanismTooWeak },
+    { QStringLiteral("not-authorized"), SASLCond::NotAuthorized },
+    { QStringLiteral("temporary-auth-failure"), SASLCond::TemporaryAuthFailure },
+} };
 
-BasicProtocol::StreamCondEntry BasicProtocol::streamCondTable[] = {
-    { "bad-format", BadFormat },
-    { "bad-namespace-prefix", BadNamespacePrefix },
-    { "conflict", Conflict },
-    { "connection-timeout", ConnectionTimeout },
-    { "host-gone", HostGone },
-    { "host-unknown", HostUnknown },
-    { "improper-addressing", ImproperAddressing },
-    { "internal-server-error", InternalServerError },
-    { "invalid-from", InvalidFrom },
-    { "invalid-namespace", InvalidNamespace },
-    { "invalid-xml", InvalidXml },
-    { "not-authorized", StreamNotAuthorized },
-    { "not-well-formed", NotWellFormed },
-    { "policy-violation", PolicyViolation },
-    { "remote-connection-failed", RemoteConnectionFailed },
-    { "reset", StreamReset },
-    { "resource-constraint", ResourceConstraint },
-    { "restricted-xml", RestrictedXml },
-    { "see-other-host", SeeOtherHost },
-    { "system-shutdown", SystemShutdown },
-    { "undefined-condition", UndefinedCondition },
-    { "unsupported-encoding", UnsupportedEncoding },
-    { "unsupported-stanza-type", UnsupportedStanzaType },
-    { "unsupported-version", UnsupportedVersion },
-    { nullptr, 0 },
-};
+std::array<BasicProtocol::StreamCondEntry, 24> BasicProtocol::streamCondTable { {
+    { QStringLiteral("bad-format"), StreamCond::BadFormat },
+    { QStringLiteral("bad-namespace-prefix"), StreamCond::BadNamespacePrefix },
+    { QStringLiteral("conflict"), StreamCond::Conflict },
+    { QStringLiteral("connection-timeout"), StreamCond::ConnectionTimeout },
+    { QStringLiteral("host-gone"), StreamCond::HostGone },
+    { QStringLiteral("host-unknown"), StreamCond::HostUnknown },
+    { QStringLiteral("improper-addressing"), StreamCond::ImproperAddressing },
+    { QStringLiteral("internal-server-error"), StreamCond::InternalServerError },
+    { QStringLiteral("invalid-from"), StreamCond::InvalidFrom },
+    { QStringLiteral("invalid-namespace"), StreamCond::InvalidNamespace },
+    { QStringLiteral("invalid-xml"), StreamCond::InvalidXml },
+    { QStringLiteral("not-authorized"), StreamCond::NotAuthorized },
+    { QStringLiteral("not-well-formed"), StreamCond::NotWellFormed },
+    { QStringLiteral("policy-violation"), StreamCond::PolicyViolation },
+    { QStringLiteral("remote-connection-failed"), StreamCond::RemoteConnectionFailed },
+    { QStringLiteral("reset"), StreamCond::Reset },
+    { QStringLiteral("resource-constraint"), StreamCond::ResourceConstraint },
+    { QStringLiteral("restricted-xml"), StreamCond::RestrictedXml },
+    { QStringLiteral("see-other-host"), StreamCond::SeeOtherHost },
+    { QStringLiteral("system-shutdown"), StreamCond::SystemShutdown },
+    { QStringLiteral("undefined-condition"), StreamCond::UndefinedCondition },
+    { QStringLiteral("unsupported-encoding"), StreamCond::UnsupportedEncoding },
+    { QStringLiteral("unsupported-stanza-type"), StreamCond::UnsupportedStanzaType },
+    { QStringLiteral("unsupported-version"), StreamCond::UnsupportedVersion },
+} };
 
 BasicProtocol::BasicProtocol() : XmlProtocol() { init(); }
 
@@ -143,7 +142,7 @@ BasicProtocol::~BasicProtocol() { }
 
 void BasicProtocol::init()
 {
-    errCond        = -1;
+    errCond        = {};
     sasl_authed    = false;
     doShutdown     = false;
     delayedError   = false;
@@ -210,7 +209,7 @@ QDomElement BasicProtocol::recvStanza()
 
 void BasicProtocol::shutdown() { doShutdown = true; }
 
-void BasicProtocol::shutdownWithError(int cond, const QString &str)
+void BasicProtocol::shutdownWithError(StreamCond cond, const QString &str)
 {
     otherHost = str;
     delayErrorAndClose(cond);
@@ -236,38 +235,38 @@ void BasicProtocol::setSASLNext(const QByteArray &step) { sasl_step = step; }
 
 void BasicProtocol::setSASLAuthed() { sasl_authed = true; }
 
-int BasicProtocol::stringToSASLCond(const QString &s)
+std::optional<BasicProtocol::SASLCond> BasicProtocol::stringToSASLCond(const QString &s)
 {
-    for (int n = 0; saslCondTable[n].str; ++n) {
-        if (s == saslCondTable[n].str)
-            return saslCondTable[n].cond;
+    for (auto const &entry : saslCondTable) {
+        if (s == entry.str)
+            return entry.cond;
     }
-    return -1;
+    return {};
 }
 
-int BasicProtocol::stringToStreamCond(const QString &s)
+std::optional<BasicProtocol::StreamCond> BasicProtocol::stringToStreamCond(const QString &s)
 {
-    for (int n = 0; streamCondTable[n].str; ++n) {
-        if (s == streamCondTable[n].str)
-            return streamCondTable[n].cond;
+    for (auto const &entry : streamCondTable) {
+        if (s == entry.str)
+            return entry.cond;
     }
-    return -1;
+    return {};
 }
 
-QString BasicProtocol::saslCondToString(int x)
+QString BasicProtocol::saslCondToString(SASLCond x)
 {
-    for (int n = 0; saslCondTable[n].str; ++n) {
-        if (x == saslCondTable[n].cond)
-            return saslCondTable[n].str;
+    for (auto const &entry : saslCondTable) {
+        if (x == entry.cond)
+            return entry.str;
     }
     return QString();
 }
 
-QString BasicProtocol::streamCondToString(int x)
+QString BasicProtocol::streamCondToString(StreamCond x)
 {
-    for (int n = 0; streamCondTable[n].str; ++n) {
-        if (x == streamCondTable[n].cond)
-            return streamCondTable[n].str;
+    for (auto const &entry : streamCondTable) {
+        if (x == entry.cond)
+            return entry.str;
     }
     return QString();
 }
@@ -281,46 +280,49 @@ void BasicProtocol::extractStreamError(const QDomElement &e)
     QDomElement t = firstChildElement(e);
     if (t.isNull() || t.namespaceURI() != NS_STREAMS) {
         // probably old-style error
-        errCond = -1;
+        errCond = {};
         errText = e.text();
     } else
         errCond = stringToStreamCond(t.tagName());
 
-    if (errCond != -1) {
-        if (errCond == SeeOtherHost)
-            otherHost = t.text();
-
-        auto nodes = e.elementsByTagNameNS(NS_STREAMS, "text");
-        if (nodes.count()) {
-            for (int i = 0; i < nodes.count(); i++) {
-                auto    e    = nodes.item(i).toElement();
-                QString lang = e.attributeNS(NS_STREAMS, "lang", "");
-                langText.insert(lang, e.text());
-            }
-        } else
-            text = t.text();
-
-        // find first non-standard namespaced element
-        QDomNodeList nl = e.childNodes();
-        for (int n = 0; n < nl.count(); ++n) {
-            QDomNode i = nl.item(n);
-            if (i.isElement() && i.namespaceURI() != NS_STREAMS) {
-                appSpec = i.toElement();
-                break;
-            }
-        }
-
-        errText     = text;
-        errLangText = langText;
-        errAppSpec  = appSpec;
+    if (!errCond.has_value()) {
+        qWarning("unknown stream error=%s", qUtf8Printable(t.tagName()));
+        // rfc6120 says we should treat unknows conditions as <undefined-condition/>
+        errCond = StreamCond::UndefinedCondition;
     }
+    if (std::get<StreamCond>(*errCond) == StreamCond::SeeOtherHost)
+        otherHost = t.text();
+
+    auto nodes = e.elementsByTagNameNS(NS_STREAMS, "text");
+    if (nodes.count()) {
+        for (int i = 0; i < nodes.count(); i++) {
+            auto    e    = nodes.item(i).toElement();
+            QString lang = e.attributeNS(NS_STREAMS, "lang", "");
+            langText.insert(lang, e.text());
+        }
+    } else
+        text = t.text();
+
+    // find first non-standard namespaced element
+    QDomNodeList nl = e.childNodes();
+    for (int n = 0; n < nl.count(); ++n) {
+        QDomNode i = nl.item(n);
+        if (i.isElement() && i.namespaceURI() != NS_STREAMS) {
+            appSpec = i.toElement();
+            break;
+        }
+    }
+
+    errText     = text;
+    errLangText = langText;
+    errAppSpec  = appSpec;
 }
 
 void BasicProtocol::send(const QDomElement &e, bool clip) { writeElement(e, TypeElement, false, clip, false); }
 
 void BasicProtocol::sendUrgent(const QDomElement &e, bool clip) { writeElement(e, TypeElement, false, clip, true); }
 
-void BasicProtocol::sendStreamError(int cond, const QString &text, const QDomElement &appSpec)
+void BasicProtocol::sendStreamError(StreamCond cond, const QString &text, const QDomElement &appSpec)
 {
     QDomElement se  = doc.createElementNS(NS_ETHERX, "stream:error");
     QDomElement err = doc.createElementNS(NS_STREAMS, streamCondToString(cond));
@@ -346,7 +348,7 @@ void BasicProtocol::sendStreamError(const QString &text)
     writeElement(se, 100, false);
 }
 
-bool BasicProtocol::errorAndClose(int cond, const QString &text, const QDomElement &appSpec)
+bool BasicProtocol::errorAndClose(StreamCond cond, const QString &text, const QDomElement &appSpec)
 {
     closeError = true;
     errCond    = cond;
@@ -363,7 +365,7 @@ bool BasicProtocol::error(int code)
     return true;
 }
 
-void BasicProtocol::delayErrorAndClose(int cond, const QString &text, const QDomElement &appSpec)
+void BasicProtocol::delayErrorAndClose(StreamCond cond, const QString &text, const QDomElement &appSpec)
 {
     errorCode    = ErrStream;
     errCond      = cond;
@@ -415,7 +417,7 @@ void BasicProtocol::handleDocOpen(const Parser::Event &pe)
 {
     if (isIncoming()) {
         if (xmlEncoding() != "UTF-8") {
-            delayErrorAndClose(UnsupportedEncoding);
+            delayErrorAndClose(StreamCond::UnsupportedEncoding);
             return;
         }
     }
@@ -455,7 +457,7 @@ void BasicProtocol::handleDocOpen(const Parser::Event &pe)
         handleStreamOpen(pe);
     } else {
         if (isIncoming())
-            delayErrorAndClose(BadFormat);
+            delayErrorAndClose(StreamCond::BadFormat);
         else
             delayError(ErrProtocol);
     }
@@ -464,7 +466,7 @@ void BasicProtocol::handleDocOpen(const Parser::Event &pe)
 bool BasicProtocol::handleError()
 {
     if (isIncoming())
-        return errorAndClose(NotWellFormed);
+        return errorAndClose(StreamCond::NotWellFormed);
     else
         return error(ErrParse);
 }
@@ -485,7 +487,8 @@ bool BasicProtocol::doStep(const QDomElement &e)
     // handle pending error
     if (delayedError) {
         if (isIncoming())
-            return errorAndClose(errCond, errText, errAppSpec);
+            // see delayErrorAndClose. it's the only place we set errCond
+            return errorAndClose(std::get<StreamCond>(*errCond), errText, errAppSpec);
         else
             return error(errorCode);
     }
@@ -834,13 +837,13 @@ void CoreProtocol::handleStreamOpen(const Parser::Event &pe)
 
         // verify namespace
         if ((!server && ns != NS_CLIENT) || (server && ns != NS_SERVER) || (dialback && db != NS_DIALBACK)) {
-            delayErrorAndClose(InvalidNamespace);
+            delayErrorAndClose(StreamCond::InvalidNamespace);
             return;
         }
 
         // verify version
         if (version.major < 1 && !dialback) {
-            delayErrorAndClose(UnsupportedVersion);
+            delayErrorAndClose(StreamCond::UnsupportedVersion);
             return;
         }
     } else {
@@ -1474,7 +1477,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
             } else if (e.tagName() == "failure") {
                 QDomElement t = firstChildElement(e);
                 if (t.isNull() || t.namespaceURI() != NS_SASL)
-                    errCond = -1;
+                    errCond = {};
                 else
                     errCond = stringToSASLCond(t.tagName());
 
@@ -1518,7 +1521,7 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                     jid_ = j;
                     return loginComplete();
                 } else {
-                    errCond = -1;
+                    errCond = {};
 
                     QDomElement err = e.elementsByTagNameNS(NS_CLIENT, "error").item(0).toElement();
                     if (!err.isNull()) {
@@ -1535,9 +1538,9 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                         if (!t.isNull() && t.namespaceURI() == NS_STANZAS) {
                             QString cond = t.tagName();
                             if (cond == "not-allowed")
-                                errCond = BindNotAllowed;
+                                errCond = BindCond::BindNotAllowed;
                             else if (cond == "conflict")
-                                errCond = BindConflict;
+                                errCond = BindCond::BindConflict;
                         }
                     }
 

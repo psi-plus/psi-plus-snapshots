@@ -1234,7 +1234,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                  ce             = ce.nextSiblingElement(candidateTag)) {
                 Candidate c(q, ce);
                 if (!c) {
-                    throw Stanza::Error(Stanza::Error::Cancel, Stanza::Error::BadRequest);
+                    throw Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
                 }
                 if (!p2pAllowed && c.type() != Candidate::Proxy) {
                     qDebug("new remote candidate discarded with forbidden p2p: %s", qPrintable(c));
@@ -1262,14 +1262,14 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 if (it == localCandidates.end()) {
                     if (localCandidatesTrack.contains(cid))
                         return true; // likely discarded as not needed anymore
-                    throw Stanza::Error(Stanza::Error::Cancel, Stanza::Error::ItemNotFound,
+                    throw Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::ItemNotFound,
                                         QString("failed to find incoming candidate-used candidate %1").arg(cid));
                 }
                 auto &cUsed = it->second;
                 if (cUsed.state() == Candidate::Pending) {
                     if (cUsed.type() != Candidate::Proxy && !cUsed.isConnected()) {
                         throw Stanza::Error(
-                            Stanza::Error::Cancel, Stanza::Error::NotAcceptable,
+                            Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::NotAcceptable,
                             QString("incoming candidate-used refers a candidate w/o active socks connection: %1")
                                 .arg(QString(cUsed)));
                     }
@@ -1313,7 +1313,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             if (!el.isNull()) {
                 QString cid = el.attribute(QStringLiteral("cid"));
                 if (cid.isEmpty()) {
-                    throw Stanza::Error(Stanza::Error::Cancel, Stanza::Error::ItemNotFound,
+                    throw Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::ItemNotFound,
                                         "failed to find incoming activated candidate");
                 }
                 auto c = remoteUsedCandidate;
@@ -1334,7 +1334,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             if (!el.isNull()) {
                 auto it = localCandidates.find(el.attribute(QStringLiteral("cid")));
                 if (it == localCandidates.end()) {
-                    throw Stanza::Error(Stanza::Error::Cancel, Stanza::Error::ItemNotFound,
+                    throw Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::ItemNotFound,
                                         "failed to find incoming proxy-error candidate");
                 }
                 auto &c = it->second;

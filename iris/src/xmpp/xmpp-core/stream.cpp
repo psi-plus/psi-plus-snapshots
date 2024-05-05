@@ -834,7 +834,7 @@ void ClientStream::srvProcessNext()
 
             if (d->srv.to != d->server) {
                 // host-gone, host-unknown, see-other-host
-                d->srv.shutdownWithError(CoreProtocol::HostUnknown);
+                d->srv.shutdownWithError(CoreProtocol::StreamCond::HostUnknown);
             } else
                 d->srv.setFrom(d->server);
             break;
@@ -1296,7 +1296,7 @@ void ClientStream::handleError()
         reset();
         emit error(ErrProtocol);
     } else if (c == CoreProtocol::ErrStream) {
-        int         x        = d->client.errCond;
+        auto        x        = std::get<CoreProtocol::StreamCond>(*d->client.errCond);
         QString     text     = d->client.errText;
         auto        langText = d->client.errLangText;
         QDomElement appSpec  = d->client.errAppSpec;
@@ -1305,91 +1305,91 @@ void ClientStream::handleError()
         int strErr  = -1;
 
         switch (x) {
-        case CoreProtocol::BadFormat: {
+        case CoreProtocol::StreamCond::BadFormat: {
             break;
         } // should NOT happen (we send the right format)
-        case CoreProtocol::BadNamespacePrefix: {
+        case CoreProtocol::StreamCond::BadNamespacePrefix: {
             break;
         } // should NOT happen (we send prefixes)
-        case CoreProtocol::Conflict: {
+        case CoreProtocol::StreamCond::Conflict: {
             strErr = Conflict;
             break;
         }
-        case CoreProtocol::ConnectionTimeout: {
+        case CoreProtocol::StreamCond::ConnectionTimeout: {
             strErr = ConnectionTimeout;
             break;
         }
-        case CoreProtocol::HostGone: {
+        case CoreProtocol::StreamCond::HostGone: {
             connErr = HostGone;
             break;
         }
-        case CoreProtocol::HostUnknown: {
+        case CoreProtocol::StreamCond::HostUnknown: {
             connErr = HostUnknown;
             break;
         }
-        case CoreProtocol::ImproperAddressing: {
+        case CoreProtocol::StreamCond::ImproperAddressing: {
             break;
         } // should NOT happen (we aren't a server)
-        case CoreProtocol::InternalServerError: {
+        case CoreProtocol::StreamCond::InternalServerError: {
             strErr = InternalServerError;
             break;
         }
-        case CoreProtocol::InvalidFrom: {
+        case CoreProtocol::StreamCond::InvalidFrom: {
             strErr = InvalidFrom;
             break;
         }
-        case CoreProtocol::InvalidNamespace: {
+        case CoreProtocol::StreamCond::InvalidNamespace: {
             break;
         } // should NOT happen (we set the right ns)
-        case CoreProtocol::InvalidXml: {
+        case CoreProtocol::StreamCond::InvalidXml: {
             strErr = InvalidXml;
             break;
         } // shouldn't happen either, but just in case ...
-        case CoreProtocol::StreamNotAuthorized: {
+        case CoreProtocol::StreamCond::NotAuthorized: {
             break;
         } // should NOT happen (we're not stupid)
-        case CoreProtocol::PolicyViolation: {
+        case CoreProtocol::StreamCond::PolicyViolation: {
             strErr = PolicyViolation;
             break;
         }
-        case CoreProtocol::RemoteConnectionFailed: {
+        case CoreProtocol::StreamCond::RemoteConnectionFailed: {
             connErr = RemoteConnectionFailed;
             break;
         }
-        case CoreProtocol::StreamReset: {
+        case CoreProtocol::StreamCond::Reset: {
             strErr = StreamReset;
             break;
         }
-        case CoreProtocol::ResourceConstraint: {
+        case CoreProtocol::StreamCond::ResourceConstraint: {
             strErr = ResourceConstraint;
             break;
         }
-        case CoreProtocol::RestrictedXml: {
+        case CoreProtocol::StreamCond::RestrictedXml: {
             strErr = InvalidXml;
             break;
         } // group with this one
-        case CoreProtocol::SeeOtherHost: {
+        case CoreProtocol::StreamCond::SeeOtherHost: {
             connErr = SeeOtherHost;
             break;
         }
-        case CoreProtocol::SystemShutdown: {
+        case CoreProtocol::StreamCond::SystemShutdown: {
             strErr = SystemShutdown;
             break;
         }
-        case CoreProtocol::UndefinedCondition: {
+        case CoreProtocol::StreamCond::UndefinedCondition: {
             break;
         } // leave as null error
-        case CoreProtocol::UnsupportedEncoding: {
+        case CoreProtocol::StreamCond::UnsupportedEncoding: {
             break;
         } // should NOT happen (we send good encoding)
-        case CoreProtocol::UnsupportedStanzaType: {
+        case CoreProtocol::StreamCond::UnsupportedStanzaType: {
             break;
         } // should NOT happen (we're not stupid)
-        case CoreProtocol::UnsupportedVersion: {
+        case CoreProtocol::StreamCond::UnsupportedVersion: {
             connErr = UnsupportedVersion;
             break;
         }
-        case CoreProtocol::NotWellFormed: {
+        case CoreProtocol::StreamCond::NotWellFormed: {
             strErr = InvalidXml;
             break;
         } // group with this one
@@ -1418,9 +1418,9 @@ void ClientStream::handleError()
         d->errCond = TLSStart;
         emit error(ErrTLS);
     } else if (c == CoreProtocol::ErrAuth) {
-        int x = d->client.errCond;
         int r = GenericAuthError;
         if (d->client.old) {
+            auto x = std::get<int>(*d->client.errCond);
             if (x == 401) // not authorized
                 r = NotAuthorized;
             else if (x == 409) // conflict
@@ -1428,48 +1428,49 @@ void ClientStream::handleError()
             else if (x == 406) // not acceptable (this should NOT happen)
                 r = GenericAuthError;
         } else {
+            auto x = std::get<CoreProtocol::SASLCond>(*d->client.errCond);
             switch (x) {
-            case CoreProtocol::Aborted: {
+            case CoreProtocol::SASLCond::Aborted: {
                 r = GenericAuthError;
                 break;
             } // should NOT happen (we never send <abort/>)
-            case CoreProtocol::AccountDisabled: {
+            case CoreProtocol::SASLCond::AccountDisabled: {
                 r = AccountDisabled;
                 break;
             } // account temporrily disabled
-            case CoreProtocol::CredentialsExpired: {
+            case CoreProtocol::SASLCond::CredentialsExpired: {
                 r = CredentialsExpired;
                 break;
             } // credential expired
-            case CoreProtocol::EncryptionRequired: {
+            case CoreProtocol::SASLCond::EncryptionRequired: {
                 r = EncryptionRequired;
                 break;
             } // can't use mech without TLS
-            case CoreProtocol::IncorrectEncoding: {
+            case CoreProtocol::SASLCond::IncorrectEncoding: {
                 r = GenericAuthError;
                 break;
             } // should NOT happen
-            case CoreProtocol::InvalidAuthzid: {
+            case CoreProtocol::SASLCond::InvalidAuthzid: {
                 r = InvalidAuthzid;
                 break;
             }
-            case CoreProtocol::InvalidMech: {
+            case CoreProtocol::SASLCond::InvalidMechanism: {
                 r = InvalidMech;
                 break;
             }
-            case CoreProtocol::MalformedRequest: {
+            case CoreProtocol::SASLCond::MalformedRequest: {
                 r = MalformedRequest;
                 break;
             }
-            case CoreProtocol::MechTooWeak: {
+            case CoreProtocol::SASLCond::MechanismTooWeak: {
                 r = MechTooWeak;
                 break;
             }
-            case CoreProtocol::NotAuthorized: {
+            case CoreProtocol::SASLCond::NotAuthorized: {
                 r = NotAuthorized;
                 break;
             }
-            case CoreProtocol::TemporaryAuthFailure: {
+            case CoreProtocol::SASLCond::TemporaryAuthFailure: {
                 r = TemporaryAuthFailure;
                 break;
             }
@@ -1484,12 +1485,13 @@ void ClientStream::handleError()
         d->errCond = NoMech;
         emit error(ErrAuth);
     } else if (c == CoreProtocol::ErrBind) {
-        int r = -1;
-        if (d->client.errCond == CoreProtocol::BindBadRequest) {
+        int  r = -1;
+        auto x = std::get<CoreProtocol::BindCond>(*d->client.errCond);
+        if (x == CoreProtocol::BindCond::BindBadRequest) {
             // should NOT happen
-        } else if (d->client.errCond == CoreProtocol::BindNotAllowed) {
+        } else if (x == CoreProtocol::BindCond::BindNotAllowed) {
             r = BindNotAllowed;
-        } else if (d->client.errCond == CoreProtocol::BindConflict) {
+        } else if (x == CoreProtocol::BindCond::BindConflict) {
             r = BindConflict;
         }
 
