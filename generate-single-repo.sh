@@ -3,7 +3,7 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2024-05-04
+# Updated: 2024-05-05
 # Version: N/A
 
 set -e
@@ -107,7 +107,7 @@ if [ "${PSI_OLD_HASH}"       = "${PSI_NEW_HASH}" ] && \
    [ "${PSIMEDIA_OLD_HASH}"  = "${PSIMEDIA_NEW_HASH}" ] && \
    [ "${RESOURCES_OLD_HASH}" = "${RESOURCES_NEW_HASH}" ]; then
     echo "Updating is not required!"
-    git checkout HEAD .
+    git checkout HEAD . 2> /dev/null
     echo
     exit 0
 fi
