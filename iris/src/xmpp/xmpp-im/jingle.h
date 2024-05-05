@@ -25,7 +25,6 @@
 #include <QObject>
 #include <QSharedDataPointer>
 #include <QSharedPointer>
-#include <optional>
 
 #include <functional>
 
@@ -194,11 +193,9 @@ namespace Jingle {
 
         static const char *names[Last];
 
-        static XMPP::Stanza::Error make(QDomDocument &doc, int jingleCond,
-                                        XMPP::Stanza::Error::ErrorType type = XMPP::Stanza::Error::ErrorType::Cancel,
-                                        XMPP::Stanza::Error::ErrorCond condition
-                                        = XMPP::Stanza::Error::ErrorCond::UndefinedCondition,
-                                        const QString &text = QString());
+        static XMPP::Stanza::Error make(QDomDocument &doc, int jingleCond, int type = XMPP::Stanza::Error::Cancel,
+                                        int            condition = XMPP::Stanza::Error::UndefinedCondition,
+                                        const QString &text      = QString());
 
         static XMPP::Stanza::Error makeTieBreak(QDomDocument &doc);
         static XMPP::Stanza::Error makeOutOfOrder(QDomDocument &doc);
@@ -374,10 +371,10 @@ namespace Jingle {
         bool isAllowedParty(const Jid &jid) const;
         void setRemoteJidChecker(std::function<bool(const Jid &)> checker);
 
-        Session                                  *session(const Jid &remoteJid, const QString &sid);
-        Session                                  *newSession(const Jid &j);
-        QString                                   registerSession(Session *session);
-        const std::optional<XMPP::Stanza::Error> &lastError() const;
+        Session            *session(const Jid &remoteJid, const QString &sid);
+        Session            *newSession(const Jid &j);
+        QString             registerSession(Session *session);
+        XMPP::Stanza::Error lastError() const;
 
         void detachSession(Session *s); // disconnect the session from manager
     signals:

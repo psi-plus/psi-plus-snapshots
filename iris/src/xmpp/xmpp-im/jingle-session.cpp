@@ -87,7 +87,7 @@ namespace XMPP { namespace Jingle {
         State    state = State::Created; // state of session on our side. if it's incoming we start from Created anyaway
                                          // but Pending state is skipped
         Origin                                             role = Origin::Initiator; // my role in the session
-        std::optional<XMPP::Stanza::Error>                 lastError;
+        XMPP::Stanza::Error                                lastError;
         Reason                                             terminateReason;
         QMap<QString, QWeakPointer<ApplicationManagerPad>> applicationPads;
         QMap<QString, QWeakPointer<TransportManagerPad>>   transportPads;
@@ -212,7 +212,7 @@ namespace XMPP { namespace Jingle {
             if (waitingAck) {
                 return;
             }
-            lastError = {};
+            lastError = Stanza::Error(0, 0);
             if (!stepTimer.isActive()) {
                 stepTimer.start();
             }
@@ -363,8 +363,7 @@ namespace XMPP { namespace Jingle {
                 for (const auto &c : std::as_const(initialIncomingUnacceptedContent)) {
                     auto out = c->evaluateOutgoingUpdate();
                     if (out.action == Action::ContentReject) {
-                        lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                                        XMPP::Stanza::Error::ErrorCond::BadRequest);
+                        lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                         setSessionFinished();
                         return true;
                     }
@@ -376,8 +375,7 @@ namespace XMPP { namespace Jingle {
                 for (const auto &c : std::as_const(contentList)) {
                     auto out = c->evaluateOutgoingUpdate();
                     if (out.action == Action::ContentRemove) {
-                        lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                                        XMPP::Stanza::Error::ErrorCond::BadRequest);
+                        lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                         setSessionFinished();
                         return true;
                     }
@@ -548,8 +546,7 @@ namespace XMPP { namespace Jingle {
 
                 std::tie(err, cond, app) = parseContentAdd(ce);
                 if (err == Private::AddContentError::Unparsed) {
-                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                                    XMPP::Stanza::Error::ErrorCond::BadRequest);
+                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                     qDeleteAll(addSet);
                     return ParseContentListResult(Unparsed, cond, QList<Application *>(), QList<QDomElement>());
                 }
@@ -564,7 +561,7 @@ namespace XMPP { namespace Jingle {
 
                     if (it == addSet.end()) {
                         rejectSet.insert(contentName, std::make_pair(ce, cond));
-                    } // else it was invalid alternative
+                    }
                     continue;
                 }
 
@@ -651,12 +648,12 @@ namespace XMPP { namespace Jingle {
                         a->setState(State::Pending); // reset state to pending for already passed validation before
                                                      // passing error back
                     }
-                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
+                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel,
                                                     err == Private::AddContentError::Unexpected
-                                                        ? XMPP::Stanza::Error::ErrorCond::UnexpectedRequest
-                                                        : XMPP::Stanza::Error::ErrorCond::BadRequest);
+                                                        ? XMPP::Stanza::Error::UnexpectedRequest
+                                                        : XMPP::Stanza::Error::BadRequest);
                     if (err == Private::AddContentError::Unexpected) {
-                        ErrorUtil::fill(jingleEl.ownerDocument(), *lastError, ErrorUtil::OutOfOrder);
+                        ErrorUtil::fill(jingleEl.ownerDocument(), lastError, ErrorUtil::OutOfOrder);
                     }
                     return std::tuple<bool, QList<Application *>>(false, QList<Application *>());
                 }
@@ -670,8 +667,7 @@ namespace XMPP { namespace Jingle {
                         a->setState(State::Pending); // reset state to pending for already passed validation before
                                                      // passing error back
                     }
-                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                                    XMPP::Stanza::Error::ErrorCond::BadRequest);
+                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                     return std::tuple<bool, QList<Application *>>(false, QList<Application *>());
                 }
 
@@ -723,10 +719,9 @@ namespace XMPP { namespace Jingle {
             switch (err) {
             case Private::AddContentError::Unparsed:
             case Private::AddContentError::Unexpected:
-                lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                                XMPP::Stanza::Error::ErrorCond::BadRequest);
+                lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                 if (err == Private::AddContentError::Unexpected) {
-                    ErrorUtil::fill(jingleEl.ownerDocument(), *lastError, ErrorUtil::OutOfOrder);
+                    ErrorUtil::fill(jingleEl.ownerDocument(), lastError, ErrorUtil::OutOfOrder);
                 }
                 return false;
             case Private::AddContentError::Unsupported:
@@ -757,8 +752,7 @@ namespace XMPP { namespace Jingle {
                  ce             = ce.nextSiblingElement(contentTag)) {
                 ContentBase cb(ce);
                 if (!cb.isValid()) {
-                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                                    XMPP::Stanza::Error::ErrorCond::BadRequest);
+                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                     return false;
                 }
                 Application *app = contentList.value(ContentKey { cb.name, cb.creator });
@@ -798,8 +792,7 @@ namespace XMPP { namespace Jingle {
 
             std::tie(parsed, apps) = parseContentAcceptList(jingleEl);
             if (!parsed) {
-                lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                                XMPP::Stanza::Error::ErrorCond::BadRequest);
+                lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                 return false;
             }
 
@@ -822,8 +815,7 @@ namespace XMPP { namespace Jingle {
 
             std::tie(parsed, apps) = parseContentAcceptList(jingleEl); // marks valid apps as accepted
             if (!parsed) {
-                lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                                XMPP::Stanza::Error::ErrorCond::BadRequest);
+                lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                 return false;
             }
 
@@ -854,15 +846,13 @@ namespace XMPP { namespace Jingle {
                 std::tie(transportParsed, errReason, transport) = parseIncomingTransport(ce);
 
                 if (!cb.isValid() || !transportParsed) {
-                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                                    XMPP::Stanza::Error::ErrorCond::BadRequest);
+                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                     return false;
                 }
                 Application *app = contentList.value(ContentKey { cb.name, cb.creator });
                 if (!app || (app->creator() == role && app->state() <= State::Unacked)) {
                     qDebug("not existing app or inaporpriate app state");
-                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                                    XMPP::Stanza::Error::ErrorCond::ItemNotFound);
+                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::ItemNotFound);
                     return false;
                 }
 
@@ -937,8 +927,7 @@ namespace XMPP { namespace Jingle {
                 auto        transportEl = ce.firstChildElement(QString::fromLatin1("transport"));
                 QString     transportNS = transportEl.namespaceURI();
                 if (!cb.isValid() || transportEl.isNull() || transportNS.isEmpty()) {
-                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                                    XMPP::Stanza::Error::ErrorCond::BadRequest);
+                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                     return false;
                 }
 
@@ -988,14 +977,12 @@ namespace XMPP { namespace Jingle {
                 ContentBase  cb(ce);
                 if (!cb.isValid() || !(app = q->content(cb.name, cb.creator)) || app->state() >= State::Finishing
                     || !app->transport()) {
-                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                                    XMPP::Stanza::Error::ErrorCond::BadRequest);
+                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                     return false;
                 }
                 auto tel = ce.firstChildElement(QStringLiteral("transport"));
                 if (tel.isNull() || tel.namespaceURI() != app->transport()->pad()->ns()) {
-                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                                    XMPP::Stanza::Error::ErrorCond::BadRequest);
+                    lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::BadRequest);
                     return false;
                 }
                 updates.append(qMakePair(app->transport(), tel));
@@ -1065,7 +1052,7 @@ namespace XMPP { namespace Jingle {
 
     bool Session::isGroupingAllowed() const { return d->groupingAllowed; }
 
-    std::optional<XMPP::Stanza::Error> Session::lastError() const { return d->lastError; }
+    XMPP::Stanza::Error Session::lastError() const { return d->lastError; }
 
     Application *Session::newContent(const QString &ns, Origin senders)
     {
@@ -1224,7 +1211,8 @@ namespace XMPP { namespace Jingle {
             d->planStep();
             return true;
         case Private::AddContentError::Ok:
-            Q_ASSERT(!apps.isEmpty());
+            if (!apps.size())
+                return false;
             d->initialIncomingUnacceptedContent = apps;
             for (auto app : std::as_const(apps)) {
                 app->markInitialApplication(true);
@@ -1233,16 +1221,15 @@ namespace XMPP { namespace Jingle {
             d->planStep();
             return true;
         }
-        Q_ASSERT(false);
-        return false; // unreachable
+
+        return false;
     }
 
     bool Session::updateFromXml(Action action, const QDomElement &jingleEl)
     {
         if (d->state == State::Finished) {
-            d->lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                               XMPP::Stanza::Error::ErrorCond::UnexpectedRequest);
-            ErrorUtil::fill(jingleEl.ownerDocument(), *d->lastError, ErrorUtil::OutOfOrder);
+            d->lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::UnexpectedRequest);
+            ErrorUtil::fill(jingleEl.ownerDocument(), d->lastError, ErrorUtil::OutOfOrder);
             return false;
         }
 
@@ -1281,8 +1268,7 @@ namespace XMPP { namespace Jingle {
             break;
         }
 
-        d->lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                           XMPP::Stanza::Error::ErrorCond::FeatureNotImplemented);
+        d->lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::Cancel, XMPP::Stanza::Error::FeatureNotImplemented);
         return false;
     }
 }}

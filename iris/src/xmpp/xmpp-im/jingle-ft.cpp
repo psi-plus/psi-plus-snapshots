@@ -152,20 +152,20 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         bool closeDeviceOnFinish = true;
         bool streamingMode       = false;
         // bool                endlessRange        = false; // where range in accepted file doesn't have end
-        bool                               outgoingReceived    = false;
-        bool                               writeLoggingStarted = false;
-        bool                               readLoggingStarted  = false;
-        File                               file;
-        File                               acceptFile; // as it comes with "accept" response
-        std::optional<XMPP::Stanza::Error> lastError;
-        Reason                             lastReason;
-        Connection::Ptr                    connection;
-        QIODevice                         *device = nullptr;
-        std::optional<quint64>             bytesLeft;
-        QList<Hash>                        outgoingChecksum;
-        QList<Hash>                        incomingChecksum;
-        QTimer                            *finalizeTimer = nullptr;
-        FileHasher                        *hasher        = nullptr;
+        bool                   outgoingReceived    = false;
+        bool                   writeLoggingStarted = false;
+        bool                   readLoggingStarted  = false;
+        File                   file;
+        File                   acceptFile; // as it comes with "accept" response
+        XMPP::Stanza::Error    lastError;
+        Reason                 lastReason;
+        Connection::Ptr        connection;
+        QIODevice             *device = nullptr;
+        std::optional<quint64> bytesLeft;
+        QList<Hash>            outgoingChecksum;
+        QList<Hash>            incomingChecksum;
+        QTimer                *finalizeTimer = nullptr;
+        FileHasher            *hasher        = nullptr;
 
         void setState(State s)
         {
@@ -277,13 +277,13 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                     return; // we will come back on readyRead
             }
             data.resize(sz);
-            auto readSz = device->read(data.data(), sz);
-            if (readSz < 0) {
+            sz = device->read(data.data(), sz);
+            if (sz == -1) {
                 handleStreamFail(QString::fromLatin1("source device failed"));
                 return;
             }
-            data.resize(readSz);
-            if (readSz == 0) {
+            data.resize(sz);
+            if (sz == 0) {
                 if (!bytesLeft) {
                     lastReason = Reason(Reason::Condition::Success);
                     if (hasher) {
@@ -369,8 +369,8 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                    qUtf8Printable(q->pad()->session()->peer().full()));
             connection = newConnection;
 
-            lastReason = {};
-            lastError  = {};
+            lastReason = Reason();
+            lastError.reset();
 
             if (acceptFile.range().isValid()) {
                 if (acceptFile.range().length) {
@@ -423,7 +423,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                         writeLoggingStarted = true;
                     }
                     auto bs = getBlockSize();
-                    if (q->pad()->session()->role() == q->senders() && quint64(connection->bytesToWrite()) < bs) {
+                    if (q->pad()->session()->role() == q->senders() && connection->bytesToWrite() < bs) {
                         writeNextBlockToTransport();
                     }
                 },
@@ -517,7 +517,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     void Application::setState(State state) { d->setState(state); }
 
-    const std::optional<Stanza::Error> &Application::lastError() const { return d->lastError; }
+    Stanza::Error Application::lastError() const { return d->lastError; }
 
     Reason Application::lastReason() const { return d->lastReason; }
 
