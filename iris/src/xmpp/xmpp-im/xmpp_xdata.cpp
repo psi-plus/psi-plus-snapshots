@@ -305,9 +305,7 @@ bool XData::Field::MediaElement::checkSupport(const QStringList &wildcards)
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             if (QRegExp(wildcard, Qt::CaseSensitive, QRegExp::Wildcard).exactMatch(uri.mimeType)) {
 #else
-            if (QRegularExpression::fromWildcard(QLatin1Char('^') + wildcard + QLatin1Char('$'), Qt::CaseSensitive)
-                    .match(uri.mimeType)
-                    .hasMatch()) {
+            if (QRegularExpression::fromWildcard(wildcard, Qt::CaseSensitive).match(uri.mimeType).hasMatch()) {
 #endif
                 return true;
             }
