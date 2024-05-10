@@ -37,7 +37,6 @@ QCA::SecureArray HMAC_SHA_1(const QCA::SecureArray &key, const QCA::SecureArray 
 SCRAMSHA1Response::SCRAMSHA1Response(const QByteArray &server_first_message, const QByteArray &password_in,
                                      const QByteArray &client_first_message, const QString &salted_password_base64)
 {
-    Q_UNUSED(rand);
     QString pass_in = QString::fromUtf8(password_in);
     QString pass_out;
 
