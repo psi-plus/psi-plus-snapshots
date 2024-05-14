@@ -862,7 +862,7 @@ void Client::pmMessage(const Message &m)
         d->ibbman->takeIncomingData(m.from(), m.id(), m.ibbData(), Stanza::Message);
     }
 
-    if (m.type() == "groupchat") {
+    if (m.type() == Message::Type::Groupchat) {
         for (QList<GroupChat>::Iterator it = d->groupChatList.begin(); it != d->groupChatList.end(); it++) {
             const GroupChat &i = *it;
 

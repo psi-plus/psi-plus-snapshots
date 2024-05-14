@@ -55,6 +55,8 @@ public:
         Sent      // own messages are sent from other clients
     };
 
+    enum class Type { Chat, Error, Groupchat, Headline, Normal };
+
     // XEP-0334
     enum ProcessingHint { NoPermanentStore = 1, NoStore = 2, NoCopy = 4, Store = 8 };
     Q_DECLARE_FLAGS(ProcessingHints, ProcessingHint)
@@ -76,7 +78,8 @@ public:
     Jid           to() const;
     Jid           from() const;
     QString       id() const;
-    QString       type() const;
+    Type          type() const;
+    QString       typeStr() const;
     QString       lang() const;
     QString       subject(const QString &lang = QString()) const;
     QString       subject(const QLocale &lang) const;
@@ -89,7 +92,7 @@ public:
     void setTo(const Jid &j);
     void setFrom(const Jid &j);
     void setId(const QString &s);
-    void setType(const QString &s);
+    void setType(Type type);
     void setLang(const QString &s);
     void setSubject(const QString &s, const QString &lang = "");
     void setBody(const QString &s, const QString &lang = "");

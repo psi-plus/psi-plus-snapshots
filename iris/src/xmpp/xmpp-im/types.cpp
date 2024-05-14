@@ -664,8 +664,9 @@ void HTMLElement::filterOutUnwantedRecursive(QDomElement &el, bool strict)
 {
     Q_UNUSED(strict) // TODO filter out not xhtml-im elements
 
-    static QSet<QString> unwanted = QSet<QString>() << "script" << "iframe";
-    QDomNode             child    = el.firstChild();
+    static QSet<QString> unwanted = QSet<QString>() << "script"
+                                                    << "iframe";
+    QDomNode child = el.firstChild();
     while (!child.isNull()) {
         QDomNode sibling = child.nextSibling();
         if (child.isElement()) {
@@ -697,13 +698,14 @@ void HTMLElement::filterOutUnwantedRecursive(QDomElement &el, bool strict)
 //----------------------------------------------------------------------------
 class Message::Private : public QSharedData {
 public:
-    Jid     to, from;
-    QString id, type, lang;
+    Jid           to, from;
+    QString       id, lang;
+    Message::Type type = Message::Type::Normal;
 
-    StringMap     subject, body;
-    QString       thread;
     bool          threadSend  = false;
     bool          pureSubject = false; // set during parsing is subject exists body doesn't
+    StringMap     subject, body;
+    QString       thread;
     Stanza::Error error;
 
     // extensions
@@ -789,7 +791,27 @@ Jid Message::from() const { return d ? d->from : Jid(); }
 QString Message::id() const { return d ? d->id : QString(); }
 
 //! \brief Return type information
-QString Message::type() const { return d ? d->type : QString(); }
+Message::Type Message::type() const { return d ? d->type : Type::Normal; }
+
+QString Message::typeStr() const
+{
+    if (d) {
+        switch (d->type) {
+        case Type::Chat:
+            return QStringLiteral("chat");
+        case Type::Error:
+            return QStringLiteral("error");
+        case Type::Groupchat:
+            return QStringLiteral("groupchat");
+        case Type::Headline:
+            return QStringLiteral("headline");
+        case Type::Normal:
+        default:
+            break;
+        }
+    }
+    return {};
+}
 
 QString Message::lang() const { return d ? d->lang : QString(); }
 
@@ -879,9 +901,9 @@ void Message::setId(const QString &s)
 //! \brief Set Type of message
 //!
 //! \param type - type of message your going to send
-void Message::setType(const QString &s)
+void Message::setType(Type type)
 {
-    MessageD()->type = s;
+    MessageD()->type = type;
     // d->flag = false;
 }
 
@@ -1133,7 +1155,8 @@ Stanza Message::toStanza(Stream *stream) const
     if (!d) {
         return Stanza();
     }
-    Stanza s = stream->createStanza(Stanza::Message, d->to, d->type);
+
+    Stanza s = stream->createStanza(Stanza::Message, d->to, typeStr());
     if (!d->from.isEmpty())
         s.setFrom(d->from);
     if (!d->id.isEmpty())
@@ -1169,7 +1192,7 @@ Stanza Message::toStanza(Stream *stream) const
         }
     }
 
-    if (d->type == "error")
+    if (d->type == Type::Error)
         s.setError(d->error);
 
     // thread
@@ -1440,8 +1463,20 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
     setTo(s.to());
     setFrom(s.from());
     setId(s.id());
-    setType(s.type());
     setLang(s.lang());
+
+    auto typeStr = s.type();
+    if (typeStr == "chat") {
+        setType(Type::Chat);
+    } else if (typeStr == "error") {
+        setType(Type::Error);
+    } else if (typeStr == "groupchat") {
+        setType(Type::Groupchat);
+    } else if (typeStr == "headline") {
+        setType(Type::Headline);
+    } else {
+        setType(Type::Normal); // everything unknown is normal by rfc6121
+    }
 
     d->subject.clear();
     d->body.clear();
