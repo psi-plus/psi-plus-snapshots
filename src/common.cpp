@@ -469,7 +469,7 @@ void clearMenu(QMenu *m)
 bool isKde()
 {
     return qgetenv("XDG_SESSION_DESKTOP") == "KDE" || qgetenv("DESKTOP_SESSION").endsWith("plasma")
-        || qgetenv("DESKTOP_SESSION").endsWith("plasma5");
+        || qgetenv("DESKTOP_SESSION").endsWith("plasma5") || qgetenv("DESKTOP_SESSION").endsWith("plasmawayland");
 }
 
 void bringToFront(QWidget *widget, bool)
@@ -481,6 +481,12 @@ void bringToFront(QWidget *widget, bool)
     X11WindowSystem::instance()->bringToFront(w);
 #endif
 
+    // dirty hack to bring window to front in wayland desktop session
+    if (qApp->platformName() == "wayland" && qApp->applicationState() & Qt::ApplicationInactive) {
+        w->setWindowFlags(w->windowFlags() | Qt::WindowStaysOnTopHint);
+        w->setWindowFlags(w->windowFlags() & ~Qt::WindowStaysOnTopHint);
+    }
+
     if (w->isMaximized()) {
         w->showMaximized();
     } else {
@@ -489,6 +495,7 @@ void bringToFront(QWidget *widget, bool)
 
     // if(grabFocus)
     //    w->setActiveWindow();
+
     w->raise();
     w->activateWindow();
 
