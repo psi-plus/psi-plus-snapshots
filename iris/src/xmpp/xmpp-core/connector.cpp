@@ -328,7 +328,9 @@ void AdvancedConnector::connectToServer(const QString &server)
 #endif
 
         connect(s, &BSocket::connected, this, [this, s]() {
-            setUseSSL(s->service() == QLatin1String(XMPP_CLIENT_TLS_SRV));
+            if (!useSSL()) {
+                setUseSSL(s->service() == QLatin1String(XMPP_CLIENT_TLS_SRV));
+            }
             bs_connected();
         });
         connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
