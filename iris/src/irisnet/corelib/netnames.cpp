@@ -27,6 +27,7 @@
 #include <QRandomGenerator>
 #endif
 #include <limits>
+#include <optional>
 
 #define NNDEBUG (qDebug() << this << "#" << __FUNCTION__ << ":")
 static std::optional<bool> enable_logs;
@@ -371,7 +372,8 @@ public:
 ServiceInstance::ServiceInstance() : d(new Private) { }
 
 ServiceInstance::ServiceInstance(const QString &instance, const QString &type, const QString &domain,
-                                 const QMap<QString, QByteArray> &attribs) : d(new Private)
+                                 const QMap<QString, QByteArray> &attribs) :
+    d(new Private)
 {
     d->instance = instance;
     d->type     = type;
@@ -1218,8 +1220,9 @@ void ServiceResolver::start(const QStringList &services, const QString &transpor
                 [this, resolver, stats, service](const QList<XMPP::NameRecord> &r) {
                     NNLOG(NNDEBUG << "sl:" << r);
                     QList<ServiceBoundRecord> sbr;
-                    std::transform(r.begin(), r.end(), std::back_inserter(sbr),
-                                   [service](auto const &r) { return ServiceBoundRecord { service, r }; });
+                    std::transform(r.begin(), r.end(), std::back_inserter(sbr), [service](auto const &r) {
+                        return ServiceBoundRecord { service, r };
+                    });
                     d->srvList << sbr;
                     stats->finishOne(true);
                     cleanup_resolver(resolver);

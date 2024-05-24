@@ -27,6 +27,8 @@
 #include <QTcpSocket>
 #include <QTimer>
 
+#include <optional>
+
 // #include <limits>  // if it's still needed please comment why
 
 #define BSDEBUG (qDebug() << this << "#" << __FUNCTION__ << ":")
