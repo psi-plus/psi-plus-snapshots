@@ -195,7 +195,7 @@ public:
         sd.resolver->setProtocol(XMPP::ServiceResolver::HappyEyeballs);
         connect(sd.resolver, &XMPP::ServiceResolver::srvReady, this, &HappyEyeballsConnector::splitSrvResolvers);
         // we don't care about special handling of fail. we have fallback host there anyway
-        connect(sd.resolver, &XMPP::ServiceResolver::error, this, &HappyEyeballsConnector::splitSrvResolvers);
+        connect(sd.resolver, &XMPP::ServiceResolver::srvFailed, this, &HappyEyeballsConnector::splitSrvResolvers);
         sd.state = Resolve;
         sd.resolver->start(services, transport, domain, port);
     }
@@ -459,6 +459,7 @@ void BSocket::ensureConnector()
 /* Connect to an already resolved host */
 void BSocket::connectToHost(const QHostAddress &address, quint16 port)
 {
+    BSLOG(BSDEBUG << address << port);
     resetConnection(true);
     d->address = address;
     d->port    = port;
@@ -471,6 +472,7 @@ void BSocket::connectToHost(const QHostAddress &address, quint16 port)
 /* Connect to a host via the specified protocol, or the default protocols if not specified */
 void BSocket::connectToHost(const QString &host, quint16 port, QAbstractSocket::NetworkLayerProtocol protocol)
 {
+    BSLOG(BSDEBUG << host << port << protocol);
     resetConnection(true);
     d->host  = host;
     d->port  = port;
@@ -483,6 +485,7 @@ void BSocket::connectToHost(const QString &host, quint16 port, QAbstractSocket::
 /* Connect to the hosts for the specified services */
 void BSocket::connectToHost(const QStringList &services, const QString &transport, const QString &domain, quint16 port)
 {
+    BSLOG(BSDEBUG << services << transport << domain << port);
     resetConnection(true);
     d->domain = domain;
     d->state  = Connecting;
