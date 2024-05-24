@@ -1176,7 +1176,7 @@ void ServiceResolver::start(const QString &host, quint16 port, const QString &se
 void ServiceResolver::start(const QStringList &services, const QString &transport, const QString &domain, int port)
 {
 #ifdef NETNAMES_DEBUG
-    NNDEBUG << "s:" << service << "t:" << transport << "d:" << domain << "p:" << port;
+    NNDEBUG << "s:" << services << "t:" << transport << "d:" << domain << "p:" << port;
 #endif
     /* clear SRV list */
     d->srvList.clear();
@@ -1254,7 +1254,7 @@ void ServiceResolver::start(const QStringList &services, const QString &transpor
 void ServiceResolver::handle_host_ready(const QString &service, const QList<XMPP::NameRecord> &rl)
 {
 #ifdef NETNAMES_DEBUG
-    NNDEBUG << "hl:" << r;
+    NNDEBUG << "hl:" << rl;
 #endif
 
     /* cleanup resolver */

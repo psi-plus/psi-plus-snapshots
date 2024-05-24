@@ -179,7 +179,7 @@ public:
     void connectToHost(const QStringList &services, const QString &transport, const QString &domain, quint16 port)
     {
 #ifdef BS_DEBUG
-        BSDEBUG << "s:" << service << "t:" << transport << "d:" << domain;
+        BSDEBUG << "s:" << services << "t:" << transport << "d:" << domain;
 #endif
         // this->service   = service;
         this->transport = transport;
