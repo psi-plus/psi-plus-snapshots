@@ -29,10 +29,19 @@
 
 // #include <limits>  // if it's still needed please comment why
 
-// #define BS_DEBUG
-#ifdef BS_DEBUG
 #define BSDEBUG (qDebug() << this << "#" << __FUNCTION__ << ":")
-#endif
+static std::optional<bool> enable_logs;
+#define BSLOG(msg)                                                                                                     \
+    {                                                                                                                  \
+        if (!enable_logs.has_value()) {                                                                                \
+            enable_logs = qgetenv("BS_DEBUG") == "1";                                                                  \
+        }                                                                                                              \
+        if (*enable_logs) {                                                                                            \
+            msg;                                                                                                       \
+        }                                                                                                              \
+    }                                                                                                                  \
+    while (false)                                                                                                      \
+        ;
 
 #define READBUFSIZE 65536
 
@@ -133,9 +142,7 @@ public:
 
     void connectToHost(const QHostAddress &address, quint16 port)
     {
-#ifdef BS_DEBUG
-        BSDEBUG << "a:" << address << "p:" << port;
-#endif
+        BSLOG(BSDEBUG << "a:" << address << "p:" << port);
         this->address = address;
         SockData &sd  = addSocket();
         sd.state      = Connecting;
@@ -145,9 +152,7 @@ public:
     /* Connect to a host via the specified protocol, or the default protocols if not specified */
     void connectToHost(const QString &host, quint16 port, QAbstractSocket::NetworkLayerProtocol protocol)
     {
-#ifdef BS_DEBUG
-        BSDEBUG << "h:" << host << "p:" << port << "pr:" << protocol;
-#endif
+        BSLOG(BSDEBUG << "h:" << host << "p:" << port << "pr:" << protocol);
         this->domain = host;
         this->port   = port;
         SockData &sd = addSocket();
@@ -178,9 +183,7 @@ public:
 
     void connectToHost(const QStringList &services, const QString &transport, const QString &domain, quint16 port)
     {
-#ifdef BS_DEBUG
-        BSDEBUG << "s:" << services << "t:" << transport << "d:" << domain;
-#endif
+        BSLOG(BSDEBUG << "s:" << services << "t:" << transport << "d:" << domain);
         // this->service   = service;
         this->transport = transport;
         this->domain    = domain;
@@ -259,9 +262,7 @@ private slots:
     */
     void qs_connected()
     {
-#ifdef BS_DEBUG
-        BSDEBUG;
-#endif
+        BSLOG(BSDEBUG);
         QPointer<HappyEyeballsConnector> valid(this);
         setCurrentByRelay(static_cast<QTcpSocketSignalRelay *>(sender()));
         for (int i = 0; i < sockets.count(); i++) {
@@ -282,9 +283,8 @@ private slots:
         setCurrentByRelay(static_cast<QTcpSocketSignalRelay *>(sender()));
         // TODO remember error code
         lastError = sockets[lastIndex].sock->errorString();
-#ifdef BS_DEBUG
-        BSDEBUG << "error:" << lastError;
-#endif
+        BSLOG(BSDEBUG << "error:" << lastError);
+
         if (sockets[lastIndex].resolver) {
             sockets[lastIndex].sock->abort();
             sockets[lastIndex].state = Resolve;
@@ -297,9 +297,7 @@ private slots:
 
     void splitSrvResolvers()
     {
-#ifdef BS_DEBUG
-        BSDEBUG << "splitting resolvers";
-#endif
+        BSLOG(BSDEBUG << "splitting resolvers");
         setCurrentByResolver(static_cast<XMPP::ServiceResolver *>(sender()));
         Q_ASSERT(lastIndex >= 0);
 
@@ -331,9 +329,7 @@ private slots:
     /* host resolved, now try to connect to it */
     void handleDnsReady(const QHostAddress &address, quint16 port, const QString &hostname, const QString &service)
     {
-#ifdef BS_DEBUG
-        BSDEBUG << "a:" << address << "p:" << port;
-#endif
+        BSLOG(BSDEBUG << "a:" << address << "p:" << port);
         setCurrentByResolver(static_cast<XMPP::ServiceResolver *>(sender()));
         sockets[lastIndex].state    = Connecting;
         sockets[lastIndex].hostname = hostname;
@@ -344,11 +340,7 @@ private slots:
     /* resolver failed the dns lookup */
     void handleDnsError(XMPP::ServiceResolver::Error e)
     {
-#ifdef BS_DEBUG
-        BSDEBUG << "e:" << e;
-#else
-        Q_UNUSED(e)
-#endif
+        BSLOG(BSDEBUG << "e:" << e);
         if (!fallbackTimer.isActive()) {
             emit error(QAbstractSocket::HostNotFoundError);
         }
@@ -356,9 +348,7 @@ private slots:
 
     void startFallback()
     {
-#ifdef BS_DEBUG
-        BSDEBUG;
-#endif
+        BSLOG(BSDEBUG);
         for (int i = 0; i < sockets.count(); i++) {
             SockData &sd = sockets[i];
             if (sd.state == Created) {
@@ -417,9 +407,7 @@ BSocket::~BSocket()
 
 void BSocket::resetConnection(bool clear)
 {
-#ifdef BS_DEBUG
-    BSDEBUG << clear;
-#endif
+    BSLOG(BSDEBUG << clear);
     if (d->connector) {
         d->connector->deleteLater();
         disconnect(d->connector);
@@ -554,9 +542,7 @@ qint64 BSocket::writeData(const char *data, qint64 maxSize)
 {
     if (d->state != Connected)
         return 0;
-#ifdef BS_DEBUG_EXTRA
-    BSDEBUG << "- [" << maxSize << "]: {" << QByteArray::fromRawData(data, maxSize) << "}";
-#endif
+    BSLOG(BSDEBUG << "- [" << maxSize << "]: {" << QByteArray::fromRawData(data, maxSize) << "}");
     return d->qsock->write(data, maxSize);
 }
 
@@ -576,9 +562,7 @@ qint64 BSocket::readData(char *data, qint64 maxSize)
         readSize = ByteStream::readData(data, maxSize);
     }
 
-#ifdef BS_DEBUG_EXTRA
-    BSDEBUG << "- [" << readSize << "]: {" << QByteArray::fromRawData(data, readSize) << "}";
-#endif
+    BSLOG(BSDEBUG << "- [" << readSize << "]: {" << QByteArray::fromRawData(data, readSize) << "}");
     return readSize;
 }
 
@@ -651,9 +635,7 @@ void BSocket::qs_connected_step2(bool signalConnected)
 
     setOpenMode(QIODevice::ReadWrite);
     d->state = Connected;
-#ifdef BS_DEBUG
-    BSDEBUG << "Connected";
-#endif
+    BSLOG(BSDEBUG << "Connected");
     QPointer<BSocket> valid(this);
     if (signalConnected) {
         emit connected();
@@ -667,9 +649,7 @@ void BSocket::qs_connected_step2(bool signalConnected)
 void BSocket::qs_closed()
 {
     if (d->state == Closing) {
-#ifdef BS_DEBUG
-        BSDEBUG << "Delayed Close Finished";
-#endif
+        BSLOG(BSDEBUG << "Delayed Close Finished");
         resetConnection();
         emit delayedCloseFinished();
     }
@@ -679,26 +659,20 @@ void BSocket::qs_readyRead() { emit readyRead(); }
 
 void BSocket::qs_bytesWritten(qint64 x64)
 {
-#ifdef BS_DEBUG_EXTRA
-    BSDEBUG << "BytesWritten [" << x64 << "]";
-#endif
+    BSLOG(BSDEBUG << "BytesWritten [" << x64 << "]");
     emit bytesWritten(x64);
 }
 
 void BSocket::qs_error(QAbstractSocket::SocketError x)
 {
     if (x == QTcpSocket::RemoteHostClosedError) {
-#ifdef BS_DEBUG
-        BSDEBUG << "Connection Closed";
-#endif
+        BSLOG(BSDEBUG << "Connection Closed");
         resetConnection();
         emit connectionClosed();
         return;
     }
 
-#ifdef BS_DEBUG
-    BSDEBUG << "Error";
-#endif
+    BSLOG(BSDEBUG << "Error");
     resetConnection();
     if (x == QTcpSocket::ConnectionRefusedError)
         emit error(ErrConnectionRefused);

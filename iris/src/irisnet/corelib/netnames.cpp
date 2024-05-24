@@ -28,10 +28,19 @@
 #endif
 #include <limits>
 
-// #define NETNAMES_DEBUG
-#ifdef NETNAMES_DEBUG
 #define NNDEBUG (qDebug() << this << "#" << __FUNCTION__ << ":")
-#endif
+static std::optional<bool> enable_logs;
+#define NNLOG(msg)                                                                                                     \
+    {                                                                                                                  \
+        if (!enable_logs.has_value()) {                                                                                \
+            enable_logs = qgetenv("NN_DEBUG") == "1";                                                                  \
+        }                                                                                                              \
+        if (*enable_logs) {                                                                                            \
+            msg;                                                                                                       \
+        }                                                                                                              \
+    }                                                                                                                  \
+    while (false)                                                                                                      \
+        ;
 
 namespace XMPP {
 //----------------------------------------------------------------------------
@@ -482,9 +491,7 @@ ServiceBoundRecord WeightedNameRecordList::takeNext()
     }
     /* There are no priority groups left, return failure */
     if (currentPriorityGroup == priorityGroups.end()) {
-#ifdef NETNAMES_DEBUG
-        NNDEBUG << "No more SRV records left";
-#endif
+        NNLOG(NNDEBUG << "No more SRV records left");
         return {};
     }
 
@@ -494,16 +501,12 @@ ServiceBoundRecord WeightedNameRecordList::takeNext()
         totalWeight += record.record.weight();
     }
 
-#ifdef NETNAMES_DEBUG
-    NNDEBUG << "Total weight:" << totalWeight;
-#endif
+    NNLOG(NNDEBUG << "Total weight:" << totalWeight);
 
     /* Pick a random entry */
     int randomWeight = totalWeight ? QRandomGenerator::global()->bounded(totalWeight) : 0;
 
-#ifdef NETNAMES_DEBUG
-    NNDEBUG << "Picked weight:" << randomWeight;
-#endif
+    NNLOG(NNDEBUG << "Picked weight:" << randomWeight);
 
     /* Iterate through the priority group until we found the randomly selected entry */
     WeightedNameRecordPriorityGroup::iterator it(currentPriorityGroup->second.begin());
@@ -514,9 +517,7 @@ ServiceBoundRecord WeightedNameRecordList::takeNext()
     /* We are going to delete the entry in the list, so save it */
     auto result { *it };
 
-#ifdef NETNAMES_DEBUG
-    NNDEBUG << "Picked record:" << result;
-#endif
+    NNLOG(NNDEBUG << "Picked record:" << result);
 
     /* Delete the entry from list, to prevent it from being tried multiple times */
     currentPriorityGroup->second.remove(it->record.weight(), *it);
@@ -1093,9 +1094,7 @@ void ServiceBrowser::stop() { }
 //----------------------------------------------------------------------------
 ServiceResolver::ServiceResolver(QObject *parent) : QObject(parent)
 {
-#ifdef NETNAMES_DEBUG
-    NNDEBUG;
-#endif
+    NNLOG(NNDEBUG);
 
     d = new Private(this);
 }
@@ -1104,9 +1103,7 @@ ServiceResolver::~ServiceResolver() { delete d; }
 
 void ServiceResolver::clear_resolvers()
 {
-#ifdef NETNAMES_DEBUG
-    NNDEBUG;
-#endif
+    NNLOG(NNDEBUG);
 
     /* cleanup all resolvers */
     for (XMPP::NameResolver *resolver : std::as_const(d->resolverList)) {
@@ -1116,9 +1113,7 @@ void ServiceResolver::clear_resolvers()
 
 void ServiceResolver::cleanup_resolver(XMPP::NameResolver *resolver)
 {
-#ifdef NETNAMES_DEBUG
-    NNDEBUG << "r:" << resolver;
-#endif
+    NNLOG(NNDEBUG << "r:" << resolver);
 
     if (resolver) {
         /*
@@ -1144,9 +1139,7 @@ void ServiceResolver::start(const QByteArray &name) { NameManager::instance()->r
 /* normal host lookup */
 void ServiceResolver::start(const QString &host, quint16 port, const QString &service)
 {
-#ifdef NETNAMES_DEBUG
-    NNDEBUG << "h:" << host << "p:" << port;
-#endif
+    NNLOG(NNDEBUG << "h:" << host << "p:" << port);
 
     /* clear host list */
     d->hostList.clear();
@@ -1156,9 +1149,7 @@ void ServiceResolver::start(const QString &host, quint16 port, const QString &se
     d->host     = host;
     d->port     = port;
 
-#ifdef NETNAMES_DEBUG
-    NNDEBUG << "d->p:" << d->protocol;
-#endif
+    NNLOG(NNDEBUG << "d->p:" << d->protocol);
 
     /* initiate the host lookup */
     XMPP::NameRecord::Type querytype
@@ -1175,9 +1166,7 @@ void ServiceResolver::start(const QString &host, quint16 port, const QString &se
 /* SRV lookup */
 void ServiceResolver::start(const QStringList &services, const QString &transport, const QString &domain, int port)
 {
-#ifdef NETNAMES_DEBUG
-    NNDEBUG << "s:" << services << "t:" << transport << "d:" << domain << "p:" << port;
-#endif
+    NNLOG(NNDEBUG << "s:" << services << "t:" << transport << "d:" << domain << "p:" << port);
     /* clear SRV list */
     d->srvList.clear();
     d->domain = domain;
@@ -1207,9 +1196,11 @@ void ServiceResolver::start(const QStringList &services, const QString &transpor
     auto stats = std::make_shared<SrvStats>(
         [this](bool success) {
             if (success) {
+                NNLOG(NNDEBUG << "emit srvReady");
                 emit srvReady();
             } else {
                 /* srvList already contains a failsafe host, try that */
+                NNLOG(NNDEBUG << "emit srvFailed");
                 emit srvFailed();
             }
             if (d->requestedProtocol != HappyEyeballs) {
@@ -1225,9 +1216,7 @@ void ServiceResolver::start(const QStringList &services, const QString &transpor
         auto resolver = new XMPP::NameResolver;
         connect(resolver, &XMPP::NameResolver::resultsReady, this,
                 [this, resolver, stats, service](const QList<XMPP::NameRecord> &r) {
-#ifdef NETNAMES_DEBUG
-                    NNDEBUG << "sl:" << r;
-#endif
+                    NNLOG(NNDEBUG << "sl:" << r);
                     QList<ServiceBoundRecord> sbr;
                     std::transform(r.begin(), r.end(), std::back_inserter(sbr),
                                    [service](auto const &r) { return ServiceBoundRecord { service, r }; });
@@ -1236,12 +1225,8 @@ void ServiceResolver::start(const QStringList &services, const QString &transpor
                     cleanup_resolver(resolver);
                 });
         connect(resolver, &XMPP::NameResolver::error, this, [this, resolver, stats](XMPP::NameResolver::Error e) {
-        /* failed the srv lookup, but we might have a fallback host in the srvList */
-#ifdef NETNAMES_DEBUG
-            NNDEBUG << "e:" << e;
-#else
-            Q_UNUSED(e)
-#endif
+            /* failed the srv lookup, but we might have a fallback host in the srvList */
+            NNLOG(NNDEBUG << "e:" << e);
             stats->finishOne(false);
             cleanup_resolver(resolver);
         });
@@ -1253,9 +1238,7 @@ void ServiceResolver::start(const QStringList &services, const QString &transpor
 /* hosts resolved, now try to connect to them */
 void ServiceResolver::handle_host_ready(const QString &service, const QList<XMPP::NameRecord> &rl)
 {
-#ifdef NETNAMES_DEBUG
-    NNDEBUG << "hl:" << rl;
-#endif
+    NNLOG(NNDEBUG << "hl:" << rl);
 
     /* cleanup resolver */
     cleanup_resolver(static_cast<XMPP::NameResolver *>(sender()));
@@ -1270,9 +1253,7 @@ void ServiceResolver::handle_host_ready(const QString &service, const QList<XMPP
 /* failed to lookup the primary record (A or AAAA, depending on user choice) */
 void ServiceResolver::handle_host_error(XMPP::NameResolver::Error e)
 {
-#ifdef NETNAMES_DEBUG
-    NNDEBUG << "e:" << e;
-#endif
+    NNLOG(NNDEBUG << "e:" << e);
 
     /* cleanup resolver */
     cleanup_resolver(static_cast<XMPP::NameResolver *>(sender()));
@@ -1287,11 +1268,7 @@ void ServiceResolver::handle_host_error(XMPP::NameResolver::Error e)
 /* failed to lookup the fallback record (A or AAAA, depending on user choice) */
 void ServiceResolver::handle_host_fallback_error(XMPP::NameResolver::Error e)
 {
-#ifdef NETNAMES_DEBUG
-    NNDEBUG << "e:" << e;
-#else
-    Q_UNUSED(e)
-#endif
+    NNLOG(NNDEBUG << "e:" << e);
 
     /* cleanup resolver */
     cleanup_resolver(static_cast<XMPP::NameResolver *>(sender()));
@@ -1310,9 +1287,7 @@ bool ServiceResolver::check_protocol_fallback()
 /* lookup the fallback host */
 bool ServiceResolver::lookup_host_fallback()
 {
-#ifdef NETNAMES_DEBUG
-    NNDEBUG;
-#endif
+    NNLOG(NNDEBUG);
 
     /* if a fallback is desired, otherwise we must fail immediately */
     if (!check_protocol_fallback()) {
@@ -1322,9 +1297,7 @@ bool ServiceResolver::lookup_host_fallback()
     d->protocol = (d->protocol == QAbstractSocket::IPv6Protocol ? QAbstractSocket::IPv4Protocol
                                                                 : QAbstractSocket::IPv6Protocol);
 
-#ifdef NETNAMES_DEBUG
-    NNDEBUG << "d->p:" << d->protocol;
-#endif
+    NNLOG(NNDEBUG << "d->p:" << d->protocol);
 
     /* initiate the fallback host lookup */
     XMPP::NameRecord::Type querytype
@@ -1343,9 +1316,7 @@ bool ServiceResolver::lookup_host_fallback()
 /* notify user about next host */
 bool ServiceResolver::try_next_host()
 {
-#ifdef NETNAMES_DEBUG
-    NNDEBUG << "hl:" << d->hostList;
-#endif
+    NNLOG(NNDEBUG << "hl:" << d->hostList);
 
     /* if there is a host left for current protocol (AAAA or A) */
     if (!d->hostList.empty()) {
@@ -1362,9 +1333,7 @@ bool ServiceResolver::try_next_host()
 /* lookup the next SRV record in line */
 void ServiceResolver::try_next_srv()
 {
-#ifdef NETNAMES_DEBUG
-    NNDEBUG << "sl:" << d->srvList;
-#endif
+    NNLOG(NNDEBUG << "sl:" << d->srvList);
 
     /* if there are still hosts we did not try */
     auto record = d->srvList.takeNext();
@@ -1372,9 +1341,7 @@ void ServiceResolver::try_next_srv()
         /* lookup host by name and specify port for later use */
         start(record.record.name(), quint16(record.record.port()), record.service);
     } else {
-#ifdef NETNAMES_DEBUG
-        NNDEBUG << "SRV list empty, failing";
-#endif
+        NNLOG(NNDEBUG << "SRV list empty, failing");
         /* no more SRV hosts to try, fail */
         emit error(NoHostLeft);
     }
