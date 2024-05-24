@@ -76,7 +76,6 @@ public:
     quint16      peerPort() const;
 
     virtual QString host() const;
-
 signals:
     void connected();
     void error();
@@ -85,6 +84,7 @@ protected:
     void setUseSSL(bool b);
     void setPeerAddressNone();
     void setPeerAddress(const QHostAddress &addr, quint16 port);
+    void setRequireDirectTLS(bool require);
 
 private:
     bool         ssl; // a flag to start ssl handshake immediately

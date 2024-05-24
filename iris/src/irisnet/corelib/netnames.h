@@ -501,36 +501,47 @@ private:
 
 IRISNET_EXPORT QDebug operator<<(QDebug, XMPP::NameResolver::Error);
 
+struct ServiceBoundRecord {
+    QString    service;
+    NameRecord record;
+
+    bool operator==(const ServiceBoundRecord &other) const
+    {
+        return service == other.service && record == other.record;
+    };
+};
+
 class IRISNET_EXPORT WeightedNameRecordList {
     friend QDebug operator<<(QDebug, const WeightedNameRecordList &);
 
 public:
     WeightedNameRecordList();
-    WeightedNameRecordList(const QList<NameRecord> &list);
+    WeightedNameRecordList(const QList<ServiceBoundRecord> &list);
     WeightedNameRecordList(const WeightedNameRecordList &other);
     WeightedNameRecordList &operator=(const WeightedNameRecordList &other);
     ~WeightedNameRecordList();
-    bool       isEmpty() const; //!< Returns true if the list contains no items; otherwise returns false.
-    NameRecord takeNext();      //!< Removes the next host to try from the list and returns it.
+    bool               isEmpty() const; //!< Returns true if the list contains no items; otherwise returns false.
+    ServiceBoundRecord takeNext();      //!< Removes the next host to try from the list and returns it.
 
     void clear(); //!< Removes all items from the list.
     void append(const WeightedNameRecordList &);
-    void append(const QList<NameRecord> &);
-    void append(const NameRecord &);
+    void append(const QList<ServiceBoundRecord> &);
+    void append(const ServiceBoundRecord &);
     void append(const QString &hostname, quint16 port);
 
     WeightedNameRecordList &operator<<(const WeightedNameRecordList &);
-    WeightedNameRecordList &operator<<(const QList<NameRecord> &);
-    WeightedNameRecordList &operator<<(const NameRecord &);
+    WeightedNameRecordList &operator<<(const QList<ServiceBoundRecord> &);
+    WeightedNameRecordList &operator<<(const ServiceBoundRecord &);
 
 private:
-    typedef QMultiMap<int /* weight */, NameRecord>                       WeightedNameRecordPriorityGroup;
+    typedef QMultiMap<int /* weight */, ServiceBoundRecord>               WeightedNameRecordPriorityGroup;
     typedef std::map<int /* priority */, WeightedNameRecordPriorityGroup> WNRL;
 
     WNRL           priorityGroups;
     WNRL::iterator currentPriorityGroup;
 };
 
+QDebug operator<<(QDebug, const ServiceBoundRecord &);
 QDebug operator<<(QDebug, const XMPP::WeightedNameRecordList &);
 
 class IRISNET_EXPORT ServiceBrowser : public QObject {
@@ -620,15 +631,15 @@ public:
      * \param host Hostname to lookup
      * \param port Port to signal via resultReady (for convenience)
      */
-    void start(const QString &host, quint16 port);
+    void start(const QString &host, quint16 port, const QString &service = {});
     /*!
      * Start an indirect (SRV) lookup for the service
-     * \param service Service type, like "ssh" or "ftp"
+     * \param services List of services considered to be the same type, like "ssh" or "ftp"
      * \param transport IP transport, like "tcp" or "udp"
      * \param domain Domainname to lookup
      * \param port Specify a valid port number to make ServiceResolver fallback to domain:port
      */
-    void start(const QString &service, const QString &transport, const QString &domain,
+    void start(const QStringList &services, const QString &transport, const QString &domain,
                int port = std::numeric_limits<int>::max());
 
     /*! Announce the next resolved host, \sa resultReady */
@@ -651,7 +662,7 @@ signals:
      * \param port Port the service resides on
      * \param hostname Hostname form DNS reply with address:port
      */
-    void resultReady(const QHostAddress &address, quint16 port, const QString &hostname);
+    void resultReady(const QHostAddress &address, quint16 port, const QString &hostname, const QString &service);
     /*! The lookup failed */
     void error(XMPP::ServiceResolver::Error);
     /*! SRV domain:port records received. No IP yet. */
@@ -659,9 +670,7 @@ signals:
     void srvFailed();
 
 private slots:
-    void handle_srv_ready(const QList<XMPP::NameRecord> &);
-    void handle_srv_error(XMPP::NameResolver::Error);
-    void handle_host_ready(const QList<XMPP::NameRecord> &);
+    void handle_host_ready(const QString &service, const QList<XMPP::NameRecord> &);
     void handle_host_error(XMPP::NameResolver::Error);
     void handle_host_fallback_error(XMPP::NameResolver::Error);
 

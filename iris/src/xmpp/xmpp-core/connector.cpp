@@ -51,6 +51,7 @@ using namespace XMPP;
 static const int   XMPP_DEFAULT_PORT     = 5222;
 static const int   XMPP_LEGACY_PORT      = 5223;
 static const char *XMPP_CLIENT_SRV       = "xmpp-client";
+static const char *XMPP_CLIENT_TLS_SRV   = "xmpps-client";
 static const char *XMPP_CLIENT_TRANSPORT = "tcp";
 
 //----------------------------------------------------------------------------
@@ -326,7 +327,10 @@ void AdvancedConnector::connectToServer(const QString &server)
         XDEBUG << "Adding socket:" << s;
 #endif
 
-        connect(s, SIGNAL(connected()), SLOT(bs_connected()));
+        connect(s, &BSocket::connected, this, [this, s]() {
+            setUseSSL(s->service() == QLatin1String(XMPP_CLIENT_TLS_SRV));
+            bs_connected();
+        });
         connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
 
         if (!d->opt_host.isEmpty()) { /* if custom host:port */
@@ -337,8 +341,8 @@ void AdvancedConnector::connectToServer(const QString &server)
         } else if (d->opt_ssl != Never) { /* if ssl forced or should be probed */
             d->port = XMPP_LEGACY_PORT;
         }
-
-        s->connectToHost(XMPP_CLIENT_SRV, XMPP_CLIENT_TRANSPORT, d->host, quint16(d->port));
+        QStringList services = { XMPP_CLIENT_SRV, XMPP_CLIENT_TLS_SRV };
+        s->connectToHost(services, XMPP_CLIENT_TRANSPORT, d->host, quint16(d->port));
     }
 }
 
