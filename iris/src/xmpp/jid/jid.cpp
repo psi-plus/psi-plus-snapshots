@@ -307,6 +307,9 @@ void Jid::setNode(const QString &s)
 
 void Jid::setResource(const QString &s)
 {
+    if (r == s) {
+        return;
+    }
     if (!valid)
         return;
     QString norm;

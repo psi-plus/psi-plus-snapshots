@@ -29,6 +29,8 @@
 #include <QString>
 #include <QStringList>
 
+#include <optional>
+
 namespace XMPP {
 class DiscoItem;
 class StatusPrivate;
@@ -132,9 +134,8 @@ public:
     void setSongTitle(const QString &);
 
     // XEP-0153: vCard-Based Avatars
-    const QByteArray &photoHash() const;
-    void              setPhotoHash(const QByteArray &);
-    bool              hasPhotoHash() const;
+    const std::optional<QByteArray> &photoHash() const;
+    void                             setPhotoHash(const QByteArray &);
 
     // XEP-0231 bits of binary
     void           addBoBData(const BoBData &);

@@ -79,6 +79,12 @@ public:
         int  code() const;
         bool fromCode(int code);
 
+        inline bool isCancel() const { return type == ErrorType::Cancel; }
+        inline bool isContinue() const { return type == ErrorType::Continue; }
+        inline bool isModify() const { return type == ErrorType::Modify; }
+        inline bool isAuth() const { return type == ErrorType::Auth; }
+        inline bool isWait() const { return type == ErrorType::Wait; }
+
         QPair<QString, QString> description() const;
         QString                 toString() const;
 

@@ -2067,13 +2067,13 @@ class StatusPrivate : public QSharedData {
 public:
     StatusPrivate() = default;
 
-    int        priority = 0;
-    QString    show, status, key;
-    QDateTime  timeStamp;
-    bool       isAvailable = false;
-    bool       isInvisible = false;
-    QByteArray photoHash;
-    bool       hasPhotoHash = false;
+    int       priority = 0;
+    QString   show, status, key;
+    QDateTime timeStamp;
+    bool      isAvailable = false;
+    bool      isInvisible = false;
+
+    std::optional<QByteArray> photoHash;
 
     QString xsigned;
     // gabber song extension
@@ -2230,15 +2230,9 @@ void Status::setMUCHistory(int maxchars, int maxstanzas, int seconds, const QDat
     d->mucHistorySince      = since;
 }
 
-const QByteArray &Status::photoHash() const { return d->photoHash; }
+const std::optional<QByteArray> &Status::photoHash() const { return d->photoHash; }
 
-void Status::setPhotoHash(const QByteArray &h)
-{
-    d->photoHash    = h;
-    d->hasPhotoHash = true;
-}
-
-bool Status::hasPhotoHash() const { return d->hasPhotoHash; }
+void Status::setPhotoHash(const QByteArray &h) { d->photoHash = h; }
 
 void Status::addBoBData(const BoBData &bob) { d->bobDataList.append(bob); }
 

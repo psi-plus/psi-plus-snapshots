@@ -610,9 +610,9 @@ void JT_Presence::pres(const Status &s)
             tag.appendChild(m);
         }
 
-        if (s.hasPhotoHash()) {
+        if (s.photoHash().has_value()) {
             QDomElement m = doc()->createElementNS("vcard-temp:x:update", "x");
-            m.appendChild(textTag(doc(), "photo", QString::fromLatin1(s.photoHash().toHex())));
+            m.appendChild(textTag(doc(), "photo", QString::fromLatin1(s.photoHash()->toHex())));
             tag.appendChild(m);
         }
 
@@ -751,7 +751,7 @@ bool JT_PushPresence::take(const QDomElement &e)
             if (!t.isNull())
                 p.setPhotoHash(
                     QByteArray::fromHex(tagContent(t).toLatin1())); // if hash is empty this may mean photo removal
-            // else vcard.hasPhotoHash() returns false and that's mean user is not yet ready to advertise his image
+            // else vcard.photoHash() returns false and that's mean user is not yet ready to advertise his image
         } else if (i.tagName() == "x" && i.namespaceURI() == "http://jabber.org/protocol/muc#user") {
             for (QDomElement muc_e = i.firstChildElement(); !muc_e.isNull(); muc_e = muc_e.nextSiblingElement()) {
                 if (muc_e.tagName() == "item")

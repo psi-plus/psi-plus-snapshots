@@ -335,6 +335,7 @@ void AdvancedConnector::connectToServer(const QString &server)
         });
         connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
 
+        QStringList services = { XMPP_CLIENT_SRV };
         if (!d->opt_host.isEmpty()) { /* if custom host:port */
             d->host = d->opt_host;
             d->port = d->opt_port;
@@ -342,8 +343,8 @@ void AdvancedConnector::connectToServer(const QString &server)
             return;
         } else if (d->opt_ssl != Never) { /* if ssl forced or should be probed */
             d->port = XMPP_LEGACY_PORT;
+            services << XMPP_CLIENT_TLS_SRV;
         }
-        QStringList services = { XMPP_CLIENT_SRV, XMPP_CLIENT_TLS_SRV };
         s->connectToHost(services, XMPP_CLIENT_TRANSPORT, d->host, quint16(d->port));
     }
 }
