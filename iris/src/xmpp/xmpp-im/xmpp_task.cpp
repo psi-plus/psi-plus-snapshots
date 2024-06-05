@@ -268,7 +268,7 @@ bool Task::iqVerify(const QDomElement &x, const Jid &to, const QString &id, cons
     // empty 'from' ?
     if (from.isEmpty()) {
         // allowed if we are querying the server
-        if (!to.isEmpty() && !to.compare(server))
+        if (!to.isEmpty() && !to.compare(local, false) && !to.compare(server))
             return false;
     }
     // from ourself?
