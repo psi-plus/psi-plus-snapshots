@@ -250,7 +250,7 @@ ExternalServiceDiscovery::ExternalServiceDiscovery(Client *client) : client_(cli
 
 bool ExternalServiceDiscovery::isSupported() const
 {
-    return client_->serverInfoManager()->features().test("urn:xmpp:extdisco:2");
+    return client_->serverInfoManager()->server_features().test("urn:xmpp:extdisco:2");
 }
 
 void ExternalServiceDiscovery::services(QObject *ctx, ServicesCallback &&callback, std::chrono::minutes minTtl,

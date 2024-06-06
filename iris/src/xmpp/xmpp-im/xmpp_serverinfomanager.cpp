@@ -266,12 +266,12 @@ void ServerInfoManager::server_disco_finished()
 {
     JT_DiscoInfo *jt = static_cast<JT_DiscoInfo *>(sender());
     if (jt->success()) {
-        _features = jt->item().features();
+        _server_features = jt->item().features();
 
-        if (_features.hasMulticast())
+        if (_server_features.hasMulticast())
             _multicastService = _client->jid().domain();
 
-        _canMessageCarbons = _features.hasMessageCarbons();
+        _canMessageCarbons = _server_features.hasMessageCarbons();
 
         auto servInfo
             = jt->item().findExtension(XData::Data_Result, QLatin1String("http://jabber.org/network/serverinfo"));
@@ -297,6 +297,7 @@ void ServerInfoManager::account_disco_finished()
             if (i.category == "pubsub" && i.type == "pep")
                 _hasPEP = true;
         }
+        _account_features = jt->item().features();
 
         emit featuresChanged();
     }

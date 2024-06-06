@@ -59,6 +59,7 @@ public:
     bool        hasCaps() const;
     bool        hasCapsOptimize() const;
     bool        hasDirectMucInvite() const;
+    bool        hasAvatarConversion() const;
 
     [[deprecated]] inline bool canRegister() const { return hasRegister(); }
     [[deprecated]] inline bool canSearch() const { return hasSearch(); }

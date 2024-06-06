@@ -214,6 +214,12 @@ bool Features::hasCapsOptimize() const { return test(QStringList() << QLatin1Str
 #define NS_DIRECT_MUC_INVITE "jabber:x:conference"
 bool Features::hasDirectMucInvite() const { return test(QStringList() << QLatin1String(NS_DIRECT_MUC_INVITE)); }
 
+#define FID_AVATAR_TO_VCARD_CONVERSION "urn:xmpp:pep-vcard-conversion:0"
+bool Features::hasAvatarConversion() const
+{
+    return test(QStringList() << QLatin1String(FID_AVATAR_TO_VCARD_CONVERSION));
+}
+
 // custom Psi actions
 #define FID_ADD "psi:add"
 
