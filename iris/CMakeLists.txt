@@ -37,7 +37,7 @@ include(policyRules)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 
 # Detect MXE cross-compilation
 set(IRIS_DEFAULT_BUNDLED_USRSCTP OFF)
@@ -68,8 +68,6 @@ option(IRIS_BUILD_TOOLS "Build tools and examples" OFF)
 option(IRIS_ENABLE_DEBUG "Enable debugging code paths" OFF)
 
 set(IRIS_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_INCLUDEDIR}/xmpp/iris)
-
-set(CMAKE_CXX_STANDARD 17)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo"))
     include(debug-definitions)

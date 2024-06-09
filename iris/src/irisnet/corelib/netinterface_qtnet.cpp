@@ -51,7 +51,7 @@ public:
         notifier = new QSocketNotifier(netlinkFd, QSocketNotifier::Read, this);
 
         connect(notifier, &QSocketNotifier::activated, this,
-                [=](QSocketDescriptor, QSocketNotifier::Type) { emit changed(); });
+                [this](QSocketDescriptor, QSocketNotifier::Type) { emit changed(); });
     }
 
     ~InterfaceMonitor()

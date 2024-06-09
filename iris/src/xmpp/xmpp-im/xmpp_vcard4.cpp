@@ -80,7 +80,7 @@ namespace {
                     }
                     auto doc  = parent.ownerDocument();
                     auto bday = parent.appendChild(doc.createElement(QLatin1String(tagName))).toElement();
-                    historical.first.addTo(bday);
+                    historical.parameters.addTo(bday);
                     using Tv = std::decay_t<decltype(v)>;
                     if constexpr (std::is_same_v<Tv, QString>) {
                         VCardHelper::addTextElement(doc, bday, QLatin1String("text"), QStringList { v });
@@ -95,7 +95,7 @@ namespace {
                                                     QStringList { v.toString(Qt::ISODate) });
                     }
                 },
-                historical.second);
+                historical.data);
         }
 
         template <typename ListType>
@@ -113,17 +113,17 @@ namespace {
         }
 
         template <typename T>
-        static void serializeList(QDomElement &parent, const QList<std::pair<Parameters, T>> &list,
-                                  const QString &tagName, const QString &innerTagName = QLatin1String("text"))
+        static void serializeList(QDomElement &parent, const TaggedList<T> &list, const QString &tagName,
+                                  const QString &innerTagName = QLatin1String("text"))
         {
             auto document = parent.ownerDocument();
             for (const auto &entry : list) {
                 QDomElement element = document.createElement(tagName);
-                entry.first.addTo(element);
+                entry.parameters.addTo(element);
                 if constexpr (std::is_same_v<T, QString>) {
-                    addTextElement(document, element, QLatin1String("text"), QStringList { entry.second });
+                    addTextElement(document, element, QLatin1String("text"), QStringList { entry.data });
                 } else if constexpr (std::is_same_v<T, QUrl> || std::is_same_v<T, UriValue>) {
-                    addTextElement(document, element, QLatin1String("uri"), QStringList { entry.second.toString() });
+                    addTextElement(document, element, QLatin1String("uri"), QStringList { entry.data.toString() });
                 } else if constexpr (std::is_same_v<T, UriOrText>) {
                     std::visit(
                         [&](auto v) {
@@ -134,9 +134,9 @@ namespace {
                                 addTextElement(document, element, QLatin1String("text"), QStringList { v });
                             }
                         },
-                        entry.second);
+                        entry.data);
                 } else if constexpr (std::is_same_v<T, QStringList>) {
-                    for (auto const &s : entry.second) {
+                    for (auto const &s : entry.data) {
                         element.appendChild(document.createElement(QLatin1String("text")))
                             .appendChild(document.createTextNode(s));
                     }
@@ -158,7 +158,7 @@ namespace {
                                 addTextElement(document, element, QLatin1String("text"), QStringList { v });
                             }
                         },
-                        entry.second);
+                        entry.data);
                 } else {
                     throw std::logic_error("should never happen. some type is not supported");
                 }
@@ -202,8 +202,7 @@ namespace {
         }
 
         template <typename ItemT>
-        static void fillContainer(QDomElement parent, const char *tagName,
-                                  QList<std::pair<Parameters, ItemT>> &container)
+        static void fillContainer(QDomElement parent, const char *tagName, TaggedList<ItemT> &container)
         {
             auto tn = QString::fromLatin1(tagName);
             for (auto e = parent.firstChildElement(tn); !e.isNull(); e = e.nextSiblingElement(tn)) {
@@ -253,28 +252,28 @@ namespace {
             if (source.isNull()) {
                 return;
             }
-            to.first = Parameters(source.firstChildElement(QLatin1String("parameters")));
-            auto v   = VCardHelper::extractText(source, "date");
+            to.parameters = Parameters(source.firstChildElement(QLatin1String("parameters")));
+            auto v        = VCardHelper::extractText(source, "date");
             if (v.isNull()) {
                 v = VCardHelper::extractText(source, "date-time");
                 if (v.isNull()) {
                     v = VCardHelper::extractText(source, "time");
                     if (v.isNull()) {
-                        to.second = VCardHelper::extractText(source, "text");
+                        to.data = VCardHelper::extractText(source, "text");
                     } else {
-                        to.second = QTime::fromString(v, Qt::ISODate);
+                        to.data = QTime::fromString(v, Qt::ISODate);
                     }
                 } else {
-                    to.second = QDateTime::fromString(v, Qt::ISODate);
+                    to.data = QDateTime::fromString(v, Qt::ISODate);
                 }
             } else {
-                to.second = QDate::fromString(v, Qt::ISODate);
+                to.data = QDate::fromString(v, Qt::ISODate);
             }
         }
 
         static bool isNull(const PHistorical &h)
         {
-            return std::visit([](auto const &v) { return v.isNull(); }, h.second);
+            return std::visit([](auto const &v) { return v.isNull(); }, h.data);
         }
     };
 
@@ -480,7 +479,7 @@ public:
     QString        genderComment;
 
     // Delivery Addressing Properties
-    QList<std::pair<Parameters, Address>> addresses; // any number of addresses
+    PAddresses addresses; // any number of addresses
 
     // Communications Properties
     PUrisOrTexts tels;   // any number of telephones
@@ -605,7 +604,7 @@ public:
 
     bool isEmpty() const
     {
-        return fullName.isEmpty() && names.second.isEmpty() && nickname.isEmpty() && emails.isEmpty() && tels.isEmpty()
+        return fullName.isEmpty() && names.data.isEmpty() && nickname.isEmpty() && emails.isEmpty() && tels.isEmpty()
             && org.isEmpty() && title.isEmpty() && role.isEmpty() && note.isEmpty() && urls.isEmpty()
             && VCardHelper::isNull(bday) && VCardHelper::isNull(anniversary) && gender == VCard4::Gender::Undefined
             && uid.isEmpty() && kind.isEmpty() && categories.isEmpty() && busyTimeUrl.isEmpty()
@@ -640,9 +639,9 @@ QDomElement VCard::toXmlElement(QDomDocument &document) const
     QDomElement vCardElement = document.createElement(QLatin1String("vcard"));
 
     VCardHelper::serializeList(vCardElement, d->fullName, QLatin1String("fn"));
-    if (!d->names.second.isEmpty()) {
-        auto e = vCardElement.appendChild(d->names.second.toXmlElement(document)).toElement();
-        d->names.first.addTo(e);
+    if (!d->names.data.isEmpty()) {
+        auto e = vCardElement.appendChild(d->names.data.toXmlElement(document)).toElement();
+        d->names.parameters.addTo(e);
     }
     VCardHelper::serializeList(vCardElement, d->nickname, QLatin1String("nickname"), QLatin1String("text"));
     VCardHelper::serializeList(vCardElement, d->emails, QLatin1String("email"), QLatin1String("text"));
@@ -694,8 +693,8 @@ QDomElement VCard::toXmlElement(QDomDocument &document) const
 
     for (const auto &address : d->addresses) {
         QDomElement adrElement = document.createElement(QLatin1String("adr"));
-        address.first.addTo(adrElement);
-        adrElement.appendChild(address.second.toXmlElement(document));
+        address.parameters.addTo(adrElement);
+        adrElement.appendChild(address.data.toXmlElement(document));
         vCardElement.appendChild(adrElement);
     }
 
@@ -791,9 +790,9 @@ void VCard::setEmails(const PStrings &emails)
     d->emails = emails;
 }
 
-PUrisOrTexts VCard::tels() const { return d ? d->tels : PUrisOrTexts(); }
+PUrisOrTexts VCard::phones() const { return d ? d->tels : PUrisOrTexts(); }
 
-void VCard::setTels(const PUrisOrTexts &tels)
+void VCard::setPhones(const PUrisOrTexts &tels)
 {
     INIT_D();
     d->tels = tels;
@@ -951,9 +950,9 @@ void VCard::setKey(const PUrisOrTexts &key)
     d->key = key;
 }
 
-PStrings VCard::lang() const { return d ? d->lang : PStrings(); }
+PStrings VCard::languages() const { return d ? d->lang : PStrings(); }
 
-void VCard::setLang(const PStrings &lang)
+void VCard::setLanguages(const PStrings &lang)
 {
     INIT_D();
     d->lang = lang;
@@ -1031,12 +1030,9 @@ void VCard::setTimeZone(const PTimeZones &timeZone)
     d->timeZone = timeZone;
 }
 
-QList<std::pair<Parameters, Address>> VCard::addresses() const
-{
-    return d ? d->addresses : QList<std::pair<Parameters, Address>>();
-}
+PAddresses VCard::addresses() const { return d ? d->addresses : PAddresses(); }
 
-void VCard::setAddresses(const QList<std::pair<Parameters, Address>> &addresses)
+void VCard::setAddresses(const PAddresses &addresses)
 {
     INIT_D();
     d->addresses = addresses;

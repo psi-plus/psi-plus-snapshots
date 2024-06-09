@@ -30,6 +30,7 @@
 #include <QStringList>
 #include <QUrl>
 
+#include <algorithm>
 #include <variant>
 
 /**
@@ -100,28 +101,49 @@ public:
     QString    mediaType;
 };
 
+template <typename T> struct Item {
+    Parameters parameters;
+    T          data;
+
+    operator QString() const { return data; }
+};
+
+template <typename T> class TaggedList : public QList<T> {
+public:
+    using item_type = T;
+
+    T preferred() const
+    {
+        if (this->empty()) {
+            return {};
+        }
+        return *std::ranges::max_element(
+            *this, [](auto const &a, auto const &b) { return a.parameters.pref > b.parameters.pref; });
+    }
+};
+
 using UriOrText  = std::variant<QUrl, QString>;
 using TimeZone   = std::variant<QUrl, QString, int>;
 using Historical = std::variant<QDateTime, QDate, QTime, QString>;
 
-using PStringList = std::pair<Parameters, QStringList>;
-using PString     = std::pair<Parameters, QString>;
-using PUri        = std::pair<Parameters, QUrl>;
-using PDate       = std::pair<Parameters, QDate>;
-using PAdvUri     = std::pair<Parameters, UriValue>;
-using PAddress    = std::pair<Parameters, Address>;
-using PNames      = std::pair<Parameters, Names>;
-using PUriOrText  = std::pair<Parameters, UriOrText>;
-using PTimeZone   = std::pair<Parameters, TimeZone>;
-using PHistorical = std::pair<Parameters, Historical>;
+using PStringList = Item<QStringList>;
+using PString     = Item<QString>;
+using PUri        = Item<QUrl>;
+using PDate       = Item<QDate>;
+using PAdvUri     = Item<UriValue>;
+using PAddress    = Item<Address>;
+using PNames      = Item<Names>;
+using PUriOrText  = Item<UriOrText>;
+using PTimeZone   = Item<TimeZone>;
+using PHistorical = Item<Historical>;
 
-using PStringLists = QList<PStringList>;
-using PStrings     = QList<PString>;
-using PUris        = QList<PUri>;
-using PAdvUris     = QList<PAdvUri>;
-using PAddresses   = QList<PAddress>;
-using PUrisOrTexts = QList<PUriOrText>;
-using PTimeZones   = QList<PTimeZone>;
+using PStringLists = TaggedList<PStringList>;
+using PStrings     = TaggedList<PString>;
+using PUris        = TaggedList<PUri>;
+using PAdvUris     = TaggedList<PAdvUri>;
+using PAddresses   = TaggedList<PAddress>;
+using PUrisOrTexts = TaggedList<PUriOrText>;
+using PTimeZones   = TaggedList<PTimeZone>;
 
 class VCard {
 public:
@@ -150,8 +172,8 @@ public:
     PStrings emails() const;
     void     setEmails(const PStrings &emails);
 
-    PUrisOrTexts tels() const;
-    void         setTels(const PUrisOrTexts &tels);
+    PUrisOrTexts phones() const;
+    void         setPhones(const PUrisOrTexts &tels);
 
     PStringLists org() const;
     void         setOrg(const PStringLists &org);
@@ -210,8 +232,8 @@ public:
     PUrisOrTexts key() const;
     void         setKey(const PUrisOrTexts &key);
 
-    PStrings lang() const;
-    void     setLang(const PStrings &lang);
+    PStrings languages() const;
+    void     setLanguages(const PStrings &lang);
 
     PAdvUris logo() const;
     void     setLogo(const PAdvUris &logo);
