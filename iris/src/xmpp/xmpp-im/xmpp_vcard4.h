@@ -101,25 +101,26 @@ public:
     QString    mediaType;
 };
 
-template <typename T> struct Item {
+struct ItemBase {
     Parameters parameters;
-    T          data;
-
-    operator QString() const { return data; }
 };
 
-template <typename T> class TaggedList : public QList<T> {
-public:
-    using item_type = T;
+template <typename T> struct Item : public ItemBase {
+    T data;
+    operator QString() const { return data; }
+    operator QDate() const { return {}; }
+};
 
-    T preferred() const
-    {
-        if (this->empty()) {
-            return {};
-        }
-        return *std::ranges::max_element(
-            *this, [](auto const &a, auto const &b) { return a.parameters.pref > b.parameters.pref; });
-    }
+template <> struct Item<QDate> : public ItemBase {
+    QDate data;
+    operator QString() const { return data.toString(Qt::ISODate); }
+    operator QDate() const { return data; }
+};
+
+template <> struct Item<QDateTime> : public ItemBase {
+    QDateTime data;
+    operator QString() const { return data.toString(Qt::ISODate); }
+    operator QDate() const { return data.date(); }
 };
 
 using UriOrText  = std::variant<QUrl, QString>;
@@ -136,6 +137,53 @@ using PNames      = Item<Names>;
 using PUriOrText  = Item<UriOrText>;
 using PTimeZone   = Item<TimeZone>;
 using PHistorical = Item<Historical>;
+
+template <> struct Item<Historical> : public ItemBase {
+    Historical data;
+    operator QString() const
+    {
+        return std::visit(
+            [this](auto const &v) {
+                using Tv = std::decay_t<decltype(v)>;
+                if constexpr (std::is_same_v<Tv, QString>) {
+                    return v;
+                } else {
+                    return v.toString(Qt::ISODate);
+                }
+            },
+            data);
+    }
+    operator QDate() const
+    {
+        return std::visit(
+            [this](auto const &v) {
+                using Tv = std::decay_t<decltype(v)>;
+                if constexpr (std::is_same_v<Tv, QDate>) {
+                    return v;
+                }
+                if constexpr (std::is_same_v<Tv, QDateTime>) {
+                    return v.date();
+                } else {
+                    return QDate {};
+                }
+            },
+            data);
+    }
+};
+
+template <typename T> class TaggedList : public QList<T> {
+public:
+    using item_type = T;
+
+    T preferred() const
+    {
+        if (this->empty()) {
+            return {};
+        }
+        return *std::ranges::max_element(
+            *this, [](auto const &a, auto const &b) { return a.parameters.pref > b.parameters.pref; });
+    }
+};
 
 using PStringLists = TaggedList<PStringList>;
 using PStrings     = TaggedList<PString>;
