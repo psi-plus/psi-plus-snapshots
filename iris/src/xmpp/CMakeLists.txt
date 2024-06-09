@@ -54,6 +54,7 @@ set(XMPP_IM_HEADERS
     xmpp-im/xmpp_subsets.h
     xmpp-im/xmpp_url.h
     xmpp-im/xmpp_vcard.h
+    xmpp-im/xmpp_vcard4.h
     xmpp-im/xmpp_xdata.h
     xmpp-im/xmpp_xmlcommon.h
     xmpp-im/xmpp_encryption.h
@@ -130,6 +131,7 @@ target_sources(iris PRIVATE
     xmpp-im/xmpp_task.cpp
     xmpp-im/xmpp_tasks.cpp
     xmpp-im/xmpp_vcard.cpp
+    xmpp-im/xmpp_vcard4.cpp
     xmpp-im/xmpp_xdata.cpp
     xmpp-im/xmpp_xmlcommon.cpp
     xmpp-im/xmpp_encryption.cpp
