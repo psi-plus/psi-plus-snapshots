@@ -182,6 +182,15 @@ bool Features::hasVCard() const
     return test(ns);
 }
 
+#define FID_VCARD4 "urn:ietf:params:xml:ns:vcard-4.0"
+bool Features::hasVCard4() const
+{
+    QSet<QString> ns;
+    ns << FID_VCARD4;
+
+    return test(ns);
+}
+
 #define FID_MESSAGECARBONS "urn:xmpp:carbons:2"
 bool Features::hasMessageCarbons() const
 {

@@ -19,6 +19,8 @@
 
 #include "xmpp_vcard4.h"
 
+#include "xmpp_vcard.h"
+
 #include <QDomDocument>
 #include <QDomElement>
 #include <QFile>
@@ -113,7 +115,7 @@ namespace {
         }
 
         template <typename T>
-        static void serializeList(QDomElement &parent, const TaggedList<T> &list, const QString &tagName,
+        static void serializeList(QDomElement &parent, const TaggedList<Item<T>> &list, const QString &tagName,
                                   const QString &innerTagName = QLatin1String("text"))
         {
             auto document = parent.ownerDocument();
@@ -307,7 +309,7 @@ bool Names::isEmpty() const noexcept
 Address::Address(const QDomElement &element)
 {
     pobox    = VCardHelper::extractTexts(element, "pobox");
-    ext      = VCardHelper::extractTexts(element, "ext");
+    extaddr  = VCardHelper::extractTexts(element, "ext");
     street   = VCardHelper::extractTexts(element, "street");
     locality = VCardHelper::extractTexts(element, "locality");
     region   = VCardHelper::extractTexts(element, "region");
@@ -319,7 +321,7 @@ QDomElement Address::toXmlElement(QDomDocument &document) const
 {
     QDomElement addressElement = document.createElement(QLatin1String("adr"));
     VCardHelper::addTextElement(document, addressElement, QLatin1String("pobox"), pobox);
-    VCardHelper::addTextElement(document, addressElement, QLatin1String("ext"), ext);
+    VCardHelper::addTextElement(document, addressElement, QLatin1String("ext"), extaddr);
     VCardHelper::addTextElement(document, addressElement, QLatin1String("street"), street);
     VCardHelper::addTextElement(document, addressElement, QLatin1String("locality"), locality);
     VCardHelper::addTextElement(document, addressElement, QLatin1String("region"), region);
@@ -330,7 +332,7 @@ QDomElement Address::toXmlElement(QDomDocument &document) const
 
 bool Address::isEmpty() const noexcept
 {
-    return pobox.isEmpty() && ext.isEmpty() && street.isEmpty() && locality.isEmpty() && region.isEmpty()
+    return pobox.isEmpty() && extaddr.isEmpty() && street.isEmpty() && locality.isEmpty() && region.isEmpty()
         && code.isEmpty() && country.isEmpty();
 }
 
@@ -617,6 +619,14 @@ public:
 
 VCard::VCard() : d(nullptr) { }
 
+VCard::VCard(const VCard &other) : d(other.d) { }
+
+VCard &VCard::operator=(const VCard &other)
+{
+    d = other.d;
+    return *this;
+}
+
 VCard::VCard(const QDomElement &element) : d(new VCardData(element)) { }
 
 VCard::~VCard() = default;
@@ -627,8 +637,6 @@ bool VCard::isEmpty() const
         return true;
     return d->isEmpty();
 }
-
-VCard::operator bool() const { return d != nullptr; }
 
 QDomElement VCard::toXmlElement(QDomDocument &document) const
 {
@@ -707,6 +715,11 @@ VCard VCard::fromFile(const QString &filename)
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
         return VCard();
 
+    return fromFile(file);
+}
+
+VCard VCard::fromFile(QFile &file)
+{
     QDomDocument doc;
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (!doc.setContent(&file, true)) {
@@ -756,6 +769,294 @@ bool VCard::save(const QString &filename) const
     return true;
 }
 
+void VCard::fromVCardTemp(const XMPP::VCard &tempVCard)
+{
+    // Helper function to convert boolean flags to parameters
+    auto convertToParameters = [](const XMPP::VCard::Address &address) {
+        Parameters params;
+        if (address.home)
+            params.type.append("home");
+        if (address.work)
+            params.type.append("work");
+        if (address.postal)
+            params.type.append("postal");
+        if (address.parcel)
+            params.type.append("parcel");
+        if (address.dom)
+            params.type.append("dom");
+        if (address.intl)
+            params.type.append("intl");
+        if (address.pref)
+            params.pref = 1; // Pref is true, setting as preferred
+        return params;
+    };
+
+    // Full Name
+    setFullName({ { PString { Parameters(), tempVCard.fullName() } } });
+
+    // Names
+    PNames names;
+    names.parameters = Parameters();
+    names.data.surname << tempVCard.familyName();
+    names.data.given << tempVCard.givenName();
+    names.data.additional << tempVCard.middleName();
+    names.data.prefix << tempVCard.prefixName();
+    names.data.suffix << tempVCard.suffixName();
+    setNames(names);
+
+    // Nickname
+    setNickName({ { { PStringList { Parameters(), { tempVCard.nickName() } } } } });
+
+    // Photo
+    if (!tempVCard.photo().isEmpty()) {
+        setPhoto({ { PAdvUri {
+            Parameters(),
+            UriValue(QString::fromLatin1("data:image/jpeg;base64,") + tempVCard.photo().toBase64()) } } });
+    } else {
+        setPhoto({ { PAdvUri { Parameters(), UriValue(tempVCard.photoURI()) } } });
+    }
+
+    // Birthday
+    if (!tempVCard.bday().isNull()) {
+        setBday({ { PDate { Parameters(), tempVCard.bday() } } });
+    } else {
+        setBday({ { PDate { Parameters(), QDate::fromString(tempVCard.bdayStr(), Qt::ISODate) } } });
+    }
+
+    // Addresses
+    PAddresses addresses;
+    for (const auto &addr : tempVCard.addressList()) {
+        addresses.append({ convertToParameters(addr), Address { addr } });
+    }
+    setAddresses(addresses);
+
+    // Phones
+    PUrisOrTexts phones;
+    for (const auto &phone : tempVCard.phoneList()) {
+        Parameters params;
+        if (phone.home)
+            params.type.append("home");
+        if (phone.work)
+            params.type.append("work");
+        if (phone.voice)
+            params.type.append("voice");
+        if (phone.fax)
+            params.type.append("fax");
+        if (phone.pager)
+            params.type.append("pager");
+        if (phone.msg)
+            params.type.append("msg");
+        if (phone.cell)
+            params.type.append("cell");
+        if (phone.video)
+            params.type.append("video");
+        if (phone.bbs)
+            params.type.append("bbs");
+        if (phone.modem)
+            params.type.append("modem");
+        if (phone.isdn)
+            params.type.append("isdn");
+        if (phone.pcs)
+            params.type.append("pcs");
+        if (phone.pref)
+            params.pref = 1; // Pref is true, setting as preferred
+        phones.append({ params, phone.number });
+    }
+    setPhones(phones);
+
+    // Emails
+    PStrings emails;
+    for (const auto &email : tempVCard.emailList()) {
+        Parameters params;
+        if (email.home)
+            params.type.append("home");
+        if (email.work)
+            params.type.append("work");
+        if (email.internet)
+            params.type.append("internet");
+        if (email.x400)
+            params.type.append("x400");
+        if (email.pref)
+            params.pref = 1; // Pref is true, setting as preferred
+        emails.append({ params, email.userid });
+    }
+    setEmails(emails);
+
+    // JID
+    setImpp({ { PUri { Parameters(), tempVCard.jid() } } });
+
+    // Title
+    setTitle({ { PString { Parameters(), tempVCard.title() } } });
+
+    // Role
+    setRole({ { PString { Parameters(), tempVCard.role() } } });
+
+    // Logo
+    if (!tempVCard.logo().isEmpty()) {
+        setLogo({ { PAdvUri {
+            Parameters(), UriValue(QString::fromLatin1("data:image/jpeg;base64,") + tempVCard.logo().toBase64()) } } });
+    } else {
+        setLogo({ { PAdvUri { Parameters(), UriValue(tempVCard.logoURI()) } } });
+    }
+
+    // Org
+    PStringLists org;
+    org.append({ Parameters(), { tempVCard.org().name } });
+    for (const auto &unit : tempVCard.org().unit) {
+        org.append({ Parameters(), { unit } });
+    }
+    setOrg(org);
+
+    // Categories
+    setCategories({ { { PStringList { Parameters(), tempVCard.categories() } } } });
+
+    // Note
+    setNote({ { PString { Parameters(), tempVCard.note() } } });
+
+    // ProdId
+    setProdid(tempVCard.prodId());
+
+    // Rev
+    setRev(QDateTime::fromString(tempVCard.rev(), Qt::ISODate));
+
+    // UID
+    setUid(tempVCard.uid());
+
+    // URL
+    setUrls({ { PUri { Parameters(), QUrl(tempVCard.url()) } } });
+
+    // Geo
+    if (!tempVCard.geo().lat.isEmpty() && !tempVCard.geo().lon.isEmpty()) {
+        setGeo({ { PUri { Parameters(), QUrl("geo:" + tempVCard.geo().lat + "," + tempVCard.geo().lon) } } });
+    }
+
+    // Timezone
+    setTimeZone({ { PTimeZone { Parameters(), tempVCard.timezone() } } });
+
+    // Desc (translated to note)
+    setNote({ { PString { Parameters(), tempVCard.desc() } } });
+
+    // Sound
+    if (!tempVCard.sound().isEmpty()) {
+        setSound({ { PAdvUri {
+            Parameters(), UriValue(QString::fromLatin1("data:audio/wav;base64,") + tempVCard.sound().toBase64()) } } });
+    } else {
+        setSound({ { PAdvUri { Parameters(), UriValue(tempVCard.soundURI()) } } });
+    }
+}
+
+XMPP::VCard VCard::toVCardTemp() const
+{
+    XMPP::VCard tempVCard;
+
+    // Full Name
+    if (!d->fullName.isEmpty()) {
+        tempVCard.setFullName(d->fullName.preferred().data);
+    }
+
+    // Names
+    tempVCard.setGivenName(d->names.data.given.value(0));
+    tempVCard.setMiddleName(d->names.data.additional.value(0));
+    tempVCard.setFamilyName(d->names.data.surname.value(0));
+
+    // Nickname
+    if (!d->nickname.isEmpty()) {
+        tempVCard.setNickName(d->nickname.preferred().data.value(0));
+    }
+
+    // Birthday
+    if (!VCardHelper::isNull(d->bday)) {
+        QDate bday = d->bday;
+        if (bday.isValid()) {
+            tempVCard.setBday(bday);
+        } else {
+            tempVCard.setBdayStr(d->bday);
+        }
+    }
+
+    // Email
+    if (!d->emails.isEmpty()) {
+        XMPP::VCard::Email email;
+        const auto        &preferredEmail = d->emails.preferred();
+        email.userid                      = preferredEmail.data;
+        if (preferredEmail.parameters.pref > 0) {
+            email.pref = true;
+        }
+        for (const auto &type : preferredEmail.parameters.type) {
+            if (type == "home") {
+                email.home = true;
+            } else if (type == "work") {
+                email.work = true;
+            } else if (type == "internet") {
+                email.internet = true;
+            } else if (type == "x400") {
+                email.x400 = true;
+            }
+        }
+        XMPP::VCard::EmailList emailList;
+        emailList << email;
+        tempVCard.setEmailList(emailList);
+    }
+
+    // URL
+    if (!d->urls.isEmpty()) {
+        tempVCard.setUrl(d->urls.preferred().data.toString());
+    }
+
+    // Phone
+    if (!d->tels.isEmpty()) {
+        XMPP::VCard::Phone phone;
+        const auto        &preferredPhone = d->tels.preferred();
+        phone.number                      = std::get<QString>(preferredPhone.data);
+        for (const auto &type : preferredPhone.parameters.type) {
+            if (type == "home") {
+                phone.home = true;
+            } else if (type == "voice") {
+                phone.voice = true;
+            }
+        }
+        XMPP::VCard::PhoneList phoneList;
+        phoneList << phone;
+        tempVCard.setPhoneList(phoneList);
+    }
+
+    // Photo
+    tempVCard.setPhoto(d->photo);
+
+    // Address
+    if (!d->addresses.isEmpty()) {
+        XMPP::VCard::AddressList addressList;
+        for (const auto &address : d->addresses) {
+            XMPP::VCard::Address addr;
+            addr.home     = address.parameters.type.contains("home");
+            addr.street   = address.data.pobox.value(0);
+            addr.extaddr  = address.data.extaddr.value(0);
+            addr.locality = address.data.street.value(0);
+            addr.region   = address.data.locality.value(0);
+            addr.pcode    = address.data.region.value(0);
+            addr.country  = address.data.country.value(0);
+            addressList << addr;
+        }
+        tempVCard.setAddressList(addressList);
+    }
+
+    // Organization
+    if (!d->org.isEmpty()) {
+        XMPP::VCard::Org org;
+        org.name = d->org.value(0).data.value(0);
+        for (int i = 1; i < d->org.size(); ++i) {
+            org.unit << d->org[i].data.value(0);
+        }
+        tempVCard.setOrg(org);
+    }
+
+    tempVCard.setTitle(d->title.preferred().data);
+    tempVCard.setRole(d->role.preferred().data);
+    tempVCard.setNote(d->note.preferred().data);
+
+    return tempVCard;
+}
+
 // Getters and setters implementation
 
 PStrings VCard::fullName() const { return d->fullName; }
@@ -774,9 +1075,9 @@ void VCard::setNames(const PNames &names)
     d->names = names;
 }
 
-PStringLists VCard::nickname() const { return d ? d->nickname : PStringLists(); }
+PStringLists VCard::nickName() const { return d ? d->nickname : PStringLists(); }
 
-void VCard::setNickname(const PStringLists &nickname)
+void VCard::setNickName(const PStringLists &nickname)
 {
     INIT_D();
     d->nickname = nickname;

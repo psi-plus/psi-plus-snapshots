@@ -41,12 +41,17 @@ struct HashDesc {
     Hash::Type         hashType;
     const char *const *synonims = nullptr;
 };
+
+// hash types in priority order mostly by speed
 static const std::array hashTypes {
-    HashDesc { "unknown", Hash::Type::Unknown },        HashDesc { "sha-1", Hash::Type::Sha1, sha1_synonims },
-    HashDesc { "sha-256", Hash::Type::Sha256 },         HashDesc { "sha-512", Hash::Type::Sha512 },
-    HashDesc { "sha3-256", Hash::Type::Sha3_256 },      HashDesc { "sha3-512", Hash::Type::Sha3_512 },
-    HashDesc { "blake2b-256", Hash::Type::Blake2b256 }, HashDesc { "blake2b-512", Hash::Type::Blake2b512 }
-};
+    HashDesc { "blake2b-512", Hash::Type::Blake2b512 },
+    HashDesc { "blake2b-256", Hash::Type::Blake2b256 },
+    HashDesc { "sha-1", Hash::Type::Sha1, sha1_synonims },
+    HashDesc { "sha-512", Hash::Type::Sha512 },
+    HashDesc { "sha-256", Hash::Type::Sha256 },
+    HashDesc { "sha3-512", Hash::Type::Sha3_512 },
+    HashDesc { "sha3-256", Hash::Type::Sha3_256 },
+}; // HashDesc { "unknown", Hash::Type::Unknown },
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 using HashVariant = std::variant<std::nullptr_t, QCryptographicHash, QCA::Hash, Blake2Hash>;
@@ -143,9 +148,13 @@ Hash::Hash(const QDomElement &el)
 QString Hash::stringType() const
 {
     if (!v_type || int(v_type) > LastType)
-        return QString(); // must be empty. other code relies on it
-    static_assert(LastType + 1 == hashTypes.size(), "hashType and enum are not in sync");
-    return QLatin1String(hashTypes[int(v_type)].text);
+        return {}; // must be empty. other code relies on it
+    static_assert(LastType == hashTypes.size(), "hashType and enum are not in sync");
+    auto it = std::ranges::find_if(hashTypes, [this](auto const &v) { return v.hashType == v_type; });
+    if (it == hashTypes.end()) {
+        throw std::logic_error("hashTypes array is inconsistent");
+    }
+    return QLatin1String(it->text);
 }
 
 Hash::Type Hash::parseType(const QStringView &algo)
@@ -310,21 +319,13 @@ Hash Hash::from(const QStringView &str)
 
 Hash Hash::fastestHash(const Features &features)
 {
-    std::array  qcaAlgos = { "blake2b_512", "blake2b_256", "sha1", "sha512", "sha256", "sha3_256", "sha3_512" };
-    std::array  qcaMap   = { Blake2b512, Blake2b256, Sha1, Sha512, Sha256, Sha3_256, Sha3_512 };
-    QStringList priorityFeatures;
-    priorityFeatures.reserve(int(qcaAlgos.size()));
-    for (auto t : qcaMap) {
-        priorityFeatures.append(QString(QLatin1String("urn:xmpp:hash-function-text-names:"))
-                                + QLatin1String(hashTypes[int(t)].text));
-        // REVIEW modify hashTypes with priority info instead?
-    }
-    for (std::size_t i = 0; i < qcaAlgos.size(); i++) {
-        if (QCA::isSupported(qcaAlgos[i]) && features.test(priorityFeatures[i])) {
-            return Hash(qcaMap[i]);
+    for (auto const &h : hashTypes) {
+        auto feature = QString(QLatin1String("urn:xmpp:hash-function-text-names:")) + QLatin1String(h.text);
+        if (features.test(feature)) {
+            return Hash(h.hashType);
         }
     }
-    return Hash(); // qca is the fastest and it defintiely has sha1. so no reason to use qt or custom blake
+    return {};
 }
 
 class StreamHashPrivate {

@@ -41,25 +41,27 @@ public:
 
     // features
     inline bool isEmpty() const { return _list.isEmpty(); }
-    bool        hasRegister() const;
-    bool        hasSearch() const;
-    bool        hasMulticast() const;
-    bool        hasGroupchat() const;
-    bool        hasVoice() const;
-    bool        hasDisco() const;
-    bool        hasChatState() const;
-    bool        hasCommand() const;
-    bool        hasGateway() const;
-    bool        hasVersion() const;
-    bool        hasVCard() const;
-    bool        hasMessageCarbons() const;
-    bool        hasJingleFT() const;
-    bool        hasJingleIceUdp() const;
-    bool        hasJingleIce() const;
-    bool        hasCaps() const;
-    bool        hasCapsOptimize() const;
-    bool        hasDirectMucInvite() const;
-    bool        hasAvatarConversion() const;
+
+    bool hasRegister() const;
+    bool hasSearch() const;
+    bool hasMulticast() const;
+    bool hasGroupchat() const;
+    bool hasVoice() const;
+    bool hasDisco() const;
+    bool hasChatState() const;
+    bool hasCommand() const;
+    bool hasGateway() const;
+    bool hasVersion() const;
+    bool hasVCard() const;
+    bool hasVCard4() const;
+    bool hasMessageCarbons() const;
+    bool hasJingleFT() const;
+    bool hasJingleIceUdp() const;
+    bool hasJingleIce() const;
+    bool hasCaps() const;
+    bool hasCapsOptimize() const;
+    bool hasDirectMucInvite() const;
+    bool hasAvatarConversion() const;
 
     [[deprecated]] inline bool canRegister() const { return hasRegister(); }
     [[deprecated]] inline bool canSearch() const { return hasSearch(); }

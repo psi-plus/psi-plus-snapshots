@@ -79,7 +79,7 @@ void ServerInfoManager::queryServicesList()
     auto jtitems       = new JT_DiscoItems(_client->rootTask());
     connect(
         jtitems, &JT_DiscoItems::finished, this,
-        [=]() {
+        [this, jtitems]() {
             _servicesInfo.clear(); //
             if (jtitems->success()) {
                 _servicesListState = ST_Ready;

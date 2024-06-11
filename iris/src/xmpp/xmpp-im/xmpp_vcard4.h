@@ -20,6 +20,8 @@
 #ifndef XMPP_VCARD4_H
 #define XMPP_VCARD4_H
 
+#include "xmpp_vcard.h"
+
 #include <QDate>
 #include <QDateTime>
 #include <QDomElement>
@@ -32,6 +34,8 @@
 
 #include <algorithm>
 #include <variant>
+
+class QFile;
 
 /**
  * This code represents implementation of RFC 6351/6350 as well as XEP-0292
@@ -76,11 +80,17 @@ class Address {
 public:
     Address() = default;
     Address(const QDomElement &element);
+    Address(const XMPP::VCard::Address &legacyAddress) :
+        pobox({ legacyAddress.pobox }), extaddr({ legacyAddress.extaddr }), street({ legacyAddress.street }),
+        locality({ legacyAddress.locality }), region({ legacyAddress.region }), code({ legacyAddress.pcode }),
+        country({ legacyAddress.country })
+    {
+    }
     QDomElement toXmlElement(QDomDocument &document) const;
     bool        isEmpty() const noexcept;
 
     QStringList pobox;
-    QStringList ext;
+    QStringList extaddr;
     QStringList street;
     QStringList locality;
     QStringList region;
@@ -121,6 +131,11 @@ template <> struct Item<QDateTime> : public ItemBase {
     QDateTime data;
     operator QString() const { return data.toString(Qt::ISODate); }
     operator QDate() const { return data.date(); }
+};
+
+template <> struct Item<QStringList> : public ItemBase {
+    QStringList data;
+    operator QString() const { return data.value(0); }
 };
 
 using UriOrText  = std::variant<QUrl, QString>;
@@ -183,9 +198,35 @@ public:
         return *std::ranges::max_element(
             *this, [](auto const &a, auto const &b) { return a.parameters.pref > b.parameters.pref; });
     }
+
+    operator QString() const { return preferred().data; }
 };
 
-using PStringLists = TaggedList<PStringList>;
+template <> class TaggedList<PAdvUri> : public QList<PAdvUri> {
+public:
+    using item_type = PAdvUri;
+
+    operator QByteArray() const
+    {
+        // take first preferred data uri and its data
+        if (this->empty()) {
+            return {};
+        }
+        return std::ranges::max_element(*this,
+                                        [](auto const &a, auto const &b) {
+                                            return ((int(!a.data.data.isEmpty()) << 8) + a.parameters.pref)
+                                                > ((int(!b.data.data.isEmpty()) << 8) + b.parameters.pref);
+                                        })
+            ->data.data;
+    }
+};
+
+class TaggedListStringList : public TaggedList<PStringList> {
+public:
+    operator QString() const { return preferred().data.value(0); }
+};
+
+using PStringLists = TaggedListStringList;
 using PStrings     = TaggedList<PString>;
 using PUris        = TaggedList<PUri>;
 using PAdvUris     = TaggedList<PAdvUri>;
@@ -197,15 +238,25 @@ class VCard {
 public:
     VCard();
     VCard(const QDomElement &element);
+    VCard(const VCard &other);
+
     ~VCard();
 
-    bool     isEmpty() const;
-    explicit operator bool() const;
+    VCard &operator=(const VCard &);
+
+    bool isEmpty() const;
+
+    inline bool     isNull() const { return d != nullptr; }
+    inline explicit operator bool() const { return isNull(); }
 
     QDomElement toXmlElement(QDomDocument &document) const;
 
     static VCard fromFile(const QString &filename);
+    static VCard fromFile(QFile &file);
     bool         save(const QString &filename) const;
+
+    void        fromVCardTemp(const XMPP::VCard &tempVCard);
+    XMPP::VCard toVCardTemp() const;
 
     // Getters and setters
     PStrings fullName() const;
@@ -214,8 +265,8 @@ public:
     const PNames &names() const;
     void          setNames(const PNames &names);
 
-    PStringLists nickname() const;
-    void         setNickname(const PStringLists &nickname);
+    PStringLists nickName() const;
+    void         setNickName(const PStringLists &nickname);
 
     PStrings emails() const;
     void     setEmails(const PStrings &emails);

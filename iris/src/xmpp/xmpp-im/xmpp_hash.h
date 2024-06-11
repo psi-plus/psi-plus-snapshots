@@ -36,7 +36,7 @@ class Features;
 
 class Hash {
 public:
-    // NB: keep this in sync with Hash::fastestHash() and with hashTypes in cpp the file!
+    // NB: we have only supported algorithms here. if more is needed then do extra checks
     enum Type {     // XEP-0300 Version 0.5.3 (2018-02-14)
         Unknown,    // not standard, just a default
         Sha1,       // SHOULD NOT

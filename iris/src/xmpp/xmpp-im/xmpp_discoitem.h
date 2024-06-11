@@ -93,6 +93,8 @@ public:
     static DiscoItem fromDiscoInfoResult(const QDomElement &x);
     QDomElement      toDiscoInfoResult(QDomDocument *doc) const;
 
+    bool hasPersistentStorage() const;
+
 private:
     QSharedDataPointer<DiscoItemPrivate> d;
 };

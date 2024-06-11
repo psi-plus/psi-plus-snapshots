@@ -219,6 +219,17 @@ QDomElement DiscoItem::toDiscoInfoResult(QDomDocument *doc) const
     return q;
 }
 
+bool DiscoItem::hasPersistentStorage() const
+{
+    bool hasPEP = false;
+    for (const DiscoItem::Identity &i : d->identities) {
+        if (i.category == "pubsub" && i.type == "pep") {
+            hasPEP = true;
+        }
+    }
+    return hasPEP && d->features.test("http://jabber.org/protocol/pubsub#publish-options");
+}
+
 const Jid &DiscoItem::jid() const { return d->jid; }
 
 void DiscoItem::setJid(const Jid &j) { d->jid = j; }
