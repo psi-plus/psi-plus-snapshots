@@ -252,7 +252,7 @@ public:
     QDomElement toXmlElement(QDomDocument &document) const;
 
     static VCard fromFile(const QString &filename);
-    static VCard fromFile(QFile &file);
+    static VCard fromDevice(QIODevice *dev);
     bool         save(const QString &filename) const;
 
     void        fromVCardTemp(const XMPP::VCard &tempVCard);
