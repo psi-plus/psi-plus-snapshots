@@ -264,12 +264,12 @@ void ServerInfoManager::server_disco_finished()
 {
     JT_DiscoInfo *jt = static_cast<JT_DiscoInfo *>(sender());
     if (jt->success()) {
-        _server_features = jt->item().features();
+        _serverFeatures = jt->item().features();
 
-        if (_server_features.hasMulticast())
+        if (_serverFeatures.hasMulticast())
             _multicastService = _client->jid().domain();
 
-        _canMessageCarbons = _server_features.hasMessageCarbons();
+        _canMessageCarbons = _serverFeatures.hasMessageCarbons();
 
         auto servInfo
             = jt->item().findExtension(XData::Data_Result, QLatin1String("http://jabber.org/network/serverinfo"));
@@ -297,7 +297,7 @@ void ServerInfoManager::account_disco_finished()
             }
         }
         _hasPersistentStorage = jt->item().hasPersistentStorage();
-        _account_features     = jt->item().features();
+        _accountFeatures      = jt->item().features();
 
         emit featuresChanged();
     }

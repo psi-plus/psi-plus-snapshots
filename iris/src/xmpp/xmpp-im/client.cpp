@@ -286,7 +286,7 @@ void Client::setCapsOptimizationAllowed(bool allowed) { d->capsOptimization = al
 
 bool Client::capsOptimizationAllowed() const
 {
-    if (d->capsOptimization && d->active && d->serverInfoManager->server_features().hasCapsOptimize()) {
+    if (d->capsOptimization && d->active && d->serverInfoManager->serverFeatures().hasCapsOptimize()) {
         auto it = d->resourceList.find(d->resource);
         return it != d->resourceList.end() && it->status().isAvailable();
     }

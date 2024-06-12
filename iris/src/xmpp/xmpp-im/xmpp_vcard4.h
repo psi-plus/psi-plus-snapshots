@@ -102,6 +102,7 @@ class UriValue {
 public:
     UriValue() = default;
     explicit UriValue(const QString &uri);
+    explicit UriValue(const QByteArray &data, const QString &mime);
     QString toString() const;
     inline  operator QString() const { return toString(); }
     bool    isEmpty() const { return url.isEmpty() && data.isEmpty(); }
@@ -252,6 +253,7 @@ public:
     ~VCard();
 
     VCard &operator=(const VCard &);
+    void   detach();
 
     bool isEmpty() const;
 

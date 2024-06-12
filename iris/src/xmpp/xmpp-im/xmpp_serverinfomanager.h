@@ -81,8 +81,8 @@ public:
     const QString                           &multicastService() const;
     inline bool                              hasPEP() const { return _hasPEP; }
     inline bool                              hasPersistentStorage() const { return _hasPersistentStorage; }
-    inline const Features                   &server_features() const { return _server_features; }
-    inline const Features                   &account_features() const { return _account_features; }
+    inline const Features                   &serverFeatures() const { return _serverFeatures; }
+    inline const Features                   &accountFeatures() const { return _accountFeatures; }
     bool                                     canMessageCarbons() const;
     inline const QMap<QString, QStringList> &extraServerInfo() const { return _extraServerInfo; }
 
@@ -128,8 +128,8 @@ private:
 private:
     XMPP::Client              *_client = nullptr;
     CapsSpec                   _caps;
-    Features                   _server_features;
-    Features                   _account_features;
+    Features                   _serverFeatures;
+    Features                   _accountFeatures;
     QString                    _multicastService;
     QMap<QString, QStringList> _extraServerInfo; // XEP-0128, XEP-0157
 

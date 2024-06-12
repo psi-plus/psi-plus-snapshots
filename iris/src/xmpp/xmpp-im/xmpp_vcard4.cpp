@@ -462,6 +462,8 @@ UriValue::UriValue(const QString &uri)
     }
 }
 
+UriValue::UriValue(const QByteArray &data, const QString &mime) : data(data), mediaType(mime) { }
+
 QString UriValue::toString() const
 {
     if (!mediaType.isEmpty()) {
@@ -632,6 +634,8 @@ VCard &VCard::operator=(const VCard &other)
     d = other.d;
     return *this;
 }
+
+void VCard::detach() { d.detach(); }
 
 VCard::VCard(const QDomElement &element) : d(new VCardData(element)) { }
 
