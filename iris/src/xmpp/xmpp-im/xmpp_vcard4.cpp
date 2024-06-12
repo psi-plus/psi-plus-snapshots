@@ -812,22 +812,20 @@ void VCard::fromVCardTemp(const XMPP::VCard &tempVCard)
     setNames(names);
 
     // Nickname
-    setNickName({ { { PStringList { Parameters(), { tempVCard.nickName() } } } } });
+    setNickName({ tempVCard.nickName() });
 
     // Photo
     if (!tempVCard.photo().isEmpty()) {
-        setPhoto({ { PAdvUri {
-            Parameters(),
-            UriValue(QString::fromLatin1("data:image/jpeg;base64,") + tempVCard.photo().toBase64()) } } });
+        setPhoto(UriValue(QString::fromLatin1("data:image/jpeg;base64,") + tempVCard.photo().toBase64()));
     } else {
-        setPhoto({ { PAdvUri { Parameters(), UriValue(tempVCard.photoURI()) } } });
+        setPhoto(UriValue(tempVCard.photoURI()));
     }
 
     // Birthday
     if (!tempVCard.bday().isNull()) {
-        setBday({ { PDate { Parameters(), tempVCard.bday() } } });
+        setBday(tempVCard.bday());
     } else {
-        setBday({ { PDate { Parameters(), QDate::fromString(tempVCard.bdayStr(), Qt::ISODate) } } });
+        setBday(tempVCard.bdayStr());
     }
 
     // Addresses
@@ -890,20 +888,19 @@ void VCard::fromVCardTemp(const XMPP::VCard &tempVCard)
     setEmails(emails);
 
     // JID
-    setImpp({ { PUri { Parameters(), tempVCard.jid() } } });
+    setImpp(tempVCard.jid());
 
     // Title
-    setTitle({ { PString { Parameters(), tempVCard.title() } } });
+    setTitle(tempVCard.title());
 
     // Role
-    setRole({ { PString { Parameters(), tempVCard.role() } } });
+    setRole(tempVCard.role());
 
     // Logo
     if (!tempVCard.logo().isEmpty()) {
-        setLogo({ { PAdvUri {
-            Parameters(), UriValue(QString::fromLatin1("data:image/jpeg;base64,") + tempVCard.logo().toBase64()) } } });
+        setLogo(UriValue(QString::fromLatin1("data:image/jpeg;base64,") + tempVCard.logo().toBase64()));
     } else {
-        setLogo({ { PAdvUri { Parameters(), UriValue(tempVCard.logoURI()) } } });
+        setLogo(UriValue(tempVCard.logoURI()));
     }
 
     // Org
@@ -915,7 +912,7 @@ void VCard::fromVCardTemp(const XMPP::VCard &tempVCard)
     setOrg(org);
 
     // Categories
-    setCategories({ { { PStringList { Parameters(), tempVCard.categories() } } } });
+    setCategories(tempVCard.categories());
 
     // Note
     setNote({ { PString { Parameters(), tempVCard.note() } } });
@@ -930,11 +927,11 @@ void VCard::fromVCardTemp(const XMPP::VCard &tempVCard)
     setUid(tempVCard.uid());
 
     // URL
-    setUrls({ { PUri { Parameters(), QUrl(tempVCard.url()) } } });
+    setUrls(QUrl(tempVCard.url()));
 
     // Geo
     if (!tempVCard.geo().lat.isEmpty() && !tempVCard.geo().lon.isEmpty()) {
-        setGeo({ { PUri { Parameters(), QUrl("geo:" + tempVCard.geo().lat + "," + tempVCard.geo().lon) } } });
+        setGeo(QUrl("geo:" + tempVCard.geo().lat + "," + tempVCard.geo().lon));
     }
 
     // Timezone
@@ -945,10 +942,9 @@ void VCard::fromVCardTemp(const XMPP::VCard &tempVCard)
 
     // Sound
     if (!tempVCard.sound().isEmpty()) {
-        setSound({ { PAdvUri {
-            Parameters(), UriValue(QString::fromLatin1("data:audio/wav;base64,") + tempVCard.sound().toBase64()) } } });
+        setSound(UriValue(QString::fromLatin1("data:audio/wav;base64,") + tempVCard.sound().toBase64()));
     } else {
-        setSound({ { PAdvUri { Parameters(), UriValue(tempVCard.soundURI()) } } });
+        setSound(UriValue(tempVCard.soundURI()));
     }
 }
 
@@ -1074,12 +1070,26 @@ void VCard::setFullName(const PStrings &fullName)
     d->fullName = fullName;
 }
 
+Item<QString> &VCard::setFullName(const QString &fullName)
+{
+    INIT_D();
+    d->fullName.append({ Parameters(), fullName });
+    return d->fullName.last();
+}
+
 PNames VCard::names() const { return d ? d->names : PNames {}; }
 
 void VCard::setNames(const PNames &names)
 {
     INIT_D();
     d->names = names;
+}
+
+Item<Names> &VCard::setNames(const Names &names)
+{
+    INIT_D();
+    d->names = { Parameters(), names };
+    return d->names;
 }
 
 PStringLists VCard::nickName() const { return d ? d->nickname : PStringLists(); }
@@ -1090,12 +1100,26 @@ void VCard::setNickName(const PStringLists &nickname)
     d->nickname = nickname;
 }
 
+Item<QStringList> &VCard::setNickName(const QStringList &nickname)
+{
+    INIT_D();
+    d->nickname.append({ Parameters(), nickname });
+    return d->nickname.last();
+}
+
 PStrings VCard::emails() const { return d ? d->emails : PStrings(); }
 
 void VCard::setEmails(const PStrings &emails)
 {
     INIT_D();
     d->emails = emails;
+}
+
+Item<QString> &VCard::setEmails(const QString &email)
+{
+    INIT_D();
+    d->emails.append({ Parameters(), email });
+    return d->emails.last();
 }
 
 PUrisOrTexts VCard::phones() const { return d ? d->tels : PUrisOrTexts(); }
@@ -1106,12 +1130,26 @@ void VCard::setPhones(const PUrisOrTexts &tels)
     d->tels = tels;
 }
 
+Item<UriOrText> &VCard::setPhones(const UriOrText &phone)
+{
+    INIT_D();
+    d->tels.append({ Parameters(), phone });
+    return d->tels.last();
+}
+
 PStringLists VCard::org() const { return d ? d->org : PStringLists(); }
 
 void VCard::setOrg(const PStringLists &org)
 {
     INIT_D();
     d->org = org;
+}
+
+Item<QStringList> &VCard::setOrg(const QStringList &org)
+{
+    INIT_D();
+    d->org.append({ Parameters(), org });
+    return d->org.last();
 }
 
 PStrings VCard::title() const { return d ? d->title : PStrings(); }
@@ -1122,12 +1160,26 @@ void VCard::setTitle(const PStrings &title)
     d->title = title;
 }
 
+Item<QString> &VCard::setTitle(const QString &title)
+{
+    INIT_D();
+    d->title.append({ Parameters(), title });
+    return d->title.last();
+}
+
 PStrings VCard::role() const { return d ? d->role : PStrings(); }
 
 void VCard::setRole(const PStrings &role)
 {
     INIT_D();
     d->role = role;
+}
+
+Item<QString> &VCard::setRole(const QString &role)
+{
+    INIT_D();
+    d->role.append({ Parameters(), role });
+    return d->role.last();
 }
 
 PStrings VCard::note() const { return d ? d->note : PStrings(); }
@@ -1138,12 +1190,26 @@ void VCard::setNote(const PStrings &note)
     d->note = note;
 }
 
+Item<QString> &VCard::setNote(const QString &note)
+{
+    INIT_D();
+    d->note.append({ Parameters(), note });
+    return d->note.last();
+}
+
 PUris VCard::urls() const { return d ? d->urls : PUris(); }
 
 void VCard::setUrls(const PUris &urls)
 {
     INIT_D();
     d->urls = urls;
+}
+
+Item<QUrl> &VCard::setUrls(const QUrl &url)
+{
+    INIT_D();
+    d->urls.append({ Parameters(), url });
+    return d->urls.last();
 }
 
 PHistorical VCard::bday() const { return d ? d->bday : PHistorical(); }
@@ -1154,12 +1220,26 @@ void VCard::setBday(const PHistorical &bday)
     d->bday = bday;
 }
 
+Item<Historical> &VCard::setBday(const Historical &bday)
+{
+    INIT_D();
+    d->bday = { Parameters(), bday };
+    return d->bday;
+}
+
 PHistorical VCard::anniversary() const { return d ? d->anniversary : PHistorical(); }
 
 void VCard::setAnniversary(const PHistorical &anniversary)
 {
     INIT_D();
     d->anniversary = anniversary;
+}
+
+Item<Historical> &VCard::setAnniversary(const Historical &anniversary)
+{
+    INIT_D();
+    d->anniversary = { Parameters(), anniversary };
+    return d->anniversary;
 }
 
 VCard4::Gender VCard::gender() const { return d ? d->gender : VCard4::Gender::Undefined; }
@@ -1202,12 +1282,26 @@ void VCard::setCategories(const PStringLists &categories)
     d->categories = categories;
 }
 
+Item<QStringList> &VCard::setCategories(const QStringList &categories)
+{
+    INIT_D();
+    d->categories.append({ Parameters(), categories });
+    return d->categories.last();
+}
+
 PUris VCard::busyTimeUrl() const { return d ? d->busyTimeUrl : PUris(); }
 
 void VCard::setBusyTimeUrl(const PUris &busyTimeUrl)
 {
     INIT_D();
     d->busyTimeUrl = busyTimeUrl;
+}
+
+Item<QUrl> &VCard::setBusyTimeUrl(const QUrl &url)
+{
+    INIT_D();
+    d->busyTimeUrl.append({ Parameters(), url });
+    return d->busyTimeUrl.last();
 }
 
 PUris VCard::calendarRequestUri() const { return d ? d->calendarRequestUri : PUris(); }
@@ -1218,12 +1312,26 @@ void VCard::setCalendarRequestUri(const PUris &calendarRequestUri)
     d->calendarRequestUri = calendarRequestUri;
 }
 
+Item<QUrl> &VCard::setCalendarRequestUri(const QUrl &url)
+{
+    INIT_D();
+    d->calendarRequestUri.append({ Parameters(), url });
+    return d->calendarRequestUri.last();
+}
+
 PUris VCard::calendarUri() const { return d ? d->calendarUri : PUris(); }
 
 void VCard::setCalendarUri(const PUris &calendarUri)
 {
     INIT_D();
     d->calendarUri = calendarUri;
+}
+
+Item<QUrl> &VCard::setCalendarUri(const QUrl &url)
+{
+    INIT_D();
+    d->calendarUri.append({ Parameters(), url });
+    return d->calendarUri.last();
 }
 
 QHash<int, QString> VCard::clientPidMap() const { return d ? d->clientPidMap : QHash<int, QString>(); }
@@ -1242,12 +1350,26 @@ void VCard::setGeo(const PUris &geo)
     d->geo = geo;
 }
 
+Item<QUrl> &VCard::setGeo(const QUrl &url)
+{
+    INIT_D();
+    d->geo.append({ Parameters(), url });
+    return d->geo.last();
+}
+
 PUris VCard::impp() const { return d ? d->impp : PUris(); }
 
 void VCard::setImpp(const PUris &impp)
 {
     INIT_D();
     d->impp = impp;
+}
+
+Item<QUrl> &VCard::setImpp(const QUrl &url)
+{
+    INIT_D();
+    d->impp.append({ Parameters(), url });
+    return d->impp.last();
 }
 
 PUrisOrTexts VCard::key() const { return d ? d->key : PUrisOrTexts(); }
@@ -1258,12 +1380,26 @@ void VCard::setKey(const PUrisOrTexts &key)
     d->key = key;
 }
 
+Item<UriOrText> &VCard::setKey(const UriOrText &key)
+{
+    INIT_D();
+    d->key.append({ Parameters(), key });
+    return d->key.last();
+}
+
 PStrings VCard::languages() const { return d ? d->lang : PStrings(); }
 
 void VCard::setLanguages(const PStrings &lang)
 {
     INIT_D();
     d->lang = lang;
+}
+
+Item<QString> &VCard::setLanguages(const QString &lang)
+{
+    INIT_D();
+    d->lang.append({ Parameters(), lang });
+    return d->lang.last();
 }
 
 PAdvUris VCard::logo() const { return d ? d->logo : PAdvUris(); }
@@ -1274,6 +1410,13 @@ void VCard::setLogo(const PAdvUris &logo)
     d->logo = logo;
 }
 
+Item<UriValue> &VCard::setLogo(const UriValue &logo)
+{
+    INIT_D();
+    d->logo.append({ Parameters(), logo });
+    return d->logo.last();
+}
+
 PUris VCard::member() const { return d ? d->member : PUris(); }
 
 void VCard::setMember(const PUris &member)
@@ -1282,12 +1425,26 @@ void VCard::setMember(const PUris &member)
     d->member = member;
 }
 
+Item<QUrl> &VCard::setMember(const QUrl &member)
+{
+    INIT_D();
+    d->member.append({ Parameters(), member });
+    return d->member.last();
+}
+
 PAdvUris VCard::photo() const { return d ? d->photo : PAdvUris(); }
 
 void VCard::setPhoto(const PAdvUris &photo)
 {
     INIT_D();
     d->photo = photo;
+}
+
+Item<UriValue> &VCard::setPhoto(const UriValue &photo)
+{
+    INIT_D();
+    d->photo.append({ Parameters(), photo });
+    return d->photo.last();
 }
 
 QString VCard::prodid() const { return d ? d->prodid : QString(); }
@@ -1306,6 +1463,13 @@ void VCard::setRelated(const PUrisOrTexts &related)
     d->related = related;
 }
 
+Item<UriOrText> &VCard::setRelated(const UriOrText &related)
+{
+    INIT_D();
+    d->related.append({ Parameters(), related });
+    return d->related.last();
+}
+
 QDateTime VCard::rev() const { return d ? d->rev : QDateTime(); }
 
 void VCard::setRev(const QDateTime &rev)
@@ -1322,12 +1486,26 @@ void VCard::setSound(const PAdvUris &sound)
     d->sound = sound;
 }
 
+Item<UriValue> &VCard::setSound(const UriValue &sound)
+{
+    INIT_D();
+    d->sound.append({ Parameters(), sound });
+    return d->sound.last();
+}
+
 PUris VCard::source() const { return d ? d->source : PUris(); }
 
 void VCard::setSource(const PUris &source)
 {
     INIT_D();
     d->source = source;
+}
+
+Item<QUrl> &VCard::setSource(const QUrl &source)
+{
+    INIT_D();
+    d->source.append({ Parameters(), source });
+    return d->source.last();
 }
 
 PTimeZones VCard::timeZone() const { return d ? d->timeZone : PTimeZones(); }
@@ -1338,12 +1516,26 @@ void VCard::setTimeZone(const PTimeZones &timeZone)
     d->timeZone = timeZone;
 }
 
+Item<TimeZone> &VCard::setTimeZone(const TimeZone &timeZone)
+{
+    INIT_D();
+    d->timeZone.append({ Parameters(), timeZone });
+    return d->timeZone.last();
+}
+
 PAddresses VCard::addresses() const { return d ? d->addresses : PAddresses(); }
 
 void VCard::setAddresses(const PAddresses &addresses)
 {
     INIT_D();
     d->addresses = addresses;
+}
+
+Item<Address> &VCard::setAddresses(const Address &addresses)
+{
+    INIT_D();
+    d->addresses.append({ Parameters(), addresses });
+    return d->addresses.last();
 }
 
 } // namespace VCard4
