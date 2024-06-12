@@ -204,7 +204,7 @@ namespace {
         }
 
         template <typename ItemT>
-        static void fillContainer(QDomElement parent, const char *tagName, TaggedList<ItemT> &container)
+        static void fillContainer(QDomElement parent, const char *tagName, TaggedList<Item<ItemT>> &container)
         {
             auto tn = QString::fromLatin1(tagName);
             for (auto e = parent.firstChildElement(tn); !e.isNull(); e = e.nextSiblingElement(tn)) {
@@ -644,7 +644,7 @@ QDomElement VCard::toXmlElement(QDomDocument &document) const
         return {};
     }
 
-    QDomElement vCardElement = document.createElement(QLatin1String("vcard"));
+    QDomElement vCardElement = document.createElementNS(VCARD_NAMESPACE, QLatin1String("vcard"));
 
     VCardHelper::serializeList(vCardElement, d->fullName, QLatin1String("fn"));
     if (!d->names.data.isEmpty()) {
@@ -947,7 +947,7 @@ void VCard::fromVCardTemp(const XMPP::VCard &tempVCard)
 
 XMPP::VCard VCard::toVCardTemp() const
 {
-    XMPP::VCard tempVCard;
+    auto tempVCard = XMPP::VCard::makeEmpty();
 
     // Full Name
     if (!d->fullName.isEmpty()) {
@@ -1059,7 +1059,7 @@ XMPP::VCard VCard::toVCardTemp() const
 
 // Getters and setters implementation
 
-PStrings VCard::fullName() const { return d->fullName; }
+PStrings VCard::fullName() const { return d ? d->fullName : PStrings {}; }
 
 void VCard::setFullName(const PStrings &fullName)
 {
@@ -1067,7 +1067,7 @@ void VCard::setFullName(const PStrings &fullName)
     d->fullName = fullName;
 }
 
-const PNames &VCard::names() const { return d->names; }
+PNames VCard::names() const { return d ? d->names : PNames {}; }
 
 void VCard::setNames(const PNames &names)
 {

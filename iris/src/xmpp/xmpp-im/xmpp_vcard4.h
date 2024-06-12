@@ -262,8 +262,8 @@ public:
     PStrings fullName() const;
     void     setFullName(const PStrings &fullName);
 
-    const PNames &names() const;
-    void          setNames(const PNames &names);
+    PNames names() const;
+    void   setNames(const PNames &names);
 
     PStringLists nickName() const;
     void         setNickName(const PStringLists &nickname);

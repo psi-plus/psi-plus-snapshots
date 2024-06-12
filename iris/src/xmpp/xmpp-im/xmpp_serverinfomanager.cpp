@@ -69,8 +69,6 @@ void ServerInfoManager::deinitialize()
 
 const QString &ServerInfoManager::multicastService() const { return _multicastService; }
 
-bool ServerInfoManager::hasPEP() const { return _hasPEP; }
-
 bool ServerInfoManager::canMessageCarbons() const { return _canMessageCarbons; }
 
 void ServerInfoManager::queryServicesList()
@@ -294,10 +292,12 @@ void ServerInfoManager::account_disco_finished()
         // Identities
         DiscoItem::Identities is = jt->item().identities();
         for (const DiscoItem::Identity &i : is) {
-            if (i.category == "pubsub" && i.type == "pep")
+            if (i.category == "pubsub" && i.type == "pep") {
                 _hasPEP = true;
+            }
         }
-        _account_features = jt->item().features();
+        _hasPersistentStorage = jt->item().hasPersistentStorage();
+        _account_features     = jt->item().features();
 
         emit featuresChanged();
     }

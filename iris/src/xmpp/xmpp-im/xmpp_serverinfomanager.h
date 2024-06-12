@@ -79,7 +79,8 @@ public:
     ServerInfoManager(XMPP::Client *client);
 
     const QString                           &multicastService() const;
-    bool                                     hasPEP() const;
+    inline bool                              hasPEP() const { return _hasPEP; }
+    inline bool                              hasPersistentStorage() const { return _hasPersistentStorage; }
     inline const Features                   &server_features() const { return _server_features; }
     inline const Features                   &account_features() const { return _account_features; }
     bool                                     canMessageCarbons() const;
@@ -137,9 +138,10 @@ private:
     QMap<QString, ServiceInfo>
         _servicesInfo; // all the diso#info requests for services of this server jid=>(state,info)
 
-    bool _featuresRequested;
-    bool _hasPEP;
-    bool _canMessageCarbons;
+    bool _featuresRequested    = false;
+    bool _hasPEP               = false;
+    bool _hasPersistentStorage = false;
+    bool _canMessageCarbons    = false;
 };
 } // namespace XMPP
 
