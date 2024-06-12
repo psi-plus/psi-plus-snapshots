@@ -118,6 +118,9 @@ namespace {
         static void serializeList(QDomElement &parent, const TaggedList<Item<T>> &list, const QString &tagName,
                                   const QString &innerTagName = QLatin1String("text"))
         {
+            if (list.isEmpty()) {
+                return;
+            }
             auto document = parent.ownerDocument();
             for (const auto &entry : list) {
                 QDomElement element = document.createElement(tagName);
@@ -319,6 +322,9 @@ Address::Address(const QDomElement &element)
 
 QDomElement Address::toXmlElement(QDomDocument &document) const
 {
+    if (isEmpty()) {
+        return {};
+    }
     QDomElement addressElement = document.createElement(QLatin1String("adr"));
     VCardHelper::addTextElement(document, addressElement, QLatin1String("pobox"), pobox);
     VCardHelper::addTextElement(document, addressElement, QLatin1String("ext"), extaddr);
@@ -477,7 +483,7 @@ public:
     PAdvUris       photo;
     PHistorical    bday;        // at most 1
     PHistorical    anniversary; // at most 1
-    VCard4::Gender gender;
+    VCard4::Gender gender = Gender::Undefined;
     QString        genderComment;
 
     // Delivery Addressing Properties
@@ -700,10 +706,11 @@ QDomElement VCard::toXmlElement(QDomDocument &document) const
     }
 
     for (const auto &address : d->addresses) {
-        QDomElement adrElement = document.createElement(QLatin1String("adr"));
-        address.parameters.addTo(adrElement);
-        adrElement.appendChild(address.data.toXmlElement(document));
-        vCardElement.appendChild(adrElement);
+        auto addrEl = address.data.toXmlElement(document);
+        if (!addrEl.isNull()) {
+            address.parameters.addTo(addrEl);
+            vCardElement.appendChild(addrEl);
+        }
     }
 
     return vCardElement;
