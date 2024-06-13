@@ -334,6 +334,8 @@ void XData::setType(Type t) { d->type = t; }
 
 QString XData::registrarType() const { return d->registrarType; }
 
+void XData::setRegistrarType(const QString &registrarType) { d->registrarType = registrarType; }
+
 const XData::FieldList &XData::fields() const { return d->fields; }
 
 XData::Field XData::getField(const QString &var) const
@@ -453,6 +455,13 @@ QDomElement XData::toXml(QDomDocument *doc, bool submitForm) const
         x.appendChild(textTag(doc, "title", d->title));
     if (!submitForm && !d->instructions.isEmpty())
         x.appendChild(textTag(doc, "instructions", d->instructions));
+    if (!d->registrarType.isEmpty()) {
+        XData::Field f;
+        f.setType(Field::Field_Hidden);
+        f.setVar(QLatin1String("FORM_TYPE"));
+        f.setValue({ d->registrarType });
+        x.appendChild(f.toXml(doc, submitForm));
+    }
 
     if (!d->fields.isEmpty()) {
         for (const auto &f : std::as_const(d->fields)) {

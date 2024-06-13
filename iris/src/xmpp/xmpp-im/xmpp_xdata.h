@@ -47,6 +47,7 @@ public:
     Type    type() const;
     void    setType(Type);
     QString registrarType() const;
+    void    setRegistrarType(const QString &registrarType);
 
     struct ReportField {
         ReportField() { }
