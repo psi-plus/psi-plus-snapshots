@@ -803,32 +803,41 @@ void VCard::fromVCardTemp(const XMPP::VCard &tempVCard)
     };
 
     // Full Name
-    setFullName({ { PString { Parameters(), tempVCard.fullName() } } });
+    if (!tempVCard.fullName().isEmpty()) {
+        setFullName({ { PString { Parameters(), tempVCard.fullName() } } });
+    }
 
     // Names
     PNames names;
     names.parameters = Parameters();
-    names.data.surname << tempVCard.familyName();
-    names.data.given << tempVCard.givenName();
-    names.data.additional << tempVCard.middleName();
-    names.data.prefix << tempVCard.prefixName();
-    names.data.suffix << tempVCard.suffixName();
+    if (!tempVCard.familyName().isEmpty())
+        names.data.surname << tempVCard.familyName();
+    if (!tempVCard.givenName().isEmpty())
+        names.data.given << tempVCard.givenName();
+    if (!tempVCard.middleName().isEmpty())
+        names.data.additional << tempVCard.middleName();
+    if (!tempVCard.prefixName().isEmpty())
+        names.data.prefix << tempVCard.prefixName();
+    if (!tempVCard.suffixName().isEmpty())
+        names.data.suffix << tempVCard.suffixName();
     setNames(names);
 
     // Nickname
-    setNickName({ tempVCard.nickName() });
+    if (!tempVCard.nickName().isEmpty()) {
+        setNickName({ tempVCard.nickName() });
+    }
 
     // Photo
     if (!tempVCard.photo().isEmpty()) {
-        setPhoto(UriValue(QString::fromLatin1("data:image/jpeg;base64,") + tempVCard.photo().toBase64()));
-    } else {
+        setPhoto(UriValue(tempVCard.photo(), QLatin1String("image/jpeg")));
+    } else if (!tempVCard.photoURI().isEmpty()) {
         setPhoto(UriValue(tempVCard.photoURI()));
     }
 
     // Birthday
     if (!tempVCard.bday().isNull()) {
         setBday(tempVCard.bday());
-    } else {
+    } else if (!tempVCard.bdayStr().isEmpty()) {
         setBday(tempVCard.bdayStr());
     }
 
@@ -837,7 +846,9 @@ void VCard::fromVCardTemp(const XMPP::VCard &tempVCard)
     for (const auto &addr : tempVCard.addressList()) {
         addresses.append({ convertToParameters(addr), Address { addr } });
     }
-    setAddresses(addresses);
+    if (!addresses.isEmpty()) {
+        setAddresses(addresses);
+    }
 
     // Phones
     PUrisOrTexts phones;
@@ -869,9 +880,13 @@ void VCard::fromVCardTemp(const XMPP::VCard &tempVCard)
             params.type.append("pcs");
         if (phone.pref)
             params.pref = 1; // Pref is true, setting as preferred
-        phones.append({ params, phone.number });
+        if (!phone.number.isEmpty()) {
+            phones.append({ params, phone.number });
+        }
     }
-    setPhones(phones);
+    if (!phones.isEmpty()) {
+        setPhones(phones);
+    }
 
     // Emails
     PStrings emails;
@@ -887,51 +902,77 @@ void VCard::fromVCardTemp(const XMPP::VCard &tempVCard)
             params.type.append("x400");
         if (email.pref)
             params.pref = 1; // Pref is true, setting as preferred
-        emails.append({ params, email.userid });
+        if (!email.userid.isEmpty()) {
+            emails.append({ params, email.userid });
+        }
     }
-    setEmails(emails);
+    if (!emails.isEmpty()) {
+        setEmails(emails);
+    }
 
     // JID
-    setImpp(tempVCard.jid());
+    if (!tempVCard.jid().isEmpty()) {
+        setImpp(tempVCard.jid());
+    }
 
     // Title
-    setTitle(tempVCard.title());
+    if (!tempVCard.title().isEmpty()) {
+        setTitle(tempVCard.title());
+    }
 
     // Role
-    setRole(tempVCard.role());
+    if (!tempVCard.role().isEmpty()) {
+        setRole(tempVCard.role());
+    }
 
     // Logo
     if (!tempVCard.logo().isEmpty()) {
-        setLogo(UriValue(QString::fromLatin1("data:image/jpeg;base64,") + tempVCard.logo().toBase64()));
-    } else {
+        setLogo(UriValue(tempVCard.logo(), QLatin1String("image/jpeg;base64")));
+    } else if (!tempVCard.logoURI().isEmpty()) {
         setLogo(UriValue(tempVCard.logoURI()));
     }
 
     // Org
     PStringLists org;
-    org.append({ Parameters(), { tempVCard.org().name } });
-    for (const auto &unit : tempVCard.org().unit) {
-        org.append({ Parameters(), { unit } });
+    if (!tempVCard.org().name.isEmpty()) {
+        org.append({ Parameters(), { tempVCard.org().name } });
+        for (const auto &unit : tempVCard.org().unit) {
+            if (!unit.isEmpty()) {
+                org.append({ Parameters(), { unit } });
+            }
+        }
+        setOrg(org);
     }
-    setOrg(org);
 
     // Categories
-    setCategories(tempVCard.categories());
+    if (!tempVCard.categories().isEmpty()) {
+        setCategories(tempVCard.categories());
+    }
 
     // Note
-    setNote({ { PString { Parameters(), tempVCard.note() } } });
+    if (!tempVCard.note().isEmpty()) {
+        setNote(tempVCard.note());
+    }
 
     // ProdId
-    setProdid(tempVCard.prodId());
+    if (!tempVCard.prodId().isEmpty()) {
+        setProdid(tempVCard.prodId());
+    }
 
     // Rev
-    setRev(QDateTime::fromString(tempVCard.rev(), Qt::ISODate));
+    if (!tempVCard.rev().isEmpty()) {
+        setRev(QDateTime::fromString(tempVCard.rev(), Qt::ISODate));
+    }
 
     // UID
-    setUid(tempVCard.uid());
+    if (!tempVCard.uid().isEmpty()) {
+        setUid(tempVCard.uid());
+    }
 
     // URL
-    setUrls(QUrl(tempVCard.url()));
+    if (!tempVCard.url().isEmpty()) {
+        setUrls(QUrl(tempVCard.url()));
+    }
 
     // Geo
     if (!tempVCard.geo().lat.isEmpty() && !tempVCard.geo().lon.isEmpty()) {
@@ -939,15 +980,19 @@ void VCard::fromVCardTemp(const XMPP::VCard &tempVCard)
     }
 
     // Timezone
-    setTimeZone({ { PTimeZone { Parameters(), tempVCard.timezone() } } });
+    if (!tempVCard.timezone().isEmpty()) {
+        setTimeZone(tempVCard.timezone());
+    }
 
     // Desc (translated to note)
-    setNote({ { PString { Parameters(), tempVCard.desc() } } });
+    if (!tempVCard.desc().isEmpty()) {
+        setNote(tempVCard.desc());
+    }
 
     // Sound
     if (!tempVCard.sound().isEmpty()) {
-        setSound(UriValue(QString::fromLatin1("data:audio/wav;base64,") + tempVCard.sound().toBase64()));
-    } else {
+        setSound(UriValue(tempVCard.sound(), QLatin1String("audio/wav")));
+    } else if (!tempVCard.soundURI().isEmpty()) {
         setSound(UriValue(tempVCard.soundURI()));
     }
 }
