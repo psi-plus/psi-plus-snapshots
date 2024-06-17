@@ -45,6 +45,8 @@
 #include "applicationinfo.h"
 #include "psiiconset.h"
 
+#include <wtypes.h>
+
 #include <propkey.h>
 #include <propvarutil.h>
 #include <shobjidl.h>
