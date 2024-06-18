@@ -145,7 +145,7 @@ template <> struct Item<Historical> : public ItemBase<Historical> {
     operator QString() const
     {
         return std::visit(
-            [this](auto const &v) {
+            [](auto const &v) {
                 using Tv = std::decay_t<decltype(v)>;
                 if constexpr (std::is_same_v<Tv, QString>) {
                     return v;
@@ -158,7 +158,7 @@ template <> struct Item<Historical> : public ItemBase<Historical> {
     operator QDate() const
     {
         return std::visit(
-            [this](auto const &v) {
+            [](auto const &v) {
                 using Tv = std::decay_t<decltype(v)>;
                 if constexpr (std::is_same_v<Tv, QDate>) {
                     return v;
@@ -177,7 +177,7 @@ template <> struct Item<UriOrText> : public ItemBase<UriOrText> {
     operator QString() const
     {
         return std::visit(
-            [this](auto const &v) {
+            [](auto const &v) {
                 using Tv = std::decay_t<decltype(v)>;
                 if constexpr (std::is_same_v<Tv, QString>) {
                     return v;

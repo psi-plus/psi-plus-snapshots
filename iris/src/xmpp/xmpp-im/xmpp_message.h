@@ -30,6 +30,8 @@
 
 #include <QExplicitlySharedDataPointer>
 
+#include <optional>
+
 class QDateTime;
 class QString;
 
@@ -64,6 +66,11 @@ public:
     struct StanzaId {
         Jid     by;
         QString id;
+    };
+
+    struct Reactions {
+        QString     targetId;
+        QStringList reactions;
     };
 
     Message();
@@ -219,6 +226,10 @@ public:
     QList<Reference> references() const;
     void             addReference(const Reference &r);
     void             setReferences(const QList<Reference> &r);
+
+    // XEP-0444 message reaction
+    void      setReactions(const Reactions &reactions);
+    Reactions reactions() const;
 
     // Obsolete invitation
     QString invite() const;
