@@ -135,6 +135,7 @@ public:
     void setProxy(const Proxy &proxy);
     void setOptProbe(bool);
     void setOptSSL(bool);
+    void setOptTlsSrv(bool);
 
     void changePollInterval(int secs);
 

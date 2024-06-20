@@ -149,17 +149,18 @@ AdvancedConnector::Proxy::operator QNetworkProxy()
 // AdvancedConnector
 //----------------------------------------------------------------------------
 typedef enum { Idle, Connecting, Connected } Mode;
-typedef enum { Force, Probe, Never } LegacySSL;
+typedef enum : char { Force, Probe, Never } LegacySSL;
 
 class AdvancedConnector::Private {
 public:
     ByteStream *bs; //!< Socket to use
 
     /* configuration values / "options" */
-    QString   opt_host; //!< explicit host from config
-    quint16   opt_port; //!< explicit port from config
-    LegacySSL opt_ssl;  //!< Whether to use legacy SSL support
-    Proxy     proxy;    //!< Proxy configuration
+    QString   opt_host;           //!< explicit host from config
+    quint16   opt_port;           //!< explicit port from config
+    LegacySSL opt_ssl    = Never; //!< Whether to use legacy SSL support
+    bool      opt_srvtls = true;  //!< Whether to lookup tls port from SRV
+    Proxy     proxy;              //!< Proxy configuration
 
     /* State tracking values */
     Mode    mode;      //!< Idle, Connecting, Connected
@@ -241,6 +242,8 @@ void AdvancedConnector::setOptSSL(bool b)
         return;
     d->opt_ssl = (b ? Force : Never);
 }
+
+void AdvancedConnector::setOptTlsSrv(bool value) { d->opt_srvtls = value; }
 
 void AdvancedConnector::connectToServer(const QString &server)
 {
@@ -335,13 +338,15 @@ void AdvancedConnector::connectToServer(const QString &server)
         });
         connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
 
-        QStringList services = { XMPP_CLIENT_SRV };
         if (!d->opt_host.isEmpty()) { /* if custom host:port */
             d->host = d->opt_host;
             d->port = d->opt_port;
             s->connectToHost(d->host, quint16(d->port));
             return;
-        } else if (d->opt_ssl != Never) { /* if ssl forced or should be probed */
+        }
+
+        QStringList services = { XMPP_CLIENT_SRV };
+        if (d->opt_ssl == Never && d->opt_srvtls) { /* if ssl forced or should be probed */
             d->port = XMPP_LEGACY_PORT;
             services << XMPP_CLIENT_TLS_SRV;
         }
