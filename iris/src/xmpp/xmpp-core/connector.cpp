@@ -347,8 +347,10 @@ void AdvancedConnector::connectToServer(const QString &server)
 
         QStringList services = { XMPP_CLIENT_SRV };
         if (d->opt_ssl == Never && d->opt_srvtls) { /* if ssl forced or should be probed */
-            d->port = XMPP_LEGACY_PORT;
             services << XMPP_CLIENT_TLS_SRV;
+        }
+        if (d->opt_ssl != Never) {
+            d->port = XMPP_LEGACY_PORT;
         }
         s->connectToHost(services, XMPP_CLIENT_TRANSPORT, d->host, quint16(d->port));
     }
