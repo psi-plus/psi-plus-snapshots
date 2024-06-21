@@ -80,11 +80,29 @@ class Address {
 public:
     Address() = default;
     Address(const QDomElement &element);
-    Address(const XMPP::VCard::Address &legacyAddress) :
-        pobox({ legacyAddress.pobox }), extaddr({ legacyAddress.extaddr }), street({ legacyAddress.street }),
-        locality({ legacyAddress.locality }), region({ legacyAddress.region }), code({ legacyAddress.pcode }),
-        country({ legacyAddress.country })
+    Address(const XMPP::VCard::Address &legacyAddress)
     {
+        if (!legacyAddress.pobox.isEmpty()) {
+            pobox.append(legacyAddress.pobox);
+        }
+        if (!legacyAddress.extaddr.isEmpty()) {
+            extaddr.append(legacyAddress.extaddr);
+        }
+        if (!legacyAddress.street.isEmpty()) {
+            street.append(legacyAddress.street);
+        }
+        if (!legacyAddress.locality.isEmpty()) {
+            locality.append(legacyAddress.locality);
+        }
+        if (!legacyAddress.region.isEmpty()) {
+            region.append(legacyAddress.region);
+        }
+        if (!legacyAddress.pcode.isEmpty()) {
+            code.append(legacyAddress.pcode);
+        }
+        if (!legacyAddress.country.isEmpty()) {
+            country.append(legacyAddress.country);
+        }
     }
     QDomElement toXmlElement(QDomDocument &document) const;
     bool        isEmpty() const noexcept;

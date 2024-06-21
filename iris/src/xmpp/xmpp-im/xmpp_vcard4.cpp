@@ -844,11 +844,12 @@ void VCard::fromVCardTemp(const XMPP::VCard &tempVCard)
     // Addresses
     PAddresses addresses;
     for (const auto &addr : tempVCard.addressList()) {
-        addresses.append({ convertToParameters(addr), Address { addr } });
+        PAddress pa { convertToParameters(addr), Address { addr } };
+        if (!pa.data.isEmpty()) {
+            addresses.append(pa);
+        }
     }
-    if (!addresses.isEmpty()) {
-        setAddresses(addresses);
-    }
+    setAddresses(addresses);
 
     // Phones
     PUrisOrTexts phones;
