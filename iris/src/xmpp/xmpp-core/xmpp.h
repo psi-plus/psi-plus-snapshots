@@ -31,6 +31,8 @@
 #include <QUrl>
 #include <QtCrypto> // For QCA::SASL::Params
 
+#include <memory>
+
 #ifndef CS_XMPP
 class ByteStream;
 #endif
@@ -133,7 +135,6 @@ public:
     };
 
     void setProxy(const Proxy &proxy);
-    void setOptProbe(bool);
     void setOptSSL(bool);
     void setOptTlsSrv(bool);
 
@@ -163,7 +164,7 @@ private slots:
 
 private:
     class Private;
-    Private *d;
+    std::unique_ptr<Private> d;
 
     void cleanup();
 };
