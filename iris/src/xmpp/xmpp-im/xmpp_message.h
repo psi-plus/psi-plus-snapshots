@@ -29,8 +29,7 @@
 #include "xmpp_url.h"
 
 #include <QExplicitlySharedDataPointer>
-
-#include <optional>
+#include <QSet>
 
 class QDateTime;
 class QString;
@@ -69,8 +68,8 @@ public:
     };
 
     struct Reactions {
-        QString     targetId;
-        QStringList reactions;
+        QString       targetId;
+        QSet<QString> reactions;
     };
 
     Message();

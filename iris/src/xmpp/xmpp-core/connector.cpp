@@ -328,10 +328,11 @@ void AdvancedConnector::connectToServer(const QString &server)
             return;
         }
 
-        QStringList services = { XMPP_CLIENT_SRV };
+        QStringList services;
         if (!d->opt_directtls && d->opt_srvtls) {
             services << XMPP_CLIENT_TLS_SRV;
         }
+        services << XMPP_CLIENT_SRV;
         if (d->opt_directtls) {
             d->port = XMPP_LEGACY_PORT;
         }

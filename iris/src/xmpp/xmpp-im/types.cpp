@@ -29,6 +29,8 @@
 #include <QList>
 #include <QMap>
 
+#include <optional>
+
 #define NS_XML "http://www.w3.org/XML/1998/namespace"
 
 namespace XMPP {
@@ -1810,9 +1812,10 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
             auto reactionTag = QStringLiteral("reaction");
             auto reaction    = reactionStanza.firstChildElement(reactionTag);
             while (!reaction.isNull()) {
-                d->reactions.reactions.append(reaction.text().trimmed());
+                d->reactions.reactions.insert(reaction.text().trimmed());
                 reaction = reaction.nextSiblingElement(reactionTag);
             }
+            d->reactions.reactions.squeeze();
         }
     }
 
