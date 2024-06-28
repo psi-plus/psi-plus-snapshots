@@ -1449,6 +1449,7 @@ Stanza Message::toStanza(Stream *stream) const
             e.appendChild(s.createTextElement(reactionsNS, QStringLiteral("reaction"), reaction));
         }
         s.appendChild(e);
+        s.appendChild(s.createElement(QStringLiteral("urn:xmpp:hints"), QStringLiteral("store")));
     }
 
     return s;
@@ -1804,13 +1805,13 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
     }
 
     // XEP-0444 message reactions
-    auto reactionStanza
+    auto reactions
         = childElementsByTagNameNS(root, "urn:xmpp:reactions:0", QStringLiteral("reactions")).item(0).toElement();
-    if (!reactionStanza.isNull()) {
-        d->reactions.targetId = reactionStanza.attribute(QLatin1String("id"));
+    if (!reactions.isNull()) {
+        d->reactions.targetId = reactions.attribute(QLatin1String("id"));
         if (!d->reactions.targetId.isEmpty()) {
             auto reactionTag = QStringLiteral("reaction");
-            auto reaction    = reactionStanza.firstChildElement(reactionTag);
+            auto reaction    = reactions.firstChildElement(reactionTag);
             while (!reaction.isNull()) {
                 d->reactions.reactions.insert(reaction.text().trimmed());
                 reaction = reaction.nextSiblingElement(reactionTag);
