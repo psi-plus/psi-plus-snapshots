@@ -230,6 +230,9 @@ public:
     void      setReactions(const Reactions &reactions);
     Reactions reactions() const;
 
+    void    setRetraction(const QString &retractedMessageId);
+    QString retraction() const;
+
     // Obsolete invitation
     QString invite() const;
     void    setInvite(const QString &s);

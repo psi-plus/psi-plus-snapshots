@@ -752,6 +752,7 @@ public:
     Message::StanzaId        stanzaId;           // XEP-0359
     QList<Reference>         references;         // XEP-0385 and XEP-0372
     Message::Reactions       reactions;          // XEP-0444
+    QString                  retraction;         // XEP-0424
 };
 
 #define MessageD() (d ? d : (d = new Private))
@@ -1103,6 +1104,10 @@ void Message::setReactions(const XMPP::Message::Reactions &reactions) { MessageD
 
 XMPP::Message::Reactions Message::reactions() const { return d ? d->reactions : Reactions {}; }
 
+void Message::setRetraction(const QString &retractedMessageId) { MessageD()->retraction = retractedMessageId; }
+
+QString Message::retraction() const { return d ? d->retraction : QString {}; }
+
 QString Message::invite() const { return d ? d->invite : QString(); }
 
 void Message::setInvite(const QString &s) { MessageD()->invite = s; }
@@ -1448,6 +1453,14 @@ Stanza Message::toStanza(Stream *stream) const
         for (const QString &reaction : d->reactions.reactions) {
             e.appendChild(s.createTextElement(reactionsNS, QStringLiteral("reaction"), reaction));
         }
+        s.appendChild(e);
+        s.appendChild(s.createElement(QStringLiteral("urn:xmpp:hints"), QStringLiteral("store")));
+    }
+
+    // XEP-0424
+    if (!d->retraction.isEmpty()) {
+        auto e = s.createElement("urn:xmpp:message-retract:1", QStringLiteral("retract"));
+        e.setAttribute(QLatin1String("id"), d->retraction);
         s.appendChild(e);
         s.appendChild(s.createElement(QStringLiteral("urn:xmpp:hints"), QStringLiteral("store")));
     }
@@ -1820,6 +1833,11 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
         }
     }
 
+    // XEP-0424 message retraction
+    d->retraction = childElementsByTagNameNS(root, "urn:xmpp:message-retract:1", QStringLiteral("retract"))
+                        .item(0)
+                        .toElement()
+                        .attribute(QLatin1String("id"));
     return true;
 }
 
