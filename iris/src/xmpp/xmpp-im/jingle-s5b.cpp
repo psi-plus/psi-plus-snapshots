@@ -698,42 +698,42 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
             proxyDiscoveryInProgress            = true;
             QList<QSet<QString>> featureOptions = { { "http://jabber.org/protocol/bytestreams" } };
-            q->_pad->session()->manager()->client()->serverInfoManager()->queryServiceInfo(
+            auto                 query = q->_pad->session()->manager()->client()->serverInfoManager()->queryServiceInfo(
                 QStringLiteral("proxy"), QStringLiteral("bytestreams"), featureOptions,
-                QRegularExpression("proxy.*|socks.*|stream.*|s5b.*"), ServerInfoManager::SQ_CheckAllOnNoMatch,
-                [this](const QList<DiscoItem> &items) {
-                    if (!proxyDiscoveryInProgress) { // check if new results are ever/still expected
-                        // seems like we have successful connection via higher priority channel. so nobody cares
-                        // about proxy
-                        return;
-                    }
-                    auto m         = static_cast<Manager *>(q->_pad->manager());
-                    Jid  userProxy = m->userProxy();
+                QRegularExpression("proxy.*|socks.*|stream.*|s5b.*"), ServiceInfoQuery::CheckAllOnNoMatch);
+            q->connect(query, &ServiceInfoQuery::finished, q, [this](const QList<DiscoItem> &items) {
+                if (!proxyDiscoveryInProgress) { // check if new results are ever/still expected
+                    // seems like we have successful connection via higher priority channel. so nobody cares
+                    // about proxy
+                    return;
+                }
+                auto m         = static_cast<Manager *>(q->_pad->manager());
+                Jid  userProxy = m->userProxy();
 
-                    bool userProxyFound = !userProxy.isValid();
-                    for (const auto &i : items) {
-                        quint16 localPref = 0;
-                        if (!userProxyFound && i.jid() == userProxy) {
-                            localPref      = 1;
-                            userProxyFound = true;
-                            continue;
-                        }
-                        Candidate c(q, i.jid(), generateCid(), localPref);
-                        localCandidates.emplace(c.cid(), c);
-                        qDebug("new local candidate: %s", qPrintable(c.toString()));
-                        queryS5BProxy(i.jid(), c.cid());
+                bool userProxyFound = !userProxy.isValid();
+                for (const auto &i : items) {
+                    quint16 localPref = 0;
+                    if (!userProxyFound && i.jid() == userProxy) {
+                        localPref      = 1;
+                        userProxyFound = true;
+                        continue;
                     }
-                    if (!userProxyFound) {
-                        Candidate c(q, userProxy, generateCid(), 1);
-                        localCandidates.emplace(c.cid(), c);
-                        qDebug("new local candidate: %s", qPrintable(c.toString()));
-                        queryS5BProxy(userProxy, c.cid());
-                    } else if (items.count() == 0) {
-                        // seems like we don't have any proxy
-                        proxyDiscoveryInProgress = false;
-                        checkAndFinishNegotiation();
-                    }
-                });
+                    Candidate c(q, i.jid(), generateCid(), localPref);
+                    localCandidates.emplace(c.cid(), c);
+                    qDebug("new local candidate: %s", qPrintable(c.toString()));
+                    queryS5BProxy(i.jid(), c.cid());
+                }
+                if (!userProxyFound) {
+                    Candidate c(q, userProxy, generateCid(), 1);
+                    localCandidates.emplace(c.cid(), c);
+                    qDebug("new local candidate: %s", qPrintable(c.toString()));
+                    queryS5BProxy(userProxy, c.cid());
+                } else if (items.count() == 0) {
+                    // seems like we don't have any proxy
+                    proxyDiscoveryInProgress = false;
+                    checkAndFinishNegotiation();
+                }
+            });
         }
 
         void tryConnectToRemoteCandidate()

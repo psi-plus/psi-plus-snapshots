@@ -21,13 +21,13 @@
 
 #include "xmpp_client.h"
 #include "xmpp_serverinfomanager.h"
-#include "xmpp_tasks.h"
 #include "xmpp_xmlcommon.h"
 
 #include <QList>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QPointer>
 
 using namespace XMPP;
 
@@ -99,70 +99,69 @@ void HttpFileUpload::start()
     if (featureOptions.isEmpty()) {
         featureOptions << (QSet<QString>() << xmlns_v0_2_5) << (QSet<QString>() << xmlns_v0_3_1);
     }
-    d->client->serverInfoManager()->queryServiceInfo(
+    auto query = d->client->serverInfoManager()->queryServiceInfo(
         QLatin1String("store"), QLatin1String("file"), featureOptions,
-        QRegularExpression("^(upload|http|stor|file|dis|drive).*"), ServerInfoManager::SQ_CheckAllOnNoMatch,
-        [this](const QList<DiscoItem> &items) {
-            d->httpHosts.clear();
-            for (const auto &item : items) {
-                const QStringList &l   = item.features().list();
-                XEP0363::version   ver = XEP0363::vUnknown;
-                QString            xmlns;
-                quint64            sizeLimit = 0;
-                if (l.contains(xmlns_v0_3_1)) {
-                    ver   = XEP0363::v0_3_1;
-                    xmlns = xmlns_v0_3_1;
-                } else if (l.contains(xmlns_v0_2_5)) {
-                    ver   = XEP0363::v0_2_5;
-                    xmlns = xmlns_v0_2_5;
+        QRegularExpression("^(upload|http|stor|file|dis|drive).*"), ServiceInfoQuery::CheckAllOnNoMatch);
+    connect(query, &ServiceInfoQuery::finished, this, [this](const QList<DiscoItem> &items) {
+        d->httpHosts.clear();
+        for (const auto &item : items) {
+            const QStringList &l   = item.features().list();
+            XEP0363::version   ver = XEP0363::vUnknown;
+            QString            xmlns;
+            quint64            sizeLimit = 0;
+            if (l.contains(xmlns_v0_3_1)) {
+                ver   = XEP0363::v0_3_1;
+                xmlns = xmlns_v0_3_1;
+            } else if (l.contains(xmlns_v0_2_5)) {
+                ver   = XEP0363::v0_2_5;
+                xmlns = xmlns_v0_2_5;
+            }
+            if (ver != XEP0363::vUnknown) {
+                QVector<std::pair<HttpHost, int>> hosts;
+                const XData::Field field = item.registeredExtension(xmlns).getField(QLatin1String("max-file-size"));
+                if (field.isValid() && field.type() == XData::Field::Field_TextSingle)
+                    sizeLimit = field.value().at(0).toULongLong();
+                HttpHost host;
+                host.ver       = ver;
+                host.jid       = item.jid();
+                host.sizeLimit = sizeLimit;
+                QVariant metaProps(d->client->serverInfoManager()->serviceMeta(host.jid, "httpprops"));
+                if (metaProps.isValid()) {
+                    host.props = HostProps(metaProps.value<int>());
+                } else {
+                    host.props = SecureGet | SecurePut;
+                    if (ver == XEP0363::v0_3_1)
+                        host.props |= NewestVer;
                 }
-                if (ver != XEP0363::vUnknown) {
-                    QVector<std::pair<HttpHost, int>> hosts;
-                    const XData::Field field = item.registeredExtension(xmlns).getField(QLatin1String("max-file-size"));
-                    if (field.isValid() && field.type() == XData::Field::Field_TextSingle)
-                        sizeLimit = field.value().at(0).toULongLong();
-                    HttpHost host;
-                    host.ver       = ver;
-                    host.jid       = item.jid();
-                    host.sizeLimit = sizeLimit;
-                    QVariant metaProps(d->client->serverInfoManager()->serviceMeta(host.jid, "httpprops"));
-                    if (metaProps.isValid()) {
-                        host.props = HostProps(metaProps.value<int>());
-                    } else {
-                        host.props = SecureGet | SecurePut;
-                        if (ver == XEP0363::v0_3_1)
-                            host.props |= NewestVer;
-                    }
-                    int value = 0;
-                    if (host.props & SecureGet)
-                        value += 5;
-                    if (host.props & SecurePut)
-                        value += 5;
-                    if (host.props & NewestVer)
-                        value += 3;
-                    if (host.props & Failure)
-                        value -= 15;
-                    if (!sizeLimit || d->fileSize < sizeLimit)
-                        hosts.append({ host, value });
+                int value = 0;
+                if (host.props & SecureGet)
+                    value += 5;
+                if (host.props & SecurePut)
+                    value += 5;
+                if (host.props & NewestVer)
+                    value += 3;
+                if (host.props & Failure)
+                    value -= 15;
+                if (!sizeLimit || d->fileSize < sizeLimit)
+                    hosts.append({ host, value });
 
-                    // no sorting in preference order. most preferred go first
-                    std::sort(hosts.begin(), hosts.end(),
-                              [](const auto &a, const auto &b) { return a.second > b.second; });
-                    for (auto &hp : hosts) {
-                        d->httpHosts.append(hp.first);
-                    }
+                // no sorting in preference order. most preferred go first
+                std::sort(hosts.begin(), hosts.end(), [](const auto &a, const auto &b) { return a.second > b.second; });
+                for (auto &hp : hosts) {
+                    d->httpHosts.append(hp.first);
                 }
             }
-            // d->currentHost = d->httpHosts.begin();
-            d->client->httpFileUploadManager()->setDiscoHosts(d->httpHosts);
-            if (d->httpHosts.isEmpty()) { // if empty as the last resort check all services
-                d->result.statusCode   = HttpFileUpload::ErrorCode::NoUploadService;
-                d->result.statusString = "No suitable http upload services were found";
-                done(State::Error);
-            } else {
-                tryNextServer();
-            }
-        });
+        }
+        // d->currentHost = d->httpHosts.begin();
+        d->client->httpFileUploadManager()->setDiscoHosts(d->httpHosts);
+        if (d->httpHosts.isEmpty()) { // if empty as the last resort check all services
+            d->result.statusCode   = HttpFileUpload::ErrorCode::NoUploadService;
+            d->result.statusString = "No suitable http upload services were found";
+            done(State::Error);
+        } else {
+            tryNextServer();
+        }
+    });
 }
 
 void HttpFileUpload::tryNextServer()

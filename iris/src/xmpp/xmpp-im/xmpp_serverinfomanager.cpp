@@ -94,6 +94,14 @@ void ServerInfoManager::queryServicesList()
     jtitems->go(true);
 }
 
+void ServerInfoManager::finish(ServiceInfoQuery *q, const QList<DiscoItem> &items)
+{
+    emit q->finished(items);
+    if (q->parent() == this) {
+        q->deleteLater();
+    }
+}
+
 void ServerInfoManager::checkPendingServiceQueries()
 {
     // if services list is not ready yet we have to exit. if it's failed we have to finish all pending queries
@@ -102,17 +110,18 @@ void ServerInfoManager::checkPendingServiceQueries()
             const auto sqs = _serviceQueries;
             _serviceQueries.clear();
             for (const auto &q : sqs) {
-                q.callback(QList<DiscoItem>());
+                finish(q);
             }
         }
         return;
     }
 
     // services list is ready here and we can start checking it and sending disco#info to not cached entries
-    auto sqIt = _serviceQueries.begin();
-    while (sqIt != _serviceQueries.end()) {
+    auto queryIt = _serviceQueries.begin();
+    while (queryIt != _serviceQueries.end()) {
 
         // populate services to query for this service request
+        auto sqIt = *queryIt;
         if (!sqIt->servicesToQueryDefined) {
             sqIt->spareServicesToQuery.clear();
             // grep all suitble service jids. moving forward preferred ones
@@ -122,7 +131,7 @@ void ServerInfoManager::checkPendingServiceQueries()
                 if (sqIt->nameHint.isValid()) {
                     if (!sqIt->nameHint.isValid() || sqIt->nameHint.match(si.key()).hasMatch()) {
                         sqIt->servicesToQuery.push_back(si.key());
-                    } else if (sqIt->options & SQ_CheckAllOnNoMatch) {
+                    } else if (sqIt->options & ServiceInfoQuery::CheckAllOnNoMatch) {
                         sqIt->spareServicesToQuery.push_back(si.key());
                     }
                 } else {
@@ -134,8 +143,8 @@ void ServerInfoManager::checkPendingServiceQueries()
                 sqIt->spareServicesToQuery.clear();
             }
             if (sqIt->servicesToQuery.empty()) {
-                sqIt->callback(QList<DiscoItem>());
-                _serviceQueries.erase(sqIt++);
+                finish(sqIt);
+                _serviceQueries.erase(queryIt++);
                 continue;
             }
             sqIt->servicesToQueryDefined = true;
@@ -169,7 +178,7 @@ void ServerInfoManager::checkPendingServiceQueries()
                             sqIt->features.constBegin(), sqIt->features.constEnd(), false,
                             [&si](bool a, const QSet<QString> &b) { return a || si->item.features().test(b); }))) {
                     sqIt->result.append(si->item);
-                    if (sqIt->options & SQ_FinishOnFirstMatch) {
+                    if (sqIt->options & ServiceInfoQuery::FinishOnFirstMatch) {
                         break;
                     }
                 }
@@ -210,20 +219,19 @@ void ServerInfoManager::checkPendingServiceQueries()
         }
 
         // if has at least one sufficient result
-        auto forceFinish = (!sqIt->result.isEmpty() && (sqIt->options & SQ_FinishOnFirstMatch)); // stop on first found
+        auto forceFinish = (!sqIt->result.isEmpty()
+                            && (sqIt->options & ServiceInfoQuery::FinishOnFirstMatch)); // stop on first found
         // if nothing in progress then we have full result set or nothing found even in spare list
         if (forceFinish || !hasInProgress) { // self explanatory
-            auto callback = std::move(sqIt->callback);
-            auto result   = sqIt->result;
-            _serviceQueries.erase(sqIt++);
-            callback(result);
+            _serviceQueries.erase(queryIt++);
+            finish(sqIt, sqIt->result);
         } else {
-            ++sqIt;
+            ++queryIt;
         }
     }
 }
 
-void ServerInfoManager::appendQuery(const ServiceQuery &q)
+void ServerInfoManager::appendQuery(ServiceInfoQuery *q)
 {
     _serviceQueries.push_back(q);
     if (_servicesListState == ST_InProgress) {
@@ -236,11 +244,14 @@ void ServerInfoManager::appendQuery(const ServiceQuery &q)
     }
 }
 
-void ServerInfoManager::queryServiceInfo(const QString &category, const QString &type,
-                                         const QList<QSet<QString>> &features, const QRegularExpression &nameHint,
-                                         SQOptions options, std::function<void(const QList<DiscoItem> &items)> callback)
+ServiceInfoQuery *ServerInfoManager::queryServiceInfo(const QString &category, const QString &type,
+                                                      const QList<QSet<QString>> &features,
+                                                      const QRegularExpression   &nameHint,
+                                                      ServiceInfoQuery::Options   options)
 {
-    appendQuery(ServiceQuery(type, category, features, nameHint, options, std::move(callback)));
+    auto query = new ServiceInfoQuery(type, category, features, nameHint, options, this);
+    appendQuery(query);
+    return query;
 }
 
 void ServerInfoManager::setServiceMeta(const Jid &service, const QString &key, const QVariant &value)

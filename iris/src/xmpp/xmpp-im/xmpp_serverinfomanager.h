@@ -28,7 +28,6 @@
 #include <QString>
 #include <QVariant>
 
-#include <functional>
 #include <list>
 
 namespace XMPP {
@@ -36,37 +35,43 @@ class Client;
 class Features;
 class Jid;
 
+class ServiceInfoQuery : public QObject {
+    Q_OBJECT
+public:
+    enum Option {
+        CheckAllOnNoMatch    = 1, // check all if matched by name services do not match or no matched by name
+        FinishOnFirstMatch   = 2, // first callback is final
+        CallbackOnAnyMatches = 4  // TODO don't wait while all services will be discovered. empty result list = final
+    };
+    Q_DECLARE_FLAGS(Options, Option)
+
+    QList<DiscoItem> result;
+
+private:
+    friend class ServerInfoManager;
+    const QString              type;
+    const QString              category;
+    const QList<QSet<QString>> features;
+    const QRegularExpression   nameHint;
+    const Options              options;
+    std::list<QString>         servicesToQuery;
+    std::list<QString>         spareServicesToQuery; // usually a fallback when the above is not matched
+    bool                       servicesToQueryDefined = false;
+
+    ServiceInfoQuery(const QString &type, const QString &category, const QList<QSet<QString>> &features,
+                     const QRegularExpression &nameHint, const Options &options, QObject *parent) :
+        QObject(parent), type(type), category(category), features(features), nameHint(nameHint), options(options)
+    {
+    }
+
+signals:
+    void finished(const QList<DiscoItem> &item);
+};
+
 class ServerInfoManager : public QObject {
     Q_OBJECT
 public:
-    enum SQOption {
-        SQ_CheckAllOnNoMatch    = 1, // check all if matched by name services do not match or no matched by name
-        SQ_FinishOnFirstMatch   = 2, // first callback is final
-        SQ_CallbackOnAnyMatches = 4  // TODO don't wait while all services will be discovered. empty result list = final
-    };
-    Q_DECLARE_FLAGS(SQOptions, SQOption)
-
 private:
-    struct ServiceQuery {
-        const QString                                           type;
-        const QString                                           category;
-        const QList<QSet<QString>>                              features;
-        const QRegularExpression                                nameHint;
-        const SQOptions                                         options;
-        const std::function<void(const QList<DiscoItem> &item)> callback;
-        std::list<QString>                                      servicesToQuery;
-        std::list<QString> spareServicesToQuery; // usually a fallback when the above is not matched
-        bool               servicesToQueryDefined = false;
-        QList<DiscoItem>   result;
-
-        ServiceQuery(const QString &type, const QString &category, const QList<QSet<QString>> &features,
-                     const QRegularExpression &nameHint, const SQOptions &options,
-                     const std::function<void(const QList<DiscoItem> &item)> &&callback) :
-            type(type), category(category), features(features), nameHint(nameHint), options(options), callback(callback)
-        {
-        }
-    };
-
     enum ServicesState { ST_NotQueried, ST_InProgress, ST_Ready, ST_Failed };
 
     struct ServiceInfo {
@@ -103,11 +108,11 @@ public:
        nameHint = (http\..*|)  // search for service name like http.jabber.ru
      Result: disco info for upload.jabber.ru will be returned.
     */
-    void     queryServiceInfo(const QString &category, const QString &type, const QList<QSet<QString>> &features,
-                              const QRegularExpression &nameHint, SQOptions options,
-                              std::function<void(const QList<DiscoItem> &items)> callback);
-    void     setServiceMeta(const Jid &service, const QString &key, const QVariant &value);
-    QVariant serviceMeta(const Jid &service, const QString &key);
+    ServiceInfoQuery *queryServiceInfo(const QString &category, const QString &type,
+                                       const QList<QSet<QString>> &features, const QRegularExpression &nameHint,
+                                       ServiceInfoQuery::Options options);
+    void              setServiceMeta(const Jid &service, const QString &key, const QVariant &value);
+    QVariant          serviceMeta(const Jid &service, const QString &key);
 
 signals:
     void featuresChanged();
@@ -123,7 +128,8 @@ private slots:
 private:
     void queryServicesList();
     void checkPendingServiceQueries();
-    void appendQuery(const ServiceQuery &q);
+    void appendQuery(ServiceInfoQuery *q);
+    void finish(ServiceInfoQuery *q, const QList<DiscoItem> &items = {});
 
 private:
     XMPP::Client              *_client = nullptr;
@@ -133,8 +139,8 @@ private:
     QString                    _multicastService;
     QMap<QString, QStringList> _extraServerInfo; // XEP-0128, XEP-0157
 
-    std::list<ServiceQuery> _serviceQueries; // a storage of pending requests as result of `queryService` call
-    ServicesState           _servicesListState = ST_NotQueried;
+    std::list<ServiceInfoQuery *> _serviceQueries; // a storage of pending requests as result of `queryService` call
+    ServicesState                 _servicesListState = ST_NotQueried;
     QMap<QString, ServiceInfo>
         _servicesInfo; // all the diso#info requests for services of this server jid=>(state,info)
 
