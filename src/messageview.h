@@ -126,8 +126,6 @@ public:
     inline const QString                  &quoteId() const { return _quoteId; }
     inline void                            setRetractionId(const QString &id) { _retractionId = id; }
     inline const QString                  &retractionId() const { return _retractionId; }
-    inline void                            setCarbonDirection(XMPP::Message::CarbonDir c) { _carbon = c; }
-    inline XMPP::Message::CarbonDir        carbonDirection() const { return _carbon; }
     inline void                            addReference(FileSharingItem *fsi) { _references.append(fsi); }
     inline const QList<FileSharingItem *> &references() const { return _references; }
     inline void                            setReactionsId(const QString &id) { _reactionsId = id; }
@@ -151,7 +149,6 @@ private:
     QString                  _quoteId;
     QString                  _retractionId;
     QString                  _reactionsId;
-    XMPP::Message::CarbonDir _carbon;
     QList<FileSharingItem *> _references;
     QSet<QString>            _reactions;
 };

@@ -31,10 +31,12 @@ set(XMPP_IM_HEADERS
     xmpp-im/xmpp_thumbs.h
     xmpp-im/xmpp_agentitem.h
     xmpp-im/xmpp_captcha.h
+    xmpp-im/xmpp_carbons.h
     xmpp-im/xmpp_chatstate.h
     xmpp-im/xmpp_discoitem.h
     xmpp-im/xmpp_features.h
     xmpp-im/xmpp_form.h
+    xmpp-im/xmpp_forwarding.h
     xmpp-im/xmpp_htmlelement.h
     xmpp-im/xmpp_httpauthrequest.h
     xmpp-im/xmpp_liveroster.h
@@ -69,6 +71,8 @@ set(XMPP_IM_HEADERS
     xmpp-im/xmpp_bytestream.h
     xmpp-im/xmpp_client.h
     xmpp-im/xmpp_discoinfotask.h
+    xmpp-im/xmpp_mamtask.h
+    xmpp-im/xmpp_mammanager.h
     xmpp-im/xmpp_ibb.h
     xmpp-im/xmpp_serverinfomanager.h
     xmpp-im/xmpp_task.h
@@ -121,10 +125,14 @@ target_sources(iris PRIVATE
     xmpp-im/xmpp_bitsofbinary.cpp
     xmpp-im/xmpp_bytestream.cpp
     xmpp-im/xmpp_caps.cpp
+    xmpp-im/xmpp_carbons.cpp
     xmpp-im/xmpp_discoinfotask.cpp
     xmpp-im/xmpp_discoitem.cpp
     xmpp-im/xmpp_hash.cpp
     xmpp-im/xmpp_ibb.cpp
+    xmpp-im/xmpp_forwarding.cpp
+    xmpp-im/xmpp_mamtask.cpp
+    xmpp-im/xmpp_mammanager.cpp
     xmpp-im/xmpp_reference.cpp
     xmpp-im/xmpp_serverinfomanager.cpp
     xmpp-im/xmpp_subsets.cpp

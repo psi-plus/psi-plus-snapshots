@@ -31,17 +31,18 @@ class ByteStream;
 class QDomDocument;
 class QDomElement;
 class QNetworkAccessManager;
-class QString;
 
 namespace XMPP {
 class BSConnection;
 class CapsManager;
+class CarbonsManager;
 class ClientStream;
 class EncryptionHandler;
 class Features;
 class FileTransferManager;
 class HttpFileUploadManager;
 class IBBManager;
+class JT_PushMessage;
 class JidLinkManager;
 class LiveRoster;
 class LiveRosterItem;
@@ -70,9 +71,7 @@ namespace Jingle {
         class Manager;
     }
 }
-}
 
-namespace XMPP {
 class Client : public QObject {
     Q_OBJECT
 
@@ -150,6 +149,8 @@ public:
     BoBManager               *bobManager() const;
     JidLinkManager           *jidLinkManager() const;
     CapsManager              *capsManager() const;
+    CarbonsManager           *carbonsManager() const;
+    JT_PushMessage           *pushMessage() const;
     ServerInfoManager        *serverInfoManager() const;
     ExternalServiceDiscovery *externalServiceDiscovery() const;
     StunDiscoManager         *stunDiscoManager() const;

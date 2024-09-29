@@ -1795,15 +1795,15 @@ void PsiCon::processEvent(const PsiEvent::Ptr &e, ActivationType activationType)
     bool sentToChatWindow = false;
     if (e->type() == PsiEvent::Message) {
         MessageEvent::Ptr me = e.staticCast<MessageEvent>();
-        const Message    &m  = me->message();
+        const Message     dm = me->message().displayMessage();
 #ifdef GROUPCHAT
-        if (m.type() == Message::Type::Groupchat) {
+        if (dm.type() == Message::Type::Groupchat) {
             isMuc = true;
         } else {
 #endif
-            bool emptyForm = m.getForm().fields().empty();
+            bool emptyForm = dm.getForm().fields().empty();
             // FIXME: Refactor this, PsiAccount and PsiEvent out
-            if (m.type() == Message::Type::Chat && emptyForm) {
+            if (dm.type() == Message::Type::Chat && emptyForm) {
                 isChat           = true;
                 sentToChatWindow = me->sentToChatWindow();
             }

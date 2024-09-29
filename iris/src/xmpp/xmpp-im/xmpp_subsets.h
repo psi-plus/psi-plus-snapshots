@@ -34,6 +34,8 @@ public:
     bool isLast() const;
     int  count() const;
     void setMax(int max);
+    void setFirstID(const QString&);
+    void setLastID(const QString&);
 
     void getCount();
     void getFirst();

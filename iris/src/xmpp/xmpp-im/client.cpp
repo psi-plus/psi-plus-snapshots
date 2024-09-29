@@ -79,6 +79,7 @@
 #include "xmpp/xmpp-core/protocol.h"
 #include "xmpp_bitsofbinary.h"
 #include "xmpp_caps.h"
+#include "xmpp_carbons.h"
 #include "xmpp_externalservicediscovery.h"
 #include "xmpp_hash.h"
 #include "xmpp_ibb.h"
@@ -134,6 +135,7 @@ public:
     LiveRoster                roster;
     ResourceList              resourceList;
     CapsManager              *capsman                  = nullptr;
+    CarbonsManager           *carbonsman               = nullptr;
     TcpPortReserver          *tcpPortReserver          = nullptr;
     S5BManager               *s5bman                   = nullptr;
     Jingle::S5B::Manager     *jingleS5BManager         = nullptr;
@@ -149,6 +151,7 @@ public:
     Jingle::Manager          *jingleManager            = nullptr;
     QList<GroupChat>          groupChatList;
     EncryptionHandler        *encryptionHandler = nullptr;
+    JT_PushMessage           *pushMessage       = nullptr;
 };
 
 Client::Client(QObject *par) : QObject(par)
@@ -237,8 +240,9 @@ void Client::start(const QString &host, const QString &user, const QString &pass
     connect(pp, SIGNAL(subscription(Jid, QString, QString)), SLOT(ppSubscription(Jid, QString, QString)));
     connect(pp, SIGNAL(presence(Jid, Status)), SLOT(ppPresence(Jid, Status)));
 
-    JT_PushMessage *pm = new JT_PushMessage(rootTask(), d->encryptionHandler);
-    connect(pm, SIGNAL(message(Message)), SLOT(pmMessage(Message)));
+    d->pushMessage = new JT_PushMessage(rootTask(), d->encryptionHandler);
+    connect(d->pushMessage, SIGNAL(message(Message)), SLOT(pmMessage(Message)));
+    d->carbonsman = new CarbonsManager(d->pushMessage);
 
     JT_PushRoster *pr = new JT_PushRoster(rootTask());
     connect(pr, SIGNAL(roster(Roster)), SLOT(prRoster(Roster)));
@@ -304,6 +308,10 @@ HttpFileUploadManager *Client::httpFileUploadManager() const { return d->httpFil
 Jingle::Manager *Client::jingleManager() const { return d->jingleManager; }
 
 bool Client::isActive() const { return d->active; }
+
+CarbonsManager *Client::carbonsManager() const { return d->carbonsman; }
+
+JT_PushMessage *Client::pushMessage() const { return d->pushMessage; }
 
 QString Client::groupChatPassword(const QString &host, const QString &room) const
 {

@@ -23,7 +23,6 @@
 #include "xmpp_task.h"
 
 class QDomElement;
-class QString;
 
 namespace XMPP {
 class Jid;

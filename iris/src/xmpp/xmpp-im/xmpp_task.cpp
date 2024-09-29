@@ -83,6 +83,8 @@ QDomDocument *Task::doc() const { return client()->doc(); }
 
 QString Task::id() const { return d->id; }
 
+QString Task::genUniqueID() { return client()->genUniqueId(); }
+
 bool Task::success() const { return d->success; }
 
 int Task::statusCode() const { return d->statusCode; }

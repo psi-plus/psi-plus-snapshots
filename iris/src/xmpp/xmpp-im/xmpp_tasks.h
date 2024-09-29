@@ -200,8 +200,21 @@ private:
 class JT_PushMessage : public Task {
     Q_OBJECT
 public:
+    class Subscriber {
+    public:
+        virtual ~Subscriber();
+        virtual bool xmlEvent(const QDomElement &root, QDomElement &e, Client *c, int userData, bool nested);
+        virtual bool messageEvent(Message &msg, int userData, bool nested);
+    };
     JT_PushMessage(Task *parent, EncryptionHandler *encryptionHandler = nullptr);
     ~JT_PushMessage();
+
+    void subscribeXml(Subscriber *sbs, const QString &tagName, const QString &xmlnsStr, int userData);
+    void unsubscribeXml(Subscriber *sbs, const QString &tagName, const QString &xmlnsStr);
+    void subscribeMessage(Subscriber *sbs, int userData);
+    void unsubscribeMessage(Subscriber *sbs);
+    bool processXmlSubscribers(QDomElement &el, Client *client, bool nested);
+    bool processMessageSubscribers(Message &msg, bool nested);
 
     bool take(const QDomElement &);
 
@@ -210,7 +223,7 @@ signals:
 
 private:
     class Private;
-    Private *d = nullptr;
+    std::unique_ptr<Private> d;
 };
 
 class JT_VCard : public Task {
@@ -405,21 +418,6 @@ class JT_PongServer : public Task {
 public:
     JT_PongServer(Task *);
     bool take(const QDomElement &);
-};
-
-class JT_MessageCarbons : public Task {
-    Q_OBJECT
-
-public:
-    JT_MessageCarbons(Task *parent);
-    void enable();
-    void disable();
-
-    void onGo();
-    bool take(const QDomElement &e);
-
-private:
-    QDomElement _iq;
 };
 
 class JT_CaptchaChallenger : public Task {

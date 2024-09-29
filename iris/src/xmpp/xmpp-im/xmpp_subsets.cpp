@@ -165,6 +165,8 @@ bool SubsetsClientManager::isLast() const { return d->result.last; }
 int SubsetsClientManager::count() const { return d->result.count; }
 
 void SubsetsClientManager::setMax(int max) { d->query.max = max; }
+void SubsetsClientManager::setFirstID(const QString& a) { d->result.firstId = a; }
+void SubsetsClientManager::setLastID(const QString& a) { d->result.lastId = a; }
 
 QDomElement SubsetsClientManager::findElement(const QDomElement &el, bool child)
 {

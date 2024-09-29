@@ -44,6 +44,7 @@ public:
     Client       *client() const;
     QDomDocument *doc() const;
     QString       id() const;
+    QString       genUniqueID();
 
     bool                 success() const;
     int                  statusCode() const;

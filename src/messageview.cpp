@@ -30,10 +30,7 @@ static const QString me_cmd = "/me ";
 // ======================================================================
 // MessageView
 // ======================================================================
-MessageView::MessageView(Type t) :
-    _type(t), _status(0), _statusPriority(0), _dateTime(QDateTime::currentDateTime()), _carbon(XMPP::Message::NoCarbon)
-{
-}
+MessageView::MessageView(Type t) : _type(t), _status(0), _statusPriority(0), _dateTime(QDateTime::currentDateTime()) { }
 
 MessageView MessageView::fromPlainText(const QString &text, Type type)
 {

@@ -21,7 +21,9 @@
 #include "xmpp/xmpp-core/protocol.h"
 #include "xmpp_bitsofbinary.h"
 #include "xmpp_captcha.h"
+#include "xmpp_carbons.h"
 #include "xmpp_features.h"
+#include "xmpp_forwarding.h"
 #include "xmpp_ibb.h"
 #include "xmpp_reference.h"
 #include "xmpp_xmlcommon.h"
@@ -732,7 +734,6 @@ public:
     QMap<QString, HTMLElement> htmlElements;
     QDomElement                sxe;
     QList<BoBData>             bobDataList;
-    Jid                        forwardedFrom;
 
     QList<int>       mucStatuses;
     QList<MUCInvite> mucInvites;
@@ -743,14 +744,14 @@ public:
     bool spooled = false, wasEncrypted = false;
 
     // XEP-0280 Message Carbons
-    bool                     isDisabledCarbons = false;
-    Message::CarbonDir       carbonDir         = Message::NoCarbon; // it's a forwarded message
+    bool                     carbonsPrivate = false;
     Message::ProcessingHints processingHints;
     QString                  replaceId;
     QString                  originId;           // XEP-0359
     QString                  encryptionProtocol; // XEP-0380
     Message::StanzaId        stanzaId;           // XEP-0359
     QList<Reference>         references;         // XEP-0385 and XEP-0372
+    Forwarding               forwarding;         // XEP-0297
     Message::Reactions       reactions;          // XEP-0444
     QString                  retraction;         // XEP-0424
 };
@@ -1134,17 +1135,44 @@ QList<BoBData> Message::bobDataList() const { return d ? d->bobDataList : QList<
 
 IBBData Message::ibbData() const { return d ? d->ibbData : IBBData(); }
 
-void Message::setDisabledCarbons(bool disabled) { MessageD()->isDisabledCarbons = disabled; }
+//! \brief Returns Jid of the remote contact
+//!
+//! Returns Jid of the remote contact for the original message
+//! which may be wrapped using carbons. It is useful when a client
+//! needs to know in which window it should display the message.
+//! So it is not always just from().
+Jid Message::displayJid() const
+{
+    if (!d)
+        return Jid();
 
-bool Message::isDisabledCarbons() const { return d && d->isDisabledCarbons; }
+    switch (d->forwarding.type()) {
+    case Forwarding::ForwardedCarbonsSent:
+        return d->forwarding.message().to();
+    case Forwarding::ForwardedCarbonsReceived:
+        return d->forwarding.message().from();
+    default:
+        break;
+    }
+    return from();
+}
 
-void Message::setCarbonDirection(Message::CarbonDir cd) { MessageD()->carbonDir = cd; }
+//! \brief Returns either the message inside the carbons or itself.
+Message Message::displayMessage() const
+{
+    if (d && d->forwarding.isCarbons())
+        return d->forwarding.message();
 
-Message::CarbonDir Message::carbonDirection() const { return d ? d->carbonDir : NoCarbon; }
+    return *this;
+}
 
-void Message::setForwardedFrom(const Jid &jid) { MessageD()->forwardedFrom = jid; }
+void Message::setCarbonsPrivate(bool enable) { MessageD()->carbonsPrivate = enable; }
 
-Jid Message::forwardedFrom() const { return d ? d->forwardedFrom : Jid(); }
+bool Message::carbonsPrivate() const { return (d && d->carbonsPrivate); }
+
+void Message::setForwarded(const Forwarding &frw) { MessageD()->forwarding = frw; }
+
+const Forwarding &Message::forwarded() const { return d->forwarding; }
 
 bool Message::spooled() const { return d && d->spooled; }
 
@@ -1400,10 +1428,10 @@ Stanza Message::toStanza(Stream *stream) const
     }
 
     // Avoiding Carbons
-    if (isDisabledCarbons()) {
-        QDomElement e = s.createElement("urn:xmpp:carbons:2", "private");
-        s.appendChild(e);
+    if (d->carbonsPrivate) {
+        s.appendChild(CarbonsManager::privateElement(stream->doc()));
     }
+
     if (!d->replaceId.isEmpty()) {
         QDomElement e = s.createElement("urn:xmpp:message-correct:0", "replace");
         e.setAttribute("id", d->replaceId);
@@ -1439,6 +1467,10 @@ Stanza Message::toStanza(Stream *stream) const
         e.setAttribute(QStringLiteral("by"), d->stanzaId.by.full());
         s.appendChild(e);
     }
+
+    // XEP-0297: Stanza Forwarding
+    if (d->forwarding.type() != Forwarding::ForwardedNone)
+        s.appendChild(d->forwarding.toXml(stream));
 
     // XEP-0372 and XEP-0385
     for (auto const &r : std::as_const(d->references)) {

@@ -836,12 +836,12 @@ PsiIcon *PsiIconset::event2icon(const PsiEvent::Ptr &e)
     QString icon;
     if (e->type() == PsiEvent::Message) {
         MessageEvent::Ptr me = e.staticCast<MessageEvent>();
-        const Message    &m  = me->message();
-        if (m.type() == Message::Type::Headline)
+        const Message     dm = me->message().displayMessage();
+        if (dm.type() == Message::Type::Headline)
             icon = "psi/headline";
-        else if (m.type() == Message::Type::Chat || m.type() == Message::Type::Groupchat)
+        else if (dm.type() == Message::Type::Chat || dm.type() == Message::Type::Groupchat)
             icon = "psi/chat";
-        else if (m.type() == Message::Type::Error)
+        else if (dm.type() == Message::Type::Error)
             icon = "psi/system";
         else
             icon = "psi/message";

@@ -326,12 +326,12 @@ void PsiPopup::setData(const Jid &j, const Resource &r, const UserListItem *u, c
             || !PsiOptions::instance()->getOption("options.ui.file-transfer.auto-popup").toBool())) {
         if ((event && event->type() == PsiEvent::Message)
             && (PsiOptions::instance()->getOption("options.ui.notifications.passive-popups.showMessage").toBool())) {
-            const Message *jmessage = &event.staticCast<MessageEvent>()->message();
-            QString        message;
+            const Message jmessage = event.staticCast<MessageEvent>()->message().displayMessage();
+            QString       message;
 
-            if (!jmessage->subject().isEmpty())
-                message += "<font color=\"red\"><b>" + tr("Subject:") + " " + jmessage->subject() + "</b></font><br>";
-            message += TextUtil::plain2rich(jmessage->body());
+            if (!jmessage.subject().isEmpty())
+                message += "<font color=\"red\"><b>" + tr("Subject:") + " " + jmessage.subject() + "</b></font><br>";
+            message += TextUtil::plain2rich(jmessage.body());
 
             if (!message.isEmpty()) {
                 contactText += "<br/><font size=\"+1\">" + message + "</font>";
