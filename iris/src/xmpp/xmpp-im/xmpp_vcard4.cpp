@@ -1493,7 +1493,8 @@ void VCard::setPhoto(const PAdvUris &photo)
 Item<UriValue> &VCard::setPhoto(const UriValue &photo)
 {
     INIT_D();
-    d->photo.append({ Parameters(), photo });
+    PAdvUris l = { { PAdvUri { Parameters(), photo } } };
+    d->photo   = std::move(l);
     return d->photo.last();
 }
 

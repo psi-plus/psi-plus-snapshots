@@ -118,9 +118,12 @@ void HttpFileUpload::start()
             }
             if (ver != XEP0363::vUnknown) {
                 QVector<std::pair<HttpHost, int>> hosts;
-                const XData::Field field = item.registeredExtension(xmlns).getField(QLatin1String("max-file-size"));
-                if (field.isValid() && field.type() == XData::Field::Field_TextSingle)
-                    sizeLimit = field.value().at(0).toULongLong();
+                auto optField = item.registeredExtension(xmlns).findField(QLatin1String("max-file-size"));
+                if (optField) {
+                    const XData::Field &field = *optField;
+                    if (field.isValid() && field.type() == XData::Field::Field_TextSingle)
+                        sizeLimit = field.value().value(0).toULongLong();
+                }
                 HttpHost host;
                 host.ver       = ver;
                 host.jid       = item.jid();

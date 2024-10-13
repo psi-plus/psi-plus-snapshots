@@ -338,7 +338,7 @@ void XData::setRegistrarType(const QString &registrarType) { d->registrarType = 
 
 const XData::FieldList &XData::fields() const { return d->fields; }
 
-XData::Field XData::getField(const QString &var) const
+std::optional<XMPP::XData::Field> XMPP::XData::findField(const QString &var) const
 {
     if (!d->fields.isEmpty()) {
         FieldList::ConstIterator it = d->fields.begin();
@@ -348,7 +348,13 @@ XData::Field XData::getField(const QString &var) const
                 return f;
         }
     }
-    return Field();
+    return {};
+}
+
+XData::Field XData::getField(const QString &var) const
+{
+    auto of = findField(var);
+    return of ? *of : XData::Field {};
 }
 
 XData::Field &XData::fieldRef(const QString &var)

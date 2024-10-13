@@ -28,6 +28,8 @@
 #include <QString>
 #include <QStringList>
 
+#include <optional>
+
 class QDomDocument;
 class QDomElement;
 
@@ -152,9 +154,12 @@ public:
     typedef QList<Field> FieldList;
 
     const FieldList &fields() const;
-    Field            getField(const QString &var) const;
-    Field           &fieldRef(const QString &var);
-    void             setFields(const FieldList &fl);
+
+    std::optional<Field> findField(const QString &var) const;
+    Field                getField(const QString &var) const;
+    Field               &fieldRef(const QString &var); // dangerous
+
+    void setFields(const FieldList &fl);
 
 private:
     class Private : public QSharedData {

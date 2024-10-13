@@ -2902,20 +2902,22 @@ CaptchaChallenge::CaptchaChallenge(const Message &m) : d(new CaptchaChallengePri
         d->dt = QDateTime::currentDateTime();
     }
 
-    if (m.getForm().registrarType() != "urn:xmpp:captcha" || m.getForm().type() != XData::Data_Form)
+    if (m.getForm().registrarType() != QLatin1String("urn:xmpp:captcha") || m.getForm().type() != XData::Data_Form
+        || m.id().isEmpty())
         return;
 
-    if (m.id().isEmpty() || m.getForm().getField("challenge").value().value(0) != m.id())
+    auto fieldOpt = m.getForm().findField("challenge");
+    if (!fieldOpt || fieldOpt->value().value(0) != m.id())
         return;
 
-    if (m.getForm().getField("from").value().value(0).isEmpty())
+    if (fieldOpt = m.getForm().findField("from"); !fieldOpt || fieldOpt->value().value(0).isEmpty())
         return;
 
     d->form        = m.getForm();
     d->explanation = m.body();
     d->urls        = m.urlList();
     d->arbiter     = m.from();
-    d->offendedJid = Jid(m.getForm().getField("from").value().value(0));
+    d->offendedJid = Jid(fieldOpt->value().value(0));
 }
 
 CaptchaChallenge::~CaptchaChallenge() { }
