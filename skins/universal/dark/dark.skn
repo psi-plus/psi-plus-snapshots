@@ -703,7 +703,7 @@ QMenu::disabled, QMenu::item:disabled:selected {
 }
 
 QMenu::item {
-    padding: 2px 24px 2px 24px;
+    spacing: 10
     border: 1px solid transparent;
 }
 
@@ -943,14 +943,13 @@ PopupActionButton {
     color: #bcbcbc;
     margin-left: 1px;
     margin-right: 1px;
-    min-width: 40px;
-    max-height: 32px;
-    min-height: 24px;
+    min-width: 42px;
+    max-height: 48px;
+    min-height: 32px;
     background-color: #2d2d2d;
     border: 1px outset #5b5b5b;
     border-radius: 3px;
-    padding: 0px;
-    subcontrol-position: center;
+    padding: -5px;
 }
 
 PopupActionButton::menu-indicator {
@@ -1063,7 +1062,7 @@ QMenu::disabled, QMenu::item:disabled:selected {
 }
 
 QMenu::item {
-    padding: 2px 24px 2px 24px;
+    spacing: 10
     border: 1px solid transparent;
 }
 
