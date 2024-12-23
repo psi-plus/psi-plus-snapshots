@@ -1,4 +1,4 @@
-<skin author="VitoZz" name="Breath Dark" path="/home/vitaly/.local/share/psi/skins/universal/breath_dark" version="1.5">
+<skin author="VitoZz" name="Breath Dark" path="/tmp/psi/skins/universal/breath_dark" version="1.6">
     <options>
         <options.ui.look.colors.chat.link-color type="QColor">#0000ff</options.ui.look.colors.chat.link-color>
         <options.ui.look.colors.chat.mailto-color type="QColor">#2c9dff</options.ui.look.colors.chat.mailto-color>
@@ -704,6 +704,8 @@ SendButtonTemplatesEditor>QPushButton:pressed#btnOk, SendButtonTemplatesEditor>Q
 QMenu {
     margin: 1px;
     color: #c0c0c0;
+    selection-color: white;
+    selection-background-color:  #006e62;
     background-color: #282e33;
     border: 1px outset #53575b;
     border-radius: 3px;
@@ -715,8 +717,10 @@ QMenu::disabled, QMenu::item:disabled:selected {
 }
 
 QMenu::item {
+    /*padding: 2px 2px 2px 4px;*/
     spacing: 10
     border: 1px solid transparent;
+    border-radius: 3px;
 }
 
 QMenu::item:selected {
@@ -760,6 +764,7 @@ IconSelect {
 }
 
 IconSelectPopup>QScrollArea {
+    /*margin: 0px;*/
     color: #c0c0c0;
     background-color: #282e33;
     border: 1px outset #53575b;
@@ -1073,7 +1078,8 @@ QStackedWidget>QWidget>QLineEdit {
 QMenu {
     margin: 2px;
     color: #fcfbf8;
-    selection-color: #006e62;
+    selection-color: white;
+    selection-background-color:  #006e62;
     background-color: #282e33;
     border: 1px solid #53575b;
     border-radius: 3px;
@@ -1087,6 +1093,7 @@ QMenu::disabled, QMenu::item:disabled:selected {
 QMenu::item {
     spacing: 10
     border: 1px solid transparent;
+    border-radius: 3px;
 }
 
 QMenu::item:selected {
@@ -1207,6 +1214,7 @@ QToolButton:pressed {
         <options.iconsets.affiliations type="QString">futurama-robots-affiliations.jisp</options.iconsets.affiliations>
         <options.ui.chat.scaled-message-icons type="bool">false</options.ui.chat.scaled-message-icons>
         <options.ui.chat.theme type="QString">psi/bubble</options.ui.chat.theme>
+        <options.ui.muc.theme type="QString">psi/bubble</options.ui.muc.theme>
         <options.ui.message.show-character-count type="bool">true</options.ui.message.show-character-count>
         <options.ui.muc.show-affiliation-icons type="bool">true</options.ui.muc.show-affiliation-icons>
         <options.ui.muc.show-groups type="bool">true</options.ui.muc.show-groups>
