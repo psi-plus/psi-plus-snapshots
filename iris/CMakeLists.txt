@@ -66,6 +66,7 @@ option(IRIS_BUNDLED_QCA "Adds: DTLS, Blake2b (needed with Qt5) and other useful 
 option(IRIS_BUNDLED_USRSCTP "Compile compatible UsrSCTP lib (required for datachannel Jingle transport)" ${IRIS_DEFAULT_BUNDLED_USRSCTP})
 option(IRIS_BUILD_TOOLS "Build tools and examples" OFF)
 option(IRIS_ENABLE_DEBUG "Enable debugging code paths" OFF)
+option(USE_QT6 "Enable Qt6 support" OFF)
 
 set(IRIS_INSTALL_INCLUDEDIR ${CMAKE_INSTALL_INCLUDEDIR}/xmpp/iris)
 
@@ -73,6 +74,9 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR ("${CMAKE_BUILD_TYPE}" STREQUAL "Re
     include(debug-definitions)
 endif()
 
+if(USE_QT6)
+    set(QT_DEFAULT_MAJOR_VERSION 6)
+endif()
 if("${QT_DEFAULT_MAJOR_VERSION}" STREQUAL "")
     set(QT_DEFAULT_MAJOR_VERSION 5)
 endif()

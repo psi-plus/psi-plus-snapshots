@@ -33,7 +33,7 @@ else()
     #set CMake options and transfer the environment to an external project
     set(USRSCTP_BUILD_OPTIONS
         -DBUILD_SHARED_LIBS=OFF -Dsctp_build_programs=OFF -Dsctp_build_shared_lib=OFF -Dsctp_debug=OFF
-        -Dsctp_inet=OFF -Dsctp_inet6=OFF -DCMAKE_INSTALL_PREFIX=${USRSCTP_PREFIX}
+        -Dsctp_inet=OFF -Dsctp_inet6=OFF -Dsctp_werror=OFF -DCMAKE_INSTALL_PREFIX=${USRSCTP_PREFIX}
         -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER})
