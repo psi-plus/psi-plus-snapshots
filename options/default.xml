@@ -46,7 +46,7 @@
             <bookmarks comment="Options for bookmarked conference rooms">
                 <auto-join comment="Automatically join bookmarked conference rooms that are configured for auto-joining." type="bool">true</auto-join>
             </bookmarks>
-            <show-joins comment="Display notices of users joining and leaving conferences" type="bool">true</show-joins>
+            <show-joins comment="Display notices of users joining and leaving conferences" type="bool">false</show-joins>
             <show-role-affiliation comment="Include role and affiliation changes in join messages, and display notices of changes" type="bool">true</show-role-affiliation>
             <show-status-changes comment="Show status changes in groupchat window" type="bool">false</show-status-changes>
             <accept-defaults comment="Automatically accept the default room configuration when a new room is created." type="bool">true</accept-defaults>
@@ -741,10 +741,10 @@ QLineEdit#le_status_text {
         <status>
             <ask-for-message-on-offline type="bool">false</ask-for-message-on-offline>
             <ask-for-message-on-online type="bool">false</ask-for-message-on-online>
-            <ask-for-message-on-chat type="bool">true</ask-for-message-on-chat>
-            <ask-for-message-on-away type="bool">true</ask-for-message-on-away>
+            <ask-for-message-on-chat type="bool">false</ask-for-message-on-chat>
+            <ask-for-message-on-away type="bool">false</ask-for-message-on-away>
             <ask-for-message-on-xa type="bool">true</ask-for-message-on-xa>
-            <ask-for-message-on-dnd type="bool">true</ask-for-message-on-dnd>
+            <ask-for-message-on-dnd type="bool">false</ask-for-message-on-dnd>
             <auto-away>
                 <away-after type="int">10</away-after>
                 <force-priority type="bool">false</force-priority>
