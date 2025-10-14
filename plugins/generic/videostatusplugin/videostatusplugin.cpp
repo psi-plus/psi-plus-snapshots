@@ -57,6 +57,7 @@ static const QList<StringMap> players({ { "vlc", "VLC" },
                                         { "mplayer", "GNOME MPlayer" },
                                         { "dragonplayer", "Dragon Player" },
                                         { "smplayer", "SMPlayer" },
+                                        { "parole", "Parole Player" },
                                         { "haruna", "Haruna Player" } });
 struct PlayerStatus {
     int playStatus;
@@ -321,7 +322,9 @@ void VideoStatusChanger::restoreOptions()
 #elif defined(Q_OS_WIN)
     ui_.groupBox->hide();
 #endif
-    QStringList list({ "away", "xa", "dnd" });
+    const QStringList list({ "away", "xa", "dnd" });
+    if (ui_.cb_status->count() > 0)
+        ui_.cb_status->clear();
     ui_.cb_status->addItems(list);
     ui_.cb_status->setCurrentIndex(ui_.cb_status->findText(status));
     ui_.le_message->setText(statusMessage);
@@ -374,7 +377,8 @@ QString VideoStatusChanger::pluginInfo()
               "Settings tab on \"Interface\\Control Interface\" section of the player settings; \n\n"
               "To work with Kaffeine player you must have player version (>= 1.0), additional configuration is not "
               "needed; \n\n"
-              "To work with GNOME MPlayer additional configuration is not needed.");
+              "To work with GNOME MPlayer additional configuration is not needed;\n\n"
+              "To work with Parole player you need to enable MPRIS2 module/plugin.");
 }
 
 #ifdef HAVE_DBUS
