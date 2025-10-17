@@ -44,7 +44,7 @@ public:
         QList<IrisNetProvider *> list = irisNetProviders();
 
         c = nullptr;
-        for (IrisNetProvider *p : list) {
+        for (IrisNetProvider *p : std::as_const(list)) {
             c = p->createNetInterfaceProvider();
             if (c)
                 break;

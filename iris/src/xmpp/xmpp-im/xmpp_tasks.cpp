@@ -32,6 +32,9 @@
 #include <QList>
 #include <QRegularExpression>
 #include <QTimer>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+#include <QTimeZone>
+#endif
 
 using namespace XMPP;
 
@@ -776,7 +779,11 @@ bool JT_PushPresence::take(const QDomElement &e)
         if (client()->manualTimeZoneOffset()) {
             stamp = stamp.addSecs(client()->timeZoneOffset() * 3600);
         } else {
+#if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
             stamp.setTimeSpec(Qt::UTC);
+#else
+            stamp.setTimeZone(QTimeZone::UTC);
+#endif
             stamp = stamp.toLocalTime();
         }
         p.setTimeStamp(stamp);

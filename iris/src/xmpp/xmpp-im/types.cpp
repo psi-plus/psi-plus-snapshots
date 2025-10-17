@@ -33,6 +33,10 @@
 
 #include <optional>
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+#include <QTimeZone>
+#endif
+
 #define NS_XML "http://www.w3.org/XML/1998/namespace"
 
 namespace XMPP {
@@ -1482,7 +1486,7 @@ Stanza Message::toStanza(Stream *stream) const
     if (!d->reactions.targetId.isEmpty()) {
         auto e = s.createElement(reactionsNS, QStringLiteral("reactions"));
         e.setAttribute(QLatin1String("id"), d->reactions.targetId);
-        for (const QString &reaction : d->reactions.reactions) {
+        for (const QString &reaction : std::as_const(d->reactions.reactions)) {
             e.appendChild(s.createTextElement(reactionsNS, QStringLiteral("reaction"), reaction));
         }
         s.appendChild(e);
@@ -1656,7 +1660,11 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
         if (useTimeZoneOffset) {
             d->timeStamp = stamp.addSecs(timeZoneOffset * 3600);
         } else {
+#if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
             stamp.setTimeSpec(Qt::UTC);
+#else
+            stamp.setTimeZone(QTimeZone::UTC);
+#endif
             d->timeStamp = stamp.toLocalTime();
         }
         d->timeStampSend = true;
@@ -2077,7 +2085,7 @@ CapsSpec CapsSpec::fromXml(const QDomElement &e)
 {
     QString    node     = e.attribute("node");
     QString    ver      = e.attribute("ver");
-    QString    hashAlgo = e.attribute("hash");
+    QString    hashAlgo = e.attribute("hash").toLower();
     QString    ext      = e.attribute("ext"); // deprecated. let it be here till 2018
     CryptoMap &cm       = cryptoMap();
     CapsSpec   cs;

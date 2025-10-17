@@ -709,7 +709,7 @@ QDomElement VCard::toXmlElement(QDomDocument &document) const
                         .appendChild(document.createTextNode(d->rev.toString(Qt::ISODate)));
     }
 
-    for (const auto &address : d->addresses) {
+    for (const auto &address : std::as_const(d->addresses)) {
         auto addrEl = address.data.toXmlElement(document);
         if (!addrEl.isNull()) {
             address.parameters.addTo(addrEl);
@@ -1079,7 +1079,7 @@ XMPP::VCard VCard::toVCardTemp() const
     // Address
     if (!d->addresses.isEmpty()) {
         XMPP::VCard::AddressList addressList;
-        for (const auto &address : d->addresses) {
+        for (const auto &address : std::as_const(d->addresses)) {
             XMPP::VCard::Address addr;
             addr.home     = address.parameters.type.contains("home");
             addr.street   = address.data.pobox.value(0);

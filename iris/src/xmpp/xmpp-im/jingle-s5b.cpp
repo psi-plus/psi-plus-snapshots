@@ -153,7 +153,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                     continue;
                 }
                 QList<QNetworkAddressEntry> entries = ni.addressEntries();
-                for (const QNetworkAddressEntry &na : entries) {
+                for (const QNetworkAddressEntry &na : std::as_const(entries)) {
                     QHostAddress ha = na.ip();
                     if (ha.protocol() == QAbstractSocket::IPv6Protocol &&
 #if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)

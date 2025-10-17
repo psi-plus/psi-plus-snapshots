@@ -372,10 +372,7 @@ namespace StunTypes {
         return true;
     }
 
-#define METHOD_ENTRY(x)                                                                                                \
-    {                                                                                                                  \
-        x, #x                                                                                                          \
-    }
+#define METHOD_ENTRY(x) { x, #x }
 
     struct MethodEntry {
         Method      method;
@@ -394,10 +391,7 @@ namespace StunTypes {
         return QString();
     }
 
-#define ATTRIB_ENTRY(x)                                                                                                \
-    {                                                                                                                  \
-        x, #x                                                                                                          \
-    }
+#define ATTRIB_ENTRY(x) { x, #x }
 
     struct AttribEntry {
         Attribute   type;
@@ -611,7 +605,7 @@ namespace StunTypes {
         out += "Attributes:";
         QList<StunMessage::Attribute> attribs = message.attributes();
         if (!attribs.isEmpty()) {
-            for (const StunMessage::Attribute &a : attribs) {
+            for (const StunMessage::Attribute &a : std::as_const(attribs)) {
                 out += '\n';
 
                 QString name = attributeTypeToString(a.type);

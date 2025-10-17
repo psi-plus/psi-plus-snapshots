@@ -60,10 +60,14 @@ else()
         if(NOT Git_FOUND)
             message(FATAL_ERROR "Git not found! Bundled UsrSCTP needs Git utility.\nPlease set GIT_EXECUTABLE variable or add git to PATH")
         endif()
+        # When using the "cmake --build . -t clean" command, it cleans the built files, but the next time it builds, it crashes with a patch error.
+        # As an attempt to avoid this crash the last line of patch_command was added
         set(patch_command
-        ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/usrsctp.patch <SOURCE_DIR> &&
-        ${GIT_EXECUTABLE} checkout <SOURCE_DIR>/usrsctplib/netinet/sctp_output.c &&
-        ${GIT_EXECUTABLE} apply <SOURCE_DIR>/usrsctp.patch)
+            ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/usrsctp.patch <SOURCE_DIR> &&
+            ${GIT_EXECUTABLE} checkout <SOURCE_DIR>/usrsctplib/netinet/sctp_output.c &&
+            ${GIT_EXECUTABLE} apply <SOURCE_DIR>/usrsctp.patch ||
+            ${CMAKE_COMMAND} -E echo "USRSCTP Sources already patched"
+        )
         ExternalProject_Add(UsrSCTPProject
             PREFIX ${USRSCTP_PREFIX}
             BINARY_DIR ${USRSCTP_BUILD_DIR}

@@ -557,7 +557,7 @@ void Client::streamOutgoingXml(const QString &s)
 void Client::parseUnhandledStreamFeatures()
 {
     QList<QDomElement> nl = d->stream->unhandledFeatures();
-    for (const QDomElement &e : nl) {
+    for (const QDomElement &e : std::as_const(nl)) {
         if (e.localName() == "c" && e.namespaceURI() == NS_CAPS) {
             d->serverCaps = CapsSpec::fromXml(e);
             if (d->capsman->isEnabled()) {

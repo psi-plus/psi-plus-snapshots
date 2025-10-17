@@ -140,7 +140,7 @@ static bool cert_match_domain(const QString &certname, const QString &acedomain)
     if (QRegularExpression("[^a-z0-9\\.\\*\\-]").match(name).hasMatch())
         return false;
 
-        // hack into parts, and require at least 1 part
+    // hack into parts, and require at least 1 part
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     QStringList parts_name = name.split('.', Qt::KeepEmptyParts);
 #else
@@ -169,7 +169,7 @@ static bool cert_match_domain(const QString &certname, const QString &acedomain)
         if (s.isEmpty())
             return false;
     }
-    for (const QString &s : parts_compare) {
+    for (const QString &s : std::as_const(parts_compare)) {
         if (s.isEmpty())
             return false;
     }

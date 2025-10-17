@@ -18,6 +18,9 @@
  */
 
 #include "xmpp_mamtask.h"
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+#include <QTimeZone>
+#endif
 
 using namespace XMLHelper;
 using namespace XMPP;
@@ -38,9 +41,9 @@ public:
     QString            lastArchiveID;
     QString            fromID;
     QString            toID;
-    QString mainQueryID;
+    QString            mainQueryID;
     QString            currentPageQueryID;
-    QString currentPageQueryIQID;
+    QString            currentPageQueryIQID;
     QDateTime          from;
     QDateTime          to;
     QList<QDomElement> archive;
@@ -76,7 +79,11 @@ XData MAMTask::Private::makeMAMFilter()
         XData::Field start;
         start.setType(XData::Field::Field_TextSingle);
         start.setVar(QLatin1String("start"));
+#if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
         from.setTimeSpec(Qt::UTC);
+#else
+        from.setTimeZone(QTimeZone::UTC);
+#endif
         start.setValue(QStringList(from.toString()));
         fl.append(start);
     }
@@ -85,7 +92,11 @@ XData MAMTask::Private::makeMAMFilter()
         XData::Field end;
         end.setType(XData::Field::Field_TextSingle);
         end.setVar(QLatin1String("end"));
+#if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
         to.setTimeSpec(Qt::UTC);
+#else
+        to.setTimeZone(QTimeZone::UTC);
+#endif
         end.setValue(QStringList(to.toString()));
         fl.append(end);
     }
@@ -117,9 +128,9 @@ XData MAMTask::Private::makeMAMFilter()
 void MAMTask::Private::getPage()
 {
     currentPageQueryIQID = q->genUniqueID();
-    QDomElement iq    = createIQ(q->doc(), QLatin1String("set"), QLatin1String(), currentPageQueryIQID);
-    QDomElement query = q->doc()->createElementNS(XMPP_MAM_NAMESPACE, QLatin1String("query"));
-    currentPageQueryID    = q->genUniqueID();
+    QDomElement iq       = createIQ(q->doc(), QLatin1String("set"), QLatin1String(), currentPageQueryIQID);
+    QDomElement query    = q->doc()->createElementNS(XMPP_MAM_NAMESPACE, QLatin1String("query"));
+    currentPageQueryID   = q->genUniqueID();
     query.setAttribute(QLatin1String("queryid"), currentPageQueryID);
     XData x = makeMAMFilter();
 
@@ -154,7 +165,7 @@ void MAMTask::Private::getPage()
 void MAMTask::Private::getArchiveMetadata()
 {
     // Craft a query to get the first and last messages in an archive
-    mainQueryID = q->genUniqueID();
+    mainQueryID          = q->genUniqueID();
     QDomElement iq       = createIQ(q->doc(), QLatin1String("get"), QLatin1String(), mainQueryID);
     QDomElement metadata = emptyTag(q->doc(), QLatin1String("metadata"));
     metadata.setAttribute(QLatin1String("xmlns"), XMPP_MAM_NAMESPACE);
@@ -216,8 +227,8 @@ bool MAMTask::take(const QDomElement &x)
                 return true;
             } else if (!x.elementsByTagNameNS(XMPP_MAM_NAMESPACE, QLatin1String("fin")).isEmpty()) {
                 // We are done?
-                //setSuccess();
-                //return true;
+                // setSuccess();
+                // return true;
                 return false; // TODO: testing
             }
             // Probably ignore it
@@ -245,7 +256,7 @@ bool MAMTask::take(const QDomElement &x)
 
         // Return if the archive is empty
         QDomElement queryMetadata = x.firstChildElement(QLatin1String("metadata"));
-        if(queryMetadata == QDomElement()) {
+        if (queryMetadata == QDomElement()) {
             setError(1, "Malformed server metadata response");
             return true;
         }
@@ -256,7 +267,7 @@ bool MAMTask::take(const QDomElement &x)
         }
 
         QDomElement start_id = queryMetadata.firstChildElement(QLatin1String("start"));
-        QDomElement end_id = queryMetadata.firstChildElement(QLatin1String("end"));
+        QDomElement end_id   = queryMetadata.firstChildElement(QLatin1String("end"));
 
         if (start_id.isNull() || end_id.isNull()) {
             setError(1, "Malformed server metadata response");
