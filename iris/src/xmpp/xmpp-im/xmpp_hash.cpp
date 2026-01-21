@@ -293,12 +293,11 @@ Hash Hash::from(XMPP::Hash::Type t, QIODevice *dev)
 
 Hash Hash::from(Hash::Type t, const QFileInfo &file)
 {
-    if (file.isReadable()) {
-        QFile f(file.filePath());
-        f.open(QIODevice::ReadOnly);
+    QFile f(file.filePath());
+    if (f.open(QIODevice::ReadOnly)) {
         return from(t, &f);
     }
-    return Hash();
+    return {};
 }
 
 Hash Hash::from(const QStringView &str)

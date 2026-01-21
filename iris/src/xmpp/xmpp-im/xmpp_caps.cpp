@@ -307,7 +307,8 @@ void CapsManager::updateDisco(const Jid &jid, const DiscoItem &item)
     if (!cs.isValid()) {
         return;
     }
-    if (item.capsHash(cs.hashAlgorithm()) == cs.version()) {
+    auto algo = cs.hashAlgorithm();
+    if (algo && item.capsHash(*algo) == cs.version()) {
         CapsRegistry::instance()->registerCaps(cs, item);
     }
 }

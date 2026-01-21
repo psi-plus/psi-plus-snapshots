@@ -591,9 +591,12 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         auto hash = Hash::fastestHash(pad()->session()->peerFeatures());
         if (hash.isValid() && fi.size() < 10e6) { // compute hash dynamically (in a thread) for large files
             QFile f(fi.absoluteFilePath());
-            f.open(QIODevice::ReadOnly);
-            hash.compute(&f);
-            f.close();
+            if (f.open(QIODevice::ReadOnly)) {
+                hash.compute(&f);
+                f.close();
+            } else {
+                qWarning("failed to open %s: %s", qPrintable(fi.absoluteFilePath()), qPrintable(f.errorString()));
+            }
         }
 
         File file;

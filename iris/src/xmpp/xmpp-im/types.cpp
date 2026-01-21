@@ -2035,7 +2035,7 @@ bool Subscription::fromString(const QString &s)
 /**
  * Default constructor.
  */
-CapsSpec::CapsSpec() : hashAlgo_(CapsSpec::invalidAlgo) { }
+CapsSpec::CapsSpec() { }
 
 /**
  * \brief Basic constructor.
@@ -2043,7 +2043,7 @@ CapsSpec::CapsSpec() : hashAlgo_(CapsSpec::invalidAlgo) { }
  * @param ven the version
  * @param ext the list of extensions (separated by spaces)
  */
-CapsSpec::CapsSpec(const QString &node, QCryptographicHash::Algorithm hashAlgo, const QString &ver) :
+CapsSpec::CapsSpec(const QString &node, XMPP::CapsSpec::AlgoOpt hashAlgo, const QString &ver) :
     node_(node), ver_(ver), hashAlgo_(hashAlgo)
 {
 }
@@ -2057,7 +2057,7 @@ CapsSpec::CapsSpec(const DiscoItem &disco, QCryptographicHash::Algorithm hashAlg
  * @brief Checks for validity
  * @return true on valid
  */
-bool CapsSpec::isValid() const { return !node_.isEmpty() && !ver_.isEmpty() && (hashAlgo_ != CapsSpec::invalidAlgo); }
+bool CapsSpec::isValid() const { return !node_.isEmpty() && !ver_.isEmpty() && hashAlgo_; }
 
 /**
  * \brief Returns the node of the capabilities specification.
@@ -2069,13 +2069,17 @@ const QString &CapsSpec::node() const { return node_; }
  */
 const QString &CapsSpec::version() const { return ver_; }
 
-QCryptographicHash::Algorithm CapsSpec::hashAlgorithm() const { return hashAlgo_; }
+XMPP::CapsSpec::AlgoOpt CapsSpec::hashAlgorithm() const { return hashAlgo_; }
 
 QDomElement CapsSpec::toXml(QDomDocument *doc) const
 {
-    QDomElement c    = doc->createElementNS(NS_CAPS, "c");
-    QString     algo = cryptoMap().key(hashAlgo_);
-    c.setAttribute("hash", algo);
+    QDomElement c = doc->createElementNS(NS_CAPS, "c");
+    if (hashAlgo_) {
+        QString algo = cryptoMap().key(*hashAlgo_);
+        c.setAttribute("hash", algo);
+    } else {
+        c.setAttribute("hash", "");
+    }
     c.setAttribute("node", node_);
     c.setAttribute("ver", ver_);
     return c;
@@ -2090,8 +2094,8 @@ CapsSpec CapsSpec::fromXml(const QDomElement &e)
     CryptoMap &cm       = cryptoMap();
     CapsSpec   cs;
     if (!node.isEmpty() && !ver.isEmpty()) {
-        QCryptographicHash::Algorithm algo = CapsSpec::invalidAlgo;
-        CryptoMap::ConstIterator      it;
+        std::optional<QCryptographicHash::Algorithm> algo;
+        CryptoMap::ConstIterator                     it;
         if (!hashAlgo.isEmpty() && (it = cm.constFind(hashAlgo)) != cm.constEnd()) {
             algo = it.value();
         }

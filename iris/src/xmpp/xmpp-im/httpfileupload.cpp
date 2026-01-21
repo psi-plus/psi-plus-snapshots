@@ -438,11 +438,15 @@ HttpFileUpload *HttpFileUploadManager::upload(const QString &srcFilename, const 
                                               const QString &mType)
 {
     auto f = new QFile(srcFilename);
-    f->open(QIODevice::ReadOnly);
-    auto hfu = upload(f, f->size(), dstFilename, mType);
-    connect(hfu, &HttpFileUpload::finished, this, [f]() { f->close(); });
-    f->setParent(hfu);
-    return hfu;
+    if (f->open(QIODevice::ReadOnly)) {
+        auto hfu = upload(f, f->size(), dstFilename, mType);
+        connect(hfu, &HttpFileUpload::finished, this, [f]() { f->close(); });
+        f->setParent(hfu);
+        return hfu;
+    }
+    qWarning("failed to open %s: %s", qPrintable(srcFilename), qPrintable(f->errorString()));
+    delete f;
+    return nullptr;
 }
 
 HttpFileUpload *HttpFileUploadManager::upload(QIODevice *source, quint64 fsize, const QString &dstFilename,
