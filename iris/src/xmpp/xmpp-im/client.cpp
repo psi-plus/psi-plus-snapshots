@@ -1177,38 +1177,40 @@ DiscoItem Client::makeDiscoResult(const QString &node) const
     XData            si;
     XData::FieldList si_fields;
 
-    XData::Field si_type_field;
-    si_type_field.setType(XData::Field::Field_Hidden);
-    si_type_field.setVar("FORM_TYPE");
-    si_type_field.setValue(QStringList(QLatin1String("urn:xmpp:dataforms:softwareinfo")));
-    si_fields.append(si_type_field);
+    if (!d->clientName.isEmpty()) {
+        XData::Field software_field;
+        software_field.setType(XData::Field::Field_TextSingle);
+        software_field.setVar("software");
+        software_field.setValue(QStringList(d->clientName));
+        si_fields.append(software_field);
+    }
 
-    XData::Field software_field;
-    software_field.setType(XData::Field::Field_TextSingle);
-    software_field.setVar("software");
-    software_field.setValue(QStringList(d->clientName));
-    si_fields.append(software_field);
+    if (!d->clientVersion.isEmpty()) {
+        XData::Field software_v_field;
+        software_v_field.setType(XData::Field::Field_TextSingle);
+        software_v_field.setVar("software_version");
+        software_v_field.setValue(QStringList(d->clientVersion));
+        si_fields.append(software_v_field);
+    }
 
-    XData::Field software_v_field;
-    software_v_field.setType(XData::Field::Field_TextSingle);
-    software_v_field.setVar("software_version");
-    software_v_field.setValue(QStringList(d->clientVersion));
-    si_fields.append(software_v_field);
+    if (!d->osName.isEmpty()) {
+        XData::Field os_field;
+        os_field.setType(XData::Field::Field_TextSingle);
+        os_field.setVar("os");
+        os_field.setValue(QStringList(d->osName));
+        si_fields.append(os_field);
+    }
 
-    XData::Field os_field;
-    os_field.setType(XData::Field::Field_TextSingle);
-    os_field.setVar("os");
-    os_field.setValue(QStringList(d->osName));
-    si_fields.append(os_field);
-
-    XData::Field os_v_field;
-    os_v_field.setType(XData::Field::Field_TextSingle);
-    os_v_field.setVar("os_version");
-    os_v_field.setValue(QStringList(d->osVersion));
-    si_fields.append(os_v_field);
-
+    if (!d->osVersion.isEmpty()) {
+        XData::Field os_v_field;
+        os_v_field.setType(XData::Field::Field_TextSingle);
+        os_v_field.setVar("os_version");
+        os_v_field.setValue(QStringList(d->osVersion));
+        si_fields.append(os_v_field);
+    }
     si.setType(XData::Data_Result);
     si.setFields(si_fields);
+    si.setRegistrarType("urn:xmpp:dataforms:softwareinfo");
 
     item.setExtensions(QList<XData>() << si);
 
