@@ -369,12 +369,16 @@ XData::Field &XData::fieldRef(const QString &var)
 
 void XData::setFields(const FieldList &fl)
 {
-    d->fields = fl;
+    // copy all fields except of the FORM_TYPE that will be set later from the registrarType
+    XData::FieldList fields;
     for (const Field &f : fl) {
         if (f.type() == Field::Field_Hidden && f.var() == "FORM_TYPE") {
             d->registrarType = f.value().value(0);
+            continue;
         }
+        fields.append(f);
     }
+    d->fields = fields;
 }
 
 void XData::fromXml(const QDomElement &e)
