@@ -117,6 +117,13 @@ public:
     EncryptionJob *publishOwnDevice();
 
     /**
+     * Remove a non-current device from this account's published OMEMO device
+     * lists. Its bundle is intentionally left on the server: without a
+     * device-list entry it is no longer selected as an encryption recipient.
+     */
+    EncryptionJob *retireOwnDevice(uint32_t deviceId);
+
+    /**
      * Send an empty OMEMO 2 protocol message to one existing Double Ratchet
      * session. Empty messages are an OMEMO 2 protocol-management primitive and
      * are not generated for the legacy profile.

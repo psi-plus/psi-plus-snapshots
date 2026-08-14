@@ -1458,7 +1458,8 @@ public:
         return true;
     }
 
-    QDomDocument makeDeviceListDocument(OmemoProtocol protocol) const
+    QDomDocument makeDeviceListDocument(OmemoProtocol                  protocol,
+                                        const std::optional<uint32_t> &excludedDeviceId = {}) const
     {
         QDomDocument document;
         const auto   ns       = protocolNamespace(protocol);
@@ -1480,6 +1481,8 @@ public:
         std::sort(sorted.begin(), sorted.end());
         const auto ownSignature = protocol == OmemoProtocol::Omemo2 ? signOwnLabel() : QByteArray();
         for (const auto id : sorted) {
+            if (excludedDeviceId && id == *excludedDeviceId)
+                continue;
             auto device = document.createElementNS(ns, QStringLiteral("device"));
             device.setAttribute(QStringLiteral("id"), QString::number(id));
             if (id == data.ownDevice->id && !data.ownDevice->label.isEmpty()) {
@@ -1501,6 +1504,39 @@ public:
             devices.appendChild(device);
         }
         return document;
+    }
+
+    bool markOwnDeviceRetired(uint32_t deviceId, const QList<OmemoProtocol> &protocols, QString *error)
+    {
+        const auto ownBare = client->jid().bare();
+        auto       devices = data.devices.value(ownBare);
+        auto       it      = devices.find(deviceId);
+        if (it == devices.end()) {
+            if (error)
+                *error = QStringLiteral("OMEMO device is not known for this account");
+            return false;
+        }
+
+        auto       device    = it.value();
+        bool       wasActive = deviceActive(device);
+        const auto now       = QDateTime::currentDateTimeUtc();
+        for (const auto protocol : protocols) {
+            auto state                      = device.protocols.value(protocol);
+            state.removalFromDeviceListDate = now;
+            device.protocols.insert(protocol, state);
+        }
+        if (!storage->addDevice(ownBare, deviceId, device)) {
+            if (error)
+                *error = QStringLiteral("Could not persist the retired OMEMO device");
+            return false;
+        }
+        it.value() = device;
+        data.devices.insert(ownBare, devices);
+        if (wasActive && !deviceActive(device))
+            emit q->deviceRemoved(Jid(ownBare), deviceId);
+        else
+            emit q->deviceChanged(Jid(ownBare), deviceId);
+        return true;
     }
 
     QDomDocument makeBundleDocument(OmemoProtocol protocol, QString *error) const
@@ -3182,6 +3218,77 @@ EncryptionJob *OmemoEncryption::publishOwnDevice()
             legacy->deleteLater();
         });
     });
+    return job;
+}
+
+EncryptionJob *OmemoEncryption::retireOwnDevice(uint32_t deviceId)
+{
+    auto *job = new EncryptionJob(this);
+    if (!d->data.ownDevice || deviceId == 0) {
+        job->fail(EncryptionJob::Error::InvalidInput, QStringLiteral("Invalid OMEMO device id"));
+        return job;
+    }
+    if (deviceId == d->data.ownDevice->id) {
+        job->fail(EncryptionJob::Error::InvalidInput, QStringLiteral("The current OMEMO device cannot be retired"));
+        return job;
+    }
+
+    const auto ownBare = d->client->jid().bare();
+    const auto known   = d->data.devices.value(ownBare);
+    const auto device  = known.constFind(deviceId);
+    if (device == known.cend()) {
+        job->fail(EncryptionJob::Error::InvalidInput, QStringLiteral("OMEMO device is not known for this account"));
+        return job;
+    }
+
+    QList<OmemoProtocol> protocols;
+    for (const auto protocol : { OmemoProtocol::Omemo2, OmemoProtocol::Legacy }) {
+        if (Private::protocolActive(*device, protocol))
+            protocols.append(protocol);
+    }
+    if (protocols.isEmpty()) {
+        job->fail(EncryptionJob::Error::InvalidInput, QStringLiteral("OMEMO device is already retired"));
+        return job;
+    }
+
+    auto publishNext = std::make_shared<std::function<void(qsizetype)>>();
+    const std::weak_ptr<std::function<void(qsizetype)>> weakPublishNext = publishNext;
+    *publishNext = [this, job, deviceId, protocols, weakPublishNext](qsizetype index) {
+        const auto publishNext = weakPublishNext.lock();
+        if (!publishNext) {
+            job->fail(EncryptionJob::Error::Cancelled, QStringLiteral("OMEMO device retirement was cancelled"));
+            return;
+        }
+        if (index == protocols.size()) {
+            job->complete(QByteArray());
+            return;
+        }
+
+        const auto    protocol = protocols.at(index);
+        const auto    document = d->makeDeviceListDocument(protocol, deviceId);
+        PubSubOptions options;
+        if (protocol == OmemoProtocol::Omemo2)
+            options.insert(QStringLiteral("pubsub#access_model"), { QStringLiteral("open") });
+        const QString itemId = protocol == OmemoProtocol::Omemo2 ? QStringLiteral("current") : QString();
+        d->publishPepItem(
+            protocolDevicesNode(protocol), PubSubItem(itemId, document.documentElement()), options,
+            [this, job, deviceId, protocol, index, publishNext](bool ok, const QString &publishError) {
+                if (!ok) {
+                    job->fail(EncryptionJob::Error::NetworkError,
+                              publishError.isEmpty()
+                                  ? QStringLiteral("Could not update %1 OMEMO device list").arg(protocolName(protocol))
+                                  : publishError);
+                    return;
+                }
+                QString error;
+                if (!d->markOwnDeviceRetired(deviceId, { protocol }, &error)) {
+                    job->fail(EncryptionJob::Error::StorageError, error);
+                    return;
+                }
+                (*publishNext)(index + 1);
+            });
+    };
+    (*publishNext)(0);
     return job;
 }
 
