@@ -85,6 +85,8 @@ QString Task::id() const { return d->id; }
 
 QString Task::genUniqueID() { return client()->genUniqueId(); }
 
+const EncryptionMetadata *Task::encryptionMetadata() const { return client()->currentEncryptionMetadata(); }
+
 bool Task::success() const { return d->success; }
 
 int Task::statusCode() const { return d->statusCode; }

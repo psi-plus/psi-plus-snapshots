@@ -726,9 +726,7 @@ public:
     QString                    nick;
     QString                    eventId;
     QString                    xsigned, xencrypted, invite;
-    QString                    pubsubNode;
-    QList<PubSubItem>          pubsubItems;
-    QList<PubSubRetraction>    pubsubRetractions;
+    QList<PubSubEvent>         pubSubEvents;
     QList<MsgEvent>            eventList;
     ChatState                  chatState      = StateNone;
     MessageReceipt             messageReceipt = ReceiptNone;
@@ -956,13 +954,52 @@ void Message::setThread(const QString &s, bool send)
 
 void Message::setError(const Stanza::Error &err) { MessageD()->error = err; }
 
-QString Message::pubsubNode() const { return d ? d->pubsubNode : QString(); }
+const QList<PubSubEvent> &Message::pubSubEvents() const
+{
+    static const QList<PubSubEvent> empty;
+    return d ? d->pubSubEvents : empty;
+}
 
-QList<PubSubItem> Message::pubsubItems() const { return d ? d->pubsubItems : QList<PubSubItem>(); }
+QString Message::pubsubNode() const
+{
+    if (!d)
+        return {};
+    QString node;
+    for (const auto &event : d->pubSubEvents) {
+        if (event.type() == PubSubEvent::Type::Items)
+            node = event.node();
+    }
+    return node;
+}
+
+QList<PubSubItem> Message::pubsubItems() const
+{
+    QList<PubSubItem> items;
+    if (!d)
+        return items;
+    for (const auto &event : d->pubSubEvents) {
+        if (event.type() != PubSubEvent::Type::Items)
+            continue;
+        // Preserve the legacy accessor's behavior: payload-less item
+        // notifications were not exposed by the old parser.
+        for (const auto &item : event.items()) {
+            if (!item.payload().isNull())
+                items += item;
+        }
+    }
+    return items;
+}
 
 QList<PubSubRetraction> Message::pubsubRetractions() const
 {
-    return d ? d->pubsubRetractions : QList<PubSubRetraction>();
+    QList<PubSubRetraction> retractions;
+    if (!d)
+        return retractions;
+    for (const auto &event : d->pubSubEvents) {
+        if (event.type() == PubSubEvent::Type::Items)
+            retractions += event.retractions();
+    }
+    return retractions;
 }
 
 QDateTime Message::timeStamp() const { return d ? d->timeStamp : QDateTime(); }
@@ -1577,25 +1614,49 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
             }
         } else if (e.tagName() == QLatin1String("event")
                    && e.namespaceURI() == QLatin1String("http://jabber.org/protocol/pubsub#event")) {
-            for (QDomNode enode = e.firstChild(); !enode.isNull(); enode = enode.nextSibling()) {
-                QDomElement eel = enode.toElement();
-                if (eel.tagName() == QLatin1String("items")) {
-                    d->pubsubNode = eel.attribute("node");
-                    for (QDomNode inode = eel.firstChild(); !inode.isNull(); inode = inode.nextSibling()) {
-                        QDomElement o = inode.toElement();
-                        if (o.tagName() == QLatin1String("item")) {
-                            for (QDomNode j = o.firstChild(); !j.isNull(); j = j.nextSibling()) {
-                                QDomElement item = j.toElement();
-                                if (!item.isNull()) {
-                                    d->pubsubItems += PubSubItem(o.attribute("id"), item);
-                                }
-                            }
-                        }
-                        if (o.tagName() == "retract") {
-                            d->pubsubRetractions += PubSubRetraction(o.attribute("id"));
+            constexpr auto pubSubEventNs = "http://jabber.org/protocol/pubsub#event";
+            for (auto eventElement = e.firstChildElement(); !eventElement.isNull();
+                 eventElement      = eventElement.nextSiblingElement()) {
+                const QString localName = eventElement.localName().isEmpty()
+                    ? eventElement.tagName().section(QLatin1Char(':'), -1)
+                    : eventElement.localName();
+                if (!eventElement.namespaceURI().isEmpty()
+                    && eventElement.namespaceURI() != QLatin1String(pubSubEventNs))
+                    continue;
+
+                PubSubEvent::Type eventType = PubSubEvent::Type::Unknown;
+                if (localName == QLatin1String("items"))
+                    eventType = PubSubEvent::Type::Items;
+                else if (localName == QLatin1String("collection"))
+                    eventType = PubSubEvent::Type::Collection;
+                else if (localName == QLatin1String("configuration"))
+                    eventType = PubSubEvent::Type::Configuration;
+                else if (localName == QLatin1String("delete"))
+                    eventType = PubSubEvent::Type::Delete;
+                else if (localName == QLatin1String("purge"))
+                    eventType = PubSubEvent::Type::Purge;
+                else if (localName == QLatin1String("subscription"))
+                    eventType = PubSubEvent::Type::Subscription;
+
+                QList<PubSubItem>       items;
+                QList<PubSubRetraction> retractions;
+                if (eventType == PubSubEvent::Type::Items) {
+                    for (auto itemElement = eventElement.firstChildElement(); !itemElement.isNull();
+                         itemElement      = itemElement.nextSiblingElement()) {
+                        const QString itemName = itemElement.localName().isEmpty()
+                            ? itemElement.tagName().section(QLatin1Char(':'), -1)
+                            : itemElement.localName();
+                        if (itemName == QLatin1String("item")) {
+                            items += PubSubItem(itemElement.attribute(QStringLiteral("id")),
+                                                itemElement.firstChildElement());
+                        } else if (itemName == QLatin1String("retract")) {
+                            retractions += PubSubRetraction(itemElement.attribute(QStringLiteral("id")));
                         }
                     }
                 }
+
+                d->pubSubEvents += PubSubEvent(eventType, eventElement.attribute(QStringLiteral("node")), items,
+                                               retractions, eventElement);
             }
         } else if (e.tagName() == QLatin1String("no-permanent-store")
                    && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
@@ -2868,6 +2929,27 @@ void SearchResult::setFirst(const QString &first) { v_first = first; }
 void SearchResult::setLast(const QString &last) { v_last = last; }
 
 void SearchResult::setEmail(const QString &email) { v_email = email; }
+
+//----------------------------------------------------------------------------
+// PubSubEvent
+//----------------------------------------------------------------------------
+PubSubEvent::PubSubEvent() = default;
+
+PubSubEvent::PubSubEvent(Type type, const QString &node, const QList<PubSubItem> &items,
+                         const QList<PubSubRetraction> &retractions, const QDomElement &element) :
+    type_(type), node_(node), items_(items), retractions_(retractions), element_(element)
+{
+}
+
+PubSubEvent::Type PubSubEvent::type() const { return type_; }
+
+const QString &PubSubEvent::node() const { return node_; }
+
+const QList<PubSubItem> &PubSubEvent::items() const { return items_; }
+
+const QList<PubSubRetraction> &PubSubEvent::retractions() const { return retractions_; }
+
+const QDomElement &PubSubEvent::element() const { return element_; }
 
 PubSubItem::PubSubItem() { }
 

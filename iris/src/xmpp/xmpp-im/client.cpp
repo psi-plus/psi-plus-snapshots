@@ -80,9 +80,11 @@
 #include "xmpp_bitsofbinary.h"
 #include "xmpp_caps.h"
 #include "xmpp_carbons.h"
+#include "xmpp_encryption.h"
 #include "xmpp_externalservicediscovery.h"
 #include "xmpp_hash.h"
 #include "xmpp_ibb.h"
+#include "xmpp_pubsub.h"
 #include "xmpp_serverinfomanager.h"
 #include "xmpp_tasks.h"
 #include "xmpp_xmlcommon.h"
@@ -145,13 +147,16 @@ public:
     BoBManager               *bobman                   = nullptr;
     FileTransferManager      *ftman                    = nullptr;
     ServerInfoManager        *serverInfoManager        = nullptr;
+    PubSubManager            *pubSubManager            = nullptr;
     ExternalServiceDiscovery *externalServiceDiscovery = nullptr;
     StunDiscoManager         *stunDiscoManager         = nullptr;
     HttpFileUploadManager    *httpFileUploadManager    = nullptr;
     Jingle::Manager          *jingleManager            = nullptr;
     QList<GroupChat>          groupChatList;
-    EncryptionHandler        *encryptionHandler = nullptr;
-    JT_PushMessage           *pushMessage       = nullptr;
+    EncryptionHandler        *encryptionHandler         = nullptr;
+    EncryptionManager        *encryptionManager         = nullptr;
+    const EncryptionMetadata *currentEncryptionMetadata = nullptr;
+    JT_PushMessage           *pushMessage               = nullptr;
 };
 
 Client::Client(QObject *par) : QObject(par)
@@ -162,7 +167,8 @@ Client::Client(QObject *par) : QObject(par)
     d->clientName    = "N/A";
     d->clientVersion = "0.0";
 
-    d->root = new Task(this, true);
+    d->root              = new Task(this, true);
+    d->encryptionManager = new EncryptionManager(this);
 
     d->s5bman = new S5BManager(this);
     connect(d->s5bman, SIGNAL(incomingReady()), SLOT(s5b_incomingReady()));
@@ -177,6 +183,7 @@ Client::Client(QObject *par) : QObject(par)
     d->capsman = new CapsManager(this);
 
     d->serverInfoManager        = new ServerInfoManager(this);
+    d->pubSubManager            = new PubSubManager(this);
     d->externalServiceDiscovery = new ExternalServiceDiscovery(this);
     d->stunDiscoManager         = new StunDiscoManager(this);
     d->httpFileUploadManager    = new HttpFileUploadManager(this);
@@ -241,6 +248,7 @@ void Client::start(const QString &host, const QString &user, const QString &pass
     connect(pp, SIGNAL(presence(Jid, Status)), SLOT(ppPresence(Jid, Status)));
 
     d->pushMessage = new JT_PushMessage(rootTask(), d->encryptionHandler);
+    d->pubSubManager->setPushMessage(d->pushMessage);
     connect(d->pushMessage, SIGNAL(message(Message)), SLOT(pmMessage(Message)));
     d->carbonsman = new CarbonsManager(d->pushMessage);
 
@@ -298,6 +306,8 @@ bool Client::capsOptimizationAllowed() const
 }
 
 ServerInfoManager *Client::serverInfoManager() const { return d->serverInfoManager; }
+
+PubSubManager *Client::pubSubManager() const { return d->pubSubManager; }
 
 ExternalServiceDiscovery *Client::externalServiceDiscovery() const { return d->externalServiceDiscovery; }
 
@@ -594,27 +604,110 @@ void Client::distribute(const QDomElement &x)
         }
     }
 
-    if (!rootTask()->take(x) && (x.attribute("type") == "get" || x.attribute("type") == "set")) {
-        debug("Client: Unrecognized IQ.\n");
+    if (auto method = d->encryptionManager->methodForStanza(x)) {
+        EncryptionContext context;
+        auto              job      = d->encryptionManager->decrypt(x, context);
+        const QString     methodId = method->id();
+        auto              finish   = [this, job, methodId]() {
+            if (job->success()) {
+                distributeDecrypted(job->stanza(), &job->metadata());
+            } else {
+                debug(QStringLiteral("Client: %1 stanza decryption failed: %2").arg(methodId, job->errorString()));
+                emit stanzaDecryptionFailed(methodId, job->errorString());
+            }
+            job->deleteLater();
+        };
+        if (job->isFinished())
+            finish();
+        else
+            connect(job, &EncryptionJob::finished, this, finish);
+        return;
+    }
 
-        // Create reply element
-        QDomElement reply = createIQ(doc(), "error", x.attribute("from"), x.attribute("id"));
+    if (distributeEncryptedCarbon(x))
+        return;
 
-        // Copy children
-        for (QDomNode n = x.firstChild(); !n.isNull(); n = n.nextSibling()) {
-            reply.appendChild(n.cloneNode());
+    distributeDecrypted(x, nullptr);
+}
+
+bool Client::distributeEncryptedCarbon(const QDomElement &x)
+{
+    if (!d->carbonsman || !d->encryptionManager || x.tagName() != QLatin1String("message"))
+        return false;
+
+    const auto forwarded = d->carbonsman->forwardedMessage(x);
+    if (forwarded.isNull())
+        return false;
+
+    auto *method = d->encryptionManager->methodForStanza(forwarded);
+    if (!method)
+        return false;
+
+    EncryptionContext context;
+    auto              job      = d->encryptionManager->decrypt(forwarded, context);
+    const QString     methodId = method->id();
+    const QDomElement original = x;
+    auto              finish   = [this, job, methodId, original]() {
+        if (!job->success()) {
+            debug(
+                QStringLiteral("Client: %1 forwarded carbon decryption failed: %2").arg(methodId, job->errorString()));
+            emit stanzaDecryptionFailed(methodId, job->errorString());
+            job->deleteLater();
+            return;
         }
 
-        // Add error
+        QDomDocument document;
+        auto         carbon = document.importNode(original, true).toElement();
+        document.appendChild(carbon);
+        auto encryptedForwarded = d->carbonsman->forwardedMessage(carbon);
+        if (encryptedForwarded.isNull()) {
+            debug(QStringLiteral("Client: could not locate forwarded carbon after cloning"));
+            job->deleteLater();
+            return;
+        }
+
+        const auto decrypted = document.importNode(job->stanza(), true);
+        encryptedForwarded.parentNode().replaceChild(decrypted, encryptedForwarded);
+        distributeDecrypted(carbon, &job->metadata());
+        job->deleteLater();
+    };
+    if (job->isFinished())
+        finish();
+    else
+        connect(job, &EncryptionJob::finished, this, finish);
+    return true;
+}
+
+void Client::distributeDecrypted(const QDomElement &x, const EncryptionMetadata *metadata)
+{
+    // Encryption backends may consume protocol-management stanzas (for example
+    // OMEMO empty key-exchange/heartbeat messages) without exposing them as
+    // application messages.  They are still authenticated/decrypted first.
+    if (metadata && metadata->protocolOnly)
+        return;
+
+    const auto previousMetadata  = d->currentEncryptionMetadata;
+    d->currentEncryptionMetadata = metadata;
+    const bool handled           = rootTask()->take(x);
+    d->currentEncryptionMetadata = previousMetadata;
+
+    if (!handled && (x.attribute("type") == "get" || x.attribute("type") == "set")) {
+        debug("Client: Unrecognized IQ.\n");
+
+        QDomElement reply = createIQ(doc(), "error", x.attribute("from"), x.attribute("id"));
+        for (QDomNode n = x.firstChild(); !n.isNull(); n = n.nextSibling())
+            reply.appendChild(n.cloneNode());
+
         QDomElement error = doc()->createElement("error");
         error.setAttribute("type", "cancel");
         reply.appendChild(error);
+        error.appendChild(doc()->createElementNS(QLatin1String("urn:ietf:params:xml:ns:xmpp-stanzas"),
+                                                 QLatin1String("feature-not-implemented")));
 
-        QDomElement error_type = doc()->createElementNS(QLatin1String("urn:ietf:params:xml:ns:xmpp-stanzas"),
-                                                        QLatin1String("feature-not-implemented"));
-        error.appendChild(error_type);
-
-        send(reply);
+        if (metadata)
+            replyEncrypted(reply, *metadata);
+        else
+            send(reply);
     }
 }
 
@@ -659,6 +752,48 @@ void Client::send(const QString &str)
     debug(QString("Client: outgoing: [\n%1]\n").arg(str));
     emit xmlOutgoing(str);
     static_cast<ClientStream *>(d->stream)->writeDirect(str);
+}
+
+EncryptionJob *Client::sendEncrypted(const QDomElement &stanza, const QString &methodId,
+                                     const EncryptionContext &context)
+{
+    auto job    = d->encryptionManager->encrypt(methodId, stanza, context);
+    auto finish = [this, job]() {
+        if (job->success())
+            send(job->stanza());
+        else
+            debug(QStringLiteral("Client: outgoing stanza encryption failed: %1").arg(job->errorString()));
+    };
+    if (job->isFinished())
+        finish();
+    else
+        connect(job, &EncryptionJob::finished, this, finish);
+    return job;
+}
+
+EncryptionJob *Client::sendEncrypted(const QDomElement &stanza, EncryptedSession *session)
+{
+    auto job    = d->encryptionManager->encrypt(session, stanza);
+    auto finish = [this, job]() {
+        if (job->success())
+            send(job->stanza());
+        else
+            debug(QStringLiteral("Client: outgoing stanza encryption failed: %1").arg(job->errorString()));
+    };
+    if (job->isFinished())
+        finish();
+    else
+        connect(job, &EncryptionJob::finished, this, finish);
+    return job;
+}
+
+EncryptionJob *Client::replyEncrypted(const QDomElement &stanza, const EncryptionMetadata &metadata)
+{
+    EncryptionContext context;
+    if (!metadata.sender.isEmpty())
+        context.recipients.append(metadata.sender);
+    context.replyTo = metadata;
+    return sendEncrypted(stanza, metadata.methodId, context);
 }
 
 /* drops any pending outgoing xml elements */
@@ -1018,6 +1153,44 @@ void Client::sendMessage(Message &m)
     j->go(true);
 }
 
+EncryptionJob *Client::sendMessageEncrypted(Message &m, const QString &methodId, const EncryptionContext &inputContext)
+{
+    if (!hasStream()) {
+        auto job = new EncryptionJob(d->encryptionManager);
+        job->fail(EncryptionJob::Error::NetworkError, QStringLiteral("No active XMPP stream"));
+        return job;
+    }
+    if (m.id().isEmpty())
+        m.setId(genUniqueId());
+    Stanza            stanza  = m.toStanza(&stream());
+    EncryptionContext context = inputContext;
+    if (context.recipients.isEmpty() && !m.to().isEmpty())
+        context.recipients.append(m.to());
+    m.setWasEncrypted(true);
+    m.setEncryptionProtocol(methodId);
+    return sendEncrypted(stanza.element(), methodId, context);
+}
+
+EncryptionJob *Client::sendMessageEncrypted(Message &m, EncryptedSession *session)
+{
+    if (!hasStream()) {
+        auto job = new EncryptionJob(d->encryptionManager);
+        job->fail(EncryptionJob::Error::NetworkError, QStringLiteral("No active XMPP stream"));
+        return job;
+    }
+    if (!session) {
+        auto job = new EncryptionJob(d->encryptionManager);
+        job->fail(EncryptionJob::Error::NoSession, QStringLiteral("No encryption session was selected"));
+        return job;
+    }
+    if (m.id().isEmpty())
+        m.setId(genUniqueId());
+    Stanza stanza = m.toStanza(&stream());
+    m.setWasEncrypted(true);
+    m.setEncryptionProtocol(session->methodId());
+    return sendEncrypted(stanza.element(), session);
+}
+
 void Client::sendSubscription(const Jid &jid, const QString &type, const QString &nick)
 {
     JT_Presence *j = new JT_Presence(rootTask());
@@ -1113,6 +1286,10 @@ void Client::setEncryptionHandler(EncryptionHandler *encryptionHandler) { d->enc
 
 EncryptionHandler *Client::encryptionHandler() const { return d->encryptionHandler; }
 
+EncryptionManager *Client::encryptionManager() const { return d->encryptionManager; }
+
+const EncryptionMetadata *Client::currentEncryptionMetadata() const { return d->currentEncryptionMetadata; }
+
 DiscoItem::Identity Client::identity() const { return d->identity; }
 
 void Client::setIdentity(const DiscoItem::Identity &identity)
@@ -1161,6 +1338,7 @@ DiscoItem Client::makeDiscoResult(const QString &node) const
     features.addFeature("urn:xmpp:jingle:1");
     features.addFeature("urn:xmpp:extdisco:2");
     features += d->jingleManager->discoFeatures();
+    features += d->encryptionManager->features();
 
     // TODO rather do foreach for all registered jingle apps and transports
     // TODO: since it depends on UI it needs a way to be disabled

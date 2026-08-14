@@ -26,6 +26,7 @@
 #include "iris/xmpp_chatstate.h"
 #include "iris/xmpp_client.h"
 #include "iris/xmpp_discoitem.h"
+#include "iris/xmpp_encryption.h"
 #include "iris/xmpp_features.h"
 #include "iris/xmpp_form.h"
 #include "iris/xmpp_hash.h"
@@ -36,8 +37,15 @@
 #include "iris/xmpp_liverosteritem.h"
 #include "iris/xmpp_message.h"
 #include "iris/xmpp_muc.h"
+#include "iris/xmpp_omemostorage.h"
+#include "iris/xmpp_pubsub.h"
+#include "iris/xmpp_pubsubevent.h"
 #include "iris/xmpp_pubsubitem.h"
 #include "iris/xmpp_pubsubretraction.h"
+#include "iris/xmpp_sce.h"
+#ifdef IRIS_ENABLE_OMEMO
+#include "iris/xmpp_omemo.h"
+#endif
 #include "iris/xmpp_resource.h"
 #include "iris/xmpp_resourcelist.h"
 #include "iris/xmpp_roster.h"

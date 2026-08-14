@@ -30,6 +30,7 @@ class QDomElement;
 
 namespace XMPP {
 class Client;
+class EncryptionMetadata;
 class Jid;
 
 class Task : public QObject {
@@ -40,11 +41,12 @@ public:
     Task(Client *, bool isRoot);
     virtual ~Task();
 
-    Task         *parent() const;
-    Client       *client() const;
-    QDomDocument *doc() const;
-    QString       id() const;
-    QString       genUniqueID();
+    Task                     *parent() const;
+    Client                   *client() const;
+    QDomDocument             *doc() const;
+    QString                   id() const;
+    QString                   genUniqueID();
+    const EncryptionMetadata *encryptionMetadata() const;
 
     bool                 success() const;
     int                  statusCode() const;

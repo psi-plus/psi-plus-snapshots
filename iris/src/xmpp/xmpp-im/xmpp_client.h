@@ -37,7 +37,12 @@ class BSConnection;
 class CapsManager;
 class CarbonsManager;
 class ClientStream;
+class EncryptionContext;
+class EncryptedSession;
 class EncryptionHandler;
+class EncryptionJob;
+class EncryptionManager;
+class EncryptionMetadata;
 class Features;
 class FileTransferManager;
 class HttpFileUploadManager;
@@ -47,6 +52,7 @@ class JidLinkManager;
 class LiveRoster;
 class LiveRosterItem;
 class Message;
+class PubSubManager;
 class Resource;
 class ResourceList;
 class Roster;
@@ -91,9 +97,12 @@ public:
     const ResourceList &resourceList() const;
     bool                isSessionRequired() const;
 
-    void send(const QDomElement &);
-    void send(const QString &);
-    void clearSendQueue();
+    void           send(const QDomElement &);
+    void           send(const QString &);
+    EncryptionJob *sendEncrypted(const QDomElement &, const QString &methodId, const EncryptionContext &);
+    EncryptionJob *sendEncrypted(const QDomElement &, EncryptedSession *session);
+    EncryptionJob *replyEncrypted(const QDomElement &, const EncryptionMetadata &);
+    void           clearSendQueue();
 
     QString host() const;
     QString user() const;
@@ -104,10 +113,12 @@ public:
     void                   setNetworkAccessManager(QNetworkAccessManager *qnam);
     QNetworkAccessManager *networkAccessManager() const;
 
-    void rosterRequest(bool withGroupsDelimiter = true);
-    void sendMessage(Message &);
-    void sendSubscription(const Jid &, const QString &, const QString &nick = QString());
-    void setPresence(const Status &);
+    void           rosterRequest(bool withGroupsDelimiter = true);
+    void           sendMessage(Message &);
+    EncryptionJob *sendMessageEncrypted(Message &, const QString &methodId, const EncryptionContext &);
+    EncryptionJob *sendMessageEncrypted(Message &, EncryptedSession *session);
+    void           sendSubscription(const Jid &, const QString &, const QString &nick = QString());
+    void           setPresence(const Status &);
 
     void          debug(const QString &);
     QString       genUniqueId();
@@ -124,14 +135,16 @@ public:
     CapsSpec caps() const;
     CapsSpec serverCaps() const;
 
-    void               setOSName(const QString &);
-    void               setOSVersion(const QString &);
-    void               setTimeZone(const QString &, int);
-    void               setClientName(const QString &);
-    void               setClientVersion(const QString &);
-    void               setCaps(const CapsSpec &);
-    void               setEncryptionHandler(EncryptionHandler *);
-    EncryptionHandler *encryptionHandler() const;
+    void                      setOSName(const QString &);
+    void                      setOSVersion(const QString &);
+    void                      setTimeZone(const QString &, int);
+    void                      setClientName(const QString &);
+    void                      setClientVersion(const QString &);
+    void                      setCaps(const CapsSpec &);
+    void                      setEncryptionHandler(EncryptionHandler *);
+    EncryptionHandler        *encryptionHandler() const;
+    EncryptionManager        *encryptionManager() const;
+    const EncryptionMetadata *currentEncryptionMetadata() const;
 
     void                setIdentity(const DiscoItem::Identity &);
     DiscoItem::Identity identity() const;
@@ -152,6 +165,7 @@ public:
     CarbonsManager           *carbonsManager() const;
     JT_PushMessage           *pushMessage() const;
     ServerInfoManager        *serverInfoManager() const;
+    PubSubManager            *pubSubManager() const;
     ExternalServiceDiscovery *externalServiceDiscovery() const;
     StunDiscoManager         *stunDiscoManager() const;
     HttpFileUploadManager    *httpFileUploadManager() const;
@@ -166,7 +180,7 @@ public:
     QString groupChatPassword(const QString &host, const QString &room) const;
     bool    groupChatJoin(const QString &host, const QString &room, const QString &nick,
                           const QString &password = QString(), int maxchars = -1, int maxstanzas = -1, int seconds = -1,
-                          const QDateTime &since = QDateTime(), const Status    & = Status());
+                          const QDateTime &since = QDateTime(), const Status & = Status());
     void    groupChatSetStatus(const QString &host, const QString &room, const Status &);
     void    groupChatChangeNick(const QString &host, const QString &room, const QString &nick, const Status &);
     void    groupChatLeave(const QString &host, const QString &room, const QString &statusStr = QString());
@@ -191,6 +205,7 @@ signals:
     void xmlIncoming(const QString &);
     void xmlOutgoing(const QString &);
     void stanzaElementOutgoing(QDomElement &);
+    void stanzaDecryptionFailed(const QString &methodId, const QString &error);
     void groupChatJoined(const Jid &);
     void groupChatLeft(const Jid &);
     void groupChatPresence(const Jid &, const Status &);
@@ -232,6 +247,8 @@ public:
 private:
     void cleanup();
     void distribute(const QDomElement &);
+    bool distributeEncryptedCarbon(const QDomElement &);
+    void distributeDecrypted(const QDomElement &, const EncryptionMetadata *metadata);
     void importRoster(const Roster &);
     void importRosterItem(const RosterItem &);
     void updateSelfPresence(const Jid &, const Status &);

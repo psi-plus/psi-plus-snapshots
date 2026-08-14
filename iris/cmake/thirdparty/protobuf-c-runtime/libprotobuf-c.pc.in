@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: protobuf-c
+Description: Protocol Buffers C runtime
+Version: 1.5.1
+Libs: -L${libdir} -lprotobuf-c
+Cflags: -I${includedir}

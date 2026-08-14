@@ -32,6 +32,22 @@ namespace XMPP {
 
 static const QString xmlns_carbons(QStringLiteral("urn:xmpp:carbons:2"));
 
+static const QString xmlns_forward(QStringLiteral("urn:xmpp:forward:0"));
+
+static bool isOwnCarbon(const QDomElement &root, const Client *client)
+{
+    if (!client || root.tagName() != QLatin1String("message"))
+        return false;
+
+    const Jid from(root.attribute(QStringLiteral("from")));
+    const Jid to(root.attribute(QStringLiteral("to")));
+    const Jid own = client->jid();
+    if (!from.isValid() || !to.isValid() || !own.isValid() || !from.resource().isEmpty())
+        return false;
+
+    return from.bare() == own.bare() && to.bare() == own.bare();
+}
+
 class CarbonsSubscriber : public JT_PushMessage::Subscriber {
 public:
     bool xmlEvent(const QDomElement &root, QDomElement &e, Client *client, int userData, bool nested) override;
@@ -105,9 +121,7 @@ bool CarbonsSubscriber::xmlEvent(const QDomElement &root, QDomElement &e, Client
     bool drop = false;
     frw.setType(Forwarding::ForwardedNone);
     if (!nested) {
-        Jid from(root.attribute(QStringLiteral("from")));
-        Jid to(root.attribute(QStringLiteral("to")));
-        if (from.resource().isEmpty() && from.compare(to, false)) {
+        if (isOwnCarbon(root, client)) {
             QDomElement child = e.firstChildElement();
             while (!child.isNull()) {
                 if (frw.fromXml(child, client)) {
@@ -116,8 +130,9 @@ bool CarbonsSubscriber::xmlEvent(const QDomElement &root, QDomElement &e, Client
                 }
                 child = child.nextSiblingElement();
             }
-        } else
+        } else {
             drop = true;
+        }
         e = QDomElement();
     }
     return drop;
@@ -172,6 +187,34 @@ CarbonsManager::CarbonsManager(JT_PushMessage *push_m) : QObject(push_m), d(new 
 }
 
 CarbonsManager::~CarbonsManager() { }
+
+QDomElement CarbonsManager::forwardedMessage(const QDomElement &stanza) const
+{
+    if (!d->push_m || !isOwnCarbon(stanza, d->push_m->client()))
+        return {};
+
+    for (auto carbon = stanza.firstChildElement(); !carbon.isNull(); carbon = carbon.nextSiblingElement()) {
+        const auto name = carbon.tagName();
+        if (carbon.attribute(QStringLiteral("xmlns")) != xmlns_carbons
+            || (name != QLatin1String("received") && name != QLatin1String("sent"))) {
+            continue;
+        }
+
+        for (auto forwarded = carbon.firstChildElement(); !forwarded.isNull();
+             forwarded      = forwarded.nextSiblingElement()) {
+            if (forwarded.tagName() != QLatin1String("forwarded")
+                || forwarded.attribute(QStringLiteral("xmlns")) != xmlns_forward) {
+                continue;
+            }
+            for (auto message = forwarded.firstChildElement(); !message.isNull();
+                 message      = message.nextSiblingElement()) {
+                if (message.tagName() == QLatin1String("message"))
+                    return message;
+            }
+        }
+    }
+    return {};
+}
 
 QDomElement CarbonsManager::privateElement(QDomDocument &doc)
 {

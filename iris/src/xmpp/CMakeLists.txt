@@ -45,7 +45,11 @@ set(XMPP_IM_HEADERS
     xmpp-im/xmpp_muc.h
     xmpp-im/xmpp_reference.h
     xmpp-im/xmpp_pubsubitem.h
+    xmpp-im/xmpp_pubsubevent.h
+    xmpp-im/xmpp_pubsub.h
     xmpp-im/xmpp_pubsubretraction.h
+    xmpp-im/xmpp_omemostorage.h
+    xmpp-im/xmpp_sce.h
     xmpp-im/xmpp_receipts.h
     xmpp-im/xmpp_resource.h
     xmpp-im/xmpp_resourcelist.h
@@ -133,6 +137,9 @@ target_sources(iris PRIVATE
     xmpp-im/xmpp_forwarding.cpp
     xmpp-im/xmpp_mamtask.cpp
     xmpp-im/xmpp_mammanager.cpp
+    xmpp-im/xmpp_pubsub.cpp
+    xmpp-im/xmpp_omemostorage.cpp
+    xmpp-im/xmpp_sce.cpp
     xmpp-im/xmpp_reference.cpp
     xmpp-im/xmpp_serverinfomanager.cpp
     xmpp-im/xmpp_subsets.cpp
@@ -178,6 +185,16 @@ target_sources(iris PRIVATE
     xmpp-im/s5b.cpp
     xmpp-im/xmpp_features.cpp
 )
+
+if(IRIS_ENABLE_OMEMO)
+    target_sources(iris PRIVATE
+        xmpp-im/xmpp_omemo.h
+        xmpp-im/xmpp_omemo.cpp
+    )
+    target_compile_definitions(iris PUBLIC IRIS_ENABLE_OMEMO=1)
+    target_link_libraries(iris PRIVATE PkgConfig::OmemoC)
+    list(APPEND XMPP_IM_HEADERS xmpp-im/xmpp_omemo.h)
+endif()
 
 if(IRIS_ENABLE_JINGLE_SCTP)
     target_compile_definitions(iris PRIVATE JINGLE_SCTP)

@@ -21,40 +21,42 @@
 #ifndef XMPP_CARBONS_H
 #define XMPP_CARBONS_H
 
-#include <memory>
 #include <QObject>
+#include <memory>
 
 class QDomDocument;
 class QDomElement;
 
-namespace XMPP
-{
-    class Task;
-    class Client;
-    class JT_PushMessage;
+namespace XMPP {
+class Task;
+class Client;
+class JT_PushMessage;
 
-    class CarbonsManager : public QObject
-    {
-        Q_OBJECT
+class CarbonsManager : public QObject {
+    Q_OBJECT
 
-    public:
-        CarbonsManager(JT_PushMessage *push_m);
-        CarbonsManager(const CarbonsManager &) = delete;
-        CarbonsManager & operator=(const CarbonsManager &) = delete;
-        ~CarbonsManager();
+public:
+    CarbonsManager(JT_PushMessage *push_m);
+    CarbonsManager(const CarbonsManager &)            = delete;
+    CarbonsManager &operator=(const CarbonsManager &) = delete;
+    ~CarbonsManager();
 
-        static QDomElement privateElement(QDomDocument &doc);
+    static QDomElement privateElement(QDomDocument &doc);
 
-        void setEnabled(bool enable);
-        bool isEnabled() const;
+    void setEnabled(bool enable);
+    bool isEnabled() const;
 
-    signals:
-        void finished();
+signals:
+    void finished();
 
-    private:
-        class Private;
-        std::unique_ptr<Private> d;
-    };
+private:
+    friend class Client;
+
+    QDomElement forwardedMessage(const QDomElement &stanza) const;
+
+    class Private;
+    std::unique_ptr<Private> d;
+};
 }
 
 #endif

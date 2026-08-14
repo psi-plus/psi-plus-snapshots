@@ -366,7 +366,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         DisconnectReason        disconnectReason = None;
         quint8                  componentIndex   = 0;
 
-        RawConnection(quint8 componentIndex) : componentIndex(componentIndex) {};
+        RawConnection(quint8 componentIndex) : componentIndex(componentIndex) { };
 
         int component() const override { return componentIndex; }
 

@@ -40,6 +40,7 @@ class HTMLElement;
 class HttpAuthRequest;
 class IBBData;
 class Jid;
+class PubSubEvent;
 class PubSubItem;
 class PubSubRetraction;
 class XData;
@@ -100,9 +101,10 @@ public:
     void setError(const Stanza::Error &err);
 
     // XEP-0060
-    QString                 pubsubNode() const;
-    QList<PubSubItem>       pubsubItems() const;
-    QList<PubSubRetraction> pubsubRetractions() const;
+    const QList<PubSubEvent>                                            &pubSubEvents() const;
+    [[deprecated("Use pubSubEvents() instead")]] QString                 pubsubNode() const;
+    [[deprecated("Use pubSubEvents() instead")]] QList<PubSubItem>       pubsubItems() const;
+    [[deprecated("Use pubSubEvents() instead")]] QList<PubSubRetraction> pubsubRetractions() const;
 
     // XEP-0091
     QDateTime timeStamp() const;

@@ -21,71 +21,68 @@
 #ifndef XMPP_FORWARDING_H
 #define XMPP_FORWARDING_H
 
-#include <memory>
-#include <QObject>
 #include <QDateTime>
 #include <QDomElement>
+#include <QObject>
+#include <memory>
 
 #include "xmpp_message.h"
 
-namespace XMPP
-{
-    class Client;
-    class Stream;
-    class Message;
-    class JT_PushMessage;
+namespace XMPP {
+class Client;
+class Stream;
+class Message;
+class JT_PushMessage;
 
-    class Forwarding
-    {
-    public:
-        Forwarding();
-        Forwarding(const Forwarding &);
-        ~Forwarding();
+class Forwarding {
+public:
+    Forwarding();
+    Forwarding(const Forwarding &);
+    ~Forwarding();
 
-        Forwarding & operator=(const Forwarding &);
+    Forwarding &operator=(const Forwarding &);
 
-        enum Type {
-            ForwardedNone,
-            ForwardedMessage, // XEP-0297
-            ForwardedCarbonsReceived, // XEP-0280
-            ForwardedCarbonsSent, // XEP-0280
-        };
-        Type type() const;
-        void setType(Type type);
-        bool isCarbons() const;
-
-        QDateTime timeStamp() const;
-        void setTimeStamp(const QDateTime &ts);
-
-        Message message() const;
-        void setMessage(const Message &msg);
-
-        bool fromXml(const QDomElement &e, Client *client);
-        QDomElement toXml(Stream *stream) const;
-
-    private:
-        Type type_;
-        QDateTime ts_;
-        Message msg_;
+    enum Type {
+        ForwardedNone,
+        ForwardedMessage,         // XEP-0297
+        ForwardedCarbonsReceived, // XEP-0280
+        ForwardedCarbonsSent,     // XEP-0280
     };
+    Type type() const;
+    void setType(Type type);
+    bool isCarbons() const;
 
-    class ForwardingManager : public QObject
-    {
-        Q_OBJECT
+    QDateTime timeStamp() const;
+    void      setTimeStamp(const QDateTime &ts);
 
-    public:
-        ForwardingManager(JT_PushMessage *push_m);
-        ForwardingManager(const ForwardingManager &) = delete;
-        ForwardingManager & operator=(const ForwardingManager &) = delete;
-        ~ForwardingManager();
+    Message message() const;
+    void    setMessage(const Message &msg);
 
-        void setEnabled(bool enabled);
-        bool isEnabled() const;
+    bool        fromXml(const QDomElement &e, Client *client);
+    QDomElement toXml(Stream *stream) const;
 
-    private:
-        class Private;
-        std::unique_ptr<Private> d;
-    };
+private:
+    Type      type_;
+    QDateTime ts_;
+    Message   msg_;
+};
+
+class ForwardingManager : public QObject {
+    Q_OBJECT
+
+public:
+    ForwardingManager(JT_PushMessage *push_m);
+    ForwardingManager(const ForwardingManager &)            = delete;
+    ForwardingManager &operator=(const ForwardingManager &) = delete;
+    ~ForwardingManager();
+
+    void setEnabled(bool enabled);
+    bool isEnabled() const;
+
+private:
+    class Private;
+    std::unique_ptr<Private> d;
+};
 
 }
 

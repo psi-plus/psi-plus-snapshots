@@ -55,7 +55,7 @@ if(NOT DEFINED USE_MXE AND (EXISTS "${CMAKE_TOOLCHAIN_FILE}"))
 endif()
 
 set(IRIS_DEFAULT_BUNDLED_QCA OFF)
-if(APPLE OR (MSVC OR USE_MXE))
+if(APPLE OR ANDROID OR (MSVC OR USE_MXE))
     set(IRIS_DEFAULT_BUNDLED_QCA ON)
 endif()
 
@@ -64,6 +64,8 @@ option(IRIS_ENABLE_JINGLE_SCTP "Enable SCTP over ICE Jingle transport / data cha
 # note Blake2b is needed only with Qt5. Qt6 has its own implementation
 option(IRIS_BUNDLED_QCA "Adds: DTLS, Blake2b (needed with Qt5) and other useful for XMPP crypto-stuff" ${IRIS_DEFAULT_BUNDLED_QCA})
 option(IRIS_BUNDLED_USRSCTP "Compile compatible UsrSCTP lib (required for datachannel Jingle transport)" ${IRIS_DEFAULT_BUNDLED_USRSCTP})
+option(IRIS_ENABLE_OMEMO "Enable XEP-0384 OMEMO support (requires GPLv3 libomemo-c)" OFF)
+option(IRIS_BUNDLED_OMEMO_C "Build libomemo-c and protobuf-c when OMEMO is enabled" ON)
 option(IRIS_BUILD_TOOLS "Build tools and examples" OFF)
 option(IRIS_ENABLE_DEBUG "Enable debugging code paths" OFF)
 option(USE_QT6 "Enable Qt6 support" OFF)
@@ -84,7 +86,7 @@ endif()
 if(QT_DEFAULT_MAJOR_VERSION LESS 6)
     find_package(Qt5 5.10 REQUIRED COMPONENTS Core Gui Xml Network)
 else()
-    find_package(Qt6 REQUIRED COMPONENTS Core Gui Xml Network)
+    find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Xml Network)
 endif()
 message(STATUS "Qt${QT_DEFAULT_MAJOR_VERSION} found, version ${Qt${QT_DEFAULT_MAJOR_VERSION}Core_VERSION}")
 
@@ -97,6 +99,11 @@ find_file(STDINT_INCLUDE stdint.h)
 if(NOT ${STDINT_INCLUDE} STREQUAL "STDINT_INCLUDE-NOTFOUND")
     message(STATUS "StdInt include found: ${STDINT_INCLUDE}")
     set(STDINT_FOUND ON)
+endif()
+
+# Find OMEMO Double Ratchet backend only for builds that explicitly enable it.
+if(IRIS_ENABLE_OMEMO)
+    include(IrisOMEMO)
 endif()
 
 # Find SCTP package or use bundled if enabled
