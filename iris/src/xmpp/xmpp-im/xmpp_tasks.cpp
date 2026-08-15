@@ -846,14 +846,14 @@ public:
     bool processChildStanzaNode(const QDomElement &root, QDomElement &e, Client *c, bool nested)
     {
         QString tagName  = e.tagName();
-        QString xmlnsStr = e.attribute(QString::fromLatin1("xmlns"));
+        QString xmlnsStr = e.namespaceURI();
         QString key      = genKey(tagName, xmlnsStr);
         auto    it       = subsData.constFind(key);
         if (it != subsData.constEnd()) {
             foreach (const SubsData &sd, it.value()) {
                 if (sd.sbs->xmlEvent(root, e, c, sd.userData, nested))
                     return true;
-                if (e.tagName() != tagName || e.attribute(QString::fromLatin1("xmlns")) != tagName)
+                if (e.tagName() != tagName || e.namespaceURI() != xmlnsStr)
                     return false;
             }
         }

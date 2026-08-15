@@ -80,7 +80,7 @@ void Forwarding::setMessage(const Message &msg) { msg_ = msg; }
 
 bool Forwarding::fromXml(const QDomElement &e, Client *client)
 {
-    if (e.tagName() != QString::fromLatin1("forwarded") || e.attribute(QString::fromLatin1("xmlns")) != xmlns_forward)
+    if (e.tagName() != QString::fromLatin1("forwarded") || e.namespaceURI() != xmlns_forward)
         return false;
 
     bool correct      = false;
@@ -105,8 +105,7 @@ bool Forwarding::fromXml(const QDomElement &e, Client *client)
                 type_   = ForwardedMessage;
                 correct = true;
             }
-        } else if (child.tagName() == QString::fromLatin1("delay")
-                   && child.attribute(QString::fromLatin1("xmlns")) == xmlns_delay) {
+        } else if (child.tagName() == QString::fromLatin1("delay") && child.namespaceURI() == xmlns_delay) {
             ts_ = QDateTime::fromString(child.attribute(QString::fromLatin1("stamp")).left(19), Qt::ISODate);
         }
         child = child.nextSiblingElement();

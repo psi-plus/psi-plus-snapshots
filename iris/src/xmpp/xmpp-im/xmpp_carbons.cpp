@@ -195,15 +195,14 @@ QDomElement CarbonsManager::forwardedMessage(const QDomElement &stanza) const
 
     for (auto carbon = stanza.firstChildElement(); !carbon.isNull(); carbon = carbon.nextSiblingElement()) {
         const auto name = carbon.tagName();
-        if (carbon.attribute(QStringLiteral("xmlns")) != xmlns_carbons
+        if (carbon.namespaceURI() != xmlns_carbons
             || (name != QLatin1String("received") && name != QLatin1String("sent"))) {
             continue;
         }
 
         for (auto forwarded = carbon.firstChildElement(); !forwarded.isNull();
              forwarded      = forwarded.nextSiblingElement()) {
-            if (forwarded.tagName() != QLatin1String("forwarded")
-                || forwarded.attribute(QStringLiteral("xmlns")) != xmlns_forward) {
+            if (forwarded.tagName() != QLatin1String("forwarded") || forwarded.namespaceURI() != xmlns_forward) {
                 continue;
             }
             for (auto message = forwarded.firstChildElement(); !message.isNull();
