@@ -21,6 +21,7 @@
 
 #include "xmpp/jid/jid.h"
 #include "xmpp_discoitem.h"
+#include "xmpp_encryption.h"
 #include "xmpp_status.h"
 
 #include <QCryptographicHash>
@@ -37,12 +38,7 @@ class BSConnection;
 class CapsManager;
 class CarbonsManager;
 class ClientStream;
-class EncryptionContext;
-class EncryptedSession;
 class EncryptionHandler;
-class EncryptionJob;
-class EncryptionManager;
-class EncryptionMetadata;
 class Features;
 class FileTransferManager;
 class HttpFileUploadManager;
@@ -205,7 +201,8 @@ signals:
     void xmlIncoming(const QString &);
     void xmlOutgoing(const QString &);
     void stanzaElementOutgoing(QDomElement &);
-    void stanzaDecryptionFailed(const QString &methodId, const QString &error);
+    void stanzaDecryptionFailed(const QString &methodId, const Jid &peer, EncryptionJob::Error errorCode,
+                                const QString &error, const EncryptionMetadata &metadata);
     void groupChatJoined(const Jid &);
     void groupChatLeft(const Jid &);
     void groupChatPresence(const Jid &, const Status &);

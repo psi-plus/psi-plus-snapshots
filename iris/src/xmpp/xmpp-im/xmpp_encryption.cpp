@@ -90,12 +90,13 @@ void EncryptionJob::complete(const QByteArray &data, const EncryptionMetadata &m
     emit finished();
 }
 
-void EncryptionJob::fail(Error error, const QString &message)
+void EncryptionJob::fail(Error error, const QString &message, const EncryptionMetadata &metadata)
 {
     if (d->finished)
         return;
     d->error       = error == Error::None ? Error::ProtocolError : error;
     d->errorString = message;
+    d->metadata    = metadata;
     d->finished    = true;
     emit finished();
 }
@@ -153,7 +154,7 @@ static EncryptionJob *unsupportedJob(QObject *parent)
 {
     auto job = new EncryptionJob(parent);
     job->fail(EncryptionJob::Error::Unsupported,
-              QStringLiteral("Operation is not supported by this encryption session"));
+              QStringLiteral("Operation is not supported by this encryption implementation"));
     return job;
 }
 
@@ -164,6 +165,10 @@ EncryptionJob *EncryptedSession::decrypt(const QByteArray &) { return unsupporte
 
 EncryptionMethod::EncryptionMethod(QObject *parent) : QObject(parent) { }
 EncryptionMethod::~EncryptionMethod() = default;
+
+EncryptionJob *EncryptionMethod::prepareDecryptionRecovery(const EncryptionMetadata &) { return unsupportedJob(this); }
+
+EncryptionJob *EncryptionMethod::recoverDecryption(const EncryptionMetadata &) { return unsupportedJob(this); }
 
 class EncryptionManager::Private {
 public:
@@ -353,6 +358,24 @@ EncryptionJob *EncryptionManager::decrypt(const QString &methodId, const QByteAr
         return unsupported(QStringLiteral("Unknown encryption method: %1").arg(methodId));
     return runTransient(m, EncryptionMethod::DataMessage, context,
                         [&data](EncryptedSession *session) { return session->decrypt(data); });
+}
+
+EncryptionJob *EncryptionManager::prepareDecryptionRecovery(const QString &methodId, const EncryptionMetadata &metadata)
+{
+    auto m = method(methodId);
+    if (!m)
+        return unsupported(QStringLiteral("Unknown encryption method: %1").arg(methodId));
+    auto job = m->prepareDecryptionRecovery(metadata);
+    return job ? job : unsupported(QStringLiteral("Encryption method returned no recovery preparation job"));
+}
+
+EncryptionJob *EncryptionManager::recoverDecryption(const QString &methodId, const EncryptionMetadata &metadata)
+{
+    auto m = method(methodId);
+    if (!m)
+        return unsupported(QStringLiteral("Unknown encryption method: %1").arg(methodId));
+    auto job = m->recoverDecryption(metadata);
+    return job ? job : unsupported(QStringLiteral("Encryption method returned no recovery job"));
 }
 
 EncryptionJob *EncryptionManager::encrypt(EncryptedSession *session, const QDomElement &stanza)

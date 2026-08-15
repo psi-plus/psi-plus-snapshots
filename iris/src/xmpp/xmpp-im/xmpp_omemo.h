@@ -72,6 +72,8 @@ public:
     EncryptedSession *startSession(Capabilities caps, const EncryptionContext &context) override;
     Features          features() const override;
     bool              canDecrypt(const QDomElement &stanza) const override;
+    EncryptionJob    *prepareDecryptionRecovery(const EncryptionMetadata &metadata) override;
+    EncryptionJob    *recoverDecryption(const EncryptionMetadata &metadata) override;
 
     /** Wire profiles usable with the currently available QCA provider. */
     OmemoProtocols supportedProtocols() const;
@@ -117,6 +119,13 @@ public:
     EncryptionJob *publishOwnDevice();
 
     /**
+     * Check the account's OMEMO 2 PEP device list and bundles.  A broken
+     * bundle of the current device is republished; a broken bundle belonging
+     * to another device is retracted and its device id is retired.
+     */
+    EncryptionJob *sanitizeOwnPep();
+
+    /**
      * Remove a non-current device from this account's published OMEMO device
      * lists. Its bundle is intentionally left on the server: without a
      * device-list entry it is no longer selected as an encryption recipient.
@@ -141,6 +150,9 @@ signals:
     void warning(const QString &message);
 
 private:
+    EncryptionJob *sendProtocolMessage(const Jid &recipient, uint32_t deviceId, OmemoProtocol protocol,
+                                       bool requireKeyExchange);
+
     friend class OmemoEncryptedSession;
     class Private;
     std::unique_ptr<Private> d;

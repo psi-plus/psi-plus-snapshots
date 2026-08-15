@@ -80,11 +80,11 @@ private:
 };
 
 /**
- * Metadata attached to a successfully decrypted stanza.
+ * Metadata attached to an encryption/decryption result.
  *
  * The common fields deliberately describe the cryptographic peer rather than
- * a concrete encryption protocol.  Protocol-specific state that has to
- * survive deferred replies can be placed in details().
+ * a concrete encryption protocol. Protocol-specific state that has to
+ * survive deferred replies or a failed operation can be placed in details.
  */
 class EncryptionMetadata {
 public:
@@ -144,7 +144,7 @@ public:
     // EncryptionMethod implementations complete jobs through these helpers.
     void complete(const QDomElement &stanza, const EncryptionMetadata &metadata = {});
     void complete(const QByteArray &data, const EncryptionMetadata &metadata = {});
-    void fail(Error error, const QString &message = {});
+    void fail(Error error, const QString &message = {}, const EncryptionMetadata &metadata = {});
 
 signals:
     void finished();
@@ -206,6 +206,21 @@ public:
     virtual EncryptedSession *startSession(Capabilities caps, const EncryptionContext &context) = 0;
     virtual Features          features() const                                                  = 0;
     virtual bool              canDecrypt(const QDomElement &stanza) const                       = 0;
+
+    /**
+     * Resolve and validate the peer data needed to recover a failed incoming
+     * decryption. Implementations must not create a new cryptographic session
+     * or send a recovery/key-exchange message during this phase. Read-only
+     * discovery requests needed to present the decision are allowed.
+     */
+    virtual EncryptionJob *prepareDecryptionRecovery(const EncryptionMetadata &metadata);
+
+    /**
+     * Restore protocol state after the application has explicitly authorized
+     * recovery. The caller is responsible for obtaining any user interaction
+     * required by the encryption protocol and local trust policy.
+     */
+    virtual EncryptionJob *recoverDecryption(const EncryptionMetadata &metadata);
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(EncryptionMethod::Capabilities)
 
@@ -235,6 +250,9 @@ public:
     EncryptionJob *decrypt(const QDomElement &stanza, const EncryptionContext &context = {});
     EncryptionJob *encrypt(const QString &methodId, const QByteArray &data, const EncryptionContext &context = {});
     EncryptionJob *decrypt(const QString &methodId, const QByteArray &data, const EncryptionContext &context = {});
+
+    EncryptionJob *prepareDecryptionRecovery(const QString &methodId, const EncryptionMetadata &metadata);
+    EncryptionJob *recoverDecryption(const QString &methodId, const EncryptionMetadata &metadata);
 
     EncryptionJob *encrypt(EncryptedSession *session, const QDomElement &stanza);
     EncryptionJob *decrypt(EncryptedSession *session, const QDomElement &stanza);

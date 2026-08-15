@@ -608,12 +608,13 @@ void Client::distribute(const QDomElement &x)
         EncryptionContext context;
         auto              job      = d->encryptionManager->decrypt(x, context);
         const QString     methodId = method->id();
-        auto              finish   = [this, job, methodId]() {
+        const Jid         peer(x.attribute(QStringLiteral("from")));
+        auto              finish = [this, job, methodId, peer]() {
             if (job->success()) {
                 distributeDecrypted(job->stanza(), &job->metadata());
             } else {
                 debug(QStringLiteral("Client: %1 stanza decryption failed: %2").arg(methodId, job->errorString()));
-                emit stanzaDecryptionFailed(methodId, job->errorString());
+                emit stanzaDecryptionFailed(methodId, peer, job->error(), job->errorString(), job->metadata());
             }
             job->deleteLater();
         };
@@ -647,11 +648,37 @@ bool Client::distributeEncryptedCarbon(const QDomElement &x)
     auto              job      = d->encryptionManager->decrypt(forwarded, context);
     const QString     methodId = method->id();
     const QDomElement original = x;
-    auto              finish   = [this, job, methodId, original]() {
+    const Jid         forwardedFrom(forwarded.attribute(QStringLiteral("from")));
+    const Jid         forwardedTo(forwarded.attribute(QStringLiteral("to")));
+    const Jid         peer   = forwardedFrom.bare() == jid().bare() ? forwardedTo : forwardedFrom;
+    auto              finish = [this, job, methodId, original, peer]() {
         if (!job->success()) {
             debug(
                 QStringLiteral("Client: %1 forwarded carbon decryption failed: %2").arg(methodId, job->errorString()));
-            emit stanzaDecryptionFailed(methodId, job->errorString());
+            emit stanzaDecryptionFailed(methodId, peer, job->error(), job->errorString(), job->metadata());
+
+            // A carbon may carry a human-readable fallback body. Preserve it
+            // instead of silently discarding the whole forwarded message, but
+            // remove the encrypted payload and EME marker first: the fallback
+            // is plaintext and must not be presented as successfully decrypted.
+            QDomDocument fallbackDocument;
+            auto         fallbackCarbon = fallbackDocument.importNode(original, true).toElement();
+            fallbackDocument.appendChild(fallbackCarbon);
+            auto fallbackMessage = d->carbonsman->forwardedMessage(fallbackCarbon);
+            for (auto child = fallbackMessage.firstChildElement(); !child.isNull();) {
+                const auto next = child.nextSiblingElement();
+                if ((child.tagName() == QLatin1String("encrypted")
+                     && (child.namespaceURI() == QLatin1String("urn:xmpp:omemo:2")
+                         || child.namespaceURI() == QLatin1String("eu.siacs.conversations.axolotl")))
+                    || (child.tagName() == QLatin1String("encryption")
+                        && child.namespaceURI() == QLatin1String("urn:xmpp:eme:0"))) {
+                    fallbackMessage.removeChild(child);
+                }
+                child = next;
+            }
+            // Calling distributeDecrypted() directly is intentional: the
+            // fallback must not enter this method a second time.
+            distributeDecrypted(fallbackCarbon, nullptr);
             job->deleteLater();
             return;
         }
