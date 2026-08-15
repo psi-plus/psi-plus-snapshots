@@ -9,7 +9,7 @@ set(IRIS_PROTOBUF_C_SOURCE_DIR "" CACHE PATH "Local protobuf-c source directory"
 
 if(NOT IRIS_BUNDLED_OMEMO_C)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(OmemoC REQUIRED IMPORTED_TARGET libomemo-c>=0.5.1)
+    pkg_check_modules(OmemoC REQUIRED IMPORTED_TARGET "libomemo-c>=0.5.1")
     return()
 endif()
 
@@ -80,6 +80,7 @@ endif()
 ExternalProject_Add(
     iris_bundled_protobuf_c
     ${_protobuf_c_source_args}
+    UPDATE_COMMAND ""
     PREFIX "${_omemoc_prefix}/protobuf-c"
     SOURCE_SUBDIR "."
     INSTALL_DIR "${IRIS_OMEMO_C_INSTALL_DIR}"
@@ -127,6 +128,7 @@ _iris_omemo_append_cross_compile_args(_omemoc_cmake_args)
 ExternalProject_Add(
     iris_bundled_omemoc
     ${_omemoc_source_args}
+    UPDATE_COMMAND ""
     PREFIX "${_omemoc_prefix}/libomemo-c"
     INSTALL_DIR "${IRIS_OMEMO_C_INSTALL_DIR}"
     LIST_SEPARATOR "|"

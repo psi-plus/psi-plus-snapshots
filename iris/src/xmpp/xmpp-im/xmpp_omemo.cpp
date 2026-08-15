@@ -2167,14 +2167,13 @@ public:
 
         std::optional<OmemoProtocol> selected;
         for (const auto &resource : resources) {
-            // Entity capabilities are a strong hint for selecting a wire
-            // profile for an online resource, but they are not OMEMO device
-            // discovery.  In particular, CapsManager intentionally does not
-            // cache our own resources and an offline peer has no resource caps
-            // at all.  Fall back to the PEP device state we already know.
-            auto current = q->preferredProtocolFor(resource);
+            // A cached PEP device list is actual OMEMO discovery data, whereas
+            // entity capabilities only say what this online resource can
+            // implement. Prefer the known list so a dual-stack resource whose
+            // OMEMO 2 node is absent can still use its legacy devices.
+            auto current = preferredKnownProtocolFor(resource.bare());
             if (!current)
-                current = preferredKnownProtocolFor(resource.bare());
+                current = q->preferredProtocolFor(resource);
             if (!current)
                 continue;
             if (selected && *selected != *current) {
@@ -2661,7 +2660,13 @@ public:
                 return job;
             }
             QDomDocument envelopeDocument;
-            if (!envelopeDocument.setContent(QString::fromUtf8(envelopeBytes))) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            const bool envelopeParsed = envelopeDocument.setContent(envelopeBytes, true);
+#else
+            const auto envelopeParsed
+                = envelopeDocument.setContent(envelopeBytes, QDomDocument::ParseOption::UseNamespaceProcessing);
+#endif
+            if (!envelopeParsed) {
                 job->fail(EncryptionJob::Error::ProtocolError,
                           QStringLiteral("Decrypted OMEMO payload is not valid XML"));
                 return job;
