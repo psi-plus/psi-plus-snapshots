@@ -167,8 +167,11 @@ Client::Client(QObject *par) : QObject(par)
     d->clientName    = "N/A";
     d->clientVersion = "0.0";
 
-    d->root              = new Task(this, true);
-    d->encryptionManager = new EncryptionManager(this);
+    d->root                              = new Task(this, true);
+    d->encryptionManager                 = new EncryptionManager(this);
+    const auto encryptionFeaturesChanged = [this](const QString &) { d->caps.resetVersion(); };
+    connect(d->encryptionManager, &EncryptionManager::methodRegistered, this, encryptionFeaturesChanged);
+    connect(d->encryptionManager, &EncryptionManager::methodUnregistered, this, encryptionFeaturesChanged);
 
     d->s5bman = new S5BManager(this);
     connect(d->s5bman, SIGNAL(incomingReady()), SLOT(s5b_incomingReady()));
@@ -645,6 +648,7 @@ bool Client::distributeEncryptedCarbon(const QDomElement &x)
         return false;
 
     EncryptionContext context;
+    context.options.insert(QStringLiteral("forwardedCarbon"), true);
     auto              job      = d->encryptionManager->decrypt(forwarded, context);
     const QString     methodId = method->id();
     const QDomElement original = x;
