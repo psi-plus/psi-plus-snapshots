@@ -223,7 +223,7 @@ void EncryptionManager::unregisterMethod(EncryptionMethod *method)
 
 EncryptionMethod *EncryptionManager::method(const QString &id) const
 {
-    for (const auto &entry : d->methods) {
+    for (const auto &entry : std::as_const(d->methods)) {
         if (entry && entry->id() == id)
             return entry;
     }
@@ -232,7 +232,7 @@ EncryptionMethod *EncryptionManager::method(const QString &id) const
 
 EncryptionMethod *EncryptionManager::methodForStanza(const QDomElement &stanza) const
 {
-    for (const auto &entry : d->methods) {
+    for (const auto &entry : std::as_const(d->methods)) {
         if (entry && entry->capabilities().testFlag(EncryptionMethod::XmppStanza) && entry->canDecrypt(stanza))
             return entry;
     }
@@ -242,7 +242,7 @@ EncryptionMethod *EncryptionManager::methodForStanza(const QDomElement &stanza) 
 EncryptionManager::MethodsMap EncryptionManager::methods(EncryptionMethod::Capabilities caps) const
 {
     MethodsMap ret;
-    for (const auto &entry : d->methods) {
+    for (const auto &entry : std::as_const(d->methods)) {
         if (!entry)
             continue;
         if (caps == EncryptionMethod::Capabilities() || (caps & entry->capabilities()))
@@ -254,7 +254,7 @@ EncryptionManager::MethodsMap EncryptionManager::methods(EncryptionMethod::Capab
 Features EncryptionManager::features() const
 {
     Features result;
-    for (const auto &entry : d->methods) {
+    for (const auto &entry : std::as_const(d->methods)) {
         if (entry)
             result += entry->features();
     }

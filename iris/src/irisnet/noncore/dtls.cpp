@@ -298,24 +298,8 @@ Dtls::Dtls(QObject *parent, const QString &localJid, const QString &remoteJid) :
 
 void Dtls::setLocalCertificate(const QCA::Certificate &cert, const QCA::PrivateKey &pkey)
 {
-    Hash::Type hashType = Hash::Sha256;
-    switch (cert.signatureAlgorithm()) {
-    case QCA::EMSA1_SHA1:
-    case QCA::EMSA3_SHA1:
-        hashType = Hash::Sha1;
-        break;
-    case QCA::EMSA3_SHA256:
-        hashType = Hash::Sha256;
-        break;
-    case QCA::EMSA3_SHA512:
-        hashType = Hash::Sha512;
-        break;
-    default:
-        break;
-    }
-
     d->tls->setCertificate(cert, pkey);
-    d->localFingerprint.hash = Private::computeFingerprint(cert, hashType);
+    d->localFingerprint.hash = Private::computeFingerprint(cert, Hash::Sha256);
 }
 
 QCA::Certificate Dtls::localCertificate() const { return d->cert; }

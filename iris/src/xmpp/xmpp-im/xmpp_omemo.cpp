@@ -27,10 +27,8 @@
 
 #include <algorithm>
 #include <array>
-#include <climits>
 #include <cstring>
 #include <functional>
-#include <limits>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -1218,7 +1216,7 @@ public:
 
         QList<uint32_t> ids = data.preKeyPairs.keys();
         std::sort(ids.begin(), ids.end());
-        for (const auto id : ids) {
+        for (const auto id : std::as_const(ids)) {
             const auto       record = data.preKeyPairs.value(id);
             session_pre_key *preKey = nullptr;
             result = session_pre_key_deserialize(&preKey, reinterpret_cast<const uint8_t *>(record.constData()),
@@ -1407,7 +1405,6 @@ public:
             auto device                     = previous.value(id);
             auto state                      = device.protocols.value(protocol);
             state.removalFromDeviceListDate = {};
-            device.protocols.insert(protocol, state);
 
             const QString label = deviceElement.attribute(QStringLiteral("label"));
             if (protocol == OmemoProtocol::Omemo2) {
@@ -1415,24 +1412,30 @@ public:
                     = QByteArray::fromBase64(deviceElement.attribute(QStringLiteral("labelsig")).toLatin1(),
                                              QByteArray::AbortOnBase64DecodingErrors);
                 if (!label.isEmpty() && signature.size() == CURVE_SIGNATURE_LEN) {
-                    if (device.label != label || device.labelSignature != signature) {
-                        device.label          = label;
-                        device.labelSignature = signature;
-                        device.labelVerified  = false;
+                    if (state.label != label || state.labelSignature != signature) {
+                        state.label          = label;
+                        state.labelSignature = signature;
+                        state.labelVerified  = false;
                     }
                 } else {
-                    device.label.clear();
-                    device.labelSignature.clear();
-                    device.labelVerified = false;
+                    state.label.clear();
+                    state.labelSignature.clear();
+                    state.labelVerified = false;
                 }
-            } else if (!device.labelVerified && !label.isEmpty()) {
-                device.label = label;
-                device.labelSignature.clear();
+            } else {
+                // Legacy labels are unverified metadata and belong only to the
+                // legacy wire-profile record.
+                state.label          = label;
+                state.labelSignature = {};
+                state.labelVerified  = false;
             }
+            device.protocols.insert(protocol, state);
             next.insert(id, device);
         }
 
-        const auto now = QDateTime::currentDateTimeUtc();
+        const auto     now        = QDateTime::currentDateTimeUtc();
+        QSet<uint32_t> changedIds = activeIds;
+        QSet<uint32_t> fullyRemovedIds;
         for (auto it = next.begin(); it != next.end(); ++it) {
             auto stateIt = it->protocols.find(protocol);
             if (stateIt == it->protocols.end() || activeIds.contains(it.key())
@@ -1441,8 +1444,9 @@ public:
             }
             const bool wasActive               = deviceActive(*it);
             stateIt->removalFromDeviceListDate = now;
+            changedIds.insert(it.key());
             if (wasActive && !deviceActive(*it))
-                emit q->deviceRemoved(Jid(bare), it.key());
+                fullyRemovedIds.insert(it.key());
         }
         for (auto it = next.cbegin(); it != next.cend(); ++it) {
             if (!storage->addDevice(bare, it.key(), it.value())) {
@@ -1453,8 +1457,12 @@ public:
         }
         data.devices.insert(bare, next);
         fetchedDeviceLists.insert(fetchedListKey(bare, protocol));
-        for (const auto id : activeIds)
-            emit q->deviceChanged(Jid(bare), id);
+        for (const auto id : changedIds) {
+            if (fullyRemovedIds.contains(id))
+                emit q->deviceRemoved(Jid(bare), id);
+            else
+                emit q->deviceChanged(Jid(bare), id);
+        }
         return true;
     }
 
@@ -1480,7 +1488,7 @@ public:
         QList<uint32_t> sorted = ids.values();
         std::sort(sorted.begin(), sorted.end());
         const auto ownSignature = protocol == OmemoProtocol::Omemo2 ? signOwnLabel() : QByteArray();
-        for (const auto id : sorted) {
+        for (const auto id : std::as_const(sorted)) {
             if (excludedDeviceId && id == *excludedDeviceId)
                 continue;
             auto device = document.createElementNS(ns, QStringLiteral("device"));
@@ -1490,7 +1498,7 @@ public:
                 if (protocol == OmemoProtocol::Omemo2 && ownSignature.size() == CURVE_SIGNATURE_LEN)
                     device.setAttribute(QStringLiteral("labelsig"), QString::fromLatin1(ownSignature.toBase64()));
             } else {
-                const auto stored = known.value(id);
+                const auto stored = known.value(id).protocols.value(protocol);
                 if (protocol == OmemoProtocol::Legacy) {
                     if (!stored.label.isEmpty())
                         device.setAttribute(QStringLiteral("label"), stored.label);
@@ -1603,9 +1611,9 @@ public:
             return SG_ERR_UNTRUSTED_IDENTITY;
         }
         state.keyId = storedIdentity;
+        if (protocol == OmemoProtocol::Omemo2 && !state.label.isEmpty() && !state.labelSignature.isEmpty())
+            state.labelVerified = verifyDeviceLabel(bundle.identityKey, state.label, state.labelSignature);
         device.protocols.insert(protocol, state);
-        if (protocol == OmemoProtocol::Omemo2 && !device.label.isEmpty() && !device.labelSignature.isEmpty())
-            device.labelVerified = verifyDeviceLabel(bundle.identityKey, device.label, device.labelSignature);
         if (!setDevice(bare, id, device)) {
             if (error)
                 *error = QStringLiteral("Could not persist the remote OMEMO identity");
@@ -2045,9 +2053,9 @@ public:
             }
             if (state.keyId.isEmpty()) {
                 state.keyId = stored;
+                if (protocol == OmemoProtocol::Omemo2 && !state.label.isEmpty())
+                    state.labelVerified = verifyDeviceLabel(bundle->identityKey, state.label, state.labelSignature);
                 device.protocols.insert(protocol, state);
-                if (protocol == OmemoProtocol::Omemo2 && !device.label.isEmpty())
-                    device.labelVerified = verifyDeviceLabel(bundle->identityKey, device.label, device.labelSignature);
                 if (!setDevice(bare, id, device)) {
                     callback(false, EncryptionJob::Error::StorageError,
                              QStringLiteral("Could not persist remote OMEMO identity"));
@@ -2143,8 +2151,8 @@ public:
                                 prepared.senderKey = identity;
                                 prepared.details.insert(QStringLiteral("trustLevel"),
                                                         static_cast<int>(trustLevel(sender.bare(), identity)));
-                                if (device.labelVerified && !device.label.isEmpty())
-                                    prepared.details.insert(QStringLiteral("deviceLabel"), device.label);
+                                if (state.labelVerified && !state.label.isEmpty())
+                                    prepared.details.insert(QStringLiteral("deviceLabel"), state.label);
                                 callback(true, EncryptionJob::Error::None, {}, prepared);
                             });
             });
@@ -2261,13 +2269,15 @@ public:
 
         std::optional<OmemoProtocol> selected;
         for (const auto &resource : resources) {
-            // A cached PEP device list is actual OMEMO discovery data, whereas
-            // entity capabilities only say what this online resource can
-            // implement. Prefer the known list so a dual-stack resource whose
-            // OMEMO 2 node is absent can still use its legacy devices.
-            auto current = preferredKnownProtocolFor(resource.bare());
+            // Wire-profile selection for a concrete online resource must use
+            // that resource's entity capabilities first. PEP device lists are
+            // account-wide: preferring them here could select OMEMO 2 for a
+            // legacy-only resource merely because the bare JID has an OMEMO 2
+            // device entry belonging to another resource. If resource caps are
+            // unavailable, fall back to the cached PEP device state.
+            auto current = q->preferredProtocolFor(resource);
             if (!current)
-                current = q->preferredProtocolFor(resource);
+                current = preferredKnownProtocolFor(resource.bare());
             if (!current)
                 continue;
             if (selected && *selected != *current) {
@@ -2336,7 +2346,7 @@ public:
         QList<QPair<QString, uint32_t>> targets;
         const bool                      replyOnlySender = context.replyTo.has_value()
             && context.options.value(QStringLiteral("replyOnlySenderDevice"), true).toBool();
-        for (const auto &owner : logicalOwners) {
+        for (const auto &owner : std::as_const(logicalOwners)) {
             if (replyOnlySender && context.replyTo && owner == context.replyTo->sender.bare()
                 && context.replyTo->senderDeviceId > 0) {
                 targets.append(qMakePair(owner, context.replyTo->senderDeviceId));
@@ -2355,7 +2365,7 @@ public:
         // logical recipient. Otherwise a contact whose devices were all
         // explicitly distrusted would receive an undecryptable stanza that was
         // encrypted only for our own carbon devices.
-        for (const auto &owner : logicalOwners) {
+        for (const auto &owner : std::as_const(logicalOwners)) {
             if (owner == ownBare)
                 continue;
             const bool covered = std::any_of(targets.cbegin(), targets.cend(),
@@ -2473,7 +2483,10 @@ public:
                             return;
                         auto d = method_->d.get();
                         if (!sessionsOk) {
-                            guardedJob->fail(sessionError, sessionErrorString);
+                            EncryptionMetadata metadata;
+                            metadata.methodId = OmemoEncryption::methodId();
+                            metadata.details.insert(QLatin1String(OmemoProtocolOption), protocolName(protocol));
+                            guardedJob->fail(sessionError, sessionErrorString, metadata);
                             return;
                         }
 
@@ -2530,7 +2543,10 @@ public:
                             const int code = d->encryptKey(target.first, target.second, protocol, keyMaterial,
                                                            &encrypted, &cryptoError);
                             if (code != SG_SUCCESS) {
-                                guardedJob->fail(signalErrorToJob(code), cryptoError);
+                                EncryptionMetadata metadata;
+                                metadata.methodId = OmemoEncryption::methodId();
+                                metadata.details.insert(QLatin1String(OmemoProtocolOption), protocolName(protocol));
+                                guardedJob->fail(signalErrorToJob(code), cryptoError, metadata);
                                 return;
                             }
                             keys.append(encrypted);
@@ -2820,10 +2836,11 @@ public:
         // Incoming messages already give us the sender's authenticated identity key.  Use it to verify a label
         // learned from the OMEMO 2 device list before the UI asks the user to trust this device.
         const auto wireIdentity = d->wireIdentityFromStored(state.keyId, OmemoProtocol::Omemo2);
-        if (protocol == OmemoProtocol::Omemo2 && !device.labelVerified && !device.label.isEmpty()
-            && !device.labelSignature.isEmpty() && !wireIdentity.isEmpty()) {
-            device.labelVerified = d->verifyDeviceLabel(wireIdentity, device.label, device.labelSignature);
-            deviceChanged        = true;
+        if (protocol == OmemoProtocol::Omemo2 && !state.labelVerified && !state.label.isEmpty()
+            && !state.labelSignature.isEmpty() && !wireIdentity.isEmpty()) {
+            state.labelVerified = d->verifyDeviceLabel(wireIdentity, state.label, state.labelSignature);
+            device.protocols.insert(protocol, state);
+            deviceChanged = true;
         }
         if (deviceChanged) {
             if (!d->setDevice(sender.bare(), senderDevice, device)) {
@@ -3009,26 +3026,24 @@ QString    OmemoEncryption::ownDeviceLabel() const { return d->data.ownDevice ? 
 QList<OmemoDeviceInfo> OmemoEncryption::devices(const Jid &owner) const
 {
     QList<OmemoDeviceInfo> result;
-    const auto             appendOwner
-        = [this, &result](const QString &bare, const QHash<uint32_t, OmemoStorage::Device> &devices) {
-              for (auto it = devices.cbegin(); it != devices.cend(); ++it) {
-                  OmemoDeviceInfo info;
-                  info.owner  = Jid(bare);
-                  info.id     = it.key();
-                  info.label  = it->labelVerified ? it->label : QString();
-                  info.active = Private::deviceActive(*it);
-                  for (auto state = it->protocols.cbegin(); state != it->protocols.cend(); ++state) {
-                      info.protocols |= state.key();
-                      info.hasSession = info.hasSession || !state->session.isEmpty();
-                  }
-                  const auto modernState    = it->protocols.value(OmemoProtocol::Omemo2);
-                  const auto legacyState    = it->protocols.value(OmemoProtocol::Legacy);
-                  const auto storedIdentity = !modernState.keyId.isEmpty() ? modernState.keyId : legacyState.keyId;
-                  info.identityKey          = d->wireIdentityFromStored(storedIdentity, OmemoProtocol::Omemo2);
-                  info.trust                = d->trustLevel(bare, info.identityKey);
-                  result.append(info);
-              }
-          };
+    const auto             appendOwner = [this, &result](const QString                               &bare,
+                                             const QHash<uint32_t, OmemoStorage::Device> &devices) {
+        for (auto it = devices.cbegin(); it != devices.cend(); ++it) {
+            for (auto state = it->protocols.cbegin(); state != it->protocols.cend(); ++state) {
+                OmemoDeviceInfo info;
+                info.owner     = Jid(bare);
+                info.id        = it.key();
+                info.protocol  = state.key();
+                info.protocols = state.key();
+                info.label = state.key() == OmemoProtocol::Omemo2 && state->labelVerified ? state->label : QString();
+                info.active      = !state->removalFromDeviceListDate.isValid();
+                info.hasSession  = !state->session.isEmpty();
+                info.identityKey = d->wireIdentityFromStored(state->keyId, OmemoProtocol::Omemo2);
+                info.trust       = d->trustLevel(bare, info.identityKey);
+                result.append(info);
+            }
+        }
+    };
     if (owner.isValid()) {
         const auto bare = owner.bare();
         appendOwner(bare, d->data.devices.value(bare));
@@ -3433,7 +3448,7 @@ EncryptionJob *OmemoEncryption::sanitizeOwnPep()
                             return;
                         }
                         retract->deleteLater();
-                        auto retire = retireOwnDevice(target.second);
+                        auto retire = retireOwnDevice(target.second, OmemoProtocol::Omemo2);
                         connect(retire, &EncryptionJob::finished, this, [job, retire, index, next]() {
                             if (retire->success())
                                 (*next)(index + 1);
@@ -3446,6 +3461,54 @@ EncryptionJob *OmemoEncryption::sanitizeOwnPep()
         };
         (*next)(0);
     });
+    return job;
+}
+
+EncryptionJob *OmemoEncryption::retireOwnDevice(uint32_t deviceId, OmemoProtocol protocol)
+{
+    auto *job = new EncryptionJob(this);
+    if (!d->data.ownDevice || deviceId == 0) {
+        job->fail(EncryptionJob::Error::InvalidInput, QStringLiteral("Invalid OMEMO device id"));
+        return job;
+    }
+    if (deviceId == d->data.ownDevice->id) {
+        job->fail(EncryptionJob::Error::InvalidInput, QStringLiteral("The current OMEMO device cannot be retired"));
+        return job;
+    }
+
+    const auto ownBare = d->client->jid().bare();
+    const auto known   = d->data.devices.value(ownBare);
+    const auto device  = known.constFind(deviceId);
+    if (device == known.cend() || !Private::protocolActive(*device, protocol)) {
+        job->fail(EncryptionJob::Error::InvalidInput,
+                  QStringLiteral("%1 OMEMO device %2 is not active for this account")
+                      .arg(protocolName(protocol), QString::number(deviceId)));
+        return job;
+    }
+
+    const auto    document = d->makeDeviceListDocument(protocol, deviceId);
+    PubSubOptions options;
+    if (protocol == OmemoProtocol::Omemo2)
+        options.insert(QStringLiteral("pubsub#access_model"), { QStringLiteral("open") });
+    const QString itemId = QStringLiteral("current");
+
+    d->publishPepItem(
+        protocolDevicesNode(protocol), PubSubItem(itemId, document.documentElement()), options,
+        [this, job, deviceId, protocol](bool ok, const QString &publishError) {
+            if (!ok) {
+                job->fail(EncryptionJob::Error::NetworkError,
+                          publishError.isEmpty()
+                              ? QStringLiteral("Could not update %1 OMEMO device list").arg(protocolName(protocol))
+                              : publishError);
+                return;
+            }
+            QString error;
+            if (!d->markOwnDeviceRetired(deviceId, { protocol }, &error)) {
+                job->fail(EncryptionJob::Error::StorageError, error);
+                return;
+            }
+            job->complete(QByteArray());
+        });
     return job;
 }
 
@@ -3497,7 +3560,7 @@ EncryptionJob *OmemoEncryption::retireOwnDevice(uint32_t deviceId)
         PubSubOptions options;
         if (protocol == OmemoProtocol::Omemo2)
             options.insert(QStringLiteral("pubsub#access_model"), { QStringLiteral("open") });
-        const QString itemId = protocol == OmemoProtocol::Omemo2 ? QStringLiteral("current") : QString();
+        const QString itemId = QStringLiteral("current");
         d->publishPepItem(
             protocolDevicesNode(protocol), PubSubItem(itemId, document.documentElement()), options,
             [this, job, deviceId, protocol, index, publishNext](bool ok, const QString &publishError) {

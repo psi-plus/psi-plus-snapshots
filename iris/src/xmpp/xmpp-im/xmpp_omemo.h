@@ -25,13 +25,17 @@ class Client;
 
 struct OmemoDeviceInfo {
     Jid                  owner;
-    uint32_t             id = 0;
+    uint32_t             id       = 0;
+    OmemoProtocol        protocol = OmemoProtocol::Omemo2;
     QString              label;
     QByteArray           identityKey;
     EncryptionTrustLevel trust = EncryptionTrustLevel::Undecided;
-    OmemoProtocols       protocols;
-    bool                 active     = false;
-    bool                 hasSession = false;
+    // Kept as a convenience flag for callers which already consume protocol
+    // sets. devices() returns one record per wire profile, so this currently
+    // contains exactly protocol.
+    OmemoProtocols protocols;
+    bool           active     = false;
+    bool           hasSession = false;
 };
 
 /**
@@ -126,9 +130,16 @@ public:
     EncryptionJob *sanitizeOwnPep();
 
     /**
-     * Remove a non-current device from this account's published OMEMO device
-     * lists. Its bundle is intentionally left on the server: without a
-     * device-list entry it is no longer selected as an encryption recipient.
+     * Remove one wire-profile record for a non-current device from this
+     * account's published OMEMO device list. Its bundle is intentionally left
+     * on the server: without a device-list entry it is no longer selected as
+     * an encryption recipient.
+     */
+    EncryptionJob *retireOwnDevice(uint32_t deviceId, OmemoProtocol protocol);
+
+    /**
+     * Compatibility helper: retire every active wire-profile record which
+     * happens to use this numeric id.
      */
     EncryptionJob *retireOwnDevice(uint32_t deviceId);
 

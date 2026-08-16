@@ -61,6 +61,13 @@ public:
      * these blobs separate is therefore required for correct interoperation.
      */
     struct DeviceProtocolState {
+        // Device-list metadata belongs to a wire profile. Equal numeric device
+        // ids in legacy OMEMO and OMEMO 2 do not imply that the records refer
+        // to the same client installation.
+        QString    label;
+        QByteArray labelSignature;
+        bool       labelVerified = false;
+
         QByteArray keyId;
         QByteArray session;
         QByteArray lastReceivedRatchetKey;
@@ -69,10 +76,13 @@ public:
         QDateTime  removalFromDeviceListDate;
     };
 
+    /**
+     * Storage bucket for one numeric device id.
+     *
+     * Each entry in protocols is an independent wire-profile device record.
+     * The bucket must not be interpreted as a cross-profile device identity.
+     */
     struct Device {
-        QString                                  label;
-        QByteArray                               labelSignature;
-        bool                                     labelVerified = false;
         QMap<OmemoProtocol, DeviceProtocolState> protocols;
     };
 
