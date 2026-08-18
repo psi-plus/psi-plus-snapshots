@@ -2956,11 +2956,7 @@ OmemoEncryption::OmemoEncryption(Client *client, OmemoStorage *storage, Encrypti
             });
 }
 
-OmemoEncryption::~OmemoEncryption()
-{
-    if (d && d->client && d->client->encryptionManager())
-        d->client->encryptionManager()->unregisterMethod(this);
-}
+OmemoEncryption::~OmemoEncryption() = default;
 
 QString                        OmemoEncryption::id() const { return methodId(); }
 QString                        OmemoEncryption::name() const { return QStringLiteral("OMEMO"); }

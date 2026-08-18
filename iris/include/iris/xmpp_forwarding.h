@@ -1,1 +1,1 @@
-#include "../../src/xmpp/xmpp-im/xmpp_forwarding.h"
+#include "xmpp/xmpp-im/xmpp_forwarding.h"

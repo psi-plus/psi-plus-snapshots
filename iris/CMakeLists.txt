@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.0)
+cmake_minimum_required(VERSION 3.11.0)
 
 project(iris
     DESCRIPTION "XMPP network library"
@@ -38,6 +38,12 @@ include(policyRules)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 20)
+
+# irisnet, stringprep and other internal static libraries are linked into
+# libiris when Iris itself is built shared. They must therefore be PIC too.
+if(BUILD_SHARED_LIBS)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
 
 # Detect MXE cross-compilation
 set(IRIS_DEFAULT_BUNDLED_USRSCTP OFF)
@@ -147,19 +153,49 @@ if(IRIS_ENABLE_INSTALL)
         ${CMAKE_CURRENT_BINARY_DIR}/iris.pc
         @ONLY
     )
-
+    set(CONFIG_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/Iris)
     install(TARGETS iris
         EXPORT iris
         LIBRARY DESTINATION  ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION  ${CMAKE_INSTALL_LIBDIR}
     )
     install(EXPORT iris
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Iris
+        DESTINATION ${CONFIG_INSTALL_DIR}
         NAMESPACE iris::
-        FILE IrisConfig.cmake
+        FILE IrisTargets.cmake
     )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/IrisConfigVersion.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Iris
+    if(IRIS_BUNDLED_QCA)
+        install(DIRECTORY "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR}/"
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/iris/qca"
+            FILES_MATCHING PATTERN "*.h"
+        )
+
+        install(FILES
+            "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}qca-qt${QT_DEFAULT_MAJOR_VERSION}${D}${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        )
+        install(FILES
+            "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/qca-qt${QT_DEFAULT_MAJOR_VERSION}/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${D}${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/qca-qt${QT_DEFAULT_MAJOR_VERSION}/crypto"
+        )
+
+        set(QCA_CORE_LIB_REL "${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}qca-qt${QT_DEFAULT_MAJOR_VERSION}${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+        set(QCA_OSSL_LIB_REL "${CMAKE_INSTALL_LIBDIR}/qca-qt${QT_DEFAULT_MAJOR_VERSION}/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+        set(QCA_INCLUDE_REL "${CMAKE_INSTALL_INCLUDEDIR}/iris/qca")
+    else()
+        set(QCA_CORE_LIB_REL "")
+        set(QCA_OSSL_LIB_REL "")
+        set(QCA_INCLUDE_REL "")
+    endif()
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/IrisConfig.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/IrisConfig.cmake"
+        @ONLY
+    )
+    install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/IrisConfigVersion.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/IrisConfig.cmake"
+        DESTINATION ${CONFIG_INSTALL_DIR}
     )
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/iris.pc
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig

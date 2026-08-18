@@ -18,30 +18,39 @@ set(IRISNET_CORELIB_HEADERS
     corelib/objectsession.h
 )
 set(IRISNET_NONCORE_HEADERS
-    noncore/cutestuff/bsocket.h
-    noncore/cutestuff/bytestream.h
-    noncore/cutestuff/httpconnect.h
-    noncore/cutestuff/httppoll.h
-    noncore/cutestuff/socks.h
     noncore/dtls.h
     noncore/ice176.h
     noncore/iceabstractstundisco.h
     noncore/iceagent.h
-    noncore/legacy/ndns.h
-    noncore/legacy/srvresolver.h
+    noncore/icecomponent.h
+    noncore/icetransport.h
     noncore/processquit.h
     noncore/stunallocate.h
     noncore/stunbinding.h
     noncore/stunmessage.h
     noncore/stuntransaction.h
     noncore/tcpportreserver.h
+    noncore/transportaddress.h
     noncore/turnclient.h
     noncore/udpportreserver.h
+)
+set(IRISNET_CUTESTUFF_HEADERS
+    noncore/cutestuff/bsocket.h
+    noncore/cutestuff/bytestream.h
+    noncore/cutestuff/httpconnect.h
+    noncore/cutestuff/httppoll.h
+    noncore/cutestuff/socks.h
+)
+set(IRISNET_LEGACY_HEADERS
+    noncore/legacy/ndns.h
+    noncore/legacy/srvresolver.h
 )
 
 target_sources(irisnet PRIVATE
     ${IRISNET_CORELIB_HEADERS}
     ${IRISNET_NONCORE_HEADERS}
+    ${IRISNET_CUTESTUFF_HEADERS}
+    ${IRISNET_LEGACY_HEADERS}
     corelib/irisnetglobal.cpp
     corelib/irisnetplugin.cpp
 
@@ -96,12 +105,18 @@ if(IRIS_ENABLE_JINGLE_SCTP)
     )
 endif()
 
+set(Qca_INCLUDE_DIR "")
+
 if(IRIS_BUNDLED_QCA)
-    add_dependencies(irisnet QcaProject)
+    add_dependencies(irisnet Qca::Qca)
+    get_target_property(Qca_INCLUDE_DIR Qca::Qca INTERFACE_INCLUDE_DIRECTORIES)
 endif()
+list(APPEND IRISNET_DEPS "$<BUILD_INTERFACE:Qca::Qca>")
 
 if(IRIS_ENABLE_JINGLE_SCTP AND IRIS_BUNDLED_USRSCTP)
-    add_dependencies(irisnet UsrSCTPProject)
+    add_dependencies(irisnet SctpLab::UsrSCTP)
+    get_target_property(USRSCTP_INCLUDES SctpLab::UsrSCTP INTERFACE_INCLUDE_DIRECTORIES)
+    list(APPEND IRISNET_DEPS "$<BUILD_INTERFACE:SctpLab::UsrSCTP>")
 endif()
 
 target_include_directories(irisnet
@@ -126,7 +141,7 @@ if(NOT WIN32)
 endif()
 
 target_link_libraries(irisnet PUBLIC
-    ${Qca_LIBRARY} ${USRSCTP_LIBRARY}
+    ${IRISNET_DEPS}
 )
 
 if(QT_DEFAULT_MAJOR_VERSION LESS 6)
@@ -142,5 +157,11 @@ if(IRIS_ENABLE_INSTALL)
     )
     install(FILES ${IRISNET_NONCORE_HEADERS}
         DESTINATION ${IRIS_INSTALL_INCLUDEDIR}/irisnet/noncore
+    )
+    install(FILES ${IRISNET_CUTESTUFF_HEADERS}
+        DESTINATION ${IRIS_INSTALL_INCLUDEDIR}/irisnet/noncore/cutestuff
+    )
+    install(FILES ${IRISNET_LEGACY_HEADERS}
+        DESTINATION ${IRIS_INSTALL_INCLUDEDIR}/irisnet/noncore/legacy
     )
 endif()

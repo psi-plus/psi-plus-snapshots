@@ -38,7 +38,6 @@ class BSConnection;
 class CapsManager;
 class CarbonsManager;
 class ClientStream;
-class EncryptionHandler;
 class Features;
 class FileTransferManager;
 class HttpFileUploadManager;
@@ -137,8 +136,6 @@ public:
     void                      setClientName(const QString &);
     void                      setClientVersion(const QString &);
     void                      setCaps(const CapsSpec &);
-    void                      setEncryptionHandler(EncryptionHandler *);
-    EncryptionHandler        *encryptionHandler() const;
     EncryptionManager        *encryptionManager() const;
     const EncryptionMetadata *currentEncryptionMetadata() const;
 

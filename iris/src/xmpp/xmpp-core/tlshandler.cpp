@@ -306,16 +306,32 @@ TLSHandler::~TLSHandler() { }
 //----------------------------------------------------------------------------
 class QCATLSHandler::Private {
 public:
-    QCA::TLS *tls;
-    int       state, err;
-    QString   host;
-    bool      internalHostMatch;
+    std::unique_ptr<QCA::TLS> ownedTls;
+    QCA::TLS                 *tls = nullptr;
+    int                       state, err;
+    QString                   host;
+    bool                      internalHostMatch;
 };
 
 QCATLSHandler::QCATLSHandler(QCA::TLS *parent) : TLSHandler(parent)
 {
     d      = new Private;
     d->tls = parent;
+    init();
+}
+
+QCATLSHandler::QCATLSHandler(std::unique_ptr<QCA::TLS> tls, QObject *parent) : TLSHandler(parent)
+{
+    d           = new Private;
+    d->ownedTls = std::move(tls);
+    d->tls      = d->ownedTls.get();
+    init();
+}
+
+QCATLSHandler::~QCATLSHandler() { delete d; }
+
+void QCATLSHandler::init()
+{
     connect(d->tls, SIGNAL(handshaken()), SLOT(tls_handshaken()));
     connect(d->tls, SIGNAL(readyRead()), SLOT(tls_readyRead()));
     connect(d->tls, SIGNAL(readyReadOutgoing()), SLOT(tls_readyReadOutgoing()));
@@ -326,7 +342,10 @@ QCATLSHandler::QCATLSHandler(QCA::TLS *parent) : TLSHandler(parent)
     d->internalHostMatch = false;
 }
 
-QCATLSHandler::~QCATLSHandler() { delete d; }
+QCATLSHandler *QCATLSHandler::createOwned(QObject *parent)
+{
+    return new QCATLSHandler(std::make_unique<QCA::TLS>(), parent);
+}
 
 void QCATLSHandler::setXMPPCertCheck(bool enable) { d->internalHostMatch = enable; }
 bool QCATLSHandler::XMPPCertCheck() { return d->internalHostMatch; }
@@ -349,6 +368,8 @@ bool QCATLSHandler::certMatchesHostname()
 
     return false;
 }
+
+bool QCATLSHandler::peerIdentityValid() const { return d->tls->peerIdentityResult() == QCA::TLS::Valid; }
 
 QCA::TLS *QCATLSHandler::tls() const { return d->tls; }
 

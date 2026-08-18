@@ -21,7 +21,6 @@
 #define XMPP_TASKS_H
 
 #include "xmpp_discoinfotask.h"
-#include "xmpp_encryptionhandler.h"
 #include "xmpp_form.h"
 #include "xmpp_message.h"
 #include "xmpp_subsets.h"
@@ -206,7 +205,7 @@ public:
         virtual bool xmlEvent(const QDomElement &root, QDomElement &e, Client *c, int userData, bool nested);
         virtual bool messageEvent(Message &msg, int userData, bool nested);
     };
-    JT_PushMessage(Task *parent, EncryptionHandler *encryptionHandler = nullptr);
+    explicit JT_PushMessage(Task *parent);
     ~JT_PushMessage();
 
     void subscribeXml(Subscriber *sbs, const QString &tagName, const QString &xmlnsStr, int userData);

@@ -92,7 +92,6 @@ set(XMPP_IM_HEADERS
     xmpp-im/jingle-s5b.h
     xmpp-im/jingle-ibb.h
     xmpp-im/jingle-file.h
-    xmpp-im/jingle-sctp.h
 )
 
 set(XMPP_HEADERS_PRIVATE
@@ -199,12 +198,14 @@ endif()
 if(IRIS_ENABLE_JINGLE_SCTP)
     target_compile_definitions(iris PRIVATE JINGLE_SCTP)
     target_sources(iris PRIVATE
+        xmpp-im/jingle-sctp.h
         xmpp-im/jingle-sctp.cpp
         xmpp-im/jingle-sctp-association_p.cpp
         xmpp-im/jingle-sctp-association_p.h
         xmpp-im/jingle-webrtc-datachannel_p.cpp
         xmpp-im/jingle-webrtc-datachannel_p.h
     )
+    list(APPEND XMPP_IM_HEADERS xmpp-im/jingle-sctp.h)
 endif()
 
 if(QT_DEFAULT_MAJOR_VERSION LESS 6)
@@ -223,24 +224,25 @@ if(QT_DEFAULT_MAJOR_VERSION LESS 6)
     endif()
 endif()
 
-target_link_libraries(iris
-    PRIVATE
-        $<BUILD_INTERFACE:stringprep>
-        $<BUILD_INTERFACE:irisnet>
-        ZLIB::ZLIB
-    PUBLIC
-        ${Qca_LIBRARY}
-        Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Gui Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Xml
-)
-
 if(IRIS_BUNDLED_QCA)
-    add_dependencies(iris QcaProject)
+    add_dependencies(iris Qca::Qca)
+    get_target_property(Qca_INCLUDE_DIR Qca::Qca INTERFACE_INCLUDE_DIRECTORIES)
     target_include_directories(iris PUBLIC
         "$<BUILD_INTERFACE:${Qca_INCLUDE_DIR}>"
         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/iris/qca>"
     )
     target_link_libraries(iris PUBLIC OpenSSL::SSL)
 endif()
+
+target_link_libraries(iris
+    PRIVATE
+        $<BUILD_INTERFACE:stringprep>
+        $<BUILD_INTERFACE:irisnet>
+        ZLIB::ZLIB
+    PUBLIC
+        $<BUILD_INTERFACE:Qca::Qca>
+        Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Gui Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Xml
+)
 
 if(IRIS_ENABLE_DEBUG)
     target_compile_definitions(iris PRIVATE XMPP_TEST)
@@ -268,7 +270,10 @@ else()
             ${Qca_INCLUDE_DIR}
         )
 endif()
-target_include_directories(iris PUBLIC $<INSTALL_INTERFACE:include/xmpp>)
+target_include_directories(iris PUBLIC
+    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/xmpp>"
+    "$<INSTALL_INTERFACE:${IRIS_INSTALL_INCLUDEDIR}>"
+)
 
 if (IRIS_ENABLE_INSTALL)
     install(FILES ${XMPP_JID_HEADERS}

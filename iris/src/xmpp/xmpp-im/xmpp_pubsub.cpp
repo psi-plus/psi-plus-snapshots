@@ -252,6 +252,69 @@ public:
     PubSubOptions options;
 };
 
+class PubSubNodeConfigTask::Private {
+public:
+    Jid           service;
+    QString       node;
+    PubSubOptions options;
+};
+
+PubSubNodeConfigTask::PubSubNodeConfigTask(Task *parent) : Task(parent), d(std::make_unique<Private>()) { }
+PubSubNodeConfigTask::~PubSubNodeConfigTask() = default;
+
+void PubSubNodeConfigTask::get(const Jid &service, const QString &node)
+{
+    d->service = service;
+    d->node    = node;
+    d->options.clear();
+}
+
+const PubSubOptions &PubSubNodeConfigTask::options() const { return d->options; }
+
+void PubSubNodeConfigTask::onGo()
+{
+    auto iq        = createIQ(doc(), QStringLiteral("get"), d->service.full(), id());
+    auto pubsub    = doc()->createElementNS(QLatin1String(PubSubOwnerNs), QStringLiteral("pubsub"));
+    auto configure = doc()->createElementNS(QLatin1String(PubSubOwnerNs), QStringLiteral("configure"));
+    configure.setAttribute(QStringLiteral("node"), d->node);
+    pubsub.appendChild(configure);
+    iq.appendChild(pubsub);
+    send(iq);
+}
+
+bool PubSubNodeConfigTask::take(const QDomElement &stanza)
+{
+    if (!iqVerify(stanza, d->service, id()))
+        return false;
+    if (stanza.attribute(QStringLiteral("type")) != QLatin1String("result")) {
+        setError(stanza);
+        return true;
+    }
+
+    const auto pubsub    = directChildNS(stanza, QStringLiteral("pubsub"), QLatin1String(PubSubOwnerNs));
+    const auto configure = directChildNS(pubsub, QStringLiteral("configure"), QLatin1String(PubSubOwnerNs));
+    const auto form      = directChildNS(configure, QStringLiteral("x"), QLatin1String(XDataNs));
+    for (auto field = form.firstChildElement(); !field.isNull(); field = field.nextSiblingElement()) {
+        const QString local
+            = field.localName().isEmpty() ? field.tagName().section(QLatin1Char(':'), -1) : field.localName();
+        if (local != QLatin1String("field") || field.namespaceURI() != QLatin1String(XDataNs))
+            continue;
+        const auto name = field.attribute(QStringLiteral("var"));
+        if (name.isEmpty() || name == QLatin1String("FORM_TYPE"))
+            continue;
+        QStringList values;
+        for (auto value = field.firstChildElement(); !value.isNull(); value = value.nextSiblingElement()) {
+            const QString valueLocal
+                = value.localName().isEmpty() ? value.tagName().section(QLatin1Char(':'), -1) : value.localName();
+            if (valueLocal == QLatin1String("value") && value.namespaceURI() == QLatin1String(XDataNs))
+                values.append(value.text());
+        }
+        d->options.insert(name, values);
+    }
+    setSuccess();
+    return true;
+}
+
 PubSubConfigureTask::PubSubConfigureTask(Task *parent) : Task(parent), d(std::make_unique<Private>()) { }
 PubSubConfigureTask::~PubSubConfigureTask() = default;
 
@@ -423,6 +486,13 @@ PubSubCreateTask *PubSubManager::createNode(const Jid &service, const QString &n
 {
     auto task = new PubSubCreateTask(d->client->rootTask());
     task->create(service, node, nodeOptions);
+    return task;
+}
+
+PubSubNodeConfigTask *PubSubManager::nodeConfig(const Jid &service, const QString &node)
+{
+    auto task = new PubSubNodeConfigTask(d->client->rootTask());
+    task->get(service, node);
     return task;
 }
 

@@ -153,7 +153,6 @@ public:
     HttpFileUploadManager    *httpFileUploadManager    = nullptr;
     Jingle::Manager          *jingleManager            = nullptr;
     QList<GroupChat>          groupChatList;
-    EncryptionHandler        *encryptionHandler         = nullptr;
     EncryptionManager        *encryptionManager         = nullptr;
     const EncryptionMetadata *currentEncryptionMetadata = nullptr;
     JT_PushMessage           *pushMessage               = nullptr;
@@ -250,7 +249,7 @@ void Client::start(const QString &host, const QString &user, const QString &pass
     connect(pp, SIGNAL(subscription(Jid, QString, QString)), SLOT(ppSubscription(Jid, QString, QString)));
     connect(pp, SIGNAL(presence(Jid, Status)), SLOT(ppPresence(Jid, Status)));
 
-    d->pushMessage = new JT_PushMessage(rootTask(), d->encryptionHandler);
+    d->pushMessage = new JT_PushMessage(rootTask());
     d->pubSubManager->setPushMessage(d->pushMessage);
     connect(d->pushMessage, SIGNAL(message(Message)), SLOT(pmMessage(Message)));
     d->carbonsman = new CarbonsManager(d->pushMessage);
@@ -1312,10 +1311,6 @@ void Client::setClientVersion(const QString &s)
 }
 
 void Client::setCaps(const CapsSpec &s) { d->caps = s; }
-
-void Client::setEncryptionHandler(EncryptionHandler *encryptionHandler) { d->encryptionHandler = encryptionHandler; }
-
-EncryptionHandler *Client::encryptionHandler() const { return d->encryptionHandler; }
 
 EncryptionManager *Client::encryptionManager() const { return d->encryptionManager; }
 

@@ -1,3 +1,4 @@
+include(CMakeFindDependencyMacro)
 # known at buildtime
 set(Iris_VERSION "@IRIS_LIB_VERSION_STRING@")
 set(Iris_VERSION_MAJOR @IRIS_LIB_VERSION_MAJOR@)
@@ -11,6 +12,41 @@ get_filename_component(rootDir ${currentDir}/@relInstallDir@ ABSOLUTE) # get the
 set(Iris_INCLUDE_DIR "${rootDir}/@IRIS_INCLUDEDIR_REL@")
 set(Iris_LIBRARY_DIR "${rootDir}/@LIB_INSTALL_DIR_REL@")
 set(Iris_LIB_SONAME iris)
+
+if(NOT TARGET Qca::Qca)
+    find_package(Qca QUIET)
+
+    if(NOT TARGET Qca::Qca)
+        if("@QCA_CORE_LIB_REL@" STREQUAL "" AND "@QCA_OSSL_LIB_REL@" STREQUAL "")
+            find_dependency(Qca REQUIRED)
+        else()
+            set(_qca_core_path "${rootDir}/@QCA_CORE_LIB_REL@")
+            set(_qca_ossl_path "${rootDir}/@QCA_OSSL_LIB_REL@")
+            set(_qca_include_dir "${rootDir}/@QCA_INCLUDE_REL@")
+
+            # Core
+            add_library(qca-core STATIC IMPORTED GLOBAL)
+            set_target_properties(qca-core PROPERTIES
+                IMPORTED_LOCATION "${_qca_core_path}"
+                INTERFACE_INCLUDE_DIRECTORIES "${_qca_include_dir}"
+            )
+
+            # OSSL plugin
+            add_library(qca-ossl STATIC IMPORTED GLOBAL)
+            set_target_properties(qca-ossl PROPERTIES
+                IMPORTED_LOCATION "${_qca_ossl_path}"
+                INTERFACE_INCLUDE_DIRECTORIES "${_qca_include_dir}"
+            )
+
+            add_library(Qca::Qca INTERFACE IMPORTED) # IMPORTED не обязателен, но можно
+            add_library(Qca_QCA_AGGREGATE INTERFACE)
+            target_link_libraries(Qca_QCA_AGGREGATE INTERFACE qca-core qca-ossl)
+            add_library(Qca::Qca ALIAS Qca_QCA_AGGREGATE)
+        endif()
+    endif()
+endif()
+
+
 
 if(NOT TARGET iris)
     include(${currentDir}/IrisTargets.cmake)

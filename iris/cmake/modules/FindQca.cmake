@@ -37,9 +37,9 @@ if (Qca_INCLUDE_DIR AND Qca_LIBRARY)
 endif()
 
 set(EXTRA_PATH_SUFFIXES
-    qt5/Qca-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto
+    qt${QT_DEFAULT_MAJOR_VERSION}/Qca-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto
     Qca-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto
-    qt5/QtCrypto
+    qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto
     qt/Qca-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto
     lib/qca-qt${QT_DEFAULT_MAJOR_VERSION}.framework/Versions/2/Headers
 )
@@ -70,8 +70,10 @@ find_package_handle_standard_args(
 )
 
 if (Qca_FOUND)
-    set ( Qca_LIBRARIES ${Qca_LIBRARY} )
-    set ( Qca_INCLUDE_DIRS ${Qca_INCLUDE_DIR} )
+    add_library(Qca::Qca UNKNOWN IMPORTED)
+    set_target_properties(Qca::Qca PROPERTIES
+        IMPORTED_LOCATION "${Qca_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${Qca_INCLUDE_DIR}")
 endif()
 
 mark_as_advanced( Qca_INCLUDE_DIR Qca_LIBRARY )

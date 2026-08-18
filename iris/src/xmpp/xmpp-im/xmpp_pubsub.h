@@ -100,6 +100,25 @@ private:
     std::unique_ptr<Private> d;
 };
 
+/** Retrieves the current owner node configuration data form. */
+class PubSubNodeConfigTask : public Task {
+    Q_OBJECT
+public:
+    explicit PubSubNodeConfigTask(Task *parent);
+    ~PubSubNodeConfigTask() override;
+
+    void                 get(const Jid &service, const QString &node);
+    const PubSubOptions &options() const;
+
+protected:
+    void onGo() override;
+    bool take(const QDomElement &stanza) override;
+
+private:
+    class Private;
+    std::unique_ptr<Private> d;
+};
+
 class PubSubRetractTask : public Task {
     Q_OBJECT
 public:
@@ -125,11 +144,12 @@ public:
     ~PubSubManager() override;
 
     PubSubItemsTask *items(const Jid &service, const QString &node, const QStringList &itemIds = {}, int maxItems = 0);
-    PubSubPublishTask   *publish(const Jid &service, const QString &node, const PubSubItem &item,
-                                 const PubSubOptions &publishOptions = {});
-    PubSubCreateTask    *createNode(const Jid &service, const QString &node, const PubSubOptions &nodeOptions = {});
-    PubSubConfigureTask *configureNode(const Jid &service, const QString &node, const PubSubOptions &nodeOptions);
-    PubSubRetractTask   *retract(const Jid &service, const QString &node, const QString &itemId, bool notify = true);
+    PubSubPublishTask    *publish(const Jid &service, const QString &node, const PubSubItem &item,
+                                  const PubSubOptions &publishOptions = {});
+    PubSubCreateTask     *createNode(const Jid &service, const QString &node, const PubSubOptions &nodeOptions = {});
+    PubSubNodeConfigTask *nodeConfig(const Jid &service, const QString &node);
+    PubSubConfigureTask  *configureNode(const Jid &service, const QString &node, const PubSubOptions &nodeOptions);
+    PubSubRetractTask    *retract(const Jid &service, const QString &node, const QString &itemId, bool notify = true);
 
 signals:
     void eventReceived(const Jid &service, const PubSubEvent &event);

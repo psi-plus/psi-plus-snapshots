@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.0)
+cmake_minimum_required(VERSION 3.11.0)
 
 set(IRIS_BUNDLED_QCA_GIT_REPOSITORY "https://github.com/psi-im/qca.git" CACHE STRING
     "Bundled QCA git repository")
@@ -6,22 +6,29 @@ set(IRIS_BUNDLED_QCA_GIT_TAG "master" CACHE STRING "Bundled QCA git tag or branc
 set(IRIS_QCA_SOURCE_DIR "" CACHE PATH "Local QCA source directory")
 
 if(IRIS_BUNDLED_QCA)
+    include(GNUInstallDirs)
     message(STATUS "QCA: using bundled psi-im/qca")
     set(QCA_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/qca")
     if(IRIS_QCA_SOURCE_DIR)
         set(QCA_SOURCE_DIR "${IRIS_QCA_SOURCE_DIR}")
     endif()
-    set(QCA_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/qca")
-    set(QCA_BUILD_DIR "${QCA_PREFIX}/build")
-    set(Qca_INCLUDE_DIR "${QCA_BUILD_DIR}")
+    set(QCA_PREFIX "${CMAKE_BINARY_DIR}/_deps/qca")
+    set(IRIS_QCA_INSTALL_DIR "${QCA_PREFIX}/install")
+    set(Qca_INCLUDE_DIR "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR}/Qca-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto")
     if(NOT EXISTS "${QCA_SOURCE_DIR}")
-        list(APPEND Qca_INCLUDE_DIR "${QCA_PREFIX}/src/QcaProject/include/QtCrypto")
+        set(_qca_source_args
+            GIT_REPOSITORY ${IRIS_BUNDLED_QCA_GIT_REPOSITORY}
+            GIT_TAG "${IRIS_BUNDLED_QCA_GIT_TAG}"
+            GIT_SHALLOW TRUE GIT_PROGRESS TRUE
+            UPDATE_COMMAND ""
+            )
     else()
-        list(APPEND Qca_INCLUDE_DIR "${QCA_SOURCE_DIR}/include/QtCrypto")
+        message(STATUS "QCA: found local sources at ${QCA_SOURCE_DIR}")
+        set(_qca_source_args SOURCE_DIR "${QCA_SOURCE_DIR}" DOWNLOAD_COMMAND "" UPDATE_COMMAND "")
     endif()
 
-    set(Qca_CORE_LIB "${QCA_BUILD_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}qca-qt${QT_DEFAULT_MAJOR_VERSION}${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
-    set(Qca_OSSL_LIB "${QCA_BUILD_DIR}/lib/qca-qt${QT_DEFAULT_MAJOR_VERSION}/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+    set(Qca_CORE_LIB "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}qca-qt${QT_DEFAULT_MAJOR_VERSION}${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+    set(Qca_OSSL_LIB "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/qca-qt${QT_DEFAULT_MAJOR_VERSION}/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
     set(Qca_LIBRARY ${Qca_OSSL_LIB} ${Qca_CORE_LIB})
     if(APPLE)
         set(Qca_LIBRARY ${Qca_LIBRARY} "-framework CoreFoundation" "-framework Security")
@@ -41,6 +48,12 @@ if(IRIS_BUNDLED_QCA)
         find_package(OpenSSL REQUIRED)
     endif()
 
+    if(CMAKE_CONFIGURATION_TYPES)
+        set(_qca_build_config "$<CONFIG>")
+    else()
+        set(_qca_build_config "${CMAKE_BUILD_TYPE}")
+    endif()
+
     include(ExternalProject)
     string(REPLACE ";" "|" _iris_qca_prefix_path "${CMAKE_PREFIX_PATH}")
     string(REPLACE ";" "|" _iris_qca_osx_architectures "${CMAKE_OSX_ARCHITECTURES}")
@@ -52,8 +65,9 @@ if(IRIS_BUNDLED_QCA)
         -DBUILD_TESTS=OFF
         -DBUILD_TOOLS=OFF
         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-        -DCMAKE_INSTALL_PREFIX=${QCA_PREFIX}
-        -DCMAKE_PREFIX_PATH=${_iris_qca_prefix_path}
+        "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
+        "-DLIB_INSTALL_DIR=<INSTALL_DIR>/${CMAKE_INSTALL_LIBDIR}"
+        "-DINCLUDE_INSTALL_DIR=<INSTALL_DIR>/${CMAKE_INSTALL_INCLUDEDIR}"
         -DOPENSSL_ROOT_DIR=${OPENSSL_ROOT_DIR}
         -DOPENSSL_INCLUDE_DIR=${OPENSSL_INCLUDE_DIR}
         -DOPENSSL_SSL_LIBRARY=${OPENSSL_SSL_LIBRARY}
@@ -83,34 +97,34 @@ if(IRIS_BUNDLED_QCA)
     else()
         list(APPEND QCA_BUILD_OPTIONS -DBUILD_WITH_QT6=ON)
     endif()
+    file(MAKE_DIRECTORY "${Qca_INCLUDE_DIR}")
+    ExternalProject_Add(QcaProject
+        ${_qca_source_args}
+        PREFIX ${QCA_PREFIX}
+        INSTALL_DIR "${IRIS_QCA_INSTALL_DIR}"
+        LIST_SEPARATOR "|"
+        CMAKE_ARGS ${QCA_BUILD_OPTIONS}
+        BUILD_BYPRODUCTS ${Qca_CORE_LIB} ${Qca_OSSL_LIB}
+        INSTALL_COMMAND "${CMAKE_COMMAND}" --install <BINARY_DIR> --config "${_qca_build_config}"
+        )
+    add_library(qca-core STATIC IMPORTED GLOBAL)
+    set_target_properties(qca-core PROPERTIES
+        IMPORTED_LOCATION "${Qca_CORE_LIB}"
+        INTERFACE_INCLUDE_DIRECTORIES "${Qca_INCLUDE_DIR}"
+    )
+    add_library(qca-ossl STATIC IMPORTED GLOBAL)
+    set_target_properties(qca-ossl PROPERTIES
+        IMPORTED_LOCATION "${Qca_OSSL_LIB}"
+        INTERFACE_INCLUDE_DIRECTORIES "${Qca_INCLUDE_DIR}"
+    )
 
-    if(EXISTS "${QCA_SOURCE_DIR}/CMakeLists.txt")
-        message(STATUS "QCA: found local sources at ${QCA_SOURCE_DIR}")
-        ExternalProject_Add(QcaProject
-            PREFIX ${QCA_PREFIX}
-            BINARY_DIR ${QCA_BUILD_DIR}
-            SOURCE_DIR ${QCA_SOURCE_DIR}
-            LIST_SEPARATOR "|"
-            CMAKE_ARGS ${QCA_BUILD_OPTIONS}
-            BUILD_BYPRODUCTS ${Qca_LIBRARY}
-            INSTALL_COMMAND "")
-    else()
-        include(FindGit)
-        find_package(Git)
-        if(NOT Git_FOUND)
-            message(FATAL_ERROR "Git not found! Bundled QCA needs Git")
-        endif()
-        ExternalProject_Add(QcaProject
-            PREFIX ${QCA_PREFIX}
-            BINARY_DIR ${QCA_BUILD_DIR}
-            GIT_REPOSITORY ${IRIS_BUNDLED_QCA_GIT_REPOSITORY}
-            GIT_TAG ${IRIS_BUNDLED_QCA_GIT_TAG}
-            LIST_SEPARATOR "|"
-            CMAKE_ARGS ${QCA_BUILD_OPTIONS}
-            BUILD_BYPRODUCTS ${Qca_LIBRARY}
-            INSTALL_COMMAND ""
-            UPDATE_COMMAND "")
-    endif()
+    add_library(Qca INTERFACE)
+    target_link_libraries(Qca INTERFACE qca-core qca-ossl)
+    target_include_directories(Qca INTERFACE "${Qca_INCLUDE_DIR}")
+    add_library(Qca::Qca ALIAS Qca)
+    add_dependencies(qca-core QcaProject)
+    add_dependencies(qca-ossl QcaProject)
+    add_dependencies(Qca QcaProject)
 else()
     message(WARNING "Disabling IRIS_BUNDLED_QCA makes DTLS/PsiMedia support dependent on the system QCA build")
     message(STATUS "QCA: using system")

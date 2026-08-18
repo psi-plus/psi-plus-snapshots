@@ -811,10 +811,6 @@ void JT_Message::onGo()
     Stanza      s = m.toStanza(&(client()->stream()));
     QDomElement e = s.element();
 
-    if (auto encryptionHandler = client()->encryptionHandler()) {
-        Q_UNUSED(encryptionHandler->encryptMessageElement(e));
-    }
-
     // See: XEP-0380: Explicit Message Encryption
     const bool wasEncrypted = !e.firstChildElement("encryption").isNull();
     m.setWasEncrypted(wasEncrypted);
@@ -837,7 +833,6 @@ public:
         int         userData = -1;
     };
     using SubsDataList = QVector<SubsData>;
-    EncryptionHandler           *m_encryptionHandler;
     QHash<QString, SubsDataList> subsData;
     SubsDataList                 subsMData;
 
@@ -890,10 +885,7 @@ bool JT_PushMessage::Subscriber::messageEvent(Message &msg, int userData, bool n
     return false;
 }
 
-JT_PushMessage::JT_PushMessage(Task *parent, EncryptionHandler *encryptionHandler) : Task(parent), d(new Private)
-{
-    d->m_encryptionHandler = encryptionHandler;
-}
+JT_PushMessage::JT_PushMessage(Task *parent) : Task(parent), d(new Private) { }
 
 JT_PushMessage::~JT_PushMessage() { }
 
@@ -966,15 +958,6 @@ bool JT_PushMessage::take(const QDomElement &e)
         return false;
 
     QDomElement e1 = e;
-
-    if (d->m_encryptionHandler) {
-        if (d->m_encryptionHandler->decryptMessageElement(e1)) {
-            if (e1.isNull()) {
-                // The message was processed, but has to be discarded for some reason
-                return true;
-            }
-        }
-    }
 
     if (processXmlSubscribers(e1, client(), false))
         return true;
