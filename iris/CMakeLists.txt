@@ -34,6 +34,7 @@ list(APPEND CMAKE_MODULE_PATH
 )
 
 include(policyRules)
+include(GNUInstallDirs)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -95,6 +96,10 @@ else()
     find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Xml Network)
 endif()
 message(STATUS "Qt${QT_DEFAULT_MAJOR_VERSION} found, version ${Qt${QT_DEFAULT_MAJOR_VERSION}Core_VERSION}")
+
+if(IS_SUBPROJECT)
+    set(IRIS_ENABLE_INSTALL OFF)
+endif()
 
 # Find QCA package or use bundled if enabled
 include(IrisQCA)
@@ -166,7 +171,7 @@ if(IRIS_ENABLE_INSTALL)
     )
     if(IRIS_BUNDLED_QCA)
         install(DIRECTORY "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR}/"
-            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/iris/qca"
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/"
             FILES_MATCHING PATTERN "*.h"
         )
 
@@ -174,18 +179,39 @@ if(IRIS_ENABLE_INSTALL)
             "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}qca-qt${QT_DEFAULT_MAJOR_VERSION}${D}${CMAKE_STATIC_LIBRARY_SUFFIX}"
             DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         )
+        if(${QT_DEFAULT_MAJOR_VERSION} GREATER_EQUAL 6)
+            set(QT_PLUGINS_DIR "qt6/plguins")
+        else()
+            set(QT_PLUGINS_DIR "qt/plguins")
+        endif()
+
         install(FILES
             "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/qca-qt${QT_DEFAULT_MAJOR_VERSION}/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${D}${CMAKE_STATIC_LIBRARY_SUFFIX}"
-            DESTINATION "${CMAKE_INSTALL_LIBDIR}/qca-qt${QT_DEFAULT_MAJOR_VERSION}/crypto"
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/${QT_PLUGINS_DIR}/crypto"
         )
 
         set(QCA_CORE_LIB_REL "${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}qca-qt${QT_DEFAULT_MAJOR_VERSION}${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
-        set(QCA_OSSL_LIB_REL "${CMAKE_INSTALL_LIBDIR}/qca-qt${QT_DEFAULT_MAJOR_VERSION}/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
-        set(QCA_INCLUDE_REL "${CMAKE_INSTALL_INCLUDEDIR}/iris/qca")
+        set(QCA_OSSL_LIB_REL "${CMAKE_INSTALL_LIBDIR}/${QT_PLUGINS_DIR}/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+        set(QCA_INCLUDE_REL "${CMAKE_INSTALL_INCLUDEDIR}")
     else()
         set(QCA_CORE_LIB_REL "")
         set(QCA_OSSL_LIB_REL "")
         set(QCA_INCLUDE_REL "")
+    endif()
+    if(IRIS_BUNDLED_USRSCTP)
+        install(DIRECTORY "${IRIS_USRSCTP_INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR}/"
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/"
+            FILES_MATCHING PATTERN "*.h"
+        )
+        install(FILES
+            "${IRIS_USRSCTP_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}usrsctp${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        )
+        set(USRSCTP_LIB_REL "${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}usrsctp${QT_DEFAULT_MAJOR_VERSION}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+        set(USRSCTP_INCLUDE_REL "${CMAKE_INSTALL_INCLUDEDIR}")
+    else()
+        set(USRSCTP_LIB_REL "")
+        set(USRSCTP_INCLUDE_REL "")
     endif()
     configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/IrisConfig.cmake.in"
@@ -201,8 +227,8 @@ if(IRIS_ENABLE_INSTALL)
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
     )
 
-    install(DIRECTORY include/iris
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/xmpp
-        FILES_MATCHING PATTERN "*.h"
-    )
+    #install(DIRECTORY include/iris
+    #    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/xmpp
+    #    FILES_MATCHING PATTERN "*.h"
+    #)
 endif()

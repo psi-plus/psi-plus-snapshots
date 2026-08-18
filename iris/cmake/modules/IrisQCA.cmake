@@ -20,11 +20,10 @@ if(IRIS_BUNDLED_QCA)
             GIT_REPOSITORY ${IRIS_BUNDLED_QCA_GIT_REPOSITORY}
             GIT_TAG "${IRIS_BUNDLED_QCA_GIT_TAG}"
             GIT_SHALLOW TRUE GIT_PROGRESS TRUE
-            UPDATE_COMMAND ""
             )
     else()
         message(STATUS "QCA: found local sources at ${QCA_SOURCE_DIR}")
-        set(_qca_source_args SOURCE_DIR "${QCA_SOURCE_DIR}" DOWNLOAD_COMMAND "" UPDATE_COMMAND "")
+        set(_qca_source_args SOURCE_DIR "${QCA_SOURCE_DIR}" DOWNLOAD_COMMAND "")
     endif()
 
     set(Qca_CORE_LIB "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}qca-qt${QT_DEFAULT_MAJOR_VERSION}${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
@@ -100,6 +99,7 @@ if(IRIS_BUNDLED_QCA)
     file(MAKE_DIRECTORY "${Qca_INCLUDE_DIR}")
     ExternalProject_Add(QcaProject
         ${_qca_source_args}
+        UPDATE_COMMAND ""
         PREFIX ${QCA_PREFIX}
         INSTALL_DIR "${IRIS_QCA_INSTALL_DIR}"
         LIST_SEPARATOR "|"

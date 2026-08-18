@@ -46,7 +46,22 @@ if(NOT TARGET Qca::Qca)
     endif()
 endif()
 
-
+if(NOT TARGET SctpLab::UsrSCTP)
+    find_package(UsrSCTP QUIET)
+    if(NOT TARGET SctpLab::UsrSCTP)
+        if("@USRSCTP_LIB_REL@" STREQUAL "")
+            find_dependency(SctpLab::UsrSCTP REQUIRED)
+        else()
+            set(_usrsctp_path "${rootDir}/@USRSCTP_LIB_REL@")
+            set(_usrsctp_include_dir "${rootDir}/@USRSCTP_INCLUDE_REL@")
+            add_library(SctpLab::UsrSCTP STATIC IMPORTED GLOBAL)
+            set_target_properties(SctpLab::UsrSCTP PROPERTIES
+                IMPORTED_LOCATION "${_usrsctp_path}"
+                INTERFACE_INCLUDE_DIRECTORIES "${_usrsctp_include_dir}"
+            )
+        endif()
+    endif()
+endif()
 
 if(NOT TARGET iris)
     include(${currentDir}/IrisTargets.cmake)

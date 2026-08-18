@@ -16,6 +16,7 @@ if(NOT IRIS_BUNDLED_USRSCTP)
         message(FATAL_ERROR "UsrSCTP library not found. Try to install usrsctp library or enable IRIS_BUNDLED_USRSCTP flag")
     endif()
 else()
+    include(GNUInstallDirs)
     message(STATUS "USRSCTP: using bundled")
     set(USRSCTP_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/usrsctp)
     set(USRSCTP_PREFIX "${CMAKE_BINARY_DIR}/_deps/usrsctp")
@@ -39,7 +40,7 @@ else()
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER})
     if (EXISTS ${USRSCTP_SOURCE_DIR})
         message(STATUS "USRSCTP: found bundled sources")
-        set(_usrsctp_source_args SOURCE_DIR "${USRSCTP_SOURCE_DIR}" DOWNLOAD_COMMAND "" UPDATE_COMMAND "")
+        set(_usrsctp_source_args SOURCE_DIR "${USRSCTP_SOURCE_DIR}" DOWNLOAD_COMMAND "")
     else()
         include(FindGit)
         find_package(Git)
@@ -50,7 +51,6 @@ else()
             GIT_REPOSITORY ${IRIS_USRSCTP_GIT_REPO}
             GIT_TAG "${IRIS_USRSCTP_GIT_TAG}"
             GIT_PROGRESS TRUE
-            UPDATE_COMMAND ""
             )
         # When using the "cmake --build . -t clean" command, it cleans the built files, but the next time it builds, it crashes with a patch error.
         # As an attempt to avoid this crash the last line of patch_command was added
@@ -72,6 +72,7 @@ else()
     file(MAKE_DIRECTORY "${USRSCTP_INCLUDE_DIR}")
     ExternalProject_Add(UsrSCTPProject
         ${_usrsctp_source_args}
+        UPDATE_COMMAND ""
         PREFIX ${USRSCTP_PREFIX}
         INSTALL_DIR ${IRIS_USRSCTP_INSTALL_DIR}
         CMAKE_ARGS ${USRSCTP_BUILD_OPTIONS}

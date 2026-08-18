@@ -96,13 +96,12 @@ if(IRIS_OMEMO_C_SOURCE_DIR)
     if(NOT EXISTS "${IRIS_OMEMO_C_SOURCE_DIR}/CMakeLists.txt")
         message(FATAL_ERROR "IRIS_OMEMO_C_SOURCE_DIR does not contain a libomemo-c source tree: ${IRIS_OMEMO_C_SOURCE_DIR}")
     endif()
-    set(_omemoc_source_args SOURCE_DIR "${IRIS_OMEMO_C_SOURCE_DIR}" DOWNLOAD_COMMAND "" UPDATE_COMMAND "")
+    set(_omemoc_source_args SOURCE_DIR "${IRIS_OMEMO_C_SOURCE_DIR}" DOWNLOAD_COMMAND "")
 else()
     set(_omemoc_source_args
         GIT_REPOSITORY https://github.com/dino/libomemo-c.git
         GIT_TAG "v${IRIS_BUNDLED_OMEMO_C_VERSION}"
-        GIT_SHALLOW TRUE GIT_PROGRESS TRUE
-        UPDATE_COMMAND "")
+        GIT_SHALLOW TRUE GIT_PROGRESS TRUE)
 endif()
 
 set(_omemoc_c_flags "${CMAKE_C_FLAGS}")
@@ -144,6 +143,7 @@ endif()
 ExternalProject_Add(
     iris_bundled_omemoc
     ${_omemoc_source_args}
+    UPDATE_COMMAND ""
     PREFIX "${_omemoc_prefix}/libomemo-c"
     INSTALL_DIR "${IRIS_OMEMO_C_INSTALL_DIR}"
     LIST_SEPARATOR "|"
