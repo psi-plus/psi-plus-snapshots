@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.10.0)
 set(IRIS_USRSCTP_GIT_REPO "https://github.com/sctplab/usrsctp.git")
 set(IRIS_USRSCTP_GIT_TAG 848eca82f92273af9a79687a90343a2ebcf3481d)
 
+include(GNUInstallDirs)
 if(USE_MXE AND STDINT_FOUND)
     # Add SCTP_STDINT_INCLUDE definition to compile irisnet with usrsctp with MinGW
     add_definitions(
@@ -16,7 +17,6 @@ if(NOT IRIS_BUNDLED_USRSCTP)
         message(FATAL_ERROR "UsrSCTP library not found. Try to install usrsctp library or enable IRIS_BUNDLED_USRSCTP flag")
     endif()
 else()
-    include(GNUInstallDirs)
     message(STATUS "USRSCTP: using bundled")
     set(USRSCTP_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/usrsctp)
     set(USRSCTP_PREFIX "${CMAKE_BINARY_DIR}/_deps/usrsctp")
@@ -31,7 +31,8 @@ else()
     #set CMake options and transfer the environment to an external project
     set(USRSCTP_BUILD_OPTIONS
         -DBUILD_SHARED_LIBS=OFF -Dsctp_build_programs=OFF -Dsctp_build_shared_lib=OFF -Dsctp_debug=OFF
-        -Dsctp_inet=OFF -Dsctp_inet6=OFF -Dsctp_werror=OFF "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
+        -Dsctp_inet=OFF -Dsctp_inet6=OFF -Dsctp_werror=OFF
+        -DCMAKE_INSTALL_LIBDIR=${CMAKE_INSTALL_LIBDIR} "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
         "-DLIB_INSTALL_DIR=<INSTALL_DIR>/${CMAKE_INSTALL_LIBDIR}"
         "-DINCLUDE_INSTALL_DIR=<INSTALL_DIR>/${CMAKE_INSTALL_INCLUDEDIR}"
         "-DINSTALL_PKGCONFIG_DIR=<INSTALL_DIR>/${CMAKE_INSTALL_LIBDIR}/pkgconfig"
