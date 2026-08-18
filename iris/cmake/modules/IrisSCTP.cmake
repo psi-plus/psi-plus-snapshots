@@ -12,7 +12,7 @@ if(USE_MXE AND STDINT_FOUND)
 endif()
 
 if(NOT IRIS_BUNDLED_USRSCTP)
-    find_package(UsrSCTP)
+    find_package(UsrSCTP REQUIRED)
     if(NOT UsrSCTP_FOUND)
         message(FATAL_ERROR "UsrSCTP library not found. Try to install usrsctp library or enable IRIS_BUNDLED_USRSCTP flag")
     endif()

@@ -117,9 +117,11 @@ if(IRIS_BUNDLED_QCA)
         IMPORTED_LOCATION "${Qca_OSSL_LIB}"
         INTERFACE_INCLUDE_DIRECTORIES "${Qca_INCLUDE_DIR}"
     )
-
     add_library(Qca INTERFACE)
-    target_link_libraries(Qca INTERFACE qca-core qca-ossl)
+    target_link_libraries(Qca INTERFACE qca-core qca-ossl OpenSSL::Crypto OpenSSL::SSL)
+    if(WIN32 OR USE_MXE)
+        target_link_libraries(Qca INTERFACE crypt32 ws2_32)
+    endif()
     target_include_directories(Qca INTERFACE "${Qca_INCLUDE_DIR}")
     add_library(Qca::Qca ALIAS Qca)
     add_dependencies(qca-core QcaProject)

@@ -231,7 +231,6 @@ if(IRIS_BUNDLED_QCA)
         "$<BUILD_INTERFACE:${Qca_INCLUDE_DIR}>"
         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/iris/qca>"
     )
-    target_link_libraries(iris PUBLIC OpenSSL::SSL)
 endif()
 
 target_link_libraries(iris
