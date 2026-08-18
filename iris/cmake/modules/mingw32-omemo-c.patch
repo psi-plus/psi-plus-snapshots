@@ -19,7 +19,7 @@ index 7e3ab6a..347e563 100644
  #include <unistd.h>
  #else
  #include <basetsd.h>
-+#ifndef __ssize_t_defined
++#ifndef __MINGW32__
  typedef SSIZE_T ssize_t;
  #endif
 +#endif
