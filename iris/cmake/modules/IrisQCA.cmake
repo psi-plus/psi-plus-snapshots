@@ -30,10 +30,23 @@ if(IRIS_BUNDLED_QCA)
             GIT_TAG "${IRIS_BUNDLED_QCA_GIT_TAG}"
             GIT_SHALLOW TRUE GIT_PROGRESS TRUE
             )
+        set(_qca_source_identity
+            "git:${IRIS_BUNDLED_QCA_GIT_REPOSITORY}@${IRIS_BUNDLED_QCA_GIT_TAG}")
     else()
-        message(STATUS "QCA: found local sources at ${QCA_SOURCE_DIR}")
-        set(_qca_source_args SOURCE_DIR "${QCA_SOURCE_DIR}" DOWNLOAD_COMMAND "")
+        get_filename_component(_qca_source_realpath "${QCA_SOURCE_DIR}" REALPATH)
+        message(STATUS "QCA: found local sources at ${_qca_source_realpath}")
+        set(_qca_source_args SOURCE_DIR "${_qca_source_realpath}" DOWNLOAD_COMMAND "")
+        set(_qca_source_identity "local:${_qca_source_realpath}")
     endif()
+
+    # ExternalProject's default binary directory is derived only from the
+    # project name. Reconfiguring Iris after switching between the downloaded
+    # QCA tree and IRIS_QCA_SOURCE_DIR would otherwise reuse a CMakeCache.txt
+    # generated for a different source directory. Give each source identity
+    # its own binary directory instead.
+    string(SHA256 _qca_source_hash "${_qca_source_identity}")
+    string(SUBSTRING "${_qca_source_hash}" 0 12 _qca_source_hash_short)
+    set(_qca_binary_dir "${QCA_PREFIX}/build-${_qca_source_hash_short}")
 
     set(Qca_CORE_LIB "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}qca3-qt${QT_DEFAULT_MAJOR_VERSION}${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
     set(Qca_OSSL_LIB "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/qca3-qt${QT_DEFAULT_MAJOR_VERSION}/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
@@ -110,6 +123,7 @@ if(IRIS_BUNDLED_QCA)
         ${_qca_source_args}
         UPDATE_COMMAND ""
         PREFIX ${QCA_PREFIX}
+        BINARY_DIR "${_qca_binary_dir}"
         INSTALL_DIR "${IRIS_QCA_INSTALL_DIR}"
         LIST_SEPARATOR "|"
         CMAKE_ARGS ${QCA_BUILD_OPTIONS}
