@@ -19,7 +19,7 @@
 #ifndef XMPP_ROSTERITEM_H
 #define XMPP_ROSTERITEM_H
 
-#include "xmpp/jid/jid.h"
+#include <iris/jid/jid.h>
 
 #include <QString>
 #include <QStringList>

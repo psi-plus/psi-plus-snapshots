@@ -20,7 +20,7 @@
 #ifndef JINGLE_APPLICATION_H
 #define JINGLE_APPLICATION_H
 
-#include "jingle-transport.h"
+#include <iris/xmpp-im/jingle-transport.h>
 #include <optional>
 
 class QTimer;

@@ -19,7 +19,7 @@
 #ifndef NETAVAILABILITY_H
 #define NETAVAILABILITY_H
 
-#include "irisnetglobal.h"
+#include <iris/irisnet/corelib/irisnetglobal.h>
 
 namespace XMPP {
 class NetAvailability : public QObject {

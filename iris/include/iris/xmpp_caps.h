@@ -1,1 +1,1 @@
-#include "xmpp/xmpp-im/xmpp_caps.h"
+#include <iris/xmpp-im/xmpp_caps.h>

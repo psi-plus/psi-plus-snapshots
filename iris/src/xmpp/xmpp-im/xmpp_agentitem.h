@@ -20,8 +20,8 @@
 #ifndef XMPP_AGENTITEM
 #define XMPP_AGENTITEM
 
-#include "xmpp/jid/jid.h"
-#include "xmpp_features.h"
+#include <iris/jid/jid.h>
+#include <iris/xmpp-im/xmpp_features.h>
 
 #include <QString>
 

@@ -21,7 +21,7 @@
 
 #include <QAbstractSocket>
 
-#include "xmpp_hash.h"
+#include <iris/xmpp-im/xmpp_hash.h>
 
 namespace QCA {
 class Certificate;

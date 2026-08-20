@@ -19,10 +19,10 @@
 #ifndef XMPP_CLIENT_H
 #define XMPP_CLIENT_H
 
-#include "xmpp/jid/jid.h"
-#include "xmpp_discoitem.h"
-#include "xmpp_encryption.h"
-#include "xmpp_status.h"
+#include <iris/jid/jid.h>
+#include <iris/xmpp-im/xmpp_discoitem.h>
+#include <iris/xmpp-im/xmpp_encryption.h>
+#include <iris/xmpp-im/xmpp_status.h>
 
 #include <QCryptographicHash>
 #include <QObject>

@@ -20,8 +20,8 @@
 #ifndef XMPP_HTTPFILEUPLOAD_H
 #define XMPP_HTTPFILEUPLOAD_H
 
-#include "xmpp/jid/jid.h"
-#include "xmpp_task.h"
+#include <iris/jid/jid.h>
+#include <iris/xmpp-im/xmpp_task.h>
 
 #include <functional>
 #include <memory>
@@ -80,7 +80,7 @@ public:
         HostProps        props;
     };
 
-    HttpFileUpload(Client *client, QIODevice *source, size_t fsize, const QString &dstFilename,
+    HttpFileUpload(Client *client, QIODevice *source, quint64 fsize, const QString &dstFilename,
                    const QString &mType = QString());
     HttpFileUpload(const HttpFileUpload &) = delete;
     ~HttpFileUpload();

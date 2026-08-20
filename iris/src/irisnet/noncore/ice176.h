@@ -19,7 +19,7 @@
 #ifndef ICE176_H
 #define ICE176_H
 
-#include "turnclient.h"
+#include <iris/irisnet/noncore/turnclient.h>
 
 #include <QHostAddress>
 #include <QObject>

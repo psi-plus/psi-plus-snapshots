@@ -1,1 +1,1 @@
-#include "xmpp/xmpp-im/xmpp_captcha.h"
+#include <iris/xmpp-im/xmpp_captcha.h>

@@ -19,8 +19,8 @@
 #ifndef XMPP_CAPTCHA_H
 #define XMPP_CAPTCHA_H
 
-#include "xmpp/jid/jid.h"
-#include "xmpp_url.h"
+#include <iris/jid/jid.h>
+#include <iris/xmpp-im/xmpp_url.h>
 
 #include <QDateTime>
 

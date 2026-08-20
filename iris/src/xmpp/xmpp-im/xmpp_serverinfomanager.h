@@ -20,8 +20,8 @@
 #ifndef SERVERINFOMANAGER_H
 #define SERVERINFOMANAGER_H
 
-#include "xmpp_discoitem.h"
-#include "xmpp_status.h"
+#include <iris/xmpp-im/xmpp_discoitem.h>
+#include <iris/xmpp-im/xmpp_status.h>
 
 #include <QObject>
 #include <QRegularExpression>

@@ -20,8 +20,8 @@
 #ifndef XMPP_EXTERNALSERVICEDISCOVERY_H
 #define XMPP_EXTERNALSERVICEDISCOVERY_H
 
-#include "xmpp_task.h"
-#include "xmpp_xdata.h"
+#include <iris/xmpp-im/xmpp_task.h>
+#include <iris/xmpp-im/xmpp_xdata.h>
 
 #include <QDateTime>
 #include <QDeadlineTimer>

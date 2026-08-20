@@ -19,7 +19,7 @@
 #ifndef XMPP_RESOURCELIST_H
 #define XMPP_RESOURCELIST_H
 
-#include "xmpp_resource.h"
+#include <iris/xmpp-im/xmpp_resource.h>
 
 #include <QList>
 

@@ -28,6 +28,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QPointer>
+#include <QVariant>
 
 using namespace XMPP;
 
@@ -47,6 +48,7 @@ public:
     QString                         fileName;
     QString                         mediaType;
     QList<HttpHost>                 httpHosts;
+    bool                            sourceUploadStarted = false;
 
     struct {
         HttpFileUpload::ErrorCode statusCode = HttpFileUpload::ErrorCode::NoError;
@@ -58,7 +60,7 @@ public:
     } result;
 };
 
-HttpFileUpload::HttpFileUpload(XMPP::Client *client, QIODevice *source, size_t fsize, const QString &dstFilename,
+HttpFileUpload::HttpFileUpload(XMPP::Client *client, QIODevice *source, quint64 fsize, const QString &dstFilename,
                                const QString &mType) : QObject(client), d(new Private)
 {
     d->client       = client;
@@ -219,6 +221,16 @@ void HttpFileUpload::tryNextServer()
                 return;
             }
 
+            if (d->sourceUploadStarted) {
+                if (!d->sourceDevice || d->sourceDevice->isSequential() || !d->sourceDevice->seek(0)) {
+                    d->result.statusCode   = ErrorCode::HttpFailed;
+                    d->result.statusString = "The upload source cannot be replayed for another HTTP service";
+                    done(State::Error);
+                    return;
+                }
+            }
+            d->sourceUploadStarted = true;
+
             setState(State::HttpRequest);
             // time for a http request
             QNetworkRequest req(d->result.putUrl);
@@ -226,6 +238,7 @@ void HttpFileUpload::tryNextServer()
                 req.setRawHeader(h.name.toLatin1(), h.value.toLatin1());
             if (!d->mediaType.isEmpty())
                 req.setHeader(QNetworkRequest::ContentTypeHeader, d->mediaType);
+            req.setHeader(QNetworkRequest::ContentLengthHeader, QVariant::fromValue<qulonglong>(d->fileSize));
 
             auto reply = d->qnam->put(req, d->sourceDevice);
             connect(reply, &QNetworkReply::uploadProgress, this, &HttpFileUpload::progress);

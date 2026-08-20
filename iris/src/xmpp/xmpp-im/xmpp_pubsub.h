@@ -11,10 +11,10 @@
 #ifndef XMPP_PUBSUB_H
 #define XMPP_PUBSUB_H
 
-#include "xmpp/jid/jid.h"
-#include "xmpp_pubsubevent.h"
-#include "xmpp_pubsubitem.h"
-#include "xmpp_task.h"
+#include <iris/jid/jid.h>
+#include <iris/xmpp-im/xmpp_pubsubevent.h>
+#include <iris/xmpp-im/xmpp_pubsubitem.h>
+#include <iris/xmpp-im/xmpp_task.h>
 
 #include <QList>
 #include <QMap>

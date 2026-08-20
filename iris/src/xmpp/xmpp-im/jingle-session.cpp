@@ -390,7 +390,8 @@ namespace XMPP { namespace Jingle {
             State  finalState   = State::Active;
             // so all contents is ready for session-initiate. let's do it
             if (role == Origin::Initiator) {
-                sid          = manager->registerSession(q);
+                if (sid.isEmpty())
+                    sid = manager->registerSession(q);
                 actionToSend = Action::SessionInitiate;
                 finalState   = State::Pending;
             }
@@ -1156,6 +1157,15 @@ namespace XMPP { namespace Jingle {
             d->notifyPads<&SessionManagerPad::onLocalAccepted>();
             d->planStep();
         }
+    }
+
+    QString Session::reserveSid()
+    {
+        if (d->role != Origin::Initiator || d->state != State::Created)
+            return {};
+        if (d->sid.isEmpty())
+            d->sid = d->manager->registerSession(this);
+        return d->sid;
     }
 
     void Session::terminate(Reason::Condition cond, const QString &comment)

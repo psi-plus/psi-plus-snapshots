@@ -1,1 +1,1 @@
-#include "xmpp/xmpp-im/httpfileupload.h"
+#include <iris/xmpp-im/httpfileupload.h>

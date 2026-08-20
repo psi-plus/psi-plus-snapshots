@@ -20,10 +20,10 @@
 #ifndef XMPP_DISCOITEM
 #define XMPP_DISCOITEM
 
-#include "xmpp/jid/jid.h"
-#include "xmpp_agentitem.h"
-#include "xmpp_features.h"
-#include "xmpp_xdata.h"
+#include <iris/jid/jid.h>
+#include <iris/xmpp-im/xmpp_agentitem.h>
+#include <iris/xmpp-im/xmpp_features.h>
+#include <iris/xmpp-im/xmpp_xdata.h>
 
 #include <QCryptographicHash>
 #include <QString>

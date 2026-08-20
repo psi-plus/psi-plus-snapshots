@@ -19,7 +19,7 @@
 #ifndef XMPP_LIVEROSTER_H
 #define XMPP_LIVEROSTER_H
 
-#include "xmpp_liverosteritem.h"
+#include <iris/xmpp-im/xmpp_liverosteritem.h>
 
 #include <QList>
 

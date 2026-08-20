@@ -20,9 +20,9 @@
 #ifndef JINGLE_SESSION_H
 #define JINGLE_SESSION_H
 
-#include "jingle-application.h"
-#include "jingle-transport.h"
-#include "xmpp_features.h"
+#include <iris/xmpp-im/jingle-application.h>
+#include <iris/xmpp-im/jingle-transport.h>
+#include <iris/xmpp-im/xmpp_features.h>
 
 namespace XMPP { namespace Jingle {
 
@@ -91,8 +91,9 @@ namespace XMPP { namespace Jingle {
     private:
         friend class Manager;
         friend class JTPush;
-        bool incomingInitiate(const Jingle &jingle, const QDomElement &jingleEl);
-        bool updateFromXml(Action action, const QDomElement &jingleEl);
+        QString reserveSid();
+        bool    incomingInitiate(const Jingle &jingle, const QDomElement &jingleEl);
+        bool    updateFromXml(Action action, const QDomElement &jingleEl);
 
         class Private;
         std::unique_ptr<Private> d;

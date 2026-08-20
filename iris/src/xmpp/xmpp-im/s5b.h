@@ -20,12 +20,12 @@
 #ifndef XMPP_S5B_H
 #define XMPP_S5B_H
 
-#include "iris/bytestream.h"
-#include "iris/tcpportreserver.h"
-#include "iris/xmpp_bytestream.h"
-#include "iris/xmpp_stanza.h"
-#include "iris/xmpp_task.h"
-#include "xmpp/jid/jid.h"
+#include <iris/irisnet/noncore/cutestuff/bytestream.h>
+#include <iris/irisnet/noncore/tcpportreserver.h>
+#include <iris/jid/jid.h>
+#include <iris/xmpp-core/xmpp_stanza.h>
+#include <iris/xmpp-im/xmpp_bytestream.h>
+#include <iris/xmpp-im/xmpp_task.h>
 
 #include <QHostAddress>
 #include <QList>

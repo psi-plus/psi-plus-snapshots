@@ -1,1 +1,1 @@
-#include "irisnet/corelib/irisnetplugin.h"
+#include <iris/irisnet/corelib/irisnetplugin.h>

@@ -20,11 +20,11 @@
 #ifndef XMPP_TASKS_H
 #define XMPP_TASKS_H
 
-#include "xmpp_discoinfotask.h"
-#include "xmpp_form.h"
-#include "xmpp_message.h"
-#include "xmpp_subsets.h"
-#include "xmpp_vcard.h"
+#include <iris/xmpp-im/xmpp_discoinfotask.h>
+#include <iris/xmpp-im/xmpp_form.h>
+#include <iris/xmpp-im/xmpp_message.h>
+#include <iris/xmpp-im/xmpp_subsets.h>
+#include <iris/xmpp-im/xmpp_vcard.h>
 
 #include <QList>
 #include <QString>

@@ -20,11 +20,11 @@
 #ifndef XMPP_MAM_TASK_H
 #define XMPP_MAM_TASK_H
 
-#include "xmpp/jid/jid.h"
-#include "xmpp_subsets.h"
-#include "xmpp_task.h"
-#include "xmpp_xdata.h"
-#include "xmpp_xmlcommon.h"
+#include <iris/jid/jid.h>
+#include <iris/xmpp-im/xmpp_subsets.h>
+#include <iris/xmpp-im/xmpp_task.h>
+#include <iris/xmpp-im/xmpp_xdata.h>
+#include <iris/xmpp-im/xmpp_xmlcommon.h>
 
 #include <QDateTime>
 

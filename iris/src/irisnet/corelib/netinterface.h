@@ -19,7 +19,7 @@
 #ifndef NETINTERFACE_H
 #define NETINTERFACE_H
 
-#include "irisnetglobal.h"
+#include <iris/irisnet/corelib/irisnetglobal.h>
 
 namespace XMPP {
 class NetInterfaceManager;

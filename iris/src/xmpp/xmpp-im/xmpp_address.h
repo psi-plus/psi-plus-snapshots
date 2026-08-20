@@ -19,8 +19,8 @@
 #ifndef XMPP_ADDRESS_H
 #define XMPP_ADDRESS_H
 
-#include "iris/xmpp_stanza.h"
-#include "xmpp/jid/jid.h"
+#include <iris/jid/jid.h>
+#include <iris/xmpp-core/xmpp_stanza.h>
 
 #include <QString>
 

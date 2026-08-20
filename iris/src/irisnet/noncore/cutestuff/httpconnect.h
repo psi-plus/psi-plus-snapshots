@@ -20,7 +20,7 @@
 #ifndef CS_HTTPCONNECT_H
 #define CS_HTTPCONNECT_H
 
-#include "bytestream.h"
+#include <iris/irisnet/noncore/cutestuff/bytestream.h>
 
 // CS_NAMESPACE_BEGIN
 class HttpConnect : public ByteStream {

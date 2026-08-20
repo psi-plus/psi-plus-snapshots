@@ -1193,6 +1193,30 @@ bool ClientStream::handleNeed()
             auth_flags = (QCA::SASL::AuthFlags)(auth_flags | QCA::SASL::RequireMutualAuth);
         d->sasl->setConstraints(auth_flags, d->minimumSSF, d->maximumSSF);
 
+        bool channelBindingReady = false;
+#if IRIS_QCA_HAS_CHANNEL_BINDING
+        if (d->using_tls && d->tlsHandler && d->sasl->supportsChannelBinding()) {
+            auto *qcaTlsHandler = qobject_cast<QCATLSHandler *>(d->tlsHandler);
+            if (qcaTlsHandler && qcaTlsHandler->tls()) {
+                QCA::TLS     *tls         = qcaTlsHandler->tls();
+                const QString bindingType = tls->defaultChannelBindingType();
+                if (!bindingType.isEmpty()) {
+                    const QByteArray bindingData = tls->channelBinding(bindingType);
+                    if (!bindingData.isEmpty())
+                        channelBindingReady = d->sasl->setChannelBinding(bindingType, bindingData, false);
+                }
+            }
+        }
+#endif
+        if (!channelBindingReady) {
+            for (auto it = ml.begin(); it != ml.end();) {
+                if (it->endsWith(QLatin1String("-PLUS")))
+                    it = ml.erase(it);
+                else
+                    ++it;
+            }
+        }
+
 #ifdef IRIS_SASLCONNECTHOST
         d->sasl->startClient("xmpp", QUrl::toAce(d->connectHost), ml, QCA::SASL::AllowClientSendFirst);
 #else

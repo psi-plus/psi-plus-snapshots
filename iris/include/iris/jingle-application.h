@@ -1,1 +1,1 @@
-#include "xmpp/xmpp-im/jingle-application.h"
+#include <iris/xmpp-im/jingle-application.h>

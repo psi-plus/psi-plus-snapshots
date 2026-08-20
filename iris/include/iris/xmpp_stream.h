@@ -1,1 +1,1 @@
-#include "xmpp/xmpp-core/xmpp_stream.h"
+#include <iris/xmpp-core/xmpp_stream.h>

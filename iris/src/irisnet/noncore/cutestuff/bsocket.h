@@ -21,7 +21,7 @@
 #ifndef CS_BSOCKET_H
 #define CS_BSOCKET_H
 
-#include "bytestream.h"
+#include <iris/irisnet/noncore/cutestuff/bytestream.h>
 
 #include <QAbstractSocket>
 #include <limits>

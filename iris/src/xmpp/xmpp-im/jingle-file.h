@@ -20,15 +20,17 @@
 #ifndef XMPP_JINGLE_FILETRANSFER_FILE_H
 #define XMPP_JINGLE_FILETRANSFER_FILE_H
 
-#include "xmpp_hash.h"
-#include "xmpp_thumbs.h"
+#include <iris/xmpp-im/xmpp_hash.h>
+#include <iris/xmpp-im/xmpp_thumbs.h>
 
 #include <QDateTime>
+#include <QMap>
 #include <QObject>
 
 #include <optional>
 
 namespace XMPP::Jingle::FileTransfer {
+extern const QString FILE_METADATA_NS;
 struct Range {
     std::uint64_t offset = 0; // 0 - default value from spec even when not set.
     std::uint64_t length = 0; // 0 - from offset to the end of the file
@@ -50,11 +52,14 @@ public:
     File       &operator=(const File &other);
     inline bool isValid() const { return d != nullptr; }
     QDomElement toXml(QDomDocument *doc) const;
+    QDomElement toMetadataXml(QDomDocument *doc) const;
     bool        merge(const File &other);
     bool        hasComputedHashes() const;
 
     QDateTime                    date() const;
     QString                      description() const;
+    QString                      description(const QString &language) const;
+    QMap<QString, QString>       descriptions() const;
     QList<Hash>                  hashes() const;
     QList<Hash>                  computedHashes() const;
     Hash                         hash(Hash::Type t = Hash::Unknown) const;
@@ -63,10 +68,16 @@ public:
     std::optional<std::uint64_t> size() const;
     Range                        range() const;
     Thumbnail                    thumbnail() const;
+    QList<Thumbnail>             thumbnails() const;
     QByteArray                   amplitudes() const;
+    std::optional<std::uint32_t> width() const;
+    std::optional<std::uint32_t> height() const;
+    std::optional<std::uint64_t> length() const;
 
     void setDate(const QDateTime &date);
     void setDescription(const QString &desc);
+    void setDescription(const QString &desc, const QString &language);
+    void setDescriptions(const QMap<QString, QString> &descriptions);
     void addHash(const Hash &hash);
     void setHashes(const QList<Hash> &hashes);
     void setMediaType(const QString &mediaType);
@@ -74,9 +85,15 @@ public:
     void setSize(uint64_t size);
     void setRange(const Range &range = Range()); // default empty just to indicate it's supported
     void setThumbnail(const Thumbnail &thumb);
+    void setThumbnails(const QList<Thumbnail> &thumbnails);
+    void addThumbnail(const Thumbnail &thumbnail);
     void setAmplitudes(const QByteArray &amplitudes);
+    void setWidth(std::uint32_t width);
+    void setHeight(std::uint32_t height);
+    void setLength(std::uint64_t length);
 
 private:
+    QDomElement toXml(QDomDocument *doc, const QString &ns, bool jingleExtensions) const;
     class Private;
     Private                    *ensureD();
     QSharedDataPointer<Private> d;

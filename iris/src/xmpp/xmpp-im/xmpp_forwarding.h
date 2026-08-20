@@ -26,7 +26,7 @@
 #include <QObject>
 #include <memory>
 
-#include "xmpp_message.h"
+#include <iris/xmpp-im/xmpp_message.h>
 
 namespace XMPP {
 class Client;

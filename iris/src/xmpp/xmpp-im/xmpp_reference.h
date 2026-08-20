@@ -20,7 +20,7 @@
 #ifndef XMPPREFERENCE_H
 #define XMPPREFERENCE_H
 
-#include "jingle-ft.h"
+#include <iris/xmpp-im/jingle-ft.h>
 
 #include <QDomElement>
 #include <QSharedPointer>

@@ -20,10 +20,10 @@
 #ifndef JINGLEFT_H
 #define JINGLEFT_H
 
-#include "jingle-application.h"
-#include "jingle-file.h"
-#include "jingle.h"
-#include "xmpp_hash.h"
+#include <iris/xmpp-im/jingle-application.h>
+#include <iris/xmpp-im/jingle-file.h>
+#include <iris/xmpp-im/jingle.h>
+#include <iris/xmpp-im/xmpp_hash.h>
 
 namespace XMPP {
 class Client;

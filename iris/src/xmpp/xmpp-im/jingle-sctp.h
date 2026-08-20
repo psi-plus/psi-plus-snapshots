@@ -20,7 +20,7 @@
 #ifndef JINGLE_SCTP_H
 #define JINGLE_SCTP_H
 
-#include "jingle-connection.h"
+#include <iris/xmpp-im/jingle-connection.h>
 
 #include <QAbstractSocket>
 #include <QDomElement>

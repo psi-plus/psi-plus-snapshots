@@ -20,9 +20,9 @@
 #ifndef XMPP_IBB_H
 #define XMPP_IBB_H
 
-#include "bytestream.h"
-#include "xmpp_bytestream.h"
-#include "xmpp_task.h"
+#include <iris/irisnet/noncore/cutestuff/bytestream.h>
+#include <iris/xmpp-im/xmpp_bytestream.h>
+#include <iris/xmpp-im/xmpp_task.h>
 
 #include <QDomElement>
 #include <QList>

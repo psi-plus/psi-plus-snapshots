@@ -19,9 +19,9 @@
 #ifndef XMPP_LIVEROSTERITEM_H
 #define XMPP_LIVEROSTERITEM_H
 
-#include "xmpp_resourcelist.h"
-#include "xmpp_rosteritem.h"
-#include "xmpp_status.h"
+#include <iris/xmpp-im/xmpp_resourcelist.h>
+#include <iris/xmpp-im/xmpp_rosteritem.h>
+#include <iris/xmpp-im/xmpp_status.h>
 
 namespace XMPP {
 class LiveRosterItem : public RosterItem {

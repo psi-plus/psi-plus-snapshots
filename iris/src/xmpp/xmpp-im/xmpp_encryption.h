@@ -18,8 +18,8 @@
 #ifndef XMPP_ENCRYPTION_H
 #define XMPP_ENCRYPTION_H
 
-#include "xmpp/jid/jid.h"
-#include "xmpp_features.h"
+#include <iris/jid/jid.h>
+#include <iris/xmpp-im/xmpp_features.h>
 
 #include <QByteArray>
 #include <QDomDocument>

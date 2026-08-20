@@ -8,21 +8,32 @@ else()
     add_library(iris)
 endif()
 
+set_target_properties(iris PROPERTIES
+    OUTPUT_NAME "${IRIS_LIB_NAME}"
+    VERSION "${IRIS_LIB_VERSION_STRING}"
+    SOVERSION "${IRIS_LIB_VERSION_MAJOR}"
+    EXPORT_NAME Iris
+)
+add_library(Iris::Iris ALIAS iris)
+add_library(iris::iris ALIAS iris)
+
 set(XMPP_JID_HEADERS jid/jid.h)
 
 set(XMPP_CORE_HEADERS
+    xmpp-core/xmpp_stanza.h
+    xmpp-core/xmpp.h
+    xmpp-core/xmpp_clientstream.h
+    xmpp-core/xmpp_stream.h
+)
+
+set(XMPP_CORE_PRIVATE_HEADERS
     xmpp-core/parser.h
     xmpp-core/protocol.h
     xmpp-core/sm.h
     xmpp-core/td.h
     xmpp-core/xmlprotocol.h
-    xmpp-core/xmpp_stanza.h
-
     xmpp-core/compressionhandler.h
     xmpp-core/securestream.h
-    xmpp-core/xmpp.h
-    xmpp-core/xmpp_clientstream.h
-    xmpp-core/xmpp_stream.h
 )
 
 set(XMPP_IM_HEADERS
@@ -75,9 +86,9 @@ set(XMPP_IM_HEADERS
     xmpp-im/xmpp_bytestream.h
     xmpp-im/xmpp_client.h
     xmpp-im/xmpp_discoinfotask.h
+    xmpp-im/xmpp_ibb.h
     xmpp-im/xmpp_mamtask.h
     xmpp-im/xmpp_mammanager.h
-    xmpp-im/xmpp_ibb.h
     xmpp-im/xmpp_serverinfomanager.h
     xmpp-im/xmpp_task.h
     xmpp-im/xmpp_tasks.h
@@ -92,6 +103,8 @@ set(XMPP_IM_HEADERS
     xmpp-im/jingle-s5b.h
     xmpp-im/jingle-ibb.h
     xmpp-im/jingle-file.h
+    xmpp-im/jingle-pub.h
+    xmpp-im/xmpp_file-sharing.h
 )
 
 set(XMPP_HEADERS_PRIVATE
@@ -109,6 +122,7 @@ set(XMPP_HEADERS_PRIVATE
 target_sources(iris PRIVATE
     ${XMPP_JID_HEADERS}
     ${XMPP_CORE_HEADERS}
+    ${XMPP_CORE_PRIVATE_HEADERS}
     ${XMPP_IM_HEADERS}
     ${XMPP_HEADERS_PRIVATE}
     xmpp-core/compressionhandler.cpp
@@ -163,6 +177,8 @@ target_sources(iris PRIVATE
     xmpp-im/jingle-s5b.cpp
     xmpp-im/jingle-ibb.cpp
     xmpp-im/jingle-file.cpp
+    xmpp-im/jingle-pub.cpp
+    xmpp-im/xmpp_file-sharing.cpp
 
     base/timezone.cpp
 
@@ -225,12 +241,22 @@ if(QT_DEFAULT_MAJOR_VERSION LESS 6)
 endif()
 
 if(IRIS_BUNDLED_QCA)
-    add_dependencies(iris Qca::Qca)
-    get_target_property(Qca_INCLUDE_DIR Qca::Qca INTERFACE_INCLUDE_DIRECTORIES)
+    add_dependencies(iris QcaProject)
+    target_link_libraries(iris PRIVATE ${IRIS_QCA_TARGET})
     target_include_directories(iris PUBLIC
         "$<BUILD_INTERFACE:${Qca_INCLUDE_DIR}>"
-        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/iris/qca>"
+        "$<INSTALL_INTERFACE:${IRIS_BUNDLED_QCA_INCLUDE_REL}>"
     )
+else()
+    # System QCA is a real public dependency because Iris public headers expose
+    # QCA types. The selected target may be Qca3::Qca or Qca::Qca.
+    target_link_libraries(iris PUBLIC ${IRIS_QCA_TARGET})
+endif()
+
+if(IRIS_QCA_HAS_CHANNEL_BINDING)
+    target_compile_definitions(iris PRIVATE IRIS_QCA_HAS_CHANNEL_BINDING=1)
+else()
+    target_compile_definitions(iris PRIVATE IRIS_QCA_HAS_CHANNEL_BINDING=0)
 endif()
 
 target_link_libraries(iris
@@ -239,8 +265,10 @@ target_link_libraries(iris
         $<BUILD_INTERFACE:irisnet>
         ZLIB::ZLIB
     PUBLIC
-        $<BUILD_INTERFACE:Qca::Qca>
-        Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Gui Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Xml
+        Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+        Qt${QT_DEFAULT_MAJOR_VERSION}::Gui
+        Qt${QT_DEFAULT_MAJOR_VERSION}::Network
+        Qt${QT_DEFAULT_MAJOR_VERSION}::Xml
 )
 
 if(IRIS_ENABLE_DEBUG)
@@ -249,39 +277,26 @@ endif()
 
 target_compile_definitions(iris PUBLIC IRISNET_STATIC QSTRINGPREP_BUILDING)
 
-if(IS_SUBPROJECT)
-    target_include_directories(iris
-        PUBLIC
-            ${iris_SOURCE_DIR}/include
-            ${iris_SOURCE_DIR}/src
-            ${Qca_INCLUDE_DIR}
-        )
-    target_include_directories(iris
-        PRIVATE
-            ${iris_SOURCE_DIR}/include/iris
-        )
-else()
-    target_include_directories(iris
-        PRIVATE
-            ${iris_SOURCE_DIR}/include
-            ${iris_SOURCE_DIR}/include/iris
-            ${iris_SOURCE_DIR}/src
-            ${Qca_INCLUDE_DIR}
-        )
-endif()
-target_include_directories(iris PUBLIC
-    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/xmpp>"
-    "$<INSTALL_INTERFACE:${IRIS_INSTALL_INCLUDEDIR}>"
+target_include_directories(iris
+    PRIVATE
+        ${iris_SOURCE_DIR}/src
+    PUBLIC
+        "$<BUILD_INTERFACE:${iris_SOURCE_DIR}/include>"
+        "$<BUILD_INTERFACE:${iris_SOURCE_DIR}/include/iris>"
+        "$<BUILD_INTERFACE:${iris_SOURCE_DIR}/include/iris/jid>"
+        "$<INSTALL_INTERFACE:${IRIS_INSTALL_INCLUDE_ROOT}>"
+        "$<INSTALL_INTERFACE:${IRIS_INSTALL_INCLUDEDIR}>"
+        "$<INSTALL_INTERFACE:${IRIS_INSTALL_INCLUDEDIR}/jid>"
 )
 
 if (IRIS_ENABLE_INSTALL)
     install(FILES ${XMPP_JID_HEADERS}
-        DESTINATION ${IRIS_INSTALL_INCLUDEDIR}/xmpp/jid
+        DESTINATION ${IRIS_INSTALL_INCLUDEDIR}/jid
     )
     install(FILES ${XMPP_CORE_HEADERS}
-        DESTINATION ${IRIS_INSTALL_INCLUDEDIR}/xmpp/xmpp-core
+        DESTINATION ${IRIS_INSTALL_INCLUDEDIR}/xmpp-core
     )
     install(FILES ${XMPP_IM_HEADERS}
-        DESTINATION ${IRIS_INSTALL_INCLUDEDIR}/xmpp/xmpp-im
+        DESTINATION ${IRIS_INSTALL_INCLUDEDIR}/xmpp-im
     )
 endif()

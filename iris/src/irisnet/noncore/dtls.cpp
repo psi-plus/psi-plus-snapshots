@@ -237,8 +237,15 @@ public:
             return;
         }
 
+#if IRIS_QCA_HAS_DTLS
         tls = new QCA::TLS(QCA::TLS::Datagram);
         tls->setCertificate(cert, pkey);
+#else
+        qWarning("DTLS is not supported by the QCA API used to build Iris");
+        lastError = QAbstractSocket::SocketError::OperationError;
+        emit q->errorOccurred(lastError);
+        return;
+#endif
 
         connect(tls, &QCA::TLS::certificateRequested, tls, &QCA::TLS::continueAfterStep);
         connect(tls, &QCA::TLS::handshaken, this, &Dtls::Private::tls_handshaken);
@@ -341,7 +348,14 @@ void Dtls::negotiate() { d->negotiate(); }
 
 bool Dtls::isStarted() const { return d->tls != nullptr; }
 
-bool Dtls::isSupported() { return QCA::isSupported("dtls"); }
+bool Dtls::isSupported()
+{
+#if IRIS_QCA_HAS_DTLS
+    return QCA::isSupported("dtls");
+#else
+    return false;
+#endif
+}
 
 QByteArray Dtls::readDatagram()
 {

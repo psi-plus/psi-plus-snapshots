@@ -19,7 +19,7 @@
 #ifndef XMPP_ROSTER_H
 #define XMPP_ROSTER_H
 
-#include "xmpp_rosteritem.h"
+#include <iris/xmpp-im/xmpp_rosteritem.h>
 
 #include <QList>
 

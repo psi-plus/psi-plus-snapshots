@@ -108,10 +108,9 @@ endif()
 set(Qca_INCLUDE_DIR "")
 
 if(IRIS_BUNDLED_QCA)
-    add_dependencies(irisnet Qca::Qca)
-    get_target_property(Qca_INCLUDE_DIR Qca::Qca INTERFACE_INCLUDE_DIRECTORIES)
+    add_dependencies(irisnet QcaProject)
 endif()
-list(APPEND IRISNET_DEPS "$<BUILD_INTERFACE:Qca::Qca>")
+list(APPEND IRISNET_DEPS ${IRIS_QCA_TARGET})
 
 if(IRIS_ENABLE_JINGLE_SCTP)
     if(IRIS_BUNDLED_USRSCTP)
@@ -123,14 +122,19 @@ endif()
 
 target_include_directories(irisnet
     PRIVATE
+        ${iris_SOURCE_DIR}/include
         ${iris_SOURCE_DIR}/include/iris
         ${iris_SOURCE_DIR}/src
-        ${Qca_INCLUDE_DIR}
     PUBLIC
         ${USRSCTP_INCLUDES}
 )
 
 target_compile_definitions(irisnet PRIVATE IRISNET_STATIC HAVE_QTNET)
+if(IRIS_QCA_HAS_DTLS)
+    target_compile_definitions(irisnet PRIVATE IRIS_QCA_HAS_DTLS=1)
+else()
+    target_compile_definitions(irisnet PRIVATE IRIS_QCA_HAS_DTLS=0)
+endif()
 
 if(WIN32)
     set(EXTRA_LDFLAGS ws2_32 iphlpapi)

@@ -1,1 +1,1 @@
-#include "xmpp/xmpp-im/s5b.h"
+#include <iris/xmpp-im/s5b.h>

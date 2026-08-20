@@ -20,7 +20,7 @@
 #ifndef XMPP_MUC_H
 #define XMPP_MUC_H
 
-#include "xmpp/jid/jid.h"
+#include <iris/jid/jid.h>
 
 #include <QDomElement>
 #include <QString>

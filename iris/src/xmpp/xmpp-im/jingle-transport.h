@@ -20,8 +20,8 @@
 #ifndef JINGLE_TRANSPORT_H
 #define JINGLE_TRANSPORT_H
 
-#include "jingle-connection.h"
-#include "jingle.h"
+#include <iris/xmpp-im/jingle-connection.h>
+#include <iris/xmpp-im/jingle.h>
 
 namespace XMPP { namespace Jingle {
 

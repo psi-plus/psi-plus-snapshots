@@ -1,1 +1,1 @@
-#include "xmpp/xmpp-im/im.h"
+#include <iris/xmpp-im/im.h>

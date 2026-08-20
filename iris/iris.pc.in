@@ -1,10 +1,13 @@
 prefix="@CMAKE_INSTALL_PREFIX@"
 exec_prefix="${prefix}"
 libdir="${prefix}/@CMAKE_INSTALL_LIBDIR@"
-includedir="${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/xmpp"
+includeroot="${prefix}/@IRIS_INSTALL_INCLUDE_ROOT@"
+irisincludedir="${prefix}/@IRIS_INSTALL_INCLUDEDIR@"
+jidincludedir="${irisincludedir}/jid"
 
-Name: iris
+Name: @IRIS_LIB_NAME@
 Description: Iris is a comprehensive library for working with the XMPP protocol
 Version: @IRIS_LIB_VERSION_STRING@
-Libs: -L${libdir} -liris
-Cflags: -I${includedir}
+Requires: Qt@QT_DEFAULT_MAJOR_VERSION@Core Qt@QT_DEFAULT_MAJOR_VERSION@Gui Qt@QT_DEFAULT_MAJOR_VERSION@Network Qt@QT_DEFAULT_MAJOR_VERSION@Xml@IRIS_PC_QCA_REQUIRES@
+Libs: -L${libdir} -l@IRIS_LIB_NAME@
+Cflags: -I${includeroot} -I${irisincludedir} -I${jidincludedir}@IRIS_PC_QCA_CFLAGS@

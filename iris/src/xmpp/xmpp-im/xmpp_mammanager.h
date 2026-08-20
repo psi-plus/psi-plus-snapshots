@@ -20,8 +20,8 @@
 #ifndef XMPP_MAM_MANAGER_H
 #define XMPP_MAM_MANAGER_H
 
-#include "xmpp_client.h"
-#include "xmpp_mamtask.h"
+#include <iris/xmpp-im/xmpp_client.h>
+#include <iris/xmpp-im/xmpp_mamtask.h>
 
 #include <QObject>
 #include <QString>

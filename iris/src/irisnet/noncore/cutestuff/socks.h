@@ -20,7 +20,7 @@
 #ifndef CS_SOCKS_H
 #define CS_SOCKS_H
 
-#include "bytestream.h"
+#include <iris/irisnet/noncore/cutestuff/bytestream.h>
 
 // CS_NAMESPACE_BEGIN
 class QHostAddress;

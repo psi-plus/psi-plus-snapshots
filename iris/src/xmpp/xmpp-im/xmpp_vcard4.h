@@ -20,7 +20,7 @@
 #ifndef XMPP_VCARD4_H
 #define XMPP_VCARD4_H
 
-#include "xmpp_vcard.h"
+#include <iris/xmpp-im/xmpp_vcard.h>
 
 #include <QDate>
 #include <QDateTime>

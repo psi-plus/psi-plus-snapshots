@@ -23,7 +23,7 @@
 #include <QList>
 #include <QObject>
 
-#include "transportaddress.h"
+#include <iris/irisnet/noncore/transportaddress.h>
 
 class QByteArray;
 

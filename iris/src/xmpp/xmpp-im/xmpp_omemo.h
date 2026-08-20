@@ -11,8 +11,8 @@
 #ifndef XMPP_OMEMO_H
 #define XMPP_OMEMO_H
 
-#include "xmpp_encryption.h"
-#include "xmpp_omemostorage.h"
+#include <iris/xmpp-im/xmpp_encryption.h>
+#include <iris/xmpp-im/xmpp_omemostorage.h>
 
 #include <QList>
 

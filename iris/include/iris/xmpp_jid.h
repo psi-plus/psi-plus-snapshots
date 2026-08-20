@@ -1,1 +1,1 @@
-#include "xmpp/jid/jid.h"
+#include <iris/jid/jid.h>

@@ -20,9 +20,9 @@
 #ifndef JINGLE_ICE_H
 #define JINGLE_ICE_H
 
-#include "iris/tcpportreserver.h"
-#include "iris/xmpp.h"
-#include "jingle-transport.h"
+#include <iris/irisnet/noncore/tcpportreserver.h>
+#include <iris/xmpp-core/xmpp.h>
+#include <iris/xmpp-im/jingle-transport.h>
 
 class QHostAddress;
 

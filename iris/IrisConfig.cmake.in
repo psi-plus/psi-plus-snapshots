@@ -1,70 +1,85 @@
+@PACKAGE_INIT@
+
 include(CMakeFindDependencyMacro)
-# known at buildtime
+
 set(Iris_VERSION "@IRIS_LIB_VERSION_STRING@")
 set(Iris_VERSION_MAJOR @IRIS_LIB_VERSION_MAJOR@)
 set(Iris_VERSION_MINOR @IRIS_LIB_VERSION_MINOR@)
 set(Iris_VERSION_PATCH @IRIS_LIB_VERSION_PATCH@)
+set(Iris_QT_MAJOR_VERSION @QT_DEFAULT_MAJOR_VERSION@)
+set(Iris_QCA_MAJOR @IRIS_QCA_MAJOR@)
+set(Iris_QCA_HAS_DTLS @IRIS_QCA_HAS_DTLS@)
+set(Iris_QCA_HAS_CHANNEL_BINDING @IRIS_QCA_HAS_CHANNEL_BINDING@)
+set(Iris_INSTALL_NAMESPACE "@IRIS_INSTALL_NAMESPACE@")
+set(Iris_LIB_SONAME "@IRIS_LIB_NAME@")
 
-get_filename_component(currentDir ${CMAKE_CURRENT_LIST_FILE} PATH) # get the directory where I myself am
-get_filename_component(rootDir ${currentDir}/@relInstallDir@ ABSOLUTE) # get the chosen install prefix
+if(Iris_QT_MAJOR_VERSION GREATER_EQUAL 6)
+    find_dependency(Qt6 6.4 REQUIRED COMPONENTS Core Gui Network Xml)
+else()
+    find_dependency(Qt5 5.10 REQUIRED COMPONENTS Core Gui Network Xml)
+endif()
 
-# install locations
-set(Iris_INCLUDE_DIR "${rootDir}/@IRIS_INCLUDEDIR_REL@")
-set(Iris_LIBRARY_DIR "${rootDir}/@LIB_INSTALL_DIR_REL@")
-set(Iris_LIB_SONAME iris)
-
-if(NOT TARGET Qca::Qca)
-    find_package(Qca QUIET)
-
-    if(NOT TARGET Qca::Qca)
-        if("@QCA_CORE_LIB_REL@" STREQUAL "" AND "@QCA_OSSL_LIB_REL@" STREQUAL "")
+if(NOT @IRIS_BUNDLED_QCA@)
+    if(Iris_QCA_MAJOR EQUAL 3)
+        if(NOT TARGET Qca3::Qca)
+            find_dependency(Qca3-qt@QT_DEFAULT_MAJOR_VERSION@ CONFIG REQUIRED)
+        endif()
+    else()
+        if(NOT TARGET Qca::Qca)
+            set(_iris_saved_module_path "${CMAKE_MODULE_PATH}")
+            set(_iris_saved_qt_default_major_version "${QT_DEFAULT_MAJOR_VERSION}")
+            set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/modules;${CMAKE_MODULE_PATH}")
+            set(QT_DEFAULT_MAJOR_VERSION @QT_DEFAULT_MAJOR_VERSION@)
             find_dependency(Qca REQUIRED)
-        else()
-            set(_qca_core_path "${rootDir}/@QCA_CORE_LIB_REL@")
-            set(_qca_ossl_path "${rootDir}/@QCA_OSSL_LIB_REL@")
-            set(_qca_include_dir "${rootDir}/@QCA_INCLUDE_REL@")
-
-            # Core
-            add_library(qca-core STATIC IMPORTED GLOBAL)
-            set_target_properties(qca-core PROPERTIES
-                IMPORTED_LOCATION "${_qca_core_path}"
-                INTERFACE_INCLUDE_DIRECTORIES "${_qca_include_dir}"
-            )
-
-            # OSSL plugin
-            add_library(qca-ossl STATIC IMPORTED GLOBAL)
-            set_target_properties(qca-ossl PROPERTIES
-                IMPORTED_LOCATION "${_qca_ossl_path}"
-                INTERFACE_INCLUDE_DIRECTORIES "${_qca_include_dir}"
-            )
-
-            add_library(Qca::Qca INTERFACE IMPORTED) # IMPORTED не обязателен, но можно
-            add_library(Qca_QCA_AGGREGATE INTERFACE)
-            target_link_libraries(Qca_QCA_AGGREGATE INTERFACE qca-core qca-ossl)
-            add_library(Qca::Qca ALIAS Qca_QCA_AGGREGATE)
+            set(CMAKE_MODULE_PATH "${_iris_saved_module_path}")
+            if(_iris_saved_qt_default_major_version STREQUAL "")
+                unset(QT_DEFAULT_MAJOR_VERSION)
+            else()
+                set(QT_DEFAULT_MAJOR_VERSION "${_iris_saved_qt_default_major_version}")
+            endif()
+            unset(_iris_saved_module_path)
+            unset(_iris_saved_qt_default_major_version)
         endif()
     endif()
 endif()
 
-if(NOT TARGET SctpLab::UsrSCTP)
-    find_package(UsrSCTP QUIET)
-    if(NOT TARGET SctpLab::UsrSCTP)
-        if("@USRSCTP_LIB_REL@" STREQUAL "")
-            find_dependency(SctpLab::UsrSCTP REQUIRED)
-        else()
-            set(_usrsctp_path "${rootDir}/@USRSCTP_LIB_REL@")
-            set(_usrsctp_include_dir "${rootDir}/@USRSCTP_INCLUDE_REL@")
-            add_library(SctpLab::UsrSCTP STATIC IMPORTED GLOBAL)
-            set_target_properties(SctpLab::UsrSCTP PROPERTIES
-                IMPORTED_LOCATION "${_usrsctp_path}"
-                INTERFACE_INCLUDE_DIRECTORIES "${_usrsctp_include_dir}"
-            )
-        endif()
-    endif()
+include("${CMAKE_CURRENT_LIST_DIR}/IrisTargets.cmake")
+
+# A shared Iris with bundled QCA contains the QCA implementation itself. Its
+# public headers still expose QCA types, so recreate the normal QCA 3 target as
+# an interface backed by Iris::Iris plus the privately installed QCA headers.
+# No standalone bundled QCA library/provider is installed into the prefix.
+if(@IRIS_BUNDLED_QCA@ AND NOT TARGET Qca3::Qca)
+    add_library(Qca3::Qca INTERFACE IMPORTED)
+    set_property(TARGET Qca3::Qca PROPERTY INTERFACE_LINK_LIBRARIES Iris::Iris)
+    set_property(TARGET Qca3::Qca PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+        "${PACKAGE_PREFIX_DIR}/@IRIS_BUNDLED_QCA_INCLUDE_REL@")
 endif()
 
-if(NOT TARGET iris)
-    include(${currentDir}/IrisTargets.cmake)
+set(Iris_INCLUDE_DIRS
+    "${PACKAGE_PREFIX_DIR}/@IRIS_INSTALL_INCLUDE_ROOT@"
+    "${PACKAGE_PREFIX_DIR}/@IRIS_INSTALL_INCLUDEDIR@"
+    "${PACKAGE_PREFIX_DIR}/@IRIS_INSTALL_INCLUDEDIR@/jid"
+)
+if(@IRIS_BUNDLED_QCA@)
+    list(APPEND Iris_INCLUDE_DIRS
+        "${PACKAGE_PREFIX_DIR}/@IRIS_BUNDLED_QCA_INCLUDE_REL@")
+endif()
+set(Iris_INCLUDE_DIR "${Iris_INCLUDE_DIRS}")
+set(Iris_LIBRARY Iris::Iris)
+set(Iris_LIBRARIES Iris::Iris)
+
+if(TARGET Iris::Iris AND NOT TARGET iris::iris)
+    add_library(iris::iris INTERFACE IMPORTED)
+    set_property(TARGET iris::iris PROPERTY INTERFACE_LINK_LIBRARIES Iris::Iris)
 endif()
 
-set(Iris_LIBRARY iris)
+# Psi historically links a plain target/library name `iris` after
+# find_package(Iris). Keep that working while the installed SONAME is
+# Qt-qualified and may also carry an installation namespace.
+if(TARGET Iris::Iris AND NOT TARGET iris)
+    add_library(iris INTERFACE IMPORTED)
+    set_property(TARGET iris PROPERTY INTERFACE_LINK_LIBRARIES Iris::Iris)
+endif()
+
+check_required_components(Iris)

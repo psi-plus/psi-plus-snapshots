@@ -1,7 +1,7 @@
 #ifndef XMPP_ICEAGENT_H
 #define XMPP_ICEAGENT_H
 
-#include "icecomponent.h"
+#include <iris/irisnet/noncore/icecomponent.h>
 
 #include <QObject>
 #include <memory>

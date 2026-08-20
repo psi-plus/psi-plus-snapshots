@@ -20,8 +20,8 @@
 #ifndef XMPP_STATUS_H
 #define XMPP_STATUS_H
 
-#include "xmpp_bitsofbinary.h"
-#include "xmpp_muc.h"
+#include <iris/xmpp-im/xmpp_bitsofbinary.h>
+#include <iris/xmpp-im/xmpp_muc.h>
 
 #include <QCryptographicHash>
 #include <QDateTime>

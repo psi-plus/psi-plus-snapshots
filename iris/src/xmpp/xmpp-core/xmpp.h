@@ -20,8 +20,8 @@
 #ifndef XMPP_H
 #define XMPP_H
 
-#include "iris/addressresolver.h"
-#include "xmpp_clientstream.h"
+#include <iris/irisnet/corelib/addressresolver.h>
+#include <iris/xmpp-core/xmpp_clientstream.h>
 
 #include <QDomDocument>
 #include <QHostAddress>

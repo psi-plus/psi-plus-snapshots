@@ -19,8 +19,8 @@
 #ifndef XMPP_DISCOINFOTASK_H
 #define XMPP_DISCOINFOTASK_H
 
-#include "xmpp_discoitem.h"
-#include "xmpp_task.h"
+#include <iris/xmpp-im/xmpp_discoitem.h>
+#include <iris/xmpp-im/xmpp_task.h>
 
 class QDomElement;
 

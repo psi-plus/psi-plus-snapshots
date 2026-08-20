@@ -23,7 +23,7 @@
 #include <QEnableSharedFromThis>
 #include <QObject>
 
-#include "transportaddress.h"
+#include <iris/irisnet/noncore/transportaddress.h>
 
 namespace QCA {
 class SecureArray;

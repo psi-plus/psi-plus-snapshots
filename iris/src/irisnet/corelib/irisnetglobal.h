@@ -19,7 +19,7 @@
 #ifndef IRISNETGLOBAL_H
 #define IRISNETGLOBAL_H
 
-#include "irisnetexport.h"
+#include <iris/irisnet/corelib/irisnetexport.h>
 
 #include <QtCore>
 #include <QtNetwork>

@@ -11,8 +11,8 @@
 #ifndef XMPP_PUBSUBEVENT_H
 #define XMPP_PUBSUBEVENT_H
 
-#include "xmpp_pubsubitem.h"
-#include "xmpp_pubsubretraction.h"
+#include <iris/xmpp-im/xmpp_pubsubitem.h>
+#include <iris/xmpp-im/xmpp_pubsubretraction.h>
 
 #include <QDomElement>
 #include <QList>

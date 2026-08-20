@@ -20,7 +20,7 @@
 #ifndef CS_HTTPPOLL_H
 #define CS_HTTPPOLL_H
 
-#include "bytestream.h"
+#include <iris/irisnet/noncore/cutestuff/bytestream.h>
 
 class QUrl;
 

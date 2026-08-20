@@ -20,7 +20,7 @@
 #ifndef NETNAMES_H
 #define NETNAMES_H
 
-#include "irisnetglobal.h"
+#include <iris/irisnet/corelib/irisnetglobal.h>
 
 #include <QtCore>
 #include <QtNetwork>

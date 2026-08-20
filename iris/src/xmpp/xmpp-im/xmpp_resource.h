@@ -19,7 +19,7 @@
 #ifndef XMPP_RESOURCE_H
 #define XMPP_RESOURCE_H
 
-#include "xmpp_status.h"
+#include <iris/xmpp-im/xmpp_status.h>
 
 #include <QString>
 

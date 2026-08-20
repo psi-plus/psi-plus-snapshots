@@ -20,7 +20,7 @@
 #ifndef JINGLENSTRANSPORTSLIST_H
 #define JINGLENSTRANSPORTSLIST_H
 
-#include "jingle-transport.h"
+#include <iris/xmpp-im/jingle-transport.h>
 
 namespace XMPP { namespace Jingle {
 

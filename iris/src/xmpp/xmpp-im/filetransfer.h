@@ -20,9 +20,9 @@
 #ifndef XMPP_FILETRANSFER_H
 #define XMPP_FILETRANSFER_H
 
-#include "xmpp/jid/jid.h"
-#include "xmpp_task.h"
-#include "xmpp_thumbs.h"
+#include <iris/jid/jid.h>
+#include <iris/xmpp-im/xmpp_task.h>
+#include <iris/xmpp-im/xmpp_thumbs.h>
 
 namespace XMPP {
 class BSConnection;

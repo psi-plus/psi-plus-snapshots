@@ -19,9 +19,9 @@
 #ifndef ICECOMPONENT_H
 #define ICECOMPONENT_H
 
-#include "ice176.h"
-#include "icetransport.h"
-#include "turnclient.h"
+#include <iris/irisnet/noncore/ice176.h>
+#include <iris/irisnet/noncore/icetransport.h>
+#include <iris/irisnet/noncore/turnclient.h>
 
 #include <QList>
 

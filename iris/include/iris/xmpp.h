@@ -1,1 +1,1 @@
-#include "xmpp/xmpp-core/xmpp.h"
+#include <iris/xmpp-core/xmpp.h>

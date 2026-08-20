@@ -20,7 +20,7 @@
 #ifndef CS_SRVRESOLVER_H
 #define CS_SRVRESOLVER_H
 
-#include "netnames.h"
+#include <iris/irisnet/corelib/netnames.h>
 
 #include <QtCore>
 #include <QtNetwork>

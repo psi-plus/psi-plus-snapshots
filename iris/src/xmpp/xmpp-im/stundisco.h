@@ -20,8 +20,8 @@
 #ifndef XMPP_STUNDISCO_H
 #define XMPP_STUNDISCO_H
 
-#include "iceabstractstundisco.h"
-#include "xmpp_client.h"
+#include <iris/irisnet/noncore/iceabstractstundisco.h>
+#include <iris/xmpp-im/xmpp_client.h>
 
 #include <memory>
 

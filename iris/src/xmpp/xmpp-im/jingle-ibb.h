@@ -20,7 +20,7 @@
 #ifndef JINGLEIBB_H
 #define JINGLEIBB_H
 
-#include "jingle-transport.h"
+#include <iris/xmpp-im/jingle-transport.h>
 
 namespace XMPP {
 class IBBConnection;

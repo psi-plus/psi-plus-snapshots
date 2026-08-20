@@ -28,7 +28,8 @@
 
 namespace XMPP::Jingle::FileTransfer {
 
-const QString NS = QStringLiteral("urn:xmpp:jingle:apps:file-transfer:5");
+const QString NS               = QStringLiteral("urn:xmpp:jingle:apps:file-transfer:5");
+const QString FILE_METADATA_NS = QStringLiteral("urn:xmpp:file:metadata:0");
 
 static const QString THUMBNAIL_TAG  = QStringLiteral("thumbnail");
 static const QString RANGE_TAG      = QStringLiteral("range");
@@ -39,6 +40,9 @@ static const QString NAME_TAG       = QStringLiteral("name");
 static const QString SIZE_TAG       = QStringLiteral("size");
 static const QString FILETAG        = QStringLiteral("file");
 static const QString AMPLITUDES_TAG = QStringLiteral("amplitudes");
+static const QString WIDTH_TAG      = QStringLiteral("width");
+static const QString HEIGHT_TAG     = QStringLiteral("height");
+static const QString LENGTH_TAG     = QStringLiteral("length");
 
 const QString AMPLITUDES_NS = QStringLiteral("urn:audio:amplitudes");
 
@@ -70,10 +74,15 @@ public:
     QString                      mediaType;
     QString                      name;
     QString                      desc;
-    std::optional<std::uint64_t> size = 0;
+    QMap<QString, QString>       localizedDescriptions;
+    std::optional<std::uint64_t> size;
+    std::optional<std::uint32_t> width;
+    std::optional<std::uint32_t> height;
+    std::optional<std::uint64_t> length;
     Range                        range;
     QList<Hash>                  hashes;
     Thumbnail                    thumbnail;
+    QList<Thumbnail>             extraThumbnails;
     QByteArray                   amplitudes;
 };
 
@@ -95,36 +104,57 @@ File::File(const QDomElement &file)
     QString                      mediaType;
     QString                      name;
     QString                      desc;
-    std::optional<std::uint64_t> size           = 0;
+    QMap<QString, QString>       localizedDescriptions;
+    bool                         defaultDescriptionSeen = false;
+    std::optional<std::uint64_t> size;
+    std::optional<std::uint32_t> width;
+    std::optional<std::uint32_t> height;
+    std::optional<std::uint64_t> length;
     bool                         rangeSupported = false;
     Range                        range;
     QList<Hash>                  hashes;
     Thumbnail                    thumbnail;
+    QList<Thumbnail>             extraThumbnails;
     QByteArray                   amplitudes;
 
     bool ok;
 
     for (QDomElement ce = file.firstChildElement(); !ce.isNull(); ce = ce.nextSiblingElement()) {
 
-        if (ce.tagName() == DATE_TAG) {
-            date = QDateTime::fromString(ce.text().left(19), Qt::ISODate);
+        if (ce.localName() == DATE_TAG) {
+            date = QDateTime::fromString(ce.text(), Qt::ISODate);
             if (!date.isValid()) {
                 return;
             }
 
-        } else if (ce.tagName() == MEDIA_TYPE_TAG) {
+        } else if (ce.localName() == MEDIA_TYPE_TAG) {
             mediaType = ce.text();
 
-        } else if (ce.tagName() == NAME_TAG) {
+        } else if (ce.localName() == NAME_TAG) {
             name = ce.text();
 
-        } else if (ce.tagName() == SIZE_TAG) {
+        } else if (ce.localName() == SIZE_TAG) {
             size = ce.text().toULongLong(&ok);
             if (!ok) {
                 return;
             }
 
-        } else if (ce.tagName() == RANGE_TAG) {
+        } else if (ce.localName() == WIDTH_TAG) {
+            width = ce.text().toUInt(&ok);
+            if (!ok)
+                return;
+
+        } else if (ce.localName() == HEIGHT_TAG) {
+            height = ce.text().toUInt(&ok);
+            if (!ok)
+                return;
+
+        } else if (ce.localName() == LENGTH_TAG) {
+            length = ce.text().toULongLong(&ok);
+            if (!ok)
+                return;
+
+        } else if (ce.localName() == RANGE_TAG) {
             if (ce.hasAttribute(QLatin1String("offset"))) {
                 range.offset = ce.attribute(QLatin1String("offset")).toLongLong(&ok);
                 if (!ok || range.offset < 0) {
@@ -150,10 +180,21 @@ File::File(const QDomElement &file)
             }
             rangeSupported = true;
 
-        } else if (ce.tagName() == DESC_TAG) {
-            desc = ce.text();
+        } else if (ce.localName() == DESC_TAG) {
+            const auto language
+                = ce.attributeNS(QStringLiteral("http://www.w3.org/XML/1998/namespace"), QStringLiteral("lang"));
+            if (language.isEmpty()) {
+                if (defaultDescriptionSeen)
+                    return;
+                defaultDescriptionSeen = true;
+                desc                   = ce.text();
+            } else {
+                if (localizedDescriptions.contains(language))
+                    return;
+                localizedDescriptions.insert(language, ce.text());
+            }
 
-        } else if (ce.tagName() == QLatin1String("hash")) {
+        } else if (ce.localName() == QLatin1String("hash")) {
             if (ce.namespaceURI() == HASH_NS) {
                 Hash h(ce);
                 if (h.type() == Hash::Type::Unknown) {
@@ -162,7 +203,7 @@ File::File(const QDomElement &file)
                 hashes.append(h);
             }
 
-        } else if (ce.tagName() == QLatin1String("hash-used")) {
+        } else if (ce.localName() == QLatin1String("hash-used")) {
             if (ce.namespaceURI() == HASH_NS) {
                 Hash h(ce);
                 if (h.type() == Hash::Type::Unknown) {
@@ -171,60 +212,99 @@ File::File(const QDomElement &file)
                 hashes.append(h);
             }
 
-        } else if (ce.tagName() == THUMBNAIL_TAG) {
-            thumbnail = Thumbnail(ce);
-        } else if (ce.tagName() == AMPLITUDES_TAG && ce.namespaceURI() == AMPLITUDES_NS) {
+        } else if (ce.localName() == THUMBNAIL_TAG) {
+            Thumbnail parsedThumbnail(ce);
+            if (parsedThumbnail.isValid()) {
+                if (!thumbnail.isValid())
+                    thumbnail = parsedThumbnail;
+                else
+                    extraThumbnails.append(parsedThumbnail);
+            }
+        } else if (ce.localName() == AMPLITUDES_TAG && ce.namespaceURI() == AMPLITUDES_NS) {
             amplitudes = QByteArray::fromBase64(ce.text().toLatin1());
         }
     }
 
-    auto p            = new Private;
-    p->date           = date;
-    p->mediaType      = mediaType;
-    p->name           = name;
-    p->desc           = desc;
-    p->size           = size;
-    p->rangeSupported = rangeSupported;
-    p->range          = range;
-    p->hashes         = hashes;
-    p->thumbnail      = thumbnail;
-    p->amplitudes     = amplitudes;
+    auto p                   = new Private;
+    p->date                  = date;
+    p->mediaType             = mediaType;
+    p->name                  = name;
+    p->desc                  = desc;
+    p->localizedDescriptions = localizedDescriptions;
+    p->size                  = size;
+    p->width                 = width;
+    p->height                = height;
+    p->length                = length;
+    p->rangeSupported        = rangeSupported;
+    p->range                 = range;
+    p->hashes                = hashes;
+    p->thumbnail             = thumbnail;
+    p->extraThumbnails       = extraThumbnails;
+    p->amplitudes            = amplitudes;
 
     d = p;
 }
 
 QDomElement File::toXml(QDomDocument *doc) const
 {
-    if (!isValid() || d->hashes.isEmpty()) {
-        return QDomElement();
-    }
-    QDomElement el = doc->createElementNS(NS, QStringLiteral("file"));
-    if (d->date.isValid()) {
+    if (!isValid() || d->hashes.isEmpty())
+        return {};
+    return toXml(doc, NS, true);
+}
+
+QDomElement File::toMetadataXml(QDomDocument *doc) const { return toXml(doc, FILE_METADATA_NS, false); }
+
+QDomElement File::toXml(QDomDocument *doc, const QString &ns, bool jingleExtensions) const
+{
+    if (!doc || !isValid())
+        return {};
+
+    QDomElement el = doc->createElementNS(ns, QStringLiteral("file"));
+    if (d->date.isValid())
         el.appendChild(XMLHelper::textTag(*doc, DATE_TAG, d->date.toString(Qt::ISODate)));
-    }
-    if (d->desc.size()) {
+    if (!d->desc.isEmpty())
         el.appendChild(XMLHelper::textTag(*doc, DESC_TAG, d->desc));
+    if (!jingleExtensions) {
+        for (auto it = d->localizedDescriptions.cbegin(); it != d->localizedDescriptions.cend(); ++it) {
+            auto desc = XMLHelper::textTag(*doc, DESC_TAG, it.value());
+            desc.setAttributeNS(QStringLiteral("http://www.w3.org/XML/1998/namespace"), QStringLiteral("xml:lang"),
+                                it.key());
+            el.appendChild(desc);
+        }
     }
     for (const auto &h : d->hashes) {
-        el.appendChild(h.toXml(doc));
+        auto hashEl = h.toXml(doc);
+        if (!hashEl.isNull())
+            el.appendChild(hashEl);
     }
-    if (d->mediaType.size()) {
+    if (!d->mediaType.isEmpty())
         el.appendChild(XMLHelper::textTag(*doc, MEDIA_TYPE_TAG, d->mediaType));
-    }
-    if (d->name.size()) {
+    if (!d->name.isEmpty())
         el.appendChild(XMLHelper::textTag(*doc, NAME_TAG, d->name));
-    }
-    if (d->size) {
+    if (d->size)
         el.appendChild(XMLHelper::textTag(*doc, SIZE_TAG, qint64(*d->size)));
-    }
-    if (d->rangeSupported || d->range.isValid()) {
-        el.appendChild(d->range.toXml(doc));
-    }
-    if (d->thumbnail.isValid()) {
+    if (d->thumbnail.isValid())
         el.appendChild(d->thumbnail.toXml(doc));
+    if (!jingleExtensions) {
+        for (const auto &thumbnail : d->extraThumbnails) {
+            if (thumbnail.isValid())
+                el.appendChild(thumbnail.toXml(doc));
+        }
     }
-    if (d->amplitudes.size()) {
-        el.appendChild(XMLHelper::textTagNS(doc, AMPLITUDES_NS, AMPLITUDES_TAG, d->amplitudes));
+    if (!jingleExtensions) {
+        if (d->width)
+            el.appendChild(XMLHelper::textTag(*doc, WIDTH_TAG, qint64(*d->width)));
+        if (d->height)
+            el.appendChild(XMLHelper::textTag(*doc, HEIGHT_TAG, qint64(*d->height)));
+        if (d->length)
+            el.appendChild(XMLHelper::textTag(*doc, LENGTH_TAG, qint64(*d->length)));
+    }
+
+    if (jingleExtensions) {
+        if (d->rangeSupported || d->range.isValid())
+            el.appendChild(d->range.toXml(doc));
+        if (!d->amplitudes.isEmpty())
+            el.appendChild(XMLHelper::textTagNS(doc, AMPLITUDES_NS, AMPLITUDES_TAG, d->amplitudes));
     }
     return el;
 }
@@ -260,6 +340,21 @@ bool File::hasComputedHashes() const
 QDateTime File::date() const { return d ? d->date : QDateTime(); }
 
 QString File::description() const { return d ? d->desc : QString(); }
+QString File::description(const QString &language) const
+{
+    if (!d)
+        return {};
+    return language.isEmpty() ? d->desc : d->localizedDescriptions.value(language);
+}
+QMap<QString, QString> File::descriptions() const
+{
+    if (!d)
+        return {};
+    auto result = d->localizedDescriptions;
+    if (!d->desc.isEmpty())
+        result.insert(QString(), d->desc);
+    return result;
+}
 
 QList<Hash> File::hashes() const { return d ? d->hashes : QList<Hash>(); }
 QList<Hash> File::computedHashes() const
@@ -296,13 +391,39 @@ std::optional<std::uint64_t> File::size() const { return d ? d->size : std::opti
 
 Range File::range() const { return d ? d->range : Range(); }
 
-Thumbnail File::thumbnail() const { return d ? d->thumbnail : Thumbnail(); }
+Thumbnail        File::thumbnail() const { return d ? d->thumbnail : Thumbnail(); }
+QList<Thumbnail> File::thumbnails() const
+{
+    if (!d)
+        return {};
+    auto result = d->extraThumbnails;
+    if (d->thumbnail.isValid())
+        result.prepend(d->thumbnail);
+    return result;
+}
 
-QByteArray File::amplitudes() const { return d ? d->amplitudes : QByteArray(); }
+QByteArray                   File::amplitudes() const { return d ? d->amplitudes : QByteArray(); }
+std::optional<std::uint32_t> File::width() const { return d ? d->width : std::optional<std::uint32_t> {}; }
+std::optional<std::uint32_t> File::height() const { return d ? d->height : std::optional<std::uint32_t> {}; }
+std::optional<std::uint64_t> File::length() const { return d ? d->length : std::optional<std::uint64_t> {}; }
 
 void File::setDate(const QDateTime &date) { ensureD()->date = date; }
 
 void File::setDescription(const QString &desc) { ensureD()->desc = desc; }
+void File::setDescription(const QString &desc, const QString &language)
+{
+    if (language.isEmpty())
+        ensureD()->desc = desc;
+    else
+        ensureD()->localizedDescriptions.insert(language, desc);
+}
+void File::setDescriptions(const QMap<QString, QString> &descriptions)
+{
+    auto p                   = ensureD();
+    p->desc                  = descriptions.value(QString());
+    p->localizedDescriptions = descriptions;
+    p->localizedDescriptions.remove(QString());
+}
 
 void File::addHash(const Hash &hash) { ensureD()->hashes.append(hash); }
 
@@ -320,9 +441,35 @@ void File::setRange(const Range &range)
     d->rangeSupported = true;
 }
 
-void File::setThumbnail(const Thumbnail &thumb) { ensureD()->thumbnail = thumb; }
+void File::setThumbnail(const Thumbnail &thumb)
+{
+    auto p       = ensureD();
+    p->thumbnail = thumb;
+    p->extraThumbnails.clear();
+}
+void File::setThumbnails(const QList<Thumbnail> &thumbnails)
+{
+    auto p       = ensureD();
+    p->thumbnail = {};
+    p->extraThumbnails.clear();
+    for (const auto &thumbnail : thumbnails)
+        addThumbnail(thumbnail);
+}
+void File::addThumbnail(const Thumbnail &thumbnail)
+{
+    if (!thumbnail.isValid())
+        return;
+    auto p = ensureD();
+    if (!p->thumbnail.isValid())
+        p->thumbnail = thumbnail;
+    else
+        p->extraThumbnails.append(thumbnail);
+}
 
-void File::setAmplitudes(const QByteArray &amplitudes) { d->amplitudes = amplitudes; }
+void File::setAmplitudes(const QByteArray &amplitudes) { ensureD()->amplitudes = amplitudes; }
+void File::setWidth(std::uint32_t width) { ensureD()->width = width; }
+void File::setHeight(std::uint32_t height) { ensureD()->height = height; }
+void File::setLength(std::uint64_t length) { ensureD()->length = length; }
 
 File::Private *File::ensureD()
 {

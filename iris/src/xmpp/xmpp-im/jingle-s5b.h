@@ -20,8 +20,8 @@
 #ifndef JINGLE_S5B_H
 #define JINGLE_S5B_H
 
-#include "iris/tcpportreserver.h"
-#include "jingle-transport.h"
+#include <iris/irisnet/noncore/tcpportreserver.h>
+#include <iris/xmpp-im/jingle-transport.h>
 
 class QHostAddress;
 class SocksClient;

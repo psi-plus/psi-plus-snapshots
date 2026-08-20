@@ -20,8 +20,8 @@
 #ifndef XMPP_STREAM_H
 #define XMPP_STREAM_H
 
-#include "xmpp/jid/jid.h"
-#include "xmpp_stanza.h"
+#include <iris/jid/jid.h>
+#include <iris/xmpp-core/xmpp_stanza.h>
 
 #include <QDomElement>
 #include <QObject>

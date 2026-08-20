@@ -25,8 +25,8 @@
  * For example an ICE transport may have up to 65537 connections (65535 data/sctp-channels + 2 raw)
  */
 
-#include "iris/bytestream.h"
-#include "jingle.h"
+#include <iris/irisnet/noncore/cutestuff/bytestream.h>
+#include <iris/xmpp-im/jingle.h>
 
 #include <QNetworkDatagram>
 

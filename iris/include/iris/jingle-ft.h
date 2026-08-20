@@ -1,1 +1,1 @@
-#include "xmpp/xmpp-im/jingle-ft.h"
+#include <iris/xmpp-im/jingle-ft.h>

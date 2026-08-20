@@ -19,10 +19,10 @@
 #ifndef IRISNETPLUGIN_H
 #define IRISNETPLUGIN_H
 
-#include "irisnetglobal.h"
-#include "netavailability.h"
-#include "netinterface.h"
-#include "netnames.h"
+#include <iris/irisnet/corelib/irisnetglobal.h>
+#include <iris/irisnet/corelib/netavailability.h>
+#include <iris/irisnet/corelib/netinterface.h>
+#include <iris/irisnet/corelib/netnames.h>
 
 namespace XMPP {
 class NameProvider;

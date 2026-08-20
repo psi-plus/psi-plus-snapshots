@@ -1,1 +1,1 @@
-#include "xmpp/xmpp-im/xmpp_pubsubitem.h"
+#include <iris/xmpp-im/xmpp_pubsubitem.h>

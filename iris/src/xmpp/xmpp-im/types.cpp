@@ -746,16 +746,20 @@ public:
     bool spooled = false, wasEncrypted = false;
 
     // XEP-0280 Message Carbons
-    bool                     carbonsPrivate = false;
-    Message::ProcessingHints processingHints;
-    QString                  replaceId;
-    QString                  originId;           // XEP-0359
-    QString                  encryptionProtocol; // XEP-0380
-    Message::StanzaId        stanzaId;           // XEP-0359
-    QList<Reference>         references;         // XEP-0385 and XEP-0372
-    Forwarding               forwarding;         // XEP-0297
-    Message::Reactions       reactions;          // XEP-0444
-    QString                  retraction;         // XEP-0424
+    bool                                     carbonsPrivate = false;
+    Message::ProcessingHints                 processingHints;
+    QString                                  replaceId;
+    QString                                  originId;            // XEP-0359
+    QString                                  encryptionProtocol;  // XEP-0380
+    Message::StanzaId                        stanzaId;            // XEP-0359
+    QList<Reference>                         references;          // XEP-0385 and XEP-0372
+    QList<StatelessFileSharing::FileSharing> fileSharings;        // XEP-0447
+    QList<StatelessFileSharing::Sources>     attachedFileSources; // XEP-0447 / XEP-0367
+    QString                                  attachToId;          // XEP-0367
+    QList<Jingle::JinglePub>                 jinglePublications;  // XEP-0358
+    Forwarding                               forwarding;          // XEP-0297
+    Message::Reactions                       reactions;           // XEP-0444
+    QString                                  retraction;          // XEP-0424
 };
 
 #define MessageD() (d ? d : (d = new Private))
@@ -1142,6 +1146,48 @@ void Message::addReference(const Reference &r) { MessageD()->references.append(r
 
 void Message::setReferences(const QList<Reference> &r) { MessageD()->references = r; }
 
+QList<StatelessFileSharing::FileSharing> Message::fileSharings() const
+{
+    return d ? d->fileSharings : QList<StatelessFileSharing::FileSharing>();
+}
+void Message::addFileSharing(const StatelessFileSharing::FileSharing &sharing)
+{
+    if (sharing.isValid())
+        MessageD()->fileSharings.append(sharing);
+}
+void Message::setFileSharings(const QList<StatelessFileSharing::FileSharing> &sharings)
+{
+    MessageD()->fileSharings = sharings;
+}
+QList<StatelessFileSharing::Sources> Message::attachedFileSources() const
+{
+    return d ? d->attachedFileSources : QList<StatelessFileSharing::Sources>();
+}
+void Message::addAttachedFileSources(const StatelessFileSharing::Sources &sources)
+{
+    if (sources.isValid())
+        MessageD()->attachedFileSources.append(sources);
+}
+void Message::setAttachedFileSources(const QList<StatelessFileSharing::Sources> &sources)
+{
+    MessageD()->attachedFileSources = sources;
+}
+QString                  Message::attachToId() const { return d ? d->attachToId : QString(); }
+void                     Message::setAttachToId(const QString &id) { MessageD()->attachToId = id; }
+QList<Jingle::JinglePub> Message::jinglePublications() const
+{
+    return d ? d->jinglePublications : QList<Jingle::JinglePub>();
+}
+void Message::addJinglePublication(const Jingle::JinglePub &publication)
+{
+    if (publication.isValid())
+        MessageD()->jinglePublications.append(publication);
+}
+void Message::setJinglePublications(const QList<Jingle::JinglePub> &publications)
+{
+    MessageD()->jinglePublications = publications;
+}
+
 void Message::setReactions(const XMPP::Message::Reactions &reactions) { MessageD()->reactions = reactions; }
 
 XMPP::Message::Reactions Message::reactions() const { return d ? d->reactions : Reactions {}; }
@@ -1516,6 +1562,32 @@ Stanza Message::toStanza(Stream *stream) const
     // XEP-0372 and XEP-0385
     for (auto const &r : std::as_const(d->references)) {
         s.appendChild(r.toXml(&s.doc()));
+    }
+
+    // XEP-0447 Stateless File Sharing
+    for (const auto &sharing : std::as_const(d->fileSharings)) {
+        auto element = sharing.toXml(&s.doc());
+        if (!element.isNull())
+            s.appendChild(element);
+    }
+
+    // XEP-0367 Message Attaching + XEP-0447 attached sources
+    if (!d->attachToId.isEmpty()) {
+        auto attach = s.createElement(StatelessFileSharing::MESSAGE_ATTACHING_NS, QStringLiteral("attach-to"));
+        attach.setAttribute(QStringLiteral("id"), d->attachToId);
+        s.appendChild(attach);
+    }
+    for (const auto &sources : std::as_const(d->attachedFileSources)) {
+        auto element = sources.toXml(&s.doc());
+        if (!element.isNull())
+            s.appendChild(element);
+    }
+
+    // XEP-0358 direct publication
+    for (const auto &publication : std::as_const(d->jinglePublications)) {
+        auto element = publication.toXml(&s.doc());
+        if (!element.isNull())
+            s.appendChild(element);
     }
 
     // XEP-0444
@@ -1916,6 +1988,40 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
         if (r.fromXml(references.at(i).toElement())) {
             d->references.append(r);
         }
+    }
+
+    // XEP-0447 Stateless File Sharing
+    auto fileSharings = childElementsByTagNameNS(root, StatelessFileSharing::NS, QStringLiteral("file-sharing"));
+    for (int i = 0; i < fileSharings.size(); ++i) {
+        StatelessFileSharing::FileSharing sharing(fileSharings.at(i).toElement());
+        if (sharing.isValid())
+            d->fileSharings.append(sharing);
+    }
+
+    // XEP-0367 Message Attaching and XEP-0447 source attachments
+    auto attach
+        = childElementsByTagNameNS(root, StatelessFileSharing::MESSAGE_ATTACHING_NS, QStringLiteral("attach-to"))
+              .item(0)
+              .toElement();
+    if (!attach.isNull())
+        d->attachToId = attach.attribute(QStringLiteral("id"));
+    auto attachedSources = childElementsByTagNameNS(root, StatelessFileSharing::NS, QStringLiteral("sources"));
+    for (int i = 0; i < attachedSources.size(); ++i) {
+        StatelessFileSharing::Sources sources(attachedSources.at(i).toElement());
+        if (sources.isValid())
+            d->attachedFileSources.append(sources);
+    }
+
+    // XEP-0358 direct publication. If an old sender omitted the required from
+    // attribute, use the stanza sender as the session owner.
+    auto publications = childElementsByTagNameNS(root, Jingle::JINGLEPUB_NS, QStringLiteral("jinglepub"));
+    for (int i = 0; i < publications.size(); ++i) {
+        auto element = publications.at(i).toElement();
+        if (!element.hasAttribute(QStringLiteral("from")) && d->from.isValid())
+            element.setAttribute(QStringLiteral("from"), d->from.full());
+        Jingle::JinglePub publication(element);
+        if (publication.isValid())
+            d->jinglePublications.append(publication);
     }
 
     // XEP-0444 message reactions
@@ -3051,9 +3157,11 @@ Thumbnail::Thumbnail(const QDomElement &el)
     QString ns(QLatin1String(XMPP_THUMBS_NS));
     if (el.namespaceURI() == ns) {
         uri      = QUrl(el.attribute("uri"), QUrl::StrictMode);
-        mimeType = el.attribute("mime-type");
-        width    = el.attribute("width").toUInt();
-        height   = el.attribute("height").toUInt();
+        mimeType = el.attribute("media-type");
+        if (mimeType.isEmpty())
+            mimeType = el.attribute("mime-type"); // legacy Iris serialization
+        width  = el.attribute("width").toUInt();
+        height = el.attribute("height").toUInt();
     }
 }
 
@@ -3061,7 +3169,7 @@ QDomElement Thumbnail::toXml(QDomDocument *doc) const
 {
     auto el = doc->createElementNS(XMPP_THUMBS_NS, QStringLiteral("thumbnail"));
     el.setAttribute("uri", uri.toString(QUrl::FullyEncoded));
-    el.setAttribute("mime-type", mimeType);
+    el.setAttribute("media-type", mimeType);
     if (width && height) {
         el.setAttribute("width", width);
         el.setAttribute("height", height);

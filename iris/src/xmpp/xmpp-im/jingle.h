@@ -20,7 +20,8 @@
 #ifndef JINGLE_H
 #define JINGLE_H
 
-#include "iris/xmpp_stanza.h"
+#include <iris/xmpp-core/xmpp_stanza.h>
+#include <iris/xmpp-im/jingle-pub.h>
 
 #include <QObject>
 #include <QSharedDataPointer>
@@ -379,6 +380,16 @@ namespace Jingle {
         QString                                   registerSession(Session *session);
         const std::optional<XMPP::Stanza::Error> &lastError() const;
 
+        // XEP-0358 Publishing Available Jingle Sessions. The factory must return a
+        // configured, not-yet-initiated local Session for the requester. Manager
+        // reserves its SID, acknowledges <start/>, then initiates it.
+        using PublishedSessionFactory = std::function<Session *(const Jid &requester)>;
+        JinglePub                registerPublishedSession(JinglePub publication, PublishedSessionFactory factory);
+        void                     unregisterPublishedSession(const QString &id);
+        JinglePub                publishedSession(const QString &id) const;
+        PublishedSessionRequest *requestPublishedSession(const Jid &publisher, const QString &id,
+                                                         QObject *parent = nullptr);
+
         void detachSession(Session *s); // disconnect the session from manager
     signals:
         void incomingSession(Session *);
@@ -386,6 +397,7 @@ namespace Jingle {
     private:
         friend class JTPush;
         Session *incomingSessionInitiate(const Jid &from, const Jingle &jingle, const QDomElement &jingleEl);
+        Session *startPublishedSession(const Jid &requester, const QString &id);
 
         class Private;
         std::unique_ptr<Private> d;

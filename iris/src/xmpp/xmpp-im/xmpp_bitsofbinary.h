@@ -19,8 +19,8 @@
 #ifndef XMPP_BITSOFBINARY_H
 #define XMPP_BITSOFBINARY_H
 
-#include "xmpp/jid/jid.h"
-#include "xmpp_hash.h"
+#include <iris/jid/jid.h>
+#include <iris/xmpp-im/xmpp_hash.h>
 
 #include <QDomElement>
 #include <QFile>
