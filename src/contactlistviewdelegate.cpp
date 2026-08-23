@@ -27,6 +27,7 @@
 #include "contactlistviewdelegate_p.h"
 #include "debug.h"
 #include "mood.h"
+#include "psiapplication.h"
 #include "psiiconset.h"
 #include "psioptions.h"
 
@@ -48,7 +49,6 @@ static const QString contactListFontOptionPath(QStringLiteral("options.ui.look.f
 static const QString slimGroupsOptionPath(QStringLiteral("options.ui.look.contactlist.use-slim-group-headings"));
 static const QString
     outlinedGroupsOptionPath(QStringLiteral("options.ui.look.contactlist.use-outlined-group-headings"));
-static const QString contactListBackgroundOptionPath(QStringLiteral("options.ui.look.colors.contactlist.background"));
 static const QString showStatusMessagesOptionPath(QStringLiteral("options.ui.contactlist.status-messages.show"));
 static const QString statusSingleOptionPath(QStringLiteral("options.ui.contactlist.status-messages.single-line"));
 static const QString showClientIconsPath(QStringLiteral("options.ui.contactlist.show-client-icons"));
@@ -130,6 +130,11 @@ ContactListViewDelegate::Private::Private(ContactListViewDelegate *parent, Conta
     connect(PsiOptions::instance(), SIGNAL(optionChanged(const QString &)), SLOT(optionChanged(const QString &)));
     connect(ColorOpt::instance(), SIGNAL(changed(const QString &)), SLOT(colorOptionChanged(const QString &)));
     connect(PsiIconset::instance(), SIGNAL(rosterIconsSizeChanged(int)), SLOT(rosterIconsSizeChanged(int)));
+    if (auto *app = qobject_cast<PsiApplication *>(qApp)) {
+        connect(
+            app, &PsiApplication::applicationPaletteChanged, this,
+            [this]() { colorOptionChanged(groupHeaderBackgroundColorPath); }, Qt::QueuedConnection);
+    }
 
     statusIconSize_ = PsiIconset::instance()
                           ->roster.value(PsiOptions::instance()->getOption(statusIconsetOptionPath).toString())
@@ -158,13 +163,6 @@ void ContactListViewDelegate::Private::optionChanged(const QString &option)
         statusFontMetrics_ = QFontMetrics(statusFont_);
         updated            = true;
         updateGeometry     = true;
-    }
-    if (bulkUpdate || (!updated && option == contactListBackgroundOptionPath)) {
-        QPalette p = contactList->palette();
-        p.setColor(QPalette::Base, ColorOpt::instance()->color(contactListBackgroundOptionPath));
-        contactList->setPalette(p);
-        updated        = true;
-        updateViewport = true;
     }
     if (bulkUpdate || (!updated && option == showStatusMessagesOptionPath)) {
         showStatusMessages_ = PsiOptions::instance()->getOption(showStatusMessagesOptionPath).toBool();
@@ -319,14 +317,15 @@ void ContactListViewDelegate::Private::colorOptionChanged(const QString &option)
         updated                       = true;
         updateViewPort                = true;
     }
-    if (bulkUpdate || (!updated && option == groupHeaderBackgroundColorPath)) {
-        _groupHeaderBackgroundColor = ColorOpt::instance()->color(groupHeaderBackgroundColorPath);
-        updated                     = true;
-        updateViewPort              = true;
-    }
-    if (bulkUpdate || (!updated && option == groupHeaderForegroundColorPath)) {
-        _groupHeaderForegroundColor = ColorOpt::instance()->color(groupHeaderForegroundColorPath);
-        // updated = true;
+    if (bulkUpdate
+        || (!updated && (option == groupHeaderBackgroundColorPath || option == groupHeaderForegroundColorPath))) {
+        _groupHeaderBackgroundColor
+            = ColorOpt::adaptBackground(ColorOpt::instance()->color(groupHeaderBackgroundColorPath),
+                                        contactList->palette());
+        _groupHeaderForegroundColor
+            = ColorOpt::ensureContrast(ColorOpt::instance()->color(groupHeaderForegroundColorPath),
+                                       _groupHeaderBackgroundColor, contactList->palette().color(QPalette::Text));
+        updated        = true;
         updateViewPort = true;
     }
     if (!bulkUpdate && updateViewPort)
