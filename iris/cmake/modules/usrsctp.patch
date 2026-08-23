@@ -1,18 +1,4 @@
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 3fc4ec6..1e09260 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -30,7 +30,7 @@
- #
- 
- project(usrsctplib C)
--cmake_minimum_required(VERSION 3.0)
-+cmake_minimum_required(VERSION 3.10)
- 
- # Debug build type as default
- if (NOT CMAKE_BUILD_TYPE)
 diff --git a/usrsctplib/netinet/sctp_output.c b/usrsctplib/netinet/sctp_output.c
-index b8a7b46..819f975 100755
 --- a/usrsctplib/netinet/sctp_output.c
 +++ b/usrsctplib/netinet/sctp_output.c
 @@ -13562,10 +13562,10 @@ sctp_lower_sosend(struct socket *so,

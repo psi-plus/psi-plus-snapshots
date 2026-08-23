@@ -2796,7 +2796,7 @@ public:
                 return job;
             }
             QDomDocument envelopeDocument;
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
             const bool envelopeParsed = envelopeDocument.setContent(envelopeBytes, true);
 #else
             const auto envelopeParsed

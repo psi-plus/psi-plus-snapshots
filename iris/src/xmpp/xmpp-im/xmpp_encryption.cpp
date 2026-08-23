@@ -42,7 +42,7 @@ bool MemoryEncryptionTrustStorage::setTrustLevel(const QString &methodId, const 
 
 bool MemoryEncryptionTrustStorage::removeTrust(const QString &methodId, const Jid &owner, const QByteArray &keyId)
 {
-    return levels_.remove(trustKey(methodId, owner, keyId)) > 0;
+    return levels_.remove(trustKey(methodId, owner, keyId));
 }
 
 class EncryptionJob::Private {

@@ -240,8 +240,8 @@ StanzaContentEncryption::prepare(const QDomElement &stanza, const Profile &profi
         // independent random extra length. Recompute after adding the rpad tag
         // itself so the target refers to serialized envelope size.
         const int currentSize = prepared.envelopeDocument.toByteArray(-1).size();
-        const int fixed       = std::max(0, profile.minimumEnvelopeSize - currentSize);
-        const int randomExtra = randomBoundedInclusive(std::max(0, profile.maximumRandomPadding));
+        const int fixed       = qMax(0, profile.minimumEnvelopeSize - currentSize);
+        const int randomExtra = randomBoundedInclusive(qMax(0, profile.maximumRandomPadding));
         rpad.appendChild(prepared.envelopeDocument.createTextNode(randomPadding(fixed + randomExtra)));
     }
 

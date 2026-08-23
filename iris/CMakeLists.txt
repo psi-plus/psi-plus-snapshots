@@ -132,7 +132,6 @@ endif()
 
 # Find QCA package or use bundled if enabled
 include(IrisQCA)
-include(IrisQCAFeatures)
 
 if(IRIS_BUNDLED_QCA)
     set(IRIS_BUNDLED_QCA_INCLUDE_REL

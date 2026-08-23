@@ -130,11 +130,6 @@ target_include_directories(irisnet
 )
 
 target_compile_definitions(irisnet PRIVATE IRISNET_STATIC HAVE_QTNET)
-if(IRIS_QCA_HAS_DTLS)
-    target_compile_definitions(irisnet PRIVATE IRIS_QCA_HAS_DTLS=1)
-else()
-    target_compile_definitions(irisnet PRIVATE IRIS_QCA_HAS_DTLS=0)
-endif()
 
 if(WIN32)
     set(EXTRA_LDFLAGS ws2_32 iphlpapi)

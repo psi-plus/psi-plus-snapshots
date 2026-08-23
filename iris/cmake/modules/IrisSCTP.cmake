@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10.0)
 
 set(IRIS_USRSCTP_GIT_REPO "https://github.com/sctplab/usrsctp.git")
-set(IRIS_USRSCTP_GIT_TAG 848eca82f92273af9a79687a90343a2ebcf3481d)
+set(IRIS_USRSCTP_GIT_TAG fd070e05a7474f38c7fecdf4d4b6005d2547ee00)
 
 include(GNUInstallDirs)
 if(USE_MXE AND STDINT_FOUND)

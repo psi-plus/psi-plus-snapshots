@@ -535,7 +535,18 @@ bool EncryptingDevice::open(OpenMode mode)
         setErrorString(QStringLiteral("Failed to initialize XEP-0448 cipher"));
         return false;
     }
-    return QIODevice::open(mode);
+    if (!QIODevice::open(mode))
+        return false;
+
+    // A finite non-sequential source may already be at EOF (for example an
+    // empty QBuffer). Materialize the cipher final output now so consumers
+    // can observe it through bytesAvailable() without waiting for readyRead().
+    if (!d->source->isSequential() && d->source->atEnd() && !d->finish()) {
+        setErrorString(QStringLiteral("Failed to finalize XEP-0448 encryption"));
+        QIODevice::close();
+        return false;
+    }
+    return true;
 }
 
 void EncryptingDevice::close()
@@ -576,6 +587,16 @@ qint64 EncryptingDevice::readData(char *data, qint64 maxSize)
                 setErrorString(QStringLiteral("XEP-0448 encryption failed"));
                 return -1;
             }
+            // QFile/QBuffer-style sources do not emit another readyRead after
+            // their last bytes have been consumed. Finalize in the same read
+            // so the GCM tag/CBC padding is already part of pending output.
+            // Otherwise an asynchronous consumer such as QNetworkAccessManager
+            // can drain the ciphertext, see bytesAvailable() == 0 while
+            // atEnd() is still false, and wait forever for a signal.
+            if (!d->source->isSequential() && d->source->atEnd() && !d->finish()) {
+                setErrorString(QStringLiteral("Failed to finalize XEP-0448 encryption"));
+                return -1;
+            }
             continue;
         }
         if (!d->source->atEnd())
@@ -589,6 +610,9 @@ qint64 EncryptingDevice::readData(char *data, qint64 maxSize)
     if (d->pending.isEmpty())
         return 0;
     const auto count = qMin<qint64>(maxSize, d->pending.size());
+#ifdef XMPP_DEBUG
+    qDebug() << "EncryptingDevice::readData " << count << "bytes";
+#endif
     std::memcpy(data, d->pending.constData(), std::size_t(count));
     d->pending.remove(0, qsizetype(count));
     return count;

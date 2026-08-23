@@ -1,5 +1,16 @@
 cmake_minimum_required(VERSION 3.10.0)
 
+if(POLICY CMP0074)
+    cmake_policy(SET CMP0074 NEW)
+endif()
+if(WIN32 AND ZLIB_ROOT)
+    set(_iris_zlib_library "${ZLIB_ROOT}/lib/zlib.lib")
+    set(_iris_zlib_include "${ZLIB_ROOT}/include")
+    if(EXISTS "${_iris_zlib_library}" AND EXISTS "${_iris_zlib_include}/zlib.h")
+        set(ZLIB_LIBRARY "${_iris_zlib_library}" CACHE FILEPATH "ZLIB library" FORCE)
+        set(ZLIB_INCLUDE_DIR "${_iris_zlib_include}" CACHE PATH "ZLIB include directory" FORCE)
+    endif()
+endif()
 find_package(ZLIB REQUIRED)
 
 if(IS_SUBPROJECT)
@@ -253,12 +264,6 @@ else()
     target_link_libraries(iris PUBLIC ${IRIS_QCA_TARGET})
 endif()
 
-if(IRIS_QCA_HAS_CHANNEL_BINDING)
-    target_compile_definitions(iris PRIVATE IRIS_QCA_HAS_CHANNEL_BINDING=1)
-else()
-    target_compile_definitions(iris PRIVATE IRIS_QCA_HAS_CHANNEL_BINDING=0)
-endif()
-
 target_link_libraries(iris
     PRIVATE
         $<BUILD_INTERFACE:stringprep>
@@ -273,6 +278,10 @@ target_link_libraries(iris
 
 if(IRIS_ENABLE_DEBUG)
     target_compile_definitions(iris PRIVATE XMPP_TEST)
+endif()
+
+if(WIN32)
+    target_compile_definitions(iris PRIVATE NOMINMAX)
 endif()
 
 target_compile_definitions(iris PUBLIC IRISNET_STATIC QSTRINGPREP_BUILDING)

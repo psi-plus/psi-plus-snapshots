@@ -23,11 +23,19 @@
 #include "xmpp_serverinfomanager.h"
 #include "xmpp_xmlcommon.h"
 
+#include <QHostInfo>
 #include <QList>
 #include <QNetworkAccessManager>
+#ifdef XMPP_DEBUG
+#include <QNetworkProxy>
+#include <QNetworkProxyFactory>
+#include <QNetworkProxyQuery>
+#endif
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QPointer>
+#include <QSslError>
+#include <QTimer>
 #include <QVariant>
 
 using namespace XMPP;
@@ -185,6 +193,9 @@ void HttpFileUpload::tryNextServer()
     connect(
         jt, &JT_HTTPFileUpload::finished, this,
         [this, jt, host]() mutable {
+#ifdef XMPP_DEBUG
+            qDebug() << "HTTP upload slot task finished" << "success" << jt->success();
+#endif
             if (!jt->success()) {
                 host.props |= Failure;
                 int code = jt->statusCode();
@@ -214,7 +225,13 @@ void HttpFileUpload::tryNextServer()
                 host.props &= ~SecurePut;
             host.props &= ~Failure;
 
+#ifdef XMPP_DEBUG
+            qDebug() << "HTTP upload updating service metadata";
+#endif
             d->client->serverInfoManager()->setServiceMeta(host.jid, QLatin1String("httpprops"), int(host.props));
+#ifdef XMPP_DEBUG
+            qDebug() << "HTTP upload service metadata updated";
+#endif
 
             if (!d->qnam) { // w/o network access manager, it's not more than getting slots
                 done(State::Success);
@@ -238,18 +255,160 @@ void HttpFileUpload::tryNextServer()
                 req.setRawHeader(h.name.toLatin1(), h.value.toLatin1());
             if (!d->mediaType.isEmpty())
                 req.setHeader(QNetworkRequest::ContentTypeHeader, d->mediaType);
+#ifdef XMPP_DEBUG
+            qDebug() << "HttpFileUpload::tryNextServer set Content-Length: " << d->fileSize;
+#endif
             req.setHeader(QNetworkRequest::ContentLengthHeader, QVariant::fromValue<qulonglong>(d->fileSize));
+            req.setAttribute(QNetworkRequest::DoNotBufferUploadDataAttribute, true);
 
-            auto reply = d->qnam->put(req, d->sourceDevice);
+#ifdef XMPP_DEBUG
+            const auto configuredProxy = d->qnam->proxy();
+            qDebug() << "HTTP upload network context"
+                     << "qnamThread" << d->qnam->thread() << "uploadThread" << thread() << "sourceThread"
+                     << (d->sourceDevice ? d->sourceDevice->thread() : nullptr) << "configuredProxy"
+                     << int(configuredProxy.type()) << configuredProxy.hostName() << configuredProxy.port()
+                     << "systemProxyEnabled" << QNetworkProxyFactory::usesSystemConfiguration();
+            const auto proxies = QNetworkProxyFactory::proxyForQuery(QNetworkProxyQuery(req.url()));
+            for (const auto &proxy : proxies)
+                qDebug() << "HTTP upload resolved proxy" << int(proxy.type()) << proxy.hostName() << proxy.port();
+#endif
+
+            auto reply                 = d->qnam->put(req, d->sourceDevice);
+            auto firstProgressWatchdog = new QTimer(reply);
+            firstProgressWatchdog->setSingleShot(true);
+            firstProgressWatchdog->setInterval(5000);
+            connect(firstProgressWatchdog, &QTimer::timeout, reply, [reply]() {
+                if (reply->isFinished())
+                    return;
+                qWarning() << "HTTP upload timed out waiting for initial progress" << reply->url();
+                reply->setProperty("irisHttpUploadTimedOut", true);
+                reply->setProperty("irisHttpUploadFirstProgressTimedOut", true);
+                reply->abort();
+            });
+            auto startupWatchdog = new QTimer(reply);
+            startupWatchdog->setSingleShot(true);
+            startupWatchdog->setInterval(15000);
+            connect(startupWatchdog, &QTimer::timeout, reply, [reply]() {
+                if (reply->isFinished())
+                    return;
+                qWarning() << "HTTP upload timed out resolving or connecting" << reply->url();
+                reply->setProperty("irisHttpUploadTimedOut", true);
+                reply->setProperty("irisHttpUploadFirstProgressTimedOut", true);
+                reply->abort();
+            });
+            startupWatchdog->start();
+            const auto uploadHost = req.url().host();
+            QHostInfo::lookupHost(uploadHost, this, [reply, uploadHost, firstProgressWatchdog](const QHostInfo &info) {
+                if (reply->isFinished())
+                    return;
+#ifdef XMPP_DEBUG
+                qDebug() << "HTTP upload DNS result" << uploadHost << "error" << info.error() << info.errorString()
+                         << "addresses" << info.addresses();
+#else
+                    Q_UNUSED(info)
+#endif
+                firstProgressWatchdog->start();
+            });
+            auto watchdog = new QTimer(reply);
+            watchdog->setSingleShot(true);
+            watchdog->setInterval(60000);
+            connect(watchdog, &QTimer::timeout, reply, [reply]() {
+                if (reply->isFinished())
+                    return;
+                qWarning() << "HTTP upload timed out waiting for network activity" << reply->url();
+                reply->setProperty("irisHttpUploadTimedOut", true);
+                reply->abort();
+            });
+            watchdog->start();
+#ifdef XMPP_DEBUG
+            qDebug() << "HTTP upload started" << d->result.putUrl << "contentLength" << d->fileSize << "http2Allowed"
+                     << req.attribute(QNetworkRequest::Http2AllowedAttribute, true).toBool() << "bufferUpload"
+                     << !req.attribute(QNetworkRequest::DoNotBufferUploadDataAttribute, false).toBool();
+#endif
+#if QT_VERSION >= QT_VERSION_CHECK(6, 3, 0)
+            connect(reply, &QNetworkReply::socketStartedConnecting, this,
+                    [reply, firstProgressWatchdog, startupWatchdog, watchdog] {
+                        startupWatchdog->stop();
+                        firstProgressWatchdog->start();
+                        watchdog->start();
+#ifdef XMPP_DEBUG
+                        qDebug() << "HTTP upload socket started connecting" << reply->url();
+#else
+                        Q_UNUSED(reply)
+#endif
+                    });
+            connect(reply, &QNetworkReply::requestSent, this, [reply, firstProgressWatchdog, watchdog] {
+                firstProgressWatchdog->start();
+                watchdog->start();
+#ifdef XMPP_DEBUG
+                qDebug() << "HTTP upload request sent" << reply->url();
+#else
+                        Q_UNUSED(reply)
+#endif
+            });
+#endif
+            connect(reply, &QNetworkReply::encrypted, this, [reply, firstProgressWatchdog, watchdog] {
+                firstProgressWatchdog->start();
+                watchdog->start();
+#ifdef XMPP_DEBUG
+                qDebug() << "HTTP upload TLS encrypted" << reply->url();
+#else
+                Q_UNUSED(reply)
+#endif
+            });
             connect(reply, &QNetworkReply::uploadProgress, this, &HttpFileUpload::progress);
+            connect(reply, &QNetworkReply::uploadProgress, this,
+                    [this, reply, firstProgressWatchdog, startupWatchdog, watchdog](qint64 sent, qint64 total) {
+                        if (sent > 0) {
+                            firstProgressWatchdog->stop();
+                            startupWatchdog->stop();
+                        }
+                        watchdog->start();
+#ifdef XMPP_DEBUG
+                        qDebug() << "HTTP upload progress" << sent << '/' << total << "sourceAtEnd"
+                                 << (d->sourceDevice ? d->sourceDevice->atEnd() : true) << "replyFinished"
+                                 << reply->isFinished();
+#else
+                        Q_UNUSED(total)
+                        Q_UNUSED(reply)
+#endif
+                    });
+            connect(reply, &QNetworkReply::metaDataChanged, this, [reply, watchdog]() {
+                watchdog->start();
+#ifdef XMPP_DEBUG
+                qDebug() << "HTTP upload response metadata"
+                         << reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt()
+                         << reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString() << "headerNames"
+                         << reply->rawHeaderList();
+#else
+                Q_UNUSED(reply)
+#endif
+            });
+            connect(reply, &QNetworkReply::downloadProgress, this, [watchdog](qint64, qint64) { watchdog->start(); });
+#ifdef XMPP_DEBUG
+            connect(reply, &QNetworkReply::errorOccurred, this, [reply](QNetworkReply::NetworkError error) {
+                qDebug() << "HTTP upload error" << error << reply->errorString() << "status"
+                         << reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            });
+#endif
+            connect(reply, &QNetworkReply::sslErrors, this,
+                    [](const QList<QSslError> &errors) { qWarning() << "HTTP upload SSL errors" << errors; });
             connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+#ifdef XMPP_DEBUG
+                qDebug() << "HTTP upload finished" << "error" << reply->error() << "status"
+                         << reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() << "sourceAtEnd"
+                         << (d->sourceDevice ? d->sourceDevice->atEnd() : true);
+#endif
                 if (reply->error() == QNetworkReply::NoError) {
                     done(State::Success);
                 } else {
-                    d->result.statusCode   = ErrorCode::HttpFailed;
-                    d->result.statusString = reply->errorString();
+                    const auto timedOut    = reply->property("irisHttpUploadTimedOut").toBool();
+                    d->result.statusCode   = timedOut ? ErrorCode::Timeout : ErrorCode::HttpFailed;
+                    d->result.statusString = timedOut
+                        ? QStringLiteral("HTTP upload timed out waiting for network activity")
+                        : reply->errorString();
                     qDebug("http upload failed: %s", qPrintable(d->result.statusString));
-                    if (d->httpHosts.isEmpty())
+                    if (reply->property("irisHttpUploadFirstProgressTimedOut").toBool() || d->httpHosts.isEmpty())
                         done(State::Error);
                     else
                         tryNextServer();

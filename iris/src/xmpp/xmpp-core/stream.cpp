@@ -1194,7 +1194,10 @@ bool ClientStream::handleNeed()
         d->sasl->setConstraints(auth_flags, d->minimumSSF, d->maximumSSF);
 
         bool channelBindingReady = false;
-#if IRIS_QCA_HAS_CHANNEL_BINDING
+#if QCA_MAJOR_VERSION >= 3
+        // QCA 3 exposes channel-binding APIs, but actual availability is a
+        // runtime property of the selected TLS and SASL providers/session.
+        // Keep SCRAM-*-PLUS only when both sides can supply usable binding data.
         if (d->using_tls && d->tlsHandler && d->sasl->supportsChannelBinding()) {
             auto *qcaTlsHandler = qobject_cast<QCATLSHandler *>(d->tlsHandler);
             if (qcaTlsHandler && qcaTlsHandler->tls()) {

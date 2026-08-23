@@ -734,7 +734,7 @@ VCard VCard::fromFile(const QString &filename)
 VCard VCard::fromDevice(QIODevice *dev)
 {
     QDomDocument doc;
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#if QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
     if (!doc.setContent(dev, true)) {
 #else
     if (!doc.setContent(dev, QDomDocument::ParseOption::UseNamespaceProcessing)) {

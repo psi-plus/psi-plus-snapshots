@@ -9,7 +9,7 @@ set(IRIS_PROTOBUF_C_SOURCE_DIR "" CACHE PATH "Local protobuf-c source directory"
 
 if(NOT IRIS_BUNDLED_OMEMO_C)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(OmemoC REQUIRED IMPORTED_TARGET "libomemo-c>=0.5.1")
+    pkg_check_modules(OmemoC REQUIRED IMPORTED_TARGET "libomemo-c>=0.5.0")
     return()
 endif()
 
