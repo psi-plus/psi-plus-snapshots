@@ -161,6 +161,10 @@ else()
         else()
             find_package(${_iris_qca3_package} CONFIG QUIET)
             if(TARGET Qca3::Qca)
+                # The target was created in the iris subdirectory. Promote it
+                # so Psi's sibling src directory can reuse the same QCA 3
+                # implementation instead of falling back to legacy QCA 2.
+                set_property(TARGET Qca3::Qca PROPERTY IMPORTED_GLOBAL TRUE)
                 set(IRIS_QCA_TARGET Qca3::Qca)
             endif()
         endif()
