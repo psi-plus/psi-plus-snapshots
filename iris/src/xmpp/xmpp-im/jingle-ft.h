@@ -20,6 +20,7 @@
 #ifndef JINGLEFT_H
 #define JINGLEFT_H
 
+#include <iris/iris_export.h>
 #include <iris/xmpp-im/jingle-application.h>
 #include <iris/xmpp-im/jingle-file.h>
 #include <iris/xmpp-im/jingle.h>
@@ -32,7 +33,7 @@ class Thumbnail;
 
 namespace XMPP { namespace Jingle { namespace FileTransfer {
 
-    extern const QString NS;
+    extern IRIS_EXPORT const QString NS;
     class Manager;
 
     class Pad : public ApplicationManagerPad {
@@ -54,7 +55,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         Session *_session;
     };
 
-    class Application : public XMPP::Jingle::Application {
+    class IRIS_EXPORT Application : public XMPP::Jingle::Application {
         Q_OBJECT
     public:
         Application(const QSharedPointer<Pad> &pad, const QString &contentName, Origin creator, Origin senders);

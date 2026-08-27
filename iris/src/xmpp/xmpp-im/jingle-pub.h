@@ -11,6 +11,8 @@
 #ifndef XMPP_JINGLE_PUB_H
 #define XMPP_JINGLE_PUB_H
 
+#include <iris/iris_export.h>
+
 #include <iris/xmpp-core/xmpp_stanza.h>
 
 #include <QDomElement>
@@ -22,7 +24,7 @@
 
 namespace XMPP::Jingle {
 
-extern const QString JINGLEPUB_NS;
+extern IRIS_EXPORT const QString JINGLEPUB_NS;
 
 class JinglePub {
 public:
@@ -70,7 +72,7 @@ private:
     QSharedDataPointer<Private> d;
 };
 
-class PublishedSessionRequest : public QObject {
+class IRIS_EXPORT PublishedSessionRequest : public QObject {
     Q_OBJECT
 public:
     enum class State { Idle, Pending, Succeeded, Failed };

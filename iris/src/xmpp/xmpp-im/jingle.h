@@ -20,6 +20,8 @@
 #ifndef JINGLE_H
 #define JINGLE_H
 
+#include <iris/iris_export.h>
+
 #include <iris/xmpp-core/xmpp_stanza.h>
 #include <iris/xmpp-im/jingle-pub.h>
 
@@ -38,7 +40,7 @@ class Client;
 class Task;
 
 namespace Jingle {
-    extern const QString NS;
+    extern IRIS_EXPORT const QString NS;
 
     class Manager;
     class Session;
@@ -334,7 +336,7 @@ namespace Jingle {
     class ApplicationManagerPad;
     class TransportManager;
     class TransportManagerPad;
-    class Manager : public QObject {
+    class IRIS_EXPORT Manager : public QObject {
         Q_OBJECT
 
     public:

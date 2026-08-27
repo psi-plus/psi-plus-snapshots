@@ -19,6 +19,8 @@
 #ifndef XMPP_CLIENT_H
 #define XMPP_CLIENT_H
 
+#include <iris/iris_export.h>
+
 #include <iris/jid/jid.h>
 #include <iris/xmpp-im/xmpp_discoitem.h>
 #include <iris/xmpp-im/xmpp_encryption.h>
@@ -73,7 +75,7 @@ namespace Jingle {
     }
 }
 
-class Client : public QObject {
+class IRIS_EXPORT Client : public QObject {
     Q_OBJECT
 
 public:

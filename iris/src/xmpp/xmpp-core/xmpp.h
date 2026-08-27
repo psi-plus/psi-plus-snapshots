@@ -20,6 +20,8 @@
 #ifndef XMPP_H
 #define XMPP_H
 
+#include <iris/iris_export.h>
+
 #include <iris/irisnet/corelib/addressresolver.h>
 #include <iris/xmpp-core/xmpp_clientstream.h>
 
@@ -188,7 +190,7 @@ signals:
     void readyReadOutgoing(const QByteArray &a, int plainBytes);
 };
 
-class QCATLSHandler : public TLSHandler {
+class IRIS_EXPORT QCATLSHandler : public TLSHandler {
     Q_OBJECT
 public:
     QCATLSHandler(QCA::TLS *parent);

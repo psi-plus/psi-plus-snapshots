@@ -18,6 +18,8 @@
 #ifndef XMPP_ENCRYPTION_H
 #define XMPP_ENCRYPTION_H
 
+#include <iris/iris_export.h>
+
 #include <iris/jid/jid.h>
 #include <iris/xmpp-im/xmpp_features.h>
 
@@ -111,7 +113,7 @@ public:
 };
 
 /** Asynchronous result of a single encryption/decryption operation. */
-class EncryptionJob : public QObject {
+class IRIS_EXPORT EncryptionJob : public QObject {
     Q_OBJECT
 public:
     enum class Error {

@@ -47,6 +47,15 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 20)
 
+# Windows headers may be pulled in through Qt or either supported QCA
+# generation.  Iris uses std::numeric_limits<T>::min(), which conflicts with
+# the legacy min macro unless NOMINMAX is defined before windows.h is read.
+# WIN32_LEAN_AND_MEAN also prevents windows.h from selecting legacy winsock.h;
+# Iris uses winsock2.h where socket declarations are needed.
+if(WIN32)
+    add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
+endif()
+
 # irisnet, stringprep and other internal static libraries must be PIC when
 # linked into a shared Iris or when an embedding project explicitly requests
 # a PIC-capable static Iris (for example, to link it into a shared plugin).

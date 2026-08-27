@@ -44,10 +44,12 @@
 #endif
 
 #ifdef Q_OS_WIN32
-#include <windows.h>
+// clang-format off
 #ifdef _MSC_VER
 #include <winsock2.h>
 #endif
+#include <windows.h>
+// clang-format on
 #endif
 
 // CS_NAMESPACE_BEGIN

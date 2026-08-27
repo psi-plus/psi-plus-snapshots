@@ -20,6 +20,8 @@
 #ifndef JINGLE_APPLICATION_H
 #define JINGLE_APPLICATION_H
 
+#include <iris/iris_export.h>
+
 #include <iris/xmpp-im/jingle-transport.h>
 #include <optional>
 
@@ -50,7 +52,7 @@ namespace XMPP { namespace Jingle {
     // Represents a session for single application. for example a single file in a file transfer session.
     // There maybe multiple application instances in a session.
     // It's designed as QObject to exposed to JavaScript (qml/webkit)
-    class Application : public QObject {
+    class IRIS_EXPORT Application : public QObject {
         Q_OBJECT
     public:
         struct Update {

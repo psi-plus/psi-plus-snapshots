@@ -20,6 +20,8 @@
 #ifndef JINGLE_SESSION_H
 #define JINGLE_SESSION_H
 
+#include <iris/iris_export.h>
+
 #include <iris/xmpp-im/jingle-application.h>
 #include <iris/xmpp-im/jingle-transport.h>
 #include <iris/xmpp-im/xmpp_features.h>
@@ -29,7 +31,7 @@ namespace XMPP { namespace Jingle {
     // class Manager;
     class Application;
 
-    class Session : public QObject {
+    class IRIS_EXPORT Session : public QObject {
         Q_OBJECT
     public:
         // Note incoming session are not registered in Jingle Manager until validated.

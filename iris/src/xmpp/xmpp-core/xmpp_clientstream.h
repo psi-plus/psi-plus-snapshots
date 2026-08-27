@@ -19,6 +19,8 @@
 #ifndef XMPP_CLIENTSTREAM_H
 #define XMPP_CLIENTSTREAM_H
 
+#include <iris/iris_export.h>
+
 #include <iris/xmpp-core/xmpp_stream.h>
 
 #include <QtCrypto>
@@ -36,7 +38,7 @@ class Connector;
 class StreamFeatures;
 class TLSHandler;
 
-class ClientStream : public Stream {
+class IRIS_EXPORT ClientStream : public Stream {
     Q_OBJECT
 public:
     enum Error {

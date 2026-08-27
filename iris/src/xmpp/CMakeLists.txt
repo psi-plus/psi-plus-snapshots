@@ -28,6 +28,14 @@ set_target_properties(iris PROPERTIES
 add_library(Iris::Iris ALIAS iris)
 add_library(iris::iris ALIAS iris)
 
+get_target_property(_iris_library_type iris TYPE)
+if(_iris_library_type STREQUAL "STATIC_LIBRARY")
+    target_compile_definitions(iris PUBLIC IRIS_STATIC)
+else()
+    target_compile_definitions(iris PRIVATE IRIS_BUILDING_LIBRARY)
+endif()
+unset(_iris_library_type)
+
 set(XMPP_JID_HEADERS jid/jid.h)
 
 set(XMPP_CORE_HEADERS

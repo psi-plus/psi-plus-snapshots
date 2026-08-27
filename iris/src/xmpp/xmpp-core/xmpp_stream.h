@@ -20,6 +20,8 @@
 #ifndef XMPP_STREAM_H
 #define XMPP_STREAM_H
 
+#include <iris/iris_export.h>
+
 #include <iris/jid/jid.h>
 #include <iris/xmpp-core/xmpp_stanza.h>
 
@@ -29,7 +31,7 @@
 class QDomDocument;
 
 namespace XMPP {
-class Stream : public QObject {
+class IRIS_EXPORT Stream : public QObject {
     Q_OBJECT
 public:
     enum Error { ErrParse, ErrProtocol, ErrStream, ErrCustom = 10 };

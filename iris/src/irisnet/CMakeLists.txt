@@ -6,6 +6,11 @@ list(APPEND CMAKE_MODULE_PATH
 )
 
 add_library(irisnet STATIC)
+if(NOT IS_SUBPROJECT AND BUILD_SHARED_LIBS)
+    target_compile_definitions(irisnet PRIVATE IRIS_BUILDING_LIBRARY)
+else()
+    target_compile_definitions(irisnet PRIVATE IRIS_STATIC)
+endif()
 
 set(IRISNET_CORELIB_HEADERS
     corelib/addressresolver.h

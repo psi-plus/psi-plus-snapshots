@@ -31,10 +31,12 @@
 #include <qca.h>
 #include <stdlib.h>
 #ifdef Q_OS_WIN
-#include <windows.h>
+// clang-format off
 #ifdef _MSC_VER
 #include <winsock2.h>
 #endif
+#include <windows.h>
+// clang-format on
 #else
 #include <netinet/in.h>
 #endif

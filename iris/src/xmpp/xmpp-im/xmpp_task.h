@@ -20,6 +20,7 @@
 #ifndef XMPP_TASK_H
 #define XMPP_TASK_H
 
+#include <iris/iris_export.h>
 #include <iris/xmpp-core/xmpp_stanza.h>
 
 #include <QObject>
@@ -33,7 +34,7 @@ class Client;
 class EncryptionMetadata;
 class Jid;
 
-class Task : public QObject {
+class IRIS_EXPORT Task : public QObject {
     Q_OBJECT
 public:
     enum { ErrDisc, ErrTimeout };

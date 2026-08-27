@@ -11,6 +11,8 @@
 #ifndef XMPP_PUBSUB_H
 #define XMPP_PUBSUB_H
 
+#include <iris/iris_export.h>
+
 #include <iris/jid/jid.h>
 #include <iris/xmpp-im/xmpp_pubsubevent.h>
 #include <iris/xmpp-im/xmpp_pubsubitem.h>
@@ -137,7 +139,7 @@ private:
 };
 
 /** Generic PubSub/PEP facade shared by OMEMO and application protocols. */
-class PubSubManager : public QObject {
+class IRIS_EXPORT PubSubManager : public QObject {
     Q_OBJECT
 public:
     explicit PubSubManager(Client *client);

@@ -20,6 +20,8 @@
 #ifndef XMPP_HTTPFILEUPLOAD_H
 #define XMPP_HTTPFILEUPLOAD_H
 
+#include <iris/iris_export.h>
+
 #include <iris/jid/jid.h>
 #include <iris/xmpp-im/xmpp_task.h>
 
@@ -40,7 +42,7 @@ namespace XEP0363 {
     typedef QList<HttpHeader> HttpHeaders;
 }
 
-class HttpFileUpload : public QObject {
+class IRIS_EXPORT HttpFileUpload : public QObject {
     Q_OBJECT
 public:
     enum HostPropFlag {
