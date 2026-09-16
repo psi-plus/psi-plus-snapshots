@@ -52,7 +52,7 @@ inline static int onRecvSctpData(struct socket * /*sock*/, union sctp_sockstore 
         uint16_t ssn      = rcv.rcv_ssn;
 
         MS_DEBUG_TAG(sctp,
-                     "data chunk received [length:%lu, streamId:%" PRIu16 ", SSN:%" PRIu16 ", TSN:%" PRIu32
+                     "data chunk received [length:%zu, streamId:%" PRIu16 ", SSN:%" PRIu16 ", TSN:%" PRIu32
                      ", PPID:%" PRIu32 ", context:%" PRIu32 ", flags:%d]",
                      len, rcv.rcv_sid, rcv.rcv_ssn, rcv.rcv_tsn, ntohl(rcv.rcv_ppid), rcv.rcv_context, flags);
 
@@ -339,7 +339,7 @@ void SctpAssociation::SendSctpMessage(RTC::DataConsumer *dataConsumer, uint32_t 
 
     // This must be controlled by the DataConsumer.
     MS_ASSERT(len <= this->maxSctpMessageSize,
-              "given message exceeds max allowed message size [message size:%lu, max message size:%lu]", len,
+              "given message exceeds max allowed message size [message size:%zu, max message size:%zu]", len,
               this->maxSctpMessageSize);
 
     const auto &parameters = dataConsumer->GetSctpStreamParameters();
@@ -571,8 +571,8 @@ void SctpAssociation::OnUsrSctpReceiveSctpData(uint16_t streamId, uint16_t ssn, 
 
     if (this->messageBufferLen + len > this->maxSctpMessageSize) {
         MS_WARN_TAG(sctp,
-                    "ongoing received message exceeds max allowed message size [message size:%lu, max message "
-                    "size:%lu, eor:%u]",
+                    "ongoing received message exceeds max allowed message size [message size:%zu, max message "
+                    "size:%zu, eor:%u]",
                     this->messageBufferLen + len, this->maxSctpMessageSize, eor ? 1 : 0);
 
         this->lastSsnReceived = 0;
@@ -591,7 +591,7 @@ void SctpAssociation::OnUsrSctpReceiveSctpData(uint16_t streamId, uint16_t ssn, 
         std::memcpy(this->messageBuffer + this->messageBufferLen, data, len);
         this->messageBufferLen += len;
 
-        MS_DEBUG_DEV("notifying listener [eor:1, buffer len:%lu]", this->messageBufferLen);
+        MS_DEBUG_DEV("notifying listener [eor:1, buffer len:%zu]", this->messageBufferLen);
 
         this->listener->OnSctpAssociationMessageReceived(this, streamId, ppid, this->messageBuffer,
                                                          this->messageBufferLen);
@@ -607,7 +607,7 @@ void SctpAssociation::OnUsrSctpReceiveSctpData(uint16_t streamId, uint16_t ssn, 
         std::memcpy(this->messageBuffer + this->messageBufferLen, data, len);
         this->messageBufferLen += len;
 
-        MS_DEBUG_DEV("data buffered [eor:0, buffer len:%lu]", this->messageBufferLen);
+        MS_DEBUG_DEV("data buffered [eor:0, buffer len:%zu]", this->messageBufferLen);
     }
 }
 
@@ -777,11 +777,11 @@ void SctpAssociation::OnUsrSctpReceiveSctpNotification(union sctp_notification *
         }
 
         MS_WARN_TAG(
-            sctp, "SCTP message sent failure [streamId:%" PRIu16 ", ppid:%" PRIu32 ", sent:%s, error:0x%08x, info:%s]",
+            sctp, "SCTP message sent failure [streamId:%" PRIu16 ", ppid:%" PRIu32 ", sent:%s, error:0x%08lx, info:%s]",
             notification->sn_send_failed_event.ssfe_info.snd_sid,
             ntohl(notification->sn_send_failed_event.ssfe_info.snd_ppid),
             (notification->sn_send_failed_event.ssfe_flags & SCTP_DATA_SENT) ? "yes" : "no",
-            notification->sn_send_failed_event.ssfe_error, buffer);
+            static_cast<unsigned long>(notification->sn_send_failed_event.ssfe_error), buffer);
 
         break;
     }

@@ -11,6 +11,8 @@
 #ifndef XMPP_OMEMO_H
 #define XMPP_OMEMO_H
 
+#include <iris/iris_export.h>
+
 #include <iris/xmpp-im/xmpp_encryption.h>
 #include <iris/xmpp-im/xmpp_omemostorage.h>
 
@@ -53,7 +55,7 @@ struct OmemoDeviceInfo {
  * depend on it. All cryptographic primitives requested by libomemo-c and all
  * OMEMO payload cryptography are provided exclusively through QCA.
  */
-class OmemoEncryption final : public EncryptionMethod {
+class IRIS_EXPORT OmemoEncryption final : public EncryptionMethod {
     Q_OBJECT
 public:
     explicit OmemoEncryption(Client *client, OmemoStorage *storage = nullptr,

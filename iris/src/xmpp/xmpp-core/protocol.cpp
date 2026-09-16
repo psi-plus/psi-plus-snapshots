@@ -84,6 +84,7 @@ StreamFeatures::StreamFeatures()
 {
     tls_supported      = false;
     sasl_supported     = false;
+    sasl_cb_supported  = false;
     bind_supported     = false;
     tls_required       = false;
     compress_supported = false;
@@ -1335,6 +1336,15 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                     QDomNodeList l   = c.elementsByTagNameNS(NS_SASL, QLatin1String("mechanism"));
                     for (int n = 0; n < l.count(); ++n)
                         f.sasl_mechs += l.item(n).toElement().text();
+
+                } else if (c.localName() == QLatin1String("sasl-channel-binding") && c.namespaceURI() == NS_SASL_CB) {
+                    f.sasl_cb_supported = true;
+                    QDomNodeList l      = c.elementsByTagNameNS(NS_SASL_CB, QLatin1String("channel-binding"));
+                    for (int n = 0; n < l.count(); ++n) {
+                        const QString type = l.item(n).toElement().attribute(QLatin1String("type"));
+                        if (!type.isEmpty() && !f.sasl_cb_types.contains(type))
+                            f.sasl_cb_types += type;
+                    }
 
                 } else if (c.localName() == QLatin1String("compression") && c.namespaceURI() == NS_COMPRESS_FEATURE) {
                     f.compress_supported = true;

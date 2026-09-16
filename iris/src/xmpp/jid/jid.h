@@ -20,6 +20,8 @@
 #ifndef XMPP_JID_H
 #define XMPP_JID_H
 
+#include <iris/iris_export.h>
+
 #include <QByteArray>
 #include <QHash>
 #include <QString>
@@ -47,7 +49,7 @@ private:
     StringPrepCache();
 };
 
-class Jid {
+class IRIS_EXPORT Jid {
 public:
     Jid();
     ~Jid();

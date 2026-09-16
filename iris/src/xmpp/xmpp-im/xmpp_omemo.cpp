@@ -2604,15 +2604,21 @@ public:
                         }
                         outer.appendChild(encrypted);
 
-                        if (directChildNS(outer, QStringLiteral("store"), QLatin1String(HintsNs)).isNull())
-                            outer.appendChild(
-                                outputDocument.createElementNS(QLatin1String(HintsNs), QStringLiteral("store")));
-                        if (directChildNS(outer, QStringLiteral("encryption"), QLatin1String(EmeNs)).isNull()) {
-                            auto eme
-                                = outputDocument.createElementNS(QLatin1String(EmeNs), QStringLiteral("encryption"));
-                            eme.setAttribute(QStringLiteral("namespace"), ns);
-                            eme.setAttribute(QStringLiteral("name"), QLatin1String(OmemoName));
-                            outer.appendChild(eme);
+                        // Message Processing Hints and EME are message-only extensions.
+                        // An IQ must have exactly one direct child payload; adding either
+                        // alongside OMEMO's <encrypted/> makes compliant IQ parsers reject
+                        // the stanza before its encrypted content can be decrypted.
+                        if (localName(outer) == QLatin1String("message")) {
+                            if (directChildNS(outer, QStringLiteral("store"), QLatin1String(HintsNs)).isNull())
+                                outer.appendChild(
+                                    outputDocument.createElementNS(QLatin1String(HintsNs), QStringLiteral("store")));
+                            if (directChildNS(outer, QStringLiteral("encryption"), QLatin1String(EmeNs)).isNull()) {
+                                auto eme = outputDocument.createElementNS(QLatin1String(EmeNs),
+                                                                          QStringLiteral("encryption"));
+                                eme.setAttribute(QStringLiteral("namespace"), ns);
+                                eme.setAttribute(QStringLiteral("name"), QLatin1String(OmemoName));
+                                outer.appendChild(eme);
+                            }
                         }
                         if (protocol == OmemoProtocol::Legacy && legacyHasPayload) {
                             auto fallback = outputDocument.createElement(QStringLiteral("body"));

@@ -6,6 +6,10 @@ list(APPEND CMAKE_MODULE_PATH
 )
 
 add_library(irisnet STATIC)
+set_target_properties(irisnet PROPERTIES
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN YES
+)
 if(NOT IS_SUBPROJECT AND BUILD_SHARED_LIBS)
     target_compile_definitions(irisnet PRIVATE IRIS_BUILDING_LIBRARY)
 else()

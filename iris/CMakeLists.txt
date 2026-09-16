@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.11.0)
 
-project(iris
+project(
+    iris
     VERSION 1.0.0
     DESCRIPTION "XMPP network library"
-    LANGUAGES C CXX
-)
+    LANGUAGES C CXX)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
@@ -22,23 +22,19 @@ endif()
 # Check if Iris is a subproject
 get_directory_property(IS_SUBPROJECT PARENT_DIRECTORY)
 
-# Standalone Iris is a shared library by default. When Iris is embedded as a
-# subproject, src/xmpp/CMakeLists.txt keeps using an explicit STATIC target.
+# Standalone Iris is a shared library by default. When Iris is embedded as a subproject, src/xmpp/CMakeLists.txt keeps
+# using an explicit STATIC target.
 if(NOT IS_SUBPROJECT)
     option(BUILD_SHARED_LIBS "Build Iris as a shared library" ON)
 endif()
-option(IRIS_POSITION_INDEPENDENT_CODE
-    "Build static Iris and its internal libraries as position-independent code" OFF)
+option(IRIS_POSITION_INDEPENDENT_CODE "Build static Iris and its internal libraries as position-independent code" OFF)
 
 set(IRIS_LIB_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(IRIS_LIB_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set(IRIS_LIB_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 set(IRIS_LIB_VERSION_STRING ${PROJECT_VERSION})
 
-list(APPEND CMAKE_MODULE_PATH
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
-    "${CMAKE_SOURCE_DIR}/cmake/modules"
-)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules" "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 include(policyRules)
 include(GNUInstallDirs)
@@ -47,18 +43,19 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 20)
 
-# Windows headers may be pulled in through Qt or either supported QCA
-# generation.  Iris uses std::numeric_limits<T>::min(), which conflicts with
-# the legacy min macro unless NOMINMAX is defined before windows.h is read.
-# WIN32_LEAN_AND_MEAN also prevents windows.h from selecting legacy winsock.h;
-# Iris uses winsock2.h where socket declarations are needed.
+# Windows headers may be pulled in through Qt or either supported QCA generation.  Iris uses
+# std::numeric_limits<T>::min(), which conflicts with the legacy min macro unless NOMINMAX is defined before windows.h
+# is read. WIN32_LEAN_AND_MEAN also prevents windows.h from selecting legacy winsock.h. Native MinGW therefore needs
+# winsock2.h preincluded before any windows.h use.
 if(WIN32)
     add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
+    if(MINGW)
+        add_compile_options(-include winsock2.h)
+    endif()
 endif()
 
-# irisnet, stringprep and other internal static libraries must be PIC when
-# linked into a shared Iris or when an embedding project explicitly requests
-# a PIC-capable static Iris (for example, to link it into a shared plugin).
+# irisnet, stringprep and other internal static libraries must be PIC when linked into a shared Iris or when an
+# embedding project explicitly requests a PIC-capable static Iris (for example, to link it into a shared plugin).
 if(BUILD_SHARED_LIBS OR IRIS_POSITION_INDEPENDENT_CODE)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
@@ -83,26 +80,31 @@ if(NOT DEFINED USE_MXE AND (EXISTS "${CMAKE_TOOLCHAIN_FILE}"))
 endif()
 
 set(IRIS_DEFAULT_BUNDLED_QCA OFF)
-if(APPLE OR ANDROID OR (MSVC OR USE_MXE))
+if(APPLE
+   OR ANDROID
+   OR (MSVC OR USE_MXE))
     set(IRIS_DEFAULT_BUNDLED_QCA ON)
 endif()
 
 option(IRIS_ENABLE_INSTALL "Enable installation" ON)
 option(IRIS_ENABLE_JINGLE_SCTP "Enable SCTP over ICE Jingle transport / data channels" ON)
 # note Blake2b is needed only with Qt5. Qt6 has its own implementation
-option(IRIS_BUNDLED_QCA "Adds: DTLS, Blake2b (needed with Qt5) and other useful for XMPP crypto-stuff" ${IRIS_DEFAULT_BUNDLED_QCA})
-option(IRIS_BUNDLED_USRSCTP "Compile compatible UsrSCTP lib (required for datachannel Jingle transport)" ${IRIS_DEFAULT_BUNDLED_USRSCTP})
-option(IRIS_ENABLE_OMEMO "Enable XEP-0384 OMEMO support (requires GPLv3 libomemo-c)" OFF)
+option(IRIS_BUNDLED_QCA "Adds: DTLS, Blake2b (needed with Qt5) and other useful for XMPP crypto-stuff"
+       ${IRIS_DEFAULT_BUNDLED_QCA})
+option(IRIS_BUNDLED_USRSCTP "Compile compatible UsrSCTP lib (required for datachannel Jingle transport)"
+       ${IRIS_DEFAULT_BUNDLED_USRSCTP})
+option(IRIS_ENABLE_OMEMO "Enable XEP-0384 OMEMO support (requires GPLv3 libomemo-c)" ON)
 option(IRIS_BUNDLED_OMEMO_C "Build libomemo-c and protobuf-c when OMEMO is enabled" ON)
 option(IRIS_BUILD_TOOLS "Build tools and examples" OFF)
 option(IRIS_ENABLE_DEBUG "Enable debugging code paths" OFF)
 option(USE_QT6 "Enable Qt6 support" OFF)
 
-# Optional installation namespace. Use CamelCase here (for example Xmpp);
-# filesystem/library names are lower-cased while the CMake package directory
-# remains CamelCase (IrisXmpp), so find_package(Iris CONFIG) can still discover
-# it through CMake's standard Iris* package search layout.
-set(IRIS_INSTALL_NAMESPACE "" CACHE STRING "Optional Iris install namespace, e.g. Xmpp")
+# Optional installation namespace. Use CamelCase here (for example Xmpp); filesystem/library names are lower-cased while
+# the CMake package directory remains CamelCase (IrisXmpp), so find_package(Iris CONFIG) can still discover it through
+# CMake's standard Iris* package search layout.
+set(IRIS_INSTALL_NAMESPACE
+    ""
+    CACHE STRING "Optional Iris install namespace, e.g. Xmpp")
 if(IRIS_INSTALL_NAMESPACE)
     string(TOLOWER "${IRIS_INSTALL_NAMESPACE}" IRIS_INSTALL_NAMESPACE_LOWER)
     set(IRIS_NAME_PREFIX "${IRIS_INSTALL_NAMESPACE_LOWER}-")
@@ -143,11 +145,9 @@ endif()
 include(IrisQCA)
 
 if(IRIS_BUNDLED_QCA)
-    set(IRIS_BUNDLED_QCA_INCLUDE_REL
-        "${IRIS_INSTALL_INCLUDEDIR}/qca/Qca3-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto")
+    set(IRIS_BUNDLED_QCA_INCLUDE_REL "${IRIS_INSTALL_INCLUDEDIR}/qca/Qca3-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto")
     set(IRIS_PC_QCA_REQUIRES "")
-    set(IRIS_PC_QCA_CFLAGS
-        " -I\${irisincludedir}/qca/Qca3-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto")
+    set(IRIS_PC_QCA_CFLAGS " -I\${irisincludedir}/qca/Qca3-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto")
 elseif(IRIS_QCA_MAJOR EQUAL 3)
     set(IRIS_BUNDLED_QCA_INCLUDE_REL "")
     set(IRIS_PC_QCA_REQUIRES " qca3-qt${QT_DEFAULT_MAJOR_VERSION}")
@@ -205,83 +205,57 @@ if(IRIS_ENABLE_INSTALL)
     write_basic_package_version_file(
         ${CMAKE_CURRENT_BINARY_DIR}/IrisConfigVersion.cmake
         VERSION ${IRIS_LIB_VERSION_STRING}
-        COMPATIBILITY SameMajorVersion
-    )
-    configure_file(
-        iris.pc.in
-        ${CMAKE_CURRENT_BINARY_DIR}/${IRIS_LIB_NAME}.pc
-        @ONLY
-    )
+        COMPATIBILITY SameMajorVersion)
+    configure_file(iris.pc.in ${CMAKE_CURRENT_BINARY_DIR}/${IRIS_LIB_NAME}.pc @ONLY)
     set(CONFIG_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/${IRIS_CMAKE_PACKAGE_DIR})
-    install(TARGETS iris
+    install(
+        TARGETS iris
         EXPORT IrisTargets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
-    install(EXPORT IrisTargets
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(
+        EXPORT IrisTargets
         DESTINATION ${CONFIG_INSTALL_DIR}
         NAMESPACE Iris::
-        FILE IrisTargets.cmake
-    )
+        FILE IrisTargets.cmake)
     if(IRIS_BUNDLED_QCA)
-        # QCA is linked statically into a shared Iris. Do not install a second
-        # global QCA library/provider set: that would collide with a system
-        # QCA installation and could create two independent QCA runtimes.
-        # Public Iris headers expose QCA types, so install only the headers in
-        # an Iris-private SDK subtree. IrisConfig.cmake recreates Qca3::Qca as
-        # an interface target backed by Iris::Iris.
+        # QCA is linked statically into a shared Iris. Do not install a second global QCA library/provider set: that
+        # would collide with a system QCA installation and could create two independent QCA runtimes. Public Iris
+        # headers expose QCA types, so install only the headers in an Iris-private SDK subtree. IrisConfig.cmake
+        # recreates Qca3::Qca as an interface target backed by Iris::Iris.
         if(NOT BUILD_SHARED_LIBS)
-            message(FATAL_ERROR
-                "Installing Iris with bundled QCA currently requires BUILD_SHARED_LIBS=ON")
+            message(FATAL_ERROR "Installing Iris with bundled QCA currently requires BUILD_SHARED_LIBS=ON")
         endif()
 
-        install(DIRECTORY
-            "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR}/Qca3-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto/"
-            DESTINATION "${IRIS_BUNDLED_QCA_INCLUDE_REL}"
-        )
+        install(
+            DIRECTORY "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR}/Qca3-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto/"
+            DESTINATION "${IRIS_BUNDLED_QCA_INCLUDE_REL}")
     endif()
-    # Bundled usrsctp is a private implementation detail. For shared Iris it
-    # is linked statically into libiris and must not install a separate
-    # usrsctp archive/header set into the user's prefix. Iris public headers
-    # do not expose usrsctp types.
+    # Bundled usrsctp is a private implementation detail. For shared Iris it is linked statically into libiris and must
+    # not install a separate usrsctp archive/header set into the user's prefix. Iris public headers do not expose
+    # usrsctp types.
     configure_package_config_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/IrisConfig.cmake.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/IrisConfig.cmake"
-        INSTALL_DESTINATION ${CONFIG_INSTALL_DIR}
-    )
+        "${CMAKE_CURRENT_SOURCE_DIR}/IrisConfig.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/IrisConfig.cmake"
+        INSTALL_DESTINATION ${CONFIG_INSTALL_DIR})
     if(NOT IRIS_BUNDLED_QCA AND IRIS_QCA_MAJOR EQUAL 2)
         install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/FindQca.cmake"
-            DESTINATION "${CONFIG_INSTALL_DIR}/modules")
+                DESTINATION "${CONFIG_INSTALL_DIR}/modules")
     endif()
-    install(FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/IrisConfigVersion.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/IrisConfig.cmake"
-        DESTINATION ${CONFIG_INSTALL_DIR}
-    )
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${IRIS_LIB_NAME}.pc
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
-    )
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/IrisConfigVersion.cmake" "${CMAKE_CURRENT_BINARY_DIR}/IrisConfig.cmake"
+            DESTINATION ${CONFIG_INSTALL_DIR})
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${IRIS_LIB_NAME}.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
-    # Keep the historical flat include facade for source compatibility.
-    # Canonical public headers are installed by src/xmpp and src/irisnet into
-    # ${IRIS_INSTALL_INCLUDEDIR}/{xmpp-core,xmpp-im,jid,irisnet/...}.
+    # Keep the historical flat include facade for source compatibility. Canonical public headers are installed by
+    # src/xmpp and src/irisnet into ${IRIS_INSTALL_INCLUDEDIR}/{xmpp-core,xmpp-im,jid,irisnet/...}.
     file(GLOB IRIS_COMPAT_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/*.h")
-    list(REMOVE_ITEM IRIS_COMPAT_HEADERS
-        "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/xmpp_omemo.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/jingle-sctp.h"
-    )
-    install(FILES ${IRIS_COMPAT_HEADERS}
-        DESTINATION ${IRIS_INSTALL_INCLUDEDIR}
-    )
+    list(REMOVE_ITEM IRIS_COMPAT_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/xmpp_omemo.h"
+         "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/jingle-sctp.h")
+    install(FILES ${IRIS_COMPAT_HEADERS} DESTINATION ${IRIS_INSTALL_INCLUDEDIR})
     if(IRIS_ENABLE_OMEMO)
-        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/xmpp_omemo.h"
-            DESTINATION ${IRIS_INSTALL_INCLUDEDIR}
-        )
+        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/xmpp_omemo.h" DESTINATION ${IRIS_INSTALL_INCLUDEDIR})
     endif()
     if(IRIS_ENABLE_JINGLE_SCTP)
-        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/jingle-sctp.h"
-            DESTINATION ${IRIS_INSTALL_INCLUDEDIR}
-        )
+        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/include/iris/jingle-sctp.h" DESTINATION ${IRIS_INSTALL_INCLUDEDIR})
     endif()
 endif()

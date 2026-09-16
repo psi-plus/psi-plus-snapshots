@@ -156,17 +156,19 @@ File::File(const QDomElement &file)
 
         } else if (ce.localName() == RANGE_TAG) {
             if (ce.hasAttribute(QLatin1String("offset"))) {
-                range.offset = ce.attribute(QLatin1String("offset")).toLongLong(&ok);
-                if (!ok || range.offset < 0) {
+                const auto offset = ce.attribute(QLatin1String("offset")).toLongLong(&ok);
+                if (!ok || offset < 0) {
                     return;
                 }
+                range.offset = static_cast<std::uint64_t>(offset);
             }
             if (ce.hasAttribute(QLatin1String("length"))) {
-                range.length = ce.attribute(QLatin1String("length")).toLongLong(&ok);
-                if (!ok || range.length <= 0) { // length should absent if we need to read till end of file.
+                const auto rangeLength = ce.attribute(QLatin1String("length")).toLongLong(&ok);
+                if (!ok || rangeLength <= 0) { // length should absent if we need to read till end of file.
                     // 0-length is nonsense
                     return;
                 }
+                range.length = static_cast<std::uint64_t>(rangeLength);
             }
             QDomElement hashEl = ce.firstChildElement(QLatin1String("hash"));
             for (; !hashEl.isNull(); hashEl = hashEl.nextSiblingElement(QLatin1String("hash"))) {

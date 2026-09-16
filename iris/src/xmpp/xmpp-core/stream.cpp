@@ -1195,18 +1195,40 @@ bool ClientStream::handleNeed()
 
         bool channelBindingReady = false;
 #if QCA_MAJOR_VERSION >= 3
+        bool plusMechanismOffered = false;
+        for (const QString &mechanism : std::as_const(ml)) {
+            if (mechanism.endsWith(QLatin1String("-PLUS"))) {
+                plusMechanismOffered = true;
+                break;
+            }
+        }
+
         // QCA 3 exposes channel-binding APIs, but actual availability is a
         // runtime property of the selected TLS and SASL providers/session.
         // Keep SCRAM-*-PLUS only when both sides can supply usable binding data.
-        if (d->using_tls && d->tlsHandler && d->sasl->supportsChannelBinding()) {
+        if (plusMechanismOffered && d->using_tls && d->tlsHandler && d->sasl->supportsChannelBinding()) {
             auto *qcaTlsHandler = qobject_cast<QCATLSHandler *>(d->tlsHandler);
             if (qcaTlsHandler && qcaTlsHandler->tls()) {
-                QCA::TLS     *tls         = qcaTlsHandler->tls();
-                const QString bindingType = tls->defaultChannelBindingType();
+                QCA::TLS *tls         = qcaTlsHandler->tls();
+                QString   bindingType = tls->defaultChannelBindingType();
+
+                // XEP-0440 lets the server restrict the channel-binding types
+                // it accepts.  Without that feature, retain the legacy SCRAM
+                // behaviour and try QCA's default type.
+                if (d->client.features.sasl_cb_supported && !d->client.features.sasl_cb_types.contains(bindingType)) {
+                    bindingType.clear();
+                    for (const QString &type : tls->channelBindingTypes()) {
+                        if (d->client.features.sasl_cb_types.contains(type)) {
+                            bindingType = type;
+                            break;
+                        }
+                    }
+                }
+
                 if (!bindingType.isEmpty()) {
                     const QByteArray bindingData = tls->channelBinding(bindingType);
                     if (!bindingData.isEmpty())
-                        channelBindingReady = d->sasl->setChannelBinding(bindingType, bindingData, false);
+                        channelBindingReady = d->sasl->setChannelBinding(bindingType, bindingData, true);
                 }
             }
         }

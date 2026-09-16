@@ -65,7 +65,7 @@ bool Dtls::FingerPrint::parse(const QDomElement &el)
     hash    = QStringView { ht };
     hash.setData(QByteArray::fromHex(el.text().toLatin1()));
     auto setupIt = std::find(fpRoles.begin(), fpRoles.end(), el.attribute(QLatin1String("setup")).toLatin1());
-    setup        = Setup(setupIt == fpRoles.end() ? NotSet : std::distance(fpRoles.begin(), setupIt) + 1);
+    setup        = setupIt == fpRoles.end() ? NotSet : Setup(std::distance(fpRoles.begin(), setupIt) + 1);
     return isValid();
 }
 

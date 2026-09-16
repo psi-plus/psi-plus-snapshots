@@ -38,6 +38,7 @@
 #define NS_STREAMS "urn:ietf:params:xml:ns:xmpp-streams"
 #define NS_TLS "urn:ietf:params:xml:ns:xmpp-tls"
 #define NS_SASL "urn:ietf:params:xml:ns:xmpp-sasl"
+#define NS_SASL_CB "urn:xmpp:sasl-cb:0"
 #define NS_SESSION "urn:ietf:params:xml:ns:xmpp-session"
 #define NS_STANZAS "urn:ietf:params:xml:ns:xmpp-stanzas"
 #define NS_BIND "urn:ietf:params:xml:ns:xmpp-bind"
@@ -59,12 +60,13 @@ class StreamFeatures {
 public:
     StreamFeatures();
 
-    bool        tls_supported, sasl_supported, bind_supported, compress_supported;
+    bool        tls_supported, sasl_supported, sasl_cb_supported, bind_supported, compress_supported;
     bool        tls_required;
     bool        sm_supported;
     bool        session_supported;
     bool        session_required;
     QStringList sasl_mechs;
+    QStringList sasl_cb_types;
     QStringList compression_mechs;
     QStringList hosts;
 };
