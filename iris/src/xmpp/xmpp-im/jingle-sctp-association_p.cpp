@@ -227,7 +227,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     {
         SCTP_DEBUG("adding new channel");
         int channelType = int(reliable);
-        if (ordered)
+        if (!ordered)
             channelType |= 0x80;
         auto channel
             = QSharedPointer<WebRTCDataChannel>::create(this, channelType, priority, reliability, label, protocol);
@@ -327,7 +327,20 @@ namespace XMPP { namespace Jingle { namespace SCTP {
             qDebug("jingle-sctp: closing not existing stream %d", streamId);
             return;
         }
-        it->staticCast<WebRTCDataChannel>()->onDisconnected(WebRTCDataChannel::ChannelClosed);
+
+        // Keep a temporary strong reference while dropping association
+        // ownership. The application may already have released its own
+        // reference by the time the asynchronous SCTP reset completes.
+        auto channel = it.value();
+        channels.erase(it);
+        pendingChannels.removeAll(channel);
+
+        // Only locally allocated parity consumes channelsLeft.
+        const bool localStream = bool(streamId & 1) == useOddStreamId;
+        if (localStream)
+            ++channelsLeft;
+
+        channel.staticCast<WebRTCDataChannel>()->onDisconnected(WebRTCDataChannel::ChannelClosed);
     }
 
     void AssociationPrivate::connectChannelSignals(Connection::Ptr channel)

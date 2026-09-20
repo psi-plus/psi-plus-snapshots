@@ -24,8 +24,222 @@
 
 #include <QPointer>
 #include <QTimer>
+#include <utility>
 
 namespace XMPP { namespace Jingle {
+
+    static bool isValidSenders(Origin senders)
+    {
+        return senders == Origin::None || senders == Origin::Both || senders == Origin::Initiator
+            || senders == Origin::Responder;
+    }
+
+    static QString sendersAttribute(Origin senders)
+    {
+        switch (senders) {
+        case Origin::None:
+            return QStringLiteral("none");
+        case Origin::Both:
+            return QStringLiteral("both");
+        case Origin::Initiator:
+            return QStringLiteral("initiator");
+        case Origin::Responder:
+            return QStringLiteral("responder");
+        }
+        return {};
+    }
+
+    class Application::ContentModifyTieBreakResolver : public TieBreaker::Resolver {
+    public:
+        explicit ContentModifyTieBreakResolver(Application *application) :
+            application_(application), key_(application->_contentName, application->_creator)
+        {
+        }
+
+        TieBreaker::Solution resolve(const QDomElement &localData, const QDomElement &remoteData) override
+        {
+            if (!contains(localData) || !contains(remoteData))
+                return TieBreaker::Solution::Continue;
+
+            const auto application = application_.data();
+            if (!application || !application->_pad || !application->_pad->session())
+                return TieBreaker::Solution::Continue;
+
+            switch (application->_pad->session()->role()) {
+            case Origin::Initiator:
+                return TieBreaker::Solution::Break;
+            case Origin::Responder:
+                return TieBreaker::Solution::Postpone;
+            default:
+                return TieBreaker::Solution::Continue;
+            }
+        }
+
+        void retry(const TieBreaker::RetryContext &context) override
+        {
+            Q_UNUSED(context);
+            auto application = application_.data();
+            if (!application || application->_state >= State::Finishing || application->_sendersUpdateInFlight
+                || !application->_requestedSenders)
+                return;
+
+            if (*application->_requestedSenders == application->_senders) {
+                application->_requestedSenders.reset();
+                return;
+            }
+            emit application->updated();
+        }
+
+    private:
+        bool contains(const QDomElement &jingle) const
+        {
+            for (auto element = jingle.firstChildElement(); !element.isNull(); element = element.nextSiblingElement()) {
+                const auto name = element.localName().isEmpty() ? element.tagName() : element.localName();
+                if (name != QLatin1String("content"))
+                    continue;
+                const ContentBase content(element);
+                if (content.isValid() && ContentKey { content.name, content.creator } == key_)
+                    return true;
+            }
+            return false;
+        }
+
+        QPointer<Application> application_;
+        ContentKey            key_;
+    };
+
+    class Application::TransportReplaceTieBreakResolver : public TieBreaker::Resolver {
+    public:
+        explicit TransportReplaceTieBreakResolver(Application *application) : application_(application) { }
+
+        TieBreaker::Solution resolve(const QDomElement &localData, const QDomElement &remoteData) override
+        {
+            auto app = application_.data();
+            if (!app || app->_state >= State::Finishing || app->_pad->session()->role() != Origin::Initiator)
+                return TieBreaker::Solution::Continue;
+            const ContentKey key { app->_contentName, app->_creator };
+            auto             contains = [&key](const QDomElement &data) {
+                for (auto el = data.firstChildElement(QStringLiteral("content")); !el.isNull();
+                     el      = el.nextSiblingElement(QStringLiteral("content"))) {
+                    const ContentBase content(el);
+                    if (content.isValid() && ContentKey { content.name, content.creator } == key)
+                        return true;
+                }
+                return false;
+            };
+            // The coordinator supplies only a genuinely in-flight IQ snapshot.
+            // Responder yields through normal processing: replacing the transport
+            // invalidates the old completion, while a rejected remote proposal
+            // leaves ordinary failed-IQ fallback as the sole recovery owner.
+            return contains(localData) && contains(remoteData) ? TieBreaker::Solution::Break
+                                                               : TieBreaker::Solution::Continue;
+        }
+
+    private:
+        QPointer<Application> application_;
+    };
+
+    Application::~Application() = default;
+
+    void Application::ensureTransportReplaceTieBreakResolver()
+    {
+        if (_transportReplaceTieBreakRegistration || !_pad || !_pad->session())
+            return;
+        _transportReplaceTieBreakResolver = std::make_unique<TransportReplaceTieBreakResolver>(this);
+        _transportReplaceTieBreakRegistration
+            = _pad->tieBreaker()->registerResolver(Action::TransportReplace, _transportReplaceTieBreakResolver.get());
+    }
+
+    void Application::ensureContentModifyTieBreakResolver()
+    {
+        if (_contentModifyTieBreakRegistration || !_pad || !_pad->session())
+            return;
+        _contentModifyTieBreakResolver = std::make_unique<ContentModifyTieBreakResolver>(this);
+        _contentModifyTieBreakRegistration
+            = _pad->tieBreaker()->registerResolver(Action::ContentModify, _contentModifyTieBreakResolver.get());
+    }
+
+    void Application::incomingContentModify(Origin senders)
+    {
+        if (!supportsContentModify() || !isValidSenders(senders) || _senders == senders)
+            return;
+        _senders = senders;
+
+        QPointer<Application> guard(this);
+        emit                  sendersChanged(senders);
+        if (!guard)
+            return;
+        emit sendersChangedByPeer(senders);
+        if (!guard)
+            return;
+
+        if (_requestedSenders && !_sendersUpdateInFlight) {
+            if (*_requestedSenders == _senders)
+                _requestedSenders.reset();
+            else
+                emit updated();
+        }
+    }
+
+    bool Application::requestSenders(Origin senders) { return requestSendersTracked(senders) != 0; }
+
+    quint64 Application::requestSendersTracked(Origin senders)
+    {
+        if (!supportsContentModify() || !isValidSenders(senders) || _state >= State::Finishing)
+            return 0;
+
+        const auto revision = ++_sendersRequestRevision;
+
+        if (!_sendersStateConnection) {
+            qRegisterMetaType<SendersAttemptResult>();
+            _sendersStateConnection = connect(this, &Application::stateChanged, this, [this](State state) {
+                if (state >= State::Finishing) {
+                    _requestedSenders.reset();
+                    _sendersUpdateInFlight.reset();
+                    const auto attempt = std::exchange(_sendersAttempt, std::nullopt);
+                    if (attempt)
+                        emit sendersAttemptFinished(*attempt); // default outcome: Cancelled
+                    return;
+                }
+                if (state == State::Active && _requestedSenders && !_sendersUpdateInFlight)
+                    emit updated();
+            });
+        }
+
+        // Before the initial content stanza is consumed by takeOutgoingUpdate(),
+        // changing direction only changes the local proposal/answer. No
+        // content-modify is needed yet.
+        if (_state <= State::ApprovedToSend && !_sendersUpdateInFlight) {
+            _requestedSenders.reset();
+            if (_senders != senders) {
+                _senders = senders;
+                emit sendersChanged(senders);
+            }
+            return revision;
+        }
+
+        // If another direction change is already in flight, asking for the
+        // currently negotiated value is still meaningful: it supersedes the
+        // in-flight request once its IQ result arrives.
+        if (!_sendersUpdateInFlight && _senders == senders) {
+            _requestedSenders.reset();
+            return revision;
+        }
+        if (_requestedSenders && *_requestedSenders == senders)
+            return revision;
+
+        _requestedSenders = senders;
+        emit updated();
+        return revision;
+    }
+
+    bool Application::cancelQueuedSenders(quint64 revision)
+    {
+        if (!revision || revision != _sendersRequestRevision)
+            return false;
+        _requestedSenders.reset();
+        return true;
+    }
 
     class ConnectionWaiter : public QObject {
         Q_OBJECT
@@ -191,9 +405,16 @@ namespace XMPP { namespace Jingle {
             }
             break;
         case State::Active:
-            if (_transport->hasUpdates())
+            // Preserve the action priority defined by Action: flush transport
+            // updates before changing media direction.
+            if (_transport->hasUpdates()) {
                 _update = { Action::TransportInfo, Reason() };
-
+            } else if (_requestedSenders && !_sendersUpdateInFlight) {
+                if (*_requestedSenders == _senders)
+                    _requestedSenders.reset();
+                else
+                    _update = { Action::ContentModify, Reason() };
+            }
             break;
         default:
             break;
@@ -246,39 +467,159 @@ namespace XMPP { namespace Jingle {
                                        if (task->success())
                                            setState(State::Connecting);
                                    } };
+        case Action::ContentModify: {
+            Q_ASSERT(_state == State::Active);
+            Q_ASSERT(_requestedSenders);
+            Q_ASSERT(!_sendersUpdateInFlight);
+            const auto requested = *_requestedSenders;
+            ensureContentModifyTieBreakResolver();
+
+            // XEP-0166 makes senders mandatory for content-modify. ContentBase
+            // normally omits the default value "both", so force the attribute
+            // for every direction here.
+            contentEl.setAttribute(QLatin1String("senders"), sendersAttribute(requested));
+            _sendersUpdateInFlight = requested;
+            const auto attemptId   = ++_nextSendersAttempt;
+            const auto revision    = _sendersRequestRevision;
+            _sendersAttempt        = SendersAttemptResult { attemptId, revision, requested };
+            return OutgoingUpdate { updates,
+                                    [this, guard = QPointer<Application>(this), requested, attemptId,
+                                     revision](Task *task) {
+                                        if (!guard || !_sendersAttempt || _sendersAttempt->id != attemptId)
+                                            return; // deletion, cancellation or duplicate/stale completion
+                                        const bool success   = task && task->success();
+                                        const bool postponed = _contentModifyTieBreakRegistration.isPostponed();
+                                        auto       result    = *_sendersAttempt;
+                                        result.outcome       = success ? SendersAttemptResult::Outcome::Accepted
+                                                                       : SendersAttemptResult::Outcome::Rejected;
+                                        if (!success)
+                                            result.error = task ? task->error() : Stanza::Error();
+                                        if (task && !success && task->statusCode() == Task::ErrTimeout) {
+                                            result.outcome = SendersAttemptResult::Outcome::TimedOut;
+                                            result.error   = Stanza::Error(Stanza::Error::ErrorType::Wait,
+                                                                           Stanza::Error::ErrorCond::RemoteServerTimeout);
+                                        } else if (!task || (!success && task->statusCode() == Task::ErrDisc)) {
+                                            result.outcome = SendersAttemptResult::Outcome::Cancelled;
+                                        }
+                                        _sendersAttempt.reset();
+                                        _sendersUpdateInFlight.reset();
+                                        const bool changed = success && _senders != requested;
+                                        if (success)
+                                            _senders = requested;
+
+                                        // A generic failure drops an unchanged request as before. A
+                                        // postponed crossed action keeps its local intent until TieBreaker
+                                        // calls retry() after this owner callback has fully completed.
+                                        if (!success && !postponed && _sendersRequestRevision == revision)
+                                            _requestedSenders.reset();
+                                        if (_requestedSenders && *_requestedSenders == _senders)
+                                            _requestedSenders.reset();
+
+                                        // Publish only after cleanup: callbacks may enqueue a newer
+                                        // revision, finish the content or delete it synchronously.
+                                        if (changed)
+                                            emit sendersChanged(requested);
+                                        if (!guard)
+                                            return;
+                                        emit sendersAttemptFinished(result);
+                                        if (!guard || _state >= State::Finishing)
+                                            return;
+                                        if (_requestedSenders && !postponed)
+                                            emit updated();
+                                    } };
+        }
         case Action::TransportInfo:
             Q_ASSERT(_transport->hasUpdates());
             std::tie(transportEl, transportCB) = wrapOutgoingTransportUpdate();
             contentEl.appendChild(transportEl);
             return OutgoingUpdate { updates, transportCB };
-        case Action::TransportReplace:
+        // transport-replace IQ lifetime belongs to PendingTransportReplace, not
+        // Transport::State. Capture the concrete transport as transaction identity:
+        // its callback is a reentrant boundary and may install a newer replacement.
+        case Action::TransportReplace: {
+            ensureTransportReplaceTieBreakResolver();
             Q_ASSERT(_transport->hasUpdates());
+            const auto replacement             = _transport.toWeakRef();
             std::tie(transportEl, transportCB) = wrapOutgoingTransportUpdate();
             contentEl.appendChild(transportEl);
-            if (_pendingTransportReplace == PendingTransportReplace::Planned) {
+            if (_pendingTransportReplace == PendingTransportReplace::Planned)
                 _pendingTransportReplace = PendingTransportReplace::NeedAck;
-            }
+            const auto generation = ++_transportReplaceGeneration;
             if (_update.reason.isValid())
                 updates << _update.reason.toXml(doc);
-            return OutgoingUpdate { updates, [this, transportCB](Task *task) {
-                                       transportCB(task);
-                                       if (task->success())
-                                           _pendingTransportReplace = PendingTransportReplace::InProgress;
-                                       // else transport will report failure from its callback => select next tran.
-                                   } };
-        case Action::TransportAccept:
+            return OutgoingUpdate {
+                updates,
+                [this, guard = QPointer<Application>(this), replacement, transportCB, generation](Task *task) {
+                    if (!guard || _state >= State::Finishing || _transportReplaceGeneration != generation)
+                        return;
+                    auto expected = replacement.lock();
+                    if (!expected || _transport != expected
+                        || _pendingTransportReplace != PendingTransportReplace::NeedAck)
+                        return;
+
+                    // Retire the IQ before invoking any transport-specific code.
+                    // A callback may deliver another incoming IQ, duplicate this
+                    // completion, delete us or install a newer replacement.
+                    const bool accepted            = task && task->success();
+                    const auto completedGeneration = ++_transportReplaceGeneration;
+                    _pendingTransportReplace
+                        = accepted ? PendingTransportReplace::InProgress : PendingTransportReplace::Planned;
+                    transportCB(task);
+                    if (!guard || accepted || _state >= State::Finishing
+                        || _transportReplaceGeneration != completedGeneration || _transport != expected
+                        || _pendingTransportReplace != PendingTransportReplace::Planned)
+                        return;
+
+                    // The peer did not acknowledge this replacement. Do not leave
+                    // the application blocked in NeedAck; move to the next local
+                    // candidate (or content-remove if none remain).
+                    selectNextTransport();
+                }
+            };
+        }
+        // This ACK completes a peer-initiated replacement. Treat the outgoing
+        // transport-accept as its own attempt: validate and retire that attempt before
+        // invoking transport-specific code. The callback is a reentrant boundary and
+        // may delete us, install even the same Transport as a new generation, or cause
+        // this completion to be delivered again.
+        case Action::TransportAccept: {
             Q_ASSERT(_transport->hasUpdates());
+            const auto accepted                = _transport.toWeakRef();
+            const auto generation              = _transportReplaceGeneration;
             std::tie(transportEl, transportCB) = wrapOutgoingTransportUpdate();
             contentEl.appendChild(transportEl);
-            return OutgoingUpdate { updates, [this, transportCB](Task *task) {
-                                       transportCB(task);
-                                       if (task->success()) {
-                                           _pendingTransportReplace = PendingTransportReplace::None;
-                                           if (_state == State::Connecting || _state == State::Active)
-                                               _transport->start();
-                                       }
-                                       // else transport will report failure from its callback => select next tran.
-                                   } };
+            return OutgoingUpdate {
+                updates,
+                [this, guard = QPointer<Application>(this), accepted, transportCB, generation](Task *task) {
+                    if (!guard || _state >= State::Finishing || _transportReplaceGeneration != generation)
+                        return;
+                    auto expected = accepted.lock();
+                    if (!expected || _transport != expected
+                        || _pendingTransportReplace != PendingTransportReplace::InProgress)
+                        return;
+
+                    const bool succeeded         = task && task->success();
+                    const auto retiredGeneration = ++_transportReplaceGeneration;
+                    if (succeeded)
+                        _pendingTransportReplace = PendingTransportReplace::None;
+
+                    transportCB(task);
+                    if (!guard || _state >= State::Finishing || _transportReplaceGeneration != retiredGeneration
+                        || _transport != expected)
+                        return;
+
+                    if (succeeded) {
+                        if (_pendingTransportReplace != PendingTransportReplace::None)
+                            return;
+                        if (_state == State::Connecting || _state == State::Active)
+                            expected->start();
+                    }
+                    // On failure the transport callback retains ownership of
+                    // transport-specific failure/fallback handling. The generation
+                    // retirement above still makes duplicate/stale completions inert.
+                }
+            };
+        }
         default:
             break;
         }
@@ -320,30 +661,62 @@ namespace XMPP { namespace Jingle {
     bool Application::selectNextTransport(const QSharedPointer<Transport> alikeTransport)
     {
         qDebug("selecting next transport");
-        if (!_transportSelector->hasMoreTransports()) {
+        const auto expected   = _transport;
+        const auto generation = _transportReplaceGeneration;
+        auto       current    = [this, guard = QPointer<Application>(this), expected, generation] {
+            return guard && _state < State::Finishing && _transport == expected
+                && _transportReplaceGeneration == generation;
+        };
+        auto failNoTransport = [this, &current]() {
+            if (!current())
+                return false;
             if (_transport) {
                 qDebug("Application::selectNextTransport: stopping %s transport", qPrintable(_transport->pad()->ns()));
                 _transport->disconnect(this);
                 _transport->stop();
+                if (!current())
+                    return false;
             }
             _state             = (isRemote() || _state > State::ApprovedToSend) ? State::Finishing : State::Finished;
             _terminationReason = Reason(Reason::FailedTransport);
             emit updated(); // will be evaluated to content-remove
             return false;
-        }
+        };
+
+        if (!current())
+            return false;
+        const bool hasMore = _transportSelector->hasMoreTransports();
+        if (!current())
+            return false;
+        if (!hasMore)
+            return failNoTransport();
 
         if (alikeTransport) {
             auto tr = _transportSelector->getAlikeTransport(alikeTransport);
+            if (!current())
+                return false;
             if (tr && setTransport(tr))
+                return true;
+            if (!current())
+                return false;
+        }
+
+        while (current()) {
+            auto t = _transportSelector->getNextTransport();
+            if (!current())
+                return false;
+            if (!t)
+                break;
+            if (setTransport(t))
                 return true;
         }
 
-        QSharedPointer<Transport> t;
-        while ((t = _transportSelector->getNextTransport()))
-            if (setTransport(t))
-                return true;
+        if (!current())
+            return false;
+        if (!_transportSelector->hasMoreTransports())
+            return failNoTransport();
 
-        emit updated(); // will be evaluated to content-remove
+        emit updated(); // selector may have a transiently unavailable candidate
         return false;
     }
 
@@ -355,39 +728,105 @@ namespace XMPP { namespace Jingle {
         return !_transport || _transportSelector->compare(t, _transport) > 0;
     }
 
-    void Application::incomingTransportAccept(const QDomElement &el)
+    bool Application::transportReplaceAwaitingAck() const
     {
-        if (_pendingTransportReplace != PendingTransportReplace::InProgress) {
-            return; // ignore out of order
-        }
+        return _pendingTransportReplace == PendingTransportReplace::NeedAck;
+    }
+
+    bool Application::transportReplaceInProgress() const
+    {
+        return _pendingTransportReplace == PendingTransportReplace::InProgress;
+    }
+
+    bool Application::incomingTransportAccept(const QDomElement &el)
+    {
+        if (_pendingTransportReplace != PendingTransportReplace::InProgress || !_transport)
+            return false;
+
+        auto prepared = _transport->prepareUpdate(el);
+        if (!prepared)
+            return false;
+        return incomingTransportAccept(std::move(prepared.update));
+    }
+
+    bool Application::incomingTransportAccept(Transport::PreparedUpdatePtr update)
+    {
+        if (_pendingTransportReplace != PendingTransportReplace::InProgress || !_transport || !update)
+            return false;
+
+        const auto            expected   = _transport;
+        const auto            generation = _transportReplaceGeneration;
+        QPointer<Application> guard(this);
+        if (!expected->commitPreparedUpdate(std::move(update)))
+            return false;
+        if (!guard)
+            return true;
+
+        // Committing a transport payload may reenter application code and even
+        // reselect the same Transport object. Complete only the exact attempt
+        // for which this prepared value was staged.
+        if (_state >= State::Finishing || _transport != expected || _transportReplaceGeneration != generation
+            || _pendingTransportReplace != PendingTransportReplace::InProgress)
+            return true;
+
+        ++_transportReplaceGeneration;
         _pendingTransportReplace = PendingTransportReplace::None;
-        if (_transport->update(el) && _state >= State::Connecting)
-            _transport->start();
+        if (_state >= State::Connecting)
+            expected->start();
+        return true;
+    }
+    bool Application::incomingTransportReject()
+    {
+        if (_pendingTransportReplace != PendingTransportReplace::InProgress || !_transport || !_transport->isLocal())
+            return false;
+
+        // The peer rejected the current proposal. Any selected successor is a
+        // fresh proposal and must be signalled with another transport-replace.
+        _pendingTransportReplace = PendingTransportReplace::Planned;
+        selectNextTransport();
+        return true;
     }
 
     bool Application::isTransportReplaceEnabled() const { return true; }
 
     bool Application::setTransport(const QSharedPointer<Transport> &transport, const Reason &reason)
     {
-        if (!isTransportReplaceEnabled() || !_transportSelector->replace(_transport, transport))
+        // Pin both transports (the argument may alias our member) and check
+        // identity after selector callbacks, including same-object reselection.
+        const auto replacement       = transport;
+        const auto expected          = _transport;
+        const auto generation        = _transportReplaceGeneration;
+        const auto replacementReason = reason;
+        auto       current           = [this, guard = QPointer<Application>(this), expected, generation] {
+            return guard && _state < State::Finishing && _transport == expected
+                && _transportReplaceGeneration == generation;
+        };
+        if (!replacement || !current())
             return false;
+        const bool enabled = isTransportReplaceEnabled();
+        if (!current() || !enabled)
+            return false;
+        const bool accepted = _transportSelector->replace(expected, replacement);
+        if (!current() || !accepted)
+            return false;
+
+        if (expected && expected->state() < State::Unacked && expected->creator() == _pad->session()->role()
+            && expected->pad()->ns() != replacement->pad()->ns()) {
+            _transportSelector->backupTransport(expected);
+            if (!current())
+                return false;
+        }
+        ++_transportReplaceGeneration;
 
         // in case we automatically select a new transport on our own we definitely will come up to this point
         if (_transport) {
-            if (_transport->state() < State::Unacked && _transport->creator() == _pad->session()->role()
-                && _transport->pad()->ns() != transport->pad()->ns()) {
-                // the transport will be reused later since the remote doesn't know about it yet
-                _transportSelector->backupTransport(_transport);
-            }
-
-            if (transport->isLocal()) {
+            if (replacement->isLocal()) {
                 auto ts = _transport->state() == State::Finished ? _transport->prevState() : _transport->state();
-                if (_transport->isRemote() || ts > State::Unacked) {
-                    // if remote knows of the current transport
+                if (_transport->isRemote() || ts >= State::Unacked) {
+                    // Even when the previous transport still calls itself Unacked,
+                    // this successor has not been sent. It cannot inherit an IQ
+                    // completion belonging to the previous transport instance.
                     _pendingTransportReplace = PendingTransportReplace::Planned;
-                } else if (_transport->isLocal() && ts == State::Unacked) {
-                    // if remote may know but we don't know yet about it
-                    _pendingTransportReplace = PendingTransportReplace::NeedAck;
                 }
             } else {
                 _pendingTransportReplace = PendingTransportReplace::InProgress;
@@ -395,20 +834,21 @@ namespace XMPP { namespace Jingle {
 
             if (_pendingTransportReplace != PendingTransportReplace::None) {
                 if (_transport->state() == State::Finished) { // initiate replace?
-                    _transportReplaceReason = reason.isValid() ? reason : _transport->lastReason();
+                    _transportReplaceReason
+                        = replacementReason.isValid() ? replacementReason : _transport->lastReason();
                 } else {
-                    _transportReplaceReason = reason;
+                    _transportReplaceReason = replacementReason;
                 }
             }
             qDebug("Application::setTransport: resetting %s transport in favor of %s",
-                   qPrintable(_transport->pad()->ns()), qPrintable(transport->pad()->ns()));
+                   qPrintable(_transport->pad()->ns()), qPrintable(replacement->pad()->ns()));
             _transport->disconnect(this);
             _transport.reset();
         } else {
-            qDebug("setting transport %s", qPrintable(transport->pad()->ns()));
+            qDebug("setting transport %s", qPrintable(replacement->pad()->ns()));
         }
 
-        _transport = transport;
+        _transport = replacement;
 
         connect(_transport.data(), &Transport::updated, this, &Application::updated);
         connect(_transport.data(), &Transport::failed, this, [this]() { selectNextTransport(); });

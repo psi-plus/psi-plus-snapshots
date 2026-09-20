@@ -119,7 +119,14 @@ set(XMPP_IM_HEADERS
     xmpp-im/jingle-nstransportslist.h
     xmpp-im/jingle-application.h
     xmpp-im/jingle-session.h
+    xmpp-im/jingle-tiebreaker.h
     xmpp-im/jingle-ft.h
+    xmpp-im/jingle-rtp-description.h
+    xmpp-im/jingle-rtp-negotiation.h
+    xmpp-im/jingle-rtp.h
+    xmpp-im/jingle-rtp-directions.h
+    xmpp-im/jingle-rtp-info.h
+    xmpp-im/jingle-rtp-srtp.h
     xmpp-im/jingle-ice.h
     xmpp-im/jingle-s5b.h
     xmpp-im/jingle-ibb.h
@@ -129,6 +136,7 @@ set(XMPP_IM_HEADERS
 )
 
 set(XMPP_HEADERS_PRIVATE
+    xmpp-im/jingle-rtp-router_p.h
     sasl/digestmd5proplist.h
     sasl/digestmd5response.h
     sasl/plainmessage.h
@@ -188,12 +196,24 @@ target_sources(iris PRIVATE
     xmpp-im/stundisco.cpp
 
     xmpp-im/jingle.cpp
+    xmpp-im/jingle-tiebreaker.cpp
     xmpp-im/jingle-connection.cpp
     xmpp-im/jingle-session.cpp
     xmpp-im/jingle-application.cpp
     xmpp-im/jingle-transport.cpp
     xmpp-im/jingle-nstransportslist.cpp
     xmpp-im/jingle-ft.cpp
+    xmpp-im/jingle-rtp-description.cpp
+    xmpp-im/jingle-rtp-negotiation.cpp
+    xmpp-im/jingle-rtp.cpp
+    xmpp-im/jingle-rtp-directions.cpp
+    xmpp-im/jingle-rtp-direction-operation.cpp
+    xmpp-im/jingle-rtp-media.cpp
+    xmpp-im/jingle-rtp-info.cpp
+    xmpp-im/jingle-rtp-srtp.cpp
+    xmpp-im/jingle-rtp-router_p.cpp
+    xmpp-im/jingle-ice-udp.h
+    xmpp-im/jingle-ice-udp.cpp
     xmpp-im/jingle-ice.cpp
     xmpp-im/jingle-s5b.cpp
     xmpp-im/jingle-ibb.cpp
@@ -233,6 +253,7 @@ if(IRIS_ENABLE_OMEMO)
 endif()
 
 if(IRIS_ENABLE_JINGLE_SCTP)
+    # SCTP and SRTP are independent optional packet paths.
     target_compile_definitions(iris PRIVATE JINGLE_SCTP)
     target_sources(iris PRIVATE
         xmpp-im/jingle-sctp.h
@@ -243,6 +264,11 @@ if(IRIS_ENABLE_JINGLE_SCTP)
         xmpp-im/jingle-webrtc-datachannel_p.h
     )
     list(APPEND XMPP_IM_HEADERS xmpp-im/jingle-sctp.h)
+endif()
+
+if(IRIS_ENABLE_SRTP)
+    target_compile_definitions(iris PRIVATE IRIS_HAVE_SRTP)
+    target_link_libraries(iris PRIVATE SRTP::SRTP)
 endif()
 
 if(QT_DEFAULT_MAJOR_VERSION LESS 6)

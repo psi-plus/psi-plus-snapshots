@@ -16,6 +16,13 @@ else()
     target_compile_definitions(irisnet PRIVATE IRIS_STATIC)
 endif()
 
+set(IRISNET_USE_JDNS OFF)
+if(ANDROID AND QT_DEFAULT_MAJOR_VERSION GREATER_EQUAL 6)
+    include(IrisJDns)
+    iris_configure_jdns()
+    set(IRISNET_USE_JDNS ON)
+endif()
+
 set(IRISNET_CORELIB_HEADERS
     corelib/addressresolver.h
     corelib/irisnetexport.h
@@ -81,7 +88,6 @@ target_sources(irisnet PRIVATE
     corelib/netinterface.cpp
     corelib/netnames.cpp
     corelib/objectsession.cpp
-    corelib/netinterface_qtname.cpp
     corelib/netinterface_qtnet.cpp
 
     noncore/iceagent.cpp
@@ -100,6 +106,13 @@ target_sources(irisnet PRIVATE
 
     noncore/cutestuff/bsocket.cpp
 )
+
+if(IRISNET_USE_JDNS)
+    target_sources(irisnet PRIVATE corelib/netnames_jdns.cpp)
+    target_compile_definitions(irisnet PRIVATE NEED_JDNS)
+else()
+    target_sources(irisnet PRIVATE corelib/netinterface_qtname.cpp)
+endif()
 
 if(UNIX)
     target_sources(irisnet PRIVATE
@@ -120,6 +133,10 @@ if(IRIS_BUNDLED_QCA)
     add_dependencies(irisnet QcaProject)
 endif()
 list(APPEND IRISNET_DEPS ${IRIS_QCA_TARGET})
+
+if(IRISNET_USE_JDNS)
+    list(APPEND IRISNET_DEPS QJDns::QJDns)
+endif()
 
 if(IRIS_ENABLE_JINGLE_SCTP)
     if(IRIS_BUNDLED_USRSCTP)

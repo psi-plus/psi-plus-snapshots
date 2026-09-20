@@ -64,8 +64,12 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         quint16   priority    = 256;
         QString   label;
         QString   protocol;
-        int       streamId  = -1;
-        DcepState dcepState = NoDcep;
+        int       streamId          = -1;
+        bool      closeRequested    = false;
+        bool      streamClosed      = false;
+        bool      closeWasLocal     = false;
+        bool      closeSignalEmitted = false;
+        DcepState dcepState         = NoDcep;
 
         WebRTCDataChannel(AssociationPrivate *association, quint8 channelType = 0, quint32 reliability = 0,
                           quint16 priority = 256, const QString &label = QString(), const QString &protocol = QString(),
@@ -89,6 +93,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         void onConnected();
         void onError(QAbstractSocket::SocketError error);
         void onDisconnected(DisconnectReason reason);
+        void finishCloseIfDrained();
         void onIncomingData(const QByteArray &data, quint32 ppid);
         void onMessageWritten(size_t size);
     };

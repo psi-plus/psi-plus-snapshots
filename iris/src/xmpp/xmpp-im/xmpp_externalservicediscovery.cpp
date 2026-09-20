@@ -199,7 +199,7 @@ bool ExternalService::needsNewCreds(std::chrono::minutes minTtl) const
     return restricted || !(expires.isForever() || expires.remainingTimeAsDuration() > minTtl);
 }
 
-ExternalServiceDiscovery::ExternalServiceDiscovery(Client *client) : client_(client)
+ExternalServiceDiscovery::ExternalServiceDiscovery(Client *client) : QObject(client), client_(client)
 {
     JT_PushExternalService *push = new JT_PushExternalService(client->rootTask());
     connect(push, &JT_PushExternalService::received, this, [this](const ExternalServiceList &services) {

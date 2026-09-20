@@ -23,6 +23,11 @@
 #include <iris/xmpp-im/jingle-connection.h>
 #include <iris/xmpp-im/jingle.h>
 
+#include <QVariant>
+
+#include <memory>
+#include <optional>
+
 namespace XMPP { namespace Jingle {
 
     class TransportManager;
@@ -32,6 +37,7 @@ namespace XMPP { namespace Jingle {
         typedef QSharedPointer<TransportManagerPad> Ptr;
 
         virtual TransportManager *manager() const = 0;
+        QString requestedNamespace() const { return property("_iris_jingle_transport_namespace").toString(); }
     };
 
     class Transport : public QObject {
@@ -54,19 +60,71 @@ namespace XMPP { namespace Jingle {
         inline bool                     isLocal() const { return !isRemote(); }
 
         /**
-         * @brief prepare to send content-add/session-initiate
-         *  When ready, the application first set update type to ContentAdd and then emit updated()
+         * @brief Start preparing the transport signaling offer or answer.
+         *
+         * Implementations should collect the information needed for their `<transport/>` element and emit updated()
+         * when signaling can proceed. Candidate-based transports may emit updated() more than once as more candidates
+         * become available.
          */
         virtual void prepare() = 0;
 
         /**
-         * @brief start really transfer data. starting with connection to remote candidates for example
+         * @brief Start connectivity negotiation after the transport has been accepted by signaling.
+         *
+         * For a local transport this may start candidate connectivity checks; for a remote transport it may start
+         * connecting to the peer's candidates. In-band transports may become usable immediately.
          */
-        virtual void start() = 0; // for local transport start searching for candidates (including probing proxy,stun
-                                  // etc) for remote transport try to connect to all proposed hosts in order their
-                                  // priority. in-band transport may just emit updated() here
+        virtual void start() = 0;
         virtual void stop();
-        virtual bool update(const QDomElement &el) = 0; // accepts transport element on incoming transport-info
+
+        /**
+         * An owned, transport-specific incoming update produced without mutating
+         * the live transport. Session code can prepare every member of a batch
+         * before committing any of them.
+         */
+        class PreparedUpdate {
+        public:
+            virtual ~PreparedUpdate() = default;
+        };
+        using PreparedUpdatePtr = std::unique_ptr<PreparedUpdate>;
+
+        enum class PrepareUpdateStatus {
+            Ready,       // owned payload is fully parsed and can be committed
+            Invalid,     // payload is malformed or invalid for the current transport state
+            Unsupported, // provider has no side-effect-free staging implementation
+        };
+        struct PrepareUpdateResult {
+            PrepareUpdateStatus                  status = PrepareUpdateStatus::Unsupported;
+            PreparedUpdatePtr                    update;
+            std::optional<XMPP::Stanza::Error>   error;
+
+            explicit operator bool() const
+            {
+                return status == PrepareUpdateStatus::Ready && bool(update);
+            }
+        };
+
+        /**
+         * Parse and validate an incoming <transport/> payload into an owned value.
+         *
+         * Implementations must not mutate transport/network state, emit signals,
+         * schedule work or invoke application callbacks from this method. The
+         * default is fail-closed (Unsupported) for transports not yet migrated.
+         */
+        virtual PrepareUpdateResult prepareUpdate(const QDomElement &el);
+
+        /**
+         * Apply a value previously returned by prepareUpdate().
+         *
+         * The caller owns transport/Application identity checks around this
+         * reentrant boundary. Implementations must reject values of another
+         * transport type without side effects.
+         */
+        virtual bool commitPreparedUpdate(PreparedUpdatePtr update);
+
+        // Compatibility entry point for callers that do not batch updates.
+        // Built-in transports implement it through prepareUpdate()/commitPreparedUpdate().
+        virtual bool update(const QDomElement &el) = 0;
         virtual bool hasUpdates() const            = 0;
 
         /**
@@ -156,16 +214,16 @@ namespace XMPP { namespace Jingle {
 
     signals:
         /**
-         * found some candidates and they have to be sent. takeUpdate has to be called from this signal
-         * handler. if it's just always ready then signal has to be sent at least once otherwise
-         * session-initiate won't be sent.
+         * Found signaling updates that have to be sent. The session will eventually call takeOutgoingUpdate(). If a
+         * transport is immediately ready it still has to emit this signal at least once, otherwise the initial Jingle
+         * action cannot be sent.
          */
         void updated();
-        void failed(); // transport ailed for whatever reason. aborted for example. _state will be State::Finished
+        void failed(); // transport failed for whatever reason. aborted for example. _state will be State::Finished
         void stateChanged();
 
     protected:
-        /// just updates state and signals about the change. No any loggic attached to the new state
+        /// Just updates state and signals about the change. No logic is attached to the new state.
         void setState(State newState);
 
         /// Where the user already gave his consent to transfer data. (one exception: State::Finished)
@@ -245,6 +303,9 @@ namespace XMPP { namespace Jingle {
         // FIXME rename methods
         virtual QSharedPointer<Transport> newTransport(const TransportManagerPad::Ptr &pad, Origin creator) = 0;
         virtual TransportManagerPad      *pad(Session *session)                                             = 0;
+        // Additive, non-virtual helper so multi-namespace managers keep the
+        // existing vtable and pads keep their existing object layout.
+        TransportManagerPad *padForNamespace(Session *session, const QString &ns);
 
         // this method is supposed to gracefully close all related sessions as a preparation for plugin unload for
         // example

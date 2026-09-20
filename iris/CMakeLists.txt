@@ -88,6 +88,12 @@ endif()
 
 option(IRIS_ENABLE_INSTALL "Enable installation" ON)
 option(IRIS_ENABLE_JINGLE_SCTP "Enable SCTP over ICE Jingle transport / data channels" ON)
+option(IRIS_ENABLE_SRTP "Enable libSRTP packet protection for native Jingle RTP" OFF)
+set(IRIS_PC_SRTP_REQUIRES "")
+if(IRIS_ENABLE_SRTP)
+    find_package(SRTP REQUIRED)
+    set(IRIS_PC_SRTP_REQUIRES "libsrtp2")
+endif()
 # note Blake2b is needed only with Qt5. Qt6 has its own implementation
 option(IRIS_BUNDLED_QCA "Adds: DTLS, Blake2b (needed with Qt5) and other useful for XMPP crypto-stuff"
        ${IRIS_DEFAULT_BUNDLED_QCA})
@@ -244,6 +250,10 @@ if(IRIS_ENABLE_INSTALL)
     endif()
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/IrisConfigVersion.cmake" "${CMAKE_CURRENT_BINARY_DIR}/IrisConfig.cmake"
             DESTINATION ${CONFIG_INSTALL_DIR})
+    if(IRIS_ENABLE_SRTP)
+        install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/FindSRTP.cmake"
+                DESTINATION ${CONFIG_INSTALL_DIR}/modules)
+    endif()
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${IRIS_LIB_NAME}.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
     # Keep the historical flat include facade for source compatibility. Canonical public headers are installed by

@@ -10,4 +10,5 @@ Description: Iris is a comprehensive library for working with the XMPP protocol
 Version: @IRIS_LIB_VERSION_STRING@
 Requires: Qt@QT_DEFAULT_MAJOR_VERSION@Core Qt@QT_DEFAULT_MAJOR_VERSION@Gui Qt@QT_DEFAULT_MAJOR_VERSION@Network Qt@QT_DEFAULT_MAJOR_VERSION@Xml@IRIS_PC_QCA_REQUIRES@
 Libs: -L${libdir} -l@IRIS_LIB_NAME@
+Requires.private: @IRIS_PC_SRTP_REQUIRES@
 Cflags: -I${includeroot} -I${irisincludedir} -I${jidincludedir}@IRIS_PC_QCA_CFLAGS@

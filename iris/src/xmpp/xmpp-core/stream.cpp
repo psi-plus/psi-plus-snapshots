@@ -54,6 +54,7 @@
 
 #include <QByteArray>
 #include <QList>
+#include <QLoggingCategory>
 #include <QPointer>
 #include <QTextStream>
 #include <QTimer>
@@ -68,6 +69,8 @@ using namespace XMPP;
 
 static Debug *debug_ptr = nullptr;
 void          XMPP::setDebug(Debug *p) { debug_ptr = p; }
+
+Q_LOGGING_CATEGORY(saslChannelBindingLog, "iris.xmpp.saslcb", QtWarningMsg)
 
 static QByteArray randomArray(int size)
 {
@@ -664,6 +667,7 @@ void ClientStream::ss_error(int x)
 
 void ClientStream::sasl_clientFirstStep(bool, const QByteArray &ba)
 {
+    qCDebug(saslChannelBindingLog).noquote() << "selected SASL mechanism:" << d->sasl->mechanism();
     d->client.setSASLFirst(d->sasl->mechanism(), ba);
     // d->client.sasl_mech = mech;
     // d->client.sasl_firstStep = stepData ? true : false;
@@ -1206,18 +1210,30 @@ bool ClientStream::handleNeed()
         // QCA 3 exposes channel-binding APIs, but actual availability is a
         // runtime property of the selected TLS and SASL providers/session.
         // Keep SCRAM-*-PLUS only when both sides can supply usable binding data.
+        const auto *activeSaslProvider = d->sasl->provider();
+        qCDebug(saslChannelBindingLog).noquote()
+            << "SASL channel binding: mechanisms=" << ml.join(", ") << "plusOffered=" << plusMechanismOffered
+            << "tlsActive=" << d->using_tls
+            << "provider=" << (activeSaslProvider ? activeSaslProvider->name() : QStringLiteral("<none>"))
+            << "providerSupports=" << d->sasl->supportsChannelBinding()
+            << "serverTypes=" << d->client.features.sasl_cb_types.join(", ");
         if (plusMechanismOffered && d->using_tls && d->tlsHandler && d->sasl->supportsChannelBinding()) {
             auto *qcaTlsHandler = qobject_cast<QCATLSHandler *>(d->tlsHandler);
             if (qcaTlsHandler && qcaTlsHandler->tls()) {
-                QCA::TLS *tls         = qcaTlsHandler->tls();
-                QString   bindingType = tls->defaultChannelBindingType();
+                QCA::TLS         *tls               = qcaTlsHandler->tls();
+                QString           bindingType       = tls->defaultChannelBindingType();
+                const QStringList localBindingTypes = tls->channelBindingTypes();
+
+                qCDebug(saslChannelBindingLog).noquote()
+                    << "SASL channel binding: TLS version=" << int(tls->version())
+                    << "localTypes=" << localBindingTypes.join(", ") << "defaultType=" << bindingType;
 
                 // XEP-0440 lets the server restrict the channel-binding types
                 // it accepts.  Without that feature, retain the legacy SCRAM
                 // behaviour and try QCA's default type.
                 if (d->client.features.sasl_cb_supported && !d->client.features.sasl_cb_types.contains(bindingType)) {
                     bindingType.clear();
-                    for (const QString &type : tls->channelBindingTypes()) {
+                    for (const QString &type : localBindingTypes) {
                         if (d->client.features.sasl_cb_types.contains(type)) {
                             bindingType = type;
                             break;
@@ -1229,11 +1245,15 @@ bool ClientStream::handleNeed()
                     const QByteArray bindingData = tls->channelBinding(bindingType);
                     if (!bindingData.isEmpty())
                         channelBindingReady = d->sasl->setChannelBinding(bindingType, bindingData, true);
+                    qCDebug(saslChannelBindingLog).noquote()
+                        << "SASL channel binding: selectedType=" << bindingType << "dataSize=" << bindingData.size()
+                        << "configured=" << channelBindingReady;
                 }
             }
         }
 #endif
         if (!channelBindingReady) {
+            qCDebug(saslChannelBindingLog) << "SASL channel binding unavailable; removing SCRAM PLUS mechanisms";
             for (auto it = ml.begin(); it != ml.end();) {
                 if (it->endsWith(QLatin1String("-PLUS")))
                     it = ml.erase(it);

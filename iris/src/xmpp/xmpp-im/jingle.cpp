@@ -20,6 +20,7 @@
 #include "jingle.h"
 
 #include "jingle-pub.h"
+#include "jingle-rtp.h"
 
 #include "jingle-application.h"
 #include "jingle-session.h"
@@ -33,6 +34,7 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QDomElement>
+#include <QHash>
 #include <QMap>
 #include <QPointer>
 #include <QTimer>
@@ -306,12 +308,15 @@ namespace XMPP { namespace Jingle {
     ContentBase::ContentBase(const QDomElement &el)
     {
         static QMap<QString, Origin> sendersMap({ { QStringLiteral("initiator"), Origin::Initiator },
-                                                  { QStringLiteral("none"), Origin::Both },
+                                                  { QStringLiteral("none"), Origin::None },
+                                                  { QStringLiteral("both"), Origin::Both },
                                                   { QStringLiteral("responder"), Origin::Responder } });
-        creator     = creatorAttr(el);
-        name        = el.attribute(QLatin1String("name"));
-        senders     = sendersMap.value(el.attribute(QLatin1String("senders")));
-        disposition = el.attribute(QLatin1String("disposition")); // if empty, it's "session"
+        creator              = creatorAttr(el);
+        name                 = el.attribute(QLatin1String("name"));
+        const auto direction = el.attribute(QLatin1String("senders"), QStringLiteral("both"));
+        validSenders         = sendersMap.contains(direction);
+        senders              = sendersMap.value(direction, Origin::None);
+        disposition          = el.attribute(QLatin1String("disposition")); // if empty, it's "session"
     }
 
     QDomElement ContentBase::toXml(QDomDocument *doc, const QString &tagName, const QString &ns) const
@@ -382,56 +387,15 @@ namespace XMPP { namespace Jingle {
     class JTPush : public Task {
         Q_OBJECT
 
-        QList<QString> externalManagers;
-        QList<QString> externalSessions;
-
     public:
         JTPush(Task *parent) : Task(parent) { }
 
         ~JTPush() { }
 
-        inline void addExternalManager(const QString &ns) { externalManagers.append(ns); }
-        inline void forgetExternalSession(const QString &sid) { externalSessions.removeOne(sid); }
-        inline void registerExternalSession(const QString &sid) { externalSessions.append(sid); }
-
         bool take(const QDomElement &iq)
         {
             if (iq.tagName() != QLatin1String("iq"))
                 return false;
-
-            // XEP-0358: a requester asks the publisher to initiate a previously
-            // advertised Jingle session. This is an IQ-get, unlike normal Jingle.
-            if (iq.attribute(QLatin1String("type")) == QLatin1String("get")) {
-                auto start = childElementsByTagNameNS(iq, JINGLEPUB_NS, QStringLiteral("start")).item(0).toElement();
-                if (!start.isNull()) {
-                    const Jid  requester(iq.attribute(QStringLiteral("from")));
-                    const auto publicationId = start.attribute(QStringLiteral("id"));
-                    auto       manager       = client()->jingleManager();
-                    if (publicationId.isEmpty() || !manager->publishedSession(publicationId).isValid()) {
-                        respondError(iq, Stanza::Error::ErrorType::Modify, Stanza::Error::ErrorCond::NotAcceptable);
-                        return true;
-                    }
-                    if (!manager->isAllowedParty(requester)) {
-                        respondError(iq, Stanza::Error::ErrorType::Auth, Stanza::Error::ErrorCond::Forbidden);
-                        return true;
-                    }
-                    auto session = manager->startPublishedSession(requester, publicationId);
-                    if (!session || session->sid().isEmpty()) {
-                        respondError(iq, Stanza::Error::ErrorType::Cancel,
-                                     Stanza::Error::ErrorCond::ServiceUnavailable);
-                        return true;
-                    }
-                    auto resp
-                        = createIQ(client()->doc(), "result", requester.full(), iq.attribute(QStringLiteral("id")));
-                    auto starting = client()->doc()->createElementNS(JINGLEPUB_NS, QStringLiteral("starting"));
-                    starting.setAttribute(QStringLiteral("sid"), session->sid());
-                    resp.appendChild(starting);
-                    client()->send(resp);
-                    QTimer::singleShot(0, session, [session]() { session->initiate(); });
-                    return true;
-                }
-                return false;
-            }
 
             if (iq.attribute(QLatin1String("type")) != QLatin1String("set"))
                 return false;
@@ -445,25 +409,6 @@ namespace XMPP { namespace Jingle {
             if (!jingle.isValid()) {
                 respondError(iq, Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
                 return true;
-            }
-
-            if (externalManagers.size()) {
-                if (jingle.action() == Action::SessionInitiate) {
-                    auto cname = QString::fromLatin1("content");
-                    auto dname = QString::fromLatin1("description");
-                    for (auto n = jingleEl.firstChildElement(cname); !n.isNull(); n = n.nextSiblingElement(cname)) {
-                        auto del = n.firstChildElement(dname);
-                        if (!del.isNull() && externalManagers.contains(del.namespaceURI())) {
-                            externalSessions.append(jingle.sid());
-                            return false;
-                        }
-                    }
-                } else if (externalSessions.contains(jingle.sid())) {
-                    if (jingle.action() == Action::SessionTerminate) {
-                        externalSessions.removeOne(jingle.sid());
-                    }
-                    return false;
-                }
             }
 
             QString fromStr(iq.attribute(QStringLiteral("from")));
@@ -511,10 +456,45 @@ namespace XMPP { namespace Jingle {
                     }
                     return true;
                 }
-                if (!session->updateFromXml(jingle.action(), jingleEl)) {
-                    respondError(iq, *session->lastError());
+                QPointer<Session> sessionGuard(session);
+                // Replacement batches must be validated before arbitration and
+                // retain validated sibling hints until after the IQ reply.
+                const auto tieBreak = jingle.action() == Action::TransportReplace
+                    ? TieBreaker::Resolution()
+                    : session->tieBreaker()->resolveIncoming(jingle.action(), jingleEl);
+                if (!sessionGuard) {
+                    respondError(iq, Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::ItemNotFound);
                     return true;
                 }
+                if (tieBreak.error) {
+                    respondError(iq, *tieBreak.error);
+                    return true;
+                }
+                if (tieBreak.solution == TieBreaker::Solution::Break) {
+                    respondTieBreak(iq);
+                    return true;
+                }
+
+                std::function<void()> afterReply;
+                const bool            applied = session->updateFromXml(jingle.action(), jingleEl, &afterReply);
+                if (!applied) {
+                    if (sessionGuard && sessionGuard->lastError())
+                        respondError(iq, *sessionGuard->lastError());
+                    else
+                        respondError(iq, Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
+                } else {
+                    auto resp = createIQ(client()->doc(), "result", fromStr, iq.attribute(QStringLiteral("id")));
+                    client()->send(resp);
+                }
+                // Recovery may start networking or destroy the Session. Publish
+                // the incoming outcome only after its IQ reply has been sent.
+                if (afterReply)
+                    afterReply();
+                if (sessionGuard) {
+                    sessionGuard->tieBreaker()->incomingFinished(
+                        tieBreak.id, applied ? TieBreaker::RemoteResult::Applied : TieBreaker::RemoteResult::Rejected);
+                }
+                return true;
             }
 
             auto resp = createIQ(client()->doc(), "result", fromStr, iq.attribute(QStringLiteral("id")));
@@ -528,7 +508,8 @@ namespace XMPP { namespace Jingle {
             auto          resp = createIQ(client()->doc(), "error", iq.attribute(QStringLiteral("from")),
                                           iq.attribute(QStringLiteral("id")));
             Stanza::Error error(errType, errCond, text);
-            auto          errEl = error.toXml(*client()->doc(), client()->stream().baseNS());
+            const auto baseNS = client()->hasStream() ? client()->stream().baseNS() : QStringLiteral("jabber:client");
+            auto       errEl  = error.toXml(*client()->doc(), baseNS);
             if (!jingleErr.isNull()) {
                 errEl.appendChild(jingleErr);
             }
@@ -545,9 +526,10 @@ namespace XMPP { namespace Jingle {
 
         void respondError(const QDomElement &iq, const Stanza::Error &error)
         {
-            auto resp = createIQ(client()->doc(), "error", iq.attribute(QStringLiteral("from")),
-                                 iq.attribute(QStringLiteral("id")));
-            resp.appendChild(error.toXml(*client()->doc(), client()->stream().baseNS()));
+            auto       resp   = createIQ(client()->doc(), "error", iq.attribute(QStringLiteral("from")),
+                                         iq.attribute(QStringLiteral("id")));
+            const auto baseNS = client()->hasStream() ? client()->stream().baseNS() : QStringLiteral("jabber:client");
+            resp.appendChild(error.toXml(*client()->doc(), baseNS));
             client()->send(resp);
         }
     };
@@ -568,6 +550,8 @@ namespace XMPP { namespace Jingle {
 
     QDomDocument *SessionManagerPad::doc() const { return session()->manager()->client()->doc(); }
 
+    TieBreaker *SessionManagerPad::tieBreaker() const { return session()->tieBreaker(); }
+
     //----------------------------------------------------------------------------
     // Manager
     //----------------------------------------------------------------------------
@@ -586,12 +570,9 @@ namespace XMPP { namespace Jingle {
         Jid                                   redirectionJid;
         std::optional<XMPP::Stanza::Error>    lastError;
         QHash<QPair<Jid, QString>, Session *> sessions;
-        struct Published {
-            JinglePub               publication;
-            PublishedSessionFactory factory;
-        };
-        QHash<QString, Published> publishedSessions;
-        int                       maxSessions = -1; // no limit
+        std::unique_ptr<PublicationManager>   publicationManager;
+        std::unique_ptr<RTP::Manager>         rtpManager;
+        int                                   maxSessions = -1; // no limit
 
         void setupSession(Session *s)
         {
@@ -605,6 +586,9 @@ namespace XMPP { namespace Jingle {
         d->client  = client;
         d->manager = this;
         d->pushTask.reset(new JTPush(client->rootTask()));
+        d->publicationManager = std::make_unique<PublicationManager>(this);
+        d->rtpManager         = std::make_unique<RTP::Manager>();
+        registerApplication(d->rtpManager.get());
         /*
         static bool mtReg = false;
         if (!mtReg) {
@@ -625,11 +609,8 @@ namespace XMPP { namespace Jingle {
 
     Client *Manager::client() const { return d->client; }
 
-    void Manager::addExternalManager(const QString &ns) { d->pushTask->addExternalManager(ns); }
-
-    void Manager::registerExternalSession(const QString &sid) { d->pushTask->registerExternalSession(sid); }
-
-    void Manager::forgetExternalSession(const QString &sid) { d->pushTask->forgetExternalSession(sid); }
+    PublicationManager *Manager::publicationManager() const { return d->publicationManager.get(); }
+    RTP::Manager       *Manager::rtpManager() const { return d->rtpManager.get(); }
 
     void Manager::setRedirection(const Jid &to) { d->redirectionJid = to; }
 
@@ -708,7 +689,7 @@ namespace XMPP { namespace Jingle {
         if (transportManager == d->transportManagers.end()) {
             return nullptr;
         }
-        return transportManager->second->pad(session);
+        return transportManager->second->padForNamespace(session, ns);
     }
 
     QStringList Manager::availableTransports(const TransportFeatures &features) const
@@ -728,72 +709,41 @@ namespace XMPP { namespace Jingle {
 
     QStringList Manager::discoFeatures() const
     {
-        QStringList ret { JINGLEPUB_NS };
+        QStringList ret { NS };
+        ret += d->publicationManager->discoFeatures();
+        // RFC 5888 grouping is a protocol capability, not a promise that every
+        // Jingle application/transport combination will use a shared association.
+        // Concrete BUNDLE use still depends on negotiated groups and application
+        // compatibility.
+        ret += QStringLiteral("urn:ietf:rfc:5888");
         for (auto const &mgr : d->applicationManagers) {
             ret += mgr.second->discoFeatures();
         }
         for (auto const &mgr : d->transportManagers) {
             ret += mgr.second->discoFeatures();
         }
+        ret.removeDuplicates();
         return ret;
     }
 
     JinglePub Manager::registerPublishedSession(JinglePub publication, PublishedSessionFactory factory)
     {
-        if (!factory)
-            return {};
-        if (!publication.from().isValid())
-            publication.setFrom(d->client->jid());
-        if (publication.id().isEmpty()) {
-            QString id;
-            do {
-                id = QString::number(QRandomGenerator::global()->generate64(), 16);
-            } while (d->publishedSessions.contains(id));
-            publication.setId(id);
-        }
-        if (!publication.isValid())
-            return {};
-        const auto localJid = d->client->jid();
-        if (!publication.from().compare(localJid, false)
-            || (!publication.from().resource().isEmpty() && !publication.from().compare(localJid)))
-            return {};
-        if (d->publishedSessions.contains(publication.id()))
-            return {};
-        d->publishedSessions.insert(publication.id(), Private::Published { publication, std::move(factory) });
-        return publication;
+        return d->publicationManager->registerPublishedSession(std::move(publication), std::move(factory));
     }
 
-    void Manager::unregisterPublishedSession(const QString &id) { d->publishedSessions.remove(id); }
-
-    JinglePub Manager::publishedSession(const QString &id) const
+    void Manager::unregisterPublishedSession(const QString &id)
     {
-        auto it = d->publishedSessions.constFind(id);
-        return it == d->publishedSessions.cend() ? JinglePub() : it->publication;
+        d->publicationManager->unregisterPublishedSession(id);
     }
+
+    JinglePub Manager::publishedSession(const QString &id) const { return d->publicationManager->publishedSession(id); }
 
     PublishedSessionRequest *Manager::requestPublishedSession(const Jid &publisher, const QString &id, QObject *parent)
     {
-        return new PublishedSessionRequest(this, publisher, id, parent ? parent : this);
+        return d->publicationManager->requestPublishedSession(publisher, id, parent ? parent : this);
     }
 
-    Session *Manager::startPublishedSession(const Jid &requester, const QString &id)
-    {
-        auto it = d->publishedSessions.find(id);
-        if (it == d->publishedSessions.end() || !isAllowedParty(requester))
-            return nullptr;
-        Session *session = it->factory(requester);
-        if (!session || session->manager() != this || session->role() != Origin::Initiator
-            || !session->peer().compare(requester)) {
-            if (session && session->manager() == this)
-                session->deleteLater();
-            return nullptr;
-        }
-        if (session->reserveSid().isEmpty()) {
-            session->deleteLater();
-            return nullptr;
-        }
-        return session;
-    }
+    void Manager::clientPresenceAvailable() { d->publicationManager->clientPresenceAvailable(); }
 
     Session *Manager::incomingSessionInitiate(const Jid &from, const Jingle &jingle, const QDomElement &jingleEl)
     {

@@ -23,7 +23,9 @@
 #include "xmpp/jid/jid.h"
 #include "xmpp_client.h"
 #include "xmpp_ibb.h"
+#include "xmpp_task.h"
 
+#include <QPointer>
 #include <QTimer>
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QRandomGenerator>
@@ -66,6 +68,10 @@ namespace XMPP { namespace Jingle { namespace IBB {
             connect(c, &IBBConnection::delayedCloseFinished, this, &Connection::handleIBBClosed);
             connect(c, &IBBConnection::aboutToClose, this, &Connection::aboutToClose);
             connect(c, &IBBConnection::connected, this, &Connection::handleConnnected);
+            connect(c, &IBBConnection::error, this, [this](int error) {
+                setError(error);
+                handleIBBClosed();
+            });
         }
 
         void handleConnnected()
@@ -95,14 +101,20 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
         void close()
         {
+            if (state >= State::Finishing)
+                return;
+
             if (connection) {
+                state = State::Finishing;
                 connection->close();
                 setOpenMode(connection->openMode());
+                if (!connection->isOpen() && !bytesAvailable())
+                    postCloseAllDataRead();
             } else {
+                state = State::Finished;
                 XMPP::Jingle::Connection::close();
                 emit connectionClosed();
             }
-            state = State::Finished;
         }
 
     protected:
@@ -120,6 +132,8 @@ namespace XMPP { namespace Jingle { namespace IBB {
     private:
         void handleIBBClosed()
         {
+            if (!connection || state == State::Finished)
+                return;
             state = State::Finishing;
             if (bytesAvailable())
                 setOpenMode(QIODevice::ReadOnly);
@@ -135,6 +149,16 @@ namespace XMPP { namespace Jingle { namespace IBB {
             setOpenMode(QIODevice::NotOpen);
             emit connectionClosed();
         }
+    };
+
+    class PreparedIbbUpdate final : public XMPP::Jingle::Transport::PreparedUpdate {
+    public:
+        enum class Kind { NewStream, Existing, Noop };
+
+        QString                  sid;
+        size_t                   blockSize = 0;
+        Kind                     kind      = Kind::NewStream;
+        QWeakPointer<Connection> expected;
     };
 
     struct Transport::Private {
@@ -232,67 +256,124 @@ namespace XMPP { namespace Jingle { namespace IBB {
         }
     }
 
-    bool Transport::update(const QDomElement &transportEl)
+    Transport::PrepareUpdateResult Transport::prepareUpdate(const QDomElement &transportEl)
     {
         if (_state == State::Finished) {
             qWarning("The IBB transport has finished already");
-            return false;
+            return { PrepareUpdateStatus::Invalid, {}, {} };
         }
 
-        QString sid = transportEl.attribute(QString::fromLatin1("sid"));
+        const QString sid = transportEl.attribute(QString::fromLatin1("sid"));
         if (sid.isEmpty()) {
             qWarning("empty SID");
-            return false;
+            return { PrepareUpdateStatus::Invalid, {}, {} };
         }
 
-        size_t bs_final = d->defaultBlockSize;
-        auto   bs       = transportEl.attribute(QString::fromLatin1("block-size"));
+        size_t blockSize = d->defaultBlockSize;
+        const auto bs    = transportEl.attribute(QString::fromLatin1("block-size"));
         if (!bs.isEmpty()) {
-            size_t bsn = bs.toULongLong();
-            if (bsn && bsn <= bs_final) {
-                bs_final = bsn;
-            }
+            const size_t parsed = bs.toULongLong();
+            if (parsed && parsed <= blockSize)
+                blockSize = parsed;
         }
 
-        auto it = d->connections.find(sid);
-        if (it == d->connections.end()) { // new sid = new stream according to xep
-            auto c = d->newStream(sid, bs_final, _pad->session()->peerRole());
-            if (!c) {
+        auto prepared       = std::make_unique<PreparedIbbUpdate>();
+        prepared->sid       = sid;
+        prepared->blockSize = blockSize;
+
+        const auto it = d->connections.constFind(sid);
+        if (it == d->connections.cend()) {
+            prepared->kind = PreparedIbbUpdate::Kind::NewStream;
+            return { PrepareUpdateStatus::Ready, std::move(prepared), {} };
+        }
+
+        prepared->expected = it.value().toWeakRef();
+        if (it.value()->creator != _pad->session()->role() || it.value()->state != State::Pending) {
+            if (it.value()->state >= State::Accepted && it.value()->state <= State::Active) {
+                prepared->kind = PreparedIbbUpdate::Kind::Noop;
+                return { PrepareUpdateStatus::Ready, std::move(prepared), {} };
+            }
+            qWarning("Unexpected IBB answer");
+            return { PrepareUpdateStatus::Invalid, {}, {} };
+        }
+
+        prepared->kind = PreparedIbbUpdate::Kind::Existing;
+        return { PrepareUpdateStatus::Ready, std::move(prepared), {} };
+    }
+
+    bool Transport::commitPreparedUpdate(PreparedUpdatePtr update)
+    {
+        auto prepared = dynamic_cast<PreparedIbbUpdate *>(update.get());
+        if (!prepared || _state == State::Finished)
+            return false;
+
+        QPointer<Session> session(_pad->session());
+        auto              it = d->connections.find(prepared->sid);
+
+        if (prepared->kind == PreparedIbbUpdate::Kind::NewStream) {
+            if (it != d->connections.end())
+                return false;
+
+            auto connection = d->newStream(prepared->sid, prepared->blockSize, _pad->session()->peerRole());
+            if (!connection) {
                 qWarning("failed to create IBB connection");
                 return false;
             }
-            c->setRemote(true);
-            c->state = State::Pending;
+            connection->setRemote(true);
+            connection->state = State::Pending;
+
+            bool inserted = false;
             if (_state == State::Created && isRemote()) {
-                // seems like we are just initing remote transport
+                d->connections.insert(prepared->sid, connection);
+                inserted = true;
+                // Publish state only after the new connection is fully installed:
+                // stateChanged() is an external reentrancy boundary.
                 setState(State::Pending);
-                d->connections.insert(sid, c);
-            } else if (!wasAccepted() || notifyIncomingConnection(c))
-                d->connections.insert(sid, c);
-        } else {
-            if ((*it)->creator != _pad->session()->role() || (*it)->state != State::Pending) {
-                if ((*it)->state >= State::Accepted && (*it)->state <= State::Active) {
-                    qWarning("Ignoring IBB transport in state: %d", int((*it)->state));
+                if (!session)
                     return true;
-                }
-                qWarning("Unexpected IBB answer");
-                return false; // out of order or something like this
+            } else if (!wasAccepted() || notifyIncomingConnection(connection)) {
+                if (!session)
+                    return true;
+                d->connections.insert(prepared->sid, connection);
+                inserted = true;
             }
 
-            if (bs_final < (*it)->_blockSize) {
-                (*it)->_blockSize = bs_final;
+            if (session && inserted && _state >= State::Connecting) {
+                QTimer::singleShot(0, this, [this, connection]() mutable { d->checkAndStartConnection(connection); });
             }
-            if (_creator == _pad->session()->role()) {
-                setState(State::Accepted);
-            }
-            (*it)->state = State::Accepted;
+            return true;
         }
 
-        if (_state >= State::Connecting) {
-            auto c = it.value();
-            QTimer::singleShot(0, this, [this, c]() mutable { d->checkAndStartConnection(c); });
+        auto expected = prepared->expected.lock();
+        if (!expected || it == d->connections.end() || it.value() != expected)
+            return false;
+
+        if (prepared->kind == PreparedIbbUpdate::Kind::Noop)
+            return true;
+
+        if (expected->creator != _pad->session()->role() || expected->state != State::Pending)
+            return false;
+
+        if (prepared->blockSize < expected->_blockSize)
+            expected->_blockSize = prepared->blockSize;
+        // Complete the connection mutation before publishing the transport state.
+        expected->state = State::Accepted;
+        if (_creator == _pad->session()->role()) {
+            setState(State::Accepted);
+            if (!session)
+                return true;
+        }
+
+        if (session && _state >= State::Connecting) {
+            QTimer::singleShot(0, this, [this, expected]() mutable { d->checkAndStartConnection(expected); });
         }
         return true;
+    }
+
+    bool Transport::update(const QDomElement &transportEl)
+    {
+        auto prepared = prepareUpdate(transportEl);
+        return prepared && commitPreparedUpdate(std::move(prepared.update));
     }
 
     bool Transport::hasUpdates() const
@@ -343,23 +424,25 @@ namespace XMPP { namespace Jingle { namespace IBB {
         if (_state == State::ApprovedToSend) {
             setState(State::Unacked);
         }
-        upd = OutgoingTransportInfoUpdate { tel, [this, connection](bool success) mutable {
-                                               if (!success || connection->state != State::Unacked)
-                                                   return;
+        upd = OutgoingTransportInfoUpdate {
+            tel,
+            [this, guard = QPointer<Transport>(this), connection](Task *task) mutable {
+                if (!guard || !task || !task->success() || connection->state != State::Unacked)
+                    return;
 
-                                               if (connection->creator == _pad->session()->role()) {
-                                                   connection->state = State::Pending;
-                                               } else {
-                                                   connection->state = State::Accepted;
-                                               }
+                if (connection->creator == _pad->session()->role()) {
+                    connection->state = State::Pending;
+                } else {
+                    connection->state = State::Accepted;
+                }
 
-                                               if (_state == State::Unacked) {
-                                                   setState(_creator == _pad->session()->role() ? State::Pending
-                                                                                                : State::Accepted);
-                                               }
-                                               if (_state >= State::Connecting)
-                                                   d->checkAndStartConnection(connection);
-                                           } };
+                if (_state == State::Unacked) {
+                    setState(_creator == _pad->session()->role() ? State::Pending : State::Accepted);
+                }
+                if (guard && _state >= State::Connecting)
+                    d->checkAndStartConnection(connection);
+            }
+        };
 
         return upd;
     }

@@ -32,6 +32,13 @@ namespace XMPP { namespace Jingle {
     {
         return (features() & desiredFeatures) == desiredFeatures;
     }
+    TransportManagerPad *TransportManager::padForNamespace(Session *session, const QString &ns)
+    {
+        auto result = pad(session);
+        if (result)
+            result->setProperty("_iris_jingle_transport_namespace", ns);
+        return result;
+    }
     QStringList TransportManager::ns() const { return discoFeatures(); }
     void        TransportManager::closeAll(const QString &) { emit abortAllRequested(); }
 
@@ -43,6 +50,16 @@ namespace XMPP { namespace Jingle {
     bool Transport::isRemote() const { return _pad->session()->role() != _creator; }
 
     void Transport::stop() { _state = State::Finished; }
+
+    Transport::PrepareUpdateResult Transport::prepareUpdate(const QDomElement &)
+    {
+        return {};
+    }
+
+    bool Transport::commitPreparedUpdate(PreparedUpdatePtr)
+    {
+        return false;
+    }
 
     int Transport::maxSupportedComponents() const { return 1; }
 

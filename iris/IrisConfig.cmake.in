@@ -41,6 +41,14 @@ if(NOT @IRIS_BUNDLED_QCA@)
     endif()
 endif()
 
+if(@IRIS_ENABLE_SRTP@)
+    set(_iris_saved_srtp_module_path "${CMAKE_MODULE_PATH}")
+    list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/modules")
+    find_dependency(SRTP)
+    set(CMAKE_MODULE_PATH "${_iris_saved_srtp_module_path}")
+    unset(_iris_saved_srtp_module_path)
+endif()
+
 include("${CMAKE_CURRENT_LIST_DIR}/IrisTargets.cmake")
 
 # A shared Iris with bundled QCA contains the QCA implementation itself. Its

@@ -21,8 +21,10 @@
 #include "jingle-sctp-association_p.h"
 
 #include <QtEndian>
+#include <QTimer>
 
 #include <cstring>
+#include <limits>
 
 namespace XMPP { namespace Jingle { namespace SCTP {
 
@@ -65,17 +67,18 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         quint16 priority       = qFromBigEndian<quint16>(data.data() + 2);
         quint32 reliability    = qFromBigEndian<quint32>(data.data() + 4);
         quint16 labelLength    = qFromBigEndian<quint16>(data.data() + 8);
-        auto    protoOff       = (12 + labelLength) + labelLength % 4;
         quint16 protocolLength = qFromBigEndian<quint16>(data.data() + 10);
-        if (protoOff + protocolLength > data.size()) {
+        const qsizetype labelOffset    = 12;
+        const qsizetype protocolOffset = labelOffset + qsizetype(labelLength);
+        if (protocolOffset > data.size() || qsizetype(protocolLength) > data.size() - protocolOffset) {
             qWarning("jingle-sctp: truncated label or protocol in header for WebRTC DataChannel DATA_CHANNEL_OPEN. "
                      "Dropping..");
             return {};
         }
-        QString label    = QString::fromUtf8(data.data() + 12, labelLength);
-        QString protocol = QString::fromUtf8(data.data() + protoOff, protocolLength);
+        QString label    = QString::fromUtf8(data.data() + labelOffset, labelLength);
+        QString protocol = QString::fromUtf8(data.data() + protocolOffset, protocolLength);
         // start with DcepNegotiated since caller will ack asap
-        auto channel       = QSharedPointer<WebRTCDataChannel>::create(assoc, channelType, priority, reliability, label,
+        auto channel       = QSharedPointer<WebRTCDataChannel>::create(assoc, channelType, reliability, priority, label,
                                                                        protocol, DcepNegotiated);
         channel->_isRemote = true;
         channel->setOpenMode(QIODevice::ReadWrite);
@@ -88,19 +91,24 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         auto utf8Label    = label.toUtf8();
         auto utf8Protocol = protocol.toUtf8();
 
-        auto sz       = 12 + utf8Label.size();
-        auto protoOff = (sz + 3) & ~3;
-        sz += (utf8Protocol.size() + 3) & ~3;
-        QByteArray data(sz, 0);
+        if (utf8Label.size() > std::numeric_limits<quint16>::max()
+            || utf8Protocol.size() > std::numeric_limits<quint16>::max()) {
+            qWarning("jingle-sctp: WebRTC DataChannel label or protocol is too long");
+            onError(QAbstractSocket::SocketResourceError);
+            return;
+        }
+
+        const qsizetype protocolOffset = 12 + utf8Label.size();
+        QByteArray      data(protocolOffset + utf8Protocol.size(), 0);
 
         data[0] = DCEP_DATA_CHANNEL_OPEN;
         data[1] = channelType;
         qToBigEndian(priority, data.data() + 2);
         qToBigEndian(reliability, data.data() + 4);
-        qToBigEndian(utf8Label.size(), data.data() + 8);
-        qToBigEndian(utf8Protocol.size(), data.data() + 10);
+        qToBigEndian<quint16>(quint16(utf8Label.size()), data.data() + 8);
+        qToBigEndian<quint16>(quint16(utf8Protocol.size()), data.data() + 10);
         data.replace(12, utf8Label.size(), utf8Label);
-        data.replace(protoOff, utf8Protocol.size(), utf8Protocol);
+        data.replace(protocolOffset, utf8Protocol.size(), utf8Protocol);
 
         dcepState = DcepOpening;
         association->write(data, streamId, PPID_DCEP);
@@ -116,8 +124,13 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         if (datagrams.size()) {
             auto dg = datagrams.takeFirst();
             _bytesAvailable -= dg.data().size();
+            // Do not emit connectionClosed synchronously from inside readDatagram():
+            // the caller has not yet accounted the returned bytes. Defer the drain
+            // edge to the event loop so application state observes the payload first.
+            QTimer::singleShot(0, this, [this]() { finishCloseIfDrained(); });
             return dg;
         }
+        finishCloseIfDrained();
         return {};
     }
 
@@ -157,11 +170,34 @@ namespace XMPP { namespace Jingle { namespace SCTP {
             sz -= dataSz;
         } while (sz > 0 && !datagrams.isEmpty());
         _bytesAvailable -= actualSz;
+        // read() has the same ordering requirement as readDatagram(): closure
+        // notification must not overtake accounting of the bytes being returned.
+        QTimer::singleShot(0, this, [this]() { finishCloseIfDrained(); });
         // qDebug("read %lld bytes. more %lld is available", actualSz, _bytesAvailable);
         return actualSz;
     }
 
-    void WebRTCDataChannel::close() { XMPP::Jingle::Connection::close(); }
+    void WebRTCDataChannel::close()
+    {
+        if (closeRequested || closeSignalEmitted)
+            return;
+        closeRequested = true;
+
+        if (streamClosed || streamId < 0 || !association) {
+            XMPP::Jingle::Connection::close();
+            closeWasLocal = true;
+            streamClosed  = true;
+            finishCloseIfDrained();
+            return;
+        }
+
+        // Stop accepting application writes immediately, but keep the read
+        // side alive until SCTP confirms the stream reset. Buffered peer data
+        // must remain readable during that finishing window.
+        if (openMode() & QIODevice::WriteOnly)
+            setOpenMode(openMode() & ~QIODevice::WriteOnly);
+        association->close(quint16(streamId));
+    }
 
     TransportFeatures WebRTCDataChannel::features() const
     {
@@ -183,12 +219,30 @@ namespace XMPP { namespace Jingle { namespace SCTP {
 
     void WebRTCDataChannel::onDisconnected(DisconnectReason reason)
     {
-        if (!(openMode() & QIODevice::WriteOnly))
+        if (streamClosed)
             return;
-        streamId         = -1;
-        disconnectReason = reason;
-        setOpenMode(openMode() & ~QIODevice::WriteOnly);
+
+        closeWasLocal     = closeRequested;
+        streamClosed      = true;
+        streamId          = -1;
+        disconnectReason  = reason;
+        if (openMode() & QIODevice::WriteOnly)
+            setOpenMode(openMode() & ~QIODevice::WriteOnly);
         emit disconnected();
+        finishCloseIfDrained();
+    }
+
+    void WebRTCDataChannel::finishCloseIfDrained()
+    {
+        if (!streamClosed || closeSignalEmitted || bytesAvailable() > 0)
+            return;
+
+        closeSignalEmitted = true;
+        setOpenMode(QIODevice::NotOpen);
+        if (closeWasLocal)
+            emit delayedCloseFinished();
+        else
+            emit connectionClosed();
     }
 
     void WebRTCDataChannel::onIncomingData(const QByteArray &data, quint32 ppid)

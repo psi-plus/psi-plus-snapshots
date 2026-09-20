@@ -20,7 +20,10 @@
 #ifndef JINGLE_ICE_H
 #define JINGLE_ICE_H
 
+#include <QHash>
+#include <QWeakPointer>
 #include <iris/irisnet/noncore/tcpportreserver.h>
+#include <iris/jingle-rtp-srtp.h>
 #include <iris/xmpp-core/xmpp.h>
 #include <iris/xmpp-im/jingle-transport.h>
 
@@ -31,11 +34,14 @@ class Client;
 
 namespace Jingle { namespace ICE {
     extern const QString NS;
+    extern const QString NS_ICE_UDP;
 
     class Transport;
+    class ConnectionMembership;
 
     class Manager;
-    class Transport : public XMPP::Jingle::Transport {
+    class IceConnection;
+    class Transport : public XMPP::Jingle::Transport, public RTP::PacketTransport {
         Q_OBJECT
     public:
         enum Mode { Tcp, Udp };
@@ -45,6 +51,9 @@ namespace Jingle { namespace ICE {
 
         void                        prepare() override;
         void                        start() override;
+        void                        stop() override;
+        PrepareUpdateResult         prepareUpdate(const QDomElement &transportEl) override;
+        bool                        commitPreparedUpdate(PreparedUpdatePtr update) override;
         bool                        update(const QDomElement &transportEl) override;
         bool                        hasUpdates() const override;
         OutgoingTransportInfoUpdate takeOutgoingUpdate(bool ensureTransportElement) override;
@@ -55,9 +64,20 @@ namespace Jingle { namespace ICE {
         void                   setComponentsCount(int count) override;
         Connection::Ptr        addChannel(TransportFeatures features, const QString &id, int component = -1) override;
         QList<Connection::Ptr> channels() const override;
+        // Explicit experimental single-component RTP/RTCP mux. Configure before
+        // prepare(); caller must require rtcp-mux in the RTP answer (a refusal
+        // needs a different transport). No raw media fallback. This does not
+        // advertise BUNDLE. The returned binding is owned by the ICE connection;
+        // consumers retaining it must use QPointer.
+        bool              enableRtpMux() override;
+        RTP::SrtpSession *rtpSession() const override;
+        bool              sendRtpPacket(QByteArray, RTP::SrtpContext::Packet, quint64 epoch) override;
 
     private:
         friend class Manager;
+        friend class Pad;
+        void releaseNetworkOwnership();
+        bool iceCanSendMedia() const;
 
         class Private;
         std::unique_ptr<Private> d;
@@ -70,6 +90,7 @@ namespace Jingle { namespace ICE {
         typedef QSharedPointer<Pad> Ptr;
 
         Pad(Manager *manager, Session *session);
+        ~Pad() override;
         QString           ns() const override;
         Session          *session() const override;
         TransportManager *manager() const override;
@@ -78,9 +99,18 @@ namespace Jingle { namespace ICE {
         inline TcpPortScope *discoScope() const { return _discoScope; }
 
     private:
+        friend class Transport;
+        IceConnection       *groupedConnectionFor(Transport *transport, bool *contentBound, bool *groupRequired);
+        ConnectionMembership membershipFor(Transport *transport, bool *contentBound);
+        bool                 groupedConnectionAccepted(Transport *transport) const;
+        bool                 shouldDeferGroupedNetwork(Transport *transport) const;
+        qsizetype            liveAssociationCount() const;
+
+        class Private;
+        std::unique_ptr<Private> d;
         Manager      *_manager;
         Session      *_session;
-        TcpPortScope *_discoScope;
+        TcpPortScope *_discoScope = nullptr;
         bool          _allowGrouping = false;
     };
 
@@ -120,6 +150,7 @@ namespace Jingle { namespace ICE {
         void setBasePort(int port);
         void setExternalAddress(const QString &host);
         void setSelfAddress(const QHostAddress &addr);
+        void setAllowIpExposure(bool allow);
         void setStunBindService(const QString &host, int port);
         void setStunRelayUdpService(const QString &host, int port, const QString &user, const QString &pass);
         void setStunRelayTcpService(const QString &host, int port, const XMPP::AdvancedConnector::Proxy &proxy,

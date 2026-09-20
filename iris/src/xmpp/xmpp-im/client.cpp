@@ -1240,6 +1240,12 @@ void Client::setPresence(const Status &s)
     j->pres(s);
     j->go(true);
 
+    // PEP node+notify subscriptions are established by available presence.
+    // Start XEP-0358 authority snapshots only after that stanza has been
+    // queued, so live catalog events cannot normally precede the subscription.
+    if (s.isAvailable())
+        d->jingleManager->clientPresenceAvailable();
+
     // update our resourceList
     ppPresence(jid(), s);
     // ResourceList::Iterator rit = d->resourceList.find(resource());
@@ -1361,7 +1367,6 @@ DiscoItem Client::makeDiscoResult(const QString &node) const
     features.addFeature("urn:xmpp:ping");
     features.addFeature("urn:xmpp:time");
     features.addFeature("urn:xmpp:message-correct:0");
-    features.addFeature("urn:xmpp:jingle:1");
     features.addFeature("urn:xmpp:extdisco:2");
     features += d->jingleManager->discoFeatures();
     features += d->encryptionManager->features();

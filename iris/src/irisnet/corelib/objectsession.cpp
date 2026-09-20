@@ -26,6 +26,26 @@
 #include <stdlib.h>
 
 namespace XMPP {
+namespace {
+    const char *argumentName(const ObjectSessionArgument &arg)
+    {
+#if QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
+        return arg.name();
+#else
+        return arg.name;
+#endif
+    }
+
+    const void *argumentData(const ObjectSessionArgument &arg)
+    {
+#if QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
+        return arg.data();
+#else
+        return arg.data;
+#endif
+    }
+} // namespace
+
 class ObjectSessionWatcherPrivate {
 public:
     ObjectSession *sess;
@@ -63,17 +83,20 @@ public:
             args.clear();
         }
 
-        bool setArgs(QGenericArgument val0 = QGenericArgument(), QGenericArgument val1 = QGenericArgument(),
-                     QGenericArgument val2 = QGenericArgument(), QGenericArgument val3 = QGenericArgument(),
-                     QGenericArgument val4 = QGenericArgument(), QGenericArgument val5 = QGenericArgument(),
-                     QGenericArgument val6 = QGenericArgument(), QGenericArgument val7 = QGenericArgument(),
-                     QGenericArgument val8 = QGenericArgument(), QGenericArgument val9 = QGenericArgument())
+        bool setArgs(
+            ObjectSessionArgument val0 = ObjectSessionArgument(), ObjectSessionArgument val1 = ObjectSessionArgument(),
+            ObjectSessionArgument val2 = ObjectSessionArgument(), ObjectSessionArgument val3 = ObjectSessionArgument(),
+            ObjectSessionArgument val4 = ObjectSessionArgument(), ObjectSessionArgument val5 = ObjectSessionArgument(),
+            ObjectSessionArgument val6 = ObjectSessionArgument(), ObjectSessionArgument val7 = ObjectSessionArgument(),
+            ObjectSessionArgument val8 = ObjectSessionArgument(), ObjectSessionArgument val9 = ObjectSessionArgument())
         {
-            const char *arg_name[] = { val0.name(), val1.name(), val2.name(), val3.name(), val4.name(),
-                                       val5.name(), val6.name(), val7.name(), val8.name(), val9.name() };
+            const char *arg_name[] = { argumentName(val0), argumentName(val1), argumentName(val2), argumentName(val3),
+                                       argumentName(val4), argumentName(val5), argumentName(val6), argumentName(val7),
+                                       argumentName(val8), argumentName(val9) };
 
-            void *arg_data[] = { val0.data(), val1.data(), val2.data(), val3.data(), val4.data(),
-                                 val5.data(), val6.data(), val7.data(), val8.data(), val9.data() };
+            const void *arg_data[] = { argumentData(val0), argumentData(val1), argumentData(val2), argumentData(val3),
+                                       argumentData(val4), argumentData(val5), argumentData(val6), argumentData(val7),
+                                       argumentData(val8), argumentData(val9) };
 
             clearArgs();
 
@@ -206,19 +229,20 @@ void ObjectSession::reset()
 
 bool ObjectSession::isDeferred(QObject *obj, const char *method) { return d->havePendingCall(obj, method); }
 
-void ObjectSession::defer(QObject *obj, const char *method, QGenericArgument val0, QGenericArgument val1,
-                          QGenericArgument val2, QGenericArgument val3, QGenericArgument val4, QGenericArgument val5,
-                          QGenericArgument val6, QGenericArgument val7, QGenericArgument val8, QGenericArgument val9)
+void ObjectSession::defer(QObject *obj, const char *method, ObjectSessionArgument val0, ObjectSessionArgument val1,
+                          ObjectSessionArgument val2, ObjectSessionArgument val3, ObjectSessionArgument val4,
+                          ObjectSessionArgument val5, ObjectSessionArgument val6, ObjectSessionArgument val7,
+                          ObjectSessionArgument val8, ObjectSessionArgument val9)
 {
     ObjectSessionPrivate::MethodCall *call = new ObjectSessionPrivate::MethodCall(obj, method);
     call->setArgs(val0, val1, val2, val3, val4, val5, val6, val7, val8, val9);
     d->addPendingCall(call);
 }
 
-void ObjectSession::deferExclusive(QObject *obj, const char *method, QGenericArgument val0, QGenericArgument val1,
-                                   QGenericArgument val2, QGenericArgument val3, QGenericArgument val4,
-                                   QGenericArgument val5, QGenericArgument val6, QGenericArgument val7,
-                                   QGenericArgument val8, QGenericArgument val9)
+void ObjectSession::deferExclusive(QObject *obj, const char *method, ObjectSessionArgument val0,
+                                   ObjectSessionArgument val1, ObjectSessionArgument val2, ObjectSessionArgument val3,
+                                   ObjectSessionArgument val4, ObjectSessionArgument val5, ObjectSessionArgument val6,
+                                   ObjectSessionArgument val7, ObjectSessionArgument val8, ObjectSessionArgument val9)
 {
     if (d->havePendingCall(obj, method))
         return;

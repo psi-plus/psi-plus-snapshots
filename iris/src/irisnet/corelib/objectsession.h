@@ -25,6 +25,12 @@ namespace XMPP {
 class ObjectSessionPrivate;
 class ObjectSessionWatcherPrivate;
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
+using ObjectSessionArgument = QGenericArgument;
+#else
+using ObjectSessionArgument = QMetaMethodArgument;
+#endif
+
 class ObjectSession : public QObject {
     Q_OBJECT
 
@@ -36,18 +42,20 @@ public:
     void reset();
 
     bool isDeferred(QObject *obj, const char *method);
-    void defer(QObject *obj, const char *method, QGenericArgument val0 = QGenericArgument(),
-               QGenericArgument val1 = QGenericArgument(), QGenericArgument val2 = QGenericArgument(),
-               QGenericArgument val3 = QGenericArgument(), QGenericArgument val4 = QGenericArgument(),
-               QGenericArgument val5 = QGenericArgument(), QGenericArgument val6 = QGenericArgument(),
-               QGenericArgument val7 = QGenericArgument(), QGenericArgument val8 = QGenericArgument(),
-               QGenericArgument val9 = QGenericArgument());
-    void deferExclusive(QObject *obj, const char *method, QGenericArgument val0 = QGenericArgument(),
-                        QGenericArgument val1 = QGenericArgument(), QGenericArgument val2 = QGenericArgument(),
-                        QGenericArgument val3 = QGenericArgument(), QGenericArgument val4 = QGenericArgument(),
-                        QGenericArgument val5 = QGenericArgument(), QGenericArgument val6 = QGenericArgument(),
-                        QGenericArgument val7 = QGenericArgument(), QGenericArgument val8 = QGenericArgument(),
-                        QGenericArgument val9 = QGenericArgument());
+    void
+         defer(QObject *obj, const char *method, ObjectSessionArgument val0 = ObjectSessionArgument(),
+               ObjectSessionArgument val1 = ObjectSessionArgument(), ObjectSessionArgument val2 = ObjectSessionArgument(),
+               ObjectSessionArgument val3 = ObjectSessionArgument(), ObjectSessionArgument val4 = ObjectSessionArgument(),
+               ObjectSessionArgument val5 = ObjectSessionArgument(), ObjectSessionArgument val6 = ObjectSessionArgument(),
+               ObjectSessionArgument val7 = ObjectSessionArgument(), ObjectSessionArgument val8 = ObjectSessionArgument(),
+               ObjectSessionArgument val9 = ObjectSessionArgument());
+    void deferExclusive(
+        QObject *obj, const char *method, ObjectSessionArgument val0 = ObjectSessionArgument(),
+        ObjectSessionArgument val1 = ObjectSessionArgument(), ObjectSessionArgument val2 = ObjectSessionArgument(),
+        ObjectSessionArgument val3 = ObjectSessionArgument(), ObjectSessionArgument val4 = ObjectSessionArgument(),
+        ObjectSessionArgument val5 = ObjectSessionArgument(), ObjectSessionArgument val6 = ObjectSessionArgument(),
+        ObjectSessionArgument val7 = ObjectSessionArgument(), ObjectSessionArgument val8 = ObjectSessionArgument(),
+        ObjectSessionArgument val9 = ObjectSessionArgument());
 
     void pause();
     void resume();

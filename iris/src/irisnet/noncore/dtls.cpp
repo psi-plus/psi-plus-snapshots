@@ -104,6 +104,8 @@ public:
     // original fingerprints
     FingerPrint localFingerprint;
     FingerPrint remoteFingerprint;
+    QStringList srtpProfiles;
+    bool        authenticated = false;
 
     QAbstractSocket::SocketError lastError = QAbstractSocket::UnknownSocketError;
 
@@ -122,12 +124,23 @@ public:
         DTLS_DEBUG("tls handshaken");
         auto peerIdentity = tls->peerIdentityResult();
         if (peerIdentity == QCA::TLS::Valid || peerIdentity == QCA::TLS::InvalidCertificate) {
-            const auto  chain = tls->peerCertificateChain();
-            const auto &cert  = chain.first();
-            if (computeFingerprint(cert, remoteFingerprint.hash.type()) == remoteFingerprint.hash) {
+            const auto chain = tls->peerCertificateChain();
+            if (!chain.isEmpty()
+                && computeFingerprint(chain.first(), remoteFingerprint.hash.type()) == remoteFingerprint.hash) {
                 DTLS_DEBUG("valid");
+#if QCA_MAJOR_VERSION >= 3
+                if (!srtpProfiles.isEmpty()
+                    && (!srtpProfiles.contains(tls->selectedSRTPProfile()) || tls->srtpKeyingMaterial().isNull())) {
+                    lastError = QAbstractSocket::SslHandshakeFailedError;
+                    tls->reset();
+                    emit q->errorOccurred(lastError);
+                    return;
+                }
+#endif
+                authenticated = true;
                 tls->continueAfterStep();
-                emit q->connected();
+                if (authenticated)
+                    emit q->connected();
                 return;
             } else {
                 qWarning("dtls fingerprints do not match: %d", int(tls->peerIdentityResult()));
@@ -136,13 +149,15 @@ public:
             qWarning("dtls peerIdentity failure: %d", int(tls->peerIdentityResult()));
         }
 
-        lastError = QAbstractSocket::SslHandshakeFailedError;
+        lastError     = QAbstractSocket::SslHandshakeFailedError;
+        authenticated = false;
         tls->reset();
         emit q->errorOccurred(lastError);
     }
 
     void tls_error()
     {
+        authenticated = false;
         DTLS_DEBUG("tls error: %d", tls->errorCode());
         switch (tls->errorCode()) {
         case QCA::TLS::ErrorSignerExpired:
@@ -170,6 +185,7 @@ public:
         if (tls) {
             if (remoteFingerprint == fp)
                 return;
+            authenticated = false;
             // need to restart dtls. see rfc8842 (todo: but in fact we need more checks)
             needRestart            = true;
             localFingerprint.setup = Dtls::NotSet;
@@ -226,8 +242,10 @@ public:
 
     void negotiate()
     {
+        authenticated = false;
         if (tls) {
             delete tls;
+            tls = nullptr;
         }
 
         if (!remoteFingerprint.isValid()) {
@@ -243,14 +261,29 @@ public:
             emit q->errorOccurred(lastError);
             return;
         }
-        tls = new QCA::TLS(QCA::TLS::Datagram);
+        tls = new QCA::TLS(QCA::TLS::Datagram, this);
+#if QCA_MAJOR_VERSION >= 3
+        if (!tls->setSRTPProfiles(srtpProfiles)) {
+            delete tls;
+            tls       = nullptr;
+            lastError = QAbstractSocket::OperationError;
+            emit q->errorOccurred(lastError);
+            return;
+        }
+#endif
         tls->setCertificate(cert, pkey);
 
         connect(tls, &QCA::TLS::certificateRequested, tls, &QCA::TLS::continueAfterStep);
         connect(tls, &QCA::TLS::handshaken, this, &Dtls::Private::tls_handshaken);
-        connect(tls, &QCA::TLS::readyRead, q, &Dtls::readyRead);
+        connect(tls, &QCA::TLS::readyRead, q, [this]() {
+            if (authenticated)
+                emit q->readyRead();
+        });
         connect(tls, &QCA::TLS::readyReadOutgoing, q, &Dtls::readyReadOutgoing);
-        connect(tls, &QCA::TLS::closed, q, &Dtls::closed);
+        connect(tls, &QCA::TLS::closed, q, [this]() {
+            authenticated = false;
+            emit q->closed();
+        });
         connect(tls, &QCA::TLS::error, this, &Dtls::Private::tls_error);
 
         if (localFingerprint.setup == Dtls::Passive) {
@@ -304,7 +337,12 @@ Dtls::Dtls(QObject *parent, const QString &localJid, const QString &remoteJid) :
 
 void Dtls::setLocalCertificate(const QCA::Certificate &cert, const QCA::PrivateKey &pkey)
 {
-    d->tls->setCertificate(cert, pkey);
+    if (d->tls) {
+        qWarning("Cannot change DTLS identity after negotiation has started");
+        return;
+    }
+    d->cert                  = cert;
+    d->pkey                  = pkey;
     d->localFingerprint.hash = Private::computeFingerprint(cert, Hash::Sha256);
 }
 
@@ -349,10 +387,52 @@ bool Dtls::isStarted() const { return d->tls != nullptr; }
 
 bool Dtls::isSupported() { return QCA::isSupported("dtls"); }
 
+QStringList Dtls::supportedSRTPProfiles()
+{
+#if QCA_MAJOR_VERSION >= 3
+    QCA::TLS tls(QCA::TLS::Datagram);
+    return tls.supportedSRTPProfiles();
+#else
+    return {};
+#endif
+}
+
+bool Dtls::setSRTPProfiles(const QStringList &profiles)
+{
+    if (d->tls)
+        return false;
+#if QCA_MAJOR_VERSION >= 3
+    QCA::TLS probe(QCA::TLS::Datagram);
+    if (!probe.setSRTPProfiles(profiles))
+        return false;
+#else
+    if (!profiles.isEmpty())
+        return false;
+#endif
+    d->srtpProfiles = profiles;
+    return true;
+}
+
+QString Dtls::selectedSRTPProfile() const
+{
+#if QCA_MAJOR_VERSION >= 3
+    if (d->authenticated && d->tls)
+        return d->tls->selectedSRTPProfile();
+#endif
+    return {};
+}
+
+#if QCA_MAJOR_VERSION >= 3
+QCA::TLS::SRTPKeyingMaterial Dtls::srtpKeyingMaterial() const
+{
+    return d->authenticated && d->tls ? d->tls->srtpKeyingMaterial() : QCA::TLS::SRTPKeyingMaterial();
+}
+#endif
+
 QByteArray Dtls::readDatagram()
 {
-    if (!d->tls) {
-        DTLS_DEBUG("negotiation hasn't started yet. ignore readDatagram");
+    if (!d->tls || !d->authenticated) {
+        DTLS_DEBUG("peer is not authenticated. ignore readDatagram");
         return {};
     }
     QByteArray a = d->tls->read();
@@ -374,8 +454,8 @@ QByteArray Dtls::readOutgoingDatagram()
 void Dtls::writeDatagram(const QByteArray &data)
 {
     // DTLS_DEBUG("write %d bytes for encryption\n", data.size());
-    if (!d->tls) {
-        DTLS_DEBUG("negotiation hasn't started yet. ignore writeDatagram");
+    if (!d->tls || !d->authenticated) {
+        DTLS_DEBUG("peer is not authenticated. ignore writeDatagram");
         return;
     }
     d->tls->write(data);

@@ -20,6 +20,7 @@
 #define XMPP_DTLS_H
 
 #include <QAbstractSocket>
+#include <QtCrypto>
 
 #include <iris/xmpp-im/xmpp_hash.h>
 
@@ -53,7 +54,7 @@ public:
 
         static QString ns();
 
-        inline bool operator==(const FingerPrint &other) const { return setup == other.setup || hash == other.hash; }
+        inline bool operator==(const FingerPrint &other) const { return setup == other.setup && hash == other.hash; }
         inline bool operator!=(const FingerPrint &other) const { return !(*this == other); }
 
         bool        parse(const QDomElement &el);
@@ -87,6 +88,17 @@ public:
     void       writeIncomingDatagram(const QByteArray &data);
 
     bool isStarted() const;
+
+    /** Configure before negotiation. A nonempty list requires SRTP negotiation;
+     * failure to agree a profile fails the connection. Empty selects plain DTLS.
+     */
+    bool               setSRTPProfiles(const QStringList &profiles);
+    static QStringList supportedSRTPProfiles();
+    QString            selectedSRTPProfile() const;
+#if QCA_MAJOR_VERSION >= 3
+    /** Available only after the peer fingerprint has been verified. */
+    QCA::TLS::SRTPKeyingMaterial srtpKeyingMaterial() const;
+#endif
 
     static bool isSupported();
 signals:

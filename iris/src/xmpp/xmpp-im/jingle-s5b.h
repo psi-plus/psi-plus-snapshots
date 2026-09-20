@@ -135,6 +135,8 @@ namespace Jingle { namespace S5B {
 
         void                        prepare() override;
         void                        start() override;
+        PrepareUpdateResult         prepareUpdate(const QDomElement &transportEl) override;
+        bool                        commitPreparedUpdate(PreparedUpdatePtr update) override;
         bool                        update(const QDomElement &transportEl) override;
         bool                        hasUpdates() const override;
         OutgoingTransportInfoUpdate takeOutgoingUpdate(bool ensureTransportElement) override;
@@ -150,6 +152,7 @@ namespace Jingle { namespace S5B {
 
     private:
         friend class Manager;
+        friend struct TransportTestAccess;
 
         class Private;
         std::unique_ptr<Private> d;

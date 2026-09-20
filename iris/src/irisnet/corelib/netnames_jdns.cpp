@@ -21,6 +21,8 @@
 #include "objectsession.h"
 #include "qjdnsshared.h"
 
+#include <QUrl>
+
 // #define JDNS_DEBUG
 
 Q_DECLARE_METATYPE(XMPP::NameRecord)
@@ -67,7 +69,7 @@ static NameRecord importJDNSRecord(const QJDns::Record &in)
     default:
         return out;
     }
-    out.setOwner(in.owner);
+    out.setOwner(QUrl::fromAce(in.owner));
     out.setTtl(in.ttl);
     return out;
 }
@@ -133,7 +135,7 @@ static QJDns::Record exportJDNSRecord(const NameRecord &in)
     default:
         return out;
     }
-    out.owner = in.owner();
+    out.owner = QUrl::toAce(in.owner());
     out.ttl   = in.ttl();
     return out;
 }

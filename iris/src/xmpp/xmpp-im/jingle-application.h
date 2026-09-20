@@ -22,6 +22,8 @@
 
 #include <iris/iris_export.h>
 
+#include <QMetaObject>
+#include <iris/xmpp-im/jingle-tiebreaker.h>
 #include <iris/xmpp-im/jingle-transport.h>
 #include <optional>
 
@@ -47,6 +49,9 @@ namespace XMPP { namespace Jingle {
         virtual QString generateContentName(Origin senders) = 0;
 
         virtual bool incomingSessionInfo(const QDomElement &el);
+        // Auxiliary info namespaces need not equal the application description
+        // namespace. They must route to the existing pad, not create another one.
+        virtual QStringList sessionInfoNamespaces() const { return { ns() }; }
     };
 
     // Represents a session for single application. for example a single file in a file transfer session.
@@ -71,6 +76,8 @@ namespace XMPP { namespace Jingle {
             UserFlag           = 0x100
         };
         Q_DECLARE_FLAGS(ApplicationFlags, ApplicationFlag)
+
+        ~Application() override;
 
         virtual void setState(State state) = 0; // likely just remember the state and not generate any signals
         virtual const std::optional<XMPP::Stanza::Error> &lastError() const  = 0;
@@ -100,6 +107,51 @@ namespace XMPP { namespace Jingle {
         virtual QDomElement  makeLocalAnswer()                               = 0;
 
         /**
+         * Process advisory application parameters from description-info.
+         * This is not a new offer/answer. Return false for unsupported payloads.
+         * Implementations must not run a nested event loop in this callback.
+         */
+        virtual bool incomingDescriptionInfo(const QDomElement &) { return false; }
+
+        /** Opt in only if the application can enforce changing media direction.
+         * This is a capability query, not a consent callback; it must have no side effects.
+         * File-transfer applications retain their fixed sending direction by default.
+         */
+        virtual bool supportsContentModify() const { return false; }
+
+        /** Apply a validated peer direction update. Does not start the application,
+         * restart its transport or grant permission to capture local media.
+         * Receivers of sendersChanged must enforce local consent independently and
+         * must not run a nested event loop during incoming stanza processing.
+         */
+        void incomingContentModify(Origin senders);
+
+        /** Request a media-direction change.
+         * Before the initial content stanza leaves this endpoint, the local proposal
+         * is updated synchronously. Afterwards the latest request is queued until the
+         * application is active and sent as content-modify. The negotiated direction
+         * changes only after the peer acknowledges that request.
+         */
+        bool requestSenders(Origin senders);
+
+        // Low-level scheduling revision, not a durable policy/operation handle.
+        // Returns zero on rejection. A no-op/proposal-only request has no IQ
+        // attempt; consumers observe senders() as well as attempt completions.
+        quint64 requestSendersTracked(Origin senders);
+        // Discard only this queued revision, never an already sent IQ.
+        bool cancelQueuedSenders(quint64 revision);
+        bool sendersAttemptPending() const { return _sendersUpdateInFlight.has_value(); }
+
+        struct SendersAttemptResult {
+            enum class Outcome { Accepted, Rejected, TimedOut, Cancelled };
+            quint64                      id       = 0; // unique within this Application incarnation
+            quint64                      revision = 0;
+            Origin                       target   = Origin::None;
+            Outcome                      outcome  = Outcome::Cancelled;
+            std::optional<Stanza::Error> error; // includes the IQ timeout error
+        };
+
+        /**
          * @brief evaluateOutgoingUpdate computes and prepares next update which will be taken with takeOutgoingUpdate
          *   The updated will be taked immediately if considered to be most preferred among other updates types of
          *   other applications.
@@ -110,24 +162,46 @@ namespace XMPP { namespace Jingle {
         virtual OutgoingUpdate takeOutgoingUpdate();
 
         /**
-         * @brief setTransport checks if transport is compatible and stores it
-         * @param transport
-         * @return false if not compatible
+         * @brief Validate and install a new current transport.
+         *
+         * Replacement policy is delegated to TransportSelector::replace(). When the
+         * application already has a transport, this method also derives the Jingle
+         * transport-replace signaling state for the new instance and disconnects the
+         * superseded transport. Transport::State is not the lifetime of the
+         * transport-replace IQ; see PendingTransportReplace.
+         *
+         * The transport is retained by QSharedPointer. It is intentionally not made a
+         * QObject child of Application, because transport callbacks may outlive one
+         * signaling step and can hold shared references of their own.
+         *
+         * @param transport Candidate transport to make current.
+         * @param reason Optional failure reason carried into a subsequent replacement.
+         * @return true if the selector accepted and installed the transport.
          */
         bool setTransport(const QSharedPointer<Transport> &transport, const Reason &reason = Reason());
 
         /**
-         * @brief selectNextTransport selects next transport from compatible transports list.
-         *   The list is usually stored in the application
-         * @return
+         * @brief Select the next compatible local transport after failure/replacement.
+         *
+         * When @p alikeTransport is supplied, it is an advisory peer proposal used by
+         * TransportSelector::getAlikeTransport() to choose an efficient compatible local
+         * retry. The peer transport itself is not implicitly installed. If no candidate
+         * remains, the application moves toward content-remove with failed-transport.
+         * Selector calls and emitted signals are reentrant boundaries.
+         *
+         * @param alikeTransport Optional remote transport used only as a selection hint.
+         * @return true if a successor transport was installed.
          */
         bool selectNextTransport(const QSharedPointer<Transport> alikeTransport = QSharedPointer<Transport>());
 
         /**
-         * @brief Checks where transport-replace is possible atm
-         * @return
+         * @brief Return whether this application currently permits transport replacement.
+         *
+         * Incoming transport-replace validation calls this before mutation. Overrides
+         * should behave as a capability/state query and avoid unrelated side effects.
          */
         virtual bool isTransportReplaceEnabled() const;
+        virtual bool supportsSharedTransport() const { return false; }
 
         /**
          * @brief wantBetterTransport checks if the transport is a better match for the application
@@ -145,7 +219,56 @@ namespace XMPP { namespace Jingle {
         virtual void remove(Reason::Condition cond = Reason::Success, const QString &comment = QString()) = 0;
 
         virtual void incomingRemove(const Reason &r) = 0;
-        void         incomingTransportAccept(const QDomElement &el);
+
+        /**
+         * @brief Whether this content is awaiting its transport-replace completion callback.
+         *
+         * This is signaling state (`NeedAck`). Never infer the same fact from
+         * Transport::State::Unacked: transport implementations, notably ICE, do not
+         * share one transport-state transition for Jingle IQ lifetime. In a batch,
+         * the IQ may already be finished while an earlier owner's callback runs.
+         * Use the Session TieBreaker, not this flag, for collision arbitration.
+         */
+        bool transportReplaceAwaitingAck() const;
+
+        // Identity of the current replacement attempt, including same-object
+        // reselection. For guarded Session staging; not an IQ lifetime counter.
+        quint64 transportReplaceGeneration() const { return _transportReplaceGeneration; }
+
+        /**
+         * @brief Whether the current replacement is in the post-IQ negotiation phase.
+         *
+         * `InProgress` means the replacement proposal is the current signaling attempt
+         * known to the peer and is waiting for transport-accept/reject completion.
+         */
+        bool transportReplaceInProgress() const;
+
+        /**
+         * @brief Parse and apply a peer transport-accept to the current replacement.
+         *
+         * This compatibility overload stages a single payload first. Session batch
+         * handling should prepare every sibling before calling the PreparedUpdate overload.
+         */
+        bool incomingTransportAccept(const QDomElement &el);
+
+        /**
+         * @brief Commit an already prepared peer transport-accept payload.
+         *
+         * Completion is tied to the current transport and replacement generation.
+         * commitPreparedUpdate() and start() are reentrant boundaries; a superseding
+         * same-pointer generation must not be completed by this acknowledgement.
+         */
+        bool incomingTransportAccept(Transport::PreparedUpdatePtr update);
+
+        /**
+         * @brief Apply a validated peer transport-reject to the current local replacement.
+         *
+         * A handled rejection returns the signaling state to Planned and asks the
+         * TransportSelector for the next local candidate. `true` means the rejection was
+         * consumed even when no fallback exists and content removal is scheduled.
+         * @return false if the current transaction is not a rejectable local replacement.
+         */
+        bool incomingTransportReject();
 
     protected:
         /**
@@ -164,16 +287,33 @@ namespace XMPP { namespace Jingle {
         void updated(); // signal for session it has to send updates to remote. so it will follow with
                         // takeOutgoingUpdate() eventually
         void stateChanged(State);
+        void sendersChanged(Origin);
+        // Emitted only when the negotiated direction changes due to a peer content-modify.
+        // Local proposals and acknowledgements of our own content-modify do not emit it.
+        void sendersChangedByPeer(Origin);
+        // One terminal result per consumed content-modify attempt, after internal
+        // state cleanup. May be synchronous. QObject::destroyed is the terminal
+        // lifetime notification if the Application is deleted before completion.
+        void sendersAttemptFinished(const XMPP::Jingle::Application::SendersAttemptResult &result);
 
     protected:
         State            _state = State::Created;
         ApplicationFlags _flags;
 
+        /**
+         * XEP-0166 transport-replace signaling state for this content.
+         *
+         * This state machine is orthogonal to Transport::State. `NeedAck` means
+         * this content's local completion callback has not run yet; the Session's
+         * TieBreaker independently tracks whether the batched IQ is outstanding.
+         * `InProgress` is the subsequent accept/reject phase (or an incoming peer
+         * replacement currently being negotiated).
+         */
         enum class PendingTransportReplace {
-            None,      // not in the replace mode
-            Planned,   // didn't send a replacement yet. working on it.
-            NeedAck,   // we sent replacement. waiting for iq ack
-            InProgress // not yet accepted but acknowledged
+            None,      ///< No transport-replace signaling transaction is active.
+            Planned,   ///< A local successor is selected but not signaled yet.
+            NeedAck,   ///< transport-replace was serialized; waiting for this owner's completion.
+            InProgress ///< Proposal is current; waiting for transport-accept/reject completion.
         };
 
         // has to be set when whatever way remote knows about the current transport
@@ -187,14 +327,28 @@ namespace XMPP { namespace Jingle {
         Origin  _creator;
         Origin  _senders;
 
-        // current transport. either local or remote. has info about origin and state
+        // Disposable queued target and concrete IQ target, not durable UI policy.
+        std::optional<Origin>               _requestedSenders;
+        std::optional<Origin>               _sendersUpdateInFlight;
+        QMetaObject::Connection             _sendersStateConnection;
+        quint64                             _sendersRequestRevision = 0;
+        quint64                             _nextSendersAttempt     = 0;
+        std::optional<SendersAttemptResult> _sendersAttempt;
+
+        // Current transport uses shared ownership, independently of QObject parentage.
+        // Session handlers pair QPointer<Application> with weak/shared transport snapshots
+        // so reentrant callbacks cannot apply stale signaling to a newer transport instance.
         QSharedPointer<Transport>          _transport;
         std::unique_ptr<TransportSelector> _transportSelector;
 
-        // if transport-replace is in progress. will be set to true when accepted by both sides.
+        // Jingle signaling transaction state for replacing _transport. Do not derive it
+        // from Transport::State; concrete transports use those states differently.
         PendingTransportReplace _pendingTransportReplace = PendingTransportReplace::None;
+        // Invalidate saved IQ completions on serialization, completion and transport
+        // replacement, including reselection of the same Transport object.
+        quint64 _transportReplaceGeneration = 0;
 
-        // while it's valid - we are in unaccepted yet transport-replace
+        // Reason attached to the pending replacement when the previous transport failed.
         Reason _transportReplaceReason;
 
         // when set the content will be removed with this reason
@@ -204,6 +358,19 @@ namespace XMPP { namespace Jingle {
         Update _update;
 
         QTimer *transportInitTimer = nullptr;
+
+    private:
+        class ContentModifyTieBreakResolver;
+        void ensureContentModifyTieBreakResolver();
+        class TransportReplaceTieBreakResolver;
+        void ensureTransportReplaceTieBreakResolver();
+
+        // Registration is declared after the resolver so it is destroyed
+        // first and never leaves TieBreaker with a dangling callback.
+        std::unique_ptr<TieBreaker::Resolver> _contentModifyTieBreakResolver;
+        TieBreaker::Registration              _contentModifyTieBreakRegistration;
+        std::unique_ptr<TieBreaker::Resolver> _transportReplaceTieBreakResolver;
+        TieBreaker::Registration              _transportReplaceTieBreakRegistration;
     };
 
     inline bool operator<(const Application::Update &a, const Application::Update &b)
@@ -231,5 +398,7 @@ namespace XMPP { namespace Jingle {
     };
 
 }}
+
+Q_DECLARE_METATYPE(XMPP::Jingle::Application::SendersAttemptResult)
 
 #endif
