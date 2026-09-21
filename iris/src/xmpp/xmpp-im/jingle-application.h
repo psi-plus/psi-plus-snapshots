@@ -25,8 +25,10 @@
 #include <QMetaObject>
 #include <iris/xmpp-im/jingle-tiebreaker.h>
 #include <iris/xmpp-im/jingle-transport.h>
+#include <any>
 #include <optional>
 
+class QDomDocument;
 class QTimer;
 
 namespace XMPP { namespace Jingle {
@@ -392,6 +394,13 @@ namespace XMPP { namespace Jingle {
         // this method is supposed to gracefully close all related sessions as a preparation for plugin unload for
         // example
         virtual void closeAll(const QString &ns = QString()) = 0;
+
+        // XEP-0353 proposal descriptions are application-owned payloads. The
+        // generic JMI layer routes a foreign-namespace element here and keeps
+        // only the typed result; it never interprets application attributes or
+        // nested elements itself.
+        virtual std::optional<std::any> parseProposal(const QDomElement &) const { return std::nullopt; }
+        virtual QDomElement serializeProposal(const std::any &, QDomDocument *) const { return {}; }
 
         virtual QStringList ns() const;
         virtual QStringList discoFeatures() const = 0;

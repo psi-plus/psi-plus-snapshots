@@ -7,7 +7,7 @@
  * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
- * but WITHANY WARRANTY; without even the implied warranty of
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
@@ -37,6 +37,14 @@
 #define RTPWORKER_DEBUG
 
 namespace PsiMedia {
+namespace {
+
+constexpr int OpusPayloadType  = 111;
+constexpr int OpusRtpClockRate = 48000;
+constexpr int Vp8PayloadType   = 96;
+constexpr int Vp8RtpClockRate  = 90000;
+
+} // namespace
 
 static GstStaticPadTemplate raw_audio_src_template
     = GST_STATIC_PAD_TEMPLATE("src", GST_PAD_SRC, GST_PAD_ALWAYS, GST_STATIC_CAPS("audio/x-raw"));
@@ -151,6 +159,35 @@ static GstClock *shared_clock         = nullptr;
 static bool      send_clock_is_shared = false;
 // static bool recv_clock_is_shared = false;
 
+static GstClockTime samplePresentationAge(GstSample *sample, GstElement *pipeline)
+{
+    if (!sample || !pipeline)
+        return GST_CLOCK_TIME_NONE;
+
+    GstBuffer *buffer = gst_sample_get_buffer(sample);
+    if (!buffer || !GST_CLOCK_TIME_IS_VALID(GST_BUFFER_PTS(buffer)))
+        return GST_CLOCK_TIME_NONE;
+
+    GstClockTime sampleRunningTime = GST_BUFFER_PTS(buffer);
+    const GstSegment *segment = gst_sample_get_segment(sample);
+    if (segment && segment->format == GST_FORMAT_TIME)
+        sampleRunningTime = gst_segment_to_running_time(segment, GST_FORMAT_TIME, GST_BUFFER_PTS(buffer));
+    if (!GST_CLOCK_TIME_IS_VALID(sampleRunningTime))
+        return GST_CLOCK_TIME_NONE;
+
+    GstClock *clock = gst_element_get_clock(pipeline);
+    if (!clock)
+        return GST_CLOCK_TIME_NONE;
+    const GstClockTime now  = gst_clock_get_time(clock);
+    const GstClockTime base = gst_element_get_base_time(pipeline);
+    gst_object_unref(clock);
+    if (!GST_CLOCK_TIME_IS_VALID(now) || !GST_CLOCK_TIME_IS_VALID(base) || now < base)
+        return GST_CLOCK_TIME_NONE;
+
+    const GstClockTime currentRunningTime = now - base;
+    return currentRunningTime >= sampleRunningTime ? currentRunningTime - sampleRunningTime : 0;
+}
+
 RtpWorker::RtpWorker(GMainContext *mainContext, DeviceMonitor *hardwareDeviceMonitor) :
     mainContext_(mainContext), hardwareDeviceMonitor_(hardwareDeviceMonitor), audioStats(new Stats("audio")),
     videoStats(new Stats("video"))
@@ -208,14 +245,75 @@ RtpWorker::~RtpWorker()
     delete videoStats;
 }
 
+void RtpWorker::cleanupSend()
+{
+    volumein_mutex.lock();
+    volumein = nullptr;
+    volumein_mutex.unlock();
+
+    rtpaudioout_mutex.lock();
+    rtpaudioout = false;
+    rtpaudioout_mutex.unlock();
+
+    rtpvideoout_mutex.lock();
+    rtpvideoout = false;
+    rtpvideoout_mutex.unlock();
+
+    if (sendbin) {
+        if (shared_clock && send_clock_is_shared) {
+            gst_object_unref(shared_clock);
+            shared_clock         = nullptr;
+            send_clock_is_shared = false;
+
+            if (recv_in_use) {
+                // The send pipeline is the optional master clock. Releasing it
+                // must not tear down the receive graph: temporarily move the
+                // receive pipeline to READY, restore automatic clocking and
+                // continue with the same recvbin/appsrc/sink objects.
+                qDebug("recv clock reverts to auto");
+                gst_element_set_state(rpipeline, GST_STATE_READY);
+                gst_element_get_state(rpipeline, nullptr, nullptr, GST_CLOCK_TIME_NONE);
+                gst_pipeline_auto_clock(GST_PIPELINE(rpipeline));
+                gst_element_set_state(rpipeline, GST_STATE_PLAYING);
+            }
+        }
+
+        send_pipelineContext->deactivate();
+        gst_pipeline_auto_clock(GST_PIPELINE(spipeline));
+        gst_bin_remove(GST_BIN(spipeline), sendbin);
+        sendbin     = nullptr;
+        send_in_use = false;
+    }
+
+    if (pd_audiosrc) {
+        delete pd_audiosrc;
+        pd_audiosrc = nullptr;
+        audiosrc    = nullptr;
+    }
+
+    if (pd_videosrc) {
+        delete pd_videosrc;
+        pd_videosrc = nullptr;
+    }
+
+    // All of these are borrowed from the sender graph. File playback stores
+    // decoder elements in audiosrc/videosrc, while live capture stores device
+    // elements there. Once sendbin/device contexts are gone none of the
+    // pointers may survive into the next source generation.
+    fileDemux   = nullptr;
+    audiosrc    = nullptr;
+    videosrc    = nullptr;
+    audiortppay = nullptr;
+    videortppay = nullptr;
+}
+
 void RtpWorker::cleanup()
 {
 #ifdef RTPWORKER_DEBUG
     qDebug("cleaning up...");
 #endif
-    volumein_mutex.lock();
-    volumein = nullptr;
-    volumein_mutex.unlock();
+
+    cleanupSend();
 
     volumeout_mutex.lock();
     volumeout = nullptr;
@@ -229,96 +327,12 @@ void RtpWorker::cleanup()
     videortpsrc = nullptr;
     videortpsrc_mutex.unlock();
 
-    rtpaudioout_mutex.lock();
-    rtpaudioout = false;
-    rtpaudioout_mutex.unlock();
-
-    rtpvideoout_mutex.lock();
-    rtpvideoout = false;
-    rtpvideoout_mutex.unlock();
-
-    // if(pd_audiosrc)
-    //    pd_audiosrc->deactivate();
-
-    // if(pd_videosrc)
-    //    pd_videosrc->deactivate();
-
-    if (sendbin) {
-        if (shared_clock && send_clock_is_shared) {
-            gst_object_unref(shared_clock);
-            shared_clock         = nullptr;
-            send_clock_is_shared = false;
-
-            if (recv_in_use) {
-                qDebug("recv clock reverts to auto");
-                gst_element_set_state(rpipeline, GST_STATE_READY);
-                gst_element_get_state(rpipeline, nullptr, nullptr, GST_CLOCK_TIME_NONE);
-                gst_pipeline_auto_clock(GST_PIPELINE(rpipeline));
-
-                // only restart the receive pipeline if it is
-                //   owned by a separate session
-                if (!recvbin) {
-                    gst_element_set_state(rpipeline, GST_STATE_PLAYING);
-                    // gst_element_get_state(rpipeline, nullptr, nullptr, GST_CLOCK_TIME_NONE);
-                }
-            }
-        }
-
-        send_pipelineContext->deactivate();
-        gst_pipeline_auto_clock(GST_PIPELINE(spipeline));
-        // gst_element_set_state(sendbin, GST_STATE_NULL);
-        // gst_element_get_state(sendbin, nullptr, nullptr, GST_CLOCK_TIME_NONE);
-        gst_bin_remove(GST_BIN(spipeline), sendbin);
-        sendbin     = nullptr;
-        send_in_use = false;
-    }
-
     if (recvbin) {
-        // NOTE: commenting this out because recv clock is no longer
-        //  ever shared
-        /*if(shared_clock && recv_clock_is_shared)
-        {
-            gst_object_unref(shared_clock);
-            shared_clock = 0;
-            recv_clock_is_shared = false;
-
-            if(send_in_use)
-            {
-                // FIXME: do we really need to restart the pipeline?
-
-                qDebug("send clock becomes master");
-                send_pipelineContext->deactivate();
-                gst_pipeline_auto_clock(GST_PIPELINE(spipeline));
-                send_pipelineContext->activate();
-                //gst_element_get_state(spipeline, nullptr, nullptr, GST_CLOCK_TIME_NONE);
-
-                // send clock becomes shared
-                shared_clock = gst_pipeline_get_clock(GST_PIPELINE(spipeline));
-                gst_object_ref(GST_OBJECT(shared_clock));
-                gst_pipeline_use_clock(GST_PIPELINE(spipeline), shared_clock);
-                send_clock_is_shared = true;
-            }
-        }*/
-
         recv_pipelineContext->deactivate();
         gst_pipeline_auto_clock(GST_PIPELINE(rpipeline));
-        // gst_element_set_state(recvbin, GST_STATE_NULL);
-        // gst_element_get_state(recvbin, nullptr, nullptr, GST_CLOCK_TIME_NONE);
         gst_bin_remove(GST_BIN(rpipeline), recvbin);
         recvbin     = nullptr;
         recv_in_use = false;
-    }
-
-    if (pd_audiosrc) {
-        delete pd_audiosrc;
-        pd_audiosrc = nullptr;
-        audiosrc    = nullptr;
-    }
-
-    if (pd_videosrc) {
-        delete pd_videosrc;
-        pd_videosrc = nullptr;
-        videosrc    = nullptr;
     }
 
     if (pd_audiosink) {
@@ -421,7 +435,7 @@ GstAppSink *RtpWorker::makeVideoPlayAppSink(const gchar *name)
 void RtpWorker::rtpAudioIn(const PRtpPacket &packet)
 {
     QMutexLocker locker(&audiortpsrc_mutex);
-    if (packet.portOffset == 0 && audiortpsrc) {
+    if (packet.type == PRtpPacket::Type::Rtp && audiortpsrc) {
         gst_app_src_push_buffer((GstAppSrc *)audiortpsrc, makeGstBuffer(packet));
     }
 }
@@ -429,7 +443,7 @@ void RtpWorker::rtpAudioIn(const PRtpPacket &packet)
 void RtpWorker::rtpVideoIn(const PRtpPacket &packet)
 {
     QMutexLocker locker(&videortpsrc_mutex);
-    if (packet.portOffset == 0 && videortpsrc)
+    if (packet.type == PRtpPacket::Type::Rtp && videortpsrc)
         gst_app_src_push_buffer((GstAppSrc *)videortpsrc, makeGstBuffer(packet));
 }
 
@@ -819,50 +833,60 @@ GstFlowReturn RtpWorker::show_frame_output(GstAppSink *appsink)
 GstFlowReturn RtpWorker::packet_ready_rtp_audio(GstAppSink *appsink)
 {
     GstSample *sample = gst_app_sink_pull_sample(appsink);
-    GstBuffer *buffer = gst_sample_get_buffer(sample);
-    int        sz     = int(gst_buffer_get_size(buffer));
-    QByteArray ba;
-    ba.resize(sz);
-    gst_buffer_extract(buffer, 0, ba.data(), gsize(sz));
-    gst_sample_unref(sample);
+    if (!sample)
+        return GST_FLOW_EOS;
 
-    PRtpPacket packet;
-    packet.rawValue   = ba;
-    packet.portOffset = 0;
+    GstBuffer *buffer = gst_sample_get_buffer(sample);
+    if (!buffer) {
+        gst_sample_unref(sample);
+        return GST_FLOW_ERROR;
+    }
+
+    EncodedRtpPacket packet;
+    packet.buffer          = buffer;
+    packet.presentationAge = samplePresentationAge(sample, spipeline);
 
 #ifdef RTPWORKER_DEBUG
-    audioStats->print_stats(packet.rawValue.size());
+    audioStats->print_stats(int(gst_buffer_get_size(buffer)));
 #endif
 
-    QMutexLocker locker(&rtpaudioout_mutex);
-    if (cb_rtpAudioOut && rtpaudioout)
-        cb_rtpAudioOut(packet, app);
+    {
+        QMutexLocker locker(&rtpaudioout_mutex);
+        if (cb_rtpAudioOut && rtpaudioout)
+            cb_rtpAudioOut(packet, app);
+    }
 
+    gst_sample_unref(sample);
     return GST_FLOW_OK;
 }
 
 GstFlowReturn RtpWorker::packet_ready_rtp_video(GstAppSink *appsink)
 {
     GstSample *sample = gst_app_sink_pull_sample(appsink);
-    GstBuffer *buffer = gst_sample_get_buffer(sample);
-    int        sz     = int(gst_buffer_get_size(buffer));
-    QByteArray ba;
-    ba.resize(sz);
-    gst_buffer_extract(buffer, 0, ba.data(), gsize(sz));
-    gst_sample_unref(sample);
+    if (!sample)
+        return GST_FLOW_EOS;
 
-    PRtpPacket packet;
-    packet.rawValue   = ba;
-    packet.portOffset = 0;
+    GstBuffer *buffer = gst_sample_get_buffer(sample);
+    if (!buffer) {
+        gst_sample_unref(sample);
+        return GST_FLOW_ERROR;
+    }
+
+    EncodedRtpPacket packet;
+    packet.buffer          = buffer;
+    packet.presentationAge = samplePresentationAge(sample, spipeline);
 
 #ifdef RTPWORKER_DEBUG
-    videoStats->print_stats(packet.rawValue.size());
+    videoStats->print_stats(int(gst_buffer_get_size(buffer)));
 #endif
 
-    QMutexLocker locker(&rtpvideoout_mutex);
-    if (cb_rtpVideoOut && rtpvideoout)
-        cb_rtpVideoOut(packet, app);
+    {
+        QMutexLocker locker(&rtpvideoout_mutex);
+        if (cb_rtpVideoOut && rtpvideoout)
+            cb_rtpVideoOut(packet, app);
+    }
 
+    gst_sample_unref(sample);
     return GST_FLOW_OK;
 }
 
@@ -950,12 +974,22 @@ bool RtpWorker::setupSendRecv()
     return true;
 }
 
-bool RtpWorker::startSend() { return startSend(16000); }
-
-bool RtpWorker::startSend(int rate)
+bool RtpWorker::startSend()
 {
+    // QByteArray-backed input has never had a real GStreamer source in this
+    // provider. Fail closed instead of silently constructing filesrc with an
+    // empty location and, after a live-source switch, leaving old capture
+    // semantics ambiguous.
+    if (!indata.isEmpty()) {
+#ifdef RTPWORKER_DEBUG
+        qDebug("In-memory file input is not supported by the GStreamer provider");
+#endif
+        error = RtpSessionContext::ErrorGeneric;
+        return false;
+    }
+
     // file source
-    if (!infile.isEmpty() || !indata.isEmpty()) {
+    if (!infile.isEmpty()) {
         if (send_in_use)
             return false;
 
@@ -1034,7 +1068,7 @@ bool RtpWorker::startSend(int rate)
     send_in_use = true;
 
     if (audiosrc) {
-        if (!addAudioChain(rate)) {
+        if (!addAudioChain()) {
             delete pd_audiosrc;
             pd_audiosrc = nullptr;
             delete pd_videosrc;
@@ -1168,8 +1202,9 @@ bool RtpWorker::startRecv()
     int opus_at = -1;
     for (int n = 0; n < remoteAudioPayloadInfo.count(); ++n) {
         const PPayloadInfo &ri = remoteAudioPayloadInfo[n];
-        if (ri.name.toUpper() == "OPUS") {
+        if (ri.name.compare(QLatin1String("OPUS"), Qt::CaseInsensitive) == 0 && ri.clockrate == OpusRtpClockRate) {
             opus_at = n;
+            break;
         }
     }
 
@@ -1177,7 +1212,7 @@ bool RtpWorker::startRecv()
     int vp8_at = -1;
     for (int n = 0; n < remoteVideoPayloadInfo.count(); ++n) {
         const PPayloadInfo &ri = remoteVideoPayloadInfo[n];
-        if (ri.name.toUpper() == "VP8" && ri.clockrate == 90000) {
+        if (ri.name.toUpper() == "VP8" && ri.clockrate == Vp8RtpClockRate) {
             vp8_at = n;
             break;
         }
@@ -1210,8 +1245,11 @@ bool RtpWorker::startRecv()
         if (!recvbin)
             recvbin = gst_bin_new("recvbin");
 
+        static quint64 audioRecvSourceSerial = 0;
+        const QByteArray audioRecvSourceName
+            = QByteArrayLiteral("psimedia_audio_rtp_recv_") + QByteArray::number(++audioRecvSourceSerial);
         audiortpsrc_mutex.lock();
-        audiortpsrc = gst_element_factory_make("appsrc", nullptr);
+        audiortpsrc = gst_element_factory_make("appsrc", audioRecvSourceName.constData());
         audiortpsrc_mutex.unlock();
 
         GstCaps *caps = gst_caps_new_empty();
@@ -1247,8 +1285,11 @@ bool RtpWorker::startRecv()
         if (!recvbin)
             recvbin = gst_bin_new("recvbin");
 
+        static quint64 videoRecvSourceSerial = 0;
+        const QByteArray videoRecvSourceName
+            = QByteArrayLiteral("psimedia_video_rtp_recv_") + QByteArray::number(++videoRecvSourceSerial);
         videortpsrc_mutex.lock();
-        videortpsrc = gst_element_factory_make("appsrc", nullptr);
+        videortpsrc = gst_element_factory_make("appsrc", videoRecvSourceName.constData());
         videortpsrc_mutex.unlock();
 
         GstCaps *caps = gst_caps_new_empty();
@@ -1292,8 +1333,8 @@ bool RtpWorker::startRecv()
             }
             if (pd_audiosrc) {
                 PipelineDeviceOptions opts = pd_audiosrc->options();
-                opts.aec                   = true;
                 opts.echoProberName        = pd_audiosink->options().echoProberName;
+                opts.aec                   = !opts.echoProberName.isEmpty();
                 pd_audiosrc->setOptions(opts);
             }
 
@@ -1428,35 +1469,28 @@ fail1:
     return false;
 }
 
-bool RtpWorker::addAudioChain() { return addAudioChain(16000); }
-
-bool RtpWorker::addAudioChain(int rate)
+bool RtpWorker::addAudioChain()
 {
-    // TODO: support other codecs.  for now, we only support opus 16khz
-    QString codec    = "opus";
-    int     size     = 16;
-    int     channels = 2;
-    // QString codec = localAudioParams[0].codec;
-    // int rate = localAudioParams[0].sampleRate;
-    // int size = localAudioParams[0].sampleSize;
-    // int channels = localAudioParams[0].channels;
+    // TODO: support other codecs. For now, only Opus is supported here.
+    QString codec = "opus";
 #ifdef RTPWORKER_DEBUG
     qDebug("codec=%s", qPrintable(codec));
 #endif
 
-    // see if we need to match a pt id
-    int pt = -1;
+    // RTP payload selection is independent of the raw input sample rate.
+    // Opus always uses a 48 kHz RTP clock (RFC 7587); GStreamer negotiates
+    // the actual raw audio format feeding opusenc.
+    int pt = OpusPayloadType;
     for (int n = 0; n < remoteAudioPayloadInfo.count(); ++n) {
         const PPayloadInfo &ri = remoteAudioPayloadInfo[n];
-        if (ri.name.toUpper() == "OPUS" && ri.clockrate == rate) {
+        if (ri.name.compare(QLatin1String("OPUS"), Qt::CaseInsensitive) == 0 && ri.clockrate == OpusRtpClockRate) {
             pt = ri.id;
             break;
         }
     }
 
     // NOTE: we don't bother with a maxbitrate constraint on audio yet
-
-    GstElement *audioenc = bins_audioenc_create(codec, pt, rate, size, channels);
+    GstElement *audioenc = bins_audioenc_create(codec, pt);
     if (!audioenc)
         return false;
 
@@ -1535,10 +1569,10 @@ bool RtpWorker::addVideoChain()
 #endif
 
     // see if we need to match a pt id
-    int pt = -1;
+    int pt = Vp8PayloadType;
     for (int n = 0; n < remoteVideoPayloadInfo.count(); ++n) {
         const PPayloadInfo &ri = remoteVideoPayloadInfo[n];
-        if (ri.name.toUpper() == "VP8" && ri.clockrate == 90000) {
+        if (ri.name.toUpper() == "VP8" && ri.clockrate == Vp8RtpClockRate) {
             pt = ri.id;
             break;
         }
@@ -1734,7 +1768,7 @@ bool RtpWorker::updateVp8Config()
     int vp8_at = -1;
     for (int n = 0; n < actual_remoteVideoPayloadInfo.count(); ++n) {
         const PPayloadInfo &ri = actual_remoteVideoPayloadInfo[n];
-        if (ri.name.toUpper() == "VP8" && ri.clockrate == 90000) {
+        if (ri.name.toUpper() == "VP8" && ri.clockrate == Vp8RtpClockRate) {
             vp8_at = n;
             break;
         }
@@ -1745,7 +1779,8 @@ bool RtpWorker::updateVp8Config()
     // if so, update the videortpsrc caps
     for (int n = 0; n < remoteVideoPayloadInfo.count(); ++n) {
         const PPayloadInfo &ri = remoteVideoPayloadInfo[n];
-        if (ri.name.toUpper() == "VP8" && ri.clockrate == 90000 && ri.id == actual_remoteVideoPayloadInfo[vp8_at].id) {
+        if (ri.name.toUpper() == "VP8" && ri.clockrate == Vp8RtpClockRate
+            && ri.id == actual_remoteVideoPayloadInfo[vp8_at].id) {
             GstStructure *cs = payloadInfoToStructure(remoteVideoPayloadInfo[n], "video");
             if (!cs) {
 #ifdef RTPWORKER_DEBUG

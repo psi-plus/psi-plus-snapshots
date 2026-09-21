@@ -14,6 +14,8 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 get_filename_component(ABS_GST_PARENT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 
+option(PSIMEDIA_BUILD_TESTS "Build psimedia provider regression tests" OFF)
+
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo"))
     option(PSIMEDIA_PIPELINE_DEBUG "Add -DPIPELINE_DEBUG definition" OFF)
     option(PSIMEDIA_RTPWORKER_DEBUG "Add -DRTPWORKER_DEBUG definition" OFF)
@@ -46,7 +48,10 @@ set(SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/payloadinfo.cpp
     ${CMAKE_CURRENT_LIST_DIR}/pipeline.cpp
     ${CMAKE_CURRENT_LIST_DIR}/bins.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rtpsessionbridge.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rtpsessionbridge.h
     ${CMAKE_CURRENT_LIST_DIR}/rtpworker.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rtpworker_devices.cpp
     ${CMAKE_CURRENT_LIST_DIR}/gstthread.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rwcontrol.cpp
     ${CMAKE_CURRENT_LIST_DIR}/gstprovider.cpp
@@ -142,17 +147,65 @@ target_include_directories(${PROVIDERLIB}
 target_link_libraries(${PROVIDERLIB} PUBLIC
                       ${GSTMODULES_LINK_LIBRARIES}
                       ${GLIBMODULES_LINK_LIBRARIES}
+                      Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+                      Qt${QT_DEFAULT_MAJOR_VERSION}::Gui
 )
 
-target_link_libraries(${PROVIDERLIB} PRIVATE ${PROJECT_LDFLAGS})
+target_link_libraries(${PROVIDERLIB} PRIVATE
+    ${PROJECT_LDFLAGS}
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Widgets
+)
 
 if(APPLE)
     target_link_libraries(${PROVIDERLIB} PRIVATE "-framework CoreAudio")
     set_property(TARGET ${PROVIDERLIB}  PROPERTY SUFFIX ".dylib")
 endif()
 
-target_link_libraries(${PROVIDERLIB} PRIVATE
-    Qt${QT_DEFAULT_MAJOR_VERSION}::Core
-    Qt${QT_DEFAULT_MAJOR_VERSION}::Gui
-    Qt${QT_DEFAULT_MAJOR_VERSION}::Widgets
-)
+if(PSIMEDIA_BUILD_TESTS)
+    enable_testing()
+
+    add_executable(psimedia_rtpworkerownership_test ${ABS_GST_PARENT_DIR}/tests/rtpworkerownership.cpp)
+    target_link_libraries(psimedia_rtpworkerownership_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_rtpworkerownership COMMAND psimedia_rtpworkerownership_test)
+    set_tests_properties(psimedia_rtpworkerownership PROPERTIES TIMEOUT 20)
+
+    add_executable(psimedia_opusrtppay_test ${ABS_GST_PARENT_DIR}/tests/opusrtppay.cpp)
+    target_link_libraries(psimedia_opusrtppay_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_opusrtppay COMMAND psimedia_opusrtppay_test)
+    set_tests_properties(psimedia_opusrtppay PROPERTIES TIMEOUT 15)
+
+    add_executable(psimedia_payloadinfo_test ${ABS_GST_PARENT_DIR}/tests/payloadinfo.cpp)
+    target_link_libraries(psimedia_payloadinfo_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_payloadinfo COMMAND psimedia_payloadinfo_test)
+    set_tests_properties(psimedia_payloadinfo PROPERTIES TIMEOUT 10)
+
+    add_executable(psimedia_rtpchannel_test ${ABS_GST_PARENT_DIR}/tests/rtpchannel.cpp)
+    target_link_libraries(psimedia_rtpchannel_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_rtpchannel COMMAND psimedia_rtpchannel_test)
+    set_tests_properties(psimedia_rtpchannel PROPERTIES TIMEOUT 10)
+
+    add_executable(psimedia_rtpsessioncontext_sender_test ${ABS_GST_PARENT_DIR}/tests/rtpsessioncontext_sender.cpp)
+    target_link_libraries(psimedia_rtpsessioncontext_sender_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_rtpsessioncontext_sender COMMAND psimedia_rtpsessioncontext_sender_test)
+    set_tests_properties(psimedia_rtpsessioncontext_sender PROPERTIES TIMEOUT 45)
+
+    add_executable(psimedia_rtpsessionbridge_test ${ABS_GST_PARENT_DIR}/tests/rtpsessionbridge.cpp)
+    target_link_libraries(psimedia_rtpsessionbridge_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_rtpsessionbridge COMMAND psimedia_rtpsessionbridge_test)
+    set_tests_properties(psimedia_rtpsessionbridge PROPERTIES TIMEOUT 15)
+
+    add_executable(psimedia_rtpsessionbridge_packets_test ${ABS_GST_PARENT_DIR}/tests/rtpsessionbridge_packets.cpp)
+    target_link_libraries(psimedia_rtpsessionbridge_packets_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_rtpsessionbridge_packets COMMAND psimedia_rtpsessionbridge_packets_test)
+    set_tests_properties(psimedia_rtpsessionbridge_packets PROPERTIES TIMEOUT 15)
+
+    add_executable(psimedia_rtpsessionbridge_periodic_test ${ABS_GST_PARENT_DIR}/tests/rtpsessionbridge_periodic.cpp)
+    target_link_libraries(psimedia_rtpsessionbridge_periodic_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_rtpsessionbridge_periodic COMMAND psimedia_rtpsessionbridge_periodic_test)
+    set_tests_properties(psimedia_rtpsessionbridge_periodic PROPERTIES TIMEOUT 15)
+
+    add_executable(psimedia_rtpsessionbridge_backpressure_test ${ABS_GST_PARENT_DIR}/tests/rtpsessionbridge_backpressure.cpp)
+    target_link_libraries(psimedia_rtpsessionbridge_backpressure_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_rtpsessionbridge_backpressure COMMAND psimedia_rtpsessionbridge_backpressure_test)
+    set_tests_properties(psimedia_rtpsessionbridge_backpressure PROPERTIES TIMEOUT 15)
+endif()

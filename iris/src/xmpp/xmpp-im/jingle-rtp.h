@@ -14,7 +14,19 @@
 #include <memory>
 #include <optional>
 
+namespace XMPP { class Message; }
+
 namespace XMPP::Jingle::RTP {
+
+enum class Media : quint8 { None = 0x00, Audio = 0x01, Video = 0x02 };
+Q_DECLARE_FLAGS(MediaSet, Media)
+Q_DECLARE_OPERATORS_FOR_FLAGS(MediaSet)
+
+struct IRIS_EXPORT Proposal {
+    Media media = Media::None;
+
+    bool isValid() const { return media == Media::Audio || media == Media::Video; }
+};
 
 // All calls occur on the Jingle thread. Factories and negotiation must not
 // capture media, start a nested event loop, or initiate network activity.
@@ -264,15 +276,29 @@ public:
     // transport selection and RTP discovery; an empty or unusable whitelist means
     // this manager must not advertise RTP support.
     void         setTransportNamespaces(const QStringList &);
+
+    // Start an XEP-0353 proposal for a new RTP call. The returned UUID is also
+    // the Jingle SID that must be used after <proceed/>.
+    QString propose(const Jid &peer, MediaSet media);
+
+    Application *createOutgoing(Session *, Media media, Origin senders = Origin::Both);
     Application *createOutgoing(Session *, const QString &media, Origin senders = Origin::Both);
     Application *startApplication(const ApplicationManagerPad::Ptr &, const QString &, Origin, Origin) override;
     ApplicationManagerPad *pad(Session *) override;
     void                   closeAll(const QString & = QString()) override;
-    QStringList            ns() const override { return { Description::ns() }; }
-    QStringList            discoFeatures() const override;
+    std::optional<std::any> parseProposal(const QDomElement &) const override;
+    QDomElement             serializeProposal(const std::any &, QDomDocument *) const override;
+    QStringList             ns() const override { return { Description::ns() }; }
+    QStringList             discoFeatures() const override;
+
+signals:
+    // Convenience view for ordinary RTP call proposals. Mixed/application-
+    // composite JMI proposals remain available only through Jingle::Manager.
+    void incomingProposal(const XMPP::Message &message, const QString &id, XMPP::Jingle::RTP::MediaSet media);
 
 private:
     QPointer<XMPP::Jingle::Manager> jingle_;
+    QMetaObject::Connection         jmiConnection_;
     std::shared_ptr<MediaProvider>  provider_;
     QStringList                     transports_;
     QList<QPointer<Application>>    applications_;
@@ -280,4 +306,5 @@ private:
 
 }
 Q_DECLARE_METATYPE(XMPP::Jingle::RTP::MediaError)
+Q_DECLARE_METATYPE(XMPP::Jingle::RTP::MediaSet)
 #endif

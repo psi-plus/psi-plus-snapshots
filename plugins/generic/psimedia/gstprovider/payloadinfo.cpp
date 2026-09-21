@@ -136,7 +136,10 @@ GstStructure *payloadInfoToStructure(const PPayloadInfo &info, const QString &me
         GValue gv;
         memset(&gv, 0, sizeof(GValue));
         g_value_init(&gv, G_TYPE_STRING);
-        g_value_set_string(&gv, info.name.toLatin1().data());
+        // RTP encoding names are case-insensitive on the wire, while
+        // GStreamer depayloaders expose canonical upper-case names
+        // such as OPUS, VP8 and PCMU.
+        g_value_set_string(&gv, info.name.toUpper().toLatin1().data());
         gst_structure_set_value(out, "encoding-name", &gv);
     }
 

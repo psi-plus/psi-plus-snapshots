@@ -147,10 +147,12 @@ public:
 
 class PRtpPacket {
 public:
-    QByteArray rawValue;
-    int        portOffset;
+    // Preserve the historical Provider 1.6 int-sized 0/1 representation while
+    // keeping packet semantics independent of transport topology.
+    enum class Type : int { Rtp = 0, Rtcp = 1 };
 
-    inline PRtpPacket() : portOffset(0) { }
+    QByteArray rawValue;
+    Type       type = Type::Rtp;
 };
 
 class Provider : public QObjectInterface {

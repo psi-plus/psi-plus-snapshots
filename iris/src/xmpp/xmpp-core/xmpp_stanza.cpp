@@ -360,7 +360,7 @@ bool Stanza::Error::fromXml(const QDomElement &e, const QString &baseNS)
         }
     } else {
         type      = *parsedType;
-        condition = ErrorCond(-1);
+        condition = ErrorCond::Invalid;
     }
 
     by = e.attribute(QStringLiteral("by"));
@@ -379,12 +379,12 @@ bool Stanza::Error::fromXml(const QDomElement &e, const QString &baseNS)
             appSpec = t;
         }
 
-        if (condition != ErrorCond(-1) && !appSpec.isNull() && !text.isEmpty())
+        if (condition != ErrorCond::Invalid && !appSpec.isNull() && !text.isEmpty())
             break;
     }
 
     // try to guess type/condition
-    if (condition == ErrorCond(-1)) {
+    if (condition == ErrorCond::Invalid) {
         condition = ErrorCond::UndefinedCondition;
     }
 
@@ -462,16 +462,15 @@ QString Stanza::Error::toString() const
 //----------------------------------------------------------------------------
 class Stanza::Private {
 public:
-    static int stringToKind(const QString &s)
+    static Kind stringToKind(const QString &s)
     {
         if (s == QStringLiteral("message"))
             return Message;
-        else if (s == QStringLiteral("presence"))
+        if (s == QStringLiteral("presence"))
             return Presence;
-        else if (s == QStringLiteral("iq"))
+        if (s == QStringLiteral("iq"))
             return IQ;
-        else
-            return -1;
+        return Unknown;
     }
 
     static QString kindToString(Kind k)
@@ -519,8 +518,7 @@ Stanza::Stanza(Stream *s, const QDomElement &e)
     d = nullptr;
     if (e.namespaceURI() != s->baseNS())
         return;
-    int x = Private::stringToKind(e.tagName());
-    if (x == -1)
+    if (Private::stringToKind(e.tagName()) == Unknown)
         return;
     d    = new Private;
     d->s = s;
@@ -549,7 +547,7 @@ Stanza::~Stanza() { delete d; }
 
 bool Stanza::isNull() const { return d == nullptr; }
 
-QDomElement Stanza::element() const { return d->e; }
+QDomElement Stanza::element() const { return d ? d->e : QDomElement(); }
 
 QString Stanza::toString() const { return Stream::xmlToString(d->e); }
 
@@ -571,9 +569,9 @@ QDomElement Stanza::createTextElement(const QString &ns, const QString &tagName,
 
 void Stanza::appendChild(const QDomElement &e) { d->e.appendChild(e); }
 
-Stanza::Kind Stanza::kind() const { return (Kind)Private::stringToKind(d->e.tagName()); }
+Stanza::Kind Stanza::kind() const { return d ? Private::stringToKind(d->e.tagName()) : Unknown; }
 
-Stanza::Kind Stanza::kind(const QString &tagName) { return (Kind)Private::stringToKind(tagName); }
+Stanza::Kind Stanza::kind(const QString &tagName) { return Private::stringToKind(tagName); }
 
 void Stanza::setKind(Kind k) { d->e.setTagName(Private::kindToString(k)); }
 

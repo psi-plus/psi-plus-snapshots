@@ -223,8 +223,10 @@ public:
     ~Private()
     {
         delete _platform;
-        gst_device_monitor_stop(_monitor);
-        g_object_unref(_monitor);
+        if (_monitor) {
+            gst_device_monitor_stop(_monitor);
+            g_object_unref(_monitor);
+        }
     }
 
     static GstDevice gstDevConvert(::GstDevice *gdev)

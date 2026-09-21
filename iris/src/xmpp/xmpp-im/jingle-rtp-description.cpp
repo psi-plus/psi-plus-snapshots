@@ -23,7 +23,12 @@ namespace {
     QDomElement deserializeOpaqueExtension(QDomDocument &target, const QByteArray &xml)
     {
         QDomDocument owned;
-        if (!owned.setContent(xml, true))
+#if QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
+        const bool parsed = owned.setContent(xml, true);
+#else
+        const auto parsed = owned.setContent(xml, QDomDocument::ParseOption::UseNamespaceProcessing);
+#endif
+        if (!parsed)
             return {};
         const auto element = owned.documentElement();
         return element.isNull() ? QDomElement() : target.importNode(element, true).toElement();

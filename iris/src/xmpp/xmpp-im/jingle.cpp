@@ -27,12 +27,14 @@
 #include "xmpp-im/xmpp_hash.h"
 #include "xmpp/jid/jid.h"
 #include "xmpp_client.h"
+#include "xmpp_message.h"
 #include "xmpp_stream.h"
 #include "xmpp_task.h"
 #include "xmpp_xmlcommon.h"
 
 #include <QDateTime>
 #include <QDebug>
+#include <QDomDocument>
 #include <QDomElement>
 #include <QHash>
 #include <QMap>
@@ -570,14 +572,23 @@ namespace XMPP { namespace Jingle {
         Jid                                   redirectionJid;
         std::optional<XMPP::Stanza::Error>    lastError;
         QHash<QPair<Jid, QString>, Session *> sessions;
-        std::unique_ptr<PublicationManager>   publicationManager;
-        std::unique_ptr<RTP::Manager>         rtpManager;
-        int                                   maxSessions = -1; // no limit
+        std::unique_ptr<PublicationManager>    publicationManager;
+        std::unique_ptr<RTP::Manager>           rtpManager;
+        bool                                    messageInitiationEnabled = false;
+        int                                     maxSessions = -1; // no limit
 
         void setupSession(Session *s)
         {
             QObject::connect(s, &Session::terminated, manager,
                              [this, s]() { sessions.remove(qMakePair(s->peer(), s->sid())); });
+            QObject::connect(s, &QObject::destroyed, manager, [this, s]() {
+                for (auto it = sessions.begin(); it != sessions.end();) {
+                    if (it.value() == s)
+                        it = sessions.erase(it);
+                    else
+                        ++it;
+                }
+            });
         }
     };
 
@@ -589,6 +600,17 @@ namespace XMPP { namespace Jingle {
         d->publicationManager = std::make_unique<PublicationManager>(this);
         d->rtpManager         = std::make_unique<RTP::Manager>();
         registerApplication(d->rtpManager.get());
+
+        connect(d->client, &Client::messageReceived, this, [this](const Message &message) {
+            // Carbons wrap the protocol message in a forwarding envelope. JMI
+            // belongs to the effective inner chat message.
+            const auto effective = message.displayMessage();
+            if (effective.type() != Message::Type::Chat)
+                return;
+            const auto initiation = effective.jingleMessageInitiation();
+            if (initiation.isValid())
+                emit incomingMessageInitiation(effective, initiation);
+        });
         /*
         static bool mtReg = false;
         if (!mtReg) {
@@ -611,6 +633,56 @@ namespace XMPP { namespace Jingle {
 
     PublicationManager *Manager::publicationManager() const { return d->publicationManager.get(); }
     RTP::Manager       *Manager::rtpManager() const { return d->rtpManager.get(); }
+
+    bool Manager::messageInitiationEnabled() const { return d->messageInitiationEnabled; }
+
+    void Manager::setMessageInitiationEnabled(bool enabled) { d->messageInitiationEnabled = enabled; }
+
+    std::optional<std::any> Manager::parseMessageInitiationDescription(const QDomElement &element) const
+    {
+        const auto manager = d->applicationManagers.find(element.namespaceURI());
+        if (manager == d->applicationManagers.end() || !manager->second)
+            return std::nullopt;
+        return manager->second->parseProposal(element);
+    }
+
+    QDomElement Manager::serializeMessageInitiationDescription(const QString &applicationNamespace,
+                                                               const std::any &data,
+                                                               QDomDocument *document) const
+    {
+        if (!document || applicationNamespace.isEmpty() || !data.has_value())
+            return {};
+
+        const auto manager = d->applicationManagers.find(applicationNamespace);
+        if (manager == d->applicationManagers.end() || !manager->second)
+            return {};
+
+        auto element = manager->second->serializeProposal(data, document);
+        if (element.isNull() || element.namespaceURI() != applicationNamespace)
+            return {};
+        return element;
+    }
+
+    bool Manager::sendMessageInitiation(const Jid &to, const MessageInitiation &initiation)
+    {
+        if (!to.isValid() || !initiation.isValid())
+            return false;
+
+        QDomDocument validationDocument;
+        const auto serializer = [this](const QString &applicationNamespace, const std::any &data,
+                                       QDomDocument *document) {
+            return serializeMessageInitiationDescription(applicationNamespace, data, document);
+        };
+        if (initiation.toXml(&validationDocument, serializer).isNull())
+            return false;
+
+        Message message(to);
+        message.setType(Message::Type::Chat);
+        message.setProcessingHints(Message::ProcessingHints(Message::Store));
+        message.setJingleMessageInitiation(initiation);
+        d->client->sendMessage(message);
+        return true;
+    }
 
     void Manager::setRedirection(const Jid &to) { d->redirectionJid = to; }
 
@@ -711,6 +783,9 @@ namespace XMPP { namespace Jingle {
     {
         QStringList ret { NS };
         ret += d->publicationManager->discoFeatures();
+        // XEP-0353 intentionally has no service-discovery feature. The local
+        // enable flag controls policy/handling only and must not be advertised
+        // through disco/caps.
         // RFC 5888 grouping is a protocol capability, not a promise that every
         // Jingle application/transport combination will use a shared association.
         // Concrete BUNDLE use still depends on negotiated groups and application
@@ -780,10 +855,36 @@ namespace XMPP { namespace Jingle {
         return s;
     }
 
-    QString Manager::registerSession(Session *session)
+    Session *Manager::newSession(const Jid &j, const QString &sid)
     {
+        if (sid.isEmpty())
+            return nullptr;
+
+        auto s = new Session(this, j);
+        if (s->reserveSid(sid).isEmpty()) {
+            delete s;
+            return nullptr;
+        }
+        d->setupSession(s);
+        return s;
+    }
+
+    QString Manager::registerSession(Session *session, const QString &requestedSid)
+    {
+        if (!session)
+            return {};
+
+        auto peer = session->peer();
+        if (!requestedSid.isEmpty()) {
+            const auto key      = qMakePair(peer, requestedSid);
+            const auto existing = d->sessions.value(key, nullptr);
+            if (existing && existing != session)
+                return {};
+            d->sessions.insert(key, session);
+            return requestedSid;
+        }
+
         QString id;
-        auto    peer = session->peer();
         do {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
             id = QString("%1").arg(QRandomGenerator::global()->generate(), 6, 32, QChar('0'));

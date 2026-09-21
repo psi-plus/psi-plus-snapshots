@@ -233,7 +233,17 @@ private:
             gst_element_set_name(deviceElement, "aindev");
             gst_bin_add(GST_BIN(bin), deviceElement);
 
+            bool aecAvailable = true;
             if (options.aec) {
+                GstElementFactory *factory = gst_element_factory_find("webrtcdsp");
+                aecAvailable               = factory != nullptr;
+                if (factory)
+                    gst_object_unref(factory);
+                else
+                    qWarning("Failed to find GStreamer webrtcdsp element. Echo cancellation was disabled");
+            }
+
+            if (options.aec && aecAvailable) {
 
                 GstElement *audioconvert  = gst_element_factory_make("audioconvert", nullptr);
                 GstElement *audioresample = gst_element_factory_make("audioresample", nullptr);

@@ -7,7 +7,7 @@
  * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
- * but WITHANY WARRANTY; without even the implied warranty of
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
@@ -117,12 +117,9 @@ static RwControlStatusMessage *statusFromWorker(RtpWorker *worker)
 
 static void applyDevicesToWorker(RtpWorker *worker, const RwControlConfigDevices &devices)
 {
-    worker->aout     = devices.audioOutId;
-    worker->ain      = devices.audioInId;
-    worker->vin      = devices.videoInId;
-    worker->infile   = devices.fileNameIn;
-    worker->indata   = devices.fileDataIn;
-    worker->loopFile = devices.loopFile;
+    worker->aout = devices.audioOutId;
+    worker->setInputDevices(devices.audioInId, devices.videoInId, devices.fileNameIn, devices.fileDataIn,
+                            devices.loopFile);
     worker->setOutputVolume(devices.audioOutVolume);
     worker->setInputVolume(devices.audioInVolume);
 }
@@ -419,12 +416,12 @@ void RwControlRemote::cb_worker_outputFrame(const RtpWorker::Frame &frame, void 
     static_cast<RwControlRemote *>(app)->worker_outputFrame(frame);
 }
 
-void RwControlRemote::cb_worker_rtpAudioOut(const PRtpPacket &packet, void *app)
+void RwControlRemote::cb_worker_rtpAudioOut(const RtpWorker::EncodedRtpPacket &packet, void *app)
 {
     static_cast<RwControlRemote *>(app)->worker_rtpAudioOut(packet);
 }
 
-void RwControlRemote::cb_worker_rtpVideoOut(const PRtpPacket &packet, void *app)
+void RwControlRemote::cb_worker_rtpVideoOut(const RtpWorker::EncodedRtpPacket &packet, void *app)
 {
     static_cast<RwControlRemote *>(app)->worker_rtpVideoOut(packet);
 }
@@ -619,13 +616,13 @@ void RwControlRemote::worker_outputFrame(const RtpWorker::Frame &frame)
     local_->postMessage(msg);
 }
 
-void RwControlRemote::worker_rtpAudioOut(const PRtpPacket &packet)
+void RwControlRemote::worker_rtpAudioOut(const RtpWorker::EncodedRtpPacket &packet)
 {
     if (local_->cb_rtpAudioOut)
         local_->cb_rtpAudioOut(packet, local_->app);
 }
 
-void RwControlRemote::worker_rtpVideoOut(const PRtpPacket &packet)
+void RwControlRemote::worker_rtpVideoOut(const RtpWorker::EncodedRtpPacket &packet)
 {
     if (local_->cb_rtpVideoOut)
         local_->cb_rtpVideoOut(packet, local_->app);

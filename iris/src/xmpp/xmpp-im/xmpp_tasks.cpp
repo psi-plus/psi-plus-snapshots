@@ -807,8 +807,11 @@ JT_Message::~JT_Message() { }
 
 void JT_Message::onGo()
 {
-
-    Stanza      s = m.toStanza(&(client()->stream()));
+    Stanza s = m.toStanza(&(client()->stream()), client()->jingleManager());
+    if (s.isNull()) {
+        setError(ErrDisc, tr("Unable to serialize message stanza"));
+        return;
+    }
     QDomElement e = s.element();
 
     // See: XEP-0380: Explicit Message Encryption
@@ -969,7 +972,8 @@ bool JT_PushMessage::take(const QDomElement &e)
     }
 
     Message m;
-    if (!m.fromStanza(s, client()->manualTimeZoneOffset(), client()->timeZoneOffset())) {
+    if (!m.fromStanza(s, client()->manualTimeZoneOffset(), client()->timeZoneOffset(),
+                      client()->jingleManager())) {
         // printf("bad message\n");
         return false;
     }

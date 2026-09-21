@@ -433,14 +433,14 @@ const QList<VideoParams> &Features::supportedVideoModes() { return d->supportedV
 class RtpPacket::Private : public QSharedData {
 public:
     QByteArray rawValue;
-    int        portOffset;
+    Type       type;
 
-    Private(const QByteArray &_rawValue, int _portOffset) : rawValue(_rawValue), portOffset(_portOffset) { }
+    Private(const QByteArray &_rawValue, Type _type) : rawValue(_rawValue), type(_type) { }
 };
 
 RtpPacket::RtpPacket() : d(nullptr) { }
 
-RtpPacket::RtpPacket(const QByteArray &rawValue, int portOffset) : d(new Private(rawValue, portOffset)) { }
+RtpPacket::RtpPacket(const QByteArray &rawValue, Type type) : d(new Private(rawValue, type)) { }
 
 RtpPacket::RtpPacket(const RtpPacket &other) = default;
 
@@ -452,7 +452,7 @@ bool RtpPacket::isNull() const { return (d ? false : true); }
 
 QByteArray RtpPacket::rawValue() const { return d->rawValue; }
 
-int RtpPacket::portOffset() const { return d->portOffset; }
+RtpPacket::Type RtpPacket::type() const { return d->type; }
 
 //----------------------------------------------------------------------------
 // RtpChannel
@@ -473,7 +473,7 @@ RtpPacket RtpChannel::read()
 {
     if (d->c) {
         PRtpPacket pp = d->c->read();
-        return RtpPacket(pp.rawValue, pp.portOffset);
+        return RtpPacket(pp.rawValue, pp.type == PRtpPacket::Type::Rtp ? RtpPacket::Type::Rtp : RtpPacket::Type::Rtcp);
     } else
         return RtpPacket();
 }
@@ -487,8 +487,8 @@ void RtpChannel::write(const RtpPacket &rtp)
         }
 
         PRtpPacket pp;
-        pp.rawValue   = rtp.rawValue();
-        pp.portOffset = rtp.portOffset();
+        pp.rawValue = rtp.rawValue();
+        pp.type     = rtp.type() == RtpPacket::Type::Rtp ? PRtpPacket::Type::Rtp : PRtpPacket::Type::Rtcp;
         d->c->write(pp);
     }
 }

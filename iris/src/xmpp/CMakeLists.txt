@@ -74,6 +74,7 @@ set(XMPP_IM_HEADERS
     xmpp-im/xmpp_liveroster.h
     xmpp-im/xmpp_liverosteritem.h
     xmpp-im/xmpp_message.h
+    xmpp-im/xmpp_jinglemessage.h
     xmpp-im/xmpp_muc.h
     xmpp-im/xmpp_reference.h
     xmpp-im/xmpp_pubsubitem.h
@@ -168,6 +169,7 @@ target_sources(iris PRIVATE
     xmpp-im/filetransfer.cpp
     xmpp-im/httpfileupload.cpp
     xmpp-im/types.cpp
+    xmpp-im/xmpp_jinglemessage.cpp
     xmpp-im/xmpp_bitsofbinary.cpp
     xmpp-im/xmpp_bytestream.cpp
     xmpp-im/xmpp_caps.cpp

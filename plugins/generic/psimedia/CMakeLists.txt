@@ -129,7 +129,12 @@ if(NOT IS_SUBPROJECT)
 endif()
 
 if("${QT_DEFAULT_MAJOR_VERSION}" STREQUAL "")
-    set(QT_DEFAULT_MAJOR_VERSION 5)
+    set(QT_DEFAULT_MAJOR_VERSION 6)
+endif()
+
+option(PSIMEDIA_BUILD_TESTS "Build psimedia provider regression tests" OFF)
+if(PSIMEDIA_BUILD_TESTS)
+    enable_testing()
 endif()
 
 if(BUILD_DEMO)

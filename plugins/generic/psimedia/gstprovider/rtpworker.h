@@ -7,7 +7,7 @@
  * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
- * but WITHANY WARRANTY; without even the implied warranty of
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
@@ -47,6 +47,14 @@ public:
         static Frame pullFromSink(GstAppSink *appsink);
     };
 
+    // Borrowed encoded RTP buffer plus its age in the sender pipeline's
+    // running-time domain. The callback is synchronous; consumers that retain
+    // the buffer must take their own reference.
+    struct EncodedRtpPacket {
+        GstBuffer   *buffer          = nullptr;
+        GstClockTime presentationAge = GST_CLOCK_TIME_NONE;
+    };
+
     void *app = nullptr; // for callbacks
 
     QString             aout;
@@ -82,6 +90,8 @@ public:
     void transmitVideo();
     void pauseAudio();
     void pauseVideo();
+    void setInputDevices(const QString &audioInput, const QString &videoInput, const QString &fileName,
+                         const QByteArray &fileData, bool loop);
     void stop(); // can be called at any time after calling start
 
     // the rtp input functions are safe to call from any thread
@@ -108,10 +118,10 @@ public:
     // callbacks - from alternate thread, be safe!
     //   also, it is not safe to assign callbacks except before starting
 
-    void (*cb_previewFrame)(const Frame &frame, void *app)      = nullptr;
-    void (*cb_outputFrame)(const Frame &frame, void *app)       = nullptr;
-    void (*cb_rtpAudioOut)(const PRtpPacket &packet, void *app) = nullptr;
-    void (*cb_rtpVideoOut)(const PRtpPacket &packet, void *app) = nullptr;
+    void (*cb_previewFrame)(const Frame &frame, void *app)                        = nullptr;
+    void (*cb_outputFrame)(const Frame &frame, void *app)                         = nullptr;
+    void (*cb_rtpAudioOut)(const EncodedRtpPacket &packet, void *app)             = nullptr;
+    void (*cb_rtpVideoOut)(const EncodedRtpPacket &packet, void *app)             = nullptr;
 
     // empty record packet = EOF/error
     void (*cb_recordData)(const QByteArray &packet, void *app) = nullptr;
@@ -153,6 +163,7 @@ private:
     Stats *videoStats = nullptr;
 
     void cleanup();
+    void cleanupSend();
 
     static gboolean      cb_doStart(gpointer data);
     static gboolean      cb_doUpdate(gpointer data);
@@ -186,10 +197,8 @@ private:
 
     bool        setupSendRecv();
     bool        startSend();
-    bool        startSend(int rate);
     bool        startRecv();
     bool        addAudioChain();
-    bool        addAudioChain(int rate);
     bool        addVideoChain();
     bool        getCaps();
     bool        updateVp8Config();

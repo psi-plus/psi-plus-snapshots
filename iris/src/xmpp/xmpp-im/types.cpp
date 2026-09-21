@@ -25,6 +25,7 @@
 #include "xmpp_features.h"
 #include "xmpp_forwarding.h"
 #include "xmpp_ibb.h"
+#include "jingle.h"
 #include "xmpp_reference.h"
 #include "xmpp_xmlcommon.h"
 
@@ -757,6 +758,7 @@ public:
     QList<StatelessFileSharing::Sources>     attachedFileSources; // XEP-0447 / XEP-0367
     QString                                  attachToId;          // XEP-0367
     QList<Jingle::JinglePub>                 jinglePublications;  // XEP-0358
+    Jingle::MessageInitiation                jingleMessageInitiation;  // XEP-0353
     Forwarding                               forwarding;          // XEP-0297
     Message::Reactions                       reactions;           // XEP-0444
     QString                                  retraction;          // XEP-0424
@@ -968,8 +970,9 @@ QString Message::pubsubNode() const
 {
     if (!d)
         return {};
-    QString node;
-    for (const auto &event : d->pubSubEvents) {
+    QString     node;
+    const auto &events = d->pubSubEvents;
+    for (const auto &event : events) {
         if (event.type() == PubSubEvent::Type::Items)
             node = event.node();
     }
@@ -981,7 +984,8 @@ QList<PubSubItem> Message::pubsubItems() const
     QList<PubSubItem> items;
     if (!d)
         return items;
-    for (const auto &event : d->pubSubEvents) {
+    const auto &events = d->pubSubEvents;
+    for (const auto &event : events) {
         if (event.type() != PubSubEvent::Type::Items)
             continue;
         // Preserve the legacy accessor's behavior: payload-less item
@@ -999,7 +1003,8 @@ QList<PubSubRetraction> Message::pubsubRetractions() const
     QList<PubSubRetraction> retractions;
     if (!d)
         return retractions;
-    for (const auto &event : d->pubSubEvents) {
+    const auto &events = d->pubSubEvents;
+    for (const auto &event : events) {
         if (event.type() == PubSubEvent::Type::Items)
             retractions += event.retractions();
     }
@@ -1277,7 +1282,20 @@ void Message::setProcessingHints(const ProcessingHints &hints) { MessageD()->pro
 
 Message::ProcessingHints Message::processingHints() const { return d ? d->processingHints : ProcessingHints(); }
 
-Stanza Message::toStanza(Stream *stream) const
+Jingle::MessageInitiation Message::jingleMessageInitiation() const
+{
+    return d ? d->jingleMessageInitiation : Jingle::MessageInitiation();
+}
+
+void Message::setJingleMessageInitiation(const Jingle::MessageInitiation &initiation)
+{
+    MessageD()->jingleMessageInitiation = initiation.isValid() ? initiation : Jingle::MessageInitiation();
+}
+
+
+Stanza Message::toStanza(Stream *stream) const { return toStanza(stream, nullptr); }
+
+Stanza Message::toStanza(Stream *stream, Jingle::Manager *jingleManager) const
 {
     if (!d) {
         return Stanza();
@@ -1542,6 +1560,22 @@ Stanza Message::toStanza(Stream *stream) const
         }
     }
 
+    // XEP-0353 Jingle Message Initiation. Application-specific proposal
+    // payloads are serialized only by their registered ApplicationManager.
+    if (d->jingleMessageInitiation.isValid()) {
+        Jingle::MessageInitiation::DescriptionSerializer serializer;
+        if (jingleManager) {
+            serializer = [jingleManager](const QString &applicationNamespace, const std::any &data,
+                                         QDomDocument *document) {
+                return jingleManager->serializeMessageInitiationDescription(applicationNamespace, data, document);
+            };
+        }
+        auto element = d->jingleMessageInitiation.toXml(&s.doc(), serializer);
+        if (element.isNull())
+            return {};
+        s.appendChild(element);
+    }
+
     // XEP-0359: Unique and Stable Stanza IDs
     if (!d->originId.isEmpty()) {
         auto e = s.createElement(QStringLiteral("urn:xmpp:sid:0"), QStringLiteral("origin-id"));
@@ -1616,12 +1650,15 @@ Stanza Message::toStanza(Stream *stream) const
 /**
   \brief Create Message from Stanza \a s, using given \a timeZoneOffset (old style)
   */
-bool Message::fromStanza(const Stanza &s, int timeZoneOffset) { return fromStanza(s, true, timeZoneOffset); }
+bool Message::fromStanza(const Stanza &s, int timeZoneOffset)
+{
+    return fromStanza(s, true, timeZoneOffset, nullptr);
+}
 
 /**
   \brief Create Message from Stanza \a s
   */
-bool Message::fromStanza(const Stanza &s) { return fromStanza(s, false, 0); }
+bool Message::fromStanza(const Stanza &s) { return fromStanza(s, false, 0, nullptr); }
 
 /**
   \brief Create Message from Stanza \a s
@@ -1633,7 +1670,13 @@ bool Message::fromStanza(const Stanza &s) { return fromStanza(s, false, 0); }
   */
 bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOffset)
 {
-    if (s.kind() != Stanza::Message)
+    return fromStanza(s, useTimeZoneOffset, timeZoneOffset, nullptr);
+}
+
+bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOffset,
+                         Jingle::Manager *jingleManager)
+{
+    if (s.isNull() || s.kind() != Stanza::Message)
         return false;
 
     d = new Private;
@@ -1666,6 +1709,7 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
     int          n;
     bool         hasBodyOrThread = false;
     bool         hasSubject      = false;
+    int          jmiElementCount = 0;
     for (QDomElement e = root.firstChildElement(); !e.isNull(); e = e.nextSiblingElement()) {
         if (e.namespaceURI() == s.baseNS()) {
             if (e.tagName() == QLatin1String("subject")) {
@@ -1729,6 +1773,22 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 
                 d->pubSubEvents += PubSubEvent(eventType, eventElement.attribute(QStringLiteral("node")), items,
                                                retractions, eventElement);
+            }
+        } else if (e.namespaceURI() == Jingle::MessageInitiation::ns()) {
+            ++jmiElementCount;
+            if (jmiElementCount == 1) {
+                Jingle::MessageInitiation::DescriptionParser parser;
+                if (jingleManager) {
+                    parser = [jingleManager](const QDomElement &description) {
+                        return jingleManager->parseMessageInitiationDescription(description);
+                    };
+                }
+                d->jingleMessageInitiation = Jingle::MessageInitiation::fromXml(e, parser);
+            } else {
+                // XEP-0353 defines one JMI action per message stanza. Multiple
+                // actions have no specified ordering or combined semantics, so
+                // fail closed rather than inventing one.
+                d->jingleMessageInitiation = {};
             }
         } else if (e.tagName() == QLatin1String("no-permanent-store")
                    && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {

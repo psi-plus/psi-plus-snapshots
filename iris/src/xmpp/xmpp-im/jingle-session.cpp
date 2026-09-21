@@ -1996,12 +1996,14 @@ namespace XMPP { namespace Jingle {
         }
     }
 
-    QString Session::reserveSid()
+    QString Session::reserveSid(const QString &requestedSid)
     {
         if (d->role != Origin::Initiator || d->state != State::Created)
             return {};
         if (d->sid.isEmpty())
-            d->sid = d->manager->registerSession(this);
+            d->sid = d->manager->registerSession(this, requestedSid);
+        else if (!requestedSid.isEmpty() && d->sid != requestedSid)
+            return {};
         return d->sid;
     }
 

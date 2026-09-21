@@ -15,7 +15,6 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301  USA
- *
  */
 
 #include "gstrtpchannel.h"
@@ -60,10 +59,11 @@ void GstRtpChannel::receiver_push_packet_for_write(const PRtpPacket &rtp)
 
 void GstRtpChannel::write(const PRtpPacket &rtp)
 {
-    m.lock();
-    if (!enabled)
-        return;
-    m.unlock();
+    {
+        QMutexLocker locker(&m);
+        if (!enabled)
+            return;
+    }
 
     receiver_push_packet_for_write(rtp);
     ++written_pending;

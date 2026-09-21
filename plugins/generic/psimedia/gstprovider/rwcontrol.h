@@ -7,7 +7,7 @@
  * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
- * but WITHANY WARRANTY; without even the implied warranty of
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
@@ -295,10 +295,10 @@ public:
     // note that it is only safe to assign callbacks prior to starting.
     // note if the stream is stopped while recording is active, then
     //   stopped status will not be reported until EOF is delivered.
-    void *app                                                   = nullptr;
-    void (*cb_rtpAudioOut)(const PRtpPacket &packet, void *app) = nullptr;
-    void (*cb_rtpVideoOut)(const PRtpPacket &packet, void *app) = nullptr;
-    void (*cb_recordData)(const QByteArray &packet, void *app)  = nullptr;
+    void *app                                                                    = nullptr;
+    void (*cb_rtpAudioOut)(const RtpWorker::EncodedRtpPacket &packet, void *app) = nullptr;
+    void (*cb_rtpVideoOut)(const RtpWorker::EncodedRtpPacket &packet, void *app) = nullptr;
+    void (*cb_recordData)(const QByteArray &packet, void *app)                   = nullptr;
 
     void dumpPipeline(std::function<void(const QStringList &)> callback);
 signals:
@@ -365,8 +365,8 @@ private:
     static void     cb_worker_audioInputIntensity(int value, void *app);
     static void     cb_worker_previewFrame(const RtpWorker::Frame &frame, void *app);
     static void     cb_worker_outputFrame(const RtpWorker::Frame &frame, void *app);
-    static void     cb_worker_rtpAudioOut(const PRtpPacket &packet, void *app);
-    static void     cb_worker_rtpVideoOut(const PRtpPacket &packet, void *app);
+    static void     cb_worker_rtpAudioOut(const RtpWorker::EncodedRtpPacket &packet, void *app);
+    static void     cb_worker_rtpVideoOut(const RtpWorker::EncodedRtpPacket &packet, void *app);
     static void     cb_worker_recordData(const QByteArray &packet, void *app);
 
     gboolean processMessages();
@@ -379,8 +379,8 @@ private:
     void     worker_audioInputIntensity(int value);
     void     worker_previewFrame(const RtpWorker::Frame &frame);
     void     worker_outputFrame(const RtpWorker::Frame &frame);
-    void     worker_rtpAudioOut(const PRtpPacket &packet);
-    void     worker_rtpVideoOut(const PRtpPacket &packet);
+    void     worker_rtpAudioOut(const RtpWorker::EncodedRtpPacket &packet);
+    void     worker_rtpVideoOut(const RtpWorker::EncodedRtpPacket &packet);
     void     worker_recordData(const QByteArray &packet);
 
     void resumeMessages();

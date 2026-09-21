@@ -23,7 +23,6 @@
 #include <QSize>
 #include <QString>
 #include <cstdio>
-#include <gst/audio/audio-channels.h>
 #include <gst/gst.h>
 
 // default latency is 200ms
@@ -290,10 +289,9 @@ GstElement *bins_videoprep_create(const QSize &size, int fps, bool is_live)
     return bin;
 }
 
-GstElement *bins_audioenc_create(const QString &codec, int id, int rate, int size, int channels)
+GstElement *bins_audioenc_create(const QString &codec, int id)
 {
-    bool variableRate = (codec == QLatin1String("opus")); // opus supports variable bitrate and resampling on its own
-    GstElement *bin   = gst_bin_new("audioencbin");
+    GstElement *bin = gst_bin_new("audioencbin");
 
     GstElement *audioenc    = nullptr;
     GstElement *audiortppay = nullptr;
@@ -303,47 +301,19 @@ GstElement *bins_audioenc_create(const QString &codec, int id, int rate, int siz
     if (id != -1)
         g_object_set(G_OBJECT(audiortppay), "pt", id, NULL);
 
+    // Raw PCM format belongs to the source/encoder pipeline, not to RTP
+    // payload metadata. Let GStreamer negotiate channel count, sample format,
+    // and sample rate; audioresample bridges source rates unsupported by the
+    // selected encoder without conflating them with the RTP clock rate.
     GstElement *audioconvert  = gst_element_factory_make("audioconvert", nullptr);
-    GstElement *audioresample = nullptr;
-    if (!variableRate) {
-        // suppose variadic-rate encoder have internal resampler (like opus)
-        audioresample = gst_element_factory_make("audioresample", nullptr);
-    }
-
-    GstStructure *cs;
-    GstCaps      *caps         = gst_caps_new_empty();
-    guint64       channel_mask = 0;
-    channel_mask |= G_GUINT64_CONSTANT(1) << GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
-    channel_mask |= G_GUINT64_CONSTANT(1) << GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
-    if (variableRate) {
-        // there is much sense to change rate if variadic-rate codec can do internal resampling.
-        // also width could be taken from internal codec's caps. just any width.
-        cs = gst_structure_new("audio/x-raw", "channels", G_TYPE_INT, channels, "channel-mask", GST_TYPE_BITMASK,
-                               channel_mask, NULL);
-        qDebug("channels=%d", channels);
-    } else {
-        cs = gst_structure_new("audio/x-raw", "rate", G_TYPE_INT, rate, "width", G_TYPE_INT, size, "channels",
-                               G_TYPE_INT, channels, "channel-mask", GST_TYPE_BITMASK, channel_mask, NULL);
-        qDebug("rate=%d,width=%d,channels=%d", rate, size, channels);
-    }
-    gst_caps_append_structure(caps, cs);
-    GstElement *capsfilter = gst_element_factory_make("capsfilter", nullptr);
-    g_object_set(G_OBJECT(capsfilter), "caps", caps, NULL);
-    gst_caps_unref(caps);
+    GstElement *audioresample = gst_element_factory_make("audioresample", nullptr);
 
     gst_bin_add(GST_BIN(bin), audioconvert);
-    if (audioresample) {
-        gst_bin_add(GST_BIN(bin), audioresample);
-    }
-    gst_bin_add(GST_BIN(bin), capsfilter);
+    gst_bin_add(GST_BIN(bin), audioresample);
     gst_bin_add(GST_BIN(bin), audioenc);
     gst_bin_add(GST_BIN(bin), audiortppay);
 
-    if (audioresample) {
-        gst_element_link_many(audioconvert, audioresample, capsfilter, audioenc, audiortppay, NULL);
-    } else {
-        gst_element_link_many(audioconvert, capsfilter, audioenc, audiortppay, NULL);
-    }
+    gst_element_link_many(audioconvert, audioresample, audioenc, audiortppay, NULL);
 
     GstPad *pad;
 

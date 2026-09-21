@@ -7,7 +7,7 @@
  * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
- * but WITHANY WARRANTY; without even the implied warranty of
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
@@ -25,7 +25,10 @@
 
 #include "gstrecorder.h"
 #include "gstrtpchannel.h"
+#include "rtpsessionbridge.h"
 #include "rwcontrol.h"
+
+#include <atomic>
 
 namespace PsiMedia {
 
@@ -52,6 +55,7 @@ public:
     bool                   isStarted;
     bool                   isStopping;
     bool                   pending_status;
+    bool                   terminalError = false;
 
 #ifdef QT_GUI_LIB
     GstVideoWidget *outputWidget, *previewWidget;
@@ -62,8 +66,17 @@ public:
     // keep these parentless, so they can switch threads
     GstRtpChannel audioRtp;
     GstRtpChannel videoRtp;
-    QMutex        write_mutex;
-    bool          allow_writes;
+
+    // One RFC 3550 session per media type. These live on the provider's Qt
+    // thread while the legacy encoder/decoder worker remains on the GLib
+    // thread. The bridge callbacks serialize packet delivery back here.
+    RtpSessionBridge audioBridge;
+    RtpSessionBridge videoBridge;
+    std::atomic<int> audioSendPayloadType { -1 };
+    std::atomic<int> videoSendPayloadType { -1 };
+
+    QMutex write_mutex;
+    bool   allow_writes;
 
     explicit GstRtpSessionContext(GstMainLoop *_gstLoop, DeviceMonitor *deviceMonitor, QObject *parent = nullptr);
 
@@ -134,18 +147,22 @@ private slots:
     void control_outputFrame(const QImage &img);
     void control_audioOutputIntensityChanged(int intensity);
     void control_audioInputIntensityChanged(int intensity);
+    void control_rtpBridgeError();
     void recorder_stopped();
 
 private:
-    static void cb_control_rtpAudioOut(const PRtpPacket &packet, void *app);
-    static void cb_control_rtpVideoOut(const PRtpPacket &packet, void *app);
+    static void cb_control_rtpAudioOut(const RtpWorker::EncodedRtpPacket &packet, void *app);
+    static void cb_control_rtpVideoOut(const RtpWorker::EncodedRtpPacket &packet, void *app);
     static void cb_control_recordData(const QByteArray &packet, void *app);
 
-    // note: this is executed from a different thread
-    void control_rtpAudioOut(const PRtpPacket &packet);
+    bool configureRtpBridges();
+    void stopRtpBridges();
 
     // note: this is executed from a different thread
-    void control_rtpVideoOut(const PRtpPacket &packet);
+    void control_rtpAudioOut(const RtpWorker::EncodedRtpPacket &packet);
+
+    // note: this is executed from a different thread
+    void control_rtpVideoOut(const RtpWorker::EncodedRtpPacket &packet);
 
     // note: this is executed from a different thread
     void control_recordData(const QByteArray &packet);

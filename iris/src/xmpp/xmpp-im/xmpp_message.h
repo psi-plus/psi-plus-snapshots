@@ -22,6 +22,7 @@
 #include <iris/xmpp-im/xmpp_address.h>
 #include <iris/xmpp-im/xmpp_chatstate.h>
 #include <iris/xmpp-im/xmpp_file-sharing.h>
+#include <iris/xmpp-im/xmpp_jinglemessage.h>
 #include <iris/xmpp-im/xmpp_muc.h>
 #include <iris/xmpp-im/xmpp_receipts.h>
 #include <iris/xmpp-im/xmpp_reference.h>
@@ -41,10 +42,15 @@ class HTMLElement;
 class HttpAuthRequest;
 class IBBData;
 class Jid;
+class JT_Message;
+class JT_PushMessage;
 class PubSubEvent;
 class PubSubItem;
 class PubSubRetraction;
 class XData;
+namespace Jingle {
+class Manager;
+}
 
 typedef QMap<QString, QString> StringMap;
 
@@ -209,6 +215,10 @@ public:
     void             setMUCPassword(const QString &);
     bool             hasMUCUser() const;
 
+    // XEP-0353 Jingle Message Initiation
+    Jingle::MessageInitiation jingleMessageInitiation() const;
+    void setJingleMessageInitiation(const Jingle::MessageInitiation &initiation);
+
     // XEP-0359
     StanzaId stanzaId() const;
     void     setStanzaId(const StanzaId &id);
@@ -264,6 +274,13 @@ public:
     bool   fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOffset);
 
 private:
+    friend class Forwarding;
+    friend class JT_Message;
+    friend class JT_PushMessage;
+
+    Stanza toStanza(Stream *stream, Jingle::Manager *jingleManager) const;
+    bool fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOffset, Jingle::Manager *jingleManager);
+
     class Private;
     QExplicitlySharedDataPointer<Private> d;
 };

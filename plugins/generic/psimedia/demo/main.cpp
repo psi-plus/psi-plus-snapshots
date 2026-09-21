@@ -448,7 +448,8 @@ void RtpBinding::net_ready(int offset)
         if (mode == Send && offset == 0)
             continue;
 
-        PsiMedia::RtpPacket packet(rawValue, offset);
+        PsiMedia::RtpPacket packet(rawValue, offset == 0 ? PsiMedia::RtpPacket::Type::Rtp
+                                                             : PsiMedia::RtpPacket::Type::Rtcp);
         channel->write(packet);
     }
 }
@@ -466,7 +467,7 @@ void RtpBinding::app_ready()
 
     while (channel->packetsAvailable() > 0) {
         PsiMedia::RtpPacket packet = channel->read();
-        int                 offset = packet.portOffset();
+        int                 offset = packet.type() == PsiMedia::RtpPacket::Type::Rtp ? 0 : 1;
         if (offset < 0 || offset > 1)
             continue;
 

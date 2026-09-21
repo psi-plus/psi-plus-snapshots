@@ -32,7 +32,7 @@ class Stream;
 
 class Stanza {
 public:
-    enum Kind { Message, Presence, IQ };
+    enum Kind { Unknown = -1, Message, Presence, IQ };
 
     Stanza();
     Stanza(const Stanza &from);
@@ -43,6 +43,7 @@ public:
     public:
         enum class ErrorType { Cancel = 1, Continue, Modify, Auth, Wait };
         enum class ErrorCond {
+            Invalid = -1,
             BadRequest = 1,
             Conflict,
             FeatureNotImplemented,
