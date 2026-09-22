@@ -106,15 +106,16 @@ int main(int argc, char **argv)
 
     Component component;
     component.dtls = new Dtls(group, QStringLiteral("local"), QStringLiteral("peer"));
-    component.srtp = new Jingle::RTP::SrtpSession(component.dtls, group);
-    QPointer<Jingle::RTP::SrtpSession> srtp(component.srtp);
+    component.secureRtp
+        = new Jingle::RTP::SecureRtpAssociation(component.dtls, group->secureRtpAssociationId, group);
+    QPointer<Jingle::RTP::SecureRtpAssociation> secureRtp(component.secureRtp);
     group->components.append(component);
     QPointer<Dtls> dtls(component.dtls);
     audio.reset();
     check(group && dtls, "releasing one membership destroyed shared resources");
     check(other && other != group, "independent connection was affected");
     video.reset();
-    check(!group && !dtls && !srtp, "last membership retained connection or DTLS/SRTP resources");
+    check(!group && !dtls && !secureRtp, "last membership retained connection or DTLS/SRTP resources");
     check(other, "group teardown destroyed an independent connection");
     independent.reset();
     check(!other, "independent connection leaked");
@@ -229,25 +230,26 @@ int main(int argc, char **argv)
     bool nullBound = true;
     check(!padA->membershipFor(nullptr, &nullBound) && !nullBound, "registry accepted a null transport");
 
-    if (!Jingle::RTP::SrtpContext::supportedProfiles().isEmpty() && !Dtls::supportedSRTPProfiles().isEmpty()) {
+    const auto srtpProfiles = Dtls::supportedSRTPProfiles();
+    if (!srtpProfiles.isEmpty()) {
         // A transport used directly without a Jingle Application remains on the
-        // explicit standalone compatibility path and must not consume a content
-        // association in the Pad registry.
+        // explicit standalone path and must not consume a content association in
+        // the Pad registry.
         const auto beforeStandalone = padB->liveAssociationCount();
         auto media = QSharedPointer<Transport>::create(padB, Jingle::Origin::Initiator);
-        check(media->enableRtpMux(), "explicit secure RTP mode rejected");
+        check(media->enableRtpMux(srtpProfiles), "explicit secure RTP mode rejected");
         check(padB->liveAssociationCount() == beforeStandalone,
               "standalone secure RTP transport polluted the content registry");
-        check(!media->rtpSession(), "SRTP binding created before DTLS configuration");
-        check(!media->sendRtpPacket({}, Jingle::RTP::SrtpContext::Packet::Rtp, 0), "unprepared media sent");
+        check(!media->rtpAssociation(), "secure RTP association created before DTLS configuration");
+        check(!media->sendProtectedRtpPacket({}, Jingle::RTP::PacketKind::Rtp, 0), "unprepared media sent");
         check(!media->addChannel(Jingle::TransportFeature::MessageOriented, "raw", 0),
               "secure RTP exposed raw channel");
         media->setComponentsCount(2);
         media->stop();
-        check(!media->enableRtpMux(), "stopped transport reconfigured");
+        check(!media->enableRtpMux(srtpProfiles), "stopped transport reconfigured");
 
         auto insecure = QSharedPointer<Transport>::create(padB, Jingle::Origin::Responder);
-        check(insecure->enableRtpMux(), "incoming secure RTP mode rejected");
+        check(insecure->enableRtpMux(srtpProfiles), "incoming secure RTP mode rejected");
         insecure->prepare();
         check(insecure->state() >= Jingle::State::Finishing, "incoming RTP without fingerprint accepted");
         check(!insecure->hasUpdates(), "insecure RTP transport exposed ICE signaling after security failure");
@@ -327,33 +329,36 @@ int main(int argc, char **argv)
     check(audioBound && videoBound && audioGrouped && videoGrouped && sharedAudio && sharedAudio == sharedVideo,
           "explicit BUNDLE group did not stage one shared association");
     check(bundlePad->liveAssociationCount() == 1, "staged BUNDLE created more than one association");
-    check(audioTransport->enableRtpMux() && videoTransport->enableRtpMux(),
+    check(!srtpProfiles.isEmpty()
+              && audioTransport->enableRtpMux(srtpProfiles)
+              && videoTransport->enableRtpMux(srtpProfiles),
           "staged BUNDLE transports did not accept shared RTP mux");
     check(sharedAudio->components.size() == 1, "shared RTP association created duplicate components");
     auto &sharedComponent = sharedAudio->components[0];
     sharedComponent.dtls = new Dtls(sharedAudio, QStringLiteral("local"), QStringLiteral("peer"));
-    sharedComponent.srtp = new Jingle::RTP::SrtpSession(sharedComponent.dtls, sharedAudio);
-    QPointer<Jingle::RTP::SrtpSession> sharedSrtp(sharedComponent.srtp);
-    const auto sharedEpoch = sharedSrtp->epoch();
+    sharedComponent.secureRtp = new Jingle::RTP::SecureRtpAssociation(
+        sharedComponent.dtls, sharedAudio->secureRtpAssociationId, sharedAudio);
+    QPointer<Jingle::RTP::SecureRtpAssociation> sharedSecureRtp(sharedComponent.secureRtp);
+    const auto sharedEpoch = sharedSecureRtp->epoch();
     int invalidations = 0;
-    QObject::connect(sharedSrtp, &Jingle::RTP::SrtpSession::invalidated, &app, [&invalidations]() {
-        ++invalidations;
-    });
-    check(audioTransport->rtpSession() == sharedSrtp && videoTransport->rtpSession() == sharedSrtp,
-          "BUNDLE members did not expose the same SRTP association");
+    QObject::connect(sharedSecureRtp, &Jingle::RTP::SecureRtpAssociation::invalidated, &app,
+                     [&invalidations](quint64) { ++invalidations; });
+    check(audioTransport->rtpAssociation() == sharedSecureRtp
+              && videoTransport->rtpAssociation() == sharedSecureRtp,
+          "BUNDLE members did not expose the same secure RTP association");
 
     QPointer<IceConnection> stagedGuard(sharedAudio);
     audioTransport->stop();
-    check(sharedSrtp && invalidations == 0 && sharedSrtp->epoch() == sharedEpoch
-              && videoTransport->rtpSession() == sharedSrtp,
-          "stopping one BUNDLE member invalidated the shared SRTP association");
+    check(sharedSecureRtp && invalidations == 0 && sharedSecureRtp->epoch() == sharedEpoch
+              && videoTransport->rtpAssociation() == sharedSecureRtp,
+          "stopping one BUNDLE member invalidated the shared secure RTP association");
     delete audioApp;
-    check(stagedGuard && sharedSrtp && bundlePad->liveAssociationCount() == 1,
+    check(stagedGuard && sharedSecureRtp && bundlePad->liveAssociationCount() == 1,
           "removing one staged BUNDLE member destroyed the surviving association");
     delete videoApp;
-    check(!stagedGuard && !sharedSrtp && bundlePad->liveAssociationCount() == 0,
+    check(!stagedGuard && !sharedSecureRtp && bundlePad->liveAssociationCount() == 0,
           "last staged BUNDLE member retained its association");
-    check(!audioTransport->rtpSession() && !videoTransport->rtpSession(),
+    check(!audioTransport->rtpAssociation() && !videoTransport->rtpAssociation(),
           "live Transport retained a dangling BUNDLE association view");
 
     qInfo("ICE resource ownership regressions passed");

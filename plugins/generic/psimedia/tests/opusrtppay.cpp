@@ -135,7 +135,7 @@ int main(int argc, char **argv)
     if (!ok)
         return 5;
 
-    qInfo() << "Raw audio" << RawSampleRate << "Hz /" << RawChannels << "channel became Opus RTP"
-            << OpusRtpClockRate << "Hz /" << OpusRtpChannels << "channels with PT" << NegotiatedPayloadType;
+    qInfo() << "Raw audio" << RawSampleRate << "Hz /" << RawChannels << "channel became Opus RTP" << OpusRtpClockRate
+            << "Hz /" << OpusRtpChannels << "channels with PT" << NegotiatedPayloadType;
     return 0;
 }

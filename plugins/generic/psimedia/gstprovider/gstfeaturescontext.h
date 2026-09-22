@@ -31,7 +31,7 @@ class GstFeaturesContext : public QObject, public FeaturesContext {
 
 public:
     QPointer<GstMainLoop> gstLoop;
-    DeviceMonitor *       deviceMonitor = nullptr;
+    DeviceMonitor        *deviceMonitor = nullptr;
     PFeatures             features;
     bool                  updated = false;
     std::list<Watcher>    watchers;

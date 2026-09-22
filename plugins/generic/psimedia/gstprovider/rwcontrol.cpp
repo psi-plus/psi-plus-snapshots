@@ -154,13 +154,18 @@ RwControlLocal::RwControlLocal(GstMainLoop *thread, DeviceMonitor *hardwareDevic
 
 RwControlLocal::~RwControlLocal()
 {
-    // delete RwControlRemote, block until done
+    // Delete RwControlRemote on its GLib owner context. Keep the lifetime
+    // synchronization strict, but make a stalled teardown observable instead
+    // of silently freezing the UI with no indication of the blocked layer.
     QMutexLocker locker(&m);
     timer = g_timeout_source_new(0);
     g_source_set_callback(timer, cb_doDestroyRemote, this, nullptr);
     g_source_attach(timer, thread_->mainContext());
     g_source_unref(timer);
-    w.wait(&m);
+    while (remote_) {
+        if (!w.wait(&m, 2000))
+            qWarning("Still waiting for remote media worker teardown after 2s");
+    }
 
     qDeleteAll(in);
 }
@@ -371,14 +376,26 @@ RwControlRemote::RwControlRemote(GMainContext *mainContext, DeviceMonitor *hardw
     worker->cb_outputFrame          = cb_worker_outputFrame;
     worker->cb_rtpAudioOut          = cb_worker_rtpAudioOut;
     worker->cb_rtpVideoOut          = cb_worker_rtpVideoOut;
+    worker->cb_videoKeyframeRequest = cb_worker_videoKeyframeRequest;
     worker->cb_recordData           = cb_worker_recordData;
 }
 
 RwControlRemote::~RwControlRemote()
 {
+    {
+        QMutexLocker locker(&m);
+        // doDestroyRemote() runs on mainContext_, so no callback can currently
+        // execute concurrently here. Remove any later dispatch before freeing
+        // the callback data (this).
+        cancelTimerLocked();
+        blocking = true;
+    }
+
     delete worker;
+    worker = nullptr;
 
     qDeleteAll(in);
+    in.clear();
 }
 
 gboolean RwControlRemote::cb_processMessages(gpointer data)
@@ -426,6 +443,11 @@ void RwControlRemote::cb_worker_rtpVideoOut(const RtpWorker::EncodedRtpPacket &p
     static_cast<RwControlRemote *>(app)->worker_rtpVideoOut(packet);
 }
 
+void RwControlRemote::cb_worker_videoKeyframeRequest(quint32 ssrc, quint8 payloadType, void *app)
+{
+    static_cast<RwControlRemote *>(app)->worker_videoKeyframeRequest(ssrc, payloadType);
+}
+
 void RwControlRemote::cb_worker_recordData(const QByteArray &packet, void *app)
 {
     static_cast<RwControlRemote *>(app)->worker_recordData(packet);
@@ -433,9 +455,15 @@ void RwControlRemote::cb_worker_recordData(const QByteArray &packet, void *app)
 
 gboolean RwControlRemote::processMessages()
 {
+    // The main context owns a dispatch reference while this callback runs.
+    // Drop our scheduling reference now; a concurrently posted message may
+    // install a new source, which remains independently owned through timer.
     m.lock();
-    timer = nullptr;
+    GSource *dispatched = timer;
+    timer               = nullptr;
     m.unlock();
+    if (dispatched)
+        g_source_unref(dispatched);
 
     while (true) {
         m.lock();
@@ -458,10 +486,7 @@ gboolean RwControlRemote::processMessages()
         if (!ret) {
             m.lock();
             blocking = true;
-            if (timer) {
-                g_source_destroy(timer);
-                timer = nullptr;
-            }
+            cancelTimerLocked();
             m.unlock();
             break;
         }
@@ -628,10 +653,31 @@ void RwControlRemote::worker_rtpVideoOut(const RtpWorker::EncodedRtpPacket &pack
         local_->cb_rtpVideoOut(packet, local_->app);
 }
 
+void RwControlRemote::worker_videoKeyframeRequest(quint32 ssrc, quint8 payloadType)
+{
+    QPointer<RwControlLocal> local(local_);
+    QMetaObject::invokeMethod(
+        local_,
+        [local, ssrc, payloadType]() {
+            if (local)
+                emit local->videoKeyframeRequested(ssrc, payloadType);
+        },
+        Qt::QueuedConnection);
+}
+
 void RwControlRemote::worker_recordData(const QByteArray &packet)
 {
     if (local_->cb_recordData)
         local_->cb_recordData(packet, local_->app);
+}
+
+void RwControlRemote::cancelTimerLocked()
+{
+    if (!timer)
+        return;
+    g_source_destroy(timer);
+    g_source_unref(timer);
+    timer = nullptr;
 }
 
 void RwControlRemote::resumeMessages()

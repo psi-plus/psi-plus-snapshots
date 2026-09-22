@@ -21,10 +21,10 @@
 #include <atomic>
 #include <chrono>
 #include <functional>
-#include <utility>
 #include <gst/app/gstappsink.h>
 #include <gst/app/gstappsrc.h>
 #include <gst/gst.h>
+#include <utility>
 
 namespace PsiMedia {
 
@@ -50,12 +50,12 @@ public:
     using MediaPacketHandler = std::function<void(GstBuffer *)>;
 
     struct DeliveryQueueStats {
-        int     networkPackets     = 0;
-        int     mediaPackets       = 0;
-        quint64 networkBytes       = 0;
-        quint64 mediaBytes         = 0;
-        quint64 networkByteDrops   = 0;
-        quint64 mediaByteDrops     = 0;
+        int     networkPackets      = 0;
+        int     mediaPackets        = 0;
+        quint64 networkBytes        = 0;
+        quint64 mediaBytes          = 0;
+        quint64 networkByteDrops    = 0;
+        quint64 mediaByteDrops      = 0;
         quint64 networkExpiredDrops = 0;
         quint64 mediaExpiredDrops   = 0;
     };
@@ -68,8 +68,22 @@ public:
 
     bool isValid() const { return pipeline_ != nullptr; }
 
-    /** Update the negotiated payload map. Owner thread only; safe while running. */
+    struct PayloadGroup {
+        QByteArray          endpointId;
+        QString             media;
+        QList<PPayloadInfo> local;
+        QList<PPayloadInfo> remote;
+    };
+
+    /** Update the legacy single-media payload map. Owner thread only; safe while running. */
     bool setPayloads(const QList<PPayloadInfo> &local, const QList<PPayloadInfo> &remote);
+
+    /**
+     * Configure the payload map for one RTP session shared by several media
+     * endpoints. Payload types reused by two endpoints must resolve to identical
+     * RTP caps because rtpsession's request-pt-map is keyed only by PT.
+     */
+    bool setPayloadGroups(const QList<PayloadGroup> &groups);
 
     /** Owner-thread control-plane operations. */
     bool start();
@@ -138,6 +152,13 @@ public:
     /** Request an early RTCP report/feedback packet within maxDelay ns. Owner thread only. */
     bool requestRtcp(guint64 maxDelay = 0);
 
+    /**
+     * Forward a decoder keyframe request to this RTP session. If the negotiated
+     * PT caps contain rtcp-fb-nack-pli, rtpsession schedules a PLI for @ssrc.
+     * Owner thread only.
+     */
+    bool requestRemoteKeyframe(quint32 ssrc, quint8 payloadType);
+
     quint64 receivedRtcpPackets() const { return receivedRtcpPackets_.load(); }
 
     /**
@@ -158,9 +179,9 @@ public:
     DeliveryQueueStats deliveryQueueStats() const
     {
         QMutexLocker locker(&deliveryMutex_);
-        return { networkQueue_.rawSize(), mediaQueue_.rawSize(), networkQueue_.bytes(), mediaQueue_.bytes(),
-                 networkQueue_.byteDrops(), mediaQueue_.byteDrops(), networkQueue_.expiredDrops(),
-                 mediaQueue_.expiredDrops() };
+        return { networkQueue_.rawSize(),      mediaQueue_.rawSize(),     networkQueue_.bytes(),
+                 mediaQueue_.bytes(),          networkQueue_.byteDrops(), mediaQueue_.byteDrops(),
+                 networkQueue_.expiredDrops(), mediaQueue_.expiredDrops() };
     }
 
     static constexpr int     maxQueuedNetworkPackets() { return MaxQueuedNetworkPackets; }
@@ -174,20 +195,20 @@ public:
 
 private:
     struct QueuedNetworkPacket {
-        quint64 generation = 0;
-        PRtpPacket packet;
+        quint64                               generation = 0;
+        PRtpPacket                            packet;
         std::chrono::steady_clock::time_point enqueuedAt = std::chrono::steady_clock::now();
 
         quint64 byteSize() const { return quint64(packet.rawValue.size()); }
         void    release() { }
     };
     struct QueuedMediaPacket {
-        quint64    generation = 0;
-        GstBuffer *buffer     = nullptr;
+        quint64                               generation = 0;
+        GstBuffer                            *buffer     = nullptr;
         std::chrono::steady_clock::time_point enqueuedAt = std::chrono::steady_clock::now();
 
         quint64 byteSize() const { return buffer ? quint64(gst_buffer_get_size(buffer)) : 0; }
-        void release()
+        void    release()
         {
             if (buffer) {
                 gst_buffer_unref(buffer);
@@ -202,7 +223,7 @@ private:
     static constexpr quint64 MaxQueuedMediaBytes     = 512 * 1024;
     static constexpr qint64  MaxQueuedPacketAgeMs    = 1000;
 
-    template<typename Item, int MaxPackets, quint64 MaxBytes, qint64 MaxAgeMs> class DeliveryQueue {
+    template <typename Item, int MaxPackets, quint64 MaxBytes, qint64 MaxAgeMs> class DeliveryQueue {
     public:
         ~DeliveryQueue() { clear(); }
 
@@ -238,7 +259,7 @@ private:
 
         Item dequeue()
         {
-            Item item = queue_.dequeue();
+            Item          item = queue_.dequeue();
             const quint64 size = item.byteSize();
             bytes_             = size > bytes_ ? 0 : bytes_ - size;
             return item;
@@ -259,7 +280,7 @@ private:
     private:
         void purgeExpired()
         {
-            const auto now = std::chrono::steady_clock::now();
+            const auto now    = std::chrono::steady_clock::now();
             const auto maxAge = std::chrono::milliseconds(MaxAgeMs);
             while (!queue_.isEmpty() && now - queue_.head().enqueuedAt > maxAge)
                 dropFront(true);
@@ -267,7 +288,7 @@ private:
 
         void dropFront(bool expired)
         {
-            Item item = queue_.dequeue();
+            Item          item = queue_.dequeue();
             const quint64 size = item.byteSize();
             bytes_             = size > bytes_ ? 0 : bytes_ - size;
             if (expired)
@@ -281,11 +302,11 @@ private:
         quint64      expiredDrops_ = 0;
     };
 
-    static GstCaps       *requestPtMap(GstElement *session, guint pt, gpointer data);
-    static GstFlowReturn  sendRtpReady(GstAppSink *sink, gpointer data);
-    static GstFlowReturn  recvRtpReady(GstAppSink *sink, gpointer data);
-    static GstFlowReturn  sendRtcpReady(GstAppSink *sink, gpointer data);
-    static void           receivingRtcp(GObject *session, GstBuffer *buffer, gpointer data);
+    static GstCaps      *requestPtMap(GstElement *session, guint pt, gpointer data);
+    static GstFlowReturn sendRtpReady(GstAppSink *sink, gpointer data);
+    static GstFlowReturn recvRtpReady(GstAppSink *sink, gpointer data);
+    static GstFlowReturn sendRtcpReady(GstAppSink *sink, gpointer data);
+    static void          receivingRtcp(GObject *session, GstBuffer *buffer, gpointer data);
 
     bool          build();
     void          cleanup();
@@ -336,11 +357,11 @@ private:
 
     mutable QMutex deliveryMutex_;
     DeliveryQueue<QueuedNetworkPacket, MaxQueuedNetworkPackets, MaxQueuedNetworkBytes, MaxQueuedPacketAgeMs>
-        networkQueue_;
+                                                                                                       networkQueue_;
     DeliveryQueue<QueuedMediaPacket, MaxQueuedMediaPackets, MaxQueuedMediaBytes, MaxQueuedPacketAgeMs> mediaQueue_;
     quint64 scheduledDeliveryGeneration_ = 0;
-    quint64 generation_                   = 0;
-    bool    deliveriesEnabled_            = false;
+    quint64 generation_                  = 0;
+    bool    deliveriesEnabled_           = false;
 
     NetworkPacketHandler networkPacketHandler_;
     MediaPacketHandler   mediaPacketHandler_;

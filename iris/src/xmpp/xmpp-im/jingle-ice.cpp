@@ -43,6 +43,7 @@
 #include <QElapsedTimer>
 #include <QNetworkInterface>
 #include <QTimer>
+#include <QUuid>
 
 template <class T> constexpr std::add_const_t<T> &as_const(T &t) noexcept { return t; }
 
@@ -551,7 +552,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
     };
 
-    IceConnection::IceConnection() = default;
+    IceConnection::IceConnection() :
+        secureRtpAssociationId(QUuid::createUuid().toRfc4122())
+    {
+    }
 
     static void startAssociationDtlsIfReady(IceConnection *network)
     {
@@ -674,8 +678,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 return;
             auto  buffer    = ice->readDatagram(componentIndex);
             auto &component = network->components[componentIndex];
-            if (component.srtp) {
-                component.srtp->dispatchMuxed(std::move(buffer));
+            if (component.secureRtp) {
+                component.secureRtp->receiveMuxed(std::move(buffer));
             } else if (component.dtls) {
                 component.dtls->writeIncomingDatagram(buffer);
             } else if (component.rawConnection) {
@@ -733,6 +737,14 @@ namespace XMPP { namespace Jingle { namespace ICE {
         if (ice)
             ice->disconnect(this);
         for (const auto &c : components) {
+            if (c.secureRtp) {
+                // Backend SRTP state belongs to the Jingle media session, not
+                // to this ICE QObject. Retire the security association while its
+                // Pad listeners are still connected so exported key material is
+                // invalidated before we suppress callbacks during destruction.
+                c.secureRtp->close();
+                c.secureRtp->disconnect();
+            }
             if (c.dtls)
                 c.dtls->disconnect(this);
 #ifdef JINGLE_SCTP
@@ -742,7 +754,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         }
         // Tear down packet consumers before handing ICE to asynchronous shutdown.
         for (auto &c : components) {
-            delete c.srtp;
+            delete c.secureRtp;
 #ifdef JINGLE_SCTP
             delete c.sctp;
 #endif
@@ -883,6 +895,17 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 network->runtime->pad = pad.data();
             if (network->runtime->creator == Origin::None)
                 network->runtime->creator = q->creator();
+
+            // A responder may receive and validate all per-content ICE/DTLS
+            // signaling before it decides whether to accept an offered BUNDLE.
+            // In that case handleRemoteUpdate() intentionally keeps the parsed
+            // state on the logical Transport and allocates no physical network.
+            // Once the local grouping decision creates the shared association,
+            // seed its association-owned runtime immediately so prepare() can
+            // configure DTLS from the already received fingerprint.
+            if (remoteState && !network->runtime->mergeRemoteIce(*remoteState))
+                return false;
+
             if (!network->runtime->hasParticipant(q)) {
                 QPointer<Transport> guard(q);
                 IceConnection::Runtime::Participant participant;
@@ -954,11 +977,27 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 = new Dtls(network, q->pad()->session()->me().full(), q->pad()->session()->peer().full());
 
             auto dtls = network->components[componentIndex].dtls;
+            // Fingerprint/role negotiation can complete as soon as signaling
+            // arrives, but the DTLS engine must not emit handshake records until
+            // ICE has a nominated pair. In particular a remote setup=active
+            // answer makes us passive/server and setRemoteFingerprint() would
+            // otherwise start the server while ICE writes still have no route.
+            dtls->setNegotiationDeferred(true);
             if (!rtpProfiles.isEmpty()) {
-                if (!dtls->setSRTPProfiles(rtpProfiles)) {
+                if (!dtls->setSRTPProfiles(rtpProfiles))
                     return false;
-                }
-                network->components[componentIndex].srtp = new RTP::SrtpSession(dtls, network);
+                auto association = new RTP::SecureRtpAssociation(
+                    dtls, network->secureRtpAssociationId, network);
+                network->components[componentIndex].secureRtp = association;
+                QObject::connect(association, &RTP::SecureRtpAssociation::ready, network,
+                                 [net = network](quint64 epoch) {
+                                     net->generation.dtlsEpoch = epoch;
+                                 });
+                QObject::connect(association, &RTP::SecureRtpAssociation::invalidated, network,
+                                 [net = network, association](quint64) {
+                                     if (association)
+                                         net->generation.dtlsEpoch = association->epoch();
+                                 });
             }
             if (q->isLocal()) {
                 dtls->initOutgoing();
@@ -1344,13 +1383,13 @@ namespace XMPP { namespace Jingle { namespace ICE {
         d->remoteState.reset(new Element {});
         connect(this, &XMPP::Jingle::Transport::stateChanged, this, [this]() {
             if (!d->groupManagedNetwork && _state >= State::Finishing) {
-                if (auto binding = rtpSession())
+                if (auto binding = rtpAssociation())
                     binding->close();
             }
         });
         connect(this, &XMPP::Jingle::Transport::failed, this, [this]() {
             if (!d->groupManagedNetwork) {
-                if (auto binding = rtpSession())
+                if (auto binding = rtpAssociation())
                     binding->close();
             }
         });
@@ -1362,7 +1401,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
     Transport::~Transport()
     {
-        if (auto binding = rtpSession()) {
+        if (auto binding = rtpAssociation()) {
             binding->disconnect(this);
             if (!d->groupManagedNetwork)
                 binding->close();
@@ -1375,7 +1414,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         // remain alive in selector/signaling bookkeeping, but asynchronous work
         // owned by the previous incarnation must never reacquire an association.
         d->networkOwnershipRetired = true;
-        if (auto binding = rtpSession()) {
+        if (auto binding = rtpAssociation()) {
             binding->disconnect(this);
             if (!d->groupManagedNetwork)
                 binding->close();
@@ -1392,44 +1431,48 @@ namespace XMPP { namespace Jingle { namespace ICE {
     {
         XMPP::Jingle::Transport::stop();
         if (!d->groupManagedNetwork) {
-            if (auto binding = rtpSession())
+            if (auto binding = rtpAssociation())
                 binding->close();
         }
     }
 
-    bool Transport::enableRtpMux()
+    bool Transport::enableRtpMux(const QStringList &profiles)
     {
-        if (!d->ensureNetwork())
+        if (profiles.isEmpty() || !d->ensureNetwork())
             return false;
         if ((_state != State::Created && !(isRemote() && _state == State::Pending))
             || d->network->components.size() != 1 || d->network->components[0].rawConnection)
             return false;
         if (!d->groupManagedNetwork && (d->network->ice || d->network->components[0].dtls))
             return false;
-        if (d->groupManagedNetwork && d->network->components[0].dtls && !d->network->components[0].srtp)
+        if (d->groupManagedNetwork && d->network->components[0].dtls
+            && !d->network->components[0].secureRtp)
             return false;
-        auto profiles = RTP::supportedSecureRtpProfiles();
-        if (profiles.isEmpty())
-            return false;
-        d->rtpProfiles                        = profiles;
+
+        const auto supported = Dtls::supportedSRTPProfiles();
+        for (const auto &profile : profiles)
+            if (!supported.contains(profile))
+                return false;
+
+        d->rtpProfiles                         = profiles;
         d->network->components[0].lowOverhead = true;
         return true;
     }
 
-    RTP::SrtpSession *Transport::rtpSession() const
+    RTP::SecureRtpAssociation *Transport::rtpAssociation() const
     {
-        return !d->network || d->network->components.isEmpty() ? nullptr : d->network->components[0].srtp;
+        return !d->network || d->network->components.isEmpty() ? nullptr
+                                                                : d->network->components[0].secureRtp;
     }
 
-    bool Transport::sendRtpPacket(QByteArray packet, RTP::SrtpContext::Packet kind, quint64 epoch)
+    bool Transport::sendProtectedRtpPacket(QByteArray packet, RTP::PacketKind kind, quint64 epoch)
     {
-        auto binding = rtpSession();
-        if (!binding || !d->network || !d->network->ice || _state < State::Connecting || _state >= State::Finishing)
+        auto association = rtpAssociation();
+        if (!association || !d->network || !d->network->ice || _state < State::Connecting
+            || _state >= State::Finishing
+            || !association->validateProtectedMuxed(packet, kind, epoch))
             return false;
-        auto encrypted = binding->protectMuxed(std::move(packet), kind, epoch);
-        if (!encrypted)
-            return false;
-        d->network->ice->writeDatagram(0, *encrypted);
+        d->network->ice->writeDatagram(0, packet);
         return true;
     }
 
@@ -1656,7 +1699,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             return d->addDataChannel(features, id, componentIndex);
 #endif
         if (!d->rtpProfiles.isEmpty())
-            return {}; // Protected RTP uses sendRtpPacket, never a raw channel.
+            return {}; // Protected RTP uses sendProtectedRtpPacket(), never a raw channel.
         componentIndex = d->ensureComponentExist(componentIndex, features & TransportFeature::LowOverhead);
         if (componentIndex < 0)
             return {}; // failed to add component for the features

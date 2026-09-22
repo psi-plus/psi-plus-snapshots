@@ -21,11 +21,11 @@
 #ifndef PSIMEDIA_GSTRECORDER_H
 #define PSIMEDIA_GSTRECORDER_H
 
-#include <QMutex>
-#include <QPointer>
-#include <QObject>
-#include <QList>
 #include <QByteArray>
+#include <QList>
+#include <QMutex>
+#include <QObject>
+#include <QPointer>
 
 class QIODevice;
 
@@ -41,7 +41,7 @@ class GstRecorder : public QObject {
 
 public:
     RwControlLocal *control;
-    QIODevice *     recordDevice, *nextRecordDevice;
+    QIODevice      *recordDevice, *nextRecordDevice;
     bool            record_cancel;
 
     QMutex            m;

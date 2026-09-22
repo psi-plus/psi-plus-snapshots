@@ -60,19 +60,19 @@ static void usage()
 
 int main(int argc, char **argv)
 {
-    char *            playback_device;
-    char *            capture_device;
-    snd_pcm_t *       playback_handle;
-    snd_pcm_t *       capture_handle;
+    char             *playback_device;
+    char             *capture_device;
+    snd_pcm_t        *playback_handle;
+    snd_pcm_t        *capture_handle;
     snd_pcm_uframes_t playback_psize;
     snd_pcm_uframes_t capture_psize;
     int               mode;
     unsigned int      rate = 44100;
-    short *           pbuf, *cbuf;
+    short            *pbuf, *cbuf;
     int               count;
     int               err;
     int               at, at_play;
-    FILE *            fin, *fout;
+    FILE             *fin, *fout;
 
     if (argc < 2) {
         usage();

@@ -35,10 +35,10 @@ struct RtpSessionBridgeTestAccess {
         if (!bridge.bus_ || !bridge.pipeline_)
             return false;
 
-        GError *error = g_error_new_literal(GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
-                                            "synthetic RTP bridge runtime failure");
-        GstMessage *message = gst_message_new_error(GST_OBJECT(bridge.pipeline_), error,
-                                                    "psimedia runtime-error regression");
+        GError *error
+            = g_error_new_literal(GST_CORE_ERROR, GST_CORE_ERROR_FAILED, "synthetic RTP bridge runtime failure");
+        GstMessage *message
+            = gst_message_new_error(GST_OBJECT(bridge.pipeline_), error, "psimedia runtime-error regression");
         g_error_free(error);
         if (!message)
             return false;
@@ -50,12 +50,12 @@ struct RtpSessionBridgeTestAccess {
 
 namespace {
 
-constexpr int NegotiatedPayloadType = 109;
-constexpr int RawSampleRate         = 44100;
-constexpr int RawChannels           = 1;
-constexpr int OpusRtpClockRate      = 48000;
-constexpr int OpusRtpChannels       = 2;
-constexpr quint32 DecodeRemoteSsrc  = 0x13572468;
+constexpr int     NegotiatedPayloadType = 109;
+constexpr int     RawSampleRate         = 44100;
+constexpr int     RawChannels           = 1;
+constexpr int     OpusRtpClockRate      = 48000;
+constexpr int     OpusRtpChannels       = 2;
+constexpr quint32 DecodeRemoteSsrc      = 0x13572468;
 
 bool isExpectedRtpPacket(const PsiMedia::PRtpPacket &packet)
 {
@@ -66,15 +66,42 @@ bool isExpectedRtpPacket(const PsiMedia::PRtpPacket &packet)
     return (bytes[0] >> 6) == 2 && (bytes[1] & 0x7f) == NegotiatedPayloadType;
 }
 
-QList<PsiMedia::PRtpPacket> waitForRtpPackets(PsiMedia::GstRtpChannel *audioChannel,
-                                                    PsiMedia::GstRtpSessionContext *session, int count = 6,
-                                                    int timeoutMs = 10000)
+bool waitForPayloadPacket(PsiMedia::RtpChannelContext *channel, int payloadType,
+                          PsiMedia::GstRtpSessionContext *session, int timeoutMs = 10000)
+{
+    bool       failed = false;
+    const auto errorConnection
+        = QObject::connect(session, &PsiMedia::GstRtpSessionContext::error, [&]() { failed = true; });
+
+    QElapsedTimer timer;
+    timer.start();
+    while (!failed && timer.elapsed() < timeoutMs) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+        while (channel->packetsAvailable() > 0) {
+            const auto packet = channel->read();
+            if (packet.type != PsiMedia::PRtpPacket::Type::Rtp || packet.rawValue.size() < 2)
+                continue;
+            const auto *bytes = reinterpret_cast<const uchar *>(packet.rawValue.constData());
+            if ((bytes[0] >> 6) == 2 && (bytes[1] & 0x7f) == payloadType) {
+                QObject::disconnect(errorConnection);
+                return true;
+            }
+        }
+        QThread::msleep(5);
+    }
+
+    QObject::disconnect(errorConnection);
+    return false;
+}
+
+QList<PsiMedia::PRtpPacket> waitForRtpPackets(PsiMedia::GstRtpChannel        *audioChannel,
+                                              PsiMedia::GstRtpSessionContext *session, int count = 6,
+                                              int timeoutMs = 10000)
 {
     QList<PsiMedia::PRtpPacket> result;
     bool                        failed = false;
-    const auto errorConnection = QObject::connect(session, &PsiMedia::GstRtpSessionContext::error, [&]() {
-        failed = true;
-    });
+    const auto                  errorConnection
+        = QObject::connect(session, &PsiMedia::GstRtpSessionContext::error, [&]() { failed = true; });
 
     QElapsedTimer timer;
     timer.start();
@@ -99,15 +126,14 @@ quint64 remoteRtpPacketsProcessed(PsiMedia::RtpSessionBridge &bridge, quint32 ss
     if (!stats)
         return 0;
 
-    guint64 packets = 0;
+    guint64       packets      = 0;
     const GValue *sourcesValue = gst_structure_get_value(stats, "source-stats");
     if (sourcesValue) {
         auto *sources = static_cast<GValueArray *>(g_value_get_boxed(sourcesValue));
         if (sources) {
             for (guint i = 0; i < sources->n_values; ++i) {
-                const auto *source
-                    = static_cast<const GstStructure *>(g_value_get_boxed(&sources->values[i]));
-                guint sourceSsrc = 0;
+                const auto *source     = static_cast<const GstStructure *>(g_value_get_boxed(&sources->values[i]));
+                guint       sourceSsrc = 0;
                 if (source && gst_structure_get_uint(source, "ssrc", &sourceSsrc) && sourceSsrc == ssrc) {
                     gst_structure_get_uint64(source, "packets-received", &packets);
                     break;
@@ -139,12 +165,12 @@ void makeRemoteRtp(PsiMedia::PRtpPacket &packet, quint16 sequence, quint32 times
 }
 
 bool waitForDecodedOutput(PsiMedia::GstRtpChannel *audioChannel, PsiMedia::RtpSessionBridge &bridge,
-                          const QList<PsiMedia::PRtpPacket> &packets, const QString &outputPath,
-                          quint16 &sequence, quint32 &timestamp, int timeoutMs = 5000)
+                          const QList<PsiMedia::PRtpPacket> &packets, const QString &outputPath, quint16 &sequence,
+                          quint32 &timestamp, int timeoutMs = 5000)
 {
-    const qint64 initialSize = QFileInfo(outputPath).exists() ? QFileInfo(outputPath).size() : 0;
+    const qint64  initialSize      = QFileInfo(outputPath).exists() ? QFileInfo(outputPath).size() : 0;
     const quint64 initialProcessed = remoteRtpPacketsProcessed(bridge, DecodeRemoteSsrc);
-    int          written     = 0;
+    int           written          = 0;
     for (auto packet : packets) {
         if (packet.rawValue.size() < 12)
             continue;
@@ -166,8 +192,8 @@ bool waitForDecodedOutput(PsiMedia::GstRtpChannel *audioChannel, PsiMedia::RtpSe
     }
     const quint64 processed = remoteRtpPacketsProcessed(bridge, DecodeRemoteSsrc);
     if (processed <= initialProcessed) {
-        qCritical() << "RTP bridge did not validate reflected remote packets"
-                    << initialProcessed << processed << written;
+        qCritical() << "RTP bridge did not validate reflected remote packets" << initialProcessed << processed
+                    << written;
         return false;
     }
 
@@ -205,8 +231,8 @@ bool waitForControlBarrier(PsiMedia::RtpSessionContext *session, int timeoutMs =
     return done;
 }
 
-
-QString receiveAppSrcName(PsiMedia::RtpSessionContext *session, int timeoutMs = 5000)
+QString receiveAppSrcName(PsiMedia::RtpSessionContext *session, const QString &media = QStringLiteral("audio"),
+                          int timeoutMs = 5000)
 {
     QString    dotPath;
     QEventLoop loop;
@@ -239,8 +265,9 @@ QString receiveAppSrcName(PsiMedia::RtpSessionContext *session, int timeoutMs = 
     QFile file(dotPath);
     if (!file.open(QIODevice::ReadOnly))
         return {};
-    const QString dot = QString::fromUtf8(file.readAll());
-    const auto match = QRegularExpression(QStringLiteral("psimedia_audio_rtp_recv_\\d+")).match(dot);
+    const QString dot     = QString::fromUtf8(file.readAll());
+    const auto    pattern = QStringLiteral("psimedia_%1_rtp_recv_\\d+").arg(media);
+    const auto    match   = QRegularExpression(pattern).match(dot);
     return match.hasMatch() ? match.captured(0) : QString();
 }
 
@@ -251,14 +278,12 @@ void drainPackets(PsiMedia::GstRtpChannel *channel)
         channel->read();
 }
 
-
-bool waitForRtpQuiet(PsiMedia::GstRtpChannel *audioChannel, PsiMedia::GstRtpSessionContext *session,
-                     int quietMs = 500, int timeoutMs = 10000)
+bool waitForRtpQuiet(PsiMedia::GstRtpChannel *audioChannel, PsiMedia::GstRtpSessionContext *session, int quietMs = 500,
+                     int timeoutMs = 10000)
 {
-    bool failed = false;
-    const auto errorConnection = QObject::connect(session, &PsiMedia::GstRtpSessionContext::error, [&]() {
-        failed = true;
-    });
+    bool       failed = false;
+    const auto errorConnection
+        = QObject::connect(session, &PsiMedia::GstRtpSessionContext::error, [&]() { failed = true; });
 
     QElapsedTimer total;
     QElapsedTimer quiet;
@@ -291,7 +316,6 @@ bool waitForRtpQuiet(PsiMedia::GstRtpChannel *audioChannel, PsiMedia::GstRtpSess
     return false;
 }
 
-
 bool createFiniteOpusFile(const QString &path)
 {
     GstElement *pipeline = gst_pipeline_new("psimedia-test-file");
@@ -310,8 +334,8 @@ bool createFiniteOpusFile(const QString &path)
 
     g_object_set(source, "is-live", FALSE, "num-buffers", 50, nullptr);
     g_object_set(sink, "location", QFile::encodeName(path).constData(), nullptr);
-    GstCaps *rawCaps = gst_caps_new_simple("audio/x-raw", "rate", G_TYPE_INT, OpusRtpClockRate, "channels",
-                                           G_TYPE_INT, OpusRtpChannels, nullptr);
+    GstCaps *rawCaps = gst_caps_new_simple("audio/x-raw", "rate", G_TYPE_INT, OpusRtpClockRate, "channels", G_TYPE_INT,
+                                           OpusRtpChannels, nullptr);
     g_object_set(caps, "caps", rawCaps, nullptr);
     gst_caps_unref(rawCaps);
 
@@ -329,8 +353,8 @@ bool createFiniteOpusFile(const QString &path)
     }
 
     GstBus     *bus = gst_element_get_bus(pipeline);
-    GstMessage *msg = gst_bus_timed_pop_filtered(
-        bus, 10 * GST_SECOND, GstMessageType(GST_MESSAGE_EOS | GST_MESSAGE_ERROR));
+    GstMessage *msg
+        = gst_bus_timed_pop_filtered(bus, 10 * GST_SECOND, GstMessageType(GST_MESSAGE_EOS | GST_MESSAGE_ERROR));
     const bool ok = msg && GST_MESSAGE_TYPE(msg) == GST_MESSAGE_EOS;
     if (msg)
         gst_message_unref(msg);
@@ -362,7 +386,7 @@ int main(int argc, char **argv)
     }
 
     std::unique_ptr<PsiMedia::RtpSessionContext> session(provider.createRtpSession());
-    auto *gstSession = qobject_cast<PsiMedia::GstRtpSessionContext *>(session->qobject());
+    auto *gstSession   = qobject_cast<PsiMedia::GstRtpSessionContext *>(session->qobject());
     auto *audioChannel = qobject_cast<PsiMedia::GstRtpChannel *>(session->audioRtpChannel()->qobject());
     if (!gstSession || !audioChannel) {
         qCritical() << "Provider did not create the production GStreamer RTP session";
@@ -388,7 +412,8 @@ int main(int argc, char **argv)
     // requiring a physical audio device.
     const QString decodedOutputPath = tempDir.filePath(QStringLiteral("decoded.raw"));
     session->setAudioOutputDevice(
-        QStringLiteral("filesink location=\"%1\" buffer-mode=unbuffered sync=false async=false").arg(decodedOutputPath));
+        QStringLiteral("filesink location=\"%1\" buffer-mode=unbuffered sync=false async=false")
+            .arg(decodedOutputPath));
 
     // Negotiation must not require capture. The live source is attached only
     // after the session has started, matching Psi's consent/no-microphone path.
@@ -416,7 +441,7 @@ int main(int argc, char **argv)
 
     if (startFailed || startTimedOut) {
         qCritical() << (startFailed ? "Production RTP session failed to start"
-                                   : "Timed out starting production RTP session");
+                                    : "Timed out starting production RTP session");
         return 3;
     }
 
@@ -463,7 +488,8 @@ int main(int argc, char **argv)
 
     quint16 remoteSequence  = 1;
     quint32 remoteTimestamp = 48000;
-    if (!waitForDecodedOutput(audioChannel, gstSession->audioBridge, livePackets, decodedOutputPath, remoteSequence, remoteTimestamp)) {
+    if (!waitForDecodedOutput(audioChannel, gstSession->audioBridge, livePackets, decodedOutputPath, remoteSequence,
+                              remoteTimestamp)) {
         qCritical() << "Production receive path did not decode live-source RTP";
         return 8;
     }
@@ -476,8 +502,8 @@ int main(int argc, char **argv)
     }
     const QString receiveAfterFileSwitch = receiveAppSrcName(session.get());
     if (receiveAfterFileSwitch != receiveBeforeSwitch) {
-        qCritical() << "Live-to-file capture switch recreated the receive pipeline"
-                    << receiveBeforeSwitch << receiveAfterFileSwitch;
+        qCritical() << "Live-to-file capture switch recreated the receive pipeline" << receiveBeforeSwitch
+                    << receiveAfterFileSwitch;
         return 10;
     }
     // Preserve the previous transmit intent across the source replacement.
@@ -487,7 +513,8 @@ int main(int argc, char **argv)
         qCritical() << "File input did not produce RTP after replacing live capture";
         return 10;
     }
-    if (!waitForDecodedOutput(audioChannel, gstSession->audioBridge, filePackets, decodedOutputPath, remoteSequence, remoteTimestamp)) {
+    if (!waitForDecodedOutput(audioChannel, gstSession->audioBridge, filePackets, decodedOutputPath, remoteSequence,
+                              remoteTimestamp)) {
         qCritical() << "Receive decode/output stopped after live-to-file capture switch";
         return 10;
     }
@@ -510,8 +537,8 @@ int main(int argc, char **argv)
     }
     const QString receiveAfterLiveSwitch = receiveAppSrcName(session.get());
     if (receiveAfterLiveSwitch != receiveBeforeSwitch) {
-        qCritical() << "File-to-live capture switch recreated the receive pipeline"
-                    << receiveBeforeSwitch << receiveAfterLiveSwitch;
+        qCritical() << "File-to-live capture switch recreated the receive pipeline" << receiveBeforeSwitch
+                    << receiveAfterLiveSwitch;
         return 13;
     }
     session->transmitAudio();
@@ -520,7 +547,8 @@ int main(int argc, char **argv)
         qCritical() << "RTP did not resume after file-to-live switch";
         return 13;
     }
-    if (!waitForDecodedOutput(audioChannel, gstSession->audioBridge, resumedLivePackets, decodedOutputPath, remoteSequence, remoteTimestamp)) {
+    if (!waitForDecodedOutput(audioChannel, gstSession->audioBridge, resumedLivePackets, decodedOutputPath,
+                              remoteSequence, remoteTimestamp)) {
         qCritical() << "Receive decode/output stopped after file-to-live capture switch";
         return 13;
     }
@@ -553,6 +581,131 @@ int main(int argc, char **argv)
         return 15;
     }
 
+    // Reproduce the Jingle adapter ordering: audio starts the receive graph,
+    // then video is negotiated on the already-running session. The regression
+    // checks the topology invariant directly; end-to-end VP8 decoding is covered
+    // by the live Prosody A/V BUNDLE integration job.
+    std::unique_ptr<PsiMedia::RtpSessionContext> videoSession(provider.createRtpSession());
+    auto *videoGstSession = qobject_cast<PsiMedia::GstRtpSessionContext *>(videoSession->qobject());
+    if (!videoGstSession) {
+        qCritical() << "Provider did not create the late-video test session";
+        return 16;
+    }
+
+    videoSession->setLocalAudioPreferences({ rawAudio });
+    videoSession->setRemoteAudioPreferences({ remoteOpus });
+    videoSession->audioRtpChannel()->setEnabled(true);
+
+    bool       videoStartFailed   = false;
+    bool       videoStartTimedOut = false;
+    QEventLoop videoStartLoop;
+    QTimer     videoStartTimer;
+    videoStartTimer.setSingleShot(true);
+    QObject::connect(&videoStartTimer, &QTimer::timeout, &videoStartLoop, [&]() {
+        videoStartTimedOut = true;
+        videoStartLoop.quit();
+    });
+    QObject::connect(videoGstSession, &PsiMedia::GstRtpSessionContext::started, &videoStartLoop, &QEventLoop::quit);
+    QObject::connect(videoGstSession, &PsiMedia::GstRtpSessionContext::error, &videoStartLoop, [&]() {
+        videoStartFailed = true;
+        videoStartLoop.quit();
+    });
+
+    videoStartTimer.start(10000);
+    videoSession->start();
+    videoStartLoop.exec();
+    videoStartTimer.stop();
+    if (videoStartFailed || videoStartTimedOut) {
+        qCritical() << "Audio-first late-video test session did not start";
+        return 16;
+    }
+
+    const QString audioReceiveBeforeVideo = receiveAppSrcName(videoSession.get());
+    if (audioReceiveBeforeVideo.isEmpty()) {
+        qCritical() << "Audio-first session did not create its receive appsrc";
+        return 16;
+    }
+    if (!receiveAppSrcName(videoSession.get(), QStringLiteral("video")).isEmpty()) {
+        qCritical() << "Video receive appsrc existed before video negotiation";
+        return 16;
+    }
+
+    PsiMedia::PVideoParams localVideo;
+    localVideo.codec = QStringLiteral("vp8");
+    localVideo.size  = QSize(320, 240);
+    localVideo.fps   = 15;
+    videoSession->setLocalVideoPreferences({ localVideo });
+
+    PsiMedia::PPayloadInfo remoteVp8;
+    remoteVp8.id        = 96;
+    remoteVp8.name      = QStringLiteral("VP8");
+    remoteVp8.clockrate = 90000;
+    videoSession->setRemoteVideoPreferences({ remoteVp8 });
+
+    bool       videoUpdateFailed   = false;
+    bool       videoUpdateTimedOut = false;
+    QEventLoop videoUpdateLoop;
+    QTimer     videoUpdateTimer;
+    videoUpdateTimer.setSingleShot(true);
+    QObject::connect(&videoUpdateTimer, &QTimer::timeout, &videoUpdateLoop, [&]() {
+        videoUpdateTimedOut = true;
+        videoUpdateLoop.quit();
+    });
+    QObject::connect(videoGstSession, &PsiMedia::GstRtpSessionContext::preferencesUpdated, &videoUpdateLoop,
+                     &QEventLoop::quit);
+    QObject::connect(videoGstSession, &PsiMedia::GstRtpSessionContext::error, &videoUpdateLoop, [&]() {
+        videoUpdateFailed = true;
+        videoUpdateLoop.quit();
+    });
+
+    videoUpdateTimer.start(10000);
+    videoSession->updatePreferences();
+    videoUpdateLoop.exec();
+    videoUpdateTimer.stop();
+    if (videoUpdateFailed || videoUpdateTimedOut) {
+        qCritical() << "Adding video to the running audio receive graph failed";
+        return 16;
+    }
+
+    const QString audioReceiveAfterVideo = receiveAppSrcName(videoSession.get());
+    const QString videoReceiveAfterVideo = receiveAppSrcName(videoSession.get(), QStringLiteral("video"));
+    if (audioReceiveAfterVideo != audioReceiveBeforeVideo) {
+        qCritical() << "Late video negotiation rebuilt the live audio receive graph" << audioReceiveBeforeVideo
+                    << audioReceiveAfterVideo;
+        return 16;
+    }
+    if (videoReceiveAfterVideo.isEmpty()) {
+        qCritical() << "Late video negotiation did not add the video receive appsrc";
+        return 16;
+    }
+
+    const auto negotiatedVideo = videoSession->remoteVideoPayloadInfo();
+    if (negotiatedVideo.size() != 1 || negotiatedVideo.constFirst().id != remoteVp8.id
+        || negotiatedVideo.constFirst().name.compare(QStringLiteral("VP8"), Qt::CaseInsensitive) != 0
+        || negotiatedVideo.constFirst().clockrate != remoteVp8.clockrate) {
+        qCritical() << "Late video negotiation did not commit VP8 receive status";
+        return 16;
+    }
+
+    bool       videoStopTimedOut = false;
+    QEventLoop videoStopLoop;
+    QTimer     videoStopTimer;
+    videoStopTimer.setSingleShot(true);
+    QObject::connect(&videoStopTimer, &QTimer::timeout, &videoStopLoop, [&]() {
+        videoStopTimedOut = true;
+        videoStopLoop.quit();
+    });
+    QObject::connect(videoGstSession, &PsiMedia::GstRtpSessionContext::stopped, &videoStopLoop, &QEventLoop::quit);
+    videoStopTimer.start(10000);
+    videoSession->stop();
+    videoStopLoop.exec();
+    videoStopTimer.stop();
+    if (videoStopTimedOut) {
+        qCritical() << "Timed out stopping late-video test session";
+        return 16;
+    }
+    videoSession.reset();
+
     // A bridge can fail after PLAYING even when the legacy media worker is
     // otherwise healthy. Verify that a real GstBus error reaches the provider
     // terminal error path exactly once on the Qt owner thread.
@@ -576,8 +729,7 @@ int main(int argc, char **argv)
         errorStartTimedOut = true;
         errorStartLoop.quit();
     });
-    QObject::connect(errorGstSession, &PsiMedia::GstRtpSessionContext::started, &errorStartLoop,
-                     &QEventLoop::quit);
+    QObject::connect(errorGstSession, &PsiMedia::GstRtpSessionContext::started, &errorStartLoop, &QEventLoop::quit);
     QObject::connect(errorGstSession, &PsiMedia::GstRtpSessionContext::error, &errorStartLoop, [&]() {
         errorStartFailed = true;
         errorStartLoop.quit();
@@ -592,9 +744,9 @@ int main(int argc, char **argv)
         return 17;
     }
 
-    int        runtimeErrors = 0;
+    int        runtimeErrors    = 0;
     bool       wrongErrorThread = false;
-    QThread   *ownerThread = QThread::currentThread();
+    QThread   *ownerThread      = QThread::currentThread();
     QEventLoop runtimeErrorLoop;
     QTimer     runtimeErrorTimer;
     runtimeErrorTimer.setSingleShot(true);
@@ -617,8 +769,8 @@ int main(int argc, char **argv)
 
     if (runtimeErrors != 1 || wrongErrorThread
         || errorGstSession->errorCode() != PsiMedia::RtpSessionContext::ErrorGeneric) {
-        qCritical() << "RTP bridge runtime error did not reach provider terminal path"
-                    << runtimeErrors << wrongErrorThread << int(errorGstSession->errorCode());
+        qCritical() << "RTP bridge runtime error did not reach provider terminal path" << runtimeErrors
+                    << wrongErrorThread << int(errorGstSession->errorCode());
         return 19;
     }
 

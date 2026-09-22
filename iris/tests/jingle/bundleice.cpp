@@ -137,7 +137,9 @@ struct Side {
               "BUNDLE members did not stage one association");
         network = audioNetwork;
         check(icePad->liveAssociationCount() == 1, "BUNDLE side staged multiple associations");
-        check(audio->enableRtpMux() && video->enableRtpMux(), "BUNDLE RTP mux setup failed");
+        const auto profiles = Dtls::supportedSRTPProfiles();
+        check(!profiles.isEmpty() && audio->enableRtpMux(profiles) && video->enableRtpMux(profiles),
+              "BUNDLE RTP mux setup failed");
     }
 
     ~Side()
@@ -153,8 +155,7 @@ int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
     QCA::Initializer qca;
-    check(!J::RTP::SrtpContext::supportedProfiles().isEmpty() && !Dtls::supportedSRTPProfiles().isEmpty(),
-          "DTLS-SRTP backend required");
+    check(!Dtls::supportedSRTPProfiles().isEmpty(), "DTLS-SRTP backend required");
 
     TcpPortReserver reserver;
     Side first(Jid(QStringLiteral("second@example.test/device")), J::Origin::Initiator, &reserver);
@@ -172,8 +173,8 @@ int main(int argc, char **argv)
     first.video->prepare();
     check(first.audio->state() == J::State::ApprovedToSend && first.video->state() == J::State::ApprovedToSend,
           "initiator BUNDLE transports did not prepare");
-    check(first.audio->rtpSession() && first.audio->rtpSession() == first.video->rtpSession(),
-          "initiator did not share SRTP");
+    check(first.audio->rtpAssociation() && first.audio->rtpAssociation() == first.video->rtpAssociation(),
+          "initiator did not share secure RTP");
 
     auto exchange = [](TestIceTransport *from, TestIceTransport *to) {
         if (!from->hasUpdates())
@@ -219,8 +220,8 @@ int main(int argc, char **argv)
             check(second.audio->state() == J::State::ApprovedToSend
                       && second.video->state() == J::State::ApprovedToSend,
                   "responder BUNDLE transports did not prepare");
-            check(second.audio->rtpSession() && second.audio->rtpSession() == second.video->rtpSession(),
-                  "responder did not share SRTP");
+            check(second.audio->rtpAssociation() && second.audio->rtpAssociation() == second.video->rtpAssociation(),
+                  "responder did not share secure RTP");
         }
 
         if (secondPrepared) {
@@ -242,9 +243,9 @@ int main(int argc, char **argv)
             }
         }
 
-        auto firstSrtp = first.video->rtpSession();
-        auto secondSrtp = second.video->rtpSession();
-        if (!checksStarted || !firstSrtp || !secondSrtp || !firstSrtp->isReady() || !secondSrtp->isReady())
+        auto firstSecure = first.video->rtpAssociation();
+        auto secondSecure = second.video->rtpAssociation();
+        if (!checksStarted || !firstSecure || !secondSecure || !firstSecure->isReady() || !secondSecure->isReady())
             return;
 
         static bool handlersInstalled = false;
@@ -253,9 +254,9 @@ int main(int argc, char **argv)
         static bool replySent = false;
         if (!handlersInstalled) {
             handlersInstalled = true;
-            QObject::connect(secondSrtp, &J::RTP::SrtpSession::packetReceived, &loop,
-                             [&](const QByteArray &packet, J::RTP::SrtpContext::Packet kind, quint64) {
-                                 check(kind == J::RTP::SrtpContext::Packet::Rtp, "BUNDLE delivered non-RTP");
+            QObject::connect(secondSecure, &J::RTP::SecureRtpAssociation::protectedPacketReceived, &loop,
+                             [&](const QByteArray &packet, J::RTP::PacketKind kind, quint64) {
+                                 check(kind == J::RTP::PacketKind::Rtp, "BUNDLE delivered non-RTP");
                                  if (packet == audioPacket)
                                      audioReceived = true;
                                  else if (packet == videoPacket)
@@ -263,39 +264,39 @@ int main(int argc, char **argv)
                                  else if (packet == survivorPacket)
                                      survivorReceived = true;
                              });
-            QObject::connect(firstSrtp, &J::RTP::SrtpSession::packetReceived, &loop,
-                             [&](const QByteArray &packet, J::RTP::SrtpContext::Packet kind, quint64) {
-                                 if (kind == J::RTP::SrtpContext::Packet::Rtp && packet == replyPacket)
+            QObject::connect(firstSecure, &J::RTP::SecureRtpAssociation::protectedPacketReceived, &loop,
+                             [&](const QByteArray &packet, J::RTP::PacketKind kind, quint64) {
+                                 if (kind == J::RTP::PacketKind::Rtp && packet == replyPacket)
                                      replyReceived = true;
                              });
         }
 
         if (!initialSent) {
             initialSent = true;
-            const auto epoch = firstSrtp->epoch();
-            check(first.audio->sendRtpPacket(audioPacket, J::RTP::SrtpContext::Packet::Rtp, epoch),
+            const auto epoch = firstSecure->epoch();
+            check(first.audio->sendProtectedRtpPacket(audioPacket, J::RTP::PacketKind::Rtp, epoch),
                   "audio BUNDLE member failed to send");
-            check(first.video->sendRtpPacket(videoPacket, J::RTP::SrtpContext::Packet::Rtp, epoch),
+            check(first.video->sendProtectedRtpPacket(videoPacket, J::RTP::PacketKind::Rtp, epoch),
                   "video BUNDLE member failed to send");
         }
 
         if (!survivorSent && audioReceived && videoReceived) {
             survivorSent = true;
-            auto *shared = first.video->rtpSession();
+            auto *shared = first.video->rtpAssociation();
             const auto epoch = shared->epoch();
             first.audio->stop();
             check(first.audio->state() == J::State::Finished, "audio member did not stop");
-            check(first.video->rtpSession() == shared && shared->isReady() && shared->epoch() == epoch,
-                  "stopping audio invalidated shared SRTP");
-            check(first.video->sendRtpPacket(survivorPacket, J::RTP::SrtpContext::Packet::Rtp, epoch),
+            check(first.video->rtpAssociation() == shared && shared->isReady() && shared->epoch() == epoch,
+                  "stopping audio invalidated shared secure RTP");
+            check(first.video->sendProtectedRtpPacket(survivorPacket, J::RTP::PacketKind::Rtp, epoch),
                   "surviving video member failed to send");
         }
 
         if (!replySent && survivorReceived) {
             replySent = true;
-            auto *shared = second.video->rtpSession();
-            check(shared && shared->isReady(), "responder shared SRTP disappeared");
-            check(second.video->sendRtpPacket(replyPacket, J::RTP::SrtpContext::Packet::Rtp, shared->epoch()),
+            auto *shared = second.video->rtpAssociation();
+            check(shared && shared->isReady(), "responder shared secure RTP disappeared");
+            check(second.video->sendProtectedRtpPacket(replyPacket, J::RTP::PacketKind::Rtp, shared->epoch()),
                   "responder video reply failed");
         }
 
@@ -309,20 +310,20 @@ int main(int argc, char **argv)
     tick.stop();
 
     check(!failed && checksStarted && audioReceived && videoReceived && survivorReceived && replyReceived,
-          "shared ICE/DTLS/SRTP BUNDLE loopback failed");
+          "shared ICE/DTLS/secure-RTP BUNDLE loopback failed");
 
-    auto *survivingSrtp = first.video->rtpSession();
-    check(survivingSrtp && survivingSrtp->isReady(), "shared SRTP not ready before member removal");
+    auto *survivingSecure = first.video->rtpAssociation();
+    check(survivingSecure && survivingSecure->isReady(), "shared secure RTP not ready before member removal");
     delete first.audioApp;
     first.audioApp = nullptr;
-    check(firstGuard && first.icePad->liveAssociationCount() == 1 && first.video->rtpSession() == survivingSrtp
-              && survivingSrtp->isReady(),
+    check(firstGuard && first.icePad->liveAssociationCount() == 1 && first.video->rtpAssociation() == survivingSecure
+              && survivingSecure->isReady(),
           "removing stopped audio destroyed the surviving association");
 
     delete first.videoApp;
     first.videoApp = nullptr;
-    check(!firstGuard && first.icePad->liveAssociationCount() == 0 && !first.audio->rtpSession()
-              && !first.video->rtpSession(),
+    check(!firstGuard && first.icePad->liveAssociationCount() == 0 && !first.audio->rtpAssociation()
+              && !first.video->rtpAssociation(),
           "last initiator BUNDLE member retained or dangled the association");
 
     delete second.audioApp;
@@ -334,6 +335,6 @@ int main(int argc, char **argv)
     check(!secondGuard && second.icePad->liveAssociationCount() == 0,
           "last responder BUNDLE member retained the association");
 
-    qInfo("Shared ICE/DTLS/SRTP BUNDLE runtime regression passed");
+    qInfo("Shared ICE/DTLS/secure-RTP BUNDLE runtime regression passed");
     return 0;
 }

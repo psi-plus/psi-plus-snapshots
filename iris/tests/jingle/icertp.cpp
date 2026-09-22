@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include "../../src/xmpp/xmpp-im/jingle-ice-connection_p.h"
 #include <iris/ice176.h>
+#include <iris/dtls.h>
 #include <iris/jingle-rtp-srtp.h>
 #include <iris/jingle-rtp.h>
 #include <iris/jingle-session.h>
@@ -33,61 +34,159 @@ public:
     }
 };
 struct MediaState {
-    J::RTP::MediaEndpoint::PacketWriter writer;
-    QList<QByteArray>                   received;
-    int                                 configured = 0, attached = 0;
+    std::function<bool(const QByteArray &, J::RTP::PacketKind)> writer;
+    QList<QByteArray>                                           received;
+    int                                                         configured = 0;
+    int                                                         attached   = 0;
 };
+
 class Endpoint : public J::RTP::MediaEndpoint {
 public:
     explicit Endpoint(std::shared_ptr<MediaState> state) : state(std::move(state)) { }
+
     J::RTP::Description localOffer() const override
     {
         J::RTP::Description d;
-        d.media   = "audio";
+        d.media   = QStringLiteral("audio");
         d.rtcpMux = true;
         J::RTP::PayloadType p;
         p.id        = 96;
-        p.name      = "opus";
+        p.name      = QStringLiteral("opus");
         p.clockrate = 48000;
         p.channels  = 2;
         d.payloads.append(p);
         return d;
     }
+
     std::optional<J::RTP::Description> makeAnswer(const J::RTP::Description &d) const override { return d; }
     bool acceptsAnswer(const J::RTP::Description &, const J::RTP::Description &) const override { return true; }
+
     bool configure(const J::RTP::Description &, const J::RTP::Description &) override
     {
         ++state->configured;
         return true;
     }
-    bool supportsPacketIo() const override { return true; }
-    bool attachPacketIo(PacketWriter writer) override
-    {
-        ++state->attached;
-        state->writer = std::move(writer);
-        return true;
-    }
-    void receivePacket(const QByteArray &packet, J::RTP::SrtpContext::Packet) override
-    {
-        state->received.append(packet);
-    }
-    void                        stop() override { state->writer = {}; }
+
+    void stop() override { state->writer = {}; }
+
     std::shared_ptr<MediaState> state;
 };
+
 class MediaSession : public J::RTP::MediaSession {
 public:
     explicit MediaSession(std::shared_ptr<MediaState> state) : state(std::move(state)) { }
+
     std::unique_ptr<J::RTP::MediaEndpoint> createEndpoint(const QString &, const QString &) override
     {
         return std::make_unique<Endpoint>(state);
     }
+
+    bool attachSecureRtpPacketIo(ProtectedPacketWriter writer) override
+    {
+        protectedWriter_ = std::move(writer);
+        return bool(protectedWriter_);
+    }
+
+    void detachSecureRtpPacketIo() override
+    {
+        protectedWriter_ = {};
+        state->writer    = {};
+    }
+
+    bool configureSecureRtpEndpoints(const QList<J::RTP::SecureRtpEndpoint> &endpoints) override
+    {
+        if (endpoints.size() > 1)
+            return false;
+        endpoints_ = endpoints;
+        if (endpoints_.isEmpty()) {
+            state->writer = {};
+            return true;
+        }
+
+        const auto &endpoint = endpoints_.constFirst();
+        if (!endpoint.isValid() || endpoint.media != QLatin1String("audio"))
+            return false;
+        if (!attachedEndpoint_) {
+            attachedEndpoint_ = true;
+            ++state->attached;
+        }
+
+        state->writer = [this](const QByteArray &data, J::RTP::PacketKind kind) {
+            if (endpoints_.isEmpty() || !protectedWriter_)
+                return false;
+            const auto &endpoint = endpoints_.constFirst();
+            const auto epoch = epochs_.value(endpoint.associationId);
+            if (!epoch)
+                return false;
+            J::RTP::SecureRtpPacket packet;
+            packet.associationId = endpoint.associationId;
+            packet.epoch         = epoch;
+            packet.data          = data;
+            packet.kind          = kind;
+            return protectedWriter_(packet);
+        };
+        return true;
+    }
+
+    bool configureSecureRtpAssociation(const J::RTP::SecureRtpParameters &parameters) override
+    {
+        if (!parameters.isValid())
+            return false;
+        epochs_.insert(parameters.associationId, parameters.epoch);
+        return true;
+    }
+
+    void invalidateSecureRtpAssociation(const QByteArray &associationId, quint64 epoch) override
+    {
+        if (epochs_.value(associationId) == epoch)
+            epochs_.remove(associationId);
+    }
+
+    bool receiveProtectedRtpPacket(const J::RTP::SecureRtpPacket &packet) override
+    {
+        if (endpoints_.isEmpty() || epochs_.value(packet.associationId) != packet.epoch)
+            return false;
+        const auto &endpoint = endpoints_.constFirst();
+        if (endpoint.associationId != packet.associationId)
+            return false;
+
+        if (packet.kind == J::RTP::PacketKind::Rtp) {
+            if (packet.data.size() < 12 || (quint8(packet.data[0]) >> 6) != 2)
+                return false;
+            const quint8 payload = quint8(packet.data[1]) & 0x7f;
+            if (!endpoint.incomingPayloadTypes.contains(payload))
+                return false;
+        }
+
+        state->received.append(packet.data);
+        return true;
+    }
+
     std::shared_ptr<MediaState> state;
+
+private:
+    QList<J::RTP::SecureRtpEndpoint> endpoints_;
+    QHash<QByteArray, quint64>       epochs_;
+    ProtectedPacketWriter            protectedWriter_;
+    bool                             attachedEndpoint_ = false;
 };
+
 class Provider : public J::RTP::MediaProvider {
 public:
     explicit Provider(std::shared_ptr<MediaState> state) : state(std::move(state)) { }
-    std::unique_ptr<J::RTP::MediaSession> createSession() override { return std::make_unique<MediaSession>(state); }
-    std::shared_ptr<MediaState>           state;
+
+    std::unique_ptr<J::RTP::MediaSession> createSession() override
+    {
+        return std::make_unique<MediaSession>(state);
+    }
+
+    QStringList mediaTypes() const override { return { QStringLiteral("audio") }; }
+    QStringList secureRtpProfiles() const override
+    {
+        return { QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80") };
+    }
+
+    std::shared_ptr<MediaState> state;
 };
 
 int main(int argc, char **argv)
@@ -157,7 +256,9 @@ int main(int argc, char **argv)
         check(firstApp->initializeOutgoing("audio"), "RTP application offer failed");
         check(firstApp->setTransport(first) && secondApp->setTransport(second), "RTP application rejected ICE");
     } else {
-        check(first->enableRtpMux() && second->enableRtpMux(), "DTLS-SRTP backend required");
+        const auto profiles = Dtls::supportedSRTPProfiles();
+        check(!profiles.isEmpty() && first->enableRtpMux(profiles) && second->enableRtpMux(profiles),
+              "DTLS-SRTP backend required");
     }
 
     QEventLoop loop;
@@ -227,7 +328,7 @@ int main(int argc, char **argv)
                 }
             });
         }
-        auto a = first->rtpSession(), b = second->rtpSession();
+        auto a = first->rtpAssociation(), b = second->rtpAssociation();
         if (delayedAck && a && b) {
             check(!a->isReady() && !b->isReady(), "failed fingerprint IQ started DTLS-SRTP");
             if (first->iceCanSendMedia() && second->iceCanSendMedia()) {
@@ -250,30 +351,32 @@ int main(int argc, char **argv)
                 check(firstMedia->configured == 1 && secondMedia->configured == 1 && firstMedia->attached == 1
                           && secondMedia->attached == 1,
                       "media attached more than once");
-                check(firstMedia->writer(rtp, J::RTP::SrtpContext::Packet::Rtp), "media writer failed");
+                check(firstMedia->writer && firstMedia->writer(rtp, J::RTP::PacketKind::Rtp),
+                      "media writer failed");
                 return;
             }
-            QObject::connect(b, &J::RTP::SrtpSession::packetReceived, &loop,
-                             [&](const QByteArray &data, J::RTP::SrtpContext::Packet kind, quint64 epoch) {
-                                 check(data == rtp && kind == J::RTP::SrtpContext::Packet::Rtp,
+            QObject::connect(b, &J::RTP::SecureRtpAssociation::protectedPacketReceived, &loop,
+                             [&](const QByteArray &data, J::RTP::PacketKind kind, quint64 epoch) {
+                                 check(data == rtp && kind == J::RTP::PacketKind::Rtp,
                                        "incorrect media over ICE");
-                                 check(epoch == second->rtpSession()->epoch(), "stale received media epoch");
+                                 check(epoch == second->rtpAssociation()->epoch(), "stale received media epoch");
                                  received = true;
-                                 check(second->sendRtpPacket(rtcp, J::RTP::SrtpContext::Packet::Rtcp, epoch),
+                                 check(second->sendProtectedRtpPacket(rtcp, J::RTP::PacketKind::Rtcp, epoch),
                                        "ICE RTCP write rejected");
                              });
-            QObject::connect(a, &J::RTP::SrtpSession::packetReceived, &loop,
-                             [&](const QByteArray &data, J::RTP::SrtpContext::Packet kind, quint64) {
-                                 replied = data == rtcp && kind == J::RTP::SrtpContext::Packet::Rtcp;
+            QObject::connect(a, &J::RTP::SecureRtpAssociation::protectedPacketReceived, &loop,
+                             [&](const QByteArray &data, J::RTP::PacketKind kind, quint64) {
+                                 replied = data == rtcp && kind == J::RTP::PacketKind::Rtcp;
                                  loop.quit();
                              });
-            check(first->sendRtpPacket(rtp, J::RTP::SrtpContext::Packet::Rtp, a->epoch()), "ICE RTP write rejected");
+            check(first->sendProtectedRtpPacket(rtp, J::RTP::PacketKind::Rtp, a->epoch()), "ICE RTP write rejected");
         }
         if (applicationMode && sent) {
             if (!received && !secondMedia->received.isEmpty()) {
                 received = secondMedia->received.first() == rtp;
                 check(received, "media backend received incorrect RTP");
-                check(secondMedia->writer(rtcp, J::RTP::SrtpContext::Packet::Rtcp), "media RTCP writer failed");
+                check(secondMedia->writer && secondMedia->writer(rtcp, J::RTP::PacketKind::Rtcp),
+                      "media RTCP writer failed");
             }
             if (!firstMedia->received.isEmpty()) {
                 replied = firstMedia->received.first() == rtcp;
@@ -294,60 +397,48 @@ int main(int argc, char **argv)
         qWarning() << "ICE test state" << int(first->state()) << int(second->state()) << offered << answered << started
                    << "applications" << (firstApp ? int(firstApp->state()) : -1)
                    << (secondApp ? int(secondApp->state()) : -1);
-    check(!failed && rejectionChecked && received && replied, "ICE/DTLS/SRTP exchange failed or timed out");
-    const auto                          epoch = first->rtpSession()->epoch();
-    J::RTP::MediaEndpoint::PacketWriter retainedWriter;
+    check(!failed && rejectionChecked && received && replied, "ICE/DTLS/secure-RTP exchange failed or timed out");
+    const auto epoch = first->rtpAssociation()->epoch();
+    std::function<bool(const QByteArray &, J::RTP::PacketKind)> retainedWriter;
     if (applicationMode) {
         retainedWriter = firstMedia->writer;
-        firstApp->incomingContentModify(J::Origin::None);
-        check(!retainedWriter(rtp, J::RTP::SrtpContext::Packet::Rtp), "senders=none allowed RTP");
-        firstApp->incomingContentModify(J::Origin::Both);
+
+        // Payload validation now belongs behind the authenticated media boundary.
+        // Iris intentionally forwards opaque protected packets without inspecting
+        // negotiated PT/SSRC state.
         auto unknown = rtp;
         unknown[1]   = char(97);
-        check(!retainedWriter(unknown, J::RTP::SrtpContext::Packet::Rtp), "unnegotiated payload sent");
-        auto deliverAuthenticated = [&](QByteArray packet) {
-            QEventLoop arrival;
-            QTimer     timeout;
-            timeout.setSingleShot(true);
-            bool authenticated = false;
-            QObject::connect(&timeout, &QTimer::timeout, &arrival, &QEventLoop::quit);
-            QObject::connect(second->rtpSession(), &J::RTP::SrtpSession::packetReceived, &arrival,
-                             [&](const QByteArray &bytes, J::RTP::SrtpContext::Packet kind, quint64) {
-                                 check(bytes == packet && kind == J::RTP::SrtpContext::Packet::Rtp,
-                                       "wrong authenticated probe");
-                                 authenticated = true;
-                                 arrival.quit();
-                             });
-            check(first->sendRtpPacket(packet, J::RTP::SrtpContext::Packet::Rtp, epoch), "probe did not enter SRTP");
-            timeout.start(2000);
-            if (!authenticated)
-                arrival.exec();
-            check(authenticated, "probe was not authenticated: filtering test is inconclusive");
-        };
         const auto before = secondMedia->received.size();
-        unknown[3]        = char(2);
-        deliverAuthenticated(unknown);
-        check(secondMedia->received.size() == before, "unnegotiated payload reached backend");
-        secondApp->incomingContentModify(J::Origin::None);
+        check(retainedWriter && retainedWriter(unknown, J::RTP::PacketKind::Rtp),
+              "opaque protected packet did not leave media backend");
+        QElapsedTimer wait;
+        wait.start();
+        while (wait.elapsed() < 250)
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+        check(secondMedia->received.size() == before,
+              "backend accepted an unnegotiated authenticated payload");
+
         auto probe = rtp;
-        probe[3]   = char(3);
-        deliverAuthenticated(probe);
-        check(secondMedia->received.size() == before, "senders=none delivered incoming RTP");
-        secondApp->incomingContentModify(J::Origin::Both);
-        probe[3] = char(4);
-        deliverAuthenticated(probe);
+        probe[3]   = char(4);
+        check(retainedWriter(probe, J::RTP::PacketKind::Rtp),
+              "negotiated protected payload did not leave media backend");
+        wait.restart();
+        while (secondMedia->received.size() == before && wait.elapsed() < 2000)
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
         check(secondMedia->received.size() == before + 1 && secondMedia->received.last() == probe,
-              "restoring senders did not restore permitted media");
+              "backend did not deliver negotiated authenticated media");
     }
     first->stop();
-    check(!first->rtpSession()->isReady(), "stopping ICE transport retained SRTP keys");
-    check(!first->sendRtpPacket(rtp, J::RTP::SrtpContext::Packet::Rtp, epoch), "stopped ICE transport sent RTP");
+    check(!first->rtpAssociation()->isReady(), "stopping ICE transport retained SRTP keys");
+    check(!first->sendProtectedRtpPacket(rtp, J::RTP::PacketKind::Rtp, epoch),
+          "stopped ICE transport sent RTP");
     if (applicationMode) {
-        check(!retainedWriter(rtp, J::RTP::SrtpContext::Packet::Rtp), "retained media writer survived transport stop");
+        check(!retainedWriter(rtp, J::RTP::PacketKind::Rtp),
+              "retained media writer survived transport stop");
         firstApp.reset();
-        check(!retainedWriter(rtp, J::RTP::SrtpContext::Packet::Rtp),
+        check(!retainedWriter(rtp, J::RTP::PacketKind::Rtp),
               "retained media writer survived application deletion");
     }
     second->stop();
-    qInfo() << "Loopback ICE/DTLS/SRTP integration passed for" << transportNs;
+    qInfo() << "Loopback ICE/DTLS/secure-RTP integration passed for" << transportNs;
 }

@@ -72,6 +72,11 @@ public:
     void acceptIncoming(); // when we need to respond to the remote dtls info
     void onRemoteAcceptedFingerprint();
 
+    // Keep role/fingerprint negotiation separate from starting the DTLS engine.
+    // Jingle ICE enables this so no handshake datagram is emitted before ICE
+    // has a nominated pair capable of carrying the response.
+    void setNegotiationDeferred(bool deferred);
+
     void             setLocalCertificate(const QCA::Certificate &cert, const QCA::PrivateKey &pkey);
     QCA::Certificate localCertificate() const;
     QCA::Certificate remoteCertificate() const;

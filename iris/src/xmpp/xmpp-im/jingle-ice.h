@@ -69,9 +69,9 @@ namespace Jingle { namespace ICE {
         // needs a different transport). No raw media fallback. This does not
         // advertise BUNDLE. The returned binding is owned by the ICE connection;
         // consumers retaining it must use QPointer.
-        bool              enableRtpMux() override;
-        RTP::SrtpSession *rtpSession() const override;
-        bool              sendRtpPacket(QByteArray, RTP::SrtpContext::Packet, quint64 epoch) override;
+        bool                       enableRtpMux(const QStringList &profiles) override;
+        RTP::SecureRtpAssociation *rtpAssociation() const override;
+        bool                       sendProtectedRtpPacket(QByteArray, RTP::PacketKind, quint64 epoch) override;
 
     private:
         friend class Manager;

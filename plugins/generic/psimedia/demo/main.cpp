@@ -448,8 +448,8 @@ void RtpBinding::net_ready(int offset)
         if (mode == Send && offset == 0)
             continue;
 
-        PsiMedia::RtpPacket packet(rawValue, offset == 0 ? PsiMedia::RtpPacket::Type::Rtp
-                                                             : PsiMedia::RtpPacket::Type::Rtcp);
+        PsiMedia::RtpPacket packet(rawValue,
+                                   offset == 0 ? PsiMedia::RtpPacket::Type::Rtp : PsiMedia::RtpPacket::Type::Rtcp);
         channel->write(packet);
     }
 }

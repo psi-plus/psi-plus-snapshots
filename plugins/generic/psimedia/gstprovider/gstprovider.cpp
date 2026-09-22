@@ -27,6 +27,7 @@
 #include "gstprovider.h"
 #include "gstrtpsessioncontext.h"
 #include "gstthread.h"
+#include "securertpcontext.h"
 
 #include <QtPlugin>
 
@@ -109,5 +110,12 @@ FeaturesContext *GstProvider::createFeatures() { return new GstFeaturesContext(g
 RtpSessionContext *GstProvider::createRtpSession() { return new GstRtpSessionContext(gstEventLoop, deviceMonitor); }
 
 AudioRecorderContext *GstProvider::createAudioRecorder() { return new GstAudioRecorderContext(gstEventLoop); }
+
+QStringList GstProvider::supportedSecureRtpProfiles() const { return SrtpAssociation::supportedProfiles(); }
+
+SecureRtpSessionContext *GstProvider::createSecureRtpSession()
+{
+    return new GstSecureRtpSessionContext(gstEventLoop, deviceMonitor);
+}
 
 }

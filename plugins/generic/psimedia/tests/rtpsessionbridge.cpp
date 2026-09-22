@@ -37,7 +37,7 @@ enum class EarlyExit {
     AfterRtcpOutputWait,
 };
 
-template<typename Predicate> bool waitUntil(Predicate predicate, std::chrono::milliseconds timeout = 2s)
+template <typename Predicate> bool waitUntil(Predicate predicate, std::chrono::milliseconds timeout = 2s)
 {
     const auto deadline = std::chrono::steady_clock::now() + timeout;
     do {
@@ -192,9 +192,8 @@ int runScenario(const PsiMedia::PPayloadInfo &opus, EarlyExit earlyExit)
         return 0;
 
     if (!waitUntil([&] {
-            return std::any_of(networkPackets.cbegin(), networkPackets.cend(), [](const auto &packet) {
-                return packet.type == PsiMedia::PRtpPacket::Type::Rtp;
-            });
+            return std::any_of(networkPackets.cbegin(), networkPackets.cend(),
+                               [](const auto &packet) { return packet.type == PsiMedia::PRtpPacket::Type::Rtp; });
         })) {
         qCritical() << "outgoing RTP was not emitted";
         return 5;
@@ -327,7 +326,7 @@ int runStopFromCallback(const PsiMedia::PPayloadInfo &opus)
 
 int runConcurrentStop(const PsiMedia::PPayloadInfo &opus)
 {
-    int deliveries = 0;
+    int                        deliveries = 0;
     PsiMedia::RtpSessionBridge bridge(QStringLiteral("audio"));
     if (!bridge.isValid() || !bridge.setPayloads({ opus }, { opus }))
         return 50;
@@ -339,7 +338,7 @@ int runConcurrentStop(const PsiMedia::PPayloadInfo &opus)
         return 51;
 
     std::atomic<bool> send { true };
-    std::thread sender([&] {
+    std::thread       sender([&] {
         quint16 sequence = 100;
         while (send.load(std::memory_order_acquire)) {
             feedOutgoing(bridge, sequence++);
@@ -365,7 +364,7 @@ int runDeleteFromCallback(const PsiMedia::PPayloadInfo &opus)
     bool     wrongCallbackThread = false;
     QThread *ownerThread         = QThread::currentThread();
 
-    auto *bridge = new PsiMedia::RtpSessionBridge(QStringLiteral("audio"));
+    auto                                *bridge = new PsiMedia::RtpSessionBridge(QStringLiteral("audio"));
     QPointer<PsiMedia::RtpSessionBridge> guard(bridge);
     if (!bridge->isValid() || !bridge->setPayloads({ opus }, { opus })) {
         delete bridge;
@@ -417,7 +416,7 @@ int main(int argc, char **argv)
             qCritical() << "failed to create compatibility-test bridge";
             return 30;
         }
-        auto incompatible = opus;
+        auto incompatible      = opus;
         incompatible.name      = QStringLiteral("PCMU");
         incompatible.clockrate = 8000;
         incompatible.channels  = 1;
@@ -431,15 +430,9 @@ int main(int argc, char **argv)
         return result;
 
     constexpr EarlyExit exits[] = {
-        EarlyExit::AfterStart,
-        EarlyExit::AfterOutgoingFeed,
-        EarlyExit::AfterOutgoingWait,
-        EarlyExit::AfterIncomingFeed,
-        EarlyExit::AfterIncomingWait,
-        EarlyExit::AfterRtcpFeed,
-        EarlyExit::AfterRtcpWait,
-        EarlyExit::AfterRtcpRequest,
-        EarlyExit::AfterRtcpOutputWait,
+        EarlyExit::AfterStart,        EarlyExit::AfterOutgoingFeed, EarlyExit::AfterOutgoingWait,
+        EarlyExit::AfterIncomingFeed, EarlyExit::AfterIncomingWait, EarlyExit::AfterRtcpFeed,
+        EarlyExit::AfterRtcpWait,     EarlyExit::AfterRtcpRequest,  EarlyExit::AfterRtcpOutputWait,
     };
     for (const auto point : exits) {
         if (const int result = runScenario(opus, point)) {

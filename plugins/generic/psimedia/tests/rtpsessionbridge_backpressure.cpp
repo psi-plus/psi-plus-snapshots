@@ -92,8 +92,7 @@ void pumpFor(std::chrono::milliseconds duration)
     }
 }
 
-template<typename Predicate> bool waitWithoutOwnerEvents(Predicate predicate,
-                                                          std::chrono::milliseconds timeout = 1s)
+template <typename Predicate> bool waitWithoutOwnerEvents(Predicate predicate, std::chrono::milliseconds timeout = 1s)
 {
     const auto deadline = std::chrono::steady_clock::now() + timeout;
     do {
@@ -106,7 +105,7 @@ template<typename Predicate> bool waitWithoutOwnerEvents(Predicate predicate,
 
 int runPacketLimits(const PsiMedia::PPayloadInfo &opus)
 {
-    std::vector<quint16> networkSequences;
+    std::vector<quint16>       networkSequences;
     PsiMedia::RtpSessionBridge bridge(QStringLiteral("audio"));
     if (!bridge.isValid() || !bridge.setPayloads({ opus }, { opus }))
         return 10;
@@ -126,9 +125,8 @@ int runPacketLimits(const PsiMedia::PPayloadInfo &opus)
     // Do not process the Qt owner event loop: the GStreamer streaming thread may
     // enqueue packets, but the user handler cannot consume them. Reaching the
     // configured packet cap proves the slow-consumer path is exercised.
-    if (!waitWithoutOwnerEvents([&] {
-            return bridge.deliveryQueueStats().networkPackets == bridge.maxQueuedNetworkPackets();
-        })) {
+    if (!waitWithoutOwnerEvents(
+            [&] { return bridge.deliveryQueueStats().networkPackets == bridge.maxQueuedNetworkPackets(); })) {
         qCritical() << "network queue never reached its packet cap";
         return 13;
     }
@@ -162,7 +160,7 @@ int runPacketLimits(const PsiMedia::PPayloadInfo &opus)
 
 int runByteLimit(const PsiMedia::PPayloadInfo &opus)
 {
-    int deliveries = 0;
+    int                        deliveries = 0;
     PsiMedia::RtpSessionBridge bridge(QStringLiteral("audio"));
     if (!bridge.isValid() || !bridge.setPayloads({ opus }, { opus }))
         return 20;
@@ -197,7 +195,7 @@ int runByteLimit(const PsiMedia::PPayloadInfo &opus)
 
 int runAgeLimit(const PsiMedia::PPayloadInfo &opus)
 {
-    int deliveries = 0;
+    int                        deliveries = 0;
     PsiMedia::RtpSessionBridge bridge(QStringLiteral("audio"));
     if (!bridge.isValid() || !bridge.setPayloads({ opus }, { opus }))
         return 30;
@@ -227,7 +225,7 @@ int runAgeLimit(const PsiMedia::PPayloadInfo &opus)
 
 int runOwnerFairness(const PsiMedia::PPayloadInfo &opus)
 {
-    int deliveries = 0;
+    int                        deliveries = 0;
     PsiMedia::RtpSessionBridge bridge(QStringLiteral("audio"));
     if (!bridge.isValid() || !bridge.setPayloads({ opus }, { opus }))
         return 40;
@@ -248,9 +246,8 @@ int runOwnerFairness(const PsiMedia::PPayloadInfo &opus)
         if (!sendOutgoing(bridge, sequence))
             return 42;
     }
-    if (!waitWithoutOwnerEvents([&] {
-            return bridge.deliveryQueueStats().networkPackets == bridge.maxQueuedNetworkPackets();
-        })) {
+    if (!waitWithoutOwnerEvents(
+            [&] { return bridge.deliveryQueueStats().networkPackets == bridge.maxQueuedNetworkPackets(); })) {
         qCritical() << "fairness queue never reached its packet cap";
         return 43;
     }
@@ -281,7 +278,7 @@ int runOwnerFairness(const PsiMedia::PPayloadInfo &opus)
 
 int runMediaPacketLimit(const PsiMedia::PPayloadInfo &opus)
 {
-    int mediaDeliveries = 0;
+    int                        mediaDeliveries = 0;
     PsiMedia::RtpSessionBridge bridge(QStringLiteral("audio"));
     if (!bridge.isValid() || !bridge.setPayloads({ opus }, { opus }))
         return 50;
@@ -297,9 +294,8 @@ int runMediaPacketLimit(const PsiMedia::PPayloadInfo &opus)
             return 52;
     }
 
-    if (!waitWithoutOwnerEvents([&] {
-            return bridge.deliveryQueueStats().mediaPackets == bridge.maxQueuedMediaPackets();
-        })) {
+    if (!waitWithoutOwnerEvents(
+            [&] { return bridge.deliveryQueueStats().mediaPackets == bridge.maxQueuedMediaPackets(); })) {
         qCritical() << "media queue never reached its packet cap";
         return 53;
     }

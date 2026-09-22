@@ -25,7 +25,7 @@ static void pump()
 static const QString transportNs = QStringLiteral("urn:iris:test:rtp-transport");
 struct Counters {
     int  sessions = 0, endpoints = 0, configured = 0, stopped = 0, liveEndpoints = 0, hints = 0;
-    bool configOk = true, packetIo = false, offerOk = true, answerOk = true;
+    bool configOk = true, offerOk = true, answerOk = true;
 };
 class Endpoint : public R::MediaEndpoint {
 public:
@@ -35,7 +35,6 @@ public:
         ++this->c->liveEndpoints;
     }
     ~Endpoint() override { --c->liveEndpoints; }
-    bool           supportsPacketIo() const override { return c->packetIo; }
     R::Description localOffer() const override
     {
         if (!c->offerOk)
@@ -75,17 +74,45 @@ public:
 class MediaSession : public R::MediaSession {
 public:
     explicit MediaSession(std::shared_ptr<Counters> c) : c(std::move(c)) { ++this->c->sessions; }
+
     std::unique_ptr<R::MediaEndpoint> createEndpoint(const QString &, const QString &media) override
     {
         return std::make_unique<Endpoint>(c, media);
     }
+
+    bool attachSecureRtpPacketIo(ProtectedPacketWriter writer) override
+    {
+        protectedWriter_ = std::move(writer);
+        return true;
+    }
+    void detachSecureRtpPacketIo() override { protectedWriter_ = {}; }
+    bool configureSecureRtpEndpoints(const QList<R::SecureRtpEndpoint> &endpoints) override
+    {
+        secureEndpoints_ = endpoints;
+        return true;
+    }
+    bool configureSecureRtpAssociation(const R::SecureRtpParameters &parameters) override
+    {
+        return parameters.isValid();
+    }
+    void invalidateSecureRtpAssociation(const QByteArray &, quint64) override { }
+    bool receiveProtectedRtpPacket(const R::SecureRtpPacket &) override { return true; }
+
     std::shared_ptr<Counters> c;
+
+private:
+    ProtectedPacketWriter       protectedWriter_;
+    QList<R::SecureRtpEndpoint> secureEndpoints_;
 };
 class Provider : public R::MediaProvider {
 public:
     explicit Provider(std::shared_ptr<Counters> c) : c(std::move(c)) { }
     std::unique_ptr<R::MediaSession> createSession() override { return std::make_unique<MediaSession>(c); }
-    std::shared_ptr<Counters>        c;
+    QStringList secureRtpProfiles() const override
+    {
+        return { QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80") };
+    }
+    std::shared_ptr<Counters> c;
 };
 class TransportPad : public TransportManagerPad {
 public:
@@ -95,9 +122,13 @@ public:
     TransportManager *manager() const override { return nullptr; }
     Session          *s;
 };
-class TestTransport : public Transport {
+class TestTransportBase : public Transport {
 public:
-    TestTransport(Session *s, Origin creator) : Transport(TransportManagerPad::Ptr(new TransportPad(s)), creator) { }
+    TestTransportBase(Session *s, Origin creator) :
+        Transport(TransportManagerPad::Ptr(new TransportPad(s)), creator)
+    {
+    }
+
     void prepare() override
     {
         setState(State::ApprovedToSend);
@@ -122,21 +153,53 @@ public:
         setState(State::Accepted);
         return true;
     }
-    bool                        hasUpdates() const override { return _state == State::ApprovedToSend; }
+    bool hasUpdates() const override { return _state == State::ApprovedToSend; }
     OutgoingTransportInfoUpdate takeOutgoingUpdate(bool = false) override
     {
         auto xml = _pad->doc()->createElementNS(transportNs, "transport");
         return { xml, {} };
     }
-    bool              isValid() const override { return true; }
+    bool isValid() const override { return true; }
     TransportFeatures features() const override
     {
         return TransportFeature::LiveOriented | TransportFeature::MessageOriented;
     }
-    Connection::Ptr        addChannel(TransportFeatures, const QString &, int = -1) override { return {}; }
+    Connection::Ptr addChannel(TransportFeatures, const QString &, int = -1) override { return {}; }
     QList<Connection::Ptr> channels() const override { return {}; }
-    int                    starts = 0, stops = 0;
-    std::function<void()>  onStop;
+
+    int                  starts = 0, stops = 0;
+    std::function<void()> onStop;
+};
+
+class TestTransport final : public TestTransportBase, public R::PacketTransport {
+public:
+    TestTransport(Session *s, Origin creator) :
+        TestTransportBase(s, creator),
+        association_(nullptr, QByteArrayLiteral("rtpapplication-test"))
+    {
+    }
+
+    bool enableRtpMux(const QStringList &profiles) override
+    {
+        secureEnabled_ = !profiles.isEmpty() && state() < State::Finishing;
+        return secureEnabled_;
+    }
+    R::SecureRtpAssociation *rtpAssociation() const override
+    {
+        return secureEnabled_ && state() >= State::ApprovedToSend
+            ? const_cast<R::SecureRtpAssociation *>(&association_)
+            : nullptr;
+    }
+    bool sendProtectedRtpPacket(QByteArray, R::PacketKind, quint64) override { return false; }
+
+private:
+    mutable R::SecureRtpAssociation association_;
+    bool                            secureEnabled_ = false;
+};
+
+class UnprotectedTransport final : public TestTransportBase {
+public:
+    using TestTransportBase::TestTransportBase;
 };
 
 struct OwnedXml {
@@ -329,12 +392,11 @@ int main(int argc, char **argv)
         pad.clear(); // custom deleter must not access a destroyed Session
     }
     {
-        auto packetCounters      = std::make_shared<Counters>();
-        packetCounters->packetIo = true;
+        auto packetCounters = std::make_shared<Counters>();
         manager->setMediaProvider(std::make_shared<Provider>(packetCounters));
         Session session(client.jingleManager(), Jid("peer@example.org/device"));
         auto    audio       = manager->createOutgoing(&session, "audio");
-        auto    unprotected = QSharedPointer<TestTransport>::create(&session, Origin::Initiator);
+        auto    unprotected = QSharedPointer<UnprotectedTransport>::create(&session, Origin::Initiator);
         check(audio && audio->setTransport(unprotected), "packet test setup failed");
         audio->prepare();
         check(audio->state() == State::Created, "packet preparation completed inline");

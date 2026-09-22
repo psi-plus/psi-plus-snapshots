@@ -21,7 +21,8 @@
 namespace {
 using namespace std::chrono_literals;
 
-constexpr quint32 LocalSsrc = 0x10203040;
+constexpr quint32 LocalSsrc       = 0x10203040;
+constexpr quint32 RemoteVideoSsrc = 0x50607080;
 
 void put16(uchar *p, quint16 value)
 {
@@ -57,6 +58,19 @@ QByteArray makeRtp()
     return packet;
 }
 
+QByteArray makeRemoteVideoRtp(quint16 sequence)
+{
+    QByteArray packet(13, '\0');
+    auto      *p = reinterpret_cast<uchar *>(packet.data());
+    p[0]         = 0x80;
+    p[1]         = 96;
+    put16(p + 2, sequence);
+    put32(p + 4, quint32(sequence) * 3000);
+    put32(p + 8, RemoteVideoSsrc);
+    p[12] = 0x7f;
+    return packet;
+}
+
 GstBuffer *bufferFor(const QByteArray &data)
 {
     GstBuffer *buffer = gst_buffer_new_allocate(nullptr, gsize(data.size()), nullptr);
@@ -71,7 +85,7 @@ GstBuffer *bufferFor(const QByteArray &data)
 
 bool hasSenderReport(const QByteArray &compound)
 {
-    const auto *bytes = reinterpret_cast<const uchar *>(compound.constData());
+    const auto *bytes  = reinterpret_cast<const uchar *>(compound.constData());
     int         offset = 0;
     while (offset + 8 <= compound.size()) {
         const uchar *packet = bytes + offset;
@@ -80,15 +94,59 @@ bool hasSenderReport(const QByteArray &compound)
         const int packetBytes = (int(read16(packet + 2)) + 1) * 4;
         if (packetBytes < 8 || offset + packetBytes > compound.size())
             return false;
-        if (packet[1] == 200 && packetBytes >= 28 && read32(packet + 4) == LocalSsrc
-            && read32(packet + 20) > 0 && read32(packet + 24) > 0)
+        if (packet[1] == 200 && packetBytes >= 28 && read32(packet + 4) == LocalSsrc && read32(packet + 20) > 0
+            && read32(packet + 24) > 0)
             return true;
         offset += packetBytes;
     }
     return false;
 }
 
-template<typename Predicate> bool waitUntil(Predicate predicate, std::chrono::milliseconds timeout = 2s)
+bool hasPli(const QByteArray &compound)
+{
+    const auto *bytes  = reinterpret_cast<const uchar *>(compound.constData());
+    int         offset = 0;
+    while (offset + 4 <= compound.size()) {
+        const uchar *packet = bytes + offset;
+        if ((packet[0] >> 6) != 2)
+            return false;
+        const int packetBytes = (int(read16(packet + 2)) + 1) * 4;
+        if (packetBytes < 4 || offset + packetBytes > compound.size())
+            return false;
+        if (packet[1] == 206 && (packet[0] & 0x1f) == 1 && packetBytes >= 12 && read32(packet + 8) == RemoteVideoSsrc)
+            return true;
+        offset += packetBytes;
+    }
+    return false;
+}
+
+bool hasRemoteSource(PsiMedia::RtpSessionBridge &bridge)
+{
+    GstStructure *stats = bridge.sessionStats();
+    if (!stats)
+        return false;
+    bool          found        = false;
+    const GValue *sourcesValue = gst_structure_get_value(stats, "source-stats");
+    if (sourcesValue) {
+        auto *sources = static_cast<GValueArray *>(g_value_get_boxed(sourcesValue));
+        if (sources) {
+            for (guint i = 0; i < sources->n_values; ++i) {
+                const auto *source  = static_cast<const GstStructure *>(g_value_get_boxed(&sources->values[i]));
+                guint       ssrc    = 0;
+                guint64     packets = 0;
+                if (source && gst_structure_get_uint(source, "ssrc", &ssrc) && ssrc == RemoteVideoSsrc
+                    && gst_structure_get_uint64(source, "packets-received", &packets) && packets > 0) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+    }
+    gst_structure_free(stats);
+    return found;
+}
+
+template <typename Predicate> bool waitUntil(Predicate predicate, std::chrono::milliseconds timeout = 2s)
 {
     const auto deadline = std::chrono::steady_clock::now() + timeout;
     do {
@@ -160,6 +218,60 @@ int main(int argc, char **argv)
     }
 
     bridge.stop();
-    qInfo() << "RTP/RTCP regular scheduling regression passed";
+
+    // A decoder keyframe request crossing an appsrc boundary must re-enter the
+    // RTP session so AVPF can emit a standards-compliant PLI. rtpsession only
+    // enables that path when the negotiated PT caps contain nack/pli support.
+    PsiMedia::PPayloadInfo vp8;
+    vp8.id        = 96;
+    vp8.name      = QStringLiteral("VP8");
+    vp8.clockrate = 90000;
+    PsiMedia::PPayloadInfo::Parameter pli;
+    pli.name  = QStringLiteral("rtcp-fb-nack-pli");
+    pli.value = QStringLiteral("true");
+    vp8.parameters.append(pli);
+
+    std::vector<PsiMedia::PRtpPacket> videoNetwork;
+    PsiMedia::RtpSessionBridge        videoBridge(QStringLiteral("video"));
+    if (!videoBridge.isValid() || !videoBridge.setPayloads({ vp8 }, { vp8 })) {
+        qCritical() << "failed to configure PLI video bridge";
+        return 7;
+    }
+    videoBridge.setMediaPacketHandler([](GstBuffer *) { });
+    videoBridge.setNetworkPacketHandler([&](const auto &packet) { videoNetwork.push_back(packet); });
+    videoBridge.setRtcpMinimumInterval(10 * GST_MSECOND);
+    if (!videoBridge.start()) {
+        qCritical() << "failed to start PLI video bridge";
+        return 8;
+    }
+
+    for (quint16 sequence = 1; sequence <= 3; ++sequence) {
+        PsiMedia::PRtpPacket packet;
+        packet.type     = PsiMedia::PRtpPacket::Type::Rtp;
+        packet.rawValue = makeRemoteVideoRtp(sequence);
+        if (videoBridge.receivePacket(packet) != GST_FLOW_OK) {
+            qCritical() << "failed to feed remote VP8 RTP";
+            return 9;
+        }
+    }
+    if (!waitUntil([&] { return hasRemoteSource(videoBridge); })) {
+        qCritical() << "remote VP8 source did not become active";
+        return 10;
+    }
+    if (!videoBridge.requestRemoteKeyframe(RemoteVideoSsrc, 96)) {
+        qCritical() << "rtpsession rejected decoder keyframe request";
+        return 11;
+    }
+    if (!waitUntil([&] {
+            return std::any_of(videoNetwork.cbegin(), videoNetwork.cend(), [](const auto &packet) {
+                return packet.type == PsiMedia::PRtpPacket::Type::Rtcp && hasPli(packet.rawValue);
+            });
+        })) {
+        qCritical() << "decoder keyframe request did not produce RTCP PLI";
+        return 12;
+    }
+
+    videoBridge.stop();
+    qInfo() << "RTP/RTCP regular scheduling and PLI regression passed";
     return 0;
 }

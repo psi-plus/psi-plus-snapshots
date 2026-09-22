@@ -13,18 +13,21 @@ int main(int argc, char **argv)
     gst_init(nullptr, nullptr);
     auto *context = g_main_context_default();
     {
-        PsiMedia::RtpWorker owner(context, nullptr);
+        PsiMedia::RtpWorker    owner(context, nullptr);
         PsiMedia::PAudioParams audio;
-        audio.codec = QStringLiteral("opus");
-        audio.sampleRate = 48000;
-        audio.sampleSize = 16;
-        audio.channels = 1;
+        audio.codec            = QStringLiteral("opus");
+        audio.sampleRate       = 48000;
+        audio.sampleSize       = 16;
+        audio.channels         = 1;
         owner.localAudioParams = { audio };
-        owner.ain = QStringLiteral("audiotestsrc is-live=true wave=sine");
-        struct Result { bool done = false; bool failed = false; } result;
-        owner.app = &result;
+        owner.ain              = QStringLiteral("audiotestsrc is-live=true wave=sine");
+        struct Result {
+            bool done   = false;
+            bool failed = false;
+        } result;
+        owner.app        = &result;
         owner.cb_started = [](void *p) { static_cast<Result *>(p)->done = true; };
-        owner.cb_error = [](void *p) {
+        owner.cb_error   = [](void *p) {
             auto &r = *static_cast<Result *>(p);
             r.done = r.failed = true;
         };

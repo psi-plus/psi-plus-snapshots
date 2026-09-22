@@ -162,6 +162,20 @@ GstStructure *payloadInfoToStructure(const PPayloadInfo &info, const QString &me
     for (const PPayloadInfo::Parameter &i : std::as_const(info.parameters)) {
         QString value = i.value;
 
+        // RTCP feedback capability is represented internally through the
+        // existing parameter list to avoid changing the provider ABI, but RTP
+        // caps expect these fields to be boolean.
+        if (i.name.startsWith(QLatin1String("rtcp-fb-"))) {
+            GValue gv = G_VALUE_INIT;
+            g_value_init(&gv, G_TYPE_BOOLEAN);
+            const bool enabled
+                = value.compare(QLatin1String("false"), Qt::CaseInsensitive) != 0 && value != QLatin1String("0");
+            g_value_set_boolean(&gv, enabled);
+            gst_structure_set_value(out, i.name.toLatin1().constData(), &gv);
+            g_value_unset(&gv);
+            continue;
+        }
+
         // FIXME: is there a better way to detect when we should do this conversion?
         if (i.name == "configuration" && (info.name.toUpper() == "VP8" || info.name.toUpper() == "VORBIS")) {
             QByteArray config = hexDecode(value);
@@ -178,6 +192,7 @@ GstStructure *payloadInfoToStructure(const PPayloadInfo &info, const QString &me
         g_value_init(&gv, G_TYPE_STRING);
         g_value_set_string(&gv, value.toLatin1().data());
         gst_structure_set_value(out, i.name.toLatin1().data(), &gv);
+        g_value_unset(&gv);
     }
 
     return out;

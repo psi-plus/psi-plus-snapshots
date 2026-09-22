@@ -20,7 +20,7 @@ class Ice176;
 class UdpPortReserver;
 namespace Jingle {
     namespace RTP {
-        class SrtpSession;
+        class SecureRtpAssociation;
     }
     namespace SCTP {
         class Association;
@@ -34,7 +34,7 @@ namespace Jingle {
             bool                          lowOverhead     = false;
             bool                          needDatachannel = false;
             Dtls                         *dtls            = nullptr;
-            RTP::SrtpSession             *srtp            = nullptr;
+            RTP::SecureRtpAssociation    *secureRtp       = nullptr;
             SCTP::Association            *sctp            = nullptr;
             QSharedPointer<RawConnection> rawConnection;
         };
@@ -63,6 +63,7 @@ namespace Jingle {
             QVector<Component>   components;
             UdpPortReserver     *portReserver = nullptr;
             Ice176              *ice          = nullptr;
+            QByteArray           secureRtpAssociationId;
             ConnectionGeneration generation;
             std::unique_ptr<Runtime> runtime;
 

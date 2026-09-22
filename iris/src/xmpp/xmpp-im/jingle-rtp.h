@@ -28,20 +28,49 @@ struct IRIS_EXPORT Proposal {
     bool isValid() const { return media == Media::Audio || media == Media::Video; }
 };
 
+// Opaque backend-facing identity. Tokens have meaning only inside one Jingle
+// MediaSession and are never serialized on the wire.
+struct IRIS_EXPORT SecureRtpPacket {
+    QByteArray           associationId;
+    quint64              epoch = 0;
+    QByteArray           data;
+    PacketKind           kind = PacketKind::Rtp;
+};
+
+struct IRIS_EXPORT SecureRtpEndpoint {
+    QByteArray      endpointId;
+    QByteArray      associationId;
+    QString         media;
+    QByteArray      mid;
+    quint16         midExtensionId = 0;
+    QSet<quint8>    incomingPayloadTypes;
+    QSet<quint32>   incomingSsrcs;
+    QSet<quint32>   localSsrcs;
+
+    bool isValid() const
+    {
+        return !endpointId.isEmpty() && !associationId.isEmpty()
+            && (media == QLatin1String("audio") || media == QLatin1String("video"));
+    }
+};
+
+struct IRIS_EXPORT SecureRtpParameters {
+    QByteArray       associationId;
+    quint64          epoch = 0;
+    QString          profile;
+    QCA::SecureArray localMasterKey;
+    QCA::SecureArray localMasterSalt;
+    QCA::SecureArray remoteMasterKey;
+    QCA::SecureArray remoteMasterSalt;
+
+    bool isValid() const { return !associationId.isEmpty() && epoch != 0 && !profile.isEmpty(); }
+};
+
 // All calls occur on the Jingle thread. Factories and negotiation must not
 // capture media, start a nested event loop, or initiate network activity.
 // The adapter owns its internal worker threads and must join them on destruction.
 class IRIS_EXPORT MediaEndpoint : public CodecNegotiator {
 public:
-    using PacketWriter = std::function<bool(QByteArray, SrtpContext::Packet)>;
-    // Stable opt-in capability; all calls, including PacketWriter, stay on the Jingle
-    // thread. Worker-thread engines must use bounded queues in their adapter.
-    virtual bool supportsPacketIo() const { return false; }
-    // Called once after negotiated parameters are applied and authentication is
-    // ready. This does not grant permission to capture media. Writer becomes
-    // usable when the Application is Active. stop() must detach all callbacks.
-    virtual bool        attachPacketIo(PacketWriter) { return false; }
-    virtual void        receivePacket(const QByteArray &, SrtpContext::Packet) { }
     virtual Description localOffer() const = 0;
     // Transitional synchronous fallback for adapters which do not implement the
     // MediaSession async hooks yet. Native media adapters must not block here.
@@ -102,6 +131,18 @@ public:
     MediaSession &operator=(const MediaSession &) = delete;
 
     virtual std::unique_ptr<MediaEndpoint> createEndpoint(const QString &contentName, const QString &media) = 0;
+
+    // Optional protected group packet boundary. Per-content MediaEndpoint stays
+    // responsible for codec negotiation; SRTP/SRTCP ownership belongs here so a
+    // BUNDLE group shares one association while unbundled contents remain
+    // independent associations inside the same backend media session.
+    using ProtectedPacketWriter = std::function<bool(const SecureRtpPacket &)>;
+    virtual bool configureSecureRtpEndpoints(const QList<SecureRtpEndpoint> &) { return false; }
+    virtual bool configureSecureRtpAssociation(const SecureRtpParameters &) { return false; }
+    virtual void invalidateSecureRtpAssociation(const QByteArray &, quint64) { }
+    virtual bool receiveProtectedRtpPacket(const SecureRtpPacket &) { return false; }
+    virtual bool attachSecureRtpPacketIo(ProtectedPacketWriter) { return false; }
+    virtual void detachSecureRtpPacketIo() { }
 
     std::unique_ptr<MediaOperation> prepareLocalOffer(MediaEndpoint *, PrepareCallback);
     std::unique_ptr<MediaOperation> prepareAnswer(MediaEndpoint *, const Description &remoteSnapshot, PrepareCallback);
@@ -165,8 +206,9 @@ public:
     virtual ~MediaProvider()                              = default;
     virtual std::unique_ptr<MediaSession> createSession() = 0;
     // Discovery must describe the actual backend, not merely the RTP parser.
-    // Unknown providers advertise no RTP media types by default.
+    // Unknown providers advertise no RTP media types or packet crypto by default.
     virtual QStringList mediaTypes() const { return {}; }
+    virtual QStringList secureRtpProfiles() const { return {}; }
 };
 
 class Manager;
@@ -194,9 +236,13 @@ signals:
 private:
     friend class Application;
     class RoutingPrivate;
-    bool bindPacketRoute(Application *, SrtpSession *, const Description &local, const Description &remote);
-    void unbindPacketRoute(Application *);
-    bool registerOutgoingRtp(Application *, const QByteArray &);
+    bool bindSecureTransport(Application *, SecureRtpAssociation *, const Description &local,
+                             const Description &remote);
+    void unbindSecureTransport(Application *);
+    bool sendProtectedPacket(const SecureRtpPacket &);
+    bool configureSecureAssociation(SecureRtpAssociation *);
+    bool ensureSecurePacketIo();
+    QStringList secureRtpProfiles() const;
 
     QPointer<Manager> manager_;
     QPointer<Session> session_;
@@ -205,7 +251,8 @@ private:
     std::unique_ptr<MediaSession>  media_;
     QStringList                    transports_;
     quint64                        nextName_   = 0;
-    DirectionController           *directions_ = nullptr; // QObject child
+    DirectionController            *directions_ = nullptr; // QObject child
+    bool                            securePacketIoAttached_ = false;
     std::unique_ptr<RoutingPrivate> routing_;
 };
 
@@ -245,8 +292,9 @@ private:
     void                            applied(MediaOperation::Id, MediaError);
     void                            failPreparation(Reason::Condition, const QString &);
     void                            activateMedia();
-    bool                            sendPacket(QByteArray, SrtpContext::Packet, quint64 epoch);
-    void                            receiveRoutedPacket(const QByteArray &, SrtpContext::Packet, quint64 epoch);
+    // Direction/consent policy query. This is deliberately independent of
+    // packet parsing; media adapters use it to decide whether capture/transmit
+    // or receive paths may be active.
     bool                            allowsRtp(bool sending) const;
     Negotiation                     negotiation_;
     std::optional<Negotiation>      beforeAnswer_;
@@ -258,11 +306,10 @@ private:
     std::optional<Stanza::Error>    error_;
     Reason                          reason_;
     bool                            configured_        = false;
-    bool                            attached_          = false;
+    bool                            secureBound_        = false;
     bool                            stopping_          = false;
     bool                            preparationFailed_ = false;
-    QPointer<SrtpSession>           security_;
-    QSet<int>                       negotiatedPayloads_;
+    QPointer<SecureRtpAssociation>  association_;
 };
 
 class IRIS_EXPORT Manager : public ApplicationManager {
@@ -290,6 +337,7 @@ public:
     QDomElement             serializeProposal(const std::any &, QDomDocument *) const override;
     QStringList             ns() const override { return { Description::ns() }; }
     QStringList             discoFeatures() const override;
+    QStringList             secureRtpProfiles() const;
 
 signals:
     // Convenience view for ordinary RTP call proposals. Mixed/application-

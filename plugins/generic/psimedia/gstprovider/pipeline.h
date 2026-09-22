@@ -69,6 +69,11 @@ public:
     QString echoProberName;
 };
 
+// Internal utility kept visible for regression coverage of PipeWire/V4L2
+// list/range-valued camera capabilities. Caller owns the returned GstCaps.
+GstCaps *selectVideoCaptureCaps(const QString &nativeCaps, const QSize &desiredSize, int preferredFps,
+                                QString *selectedMime = nullptr);
+
 class PipelineDeviceContext {
 public:
     static PipelineDeviceContext *create(PipelineContext *pipeline, const QString &id, PDevice::Type type,

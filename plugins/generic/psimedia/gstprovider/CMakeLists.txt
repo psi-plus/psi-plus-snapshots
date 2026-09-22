@@ -15,6 +15,34 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 get_filename_component(ABS_GST_PARENT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 
 option(PSIMEDIA_BUILD_TESTS "Build psimedia provider regression tests" OFF)
+option(PSIMEDIA_ENABLE_SRTP "Enable direct libSRTP packet protection" ON)
+
+set(PSIMEDIA_SRTP_TARGET "")
+if(PSIMEDIA_ENABLE_SRTP)
+    pkg_check_modules(PSIMEDIA_SRTP QUIET IMPORTED_TARGET libsrtp2>=2.0)
+    if(TARGET PkgConfig::PSIMEDIA_SRTP)
+        set(PSIMEDIA_SRTP_TARGET PkgConfig::PSIMEDIA_SRTP)
+    else()
+        find_path(PSIMEDIA_SRTP_INCLUDE_DIR
+                  NAMES srtp2/srtp.h
+                  HINTS ${SRTP_ROOT} $ENV{SRTP_ROOT} ${GST_SDK}
+                  PATH_SUFFIXES include)
+        find_library(PSIMEDIA_SRTP_LIBRARY
+                     NAMES srtp2
+                     HINTS ${SRTP_ROOT} $ENV{SRTP_ROOT} ${GST_SDK}
+                     PATH_SUFFIXES lib lib64)
+        if(NOT PSIMEDIA_SRTP_INCLUDE_DIR OR NOT PSIMEDIA_SRTP_LIBRARY)
+            message(FATAL_ERROR
+                "PSIMEDIA_ENABLE_SRTP=ON requires libSRTP 2.x (libsrtp2). "
+                "Install the development package, set SRTP_ROOT, or disable SRTP explicitly.")
+        endif()
+        add_library(psimedia_srtp2 UNKNOWN IMPORTED)
+        set_target_properties(psimedia_srtp2 PROPERTIES
+                              IMPORTED_LOCATION "${PSIMEDIA_SRTP_LIBRARY}"
+                              INTERFACE_INCLUDE_DIRECTORIES "${PSIMEDIA_SRTP_INCLUDE_DIR}")
+        set(PSIMEDIA_SRTP_TARGET psimedia_srtp2)
+    endif()
+endif()
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo"))
     option(PSIMEDIA_PIPELINE_DEBUG "Add -DPIPELINE_DEBUG definition" OFF)
@@ -50,6 +78,14 @@ set(SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/bins.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rtpsessionbridge.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rtpsessionbridge.h
+    ${CMAKE_CURRENT_LIST_DIR}/rtpbundlerouter.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rtpbundlerouter.h
+    ${CMAKE_CURRENT_LIST_DIR}/rtpgroupbridge.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/rtpgroupbridge.h
+    ${CMAKE_CURRENT_LIST_DIR}/securertpcontext.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/securertpcontext.h
+    ${CMAKE_CURRENT_LIST_DIR}/securertpgroup.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/securertpgroup.h
     ${CMAKE_CURRENT_LIST_DIR}/rtpworker.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rtpworker_devices.cpp
     ${CMAKE_CURRENT_LIST_DIR}/gstthread.cpp
@@ -156,6 +192,13 @@ target_link_libraries(${PROVIDERLIB} PRIVATE
     Qt${QT_DEFAULT_MAJOR_VERSION}::Widgets
 )
 
+if(PSIMEDIA_ENABLE_SRTP)
+    target_compile_definitions(${PROVIDERLIB} PRIVATE PSIMEDIA_HAVE_SRTP=1)
+    # gstprovidersrc is static, so the SRTP dependency must propagate to every
+    # plugin/test executable that consumes it.
+    target_link_libraries(${PROVIDERLIB} PUBLIC ${PSIMEDIA_SRTP_TARGET})
+endif()
+
 if(APPLE)
     target_link_libraries(${PROVIDERLIB} PRIVATE "-framework CoreAudio")
     set_property(TARGET ${PROVIDERLIB}  PROPERTY SUFFIX ".dylib")
@@ -164,10 +207,52 @@ endif()
 if(PSIMEDIA_BUILD_TESTS)
     enable_testing()
 
+    add_executable(psimedia_rtpgroupbridge_test ${ABS_GST_PARENT_DIR}/tests/rtpgroupbridge.cpp)
+    target_link_libraries(psimedia_rtpgroupbridge_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_rtpgroupbridge COMMAND psimedia_rtpgroupbridge_test)
+    set_tests_properties(psimedia_rtpgroupbridge PROPERTIES TIMEOUT 20)
+
+    add_executable(psimedia_rtpbundlerouter_test ${ABS_GST_PARENT_DIR}/tests/rtpbundlerouter.cpp)
+    target_link_libraries(psimedia_rtpbundlerouter_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_rtpbundlerouter COMMAND psimedia_rtpbundlerouter_test)
+    set_tests_properties(psimedia_rtpbundlerouter PROPERTIES TIMEOUT 10)
+
+    if(PSIMEDIA_ENABLE_SRTP)
+        add_executable(psimedia_securertpqueue_test ${ABS_GST_PARENT_DIR}/tests/securertpqueue.cpp)
+        target_link_libraries(psimedia_securertpqueue_test PRIVATE ${PROVIDERLIB})
+        add_test(NAME psimedia_securertpqueue COMMAND psimedia_securertpqueue_test)
+        set_tests_properties(psimedia_securertpqueue PROPERTIES TIMEOUT 10)
+
+        add_executable(psimedia_securertpgroup_test ${ABS_GST_PARENT_DIR}/tests/securertpgroup.cpp)
+        target_link_libraries(psimedia_securertpgroup_test PRIVATE ${PROVIDERLIB})
+        add_test(NAME psimedia_securertpgroup COMMAND psimedia_securertpgroup_test)
+        set_tests_properties(psimedia_securertpgroup PROPERTIES TIMEOUT 25)
+
+        add_executable(psimedia_securertp_test ${ABS_GST_PARENT_DIR}/tests/securertp.cpp)
+        target_link_libraries(psimedia_securertp_test PRIVATE ${PROVIDERLIB})
+        add_test(NAME psimedia_securertp COMMAND psimedia_securertp_test)
+        set_tests_properties(psimedia_securertp PROPERTIES TIMEOUT 15)
+    endif()
+
+    add_executable(psimedia_rwcontrol_teardown_test ${ABS_GST_PARENT_DIR}/tests/rwcontrol_teardown.cpp)
+    target_link_libraries(psimedia_rwcontrol_teardown_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_rwcontrol_teardown COMMAND psimedia_rwcontrol_teardown_test)
+    set_tests_properties(psimedia_rwcontrol_teardown PROPERTIES TIMEOUT 10)
+
     add_executable(psimedia_rtpworkerownership_test ${ABS_GST_PARENT_DIR}/tests/rtpworkerownership.cpp)
     target_link_libraries(psimedia_rtpworkerownership_test PRIVATE ${PROVIDERLIB})
     add_test(NAME psimedia_rtpworkerownership COMMAND psimedia_rtpworkerownership_test)
     set_tests_properties(psimedia_rtpworkerownership PROPERTIES TIMEOUT 20)
+
+    add_executable(psimedia_rtpworker_receive_order_test ${ABS_GST_PARENT_DIR}/tests/rtpworker_receive_order.cpp)
+    target_link_libraries(psimedia_rtpworker_receive_order_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_rtpworker_receive_order COMMAND psimedia_rtpworker_receive_order_test)
+    set_tests_properties(psimedia_rtpworker_receive_order PROPERTIES TIMEOUT 20)
+
+    add_executable(psimedia_rtpworker_send_order_test ${ABS_GST_PARENT_DIR}/tests/rtpworker_send_order.cpp)
+    target_link_libraries(psimedia_rtpworker_send_order_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_rtpworker_send_order COMMAND psimedia_rtpworker_send_order_test)
+    set_tests_properties(psimedia_rtpworker_send_order PROPERTIES TIMEOUT 45)
 
     add_executable(psimedia_opusrtppay_test ${ABS_GST_PARENT_DIR}/tests/opusrtppay.cpp)
     target_link_libraries(psimedia_opusrtppay_test PRIVATE ${PROVIDERLIB})
@@ -183,6 +268,25 @@ if(PSIMEDIA_BUILD_TESTS)
     target_link_libraries(psimedia_rtpchannel_test PRIVATE ${PROVIDERLIB})
     add_test(NAME psimedia_rtpchannel COMMAND psimedia_rtpchannel_test)
     set_tests_properties(psimedia_rtpchannel PROPERTIES TIMEOUT 10)
+
+    add_executable(psimedia_gstvideowidget_size_test ${ABS_GST_PARENT_DIR}/tests/gstvideowidget_size.cpp)
+    target_link_libraries(psimedia_gstvideowidget_size_test PRIVATE
+                          ${PROVIDERLIB}
+                          Qt${QT_DEFAULT_MAJOR_VERSION}::Widgets)
+    add_test(NAME psimedia_gstvideowidget_size COMMAND psimedia_gstvideowidget_size_test)
+    set_tests_properties(psimedia_gstvideowidget_size PROPERTIES
+                         TIMEOUT 10
+                         ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+    add_executable(psimedia_videoprep_test ${ABS_GST_PARENT_DIR}/tests/videoprep.cpp)
+    target_link_libraries(psimedia_videoprep_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_videoprep COMMAND psimedia_videoprep_test)
+    set_tests_properties(psimedia_videoprep PROPERTIES TIMEOUT 10)
+
+    add_executable(psimedia_video_capture_caps_test ${ABS_GST_PARENT_DIR}/tests/video_capture_caps.cpp)
+    target_link_libraries(psimedia_video_capture_caps_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_video_capture_caps COMMAND psimedia_video_capture_caps_test)
+    set_tests_properties(psimedia_video_capture_caps PROPERTIES TIMEOUT 10)
 
     add_executable(psimedia_rtpsessioncontext_sender_test ${ABS_GST_PARENT_DIR}/tests/rtpsessioncontext_sender.cpp)
     target_link_libraries(psimedia_rtpsessioncontext_sender_test PRIVATE ${PROVIDERLIB})

@@ -997,23 +997,24 @@ pending-content rejection, session destruction with
 remaining contents, and DTLS fingerprint comparison. Run with:
 
 ```sh
-cmake -S tests/jingle -B build/jingle-tests -DUSE_QT6=ON -DIRIS_SYSTEM_QCA=3 -DIRIS_ENABLE_SRTP=ON
+cmake -S tests/jingle -B build/jingle-tests -DUSE_QT6=ON -DIRIS_SYSTEM_QCA=3 -DIRIS_ENABLE_JINGLE_SCTP=ON
 cmake --build build/jingle-tests -j2
 ctest --test-dir build/jingle-tests --output-on-failure -j1
 ```
 
 The DTLS-SRTP integration test requires a QCA3 provider supporting
 `SRTP_AES128_CM_HMAC_SHA1_80`. It runs two local DTLS endpoints and verifies directional key
-agreement, fingerprint mismatch, required-SRTP refusal, key invalidation on fingerprint change,
-and plain DTLS application data. With QCA2 it checks that SRTP configuration is rejected.
-With `IRIS_ENABLE_SRTP=ON`, it also protects RTP/SRTCP with actual DTLS-exported keys through
-system libSRTP. When SCTP is enabled, it transfers and echoes a 32 KiB data-channel message
-over QCA DTLS, both without SRTP negotiation and alongside live SRTP contexts. These are
-in-memory integration tests, not ICE connectivity or external-client interoperability tests.
-The separate SRTP test exercises supported profiles, authentication failure, replay, rollover,
-directional keys, stream limits and fail-closed reconfiguration.
+agreement/export, fingerprint mismatch, required-SRTP refusal, key invalidation on fingerprint
+change and plain DTLS application data. Iris does not protect RTP/SRTCP itself: the test exercises
+`SecureRtpAssociation` as the authenticated DTLS/ICE boundary, verifies that protected RTP/RTCP
+is forwarded unchanged with the correct packet kind and epoch, and checks fail-closed behavior
+after identity invalidation. When SCTP is enabled, it also transfers and echoes a 32 KiB
+data-channel message over the same QCA DTLS pair while the secure RTP association is live.
+These are in-memory integration tests, not ICE connectivity or external-client interoperability
+tests. Actual libSRTP packet protection is owned by the media backend and is covered by the
+cross-repository psimedia/Psi integration gates.
 The optional `jingle_icertp` test additionally runs native ICE transports over loopback UDP,
-exchanges their transport XML and verifies protected RTP/RTCP plus fingerprint-ACK gating.
+exchanges their transport XML and verifies protected RTP/RTCP transport plus fingerprint-ACK gating.
 It requires local socket permissions. `jingle_transportacks` checks IBB acknowledgement
 success/failure and callbacks outliving their transport. A non-null IQ task is not evidence of
 success: acknowledgement handlers inspect `Task::success()`.

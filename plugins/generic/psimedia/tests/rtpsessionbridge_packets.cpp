@@ -25,7 +25,7 @@ constexpr quint32 LocalSsrc        = 0x10203040;
 constexpr quint32 RemoteSsrc       = 0x55667788;
 constexpr quint32 RemoteReportSsrc = 0x99aabbcc;
 
-template<typename Predicate> bool waitUntil(Predicate predicate, std::chrono::milliseconds timeout = 2s)
+template <typename Predicate> bool waitUntil(Predicate predicate, std::chrono::milliseconds timeout = 2s)
 {
     const auto deadline = std::chrono::steady_clock::now() + timeout;
     do {
@@ -84,12 +84,12 @@ QByteArray makeReceiverReport(quint32 senderSsrc, quint32 reportedSsrc)
     put16(p + 2, 7);     // (32 / 4) - 1
     put32(p + 4, senderSsrc);
     put32(p + 8, reportedSsrc);
-    p[12] = 7;           // fraction lost
+    p[12] = 7; // fraction lost
     p[13] = 0;
     p[14] = 0;
-    p[15] = 3;           // cumulative packets lost
-    put32(p + 16, 1);    // extended highest sequence
-    put32(p + 20, 123);  // interarrival jitter
+    p[15] = 3;          // cumulative packets lost
+    put32(p + 16, 1);   // extended highest sequence
+    put32(p + 20, 123); // interarrival jitter
     return packet;
 }
 
@@ -132,7 +132,7 @@ const GstStructure *findSourceStats(const GstStructure *sessionStats, quint32 ss
         const GValue *value = &sources->values[i];
         if (!value)
             continue;
-        const auto *source = static_cast<const GstStructure *>(g_value_get_boxed(value));
+        const auto *source     = static_cast<const GstStructure *>(g_value_get_boxed(value));
         guint       sourceSsrc = 0;
         if (source && gst_structure_get_uint(source, "ssrc", &sourceSsrc) && sourceSsrc == ssrc)
             return source;
@@ -145,12 +145,12 @@ bool remoteRtpWasProcessed(PsiMedia::RtpSessionBridge &bridge)
     GstStructure *stats = bridge.sessionStats();
     if (!stats)
         return false;
-    const GstStructure *source = findSourceStats(stats, RemoteSsrc);
+    const GstStructure *source    = findSourceStats(stats, RemoteSsrc);
     gboolean            validated = FALSE;
     gboolean            internal  = TRUE;
     gint                clockRate = -1;
     guint64             packets   = 0;
-    const bool ok = source && gst_structure_get_boolean(source, "validated", &validated)
+    const bool          ok        = source && gst_structure_get_boolean(source, "validated", &validated)
         && gst_structure_get_boolean(source, "internal", &internal)
         && gst_structure_get_int(source, "clock-rate", &clockRate)
         && gst_structure_get_uint64(source, "packets-received", &packets) && validated && !internal
@@ -169,7 +169,7 @@ bool receiverReportWasProcessed(PsiMedia::RtpSessionBridge &bridge)
     // sent the RR. rb-ssrc identifies the local source that the block reports
     // on. Checking both SSRCs and the non-zero fields proves that recv_rtcp_sink
     // did more than merely observe an RTCP buffer.
-    const GstStructure *source = findSourceStats(stats, RemoteReportSsrc);
+    const GstStructure *source       = findSourceStats(stats, RemoteReportSsrc);
     gboolean            internal     = TRUE;
     gboolean            haveRb       = FALSE;
     guint               reportedSsrc = 0;
@@ -177,21 +177,21 @@ bool receiverReportWasProcessed(PsiMedia::RtpSessionBridge &bridge)
     gint                packetsLost  = 0;
     guint               highestSeq   = 0;
     guint               jitter       = 0;
-    const bool ok = source && gst_structure_get_boolean(source, "internal", &internal)
+    const bool          ok           = source && gst_structure_get_boolean(source, "internal", &internal)
         && gst_structure_get_boolean(source, "have-rb", &haveRb)
         && gst_structure_get_uint(source, "rb-ssrc", &reportedSsrc)
         && gst_structure_get_uint(source, "rb-fractionlost", &fractionLost)
         && gst_structure_get_int(source, "rb-packetslost", &packetsLost)
         && gst_structure_get_uint(source, "rb-exthighestseq", &highestSeq)
-        && gst_structure_get_uint(source, "rb-jitter", &jitter) && !internal && haveRb
-        && reportedSsrc == LocalSsrc && fractionLost == 7 && packetsLost == 3 && highestSeq == 1 && jitter == 123;
+        && gst_structure_get_uint(source, "rb-jitter", &jitter) && !internal && haveRb && reportedSsrc == LocalSsrc
+        && fractionLost == 7 && packetsLost == 3 && highestSeq == 1 && jitter == 123;
     gst_structure_free(stats);
     return ok;
 }
 
 bool senderReport(const QByteArray &compound, quint32 expectedSsrc, quint32 *rtpTimestamp = nullptr)
 {
-    const auto *bytes = reinterpret_cast<const uchar *>(compound.constData());
+    const auto *bytes  = reinterpret_cast<const uchar *>(compound.constData());
     int         offset = 0;
     while (offset + 8 <= compound.size()) {
         const uchar *packet = bytes + offset;
@@ -326,8 +326,8 @@ int main(int argc, char **argv)
     // A sender pipeline can queue encoded RTP before handing it to the bridge.
     // Preserve that producer age when mapping RTP to RTCP SR time instead of
     // pretending the packet was produced at callback arrival.
-    constexpr quint32 TimingSsrc         = 0x1234abcd;
-    constexpr quint32 TimingRtpTimestamp = 48000;
+    constexpr quint32                 TimingSsrc         = 0x1234abcd;
+    constexpr quint32                 TimingRtpTimestamp = 48000;
     std::vector<PsiMedia::PRtpPacket> timingPackets;
 
     PsiMedia::RtpSessionBridge timingBridge(QStringLiteral("audio"));
@@ -335,8 +335,7 @@ int main(int argc, char **argv)
         qCritical() << "failed to configure timing bridge";
         return 14;
     }
-    timingBridge.setNetworkPacketHandler(
-        [&](const PsiMedia::PRtpPacket &packet) { timingPackets.push_back(packet); });
+    timingBridge.setNetworkPacketHandler([&](const PsiMedia::PRtpPacket &packet) { timingPackets.push_back(packet); });
     timingBridge.setRtcpMinimumInterval(10 * GST_MSECOND);
     if (!timingBridge.start()) {
         qCritical() << "failed to start timing bridge";
@@ -344,8 +343,8 @@ int main(int argc, char **argv)
     }
 
     std::this_thread::sleep_for(600ms);
-    const QByteArray timingRtp = makeRtp(77, TimingRtpTimestamp, TimingSsrc);
-    GstBuffer *timingBuffer = bufferFor(timingRtp, 100 * GST_MSECOND);
+    const QByteArray timingRtp    = makeRtp(77, TimingRtpTimestamp, TimingSsrc);
+    GstBuffer       *timingBuffer = bufferFor(timingRtp, 100 * GST_MSECOND);
     if (!timingBuffer) {
         qCritical() << "failed to allocate timing RTP buffer";
         return 16;

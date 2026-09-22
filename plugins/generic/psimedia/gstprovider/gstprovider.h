@@ -30,9 +30,9 @@ namespace PsiMedia {
 class GstMainLoop;
 class DeviceMonitor;
 
-class GstProvider : public QObject, public Provider {
+class GstProvider : public QObject, public Provider, public SecureRtpProvider {
     Q_OBJECT
-    Q_INTERFACES(PsiMedia::Provider)
+    Q_INTERFACES(PsiMedia::Provider PsiMedia::SecureRtpProvider)
 
 public:
     QThread               gstEventLoopThread;
@@ -48,6 +48,9 @@ public:
     FeaturesContext      *createFeatures() override;
     RtpSessionContext    *createRtpSession() override;
     AudioRecorderContext *createAudioRecorder() override;
+
+    QStringList              supportedSecureRtpProfiles() const override;
+    SecureRtpSessionContext *createSecureRtpSession() override;
 };
 
 }

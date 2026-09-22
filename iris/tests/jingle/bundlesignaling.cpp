@@ -64,18 +64,10 @@ public:
 
     bool acceptsAnswer(const J::RTP::Description &, const J::RTP::Description &) const override { return true; }
     bool configure(const J::RTP::Description &, const J::RTP::Description &) override { return true; }
-    bool supportsPacketIo() const override { return true; }
-    bool attachPacketIo(PacketWriter writer) override
-    {
-        writer_ = std::move(writer);
-        return true;
-    }
-    void receivePacket(const QByteArray &, J::RTP::SrtpContext::Packet) override { }
-    void stop() override { writer_ = {}; }
+    void stop() override { }
 
 private:
-    QString      media_;
-    PacketWriter writer_;
+    QString media_;
 };
 
 class MediaSession final : public J::RTP::MediaSession {
@@ -86,12 +78,33 @@ public:
             return {};
         return std::make_unique<Endpoint>(media);
     }
+
+    bool attachSecureRtpPacketIo(ProtectedPacketWriter writer) override
+    {
+        writer_ = std::move(writer);
+        return true;
+    }
+    void detachSecureRtpPacketIo() override { writer_ = {}; }
+    bool configureSecureRtpEndpoints(const QList<J::RTP::SecureRtpEndpoint> &) override { return true; }
+    bool configureSecureRtpAssociation(const J::RTP::SecureRtpParameters &parameters) override
+    {
+        return parameters.isValid();
+    }
+    void invalidateSecureRtpAssociation(const QByteArray &, quint64) override { }
+    bool receiveProtectedRtpPacket(const J::RTP::SecureRtpPacket &) override { return true; }
+
+private:
+    ProtectedPacketWriter writer_;
 };
 
 class Provider final : public J::RTP::MediaProvider {
 public:
     std::unique_ptr<J::RTP::MediaSession> createSession() override { return std::make_unique<MediaSession>(); }
     QStringList mediaTypes() const override { return { QStringLiteral("audio"), QStringLiteral("video") }; }
+    QStringList secureRtpProfiles() const override
+    {
+        return { QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80") };
+    }
 };
 
 static void setPeerFeatures(Client &client, const Jid &peer, QStringList features)
@@ -438,10 +451,13 @@ static void exerciseResponder(const WireOffer &offer, TcpPortReserver *reserver,
     const qsizetype expectedAssociations = acceptBundle ? 1 : 2;
     check(waitFor([&]() {
               return audio->state() >= J::State::ApprovedToSend && video->state() >= J::State::ApprovedToSend
+                  && audio->state() < J::State::Finishing && video->state() < J::State::Finishing
                   && icePad->liveAssociationCount() == expectedAssociations;
           }),
-          acceptBundle ? "accepted BUNDLE did not allocate one shared association"
-                       : "BUNDLE refusal did not allocate independent associations");
+          acceptBundle ? "accepted BUNDLE did not allocate one live shared association"
+                       : "BUNDLE refusal did not allocate live independent associations");
+    check(audio->state() < J::State::Finishing && video->state() < J::State::Finishing,
+          "responder RTP application failed while preparing accepted transports");
 
     bool audioBound = false, audioRequired = false, videoBound = false, videoRequired = false;
     auto *audioNetwork = icePad->groupedConnectionFor(audioTransport.data(), &audioBound, &audioRequired);
@@ -451,14 +467,14 @@ static void exerciseResponder(const WireOffer &offer, TcpPortReserver *reserver,
     if (acceptBundle) {
         check(audioRequired && videoRequired && audioNetwork && audioNetwork == videoNetwork,
               "accepted BUNDLE did not bind both contents to one staged association");
-        check(audioTransport->rtpSession() && audioTransport->rtpSession() == videoTransport->rtpSession(),
+        check(audioTransport->rtpAssociation() && audioTransport->rtpAssociation() == videoTransport->rtpAssociation(),
               "accepted BUNDLE did not share responder SRTP");
 
     } else {
         check(!audioRequired && !videoRequired && !audioNetwork && !videoNetwork,
               "BUNDLE refusal retained staged shared membership");
-        check(audioTransport->rtpSession() && videoTransport->rtpSession()
-                  && audioTransport->rtpSession() != videoTransport->rtpSession(),
+        check(audioTransport->rtpAssociation() && videoTransport->rtpAssociation()
+                  && audioTransport->rtpAssociation() != videoTransport->rtpAssociation(),
               "BUNDLE refusal did not retain independent SRTP associations");
     }
 }
@@ -578,13 +594,13 @@ static void exerciseInitiatorReplacement(const WireOffer &transportSource, TcpPo
 
     check(waitFor([&]() {
               return audioPrepared && videoPrepared
-                  && replacementAudio->rtpSession()
-                  && replacementVideo->rtpSession();
+                  && replacementAudio->rtpAssociation()
+                  && replacementVideo->rtpAssociation();
           }),
           "production replacement preparation did not complete both BUNDLE members");
     check(!oldNetwork && icePad->liveAssociationCount() == 1,
           "full BUNDLE replacement did not leave exactly one live association");
-    check(replacementAudio->rtpSession() == replacementVideo->rtpSession(),
+    check(replacementAudio->rtpAssociation() == replacementVideo->rtpAssociation(),
           "replacement BUNDLE members did not share one SRTP session");
 }
 
@@ -720,7 +736,7 @@ static void exerciseTwoGroupReplacement(const WireOffer &transportSource, TcpPor
     check(ra1 && ra2 && ra1 != ta1 && ra2 != ta2, "first group did not install replacement transports");
     check(waitFor([&]() {
               return ra1->state() == J::State::ApprovedToSend && ra2->state() == J::State::ApprovedToSend
-                  && ra1->rtpSession() && ra2->rtpSession();
+                  && ra1->rtpAssociation() && ra2->rtpAssociation();
           }),
           "first BUNDLE group replacement did not finish preparation");
     check(!oldA && stableB && icePad->liveAssociationCount() == 2,

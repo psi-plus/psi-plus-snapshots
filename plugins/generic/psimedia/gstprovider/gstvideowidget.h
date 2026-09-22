@@ -24,6 +24,7 @@
 #include "psimediaprovider.h"
 
 #include <QImage>
+#include <QPointer>
 
 namespace PsiMedia {
 
@@ -35,6 +36,7 @@ class GstVideoWidget : public QObject {
 
 public:
     VideoWidgetContext *context;
+    QPointer<QObject>   contextObject;
     QImage              curImage;
 
     explicit GstVideoWidget(VideoWidgetContext *_context, QObject *parent = nullptr);

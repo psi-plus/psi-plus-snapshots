@@ -133,6 +133,8 @@ if("${QT_DEFAULT_MAJOR_VERSION}" STREQUAL "")
 endif()
 
 option(PSIMEDIA_BUILD_TESTS "Build psimedia provider regression tests" OFF)
+option(PSIMEDIA_ENABLE_SRTP "Enable direct libSRTP packet protection" ON)
+option(PSIMEDIA_BUILD_DEB_PACKAGE "Enable standalone Debian package generation" OFF)
 if(PSIMEDIA_BUILD_TESTS)
     enable_testing()
 endif()
@@ -145,3 +147,61 @@ if(BUILD_PSIPLUGIN)
     add_subdirectory(psiplugin)
 endif()
 add_subdirectory(gstprovider)
+
+if(PSIMEDIA_BUILD_DEB_PACKAGE)
+    if(NOT UNIX OR APPLE)
+        message(FATAL_ERROR "PSIMEDIA_BUILD_DEB_PACKAGE is supported only on Debian-family Linux builds")
+    endif()
+    if(NOT BUILD_PSIPLUGIN)
+        message(FATAL_ERROR "PSIMEDIA_BUILD_DEB_PACKAGE requires BUILD_PSIPLUGIN=ON")
+    endif()
+
+    set(_psimedia_package_base_version "1.0.4")
+    execute_process(
+        COMMAND git -C "${PROJECT_SOURCE_DIR}" describe --tags --exact-match --match "v[0-9]*"
+        OUTPUT_VARIABLE _psimedia_exact_tag
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE _psimedia_tag_result
+    )
+    if(_psimedia_tag_result EQUAL 0 AND _psimedia_exact_tag MATCHES "^v([0-9]+\\.[0-9]+\\.[0-9]+)$")
+        set(PSIMEDIA_PACKAGE_VERSION "${CMAKE_MATCH_1}")
+    else()
+        execute_process(
+            COMMAND git -C "${PROJECT_SOURCE_DIR}" show -s --format=%cd --date=format:%Y%m%d HEAD
+            OUTPUT_VARIABLE _psimedia_git_date
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+        execute_process(
+            COMMAND git -C "${PROJECT_SOURCE_DIR}" rev-parse --short=8 HEAD
+            OUTPUT_VARIABLE _psimedia_git_sha
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+        if(NOT _psimedia_git_date)
+            set(_psimedia_git_date "unknown")
+        endif()
+        if(NOT _psimedia_git_sha)
+            set(_psimedia_git_sha "unknown")
+        endif()
+        set(PSIMEDIA_PACKAGE_VERSION
+            "${_psimedia_package_base_version}+git${_psimedia_git_date}.${_psimedia_git_sha}")
+    endif()
+
+    set(CPACK_GENERATOR "DEB")
+    set(CPACK_PACKAGE_NAME "psi-plugin-psimedia")
+    set(CPACK_PACKAGE_VENDOR "Psi IM")
+    set(CPACK_PACKAGE_CONTACT "Psi IM team")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Audio/video calls media plugin for Psi")
+    set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/psi-im/psimedia")
+    set(CPACK_PACKAGE_VERSION "${PSIMEDIA_PACKAGE_VERSION}")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "net")
+    set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS
+        "psi, gstreamer1.0-plugins-base, gstreamer1.0-plugins-good, gstreamer1.0-plugins-bad")
+    set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "gstreamer1.0-plugins-ugly")
+    set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+    include(CPack)
+endif()

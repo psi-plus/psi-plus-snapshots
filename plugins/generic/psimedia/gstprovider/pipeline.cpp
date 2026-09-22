@@ -27,6 +27,8 @@
 #include <gst/gst.h>
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <ranges>
 
 // FIXME: this file is heavily commented out and a mess, mainly because
@@ -115,42 +117,185 @@ static GstCaps *filter_for_capture_size(const QSize &size)
                                                size.height(), nullptr),
                              gst_structure_new("image/jpeg", "width", G_TYPE_INT, size.width(), "height", G_TYPE_INT,
                                                size.height(), nullptr),
-                             gst_structure_new("video/h264", "width", G_TYPE_INT, size.width(), "height", G_TYPE_INT,
+                             gst_structure_new("video/x-h264", "width", G_TYPE_INT, size.width(), "height", G_TYPE_INT,
                                                size.height(), nullptr),
                              nullptr);
 }
 
-static GstCaps *filter_for_desired_size(GstDevice *dev, const QSize &size)
+static int videoMimeRank(const QString &mime)
 {
-    static std::array mime_prioriry { QLatin1String { "video/x-raw" }, QLatin1String { "image/jpeg" },
-                                      QLatin1String("video/h264") };
-    namespace views   = std::ranges::views;
-    auto desiredScore = double(size.width()) * size.height();
-    auto capsScore    = [&desiredScore](const auto &c) { // less is better
-        auto it = std::find(mime_prioriry.begin(), mime_prioriry.end(), c.mime);
-        return std::abs(double(c.video.width) * c.video.height - desiredScore)
-            + (it == mime_prioriry.end() ? mime_prioriry.size()
-                                            : std::distance(mime_prioriry.begin(), mime_prioriry.end()));
-    };
+    if (mime == QLatin1String("video/x-raw"))
+        return 0;
+    if (mime == QLatin1String("image/jpeg"))
+        return 1;
+    if (mime == QLatin1String("video/x-h264"))
+        return 2;
+    return -1;
+}
 
-    std::vector<std::pair<double, PDevice::Caps>> srcCaps;
-    std::ranges::copy(dev->caps | views::filter([](auto const &c) { return c.video.framerate_numerator >= 24; })
-                          | views::transform([&](auto const &c) { return std::make_pair(capsScore(c), c); }),
-                      std::back_inserter(srcCaps));
-    std::ranges::sort(srcCaps, [](const auto &a, const auto &b) { return a.first < b.first; });
+static double videoCaptureScore(const QSize &desiredSize, int preferredFps, const QString &mime, int width, int height,
+                                int fpsNumerator, int fpsDenominator)
+{
+    if (width <= 0 || height <= 0 || fpsNumerator <= 0 || fpsDenominator <= 0)
+        return std::numeric_limits<double>::infinity();
 
-    GstCaps *caps = gst_caps_new_empty();
-    if (srcCaps.empty()) {
-        // try to get at least something starting from those usually having good bitrate
-        gst_caps_append_structure(caps, gst_structure_new_empty("image/jpeg"));
-        gst_caps_append_structure(caps, gst_structure_new_empty("video/h264"));
-        gst_caps_append_structure(caps, gst_structure_new_empty("video/x-raw"));
-        return caps;
-    } else {
-        auto const &selected = srcCaps[0].second;
-        return gst_caps_new_simple(selected.mime.toLatin1().constData(), "width", G_TYPE_INT, selected.video.width,
-                                   "height", G_TYPE_INT, selected.video.height, nullptr);
+    const double desiredAspect = double(desiredSize.width()) / double(desiredSize.height());
+    const double actualAspect  = double(width) / double(height);
+    const double aspectError   = std::abs(actualAspect / desiredAspect - 1.0);
+    const double widthError    = std::abs(double(width - desiredSize.width())) / double(desiredSize.width());
+    const double heightError   = std::abs(double(height - desiredSize.height())) / double(desiredSize.height());
+    const double fps           = double(fpsNumerator) / double(fpsDenominator);
+    const double fpsError      = std::abs(fps - preferredFps) / double(preferredFps);
+    const int    mimeRank      = videoMimeRank(mime);
+
+    if (mimeRank < 0)
+        return std::numeric_limits<double>::infinity();
+
+    // Capture cadence is the strongest quality constraint. Geometry is
+    // secondary because videoprep preserves display aspect ratio with borders,
+    // so a smooth nearby mode is better than an exact 5 fps mode. MIME is only
+    // a tie breaker, preferring raw to avoid an unnecessary decode.
+    return fpsError * 100.0 + aspectError * 20.0 + (widthError + heightError) * 10.0 + mimeRank * 0.01;
+}
+
+static GstCaps *filter_for_desired_size(GstDevice *dev, const QSize &size, int preferredFps, QString *selectedMime)
+{
+    if (selectedMime)
+        selectedMime->clear();
+    preferredFps = preferredFps > 0 ? preferredFps : 30;
+
+    GstCaps *bestCaps  = nullptr;
+    double   bestScore = std::numeric_limits<double>::infinity();
+    QString  bestMime;
+    int      bestWidth  = 0;
+    int      bestHeight = 0;
+    int      bestFpsNum = 0;
+    int      bestFpsDen = 1;
+
+    // Prefer the complete GstDevice caps. Unlike PDevice::Caps these preserve
+    // PipeWire/V4L2 lists and ranges, which are common for webcam modes.
+    GstCaps *nativeCaps
+        = dev->nativeCaps.isEmpty() ? nullptr : gst_caps_from_string(dev->nativeCaps.toUtf8().constData());
+    if (nativeCaps && !gst_caps_is_empty(nativeCaps) && !gst_caps_is_any(nativeCaps)) {
+        for (guint i = 0; i < gst_caps_get_size(nativeCaps); ++i) {
+            const GstStructure *source = gst_caps_get_structure(nativeCaps, i);
+            const QString       mime   = QString::fromLatin1(gst_structure_get_name(source));
+            if (videoMimeRank(mime) < 0)
+                continue;
+
+            GstStructure *fixed = gst_structure_copy(source);
+            if (gst_structure_has_field(fixed, "width"))
+                gst_structure_fixate_field_nearest_int(fixed, "width", size.width());
+            else
+                gst_structure_set(fixed, "width", G_TYPE_INT, size.width(), nullptr);
+
+            if (gst_structure_has_field(fixed, "height"))
+                gst_structure_fixate_field_nearest_int(fixed, "height", size.height());
+            else
+                gst_structure_set(fixed, "height", G_TYPE_INT, size.height(), nullptr);
+
+            if (gst_structure_has_field(fixed, "framerate"))
+                gst_structure_fixate_field_nearest_fraction(fixed, "framerate", preferredFps, 1);
+            else
+                gst_structure_set(fixed, "framerate", GST_TYPE_FRACTION, preferredFps, 1, nullptr);
+
+            gst_structure_fixate(fixed);
+
+            int width  = 0;
+            int height = 0;
+            int fpsNum = 0;
+            int fpsDen = 1;
+            if (!gst_structure_get_int(fixed, "width", &width) || !gst_structure_get_int(fixed, "height", &height)
+                || !gst_structure_get_fraction(fixed, "framerate", &fpsNum, &fpsDen)) {
+                gst_structure_free(fixed);
+                continue;
+            }
+
+            const double score = videoCaptureScore(size, preferredFps, mime, width, height, fpsNum, fpsDen);
+            if (score >= bestScore) {
+                gst_structure_free(fixed);
+                continue;
+            }
+
+            // GstDevice caps describe device capabilities, not necessarily a
+            // filter that is safe to push back into the created source element.
+            // PipeWire in particular may advertise memory features (for example
+            // DMABuf) and extra format fields that are valid for discovery but
+            // make a dynamically created pipewiresrc fail to negotiate when
+            // copied verbatim. Use the full caps only for mode selection, then
+            // rebuild a minimal fixed filter in normal system memory.
+            GstCaps *candidate
+                = gst_caps_new_simple(mime.toLatin1().constData(), "width", G_TYPE_INT, width, "height", G_TYPE_INT,
+                                      height, "framerate", GST_TYPE_FRACTION, fpsNum, fpsDen, nullptr);
+            gst_structure_free(fixed);
+
+            if (bestCaps)
+                gst_caps_unref(bestCaps);
+            bestCaps   = candidate;
+            bestScore  = score;
+            bestMime   = mime;
+            bestWidth  = width;
+            bestHeight = height;
+            bestFpsNum = fpsNum;
+            bestFpsDen = fpsDen;
+        }
     }
+    if (nativeCaps)
+        gst_caps_unref(nativeCaps);
+
+    // Compatibility fallback for platform monitors that only expose the legacy
+    // fixed PDevice::Caps list.
+    if (!bestCaps) {
+        for (const auto &candidate : dev->caps) {
+            const double score
+                = videoCaptureScore(size, preferredFps, candidate.mime, candidate.video.width, candidate.video.height,
+                                    candidate.video.framerate_numerator, candidate.video.framerate_denominator);
+            if (score >= bestScore)
+                continue;
+
+            if (bestCaps)
+                gst_caps_unref(bestCaps);
+            bestCaps   = gst_caps_new_simple(candidate.mime.toLatin1().constData(), "width", G_TYPE_INT,
+                                             candidate.video.width, "height", G_TYPE_INT, candidate.video.height,
+                                             "framerate", GST_TYPE_FRACTION, candidate.video.framerate_numerator,
+                                             candidate.video.framerate_denominator, nullptr);
+            bestScore  = score;
+            bestMime   = candidate.mime;
+            bestWidth  = candidate.video.width;
+            bestHeight = candidate.video.height;
+            bestFpsNum = candidate.video.framerate_numerator;
+            bestFpsDen = candidate.video.framerate_denominator;
+        }
+    }
+
+    if (!bestCaps) {
+        // Last-resort source negotiation. Keep it raw, but still request the
+        // intended call geometry/cadence rather than accepting an arbitrary
+        // low-fps default from PipeWire.
+        bestMime   = QStringLiteral("video/x-raw");
+        bestWidth  = size.width();
+        bestHeight = size.height();
+        bestFpsNum = preferredFps;
+        bestFpsDen = 1;
+        bestCaps = gst_caps_new_simple("video/x-raw", "width", G_TYPE_INT, bestWidth, "height", G_TYPE_INT, bestHeight,
+                                       "framerate", GST_TYPE_FRACTION, bestFpsNum, bestFpsDen, nullptr);
+    }
+
+    if (selectedMime)
+        *selectedMime = bestMime;
+#ifdef PIPELINE_DEBUG
+    qDebug("VideoIn selected capture mode=%s %dx%d @ %d/%d", qPrintable(bestMime), bestWidth, bestHeight, bestFpsNum,
+           bestFpsDen);
+#endif
+    return bestCaps;
+}
+
+GstCaps *selectVideoCaptureCaps(const QString &nativeCaps, const QSize &desiredSize, int preferredFps,
+                                QString *selectedMime)
+{
+    GstDevice device;
+    device.nativeCaps = nativeCaps;
+    return filter_for_desired_size(&device, desiredSize, preferredFps, selectedMime);
 }
 
 static GstElement *make_webrtcdsp_filter()
@@ -267,10 +412,21 @@ private:
             gst_object_unref(GST_OBJECT(pad));
         } else if (type == PDevice::VideoIn) {
 
-            auto device = deviceMonitor->device(id);
+            auto device = deviceMonitor ? deviceMonitor->device(id) : nullptr;
             if (!device) {
-                gst_object_unref(deviceElement);
-                return nullptr;
+                // Synthetic/custom GStreamer sources (for example videotestsrc)
+                // do not have hardware DeviceMonitor metadata. Accept a raw-video
+                // source directly; real enumerated cameras keep the caps/decode
+                // selection path below.
+                GstPad *pad = gst_element_get_static_pad(deviceElement, "src");
+                if (!pad) {
+                    gst_object_unref(deviceElement);
+                    return nullptr;
+                }
+                gst_bin_add(GST_BIN(bin), deviceElement);
+                gst_element_add_pad(bin, gst_ghost_pad_new("src", pad));
+                gst_object_unref(pad);
+                return bin;
             }
 
 #ifdef Q_OS_MAC
@@ -298,39 +454,122 @@ path2::caps="video/x-raw" \
 */
 
             GstCaps *capsfilter = nullptr;
-            if (captureSize.isValid())
-                capsfilter = filter_for_capture_size(captureSize);
-            else if (options.videoSize.isValid())
-                capsfilter = filter_for_desired_size(device, options.videoSize);
+            QString  selectedMime;
+            if (captureSize.isValid()) {
+                capsfilter   = filter_for_capture_size(captureSize);
+                selectedMime = QStringLiteral("video/x-raw");
+            } else if (options.videoSize.isValid()) {
+                // PipeWire devices frequently expose only range-valued caps.
+                // The legacy fixed PDevice::Caps view is then empty. Feeding a
+                // fixated discovery mode back into pipewiresrc proved brittle
+                // with real cameras: the source stayed PLAYING with no current
+                // caps or buffers. Preserve the previously working behavior for
+                // that case and let PipeWire choose a concrete raw mode; the
+                // downstream video-prep chain still scales it to the call size.
+                if (id.startsWith(QLatin1String("pipewiresrc")) && device->caps.isEmpty()
+                    && device->nativeCaps.contains(QLatin1String("video/x-raw"))) {
+                    capsfilter   = gst_caps_new_empty_simple("video/x-raw");
+                    selectedMime = QStringLiteral("video/x-raw");
+#ifdef PIPELINE_DEBUG
+                    qDebug("VideoIn PipeWire range-only caps: leaving source mode unfixed");
+#endif
+                } else {
+                    capsfilter = filter_for_desired_size(device, options.videoSize, options.fps > 0 ? options.fps : 30,
+                                                         &selectedMime);
+                }
+            }
 
-            gst_bin_add(GST_BIN(bin), deviceElement);
+            if (selectedMime.isEmpty()) {
+                if (device->caps.isEmpty()) {
+                    // DeviceMonitor only records fixed tuples. PipeWire/V4L2
+                    // cameras that advertise ranges can therefore legitimately
+                    // arrive here with no fixed entries at all.
+                    selectedMime = QStringLiteral("video/x-raw");
+                } else {
+                    const auto hasMime = [device](const QString &mime) {
+                        return std::any_of(device->caps.begin(), device->caps.end(),
+                                           [&mime](const auto &c) { return c.mime == mime; });
+                    };
+                    if (hasMime(QStringLiteral("video/x-raw")))
+                        selectedMime = QStringLiteral("video/x-raw");
+                    else if (hasMime(QStringLiteral("image/jpeg")))
+                        selectedMime = QStringLiteral("image/jpeg");
+                    else if (hasMime(QStringLiteral("video/x-h264")))
+                        selectedMime = QStringLiteral("video/x-h264");
+                }
+            }
 
-            GstPad *binPad
-                = gst_ghost_pad_new_no_target_from_template("src", gst_static_pad_template_get(&videosrcbin_template));
-            gst_element_add_pad(bin, binPad);
+            const auto failVideoBin = [&]() -> GstElement * {
+                if (capsfilter) {
+                    gst_caps_unref(capsfilter);
+                    capsfilter = nullptr;
+                }
+                gst_object_unref(bin);
+                return nullptr;
+            };
+            const auto addVideoElement = [bin](GstElement *element) {
+                if (!element)
+                    return false;
+                if (gst_bin_add(GST_BIN(bin), element))
+                    return true;
+                gst_object_unref(element);
+                return false;
+            };
+
+            if (!gst_bin_add(GST_BIN(bin), deviceElement)) {
+                gst_object_unref(deviceElement);
+                return failVideoBin();
+            }
+
+            GstPadTemplate *srcTemplate = gst_static_pad_template_get(&videosrcbin_template);
+            GstPad *binPad = srcTemplate ? gst_ghost_pad_new_no_target_from_template("src", srcTemplate) : nullptr;
+            if (srcTemplate)
+                gst_object_unref(srcTemplate);
+            if (!binPad || !gst_element_add_pad(bin, binPad)) {
+                if (binPad)
+                    gst_object_unref(binPad);
+                return failVideoBin();
+            }
+
+            const auto setGhostTarget = [binPad](GstElement *element) {
+                GstPad *srcPad = element ? gst_element_get_static_pad(element, "src") : nullptr;
+                if (!srcPad)
+                    return false;
+                const bool ok = gst_ghost_pad_set_target(GST_GHOST_PAD(binPad), srcPad);
+                gst_object_unref(srcPad);
+                return ok;
+            };
 
             QList<GstElement *> toLink;
-            // find best suitable caps
-            if (std::any_of(device->caps.begin(), device->caps.end(),
-                            [](const auto &c) { return c.mime == QStringLiteral("image/jpeg"); })) {
+            // Decoder topology must match the caps we selected above, not any
+            // format the camera happens to advertise as an alternative.
+            if (selectedMime == QLatin1String("video/x-raw")) {
+                GstElement *videoconvert = gst_element_factory_make("videoconvert", nullptr);
+                if (!addVideoElement(videoconvert))
+                    return failVideoBin();
+                toLink.append(videoconvert);
+                if (!setGhostTarget(videoconvert))
+                    return failVideoBin();
+            } else if (selectedMime == QLatin1String("image/jpeg")) {
                 GstElement *jpegdec = gst_element_factory_make("jpegdec", nullptr);
-                Q_ASSERT(gst_bin_add(GST_BIN(bin), jpegdec));
+                if (!addVideoElement(jpegdec))
+                    return failVideoBin();
                 toLink.append(jpegdec);
-                Q_ASSERT(gst_ghost_pad_set_target(GST_GHOST_PAD(binPad), gst_element_get_static_pad(jpegdec, "src")));
-
-            } else if (std::any_of(device->caps.begin(), device->caps.end(),
-                                   [](const auto &c) { return c.mime == QStringLiteral("video/x-h264"); })) {
-                GstElement *h264parse = gst_element_factory_make("h264parse", nullptr);
-                gst_bin_add(GST_BIN(bin), h264parse);
-                toLink.append(h264parse);
+                if (!setGhostTarget(jpegdec))
+                    return failVideoBin();
+            } else if (selectedMime == QLatin1String("video/x-h264")) {
+                GstElement *h264parse  = gst_element_factory_make("h264parse", nullptr);
                 GstElement *avdec_h264 = gst_element_factory_make("avdec_h264", nullptr);
-                gst_bin_add(GST_BIN(bin), avdec_h264);
+                if (!addVideoElement(h264parse) || !addVideoElement(avdec_h264))
+                    return failVideoBin();
+                toLink.append(h264parse);
                 toLink.append(avdec_h264);
-                gst_ghost_pad_set_target(GST_GHOST_PAD(binPad), gst_element_get_static_pad(avdec_h264, "src"));
-
+                if (!setGhostTarget(avdec_h264))
+                    return failVideoBin();
             } else {
                 GstElement *decodebin = gst_element_factory_make("decodebin", nullptr);
-                gst_bin_add(GST_BIN(bin), decodebin);
+                if (!addVideoElement(decodebin))
+                    return failVideoBin();
                 toLink.append(decodebin);
 
                 g_signal_connect(G_OBJECT(decodebin), "pad-added", G_CALLBACK(videosrcbin_pad_added), binPad);
@@ -343,16 +582,20 @@ path2::caps="video/x-raw" \
             //                                                      nullptr);
             //             gst_bin_add(GST_BIN(bin), switchbin);
 
+            bool sourceLinked = false;
             if (capsfilter) {
-                Q_ASSERT(gst_element_link_filtered(deviceElement, toLink[0], capsfilter));
+                sourceLinked = gst_element_link_filtered(deviceElement, toLink[0], capsfilter);
                 gst_caps_unref(capsfilter);
+                capsfilter = nullptr;
             } else {
-                gst_element_link(deviceElement, toLink[0]);
+                sourceLinked = gst_element_link(deviceElement, toLink[0]);
             }
-            if (toLink.size() > 1) {
-                for (int i = 1; i < toLink.size(); i++) {
-                    Q_ASSERT(gst_element_link(toLink[i - 1], toLink[i]));
-                }
+            if (!sourceLinked)
+                return failVideoBin();
+
+            for (int i = 1; i < toLink.size(); ++i) {
+                if (!gst_element_link(toLink[i - 1], toLink[i]))
+                    return failVideoBin();
             }
         } else // AudioOut
         {
@@ -684,11 +927,23 @@ public:
 
     void deactivate()
     {
-        if (activated) {
-            gst_element_set_state(pipeline, GST_STATE_NULL);
-            gst_element_get_state(pipeline, nullptr, nullptr, GST_CLOCK_TIME_NONE);
-            activated = false;
+        if (!activated)
+            return;
+
+        const GstStateChangeReturn setResult = gst_element_set_state(pipeline, GST_STATE_NULL);
+        if (setResult == GST_STATE_CHANGE_FAILURE) {
+            qWarning("Pipeline failed to enter NULL during teardown");
+        } else if (setResult == GST_STATE_CHANGE_ASYNC) {
+            GstState                   current    = GST_STATE_VOID_PENDING;
+            GstState                   pending    = GST_STATE_VOID_PENDING;
+            const GstStateChangeReturn waitResult = gst_element_get_state(pipeline, &current, &pending, 2 * GST_SECOND);
+            if (waitResult == GST_STATE_CHANGE_ASYNC) {
+                qWarning("Pipeline teardown timed out after 2s (current=%d pending=%d)", int(current), int(pending));
+            } else if (waitResult == GST_STATE_CHANGE_FAILURE) {
+                qWarning("Pipeline teardown failed while waiting for NULL");
+            }
         }
+        activated = false;
     }
 };
 

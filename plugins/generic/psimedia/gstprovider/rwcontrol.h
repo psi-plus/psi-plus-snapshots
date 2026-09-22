@@ -309,6 +309,7 @@ signals:
     void outputFrame(const QImage &img);
     void audioOutputIntensityChanged(int intensity);
     void audioInputIntensityChanged(int intensity);
+    void videoKeyframeRequested(quint32 ssrc, quint8 payloadType);
 
 private slots:
     void processMessages();
@@ -367,6 +368,7 @@ private:
     static void     cb_worker_outputFrame(const RtpWorker::Frame &frame, void *app);
     static void     cb_worker_rtpAudioOut(const RtpWorker::EncodedRtpPacket &packet, void *app);
     static void     cb_worker_rtpVideoOut(const RtpWorker::EncodedRtpPacket &packet, void *app);
+    static void     cb_worker_videoKeyframeRequest(quint32 ssrc, quint8 payloadType, void *app);
     static void     cb_worker_recordData(const QByteArray &packet, void *app);
 
     gboolean processMessages();
@@ -381,14 +383,18 @@ private:
     void     worker_outputFrame(const RtpWorker::Frame &frame);
     void     worker_rtpAudioOut(const RtpWorker::EncodedRtpPacket &packet);
     void     worker_rtpVideoOut(const RtpWorker::EncodedRtpPacket &packet);
+    void     worker_videoKeyframeRequest(quint32 ssrc, quint8 payloadType);
     void     worker_recordData(const QByteArray &packet);
 
     void resumeMessages();
+    // Owns one reference to timer while non-null. Caller must hold m.
+    void cancelTimerLocked();
 
     // return false to block further message processing
     bool processMessage(RwControlMessage *msg);
 
     friend class RwControlLocal;
+    friend class RwControlRemoteLifecycleTest;
     void postMessage(RwControlMessage *msg);
     void rtpAudioIn(const PRtpPacket &packet);
     void rtpVideoIn(const PRtpPacket &packet);

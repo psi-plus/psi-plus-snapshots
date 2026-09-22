@@ -208,12 +208,15 @@ static bool video_codec_get_recv_elements(const QString &name, GstElement **dec,
 
 GstElement *bins_videoprep_create(const QSize &size, int fps, bool is_live)
 {
-    Q_UNUSED(is_live);
+    Q_UNUSED(is_live)
     GstElement *bin = gst_bin_new("videoprepbin");
 
     GstElement *videorate  = nullptr;
     GstElement *ratefilter = nullptr;
-    if (fps != -1) {
+    // For live sources an unspecified FPS means "preserve source timestamps".
+    // Only insert videorate when the caller explicitly requests a cadence (or
+    // for legacy file input, where RtpWorker supplies one).
+    if (fps > 0) {
         videorate = gst_element_factory_make("videorate", nullptr);
 
         ratefilter = gst_element_factory_make("capsfilter", nullptr);
@@ -233,9 +236,15 @@ GstElement *bins_videoprep_create(const QSize &size, int fps, bool is_live)
         videoscale  = gst_element_factory_make("videoscale", nullptr);
         scalefilter = gst_element_factory_make("capsfilter", nullptr);
 
+        // Keep the source display aspect ratio even when the capture device
+        // cannot provide the exact call canvas. videoscale will letterbox
+        // rather than stretch, and square PAR makes the encoded geometry
+        // unambiguous to remote VP8 decoders.
+        g_object_set(G_OBJECT(videoscale), "add-borders", TRUE, nullptr);
+
         GstCaps      *caps = gst_caps_new_empty();
         GstStructure *cs   = gst_structure_new("video/x-raw", "width", G_TYPE_INT, size.width(), "height", G_TYPE_INT,
-                                               size.height(), NULL);
+                                               size.height(), "pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1, NULL);
 
         gst_caps_append_structure(caps, cs);
 
@@ -410,7 +419,18 @@ GstElement *bins_videodec_create(const QString &codec)
 
     gst_element_link_many(videortpjitterbuffer, videortpdepay, videodec, NULL);
 
-    g_object_set(G_OBJECT(videortpjitterbuffer), "latency", (unsigned int)get_rtp_latency(), NULL);
+    // Lost-packet events allow RTP video depayloaders to decide when decoding
+    // needs a fresh keyframe. The receive graph is separated from the shared
+    // rtpsession by appsrc, so RtpWorker forwards the resulting
+    // GstForceKeyUnit event back to the group session explicitly.
+    g_object_set(G_OBJECT(videortpjitterbuffer), "latency", (unsigned int)get_rtp_latency(), "do-lost", TRUE, NULL);
+    if (codec == QLatin1String("vp8")) {
+        auto *klass = G_OBJECT_GET_CLASS(videortpdepay);
+        if (g_object_class_find_property(klass, "request-keyframe"))
+            g_object_set(G_OBJECT(videortpdepay), "request-keyframe", TRUE, nullptr);
+        if (g_object_class_find_property(klass, "wait-for-keyframe"))
+            g_object_set(G_OBJECT(videortpdepay), "wait-for-keyframe", TRUE, nullptr);
+    }
 
     GstPad *pad;
 

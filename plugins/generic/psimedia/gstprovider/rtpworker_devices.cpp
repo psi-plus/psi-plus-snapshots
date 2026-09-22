@@ -14,44 +14,44 @@
 namespace PsiMedia {
 namespace {
 
-enum class InputSourceMode {
-    None,
-    Live,
-    File,
-    Data,
-};
+    enum class InputSourceMode {
+        None,
+        Live,
+        File,
+        Data,
+    };
 
-struct InputSourceIdentity {
-    InputSourceMode mode = InputSourceMode::None;
-    QString         audioInput;
-    QString         videoInput;
-    QString         fileName;
-    QByteArray      fileData;
+    struct InputSourceIdentity {
+        InputSourceMode mode = InputSourceMode::None;
+        QString         audioInput;
+        QString         videoInput;
+        QString         fileName;
+        QByteArray      fileData;
 
-    bool operator!=(const InputSourceIdentity &other) const
+        bool operator!=(const InputSourceIdentity &other) const
+        {
+            return mode != other.mode || audioInput != other.audioInput || videoInput != other.videoInput
+                || fileName != other.fileName || fileData != other.fileData;
+        }
+    };
+
+    InputSourceIdentity inputSourceIdentity(const QString &audioInput, const QString &videoInput,
+                                            const QString &fileName, const QByteArray &fileData)
     {
-        return mode != other.mode || audioInput != other.audioInput || videoInput != other.videoInput
-            || fileName != other.fileName || fileData != other.fileData;
+        InputSourceIdentity result;
+        result.audioInput = audioInput;
+        result.videoInput = videoInput;
+        result.fileName   = fileName;
+        result.fileData   = fileData;
+
+        if (!fileData.isEmpty())
+            result.mode = InputSourceMode::Data;
+        else if (!fileName.isEmpty())
+            result.mode = InputSourceMode::File;
+        else if (!audioInput.isEmpty() || !videoInput.isEmpty())
+            result.mode = InputSourceMode::Live;
+        return result;
     }
-};
-
-InputSourceIdentity inputSourceIdentity(const QString &audioInput, const QString &videoInput, const QString &fileName,
-                                        const QByteArray &fileData)
-{
-    InputSourceIdentity result;
-    result.audioInput = audioInput;
-    result.videoInput = videoInput;
-    result.fileName   = fileName;
-    result.fileData   = fileData;
-
-    if (!fileData.isEmpty())
-        result.mode = InputSourceMode::Data;
-    else if (!fileName.isEmpty())
-        result.mode = InputSourceMode::File;
-    else if (!audioInput.isEmpty() || !videoInput.isEmpty())
-        result.mode = InputSourceMode::Live;
-    return result;
-}
 
 } // namespace
 
@@ -61,7 +61,18 @@ void RtpWorker::setInputDevices(const QString &audioInput, const QString &videoI
     const auto oldSource     = inputSourceIdentity(ain, vin, infile, indata);
     const auto newSource     = inputSourceIdentity(audioInput, videoInput, fileName, fileData);
     const bool sourceChanged = oldSource != newSource;
-    const bool rebuildSender = sourceChanged && sendbin;
+
+    const bool additiveLiveSource = oldSource.mode == InputSourceMode::Live && newSource.mode == InputSourceMode::Live
+        && (oldSource.audioInput.isEmpty() || oldSource.audioInput == newSource.audioInput)
+        && (oldSource.videoInput.isEmpty() || oldSource.videoInput == newSource.videoInput)
+        && (!oldSource.audioInput.isEmpty() || !newSource.audioInput.isEmpty())
+        && (!oldSource.videoInput.isEmpty() || !newSource.videoInput.isEmpty());
+
+    // Adding the second live media source (audio -> A/V or video -> A/V) is a
+    // topology extension, not a source replacement. RtpWorker::update() grafts
+    // the missing branch onto the active sender. Real replacement/removal still
+    // rebuilds the sender to keep the legacy semantics deterministic.
+    const bool rebuildSender = sourceChanged && sendbin && !additiveLiveSource;
 
     bool audioWasTransmitting = false;
     bool videoWasTransmitting = false;

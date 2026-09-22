@@ -47,4 +47,3 @@ target_link_libraries(
 add_dependencies(${PLUGIN} gstprovidersrc)
 target_link_libraries(${PLUGIN} gstprovidersrc)
 install(TARGETS ${PLUGIN} LIBRARY DESTINATION ${LIB_INSTALL_DIR})
-

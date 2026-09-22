@@ -63,7 +63,7 @@ public:
 
 void setDebug(Debug *);
 
-class Connector : public QObject {
+class IRIS_EXPORT Connector : public QObject {
     Q_OBJECT
 public:
     Connector(QObject *parent = nullptr);
@@ -97,7 +97,7 @@ private:
     quint16      port;
 };
 
-class AdvancedConnector : public Connector {
+class IRIS_EXPORT AdvancedConnector : public Connector {
     Q_OBJECT
 public:
     enum Error { ErrConnectionRefused, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth, ErrStream };
@@ -171,7 +171,7 @@ private:
     void cleanup();
 };
 
-class TLSHandler : public QObject {
+class IRIS_EXPORT TLSHandler : public QObject {
     Q_OBJECT
 public:
     TLSHandler(QObject *parent = nullptr);

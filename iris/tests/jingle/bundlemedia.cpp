@@ -32,13 +32,13 @@ public:
 };
 
 struct MediaState {
-    QString                             media;
-    quint8                              payload = 0;
-    quint32                             ssrc    = 0;
-    J::RTP::MediaEndpoint::PacketWriter writer;
-    QList<QByteArray>                   received;
-    int                                 configured = 0;
-    int                                 attached   = 0;
+    QString                           media;
+    quint8                            payload = 0;
+    quint32                           ssrc    = 0;
+    std::function<bool(const QByteArray &)> writer;
+    QList<QByteArray>                 received;
+    int                               configured = 0;
+    int                               attached   = 0;
 };
 
 class Endpoint final : public J::RTP::MediaEndpoint {
@@ -83,21 +83,6 @@ public:
         return true;
     }
 
-    bool supportsPacketIo() const override { return true; }
-
-    bool attachPacketIo(PacketWriter writer) override
-    {
-        ++state_->attached;
-        state_->writer = std::move(writer);
-        return true;
-    }
-
-    void receivePacket(const QByteArray &packet, J::RTP::SrtpContext::Packet kind) override
-    {
-        check(kind == J::RTP::SrtpContext::Packet::Rtp, "BUNDLE media endpoint received non-RTP");
-        state_->received.append(packet);
-    }
-
     void stop() override { state_->writer = {}; }
 
 private:
@@ -117,8 +102,139 @@ public:
         return std::make_unique<Endpoint>(std::move(state));
     }
 
+    bool attachSecureRtpPacketIo(ProtectedPacketWriter writer) override
+    {
+        protectedWriter_ = std::move(writer);
+        return bool(protectedWriter_);
+    }
+
+    void detachSecureRtpPacketIo() override
+    {
+        protectedWriter_ = {};
+        for (const auto &state : states_)
+            state->writer = {};
+    }
+
+    bool configureSecureRtpEndpoints(const QList<J::RTP::SecureRtpEndpoint> &endpoints) override
+    {
+        QSet<QByteArray> seen;
+        for (const auto &endpoint : endpoints) {
+            if (!endpoint.isValid() || seen.contains(endpoint.endpointId))
+                return false;
+            seen.insert(endpoint.endpointId);
+        }
+
+        endpoints_ = endpoints;
+        for (const auto &endpoint : endpoints_) {
+            auto state = stateForMedia(endpoint.media);
+            if (!state)
+                return false;
+            if (!attachedEndpoints_.contains(endpoint.endpointId)) {
+                attachedEndpoints_.insert(endpoint.endpointId);
+                ++state->attached;
+            }
+            const auto endpointId = endpoint.endpointId;
+            state->writer = [this, endpointId](const QByteArray &packet) {
+                auto it = std::find_if(endpoints_.cbegin(), endpoints_.cend(),
+                                       [&endpointId](const auto &value) { return value.endpointId == endpointId; });
+                if (it == endpoints_.cend() || !protectedWriter_)
+                    return false;
+                const auto epoch = epochs_.value(it->associationId);
+                if (!epoch)
+                    return false;
+                J::RTP::SecureRtpPacket protectedPacket;
+                protectedPacket.associationId = it->associationId;
+                protectedPacket.epoch         = epoch;
+                protectedPacket.data          = packet;
+                protectedPacket.kind          = J::RTP::PacketKind::Rtp;
+                return protectedWriter_(protectedPacket);
+            };
+        }
+
+        // Removed endpoints must immediately lose producer access.
+        for (const auto &state : states_) {
+            const bool alive = std::any_of(endpoints_.cbegin(), endpoints_.cend(),
+                                           [&](const auto &endpoint) { return endpoint.media == state->media; });
+            if (!alive)
+                state->writer = {};
+        }
+        return true;
+    }
+
+    bool configureSecureRtpAssociation(const J::RTP::SecureRtpParameters &parameters) override
+    {
+        if (!parameters.isValid())
+            return false;
+        epochs_.insert(parameters.associationId, parameters.epoch);
+        return true;
+    }
+
+    void invalidateSecureRtpAssociation(const QByteArray &associationId, quint64 epoch) override
+    {
+        if (epochs_.value(associationId) == epoch)
+            epochs_.remove(associationId);
+    }
+
+    bool associationReady(const QByteArray &associationId, quint64 epoch) const
+    {
+        return epochs_.value(associationId) == epoch;
+    }
+
+    bool receiveProtectedRtpPacket(const J::RTP::SecureRtpPacket &packet) override
+    {
+        if (packet.kind != J::RTP::PacketKind::Rtp || epochs_.value(packet.associationId) != packet.epoch
+            || packet.data.size() < 12 || (quint8(packet.data[0]) >> 6) != 2)
+            return false;
+
+        const quint8 payload = quint8(packet.data[1]) & 0x7f;
+        const auto *bytes = reinterpret_cast<const uchar *>(packet.data.constData());
+        const quint32 ssrc = (quint32(bytes[8]) << 24) | (quint32(bytes[9]) << 16)
+            | (quint32(bytes[10]) << 8) | quint32(bytes[11]);
+
+        const J::RTP::SecureRtpEndpoint *selected = nullptr;
+        for (const auto &endpoint : endpoints_) {
+            if (endpoint.associationId != packet.associationId)
+                continue;
+            if (endpoint.incomingSsrcs.contains(ssrc)) {
+                if (selected)
+                    return false;
+                selected = &endpoint;
+            }
+        }
+        if (!selected) {
+            for (const auto &endpoint : endpoints_) {
+                if (endpoint.associationId != packet.associationId
+                    || !endpoint.incomingPayloadTypes.contains(payload))
+                    continue;
+                if (selected)
+                    return false;
+                selected = &endpoint;
+            }
+        }
+        if (!selected)
+            return false;
+
+        auto state = stateForMedia(selected->media);
+        if (!state)
+            return false;
+        state->received.append(packet.data);
+        return true;
+    }
+
 private:
+    std::shared_ptr<MediaState> stateForMedia(const QString &media) const
+    {
+        for (const auto &state : states_)
+            if (state->media == media)
+                return state;
+        return {};
+    }
+
     QHash<QString, std::shared_ptr<MediaState>> states_;
+    QList<J::RTP::SecureRtpEndpoint>            endpoints_;
+    QSet<QByteArray>                            attachedEndpoints_;
+    QHash<QByteArray, quint64>                  epochs_;
+    ProtectedPacketWriter                       protectedWriter_;
 };
 
 class Provider final : public J::RTP::MediaProvider {
@@ -131,16 +247,19 @@ public:
     }
 
     QStringList mediaTypes() const override { return { QStringLiteral("audio"), QStringLiteral("video") }; }
+    QStringList secureRtpProfiles() const override
+    {
+        return { QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80") };
+    }
 
 private:
     QHash<QString, std::shared_ptr<MediaState>> states_;
 };
 
-// The lower-level jingle_bundleice regression already exercises the production
-// BUNDLE membership guard in ICE::Transport::start(). This layered regression
-// keeps that association-level start under harness control so it can isolate the
-// production RTP::Application + BundleRouter path without fabricating Session
-// peer-group state.
+// The lower-level jingle_bundleice regression exercises ICE association
+// ownership. This layered regression keeps association start under harness
+// control and verifies the production RTP::Application -> group-level MediaSession
+// boundary without routing plaintext RTP inside Iris.
 class TestIceTransport final : public J::ICE::Transport {
 public:
     using J::ICE::Transport::Transport;
@@ -249,8 +368,7 @@ int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
     QCA::Initializer qca;
-    check(!J::RTP::SrtpContext::supportedProfiles().isEmpty() && !Dtls::supportedSRTPProfiles().isEmpty(),
-          "DTLS-SRTP backend required");
+    check(!Dtls::supportedSRTPProfiles().isEmpty(), "DTLS-SRTP backend required");
 
     TcpPortReserver reserver;
     Side first(Jid(QStringLiteral("second@example.test/device")), true, 0x11111111u, 0x22222222u, &reserver);
@@ -352,9 +470,9 @@ int main(int argc, char **argv)
             check(first.audioState->attached == 1 && first.videoState->attached == 1
                       && second.audioState->attached == 1 && second.videoState->attached == 1,
                   "RTP BUNDLE endpoints did not attach exactly once");
-            check(first.audioState->writer(audioPacket, J::RTP::SrtpContext::Packet::Rtp),
+            check(first.audioState->writer && first.audioState->writer(audioPacket),
                   "audio RTP BUNDLE writer failed");
-            check(first.videoState->writer(videoPacket, J::RTP::SrtpContext::Packet::Rtp),
+            check(first.videoState->writer && first.videoState->writer(videoPacket),
                   "video RTP BUNDLE writer failed");
         }
 
@@ -362,7 +480,7 @@ int main(int argc, char **argv)
             && second.videoState->received.contains(videoPacket)) {
             check(!second.audioState->received.contains(videoPacket)
                       && !second.videoState->received.contains(audioPacket),
-                  "BundleRouter cross-routed audio/video RTP");
+                  "backend group router cross-routed audio/video RTP");
             membersRemoved = true;
             secondAudioBeforeRemoval = second.audioState->received.size();
             secondVideoBeforeSurvivor = second.videoState->received.size();
@@ -371,23 +489,24 @@ int main(int argc, char **argv)
             second.audioApp->incomingRemove(J::Reason(J::Reason::Success));
             check(first.videoApp->state() == J::State::Active && second.videoApp->state() == J::State::Active,
                   "removing audio deactivated surviving video application");
-            check(first.videoTransport->rtpSession() && first.videoTransport->rtpSession()->isReady()
-                      && second.videoTransport->rtpSession() && second.videoTransport->rtpSession()->isReady(),
-                  "removing audio invalidated shared video SRTP");
+            check(first.videoTransport->rtpAssociation() && first.videoTransport->rtpAssociation()->isReady()
+                      && second.videoTransport->rtpAssociation() && second.videoTransport->rtpAssociation()->isReady(),
+                  "removing audio invalidated shared video secure RTP");
         }
 
         if (membersRemoved && !staleSent) {
             staleSent = true;
-            auto *srtp = first.videoTransport->rtpSession();
-            check(srtp && first.videoTransport->sendRtpPacket(staleAudio, J::RTP::SrtpContext::Packet::Rtp,
-                                                              srtp->epoch()),
-                  "authenticated stale-audio probe failed to enter shared SRTP");
+            auto *association = first.videoTransport->rtpAssociation();
+            check(association
+                      && first.videoTransport->sendProtectedRtpPacket(
+                          staleAudio, J::RTP::PacketKind::Rtp, association->epoch()),
+                  "authenticated stale-audio probe failed to enter shared secure RTP");
         }
 
         if (staleSent && !survivorSent && second.audioState->received.size() == secondAudioBeforeRemoval
             && second.videoState->received.size() == secondVideoBeforeSurvivor) {
             survivorSent = true;
-            check(first.videoState->writer(survivor, J::RTP::SrtpContext::Packet::Rtp),
+            check(first.videoState->writer && first.videoState->writer(survivor),
                   "surviving video writer failed after audio removal");
         }
 
@@ -413,10 +532,34 @@ int main(int argc, char **argv)
                    << staleSent << survivorSent;
 
     check(!failed && survivorSent && second.videoState->received.contains(survivor),
-          "production RTP BundleRouter regression failed or timed out");
+          "production RTP backend-routing regression failed or timed out");
     check(first.icePad->liveAssociationCount() == 1 && second.icePad->liveAssociationCount() == 1,
           "removing one RTP BUNDLE member changed association count");
 
-    qInfo("Production RTP BundleRouter regression passed");
+    // An association QObject can disappear without first emitting invalidated
+    // (for example while the ICE connection itself is being torn down). The
+    // media backend must still lose the exported keys immediately rather than
+    // keeping them staged until the whole MediaSession is destroyed.
+    auto *firstBackend = dynamic_cast<MediaSession *>(first.rtpPad->mediaSession());
+    auto *dyingAssociation = first.videoTransport->rtpAssociation();
+    check(firstBackend && dyingAssociation, "secure RTP destruction fixture unavailable");
+    const auto dyingId    = dyingAssociation->associationId();
+    const auto dyingEpoch = dyingAssociation->epoch();
+    check(firstBackend->associationReady(dyingId, dyingEpoch),
+          "backend lost association before destruction regression");
+
+    check(first.network && !first.network->components.isEmpty()
+              && first.network->components[0].secureRtp == dyingAssociation,
+          "unexpected BUNDLE association ownership before destruction");
+    first.network->components[0].secureRtp = nullptr; // prevent IceConnection's later destructor from double deleting
+    delete dyingAssociation;
+    QCoreApplication::processEvents(QEventLoop::AllEvents);
+
+    check(!firstBackend->associationReady(dyingId, dyingEpoch),
+          "destroyed secure RTP association left key material staged in backend");
+    check(first.videoApp->state() >= J::State::Finishing,
+          "destroyed secure RTP association left its application active");
+
+    qInfo("Production RTP backend-routing regression passed");
     return 0;
 }

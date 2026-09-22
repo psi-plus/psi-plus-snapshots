@@ -26,7 +26,8 @@
 
 namespace PsiMedia {
 
-GstVideoWidget::GstVideoWidget(VideoWidgetContext *_context, QObject *parent) : QObject(parent), context(_context)
+GstVideoWidget::GstVideoWidget(VideoWidgetContext *_context, QObject *parent) :
+    QObject(parent), context(_context), contextObject(_context ? _context->qobject() : nullptr)
 {
     QPalette palette;
     palette.setColor(context->qwidget()->backgroundRole(), Qt::black);
@@ -39,7 +40,15 @@ GstVideoWidget::GstVideoWidget(VideoWidgetContext *_context, QObject *parent) : 
 
 void GstVideoWidget::show_frame(const QImage &image)
 {
-    curImage = image;
+    if (!context || contextObject.isNull()) {
+        curImage = QImage();
+        return;
+    }
+
+    const auto previousSize = curImage.size();
+    curImage                = image;
+    if (!image.isNull() && image.size() != previousSize)
+        context->setVideoSize(image.size());
     context->qwidget()->update();
 }
 
@@ -47,7 +56,7 @@ void GstVideoWidget::context_resized(const QSize &newSize) { Q_UNUSED(newSize); 
 
 void GstVideoWidget::context_paintEvent(QPainter *p)
 {
-    if (curImage.isNull())
+    if (!context || contextObject.isNull() || curImage.isNull())
         return;
 
     QSize size    = context->qwidget()->size();

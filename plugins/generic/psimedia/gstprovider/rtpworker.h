@@ -29,6 +29,8 @@
 #include <gst/app/gstappsink.h>
 #include <gst/gst.h>
 
+#include <atomic>
+
 namespace PsiMedia {
 
 class PipelineDeviceContext;
@@ -118,10 +120,11 @@ public:
     // callbacks - from alternate thread, be safe!
     //   also, it is not safe to assign callbacks except before starting
 
-    void (*cb_previewFrame)(const Frame &frame, void *app)                        = nullptr;
-    void (*cb_outputFrame)(const Frame &frame, void *app)                         = nullptr;
-    void (*cb_rtpAudioOut)(const EncodedRtpPacket &packet, void *app)             = nullptr;
-    void (*cb_rtpVideoOut)(const EncodedRtpPacket &packet, void *app)             = nullptr;
+    void (*cb_previewFrame)(const Frame &frame, void *app)                       = nullptr;
+    void (*cb_outputFrame)(const Frame &frame, void *app)                        = nullptr;
+    void (*cb_rtpAudioOut)(const EncodedRtpPacket &packet, void *app)            = nullptr;
+    void (*cb_rtpVideoOut)(const EncodedRtpPacket &packet, void *app)            = nullptr;
+    void (*cb_videoKeyframeRequest)(quint32 ssrc, quint8 payloadType, void *app) = nullptr;
 
     // empty record packet = EOF/error
     void (*cb_recordData)(const QByteArray &packet, void *app) = nullptr;
@@ -134,23 +137,26 @@ private:
     PipelineDeviceContext *pd_audiosrc = nullptr, *pd_videosrc = nullptr, *pd_audiosink = nullptr;
     GstElement            *sendbin = nullptr, *recvbin = nullptr;
 
-    GstElement *fileDemux   = nullptr;
-    GstElement *audiosrc    = nullptr;
-    GstElement *videosrc    = nullptr;
-    GstElement *audiortpsrc = nullptr;
-    GstElement *videortpsrc = nullptr;
-    GstElement *audiortppay = nullptr;
-    GstElement *videortppay = nullptr;
-    GstElement *volumein    = nullptr;
-    GstElement *volumeout   = nullptr;
-    bool        rtpaudioout = false;
-    bool        rtpvideoout = false;
-    QMutex      audiortpsrc_mutex;
-    QMutex      videortpsrc_mutex;
-    QMutex      volumein_mutex;
-    QMutex      volumeout_mutex;
-    QMutex      rtpaudioout_mutex;
-    QMutex      rtpvideoout_mutex;
+    GstElement          *fileDemux   = nullptr;
+    GstElement          *audiosrc    = nullptr;
+    GstElement          *videosrc    = nullptr;
+    GstElement          *audiortpsrc = nullptr;
+    GstElement          *videortpsrc = nullptr;
+    GstElement          *audiortppay = nullptr;
+    GstElement          *videortppay = nullptr;
+    GstElement          *volumein    = nullptr;
+    GstElement          *volumeout   = nullptr;
+    bool                 rtpaudioout = false;
+    bool                 rtpvideoout = false;
+    QMutex               audiortpsrc_mutex;
+    QMutex               videortpsrc_mutex;
+    QMutex               volumein_mutex;
+    QMutex               volumeout_mutex;
+    QMutex               rtpaudioout_mutex;
+    QMutex               rtpvideoout_mutex;
+    std::atomic<quint32> remoteVideoSsrc_ { 0 };
+    std::atomic<int>     remoteVideoPayloadType_ { -1 };
+    std::atomic_bool     firstOutgoingVideoLogged_ { false };
 
     // GSource *recordTimer;
 
@@ -165,39 +171,46 @@ private:
     void cleanup();
     void cleanupSend();
 
-    static gboolean      cb_doStart(gpointer data);
-    static gboolean      cb_doUpdate(gpointer data);
-    static gboolean      cb_doStop(gpointer data);
-    static void          cb_fileDemux_no_more_pads(GstElement *element, gpointer data);
-    static void          cb_fileDemux_pad_added(GstElement *element, GstPad *pad, gpointer data);
-    static void          cb_fileDemux_pad_removed(GstElement *element, GstPad *pad, gpointer data);
-    static gboolean      cb_bus_call(GstBus *bus, GstMessage *msg, gpointer data);
-    static GstFlowReturn cb_show_frame_preview(GstAppSink *appsink, gpointer data);
-    static GstFlowReturn cb_show_frame_output(GstAppSink *appsink, gpointer data);
-    static GstFlowReturn cb_packet_ready_rtp_audio(GstAppSink *appsink, gpointer data);
-    static GstFlowReturn cb_packet_ready_rtp_video(GstAppSink *appsink, gpointer data);
-    static GstFlowReturn cb_packet_ready_preroll_stub(GstAppSink *appsink, gpointer data);
-    static void          cb_packet_ready_eos_stub(GstAppSink *appsink, gpointer data);
-    static gboolean      cb_packet_ready_event_stub(GstAppSink *appsink, gpointer data);
-    static gboolean      cb_packet_ready_allocation_stub(GstAppSink *appsink, GstQuery *query, gpointer user_data);
-    static gboolean      cb_fileReady(gpointer data);
+    static gboolean          cb_doStart(gpointer data);
+    static gboolean          cb_doUpdate(gpointer data);
+    static gboolean          cb_doStop(gpointer data);
+    static void              cb_fileDemux_no_more_pads(GstElement *element, gpointer data);
+    static void              cb_fileDemux_pad_added(GstElement *element, GstPad *pad, gpointer data);
+    static void              cb_fileDemux_pad_removed(GstElement *element, GstPad *pad, gpointer data);
+    static gboolean          cb_bus_call(GstBus *bus, GstMessage *msg, gpointer data);
+    static GstFlowReturn     cb_show_frame_preview(GstAppSink *appsink, gpointer data);
+    static GstFlowReturn     cb_show_frame_output(GstAppSink *appsink, gpointer data);
+    static GstFlowReturn     cb_packet_ready_rtp_audio(GstAppSink *appsink, gpointer data);
+    static GstFlowReturn     cb_packet_ready_rtp_video(GstAppSink *appsink, gpointer data);
+    static GstFlowReturn     cb_packet_ready_preroll_stub(GstAppSink *appsink, gpointer data);
+    static void              cb_packet_ready_eos_stub(GstAppSink *appsink, gpointer data);
+    static gboolean          cb_packet_ready_event_stub(GstAppSink *appsink, gpointer data);
+    static gboolean          cb_packet_ready_allocation_stub(GstAppSink *appsink, GstQuery *query, gpointer user_data);
+    static GstPadProbeReturn cb_video_keyframe_event(GstPad *pad, GstPadProbeInfo *info, gpointer data);
+    static gboolean          cb_fileReady(gpointer data);
 
-    gboolean      doStart();
-    gboolean      doUpdate();
-    gboolean      doStop();
-    void          fileDemux_no_more_pads(GstElement *element);
-    void          fileDemux_pad_added(GstElement *element, GstPad *pad);
-    void          fileDemux_pad_removed(GstElement *element, GstPad *pad);
-    gboolean      bus_call(GstBus *bus, GstMessage *msg);
-    GstFlowReturn show_frame_preview(GstAppSink *appsink);
-    GstFlowReturn show_frame_output(GstAppSink *appsink);
-    GstFlowReturn packet_ready_rtp_audio(GstAppSink *appsink);
-    GstFlowReturn packet_ready_rtp_video(GstAppSink *appsink);
-    gboolean      fileReady();
+    gboolean          doStart();
+    gboolean          doUpdate();
+    gboolean          doStop();
+    void              fileDemux_no_more_pads(GstElement *element);
+    void              fileDemux_pad_added(GstElement *element, GstPad *pad);
+    void              fileDemux_pad_removed(GstElement *element, GstPad *pad);
+    gboolean          bus_call(GstBus *bus, GstMessage *msg);
+    GstFlowReturn     show_frame_preview(GstAppSink *appsink);
+    GstFlowReturn     show_frame_output(GstAppSink *appsink);
+    GstFlowReturn     packet_ready_rtp_audio(GstAppSink *appsink);
+    GstFlowReturn     packet_ready_rtp_video(GstAppSink *appsink);
+    GstPadProbeReturn video_keyframe_event(GstPad *pad, GstPadProbeInfo *info);
+    bool              installVideoKeyframeProbe(GstElement *source);
+    gboolean          fileReady();
 
     bool        setupSendRecv();
     bool        startSend();
     bool        startRecv();
+    bool        addAudioRecvChain();
+    bool        addVideoRecvChain();
+    bool        addAudioSendChain();
+    bool        addVideoSendChain();
     bool        addAudioChain();
     bool        addVideoChain();
     bool        getCaps();

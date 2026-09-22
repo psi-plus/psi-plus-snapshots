@@ -14,9 +14,9 @@ remain outside Iris.
 | RTP signaling | Description, initial offer/answer, prepared answers, session-info, incoming direction/advisory updates | No complete dynamic codec/track renegotiation |
 | Media integration | Provider/session/endpoint interfaces, serialized asynchronous operations, cancellation, deadlines | External backend; Iris unit/integration tests use mock media, while cross-repo gates exercise real psimedia |
 | Transport | Custom `ice:0` and standard `ice-udp:1` wire profiles on the existing ICE implementation | Per-content Transport signaling; negotiated BUNDLE members may share one session-local IceConnection |
-| Security | QCA DTLS verification/export and optional libSRTP RTP/SRTCP | No plaintext fallback for packet-capable RTP |
+| Security | QCA DTLS verification/export plus opaque protected RTP/RTCP transport | Packet protection belongs to the media backend; no plaintext fallback for packet-capable RTP |
 | Grouping | Session grouping snapshots plus transactional group/membership models wired into ICE::Pad | Initial negotiated BUNDLE and full-group pre-Connecting replacement are implemented; active-call migration/removal still have separate gates |
-| Routing | Authenticated BundleRouter wired into RTP::Pad per SrtpSession ingress | Per-content RTP/RTCP routing is live; SharedRtcp still lacks group-level media ingress |
+| Routing | Authenticated BundleRouter wired into RTP::Pad per SecureRtpAssociation ingress | Per-content RTP/RTCP routing is live; SharedRtcp still lacks group-level media ingress |
 | Interoperability | Local UDP/DTLS/SRTP, negotiated-BUNDLE regressions and server-mediated Psi↔Psi audio | No Conversations result or external live BUNDLE peer result is claimed |
 
 Advertising the grouping capability alone still does not force BUNDLE: the peer answer must
@@ -202,38 +202,41 @@ after every member has bound; the old association is then retired.
 
 For packet-capable RTP, `PacketTransport::enableRtpMux()` selects the one-component authenticated
 RTP/RTCP path. The answer must accept rtcp-mux; an incompatible answer does not enable raw RTP.
-`RTP::supportedSecureRtpProfiles()` probes the intersection usable by the SRTP packet engine
-and QCA DTLS. This indicates crypto availability, not codecs, device availability or interop.
+The RTP Pad intersects the media provider's secure-RTP profiles with the profiles supported by
+QCA DTLS. This indicates that both sides of the key-export boundary agree on a profile; it does
+not imply codec, device or external-peer interoperability.
 
-QCA3 negotiates DTLS profiles and exports directional keys/salts after fingerprint verification.
-`Dtls` gates application data and key access on authentication and invalidates them on errors,
-closure or fingerprint changes. Fingerprints conveyed by signaling do not independently provide
-OMEMO-authenticated peer identity.
+QCA3 negotiates DTLS-SRTP profiles and exports directional keys/salts after fingerprint
+verification. `Dtls` gates application data and key access on authentication and invalidates
+them on errors, closure or fingerprint changes. Fingerprints conveyed by signaling do not
+independently provide OMEMO-authenticated peer identity.
 
-Optional `IRIS_ENABLE_SRTP` links libSRTP's public packet API. `SrtpContext` owns separate
-send/receive contexts, replay state and key copies. AES-CM/HMAC-SHA1 and AEAD-GCM depend on the
-installed backend's supported profiles; null encryption is rejected. Reapplying identical live
-keys preserves replay state. Failed reconfiguration invalidates the context.
-
-`SrtpSession` binds these contexts to one Dtls association, listens for invalidation and checks
-the authentication gate at packet access, including reentrant access during invalidation.
-An epoch is scoped to that binding, not a global generation. Independently retained key copies
-cannot be erased by invalidating the binding.
+`SecureRtpAssociation` is deliberately not an SRTP cipher. It binds one authenticated DTLS
+association to a stable association id and epoch, owns the verified key-export snapshot, demuxes
+DTLS from protected RTP/RTCP, and forwards protected media bytes unchanged to the media backend.
+The RTP Pad exports the association parameters to `MediaSession::configureSecureRtpAssociation()`,
+installs per-content routing with `configureSecureRtpEndpoints()`, forwards incoming protected
+packets to the backend and accepts already-protected outgoing packets from it. Replays, packet
+authentication and encryption/decryption therefore belong to the backend (psimedia uses libSRTP),
+not Iris.
 
 ```mermaid
 flowchart LR
     ICE[ICE datagram] --> C[Datagram classification]
     C -->|DTLS| Q[QCA Dtls]
     Q -->|application records| SCTP[SCTP data channels]
-    Q -->|verified exporter| S[SrtpSession / libSRTP]
-    C -->|SRTP or SRTCP| S
-    S -->|authenticated bytes and kind / epoch| A[RTP Application]
-    A -->|protect and send| ICE
+    Q -->|verified exporter| A[SecureRtpAssociation]
+    C -->|protected RTP / RTCP| A
+    A -->|keys + opaque protected packets| P[RTP Pad / MediaSession]
+    P -->|backend protect / unprotect| M[psimedia / libSRTP]
+    M -->|protected egress| P
+    P --> A
+    A --> ICE
 ```
 
 STUN/TURN handling belongs to the lower network layer. Media does not travel as DTLS application
-records. No custom QCA cipher backend is registered in libSRTP; its system backend and QCA DTLS
-coexist. SRTP unavailability must not be equated with plain DTLS/SCTP unavailability.
+records. Iris has no libSRTP dependency in this architecture; DTLS/SCTP remains usable through
+QCA independently of the media backend's SRTP implementation.
 
 ## Group and routing components
 

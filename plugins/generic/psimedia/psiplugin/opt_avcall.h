@@ -36,10 +36,10 @@ public:
 private:
     QPointer<QWidget>          w;
     QIcon                      _icon;
-    PsiMedia::Provider *       provider;
+    PsiMedia::Provider        *provider;
     PsiMedia::FeaturesContext *features  = nullptr;
-    OptionAccessingHost *      optHost   = nullptr;
-    PsiMediaHost *             mediaHost = nullptr;
+    OptionAccessingHost       *optHost   = nullptr;
+    PsiMediaHost              *mediaHost = nullptr;
 
     std::function<void()>          dataChanged;
     std::function<void(bool)>      noDirty;

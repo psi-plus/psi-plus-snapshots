@@ -242,7 +242,7 @@ public:
 
 class GstMainLoop::Private {
 public:
-    struct BridgeQueueSource{
+    struct BridgeQueueSource {
         GSource               parent;
         GstMainLoop::Private *d = nullptr;
     };

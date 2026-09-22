@@ -1,11 +1,11 @@
 #include "opt_avcall.h"
 
-//#include "../avcall/avcall.h"
-//#include "../avcall/mediadevicewatcher.h"
+// #include "../avcall/avcall.h"
+// #include "../avcall/mediadevicewatcher.h"
 #include "../psimedia/psimedia.h"
-//#include "common.h"
-//#include "iconwidget.h"
-//#include "psioptions.h"
+// #include "common.h"
+// #include "iconwidget.h"
+// #include "psioptions.h"
 #include "gstprovider.h"
 #include "optionaccessinghost.h"
 #include "ui_opt_avcall.h"
@@ -24,9 +24,7 @@ public:
 //----------------------------------------------------------------------------
 
 OptionsTabAvCall::OptionsTabAvCall(PsiMedia::Provider *provider, OptionAccessingHost *optHost, PsiMediaHost *mediaHost,
-                                   QIcon icon) :
-    _icon(icon),
-    provider(provider), optHost(optHost), mediaHost(mediaHost)
+                                   QIcon icon) : _icon(icon), provider(provider), optHost(optHost), mediaHost(mediaHost)
 {
     // connect(MediaDeviceWatcher::instance(), &MediaDeviceWatcher::updated, this, [this]() { restoreOptions(); });
 }

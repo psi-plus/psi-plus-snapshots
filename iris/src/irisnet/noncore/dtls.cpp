@@ -105,7 +105,8 @@ public:
     FingerPrint localFingerprint;
     FingerPrint remoteFingerprint;
     QStringList srtpProfiles;
-    bool        authenticated = false;
+    bool        authenticated       = false;
+    bool        negotiationDeferred = false;
 
     QAbstractSocket::SocketError lastError = QAbstractSocket::UnknownSocketError;
 
@@ -204,14 +205,14 @@ public:
                 remoteFingerprint.setup = Dtls::Active;
             }
             localFingerprint.setup = remoteFingerprint.setup == Dtls::Active ? Dtls::Passive : Dtls::Active;
-            if (localFingerprint.setup == Dtls::Passive)
+            if (localFingerprint.setup == Dtls::Passive && !negotiationDeferred)
                 negotiate();
             return;
         }
         // local is active or passive already, no idea in what scenario. probably something custom
         bool roleConflict = remoteFingerprint.setup == localFingerprint.setup;
         if (!roleConflict && !remoteActiveOrPassive) {
-            if (localFingerprint.setup == Dtls::Passive)
+            if (localFingerprint.setup == Dtls::Passive && !negotiationDeferred)
                 negotiate();
             return; // looks valid
         }
@@ -235,7 +236,7 @@ public:
         } else {
             localFingerprint.setup = remoteFingerprint.setup == Dtls::Active ? Dtls::Passive : Dtls::Active;
         }
-        if (localFingerprint.setup == Dtls::Passive) {
+        if (localFingerprint.setup == Dtls::Passive && !negotiationDeferred) {
             negotiate(); // start server
         }
     }
@@ -368,9 +369,17 @@ void Dtls::acceptIncoming() { d->acceptIncoming(); }
 
 void Dtls::onRemoteAcceptedFingerprint()
 {
-    if (d->localFingerprint.setup == Active) {
+    if (!d->tls && (d->localFingerprint.setup == Active || d->localFingerprint.setup == Passive))
         d->negotiate();
+}
+
+void Dtls::setNegotiationDeferred(bool deferred)
+{
+    if (d->tls) {
+        qWarning("Cannot change DTLS negotiation policy after negotiation has started");
+        return;
     }
+    d->negotiationDeferred = deferred;
 }
 
 const Dtls::FingerPrint &Dtls::localFingerprint() const { return d->localFingerprint; }

@@ -29,7 +29,7 @@ namespace XMPP::Jingle {
 
 extern IRIS_EXPORT const QString JINGLEPUB_NS;
 
-class JinglePub {
+class IRIS_EXPORT JinglePub {
 public:
     struct Meta {
         QString language;

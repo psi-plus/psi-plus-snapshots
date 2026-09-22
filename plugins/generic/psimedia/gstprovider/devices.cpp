@@ -263,17 +263,25 @@ public:
             d.type = PDevice::VideoIn;
 
             auto caps = gst_device_get_caps(gdev);
-            for (guint i = 0; i < gst_caps_get_size(caps); i++) {
-                auto                    structure = gst_caps_get_structure(caps, i);
-                auto                    mime_type = gst_structure_get_name(structure);
-                PsiMedia::PDevice::Caps mediaCaps;
-                mediaCaps.mime = QString::fromLatin1(mime_type);
-                if (gst_structure_get_int(structure, "width", &mediaCaps.video.width)
-                    && gst_structure_get_int(structure, "height", &mediaCaps.video.height)
-                    && gst_structure_get_fraction(structure, "framerate", &mediaCaps.video.framerate_numerator,
-                                                  &mediaCaps.video.framerate_denominator)) {
-                    d.caps.append(mediaCaps);
+            if (caps) {
+                gchar *capsText = gst_caps_to_string(caps);
+                if (capsText) {
+                    d.nativeCaps = QString::fromUtf8(capsText);
+                    g_free(capsText);
                 }
+                for (guint i = 0; i < gst_caps_get_size(caps); i++) {
+                    auto                    structure = gst_caps_get_structure(caps, i);
+                    auto                    mime_type = gst_structure_get_name(structure);
+                    PsiMedia::PDevice::Caps mediaCaps;
+                    mediaCaps.mime = QString::fromLatin1(mime_type);
+                    if (gst_structure_get_int(structure, "width", &mediaCaps.video.width)
+                        && gst_structure_get_int(structure, "height", &mediaCaps.video.height)
+                        && gst_structure_get_fraction(structure, "framerate", &mediaCaps.video.framerate_numerator,
+                                                      &mediaCaps.video.framerate_denominator)) {
+                        d.caps.append(mediaCaps);
+                    }
+                }
+                gst_caps_unref(caps);
             }
         }
 
