@@ -283,9 +283,14 @@ int main(int argc, char **argv)
             return false;
         auto [xml, ack] = from->takeOutgoingUpdate(false);
         check(!xml.isNull() && xml.namespaceURI() == transportNs, "wrong ICE wire namespace");
-        if (iceUdpMode)
+        if (iceUdpMode) {
+            check(!xml.hasAttribute(QStringLiteral("ice2")), "RFC 8445 ice2 leaked into XEP-0176");
             check(xml.firstChildElement(QStringLiteral("gathering-complete")).isNull(),
-                        "gathering-complete leaked into XEP-0176");
+                  "gathering-complete leaked into XEP-0176");
+        } else {
+            check(xml.attribute(QStringLiteral("ice2")) == QStringLiteral("true"),
+                  "XEP-0371 transport did not advertise RFC 8445 ice2");
+        }
         check(to->update(xml), "ICE signaling update rejected");
         if (ack) {
             const bool reject = from == second.data() && !rejectionChecked && !delayedAck;

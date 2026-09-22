@@ -118,7 +118,7 @@ public:
     enum Feature {
         Trickle              = 0x1, // additional candidates will be sent later when discovered
         AggressiveNomination = 0x2, // all the candidates are nominated. so select by priority
-        NotNominatedData     = 0x4, // Data on valid but not nominated candidates is allowed
+        NotNominatedData     = 0x4, // RFC8445/ice2: data may use valid pairs before selection
         RTPOptimization      = 0x8, // Different formula for RTO, not used in RFC8445
         GatheringComplete    = 0x10 // Looks MUST in XEP-0371 but missed in XEP-0176
     };

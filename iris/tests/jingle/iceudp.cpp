@@ -74,11 +74,14 @@ int main(int argc, char **argv)
           "shared ICE bridge changed XEP-0176 semantics");
 
     auto internalWithCompletion = internal.cloneNode(true).toElement();
+    internalWithCompletion.setAttribute(QStringLiteral("ice2"), QStringLiteral("true"));
     internalWithCompletion.appendChild(internalDoc.createElement(QStringLiteral("gathering-complete")));
     const auto withoutCompletion = internalToIceUdp(internalDoc, internalWithCompletion);
     check(!withoutCompletion.isNull()
               && withoutCompletion.firstChildElement(QStringLiteral("gathering-complete")).isNull(),
           "gathering-complete leaked through shared ICE bridge");
+    check(!withoutCompletion.hasAttribute(QStringLiteral("ice2")),
+          "RFC 8445 ice2 leaked into RFC 5245 XEP-0176 signaling");
 
     const auto selected = parse("<remote-candidate component='1' ip='192.0.2.10' port='6000'/>");
     check(selected && selected->remoteCandidate && selected->remoteCandidate->port == 6000,

@@ -80,6 +80,11 @@ add_test(NAME jingle_dtlssrtp COMMAND jingle_dtlssrtp_test)
 add_executable(jingle_iceownership_test iceownership.cpp)
 target_link_libraries(jingle_iceownership_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core)
 add_test(NAME jingle_iceownership COMMAND jingle_iceownership_test)
+add_executable(jingle_icevalidpair_test icevalidpair.cpp)
+target_link_libraries(jingle_icevalidpair_test PRIVATE irisnet iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Network)
+add_test(NAME jingle_icevalidpair COMMAND jingle_icevalidpair_test)
+set_tests_properties(jingle_icevalidpair PROPERTIES TIMEOUT 12)
 add_executable(jingle_iceudp_test iceudp.cpp)
 target_include_directories(jingle_iceudp_test PRIVATE ../../src/xmpp/xmpp-im)
 target_link_libraries(jingle_iceudp_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core

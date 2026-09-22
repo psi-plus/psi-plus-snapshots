@@ -1118,8 +1118,12 @@ private:
         if (readyToSendMedia) {
             return;
         }
-        bool allowNotNominatedData = (localFeatures & NotNominatedData) && (remoteFeatures & NotNominatedData);
-        // if both follow RFC8445 and allow to send data on any valid pair
+        // RFC 8445 Section 12.1 allows application data on a valid
+        // pair before final selection. Section 10 requires an RFC 8445
+        // agent to signal its compliance to the peer using ice2, so the
+        // using protocol must only enable NotNominatedData when it has done
+        // that signaling. The peer need not advertise ice2 in return.
+        const bool allowNotNominatedData = localFeatures & NotNominatedData;
         if (!std::all_of(components.begin(), components.end(),
                          [&](auto &c) { return (allowNotNominatedData && c.hasValidPairs) || c.hasNominatedPairs; })) {
             return;
