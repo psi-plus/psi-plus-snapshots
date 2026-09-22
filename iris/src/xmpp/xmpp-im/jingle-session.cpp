@@ -530,7 +530,10 @@ namespace XMPP { namespace Jingle {
                 signalingContent.insert(content);
                 planStep();
             });
-            QObject::connect(content, &Application::destroyed, q, [this, content]() {
+            QObject::connect(content, &Application::destroying, q, [this, content]() {
+                // contentList is a live-object registry. Drop the raw pointer as
+                // soon as Application teardown begins, before any QObject-level
+                // destruction notification can expose a stale entry.
                 signalingContent.remove(content);
                 initialIncomingUnacceptedContent.removeOne(content);
                 for (auto it = contentList.begin(); it != contentList.end(); ++it) { // optimize for large lists?
@@ -539,6 +542,12 @@ namespace XMPP { namespace Jingle {
                         break;
                     }
                 }
+            });
+            QObject::connect(content, &Application::destroyed, q, [this, content]() {
+                // Idempotent cleanup for auxiliary registries. contentList was
+                // already pruned by Application::destroying.
+                signalingContent.remove(content);
+                initialIncomingUnacceptedContent.removeOne(content);
             });
         }
 
@@ -809,8 +818,14 @@ namespace XMPP { namespace Jingle {
 
         bool handleIncomingContentRemove(const QDomElement &jingleEl, bool rejected = false)
         {
-            QSet<Application *> toRemove;
-            QString             contentTag(QStringLiteral("content"));
+            struct Removal {
+                QPointer<Application> application;
+                ContentKey            key;
+            };
+
+            QList<Removal>       toRemove;
+            QSet<Application *>  seen;
+            QString              contentTag(QStringLiteral("content"));
             for (QDomElement ce = jingleEl.firstChildElement(contentTag); !ce.isNull();
                  ce             = ce.nextSiblingElement(contentTag)) {
                 ContentBase cb(ce);
@@ -819,7 +834,8 @@ namespace XMPP { namespace Jingle {
                                                     XMPP::Stanza::Error::ErrorCond::BadRequest);
                     return false;
                 }
-                Application *app = contentList.value(ContentKey { cb.name, cb.creator });
+                const ContentKey key { cb.name, cb.creator };
+                Application    *app = contentList.value(key);
                 if (rejected && app
                     && (app->creator() != role || app->flags().testFlag(Application::InitialApplication)
                         || (app->state() != State::Pending && app->state() != State::Unacked))) {
@@ -828,29 +844,67 @@ namespace XMPP { namespace Jingle {
                     ErrorUtil::fill(jingleEl.ownerDocument(), *lastError, ErrorUtil::OutOfOrder);
                     return false;
                 }
-                if (app) {
-                    toRemove.insert(app);
+                if (app && !seen.contains(app)) {
+                    seen.insert(app);
+                    toRemove.append(Removal { QPointer<Application>(app), key });
                 }
             }
 
             auto   reasonEl = jingleEl.firstChildElement(QString::fromLatin1("reason"));
             Reason reason = reasonEl.isNull() ? Reason(rejected ? Reason::Decline : Reason::Success) : Reason(reasonEl);
+            QPointer<Session> session(q);
 
-            for (auto app : toRemove) {
-                signalingContent.remove(app);
-                initialIncomingUnacceptedContent.removeAll(app);
-                contentList.remove(ContentKey { app->contentName(), app->creator() });
-                if (app->transport()) {
-                    app->transport()->disconnect(app);
-                    app->transport()->stop();
+            for (const auto &entry : std::as_const(toRemove)) {
+                if (!session)
+                    return true;
+
+                auto app = entry.application;
+                if (!app || contentList.value(entry.key) != app.data())
+                    continue;
+
+                // Detach before invoking transport/application callbacks. Those
+                // callbacks are allowed to synchronously tear down the owning
+                // call and delete Session. A detached application remains this
+                // handler's responsibility until it is explicitly deleted.
+                signalingContent.remove(app.data());
+                initialIncomingUnacceptedContent.removeAll(app.data());
+                contentList.remove(entry.key);
+
+                const auto transport = app->transport();
+                if (transport) {
+                    transport->disconnect(app.data());
+                    transport->stop();
                 }
+
+                if (!session) {
+                    if (app)
+                        delete app.data();
+                    return true;
+                }
+                if (!app)
+                    continue;
+
                 app->incomingRemove(reason);
-                delete app;
+
+                if (!session) {
+                    if (app)
+                        delete app.data();
+                    return true;
+                }
+                if (app)
+                    delete app.data();
+
+                // QObject destruction is another reentrant boundary: external
+                // call owners may dispose the Session when the last RTP content
+                // disappears.
+                if (!session)
+                    return true;
             }
 
-            if (contentList.isEmpty()) {
+            if (!session)
+                return true;
+            if (contentList.isEmpty())
                 terminateReason = reason;
-            }
 
             planStep();
             return true;
@@ -1318,8 +1372,13 @@ namespace XMPP { namespace Jingle {
 
                 Application *app = contentList.value(key);
                 if (!app || !app->transport() || app->transport()->creator() != role
-                    || app->transport()->state() != State::Pending || transportNS != app->transport()->pad()->ns()) {
-                    // Ignore an out-of-order acknowledgement exactly as before.
+                    || app->transport()->state() < State::ApprovedToSend
+                    || app->transport()->state() >= State::Finishing
+                    || transportNS != app->transport()->pad()->ns()) {
+                    // Ignore an acknowledgement that cannot belong to a live,
+                    // locally proposed transport. Transport::State is not the
+                    // transport-replace IQ lifetime: ICE may remain
+                    // ApprovedToSend after the replacement IQ is acknowledged.
                     qInfo("ignore out of order transport-accept");
                     continue;
                 }
@@ -1731,11 +1790,12 @@ namespace XMPP { namespace Jingle {
 
     Session::~Session()
     {
-        // Application::destroyed removes entries from contentList. Detach the
-        // list before deletion so those callbacks cannot invalidate iteration.
-        const auto contents = d->contentList.values();
-        d->contentList.clear();
-        qDeleteAll(contents);
+        // contentList contains only live Applications. Application::~Application
+        // unregisters itself before QObject destruction, so reentrant sibling
+        // deletion simply shrinks this same registry and never leaves a stale
+        // pointer for a later iteration.
+        while (!d->contentList.isEmpty())
+            delete d->contentList.constBegin().value();
         qDebug("session %s destroyed", qPrintable(d->sid));
     }
 

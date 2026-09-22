@@ -41,6 +41,7 @@ struct Stats {
     std::function<void()> onStop;
     std::function<void()> onRemove;
     std::function<void()> onStart;
+    std::function<void()> onDestroy;
 };
 
 class TestApplicationPad final : public ApplicationManagerPad {
@@ -112,6 +113,13 @@ public:
         _state       = State::Pending;
         _flags |= InitialApplication;
         _transport = QSharedPointer<TestTransport>::create(session, Origin::Initiator, stats_);
+    }
+
+    ~TestApplication() override
+    {
+        auto callback = std::move(stats_->onDestroy);
+        if (callback)
+            callback();
     }
 
     void                                setState(State state) override { _state = state; }
@@ -195,6 +203,19 @@ static OwnedXml answer(Application *accepted, bool malformed = false)
         missing.setAttribute(QStringLiteral("name"), QStringLiteral("missing"));
         jingle.appendChild(missing);
     }
+    xml.root = jingle;
+    return xml;
+}
+
+static OwnedXml contentRemove(Application *removed)
+{
+    OwnedXml xml;
+    auto    &doc     = xml.doc;
+    auto     jingle  = doc.createElementNS(NS, QStringLiteral("jingle"));
+    auto     content = doc.createElementNS(NS, QStringLiteral("content"));
+    content.setAttribute(QStringLiteral("creator"), QStringLiteral("initiator"));
+    content.setAttribute(QStringLiteral("name"), removed->contentName());
+    jingle.appendChild(content);
     xml.root = jingle;
     return xml;
 }
@@ -372,6 +393,76 @@ int main(int argc, char **argv)
         check(!sessionGuard, "Session survived its incomingRemove callback deletion");
         check(!videoGuard, "detached omitted content leaked when incomingRemove deleted Session");
         check(stats->starts == 0, "accepted content started after incomingRemove deleted Session");
+    }
+
+    // contentList is a live-object registry. Application teardown must remove
+    // its raw entry before QObject::destroyed, and Session destruction must
+    // tolerate one Application destructor synchronously deleting a sibling.
+    {
+        auto stats = QSharedPointer<Stats>::create();
+        auto session
+            = new Session(client.jingleManager(), Jid(QStringLiteral("peer@example.org/device")), Origin::Initiator);
+        auto first  = new TestApplication(session, QStringLiteral("audio"), stats);
+        auto second = new TestApplication(session, QStringLiteral("video"), stats);
+        QPointer<TestApplication> firstGuard(first), secondGuard(second);
+        session->addContent(first);
+        session->addContent(second);
+        bool firstUnregisteredAtDestroying = false;
+        QObject::connect(first, &Application::destroying, session, [&]() {
+            firstUnregisteredAtDestroying
+                = session->content(QStringLiteral("audio"), Origin::Initiator) == nullptr;
+        });
+        stats->onDestroy = [second]() { delete second; };
+
+        delete session;
+
+        check(firstUnregisteredAtDestroying,
+              "Application remained in contentList after teardown began");
+        check(!firstGuard && !secondGuard,
+              "Session destructor left content alive after reentrant sibling destruction");
+    }
+
+    // content-remove itself is a reentrant lifetime boundary. This mirrors
+    // a UI/call owner synchronously deleting Session when the peer removes the
+    // final failed RTP content.
+    {
+        auto stats = QSharedPointer<Stats>::create();
+        auto session
+            = new Session(client.jingleManager(), Jid(QStringLiteral("peer@example.org/device")), Origin::Initiator);
+        QPointer<Session> sessionGuard(session);
+        auto application = new TestApplication(session, QStringLiteral("audio"), stats);
+        QPointer<TestApplication> applicationGuard(application);
+        session->addContent(application);
+        stats->onRemove = [session]() { delete session; };
+
+        check(session->updateFromXml(Action::ContentRemove, contentRemove(application)),
+              "content-remove did not survive Session deletion from incomingRemove callback");
+        check(!sessionGuard, "Session survived content-remove callback deletion");
+        check(!applicationGuard, "detached content leaked after content-remove deleted Session");
+        check(stats->removes == 1, "content-remove callback did not run exactly once");
+    }
+
+    // Removing one ordinary content must not disturb a live sibling. The
+    // Session registry must drop only the removed Application and retain the
+    // surviving content as a valid live entry.
+    {
+        auto    stats = QSharedPointer<Stats>::create();
+        Session session(client.jingleManager(), Jid(QStringLiteral("peer@example.org/device")), Origin::Initiator);
+        TestApplication *audio = nullptr, *video = nullptr;
+        addInitialPair(session, stats, &audio, &video);
+        QPointer<TestApplication> audioGuard(audio), videoGuard(video);
+
+        check(session.updateFromXml(Action::ContentRemove, contentRemove(audio)),
+              "ordinary content-remove was rejected");
+        check(!audioGuard, "content-remove retained the removed application");
+        check(videoGuard && session.content(QStringLiteral("video"), Origin::Initiator) == videoGuard.data(),
+              "content-remove removed or invalidated a neighboring application");
+        check(session.content(QStringLiteral("audio"), Origin::Initiator) == nullptr,
+              "content-remove left a stale application in contentList");
+        check(stats->removes == 1 && stats->stops == 1,
+              "content-remove performed unexpected sibling cleanup");
+        check(session.state() < State::Finishing,
+              "content-remove of one sibling terminated the whole session");
     }
 
     // Ordinary content-accept must not inherit the initial-session subset rule.

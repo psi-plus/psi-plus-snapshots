@@ -172,6 +172,8 @@ add_test(NAME jingle_transportreplace_transport_reject
     COMMAND jingle_transportreplaceprotocol_test transport-reject)
 add_test(NAME jingle_transportreplace_failed_iq_fallback
     COMMAND jingle_transportreplaceprotocol_test failed-iq-fallback)
+add_test(NAME jingle_transportreplace_approved_to_send_accept
+    COMMAND jingle_transportreplaceprotocol_test approved-to-send-accept)
 add_test(NAME jingle_transportreplace_malformed_accept_session
     COMMAND jingle_transportreplaceprotocol_test malformed-accept)
 add_test(NAME jingle_transportreplace_duplicate_accept

@@ -14,6 +14,10 @@
 #include <memory>
 #include <optional>
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+Q_MOC_INCLUDE(<iris/xmpp-im/xmpp_message.h>)
+#endif
+
 namespace XMPP { class Message; }
 
 namespace XMPP::Jingle::RTP {

@@ -558,8 +558,27 @@ QDomElement Application::makeLocalAnswer()
 }
 bool Application::isTransportReplaceEnabled() const
 {
-    // Coordinated replacement of a shared RTP connection is not implemented yet.
-    return _state < State::Connecting;
+    if (_state < State::Connecting)
+        return true;
+    if (_state != State::Connecting)
+        return false;
+
+    // Connecting is not an established call: ICE/DTLS may still fail before
+    // the secure association ever becomes ready. Allow ordinary per-content
+    // fallback in that state. A negotiated multi-content BUNDLE still needs a
+    // coordinated full-group replacement, so keep that case behind the
+    // existing active/shared-migration gate.
+    auto pad = _pad.staticCast<Pad>();
+    auto session = pad ? pad->session() : nullptr;
+    if (!session)
+        return false;
+    const auto groups = session->role() == Origin::Initiator ? session->remoteGroupings() : session->groupings();
+    for (const auto &group : groups) {
+        if (group.semantics == QLatin1String("BUNDLE") && group.contents.size() > 1
+            && group.contents.contains(_contentName))
+            return false;
+    }
+    return true;
 }
 void Application::prepare()
 {
@@ -677,6 +696,18 @@ void Application::prepareTransport()
     if (!association_) {
         remove(Reason::SecurityError, QStringLiteral("RTP security association unavailable"));
         return;
+    }
+
+    // On a pre-connected transport fallback the RTP codec/media negotiation is
+    // already configured. Move its secure endpoint binding to the replacement
+    // association now; no codec renegotiation is needed. bindSecureTransport()
+    // atomically retires the old per-content association binding.
+    if (configured_) {
+        if (!remote || !pad || !pad->bindSecureTransport(this, association_, *local, *remote)) {
+            remove(Reason::FailedApplication, QStringLiteral("Secure RTP replacement binding failed"));
+            return;
+        }
+        secureBound_ = true;
     }
 
     const QPointer<Transport> securityTransport(preparing.data());

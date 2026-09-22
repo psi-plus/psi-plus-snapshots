@@ -203,6 +203,44 @@ static void validIceSelection()
           "RTP application selected the wrong transport for ICE caps");
 }
 
+static void replacementDisabledAfterConnecting()
+{
+    TcpPortReserver reserver;
+    Client          client;
+    client.setTcpPortReserver(&reserver);
+
+    auto rtp = client.jingleManager()->rtpManager();
+    rtp->setMediaProvider(std::make_shared<Provider>());
+    // Keep a second compatible ICE namespace available so selectNextTransport()
+    // would return the same unconsumed candidate forever if setTransport()
+    // rejected replacement after Connecting.
+    rtp->setTransportNamespaces({ J::ICE::NS, J::ICE::NS_ICE_UDP });
+    if (rtp->discoFeatures().isEmpty())
+        return;
+
+    const Jid peer(QStringLiteral("connecting-fallback-peer@example.test/device"));
+    QStringList caps = secureAudioProfile(rtp);
+    caps += client.jingleICEManager()->discoFeatures();
+    setPeerFeatures(client, peer, caps);
+
+    J::Session session(client.jingleManager(), peer, J::Origin::Initiator);
+    auto app = dynamic_cast<J::RTP::Application *>(
+        rtp->createOutgoing(&session, QStringLiteral("audio"), J::Origin::Both));
+    check(app, "failed to create RTP application for connecting fallback regression");
+    check(app->selectNextTransport(), "failed to install initial RTP transport");
+    check(app->transport() && app->transport()->pad()->ns() == J::ICE::NS_ICE_UDP,
+          "fixture did not leave the alternate ICE namespace available");
+
+    const auto first = app->transport();
+    app->setState(J::State::Connecting);
+    check(app->selectNextTransport(), "RTP did not fall back after pre-connected transport failure");
+    check(app->transport() && app->transport() != first
+              && app->transport()->pad()->ns() == J::ICE::NS,
+          "RTP fallback did not select the remaining ICE transport");
+    check(app->state() == J::State::Connecting,
+          "pre-connected RTP fallback incorrectly terminated the application");
+}
+
 static void incompatibleTransportCaps(const QStringList &extraCaps, const char *message)
 {
     TcpPortReserver reserver;
@@ -241,6 +279,7 @@ int main(int argc, char **argv)
     localAdvertisement();
     peerProfileRequirements();
     validIceSelection();
+    replacementDisabledAfterConnecting();
 
     {
         Client probe;

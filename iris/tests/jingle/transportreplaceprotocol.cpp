@@ -328,6 +328,26 @@ static void testFailedIqSelectsFallback(Client &client)
           "failed transport-replace IQ did not run through transport selector recovery");
 }
 
+static void testIceLikeApprovedToSendTransportAccept(Client &client)
+{
+    J::Session session(client.jingleManager(), Jid(QStringLiteral("ice-like-accept@example.test/device")),
+                       J::Origin::Initiator);
+    auto local = makeTransport(session, J::Origin::Initiator, J::State::ApprovedToSend,
+                               QStringLiteral("local-replacement"));
+    auto app = addApplication(session, local, std::make_unique<TestSelector>());
+    app->markReplaceInProgress();
+
+    QDomDocument doc;
+    const bool ok
+        = session.updateFromXml(J::Action::TransportAccept, payload(doc, QStringLiteral("accepted-replacement")));
+
+    check(ok, "ICE-like ApprovedToSend transport-accept was rejected");
+    check(!app->replaceInProgress(), "valid ICE-like transport-accept did not complete replacement state");
+    check(local->id() == QLatin1String("accepted-replacement"),
+          "valid ICE-like transport-accept did not commit remote transport parameters");
+    check(local->starts() == 1, "valid ICE-like transport-accept did not start replacement transport");
+}
+
 static void testMalformedTransportAcceptRejectedAtomically(Client &client)
 {
     J::Session session(client.jingleManager(), Jid(QStringLiteral("peer@example.test/device")), J::Origin::Initiator);
@@ -400,6 +420,8 @@ int main(int argc, char **argv)
         testTransportRejectSelectsFallback(client);
     else if (test == QLatin1String("failed-iq-fallback"))
         testFailedIqSelectsFallback(client);
+    else if (test == QLatin1String("approved-to-send-accept"))
+        testIceLikeApprovedToSendTransportAccept(client);
     else if (test == QLatin1String("malformed-accept"))
         testMalformedTransportAcceptRejectedAtomically(client);
     else if (test == QLatin1String("duplicate-accept"))

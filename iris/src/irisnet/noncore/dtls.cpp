@@ -20,12 +20,14 @@
 #include "xmpp_xmlcommon.h"
 
 #include <array>
+#include <utility>
 
 #include <QtCrypto>
 #if QT_VERSION >= QT_VERSION_CHECK(5, 10, 0)
 #include <QRandomGenerator>
 #endif
 #include <QAbstractSocket>
+#include <QList>
 
 #define DTLS_DEBUG(msg, ...) qDebug("dtls: " msg, ##__VA_ARGS__)
 
@@ -108,6 +110,9 @@ public:
     bool        authenticated       = false;
     bool        negotiationDeferred = false;
 
+    QList<QByteArray> pendingIncomingDatagrams;
+    int               pendingIncomingBytes = 0;
+
     QAbstractSocket::SocketError lastError = QAbstractSocket::UnknownSocketError;
 
     Private(Dtls *q) : QObject(q), q(q) { }
@@ -122,7 +127,8 @@ public:
 
     void tls_handshaken()
     {
-        DTLS_DEBUG("tls handshaken");
+        DTLS_DEBUG("[%p] tls handshaken local-setup=%d remote-setup=%d", q, int(localFingerprint.setup),
+                   int(remoteFingerprint.setup));
         auto peerIdentity = tls->peerIdentityResult();
         if (peerIdentity == QCA::TLS::Valid || peerIdentity == QCA::TLS::InvalidCertificate) {
             const auto chain = tls->peerCertificateChain();
@@ -159,7 +165,8 @@ public:
     void tls_error()
     {
         authenticated = false;
-        DTLS_DEBUG("tls error: %d", tls->errorCode());
+        DTLS_DEBUG("[%p] tls error: qca=%d local-setup=%d remote-setup=%d", q, tls->errorCode(),
+                   int(localFingerprint.setup), int(remoteFingerprint.setup));
         switch (tls->errorCode()) {
         case QCA::TLS::ErrorSignerExpired:
         case QCA::TLS::ErrorSignerInvalid:
@@ -182,6 +189,9 @@ public:
 
     void setRemoteFingerprint(const FingerPrint &fp)
     {
+        DTLS_DEBUG("[%p] set remote fingerprint setup=%d valid=%d current-local-setup=%d started=%d deferred=%d",
+                   q, int(fp.setup), int(fp.isValid()), int(localFingerprint.setup), int(tls != nullptr),
+                   int(negotiationDeferred));
         bool needRestart = false;
         if (tls) {
             if (remoteFingerprint == fp)
@@ -236,6 +246,8 @@ public:
         } else {
             localFingerprint.setup = remoteFingerprint.setup == Dtls::Active ? Dtls::Passive : Dtls::Active;
         }
+        DTLS_DEBUG("[%p] accept incoming selected local-setup=%d remote-setup=%d deferred=%d", q,
+                   int(localFingerprint.setup), int(remoteFingerprint.setup), int(negotiationDeferred));
         if (localFingerprint.setup == Dtls::Passive && !negotiationDeferred) {
             negotiate(); // start server
         }
@@ -243,6 +255,9 @@ public:
 
     void negotiate()
     {
+        DTLS_DEBUG("[%p] negotiate local-setup=%d remote-setup=%d remote-fingerprint-valid=%d profiles=%d", q,
+                   int(localFingerprint.setup), int(remoteFingerprint.setup), int(remoteFingerprint.isValid()),
+                   int(srtpProfiles.size()));
         authenticated = false;
         if (tls) {
             delete tls;
@@ -288,12 +303,19 @@ public:
         connect(tls, &QCA::TLS::error, this, &Dtls::Private::tls_error);
 
         if (localFingerprint.setup == Dtls::Passive) {
-            qDebug("Starting DTLS server");
+            DTLS_DEBUG("[%p] starting server", q);
             tls->startServer();
         } else {
-            qDebug("Starting DTLS client");
+            DTLS_DEBUG("[%p] starting client", q);
             tls->startClient();
         }
+
+        auto queued = std::move(pendingIncomingDatagrams);
+        pendingIncomingBytes = 0;
+        if (!queued.isEmpty())
+            DTLS_DEBUG("[%p] replay %d pre-start datagram(s)", q, int(queued.size()));
+        for (const auto &datagram : std::as_const(queued))
+            tls->writeIncoming(datagram);
     }
 
     void generateCertificate()
@@ -363,12 +385,16 @@ void Dtls::initOutgoing()
         d->generateCertificate();
     }
     d->localFingerprint.setup = ActPass;
+    DTLS_DEBUG("[%p] init outgoing local=%s remote=%s setup=actpass deferred=%d", this,
+               qPrintable(d->localJid), qPrintable(d->remoteJid), int(d->negotiationDeferred));
 }
 
 void Dtls::acceptIncoming() { d->acceptIncoming(); }
 
 void Dtls::onRemoteAcceptedFingerprint()
 {
+    DTLS_DEBUG("[%p] remote fingerprint accepted local-setup=%d remote-setup=%d started=%d", this,
+               int(d->localFingerprint.setup), int(d->remoteFingerprint.setup), int(d->tls != nullptr));
     if (!d->tls && (d->localFingerprint.setup == Active || d->localFingerprint.setup == Passive))
         d->negotiate();
 }
@@ -452,11 +478,11 @@ QByteArray Dtls::readDatagram()
 QByteArray Dtls::readOutgoingDatagram()
 {
     if (!d->tls) {
-        DTLS_DEBUG("negotiation hasn't started yet. ignore readOutgoingDatagram");
+        DTLS_DEBUG("[%p] negotiation hasn't started yet. ignore readOutgoingDatagram", this);
         return {};
     }
     auto ba = d->tls->readOutgoing();
-    // DTLS_DEBUG("read outgoing packet of %d bytes", ba.size());
+    DTLS_DEBUG("[%p] outgoing datagram bytes=%d authenticated=%d", this, int(ba.size()), int(d->authenticated));
     return ba;
 }
 
@@ -472,9 +498,25 @@ void Dtls::writeDatagram(const QByteArray &data)
 
 void Dtls::writeIncomingDatagram(const QByteArray &data)
 {
-    // DTLS_DEBUG("write incoming %d bytes for decryption\n", data.size());
+    DTLS_DEBUG("[%p] incoming datagram bytes=%d started=%d authenticated=%d", this, int(data.size()),
+               int(d->tls != nullptr), int(d->authenticated));
     if (!d->tls) {
-        DTLS_DEBUG("negotiation hasn't started yet. ignore incoming datagram");
+        if (data.isEmpty())
+            return;
+
+        constexpr int MaxPendingDatagrams = 16;
+        constexpr int MaxPendingBytes     = 64 * 1024;
+        if (d->pendingIncomingDatagrams.size() >= MaxPendingDatagrams
+            || d->pendingIncomingBytes + data.size() > MaxPendingBytes) {
+            DTLS_DEBUG("[%p] negotiation hasn't started yet. drop excess incoming datagram bytes=%d", this,
+                       int(data.size()));
+            return;
+        }
+
+        d->pendingIncomingDatagrams.append(data);
+        d->pendingIncomingBytes += data.size();
+        DTLS_DEBUG("[%p] negotiation hasn't started yet. queue incoming datagram bytes=%d pending=%d/%d", this,
+                   int(data.size()), int(d->pendingIncomingDatagrams.size()), d->pendingIncomingBytes);
         return;
     }
     d->tls->writeIncoming(data);

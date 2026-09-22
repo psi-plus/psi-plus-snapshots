@@ -578,15 +578,33 @@ namespace XMPP { namespace Jingle { namespace ICE {
     {
     }
 
+    static QByteArray associationDebugId(const IceConnection *network)
+    {
+        return network ? network->secureRtpAssociationId.toHex().left(12) : QByteArrayLiteral("none");
+    }
+
     static void startAssociationDtlsIfReady(IceConnection *network)
     {
+        const auto id = associationDebugId(network);
+        qInfo("jingle-ice[%s] DTLS gate runtime=%d started=%d fingerprint-acked=%d ice=%d can-send=%d components=%d",
+              id.constData(), int(network && network->runtime),
+              int(network && network->runtime && network->runtime->dtlsAcceptanceStarted),
+              int(network && network->runtime && network->runtime->remoteFingerprintAccepted),
+              int(network && network->ice), int(network && network->ice && network->ice->canSendMedia()),
+              network ? int(network->components.size()) : 0);
         if (!network || !network->runtime || network->runtime->dtlsAcceptanceStarted
             || !network->runtime->remoteFingerprintAccepted || !network->ice || !network->ice->canSendMedia())
             return;
         network->runtime->dtlsAcceptanceStarted = true;
         for (const auto &component : std::as_const(network->components)) {
-            if (component.dtls)
+            if (component.dtls) {
+                qInfo("jingle-ice[%s] start DTLS component=%d dtls=%p", id.constData(),
+                      component.componentIndex, component.dtls);
                 component.dtls->onRemoteAcceptedFingerprint();
+            } else {
+                qInfo("jingle-ice[%s] no DTLS object for component=%d", id.constData(),
+                      component.componentIndex);
+            }
         }
     }
 
@@ -683,7 +701,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
         QObject::connect(ice, &Ice176::readyToSendMedia, network, [network, currentIce]() {
             if (!currentIce() || !network->runtime)
                 return;
-            qDebug("ICE reported ready to send media!");
+            const auto id = associationDebugId(network);
+            qInfo("jingle-ice[%s] ICE ready-to-send fingerprint-acked=%d dtls-started=%d", id.constData(),
+                  int(network->runtime->remoteFingerprintAccepted),
+                  int(network->runtime->dtlsAcceptanceStarted));
             if (!network->components.isEmpty() && network->components[0].dtls) {
                 startAssociationDtlsIfReady(network);
                 return;
@@ -993,8 +1014,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
         bool setupDtls(int componentIndex)
         {
-            qDebug("Setup DTLS");
             Q_ASSERT(componentIndex < network->components.length());
+            const auto id = associationDebugId(network);
+            qInfo("jingle-ice[%s] setup DTLS component=%d transport=%p grouped=%d local=%d remote=%d",
+                  id.constData(), componentIndex, q, int(groupManagedNetwork), int(q->isLocal()), int(q->isRemote()));
             if (network->components[componentIndex].dtls) {
                 if (componentIndex == 0)
                     pendingActions |= NewFingerprint;
@@ -1065,10 +1088,23 @@ namespace XMPP { namespace Jingle { namespace ICE {
 #endif
             });
             dtls->connect(dtls, &Dtls::readyReadOutgoing, network, [net = network, componentIndex]() {
-                net->ice->writeDatagram(componentIndex, net->components[componentIndex].dtls->readOutgoingDatagram());
+                if (!net->ice || componentIndex < 0 || componentIndex >= net->components.size())
+                    return;
+                auto *componentDtls = net->components[componentIndex].dtls;
+                if (!componentDtls)
+                    return;
+                const auto id = associationDebugId(net);
+                for (auto packet = componentDtls->readOutgoingDatagram(); !packet.isEmpty();
+                     packet      = componentDtls->readOutgoingDatagram()) {
+                    qInfo("jingle-ice[%s] DTLS outgoing component=%d dtls=%p bytes=%d ice-can-send=%d",
+                          id.constData(), componentIndex, componentDtls, int(packet.size()),
+                          int(net->ice->canSendMedia()));
+                    net->ice->writeDatagram(componentIndex, packet);
+                }
             });
             dtls->connect(dtls, &Dtls::connected, network, [net = network, componentIndex, dtls]() {
-                qDebug("Dtls::connected");
+                const auto id = associationDebugId(net);
+                qInfo("jingle-ice[%s] DTLS connected component=%d dtls=%p", id.constData(), componentIndex, dtls);
                 auto &c = net->components[componentIndex];
 #ifdef JINGLE_SCTP
                 if (c.sctp) {
@@ -1083,7 +1119,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
             });
             dtls->connect(dtls, &Dtls::errorOccurred, network,
                           [net = network, componentIndex](QAbstractSocket::SocketError error) {
-                              qDebug("dtls failed for component %d", componentIndex);
+                              const auto id = associationDebugId(net);
+                              qWarning("jingle-ice[%s] DTLS failed component=%d error=%d", id.constData(),
+                                       componentIndex, int(error));
                               auto &c = net->components[componentIndex];
 #ifdef JINGLE_SCTP
                               if (c.sctp)
@@ -1093,7 +1131,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
                                   c.rawConnection->onError(error);
                           });
             dtls->connect(dtls, &Dtls::closed, network, [net = network, componentIndex]() {
-                qDebug("dtls closed for component %d", componentIndex);
+                const auto id = associationDebugId(net);
+                qInfo("jingle-ice[%s] DTLS closed component=%d", id.constData(), componentIndex);
                 auto &c = net->components[componentIndex];
                 if (c.rawConnection)
                     c.rawConnection->onDisconnected(RawConnection::DtlsClosed);
@@ -1565,7 +1604,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
     // we got content acceptance from any side and now can connect
     void Transport::start()
     {
-        qDebug("Starting connecting");
+        const auto id = associationDebugId(d->network);
+        qInfo("jingle-ice[%s] transport start transport=%p state=%d grouped=%d checks-started=%d", id.constData(),
+              this, int(_state), int(d->groupManagedNetwork),
+              int(d->network && d->network->runtime && d->network->runtime->checksStarted));
         if (_state >= State::Finishing)
             return;
         if (!d->network || !d->network->ice) {
@@ -1692,6 +1734,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
                                                  // then on response we are sure remote server started dtls server and
                                                  // we can connect now.
                                                  if (hasFingerprint && d->network && d->network->runtime) {
+                                                     const auto id = associationDebugId(d->network);
+                                                     qInfo("jingle-ice[%s] fingerprint IQ acknowledged transport=%p ice-can-send=%d",
+                                                           id.constData(), this,
+                                                           int(d->network->ice && d->network->ice->canSendMedia()));
                                                      d->remoteAcceptedFingerprint = true;
                                                      d->network->runtime->remoteFingerprintAccepted = true;
                                                      startAssociationDtlsIfReady(d->network);

@@ -109,6 +109,8 @@ bool SecureRtpAssociation::receiveMuxed(QByteArray bytes)
 {
     const auto kind = classifyDatagram(bytes);
     if (kind == DatagramKind::Dtls) {
+        qInfo("jingle-srtp[%s] DTLS incoming dtls=%p bytes=%d ready=%d", associationId_.toHex().left(12).constData(),
+              dtls_.data(), int(bytes.size()), int(isReady()));
         if (dtls_)
             dtls_->writeIncomingDatagram(bytes);
         return true;

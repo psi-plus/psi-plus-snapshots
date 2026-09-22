@@ -286,6 +286,9 @@ namespace XMPP { namespace Jingle {
         void expectSingleConnection(TransportFeatures features, std::function<void(Connection::Ptr)> &&ready);
 
     signals:
+        // Emitted from Application::~Application(), before QObject destruction,
+        // so Session can drop raw registry entries as soon as teardown begins.
+        void destroying();
         void updated(); // signal for session it has to send updates to remote. so it will follow with
                         // takeOutgoingUpdate() eventually
         void stateChanged(State);

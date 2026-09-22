@@ -139,7 +139,7 @@ namespace XMPP { namespace Jingle {
         QPointer<Application> application_;
     };
 
-    Application::~Application() = default;
+    Application::~Application() { emit destroying(); }
 
     void Application::ensureTransportReplaceTieBreakResolver()
     {
@@ -645,12 +645,16 @@ namespace XMPP { namespace Jingle {
 
     void Application::expectSingleConnection(TransportFeatures features, std::function<void(Connection::Ptr)> &&ready)
     {
+        const auto expected = _transport.toWeakRef();
         new ConnectionWaiter(
             features, std::move(ready),
-            [this]() {
+            [this, expected]() {
+                auto failedTransport = expected.lock();
+                if (!failedTransport || _transport != failedTransport)
+                    return;
                 qDebug("Application::expectSingleConnection: stopping failed %s transport",
-                       qPrintable(_transport->pad()->ns()));
-                _transport->stop();
+                       qPrintable(failedTransport->pad()->ns()));
+                failedTransport->stop();
                 selectNextTransport();
             },
             this);
@@ -685,6 +689,15 @@ namespace XMPP { namespace Jingle {
 
         if (!current())
             return false;
+
+        // If the application policy cannot migrate the current transport,
+        // do not enter a selector loop that may keep returning the same
+        // unconsumed candidate forever. RTP deliberately allows this while an
+        // unbundled call is still Connecting, but not for established media or
+        // an unsupported shared-transport migration.
+        if (_transport && !isTransportReplaceEnabled())
+            return failNoTransport();
+
         const bool hasMore = _transportSelector->hasMoreTransports();
         if (!current())
             return false;
