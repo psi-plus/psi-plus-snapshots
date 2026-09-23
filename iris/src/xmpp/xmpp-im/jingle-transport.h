@@ -140,6 +140,11 @@ namespace XMPP { namespace Jingle {
         // returns all the available transport features while addChannel() can use just a subset of them
         virtual TransportFeatures features() const = 0;
 
+        // Transport capability: true when this transport can multiplex multiple
+        // Jingle contents over one physical association. Grouping requires both
+        // this capability and Application::allowsSharedTransport().
+        virtual bool supportsSharedTransport() const { return false; }
+
         // a component is basically is a subconnection usually with a dedicated IP port. A component may have one or
         // more channels. Components are pretty much generic but channels aren't. Channels give connection objects,
         // while components are rather indexes.

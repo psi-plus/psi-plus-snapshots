@@ -81,7 +81,7 @@ public:
     QDomElement makeLocalAnswer() override { return {}; }
     void prepare() override { }
     void start() override { }
-    bool supportsSharedTransport() const override { return true; }
+    bool allowsSharedTransport() const override { return true; }
     void remove(Jingle::Reason::Condition = Jingle::Reason::Success, const QString & = QString()) override { }
     void incomingRemove(const Jingle::Reason &) override { }
 

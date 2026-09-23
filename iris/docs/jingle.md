@@ -186,6 +186,14 @@ The ICE data-oriented/ordered feature advertisement is conditional on `JINGLE_SC
 `Dtls::isSupported()`. Registering the ICE manager alone does not guarantee that it can carry
 file transfers in a particular build.
 
+Shared transport eligibility has two independent gates. An application returns
+`allowsSharedTransport()` when its semantics permit sharing, while a concrete transport returns
+`supportsSharedTransport()` when it can actually multiplex several Jingle contents over one
+physical association. Initial Session grouping intersects both gates and peer grouping caps.
+Compatible contents are BUNDLEd automatically by default; explicit `setGroupings()` calls or
+`setAutomaticGroupingEnabled(false)` override that policy. This allows RTP and an ICE/SCTP file
+transfer to share one ICE/DTLS path without making IBB or S5B implicitly shareable.
+
 ## Pads in more detail
 
 `SessionManagerPad` is the common base for application and transport pads. It provides hooks that

@@ -74,7 +74,7 @@ public:
     QDomElement makeLocalAnswer() override { return {}; }
     void prepare() override { }
     void start() override { }
-    bool supportsSharedTransport() const override { return true; }
+    bool allowsSharedTransport() const override { return true; }
     void remove(J::Reason::Condition = J::Reason::Success, const QString & = {}) override { }
     void incomingRemove(const J::Reason &) override { }
 

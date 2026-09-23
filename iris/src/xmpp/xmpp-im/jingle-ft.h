@@ -68,6 +68,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         Reason                                    lastReason() const override;
 
         bool isTransportReplaceEnabled() const override;
+        bool allowsSharedTransport() const override { return true; }
         void remove(Reason::Condition cond = Reason::Success, const QString &comment = QString()) override;
 
         void setFile(const File &file);

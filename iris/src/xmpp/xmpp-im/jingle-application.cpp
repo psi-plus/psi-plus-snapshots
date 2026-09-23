@@ -863,6 +863,9 @@ namespace XMPP { namespace Jingle {
 
         _transport = replacement;
 
+        if (auto session = _pad ? _pad->session() : nullptr)
+            session->refreshAutomaticGroupings();
+
         connect(_transport.data(), &Transport::updated, this, &Application::updated);
         connect(_transport.data(), &Transport::failed, this, [this]() { selectNextTransport(); });
 

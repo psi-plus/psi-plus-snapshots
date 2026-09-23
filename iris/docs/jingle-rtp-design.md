@@ -19,10 +19,15 @@ remain outside Iris.
 | Routing | Authenticated BundleRouter wired into RTP::Pad per SecureRtpAssociation ingress | Per-content RTP/RTCP routing is live; SharedRtcp still lacks group-level media ingress |
 | Interoperability | Local UDP/DTLS/SRTP, negotiated-BUNDLE regressions and server-mediated Psi↔Psi audio | No Conversations result or external live BUNDLE peer result is claimed |
 
-Advertising the grouping capability alone still does not force BUNDLE: the peer answer must
-negotiate a compatible group and every member must support sharing. Once negotiated, ICE::Pad
-uses the session-local group registry to bind members to a shared association. JMI and
-active-call group-coordinated recovery remain separate work.
+Initial grouping is capability-driven by default. If the peer advertises grouping support,
+the Session automatically proposes compatible local contents and automatically accepts a compatible
+subset of an offered BUNDLE. Eligibility is the intersection of application policy
+(`Application::allowsSharedTransport()`) and the selected concrete transport capability
+(`Transport::supportsSharedTransport()`). Explicit `setGroupings()` calls take ownership of
+the policy for that Session, and `setAutomaticGroupingEnabled(false)` provides an opt-out.
+`GroupNegotiation` still validates the complete offer/answer and `ConnectionGroupTransaction`
+remains the only shared-association commit path. JMI and active-call group-coordinated recovery
+remain separate work.
 
 ## Object and ownership model
 
@@ -60,8 +65,10 @@ flowchart TD
 ```
 
 Per-content `Transport` objects keep signaling and replacement identity even when several
-BUNDLE members share one `IceConnection`/DTLS/SRTP association. The generic byte/datagram
-`Connection` API used by file transfer is separate from RTP's `PacketTransport` interface.
+BUNDLE members share one `IceConnection`/DTLS association. RTP obtains SRTP key material through
+`PacketTransport`, while a data-oriented application can use SCTP/data channels through the
+generic `Connection` API on that same DTLS association. These application APIs stay separate even
+when their physical network path is shared.
 
 ## Descriptions and initial negotiation
 
@@ -197,6 +204,11 @@ Production `ICE::Pad` owns a session-local `ConnectionRegistry`. Independent con
 their own membership, while negotiated BUNDLE contents are staged through
 `ConnectionGroupTransaction` and resolve through `groupedConnectionFor()` to one shared
 `IceConnection`. Transport objects remain per-content and retain signaling/generation identity.
+Initial preparation preselects candidate transports for all local grouped contents before any one
+application starts its concrete transport, so synchronous SCTP/file-transfer preparation cannot
+accidentally allocate an independent path ahead of asynchronous RTP preparation. A shared DTLS
+created first by a data-channel member may acquire SRTP profiles and a `SecureRtpAssociation`
+until the DTLS engine actually starts; after startup the configuration remains fail-closed.
 A full negotiated BUNDLE replacement stages a fresh group and switches ownership atomically only
 after every member has bound; the old association is then retired.
 

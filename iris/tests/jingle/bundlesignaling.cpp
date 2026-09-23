@@ -13,6 +13,7 @@
 #include <iris/jingle-ice.h>
 #undef private
 
+#include <iris/jingle-ft.h>
 #include <iris/jingle-rtp.h>
 #include <iris/xmpp_caps.h>
 #include <iris/xmpp_client.h>
@@ -169,12 +170,13 @@ static WireOffer makeOffer(Client &client, TcpPortReserver *reserver)
 
     const QString audioName = audio->contentName();
     const QString videoName = video->contentName();
-    check(session.setGroupings(
-              { J::ContentGroup { QStringLiteral("BUNDLE"), { audioName, videoName } } }),
-          "initiator BUNDLE proposal rejected");
 
     audio->prepare();
     video->prepare();
+    check(session.groupings().size() == 1
+              && session.groupings().first().semantics == QLatin1String("BUNDLE")
+              && session.groupings().first().contents == QStringList({ audioName, videoName }),
+          "caps-driven initiator did not automatically propose RTP BUNDLE");
 
     auto audioTransport = qSharedPointerDynamicCast<J::ICE::Transport>(audio->transport());
     auto videoTransport = qSharedPointerDynamicCast<J::ICE::Transport>(video->transport());
@@ -345,6 +347,88 @@ static void acknowledgeJingleTask(RootTaskKeeper &keeper, const Jid &peer)
     keeper.release();
 }
 
+#ifdef IRIS_TEST_SCTP
+static void exerciseMixedRtpFileTransferBundle(TcpPortReserver *reserver)
+{
+    Client client;
+    client.setTcpPortReserver(reserver);
+    client.jingleICEManager()->setSelfAddress(QHostAddress::LocalHost);
+    auto rtp = client.jingleManager()->rtpManager();
+    rtp->setMediaProvider(std::make_shared<Provider>());
+    rtp->setTransportNamespaces({ J::ICE::NS });
+
+    const Jid peer(QStringLiteral("mixed@example.test/device"));
+    auto features = rtpIcePeerFeatures(client, rtp);
+    // Force the data-oriented application onto the exact same ICE namespace
+    // as RTP so this fixture tests one physical ICE/DTLS association rather
+    // than transport preference ordering.
+    features.removeAll(QStringLiteral("urn:xmpp:jingle:transports:s5b:1"));
+    features.removeAll(QStringLiteral("urn:xmpp:jingle:transports:ibb:1"));
+    features.removeAll(QStringLiteral("urn:xmpp:jingle:transports:ice-udp:1"));
+    setPeerFeatures(client, peer, features);
+
+    J::Session session(client.jingleManager(), peer, J::Origin::Initiator);
+    auto audio = dynamic_cast<J::RTP::Application *>(
+        rtp->createOutgoing(&session, QStringLiteral("audio"), J::Origin::Both));
+    auto video = dynamic_cast<J::RTP::Application *>(
+        rtp->createOutgoing(&session, QStringLiteral("video"), J::Origin::Both));
+    check(audio && video, "mixed BUNDLE fixture could not create RTP applications");
+
+    std::unique_ptr<J::Application> ftOwner(
+        session.newContent(J::FileTransfer::NS, J::Origin::Initiator));
+    auto ft = dynamic_cast<J::FileTransfer::Application *>(ftOwner.get());
+    check(ft, "mixed BUNDLE fixture could not create file-transfer application");
+    J::FileTransfer::File file;
+    file.setName(QStringLiteral("frame-metadata.bin"));
+    file.setSize(32);
+    ft->setFile(file);
+    auto ftContent = ftOwner.release();
+    session.addContent(ftContent);
+
+    RootTaskKeeper pendingInitiate(client.rootTask());
+    session.initiate();
+
+    auto audioTransport = qSharedPointerDynamicCast<J::ICE::Transport>(audio->transport());
+    auto videoTransport = qSharedPointerDynamicCast<J::ICE::Transport>(video->transport());
+    auto ftTransport = qSharedPointerDynamicCast<J::ICE::Transport>(ft->transport());
+    check(audioTransport && videoTransport && ftTransport,
+          "mixed BUNDLE initial transport preselection did not choose ICE for every content");
+
+    const auto groups = session.groupings();
+    check(groups.size() == 1 && groups.first().semantics == QLatin1String("BUNDLE")
+              && groups.first().contents.size() == 3
+              && groups.first().contents.contains(audio->contentName())
+              && groups.first().contents.contains(video->contentName())
+              && groups.first().contents.contains(ft->contentName()),
+          "automatic grouping did not include compatible RTP and file-transfer contents");
+
+    auto icePad = audioTransport->pad().staticCast<J::ICE::Pad>();
+    check(waitFor([&]() {
+              return audioTransport->state() >= J::State::ApprovedToSend
+                  && videoTransport->state() >= J::State::ApprovedToSend
+                  && ftTransport->state() >= J::State::ApprovedToSend
+                  && audioTransport->rtpAssociation()
+                  && videoTransport->rtpAssociation()
+                  && ftTransport->rtpAssociation()
+                  && icePad->liveAssociationCount() == 1;
+          }),
+          "mixed RTP/SCTP BUNDLE did not prepare one shared secure association");
+
+    bool audioBound = false, audioRequired = false;
+    bool videoBound = false, videoRequired = false;
+    bool ftBound = false, ftRequired = false;
+    auto *audioNetwork = icePad->groupedConnectionFor(audioTransport.data(), &audioBound, &audioRequired);
+    auto *videoNetwork = icePad->groupedConnectionFor(videoTransport.data(), &videoBound, &videoRequired);
+    auto *ftNetwork = icePad->groupedConnectionFor(ftTransport.data(), &ftBound, &ftRequired);
+    check(audioBound && videoBound && ftBound && audioRequired && videoRequired && ftRequired
+              && audioNetwork && audioNetwork == videoNetwork && audioNetwork == ftNetwork,
+          "mixed RTP/SCTP BUNDLE members did not bind to one ICE connection");
+    check(audioTransport->rtpAssociation() == videoTransport->rtpAssociation()
+              && audioTransport->rtpAssociation() == ftTransport->rtpAssociation(),
+          "mixed RTP/SCTP BUNDLE did not reuse the one DTLS/SRTP association");
+}
+#endif
+
 static QDomElement sessionAcceptPayload(
     QDomDocument &doc, const J::Session &session, const WireOffer &transportSource,
     J::RTP::Application *audio, J::RTP::Application *video, const Jid &peer)
@@ -439,11 +523,13 @@ static void exerciseResponder(const WireOffer &offer, TcpPortReserver *reserver,
           "responder allocated BUNDLE association before local grouping decision");
 
     if (acceptBundle) {
-        check(session.setGroupings(
-                  { J::ContentGroup { QStringLiteral("BUNDLE"), { offer.audioName, offer.videoName } } }),
-              "responder could not accept offered BUNDLE group");
+        check(session.groupings().size() == 1
+                  && session.groupings().first().semantics == QLatin1String("BUNDLE")
+                  && session.groupings().first().contents == QStringList({ offer.audioName, offer.videoName }),
+              "caps-driven responder did not automatically accept compatible BUNDLE");
     } else {
-        check(session.setGroupings({}), "responder could not refuse BUNDLE");
+        session.setAutomaticGroupingEnabled(false);
+        check(session.groupings().isEmpty(), "disabling automatic grouping retained responder BUNDLE");
     }
 
     session.accept();
@@ -765,6 +851,9 @@ int main(int argc, char **argv)
     const auto offer = makeOffer(initiator, &reserver);
     exerciseResponder(offer, &reserver, true);
     exerciseResponder(offer, &reserver, false);
+#ifdef IRIS_TEST_SCTP
+    exerciseMixedRtpFileTransferBundle(&reserver);
+#endif
     exerciseInitiatorReplacement(offer, &reserver);
     exerciseTwoGroupReplacement(offer, &reserver);
 

@@ -111,9 +111,12 @@ namespace XMPP { namespace Jingle {
         Jid     origFrom;   // "from" attr of IQ.
         Jid     otherParty; // either "from" or initiator/responder. it's where to send all requests.
         Jid     localParty; // that one will be set as initiator/responder if provided
-        bool    waitingAck      = false;
-        bool    needNotifyGroup = false; // whenever grouping info changes
-        bool    groupingAllowed = false;
+        bool    waitingAck                = false;
+        bool    needNotifyGroup           = false; // whenever grouping info changes
+        bool    groupingAllowed           = false;
+        bool    automaticGroupingEnabled  = true;
+        bool    localGroupingsExplicit    = false;
+        bool    automaticGroupingsActive  = false;
 
         void setSessionFinished()
         {
@@ -433,6 +436,7 @@ namespace XMPP { namespace Jingle {
                 finalState   = State::Pending;
             }
 
+            q->refreshAutomaticGroupings(rejectedInitialContent);
             notifyPads<&SessionManagerPad::onSend>();
 
             // Pads may change the proposal in onSend(). Validate after that,
@@ -1829,6 +1833,25 @@ namespace XMPP { namespace Jingle {
 
     bool Session::isGroupingAllowed() const { return d->groupingAllowed; }
 
+    void Session::setAutomaticGroupingEnabled(bool enabled)
+    {
+        if (d->automaticGroupingEnabled == enabled)
+            return;
+        d->automaticGroupingEnabled = enabled;
+        if (d->state > State::ApprovedToSend || d->localGroupingsExplicit)
+            return;
+        if (!enabled && d->automaticGroupingsActive) {
+            d->groups.clear();
+            d->automaticGroupingsActive = false;
+            d->needNotifyGroup          = true;
+            return;
+        }
+        if (enabled)
+            refreshAutomaticGroupings();
+    }
+
+    bool Session::automaticGroupingEnabled() const { return d->automaticGroupingEnabled; }
+
     std::optional<XMPP::Stanza::Error> Session::lastError() const { return d->lastError; }
 
     TieBreaker       *Session::tieBreaker() { return &tieBreaker_; }
@@ -1899,13 +1922,101 @@ namespace XMPP { namespace Jingle {
             || (d->role == Origin::Responder && d->state <= State::ApprovedToSend
                 && !validBundleAnswer(d->remoteGroups, groups)))
             return false;
-        d->groups          = groups;
-        d->needNotifyGroup = true;
+        d->groups                   = groups;
+        d->needNotifyGroup          = true;
+        d->localGroupingsExplicit   = true;
+        d->automaticGroupingsActive = false;
         return true;
     }
 
     QList<ContentGroup> Session::groupings() const { return d->groups; }
     QList<ContentGroup> Session::remoteGroupings() const { return d->remoteGroups; }
+
+    void Session::refreshAutomaticGroupings(const QSet<Application *> &excluded)
+    {
+        if (!d->automaticGroupingEnabled || !d->groupingAllowed || d->localGroupingsExplicit
+            || d->state > State::ApprovedToSend)
+            return;
+
+        struct EligibleContent {
+            QString name;
+            QString transportNamespace;
+        };
+
+        QHash<QString, int> nameCounts;
+        for (auto app : std::as_const(d->contentList)) {
+            if (app && app->state() < State::Finishing && !excluded.contains(app))
+                ++nameCounts[app->contentName()];
+        }
+
+        QMap<QString, EligibleContent> eligibleByName;
+        for (auto app : std::as_const(d->contentList)) {
+            if (!app || app->state() >= State::Finishing || excluded.contains(app)
+                || nameCounts.value(app->contentName()) != 1 || !app->allowsSharedTransport())
+                continue;
+            const auto transport = app->transport();
+            if (!transport || !transport->pad() || !transport->supportsSharedTransport())
+                continue;
+            const auto transportNamespace = transport->pad()->ns();
+            if (transportNamespace.isEmpty())
+                continue;
+            eligibleByName.insert(app->contentName(), EligibleContent { app->contentName(), transportNamespace });
+        }
+
+        QList<ContentGroup> automatic;
+        if (d->role == Origin::Responder) {
+            for (const auto &offer : std::as_const(d->remoteGroups)) {
+                if (offer.semantics != QLatin1String("BUNDLE") || offer.contents.size() < 2)
+                    continue;
+
+                QMap<QString, QStringList> candidatesByTransport;
+                QStringList               transportOrder;
+                for (const auto &name : offer.contents) {
+                    const auto it = eligibleByName.constFind(name);
+                    if (it == eligibleByName.cend())
+                        continue;
+                    if (!candidatesByTransport.contains(it->transportNamespace))
+                        transportOrder.append(it->transportNamespace);
+                    candidatesByTransport[it->transportNamespace].append(name);
+                }
+
+                QStringList accepted;
+                for (const auto &transportNamespace : std::as_const(transportOrder)) {
+                    const auto candidate = candidatesByTransport.value(transportNamespace);
+                    if (candidate.size() > accepted.size())
+                        accepted = candidate;
+                }
+                if (accepted.size() > 1)
+                    automatic.append(ContentGroup { QStringLiteral("BUNDLE"), accepted });
+            }
+        } else {
+            QMap<QString, QStringList> membersByTransport;
+            for (auto it = eligibleByName.cbegin(); it != eligibleByName.cend(); ++it)
+                membersByTransport[it->transportNamespace].append(it->name);
+            for (auto it = membersByTransport.cbegin(); it != membersByTransport.cend(); ++it) {
+                if (it.value().size() > 1)
+                    automatic.append(ContentGroup { QStringLiteral("BUNDLE"), it.value() });
+            }
+        }
+
+        auto sameGroups = [](const QList<ContentGroup> &left, const QList<ContentGroup> &right) {
+            if (left.size() != right.size())
+                return false;
+            for (qsizetype i = 0; i < left.size(); ++i) {
+                if (left.at(i).semantics != right.at(i).semantics || left.at(i).contents != right.at(i).contents)
+                    return false;
+            }
+            return true;
+        };
+        if (sameGroups(d->groups, automatic)) {
+            d->automaticGroupingsActive = !automatic.isEmpty();
+            return;
+        }
+
+        d->groups                   = automatic;
+        d->automaticGroupingsActive = !automatic.isEmpty();
+        d->needNotifyGroup          = true;
+    }
 
     bool Session::validLocalGroupings() const
     {
@@ -2036,9 +2147,25 @@ namespace XMPP { namespace Jingle {
         // So we presented a user incoming session in UI, the user modified it somehow and finally accepted.
         d->state = State::ApprovedToSend;
         d->notifyPads<&SessionManagerPad::onLocalAccepted>();
-        for (auto &c : d->contentList) {
-            c->prepare();
+
+        // Grouping must be decided before the first concrete transport starts
+        // preparing. Some applications (notably file transfer over SCTP) prepare
+        // their transport synchronously, while RTP first waits for its media
+        // backend. Preselect every local transport up front so a mixed BUNDLE
+        // never allocates an independent association merely due to callback order.
+        if (d->groupingAllowed
+            && ((d->automaticGroupingEnabled && !d->localGroupingsExplicit) || !d->groups.isEmpty())) {
+            const auto contents = d->contentList.values();
+            for (auto content : contents) {
+                if (content && content->creator() == d->role && !content->transport()
+                    && content->state() < State::Finishing)
+                    content->selectNextTransport();
+            }
+            refreshAutomaticGroupings();
         }
+
+        for (auto &c : d->contentList)
+            c->prepare();
         d->planStep();
     }
 
@@ -2048,10 +2175,23 @@ namespace XMPP { namespace Jingle {
         if (d->role == Origin::Initiator && d->state == State::Created) {
             d->state = State::ApprovedToSend;
             d->notifyPads<&SessionManagerPad::onLocalAccepted>();
-            for (auto &c : d->contentList) {
+
+            for (auto &c : d->contentList)
                 c->markInitialApplication(true);
-                c->prepare();
+
+            if (d->groupingAllowed
+            && ((d->automaticGroupingEnabled && !d->localGroupingsExplicit) || !d->groups.isEmpty())) {
+                const auto contents = d->contentList.values();
+                for (auto content : contents) {
+                    if (content && content->creator() == d->role && !content->transport()
+                        && content->state() < State::Finishing)
+                        content->selectNextTransport();
+                }
+                refreshAutomaticGroupings();
             }
+
+            for (auto &c : d->contentList)
+                c->prepare();
             d->planStep();
         }
     }
@@ -2147,6 +2287,7 @@ namespace XMPP { namespace Jingle {
                 app->markInitialApplication(true);
                 d->addAndInitContent(Origin::Initiator, app);
             }
+            refreshAutomaticGroupings();
             d->planStep();
             return true;
         }

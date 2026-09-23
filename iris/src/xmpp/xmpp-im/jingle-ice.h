@@ -59,6 +59,7 @@ namespace Jingle { namespace ICE {
         OutgoingTransportInfoUpdate takeOutgoingUpdate(bool ensureTransportElement) override;
         bool                        isValid() const override;
         TransportFeatures           features() const override;
+        bool                        supportsSharedTransport() const override { return true; }
         int                         maxSupportedChannelsPerComponent(TransportFeatures features) const override;
 
         void                   setComponentsCount(int count) override;

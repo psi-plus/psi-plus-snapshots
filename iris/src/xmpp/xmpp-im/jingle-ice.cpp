@@ -275,6 +275,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         bool initializationStarted       = false;
         bool remoteFingerprintAccepted  = false;
         bool dtlsAcceptanceStarted       = false;
+        bool remoteFingerprintApplied    = false;
         bool gatheringComplete           = false;
         bool checksStarted                = false;
 
@@ -1012,43 +1013,52 @@ namespace XMPP { namespace Jingle { namespace ICE {
             return c;
         }
 
+        bool ensureSecureRtp(int componentIndex, Dtls *dtls)
+        {
+            auto &component = network->components[componentIndex];
+            if (rtpProfiles.isEmpty() || component.secureRtp)
+                return true;
+            if (!dtls || dtls->isStarted() || !dtls->setSRTPProfiles(rtpProfiles))
+                return false;
+
+            auto association
+                = new RTP::SecureRtpAssociation(dtls, network->secureRtpAssociationId, network);
+            component.secureRtp = association;
+            QObject::connect(association, &RTP::SecureRtpAssociation::ready, network,
+                             [net = network](quint64 epoch) { net->generation.dtlsEpoch = epoch; });
+            QObject::connect(association, &RTP::SecureRtpAssociation::invalidated, network,
+                             [net = network, association](quint64) {
+                                 if (association)
+                                     net->generation.dtlsEpoch = association->epoch();
+                             });
+            return true;
+        }
+
         bool setupDtls(int componentIndex)
         {
             Q_ASSERT(componentIndex < network->components.length());
             const auto id = associationDebugId(network);
             qInfo("jingle-ice[%s] setup DTLS component=%d transport=%p grouped=%d local=%d remote=%d",
                   id.constData(), componentIndex, q, int(groupManagedNetwork), int(q->isLocal()), int(q->isRemote()));
-            if (network->components[componentIndex].dtls) {
+            auto &component = network->components[componentIndex];
+            if (component.dtls) {
+                if (!ensureSecureRtp(componentIndex, component.dtls))
+                    return false;
                 if (componentIndex == 0)
                     pendingActions |= NewFingerprint;
                 return true;
             }
-            network->components[componentIndex].dtls
-                = new Dtls(network, q->pad()->session()->me().full(), q->pad()->session()->peer().full());
+            component.dtls = new Dtls(network, q->pad()->session()->me().full(), q->pad()->session()->peer().full());
 
-            auto dtls = network->components[componentIndex].dtls;
+            auto dtls = component.dtls;
             // Fingerprint/role negotiation can complete as soon as signaling
             // arrives, but the DTLS engine must not emit handshake records until
             // ICE has a nominated pair. In particular a remote setup=active
             // answer makes us passive/server and setRemoteFingerprint() would
             // otherwise start the server while ICE writes still have no route.
             dtls->setNegotiationDeferred(true);
-            if (!rtpProfiles.isEmpty()) {
-                if (!dtls->setSRTPProfiles(rtpProfiles))
-                    return false;
-                auto association = new RTP::SecureRtpAssociation(
-                    dtls, network->secureRtpAssociationId, network);
-                network->components[componentIndex].secureRtp = association;
-                QObject::connect(association, &RTP::SecureRtpAssociation::ready, network,
-                                 [net = network](quint64 epoch) {
-                                     net->generation.dtlsEpoch = epoch;
-                                 });
-                QObject::connect(association, &RTP::SecureRtpAssociation::invalidated, network,
-                                 [net = network, association](quint64) {
-                                     if (association)
-                                         net->generation.dtlsEpoch = association->epoch();
-                                 });
-            }
+            if (!ensureSecureRtp(componentIndex, dtls))
+                return false;
             if (q->isLocal()) {
                 dtls->initOutgoing();
             } else {
@@ -1057,6 +1067,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 if (!fingerprint)
                     return false;
                 dtls->setRemoteFingerprint(*fingerprint);
+                if (network->runtime)
+                    network->runtime->remoteFingerprintApplied = true;
                 dtls->acceptIncoming();
             }
 
@@ -1309,11 +1321,17 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 setupRemoteICE(e);
 
             if (e.fingerprint.isValid() && q->isLocal() && network->runtime
-                && network->runtime->remoteFingerprint) {
+                && network->runtime->remoteFingerprint && !network->runtime->remoteFingerprintApplied) {
+                // DTLS negotiation state belongs to the physical BUNDLE association,
+                // not to each logical content. Followers carry the same fingerprint
+                // for signaling consistency, but must not apply it a second time to
+                // the shared Dtls object (which can renegotiate the setup role and
+                // spuriously fail an otherwise healthy association).
                 for (auto &component : network->components) {
                     if (component.dtls)
                         component.dtls->setRemoteFingerprint(*network->runtime->remoteFingerprint);
                 }
+                network->runtime->remoteFingerprintApplied = true;
             }
             if (q->state() == State::Created && q->isRemote()) {
                 // initial incoming transport
@@ -1519,7 +1537,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         if (!d->groupManagedNetwork && (d->network->ice || d->network->components[0].dtls))
             return false;
         if (d->groupManagedNetwork && d->network->components[0].dtls
-            && !d->network->components[0].secureRtp)
+            && d->network->components[0].dtls->isStarted() && !d->network->components[0].secureRtp)
             return false;
 
         const auto supported = Dtls::supportedSRTPProfiles();
@@ -1974,7 +1992,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                     if (!app || !tr || !tr->pad())
                         continue;
                     members.append(GroupNegotiation::Member { it.key(), tr->pad()->ns(),
-                                                               app->supportsSharedTransport(), std::nullopt });
+                                                               app->allowsSharedTransport() && tr->supportsSharedTransport(), std::nullopt });
                 }
 
                 GroupNegotiation::Error error = GroupNegotiation::Error::None;
@@ -2075,7 +2093,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                     if (!current || current->pad().data() != this || d->contentOwners.value(*key) == current.data())
                         return nullptr; // never split one live BUNDLE generation
                     members.append(GroupNegotiation::Member { *key, current->pad()->ns(),
-                                                               app->supportsSharedTransport(), std::nullopt });
+                                                               app->allowsSharedTransport() && current->supportsSharedTransport(), std::nullopt });
                     replacementKeys.insert(*key);
                 }
 
