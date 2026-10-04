@@ -5,6 +5,7 @@
 #include <iris/dtls.h>
 #include <iris/jingle-rtp.h>
 #include <iris/xmpp_client.h>
+#include <iris/xmpp_task.h>
 #include <qca.h>
 #define private public
 #include <iris/jingle-session.h>
@@ -27,6 +28,16 @@ static const QString transportNs = QStringLiteral("urn:iris:test:rtp-transport")
 struct Counters {
     int  sessions = 0, endpoints = 0, configured = 0, stopped = 0, liveEndpoints = 0, hints = 0;
     bool configOk = true, offerOk = true, answerOk = true;
+};
+class IqResult : public Task {
+public:
+    IqResult(Task *parent, bool success) : Task(parent)
+    {
+        if (success)
+            setSuccess();
+        else
+            setError(500);
+    }
 };
 class Endpoint : public R::MediaEndpoint {
 public:
@@ -360,17 +371,53 @@ int main(int argc, char **argv)
         pump();
         check(audio->evaluateOutgoingUpdate().action == Action::ContentAccept, "incoming RTP answer not scheduled");
         check(!audio->makeLocalAnswer().isNull(), "local RTP answer empty");
-        audio->takeOutgoingUpdate();
-        audio->setState(State::Connecting); // emulate successful session-accept IQ result
+        auto answer                = audio->takeOutgoingUpdate();
         counters->configOk         = false;
         const int configuredBefore = counters->configured;
-        audio->start();
+        IqResult  accepted(client.rootTask(), true);
+        std::get<1>(answer)(&accepted);
         check(counters->configured == configuredBefore && transport->starts == 0,
               "media configuration ran inline from start");
         pump();
         check(audio->state() == State::Finishing && transport->starts == 0,
               "failed media configuration started transport");
         counters->configOk = true;
+    }
+    // A real content-accept IQ completion must start the application. Merely
+    // setting Connecting and calling start() by hand hides missing ACK wiring.
+    for (const bool success : { false, true }) {
+        Session incoming(client.jingleManager(), Jid("peer@example.org/device"), Origin::Responder);
+        auto    pad = incoming.applicationPadFactory(R::Description::ns());
+        std::unique_ptr<R::Application> video(
+            manager->startApplication(pad, "screen", Origin::Initiator, Origin::Initiator));
+        QDomDocument doc;
+        Endpoint     offered(counters, "video");
+        check(video->setRemoteOffer(offered.localOffer().toXml(doc)) == R::Application::Ok,
+              "content-add answer fixture rejected offer");
+        auto transport = QSharedPointer<TestTransport>::create(&incoming, Origin::Initiator);
+        check(video->setTransport(transport), "content-add answer fixture rejected transport");
+        video->prepare();
+        pump();
+        check(video->evaluateOutgoingUpdate().action == Action::ContentAccept, "no content-accept answer");
+        auto update = video->takeOutgoingUpdate();
+        check(video->state() == State::Unacked && transport->starts == 0,
+              "answer started connectivity before IQ result");
+        const int configuredBefore = counters->configured;
+        IqResult  result(client.rootTask(), success);
+        auto      complete = std::get<1>(update);
+        check(bool(complete), "content-accept has no IQ completion");
+        complete(&result);
+        check(counters->configured == configuredBefore && transport->starts == 0,
+              "answer ACK bypassed asynchronous media apply");
+        pump();
+        check(counters->configured == configuredBefore + (success ? 1 : 0) && transport->starts == (success ? 1 : 0),
+              "content-accept IQ result did not control media/transport startup");
+        check(video->state() == (success ? State::Connecting : State::Finished),
+              "content-accept IQ result left wrong application state");
+        complete(&result);
+        pump();
+        check(counters->configured == configuredBefore + (success ? 1 : 0) && transport->starts == (success ? 1 : 0),
+              "duplicate answer IQ completion repeated startup");
     }
     check(counters->liveEndpoints == 0, "incoming teardown leaked endpoint");
     for (auto kind : { R::SessionInfo::Kind::Active, R::SessionInfo::Kind::Hold, R::SessionInfo::Kind::Unhold,

@@ -194,6 +194,13 @@ Compatible contents are BUNDLEd automatically by default; explicit `setGroupings
 `setAutomaticGroupingEnabled(false)` override that policy. This allows RTP and an ICE/SCTP file
 transfer to share one ICE/DTLS path without making IBB or S5B implicitly shareable.
 
+The initial proposal can contain a BUNDLE group with one eligible content. An audio-only call
+can therefore negotiate its group before video or screen sharing is added. The responder can
+accept a nonempty subset, including one member. If the peer accepts the sole content without
+the group, Iris retains that content's prepared ICE/DTLS association as an independent transport;
+it does not restart ICE or treat the group as negotiated. Later additions then use their own
+transport. This is initial offer/answer handling, not unbundling an accepted group.
+
 ### Extending BUNDLE in an active session
 
 `Session::negotiatedGroupings()` returns the accepted topology. Use it when inspecting
@@ -561,6 +568,14 @@ and `activated()` until after `JTPush` sends the IQ result. This prevents IBB `<
 overtaking the acknowledgement ([XEP-0261, section 2.1](https://xmpp.org/extensions/xep-0261.html)).
 Incoming `content-accept` in an active session uses the same deferred start, without emitting
 another `activated()`. Queued starts check session state, content membership and application state.
+
+For an outgoing `session-accept` or `content-accept`, the application's answer completion
+callback calls `start()` after a successful IQ result. The Session commits accepted grouping
+before invoking that callback. RTP then applies media parameters asynchronously, binds its
+secure endpoint, and starts the transport; changing the application state to `Connecting` alone
+does not perform those operations. An IQ error, removed/destroyed content, or replaced transport
+must not start the retired application negotiation. Initial acceptance uses the same callback
+and does not issue a second application start.
 
 Initial acceptance may select a nonempty subset of pending contents. Omitted contents are
 detached and cleaned up using guarded object snapshots; cancellation or session destruction

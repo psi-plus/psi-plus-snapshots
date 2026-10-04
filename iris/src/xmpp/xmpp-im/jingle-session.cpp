@@ -506,8 +506,8 @@ namespace XMPP { namespace Jingle {
              *         b) don't send content-accept and accept everything with session-accept
              *      We prefer option (b) in our implementation.
              */
-            typedef std::tuple<QPointer<Application>, OutgoingUpdateCB, bool> AckHndl;
-            QSet<Application *>                                               rejectedInitialContent;
+            typedef std::tuple<QPointer<Application>, OutgoingUpdateCB> AckHndl;
+            QSet<Application *>                                         rejectedInitialContent;
             if (role == Origin::Responder) {
                 int    acceptedInitialContent = 0;
                 Reason rejectionReason;
@@ -575,7 +575,7 @@ namespace XMPP { namespace Jingle {
                 if (!rejectedInitial)
                     contents += xml;
                 if (callback)
-                    acceptApps.append(AckHndl { app, callback, !rejectedInitial });
+                    acceptApps.append(AckHndl { app, callback });
             }
             if (contents.isEmpty()) {
                 q->terminate(Reason::Decline, QStringLiteral("No initial content was accepted"));
@@ -587,6 +587,7 @@ namespace XMPP { namespace Jingle {
             const auto acceptedInitialGroups
                 = role == Origin::Responder && groupingAllowed ? groups : QList<ContentGroup> {};
             sendJingle(actionToSend, contents, [this, acceptApps, finalState, acceptedInitialGroups](JT *jt) {
+                QPointer<Session> session(q);
                 if (!jt->success()) {
                     qDebug("Session accept/initiate returned iq error");
                     emit q->terminated();
@@ -596,13 +597,12 @@ namespace XMPP { namespace Jingle {
                 if (finalState == State::Active && role == Origin::Responder)
                     publishNegotiatedGroups(acceptedInitialGroups);
                 for (const auto &h : acceptApps) {
-                    auto app         = std::get<0>(h);
-                    auto callback    = std::get<1>(h);
-                    auto shouldStart = std::get<2>(h);
+                    auto app      = std::get<0>(h);
+                    auto callback = std::get<1>(h);
                     if (app) {
                         callback(jt);
-                        if (role == Origin::Responder && shouldStart)
-                            app->start();
+                        if (!session)
+                            return;
                     }
                 }
                 if (finalState == State::Active) {
@@ -2678,7 +2678,7 @@ namespace XMPP { namespace Jingle {
         QList<ContentGroup> automatic;
         if (d->role == Origin::Responder) {
             for (const auto &offer : std::as_const(d->remoteGroups)) {
-                if (offer.semantics != QLatin1String("BUNDLE") || offer.contents.size() < 2)
+                if (offer.semantics != QLatin1String("BUNDLE") || offer.contents.isEmpty())
                     continue;
 
                 QMap<QString, QStringList> candidatesByTransport;
@@ -2698,7 +2698,7 @@ namespace XMPP { namespace Jingle {
                     if (candidate.size() > accepted.size())
                         accepted = candidate;
                 }
-                if (accepted.size() > 1)
+                if (!accepted.isEmpty())
                     automatic.append(ContentGroup { QStringLiteral("BUNDLE"), accepted });
             }
         } else {
@@ -2706,7 +2706,7 @@ namespace XMPP { namespace Jingle {
             for (auto it = eligibleByName.cbegin(); it != eligibleByName.cend(); ++it)
                 membersByTransport[it->transportNamespace].append(it->name);
             for (auto it = membersByTransport.cbegin(); it != membersByTransport.cend(); ++it) {
-                if (it.value().size() > 1)
+                if (!it.value().isEmpty())
                     automatic.append(ContentGroup { QStringLiteral("BUNDLE"), it.value() });
             }
         }

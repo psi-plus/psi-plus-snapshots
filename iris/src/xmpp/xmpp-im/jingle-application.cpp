@@ -488,9 +488,18 @@ namespace XMPP { namespace Jingle {
                                            return;
                                        if (transportCB)
                                            transportCB(task);
-                                       if (!guard || _state != State::Unacked || _terminationReason.isValid())
+                                       if (!guard || _state != State::Unacked || _terminationReason.isValid()
+                                           || expected.lock() != _transport)
                                            return;
-                                       setState(task->success() ? State::Connecting : State::Finished);
+                                       const bool accepted = task->success();
+                                       setState(accepted ? State::Connecting : State::Finished);
+                                       // Active-session acceptance needs the same application
+                                       // startup as session-accept, after the answer IQ ACK.
+                                       // State callbacks may remove the content or replace its
+                                       // transport; never start the retired negotiation.
+                                       if (guard && accepted && _state == State::Connecting
+                                           && !_terminationReason.isValid() && expected.lock() == _transport)
+                                           start();
                                    } };
         }
         case Action::ContentModify: {

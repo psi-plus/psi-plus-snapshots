@@ -1635,9 +1635,17 @@ namespace XMPP { namespace Jingle { namespace ICE {
             onFinish(Reason::FailedTransport, QStringLiteral("ICE transport has not been prepared"));
             return;
         }
-        if (d->groupManagedNetwork && !pad().staticCast<Pad>()->groupedConnectionAccepted(this)) {
-            onFinish(Reason::FailedTransport, QStringLiteral("Negotiated BUNDLE membership changed before ICE start"));
-            return;
+        if (d->groupManagedNetwork) {
+            auto groupPad    = pad().staticCast<Pad>();
+            auto independent = groupPad->takeUnacceptedSingletonMembership(this);
+            if (independent) {
+                d->membership          = std::move(independent);
+                d->groupManagedNetwork = false;
+            } else if (!groupPad->groupedConnectionAccepted(this)) {
+                onFinish(Reason::FailedTransport,
+                         QStringLiteral("Negotiated BUNDLE membership changed before ICE start"));
+                return;
+            }
         }
         QPointer<Transport> guard(this);
         setState(State::Connecting);
@@ -1986,7 +1994,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
             bool hasSharedOffer = false;
             for (const auto &group : std::as_const(d->stagedOfferGroups))
-                hasSharedOffer |= group.semantics == QLatin1String("BUNDLE") && group.contents.size() > 1;
+                hasSharedOffer |= group.semantics == QLatin1String("BUNDLE") && !group.contents.isEmpty();
 
             if (hasSharedOffer) {
                 QList<GroupNegotiation::Member> members;
@@ -2011,7 +2019,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                     } else {
                         d->stagedGroups = std::move(*staged);
                         for (const auto &association : plan->associations()) {
-                            if (!association.bundled || association.members.size() < 2
+                            if (!association.bundled || association.members.isEmpty()
                                 || association.transportNamespace != ns())
                                 continue;
                             for (const auto &key : association.members) {
@@ -2107,7 +2115,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
         const bool offeredAsShared = std::any_of(
             d->stagedOfferGroups.cbegin(), d->stagedOfferGroups.cend(), [content](const ContentGroup &group) {
-                return group.semantics == QLatin1String("BUNDLE") && group.contents.size() > 1
+                return group.semantics == QLatin1String("BUNDLE") && !group.contents.isEmpty()
                     && group.contents.contains(content->first);
             });
         // Initiator-side staging is provisional until the peer answer arrives.
@@ -2273,6 +2281,34 @@ namespace XMPP { namespace Jingle { namespace ICE {
         return connection;
     }
 
+    ConnectionMembership Pad::takeUnacceptedSingletonMembership(Transport *transport)
+    {
+        if (!transport || !_session || _session->role() != Origin::Initiator || _session->state() != State::Active
+            || !d->stagedGroups)
+            return {};
+        const auto content = contentForTransport(_session, transport);
+        if (!content || !d->stagedContents.contains(*content))
+            return {};
+        for (const auto &group : _session->negotiatedGroupings()) {
+            if (group.semantics == QLatin1String("BUNDLE") && group.contents.contains(content->first))
+                return {};
+        }
+        // Only an initial one-member proposal can be refused without changing
+        // the physical transport. Never unbundle an already accepted group.
+        const bool singleton = std::any_of(
+            d->stagedOfferGroups.cbegin(), d->stagedOfferGroups.cend(), [&content](const ContentGroup &group) {
+                return group.semantics == QLatin1String("BUNDLE") && group.contents == QStringList { content->first };
+            });
+        if (!singleton || d->contentOwners.value(*content) != transport)
+            return {};
+        auto membership = d->stagedGroups->takeMembership(*content);
+        if (membership) {
+            d->stagedContents.remove(*content);
+            d->establishedContents.remove(*content);
+        }
+        return membership;
+    }
+
     bool Pad::groupedConnectionAccepted(Transport *transport) const
     {
         if (!transport || !_session || !d->stagedGroups)
@@ -2302,7 +2338,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         const auto &answer = _session->remoteGroupings();
         for (const auto &offered : d->stagedOfferGroups) {
             if (offered.semantics != QLatin1String("BUNDLE") || !offered.contents.contains(content->first)
-                || offered.contents.size() < 2)
+                || offered.contents.isEmpty())
                 continue;
             return std::any_of(answer.cbegin(), answer.cend(), [&offered](const ContentGroup &accepted) {
                 return sameGroupMembers(offered, accepted);

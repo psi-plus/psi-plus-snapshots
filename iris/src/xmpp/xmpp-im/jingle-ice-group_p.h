@@ -31,7 +31,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         {
             ConnectionGroupTransaction result;
             for (const auto &association : plan.associations()) {
-                if (!association.bundled || association.members.size() < 2
+                if (!association.bundled || association.members.isEmpty()
                     || association.transportNamespace != transportNamespace)
                     continue;
                 if (association.owner != association.members.first())
@@ -341,6 +341,21 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 }
             }
             return false;
+        }
+
+        // Initial refusal of a one-member group can keep the same network as
+        // an independent transport. Transfer ownership without detaching and
+        // reattaching the content or changing its membership generation.
+        ConnectionMembership takeMembership(const ContentKey &content)
+        {
+            for (auto it = entries_.begin(); it != entries_.end(); ++it) {
+                if (it->content == content) {
+                    auto membership = std::move(it->membership);
+                    entries_.erase(it);
+                    return membership;
+                }
+            }
+            return {};
         }
 
         // After a replacement generation has been finalized, keep memberships

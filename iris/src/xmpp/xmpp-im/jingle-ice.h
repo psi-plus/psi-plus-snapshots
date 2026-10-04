@@ -109,6 +109,7 @@ namespace Jingle { namespace ICE {
         void                 watchGroupedContent(Application *, const ContentKey &);
         IceConnection       *groupedConnectionFor(Transport *transport, bool *contentBound, bool *groupRequired);
         ConnectionMembership membershipFor(Transport *transport, bool *contentBound);
+        ConnectionMembership takeUnacceptedSingletonMembership(Transport *transport);
         bool                 groupedConnectionAccepted(Transport *transport) const;
         bool                 shouldDeferGroupedNetwork(Transport *transport) const;
         qsizetype            liveAssociationCount() const;

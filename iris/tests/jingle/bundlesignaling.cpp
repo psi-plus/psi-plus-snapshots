@@ -35,7 +35,10 @@ public:
 
 class Endpoint final : public J::RTP::MediaEndpoint {
 public:
-    explicit Endpoint(QString media) : media_(std::move(media)) { }
+    explicit Endpoint(QString media, QString content = {}, std::shared_ptr<QSet<QString>> configured = {}) :
+        media_(std::move(media)), content_(std::move(content)), configured_(std::move(configured))
+    {
+    }
 
     J::RTP::Description localOffer() const override
     {
@@ -59,25 +62,33 @@ public:
             return {};
         auto answer = offer;
         // Distinguish responder SSRCs while preserving offered PT identifiers.
-        answer.ssrc = media_ == QLatin1String("audio") ? 0x33333333u : 0x44444444u;
+        answer.ssrc = offer.ssrc.value_or(0x22222222u) ^ 0x66666666u;
         return answer;
     }
 
     bool acceptsAnswer(const J::RTP::Description &, const J::RTP::Description &) const override { return true; }
-    bool configure(const J::RTP::Description &, const J::RTP::Description &) override { return true; }
+    bool configure(const J::RTP::Description &, const J::RTP::Description &) override
+    {
+        if (configured_)
+            configured_->insert(content_);
+        return true;
+    }
     void stop() override { }
 
 private:
-    QString media_;
+    QString                        media_;
+    QString                        content_;
+    std::shared_ptr<QSet<QString>> configured_;
 };
 
 class MediaSession final : public J::RTP::MediaSession {
 public:
-    std::unique_ptr<J::RTP::MediaEndpoint> createEndpoint(const QString &, const QString &media) override
+    explicit MediaSession(std::shared_ptr<QSet<QString>> configured = {}) : configured_(std::move(configured)) { }
+    std::unique_ptr<J::RTP::MediaEndpoint> createEndpoint(const QString &content, const QString &media) override
     {
         if (media != QLatin1String("audio") && media != QLatin1String("video"))
             return {};
-        return std::make_unique<Endpoint>(media);
+        return std::make_unique<Endpoint>(media, content, configured_);
     }
 
     bool attachSecureRtpPacketIo(ProtectedPacketWriter writer) override
@@ -95,14 +106,22 @@ public:
     bool receiveProtectedRtpPacket(const J::RTP::SecureRtpPacket &) override { return true; }
 
 private:
-    ProtectedPacketWriter writer_;
+    ProtectedPacketWriter          writer_;
+    std::shared_ptr<QSet<QString>> configured_;
 };
 
 class Provider final : public J::RTP::MediaProvider {
 public:
-    std::unique_ptr<J::RTP::MediaSession> createSession() override { return std::make_unique<MediaSession>(); }
+    explicit Provider(std::shared_ptr<QSet<QString>> configured = {}) : configured_(std::move(configured)) { }
+    std::unique_ptr<J::RTP::MediaSession> createSession() override
+    {
+        return std::make_unique<MediaSession>(configured_);
+    }
     QStringList mediaTypes() const override { return { QStringLiteral("audio"), QStringLiteral("video") }; }
     QStringList secureRtpProfiles() const override { return { QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80") }; }
+
+private:
+    std::shared_ptr<QSet<QString>> configured_;
 };
 
 static void setPeerFeatures(Client &client, const Jid &peer, QStringList features)
@@ -147,8 +166,9 @@ struct WireOffer {
     QString      videoName;
 };
 
-static WireOffer makeOffer(Client &client, TcpPortReserver *reserver)
+static WireOffer makeOffer(Client &client, TcpPortReserver *reserver, J::RTP::MediaSet media)
 {
+    check(media != J::RTP::MediaSet {}, "wire offer needs at least one media content");
     client.setTcpPortReserver(reserver);
     client.jingleICEManager()->setSelfAddress(QHostAddress::LocalHost);
     auto rtp = client.jingleManager()->rtpManager();
@@ -158,80 +178,77 @@ static WireOffer makeOffer(Client &client, TcpPortReserver *reserver)
     const Jid peer(QStringLiteral("responder@example.test/device"));
     setPeerFeatures(client, peer, rtpIcePeerFeatures(client, rtp));
 
-    J::Session session(client.jingleManager(), peer, J::Origin::Initiator);
-    auto       audio
-        = dynamic_cast<J::RTP::Application *>(rtp->createOutgoing(&session, QStringLiteral("audio"), J::Origin::Both));
-    auto video
-        = dynamic_cast<J::RTP::Application *>(rtp->createOutgoing(&session, QStringLiteral("video"), J::Origin::Both));
-    check(audio && video, "failed to create outgoing RTP applications");
+    J::Session                   session(client.jingleManager(), peer, J::Origin::Initiator);
+    WireOffer                    offer;
+    QList<J::RTP::Application *> applications;
+    QStringList                  members;
+    for (const auto type : { J::RTP::Media::Audio, J::RTP::Media::Video }) {
+        if (!media.testFlag(type))
+            continue;
+        auto application = dynamic_cast<J::RTP::Application *>(rtp->createOutgoing(&session, type, J::Origin::Both));
+        check(application, "failed to create outgoing RTP application");
+        applications.append(application);
+        members.append(application->contentName());
+        if (type == J::RTP::Media::Audio)
+            offer.audioName = application->contentName();
+        else
+            offer.videoName = application->contentName();
+    }
 
-    const QString audioName = audio->contentName();
-    const QString videoName = video->contentName();
-
-    audio->prepare();
-    video->prepare();
+    for (auto application : applications)
+        application->prepare();
     check(session.groupings().size() == 1 && session.groupings().first().semantics == QLatin1String("BUNDLE")
-              && session.groupings().first().contents == QStringList({ audioName, videoName }),
+              && session.groupings().first().contents == members,
           "caps-driven initiator did not automatically propose RTP BUNDLE");
 
-    auto audioTransport = qSharedPointerDynamicCast<J::ICE::Transport>(audio->transport());
-    auto videoTransport = qSharedPointerDynamicCast<J::ICE::Transport>(video->transport());
-    check(audioTransport && videoTransport, "caps-driven RTP selection did not choose ICE");
-    auto icePad = audioTransport->pad().staticCast<J::ICE::Pad>();
-
+    QList<QSharedPointer<J::ICE::Transport>> transports;
+    for (auto application : applications) {
+        auto transport = qSharedPointerDynamicCast<J::ICE::Transport>(application->transport());
+        check(bool(transport), "caps-driven RTP selection did not choose ICE");
+        transports.append(transport);
+    }
+    auto icePad = transports.first()->pad().staticCast<J::ICE::Pad>();
     check(waitFor([&]() {
-              return audio->localDescription() && video->localDescription() && audioTransport->hasUpdates()
-                  && videoTransport->hasUpdates();
+              for (qsizetype i = 0; i < applications.size(); ++i) {
+                  if (!applications.at(i)->localDescription() || !transports.at(i)->hasUpdates())
+                      return false;
+              }
+              return true;
           }),
           "outgoing BUNDLE offer did not finish RTP/ICE preparation");
     check(icePad->liveAssociationCount() == 1, "initiator BUNDLE offer did not stage one association");
 
-    auto [audioTransportXml, audioAck] = audioTransport->takeOutgoingUpdate(false);
-    auto [videoTransportXml, videoAck] = videoTransport->takeOutgoingUpdate(false);
-    check(!audioTransportXml.isNull() && !videoTransportXml.isNull(), "missing BUNDLE ICE offer updates");
-
-    // Complete the local IQ boundary so fingerprint state is not left half-sent
-    // while this temporary initiator Session is destroyed.
-    if (audioAck) {
-        Ack result(client.rootTask());
-        audioAck(&result);
-    }
-    if (videoAck) {
-        Ack result(client.rootTask());
-        videoAck(&result);
-    }
-
-    WireOffer offer;
-    offer.audioName = audioName;
-    offer.videoName = videoName;
-
     J::Jingle jingle(J::Action::SessionInitiate, QStringLiteral("bundle-signaling-test"));
     jingle.setInitiator(Jid(QStringLiteral("initiator@example.test/device")));
     offer.root = jingle.toXml(&offer.doc);
-
-    auto appendContent = [&](J::RTP::Application *application, const QDomElement &transportXml) {
+    for (qsizetype i = 0; i < applications.size(); ++i) {
+        auto application                 = applications.at(i);
+        auto [transportXml, acknowledge] = transports.at(i)->takeOutgoingUpdate(false);
+        check(!transportXml.isNull(), "missing BUNDLE ICE offer update");
+        // Complete the local IQ boundary so fingerprint state is not left
+        // half-sent while this temporary initiator Session is destroyed.
+        if (acknowledge) {
+            Ack result(client.rootTask());
+            acknowledge(&result);
+        }
         J::ContentBase content(J::Origin::Initiator, application->contentName());
         content.senders = J::Origin::Both;
-        auto contentXml = content.toXml(&offer.doc, QStringLiteral("content"), QStringLiteral("urn:xmpp:jingle:1"));
-        check(contentXml.namespaceURI() == QLatin1String("urn:xmpp:jingle:1"),
-              "wire offer content lost the Jingle namespace");
+        auto contentXml = content.toXml(&offer.doc, QStringLiteral("content"), J::NS);
+        check(contentXml.namespaceURI() == J::NS, "wire offer content lost the Jingle namespace");
         contentXml.appendChild(offer.doc.importNode(application->makeLocalOffer(), true));
         contentXml.appendChild(offer.doc.importNode(transportXml, true));
         offer.root.appendChild(contentXml);
-    };
-    appendContent(audio, audioTransportXml);
-    appendContent(video, videoTransportXml);
+    }
 
     auto group = offer.doc.createElementNS(QStringLiteral("urn:xmpp:jingle:apps:grouping:0"), QStringLiteral("group"));
     group.setAttribute(QStringLiteral("semantics"), QStringLiteral("BUNDLE"));
-    for (const auto &name : { audioName, videoName }) {
+    for (const auto &name : members) {
         auto member
             = offer.doc.createElementNS(QStringLiteral("urn:xmpp:jingle:apps:grouping:0"), QStringLiteral("content"));
         member.setAttribute(QStringLiteral("name"), name);
         group.appendChild(member);
     }
     offer.root.appendChild(group);
-
     return offer;
 }
 
@@ -375,6 +392,101 @@ static void acknowledgeJingleTask(RootTaskKeeper &keeper, const Jid &peer, bool 
     keeper.release();
 }
 
+static void exerciseScreenAnswer(const WireOffer &offer, TcpPortReserver *reserver, const QString &scenario)
+{
+    Client client;
+    client.setTcpPortReserver(reserver);
+    client.jingleICEManager()->setSelfAddress(QHostAddress::LocalHost);
+    auto configured = std::make_shared<QSet<QString>>();
+    auto rtp        = client.jingleManager()->rtpManager();
+    rtp->setMediaProvider(std::make_shared<Provider>(configured));
+    rtp->setTransportNamespaces({ J::ICE::NS });
+    const Jid peer(QStringLiteral("initiator@example.test/device"));
+    setPeerFeatures(client, peer, rtpIcePeerFeatures(client, rtp));
+
+    J::Session session(client.jingleManager(), peer, J::Origin::Responder);
+    check(session.incomingInitiate(J::Jingle(offer.root), offer.root), "screen fixture rejected initial offer");
+    const auto anchorName = offer.audioName.isEmpty() ? offer.videoName : offer.audioName;
+    auto       anchor     = session.content(anchorName, J::Origin::Initiator);
+    check(anchor, "screen fixture lost its initial content");
+    auto           anchorTransport = anchor->transport().staticCast<J::ICE::Transport>();
+    auto           icePad          = anchorTransport->pad().staticCast<J::ICE::Pad>();
+    RootTaskKeeper initialAnswer(client.rootTask());
+    session.accept();
+    check(waitFor([&]() { return initialAnswer.task() != nullptr; }), "initial answer was not serialized");
+    acknowledgeJingleTask(initialAnswer, peer);
+    check(waitFor([&]() { return configured->contains(anchorName); }), "initial media did not start on ACK");
+    const auto originalGroups = session.negotiatedGroupings();
+    check(session.state() == J::State::Active && originalGroups.size() == 1
+              && originalGroups.first().contents.size()
+                  == (int(!offer.audioName.isEmpty()) + int(!offer.videoName.isEmpty())),
+          "initial audio/video BUNDLE was not negotiated");
+    bool  bound = false, required = false;
+    auto *network = icePad->groupedConnectionFor(anchorTransport.data(), &bound, &required);
+    check(network && bound && required && icePad->liveAssociationCount() == 1,
+          "initial BUNDLE did not retain its association");
+    const auto initialGeneration = network->generation;
+
+    const QString screenName = QStringLiteral("screen");
+    QDomDocument  addDoc;
+    auto          add = J::Jingle(J::Action::ContentAdd, session.sid()).toXml(&addDoc);
+    addDoc.appendChild(add);
+    J::ContentBase cb(J::Origin::Initiator, screenName);
+    cb.senders       = J::Origin::Initiator;
+    auto content     = cb.toXml(&addDoc, QStringLiteral("content"), J::NS);
+    auto description = Endpoint(QStringLiteral("video")).localOffer();
+    description.ssrc = 0x55555555u;
+    content.appendChild(description.toXml(addDoc));
+    content.appendChild(
+        addDoc.importNode(sourceContent(offer, anchorName).firstChildElement(QStringLiteral("transport")), true));
+    add.appendChild(content);
+    auto members = originalGroups.first().contents;
+    members.append(screenName);
+    auto group = addDoc.createElementNS(QStringLiteral("urn:xmpp:jingle:apps:grouping:0"), QStringLiteral("group"));
+    group.setAttribute(QStringLiteral("semantics"), QStringLiteral("BUNDLE"));
+    for (const auto &name : members) {
+        auto member = addDoc.createElementNS(group.namespaceURI(), QStringLiteral("content"));
+        member.setAttribute(QStringLiteral("name"), name);
+        group.appendChild(member);
+    }
+    add.appendChild(group);
+    check(session.updateFromXml(J::Action::ContentAdd, add), "screen BUNDLE extension was rejected");
+    auto screen = session.content(screenName, J::Origin::Initiator);
+    check(screen, "screen addition did not create an application");
+    auto           screenTransport = screen->transport().staticCast<J::ICE::Transport>();
+    RootTaskKeeper answer(client.rootTask());
+    screen->prepare();
+    check(waitFor([&]() { return answer.task() != nullptr; }), "screen answer was not serialized");
+    bool screenBound = false, screenRequired = false;
+    check(icePad->groupedConnectionFor(screenTransport.data(), &screenBound, &screenRequired) == network && screenBound
+              && screenRequired && icePad->liveAssociationCount() == 1 && network->generation == initialGeneration
+              && !configured->contains(screenName)
+              && session.negotiatedGroupings().first().contents == originalGroups.first().contents,
+          "screen preparation changed committed BUNDLE or started media before answer ACK");
+
+    if (scenario == QLatin1String("destroy"))
+        delete screen;
+    else if (scenario == QLatin1String("remove"))
+        screen->remove(J::Reason::Cancel);
+    acknowledgeJingleTask(answer, peer, scenario != QLatin1String("error"));
+    if (scenario == QLatin1String("success")) {
+        check(waitFor([&]() { return configured->contains(screenName); }), "screen answer ACK did not start media");
+        check(session.negotiatedGroupings().first().contents == members
+                  && screenTransport->rtpAssociation() == anchorTransport->rtpAssociation()
+                  && icePad->liveAssociationCount() == 1
+                  && network->generation.iceGeneration == initialGeneration.iceGeneration
+                  && network->generation.dtlsEpoch == initialGeneration.dtlsEpoch,
+              "screen acceptance allocated or restarted the established association");
+    } else {
+        QCoreApplication::processEvents(QEventLoop::AllEvents);
+        check(!configured->contains(screenName) && !screenTransport->rtpAssociation()
+                  && session.state() == J::State::Active
+                  && session.negotiatedGroupings().first().contents == originalGroups.first().contents
+                  && icePad->liveAssociationCount() == 1 && network->generation == initialGeneration,
+              "failed or stale screen answer started media or changed established BUNDLE");
+    }
+}
+
 #ifdef IRIS_TEST_SCTP
 static void exerciseMixedRtpFileTransferBundle(TcpPortReserver *reserver)
 {
@@ -489,17 +601,78 @@ static QDomElement sessionAcceptPayload(QDomDocument &doc, const J::Session &ses
     };
 
     appendAnswer(audio, transportSource.audioName, 0x33333333u);
-    appendAnswer(video, transportSource.videoName, 0x44444444u);
+    if (video)
+        appendAnswer(video, transportSource.videoName, 0x44444444u);
 
     auto group = doc.createElementNS(QStringLiteral("urn:xmpp:jingle:apps:grouping:0"), QStringLiteral("group"));
     group.setAttribute(QStringLiteral("semantics"), QStringLiteral("BUNDLE"));
     for (auto application : { audio, video }) {
+        if (!application)
+            continue;
         auto member = doc.createElementNS(QStringLiteral("urn:xmpp:jingle:apps:grouping:0"), QStringLiteral("content"));
         member.setAttribute(QStringLiteral("name"), application->contentName());
         group.appendChild(member);
     }
     root.appendChild(group);
     return root;
+}
+
+static void exerciseInitialSingletonAnswer(const WireOffer &transportSource, TcpPortReserver *reserver, bool bundled)
+{
+    Client client;
+    client.setTcpPortReserver(reserver);
+    client.jingleICEManager()->setSelfAddress(QHostAddress::LocalHost);
+    auto configured = std::make_shared<QSet<QString>>();
+    auto rtp        = client.jingleManager()->rtpManager();
+    rtp->setMediaProvider(std::make_shared<Provider>(configured));
+    rtp->setTransportNamespaces({ J::ICE::NS });
+    const Jid peer(QStringLiteral("responder@example.test/device"));
+    setPeerFeatures(client, peer, rtpIcePeerFeatures(client, rtp));
+    J::Session session(client.jingleManager(), peer, J::Origin::Initiator);
+    auto       audio
+        = dynamic_cast<J::RTP::Application *>(rtp->createOutgoing(&session, QStringLiteral("audio"), J::Origin::Both));
+    check(audio, "singleton fixture did not create audio");
+    RootTaskKeeper initiate(client.rootTask());
+    session.initiate();
+    check(waitFor([&]() { return initiate.task() != nullptr; }), "singleton initiate was not serialized");
+    acknowledgeJingleTask(initiate, peer);
+    auto  audioTransport = audio->transport().staticCast<J::ICE::Transport>();
+    auto  icePad         = audioTransport->pad().staticCast<J::ICE::Pad>();
+    bool  bound = false, required = false;
+    auto *network = icePad->groupedConnectionFor(audioTransport.data(), &bound, &required);
+    check(network && bound && required && session.groupings().first().contents == QStringList { audio->contentName() },
+          "audio-only initiate did not propose singleton BUNDLE");
+    const auto   initialGeneration = network->generation;
+    const auto   initialSecurity   = audioTransport->rtpAssociation();
+    QDomDocument answerDoc;
+    auto         answer = sessionAcceptPayload(answerDoc, session, transportSource, audio, nullptr, peer);
+    if (!bundled)
+        answer.removeChild(answer.firstChildElement(QStringLiteral("group")));
+    check(session.updateFromXml(J::Action::SessionAccept, answer), "singleton answer was rejected");
+    check(waitFor([&]() { return configured->contains(audio->contentName()); }),
+          "singleton answer did not start audio");
+    check(audio->state() == J::State::Connecting && audioTransport->state() == J::State::Connecting
+              && audioTransport->rtpAssociation() == initialSecurity && icePad->liveAssociationCount() == 1
+              && network->generation == initialGeneration && session.negotiatedGroupings().isEmpty() == !bundled,
+          "initial singleton acceptance/refusal restarted or failed the audio transport");
+
+    RootTaskKeeper addition(client.rootTask());
+    auto           screen = dynamic_cast<J::RTP::Application *>(
+        rtp->createOutgoing(&session, QStringLiteral("video"), J::Origin::Initiator));
+    check(screen, "singleton call did not allow a video addition");
+    screen->prepare();
+    check(waitFor([&]() { return addition.task() != nullptr; }), "video addition was not serialized");
+    auto  screenTransport = screen->transport().staticCast<J::ICE::Transport>();
+    bool  screenBound = false, screenRequired = false;
+    auto *screenNetwork = icePad->groupedConnectionFor(screenTransport.data(), &screenBound, &screenRequired);
+    check(screenBound && screenRequired == bundled && (bundled ? screenNetwork == network : !screenNetwork)
+              && (screenTransport->rtpAssociation() == initialSecurity) == bundled
+              && icePad->liveAssociationCount() == (bundled ? 1 : 2) && !configured->contains(screen->contentName())
+              && network->generation == initialGeneration,
+          "video extension ignored the peer's initial grouping decision");
+    acknowledgeJingleTask(addition, peer);
+    check(screen->state() == J::State::Pending && !configured->contains(screen->contentName()),
+          "content-add receipt ACK accepted or started video");
 }
 
 static void exerciseResponder(const WireOffer &offer, TcpPortReserver *reserver, bool acceptBundle)
@@ -1423,7 +1596,17 @@ int main(int argc, char **argv)
     TcpPortReserver  reserver;
 
     Client     initiator;
-    const auto offer = makeOffer(initiator, &reserver);
+    const auto offer          = makeOffer(initiator, &reserver, J::RTP::Media::Audio | J::RTP::Media::Video);
+    const auto audioOnlyOffer = makeOffer(initiator, &reserver, J::RTP::Media::Audio);
+    const auto videoOnlyOffer = makeOffer(initiator, &reserver, J::RTP::Media::Video);
+    exerciseInitialSingletonAnswer(audioOnlyOffer, &reserver, true);
+    exerciseInitialSingletonAnswer(audioOnlyOffer, &reserver, false);
+    for (const auto &scenario :
+         { QStringLiteral("success"), QStringLiteral("error"), QStringLiteral("remove"), QStringLiteral("destroy") }) {
+        exerciseScreenAnswer(offer, &reserver, scenario);
+        exerciseScreenAnswer(audioOnlyOffer, &reserver, scenario);
+        exerciseScreenAnswer(videoOnlyOffer, &reserver, scenario);
+    }
     exerciseResponder(offer, &reserver, true);
     exerciseResponder(offer, &reserver, false);
 #ifdef IRIS_TEST_SCTP
