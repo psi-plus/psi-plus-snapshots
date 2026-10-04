@@ -2,16 +2,16 @@
 #include <QCoreApplication>
 #include <QtCrypto>
 
-#include <iris/xmpp-im/jingle-ibb.h>
-#include <iris/xmpp-im/jingle-s5b.h>
 #include <iris/jingle-ice.h>
 #include <iris/jingle-rtp.h>
 #include <iris/jingle-session.h>
+#include <iris/xmpp-im/jingle-ibb.h>
+#include <iris/xmpp-im/jingle-s5b.h>
 #include <iris/xmpp_caps.h>
 #include <iris/xmpp_client.h>
 
 using namespace XMPP;
-namespace J = XMPP::Jingle;
+namespace J                      = XMPP::Jingle;
 static const QString DtlsFeature = QStringLiteral("urn:xmpp:jingle:apps:dtls:0");
 
 static void check(bool ok, const char *message)
@@ -57,11 +57,8 @@ public:
 class Provider final : public J::RTP::MediaProvider {
 public:
     std::unique_ptr<J::RTP::MediaSession> createSession() override { return std::make_unique<MediaSession>(); }
-    QStringList mediaTypes() const override { return { QStringLiteral("audio") }; }
-    QStringList secureRtpProfiles() const override
-    {
-        return { QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80") };
-    }
+    QStringList                           mediaTypes() const override { return { QStringLiteral("audio") }; }
+    QStringList secureRtpProfiles() const override { return { QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80") }; }
 };
 
 static void setPeerFeatures(Client &client, const Jid &peer, QStringList features)
@@ -140,13 +137,13 @@ static void peerProfileRequirements()
         return;
 
     const Jid peer(QStringLiteral("profile-peer@example.test/device"));
-    auto full = secureAudioProfile(rtp);
+    auto      full = secureAudioProfile(rtp);
     full += J::ICE::NS;
 
     auto canCreate = [&](QStringList features, bool expectGrouping = false) {
         setPeerFeatures(client, peer, std::move(features));
         J::Session session(client.jingleManager(), peer, J::Origin::Initiator);
-        auto app = dynamic_cast<J::RTP::Application *>(
+        auto       app = dynamic_cast<J::RTP::Application *>(
             rtp->createOutgoing(&session, QStringLiteral("audio"), J::Origin::Both));
         if (app)
             check(session.isGroupingAllowed() == expectGrouping,
@@ -189,14 +186,14 @@ static void validIceSelection()
     if (rtp->discoFeatures().isEmpty())
         return;
 
-    const Jid peer(QStringLiteral("ice-peer@example.test/device"));
+    const Jid   peer(QStringLiteral("ice-peer@example.test/device"));
     QStringList caps = secureAudioProfile(rtp);
     caps += client.jingleICEManager()->discoFeatures();
     setPeerFeatures(client, peer, caps);
 
     J::Session session(client.jingleManager(), peer, J::Origin::Initiator);
-    auto app = dynamic_cast<J::RTP::Application *>(
-        rtp->createOutgoing(&session, QStringLiteral("audio"), J::Origin::Both));
+    auto       app
+        = dynamic_cast<J::RTP::Application *>(rtp->createOutgoing(&session, QStringLiteral("audio"), J::Origin::Both));
     check(app, "failed to create RTP application for ICE caps");
     check(app->selectNextTransport(), "RTP application rejected advertised ICE transport");
     check(app->transport() && app->transport()->pad()->ns() == J::ICE::NS,
@@ -214,31 +211,53 @@ static void replacementDisabledAfterConnecting()
     // Keep a second compatible ICE namespace available so selectNextTransport()
     // would return the same unconsumed candidate forever if setTransport()
     // rejected replacement after Connecting.
-    rtp->setTransportNamespaces({ J::ICE::NS, J::ICE::NS_ICE_UDP });
+    rtp->setTransportNamespaces({ J::ICE::NS_ICE_UDP, J::ICE::NS });
     if (rtp->discoFeatures().isEmpty())
         return;
 
-    const Jid peer(QStringLiteral("connecting-fallback-peer@example.test/device"));
+    const Jid   peer(QStringLiteral("connecting-fallback-peer@example.test/device"));
     QStringList caps = secureAudioProfile(rtp);
     caps += client.jingleICEManager()->discoFeatures();
     setPeerFeatures(client, peer, caps);
 
     J::Session session(client.jingleManager(), peer, J::Origin::Initiator);
-    auto app = dynamic_cast<J::RTP::Application *>(
-        rtp->createOutgoing(&session, QStringLiteral("audio"), J::Origin::Both));
+    auto       app
+        = dynamic_cast<J::RTP::Application *>(rtp->createOutgoing(&session, QStringLiteral("audio"), J::Origin::Both));
     check(app, "failed to create RTP application for connecting fallback regression");
     check(app->selectNextTransport(), "failed to install initial RTP transport");
-    check(app->transport() && app->transport()->pad()->ns() == J::ICE::NS_ICE_UDP,
+    check(app->transport() && app->transport()->pad()->ns() == J::ICE::NS,
           "fixture did not leave the alternate ICE namespace available");
 
     const auto first = app->transport();
     app->setState(J::State::Connecting);
     check(app->selectNextTransport(), "RTP did not fall back after pre-connected transport failure");
-    check(app->transport() && app->transport() != first
-              && app->transport()->pad()->ns() == J::ICE::NS,
+    check(app->transport() && app->transport() != first && app->transport()->pad()->ns() == J::ICE::NS_ICE_UDP,
           "RTP fallback did not select the remaining ICE transport");
-    check(app->state() == J::State::Connecting,
-          "pre-connected RTP fallback incorrectly terminated the application");
+    check(app->state() == J::State::Connecting, "pre-connected RTP fallback incorrectly terminated the application");
+}
+
+static void preferredIceSelection()
+{
+    for (const auto &transportCaps : { QStringList { J::ICE::NS, J::ICE::NS_ICE_UDP }, QStringList { J::ICE::NS },
+                                       QStringList { J::ICE::NS_ICE_UDP } }) {
+        TcpPortReserver reserver;
+        Client          client;
+        client.setTcpPortReserver(&reserver);
+        auto rtp = client.jingleManager()->rtpManager();
+        rtp->setMediaProvider(std::make_shared<Provider>());
+        rtp->setTransportNamespaces({ J::ICE::NS_ICE_UDP, J::ICE::NS });
+        if (rtp->discoFeatures().isEmpty())
+            return;
+        const Jid peer(QStringLiteral("ice-preference-peer@example.test/device"));
+        auto      caps = secureAudioProfile(rtp);
+        caps += transportCaps;
+        setPeerFeatures(client, peer, caps);
+        J::Session session(client.jingleManager(), peer, J::Origin::Initiator);
+        auto       app = rtp->createOutgoing(&session, QStringLiteral("audio"), J::Origin::Both);
+        check(app && app->selectNextTransport(), "RTP failed to select a supported ICE profile");
+        const auto expected = transportCaps.contains(J::ICE::NS) ? J::ICE::NS : J::ICE::NS_ICE_UDP;
+        check(app->transport()->pad()->ns() == expected, "RTP did not prefer ice:0 when supported by the peer");
+    }
 }
 
 static void incompatibleTransportCaps(const QStringList &extraCaps, const char *message)
@@ -256,14 +275,14 @@ static void incompatibleTransportCaps(const QStringList &extraCaps, const char *
     if (rtp->discoFeatures().isEmpty())
         return;
 
-    const Jid peer(QStringLiteral("non-ice-peer@example.test/device"));
+    const Jid   peer(QStringLiteral("non-ice-peer@example.test/device"));
     QStringList caps = secureAudioProfile(rtp);
     caps += extraCaps;
     setPeerFeatures(client, peer, caps);
 
     J::Session session(client.jingleManager(), peer, J::Origin::Initiator);
-    auto app = dynamic_cast<J::RTP::Application *>(
-        rtp->createOutgoing(&session, QStringLiteral("audio"), J::Origin::Both));
+    auto       app
+        = dynamic_cast<J::RTP::Application *>(rtp->createOutgoing(&session, QStringLiteral("audio"), J::Origin::Both));
     check(app, "failed to create RTP application for incompatible transport caps");
     check(!app->selectNextTransport(), message);
     check(!app->transport(), "RTP application installed an incompatible transport");
@@ -279,6 +298,7 @@ int main(int argc, char **argv)
     localAdvertisement();
     peerProfileRequirements();
     validIceSelection();
+    preferredIceSelection();
     replacementDisabledAfterConnecting();
 
     {
@@ -289,10 +309,9 @@ int main(int argc, char **argv)
 
     {
         Client probe;
-        auto caps = probe.jingleIBBManager()->discoFeatures();
+        auto   caps = probe.jingleIBBManager()->discoFeatures();
         caps += QStringLiteral("urn:ietf:rfc:5888");
-        incompatibleTransportCaps(caps,
-                                  "RTP application accepted IBB because the peer also advertised grouping");
+        incompatibleTransportCaps(caps, "RTP application accepted IBB because the peer also advertised grouping");
     }
 
     {

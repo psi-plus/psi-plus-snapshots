@@ -182,6 +182,12 @@ Iris supplies file-transfer and RTP applications and three transport managers:
 the final policy through `TransportSelector`; Jingle core deliberately does not hard-code a single
 transport order.
 
+`RTP::Manager::setTransportNamespaces()` lists transports from least to most
+preferred: `NSTransportsList` selects from the end and checks peer capabilities.
+To prefer `ice:0` with ICE-UDP compatibility fallback, use
+`{ ICE::NS_ICE_UDP, ICE::NS }`. Psi uses this order for new RTP calls.
+An accepted BUNDLE extension keeps the group's existing transport profile.
+
 The ICE data-oriented/ordered feature advertisement is conditional on `JINGLE_SCTP` and
 `Dtls::isSupported()`. Registering the ICE manager alone does not guarantee that it can carry
 file transfers in a particular build.
@@ -236,6 +242,13 @@ before application callbacks can start the transport. Preparation can pin and us
 association, but it does not publish the new content's membership. IQ completions are bound
 to their own content/transport transaction; an unrelated answer or late ACK cannot commit a
 later extension.
+
+An extension reuses the existing DTLS association and its selected client/server roles
+([RFC 9143 section 11](https://www.rfc-editor.org/rfc/rfc9143.html#section-11)).
+An initial `setup="actpass"` can therefore be followed by the selected `active` or
+`passive` role with the same certificate fingerprint. Iris validates this against the
+existing DTLS object, keeps the original association signaling state, and does not
+restart DTLS. An opposite selected role or a different fingerprint is rejected.
 
 [RFC 9143 section 7.5.1](https://www.rfc-editor.org/rfc/rfc9143.html#section-7.5.1)
 requires an accepted addition to remain in the proposed BUNDLE. An answerer that cannot share

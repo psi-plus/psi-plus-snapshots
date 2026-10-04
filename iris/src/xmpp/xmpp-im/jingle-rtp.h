@@ -331,6 +331,7 @@ public:
     // Explicit transport whitelist for this RTP backend. It gates both
     // transport selection and RTP discovery; an empty or unusable whitelist means
     // this manager must not advertise RTP support.
+    // Ordered from least to most preferred (selection starts at the end).
     void setTransportNamespaces(const QStringList &);
 
     // Start an XEP-0353 proposal for a new RTP call. The returned UUID is also

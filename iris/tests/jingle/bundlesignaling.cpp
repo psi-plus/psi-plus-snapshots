@@ -166,14 +166,16 @@ struct WireOffer {
     QString      videoName;
 };
 
-static WireOffer makeOffer(Client &client, TcpPortReserver *reserver, J::RTP::MediaSet media)
+static WireOffer makeOffer(Client &client, TcpPortReserver *reserver, J::RTP::MediaSet media,
+                           const QString &transportNamespace = J::ICE::NS)
 {
     check(media != J::RTP::MediaSet {}, "wire offer needs at least one media content");
     client.setTcpPortReserver(reserver);
     client.jingleICEManager()->setSelfAddress(QHostAddress::LocalHost);
     auto rtp = client.jingleManager()->rtpManager();
     rtp->setMediaProvider(std::make_shared<Provider>());
-    rtp->setTransportNamespaces({ J::ICE::NS });
+    rtp->setTransportNamespaces(transportNamespace == J::ICE::NS ? QStringList { J::ICE::NS_ICE_UDP, J::ICE::NS }
+                                                                 : QStringList { transportNamespace });
 
     const Jid peer(QStringLiteral("responder@example.test/device"));
     setPeerFeatures(client, peer, rtpIcePeerFeatures(client, rtp));
@@ -205,6 +207,7 @@ static WireOffer makeOffer(Client &client, TcpPortReserver *reserver, J::RTP::Me
     for (auto application : applications) {
         auto transport = qSharedPointerDynamicCast<J::ICE::Transport>(application->transport());
         check(bool(transport), "caps-driven RTP selection did not choose ICE");
+        check(transport->pad()->ns() == transportNamespace, "RTP BUNDLE selected a lower-priority ICE profile");
         transports.append(transport);
     }
     auto icePad = transports.first()->pad().staticCast<J::ICE::Pad>();
@@ -392,7 +395,8 @@ static void acknowledgeJingleTask(RootTaskKeeper &keeper, const Jid &peer, bool 
     keeper.release();
 }
 
-static void exerciseScreenAnswer(const WireOffer &offer, TcpPortReserver *reserver, const QString &scenario)
+static void exerciseScreenAnswer(const WireOffer &offer, TcpPortReserver *reserver, const QString &scenario,
+                                 bool selectedRole = true)
 {
     Client client;
     client.setTcpPortReserver(reserver);
@@ -400,14 +404,15 @@ static void exerciseScreenAnswer(const WireOffer &offer, TcpPortReserver *reserv
     auto configured = std::make_shared<QSet<QString>>();
     auto rtp        = client.jingleManager()->rtpManager();
     rtp->setMediaProvider(std::make_shared<Provider>(configured));
-    rtp->setTransportNamespaces({ J::ICE::NS });
+    const auto anchorName = offer.audioName.isEmpty() ? offer.videoName : offer.audioName;
+    rtp->setTransportNamespaces(
+        { sourceContent(offer, anchorName).firstChildElement(QStringLiteral("transport")).namespaceURI() });
     const Jid peer(QStringLiteral("initiator@example.test/device"));
     setPeerFeatures(client, peer, rtpIcePeerFeatures(client, rtp));
 
     J::Session session(client.jingleManager(), peer, J::Origin::Responder);
     check(session.incomingInitiate(J::Jingle(offer.root), offer.root), "screen fixture rejected initial offer");
-    const auto anchorName = offer.audioName.isEmpty() ? offer.videoName : offer.audioName;
-    auto       anchor     = session.content(anchorName, J::Origin::Initiator);
+    auto anchor = session.content(anchorName, J::Origin::Initiator);
     check(anchor, "screen fixture lost its initial content");
     auto           anchorTransport = anchor->transport().staticCast<J::ICE::Transport>();
     auto           icePad          = anchorTransport->pad().staticCast<J::ICE::Pad>();
@@ -437,8 +442,29 @@ static void exerciseScreenAnswer(const WireOffer &offer, TcpPortReserver *reserv
     auto description = Endpoint(QStringLiteral("video")).localOffer();
     description.ssrc = 0x55555555u;
     content.appendChild(description.toXml(addDoc));
-    content.appendChild(
-        addDoc.importNode(sourceContent(offer, anchorName).firstChildElement(QStringLiteral("transport")), true));
+    auto extensionTransport
+        = addDoc.importNode(sourceContent(offer, anchorName).firstChildElement(QStringLiteral("transport")), true)
+              .toElement();
+    // The initial offer used actpass. Its answer selected an active receiver,
+    // so the offerer's established DTLS role in this content-add is passive.
+    if (selectedRole)
+        extensionTransport.firstChildElement(QStringLiteral("fingerprint"))
+            .setAttribute(QStringLiteral("setup"), QStringLiteral("passive"));
+    // Resolving actpass must not permit changing the selected role or identity.
+    auto invalidTransport   = extensionTransport.cloneNode(true).toElement();
+    auto invalidFingerprint = invalidTransport.firstChildElement(QStringLiteral("fingerprint"));
+    invalidFingerprint.setAttribute(QStringLiteral("setup"), QStringLiteral("active"));
+    check(anchorTransport->prepareUpdate(invalidTransport).status == J::Transport::PrepareUpdateStatus::Invalid,
+          "BUNDLE follower changed the negotiated DTLS role");
+    invalidFingerprint.setAttribute(QStringLiteral("setup"), QStringLiteral("passive"));
+    auto fingerprintText = invalidFingerprint.text();
+    check(!fingerprintText.isEmpty(), "screen fixture has no certificate fingerprint");
+    fingerprintText[0] = fingerprintText[0] == QLatin1Char('0') ? QLatin1Char('1') : QLatin1Char('0');
+    invalidFingerprint.firstChild().setNodeValue(fingerprintText);
+    check(anchorTransport->prepareUpdate(invalidTransport).status == J::Transport::PrepareUpdateStatus::Invalid
+              && network->generation == initialGeneration,
+          "BUNDLE follower changed certificate identity or runtime generation");
+    content.appendChild(extensionTransport);
     add.appendChild(content);
     auto members = originalGroups.first().contents;
     members.append(screenName);
@@ -1599,6 +1625,8 @@ int main(int argc, char **argv)
     const auto offer          = makeOffer(initiator, &reserver, J::RTP::Media::Audio | J::RTP::Media::Video);
     const auto audioOnlyOffer = makeOffer(initiator, &reserver, J::RTP::Media::Audio);
     const auto videoOnlyOffer = makeOffer(initiator, &reserver, J::RTP::Media::Video);
+    const auto udpOffer
+        = makeOffer(initiator, &reserver, J::RTP::Media::Audio | J::RTP::Media::Video, J::ICE::NS_ICE_UDP);
     exerciseInitialSingletonAnswer(audioOnlyOffer, &reserver, true);
     exerciseInitialSingletonAnswer(audioOnlyOffer, &reserver, false);
     for (const auto &scenario :
@@ -1606,7 +1634,10 @@ int main(int argc, char **argv)
         exerciseScreenAnswer(offer, &reserver, scenario);
         exerciseScreenAnswer(audioOnlyOffer, &reserver, scenario);
         exerciseScreenAnswer(videoOnlyOffer, &reserver, scenario);
+        exerciseScreenAnswer(udpOffer, &reserver, scenario);
     }
+    exerciseScreenAnswer(offer, &reserver, QStringLiteral("success"), false);
+    exerciseScreenAnswer(udpOffer, &reserver, QStringLiteral("success"), false);
     exerciseResponder(offer, &reserver, true);
     exerciseResponder(offer, &reserver, false);
 #ifdef IRIS_TEST_SCTP

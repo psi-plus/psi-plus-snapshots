@@ -262,6 +262,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
     class IceConnection::Runtime {
     public:
+        explicit Runtime(IceConnection &connection) : connection(connection) { }
+
+        IceConnection &connection;
         struct Participant {
             QPointer<Transport>                                   transport;
             std::function<void(const QList<Ice176::Candidate> &)> onLocalCandidates;
@@ -332,7 +335,18 @@ namespace XMPP { namespace Jingle { namespace ICE {
             if ((!e.ufrag.isEmpty() || !e.pwd.isEmpty()) && (!remoteUfrag.isEmpty() || !remotePassword.isEmpty())
                 && (remoteUfrag != e.ufrag || remotePassword != e.pwd))
                 return false;
-            return !e.fingerprint.isValid() || !remoteFingerprint || *remoteFingerprint == e.fingerprint;
+            if (!e.fingerprint.isValid() || !remoteFingerprint || *remoteFingerprint == e.fingerprint)
+                return true;
+            // The original offer can contain actpass while a later BUNDLE
+            // member carries the role selected by that offer/answer exchange.
+            // Consult the existing DTLS object; never infer a new role from the
+            // added content or change the established association's fingerprint.
+            if (remoteFingerprint->setup != Dtls::ActPass || remoteFingerprint->hash != e.fingerprint.hash
+                || connection.components.isEmpty() || !connection.components[0].dtls)
+                return false;
+            const auto &negotiated = connection.components[0].dtls->remoteFingerprint();
+            return (negotiated.setup == Dtls::Active || negotiated.setup == Dtls::Passive)
+                && negotiated == e.fingerprint;
         }
 
         bool mergeRemoteIce(const Element &e)
@@ -358,9 +372,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 remoteUfrag    = e.ufrag;
                 remotePassword = e.pwd;
             }
-            if (e.fingerprint.isValid()) {
-                if (remoteFingerprint && *remoteFingerprint != e.fingerprint)
-                    return false;
+            if (e.fingerprint.isValid() && !remoteFingerprint) {
                 remoteFingerprint = e.fingerprint;
             }
             if (!e.candidates.isEmpty()) {
@@ -952,7 +964,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             if (!network)
                 return false;
             if (!network->runtime)
-                network->runtime = std::make_unique<IceConnection::Runtime>();
+                network->runtime = std::make_unique<IceConnection::Runtime>(*network);
             if (!network->runtime->pad)
                 network->runtime->pad = pad.data();
             if (network->runtime->creator == Origin::None)
@@ -965,8 +977,16 @@ namespace XMPP { namespace Jingle { namespace ICE {
             // Once the local grouping decision creates the shared association,
             // seed its association-owned runtime immediately so prepare() can
             // configure DTLS from the already received fingerprint.
-            if (remoteState && !network->runtime->mergeRemoteIce(*remoteState))
+            if (remoteState && !network->runtime->mergeRemoteIce(*remoteState)) {
+                qWarning("jingle-ice[%s] transport=%p association attach rejected: conflicting ICE/DTLS parameters "
+                         "remote-setup=%d original-setup=%d negotiated-setup=%d",
+                         associationDebugId(network).constData(), q, int(remoteState->fingerprint.setup),
+                         network->runtime->remoteFingerprint ? int(network->runtime->remoteFingerprint->setup) : -1,
+                         !network->components.isEmpty() && network->components[0].dtls
+                             ? int(network->components[0].dtls->remoteFingerprint().setup)
+                             : -1);
                 return false;
+            }
 
             if (!network->runtime->hasParticipant(q)) {
                 QPointer<Transport>                 guard(q);
