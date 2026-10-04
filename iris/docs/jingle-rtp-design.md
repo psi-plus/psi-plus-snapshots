@@ -373,6 +373,13 @@ The standalone `tests/jingle` project includes XML/profile selection, group plan
 ownership, RTP negotiation/prepared answers, media operations, application/runtime errors,
 subset acceptance, routing, SRTP and transport ACK regressions.
 
+ICE regressions also cover nomination replies to local peer-reflexive candidates
+and cancellation of retained STUN transactions when an association stops. Replies
+are routed by the physical socket/path rather than the candidate's mapped address,
+including pairs in the valid list outside the checklist. Transaction ID and remote
+endpoint checks still apply after STUN integrity/fingerprint validation. Late
+transaction results cannot restart or report an error on a stopped association.
+
 With system QCA3 and SRTP enabled it also includes loopback ICE/SRTP and mock-media packet
 tests in both ICE wire profiles, plus shared BUNDLE ICE/media/signaling regressions. DTLS tests
 cover verified keys and, when SCTP is enabled, DTLS application data/data channels alongside

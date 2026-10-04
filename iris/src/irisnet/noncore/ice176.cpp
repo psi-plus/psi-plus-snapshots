@@ -161,7 +161,7 @@ public:
         qint64  priority = 0;
         QString foundation; // rfc8445 6.1.2.6 (combination of foundations)
 
-        StunBinding *binding = nullptr;
+        QPointer<StunBinding> binding;
 
         // FIXME: this is wrong i think, it should be in LocalTransport
         //   or such, to multiplex ids
@@ -399,6 +399,30 @@ public:
         pacTimer.reset();
         checkTimer.stop();
 
+        // Valid/selected pairs can outlive their checklist entry (for example
+        // after peer-reflexive discovery). Cancel every retained transaction
+        // before removing sockets, not only those reached by candidateRemoved.
+        auto pending = checkList.pairs + checkList.validPairs;
+        for (auto &component : components) {
+            if (component.highestPair)
+                pending.append(component.highestPair);
+            if (component.selectedPair)
+                pending.append(component.selectedPair);
+            component.highestPair.reset();
+            component.selectedPair.reset();
+        }
+        for (const auto &pair : std::as_const(pending)) {
+            if (pair->binding) {
+                pair->binding->disconnect(this);
+                pair->binding->cancel();
+            }
+            if (pair->pool)
+                pair->pool->disconnect(this);
+        }
+        checkList.triggeredPairs.clear();
+        checkList.validPairs.clear();
+        checkList.pairs.clear();
+
         // will trigger candidateRemoved events and result pairs cleanup.
         if (!components.empty()) {
             for (auto &c : components) {
@@ -615,7 +639,7 @@ public:
         connect(pair->pool.data(), &StunTransactionPool::outgoingMessage, this,
                 [this, weakPair = pair.toWeakRef()](const QByteArray &packet, const TransportAddress &) {
                     auto pair = weakPair.toStrongRef();
-                    if (!pair)
+                    if (!pair || state == Stopped || state == Stopping)
                         return;
                     int at = findLocalCandidate(pair->local->addr);
                     if (at == -1) { // FIXME: assert?
@@ -661,7 +685,44 @@ public:
         pair->binding->setShortTermUsername(peerUser + ':' + localUser);
         pair->binding->setShortTermPassword(peerPass);
 
-        pair->binding->start();
+        pair->binding->start(pair->remote->addr);
+    }
+
+    void handleCheckResponse(IceTransport *transport, int path, const StunMessage &message,
+                             const TransportAddress &from)
+    {
+        if (state == Stopped || state == Stopping)
+            return;
+
+        // A nominated local peer-reflexive pair may only be in the valid list.
+        // Its mapped address differs from the socket address: route by the
+        // actual transport/path, then let the transaction check ID and source.
+        auto pairs = checkList.pairs + checkList.validPairs;
+        for (const auto &component : components) {
+            if (component.highestPair)
+                pairs.append(component.highestPair);
+            if (component.selectedPair)
+                pairs.append(component.selectedPair);
+        }
+        QSet<StunTransactionPool *> seen;
+        QPointer<Private>           guard(this);
+        for (const auto &pair : std::as_const(pairs)) {
+            if (pair->state != PInProgress || !pair->pool)
+                continue;
+            const int at = findLocalCandidate(pair->local->addr);
+            if (at == -1)
+                continue;
+            const auto local = localCandidates[at];
+            if (local.iceTransport.data() != transport || local.path != path)
+                continue;
+            auto pool = pair->pool;
+            if (seen.contains(pool.data()))
+                continue;
+            seen.insert(pool.data());
+            pool->writeIncomingMessage(message, from);
+            if (!guard || state == Stopped || state == Stopping)
+                return;
+        }
     }
 
     void doPairing(const QList<IceComponent::Candidate>          &localCandidates,
@@ -1206,6 +1267,8 @@ private:
 
     void handlePairBindingSuccess(CandidatePair::Ptr pair)
     {
+        if (state == Stopped || state == Stopping)
+            return;
         /*
             RFC8445 7.2.5.2.1.  Non-Symmetric Transport Addresses
             tells us addr:port of source->dest of request MUST match with dest<-source of the response,
@@ -1275,9 +1338,8 @@ private:
 
     void handlePairBindingError(CandidatePair::Ptr pair, XMPP::StunBinding::Error)
     {
-        Q_ASSERT(state != Stopped);
-        if (state == Stopping)
-            return; // we don't care about late errors
+        if (state == Stopped || state == Stopping)
+            return; // terminal ICE cannot be revived by a late STUN result
 
         if (state == Active) {
             iceDebug("todo! binding error ignored in Active state");
@@ -1480,11 +1542,16 @@ private slots:
     // path is either direct or relayed
     void it_readyRead(int path)
     {
-        IceTransport *it = static_cast<IceTransport *>(sender());
-        int           at = findLocalCandidate(it, path, true); // just host or relay
-        Q_ASSERT(at != -1);
+        if (state == Stopped || state == Stopping)
+            return;
+        QPointer<Private> guard(this);
+        IceTransport     *it = static_cast<IceTransport *>(sender());
+        int               at = findLocalCandidate(it, path, true); // just host or relay
+        if (at == -1)
+            return; // a queued notification from a removed socket
 
-        IceComponent::Candidate &locCand = localCandidates[at];
+        // A successful check can remove candidates while completing nomination.
+        const auto locCand = localCandidates[at];
 
         IceTransport *sock = it;
 
@@ -1561,13 +1628,9 @@ private slots:
                     iceDebug("received validated response from %s to %s", qPrintable(fromAddr),
                              qPrintable(locCand.info->addr));
 
-                    // FIXME: this is so gross and completely defeats the point of having pools
-                    for (int n = 0; n < checkList.pairs.count(); ++n) {
-                        CandidatePair &pair = *checkList.pairs[n];
-                        if (pair.state == PInProgress && pair.local->addr.addr == locCand.info->addr.addr
-                            && pair.local->addr.port == locCand.info->addr.port)
-                            pair.pool->writeIncomingMessage(msg);
-                    }
+                    handleCheckResponse(it, path, msg, fromAddr);
+                    if (!guard || state == Stopped || state == Stopping)
+                        return;
                 } else {
                     // iceDebug("received some non-stun or invalid stun packet");
 
