@@ -572,7 +572,7 @@ bool Application::isTransportReplaceEnabled() const
     auto session = pad ? pad->session() : nullptr;
     if (!session)
         return false;
-    const auto groups = session->role() == Origin::Initiator ? session->remoteGroupings() : session->groupings();
+    const auto groups = session->negotiatedGroupings();
     for (const auto &group : groups) {
         if (group.semantics == QLatin1String("BUNDLE") && group.contents.size() > 1
             && group.contents.contains(_contentName))

@@ -194,6 +194,68 @@ Compatible contents are BUNDLEd automatically by default; explicit `setGroupings
 `setAutomaticGroupingEnabled(false)` override that policy. This allows RTP and an ICE/SCTP file
 transfer to share one ICE/DTLS path without making IBB or S5B implicitly shareable.
 
+### Extending BUNDLE in an active session
+
+`Session::negotiatedGroupings()` returns the accepted topology. Use it when inspecting
+live BUNDLE membership or coordinating transport replacement. `groupings()` describes the
+local grouping policy/proposal and `remoteGroupings()` retains the peer grouping snapshot;
+neither substitutes for the negotiated topology. Pending active extensions are internal and
+do not change these snapshots until accepted.
+
+With automatic grouping enabled, `Session::addContent()` can append a compatible content to
+one already negotiated BUNDLE group. Configure the application's offer first, then add it to
+the active session through the usual application API. Preparation selects the established
+ICE/DTLS association rather than creating a parallel transport stack. Sharing requires both
+application and transport support, the same transport namespace as existing members, and one
+unambiguously compatible group. For a file transfer sharing RTP's association, SCTP support
+must be enabled. Explicit `setGroupings()` policy and `setAutomaticGroupingEnabled(false)`
+disable automatic extension. `setGroupings()` cannot change an active session's topology.
+
+Iris currently permits one pending BUNDLE extension per session and one added group member
+per transaction. It preserves the established members and their order, including the existing
+BUNDLE tag. Reordering tags, moving accepted contents between groups, unbundling accepted
+contents, and changing multiple groups in one transaction are outside this implementation's
+scope. This is an Iris restriction, not a claim that RFC 9143 prohibits every such operation.
+An update describes the complete membership of each supplied group; unrelated groups need
+not be repeated and retain their accepted membership. Group references resolve against the
+union of existing contents and current stanza definitions, deduplicated by `(name, creator)`.
+Names that identify different creators remain ambiguous and are rejected, because XEP-0338
+references carry no creator.
+
+A `content-add` IQ result acknowledges receipt; it does not accept the content or BUNDLE
+membership. The offerer commits on a validated `content-accept` containing that content and
+the accepted group. The answerer commits only after the IQ result for its `content-accept`,
+before application callbacks can start the transport. Preparation can pin and use the existing
+association, but it does not publish the new content's membership. IQ completions are bound
+to their own content/transport transaction; an unrelated answer or late ACK cannot commit a
+later extension.
+
+[RFC 9143 section 7.5.1](https://www.rfc-editor.org/rfc/rfc9143.html#section-7.5.1)
+requires an accepted addition to remain in the proposed BUNDLE. An answerer that cannot share
+the established transport sends `content-reject`, including when local grouping policy refuses
+sharing. It cannot accept that content independently by omitting the group or repeating the old
+group. An invalid `content-accept` receives an IQ error without changing the committed topology
+or cancelling the outstanding offer: the peer can send a corrected answer or `content-reject`.
+A failed outgoing `content-add`/`content-accept` IQ, local rejection, peer rejection, or destruction
+of the added content retires its provisional ownership and leaves existing members alive.
+After a failed answer IQ, Iris also sends `content-remove` for the addition so the peer does
+not keep an unresolved offer; removal works even if the peer accepted but its IQ result was lost.
+
+`content-remove` and application teardown remove the content from negotiated groups without a
+separate grouping stanza. If an established member disappears while its group is being extended,
+Iris cancels the pending addition instead of committing its obsolete group snapshot. Survivors
+continue using their association; a group with one surviving member can be extended again or
+have its transport replaced. Transport replacement of the affected group is refused while an
+extension is pending. After acceptance, replacement includes the newly accepted member along
+with the existing group members. Keeping a `QSharedPointer<Transport>` after its application
+ends does not keep that application's membership or network callbacks alive. Final network
+destruction can be deferred until teardown callbacks have returned.
+
+The active-session XML mapping is documented in the proposed XEP-0338 update. The
+[published XEP-0338](https://xmpp.org/extensions/xep-0338.html) does not yet specify this exchange
+in the same detail; consumers should distinguish the Iris-supported extension profile from
+arbitrary SDP BUNDLE renegotiation.
+
 ## Pads in more detail
 
 `SessionManagerPad` is the common base for application and transport pads. It provides hooks that
@@ -336,6 +398,12 @@ contract. `Transport::prepareUpdate()` parses and validates one `<transport/>` i
 `PreparedUpdate` without mutating live transport/network state, emitting signals or scheduling
 work. The default implementation is fail-closed (`Unsupported`); built-in ICE, IBB and S5B
 transports provide typed prepared values and apply them through `commitPreparedUpdate()`.
+
+Incoming `content-accept` also validates all content envelopes and prepares transport payloads
+before applying application answers or starting network work. For compatibility, external
+transport providers that return `Unsupported` can still use their legacy `update()` here, after
+the complete application-answer batch validates. Such providers must implement `prepareUpdate()`
+to provide the same protection against malformed later transport payloads as the built-in transports.
 
 Session first validates the complete content batch and prepares every still-current payload. A
 malformed later sibling therefore cannot leave an earlier transport update applied. Only after the

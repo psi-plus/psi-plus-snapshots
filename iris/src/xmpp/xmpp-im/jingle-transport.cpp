@@ -23,6 +23,13 @@
 #include <QPointer>
 
 namespace XMPP { namespace Jingle {
+    QStringList TransportManagerPad::pendingGroupMembersFor(const ContentKey &content) const
+    {
+        auto       owner = session();
+        const auto group = owner ? owner->pendingGroupExtensionFor(content) : std::optional<ContentGroup>();
+        return group ? group->contents : QStringList();
+    }
+
     //----------------------------------------------------------------------------
     // TransportManager
     //----------------------------------------------------------------------------
@@ -51,15 +58,9 @@ namespace XMPP { namespace Jingle {
 
     void Transport::stop() { _state = State::Finished; }
 
-    Transport::PrepareUpdateResult Transport::prepareUpdate(const QDomElement &)
-    {
-        return {};
-    }
+    Transport::PrepareUpdateResult Transport::prepareUpdate(const QDomElement &) { return {}; }
 
-    bool Transport::commitPreparedUpdate(PreparedUpdatePtr)
-    {
-        return false;
-    }
+    bool Transport::commitPreparedUpdate(PreparedUpdatePtr) { return false; }
 
     int Transport::maxSupportedComponents() const { return 1; }
 

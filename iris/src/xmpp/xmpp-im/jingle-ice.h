@@ -32,6 +32,9 @@ class QHostAddress;
 namespace XMPP {
 class Client;
 
+namespace Jingle {
+    class Application;
+}
 namespace Jingle { namespace ICE {
     extern const QString NS;
     extern const QString NS_ICE_UDP;
@@ -101,6 +104,9 @@ namespace Jingle { namespace ICE {
 
     private:
         friend class Transport;
+        bool                 commitGroupExtension(const ContentKey &) override;
+        void                 rollbackGroupExtension(const ContentKey &) override;
+        void                 watchGroupedContent(Application *, const ContentKey &);
         IceConnection       *groupedConnectionFor(Transport *transport, bool *contentBound, bool *groupRequired);
         ConnectionMembership membershipFor(Transport *transport, bool *contentBound);
         bool                 groupedConnectionAccepted(Transport *transport) const;
@@ -109,10 +115,10 @@ namespace Jingle { namespace ICE {
 
         class Private;
         std::unique_ptr<Private> d;
-        Manager      *_manager;
-        Session      *_session;
-        TcpPortScope *_discoScope = nullptr;
-        bool          _allowGrouping = false;
+        Manager                 *_manager;
+        Session                 *_session;
+        TcpPortScope            *_discoScope    = nullptr;
+        bool                     _allowGrouping = false;
     };
 
     class Manager : public TransportManager {

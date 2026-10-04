@@ -27,10 +27,10 @@
 #include <iris/xmpp-im/jingle-transport.h>
 #include <iris/xmpp-im/xmpp_features.h>
 
+#include <QSet>
 #include <algorithm>
 #include <functional>
 #include <memory>
-#include <QSet>
 
 namespace XMPP { namespace Jingle {
 
@@ -106,6 +106,9 @@ namespace XMPP { namespace Jingle {
         // Last successfully parsed initial peer offer/answer. Automatic local
         // grouping may accept a compatible subset while preserving this peer snapshot.
         QList<ContentGroup> remoteGroupings() const;
+        // Group topology that has completed offer/answer negotiation. Unlike
+        // groupings()/remoteGroupings(), this never exposes a pending proposal.
+        QList<ContentGroup> negotiatedGroupings() const;
 
         ApplicationManagerPad::Ptr applicationPad(const QString &ns);
         TransportManagerPad::Ptr   transportPad(const QString &ns);
@@ -142,6 +145,7 @@ namespace XMPP { namespace Jingle {
     private:
         friend class Application;
         friend class Manager;
+        friend class TransportManagerPad;
         friend class PublicationManager;
         friend class JTPush;
 
@@ -150,9 +154,11 @@ namespace XMPP { namespace Jingle {
         // Dispatcher must invoke afterReply only after sending the incoming IQ reply.
         bool updateFromXml(Action action, const QDomElement &jingleEl, std::function<void()> *afterReply = nullptr);
         static std::optional<QList<ContentGroup>> parseGroupings(const QDomElement &jingleEl);
+
         static bool validBundleAnswer(const QList<ContentGroup> &offer, const QList<ContentGroup> &answer);
         bool        validLocalGroupings() const;
         void        refreshAutomaticGroupings(const QSet<Application *> &excluded = {});
+        std::optional<ContentGroup> pendingGroupExtensionFor(const ContentKey &) const;
 
         TieBreaker tieBreaker_;
 

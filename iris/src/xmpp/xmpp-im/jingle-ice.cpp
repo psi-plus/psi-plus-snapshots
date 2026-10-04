@@ -57,14 +57,17 @@ namespace XMPP { namespace Jingle { namespace ICE {
         QMap<ContentKey, QPointer<Transport>>     contentOwners;
         QSet<ContentKey>                          establishedContents;
         std::optional<ConnectionGroupTransaction> stagedGroups;
+        std::optional<ConnectionGroupTransaction> extensionGroups;
+        std::optional<ContentKey>                 extensionContent;
+        QPointer<Transport>                       extensionTransport;
         std::optional<ConnectionGroupTransaction> replacementGroups;
         QSet<ContentKey>                          replacementContents;
         QSet<ContentKey>                          replacementBound;
         QMap<ContentKey, QPointer<Transport>>     replacementTransports;
         QList<ContentGroup>                       stagedOfferGroups;
         QSet<ContentKey>                          stagedContents;
-        bool                                      groupStageAttempted = false;
-        bool                                      groupStageFailed    = false;
+        bool                                      groupStageAttempted  = false;
+        bool                                      groupStageFailed     = false;
         bool                                      localAcceptanceKnown = false;
     };
 
@@ -150,10 +153,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
     }
 
     struct Element {
-        QString           pwd;
-        QString           ufrag;
+        QString             pwd;
+        QString             ufrag;
         std::optional<bool> ice2;
-        Dtls::FingerPrint fingerprint;
+        Dtls::FingerPrint   fingerprint;
 #ifdef JINGLE_SCTP
         SCTP::MapElement            sctpMap;
         QList<SCTP::ChannelElement> sctpChannels;
@@ -257,11 +260,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
         }
     };
 
-
     class IceConnection::Runtime {
     public:
         struct Participant {
-            QPointer<Transport> transport;
+            QPointer<Transport>                                   transport;
             std::function<void(const QList<Ice176::Candidate> &)> onLocalCandidates;
             std::function<void()>                                 onGatheringComplete;
             std::function<void(Ice176::Error)>                    onError;
@@ -272,28 +274,28 @@ namespace XMPP { namespace Jingle { namespace ICE {
         QPointer<Pad> pad;
         Origin        creator = Origin::None;
 
-        bool initializationStarted       = false;
-        bool remoteFingerprintAccepted  = false;
-        bool dtlsAcceptanceStarted       = false;
-        bool remoteFingerprintApplied    = false;
-        bool gatheringComplete           = false;
-        bool checksStarted                = false;
+        bool initializationStarted     = false;
+        bool remoteFingerprintAccepted = false;
+        bool dtlsAcceptanceStarted     = false;
+        bool remoteFingerprintApplied  = false;
+        bool gatheringComplete         = false;
+        bool checksStarted             = false;
 
-        QList<Participant>      participants;
+        QList<Participant>       participants;
         QList<Ice176::Candidate> localCandidateHistory;
 
         // Association-owned discovery/startup state. No asynchronous callback
         // below is allowed to depend on one Transport::Private surviving.
-        int          basePort = -1;
-        bool         allowIpExposure = true;
-        QHostAddress selfAddr;
+        int               basePort        = -1;
+        bool              allowIpExposure = true;
+        QHostAddress      selfAddr;
         TurnClient::Proxy stunProxy;
 
         QHostAddress extAddr;
         QHostAddress stunBindAddr;
         QHostAddress stunRelayUdpAddr;
         QHostAddress stunRelayTcpAddr;
-        int          stunBindPort = 0;
+        int          stunBindPort     = 0;
         int          stunRelayUdpPort = 0;
         int          stunRelayTcpPort = 0;
         QString      stunRelayUdpUser;
@@ -301,13 +303,13 @@ namespace XMPP { namespace Jingle { namespace ICE {
         QString      stunRelayTcpUser;
         QString      stunRelayTcpPass;
 
-        QString                  remoteUfrag;
-        QString                  remotePassword;
-        std::optional<bool>      remoteIce2;
+        QString                          remoteUfrag;
+        QString                          remotePassword;
+        std::optional<bool>              remoteIce2;
         std::optional<Dtls::FingerPrint> remoteFingerprint;
-        QList<Ice176::Candidate> remoteCandidates;
+        QList<Ice176::Candidate>         remoteCandidates;
         QList<Ice176::SelectedCandidate> remoteSelectedCandidates;
-        bool                     remoteGatheringComplete = false;
+        bool                             remoteGatheringComplete = false;
 
         void pruneParticipants()
         {
@@ -323,8 +325,23 @@ namespace XMPP { namespace Jingle { namespace ICE {
                                [transport](const Participant &p) { return p.transport == transport; });
         }
 
+        bool compatibleRemoteIce(const Element &e) const
+        {
+            if (e.ice2 && remoteIce2 && *e.ice2 != *remoteIce2)
+                return false;
+            if ((!e.ufrag.isEmpty() || !e.pwd.isEmpty()) && (!remoteUfrag.isEmpty() || !remotePassword.isEmpty())
+                && (remoteUfrag != e.ufrag || remotePassword != e.pwd))
+                return false;
+            return !e.fingerprint.isValid() || !remoteFingerprint || *remoteFingerprint == e.fingerprint;
+        }
+
         bool mergeRemoteIce(const Element &e)
         {
+            // Check every association-level field before changing any of them.
+            // A conflicting follower must not partially modify an established
+            // BUNDLE's ICE version, credentials or DTLS role/fingerprint.
+            if (!compatibleRemoteIce(e))
+                return false;
             // Only an explicit ice2 attribute updates the peer-version state.
             // Runtime state is also seeded from an empty per-content Element
             // before the first remote transport arrives, so absence here cannot
@@ -348,10 +365,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
             }
             if (!e.candidates.isEmpty()) {
                 for (const auto &candidate : e.candidates) {
-                    const auto duplicate = std::find_if(
-                        remoteCandidates.cbegin(), remoteCandidates.cend(), [&candidate](const Ice176::Candidate &known) {
-                            return !candidate.id.isEmpty() && candidate.id == known.id;
-                        });
+                    const auto duplicate = std::find_if(remoteCandidates.cbegin(), remoteCandidates.cend(),
+                                                        [&candidate](const Ice176::Candidate &known) {
+                                                            return !candidate.id.isEmpty() && candidate.id == known.id;
+                                                        });
                     if (duplicate == remoteCandidates.cend())
                         remoteCandidates.append(candidate);
                 }
@@ -571,13 +588,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
             setOpenMode(QIODevice::ReadOnly);
             emit disconnected();
         }
-
     };
 
-    IceConnection::IceConnection() :
-        secureRtpAssociationId(QUuid::createUuid().toRfc4122())
-    {
-    }
+    IceConnection::IceConnection() : secureRtpAssociationId(QUuid::createUuid().toRfc4122()) { }
 
     static QByteArray associationDebugId(const IceConnection *network)
     {
@@ -599,12 +612,11 @@ namespace XMPP { namespace Jingle { namespace ICE {
         network->runtime->dtlsAcceptanceStarted = true;
         for (const auto &component : std::as_const(network->components)) {
             if (component.dtls) {
-                qInfo("jingle-ice[%s] start DTLS component=%d dtls=%p", id.constData(),
-                      component.componentIndex, component.dtls);
+                qInfo("jingle-ice[%s] start DTLS component=%d dtls=%p", id.constData(), component.componentIndex,
+                      component.dtls);
                 component.dtls->onRemoteAcceptedFingerprint();
             } else {
-                qInfo("jingle-ice[%s] no DTLS object for component=%d", id.constData(),
-                      component.componentIndex);
+                qInfo("jingle-ice[%s] no DTLS object for component=%d", id.constData(), component.componentIndex);
             }
         }
     }
@@ -629,8 +641,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
             qDebug("TURN w/ TCP service: %s;%d", qPrintable(runtime->stunRelayTcpAddr.toString()),
                    runtime->stunRelayTcpPort);
 
-        auto listenAddrs = runtime->selfAddr.isNull() ? Ice176::availableNetworkAddresses()
-                                                      : QList<QHostAddress> { runtime->selfAddr };
+        auto                        listenAddrs = runtime->selfAddr.isNull() ? Ice176::availableNetworkAddresses()
+                                                                             : QList<QHostAddress> { runtime->selfAddr };
         QList<Ice176::LocalAddress> localAddrs;
         QStringList                 strList;
         for (const QHostAddress &host : std::as_const(listenAddrs)) {
@@ -652,8 +664,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 printf("  %s\n", qPrintable(host));
         }
 
-        auto *ice = new Ice176(network);
-        network->ice = ice;
+        auto *ice                = new Ice176(network);
+        network->ice             = ice;
         const auto iceGeneration = ++network->generation.iceGeneration;
         ice->setAllowIpExposure(runtime->allowIpExposure);
 
@@ -699,23 +711,25 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 if (participant.onGatheringComplete)
                     participant.onGatheringComplete();
         });
-        QObject::connect(ice, &Ice176::readyToSendMedia, network, [network, currentIce]() {
-            if (!currentIce() || !network->runtime)
-                return;
-            const auto id = associationDebugId(network);
-            qInfo("jingle-ice[%s] ICE ready-to-send fingerprint-acked=%d dtls-started=%d", id.constData(),
-                  int(network->runtime->remoteFingerprintAccepted),
-                  int(network->runtime->dtlsAcceptanceStarted));
-            if (!network->components.isEmpty() && network->components[0].dtls) {
-                startAssociationDtlsIfReady(network);
-                return;
-            }
-            network->runtime->pruneParticipants();
-            const auto participants = network->runtime->participants;
-            for (const auto &participant : participants)
-                if (participant.onRawReady)
-                    participant.onRawReady();
-        }, Qt::QueuedConnection);
+        QObject::connect(
+            ice, &Ice176::readyToSendMedia, network,
+            [network, currentIce]() {
+                if (!currentIce() || !network->runtime)
+                    return;
+                const auto id = associationDebugId(network);
+                qInfo("jingle-ice[%s] ICE ready-to-send fingerprint-acked=%d dtls-started=%d", id.constData(),
+                      int(network->runtime->remoteFingerprintAccepted), int(network->runtime->dtlsAcceptanceStarted));
+                if (!network->components.isEmpty() && network->components[0].dtls) {
+                    startAssociationDtlsIfReady(network);
+                    return;
+                }
+                network->runtime->pruneParticipants();
+                const auto participants = network->runtime->participants;
+                for (const auto &participant : participants)
+                    if (participant.onRawReady)
+                        participant.onRawReady();
+            },
+            Qt::QueuedConnection);
         QObject::connect(ice, &Ice176::readyRead, network, [network, ice, currentIce](int componentIndex) {
             if (!currentIce() || componentIndex < 0 || componentIndex >= network->components.size())
                 return;
@@ -749,13 +763,12 @@ namespace XMPP { namespace Jingle { namespace ICE {
         if (!runtime->stunBindAddr.isNull() && runtime->stunBindPort > 0)
             ice->setStunBindService(runtime->stunBindAddr, runtime->stunBindPort);
         if (!runtime->stunRelayUdpAddr.isNull() && !runtime->stunRelayUdpUser.isEmpty())
-            ice->setStunRelayUdpService(runtime->stunRelayUdpAddr, runtime->stunRelayUdpPort,
-                                                 runtime->stunRelayUdpUser, runtime->stunRelayUdpPass.toUtf8());
+            ice->setStunRelayUdpService(runtime->stunRelayUdpAddr, runtime->stunRelayUdpPort, runtime->stunRelayUdpUser,
+                                        runtime->stunRelayUdpPass.toUtf8());
         if (!runtime->stunRelayTcpAddr.isNull() && !runtime->stunRelayTcpUser.isEmpty())
-            ice->setStunRelayTcpService(runtime->stunRelayTcpAddr, runtime->stunRelayTcpPort,
-                                                 runtime->stunRelayTcpUser, runtime->stunRelayTcpPass.toUtf8());
-        ice->setStunDiscoverer(
-            pad->session()->manager()->client()->stunDiscoManager()->createMonitor());
+            ice->setStunRelayTcpService(runtime->stunRelayTcpAddr, runtime->stunRelayTcpPort, runtime->stunRelayTcpUser,
+                                        runtime->stunRelayTcpPass.toUtf8());
+        ice->setStunDiscoverer(pad->session()->manager()->client()->stunDiscoManager()->createMonitor());
 
         ice->setComponentCount(network->components.count());
         // XEP-0371 carries the RFC 8445 ice2 option, so it can enable
@@ -869,9 +882,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
         ConnectionMembership          membership;
         QSharedPointer<IceConnection> standaloneNetwork;
         QPointer<IceConnection>       network;
-        bool                           groupManagedNetwork       = false;
-        bool                           networkOwnershipRetired   = false;
-        QStringList                    rtpProfiles;
+        bool                          groupManagedNetwork     = false;
+        bool                          networkOwnershipRetired = false;
+        QStringList                   rtpProfiles;
 
         ~Private() { releaseNetwork(); }
 
@@ -920,7 +933,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
             bool contentBound  = false;
             bool groupRequired = false;
-            network = pad->groupedConnectionFor(q, &contentBound, &groupRequired);
+            network            = pad->groupedConnectionFor(q, &contentBound, &groupRequired);
             if (groupRequired) {
                 if (!network)
                     return false;
@@ -956,9 +969,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 return false;
 
             if (!network->runtime->hasParticipant(q)) {
-                QPointer<Transport> guard(q);
+                QPointer<Transport>                 guard(q);
                 IceConnection::Runtime::Participant participant;
-                participant.transport = guard;
+                participant.transport         = guard;
                 participant.onLocalCandidates = [guard](const QList<Ice176::Candidate> &candidates) {
                     if (!guard)
                         return;
@@ -1021,8 +1034,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             if (!dtls || dtls->isStarted() || !dtls->setSRTPProfiles(rtpProfiles))
                 return false;
 
-            auto association
-                = new RTP::SecureRtpAssociation(dtls, network->secureRtpAssociationId, network);
+            auto association    = new RTP::SecureRtpAssociation(dtls, network->secureRtpAssociationId, network);
             component.secureRtp = association;
             QObject::connect(association, &RTP::SecureRtpAssociation::ready, network,
                              [net = network](quint64 epoch) { net->generation.dtlsEpoch = epoch; });
@@ -1038,8 +1050,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
         {
             Q_ASSERT(componentIndex < network->components.length());
             const auto id = associationDebugId(network);
-            qInfo("jingle-ice[%s] setup DTLS component=%d transport=%p grouped=%d local=%d remote=%d",
-                  id.constData(), componentIndex, q, int(groupManagedNetwork), int(q->isLocal()), int(q->isRemote()));
+            qInfo("jingle-ice[%s] setup DTLS component=%d transport=%p grouped=%d local=%d remote=%d", id.constData(),
+                  componentIndex, q, int(groupManagedNetwork), int(q->isLocal()), int(q->isRemote()));
             auto &component = network->components[componentIndex];
             if (component.dtls) {
                 if (!ensureSecureRtp(componentIndex, component.dtls))
@@ -1062,8 +1074,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
             if (q->isLocal()) {
                 dtls->initOutgoing();
             } else {
-                const auto fingerprint = network->runtime ? network->runtime->remoteFingerprint
-                                                          : std::optional<Dtls::FingerPrint> {};
+                const auto fingerprint
+                    = network->runtime ? network->runtime->remoteFingerprint : std::optional<Dtls::FingerPrint> {};
                 if (!fingerprint)
                     return false;
                 dtls->setRemoteFingerprint(*fingerprint);
@@ -1079,7 +1091,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                         if (!net->runtime)
                             return;
                         net->runtime->remoteFingerprintAccepted = false;
-                        net->runtime->dtlsAcceptanceStarted      = false;
+                        net->runtime->dtlsAcceptanceStarted     = false;
                         net->runtime->pruneParticipants();
                         const auto participants = net->runtime->participants;
                         for (const auto &participant : participants)
@@ -1108,9 +1120,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 const auto id = associationDebugId(net);
                 for (auto packet = componentDtls->readOutgoingDatagram(); !packet.isEmpty();
                      packet      = componentDtls->readOutgoingDatagram()) {
-                    qInfo("jingle-ice[%s] DTLS outgoing component=%d dtls=%p bytes=%d ice-can-send=%d",
-                          id.constData(), componentIndex, componentDtls, int(packet.size()),
-                          int(net->ice->canSendMedia()));
+                    qInfo("jingle-ice[%s] DTLS outgoing component=%d dtls=%p bytes=%d ice-can-send=%d", id.constData(),
+                          componentIndex, componentDtls, int(packet.size()), int(net->ice->canSendMedia()));
                     net->ice->writeDatagram(componentIndex, packet);
                 }
             });
@@ -1160,15 +1171,15 @@ namespace XMPP { namespace Jingle { namespace ICE {
         {
             if (!network || !network->runtime || network->runtime->initializationStarted)
                 return;
-            auto runtime = network->runtime.get();
+            auto runtime                   = network->runtime.get();
             runtime->initializationStarted = true;
 
-            auto manager          = dynamic_cast<Manager *>(q->pad()->manager())->d.get();
-            runtime->basePort     = manager->basePort;
-            runtime->allowIpExposure = manager->allowIpExposure;
-            runtime->selfAddr     = manager->selfAddr;
-            runtime->stunProxy    = manager->stunProxy;
-            runtime->stunBindPort = manager->stunBindPort;
+            auto manager              = dynamic_cast<Manager *>(q->pad()->manager())->d.get();
+            runtime->basePort         = manager->basePort;
+            runtime->allowIpExposure  = manager->allowIpExposure;
+            runtime->selfAddr         = manager->selfAddr;
+            runtime->stunProxy        = manager->stunProxy;
+            runtime->stunBindPort     = manager->stunBindPort;
             runtime->stunRelayUdpPort = manager->stunRelayUdpPort;
             runtime->stunRelayTcpPort = manager->stunRelayTcpPort;
             runtime->stunRelayUdpUser = manager->stunRelayUdpUser;
@@ -1193,7 +1204,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                     [guard = QPointer<IceConnection>(network), start](const ExternalServiceList &services) {
                         if (!guard || !guard->runtime)
                             return;
-                        auto runtime = guard->runtime.get();
+                        auto                 runtime = guard->runtime.get();
                         ExternalService::Ptr stun;
                         ExternalService::Ptr turnUdp;
                         ExternalService::Ptr turnTcp;
@@ -1244,12 +1255,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
             runtime->stunBindAddr.setAddress(manager->stunBindHost);
             runtime->stunRelayUdpAddr.setAddress(manager->stunRelayUdpHost);
             runtime->stunRelayTcpAddr.setAddress(manager->stunRelayTcpHost);
-            Resolver::ResolveList resolve {
-                { manager->extHost, std::ref(runtime->extAddr) },
-                { manager->stunBindHost, std::ref(runtime->stunBindAddr) },
-                { manager->stunRelayUdpHost, std::ref(runtime->stunRelayUdpAddr) },
-                { manager->stunRelayTcpHost, std::ref(runtime->stunRelayTcpAddr) }
-            };
+            Resolver::ResolveList resolve { { manager->extHost, std::ref(runtime->extAddr) },
+                                            { manager->stunBindHost, std::ref(runtime->stunBindAddr) },
+                                            { manager->stunRelayUdpHost, std::ref(runtime->stunRelayUdpAddr) },
+                                            { manager->stunRelayTcpHost, std::ref(runtime->stunRelayTcpAddr) } };
             Resolver::resolve(network, std::move(resolve), start);
         }
 
@@ -1320,8 +1329,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
             if (network->ice)
                 setupRemoteICE(e);
 
-            if (e.fingerprint.isValid() && q->isLocal() && network->runtime
-                && network->runtime->remoteFingerprint && !network->runtime->remoteFingerprintApplied) {
+            if (e.fingerprint.isValid() && q->isLocal() && network->runtime && network->runtime->remoteFingerprint
+                && !network->runtime->remoteFingerprintApplied) {
                 // DTLS negotiation state belongs to the physical BUNDLE association,
                 // not to each logical content. Followers carry the same fingerprint
                 // for signaling consistency, but must not apply it a second time to
@@ -1420,12 +1429,11 @@ namespace XMPP { namespace Jingle { namespace ICE {
             if (remoteState->sctpMap.isValid()) {
                 // TODO if we already have associations params try to ruse them instead of making new one
             }
-            QObject::connect(c.sctp, &SCTP::Association::readyReadOutgoing, network,
-                             [net = network, componentIndex]() {
-                                 auto &c   = net->components[componentIndex];
-                                 auto  buf = c.sctp->readOutgoing();
-                                 c.dtls->writeDatagram(buf);
-                             });
+            QObject::connect(c.sctp, &SCTP::Association::readyReadOutgoing, network, [net = network, componentIndex]() {
+                auto &c   = net->components[componentIndex];
+                auto  buf = c.sctp->readOutgoing();
+                c.dtls->writeDatagram(buf);
+            });
             q->connect(c.sctp, &SCTP::Association::newIncomingChannel, q, [this, componentIndex]() {
                 qDebug("new incoming sctp channel");
                 auto assoc   = network->components[componentIndex].sctp;
@@ -1513,10 +1521,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         d->releaseNetwork();
     }
 
-    bool Transport::iceCanSendMedia() const
-    {
-        return d->network && d->network->ice && d->network->ice->canSendMedia();
-    }
+    bool Transport::iceCanSendMedia() const { return d->network && d->network->ice && d->network->ice->canSendMedia(); }
 
     void Transport::stop()
     {
@@ -1536,8 +1541,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
             return false;
         if (!d->groupManagedNetwork && (d->network->ice || d->network->components[0].dtls))
             return false;
-        if (d->groupManagedNetwork && d->network->components[0].dtls
-            && d->network->components[0].dtls->isStarted() && !d->network->components[0].secureRtp)
+        if (d->groupManagedNetwork && d->network->components[0].dtls && d->network->components[0].dtls->isStarted()
+            && !d->network->components[0].secureRtp)
             return false;
 
         const auto supported = Dtls::supportedSRTPProfiles();
@@ -1545,22 +1550,20 @@ namespace XMPP { namespace Jingle { namespace ICE {
             if (!supported.contains(profile))
                 return false;
 
-        d->rtpProfiles                         = profiles;
+        d->rtpProfiles                        = profiles;
         d->network->components[0].lowOverhead = true;
         return true;
     }
 
     RTP::SecureRtpAssociation *Transport::rtpAssociation() const
     {
-        return !d->network || d->network->components.isEmpty() ? nullptr
-                                                                : d->network->components[0].secureRtp;
+        return !d->network || d->network->components.isEmpty() ? nullptr : d->network->components[0].secureRtp;
     }
 
     bool Transport::sendProtectedRtpPacket(QByteArray packet, RTP::PacketKind kind, quint64 epoch)
     {
         auto association = rtpAssociation();
-        if (!association || !d->network || !d->network->ice || _state < State::Connecting
-            || _state >= State::Finishing
+        if (!association || !d->network || !d->network->ice || _state < State::Connecting || _state >= State::Finishing
             || !association->validateProtectedMuxed(packet, kind, epoch))
             return false;
         d->network->ice->writeDatagram(0, packet);
@@ -1623,8 +1626,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
     void Transport::start()
     {
         const auto id = associationDebugId(d->network);
-        qInfo("jingle-ice[%s] transport start transport=%p state=%d grouped=%d checks-started=%d", id.constData(),
-              this, int(_state), int(d->groupManagedNetwork),
+        qInfo("jingle-ice[%s] transport start transport=%p state=%d grouped=%d checks-started=%d", id.constData(), this,
+              int(_state), int(d->groupManagedNetwork),
               int(d->network && d->network->runtime && d->network->runtime->checksStarted));
         if (_state >= State::Finishing)
             return;
@@ -1663,6 +1666,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
             Element element;
             element.parse(normalized);
+            if (d->network && d->network->runtime && !d->network->runtime->compatibleRemoteIce(element))
+                return { PrepareUpdateStatus::Invalid, {}, {} };
             return { PrepareUpdateStatus::Ready, std::make_unique<PreparedIceUpdate>(std::move(element)), {} };
         } catch (const std::runtime_error &e) {
             qWarning("Transport update failed: %s", e.what());
@@ -1687,9 +1692,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         QTimer::singleShot(0, this, [this, element, network, iceGeneration]() {
             if (d->networkOwnershipRetired)
                 return;
-            if (network
-                && (!d->network || d->network != network
-                    || network->generation.iceGeneration != iceGeneration))
+            if (network && (!d->network || d->network != network || network->generation.iceGeneration != iceGeneration))
                 return;
             d->handleRemoteUpdate(element);
         });
@@ -1744,23 +1747,24 @@ namespace XMPP { namespace Jingle { namespace ICE {
         d->pendingLocalCandidates.clear();
         d->pendingActions = 0;
 
-        return OutgoingTransportInfoUpdate { transportXml,
-                                             [this, trptr = QPointer<Transport>(d->q), hasFingerprint](Task *task) {
-                                                 if (!trptr || !task || !task->success())
-                                                     return;
-                                                 // if we send our fingerprint as a response to remotely initiated dtls
-                                                 // then on response we are sure remote server started dtls server and
-                                                 // we can connect now.
-                                                 if (hasFingerprint && d->network && d->network->runtime) {
-                                                     const auto id = associationDebugId(d->network);
-                                                     qInfo("jingle-ice[%s] fingerprint IQ acknowledged transport=%p ice-can-send=%d",
-                                                           id.constData(), this,
-                                                           int(d->network->ice && d->network->ice->canSendMedia()));
-                                                     d->remoteAcceptedFingerprint = true;
-                                                     d->network->runtime->remoteFingerprintAccepted = true;
-                                                     startAssociationDtlsIfReady(d->network);
-                                                 }
-                                             } };
+        return OutgoingTransportInfoUpdate {
+            transportXml,
+            [this, trptr = QPointer<Transport>(d->q), hasFingerprint](Task *task) {
+                if (!trptr || !task || !task->success())
+                    return;
+                // if we send our fingerprint as a response to remotely initiated dtls
+                // then on response we are sure remote server started dtls server and
+                // we can connect now.
+                if (hasFingerprint && d->network && d->network->runtime) {
+                    const auto id = associationDebugId(d->network);
+                    qInfo("jingle-ice[%s] fingerprint IQ acknowledged transport=%p ice-can-send=%d", id.constData(),
+                          this, int(d->network->ice && d->network->ice->canSendMedia()));
+                    d->remoteAcceptedFingerprint                   = true;
+                    d->network->runtime->remoteFingerprintAccepted = true;
+                    startAssociationDtlsIfReady(d->network);
+                }
+            }
+        };
     }
 
     bool Transport::isValid() const { return d != nullptr; }
@@ -1975,9 +1979,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
             *contentBound = true;
 
         if (!d->groupStageAttempted) {
-            d->groupStageAttempted = true;
-            const bool provisionalOffer = _session->role() == Origin::Initiator;
-            d->stagedOfferGroups = provisionalOffer ? _session->groupings() : _session->remoteGroupings();
+            d->groupStageAttempted        = true;
+            const bool provisionalOffer   = _session->role() == Origin::Initiator;
+            d->stagedOfferGroups          = provisionalOffer ? _session->groupings() : _session->remoteGroupings();
             const auto stagedAnswerGroups = provisionalOffer ? d->stagedOfferGroups : _session->groupings();
 
             bool hasSharedOffer = false;
@@ -1991,13 +1995,13 @@ namespace XMPP { namespace Jingle { namespace ICE {
                     auto tr  = app ? app->transport() : QSharedPointer<XMPP::Jingle::Transport>();
                     if (!app || !tr || !tr->pad())
                         continue;
-                    members.append(GroupNegotiation::Member { it.key(), tr->pad()->ns(),
-                                                               app->allowsSharedTransport() && tr->supportsSharedTransport(), std::nullopt });
+                    members.append(GroupNegotiation::Member {
+                        it.key(), tr->pad()->ns(), app->allowsSharedTransport() && tr->supportsSharedTransport(),
+                        std::nullopt });
                 }
 
                 GroupNegotiation::Error error = GroupNegotiation::Error::None;
-                auto plan
-                    = GroupNegotiation::initialPlan(members, d->stagedOfferGroups, stagedAnswerGroups, &error);
+                auto plan = GroupNegotiation::initialPlan(members, d->stagedOfferGroups, stagedAnswerGroups, &error);
                 if (!plan) {
                     d->groupStageFailed = true;
                 } else {
@@ -2014,24 +2018,90 @@ namespace XMPP { namespace Jingle { namespace ICE {
                                 d->stagedContents.insert(key);
                                 auto app = _session->content(key.first, key.second);
                                 if (app) {
-                                    connect(app, &QObject::destroyed, this, [this, key]() {
-                                        if (d->replacementContents.contains(key)) {
-                                            d->replacementGroups.reset();
-                                            d->replacementContents.clear();
-                                            d->replacementBound.clear();
-                                            d->replacementTransports.clear();
-                                        }
-                                        if (d->stagedGroups)
-                                            d->stagedGroups->release(key);
-                                        d->contentOwners.remove(key);
-                                        d->establishedContents.remove(key);
-                                        d->registry.prune();
-                                    });
+                                    watchGroupedContent(app, key);
                                 }
                             }
                         }
                     }
                 }
+            }
+        }
+
+        // An Active content-add may provisionally extend an already-negotiated
+        // BUNDLE. The new Transport prepares against the old IceConnection, but
+        // ConnectionAssociationState membership is not published until the
+        // content-accept answer commits the extension.
+        if (d->stagedGroups && !d->stagedContents.contains(*content)) {
+            const auto pendingMembers = pendingGroupMembersFor(*content);
+            if (!pendingMembers.isEmpty()) {
+                if (groupRequired)
+                    *groupRequired = true; // failure must never allocate an independent fallback
+                if (d->replacementGroups)
+                    return nullptr;
+                if (!d->extensionGroups) {
+                    std::optional<ContentKey> anchor;
+                    quint64                   associationId = 0;
+                    bool                      valid         = true;
+                    for (const auto &name : pendingMembers) {
+                        if (name == content->first)
+                            continue;
+                        std::optional<ContentKey> key;
+                        for (auto it = _session->contentList().cbegin(); it != _session->contentList().cend(); ++it) {
+                            if (it.key().first != name || it.value()->state() >= State::Finishing)
+                                continue;
+                            if (key) {
+                                valid = false;
+                                break;
+                            }
+                            key = it.key();
+                        }
+                        if (!valid || !key || !d->stagedContents.contains(*key)) {
+                            valid = false;
+                            break;
+                        }
+                        const auto member = _session->content(key->first, key->second);
+                        if (!member || d->contentOwners.value(*key).data() != member->transport().data()) {
+                            valid = false; // an established member is changing its transport incarnation
+                            break;
+                        }
+                        const auto memberAssociation = d->stagedGroups->associationIdFor(*key);
+                        if (!memberAssociation || (associationId && memberAssociation != associationId)) {
+                            valid = false;
+                            break;
+                        }
+                        associationId = memberAssociation;
+                        if (!anchor)
+                            anchor = *key;
+                    }
+
+                    if (!valid || !anchor)
+                        return nullptr;
+                    auto extension = ConnectionGroupTransaction::stageMembershipExtension(
+                        *d->stagedGroups, d->registry, *anchor, QList<ContentKey> { *content });
+                    if (!extension || extension->associationIdFor(*content) != associationId)
+                        return nullptr;
+                    d->extensionGroups    = std::move(*extension);
+                    d->extensionContent   = *content;
+                    d->extensionTransport = transport;
+                    connect(transport, &QObject::destroyed, this, [this, content = *content, transport]() {
+                        if (!d->extensionContent || *d->extensionContent != content
+                            || (d->extensionTransport && d->extensionTransport != transport))
+                            return;
+                        if (d->extensionGroups)
+                            d->extensionGroups->rollbackExtension();
+                        d->extensionGroups.reset();
+                        d->extensionContent.reset();
+                        d->extensionTransport.clear();
+                        d->registry.prune();
+                    });
+                }
+
+                if (!d->extensionContent || *d->extensionContent != *content || d->extensionTransport != transport
+                    || !d->extensionGroups)
+                    return nullptr;
+                if (groupRequired)
+                    *groupRequired = true;
+                return d->extensionGroups->connectionFor(*content);
             }
         }
 
@@ -2043,22 +2113,21 @@ namespace XMPP { namespace Jingle { namespace ICE {
         // Initiator-side staging is provisional until the peer answer arrives.
         // A responder already knows its local answer before accept()/prepare(),
         // so any refused member must stay on an independent association.
-        const bool requiresShared = d->stagedContents.contains(*content)
-            || (_session->role() == Origin::Initiator && offeredAsShared);
+        const bool requiresShared
+            = d->stagedContents.contains(*content) || (_session->role() == Origin::Initiator && offeredAsShared);
         if (groupRequired)
             *groupRequired = requiresShared;
         if (!requiresShared || d->groupStageFailed || !d->stagedGroups)
             return nullptr;
 
-        const bool replacingEstablished = d->establishedContents.contains(*content)
-            && d->contentOwners.value(*content) != transport;
+        const bool replacingEstablished
+            = d->establishedContents.contains(*content) && d->contentOwners.value(*content) != transport;
 
         if (replacingEstablished) {
-            const auto &negotiatedGroups
-                = _session->role() == Origin::Initiator ? _session->remoteGroupings() : _session->groupings();
+            const auto                  negotiatedGroups = _session->negotiatedGroupings();
             std::optional<ContentGroup> negotiatedBundle;
             for (const auto &group : negotiatedGroups) {
-                if (group.semantics == QLatin1String("BUNDLE") && group.contents.size() > 1
+                if (group.semantics == QLatin1String("BUNDLE") && !group.contents.isEmpty()
                     && group.contents.contains(content->first)) {
                     if (negotiatedBundle)
                         return nullptr;
@@ -2074,10 +2143,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
                     return nullptr;
 
                 QList<GroupNegotiation::Member> members;
-                QSet<ContentKey>                 replacementKeys;
+                QSet<ContentKey>                replacementKeys;
                 for (const auto &name : negotiatedBundle->contents) {
                     std::optional<ContentKey> key;
-                    Application                *app = nullptr;
+                    Application              *app = nullptr;
                     for (auto it = _session->contentList().cbegin(); it != _session->contentList().cend(); ++it) {
                         if (it.key().first != name)
                             continue;
@@ -2092,19 +2161,19 @@ namespace XMPP { namespace Jingle { namespace ICE {
                     auto current = app->transport();
                     if (!current || current->pad().data() != this || d->contentOwners.value(*key) == current.data())
                         return nullptr; // never split one live BUNDLE generation
-                    members.append(GroupNegotiation::Member { *key, current->pad()->ns(),
-                                                               app->allowsSharedTransport() && current->supportsSharedTransport(), std::nullopt });
+                    members.append(GroupNegotiation::Member {
+                        *key, current->pad()->ns(), app->allowsSharedTransport() && current->supportsSharedTransport(),
+                        std::nullopt });
                     replacementKeys.insert(*key);
                 }
 
                 GroupNegotiation::Error error = GroupNegotiation::Error::None;
-                auto plan = GroupNegotiation::initialPlan(
-                    members, QList<ContentGroup> { *negotiatedBundle },
-                    QList<ContentGroup> { *negotiatedBundle }, &error);
+                auto plan = GroupNegotiation::initialPlan(members, QList<ContentGroup> { *negotiatedBundle },
+                                                          QList<ContentGroup> { *negotiatedBundle }, &error);
                 if (!plan)
                     return nullptr;
-                auto replacement = ConnectionGroupTransaction::stageBundledReplacement(
-                    *plan, d->registry, *d->stagedGroups, ns());
+                auto replacement
+                    = ConnectionGroupTransaction::stageBundledReplacement(*plan, d->registry, *d->stagedGroups, ns());
                 if (!replacement)
                     return nullptr;
 
@@ -2112,7 +2181,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 d->replacementContents = replacementKeys;
                 for (const auto &key : std::as_const(d->replacementContents)) {
                     auto app = _session->content(key.first, key.second);
-                    auto tr  = app ? qSharedPointerDynamicCast<Transport>(app->transport()) : QSharedPointer<Transport>();
+                    auto tr
+                        = app ? qSharedPointerDynamicCast<Transport>(app->transport()) : QSharedPointer<Transport>();
                     if (!tr) {
                         d->replacementGroups.reset();
                         d->replacementContents.clear();
@@ -2131,8 +2201,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 }
             }
 
-            if (!d->replacementContents.contains(*content)
-                || d->replacementTransports.value(*content) != transport)
+            if (!d->replacementContents.contains(*content) || d->replacementTransports.value(*content) != transport)
                 return nullptr;
 
             auto replacementConnection = d->replacementGroups->connectionFor(*content);
@@ -2163,7 +2232,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 d->replacementGroups.reset();
 
                 for (const auto &key : std::as_const(d->replacementContents)) {
-                    auto next = d->replacementTransports.value(key);
+                    auto next     = d->replacementTransports.value(key);
                     auto previous = d->contentOwners.value(key);
                     if (previous && previous != next)
                         previous->releaseNetworkOwnership();
@@ -2209,8 +2278,23 @@ namespace XMPP { namespace Jingle { namespace ICE {
         if (!transport || !_session || !d->stagedGroups)
             return true;
         const auto content = contentForTransport(_session, transport);
+        if (content && !pendingGroupMembersFor(*content).isEmpty())
+            return false;
         if (!content || !d->stagedContents.contains(*content))
             return true;
+
+        // Once the Session is Active, only committed negotiated topology is
+        // authoritative. This covers both initial members and later accepted
+        // content-add extensions without reinterpreting pending local/remote
+        // grouping proposals.
+        if (_session->state() == State::Active) {
+            for (const auto &group : _session->negotiatedGroupings()) {
+                if (group.semantics == QLatin1String("BUNDLE") && !group.contents.isEmpty()
+                    && group.contents.contains(content->first))
+                    return true;
+            }
+            return false;
+        }
 
         if (_session->role() == Origin::Responder)
             return true; // staged directly from the responder's actual local answer
@@ -2220,10 +2304,95 @@ namespace XMPP { namespace Jingle { namespace ICE {
             if (offered.semantics != QLatin1String("BUNDLE") || !offered.contents.contains(content->first)
                 || offered.contents.size() < 2)
                 continue;
-            return std::any_of(answer.cbegin(), answer.cend(),
-                               [&offered](const ContentGroup &accepted) { return sameGroupMembers(offered, accepted); });
+            return std::any_of(answer.cbegin(), answer.cend(), [&offered](const ContentGroup &accepted) {
+                return sameGroupMembers(offered, accepted);
+            });
         }
         return false;
+    }
+
+    void Pad::watchGroupedContent(Application *app, const ContentKey &content)
+    {
+        auto release = [this, content]() {
+            if (d->replacementContents.contains(content)) {
+                for (const auto &transport : std::as_const(d->replacementTransports)) {
+                    if (transport)
+                        transport->releaseNetworkOwnership();
+                }
+                d->replacementGroups.reset();
+                d->replacementContents.clear();
+                d->replacementBound.clear();
+                d->replacementTransports.clear();
+            }
+            // A retained Transport is not an extra content membership. Detach
+            // its runtime callbacks before releasing the application's strong share.
+            if (auto owner = d->contentOwners.take(content))
+                owner->releaseNetworkOwnership();
+            if (d->stagedGroups) {
+                auto pin = d->stagedGroups->pinConnection(content);
+                d->stagedGroups->release(content);
+                if (pin)
+                    QTimer::singleShot(0, this, [pin = std::move(pin)]() { });
+            }
+            d->stagedContents.remove(content);
+            d->establishedContents.remove(content);
+            d->registry.prune();
+        };
+        connect(app, &Application::destroying, this, release);
+        connect(app, &Application::stateChanged, this, [release](State state) {
+            if (state >= State::Finishing)
+                release();
+        });
+    }
+
+    bool Pad::commitGroupExtension(const ContentKey &content)
+    {
+        // Session calls this only for a negotiated pending extension. Missing
+        // staging is therefore a transaction failure, not an idempotent success:
+        // otherwise negotiatedGroups could publish membership that never joined
+        // the physical association.
+        if (!d->extensionContent || *d->extensionContent != content)
+            return false;
+        if (!d->extensionGroups || !d->stagedGroups || !d->extensionTransport || d->replacementGroups)
+            return false;
+        const auto app = _session->content(content.first, content.second);
+        if (!app || app->transport().data() != d->extensionTransport.data()
+            || d->extensionTransport->state() >= State::Finishing)
+            return false;
+
+        if (!d->extensionGroups->activateExtension(d->registry))
+            return false;
+        if (!d->extensionGroups->finalizeExtension(*d->stagedGroups, d->registry)) {
+            d->extensionGroups->rollbackExtension();
+            return false;
+        }
+
+        auto transport = d->extensionTransport;
+        d->stagedContents.insert(content);
+        d->contentOwners.insert(content, transport);
+        d->establishedContents.insert(content);
+        if (auto app = _session->content(content.first, content.second))
+            watchGroupedContent(app, content);
+
+        d->extensionGroups.reset();
+        d->extensionContent.reset();
+        d->extensionTransport.clear();
+        d->registry.prune();
+        return true;
+    }
+
+    void Pad::rollbackGroupExtension(const ContentKey &content)
+    {
+        if (!d->extensionContent || *d->extensionContent != content)
+            return;
+        if (d->extensionTransport)
+            d->extensionTransport->releaseNetworkOwnership();
+        if (d->extensionGroups)
+            d->extensionGroups->rollbackExtension();
+        d->extensionGroups.reset();
+        d->extensionContent.reset();
+        d->extensionTransport.clear();
+        d->registry.prune();
     }
 
     bool Pad::shouldDeferGroupedNetwork(Transport *transport) const
@@ -2284,19 +2453,13 @@ namespace XMPP { namespace Jingle { namespace ICE {
         return membership;
     }
 
-    qsizetype Pad::liveAssociationCount() const
-    {
-        return d ? d->registry.liveAssociationCount() : 0;
-    }
+    qsizetype Pad::liveAssociationCount() const { return d ? d->registry.liveAssociationCount() : 0; }
 
     Session *Pad::session() const { return _session; }
 
     TransportManager *Pad::manager() const { return _manager; }
 
-    void Pad::onLocalAccepted()
-    {
-        d->localAcceptanceKnown = true;
-    }
+    void Pad::onLocalAccepted() { d->localAcceptanceKnown = true; }
 
 } // namespace Ice
 } // namespace Jingle

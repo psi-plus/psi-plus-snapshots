@@ -38,6 +38,19 @@ namespace XMPP { namespace Jingle {
 
         virtual TransportManager *manager() const = 0;
         QString requestedNamespace() const { return property("_iris_jingle_transport_namespace").toString(); }
+
+    protected:
+        // Transport implementations can inspect their provisional group without
+        // exposing signaling transactions through Session's public API.
+        QStringList pendingGroupMembersFor(const ContentKey &) const;
+
+    private:
+        friend class Session;
+        // Internal dynamic grouping transaction hooks. A transport pad that stages
+        // provisional shared membership may commit/rollback it when the
+        // corresponding content-add/content-accept negotiation completes.
+        virtual bool commitGroupExtension(const ContentKey &) { return false; }
+        virtual void rollbackGroupExtension(const ContentKey &) { }
     };
 
     class Transport : public QObject {
@@ -94,14 +107,11 @@ namespace XMPP { namespace Jingle {
             Unsupported, // provider has no side-effect-free staging implementation
         };
         struct PrepareUpdateResult {
-            PrepareUpdateStatus                  status = PrepareUpdateStatus::Unsupported;
-            PreparedUpdatePtr                    update;
-            std::optional<XMPP::Stanza::Error>   error;
+            PrepareUpdateStatus                status = PrepareUpdateStatus::Unsupported;
+            PreparedUpdatePtr                  update;
+            std::optional<XMPP::Stanza::Error> error;
 
-            explicit operator bool() const
-            {
-                return status == PrepareUpdateStatus::Ready && bool(update);
-            }
+            explicit operator bool() const { return status == PrepareUpdateStatus::Ready && bool(update); }
         };
 
         /**

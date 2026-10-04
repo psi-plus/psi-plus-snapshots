@@ -26,9 +26,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
         ConnectionGroupTransaction(ConnectionGroupTransaction &&)                 = default;
         ConnectionGroupTransaction &operator=(ConnectionGroupTransaction &&)      = default;
 
-        static std::optional<ConnectionGroupTransaction> stageBundled(const GroupPlan &plan,
-                                                                                   ConnectionRegistry &registry,
-                                                                                   const QString &transportNamespace)
+        static std::optional<ConnectionGroupTransaction>
+        stageBundled(const GroupPlan &plan, ConnectionRegistry &registry, const QString &transportNamespace)
         {
             ConnectionGroupTransaction result;
             for (const auto &association : plan.associations()) {
@@ -52,6 +51,42 @@ namespace XMPP { namespace Jingle { namespace ICE {
                     result.entries_.push_back(Entry { association.id, content, std::move(membership) });
                 }
             }
+            return result;
+        }
+
+        // Stage additional logical contents onto an already-live association
+        // without publishing membership yet. The returned transaction pins the
+        // existing association strongly so a new Transport can prepare against
+        // the same IceConnection before content-add/content-accept completes.
+        // activateExtension() is the signaling commit point; destruction before
+        // activation is a no-op on live membership/generation.
+        static std::optional<ConnectionGroupTransaction>
+        stageMembershipExtension(const ConnectionGroupTransaction &current, ConnectionRegistry &registry,
+                                 const ContentKey &existingMember, const QList<ContentKey> &additions)
+        {
+            const auto associationId = current.associationIdFor(existingMember);
+            if (!associationId || additions.isEmpty())
+                return std::nullopt;
+
+            auto state = registry.associations_.value(associationId).toStrongRef();
+            if (!state || !state->connection || !state->members.contains(existingMember))
+                return std::nullopt;
+
+            QSet<ContentKey> seen;
+            for (const auto &content : additions) {
+                if (content.first.isEmpty()
+                    || (content.second != Origin::Initiator && content.second != Origin::Responder)
+                    || seen.contains(content) || current.associationIdFor(content) || registry.containsContent(content))
+                    return std::nullopt;
+                seen.insert(content);
+            }
+
+            ConnectionGroupTransaction result;
+            result.isExtension_            = true;
+            result.extensionAssociationId_ = associationId;
+            result.extensionAnchor_        = existingMember;
+            result.extensionState_         = std::move(state);
+            result.extensionContents_      = additions;
             return result;
         }
 
@@ -82,20 +117,18 @@ namespace XMPP { namespace Jingle { namespace ICE {
             return result;
         }
 
-
         // Stage a new physical association for an already-active BUNDLE group
         // without touching the registry-visible generation. This is the
         // make-before-break primitive used by transport-replace/ICE restart.
         static std::optional<ConnectionGroupTransaction>
         stageBundledReplacement(const GroupPlan &plan, ConnectionRegistry &registry,
-                                const ConnectionGroupTransaction &current,
-                                const QString &transportNamespace)
+                                const ConnectionGroupTransaction &current, const QString &transportNamespace)
         {
             ConnectionGroupTransaction result;
             result.isReplacement_ = true;
 
             for (const auto &association : plan.associations()) {
-                if (!association.bundled || association.members.size() < 2
+                if (!association.bundled || association.members.isEmpty()
                     || association.transportNamespace != transportNamespace)
                     continue;
                 if (association.owner != association.members.first())
@@ -122,8 +155,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 newState->connection = QSharedPointer<IceConnection>::create();
                 for (const auto &content : association.members)
                     newState->members.insert(content);
-                newState->connection->generation.membershipRevision
-                    += quint64(association.members.size());
+                newState->connection->generation.membershipRevision += quint64(association.members.size());
 
                 result.replacements_.push_back(
                     ReplacementAssociation { oldAssociationId, std::move(oldState), newState });
@@ -147,8 +179,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             // Revalidate the complete old generation before mutating the weak
             // registry index. Membership owners keep the old connections alive.
             for (const auto &replacement : replacements_) {
-                if (registry.associations_.value(replacement.oldAssociationId).toStrongRef()
-                    != replacement.oldState)
+                if (registry.associations_.value(replacement.oldAssociationId).toStrongRef() != replacement.oldState)
                     return false;
                 if (registry.associations_.contains(replacement.newState->id))
                     return false;
@@ -169,8 +200,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 return false;
 
             for (const auto &replacement : replacements_) {
-                if (registry.associations_.value(replacement.newState->id).toStrongRef()
-                    != replacement.newState)
+                if (registry.associations_.value(replacement.newState->id).toStrongRef() != replacement.newState)
                     return false;
             }
             for (const auto &replacement : replacements_)
@@ -192,8 +222,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             // longer owns a rollback reference to the old generation. Existing
             // old Transport memberships may still keep it alive until retired.
             for (const auto &replacement : replacements_) {
-                if (registry.associations_.value(replacement.newState->id).toStrongRef()
-                    != replacement.newState)
+                if (registry.associations_.value(replacement.newState->id).toStrongRef() != replacement.newState)
                     return false;
             }
             for (auto &replacement : replacements_)
@@ -207,7 +236,79 @@ namespace XMPP { namespace Jingle { namespace ICE {
         bool replacementActive() const { return replacementActive_; }
         bool replacementFinalized() const { return replacementFinalized_; }
 
+        bool isExtension() const { return isExtension_; }
+        bool extensionActive() const { return extensionActive_; }
+        bool extensionFinalized() const { return extensionFinalized_; }
+
+        bool activateExtension(ConnectionRegistry &registry)
+        {
+            if (!isExtension_ || extensionActive_ || extensionFinalized_ || !extensionState_
+                || !extensionState_->members.contains(extensionAnchor_)
+                || registry.associations_.value(extensionAssociationId_).toStrongRef() != extensionState_)
+                return false;
+
+            for (const auto &content : std::as_const(extensionContents_)) {
+                if (registry.containsContent(content) || extensionState_->members.contains(content))
+                    return false;
+            }
+
+            for (const auto &content : std::as_const(extensionContents_)) {
+                extensionState_->members.insert(content);
+                ++extensionState_->connection->generation.membershipRevision;
+                entries_.push_back(Entry { -1, content, ConnectionMembership(extensionState_, content) });
+            }
+            extensionActive_ = true;
+            return true;
+        }
+
+        bool rollbackExtension()
+        {
+            if (!isExtension_ || extensionFinalized_)
+                return false;
+            if (extensionActive_) {
+                // These entries contain only the newly-added memberships.
+                // Their destructors remove the contents and advance membership
+                // revision; the established association and its old members stay.
+                entries_.clear();
+                extensionActive_ = false;
+            }
+            extensionState_.clear();
+            extensionContents_.clear();
+            return true;
+        }
+
+        bool finalizeExtension(ConnectionGroupTransaction &current, ConnectionRegistry &registry)
+        {
+            if (!isExtension_ || !extensionActive_ || extensionFinalized_ || !extensionState_
+                || registry.associations_.value(extensionAssociationId_).toStrongRef() != extensionState_
+                || current.associationIdFor(extensionAnchor_) != extensionAssociationId_)
+                return false;
+            for (const auto &entry : entries_) {
+                if (current.associationIdFor(entry.content))
+                    return false;
+            }
+            for (auto &entry : entries_)
+                current.entries_.push_back(std::move(entry));
+            entries_.clear();
+            extensionContents_.clear();
+            extensionState_.clear();
+            extensionFinalized_ = true;
+            return true;
+        }
+
         qsizetype size() const { return qsizetype(entries_.size()); }
+
+        // Runtime teardown may be reentrant from a child QObject's destroyed
+        // signal. A temporary pin lets the pad retire membership immediately
+        // while deferring parent destruction until that callback has returned.
+        QSharedPointer<IceConnection> pinConnection(const ContentKey &content) const
+        {
+            for (const auto &entry : entries_) {
+                if (entry.content == content && entry.membership.state_)
+                    return entry.membership.state_->connection;
+            }
+            return {};
+        }
 
         IceConnection *connectionFor(const ContentKey &content) const
         {
@@ -215,6 +316,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 if (entry.content == content)
                     return entry.membership.connection();
             }
+            if (isExtension_ && !extensionFinalized_ && extensionState_ && extensionContents_.contains(content))
+                return extensionState_->connection.data();
             return nullptr;
         }
 
@@ -224,6 +327,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 if (entry.content == content)
                     return entry.membership.associationId();
             }
+            if (isExtension_ && !extensionFinalized_ && extensionState_ && extensionContents_.contains(content))
+                return extensionAssociationId_;
             return 0;
         }
 
@@ -267,9 +372,17 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
         std::vector<Entry>                  entries_;
         std::vector<ReplacementAssociation> replacements_;
-        bool                                isReplacement_       = false;
+        bool                                isReplacement_        = false;
         bool                                replacementActive_    = false;
         bool                                replacementFinalized_ = false;
+
+        bool                                       isExtension_            = false;
+        bool                                       extensionActive_        = false;
+        bool                                       extensionFinalized_     = false;
+        quint64                                    extensionAssociationId_ = 0;
+        ContentKey                                 extensionAnchor_;
+        QSharedPointer<ConnectionAssociationState> extensionState_;
+        QList<ContentKey>                          extensionContents_;
     };
 
 }}}

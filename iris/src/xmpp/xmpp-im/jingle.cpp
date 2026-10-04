@@ -572,10 +572,10 @@ namespace XMPP { namespace Jingle {
         Jid                                   redirectionJid;
         std::optional<XMPP::Stanza::Error>    lastError;
         QHash<QPair<Jid, QString>, Session *> sessions;
-        std::unique_ptr<PublicationManager>    publicationManager;
-        std::unique_ptr<RTP::Manager>           rtpManager;
-        bool                                    messageInitiationEnabled = false;
-        int                                     maxSessions = -1; // no limit
+        std::unique_ptr<PublicationManager>   publicationManager;
+        std::unique_ptr<RTP::Manager>         rtpManager;
+        bool                                  messageInitiationEnabled = false;
+        int                                   maxSessions              = -1; // no limit
 
         void setupSession(Session *s)
         {
@@ -646,9 +646,8 @@ namespace XMPP { namespace Jingle {
         return manager->second->parseProposal(element);
     }
 
-    QDomElement Manager::serializeMessageInitiationDescription(const QString &applicationNamespace,
-                                                               const std::any &data,
-                                                               QDomDocument *document) const
+    QDomElement Manager::serializeMessageInitiationDescription(const QString  &applicationNamespace,
+                                                               const std::any &data, QDomDocument *document) const
     {
         if (!document || applicationNamespace.isEmpty() || !data.has_value())
             return {};
@@ -669,10 +668,10 @@ namespace XMPP { namespace Jingle {
             return false;
 
         QDomDocument validationDocument;
-        const auto serializer = [this](const QString &applicationNamespace, const std::any &data,
-                                       QDomDocument *document) {
-            return serializeMessageInitiationDescription(applicationNamespace, data, document);
-        };
+        const auto   serializer
+            = [this](const QString &applicationNamespace, const std::any &data, QDomDocument *document) {
+                  return serializeMessageInitiationDescription(applicationNamespace, data, document);
+              };
         if (initiation.toXml(&validationDocument, serializer).isNull())
             return false;
 
@@ -699,8 +698,13 @@ namespace XMPP { namespace Jingle {
     void Manager::unregisterApp(const QString &ns)
     {
         auto node = d->applicationManagers.extract(ns);
-        if (node) {
-            node.mapped()->closeAll(ns);
+        if (node && node.mapped()) {
+            const auto provider = node.mapped();
+            provider->closeAll(ns);
+            if (provider
+                && std::none_of(d->applicationManagers.cbegin(), d->applicationManagers.cend(),
+                                [provider](const auto &entry) { return entry.second == provider; }))
+                provider->setJingleManager(nullptr);
         }
     }
 
@@ -726,8 +730,13 @@ namespace XMPP { namespace Jingle {
     void Manager::unregisterTransport(const QString &ns)
     {
         auto trManager = d->transportManagers.extract(ns);
-        if (trManager) {
-            trManager.mapped()->closeAll(ns);
+        if (trManager && trManager.mapped()) {
+            const auto provider = trManager.mapped();
+            provider->closeAll(ns);
+            if (provider
+                && std::none_of(d->transportManagers.cbegin(), d->transportManagers.cend(),
+                                [provider](const auto &entry) { return entry.second == provider; }))
+                provider->setJingleManager(nullptr);
         }
     }
 

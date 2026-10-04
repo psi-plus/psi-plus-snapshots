@@ -2,6 +2,7 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QEventLoop>
+#include <iris/dtls.h>
 #include <iris/jingle-rtp.h>
 #include <iris/xmpp_client.h>
 #include <qca.h>
@@ -108,10 +109,7 @@ class Provider : public R::MediaProvider {
 public:
     explicit Provider(std::shared_ptr<Counters> c) : c(std::move(c)) { }
     std::unique_ptr<R::MediaSession> createSession() override { return std::make_unique<MediaSession>(c); }
-    QStringList secureRtpProfiles() const override
-    {
-        return { QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80") };
-    }
+    QStringList secureRtpProfiles() const override { return { QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80") }; }
     std::shared_ptr<Counters> c;
 };
 class TransportPad : public TransportManagerPad {
@@ -125,9 +123,7 @@ public:
 class TestTransportBase : public Transport {
 public:
     TestTransportBase(Session *s, Origin creator) :
-        Transport(TransportManagerPad::Ptr(new TransportPad(s)), creator)
-    {
-    }
+        Transport(TransportManagerPad::Ptr(new TransportPad(s)), creator) { }
 
     void prepare() override
     {
@@ -153,29 +149,28 @@ public:
         setState(State::Accepted);
         return true;
     }
-    bool hasUpdates() const override { return _state == State::ApprovedToSend; }
+    bool                        hasUpdates() const override { return _state == State::ApprovedToSend; }
     OutgoingTransportInfoUpdate takeOutgoingUpdate(bool = false) override
     {
         auto xml = _pad->doc()->createElementNS(transportNs, "transport");
         return { xml, {} };
     }
-    bool isValid() const override { return true; }
+    bool              isValid() const override { return true; }
     TransportFeatures features() const override
     {
         return TransportFeature::LiveOriented | TransportFeature::MessageOriented;
     }
-    Connection::Ptr addChannel(TransportFeatures, const QString &, int = -1) override { return {}; }
+    Connection::Ptr        addChannel(TransportFeatures, const QString &, int = -1) override { return {}; }
     QList<Connection::Ptr> channels() const override { return {}; }
 
-    int                  starts = 0, stops = 0;
+    int                   starts = 0, stops = 0;
     std::function<void()> onStop;
 };
 
 class TestTransport final : public TestTransportBase, public R::PacketTransport {
 public:
     TestTransport(Session *s, Origin creator) :
-        TestTransportBase(s, creator),
-        association_(nullptr, QByteArrayLiteral("rtpapplication-test"))
+        TestTransportBase(s, creator), association_(nullptr, QByteArrayLiteral("rtpapplication-test"))
     {
     }
 
@@ -186,9 +181,8 @@ public:
     }
     R::SecureRtpAssociation *rtpAssociation() const override
     {
-        return secureEnabled_ && state() >= State::ApprovedToSend
-            ? const_cast<R::SecureRtpAssociation *>(&association_)
-            : nullptr;
+        return secureEnabled_ && state() >= State::ApprovedToSend ? const_cast<R::SecureRtpAssociation *>(&association_)
+                                                                  : nullptr;
     }
     bool sendProtectedRtpPacket(QByteArray, R::PacketKind, quint64) override { return false; }
 
@@ -208,7 +202,7 @@ struct OwnedXml {
 
     operator QDomElement() const { return root; }
     QDomElement firstChildElement() const { return root.firstChildElement(); }
-    QDomNode cloneNode(bool deep = true) const { return root.cloneNode(deep); }
+    QDomNode    cloneNode(bool deep = true) const { return root.cloneNode(deep); }
 };
 
 static OwnedXml infoXml(const QString &body)
@@ -223,8 +217,12 @@ int main(int argc, char **argv)
 {
     QCoreApplication eventLoop(argc, argv);
     QCA::Initializer qca;
-    Client           client;
-    auto             manager = client.jingleManager()->rtpManager();
+    if (Dtls::supportedSRTPProfiles().isEmpty()) {
+        qInfo("RTP application regression requires a DTLS-SRTP backend");
+        return 77;
+    }
+    Client client;
+    auto   manager = client.jingleManager()->rtpManager();
     check(manager && manager->discoFeatures().isEmpty(), "unfinished RTP advertised");
     auto counters = std::make_shared<Counters>();
     {

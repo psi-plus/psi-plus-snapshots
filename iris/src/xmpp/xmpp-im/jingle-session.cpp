@@ -19,6 +19,7 @@
 
 #include "jingle-session.h"
 
+#include "jingle-active-group-extension_p.h"
 #include "jingle-application.h"
 #include "jingle-group-negotiation_p.h"
 #include "xmpp/jid/jid.h"
@@ -100,6 +101,19 @@ namespace XMPP { namespace Jingle {
         QList<ContentGroup>                                groups;
         QList<ContentGroup>                                remoteGroups;
         QList<ContentGroup>                                sentInitialGroups;
+        QList<ContentGroup>                                negotiatedGroups;
+        QHash<QString, Origin>                             negotiatedCreators;
+
+        struct PendingGroupExtension {
+            ContentKey              content;
+            QList<ContentGroup>     before;
+            QList<ContentGroup>     offer;
+            quint64                 id = 0;
+            QWeakPointer<Transport> transport;
+        };
+        quint64                              nextGroupExtensionId = 0;
+        std::optional<PendingGroupExtension> outgoingGroupExtension;
+        std::optional<PendingGroupExtension> incomingGroupExtension;
 
         // not yet acccepted applications from initial incoming request
         QList<Application *> initialIncomingUnacceptedContent;
@@ -111,12 +125,12 @@ namespace XMPP { namespace Jingle {
         Jid     origFrom;   // "from" attr of IQ.
         Jid     otherParty; // either "from" or initiator/responder. it's where to send all requests.
         Jid     localParty; // that one will be set as initiator/responder if provided
-        bool    waitingAck                = false;
-        bool    needNotifyGroup           = false; // whenever grouping info changes
-        bool    groupingAllowed           = false;
-        bool    automaticGroupingEnabled  = true;
-        bool    localGroupingsExplicit    = false;
-        bool    automaticGroupingsActive  = false;
+        bool    waitingAck               = false;
+        bool    needNotifyGroup          = false; // whenever grouping info changes
+        bool    groupingAllowed          = false;
+        bool    automaticGroupingEnabled = true;
+        bool    localGroupingsExplicit   = false;
+        bool    automaticGroupingsActive = false;
 
         void setSessionFinished()
         {
@@ -137,7 +151,7 @@ namespace XMPP { namespace Jingle {
             q->deleteLater();
         }
 
-        QList<QDomElement> genGroupingXML()
+        QList<QDomElement> genGroupingXML(const QList<ContentGroup> &source)
         {
             QList<QDomElement> ret;
             if (!groupingAllowed)
@@ -145,7 +159,7 @@ namespace XMPP { namespace Jingle {
 
             QDomDocument &doc = *manager->client()->doc();
 
-            for (const auto &group : groups) {
+            for (const auto &group : source) {
                 auto g = doc.createElementNS(QLatin1String("urn:xmpp:jingle:apps:grouping:0"), QLatin1String("group"));
                 g.setAttribute(QLatin1String("semantics"), group.semantics);
                 for (auto const &name : group.contents) {
@@ -175,6 +189,19 @@ namespace XMPP { namespace Jingle {
             }
         }
 
+        bool updateContainsContent(const QList<QDomElement> &update, const ContentKey &key) const
+        {
+            for (const auto &element : update) {
+                if ((element.localName().isEmpty() ? element.tagName() : element.localName())
+                    != QLatin1String("content"))
+                    continue;
+                ContentBase content(element);
+                if (content.isValid() && content.name == key.first && content.creator == key.second)
+                    return true;
+            }
+            return false;
+        }
+
         void sendJingle(Action action, QList<QDomElement> update,
                         std::function<void(JT *)> callback = std::function<void(JT *)>())
         {
@@ -192,16 +219,35 @@ namespace XMPP { namespace Jingle {
             for (const QDomElement &e : update) {
                 xml.appendChild(e);
             }
-            if (needNotifyGroup
-                && (action == Action::SessionInitiate || action == Action::SessionAccept || action == Action::ContentAdd
-                    || action == Action::ContentAccept)) {
-                const auto xmls = genGroupingXML();
+            QList<ContentGroup> groupUpdate;
+            if (action == Action::ContentAdd && outgoingGroupExtension
+                && updateContainsContent(update, outgoingGroupExtension->content)) {
+                groupUpdate = outgoingGroupExtension->offer;
+            } else if (action == Action::ContentAccept && incomingGroupExtension
+                       && updateContainsContent(update, incomingGroupExtension->content)) {
+                // RFC 9143 section 7.5.1: a newly added content cannot be
+                // accepted while being moved out of the existing BUNDLE in the
+                // answer. A responder that cannot accept this membership must
+                // reject the content-add instead.
+                groupUpdate = incomingGroupExtension->offer;
+            } else if (needNotifyGroup
+                       && (action == Action::SessionInitiate || action == Action::SessionAccept
+                           || action == Action::ContentAdd || action == Action::ContentAccept)) {
+                groupUpdate = groups;
+            }
+
+            if (!groupUpdate.isEmpty()) {
+                const auto xmls = genGroupingXML(groupUpdate);
                 if (!xmls.isEmpty())
-                    includedGroups = groups;
+                    includedGroups = groupUpdate;
                 for (auto const &g : xmls)
                     xml.appendChild(g);
-                needNotifyGroup = false;
             }
+            if (!groupUpdate.isEmpty()
+                || (needNotifyGroup
+                    && (action == Action::SessionInitiate || action == Action::SessionAccept
+                        || action == Action::ContentAdd || action == Action::ContentAccept)))
+                needNotifyGroup = false;
 
             if (action == Action::SessionInitiate) {
                 // Snapshot what was actually serialized (including capability
@@ -350,30 +396,102 @@ namespace XMPP { namespace Jingle {
 
             QList<AckHndl> acceptApps;
             if (updates.size()) {
-                auto       upd  = updates.begin().key(); // NOTE maybe some actions have more priority than others
-                auto const apps = updates.values(upd);
-                for (auto app : apps) {
+                auto              upd = updates.begin().key(); // NOTE maybe some actions have more priority than others
+                const auto        apps = snapshotContents(updates.values(upd));
+                QPointer<Session> sessionGuard(q);
+                const auto        outgoingExtension = outgoingGroupExtension;
+                const auto        incomingExtension = incomingGroupExtension;
+                for (const auto &entry : apps) {
+                    auto app = entry.application;
+                    if (!app || contentList.value(entry.key) != app.data())
+                        continue;
                     QList<QDomElement> xml;
                     OutgoingUpdateCB   callback;
                     std::tie(xml, callback) = app->takeOutgoingUpdate();
+                    if (!sessionGuard)
+                        return;
+                    if (!app || contentList.value(entry.key) != app.data())
+                        continue;
                     updateXml += xml;
-                    if (callback) {
+                    if (callback)
                         acceptApps.append(AckHndl { app, callback });
-                    }
                 }
-                sendJingle(upd.action, updateXml, [this, acceptApps](JT *jt) {
-                    QPointer<Session> session(q);
-                    for (const auto &h : acceptApps) {
-                        auto app      = std::get<0>(h);
-                        auto callback = std::get<1>(h);
-                        if (app) {
-                            callback(jt);
-                            if (!session)
-                                return;
+                if (updateXml.isEmpty())
+                    return;
+                const auto outgoingAction = upd.action;
+                const bool completesIncomingExtension
+                    = incomingExtension && updateContainsContent(updateXml, incomingExtension->content);
+
+                // Rejecting/removing the proposed content is itself the local
+                // decision to refuse the extension. Retire provisional network
+                // ownership before sending that decision; established BUNDLE
+                // members remain untouched.
+                if (completesIncomingExtension
+                    && (outgoingAction == Action::ContentReject || outgoingAction == Action::ContentRemove)) {
+                    rollbackIncomingGroupExtension();
+                }
+
+                sendJingle(
+                    upd.action, updateXml,
+                    [this, acceptApps, outgoingAction, completesIncomingExtension, outgoingExtension,
+                     incomingExtension](JT *jt) {
+                        QPointer<Session> session(q);
+
+                        // A content-accept commits the physical membership only after
+                        // the peer has acknowledged our answer. Do this before the
+                        // application completion callbacks can start the transport,
+                        // because groupedConnectionAccepted() consults negotiatedGroups.
+                        const bool currentIncoming = incomingExtension && incomingGroupExtension
+                            && incomingExtension->id == incomingGroupExtension->id;
+                        const bool currentOutgoing = outgoingExtension && outgoingGroupExtension
+                            && outgoingExtension->id == outgoingGroupExtension->id;
+                        if (outgoingAction == Action::ContentAccept && completesIncomingExtension && currentIncoming) {
+                            if (jt->success()) {
+                                if (!commitIncomingGroupExtension()) {
+                                    rollbackIncomingGroupExtension();
+                                    QPointer<Application> app(contentList.value(incomingExtension->content));
+                                    if (app)
+                                        app->remove(Reason::FailedTransport,
+                                                    QStringLiteral("Failed to commit negotiated BUNDLE extension"));
+                                    return;
+                                }
+                            } else {
+                                rollbackIncomingGroupExtension();
+                                // The offerer still owns an unresolved content-add.
+                                // Remove the added content explicitly; after a timeout
+                                // it may even have accepted our answer but lost the ACK.
+                                const auto        &key = incomingExtension->content;
+                                QList<QDomElement> cancellation { ContentBase(key.second, key.first)
+                                                                      .toXml(manager->client()->doc(),
+                                                                             QStringLiteral("content"), NS) };
+                                cancellation += Reason(Reason::FailedTransport).toXml(manager->client()->doc());
+                                outgoingUpdates.insert(Action::ContentRemove,
+                                                       OutgoingUpdate { cancellation, OutgoingUpdateCB() });
+                            }
                         }
-                    }
-                    planStep();
-                });
+
+                        if (outgoingAction == Action::ContentAdd && !jt->success() && currentOutgoing)
+                            rollbackOutgoingGroupExtension();
+
+                        for (const auto &h : acceptApps) {
+                            auto app      = std::get<0>(h);
+                            auto callback = std::get<1>(h);
+                            if (app) {
+                                const ContentKey key { app->contentName(), app->creator() };
+                                if ((outgoingAction == Action::ContentAccept && incomingExtension
+                                     && key == incomingExtension->content && !currentIncoming)
+                                    || (outgoingAction == Action::ContentAdd && outgoingExtension
+                                        && key == outgoingExtension->content && !currentOutgoing))
+                                    continue;
+                                callback(jt);
+                                if (!session)
+                                    return;
+                            }
+                        }
+                        if (!session)
+                            return;
+                        planStep();
+                    });
             }
         }
 
@@ -466,13 +584,17 @@ namespace XMPP { namespace Jingle {
 
             state = State::Unacked;
             initialIncomingUnacceptedContent.clear();
-            sendJingle(actionToSend, contents, [this, acceptApps, finalState](JT *jt) {
+            const auto acceptedInitialGroups
+                = role == Origin::Responder && groupingAllowed ? groups : QList<ContentGroup> {};
+            sendJingle(actionToSend, contents, [this, acceptApps, finalState, acceptedInitialGroups](JT *jt) {
                 if (!jt->success()) {
                     qDebug("Session accept/initiate returned iq error");
                     emit q->terminated();
                     return;
                 }
                 state = finalState;
+                if (finalState == State::Active && role == Origin::Responder)
+                    publishNegotiatedGroups(acceptedInitialGroups);
                 for (const auto &h : acceptApps) {
                     auto app         = std::get<0>(h);
                     auto callback    = std::get<1>(h);
@@ -524,28 +646,235 @@ namespace XMPP { namespace Jingle {
             return TransportResult { false, Reason::NoReason, QSharedPointer<Transport>() };
         }
 
+        static bool sameGroupings(const QList<ContentGroup> &left, const QList<ContentGroup> &right)
+        {
+            return ActiveGroupExtension::same(left, right);
+        }
+
+        std::optional<QList<ContentGroup>> parseCurrentGroupings(const QDomElement &jingleEl) const
+        {
+            const auto       groupingNs = QStringLiteral("urn:xmpp:jingle:apps:grouping:0");
+            QSet<ContentKey> available;
+            for (auto it = contentList.cbegin(); it != contentList.cend(); ++it) {
+                if (it.value() && it.value()->state() < State::Finishing)
+                    available.insert(it.key());
+            }
+            for (auto el = jingleEl.firstChildElement(); !el.isNull(); el = el.nextSiblingElement()) {
+                if (el.namespaceURI() != QLatin1String("urn:xmpp:jingle:1")
+                    || el.localName() != QLatin1String("content"))
+                    continue;
+                const ContentBase content(el);
+                if (!content.isValid())
+                    return std::nullopt;
+                available.insert(ContentKey { content.name, content.creator });
+            }
+
+            QHash<QString, int> contentNames;
+            for (const auto &key : available)
+                ++contentNames[key.first];
+
+            QList<ContentGroup> result;
+            for (auto el = jingleEl.firstChildElement(); !el.isNull(); el = el.nextSiblingElement()) {
+                if (el.namespaceURI() != groupingNs || el.localName() != QLatin1String("group"))
+                    continue;
+                ContentGroup  group { el.attribute(QStringLiteral("semantics")), {} };
+                QSet<QString> seen;
+                if (group.semantics.trimmed().isEmpty())
+                    return std::nullopt;
+                for (auto child = el.firstChildElement(); !child.isNull(); child = child.nextSiblingElement()) {
+                    if (child.namespaceURI() != groupingNs || child.localName() != QLatin1String("content"))
+                        continue;
+                    const auto name = child.attribute(QStringLiteral("name"));
+                    if (name.isEmpty() || seen.contains(name))
+                        return std::nullopt;
+                    seen.insert(name);
+                    group.contents.append(name);
+                }
+                for (const auto &name : group.contents) {
+                    if (contentNames.value(name) != 1)
+                        return std::nullopt;
+                }
+                result.append(std::move(group));
+            }
+            return result;
+        }
+
+        void publishNegotiatedGroups(const QList<ContentGroup> &topology)
+        {
+            negotiatedGroups = topology;
+            // Group references omit creator on the wire. Keep the creator
+            // resolved during negotiation so retiring a later ungrouped content
+            // with the same name cannot remove the established membership.
+            QHash<QString, Origin> resolved;
+            for (const auto &group : topology) {
+                for (const auto &name : group.contents) {
+                    if (negotiatedCreators.contains(name)) {
+                        resolved.insert(name, negotiatedCreators.value(name));
+                        continue;
+                    }
+                    for (auto it = contentList.cbegin(); it != contentList.cend(); ++it) {
+                        if (it.key().first == name && it.value()->state() < State::Finishing) {
+                            resolved.insert(name, it.key().second);
+                            break;
+                        }
+                    }
+                }
+            }
+            negotiatedCreators = std::move(resolved);
+        }
+
+        void rollbackOutgoingGroupExtension()
+        {
+            if (!outgoingGroupExtension)
+                return;
+            const auto key       = outgoingGroupExtension->content;
+            auto       transport = outgoingGroupExtension->transport.lock();
+            outgoingGroupExtension.reset();
+            auto pad = transport ? transport->pad() : TransportManagerPad::Ptr();
+            if (pad)
+                pad->rollbackGroupExtension(key);
+        }
+
+        bool commitOutgoingGroupExtension(const QList<ContentGroup> &answer)
+        {
+            if (!outgoingGroupExtension)
+                return true;
+            const auto key = outgoingGroupExtension->content;
+            auto       app = contentList.value(key);
+            if (!sameGroupings(negotiatedGroups, outgoingGroupExtension->before) || !app
+                || app->state() != State::Accepted)
+                return false;
+            auto transport = outgoingGroupExtension->transport.lock();
+            if (!transport || app->transport() != transport)
+                return false;
+            auto pad = transport->pad();
+            if (!pad || !pad->commitGroupExtension(key))
+                return false;
+            groups       = answer;
+            remoteGroups = answer;
+            publishNegotiatedGroups(answer);
+            outgoingGroupExtension.reset();
+            return true;
+        }
+
+        void rollbackIncomingGroupExtension()
+        {
+            if (!incomingGroupExtension)
+                return;
+            const auto key       = incomingGroupExtension->content;
+            auto       transport = incomingGroupExtension->transport.lock();
+            incomingGroupExtension.reset();
+            auto pad = transport ? transport->pad() : TransportManagerPad::Ptr();
+            if (pad)
+                pad->rollbackGroupExtension(key);
+        }
+
+        bool commitIncomingGroupExtension()
+        {
+            if (!incomingGroupExtension)
+                return true;
+            const auto pending = *incomingGroupExtension;
+            auto       app     = contentList.value(pending.content);
+            if (!sameGroupings(negotiatedGroups, pending.before) || !app || app->state() != State::Unacked)
+                return false;
+            auto transport = pending.transport.lock();
+            if (!transport || app->transport() != transport)
+                return false;
+            auto pad = transport->pad();
+            if (!pad || !pad->commitGroupExtension(pending.content))
+                return false;
+            groups       = pending.offer;
+            remoteGroups = pending.offer;
+            publishNegotiatedGroups(pending.offer);
+            incomingGroupExtension.reset();
+            return true;
+        }
+
+        void retireContentGrouping(const ContentKey &key)
+        {
+            if (negotiatedCreators.contains(key.first) && negotiatedCreators.value(key.first) != key.second)
+                return;
+            auto affects = [&key](const PendingGroupExtension &pending) {
+                if (pending.content == key)
+                    return true;
+                for (const auto &group : pending.offer) {
+                    if (group.semantics == QLatin1String("BUNDLE") && group.contents.contains(pending.content.first)
+                        && group.contents.contains(key.first))
+                        return true;
+                }
+                return false;
+            };
+            auto cancel = [this, &key](const std::optional<PendingGroupExtension> &pending, bool outgoing) {
+                if (!pending)
+                    return;
+                const auto added = pending->content;
+                if (outgoing)
+                    rollbackOutgoingGroupExtension();
+                else
+                    rollbackIncomingGroupExtension();
+                if (added == key)
+                    return;
+                // A removed established member invalidates the outstanding offer.
+                // Cancel only the added content, after the current teardown boundary.
+                QPointer<Application> app(contentList.value(added));
+                QTimer::singleShot(0, q, [app]() {
+                    if (app && app->state() < State::Finishing)
+                        app->remove(Reason::Cancel, QStringLiteral("BUNDLE changed during content negotiation"));
+                });
+            };
+            if (outgoingGroupExtension && affects(*outgoingGroupExtension))
+                cancel(outgoingGroupExtension, true);
+            if (incomingGroupExtension && affects(*incomingGroupExtension))
+                cancel(incomingGroupExtension, false);
+
+            auto prune = [&key](QList<ContentGroup> &topology) {
+                for (auto it = topology.begin(); it != topology.end();) {
+                    it->contents.removeAll(key.first);
+                    if (it->contents.isEmpty())
+                        it = topology.erase(it);
+                    else
+                        ++it;
+                }
+            };
+            prune(groups);
+            prune(remoteGroups);
+            prune(negotiatedGroups);
+            negotiatedCreators.remove(key.first);
+            if (outgoingGroupExtension) {
+                prune(outgoingGroupExtension->before);
+                prune(outgoingGroupExtension->offer);
+            }
+            if (incomingGroupExtension) {
+                prune(incomingGroupExtension->before);
+                prune(incomingGroupExtension->offer);
+            }
+        }
+
         void addAndInitContent(Origin creator, Application *content)
         {
-            contentList.insert(ContentKey { content->contentName(), creator }, content);
+            const ContentKey key { content->contentName(), creator };
+            contentList.insert(key, content);
             if (state != State::Created && content->evaluateOutgoingUpdate().action != Action::NoAction) {
                 signalingContent.insert(content);
             }
+            QObject::connect(content, &Application::stateChanged, q, [this, key](State newState) {
+                if (newState >= State::Finishing)
+                    retireContentGrouping(key);
+            });
             QObject::connect(content, &Application::updated, q, [this, content]() {
                 signalingContent.insert(content);
                 planStep();
             });
-            QObject::connect(content, &Application::destroying, q, [this, content]() {
+            QObject::connect(content, &Application::destroying, q, [this, content, key]() {
                 // contentList is a live-object registry. Drop the raw pointer as
                 // soon as Application teardown begins, before any QObject-level
-                // destruction notification can expose a stale entry.
+                // destruction notification can expose a stale entry. Roll back a
+                // still-provisional extension while the transport is still reachable.
+                retireContentGrouping(key);
                 signalingContent.remove(content);
                 initialIncomingUnacceptedContent.removeOne(content);
-                for (auto it = contentList.begin(); it != contentList.end(); ++it) { // optimize for large lists?
-                    if (it.value() == content) {
-                        contentList.erase(it);
-                        break;
-                    }
-                }
+                if (contentList.value(key) == content)
+                    contentList.remove(key);
             });
             QObject::connect(content, &Application::destroyed, q, [this, content]() {
                 // Idempotent cleanup for auxiliary registries. contentList was
@@ -644,6 +973,8 @@ namespace XMPP { namespace Jingle {
                         delete *it; // unpreferred app
                         *it = app;
                     }
+                } else {
+                    delete app;
                 }
             }
 
@@ -682,12 +1013,13 @@ namespace XMPP { namespace Jingle {
                 return result { AddContentError::Unparsed, Reason::NoReason, app };
             }
 
-            if (!app->transport()->update(transportEl)) {
-                // clearly unparsed. otherwise the app will generate failure event with a Reason.
-                return result { AddContentError::Unparsed, Reason::NoReason, app };
-            }
-
-            auto ansret = app->setRemoteAnswer(descriptionEl);
+            QPointer<Application> application(app);
+            QPointer<Session>     session(q);
+            auto                  ansret = app->setRemoteAnswer(descriptionEl);
+            if (!session || !application)
+                return result { AddContentError::Unexpected, Reason::NoReason, nullptr };
+            if (contentList.value(ContentKey { c.name, c.creator }) != app)
+                return result { AddContentError::Unexpected, Reason::NoReason, nullptr };
             if (ansret == Application::Unparsed)
                 return result { AddContentError::Unparsed, Reason::NoReason, app };
 
@@ -701,7 +1033,53 @@ namespace XMPP { namespace Jingle {
 
         std::tuple<bool, QList<Application *>> parseContentAcceptList(const QDomElement &jingleEl)
         {
-            QMap<QString, Application *>                             acceptSet;
+            QPointer<Session> session(q);
+            struct AnswerTransport {
+                QPointer<Application>        application;
+                QSharedPointer<Transport>    transport;
+                QDomElement                  xml;
+                Transport::PreparedUpdatePtr prepared;
+            };
+            std::vector<AnswerTransport> transports;
+            QSet<ContentKey>             seen;
+            // Validate the entire envelope and prepare transport payloads before
+            // setRemoteAnswer() can advance any application or queue network work.
+            for (auto ce = jingleEl.firstChildElement(QStringLiteral("content")); !ce.isNull();
+                 ce      = ce.nextSiblingElement(QStringLiteral("content"))) {
+                const ContentBase cb(ce);
+                const ContentKey  key { cb.name, cb.creator };
+                const auto        app         = contentList.value(key);
+                const auto        description = ce.firstChildElement(QStringLiteral("description"));
+                const auto        transport   = ce.firstChildElement(QStringLiteral("transport"));
+                if ((!ce.namespaceURI().isEmpty() && ce.namespaceURI() != NS) || !cb.isValid() || cb.creator != role
+                    || seen.contains(key) || !app || app->state() != State::Pending || !app->transport()
+                    || description.isNull() || transport.isNull() || description.namespaceURI() != app->pad()->ns()
+                    || transport.namespaceURI() != app->transport()->pad()->ns()
+                    || !description.nextSiblingElement(QStringLiteral("description")).isNull()
+                    || !transport.nextSiblingElement(QStringLiteral("transport")).isNull()) {
+                    if (!session)
+                        return { true, {} };
+                    lastError = Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
+                    return { false, {} };
+                }
+                seen.insert(key);
+                auto prepared = app->transport()->prepareUpdate(transport);
+                if (!prepared && prepared.status != Transport::PrepareUpdateStatus::Unsupported) {
+                    if (!session)
+                        return { true, {} };
+                    lastError = Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
+                    return { false, {} };
+                }
+                // Older external transport providers keep their update() entry
+                // point, but it is invoked only after the whole answer validates.
+                transports.push_back({ app, app->transport(), transport, std::move(prepared.update) });
+            }
+            if (seen.isEmpty()) {
+                lastError = Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
+                return { false, {} };
+            }
+
+            QMap<QString, QPointer<Application>>                     acceptSet;
             QMap<QString, std::pair<QDomElement, Reason::Condition>> rejectSet;
 
             QString contentTag(QStringLiteral("content"));
@@ -713,11 +1091,16 @@ namespace XMPP { namespace Jingle {
                 Application             *app;
 
                 std::tie(err, cond, app) = parseContentAccept(ce);
+                if (!session)
+                    return { true, {} };
                 if (err == Private::AddContentError::Unparsed || err == Private::AddContentError::Unexpected) {
                     for (auto &a : acceptSet) {
-                        a->setState(State::Pending); // reset state to pending for already passed validation before
-                                                     // passing error back
+                        if (a)
+                            a->setState(State::Pending); // reset state to pending for already passed validation before
+                                                         // passing error back
                     }
+                    if (!session)
+                        return { true, {} };
                     lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
                                                     err == Private::AddContentError::Unexpected
                                                         ? XMPP::Stanza::Error::ErrorCond::UnexpectedRequest
@@ -734,9 +1117,12 @@ namespace XMPP { namespace Jingle {
                 if (it != acceptSet.end() || rit != rejectSet.end()) {
                     // duplicates are not allowed in accept request
                     for (auto &a : acceptSet) {
-                        a->setState(State::Pending); // reset state to pending for already passed validation before
-                                                     // passing error back
+                        if (a)
+                            a->setState(State::Pending); // reset state to pending for already passed validation before
+                                                         // passing error back
                     }
+                    if (!session)
+                        return { true, {} };
                     lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
                                                     XMPP::Stanza::Error::ErrorCond::BadRequest);
                     return std::tuple<bool, QList<Application *>>(false, QList<Application *>());
@@ -745,6 +1131,8 @@ namespace XMPP { namespace Jingle {
                 if (err != Private::AddContentError::Ok) {
                     app->setState(State::Finished); // we can't keep working with this content for whatever reason. if
                                                     // "accept" failed there is no fallback
+                    if (!session)
+                        return { true, {} };
                     // This set is captured by a queued callback. Keep the XML
                     // in the client-owned document so the incoming stanza may die
                     // immediately after this handler returns.
@@ -756,6 +1144,24 @@ namespace XMPP { namespace Jingle {
                     continue;
                 }
                 acceptSet.insert(contentName, app);
+            }
+
+            for (auto &entry : transports) {
+                auto app = entry.application;
+                if (!app || app->state() != State::Accepted || app->transport() != entry.transport)
+                    continue;
+                const bool applied = entry.prepared ? entry.transport->commitPreparedUpdate(std::move(entry.prepared))
+                                                    : entry.transport->update(entry.xml);
+                if (!session)
+                    return { true, {} };
+                if (!applied) {
+                    for (auto accepted : acceptSet)
+                        if (accepted)
+                            accepted->setState(State::Pending);
+                    if (!session)
+                        return { true, {} };
+                    return { false, {} };
+                }
             }
 
             if (rejectSet.size()) {
@@ -780,11 +1186,71 @@ namespace XMPP { namespace Jingle {
                                                            } });
                 });
             }
-            return std::tuple<bool, QList<Application *>>(true, acceptSet.values());
+            QList<Application *> accepted;
+            for (const auto &application : std::as_const(acceptSet)) {
+                if (application)
+                    accepted.append(application.data());
+            }
+            return { true, accepted };
         }
 
         bool handleIncomingContentAdd(const QDomElement &jingleEl)
         {
+            std::optional<QList<ContentGroup>>          peerGroups;
+            std::optional<ActiveGroupExtension::Result> groupChange;
+            QSet<QString>                               stanzaContentNames;
+
+            if (state == State::Active) {
+                bool hasGroupUpdate = false;
+                for (auto el = jingleEl.firstChildElement(); !el.isNull(); el = el.nextSiblingElement()) {
+                    if (el.namespaceURI() == QLatin1String("urn:xmpp:jingle:apps:grouping:0")
+                        && el.localName() == QLatin1String("group")) {
+                        hasGroupUpdate = true;
+                    }
+                    if (el.namespaceURI() == QLatin1String("urn:xmpp:jingle:1")
+                        && el.localName() == QLatin1String("content")) {
+                        const auto name = el.attribute(QStringLiteral("name"));
+                        if (!name.isEmpty())
+                            stanzaContentNames.insert(name);
+                    }
+                }
+
+                if (hasGroupUpdate) {
+                    peerGroups = parseCurrentGroupings(jingleEl);
+                    if (!peerGroups) {
+                        lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
+                                                        XMPP::Stanza::Error::ErrorCond::BadRequest);
+                        return false;
+                    }
+                    groupChange = ActiveGroupExtension::classify(negotiatedGroups, *peerGroups, stanzaContentNames);
+                    if (groupChange->kind == ActiveGroupExtension::Kind::Invalid
+                        || (groupChange->kind == ActiveGroupExtension::Kind::Extension
+                            && (outgoingGroupExtension || incomingGroupExtension))) {
+                        lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
+                                                        XMPP::Stanza::Error::ErrorCond::UnexpectedRequest);
+                        ErrorUtil::fill(jingleEl.ownerDocument(), *lastError, ErrorUtil::OutOfOrder);
+                        return false;
+                    }
+                }
+            }
+
+            QSet<ContentKey> additions;
+            for (auto ce = jingleEl.firstChildElement(QStringLiteral("content")); !ce.isNull();
+                 ce      = ce.nextSiblingElement(QStringLiteral("content"))) {
+                const ContentBase cb(ce);
+                const ContentKey  key { cb.name, cb.creator };
+                if ((!ce.namespaceURI().isEmpty() && ce.namespaceURI() != NS) || !cb.isValid()
+                    || cb.creator != negateOrigin(role) || contentList.contains(key)) {
+                    lastError = Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
+                    return false;
+                }
+                additions.insert(key);
+            }
+            if (additions.isEmpty()) {
+                lastError = Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
+                return false;
+            }
+
             Private::AddContentError err;
             Reason::Condition        cond;
             QList<Application *>     apps;
@@ -808,8 +1274,108 @@ namespace XMPP { namespace Jingle {
                 break;
             }
 
+            const Origin remoteRole = negateOrigin(role);
+            if (groupChange && groupChange->kind == ActiveGroupExtension::Kind::Extension && peerGroups) {
+                Application *extensionApp = nullptr;
+                for (auto app : std::as_const(apps)) {
+                    if (!app || app->contentName() != groupChange->addedName)
+                        continue;
+                    if (extensionApp || app->creator() != remoteRole) {
+                        qDeleteAll(apps);
+                        lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
+                                                        XMPP::Stanza::Error::ErrorCond::BadRequest);
+                        return false;
+                    }
+                    extensionApp = app;
+                }
+
+                // If this specific content was unsupported, ContentReject is
+                // already queued and there is no group answer to commit. For a
+                // supported content, RFC 9143 section 7.5.1 does not permit an
+                // answer that accepts the new content while moving it out of the
+                // proposed BUNDLE. If we cannot share the established transport,
+                // reject the content-add rather than inventing an independent
+                // content-accept fallback.
+                if (extensionApp) {
+                    bool share = groupingAllowed && automaticGroupingEnabled && !localGroupingsExplicit
+                        && extensionApp->allowsSharedTransport();
+                    const auto newTransport = extensionApp->transport();
+                    share = share && newTransport && newTransport->pad() && newTransport->supportsSharedTransport();
+                    if (share) {
+                        const auto &beforeGroup = negotiatedGroups.at(groupChange->groupIndex);
+                        const auto  transportNs = newTransport->pad()->ns();
+                        for (const auto &name : beforeGroup.contents) {
+                            Application *member = nullptr;
+                            for (auto it = contentList.cbegin(); it != contentList.cend(); ++it) {
+                                if (it.key().first != name || !it.value() || it.value()->state() >= State::Finishing)
+                                    continue;
+                                if (member) {
+                                    share = false;
+                                    break;
+                                }
+                                member = it.value();
+                            }
+                            if (!share || !member || !member->allowsSharedTransport()
+                                || member->transportReplaceAwaitingAck() || member->transportReplaceInProgress()) {
+                                share = false;
+                                break;
+                            }
+                            const auto transport = member->transport();
+                            if (!transport || !transport->pad() || !transport->supportsSharedTransport()
+                                || transport->pad()->ns() != transportNs) {
+                                share = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (share) {
+                        incomingGroupExtension
+                            = PendingGroupExtension { ContentKey { groupChange->addedName, remoteRole },
+                                                      negotiatedGroups,
+                                                      ActiveGroupExtension::extended(negotiatedGroups, *groupChange),
+                                                      ++nextGroupExtensionId, newTransport.toWeakRef() };
+                    } else {
+                        QDomElement rejectedContent;
+                        for (auto ce = jingleEl.firstChildElement(QLatin1String("content")); !ce.isNull();
+                             ce      = ce.nextSiblingElement(QLatin1String("content"))) {
+                            ContentBase cb(ce);
+                            if (cb.isValid() && cb.name == groupChange->addedName && cb.creator == remoteRole) {
+                                rejectedContent = manager->client()->doc()->importNode(ce, true).toElement();
+                                break;
+                            }
+                        }
+                        if (rejectedContent.isNull()) {
+                            qDeleteAll(apps);
+                            lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
+                                                            XMPP::Stanza::Error::ErrorCond::BadRequest);
+                            return false;
+                        }
+
+                        apps.removeOne(extensionApp);
+                        delete extensionApp;
+
+                        auto existing = outgoingUpdates.find(Action::ContentReject);
+                        if (existing == outgoingUpdates.end()) {
+                            QList<QDomElement> extensionRejects { rejectedContent };
+                            extensionRejects += Reason(Reason::IncompatibleParameters).toXml(manager->client()->doc());
+                            outgoingUpdates.insert(Action::ContentReject,
+                                                   OutgoingUpdate { extensionRejects, OutgoingUpdateCB() });
+                        } else {
+                            auto     &elements = std::get<0>(existing.value());
+                            qsizetype pos      = elements.size();
+                            if (!elements.isEmpty()
+                                && (elements.last().localName().isEmpty() ? elements.last().tagName()
+                                                                          : elements.last().localName())
+                                    == QLatin1String("reason"))
+                                --pos;
+                            elements.insert(pos, rejectedContent);
+                        }
+                    }
+                }
+            }
+
             if (apps.size()) {
-                Origin remoteRole = negateOrigin(role);
                 for (auto app : std::as_const(apps)) {
                     addAndInitContent(remoteRole, app); // TODO check conflicts
                 }
@@ -827,19 +1393,19 @@ namespace XMPP { namespace Jingle {
                 ContentKey            key;
             };
 
-            QList<Removal>       toRemove;
-            QSet<Application *>  seen;
-            QString              contentTag(QStringLiteral("content"));
+            QList<Removal>      toRemove;
+            QSet<Application *> seen;
+            QString             contentTag(QStringLiteral("content"));
             for (QDomElement ce = jingleEl.firstChildElement(contentTag); !ce.isNull();
                  ce             = ce.nextSiblingElement(contentTag)) {
                 ContentBase cb(ce);
-                if (!cb.isValid()) {
+                if ((!ce.namespaceURI().isEmpty() && ce.namespaceURI() != NS) || !cb.isValid()) {
                     lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
                                                     XMPP::Stanza::Error::ErrorCond::BadRequest);
                     return false;
                 }
                 const ContentKey key { cb.name, cb.creator };
-                Application    *app = contentList.value(key);
+                Application     *app = contentList.value(key);
                 if (rejected && app
                     && (app->creator() != role || app->flags().testFlag(Application::InitialApplication)
                         || (app->state() != State::Pending && app->state() != State::Unacked))) {
@@ -865,6 +1431,8 @@ namespace XMPP { namespace Jingle {
                 auto app = entry.application;
                 if (!app || contentList.value(entry.key) != app.data())
                     continue;
+
+                retireContentGrouping(entry.key);
 
                 // Detach before invoking transport/application callbacks. Those
                 // callbacks are allowed to synchronously tear down the owning
@@ -899,7 +1467,7 @@ namespace XMPP { namespace Jingle {
                     delete app.data();
 
                 // QObject destruction is another reentrant boundary: external
-                // call owners may dispose the Session when the last RTP content
+                // call owners may dispose of the Session when the last RTP content
                 // disappears.
                 if (!session)
                     return true;
@@ -989,7 +1557,10 @@ namespace XMPP { namespace Jingle {
             bool                 parsed;
             QList<Application *> apps;
 
+            QPointer<Session> sessionGuard(q);
             std::tie(parsed, apps) = parseContentAcceptList(jingleEl);
+            if (!sessionGuard)
+                return true;
             if (!parsed) {
                 lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
                                                 XMPP::Stanza::Error::ErrorCond::BadRequest);
@@ -1105,6 +1676,7 @@ namespace XMPP { namespace Jingle {
             }
 
             remoteGroups = *peerGroups;
+            publishNegotiatedGroups(*peerGroups);
             // Session acceptance completes signaling, not transport connectivity.
             state = State::Active;
             startAcceptedContents(std::move(guardedAccepted), true);
@@ -1115,20 +1687,62 @@ namespace XMPP { namespace Jingle {
 
         bool handleIncomingContentAccept(const QDomElement &jingleEl)
         {
-            bool                 parsed;
-            QList<Application *> apps;
-
-            std::tie(parsed, apps) = parseContentAcceptList(jingleEl); // marks valid apps as accepted
-            if (!parsed) {
-                lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
-                                                XMPP::Stanza::Error::ErrorCond::BadRequest);
+            QSet<ContentKey> answered;
+            for (auto ce = jingleEl.firstChildElement(QStringLiteral("content")); !ce.isNull();
+                 ce      = ce.nextSiblingElement(QStringLiteral("content"))) {
+                const ContentBase cb(ce);
+                if (!cb.isValid()) {
+                    lastError = Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
+                    return false;
+                }
+                answered.insert(ContentKey { cb.name, cb.creator });
+            }
+            const auto pending          = outgoingGroupExtension;
+            const bool answersExtension = pending && answered.contains(pending->content);
+            const auto peerGroups       = parseCurrentGroupings(jingleEl);
+            if (!peerGroups) {
+                lastError = Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
+                return false;
+            }
+            const auto change = ActiveGroupExtension::classify(
+                negotiatedGroups, *peerGroups,
+                answersExtension ? QSet<QString> { pending->content.first } : QSet<QString> {});
+            if ((answersExtension
+                 && (change.kind != ActiveGroupExtension::Kind::Extension
+                     || !sameGroupings(ActiveGroupExtension::extended(negotiatedGroups, change), pending->offer)))
+                || (!answersExtension && change.kind != ActiveGroupExtension::Kind::Unchanged)) {
+                // An IQ error refuses this malformed answer. It does not decide
+                // the outstanding offer; a corrected answer or content-reject
+                // can still complete that transaction without re-preparing ICE.
+                lastError = Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
                 return false;
             }
 
-            auto guardedApps = snapshotContents(apps);
-            if (!guardedApps.isEmpty() && state == State::Active) {
-                startAcceptedContents(std::move(guardedApps));
+            bool                 parsed;
+            QList<Application *> apps;
+            QPointer<Session>    sessionGuard(q);
+            std::tie(parsed, apps) = parseContentAcceptList(jingleEl);
+            if (!sessionGuard)
+                return true;
+            if (!parsed)
+                return false;
+
+            if (answersExtension && outgoingGroupExtension && outgoingGroupExtension->id == pending->id) {
+                if (!commitOutgoingGroupExtension(pending->offer)) {
+                    rollbackOutgoingGroupExtension();
+                    QPointer<Application> app(contentList.value(pending->content));
+                    QTimer::singleShot(0, q, [app]() {
+                        if (app && app->state() < State::Finishing)
+                            app->remove(Reason::FailedTransport, QStringLiteral("BUNDLE membership could not commit"));
+                    });
+                    lastError = Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
+                    return false;
+                }
             }
+
+            auto guardedApps = snapshotContents(apps);
+            if (!guardedApps.isEmpty() && state == State::Active)
+                startAcceptedContents(std::move(guardedApps));
             planStep();
 
             return true;
@@ -1209,7 +1823,23 @@ namespace XMPP { namespace Jingle {
                 return false;
             }
 
-            const auto &negotiatedGroups = role == Origin::Initiator ? remoteGroups : groups;
+            for (const auto &key : seen) {
+                for (const auto *pending : { &outgoingGroupExtension, &incomingGroupExtension }) {
+                    if (!*pending)
+                        continue;
+                    for (const auto &group : (*pending)->offer) {
+                        if (group.semantics == QLatin1String("BUNDLE")
+                            && group.contents.contains((*pending)->content.first)
+                            && group.contents.contains(key.first)) {
+                            lastError = Stanza::Error(Stanza::Error::ErrorType::Cancel,
+                                                      Stanza::Error::ErrorCond::UnexpectedRequest);
+                            ErrorUtil::fill(jingleEl.ownerDocument(), *lastError, ErrorUtil::OutOfOrder);
+                            return false;
+                        }
+                    }
+                }
+            }
+            const auto &negotiatedGroups = this->negotiatedGroups;
             if (!GroupNegotiation::replacementBatchPreservesBundles(negotiatedGroups, seen)) {
                 lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
                                                 XMPP::Stanza::Error::ErrorCond::UnexpectedRequest);
@@ -1346,12 +1976,12 @@ namespace XMPP { namespace Jingle {
         bool handleIncomingTransportAccept(const QDomElement &jingleEl)
         {
             struct ValidatedTransportAccept {
-                QPointer<Application>          application;
-                ContentKey                     key;
-                QWeakPointer<Transport>        current;
-                quint64                        generation = 0;
-                QDomElement                    transport;
-                Transport::PreparedUpdatePtr   prepared;
+                QPointer<Application>        application;
+                ContentKey                   key;
+                QWeakPointer<Transport>      current;
+                quint64                      generation = 0;
+                QDomElement                  transport;
+                Transport::PreparedUpdatePtr prepared;
             };
             QString                               contentTag(QStringLiteral("content"));
             std::vector<ValidatedTransportAccept> updates;
@@ -1377,8 +2007,7 @@ namespace XMPP { namespace Jingle {
                 Application *app = contentList.value(key);
                 if (!app || !app->transport() || app->transport()->creator() != role
                     || app->transport()->state() < State::ApprovedToSend
-                    || app->transport()->state() >= State::Finishing
-                    || transportNS != app->transport()->pad()->ns()) {
+                    || app->transport()->state() >= State::Finishing || transportNS != app->transport()->pad()->ns()) {
                     // Ignore an acknowledgement that cannot belong to a live,
                     // locally proposed transport. Transport::State is not the
                     // transport-replace IQ lifetime: ICE may remain
@@ -1413,7 +2042,7 @@ namespace XMPP { namespace Jingle {
                 const auto condition = result.status == Transport::PrepareUpdateStatus::Unsupported
                     ? XMPP::Stanza::Error::ErrorCond::FeatureNotImplemented
                     : XMPP::Stanza::Error::ErrorCond::BadRequest;
-                lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel, condition);
+                lastError            = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel, condition);
             };
 
             QPointer<Session> session(q);
@@ -1427,8 +2056,7 @@ namespace XMPP { namespace Jingle {
                 auto app              = entry.application;
                 auto currentTransport = entry.current.lock();
                 if (!app || contentList.value(entry.key) != app.data() || !currentTransport
-                    || app->transport() != currentTransport
-                    || app->transportReplaceGeneration() != entry.generation
+                    || app->transport() != currentTransport || app->transportReplaceGeneration() != entry.generation
                     || !app->transportReplaceInProgress())
                     continue;
 
@@ -1453,8 +2081,7 @@ namespace XMPP { namespace Jingle {
                 auto app              = entry.application;
                 auto currentTransport = entry.current.lock();
                 if (!app || contentList.value(entry.key) != app.data() || !currentTransport
-                    || app->transport() != currentTransport
-                    || app->transportReplaceGeneration() != entry.generation
+                    || app->transport() != currentTransport || app->transportReplaceGeneration() != entry.generation
                     || !app->transportReplaceInProgress())
                     continue;
 
@@ -1681,12 +2308,12 @@ namespace XMPP { namespace Jingle {
         bool handleIncomingTransportInfo(const QDomElement &jingleEl)
         {
             struct ValidatedTransportInfo {
-                QPointer<Application>         application;
-                ContentKey                    key;
-                QWeakPointer<Transport>       current;
-                quint64                       generation = 0;
-                QDomElement                   transport;
-                Transport::PreparedUpdatePtr  prepared;
+                QPointer<Application>        application;
+                ContentKey                   key;
+                QWeakPointer<Transport>      current;
+                quint64                      generation = 0;
+                QDomElement                  transport;
+                Transport::PreparedUpdatePtr prepared;
             };
 
             QString                             contentTag(QStringLiteral("content"));
@@ -1694,8 +2321,8 @@ namespace XMPP { namespace Jingle {
             QSet<ContentKey>                    seen;
             for (QDomElement ce = jingleEl.firstChildElement(contentTag); !ce.isNull();
                  ce             = ce.nextSiblingElement(contentTag)) {
-                Application *app = nullptr;
-                ContentBase  cb(ce);
+                Application     *app = nullptr;
+                ContentBase      cb(ce);
                 const ContentKey key { cb.name, cb.creator };
                 if (!cb.isValid() || seen.contains(key) || !(app = q->content(cb.name, cb.creator))
                     || app->state() >= State::Finishing || !app->transport()) {
@@ -1727,7 +2354,7 @@ namespace XMPP { namespace Jingle {
                 const auto condition = result.status == Transport::PrepareUpdateStatus::Unsupported
                     ? XMPP::Stanza::Error::ErrorCond::FeatureNotImplemented
                     : XMPP::Stanza::Error::ErrorCond::BadRequest;
-                lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel, condition);
+                lastError            = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel, condition);
             };
 
             QPointer<Session> session(q);
@@ -1876,8 +2503,74 @@ namespace XMPP { namespace Jingle {
         Q_ASSERT(d->state < State::Finishing);
         d->addAndInitContent(d->role, content);
         if (d->state >= State::ApprovedToSend) {
-            // If we add content to already initiated session then we are gonna
-            // send it immediatelly. So start prepare
+            // Active content-add may extend an already-negotiated BUNDLE. Select
+            // its concrete transport before prepare(), derive the full proposed
+            // group from committed topology, and let the transport pad stage a
+            // provisional membership on the existing physical association.
+            if (d->state == State::Active && d->groupingAllowed && d->automaticGroupingEnabled
+                && !d->localGroupingsExplicit && !d->outgoingGroupExtension && !d->incomingGroupExtension
+                && content->creator() == d->role && content->allowsSharedTransport()) {
+                if (!content->transport())
+                    content->selectNextTransport();
+
+                const auto newTransport = content->transport();
+                if (newTransport && newTransport->pad() && newTransport->supportsSharedTransport()) {
+                    const auto transportNs   = newTransport->pad()->ns();
+                    int        selectedGroup = -1;
+                    for (qsizetype index = 0; index < d->negotiatedGroups.size(); ++index) {
+                        const auto &group = d->negotiatedGroups.at(index);
+                        if (group.semantics != QLatin1String("BUNDLE") || group.contents.isEmpty()
+                            || group.contents.contains(content->contentName()))
+                            continue;
+
+                        bool compatible = true;
+                        for (const auto &name : group.contents) {
+                            Application *member = nullptr;
+                            for (auto it = d->contentList.cbegin(); it != d->contentList.cend(); ++it) {
+                                if (it.key().first != name || it.value() == content
+                                    || it.value()->state() >= State::Finishing)
+                                    continue;
+                                if (member) {
+                                    compatible = false; // ambiguous content name
+                                    break;
+                                }
+                                member = it.value();
+                            }
+                            if (!compatible || !member || !member->allowsSharedTransport()
+                                || member->transportReplaceAwaitingAck() || member->transportReplaceInProgress()) {
+                                compatible = false;
+                                break;
+                            }
+                            const auto transport = member->transport();
+                            if (!transport || !transport->pad() || !transport->supportsSharedTransport()
+                                || transport->pad()->ns() != transportNs) {
+                                compatible = false;
+                                break;
+                            }
+                        }
+                        if (!compatible)
+                            continue;
+                        if (selectedGroup >= 0) {
+                            selectedGroup = -2; // more than one compatible established group: no automatic guess
+                            break;
+                        }
+                        selectedGroup = int(index);
+                    }
+
+                    if (selectedGroup >= 0) {
+                        auto proposal = d->negotiatedGroups;
+                        proposal[selectedGroup].contents.append(content->contentName());
+                        d->outgoingGroupExtension
+                            = Private::PendingGroupExtension { ContentKey { content->contentName(), d->role },
+                                                               d->negotiatedGroups, std::move(proposal),
+                                                               ++d->nextGroupExtensionId, newTransport.toWeakRef() };
+                    }
+                }
+            }
+
+            // If we add content to an already initiated session then we are
+            // going to send it immediately. Start application/transport prepare
+            // only after the provisional grouping decision above.
             content->prepare();
         }
     }
@@ -1912,6 +2605,8 @@ namespace XMPP { namespace Jingle {
 
     bool Session::setGroupings(const QList<ContentGroup> &groups)
     {
+        if (d->state > State::ApprovedToSend && !Private::sameGroupings(groups, d->negotiatedGroups))
+            return false;
         for (const auto &group : groups) {
             if (!validGroup(group))
                 return false;
@@ -1931,6 +2626,23 @@ namespace XMPP { namespace Jingle {
 
     QList<ContentGroup> Session::groupings() const { return d->groups; }
     QList<ContentGroup> Session::remoteGroupings() const { return d->remoteGroups; }
+    QList<ContentGroup> Session::negotiatedGroupings() const { return d->negotiatedGroups; }
+
+    std::optional<ContentGroup> Session::pendingGroupExtensionFor(const ContentKey &content) const
+    {
+        const Private::PendingGroupExtension *pending = nullptr;
+        if (d->outgoingGroupExtension && d->outgoingGroupExtension->content == content)
+            pending = &*d->outgoingGroupExtension;
+        else if (d->incomingGroupExtension && d->incomingGroupExtension->content == content)
+            pending = &*d->incomingGroupExtension;
+        if (!pending)
+            return std::nullopt;
+        for (const auto &group : pending->offer) {
+            if (group.semantics == QLatin1String("BUNDLE") && group.contents.contains(content.first))
+                return group;
+        }
+        return std::nullopt;
+    }
 
     void Session::refreshAutomaticGroupings(const QSet<Application *> &excluded)
     {
@@ -1970,7 +2682,7 @@ namespace XMPP { namespace Jingle {
                     continue;
 
                 QMap<QString, QStringList> candidatesByTransport;
-                QStringList               transportOrder;
+                QStringList                transportOrder;
                 for (const auto &name : offer.contents) {
                     const auto it = eligibleByName.constFind(name);
                     if (it == eligibleByName.cend())
@@ -2180,7 +2892,7 @@ namespace XMPP { namespace Jingle {
                 c->markInitialApplication(true);
 
             if (d->groupingAllowed
-            && ((d->automaticGroupingEnabled && !d->localGroupingsExplicit) || !d->groups.isEmpty())) {
+                && ((d->automaticGroupingEnabled && !d->localGroupingsExplicit) || !d->groups.isEmpty())) {
                 const auto contents = d->contentList.values();
                 for (auto content : contents) {
                     if (content && content->creator() == d->role && !content->transport()

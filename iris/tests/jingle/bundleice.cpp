@@ -34,10 +34,10 @@ public:
 class TestApplicationPad final : public J::ApplicationManagerPad {
 public:
     explicit TestApplicationPad(J::Session *session) : session_(session) { }
-    J::Session *session() const override { return session_; }
-    QString ns() const override { return QStringLiteral("urn:iris:test:bundle-runtime"); }
+    J::Session            *session() const override { return session_; }
+    QString                ns() const override { return QStringLiteral("urn:iris:test:bundle-runtime"); }
     J::ApplicationManager *manager() const override { return nullptr; }
-    QString generateContentName(J::Origin) override { return {}; }
+    QString                generateContentName(J::Origin) override { return {}; }
 
 private:
     J::Session *session_ = nullptr;
@@ -51,7 +51,7 @@ public:
     void backupTransport(QSharedPointer<J::Transport>) override { }
     bool hasMoreTransports() const override { return false; }
     bool hasTransport(QSharedPointer<J::Transport>) const override { return false; }
-    int compare(QSharedPointer<J::Transport>, QSharedPointer<J::Transport>) const override { return 0; }
+    int  compare(QSharedPointer<J::Transport>, QSharedPointer<J::Transport>) const override { return 0; }
 };
 
 class TestApplication final : public J::Application {
@@ -65,16 +65,16 @@ public:
         _transportSelector = std::make_unique<TestTransportSelector>();
     }
 
-    void setState(J::State state) override { _state = state; }
+    void                                      setState(J::State state) override { _state = state; }
     const std::optional<XMPP::Stanza::Error> &lastError() const override { return error_; }
-    J::Reason lastReason() const override { return reason_; }
-    SetDescError setRemoteOffer(const QDomElement &) override { return Ok; }
-    SetDescError setRemoteAnswer(const QDomElement &) override { return Ok; }
-    QDomElement makeLocalOffer() override { return {}; }
-    QDomElement makeLocalAnswer() override { return {}; }
-    void prepare() override { }
-    void start() override { }
-    bool allowsSharedTransport() const override { return true; }
+    J::Reason                                 lastReason() const override { return reason_; }
+    SetDescError                              setRemoteOffer(const QDomElement &) override { return Ok; }
+    SetDescError                              setRemoteAnswer(const QDomElement &) override { return Ok; }
+    QDomElement                               makeLocalOffer() override { return {}; }
+    QDomElement                               makeLocalAnswer() override { return {}; }
+    void                                      prepare() override { }
+    void                                      start() override { }
+    bool                                      allowsSharedTransport() const override { return true; }
     void remove(J::Reason::Condition = J::Reason::Success, const QString & = {}) override { }
     void incomingRemove(const J::Reason &) override { }
 
@@ -83,7 +83,7 @@ protected:
 
 private:
     std::optional<XMPP::Stanza::Error> error_;
-    J::Reason reason_;
+    J::Reason                          reason_;
 };
 
 class TestIceTransport final : public J::ICE::Transport {
@@ -93,16 +93,16 @@ public:
 };
 
 struct Side {
-    Client client;
-    J::Session session;
-    J::TransportManagerPad::Ptr basePad;
-    QSharedPointer<J::ICE::Pad> icePad;
-    J::ApplicationManagerPad::Ptr appPad;
-    TestApplication *audioApp = nullptr;
-    TestApplication *videoApp = nullptr;
+    Client                           client;
+    J::Session                       session;
+    J::TransportManagerPad::Ptr      basePad;
+    QSharedPointer<J::ICE::Pad>      icePad;
+    J::ApplicationManagerPad::Ptr    appPad;
+    TestApplication                 *audioApp = nullptr;
+    TestApplication                 *videoApp = nullptr;
     QSharedPointer<TestIceTransport> audio;
     QSharedPointer<TestIceTransport> video;
-    J::ICE::IceConnection *network = nullptr;
+    J::ICE::IceConnection           *network = nullptr;
 
     Side(const Jid &peer, J::Origin transportCreator, TcpPortReserver *reserver) :
         session(client.jingleManager(), peer, J::Origin::Initiator)
@@ -127,10 +127,10 @@ struct Side {
         check(audioApp->setTransport(audio) && videoApp->setTransport(video),
               "BUNDLE applications rejected ICE transports");
         check(session.setGroupings({ J::ContentGroup { QStringLiteral("BUNDLE"),
-                                                        { QStringLiteral("audio"), QStringLiteral("video") } } }),
+                                                       { QStringLiteral("audio"), QStringLiteral("video") } } }),
               "BUNDLE grouping rejected");
 
-        bool audioBound = false, audioGrouped = false, videoBound = false, videoGrouped = false;
+        bool  audioBound = false, audioGrouped = false, videoBound = false, videoGrouped = false;
         auto *audioNetwork = icePad->groupedConnectionFor(audio.data(), &audioBound, &audioGrouped);
         auto *videoNetwork = icePad->groupedConnectionFor(video.data(), &videoBound, &videoGrouped);
         check(audioBound && videoBound && audioGrouped && videoGrouped && audioNetwork && audioNetwork == videoNetwork,
@@ -158,14 +158,14 @@ int main(int argc, char **argv)
     check(!Dtls::supportedSRTPProfiles().isEmpty(), "DTLS-SRTP backend required");
 
     TcpPortReserver reserver;
-    Side first(Jid(QStringLiteral("second@example.test/device")), J::Origin::Initiator, &reserver);
-    Side second(Jid(QStringLiteral("first@example.test/device")), J::Origin::Responder, &reserver);
+    Side            first(Jid(QStringLiteral("second@example.test/device")), J::Origin::Initiator, &reserver);
+    Side            second(Jid(QStringLiteral("first@example.test/device")), J::Origin::Responder, &reserver);
 
     check(first.network != second.network, "sessions shared an ICE association");
     QPointer<J::ICE::IceConnection> firstGuard(first.network), secondGuard(second.network);
 
     bool failed = false;
-    auto fail = [&]() { failed = true; };
+    auto fail   = [&]() { failed = true; };
     for (const auto &transport : { first.audio, first.video, second.audio, second.video })
         QObject::connect(transport.data(), &J::Transport::failed, &app, fail);
 
@@ -190,30 +190,26 @@ int main(int argc, char **argv)
     };
 
     QEventLoop loop;
-    QTimer tick, deadline;
+    QTimer     tick, deadline;
     deadline.setSingleShot(true);
     QObject::connect(&deadline, &QTimer::timeout, &loop, &QEventLoop::quit);
 
-    bool firstAudioSignaled = false, firstVideoSignaled = false, secondPrepared = false;
-    bool secondAudioSignaled = false, secondVideoSignaled = false, checksStarted = false;
-    bool audioReceived = false, videoReceived = false, survivorReceived = false, replyReceived = false;
+    bool          firstAudioSignaled = false, firstVideoSignaled = false, secondPrepared = false;
+    bool          secondAudioSignaled = false, secondVideoSignaled = false, checksStarted = false;
+    bool          audioReceived = false, videoReceived = false, survivorReceived = false, replyReceived = false;
     QElapsedTimer answerSettled;
 
-    const QByteArray audioPacket
-        = QByteArray::fromHex("806000010000000111111111") + QByteArrayLiteral("bundle-audio");
-    const QByteArray videoPacket
-        = QByteArray::fromHex("806100010000000222222222") + QByteArrayLiteral("bundle-video");
-    QByteArray survivorPacket
-        = QByteArray::fromHex("806100020000000322222222") + QByteArrayLiteral("bundle-survivor");
-    const QByteArray replyPacket
-        = QByteArray::fromHex("806100030000000433333333") + QByteArrayLiteral("bundle-reply");
+    const QByteArray audioPacket = QByteArray::fromHex("806000010000000111111111") + QByteArrayLiteral("bundle-audio");
+    const QByteArray videoPacket = QByteArray::fromHex("806100010000000222222222") + QByteArrayLiteral("bundle-video");
+    QByteArray survivorPacket = QByteArray::fromHex("806100020000000322222222") + QByteArrayLiteral("bundle-survivor");
+    const QByteArray replyPacket = QByteArray::fromHex("806100030000000433333333") + QByteArrayLiteral("bundle-reply");
 
     QObject::connect(&tick, &QTimer::timeout, &loop, [&]() {
         firstAudioSignaled = exchange(first.audio.data(), second.audio.data()) || firstAudioSignaled;
         firstVideoSignaled = exchange(first.video.data(), second.video.data()) || firstVideoSignaled;
 
-        if (!secondPrepared && firstAudioSignaled && firstVideoSignaled
-            && second.audio->state() == J::State::Pending && second.video->state() == J::State::Pending) {
+        if (!secondPrepared && firstAudioSignaled && firstVideoSignaled && second.audio->state() == J::State::Pending
+            && second.video->state() == J::State::Pending) {
             secondPrepared = true;
             second.audio->prepare();
             second.video->prepare();
@@ -243,15 +239,15 @@ int main(int argc, char **argv)
             }
         }
 
-        auto firstSecure = first.video->rtpAssociation();
+        auto firstSecure  = first.video->rtpAssociation();
         auto secondSecure = second.video->rtpAssociation();
         if (!checksStarted || !firstSecure || !secondSecure || !firstSecure->isReady() || !secondSecure->isReady())
             return;
 
         static bool handlersInstalled = false;
-        static bool initialSent = false;
-        static bool survivorSent = false;
-        static bool replySent = false;
+        static bool initialSent       = false;
+        static bool survivorSent      = false;
+        static bool replySent         = false;
         if (!handlersInstalled) {
             handlersInstalled = true;
             QObject::connect(secondSecure, &J::RTP::SecureRtpAssociation::protectedPacketReceived, &loop,
@@ -272,7 +268,7 @@ int main(int argc, char **argv)
         }
 
         if (!initialSent) {
-            initialSent = true;
+            initialSent      = true;
             const auto epoch = firstSecure->epoch();
             check(first.audio->sendProtectedRtpPacket(audioPacket, J::RTP::PacketKind::Rtp, epoch),
                   "audio BUNDLE member failed to send");
@@ -281,9 +277,9 @@ int main(int argc, char **argv)
         }
 
         if (!survivorSent && audioReceived && videoReceived) {
-            survivorSent = true;
-            auto *shared = first.video->rtpAssociation();
-            const auto epoch = shared->epoch();
+            survivorSent      = true;
+            auto      *shared = first.video->rtpAssociation();
+            const auto epoch  = shared->epoch();
             first.audio->stop();
             check(first.audio->state() == J::State::Finished, "audio member did not stop");
             check(first.video->rtpAssociation() == shared && shared->isReady() && shared->epoch() == epoch,
@@ -293,7 +289,7 @@ int main(int argc, char **argv)
         }
 
         if (!replySent && survivorReceived) {
-            replySent = true;
+            replySent    = true;
             auto *shared = second.video->rtpAssociation();
             check(shared && shared->isReady(), "responder shared secure RTP disappeared");
             check(second.video->sendProtectedRtpPacket(replyPacket, J::RTP::PacketKind::Rtp, shared->epoch()),
@@ -322,6 +318,9 @@ int main(int argc, char **argv)
 
     delete first.videoApp;
     first.videoApp = nullptr;
+    check(!first.audio->rtpAssociation() && !first.video->rtpAssociation(),
+          "removed initiator contents retained runtime access to the association");
+    QCoreApplication::processEvents(QEventLoop::AllEvents);
     check(!firstGuard && first.icePad->liveAssociationCount() == 0 && !first.audio->rtpAssociation()
               && !first.video->rtpAssociation(),
           "last initiator BUNDLE member retained or dangled the association");
@@ -332,6 +331,7 @@ int main(int argc, char **argv)
           "removing responder audio destroyed video association");
     delete second.videoApp;
     second.videoApp = nullptr;
+    QCoreApplication::processEvents(QEventLoop::AllEvents);
     check(!secondGuard && second.icePad->liveAssociationCount() == 0,
           "last responder BUNDLE member retained the association");
 

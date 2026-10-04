@@ -204,6 +204,7 @@ add_executable(jingle_rtpapplication_test rtpapplication.cpp)
 target_link_libraries(jingle_rtpapplication_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
 add_test(NAME jingle_rtpapplication COMMAND jingle_rtpapplication_test)
+set_tests_properties(jingle_rtpapplication PROPERTIES SKIP_RETURN_CODE 77)
 add_executable(jingle_rtpdirection_test rtpdirection.cpp)
 target_link_libraries(jingle_rtpdirection_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core)
 add_test(NAME jingle_rtpdirection COMMAND jingle_rtpdirection_test)

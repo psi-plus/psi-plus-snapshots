@@ -335,7 +335,13 @@ namespace XMPP { namespace Jingle {
             return _update;
 
         if (_terminationReason.isValid()) {
-            _update = { Action::ContentRemove, _terminationReason };
+            // Reject a remotely added content that has not crossed the local
+            // content-accept sending boundary yet. Once sent, removing the same
+            // content is an ordinary content-remove. Initial session contents
+            // are negotiated by session-initiate/session-accept instead.
+            const bool rejectPendingContentAdd
+                = isRemote() && !_flags.testFlag(InitialApplication) && !contentAnswerSent_;
+            _update = { rejectPendingContentAdd ? Action::ContentReject : Action::ContentRemove, _terminationReason };
             return _update;
         }
 
@@ -444,29 +450,49 @@ namespace XMPP { namespace Jingle {
             if (_update.reason.isValid())
                 updates << _update.reason.toXml(doc);
             return OutgoingUpdate { updates, [this](bool) { setState(State::Finished); } };
-        case Action::ContentAdd:
+        case Action::ContentAdd: {
             contentEl.appendChild(makeLocalOffer());
             std::tie(transportEl, transportCB) = wrapOutgoingTransportUpdate();
             contentEl.appendChild(transportEl);
 
+            const QPointer<Application> guard(this);
+            const auto                  expected = _transport.toWeakRef();
             setState(State::Unacked);
-            return OutgoingUpdate { updates, [this, transportCB](Task *task) {
-                                       transportCB(task);
-                                       if (task->success())
-                                           setState(State::Pending);
+            if (!guard)
+                return {};
+            return OutgoingUpdate { updates, [this, guard, expected, transportCB](Task *task) {
+                                       if (!guard || !task || _state != State::Unacked || _terminationReason.isValid()
+                                           || expected.lock() != _transport)
+                                           return;
+                                       if (transportCB)
+                                           transportCB(task);
+                                       if (!guard || _state != State::Unacked || _terminationReason.isValid())
+                                           return;
+                                       setState(task->success() ? State::Pending : State::Finished);
                                    } };
-
-        case Action::ContentAccept:
+        }
+        case Action::ContentAccept: {
+            contentAnswerSent_ = true;
             contentEl.appendChild(makeLocalAnswer());
             std::tie(transportEl, transportCB) = wrapOutgoingTransportUpdate(true);
             contentEl.appendChild(transportEl);
 
+            const QPointer<Application> guard(this);
+            const auto                  expected = _transport.toWeakRef();
             setState(State::Unacked);
-            return OutgoingUpdate { updates, [this, transportCB](Task *task) {
-                                       transportCB(task);
-                                       if (task->success())
-                                           setState(State::Connecting);
+            if (!guard)
+                return {};
+            return OutgoingUpdate { updates, [this, guard, expected, transportCB](Task *task) {
+                                       if (!guard || !task || _state != State::Unacked || _terminationReason.isValid()
+                                           || expected.lock() != _transport)
+                                           return;
+                                       if (transportCB)
+                                           transportCB(task);
+                                       if (!guard || _state != State::Unacked || _terminationReason.isValid())
+                                           return;
+                                       setState(task->success() ? State::Connecting : State::Finished);
                                    } };
+        }
         case Action::ContentModify: {
             Q_ASSERT(_state == State::Active);
             Q_ASSERT(_requestedSenders);

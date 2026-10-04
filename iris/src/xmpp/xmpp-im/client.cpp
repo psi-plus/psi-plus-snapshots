@@ -837,7 +837,11 @@ bool Client::hasStream() const { return !!d->stream; }
 
 Stream &Client::stream() { return *(d->stream.data()); }
 
-QString Client::streamBaseNS() const { return d->stream->baseNS(); }
+QString Client::streamBaseNS() const
+{
+    // Tasks can complete with a parsed error after the stream has gone away.
+    return d->stream ? d->stream->baseNS() : QStringLiteral("jabber:client");
+}
 
 const LiveRoster &Client::roster() const { return d->roster; }
 

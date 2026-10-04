@@ -23,9 +23,9 @@
 #include <iris/iris_export.h>
 
 #include <QMetaObject>
+#include <any>
 #include <iris/xmpp-im/jingle-tiebreaker.h>
 #include <iris/xmpp-im/jingle-transport.h>
-#include <any>
 #include <optional>
 
 class QDomDocument;
@@ -306,6 +306,7 @@ namespace XMPP { namespace Jingle {
     protected:
         State            _state = State::Created;
         ApplicationFlags _flags;
+        bool             contentAnswerSent_ = false;
 
         /**
          * XEP-0166 transport-replace signaling state for this content.
@@ -405,7 +406,7 @@ namespace XMPP { namespace Jingle {
         // only the typed result; it never interprets application attributes or
         // nested elements itself.
         virtual std::optional<std::any> parseProposal(const QDomElement &) const { return std::nullopt; }
-        virtual QDomElement serializeProposal(const std::any &, QDomDocument *) const { return {}; }
+        virtual QDomElement             serializeProposal(const std::any &, QDomDocument *) const { return {}; }
 
         virtual QStringList ns() const;
         virtual QStringList discoFeatures() const = 0;
