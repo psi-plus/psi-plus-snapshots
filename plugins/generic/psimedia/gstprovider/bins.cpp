@@ -208,7 +208,6 @@ static bool video_codec_get_recv_elements(const QString &name, GstElement **dec,
 
 GstElement *bins_videoprep_create(const QSize &size, int fps, bool is_live)
 {
-    Q_UNUSED(is_live)
     GstElement *bin = gst_bin_new("videoprepbin");
 
     GstElement *videorate  = nullptr;
@@ -218,13 +217,28 @@ GstElement *bins_videoprep_create(const QSize &size, int fps, bool is_live)
     // for legacy file input, where RtpWorker supplies one).
     if (fps > 0) {
         videorate = gst_element_factory_make("videorate", nullptr);
+        if (is_live) {
+            // Capture may start long after the pipeline's time segment began,
+            // and a static desktop may supply frames very infrequently. Never
+            // turn either gap into a backlog of historical duplicate frames.
+            // The requested FPS is a ceiling; preserve actual capture times.
+            g_object_set(G_OBJECT(videorate), "skip-to-first", TRUE, "drop-only", TRUE, "max-rate", fps, nullptr);
+        }
 
         ratefilter = gst_element_factory_make("capsfilter", nullptr);
 
         GstCaps      *caps = gst_caps_new_empty();
-        GstStructure *cs   = gst_structure_new("video/x-raw", "framerate", GST_TYPE_FRACTION, fps, 1, NULL);
-
+        GstStructure *cs   = gst_structure_new("video/x-raw", "framerate", GST_TYPE_FRACTION, fps, 1, nullptr);
         gst_caps_append_structure(caps, cs);
+        if (is_live) {
+            // Prefer the ceiling for unknown/variable input rates, but allow
+            // all positive slower fixed rates without requesting duplicates.
+            // Exclude 0/1 output: videorate treats it as unlimited passthrough,
+            // defeating the FPS ceiling when a source advertises variable FPS.
+            gst_caps_append_structure(
+                caps,
+                gst_structure_new("video/x-raw", "framerate", GST_TYPE_FRACTION_RANGE, 1, G_MAXINT, fps, 1, nullptr));
+        }
 
         g_object_set(G_OBJECT(ratefilter), "caps", caps, NULL);
         gst_caps_unref(caps);

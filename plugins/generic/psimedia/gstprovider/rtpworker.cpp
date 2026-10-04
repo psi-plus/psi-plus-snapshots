@@ -157,6 +157,8 @@ static void logElementSrcCaps(const char *label, GstElement *element)
 class Stats {
 public:
     QString       name;
+    const void   *owner;
+    GstClockTime  maximumPresentationAge = GST_CLOCK_TIME_NONE;
     int           calls;
     int           sizes[30];
     int           sizes_at;
@@ -164,13 +166,15 @@ public:
     int           keyframes;
     QElapsedTimer calltime;
 
-    Stats(const QString &_name) : name(_name), calls(-1), sizes_at(0), frames(0), keyframes(0)
+    Stats(const QString &_name, const void *worker) :
+        name(_name), owner(worker), calls(-1), sizes_at(0), frames(0), keyframes(0)
     {
         for (int k = 0; k < 30; ++k)
             sizes[k] = 0;
     }
 
-    void print_stats(int current_size, bool frameBoundary = false, bool keyframe = false)
+    void print_stats(int current_size, bool frameBoundary = false, bool keyframe = false,
+                     GstClockTime presentationAge = GST_CLOCK_TIME_NONE)
     {
         // -2 means quit
         if (calls == -2)
@@ -181,6 +185,9 @@ public:
             --sizes_at;
         }
         sizes[sizes_at++] = current_size;
+        if (GST_CLOCK_TIME_IS_VALID(presentationAge)
+            && (!GST_CLOCK_TIME_IS_VALID(maximumPresentationAge) || presentationAge > maximumPresentationAge))
+            maximumPresentationAge = presentationAge;
         if (frameBoundary)
             ++frames;
         if (keyframe)
@@ -198,19 +205,30 @@ public:
             for (int n = 0; n < sizes_at; ++n)
                 avg += sizes[n];
             avg /= sizes_at;
-            const qint64 elapsedMs   = calltime.elapsed();
-            int          bytesPerSec = (calls * avg) / 10;
-            int          bps         = bytesPerSec * 10;
-            int          kbps        = bps / 1000;
-            calls                    = -2;
-            calltime.restart();
-            if (frames > 0) {
-                const double fps = elapsedMs > 0 ? (double(frames) * 1000.0 / double(elapsedMs)) : 0.0;
-                qDebug("%s: average packet size=%d, kbps=%d, rtp-fps=%.1f, keyframes=%d", qPrintable(name), avg, kbps,
-                       fps, keyframes);
+            const qint64 elapsedMs     = calltime.elapsed();
+            int          bytesPerSec   = (calls * avg) / 10;
+            int          bps           = bytesPerSec * 10;
+            int          kbps          = bps / 1000;
+            const bool   videoInterval = frames > 0;
+            if (videoInterval) {
+                const double fps   = elapsedMs > 0 ? (double(frames) * 1000.0 / double(elapsedMs)) : 0.0;
+                const qint64 ageMs = GST_CLOCK_TIME_IS_VALID(maximumPresentationAge)
+                    ? qint64(maximumPresentationAge / GST_MSECOND)
+                    : -1;
+                qDebug("%s worker=%p: average packet size=%d, kbps=%d, rtp-fps=%.1f, keyframes=%d, max-age-ms=%lld",
+                       qPrintable(name), owner, avg, kbps, fps, keyframes, static_cast<long long>(ageMs));
+                if (ageMs >= 1000)
+                    qWarning("psimedia worker=%p video capture/encoder backlog max-age-ms=%lld", owner,
+                             static_cast<long long>(ageMs));
             } else {
-                qDebug("%s: average packet size=%d, kbps=%d", qPrintable(name), avg, kbps);
+                qDebug("%s worker=%p: average packet size=%d, kbps=%d", qPrintable(name), owner, avg, kbps);
             }
+            // Keep reporting video age, so a backlog arising after startup is
+            // visible. One message per ten seconds per worker avoids frame spam.
+            calls    = videoInterval ? 0 : -2;
+            sizes_at = frames = keyframes = 0;
+            maximumPresentationAge        = GST_CLOCK_TIME_NONE;
+            calltime.restart();
         } else
             ++calls;
     }
@@ -270,8 +288,8 @@ static GstClockTime samplePresentationAge(GstSample *sample, GstElement *pipelin
 }
 
 RtpWorker::RtpWorker(GMainContext *mainContext, DeviceMonitor *hardwareDeviceMonitor) :
-    mainContext_(mainContext), hardwareDeviceMonitor_(hardwareDeviceMonitor), audioStats(new Stats("audio")),
-    videoStats(new Stats("video"))
+    mainContext_(mainContext), hardwareDeviceMonitor_(hardwareDeviceMonitor), audioStats(new Stats("audio", this)),
+    videoStats(new Stats("video", this))
 {
     send_pipelineContext = new PipelineContext;
     recv_pipelineContext = new PipelineContext;
@@ -1085,7 +1103,7 @@ GstFlowReturn RtpWorker::packet_ready_rtp_video(GstAppSink *appsink)
         keyframe      = vp8PacketStartsKeyframe(rtpMap.data, rtpMap.size);
         gst_buffer_unmap(buffer, &rtpMap);
     }
-    videoStats->print_stats(int(gst_buffer_get_size(buffer)), frameBoundary, keyframe);
+    videoStats->print_stats(int(gst_buffer_get_size(buffer)), frameBoundary, keyframe, packet.presentationAge);
     if (!firstOutgoingVideoLogged_.exchange(true, std::memory_order_acq_rel)) {
         const qint64 ageMs
             = GST_CLOCK_TIME_IS_VALID(packet.presentationAge) ? qint64(packet.presentationAge / GST_MSECOND) : -1;
@@ -2230,8 +2248,9 @@ bool RtpWorker::addVideoChain()
     if (fileDemux && fps <= 0)
         fps = 30; // keep deterministic legacy pacing for file input
 #ifdef RTPWORKER_DEBUG
-    qDebug("codec=%s, video prep=%dx%d @ %s fps", qPrintable(codec), size.width(), size.height(),
-           fps > 0 ? qPrintable(QString::number(fps)) : "source");
+    qDebug("psimedia worker=%p video prep codec=%s size=%dx%d fps=%s live=%d cadence=%s", static_cast<void *>(this),
+           qPrintable(codec), size.width(), size.height(), fps > 0 ? qPrintable(QString::number(fps)) : "source",
+           int(!fileDemux), fileDemux ? "constant" : "capture-timestamps");
 #endif
 
     // see if we need to match a pt id
