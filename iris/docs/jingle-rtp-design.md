@@ -155,6 +155,10 @@ sequenceDiagram
 fails its media path. It is distinct from an operation-specific error. The adapter must define
 safe teardown when its underlying backend has already disposed of resources before notifying
 Iris; Iris must not assume that a provider's own stop function is idempotent.
+`MediaSession::endpointError(endpoint, error)` instead removes only the application
+owning that endpoint with `failed-application`. Providers with independent camera
+and screen capture use this for a lost source; a shared association failure still
+uses `runtimeError`. The endpoint pointer is borrowed for synchronous delivery.
 
 ### Readiness and packet I/O
 
@@ -342,12 +346,12 @@ Delivery queues have packet, byte and age bounds (network 256 packets, media 128
 callbacks protect stop/restart delivery. These bounds do not bound all GStreamer queues or
 the duration of a continuously replenished delivery loop.
 
-Live input-ID changes call RtpWorker::setInputDevices. With an existing sendbin the current
-implementation cleans up both send and receive pipelines and recreates them; context and
-rtpsession bridges remain alive. It is not an isolated per-source replacement. Live/file
-transitions are excluded from this rebuild condition and must not be treated as a supported
-capture-switch guarantee. Audio-only sender regression checks late attach/detach/reattach
-RTP, not physical source closure or uninterrupted video/receive playback.
+Live input-ID changes call RtpWorker::setInputDevices. Source replacement and
+removal rebuild that codec worker's sender while preserving its receive graph.
+Adding the second audio/video branch to a legacy worker extends its live graph.
+With grouped capture, each video content has its own worker and pipelines, so
+replacing or stopping the screen does not stop camera or audio pipelines. Actual
+source closure and compositor permission behavior still need desktop testing.
 
 Production bridge wiring and negotiated RTP BUNDLE are implemented, while complete hotplug/privacy,
 recovery, SharedRtcp media ingress, active-call shared-association migration and external BUNDLE
@@ -401,3 +405,33 @@ Protocol references: [XEP-0167](https://xmpp.org/extensions/xep-0167.html),
 [RFC 5761](https://www.rfc-editor.org/rfc/rfc5761),
 [RFC 5764](https://www.rfc-editor.org/rfc/rfc5764) and
 [RFC 7983](https://www.rfc-editor.org/rfc/rfc7983).
+
+
+### Independent camera and screen contents
+
+A client can add a one-way video content to an active session using the existing
+RTP Manager and normal `content-add` / `content-accept` lifecycle. The optional
+`createOutgoing(..., contentName)` argument lets application policy choose a
+unique name; duplicate `(creator, name)` identities are rejected. Names do not
+establish source type or confer capture permission.
+
+`SecureRtpEndpoint::contentName` matches the name passed to
+`MediaSession::createEndpoint()`. It identifies the codec endpoint in a provider
+with several video workers; its opaque `endpointId` remains the packet-routing
+identity. BUNDLE membership and SRTP association identity continue to belong to
+Iris signaling and its committed topology.
+
+Psi's updated psimedia provider advertises the optional
+`GroupedSecureRtpSessionContext/1.0` interface. Separate video workers join a
+call-owned secure-group context before preparation. Each supplies its endpoint
+routes; the owner aggregates them, owns SRTP/RTCP and dispatches received media
+to the matching decoder. Retirement removes only that worker's routes and
+capture graph. Older providers do not advertise this capability and retain their
+existing single-video behavior.
+
+Screen capture authorization belongs to the client, not Iris. The client revokes
+capture immediately on stop, even before content-removal signaling completes.
+No pending offer or peer request can authorize a local camera or screen. A portal
+resource lease can remain alive through asynchronous codec teardown while its
+permission session is already closed. See Psi's `doc/screen-sharing.md` for the
+Linux source picker, build requirements and interoperability limits.

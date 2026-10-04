@@ -224,6 +224,19 @@ int main(int argc, char **argv)
     Client client;
     auto   manager = client.jingleManager()->rtpManager();
     check(manager && manager->discoFeatures().isEmpty(), "unfinished RTP advertised");
+    {
+        auto named = std::make_shared<Counters>();
+        manager->setMediaProvider(std::make_shared<Provider>(named));
+        manager->setTransportNamespaces({ transportNs });
+        Session session(client.jingleManager(), Jid("peer@example.org/device"));
+        auto screen = manager->createOutgoing(&session, R::Media::Video, Origin::Initiator, QStringLiteral("screen-1"));
+        check(screen && screen->contentName() == QLatin1String("screen-1") && screen->senders() == Origin::Initiator,
+              "named one-way screen content was not preserved");
+        check(!manager->createOutgoing(&session, R::Media::Video, Origin::Initiator, QStringLiteral("screen-1"))
+                  && named->endpoints == 1,
+              "duplicate screen identity created another backend endpoint");
+    }
+    manager->setMediaProvider({});
     auto counters = std::make_shared<Counters>();
     {
         Session session(client.jingleManager(), Jid("peer@example.org/device"));

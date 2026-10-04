@@ -121,7 +121,41 @@ GstRtpSessionContext::GstRtpSessionContext(GstMainLoop *_gstLoop, DeviceMonitor 
     connect(&recorder, SIGNAL(stopped()), SLOT(recorder_stopped()));
 }
 
-GstRtpSessionContext::~GstRtpSessionContext() { cleanup(); }
+GstRtpSessionContext::~GstRtpSessionContext()
+{
+    cleanup();
+    if (secureGroupOwner_)
+        secureGroupOwner_->secureGroupChildren_.remove(this);
+    for (auto child : std::as_const(secureGroupChildren_)) {
+        child->secureGroupOwner_.clear();
+        child->secureGroupDetached_ = true;
+        child->refreshSecureProducerRoutes();
+    }
+}
+
+bool GstRtpSessionContext::shareSecureGroupsWith(QObject *base)
+{
+    auto owner = qobject_cast<GstRtpSessionContext *>(base);
+    if (!owner || owner == this || !secureMode_ || !owner->secureMode_ || owner->secureGroupOwner_
+        || owner->secureGroupDetached_ || secureGroupDetached_ || secureGroupOwner_ || isStarted
+        || !secureGroups_.empty() || !secureEndpoints_.isEmpty() || thread() != owner->thread())
+        return false;
+    secureGroupOwner_ = owner;
+    owner->secureGroupChildren_.insert(this);
+    return true;
+}
+
+GstRtpSessionContext *GstRtpSessionContext::secureEndpointOwner(const QByteArray &id)
+{
+    for (const auto &endpoint : secureEndpoints_)
+        if (endpoint.endpointId == id)
+            return this;
+    for (auto child : std::as_const(secureGroupChildren_))
+        for (const auto &endpoint : child->secureEndpoints_)
+            if (endpoint.endpointId == id)
+                return child;
+    return nullptr;
+}
 
 QObject *GstRtpSessionContext::qobject() { return this; }
 
@@ -131,6 +165,8 @@ void GstRtpSessionContext::stopRtpBridges()
     videoSendPayloadType.store(-1, std::memory_order_release);
 
     if (secureMode_) {
+        if (secureGroupOwner_)
+            secureConfigureEndpoints({});
         for (auto &[associationId, state] : secureGroups_) {
             Q_UNUSED(associationId)
             if (state.started && state.group)
@@ -521,6 +557,8 @@ bool GstRtpSessionContext::configureRtpBridges()
 
 GstRtpSessionContext::SecureGroupState *GstRtpSessionContext::findSecureGroup(const QByteArray &associationId)
 {
+    if (secureGroupOwner_)
+        return secureGroupOwner_->findSecureGroup(associationId);
     const auto it = secureGroups_.find(associationId);
     return it == secureGroups_.end() ? nullptr : &it->second;
 }
@@ -528,12 +566,18 @@ GstRtpSessionContext::SecureGroupState *GstRtpSessionContext::findSecureGroup(co
 const GstRtpSessionContext::SecureGroupState *
 GstRtpSessionContext::findSecureGroup(const QByteArray &associationId) const
 {
+    if (secureGroupOwner_)
+        return secureGroupOwner_->findSecureGroup(associationId);
     const auto it = secureGroups_.find(associationId);
     return it == secureGroups_.end() ? nullptr : &it->second;
 }
 
 GstRtpSessionContext::SecureGroupState *GstRtpSessionContext::ensureSecureGroup(const QByteArray &associationId)
 {
+    if (secureGroupDetached_)
+        return nullptr;
+    if (secureGroupOwner_)
+        return secureGroupOwner_->ensureSecureGroup(associationId);
     if (associationId.isEmpty())
         return nullptr;
 
@@ -570,14 +614,19 @@ bool GstRtpSessionContext::configureSecureGroup(const QByteArray &associationId)
     auto *state = findSecureGroup(associationId);
     if (!secureMode_ || !state || !state->group)
         return false;
-    if (!securePayloadsReady_ || state->endpoints.isEmpty())
+    if (state->endpoints.isEmpty())
         return true;
 
     QList<RtpGroupBridge::Endpoint> groupEndpoints;
     for (const auto &endpoint : state->endpoints) {
-        const bool  audio  = endpoint.media == QLatin1String("audio");
-        const auto &local  = audio ? lastStatus.localAudioPayloadInfo : lastStatus.localVideoPayloadInfo;
-        const auto &remote = audio ? lastStatus.remoteAudioPayloadInfo : lastStatus.remoteVideoPayloadInfo;
+        auto target = secureEndpointOwner(endpoint.endpointId);
+        if (!target)
+            return false;
+        if (!target->securePayloadsReady_)
+            return true; // membership may be staged before codec preparation completes
+        const bool audio = endpoint.media == QLatin1String("audio");
+        const auto &local = audio ? target->lastStatus.localAudioPayloadInfo : target->lastStatus.localVideoPayloadInfo;
+        const auto &remote = audio ? target->lastStatus.remoteAudioPayloadInfo : target->lastStatus.remoteVideoPayloadInfo;
         if (local.isEmpty() || remote.isEmpty())
             return false;
 
@@ -615,18 +664,21 @@ bool GstRtpSessionContext::configureSecureGroup(const QByteArray &associationId)
 
     for (const auto &endpoint : groupEndpoints) {
         const bool audio = endpoint.media == QLatin1String("audio");
-        state->group->setEndpointMediaPacketHandler(endpoint.id, [this, audio](GstBuffer *buffer) {
+        QPointer<GstRtpSessionContext> target(secureEndpointOwner(endpoint.id));
+        state->group->setEndpointMediaPacketHandler(endpoint.id, [target, audio](GstBuffer *buffer) {
+            if (!target)
+                return;
             const auto packet = packetFromBuffer(buffer);
             if (packet.rawValue.isEmpty())
                 return;
 
-            QMutexLocker locker(&write_mutex);
-            if (!allow_writes || !control)
+            QMutexLocker locker(&target->write_mutex);
+            if (!target->allow_writes || !target->control)
                 return;
             if (audio)
-                control->rtpAudioIn(packet);
+                target->control->rtpAudioIn(packet);
             else
-                control->rtpVideoIn(packet);
+                target->control->rtpVideoIn(packet);
         });
     }
 
@@ -635,9 +687,13 @@ bool GstRtpSessionContext::configureSecureGroup(const QByteArray &associationId)
 
 bool GstRtpSessionContext::configureSecureGroups()
 {
+    if (secureGroupDetached_)
+        return false;
+    if (secureGroupOwner_)
+        return secureGroupOwner_->configureSecureGroups();
     if (!secureMode_)
         return false;
-    if (!securePayloadsReady_ || secureEndpoints_.isEmpty())
+    if (secureGroups_.empty())
         return true;
 
     for (const auto &[associationId, state] : secureGroups_) {
@@ -655,8 +711,13 @@ bool GstRtpSessionContext::maybeStartSecureGroup(const QByteArray &associationId
         return false;
     if (state->started)
         return true;
-    if (!securePayloadsReady_ || state->endpoints.isEmpty() || !state->group->isReady())
+    if (state->endpoints.isEmpty() || !state->group->isReady())
         return true;
+    for (const auto &endpoint : state->endpoints) {
+        auto owner = secureEndpointOwner(endpoint.endpointId);
+        if (!owner || !owner->securePayloadsReady_)
+            return true;
+    }
 
     if (!state->group->start())
         return false;
@@ -666,24 +727,42 @@ bool GstRtpSessionContext::maybeStartSecureGroup(const QByteArray &associationId
 
 bool GstRtpSessionContext::secureConfigureEndpoints(const QList<PSecureRtpEndpoint> &endpoints)
 {
-    if (!secureMode_ || QThread::currentThread() != thread())
+    if (!secureMode_ || secureGroupDetached_ || QThread::currentThread() != thread())
         return false;
-
-    QSet<QByteArray>                                endpointIds;
-    QSet<QString>                                   media;
-    std::map<QByteArray, QList<PSecureRtpEndpoint>> desired;
+    QSet<QByteArray> ids;
+    QSet<QString> media;
     for (const auto &endpoint : endpoints) {
-        if (endpoint.endpointId.isEmpty() || endpoint.associationId.isEmpty()
-            || endpointIds.contains(endpoint.endpointId)
+        if (endpoint.endpointId.isEmpty() || endpoint.associationId.isEmpty() || ids.contains(endpoint.endpointId)
             || (endpoint.media != QLatin1String("audio") && endpoint.media != QLatin1String("video"))
             || media.contains(endpoint.media))
             return false;
-        endpointIds.insert(endpoint.endpointId);
+        ids.insert(endpoint.endpointId);
         media.insert(endpoint.media);
-        for (int payloadType : endpoint.incomingPayloadTypes) {
-            if (payloadType < 0 || payloadType > 127)
+        for (int pt : endpoint.incomingPayloadTypes)
+            if (pt < 0 || pt > 127)
                 return false;
-        }
+    }
+    const auto previous = secureEndpoints_;
+    secureEndpoints_ = endpoints;
+    auto owner = secureGroupOwner_ ? secureGroupOwner_.data() : this;
+    if (owner->rebuildSecureEndpoints())
+        return true;
+    secureEndpoints_ = previous;
+    owner->rebuildSecureEndpoints();
+    return false;
+}
+
+bool GstRtpSessionContext::rebuildSecureEndpoints()
+{
+    QList<PSecureRtpEndpoint> endpoints = secureEndpoints_;
+    for (auto child : std::as_const(secureGroupChildren_))
+        endpoints.append(child->secureEndpoints_);
+    QSet<QByteArray> ids;
+    std::map<QByteArray, QList<PSecureRtpEndpoint>> desired;
+    for (const auto &endpoint : endpoints) {
+        if (ids.contains(endpoint.endpointId))
+            return false;
+        ids.insert(endpoint.endpointId);
         desired[endpoint.associationId].append(endpoint);
     }
 
@@ -693,25 +772,21 @@ bool GstRtpSessionContext::secureConfigureEndpoints(const QList<PSecureRtpEndpoi
     for (const auto &[associationId, state] : secureGroups_)
         previous.emplace(associationId, state.endpoints);
 
-    const auto previousEndpoints = secureEndpoints_;
-    secureEndpoints_             = endpoints;
 
     for (const auto &[associationId, groupEndpoints] : desired) {
         auto *state = ensureSecureGroup(associationId);
         if (!state) {
-            secureEndpoints_ = previousEndpoints;
             return false;
         }
         state->endpoints = groupEndpoints;
-        if (securePayloadsReady_ && !configureSecureGroup(associationId)) {
-            secureEndpoints_ = previousEndpoints;
+        if (!configureSecureGroup(associationId)) {
             for (auto &[restoreId, restoreEndpoints] : previous) {
                 auto *restore      = ensureSecureGroup(restoreId);
                 restore->endpoints = restoreEndpoints;
                 if (restore->group && restoreEndpoints.isEmpty()) {
                     restore->group->clearEndpoints();
                     restore->started = false;
-                } else if (securePayloadsReady_ && !restoreEndpoints.isEmpty()) {
+                } else if (!restoreEndpoints.isEmpty()) {
                     configureSecureGroup(restoreId);
                 }
             }
@@ -750,6 +825,9 @@ bool GstRtpSessionContext::secureConfigureAssociation(const QByteArray &associat
                                                       const QByteArray &remoteMasterKey,
                                                       const QByteArray &remoteMasterSalt)
 {
+    if (secureGroupOwner_)
+        return secureGroupOwner_->secureConfigureAssociation(associationId, epoch, profile, localMasterKey,
+                                                             localMasterSalt, remoteMasterKey, remoteMasterSalt);
     if (!secureMode_ || QThread::currentThread() != thread() || associationId.isEmpty())
         return false;
     auto *state = ensureSecureGroup(associationId);
@@ -765,6 +843,10 @@ bool GstRtpSessionContext::secureConfigureAssociation(const QByteArray &associat
 
 void GstRtpSessionContext::secureInvalidateAssociation(const QByteArray &associationId, quint64 epoch)
 {
+    if (secureGroupOwner_) {
+        secureGroupOwner_->secureInvalidateAssociation(associationId, epoch);
+        return;
+    }
     if (!secureMode_ || QThread::currentThread() != thread())
         return;
     auto *state = findSecureGroup(associationId);
@@ -874,6 +956,9 @@ void GstRtpSessionContext::refreshSecureProducerRoutes()
     clearSecureOutgoingLocked();
     audioSecureProducer_ = std::move(audio);
     videoSecureProducer_ = std::move(video);
+    locker.unlock();
+    for (auto child : std::as_const(secureGroupChildren_))
+        child->refreshSecureProducerRoutes();
 }
 
 void GstRtpSessionContext::enqueueSecureOutgoing(bool audio, const RtpWorker::EncodedRtpPacket &packet)

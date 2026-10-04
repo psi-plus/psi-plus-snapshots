@@ -42,9 +42,16 @@ private:
 
 class MediaSession final : public R::MediaSession {
 public:
-    std::unique_ptr<R::MediaEndpoint> createEndpoint(const QString &, const QString &media) override
+    std::unique_ptr<R::MediaEndpoint> createEndpoint(const QString &name, const QString &media) override
     {
-        return std::make_unique<Endpoint>(media);
+        auto endpoint = std::make_unique<Endpoint>(media);
+        endpoints.insert(name, endpoint.get());
+        return endpoint;
+    }
+    QHash<QString, R::MediaEndpoint *> endpoints;
+    void                               failEndpoint(const QString &name)
+    {
+        emit endpointError(endpoints.value(name), { R::MediaError::Code::Backend, QStringLiteral("capture lost") });
     }
     void fail() { emit runtimeError({ R::MediaError::Code::Backend, QStringLiteral("runtime backend failure") }); }
 };
@@ -75,6 +82,15 @@ int main(int argc, char **argv)
     check(audio->initializeOutgoing(QStringLiteral("audio")) && video->initializeOutgoing(QStringLiteral("video"))
               && provider->session,
           "runtime-error fixture setup failed");
+
+    auto screen = new R::Application(pad, QStringLiteral("screen"), Origin::Initiator, Origin::Initiator);
+    check(screen->initializeOutgoing(QStringLiteral("video")), "screen endpoint initialization failed");
+    session.addContent(screen);
+    provider->session->failEndpoint(QStringLiteral("screen"));
+    check(screen->state() >= State::Finishing && screen->lastReason().condition() == Reason::FailedApplication,
+          "capture failure did not remove the affected screen content");
+    check(audio->state() < State::Finishing && video->state() < State::Finishing,
+          "screen capture failure removed another media content");
 
     provider->session->fail();
     check(audio->state() >= State::Finishing && video->state() >= State::Finishing,

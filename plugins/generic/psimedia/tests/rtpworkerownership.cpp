@@ -1,17 +1,22 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
-// Compile the worker into this TU to observe its legacy file-local ownership
-// flag without adding a public media API for transport/pipeline internals.
+// Exercise production worker delivery without depending on pipeline ownership flags.
 #include "../gstprovider/rtpworker.cpp"
 
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QThread>
+#include <atomic>
 
 int main(int argc, char **argv)
 {
     QCoreApplication application(argc, argv);
     gst_init(nullptr, nullptr);
     auto *context = g_main_context_default();
+    struct Result {
+        bool             done   = false;
+        bool             failed = false;
+        std::atomic<int> packets { 0 };
+    } result;
     {
         PsiMedia::RtpWorker    owner(context, nullptr);
         PsiMedia::PAudioParams audio;
@@ -21,16 +26,14 @@ int main(int argc, char **argv)
         audio.channels         = 1;
         owner.localAudioParams = { audio };
         owner.ain              = QStringLiteral("audiotestsrc is-live=true wave=sine");
-        struct Result {
-            bool done   = false;
-            bool failed = false;
-        } result;
-        owner.app        = &result;
-        owner.cb_started = [](void *p) { static_cast<Result *>(p)->done = true; };
-        owner.cb_error   = [](void *p) {
+        owner.app              = &result;
+        owner.cb_started       = [](void *p) { static_cast<Result *>(p)->done = true; };
+        owner.cb_error         = [](void *p) {
             auto &r = *static_cast<Result *>(p);
             r.done = r.failed = true;
         };
+        owner.cb_rtpAudioOut
+            = [](const PsiMedia::RtpWorker::EncodedRtpPacket &, void *p) { ++static_cast<Result *>(p)->packets; };
         owner.start();
         QElapsedTimer timer;
         timer.start();
@@ -38,15 +41,20 @@ int main(int argc, char **argv)
             g_main_context_iteration(context, false);
             QThread::msleep(1);
         }
-        if (!result.done || result.failed || !PsiMedia::send_in_use)
+        if (!result.done || result.failed)
             qFatal("Could not establish the synthetic sender");
         {
             PsiMedia::RtpWorker neverStarted(context, nullptr);
         }
-        if (!PsiMedia::send_in_use)
-            qFatal("Unrelated worker destruction released the active sender's ownership");
+        owner.transmitAudio();
+        timer.restart();
+        while (result.packets < 3 && timer.elapsed() < 5000) {
+            g_main_context_iteration(context, false);
+            QThread::msleep(1);
+        }
+        if (result.packets < 3)
+            qFatal("Unrelated worker destruction stopped active sender delivery");
+        owner.pauseAudio();
     }
-    if (PsiMedia::send_in_use)
-        qFatal("Sender destruction did not release ownership");
     qInfo("Sender ownership regression passed");
 }

@@ -15,10 +15,12 @@
 #include <optional>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-Q_MOC_INCLUDE(<iris/xmpp-im/xmpp_message.h>)
+Q_MOC_INCLUDE(<iris / xmpp - im / xmpp_message.h>)
 #endif
 
-namespace XMPP { class Message; }
+namespace XMPP {
+class Message;
+}
 
 namespace XMPP::Jingle::RTP {
 
@@ -35,21 +37,22 @@ struct IRIS_EXPORT Proposal {
 // Opaque backend-facing identity. Tokens have meaning only inside one Jingle
 // MediaSession and are never serialized on the wire.
 struct IRIS_EXPORT SecureRtpPacket {
-    QByteArray           associationId;
-    quint64              epoch = 0;
-    QByteArray           data;
-    PacketKind           kind = PacketKind::Rtp;
+    QByteArray associationId;
+    quint64    epoch = 0;
+    QByteArray data;
+    PacketKind kind = PacketKind::Rtp;
 };
 
 struct IRIS_EXPORT SecureRtpEndpoint {
-    QByteArray      endpointId;
-    QByteArray      associationId;
-    QString         media;
-    QByteArray      mid;
-    quint16         midExtensionId = 0;
-    QSet<quint8>    incomingPayloadTypes;
-    QSet<quint32>   incomingSsrcs;
-    QSet<quint32>   localSsrcs;
+    QByteArray    endpointId;
+    QByteArray    associationId;
+    QString       media;
+    QByteArray    mid;
+    quint16       midExtensionId = 0;
+    QSet<quint8>  incomingPayloadTypes;
+    QSet<quint32> incomingSsrcs;
+    QSet<quint32> localSsrcs;
+    QString       contentName; // matches createEndpoint(); endpointId remains opaque
 
     bool isValid() const
     {
@@ -166,6 +169,8 @@ signals:
     // Backend failure outside a prepare/apply operation. Operation-scoped errors
     // must be returned through that operation's completion instead, never twice.
     void runtimeError(const XMPP::Jingle::RTP::MediaError &);
+    // A codec/capture failure confined to one endpoint must not retire its siblings.
+    void endpointError(XMPP::Jingle::RTP::MediaEndpoint *, const XMPP::Jingle::RTP::MediaError &);
 
 protected:
     using PrepareCompletion = std::function<void(std::optional<Description>, MediaError)>;
@@ -240,22 +245,22 @@ signals:
 private:
     friend class Application;
     class RoutingPrivate;
-    bool bindSecureTransport(Application *, SecureRtpAssociation *, const Description &local,
-                             const Description &remote);
-    void unbindSecureTransport(Application *);
-    bool sendProtectedPacket(const SecureRtpPacket &);
-    bool configureSecureAssociation(SecureRtpAssociation *);
-    bool ensureSecurePacketIo();
+    bool        bindSecureTransport(Application *, SecureRtpAssociation *, const Description &local,
+                                    const Description &remote);
+    void        unbindSecureTransport(Application *);
+    bool        sendProtectedPacket(const SecureRtpPacket &);
+    bool        configureSecureAssociation(SecureRtpAssociation *);
+    bool        ensureSecurePacketIo();
     QStringList secureRtpProfiles() const;
 
     QPointer<Manager> manager_;
     QPointer<Session> session_;
     // Provider outlives its media session; endpoints outlive neither.
-    std::shared_ptr<MediaProvider> provider_;
-    std::unique_ptr<MediaSession>  media_;
-    QStringList                    transports_;
-    quint64                        nextName_   = 0;
-    DirectionController            *directions_ = nullptr; // QObject child
+    std::shared_ptr<MediaProvider>  provider_;
+    std::unique_ptr<MediaSession>   media_;
+    QStringList                     transports_;
+    quint64                         nextName_               = 0;
+    DirectionController            *directions_             = nullptr; // QObject child
     bool                            securePacketIoAttached_ = false;
     std::unique_ptr<RoutingPrivate> routing_;
 };
@@ -291,11 +296,11 @@ protected:
 
 private:
     friend class Pad;
-    void                            stopMedia();
-    void                            prepared(MediaOperation::Id, std::optional<Description>, MediaError);
-    void                            applied(MediaOperation::Id, MediaError);
-    void                            failPreparation(Reason::Condition, const QString &);
-    void                            activateMedia();
+    void stopMedia();
+    void prepared(MediaOperation::Id, std::optional<Description>, MediaError);
+    void applied(MediaOperation::Id, MediaError);
+    void failPreparation(Reason::Condition, const QString &);
+    void activateMedia();
     // Direction/consent policy query. This is deliberately independent of
     // packet parsing; media adapters use it to decide whether capture/transmit
     // or receive paths may be active.
@@ -310,7 +315,7 @@ private:
     std::optional<Stanza::Error>    error_;
     Reason                          reason_;
     bool                            configured_        = false;
-    bool                            secureBound_        = false;
+    bool                            secureBound_       = false;
     bool                            stopping_          = false;
     bool                            preparationFailed_ = false;
     QPointer<SecureRtpAssociation>  association_;
@@ -326,17 +331,18 @@ public:
     // Explicit transport whitelist for this RTP backend. It gates both
     // transport selection and RTP discovery; an empty or unusable whitelist means
     // this manager must not advertise RTP support.
-    void         setTransportNamespaces(const QStringList &);
+    void setTransportNamespaces(const QStringList &);
 
     // Start an XEP-0353 proposal for a new RTP call. The returned UUID is also
     // the Jingle SID that must be used after <proceed/>.
     QString propose(const Jid &peer, MediaSet media);
 
-    Application *createOutgoing(Session *, Media media, Origin senders = Origin::Both);
-    Application *createOutgoing(Session *, const QString &media, Origin senders = Origin::Both);
+    Application *createOutgoing(Session *, Media media, Origin senders = Origin::Both, const QString &contentName = {});
+    Application *createOutgoing(Session *, const QString &media, Origin senders = Origin::Both,
+                                const QString &contentName = {});
     Application *startApplication(const ApplicationManagerPad::Ptr &, const QString &, Origin, Origin) override;
-    ApplicationManagerPad *pad(Session *) override;
-    void                   closeAll(const QString & = QString()) override;
+    ApplicationManagerPad  *pad(Session *) override;
+    void                    closeAll(const QString & = QString()) override;
     std::optional<std::any> parseProposal(const QDomElement &) const override;
     QDomElement             serializeProposal(const std::any &, QDomDocument *) const override;
     QStringList             ns() const override { return { Description::ns() }; }

@@ -31,6 +31,8 @@
 
 #include <QMutex>
 #include <QQueue>
+#include <QPointer>
+#include <QSet>
 
 #include <atomic>
 #include <chrono>
@@ -94,6 +96,7 @@ public:
     QObject *qobject() override;
 
     void cleanup();
+    bool shareSecureGroupsWith(QObject *owner);
     void setAudioOutputDevice(const QString &deviceId) override;
     void setAudioInputDevice(const QString &deviceId) override;
     void setVideoInputDevice(const QString &deviceId) override;
@@ -236,6 +239,11 @@ private:
     // note: this is executed from a different thread
     void control_recordData(const QByteArray &packet);
 
+    GstRtpSessionContext *secureEndpointOwner(const QByteArray &endpointId);
+    bool rebuildSecureEndpoints();
+    QPointer<GstRtpSessionContext> secureGroupOwner_;
+    QSet<GstRtpSessionContext *> secureGroupChildren_;
+    bool secureGroupDetached_ = false;
     bool                                            secureMode_ = false;
     std::map<QByteArray, SecureGroupState>          secureGroups_;
     QList<PSecureRtpEndpoint>                       secureEndpoints_;
@@ -252,9 +260,9 @@ private:
     SecureProducerRoute          videoSecureProducer_;
 };
 
-class GstSecureRtpSessionContext final : public GstRtpSessionContext, public SecureRtpSessionContext {
+class GstSecureRtpSessionContext final : public GstRtpSessionContext, public SecureRtpSessionContext, public GroupedSecureRtpSessionContext {
     Q_OBJECT
-    Q_INTERFACES(PsiMedia::SecureRtpSessionContext)
+    Q_INTERFACES(PsiMedia::SecureRtpSessionContext PsiMedia::GroupedSecureRtpSessionContext)
 
 public:
     explicit GstSecureRtpSessionContext(GstMainLoop *gstLoop, DeviceMonitor *deviceMonitor, QObject *parent = nullptr) :
@@ -263,6 +271,7 @@ public:
     }
 
     QObject *qobject() override { return this; }
+    bool shareSecureGroupsWith(QObject *owner) override { return GstRtpSessionContext::shareSecureGroupsWith(owner); }
 
     bool configureEndpoints(const QList<PSecureRtpEndpoint> &endpoints) override
     {

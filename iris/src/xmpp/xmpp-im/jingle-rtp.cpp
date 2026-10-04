@@ -9,44 +9,44 @@
 
 namespace XMPP::Jingle::RTP {
 namespace {
-QString mediaName(Media media)
-{
-    switch (media) {
-    case Media::Audio:
-        return QStringLiteral("audio");
-    case Media::Video:
-        return QStringLiteral("video");
-    case Media::None:
-        break;
-    }
-    return {};
-}
-
-Media mediaFromName(const QString &name)
-{
-    if (name == QLatin1String("audio"))
-        return Media::Audio;
-    if (name == QLatin1String("video"))
-        return Media::Video;
-    return Media::None;
-}
-
-QStringList commonSecureRtpProfiles(const MediaProvider *provider)
-{
-    if (!provider || !Dtls::isSupported())
+    QString mediaName(Media media)
+    {
+        switch (media) {
+        case Media::Audio:
+            return QStringLiteral("audio");
+        case Media::Video:
+            return QStringLiteral("video");
+        case Media::None:
+            break;
+        }
         return {};
-
-    auto       result       = provider->secureRtpProfiles();
-    const auto dtlsProfiles = Dtls::supportedSRTPProfiles();
-    for (auto it = result.begin(); it != result.end();) {
-        if (!dtlsProfiles.contains(*it))
-            it = result.erase(it);
-        else
-            ++it;
     }
-    result.removeDuplicates();
-    return result;
-}
+
+    Media mediaFromName(const QString &name)
+    {
+        if (name == QLatin1String("audio"))
+            return Media::Audio;
+        if (name == QLatin1String("video"))
+            return Media::Video;
+        return Media::None;
+    }
+
+    QStringList commonSecureRtpProfiles(const MediaProvider *provider)
+    {
+        if (!provider || !Dtls::isSupported())
+            return {};
+
+        auto       result       = provider->secureRtpProfiles();
+        const auto dtlsProfiles = Dtls::supportedSRTPProfiles();
+        for (auto it = result.begin(); it != result.end();) {
+            if (!dtlsProfiles.contains(*it))
+                it = result.erase(it);
+            else
+                ++it;
+        }
+        result.removeDuplicates();
+        return result;
+    }
 } // namespace
 class Pad::RoutingPrivate {
 public:
@@ -66,69 +66,69 @@ public:
 };
 
 namespace {
-QByteArray secureEndpointId(const Application *application)
-{
-    if (!application)
-        return {};
-    QByteArray result = QByteArray::number(int(application->creator()));
-    result += ':';
-    result += application->contentName().toUtf8();
-    return result;
-}
-
-QList<SecureRtpEndpoint> secureEndpointList(const QHash<Application *, SecureRtpEndpoint> &endpoints)
-{
-    QList<SecureRtpEndpoint> result;
-    result.reserve(endpoints.size());
-    for (const auto &endpoint : endpoints)
-        result.append(endpoint);
-    return result;
-}
-
-void appendSecureSources(QSet<quint32> &target, const Description &description)
-{
-    if (description.ssrc && *description.ssrc)
-        target.insert(*description.ssrc);
-    for (const auto &source : description.sources)
-        if (source.ssrc)
-            target.insert(source.ssrc);
-}
-
-std::optional<SecureRtpEndpoint> secureEndpointForDescriptions(Application *application, Session *session,
-                                                               const QByteArray &associationId,
-                                                               const Description &local,
-                                                               const Description &remote)
-{
-    if (!application || !session || associationId.isEmpty() || local.media.isEmpty() || remote.media.isEmpty()
-        || local.media != remote.media || !local.rtcpMux || !remote.rtcpMux)
-        return std::nullopt;
-
-    const bool localContent = application->creator() == session->role();
-    const auto &accepted    = localContent ? remote : local;
-    if (accepted.payloads.isEmpty())
-        return std::nullopt;
-
-    SecureRtpEndpoint endpoint;
-    endpoint.endpointId    = secureEndpointId(application);
-    endpoint.associationId = associationId;
-    endpoint.media         = local.media;
-    for (const auto &payload : accepted.payloads)
-        endpoint.incomingPayloadTypes.insert(payload.id);
-
-    appendSecureSources(endpoint.incomingSsrcs, remote);
-    appendSecureSources(endpoint.localSsrcs, local);
-
-    constexpr auto MidUri = "urn:ietf:params:rtp-hdrext:sdes:mid";
-    for (const auto &extension : accepted.headerExtensions) {
-        if (extension.uri == QLatin1String(MidUri)) {
-            endpoint.midExtensionId = extension.id;
-            endpoint.mid            = application->contentName().toUtf8();
-            break;
-        }
+    QByteArray secureEndpointId(const Application *application)
+    {
+        if (!application)
+            return {};
+        QByteArray result = QByteArray::number(int(application->creator()));
+        result += ':';
+        result += application->contentName().toUtf8();
+        return result;
     }
 
-    return endpoint.isValid() ? std::optional<SecureRtpEndpoint>(std::move(endpoint)) : std::nullopt;
-}
+    QList<SecureRtpEndpoint> secureEndpointList(const QHash<Application *, SecureRtpEndpoint> &endpoints)
+    {
+        QList<SecureRtpEndpoint> result;
+        result.reserve(endpoints.size());
+        for (const auto &endpoint : endpoints)
+            result.append(endpoint);
+        return result;
+    }
+
+    void appendSecureSources(QSet<quint32> &target, const Description &description)
+    {
+        if (description.ssrc && *description.ssrc)
+            target.insert(*description.ssrc);
+        for (const auto &source : description.sources)
+            if (source.ssrc)
+                target.insert(source.ssrc);
+    }
+
+    std::optional<SecureRtpEndpoint> secureEndpointForDescriptions(Application *application, Session *session,
+                                                                   const QByteArray  &associationId,
+                                                                   const Description &local, const Description &remote)
+    {
+        if (!application || !session || associationId.isEmpty() || local.media.isEmpty() || remote.media.isEmpty()
+            || local.media != remote.media || !local.rtcpMux || !remote.rtcpMux)
+            return std::nullopt;
+
+        const bool  localContent = application->creator() == session->role();
+        const auto &accepted     = localContent ? remote : local;
+        if (accepted.payloads.isEmpty())
+            return std::nullopt;
+
+        SecureRtpEndpoint endpoint;
+        endpoint.endpointId    = secureEndpointId(application);
+        endpoint.contentName   = application->contentName();
+        endpoint.associationId = associationId;
+        endpoint.media         = local.media;
+        for (const auto &payload : accepted.payloads)
+            endpoint.incomingPayloadTypes.insert(payload.id);
+
+        appendSecureSources(endpoint.incomingSsrcs, remote);
+        appendSecureSources(endpoint.localSsrcs, local);
+
+        constexpr auto MidUri = "urn:ietf:params:rtp-hdrext:sdes:mid";
+        for (const auto &extension : accepted.headerExtensions) {
+            if (extension.uri == QLatin1String(MidUri)) {
+                endpoint.midExtensionId = extension.id;
+                endpoint.mid            = application->contentName().toUtf8();
+                break;
+            }
+        }
+
+        return endpoint.isValid() ? std::optional<SecureRtpEndpoint>(std::move(endpoint)) : std::nullopt;
+    }
 } // namespace
 
 Pad::Pad(Manager *manager, Session *session, std::shared_ptr<MediaProvider> provider, QStringList transports) :
@@ -138,8 +138,21 @@ Pad::Pad(Manager *manager, Session *session, std::shared_ptr<MediaProvider> prov
     routing_    = std::make_unique<RoutingPrivate>();
     if (provider_)
         media_ = provider_->createSession();
-    if (media_)
+    if (media_) {
         connect(media_.get(), &MediaSession::runtimeError, this, &Pad::mediaError);
+        connect(media_.get(), &MediaSession::endpointError, this,
+                [this](MediaEndpoint *endpoint, const MediaError &error) {
+                    if (!session_ || !endpoint)
+                        return;
+                    for (auto content : session_->contentList()) {
+                        auto application = dynamic_cast<Application *>(content);
+                        if (application && application->endpoint_.get() == endpoint) {
+                            application->remove(Reason::FailedApplication, error.text);
+                            return;
+                        }
+                    }
+                });
+    }
 }
 
 Pad::~Pad()
@@ -168,12 +181,12 @@ bool Pad::configureSecureAssociation(SecureRtpAssociation *association)
         return false;
 
     SecureRtpParameters parameters;
-    parameters.associationId   = association->associationId();
-    parameters.epoch           = association->epoch();
-    parameters.profile         = material.profile;
-    parameters.localMasterKey  = material.localMasterKey;
-    parameters.localMasterSalt = material.localMasterSalt;
-    parameters.remoteMasterKey = material.remoteMasterKey;
+    parameters.associationId    = association->associationId();
+    parameters.epoch            = association->epoch();
+    parameters.profile          = material.profile;
+    parameters.localMasterKey   = material.localMasterKey;
+    parameters.localMasterSalt  = material.localMasterSalt;
+    parameters.remoteMasterKey  = material.remoteMasterKey;
     parameters.remoteMasterSalt = material.remoteMasterSalt;
     return parameters.isValid() && media_->configureSecureRtpAssociation(parameters);
 }
@@ -184,19 +197,15 @@ bool Pad::ensureSecurePacketIo()
         return false;
     if (securePacketIoAttached_)
         return true;
-    securePacketIoAttached_ = media_->attachSecureRtpPacketIo([this](const SecureRtpPacket &packet) {
-        return sendProtectedPacket(packet);
-    });
+    securePacketIoAttached_ = media_->attachSecureRtpPacketIo(
+        [this](const SecureRtpPacket &packet) { return sendProtectedPacket(packet); });
     return securePacketIoAttached_;
 }
 
-QStringList Pad::secureRtpProfiles() const
-{
-    return commonSecureRtpProfiles(provider_.get());
-}
+QStringList Pad::secureRtpProfiles() const { return commonSecureRtpProfiles(provider_.get()); }
 
-bool Pad::bindSecureTransport(Application *application, SecureRtpAssociation *association,
-                              const Description &local, const Description &remote)
+bool Pad::bindSecureTransport(Application *application, SecureRtpAssociation *association, const Description &local,
+                              const Description &remote)
 {
     if (!application || !association || !media_ || application->pad().data() != this || !session_
         || !ensureSecurePacketIo())
@@ -206,9 +215,9 @@ bool Pad::bindSecureTransport(Application *application, SecureRtpAssociation *as
     if (!endpoint)
         return false;
 
-    const auto newId = association->associationId();
+    const auto newId            = association->associationId();
     const auto associationEpoch = association->epoch();
-    const auto existingBinding = routing_->associations.value(newId);
+    const auto existingBinding  = routing_->associations.value(newId);
     if (existingBinding && existingBinding->association != association)
         return false;
     const bool hadBinding = bool(existingBinding);
@@ -244,63 +253,61 @@ bool Pad::bindSecureTransport(Application *application, SecureRtpAssociation *as
         }
     }
 
-    routing_->endpoints               = std::move(candidate);
+    routing_->endpoints = std::move(candidate);
     routing_->applicationAssociations.insert(application, newId);
 
     auto binding = routing_->associations.value(newId);
     if (!binding) {
-        binding = QSharedPointer<RoutingPrivate::AssociationBinding>::create();
+        binding              = QSharedPointer<RoutingPrivate::AssociationBinding>::create();
         binding->association = association;
         binding->epoch       = associationEpoch;
         routing_->associations.insert(newId, binding);
 
-        binding->packetConnection = connect(
-            association, &SecureRtpAssociation::protectedPacketReceived, this,
-            [this, association](const QByteArray &data, PacketKind kind, quint64 epoch) {
-                if (!media_ || !association || !association->isReady() || association->epoch() != epoch)
-                    return;
-                SecureRtpPacket packet;
-                packet.associationId = association->associationId();
-                packet.epoch         = epoch;
-                packet.data          = data;
-                packet.kind          = kind;
-                media_->receiveProtectedRtpPacket(packet);
-            });
+        binding->packetConnection
+            = connect(association, &SecureRtpAssociation::protectedPacketReceived, this,
+                      [this, association](const QByteArray &data, PacketKind kind, quint64 epoch) {
+                          if (!media_ || !association || !association->isReady() || association->epoch() != epoch)
+                              return;
+                          SecureRtpPacket packet;
+                          packet.associationId = association->associationId();
+                          packet.epoch         = epoch;
+                          packet.data          = data;
+                          packet.kind          = kind;
+                          media_->receiveProtectedRtpPacket(packet);
+                      });
 
-        binding->readyConnection = connect(
-            association, &SecureRtpAssociation::ready, this,
-            [this, association](quint64 epoch) {
-                if (!association || association->epoch() != epoch || !configureSecureAssociation(association)) {
-                    emit mediaError({ MediaError::Code::Backend,
-                                      QStringLiteral("Secure RTP association activation failed") });
-                    return;
-                }
-                const auto binding = routing_->associations.value(association->associationId());
-                if (!binding)
-                    return;
-                binding->epoch = epoch;
-                const auto applications = binding->applications.values();
-                for (auto application : applications)
-                    if (application)
-                        application->activateMedia();
-            });
+        binding->readyConnection
+            = connect(association, &SecureRtpAssociation::ready, this, [this, association](quint64 epoch) {
+                  if (!association || association->epoch() != epoch || !configureSecureAssociation(association)) {
+                      emit mediaError(
+                          { MediaError::Code::Backend, QStringLiteral("Secure RTP association activation failed") });
+                      return;
+                  }
+                  const auto binding = routing_->associations.value(association->associationId());
+                  if (!binding)
+                      return;
+                  binding->epoch          = epoch;
+                  const auto applications = binding->applications.values();
+                  for (auto application : applications)
+                      if (application)
+                          application->activateMedia();
+              });
 
-        binding->invalidatedConnection = connect(
-            association, &SecureRtpAssociation::invalidated, this,
-            [this, association](quint64 epoch) {
-                const auto id = association ? association->associationId() : QByteArray();
-                if (media_ && !id.isEmpty())
-                    media_->invalidateSecureRtpAssociation(id, epoch);
-                const auto binding = routing_->associations.value(id);
-                if (!binding)
-                    return;
-                const auto applications = binding->applications.values();
-                for (auto application : applications) {
-                    if (application && application->state() < State::Finishing)
-                        application->remove(Reason::SecurityError,
-                                            QStringLiteral("RTP security association invalidated"));
-                }
-            });
+        binding->invalidatedConnection
+            = connect(association, &SecureRtpAssociation::invalidated, this, [this, association](quint64 epoch) {
+                  const auto id = association ? association->associationId() : QByteArray();
+                  if (media_ && !id.isEmpty())
+                      media_->invalidateSecureRtpAssociation(id, epoch);
+                  const auto binding = routing_->associations.value(id);
+                  if (!binding)
+                      return;
+                  const auto applications = binding->applications.values();
+                  for (auto application : applications) {
+                      if (application && application->state() < State::Finishing)
+                          application->remove(Reason::SecurityError,
+                                              QStringLiteral("RTP security association invalidated"));
+                  }
+              });
 
         binding->destroyedConnection = connect(association, &QObject::destroyed, this, [this, newId]() {
             const auto binding = routing_->associations.take(newId);
@@ -315,8 +322,7 @@ bool Pad::bindSecureTransport(Application *application, SecureRtpAssociation *as
             const auto applications = binding->applications.values();
             for (auto application : applications) {
                 if (application && application->state() < State::Finishing)
-                    application->remove(Reason::SecurityError,
-                                        QStringLiteral("RTP security association destroyed"));
+                    application->remove(Reason::SecurityError, QStringLiteral("RTP security association destroyed"));
             }
         });
     } else if (binding->association != association) {
@@ -335,13 +341,12 @@ void Pad::unbindSecureTransport(Application *application)
     auto candidate = routing_->endpoints;
     candidate.remove(application);
     if (media_ && !media_->configureSecureRtpEndpoints(secureEndpointList(candidate))) {
-        emit mediaError({ MediaError::Code::Backend,
-                          QStringLiteral("Secure RTP route teardown failed") });
+        emit mediaError({ MediaError::Code::Backend, QStringLiteral("Secure RTP route teardown failed") });
     }
     routing_->endpoints = std::move(candidate);
 
-    const auto id = routing_->applicationAssociations.take(application);
-    auto binding = routing_->associations.value(id);
+    const auto id      = routing_->applicationAssociations.take(application);
+    auto       binding = routing_->associations.value(id);
     if (!binding)
         return;
 
@@ -378,7 +383,7 @@ bool Pad::sendProtectedPacket(const SecureRtpPacket &packet)
     return false;
 }
 
-bool                Pad::incomingSessionInfo(const QDomElement &xml)
+bool Pad::incomingSessionInfo(const QDomElement &xml)
 {
     if (!session_ || session_->state() >= State::Finishing)
         return false;
@@ -568,7 +573,7 @@ bool Application::isTransportReplaceEnabled() const
     // fallback in that state. A negotiated multi-content BUNDLE still needs a
     // coordinated full-group replacement, so keep that case behind the
     // existing active/shared-migration gate.
-    auto pad = _pad.staticCast<Pad>();
+    auto pad     = _pad.staticCast<Pad>();
     auto session = pad ? pad->session() : nullptr;
     if (!session)
         return false;
@@ -674,8 +679,8 @@ void Application::prepareTransport()
         association_->disconnect(this);
     association_.clear();
 
-    const auto local  = negotiation_.localDescription();
-    const auto remote = negotiation_.remoteDescription();
+    const auto local     = negotiation_.localDescription();
+    const auto remote    = negotiation_.remoteDescription();
     auto       pad       = _pad.staticCast<Pad>();
     auto       preparing = _transport;
     auto       packets   = dynamic_cast<PacketTransport *>(preparing.data());
@@ -711,16 +716,14 @@ void Application::prepareTransport()
     }
 
     const QPointer<Transport> securityTransport(preparing.data());
-    connect(association_, &SecureRtpAssociation::ready, this,
-            [this, securityTransport](quint64) {
-                if (securityTransport && _transport.data() == securityTransport)
-                    activateMedia();
-            });
-    connect(association_, &SecureRtpAssociation::invalidated, this,
-            [this, securityTransport](quint64) {
-                if (securityTransport && _transport.data() == securityTransport)
-                    remove(Reason::SecurityError, QStringLiteral("RTP security association invalidated"));
-            });
+    connect(association_, &SecureRtpAssociation::ready, this, [this, securityTransport](quint64) {
+        if (securityTransport && _transport.data() == securityTransport)
+            activateMedia();
+    });
+    connect(association_, &SecureRtpAssociation::invalidated, this, [this, securityTransport](quint64) {
+        if (securityTransport && _transport.data() == securityTransport)
+            remove(Reason::SecurityError, QStringLiteral("RTP security association invalidated"));
+    });
     connect(association_, &QObject::destroyed, this, [this, securityTransport]() {
         if (securityTransport && _transport.data() == securityTransport)
             remove(Reason::SecurityError, QStringLiteral("RTP security association destroyed"));
@@ -797,8 +800,7 @@ bool Application::allowsRtp(bool sending) const
     if (sending && !pad->directionController()->allowsLocalSending(this))
         return false;
     const auto localRole = pad->session()->role();
-    const auto role = sending ? localRole
-                              : (localRole == Origin::Initiator ? Origin::Responder : Origin::Initiator);
+    const auto role = sending ? localRole : (localRole == Origin::Initiator ? Origin::Responder : Origin::Initiator);
     return _senders == Origin::Both || _senders == role;
 }
 
@@ -860,9 +862,8 @@ Manager::~Manager() { closeAll(); }
 
 std::optional<std::any> Manager::parseProposal(const QDomElement &element) const
 {
-    const auto name = element.localName().isEmpty()
-        ? element.tagName().section(QLatin1Char(':'), -1)
-        : element.localName();
+    const auto name
+        = element.localName().isEmpty() ? element.tagName().section(QLatin1Char(':'), -1) : element.localName();
     if (name != QLatin1String("description") || element.namespaceURI() != Description::ns())
         return std::nullopt;
 
@@ -890,10 +891,7 @@ QDomElement Manager::serializeProposal(const std::any &data, QDomDocument *docum
     return element;
 }
 
-QStringList Manager::secureRtpProfiles() const
-{
-    return commonSecureRtpProfiles(provider_.get());
-}
+QStringList Manager::secureRtpProfiles() const { return commonSecureRtpProfiles(provider_.get()); }
 
 QStringList Manager::discoFeatures() const
 {
@@ -944,27 +942,26 @@ void Manager::setJingleManager(XMPP::Jingle::Manager *manager)
     if (!jingle_)
         return;
 
-    jmiConnection_ = connect(
-        jingle_, &XMPP::Jingle::Manager::incomingMessageInitiation, this,
-        [this](const XMPP::Message &message, const MessageInitiation &initiation) {
-            if (initiation.action() != MessageInitiation::Action::Propose)
-                return;
+    jmiConnection_ = connect(jingle_, &XMPP::Jingle::Manager::incomingMessageInitiation, this,
+                             [this](const XMPP::Message &message, const MessageInitiation &initiation) {
+                                 if (initiation.action() != MessageInitiation::Action::Propose)
+                                     return;
 
-            MediaSet media;
-            for (const auto &description : initiation.descriptions()) {
-                if (description.applicationNamespace != Description::ns() || !description.isSupported()
-                    || description.data.type() != typeid(Proposal))
-                    return;
+                                 MediaSet media;
+                                 for (const auto &description : initiation.descriptions()) {
+                                     if (description.applicationNamespace != Description::ns()
+                                         || !description.isSupported() || description.data.type() != typeid(Proposal))
+                                         return;
 
-                const auto &proposal = std::any_cast<const Proposal &>(description.data);
-                if (!proposal.isValid() || media.testFlag(proposal.media))
-                    return;
-                media |= proposal.media;
-            }
+                                     const auto &proposal = std::any_cast<const Proposal &>(description.data);
+                                     if (!proposal.isValid() || media.testFlag(proposal.media))
+                                         return;
+                                     media |= proposal.media;
+                                 }
 
-            if (media != MediaSet())
-                emit incomingProposal(message, initiation.id(), media);
-        });
+                                 if (media != MediaSet())
+                                     emit incomingProposal(message, initiation.id(), media);
+                             });
 }
 void Manager::setMediaProvider(std::shared_ptr<MediaProvider> provider) { provider_ = std::move(provider); }
 void Manager::setTransportNamespaces(const QStringList &transports) { transports_ = transports; }
@@ -975,14 +972,12 @@ QString Manager::propose(const Jid &peer, MediaSet media)
         return {};
 
     const auto features = discoFeatures();
-    if (media.testFlag(Media::Audio)
-        && !features.contains(QStringLiteral("urn:xmpp:jingle:apps:rtp:audio")))
+    if (media.testFlag(Media::Audio) && !features.contains(QStringLiteral("urn:xmpp:jingle:apps:rtp:audio")))
         return {};
-    if (media.testFlag(Media::Video)
-        && !features.contains(QStringLiteral("urn:xmpp:jingle:apps:rtp:video")))
+    if (media.testFlag(Media::Video) && !features.contains(QStringLiteral("urn:xmpp:jingle:apps:rtp:video")))
         return {};
 
-    const auto id = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    const auto        id = QUuid::createUuid().toString(QUuid::WithoutBraces);
     MessageInitiation initiation(MessageInitiation::Action::Propose, id);
     if (media.testFlag(Media::Audio))
         initiation.addDescription(Description::ns(), Proposal { Media::Audio });
@@ -1019,16 +1014,18 @@ Application *Manager::startApplication(const ApplicationManagerPad::Ptr &base, c
     });
     return app;
 }
-Application *Manager::createOutgoing(Session *session, Media media, Origin senders)
+Application *Manager::createOutgoing(Session *session, Media media, Origin senders, const QString &contentName)
 {
     const auto name = mediaName(media);
-    return name.isEmpty() ? nullptr : createOutgoing(session, name, senders);
+    return name.isEmpty() ? nullptr : createOutgoing(session, name, senders, contentName);
 }
 
-Application *Manager::createOutgoing(Session *session, const QString &media, Origin senders)
+Application *Manager::createOutgoing(Session *session, const QString &media, Origin senders, const QString &contentName)
 {
     if (!session || session->manager() != jingle_ || session->state() >= State::Finishing
         || (media != QLatin1String("audio") && media != QLatin1String("video")))
+        return nullptr;
+    if (!contentName.isEmpty() && session->content(contentName, session->role()))
         return nullptr;
 
     // When XEP-0115/disco information is available, fail before constructing an
@@ -1046,8 +1043,8 @@ Application *Manager::createOutgoing(Session *session, const QString &media, Ori
     auto pad = session->applicationPadFactory(Description::ns());
     if (!pad)
         return nullptr;
-    std::unique_ptr<Application> app(
-        startApplication(pad, pad->generateContentName(senders), session->role(), senders));
+    std::unique_ptr<Application> app(startApplication(
+        pad, contentName.isEmpty() ? pad->generateContentName(senders) : contentName, session->role(), senders));
     if (!app || !app->initializeOutgoing(media))
         return nullptr;
     // addContent can prepare immediately, notifying user code which may delete

@@ -239,20 +239,6 @@ static void dump_pipeline(GstElement *in, int indent)
 //----------------------------------------------------------------------------
 // RtpWorker
 //----------------------------------------------------------------------------
-static int              worker_refs          = 0;
-static PipelineContext *send_pipelineContext = nullptr;
-static PipelineContext *recv_pipelineContext = nullptr;
-static GstElement      *spipeline            = nullptr;
-static GstElement      *rpipeline            = nullptr;
-// static GstBus *sbus = 0;
-static bool send_in_use = false;
-static bool recv_in_use = false;
-
-static bool      use_shared_clock     = true;
-static GstClock *shared_clock         = nullptr;
-static bool      send_clock_is_shared = false;
-// static bool recv_clock_is_shared = false;
-
 static GstClockTime samplePresentationAge(GstSample *sample, GstElement *pipeline)
 {
     if (!sample || !pipeline)
@@ -286,27 +272,11 @@ RtpWorker::RtpWorker(GMainContext *mainContext, DeviceMonitor *hardwareDeviceMon
     mainContext_(mainContext), hardwareDeviceMonitor_(hardwareDeviceMonitor), audioStats(new Stats("audio")),
     videoStats(new Stats("video"))
 {
-    if (worker_refs == 0) {
-        send_pipelineContext = new PipelineContext;
-        recv_pipelineContext = new PipelineContext;
-
-        spipeline = send_pipelineContext->element();
-        rpipeline = recv_pipelineContext->element();
-
-#ifdef RTPWORKER_DEBUG
-        /*sbus = gst_pipeline_get_bus(GST_PIPELINE(spipeline));
-        GSource *source = gst_bus_create_watch(bus);
-        gst_object_unref(bus);
-        g_source_set_callback(source, (GSourceFunc)cb_bus_call, this, nullptr);
-        g_source_attach(source, mainContext_);*/
-#endif
-
-        QByteArray val = qgetenv("PSI_NO_SHARED_CLOCK");
-        if (!val.isEmpty())
-            use_shared_clock = false;
-    }
-
-    ++worker_refs;
+    send_pipelineContext = new PipelineContext;
+    recv_pipelineContext = new PipelineContext;
+    spipeline = send_pipelineContext->element();
+    rpipeline = recv_pipelineContext->element();
+    use_shared_clock = qgetenv("PSI_NO_SHARED_CLOCK").isEmpty();
 }
 
 RtpWorker::~RtpWorker()
@@ -324,16 +294,8 @@ RtpWorker::~RtpWorker()
 
     cleanup();
 
-    --worker_refs;
-    if (worker_refs == 0) {
-        delete send_pipelineContext;
-        send_pipelineContext = nullptr;
-
-        delete recv_pipelineContext;
-        recv_pipelineContext = nullptr;
-
-        // sbus = 0;
-    }
+    delete send_pipelineContext;
+    delete recv_pipelineContext;
 
     delete audioStats;
     delete videoStats;
@@ -2391,12 +2353,30 @@ bool RtpWorker::addVideoChain()
     return true;
 }
 
+namespace {
+GstCaps *negotiatedPayloaderCaps(GstPad *pad)
+{
+    // Live sources can reach PLAYING with NO_PREROLL before the first buffer
+    // negotiates the payloader. This runs on the codec worker, never the UI
+    // thread. Wait for caps rather than treating normal asynchronous startup
+    // as a codec failure; broken sources still have a bounded deadline.
+    const auto deadline = gst_util_get_timestamp() + 5 * GST_SECOND;
+    do {
+        if (auto caps = gst_pad_get_current_caps(pad))
+            return caps;
+        g_usleep(10000);
+    } while (gst_util_get_timestamp() < deadline);
+    return nullptr;
+}
+}
+
 bool RtpWorker::getCaps()
 {
     if (audiortppay) {
         GstPad  *pad  = gst_element_get_static_pad(audiortppay, "src");
-        GstCaps *caps = gst_pad_get_current_caps(pad);
+        GstCaps *caps = negotiatedPayloaderCaps(pad);
         if (!caps) {
+            gst_object_unref(pad);
 #ifdef RTPWORKER_DEBUG
             qDebug("can't get audio caps");
 #endif
@@ -2428,8 +2408,9 @@ bool RtpWorker::getCaps()
 
     if (videortppay) {
         GstPad  *pad  = gst_element_get_static_pad(videortppay, "src");
-        GstCaps *caps = gst_pad_get_current_caps(pad);
+        GstCaps *caps = negotiatedPayloaderCaps(pad);
         if (!caps) {
+            gst_object_unref(pad);
 #ifdef RTPWORKER_DEBUG
             qWarning("can't get video caps");
 #endif

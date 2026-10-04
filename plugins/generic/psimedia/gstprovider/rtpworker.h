@@ -34,6 +34,7 @@
 namespace PsiMedia {
 
 class PipelineDeviceContext;
+class PipelineContext;
 class DeviceMonitor;
 class Stats;
 
@@ -133,6 +134,16 @@ private:
     GMainContext  *mainContext_           = nullptr;
     DeviceMonitor *hardwareDeviceMonitor_ = nullptr;
     GSource       *timer                  = nullptr;
+
+    // A codec endpoint owns its capture/playback graph. Sharing process-wide
+    // pipelines made a second video content fail and let its teardown stop
+    // unrelated contents. RTP/RTCP and SRTP ownership is shared separately.
+    PipelineContext *send_pipelineContext = nullptr;
+    PipelineContext *recv_pipelineContext = nullptr;
+    GstElement *spipeline = nullptr, *rpipeline = nullptr;
+    bool send_in_use = false, recv_in_use = false;
+    bool use_shared_clock = true, send_clock_is_shared = false;
+    GstClock *shared_clock = nullptr;
 
     PipelineDeviceContext *pd_audiosrc = nullptr, *pd_videosrc = nullptr, *pd_audiosink = nullptr;
     GstElement            *sendbin = nullptr, *recvbin = nullptr;

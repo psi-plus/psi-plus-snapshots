@@ -150,6 +150,47 @@ int main(int argc, char **argv)
         : profiles.constFirst();
     const auto    sizes   = sizesFor(profile);
 
+    // Independent camera/screen codec contexts join one crypto/RTCP owner.
+    // Joining, retiring a codec, or losing its owner must not create a new
+    // association or let a child resurrect a detached group.
+    {
+        auto owner = std::make_unique<GstSecureRtpSessionContext>(nullptr, nullptr);
+        auto camera = std::make_unique<GstSecureRtpSessionContext>(nullptr, nullptr);
+        auto screen = std::make_unique<GstSecureRtpSessionContext>(nullptr, nullptr);
+        check(qobject_cast<GroupedSecureRtpSessionContext *>(camera->qobject()) != nullptr,
+              "provider did not advertise grouped capture support");
+        check(!camera->shareSecureGroupsWith(camera.get()), "codec context joined itself");
+        check(camera->shareSecureGroupsWith(owner.get()) && screen->shareSecureGroupsWith(owner.get()),
+              "camera and screen could not share their RTP owner");
+        check(!owner->shareSecureGroupsWith(camera.get()), "group ownership cycle accepted");
+        PSecureRtpEndpoint cameraRoute;
+        cameraRoute.endpointId = QByteArrayLiteral("camera");
+        cameraRoute.associationId = QByteArrayLiteral("call-bundle");
+        cameraRoute.media = QStringLiteral("video");
+        cameraRoute.mid = QByteArrayLiteral("camera");
+        cameraRoute.midExtensionId = 1;
+        cameraRoute.incomingPayloadTypes = { 96 };
+        auto screenRoute = cameraRoute;
+        screenRoute.endpointId = QByteArrayLiteral("screen");
+        screenRoute.mid = QByteArrayLiteral("screen");
+        check(camera->configureEndpoints({ cameraRoute }) && screen->configureEndpoints({ screenRoute }),
+              "two video contents could not join one BUNDLE");
+        const QByteArray key(sizes.key, char(0x71)), salt(sizes.salt, char(0x72));
+        const QByteArray peerKey(sizes.key, char(0x73)), peerSalt(sizes.salt, char(0x74));
+        check(owner->configureAssociation(cameraRoute.associationId, 19, profile, key, salt, peerKey, peerSalt),
+              "shared association key activation failed");
+        check(camera->associationReady(cameraRoute.associationId) && screen->associationReady(cameraRoute.associationId)
+                  && camera->associationEpoch(cameraRoute.associationId) == 19
+                  && screen->associationEpoch(cameraRoute.associationId) == 19,
+              "codec contexts do not observe the shared crypto epoch");
+        camera.reset();
+        check(owner->associationReady(screenRoute.associationId) && screen->associationEpoch(screenRoute.associationId) == 19,
+              "retiring camera disturbed the screen association");
+        owner.reset();
+        check(!screen->associationReady(screenRoute.associationId), "screen retained a destroyed RTP owner");
+        check(!screen->configureEndpoints({ screenRoute }), "orphan codec resurrected a detached group");
+    }
+
     // Public secure media sessions must represent unbundled audio/video as two
     // independent associations while keeping one codec/device session object.
     {

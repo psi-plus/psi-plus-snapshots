@@ -1120,6 +1120,16 @@ Regression scenarios for acceptance (an integration checklist, not a record of e
 | Responder receives the result for its `session-accept` | Existing responder flow still enters `Active` and starts accepted applications. |
 | Transport remains disconnected after acceptance | Session remains `Active`; connectivity is represented by application/transport state. |
 
+## Screen sharing integration
+
+Screen sharing uses an additional ordinary RTP video application. The existing
+active-session extension path can add it to a previously negotiated BUNDLE;
+proposed membership remains provisional until its normal offer/answer and IQ
+acknowledgement boundaries commit it. Source selection, permission, local capture
+and presentation layout belong to the client. They do not change XEP-0166 content
+identity or require regrouping accepted contents. Independent codec workers and
+endpoint-local failures are described in [native RTP architecture](jingle-rtp-design.md#independent-camera-and-screen-contents).
+
 ## Source map
 
 The main implementation files are:
