@@ -99,7 +99,7 @@ static void simplifyQueue(QList<RwControlMessage *> *list)
     // if there is, remove all messages after it
     if (at != -1) {
         for (int n = at + 1; n < list->count();)
-            list->removeAt(n);
+            delete list->takeAt(n);
     }
 }
 
@@ -344,7 +344,7 @@ void RwControlLocal::postMessage(RwControlMessage *msg)
         auto fmsg     = static_cast<RwControlFrameMessage *>(msg);
         int  firstPos = -1;
         if (queuedFrameInfo(in, fmsg->frame.type, &firstPos) >= QUEUE_FRAME_MAX)
-            in.removeAt(firstPos);
+            delete in.takeAt(firstPos);
     }
 
     in += msg;

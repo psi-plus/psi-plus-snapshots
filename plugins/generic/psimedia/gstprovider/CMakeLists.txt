@@ -78,6 +78,7 @@ set(SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/bins.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rtpsessionbridge.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rtpsessionbridge.h
+    ${CMAKE_CURRENT_LIST_DIR}/rtpappsrc_p.h
     ${CMAKE_CURRENT_LIST_DIR}/rtpbundlerouter.cpp
     ${CMAKE_CURRENT_LIST_DIR}/rtpbundlerouter.h
     ${CMAKE_CURRENT_LIST_DIR}/rtpgroupbridge.cpp

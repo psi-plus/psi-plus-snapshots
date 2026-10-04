@@ -10,6 +10,7 @@
 #include "rtpsessionbridge.h"
 
 #include "payloadinfo.h"
+#include "rtpappsrc_p.h"
 
 #include <QDebug>
 #include <QElapsedTimer>
@@ -61,6 +62,7 @@ namespace {
 
     void configureAppSrc(GstAppSrc *source, const char *mediaType, bool timestamp)
     {
+        RtpInput::configure(source);
         GstCaps *caps = gst_caps_new_empty_simple(mediaType);
         gst_app_src_set_caps(source, caps);
         gst_caps_unref(caps);
@@ -584,7 +586,7 @@ GstFlowReturn RtpSessionBridge::sendRtp(GstBuffer *buffer)
 {
     if (!running_.load(std::memory_order_acquire) || !sendRtpInput_ || !buffer)
         return GST_FLOW_FLUSHING;
-    return gst_app_src_push_buffer(sendRtpInput_, gst_buffer_ref(buffer));
+    return RtpInput::push(sendRtpInput_, gst_buffer_ref(buffer));
 }
 
 GstFlowReturn RtpSessionBridge::sendRtp(GstBuffer *buffer, GstClockTime presentationAge)
@@ -937,7 +939,7 @@ GstFlowReturn RtpSessionBridge::pushRaw(GstAppSrc *source, const QByteArray &dat
     }
     std::memcpy(info.data, data.constData(), size_t(data.size()));
     gst_buffer_unmap(buffer, &info);
-    return gst_app_src_push_buffer(source, buffer);
+    return RtpInput::push(source, buffer);
 }
 
 } // namespace PsiMedia

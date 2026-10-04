@@ -19,6 +19,7 @@
  */
 
 #include "rtpworker.h"
+#include "rtpappsrc_p.h"
 
 #include <QDir>
 #include <QElapsedTimer>
@@ -601,7 +602,7 @@ void RtpWorker::rtpAudioIn(const PRtpPacket &packet)
 
     GstBuffer *buffer = makeGstBuffer(packet);
     if (buffer)
-        gst_app_src_push_buffer(source, buffer);
+        RtpInput::push(source, buffer);
     gst_object_unref(source);
 }
 
@@ -631,7 +632,7 @@ void RtpWorker::rtpVideoIn(const PRtpPacket &packet)
 
     GstBuffer *buffer = makeGstBuffer(packet);
     if (buffer)
-        gst_app_src_push_buffer(source, buffer);
+        RtpInput::push(source, buffer);
     gst_object_unref(source);
 }
 
@@ -1535,6 +1536,7 @@ bool RtpWorker::startRecv()
             = QByteArrayLiteral("psimedia_audio_rtp_recv_") + QByteArray::number(++audioRecvSourceSerial);
         audiortpsrc_mutex.lock();
         audiortpsrc = gst_element_factory_make("appsrc", audioRecvSourceName.constData());
+        RtpInput::configure(GST_APP_SRC(audiortpsrc));
         audiortpsrc_mutex.unlock();
 
         GstCaps *caps = gst_caps_new_empty();
@@ -1575,6 +1577,7 @@ bool RtpWorker::startRecv()
             = QByteArrayLiteral("psimedia_video_rtp_recv_") + QByteArray::number(++videoRecvSourceSerial);
         videortpsrc_mutex.lock();
         videortpsrc = gst_element_factory_make("appsrc", videoRecvSourceName.constData());
+        RtpInput::configure(GST_APP_SRC(videortpsrc));
         videortpsrc_mutex.unlock();
 
         GstCaps *caps = gst_caps_new_empty();

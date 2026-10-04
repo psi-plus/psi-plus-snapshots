@@ -333,6 +333,7 @@ private:
     gboolean doDestroyRemote();
 
     friend class RwControlRemote;
+    friend class RwControlRemoteLifecycleTest;
     void postMessage(RwControlMessage *msg);
 };
 

@@ -7,6 +7,7 @@
  * version 2.1 of the License, or (at your option) any later version.
  */
 
+#include "rtpappsrc_p.h"
 #include "rtpsessionbridge.h"
 
 #include <QCoreApplication>
@@ -15,6 +16,7 @@
 #include <QEventLoop>
 #include <QTimer>
 
+#include <atomic>
 #include <chrono>
 #include <thread>
 #include <vector>
@@ -171,25 +173,28 @@ int runByteLimit(const PsiMedia::PPayloadInfo &opus)
     if (!bridge.start())
         return 21;
 
-    // One RTP buffer larger than the complete delivery byte budget must never
-    // be retained for a stalled consumer.
-    const int oversizedPayload = int(bridge.maxQueuedNetworkBytes()) + 1;
-    if (!sendOutgoing(bridge, 700, oversizedPayload))
-        return 22;
+    // Fill the byte budget with individually admissible packets while the
+    // owner loop is stalled. A packet larger than the appsrc input budget is
+    // now dropped before reaching this delivery queue, so it cannot test this
+    // queue's independent limit.
+    for (quint16 sequence = 700; sequence < 800; ++sequence) {
+        if (!sendOutgoing(bridge, sequence, 8192))
+            return 22;
+        std::this_thread::sleep_for(1ms);
+    }
     if (!waitWithoutOwnerEvents([&] { return bridge.deliveryQueueStats().networkByteDrops > 0; })) {
-        qCritical() << "oversized RTP did not exercise the delivery byte cap";
+        qCritical() << "stalled RTP delivery did not enforce its byte cap";
         return 23;
     }
     const auto stats = bridge.deliveryQueueStats();
-    if (stats.networkPackets != 0 || stats.networkBytes != 0) {
-        qCritical() << "oversized RTP remained queued" << stats.networkPackets << stats.networkBytes;
+    if (stats.networkBytes > bridge.maxQueuedNetworkBytes()) {
+        qCritical() << "RTP delivery exceeded its byte budget" << stats.networkBytes;
         return 24;
     }
+    bridge.stop();
     pumpFor(30ms);
     if (deliveries != 0)
         return 25;
-
-    bridge.stop();
     return 0;
 }
 
@@ -318,6 +323,37 @@ int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
     gst_init(&argc, &argv);
+    // Hold appsrc without a consuming pipeline, simulating a stalled codec.
+    // Concurrent producers must release excess buffers without blocking.
+    auto source = GST_APP_SRC(gst_element_factory_make("appsrc", nullptr));
+    if (!source)
+        qFatal("No appsrc for input backpressure regression");
+    PsiMedia::RtpInput::configure(source);
+    std::atomic<int> released { 0 };
+    auto             producer = [&] {
+        for (int i = 0; i < 4000; ++i) {
+            auto buffer = gst_buffer_new_allocate(nullptr, 1024, nullptr);
+            gst_mini_object_weak_ref(
+                GST_MINI_OBJECT(buffer),
+                [](gpointer data, GstMiniObject *) { ++*static_cast<std::atomic<int> *>(data); }, &released);
+            if (PsiMedia::RtpInput::push(source, buffer) != GST_FLOW_OK)
+                qFatal("Stalled RTP input blocked or failed");
+        }
+    };
+    std::thread first(producer), second(producer);
+    first.join();
+    second.join();
+    if (released == 0 || gst_app_src_get_current_level_bytes(source) > 1024 * 1024)
+        qFatal("Stalled RTP appsrc retained an unbounded producer backlog");
+    auto oversized = gst_buffer_new_allocate(nullptr, PsiMedia::RtpInput::MaxQueuedBytes + 1, nullptr);
+    gst_mini_object_weak_ref(GST_MINI_OBJECT(oversized),
+                            [](gpointer data, GstMiniObject *) { ++*static_cast<std::atomic<int> *>(data); }, &released);
+    const int beforeOversized = released.load();
+    if (PsiMedia::RtpInput::push(source, oversized) != GST_FLOW_OK || released != beforeOversized + 1)
+        qFatal("Oversized RTP input retained its backing store");
+    gst_object_unref(source);
+    if (released != 8001)
+        qFatal("RTP appsrc teardown leaked queued or dropped buffers");
 
     PsiMedia::PPayloadInfo opus;
     opus.id        = 111;
