@@ -380,6 +380,7 @@ void RtpWorker::cleanupSend()
 
 void RtpWorker::cleanup()
 {
+    qInfo("psimedia worker=%p callback-context=%p cleanup error=%d", static_cast<void *>(this), app, int(error));
 #ifdef RTPWORKER_DEBUG
     qDebug("cleaning up...");
 #endif
@@ -947,9 +948,10 @@ gboolean RtpWorker::bus_call(GstBus *bus, GstMessage *msg)
         GError *err;
 
         gst_message_parse_error(msg, &err, &debug);
+        qWarning("psimedia worker=%p GStreamer error element=%s domain=%s code=%d message=%s debug=%s",
+                 static_cast<void *>(this), GST_OBJECT_NAME(GST_MESSAGE_SRC(msg)), g_quark_to_string(err->domain),
+                 err->code, err->message, debug ? debug : "");
         g_free(debug);
-
-        qDebug("Error: %s: %s", gst_element_get_name(GST_MESSAGE_SRC(msg)), err->message);
         g_error_free(err);
 
         // g_main_loop_quit(loop);
@@ -968,9 +970,10 @@ gboolean RtpWorker::bus_call(GstBus *bus, GstMessage *msg)
         GError *err;
 
         gst_message_parse_warning(msg, &err, &debug);
+        qWarning("psimedia worker=%p GStreamer warning element=%s domain=%s code=%d message=%s debug=%s",
+                 static_cast<void *>(this), GST_OBJECT_NAME(GST_MESSAGE_SRC(msg)), g_quark_to_string(err->domain),
+                 err->code, err->message, debug ? debug : "");
         g_free(debug);
-
-        qDebug("Warning: %s: %s", gst_element_get_name(GST_MESSAGE_SRC(msg)), err->message);
         g_error_free(err);
 
         // g_main_loop_quit(loop);

@@ -33,6 +33,8 @@ bool RtpBundleRouter::configure(const QList<Route> &routes)
 {
     if (routes.isEmpty() || routes.size() > MaxRoutes) {
         lastError_ = Error::InvalidRoutes;
+        qWarning("psimedia bundle-router=%p route configuration rejected: empty or oversized route table",
+                 static_cast<void *>(this));
         return false;
     }
 
@@ -60,6 +62,8 @@ bool RtpBundleRouter::configure(const QList<Route> &routes)
         const auto &route = routes.at(routeIndex);
         if (route.endpointId.isEmpty() || endpointRoutes.contains(route.endpointId)) {
             lastError_ = Error::InvalidRoutes;
+            qWarning("psimedia bundle-router=%p route configuration rejected: missing or duplicate endpoint ID",
+                     static_cast<void *>(this));
             return false;
         }
         endpointRoutes.insert(route.endpointId, routeIndex);
@@ -67,6 +71,8 @@ bool RtpBundleRouter::configure(const QList<Route> &routes)
         if (!route.mid.isEmpty()) {
             if (mids.contains(route.mid)) {
                 lastError_ = Error::InvalidRoutes;
+                qWarning("psimedia bundle-router=%p route configuration rejected: duplicate MID",
+                         static_cast<void *>(this));
                 return false;
             }
             mids.insert(route.mid);
@@ -75,6 +81,9 @@ bool RtpBundleRouter::configure(const QList<Route> &routes)
             if (route.midExtensionId > 255 || route.mid.isEmpty()
                 || (midExtensionId && midExtensionId != route.midExtensionId)) {
                 lastError_ = Error::InvalidRoutes;
+                qWarning(
+                    "psimedia bundle-router=%p route configuration rejected: invalid or inconsistent MID extension",
+                    static_cast<void *>(this));
                 return false;
             }
             midExtensionId = route.midExtensionId;
@@ -84,6 +93,8 @@ bool RtpBundleRouter::configure(const QList<Route> &routes)
         for (auto payloadType : route.incomingPayloadTypes) {
             if (payloadType > 127) {
                 lastError_ = Error::InvalidRoutes;
+                qWarning("psimedia bundle-router=%p route configuration rejected: payload type out of range",
+                         static_cast<void *>(this));
                 return false;
             }
             if (ambiguousPayloadTypes.contains(payloadType))
@@ -100,17 +111,25 @@ bool RtpBundleRouter::configure(const QList<Route> &routes)
         for (auto ssrc : route.incomingSsrcs) {
             if (!addSsrc(incomingSsrcRoutes, ssrc, routeIndex)) {
                 lastError_ = Error::InvalidRoutes;
+                qWarning("psimedia bundle-router=%p route configuration rejected: incoming SSRC belongs to multiple "
+                         "endpoints",
+                         static_cast<void *>(this));
                 return false;
             }
         }
         for (auto ssrc : route.localSsrcs) {
             if (!addSsrc(localSsrcRoutes, ssrc, routeIndex)) {
                 lastError_ = Error::InvalidRoutes;
+                qWarning(
+                    "psimedia bundle-router=%p route configuration rejected: local SSRC belongs to multiple endpoints",
+                    static_cast<void *>(this));
                 return false;
             }
         }
         if (incomingSsrcRoutes.size() + localSsrcRoutes.size() > MaxConfiguredSsrcs) {
             lastError_ = Error::InvalidRoutes;
+            qWarning("psimedia bundle-router=%p route configuration rejected: SSRC table limit exceeded",
+                     static_cast<void *>(this));
             return false;
         }
     }
@@ -123,6 +142,9 @@ bool RtpBundleRouter::configure(const QList<Route> &routes)
             continue;
         if (!addSsrc(localSsrcRoutes, it.key(), routeIt.value())) {
             lastError_ = Error::InvalidRoutes;
+            qWarning("psimedia bundle-router=%p route configuration rejected: producer SSRC conflicts with a "
+                     "configured endpoint",
+                     static_cast<void *>(this));
             return false;
         }
         registeredOutgoingSsrcs.insert(it.key(), it.value());

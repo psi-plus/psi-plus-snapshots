@@ -256,8 +256,28 @@ namespace XMPP { namespace Jingle {
             }
             auto jt = new JT(manager->client()->rootTask());
             jt->request(otherParty, xml);
+            const auto  actionName = xml.attribute(QStringLiteral("action"));
+            QStringList contentNames;
+            for (const auto &element : update) {
+                if (element.tagName() == QLatin1String("content"))
+                    contentNames.append(element.attribute(QStringLiteral("name")));
+                else if (element.tagName() == QLatin1String("reason")) {
+                    const Reason reason(element);
+                    qInfo("jingle sid=%s action=%s reason=%d text=%s", qUtf8Printable(sid), qUtf8Printable(actionName),
+                          int(reason.condition()), qUtf8Printable(reason.text()));
+                }
+            }
+            const auto names = contentNames.join(QLatin1Char(','));
+            qInfo("jingle sid=%s iq=%s send action=%s contents=%s groups=%d", qUtf8Printable(sid),
+                  qUtf8Printable(jt->id()), qUtf8Printable(actionName), qUtf8Printable(names),
+                  int(includedGroups.size()));
             const auto tieBreakTransaction = q->tieBreaker()->outgoingStarted(action, xml);
-            QObject::connect(jt, &JT::finished, q, [jt, callback, tieBreakTransaction, this]() {
+            QObject::connect(jt, &JT::finished, q, [jt, callback, tieBreakTransaction, actionName, names, this]() {
+                qInfo("jingle sid=%s iq=%s completed action=%s contents=%s success=%d error=%s", qUtf8Printable(sid),
+                      qUtf8Printable(jt->id()), qUtf8Printable(actionName), qUtf8Printable(names), int(jt->success()),
+                      jt->success()
+                          ? ""
+                          : qUtf8Printable(jt->error().toString().replace(QLatin1Char('\n'), QLatin1Char(' '))));
                 waitingAck = false;
                 const auto error
                     = jt->success() ? std::optional<Stanza::Error>() : std::optional<Stanza::Error>(jt->error());
@@ -727,8 +747,10 @@ namespace XMPP { namespace Jingle {
         {
             if (!outgoingGroupExtension)
                 return;
-            const auto key       = outgoingGroupExtension->content;
-            auto       transport = outgoingGroupExtension->transport.lock();
+            const auto key = outgoingGroupExtension->content;
+            qInfo("jingle sid=%s content=%s BUNDLE outgoing extension rollback", qUtf8Printable(sid),
+                  qUtf8Printable(key.first));
+            auto transport = outgoingGroupExtension->transport.lock();
             outgoingGroupExtension.reset();
             auto pad = transport ? transport->pad() : TransportManagerPad::Ptr();
             if (pad)
@@ -741,6 +763,9 @@ namespace XMPP { namespace Jingle {
                 return true;
             const auto key = outgoingGroupExtension->content;
             auto       app = contentList.value(key);
+            qInfo("jingle sid=%s content=%s BUNDLE outgoing extension commit state=%d topology-current=%d",
+                  qUtf8Printable(sid), qUtf8Printable(key.first), app ? int(app->state()) : -1,
+                  int(sameGroupings(negotiatedGroups, outgoingGroupExtension->before)));
             if (!sameGroupings(negotiatedGroups, outgoingGroupExtension->before) || !app
                 || app->state() != State::Accepted)
                 return false;
@@ -754,6 +779,8 @@ namespace XMPP { namespace Jingle {
             remoteGroups = answer;
             publishNegotiatedGroups(answer);
             outgoingGroupExtension.reset();
+            qInfo("jingle sid=%s content=%s BUNDLE outgoing extension committed", qUtf8Printable(sid),
+                  qUtf8Printable(key.first));
             return true;
         }
 
@@ -761,8 +788,10 @@ namespace XMPP { namespace Jingle {
         {
             if (!incomingGroupExtension)
                 return;
-            const auto key       = incomingGroupExtension->content;
-            auto       transport = incomingGroupExtension->transport.lock();
+            const auto key = incomingGroupExtension->content;
+            qInfo("jingle sid=%s content=%s BUNDLE incoming extension rollback", qUtf8Printable(sid),
+                  qUtf8Printable(key.first));
+            auto transport = incomingGroupExtension->transport.lock();
             incomingGroupExtension.reset();
             auto pad = transport ? transport->pad() : TransportManagerPad::Ptr();
             if (pad)
@@ -775,6 +804,9 @@ namespace XMPP { namespace Jingle {
                 return true;
             const auto pending = *incomingGroupExtension;
             auto       app     = contentList.value(pending.content);
+            qInfo("jingle sid=%s content=%s BUNDLE incoming extension commit state=%d topology-current=%d",
+                  qUtf8Printable(sid), qUtf8Printable(pending.content.first), app ? int(app->state()) : -1,
+                  int(sameGroupings(negotiatedGroups, pending.before)));
             if (!sameGroupings(negotiatedGroups, pending.before) || !app || app->state() != State::Unacked)
                 return false;
             auto transport = pending.transport.lock();
@@ -787,6 +819,8 @@ namespace XMPP { namespace Jingle {
             remoteGroups = pending.offer;
             publishNegotiatedGroups(pending.offer);
             incomingGroupExtension.reset();
+            qInfo("jingle sid=%s content=%s BUNDLE incoming extension committed", qUtf8Printable(sid),
+                  qUtf8Printable(pending.content.first));
             return true;
         }
 
@@ -3009,6 +3043,13 @@ namespace XMPP { namespace Jingle {
 
     bool Session::updateFromXml(Action action, const QDomElement &jingleEl, std::function<void()> *afterReply)
     {
+        QStringList names;
+        for (auto content = jingleEl.firstChildElement(QStringLiteral("content")); !content.isNull();
+             content      = content.nextSiblingElement(QStringLiteral("content")))
+            names.append(content.attribute(QStringLiteral("name")));
+        qInfo("jingle sid=%s receive action=%s contents=%s state=%d", qUtf8Printable(d->sid),
+              qUtf8Printable(jingleEl.attribute(QStringLiteral("action"), QString::number(int(action)))),
+              qUtf8Printable(names.join(QLatin1Char(','))), int(d->state));
         if (d->state == State::Finished) {
             d->lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
                                                XMPP::Stanza::Error::ErrorCond::UnexpectedRequest);

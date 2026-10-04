@@ -94,6 +94,14 @@ namespace {
                 target.insert(source.ssrc);
     }
 
+    QString reasonLabel(const Reason &reason)
+    {
+        if (!reason.isValid() || reason.condition() == Reason::NoReason)
+            return QStringLiteral("none");
+        QDomDocument doc;
+        return reason.toXml(&doc).firstChildElement().tagName();
+    }
+
     std::optional<SecureRtpEndpoint> secureEndpointForDescriptions(Application *application, Session *session,
                                                                    const QByteArray  &associationId,
                                                                    const Description &local, const Description &remote)
@@ -207,22 +215,29 @@ QStringList Pad::secureRtpProfiles() const { return commonSecureRtpProfiles(prov
 bool Pad::bindSecureTransport(Application *application, SecureRtpAssociation *association, const Description &local,
                               const Description &remote)
 {
+    const auto contentName   = application ? application->contentName() : QString();
+    const auto associationId = association ? association->associationId().toHex() : QByteArray();
+    auto       reject        = [&contentName, &associationId](const char *stage) {
+        qWarning("jingle-rtp content=%s association=%s route rejected: %s", qUtf8Printable(contentName),
+                              associationId.constData(), stage);
+        return false;
+    };
     if (!application || !association || !media_ || application->pad().data() != this || !session_
         || !ensureSecurePacketIo())
-        return false;
+        return reject("packet I/O or application/session unavailable");
 
     auto endpoint = secureEndpointForDescriptions(application, session_, association->associationId(), local, remote);
     if (!endpoint)
-        return false;
+        return reject("invalid negotiated endpoint description");
 
     const auto newId            = association->associationId();
     const auto associationEpoch = association->epoch();
     const auto existingBinding  = routing_->associations.value(newId);
     if (existingBinding && existingBinding->association != association)
-        return false;
+        return reject("association identifier belongs to another object");
     const bool hadBinding = bool(existingBinding);
     if (!configureSecureAssociation(association))
-        return false;
+        return reject("backend rejected secure association");
 
     auto candidate = routing_->endpoints;
     candidate.insert(application, *endpoint);
@@ -233,7 +248,7 @@ bool Pad::bindSecureTransport(Application *application, SecureRtpAssociation *as
         // BUNDLE association belongs to surviving contents and must stay alive.
         if (!hadBinding)
             media_->invalidateSecureRtpAssociation(newId, associationEpoch);
-        return false;
+        return reject("backend rejected endpoint route table");
     }
 
     const auto oldId = routing_->applicationAssociations.value(application);
@@ -255,6 +270,10 @@ bool Pad::bindSecureTransport(Application *application, SecureRtpAssociation *as
 
     routing_->endpoints = std::move(candidate);
     routing_->applicationAssociations.insert(application, newId);
+    qInfo("jingle-rtp content=%s association=%s route bound endpoint=%s mid=%s mid-extension=%u routes=%d epoch=%llu",
+          qUtf8Printable(contentName), associationId.constData(), endpoint->endpointId.toHex().constData(),
+          endpoint->mid.constData(), unsigned(endpoint->midExtensionId), int(routing_->endpoints.size()),
+          static_cast<unsigned long long>(associationEpoch));
 
     auto binding = routing_->associations.value(newId);
     if (!binding) {
@@ -747,6 +766,8 @@ void Application::start()
         return;
     }
     QPointer<Application> guard(this);
+    qInfo("jingle-rtp content=%s media=%s applying negotiation association=%s state=%d", qUtf8Printable(_contentName),
+          qUtf8Printable(media_), association_ ? association_->associationId().toHex().constData() : "", int(_state));
     applyOperation_ = media->applyNegotiation(endpoint_.get(), *local, *remote,
                                               [guard](MediaOperation::Id id, MediaError error) mutable {
                                                   if (guard)
@@ -761,6 +782,8 @@ void Application::applied(MediaOperation::Id id, MediaError error)
         return;
     applyOperation_.reset();
     if (error) {
+        qWarning("jingle-rtp content=%s media apply failed: %s", qUtf8Printable(_contentName),
+                 qUtf8Printable(error.text));
         remove(Reason::FailedApplication,
                error.text.isEmpty() ? QStringLiteral("Media configuration failed") : error.text);
         return;
@@ -780,6 +803,7 @@ void Application::applied(MediaOperation::Id id, MediaError error)
         return;
     }
     secureBound_ = true;
+    qInfo("jingle-rtp content=%s media parameters and secure route ready", qUtf8Printable(_contentName));
 
     beforeAnswer_.reset();
     auto                  transport = _transport;
@@ -808,6 +832,8 @@ void Application::activateMedia()
 {
     if (!configured_ || !secureBound_ || _state != State::Connecting || !association_ || !association_->isReady())
         return;
+    qInfo("jingle-rtp content=%s media=%s active association=%s", qUtf8Printable(_contentName), qUtf8Printable(media_),
+          association_->associationId().toHex().constData());
     setState(State::Active);
 }
 
@@ -815,6 +841,9 @@ void Application::remove(Reason::Condition condition, const QString &text)
 {
     if (_state >= State::Finishing || stopping_)
         return;
+    qInfo("jingle-rtp content=%s media=%s local removal state=%d reason=%s text=%s", qUtf8Printable(_contentName),
+          qUtf8Printable(media_), int(_state), qUtf8Printable(reasonLabel(Reason(condition, text))),
+          qUtf8Printable(text));
     stopping_             = true;
     const auto finalState = isLocal() && _state <= State::ApprovedToSend ? State::Finished : State::Finishing;
     reason_ = _terminationReason = Reason(condition, text);
@@ -838,6 +867,8 @@ void Application::incomingRemove(const Reason &reason)
 {
     if (_state >= State::Finishing || stopping_)
         return;
+    qInfo("jingle-rtp content=%s media=%s remote removal state=%d reason=%s text=%s", qUtf8Printable(_contentName),
+          qUtf8Printable(media_), int(_state), qUtf8Printable(reasonLabel(reason)), qUtf8Printable(reason.text()));
     stopping_ = true;
     reason_   = reason;
     QPointer<Application> guard(this);

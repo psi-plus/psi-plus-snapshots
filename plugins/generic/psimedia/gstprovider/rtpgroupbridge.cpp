@@ -220,10 +220,16 @@ bool RtpGroupBridge::configure(const QList<Endpoint> &endpoints)
     // Copying retains runtime outgoing-SSRC ownership for surviving endpoint IDs.
     // A rejected candidate cannot mutate the live route table.
     auto candidateRouter = router_;
-    if (!candidateRouter.configure(routes))
+    if (!candidateRouter.configure(routes)) {
+        qWarning("psimedia group-bridge=%p route table rejected endpoints=%d router-error=%d",
+                 static_cast<void *>(this), int(routes.size()), int(candidateRouter.lastError()));
         return false;
-    if (!session_.setPayloadGroups(payloadGroups))
+    }
+    if (!session_.setPayloadGroups(payloadGroups)) {
+        qWarning("psimedia group-bridge=%p codec payload mapping rejected endpoints=%d", static_cast<void *>(this),
+                 int(payloadGroups.size()));
         return false;
+    }
 
     router_    = std::move(candidateRouter);
     endpoints_ = std::move(nextEndpoints);
