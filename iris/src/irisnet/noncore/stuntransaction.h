@@ -19,6 +19,8 @@
 #ifndef STUNTRANSACTION_H
 #define STUNTRANSACTION_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <QByteArray>
 #include <QEnableSharedFromThis>
 #include <QObject>
@@ -59,7 +61,7 @@ class StunTransactionPrivate;
 // - if short term or long term auth is used, then the request is authenticated
 //   and the response is required to be authenticated.
 
-class StunTransaction : public QObject {
+class IRISNET_EXPORT StunTransaction : public QObject {
     Q_OBJECT
 
 public:
@@ -123,7 +125,7 @@ private:
 //   emitted as a direct result of calling certain member functions of this
 //   class as well as any other class that might use it (such as StunBinding).
 //   so, be careful with what you do in your retransmit slot.
-class StunTransactionPool : public QObject, public QEnableSharedFromThis<StunTransactionPool> {
+class IRISNET_EXPORT StunTransactionPool : public QObject, public QEnableSharedFromThis<StunTransactionPool> {
     Q_OBJECT
 
 public:

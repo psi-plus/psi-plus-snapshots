@@ -33,15 +33,13 @@ static void runPair(bool usingProtocolSignalsIce2)
 
     QList<Ice176::Candidate> firstCandidates;
     QList<Ice176::Candidate> secondCandidates;
-    bool firstStarted = false;
-    bool secondStarted = false;
+    bool                     firstStarted  = false;
+    bool                     secondStarted = false;
 
-    QObject::connect(&first, &Ice176::localCandidatesReady, [&](const QList<Ice176::Candidate> &candidates) {
-        firstCandidates += candidates;
-    });
-    QObject::connect(&second, &Ice176::localCandidatesReady, [&](const QList<Ice176::Candidate> &candidates) {
-        secondCandidates += candidates;
-    });
+    QObject::connect(&first, &Ice176::localCandidatesReady,
+                     [&](const QList<Ice176::Candidate> &candidates) { firstCandidates += candidates; });
+    QObject::connect(&second, &Ice176::localCandidatesReady,
+                     [&](const QList<Ice176::Candidate> &candidates) { secondCandidates += candidates; });
     QObject::connect(&first, &Ice176::started, [&]() { firstStarted = true; });
     QObject::connect(&second, &Ice176::started, [&]() { secondStarted = true; });
 
@@ -49,8 +47,8 @@ static void runPair(bool usingProtocolSignalsIce2)
     second.start(Ice176::Responder);
 
     QEventLoop gatherLoop;
-    QTimer gatherPoll;
-    QTimer gatherDeadline;
+    QTimer     gatherPoll;
+    QTimer     gatherDeadline;
     gatherDeadline.setSingleShot(true);
     QObject::connect(&gatherDeadline, &QTimer::timeout, &gatherLoop, &QEventLoop::quit);
     QObject::connect(&gatherPoll, &QTimer::timeout, &gatherLoop, [&]() {
@@ -70,16 +68,16 @@ static void runPair(bool usingProtocolSignalsIce2)
     first.addRemoteCandidates(secondCandidates);
     second.addRemoteCandidates(firstCandidates);
 
-    bool firstSelected = false;
-    bool secondSelected = false;
-    bool firstReady = false;
-    bool secondReady = false;
-    bool firstReadyBeforeSelection = false;
+    bool firstSelected              = false;
+    bool secondSelected             = false;
+    bool firstReady                 = false;
+    bool secondReady                = false;
+    bool firstReadyBeforeSelection  = false;
     bool secondReadyBeforeSelection = false;
-    bool earlySent = false;
-    bool earlyReceived = false;
-    bool selectedSent = false;
-    bool selectedReceived = false;
+    bool earlySent                  = false;
+    bool earlyReceived              = false;
+    bool selectedSent               = false;
+    bool selectedReceived           = false;
 
     const QByteArray early = QByteArrayLiteral("valid-pair-before-nomination");
     const QByteArray final = QByteArrayLiteral("selected-pair-after-nomination");
@@ -94,7 +92,7 @@ static void runPair(bool usingProtocolSignalsIce2)
     });
 
     QObject::connect(&first, &Ice176::readyToSendMedia, [&]() {
-        firstReady = true;
+        firstReady                = true;
         firstReadyBeforeSelection = !firstSelected;
         if (usingProtocolSignalsIce2) {
             earlySent = true;
@@ -102,7 +100,7 @@ static void runPair(bool usingProtocolSignalsIce2)
         }
     });
     QObject::connect(&second, &Ice176::readyToSendMedia, [&]() {
-        secondReady = true;
+        secondReady                = true;
         secondReadyBeforeSelection = !secondSelected;
     });
 
@@ -121,8 +119,8 @@ static void runPair(bool usingProtocolSignalsIce2)
     second.startChecks();
 
     QEventLoop exchangeLoop;
-    QTimer exchangePoll;
-    QTimer exchangeDeadline;
+    QTimer     exchangePoll;
+    QTimer     exchangeDeadline;
     exchangeDeadline.setSingleShot(true);
     QObject::connect(&exchangeDeadline, &QTimer::timeout, &exchangeLoop, &QEventLoop::quit);
     QObject::connect(&exchangePoll, &QTimer::timeout, &exchangeLoop, [&]() {

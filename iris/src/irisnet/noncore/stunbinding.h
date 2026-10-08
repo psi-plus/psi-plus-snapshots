@@ -19,13 +19,15 @@
 #ifndef STUNBINDING_H
 #define STUNBINDING_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <QObject>
 
 namespace XMPP {
 class StunTransactionPool;
 class TransportAddress;
 
-class StunBinding : public QObject {
+class IRISNET_EXPORT StunBinding : public QObject {
     Q_OBJECT
 
 public:
@@ -63,7 +65,7 @@ signals:
 private:
     Q_DISABLE_COPY(StunBinding)
 
-    class Private;
+    class IRISNET_NO_EXPORT Private;
     friend class Private;
     Private *d;
 };

@@ -73,6 +73,8 @@ target_link_libraries(jingle_contentmodifydispatcher_test PRIVATE iris Qt${QT_DE
     Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
 add_test(NAME jingle_contentmodify_dispatcher COMMAND jingle_contentmodifydispatcher_test)
 add_executable(jingle_dtlssrtp_test dtlssrtp.cpp)
+# The batch-ingress fixture has Q_OBJECT; standalone CI does not inherit AUTOMOC from Iris.
+set_target_properties(jingle_dtlssrtp_test PROPERTIES AUTOMOC ON)
 # Dtls lives in irisnet but its fingerprint/XML helpers live in iris.
 target_link_libraries(jingle_dtlssrtp_test PRIVATE irisnet iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
@@ -85,6 +87,14 @@ target_link_libraries(jingle_icevalidpair_test PRIVATE irisnet iris Qt${QT_DEFAU
     Qt${QT_DEFAULT_MAJOR_VERSION}::Network)
 add_test(NAME jingle_icevalidpair COMMAND jingle_icevalidpair_test)
 set_tests_properties(jingle_icevalidpair PROPERTIES TIMEOUT 12)
+add_executable(jingle_stunbindinglifetime_test stunbindinglifetime.cpp)
+target_link_libraries(jingle_stunbindinglifetime_test PRIVATE irisnet iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core)
+add_test(NAME jingle_stunbindinglifetime COMMAND jingle_stunbindinglifetime_test)
+add_executable(jingle_icelocalsocketownership_test icelocalsocketownership.cpp)
+target_include_directories(jingle_icelocalsocketownership_test PRIVATE ../../src/irisnet/noncore)
+target_link_libraries(jingle_icelocalsocketownership_test PRIVATE irisnet iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Network)
+add_test(NAME jingle_icelocalsocketownership COMMAND jingle_icelocalsocketownership_test)
 add_executable(jingle_iceudp_test iceudp.cpp)
 target_include_directories(jingle_iceudp_test PRIVATE ../../src/xmpp/xmpp-im)
 target_link_libraries(jingle_iceudp_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
@@ -103,6 +113,10 @@ add_executable(jingle_ftlifecycle_test ftlifecycle.cpp)
 target_link_libraries(jingle_ftlifecycle_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Network Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
 add_test(NAME jingle_ftlifecycle COMMAND jingle_ftlifecycle_test)
+add_executable(jingle_ibblifecycle_test ibblifecycle.cpp)
+target_link_libraries(jingle_ibblifecycle_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Network Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME jingle_ibblifecycle COMMAND jingle_ibblifecycle_test)
 add_executable(jingle_icereplacestate_test icereplacestate.cpp)
 target_link_libraries(jingle_icereplacestate_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Network Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
@@ -261,3 +275,13 @@ target_link_libraries(jingle_icestopcallbacks_test PRIVATE irisnet iris Qt${QT_D
     Qt${QT_DEFAULT_MAJOR_VERSION}::Network)
 add_test(NAME jingle_icestopcallbacks COMMAND jingle_icestopcallbacks_test)
 set_tests_properties(jingle_icestopcallbacks PROPERTIES TIMEOUT 5)
+
+add_executable(own_resource_caps_test ownresourcecaps.cpp)
+target_link_libraries(own_resource_caps_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME own_resource_caps COMMAND own_resource_caps_test)
+
+add_executable(jingle_managershutdown_test managershutdown.cpp)
+target_link_libraries(jingle_managershutdown_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME jingle_managershutdown COMMAND jingle_managershutdown_test)
+set_tests_properties(jingle_managershutdown PROPERTIES TIMEOUT 15)

@@ -203,6 +203,9 @@ TcpPortServer::Ptr TcpPortScope::bind(const QHostAddress &addr, quint16 port)
         return TcpPortServer::Ptr();
     }
     auto server = makeServer(socket);
+    // Shared server handles can outlive the discovery scope. Keep the
+    // listening socket with the handle, not with the scope being destroyed.
+    socket->setParent(server);
 
     TcpPortServer::Ptr shared(server, [](TcpPortServer *s) {
         auto scope = qobject_cast<TcpPortScope *>(s->parent());

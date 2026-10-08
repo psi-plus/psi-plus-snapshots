@@ -42,7 +42,6 @@ static void testInvalidLaterAcceptIsAtomic(Client &client)
           "invalid transport-accept member changed its application state");
 }
 
-
 static void testMalformedLaterPayloadDoesNotPartiallyCommit(Client &client)
 {
     J::Session session(client.jingleManager(), Jid(QStringLiteral("accept-payload-atomic@example.test/device")),
@@ -62,10 +61,10 @@ static void testMalformedLaterPayloadDoesNotPartiallyCommit(Client &client)
     const bool   ok = session.updateFromXml(
         J::Action::TransportAccept,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("audio-accepted") },
-                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("video-malformed"), false } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("audio-accepted") },
+                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("video-malformed"), false } }));
 
     check(!ok, "transport-accept batch with a malformed later payload was accepted");
 
@@ -79,11 +78,10 @@ static void testMalformedLaterPayloadDoesNotPartiallyCommit(Client &client)
     check(audioApp->replaceInProgress(),
           "malformed later payload partially completed the earlier replacement transaction");
 
-    check(video->id() == QLatin1String("video-local") && video->state() == J::State::Pending
-              && video->starts() == 0 && videoApp->replaceInProgress(),
+    check(video->id() == QLatin1String("video-local") && video->state() == J::State::Pending && video->starts() == 0
+              && videoApp->replaceInProgress(),
           "malformed transport-accept member changed its own replacement state");
 }
-
 
 static void testMalformedLaterTransportInfoDoesNotPartiallyCommit(Client &client)
 {
@@ -102,10 +100,10 @@ static void testMalformedLaterTransportInfoDoesNotPartiallyCommit(Client &client
     const bool   ok = session.updateFromXml(
         J::Action::TransportInfo,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("audio-update") },
-                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("video-malformed"), false } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("audio-update") },
+                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("video-malformed"), false } }));
 
     check(!ok, "transport-info batch with a malformed later payload was accepted");
     check(audioApp->transport().data() == audio.data() && audio->id() == QLatin1String("audio-current")

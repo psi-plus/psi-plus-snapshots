@@ -173,9 +173,9 @@ struct OwnedXml {
     QDomElement  root;
 
     operator QDomElement() const { return root; }
-    QDomElement firstChildElement() const { return root.firstChildElement(); }
+    QDomElement  firstChildElement() const { return root.firstChildElement(); }
     QDomDocument ownerDocument() const { return root.ownerDocument(); }
-    QDomNode appendChild(const QDomNode &node) { return root.appendChild(node); }
+    QDomNode     appendChild(const QDomNode &node) { return root.appendChild(node); }
 };
 
 static OwnedXml emptyAnswer()
@@ -190,7 +190,7 @@ static OwnedXml answer(Application *accepted, bool malformed = false)
     OwnedXml xml;
     auto    &doc     = xml.doc;
     auto     jingle  = doc.createElementNS(NS, QStringLiteral("jingle"));
-    auto         content = doc.createElementNS(NS, QStringLiteral("content"));
+    auto     content = doc.createElementNS(NS, QStringLiteral("content"));
     content.setAttribute(QStringLiteral("creator"), QStringLiteral("initiator"));
     content.setAttribute(QStringLiteral("name"), accepted->contentName());
     content.appendChild(doc.createElementNS(applicationNs, QStringLiteral("description")));
@@ -402,24 +402,21 @@ int main(int argc, char **argv)
         auto stats = QSharedPointer<Stats>::create();
         auto session
             = new Session(client.jingleManager(), Jid(QStringLiteral("peer@example.org/device")), Origin::Initiator);
-        auto first  = new TestApplication(session, QStringLiteral("audio"), stats);
-        auto second = new TestApplication(session, QStringLiteral("video"), stats);
+        auto                      first  = new TestApplication(session, QStringLiteral("audio"), stats);
+        auto                      second = new TestApplication(session, QStringLiteral("video"), stats);
         QPointer<TestApplication> firstGuard(first), secondGuard(second);
         session->addContent(first);
         session->addContent(second);
         bool firstUnregisteredAtDestroying = false;
         QObject::connect(first, &Application::destroying, session, [&]() {
-            firstUnregisteredAtDestroying
-                = session->content(QStringLiteral("audio"), Origin::Initiator) == nullptr;
+            firstUnregisteredAtDestroying = session->content(QStringLiteral("audio"), Origin::Initiator) == nullptr;
         });
         stats->onDestroy = [second]() { delete second; };
 
         delete session;
 
-        check(firstUnregisteredAtDestroying,
-              "Application remained in contentList after teardown began");
-        check(!firstGuard && !secondGuard,
-              "Session destructor left content alive after reentrant sibling destruction");
+        check(firstUnregisteredAtDestroying, "Application remained in contentList after teardown began");
+        check(!firstGuard && !secondGuard, "Session destructor left content alive after reentrant sibling destruction");
     }
 
     // content-remove itself is a reentrant lifetime boundary. This mirrors
@@ -429,8 +426,8 @@ int main(int argc, char **argv)
         auto stats = QSharedPointer<Stats>::create();
         auto session
             = new Session(client.jingleManager(), Jid(QStringLiteral("peer@example.org/device")), Origin::Initiator);
-        QPointer<Session> sessionGuard(session);
-        auto application = new TestApplication(session, QStringLiteral("audio"), stats);
+        QPointer<Session>         sessionGuard(session);
+        auto                      application = new TestApplication(session, QStringLiteral("audio"), stats);
         QPointer<TestApplication> applicationGuard(application);
         session->addContent(application);
         stats->onRemove = [session]() { delete session; };
@@ -459,10 +456,8 @@ int main(int argc, char **argv)
               "content-remove removed or invalidated a neighboring application");
         check(session.content(QStringLiteral("audio"), Origin::Initiator) == nullptr,
               "content-remove left a stale application in contentList");
-        check(stats->removes == 1 && stats->stops == 1,
-              "content-remove performed unexpected sibling cleanup");
-        check(session.state() < State::Finishing,
-              "content-remove of one sibling terminated the whole session");
+        check(stats->removes == 1 && stats->stops == 1, "content-remove performed unexpected sibling cleanup");
+        check(session.state() < State::Finishing, "content-remove of one sibling terminated the whole session");
     }
 
     // Ordinary content-accept must not inherit the initial-session subset rule.

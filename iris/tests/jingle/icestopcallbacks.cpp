@@ -5,9 +5,9 @@
 // Exercise retained STUN transactions deterministically without waiting for a
 // real network timeout or adding private transport state to the public API.
 #define private public
+#include "../../src/irisnet/noncore/ice176.cpp"
 #include <iris/ice176.h>
 #undef private
-#include "../../src/irisnet/noncore/ice176.cpp"
 using namespace XMPP;
 static void check(bool ok, const char *message)
 {
@@ -136,11 +136,49 @@ static void peerReflexiveResponse()
     QCoreApplication::sendPostedEvents();
 }
 
+static void usableConnectivityCancelsPacTimeout()
+{
+    Ice176 ice;
+    auto   d = ice.d;
+
+    d->state         = Ice176::Private::Started;
+    d->localFeatures = Ice176::NotNominatedData;
+    d->components.emplace_back();
+    auto &component         = d->components.back();
+    component.id            = 1;
+    component.hasValidPairs = true;
+
+    auto pair                 = Ice176::Private::CandidatePair::Ptr::create();
+    pair->local               = IceComponent::CandidateInfo::Ptr::create();
+    pair->remote              = IceComponent::CandidateInfo::Ptr::create();
+    pair->local->addr         = TransportAddress(QHostAddress::LocalHost, 10000);
+    pair->local->base         = pair->local->addr;
+    pair->local->componentId  = 1;
+    pair->local->type         = IceComponent::HostType;
+    pair->remote->addr        = TransportAddress(QHostAddress::LocalHost, 10001);
+    pair->remote->componentId = 1;
+    pair->remote->type        = IceComponent::HostType;
+    component.highestPair     = pair;
+
+    d->pacTimer = std::make_unique<QTimer>(d);
+    d->pacTimer->setSingleShot(true);
+    d->pacTimer->start(1000);
+
+    int ready = 0;
+    QObject::connect(&ice, &Ice176::readyToSendMedia, [&] { ++ready; });
+    d->tryReadyToSendMedia();
+
+    check(ice.canSendMedia(), "valid pair did not make ICE writable");
+    check(ready == 1, "ICE readiness signal was not emitted exactly once");
+    check(!d->pacTimer, "PAC timer survived usable ICE connectivity");
+}
+
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
     QCA::Initializer qca;
     stoppedCallbacks();
     peerReflexiveResponse();
-    qInfo("ICE peer-reflexive response and stopped callback regressions passed");
+    usableConnectivityCancelsPacTimeout();
+    qInfo("ICE peer-reflexive response, PAC and stopped callback regressions passed");
 }

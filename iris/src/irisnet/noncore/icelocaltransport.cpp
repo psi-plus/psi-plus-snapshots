@@ -151,8 +151,9 @@ public:
 
     IceLocalTransport       *q;
     ObjectSession            sess;
-    QUdpSocket              *extSock = nullptr;
-    SafeUdpSocket           *sock    = nullptr;
+    QUdpSocket              *extSock     = nullptr;
+    bool                     ownsExtSock = false;
+    SafeUdpSocket           *sock        = nullptr;
     StunTransactionPool::Ptr pool;
     StunBinding             *stunBinding   = nullptr;
     TurnClient              *turn          = nullptr;
@@ -190,13 +191,19 @@ public:
 
         if (sock) { // if started
             if (extSock) {
-                sock->release(); // detaches the socket but doesn't destroy
-                extSock = nullptr;
+                auto *released = sock->release();
+                if (ownsExtSock)
+                    released->deleteLater();
             }
 
             delete sock;
             sock = nullptr;
+        } else if (extSock && ownsExtSock) {
+            // start() is deferred, so destruction may happen before postStart().
+            extSock->deleteLater();
         }
+        extSock     = nullptr;
+        ownsExtSock = false;
 
         addr          = TransportAddress();
         relAddr       = TransportAddress();
@@ -638,9 +645,10 @@ IceLocalTransport::~IceLocalTransport() { delete d; }
 
 void IceLocalTransport::setClientSoftwareNameAndVersion(const QString &str) { d->clientSoftware = str; }
 
-void IceLocalTransport::start(QUdpSocket *sock)
+void IceLocalTransport::start(QUdpSocket *sock, bool takeOwnership)
 {
-    d->extSock = sock;
+    d->extSock     = sock;
+    d->ownsExtSock = takeOwnership;
     d->start();
 }
 

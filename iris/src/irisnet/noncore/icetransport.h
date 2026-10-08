@@ -19,6 +19,8 @@
 #ifndef ICETRANSPORT_H
 #define ICETRANSPORT_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <QByteArray>
 #include <QObject>
 #include <QWeakPointer>
@@ -27,7 +29,7 @@ class QHostAddress;
 
 namespace XMPP {
 class TransportAddress;
-class IceTransport : public QObject {
+class IRISNET_EXPORT IceTransport : public QObject {
     Q_OBJECT
 
 public:

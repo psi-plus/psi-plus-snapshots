@@ -85,8 +85,7 @@ public:
     {
         if (el.attribute(QStringLiteral("parse")) == QLatin1String("fail"))
             return { PrepareUpdateStatus::Invalid, {}, {} };
-        return { PrepareUpdateStatus::Ready,
-                 std::make_unique<Prepared>(el.attribute(QStringLiteral("id"))), {} };
+        return { PrepareUpdateStatus::Ready, std::make_unique<Prepared>(el.attribute(QStringLiteral("id"))), {} };
     }
 
     bool commitPreparedUpdate(PreparedUpdatePtr update) override

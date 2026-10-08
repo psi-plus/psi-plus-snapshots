@@ -577,6 +577,31 @@ namespace XMPP { namespace Jingle {
         bool                                  messageInitiationEnabled = false;
         int                                   maxSessions              = -1; // no limit
 
+        bool                                      shuttingDown = false;
+        QHash<QObject *, QMetaObject::Connection> providerDestructionConnections;
+
+        template <typename Registry> void watchProvider(QObject *provider, Registry &registry, const char *kind)
+        {
+            if (providerDestructionConnections.contains(provider))
+                return;
+            providerDestructionConnections.insert(
+                provider, QObject::connect(provider, &QObject::destroyed, manager, [this, &registry, kind, provider] {
+                    // QPointer is cleared before destroyed() is emitted. Normal
+                    // provider teardown must unregister every namespace first.
+                    for (auto it = registry.begin(); it != registry.end();) {
+                        if (!it->second) {
+                            const auto ns = it->first;
+                            it            = registry.erase(it);
+                            qCritical().noquote() << "Jingle: incorrect deinitialization:" << kind
+                                                  << "manager destroyed without unregistering namespace" << ns;
+                        } else {
+                            ++it;
+                        }
+                    }
+                    providerDestructionConnections.remove(provider);
+                }));
+        }
+
         void setupSession(Session *s)
         {
             QObject::connect(s, &Session::terminated, manager,
@@ -621,11 +646,44 @@ namespace XMPP { namespace Jingle {
 
     Manager::~Manager()
     {
-        for (auto &m : d->transportManagers) {
+        shutdown();
+        for (auto &m : d->transportManagers)
             m.second->setJingleManager(nullptr);
+        for (auto &m : d->applicationManagers)
+            m.second->setJingleManager(nullptr);
+        // Owned providers can be destroyed during Private teardown, after its
+        // registries have gone away. They have already been detached above.
+        for (const auto &connection : std::as_const(d->providerDestructionConnections))
+            QObject::disconnect(connection);
+    }
+
+    void Manager::shutdown()
+    {
+        if (d->shuttingDown)
+            return;
+        d->shuttingDown = true;
+        // The routing registry drops finished sessions before deleteLater()
+        // runs. QObject ownership also covers those and unregistered sessions.
+        QList<QPointer<Session>> sessions;
+        for (auto session : findChildren<Session *>(QString(), Qt::FindDirectChildrenOnly))
+            sessions.append(session);
+        for (const auto &session : std::as_const(sessions)) {
+            if (session)
+                session->shutdown();
         }
-        for (auto &m : d->applicationManagers) {
-            m.second->setJingleManager(nullptr);
+        // Stop transports held by callers/selectors as well, before releasing
+        // any session pads or lower-level transport infrastructure.
+        const auto               providers = d->transportManagers;
+        QSet<TransportManager *> stopped;
+        for (const auto &[ns, provider] : providers) {
+            if (provider && !stopped.contains(provider.data())) {
+                stopped.insert(provider.data());
+                provider->closeAll(ns);
+            }
+        }
+        for (const auto &session : std::as_const(sessions)) {
+            if (session)
+                delete session.data();
         }
     }
 
@@ -692,6 +750,7 @@ namespace XMPP { namespace Jingle {
         auto const &nss = app->ns();
         for (auto const &ns : nss)
             d->applicationManagers.emplace(ns, app);
+        d->watchProvider(app, d->applicationManagers, "application");
         app->setJingleManager(this);
     }
 
@@ -724,6 +783,7 @@ namespace XMPP { namespace Jingle {
         auto const &nss = transport->ns();
         for (auto const &ns : nss)
             d->transportManagers.emplace(ns, transport);
+        d->watchProvider(transport, d->transportManagers, "transport");
         transport->setJingleManager(this);
     }
 
@@ -831,6 +891,8 @@ namespace XMPP { namespace Jingle {
 
     Session *Manager::incomingSessionInitiate(const Jid &from, const Jingle &jingle, const QDomElement &jingleEl)
     {
+        if (d->shuttingDown)
+            return nullptr;
         if (d->maxSessions > 0 && d->sessions.size() == d->maxSessions) {
             d->lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Wait,
                                                XMPP::Stanza::Error::ErrorCond::ResourceConstraint);
@@ -859,6 +921,8 @@ namespace XMPP { namespace Jingle {
 
     Session *Manager::newSession(const Jid &j)
     {
+        if (d->shuttingDown)
+            return nullptr;
         auto s = new Session(this, j);
         d->setupSession(s);
         return s;
@@ -866,7 +930,7 @@ namespace XMPP { namespace Jingle {
 
     Session *Manager::newSession(const Jid &j, const QString &sid)
     {
-        if (sid.isEmpty())
+        if (d->shuttingDown || sid.isEmpty())
             return nullptr;
 
         auto s = new Session(this, j);
@@ -880,6 +944,8 @@ namespace XMPP { namespace Jingle {
 
     QString Manager::registerSession(Session *session, const QString &requestedSid)
     {
+        if (d->shuttingDown || !session || session->state() >= State::Finishing)
+            return {};
         if (!session)
             return {};
 

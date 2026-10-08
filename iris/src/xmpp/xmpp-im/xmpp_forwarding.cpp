@@ -92,8 +92,7 @@ bool Forwarding::fromXml(const QDomElement &e, Client *client)
                 break;
             Stanza  s = client->stream().createStanza(addCorrectNS(child));
             Message msg;
-            if (msg.fromStanza(s, client->manualTimeZoneOffset(), client->timeZoneOffset(),
-                               client->jingleManager())) {
+            if (msg.fromStanza(s, client->manualTimeZoneOffset(), client->timeZoneOffset(), client->jingleManager())) {
                 const auto eme
                     = child.elementsByTagNameNS(QLatin1String("urn:xmpp:eme:0"), QLatin1String("encryption"));
                 if (!eme.isEmpty()) {

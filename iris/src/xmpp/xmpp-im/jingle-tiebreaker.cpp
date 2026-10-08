@@ -145,9 +145,9 @@ namespace XMPP { namespace Jingle {
             const auto remoteDocument = resolution->remoteDocument;
             const auto remoteData     = resolution->remoteData;
             const auto localError     = *transaction->error;
-            const auto remoteResult  = *resolution->remoteResult;
-            const auto resolverIds   = resolution->resolvers;
-            const auto dispatchEpoch = epoch;
+            const auto remoteResult   = *resolution->remoteResult;
+            const auto resolverIds    = resolution->resolvers;
+            const auto dispatchEpoch  = epoch;
             releaseResolution(resolutionId);
             maybeReleaseTransaction(transactionId);
 
@@ -227,11 +227,11 @@ namespace XMPP { namespace Jingle {
     {
         // Session serializes outgoing IQs. This is not a multi-IQ scheduler.
         Q_ASSERT(!state_->currentOutgoing);
-        const auto id = ++state_->nextTransaction;
+        const auto               id = ++state_->nextTransaction;
         SharedState::Transaction transaction;
-        transaction.id            = id;
-        transaction.action        = action;
-        transaction.localData     = transaction.localDocument.importNode(localData, true).toElement();
+        transaction.id        = id;
+        transaction.action    = action;
+        transaction.localData = transaction.localDocument.importNode(localData, true).toElement();
         state_->transactions.insert(id, transaction);
         state_->currentOutgoing = id;
         return id;
@@ -285,10 +285,10 @@ namespace XMPP { namespace Jingle {
             return { Solution::Continue, 0,
                      Stanza::Error(Stanza::Error::ErrorType::Wait, Stanza::Error::ErrorCond::ResourceConstraint) };
         // Never carry a container iterator (or a reference into it) across user code.
-        const auto transactionId = transaction->id;
-        const auto localData     = transaction->localData;
+        const auto   transactionId = transaction->id;
+        const auto   localData     = transaction->localData;
         QDomDocument remoteDocument;
-        const auto remoteSnapshot = remoteDocument.importNode(remoteData, true).toElement();
+        const auto   remoteSnapshot = remoteDocument.importNode(remoteData, true).toElement();
         if (remoteSnapshot.isNull())
             return {};
         const auto epoch = state->epoch;
@@ -326,7 +326,7 @@ namespace XMPP { namespace Jingle {
         if (postponed.isEmpty())
             return {};
 
-        const auto id = ++state->nextResolution;
+        const auto                     id = ++state->nextResolution;
         SharedState::PendingResolution pending;
         pending.id             = id;
         pending.transaction    = transactionId;

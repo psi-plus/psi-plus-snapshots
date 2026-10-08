@@ -20,8 +20,8 @@
 #include "jingle-webrtc-datachannel_p.h"
 #include "jingle-sctp-association_p.h"
 
-#include <QtEndian>
 #include <QTimer>
+#include <QtEndian>
 
 #include <cstring>
 #include <limits>
@@ -63,11 +63,11 @@ namespace XMPP { namespace Jingle { namespace SCTP {
             return {};
         }
 
-        quint8  channelType    = data[1];
-        quint16 priority       = qFromBigEndian<quint16>(data.data() + 2);
-        quint32 reliability    = qFromBigEndian<quint32>(data.data() + 4);
-        quint16 labelLength    = qFromBigEndian<quint16>(data.data() + 8);
-        quint16 protocolLength = qFromBigEndian<quint16>(data.data() + 10);
+        quint8          channelType    = data[1];
+        quint16         priority       = qFromBigEndian<quint16>(data.data() + 2);
+        quint32         reliability    = qFromBigEndian<quint32>(data.data() + 4);
+        quint16         labelLength    = qFromBigEndian<quint16>(data.data() + 8);
+        quint16         protocolLength = qFromBigEndian<quint16>(data.data() + 10);
         const qsizetype labelOffset    = 12;
         const qsizetype protocolOffset = labelOffset + qsizetype(labelLength);
         if (protocolOffset > data.size() || qsizetype(protocolLength) > data.size() - protocolOffset) {
@@ -222,10 +222,10 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         if (streamClosed)
             return;
 
-        closeWasLocal     = closeRequested;
-        streamClosed      = true;
-        streamId          = -1;
-        disconnectReason  = reason;
+        closeWasLocal    = closeRequested;
+        streamClosed     = true;
+        streamId         = -1;
+        disconnectReason = reason;
         if (openMode() & QIODevice::WriteOnly)
             setOpenMode(openMode() & ~QIODevice::WriteOnly);
         emit disconnected();

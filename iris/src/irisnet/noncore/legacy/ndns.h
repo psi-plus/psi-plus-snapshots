@@ -20,13 +20,15 @@
 #ifndef CS_NDNS_H
 #define CS_NDNS_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <iris/irisnet/corelib/netnames.h>
 
 #include <QtCore>
 #include <QtNetwork>
 
 // CS_NAMESPACE_BEGIN
-class NDns : public QObject {
+class IRISNET_EXPORT NDns : public QObject {
     Q_OBJECT
 public:
     NDns(QObject *parent = nullptr);

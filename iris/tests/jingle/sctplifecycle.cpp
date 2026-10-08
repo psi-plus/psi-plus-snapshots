@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QNetworkDatagram>
+#include <QQueue>
 #include <QThread>
 
 #include <functional>
@@ -13,27 +14,47 @@ using namespace XMPP::Jingle::SCTP;
 
 namespace {
 
-void movePackets(Association &from, Association &to)
+// Production SCTP signals one outgoing packet at a time. Model its direct
+// one-packet reader, retaining packets only in the simulated network wire.
+class PacketWire {
+public:
+    explicit PacketWire(Association &source)
+    {
+        connection_ = QObject::connect(&source, &Association::readyReadOutgoing, &source, [this, &source]() {
+            if (source.pendingOutgoingDatagrams() != 1)
+                qFatal("SCTP producer batched packets behind one readiness notification");
+            packets.enqueue(source.readOutgoing());
+        });
+    }
+    ~PacketWire() { QObject::disconnect(connection_); }
+    QQueue<QByteArray> packets;
+
+private:
+    QMetaObject::Connection connection_;
+};
+
+void movePackets(PacketWire &from, Association &to)
 {
-    while (from.pendingOutgoingDatagrams() > 0) {
-        const auto packet = from.readOutgoing();
+    while (!from.packets.isEmpty()) {
+        const auto packet = from.packets.dequeue();
         if (!packet.isEmpty())
             to.writeIncoming(packet);
     }
 }
 
-bool pumpUntil(Association &left, Association &right, const std::function<bool()> &done, int timeoutMs = 5000)
+bool pumpUntil(PacketWire &leftWire, Association &left, PacketWire &rightWire, Association &right,
+               const std::function<bool()> &done, int timeoutMs = 5000)
 {
     QElapsedTimer timer;
     timer.start();
     while (!done() && timer.elapsed() < timeoutMs) {
-        movePackets(left, right);
-        movePackets(right, left);
+        movePackets(leftWire, right);
+        movePackets(rightWire, left);
         QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
         QThread::msleep(1);
     }
-    movePackets(left, right);
-    movePackets(right, left);
+    movePackets(leftWire, right);
+    movePackets(rightWire, left);
     QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
     return done();
 }
@@ -52,6 +73,7 @@ int main(int argc, char **argv)
 
     Association left(nullptr);
     Association right(nullptr);
+    PacketWire  leftWire(left), rightWire(right);
     left.setIdSelector(IdSelector::Even);
     right.setIdSelector(IdSelector::Odd);
 
@@ -66,7 +88,8 @@ int main(int argc, char **argv)
     left.onTransportConnected();
     right.onTransportConnected();
 
-    if (!pumpUntil(left, right, [&]() { return incomingCount == 2 && leftOne->isOpen() && leftTwo->isOpen(); }))
+    if (!pumpUntil(leftWire, left, rightWire, right,
+                   [&]() { return incomingCount == 2 && leftOne->isOpen() && leftTwo->isOpen(); }))
         return fail("SCTP data channels did not open");
 
     if (right.pendingChannels() != 2)
@@ -93,36 +116,49 @@ int main(int argc, char **argv)
     if ((remoteOne->channelType & 0x80) || (remoteTwo->channelType & 0x80))
         return fail("ordered data channels were encoded as unordered");
 
-    const QByteArray tail("buffered-tail");
-    if (!leftOne->writeDatagram(QNetworkDatagram(tail)))
-        return fail("failed to queue tail on first channel");
-    if (!pumpUntil(left, right, [&]() { return remoteOne->hasPendingDatagrams(); }))
-        return fail("tail did not arrive before stream close");
+    // Model the FT finishing boundary precisely. The application gets
+    // bytesWritten when a block has entered usrsctp, not when the peer has
+    // received it. Queue a sizeable reliable tail that still fits entirely in
+    // the SCTP send buffer, verify the application-facing queue is empty, and
+    // then request stream close before any of those packets are pumped to the
+    // peer. Stream reset must not discard that accepted tail.
+    QList<QByteArray> tails;
+    for (int i = 0; i < 16; ++i) {
+        QByteArray tail(8192, char(i));
+        tails.append(tail);
+        if (!leftOne->writeDatagram(QNetworkDatagram(tail)))
+            return fail("failed to queue buffered tail on first channel");
+    }
+    if (leftOne->bytesToWrite() != 0)
+        return fail("test tail did not enter the SCTP send buffer");
 
-    int localCloseFinished = 0;
+    int localCloseFinished  = 0;
     int remoteCloseFinished = 0;
     QObject::connect(leftOne.data(), &ByteStream::delayedCloseFinished, &app,
                      [&localCloseFinished]() { ++localCloseFinished; });
     QObject::connect(remoteOne.data(), &ByteStream::connectionClosed, &app,
                      [&remoteCloseFinished]() { ++remoteCloseFinished; });
 
-    // This is the FT finishing boundary: the application asks to close one
-    // completed stream while the association and another FT stream stay live.
     leftOne->close();
 
-    if (!pumpUntil(left, right, [&]() {
+    if (!pumpUntil(leftWire, left, rightWire, right, [&]() {
             return left.channels().size() == 1 && right.channels().size() == 1 && localCloseFinished == 1;
         }))
         return fail("SCTP stream reset did not complete local per-stream close");
 
     if (remoteCloseFinished != 0)
         return fail("remote close completed before buffered data was drained");
-    if (!remoteOne->hasPendingDatagrams())
-        return fail("stream close discarded buffered peer data");
-    if (remoteOne->readDatagram().data() != tail)
-        return fail("buffered tail changed across stream close");
-    if (remoteCloseFinished != 0)
-        return fail("remote close notification overtook accounting of final datagram");
+
+    for (const auto &tail : std::as_const(tails)) {
+        if (!remoteOne->hasPendingDatagrams())
+            return fail("stream close discarded accepted SCTP tail data");
+        if (remoteOne->readDatagram().data() != tail)
+            return fail("buffered tail changed across stream close");
+        if (remoteCloseFinished != 0)
+            return fail("remote close notification overtook accounting of final datagram");
+    }
+    if (remoteOne->hasPendingDatagrams())
+        return fail("unexpected extra datagram after buffered tail");
     QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
     if (remoteCloseFinished != 1)
         return fail("remote close did not complete after final datagram returned");
@@ -130,7 +166,7 @@ int main(int argc, char **argv)
     const QByteArray survivor("surviving-channel");
     if (!leftTwo->writeDatagram(QNetworkDatagram(survivor)))
         return fail("failed to write surviving channel");
-    if (!pumpUntil(left, right, [&]() { return remoteTwo->hasPendingDatagrams(); }))
+    if (!pumpUntil(leftWire, left, rightWire, right, [&]() { return remoteTwo->hasPendingDatagrams(); }))
         return fail("surviving channel stopped after sibling close");
     if (remoteTwo->readDatagram().data() != survivor)
         return fail("surviving channel payload mismatch");

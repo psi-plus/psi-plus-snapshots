@@ -11,6 +11,7 @@
 #ifndef XMPP_FILE_SHARING_H
 #define XMPP_FILE_SHARING_H
 
+#include <iris/iris_export.h>
 #include <iris/xmpp-im/jingle-file.h>
 #include <iris/xmpp-im/jingle-pub.h>
 #include <iris/xmpp-im/xmpp_hash.h>
@@ -26,21 +27,21 @@
 
 namespace XMPP::StatelessFileSharing {
 
-extern const QString NS;
-extern const QString ENCRYPTED_NS;
-extern const QString URL_DATA_NS;
-extern const QString MESSAGE_ATTACHING_NS;
+extern IRIS_EXPORT const QString NS;
+extern IRIS_EXPORT const QString ENCRYPTED_NS;
+extern IRIS_EXPORT const QString URL_DATA_NS;
+extern IRIS_EXPORT const QString MESSAGE_ATTACHING_NS;
 
 enum class Disposition { Unspecified, Inline, Attachment };
 enum class Cipher { Unknown, Aes128Gcm, Aes256Gcm, Aes256CbcPkcs7 };
 
-QString cipherUri(Cipher cipher);
-Cipher  cipherFromUri(const QString &uri);
-bool    cipherSupported(Cipher cipher);
+IRIS_EXPORT QString cipherUri(Cipher cipher);
+IRIS_EXPORT Cipher  cipherFromUri(const QString &uri);
+IRIS_EXPORT bool    cipherSupported(Cipher cipher);
 
 class EncryptedSource;
 
-class Source {
+class IRIS_EXPORT Source {
 public:
     enum class Type { Invalid, UrlData, JinglePub, Encrypted, Other };
 
@@ -71,7 +72,7 @@ private:
     QDomElement                     rawElement_;
 };
 
-class Sources {
+class IRIS_EXPORT Sources {
 public:
     Sources();
     explicit Sources(const QDomElement &element);
@@ -94,7 +95,7 @@ private:
     QList<Source> items_;
 };
 
-class EncryptedSource {
+class IRIS_EXPORT EncryptedSource {
 public:
     EncryptedSource();
     explicit EncryptedSource(const QDomElement &element);
@@ -128,7 +129,7 @@ private:
     Sources     sources_;
 };
 
-class FileSharing {
+class IRIS_EXPORT FileSharing {
 public:
     FileSharing();
     explicit FileSharing(const QDomElement &element);
@@ -164,7 +165,7 @@ struct EncryptedPayload {
 };
 
 /** Returns the wire size produced by XEP-0448 encryption for a plaintext size. */
-std::optional<std::uint64_t> encryptedSize(Cipher cipher, std::uint64_t plaintextSize);
+IRIS_EXPORT std::optional<std::uint64_t> encryptedSize(Cipher cipher, std::uint64_t plaintextSize);
 
 /**
  * Read-only sequential device which encrypts another QIODevice as XEP-0448 bytes.
@@ -175,7 +176,7 @@ std::optional<std::uint64_t> encryptedSize(Cipher cipher, std::uint64_t plaintex
  * included. A second instance can be constructed with key()/iv() to reproduce
  * exactly the same ciphertext for another transport.
  */
-class EncryptingDevice : public QIODevice {
+class IRIS_EXPORT EncryptingDevice : public QIODevice {
 public:
     EncryptingDevice(QIODevice *source, Cipher cipher, QObject *parent = nullptr);
     EncryptingDevice(QIODevice *source, Cipher cipher, const QByteArray &key, const QByteArray &iv,
@@ -204,16 +205,16 @@ private:
     std::unique_ptr<Private> d;
 };
 
-std::optional<EncryptedPayload> encrypt(Cipher cipher, const QByteArray &plaintext);
-std::optional<QByteArray>       decrypt(Cipher cipher, const QByteArray &ciphertext, const QByteArray &key,
-                                        const QByteArray &iv, std::optional<std::uint64_t> originalSize = {});
+IRIS_EXPORT std::optional<EncryptedPayload> encrypt(Cipher cipher, const QByteArray &plaintext);
+IRIS_EXPORT std::optional<QByteArray> decrypt(Cipher cipher, const QByteArray &ciphertext, const QByteArray &key,
+                                              const QByteArray &iv, std::optional<std::uint64_t> originalSize = {});
 /**
  * Authenticated streaming decryption into an already open writable device.
  * GCM input must be seekable because its authentication tag is stored at EOF
  * and QCA requires the tag before decryption starts.
  */
-bool decryptToDevice(Cipher cipher, QIODevice *ciphertext, QIODevice *plaintext, const QByteArray &key,
-                     const QByteArray &iv, std::optional<std::uint64_t> originalSize = {});
+IRIS_EXPORT bool decryptToDevice(Cipher cipher, QIODevice *ciphertext, QIODevice *plaintext, const QByteArray &key,
+                                 const QByteArray &iv, std::optional<std::uint64_t> originalSize = {});
 
 } // namespace XMPP::StatelessFileSharing
 

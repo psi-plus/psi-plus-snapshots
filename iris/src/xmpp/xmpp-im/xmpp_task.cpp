@@ -43,6 +43,7 @@ public:
     bool                autoDelete = false;
     bool                done       = false;
     int                 timeout    = 0;
+    QTimer              timeoutTimer;
 };
 
 Task::Task(Task *parent) : QObject(parent)
@@ -73,6 +74,8 @@ void Task::init()
     d->autoDelete = false;
     d->done       = false;
     d->timeout    = DEFAULT_TIMEOUT;
+    d->timeoutTimer.setSingleShot(true);
+    connect(&d->timeoutTimer, &QTimer::timeout, this, &Task::timeoutFinished);
 }
 
 Task *Task::parent() const { return (Task *)QObject::parent(); }
@@ -110,9 +113,8 @@ void Task::go(bool autoDelete)
         }
     } else {
         onGo();
-        if (d->timeout) {
-            QTimer::singleShot(d->timeout * 1000, this, SLOT(timeoutFinished()));
-        }
+        if (d->timeout)
+            d->timeoutTimer.start(d->timeout * 1000);
     }
 }
 
@@ -140,6 +142,7 @@ void Task::safeDelete()
         return;
 
     d->deleteme = true;
+    d->timeoutTimer.stop();
     if (!d->insig)
         deleteLater();
 }
@@ -215,6 +218,7 @@ void Task::done()
     if (d->done || d->insig)
         return;
     d->done = true;
+    d->timeoutTimer.stop();
 
     if (d->autoDelete)
         d->deleteme = true;

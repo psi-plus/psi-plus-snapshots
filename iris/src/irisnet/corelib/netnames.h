@@ -312,7 +312,7 @@ public:
     void setNull(const QByteArray &rawData);
 
 private:
-    class Private;
+    class IRISNET_NO_EXPORT     Private;
     QSharedDataPointer<Private> d;
 };
 
@@ -335,7 +335,7 @@ public:
     QByteArray                name() const; // full dns label
 
 private:
-    class Private;
+    class IRISNET_NO_EXPORT     Private;
     QSharedDataPointer<Private> d;
 
     friend class NameManager;
@@ -492,7 +492,7 @@ signals:
     void error(XMPP::NameResolver::Error e);
 
 private:
-    class Private;
+    class IRISNET_NO_EXPORT Private;
     friend class Private;
     Private *d;
 
@@ -561,7 +561,7 @@ signals:
     void error();
 
 private:
-    class Private;
+    class IRISNET_NO_EXPORT Private;
     friend class Private;
     Private *d;
 
@@ -682,7 +682,7 @@ private:
     bool try_next_host();
     void try_next_srv();
 
-    class Private;
+    class IRISNET_NO_EXPORT Private;
     friend class Private;
     Private *d;
 
@@ -711,7 +711,7 @@ signals:
     void error(XMPP::ServiceLocalPublisher::Error e);
 
 private:
-    class Private;
+    class IRISNET_NO_EXPORT Private;
     friend class Private;
     Private *d;
 

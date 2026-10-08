@@ -25,7 +25,7 @@ static void churnDom()
 {
     for (int i = 0; i < 128; ++i) {
         QDomDocument doc;
-        auto root = doc.createElement(QStringLiteral("churn"));
+        auto         root = doc.createElement(QStringLiteral("churn"));
         root.setAttribute(QStringLiteral("n"), i);
         doc.appendChild(root);
     }
@@ -152,20 +152,18 @@ int main(int argc, char **argv)
     {
         J::TieBreaker tieBreaker;
         Resolver      resolver;
-        resolver.solution         = J::TieBreaker::Solution::Postpone;
-        auto         registration = tieBreaker.registerResolver(J::Action::ContentModify, &resolver);
-        quint64      tx           = 0;
+        resolver.solution    = J::TieBreaker::Solution::Postpone;
+        auto    registration = tieBreaker.registerResolver(J::Action::ContentModify, &resolver);
+        quint64 tx           = 0;
         {
             QDomDocument localDoc;
-            tx = tieBreaker.outgoingStarted(J::Action::ContentModify,
-                                            jingle(localDoc, QStringLiteral("owned-local")));
+            tx = tieBreaker.outgoingStarted(J::Action::ContentModify, jingle(localDoc, QStringLiteral("owned-local")));
         }
         quint64 resolutionId = 0;
         {
             QDomDocument remoteDoc;
-            const auto resolution
-                = tieBreaker.resolveIncoming(J::Action::ContentModify,
-                                             jingle(remoteDoc, QStringLiteral("owned-remote")));
+            const auto   resolution = tieBreaker.resolveIncoming(J::Action::ContentModify,
+                                                                 jingle(remoteDoc, QStringLiteral("owned-remote")));
             check(resolution.solution == J::TieBreaker::Solution::Postpone && resolution.id,
                   "owned snapshot fixture did not postpone");
             resolutionId = resolution.id;
@@ -183,15 +181,13 @@ int main(int argc, char **argv)
     {
         J::TieBreaker tieBreaker;
         Resolver      breaker;
-        breaker.solution         = J::TieBreaker::Solution::Break;
-        auto registration       = tieBreaker.registerResolver(J::Action::ContentModify, &breaker);
+        breaker.solution                       = J::TieBreaker::Solution::Break;
+        auto                      registration = tieBreaker.registerResolver(J::Action::ContentModify, &breaker);
         J::TieBreaker::Resolution result;
         {
             QDomDocument localDoc, remoteDoc;
-            tieBreaker.outgoingStarted(J::Action::ContentModify,
-                                       jingle(localDoc, QStringLiteral("break-owned")));
-            result = tieBreaker.resolveIncoming(J::Action::ContentModify,
-                                                jingle(remoteDoc, QStringLiteral("remote")));
+            tieBreaker.outgoingStarted(J::Action::ContentModify, jingle(localDoc, QStringLiteral("break-owned")));
+            result = tieBreaker.resolveIncoming(J::Action::ContentModify, jingle(remoteDoc, QStringLiteral("remote")));
         }
         tieBreaker.clear();
         churnDom();

@@ -86,9 +86,8 @@ struct OwnedXml {
 static OwnedXml payload(const QString &contents)
 {
     OwnedXml xml;
-    check(xml.doc.setContent(QStringLiteral("<jingle xmlns='urn:xmpp:jingle:1'>") + contents
-                                 + QStringLiteral("</jingle>"),
-                             true),
+    check(xml.doc.setContent(
+              QStringLiteral("<jingle xmlns='urn:xmpp:jingle:1'>") + contents + QStringLiteral("</jingle>"), true),
           "invalid test XML");
     xml.root = xml.doc.documentElement();
     return xml;

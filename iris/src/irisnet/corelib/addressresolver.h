@@ -19,12 +19,14 @@
 #ifndef ADDRESSRESOLVER_H
 #define ADDRESSRESOLVER_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <QHostAddress>
 #include <QObject>
 
 namespace XMPP {
 // resolve both AAAA and A for a hostname
-class AddressResolver : public QObject {
+class IRISNET_EXPORT AddressResolver : public QObject {
     Q_OBJECT
 
 public:
@@ -41,7 +43,7 @@ signals:
     void error(XMPP::AddressResolver::Error e);
 
 private:
-    class Private;
+    class IRISNET_NO_EXPORT Private;
     friend class Private;
     Private *d;
 };

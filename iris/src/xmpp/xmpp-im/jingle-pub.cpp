@@ -503,7 +503,8 @@ public:
         QPointer<PublishedSessionProvider> provider;
         PublishedSessionEndpoint           endpoint;
         QString                            itemId;
-        bool                               active = true;
+        bool                               active                  = true;
+        quint64                            localMutationGeneration = 0;
     };
 
     struct AuthorityEvent {
@@ -757,6 +758,13 @@ PubSubPublishTask *PublicationManager::publishSession(const QString &publication
         const auto publishedId = task->publishedId();
         if (!publishedId.isEmpty() && publishedId != expectedItemId)
             return;
+
+        auto       session = d->publishedSessions.find(publicationId);
+        const auto context = d->providers.constFind(provider.data());
+        if (session != d->publishedSessions.end() && session->provider == provider && context != d->providers.cend()
+            && context->state == PublishedSessionProvider::State::Synchronizing) {
+            session->localMutationGeneration = context->generation;
+        }
         setPublishedSessionActive(provider, publicationId, true);
     });
     return task;
@@ -770,8 +778,18 @@ PubSubRetractTask *PublicationManager::retractSession(const QString &publication
     const auto provider = it->provider;
     const auto endpoint = resolvedEndpoint(it->endpoint, client());
     const auto itemId   = it->itemId;
+    auto       task     = retractSessionAnnouncement(endpoint.service, endpoint.node, itemId, notify);
+    if (!task)
+        return nullptr;
+
+    auto       session = d->publishedSessions.find(publicationId);
+    const auto context = d->providers.constFind(provider.data());
+    if (session != d->publishedSessions.end() && session->provider == provider && context != d->providers.cend()
+        && context->state == PublishedSessionProvider::State::Synchronizing) {
+        session->localMutationGeneration = context->generation;
+    }
     setPublishedSessionActive(provider, publicationId, false);
-    return retractSessionAnnouncement(endpoint.service, endpoint.node, itemId, notify);
+    return task;
 }
 
 PubSubPublishTask *PublicationManager::publishSessionAnnouncement(const Jid &service, const QString &node,
@@ -957,26 +975,42 @@ void PublicationManager::providerSynchronizationFinished(PublishedSessionProvide
     if (context == d->providers.end() || context->state != PublishedSessionProvider::State::Synchronizing)
         return;
 
-    const auto discovery = context->discoveryItems.values();
-    const auto targeted  = context->targetedResults.values();
-    const auto events    = context->bufferedEvents;
+    const auto generation = context->generation;
+    const auto discovery  = context->discoveryItems.values();
+    const auto targeted   = context->targetedResults.values();
+    const auto events     = context->bufferedEvents;
     context->discoveryItems.clear();
     context->targetedResults.clear();
     context->bufferedEvents.clear();
     context->pendingTasks = 0;
 
-    for (const auto &event : discovery)
-        applyPublishedItem(provider, event.endpoint, event.itemId, event.publication);
-    // Targeted results are authoritative for known ids and deliberately
-    // override a possibly truncated/unordered discovery snapshot.
+    const auto snapshotPredatesLocalMutation = [this, provider, generation](const Private::AuthorityEvent &event) {
+        const auto sessions = d->publishedSessions.values();
+        return std::any_of(
+            sessions.cbegin(), sessions.cend(), [this, provider, generation, &event](const auto &session) {
+                return session.provider == provider && session.itemId == event.itemId
+                    && session.localMutationGeneration == generation
+                    && endpointMatches(session.endpoint, event.endpoint.service, event.endpoint.node, client());
+            });
+    };
+
+    for (const auto &event : discovery) {
+        if (!snapshotPredatesLocalMutation(event))
+            applyPublishedItem(provider, event.endpoint, event.itemId, event.publication);
+    }
+    // Targeted results are authoritative for known ids unless the local item
+    // changed after this synchronization snapshot was started.
     for (const auto &event : targeted) {
+        if (snapshotPredatesLocalMutation(event))
+            continue;
         if (event.type == Private::AuthorityEvent::Type::Published)
             applyPublishedItem(provider, event.endpoint, event.itemId, event.publication);
         else
             applyRetractedItem(provider, event.endpoint, event.itemId);
     }
     // PubSub notifications observed while the IQs were in flight are replayed
-    // last so a stale snapshot cannot resurrect a retracted item.
+    // last. They are newer than both the snapshot and any local mutation which
+    // happened before the notification, so they remain authoritative.
     for (const auto &event : events) {
         switch (event.type) {
         case Private::AuthorityEvent::Type::Published:

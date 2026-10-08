@@ -19,12 +19,14 @@
 #ifndef STUNMESSAGE_H
 #define STUNMESSAGE_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <QByteArray>
 #include <QList>
 #include <QSharedDataPointer>
 
 namespace XMPP {
-class StunMessage {
+class IRISNET_EXPORT StunMessage {
 public:
     enum Class { Request, SuccessResponse, ErrorResponse, Indication };
 
@@ -85,7 +87,7 @@ public:
     static QByteArray readStun(const quint8 *data, int size);
 
 private:
-    class Private;
+    class IRISNET_NO_EXPORT     Private;
     QSharedDataPointer<Private> d;
 };
 } // namespace XMPP

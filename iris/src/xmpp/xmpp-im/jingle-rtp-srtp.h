@@ -54,10 +54,10 @@ public:
     SecureRtpAssociation(XMPP::Dtls *dtls, QByteArray associationId, QObject *parent = nullptr);
     ~SecureRtpAssociation() override;
 
-    void                      close();
-    bool                      isReady() const;
-    const QByteArray         &associationId() const { return associationId_; }
-    quint64                   epoch() const { return epoch_; }
+    void                           close();
+    bool                           isReady() const;
+    const QByteArray              &associationId() const { return associationId_; }
+    quint64                        epoch() const { return epoch_; }
     const SecureRtpKeyingMaterial &keyingMaterial() const { return material_; }
 
     // Ingress from one RTP/RTCP-mux ICE component. DTLS is consumed locally;
@@ -77,11 +77,11 @@ private:
     void activate();
     void invalidate();
 
-    QPointer<XMPP::Dtls>     dtls_;
-    QByteArray               associationId_;
-    SecureRtpKeyingMaterial  material_;
-    quint64                  epoch_  = 0;
-    bool                     active_ = false;
+    QPointer<XMPP::Dtls>    dtls_;
+    QByteArray              associationId_;
+    SecureRtpKeyingMaterial material_;
+    quint64                 epoch_  = 0;
+    bool                    active_ = false;
 };
 
 // Implemented by transports offering authenticated RTP/RTCP mux. The transport
@@ -89,10 +89,10 @@ private:
 // SRTP/SRTCP crypto.
 class IRIS_EXPORT PacketTransport {
 public:
-    virtual ~PacketTransport() = default;
-    virtual bool enableRtpMux(const QStringList &profiles) = 0;
-    virtual SecureRtpAssociation *rtpAssociation() const = 0;
-    virtual bool sendProtectedRtpPacket(QByteArray, PacketKind, quint64 epoch) = 0;
+    virtual ~PacketTransport()                                                                  = default;
+    virtual bool                  enableRtpMux(const QStringList &profiles)                     = 0;
+    virtual SecureRtpAssociation *rtpAssociation() const                                        = 0;
+    virtual bool                  sendProtectedRtpPacket(QByteArray, PacketKind, quint64 epoch) = 0;
 };
 
 } // namespace XMPP::Jingle::RTP

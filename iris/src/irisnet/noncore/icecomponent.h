@@ -19,6 +19,8 @@
 #ifndef ICECOMPONENT_H
 #define ICECOMPONENT_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <iris/irisnet/noncore/ice176.h>
 #include <iris/irisnet/noncore/icetransport.h>
 #include <iris/irisnet/noncore/turnclient.h>
@@ -30,7 +32,7 @@ class QUdpSocket;
 namespace XMPP {
 class UdpPortReserver;
 
-class IceComponent : public QObject {
+class IRISNET_EXPORT IceComponent : public QObject {
     Q_OBJECT
 
 public:
@@ -146,7 +148,7 @@ signals:
     void debugLine(const QString &line);
 
 private:
-    class Private;
+    class IRISNET_NO_EXPORT Private;
     friend class Private;
     Private *d;
 };

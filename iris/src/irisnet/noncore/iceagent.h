@@ -1,6 +1,8 @@
 #ifndef XMPP_ICEAGENT_H
 #define XMPP_ICEAGENT_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <iris/irisnet/noncore/icecomponent.h>
 
 #include <QObject>
@@ -8,7 +10,7 @@
 
 namespace XMPP {
 
-class IceAgent : public QObject {
+class IRISNET_EXPORT IceAgent : public QObject {
     Q_OBJECT
 public:
     static IceAgent *instance();
@@ -26,7 +28,7 @@ private:
 signals:
 
 private:
-    struct Private;
+    struct IRISNET_NO_EXPORT Private;
     std::unique_ptr<Private> d;
 };
 

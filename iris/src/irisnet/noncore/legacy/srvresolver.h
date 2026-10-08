@@ -20,6 +20,8 @@
 #ifndef CS_SRVRESOLVER_H
 #define CS_SRVRESOLVER_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <iris/irisnet/corelib/netnames.h>
 
 #include <QtCore>
@@ -42,7 +44,7 @@ public:
     };
 };
 
-class SrvResolver : public QObject {
+class IRISNET_EXPORT SrvResolver : public QObject {
     Q_OBJECT
 public:
     SrvResolver(QObject *parent = nullptr);
@@ -70,8 +72,8 @@ private slots:
     void t_timeout();
 
 private:
-    class Private;
-    Private *d;
+    class IRISNET_NO_EXPORT Private;
+    Private                *d;
 
     void tryNext();
 };

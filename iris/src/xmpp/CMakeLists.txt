@@ -35,7 +35,7 @@ add_library(iris::iris ALIAS iris)
 
 get_target_property(_iris_library_type iris TYPE)
 if(_iris_library_type STREQUAL "STATIC_LIBRARY")
-    target_compile_definitions(iris PUBLIC IRIS_STATIC)
+    target_compile_definitions(iris PUBLIC IRIS_STATIC IRISNET_STATIC)
 else()
     target_compile_definitions(iris PRIVATE IRIS_BUILDING_LIBRARY)
 endif()
@@ -317,7 +317,7 @@ if(WIN32)
     target_compile_definitions(iris PRIVATE NOMINMAX)
 endif()
 
-target_compile_definitions(iris PUBLIC IRISNET_STATIC QSTRINGPREP_BUILDING)
+target_compile_definitions(iris PUBLIC QSTRINGPREP_BUILDING)
 
 target_include_directories(iris
     PRIVATE

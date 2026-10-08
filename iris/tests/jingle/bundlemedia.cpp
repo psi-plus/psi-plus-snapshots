@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include "../../src/xmpp/xmpp-im/jingle-ice-connection_p.h"
-#include <iris/ice176.h>
 #include <iris/dtls.h>
+#include <iris/ice176.h>
 #include <iris/jingle-rtp-srtp.h>
 #include <iris/jingle-rtp.h>
 #include <iris/jingle-session.h>
@@ -32,13 +32,13 @@ public:
 };
 
 struct MediaState {
-    QString                           media;
-    quint8                            payload = 0;
-    quint32                           ssrc    = 0;
+    QString                                 media;
+    quint8                                  payload = 0;
+    quint32                                 ssrc    = 0;
     std::function<bool(const QByteArray &)> writer;
-    QList<QByteArray>                 received;
-    int                               configured = 0;
-    int                               attached   = 0;
+    QList<QByteArray>                       received;
+    int                                     configured = 0;
+    int                                     attached   = 0;
 };
 
 class Endpoint final : public J::RTP::MediaEndpoint {
@@ -93,8 +93,7 @@ class MediaSession final : public J::RTP::MediaSession {
 public:
     explicit MediaSession(QHash<QString, std::shared_ptr<MediaState>> states) : states_(std::move(states)) { }
 
-    std::unique_ptr<J::RTP::MediaEndpoint> createEndpoint(const QString &contentName,
-                                                           const QString &media) override
+    std::unique_ptr<J::RTP::MediaEndpoint> createEndpoint(const QString &contentName, const QString &media) override
     {
         auto state = states_.value(contentName);
         if (!state || state->media != media)
@@ -134,9 +133,9 @@ public:
                 ++state->attached;
             }
             const auto endpointId = endpoint.endpointId;
-            state->writer = [this, endpointId](const QByteArray &packet) {
+            state->writer         = [this, endpointId](const QByteArray &packet) {
                 auto it = std::find_if(endpoints_.cbegin(), endpoints_.cend(),
-                                       [&endpointId](const auto &value) { return value.endpointId == endpointId; });
+                                               [&endpointId](const auto &value) { return value.endpointId == endpointId; });
                 if (it == endpoints_.cend() || !protectedWriter_)
                     return false;
                 const auto epoch = epochs_.value(it->associationId);
@@ -186,10 +185,10 @@ public:
             || packet.data.size() < 12 || (quint8(packet.data[0]) >> 6) != 2)
             return false;
 
-        const quint8 payload = quint8(packet.data[1]) & 0x7f;
-        const auto *bytes = reinterpret_cast<const uchar *>(packet.data.constData());
-        const quint32 ssrc = (quint32(bytes[8]) << 24) | (quint32(bytes[9]) << 16)
-            | (quint32(bytes[10]) << 8) | quint32(bytes[11]);
+        const quint8  payload = quint8(packet.data[1]) & 0x7f;
+        const auto   *bytes   = reinterpret_cast<const uchar *>(packet.data.constData());
+        const quint32 ssrc
+            = (quint32(bytes[8]) << 24) | (quint32(bytes[9]) << 16) | (quint32(bytes[10]) << 8) | quint32(bytes[11]);
 
         const J::RTP::SecureRtpEndpoint *selected = nullptr;
         for (const auto &endpoint : endpoints_) {
@@ -203,8 +202,7 @@ public:
         }
         if (!selected) {
             for (const auto &endpoint : endpoints_) {
-                if (endpoint.associationId != packet.associationId
-                    || !endpoint.incomingPayloadTypes.contains(payload))
+                if (endpoint.associationId != packet.associationId || !endpoint.incomingPayloadTypes.contains(payload))
                     continue;
                 if (selected)
                     return false;
@@ -241,16 +239,10 @@ class Provider final : public J::RTP::MediaProvider {
 public:
     explicit Provider(QHash<QString, std::shared_ptr<MediaState>> states) : states_(std::move(states)) { }
 
-    std::unique_ptr<J::RTP::MediaSession> createSession() override
-    {
-        return std::make_unique<MediaSession>(states_);
-    }
+    std::unique_ptr<J::RTP::MediaSession> createSession() override { return std::make_unique<MediaSession>(states_); }
 
     QStringList mediaTypes() const override { return { QStringLiteral("audio"), QStringLiteral("video") }; }
-    QStringList secureRtpProfiles() const override
-    {
-        return { QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80") };
-    }
+    QStringList secureRtpProfiles() const override { return { QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80") }; }
 
 private:
     QHash<QString, std::shared_ptr<MediaState>> states_;
@@ -273,19 +265,19 @@ public:
 };
 
 struct Side {
-    Client                             client;
-    J::Session                         session;
-    J::TransportManagerPad::Ptr        baseIcePad;
-    QSharedPointer<J::ICE::Pad>        icePad;
-    QSharedPointer<J::RTP::Pad>        rtpPad;
-    std::shared_ptr<MediaState>        audioState;
-    std::shared_ptr<MediaState>        videoState;
-    J::RTP::Application               *audioApp = nullptr;
-    J::RTP::Application               *videoApp = nullptr;
-    QSharedPointer<TestIceTransport>   audioTransport;
-    QSharedPointer<TestIceTransport>   videoTransport;
-    J::ICE::IceConnection             *network = nullptr;
-    bool                               localApplications = false;
+    Client                           client;
+    J::Session                       session;
+    J::TransportManagerPad::Ptr      baseIcePad;
+    QSharedPointer<J::ICE::Pad>      icePad;
+    QSharedPointer<J::RTP::Pad>      rtpPad;
+    std::shared_ptr<MediaState>      audioState;
+    std::shared_ptr<MediaState>      videoState;
+    J::RTP::Application             *audioApp = nullptr;
+    J::RTP::Application             *videoApp = nullptr;
+    QSharedPointer<TestIceTransport> audioTransport;
+    QSharedPointer<TestIceTransport> videoTransport;
+    J::ICE::IceConnection           *network           = nullptr;
+    bool                             localApplications = false;
 
     Side(const Jid &peer, bool local, quint32 audioSsrc, quint32 videoSsrc, TcpPortReserver *reserver) :
         session(client.jingleManager(), peer, J::Origin::Initiator), localApplications(local)
@@ -293,11 +285,11 @@ struct Side {
         client.setTcpPortReserver(reserver);
         client.jingleICEManager()->setSelfAddress(QHostAddress::LocalHost);
 
-        audioState = std::make_shared<MediaState>();
+        audioState          = std::make_shared<MediaState>();
         audioState->media   = QStringLiteral("audio");
         audioState->payload = 96;
         audioState->ssrc    = audioSsrc;
-        videoState = std::make_shared<MediaState>();
+        videoState          = std::make_shared<MediaState>();
         videoState->media   = QStringLiteral("video");
         videoState->payload = 97;
         videoState->ssrc    = videoSsrc;
@@ -306,12 +298,11 @@ struct Side {
         states.insert(QStringLiteral("audio"), audioState);
         states.insert(QStringLiteral("video"), videoState);
         rtpPad = QSharedPointer<J::RTP::Pad>::create(client.jingleManager()->rtpManager(), &session,
-                                                      std::make_shared<Provider>(states),
-                                                      QStringList { J::ICE::NS });
+                                                     std::make_shared<Provider>(states), QStringList { J::ICE::NS });
 
         const auto creator = local ? J::Origin::Initiator : J::Origin::Responder;
-        audioApp = new J::RTP::Application(rtpPad, QStringLiteral("audio"), creator, J::Origin::Both);
-        videoApp = new J::RTP::Application(rtpPad, QStringLiteral("video"), creator, J::Origin::Both);
+        audioApp           = new J::RTP::Application(rtpPad, QStringLiteral("audio"), creator, J::Origin::Both);
+        videoApp           = new J::RTP::Application(rtpPad, QStringLiteral("video"), creator, J::Origin::Both);
         if (local) {
             check(audioApp->initializeOutgoing(QStringLiteral("audio"))
                       && videoApp->initializeOutgoing(QStringLiteral("video")),
@@ -327,15 +318,15 @@ struct Side {
         check(bool(icePad), "wrong ICE pad type");
 
         const auto transportCreator = local ? J::Origin::Initiator : J::Origin::Responder;
-        audioTransport = QSharedPointer<TestIceTransport>::create(baseIcePad, transportCreator);
-        videoTransport = QSharedPointer<TestIceTransport>::create(baseIcePad, transportCreator);
+        audioTransport              = QSharedPointer<TestIceTransport>::create(baseIcePad, transportCreator);
+        videoTransport              = QSharedPointer<TestIceTransport>::create(baseIcePad, transportCreator);
         check(audioApp->setTransport(audioTransport) && videoApp->setTransport(videoTransport),
               "RTP applications rejected ICE transports");
         check(session.setGroupings({ J::ContentGroup { QStringLiteral("BUNDLE"),
-                                                        { QStringLiteral("audio"), QStringLiteral("video") } } }),
+                                                       { QStringLiteral("audio"), QStringLiteral("video") } } }),
               "RTP BUNDLE grouping rejected");
 
-        bool audioBound = false, audioGrouped = false, videoBound = false, videoGrouped = false;
+        bool  audioBound = false, audioGrouped = false, videoBound = false, videoGrouped = false;
         auto *audioNetwork = icePad->groupedConnectionFor(audioTransport.data(), &audioBound, &audioGrouped);
         auto *videoNetwork = icePad->groupedConnectionFor(videoTransport.data(), &videoBound, &videoGrouped);
         check(audioBound && videoBound && audioGrouped && videoGrouped && audioNetwork && audioNetwork == videoNetwork,
@@ -348,16 +339,16 @@ struct Side {
 static QByteArray rtpPacket(quint8 payload, quint16 sequence, quint32 timestamp, quint32 ssrc, const char *text)
 {
     QByteArray packet(12, '\0');
-    packet[0] = char(0x80);
-    packet[1] = char(payload & 0x7f);
-    packet[2] = char(sequence >> 8);
-    packet[3] = char(sequence & 0xff);
-    packet[4] = char(timestamp >> 24);
-    packet[5] = char(timestamp >> 16);
-    packet[6] = char(timestamp >> 8);
-    packet[7] = char(timestamp);
-    packet[8] = char(ssrc >> 24);
-    packet[9] = char(ssrc >> 16);
+    packet[0]  = char(0x80);
+    packet[1]  = char(payload & 0x7f);
+    packet[2]  = char(sequence >> 8);
+    packet[3]  = char(sequence & 0xff);
+    packet[4]  = char(timestamp >> 24);
+    packet[5]  = char(timestamp >> 16);
+    packet[6]  = char(timestamp >> 8);
+    packet[7]  = char(timestamp);
+    packet[8]  = char(ssrc >> 24);
+    packet[9]  = char(ssrc >> 16);
     packet[10] = char(ssrc >> 8);
     packet[11] = char(ssrc);
     packet += text;
@@ -371,11 +362,11 @@ int main(int argc, char **argv)
     check(!Dtls::supportedSRTPProfiles().isEmpty(), "DTLS-SRTP backend required");
 
     TcpPortReserver reserver;
-    Side first(Jid(QStringLiteral("second@example.test/device")), true, 0x11111111u, 0x22222222u, &reserver);
+    Side            first(Jid(QStringLiteral("second@example.test/device")), true, 0x11111111u, 0x22222222u, &reserver);
     Side second(Jid(QStringLiteral("first@example.test/device")), false, 0x33333333u, 0x44444444u, &reserver);
 
     bool failed = false;
-    auto fail = [&]() { failed = true; };
+    auto fail   = [&]() { failed = true; };
     for (const auto &transport :
          { first.audioTransport, first.videoTransport, second.audioTransport, second.videoTransport })
         QObject::connect(transport.data(), &J::Transport::failed, &app, fail);
@@ -397,7 +388,7 @@ int main(int argc, char **argv)
     };
 
     QEventLoop loop;
-    QTimer tick, deadline;
+    QTimer     tick, deadline;
     deadline.setSingleShot(true);
     QObject::connect(&deadline, &QTimer::timeout, &loop, &QEventLoop::quit);
 
@@ -405,7 +396,7 @@ int main(int argc, char **argv)
     bool firstAudioSignaled = false, firstVideoSignaled = false, secondPrepared = false;
     bool secondAudioSignaled = false, secondVideoSignaled = false, answersApplied = false;
     bool checksStarted = false, initialSent = false, membersRemoved = false, staleSent = false, survivorSent = false;
-    int secondAudioBeforeRemoval = 0, secondVideoBeforeSurvivor = 0;
+    int  secondAudioBeforeRemoval = 0, secondVideoBeforeSurvivor = 0;
 
     const auto audioPacket = rtpPacket(96, 1, 1, first.audioState->ssrc, "bundle-audio");
     const auto videoPacket = rtpPacket(97, 1, 2, first.videoState->ssrc, "bundle-video");
@@ -454,10 +445,9 @@ int main(int argc, char **argv)
             second.videoApp->start();
         }
 
-        if (!checksStarted && answersApplied
-            && first.audioApp->state() >= J::State::Connecting && first.videoApp->state() >= J::State::Connecting
-            && second.audioApp->state() >= J::State::Connecting && second.videoApp->state() >= J::State::Connecting
-            && first.network->ice && second.network->ice) {
+        if (!checksStarted && answersApplied && first.audioApp->state() >= J::State::Connecting
+            && first.videoApp->state() >= J::State::Connecting && second.audioApp->state() >= J::State::Connecting
+            && second.videoApp->state() >= J::State::Connecting && first.network->ice && second.network->ice) {
             checksStarted = true;
             first.network->ice->startChecks();
             second.network->ice->startChecks();
@@ -467,13 +457,11 @@ int main(int argc, char **argv)
             && first.videoApp->state() == J::State::Active && second.audioApp->state() == J::State::Active
             && second.videoApp->state() == J::State::Active) {
             initialSent = true;
-            check(first.audioState->attached == 1 && first.videoState->attached == 1
-                      && second.audioState->attached == 1 && second.videoState->attached == 1,
+            check(first.audioState->attached == 1 && first.videoState->attached == 1 && second.audioState->attached == 1
+                      && second.videoState->attached == 1,
                   "RTP BUNDLE endpoints did not attach exactly once");
-            check(first.audioState->writer && first.audioState->writer(audioPacket),
-                  "audio RTP BUNDLE writer failed");
-            check(first.videoState->writer && first.videoState->writer(videoPacket),
-                  "video RTP BUNDLE writer failed");
+            check(first.audioState->writer && first.audioState->writer(audioPacket), "audio RTP BUNDLE writer failed");
+            check(first.videoState->writer && first.videoState->writer(videoPacket), "video RTP BUNDLE writer failed");
         }
 
         if (!membersRemoved && initialSent && second.audioState->received.contains(audioPacket)
@@ -481,8 +469,8 @@ int main(int argc, char **argv)
             check(!second.audioState->received.contains(videoPacket)
                       && !second.videoState->received.contains(audioPacket),
                   "backend group router cross-routed audio/video RTP");
-            membersRemoved = true;
-            secondAudioBeforeRemoval = second.audioState->received.size();
+            membersRemoved            = true;
+            secondAudioBeforeRemoval  = second.audioState->received.size();
             secondVideoBeforeSurvivor = second.videoState->received.size();
 
             first.audioApp->remove(J::Reason::Success);
@@ -495,11 +483,11 @@ int main(int argc, char **argv)
         }
 
         if (membersRemoved && !staleSent) {
-            staleSent = true;
+            staleSent         = true;
             auto *association = first.videoTransport->rtpAssociation();
             check(association
-                      && first.videoTransport->sendProtectedRtpPacket(
-                          staleAudio, J::RTP::PacketKind::Rtp, association->epoch()),
+                      && first.videoTransport->sendProtectedRtpPacket(staleAudio, J::RTP::PacketKind::Rtp,
+                                                                      association->epoch()),
                   "authenticated stale-audio probe failed to enter shared secure RTP");
         }
 
@@ -540,7 +528,7 @@ int main(int argc, char **argv)
     // (for example while the ICE connection itself is being torn down). The
     // media backend must still lose the exported keys immediately rather than
     // keeping them staged until the whole MediaSession is destroyed.
-    auto *firstBackend = dynamic_cast<MediaSession *>(first.rtpPad->mediaSession());
+    auto *firstBackend     = dynamic_cast<MediaSession *>(first.rtpPad->mediaSession());
     auto *dyingAssociation = first.videoTransport->rtpAssociation();
     check(firstBackend && dyingAssociation, "secure RTP destruction fixture unavailable");
     const auto dyingId    = dyingAssociation->associationId();

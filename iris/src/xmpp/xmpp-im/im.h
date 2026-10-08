@@ -33,10 +33,10 @@
 #include <iris/xmpp-im/xmpp_hash.h>
 #include <iris/xmpp-im/xmpp_htmlelement.h>
 #include <iris/xmpp-im/xmpp_httpauthrequest.h>
+#include <iris/xmpp-im/xmpp_jinglemessage.h>
 #include <iris/xmpp-im/xmpp_liveroster.h>
 #include <iris/xmpp-im/xmpp_liverosteritem.h>
 #include <iris/xmpp-im/xmpp_message.h>
-#include <iris/xmpp-im/xmpp_jinglemessage.h>
 #include <iris/xmpp-im/xmpp_muc.h>
 #include <iris/xmpp-im/xmpp_omemostorage.h>
 #include <iris/xmpp-im/xmpp_pubsub.h>

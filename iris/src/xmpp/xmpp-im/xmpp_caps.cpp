@@ -227,7 +227,8 @@ void CapsManager::setEnabled(bool b) { isEnabled_ = b; }
  */
 void CapsManager::updateCaps(const Jid &jid, const CapsSpec &c)
 {
-    if (jid.compare(client_->jid(), false))
+    // Other resources of our account are independent peers (e.g. file sync).
+    if (jid.compare(client_->jid()))
         return;
 
     QString fullNode = c.flatten();

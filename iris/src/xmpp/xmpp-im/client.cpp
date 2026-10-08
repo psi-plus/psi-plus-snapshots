@@ -208,10 +208,13 @@ Client::~Client()
 
     close(true);
 
+    // Stop and destroy Jingle sessions while both its own managers and the
+    // lower-level IBB/S5B infrastructure are still alive.
+    delete d->jingleManager;
+    d->jingleManager = nullptr;
     delete d->ftman;
     delete d->ibbman;
     delete d->s5bman;
-    delete d->jingleManager;
     delete d->root;
     delete d;
     // fprintf(stderr, "\tClient::~Client\n");

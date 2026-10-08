@@ -22,8 +22,8 @@ static std::optional<XMPP::Jingle::ICE::UdpTransportDescription> parseXml(const 
 
 static std::optional<XMPP::Jingle::ICE::UdpTransportDescription> parse(const QString &body)
 {
-    return parseXml(
-        "<transport xmlns='urn:xmpp:jingle:transports:ice-udp:1' pwd='secret' ufrag='frag'>" + body + "</transport>");
+    return parseXml("<transport xmlns='urn:xmpp:jingle:transports:ice-udp:1' pwd='secret' ufrag='frag'>" + body
+                    + "</transport>");
 }
 
 static QString opaqueNamespace(const QByteArray &xml)
@@ -88,11 +88,10 @@ int main(int argc, char **argv)
           "valid remote-candidate rejected");
 
     check(parse("").has_value(), "empty ICE-UDP transport rejected");
-    check(
-        !parseXml(
-            "<transport xmlns='urn:xmpp:jingle:transports:ice-udp:1'><candidate component='1' foundation='1' "
-            "generation='0' id='x' ip='192.0.2.1' port='5000' priority='1' protocol='udp' type='host'/></transport>"),
-        "candidate without credentials accepted");
+    check(!parseXml(
+              "<transport xmlns='urn:xmpp:jingle:transports:ice-udp:1'><candidate component='1' foundation='1' "
+              "generation='0' id='x' ip='192.0.2.1' port='5000' priority='1' protocol='udp' type='host'/></transport>"),
+          "candidate without credentials accepted");
     check(!parse("<candidate component='0' foundation='1' generation='0' id='x' ip='192.0.2.1' port='5000' "
                  "priority='1' protocol='udp' type='host'/>")
               && !parse("<candidate component='1' foundation='1' generation='256' id='x' ip='192.0.2.1' port='5000' "

@@ -93,7 +93,7 @@ namespace XMPP { namespace Jingle {
         // replacement unit. Replacing only some of its members would split one
         // live association into multiple signaling incarnations.
         static bool replacementBatchPreservesBundles(const QList<ContentGroup> &negotiated,
-                                                     const QSet<ContentKey> &replacements)
+                                                     const QSet<ContentKey>    &replacements)
         {
             QHash<QString, int> replacedNames;
             for (const auto &key : replacements)

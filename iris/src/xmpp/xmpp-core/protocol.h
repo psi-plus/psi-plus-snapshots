@@ -243,7 +243,7 @@ private:
     struct SendItem {
         QDomElement stanzaToSend;
         QString     stringToSend;
-        bool        doWhitespace;
+        bool        doWhitespace = false;
     };
     QList<SendItem> sendList;
 

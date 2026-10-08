@@ -1,1 +1,1 @@
-#include "../../src/xmpp/xmpp-im/jingle-rtp-srtp.h"
+#include <iris/xmpp-im/jingle-rtp-srtp.h>

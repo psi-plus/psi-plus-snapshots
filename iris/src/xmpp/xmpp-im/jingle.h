@@ -37,7 +37,7 @@ class QDomDocument;
 class QDomElement;
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-Q_MOC_INCLUDE(<iris/xmpp-im/xmpp_message.h>)
+Q_MOC_INCLUDE(<iris / xmpp - im / xmpp_message.h>)
 #endif
 
 namespace XMPP {
@@ -389,11 +389,10 @@ namespace Jingle {
         bool isAllowedParty(const Jid &jid) const;
         void setRemoteJidChecker(std::function<bool(const Jid &)> checker);
 
-        Session                                  *session(const Jid &remoteJid, const QString &sid);
-        Session                                  *newSession(const Jid &j);
-        Session                                  *newSession(const Jid &j, const QString &sid);
-        QString                                   registerSession(Session *session,
-                                                                  const QString &requestedSid = QString());
+        Session *session(const Jid &remoteJid, const QString &sid);
+        Session *newSession(const Jid &j);
+        Session *newSession(const Jid &j, const QString &sid);
+        QString  registerSession(Session *session, const QString &requestedSid = QString());
         const std::optional<XMPP::Stanza::Error> &lastError() const;
 
         PublicationManager *publicationManager() const;
@@ -415,8 +414,7 @@ namespace Jingle {
         void detachSession(Session *s); // disconnect the session from manager
     signals:
         void incomingSession(Session *);
-        void incomingMessageInitiation(const XMPP::Message &message,
-                                       const XMPP::Jingle::MessageInitiation &initiation);
+        void incomingMessageInitiation(const XMPP::Message &message, const XMPP::Jingle::MessageInitiation &initiation);
 
     private:
         friend class JTPush;
@@ -426,8 +424,9 @@ namespace Jingle {
         std::optional<std::any> parseMessageInitiationDescription(const QDomElement &element) const;
         QDomElement serializeMessageInitiationDescription(const QString &applicationNamespace, const std::any &data,
                                                           QDomDocument *document) const;
-        void     clientPresenceAvailable();
-        Session *incomingSessionInitiate(const Jid &from, const Jingle &jingle, const QDomElement &jingleEl);
+        void        shutdown();
+        void        clientPresenceAvailable();
+        Session    *incomingSessionInitiate(const Jid &from, const Jingle &jingle, const QDomElement &jingleEl);
 
         class Private;
         std::unique_ptr<Private> d;

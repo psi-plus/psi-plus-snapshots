@@ -20,6 +20,7 @@
 #ifndef XMPP_JINGLE_FILETRANSFER_FILE_H
 #define XMPP_JINGLE_FILETRANSFER_FILE_H
 
+#include <iris/iris_export.h>
 #include <iris/xmpp-im/xmpp_hash.h>
 #include <iris/xmpp-im/xmpp_thumbs.h>
 
@@ -30,8 +31,8 @@
 #include <optional>
 
 namespace XMPP::Jingle::FileTransfer {
-extern const QString FILE_METADATA_NS;
-struct Range {
+extern IRIS_EXPORT const QString FILE_METADATA_NS;
+struct IRIS_EXPORT               Range {
     std::uint64_t offset = 0; // 0 - default value from spec even when not set.
     std::uint64_t length = 0; // 0 - from offset to the end of the file
     QList<Hash>   hashes;
@@ -43,7 +44,7 @@ struct Range {
     QDomElement toXml(QDomDocument *doc) const;
 };
 
-class File {
+class IRIS_EXPORT File {
 public:
     File();
     File(const File &other);
@@ -99,7 +100,7 @@ private:
     QSharedDataPointer<Private> d;
 };
 
-class FileHasher : public QObject {
+class IRIS_EXPORT FileHasher : public QObject {
     Q_OBJECT
 public:
     FileHasher(Hash::Type type);

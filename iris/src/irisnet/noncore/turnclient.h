@@ -19,6 +19,8 @@
 #ifndef TURNCLIENT_H
 #define TURNCLIENT_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <QByteArray>
 #include <QHostAddress>
 #include <QObject>
@@ -34,7 +36,7 @@ namespace XMPP {
 class StunAllocate;
 class StunTransactionPool;
 
-class TurnClient : public QObject {
+class IRISNET_EXPORT TurnClient : public QObject {
     Q_OBJECT
 
 public:
@@ -169,7 +171,7 @@ signals:
     void debugLine(const QString &line);
 
 private:
-    class Private;
+    class IRISNET_NO_EXPORT Private;
     friend class Private;
     Private *d;
 };

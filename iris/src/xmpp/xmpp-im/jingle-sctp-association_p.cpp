@@ -29,7 +29,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     static constexpr int MAX_MESSAGE_SIZE     = 262144;
     static constexpr int MAX_SEND_BUFFER_SIZE = 262144;
 
-    std::weak_ptr<Keeper> Keeper::instance;
+    Keeper::Ptr Keeper::instance;
 
     Keeper::Keeper()
     {
@@ -45,12 +45,9 @@ namespace XMPP { namespace Jingle { namespace SCTP {
 
     Keeper::Ptr Keeper::use()
     {
-        auto i = instance.lock();
-        if (!i) {
-            i        = std::make_shared<Keeper>();
-            instance = i;
-        }
-        return i;
+        if (!instance)
+            instance = std::make_shared<Keeper>();
+        return instance;
     }
 
     AssociationPrivate::AssociationPrivate(Association *q) :

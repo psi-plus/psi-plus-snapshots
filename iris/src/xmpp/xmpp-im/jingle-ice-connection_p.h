@@ -60,11 +60,11 @@ namespace Jingle {
         public:
             class Runtime;
 
-            QVector<Component>   components;
-            UdpPortReserver     *portReserver = nullptr;
-            Ice176              *ice          = nullptr;
-            QByteArray           secureRtpAssociationId;
-            ConnectionGeneration generation;
+            QVector<Component>       components;
+            UdpPortReserver         *portReserver = nullptr;
+            Ice176                  *ice          = nullptr;
+            QByteArray               secureRtpAssociationId;
+            ConnectionGeneration     generation;
             std::unique_ptr<Runtime> runtime;
 
             IceConnection();

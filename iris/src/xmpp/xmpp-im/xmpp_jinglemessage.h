@@ -26,60 +26,59 @@ class QDomDocument;
 
 namespace XMPP { namespace Jingle {
 
-class IRIS_EXPORT MessageInitiation {
-public:
-    enum class Action { None, Propose, Ringing, Proceed, Reject, Retract, Finish };
+    class IRIS_EXPORT MessageInitiation {
+    public:
+        enum class Action { None, Propose, Ringing, Proceed, Reject, Retract, Finish };
 
-    struct Description {
-        QString  applicationNamespace;
-        std::any data;
+        struct Description {
+            QString  applicationNamespace;
+            std::any data;
 
-        bool isValid() const;
-        bool isSupported() const { return data.has_value(); }
+            bool isValid() const;
+            bool isSupported() const { return data.has_value(); }
+        };
+
+        using DescriptionParser     = std::function<std::optional<std::any>(const QDomElement &)>;
+        using DescriptionSerializer = std::function<QDomElement(const QString &, const std::any &, QDomDocument *)>;
+
+        MessageInitiation();
+        MessageInitiation(Action action, const QString &id);
+        MessageInitiation(const MessageInitiation &);
+        MessageInitiation &operator=(const MessageInitiation &);
+        ~MessageInitiation();
+
+        static const QString    &ns();
+        static MessageInitiation fromXml(const QDomElement &element, const DescriptionParser &parser = {});
+
+        bool    isValid() const;
+        Action  action() const;
+        QString id() const;
+
+        // The JMI envelope only retains the application namespace and a payload
+        // produced by the matching ApplicationManager. Unknown applications remain
+        // visible as unsupported descriptions with an empty std::any.
+        QList<Description> descriptions() const;
+        void               setDescriptions(const QList<Description> &descriptions);
+        void               addDescription(const QString &applicationNamespace, std::any data = {});
+
+        QString reasonCondition() const;
+        QString reasonText() const;
+        void    setReason(const QString &condition, const QString &text = QString());
+
+        bool tieBreak() const;
+        void setTieBreak(bool enabled);
+
+        QString migratedTo() const;
+        void    setMigratedTo(const QString &id);
+
+        QDomElement toXml(QDomDocument *doc, const DescriptionSerializer &serializer = {}) const;
+
+    private:
+        class Private;
+        Private *ensureD();
+
+        QSharedDataPointer<Private> d;
     };
-
-    using DescriptionParser = std::function<std::optional<std::any>(const QDomElement &)>;
-    using DescriptionSerializer
-        = std::function<QDomElement(const QString &, const std::any &, QDomDocument *)>;
-
-    MessageInitiation();
-    MessageInitiation(Action action, const QString &id);
-    MessageInitiation(const MessageInitiation &);
-    MessageInitiation &operator=(const MessageInitiation &);
-    ~MessageInitiation();
-
-    static const QString &ns();
-    static MessageInitiation fromXml(const QDomElement &element, const DescriptionParser &parser = {});
-
-    bool    isValid() const;
-    Action  action() const;
-    QString id() const;
-
-    // The JMI envelope only retains the application namespace and a payload
-    // produced by the matching ApplicationManager. Unknown applications remain
-    // visible as unsupported descriptions with an empty std::any.
-    QList<Description> descriptions() const;
-    void setDescriptions(const QList<Description> &descriptions);
-    void addDescription(const QString &applicationNamespace, std::any data = {});
-
-    QString reasonCondition() const;
-    QString reasonText() const;
-    void    setReason(const QString &condition, const QString &text = QString());
-
-    bool tieBreak() const;
-    void setTieBreak(bool enabled);
-
-    QString migratedTo() const;
-    void setMigratedTo(const QString &id);
-
-    QDomElement toXml(QDomDocument *doc, const DescriptionSerializer &serializer = {}) const;
-
-private:
-    class Private;
-    Private *ensureD();
-
-    QSharedDataPointer<Private> d;
-};
 
 }} // namespace XMPP::Jingle
 

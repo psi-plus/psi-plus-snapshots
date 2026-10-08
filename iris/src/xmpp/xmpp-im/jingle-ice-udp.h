@@ -41,7 +41,7 @@ struct UdpTransportDescription {
     QString                           ufrag;
     QList<UdpCandidate>               candidates;
     std::optional<UdpRemoteCandidate> remoteCandidate;
-    QList<QByteArray>                  extensions; // serialized foreign XML; no parser-document lifetime
+    QList<QByteArray>                 extensions; // serialized foreign XML; no parser-document lifetime
 
     bool isValid(QString *error = nullptr) const;
 };

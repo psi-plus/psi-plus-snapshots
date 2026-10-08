@@ -65,9 +65,9 @@ public:
     // remain valid while a JinglePub instance sharing that data is alive.
     QList<QDomElement> descriptions() const;
     // Inputs are deep-imported; the caller's QDomDocument may be destroyed after return.
-    void               setDescriptions(const QList<QDomElement> &descriptions);
-    void               addDescription(const QDomElement &description);
-    void               addDescription(const QString &applicationNamespace);
+    void setDescriptions(const QList<QDomElement> &descriptions);
+    void addDescription(const QDomElement &description);
+    void addDescription(const QString &applicationNamespace);
 
     bool        fromXml(const QDomElement &element);
     QDomElement toXml(QDomDocument *doc) const;

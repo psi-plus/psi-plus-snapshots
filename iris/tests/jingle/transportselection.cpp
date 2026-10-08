@@ -1,9 +1,9 @@
 #include <QCoreApplication>
-#include <iris/xmpp-im/jingle-ibb.h>
 #include <iris/jingle-ice.h>
 #include <iris/jingle-nstransportslist.h>
-#include <iris/xmpp-im/jingle-s5b.h>
 #include <iris/jingle-session.h>
+#include <iris/xmpp-im/jingle-ibb.h>
+#include <iris/xmpp-im/jingle-s5b.h>
 #include <iris/xmpp_caps.h>
 #include <iris/xmpp_client.h>
 
@@ -36,10 +36,7 @@ static QString selectTransport(Session &session, const QStringList &transports)
     return transport ? transport->pad()->ns() : QString();
 }
 
-static QString selectIceProfile(Session &session)
-{
-    return selectTransport(session, { ICE::NS_ICE_UDP, ICE::NS });
-}
+static QString selectIceProfile(Session &session) { return selectTransport(session, { ICE::NS_ICE_UDP, ICE::NS }); }
 
 static bool isIceTransport(const QString &ns) { return ns == ICE::NS || ns == ICE::NS_ICE_UDP; }
 
@@ -95,8 +92,7 @@ int main(int argc, char **argv)
         check(isIceTransport(preferredFileTransferTransport),
               "data-capable ICE was not selected first for Jingle file transfer");
     else
-        check(preferredFileTransferTransport == S5B::NS,
-              "S5B was not selected when ICE was not data-capable");
+        check(preferredFileTransferTransport == S5B::NS, "S5B was not selected when ICE was not data-capable");
 
     setPeerFeatures(client, peer, { S5B::NS, IBB::NS });
     check(selectTransport(session, fileTransferTransports) == S5B::NS,

@@ -36,7 +36,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     struct Keeper {
         using Ptr = std::shared_ptr<Keeper>;
 
-        static std::weak_ptr<Keeper> instance;
+        static Ptr instance;
         Keeper();
         ~Keeper();
         static Ptr use();

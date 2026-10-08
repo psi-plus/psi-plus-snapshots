@@ -245,6 +245,8 @@ void IBBConnection::ibb_finished()
             if (d->closing) {
                 resetConnection();
                 emit delayedCloseFinished();
+                // Close completion may synchronously destroy this connection.
+                return;
             }
 
             if (bytesToWrite() || d->closePending)

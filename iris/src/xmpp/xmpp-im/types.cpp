@@ -18,6 +18,7 @@
  */
 
 #include "im.h"
+#include "jingle.h"
 #include "xmpp/xmpp-core/protocol.h"
 #include "xmpp_bitsofbinary.h"
 #include "xmpp_captcha.h"
@@ -25,7 +26,6 @@
 #include "xmpp_features.h"
 #include "xmpp_forwarding.h"
 #include "xmpp_ibb.h"
-#include "jingle.h"
 #include "xmpp_reference.h"
 #include "xmpp_xmlcommon.h"
 
@@ -750,18 +750,18 @@ public:
     bool                                     carbonsPrivate = false;
     Message::ProcessingHints                 processingHints;
     QString                                  replaceId;
-    QString                                  originId;            // XEP-0359
-    QString                                  encryptionProtocol;  // XEP-0380
-    Message::StanzaId                        stanzaId;            // XEP-0359
-    QList<Reference>                         references;          // XEP-0385 and XEP-0372
-    QList<StatelessFileSharing::FileSharing> fileSharings;        // XEP-0447
-    QList<StatelessFileSharing::Sources>     attachedFileSources; // XEP-0447 / XEP-0367
-    QString                                  attachToId;          // XEP-0367
-    QList<Jingle::JinglePub>                 jinglePublications;  // XEP-0358
-    Jingle::MessageInitiation                jingleMessageInitiation;  // XEP-0353
-    Forwarding                               forwarding;          // XEP-0297
-    Message::Reactions                       reactions;           // XEP-0444
-    QString                                  retraction;          // XEP-0424
+    QString                                  originId;                // XEP-0359
+    QString                                  encryptionProtocol;      // XEP-0380
+    Message::StanzaId                        stanzaId;                // XEP-0359
+    QList<Reference>                         references;              // XEP-0385 and XEP-0372
+    QList<StatelessFileSharing::FileSharing> fileSharings;            // XEP-0447
+    QList<StatelessFileSharing::Sources>     attachedFileSources;     // XEP-0447 / XEP-0367
+    QString                                  attachToId;              // XEP-0367
+    QList<Jingle::JinglePub>                 jinglePublications;      // XEP-0358
+    Jingle::MessageInitiation                jingleMessageInitiation; // XEP-0353
+    Forwarding                               forwarding;              // XEP-0297
+    Message::Reactions                       reactions;               // XEP-0444
+    QString                                  retraction;              // XEP-0424
 };
 
 #define MessageD() (d ? d : (d = new Private))
@@ -1292,7 +1292,6 @@ void Message::setJingleMessageInitiation(const Jingle::MessageInitiation &initia
     MessageD()->jingleMessageInitiation = initiation.isValid() ? initiation : Jingle::MessageInitiation();
 }
 
-
 Stanza Message::toStanza(Stream *stream) const { return toStanza(stream, nullptr); }
 
 Stanza Message::toStanza(Stream *stream, Jingle::Manager *jingleManager) const
@@ -1565,10 +1564,10 @@ Stanza Message::toStanza(Stream *stream, Jingle::Manager *jingleManager) const
     if (d->jingleMessageInitiation.isValid()) {
         Jingle::MessageInitiation::DescriptionSerializer serializer;
         if (jingleManager) {
-            serializer = [jingleManager](const QString &applicationNamespace, const std::any &data,
-                                         QDomDocument *document) {
-                return jingleManager->serializeMessageInitiationDescription(applicationNamespace, data, document);
-            };
+            serializer
+                = [jingleManager](const QString &applicationNamespace, const std::any &data, QDomDocument *document) {
+                      return jingleManager->serializeMessageInitiationDescription(applicationNamespace, data, document);
+                  };
         }
         auto element = d->jingleMessageInitiation.toXml(&s.doc(), serializer);
         if (element.isNull())
@@ -1650,10 +1649,7 @@ Stanza Message::toStanza(Stream *stream, Jingle::Manager *jingleManager) const
 /**
   \brief Create Message from Stanza \a s, using given \a timeZoneOffset (old style)
   */
-bool Message::fromStanza(const Stanza &s, int timeZoneOffset)
-{
-    return fromStanza(s, true, timeZoneOffset, nullptr);
-}
+bool Message::fromStanza(const Stanza &s, int timeZoneOffset) { return fromStanza(s, true, timeZoneOffset, nullptr); }
 
 /**
   \brief Create Message from Stanza \a s
@@ -1673,8 +1669,7 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
     return fromStanza(s, useTimeZoneOffset, timeZoneOffset, nullptr);
 }
 
-bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOffset,
-                         Jingle::Manager *jingleManager)
+bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOffset, Jingle::Manager *jingleManager)
 {
     if (s.isNull() || s.kind() != Stanza::Message)
         return false;

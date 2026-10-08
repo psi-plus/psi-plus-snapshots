@@ -54,18 +54,17 @@ struct AcceptFixture {
         return ack;
     }
 
-    J::Session                           session;
-    J::TransportManagerPad::Ptr          pad;
+    J::Session                            session;
+    J::TransportManagerPad::Ptr           pad;
     QSharedPointer<ReentrantAckTransport> remote;
-    TestApplication                     *app = nullptr;
-    Result                               success;
+    TestApplication                      *app = nullptr;
+    Result                                success;
 };
 
 static void testReentrantNewTransport(Client &client)
 {
     AcceptFixture f(client, QStringLiteral("new-transport@example.test/device"));
-    auto newerLocal
-        = makeTransport(f.session, J::Origin::Initiator, J::State::Created, QStringLiteral("new-local"));
+    auto newerLocal = makeTransport(f.session, J::Origin::Initiator, J::State::Created, QStringLiteral("new-local"));
 
     f.remote->onAck = [app = f.app, newerLocal]() {
         check(app->setTransport(newerLocal), "reentrant transport-accept ACK could not install newer local transport");
@@ -99,8 +98,7 @@ static void testStaleDifferentTransportCompletionIsInert(Client &client)
 {
     AcceptFixture f(client, QStringLiteral("stale-transport@example.test/device"));
     auto          ack = f.takeAck();
-    auto newerLocal
-        = makeTransport(f.session, J::Origin::Initiator, J::State::Created, QStringLiteral("new-local"));
+    auto newerLocal   = makeTransport(f.session, J::Origin::Initiator, J::State::Created, QStringLiteral("new-local"));
 
     check(f.app->setTransport(newerLocal), "could not install successor before stale transport-accept ACK");
     const auto oldState = f.remote->state();
@@ -175,7 +173,7 @@ static void testAttemptRetiredBeforeNestedAccept(Client &client)
 
     f.remote->onAck = [&]() {
         QDomDocument doc;
-        auto transport = doc.createElementNS(TestTransportManager::namespaceUri(), QStringLiteral("transport"));
+        auto         transport = doc.createElementNS(TestTransportManager::namespaceUri(), QStringLiteral("transport"));
         transport.setAttribute(QStringLiteral("id"), QStringLiteral("nested"));
         nestedAccepted = f.app->incomingTransportAccept(transport);
     };
@@ -184,8 +182,8 @@ static void testAttemptRetiredBeforeNestedAccept(Client &client)
     ack(&f.success);
 
     check(!nestedAccepted, "completed transport-accept remained visible to a nested accept");
-    check(f.app->replaceIdle() && f.remote->id() == QLatin1String("remote")
-              && f.remote->state() == J::State::Active && f.remote->starts() == 1,
+    check(f.app->replaceIdle() && f.remote->id() == QLatin1String("remote") && f.remote->state() == J::State::Active
+              && f.remote->starts() == 1,
           "nested accept mutated a retired transport-accept attempt");
 }
 

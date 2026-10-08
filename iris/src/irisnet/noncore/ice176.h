@@ -19,6 +19,8 @@
 #ifndef ICE176_H
 #define ICE176_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <iris/irisnet/noncore/turnclient.h>
 
 #include <QHostAddress>
@@ -33,7 +35,7 @@ namespace XMPP {
 class UdpPortReserver;
 class AbstractStunDisco;
 
-class Ice176 : public QObject {
+class IRISNET_EXPORT Ice176 : public QObject {
     Q_OBJECT
 
 public:
@@ -183,7 +185,7 @@ signals:
     void datagramsWritten(int componentIndex, int count);
 
 private:
-    class Private;
+    class IRISNET_NO_EXPORT Private;
     friend class Private;
     Private *d;
 };

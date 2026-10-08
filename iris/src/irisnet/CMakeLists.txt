@@ -13,7 +13,7 @@ set_target_properties(irisnet PROPERTIES
 if(NOT IS_SUBPROJECT AND BUILD_SHARED_LIBS)
     target_compile_definitions(irisnet PRIVATE IRIS_BUILDING_LIBRARY)
 else()
-    target_compile_definitions(irisnet PRIVATE IRIS_STATIC)
+    target_compile_definitions(irisnet PRIVATE IRIS_STATIC IRISNET_STATIC)
 endif()
 
 set(IRISNET_USE_JDNS OFF)
@@ -155,7 +155,7 @@ target_include_directories(irisnet
         ${USRSCTP_INCLUDES}
 )
 
-target_compile_definitions(irisnet PRIVATE IRISNET_STATIC HAVE_QTNET)
+target_compile_definitions(irisnet PRIVATE HAVE_QTNET)
 
 if(WIN32)
     set(EXTRA_LDFLAGS ws2_32 iphlpapi)

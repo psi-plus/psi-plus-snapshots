@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include "../../src/xmpp/xmpp-im/jingle-ice-connection_p.h"
-#include <iris/ice176.h>
 #include <iris/dtls.h>
+#include <iris/ice176.h>
 #include <iris/jingle-rtp-srtp.h>
 #include <iris/jingle-rtp.h>
 #include <iris/jingle-session.h>
@@ -115,7 +115,7 @@ public:
             if (endpoints_.isEmpty() || !protectedWriter_)
                 return false;
             const auto &endpoint = endpoints_.constFirst();
-            const auto epoch = epochs_.value(endpoint.associationId);
+            const auto  epoch    = epochs_.value(endpoint.associationId);
             if (!epoch)
                 return false;
             J::RTP::SecureRtpPacket packet;
@@ -175,16 +175,10 @@ class Provider : public J::RTP::MediaProvider {
 public:
     explicit Provider(std::shared_ptr<MediaState> state) : state(std::move(state)) { }
 
-    std::unique_ptr<J::RTP::MediaSession> createSession() override
-    {
-        return std::make_unique<MediaSession>(state);
-    }
+    std::unique_ptr<J::RTP::MediaSession> createSession() override { return std::make_unique<MediaSession>(state); }
 
     QStringList mediaTypes() const override { return { QStringLiteral("audio") }; }
-    QStringList secureRtpProfiles() const override
-    {
-        return { QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80") };
-    }
+    QStringList secureRtpProfiles() const override { return { QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80") }; }
 
     std::shared_ptr<MediaState> state;
 };
@@ -202,18 +196,17 @@ int main(int argc, char **argv)
     {
         Client     clientWithoutReserver;
         J::Session sessionWithoutReserver(clientWithoutReserver.jingleManager(),
-                                          Jid("peer-no-reserver@example.test/device"),
-                                          J::Origin::Initiator);
-        auto *rawPad = clientWithoutReserver.jingleManager()->transportPad(&sessionWithoutReserver, transportNs);
+                                          Jid("peer-no-reserver@example.test/device"), J::Origin::Initiator);
+        auto      *rawPad = clientWithoutReserver.jingleManager()->transportPad(&sessionWithoutReserver, transportNs);
         check(rawPad, "ICE pad creation without TcpPortReserver failed");
         J::TransportManagerPad::Ptr pad(rawPad);
-        auto icePad = qSharedPointerDynamicCast<J::ICE::Pad>(pad);
+        auto                        icePad = qSharedPointerDynamicCast<J::ICE::Pad>(pad);
         check(bool(icePad), "ICE pad without TcpPortReserver has wrong type");
         check(icePad->discoScope() == nullptr, "ICE pad unexpectedly fabricated a TCP discovery scope");
     }
 
-    TcpPortReserver  reserver;
-    Client           firstClient, secondClient;
+    TcpPortReserver reserver;
+    Client          firstClient, secondClient;
     firstClient.setTcpPortReserver(&reserver);
     secondClient.setTcpPortReserver(&reserver);
     J::Session firstSession(firstClient.jingleManager(), Jid("second@example.test/device"), J::Origin::Initiator);
@@ -286,10 +279,10 @@ int main(int argc, char **argv)
         if (iceUdpMode) {
             check(!xml.hasAttribute(QStringLiteral("ice2")), "RFC 8445 ice2 leaked into XEP-0176");
             check(xml.firstChildElement(QStringLiteral("gathering-complete")).isNull(),
-                  "gathering-complete leaked into XEP-0176");
+                        "gathering-complete leaked into XEP-0176");
         } else {
             check(xml.attribute(QStringLiteral("ice2")) == QStringLiteral("true"),
-                  "XEP-0371 transport did not advertise RFC 8445 ice2");
+                        "XEP-0371 transport did not advertise RFC 8445 ice2");
         }
         check(to->update(xml), "ICE signaling update rejected");
         if (ack) {
@@ -356,14 +349,12 @@ int main(int argc, char **argv)
                 check(firstMedia->configured == 1 && secondMedia->configured == 1 && firstMedia->attached == 1
                           && secondMedia->attached == 1,
                       "media attached more than once");
-                check(firstMedia->writer && firstMedia->writer(rtp, J::RTP::PacketKind::Rtp),
-                      "media writer failed");
+                check(firstMedia->writer && firstMedia->writer(rtp, J::RTP::PacketKind::Rtp), "media writer failed");
                 return;
             }
             QObject::connect(b, &J::RTP::SecureRtpAssociation::protectedPacketReceived, &loop,
                              [&](const QByteArray &data, J::RTP::PacketKind kind, quint64 epoch) {
-                                 check(data == rtp && kind == J::RTP::PacketKind::Rtp,
-                                       "incorrect media over ICE");
+                                 check(data == rtp && kind == J::RTP::PacketKind::Rtp, "incorrect media over ICE");
                                  check(epoch == second->rtpAssociation()->epoch(), "stale received media epoch");
                                  received = true;
                                  check(second->sendProtectedRtpPacket(rtcp, J::RTP::PacketKind::Rtcp, epoch),
@@ -403,7 +394,7 @@ int main(int argc, char **argv)
                    << "applications" << (firstApp ? int(firstApp->state()) : -1)
                    << (secondApp ? int(secondApp->state()) : -1);
     check(!failed && rejectionChecked && received && replied, "ICE/DTLS/secure-RTP exchange failed or timed out");
-    const auto epoch = first->rtpAssociation()->epoch();
+    const auto                                                  epoch = first->rtpAssociation()->epoch();
     std::function<bool(const QByteArray &, J::RTP::PacketKind)> retainedWriter;
     if (applicationMode) {
         retainedWriter = firstMedia->writer;
@@ -411,8 +402,8 @@ int main(int argc, char **argv)
         // Payload validation now belongs behind the authenticated media boundary.
         // Iris intentionally forwards opaque protected packets without inspecting
         // negotiated PT/SSRC state.
-        auto unknown = rtp;
-        unknown[1]   = char(97);
+        auto unknown      = rtp;
+        unknown[1]        = char(97);
         const auto before = secondMedia->received.size();
         check(retainedWriter && retainedWriter(unknown, J::RTP::PacketKind::Rtp),
               "opaque protected packet did not leave media backend");
@@ -420,8 +411,7 @@ int main(int argc, char **argv)
         wait.start();
         while (wait.elapsed() < 250)
             QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
-        check(secondMedia->received.size() == before,
-              "backend accepted an unnegotiated authenticated payload");
+        check(secondMedia->received.size() == before, "backend accepted an unnegotiated authenticated payload");
 
         auto probe = rtp;
         probe[3]   = char(4);
@@ -435,14 +425,11 @@ int main(int argc, char **argv)
     }
     first->stop();
     check(!first->rtpAssociation()->isReady(), "stopping ICE transport retained SRTP keys");
-    check(!first->sendProtectedRtpPacket(rtp, J::RTP::PacketKind::Rtp, epoch),
-          "stopped ICE transport sent RTP");
+    check(!first->sendProtectedRtpPacket(rtp, J::RTP::PacketKind::Rtp, epoch), "stopped ICE transport sent RTP");
     if (applicationMode) {
-        check(!retainedWriter(rtp, J::RTP::PacketKind::Rtp),
-              "retained media writer survived transport stop");
+        check(!retainedWriter(rtp, J::RTP::PacketKind::Rtp), "retained media writer survived transport stop");
         firstApp.reset();
-        check(!retainedWriter(rtp, J::RTP::PacketKind::Rtp),
-              "retained media writer survived application deletion");
+        check(!retainedWriter(rtp, J::RTP::PacketKind::Rtp), "retained media writer survived application deletion");
     }
     second->stop();
     qInfo() << "Loopback ICE/DTLS/secure-RTP integration passed for" << transportNs;

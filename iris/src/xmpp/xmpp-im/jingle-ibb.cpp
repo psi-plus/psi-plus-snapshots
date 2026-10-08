@@ -117,6 +117,21 @@ namespace XMPP { namespace Jingle { namespace IBB {
             }
         }
 
+        void abort()
+        {
+            // Manager teardown cannot wait for IQ acknowledgement or for an
+            // application to consume the buffered tail of graceful close.
+            state               = State::Finished;
+            connection          = nullptr;
+            const auto children = findChildren<IBBConnection *>(QString(), Qt::FindDirectChildrenOnly);
+            for (auto child : children) {
+                child->disconnect(this);
+                delete child;
+            }
+            XMPP::Jingle::Connection::close();
+            emit connectionClosed();
+        }
+
     protected:
         qint64 writeData(const char *data, qint64 maxSize) { return connection->write(data, maxSize); }
 
@@ -210,10 +225,13 @@ namespace XMPP { namespace Jingle { namespace IBB {
     {
         d->q = this;
         connect(pad->manager(), &TransportManager::abortAllRequested, this, [this]() {
-            while (d->connections.size()) {
-                d->connections.first()->close();
+            QPointer<Transport> guard(this);
+            const auto          connections = d->connections.values();
+            for (const auto &connection : connections) {
+                connection->abort();
+                if (!guard)
+                    return;
             }
-            // d->aborted = true;
             onFinish(Reason::Cancel);
         });
     }
@@ -269,8 +287,8 @@ namespace XMPP { namespace Jingle { namespace IBB {
             return { PrepareUpdateStatus::Invalid, {}, {} };
         }
 
-        size_t blockSize = d->defaultBlockSize;
-        const auto bs    = transportEl.attribute(QString::fromLatin1("block-size"));
+        size_t     blockSize = d->defaultBlockSize;
+        const auto bs        = transportEl.attribute(QString::fromLatin1("block-size"));
         if (!bs.isEmpty()) {
             const size_t parsed = bs.toULongLong();
             if (parsed && parsed <= blockSize)

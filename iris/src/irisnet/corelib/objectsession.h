@@ -19,6 +19,8 @@
 #ifndef OBJECTSESSION_H
 #define OBJECTSESSION_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <QObject>
 
 namespace XMPP {
@@ -31,7 +33,7 @@ using ObjectSessionArgument = QGenericArgument;
 using ObjectSessionArgument = QMetaMethodArgument;
 #endif
 
-class ObjectSession : public QObject {
+class IRISNET_EXPORT ObjectSession : public QObject {
     Q_OBJECT
 
 public:
@@ -65,7 +67,7 @@ private:
     ObjectSessionPrivate *d;
 };
 
-class ObjectSessionWatcher {
+class IRISNET_EXPORT ObjectSessionWatcher {
 public:
     ObjectSessionWatcher(ObjectSession *sess);
     ~ObjectSessionWatcher();

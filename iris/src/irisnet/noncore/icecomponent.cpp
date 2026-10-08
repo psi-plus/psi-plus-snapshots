@@ -199,7 +199,7 @@ public:
                 }
 
                 int port = qsock->localPort();
-                lt->sock->start(qsock);
+                lt->sock->start(qsock, !borrowedSocket);
                 emit q->debugLine(QString("starting transport ") + la.addr.toString() + ';' + QString::number(port)
                                   + " for component " + QString::number(id));
             }

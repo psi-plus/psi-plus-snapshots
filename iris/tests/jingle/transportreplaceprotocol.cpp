@@ -79,8 +79,7 @@ public:
     {
         if (el.attribute(QStringLiteral("parse")) == QLatin1String("fail"))
             return { PrepareUpdateStatus::Invalid, {}, {} };
-        return { PrepareUpdateStatus::Ready,
-                 std::make_unique<Prepared>(el.attribute(QStringLiteral("id"))), {} };
+        return { PrepareUpdateStatus::Ready, std::make_unique<Prepared>(el.attribute(QStringLiteral("id"))), {} };
     }
 
     bool commitPreparedUpdate(PreparedUpdatePtr update) override
@@ -332,13 +331,13 @@ static void testIceLikeApprovedToSendTransportAccept(Client &client)
 {
     J::Session session(client.jingleManager(), Jid(QStringLiteral("ice-like-accept@example.test/device")),
                        J::Origin::Initiator);
-    auto local = makeTransport(session, J::Origin::Initiator, J::State::ApprovedToSend,
-                               QStringLiteral("local-replacement"));
+    auto       local
+        = makeTransport(session, J::Origin::Initiator, J::State::ApprovedToSend, QStringLiteral("local-replacement"));
     auto app = addApplication(session, local, std::make_unique<TestSelector>());
     app->markReplaceInProgress();
 
     QDomDocument doc;
-    const bool ok
+    const bool   ok
         = session.updateFromXml(J::Action::TransportAccept, payload(doc, QStringLiteral("accepted-replacement")));
 
     check(ok, "ICE-like ApprovedToSend transport-accept was rejected");

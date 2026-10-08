@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     answer.ssrc = 42;
     R::Negotiation prepared;
     check(prepared.setRemoteOffer(offer, answer) == R::Negotiation::Result::Ok, "prepared answer was not committed");
-    offer.extensions.first() = QByteArrayLiteral("<test xmlns=\"urn:iris:test\" value=\"changed\"/>");
+    offer.extensions.first()     = QByteArrayLiteral("<test xmlns=\"urn:iris:test\" value=\"changed\"/>");
     answer.payloads.first().name = QStringLiteral("changed");
     check(prepared.remoteDescription()->extensions.first().contains("value=\"original\""),
           "prepared offer snapshot leaked caller mutation");

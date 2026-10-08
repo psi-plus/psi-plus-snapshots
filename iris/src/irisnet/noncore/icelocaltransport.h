@@ -49,8 +49,9 @@ public:
     void setClientSoftwareNameAndVersion(const QString &str);
 
     // passed socket must already be bind()'ed, don't support
-    //   ErrorMismatch retries
-    void start(QUdpSocket *sock);
+    //   ErrorMismatch retries.  if takeOwnership is true, destroy the socket
+    //   when this transport is reset; otherwise leave it with the caller.
+    void start(QUdpSocket *sock, bool takeOwnership = false);
 
     // bind to this address on a random port, do support ErrorMismatch
     //   retries

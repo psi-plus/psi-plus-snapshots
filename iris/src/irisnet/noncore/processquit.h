@@ -22,6 +22,7 @@
 #ifdef NO_IRISNET
 #include <QtCore>
 #define IRISNET_EXPORT
+#define IRISNET_NO_EXPORT
 #else
 #include <iris/irisnet/corelib/irisnetglobal.h>
 #endif
@@ -107,7 +108,7 @@ signals:
     void quit();
 
 private:
-    class Private;
+    class IRISNET_NO_EXPORT Private;
     friend class Private;
     Private *d;
 

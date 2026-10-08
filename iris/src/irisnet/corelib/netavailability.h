@@ -19,10 +19,12 @@
 #ifndef NETAVAILABILITY_H
 #define NETAVAILABILITY_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <iris/irisnet/corelib/irisnetglobal.h>
 
 namespace XMPP {
-class NetAvailability : public QObject {
+class IRISNET_EXPORT NetAvailability : public QObject {
     Q_OBJECT
 
 public:
@@ -35,7 +37,7 @@ signals:
     void changed(bool available);
 
 private:
-    class Private;
+    class IRISNET_NO_EXPORT Private;
     friend class Private;
     Private *d;
 };

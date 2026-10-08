@@ -14,6 +14,18 @@ This library is licensed under the Lesser GNU General Public License. See the CO
 
 Iris depends on Qt and QCA.
 
+`dependencies.lock.json` records the QCA release tag and its full Git commit SHA.
+CI and package workflows load the release tag through
+`.github/actions/load-dependencies`; bundled CMake builds use the commit SHA.
+To update QCA, change both fields together after the release packages are published.
+Each supported packaging platform needs its corresponding QCA release asset.
+
+Changing the lock reconfigures CMake and clears stale downloaded QCA build state.
+Explicit `IRIS_BUNDLED_QCA_GIT_TAG` and `IRIS_QCA_SOURCE_DIR` overrides remain
+available; system QCA selection is unchanged. Existing build trees with a cached
+Git ref keep that ref; use `cmake -U IRIS_BUNDLED_QCA_GIT_TAG ...` once to adopt
+the lock default.
+
 ## What features are supported?
 
 * Full support for draft-ietf-xmpp-core-21, including:

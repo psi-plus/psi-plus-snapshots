@@ -2,7 +2,23 @@ cmake_minimum_required(VERSION 3.11.0)
 
 set(IRIS_BUNDLED_QCA_GIT_REPOSITORY "https://github.com/psi-im/qca.git" CACHE STRING
     "Bundled QCA git repository")
-set(IRIS_BUNDLED_QCA_GIT_TAG "master" CACHE STRING "Bundled QCA git tag or branch")
+# Read the same lock used by CI; keep compatibility with CMake 3.11.
+set(_iris_qca_lock_file "${CMAKE_CURRENT_LIST_DIR}/../../dependencies.lock.json")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_iris_qca_lock_file}")
+file(READ "${_iris_qca_lock_file}" _iris_qca_lock)
+string(REGEX MATCH "\"qca\"[ \t\r\n]*:[ \t\r\n]*\\{[^}]*\\}" _iris_qca_entry "${_iris_qca_lock}")
+string(REGEX MATCH "\"commit\"[ \t\r\n]*:[ \t\r\n]*\"([0-9a-f]+)\"" _iris_qca_match "${_iris_qca_entry}")
+set(_iris_qca_commit "${CMAKE_MATCH_1}")
+string(LENGTH "${_iris_qca_commit}" _iris_qca_commit_length)
+if(NOT _iris_qca_commit_length EQUAL 40)
+    message(FATAL_ERROR "dependencies.lock.json: QCA commit must be a full lowercase Git SHA")
+endif()
+# Advance the cached default when the lock changes, preserving explicit overrides.
+if(DEFINED IRIS_QCA_LOCK_DEFAULT AND IRIS_BUNDLED_QCA_GIT_TAG STREQUAL IRIS_QCA_LOCK_DEFAULT)
+    set(IRIS_BUNDLED_QCA_GIT_TAG "${_iris_qca_commit}" CACHE STRING "Bundled QCA git ref override" FORCE)
+endif()
+set(IRIS_BUNDLED_QCA_GIT_TAG "${_iris_qca_commit}" CACHE STRING "Bundled QCA git ref override")
+set(IRIS_QCA_LOCK_DEFAULT "${_iris_qca_commit}" CACHE INTERNAL "Last locked QCA default" FORCE)
 set(IRIS_QCA_SOURCE_DIR "" CACHE PATH "Local QCA source directory")
 set(IRIS_SYSTEM_QCA "AUTO" CACHE STRING "System QCA generation: AUTO, 2 or 3")
 set_property(CACHE IRIS_SYSTEM_QCA PROPERTY STRINGS AUTO 2 3)
@@ -22,13 +38,23 @@ if(IRIS_BUNDLED_QCA)
         set(QCA_SOURCE_DIR "${IRIS_QCA_SOURCE_DIR}")
     endif()
     set(QCA_PREFIX "${CMAKE_BINARY_DIR}/_deps/qca")
+    if(NOT EXISTS "${QCA_SOURCE_DIR}")
+        string(SHA256 _iris_qca_fingerprint
+            "${IRIS_BUNDLED_QCA_GIT_REPOSITORY}@${IRIS_BUNDLED_QCA_GIT_TAG}")
+        if(NOT "${IRIS_QCA_SOURCE_FINGERPRINT}" STREQUAL "${_iris_qca_fingerprint}")
+            # Old ExternalProject stamps must not retain a previous lock's build.
+            file(REMOVE_RECURSE "${QCA_PREFIX}")
+        endif()
+        set(IRIS_QCA_SOURCE_FINGERPRINT "${_iris_qca_fingerprint}"
+            CACHE INTERNAL "Bundled QCA source fingerprint" FORCE)
+    endif()
     set(IRIS_QCA_INSTALL_DIR "${QCA_PREFIX}/install")
     set(Qca_INCLUDE_DIR "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR}/Qca3-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto")
     if(NOT EXISTS "${QCA_SOURCE_DIR}")
         set(_qca_source_args
             GIT_REPOSITORY ${IRIS_BUNDLED_QCA_GIT_REPOSITORY}
             GIT_TAG "${IRIS_BUNDLED_QCA_GIT_TAG}"
-            GIT_SHALLOW TRUE GIT_PROGRESS TRUE
+            GIT_SHALLOW FALSE GIT_PROGRESS TRUE
             )
         set(_qca_source_identity
             "git:${IRIS_BUNDLED_QCA_GIT_REPOSITORY}@${IRIS_BUNDLED_QCA_GIT_TAG}")

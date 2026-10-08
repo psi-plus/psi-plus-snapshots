@@ -1,6 +1,8 @@
 #ifndef XMPP_ABSTRACTSTUNDISCO_H
 #define XMPP_ABSTRACTSTUNDISCO_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <QDeadlineTimer>
 #include <QHostAddress>
 #include <QList>
@@ -13,7 +15,7 @@ namespace XMPP {
 /**
  * Monitors if new STUN services are available, changed or not available anymore.
  */
-class AbstractStunDisco : public QObject {
+class IRISNET_EXPORT AbstractStunDisco : public QObject {
     Q_OBJECT
 public:
     enum Transport : std::uint8_t { Tcp, Udp };

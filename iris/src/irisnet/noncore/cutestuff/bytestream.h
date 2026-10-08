@@ -20,6 +20,8 @@
 #ifndef CS_BYTESTREAM_H
 #define CS_BYTESTREAM_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <QByteArray>
 #include <QIODevice>
 #include <QObject>
@@ -28,7 +30,7 @@ class QAbstractSocket;
 
 // CS_NAMESPACE_BEGIN
 // CS_EXPORT_BEGIN
-class ByteStream : public QIODevice {
+class IRISNET_EXPORT ByteStream : public QIODevice {
     Q_OBJECT
 public:
     enum Error { ErrOk, ErrRead, ErrWrite, ErrCustom = 10 };
@@ -68,8 +70,8 @@ protected:
 
 private:
     //! \if _hide_doc_
-    class Private;
-    Private *d;
+    class IRISNET_NO_EXPORT Private;
+    Private                *d;
     //! \endif
 };
 // CS_EXPORT_END

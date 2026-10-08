@@ -30,7 +30,7 @@ static QDomElement parseRoot(const QString &xml, QDomDocument *document)
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
-    J::RTP::Manager rtp;
+    J::RTP::Manager  rtp;
 
     {
         Stanza nullStanza;
@@ -42,24 +42,22 @@ int main(int argc, char **argv)
 
     {
         QDomDocument source;
-        const auto root = parseRoot(
-            QStringLiteral(
-                "<propose xmlns='urn:xmpp:jingle-message:0' id='call-1'>"
-                "<description xmlns='urn:xmpp:jingle:apps:rtp:1' media='audio'>"
-                "<future xmlns='urn:iris:test' value='application-owned'/>"
-                "</description>"
-                "<proposal xmlns='urn:example:jingle:application'>"
-                "<nested value='opaque-to-jmi'/>"
-                "</proposal>"
-                "</propose>"),
-            &source);
+        const auto   root = parseRoot(QStringLiteral("<propose xmlns='urn:xmpp:jingle-message:0' id='call-1'>"
+                                                       "<description xmlns='urn:xmpp:jingle:apps:rtp:1' media='audio'>"
+                                                       "<future xmlns='urn:iris:test' value='application-owned'/>"
+                                                       "</description>"
+                                                       "<proposal xmlns='urn:example:jingle:application'>"
+                                                       "<nested value='opaque-to-jmi'/>"
+                                                       "</proposal>"
+                                                       "</propose>"),
+                                      &source);
 
-        auto initiation = J::MessageInitiation::fromXml(
-            root, [&rtp](const QDomElement &description) -> std::optional<std::any> {
-                if (description.namespaceURI() == J::RTP::Description::ns())
-                    return rtp.parseProposal(description);
-                return std::nullopt;
-            });
+        auto initiation
+            = J::MessageInitiation::fromXml(root, [&rtp](const QDomElement &description) -> std::optional<std::any> {
+                  if (description.namespaceURI() == J::RTP::Description::ns())
+                      return rtp.parseProposal(description);
+                  return std::nullopt;
+              });
 
         check(initiation.isValid(), "valid JMI propose was rejected");
         check(initiation.action() == J::MessageInitiation::Action::Propose, "propose action was not parsed");
@@ -79,8 +77,7 @@ int main(int argc, char **argv)
         check(!unknown.isSupported(), "unknown proposal unexpectedly acquired a typed payload");
 
         source = QDomDocument();
-        check(std::any_cast<J::RTP::Proposal>(initiation.descriptions().at(0).data).media
-                  == J::RTP::Media::Audio,
+        check(std::any_cast<J::RTP::Proposal>(initiation.descriptions().at(0).data).media == J::RTP::Media::Audio,
               "typed RTP proposal depended on source DOM lifetime");
     }
 
@@ -96,10 +93,10 @@ int main(int argc, char **argv)
             initiation.addDescription(J::RTP::Description::ns(), J::RTP::Proposal { J::RTP::Media::Video });
 
         QDomDocument target;
-        const auto serialized = initiation.toXml(
-            &target, [&rtp](const QString &ns, const std::any &data, QDomDocument *document) {
-                return ns == J::RTP::Description::ns() ? rtp.serializeProposal(data, document) : QDomElement();
-            });
+        const auto   serialized
+            = initiation.toXml(&target, [&rtp](const QString &ns, const std::any &data, QDomDocument *document) {
+                  return ns == J::RTP::Description::ns() ? rtp.serializeProposal(data, document) : QDomElement();
+              });
         check(!serialized.isNull(), "typed audio+video RTP proposal could not be serialized");
 
         const auto audio = serialized.firstChildElement();
@@ -115,13 +112,11 @@ int main(int argc, char **argv)
 
     {
         QDomDocument document;
-        auto unsupported = J::MessageInitiation::fromXml(
-            parseRoot(
-                QStringLiteral(
-                    "<propose xmlns='urn:xmpp:jingle-message:0' id='unknown'>"
-                    "<payload xmlns='urn:example:unknown'><nested/></payload>"
-                    "</propose>"),
-                &document));
+        auto         unsupported = J::MessageInitiation::fromXml(
+            parseRoot(QStringLiteral("<propose xmlns='urn:xmpp:jingle-message:0' id='unknown'>"
+                                                     "<payload xmlns='urn:example:unknown'><nested/></payload>"
+                                                     "</propose>"),
+                              &document));
         check(unsupported.isValid(), "unknown application proposal should remain structurally valid");
         check(unsupported.descriptions().size() == 1 && !unsupported.descriptions().at(0).isSupported(),
               "unknown application proposal was not marked unsupported");
@@ -133,14 +128,13 @@ int main(int argc, char **argv)
 
     {
         QDomDocument document;
-        auto reject = J::MessageInitiation::fromXml(parseRoot(
-            QStringLiteral(
-                "<reject xmlns='urn:xmpp:jingle-message:0' id='call-2'>"
-                "<reason xmlns='urn:xmpp:jingle:1'><busy/><text>Already in a call</text></reason>"
-                "<tie-break xmlns='urn:xmpp:jingle-message:0'/>"
-                "<migrated xmlns='urn:xmpp:jingle-message:0' to='call-3'/>"
-                "</reject>"),
-            &document));
+        auto         reject = J::MessageInitiation::fromXml(
+            parseRoot(QStringLiteral("<reject xmlns='urn:xmpp:jingle-message:0' id='call-2'>"
+                                                     "<reason xmlns='urn:xmpp:jingle:1'><busy/><text>Already in a call</text></reason>"
+                                                     "<tie-break xmlns='urn:xmpp:jingle-message:0'/>"
+                                                     "<migrated xmlns='urn:xmpp:jingle-message:0' to='call-3'/>"
+                                                     "</reject>"),
+                              &document));
         check(reject.isValid(), "valid JMI reject was rejected");
         check(reject.action() == J::MessageInitiation::Action::Reject, "reject action was not parsed");
         check(reject.reasonCondition() == QStringLiteral("busy"), "reject reason was not parsed");
@@ -154,13 +148,13 @@ int main(int argc, char **argv)
 
     {
         QDomDocument document;
-        auto invalid = J::MessageInitiation::fromXml(
+        auto         invalid = J::MessageInitiation::fromXml(
             parseRoot(QStringLiteral("<propose xmlns='urn:xmpp:jingle-message:0' id='empty'/>"), &document));
         check(!invalid.isValid(), "description-less propose was accepted");
     }
 
     {
-        Message message;
+        Message              message;
         J::MessageInitiation ringing(J::MessageInitiation::Action::Ringing, QStringLiteral("call-4"));
         message.setJingleMessageInitiation(ringing);
         check(message.jingleMessageInitiation().isValid(), "Message did not retain typed JMI payload");
@@ -170,12 +164,12 @@ int main(int argc, char **argv)
 
     {
         Client client;
-        auto manager = client.jingleManager();
-        auto rtpManager = manager->rtpManager();
+        auto   manager    = client.jingleManager();
+        auto   rtpManager = manager->rtpManager();
 
-        int                  rtpProposalSignals = 0;
-        QString              lastProposalId;
-        J::RTP::MediaSet     lastProposalMedia;
+        int              rtpProposalSignals = 0;
+        QString          lastProposalId;
+        J::RTP::MediaSet lastProposalMedia;
         QObject::connect(rtpManager, &J::RTP::Manager::incomingProposal, &client,
                          [&](const Message &, const QString &id, J::RTP::MediaSet media) {
                              ++rtpProposalSignals;
@@ -192,8 +186,7 @@ int main(int argc, char **argv)
         manager->incomingMessageInitiation(sourceMessage, pureRtp);
         check(rtpProposalSignals == 1 && lastProposalId == QStringLiteral("pure-rtp"),
               "pure RTP proposal did not produce typed RTP signal");
-        check(lastProposalMedia.testFlag(J::RTP::Media::Audio)
-                  && lastProposalMedia.testFlag(J::RTP::Media::Video),
+        check(lastProposalMedia.testFlag(J::RTP::Media::Audio) && lastProposalMedia.testFlag(J::RTP::Media::Video),
               "typed RTP signal lost proposed media");
 
         J::MessageInitiation mixed(J::MessageInitiation::Action::Propose, QStringLiteral("mixed"));
@@ -212,24 +205,21 @@ int main(int argc, char **argv)
         check(!manager->discoFeatures().contains(J::MessageInitiation::ns()),
               "JMI must not be advertised through disco");
         check(manager->rtpManager()
-                  ->propose(Jid(QStringLiteral("peer@example.test")),
-                            J::RTP::Media::Audio | J::RTP::Media::Video)
+                  ->propose(Jid(QStringLiteral("peer@example.test")), J::RTP::Media::Audio | J::RTP::Media::Video)
                   .isEmpty(),
               "disabled JMI allowed a new RTP proposal");
         manager->setMessageInitiationEnabled(true);
         check(!manager->discoFeatures().contains(J::MessageInitiation::ns()),
               "enabled JMI leaked into disco despite XEP-0353 having no discovery feature");
         check(manager->rtpManager()
-                  ->propose(Jid(QStringLiteral("peer@example.test")),
-                            J::RTP::Media::Audio | J::RTP::Media::Video)
+                  ->propose(Jid(QStringLiteral("peer@example.test")), J::RTP::Media::Audio | J::RTP::Media::Video)
                   .isEmpty(),
               "RTP proposal ignored unavailable local media/transport capability");
         manager->setMessageInitiationEnabled(false);
-        check(!manager->discoFeatures().contains(J::MessageInitiation::ns()),
-              "JMI unexpectedly appeared in disco");
+        check(!manager->discoFeatures().contains(J::MessageInitiation::ns()), "JMI unexpectedly appeared in disco");
 
         const Jid sessionPeer(QStringLiteral("peer@example.test/device"));
-        auto fixed = manager->newSession(sessionPeer, QStringLiteral("jmi-session-id"));
+        auto      fixed = manager->newSession(sessionPeer, QStringLiteral("jmi-session-id"));
         check(fixed && fixed->sid() == QStringLiteral("jmi-session-id"),
               "JMI id was not accepted as an outgoing Jingle sid");
         check(manager->session(sessionPeer, QStringLiteral("jmi-session-id")) == fixed,

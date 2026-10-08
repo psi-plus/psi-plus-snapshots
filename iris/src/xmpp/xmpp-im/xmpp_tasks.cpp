@@ -972,8 +972,7 @@ bool JT_PushMessage::take(const QDomElement &e)
     }
 
     Message m;
-    if (!m.fromStanza(s, client()->manualTimeZoneOffset(), client()->timeZoneOffset(),
-                      client()->jingleManager())) {
+    if (!m.fromStanza(s, client()->manualTimeZoneOffset(), client()->timeZoneOffset(), client()->jingleManager())) {
         // printf("bad message\n");
         return false;
     }

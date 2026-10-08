@@ -131,8 +131,8 @@ namespace XMPP { namespace Jingle { namespace S5B {
             if (closing)
                 return;
 
-            closing       = true;
-            closeWasLocal = true;
+            closing             = true;
+            closeWasLocal       = true;
             auto *closingClient = client;
             closingClient->close();
             if (client != closingClient)
@@ -165,7 +165,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
         {
             if (!client || closeSignalled)
                 return;
-            closing = true;
+            closing       = true;
             closeWasLocal = closeWasLocal || local;
             setOpenMode((client->bytesAvailable() || !datagrams.isEmpty()) ? QIODevice::ReadOnly : QIODevice::NotOpen);
             if (!bytesAvailable() && datagrams.isEmpty())
@@ -665,6 +665,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
     public:
         enum PendingActions { NewCandidate = 1, CandidateUsed = 2, CandidateError = 4, Activated = 8, ProxyError = 16 };
 
+        QPointer<Manager>            manager;
         Transport                   *q                            = nullptr;
         bool                         p2pAllowed                   = true;
         bool                         offerSent                    = false;
@@ -1332,7 +1333,8 @@ namespace XMPP { namespace Jingle { namespace S5B {
     Transport::Transport(const TransportManagerPad::Ptr &pad, Origin creator) :
         XMPP::Jingle::Transport(pad, creator), d(new Private)
     {
-        d->q = this;
+        d->q       = this;
+        d->manager = static_cast<Manager *>(pad->manager());
         d->probingTimer.setSingleShot(true);
         d->negotiationFinishTimer.setSingleShot(true);
         d->negotiationFinishTimer.setInterval(5000); // TODO select the value smart way
@@ -1340,7 +1342,11 @@ namespace XMPP { namespace Jingle { namespace S5B {
         connect(&d->negotiationFinishTimer, &QTimer::timeout, this, [this]() { d->handleNegotiationTimeout(); });
         connect(_pad->manager(), &TransportManager::abortAllRequested, this, [this]() {
             d->aborted = true;
-            onFinish(Reason::Condition::Cancel);
+            d->retireProxyNegotiation();
+            QPointer<Transport> guard(this);
+            d->connection->close();
+            if (guard)
+                onFinish(Reason::Condition::Cancel);
         });
     }
 
@@ -1348,7 +1354,9 @@ namespace XMPP { namespace Jingle { namespace S5B {
     {
         if (d) {
             // TODO unregister sid too
-            static_cast<Manager *>(_pad.staticCast<Pad>()->manager())->removeKeyMapping(d->directAddr);
+            // Callers may retain a shared handle to an already stopped transport.
+            if (d->manager)
+                d->manager->removeKeyMapping(d->directAddr);
             for (auto &[_, c] : d->remoteCandidates) {
                 c.deleteSocksClient();
             }

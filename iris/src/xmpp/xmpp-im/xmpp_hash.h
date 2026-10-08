@@ -19,6 +19,8 @@
 #ifndef XMPP_HASH_H
 #define XMPP_HASH_H
 
+#include <iris/iris_export.h>
+
 #include <QHash>
 #include <QString>
 
@@ -31,10 +33,10 @@ class QDomDocument;
 
 namespace XMPP {
 
-extern QString HASH_NS;
+extern IRIS_EXPORT QString HASH_NS;
 class Features;
 
-class Hash {
+class IRIS_EXPORT Hash {
 public:
     // NB: we have only supported algorithms here. if more is needed then do extra checks
     enum Type {     // XEP-0300 Version 0.5.3 (2018-02-14)
@@ -86,7 +88,7 @@ private:
 };
 
 class StreamHashPrivate;
-class StreamHash {
+class IRIS_EXPORT StreamHash {
 public:
     StreamHash(Hash::Type type);
     ~StreamHash();

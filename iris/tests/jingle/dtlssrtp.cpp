@@ -1,3 +1,4 @@
+#include "../../src/xmpp/xmpp-im/jingle-ice-dtls_p.h"
 #include <iris/dtls.h>
 #include <iris/jingle-rtp-srtp.h>
 #ifdef IRIS_TEST_SCTP
@@ -7,6 +8,7 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QEventLoop>
+#include <QQueue>
 #include <QTimer>
 
 using XMPP::Dtls;
@@ -17,6 +19,58 @@ static void check(bool ok, const char *message)
 {
     if (!ok)
         qFatal("%s", message);
+}
+
+// Model QCA's plaintext queue, independently of provider packet coalescing.
+class BatchedDtlsSource : public QObject {
+    Q_OBJECT
+public:
+    QQueue<QByteArray> packets;
+    QByteArray         readDatagram() { return packets.isEmpty() ? QByteArray() : packets.dequeue(); }
+signals:
+    void readyRead();
+};
+
+class RecordingSctpSink : public QObject {
+public:
+    QList<QByteArray> packets;
+    bool              deleteOnWrite = false;
+    void              writeIncoming(const QByteArray &data)
+    {
+        packets.append(data);
+        if (deleteOnWrite)
+            delete this;
+    }
+};
+
+static void runBatchedDtlsIngress()
+{
+    BatchedDtlsSource source;
+    RecordingSctpSink sink;
+    int               notifications = 0;
+    QObject::connect(&source, &BatchedDtlsSource::readyRead, &sink, [&]() {
+        ++notifications;
+        XMPP::Jingle::ICE::forwardPendingDtlsDatagrams(&source, &sink);
+    });
+    const QList<QByteArray> expected { QByteArrayLiteral("record-one"), QByteArrayLiteral("record-two"),
+                                       QByteArrayLiteral("record-three") };
+    for (const auto &packet : expected)
+        source.packets.enqueue(packet);
+    emit source.readyRead();
+    check(notifications == 1, "batch fixture emitted more than one notification");
+    check(source.packets.isEmpty() && sink.packets == expected,
+          "one DTLS notification left plaintext records undelivered to SCTP");
+    emit source.readyRead();
+    check(sink.packets == expected, "empty DTLS queue forwarded an empty or duplicate record");
+
+    // Delivering a packet can synchronously tear down its association.
+    auto                       *closingSink = new RecordingSctpSink;
+    QPointer<RecordingSctpSink> sinkGuard(closingSink);
+    closingSink->deleteOnWrite = true;
+    for (const auto &packet : expected)
+        source.packets.enqueue(packet);
+    XMPP::Jingle::ICE::forwardPendingDtlsDatagrams(&source, closingSink);
+    check(!sinkGuard && source.packets.size() == 2, "DTLS drain continued after SCTP association destruction");
 }
 
 #if QCA_MAJOR_VERSION >= 3
@@ -42,10 +96,8 @@ static void runDataChannel(Dtls &first, Dtls &second)
             while (association.pendingOutgoingDatagrams())
                 dtls.writeDatagram(association.readOutgoing());
         });
-        QObject::connect(&dtls, &Dtls::readyRead, &association, [&association, &dtls]() {
-            for (auto data = dtls.readDatagram(); !data.isEmpty(); data = dtls.readDatagram())
-                association.writeIncoming(data);
-        });
+        QObject::connect(&dtls, &Dtls::readyRead, &association,
+                         [&association, &dtls]() { ICE::forwardPendingDtlsDatagrams(&dtls, &association); });
     };
     wire(sender, first);
     wire(receiver, second);
@@ -85,9 +137,9 @@ static void runDataChannel(Dtls &first, Dtls &second)
 
 static void runDeferredFirstFlight(const QCA::Certificate &cert, const QCA::PrivateKey &key)
 {
-    Dtls          passive;
-    Dtls          active;
-    const QString profile = QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80");
+    Dtls              passive;
+    Dtls              active;
+    const QString     profile = QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80");
     const QStringList profiles { profile };
 
     passive.setNegotiationDeferred(true);
@@ -139,7 +191,7 @@ static void runDeferredFirstFlight(const QCA::Certificate &cert, const QCA::Priv
     bool passiveConnected = false;
     bool activeConnected  = false;
     bool failed           = false;
-    auto maybeDone = [&]() {
+    auto maybeDone        = [&]() {
         if (passiveConnected && activeConnected)
             handshakeLoop.quit();
     };
@@ -172,10 +224,10 @@ static void runDeferredFirstFlight(const QCA::Certificate &cert, const QCA::Priv
 static void runPair(const QCA::Certificate &cert, const QCA::PrivateKey &key, bool wrongFingerprint, bool requireSRTP,
                     bool peerSRTP)
 {
-    Dtls          offerer;
-    auto          answererOwner = std::make_unique<Dtls>();
-    auto         &answerer      = *answererOwner;
-    const QString profile       = QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80");
+    Dtls              offerer;
+    auto              answererOwner = std::make_unique<Dtls>();
+    auto             &answerer      = *answererOwner;
+    const QString     profile       = QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80");
     const QStringList profiles { profile };
 
     offerer.setNegotiationDeferred(true);
@@ -251,12 +303,10 @@ static void runPair(const QCA::Certificate &cert, const QCA::PrivateKey &key, bo
     if (wrongFingerprint)
         fingerprint.hash = XMPP::Hash(XMPP::Hash::Sha256, QByteArray(32, '\0'));
     offerer.setRemoteFingerprint(fingerprint);
-    check(!offerer.isStarted() && !answerer.isStarted(),
-          "deferred DTLS started before transport readiness");
+    check(!offerer.isStarted() && !answerer.isStarted(), "deferred DTLS started before transport readiness");
     offerer.onRemoteAcceptedFingerprint();
     answerer.onRemoteAcceptedFingerprint();
-    check(offerer.isStarted() && answerer.isStarted(),
-          "deferred DTLS did not start after transport readiness");
+    check(offerer.isStarted() && answerer.isStarted(), "deferred DTLS did not start after transport readiness");
     check(!offerer.setSRTPProfiles({}), "profile configuration changed after start");
 
     timer.start(5000);
@@ -277,8 +327,7 @@ static void runPair(const QCA::Certificate &cert, const QCA::PrivateKey &key, bo
 
     if (!requireSRTP) {
         check(first.isNull() && second.isNull(), "plain DTLS unexpectedly exported SRTP keys");
-        check(!offerAssociation.isReady() && offerActivations == 0,
-              "plain DTLS activated secure RTP association");
+        check(!offerAssociation.isReady() && offerActivations == 0, "plain DTLS activated secure RTP association");
 
         QByteArray received;
         const auto reader = QObject::connect(&answerer, &Dtls::readyRead, &loop, [&]() {
@@ -307,15 +356,15 @@ static void runPair(const QCA::Certificate &cert, const QCA::PrivateKey &key, bo
 
     check(offerAssociation.isReady() && answerAssociation.isReady() && offerActivations == 1,
           "verified DTLS did not activate secure RTP associations exactly once");
-    const auto offerEpoch = offerAssociation.epoch();
-    const auto &exported  = offerAssociation.keyingMaterial();
+    const auto  offerEpoch = offerAssociation.epoch();
+    const auto &exported   = offerAssociation.keyingMaterial();
     check(exported.profile == first.profile() && exported.localMasterKey == first.localMasterKey()
               && exported.localMasterSalt == first.localMasterSalt()
               && exported.remoteMasterKey == first.remoteMasterKey()
               && exported.remoteMasterSalt == first.remoteMasterSalt(),
           "secure RTP association did not export verified DTLS key material");
 
-    int protectedPackets = 0;
+    int        protectedPackets = 0;
     QByteArray protectedData;
     PacketKind protectedKind = PacketKind::Rtp;
     QObject::connect(&answerAssociation, &SecureRtpAssociation::protectedPacketReceived, &answerAssociation,
@@ -336,7 +385,7 @@ static void runPair(const QCA::Certificate &cert, const QCA::PrivateKey &key, bo
           "stale protected RTP epoch accepted");
 
     auto ambiguous = rtp;
-    ambiguous[1] = char(72);
+    ambiguous[1]   = char(72);
     check(!offerAssociation.validateProtectedMuxed(ambiguous, PacketKind::Rtp, offerEpoch),
           "RTP/RTCP ambiguous payload type accepted");
 
@@ -366,15 +415,13 @@ static void runPair(const QCA::Certificate &cert, const QCA::PrivateKey &key, bo
     QTimer::singleShot(50, &loop, &QEventLoop::quit);
     loop.exec();
     for (auto data = answerer.readDatagram(); !data.isEmpty(); data = answerer.readDatagram())
-        check(data != QByteArrayLiteral("must-not-be-sent"),
-              "application data sent with an invalidated peer identity");
+        check(data != QByteArrayLiteral("must-not-be-sent"), "application data sent with an invalidated peer identity");
 
     SecureRtpAssociation detached(&answerer, QByteArrayLiteral("detached"));
     check(detached.isReady(), "late secure RTP association attachment failed");
     const auto detachedEpoch = detached.epoch();
     detached.close();
-    check(!detached.isReady() && detached.epoch() != detachedEpoch,
-          "closed secure RTP association remained active");
+    check(!detached.isReady() && detached.epoch() != detachedEpoch, "closed secure RTP association remained active");
     const auto closedEpoch = detached.epoch();
     detached.close();
     check(detached.epoch() == closedEpoch, "secure RTP association close is not idempotent");
@@ -390,6 +437,7 @@ int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
     QCA::Initializer init;
+    runBatchedDtlsIngress();
 #if QCA_MAJOR_VERSION >= 3
     check(Dtls::supportedSRTPProfiles().contains(QStringLiteral("SRTP_AES128_CM_HMAC_SHA1_80")),
           "a QCA3 DTLS-SRTP provider is required for this test");
@@ -399,8 +447,7 @@ int main(int argc, char **argv)
     info.insert(QCA::CommonName, QStringLiteral("iris-dtls-test"));
     options.setInfo(info);
     options.setSerialNumber(QCA::BigInteger(1));
-    options.setValidityPeriod(QDateTime::currentDateTimeUtc().addDays(-1),
-                              QDateTime::currentDateTimeUtc().addDays(1));
+    options.setValidityPeriod(QDateTime::currentDateTimeUtc().addDays(-1), QDateTime::currentDateTimeUtc().addDays(1));
     const auto             key = QCA::KeyGenerator().createRSA(2048);
     const QCA::Certificate cert(options, key);
     check(!cert.isNull(), "certificate generation failed");
@@ -417,3 +464,5 @@ int main(int argc, char **argv)
     check(dtls.setSRTPProfiles({}), "plain DTLS rejected");
 #endif
 }
+
+#include "dtlssrtp.moc"

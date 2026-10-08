@@ -22,10 +22,13 @@
 
 #if defined(IRIS_STATIC)
 #define IRIS_EXPORT
+#define IRIS_NO_EXPORT
 #elif defined(IRIS_BUILDING_LIBRARY)
 #define IRIS_EXPORT Q_DECL_EXPORT
+#define IRIS_NO_EXPORT Q_DECL_HIDDEN
 #else
 #define IRIS_EXPORT Q_DECL_IMPORT
+#define IRIS_NO_EXPORT Q_DECL_HIDDEN
 #endif
 
 #endif // IRIS_EXPORT_H

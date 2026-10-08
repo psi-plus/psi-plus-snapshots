@@ -19,6 +19,8 @@
 #ifndef STUNALLOCATE_H
 #define STUNALLOCATE_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <QHostAddress>
 #include <QList>
 #include <QObject>
@@ -32,7 +34,7 @@ class StunMessage;
 class StunTransactionPool;
 class TransportAddress;
 
-class StunAllocate : public QObject {
+class IRISNET_EXPORT StunAllocate : public QObject {
     Q_OBJECT
 
 public:
@@ -96,7 +98,7 @@ signals:
 private:
     Q_DISABLE_COPY(StunAllocate)
 
-    class Private;
+    class IRISNET_NO_EXPORT Private;
     friend class Private;
     Private *d;
 };

@@ -19,6 +19,8 @@
 #ifndef UDPPORTRESERVER_H
 #define UDPPORTRESERVER_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <QList>
 #include <QObject>
 
@@ -31,7 +33,7 @@ namespace XMPP {
 //   (interfaces) and ports to reserve.  note that the port must be available
 //   on all addresses in order for it to get reserved.
 // note: you must return all sockets back to this class before destructing
-class UdpPortReserver : public QObject {
+class IRISNET_EXPORT UdpPortReserver : public QObject {
     Q_OBJECT
 
 public:
@@ -61,8 +63,8 @@ public:
     void returnSockets(const QList<QUdpSocket *> &sockList);
 
 private:
-    class Private;
-    Private *d;
+    class IRISNET_NO_EXPORT Private;
+    Private                *d;
 };
 } // namespace XMPP
 

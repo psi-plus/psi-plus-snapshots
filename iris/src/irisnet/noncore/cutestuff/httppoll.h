@@ -20,12 +20,14 @@
 #ifndef CS_HTTPPOLL_H
 #define CS_HTTPPOLL_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <iris/irisnet/noncore/cutestuff/bytestream.h>
 
 class QUrl;
 
 // CS_NAMESPACE_BEGIN
-class HttpPoll : public ByteStream {
+class IRISNET_EXPORT HttpPoll : public ByteStream {
     Q_OBJECT
 public:
     enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
@@ -59,8 +61,8 @@ private slots:
     void do_sync();
 
 private:
-    class Private;
-    Private *d;
+    class IRISNET_NO_EXPORT Private;
+    Private                *d;
 
     void           resetConnection(bool clear = false);
     QByteArray     makePacket(const QString &ident, const QString &key, const QString &newkey, const QByteArray &block);
@@ -68,6 +70,7 @@ private:
     const QString &getKey(bool *);
 };
 
+// Internal helpers for HttpPoll; these are not shared Iris API.
 class HttpProxyPost : public QObject {
     Q_OBJECT
 public:

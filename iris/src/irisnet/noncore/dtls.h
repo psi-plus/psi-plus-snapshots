@@ -19,6 +19,8 @@
 #ifndef XMPP_DTLS_H
 #define XMPP_DTLS_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <QAbstractSocket>
 #include <QtCrypto>
 
@@ -39,7 +41,7 @@ romeo:  setRemoteFingerprint() -> acceptIncoming() -> localFingerprint() -> netw
         network (iq result) -> negotiate(start client)
 */
 
-class Dtls : public QObject {
+class IRISNET_EXPORT Dtls : public QObject {
     Q_OBJECT
 public:
     enum Setup { NotSet, Active, Passive, ActPass, HoldConn };
@@ -117,8 +119,8 @@ signals:
 private:
     void negotiate(); // yep. it's possible to make it public but not really necessary atm
 
-    class Private;
-    Private *d;
+    class IRISNET_NO_EXPORT Private;
+    Private                *d;
 };
 
 } // namespace XMPP

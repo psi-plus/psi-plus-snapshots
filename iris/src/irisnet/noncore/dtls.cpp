@@ -189,8 +189,8 @@ public:
 
     void setRemoteFingerprint(const FingerPrint &fp)
     {
-        DTLS_DEBUG("[%p] set remote fingerprint setup=%d valid=%d current-local-setup=%d started=%d deferred=%d",
-                   q, int(fp.setup), int(fp.isValid()), int(localFingerprint.setup), int(tls != nullptr),
+        DTLS_DEBUG("[%p] set remote fingerprint setup=%d valid=%d current-local-setup=%d started=%d deferred=%d", q,
+                   int(fp.setup), int(fp.isValid()), int(localFingerprint.setup), int(tls != nullptr),
                    int(negotiationDeferred));
         bool needRestart = false;
         if (tls) {
@@ -310,7 +310,7 @@ public:
             tls->startClient();
         }
 
-        auto queued = std::move(pendingIncomingDatagrams);
+        auto queued          = std::move(pendingIncomingDatagrams);
         pendingIncomingBytes = 0;
         if (!queued.isEmpty())
             DTLS_DEBUG("[%p] replay %d pre-start datagram(s)", q, int(queued.size()));
@@ -385,8 +385,8 @@ void Dtls::initOutgoing()
         d->generateCertificate();
     }
     d->localFingerprint.setup = ActPass;
-    DTLS_DEBUG("[%p] init outgoing local=%s remote=%s setup=actpass deferred=%d", this,
-               qPrintable(d->localJid), qPrintable(d->remoteJid), int(d->negotiationDeferred));
+    DTLS_DEBUG("[%p] init outgoing local=%s remote=%s setup=actpass deferred=%d", this, qPrintable(d->localJid),
+               qPrintable(d->remoteJid), int(d->negotiationDeferred));
 }
 
 void Dtls::acceptIncoming() { d->acceptIncoming(); }

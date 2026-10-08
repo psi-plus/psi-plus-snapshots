@@ -49,6 +49,8 @@ namespace XMPP { namespace Jingle {
         // Incoming sessions are not registered in Jingle Manager until their initial contents are validated. A valid
         // incoming session remains in Created state while it waits for local accept() or terminate().
 
+        // The manager is the QObject lifetime owner, including before SID
+        // registration and while a finished session awaits deferred deletion.
         Session(Manager *manager, const Jid &peer, Origin role = Origin::Initiator);
         ~Session();
 
@@ -85,7 +87,7 @@ namespace XMPP { namespace Jingle {
          * @return a new application, or nullptr if the namespace is not registered
          *
          * The returned application is not added to the session yet. Configure it first, then pass it to
-         * addContent().
+         * addContent(). The session owns its lifetime even while it is being configured.
          */
         Application *newContent(const QString &ns, Origin senders = Origin::Both);
         // get registered content if any
@@ -149,6 +151,7 @@ namespace XMPP { namespace Jingle {
         friend class PublicationManager;
         friend class JTPush;
 
+        void    shutdown();
         QString reserveSid(const QString &requestedSid = QString());
         bool    incomingInitiate(const Jingle &jingle, const QDomElement &jingleEl);
         // Dispatcher must invoke afterReply only after sending the incoming IQ reply.

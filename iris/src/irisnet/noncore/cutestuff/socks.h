@@ -20,6 +20,8 @@
 #ifndef CS_SOCKS_H
 #define CS_SOCKS_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <iris/irisnet/noncore/cutestuff/bytestream.h>
 
 // CS_NAMESPACE_BEGIN
@@ -29,7 +31,7 @@ class QTcpSocket;
 class SocksClient;
 class SocksServer;
 
-class SocksUDP : public QObject {
+class IRISNET_EXPORT SocksUDP : public QObject {
     Q_OBJECT
 public:
     ~SocksUDP();
@@ -44,14 +46,14 @@ private slots:
     void sd_activated();
 
 private:
-    class Private;
-    Private *d;
+    class IRISNET_NO_EXPORT Private;
+    Private                *d;
 
     friend class SocksClient;
     SocksUDP(SocksClient *sc, const QString &host, int port, const QHostAddress &routeAddr, int routePort);
 };
 
-class SocksClient : public ByteStream {
+class IRISNET_EXPORT SocksClient : public ByteStream {
     Q_OBJECT
 public:
     enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
@@ -114,8 +116,8 @@ private slots:
     void serve();
 
 private:
-    class Private;
-    Private *d;
+    class IRISNET_NO_EXPORT Private;
+    Private                *d;
 
     void init();
     void resetConnection(bool clear = false);
@@ -126,7 +128,7 @@ private:
     void writeData(const QByteArray &a);
 };
 
-class SocksServer : public QObject {
+class IRISNET_EXPORT SocksServer : public QObject {
     Q_OBJECT
 public:
     SocksServer(QObject *parent = nullptr);
@@ -152,8 +154,8 @@ private slots:
     void sd_activated();
 
 private:
-    class Private;
-    Private *d;
+    class IRISNET_NO_EXPORT Private;
+    Private                *d;
 };
 
 // CS_NAMESPACE_END

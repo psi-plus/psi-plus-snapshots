@@ -16,10 +16,10 @@ using Result = Negotiation::Result;
 class MockCodecs : public CodecNegotiator {
 public:
     mutable int                validations = 0;
-    bool                       accept = true;
+    bool                       accept      = true;
     std::optional<Description> response;
     std::optional<Description> makeAnswer(const Description &) const override { return response; }
-    bool acceptsAnswer(const Description &, const Description &) const override
+    bool                       acceptsAnswer(const Description &, const Description &) const override
     {
         ++validations;
         return accept;
@@ -98,7 +98,7 @@ int main(int argc, char **argv)
     offer.extensions.first() = QByteArrayLiteral("<test xmlns=\"urn:iris:test\" value=\"changed-by-caller\"/>");
     check(initiator.localDescription()->extensions.first().contains("value=\"original\""),
           "caller changed stored offer");
-    auto copy = initiator.localDescription();
+    auto copy                = initiator.localDescription();
     copy->extensions.first() = QByteArrayLiteral("<test xmlns=\"urn:iris:test\" value=\"changed-by-getter\"/>");
     check(initiator.localDescription()->extensions.first().contains("value=\"original\""),
           "getter leaked mutable opaque XML");

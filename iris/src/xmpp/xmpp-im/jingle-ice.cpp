@@ -22,6 +22,7 @@
 #endif
 
 #include "jingle-ice-connection_p.h"
+#include "jingle-ice-dtls_p.h"
 #include "jingle-ice-group_p.h"
 #include "jingle-ice-udp.h"
 #include "jingle-ice.h"
@@ -1123,13 +1124,13 @@ namespace XMPP { namespace Jingle { namespace ICE {
             }
             dtls->connect(dtls, &Dtls::readyRead, network, [net = network, componentIndex]() {
                 auto &component = net->components[componentIndex];
-                auto  d         = component.dtls->readDatagram();
 #ifdef JINGLE_SCTP
                 if (component.sctp) {
-                    // qDebug("sctp write incoming");
-                    component.sctp->writeIncoming(d);
+                    forwardPendingDtlsDatagrams(component.dtls, component.sctp);
+                    return;
                 }
 #endif
+                component.dtls->readDatagram();
             });
             dtls->connect(dtls, &Dtls::readyReadOutgoing, network, [net = network, componentIndex]() {
                 if (!net->ice || componentIndex < 0 || componentIndex >= net->components.size())
@@ -2396,7 +2397,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
         };
         connect(app, &Application::destroying, this, release);
         connect(app, &Application::stateChanged, this, [release](State state) {
-            if (state >= State::Finishing)
+            // Finishing still needs the physical association for transport
+            // drain/retransmission while Jingle receipt signaling completes.
+            if (state >= State::Finished)
                 release();
         });
     }

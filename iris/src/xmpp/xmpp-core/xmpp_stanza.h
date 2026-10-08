@@ -43,7 +43,7 @@ public:
     public:
         enum class ErrorType { Cancel = 1, Continue, Modify, Auth, Wait };
         enum class ErrorCond {
-            Invalid = -1,
+            Invalid    = -1,
             BadRequest = 1,
             Conflict,
             FeatureNotImplemented,

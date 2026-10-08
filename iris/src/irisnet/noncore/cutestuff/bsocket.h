@@ -21,6 +21,8 @@
 #ifndef CS_BSOCKET_H
 #define CS_BSOCKET_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <iris/irisnet/noncore/cutestuff/bytestream.h>
 
 #include <QAbstractSocket>
@@ -35,7 +37,7 @@ class QTcpSocket;
 /*!
     Socket with automatic hostname lookups, using SRV, AAAA and A DNS queries.
 */
-class BSocket : public ByteStream {
+class IRISNET_EXPORT BSocket : public ByteStream {
     Q_OBJECT
 public:
     enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound };
@@ -91,8 +93,8 @@ private slots:
     void qs_error(QAbstractSocket::SocketError);
 
 private:
-    class Private;
-    Private *d;
+    class IRISNET_NO_EXPORT Private;
+    Private                *d;
 
     void resetConnection(bool clear = false);
     void ensureConnector();

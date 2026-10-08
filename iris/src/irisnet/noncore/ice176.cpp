@@ -8,7 +8,7 @@
  * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
- * but WITHANY WARRANTY; without even the implied warranty of
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
@@ -1201,6 +1201,11 @@ private:
             }
         }
 #endif
+        // The PAC timer only protects against declaring failure before usable
+        // connectivity exists. With ice2 we may intentionally start using a
+        // valid pair before final nomination; a later PAC expiry must not tear
+        // down that already-working path while nomination is still pending.
+        pacTimer.reset();
         readyToSendMedia = true;
         emit q->readyToSendMedia();
     }

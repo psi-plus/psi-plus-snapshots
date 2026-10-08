@@ -589,6 +589,53 @@ static void exerciseMixedRtpFileTransferBundle(TcpPortReserver *reserver)
               && audioTransport->rtpAssociation() == ftTransport->rtpAssociation(),
           "mixed RTP/SCTP BUNDLE did not reuse the one DTLS/SRTP association");
 }
+
+static void exerciseFinishingFileTransferRetainsBundle(TcpPortReserver *reserver)
+{
+    Client client;
+    client.setTcpPortReserver(reserver);
+    client.jingleICEManager()->setSelfAddress(QHostAddress::LocalHost);
+    auto rtp = client.jingleManager()->rtpManager();
+    rtp->setMediaProvider(std::make_shared<Provider>());
+    rtp->setTransportNamespaces({ J::ICE::NS });
+
+    const Jid peer(QStringLiteral("ft-drain@example.test/device"));
+    auto      features = rtpIcePeerFeatures(client, rtp);
+    features.removeAll(QStringLiteral("urn:xmpp:jingle:transports:s5b:1"));
+    features.removeAll(QStringLiteral("urn:xmpp:jingle:transports:ibb:1"));
+    features.removeAll(QStringLiteral("urn:xmpp:jingle:transports:ice-udp:1"));
+    setPeerFeatures(client, peer, features);
+
+    J::Session                      session(client.jingleManager(), peer, J::Origin::Initiator);
+    std::unique_ptr<J::Application> owner(session.newContent(J::FileTransfer::NS, J::Origin::Initiator));
+    auto                            ft = dynamic_cast<J::FileTransfer::Application *>(owner.get());
+    check(ft, "FT drain fixture could not create file-transfer application");
+    J::FileTransfer::File file;
+    file.setName(QStringLiteral("drain.bin"));
+    file.setSize(256 * 1024);
+    ft->setFile(file);
+    session.addContent(owner.release());
+
+    RootTaskKeeper pendingInitiate(client.rootTask());
+    session.initiate();
+    auto transport = qSharedPointerDynamicCast<J::ICE::Transport>(ft->transport());
+    check(bool(transport), "FT drain fixture did not select ICE");
+    auto icePad = transport->pad().staticCast<J::ICE::Pad>();
+
+    bool                            bound = false, required = false;
+    QPointer<J::ICE::IceConnection> network(icePad->groupedConnectionFor(transport.data(), &bound, &required));
+    check(network && bound && required && icePad->liveAssociationCount() == 1,
+          "FT drain fixture was not bound to its bundled ICE association");
+
+    ft->setState(J::State::Finishing);
+    QCoreApplication::processEvents(QEventLoop::AllEvents);
+    check(network && icePad->liveAssociationCount() == 1,
+          "FT Finishing released its ICE/SCTP association before transport drain");
+
+    ft->setState(J::State::Finished);
+    QCoreApplication::processEvents(QEventLoop::AllEvents);
+    check(!network && icePad->liveAssociationCount() == 0, "finished FT retained its bundled ICE association");
+}
 #endif
 
 static QDomElement sessionAcceptPayload(QDomDocument &doc, const J::Session &session, const WireOffer &transportSource,
@@ -1642,6 +1689,7 @@ int main(int argc, char **argv)
     exerciseResponder(offer, &reserver, false);
 #ifdef IRIS_TEST_SCTP
     exerciseMixedRtpFileTransferBundle(&reserver);
+    exerciseFinishingFileTransferRetainsBundle(&reserver);
     exerciseActiveFileTransferBundleExtension(offer, &reserver);
     exerciseInitiatorActiveBundleExtension(offer, &reserver);
     exerciseInitiatorActiveBundleExtension(offer, &reserver, QStringLiteral("add-error"));

@@ -20,10 +20,12 @@
 #ifndef CS_HTTPCONNECT_H
 #define CS_HTTPCONNECT_H
 
+#include <iris/irisnet/corelib/irisnetexport.h>
+
 #include <iris/irisnet/noncore/cutestuff/bytestream.h>
 
 // CS_NAMESPACE_BEGIN
-class HttpConnect : public ByteStream {
+class IRISNET_EXPORT HttpConnect : public ByteStream {
     Q_OBJECT
 public:
     enum Error { ErrConnectionRefused = ErrCustom, ErrHostNotFound, ErrProxyConnect, ErrProxyNeg, ErrProxyAuth };
@@ -52,8 +54,8 @@ private slots:
     void sock_error(int);
 
 private:
-    class Private;
-    Private *d;
+    class IRISNET_NO_EXPORT Private;
+    Private                *d;
 
     void resetConnection(bool clear = false);
 };

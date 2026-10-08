@@ -45,15 +45,11 @@ SecureRtpAssociation::SecureRtpAssociation(XMPP::Dtls *dtls, QByteArray associat
     activate(); // Supports attaching after the verified handshake completed.
 }
 
-SecureRtpAssociation::~SecureRtpAssociation()
-{
-    close();
-}
+SecureRtpAssociation::~SecureRtpAssociation() { close(); }
 
 bool SecureRtpAssociation::isReady() const
 {
-    return active_ && dtls_ && material_.isValid()
-        && dtls_->selectedSRTPProfile() == material_.profile;
+    return active_ && dtls_ && material_.isValid() && dtls_->selectedSRTPProfile() == material_.profile;
 }
 
 void SecureRtpAssociation::close()
@@ -97,7 +93,7 @@ void SecureRtpAssociation::invalidate()
     if (!active_ && !material_.isValid())
         return;
     const quint64 invalidatedEpoch = epoch_;
-    active_ = false;
+    active_                        = false;
     material_.clear();
     ++epoch_;
     if (!epoch_)

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
-#include "../../src/xmpp/xmpp-im/jingle-s5b.cpp"
-#include "../../src/xmpp/xmpp-im/jingle-ibb.h"
 #include "../../src/xmpp/xmpp-im/jingle-application.h"
+#include "../../src/xmpp/xmpp-im/jingle-ibb.h"
+#include "../../src/xmpp/xmpp-im/jingle-s5b.cpp"
 
 #include <QCoreApplication>
 #include <QtCrypto>
@@ -98,7 +98,7 @@ public:
 
     bool hasMoreTransports() const override { return !transports_.isEmpty(); }
     bool hasTransport(QSharedPointer<J::Transport> transport) const override { return transports_.contains(transport); }
-    int compare(QSharedPointer<J::Transport> a, QSharedPointer<J::Transport> b) const override
+    int  compare(QSharedPointer<J::Transport> a, QSharedPointer<J::Transport> b) const override
     {
         return a == b ? 0 : a ? (b ? 0 : 1) : -1;
     }
@@ -112,10 +112,10 @@ class TestApplicationPad final : public J::ApplicationManagerPad {
 public:
     explicit TestApplicationPad(J::Session *session) : session_(session) { }
 
-    QString ns() const override { return QStringLiteral("urn:test:s5b-fallback"); }
-    J::Session *session() const override { return session_; }
+    QString                ns() const override { return QStringLiteral("urn:test:s5b-fallback"); }
+    J::Session            *session() const override { return session_; }
     J::ApplicationManager *manager() const override { return nullptr; }
-    QString generateContentName(J::Origin) override { return QStringLiteral("fallback"); }
+    QString                generateContentName(J::Origin) override { return QStringLiteral("fallback"); }
 
 private:
     J::Session *session_;
@@ -132,13 +132,13 @@ public:
         _transportSelector = std::make_unique<QueueSelector>(std::move(transports));
     }
 
-    void setState(J::State state) override { _state = state; }
+    void                                      setState(J::State state) override { _state = state; }
     const std::optional<XMPP::Stanza::Error> &lastError() const override { return error_; }
-    J::Reason lastReason() const override { return reason_; }
-    SetDescError setRemoteOffer(const QDomElement &) override { return Ok; }
-    SetDescError setRemoteAnswer(const QDomElement &) override { return Ok; }
-    void prepare() override { }
-    void start() override { }
+    J::Reason                                 lastReason() const override { return reason_; }
+    SetDescError                              setRemoteOffer(const QDomElement &) override { return Ok; }
+    SetDescError                              setRemoteAnswer(const QDomElement &) override { return Ok; }
+    void                                      prepare() override { }
+    void                                      start() override { }
     void remove(J::Reason::Condition condition = J::Reason::Success, const QString &text = QString()) override
     {
         reason_ = J::Reason(condition, text);
@@ -148,7 +148,7 @@ public:
 protected:
     QDomElement makeLocalOffer() override { return {}; }
     QDomElement makeLocalAnswer() override { return {}; }
-    void incomingRemove(const J::Reason &reason) override
+    void        incomingRemove(const J::Reason &reason) override
     {
         reason_ = reason;
         _state  = J::State::Finished;
@@ -177,10 +177,39 @@ struct Fixture {
     }
 };
 
+static void testServerOutlivesPortScope()
+{
+    auto *scope      = new S5BServersProducer;
+    auto *discoverer = new TcpPortDiscoverer(scope);
+    check(discoverer->setExternalHost(QStringLiteral("127.0.0.1"), 12345, QHostAddress::LocalHost, 0),
+          "Cannot bind regression server on loopback");
+    auto servers = discoverer->takeServers();
+    check(servers.size() == 1, "Regression server was not retained");
+    QPointer<QTcpServer> socket = servers[0]->findChild<QTcpServer *>();
+    check(bool(socket), "Listening socket must be owned by the retained server");
+    delete scope;
+    check(socket && socket->isListening() && servers[0].staticCast<S5BServer>()->isActive(),
+          "Destroying discovery scope invalidated retained server");
+    servers.clear();
+    check(!socket, "Releasing final server handle leaked the listening socket");
+}
+
+static void testRetainedStoppedTransport(Client &client)
+{
+    J::Session session(client.jingleManager(), Jid(QStringLiteral("peer@example.test/device")), J::Origin::Responder);
+    auto      *manager   = new S::Manager;
+    auto       pad       = J::TransportManagerPad::Ptr(manager->pad(&session));
+    auto       transport = manager->newTransport(pad, session.peerRole());
+    manager->closeAll();
+    check(transport->state() == J::State::Finished, "Manager did not stop a retained shared transport");
+    delete manager;
+    transport.clear(); // Releasing a retained terminal handle must be safe.
+}
+
 static void testMissingPortScope(Client &client)
 {
     Fixture f(client);
-    int failures = 0;
+    int     failures = 0;
     QObject::connect(f.transport.data(), &J::Transport::failed, &f.session, [&] { ++failures; });
     f.transport->prepare();
     check(f.transport->state() == J::State::Finished, "Missing S5B port scope did not finish transport");
@@ -219,8 +248,8 @@ static void testValidCommands(Client &client)
 {
     {
         Fixture f(client);
-        auto candidate = S::TransportTestAccess::install(*f.transport, true, S::Candidate::Pending);
-        auto prepared  = f.transport->prepareUpdate(payload(QStringLiteral("<candidate-used cid='chosen'/>")));
+        auto    candidate = S::TransportTestAccess::install(*f.transport, true, S::Candidate::Pending);
+        auto    prepared  = f.transport->prepareUpdate(payload(QStringLiteral("<candidate-used cid='chosen'/>")));
         check(bool(prepared) && candidate.state() == S::Candidate::Pending,
               "candidate-used preparation mutated or rejected valid state");
         check(f.transport->commitPreparedUpdate(std::move(prepared.update)), "candidate-used commit failed");
@@ -231,8 +260,8 @@ static void testValidCommands(Client &client)
 
     {
         Fixture f(client);
-        auto candidate = S::TransportTestAccess::install(*f.transport, true, S::Candidate::Pending, false);
-        auto prepared  = f.transport->prepareUpdate(payload(QStringLiteral("<candidate-error/>")));
+        auto    candidate = S::TransportTestAccess::install(*f.transport, true, S::Candidate::Pending, false);
+        auto    prepared  = f.transport->prepareUpdate(payload(QStringLiteral("<candidate-error/>")));
         check(bool(prepared) && candidate.state() == S::Candidate::Pending
                   && !S::TransportTestAccess::remoteReportedCandidateError(*f.transport),
               "candidate-error preparation mutated valid state");
@@ -244,8 +273,8 @@ static void testValidCommands(Client &client)
 
     {
         Fixture f(client);
-        auto candidate = S::TransportTestAccess::nominate(*f.transport, false, S::Candidate::Accepted);
-        auto prepared  = f.transport->prepareUpdate(payload(QStringLiteral("<activated cid='chosen'/>")));
+        auto    candidate = S::TransportTestAccess::nominate(*f.transport, false, S::Candidate::Accepted);
+        auto    prepared  = f.transport->prepareUpdate(payload(QStringLiteral("<activated cid='chosen'/>")));
         check(bool(prepared) && candidate.state() == S::Candidate::Accepted,
               "activated preparation mutated or rejected valid proxy state");
         check(f.transport->commitPreparedUpdate(std::move(prepared.update)), "activated commit failed");
@@ -280,10 +309,10 @@ static void testProxyErrorFallsBackToIbb(Client &client)
     // As with the S5B fixture manager, this local manager is not registered in
     // the client's transport registry and must not unregister the built-in IBB manager.
     J::TransportManagerPad::Ptr ibbPad(ibbManager.pad(&f.session));
-    auto ibb = ibbManager.newTransport(ibbPad, f.session.role());
+    auto                        ibb = ibbManager.newTransport(ibbPad, f.session.role());
     check(bool(ibb), "Could not create real IBB fallback transport");
 
-    auto appPad = QSharedPointer<TestApplicationPad>::create(&f.session);
+    auto                appPad = QSharedPointer<TestApplicationPad>::create(&f.session);
     FallbackApplication app(appPad, { f.transport, ibb });
     check(app.selectNextTransport() && app.transport() == f.transport,
           "Application did not select the S5B transport first");
@@ -346,6 +375,8 @@ int main(int argc, char **argv)
     Client           client;
     TcpPortReserver  reserver;
     client.setTcpPortReserver(&reserver);
+    testServerOutlivesPortScope();
+    testRetainedStoppedTransport(client);
     testMissingPortScope(client);
     testPreparation(client);
     testValidCommands(client);

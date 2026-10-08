@@ -49,7 +49,7 @@ class PubSubItem;
 class PubSubRetraction;
 class XData;
 namespace Jingle {
-class Manager;
+    class Manager;
 }
 
 typedef QMap<QString, QString> StringMap;
@@ -217,7 +217,7 @@ public:
 
     // XEP-0353 Jingle Message Initiation
     Jingle::MessageInitiation jingleMessageInitiation() const;
-    void setJingleMessageInitiation(const Jingle::MessageInitiation &initiation);
+    void                      setJingleMessageInitiation(const Jingle::MessageInitiation &initiation);
 
     // XEP-0359
     StanzaId stanzaId() const;
@@ -279,7 +279,7 @@ private:
     friend class JT_PushMessage;
 
     Stanza toStanza(Stream *stream, Jingle::Manager *jingleManager) const;
-    bool fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOffset, Jingle::Manager *jingleManager);
+    bool   fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOffset, Jingle::Manager *jingleManager);
 
     class Private;
     QExplicitlySharedDataPointer<Private> d;

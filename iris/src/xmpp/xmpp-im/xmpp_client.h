@@ -36,7 +36,7 @@ class QDomElement;
 class QNetworkAccessManager;
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-Q_MOC_INCLUDE(<iris/xmpp-im/xmpp_message.h>)
+Q_MOC_INCLUDE(<iris / xmpp - im / xmpp_message.h>)
 #endif
 
 namespace XMPP {
