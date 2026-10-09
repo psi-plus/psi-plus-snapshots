@@ -2,6 +2,7 @@
 #ifndef JINGLE_ICE_UDP_H
 #define JINGLE_ICE_UDP_H
 
+#include <iris/iris_export.h>
 #include <QByteArray>
 #include <QDomElement>
 #include <QHostAddress>
@@ -11,7 +12,7 @@
 
 namespace XMPP::Jingle::ICE {
 
-extern const QString NS_ICE_UDP;
+extern IRIS_EXPORT const QString NS_ICE_UDP;
 
 struct UdpCandidate {
     int          component = -1;

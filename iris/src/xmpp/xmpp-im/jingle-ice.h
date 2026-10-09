@@ -20,6 +20,7 @@
 #ifndef JINGLE_ICE_H
 #define JINGLE_ICE_H
 
+#include <iris/iris_export.h>
 #include <QHash>
 #include <QWeakPointer>
 #include <iris/irisnet/noncore/tcpportreserver.h>
@@ -36,8 +37,8 @@ namespace Jingle {
     class Application;
 }
 namespace Jingle { namespace ICE {
-    extern const QString NS;
-    extern const QString NS_ICE_UDP;
+    extern IRIS_EXPORT const QString NS;
+    extern IRIS_EXPORT const QString NS_ICE_UDP;
 
     class Transport;
     class ConnectionMembership;

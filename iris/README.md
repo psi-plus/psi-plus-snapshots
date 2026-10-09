@@ -14,17 +14,35 @@ This library is licensed under the Lesser GNU General Public License. See the CO
 
 Iris depends on Qt and QCA.
 
-`dependencies.lock.json` records the QCA release tag and its full Git commit SHA.
+`dependencies.lock.json` records the QCA release tag, its full Git commit SHA,
+and `qca.minimum_version` for runtime/SDK compatibility. The minimum remains
+independent of the pinned build release.
 CI and package workflows load the release tag through
 `.github/actions/load-dependencies`; bundled CMake builds use the commit SHA.
 To update QCA, change both fields together after the release packages are published.
 Each supported packaging platform needs its corresponding QCA release asset.
+The locked minimum is currently 3.0.10, which fixes DTLS input queue stalls.
+System QCA 3 selection, CMake/pkg-config SDK metadata and deb runtime/development
+dependencies all use this field rather than pinning the exact build version.
 
 Changing the lock reconfigures CMake and clears stale downloaded QCA build state.
 Explicit `IRIS_BUNDLED_QCA_GIT_TAG` and `IRIS_QCA_SOURCE_DIR` overrides remain
 available; system QCA selection is unchanged. Existing build trees with a cached
 Git ref keep that ref; use `cmake -U IRIS_BUNDLED_QCA_GIT_TAG ...` once to adopt
 the lock default.
+
+## Source archive versions
+
+CMake obtains the version from `IRIS_VERSION`, a generated `.version` file,
+Git tags, or the `.archive-version` metadata embedded by `git archive`, in
+that order. GitHub source downloads use `git archive` and substitute the
+nearest matching `v[0-9]*` tag through `.gitattributes` `export-subst`.
+The tracked `.archive-version` remains an unexpanded template in Git checkouts;
+it does not pin subsequent releases to an old version.
+
+Archives need a reachable numeric release tag. A plain directory copy or an
+archive made from an untagged repository can instead supply
+`-DIRIS_VERSION=1.1.2` or a `.version` file containing `1.1.2`.
 
 ## What features are supported?
 

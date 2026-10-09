@@ -1,6 +1,7 @@
 {
   "qca": {
-    "tag": "v3.0.9",
-    "commit": "a4325e657010dcbaf75d1974c4cddc0d9d2799f5"
+    "tag": "v3.0.10",
+    "commit": "a5121ec9fb9b4b933320341aa827c3671fe3fcaa",
+    "minimum_version": "3.0.10"
   }
 }

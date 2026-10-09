@@ -1,42 +1,6 @@
 cmake_minimum_required(VERSION 3.11.0)
 
-set(IRIS_VERSION "" CACHE STRING "Iris version override (for example 1.1 or v1.1)")
-set(iris_version "")
-
-if(IRIS_VERSION)
-    set(iris_version "${IRIS_VERSION}")
-    string(REGEX REPLACE "^v" "" iris_version "${iris_version}")
-elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.version")
-    # Generated source trees and shallow clones are self-contained: when a
-    # .version file is present, determining the version must not require Git.
-    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/.version" iris_version)
-    string(STRIP "${iris_version}" iris_version)
-    string(REGEX REPLACE "^v" "" iris_version "${iris_version}")
-else()
-    find_package(Git QUIET)
-    if(Git_FOUND AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
-        execute_process(
-            COMMAND "${GIT_EXECUTABLE}" describe --tags --abbrev=0 --match "v[0-9]*"
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-            RESULT_VARIABLE git_version_result
-            OUTPUT_VARIABLE git_version_tag
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET)
-        if(git_version_result EQUAL 0
-           AND git_version_tag MATCHES "^v[0-9]+\\.[0-9]+(\\.[0-9]+)?(\\.[0-9]+)?$")
-            string(REGEX REPLACE "^v" "" iris_version "${git_version_tag}")
-        endif()
-    endif()
-endif()
-
-if(NOT iris_version)
-    message(FATAL_ERROR
-            "Cannot determine Iris version: set IRIS_VERSION, provide .version, or use a Git checkout with a reachable v* tag")
-endif()
-
-if(NOT iris_version MATCHES "^[0-9]+\\.[0-9]+(\\.[0-9]+)?(\\.[0-9]+)?$")
-    message(FATAL_ERROR "Invalid Iris version '${iris_version}'")
-endif()
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/IrisVersion.cmake")
 
 project(
     iris
@@ -191,7 +155,7 @@ if(IRIS_BUNDLED_QCA)
     set(IRIS_PC_QCA_CFLAGS " -I\${irisincludedir}/qca/Qca3-qt${QT_DEFAULT_MAJOR_VERSION}/QtCrypto")
 elseif(IRIS_QCA_MAJOR EQUAL 3)
     set(IRIS_BUNDLED_QCA_INCLUDE_REL "")
-    set(IRIS_PC_QCA_REQUIRES " qca3-qt${QT_DEFAULT_MAJOR_VERSION}")
+    set(IRIS_PC_QCA_REQUIRES " qca3-qt${QT_DEFAULT_MAJOR_VERSION} >= ${IRIS_QCA_MIN_VERSION}")
     set(IRIS_PC_QCA_CFLAGS "")
 else()
     set(IRIS_BUNDLED_QCA_INCLUDE_REL "")

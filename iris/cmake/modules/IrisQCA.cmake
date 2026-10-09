@@ -13,6 +13,15 @@ string(LENGTH "${_iris_qca_commit}" _iris_qca_commit_length)
 if(NOT _iris_qca_commit_length EQUAL 40)
     message(FATAL_ERROR "dependencies.lock.json: QCA commit must be a full lowercase Git SHA")
 endif()
+# Keep the runtime/SDK minimum independent of the pinned build revision.
+string(REGEX MATCH "\"minimum_version\"[ \t\r\n]*:[ \t\r\n]*\"([^\"]*)\""
+    _iris_qca_min_match "${_iris_qca_entry}")
+set(IRIS_QCA_MIN_VERSION "${CMAKE_MATCH_1}")
+if(NOT IRIS_QCA_MIN_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
+    message(FATAL_ERROR "dependencies.lock.json: QCA minimum_version must be a numeric X.Y.Z string")
+endif()
+file(WRITE "${CMAKE_BINARY_DIR}/iris-qca-min-version.txt" "${IRIS_QCA_MIN_VERSION}\n")
+
 # Advance the cached default when the lock changes, preserving explicit overrides.
 if(DEFINED IRIS_QCA_LOCK_DEFAULT AND IRIS_BUNDLED_QCA_GIT_TAG STREQUAL IRIS_QCA_LOCK_DEFAULT)
     set(IRIS_BUNDLED_QCA_GIT_TAG "${_iris_qca_commit}" CACHE STRING "Bundled QCA git ref override" FORCE)
@@ -185,7 +194,7 @@ else()
         if(TARGET Qca3::Qca)
             set(IRIS_QCA_TARGET Qca3::Qca)
         else()
-            find_package(${_iris_qca3_package} CONFIG QUIET)
+            find_package(${_iris_qca3_package} ${IRIS_QCA_MIN_VERSION} CONFIG QUIET)
             if(TARGET Qca3::Qca)
                 # The target was created in the iris subdirectory. Promote it
                 # so Psi's sibling src directory can reuse the same QCA 3
@@ -195,10 +204,15 @@ else()
             endif()
         endif()
         if(IRIS_QCA_TARGET)
+            # A parent project may have loaded the target before entering Iris.
+            if(DEFINED ${_iris_qca3_package}_VERSION
+               AND "${${_iris_qca3_package}_VERSION}" VERSION_LESS IRIS_QCA_MIN_VERSION)
+                message(FATAL_ERROR "Iris requires QCA 3 >= ${IRIS_QCA_MIN_VERSION}")
+            endif()
             set(IRIS_QCA_MAJOR 3)
             set(IRIS_QCA_PACKAGE "${_iris_qca3_package}")
         elseif(_iris_system_qca STREQUAL "3")
-            message(FATAL_ERROR "System QCA 3 requested but ${_iris_qca3_package} was not found")
+            message(FATAL_ERROR "System QCA 3 requested but ${_iris_qca3_package} >= ${IRIS_QCA_MIN_VERSION} was not found")
         endif()
     endif()
 
@@ -214,7 +228,7 @@ else()
             set(IRIS_QCA_PACKAGE "Qca")
         else()
             message(FATAL_ERROR
-                "No usable system QCA found. Install QCA 3 (preferred) or QCA 2, "
+                "No usable system QCA found. Install QCA 3 >= ${IRIS_QCA_MIN_VERSION} (preferred) or QCA 2, "
                 "or enable IRIS_BUNDLED_QCA")
         endif()
     endif()

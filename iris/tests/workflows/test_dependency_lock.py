@@ -30,9 +30,9 @@ file(WRITE "${CMAKE_BINARY_DIR}/selected-ref" "${IRIS_BUNDLED_QCA_GIT_TAG}")
 ''')
         self.lock('a' * 40)
 
-    def lock(self, commit):
+    def lock(self, commit, minimum_version="3.0.10", tag="v3.0.10"):
         (self.root / 'dependencies.lock.json').write_text(
-            json.dumps({'qca': {'tag': 'v3.0.9', 'commit': commit}}))
+            json.dumps({'qca': {'tag': tag, 'commit': commit, 'minimum_version': minimum_version}}))
 
     def configure(self, *args, success=True):
         result = subprocess.run(['cmake', '-S', str(self.root), '-B', str(self.build), *args],
@@ -68,6 +68,25 @@ file(WRITE "${CMAKE_BINARY_DIR}/selected-ref" "${IRIS_BUNDLED_QCA_GIT_TAG}")
         self.configure('-DIRIS_BUNDLED_QCA_GIT_TAG=another')
         self.assertFalse(stale.exists())
 
+    def test_minimum_is_read_from_lock_and_updates_on_reconfigure(self):
+        self.lock('a' * 40, '3.0.11')
+        self.configure()
+        self.assertEqual((self.build / 'iris-qca-min-version.txt').read_text().strip(), '3.0.11')
+        self.lock('a' * 40, '3.0.10')
+        self.configure()
+        self.assertEqual((self.build / 'iris-qca-min-version.txt').read_text().strip(), '3.0.10')
+
+    def test_build_release_change_does_not_raise_minimum(self):
+        self.lock('a' * 40, tag='v3.0.11')
+        self.configure()
+        self.assertEqual((self.build / 'iris-qca-min-version.txt').read_text().strip(), '3.0.10')
+
+    def test_invalid_minimum_rejected(self):
+        for value in (None, '', 'v3.0.10', '3.0', '3.0.10-extra', 310):
+            with self.subTest(value=value):
+                self.lock('a' * 40, value)
+                self.assertIn('QCA minimum_version must be', self.configure(success=False))
+
     def test_invalid_commit_rejected(self):
         self.lock('not-a-sha')
         self.assertIn('QCA commit must be a full lowercase Git SHA',
@@ -75,13 +94,13 @@ file(WRITE "${CMAKE_BINARY_DIR}/selected-ref" "${IRIS_BUNDLED_QCA_GIT_TAG}")
 
 
 class DependencyEnvironment(unittest.TestCase):
-    def run_loader(self, tag, commit):
+    def run_loader(self, tag, commit, minimum_version="3.0.10"):
         action = (ROOT / '.github/actions/load-dependencies/action.yml').read_text()
         script = textwrap.dedent(action.split('      run: |\n', 1)[1])
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'dependencies.lock.json').write_text(json.dumps(
-                {'qca': {'tag': tag, 'commit': commit}}))
+                {'qca': {'tag': tag, 'commit': commit, 'minimum_version': minimum_version}}))
             env = root / 'env'
             env.touch()
             result = subprocess.run(['bash', '-c', script], capture_output=True,
@@ -91,7 +110,14 @@ class DependencyEnvironment(unittest.TestCase):
 
     def test_valid_lock_exported(self):
         self.assertEqual(self.run_loader('v3.0.9', 'a' * 40),
-                         (0, 'QCA_TAG=v3.0.9\nQCA_COMMIT=' + 'a' * 40 + '\n'))
+                         (0, 'QCA_TAG=v3.0.9\nQCA_COMMIT=' + 'a' * 40 + '\nQCA_MIN_VERSION=3.0.10\n'))
+
+    def test_invalid_minimum_not_partially_exported(self):
+        for value in (None, '', 'v3.0.10', '3.0', '3.0.10-extra', '3.0.10\nOTHER=value', 310):
+            with self.subTest(value=value):
+                code, env = self.run_loader('v3.0.10', 'a' * 40, value)
+                self.assertNotEqual(code, 0)
+                self.assertEqual(env, '')
 
     def test_invalid_lock_not_partially_exported(self):
         for tag, commit in [('', 'a' * 40), ('v3.0.9\nOTHER=value', 'a' * 40),
