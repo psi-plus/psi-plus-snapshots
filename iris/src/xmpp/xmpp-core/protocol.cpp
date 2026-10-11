@@ -284,7 +284,7 @@ void BasicProtocol::extractStreamError(const QDomElement &e)
         errCond = {};
         errText = e.text();
     } else
-        errCond = stringToStreamCond(t.tagName());
+        errCond = stringToStreamCond(t.localName());
 
     if (!errCond.has_value()) {
         qWarning("unknown stream error=%s", qUtf8Printable(t.tagName()));
@@ -298,7 +298,7 @@ void BasicProtocol::extractStreamError(const QDomElement &e)
     if (nodes.count()) {
         for (int i = 0; i < nodes.count(); i++) {
             auto    e    = nodes.item(i).toElement();
-            QString lang = e.attributeNS(NS_STREAMS, "lang", "");
+            QString lang = e.attributeNS(NS_XML, "lang", "");
             langText.insert(lang, e.text());
         }
     } else
@@ -502,7 +502,7 @@ bool BasicProtocol::doStep(const QDomElement &e)
 
     if (!e.isNull()) {
         // check for error
-        if (e.namespaceURI() == NS_ETHERX && e.tagName() == "error") {
+        if (e.namespaceURI() == NS_ETHERX && e.localName() == "error") {
             extractStreamError(e);
             return error(ErrStream);
         }
@@ -1485,18 +1485,31 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                 step        = HandleSASLSuccess;
                 return true;
             } else if (e.tagName() == "failure") {
-                QDomElement t = firstChildElement(e);
-                if (t.isNull() || t.namespaceURI() != NS_SASL)
-                    errCond = {};
-                else
-                    errCond = stringToSASLCond(t.tagName());
+                // RFC 6120 §6.5: an unrecognized SASL failure condition
+                // must be treated as not-authorized. Also tolerate malformed
+                // failure elements lacking a usable condition.
+                errCond = SASLCond::NotAuthorized;
+                bool foundCondition = false;
+                for (QDomElement t = e.firstChildElement(); !t.isNull(); t = t.nextSiblingElement()) {
+                    if (t.namespaceURI() != NS_SASL || t.localName() == QLatin1String("text"))
+                        continue;
+                    foundCondition = true;
+                    const auto condition = stringToSASLCond(t.localName());
+                    if (condition)
+                        errCond = *condition;
+                    else
+                        qWarning("Unknown SASL failure condition: %s", qUtf8Printable(t.localName()));
+                    break;
+                }
+                if (!foundCondition)
+                    qWarning("SASL failure without a recognized condition element");
 
                 // handle text elements
                 auto                  nodes = e.elementsByTagNameNS(NS_SASL, QLatin1String("text"));
                 decltype(errLangText) lt;
                 for (int i = 0; i < nodes.count(); i++) {
                     auto    e    = nodes.item(i).toElement();
-                    QString lang = e.attributeNS(NS_SASL, "lang", "");
+                    QString lang = e.attributeNS(NS_XML, "lang", "");
                     lt.insert(lang, e.text());
                 }
 
@@ -1535,22 +1548,19 @@ bool CoreProtocol::normalStep(const QDomElement &e)
 
                     QDomElement err = e.elementsByTagNameNS(NS_CLIENT, "error").item(0).toElement();
                     if (!err.isNull()) {
-                        // get error condition
-                        QDomNodeList nl = err.childNodes();
-                        QDomElement  t;
-                        for (int n = 0; n < nl.count(); ++n) {
-                            QDomNode i = nl.item(n);
-                            if (i.isElement()) {
-                                t = i.toElement();
-                                break;
-                            }
-                        }
-                        if (!t.isNull() && t.namespaceURI() == NS_STANZAS) {
-                            QString cond = t.tagName();
-                            if (cond == "not-allowed")
+                        // Ignore descriptive text and foreign extensions when
+                        // looking for the stanza error condition.
+                        for (QDomElement t = err.firstChildElement(); !t.isNull(); t = t.nextSiblingElement()) {
+                            if (t.namespaceURI() != NS_STANZAS || t.localName() == QLatin1String("text"))
+                                continue;
+                            const QString cond = t.localName();
+                            if (cond == QLatin1String("bad-request"))
+                                errCond = BindCond::BindBadRequest;
+                            else if (cond == QLatin1String("not-allowed"))
                                 errCond = BindCond::BindNotAllowed;
-                            else if (cond == "conflict")
+                            else if (cond == QLatin1String("conflict"))
                                 errCond = BindCond::BindConflict;
+                            break;
                         }
                     }
 

@@ -23,6 +23,12 @@ add_executable(jingle_signaling_test signaling.cpp)
 target_link_libraries(jingle_signaling_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
 enable_testing()
+# CoreProtocol error paths share the existing desktop regression test runner.
+add_executable(core_protocol_errors_test coreprotocolerrors.cpp)
+target_link_libraries(core_protocol_errors_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME core_protocol_errors COMMAND core_protocol_errors_test)
+set_tests_properties(core_protocol_errors PROPERTIES TIMEOUT 10)
 add_executable(jingle_transports5b_test transports5b.cpp)
 target_link_libraries(jingle_transports5b_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Network Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)

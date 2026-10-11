@@ -96,7 +96,7 @@ file(WRITE "${CMAKE_BINARY_DIR}/selected-ref" "${IRIS_BUNDLED_QCA_GIT_TAG}")
 class DependencyEnvironment(unittest.TestCase):
     def run_loader(self, tag, commit, minimum_version="3.0.10"):
         action = (ROOT / '.github/actions/load-dependencies/action.yml').read_text()
-        script = textwrap.dedent(action.split('      run: |\n', 1)[1])
+        script = textwrap.dedent(action.split('      run: |\n', 1)[1].split('\n    - name:', 1)[0])
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'dependencies.lock.json').write_text(json.dumps(
@@ -105,12 +105,17 @@ class DependencyEnvironment(unittest.TestCase):
             env.touch()
             result = subprocess.run(['bash', '-c', script], capture_output=True,
                                     env=dict(os.environ, GITHUB_WORKSPACE=directory,
-                                             GITHUB_ENV=str(env)))
+                                             GITHUB_ENV=str(env), QCA_LOCK_PATH="dependencies.lock.json"))
             return result.returncode, env.read_text()
 
     def test_valid_lock_exported(self):
-        self.assertEqual(self.run_loader('v3.0.9', 'a' * 40),
-                         (0, 'QCA_TAG=v3.0.9\nQCA_COMMIT=' + 'a' * 40 + '\nQCA_MIN_VERSION=3.0.10\n'))
+        self.assertEqual(self.run_loader('v3.0.11', 'a' * 40),
+                         (0, 'QCA_TAG=v3.0.11\nQCA_COMMIT=' + 'a' * 40 + '\nQCA_MIN_VERSION=3.0.10\n'))
+
+    def test_build_revision_below_minimum_rejected(self):
+        code, env = self.run_loader('v3.0.9', 'a' * 40)
+        self.assertNotEqual(code, 0)
+        self.assertEqual(env, '')
 
     def test_invalid_minimum_not_partially_exported(self):
         for value in (None, '', 'v3.0.10', '3.0', '3.0.10-extra', '3.0.10\nOTHER=value', 310):

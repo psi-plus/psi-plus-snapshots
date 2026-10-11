@@ -1365,7 +1365,10 @@ void ClientStream::handleError()
         reset();
         emit error(ErrProtocol);
     } else if (c == CoreProtocol::ErrStream) {
-        auto        x        = std::get<CoreProtocol::StreamCond>(*d->client.errCond);
+        const auto *streamCond = d->client.errCond
+            ? std::get_if<CoreProtocol::StreamCond>(&*d->client.errCond)
+            : nullptr;
+        const auto x = streamCond ? *streamCond : CoreProtocol::StreamCond::UndefinedCondition;
         QString     text     = d->client.errText;
         auto        langText = d->client.errLangText;
         QDomElement appSpec  = d->client.errAppSpec;
@@ -1488,16 +1491,17 @@ void ClientStream::handleError()
         emit error(ErrTLS);
     } else if (c == CoreProtocol::ErrAuth) {
         int r = GenericAuthError;
+        const auto langText = d->client.errLangText;
         if (d->client.old) {
-            auto x = std::get<int>(*d->client.errCond);
-            if (x == 401) // not authorized
+            const auto *code = d->client.errCond ? std::get_if<int>(&*d->client.errCond) : nullptr;
+            if (code && *code == 401) // not authorized
                 r = NotAuthorized;
-            else if (x == 409) // conflict
-                r = GenericAuthError;
-            else if (x == 406) // not acceptable (this should NOT happen)
-                r = GenericAuthError;
         } else {
-            auto x = std::get<CoreProtocol::SASLCond>(*d->client.errCond);
+            const auto *cond = d->client.errCond
+                ? std::get_if<CoreProtocol::SASLCond>(&*d->client.errCond)
+                : nullptr;
+            // Unknown SASL conditions are equivalent to not-authorized (RFC 6120 §6.5).
+            const auto x = cond ? *cond : CoreProtocol::SASLCond::NotAuthorized;
             switch (x) {
             case CoreProtocol::SASLCond::Aborted: {
                 r = GenericAuthError;
@@ -1547,21 +1551,22 @@ void ClientStream::handleError()
         }
         reset();
         d->errCond     = r;
-        d->errLangText = d->client.errLangText;
+        d->errLangText = langText;
         emit error(ErrAuth);
     } else if (c == CoreProtocol::ErrPlain) {
         reset();
         d->errCond = NoMech;
         emit error(ErrAuth);
     } else if (c == CoreProtocol::ErrBind) {
-        int  r = -1;
-        auto x = std::get<CoreProtocol::BindCond>(*d->client.errCond);
-        if (x == CoreProtocol::BindCond::BindBadRequest) {
-            // should NOT happen
-        } else if (x == CoreProtocol::BindCond::BindNotAllowed) {
-            r = BindNotAllowed;
-        } else if (x == CoreProtocol::BindCond::BindConflict) {
-            r = BindConflict;
+        int r = -1;
+        const auto *cond = d->client.errCond
+            ? std::get_if<CoreProtocol::BindCond>(&*d->client.errCond)
+            : nullptr;
+        if (cond) {
+            if (*cond == CoreProtocol::BindCond::BindNotAllowed)
+                r = BindNotAllowed;
+            else if (*cond == CoreProtocol::BindCond::BindConflict)
+                r = BindConflict;
         }
 
         if (r != -1) {

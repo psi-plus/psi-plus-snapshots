@@ -113,11 +113,11 @@ struct Side {
 
         auto *rawPad = client.jingleManager()->transportPad(&session, J::ICE::NS);
         check(rawPad, "ICE pad unavailable");
-        basePad.reset(rawPad);
-        icePad = qSharedPointerDynamicCast<J::ICE::Pad>(basePad);
+        basePad = rawPad;
+        icePad = qobject_cast<J::ICE::Pad *>(basePad);
         check(bool(icePad), "wrong ICE pad type");
 
-        appPad.reset(new TestApplicationPad(&session));
+        appPad = new TestApplicationPad(&session);
         audioApp = new TestApplication(appPad, QStringLiteral("audio"));
         videoApp = new TestApplication(appPad, QStringLiteral("video"));
         session.addContent(audioApp);

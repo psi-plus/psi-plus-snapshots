@@ -201,7 +201,7 @@ int main(int argc, char **argv)
         auto      *rawPad = clientWithoutReserver.jingleManager()->transportPad(&sessionWithoutReserver, transportNs);
         check(rawPad, "ICE pad creation without TcpPortReserver failed");
         J::TransportManagerPad *pad    = rawPad;
-        auto                    icePad = qSharedPointerDynamicCast<J::ICE::Pad>(pad);
+        auto                    icePad = qobject_cast<J::ICE::Pad *>(pad);
         check(bool(icePad), "ICE pad without TcpPortReserver has wrong type");
         check(icePad->discoScope() == nullptr, "ICE pad unexpectedly fabricated a TCP discovery scope");
     }
@@ -221,14 +221,14 @@ int main(int argc, char **argv)
         J::TransportManagerPad *pad = rawPad;
         check(pad->ns() == transportNs, "selected ICE namespace was not retained by pad");
         auto base = pad->manager()->newTransport(pad, creator);
-        auto ice  = qSharedPointerDynamicCast<J::ICE::Transport>(base);
+        auto ice  = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(base.data()));
         check(bool(ice), "selected ICE namespace did not create an ICE transport");
         return ice;
     };
     auto first     = makeTransport(firstClient, firstSession, J::Origin::Initiator);
     auto second    = makeTransport(secondClient, secondSession, J::Origin::Initiator);
-    auto firstPad  = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((first->pad()).data()));
-    auto secondPad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((second->pad()).data()));
+    auto firstPad  = QPointer<J::ICE::Pad>(qobject_cast<J::ICE::Pad *>(first->pad()));
+    auto secondPad = QPointer<J::ICE::Pad>(qobject_cast<J::ICE::Pad *>(second->pad()));
 
     // Transport construction itself must not allocate an ICE association.
     // Association selection is delayed until the Transport is already bound to

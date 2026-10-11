@@ -206,12 +206,13 @@ static WireOffer makeOffer(Client &client, TcpPortReserver *reserver, J::RTP::Me
 
     QList<QPointer<J::ICE::Transport>> transports;
     for (auto application : applications) {
-        auto transport = qSharedPointerDynamicCast<J::ICE::Transport>(application->transport());
+        auto transport
+            = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(application->transport().data()));
         check(bool(transport), "caps-driven RTP selection did not choose ICE");
         check(transport->pad()->ns() == transportNamespace, "RTP BUNDLE selected a lower-priority ICE profile");
         transports.append(transport);
     }
-    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((transports.first()->pad()).data()));
+    auto icePad = QPointer<J::ICE::Pad>(qobject_cast<J::ICE::Pad *>(transports.first()->pad()));
     check(waitFor([&]() {
               for (qsizetype i = 0; i < applications.size(); ++i) {
                   if (!applications.at(i)->localDescription() || !transports.at(i)->hasUpdates())
@@ -416,7 +417,7 @@ static void exerciseScreenAnswer(const WireOffer &offer, TcpPortReserver *reserv
     auto anchor = session.content(anchorName, J::Origin::Initiator);
     check(anchor, "screen fixture lost its initial content");
     auto anchorTransport = QPointer<J::ICE::Transport>(static_cast<J::ICE::Transport *>((anchor->transport()).data()));
-    auto icePad          = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((anchorTransport->pad()).data()));
+    auto icePad          = QPointer<J::ICE::Pad>(qobject_cast<J::ICE::Pad *>(anchorTransport->pad()));
     RootTaskKeeper initialAnswer(client.rootTask());
     session.accept();
     check(waitFor([&]() { return initialAnswer.task() != nullptr; }), "initial answer was not serialized");
@@ -554,9 +555,9 @@ static void exerciseMixedRtpFileTransferBundle(TcpPortReserver *reserver)
     RootTaskKeeper pendingInitiate(client.rootTask());
     session.initiate();
 
-    auto audioTransport = qSharedPointerDynamicCast<J::ICE::Transport>(audio->transport());
-    auto videoTransport = qSharedPointerDynamicCast<J::ICE::Transport>(video->transport());
-    auto ftTransport    = qSharedPointerDynamicCast<J::ICE::Transport>(ft->transport());
+    auto audioTransport = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(audio->transport().data()));
+    auto videoTransport = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(video->transport().data()));
+    auto ftTransport    = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(ft->transport().data()));
     check(audioTransport && videoTransport && ftTransport,
           "mixed BUNDLE initial transport preselection did not choose ICE for every content");
 
@@ -567,7 +568,7 @@ static void exerciseMixedRtpFileTransferBundle(TcpPortReserver *reserver)
               && groups.first().contents.contains(ft->contentName()),
           "automatic grouping did not include compatible RTP and file-transfer contents");
 
-    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((audioTransport->pad()).data()));
+    auto icePad = QPointer<J::ICE::Pad>(qobject_cast<J::ICE::Pad *>(audioTransport->pad()));
     check(waitFor([&]() {
               return audioTransport->state() >= J::State::ApprovedToSend
                   && videoTransport->state() >= J::State::ApprovedToSend
@@ -619,9 +620,9 @@ static void exerciseFinishingFileTransferRetainsBundle(TcpPortReserver *reserver
 
     RootTaskKeeper pendingInitiate(client.rootTask());
     session.initiate();
-    auto transport = qSharedPointerDynamicCast<J::ICE::Transport>(ft->transport());
+    auto transport = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(ft->transport().data()));
     check(bool(transport), "FT drain fixture did not select ICE");
-    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((transport->pad()).data()));
+    auto icePad = QPointer<J::ICE::Pad>(qobject_cast<J::ICE::Pad *>(transport->pad()));
 
     bool                            bound = false, required = false;
     QPointer<J::ICE::IceConnection> network(icePad->d->groupedConnectionFor(transport.data(), &bound, &required));
@@ -711,7 +712,7 @@ static void exerciseInitialSingletonAnswer(const WireOffer &transportSource, Tcp
     check(waitFor([&]() { return initiate.task() != nullptr; }), "singleton initiate was not serialized");
     acknowledgeJingleTask(initiate, peer);
     auto  audioTransport = QPointer<J::ICE::Transport>(static_cast<J::ICE::Transport *>((audio->transport()).data()));
-    auto  icePad         = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((audioTransport->pad()).data()));
+    auto  icePad         = QPointer<J::ICE::Pad>(qobject_cast<J::ICE::Pad *>(audioTransport->pad()));
     bool  bound = false, required = false;
     auto *network = icePad->d->groupedConnectionFor(audioTransport.data(), &bound, &required);
     check(network && bound && required && session.groupings().first().contents == QStringList { audio->contentName() },
@@ -775,10 +776,10 @@ static void exerciseResponder(const WireOffer &offer, TcpPortReserver *reserver,
     auto video = dynamic_cast<J::RTP::Application *>(session.content(offer.videoName, J::Origin::Initiator));
     check(audio && video, "responder did not create production RTP applications");
 
-    auto audioTransport = qSharedPointerDynamicCast<J::ICE::Transport>(audio->transport());
-    auto videoTransport = qSharedPointerDynamicCast<J::ICE::Transport>(video->transport());
+    auto audioTransport = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(audio->transport().data()));
+    auto videoTransport = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(video->transport().data()));
     check(audioTransport && videoTransport, "responder did not create production ICE transports");
-    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((audioTransport->pad()).data()));
+    auto icePad = QPointer<J::ICE::Pad>(qobject_cast<J::ICE::Pad *>(audioTransport->pad()));
 
     // Incoming transport updates are committed asynchronously. Before local
     // consent they must remain pure per-content signaling state and allocate no
@@ -892,10 +893,10 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
     auto audio = dynamic_cast<J::RTP::Application *>(session.content(offer.audioName, J::Origin::Initiator));
     auto video = dynamic_cast<J::RTP::Application *>(session.content(offer.videoName, J::Origin::Initiator));
     check(audio && video, "active extension fixture lost initial RTP applications");
-    auto audioTransport = qSharedPointerDynamicCast<J::ICE::Transport>(audio->transport());
-    auto videoTransport = qSharedPointerDynamicCast<J::ICE::Transport>(video->transport());
+    auto audioTransport = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(audio->transport().data()));
+    auto videoTransport = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(video->transport().data()));
     check(audioTransport && videoTransport, "active extension fixture lost initial ICE transports");
-    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((audioTransport->pad()).data()));
+    auto icePad = QPointer<J::ICE::Pad>(qobject_cast<J::ICE::Pad *>(audioTransport->pad()));
 
     RootTaskKeeper pendingInitialAccept(client.rootTask());
     session.accept();
@@ -926,7 +927,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
 
     auto ft = dynamic_cast<J::FileTransfer::Application *>(session.content(fileName, J::Origin::Initiator));
     check(ft, "active BUNDLE extension did not create file-transfer application");
-    auto ftTransport = qSharedPointerDynamicCast<J::ICE::Transport>(ft->transport());
+    auto ftTransport = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(ft->transport().data()));
     check(bool(ftTransport), "active BUNDLE extension did not create ICE file-transfer transport");
     check(session.negotiatedGroupings().first().contents == QStringList({ offer.audioName, offer.videoName }),
           "incoming content-add published BUNDLE membership before content-accept");
@@ -1094,7 +1095,8 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
     // locally before the queued ContentAccept can be serialized. Session must
     // roll back only the provisional membership before sending ContentReject.
     rejectedFt->prepare();
-    auto rejectedTransport = qSharedPointerDynamicCast<J::ICE::Transport>(rejectedFt->transport());
+    auto rejectedTransport
+        = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(rejectedFt->transport().data()));
     check(bool(rejectedTransport), "rollback fixture did not create ICE transport");
     bool  rejectedBound = false, rejectedRequired = false;
     auto *rejectedProvisional
@@ -1205,10 +1207,10 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
 
     RootTaskKeeper pendingInitiate(client.rootTask());
     session.initiate();
-    auto audioTransport = qSharedPointerDynamicCast<J::ICE::Transport>(audio->transport());
-    auto videoTransport = qSharedPointerDynamicCast<J::ICE::Transport>(video->transport());
+    auto audioTransport = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(audio->transport().data()));
+    auto videoTransport = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(video->transport().data()));
     check(audioTransport && videoTransport, "RFC 9143 answer fixture did not select initial ICE transports");
-    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((audioTransport->pad()).data()));
+    auto icePad = QPointer<J::ICE::Pad>(qobject_cast<J::ICE::Pad *>(audioTransport->pad()));
 
     check(waitFor([&]() { return session.state() == J::State::Unacked; }),
           "RFC 9143 answer fixture did not serialize session-initiate");
@@ -1236,7 +1238,7 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
 
     RootTaskKeeper pendingAdd(client.rootTask());
     session.addContent(ftOwner.release());
-    auto ftTransport = qSharedPointerDynamicCast<J::ICE::Transport>(ft->transport());
+    auto ftTransport = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(ft->transport().data()));
     check(bool(ftTransport), "active outgoing extension did not select ICE for file transfer");
     check(waitFor([&]() { return pendingAdd.task() != nullptr && ft->state() == J::State::Unacked; }),
           "active outgoing extension did not serialize content-add");
@@ -1383,7 +1385,18 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
     check(session.updateFromXml(J::Action::ContentAccept, independentAnswer) && ft->state() == J::State::Pending
               && shared->generation.membershipRevision == revision,
           "unrelated independent acceptance disturbed the BUNDLE transaction");
+    QPointer<J::Transport> independentTransport = independent->transport();
+    check(independentTransport && icePad->d->liveAssociationCount() == 2,
+          "independent acceptance did not retain its own association");
     delete independent;
+    // The pad owns Transport; Application teardown schedules its deletion.
+    QCoreApplication::sendPostedEvents(independentTransport.data(), QEvent::DeferredDelete);
+    check(!independentTransport && shared->generation.membershipRevision == revision
+              && session.negotiatedGroupings().size() == 1
+              && session.negotiatedGroupings().first().contents
+                  == QStringList({ audio->contentName(), video->contentName() })
+              && icePad->d->liveAssociationCount() == 1,
+          "independent teardown changed BUNDLE membership or retained its association");
 
     check(session.updateFromXml(J::Action::ContentAccept, invalid),
           "corrected, fully bundled content-accept was rejected");
@@ -1436,10 +1449,10 @@ static void exerciseInitiatorReplacement(const WireOffer &transportSource, TcpPo
     RootTaskKeeper pendingInitiate(client.rootTask());
     session.initiate();
 
-    auto audioTransport = qSharedPointerDynamicCast<J::ICE::Transport>(audio->transport());
-    auto videoTransport = qSharedPointerDynamicCast<J::ICE::Transport>(video->transport());
+    auto audioTransport = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(audio->transport().data()));
+    auto videoTransport = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(video->transport().data()));
     check(audioTransport && videoTransport, "replacement initiator did not select ICE during initiate()");
-    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((audioTransport->pad()).data()));
+    auto icePad = QPointer<J::ICE::Pad>(qobject_cast<J::ICE::Pad *>(audioTransport->pad()));
 
     // There is no connected XMPP stream in this test process, so Task::go()
     // intentionally stops at the wire boundary; inject the peer's real IQ result
@@ -1487,8 +1500,8 @@ static void exerciseInitiatorReplacement(const WireOffer &transportSource, TcpPo
     check(session.updateFromXml(J::Action::TransportReplace, full),
           "full negotiated BUNDLE transport-replace was rejected");
 
-    auto replacementAudio = qSharedPointerDynamicCast<J::ICE::Transport>(audio->transport());
-    auto replacementVideo = qSharedPointerDynamicCast<J::ICE::Transport>(video->transport());
+    auto replacementAudio = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(audio->transport().data()));
+    auto replacementVideo = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(video->transport().data()));
     check(replacementAudio && replacementVideo && replacementAudio != audioTransport
               && replacementVideo != videoTransport,
           "full BUNDLE transport-replace did not install fresh ICE transports");
@@ -1556,12 +1569,12 @@ static void exerciseTwoGroupReplacement(const WireOffer &transportSource, TcpPor
     RootTaskKeeper pendingInitiate(client.rootTask());
     session.initiate();
 
-    auto ta1 = qSharedPointerDynamicCast<J::ICE::Transport>(a1->transport());
-    auto ta2 = qSharedPointerDynamicCast<J::ICE::Transport>(a2->transport());
-    auto tb1 = qSharedPointerDynamicCast<J::ICE::Transport>(b1->transport());
-    auto tb2 = qSharedPointerDynamicCast<J::ICE::Transport>(b2->transport());
+    auto ta1 = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(a1->transport().data()));
+    auto ta2 = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(a2->transport().data()));
+    auto tb1 = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(b1->transport().data()));
+    auto tb2 = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(b2->transport().data()));
     check(ta1 && ta2 && tb1 && tb2, "two-group fixture did not select ICE");
-    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((ta1->pad()).data()));
+    auto icePad = QPointer<J::ICE::Pad>(qobject_cast<J::ICE::Pad *>(ta1->pad()));
 
     check(waitFor([&]() { return session.state() == J::State::Unacked; }),
           "two-group fixture did not serialize session-initiate");
@@ -1647,8 +1660,8 @@ static void exerciseTwoGroupReplacement(const WireOffer &transportSource, TcpPor
                                                  qMakePair(a2->contentName(), transportSource.videoName) });
     check(session.updateFromXml(J::Action::TransportReplace, replaceA), "first BUNDLE group replacement was rejected");
 
-    auto ra1 = qSharedPointerDynamicCast<J::ICE::Transport>(a1->transport());
-    auto ra2 = qSharedPointerDynamicCast<J::ICE::Transport>(a2->transport());
+    auto ra1 = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(a1->transport().data()));
+    auto ra2 = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(a2->transport().data()));
     check(ra1 && ra2 && ra1 != ta1 && ra2 != ta2, "first group did not install replacement transports");
     check(waitFor([&]() {
               return ra1->state() == J::State::ApprovedToSend && ra2->state() == J::State::ApprovedToSend

@@ -314,8 +314,8 @@ struct Side {
 
         auto *rawPad = client.jingleManager()->transportPad(&session, J::ICE::NS);
         check(rawPad, "ICE pad unavailable");
-        baseIcePad.reset(rawPad);
-        icePad = qSharedPointerDynamicCast<J::ICE::Pad>(baseIcePad);
+        baseIcePad = rawPad;
+        icePad = qobject_cast<J::ICE::Pad *>(baseIcePad);
         check(bool(icePad), "wrong ICE pad type");
 
         const auto transportCreator = local ? J::Origin::Initiator : J::Origin::Responder;
