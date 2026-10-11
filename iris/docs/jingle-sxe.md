@@ -56,9 +56,18 @@ Session
 - The prolog is a `data:` URI. It is kept as untrusted text and never parsed.
 - `Application::document()` is a child of the application. A UI can reparent it to keep the
   content after the session ends; the application then refers to it through `QPointer`.
+- A session carries at most one SXE content, since `<sxe/>` payload is addressed by the Jingle
+  `sid`. A second one offered by the peer is answered with `content-reject`
+  (`incompatible-parameters`). Other applications, such as RTP or file transfer, can share the
+  session, and a whiteboard can be added to a running session with `content-add`.
+- Jingle `senders` of an SXE content are the participants allowed to edit (see below).
+- `SXE::Manager` parses and serializes XEP-0353 proposal descriptions (`SXE::Proposal`), so a
+  whiteboard can be proposed through `Jingle::Manager::sendMessageInitiation()`.
 
-Regression tests: `tests/jingle/sxedocument.cpp` (record model) and
-`tests/jingle/sxesession.cpp` (two clients with looped-back streams).
+Regression tests: `tests/jingle/sxedocument.cpp` (record model), `tests/jingle/sxesession.cpp`
+(two clients with looped-back streams: synchronization, conflicts, senders, proposals) and
+`tests/jingle/sxecontentadd.cpp` (a whiteboard added to a session with a file transfer, and a
+refused second whiteboard). Set `SXE_TEST_DUMP=1` to print the exchanged stanzas.
 
 ## Planned: payload over other Jingle transports
 
@@ -126,22 +135,24 @@ connection-based delivery.
 - Tests: the existing session test over S5B and ICE fixtures, a forced transport failure that
   falls back to the SXE transport, and frame-size limits.
 
-## Planned: senders of an SXE content
+## Senders of an SXE content
 
 XEP-0284 does not define what Jingle `senders` means for a shared document. Psi needs it to
-switch a whiteboard off without removing it (see Psi's `doc/whiteboarding.md`), so Iris will
-define it as the set of participants that may send edits:
+switch a whiteboard off without removing it (see Psi's `doc/whiteboarding.md`), so Iris
+defines it as the set of participants that may send edits:
 
 - A participant outside `senders` sends no `<new/>`, `<set/>` or `<remove/>`; received edits
   from such a participant are ignored. `<connect/>`, state offers and the state transfer are not
   edits and stay allowed, so a joiner can synchronize a frozen document.
 - `senders='none'` freezes the document; the UI hides it. Changing `senders` back continues with
   the same records and versions, without a new state transfer.
-- `SXE::Application` returns `supportsContentModify() == true`, applies validated peer changes
-  and reports them through `sendersChanged`; `Document` gets a read-only switch so local edits
-  are refused while the local participant is not a sender.
+- `SXE::Application` returns `supportsContentModify() == true`; changes go through the usual
+  `requestSenders()`/`content-modify` machinery and are reported by `sendersChanged`.
+  `Application::mayEdit(role)` tells whether a participant may edit, and the document is
+  read-only (`Document::isReadOnly()`) while the local participant is not a sender: local
+  editing calls are refused and nothing is sent.
 
-## Planned: session proposals with XEP-0353
+## Session proposals with XEP-0353
 
 Calls already use [XEP-0353](https://xmpp.org/extensions/xep-0353.html) through the generic
 `Jingle::Manager::sendMessageInitiation()`/`incomingMessageInitiation()` layer. A whiteboard
@@ -157,7 +168,8 @@ proposal reuses it:
 ```
 
 - `SXE::Manager` implements `parseProposal()`/`serializeProposal()` for its description
-  namespace (the minimal profile's description has no children).
+  namespace (the minimal profile's description has no children); the payload type is
+  `SXE::Proposal`. Using proposals for whiteboards in Psi is still to be done.
 - All online resources of the peer receive the proposal and answer `<ringing/>`. The resource
   that sends `<proceed/>` becomes the Jingle peer; the initiator then sends `session-initiate`
   with the proposal id as `sid`. `<reject/>`, `<retract/>` and `<finish/>` follow the same rules

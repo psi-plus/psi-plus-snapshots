@@ -210,6 +210,7 @@ namespace XMPP { namespace Jingle { namespace SXE {
         QDomDocument       editsDoc;
         QList<QDomElement> outgoing;
         bool               importing     = false;
+        bool               readOnly      = false;
         bool               suppressQueue = false;
         bool               changed       = false;
 
@@ -251,7 +252,7 @@ namespace XMPP { namespace Jingle { namespace SXE {
 
         void queue(const QDomElement &edit)
         {
-            if (!importing && !suppressQueue)
+            if (!importing && !suppressQueue && !readOnly)
                 outgoing.append(edit);
         }
 
@@ -781,6 +782,8 @@ namespace XMPP { namespace Jingle { namespace SXE {
 
     QDomNode Document::insertNodeBefore(const QDomNode &node, const QDomNode &parent, const QDomNode &referenceNode)
     {
+        if (d->readOnly)
+            return {};
         if (!referenceNode.isNull() && !referenceNode.previousSibling().isNull())
             return insertNodeAfter(node, parent, referenceNode.previousSibling());
 
@@ -801,7 +804,7 @@ namespace XMPP { namespace Jingle { namespace SXE {
 
     QDomNode Document::insertNodeAfter(const QDomNode &node, const QDomNode &parent, const QDomNode &referenceNode)
     {
-        if (node.isNull())
+        if (node.isNull() || d->readOnly)
             return {};
 
         if (node.isDocumentFragment()) {
@@ -846,7 +849,7 @@ namespace XMPP { namespace Jingle { namespace SXE {
 
     void Document::removeNode(const QDomNode &node)
     {
-        auto r = d->recordOf(node);
+        auto r = d->readOnly ? nullptr : d->recordOf(node);
         if (!r)
             return;
         d->deleteRecord(r->rid, false, true, true);
@@ -855,7 +858,7 @@ namespace XMPP { namespace Jingle { namespace SXE {
 
     void Document::setAttribute(const QDomNode &node, const QString &attribute, const QString &value, int from, int n)
     {
-        if (!node.isElement() || attribute.isEmpty())
+        if (!node.isElement() || attribute.isEmpty() || d->readOnly)
             return;
         auto element = node.toElement();
         if (value.isNull()) {
@@ -876,7 +879,7 @@ namespace XMPP { namespace Jingle { namespace SXE {
 
     void Document::setNodeValue(const QDomNode &node, const QString &value, int from, int n)
     {
-        auto r = d->recordOf(node);
+        auto r = d->readOnly ? nullptr : d->recordOf(node);
         if (!r || !hasChdata(r->type))
             return;
         const auto current = r->fields().chdata;
@@ -967,6 +970,10 @@ namespace XMPP { namespace Jingle { namespace SXE {
     }
 
     bool Document::isImporting() const { return d->importing; }
+
+    void Document::setReadOnly(bool readOnly) { d->readOnly = readOnly; }
+
+    bool Document::isReadOnly() const { return d->readOnly; }
 
     QList<QDomElement> Document::snapshot(QDomDocument &doc) const
     {

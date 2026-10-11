@@ -321,3 +321,9 @@ target_link_libraries(jingle_sxesession_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_V
     Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
 add_test(NAME jingle_sxesession COMMAND jingle_sxesession_test)
 set_tests_properties(jingle_sxesession PROPERTIES TIMEOUT 15)
+
+add_executable(jingle_sxecontentadd_test sxecontentadd.cpp)
+target_link_libraries(jingle_sxecontentadd_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME jingle_sxecontentadd COMMAND jingle_sxecontentadd_test)
+set_tests_properties(jingle_sxecontentadd PROPERTIES TIMEOUT 15)

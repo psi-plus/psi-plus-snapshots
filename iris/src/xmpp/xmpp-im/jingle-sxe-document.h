@@ -81,6 +81,11 @@ namespace XMPP { namespace Jingle { namespace SXE {
         void endImport();
         bool isImporting() const;
 
+        /// While read-only, local editing calls are refused and nothing is sent; remote edits still
+        /// apply. Used when the local participant is not among the senders of the content.
+        void setReadOnly(bool readOnly);
+        bool isReadOnly() const;
+
         /// Current state as a list of edits, parents before children, suitable for <state/>.
         /// Long character data is split into several edits.
         QList<QDomElement> snapshot(QDomDocument &doc) const;

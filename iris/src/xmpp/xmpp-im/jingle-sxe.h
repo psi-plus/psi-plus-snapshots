@@ -154,11 +154,15 @@ namespace XMPP { namespace Jingle { namespace SXE {
         void      setInitialDocument(const QDomDocument &doc);
         bool      isHost() const;
         SyncState syncState() const;
+        /// True if the participant with @a role may edit: Jingle senders of an SXE content are
+        /// the participants allowed to send edits. 'none' freezes the document for everybody.
+        bool mayEdit(Origin role) const;
 
         void                                      setState(State state) override;
         const std::optional<XMPP::Stanza::Error> &lastError() const override;
         Reason                                    lastReason() const override;
         bool                                      isTransportReplaceEnabled() const override;
+        bool                                      supportsContentModify() const override { return true; }
         void remove(Reason::Condition cond = Reason::Success, const QString &comment = QString()) override;
 
         SetDescError setRemoteOffer(const QDomElement &description) override;
@@ -180,6 +184,10 @@ namespace XMPP { namespace Jingle { namespace SXE {
         std::unique_ptr<Private> d;
     };
 
+    /// Payload of an XEP-0353 proposal for an SXE application type. The minimal whiteboard
+    /// profile's description has no children.
+    struct Proposal { };
+
     class IRIS_EXPORT Manager : public XMPP::Jingle::ApplicationManager {
         Q_OBJECT
     public:
@@ -187,13 +195,15 @@ namespace XMPP { namespace Jingle { namespace SXE {
         explicit Manager(const QString &descriptionNs = NS_SVG_WHITEBOARD, QObject *parent = nullptr);
         ~Manager() override;
 
-        void                   setJingleManager(XMPP::Jingle::Manager *jm) override;
-        Application           *startApplication(ApplicationManagerPad *pad, const QString &contentName, Origin creator,
-                                                Origin senders) override;
-        ApplicationManagerPad *pad(Session *session) override;
-        void                   closeAll(const QString &ns = QString()) override;
-        QStringList            ns() const override;
-        QStringList            discoFeatures() const override;
+        void                    setJingleManager(XMPP::Jingle::Manager *jm) override;
+        Application            *startApplication(ApplicationManagerPad *pad, const QString &contentName, Origin creator,
+                                                 Origin senders) override;
+        ApplicationManagerPad  *pad(Session *session) override;
+        void                    closeAll(const QString &ns = QString()) override;
+        QStringList             ns() const override;
+        QStringList             discoFeatures() const override;
+        std::optional<std::any> parseProposal(const QDomElement &description) const override;
+        QDomElement             serializeProposal(const std::any &data, QDomDocument *document) const override;
 
         QString descriptionNamespace() const;
 

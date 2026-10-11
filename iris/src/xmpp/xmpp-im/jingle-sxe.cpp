@@ -465,6 +465,12 @@ namespace XMPP { namespace Jingle { namespace SXE {
                 transport->sendSxe(sxe);
         }
 
+        void applySenders()
+        {
+            if (document)
+                document->setReadOnly(!q->mayEdit(q->pad()->session()->role()));
+        }
+
         void onOutgoingEdits(const QList<QDomElement> &edits)
         {
             // A host includes edits made before the peer joined in the state snapshot,
@@ -539,14 +545,17 @@ namespace XMPP { namespace Jingle { namespace SXE {
         {
             if (!document)
                 return;
+            // Edits of a participant outside the senders are ignored; the state transfer is not an edit.
+            const bool peerMayEdit = q->mayEdit(q->pad()->session()->peerRole());
             if (q->isHost()) {
-                if (peerSynchronized)
+                if (peerSynchronized && peerMayEdit)
                     document->applyEdits(state);
                 return;
             }
 
             if (sync == SyncState::Synchronized) {
-                document->applyEdits(state);
+                if (peerMayEdit)
+                    document->applyEdits(state);
                 return;
             }
             if (sync != SyncState::Receiving)
@@ -620,6 +629,8 @@ namespace XMPP { namespace Jingle { namespace SXE {
                 [this](const QList<QDomElement> &edits) { d->onOutgoingEdits(edits); });
         if (isHost())
             d->document->reset(pad->ns() == NS_SVG_WHITEBOARD ? emptyWhiteboardDocument() : QDomDocument());
+        connect(this, &XMPP::Jingle::Application::sendersChanged, this, [this]() { d->applySenders(); });
+        d->applySenders();
     }
 
     Application::~Application() { setParent(nullptr); }
@@ -635,6 +646,8 @@ namespace XMPP { namespace Jingle { namespace SXE {
     bool Application::isHost() const { return isLocal(); }
 
     Application::SyncState Application::syncState() const { return d->sync; }
+
+    bool Application::mayEdit(Origin role) const { return _senders == Origin::Both || _senders == role; }
 
     void Application::setState(State state)
     {
@@ -674,7 +687,15 @@ namespace XMPP { namespace Jingle { namespace SXE {
 
     Application::SetDescError Application::setRemoteOffer(const QDomElement &description)
     {
-        return description.namespaceURI() == _pad->ns() ? Ok : IncompatibleParameters;
+        if (description.namespaceURI() != _pad->ns())
+            return IncompatibleParameters;
+        // <sxe/> payload is addressed by the Jingle sid, so a session carries one SXE content.
+        for (auto content : _pad->session()->contentList()) {
+            auto other = qobject_cast<Application *>(content);
+            if (other && other != this && other->state() < State::Finishing)
+                return IncompatibleParameters;
+        }
+        return Ok;
     }
 
     Application::SetDescError Application::setRemoteAnswer(const QDomElement &description)
@@ -766,5 +787,19 @@ namespace XMPP { namespace Jingle { namespace SXE {
     QStringList Manager::discoFeatures() const { return { descriptionNs_ }; }
 
     QString Manager::descriptionNamespace() const { return descriptionNs_; }
+
+    std::optional<std::any> Manager::parseProposal(const QDomElement &description) const
+    {
+        if (description.tagName() != QLatin1String("description") || description.namespaceURI() != descriptionNs_)
+            return std::nullopt;
+        return std::any(Proposal {});
+    }
+
+    QDomElement Manager::serializeProposal(const std::any &data, QDomDocument *document) const
+    {
+        if (!document || data.type() != typeid(Proposal))
+            return {};
+        return document->createElementNS(descriptionNs_, QStringLiteral("description"));
+    }
 
 }}}

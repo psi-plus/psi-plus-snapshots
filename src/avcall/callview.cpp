@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "callview.h"
+#include "callstage.h"
 #include "../psimedia/psimedia.h"
 #include "screensharecapture.h"
 #include <QComboBox>
 #include <QFrame>
-#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -43,6 +43,14 @@ QIcon callIcon(int kind)
         painter.drawLine(QPointF(12, 14), QPointF(12, 7));
         painter.drawLine(QPointF(12, 7), QPointF(9, 10));
         painter.drawLine(QPointF(12, 7), QPointF(15, 10));
+    } else if (kind == 4) {
+        painter.drawRoundedRect(QRectF(2, 3, 20, 14), 1.5, 1.5);
+        painter.drawLine(QPointF(9, 17), QPointF(6, 22));
+        painter.drawLine(QPointF(15, 17), QPointF(18, 22));
+        QPainterPath stroke;
+        stroke.moveTo(6, 13);
+        stroke.cubicTo(9, 6, 12, 14, 18, 7);
+        painter.drawPath(stroke);
     } else {
         QPainterPath receiver;
         receiver.moveTo(3, 14);
@@ -65,6 +73,7 @@ CallView::CallView(QWidget *parent) : QWidget(parent)
         "padding: 4px; }"
         "QLabel#callStatus, QLabel#callDuration { color: #9ca3af; }"
         "QFrame#callStage { background: #1b2435; border: 1px solid #2b3548; border-radius: 18px; }"
+        "QFrame#callTile { background: #0b1220; border: none; border-radius: 10px; }"
         "QFrame#sharingBar { background: #153b37; border: 1px solid #2dd4bf; border-radius: 10px; }"
         "QPushButton { color: #f3f4f6; background: #293447; border: 1px solid #39465c; border-radius: 12px; padding: "
         "12px 18px; font-weight: 600; }"
@@ -97,37 +106,20 @@ CallView::CallView(QWidget *parent) : QWidget(parent)
     header->addWidget(duration_);
     layout->addLayout(header);
 
-    auto stage = new QFrame(this);
-    stage->setObjectName(QStringLiteral("callStage"));
-    stage->setMinimumSize(420, 260);
-    auto stageLayout = new QGridLayout(stage);
-    stageLayout->setSpacing(12);
-    stageLayout->setColumnStretch(0, 4);
-    stageLayout->setColumnStretch(1, 1);
-    stageLayout->setContentsMargins(12, 12, 12, 12);
-    placeholder_ = new QLabel(tr("Audio call\nTurn on your camera or share your screen"), stage);
-    placeholder_->setAlignment(Qt::AlignCenter);
-    placeholder_->setStyleSheet(QStringLiteral("color: #aab6c8; font-size: 18px;"));
-    stageLayout->addWidget(placeholder_, 0, 0, 1, 2);
-    video_ = new PsiMedia::VideoWidget(stage);
-    video_->setMinimumSize(160, 120);
-    video_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    presentation_ = new PsiMedia::VideoWidget(stage);
-    presentation_->setMinimumSize(320, 180);
-    presentation_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    stage_ = new CallStage(this);
+    stage_->setMinimumSize(420, 260);
+    stage_->setPlaceholderText(tr("Audio call\nTurn on your camera or share your screen"));
+    video_        = new PsiMedia::VideoWidget;
+    presentation_ = new PsiMedia::VideoWidget;
+    stage_->addTile(presentation_, tr("Shared screen"), CallStage::ScreenPriority);
+    stage_->addTile(video_, tr("Camera"), CallStage::CameraPriority);
     for (auto video : { video_, presentation_ }) {
-        video->hide();
-
         connect(video, &PsiMedia::VideoWidget::videoSizeChanged, this, [this, video] {
-            if (!active_)
-                return;
-            video->show();
-            placeholder_->hide();
+            if (active_)
+                stage_->setTileVisible(video, true);
         });
     }
-    stageLayout->addWidget(presentation_, 0, 0);
-    stageLayout->addWidget(video_, 0, 1);
-    layout->addWidget(stage, 1);
+    layout->addWidget(stage_, 1);
 
     sharingBar_ = new QFrame(this);
     sharingBar_->setObjectName(QStringLiteral("sharingBar"));
@@ -167,10 +159,17 @@ CallView::CallView(QWidget *parent) : QWidget(parent)
     share_->setEnabled(false);
     share_->setToolTip(tr("Share a display or an individual window"));
     connect(share_, &QPushButton::clicked, this, &CallView::shareRequested);
+    whiteboard_ = new QPushButton(tr("Whiteboard"), this);
+    whiteboard_->setObjectName(QStringLiteral("callWhiteboard"));
+    whiteboard_->setCheckable(true);
+    whiteboard_->setEnabled(false);
+    whiteboard_->setToolTip(tr("Draw together on a shared whiteboard"));
+    connect(whiteboard_, &QPushButton::toggled, this, &CallView::whiteboardChanged);
     microphone_->setIcon(callIcon(0));
     camera_->setIcon(callIcon(1));
     share_->setIcon(callIcon(2));
-    for (auto button : { microphone_, camera_, share_ })
+    whiteboard_->setIcon(callIcon(4));
+    for (auto button : { microphone_, camera_, share_, whiteboard_ })
         button->setIconSize(QSize(22, 22));
     quality_ = new QComboBox(this);
     quality_->addItem(tr("HD · 2 Mbps"), 2000);
@@ -181,6 +180,7 @@ CallView::CallView(QWidget *parent) : QWidget(parent)
     controls->addWidget(microphone_);
     controls->addWidget(camera_);
     controls->addWidget(share_);
+    controls->addWidget(whiteboard_);
     controls->addStretch();
     layout->addLayout(controls);
     auto actions = new QHBoxLayout;
@@ -212,31 +212,37 @@ void    CallView::setActive(bool active)
     active_ = active;
     accept_->setVisible(!active);
     quality_->setVisible(!active);
-    end_->setText(active ? tr("End call") : tr("Close"));
-    share_->setEnabled(active && shareSupported_ && ScreenShareCapture::available());
+    end_->setText(active ? (whiteboardOnly_ ? tr("End") : tr("End call")) : tr("Close"));
+    share_->setEnabled(active && !whiteboardOnly_ && shareSupported_ && ScreenShareCapture::available());
     if (active)
-        placeholder_->setText(tr("Connected · waiting for video"));
+        stage_->setPlaceholderText(whiteboardOnly_ ? tr("Connected") : tr("Connected · waiting for video"));
 }
 void CallView::setConnecting(bool connecting)
 {
     accept_->setEnabled(!connecting);
     peer_->setReadOnly(connecting);
     quality_->setEnabled(!connecting);
-    camera_->setEnabled(!connecting && videoSupported_);
+    camera_->setEnabled(!connecting && videoSupported_ && !whiteboardOnly_);
     end_->setText(connecting ? tr("Cancel") : tr("Close"));
 }
-void CallView::setIncoming(bool incoming) { accept_->setText(incoming ? tr("Accept call") : tr("Call")); }
+void CallView::setIncoming(bool incoming)
+{
+    if (whiteboardOnly_)
+        accept_->setText(incoming ? tr("Join whiteboard") : tr("Invite"));
+    else
+        accept_->setText(incoming ? tr("Accept call") : tr("Call"));
+}
 void CallView::setVideoSupported(bool supported)
 {
     videoSupported_ = supported;
-    camera_->setEnabled(supported);
+    camera_->setEnabled(supported && !whiteboardOnly_);
     if (!supported)
         camera_->setChecked(false);
 }
 void CallView::setSharingSupported(bool supported)
 {
     shareSupported_ = supported;
-    share_->setEnabled(active_ && supported && ScreenShareCapture::available());
+    share_->setEnabled(active_ && !whiteboardOnly_ && supported && ScreenShareCapture::available());
 }
 void CallView::setCameraEnabled(bool enabled)
 {
@@ -246,16 +252,16 @@ void CallView::setCameraEnabled(bool enabled)
 }
 void CallView::setFinished()
 {
+    finished_ = true;
     setActive(false);
     accept_->hide();
     quality_->hide();
     microphone_->setEnabled(false);
     camera_->setEnabled(false);
     share_->setEnabled(false);
-    video_->hide();
-    presentation_->hide();
-    placeholder_->setText(tr("Call ended"));
-    placeholder_->show();
+    whiteboard_->setEnabled(false);
+    stage_->hideAllTiles();
+    stage_->setPlaceholderText(whiteboardOnly_ ? tr("Session ended") : tr("Call ended"));
     peer_->setReadOnly(true);
 }
 void CallView::setSharing(bool sharing, const QString &source, bool connecting)
@@ -269,7 +275,7 @@ void CallView::setSharing(bool sharing, const QString &source, bool connecting)
 void CallView::setShareSelecting(bool selecting)
 {
     selecting_ = selecting;
-    share_->setEnabled(active_ && shareSupported_ && ScreenShareCapture::available());
+    share_->setEnabled(active_ && !whiteboardOnly_ && shareSupported_ && ScreenShareCapture::available());
     share_->setText(selecting ? tr("Cancel selection") : (sharing_ ? tr("Sharing screen") : tr("Share screen")));
 }
 void CallView::setDuration(qint64 seconds)
@@ -284,10 +290,39 @@ bool                   CallView::microphoneEnabled() const { return microphone_-
 int                    CallView::bitrate() const { return quality_->currentData().toInt(); }
 PsiMedia::VideoWidget *CallView::remoteVideo() const { return video_; }
 PsiMedia::VideoWidget *CallView::remotePresentation() const { return presentation_; }
+CallStage             *CallView::stage() const { return stage_; }
+
+void CallView::setWhiteboardOnly(bool whiteboardOnly)
+{
+    whiteboardOnly_ = whiteboardOnly;
+    microphone_->setEnabled(!whiteboardOnly);
+    if (whiteboardOnly) {
+        const QSignalBlocker blocked(microphone_);
+        microphone_->setChecked(false);
+        microphone_->setText(tr("Microphone"));
+    }
+    microphone_->setToolTip(whiteboardOnly ? tr("Not available in a whiteboard session")
+                                           : tr("Turn your microphone on or off"));
+    camera_->setEnabled(!whiteboardOnly && videoSupported_);
+    share_->setEnabled(active_ && !whiteboardOnly && shareSupported_ && ScreenShareCapture::available());
+    quality_->setEnabled(!whiteboardOnly);
+    stage_->setPlaceholderText(whiteboardOnly ? tr("Whiteboard")
+                                              : tr("Audio call\nTurn on your camera or share your screen"));
+}
+bool CallView::whiteboardOnly() const { return whiteboardOnly_; }
+void CallView::setWhiteboardSupported(bool supported)
+{
+    whiteboardSupported_ = supported;
+    whiteboard_->setEnabled(supported && !finished_);
+}
+void CallView::setWhiteboardEnabled(bool enabled)
+{
+    const QSignalBlocker blocked(whiteboard_);
+    whiteboard_->setChecked(enabled);
+}
+bool CallView::whiteboardEnabled() const { return whiteboard_->isChecked(); }
 
 void CallView::hideRemoteVideo(bool presentation)
 {
-    (presentation ? presentation_ : video_)->hide();
-    if (video_->isHidden() && presentation_->isHidden())
-        placeholder_->show();
+    stage_->setTileVisible(presentation ? presentation_ : video_, false);
 }

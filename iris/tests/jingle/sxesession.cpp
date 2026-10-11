@@ -2,6 +2,7 @@
 // End-to-end Jingle SXE whiteboard session between two clients with looped-back streams.
 #include <iris/jingle-session.h>
 #include <iris/xmpp-im/jingle-sxe.h>
+#include <iris/xmpp-im/xmpp_jinglemessage.h>
 #include <iris/xmpp.h>
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_clientstream.h>
@@ -63,6 +64,12 @@ static void pump(Endpoint &a, Endpoint &b)
             from->stream.written.clear();
             for (auto stanza : out) {
                 moved = true;
+                if (qEnvironmentVariableIsSet("SXE_TEST_DUMP")) {
+                    QString     xml;
+                    QTextStream stream(&xml);
+                    stanza.save(stream, 1);
+                    qInfo("%s -> %s", qPrintable(from->jid.node()), qPrintable(xml));
+                }
                 if (stanza.tagName() == QLatin1String("message"))
                     sentMessages.append(stanza);
                 stanza.setAttribute(QStringLiteral("from"), from->jid.full());
@@ -182,6 +189,87 @@ int main(int argc, char **argv)
         check(!message.firstChildElement(QStringLiteral("sxe")).isNull(), "SXE message without payload");
         check(message.firstChildElement(QStringLiteral("sxe")).namespaceURI() == SXE::NS, "wrong SXE namespace");
         check(!message.firstChildElement(QStringLiteral("no-store")).isNull(), "SXE state may be archived");
+    }
+
+    // Senders of an SXE content are the participants allowed to edit.
+    check(content->supportsContentModify() && remote->supportsContentModify(), "SXE content cannot change senders");
+    const auto frozenAt = dump(content->document()->document());
+    check(content->requestSenders(J::Origin::None), "freezing the whiteboard was refused");
+    pump(alice, bob);
+    check(content->senders() == J::Origin::None && remote->senders() == J::Origin::None,
+          "senders change was not negotiated");
+    check(content->document()->isReadOnly() && remote->document()->isReadOnly(), "frozen document stays editable");
+    sentMessages.clear();
+    content->document()->setAttribute(hostPath, QStringLiteral("stroke"), QStringLiteral("frozen"));
+    remote->document()->setAttribute(peerPath, QStringLiteral("stroke"), QStringLiteral("frozen"));
+    content->document()->flush();
+    remote->document()->flush();
+    pump(alice, bob);
+    check(sentMessages.isEmpty() && dump(content->document()->document()) == frozenAt
+              && dump(remote->document()->document()) == frozenAt,
+          "a frozen whiteboard was edited");
+
+    // Only the initiator draws; edits of the responder are refused locally and ignored remotely.
+    check(remote->requestSenders(J::Origin::Initiator), "presenter mode was refused");
+    pump(alice, bob);
+    check(content->senders() == J::Origin::Initiator && !content->document()->isReadOnly()
+              && remote->document()->isReadOnly(),
+          "presenter mode was not applied");
+    {
+        QDomDocument forged;
+        auto         message = forged.createElement(QStringLiteral("message"));
+        message.setAttribute(QStringLiteral("from"), bob.jid.full());
+        message.setAttribute(QStringLiteral("to"), alice.jid.full());
+        auto sxe = forged.createElementNS(SXE::NS, QStringLiteral("sxe"));
+        sxe.setAttribute(QStringLiteral("session"), session->sid());
+        sxe.setAttribute(QStringLiteral("id"), QStringLiteral("forged"));
+        auto state = forged.createElementNS(SXE::NS, QStringLiteral("state"));
+        auto edit  = forged.createElementNS(SXE::NS, QStringLiteral("new"));
+        edit.setAttribute(QStringLiteral("rid"), QStringLiteral("forged.1"));
+        edit.setAttribute(QStringLiteral("type"), QStringLiteral("element"));
+        edit.setAttribute(QStringLiteral("name"), QStringLiteral("rect"));
+        state.appendChild(edit);
+        sxe.appendChild(state);
+        message.appendChild(sxe);
+        const auto before = dump(content->document()->document());
+        // A valid parent: the first <new/> of the host snapshot is the root element.
+        QDomDocument snapshotWire;
+        edit.setAttribute(QStringLiteral("parent"),
+                          content->document()->snapshot(snapshotWire).value(0).attribute(QStringLiteral("rid")));
+        alice.client.rootTask()->take(message);
+        check(dump(content->document()->document()) == before, "edit of a non-sender was applied");
+    }
+    content->document()->setAttribute(hostPath, QStringLiteral("stroke"), QStringLiteral("presenter"));
+    content->document()->flush();
+    pump(alice, bob);
+    check(peerPath.attribute(QStringLiteral("stroke")) == QStringLiteral("presenter"), "presenter edit not delivered");
+
+    // Resuming continues with the same records and versions, without a new state transfer.
+    check(content->requestSenders(J::Origin::Both), "resuming the whiteboard was refused");
+    pump(alice, bob);
+    remote->document()->setAttribute(peerPath, QStringLiteral("stroke"), QStringLiteral("resumed"));
+    remote->document()->flush();
+    pump(alice, bob);
+    check(hostPath.attribute(QStringLiteral("stroke")) == QStringLiteral("resumed")
+              && dump(remote->document()->document()) == dump(content->document()->document()),
+          "resumed whiteboard diverged");
+
+    // XEP-0353 proposals carry the whiteboard description.
+    {
+        alice.client.jingleManager()->setMessageInitiationEnabled(true);
+        bob.client.jingleManager()->setMessageInitiationEnabled(true);
+        std::optional<J::MessageInitiation> received;
+        QObject::connect(bob.client.jingleManager(), &J::Manager::incomingMessageInitiation, &app,
+                         [&](const Message &, const J::MessageInitiation &initiation) { received = initiation; });
+        J::MessageInitiation propose(J::MessageInitiation::Action::Propose, QStringLiteral("wb-proposal"));
+        propose.addDescription(SXE::NS_SVG_WHITEBOARD, std::any(SXE::Proposal {}));
+        check(alice.client.jingleManager()->sendMessageInitiation(Jid(bob.jid.bare()), propose),
+              "whiteboard proposal was not sent");
+        pump(alice, bob);
+        check(received && received->action() == J::MessageInitiation::Action::Propose
+                  && received->descriptions().size() == 1 && received->descriptions().first().isSupported()
+                  && received->descriptions().first().data.type() == typeid(SXE::Proposal),
+              "whiteboard proposal was not understood");
     }
 
     // SXE payload of a finished session is not routed anymore.
