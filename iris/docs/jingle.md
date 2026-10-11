@@ -281,7 +281,8 @@ arbitrary SDP BUNDLE renegotiation.
 ## Shared XML Editing (XEP-0284)
 
 `Jingle::SXE` implements [XEP-0284](https://xmpp.org/extensions/xep-0284.html) as a Jingle
-transport and a generic application. The client registers the application for the SVG
+transport and a generic application. See [jingle-sxe.md](jingle-sxe.md) for the design, the
+planned payload over other Jingle transports and XEP-0353 proposals. The client registers the application for the SVG
 whiteboard profile (`urn:xmpp:jingle:apps:svg-whiteboard:0`, a draft profile from
 <https://github.com/jabberworld/whiteboarding>); another document type only needs another
 `SXE::Manager(descriptionNs)`. Drawing is left to the client.
