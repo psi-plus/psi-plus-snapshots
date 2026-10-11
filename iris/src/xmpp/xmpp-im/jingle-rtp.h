@@ -268,7 +268,7 @@ private:
 class IRIS_EXPORT Application : public XMPP::Jingle::Application {
     Q_OBJECT
 public:
-    Application(const QSharedPointer<Pad> &, const QString &, Origin creator, Origin senders);
+    Application(Pad *, const QString &, Origin creator, Origin senders);
     ~Application() override;
     bool                                initializeOutgoing(const QString &media);
     void                                setState(State) override;
@@ -341,7 +341,7 @@ public:
     Application *createOutgoing(Session *, Media media, Origin senders = Origin::Both, const QString &contentName = {});
     Application *createOutgoing(Session *, const QString &media, Origin senders = Origin::Both,
                                 const QString &contentName = {});
-    Application *startApplication(const ApplicationManagerPad::Ptr &, const QString &, Origin, Origin) override;
+    Application *startApplication(ApplicationManagerPad *, const QString &, Origin, Origin) override;
     ApplicationManagerPad  *pad(Session *) override;
     void                    closeAll(const QString & = QString()) override;
     std::optional<std::any> parseProposal(const QDomElement &) const override;

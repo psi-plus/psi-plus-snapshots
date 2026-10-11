@@ -84,6 +84,9 @@ namespace XMPP { namespace Jingle { namespace SCTP {
                                           quint16 priority = 256, const QString &label = QString(),
                                           const QString &protocol = QString());
         QList<Connection::Ptr> channels() const;
+        // Signaling may prepare a channel before accepting its Jingle content.
+        Connection::Ptr newDeferredChannel(const QString &label);
+        void            activateChannel(const Connection::Ptr &channel);
         // call this when dtls connected
         void onTransportConnected();
         void onTransportError(QAbstractSocket::SocketError error);

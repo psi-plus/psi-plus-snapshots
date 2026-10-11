@@ -134,6 +134,8 @@ set(XMPP_IM_HEADERS
     xmpp-im/jingle-ice.h
     xmpp-im/jingle-s5b.h
     xmpp-im/jingle-ibb.h
+    xmpp-im/jingle-sxe-document.h
+    xmpp-im/jingle-sxe.h
     xmpp-im/jingle-file.h
     xmpp-im/jingle-pub.h
     xmpp-im/xmpp_file-sharing.h
@@ -220,6 +222,8 @@ target_sources(iris PRIVATE
     xmpp-im/jingle-ice.cpp
     xmpp-im/jingle-s5b.cpp
     xmpp-im/jingle-ibb.cpp
+    xmpp-im/jingle-sxe-document.cpp
+    xmpp-im/jingle-sxe.cpp
     xmpp-im/jingle-file.cpp
     xmpp-im/jingle-pub.cpp
     xmpp-im/xmpp_file-sharing.cpp

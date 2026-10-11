@@ -19,11 +19,13 @@
 
 #ifdef JINGLE_SCTP
 #include "jingle-sctp.h" //Do not move to avoid warnings with MinGW
+#include "jingle-webrtc-datachannel_p.h"
 #endif
 
 #include "jingle-ice-connection_p.h"
 #include "jingle-ice-dtls_p.h"
 #include "jingle-ice-group_p.h"
+#include "jingle-ice-pad_p.h"
 #include "jingle-ice-udp.h"
 #include "jingle-ice.h"
 
@@ -51,26 +53,6 @@ template <class T> constexpr std::add_const_t<T> &as_const(T &t) noexcept { retu
 namespace XMPP { namespace Jingle { namespace ICE {
     const QString NS(QStringLiteral("urn:xmpp:jingle:transports:ice:0"));
     const QString NS_DTLS(QStringLiteral("urn:xmpp:jingle:apps:dtls:0"));
-
-    class Pad::Private {
-    public:
-        ConnectionRegistry                        registry;
-        QMap<ContentKey, QPointer<Transport>>     contentOwners;
-        QSet<ContentKey>                          establishedContents;
-        std::optional<ConnectionGroupTransaction> stagedGroups;
-        std::optional<ConnectionGroupTransaction> extensionGroups;
-        std::optional<ContentKey>                 extensionContent;
-        QPointer<Transport>                       extensionTransport;
-        std::optional<ConnectionGroupTransaction> replacementGroups;
-        QSet<ContentKey>                          replacementContents;
-        QSet<ContentKey>                          replacementBound;
-        QMap<ContentKey, QPointer<Transport>>     replacementTransports;
-        QList<ContentGroup>                       stagedOfferGroups;
-        QSet<ContentKey>                          stagedContents;
-        bool                                      groupStageAttempted  = false;
-        bool                                      groupStageFailed     = false;
-        bool                                      localAcceptanceKnown = false;
-    };
 
     static XMPP::Ice176::Candidate elementToCandidate(const QDomElement &e)
     {
@@ -273,6 +255,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
             std::function<void(Ice176::Error)>                    onError;
             std::function<void()>                                 onRawReady;
             std::function<void()>                                 onFingerprintNeeded;
+#ifdef JINGLE_SCTP
+            std::function<bool(Connection::Ptr)> onIncomingChannel;
+#endif
         };
 
         QPointer<Pad> pad;
@@ -285,7 +270,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
         bool gatheringComplete         = false;
         bool checksStarted             = false;
 
-        QList<Participant>       participants;
+        QList<Participant> participants;
+#ifdef JINGLE_SCTP
+        QList<Connection::Ptr> pendingDataChannels;
+#endif
         QList<Ice176::Candidate> localCandidateHistory;
 
         // Association-owned discovery/startup state. No asynchronous callback
@@ -502,6 +490,50 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
         void t_timeout() { deleteLater(); }
     };
+
+#ifdef JINGLE_SCTP
+    static void dispatchIncomingDataChannels(IceConnection *network)
+    {
+        if (!network || !network->runtime)
+            return;
+        QPointer<IceConnection> guard(network);
+        const auto              pending = std::exchange(network->runtime->pendingDataChannels, {});
+        for (const auto &channel : pending) {
+            if (!guard || !network->runtime)
+                return;
+            auto                                 dc = qSharedPointerDynamicCast<SCTP::WebRTCDataChannel>(channel);
+            QPointer<Transport>                  target;
+            std::function<bool(Connection::Ptr)> accept;
+            bool                                 ambiguous = false;
+            if (dc && network->runtime->pad && network->runtime->pad->session()) {
+                const auto contents     = network->runtime->pad->session()->contentList();
+                const auto participants = network->runtime->participants;
+                for (const auto &participant : participants) {
+                    if (!participant.transport || !participant.transport->isRemote())
+                        continue;
+                    for (auto *app : contents) {
+                        if (app->contentName() != dc->label || app->state() >= State::Finishing
+                            || app->transport().data() != participant.transport)
+                            continue;
+                        if (target && target != participant.transport)
+                            ambiguous = true;
+                        target = participant.transport;
+                        accept = participant.onIncomingChannel;
+                    }
+                }
+            }
+            if (target && !ambiguous && target->state() < State::Connecting) {
+                // DCEP may overtake the content-accept IQ result. Keep the
+                // connection association-owned until membership commits and
+                // Transport::start authorizes application payload processing.
+                network->runtime->pendingDataChannels.append(channel);
+                continue;
+            }
+            if ((!target || ambiguous || target->state() >= State::Finishing || !accept || !accept(channel)) && channel)
+                channel->close();
+        }
+    }
+#endif
 
     class Manager::Private {
     public:
@@ -743,6 +775,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
                         participant.onRawReady();
             },
             Qt::QueuedConnection);
+        QObject::connect(ice, &Ice176::peerActivity, network, [network, currentIce]() {
+            if (currentIce() && network->runtime->pad)
+                network->runtime->pad->noteIncomingActivity();
+        });
         QObject::connect(ice, &Ice176::readyRead, network, [network, ice, currentIce](int componentIndex) {
             if (!currentIce() || componentIndex < 0 || componentIndex >= network->components.size())
                 return;
@@ -753,6 +789,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
             } else if (component.dtls) {
                 component.dtls->writeIncomingDatagram(buffer);
             } else if (component.rawConnection) {
+                if (network->runtime->pad)
+                    network->runtime->pad->noteIncomingActivity();
                 component.rawConnection->enqueueIncomingUDP(buffer);
             }
         });
@@ -873,7 +911,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
         Dtls::Setup localDtlsRole  = Dtls::ActPass;
         Dtls::Setup remoteDtlsRole = Dtls::ActPass;
 #ifdef JINGLE_SCTP
-        SCTP::MapElement sctp;
+        SCTP::MapElement                   sctp;
+        QList<QPair<int, Connection::Ptr>> deferredDataChannels;
 #endif
 
         QHostAddress extAddr;
@@ -912,6 +951,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
                                                               || participant.transport == q;
                                                       }),
                                        participants.end());
+#ifdef JINGLE_SCTP
+                    dispatchIncomingDataChannels(network);
+#endif
                 }
                 // No callback capturing this Transport::Private may survive the
                 // logical content releasing its association membership.
@@ -940,19 +982,19 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 return false;
             if (network)
                 return true;
-            auto pad = q->pad().staticCast<Pad>();
+            auto pad = static_cast<Pad *>(q->pad());
             if (!pad)
                 return false;
 
             bool contentBound  = false;
             bool groupRequired = false;
-            network            = pad->groupedConnectionFor(q, &contentBound, &groupRequired);
+            network            = pad->d->groupedConnectionFor(q, &contentBound, &groupRequired);
             if (groupRequired) {
                 if (!network)
                     return false;
                 groupManagedNetwork = true;
             } else {
-                membership = pad->membershipFor(q, &contentBound);
+                membership = pad->d->membershipFor(q, &contentBound);
                 if (contentBound) {
                     if (!membership)
                         return false;
@@ -967,7 +1009,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             if (!network->runtime)
                 network->runtime = std::make_unique<IceConnection::Runtime>(*network);
             if (!network->runtime->pad)
-                network->runtime->pad = pad.data();
+                network->runtime->pad = pad;
             if (network->runtime->creator == Origin::None)
                 network->runtime->creator = q->creator();
 
@@ -1026,6 +1068,11 @@ namespace XMPP { namespace Jingle { namespace ICE {
                     d->pendingActions |= NewFingerprint;
                     emit guard->updated();
                 };
+#ifdef JINGLE_SCTP
+                participant.onIncomingChannel = [guard](Connection::Ptr channel) {
+                    return guard && guard->notifyIncomingConnection(std::move(channel));
+                };
+#endif
                 network->runtime->participants.append(std::move(participant));
                 if (!network->runtime->localCandidateHistory.isEmpty())
                     network->runtime->participants.last().onLocalCandidates(network->runtime->localCandidateHistory);
@@ -1123,6 +1170,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 pendingActions |= NewFingerprint;
             }
             dtls->connect(dtls, &Dtls::readyRead, network, [net = network, componentIndex]() {
+                if (net->runtime->pad)
+                    net->runtime->pad->noteIncomingActivity(); // Authenticated DTLS, including SCTP acknowledgements.
                 auto &component = net->components[componentIndex];
 #ifdef JINGLE_SCTP
                 if (component.sctp) {
@@ -1138,11 +1187,15 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 auto *componentDtls = net->components[componentIndex].dtls;
                 if (!componentDtls)
                     return;
+#ifdef DTLS_PACKET_DEBUG
                 const auto id = associationDebugId(net);
+#endif
                 for (auto packet = componentDtls->readOutgoingDatagram(); !packet.isEmpty();
                      packet      = componentDtls->readOutgoingDatagram()) {
+#ifdef DTLS_PACKET_DEBUG
                     qInfo("jingle-ice[%s] DTLS outgoing component=%d dtls=%p bytes=%d ice-can-send=%d", id.constData(),
                           componentIndex, componentDtls, int(packet.size()), int(net->ice->canSendMedia()));
+#endif
                     net->ice->writeDatagram(componentIndex, packet);
                 }
             });
@@ -1331,8 +1384,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
             }
 #endif
 
-            auto pad = q->pad().staticCast<Pad>();
-            if (pad && pad->shouldDeferGroupedNetwork(q)) {
+            auto pad = static_cast<Pad *>(q->pad());
+            if (pad && pad->d->shouldDeferGroupedNetwork(q)) {
                 if (q->state() == State::Created && q->isRemote())
                     q->setState(State::Pending);
                 return;
@@ -1455,14 +1508,18 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 auto  buf = c.sctp->readOutgoing();
                 c.dtls->writeDatagram(buf);
             });
-            q->connect(c.sctp, &SCTP::Association::newIncomingChannel, q, [this, componentIndex]() {
-                qDebug("new incoming sctp channel");
-                auto assoc   = network->components[componentIndex].sctp;
-                auto channel = assoc->nextChannel();
-                if (!q->notifyIncomingConnection(channel)) {
-                    channel->close();
-                }
-            });
+            QObject::connect(c.sctp, &SCTP::Association::newIncomingChannel, network,
+                             [net = network, componentIndex]() {
+                                 qDebug("new incoming sctp channel");
+                                 auto assoc   = net->components[componentIndex].sctp;
+                                 auto channel = assoc->nextChannel();
+                                 if (!net->runtime) {
+                                     channel->close();
+                                     return;
+                                 }
+                                 net->runtime->pendingDataChannels.append(channel);
+                                 dispatchIncomingDataChannels(net);
+                             });
         }
 
         Connection::Ptr addDataChannel(TransportFeatures channelFeatures, const QString &label, int &componentIndex)
@@ -1489,12 +1546,15 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 initSctpAssociation(componentIndex);
             }
             Q_UNUSED(channelFeatures); // TODO
-            return c.sctp->newChannel(SCTP::Reliable, true, 0, 256, label);
+            auto channel = c.sctp->newDeferredChannel(label);
+            if (channel)
+                deferredDataChannels.append({ componentIndex, channel });
+            return channel;
         }
 #endif
     };
 
-    Transport::Transport(const TransportManagerPad::Ptr &pad, Origin creator) :
+    Transport::Transport(TransportManagerPad *pad, Origin creator) :
         XMPP::Jingle::Transport(pad, creator), d(new Private)
     {
         d->q = this;
@@ -1521,6 +1581,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
     Transport::~Transport()
     {
+        setParent(nullptr);
         if (auto binding = rtpAssociation()) {
             binding->disconnect(this);
             if (!d->groupManagedNetwork)
@@ -1657,12 +1718,12 @@ namespace XMPP { namespace Jingle { namespace ICE {
             return;
         }
         if (d->groupManagedNetwork) {
-            auto groupPad    = pad().staticCast<Pad>();
-            auto independent = groupPad->takeUnacceptedSingletonMembership(this);
+            auto groupPad    = static_cast<Pad *>(pad());
+            auto independent = groupPad->d->takeUnacceptedSingletonMembership(this);
             if (independent) {
                 d->membership          = std::move(independent);
                 d->groupManagedNetwork = false;
-            } else if (!groupPad->groupedConnectionAccepted(this)) {
+            } else if (!groupPad->d->groupedConnectionAccepted(this)) {
                 onFinish(Reason::FailedTransport,
                          QStringLiteral("Negotiated BUNDLE membership changed before ICE start"));
                 return;
@@ -1670,6 +1731,21 @@ namespace XMPP { namespace Jingle { namespace ICE {
         }
         QPointer<Transport> guard(this);
         setState(State::Connecting);
+#ifdef JINGLE_SCTP
+        if (guard)
+            dispatchIncomingDataChannels(d->network);
+        if (guard && d->network && !d->network->components.isEmpty()) {
+            const auto channels = std::exchange(d->deferredDataChannels, {});
+            for (const auto &channel : channels) {
+                if (!guard || !d->network)
+                    return;
+                if (channel.first < 0 || channel.first >= d->network->components.size())
+                    continue;
+                if (auto *assoc = d->network->components[channel.first].sctp)
+                    assoc->activateChannel(channel.second);
+            }
+        }
+#endif
         if (guard && _state == State::Connecting) {
             if (!d->network->runtime || !d->network->runtime->checksStarted) {
                 if (d->network->runtime)
@@ -1762,7 +1838,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             e.remoteCandidates = d->network->ice->selectedCandidates();
         // TODO sctp
 
-        auto        doc          = _pad.staticCast<Pad>()->session()->manager()->client()->doc();
+        auto        doc          = _pad->session()->manager()->client()->doc();
         QDomElement transportXml = e.toXml(doc);
         if (_pad->ns() == NS_ICE_UDP) {
             QString error;
@@ -1881,9 +1957,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
     void Manager::setJingleManager(XMPP::Jingle::Manager *jm) { d->jingleManager = jm; }
 
-    QSharedPointer<XMPP::Jingle::Transport> Manager::newTransport(const TransportManagerPad::Ptr &pad, Origin creator)
+    QPointer<XMPP::Jingle::Transport> Manager::newTransport(TransportManagerPad *pad, Origin creator)
     {
-        return QSharedPointer<Transport>::create(pad, creator).staticCast<XMPP::Jingle::Transport>();
+        return new Transport(pad, creator);
     }
 
     TransportManagerPad *Manager::pad(Session *session) { return new Pad(this, session); }
@@ -1947,7 +2023,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
     //----------------------------------------------------------------
     // Pad
     //----------------------------------------------------------------
-    Pad::Pad(Manager *manager, Session *session) : d(std::make_unique<Private>()), _manager(manager), _session(session)
+    Pad::Private::Private(Pad *q, Manager *manager, Session *session) : q(q), _manager(manager), _session(session)
     {
         // TcpPortReserver is an optional client facility. ICE currently keeps
         // the legacy TCP discovery scope only as an integration hook, so a
@@ -1956,7 +2032,16 @@ namespace XMPP { namespace Jingle { namespace ICE {
             _discoScope = reserver->scope(QString::fromLatin1("ice"));
     }
 
-    Pad::~Pad() = default;
+    Pad::Pad(Manager *manager, Session *session) :
+        TransportManagerPad(session), d(std::make_unique<Private>(this, manager, session))
+    {
+    }
+
+    Pad::~Pad()
+    {
+        setParent(nullptr);
+        destroyOwnedObjects();
+    }
 
     QString Pad::ns() const
     {
@@ -1992,13 +2077,13 @@ namespace XMPP { namespace Jingle { namespace ICE {
                            [&names](const QString &name) { return names.contains(name); });
     }
 
-    IceConnection *Pad::groupedConnectionFor(Transport *transport, bool *contentBound, bool *groupRequired)
+    IceConnection *Pad::Private::groupedConnectionFor(Transport *transport, bool *contentBound, bool *groupRequired)
     {
         if (contentBound)
             *contentBound = false;
         if (groupRequired)
             *groupRequired = false;
-        if (!transport || transport->pad().data() != this || !_session)
+        if (!transport || transport->pad() != q || !_session)
             return nullptr;
 
         const auto content = contentForTransport(_session, transport);
@@ -2007,21 +2092,21 @@ namespace XMPP { namespace Jingle { namespace ICE {
         if (contentBound)
             *contentBound = true;
 
-        if (!d->groupStageAttempted) {
-            d->groupStageAttempted        = true;
+        if (!groupStageAttempted) {
+            groupStageAttempted           = true;
             const bool provisionalOffer   = _session->role() == Origin::Initiator;
-            d->stagedOfferGroups          = provisionalOffer ? _session->groupings() : _session->remoteGroupings();
-            const auto stagedAnswerGroups = provisionalOffer ? d->stagedOfferGroups : _session->groupings();
+            stagedOfferGroups             = provisionalOffer ? _session->groupings() : _session->remoteGroupings();
+            const auto stagedAnswerGroups = provisionalOffer ? stagedOfferGroups : _session->groupings();
 
             bool hasSharedOffer = false;
-            for (const auto &group : std::as_const(d->stagedOfferGroups))
+            for (const auto &group : std::as_const(stagedOfferGroups))
                 hasSharedOffer |= group.semantics == QLatin1String("BUNDLE") && !group.contents.isEmpty();
 
             if (hasSharedOffer) {
                 QList<GroupNegotiation::Member> members;
                 for (auto it = _session->contentList().cbegin(); it != _session->contentList().cend(); ++it) {
                     auto app = it.value();
-                    auto tr  = app ? app->transport() : QSharedPointer<XMPP::Jingle::Transport>();
+                    auto tr  = app ? app->transport() : QPointer<XMPP::Jingle::Transport>();
                     if (!app || !tr || !tr->pad())
                         continue;
                     members.append(GroupNegotiation::Member {
@@ -2030,21 +2115,21 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 }
 
                 GroupNegotiation::Error error = GroupNegotiation::Error::None;
-                auto plan = GroupNegotiation::initialPlan(members, d->stagedOfferGroups, stagedAnswerGroups, &error);
+                auto plan = GroupNegotiation::initialPlan(members, stagedOfferGroups, stagedAnswerGroups, &error);
                 if (!plan) {
-                    d->groupStageFailed = true;
+                    groupStageFailed = true;
                 } else {
-                    auto staged = ConnectionGroupTransaction::stageBundled(*plan, d->registry, ns());
+                    auto staged = ConnectionGroupTransaction::stageBundled(*plan, registry, q->ns());
                     if (!staged) {
-                        d->groupStageFailed = true;
+                        groupStageFailed = true;
                     } else {
-                        d->stagedGroups = std::move(*staged);
+                        stagedGroups = std::move(*staged);
                         for (const auto &association : plan->associations()) {
                             if (!association.bundled || association.members.isEmpty()
-                                || association.transportNamespace != ns())
+                                || association.transportNamespace != q->ns())
                                 continue;
                             for (const auto &key : association.members) {
-                                d->stagedContents.insert(key);
+                                stagedContents.insert(key);
                                 auto app = _session->content(key.first, key.second);
                                 if (app) {
                                     watchGroupedContent(app, key);
@@ -2060,14 +2145,14 @@ namespace XMPP { namespace Jingle { namespace ICE {
         // BUNDLE. The new Transport prepares against the old IceConnection, but
         // ConnectionAssociationState membership is not published until the
         // content-accept answer commits the extension.
-        if (d->stagedGroups && !d->stagedContents.contains(*content)) {
-            const auto pendingMembers = pendingGroupMembersFor(*content);
+        if (stagedGroups && !stagedContents.contains(*content)) {
+            const auto pendingMembers = q->pendingGroupMembersFor(*content);
             if (!pendingMembers.isEmpty()) {
                 if (groupRequired)
                     *groupRequired = true; // failure must never allocate an independent fallback
-                if (d->replacementGroups)
+                if (replacementGroups)
                     return nullptr;
-                if (!d->extensionGroups) {
+                if (!extensionGroups) {
                     std::optional<ContentKey> anchor;
                     quint64                   associationId = 0;
                     bool                      valid         = true;
@@ -2084,16 +2169,16 @@ namespace XMPP { namespace Jingle { namespace ICE {
                             }
                             key = it.key();
                         }
-                        if (!valid || !key || !d->stagedContents.contains(*key)) {
+                        if (!valid || !key || !stagedContents.contains(*key)) {
                             valid = false;
                             break;
                         }
                         const auto member = _session->content(key->first, key->second);
-                        if (!member || d->contentOwners.value(*key).data() != member->transport().data()) {
+                        if (!member || contentOwners.value(*key).data() != member->transport().data()) {
                             valid = false; // an established member is changing its transport incarnation
                             break;
                         }
-                        const auto memberAssociation = d->stagedGroups->associationIdFor(*key);
+                        const auto memberAssociation = stagedGroups->associationIdFor(*key);
                         if (!memberAssociation || (associationId && memberAssociation != associationId)) {
                             valid = false;
                             break;
@@ -2106,51 +2191,51 @@ namespace XMPP { namespace Jingle { namespace ICE {
                     if (!valid || !anchor)
                         return nullptr;
                     auto extension = ConnectionGroupTransaction::stageMembershipExtension(
-                        *d->stagedGroups, d->registry, *anchor, QList<ContentKey> { *content });
+                        *stagedGroups, registry, *anchor, QList<ContentKey> { *content });
                     if (!extension || extension->associationIdFor(*content) != associationId)
                         return nullptr;
-                    d->extensionGroups    = std::move(*extension);
-                    d->extensionContent   = *content;
-                    d->extensionTransport = transport;
-                    connect(transport, &QObject::destroyed, this, [this, content = *content, transport]() {
-                        if (!d->extensionContent || *d->extensionContent != content
-                            || (d->extensionTransport && d->extensionTransport != transport))
+                    extensionGroups    = std::move(*extension);
+                    extensionContent   = *content;
+                    extensionTransport = transport;
+                    QObject::connect(transport, &QObject::destroyed, q, [this, content = *content, transport]() {
+                        if (!extensionContent || *extensionContent != content
+                            || (extensionTransport && extensionTransport != transport))
                             return;
-                        if (d->extensionGroups)
-                            d->extensionGroups->rollbackExtension();
-                        d->extensionGroups.reset();
-                        d->extensionContent.reset();
-                        d->extensionTransport.clear();
-                        d->registry.prune();
+                        if (extensionGroups)
+                            extensionGroups->rollbackExtension();
+                        extensionGroups.reset();
+                        extensionContent.reset();
+                        extensionTransport.clear();
+                        registry.prune();
                     });
                 }
 
-                if (!d->extensionContent || *d->extensionContent != *content || d->extensionTransport != transport
-                    || !d->extensionGroups)
+                if (!extensionContent || *extensionContent != *content || extensionTransport != transport
+                    || !extensionGroups)
                     return nullptr;
                 if (groupRequired)
                     *groupRequired = true;
-                return d->extensionGroups->connectionFor(*content);
+                return extensionGroups->connectionFor(*content);
             }
         }
 
-        const bool offeredAsShared = std::any_of(
-            d->stagedOfferGroups.cbegin(), d->stagedOfferGroups.cend(), [content](const ContentGroup &group) {
-                return group.semantics == QLatin1String("BUNDLE") && !group.contents.isEmpty()
-                    && group.contents.contains(content->first);
-            });
+        const bool offeredAsShared
+            = std::any_of(stagedOfferGroups.cbegin(), stagedOfferGroups.cend(), [content](const ContentGroup &group) {
+                  return group.semantics == QLatin1String("BUNDLE") && !group.contents.isEmpty()
+                      && group.contents.contains(content->first);
+              });
         // Initiator-side staging is provisional until the peer answer arrives.
         // A responder already knows its local answer before accept()/prepare(),
         // so any refused member must stay on an independent association.
         const bool requiresShared
-            = d->stagedContents.contains(*content) || (_session->role() == Origin::Initiator && offeredAsShared);
+            = stagedContents.contains(*content) || (_session->role() == Origin::Initiator && offeredAsShared);
         if (groupRequired)
             *groupRequired = requiresShared;
-        if (!requiresShared || d->groupStageFailed || !d->stagedGroups)
+        if (!requiresShared || groupStageFailed || !stagedGroups)
             return nullptr;
 
         const bool replacingEstablished
-            = d->establishedContents.contains(*content) && d->contentOwners.value(*content) != transport;
+            = establishedContents.contains(*content) && contentOwners.value(*content) != transport;
 
         if (replacingEstablished) {
             const auto                  negotiatedGroups = _session->negotiatedGroupings();
@@ -2166,8 +2251,8 @@ namespace XMPP { namespace Jingle { namespace ICE {
             if (!negotiatedBundle)
                 return nullptr;
 
-            if (!d->replacementGroups) {
-                const auto oldAssociationId = d->stagedGroups->associationIdFor(*content);
+            if (!replacementGroups) {
+                const auto oldAssociationId = stagedGroups->associationIdFor(*content);
                 if (!oldAssociationId)
                     return nullptr;
 
@@ -2184,11 +2269,11 @@ namespace XMPP { namespace Jingle { namespace ICE {
                         key = it.key();
                         app = it.value();
                     }
-                    if (!key || !app || !d->stagedContents.contains(*key)
-                        || d->stagedGroups->associationIdFor(*key) != oldAssociationId)
+                    if (!key || !app || !stagedContents.contains(*key)
+                        || stagedGroups->associationIdFor(*key) != oldAssociationId)
                         return nullptr;
                     auto current = app->transport();
-                    if (!current || current->pad().data() != this || d->contentOwners.value(*key) == current.data())
+                    if (!current || current->pad() != q || contentOwners.value(*key) == current.data())
                         return nullptr; // never split one live BUNDLE generation
                     members.append(GroupNegotiation::Member {
                         *key, current->pad()->ns(), app->allowsSharedTransport() && current->supportsSharedTransport(),
@@ -2202,113 +2287,112 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 if (!plan)
                     return nullptr;
                 auto replacement
-                    = ConnectionGroupTransaction::stageBundledReplacement(*plan, d->registry, *d->stagedGroups, ns());
+                    = ConnectionGroupTransaction::stageBundledReplacement(*plan, registry, *stagedGroups, q->ns());
                 if (!replacement)
                     return nullptr;
 
-                d->replacementGroups   = std::move(*replacement);
-                d->replacementContents = replacementKeys;
-                for (const auto &key : std::as_const(d->replacementContents)) {
+                replacementGroups   = std::move(*replacement);
+                replacementContents = replacementKeys;
+                for (const auto &key : std::as_const(replacementContents)) {
                     auto app = _session->content(key.first, key.second);
-                    auto tr
-                        = app ? qSharedPointerDynamicCast<Transport>(app->transport()) : QSharedPointer<Transport>();
+                    auto tr  = app ? qobject_cast<Transport *>(app->transport().data()) : nullptr;
                     if (!tr) {
-                        d->replacementGroups.reset();
-                        d->replacementContents.clear();
+                        replacementGroups.reset();
+                        replacementContents.clear();
                         return nullptr;
                     }
-                    d->replacementTransports.insert(key, tr.data());
-                    connect(tr.data(), &QObject::destroyed, this, [this, key, raw = tr.data()]() {
-                        if (d->replacementTransports.value(key) != raw)
+                    replacementTransports.insert(key, tr);
+                    QObject::connect(tr, &QObject::destroyed, q, [this, key, raw = tr]() {
+                        if (replacementTransports.value(key) != raw)
                             return;
-                        d->replacementGroups.reset();
-                        d->replacementContents.clear();
-                        d->replacementBound.clear();
-                        d->replacementTransports.clear();
-                        d->registry.prune();
+                        replacementGroups.reset();
+                        replacementContents.clear();
+                        replacementBound.clear();
+                        replacementTransports.clear();
+                        registry.prune();
                     });
                 }
             }
 
-            if (!d->replacementContents.contains(*content) || d->replacementTransports.value(*content) != transport)
+            if (!replacementContents.contains(*content) || replacementTransports.value(*content) != transport)
                 return nullptr;
 
-            auto replacementConnection = d->replacementGroups->connectionFor(*content);
+            auto replacementConnection = replacementGroups->connectionFor(*content);
             if (!replacementConnection)
                 return nullptr;
-            d->replacementBound.insert(*content);
+            replacementBound.insert(*content);
 
-            if (d->replacementBound == d->replacementContents) {
-                if (!d->replacementGroups->activateReplacement(d->registry)) {
-                    d->replacementGroups.reset();
-                    d->replacementContents.clear();
-                    d->replacementBound.clear();
-                    d->replacementTransports.clear();
+            if (replacementBound == replacementContents) {
+                if (!replacementGroups->activateReplacement(registry)) {
+                    replacementGroups.reset();
+                    replacementContents.clear();
+                    replacementBound.clear();
+                    replacementTransports.clear();
                     return nullptr;
                 }
-                if (!d->replacementGroups->finalizeReplacement(d->registry)) {
-                    d->replacementGroups->rollbackReplacement(d->registry);
-                    d->replacementGroups.reset();
-                    d->replacementContents.clear();
-                    d->replacementBound.clear();
-                    d->replacementTransports.clear();
+                if (!replacementGroups->finalizeReplacement(registry)) {
+                    replacementGroups->rollbackReplacement(registry);
+                    replacementGroups.reset();
+                    replacementContents.clear();
+                    replacementBound.clear();
+                    replacementTransports.clear();
                     return nullptr;
                 }
 
-                auto previousGroups = std::move(d->stagedGroups);
-                d->replacementGroups->retainUnreplacedFrom(std::move(*previousGroups), d->replacementContents);
-                d->stagedGroups = std::move(d->replacementGroups);
-                d->replacementGroups.reset();
+                auto previousGroups = std::move(stagedGroups);
+                replacementGroups->retainUnreplacedFrom(std::move(*previousGroups), replacementContents);
+                stagedGroups = std::move(replacementGroups);
+                replacementGroups.reset();
 
-                for (const auto &key : std::as_const(d->replacementContents)) {
-                    auto next     = d->replacementTransports.value(key);
-                    auto previous = d->contentOwners.value(key);
+                for (const auto &key : std::as_const(replacementContents)) {
+                    auto next     = replacementTransports.value(key);
+                    auto previous = contentOwners.value(key);
                     if (previous && previous != next)
                         previous->releaseNetworkOwnership();
-                    d->contentOwners.insert(key, next);
-                    d->establishedContents.insert(key);
+                    contentOwners.insert(key, next);
+                    establishedContents.insert(key);
                     if (next) {
-                        connect(next, &QObject::destroyed, this, [this, key, raw = next.data()]() {
-                            if (d->contentOwners.value(key) == raw)
-                                d->contentOwners.remove(key);
-                            d->registry.prune();
+                        QObject::connect(next, &QObject::destroyed, q, [this, key, raw = next.data()]() {
+                            if (contentOwners.value(key) == raw)
+                                contentOwners.remove(key);
+                            registry.prune();
                         });
                     }
                 }
 
-                d->replacementContents.clear();
-                d->replacementBound.clear();
-                d->replacementTransports.clear();
+                replacementContents.clear();
+                replacementBound.clear();
+                replacementTransports.clear();
                 previousGroups.reset();
-                d->registry.prune();
+                registry.prune();
             }
             return replacementConnection;
         }
 
-        auto connection = d->stagedGroups->connectionFor(*content);
+        auto connection = stagedGroups->connectionFor(*content);
         if (!connection)
             return nullptr;
 
-        auto previous = d->contentOwners.value(*content);
+        auto previous = contentOwners.value(*content);
         if (previous && previous != transport)
             previous->releaseNetworkOwnership();
-        d->contentOwners.insert(*content, transport);
-        d->establishedContents.insert(*content);
-        connect(transport, &QObject::destroyed, this, [this, content = *content, transport]() {
-            if (d->contentOwners.value(content) == transport)
-                d->contentOwners.remove(content);
-            d->registry.prune();
+        contentOwners.insert(*content, transport);
+        establishedContents.insert(*content);
+        QObject::connect(transport, &QObject::destroyed, q, [this, content = *content, transport]() {
+            if (contentOwners.value(content) == transport)
+                contentOwners.remove(content);
+            registry.prune();
         });
         return connection;
     }
 
-    ConnectionMembership Pad::takeUnacceptedSingletonMembership(Transport *transport)
+    ConnectionMembership Pad::Private::takeUnacceptedSingletonMembership(Transport *transport)
     {
         if (!transport || !_session || _session->role() != Origin::Initiator || _session->state() != State::Active
-            || !d->stagedGroups)
+            || !stagedGroups)
             return {};
         const auto content = contentForTransport(_session, transport);
-        if (!content || !d->stagedContents.contains(*content))
+        if (!content || !stagedContents.contains(*content))
             return {};
         for (const auto &group : _session->negotiatedGroupings()) {
             if (group.semantics == QLatin1String("BUNDLE") && group.contents.contains(content->first))
@@ -2316,28 +2400,28 @@ namespace XMPP { namespace Jingle { namespace ICE {
         }
         // Only an initial one-member proposal can be refused without changing
         // the physical transport. Never unbundle an already accepted group.
-        const bool singleton = std::any_of(
-            d->stagedOfferGroups.cbegin(), d->stagedOfferGroups.cend(), [&content](const ContentGroup &group) {
-                return group.semantics == QLatin1String("BUNDLE") && group.contents == QStringList { content->first };
-            });
-        if (!singleton || d->contentOwners.value(*content) != transport)
+        const bool singleton
+            = std::any_of(stagedOfferGroups.cbegin(), stagedOfferGroups.cend(), [&content](const ContentGroup &group) {
+                  return group.semantics == QLatin1String("BUNDLE") && group.contents == QStringList { content->first };
+              });
+        if (!singleton || contentOwners.value(*content) != transport)
             return {};
-        auto membership = d->stagedGroups->takeMembership(*content);
+        auto membership = stagedGroups->takeMembership(*content);
         if (membership) {
-            d->stagedContents.remove(*content);
-            d->establishedContents.remove(*content);
+            stagedContents.remove(*content);
+            establishedContents.remove(*content);
         }
         return membership;
     }
 
-    bool Pad::groupedConnectionAccepted(Transport *transport) const
+    bool Pad::Private::groupedConnectionAccepted(Transport *transport) const
     {
-        if (!transport || !_session || !d->stagedGroups)
+        if (!transport || !_session || !stagedGroups)
             return true;
         const auto content = contentForTransport(_session, transport);
-        if (content && !pendingGroupMembersFor(*content).isEmpty())
+        if (content && !q->pendingGroupMembersFor(*content).isEmpty())
             return false;
-        if (!content || !d->stagedContents.contains(*content))
+        if (!content || !stagedContents.contains(*content))
             return true;
 
         // Once the Session is Active, only committed negotiated topology is
@@ -2357,7 +2441,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
             return true; // staged directly from the responder's actual local answer
 
         const auto &answer = _session->remoteGroupings();
-        for (const auto &offered : d->stagedOfferGroups) {
+        for (const auto &offered : stagedOfferGroups) {
             if (offered.semantics != QLatin1String("BUNDLE") || !offered.contents.contains(content->first)
                 || offered.contents.isEmpty())
                 continue;
@@ -2368,35 +2452,35 @@ namespace XMPP { namespace Jingle { namespace ICE {
         return false;
     }
 
-    void Pad::watchGroupedContent(Application *app, const ContentKey &content)
+    void Pad::Private::watchGroupedContent(Application *app, const ContentKey &content)
     {
         auto release = [this, content]() {
-            if (d->replacementContents.contains(content)) {
-                for (const auto &transport : std::as_const(d->replacementTransports)) {
+            if (replacementContents.contains(content)) {
+                for (const auto &transport : std::as_const(replacementTransports)) {
                     if (transport)
                         transport->releaseNetworkOwnership();
                 }
-                d->replacementGroups.reset();
-                d->replacementContents.clear();
-                d->replacementBound.clear();
-                d->replacementTransports.clear();
+                replacementGroups.reset();
+                replacementContents.clear();
+                replacementBound.clear();
+                replacementTransports.clear();
             }
             // A retained Transport is not an extra content membership. Detach
             // its runtime callbacks before releasing the application's strong share.
-            if (auto owner = d->contentOwners.take(content))
+            if (auto owner = contentOwners.take(content))
                 owner->releaseNetworkOwnership();
-            if (d->stagedGroups) {
-                auto pin = d->stagedGroups->pinConnection(content);
-                d->stagedGroups->release(content);
+            if (stagedGroups) {
+                auto pin = stagedGroups->pinConnection(content);
+                stagedGroups->release(content);
                 if (pin)
-                    QTimer::singleShot(0, this, [pin = std::move(pin)]() { });
+                    QTimer::singleShot(0, q, [pin = std::move(pin)]() { });
             }
-            d->stagedContents.remove(content);
-            d->establishedContents.remove(content);
-            d->registry.prune();
+            stagedContents.remove(content);
+            establishedContents.remove(content);
+            registry.prune();
         };
-        connect(app, &Application::destroying, this, release);
-        connect(app, &Application::stateChanged, this, [release](State state) {
+        QObject::connect(app, &Application::destroying, q, release);
+        QObject::connect(app, &Application::stateChanged, q, [release](State state) {
             // Finishing still needs the physical association for transport
             // drain/retransmission while Jingle receipt signaling completes.
             if (state >= State::Finished)
@@ -2404,59 +2488,59 @@ namespace XMPP { namespace Jingle { namespace ICE {
         });
     }
 
-    bool Pad::commitGroupExtension(const ContentKey &content)
+    bool Pad::Private::commitGroupExtension(const ContentKey &content)
     {
         // Session calls this only for a negotiated pending extension. Missing
         // staging is therefore a transaction failure, not an idempotent success:
         // otherwise negotiatedGroups could publish membership that never joined
         // the physical association.
-        if (!d->extensionContent || *d->extensionContent != content)
+        if (!extensionContent || *extensionContent != content)
             return false;
-        if (!d->extensionGroups || !d->stagedGroups || !d->extensionTransport || d->replacementGroups)
+        if (!extensionGroups || !stagedGroups || !extensionTransport || replacementGroups)
             return false;
         const auto app = _session->content(content.first, content.second);
-        if (!app || app->transport().data() != d->extensionTransport.data()
-            || d->extensionTransport->state() >= State::Finishing)
+        if (!app || app->transport().data() != extensionTransport.data()
+            || extensionTransport->state() >= State::Finishing)
             return false;
 
-        if (!d->extensionGroups->activateExtension(d->registry))
+        if (!extensionGroups->activateExtension(registry))
             return false;
-        if (!d->extensionGroups->finalizeExtension(*d->stagedGroups, d->registry)) {
-            d->extensionGroups->rollbackExtension();
+        if (!extensionGroups->finalizeExtension(*stagedGroups, registry)) {
+            extensionGroups->rollbackExtension();
             return false;
         }
 
-        auto transport = d->extensionTransport;
-        d->stagedContents.insert(content);
-        d->contentOwners.insert(content, transport);
-        d->establishedContents.insert(content);
+        auto transport = extensionTransport;
+        stagedContents.insert(content);
+        contentOwners.insert(content, transport);
+        establishedContents.insert(content);
         if (auto app = _session->content(content.first, content.second))
             watchGroupedContent(app, content);
 
-        d->extensionGroups.reset();
-        d->extensionContent.reset();
-        d->extensionTransport.clear();
-        d->registry.prune();
+        extensionGroups.reset();
+        extensionContent.reset();
+        extensionTransport.clear();
+        registry.prune();
         return true;
     }
 
-    void Pad::rollbackGroupExtension(const ContentKey &content)
+    void Pad::Private::rollbackGroupExtension(const ContentKey &content)
     {
-        if (!d->extensionContent || *d->extensionContent != content)
+        if (!extensionContent || *extensionContent != content)
             return;
-        if (d->extensionTransport)
-            d->extensionTransport->releaseNetworkOwnership();
-        if (d->extensionGroups)
-            d->extensionGroups->rollbackExtension();
-        d->extensionGroups.reset();
-        d->extensionContent.reset();
-        d->extensionTransport.clear();
-        d->registry.prune();
+        if (extensionTransport)
+            extensionTransport->releaseNetworkOwnership();
+        if (extensionGroups)
+            extensionGroups->rollbackExtension();
+        extensionGroups.reset();
+        extensionContent.reset();
+        extensionTransport.clear();
+        registry.prune();
     }
 
-    bool Pad::shouldDeferGroupedNetwork(Transport *transport) const
+    bool Pad::Private::shouldDeferGroupedNetwork(Transport *transport) const
     {
-        if (!transport || !_session || _session->role() != Origin::Responder || d->localAcceptanceKnown)
+        if (!transport || !_session || _session->role() != Origin::Responder || localAcceptanceKnown)
             return false;
         const auto content = contentForTransport(_session, transport);
         if (!content)
@@ -2468,11 +2552,11 @@ namespace XMPP { namespace Jingle { namespace ICE {
                            });
     }
 
-    ConnectionMembership Pad::membershipFor(Transport *transport, bool *contentBound)
+    ConnectionMembership Pad::Private::membershipFor(Transport *transport, bool *contentBound)
     {
         if (contentBound)
             *contentBound = false;
-        if (!transport || transport->pad().data() != this || !_session)
+        if (!transport || transport->pad() != q || !_session)
             return {};
 
         std::optional<ContentKey> content;
@@ -2487,38 +2571,42 @@ namespace XMPP { namespace Jingle { namespace ICE {
             return {}; // compatibility path for direct low-level Transport users
         if (contentBound)
             *contentBound = true;
-        if (d->stagedContents.contains(*content))
+        if (stagedContents.contains(*content))
             return {};
 
         // A transport-replace is an ownership transition for this logical
         // content. The replaced Transport may survive in a selector backup, but
         // it must no longer retain the active association.
-        auto previous = d->contentOwners.value(*content);
+        auto previous = contentOwners.value(*content);
         if (previous && previous != transport)
             previous->releaseNetworkOwnership();
-        d->contentOwners.remove(*content);
-        d->registry.prune();
+        contentOwners.remove(*content);
+        registry.prune();
 
-        auto membership = d->registry.create(*content);
+        auto membership = registry.create(*content);
         if (!membership)
             return {};
 
-        d->contentOwners.insert(*content, transport);
-        connect(transport, &QObject::destroyed, this, [this, content = *content, transport]() {
-            if (d->contentOwners.value(content) == transport)
-                d->contentOwners.remove(content);
-            d->registry.prune();
+        contentOwners.insert(*content, transport);
+        QObject::connect(transport, &QObject::destroyed, q, [this, content = *content, transport]() {
+            if (contentOwners.value(content) == transport)
+                contentOwners.remove(content);
+            registry.prune();
         });
         return membership;
     }
 
-    qsizetype Pad::liveAssociationCount() const { return d ? d->registry.liveAssociationCount() : 0; }
+    Session *Pad::session() const { return d->_session; }
 
-    Session *Pad::session() const { return _session; }
+    TransportManager *Pad::manager() const { return d->_manager; }
 
-    TransportManager *Pad::manager() const { return _manager; }
+    TcpPortScope *Pad::discoScope() const { return d->_discoScope; }
 
     void Pad::onLocalAccepted() { d->localAcceptanceKnown = true; }
+
+    bool Pad::commitGroupExtension(const ContentKey &content) { return d->commitGroupExtension(content); }
+
+    void Pad::rollbackGroupExtension(const ContentKey &content) { d->rollbackGroupExtension(content); }
 
 } // namespace Ice
 } // namespace Jingle

@@ -12,7 +12,7 @@
 
 class ReentrantCanReplaceSelector : public TestSelector {
 public:
-    bool canReplace(QSharedPointer<J::Transport> oldTransport, QSharedPointer<J::Transport> newTransport) override
+    bool canReplace(QPointer<J::Transport> oldTransport, QPointer<J::Transport> newTransport) override
     {
         const bool result   = TestSelector::canReplace(std::move(oldTransport), std::move(newTransport));
         auto       callback = std::move(onCanReplace);
@@ -269,8 +269,8 @@ static void testTransportAcceptSkipsReentrantStaleSibling(Client &client)
 
     auto audioPad = session.transportPadFactory(TestTransportManager::namespaceUri());
     check(bool(audioPad), "test transport pad missing for reentrant transport-accept");
-    auto audioTransport = QSharedPointer<ReentrantUpdateTransport>::create(audioPad, J::Origin::Initiator,
-                                                                           QStringLiteral("audio-local"));
+    auto audioTransport = QPointer<ReentrantUpdateTransport>(
+        new ReentrantUpdateTransport(audioPad, J::Origin::Initiator, QStringLiteral("audio-local")));
     audioTransport->forceState(J::State::Pending);
     auto audio = addApplication(session, QStringLiteral("audio"), J::Origin::Initiator, audioTransport,
                                 std::make_unique<TestSelector>());

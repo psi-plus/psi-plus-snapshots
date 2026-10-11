@@ -31,6 +31,14 @@
 
 #define DTLS_DEBUG(msg, ...) qDebug("dtls: " msg, ##__VA_ARGS__)
 
+#ifdef DTLS_PACKET_DEBUG
+#define DTLS_PACKET_TRACE(msg, ...) DTLS_DEBUG(msg, ##__VA_ARGS__)
+#else
+#define DTLS_PACKET_TRACE(...)                                                                                         \
+    do {                                                                                                               \
+    } while (false)
+#endif
+
 /*
 Connection flow
 
@@ -482,7 +490,7 @@ QByteArray Dtls::readOutgoingDatagram()
         return {};
     }
     auto ba = d->tls->readOutgoing();
-    DTLS_DEBUG("[%p] outgoing datagram bytes=%d authenticated=%d", this, int(ba.size()), int(d->authenticated));
+    DTLS_PACKET_TRACE("[%p] outgoing datagram bytes=%d authenticated=%d", this, int(ba.size()), int(d->authenticated));
     return ba;
 }
 
@@ -498,8 +506,8 @@ void Dtls::writeDatagram(const QByteArray &data)
 
 void Dtls::writeIncomingDatagram(const QByteArray &data)
 {
-    DTLS_DEBUG("[%p] incoming datagram bytes=%d started=%d authenticated=%d", this, int(data.size()),
-               int(d->tls != nullptr), int(d->authenticated));
+    DTLS_PACKET_TRACE("[%p] incoming datagram bytes=%d started=%d authenticated=%d", this, int(data.size()),
+                      int(d->tls != nullptr), int(d->authenticated));
     if (!d->tls) {
         if (data.isEmpty())
             return;
@@ -515,8 +523,8 @@ void Dtls::writeIncomingDatagram(const QByteArray &data)
 
         d->pendingIncomingDatagrams.append(data);
         d->pendingIncomingBytes += data.size();
-        DTLS_DEBUG("[%p] negotiation hasn't started yet. queue incoming datagram bytes=%d pending=%d/%d", this,
-                   int(data.size()), int(d->pendingIncomingDatagrams.size()), d->pendingIncomingBytes);
+        DTLS_PACKET_TRACE("[%p] negotiation hasn't started yet. queue incoming datagram bytes=%d pending=%d/%d", this,
+                          int(data.size()), int(d->pendingIncomingDatagrams.size()), d->pendingIncomingBytes);
         return;
     }
     d->tls->writeIncoming(data);

@@ -11,10 +11,10 @@ using Op    = R::DirectionOperation;
 
 class OperationApplication : public R::Application {
 public:
-    OperationApplication(const QSharedPointer<R::Pad> &pad, const QString &name) :
+    OperationApplication(const QPointer<R::Pad> &pad, const QString &name) :
         R::Application(pad, name, J::Origin::Initiator, J::Origin::Both)
     {
-        _transport = QSharedPointer<TestTransport>::create();
+        _transport = QPointer<TestTransport>(new TestTransport());
         setState(J::State::Active);
     }
 };
@@ -31,10 +31,10 @@ static J::OutgoingUpdate consume(OperationApplication &content)
 }
 
 struct Fixture {
-    Client                  client;
-    J::Session              session { client.jingleManager(), Jid("peer@example.test/device"), J::Origin::Initiator };
-    QSharedPointer<R::Pad>  pad = QSharedPointer<R::Pad>::create(client.jingleManager()->rtpManager(), &session,
-                                                                 std::shared_ptr<R::MediaProvider>(), QStringList());
+    Client           client;
+    J::Session       session { client.jingleManager(), Jid("peer@example.test/device"), J::Origin::Initiator };
+    QPointer<R::Pad> pad = QPointer<R::Pad>(
+        new R::Pad(client.jingleManager()->rtpManager(), &session, std::shared_ptr<R::MediaProvider>(), QStringList()));
     OperationApplication    audio { pad, "audio" }, video { pad, "video" };
     R::DirectionController *controller = pad->directionController();
 };
@@ -222,13 +222,14 @@ int main(int argc, char **argv)
         Client client;
         auto   session = std::make_unique<J::Session>(client.jingleManager(), Jid("peer@example.test/device"),
                                                       J::Origin::Initiator);
-        auto   pad     = QSharedPointer<R::Pad>::create(client.jingleManager()->rtpManager(), session.get(),
-                                                        std::shared_ptr<R::MediaProvider>(), QStringList());
-        OperationApplication content(pad, "surviving");
-        auto                 operation = pad->directionController()->requestLocalSending({ { &content, false } });
+        auto   pad     = QPointer<R::Pad>(new R::Pad(client.jingleManager()->rtpManager(), session.get(),
+                                                     std::shared_ptr<R::MediaProvider>(), QStringList()));
+        QPointer<OperationApplication> content(new OperationApplication(pad, "surviving"));
+        auto operation = pad->directionController()->requestLocalSending({ { content.data(), false } });
         flush();
-        session.reset(); // Pad/content can be externally retained; no application state signal follows.
+        session.reset(); // The session tree destroys its pad and content; no application state signal follows.
         flush();
+        check(!pad && !content, "session destruction left its pad or content alive");
         check(operation->state() == Op::State::Failed && operation->error() == Op::Error::ContentGone,
               "session destruction left surviving operation pending until deadline");
     }

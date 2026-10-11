@@ -8,6 +8,7 @@
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_task.h>
 #define private public
+#include "../../src/xmpp/xmpp-im/jingle-ice-pad_p.h"
 #include <iris/jingle-ice.h>
 #undef private
 #include <QCoreApplication>
@@ -199,8 +200,8 @@ int main(int argc, char **argv)
                                           Jid("peer-no-reserver@example.test/device"), J::Origin::Initiator);
         auto      *rawPad = clientWithoutReserver.jingleManager()->transportPad(&sessionWithoutReserver, transportNs);
         check(rawPad, "ICE pad creation without TcpPortReserver failed");
-        J::TransportManagerPad::Ptr pad(rawPad);
-        auto                        icePad = qSharedPointerDynamicCast<J::ICE::Pad>(pad);
+        J::TransportManagerPad *pad    = rawPad;
+        auto                    icePad = qSharedPointerDynamicCast<J::ICE::Pad>(pad);
         check(bool(icePad), "ICE pad without TcpPortReserver has wrong type");
         check(icePad->discoScope() == nullptr, "ICE pad unexpectedly fabricated a TCP discovery scope");
     }
@@ -217,7 +218,7 @@ int main(int argc, char **argv)
     auto makeTransport = [&](Client &client, J::Session &session, J::Origin creator) {
         auto rawPad = client.jingleManager()->transportPad(&session, transportNs);
         check(rawPad, "selected ICE namespace was not registered");
-        J::TransportManagerPad::Ptr pad(rawPad);
+        J::TransportManagerPad *pad = rawPad;
         check(pad->ns() == transportNs, "selected ICE namespace was not retained by pad");
         auto base = pad->manager()->newTransport(pad, creator);
         auto ice  = qSharedPointerDynamicCast<J::ICE::Transport>(base);
@@ -226,22 +227,22 @@ int main(int argc, char **argv)
     };
     auto first     = makeTransport(firstClient, firstSession, J::Origin::Initiator);
     auto second    = makeTransport(secondClient, secondSession, J::Origin::Initiator);
-    auto firstPad  = first->pad().staticCast<J::ICE::Pad>();
-    auto secondPad = second->pad().staticCast<J::ICE::Pad>();
+    auto firstPad  = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((first->pad()).data()));
+    auto secondPad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((second->pad()).data()));
 
     // Transport construction itself must not allocate an ICE association.
     // Association selection is delayed until the Transport is already bound to
     // a Jingle content (or otherwise first used), which is required for BUNDLE.
-    check(firstPad->liveAssociationCount() == 0 && secondPad->liveAssociationCount() == 0,
+    check(firstPad->d->liveAssociationCount() == 0 && secondPad->d->liveAssociationCount() == 0,
           "ICE association was allocated before content binding");
 
     std::unique_ptr<J::RTP::Application> firstApp, secondApp;
     auto firstMedia = std::make_shared<MediaState>(), secondMedia = std::make_shared<MediaState>();
     if (applicationMode) {
         auto makeApp = [&transportNs](Client &client, J::Session &session, std::shared_ptr<MediaState> state) {
-            auto pad
-                = QSharedPointer<J::RTP::Pad>::create(client.jingleManager()->rtpManager(), &session,
-                                                      std::make_shared<Provider>(state), QStringList { transportNs });
+            auto pad = QPointer<J::RTP::Pad>(new J::RTP::Pad(client.jingleManager()->rtpManager(), &session,
+                                                             std::make_shared<Provider>(state),
+                                                             QStringList { transportNs }));
             return std::make_unique<J::RTP::Application>(pad, "audio", J::Origin::Initiator, J::Origin::Both);
         };
         firstApp  = makeApp(firstClient, firstSession, firstMedia);

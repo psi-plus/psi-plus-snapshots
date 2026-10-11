@@ -54,11 +54,11 @@ public:
 
 class HintSelector : public TestSelector {
 public:
-    QSharedPointer<J::Transport> next;
-    std::function<void()>        onHint;
-    std::function<void()>        onReplace;
-    bool                         hasMoreTransports() const override { return bool(next); }
-    QSharedPointer<J::Transport> getAlikeTransport(QSharedPointer<J::Transport>) override
+    QPointer<J::Transport> next;
+    std::function<void()>  onHint;
+    std::function<void()>  onReplace;
+    bool                   hasMoreTransports() const override { return bool(next); }
+    QPointer<J::Transport> getAlikeTransport(QPointer<J::Transport>) override
     {
         auto result   = std::exchange(next, {});
         auto callback = onHint;
@@ -66,7 +66,7 @@ public:
             callback();
         return result;
     }
-    bool replace(QSharedPointer<J::Transport> oldTransport, QSharedPointer<J::Transport> newTransport) override
+    bool replace(QPointer<J::Transport> oldTransport, QPointer<J::Transport> newTransport) override
     {
         const bool result   = TestSelector::replace(std::move(oldTransport), std::move(newTransport));
         auto       callback = std::move(onReplace);
@@ -83,16 +83,16 @@ static void flush()
 }
 
 struct Fixture {
-    TestTransportManager                manager;
-    NoNetworkConnector                  connector;
-    RecordingStream                     stream { &connector };
-    Client                              client;
-    const Jid                           peer { "peer@example.test/device" };
-    std::unique_ptr<J::Session>         owner { std::make_unique<J::Session>(client.jingleManager(), peer,
-                                                                             J::Origin::Initiator) };
-    J::Session                         &session { *owner };
-    QList<PreparedApplication *>        apps;
-    QList<QSharedPointer<AckTransport>> transports;
+    TestTransportManager          manager;
+    NoNetworkConnector            connector;
+    RecordingStream               stream { &connector };
+    Client                        client;
+    const Jid                     peer { "peer@example.test/device" };
+    std::unique_ptr<J::Session>   owner { std::make_unique<J::Session>(client.jingleManager(), peer,
+                                                                       J::Origin::Initiator) };
+    J::Session                   &session { *owner };
+    QList<PreparedApplication *>  apps;
+    QList<QPointer<AckTransport>> transports;
 
     Fixture()
     {
@@ -100,8 +100,8 @@ struct Fixture {
         client.jingleManager()->registerTransport(&manager);
         client.jingleManager()->registerSession(&session);
         for (const auto &name : { QStringLiteral("audio"), QStringLiteral("video") }) {
-            auto transport = QSharedPointer<AckTransport>::create(
-                session.transportPadFactory(TestTransportManager::namespaceUri()), J::Origin::Initiator, name);
+            auto transport = QPointer<AckTransport>(new AckTransport(
+                session.transportPadFactory(TestTransportManager::namespaceUri()), J::Origin::Initiator, name));
             transport->forceState(J::State::ApprovedToSend);
             transport->setHasUpdates(true);
             auto app = new PreparedApplication(&session, name, J::Origin::Initiator);

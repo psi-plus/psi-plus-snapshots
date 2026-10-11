@@ -31,6 +31,37 @@ available; system QCA selection is unchanged. Existing build trees with a cached
 Git ref keep that ref; use `cmake -U IRIS_BUNDLED_QCA_GIT_TAG ...` once to adopt
 the lock default.
 
+## DTLS packet diagnostics
+
+Per-datagram ICE/DTLS logging is disabled by default in all build types.
+To enable it, configure and rebuild Iris with
+`-DIRIS_DTLS_PACKET_DEBUG=ON` (defines `DTLS_PACKET_DEBUG`).
+Handshake, connection-state and error diagnostics remain available without
+this option. Rebuilding only an application linked against Iris does not
+change the library's logging configuration.
+
+## Retaining file-transfer sessions for successive ranges
+
+File-transfer applications can opt into `setKeepTransportUntilReceipt()` before
+connecting. Once the negotiated payload ends, the application remains Active
+and retains its BUNDLE membership until the receipt or a failure completes it.
+No further payload is read or written during this signaling tail. The default
+lifecycle is unchanged.
+
+Receivers can also enable `setReceiptDeferred()` and wait for `payloadVerified()`
+before calling `acknowledgeReceived()`. Verification includes the negotiated
+checksum. This permits adding and accepting the next finite range in the same
+session before acknowledging the previous content; an IQ result for
+`content-add` alone does not establish that successor. The existing receipt
+timeout bounds deferred completion. `setReceivingPaused()` provides receive
+backpressure while the application commits its current chunk and switches
+priority. Scheduling and chunk-cache policy remain the embedding application's
+responsibility.
+
+ICE/SCTP channels prepared for added contents open their DCEP handshake after
+content acceptance, and incoming channels are routed by their content label on
+the shared association. Removing one content does not disconnect its siblings.
+
 ## Source archive versions
 
 CMake obtains the version from `IRIS_VERSION`, a generated `.version` file,

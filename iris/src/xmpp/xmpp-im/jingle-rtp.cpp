@@ -140,7 +140,8 @@ namespace {
 } // namespace
 
 Pad::Pad(Manager *manager, Session *session, std::shared_ptr<MediaProvider> provider, QStringList transports) :
-    manager_(manager), session_(session), provider_(std::move(provider)), transports_(std::move(transports))
+    ApplicationManagerPad(session), manager_(manager), session_(session), provider_(std::move(provider)),
+    transports_(std::move(transports))
 {
     directions_ = new DirectionController(this);
     routing_    = std::make_unique<RoutingPrivate>();
@@ -165,6 +166,8 @@ Pad::Pad(Manager *manager, Session *session, std::shared_ptr<MediaProvider> prov
 
 Pad::~Pad()
 {
+    setParent(nullptr);
+    destroyOwnedObjects();
     if (media_) {
         if (securePacketIoAttached_)
             media_->detachSecureRtpPacketIo();
@@ -222,8 +225,7 @@ bool Pad::bindSecureTransport(Application *application, SecureRtpAssociation *as
                               associationId.constData(), stage);
         return false;
     };
-    if (!application || !association || !media_ || application->pad().data() != this || !session_
-        || !ensureSecurePacketIo())
+    if (!application || !association || !media_ || application->pad() != this || !session_ || !ensureSecurePacketIo())
         return reject("packet I/O or application/session unavailable");
 
     auto endpoint = secureEndpointForDescriptions(application, session_, association->associationId(), local, remote);
@@ -413,7 +415,7 @@ bool Pad::incomingSessionInfo(const QDomElement &xml)
             return false;
         if (!info->name.isEmpty()) {
             auto app = session_->content(info->name, info->creator);
-            if (!app || app->pad().data() != this || app->state() >= State::Finishing)
+            if (!app || app->pad() != this || app->state() >= State::Finishing)
                 return false;
         }
         infos.append(*info);
@@ -437,14 +439,15 @@ QString Pad::generateContentName(Origin)
     return name;
 }
 
-Application::Application(const QSharedPointer<Pad> &pad, const QString &name, Origin creator, Origin senders)
+Application::Application(Pad *pad, const QString &name, Origin creator, Origin senders)
 {
+    setParent(pad);
     _pad               = pad;
     _contentName       = name;
     _creator           = creator;
     _senders           = senders;
     _transportSelector = std::make_unique<NSTransportsList>(pad->session(), pad->transportNamespaces());
-    connect(pad.data(), &Pad::mediaError, this, [this](const MediaError &error) {
+    connect(pad, &Pad::mediaError, this, [this](const MediaError &error) {
         if (_state >= State::Finishing)
             return;
         remove(Reason::FailedApplication,
@@ -453,6 +456,7 @@ Application::Application(const QSharedPointer<Pad> &pad, const QString &name, Or
 }
 Application::~Application()
 {
+    setParent(nullptr);
     stopMedia();
     if (_transport) {
         _transport->disconnect(this);
@@ -464,7 +468,7 @@ void Application::stopMedia()
     prepareOperation_.reset();
     applyOperation_.reset();
     pendingRemoteOffer_.reset();
-    if (auto pad = _pad.staticCast<Pad>())
+    if (auto pad = static_cast<Pad *>(_pad))
         pad->unbindSecureTransport(this);
     if (association_)
         association_->disconnect(this);
@@ -504,7 +508,7 @@ bool Application::initializeOutgoing(const QString &media)
 {
     if (isRemote() || endpoint_ || _state != State::Created || (media != "audio" && media != "video"))
         return false;
-    auto pad = _pad.staticCast<Pad>();
+    auto pad = static_cast<Pad *>(_pad);
     if (!pad->mediaSession())
         return false;
     auto endpoint = pad->mediaSession()->createEndpoint(_contentName, media);
@@ -521,7 +525,7 @@ Application::SetDescError Application::setRemoteOffer(const QDomElement &xml)
     auto offer = Description::fromXml(xml);
     if (!offer)
         return Unparsed;
-    auto pad = _pad.staticCast<Pad>();
+    auto pad = static_cast<Pad *>(_pad);
     if ((offer->media != "audio" && offer->media != "video") || !pad->mediaSession())
         return IncompatibleParameters;
     auto endpoint = pad->mediaSession()->createEndpoint(_contentName, offer->media);
@@ -592,7 +596,7 @@ bool Application::isTransportReplaceEnabled() const
     // fallback in that state. A negotiated multi-content BUNDLE still needs a
     // coordinated full-group replacement, so keep that case behind the
     // existing active/shared-migration gate.
-    auto pad     = _pad.staticCast<Pad>();
+    auto pad     = static_cast<Pad *>(_pad);
     auto session = pad ? pad->session() : nullptr;
     if (!session)
         return false;
@@ -610,7 +614,7 @@ void Application::prepare()
         return;
     if (!_transport && !selectNextTransport())
         return;
-    auto pad   = _pad.staticCast<Pad>();
+    auto pad   = static_cast<Pad *>(_pad);
     auto media = pad->mediaSession();
     if (!media) {
         failPreparation(Reason::FailedApplication, QStringLiteral("Media session unavailable"));
@@ -700,7 +704,7 @@ void Application::prepareTransport()
 
     const auto local     = negotiation_.localDescription();
     const auto remote    = negotiation_.remoteDescription();
-    auto       pad       = _pad.staticCast<Pad>();
+    auto       pad       = static_cast<Pad *>(_pad);
     auto       preparing = _transport;
     auto       packets   = dynamic_cast<PacketTransport *>(preparing.data());
     const auto profiles  = pad ? pad->secureRtpProfiles() : QStringList {};
@@ -759,7 +763,7 @@ void Application::start()
     const auto remote = negotiation_.remoteDescription();
     if (!local || !remote)
         return;
-    auto pad   = _pad.staticCast<Pad>();
+    auto pad   = static_cast<Pad *>(_pad);
     auto media = pad->mediaSession();
     if (!media) {
         remove(Reason::FailedApplication, QStringLiteral("Media session unavailable"));
@@ -791,7 +795,7 @@ void Application::applied(MediaOperation::Id id, MediaError error)
 
     const auto local  = negotiation_.localDescription();
     const auto remote = negotiation_.remoteDescription();
-    auto       pad    = _pad.staticCast<Pad>();
+    auto       pad    = static_cast<Pad *>(_pad);
     if (!local || !remote || !pad || !association_) {
         remove(Reason::FailedApplication, QStringLiteral("Negotiated secure RTP state disappeared"));
         return;
@@ -818,7 +822,7 @@ void Application::applied(MediaOperation::Id id, MediaError error)
 
 bool Application::allowsRtp(bool sending) const
 {
-    auto pad = _pad.staticCast<Pad>();
+    auto pad = static_cast<Pad *>(_pad);
     if (!pad || !pad->session())
         return false;
     if (sending && !pad->directionController()->allowsLocalSending(this))
@@ -1027,10 +1031,9 @@ ApplicationManagerPad *Manager::pad(Session *session)
     auto result = std::make_unique<Pad>(this, session, provider_, transports_);
     return result->mediaSession() ? result.release() : nullptr;
 }
-Application *Manager::startApplication(const ApplicationManagerPad::Ptr &base, const QString &name, Origin creator,
-                                       Origin senders)
+Application *Manager::startApplication(ApplicationManagerPad *base, const QString &name, Origin creator, Origin senders)
 {
-    auto pad = qSharedPointerDynamicCast<Pad>(base);
+    auto pad = qobject_cast<Pad *>(base);
     if (!pad || pad->manager() != this || !pad->session() || !pad->mediaSession() || name.isEmpty()
         || (creator != Origin::Initiator && creator != Origin::Responder)
         || (senders != Origin::None && senders != Origin::Both && senders != Origin::Initiator

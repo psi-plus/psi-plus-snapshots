@@ -8,6 +8,7 @@
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_task.h>
 #define private public
+#include "../../src/xmpp/xmpp-im/jingle-ice-pad_p.h"
 #include <iris/jingle-ice.h>
 #undef private
 #include <QCoreApplication>
@@ -265,19 +266,19 @@ public:
 };
 
 struct Side {
-    Client                           client;
-    J::Session                       session;
-    J::TransportManagerPad::Ptr      baseIcePad;
-    QSharedPointer<J::ICE::Pad>      icePad;
-    QSharedPointer<J::RTP::Pad>      rtpPad;
-    std::shared_ptr<MediaState>      audioState;
-    std::shared_ptr<MediaState>      videoState;
-    J::RTP::Application             *audioApp = nullptr;
-    J::RTP::Application             *videoApp = nullptr;
-    QSharedPointer<TestIceTransport> audioTransport;
-    QSharedPointer<TestIceTransport> videoTransport;
-    J::ICE::IceConnection           *network           = nullptr;
-    bool                             localApplications = false;
+    Client                      client;
+    J::Session                  session;
+    J::TransportManagerPad     *baseIcePad = nullptr;
+    QPointer<J::ICE::Pad>       icePad;
+    QPointer<J::RTP::Pad>       rtpPad;
+    std::shared_ptr<MediaState> audioState;
+    std::shared_ptr<MediaState> videoState;
+    J::RTP::Application        *audioApp = nullptr;
+    J::RTP::Application        *videoApp = nullptr;
+    QPointer<TestIceTransport>  audioTransport;
+    QPointer<TestIceTransport>  videoTransport;
+    J::ICE::IceConnection      *network           = nullptr;
+    bool                        localApplications = false;
 
     Side(const Jid &peer, bool local, quint32 audioSsrc, quint32 videoSsrc, TcpPortReserver *reserver) :
         session(client.jingleManager(), peer, J::Origin::Initiator), localApplications(local)
@@ -297,8 +298,8 @@ struct Side {
         QHash<QString, std::shared_ptr<MediaState>> states;
         states.insert(QStringLiteral("audio"), audioState);
         states.insert(QStringLiteral("video"), videoState);
-        rtpPad = QSharedPointer<J::RTP::Pad>::create(client.jingleManager()->rtpManager(), &session,
-                                                     std::make_shared<Provider>(states), QStringList { J::ICE::NS });
+        rtpPad = QPointer<J::RTP::Pad>(new J::RTP::Pad(client.jingleManager()->rtpManager(), &session,
+                                                       std::make_shared<Provider>(states), QStringList { J::ICE::NS }));
 
         const auto creator = local ? J::Origin::Initiator : J::Origin::Responder;
         audioApp           = new J::RTP::Application(rtpPad, QStringLiteral("audio"), creator, J::Origin::Both);
@@ -318,8 +319,8 @@ struct Side {
         check(bool(icePad), "wrong ICE pad type");
 
         const auto transportCreator = local ? J::Origin::Initiator : J::Origin::Responder;
-        audioTransport              = QSharedPointer<TestIceTransport>::create(baseIcePad, transportCreator);
-        videoTransport              = QSharedPointer<TestIceTransport>::create(baseIcePad, transportCreator);
+        audioTransport              = QPointer<TestIceTransport>(new TestIceTransport(baseIcePad, transportCreator));
+        videoTransport              = QPointer<TestIceTransport>(new TestIceTransport(baseIcePad, transportCreator));
         check(audioApp->setTransport(audioTransport) && videoApp->setTransport(videoTransport),
               "RTP applications rejected ICE transports");
         check(session.setGroupings({ J::ContentGroup { QStringLiteral("BUNDLE"),
@@ -327,12 +328,12 @@ struct Side {
               "RTP BUNDLE grouping rejected");
 
         bool  audioBound = false, audioGrouped = false, videoBound = false, videoGrouped = false;
-        auto *audioNetwork = icePad->groupedConnectionFor(audioTransport.data(), &audioBound, &audioGrouped);
-        auto *videoNetwork = icePad->groupedConnectionFor(videoTransport.data(), &videoBound, &videoGrouped);
+        auto *audioNetwork = icePad->d->groupedConnectionFor(audioTransport.data(), &audioBound, &audioGrouped);
+        auto *videoNetwork = icePad->d->groupedConnectionFor(videoTransport.data(), &videoBound, &videoGrouped);
         check(audioBound && videoBound && audioGrouped && videoGrouped && audioNetwork && audioNetwork == videoNetwork,
               "RTP BUNDLE applications did not stage one association");
         network = audioNetwork;
-        check(icePad->liveAssociationCount() == 1, "RTP BUNDLE side staged multiple associations");
+        check(icePad->d->liveAssociationCount() == 1, "RTP BUNDLE side staged multiple associations");
     }
 };
 
@@ -521,7 +522,7 @@ int main(int argc, char **argv)
 
     check(!failed && survivorSent && second.videoState->received.contains(survivor),
           "production RTP backend-routing regression failed or timed out");
-    check(first.icePad->liveAssociationCount() == 1 && second.icePad->liveAssociationCount() == 1,
+    check(first.icePad->d->liveAssociationCount() == 1 && second.icePad->d->liveAssociationCount() == 1,
           "removing one RTP BUNDLE member changed association count");
 
     // An association QObject can disappear without first emitting invalidated

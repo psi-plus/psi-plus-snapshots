@@ -13,10 +13,10 @@ using PolicyStatus = R::DirectionController::Status;
 
 class PolicyApplication : public R::Application {
 public:
-    explicit PolicyApplication(const QSharedPointer<R::Pad> &pad) :
+    explicit PolicyApplication(const QPointer<R::Pad> &pad) :
         R::Application(pad, "audio", J::Origin::Initiator, J::Origin::Both)
     {
-        _transport = QSharedPointer<TestTransport>::create();
+        _transport = QPointer<TestTransport>(new TestTransport());
         setState(J::State::Active);
     }
 };
@@ -60,10 +60,10 @@ static void crossedPolicies(bool flushBeforeError)
     } failure(client.rootTask());
     J::Session        initiator(client.jingleManager(), Jid("r@example.test/device"), J::Origin::Initiator);
     J::Session        responder(client.jingleManager(), Jid("i@example.test/device"), J::Origin::Responder);
-    auto              ip = QSharedPointer<R::Pad>::create(client.jingleManager()->rtpManager(), &initiator,
-                                                          std::shared_ptr<R::MediaProvider>(), QStringList());
-    auto              rp = QSharedPointer<R::Pad>::create(client.jingleManager()->rtpManager(), &responder,
-                                                          std::shared_ptr<R::MediaProvider>(), QStringList());
+    auto              ip = QPointer<R::Pad>(new R::Pad(client.jingleManager()->rtpManager(), &initiator,
+                                                       std::shared_ptr<R::MediaProvider>(), QStringList()));
+    auto              rp = QPointer<R::Pad>(new R::Pad(client.jingleManager()->rtpManager(), &responder,
+                                                       std::shared_ptr<R::MediaProvider>(), QStringList()));
     PolicyApplication ia(ip), ra(rp);
     ia.incomingContentModify(J::Origin::None);
     ra.incomingContentModify(J::Origin::None);
@@ -106,8 +106,8 @@ int main(int argc, char **argv)
     Result           success(client.rootTask(), true), failure(client.rootTask(), false);
     for (auto role : { J::Origin::Initiator, J::Origin::Responder }) {
         J::Session        session(client.jingleManager(), Jid("peer@example.test/device"), role);
-        auto              pad        = QSharedPointer<R::Pad>::create(client.jingleManager()->rtpManager(), &session,
-                                                                      std::shared_ptr<R::MediaProvider>(), QStringList());
+        auto              pad        = QPointer<R::Pad>(new R::Pad(client.jingleManager()->rtpManager(), &session,
+                                                                   std::shared_ptr<R::MediaProvider>(), QStringList()));
         auto              controller = pad->directionController();
         PolicyApplication content(pad);
         const auto        peer = role == J::Origin::Initiator ? J::Origin::Responder : J::Origin::Initiator;
@@ -179,8 +179,8 @@ int main(int argc, char **argv)
     // Tokens identify an Application incarnation, never merely (creator,name).
     {
         J::Session session(client.jingleManager(), Jid("peer@example.test/device"), J::Origin::Initiator);
-        auto       pad        = QSharedPointer<R::Pad>::create(client.jingleManager()->rtpManager(), &session,
-                                                               std::shared_ptr<R::MediaProvider>(), QStringList());
+        auto       pad        = QPointer<R::Pad>(new R::Pad(client.jingleManager()->rtpManager(), &session,
+                                                            std::shared_ptr<R::MediaProvider>(), QStringList()));
         auto       controller = pad->directionController();
         auto       old        = std::make_unique<PolicyApplication>(pad);
         auto       stale      = controller->suspendLocalSending(old.get());
@@ -201,8 +201,8 @@ int main(int argc, char **argv)
     // Successful IQs do not justify an endless reassertion fight with the peer.
     {
         J::Session        session(client.jingleManager(), Jid("peer@example.test/device"), J::Origin::Initiator);
-        auto              pad = QSharedPointer<R::Pad>::create(client.jingleManager()->rtpManager(), &session,
-                                                               std::shared_ptr<R::MediaProvider>(), QStringList());
+        auto              pad = QPointer<R::Pad>(new R::Pad(client.jingleManager()->rtpManager(), &session,
+                                                            std::shared_ptr<R::MediaProvider>(), QStringList()));
         PolicyApplication content(pad);
         auto              controller = pad->directionController();
         controller->setLocalSending(&content, true);
@@ -225,8 +225,8 @@ int main(int argc, char **argv)
     // target being scheduled. The old call must not overwrite the new revision.
     {
         J::Session        session(client.jingleManager(), Jid("peer@example.test/device"), J::Origin::Initiator);
-        auto              pad = QSharedPointer<R::Pad>::create(client.jingleManager()->rtpManager(), &session,
-                                                               std::shared_ptr<R::MediaProvider>(), QStringList());
+        auto              pad = QPointer<R::Pad>(new R::Pad(client.jingleManager()->rtpManager(), &session,
+                                                            std::shared_ptr<R::MediaProvider>(), QStringList()));
         PolicyApplication content(pad);
         auto              controller = pad->directionController();
         bool              changed    = false;
@@ -246,14 +246,14 @@ int main(int argc, char **argv)
     // queued reconciliation is publishing its request.
     {
         J::Session session(client.jingleManager(), Jid("peer@example.test/device"), J::Origin::Initiator);
-        auto       pad     = QSharedPointer<R::Pad>::create(client.jingleManager()->rtpManager(), &session,
-                                                            std::shared_ptr<R::MediaProvider>(), QStringList());
+        auto       pad     = QPointer<R::Pad>(new R::Pad(client.jingleManager()->rtpManager(), &session,
+                                                         std::shared_ptr<R::MediaProvider>(), QStringList()));
         auto       content = std::make_unique<PolicyApplication>(pad);
         QPointer<R::DirectionController> controller(pad->directionController());
         auto                             token = controller->suspendLocalSending(content.get());
         QObject::connect(content.get(), &J::Application::updated, &app, [&] {
             content.reset();
-            pad.reset();
+            delete pad.data();
         });
         flush();
         check(!controller && !content, "reconciliation deletion fixture did not run");

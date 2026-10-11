@@ -23,7 +23,7 @@ static void check(bool condition, const char *message)
 
 class TestPad : public ApplicationManagerPad {
 public:
-    explicit TestPad(Session *session) : s(session) { }
+    explicit TestPad(Session *session) : ApplicationManagerPad(session), s(session) { }
     Session            *session() const override { return s; }
     QString             ns() const override { return QStringLiteral("urn:iris:test:application"); }
     ApplicationManager *manager() const override { return nullptr; }
@@ -37,7 +37,7 @@ class TestApplication : public Application {
 public:
     TestApplication(Session *session, const QString &name)
     {
-        _pad.reset(new TestPad(session));
+        _pad         = new TestPad(session);
         _contentName = name;
         _creator     = session->role();
         _senders     = Origin::Both;

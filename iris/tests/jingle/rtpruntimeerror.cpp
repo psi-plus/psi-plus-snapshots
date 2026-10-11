@@ -75,7 +75,7 @@ int main(int argc, char **argv)
     auto             manager  = client.jingleManager()->rtpManager();
     auto             provider = std::make_shared<Provider>();
     Session          session(client.jingleManager(), Jid(QStringLiteral("peer@example.org/device")));
-    auto             pad = QSharedPointer<R::Pad>::create(manager, &session, provider, QStringList {});
+    auto             pad = QPointer<R::Pad>(new R::Pad(manager, &session, provider, QStringList {}));
 
     auto audio = std::make_unique<R::Application>(pad, QStringLiteral("audio"), Origin::Initiator, Origin::Both);
     auto video = std::make_unique<R::Application>(pad, QStringLiteral("video"), Origin::Initiator, Origin::Both);

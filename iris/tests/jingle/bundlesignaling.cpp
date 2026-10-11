@@ -9,6 +9,7 @@
 #include <qca.h>
 
 #define private public
+#include "../../src/xmpp/xmpp-im/jingle-ice-pad_p.h"
 #include <iris/jingle-ice.h>
 #include <iris/jingle-session.h>
 #undef private
@@ -203,14 +204,14 @@ static WireOffer makeOffer(Client &client, TcpPortReserver *reserver, J::RTP::Me
               && session.groupings().first().contents == members,
           "caps-driven initiator did not automatically propose RTP BUNDLE");
 
-    QList<QSharedPointer<J::ICE::Transport>> transports;
+    QList<QPointer<J::ICE::Transport>> transports;
     for (auto application : applications) {
         auto transport = qSharedPointerDynamicCast<J::ICE::Transport>(application->transport());
         check(bool(transport), "caps-driven RTP selection did not choose ICE");
         check(transport->pad()->ns() == transportNamespace, "RTP BUNDLE selected a lower-priority ICE profile");
         transports.append(transport);
     }
-    auto icePad = transports.first()->pad().staticCast<J::ICE::Pad>();
+    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((transports.first()->pad()).data()));
     check(waitFor([&]() {
               for (qsizetype i = 0; i < applications.size(); ++i) {
                   if (!applications.at(i)->localDescription() || !transports.at(i)->hasUpdates())
@@ -219,7 +220,7 @@ static WireOffer makeOffer(Client &client, TcpPortReserver *reserver, J::RTP::Me
               return true;
           }),
           "outgoing BUNDLE offer did not finish RTP/ICE preparation");
-    check(icePad->liveAssociationCount() == 1, "initiator BUNDLE offer did not stage one association");
+    check(icePad->d->liveAssociationCount() == 1, "initiator BUNDLE offer did not stage one association");
 
     J::Jingle jingle(J::Action::SessionInitiate, QStringLiteral("bundle-signaling-test"));
     jingle.setInitiator(Jid(QStringLiteral("initiator@example.test/device")));
@@ -414,8 +415,8 @@ static void exerciseScreenAnswer(const WireOffer &offer, TcpPortReserver *reserv
     check(session.incomingInitiate(J::Jingle(offer.root), offer.root), "screen fixture rejected initial offer");
     auto anchor = session.content(anchorName, J::Origin::Initiator);
     check(anchor, "screen fixture lost its initial content");
-    auto           anchorTransport = anchor->transport().staticCast<J::ICE::Transport>();
-    auto           icePad          = anchorTransport->pad().staticCast<J::ICE::Pad>();
+    auto anchorTransport = QPointer<J::ICE::Transport>(static_cast<J::ICE::Transport *>((anchor->transport()).data()));
+    auto icePad          = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((anchorTransport->pad()).data()));
     RootTaskKeeper initialAnswer(client.rootTask());
     session.accept();
     check(waitFor([&]() { return initialAnswer.task() != nullptr; }), "initial answer was not serialized");
@@ -427,8 +428,8 @@ static void exerciseScreenAnswer(const WireOffer &offer, TcpPortReserver *reserv
                   == (int(!offer.audioName.isEmpty()) + int(!offer.videoName.isEmpty())),
           "initial audio/video BUNDLE was not negotiated");
     bool  bound = false, required = false;
-    auto *network = icePad->groupedConnectionFor(anchorTransport.data(), &bound, &required);
-    check(network && bound && required && icePad->liveAssociationCount() == 1,
+    auto *network = icePad->d->groupedConnectionFor(anchorTransport.data(), &bound, &required);
+    check(network && bound && required && icePad->d->liveAssociationCount() == 1,
           "initial BUNDLE did not retain its association");
     const auto initialGeneration = network->generation;
 
@@ -479,14 +480,14 @@ static void exerciseScreenAnswer(const WireOffer &offer, TcpPortReserver *reserv
     check(session.updateFromXml(J::Action::ContentAdd, add), "screen BUNDLE extension was rejected");
     auto screen = session.content(screenName, J::Origin::Initiator);
     check(screen, "screen addition did not create an application");
-    auto           screenTransport = screen->transport().staticCast<J::ICE::Transport>();
+    auto screenTransport = QPointer<J::ICE::Transport>(static_cast<J::ICE::Transport *>((screen->transport()).data()));
     RootTaskKeeper answer(client.rootTask());
     screen->prepare();
     check(waitFor([&]() { return answer.task() != nullptr; }), "screen answer was not serialized");
     bool screenBound = false, screenRequired = false;
-    check(icePad->groupedConnectionFor(screenTransport.data(), &screenBound, &screenRequired) == network && screenBound
-              && screenRequired && icePad->liveAssociationCount() == 1 && network->generation == initialGeneration
-              && !configured->contains(screenName)
+    check(icePad->d->groupedConnectionFor(screenTransport.data(), &screenBound, &screenRequired) == network
+              && screenBound && screenRequired && icePad->d->liveAssociationCount() == 1
+              && network->generation == initialGeneration && !configured->contains(screenName)
               && session.negotiatedGroupings().first().contents == originalGroups.first().contents,
           "screen preparation changed committed BUNDLE or started media before answer ACK");
 
@@ -499,7 +500,7 @@ static void exerciseScreenAnswer(const WireOffer &offer, TcpPortReserver *reserv
         check(waitFor([&]() { return configured->contains(screenName); }), "screen answer ACK did not start media");
         check(session.negotiatedGroupings().first().contents == members
                   && screenTransport->rtpAssociation() == anchorTransport->rtpAssociation()
-                  && icePad->liveAssociationCount() == 1
+                  && icePad->d->liveAssociationCount() == 1
                   && network->generation.iceGeneration == initialGeneration.iceGeneration
                   && network->generation.dtlsEpoch == initialGeneration.dtlsEpoch,
               "screen acceptance allocated or restarted the established association");
@@ -508,7 +509,7 @@ static void exerciseScreenAnswer(const WireOffer &offer, TcpPortReserver *reserv
         check(!configured->contains(screenName) && !screenTransport->rtpAssociation()
                   && session.state() == J::State::Active
                   && session.negotiatedGroupings().first().contents == originalGroups.first().contents
-                  && icePad->liveAssociationCount() == 1 && network->generation == initialGeneration,
+                  && icePad->d->liveAssociationCount() == 1 && network->generation == initialGeneration,
               "failed or stale screen answer started media or changed established BUNDLE");
     }
 }
@@ -566,22 +567,22 @@ static void exerciseMixedRtpFileTransferBundle(TcpPortReserver *reserver)
               && groups.first().contents.contains(ft->contentName()),
           "automatic grouping did not include compatible RTP and file-transfer contents");
 
-    auto icePad = audioTransport->pad().staticCast<J::ICE::Pad>();
+    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((audioTransport->pad()).data()));
     check(waitFor([&]() {
               return audioTransport->state() >= J::State::ApprovedToSend
                   && videoTransport->state() >= J::State::ApprovedToSend
                   && ftTransport->state() >= J::State::ApprovedToSend && audioTransport->rtpAssociation()
                   && videoTransport->rtpAssociation() && ftTransport->rtpAssociation()
-                  && icePad->liveAssociationCount() == 1;
+                  && icePad->d->liveAssociationCount() == 1;
           }),
           "mixed RTP/SCTP BUNDLE did not prepare one shared secure association");
 
     bool  audioBound = false, audioRequired = false;
     bool  videoBound = false, videoRequired = false;
     bool  ftBound = false, ftRequired = false;
-    auto *audioNetwork = icePad->groupedConnectionFor(audioTransport.data(), &audioBound, &audioRequired);
-    auto *videoNetwork = icePad->groupedConnectionFor(videoTransport.data(), &videoBound, &videoRequired);
-    auto *ftNetwork    = icePad->groupedConnectionFor(ftTransport.data(), &ftBound, &ftRequired);
+    auto *audioNetwork = icePad->d->groupedConnectionFor(audioTransport.data(), &audioBound, &audioRequired);
+    auto *videoNetwork = icePad->d->groupedConnectionFor(videoTransport.data(), &videoBound, &videoRequired);
+    auto *ftNetwork    = icePad->d->groupedConnectionFor(ftTransport.data(), &ftBound, &ftRequired);
     check(audioBound && videoBound && ftBound && audioRequired && videoRequired && ftRequired && audioNetwork
               && audioNetwork == videoNetwork && audioNetwork == ftNetwork,
           "mixed RTP/SCTP BUNDLE members did not bind to one ICE connection");
@@ -620,21 +621,21 @@ static void exerciseFinishingFileTransferRetainsBundle(TcpPortReserver *reserver
     session.initiate();
     auto transport = qSharedPointerDynamicCast<J::ICE::Transport>(ft->transport());
     check(bool(transport), "FT drain fixture did not select ICE");
-    auto icePad = transport->pad().staticCast<J::ICE::Pad>();
+    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((transport->pad()).data()));
 
     bool                            bound = false, required = false;
-    QPointer<J::ICE::IceConnection> network(icePad->groupedConnectionFor(transport.data(), &bound, &required));
-    check(network && bound && required && icePad->liveAssociationCount() == 1,
+    QPointer<J::ICE::IceConnection> network(icePad->d->groupedConnectionFor(transport.data(), &bound, &required));
+    check(network && bound && required && icePad->d->liveAssociationCount() == 1,
           "FT drain fixture was not bound to its bundled ICE association");
 
     ft->setState(J::State::Finishing);
     QCoreApplication::processEvents(QEventLoop::AllEvents);
-    check(network && icePad->liveAssociationCount() == 1,
+    check(network && icePad->d->liveAssociationCount() == 1,
           "FT Finishing released its ICE/SCTP association before transport drain");
 
     ft->setState(J::State::Finished);
     QCoreApplication::processEvents(QEventLoop::AllEvents);
-    check(!network && icePad->liveAssociationCount() == 0, "finished FT retained its bundled ICE association");
+    check(!network && icePad->d->liveAssociationCount() == 0, "finished FT retained its bundled ICE association");
 }
 #endif
 
@@ -709,10 +710,10 @@ static void exerciseInitialSingletonAnswer(const WireOffer &transportSource, Tcp
     session.initiate();
     check(waitFor([&]() { return initiate.task() != nullptr; }), "singleton initiate was not serialized");
     acknowledgeJingleTask(initiate, peer);
-    auto  audioTransport = audio->transport().staticCast<J::ICE::Transport>();
-    auto  icePad         = audioTransport->pad().staticCast<J::ICE::Pad>();
+    auto  audioTransport = QPointer<J::ICE::Transport>(static_cast<J::ICE::Transport *>((audio->transport()).data()));
+    auto  icePad         = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((audioTransport->pad()).data()));
     bool  bound = false, required = false;
-    auto *network = icePad->groupedConnectionFor(audioTransport.data(), &bound, &required);
+    auto *network = icePad->d->groupedConnectionFor(audioTransport.data(), &bound, &required);
     check(network && bound && required && session.groupings().first().contents == QStringList { audio->contentName() },
           "audio-only initiate did not propose singleton BUNDLE");
     const auto   initialGeneration = network->generation;
@@ -725,7 +726,7 @@ static void exerciseInitialSingletonAnswer(const WireOffer &transportSource, Tcp
     check(waitFor([&]() { return configured->contains(audio->contentName()); }),
           "singleton answer did not start audio");
     check(audio->state() == J::State::Connecting && audioTransport->state() == J::State::Connecting
-              && audioTransport->rtpAssociation() == initialSecurity && icePad->liveAssociationCount() == 1
+              && audioTransport->rtpAssociation() == initialSecurity && icePad->d->liveAssociationCount() == 1
               && network->generation == initialGeneration && session.negotiatedGroupings().isEmpty() == !bundled,
           "initial singleton acceptance/refusal restarted or failed the audio transport");
 
@@ -735,12 +736,12 @@ static void exerciseInitialSingletonAnswer(const WireOffer &transportSource, Tcp
     check(screen, "singleton call did not allow a video addition");
     screen->prepare();
     check(waitFor([&]() { return addition.task() != nullptr; }), "video addition was not serialized");
-    auto  screenTransport = screen->transport().staticCast<J::ICE::Transport>();
+    auto  screenTransport = QPointer<J::ICE::Transport>(static_cast<J::ICE::Transport *>((screen->transport()).data()));
     bool  screenBound = false, screenRequired = false;
-    auto *screenNetwork = icePad->groupedConnectionFor(screenTransport.data(), &screenBound, &screenRequired);
+    auto *screenNetwork = icePad->d->groupedConnectionFor(screenTransport.data(), &screenBound, &screenRequired);
     check(screenBound && screenRequired == bundled && (bundled ? screenNetwork == network : !screenNetwork)
               && (screenTransport->rtpAssociation() == initialSecurity) == bundled
-              && icePad->liveAssociationCount() == (bundled ? 1 : 2) && !configured->contains(screen->contentName())
+              && icePad->d->liveAssociationCount() == (bundled ? 1 : 2) && !configured->contains(screen->contentName())
               && network->generation == initialGeneration,
           "video extension ignored the peer's initial grouping decision");
     acknowledgeJingleTask(addition, peer);
@@ -777,13 +778,14 @@ static void exerciseResponder(const WireOffer &offer, TcpPortReserver *reserver,
     auto audioTransport = qSharedPointerDynamicCast<J::ICE::Transport>(audio->transport());
     auto videoTransport = qSharedPointerDynamicCast<J::ICE::Transport>(video->transport());
     check(audioTransport && videoTransport, "responder did not create production ICE transports");
-    auto icePad = audioTransport->pad().staticCast<J::ICE::Pad>();
+    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((audioTransport->pad()).data()));
 
     // Incoming transport updates are committed asynchronously. Before local
     // consent they must remain pure per-content signaling state and allocate no
     // physical association.
     QCoreApplication::processEvents(QEventLoop::AllEvents);
-    check(icePad->liveAssociationCount() == 0, "responder allocated BUNDLE association before local grouping decision");
+    check(icePad->d->liveAssociationCount() == 0,
+          "responder allocated BUNDLE association before local grouping decision");
 
     if (acceptBundle) {
         check(session.groupings().size() == 1 && session.groupings().first().semantics == QLatin1String("BUNDLE")
@@ -800,7 +802,7 @@ static void exerciseResponder(const WireOffer &offer, TcpPortReserver *reserver,
     check(waitFor([&]() {
               return audio->state() >= J::State::ApprovedToSend && video->state() >= J::State::ApprovedToSend
                   && audio->state() < J::State::Finishing && video->state() < J::State::Finishing
-                  && icePad->liveAssociationCount() == expectedAssociations;
+                  && icePad->d->liveAssociationCount() == expectedAssociations;
           }),
           acceptBundle ? "accepted BUNDLE did not allocate one live shared association"
                        : "BUNDLE refusal did not allocate live independent associations");
@@ -808,8 +810,8 @@ static void exerciseResponder(const WireOffer &offer, TcpPortReserver *reserver,
           "responder RTP application failed while preparing accepted transports");
 
     bool  audioBound = false, audioRequired = false, videoBound = false, videoRequired = false;
-    auto *audioNetwork = icePad->groupedConnectionFor(audioTransport.data(), &audioBound, &audioRequired);
-    auto *videoNetwork = icePad->groupedConnectionFor(videoTransport.data(), &videoBound, &videoRequired);
+    auto *audioNetwork = icePad->d->groupedConnectionFor(audioTransport.data(), &audioBound, &audioRequired);
+    auto *videoNetwork = icePad->d->groupedConnectionFor(videoTransport.data(), &videoBound, &videoRequired);
     check(audioBound && videoBound, "responder transports lost content identity");
 
     if (acceptBundle) {
@@ -893,7 +895,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
     auto audioTransport = qSharedPointerDynamicCast<J::ICE::Transport>(audio->transport());
     auto videoTransport = qSharedPointerDynamicCast<J::ICE::Transport>(video->transport());
     check(audioTransport && videoTransport, "active extension fixture lost initial ICE transports");
-    auto icePad = audioTransport->pad().staticCast<J::ICE::Pad>();
+    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((audioTransport->pad()).data()));
 
     RootTaskKeeper pendingInitialAccept(client.rootTask());
     session.accept();
@@ -904,14 +906,14 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
           "responder did not become Active after session-accept acknowledgement");
     check(session.negotiatedGroupings().size() == 1
               && session.negotiatedGroupings().first().contents == QStringList({ offer.audioName, offer.videoName })
-              && icePad->liveAssociationCount() == 1,
+              && icePad->d->liveAssociationCount() == 1,
           "active extension fixture did not establish initial BUNDLE");
 
     bool  audioBound = false, audioRequired = false;
     bool  videoBound = false, videoRequired = false;
-    auto *shared = icePad->groupedConnectionFor(audioTransport.data(), &audioBound, &audioRequired);
+    auto *shared = icePad->d->groupedConnectionFor(audioTransport.data(), &audioBound, &audioRequired);
     check(shared && audioBound && audioRequired
-              && icePad->groupedConnectionFor(videoTransport.data(), &videoBound, &videoRequired) == shared
+              && icePad->d->groupedConnectionFor(videoTransport.data(), &videoBound, &videoRequired) == shared
               && videoBound && videoRequired,
           "initial active RTP contents did not share one association");
 
@@ -935,8 +937,8 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
           "file-transfer extension did not serialize content-accept");
 
     bool  ftBound = false, ftRequired = false;
-    auto *provisional = icePad->groupedConnectionFor(ftTransport.data(), &ftBound, &ftRequired);
-    check(ftBound && ftRequired && provisional == shared && icePad->liveAssociationCount() == 1,
+    auto *provisional = icePad->d->groupedConnectionFor(ftTransport.data(), &ftBound, &ftRequired);
+    check(ftBound && ftRequired && provisional == shared && icePad->d->liveAssociationCount() == 1,
           "provisional file-transfer extension did not reuse the established association");
     check(session.negotiatedGroupings().first().contents == QStringList({ offer.audioName, offer.videoName }),
           "provisional physical binding leaked into negotiated topology");
@@ -946,7 +948,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
         acknowledgeJingleTask(pendingContentAccept, peer, false);
         check(ft->state() == J::State::Finished && session.state() == J::State::Active
                   && session.negotiatedGroupings().first().contents == QStringList({ offer.audioName, offer.videoName })
-                  && !ftTransport->rtpAssociation() && icePad->liveAssociationCount() == 1,
+                  && !ftTransport->rtpAssociation() && icePad->d->liveAssociationCount() == 1,
               "failed content-accept IQ changed the existing BUNDLE or left provisional ownership live");
         check(waitFor([&]() { return pendingCancellation.task() != nullptr; }),
               "failed answer IQ left the peer's original offer unresolved");
@@ -976,7 +978,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
         acknowledgeJingleTask(pendingNextAccept, peer);
         check(session.negotiatedGroupings().first().contents
                       == QStringList({ offer.audioName, offer.videoName, nextName })
-                  && icePad->liveAssociationCount() == 1,
+                  && icePad->d->liveAssociationCount() == 1,
               "replacement extension did not commit on its own answer IQ result");
         return;
     }
@@ -1001,7 +1003,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
               "invalidated extension did not cancel its proposed content");
         acknowledgeJingleTask(pendingCancellation, peer);
         check(ft->state() == J::State::Finished && videoTransport->rtpAssociation()
-                  && icePad->liveAssociationCount() == 1,
+                  && icePad->d->liveAssociationCount() == 1,
               "cancelling an extension invalidated the surviving RTP member");
         if (scenario == QLatin1String("remove-member")) {
             const QString nextName = QStringLiteral("singleton-extension");
@@ -1016,7 +1018,8 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
                   "singleton extension did not prepare its answer");
             acknowledgeJingleTask(pendingNext, peer);
             check(session.negotiatedGroupings().first().contents == QStringList({ offer.videoName, nextName })
-                      && next->transport().staticCast<J::ICE::Transport>()->rtpAssociation()
+                      && QPointer<J::ICE::Transport>(static_cast<J::ICE::Transport *>((next->transport()).data()))
+                              ->rtpAssociation()
                           == videoTransport->rtpAssociation(),
                   "extension of a surviving member did not reuse its association");
         } else {
@@ -1030,8 +1033,9 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
                   "replacement of singleton BUNDLE did not send transport-accept");
             acknowledgeJingleTask(pendingReplaceAccept, peer);
             check(!oldConnection && video->transport() != videoTransport
-                      && video->transport().staticCast<J::ICE::Transport>()->rtpAssociation()
-                      && icePad->liveAssociationCount() == 1,
+                      && QPointer<J::ICE::Transport>(static_cast<J::ICE::Transport *>((video->transport()).data()))
+                             ->rtpAssociation()
+                      && icePad->d->liveAssociationCount() == 1,
                   "singleton replacement retained the old association or lost the new one");
         }
         return;
@@ -1051,10 +1055,10 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
                   && groups.first().contents == QStringList({ offer.audioName, offer.videoName, fileName });
           }),
           "content-accept acknowledgement did not commit active BUNDLE extension");
-    check(icePad->liveAssociationCount() == 1, "committed active BUNDLE extension allocated another association");
+    check(icePad->d->liveAssociationCount() == 1, "committed active BUNDLE extension allocated another association");
 
     bool committedBound = false, committedRequired = false;
-    check(icePad->groupedConnectionFor(ftTransport.data(), &committedBound, &committedRequired) == shared
+    check(icePad->d->groupedConnectionFor(ftTransport.data(), &committedBound, &committedRequired) == shared
               && committedBound && committedRequired,
           "committed file-transfer content did not remain on established association");
 
@@ -1072,7 +1076,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
     check(!session.content(unbundledName, J::Origin::Initiator) && session.negotiatedGroupings().size() == 1
               && session.negotiatedGroupings().first().contents
                   == QStringList({ offer.audioName, offer.videoName, fileName })
-              && icePad->liveAssociationCount() == 1,
+              && icePad->d->liveAssociationCount() == 1,
           "unacceptable BUNDLE membership was accepted independently or mutated established topology");
     session.setAutomaticGroupingEnabled(true);
 
@@ -1094,8 +1098,8 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
     check(bool(rejectedTransport), "rollback fixture did not create ICE transport");
     bool  rejectedBound = false, rejectedRequired = false;
     auto *rejectedProvisional
-        = icePad->groupedConnectionFor(rejectedTransport.data(), &rejectedBound, &rejectedRequired);
-    check(rejectedBound && rejectedRequired && rejectedProvisional == shared && icePad->liveAssociationCount() == 1,
+        = icePad->d->groupedConnectionFor(rejectedTransport.data(), &rejectedBound, &rejectedRequired);
+    check(rejectedBound && rejectedRequired && rejectedProvisional == shared && icePad->d->liveAssociationCount() == 1,
           "rollback fixture did not stage on the established BUNDLE association");
 
     RootTaskKeeper pendingReject(client.rootTask());
@@ -1109,12 +1113,13 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
               const auto groups = session.negotiatedGroupings();
               return groups.size() == 1
                   && groups.first().contents == QStringList({ offer.audioName, offer.videoName, fileName })
-                  && icePad->liveAssociationCount() == 1 && rejectedFt->state() == J::State::Finished;
+                  && icePad->d->liveAssociationCount() == 1 && rejectedFt->state() == J::State::Finished;
           }),
           "local rejection changed established BUNDLE topology or lifetime");
 
     bool rejectedStillBound = false, rejectedStillRequired = false;
-    check(icePad->groupedConnectionFor(rejectedTransport.data(), &rejectedStillBound, &rejectedStillRequired) == nullptr
+    check(icePad->d->groupedConnectionFor(rejectedTransport.data(), &rejectedStillBound, &rejectedStillRequired)
+                  == nullptr
               && rejectedStillBound && !rejectedStillRequired,
           "local rejection retained provisional BUNDLE membership or lost content identity");
     check(shared && audioTransport->state() < J::State::Finishing && videoTransport->state() < J::State::Finishing,
@@ -1126,7 +1131,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
                                                    { offer.videoName, offer.audioName, fileName, malformedName });
     check(!session.updateFromXml(J::Action::ContentAdd, malformed),
           "active BUNDLE extension accepted established-member reordering");
-    check(!session.content(malformedName, J::Origin::Initiator) && icePad->liveAssociationCount() == 1,
+    check(!session.content(malformedName, J::Origin::Initiator) && icePad->d->liveAssociationCount() == 1,
           "malformed active BUNDLE extension mutated runtime state");
 
     // Session roles do not fix offer/answer roles for an active addition.
@@ -1166,7 +1171,8 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
     localAnswer.appendChild(localGroup);
     check(session.updateFromXml(J::Action::ContentAccept, localAnswer)
               && session.negotiatedGroupings().first().contents == localMembers
-              && local->transport().staticCast<J::ICE::Transport>()->rtpAssociation()
+              && QPointer<J::ICE::Transport>(static_cast<J::ICE::Transport *>((local->transport()).data()))
+                      ->rtpAssociation()
                   == audioTransport->rtpAssociation(),
           "original responder's accepted addition did not extend the established BUNDLE");
 }
@@ -1202,7 +1208,7 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
     auto audioTransport = qSharedPointerDynamicCast<J::ICE::Transport>(audio->transport());
     auto videoTransport = qSharedPointerDynamicCast<J::ICE::Transport>(video->transport());
     check(audioTransport && videoTransport, "RFC 9143 answer fixture did not select initial ICE transports");
-    auto icePad = audioTransport->pad().staticCast<J::ICE::Pad>();
+    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((audioTransport->pad()).data()));
 
     check(waitFor([&]() { return session.state() == J::State::Unacked; }),
           "RFC 9143 answer fixture did not serialize session-initiate");
@@ -1216,7 +1222,7 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
     check(session.negotiatedGroupings().size() == 1
               && session.negotiatedGroupings().first().contents
                   == QStringList({ audio->contentName(), video->contentName() })
-              && icePad->liveAssociationCount() == 1,
+              && icePad->d->liveAssociationCount() == 1,
           "RFC 9143 answer fixture did not establish one committed BUNDLE association");
 
     std::unique_ptr<J::Application> ftOwner(session.newContent(J::FileTransfer::NS, J::Origin::Initiator));
@@ -1236,15 +1242,15 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
           "active outgoing extension did not serialize content-add");
 
     bool  ftBound = false, ftRequired = false;
-    auto *shared = icePad->groupedConnectionFor(ftTransport.data(), &ftBound, &ftRequired);
-    check(shared && ftBound && ftRequired && icePad->liveAssociationCount() == 1,
+    auto *shared = icePad->d->groupedConnectionFor(ftTransport.data(), &ftBound, &ftRequired);
+    check(shared && ftBound && ftRequired && icePad->d->liveAssociationCount() == 1,
           "outgoing extension did not stage file transfer on established BUNDLE association");
     if (scenario == QLatin1String("add-error")) {
         acknowledgeJingleTask(pendingAdd, peer, false);
         check(ft->state() == J::State::Finished && !ftTransport->rtpAssociation()
                   && session.negotiatedGroupings().first().contents
                       == QStringList({ audio->contentName(), video->contentName() })
-                  && icePad->liveAssociationCount() == 1,
+                  && icePad->d->liveAssociationCount() == 1,
               "failed content-add IQ left provisional membership or damaged existing RTP");
         return;
     }
@@ -1268,7 +1274,7 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
                   && !ftTransport->rtpAssociation()
                   && session.negotiatedGroupings().first().contents
                       == QStringList({ audio->contentName(), video->contentName() })
-                  && icePad->liveAssociationCount() == 1,
+                  && icePad->d->liveAssociationCount() == 1,
               "peer content-reject retained provisional ownership or changed established membership");
         return;
     }
@@ -1308,11 +1314,11 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
     check(session.negotiatedGroupings().size() == 1
               && session.negotiatedGroupings().first().contents
                   == QStringList({ audio->contentName(), video->contentName() })
-              && icePad->liveAssociationCount() == 1,
+              && icePad->d->liveAssociationCount() == 1,
           "invalid unbundled content-accept mutated committed topology or association lifetime");
 
     bool stillBound = false, stillRequired = false;
-    check(icePad->groupedConnectionFor(ftTransport.data(), &stillBound, &stillRequired) == shared && stillBound
+    check(icePad->d->groupedConnectionFor(ftTransport.data(), &stillBound, &stillRequired) == shared && stillBound
               && stillRequired && ft->state() == J::State::Pending,
           "malformed answer cancelled the outstanding offer instead of refusing only the IQ");
     const auto revision = shared->generation.membershipRevision;
@@ -1383,7 +1389,7 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
           "corrected, fully bundled content-accept was rejected");
     check(session.negotiatedGroupings().first().contents
                   == QStringList({ audio->contentName(), video->contentName(), ft->contentName() })
-              && shared->generation.membershipRevision == revision + 1 && icePad->liveAssociationCount() == 1,
+              && shared->generation.membershipRevision == revision + 1 && icePad->d->liveAssociationCount() == 1,
           "successful local extension did not commit exactly one membership on the old association");
 
     // Application ownership determines membership even if callers retain a Transport.
@@ -1396,7 +1402,7 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
     check(!session.content(fileName, J::Origin::Initiator)
               && session.negotiatedGroupings().first().contents
                   == QStringList({ audio->contentName(), video->contentName() })
-              && icePad->liveAssociationCount() == 1 && !ftTransport->rtpAssociation(),
+              && icePad->d->liveAssociationCount() == 1 && !ftTransport->rtpAssociation(),
           "removed extension retained topology or network ownership through a retained Transport");
 }
 #endif
@@ -1433,7 +1439,7 @@ static void exerciseInitiatorReplacement(const WireOffer &transportSource, TcpPo
     auto audioTransport = qSharedPointerDynamicCast<J::ICE::Transport>(audio->transport());
     auto videoTransport = qSharedPointerDynamicCast<J::ICE::Transport>(video->transport());
     check(audioTransport && videoTransport, "replacement initiator did not select ICE during initiate()");
-    auto icePad = audioTransport->pad().staticCast<J::ICE::Pad>();
+    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((audioTransport->pad()).data()));
 
     // There is no connected XMPP stream in this test process, so Task::go()
     // intentionally stops at the wire boundary; inject the peer's real IQ result
@@ -1444,7 +1450,7 @@ static void exerciseInitiatorReplacement(const WireOffer &transportSource, TcpPo
     check(session.state() == J::State::Pending && audio->state() == J::State::Pending
               && video->state() == J::State::Pending,
           "session-initiate IQ result did not establish the pending negotiation boundary");
-    check(icePad->liveAssociationCount() == 1,
+    check(icePad->d->liveAssociationCount() == 1,
           "outgoing negotiated BUNDLE offer did not retain one shared association");
 
     // Feed a genuine session-accept document through the same production parser
@@ -1458,10 +1464,10 @@ static void exerciseInitiatorReplacement(const WireOffer &transportSource, TcpPo
           "session-accept XML did not establish the active negotiated session");
 
     bool  audioBound = false, audioRequired = false, videoBound = false, videoRequired = false;
-    auto *audioNetwork = icePad->groupedConnectionFor(audioTransport.data(), &audioBound, &audioRequired);
-    auto *videoNetwork = icePad->groupedConnectionFor(videoTransport.data(), &videoBound, &videoRequired);
+    auto *audioNetwork = icePad->d->groupedConnectionFor(audioTransport.data(), &audioBound, &audioRequired);
+    auto *videoNetwork = icePad->d->groupedConnectionFor(videoTransport.data(), &videoBound, &videoRequired);
     check(audioBound && videoBound && audioRequired && videoRequired && audioNetwork && audioNetwork == videoNetwork
-              && icePad->liveAssociationCount() == 1,
+              && icePad->d->liveAssociationCount() == 1,
           "session-accept did not preserve the original shared BUNDLE association");
     QPointer<J::ICE::IceConnection> oldNetwork(audioNetwork);
 
@@ -1471,7 +1477,7 @@ static void exerciseInitiatorReplacement(const WireOffer &transportSource, TcpPo
     check(!session.updateFromXml(J::Action::TransportReplace, partial),
           "partial negotiated BUNDLE transport-replace was accepted");
     check(audio->transport() == audioTransport && video->transport() == videoTransport && oldNetwork
-              && icePad->liveAssociationCount() == 1,
+              && icePad->d->liveAssociationCount() == 1,
           "partial BUNDLE transport-replace mutated the live association");
 
     QDomDocument fullDoc;
@@ -1500,7 +1506,7 @@ static void exerciseInitiatorReplacement(const WireOffer &transportSource, TcpPo
             return;
         seen = true;
         ++preparedReplacements;
-        check(icePad->liveAssociationCount() == 1,
+        check(icePad->d->liveAssociationCount() == 1,
                    "replacement preparation exposed more than one live BUNDLE association");
         check(preparedReplacements <= 2, "replacement transport prepared more than once");
     };
@@ -1514,7 +1520,7 @@ static void exerciseInitiatorReplacement(const WireOffer &transportSource, TcpPo
                   && replacementVideo->rtpAssociation();
           }),
           "production replacement preparation did not complete both BUNDLE members");
-    check(!oldNetwork && icePad->liveAssociationCount() == 1,
+    check(!oldNetwork && icePad->d->liveAssociationCount() == 1,
           "full BUNDLE replacement did not leave exactly one live association");
     check(replacementAudio->rtpAssociation() == replacementVideo->rtpAssociation(),
           "replacement BUNDLE members did not share one SRTP session");
@@ -1555,13 +1561,13 @@ static void exerciseTwoGroupReplacement(const WireOffer &transportSource, TcpPor
     auto tb1 = qSharedPointerDynamicCast<J::ICE::Transport>(b1->transport());
     auto tb2 = qSharedPointerDynamicCast<J::ICE::Transport>(b2->transport());
     check(ta1 && ta2 && tb1 && tb2, "two-group fixture did not select ICE");
-    auto icePad = ta1->pad().staticCast<J::ICE::Pad>();
+    auto icePad = QPointer<J::ICE::Pad>(static_cast<J::ICE::Pad *>((ta1->pad()).data()));
 
     check(waitFor([&]() { return session.state() == J::State::Unacked; }),
           "two-group fixture did not serialize session-initiate");
     acknowledgeJingleTask(pendingInitiate, peer);
     check(session.state() == J::State::Pending, "two-group initiate acknowledgement failed");
-    check(icePad->liveAssociationCount() == 2, "two BUNDLE groups did not stage two associations");
+    check(icePad->d->liveAssociationCount() == 2, "two BUNDLE groups did not stage two associations");
 
     QDomDocument acceptDoc;
     J::Jingle    acceptJingle(J::Action::SessionAccept, session.sid());
@@ -1623,13 +1629,13 @@ static void exerciseTwoGroupReplacement(const WireOffer &transportSource, TcpPor
 
     bool  a1Bound = false, a1Required = false, a2Bound = false, a2Required = false;
     bool  b1Bound = false, b1Required = false, b2Bound = false, b2Required = false;
-    auto *networkA  = icePad->groupedConnectionFor(ta1.data(), &a1Bound, &a1Required);
-    auto *networkA2 = icePad->groupedConnectionFor(ta2.data(), &a2Bound, &a2Required);
-    auto *networkB  = icePad->groupedConnectionFor(tb1.data(), &b1Bound, &b1Required);
-    auto *networkB2 = icePad->groupedConnectionFor(tb2.data(), &b2Bound, &b2Required);
+    auto *networkA  = icePad->d->groupedConnectionFor(ta1.data(), &a1Bound, &a1Required);
+    auto *networkA2 = icePad->d->groupedConnectionFor(ta2.data(), &a2Bound, &a2Required);
+    auto *networkB  = icePad->d->groupedConnectionFor(tb1.data(), &b1Bound, &b1Required);
+    auto *networkB2 = icePad->d->groupedConnectionFor(tb2.data(), &b2Bound, &b2Required);
     check(a1Bound && a2Bound && b1Bound && b2Bound && a1Required && a2Required && b1Required && b2Required && networkA
               && networkA == networkA2 && networkB && networkB == networkB2 && networkA != networkB
-              && icePad->liveAssociationCount() == 2,
+              && icePad->d->liveAssociationCount() == 2,
           "two-group negotiated topology was not two independent shared associations");
 
     QPointer<J::ICE::IceConnection> oldA(networkA);
@@ -1649,16 +1655,17 @@ static void exerciseTwoGroupReplacement(const WireOffer &transportSource, TcpPor
                   && ra1->rtpAssociation() && ra2->rtpAssociation();
           }),
           "first BUNDLE group replacement did not finish preparation");
-    check(!oldA && stableB && icePad->liveAssociationCount() == 2,
+    check(!oldA && stableB && icePad->d->liveAssociationCount() == 2,
           "replacing first BUNDLE group destroyed or duplicated sibling association");
 
     bool rb1 = false, rq1 = false, rb2 = false, rq2 = false;
-    check(icePad->groupedConnectionFor(tb1.data(), &rb1, &rq1) == stableB
-              && icePad->groupedConnectionFor(tb2.data(), &rb2, &rq2) == stableB && rb1 && rb2 && rq1 && rq2,
+    check(icePad->d->groupedConnectionFor(tb1.data(), &rb1, &rq1) == stableB
+              && icePad->d->groupedConnectionFor(tb2.data(), &rb2, &rq2) == stableB && rb1 && rb2 && rq1 && rq2,
           "first group replacement changed second group identity");
 
     bool                            stableABound = false, stableARequired = false;
-    QPointer<J::ICE::IceConnection> stableA(icePad->groupedConnectionFor(ra1.data(), &stableABound, &stableARequired));
+    QPointer<J::ICE::IceConnection> stableA(
+        icePad->d->groupedConnectionFor(ra1.data(), &stableABound, &stableARequired));
     check(stableABound && stableARequired && stableA && stableA != stableB, "first replacement association missing");
 }
 

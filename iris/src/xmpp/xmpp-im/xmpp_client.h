@@ -195,6 +195,8 @@ signals:
     void rosterItemAdded(const RosterItem &);
     void rosterItemUpdated(const RosterItem &);
     void rosterItemRemoved(const RosterItem &);
+    // Parsed presence, including peers outside the roster and sibling resources.
+    void presenceReceived(const Jid &, const Status &);
     void resourceAvailable(const Jid &, const Resource &);
     void resourceUnavailable(const Jid &, const Resource &);
     void presenceError(const Jid &, int, const QString &);

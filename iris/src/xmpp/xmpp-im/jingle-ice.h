@@ -20,9 +20,9 @@
 #ifndef JINGLE_ICE_H
 #define JINGLE_ICE_H
 
-#include <iris/iris_export.h>
 #include <QHash>
 #include <QWeakPointer>
+#include <iris/iris_export.h>
 #include <iris/irisnet/noncore/tcpportreserver.h>
 #include <iris/jingle-rtp-srtp.h>
 #include <iris/xmpp-core/xmpp.h>
@@ -33,24 +33,19 @@ class QHostAddress;
 namespace XMPP {
 class Client;
 
-namespace Jingle {
-    class Application;
-}
 namespace Jingle { namespace ICE {
     extern IRIS_EXPORT const QString NS;
     extern IRIS_EXPORT const QString NS_ICE_UDP;
 
     class Transport;
-    class ConnectionMembership;
 
     class Manager;
-    class IceConnection;
     class Transport : public XMPP::Jingle::Transport, public RTP::PacketTransport {
         Q_OBJECT
     public:
         enum Mode { Tcp, Udp };
 
-        Transport(const TransportManagerPad::Ptr &pad, Origin creator);
+        Transport(TransportManagerPad *pad, Origin creator);
         ~Transport() override;
 
         void                        prepare() override;
@@ -90,10 +85,7 @@ namespace Jingle { namespace ICE {
 
     class Pad : public TransportManagerPad {
         Q_OBJECT
-        // TODO
     public:
-        typedef QSharedPointer<Pad> Ptr;
-
         Pad(Manager *manager, Session *session);
         ~Pad() override;
         QString           ns() const override;
@@ -101,26 +93,15 @@ namespace Jingle { namespace ICE {
         TransportManager *manager() const override;
         void              onLocalAccepted() override;
 
-        inline TcpPortScope *discoScope() const { return _discoScope; }
+        TcpPortScope *discoScope() const;
 
     private:
         friend class Transport;
-        bool                 commitGroupExtension(const ContentKey &) override;
-        void                 rollbackGroupExtension(const ContentKey &) override;
-        void                 watchGroupedContent(Application *, const ContentKey &);
-        IceConnection       *groupedConnectionFor(Transport *transport, bool *contentBound, bool *groupRequired);
-        ConnectionMembership membershipFor(Transport *transport, bool *contentBound);
-        ConnectionMembership takeUnacceptedSingletonMembership(Transport *transport);
-        bool                 groupedConnectionAccepted(Transport *transport) const;
-        bool                 shouldDeferGroupedNetwork(Transport *transport) const;
-        qsizetype            liveAssociationCount() const;
+        bool commitGroupExtension(const ContentKey &) override;
+        void rollbackGroupExtension(const ContentKey &) override;
 
         class Private;
         std::unique_ptr<Private> d;
-        Manager                 *_manager;
-        Session                 *_session;
-        TcpPortScope            *_discoScope    = nullptr;
-        bool                     _allowGrouping = false;
     };
 
     class Manager : public TransportManager {
@@ -129,11 +110,10 @@ namespace Jingle { namespace ICE {
         Manager(QObject *parent = nullptr);
         ~Manager() override;
 
-        XMPP::Jingle::TransportFeatures         features() const override;
-        void                                    setJingleManager(XMPP::Jingle::Manager *jm) override;
-        QSharedPointer<XMPP::Jingle::Transport> newTransport(const TransportManagerPad::Ptr &pad,
-                                                             Origin                          creator) override;
-        TransportManagerPad                    *pad(Session *session) override;
+        XMPP::Jingle::TransportFeatures   features() const override;
+        void                              setJingleManager(XMPP::Jingle::Manager *jm) override;
+        QPointer<XMPP::Jingle::Transport> newTransport(TransportManagerPad *pad, Origin creator) override;
+        TransportManagerPad              *pad(Session *session) override;
 
         QStringList ns() const override;
         QStringList discoFeatures() const override;

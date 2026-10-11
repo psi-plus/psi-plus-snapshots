@@ -80,7 +80,7 @@ private:
 
 class TestTransportPad final : public J::TransportManagerPad {
 public:
-    explicit TestTransportPad(J::Session *session) : session_(session) { }
+    explicit TestTransportPad(J::Session *session) : J::TransportManagerPad(session), session_(session) { }
     J::Session          *session() const override { return session_; }
     QString              ns() const override { return QStringLiteral("urn:iris:test:ft"); }
     J::TransportManager *manager() const override { return nullptr; }
@@ -91,7 +91,7 @@ private:
 
 class TestTransport final : public J::Transport {
 public:
-    TestTransport(const J::TransportManagerPad::Ptr &pad, J::Origin creator) :
+    TestTransport(J::TransportManagerPad *pad, J::Origin creator) :
         J::Transport(pad, creator), connection_(QSharedPointer<TestConnection>::create())
     {
     }
@@ -99,6 +99,8 @@ public:
     void prepare() override
     {
         setState(J::State::ApprovedToSend);
+        if (isRemote())
+            notifyIncomingConnection(connection_);
         emit connection_->connected();
     }
     void                           start() override { setState(J::State::Active); }
@@ -120,7 +122,7 @@ class TestApplication final : public FT::Application {
 public:
     using FT::Application::Application;
     using FT::Application::incomingRemove;
-    void installTransport(const QSharedPointer<J::Transport> &transport) { _transport = transport; }
+    void installTransport(J::Transport *transport) { _transport = transport; }
 };
 
 static FT::File testFile(quint64 size)
@@ -162,10 +164,9 @@ static void exerciseSessionTermination(Client &client, bool partial, bool localF
     auto *session
         = new J::Session(client.jingleManager(), Jid(QStringLiteral("peer@example.test/device")), J::Origin::Initiator);
     QPointer<J::Session> sessionGuard(session);
-    auto                 appPad
-        = QSharedPointer<FT::Pad>(static_cast<FT::Pad *>(client.jingleManager()->applicationPad(session, FT::NS)));
-    auto                     transportPad = J::TransportManagerPad::Ptr(new TestTransportPad(session));
-    auto                     transport    = QSharedPointer<TestTransport>::create(transportPad, J::Origin::Initiator);
+    auto appPad = QPointer<FT::Pad>(static_cast<FT::Pad *>(client.jingleManager()->applicationPad(session, FT::NS)));
+    auto transportPad = new TestTransportPad(session);
+    auto transport    = QPointer<TestTransport>(new TestTransport(transportPad, J::Origin::Initiator));
     QPointer<TestConnection> connection(transport->connection().data());
     auto *transfer = new TestApplication(appPad, QStringLiteral("session-termination"), J::Origin::Initiator,
                                          J::Origin::Initiator);
@@ -208,12 +209,12 @@ static void exerciseSessionTermination(Client &client, bool partial, bool localF
                                                       : peerReason;
     check(finished == 1 && result.isValid() && result.condition() == expected,
           "session termination lost its reason or overwrote a local/partial transfer failure");
-    check(!connection->isOpen(), "session termination left its data stream open");
+    check(!connection || !connection->isOpen(), "session termination left its data stream open");
     check(!sessionGuard || sessionGuard->state() == J::State::Finished,
           "reentrant completion reopened a terminated session");
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     check(!sessionGuard && !appGuard, "session termination leaked the session or application");
-    transport.reset();
+    transport.clear(); // The session tree owned and destroyed the transport.
     check(!connection, "session termination leaked the transport connection");
 }
 
@@ -227,7 +228,7 @@ int main(int argc, char **argv)
     auto *rawPad = client.jingleManager()->applicationPad(&session, FT::NS);
     auto *ftPad  = dynamic_cast<FT::Pad *>(rawPad);
     check(ftPad, "client did not provide registered FT pad");
-    QSharedPointer<FT::Pad> appPad(ftPad);
+    QPointer<FT::Pad> appPad(ftPad);
 
     // Fatal integrity errors remain actionable after payload completion entered
     // Finishing. They must schedule ContentRemove, never be overwritten by the
@@ -252,8 +253,8 @@ int main(int argc, char **argv)
     // application when a known-size receiver reaches Finishing must not leave
     // beginPayloadFinishing() touching its destroyed Private afterwards.
     {
-        auto  transportPad = J::TransportManagerPad::Ptr(new TestTransportPad(&session));
-        auto  transport    = QSharedPointer<TestTransport>::create(transportPad, J::Origin::Initiator);
+        auto  transportPad = new TestTransportPad(&session);
+        auto  transport    = QPointer<TestTransport>(new TestTransport(transportPad, J::Origin::Initiator));
         auto *transfer
             = new TestApplication(appPad, QStringLiteral("reentrant"), J::Origin::Initiator, J::Origin::Responder);
         transfer->setFile(testFile(4));
@@ -285,8 +286,8 @@ int main(int argc, char **argv)
     // Exhausting the source does not prove receipt. Exercise the real finalize
     // timer callback without waiting for its thirty-second production interval.
     {
-        auto            transportPad = J::TransportManagerPad::Ptr(new TestTransportPad(&session));
-        auto            transport    = QSharedPointer<TestTransport>::create(transportPad, J::Origin::Initiator);
+        auto            transportPad = new TestTransportPad(&session);
+        auto            transport    = QPointer<TestTransport>(new TestTransport(transportPad, J::Origin::Initiator));
         TestApplication transfer(appPad, QStringLiteral("receipt-timeout"), J::Origin::Initiator, J::Origin::Initiator);
         transfer.setFile(testFile(4));
         transfer.setAcceptFile(testFile(4));
@@ -315,8 +316,8 @@ int main(int argc, char **argv)
     // Negotiating hash-used makes checksum confirmation mandatory. Receiving
     // the byte count cannot turn a missing checksum into success on timeout.
     for (bool wrongAlgorithm : { false, true }) {
-        auto            transportPad = J::TransportManagerPad::Ptr(new TestTransportPad(&session));
-        auto            transport    = QSharedPointer<TestTransport>::create(transportPad, J::Origin::Initiator);
+        auto            transportPad = new TestTransportPad(&session);
+        auto            transport    = QPointer<TestTransport>(new TestTransport(transportPad, J::Origin::Initiator));
         TestApplication transfer(appPad, QStringLiteral("checksum-timeout"), J::Origin::Initiator,
                                  J::Origin::Responder);
         auto            file = testFile(4);
@@ -359,8 +360,8 @@ int main(int argc, char **argv)
     // A queued write is not delivery: keep the reliable transport alive until
     // the remote application confirms receipt, then release it immediately.
     {
-        auto            transportPad = J::TransportManagerPad::Ptr(new TestTransportPad(&session));
-        auto            transport    = QSharedPointer<TestTransport>::create(transportPad, J::Origin::Initiator);
+        auto            transportPad = new TestTransportPad(&session);
+        auto            transport    = QPointer<TestTransport>(new TestTransport(transportPad, J::Origin::Initiator));
         TestApplication transfer(appPad, QStringLiteral("retain-until-receipt"), J::Origin::Initiator,
                                  J::Origin::Initiator);
         transfer.setFile(testFile(4));
@@ -421,8 +422,8 @@ int main(int argc, char **argv)
     // IBB peer close can beat the queued bytesWritten callback for the final
     // block. All payload is queued, but success still requires a receipt.
     {
-        auto            transportPad = J::TransportManagerPad::Ptr(new TestTransportPad(&session));
-        auto            transport    = QSharedPointer<TestTransport>::create(transportPad, J::Origin::Initiator);
+        auto            transportPad = new TestTransportPad(&session);
+        auto            transport    = QPointer<TestTransport>(new TestTransport(transportPad, J::Origin::Initiator));
         TestApplication transfer(appPad, QStringLiteral("close-before-write-notification"), J::Origin::Initiator,
                                  J::Origin::Initiator);
         transfer.setFile(testFile(4));
@@ -444,6 +445,141 @@ int main(int argc, char **argv)
         QCoreApplication::processEvents();
         check(transfer.state() == J::State::Finished && transfer.lastReason().condition() == J::Reason::Success,
               "peer close before write notification prevented successful receipt");
+    }
+
+    // A verified range may keep its live BUNDLE anchor until the application
+    // confirms that a successor was accepted. No receipt may escape beforehand.
+    {
+        auto transport
+            = QPointer<TestTransport>(new TestTransport(new TestTransportPad(&session), J::Origin::Initiator));
+        TestApplication transfer(appPad, QStringLiteral("deferred-range"), J::Origin::Initiator, J::Origin::Responder);
+        transfer.setFile(testFile(4));
+        transfer.setAcceptFile(testFile(4));
+        transfer.setKeepTransportUntilReceipt();
+        transfer.setReceiptDeferred();
+        transfer.installTransport(transport);
+        QBuffer sink;
+        sink.open(QIODevice::WriteOnly);
+        int verified = 0;
+        QObject::connect(&transfer, &FT::Application::payloadVerified, &transfer, [&] { ++verified; });
+        QObject::connect(&transfer, &FT::Application::deviceRequested, &transfer,
+                         [&](quint64, std::optional<quint64>) { transfer.setDevice(&sink, false); });
+        check(!transfer.acknowledgeReceived(), "receipt accepted before payload verification");
+        transfer.prepare();
+        transfer.setReceivingPaused(true);
+        transport->connection()->feed(QByteArray("data"));
+        check(sink.size() == 0, "paused receive pump consumed payload");
+        transfer.setReceivingPaused(false);
+        QCoreApplication::processEvents();
+        check(sink.data() == QByteArray("data") && verified == 1, "deferred range was not verified exactly once");
+        check(transfer.state() == J::State::Active, "deferred range retired its BUNDLE anchor");
+        check(transfer.evaluateOutgoingUpdate().action != J::Action::SessionInfo, "receipt escaped the handover gate");
+        check(transfer.acknowledgeReceived(), "verified range refused explicit receipt");
+        check(!transfer.acknowledgeReceived(), "duplicate receipt was accepted");
+        check(transfer.evaluateOutgoingUpdate().action == J::Action::SessionInfo, "explicit receipt was not scheduled");
+        auto receipt = transfer.takeOutgoingUpdate();
+        check(!transfer.acknowledgeReceived(), "receipt was released again while its IQ was in flight");
+        auto &elements = std::get<0>(receipt);
+        check(elements.size() == 1 && elements[0].tagName() == QStringLiteral("received"), "wrong receipt payload");
+        std::get<1>(receipt)(nullptr);
+        check(transfer.state() == J::State::Finished, "explicit receipt did not finish the range");
+    }
+
+    // A file request is created by the responder but sent by the initiator.
+    // Its checksum must identify the content creator and the accepted range.
+    {
+        auto transport
+            = QPointer<TestTransport>(new TestTransport(new TestTransportPad(&session), J::Origin::Responder));
+        TestApplication transfer(appPad, QStringLiteral("requested-range"), J::Origin::Responder, J::Origin::Initiator);
+        auto            offered = testFile(8);
+        offered.addHash(Hash(Hash::Sha256));
+        offered.setRange();
+        auto accepted = offered;
+        accepted.setRange(FT::Range(4, 4));
+        transfer.setFile(offered);
+        transfer.setAcceptFile(accepted);
+        transfer.setKeepTransportUntilReceipt();
+        transfer.installTransport(transport);
+        QBuffer source;
+        source.setData(QByteArrayLiteral("headdata"));
+        source.open(QIODevice::ReadOnly);
+        QObject::connect(&transfer, &FT::Application::deviceRequested, &transfer,
+                         [&](quint64 offset, std::optional<quint64> length) {
+                             check(offset == 4 && length && *length == 4, "wrong request range device position");
+                             source.seek(qint64(offset));
+                             transfer.setDevice(&source, false);
+                         });
+        transfer.prepare();
+        QCoreApplication::processEvents();
+        check(transfer.state() == J::State::Active, "request sender retired its retained transport");
+        check(transfer.evaluateOutgoingUpdate().action == J::Action::SessionInfo, "request checksum was not queued");
+        const auto update = transfer.takeOutgoingUpdate();
+        const auto xml    = std::get<0>(update).value(0);
+        check(xml.attribute(QStringLiteral("creator")) == QLatin1String("responder"),
+              "request checksum used the sender role instead of the creator");
+        QDomDocument wire;
+        wire.appendChild(wire.importNode(xml, true));
+        QDomDocument parsed;
+        check(parsed.setContent(wire.toByteArray(), true), "cannot parse outgoing request checksum");
+        const FT::File checksum(parsed.documentElement().firstChildElement(QStringLiteral("file")));
+        check(checksum.range().offset == 4 && checksum.range().length == 4 && checksum.range().hashes.size() == 1,
+              "request checksum did not describe the accepted range");
+        check(
+            checksum.range().hashes.first()
+                == Hash(Hash::Sha256, QCryptographicHash::hash(QByteArrayLiteral("data"), QCryptographicHash::Sha256)),
+            "request checksum included bytes outside the accepted range");
+    }
+
+    // Parse nested range hashes for responder-created content. A checksum for
+    // another range is an integrity failure and cannot unlock a receipt.
+    for (bool wrongRange : { false, true }) {
+        J::Session receiver(client.jingleManager(), Jid(QStringLiteral("peer@example.test/device")),
+                            J::Origin::Responder);
+        auto pad = QPointer<FT::Pad>(static_cast<FT::Pad *>(client.jingleManager()->applicationPad(&receiver, FT::NS)));
+        auto transport
+            = QPointer<TestTransport>(new TestTransport(new TestTransportPad(&receiver), J::Origin::Responder));
+        TestApplication transfer(pad, QStringLiteral("nested-range"), J::Origin::Responder, J::Origin::Initiator);
+        auto            file = testFile(8);
+        file.addHash(Hash(Hash::Sha256));
+        file.setRange(FT::Range(4, 4));
+        transfer.setFile(file);
+        transfer.setAcceptFile(file);
+        transfer.setKeepTransportUntilReceipt();
+        transfer.setReceiptDeferred();
+        transfer.installTransport(transport);
+        receiver.addContent(&transfer);
+        QBuffer sink;
+        sink.open(QIODevice::WriteOnly);
+        int verified = 0;
+        QObject::connect(&transfer, &FT::Application::payloadVerified, &transfer, [&] { ++verified; });
+        QObject::connect(&transfer, &FT::Application::deviceRequested, &transfer,
+                         [&](quint64, std::optional<quint64>) { transfer.setDevice(&sink, false); });
+        transfer.prepare();
+        transport->connection()->feed(QByteArrayLiteral("data"));
+        check(verified == 0 && !transfer.acknowledgeReceived(), "unverified request unlocked a receipt");
+        QDomDocument doc;
+        auto         info     = doc.createElement(QStringLiteral("jingle"));
+        auto         checksum = doc.createElementNS(FT::NS, QStringLiteral("checksum"));
+        checksum.setAttribute(QStringLiteral("creator"), QStringLiteral("responder"));
+        checksum.setAttribute(QStringLiteral("name"), transfer.contentName());
+        FT::File  hashFile;
+        FT::Range range(wrongRange ? 0 : 4, 4);
+        range.hashes.append(
+            Hash(Hash::Sha256, QCryptographicHash::hash(QByteArrayLiteral("data"), QCryptographicHash::Sha256)));
+        hashFile.setRange(range);
+        checksum.appendChild(hashFile.toXml(&doc));
+        info.appendChild(checksum);
+        doc.appendChild(info);
+        QDomDocument parsed;
+        check(parsed.setContent(doc.toByteArray(), true), "cannot parse nested checksum stanza");
+        check(pad->incomingSessionInfo(parsed.documentElement()), "nested request checksum was not handled");
+        if (wrongRange) {
+            check(verified == 0 && transfer.lastReason().condition() == J::Reason::MediaError
+                      && !transfer.acknowledgeReceived(),
+                  "checksum for another range unlocked a receipt");
+        } else {
+            check(verified == 1 && transfer.acknowledgeReceived(), "nested range checksum did not verify payload");
+        }
     }
 
     exerciseSessionTermination(client, false, false, J::Reason::Success);

@@ -239,6 +239,12 @@ if(IRIS_ENABLE_JINGLE_SCTP)
         Qt${QT_DEFAULT_MAJOR_VERSION}::Network)
     add_test(NAME jingle_transportsctp_lifecycle COMMAND jingle_transportsctp_test)
     set_tests_properties(jingle_transportsctp_lifecycle PROPERTIES TIMEOUT 15)
+    add_executable(jingle_sctpclosure_test sctpclosure.cpp)
+    target_include_directories(jingle_sctpclosure_test PRIVATE ../../src ../../src/xmpp/xmpp-im)
+    target_link_libraries(jingle_sctpclosure_test PRIVATE iris SctpLab::UsrSCTP
+        Qt${QT_DEFAULT_MAJOR_VERSION}::Core Qt${QT_DEFAULT_MAJOR_VERSION}::Network)
+    add_test(NAME jingle_sctpclosure COMMAND jingle_sctpclosure_test)
+    set_tests_properties(jingle_sctpclosure PROPERTIES TIMEOUT 10)
 endif()
 
 add_executable(jingle_transportacks_test transportacks.cpp)
@@ -285,3 +291,27 @@ target_link_libraries(jingle_managershutdown_test PRIVATE iris Qt${QT_DEFAULT_MA
     Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
 add_test(NAME jingle_managershutdown COMMAND jingle_managershutdown_test)
 set_tests_properties(jingle_managershutdown PROPERTIES TIMEOUT 15)
+
+add_executable(jingle_peeroffline_test peeroffline.cpp)
+target_link_libraries(jingle_peeroffline_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME jingle_peeroffline COMMAND jingle_peeroffline_test)
+set_tests_properties(jingle_peeroffline PROPERTIES TIMEOUT 10)
+
+add_executable(jingle_transportownership_test transportownership.cpp)
+target_link_libraries(jingle_transportownership_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME jingle_transportownership COMMAND jingle_transportownership_test)
+set_tests_properties(jingle_transportownership PROPERTIES TIMEOUT 10)
+
+add_executable(jingle_sxedocument_test sxedocument.cpp)
+target_link_libraries(jingle_sxedocument_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME jingle_sxedocument COMMAND jingle_sxedocument_test)
+set_tests_properties(jingle_sxedocument PROPERTIES TIMEOUT 10)
+
+add_executable(jingle_sxesession_test sxesession.cpp)
+target_link_libraries(jingle_sxesession_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME jingle_sxesession COMMAND jingle_sxesession_test)
+set_tests_properties(jingle_sxesession PROPERTIES TIMEOUT 15)

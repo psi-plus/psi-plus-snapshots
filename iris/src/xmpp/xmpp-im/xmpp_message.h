@@ -174,10 +174,6 @@ public:
     void  setForm(const XData &);
     XData getForm() const;
 
-    // XEP-xxxx SXE
-    void        setSxe(const QDomElement &);
-    QDomElement sxe() const;
-
     // XEP-0231 bits of binary
     void           addBoBData(const BoBData &);
     QList<BoBData> bobDataList() const;

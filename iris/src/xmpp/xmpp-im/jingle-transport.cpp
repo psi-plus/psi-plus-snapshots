@@ -23,6 +23,13 @@
 #include <QPointer>
 
 namespace XMPP { namespace Jingle {
+    void TransportManagerPad::noteIncomingActivity() const
+    {
+        const auto owner = session();
+        if (owner)
+            owner->noteIncomingActivity();
+    }
+
     QStringList TransportManagerPad::pendingGroupMembersFor(const ContentKey &content) const
     {
         auto       owner = session();
@@ -52,7 +59,29 @@ namespace XMPP { namespace Jingle {
     //----------------------------------------------------------------------------
     // Transport
     //----------------------------------------------------------------------------
-    Transport::Transport(TransportManagerPad::Ptr pad, Origin creator) : _creator(creator), _pad(pad) { }
+    Transport::Transport(TransportManagerPad *pad, Origin creator) : QObject(pad), _creator(creator), _pad(pad) { }
+
+    Transport::~Transport() { setParent(nullptr); }
+
+    void Transport::associate(Application *app) { _applications.insert(app); }
+
+    void Transport::disassociate(Application *app)
+    {
+        _applications.remove(app);
+        releaseIfUnused();
+    }
+
+    void Transport::releaseIfUnused()
+    {
+        if (!_applications.isEmpty())
+            return;
+        // stop() may emit into session code; deletion is deferred past this call stack.
+        QPointer<Transport> guard(this);
+        if (_state != State::Finished)
+            stop();
+        if (guard)
+            deleteLater();
+    }
 
     bool Transport::isRemote() const { return _pad->session()->role() != _creator; }
 
@@ -120,7 +149,7 @@ namespace XMPP { namespace Jingle {
     //----------------------------------------------------------------------------
     TransportSelector::~TransportSelector() { }
 
-    bool TransportSelector::canReplace(QSharedPointer<Transport> old, QSharedPointer<Transport> newer)
+    bool TransportSelector::canReplace(QPointer<Transport> old, QPointer<Transport> newer)
     {
         return newer && (hasTransport(newer) || compare(old, newer) == 0);
     }

@@ -947,7 +947,9 @@ public:
     void setupNominationTimer(int componentId)
     {
         Component &c = *findComponent(componentId);
-        if (c.nominationTimer)
+        // Late candidate validation can arrive after nomination has completed,
+        // including while extending an existing Jingle BUNDLE.
+        if (state != Started || c.stopped || c.selectedPair || c.nominationTimer)
             return;
         bool agrNom = bool((mode == Initiator ? localFeatures : remoteFeatures) & AggressiveNomination);
         if (!agrNom && mode == Responder)
@@ -958,11 +960,11 @@ public:
         timer->setSingleShot(true);
         timer->setInterval(nominationTimeout);
         connect(timer, &QTimer::timeout, this, [this, componentId, agrNom]() {
-            Q_ASSERT(state == Started);
             Component &c = *findComponent(componentId);
-            c.nominationTimer.release()->deleteLater();
-            if (c.stopped)
-                return; // already queue signal likely
+            if (c.nominationTimer)
+                c.nominationTimer.release()->deleteLater();
+            if (state != Started || c.stopped || c.selectedPair)
+                return; // queued timeout after nomination or shutdown
             if (agrNom)
                 setSelectedPair(componentId);
             else if (!c.nominating && !c.selectedPair)
@@ -1586,6 +1588,10 @@ private slots:
                     continue;
                 }
 
+                emit q->peerActivity();
+                if (!guard || state == Stopped || state == Stopping)
+                    return;
+
                 StunMessage response;
                 response.setClass(StunMessage::SuccessResponse);
                 response.setMethod(StunTypes::Binding);
@@ -1633,6 +1639,9 @@ private slots:
                     iceDebug("received validated response from %s to %s", qPrintable(fromAddr),
                              qPrintable(locCand.info->addr));
 
+                    emit q->peerActivity();
+                    if (!guard || state == Stopped || state == Stopping)
+                        return;
                     handleCheckResponse(it, path, msg, fromAddr);
                     if (!guard || state == Stopped || state == Stopping)
                         return;

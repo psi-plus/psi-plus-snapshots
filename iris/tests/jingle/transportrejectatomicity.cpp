@@ -15,7 +15,7 @@ static void testInvalidLaterRejectIsAtomic(Client &client)
     auto audioFallback
         = makeTransport(session, J::Origin::Initiator, J::State::Created, QStringLiteral("audio-fallback"));
     auto audioSelector = std::make_unique<TestSelector>();
-    audioSelector->backupTransport(audioFallback);
+    audioSelector->backupTransport(audioFallback.data());
     auto audio
         = addApplication(session, QStringLiteral("audio"), J::Origin::Initiator, audioOld, std::move(audioSelector));
     audio->markReplaceInProgress();

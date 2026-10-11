@@ -60,6 +60,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
 
         bool    dumpingOutogingBuffer = false;
         bool    transportConnected    = false;
+        bool    associationClosed     = false;
         bool    useOddStreamId        = false;
         quint16 nextStreamId          = 0;
         quint16 channelsLeft          = 32768;
@@ -83,7 +84,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         void            close(quint16 streamId);
         quint16         takeNextStreamId();
         Connection::Ptr newChannel(Reliability reliable, bool ordered, quint32 reliability, quint16 priority,
-                                   const QString &label, const QString &protocol);
+                                   const QString &label, const QString &protocol, bool deferOpening = false);
         QList<Connection::Ptr> allChannels() const;
         Connection::Ptr        nextChannel();
 
@@ -95,10 +96,13 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         void onOutgoingData(const QByteArray &data);
         void onIncomingData(const QByteArray &data, quint16 streamId, quint32 ppid);
         void onStreamClosed(quint16 streamId);
+        void onAssociationClosed();
 
     private:
         void connectChannelSignals(Connection::Ptr channel);
         void procesOutgoingMessageQueue();
+        void discardPendingMessages(quint16 streamId);
+        void closeChannels(WebRTCDataChannel::DisconnectReason reason);
     };
 
 }}}

@@ -102,6 +102,10 @@ option(IRIS_BUNDLED_OMEMO_C "Build libomemo-c and protobuf-c when OMEMO is enabl
 option(IRIS_BUILD_TOOLS "Build tools and examples" OFF)
 option(IRIS_BUILD_TESTS "Build Iris unit and regression tests" OFF)
 option(IRIS_ENABLE_DEBUG "Enable debugging code paths" OFF)
+option(IRIS_DTLS_PACKET_DEBUG "Log individual ICE/DTLS datagrams" OFF)
+if(IRIS_DTLS_PACKET_DEBUG)
+    add_definitions(-DDTLS_PACKET_DEBUG)
+endif()
 option(USE_QT6 "Enable Qt6 support" OFF)
 
 # Optional installation namespace. Use CamelCase here (for example Xmpp); filesystem/library names are lower-cased while

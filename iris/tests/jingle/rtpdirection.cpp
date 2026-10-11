@@ -33,8 +33,7 @@ int main(int argc, char **argv)
 
     for (const auto localRole : { J::Origin::Initiator, J::Origin::Responder }) {
         J::Session session(client.jingleManager(), Jid(QStringLiteral("peer@example.test/device")), localRole);
-        auto       pad
-            = QSharedPointer<R::Pad>::create(manager, &session, std::shared_ptr<R::MediaProvider>(), QStringList());
+        auto pad = QPointer<R::Pad>(new R::Pad(manager, &session, std::shared_ptr<R::MediaProvider>(), QStringList()));
 
         for (const auto senders : { J::Origin::None, J::Origin::Both, J::Origin::Initiator, J::Origin::Responder }) {
             R::Application application(pad, QStringLiteral("audio"), J::Origin::Initiator, senders);

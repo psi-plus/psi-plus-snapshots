@@ -39,8 +39,8 @@ static void testClientDestruction(Tail tail)
     auto transport = session->newOutgoingTransport(J::S5B::NS);
     check(bool(transport) && content->setTransport(transport), "S5B transport was not assigned");
     QPointer<J::TransportManager> transportManager(transport->pad()->manager());
-    QWeakPointer<J::Transport>    transportGuard(transport);
-    transport.clear(); // Only the application/selector owns the actual transport.
+    QPointer<J::Transport>        transportGuard(transport);
+    transport.clear(); // The transport pad remains its sole lifetime owner.
     if (tail != Tail::Unattached)
         session->addContent(content);
     if (tail == Tail::Active || tail == Tail::Deferred) {
@@ -90,10 +90,13 @@ static void testRetainedTransportIsStopped(bool prepared)
     check(bool(transport), "Cannot create externally retained transport");
     if (prepared)
         transport->prepare(); // Port/proxy discovery callbacks are queued but not dispatched.
+    const auto                       channels = transport->channels();
+    QPointer<J::TransportManagerPad> pad      = transport->pad();
+    check(transport->parent() == pad && pad->parent() == session, "Transport ownership tree is incorrect");
     delete client;
-    check(transport->state() == J::State::Finished, "Externally retained transport remained active after shutdown");
-    for (const auto &channel : transport->channels())
-        check(!channel->isOpen(), "Externally retained connection remained open after shutdown");
+    check(!transport && !pad, "Transport or pad outlived its owning session");
+    for (const auto &channel : channels)
+        check(!channel->isOpen(), "Connection remained open after its transport was destroyed");
     transport.clear();
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
 }

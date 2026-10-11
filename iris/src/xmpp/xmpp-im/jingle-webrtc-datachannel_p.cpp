@@ -111,7 +111,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         data.replace(protocolOffset, utf8Protocol.size(), utf8Protocol);
 
         dcepState = DcepOpening;
-        association->write(data, streamId, PPID_DCEP);
+        outgoingCallback({ quint16(streamId), 0, PPID_DCEP, 0, data });
     }
 
     void WebRTCDataChannel::setOutgoingCallback(OutgoingCallback &&callback) { outgoingCallback = std::move(callback); }
@@ -136,7 +136,8 @@ namespace XMPP { namespace Jingle { namespace SCTP {
 
     bool WebRTCDataChannel::writeDatagram(const QNetworkDatagram &data)
     {
-        Q_ASSERT(bool(outgoingCallback));
+        if (streamClosed || closeRequested || !outgoingCallback)
+            return false;
         outgoingBufSize += data.data().size();
         outgoingCallback({ quint16(streamId), channelType, PPID_BINARY, reliability, data.data() });
         return true;

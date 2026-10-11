@@ -32,16 +32,16 @@ namespace XMPP { namespace Jingle {
         {
         }
 
-        QSharedPointer<Transport> getNextTransport() override;
-        QSharedPointer<Transport> getAlikeTransport(QSharedPointer<Transport> alike) override;
+        QPointer<Transport> getNextTransport() override;
+        QPointer<Transport> getAlikeTransport(QPointer<Transport> alike) override;
 
-        QSharedPointer<Transport> getNextNSTransport(const QString &preferredNS = QString());
+        QPointer<Transport> getNextNSTransport(const QString &preferredNS = QString());
 
-        void backupTransport(QSharedPointer<Transport>) override;
+        void backupTransport(QPointer<Transport>) override;
         bool hasMoreTransports() const override;
-        bool hasTransport(QSharedPointer<Transport>) const override;
-        int  compare(QSharedPointer<Transport> a, QSharedPointer<Transport> b) const override;
-        bool replace(QSharedPointer<Transport> old, QSharedPointer<Transport> newer) override;
+        bool hasTransport(QPointer<Transport>) const override;
+        int  compare(QPointer<Transport> a, QPointer<Transport> b) const override;
+        bool replace(QPointer<Transport> old, QPointer<Transport> newer) override;
 
     private:
         Session    *_session = nullptr;

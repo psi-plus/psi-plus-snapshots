@@ -28,9 +28,9 @@ interface. See [native RTP architecture](jingle-rtp-design.md) for that data pat
 | Jingle engine for one XMPP client | `Jingle::Manager` | Registry for application and transport managers, incoming IQ routing, session lookup by peer/SID, disco features. |
 | One Jingle `sid` | `Jingle::Session` | Owns the signaling lifecycle and the set of `<content/>` applications. |
 | `<description xmlns='...'>` implementation | `ApplicationManager` + `Application` | The manager is global for an application namespace; each `Application` represents one `<content/>`. |
-| Per-session application state | `ApplicationManagerPad` | Adapter shared by applications of the same description namespace in one session; also handles application-specific `session-info`. |
-| `<transport xmlns='...'>` implementation | `TransportManager` + `Transport` | The manager is global for a transport namespace; a `Transport` is attached to an application and performs one transport negotiation. |
-| Per-session transport state | `TransportManagerPad` | Adapter shared by transports of the same transport namespace in one session. |
+| Per-session application state | `ApplicationManagerPad` | Adapter shared by applications of the same description namespace in one session; owns those applications; also handles application-specific `session-info`. |
+| `<transport xmlns='...'>` implementation | `TransportManager` + `Transport` | The manager is global for a transport namespace; a `Transport` is used by one or more applications and performs one transport negotiation. |
+| Per-session transport state | `TransportManagerPad` | Adapter shared by transports of the same transport namespace in one session; owns those transports. |
 | Transport selection/fallback | `TransportSelector` | Owned by an application. Chooses an initial transport and later replacements. |
 | Actual application data path | `Connection` | Minimal byte/datagram transfer unit exposed by a transport; shared between the transport and application. |
 
@@ -177,6 +177,8 @@ Iris supplies file-transfer and RTP applications and three transport managers:
 | S5B | `urn:xmpp:jingle:transports:s5b:1` | `Reliable`, `Ordered`, `Fast`, `DataOriented`. |
 | IBB | `urn:xmpp:jingle:transports:ibb:1` | `AlwaysConnect`, `Reliable`, `Ordered`, `DataOriented`. |
 | ICE | `urn:xmpp:jingle:transports:ice:0`, `urn:xmpp:jingle:transports:ice-udp:1` | One manager with namespace-specific wire profiles; mode/build-dependent transport features. |
+| SVG whiteboard (SXE) | `urn:xmpp:jingle:apps:svg-whiteboard:0` | Generic XEP-0284 shared-document application registered for the whiteboard profile. |
+| SXE | `urn:xmpp:jingle:transports:sxe` | Carries `<sxe/>` payload in messages; offers no `Connection` and is never selected by feature. |
 
 `Manager::availableTransports()` filters managers by required features. The application still owns
 the final policy through `TransportSelector`; Jingle core deliberately does not hard-code a single
@@ -267,14 +269,42 @@ Iris cancels the pending addition instead of committing its obsolete group snaps
 continue using their association; a group with one surviving member can be extended again or
 have its transport replaced. Transport replacement of the affected group is refused while an
 extension is pending. After acceptance, replacement includes the newly accepted member along
-with the existing group members. Keeping a `QSharedPointer<Transport>` after its application
-ends does not keep that application's membership or network callbacks alive. Final network
-destruction can be deferred until teardown callbacks have returned.
+with the existing group members. A `QPointer<Transport>` held after its application ends does
+not keep that application's membership or network callbacks alive. Final network destruction can
+be deferred until teardown callbacks have returned.
 
 The active-session XML mapping is documented in the proposed XEP-0338 update. The
 [published XEP-0338](https://xmpp.org/extensions/xep-0338.html) does not yet specify this exchange
 in the same detail; consumers should distinguish the Iris-supported extension profile from
 arbitrary SDP BUNDLE renegotiation.
+
+## Shared XML Editing (XEP-0284)
+
+`Jingle::SXE` implements [XEP-0284](https://xmpp.org/extensions/xep-0284.html) as a Jingle
+transport and a generic application. The client registers the application for the SVG
+whiteboard profile (`urn:xmpp:jingle:apps:svg-whiteboard:0`, a draft profile from
+<https://github.com/jabberworld/whiteboarding>); another document type only needs another
+`SXE::Manager(descriptionNs)`. Drawing is left to the client.
+
+- `SXE::Transport` signals `<host/>` entities (at least one is required) and carries
+  `<sxe xmlns='urn:xmpp:sxe:0'/>` elements in `<message/>` stanzas. A task under the root task
+  routes them by `(peer, sid)` before the chat message path sees them. Outgoing payload carries
+  `<no-store/>` and `<no-copy/>` hints (XEP-0334). Only one-to-one sessions are implemented: the
+  content creator hosts the document and payload goes to the Jingle peer.
+- `SXE::Document` maps the record set onto a `QDomDocument`. Local changes go through
+  `insertNodeAfter/Before()`, `removeNode()`, `setAttribute()`, `setNodeValue()` and are sent by
+  `flush()`. Records follow the XEP rules: primary/secondary weight ordering, removal of orphans and
+  of duplicate roots/attributes with lower secondary weight, `target` in `<set/>`/`<remove/>`,
+  no reuse of removed rids, and versioned `<set/>` where a conflicting edit reverts the record to
+  version `v - 1`. Long character data is split over several edits; snapshot chunks carry the
+  final version so the joiner keeps the sender's version numbers.
+- `SXE::Application` starts synchronization after Jingle acceptance: the joiner sends `<connect/>`,
+  accepts the `<state-offer/>` with the session description and imports the `<state/>` between
+  `<document-begin/>` and `<document-end/>`, applying payload buffered meanwhile per
+  `last-sender`/`last-id`. The host never sends edits to a joiner before its snapshot, so its
+  `last-id` is empty. The prolog is a `data:` URI kept as untrusted text and never parsed.
+- `Application::document()` is a child of the application. A UI can reparent it to keep the
+  content after the session; the application then holds it through `QPointer`.
 
 ## Pads in more detail
 
@@ -919,8 +949,8 @@ For that reason the incoming replace/accept/reject handlers use a validate-then-
 
 1. identify content by stable `(creator, name)` `ContentKey`;
 2. guard the `Application` through `QPointer`, because it is a QObject that the session may delete during a reentrant callback;
-3. snapshot the current transport through `QWeakPointer`, because transports are shared-pointer
-   owned and are not QObject children of the application;
+3. snapshot the current transport through `QPointer<Transport>`, because the application does not
+   own its transport and a released transport may be deleted by its pad;
 4. validate the complete signaling state required for the action before the first mutating
    callback where protocol atomicity requires it;
 5. before each second-pass mutation, verify that the same application is still registered under
@@ -931,11 +961,12 @@ unsupported sibling can still be returned in a queued `transport-reject`; this *
 success is intentional historical behavior**. By contrast, malformed duplicate identities and
 out-of-order accept/reject signaling are rejected before earlier siblings are committed.
 
-This also explains the ownership model. `Application::_transport` is a `QSharedPointer`; the
-base `Transport` constructor does not set the application as QObject parent. Mixing QObject
-parent ownership with `QSharedPointer` here would make destruction ambiguous. Use
-`QPointer<Application>` for application/session QObject lifetime and weak/shared transport
-pointers for transport lifetime and transaction identity.
+This also explains the ownership model (see [Ownership and asynchronous
+behavior](#ownership-and-asynchronous-behavior)). `Application::_transport` is a non-owning
+`QPointer`; the transport is a QObject child of its `TransportManagerPad`. Use
+`QPointer<Application>` and `QPointer<Transport>` snapshots for lifetime and transaction
+identity: a snapshot that became null or no longer equals the application's current transport is
+stale.
 
 ### Regression coverage
 
@@ -990,15 +1021,38 @@ A transport namespace normally needs:
 
 The API is QObject-heavy and event-driven. Several lifetime details matter when integrating it:
 
+Ownership is a QObject tree:
+
+```text
+Session
+├── ApplicationManagerPad (one per description namespace)
+│   └── Application (one per <content/>)
+└── TransportManagerPad (one per transport namespace)
+    └── Transport
+```
+
 - outgoing `Manager::newSession()` returns a `Session *` whose deletion is scheduled when the
   session reaches `Finished`;
-- `Session` schedules deletion of its registered `Application` objects when finishing; its
-  destructor deletes any contents still registered;
-- applications hold transports through `QSharedPointer` because transport callbacks may outlive a
-  signaling step;
+- pads are created on demand by `Session::applicationPadFactory()`/`transportPadFactory()` and
+  live until the session is destroyed. Because a pad always outlives its applications and
+  transports, `Application::pad()`, `Transport::pad()` and `Session::applicationPad()`/
+  `transportPad()` return raw non-owning pointers; callers that keep a pad across event-loop
+  turns can wrap it in their own `QPointer`. `IRIS_JINGLE_PAD_OWNERSHIP` marks this API;
+- an `Application` is owned by its pad. After `content-remove`, `content-reject` or session
+  termination the session deletes the application; the pad and the rest of the session survive;
+- a `Transport` is owned by its pad. Applications reference it through a non-owning
+  `QPointer`, so several BUNDLE contents may use one transport. When the last application
+  stops using it (transport replacement or application deletion), the transport is stopped and
+  deleted with `deleteLater()`. Candidates which no application adopted (rejected
+  `transport-replace`, failed selection, unparsable payload) are released through
+  `Transport::releaseIfUnused()`;
+- the session destructor stops signaling, then destroys application pads with their
+  applications, then transport pads with their transports. Applications can therefore detach
+  from live transports while destructing. External `QPointer`s to pads, applications or
+  transports become null; they never extend the lifetime of the tree;
+- shared network state of a BUNDLE group (for example ICE components) is internal to the
+  transport implementation and is not a reason to share ownership of `Transport` objects;
 - `Connection::Ptr` is shared between transport and application;
-- pad factories return shared pointers with session-aware cleanup, while the session caches weak
-  references;
 - incoming `Manager::incomingSession` and `Session::newContentReceived` are deliberately queued in
   places to avoid re-entering the IQ parser.
 

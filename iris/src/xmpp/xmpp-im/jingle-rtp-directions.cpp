@@ -30,7 +30,7 @@ struct DirectionController::Private {
 
     std::shared_ptr<Entry> adopt(DirectionController *q, Application *app)
     {
-        if (!app || app->pad().data() != pad || !pad->session() || pad->session()->state() >= State::Finishing
+        if (!app || app->pad() != pad || !pad->session() || pad->session()->state() >= State::Finishing
             || app->state() >= State::Finishing)
             return {};
         if (entries.contains(app))
@@ -263,7 +263,7 @@ std::unique_ptr<DirectionOperation> DirectionController::requestLocalSending(con
     if (rejection == Error::None) {
         for (const auto &request : requests) {
             auto app = request.content;
-            if (!app || app->pad().data() != d->pad || app->state() >= State::Finishing || !d->pad->session()
+            if (!app || app->pad() != d->pad || app->state() >= State::Finishing || !d->pad->session()
                 || d->pad->session()->state() >= State::Finishing || seen.contains(app)) {
                 rejection = Error::InvalidRequest;
                 break;

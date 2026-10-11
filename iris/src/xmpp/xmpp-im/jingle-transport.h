@@ -23,6 +23,8 @@
 #include <iris/xmpp-im/jingle-connection.h>
 #include <iris/xmpp-im/jingle.h>
 
+#include <QPointer>
+#include <QSet>
 #include <QVariant>
 
 #include <memory>
@@ -31,13 +33,17 @@
 namespace XMPP { namespace Jingle {
 
     class TransportManager;
+    class Application;
     class TransportManagerPad : public SessionManagerPad {
         Q_OBJECT
     public:
-        typedef QSharedPointer<TransportManagerPad> Ptr;
+        using SessionManagerPad::SessionManagerPad;
 
         virtual TransportManager *manager() const = 0;
         QString requestedNamespace() const { return property("_iris_jingle_transport_namespace").toString(); }
+
+        // Report received peer traffic, never local writes or queued outgoing data.
+        void noteIncomingActivity() const;
 
     protected:
         // Transport implementations can inspect their provisional group without
@@ -56,21 +62,22 @@ namespace XMPP { namespace Jingle {
     class Transport : public QObject {
         Q_OBJECT
     public:
-        Transport(TransportManagerPad::Ptr pad, Origin creator);
+        Transport(TransportManagerPad *pad, Origin creator);
+        ~Transport() override;
 
         /*enum Direction { // incoming or outgoing file/data transfer.
             Outgoing,
             Incoming
         };*/
 
-        inline Origin                   creator() const { return _creator; }
-        inline State                    state() const { return _state; }
-        inline State                    prevState() const { return _prevState; }
-        inline Reason                   lastReason() const { return _lastReason; }
-        inline XMPP::Stanza::Error      lastError() const { return _lastError; }
-        inline TransportManagerPad::Ptr pad() const { return _pad; }
-        bool                            isRemote() const;
-        inline bool                     isLocal() const { return !isRemote(); }
+        inline Origin               creator() const { return _creator; }
+        inline State                state() const { return _state; }
+        inline State                prevState() const { return _prevState; }
+        inline Reason               lastReason() const { return _lastReason; }
+        inline XMPP::Stanza::Error  lastError() const { return _lastError; }
+        inline TransportManagerPad *pad() const { return _pad; }
+        bool                        isRemote() const;
+        inline bool                 isLocal() const { return !isRemote(); }
 
         /**
          * @brief Start preparing the transport signaling offer or answer.
@@ -89,6 +96,14 @@ namespace XMPP { namespace Jingle {
          */
         virtual void start() = 0;
         virtual void stop();
+
+        /**
+         * @brief Stop and schedule deletion unless an application uses this transport.
+         *
+         * The transport pad owns every transport of its session. Code that creates a candidate transport but does not
+         * install it with Application::setTransport() releases it with this call instead of waiting for session end.
+         */
+        void releaseIfUnused();
 
         /**
          * An owned, transport-specific incoming update produced without mutating
@@ -253,14 +268,21 @@ namespace XMPP { namespace Jingle {
          */
         bool notifyIncomingConnection(Connection::Ptr) const;
 
-        State                               _state     = State::Created;
-        State                               _prevState = State::Created;
-        Origin                              _creator   = Origin::None;
-        QSharedPointer<TransportManagerPad> _pad;
-        Reason                              _lastReason;
-        XMPP::Stanza::Error                 _lastError;
-        int                                 _componentsCount = 1;
-        QList<ConnectionAcceptor>           _connectionAcceptors;
+        State                     _state     = State::Created;
+        State                     _prevState = State::Created;
+        Origin                    _creator   = Origin::None;
+        TransportManagerPad      *_pad       = nullptr; // owner of this transport
+        Reason                    _lastReason;
+        XMPP::Stanza::Error       _lastError;
+        int                       _componentsCount = 1;
+        QList<ConnectionAcceptor> _connectionAcceptors;
+
+    private:
+        friend class Application;
+        // Non-owning back-references. Several BUNDLE contents may use one transport.
+        QSet<Application *> _applications;
+        void                associate(Application *);
+        void                disassociate(Application *);
     };
 
     // It's an available transports collection per application
@@ -268,38 +290,38 @@ namespace XMPP { namespace Jingle {
         virtual ~TransportSelector();
         // Allocate the most preferred transport from the set
         // Returned transport is removed from the list of available.
-        virtual QSharedPointer<Transport> getNextTransport() = 0;
+        virtual QPointer<Transport> getNextTransport() = 0;
 
         // Allocate alike transport (e.g. we have remote transport but instead want to use our
         // own of the same type and similar parameters)
         // Returned transport is removed from the list of available.
-        virtual QSharedPointer<Transport> getAlikeTransport(QSharedPointer<Transport> alike) = 0;
+        virtual QPointer<Transport> getAlikeTransport(QPointer<Transport> alike) = 0;
 
         // Checks if replacement old with newer is possible (e.g. calls canReplace) and removes
         // the newer transport from the list of available.
         // Returns false if impossible.
-        virtual bool replace(QSharedPointer<Transport> old, QSharedPointer<Transport> newer) = 0;
+        virtual bool replace(QPointer<Transport> old, QPointer<Transport> newer) = 0;
 
         // Put transport back to the set for future use
-        virtual void backupTransport(QSharedPointer<Transport>) = 0;
+        virtual void backupTransport(QPointer<Transport>) = 0;
 
         // Where we can allocate another transport for a replacement
         virtual bool hasMoreTransports() const = 0;
 
         // Check where we can (still) use this transport for the application
-        virtual bool hasTransport(QSharedPointer<Transport>) const = 0;
+        virtual bool hasTransport(QPointer<Transport>) const = 0;
 
         /*
             >0: transport `a` is more preferred than `b`
             <0: transport `a` is less preferred
             =0: it's essentially the same transport, so hardly a replacement.
         */
-        virtual int compare(QSharedPointer<Transport> a, QSharedPointer<Transport> b) const = 0;
+        virtual int compare(QPointer<Transport> a, QPointer<Transport> b) const = 0;
 
         // Returns false if it's impossible to replace old with newer for example if the newer is
         // not supported or already proven to be useless.
         // Default implementation checks is thew newer transport is among remaining or same as old
-        virtual bool canReplace(QSharedPointer<Transport> old, QSharedPointer<Transport> newer);
+        virtual bool canReplace(QPointer<Transport> old, QPointer<Transport> newer);
     };
 
     class TransportManager : public QObject {
@@ -316,8 +338,8 @@ namespace XMPP { namespace Jingle {
         virtual void setJingleManager(Manager *jm) = 0;
 
         // FIXME rename methods
-        virtual QSharedPointer<Transport> newTransport(const TransportManagerPad::Ptr &pad, Origin creator) = 0;
-        virtual TransportManagerPad      *pad(Session *session)                                             = 0;
+        virtual QPointer<Transport>  newTransport(TransportManagerPad *pad, Origin creator) = 0;
+        virtual TransportManagerPad *pad(Session *session)                                  = 0;
         // Additive, non-virtual helper so multi-namespace managers keep the
         // existing vtable and pads keep their existing object layout.
         TransportManagerPad *padForNamespace(Session *session, const QString &ns);

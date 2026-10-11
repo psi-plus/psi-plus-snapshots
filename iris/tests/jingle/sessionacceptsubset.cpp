@@ -46,7 +46,7 @@ struct Stats {
 
 class TestApplicationPad final : public ApplicationManagerPad {
 public:
-    explicit TestApplicationPad(Session *session) : session_(session) { }
+    explicit TestApplicationPad(Session *session) : ApplicationManagerPad(session), session_(session) { }
 
     Session            *session() const override { return session_; }
     QString             ns() const override { return applicationNs; }
@@ -59,7 +59,7 @@ private:
 
 class TestTransportPad final : public TransportManagerPad {
 public:
-    explicit TestTransportPad(Session *session) : session_(session) { }
+    explicit TestTransportPad(Session *session) : TransportManagerPad(session), session_(session) { }
 
     Session          *session() const override { return session_; }
     QString           ns() const override { return transportNs; }
@@ -72,7 +72,7 @@ private:
 class TestTransport final : public Transport {
 public:
     TestTransport(Session *session, Origin creator, const QSharedPointer<Stats> &stats) :
-        Transport(TransportManagerPad::Ptr(new TestTransportPad(session)), creator), stats_(stats)
+        Transport(new TestTransportPad(session), creator), stats_(stats)
     {
     }
 
@@ -106,13 +106,13 @@ class TestApplication final : public Application {
 public:
     TestApplication(Session *session, QString name, const QSharedPointer<Stats> &stats) : stats_(stats)
     {
-        _pad         = ApplicationManagerPad::Ptr(new TestApplicationPad(session));
+        _pad         = new TestApplicationPad(session);
         _contentName = std::move(name);
         _creator     = Origin::Initiator;
         _senders     = Origin::Both;
         _state       = State::Pending;
         _flags |= InitialApplication;
-        _transport = QSharedPointer<TestTransport>::create(session, Origin::Initiator, stats_);
+        _transport = QPointer<TestTransport>(new TestTransport(session, Origin::Initiator, stats_));
     }
 
     ~TestApplication() override

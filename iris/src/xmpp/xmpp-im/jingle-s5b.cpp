@@ -1330,7 +1330,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
         }
     };
 
-    Transport::Transport(const TransportManagerPad::Ptr &pad, Origin creator) :
+    Transport::Transport(TransportManagerPad *pad, Origin creator) :
         XMPP::Jingle::Transport(pad, creator), d(new Private)
     {
         d->q       = this;
@@ -1352,9 +1352,10 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
     Transport::~Transport()
     {
+        setParent(nullptr);
         if (d) {
             // TODO unregister sid too
-            // Callers may retain a shared handle to an already stopped transport.
+            // The transport may be destroyed after it was already stopped.
             if (d->manager)
                 d->manager->removeKeyMapping(d->directAddr);
             for (auto &[_, c] : d->remoteCandidates) {
@@ -1373,16 +1374,16 @@ namespace XMPP { namespace Jingle { namespace S5B {
     {
         qDebug("Prepare local offer");
         setState(State::ApprovedToSend);
-        auto m = static_cast<Manager *>(_pad.staticCast<Pad>()->manager());
-        if (_creator == _pad->session()->role()) { // I'm creator
-            d->sid = _pad.staticCast<Pad>()->generateSid();
+        auto pad = static_cast<Pad *>(_pad);
+        auto m   = static_cast<Manager *>(pad->manager());
+        if (_creator == pad->session()->role()) { // I'm creator
+            d->sid = pad->generateSid();
         }
-        _pad.staticCast<Pad>()->registerSid(d->sid);
-        d->directAddr = makeKey(d->sid, _pad.staticCast<Pad>()->session()->initiator(),
-                                _pad.staticCast<Pad>()->session()->responder());
+        pad->registerSid(d->sid);
+        d->directAddr = makeKey(d->sid, pad->session()->initiator(), pad->session()->responder());
         m->addKeyMapping(d->directAddr, this);
 
-        auto scope = _pad.staticCast<Pad>()->discoScope();
+        auto scope = pad->discoScope();
         if (!scope) {
             onFinish(Reason::GeneralError, QLatin1String("S5B TCP port scope is not registered"));
             return;
@@ -1737,7 +1738,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             };
         };
 
-        auto doc = _pad.staticCast<Pad>()->session()->manager()->client()->doc();
+        auto doc = _pad->session()->manager()->client()->doc();
 
         QDomElement tel = doc->createElementNS(NS, "transport");
         tel.setAttribute(QStringLiteral("sid"), d->sid);
@@ -1767,8 +1768,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 c.setState(Candidate::Unacked);
             }
             if (useProxy) {
-                QString dstaddr = makeKey(d->sid, _pad.staticCast<Pad>()->session()->manager()->client()->jid(),
-                                          _pad.staticCast<Pad>()->session()->peer());
+                QString dstaddr = makeKey(d->sid, _pad->session()->manager()->client()->jid(), _pad->session()->peer());
                 tel.setAttribute(QStringLiteral("dstaddr"), dstaddr);
             }
             if (!candidatesToSend.isEmpty()) {
@@ -1951,9 +1951,9 @@ namespace XMPP { namespace Jingle { namespace S5B {
         });
     }
 
-    QSharedPointer<XMPP::Jingle::Transport> Manager::newTransport(const TransportManagerPad::Ptr &pad, Origin creator)
+    QPointer<XMPP::Jingle::Transport> Manager::newTransport(TransportManagerPad *pad, Origin creator)
     {
-        return QSharedPointer<Transport>::create(pad, creator).staticCast<XMPP::Jingle::Transport>();
+        return new Transport(pad, creator);
     }
 
     TransportManagerPad *Manager::pad(Session *session) { return new Pad(this, session); }
@@ -1997,10 +1997,16 @@ namespace XMPP { namespace Jingle { namespace S5B {
     //----------------------------------------------------------------
     // Pad
     //----------------------------------------------------------------
-    Pad::Pad(Manager *manager, Session *session) : _manager(manager), _session(session)
+    Pad::Pad(Manager *manager, Session *session) : TransportManagerPad(session), _manager(manager), _session(session)
     {
         auto reserver = _session->manager()->client()->tcpPortReserver();
         _discoScope   = reserver->scope(QString::fromLatin1("s5b"));
+    }
+
+    Pad::~Pad()
+    {
+        setParent(nullptr);
+        destroyOwnedObjects();
     }
 
     QString Pad::ns() const { return NS; }

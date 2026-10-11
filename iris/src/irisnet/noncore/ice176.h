@@ -181,6 +181,8 @@ signals:
     void componentReady(int index); // has valid nominated candidate for component with index
     void iceFinished();             // Final nominated candidates are selected for all components
 
+    // An integrity-checked peer Binding request/response was received.
+    void peerActivity();
     void readyRead(int componentIndex);
     void datagramsWritten(int componentIndex, int count);
 

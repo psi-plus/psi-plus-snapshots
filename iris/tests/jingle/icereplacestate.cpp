@@ -23,7 +23,7 @@ static void exerciseProfile(Client &client, const QString &transportNs)
 {
     J::Session session(client.jingleManager(), Jid(QStringLiteral("peer@example.test/device")), J::Origin::Initiator);
     auto       base = session.newOutgoingTransport(transportNs);
-    auto       ice  = qSharedPointerDynamicCast<J::ICE::Transport>(base);
+    auto       ice  = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(base.data()));
     check(bool(ice), "selected ICE namespace did not create an ICE transport");
     check(ice->state() == J::State::Created, "new ICE transport did not start in Created state");
 

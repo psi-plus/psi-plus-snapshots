@@ -38,7 +38,10 @@ class TestTransportManager;
 
 class TestTransportPad : public J::TransportManagerPad {
 public:
-    TestTransportPad(J::Session *session, TestTransportManager *manager) : session_(session), manager_(manager) { }
+    TestTransportPad(J::Session *session, TestTransportManager *manager) :
+        J::TransportManagerPad(session), session_(session), manager_(manager)
+    {
+    }
     J::Session          *session() const override { return session_; }
     QString              ns() const override;
     J::TransportManager *manager() const override;
@@ -50,7 +53,7 @@ private:
 
 class TestTransport : public J::Transport {
 public:
-    TestTransport(const J::TransportManagerPad::Ptr &pad, J::Origin creator, QString id = {}) :
+    TestTransport(J::TransportManagerPad *pad, J::Origin creator, QString id = {}) :
         J::Transport(pad, creator), id_(std::move(id))
     {
     }
@@ -128,12 +131,12 @@ private:
 
 class TestTransportManager : public J::TransportManager {
 public:
-    static QString               namespaceUri() { return QStringLiteral("urn:iris:test:transport-replace"); }
-    J::TransportFeatures         features() const override { return J::TransportFeature::Reliable; }
-    void                         setJingleManager(J::Manager *manager) override { manager_ = manager; }
-    QSharedPointer<J::Transport> newTransport(const J::TransportManagerPad::Ptr &pad, J::Origin creator) override
+    static QString         namespaceUri() { return QStringLiteral("urn:iris:test:transport-replace"); }
+    J::TransportFeatures   features() const override { return J::TransportFeature::Reliable; }
+    void                   setJingleManager(J::Manager *manager) override { manager_ = manager; }
+    QPointer<J::Transport> newTransport(J::TransportManagerPad *pad, J::Origin creator) override
     {
-        return QSharedPointer<TestTransport>::create(pad, creator);
+        return new TestTransport(pad, creator);
     }
     J::TransportManagerPad *pad(J::Session *session) override { return new TestTransportPad(session, this); }
     void                    closeAll(const QString & = QString()) override { }
@@ -149,7 +152,7 @@ J::TransportManager *TestTransportPad::manager() const { return manager_; }
 
 class TestAppPad : public J::ApplicationManagerPad {
 public:
-    explicit TestAppPad(J::Session *session) : session_(session) { }
+    explicit TestAppPad(J::Session *session) : J::ApplicationManagerPad(session), session_(session) { }
     J::Session            *session() const override { return session_; }
     QString                ns() const override { return QStringLiteral("urn:iris:test:application"); }
     J::ApplicationManager *manager() const override { return nullptr; }
@@ -161,39 +164,39 @@ private:
 
 class TestSelector : public J::TransportSelector {
 public:
-    QSharedPointer<J::Transport> getNextTransport() override
+    QPointer<J::Transport> getNextTransport() override
     {
         ++getNextCalls;
         if (next_.isEmpty())
             return {};
         return next_.takeFirst();
     }
-    QSharedPointer<J::Transport> getAlikeTransport(QSharedPointer<J::Transport>) override
+    QPointer<J::Transport> getAlikeTransport(QPointer<J::Transport>) override
     {
         ++getAlikeCalls;
         auto result = alike_;
         alike_.clear();
         return result;
     }
-    bool replace(QSharedPointer<J::Transport>, QSharedPointer<J::Transport>) override
+    bool replace(QPointer<J::Transport>, QPointer<J::Transport>) override
     {
         ++replaceCalls;
         return allowReplace;
     }
-    void backupTransport(QSharedPointer<J::Transport> transport) override
+    void backupTransport(QPointer<J::Transport> transport) override
     {
         ++backupCalls;
         next_.append(std::move(transport));
     }
     bool hasMoreTransports() const override { return bool(alike_) || !next_.isEmpty(); }
-    bool hasTransport(QSharedPointer<J::Transport>) const override { return allowCanReplace; }
-    bool canReplace(QSharedPointer<J::Transport>, QSharedPointer<J::Transport>) override
+    bool hasTransport(QPointer<J::Transport>) const override { return allowCanReplace; }
+    bool canReplace(QPointer<J::Transport>, QPointer<J::Transport>) override
     {
         ++canReplaceCalls;
         return allowCanReplace;
     }
-    int  compare(QSharedPointer<J::Transport>, QSharedPointer<J::Transport>) const override { return 1; }
-    void setAlike(const QSharedPointer<J::Transport> &transport) { alike_ = transport; }
+    int  compare(QPointer<J::Transport>, QPointer<J::Transport>) const override { return 1; }
+    void setAlike(J::Transport *transport) { alike_ = transport; }
 
     bool allowCanReplace = true;
     bool allowReplace    = true;
@@ -204,22 +207,21 @@ public:
     int  backupCalls     = 0;
 
 private:
-    QSharedPointer<J::Transport>        alike_;
-    QList<QSharedPointer<J::Transport>> next_;
+    QPointer<J::Transport>        alike_;
+    QList<QPointer<J::Transport>> next_;
 };
 
 class TestApplication : public J::Application {
 public:
     TestApplication(J::Session *session, QString name, J::Origin creator)
     {
-        _pad.reset(new TestAppPad(session));
+        _pad         = new TestAppPad(session);
         _contentName = std::move(name);
         _creator     = creator;
         _senders     = J::Origin::Both;
     }
 
-    TestSelector *installTransport(const QSharedPointer<TestTransport> &transport,
-                                   std::unique_ptr<TestSelector>        selector)
+    TestSelector *installTransport(TestTransport *transport, std::unique_ptr<TestSelector> selector)
     {
         auto raw           = selector.get();
         _transport         = transport;
@@ -278,20 +280,18 @@ private:
     std::optional<Stanza::Error> error_;
 };
 
-static QSharedPointer<TestTransport> makeTransport(J::Session &session, J::Origin creator, J::State state,
-                                                   const QString &id)
+static QPointer<TestTransport> makeTransport(J::Session &session, J::Origin creator, J::State state, const QString &id)
 {
     auto pad = session.transportPadFactory(TestTransportManager::namespaceUri());
     check(bool(pad), "test transport pad missing");
-    auto transport = QSharedPointer<TestTransport>::create(pad, creator, id);
+    auto transport = QPointer<TestTransport>(new TestTransport(pad, creator, id));
     transport->forceState(state);
     return transport;
 }
 
 static TestApplication *addApplication(J::Session &session, const QString &name, J::Origin contentCreator,
-                                       const QSharedPointer<TestTransport> &transport,
-                                       std::unique_ptr<TestSelector> selector, TestSelector **selectorOut = nullptr,
-                                       J::State state = J::State::Active)
+                                       TestTransport *transport, std::unique_ptr<TestSelector> selector,
+                                       TestSelector **selectorOut = nullptr, J::State state = J::State::Active)
 {
     auto app = new TestApplication(&session, name, contentCreator);
     auto raw = app->installTransport(transport, std::move(selector));

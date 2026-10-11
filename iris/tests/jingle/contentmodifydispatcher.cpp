@@ -69,8 +69,8 @@ static void completeCrossed(J::Session &initiator, J::Session &responder, quint6
 static void checkInitiatorPacketGates(Client &client, J::Session &session, J::Origin senders, bool sending,
                                       bool receiving)
 {
-    auto           pad = QSharedPointer<R::Pad>::create(client.jingleManager()->rtpManager(), &session,
-                                                        std::shared_ptr<R::MediaProvider>(), QStringList());
+    auto pad = QPointer<R::Pad>(
+        new R::Pad(client.jingleManager()->rtpManager(), &session, std::shared_ptr<R::MediaProvider>(), QStringList()));
     R::Application gate(pad, QStringLiteral("gate"), J::Origin::Responder, senders);
     check(gate.allowsRtp(true) == sending, "negotiated senders did not reach the RTP sending gate");
     check(gate.allowsRtp(false) == receiving, "negotiated senders did not reach the RTP receiving gate");

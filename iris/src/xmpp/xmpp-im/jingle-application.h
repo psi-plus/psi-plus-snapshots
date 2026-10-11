@@ -20,9 +20,14 @@
 #ifndef JINGLE_APPLICATION_H
 #define JINGLE_APPLICATION_H
 
+// Feature marker for clients of the Jingle ownership tree: Session owns pads, pads own
+// applications and transports, and pads are passed as raw non-owning pointers.
+#define IRIS_JINGLE_PAD_OWNERSHIP 1
+
 #include <iris/iris_export.h>
 
 #include <QMetaObject>
+#include <QPointer>
 #include <any>
 #include <iris/xmpp-im/jingle-tiebreaker.h>
 #include <iris/xmpp-im/jingle-transport.h>
@@ -37,8 +42,6 @@ namespace XMPP { namespace Jingle {
     class ApplicationManagerPad : public SessionManagerPad {
         Q_OBJECT
     public:
-        typedef QSharedPointer<ApplicationManagerPad> Ptr;
-
         using SessionManagerPad::SessionManagerPad;
 
         virtual ApplicationManager *manager() const = 0;
@@ -85,17 +88,17 @@ namespace XMPP { namespace Jingle {
         virtual const std::optional<XMPP::Stanza::Error> &lastError() const  = 0;
         virtual Reason                                    lastReason() const = 0;
 
-        inline ApplicationManagerPad::Ptr pad() const { return _pad; }
-        inline State                      state() const { return _state; }
-        inline Origin                     creator() const { return _creator; }
-        inline Origin                     senders() const { return _senders; }
-        inline QString                    contentName() const { return _contentName; }
-        inline QSharedPointer<Transport>  transport() const { return _transport; }
-        inline TransportSelector         *transportSelector() const { return _transportSelector.get(); }
-        bool                              isRemote() const;
-        inline bool                       isLocal() const { return !isRemote(); }
-        inline ApplicationFlags           flags() const { return _flags; }
-        inline void                       markInitialApplication(bool state)
+        inline ApplicationManagerPad *pad() const { return _pad; }
+        inline State                  state() const { return _state; }
+        inline Origin                 creator() const { return _creator; }
+        inline Origin                 senders() const { return _senders; }
+        inline QString                contentName() const { return _contentName; }
+        inline QPointer<Transport>    transport() const { return _transport; }
+        inline TransportSelector     *transportSelector() const { return _transportSelector.get(); }
+        bool                          isRemote() const;
+        inline bool                   isLocal() const { return !isRemote(); }
+        inline ApplicationFlags       flags() const { return _flags; }
+        inline void                   markInitialApplication(bool state)
         {
             if (state)
                 _flags |= InitialApplication;
@@ -172,15 +175,17 @@ namespace XMPP { namespace Jingle {
          * superseded transport. Transport::State is not the lifetime of the
          * transport-replace IQ; see PendingTransportReplace.
          *
-         * The transport is retained by QSharedPointer. It is intentionally not made a
-         * QObject child of Application, because transport callbacks may outlive one
-         * signaling step and can hold shared references of their own.
+         * The transport stays owned by its TransportManagerPad. The application only
+         * references it; several BUNDLE contents may use the same transport. A
+         * transport without remaining users is stopped and deleted. A candidate that
+         * this call does not adopt stays unused; release it with
+         * Transport::releaseIfUnused().
          *
          * @param transport Candidate transport to make current.
          * @param reason Optional failure reason carried into a subsequent replacement.
          * @return true if the selector accepted and installed the transport.
          */
-        bool setTransport(const QSharedPointer<Transport> &transport, const Reason &reason = Reason());
+        bool setTransport(Transport *transport, const Reason &reason = Reason());
 
         /**
          * @brief Select the next compatible local transport after failure/replacement.
@@ -194,7 +199,7 @@ namespace XMPP { namespace Jingle {
          * @param alikeTransport Optional remote transport used only as a selection hint.
          * @return true if a successor transport was installed.
          */
-        bool selectNextTransport(const QSharedPointer<Transport> alikeTransport = QSharedPointer<Transport>());
+        bool selectNextTransport(const QPointer<Transport> alikeTransport = QPointer<Transport>());
 
         /**
          * @brief Return whether this application currently permits transport replacement.
@@ -212,7 +217,7 @@ namespace XMPP { namespace Jingle {
          * Used in content is provided twice with two different transports
          * @return
          */
-        virtual bool wantBetterTransport(const QSharedPointer<Transport> &) const;
+        virtual bool wantBetterTransport(const QPointer<Transport> &) const;
 
         /**
          * @brief prepare to send content-add/session-initiate
@@ -327,8 +332,9 @@ namespace XMPP { namespace Jingle {
         // has to be set when whatever way remote knows about the current transport
         // bool _remoteKnowsOfTheTransport = false;
 
-        // per session object responsible for all applications of this type
-        QSharedPointer<ApplicationManagerPad> _pad;
+        // Per-session object responsible for all applications of this type.
+        // It owns this application and therefore outlives it.
+        ApplicationManagerPad *_pad = nullptr;
 
         // content properties as come from the request
         QString _contentName;
@@ -343,10 +349,10 @@ namespace XMPP { namespace Jingle {
         quint64                             _nextSendersAttempt     = 0;
         std::optional<SendersAttemptResult> _sendersAttempt;
 
-        // Current transport uses shared ownership, independently of QObject parentage.
-        // Session handlers pair QPointer<Application> with weak/shared transport snapshots
-        // so reentrant callbacks cannot apply stale signaling to a newer transport instance.
-        QSharedPointer<Transport>          _transport;
+        // Non-owning reference; the transport pad owns the transport. Session handlers
+        // pair QPointer<Application> with QPointer<Transport> snapshots so reentrant
+        // callbacks cannot apply stale signaling to a newer transport instance.
+        QPointer<Transport>                _transport;
         std::unique_ptr<TransportSelector> _transportSelector;
 
         // Jingle signaling transaction state for replacing _transport. Do not derive it
@@ -392,8 +398,8 @@ namespace XMPP { namespace Jingle {
         ApplicationManager(QObject *parent = nullptr);
 
         virtual void         setJingleManager(Manager *jm) = 0;
-        virtual Application *startApplication(const ApplicationManagerPad::Ptr &pad, const QString &contentName,
-                                              Origin creator, Origin senders)
+        virtual Application *startApplication(ApplicationManagerPad *pad, const QString &contentName, Origin creator,
+                                              Origin senders)
             = 0;
         virtual ApplicationManagerPad *pad(Session *session) = 0;
 

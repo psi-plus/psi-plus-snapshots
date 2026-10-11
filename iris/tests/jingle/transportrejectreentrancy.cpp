@@ -10,7 +10,7 @@
 
 class ReentrantRejectSelector : public TestSelector {
 public:
-    QSharedPointer<J::Transport> getNextTransport() override
+    QPointer<J::Transport> getNextTransport() override
     {
         auto result   = TestSelector::getNextTransport();
         auto callback = std::move(onGetNext);
@@ -31,7 +31,7 @@ static void testRejectSkipsReentrantStaleSibling(Client &client)
     auto audioFallback
         = makeTransport(session, J::Origin::Initiator, J::State::Created, QStringLiteral("audio-fallback"));
     auto audioSelector = std::make_unique<ReentrantRejectSelector>();
-    audioSelector->backupTransport(audioFallback);
+    audioSelector->backupTransport(audioFallback.data());
     auto audioSelectorRaw = audioSelector.get();
     auto audio
         = addApplication(session, QStringLiteral("audio"), J::Origin::Initiator, audioOld, std::move(audioSelector));

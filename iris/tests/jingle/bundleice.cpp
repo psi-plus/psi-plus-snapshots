@@ -8,6 +8,7 @@
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_task.h>
 #define private public
+#include "../../src/xmpp/xmpp-im/jingle-ice-pad_p.h"
 #include <iris/jingle-ice.h>
 #undef private
 #include <QCoreApplication>
@@ -33,7 +34,7 @@ public:
 
 class TestApplicationPad final : public J::ApplicationManagerPad {
 public:
-    explicit TestApplicationPad(J::Session *session) : session_(session) { }
+    explicit TestApplicationPad(J::Session *session) : J::ApplicationManagerPad(session), session_(session) { }
     J::Session            *session() const override { return session_; }
     QString                ns() const override { return QStringLiteral("urn:iris:test:bundle-runtime"); }
     J::ApplicationManager *manager() const override { return nullptr; }
@@ -45,18 +46,18 @@ private:
 
 class TestTransportSelector final : public J::TransportSelector {
 public:
-    QSharedPointer<J::Transport> getNextTransport() override { return {}; }
-    QSharedPointer<J::Transport> getAlikeTransport(QSharedPointer<J::Transport>) override { return {}; }
-    bool replace(QSharedPointer<J::Transport>, QSharedPointer<J::Transport> newer) override { return bool(newer); }
-    void backupTransport(QSharedPointer<J::Transport>) override { }
+    QPointer<J::Transport> getNextTransport() override { return {}; }
+    QPointer<J::Transport> getAlikeTransport(QPointer<J::Transport>) override { return {}; }
+    bool replace(QPointer<J::Transport>, QPointer<J::Transport> newer) override { return bool(newer); }
+    void backupTransport(QPointer<J::Transport>) override { }
     bool hasMoreTransports() const override { return false; }
-    bool hasTransport(QSharedPointer<J::Transport>) const override { return false; }
-    int  compare(QSharedPointer<J::Transport>, QSharedPointer<J::Transport>) const override { return 0; }
+    bool hasTransport(QPointer<J::Transport>) const override { return false; }
+    int  compare(QPointer<J::Transport>, QPointer<J::Transport>) const override { return 0; }
 };
 
 class TestApplication final : public J::Application {
 public:
-    TestApplication(const J::ApplicationManagerPad::Ptr &pad, QString name)
+    TestApplication(J::ApplicationManagerPad *pad, QString name)
     {
         _pad               = pad;
         _contentName       = std::move(name);
@@ -93,16 +94,16 @@ public:
 };
 
 struct Side {
-    Client                           client;
-    J::Session                       session;
-    J::TransportManagerPad::Ptr      basePad;
-    QSharedPointer<J::ICE::Pad>      icePad;
-    J::ApplicationManagerPad::Ptr    appPad;
-    TestApplication                 *audioApp = nullptr;
-    TestApplication                 *videoApp = nullptr;
-    QSharedPointer<TestIceTransport> audio;
-    QSharedPointer<TestIceTransport> video;
-    J::ICE::IceConnection           *network = nullptr;
+    Client                     client;
+    J::Session                 session;
+    J::TransportManagerPad    *basePad = nullptr;
+    QPointer<J::ICE::Pad>      icePad;
+    J::ApplicationManagerPad  *appPad   = nullptr;
+    TestApplication           *audioApp = nullptr;
+    TestApplication           *videoApp = nullptr;
+    QPointer<TestIceTransport> audio;
+    QPointer<TestIceTransport> video;
+    J::ICE::IceConnection     *network = nullptr;
 
     Side(const Jid &peer, J::Origin transportCreator, TcpPortReserver *reserver) :
         session(client.jingleManager(), peer, J::Origin::Initiator)
@@ -122,8 +123,8 @@ struct Side {
         session.addContent(audioApp);
         session.addContent(videoApp);
 
-        audio = QSharedPointer<TestIceTransport>::create(basePad, transportCreator);
-        video = QSharedPointer<TestIceTransport>::create(basePad, transportCreator);
+        audio = QPointer<TestIceTransport>(new TestIceTransport(basePad, transportCreator));
+        video = QPointer<TestIceTransport>(new TestIceTransport(basePad, transportCreator));
         check(audioApp->setTransport(audio) && videoApp->setTransport(video),
               "BUNDLE applications rejected ICE transports");
         check(session.setGroupings({ J::ContentGroup { QStringLiteral("BUNDLE"),
@@ -131,12 +132,12 @@ struct Side {
               "BUNDLE grouping rejected");
 
         bool  audioBound = false, audioGrouped = false, videoBound = false, videoGrouped = false;
-        auto *audioNetwork = icePad->groupedConnectionFor(audio.data(), &audioBound, &audioGrouped);
-        auto *videoNetwork = icePad->groupedConnectionFor(video.data(), &videoBound, &videoGrouped);
+        auto *audioNetwork = icePad->d->groupedConnectionFor(audio.data(), &audioBound, &audioGrouped);
+        auto *videoNetwork = icePad->d->groupedConnectionFor(video.data(), &videoBound, &videoGrouped);
         check(audioBound && videoBound && audioGrouped && videoGrouped && audioNetwork && audioNetwork == videoNetwork,
               "BUNDLE members did not stage one association");
         network = audioNetwork;
-        check(icePad->liveAssociationCount() == 1, "BUNDLE side staged multiple associations");
+        check(icePad->d->liveAssociationCount() == 1, "BUNDLE side staged multiple associations");
         const auto profiles = Dtls::supportedSRTPProfiles();
         check(!profiles.isEmpty() && audio->enableRtpMux(profiles) && video->enableRtpMux(profiles),
               "BUNDLE RTP mux setup failed");
@@ -312,7 +313,7 @@ int main(int argc, char **argv)
     check(survivingSecure && survivingSecure->isReady(), "shared secure RTP not ready before member removal");
     delete first.audioApp;
     first.audioApp = nullptr;
-    check(firstGuard && first.icePad->liveAssociationCount() == 1 && first.video->rtpAssociation() == survivingSecure
+    check(firstGuard && first.icePad->d->liveAssociationCount() == 1 && first.video->rtpAssociation() == survivingSecure
               && survivingSecure->isReady(),
           "removing stopped audio destroyed the surviving association");
 
@@ -321,18 +322,18 @@ int main(int argc, char **argv)
     check(!first.audio->rtpAssociation() && !first.video->rtpAssociation(),
           "removed initiator contents retained runtime access to the association");
     QCoreApplication::processEvents(QEventLoop::AllEvents);
-    check(!firstGuard && first.icePad->liveAssociationCount() == 0 && !first.audio->rtpAssociation()
+    check(!firstGuard && first.icePad->d->liveAssociationCount() == 0 && !first.audio->rtpAssociation()
               && !first.video->rtpAssociation(),
           "last initiator BUNDLE member retained or dangled the association");
 
     delete second.audioApp;
     second.audioApp = nullptr;
-    check(secondGuard && second.icePad->liveAssociationCount() == 1,
+    check(secondGuard && second.icePad->d->liveAssociationCount() == 1,
           "removing responder audio destroyed video association");
     delete second.videoApp;
     second.videoApp = nullptr;
     QCoreApplication::processEvents(QEventLoop::AllEvents);
-    check(!secondGuard && second.icePad->liveAssociationCount() == 0,
+    check(!secondGuard && second.icePad->d->liveAssociationCount() == 0,
           "last responder BUNDLE member retained the association");
 
     qInfo("Shared ICE/DTLS/secure-RTP BUNDLE runtime regression passed");

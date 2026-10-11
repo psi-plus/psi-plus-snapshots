@@ -25,9 +25,9 @@ public:
 
 class SuccessorSelector : public TestSelector {
 public:
-    QSharedPointer<J::Transport> next;
-    bool                         hasMoreTransports() const override { return bool(next); }
-    QSharedPointer<J::Transport> getNextTransport() override { return std::exchange(next, {}); }
+    QPointer<J::Transport> next;
+    bool                   hasMoreTransports() const override { return bool(next); }
+    QPointer<J::Transport> getNextTransport() override { return std::exchange(next, {}); }
 };
 
 int main(int argc, char **argv)
@@ -40,8 +40,8 @@ int main(int argc, char **argv)
     Result success(client.rootTask(), true), failure(client.rootTask(), false);
     for (bool ok : { true, false }) {
         J::Session session(client.jingleManager(), Jid("peer@example.test/device"), J::Origin::Initiator);
-        auto       local = QSharedPointer<CallbackTransport>::create(
-            session.transportPadFactory(TestTransportManager::namespaceUri()), J::Origin::Initiator, "local");
+        auto       local = QPointer<CallbackTransport>(new CallbackTransport(
+            session.transportPadFactory(TestTransportManager::namespaceUri()), J::Origin::Initiator, "local"));
         local->forceState(J::State::ApprovedToSend);
         local->setHasUpdates(true);
         auto app = addApplication(session, local, std::make_unique<TestSelector>());
@@ -65,8 +65,8 @@ int main(int argc, char **argv)
     }
     {
         J::Session session(client.jingleManager(), Jid("peer@example.test/device"), J::Origin::Initiator);
-        auto       local = QSharedPointer<CallbackTransport>::create(
-            session.transportPadFactory(TestTransportManager::namespaceUri()), J::Origin::Initiator, "local");
+        auto       local = QPointer<CallbackTransport>(new CallbackTransport(
+            session.transportPadFactory(TestTransportManager::namespaceUri()), J::Origin::Initiator, "local"));
         local->forceState(J::State::ApprovedToSend);
         local->setHasUpdates(true);
         auto app = addApplication(session, local, std::make_unique<TestSelector>());
@@ -81,8 +81,8 @@ int main(int argc, char **argv)
     }
     {
         J::Session session(client.jingleManager(), Jid("peer@example.test/device"), J::Origin::Initiator);
-        auto       local = QSharedPointer<CallbackTransport>::create(
-            session.transportPadFactory(TestTransportManager::namespaceUri()), J::Origin::Initiator, "local");
+        auto       local = QPointer<CallbackTransport>(new CallbackTransport(
+            session.transportPadFactory(TestTransportManager::namespaceUri()), J::Origin::Initiator, "local"));
         local->forceState(J::State::ApprovedToSend);
         local->setHasUpdates(true);
         auto app = addApplication(session, local, std::make_unique<TestSelector>());
@@ -98,8 +98,8 @@ int main(int argc, char **argv)
     }
     {
         J::Session session(client.jingleManager(), Jid("peer@example.test/device"), J::Origin::Initiator);
-        auto       local = QSharedPointer<CallbackTransport>::create(
-            session.transportPadFactory(TestTransportManager::namespaceUri()), J::Origin::Initiator, "local");
+        auto       local = QPointer<CallbackTransport>(new CallbackTransport(
+            session.transportPadFactory(TestTransportManager::namespaceUri()), J::Origin::Initiator, "local"));
         local->forceState(J::State::ApprovedToSend);
         local->setHasUpdates(true);
         auto app = addApplication(session, local, std::make_unique<TestSelector>());
@@ -114,8 +114,8 @@ int main(int argc, char **argv)
     }
     {
         J::Session session(client.jingleManager(), Jid("peer@example.test/device"), J::Origin::Initiator);
-        auto       local = QSharedPointer<CallbackTransport>::create(
-            session.transportPadFactory(TestTransportManager::namespaceUri()), J::Origin::Initiator, "local");
+        auto       local = QPointer<CallbackTransport>(new CallbackTransport(
+            session.transportPadFactory(TestTransportManager::namespaceUri()), J::Origin::Initiator, "local"));
         local->forceState(J::State::ApprovedToSend);
         local->setHasUpdates(true);
         auto app = addApplication(session, local, std::make_unique<TestSelector>());

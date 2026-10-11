@@ -32,6 +32,7 @@
 #include <QSet>
 #include <QTimer>
 #include <algorithm>
+#include <memory>
 #include <vector>
 
 template <class T> constexpr std::add_const_t<T> &as_const(T &t) noexcept { return t; }
@@ -81,6 +82,34 @@ namespace XMPP { namespace Jingle {
         }
     };
 
+    // Releases candidate transports which no application adopted. The transport pad
+    // remains the owner; this only avoids keeping rejected candidates until session end.
+    struct TransportReleaser {
+        QList<QPointer<Transport>> transports;
+
+        ~TransportReleaser()
+        {
+            for (const auto &transport : std::as_const(transports)) {
+                if (transport)
+                    transport->releaseIfUnused();
+            }
+        }
+    };
+
+    // Pads own candidates even before registration. Clean up abandoned parses
+    // without retaining a second owning pointer across provider callbacks.
+    struct ApplicationReleaser {
+        QList<QPointer<Application>> applications;
+
+        ~ApplicationReleaser()
+        {
+            for (const auto &application : std::as_const(applications)) {
+                if (application)
+                    delete application.data();
+            }
+        }
+    };
+
     //----------------------------------------------------------------------------
     // Session
     //----------------------------------------------------------------------------
@@ -89,17 +118,21 @@ namespace XMPP { namespace Jingle {
         Session *q;
         Manager *manager;
         QTimer   stepTimer;
+        QTimer   peerUnavailableTimer;
+        bool     peerAvailable = true;
         State    state = State::Created; // state of session on our side. if it's incoming we start from Created anyaway
                                          // but Pending state is skipped
-        Origin                                             role = Origin::Initiator; // my role in the session
-        std::optional<XMPP::Stanza::Error>                 lastError;
-        Reason                                             terminateReason;
-        QMap<QString, QWeakPointer<ApplicationManagerPad>> applicationPads;
-        QMap<QString, QWeakPointer<TransportManagerPad>>   transportPads;
-        QMap<ContentKey, Application *>                    contentList;
-        // Lifetime ownership includes contents already removed from signaling
-        // and contents still being configured before addContent().
-        QList<Application *>   ownedApplications;
+        Origin                             role = Origin::Initiator; // my role in the session
+        std::optional<XMPP::Stanza::Error> lastError;
+        Reason                             terminateReason;
+        // Non-owning registries; pads are QObject children of the session and
+        // remove themselves from these maps when destroyed.
+        QMap<QString, ApplicationManagerPad *> applicationPads;
+        QMap<QString, TransportManagerPad *>   transportPads;
+        QMap<ContentKey, Application *>        contentList;
+        // Non-owning registry also tracks removed and not-yet-added contents.
+        // Their ApplicationManagerPad is the lifetime owner.
+        QList<Application *>   trackedApplications;
         QSet<Application *>    signalingContent;
         QList<ContentGroup>    groups;
         QList<ContentGroup>    remoteGroups;
@@ -108,11 +141,11 @@ namespace XMPP { namespace Jingle {
         QHash<QString, Origin> negotiatedCreators;
 
         struct PendingGroupExtension {
-            ContentKey              content;
-            QList<ContentGroup>     before;
-            QList<ContentGroup>     offer;
-            quint64                 id = 0;
-            QWeakPointer<Transport> transport;
+            ContentKey          content;
+            QList<ContentGroup> before;
+            QList<ContentGroup> offer;
+            quint64             id = 0;
+            QPointer<Transport> transport;
         };
         quint64                              nextGroupExtensionId = 0;
         std::optional<PendingGroupExtension> outgoingGroupExtension;
@@ -142,13 +175,14 @@ namespace XMPP { namespace Jingle {
             QPointer<Session> guard(q);
             state = State::Finished;
             stepTimer.stop();
+            peerUnavailableTimer.stop();
             waitingAck = false;
             q->tieBreaker()->clear();
             if (!guard)
                 return;
             signalingContent.clear();
             QList<QPointer<Application>> contents;
-            for (auto app : std::as_const(ownedApplications))
+            for (auto app : std::as_const(trackedApplications))
                 contents.append(app);
             for (const auto &app : std::as_const(contents)) {
                 if (app && app->state() != State::Finished)
@@ -197,17 +231,15 @@ namespace XMPP { namespace Jingle {
 
         template <void (SessionManagerPad::*func)()> void notifyPads()
         {
-            for (auto &weakPad : transportPads) {
-                auto pad = weakPad.lock();
-                if (pad) {
-                    (pad.data()->*func)(); // just calls pad's method
-                }
-            }
-            for (auto &weakPad : applicationPads) {
-                auto pad = weakPad.lock();
-                if (pad) {
+            // A pad callback may reenter and destroy the session together with its pads.
+            QList<QPointer<SessionManagerPad>> pads;
+            for (const auto &pad : std::as_const(transportPads))
+                pads.append(pad);
+            for (const auto &pad : std::as_const(applicationPads))
+                pads.append(pad);
+            for (const auto &pad : std::as_const(pads)) {
+                if (pad)
                     (pad.data()->*func)();
-                }
             }
         }
 
@@ -300,6 +332,10 @@ namespace XMPP { namespace Jingle {
                   int(includedGroups.size()));
             const auto tieBreakTransaction = q->tieBreaker()->outgoingStarted(action, xml);
             QObject::connect(jt, &JT::finished, q, [jt, callback, tieBreakTransaction, actionName, names, this]() {
+                if (state == State::Finished)
+                    return; // A late IQ result must not revive a locally ended session.
+                if (jt->success())
+                    q->noteIncomingActivity();
                 qInfo("jingle sid=%s iq=%s completed action=%s contents=%s success=%d error=%s", qUtf8Printable(sid),
                       qUtf8Printable(jt->id()), qUtf8Printable(actionName), qUtf8Printable(names), int(jt->success()),
                       jt->success()
@@ -401,9 +437,8 @@ namespace XMPP { namespace Jingle {
             }
 
             QList<QDomElement> updateXml;
-            for (auto &mp : applicationPads) {
-                auto        p  = mp.toStrongRef();
-                QDomElement el = p->takeOutgoingSessionInfoUpdate();
+            for (const auto &pad : std::as_const(applicationPads)) {
+                QDomElement el = pad->takeOutgoingSessionInfoUpdate();
                 if (!el.isNull()) {
                     updateXml.append(el);
                     // we can send session-info for just one application. so stop processing
@@ -674,23 +709,33 @@ namespace XMPP { namespace Jingle {
             return reason;
         }
 
-        using TransportResult = std::tuple<bool, Reason::Condition, QSharedPointer<Transport>>;
+        using TransportResult = std::tuple<bool, Reason::Condition, QPointer<Transport>>;
         TransportResult parseIncomingTransport(const QDomElement &contentEl)
         {
-            auto    tel = contentEl.firstChildElement(QLatin1String("transport"));
-            QString transportNS;
+            QPointer<Session> session(q);
+            auto              tel = contentEl.firstChildElement(QLatin1String("transport"));
+            QString           transportNS;
             if (tel.isNull() || (transportNS = tel.namespaceURI()).isEmpty()) {
-                return TransportResult { false, Reason::NoReason, QSharedPointer<Transport>() };
+                return TransportResult { false, Reason::NoReason, QPointer<Transport>() };
             }
             auto trPad = q->transportPadFactory(transportNS);
+            if (!session)
+                return { false, Reason::NoReason, {} };
             if (!trPad) {
-                return TransportResult { true, Reason::UnsupportedTransports, QSharedPointer<Transport>() };
+                return TransportResult { true, Reason::UnsupportedTransports, QPointer<Transport>() };
             }
             auto transport = trPad->manager()->newTransport(trPad, negateOrigin(role));
-            if (transport && transport->update(tel)) {
+            if (!session)
+                return { false, Reason::NoReason, {} };
+            const bool parsed = transport && transport->update(tel);
+            if (!session)
+                return { false, Reason::NoReason, {} };
+            if (parsed && transport) {
                 return TransportResult { true, Reason::NoReason, transport };
             }
-            return TransportResult { false, Reason::NoReason, QSharedPointer<Transport>() };
+            if (transport)
+                transport->releaseIfUnused();
+            return TransportResult { false, Reason::NoReason, QPointer<Transport>() };
         }
 
         static bool sameGroupings(const QList<ContentGroup> &left, const QList<ContentGroup> &right)
@@ -777,9 +822,9 @@ namespace XMPP { namespace Jingle {
             const auto key = outgoingGroupExtension->content;
             qInfo("jingle sid=%s content=%s BUNDLE outgoing extension rollback", qUtf8Printable(sid),
                   qUtf8Printable(key.first));
-            auto transport = outgoingGroupExtension->transport.lock();
+            auto transport = outgoingGroupExtension->transport;
             outgoingGroupExtension.reset();
-            auto pad = transport ? transport->pad() : TransportManagerPad::Ptr();
+            auto pad = transport ? transport->pad() : nullptr;
             if (pad)
                 pad->rollbackGroupExtension(key);
         }
@@ -796,7 +841,7 @@ namespace XMPP { namespace Jingle {
             if (!sameGroupings(negotiatedGroups, outgoingGroupExtension->before) || !app
                 || app->state() != State::Accepted)
                 return false;
-            auto transport = outgoingGroupExtension->transport.lock();
+            auto transport = outgoingGroupExtension->transport;
             if (!transport || app->transport() != transport)
                 return false;
             auto pad = transport->pad();
@@ -818,9 +863,9 @@ namespace XMPP { namespace Jingle {
             const auto key = incomingGroupExtension->content;
             qInfo("jingle sid=%s content=%s BUNDLE incoming extension rollback", qUtf8Printable(sid),
                   qUtf8Printable(key.first));
-            auto transport = incomingGroupExtension->transport.lock();
+            auto transport = incomingGroupExtension->transport;
             incomingGroupExtension.reset();
-            auto pad = transport ? transport->pad() : TransportManagerPad::Ptr();
+            auto pad = transport ? transport->pad() : nullptr;
             if (pad)
                 pad->rollbackGroupExtension(key);
         }
@@ -836,7 +881,7 @@ namespace XMPP { namespace Jingle {
                   int(sameGroupings(negotiatedGroups, pending.before)));
             if (!sameGroupings(negotiatedGroups, pending.before) || !app || app->state() != State::Unacked)
                 return false;
-            auto transport = pending.transport.lock();
+            auto transport = pending.transport;
             if (!transport || app->transport() != transport)
                 return false;
             auto pad = transport->pad();
@@ -913,11 +958,16 @@ namespace XMPP { namespace Jingle {
 
         void ownApplication(Application *content)
         {
-            if (!content || ownedApplications.contains(content))
+            if (!content || trackedApplications.contains(content))
                 return;
-            ownedApplications.append(content);
+            if (auto pad = content->pad()) {
+                if (!pad->parent())
+                    pad->setParent(q);
+                content->setParent(pad);
+            }
+            trackedApplications.append(content);
             QObject::connect(content, &Application::destroying, q,
-                             [this, content] { ownedApplications.removeAll(content); });
+                             [this, content] { trackedApplications.removeAll(content); });
         }
 
         void addAndInitContent(Origin creator, Application *content)
@@ -957,40 +1007,52 @@ namespace XMPP { namespace Jingle {
 
         enum AddContentError { Ok, Unparsed, Unexpected, Unsupported };
 
-        std::tuple<AddContentError, Reason::Condition, Application *> parseContentAdd(const QDomElement &ce)
+        std::tuple<AddContentError, Reason::Condition, QPointer<Application>> parseContentAdd(const QDomElement &ce)
         {
-            QDomElement descriptionEl = ce.firstChildElement(QLatin1String("description"));
-            QString     descriptionNS = descriptionEl.namespaceURI();
-            typedef std::tuple<AddContentError, Reason::Condition, Application *> result;
+            QPointer<Session> session(q);
+            QDomElement       descriptionEl = ce.firstChildElement(QLatin1String("description"));
+            QString           descriptionNS = descriptionEl.namespaceURI();
+            typedef std::tuple<AddContentError, Reason::Condition, QPointer<Application>> result;
 
-            ContentBase c(ce);
-            auto        trpr = parseIncomingTransport(ce);
+            ContentBase       c(ce);
+            auto              trpr = parseIncomingTransport(ce);
+            TransportReleaser releaser { { std::get<2>(trpr) } };
+            if (!session)
+                return result { Unparsed, Reason::Success, nullptr };
             if (!c.isValid() || descriptionEl.isNull() || descriptionNS.isEmpty() || !std::get<0>(trpr)) {
                 return result { Unparsed, Reason::Success, nullptr };
             }
 
-            auto appPad   = q->applicationPadFactory(descriptionNS);
+            auto appPad = q->applicationPadFactory(descriptionNS);
+            if (!session)
+                return result { Unparsed, Reason::Success, nullptr };
             auto trReason = std::get<1>(trpr);
             if (!appPad || trReason != Reason::NoReason) {
                 return result { Unsupported, trReason == Reason::NoReason ? Reason::UnsupportedApplications : trReason,
                                 nullptr };
             }
-            std::unique_ptr<Application> app(appPad->manager()->startApplication(appPad, c.name, c.creator, c.senders));
-            if (!app)
+            QPointer<Application> app(appPad->manager()->startApplication(appPad, c.name, c.creator, c.senders));
+            ApplicationReleaser   appReleaser { { app } };
+            if (!session || !app)
                 return result { Unparsed, Reason::Success, nullptr };
 
             auto descErr = app->setRemoteOffer(descriptionEl);
+            if (!session || !app)
+                return result { Unparsed, Reason::Success, nullptr };
             if (descErr == Application::IncompatibleParameters) {
                 return result { Unsupported, Reason::IncompatibleParameters, nullptr };
             } else if (descErr == Application::Unparsed) {
                 return result { Unparsed, Reason::Success, nullptr };
             }
 
-            if (app->setTransport(std::get<2>(trpr))) {
-                return result { Ok, Reason::Success, app.release() };
-            }
+            const bool installed = app->setTransport(std::get<2>(trpr));
+            if (!session || !app)
+                return result { Unparsed, Reason::Success, nullptr };
+            appReleaser.applications.clear(); // The pad remains the sole lifetime owner.
+            if (installed)
+                return result { Ok, Reason::Success, app };
             // TODO We can do transport-replace in all cases where std::get<1>(trpr) != NoReason
-            return result { Unsupported, Reason::IncompatibleParameters, app.release() };
+            return result { Unsupported, Reason::IncompatibleParameters, app };
         }
 
         typedef std::tuple<AddContentError, Reason::Condition, QList<Application *>, QList<QDomElement>>
@@ -998,7 +1060,9 @@ namespace XMPP { namespace Jingle {
 
         ParseContentListResult parseContentAddList(const QDomElement &jingleEl)
         {
-            QMap<QString, Application *>                             addSet;
+            QPointer<Session>                                        session(q);
+            ApplicationReleaser                                      releaser;
+            QMap<QString, QPointer<Application>>                     addSet;
             QMap<QString, std::pair<QDomElement, Reason::Condition>> rejectSet;
 
             QString contentTag(QStringLiteral("content"));
@@ -1007,13 +1071,15 @@ namespace XMPP { namespace Jingle {
 
                 Private::AddContentError err;
                 Reason::Condition        cond;
-                Application             *app;
+                QPointer<Application>    application;
 
-                std::tie(err, cond, app) = parseContentAdd(ce);
+                std::tie(err, cond, application) = parseContentAdd(ce);
+                releaser.applications.append(application);
+                if (!session)
+                    return { Unparsed, cond, {}, {} };
                 if (err == Private::AddContentError::Unparsed) {
                     lastError = XMPP::Stanza::Error(XMPP::Stanza::Error::ErrorType::Cancel,
                                                     XMPP::Stanza::Error::ErrorCond::BadRequest);
-                    qDeleteAll(addSet);
                     return ParseContentListResult(Unparsed, cond, QList<Application *>(), QList<QDomElement>());
                 }
 
@@ -1021,8 +1087,10 @@ namespace XMPP { namespace Jingle {
                 auto it          = addSet.find(contentName);
                 if (err != Private::AddContentError::Ok) {
                     // can't continue as well
-                    if (app) { // we are going to reject it completely so delete
-                        delete app;
+                    if (application) { // we are going to reject it completely so delete
+                        delete application.data();
+                        if (!session)
+                            return { Unparsed, cond, {}, {} };
                     }
 
                     if (it == addSet.end()) {
@@ -1037,27 +1105,43 @@ namespace XMPP { namespace Jingle {
 
                 rejectSet.remove(contentName);
                 // REVIEW probably not wantBetterTransport but wantBetterApplication
-                if (it == addSet.end() || (*it)->wantBetterTransport(app->transport())) {
+                if (!application || (it != addSet.end() && !*it))
+                    return { Unparsed, Reason::Success, {}, {} };
+                const bool preferred = it == addSet.end() || (*it)->wantBetterTransport(application->transport());
+                if (!session || !application || (it != addSet.end() && !*it))
+                    return { Unparsed, Reason::Success, {}, {} };
+                if (preferred) {
                     if (it == addSet.end()) {
-                        addSet.insert(contentName, app);
+                        addSet.insert(contentName, application);
                     } else {
-                        delete *it; // unpreferred app
-                        *it = app;
+                        delete it->data(); // unpreferred application
+                        if (!session || !application)
+                            return { Unparsed, Reason::Success, {}, {} };
+                        *it = application;
                     }
                 } else {
-                    delete app;
+                    delete application.data();
+                    if (!session)
+                        return { Unparsed, Reason::Success, {}, {} };
                 }
             }
 
+            QList<Application *> applications;
+            for (const auto &application : std::as_const(addSet)) {
+                if (!application)
+                    return { Unparsed, Reason::Success, {}, {} };
+                applications.append(application.data());
+            }
+            releaser.applications.clear();
             if (rejectSet.size()) {
                 QList<QDomElement> rejectList;
                 for (auto const &i : rejectSet) {
                     rejectList.append(i.first);
                 }
-                return ParseContentListResult(Unsupported, rejectSet.first().second, addSet.values(), rejectList);
+                return ParseContentListResult(Unsupported, rejectSet.first().second, applications, rejectList);
             }
 
-            return ParseContentListResult(Ok, Reason::Success, addSet.values(), QList<QDomElement>());
+            return ParseContentListResult(Ok, Reason::Success, applications, QList<QDomElement>());
         }
 
         std::tuple<AddContentError, Reason::Condition, Application *> parseContentAccept(const QDomElement &ce)
@@ -1107,7 +1191,7 @@ namespace XMPP { namespace Jingle {
             QPointer<Session> session(q);
             struct AnswerTransport {
                 QPointer<Application>        application;
-                QSharedPointer<Transport>    transport;
+                QPointer<Transport>          transport;
                 QDomElement                  xml;
                 Transport::PreparedUpdatePtr prepared;
             };
@@ -1327,7 +1411,10 @@ namespace XMPP { namespace Jingle {
             QList<Application *>     apps;
             QList<QDomElement>       rejects;
 
+            QPointer<Session> session(q);
             std::tie(err, cond, apps, rejects) = parseContentAddList(jingleEl);
+            if (!session)
+                return true;
             switch (err) {
             case Private::AddContentError::Unparsed:
             case Private::AddContentError::Unexpected:
@@ -1405,7 +1492,7 @@ namespace XMPP { namespace Jingle {
                             = PendingGroupExtension { ContentKey { groupChange->addedName, remoteRole },
                                                       negotiatedGroups,
                                                       ActiveGroupExtension::extended(negotiatedGroups, *groupChange),
-                                                      ++nextGroupExtensionId, newTransport.toWeakRef() };
+                                                      ++nextGroupExtensionId, newTransport };
                     } else {
                         QDomElement rejectedContent;
                         for (auto ce = jingleEl.firstChildElement(QLatin1String("content")); !ce.isNull();
@@ -1512,7 +1599,7 @@ namespace XMPP { namespace Jingle {
                 signalingContent.remove(app.data());
                 initialIncomingUnacceptedContent.removeAll(app.data());
                 contentList.remove(entry.key);
-                ownedApplications.removeAll(entry.application.data());
+                trackedApplications.removeAll(entry.application.data());
 
                 const auto transport = app->transport();
                 if (transport) {
@@ -1686,7 +1773,7 @@ namespace XMPP { namespace Jingle {
                 signalingContent.remove(application.data());
                 initialIncomingUnacceptedContent.removeAll(application.data());
                 contentList.remove(entry.key);
-                ownedApplications.removeAll(entry.application.data());
+                trackedApplications.removeAll(entry.application.data());
 
                 const auto transport = application->transport();
                 if (transport) {
@@ -1827,12 +1914,12 @@ namespace XMPP { namespace Jingle {
         bool handleIncomingTransportReplace(const QDomElement &jingleEl, std::function<void()> *afterReply)
         {
             struct ValidatedTransportReplace {
-                QPointer<Application>     application;
-                ContentKey                key;
-                QWeakPointer<Transport>   current;
-                quint64                   generation;
-                QSharedPointer<Transport> incoming;
-                QDomElement               content;
+                QPointer<Application> application;
+                ContentKey            key;
+                QPointer<Transport>   current;
+                quint64               generation;
+                QPointer<Transport>   incoming;
+                QDomElement           content;
             };
             QPointer<Session>                  session(q);
             QVector<ValidatedTransportReplace> passed;
@@ -1841,7 +1928,7 @@ namespace XMPP { namespace Jingle {
             QString                            contentTag(QStringLiteral("content"));
             auto                               isCurrent = [session](const ValidatedTransportReplace &entry) {
                 auto app       = entry.application;
-                auto transport = entry.current.lock();
+                auto transport = entry.current;
                 return session && session->state() < State::Finishing && app && app->state() < State::Finishing
                     && session->content(entry.key.first, entry.key.second) == app.data() && transport
                     && app->transport() == transport && app->transportReplaceGeneration() == entry.generation;
@@ -1884,7 +1971,7 @@ namespace XMPP { namespace Jingle {
 
                 passed.append(ValidatedTransportReplace { QPointer<Application>(app),
                                                           key,
-                                                          app->transport().toWeakRef(),
+                                                          app->transport(),
                                                           app->transportReplaceGeneration(),
                                                           {},
                                                           ce.cloneNode(true).toElement() });
@@ -1923,10 +2010,14 @@ namespace XMPP { namespace Jingle {
             // Instantiate only detached incoming transports. update() is still a
             // provider callback, not a pure parse: never retain raw owner pointers
             // across it, and do not mutate current transports during this pass.
+            // Incoming transports not installed by setTransport() are released after the
+            // reply, including those kept only as tie-break selection hints.
+            auto releaser = std::make_shared<TransportReleaser>();
             for (auto &entry : passed) {
                 bool              parsed;
                 Reason::Condition reason;
                 std::tie(parsed, reason, entry.incoming) = parseIncomingTransport(entry.content);
+                releaser->transports.append(entry.incoming);
                 if (!session)
                     return false;
                 if (!parsed) {
@@ -1963,7 +2054,7 @@ namespace XMPP { namespace Jingle {
                     continue;
                 }
                 auto       app        = entry.application;
-                const bool canReplace = app->transportSelector()->canReplace(entry.current.lock(), entry.incoming);
+                const bool canReplace = app->transportSelector()->canReplace(entry.current, entry.incoming);
                 if (!session)
                     return false;
                 if (!isCurrent(entry) || !canReplace) {
@@ -1992,14 +2083,14 @@ namespace XMPP { namespace Jingle {
 
             // No remote installation on Break. Keep only validated sibling hints
             // and revalidate them once again after sending the error stanza.
-            auto finish = [session, isCurrent, entries = eligible, doTieBreak, id = resolution.id]() {
+            auto finish = [session, isCurrent, entries = eligible, doTieBreak, id = resolution.id, releaser]() {
                 if (!session)
                     return;
                 if (doTieBreak) {
                     for (const auto &entry : entries) {
                         if (!isCurrent(entry))
                             continue;
-                        const auto current = entry.current.lock();
+                        const auto current = entry.current;
                         if (current->creator() == session->role() && current->state() < State::Unacked)
                             continue;
                         entry.application->selectNextTransport(entry.incoming);
@@ -2051,7 +2142,7 @@ namespace XMPP { namespace Jingle {
             struct ValidatedTransportAccept {
                 QPointer<Application>        application;
                 ContentKey                   key;
-                QWeakPointer<Transport>      current;
+                QPointer<Transport>          current;
                 quint64                      generation = 0;
                 QDomElement                  transport;
                 Transport::PreparedUpdatePtr prepared;
@@ -2095,7 +2186,7 @@ namespace XMPP { namespace Jingle {
                 }
                 updates.push_back(ValidatedTransportAccept { QPointer<Application>(app),
                                                              key,
-                                                             app->transport().toWeakRef(),
+                                                             app->transport(),
                                                              app->transportReplaceGeneration(),
                                                              transportEl,
                                                              {} });
@@ -2127,7 +2218,7 @@ namespace XMPP { namespace Jingle {
                 if (!session)
                     return true;
                 auto app              = entry.application;
-                auto currentTransport = entry.current.lock();
+                auto currentTransport = entry.current;
                 if (!app || contentList.value(entry.key) != app.data() || !currentTransport
                     || app->transport() != currentTransport || app->transportReplaceGeneration() != entry.generation
                     || !app->transportReplaceInProgress())
@@ -2152,7 +2243,7 @@ namespace XMPP { namespace Jingle {
                 if (!entry.prepared)
                     continue;
                 auto app              = entry.application;
-                auto currentTransport = entry.current.lock();
+                auto currentTransport = entry.current;
                 if (!app || contentList.value(entry.key) != app.data() || !currentTransport
                     || app->transport() != currentTransport || app->transportReplaceGeneration() != entry.generation
                     || !app->transportReplaceInProgress())
@@ -2181,9 +2272,9 @@ namespace XMPP { namespace Jingle {
         bool handleIncomingTransportReject(const QDomElement &jingleEl)
         {
             struct ValidatedTransportReject {
-                QPointer<Application>   application;
-                ContentKey              key;
-                QWeakPointer<Transport> current;
+                QPointer<Application> application;
+                ContentKey            key;
+                QPointer<Transport>   current;
             };
             QVector<ValidatedTransportReject> updates;
             QSet<ContentKey>                  seen;
@@ -2212,8 +2303,7 @@ namespace XMPP { namespace Jingle {
                     ErrorUtil::fill(jingleEl.ownerDocument(), *lastError, ErrorUtil::OutOfOrder);
                     return false;
                 }
-                updates.append(
-                    ValidatedTransportReject { QPointer<Application>(app), key, app->transport().toWeakRef() });
+                updates.append(ValidatedTransportReject { QPointer<Application>(app), key, app->transport() });
             }
 
             if (updates.isEmpty()) {
@@ -2227,7 +2317,7 @@ namespace XMPP { namespace Jingle {
                 if (!session)
                     return true;
                 auto app              = entry.application;
-                auto currentTransport = entry.current.lock();
+                auto currentTransport = entry.current;
                 if (!app || contentList.value(entry.key) != app.data() || !currentTransport
                     || app->transport() != currentTransport)
                     continue; // superseded or removed by a previous reentrant callback
@@ -2339,17 +2429,16 @@ namespace XMPP { namespace Jingle {
 
         bool handleIncomingSessionInfo(const QDomElement &jingleEl)
         {
-            ApplicationManagerPad::Ptr destination;
-            bool                       hasElements = false;
+            ApplicationManagerPad *destination = nullptr;
+            bool                   hasElements = false;
             for (QDomElement child = jingleEl.firstChildElement(); !child.isNull();
                  child             = child.nextSiblingElement()) {
-                hasElements = true;
-                ApplicationManagerPad::Ptr owner;
-                for (const auto &weakPad : std::as_const(applicationPads)) {
-                    auto pad = weakPad.toStrongRef();
+                hasElements                  = true;
+                ApplicationManagerPad *owner = nullptr;
+                for (const auto &pad : std::as_const(applicationPads)) {
                     if (pad && pad->sessionInfoNamespaces().contains(child.namespaceURI())) {
                         if (owner && owner != pad) {
-                            owner.clear(); // ambiguous namespace ownership
+                            owner = nullptr; // ambiguous namespace ownership
                             break;
                         }
                         owner = pad;
@@ -2383,7 +2472,7 @@ namespace XMPP { namespace Jingle {
             struct ValidatedTransportInfo {
                 QPointer<Application>        application;
                 ContentKey                   key;
-                QWeakPointer<Transport>      current;
+                QPointer<Transport>          current;
                 quint64                      generation = 0;
                 QDomElement                  transport;
                 Transport::PreparedUpdatePtr prepared;
@@ -2411,12 +2500,8 @@ namespace XMPP { namespace Jingle {
                                                     XMPP::Stanza::Error::ErrorCond::BadRequest);
                     return false;
                 }
-                updates.push_back(ValidatedTransportInfo { QPointer<Application>(app),
-                                                           key,
-                                                           app->transport().toWeakRef(),
-                                                           app->transportReplaceGeneration(),
-                                                           tel,
-                                                           {} });
+                updates.push_back(ValidatedTransportInfo {
+                    QPointer<Application>(app), key, app->transport(), app->transportReplaceGeneration(), tel, {} });
             }
 
             auto setPrepareError = [this](const Transport::PrepareUpdateResult &result) {
@@ -2435,7 +2520,7 @@ namespace XMPP { namespace Jingle {
                 if (!session)
                     return true;
                 auto app              = entry.application;
-                auto currentTransport = entry.current.lock();
+                auto currentTransport = entry.current;
                 if (!app || contentList.value(entry.key) != app.data() || app->state() >= State::Finishing
                     || !currentTransport || app->transport() != currentTransport
                     || app->transportReplaceGeneration() != entry.generation)
@@ -2457,7 +2542,7 @@ namespace XMPP { namespace Jingle {
                 if (!entry.prepared)
                     continue;
                 auto app              = entry.application;
-                auto currentTransport = entry.current.lock();
+                auto currentTransport = entry.current;
                 if (!app || contentList.value(entry.key) != app.data() || app->state() >= State::Finishing
                     || !currentTransport || app->transport() != currentTransport
                     || app->transportReplaceGeneration() != entry.generation)
@@ -2486,6 +2571,40 @@ namespace XMPP { namespace Jingle {
         d->stepTimer.setInterval(0);
         connect(&d->stepTimer, &QTimer::timeout, this, [this]() { d->doStep(); });
         connect(manager->client(), &Client::disconnected, this, &Session::shutdown);
+        d->peerUnavailableTimer.setParent(this);
+        d->peerUnavailableTimer.setObjectName(QStringLiteral("jinglePeerUnavailableTimer"));
+        d->peerUnavailableTimer.setSingleShot(true);
+        d->peerUnavailableTimer.setInterval(10000); // XEP-0166 section 6.7: 5-10 seconds without incoming activity.
+        connect(manager->client(), &Client::presenceReceived, this, [this](const Jid &jid, const Status &status) {
+            if (d->state == State::Finished || !jid.compare(d->otherParty, true))
+                return;
+            d->peerAvailable = status.isAvailable();
+            // Online presence alone does not prove that the peer retained this SID.
+            // Keep the deadline until actual session/transport activity confirms it.
+            if (d->peerAvailable || d->peerUnavailableTimer.isActive())
+                return;
+            qInfo("jingle sid=%s peer unavailable; waiting for incoming activity", qUtf8Printable(d->sid));
+            d->peerUnavailableTimer.start();
+        });
+        connect(&d->peerUnavailableTimer, &QTimer::timeout, this, [this]() {
+            if (d->state == State::Finished)
+                return;
+            qInfo("jingle sid=%s ending locally: offline peer has no incoming activity", qUtf8Printable(d->sid));
+            d->terminateReason = Reason(Reason::ConnectivityError, QLatin1String("remote side disconnected"));
+            // Set the terminal state before closing channels. No IQ is sent to
+            // an unavailable resource, and late SCTP/IQ callbacks cannot send content-remove.
+            d->setSessionFinished();
+        });
+    }
+
+    void Session::noteIncomingActivity()
+    {
+        if (d->state == State::Finished || !d->peerUnavailableTimer.isActive())
+            return;
+        if (d->peerAvailable)
+            d->peerUnavailableTimer.stop();
+        else
+            d->peerUnavailableTimer.start();
     }
 
     void Session::shutdown()
@@ -2498,15 +2617,24 @@ namespace XMPP { namespace Jingle {
 
     Session::~Session()
     {
+        setParent(nullptr);
+        d->manager->detachSession(this);
         d->state = State::Finished;
         d->stepTimer.stop();
-        // Ownership outlives the signaling registry, including deleteLater().
-        // Application::destroying removes entries before reentrant sibling
-        // deletion, while session pads and all infrastructure are still alive.
-        while (!d->contentList.isEmpty())
-            delete d->contentList.constBegin().value();
-        while (!d->ownedApplications.isEmpty())
-            delete d->ownedApplications.first();
+        // Applications may consult both pads and transports while destructing.
+        // Destroy application pads first, then transport pads, while d is still alive.
+        while (auto raw = findChild<ApplicationManagerPad *>(QString(), Qt::FindDirectChildrenOnly)) {
+            QPointer<ApplicationManagerPad> pad(raw);
+            pad->destroyOwnedObjects();
+            if (pad)
+                delete pad.data();
+        }
+        while (auto raw = findChild<TransportManagerPad *>(QString(), Qt::FindDirectChildrenOnly)) {
+            QPointer<TransportManagerPad> pad(raw);
+            pad->destroyOwnedObjects();
+            if (pad)
+                delete pad.data();
+        }
         qDebug("session %s destroyed", qPrintable(d->sid));
     }
 
@@ -2647,7 +2775,7 @@ namespace XMPP { namespace Jingle {
                         d->outgoingGroupExtension
                             = Private::PendingGroupExtension { ContentKey { content->contentName(), d->role },
                                                                d->negotiatedGroups, std::move(proposal),
-                                                               ++d->nextGroupExtensionId, newTransport.toWeakRef() };
+                                                               ++d->nextGroupExtensionId, newTransport };
                     }
                 }
             }
@@ -2905,25 +3033,19 @@ namespace XMPP { namespace Jingle {
         return groups;
     }
 
-    ApplicationManagerPad::Ptr Session::applicationPad(const QString &ns)
-    {
-        return d->applicationPads.value(ns).toStrongRef();
-    }
+    ApplicationManagerPad *Session::applicationPad(const QString &ns) { return d->applicationPads.value(ns); }
 
-    TransportManagerPad::Ptr Session::transportPad(const QString &ns)
-    {
-        return d->transportPads.value(ns).toStrongRef();
-    }
+    TransportManagerPad *Session::transportPad(const QString &ns) { return d->transportPads.value(ns); }
 
-    QSharedPointer<Transport> Session::newOutgoingTransport(const QString &ns)
+    QPointer<Transport> Session::newOutgoingTransport(const QString &ns)
     {
         if (d->state >= State::Finishing)
             return {};
         auto pad = transportPadFactory(ns);
         if (pad) {
-            return pad->manager()->newTransport(pad, d->role); // pad on both side becaue we need shared pointer
+            return pad->manager()->newTransport(pad, d->role);
         }
-        return QSharedPointer<Transport>();
+        return QPointer<Transport>();
     }
 
     QString Session::preferredApplication() const
@@ -3018,35 +3140,29 @@ namespace XMPP { namespace Jingle {
         d->planStep();
     }
 
-    TransportManagerPad::Ptr Session::transportPadFactory(const QString &ns)
+    TransportManagerPad *Session::transportPadFactory(const QString &ns)
     {
-        auto pad = d->transportPads.value(ns).toStrongRef();
+        auto pad = d->transportPads.value(ns);
         if (!pad) {
-            auto deleter = [ns, session = QPointer<Session>(this)](TransportManagerPad *pad) {
-                if (session)
-                    session->d->transportPads.remove(ns);
-                delete pad;
-            };
-            pad = TransportManagerPad::Ptr(d->manager->transportPad(this, ns), deleter);
+            pad = d->manager->transportPad(this, ns);
             if (pad) {
+                pad->setParent(this);
                 d->transportPads.insert(ns, pad);
+                connect(pad, &QObject::destroyed, this, [this, ns]() { d->transportPads.remove(ns); });
             }
         }
         return pad;
     }
 
-    ApplicationManagerPad::Ptr Session::applicationPadFactory(const QString &ns)
+    ApplicationManagerPad *Session::applicationPadFactory(const QString &ns)
     {
-        auto pad = d->applicationPads.value(ns).toStrongRef();
+        auto pad = d->applicationPads.value(ns);
         if (!pad) {
-            auto deleter = [ns, session = QPointer<Session>(this)](ApplicationManagerPad *pad) {
-                if (session)
-                    session->d->applicationPads.remove(ns);
-                delete pad;
-            };
-            pad = ApplicationManagerPad::Ptr(d->manager->applicationPad(this, ns), deleter);
+            pad = d->manager->applicationPad(this, ns);
             if (pad) {
+                pad->setParent(this);
                 d->applicationPads.insert(ns, pad);
+                connect(pad, &QObject::destroyed, this, [this, ns]() { d->applicationPads.remove(ns); });
             }
         }
         return pad;
@@ -3070,7 +3186,10 @@ namespace XMPP { namespace Jingle {
         QList<Application *>     apps;
         QList<QDomElement>       rejects;
 
+        QPointer<Session> session(this);
         std::tie(err, cond, apps, rejects) = d->parseContentAddList(jingleEl);
+        if (!session)
+            return false;
         switch (err) {
         case Private::AddContentError::Unparsed:
         case Private::AddContentError::Unexpected:
@@ -3111,6 +3230,7 @@ namespace XMPP { namespace Jingle {
             return false;
         }
 
+        noteIncomingActivity();
         switch (action) {
         case Action::ContentAccept:
             return d->handleIncomingContentAccept(jingleEl);

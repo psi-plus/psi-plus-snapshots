@@ -336,6 +336,8 @@ namespace Jingle {
     class SessionManagerPad : public QObject {
         Q_OBJECT
     public:
+        explicit SessionManagerPad(Session *session = nullptr);
+        ~SessionManagerPad() override;
         virtual QDomElement takeOutgoingSessionInfoUpdate();
         virtual QString     ns() const      = 0;
         virtual Session    *session() const = 0;
@@ -346,6 +348,12 @@ namespace Jingle {
 
         virtual void  populateOutgoing(Action action, QDomElement &el);
         QDomDocument *doc() const;
+
+    protected:
+        void destroyOwnedObjects();
+
+    private:
+        friend class Session;
     };
 
     class ApplicationManager;

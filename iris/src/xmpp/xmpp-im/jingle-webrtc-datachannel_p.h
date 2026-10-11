@@ -70,6 +70,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         bool      closeWasLocal      = false;
         bool      closeSignalEmitted = false;
         DcepState dcepState          = NoDcep;
+        bool      openingDeferred    = false;
 
         WebRTCDataChannel(AssociationPrivate *association, quint8 channelType = 0, quint32 reliability = 0,
                           quint16 priority = 256, const QString &label = QString(), const QString &protocol = QString(),

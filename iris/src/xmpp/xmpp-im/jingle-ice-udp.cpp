@@ -23,7 +23,12 @@ namespace {
     QDomElement deserializeOpaqueExtension(QDomDocument &target, const QByteArray &xml)
     {
         QDomDocument owned;
-        if (!owned.setContent(xml, true))
+#if QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
+        const bool parsed = owned.setContent(xml, true);
+#else
+        const auto parsed = owned.setContent(xml, QDomDocument::ParseOption::UseNamespaceProcessing);
+#endif
+        if (!parsed)
             return {};
         const auto element = owned.documentElement();
         return element.isNull() ? QDomElement() : target.importNode(element, true).toElement();
@@ -229,7 +234,12 @@ bool UdpTransportDescription::isValid(QString *error) const
 
     for (const auto &extension : extensions) {
         QDomDocument extensionDoc;
-        if (!extensionDoc.setContent(extension, true))
+#if QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
+        const bool parsed = extensionDoc.setContent(extension, true);
+#else
+        const auto parsed = extensionDoc.setContent(extension, QDomDocument::ParseOption::UseNamespaceProcessing);
+#endif
+        if (!parsed)
             return fail(error, QStringLiteral("Malformed ICE-UDP extension"));
         const auto element = extensionDoc.documentElement();
         if (element.isNull() || element.namespaceURI().isEmpty() || element.namespaceURI() == NS_ICE_UDP)

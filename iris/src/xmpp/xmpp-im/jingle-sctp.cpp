@@ -134,6 +134,22 @@ namespace XMPP { namespace Jingle { namespace SCTP {
 
     QList<Connection::Ptr> Association::channels() const { return d->allChannels(); }
 
+    Connection::Ptr Association::newDeferredChannel(const QString &label)
+    {
+        return d->newChannel(Reliable, true, 0, 256, label, {}, true);
+    }
+
+    void Association::activateChannel(const Connection::Ptr &channel)
+    {
+        auto dc = qSharedPointerDynamicCast<WebRTCDataChannel>(channel);
+        if (!dc || dc->association != d.get() || dc->isRemote() || dc->closeRequested || dc->streamClosed)
+            return;
+        dc->openingDeferred = false;
+        if (d->assoc.GetState() == RTC::SctpAssociation::SctpState::CONNECTED
+            && dc->dcepState == WebRTCDataChannel::NoDcep)
+            dc->connect();
+    }
+
     void Association::onTransportConnected() { d->onTransportConnected(); }
 
     void Association::onTransportError(QAbstractSocket::SocketError error) { d->onTransportError(error); }

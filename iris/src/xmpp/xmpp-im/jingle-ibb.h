@@ -31,7 +31,7 @@ namespace Jingle { namespace IBB {
     class Transport : public XMPP::Jingle::Transport {
         Q_OBJECT
     public:
-        Transport(const TransportManagerPad::Ptr &pad, Origin creator);
+        Transport(TransportManagerPad *pad, Origin creator);
         ~Transport() override;
 
         void                        prepare() override;
@@ -60,9 +60,8 @@ namespace Jingle { namespace IBB {
         Q_OBJECT
         // TODO
     public:
-        typedef QSharedPointer<Pad> Ptr;
-
         Pad(Manager *manager, Session *session);
+        ~Pad() override;
         QString           ns() const override;
         Session          *session() const override;
         TransportManager *manager() const override;
@@ -80,11 +79,10 @@ namespace Jingle { namespace IBB {
         Manager(QObject *parent = nullptr);
         ~Manager() override;
 
-        XMPP::Jingle::TransportFeatures         features() const override;
-        void                                    setJingleManager(XMPP::Jingle::Manager *jm) override;
-        QSharedPointer<XMPP::Jingle::Transport> newTransport(const TransportManagerPad::Ptr &pad,
-                                                             Origin                          creator) override;
-        TransportManagerPad                    *pad(Session *session) override;
+        XMPP::Jingle::TransportFeatures   features() const override;
+        void                              setJingleManager(XMPP::Jingle::Manager *jm) override;
+        QPointer<XMPP::Jingle::Transport> newTransport(TransportManagerPad *pad, Origin creator) override;
+        TransportManagerPad              *pad(Session *session) override;
 
         QStringList discoFeatures() const override;
 

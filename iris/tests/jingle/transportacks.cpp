@@ -31,7 +31,7 @@ int main(int argc, char **argv)
     J::Session       session(client.jingleManager(), Jid("peer@example.test/device"));
     J::IBB::Manager  manager;
     manager.setJingleManager(client.jingleManager());
-    auto pad       = J::TransportManagerPad::Ptr(manager.pad(&session));
+    auto pad       = manager.pad(&session);
     auto transport = manager.newTransport(pad, J::Origin::Initiator);
     check(bool(transport->addChannel(J::TransportFeature::DataOriented, "test")), "IBB channel missing");
     transport->prepare();
@@ -44,7 +44,7 @@ int main(int argc, char **argv)
     check(transport->state() == J::State::Unacked, "null IQ acknowledged IBB offer");
     ack(&success);
     check(transport->state() == J::State::Pending, "successful IQ did not acknowledge IBB offer");
-    transport.reset();
+    delete transport.data();
     ack(&success); // Callback may outlive its transport.
     auto reentrant = manager.newTransport(pad, J::Origin::Initiator);
     check(bool(reentrant->addChannel(J::TransportFeature::DataOriented, "reentrant")), "second IBB channel missing");
@@ -52,7 +52,7 @@ int main(int argc, char **argv)
     auto update = reentrant->takeOutgoingUpdate(false);
     QObject::connect(reentrant.data(), &J::Transport::stateChanged, &app, [&]() {
         if (reentrant && reentrant->state() == J::State::Pending)
-            reentrant.reset();
+            delete reentrant.data();
     });
     std::get<1>(update)(&success);
     check(!reentrant, "IBB acknowledgement did not exercise reentrant destruction");

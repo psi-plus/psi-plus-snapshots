@@ -20,6 +20,9 @@
 #ifndef JINGLEFT_H
 #define JINGLEFT_H
 
+// Feature marker for clients that support explicit range-receipt handover.
+#define IRIS_FT_DEFERRED_RECEIPTS 1
+
 #include <iris/iris_export.h>
 #include <iris/xmpp-im/jingle-application.h>
 #include <iris/xmpp-im/jingle-file.h>
@@ -41,6 +44,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
         // TODO
     public:
         Pad(Manager *manager, Session *session);
+        ~Pad() override;
         QDomElement         takeOutgoingSessionInfoUpdate() override;
         QString             ns() const override;
         Session            *session() const override;
@@ -58,7 +62,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     class IRIS_EXPORT Application : public XMPP::Jingle::Application {
         Q_OBJECT
     public:
-        Application(const QSharedPointer<Pad> &pad, const QString &contentName, Origin creator, Origin senders);
+        Application(Pad *pad, const QString &contentName, Origin creator, Origin senders);
         ~Application() override;
 
         bool isValid() const;
@@ -92,6 +96,16 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
          */
         void setStreamingMode(bool mode = true);
 
+        // Opt in before starting the payload. Keep this application eligible for
+        // BUNDLE extension while its completed payload awaits the receipt exchange.
+        void setKeepTransportUntilReceipt(bool enabled = true);
+        // Receivers may wait for a successor content-accept before confirming this
+        // range. The integrity check still completes independently of the receipt.
+        void setReceiptDeferred(bool enabled = true);
+        bool acknowledgeReceived();
+        // Pause only the receive pump; already received bytes retain their offsets.
+        void setReceivingPaused(bool paused);
+
         void            setDevice(QIODevice *dev, bool closeOnFinish = true);
         Connection::Ptr connection() const;
 
@@ -112,6 +126,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     signals:
         void connectionReady(); // streaming mode only
+        void payloadVerified(); // receiver: bytes and negotiated checksum are valid
 
         // if size is not set then it's reamaining part of the file (non-streaming mode only)
         void deviceRequested(quint64 offset, std::optional<quint64> size);
@@ -128,9 +143,9 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     public:
         Manager(QObject *parent = nullptr);
         ~Manager();
-        void         setJingleManager(XMPP::Jingle::Manager *jm) override;
-        Application *startApplication(const ApplicationManagerPad::Ptr &pad, const QString &contentName, Origin creator,
-                                      Origin senders) override;
+        void                   setJingleManager(XMPP::Jingle::Manager *jm) override;
+        Application           *startApplication(ApplicationManagerPad *pad, const QString &contentName, Origin creator,
+                                                Origin senders) override;
         ApplicationManagerPad *pad(Session *session) override; // pad factory
         void                   closeAll(const QString &ns = QString()) override;
 

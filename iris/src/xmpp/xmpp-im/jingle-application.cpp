@@ -139,7 +139,17 @@ namespace XMPP { namespace Jingle {
         QPointer<Application> application_;
     };
 
-    Application::~Application() { emit destroying(); }
+    Application::~Application()
+    {
+        setParent(nullptr);
+        emit destroying();
+        if (_transport) {
+            auto transport = _transport;
+            _transport.clear();
+            transport->disconnect(this);
+            transport->disassociate(this);
+        }
+    }
 
     void Application::ensureTransportReplaceTieBreakResolver()
     {
@@ -247,7 +257,7 @@ namespace XMPP { namespace Jingle {
         std::function<void(Connection::Ptr)> ready;
         std::function<void()>                failed;
         Connection::Ptr                      connection;
-        QWeakPointer<Transport>              transport;
+        QPointer<Transport>                  transport;
 
         void waitConnected()
         {
@@ -262,7 +272,7 @@ namespace XMPP { namespace Jingle {
                 qDebug("ConnectionWaiter: error: %s", qPrintable(errorMessage));
             if (connection)
                 connection->disconnect(this); // qt signals
-            if (auto t = transport.lock()) {
+            if (auto t = transport) {
                 t->disconnect(this);
             }
             failed();
@@ -272,7 +282,7 @@ namespace XMPP { namespace Jingle {
         void onReady()
         {
             connection->disconnect(this); // qt signals
-            transport.lock()->disconnect(this);
+            transport->disconnect(this);
             ready(connection);
             deleteLater();
         }
@@ -287,9 +297,8 @@ namespace XMPP { namespace Jingle {
             Q_ASSERT(!tr.isNull());
 
             connect(tr.data(), &Transport::stateChanged, this, [this]() {
-                auto locked = transport.lock();
-                if (locked->state() == State::Finished) {
-                    onFailed(QLatin1String("Transport") + locked->pad()->ns()
+                if (transport->state() == State::Finished) {
+                    onFailed(QLatin1String("Transport") + transport->pad()->ns()
                              + QLatin1String(" is in finished state and no connection => transport failure"));
                 }
             });
@@ -456,13 +465,13 @@ namespace XMPP { namespace Jingle {
             contentEl.appendChild(transportEl);
 
             const QPointer<Application> guard(this);
-            const auto                  expected = _transport.toWeakRef();
+            const auto                  expected = _transport;
             setState(State::Unacked);
             if (!guard)
                 return {};
             return OutgoingUpdate { updates, [this, guard, expected, transportCB](Task *task) {
                                        if (!guard || !task || _state != State::Unacked || _terminationReason.isValid()
-                                           || expected.lock() != _transport)
+                                           || expected != _transport)
                                            return;
                                        if (transportCB)
                                            transportCB(task);
@@ -478,18 +487,18 @@ namespace XMPP { namespace Jingle {
             contentEl.appendChild(transportEl);
 
             const QPointer<Application> guard(this);
-            const auto                  expected = _transport.toWeakRef();
+            const auto                  expected = _transport;
             setState(State::Unacked);
             if (!guard)
                 return {};
             return OutgoingUpdate { updates, [this, guard, expected, transportCB](Task *task) {
                                        if (!guard || !task || _state != State::Unacked || _terminationReason.isValid()
-                                           || expected.lock() != _transport)
+                                           || expected != _transport)
                                            return;
                                        if (transportCB)
                                            transportCB(task);
                                        if (!guard || _state != State::Unacked || _terminationReason.isValid()
-                                           || expected.lock() != _transport)
+                                           || expected != _transport)
                                            return;
                                        const bool accepted = task->success();
                                        setState(accepted ? State::Connecting : State::Finished);
@@ -498,7 +507,7 @@ namespace XMPP { namespace Jingle {
                                        // State callbacks may remove the content or replace its
                                        // transport; never start the retired negotiation.
                                        if (guard && accepted && _state == State::Connecting
-                                           && !_terminationReason.isValid() && expected.lock() == _transport)
+                                           && !_terminationReason.isValid() && expected == _transport)
                                            start();
                                    } };
         }
@@ -574,7 +583,7 @@ namespace XMPP { namespace Jingle {
         case Action::TransportReplace: {
             ensureTransportReplaceTieBreakResolver();
             Q_ASSERT(_transport->hasUpdates());
-            const auto replacement             = _transport.toWeakRef();
+            const auto expected                = _transport;
             std::tie(transportEl, transportCB) = wrapOutgoingTransportUpdate();
             contentEl.appendChild(transportEl);
             if (_pendingTransportReplace == PendingTransportReplace::Planned)
@@ -584,10 +593,9 @@ namespace XMPP { namespace Jingle {
                 updates << _update.reason.toXml(doc);
             return OutgoingUpdate {
                 updates,
-                [this, guard = QPointer<Application>(this), replacement, transportCB, generation](Task *task) {
+                [this, guard = QPointer<Application>(this), expected, transportCB, generation](Task *task) {
                     if (!guard || _state >= State::Finishing || _transportReplaceGeneration != generation)
                         return;
-                    auto expected = replacement.lock();
                     if (!expected || _transport != expected
                         || _pendingTransportReplace != PendingTransportReplace::NeedAck)
                         return;
@@ -619,16 +627,15 @@ namespace XMPP { namespace Jingle {
         // this completion to be delivered again.
         case Action::TransportAccept: {
             Q_ASSERT(_transport->hasUpdates());
-            const auto accepted                = _transport.toWeakRef();
+            const auto expected                = _transport;
             const auto generation              = _transportReplaceGeneration;
             std::tie(transportEl, transportCB) = wrapOutgoingTransportUpdate();
             contentEl.appendChild(transportEl);
             return OutgoingUpdate {
                 updates,
-                [this, guard = QPointer<Application>(this), accepted, transportCB, generation](Task *task) {
+                [this, guard = QPointer<Application>(this), expected, transportCB, generation](Task *task) {
                     if (!guard || _state >= State::Finishing || _transportReplaceGeneration != generation)
                         return;
-                    auto expected = accepted.lock();
                     if (!expected || _transport != expected
                         || _pendingTransportReplace != PendingTransportReplace::InProgress)
                         return;
@@ -667,8 +674,7 @@ namespace XMPP { namespace Jingle {
         QDomElement      transportEl;
         OutgoingUpdateCB transportCB;
         std::tie(transportEl, transportCB) = _transport->takeOutgoingUpdate(ensureTransportElement);
-        auto wrapCB                        = [tr = _transport.toWeakRef(), cb = std::move(transportCB)](Task *task) {
-            auto transport = tr.lock();
+        auto wrapCB                        = [transport = _transport, cb = std::move(transportCB)](Task *task) {
             if (!transport) {
                 return;
             }
@@ -680,11 +686,9 @@ namespace XMPP { namespace Jingle {
 
     void Application::expectSingleConnection(TransportFeatures features, std::function<void(Connection::Ptr)> &&ready)
     {
-        const auto expected = _transport.toWeakRef();
         new ConnectionWaiter(
             features, std::move(ready),
-            [this, expected]() {
-                auto failedTransport = expected.lock();
+            [this, failedTransport = _transport]() {
                 if (!failedTransport || _transport != failedTransport)
                     return;
                 qDebug("Application::expectSingleConnection: stopping failed %s transport",
@@ -697,13 +701,13 @@ namespace XMPP { namespace Jingle {
 
     bool Application::isRemote() const { return _pad->session()->role() != _creator; }
 
-    bool Application::selectNextTransport(const QSharedPointer<Transport> alikeTransport)
+    bool Application::selectNextTransport(const QPointer<Transport> alikeTransport)
     {
         qDebug("selecting next transport");
         const auto expected   = _transport;
         const auto generation = _transportReplaceGeneration;
-        auto       current    = [this, guard = QPointer<Application>(this), expected, generation] {
-            return guard && _state < State::Finishing && _transport == expected
+        auto current = [this, guard = QPointer<Application>(this), expected, generation, hadExpected = bool(expected)] {
+            return guard && (!hadExpected || expected) && _state < State::Finishing && _transport == expected
                 && _transportReplaceGeneration == generation;
         };
         auto failNoTransport = [this, &current]() {
@@ -739,11 +743,25 @@ namespace XMPP { namespace Jingle {
         if (!hasMore)
             return failNoTransport();
 
+        // A selected candidate belongs to its transport pad until setTransport() adopts it.
+        auto tryCandidate = [this](const QPointer<Transport> &candidate) {
+            if (!candidate)
+                return false;
+            if (setTransport(candidate))
+                return true;
+            if (candidate)
+                candidate->releaseIfUnused();
+            return false;
+        };
+
         if (alikeTransport) {
             auto tr = _transportSelector->getAlikeTransport(alikeTransport);
-            if (!current())
+            if (!current()) {
+                if (tr)
+                    tr->releaseIfUnused();
                 return false;
-            if (tr && setTransport(tr))
+            }
+            if (tryCandidate(tr))
                 return true;
             if (!current())
                 return false;
@@ -751,11 +769,14 @@ namespace XMPP { namespace Jingle {
 
         while (current()) {
             auto t = _transportSelector->getNextTransport();
-            if (!current())
+            if (!current()) {
+                if (t)
+                    t->releaseIfUnused();
                 return false;
+            }
             if (!t)
                 break;
-            if (setTransport(t))
+            if (tryCandidate(t))
                 return true;
         }
 
@@ -768,7 +789,7 @@ namespace XMPP { namespace Jingle {
         return false;
     }
 
-    bool Application::wantBetterTransport(const QSharedPointer<Transport> &t) const
+    bool Application::wantBetterTransport(const QPointer<Transport> &t) const
     {
         if (!_transportSelector->hasTransport(t))
             return false;
@@ -837,16 +858,16 @@ namespace XMPP { namespace Jingle {
 
     bool Application::isTransportReplaceEnabled() const { return true; }
 
-    bool Application::setTransport(const QSharedPointer<Transport> &transport, const Reason &reason)
+    bool Application::setTransport(Transport *transport, const Reason &reason)
     {
-        // Pin both transports (the argument may alias our member) and check
-        // identity after selector callbacks, including same-object reselection.
-        const auto replacement       = transport;
-        const auto expected          = _transport;
-        const auto generation        = _transportReplaceGeneration;
-        const auto replacementReason = reason;
-        auto       current           = [this, guard = QPointer<Application>(this), expected, generation] {
-            return guard && _state < State::Finishing && _transport == expected
+        // Guard both transports and check identity after selector callbacks,
+        // including same-object reselection.
+        const QPointer<Transport> replacement(transport);
+        const auto                expected          = _transport;
+        const auto                generation        = _transportReplaceGeneration;
+        const auto                replacementReason = reason;
+        auto current = [this, guard = QPointer<Application>(this), expected, generation, hadExpected = bool(expected)] {
+            return guard && (!hadExpected || expected) && _state < State::Finishing && _transport == expected
                 && _transportReplaceGeneration == generation;
         };
         if (!replacement || !current())
@@ -855,13 +876,13 @@ namespace XMPP { namespace Jingle {
         if (!current() || !enabled)
             return false;
         const bool accepted = _transportSelector->replace(expected, replacement);
-        if (!current() || !accepted)
+        if (!current() || !replacement || !accepted)
             return false;
 
         if (expected && expected->state() < State::Unacked && expected->creator() == _pad->session()->role()
             && expected->pad()->ns() != replacement->pad()->ns()) {
             _transportSelector->backupTransport(expected);
-            if (!current())
+            if (!current() || !replacement)
                 return false;
         }
         ++_transportReplaceGeneration;
@@ -891,23 +912,36 @@ namespace XMPP { namespace Jingle {
             qDebug("Application::setTransport: resetting %s transport in favor of %s",
                    qPrintable(_transport->pad()->ns()), qPrintable(replacement->pad()->ns()));
             _transport->disconnect(this);
-            _transport.reset();
+            _transport.clear();
         } else {
             qDebug("setting transport %s", qPrintable(replacement->pad()->ns()));
         }
 
         _transport = replacement;
+        replacement->associate(this);
+        const auto installedGeneration = _transportReplaceGeneration;
+        auto       installed           = [this, guard = QPointer<Application>(this), replacement, installedGeneration] {
+            return guard && replacement && _state < State::Finishing && _transport == replacement
+                && _transportReplaceGeneration == installedGeneration;
+        };
+        if (expected && expected != replacement)
+            expected->disassociate(this);
+        // Releasing the previous transport calls stop(), which may delete this
+        // application or install another transport through a synchronous callback.
+        if (!installed())
+            return false;
 
         if (auto session = _pad ? _pad->session() : nullptr)
             session->refreshAutomaticGroupings();
+        if (!installed())
+            return false;
 
         connect(_transport.data(), &Transport::updated, this, &Application::updated);
         connect(_transport.data(), &Transport::failed, this, [this]() { selectNextTransport(); });
 
         if (_transport && _transport->state() < State::Finishing && _state >= State::ApprovedToSend) {
-            QTimer::singleShot(0, this, [this, wp = _transport.toWeakRef()]() {
-                auto p = wp.lock();
-                if (p && p == _transport) {
+            QTimer::singleShot(0, this, [this, transport = _transport]() {
+                if (transport && transport == _transport) {
                     prepareTransport();
                 }
             });

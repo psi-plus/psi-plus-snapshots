@@ -20,6 +20,10 @@ static void runPair(bool usingProtocolSignalsIce2)
 {
     Ice176 first;
     Ice176 second;
+    int    firstActivity  = 0;
+    int    secondActivity = 0;
+    QObject::connect(&first, &Ice176::peerActivity, [&] { ++firstActivity; });
+    QObject::connect(&second, &Ice176::peerActivity, [&] { ++secondActivity; });
 
     const QList<Ice176::LocalAddress> localAddresses { Ice176::LocalAddress { QHostAddress::LocalHost } };
     for (auto *ice : { &first, &second }) {
@@ -138,6 +142,7 @@ static void runPair(bool usingProtocolSignalsIce2)
     exchangeLoop.exec();
     exchangePoll.stop();
 
+    check(firstActivity > 0 && secondActivity > 0, "Validated ICE checks did not report incoming peer activity");
     check(firstReady && secondReady, "ICE never became writable");
     check(firstSelected && secondSelected, "ICE nomination did not eventually select a pair");
     check(selectedSent && selectedReceived, "data did not cross the selected pair");

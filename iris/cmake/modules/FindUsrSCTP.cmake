@@ -14,7 +14,7 @@ if (NOT TARGET SctpLab::UsrSCTP)
     set(USRSCTP_INCLUDES ${USRSCTP_INCLUDE})
 
     if (UsrSCTP_FOUND)
-        add_library(SctpLab::UsrSCTP UNKNOWN IMPORTED)
+        add_library(SctpLab::UsrSCTP UNKNOWN IMPORTED GLOBAL)
         set_target_properties(SctpLab::UsrSCTP PROPERTIES
                 IMPORTED_LOCATION "${USRSCTP_LIBRARY}"
                 INTERFACE_COMPILE_DEFINITIONS "${USRSCTP_DEFINITIONS}"

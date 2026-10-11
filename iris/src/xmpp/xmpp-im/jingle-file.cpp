@@ -249,7 +249,7 @@ File::File(const QDomElement &file)
 
 QDomElement File::toXml(QDomDocument *doc) const
 {
-    if (!isValid() || d->hashes.isEmpty())
+    if (!isValid() || (d->hashes.isEmpty() && d->range.hashes.isEmpty()))
         return {};
     return toXml(doc, NS, true);
 }

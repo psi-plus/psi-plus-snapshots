@@ -32,7 +32,7 @@ public:
 
 class TestPad : public J::ApplicationManagerPad {
 public:
-    explicit TestPad(J::Session *session) : session_(session) { }
+    explicit TestPad(J::Session *session) : J::ApplicationManagerPad(session), session_(session) { }
 
     J::Session            *session() const override { return session_; }
     QString                ns() const override { return QStringLiteral("urn:iris:test:application"); }
@@ -45,7 +45,10 @@ private:
 
 class TestTransport : public J::Transport {
 public:
-    TestTransport() : Transport({}, J::Origin::Initiator) { setState(J::State::Active); }
+    TestTransport(J::TransportManagerPad *pad = nullptr) : Transport(pad, J::Origin::Initiator)
+    {
+        setState(J::State::Active);
+    }
 
     void                           prepare() override { }
     void                           start() override { }
@@ -70,7 +73,7 @@ public:
                              const QString &contentName = QStringLiteral("audio"),
                              J::Origin      creator     = J::Origin::Initiator)
     {
-        _pad.reset(new TestPad(session));
+        _pad         = new TestPad(session);
         _contentName = contentName;
         _creator     = creator;
         _senders     = senders;
@@ -78,7 +81,8 @@ public:
 
     void attachTransport()
     {
-        auto transport = QSharedPointer<TestTransport>::create();
+        auto transport = QPointer<TestTransport>(new TestTransport(
+            _pad->session()->transportPadFactory(QStringLiteral("urn:xmpp:jingle:transports:ibb:1"))));
         testTransport_ = transport.data();
         _transport     = transport;
     }

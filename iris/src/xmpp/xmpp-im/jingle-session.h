@@ -112,10 +112,10 @@ namespace XMPP { namespace Jingle {
         // groupings()/remoteGroupings(), this never exposes a pending proposal.
         QList<ContentGroup> negotiatedGroupings() const;
 
-        ApplicationManagerPad::Ptr applicationPad(const QString &ns);
-        TransportManagerPad::Ptr   transportPad(const QString &ns);
+        ApplicationManagerPad *applicationPad(const QString &ns);
+        TransportManagerPad   *transportPad(const QString &ns);
 
-        QSharedPointer<Transport> newOutgoingTransport(const QString &ns);
+        QPointer<Transport> newOutgoingTransport(const QString &ns);
 
         QString     preferredApplication() const;
         QStringList allApplicationTypes() const;
@@ -130,8 +130,8 @@ namespace XMPP { namespace Jingle {
         void terminate(Reason::Condition cond, const QString &comment = QString());
 
         // allocates or returns existing pads
-        ApplicationManagerPad::Ptr applicationPadFactory(const QString &ns);
-        TransportManagerPad::Ptr   transportPadFactory(const QString &ns);
+        ApplicationManagerPad *applicationPadFactory(const QString &ns);
+        TransportManagerPad   *transportPadFactory(const QString &ns);
     signals:
         void managerPadAdded(const QString &ns);
         void initiated();
@@ -151,6 +151,7 @@ namespace XMPP { namespace Jingle {
         friend class PublicationManager;
         friend class JTPush;
 
+        void    noteIncomingActivity();
         void    shutdown();
         QString reserveSid(const QString &requestedSid = QString());
         bool    incomingInitiate(const Jingle &jingle, const QDomElement &jingleEl);

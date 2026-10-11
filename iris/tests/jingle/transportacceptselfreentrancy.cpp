@@ -32,8 +32,8 @@ static void testAcceptedTransportCannotCompleteNewerReplacement(Client &client)
     auto pad = session.transportPadFactory(TestTransportManager::namespaceUri());
     check(bool(pad), "test transport pad missing for self-reentrant transport-accept");
 
-    auto oldTransport
-        = QSharedPointer<SelfReentrantUpdateTransport>::create(pad, J::Origin::Initiator, QStringLiteral("old-local"));
+    auto oldTransport = QPointer<SelfReentrantUpdateTransport>(
+        new SelfReentrantUpdateTransport(pad, J::Origin::Initiator, QStringLiteral("old-local")));
     oldTransport->forceState(J::State::Pending);
     auto app = addApplication(session, QStringLiteral("audio"), J::Origin::Initiator, oldTransport,
                               std::make_unique<TestSelector>());

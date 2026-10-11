@@ -33,7 +33,8 @@ struct AcceptFixture {
     explicit AcceptFixture(Client &client, const QString &peer = QStringLiteral("peer@example.test/device")) :
         session(client.jingleManager(), Jid(peer), J::Origin::Initiator),
         pad(session.transportPadFactory(TestTransportManager::namespaceUri())),
-        remote(QSharedPointer<ReentrantAckTransport>::create(pad, J::Origin::Responder, QStringLiteral("remote"))),
+        remote(QPointer<ReentrantAckTransport>(
+            new ReentrantAckTransport(pad, J::Origin::Responder, QStringLiteral("remote")))),
         success(client.rootTask(), true)
     {
         check(bool(pad), "test transport pad missing");
@@ -54,11 +55,11 @@ struct AcceptFixture {
         return ack;
     }
 
-    J::Session                            session;
-    J::TransportManagerPad::Ptr           pad;
-    QSharedPointer<ReentrantAckTransport> remote;
-    TestApplication                      *app = nullptr;
-    Result                                success;
+    J::Session                      session;
+    J::TransportManagerPad         *pad = nullptr;
+    QPointer<ReentrantAckTransport> remote;
+    TestApplication                *app = nullptr;
+    Result                          success;
 };
 
 static void testReentrantNewTransport(Client &client)

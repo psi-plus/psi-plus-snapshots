@@ -115,6 +115,47 @@ int main(int argc, char **argv)
         return fail("incoming data-channel protocols do not match");
     if ((remoteOne->channelType & 0x80) || (remoteTwo->channelType & 0x80))
         return fail("ordered data channels were encoded as unordered");
+    if (remoteOne->priority != 256 || remoteOne->reliability != 0)
+        return fail("DCEP priority and reliability fields were interchanged");
+
+    // content-add creates a channel on an already established association.
+    // Exercise both allocation parities without reconnecting SCTP.
+    // Fill both send buffers first: DCEP control must retry, not be lost to
+    // EAGAIN or exposed to the application as binary payload.
+    const QByteArray congestion(262144, 'x');
+    if (!leftTwo->writeDatagram(QNetworkDatagram(congestion))
+        || !remoteTwo->writeDatagram(QNetworkDatagram(congestion)))
+        return fail("could not fill SCTP send buffers before channel addition");
+    auto lateLeft  = left.newDeferredChannel(QStringLiteral("late-left"));
+    auto lateRight = right.newChannel(Reliable, true, 0, 256, QStringLiteral("late-right"), QStringLiteral("ft"));
+    if (!lateLeft || !lateRight || !pumpUntil(leftWire, left, rightWire, right, [&]() {
+            return lateRight->isOpen() && left.pendingChannels() == 1;
+        }))
+        return fail("opposite parity late channel did not open");
+    if (lateLeft->isOpen() || right.pendingChannels() != 0)
+        return fail("deferred channel opened before content acceptance");
+    left.activateChannel(lateLeft);
+    if (!lateLeft || !lateRight || !pumpUntil(leftWire, left, rightWire, right, [&]() {
+            return lateLeft->isOpen() && lateRight->isOpen() && left.pendingChannels() == 1
+                && right.pendingChannels() == 1;
+        }))
+        return fail("channels added to active SCTP did not complete DCEP");
+    auto remoteLateLeft  = right.nextChannel().staticCast<WebRTCDataChannel>();
+    auto remoteLateRight = left.nextChannel().staticCast<WebRTCDataChannel>();
+    if (!remoteLateLeft || !remoteLateRight || remoteLateLeft->label != QLatin1String("late-left")
+        || remoteLateRight->label != QLatin1String("late-right"))
+        return fail("late channels were routed to the wrong peer");
+    const QByteArray latePayload("new-content-payload");
+    lateLeft->writeDatagram(QNetworkDatagram(latePayload));
+    lateRight->writeDatagram(QNetworkDatagram(latePayload));
+    if (!pumpUntil(leftWire, left, rightWire, right,
+                   [&]() { return remoteLateLeft->hasPendingDatagrams() && remoteLateRight->hasPendingDatagrams(); })
+        || remoteLateLeft->readDatagram().data() != latePayload
+        || remoteLateRight->readDatagram().data() != latePayload)
+        return fail("late channels did not deliver payload");
+    if (!leftTwo->hasPendingDatagrams() || !remoteTwo->hasPendingDatagrams()
+        || leftTwo->readDatagram().data() != congestion || remoteTwo->readDatagram().data() != congestion)
+        return fail("channel handshakes lost or changed existing payload");
 
     // Model the FT finishing boundary precisely. The application gets
     // bytesWritten when a block has entered usrsctp, not when the peer has
@@ -142,7 +183,7 @@ int main(int argc, char **argv)
     leftOne->close();
 
     if (!pumpUntil(leftWire, left, rightWire, right, [&]() {
-            return left.channels().size() == 1 && right.channels().size() == 1 && localCloseFinished == 1;
+            return left.channels().size() == 3 && right.channels().size() == 3 && localCloseFinished == 1;
         }))
         return fail("SCTP stream reset did not complete local per-stream close");
 
@@ -162,6 +203,23 @@ int main(int argc, char **argv)
     QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
     if (remoteCloseFinished != 1)
         return fail("remote close did not complete after final datagram returned");
+
+    // A seek cancels a content while one write is still outside usrsctp.
+    // Drop that unaccepted write; preserve accepted bytes and unblock siblings.
+    const QByteArray acceptedTail(262144, 'a');
+    const QByteArray cancelledTail(8192, 'b');
+    lateLeft->writeDatagram(QNetworkDatagram(acceptedTail));
+    lateLeft->writeDatagram(QNetworkDatagram(cancelledTail));
+    if (!lateLeft->bytesToWrite())
+        return fail("cancel fixture did not queue an unaccepted SCTP write");
+    lateLeft->close();
+    if (lateLeft->bytesToWrite())
+        return fail("cancelled stream retained unaccepted application writes");
+    if (!pumpUntil(leftWire, left, rightWire, right,
+                   [&]() { return left.channels().size() == 2 && right.channels().size() == 2; })
+        || !remoteLateLeft->hasPendingDatagrams() || remoteLateLeft->readDatagram().data() != acceptedTail
+        || remoteLateLeft->hasPendingDatagrams())
+        return fail("cancelled stream lost accepted bytes or resent unaccepted tail");
 
     const QByteArray survivor("surviving-channel");
     if (!leftTwo->writeDatagram(QNetworkDatagram(survivor)))

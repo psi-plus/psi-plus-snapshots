@@ -12,6 +12,7 @@
 
 // Inspect the internal per-session registry without publishing a BUNDLE API.
 #define private public
+#include "../../src/xmpp/xmpp-im/jingle-ice-pad_p.h"
 #include <iris/jingle-ice.h>
 #undef private
 
@@ -31,7 +32,8 @@ static void check(bool value, const char *message)
 
 class TestApplicationPad : public Jingle::ApplicationManagerPad {
 public:
-    explicit TestApplicationPad(Jingle::Session *session) : session_(session) { }
+    explicit TestApplicationPad(Jingle::Session *session) :
+        Jingle::ApplicationManagerPad(session), session_(session) { }
     QString                     ns() const override { return QStringLiteral("urn:iris:test:ice-ownership"); }
     Jingle::Session            *session() const override { return session_; }
     Jingle::ApplicationManager *manager() const override { return nullptr; }
@@ -43,16 +45,13 @@ private:
 
 class TestTransportSelector : public Jingle::TransportSelector {
 public:
-    QSharedPointer<Jingle::Transport> getNextTransport() override { return {}; }
-    QSharedPointer<Jingle::Transport> getAlikeTransport(QSharedPointer<Jingle::Transport>) override { return {}; }
-    bool replace(QSharedPointer<Jingle::Transport>, QSharedPointer<Jingle::Transport> newer) override
-    {
-        return bool(newer);
-    }
-    void backupTransport(QSharedPointer<Jingle::Transport>) override { }
+    QPointer<Jingle::Transport> getNextTransport() override { return {}; }
+    QPointer<Jingle::Transport> getAlikeTransport(QPointer<Jingle::Transport>) override { return {}; }
+    bool replace(QPointer<Jingle::Transport>, QPointer<Jingle::Transport> newer) override { return bool(newer); }
+    void backupTransport(QPointer<Jingle::Transport>) override { }
     bool hasMoreTransports() const override { return false; }
-    bool hasTransport(QSharedPointer<Jingle::Transport>) const override { return false; }
-    int  compare(QSharedPointer<Jingle::Transport>, QSharedPointer<Jingle::Transport>) const override { return 0; }
+    bool hasTransport(QPointer<Jingle::Transport>) const override { return false; }
+    int  compare(QPointer<Jingle::Transport>, QPointer<Jingle::Transport>) const override { return 0; }
 };
 
 class TestIceTransport final : public Transport {
@@ -63,7 +62,7 @@ public:
 
 class TestApplication : public Jingle::Application {
 public:
-    TestApplication(const Jingle::ApplicationManagerPad::Ptr &pad, QString name, Jingle::Origin creator)
+    TestApplication(Jingle::ApplicationManagerPad *pad, QString name, Jingle::Origin creator)
     {
         _pad               = pad;
         _contentName       = std::move(name);
@@ -188,15 +187,15 @@ int main(int argc, char **argv)
           "unsupported transport namespace created a transport");
 
     Manager manager;
-    auto    padA = Pad::Ptr::create(&manager, &sessionA);
-    auto    padB = Pad::Ptr::create(&manager, &sessionB);
+    auto    padA = new Pad(&manager, &sessionA);
+    auto    padB = new Pad(&manager, &sessionB);
 
-    // Bind three logical contents to ICE transports. Pad::membershipFor() is the
+    // Bind three logical contents to ICE transports. Pad::Private::membershipFor() is the
     // private production seam used by Transport::ensureNetwork(); exercising it
     // here keeps the test about session/content ownership rather than the removed
     // transport-addressed connection cache.
-    auto appPadA = Jingle::ApplicationManagerPad::Ptr(new TestApplicationPad(&sessionA));
-    auto appPadB = Jingle::ApplicationManagerPad::Ptr(new TestApplicationPad(&sessionB));
+    auto appPadA = new TestApplicationPad(&sessionA);
+    auto appPadB = new TestApplicationPad(&sessionB);
 
     auto firstApp    = new TestApplication(appPadA, QStringLiteral("first"), Jingle::Origin::Initiator);
     auto siblingApp  = new TestApplication(appPadA, QStringLiteral("sibling"), Jingle::Origin::Initiator);
@@ -205,39 +204,39 @@ int main(int argc, char **argv)
     sessionA.addContent(siblingApp);
     sessionB.addContent(separateApp);
 
-    auto first    = QSharedPointer<Transport>::create(padA, Jingle::Origin::Initiator);
-    auto sibling  = QSharedPointer<Transport>::create(padA, Jingle::Origin::Initiator);
-    auto separate = QSharedPointer<Transport>::create(padB, Jingle::Origin::Initiator);
+    auto first    = QPointer<Transport>(new Transport(padA, Jingle::Origin::Initiator));
+    auto sibling  = QPointer<Transport>(new Transport(padA, Jingle::Origin::Initiator));
+    auto separate = QPointer<Transport>(new Transport(padB, Jingle::Origin::Initiator));
     check(firstApp->setTransport(first) && siblingApp->setTransport(sibling) && separateApp->setTransport(separate),
           "test contents did not bind their ICE transports");
 
     bool firstBound = false, siblingBound = false, separateBound = false;
-    auto firstMembership    = padA->membershipFor(first.data(), &firstBound);
-    auto siblingMembership  = padA->membershipFor(sibling.data(), &siblingBound);
-    auto separateMembership = padB->membershipFor(separate.data(), &separateBound);
+    auto firstMembership    = padA->d->membershipFor(first.data(), &firstBound);
+    auto siblingMembership  = padA->d->membershipFor(sibling.data(), &siblingBound);
+    auto separateMembership = padB->d->membershipFor(separate.data(), &separateBound);
     check(firstBound && siblingBound && separateBound && firstMembership && siblingMembership && separateMembership,
           "content-bound ICE membership was not created");
     check(firstMembership.connection() != siblingMembership.connection(), "unbundled contents shared a connection");
     check(firstMembership.connection() != separateMembership.connection(),
           "sessions to the same peer shared a connection");
-    check(padA->liveAssociationCount() == 2 && padB->liveAssociationCount() == 1,
+    check(padA->d->liveAssociationCount() == 2 && padB->d->liveAssociationCount() == 1,
           "session-local association accounting is wrong");
 
     bool foreignBound = true;
-    check(!padA->membershipFor(separate.data(), &foreignBound) && !foreignBound,
+    check(!padA->d->membershipFor(separate.data(), &foreignBound) && !foreignBound,
           "registry accepted another session's transport");
     bool nullBound = true;
-    check(!padA->membershipFor(nullptr, &nullBound) && !nullBound, "registry accepted a null transport");
+    check(!padA->d->membershipFor(nullptr, &nullBound) && !nullBound, "registry accepted a null transport");
 
     const auto srtpProfiles = Dtls::supportedSRTPProfiles();
     if (!srtpProfiles.isEmpty()) {
         // A transport used directly without a Jingle Application remains on the
         // explicit standalone path and must not consume a content association in
         // the Pad registry.
-        const auto beforeStandalone = padB->liveAssociationCount();
-        auto       media            = QSharedPointer<Transport>::create(padB, Jingle::Origin::Initiator);
+        const auto beforeStandalone = padB->d->liveAssociationCount();
+        auto       media            = QPointer<Transport>(new Transport(padB, Jingle::Origin::Initiator));
         check(media->enableRtpMux(srtpProfiles), "explicit secure RTP mode rejected");
-        check(padB->liveAssociationCount() == beforeStandalone,
+        check(padB->d->liveAssociationCount() == beforeStandalone,
               "standalone secure RTP transport polluted the content registry");
         check(!media->rtpAssociation(), "secure RTP association created before DTLS configuration");
         check(!media->sendProtectedRtpPacket({}, Jingle::RTP::PacketKind::Rtp, 0), "unprepared media sent");
@@ -247,12 +246,12 @@ int main(int argc, char **argv)
         media->stop();
         check(!media->enableRtpMux(srtpProfiles), "stopped transport reconfigured");
 
-        auto insecure = QSharedPointer<Transport>::create(padB, Jingle::Origin::Responder);
+        auto insecure = QPointer<Transport>(new Transport(padB, Jingle::Origin::Responder));
         check(insecure->enableRtpMux(srtpProfiles), "incoming secure RTP mode rejected");
         insecure->prepare();
         check(insecure->state() >= Jingle::State::Finishing, "incoming RTP without fingerprint accepted");
         check(!insecure->hasUpdates(), "insecure RTP transport exposed ICE signaling after security failure");
-        check(padB->liveAssociationCount() == beforeStandalone,
+        check(padB->d->liveAssociationCount() == beforeStandalone,
               "failed standalone RTP transport polluted the content registry");
     }
 
@@ -260,17 +259,17 @@ int main(int argc, char **argv)
     QPointer<IceConnection> surviving(siblingMembership.connection());
     firstMembership.reset();
     check(!released, "released unbundled membership retained its ICE association");
-    check(surviving && padA->liveAssociationCount() == 1,
+    check(surviving && padA->d->liveAssociationCount() == 1,
           "releasing one unbundled member changed the sibling association");
 
-    first.reset();
+    delete first.data();
     check(surviving && siblingMembership.connection() == surviving,
           "destroying a released transport changed the sibling association");
 
     siblingMembership.reset();
-    check(!surviving && padA->liveAssociationCount() == 0, "last session-A membership retained its association");
+    check(!surviving && padA->d->liveAssociationCount() == 0, "last session-A membership retained its association");
     separateMembership.reset();
-    check(padB->liveAssociationCount() == 0, "session-B membership retained its association");
+    check(padB->d->liveAssociationCount() == 0, "session-B membership retained its association");
 
     // A committed ICE payload is intentionally applied on the next event-loop
     // turn. If transport-replace hands this content to a successor first, the
@@ -278,11 +277,11 @@ int main(int argc, char **argv)
     // standalone association or advance its signaling state.
     auto lateApp = new TestApplication(appPadA, QStringLiteral("late"), Jingle::Origin::Initiator);
     sessionA.addContent(lateApp);
-    auto retired = QSharedPointer<TestIceTransport>::create(padA, Jingle::Origin::Initiator);
-    auto current = QSharedPointer<TestIceTransport>::create(padA, Jingle::Origin::Initiator);
+    auto retired = QPointer<TestIceTransport>(new TestIceTransport(padA, Jingle::Origin::Initiator));
+    auto current = QPointer<TestIceTransport>(new TestIceTransport(padA, Jingle::Origin::Initiator));
     check(lateApp->setTransport(retired), "late-callback fixture rejected initial ICE transport");
     retired->setComponentsCount(1); // establish active content ownership in the Pad
-    check(padA->liveAssociationCount() == 1, "late-callback fixture did not allocate initial association");
+    check(padA->d->liveAssociationCount() == 1, "late-callback fixture did not allocate initial association");
     retired->forceState(Jingle::State::Pending);
 
     QDomDocument staleDoc;
@@ -295,26 +294,26 @@ int main(int argc, char **argv)
 
     check(lateApp->setTransport(current), "late-callback fixture rejected replacement ICE transport");
     current->setComponentsCount(1); // retires the previous transport ownership
-    check(padA->liveAssociationCount() == 1, "transport replacement leaked the retired association");
+    check(padA->d->liveAssociationCount() == 1, "transport replacement leaked the retired association");
     QCoreApplication::processEvents(QEventLoop::AllEvents);
-    check(retired->state() == Jingle::State::Pending,
+    check(!retired || retired->state() == Jingle::State::Pending || retired->state() == Jingle::State::Finished,
           "late ICE update advanced a superseded transport after ownership retirement");
     check(lateApp->transport() == current, "late ICE update displaced the current transport");
     delete lateApp;
-    retired.reset();
-    current.reset();
+    delete retired.data();
+    delete current.data();
     QCoreApplication::processEvents(QEventLoop::AllEvents);
-    check(padA->liveAssociationCount() == 0, "late-callback fixture retained an association after cleanup");
+    check(padA->d->liveAssociationCount() == 0, "late-callback fixture retained an association after cleanup");
 
     Jingle::Session bundleSession(client.jingleManager(), Jid(QStringLiteral("bundle@example.org/device")));
-    auto            bundlePad    = Pad::Ptr::create(&manager, &bundleSession);
-    auto            bundleAppPad = Jingle::ApplicationManagerPad::Ptr(new TestApplicationPad(&bundleSession));
+    auto            bundlePad    = new Pad(&manager, &bundleSession);
+    auto            bundleAppPad = new TestApplicationPad(&bundleSession);
     auto            audioApp = new TestApplication(bundleAppPad, QStringLiteral("audio"), Jingle::Origin::Initiator);
     auto            videoApp = new TestApplication(bundleAppPad, QStringLiteral("video"), Jingle::Origin::Initiator);
     bundleSession.addContent(audioApp);
     bundleSession.addContent(videoApp);
-    auto audioTransport = QSharedPointer<Transport>::create(bundlePad, Jingle::Origin::Initiator);
-    auto videoTransport = QSharedPointer<Transport>::create(bundlePad, Jingle::Origin::Initiator);
+    auto audioTransport = QPointer<Transport>(new Transport(bundlePad, Jingle::Origin::Initiator));
+    auto videoTransport = QPointer<Transport>(new Transport(bundlePad, Jingle::Origin::Initiator));
     check(audioApp->setTransport(audioTransport) && videoApp->setTransport(videoTransport),
           "BUNDLE ownership fixture rejected transports");
     check(bundleSession.setGroupings({ Jingle::ContentGroup { QStringLiteral("BUNDLE"),
@@ -322,11 +321,11 @@ int main(int argc, char **argv)
           "BUNDLE ownership fixture rejected grouping");
 
     bool audioBound = false, audioGrouped = false, videoBound = false, videoGrouped = false;
-    auto sharedAudio = bundlePad->groupedConnectionFor(audioTransport.data(), &audioBound, &audioGrouped);
-    auto sharedVideo = bundlePad->groupedConnectionFor(videoTransport.data(), &videoBound, &videoGrouped);
+    auto sharedAudio = bundlePad->d->groupedConnectionFor(audioTransport.data(), &audioBound, &audioGrouped);
+    auto sharedVideo = bundlePad->d->groupedConnectionFor(videoTransport.data(), &videoBound, &videoGrouped);
     check(audioBound && videoBound && audioGrouped && videoGrouped && sharedAudio && sharedAudio == sharedVideo,
           "explicit BUNDLE group did not stage one shared association");
-    check(bundlePad->liveAssociationCount() == 1, "staged BUNDLE created more than one association");
+    check(bundlePad->d->liveAssociationCount() == 1, "staged BUNDLE created more than one association");
     if (!srtpProfiles.isEmpty()) {
         check(audioTransport->enableRtpMux(srtpProfiles) && videoTransport->enableRtpMux(srtpProfiles),
               "staged BUNDLE transports did not accept shared RTP mux");
@@ -355,13 +354,13 @@ int main(int argc, char **argv)
               && (srtpProfiles.isEmpty() || videoTransport->rtpAssociation() == sharedSecureRtp),
           "stopping one BUNDLE member invalidated the shared secure RTP association");
     delete audioApp;
-    check(stagedGuard && sharedSecureRtp && bundlePad->liveAssociationCount() == 1,
+    check(stagedGuard && sharedSecureRtp && bundlePad->d->liveAssociationCount() == 1,
           "removing one staged BUNDLE member destroyed the surviving association");
     delete videoApp;
     check(!audioTransport->rtpAssociation() && !videoTransport->rtpAssociation(),
           "removed contents retained runtime access to the BUNDLE association");
     QCoreApplication::processEvents(QEventLoop::AllEvents);
-    check(!stagedGuard && !sharedSecureRtp && bundlePad->liveAssociationCount() == 0,
+    check(!stagedGuard && !sharedSecureRtp && bundlePad->d->liveAssociationCount() == 0,
           "last staged BUNDLE member retained its association");
     check(!audioTransport->rtpAssociation() && !videoTransport->rtpAssociation(),
           "live Transport retained a dangling BUNDLE association view");

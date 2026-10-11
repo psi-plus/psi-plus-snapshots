@@ -201,7 +201,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
         QSharedPointer<Connection> newStream(const QString &sid, std::size_t blockSize, Origin creator)
         {
-            auto conn    = q->_pad.staticCast<Pad>()->makeConnection(sid, blockSize);
+            auto conn    = static_cast<Pad *>(q->_pad)->makeConnection(sid, blockSize);
             auto ibbConn = conn.staticCast<Connection>();
             if (!ibbConn)
                 return ibbConn;
@@ -220,7 +220,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
         }
     };
 
-    Transport::Transport(const TransportManagerPad::Ptr &pad, Origin creator) :
+    Transport::Transport(TransportManagerPad *pad, Origin creator) :
         XMPP::Jingle::Transport(pad, creator), d(new Private)
     {
         d->q = this;
@@ -238,6 +238,7 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
     Transport::~Transport()
     {
+        setParent(nullptr);
         // we have to mark all of them as finished just in case they are captured somewhere else
         qDebug("jingle-ibb: destroy");
         auto connections = d->connections.values();
@@ -495,10 +496,16 @@ namespace XMPP { namespace Jingle { namespace IBB {
         return ret;
     }
 
-    Pad::Pad(Manager *manager, Session *session)
+    Pad::Pad(Manager *manager, Session *session) : TransportManagerPad(session)
     {
         _manager = manager;
         _session = session;
+    }
+
+    Pad::~Pad()
+    {
+        setParent(nullptr);
+        destroyOwnedObjects();
     }
 
     QString Pad::ns() const { return NS; }
@@ -533,9 +540,9 @@ namespace XMPP { namespace Jingle { namespace IBB {
 
     void Manager::setJingleManager(XMPP::Jingle::Manager *jm) { d->jingleManager = jm; }
 
-    QSharedPointer<XMPP::Jingle::Transport> Manager::newTransport(const TransportManagerPad::Ptr &pad, Origin creator)
+    QPointer<XMPP::Jingle::Transport> Manager::newTransport(TransportManagerPad *pad, Origin creator)
     {
-        return QSharedPointer<Transport>::create(pad, creator).staticCast<XMPP::Jingle::Transport>();
+        return new Transport(pad, creator);
     }
 
     TransportManagerPad *Manager::pad(Session *session) { return new Pad(this, session); }

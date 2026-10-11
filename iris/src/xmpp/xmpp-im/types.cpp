@@ -735,7 +735,6 @@ public:
     XData                      xdata;
     IBBData                    ibbData;
     QMap<QString, HTMLElement> htmlElements;
-    QDomElement                sxe;
     QList<BoBData>             bobDataList;
 
     QList<int>       mucStatuses;
@@ -1217,10 +1216,6 @@ void Message::setForm(const XData &form) { MessageD()->xdata = form; }
 
 XData Message::getForm() const { return d ? d->xdata : XData(); }
 
-QDomElement Message::sxe() const { return d ? d->sxe : QDomElement(); }
-
-void Message::setSxe(const QDomElement &e) { MessageD()->sxe = e; }
-
 void Message::addBoBData(const BoBData &bob) { MessageD()->bobDataList.append(bob); }
 
 QList<BoBData> Message::bobDataList() const { return d ? d->bobDataList : QList<BoBData>(); }
@@ -1488,11 +1483,6 @@ Stanza Message::toStanza(Stream *stream, Jingle::Manager *jingleManager) const
     // nick
     if (!d->nick.isEmpty()) {
         s.appendChild(s.createTextElement("http://jabber.org/protocol/nick", "nick", d->nick));
-    }
-
-    // sxe
-    if (!d->sxe.isNull()) {
-        s.appendChild(d->sxe);
     }
 
     // muc
@@ -1978,13 +1968,6 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
         d->nick = t.text();
     else
         d->nick = QString();
-
-    // sxe
-    t = childElementsByTagNameNS(root, "http://jabber.org/protocol/sxe", "sxe").item(0).toElement();
-    if (!t.isNull())
-        d->sxe = t;
-    else
-        d->sxe = QDomElement();
 
     t = childElementsByTagNameNS(root, "http://jabber.org/protocol/muc#user", "x").item(0).toElement();
     if (!t.isNull()) {

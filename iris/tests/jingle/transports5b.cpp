@@ -72,14 +72,14 @@ namespace XMPP { namespace Jingle { namespace S5B {
 
 class QueueSelector final : public J::TransportSelector {
 public:
-    explicit QueueSelector(QList<QSharedPointer<J::Transport>> transports) : transports_(std::move(transports)) { }
+    explicit QueueSelector(QList<QPointer<J::Transport>> transports) : transports_(std::move(transports)) { }
 
-    QSharedPointer<J::Transport> getNextTransport() override
+    QPointer<J::Transport> getNextTransport() override
     {
-        return transports_.isEmpty() ? QSharedPointer<J::Transport>() : transports_.takeFirst();
+        return transports_.isEmpty() ? QPointer<J::Transport>() : transports_.takeFirst();
     }
 
-    QSharedPointer<J::Transport> getAlikeTransport(QSharedPointer<J::Transport> alike) override
+    QPointer<J::Transport> getAlikeTransport(QPointer<J::Transport> alike) override
     {
         if (!alike)
             return {};
@@ -90,27 +90,27 @@ public:
         return {};
     }
 
-    void backupTransport(QSharedPointer<J::Transport> transport) override
+    void backupTransport(QPointer<J::Transport> transport) override
     {
         if (transport)
             transports_.prepend(std::move(transport));
     }
 
     bool hasMoreTransports() const override { return !transports_.isEmpty(); }
-    bool hasTransport(QSharedPointer<J::Transport> transport) const override { return transports_.contains(transport); }
-    int  compare(QSharedPointer<J::Transport> a, QSharedPointer<J::Transport> b) const override
+    bool hasTransport(QPointer<J::Transport> transport) const override { return transports_.contains(transport); }
+    int  compare(QPointer<J::Transport> a, QPointer<J::Transport> b) const override
     {
         return a == b ? 0 : a ? (b ? 0 : 1) : -1;
     }
-    bool replace(QSharedPointer<J::Transport>, QSharedPointer<J::Transport> newer) override { return bool(newer); }
+    bool replace(QPointer<J::Transport>, QPointer<J::Transport> newer) override { return bool(newer); }
 
 private:
-    QList<QSharedPointer<J::Transport>> transports_;
+    QList<QPointer<J::Transport>> transports_;
 };
 
 class TestApplicationPad final : public J::ApplicationManagerPad {
 public:
-    explicit TestApplicationPad(J::Session *session) : session_(session) { }
+    explicit TestApplicationPad(J::Session *session) : J::ApplicationManagerPad(session), session_(session) { }
 
     QString                ns() const override { return QStringLiteral("urn:test:s5b-fallback"); }
     J::Session            *session() const override { return session_; }
@@ -123,7 +123,7 @@ private:
 
 class FallbackApplication final : public J::Application {
 public:
-    FallbackApplication(const QSharedPointer<TestApplicationPad> &pad, QList<QSharedPointer<J::Transport>> transports)
+    FallbackApplication(const QPointer<TestApplicationPad> &pad, QList<QPointer<J::Transport>> transports)
     {
         _pad               = pad;
         _contentName       = QStringLiteral("fallback");
@@ -161,10 +161,10 @@ private:
 };
 
 struct Fixture {
-    J::Session                   session;
-    S::Manager                   manager;
-    J::TransportManagerPad::Ptr  pad;
-    QSharedPointer<S::Transport> transport;
+    J::Session              session;
+    S::Manager              manager;
+    J::TransportManagerPad *pad = nullptr;
+    QPointer<S::Transport>  transport;
 
     Fixture(Client &client, J::Origin role = J::Origin::Responder) :
         session(client.jingleManager(), Jid(QStringLiteral("peer@example.test/device")), role)
@@ -172,8 +172,9 @@ struct Fixture {
         // This fixture manager is intentionally not registered with the client's
         // Jingle manager. Binding it manually would make its destructor unregister
         // the client's built-in S5B manager.
-        pad       = J::TransportManagerPad::Ptr(manager.pad(&session));
-        transport = manager.newTransport(pad, session.peerRole()).staticCast<S::Transport>();
+        pad       = manager.pad(&session);
+        transport = QPointer<S::Transport>(
+            static_cast<S::Transport *>((manager.newTransport(pad, session.peerRole())).data()));
     }
 };
 
@@ -198,7 +199,7 @@ static void testRetainedStoppedTransport(Client &client)
 {
     J::Session session(client.jingleManager(), Jid(QStringLiteral("peer@example.test/device")), J::Origin::Responder);
     auto      *manager   = new S::Manager;
-    auto       pad       = J::TransportManagerPad::Ptr(manager->pad(&session));
+    auto       pad       = manager->pad(&session);
     auto       transport = manager->newTransport(pad, session.peerRole());
     manager->closeAll();
     check(transport->state() == J::State::Finished, "Manager did not stop a retained shared transport");
@@ -308,12 +309,12 @@ static void testProxyErrorFallsBackToIbb(Client &client)
     J::IBB::Manager ibbManager;
     // As with the S5B fixture manager, this local manager is not registered in
     // the client's transport registry and must not unregister the built-in IBB manager.
-    J::TransportManagerPad::Ptr ibbPad(ibbManager.pad(&f.session));
-    auto                        ibb = ibbManager.newTransport(ibbPad, f.session.role());
+    auto *ibbPad = ibbManager.pad(&f.session);
+    auto  ibb    = ibbManager.newTransport(ibbPad, f.session.role());
     check(bool(ibb), "Could not create real IBB fallback transport");
 
-    auto                appPad = QSharedPointer<TestApplicationPad>::create(&f.session);
-    FallbackApplication app(appPad, { f.transport, ibb });
+    auto                appPad = QPointer<TestApplicationPad>(new TestApplicationPad(&f.session));
+    FallbackApplication app(appPad, { f.transport.data(), ibb });
     check(app.selectNextTransport() && app.transport() == f.transport,
           "Application did not select the S5B transport first");
 
