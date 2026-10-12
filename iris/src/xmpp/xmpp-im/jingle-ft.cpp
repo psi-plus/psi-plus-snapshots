@@ -830,9 +830,12 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
 
     void Application::prepareTransport()
     {
+        QPointer<Application> guard(this);
+        const auto            expected = _transport;
         expectSingleConnection(TransportFeature::Reliable | TransportFeature::DataOriented | TransportFeature::Ordered,
                                [this](Connection::Ptr connection) { d->onConnectionConnected(connection); });
-        _transport->prepare();
+        if (guard && expected && _transport == expected && _state < State::Finishing)
+            expected->prepare();
     }
 
     void Application::setStreamingMode(bool mode)

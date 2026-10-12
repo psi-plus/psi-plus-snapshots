@@ -39,6 +39,7 @@ class QTimer;
 namespace XMPP { namespace Jingle {
 
     class ApplicationManager;
+    class ConnectionWaiter;
     class ApplicationManagerPad : public SessionManagerPad {
         Q_OBJECT
     public:
@@ -374,6 +375,12 @@ namespace XMPP { namespace Jingle {
         QTimer *transportInitTimer = nullptr;
 
     private:
+        friend class ConnectionWaiter;
+        // Attempt identity is independent of transport IQ serialization/ACKs.
+        QPointer<ConnectionWaiter> _connectionWaiter;
+        quint64                    _connectionAttemptRevision = 0;
+        void                       cancelConnectionWaiter();
+
         class ContentModifyTieBreakResolver;
         void ensureContentModifyTieBreakResolver();
         class TransportReplaceTieBreakResolver;

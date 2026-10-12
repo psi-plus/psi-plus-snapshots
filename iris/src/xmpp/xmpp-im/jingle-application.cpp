@@ -142,6 +142,7 @@ namespace XMPP { namespace Jingle {
     Application::~Application()
     {
         setParent(nullptr);
+        cancelConnectionWaiter();
         emit destroying();
         if (_transport) {
             auto transport = _transport;
@@ -258,6 +259,16 @@ namespace XMPP { namespace Jingle {
         std::function<void()>                failed;
         Connection::Ptr                      connection;
         QPointer<Transport>                  transport;
+        QPointer<Application>                application;
+        bool                                 retired = false;
+
+        bool ownsAttempt() const
+        {
+            return !retired && application && application->_connectionWaiter == this
+                && application->state() < State::Finishing;
+        }
+
+        bool current() const { return ownsAttempt() && transport && application->transport() == transport; }
 
         void waitConnected()
         {
@@ -268,64 +279,129 @@ namespace XMPP { namespace Jingle {
 
         void onFailed(const QString &errorMessage = QString())
         {
+            if (!ownsAttempt() || (transport && application->transport() != transport)) {
+                cancel();
+                return;
+            }
             if (!errorMessage.isEmpty())
                 qDebug("ConnectionWaiter: error: %s", qPrintable(errorMessage));
-            if (connection)
-                connection->disconnect(this); // qt signals
-            if (auto t = transport) {
-                t->disconnect(this);
-            }
-            failed();
-            deleteLater();
+            auto callback = std::move(failed);
+            cancel();
+            // Callbacks may destroy the application and this child waiter.
+            if (callback)
+                callback();
         }
 
         void onReady()
         {
-            connection->disconnect(this); // qt signals
-            transport->disconnect(this);
-            ready(connection);
-            deleteLater();
+            if (!current()) {
+                cancel();
+                return;
+            }
+            if (!connection || transport->state() >= State::Finishing) {
+                onFailed(QStringLiteral("Transport retired before its channel became ready"));
+                return;
+            }
+            auto callback = std::move(ready);
+            auto channel  = connection;
+            cancel();
+            if (callback)
+                callback(std::move(channel));
         }
 
     public:
-        ConnectionWaiter(TransportFeatures features, std::function<void(Connection::Ptr)> &&ready,
-                         std::function<void()> &&failed, Application *app) :
-            QObject(app), ready(std::move(ready)), failed(std::move(failed))
+        ConnectionWaiter(std::function<void(Connection::Ptr)> &&ready, std::function<void()> &&failed,
+                         Application *app) :
+            QObject(app), ready(std::move(ready)), failed(std::move(failed)), transport(app->transport()),
+            application(app)
         {
-            auto tr   = app->transport();
-            transport = tr;
-            Q_ASSERT(!tr.isNull());
+        }
 
-            connect(tr.data(), &Transport::stateChanged, this, [this]() {
-                if (transport->state() == State::Finished) {
-                    onFailed(QLatin1String("Transport") + transport->pad()->ns()
-                             + QLatin1String(" is in finished state and no connection => transport failure"));
-                }
+        void cancel()
+        {
+            if (retired)
+                return;
+            // Retire before disconnecting or invoking user code. The remote
+            // acceptor can still be called until deferred QObject destruction.
+            retired = true;
+            if (connection)
+                connection->disconnect(this);
+            if (transport)
+                transport->disconnect(this);
+            if (application) {
+                application->disconnect(this);
+                if (application->_connectionWaiter == this)
+                    application->_connectionWaiter.clear();
+            }
+            deleteLater();
+        }
+
+        void start(TransportFeatures features)
+        {
+            if (!current()) {
+                cancel();
+                return;
+            }
+            connect(application.data(), &Application::stateChanged, this, [this](State state) {
+                if (state >= State::Finishing)
+                    cancel();
             });
+            connect(transport.data(), &QObject::destroyed, this,
+                    [this]() { onFailed(QStringLiteral("Transport destroyed before its channel became ready")); });
+            connect(transport.data(), &Transport::stateChanged, this, [this]() {
+                if (transport && transport->state() >= State::Finishing)
+                    onFailed(QStringLiteral("Transport finished before its channel became ready"));
+            });
+            if (transport->state() >= State::Finishing) {
+                onFailed(QStringLiteral("Cannot wait for a finished transport"));
+                return;
+            }
+            const auto tr = transport;
             if (tr->isLocal()) {
-                connection = tr->addChannel(features, app->contentName());
+                QPointer<ConnectionWaiter> self(this);
+                auto                       channel = tr->addChannel(features, application->contentName());
+                if (!self)
+                    return;
+                if (!current()) {
+                    cancel();
+                    return;
+                }
+                connection = std::move(channel);
                 if (!connection) {
                     onFailed(QString("No channel on %1 transport").arg(tr->pad()->ns()));
                     return;
                 }
                 waitConnected();
+                if (connection->isOpen())
+                    onReady();
             } else {
-                app->transport()->addAcceptor(
-                    features, [this, self = QPointer<ConnectionWaiter>(this)](Connection::Ptr newConnection) {
-                        if (!self || connection)
-                            return false;
-                        connection = newConnection;
-                        if (connection->isOpen())
-                            onReady();
-                        else
-                            waitConnected();
-                        return true;
-                    });
+                tr->addAcceptor(features, [self = QPointer<ConnectionWaiter>(this)](Connection::Ptr channel) {
+                    if (!self || !self->current() || self->connection || !channel)
+                        return false;
+                    if (self->transport->state() >= State::Finishing) {
+                        self->onFailed(QStringLiteral("Incoming channel belongs to a finished transport"));
+                        return false;
+                    }
+                    self->connection = std::move(channel);
+                    self->waitConnected();
+                    if (self->connection->isOpen())
+                        self->onReady();
+                    return true;
+                });
             }
         }
 
         ~ConnectionWaiter() { qDebug("~ConnectionWaiter"); }
     };
+
+    void Application::cancelConnectionWaiter()
+    {
+        const auto waiter = _connectionWaiter;
+        ++_connectionAttemptRevision;
+        _connectionWaiter.clear();
+        if (waiter)
+            waiter->cancel();
+    }
 
     //----------------------------------------------------------------------------
     // Application
@@ -420,10 +496,18 @@ namespace XMPP { namespace Jingle {
             }
             break;
         case State::Active:
-            // Preserve the action priority defined by Action: flush transport
-            // updates before changing media direction.
+            // An established content can switch transports too (e.g. FT from
+            // ICE/SCTP to S5B). The first stanza for a new local transport
+            // MUST be transport-replace, not transport-info, and a remotely
+            // initiated replacement needs transport-accept once prepared.
+            // Flush transport signaling before changing media direction.
             if (_transport->hasUpdates()) {
-                _update = { Action::TransportInfo, Reason() };
+                if (_pendingTransportReplace == PendingTransportReplace::Planned)
+                    _update = { Action::TransportReplace, _transportReplaceReason };
+                else if (inTrReplace && !_transport->isLocal() && _transport->state() == State::ApprovedToSend)
+                    _update = { Action::TransportAccept, Reason() };
+                else
+                    _update = { Action::TransportInfo, Reason() };
             } else if (_requestedSenders && !_sendersUpdateInFlight) {
                 if (*_requestedSenders == _senders)
                     _requestedSenders.reset();
@@ -686,17 +770,31 @@ namespace XMPP { namespace Jingle {
 
     void Application::expectSingleConnection(TransportFeatures features, std::function<void(Connection::Ptr)> &&ready)
     {
-        new ConnectionWaiter(
-            features, std::move(ready),
-            [this, failedTransport = _transport]() {
-                if (!failedTransport || _transport != failedTransport)
+        cancelConnectionWaiter();
+        if (_state >= State::Finishing || !_transport)
+            return;
+        auto waiter = new ConnectionWaiter(
+            std::move(ready),
+            [this, guard = QPointer<Application>(this), failedTransport = _transport,
+             revision = _connectionAttemptRevision]() {
+                if (!guard || _state >= State::Finishing || _connectionAttemptRevision != revision
+                    || (_transport && _transport != failedTransport))
                     return;
-                qDebug("Application::expectSingleConnection: stopping failed %s transport",
-                       qPrintable(failedTransport->pad()->ns()));
-                failedTransport->stop();
+                if (failedTransport) {
+                    qDebug("Application::expectSingleConnection: stopping failed %s transport",
+                           qPrintable(failedTransport->pad()->ns()));
+                    failedTransport->stop();
+                    if (!guard || _state >= State::Finishing || _transport != failedTransport
+                        || _connectionAttemptRevision != revision)
+                        return;
+                }
                 selectNextTransport();
             },
             this);
+        // Install the attempt before channel creation, which may synchronously
+        // connect, fail, replace the transport or destroy the application.
+        _connectionWaiter = waiter;
+        waiter->start(features);
     }
 
     bool Application::isRemote() const { return _pad->session()->role() != _creator; }
@@ -713,6 +811,7 @@ namespace XMPP { namespace Jingle {
         auto failNoTransport = [this, &current]() {
             if (!current())
                 return false;
+            cancelConnectionWaiter();
             if (_transport) {
                 qDebug("Application::selectNextTransport: stopping %s transport", qPrintable(_transport->pad()->ns()));
                 _transport->disconnect(this);
@@ -885,16 +984,20 @@ namespace XMPP { namespace Jingle {
             if (!current() || !replacement)
                 return false;
         }
+        cancelConnectionWaiter();
         ++_transportReplaceGeneration;
 
         // in case we automatically select a new transport on our own we definitely will come up to this point
         if (_transport) {
             if (replacement->isLocal()) {
                 auto ts = _transport->state() == State::Finished ? _transport->prevState() : _transport->state();
-                if (_transport->isRemote() || ts >= State::Unacked) {
-                    // Even when the previous transport still calls itself Unacked,
-                    // this successor has not been sent. It cannot inherit an IQ
-                    // completion belonging to the previous transport instance.
+                if (_transport->isRemote() || ts >= State::Unacked || _state >= State::Connecting) {
+                    // An accepted application (Connecting or Active) has already
+                    // been announced to the peer, even if its old ICE transport
+                    // is still in an early internal state
+                    // and reports a pre-Unacked state. A newly selected local
+                    // transport must be introduced with transport-replace.
+                    // Never inherit an old transport's IQ completion.
                     _pendingTransportReplace = PendingTransportReplace::Planned;
                 }
             } else {

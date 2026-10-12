@@ -119,6 +119,10 @@ add_executable(jingle_ftlifecycle_test ftlifecycle.cpp)
 target_link_libraries(jingle_ftlifecycle_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Network Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
 add_test(NAME jingle_ftlifecycle COMMAND jingle_ftlifecycle_test)
+add_executable(jingle_connectionwaiter_test connectionwaiter.cpp)
+target_link_libraries(jingle_connectionwaiter_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core)
+add_test(NAME jingle_connectionwaiter COMMAND jingle_connectionwaiter_test)
+set_tests_properties(jingle_connectionwaiter PROPERTIES TIMEOUT 15)
 add_executable(jingle_ibblifecycle_test ibblifecycle.cpp)
 target_link_libraries(jingle_ibblifecycle_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Network Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
