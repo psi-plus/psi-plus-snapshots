@@ -207,7 +207,7 @@ public:
 #elif defined(Q_OS_UNIX)
         reqelem << "osssrc" << "osssink";
 #elif defined(Q_OS_WIN)
-        reqelem << "directsoundsrc" << "directsoundsink" << "ksvideosrc";
+        reqelem << "directsoundsrc" << "directsoundsink" << QLatin1String(PSIMEDIA_WINDOWS_VIDEO_SOURCE);
 #endif
 
         for (const QString &name : std::as_const(reqelem)) {

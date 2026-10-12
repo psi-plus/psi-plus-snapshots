@@ -19,7 +19,10 @@ option(PSIMEDIA_ENABLE_SRTP "Enable direct libSRTP packet protection" ON)
 
 set(PSIMEDIA_SRTP_TARGET "")
 if(PSIMEDIA_ENABLE_SRTP)
-    pkg_check_modules(PSIMEDIA_SRTP QUIET IMPORTED_TARGET libsrtp2>=2.0)
+    # An explicit SDK takes precedence over pkg-config from another toolchain.
+    if(NOT SRTP_ROOT AND "$ENV{SRTP_ROOT}" STREQUAL "")
+        pkg_check_modules(PSIMEDIA_SRTP QUIET IMPORTED_TARGET libsrtp2>=2.0)
+    endif()
     if(TARGET PkgConfig::PSIMEDIA_SRTP)
         set(PSIMEDIA_SRTP_TARGET PkgConfig::PSIMEDIA_SRTP)
     else()
@@ -68,6 +71,7 @@ pkg_check_modules(GSTMODULES REQUIRED
                     gstreamer-base-1.0
                     gstreamer-audio-1.0
                     gstreamer-video-1.0
+                    gstreamer-rtp-1.0
 )
 
 set(SOURCES
@@ -146,29 +150,20 @@ set(CMAKE_MODULE_LINKER_FLAGS
 )
 
 if(WIN32)
-    list(APPEND PROJECT_LDFLAGS
-        gstaudio-1.0
-        gstrtp-1.0
-        opus
-        setupapi
-        ksuser
-        dsound
-        ole32
-    )
-    if(USE_MXE OR MSVC)
-        list(APPEND PROJECT_LDFLAGS
-            amstrmid
-        )
-    endif()
-    if(NOT MSVC)
-        list(APPEND PROJECT_LDFLAGS
-            dxerr9
-        )
+    set(PSIMEDIA_WINDOWS_VIDEO_SOURCE "mfvideosrc" CACHE STRING "Windows camera source element")
+    set_property(CACHE PSIMEDIA_WINDOWS_VIDEO_SOURCE PROPERTY STRINGS mfvideosrc ksvideosrc)
+    if(NOT PSIMEDIA_WINDOWS_VIDEO_SOURCE MATCHES "^(mfvideosrc|ksvideosrc)$")
+        message(FATAL_ERROR "PSIMEDIA_WINDOWS_VIDEO_SOURCE must be mfvideosrc or ksvideosrc")
     endif()
 endif()
 
 set(PROVIDERLIB gstprovidersrc)
 add_library(${PROVIDERLIB} STATIC ${SOURCES})
+
+if(WIN32)
+    target_compile_definitions(${PROVIDERLIB} PRIVATE
+        PSIMEDIA_WINDOWS_VIDEO_SOURCE="${PSIMEDIA_WINDOWS_VIDEO_SOURCE}")
+endif()
 
 if(${QT_DEFAULT_MAJOR_VERSION} GREATER_EQUAL 6)
     set_target_properties(${PROVIDERLIB} PROPERTIES POSITION_INDEPENDENT_CODE ON)
