@@ -169,7 +169,8 @@ proposal reuses it:
 
 - `SXE::Manager` implements `parseProposal()`/`serializeProposal()` for its description
   namespace (the minimal profile's description has no children); the payload type is
-  `SXE::Proposal`. Using proposals for whiteboards in Psi is still to be done.
+  `SXE::Proposal`. Psi proposes whiteboards this way (`WbManager`); a proposal can also list RTP
+  and SXE descriptions together, which Psi does not use yet.
 - All online resources of the peer receive the proposal and answer `<ringing/>`. The resource
   that sends `<proceed/>` becomes the Jingle peer; the initiator then sends `session-initiate`
   with the proposal id as `sid`. `<reject/>`, `<retract/>` and `<finish/>` follow the same rules
