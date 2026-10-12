@@ -59,25 +59,24 @@ build jobs: push events check the pushed commits, and PR events check the head
 commit. The policy check still runs for the unbracketed phrase. Manual workflow
 runs ignore this marker.
 
-The reusable `.github/workflows/windows.yml` builds the two modern profiles with
+The reusable `.github/workflows/windows.yml` builds Windows MSVC / Qt6 with
 ccache in ordinary CI; it can also be dispatched alone. The manual
-`Windows packaging` workflow adds the Win7 profile and uploads plugin artifacts
-for all three profiles. It does not publish a release.
+`Windows packaging` workflow adds the Win7 / Qt5 profile and uploads plugin
+artifacts for both profiles. It does not publish a release.
 
 | Profile | Compiler / Qt | GStreamer | Runs in |
 | --- | --- | --- | --- |
-| Modern MSYS2 | Current MINGW64 compiler / Qt5 | Current MSYS2 packages; installed versions are logged | CI and packaging |
-| Modern MSVC | Visual Studio / Qt 6.8.3 | Official MSVC runtime and SDK 1.28.7 | CI and packaging |
-| Win7 MSVC | v142 (14.29) / Qt 5.15.2 | Official MSVC runtime and SDK 1.24.13 | Packaging only |
+| Windows MSVC / Qt6 | Visual Studio / Qt 6.8.3 | Official MSVC runtime and SDK 1.28.7 | CI and packaging |
+| Windows MSVC / Qt5 / Win7 | v142 (14.29) / Qt 5.15.2 | Official MSVC runtime and SDK 1.24.13 | Packaging only |
 
-The Win7 profile uses the older native SDK rather than mixing it with current
-MSYS2 GLib/Qt runtimes. Its compiler and SRTP/OpenSSL dependencies target
+The Win7 profile keeps Qt5 and the older native GStreamer SDK. Its compiler
+and SRTP/OpenSSL dependencies target
 `_WIN32_WINNT=0x0601` and `WINVER=0x0601`. GStreamer 1.26 and newer standard
 Windows binaries target Windows 10, so the Win7 profile must keep its separate
 SDK. These CI jobs run on Windows Server 2022; they verify compilation, linking
 and media regressions, and do not replace a smoke test on Windows 7 SP1.
 
-Windows capture defaults to `mfvideosrc`. All three profiles check the selected
+Windows capture defaults to `mfvideosrc`. Both profiles check the selected
 GStreamer element before building, then run the payload, Opus and SRTP tests.
 The MSVC installers are verified against upstream SHA256 files. Artifacts contain
 the plugin and its import report; deployment still needs the matching Qt and
