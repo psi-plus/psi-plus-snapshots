@@ -78,7 +78,7 @@ and media regressions, and do not replace a smoke test on Windows 7 SP1.
 
 Windows capture defaults to `mfvideosrc`. Both profiles check the selected
 GStreamer element before building, then run the payload, Opus and SRTP tests.
-The MSVC installers are verified against upstream SHA256 files. Artifacts contain
+The MSVC installers are verified against the SHA256 values in the dependency lock. Artifacts contain
 the plugin and its import report; deployment still needs the matching Qt and
 GStreamer runtimes, including the Media Foundation plugin.
 
@@ -86,3 +86,41 @@ For an older/custom Windows SDK without Media Foundation, configure
 `-DPSIMEDIA_WINDOWS_VIDEO_SOURCE=ksvideosrc`. The element is selected at build
 time; PsiMedia does not silently choose another backend at runtime. An explicit
 `SRTP_ROOT` selects that SDK in preference to a different pkg-config installation.
+
+## Dependency lock
+
+`dependencies.lock.json` is the single source for the Psi API repository/commit
+and each Windows profile's Qt version/architecture, MSVC toolset and GStreamer
+installer names, URLs and SHA256 values. Update this file when changing a managed
+dependency; do not copy source revisions or SDK versions into workflow YAML.
+The existing distribution Qt/GStreamer packages and the runner's vcpkg baseline
+remain system dependencies rather than exact source locks.
+
+All CI and packaging builds resolve the lock through
+`.github/actions/load-dependencies` after checkout. The downloaded Psi tree must
+have the exact locked Git HEAD and unmodified `plugins/include` headers.
+The optional `psi_ref` input defaults to the lock and rejects a conflicting ref,
+including branch names, instead of silently selecting another API revision.
+These checks govern CI; normal local builds may still use their selected Psi API.
+
+GStreamer installer hashes were obtained from the official per-file
+`.sha256sum` files beside the installers. Successful downloads are verified before
+execution and cached separately from compiler objects. The cache key depends
+only on the GStreamer coordinates and hashes, so a Psi or Qt update does not
+invalidate it. Cache hits are verified again and need no upstream requests.
+On a cold cache, transient HTTP errors and interrupted transfers are retried up
+to five times with increasing delay. Failed partial downloads and checksum
+mismatches never become cached installers. A persistent upstream outage still
+fails the build after the bounded retries.
+
+The CI policy job runs dependency and downloader regression checks before media
+builds. To run them locally:
+
+```sh
+python3 -B -m unittest discover -s tests/dependency_lock -p 'test_*.py' -v
+pwsh -NoProfile -File tests/dependency_lock/windows-installers.ps1
+```
+
+These tests use small isolated fixtures and fake HTTP/installer calls; they do
+not download SDKs or execute Windows installers. Native Windows compilation and
+runtime loading remain covered by the Windows build jobs.

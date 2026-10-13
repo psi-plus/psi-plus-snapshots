@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "psi": {
+    "repository": "psi-im/psi",
+    "commit": "caa631fd2b56d38a435b816cc6e4098dfe63c823"
+  },
+  "windows": {
+    "modern": {
+      "qt": {
+        "major": 6,
+        "version": "6.8.3",
+        "arch": "win64_msvc2022_64"
+      },
+      "msvc_toolset": "",
+      "gstreamer": {
+        "version": "1.28.7",
+        "installer_kind": "inno",
+        "base_url": "https://gstreamer.freedesktop.org/pkg/windows/1.28.7/msvc",
+        "installers": [
+          {
+            "file": "gstreamer-1.0-msvc-x86_64-1.28.7.exe",
+            "sha256": "032fc6062b8539838fc8da22589cb9b24c5d820baa7f8cc160af9ea08395badf"
+          }
+        ]
+      }
+    },
+    "win7": {
+      "qt": {
+        "major": 5,
+        "version": "5.15.2",
+        "arch": "win64_msvc2019_64"
+      },
+      "msvc_toolset": "14.29",
+      "gstreamer": {
+        "version": "1.24.13",
+        "installer_kind": "msi",
+        "base_url": "https://gstreamer.freedesktop.org/pkg/windows/1.24.13/msvc",
+        "installers": [
+          {
+            "file": "gstreamer-1.0-msvc-x86_64-1.24.13.msi",
+            "sha256": "66915d82adda34189703c36a5d2ef145d2e3afb7afc12c66fcf2ea506e2466d2"
+          },
+          {
+            "file": "gstreamer-1.0-devel-msvc-x86_64-1.24.13.msi",
+            "sha256": "0afb4394c2cba3999c0f5e74f28c2ac5d98f03131140e09246d4dcd60a0a0395"
+          }
+        ]
+      }
+    }
+  }
+}
