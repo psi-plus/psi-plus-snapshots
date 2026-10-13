@@ -30,12 +30,34 @@ if ($LASTEXITCODE -ne 0 -or ($versionOutput -join "`n") -notmatch [regex]::Escap
 }
 Invoke-Checked $inspect @('mfvideosrc')
 
-$triplet = if ($BuildProfile -eq 'win7') { 'x64-win7' } else { 'x64-windows' }
+# The modern MSVC profile uses the exact dynamic, release-only triplet from
+# psi-im/qca/.github/vcpkg/triplets/x64-windows-release.cmake.
+# Windows 7 still requires its own v142 ABI and minimum OS version.
+$triplet = if ($BuildProfile -eq 'win7') { 'x64-win7' } else { 'x64-windows-release' }
 $vcpkg = Join-Path $env:VCPKG_INSTALLATION_ROOT 'vcpkg.exe'
-# The legacy triplet also builds SRTP/OpenSSL with v142 and a Win7 API baseline.
-Invoke-Checked $vcpkg @('install', "libsrtp[openssl]:$triplet", 'pkgconf:x64-windows',
-    "--overlay-triplets=$source/ci/windows")
+# QCA and PsiMedia use the same vcpkg port and release-only ABI. vcpkg's
+# binary cache archives both OpenSSL and the libSRTP that links against it.
+# Keep the legacy Win7 profile independent: it uses the v142 overlay triplet.
+$packages = @("libsrtp[openssl]:$triplet", 'pkgconf:x64-windows')
+if ($BuildProfile -eq 'modern') {
+    $cache = Join-Path $env:RUNNER_TEMP 'vcpkg-binary-cache'
+    New-Item -ItemType Directory -Force -Path $cache | Out-Null
+    $env:VCPKG_BINARY_SOURCES = "clear;files,$cache,readwrite"
+    $packages = @("openssl:$triplet") + $packages
+}
+Invoke-Checked $vcpkg (@('install') + $packages + @("--overlay-triplets=$source/ci/windows"))
 $srtp = Join-Path $env:VCPKG_INSTALLATION_ROOT "installed/$triplet"
+if ($BuildProfile -eq 'modern') {
+    if (Test-Path (Join-Path $srtp 'debug')) {
+        throw 'Release-only QCA triplet unexpectedly installed Debug libraries'
+    }
+    foreach ($library in @('libcrypto-*-x64.dll', 'libssl-*-x64.dll')) {
+        $matches = @(Get-ChildItem (Join-Path $srtp 'bin') -Filter $library -File)
+        if ($matches.Count -ne 1) { throw "Expected exactly one $library in release-only OpenSSL" }
+        Write-Host "QCA-compatible OpenSSL runtime: $($matches[0].Name)"
+    }
+    Invoke-Checked $vcpkg @('list', "openssl:$triplet")
+}
 $pkgconfFiles = @(Get-ChildItem (Join-Path $env:VCPKG_INSTALLATION_ROOT 'installed/x64-windows/tools') `
     -Filter pkgconf.exe -Recurse -File)
 if ($pkgconfFiles.Count -ne 1) { throw 'Expected one vcpkg pkgconf executable' }

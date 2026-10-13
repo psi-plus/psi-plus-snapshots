@@ -69,6 +69,20 @@ artifacts for both profiles. It does not publish a release.
 | Windows MSVC / Qt6 | Visual Studio / Qt 6.8.3 | Official MSVC runtime and SDK 1.28.7 | CI and packaging |
 | Windows MSVC / Qt5 / Win7 | v142 (14.29) / Qt 5.15.2 | Official MSVC runtime and SDK 1.24.13 | Packaging only |
 
+For Windows MSVC / Qt6, OpenSSL now uses the same **vcpkg
+`x64-windows-release` triplet** as psi-im/qca
+(`.github/vcpkg/triplets/x64-windows-release.cmake` there;
+`ci/windows/x64-windows-release.cmake` here). Both use dynamic CRT,
+dynamic OpenSSL DLLs and Release-only dependencies. PsiMedia's libSRTP links
+against OpenSSL installed for this same triplet, avoiding a redundant Debug
+OpenSSL build. A vcpkg binary cache keyed by the vcpkg Git revision, MSVC
+toolset and triplet stores the compiled OpenSSL/libSRTP dependencies; compiler
+ccache is independent of this cache. GitHub caches are scoped to a repository,
+so the initial PsiMedia run may still be cold even when QCA is warm. The
+OpenSSL version comes from the runner's vcpkg ports baseline, just as in QCA;
+synchronize the vcpkg revision when strict cross-repository version identity
+is required.
+
 The Win7 profile keeps Qt5 and the older native GStreamer SDK. Its compiler
 and SRTP/OpenSSL dependencies target
 `_WIN32_WINNT=0x0601` and `WINVER=0x0601`. GStreamer 1.26 and newer standard
