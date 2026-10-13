@@ -77,6 +77,27 @@ namespace XMPP { namespace Jingle {
 
         std::optional<Stanza::Error> lastError() const;
 
+        /// Authentication of the session's DTLS fingerprints by an end-to-end method, set by a signaling
+        /// filter such as OmemoDtlsVerification (docs/jingle-e2e.md).
+        struct PeerAuthentication {
+            QString    method;         // e.g. "omemo"
+            quint32    deviceId = 0;   // the peer's device
+            QByteArray identityKey;    // the device's identity key
+            int        trustLevel = 0; // XMPP::EncryptionTrustLevel
+            bool       isValid() const { return !method.isEmpty(); }
+        };
+        PeerAuthentication peerAuthentication() const;
+        void               setPeerAuthentication(const PeerAuthentication &authentication);
+
+        /// Local policy: the session uses only end-to-end protected transports. A signaling filter that
+        /// can protect them refuses everything else with security-error; without one nothing is sent.
+        void setEndToEndRequired(bool required);
+        bool isEndToEndRequired() const;
+        /// Local wish: protect what can be protected (e.g. JET for files) but run unprotected otherwise.
+        /// A session that requires end-to-end encryption prefers it as well.
+        void setEndToEndPreferred(bool preferred);
+        bool isEndToEndPreferred() const;
+
         TieBreaker       *tieBreaker();
         const TieBreaker *tieBreaker() const;
 
@@ -143,6 +164,7 @@ namespace XMPP { namespace Jingle {
         void activated();
         void terminated();
         void newContentReceived();
+        void peerAuthenticationChanged();
 
     private:
         friend class Application;

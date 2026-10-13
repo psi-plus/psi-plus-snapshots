@@ -69,6 +69,8 @@ namespace XMPP { namespace Jingle {
         QString            reasonText;
         bool               tieBreak = false;
         QString            migratedTo;
+        QDomDocument       extensionDocument; // owns the copies in extensions
+        QList<QDomElement> extensions;
     };
 
     MessageInitiation::MessageInitiation() = default;
@@ -148,9 +150,10 @@ namespace XMPP { namespace Jingle {
                 continue;
             }
 
-            // Unknown JMI-level extensions are intentionally not retained. Iris is
-            // an endpoint, not a lossless XML proxy; application payloads are routed
-            // through their registered codecs instead.
+            // Foreign-namespace extensions are kept for their consumers; unknown JMI
+            // elements are not. Iris is an endpoint, not a lossless XML proxy.
+            if (!child.namespaceURI().isEmpty() && child.namespaceURI() != JmiNs && child.namespaceURI() != JingleNs)
+                result.addExtension(child);
         }
 
         return result.isValid() ? result : MessageInitiation();
@@ -216,6 +219,16 @@ namespace XMPP { namespace Jingle {
 
     void MessageInitiation::setMigratedTo(const QString &id) { ensureD()->migratedTo = id; }
 
+    QList<QDomElement> MessageInitiation::extensions() const { return d ? d->extensions : QList<QDomElement>(); }
+
+    void MessageInitiation::addExtension(const QDomElement &element)
+    {
+        if (element.isNull())
+            return;
+        auto data = ensureD();
+        data->extensions.append(data->extensionDocument.importNode(element, true).toElement());
+    }
+
     QDomElement MessageInitiation::toXml(QDomDocument *doc, const DescriptionSerializer &serializer) const
     {
         if (!doc || !isValid())
@@ -264,6 +277,9 @@ namespace XMPP { namespace Jingle {
             migrated.setAttribute(QStringLiteral("to"), d->migratedTo);
             element.appendChild(migrated);
         }
+
+        for (const auto &extension : d->extensions)
+            element.appendChild(doc->importNode(extension, true));
 
         return element;
     }

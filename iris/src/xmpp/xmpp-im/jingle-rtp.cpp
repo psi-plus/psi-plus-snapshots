@@ -1001,7 +1001,7 @@ void Manager::setJingleManager(XMPP::Jingle::Manager *manager)
 void Manager::setMediaProvider(std::shared_ptr<MediaProvider> provider) { provider_ = std::move(provider); }
 void Manager::setTransportNamespaces(const QStringList &transports) { transports_ = transports; }
 
-QString Manager::propose(const Jid &peer, MediaSet media)
+QString Manager::propose(const Jid &peer, MediaSet media, const QList<MessageInitiation::Description> &companions)
 {
     if (!jingle_ || !jingle_->messageInitiationEnabled() || !peer.isValid() || media == MediaSet())
         return {};
@@ -1018,6 +1018,8 @@ QString Manager::propose(const Jid &peer, MediaSet media)
         initiation.addDescription(Description::ns(), Proposal { Media::Audio });
     if (media.testFlag(Media::Video))
         initiation.addDescription(Description::ns(), Proposal { Media::Video });
+    for (const auto &companion : companions)
+        initiation.addDescription(companion.applicationNamespace, companion.data);
 
     if (!jingle_->sendMessageInitiation(Jid(peer.bare()), initiation))
         return {};

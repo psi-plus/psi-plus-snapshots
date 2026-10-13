@@ -7,6 +7,7 @@
 #include "jingle-rtp-info.h"
 #include "jingle-rtp-negotiation.h"
 #include "jingle-rtp-srtp.h"
+#include "xmpp_jinglemessage.h"
 #include <QObject>
 #include <QPointer>
 #include <QSet>
@@ -335,8 +336,9 @@ public:
     void setTransportNamespaces(const QStringList &);
 
     // Start an XEP-0353 proposal for a new RTP call. The returned UUID is also
-    // the Jingle SID that must be used after <proceed/>.
-    QString propose(const Jid &peer, MediaSet media);
+    // the Jingle SID that must be used after <proceed/>. @a companions are descriptions of other
+    // applications proposed with the call (a whiteboard); such a proposal is a mixed one for the peer.
+    QString propose(const Jid &peer, MediaSet media, const QList<MessageInitiation::Description> &companions = {});
 
     Application *createOutgoing(Session *, Media media, Origin senders = Origin::Both, const QString &contentName = {});
     Application *createOutgoing(Session *, const QString &media, Origin senders = Origin::Both,

@@ -152,6 +152,30 @@ public:
      */
     EncryptionJob *sendEmptyMessage(const Jid &recipient, uint32_t deviceId);
 
+    /**
+     * Encrypt one element for a peer outside of a message, e.g. a DTLS fingerprint or a JET
+     * transport key in a Jingle session (see docs/jingle-e2e.md).
+     *
+     * Only devices of @a recipient are targets, and only @a devices of them when not empty; the
+     * account's own devices are not. The job's stanza() is the profile's <encrypted/> element.
+     *
+     * Legacy profile: the text of @a content is the payload, as the fingerprint of Conversations'
+     * DTLS verification. A null @a content makes a key transport message; its 16-byte key and
+     * 12-byte IV are returned in metadata().details as "transportKey" and "transportIv".
+     * OMEMO 2: @a content is carried in an SCE envelope bound to both bare JIDs; it must not be null.
+     */
+    EncryptionJob *encryptElement(const Jid &recipient, OmemoProtocol protocol, const QDomElement &content,
+                                  const QList<uint32_t> &devices = {});
+
+    /**
+     * Decrypt an <encrypted/> element of either profile from @a sender, as made by encryptElement()
+     * or a compatible client. The job's stanza() is the content: for the legacy profile a
+     * <payload/> element with the payload text, or a null element for a key transport message
+     * (key and IV in details as above); for OMEMO 2 the element from the envelope. metadata()
+     * gives the sender device, its identity key and details "trustLevel" (EncryptionTrustLevel).
+     */
+    EncryptionJob *decryptElement(const Jid &sender, const QDomElement &encrypted);
+
     /** Clear all local OMEMO state. Server-side PEP data is intentionally untouched. */
     bool resetAllLocally();
 

@@ -50,6 +50,7 @@ namespace Jingle {
 
     class Manager;
     class Session;
+    class SignalingFilter;
     class TieBreaker;
     namespace RTP {
         class Manager;
@@ -410,6 +411,13 @@ namespace Jingle {
         void setMessageInitiationEnabled(bool enabled);
         bool sendMessageInitiation(const Jid &to, const MessageInitiation &initiation);
 
+        /// Filters are not owned; remove them before they are destroyed.
+        void addSignalingFilter(SignalingFilter *filter);
+        void removeSignalingFilter(SignalingFilter *filter);
+        /// Internal: sends a Jingle IQ through the filters; @a send gets the IQ to send or an error.
+        void sendFiltered(const Jid &to, const QDomElement &iq,
+                          std::function<void(const QDomElement &, const std::optional<XMPP::Stanza::Error> &)> send);
+
         // Source-compatible shortcuts for the original local-only XEP-0358 API.
         // Durable/PubSub publications should use publicationManager() directly.
         using PublishedSessionFactory = XMPP::Jingle::PublishedSessionFactory;
@@ -435,12 +443,36 @@ namespace Jingle {
         void        shutdown();
         void        clientPresenceAvailable();
         Session    *incomingSessionInitiate(const Jid &from, const Jingle &jingle, const QDomElement &jingleEl);
+        void        receiveFiltered(const QDomElement &iq);
 
         class Private;
         std::unique_ptr<Private> d;
     };
 
     Origin negateOrigin(Origin o);
+
+    /**
+     * Asynchronous rewriting of Jingle signaling, e.g. to protect DTLS fingerprints end to end
+     * (docs/jingle-e2e.md). Filters run in registration order on every <jingle/> of an IQ set. While
+     * a filter works on an IQ of a session, later IQs of that session in the same direction wait,
+     * so the order on the wire and in processing is kept. Without filters nothing is delayed.
+     */
+    class IRIS_EXPORT SignalingFilter {
+    public:
+        /// Completion of a filter: the rewritten <jingle/> (a null element keeps the input), or an
+        /// error. An incoming IQ is then answered with the error; an outgoing one fails with it.
+        using Done = std::function<void(const QDomElement &jingle, const std::optional<XMPP::Stanza::Error> &error)>;
+
+        virtual ~SignalingFilter();
+        /// Return true to take @a jingle from @a from and call @a done exactly once, maybe later.
+        virtual bool filterIncoming(const Jid &from, const QDomElement &jingle, const Done &done);
+        /// The same for a <jingle/> going to @a to.
+        virtual bool filterOutgoing(const Jid &to, const QDomElement &jingle, const Done &done);
+        /// Add extensions to an outgoing XEP-0353 message.
+        virtual void decorateMessageInitiation(const Jid &to, MessageInitiation &initiation);
+        /// Service discovery features the filter adds to Manager::discoFeatures().
+        virtual QStringList discoFeatures() const;
+    };
 
 } // namespace Jingle
 } // namespace XMPP

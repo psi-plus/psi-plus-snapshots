@@ -16,14 +16,15 @@
 #include "avcallpolicy.h"
 #include "mediadevicewatcher.h"
 #include "psiaccount.h"
+#include "psiencryptioncontroller.h"
 #include "psimediajingle.h"
 #include "psimediajinglecapabilitytransaction.h"
 
 #include <iris/dtls.h>
 #include <iris/jingle-ice.h>
 #include <iris/jingle-rtp-description.h>
-#include <iris/xmpp-im/jingle-rtp.h>
 #include <iris/jingle-session.h>
+#include <iris/xmpp-im/jingle-rtp.h>
 #include <iris/xmpp-im/xmpp_jinglemessage.h>
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_message.h>
@@ -44,6 +45,17 @@ namespace ICE    = XMPP::Jingle::ICE;
 
 static MediaConfiguration *g_config = new MediaConfiguration;
 
+// The user's policy for this contact: calls only with end-to-end encryption verified by OMEMO.
+static bool endToEndRequired(PsiAccount *account, const XMPP::Jid &peer)
+{
+    return account && account->encryptionController() && account->encryptionController()->jingleEndToEndRequired(peer);
+}
+
+// Whiteboards added to a call with an OMEMO contact protect their payload when possible.
+static bool endToEndPreferred(PsiAccount *account, const XMPP::Jid &peer)
+{
+    return account && account->encryptionController() && account->encryptionController()->jingleEndToEndPreferred(peer);
+}
 static QString resolvedAudioInputDevice()
 {
     if (!g_config->liveInput)
@@ -120,10 +132,12 @@ public:
     QList<AvCall *>                     sessions;
     QList<AvCall *>                     pending;
     QHash<QString, AvCall *>            jmiCalls;
+    QStringList                         companions;
 
 private slots:
     void incomingSession(Jingle::Session *session);
-    void incomingRtpProposal(const XMPP::Message &message, const QString &id, RTP::MediaSet media);
+    void incomingRtpProposal(const XMPP::Message &message, const QString &id, RTP::MediaSet media,
+                             const QStringList &companions = {});
     void incomingMessageInitiation(const XMPP::Message &message, const Jingle::MessageInitiation &initiation);
 };
 
@@ -175,6 +189,13 @@ public:
         return true;
     }
 
+    // A content of another application the call may carry, answered by the call's owner.
+    bool isCompanion(Jingle::Application *app) const
+    {
+        return manager && app && !dynamic_cast<RTP::Application *>(app) && app->pad()
+            && manager->companions.contains(app->pad()->ns());
+    }
+
     bool proposalMatches(Jingle::Session *incomingSession) const
     {
         if (jmiId.isEmpty())
@@ -185,6 +206,8 @@ public:
         bool audio = false;
         bool video = false;
         for (auto app : incomingSession->contentList()) {
+            if (isCompanion(app))
+                continue;
             const auto rtp = dynamic_cast<RTP::Application *>(app);
             if (!rtp)
                 return false;
@@ -233,11 +256,15 @@ public:
         session  = incomingSession;
         peer     = session->peer();
         incoming = true;
+        session->setEndToEndRequired(endToEndRequired(manager ? manager->pa : nullptr, peer));
+        session->setEndToEndPreferred(endToEndPreferred(manager ? manager->pa : nullptr, peer));
         setupSession();
 
         bool audio = false;
         bool video = false;
         for (auto app : session->contentList()) {
+            if (isCompanion(app))
+                continue;
             auto rtp = dynamic_cast<RTP::Application *>(app);
             if (!rtp)
                 return false;
@@ -268,9 +295,9 @@ public:
         incoming = session->role() == Jingle::Origin::Responder;
         joined   = true;
         // Nobody consented to capture yet: the user switches the microphone or camera on.
-        microphoneWanted    = false;
-        cameraWanted        = false;
-        signalingActive     = session->state() == Jingle::State::Active;
+        microphoneWanted = false;
+        cameraWanted     = false;
+        signalingActive  = session->state() == Jingle::State::Active;
         manager->applyNetworkConfiguration();
         setupSession();
         return true;
@@ -321,7 +348,7 @@ public:
             if (needVideo)
                 media |= RTP::Media::Video;
 
-            jmiId = manager->rtpManager->propose(peer, media);
+            jmiId = manager->rtpManager->propose(peer, media, proposalCompanions);
             if (!jmiId.isEmpty()) {
                 // XEP-0353 proposes to the peer's bare JID. The resource that
                 // answers with <proceed/> becomes the actual Jingle peer.
@@ -344,6 +371,10 @@ public:
         manager->applyNetworkConfiguration();
         session = jmiId.isEmpty() ? manager->jingleManager->newSession(peer)
                                   : manager->jingleManager->newSession(peer, jmiId);
+        if (session) {
+            session->setEndToEndRequired(endToEndRequired(manager->pa, peer));
+            session->setEndToEndPreferred(endToEndPreferred(manager->pa, peer));
+        }
         if (!session) {
             if (!jmiId.isEmpty() && jmiProceedSent)
                 sendJmiFinish(QStringLiteral("expired"), QString());
@@ -383,6 +414,10 @@ public:
             fail(errorString.isEmpty() ? tr("Unable to initialize the media backend.") : errorString);
             return;
         }
+        QPointer<AvCall> guard(q);
+        emit             q->sessionAboutToStart(session);
+        if (!guard || !session || session->state() != Jingle::State::Created)
+            return;
         session->initiate();
     }
 
@@ -450,6 +485,15 @@ public:
             }
         }
         syncAudioDirection();
+        QPointer<AvCall> guard(q);
+        emit             q->sessionAboutToStart(session);
+        if (!guard || !session || session->state() != Jingle::State::Created)
+            return;
+        const auto contents = session->contentList();
+        for (auto app : contents) {
+            if (!dynamic_cast<RTP::Application *>(app) && app->state() == Jingle::State::Created)
+                app->remove(Jingle::Reason::Decline, QStringLiteral("Declined locally"));
+        }
         session->accept();
     }
 
@@ -619,7 +663,7 @@ public:
     // Stops sending the screen but keeps the content: sharing again reuses it with a new source.
     void stopScreenSharing()
     {
-        const auto content = screenContent;
+        const auto content    = screenContent;
         const bool wasSharing = !screenSource.isEmpty();
         screenSource.clear();
         screenDirection.setLocalSending(false);
@@ -673,15 +717,18 @@ public:
             if (!guard)
                 continue;
             if (rtp->media() == QLatin1String("video") && rtp->state() < Jingle::State::Finishing) {
-                const bool receive = AvCallPolicy::allowsSender(rtp->senders(), AvCallPolicy::peerRole(session->role()));
+                const bool receive
+                    = AvCallPolicy::allowsSender(rtp->senders(), AvCallPolicy::peerRole(session->role()));
                 const bool presentation = rtp != cameraContent
                     && (rtp->contentName().startsWith(QStringLiteral("screen-"))
                         || (cameraContent && !rtp->contentName().startsWith(QStringLiteral("camera-"))));
                 auto widget = receive ? (presentation ? presentationWidget : videoWidget) : nullptr;
                 setPsiMediaJingleContentVideoOutput(session, rtp->contentName(), widget);
                 if (widget) {
-                    if (presentation) displayedScreen = rtp;
-                    else displayedCamera = rtp;
+                    if (presentation)
+                        displayedScreen = rtp;
+                    else
+                        displayedCamera = rtp;
                 }
             }
         }
@@ -814,10 +861,13 @@ private slots:
         if (changed && state >= Jingle::State::Finishing
             && (changed == displayedCamera || changed == displayedScreen)) {
             const bool presentation = changed == displayedScreen;
-            if (presentation) displayedScreen.clear();
-            else displayedCamera.clear();
+            if (presentation)
+                displayedScreen.clear();
+            else
+                displayedCamera.clear();
             emit q->incomingVideoRemoved(presentation);
-            if (!guard) return;
+            if (!guard)
+                return;
         }
         if (changed && changed == screenContent && state == Jingle::State::Active)
             emit q->screenSharingStarted();
@@ -851,18 +901,23 @@ private slots:
     void applicationSendersChanged(Jingle::Origin)
     {
         QPointer<AvCallPrivate> guard(this);
-        auto changed = qobject_cast<RTP::Application *>(sender());
-        if (changed && session && !AvCallPolicy::allowsSender(changed->senders(), AvCallPolicy::peerRole(session->role()))
+        auto                    changed = qobject_cast<RTP::Application *>(sender());
+        if (changed && session
+            && !AvCallPolicy::allowsSender(changed->senders(), AvCallPolicy::peerRole(session->role()))
             && (changed == displayedCamera || changed == displayedScreen)) {
             const bool presentation = changed == displayedScreen;
-            if (presentation) displayedScreen.clear();
-            else displayedCamera.clear();
+            if (presentation)
+                displayedScreen.clear();
+            else
+                displayedCamera.clear();
             setPsiMediaJingleContentVideoOutput(session, changed->contentName(), nullptr);
             emit q->incomingVideoRemoved(presentation);
-            if (!guard) return;
+            if (!guard)
+                return;
         }
         wireApplications();
-        if (!guard) return;
+        if (!guard)
+            return;
         if (active)
             syncActiveTransmit();
         else
@@ -888,41 +943,44 @@ private slots:
     }
 
 public:
-    AvCall                   *q       = nullptr;
-    AvCallManagerPrivate     *manager = nullptr;
-    QPointer<Jingle::Session> session;
-    XMPP::Jid                 peer;
-    AvCall::Mode              mode    = AvCall::Audio;
-    int                       bitrate = -1;
-    QString                   errorString;
-    PsiMedia::VideoWidget    *videoWidget         = nullptr;
-    PsiMedia::VideoWidget     *presentationWidget  = nullptr;
+    AvCall                    *q       = nullptr;
+    AvCallManagerPrivate      *manager = nullptr;
+    QPointer<Jingle::Session>  session;
+    XMPP::Jid                  peer;
+    AvCall::Mode               mode    = AvCall::Audio;
+    int                        bitrate = -1;
+    QString                    errorString;
+    PsiMedia::VideoWidget     *videoWidget        = nullptr;
+    PsiMedia::VideoWidget     *presentationWidget = nullptr;
     QPointer<RTP::Application> cameraContent;
     QPointer<RTP::Application> screenContent;
     QPointer<RTP::Application> displayedCamera;
     QPointer<RTP::Application> displayedScreen;
     QString                    screenSource;
-    bool                      incoming            = false;
-    bool                      joined              = false;
-    bool                      backendConfigured   = false;
-    bool                      signalingActive     = false;
-    bool                      active              = false;
-    bool                      localTermination    = false;
-    bool                      requestedAudio      = false;
-    bool                      requestedVideo      = false;
-    bool                      acceptedAudio       = false;
-    bool                      acceptedVideo       = false;
+    bool                       incoming            = false;
+    bool                       joined              = false;
+    bool                       backendConfigured   = false;
+    bool                       signalingActive     = false;
+    bool                       active              = false;
+    bool                       localTermination    = false;
+    bool                       requestedAudio      = false;
+    bool                       requestedVideo      = false;
+    bool                       acceptedAudio       = false;
+    bool                       acceptedVideo       = false;
     bool                       microphoneWanted    = true;
     bool                       cameraWanted        = true;
-    bool                      captureAudioConsent = false;
-    bool                      captureVideoConsent = false;
-    QString                   jmiId;
-    bool                      jmiProceedSent = false;
-    bool                      jmiFinishSent  = false;
-    bool                      jmiClosed      = false;
-    AvCallAudioDirection      audioDirection;
-    AvCallAudioDirection       cameraDirection;
-    AvCallAudioDirection       screenDirection;
+    bool                       captureAudioConsent = false;
+    bool                       captureVideoConsent = false;
+    QString                    jmiId;
+    // Other applications proposed with the call (XEP-0353 descriptions), offered or received.
+    QList<Jingle::MessageInitiation::Description> proposalCompanions;
+    QStringList                                   proposedCompanions;
+    bool                                          jmiProceedSent = false;
+    bool                                          jmiFinishSent  = false;
+    bool                                          jmiClosed      = false;
+    AvCallAudioDirection                          audioDirection;
+    AvCallAudioDirection                          cameraDirection;
+    AvCallAudioDirection                          screenDirection;
 };
 
 AvCall::AvCall() : d(new AvCallPrivate(this)) { }
@@ -988,6 +1046,13 @@ QString AvCall::errorString() const { return d->errorString; }
 
 XMPP::Jingle::Session *AvCall::jingleSession() const { return d->session; }
 
+void AvCall::setProposalCompanions(const QList<XMPP::Jingle::MessageInitiation::Description> &descriptions)
+{
+    d->proposalCompanions = descriptions;
+}
+
+QStringList AvCall::proposedCompanions() const { return d->proposedCompanions; }
+
 void AvCall::unlink() { d->unlink(); }
 
 AvCallManagerPrivate::AvCallManagerPrivate(PsiAccount *account, AvCallManager *q) : QObject(q), q(q), pa(account)
@@ -1016,7 +1081,10 @@ AvCallManagerPrivate::AvCallManagerPrivate(PsiAccount *account, AvCallManager *q
     connect(jingleManager, &Jingle::Manager::incomingSession, this, &AvCallManagerPrivate::incomingSession);
     connect(jingleManager, &Jingle::Manager::incomingMessageInitiation, this,
             &AvCallManagerPrivate::incomingMessageInitiation);
-    connect(rtpManager, &RTP::Manager::incomingProposal, this, &AvCallManagerPrivate::incomingRtpProposal);
+    connect(rtpManager, &RTP::Manager::incomingProposal, this,
+            [this](const XMPP::Message &message, const QString &id, RTP::MediaSet media) {
+                incomingRtpProposal(message, id, media);
+            });
 }
 
 AvCallManagerPrivate::~AvCallManagerPrivate()
@@ -1072,8 +1140,11 @@ void AvCallManagerPrivate::incomingSession(Jingle::Session *incoming)
     if (!incoming || incoming->role() != Jingle::Origin::Responder)
         return;
     const auto types = incoming->allApplicationTypes();
-    if (types.size() != 1 || types.first() != RTP::Description::ns())
+    if (!types.contains(RTP::Description::ns()))
         return;
+    for (const auto &type : types)
+        if (type != RTP::Description::ns() && !companions.contains(type))
+            return;
 
     if (!capabilities.available()) {
         incoming->terminate(Jingle::Reason::UnsupportedApplications);
@@ -1108,7 +1179,8 @@ void AvCallManagerPrivate::incomingSession(Jingle::Session *incoming)
     emit q->incomingReady();
 }
 
-void AvCallManagerPrivate::incomingRtpProposal(const XMPP::Message &message, const QString &id, RTP::MediaSet media)
+void AvCallManagerPrivate::incomingRtpProposal(const XMPP::Message &message, const QString &id, RTP::MediaSet media,
+                                               const QStringList &companions)
 {
     const bool ownMessage = message.from().compare(pa->client()->jid(), false);
     auto       call       = jmiCalls.value(id, nullptr);
@@ -1130,6 +1202,7 @@ void AvCallManagerPrivate::incomingRtpProposal(const XMPP::Message &message, con
         delete proposed;
         return;
     }
+    proposed->d->proposedCompanions = companions;
 
     const bool usableAudio = proposed->d->requestedAudio && capabilities.audio;
     const bool usableVideo = proposed->d->requestedVideo && capabilities.video;
@@ -1157,10 +1230,30 @@ void AvCallManagerPrivate::incomingMessageInitiation(const XMPP::Message        
     auto       call       = jmiCalls.value(initiation.id(), nullptr);
 
     switch (initiation.action()) {
-    case Jingle::MessageInitiation::Action::Propose:
-        // Pure RTP proposals are surfaced through RTP::Manager::incomingProposal.
-        // Mixed/application-composite proposals deliberately remain generic.
+    case Jingle::MessageInitiation::Action::Propose: {
+        // Pure RTP proposals are surfaced through RTP::Manager::incomingProposal. A call proposed with
+        // companion applications (a whiteboard) is taken here; other mixed proposals are not calls.
+        RTP::MediaSet media;
+        QStringList   others;
+        for (const auto &description : initiation.descriptions()) {
+            if (description.applicationNamespace == RTP::Description::ns()) {
+                if (!description.isSupported() || description.data.type() != typeid(RTP::Proposal))
+                    return;
+                const auto &proposal = std::any_cast<const RTP::Proposal &>(description.data);
+                if (!proposal.isValid() || media.testFlag(proposal.media))
+                    return;
+                media |= proposal.media;
+            } else if (companions.contains(description.applicationNamespace)
+                       && !others.contains(description.applicationNamespace)) {
+                others.append(description.applicationNamespace);
+            } else {
+                return;
+            }
+        }
+        if (media != RTP::MediaSet() && !others.isEmpty())
+            incomingRtpProposal(message, initiation.id(), media, others);
         return;
+    }
 
     case Jingle::MessageInitiation::Action::Proceed:
         if (!call || !call->d || call->d->jmiClosed || call->d->session)
@@ -1210,6 +1303,10 @@ void AvCallManagerPrivate::incomingMessageInitiation(const XMPP::Message        
         return;
 
     case Jingle::MessageInitiation::Action::Ringing:
+        if (!ownMessage && call && call->d && !call->d->incoming && !call->d->jmiClosed && !call->d->session
+            && message.from().compare(call->d->peer, false))
+            emit call->ringing();
+        return;
     case Jingle::MessageInitiation::Action::None:
         return;
     }
@@ -1268,6 +1365,8 @@ void AvCallManager::setStunRelayTcpService(const QString &host, int port, const 
 {
     d->iceManager->setStunRelayTcpService(host, port, proxy, user, pass);
 }
+
+void AvCallManager::setCompanionApplications(const QStringList &namespaces) { d->companions = namespaces; }
 
 void AvCallManager::setAllowIpExposure(bool allow) { d->iceManager->setAllowIpExposure(allow); }
 

@@ -47,18 +47,22 @@ extern "C" {
 
 namespace XMPP {
 namespace {
-    constexpr auto OmemoNs             = "urn:xmpp:omemo:2";
-    constexpr auto DevicesNode         = "urn:xmpp:omemo:2:devices";
-    constexpr auto BundlesNode         = "urn:xmpp:omemo:2:bundles";
-    constexpr auto LegacyOmemoNs       = "eu.siacs.conversations.axolotl";
-    constexpr auto LegacyDevicesNode   = "eu.siacs.conversations.axolotl.devicelist";
-    constexpr auto LegacyBundlesPrefix = "eu.siacs.conversations.axolotl.bundles:";
-    constexpr auto EmeNs               = "urn:xmpp:eme:0";
-    constexpr auto HintsNs             = "urn:xmpp:hints";
-    constexpr auto OmemoName           = "OMEMO";
-    constexpr auto OmemoProtocolOption = "omemoProtocol";
-    constexpr int  PreKeyTarget        = 100;
-    constexpr int  PreKeyMinimum       = 25;
+    constexpr auto OmemoNs               = "urn:xmpp:omemo:2";
+    constexpr auto DevicesNode           = "urn:xmpp:omemo:2:devices";
+    constexpr auto BundlesNode           = "urn:xmpp:omemo:2:bundles";
+    constexpr auto LegacyOmemoNs         = "eu.siacs.conversations.axolotl";
+    constexpr auto LegacyDevicesNode     = "eu.siacs.conversations.axolotl.devicelist";
+    constexpr auto LegacyBundlesPrefix   = "eu.siacs.conversations.axolotl.bundles:";
+    constexpr auto EmeNs                 = "urn:xmpp:eme:0";
+    constexpr auto HintsNs               = "urn:xmpp:hints";
+    constexpr auto OmemoName             = "OMEMO";
+    constexpr auto OmemoProtocolOption   = "omemoProtocol";
+    constexpr auto OmemoDevicesOption    = "omemoDevices";    // only these devices of the recipient
+    constexpr auto OmemoOwnDevicesOption = "omemoOwnDevices"; // false: no copies for own devices
+    constexpr auto TransportKeyDetail    = "transportKey";
+    constexpr auto TransportIvDetail     = "transportIv";
+    constexpr int  PreKeyTarget          = 100;
+    constexpr int  PreKeyMinimum         = 25;
 
     QString localName(const QDomElement &element)
     {
@@ -2338,10 +2342,15 @@ public:
             return {};
         }
         const auto ownBare = client->jid().bare();
-        if (!ownBare.isEmpty() && !logicalOwners.contains(ownBare))
+        // Elements encrypted for a peer outside of messages (Jingle) are not copied to our devices.
+        const bool ownDevices = context.options.value(QLatin1String(OmemoOwnDevicesOption), true).toBool();
+        if (ownDevices && !ownBare.isEmpty() && !logicalOwners.contains(ownBare))
             logicalOwners.append(ownBare);
         if (owners)
             *owners = logicalOwners;
+        QSet<uint32_t> onlyDevices;
+        for (const auto &device : context.options.value(QLatin1String(OmemoDevicesOption)).toList())
+            onlyDevices.insert(device.toUInt());
 
         QList<QPair<QString, uint32_t>> targets;
         const bool                      replyOnlySender = context.replyTo.has_value()
@@ -2354,6 +2363,8 @@ public:
             }
             for (const auto &target : activeDevicesFor(owner, protocol)) {
                 if (data.ownDevice && target.first == ownBare && target.second == data.ownDevice->id)
+                    continue;
+                if (!onlyDevices.isEmpty() && owner != ownBare && !onlyDevices.contains(target.second))
                     continue;
                 if (!targets.contains(target))
                     targets.append(target);
@@ -2630,6 +2641,10 @@ public:
                         EncryptionMetadata metadata;
                         metadata.methodId     = OmemoEncryption::methodId();
                         metadata.protocolOnly = protocol == OmemoProtocol::Legacy && !legacyHasPayload;
+                        if (protocol == OmemoProtocol::Legacy && !legacyHasPayload) {
+                            metadata.details.insert(QLatin1String(TransportKeyDetail), keyMaterial);
+                            metadata.details.insert(QLatin1String(TransportIvDetail), legacyIv);
+                        }
                         metadata.details.insert(QLatin1String(OmemoProtocolOption), protocolName(protocol));
                         guardedJob->complete(outer, metadata);
                     });
@@ -2747,7 +2762,16 @@ public:
             if (!encryptedCopy.isNull())
                 restoredStanza.removeChild(encryptedCopy);
 
-            if (!payloadElement.isNull()) {
+            if (payloadElement.isNull()) {
+                // A key transport message: its key and IV may key another channel (JET).
+                const auto ivElement = directChildNS(header, QStringLiteral("iv"), ns);
+                bool       ivOk      = false;
+                const auto iv        = base64Element(ivElement, &ivOk);
+                if (ivOk && iv.size() == 12 && keyMaterial.size() >= 16) {
+                    metadata.details.insert(QLatin1String(TransportKeyDetail), keyMaterial.left(16));
+                    metadata.details.insert(QLatin1String(TransportIvDetail), iv);
+                }
+            } else {
                 const auto ivElement = directChildNS(header, QStringLiteral("iv"), ns);
                 bool       ivOk      = false;
                 const auto iv        = base64Element(ivElement, &ivOk);
@@ -3727,6 +3751,115 @@ EncryptionJob *OmemoEncryption::sendProtocolMessage(const Jid &recipient, uint32
 EncryptionJob *OmemoEncryption::sendEmptyMessage(const Jid &recipient, uint32_t deviceId)
 {
     return sendProtocolMessage(recipient, deviceId, OmemoProtocol::Omemo2, false);
+}
+
+EncryptionJob *OmemoEncryption::encryptElement(const Jid &recipient, OmemoProtocol protocol, const QDomElement &content,
+                                               const QList<uint32_t> &devices)
+{
+    auto job = new EncryptionJob(this);
+    if (!recipient.isValid() || (protocol == OmemoProtocol::Omemo2 && content.isNull())) {
+        job->fail(EncryptionJob::Error::InvalidInput, QStringLiteral("Nothing to OMEMO-encrypt for this peer"));
+        return job;
+    }
+    EncryptionContext context;
+    context.recipients = { recipient };
+    context.options.insert(QLatin1String(OmemoProtocolOption), protocolName(protocol));
+    context.options.insert(QLatin1String(OmemoOwnDevicesOption), false);
+    QVariantList deviceList;
+    for (auto device : devices)
+        deviceList.append(device);
+    context.options.insert(QLatin1String(OmemoDevicesOption), deviceList);
+
+    // The existing message path does the device lists, sessions and trust; the element travels in a
+    // message that is never sent.
+    QDomDocument wrapperDocument;
+    auto         wrapper = wrapperDocument.createElement(QStringLiteral("message"));
+    wrapper.setAttribute(QStringLiteral("type"), QStringLiteral("chat"));
+    wrapper.setAttribute(QStringLiteral("to"), recipient.full());
+    wrapperDocument.appendChild(wrapper);
+    if (protocol == OmemoProtocol::Legacy) {
+        if (!content.isNull()) {
+            auto body = wrapperDocument.createElement(QStringLiteral("body"));
+            body.appendChild(wrapperDocument.createTextNode(content.text()));
+            wrapper.appendChild(body);
+        }
+    } else {
+        wrapper.appendChild(wrapperDocument.importNode(content, true));
+    }
+
+    auto session = new OmemoEncryptedSession(this, context);
+    session->setParent(job);
+    auto inner  = session->encrypt(wrapper);
+    auto finish = [job, inner, protocol]() {
+        const auto encrypted
+            = inner->success() ? inner->stanza().firstChildElement(QStringLiteral("encrypted")) : QDomElement();
+        if (!inner->success())
+            job->fail(inner->error(), inner->errorString(), inner->metadata());
+        else if (encrypted.isNull() || encrypted.namespaceURI() != protocolNamespace(protocol))
+            job->fail(EncryptionJob::Error::CryptoError, QStringLiteral("OMEMO produced no encrypted element"));
+        else
+            job->complete(encrypted, inner->metadata());
+    };
+    if (inner->isFinished())
+        finish();
+    else
+        connect(inner, &EncryptionJob::finished, job, finish);
+    return job;
+}
+
+EncryptionJob *OmemoEncryption::decryptElement(const Jid &sender, const QDomElement &encrypted)
+{
+    auto job = new EncryptionJob(this);
+    if (!sender.isValid() || encrypted.isNull() || encrypted.localName() != QLatin1String("encrypted")) {
+        job->fail(EncryptionJob::Error::InvalidInput, QStringLiteral("Not an OMEMO encrypted element"));
+        return job;
+    }
+    QDomDocument wrapperDocument;
+    auto         wrapper = wrapperDocument.createElement(QStringLiteral("message"));
+    wrapper.setAttribute(QStringLiteral("type"), QStringLiteral("chat"));
+    wrapper.setAttribute(QStringLiteral("from"), sender.full());
+    wrapper.setAttribute(QStringLiteral("to"), d->client->jid().full());
+    wrapper.appendChild(wrapperDocument.importNode(encrypted, true));
+    wrapperDocument.appendChild(wrapper);
+
+    auto session = new OmemoEncryptedSession(this, {});
+    session->setParent(job);
+    auto inner  = session->decrypt(wrapper);
+    auto finish = [job, inner]() {
+        if (!inner->success()) {
+            job->fail(inner->error(), inner->errorString(), inner->metadata());
+            return;
+        }
+        const auto  restored = inner->stanza();
+        const auto  protocol = protocolFromName(inner->metadata().details.value(QLatin1String(OmemoProtocolOption)));
+        QDomElement content;
+        if (protocol == OmemoProtocol::Legacy) {
+            const auto body = restored.firstChildElement(QStringLiteral("body"));
+            if (!body.isNull() && !inner->metadata().protocolOnly) {
+                QDomDocument document;
+                content = document.createElement(QStringLiteral("payload"));
+                content.appendChild(document.createTextNode(body.text()));
+                document.appendChild(content);
+            }
+        } else {
+            for (auto child = restored.firstChildElement(); !child.isNull(); child = child.nextSiblingElement()) {
+                if (!child.namespaceURI().isEmpty() && child.namespaceURI() != QLatin1String("jabber:client")) {
+                    content = child;
+                    break;
+                }
+            }
+            if (content.isNull()) {
+                job->fail(EncryptionJob::Error::ProtocolError, QStringLiteral("The OMEMO envelope has no content"));
+                return;
+            }
+        }
+        job->complete(content, inner->metadata());
+    };
+    if (inner->isFinished())
+        finish();
+    else
+        connect(inner, &EncryptionJob::finished, job, finish);
+    return job;
 }
 
 bool OmemoEncryption::resetAllLocally()

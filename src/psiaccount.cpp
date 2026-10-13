@@ -39,6 +39,7 @@
 #include "avatars.h"
 #include "avcall/avcall.h"
 #include "avcall/calldlg.h"
+#include "avcall/callringer.h"
 #include "avcall/mediadevicewatcher.h"
 #include "bobfilecache.h"
 #include "bookmarkmanagedlg.h"
@@ -135,6 +136,8 @@
 #endif
 #ifdef WHITEBOARDING
 #include "whiteboarding/wbmanager.h"
+
+#include <iris/xmpp-im/jingle-sxe.h>
 #endif
 
 #include <QApplication>
@@ -665,7 +668,33 @@ public:
     }
 
 public slots:
-    void queueChanged() { eventQueue->toFile(pathToProfileEvents()); }
+    void queueChanged()
+    {
+        eventQueue->toFile(pathToProfileEvents());
+        updateRinging();
+    }
+
+public:
+    // Incoming calls and whiteboard invitations ring while their events wait in the queue. An opened
+    // invitation rings in its call window until it is answered.
+    QList<QWeakPointer<PsiEvent>> ringingEvents;
+    QPointer<CallRinger>          incomingRinger;
+
+    void updateRinging()
+    {
+        ringingEvents.erase(std::remove_if(ringingEvents.begin(), ringingEvents.end(),
+                                           [this](const QWeakPointer<PsiEvent> &weak) {
+                                               const auto event = weak.toStrongRef();
+                                               return !event || !eventQueue->contains(event);
+                                           }),
+                            ringingEvents.end());
+        if (ringingEvents.isEmpty())
+            delete incomingRinger.data();
+        else if (!incomingRinger)
+            incomingRinger = new CallRinger(account, CallRinger::Incoming, true, this);
+    }
+
+public slots:
 
     void loadQueue()
     {
@@ -1269,6 +1298,10 @@ PsiAccount::PsiAccount(const UserAccount &acc, PsiContactList *parent, TabManage
 
     d->avCallManager = new AvCallManager(this);
     connect(d->avCallManager, &AvCallManager::incomingReady, d, &Private::incoming_call);
+#ifdef WHITEBOARDING
+    // A call may carry a whiteboard; CallDlg answers it.
+    d->avCallManager->setCompanionApplications({ Jingle::SXE::NS_SVG_WHITEBOARD });
+#endif
     d->updateAvCallSettings(acc);
 
     // load event queue from disk
@@ -2891,15 +2924,16 @@ void PsiAccount::wbRequest(const Jid &j, int id)
     // The invitation can be withdrawn or answered on another device before the event is opened.
     const auto weakEvent  = se.toWeakRef();
     auto       connection = std::make_shared<QMetaObject::Connection>();
-    *connection = connect(d->wbManager, &WbManager::requestCancelled, this, [this, id, weakEvent, connection](int cancelled) {
-        if (cancelled != id)
-            return;
-        disconnect(*connection);
-        QTimer::singleShot(0, this, [this, weakEvent] {
-            if (const auto event = weakEvent.toStrongRef())
-                eventQueue()->dequeue(event);
-        });
-    });
+    *connection
+        = connect(d->wbManager, &WbManager::requestCancelled, this, [this, id, weakEvent, connection](int cancelled) {
+              if (cancelled != id)
+                  return;
+              disconnect(*connection);
+              QTimer::singleShot(0, this, [this, weakEvent] {
+                  if (const auto event = weakEvent.toStrongRef())
+                      eventQueue()->dequeue(event);
+              });
+          });
     handleEvent(se, IncomingStanza);
 }
 #endif
@@ -3511,6 +3545,12 @@ void PsiAccount::playSound(PsiAccount::SoundType _onevent)
         break;
     case eFTComplete:
         str = PsiOptions::instance()->getOption("options.ui.notifications.sounds.completed-file-transfer").toString();
+        break;
+    case eIncomingCall:
+        str = PsiOptions::instance()->getOption("options.ui.notifications.sounds.incoming-call").toString();
+        break;
+    case eOutgoingCall:
+        str = PsiOptions::instance()->getOption("options.ui.notifications.sounds.outgoing-call").toString();
         break;
     default:
         Q_ASSERT(false);
@@ -4217,7 +4257,8 @@ template <typename Test> static bool anyResource(const PsiAccount *account, cons
 
 bool PsiAccount::canCall(const Jid &jid) const
 {
-    return anyResource(this, jid, [this](const Jid &full) { return callCapable(d->client->capsManager()->features(full)); });
+    return anyResource(this, jid,
+                       [this](const Jid &full) { return callCapable(d->client->capsManager()->features(full)); });
 }
 
 bool PsiAccount::canWhiteboard(const Jid &jid) const
@@ -4245,10 +4286,7 @@ void PsiAccount::actionVoice(const Jid &j) { actionVoiceSpecific(sessionTarget(j
 
 void PsiAccount::actionVoiceSpecific(const Jid &j)
 {
-    if (!callUsesMedia(j)) {
-        actionOpenWhiteboardSpecific(j);
-        return;
-    }
+    // Without media for this contact the call window starts a whiteboard (CallDlg decides).
     const Jid j2 = j;
 
     CallDlg *w = new CallDlg(this, nullptr);
@@ -5469,9 +5507,9 @@ void PsiAccount::handleEvent(const PsiEvent::Ptr &e, ActivationType activationTy
     }
 #ifdef WHITEBOARDING
     else if (e->type() == PsiEvent::Sxe) {
-        soundType = eHeadline;
+        soundType = eNone; // rings, see Private::updateRinging()
         doPopup   = true;
-        popupType = PopupManager::AlertHeadline;
+        popupType = PopupManager::AlertAvCall;
     }
 #endif
     else if (e->type() == PsiEvent::File) {
@@ -5479,7 +5517,7 @@ void PsiAccount::handleEvent(const PsiEvent::Ptr &e, ActivationType activationTy
         doPopup   = true;
         popupType = PopupManager::AlertFile;
     } else if (e->type() == PsiEvent::AvCallType) {
-        soundType = eIncomingFT;
+        soundType = eNone; // rings, see Private::updateRinging()
         doPopup   = true;
         popupType = PopupManager::AlertAvCall;
     } else if (e->type() == PsiEvent::RosterExchange) {
@@ -5569,6 +5607,10 @@ void PsiAccount::handleEvent(const PsiEvent::Ptr &e, ActivationType activationTy
 
     if (putToQueue)
         queueEvent(e, activationType);
+    if (putToQueue && activationType != FromXml && (e->type() == PsiEvent::AvCallType || e->type() == PsiEvent::Sxe)) {
+        d->ringingEvents.append(e.toWeakRef());
+        d->updateRinging();
+    }
 }
 
 UserListItem *PsiAccount::addUserListItem(const Jid &jid, const QString &nick)

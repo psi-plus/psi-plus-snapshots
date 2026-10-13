@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // End-to-end Jingle SXE whiteboard session between two clients with looped-back streams.
+#include <functional>
 #include <iris/jingle-session.h>
 #include <iris/xmpp-im/jingle-sxe.h>
 #include <iris/xmpp-im/xmpp_jinglemessage.h>
@@ -53,6 +54,8 @@ struct Endpoint {
 };
 
 static QList<QDomElement> sentMessages;
+// Sees (and may alter) every stanza on its way, with the endpoint that sent it.
+static std::function<void(const Endpoint &, QDomElement &)> onStanza;
 
 // Delivers everything written by one endpoint to the other until both are quiet.
 static void pump(Endpoint &a, Endpoint &b)
@@ -74,6 +77,8 @@ static void pump(Endpoint &a, Endpoint &b)
                     sentMessages.append(stanza);
                 stanza.setAttribute(QStringLiteral("from"), from->jid.full());
                 stanza.setAttribute(QStringLiteral("to"), to->jid.full());
+                if (onStanza)
+                    onStanza(*from, stanza);
                 to->client.rootTask()->take(stanza);
             }
         }

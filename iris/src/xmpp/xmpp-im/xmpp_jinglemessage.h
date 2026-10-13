@@ -71,6 +71,11 @@ namespace XMPP { namespace Jingle {
         QString migratedTo() const;
         void    setMigratedTo(const QString &id);
 
+        // Foreign-namespace children of actions other than <propose/>, e.g. the OMEMO device of
+        // Conversations' DTLS verification in <proceed/>. Kept as deep copies.
+        QList<QDomElement> extensions() const;
+        void               addExtension(const QDomElement &element);
+
         QDomElement toXml(QDomDocument *doc, const DescriptionSerializer &serializer = {}) const;
 
     private:

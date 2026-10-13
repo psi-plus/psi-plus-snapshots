@@ -406,7 +406,14 @@ namespace XMPP { namespace Jingle {
             if (jingleEl.isNull() || jingleEl.namespaceURI() != ::XMPP::Jingle::NS) {
                 return false;
             }
+            client()->jingleManager()->receiveFiltered(iq);
+            return true;
+        }
 
+        // Processes a Jingle IQ set after the signaling filters.
+        bool process(const QDomElement &iq)
+        {
+            auto   jingleEl = iq.firstChildElement(QStringLiteral("jingle"));
             Jingle jingle(jingleEl);
             if (!jingle.isValid()) {
                 respondError(iq, Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::BadRequest);
@@ -537,6 +544,15 @@ namespace XMPP { namespace Jingle {
     };
 
     //----------------------------------------------------------------------------
+    // SignalingFilter
+    //----------------------------------------------------------------------------
+    SignalingFilter::~SignalingFilter() = default;
+    bool        SignalingFilter::filterIncoming(const Jid &, const QDomElement &, const Done &) { return false; }
+    bool        SignalingFilter::filterOutgoing(const Jid &, const QDomElement &, const Done &) { return false; }
+    void        SignalingFilter::decorateMessageInitiation(const Jid &, MessageInitiation &) { }
+    QStringList SignalingFilter::discoFeatures() const { return {}; }
+
+    //----------------------------------------------------------------------------
     // SessionManagerPad - handle event related to a type of app/transport but not specific instance
     //----------------------------------------------------------------------------
     SessionManagerPad::SessionManagerPad(Session *session) : QObject(session) { }
@@ -592,6 +608,77 @@ namespace XMPP { namespace Jingle {
         std::unique_ptr<RTP::Manager>         rtpManager;
         bool                                  messageInitiationEnabled = false;
         int                                   maxSessions              = -1; // no limit
+
+        // Signaling filters and the per-session queues that keep the order while one works.
+        using FilterDone = std::function<void(const QDomElement &, const std::optional<XMPP::Stanza::Error> &)>;
+        QList<SignalingFilter *>                     filters;
+        QHash<QString, QList<std::function<void()>>> filterQueues;   // key → waiting jobs; present = busy
+        QDomDocument                                 filterDocument; // owns copies of waiting stanzas
+
+        static QString filterKey(bool incoming, const Jid &peer, const QDomElement &jingle)
+        {
+            return QString::number(incoming) + QLatin1Char('\n') + peer.full() + QLatin1Char('\n')
+                + jingle.attribute(QStringLiteral("sid"));
+        }
+
+        void runFilters(bool incoming, const Jid &peer, const QDomElement &jingle, int index, const FilterDone &done)
+        {
+            QPointer<Manager> guard(manager);
+            for (; index < filters.size(); ++index) {
+                auto       filter = filters.at(index);
+                const auto next   = [this, guard, incoming, peer, jingle, index, done](
+                                      const QDomElement &rewritten, const std::optional<XMPP::Stanza::Error> &error) {
+                    if (!guard)
+                        return;
+                    if (error)
+                        done({}, error);
+                    else
+                        runFilters(incoming, peer, rewritten.isNull() ? jingle : rewritten, index + 1, done);
+                };
+                const bool taken = incoming ? filter->filterIncoming(peer, jingle, next)
+                                            : filter->filterOutgoing(peer, jingle, next);
+                if (taken)
+                    return;
+            }
+            done(jingle, std::nullopt);
+        }
+
+        // Runs @a job (which calls its argument when finished) after earlier jobs with the same key.
+        void enqueue(const QString &key, const std::function<void(std::function<void()>)> &job)
+        {
+            QPointer<Manager> guard(manager);
+            auto              start = [this, guard, key, job]() {
+                job([this, guard, key]() {
+                    if (!guard)
+                        return;
+                    auto it = filterQueues.find(key);
+                    if (it == filterQueues.end())
+                        return;
+                    if (it->isEmpty()) {
+                        filterQueues.erase(it);
+                        return;
+                    }
+                    auto nextJob = it->takeFirst();
+                    nextJob();
+                });
+            };
+            auto it = filterQueues.find(key);
+            if (it != filterQueues.end()) {
+                it->append(start);
+                return;
+            }
+            filterQueues.insert(key, {});
+            start();
+        }
+
+        static QDomElement withJingle(QDomDocument &document, const QDomElement &iq, const QDomElement &jingle)
+        {
+            auto copy = document.importNode(iq, true).toElement();
+            auto old  = copy.firstChildElement(QStringLiteral("jingle"));
+            if (!old.isNull() && !jingle.isNull())
+                copy.replaceChild(document.importNode(jingle, true), old);
+            return copy;
+        }
 
         bool                                      shuttingDown = false;
         QHash<QObject *, QMetaObject::Connection> providerDestructionConnections;
@@ -749,12 +836,93 @@ namespace XMPP { namespace Jingle {
         if (initiation.toXml(&validationDocument, serializer).isNull())
             return false;
 
+        auto decorated = initiation;
+        for (auto filter : std::as_const(d->filters))
+            filter->decorateMessageInitiation(to, decorated);
+
         Message message(to);
         message.setType(Message::Type::Chat);
         message.setProcessingHints(Message::ProcessingHints(Message::Store));
-        message.setJingleMessageInitiation(initiation);
+        message.setJingleMessageInitiation(decorated);
         d->client->sendMessage(message);
         return true;
+    }
+
+    void Manager::addSignalingFilter(SignalingFilter *filter)
+    {
+        if (filter && !d->filters.contains(filter))
+            d->filters.append(filter);
+    }
+
+    void Manager::removeSignalingFilter(SignalingFilter *filter) { d->filters.removeAll(filter); }
+
+    void Manager::receiveFiltered(const QDomElement &iq)
+    {
+        if (d->filters.isEmpty()) {
+            // Nothing can protect the transports of a session that requires end-to-end encryption.
+            const auto jingle = iq.firstChildElement(QStringLiteral("jingle"));
+            const auto session
+                = this->session(Jid(iq.attribute(QStringLiteral("from"))), jingle.attribute(QStringLiteral("sid")));
+            if (session && session->isEndToEndRequired()
+                && !jingle.firstChildElement(QStringLiteral("content")).isNull()) {
+                d->pushTask->respondError(iq,
+                                          Stanza::Error(Stanza::Error::ErrorType::Cancel,
+                                                        Stanza::Error::ErrorCond::NotAcceptable,
+                                                        QStringLiteral("No end-to-end encryption available")));
+                return;
+            }
+            d->pushTask->process(iq);
+            return;
+        }
+        const Jid         from(iq.attribute(QStringLiteral("from")));
+        const auto        stored = d->filterDocument.importNode(iq, true).toElement();
+        const auto        jingle = stored.firstChildElement(QStringLiteral("jingle"));
+        QPointer<Manager> guard(this);
+        d->enqueue(Private::filterKey(true, from, jingle), [this, guard, from, stored, jingle](auto finished) {
+            d->runFilters(true, from, jingle, 0,
+                          [this, guard, stored, finished](const QDomElement                        &rewritten,
+                                                          const std::optional<XMPP::Stanza::Error> &error) {
+                              if (!guard)
+                                  return;
+                              if (error)
+                                  d->pushTask->respondError(stored, *error);
+                              else
+                                  d->pushTask->process(Private::withJingle(d->filterDocument, stored, rewritten));
+                              finished();
+                          });
+        });
+    }
+
+    void
+    Manager::sendFiltered(const Jid &to, const QDomElement &iq,
+                          std::function<void(const QDomElement &, const std::optional<XMPP::Stanza::Error> &)> send)
+    {
+        if (d->filters.isEmpty()) {
+            const auto jingle  = iq.firstChildElement(QStringLiteral("jingle"));
+            const auto session = this->session(to, jingle.attribute(QStringLiteral("sid")));
+            if (session && session->isEndToEndRequired()
+                && !jingle.firstChildElement(QStringLiteral("content")).isNull())
+                send({},
+                     Stanza::Error(Stanza::Error::ErrorType::Cancel, Stanza::Error::ErrorCond::NotAcceptable,
+                                   QStringLiteral("No end-to-end encryption available")));
+            else
+                send(iq, std::nullopt);
+            return;
+        }
+        const auto        stored = d->filterDocument.importNode(iq, true).toElement();
+        const auto        jingle = stored.firstChildElement(QStringLiteral("jingle"));
+        QPointer<Manager> guard(this);
+        d->enqueue(Private::filterKey(false, to, jingle), [this, guard, to, stored, jingle, send](auto finished) {
+            d->runFilters(false, to, jingle, 0,
+                          [this, guard, stored, send, finished](const QDomElement                        &rewritten,
+                                                                const std::optional<XMPP::Stanza::Error> &error) {
+                              if (!guard)
+                                  return;
+                              send(error ? QDomElement() : Private::withJingle(*d->client->doc(), stored, rewritten),
+                                   error);
+                              finished();
+                          });
+        });
     }
 
     void Manager::setRedirection(const Jid &to) { d->redirectionJid = to; }
@@ -882,6 +1050,8 @@ namespace XMPP { namespace Jingle {
         for (auto const &mgr : d->transportManagers) {
             ret += mgr.second->discoFeatures();
         }
+        for (auto filter : d->filters)
+            ret += filter->discoFeatures();
         ret.removeDuplicates();
         return ret;
     }

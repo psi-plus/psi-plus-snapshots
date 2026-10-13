@@ -28,11 +28,37 @@
 namespace XMPP { namespace Jingle { namespace SXE {
     extern IRIS_EXPORT const QString NS_TRANSPORT;      // urn:xmpp:jingle:transports:sxe
     extern IRIS_EXPORT const QString NS_SVG_WHITEBOARD; // urn:xmpp:jingle:apps:svg-whiteboard:0
+    /// Proposed disco feature: SXE payload on reliable, ordered message-oriented Jingle connections
+    /// (e.g. an ICE SCTP data channel), one <sxe/> element per message.
+    extern IRIS_EXPORT const QString NS_CONNECTIONS; // urn:xmpp:sxe:0#connections
 
     /// The initial document of a whiteboard session started without a user document.
     IRIS_EXPORT QDomDocument emptyWhiteboardDocument();
 
     class TransportManager;
+
+    /**
+     * @brief End-to-end protection of SXE payload in messages, e.g. SxeOmemo (OMEMO 2 with SCE).
+     *
+     * When both sides support the protector's method and the session prefers end-to-end encryption,
+     * the SXE transport carries encryption='method'; every <sxe/> then travels inside protect()'s
+     * element next to an empty <sxe session='SID'/> marker that routes the message, and plain payload is
+     * dropped. docs/xsf-proposals/xep-0284-sxe-encryption.md describes the format.
+     */
+    class IRIS_EXPORT PayloadProtector {
+    public:
+        /// The protected element (e.g. OMEMO <encrypted/>), or the inner <sxe/>; null on failure.
+        using Done = std::function<void(const QDomElement &result)>;
+
+        virtual ~PayloadProtector();
+        virtual QString     method() const                    = 0; // e.g. urn:xmpp:omemo:2
+        virtual bool        canProtect(const Jid &peer) const = 0;
+        virtual QStringList discoFeatures() const             = 0;
+        /// Protects @a sxe for @a peer; @a done gets the element to send next to the marker.
+        virtual void protect(const Jid &peer, const QDomElement &sxe, const Done &done) = 0;
+        /// Recovers the <sxe/> of a message from @a from that carries a protected element.
+        virtual void unprotect(const Jid &from, const QDomElement &message, const Done &done) = 0;
+    };
 
     /**
      * @brief The XEP-0284 SXE Jingle transport.
@@ -62,8 +88,12 @@ namespace XMPP { namespace Jingle { namespace SXE {
         QList<Connection::Ptr> channels() const override;
 
         QList<Jid> hosts() const;
+        /// The method protecting the payload end to end (PayloadProtector::method()), or empty.
+        QString encryption() const;
         /// Sends an <sxe/> element. 'session' and 'id' are filled in by the caller.
         void sendSxe(const QDomElement &sxe);
+        /// Internal: a message of the session arrived (IncomingSxeTask).
+        void receive(const QDomElement &message, const QDomElement &sxe, const Jid &from);
 
     signals:
         void sxeReceived(const QDomElement &sxe, const XMPP::Jid &from);
@@ -98,9 +128,15 @@ namespace XMPP { namespace Jingle { namespace SXE {
         bool              canMakeConnection(TransportFeatures desiredFeatures, const QString &ns) override;
         void              setJingleManager(XMPP::Jingle::Manager *jm) override;
         QPointer<XMPP::Jingle::Transport> newTransport(TransportManagerPad *pad, Origin creator) override;
-        TransportManagerPad              *pad(Session *session) override;
-        QStringList                       ns() const override;
-        QStringList                       discoFeatures() const override;
+
+        /// The SXE transport manager registered with @a manager, if any.
+        static TransportManager *of(XMPP::Jingle::Manager *manager);
+        /// Not owned; remove it before it is destroyed.
+        void                 setPayloadProtector(PayloadProtector *protector);
+        PayloadProtector    *payloadProtector() const;
+        TransportManagerPad *pad(Session *session) override;
+        QStringList          ns() const override;
+        QStringList          discoFeatures() const override;
 
     private:
         class Private;
@@ -132,6 +168,11 @@ namespace XMPP { namespace Jingle { namespace SXE {
      * creator hosts the document: the joiner sends <connect/>, accepts the
      * <state-offer/> and imports the state before editing. Local edits are
      * made through document() and sent by Document::flush().
+     *
+     * Payload goes over a Jingle connection with reliable, ordered messages when
+     * both sides support it (NS_CONNECTIONS), otherwise in <message/> stanzas
+     * (NS_TRANSPORT). A failed connection is replaced by the message transport
+     * with transport-replace, and the joiner synchronizes again.
      */
     class IRIS_EXPORT Application : public XMPP::Jingle::Application {
         Q_OBJECT
@@ -162,7 +203,9 @@ namespace XMPP { namespace Jingle { namespace SXE {
         const std::optional<XMPP::Stanza::Error> &lastError() const override;
         Reason                                    lastReason() const override;
         bool                                      isTransportReplaceEnabled() const override;
-        bool                                      supportsContentModify() const override { return true; }
+        /// A whiteboard that may use connections shares an ICE association (BUNDLE) with other contents.
+        bool allowsSharedTransport() const override;
+        bool supportsContentModify() const override { return true; }
         void remove(Reason::Condition cond = Reason::Success, const QString &comment = QString()) override;
 
         SetDescError setRemoteOffer(const QDomElement &description) override;

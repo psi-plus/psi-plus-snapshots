@@ -9,9 +9,41 @@ an invitation and joins after accepting it in the window. Both sides can draw at
 file, also after the session has ended; **Import SVG** adds the drawing of an SVG file.
 
 The protocol is a Jingle session with the SVG whiteboard application type, synchronized with
-Shared XML Editing (XEP-0284). It is implemented in Iris; see `iris/docs/jingle-sxe.md`. The
+Shared XML Editing (XEP-0284). When both clients can, the drawing goes peer-to-peer over an ICE
+data channel, which is much faster than messages through the server for large drawings and
+images; otherwise, or when the connection breaks, it goes through the server. It is implemented in Iris; see `iris/docs/jingle-sxe.md`. The
 contact must advertise whiteboard support. Group chat whiteboards are not supported yet, and the
 pre-2026 Psi whiteboard protocol is not supported anymore.
+
+## Encryption
+
+Calls, and whiteboards on an ICE data channel, are encrypted with DTLS. With OMEMO set up, Psi
+also verifies the DTLS fingerprints end to end, compatible with Conversations and Dino: the device
+that accepts an invitation names its OMEMO device in `<proceed/>`, and both sides send their
+fingerprints encrypted for the other's device (`iris/docs/jingle-e2e.md`). The call window shows
+the result under the status: verified with OMEMO, encrypted but from an untrusted device,
+encrypted but not verified, or, for a whiteboard that goes through the server, whether its
+payload is end-to-end encrypted.
+
+A whiteboard with a contact whose chat uses OMEMO protects its payload end to end even when it
+goes through the server: when both clients advertise `urn:xmpp:sxe:0#omemo`, every edit travels
+OMEMO 2 encrypted (`iris/docs/jingle-sxe.md`, `iris/docs/xsf-proposals/`). Files to such contacts
+use JET-OMEMO, with OMEMO 2 between Psi clients and the legacy profile with Conversations and Dino.
+
+Files sent to a contact whose chat uses OMEMO are encrypted end to end with JET-OMEMO when the
+contact supports it (Conversations and Dino do), on any transport; the transfer shows
+"end-to-end encrypted" while it runs, and a received file that fails authentication is deleted.
+
+**Options → Security → OMEMO → Configuration → Calls, whiteboards and files** (`options.media.require-end-to-end`)
+makes this a requirement for contacts whose chat uses OMEMO (the chat's encryption choice is
+remembered per contact; the OMEMO defaults apply until one is made): a call or whiteboard with
+such a contact is refused, with a message in the window, unless the contact's fingerprints are
+verified by a trusted OMEMO device; a whiteboard then needs an ICE data channel or OMEMO-protected
+payload on the message transport. A contact whose
+chat is switched to no encryption is not affected. Files to and from such contacts are then
+refused unless they are encrypted with JET-OMEMO.
+Sessions sent directly to a resource (without XEP-0353) cannot be verified, since the peer's
+device is unknown.
 
 ## Controls
 
@@ -76,18 +108,26 @@ highest priority. `WbManager` implements this for whiteboard-only proposals
 (`src/whiteboarding/unittest/proposal.cpp` tests it with two clients); a proposal of a call with
 a whiteboard is not supported yet.
 
-Still planned:
+Calls and whiteboard invitations ring and can be answered from the notification:
 
-- **Ringing.** While an incoming call or whiteboard proposal is pending, Psi repeats a ring tone
-  until it is accepted, declined, withdrawn by the caller or times out. The caller hears a
-  ringback tone after the contact's devices answer `<ringing/>`. A shared helper serves calls
-  and whiteboards; it respects Do Not Disturb, "silent while away" and the sound switch. New
-  sound options: `options.ui.notifications.sounds.incoming-call` (ring tone) and
-  `options.ui.notifications.sounds.outgoing-call` (ringback), with generated default sounds.
-- **Notification with buttons.** The invitation popup gets **Accept** and **Decline**. The
-  freedesktop notifier provides them as notification actions; the built-in popup gets buttons.
-  Where the platform notification has no actions, the event in the roster opens the usual
-  question. The notification closes when another device answers or the caller withdraws.
+- **Ringing.** An incoming call or whiteboard invitation repeats the ring tone while its event
+  waits in the roster and, once opened, in the call window until it is accepted, declined,
+  withdrawn by the caller, answered on another device or a minute has passed. The caller hears a
+  ringback tone after the contact's devices answer `<ringing/>`, or right away for a session
+  sent directly to one resource, until the contact answers (at most 90 seconds). `CallRinger`
+  (`src/avcall/callringer.h`) repeats the sound every 3.5 seconds through
+  `PsiAccount::playSound()`, so Do Not Disturb, "silent while away" and the sound switch apply.
+  The sounds are the options `options.ui.notifications.sounds.incoming-call` (`sound/ring.wav`)
+  and `options.ui.notifications.sounds.outgoing-call` (`sound/ringback.wav`), on the Sounds page
+  of the options. Both default sounds are generated tones: two bursts of an E5–G♯5 major third
+  with a light tremolo, and a soft 425 Hz tone.
+- **Notification with buttons.** The notification of an invitation has **Accept** and
+  **Decline**: the freedesktop notifier sends them as notification actions (category
+  `call.incoming`, critical urgency, no expiry), the built-in popup shows buttons. Accepting
+  opens the call window and accepts; declining answers without opening a window; clicking the
+  notification opens the window as before. The notification closes when the invitation leaves
+  the event queue, e.g. when the caller withdraws or another device answers. Notifiers without
+  actions (Growl) keep their usual behavior. `PsiCon::answerCallEvent()` serves all of them.
 
 ## One window for calls and whiteboards
 
@@ -98,7 +138,7 @@ get a microphone or camera. Implemented so far: the stage with tiles, whiteboard
 the call window, adding a whiteboard to a call and a microphone or camera to a whiteboard
 (either side), switching contents on and off through senders, and the single call/whiteboard
 action. A whiteboard switched on before a call is added with `content-add` once the call
-connects. Still planned: proposals and ringing (see the order of work below).
+connects. Still planned: a call with a whiteboard in one proposal (see the order of work below).
 
 ### Window
 
@@ -224,7 +264,8 @@ One action starts calls and whiteboards. It replaces **Voice Call** and the sepa
    sessions).
 5. XEP-0353 proposals for whiteboards (done) and mixed sessions (to do: a call with a
    whiteboard in one proposal, and incoming sessions with both RTP and SXE contents).
-6. Ringing and actionable notifications.
-7. SXE payload over ICE/S5B (`iris/docs/jingle-sxe.md`), which also lets a whiteboard share the
-   call's BUNDLE association.
+6. Ringing and actionable notifications (done).
+7. SXE payload on Jingle connections (done: an ICE SCTP data channel when both sides support
+   it, falling back to messages, sharing the call's BUNDLE association when a whiteboard is
+   added to a call; see `iris/docs/jingle-sxe.md`).
 

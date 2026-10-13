@@ -18,28 +18,31 @@
 
 #include "calldlg.h"
 #include "../psimedia/psimedia.h"
+#include "../whiteboarding/wbmanager.h"
+#include "../whiteboarding/wbview.h"
 #include "avcall.h"
+#include "callringer.h"
 #include "callstage.h"
 #include "callview.h"
 #include "iconset.h"
 #include "mediadevicewatcher.h"
 #include "psiaccount.h"
+#include "psiencryptioncontroller.h"
 #include "psioptions.h"
 #include "screensharecapture.h"
 #include "userlist.h"
-#include "../whiteboarding/wbmanager.h"
-#include "../whiteboarding/wbview.h"
 #include "xmpp_caps.h"
 #include "xmpp_client.h"
-#include <iris/jingle-session.h>
-#include <iris/xmpp-im/jingle-rtp.h>
-#include <iris/xmpp-im/jingle-sxe.h>
 #include <QElapsedTimer>
-#include <functional>
 #include <QIcon>
 #include <QPointer>
 #include <QTimer>
 #include <QVBoxLayout>
+#include <functional>
+#include <iris/jingle-session.h>
+#include <iris/xmpp-im/jingle-rtp.h>
+#include <iris/xmpp-im/jingle-sxe.h>
+#include <iris/xmpp_encryption.h>
 
 namespace Jingle = XMPP::Jingle;
 namespace SXE    = XMPP::Jingle::SXE;
@@ -147,7 +150,9 @@ public:
     void bind(AvCall *call)
     {
         session = call;
+        connect(call, &AvCall::ringing, this, [this] { ring(CallRinger::Outgoing); });
         connect(call, &AvCall::activated, this, [this] {
+            stopRinging();
             active = true;
             view->setConnecting(false);
             view->setActive(true);
@@ -161,6 +166,7 @@ public:
                 timer.start(1000);
             }
             if (auto jingle = session->jingleSession()) {
+                watchSecurity(jingle);
                 watchSession(jingle);
                 updateWhiteboardSupport();
                 if (whiteboardWanted && !whiteboard)
@@ -168,16 +174,19 @@ public:
             }
         });
         connect(call, &AvCall::error, this, [this] {
+            stopRinging();
             finished = true;
             active   = false;
             capture.stop();
             timer.stop();
             view->setConnecting(false);
             view->setFinished();
-            view->setStatus(session ? session->errorString() : tr("Call ended"));
+            view->setStatus(refusedForSecurity() ? securityRefusal()
+                                                 : (session ? session->errorString() : tr("Call ended")));
             updateWhiteboard();
         });
         connect(call, &AvCall::cancelled, this, [this] {
+            stopRinging();
             finished = true;
             active   = false;
             capture.stop();
@@ -197,14 +206,50 @@ public:
         connect(call, &AvCall::cameraEnabledChanged, view, &CallView::setCameraEnabled);
         connect(call, &AvCall::microphoneEnabledChanged, view, &CallView::setMicrophoneChecked);
         connect(call, &AvCall::screenSharingStarted, this, [this] { view->setSharing(true, shareLabel); });
+        connect(call, &AvCall::sessionAboutToStart, this, &Private::startWhiteboardWithCall);
+    }
+
+    SXE::Application *offeredWhiteboard(Jingle::Session *jingle) const
+    {
+        for (auto content : jingle->contentList())
+            if (auto app = qobject_cast<SXE::Application *>(content); app && app->state() == Jingle::State::Created)
+                return app;
+        return nullptr;
+    }
+
+    // The whiteboard travels in the call's session-initiate and session-accept, so the two sides do not
+    // both add one once the call runs. An offered whiteboard is joined unless it was switched off.
+    void startWhiteboardWithCall(Jingle::Session *jingle)
+    {
+        if (jingle->role() == Jingle::Origin::Initiator) {
+            if (whiteboardWanted && !whiteboard && whiteboardCapable(jingle->peer()))
+                addWhiteboard(jingle);
+            return;
+        }
+        auto app = offeredWhiteboard(jingle);
+        if (!app || (whiteboardChosen && !whiteboardWanted))
+            return; // AvCall declines it
+        app->prepare();
+        bindWhiteboard(app);
     }
 
     void accept()
     {
         if (finished || active)
             return;
-        joined = true;
+        stopRinging();
+        requiresEndToEnd = endToEndRequired(XMPP::Jid(view->peer()));
+        joined           = true;
         if (view->whiteboardOnly()) {
+            acceptWhiteboard();
+            return;
+        }
+        if (!incoming && startsAsWhiteboard()) {
+            // No audio or video chosen, or none possible: the session carries only the whiteboard, hidden
+            // until someone switches it on unless it was chosen. Media can join it once it runs.
+            whiteboardSenders = whiteboardWanted ? Jingle::Origin::Both : Jingle::Origin::None;
+            view->setWhiteboardOnly(true);
+            view->setMediaAvailable(mediaAvailable(XMPP::Jid(view->peer())));
             acceptWhiteboard();
             return;
         }
@@ -221,12 +266,18 @@ public:
             bind(account->avCallManager()->createOutgoing());
             session->setMicrophoneEnabled(view->microphoneEnabled());
             session->setCameraEnabled(view->cameraEnabled());
+            // A proposal to the contact's devices announces the whiteboard with the call.
+            if (whiteboardWanted && target.resource().isEmpty() && account->canWhiteboard(target))
+                session->setProposalCompanions({ { SXE::NS_SVG_WHITEBOARD, SXE::Proposal {} } });
             const auto           caps = account->client()->capsManager()->features(target);
             AvCall::PeerFeatures features;
             if (caps.hasJingleIce())
                 features |= AvCall::IceTransport;
             if (caps.hasJingleIceUdp())
                 features |= AvCall::IceUdpTransport;
+            // A proposal rings back once a device answers <ringing/>; a direct session rings right away.
+            if (!target.resource().isEmpty())
+                ring(CallRinger::Outgoing);
             session->connectToJid(target, view->cameraEnabled() ? AvCall::Both : AvCall::Audio, view->bitrate(),
                                   features);
         } else if (session) {
@@ -235,6 +286,18 @@ public:
             session->setCameraEnabled(view->cameraEnabled());
             session->accept(session->mode(), view->bitrate());
         }
+    }
+
+    // An outgoing call without chosen audio or video starts as a whiteboard; with nothing chosen at all it is
+    // an audio call, unless there is no media for the contact.
+    bool startsAsWhiteboard() const
+    {
+        const XMPP::Jid peer(view->peer());
+        const bool      media  = account->callUsesMedia(peer);
+        const bool      chosen = media && (view->microphoneEnabled() || view->cameraEnabled());
+        if (chosen || (media && !whiteboardWanted))
+            return false;
+        return account->canWhiteboard(peer) || !peer.resource().isEmpty();
     }
 
     // Where an outgoing session goes. A full JID (a group chat occupant or a resource chosen explicitly) is used as
@@ -248,14 +311,14 @@ public:
         const UserListItem *item      = account->find(peer);
         if (!item || item->userResourceList().isEmpty())
             return proposals ? peer : XMPP::Jid();
-        const UserResource *best      = nullptr;
+        const UserResource *best     = nullptr;
         bool                ringable = false;
         for (const auto &resource : item->userResourceList()) {
             const auto full = peer.withResource(resource.name());
             if (!capable(full))
                 continue;
-            ringable = ringable
-                || account->client()->capsManager()->features(full).test(Jingle::MessageInitiation::ns());
+            ringable
+                = ringable || account->client()->capsManager()->features(full).test(Jingle::MessageInitiation::ns());
             if (!best || resource.priority() > best->priority())
                 best = &resource;
         }
@@ -277,10 +340,9 @@ public:
 
     void updateWhiteboardSupport()
     {
-        Jingle::Session *jingle = jingleSession();
-        const bool       supported
-            = jingle ? account->wbManager() && account->wbManager()->checkSupport(jingle->peer())
-                     : account->canWhiteboard(XMPP::Jid(view->peer()));
+        Jingle::Session *jingle    = jingleSession();
+        const bool       supported = jingle ? account->wbManager() && account->wbManager()->checkSupport(jingle->peer())
+                                            : account->canWhiteboard(XMPP::Jid(view->peer()));
         // In a whiteboard-only session the whiteboard is the session; it cannot be chosen away before it starts.
         view->setWhiteboardSupported(supported && (!view->whiteboardOnly() || active));
     }
@@ -313,9 +375,8 @@ public:
             return;
         }
 
-        const auto target = outgoingTarget(XMPP::Jid(view->peer()), [this](const XMPP::Jid &full) {
-            return whiteboardCapable(full);
-        });
+        const auto target = outgoingTarget(XMPP::Jid(view->peer()),
+                                           [this](const XMPP::Jid &full) { return whiteboardCapable(full); });
         if (!target.isValid() || (!target.resource().isEmpty() && !whiteboardCapable(target))) {
             view->setStatus(tr("The contact does not support whiteboards."));
             return;
@@ -337,8 +398,14 @@ public:
     void startWhiteboardSession(const XMPP::Jid &target, const QString &sid)
     {
         auto jingleManager = account->client()->jingleManager();
-        auto jingle = sid.isEmpty() ? jingleManager->newSession(target) : jingleManager->newSession(target, sid);
-        auto app = jingle ? qobject_cast<SXE::Application *>(jingle->newContent(SXE::NS_SVG_WHITEBOARD)) : nullptr;
+        auto jingle        = sid.isEmpty() ? jingleManager->newSession(target) : jingleManager->newSession(target, sid);
+        if (jingle) {
+            jingle->setEndToEndRequired(endToEndRequired(target));
+            jingle->setEndToEndPreferred(endToEndPreferred(target));
+        }
+        auto app = jingle
+            ? qobject_cast<SXE::Application *>(jingle->newContent(SXE::NS_SVG_WHITEBOARD, whiteboardSenders))
+            : nullptr;
         if (!app) {
             delete jingle;
             if (!sid.isEmpty())
@@ -348,6 +415,7 @@ public:
         }
         view->setConnecting(true);
         view->setStatus(sid.isEmpty() ? tr("Inviting…") : tr("Connecting…"));
+        ring(CallRinger::Outgoing);
         jingle->addContent(app);
         bindWhiteboardSession(jingle);
         bindWhiteboard(app);
@@ -358,7 +426,13 @@ public:
     void bindWhiteboardSession(Jingle::Session *jingle)
     {
         wbSession = jingle;
+        if (jingle->role() == Jingle::Origin::Responder) {
+            jingle->setEndToEndRequired(endToEndRequired(jingle->peer()));
+            jingle->setEndToEndPreferred(endToEndPreferred(jingle->peer()));
+        }
+        watchSecurity(jingle);
         connect(jingle, &Jingle::Session::activated, this, [this] {
+            stopRinging();
             active = true;
             if (wbSession)
                 view->setMediaAvailable(mediaAvailable(wbSession->peer()));
@@ -371,15 +445,18 @@ public:
             updateWhiteboard();
         });
         connect(jingle, &Jingle::Session::terminated, this, [this] {
+            stopRinging();
             const bool wasActive = active;
             if (!proposalId.isEmpty())
                 account->wbManager()->finish(proposalId, wasActive);
-            finished             = true;
-            active               = false;
+            finished = true;
+            active   = false;
             timer.stop();
             view->setConnecting(false);
             view->setFinished();
-            view->setStatus(wasActive ? tr("Session ended") : tr("The invitation was declined or failed"));
+            view->setStatus(refusedForSecurity()
+                                ? securityRefusal()
+                                : (wasActive ? tr("Session ended") : tr("The invitation was declined or failed")));
             updateWhiteboard();
         });
         watchSession(jingle);
@@ -393,24 +470,22 @@ public:
         if (watchedSession == jingle)
             return;
         watchedSession = jingle;
-        connect(
-            jingle, &Jingle::Session::newContentReceived, this,
-            [this, jingle] {
-                const auto contents = jingle->contentList().values();
-                for (auto content : contents) {
-                    if (!content->isRemote() || content->state() != Jingle::State::Created)
-                        continue;
-                    auto app = qobject_cast<SXE::Application *>(content);
-                    if (app && app != whiteboard) {
-                        app->prepare();
-                        bindWhiteboard(app);
-                    } else if (!app && jingle == wbSession && !session) {
-                        // Media added by the peer to a whiteboard session: AvCall accepts it for receiving.
-                        if (!dynamic_cast<XMPP::Jingle::RTP::Application *>(content) || !joinMedia())
-                            content->remove(Jingle::Reason::UnsupportedApplications);
-                    }
+        connect(jingle, &Jingle::Session::newContentReceived, this, [this, jingle] {
+            const auto contents = jingle->contentList().values();
+            for (auto content : contents) {
+                if (!content->isRemote() || content->state() != Jingle::State::Created)
+                    continue;
+                auto app = qobject_cast<SXE::Application *>(content);
+                if (app && app != whiteboard) {
+                    app->prepare();
+                    bindWhiteboard(app);
+                } else if (!app && jingle == wbSession && !session) {
+                    // Media added by the peer to a whiteboard session: AvCall accepts it for receiving.
+                    if (!dynamic_cast<XMPP::Jingle::RTP::Application *>(content) || !joinMedia())
+                        content->remove(Jingle::Reason::UnsupportedApplications);
                 }
-            });
+            }
+        });
     }
 
     bool mediaAvailable(const XMPP::Jid &peer) const
@@ -437,13 +512,23 @@ public:
         return true;
     }
 
+    void ring(CallRinger::Kind kind, bool playNow = true)
+    {
+        if (!ringer)
+            ringer = new CallRinger(account, kind, playNow, this);
+    }
+
+    void stopRinging() { delete ringer.data(); }
+
     // Answers to the proposal of this dialog.
     void watchProposals()
     {
         auto wb = account->wbManager();
         connect(wb, &WbManager::proposalRinging, this, [this](const QString &id) {
-            if (id == proposalId && !wbSession)
+            if (id == proposalId && !wbSession) {
                 view->setStatus(tr("Ringing…"));
+                ring(CallRinger::Outgoing);
+            }
         });
         connect(wb, &WbManager::proposalAccepted, this, [this](const QString &id, const XMPP::Jid &peer) {
             if (id != proposalId || wbSession || finished)
@@ -463,6 +548,7 @@ public:
         connect(wb, &WbManager::proposalClosed, this, [this](const QString &id, const QString &message) {
             if (id != proposalId || wbSession || finished)
                 return;
+            stopRinging();
             finished = true;
             view->setConnecting(false);
             view->setFinished();
@@ -478,8 +564,92 @@ public:
             view->setStatus(tr("Unable to add a whiteboard to this call."));
             return;
         }
+        // A content-add refused without an answer (one that crossed the peer's and lost the tie-break)
+        // is tried once more, unless the peer's whiteboard took its place.
+        QPointer<Jingle::Session> session(jingle);
+        connect(app, &Jingle::Application::stateChanged, this,
+                [this, session, last = app->state()](Jingle::State state) mutable {
+                    const bool refused = state == Jingle::State::Finished && last == Jingle::State::Unacked;
+                    last               = state;
+                    if (!refused || whiteboardRetried)
+                        return;
+                    QTimer::singleShot(0, this, [this, session] {
+                        if (!session || finished || !active || whiteboardRetried || liveWhiteboard(session))
+                            return;
+                        whiteboardRetried = true;
+                        addWhiteboard(session);
+                    });
+                });
         jingle->addContent(app);
         bindWhiteboard(app);
+    }
+
+    static SXE::Application *liveWhiteboard(Jingle::Session *jingle)
+    {
+        for (auto content : jingle->contentList())
+            if (auto app = qobject_cast<SXE::Application *>(content); app && app->state() < Jingle::State::Finishing)
+                return app;
+        return nullptr;
+    }
+
+    // The policy for the contact: Options > Security and the chat's encryption choice.
+    bool endToEndRequired(const XMPP::Jid &peer) const
+    {
+        return account && account->encryptionController()
+            && account->encryptionController()->jingleEndToEndRequired(peer);
+    }
+
+    bool endToEndPreferred(const XMPP::Jid &peer) const
+    {
+        return account && account->encryptionController()
+            && account->encryptionController()->jingleEndToEndPreferred(peer);
+    }
+
+    // The protection of the session, shown under the status.
+    void watchSecurity(Jingle::Session *jingle)
+    {
+        requiresEndToEnd = jingle->isEndToEndRequired();
+        connect(jingle, &Jingle::Session::peerAuthenticationChanged, this, &Private::updateSecurity,
+                Qt::UniqueConnection);
+        updateSecurity();
+    }
+
+    void updateSecurity()
+    {
+        auto jingle = jingleSession();
+        if (!jingle) {
+            if (!finished)
+                view->setSecurity({}, false);
+            return;
+        }
+        const auto auth    = jingle->peerAuthentication();
+        const auto trust   = XMPP::EncryptionTrustLevel(auth.trustLevel);
+        const bool trusted = trust == XMPP::EncryptionTrustLevel::AutomaticallyTrusted
+            || trust == XMPP::EncryptionTrustLevel::ManuallyTrusted
+            || trust == XMPP::EncryptionTrustLevel::Authenticated;
+        verifiedEndToEnd = auth.isValid() && trusted;
+        // A whiteboard that only has the message transport goes through the server, maybe protected.
+        const auto messages = whiteboard ? qobject_cast<SXE::Transport *>(whiteboard->transport().data()) : nullptr;
+        const bool throughServer = !session && messages;
+        if (throughServer && !messages->encryption().isEmpty())
+            view->setSecurity(tr("End-to-end encrypted with OMEMO; the whiteboard goes through the server"), true);
+        else if (auth.isValid() && trusted)
+            view->setSecurity(tr("End-to-end encrypted, verified with OMEMO"), true);
+        else if (auth.isValid())
+            view->setSecurity(tr("Encrypted, but the contact's OMEMO device is not trusted"), false);
+        else if (throughServer)
+            view->setSecurity(tr("Not end-to-end encrypted: the whiteboard goes through the server"), false);
+        else if (active)
+            view->setSecurity(tr("Encrypted, not verified end-to-end"), false);
+        else
+            view->setSecurity({}, false);
+    }
+
+    bool    refusedForSecurity() const { return requiresEndToEnd && !verifiedEndToEnd; }
+    QString securityRefusal() const
+    {
+        return tr("Refused: the encryption could not be verified with a trusted OMEMO device of the contact. "
+                  "See Options > Security.");
     }
 
     void bindWhiteboard(SXE::Application *app)
@@ -505,6 +675,7 @@ public:
 
     void updateWhiteboard()
     {
+        updateSecurity();
         if (!wbView)
             return;
         const bool live = whiteboard && whiteboard->state() < Jingle::State::Finishing && !finished;
@@ -512,8 +683,8 @@ public:
         // Senders 'none' hides the board for both participants; after the session it stays for saving.
         const bool shown = live ? on && (joined || whiteboard->isHost()) : finished;
         view->stage()->setTileVisible(wbView, shown);
-        const bool synchronized = live
-            && (whiteboard->isHost() || whiteboard->syncState() == SXE::Application::SyncState::Synchronized);
+        const bool synchronized
+            = live && (whiteboard->isHost() || whiteboard->syncState() == SXE::Application::SyncState::Synchronized);
         wbView->setEditable(synchronized && whiteboard->mayEdit(whiteboard->pad()->session()->role()));
         view->setWhiteboardEnabled(on);
     }
@@ -524,6 +695,7 @@ public:
             return;
         if (!active) {
             whiteboardWanted = enabled;
+            whiteboardChosen = true;
             return;
         }
         if (!whiteboard || whiteboard->state() >= Jingle::State::Finishing) {
@@ -552,9 +724,15 @@ public:
     QPointer<Jingle::Session>  wbSession;
     QPointer<Jingle::Session>  watchedSession;
     QString                    proposalId;
-    WbView                    *wbView           = nullptr;
-    bool                       whiteboardWanted = false;
-    bool                       joined           = false;
+    QPointer<CallRinger>       ringer;
+    bool                       requiresEndToEnd  = false;
+    bool                       verifiedEndToEnd  = false;
+    WbView                    *wbView            = nullptr;
+    bool                       whiteboardWanted  = false;
+    bool                       whiteboardChosen  = false; // the user switched it before the call started
+    bool                       whiteboardRetried = false;
+    Jingle::Origin             whiteboardSenders = Jingle::Origin::Both;
+    bool                       joined            = false;
 };
 
 CallDlg::CallDlg(PsiAccount *account, QWidget *parent) : QDialog(parent), d(new Private(this))
@@ -569,10 +747,16 @@ CallDlg::~CallDlg()
     d->account->dialogUnregister(this);
     delete d;
 }
+void CallDlg::acceptIncoming()
+{
+    if (d->incoming)
+        d->accept();
+}
 void CallDlg::setOutgoing(const XMPP::Jid &jid)
 {
     d->view->setPeer(jid.full(), true);
     d->view->setIncoming(false);
+    d->view->setMediaAvailable(d->account->callUsesMedia(jid));
     d->updateWhiteboardSupport();
 }
 void CallDlg::setOutgoingWhiteboard(const XMPP::Jid &jid)
@@ -594,6 +778,13 @@ void CallDlg::setIncoming(AvCall *session)
     d->view->setIncoming(true);
     d->view->setStatus(tr("Incoming call"));
     d->updateWhiteboardSupport();
+    // A whiteboard offered with the call is shown as chosen; a call proposal shows it once the session comes.
+    if (auto jingle = session->jingleSession();
+        (jingle && d->offeredWhiteboard(jingle)) || session->proposedCompanions().contains(SXE::NS_SVG_WHITEBOARD)) {
+        d->whiteboardWanted = true;
+        d->view->setWhiteboardEnabled(true);
+    }
+    d->ring(CallRinger::Incoming, false);
 }
 void CallDlg::setIncomingWhiteboard(XMPP::Jingle::SXE::Application *whiteboard)
 {
@@ -609,6 +800,7 @@ void CallDlg::setIncomingWhiteboard(XMPP::Jingle::SXE::Application *whiteboard)
     d->bindWhiteboardSession(jingle);
     d->bindWhiteboard(whiteboard);
     d->updateWhiteboardSupport();
+    d->ring(CallRinger::Incoming, false);
 }
 void CallDlg::setIncomingWhiteboardProposal(const XMPP::Jid &peer, const QString &proposalId)
 {
@@ -623,4 +815,5 @@ void CallDlg::setIncomingWhiteboardProposal(const XMPP::Jid &peer, const QString
     d->view->setIncoming(true);
     d->view->setStatus(tr("Whiteboard invitation"));
     d->updateWhiteboardSupport();
+    d->ring(CallRinger::Incoming, false);
 }

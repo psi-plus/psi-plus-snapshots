@@ -38,7 +38,7 @@ int main(int argc, char **argv)
     QCoreApplication app(argc, argv);
 
     auto *owned = new QUdpSocket;
-    if (!owned->bind(QHostAddress::LocalHost, 0))
+    if (!owned->bind(QHostAddress(QHostAddress::LocalHost), 0))
         qFatal("failed to bind owned socket");
     QPointer<QUdpSocket> ownedGuard(owned);
     {
@@ -51,7 +51,7 @@ int main(int argc, char **argv)
         qFatal("IceLocalTransport leaked an owned QUdpSocket");
 
     auto *borrowed = new QUdpSocket;
-    if (!borrowed->bind(QHostAddress::LocalHost, 0))
+    if (!borrowed->bind(QHostAddress(QHostAddress::LocalHost), 0))
         qFatal("failed to bind borrowed socket");
     QPointer<QUdpSocket> borrowedGuard(borrowed);
     {

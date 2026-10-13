@@ -281,8 +281,8 @@ arbitrary SDP BUNDLE renegotiation.
 ## Shared XML Editing (XEP-0284)
 
 `Jingle::SXE` implements [XEP-0284](https://xmpp.org/extensions/xep-0284.html) as a Jingle
-transport and a generic application. See [jingle-sxe.md](jingle-sxe.md) for the design, the
-planned payload over other Jingle transports and XEP-0353 proposals. The client registers the application for the SVG
+transport and a generic application. See [jingle-sxe.md](jingle-sxe.md) for the design,
+payload on Jingle connections and XEP-0353 proposals. The client registers the application for the SVG
 whiteboard profile (`urn:xmpp:jingle:apps:svg-whiteboard:0`, a draft profile from
 <https://github.com/jabberworld/whiteboarding>); another document type only needs another
 `SXE::Manager(descriptionNs)`. Drawing is left to the client.
@@ -306,6 +306,12 @@ whiteboard profile (`urn:xmpp:jingle:apps:svg-whiteboard:0`, a draft profile fro
   `last-id` is empty. The prolog is a `data:` URI kept as untrusted text and never parsed.
 - `Application::document()` is a child of the application. A UI can reparent it to keep the
   content after the session; the application then holds it through `QPointer`.
+
+## End-to-end encryption
+
+Not implemented yet. [jingle-e2e.md](jingle-e2e.md) records what Conversations and Dino deploy
+(OMEMO-verified DTLS fingerprints, JET-OMEMO for file transfer) and the plan for an
+"end-to-end required" session policy.
 
 ## Pads in more detail
 
