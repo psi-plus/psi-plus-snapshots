@@ -276,21 +276,22 @@ public:
     static gboolean bridge_callback(gpointer data)
     {
         auto d = static_cast<GstMainLoop::Private *>(data);
-        while (!d->bridgeQueue.empty()) {
-            d->queueMutex.lock();
+        for (;;) {
             QPair<GstMainLoop::ContextCallback, void *> p;
-            bool                                        exist = !d->bridgeQueue.empty();
-            if (exist)
+            {
+                QMutexLocker locker(&d->queueMutex);
+                if (d->bridgeQueue.empty())
+                    break;
                 p = d->bridgeQueue.dequeue();
-            d->queueMutex.unlock();
-            bool stopping = d->stopping.load();
-            if (exist)
-                p.first(p.second);
-            if (stopping) // REVIEW if it's possible to not have anything else at all on the queue during stop
+            }
+            p.first(p.second);
+            // stop() queues the quit command after previously accepted work.
+            // Removing this source merely because stopping was requested can
+            // strand that command (and its waiting semaphore) in the queue.
+            if (!g_main_loop_is_running(d->mainLoop))
                 return FALSE;
         }
-
-        return d->mainLoop == nullptr ? FALSE : TRUE;
+        return TRUE;
     }
 
     static gboolean bridge_prepare(GSource *source, gint *timeout_)

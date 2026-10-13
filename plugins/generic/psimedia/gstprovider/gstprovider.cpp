@@ -75,6 +75,22 @@ GstProvider::GstProvider(const QVariantMap &params)
     if (!success.load()) {
         gstEventLoopThread.wait();
         delete gstEventLoop; // will null it coz QPointer
+    } else {
+        // Schedule after the startup handshake. The constructor must not wait
+        // for SRTP/NSS probing, and UI getters must never run it themselves.
+        gstEventLoop->execInContext(
+            [this](void *) {
+                const auto profiles = SrtpAssociation::supportedProfiles();
+                QMetaObject::invokeMethod(
+                    this,
+                    [this, profiles] {
+                        secureRtpProfiles_      = profiles;
+                        secureRtpProbeComplete_ = true;
+                        emit secureRtpProfilesChanged();
+                    },
+                    Qt::QueuedConnection);
+            },
+            nullptr);
     }
 }
 
@@ -105,13 +121,19 @@ QString GstProvider::creditText() const
     return str;
 }
 
-FeaturesContext *GstProvider::createFeatures() { return new GstFeaturesContext(gstEventLoop, deviceMonitor); }
+FeaturesContext *GstProvider::createFeatures()
+{
+    auto context = new GstFeaturesContext(gstEventLoop, deviceMonitor);
+    context->setBackendReady(secureRtpProbeComplete_);
+    connect(this, &GstProvider::secureRtpProfilesChanged, context, [context] { context->setBackendReady(true); });
+    return context;
+}
 
 RtpSessionContext *GstProvider::createRtpSession() { return new GstRtpSessionContext(gstEventLoop, deviceMonitor); }
 
 AudioRecorderContext *GstProvider::createAudioRecorder() { return new GstAudioRecorderContext(gstEventLoop); }
 
-QStringList GstProvider::supportedSecureRtpProfiles() const { return SrtpAssociation::supportedProfiles(); }
+QStringList GstProvider::supportedSecureRtpProfiles() const { return secureRtpProfiles_; }
 
 SecureRtpSessionContext *GstProvider::createSecureRtpSession()
 {

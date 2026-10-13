@@ -418,7 +418,7 @@ QCA::Provider::Context *ClientStream::currentSASLContext() const
 
 void ClientStream::setSCRAMStoredSaltedHash(const QString &s)
 {
-    QCA::SASLContext *context = (QCA::SASLContext *)(d->sasl->context());
+    auto *context = static_cast<QCA::SASLContext *>(currentSASLContext());
     if (context) {
         context->setProperty("scram-salted-password-base64", s);
     }
@@ -426,7 +426,7 @@ void ClientStream::setSCRAMStoredSaltedHash(const QString &s)
 
 const QString ClientStream::getSCRAMStoredSaltedHash()
 {
-    QCA::SASLContext *context = (QCA::SASLContext *)(d->sasl->context());
+    auto *context = static_cast<QCA::SASLContext *>(currentSASLContext());
     if (context) {
         return context->property("scram-salted-password-base64").toString();
     }
@@ -1365,10 +1365,9 @@ void ClientStream::handleError()
         reset();
         emit error(ErrProtocol);
     } else if (c == CoreProtocol::ErrStream) {
-        const auto *streamCond = d->client.errCond
-            ? std::get_if<CoreProtocol::StreamCond>(&*d->client.errCond)
-            : nullptr;
-        const auto x = streamCond ? *streamCond : CoreProtocol::StreamCond::UndefinedCondition;
+        const auto *streamCond
+            = d->client.errCond ? std::get_if<CoreProtocol::StreamCond>(&*d->client.errCond) : nullptr;
+        const auto  x        = streamCond ? *streamCond : CoreProtocol::StreamCond::UndefinedCondition;
         QString     text     = d->client.errText;
         auto        langText = d->client.errLangText;
         QDomElement appSpec  = d->client.errAppSpec;
@@ -1490,16 +1489,14 @@ void ClientStream::handleError()
         d->errCond = TLSStart;
         emit error(ErrTLS);
     } else if (c == CoreProtocol::ErrAuth) {
-        int r = GenericAuthError;
+        int        r        = GenericAuthError;
         const auto langText = d->client.errLangText;
         if (d->client.old) {
             const auto *code = d->client.errCond ? std::get_if<int>(&*d->client.errCond) : nullptr;
             if (code && *code == 401) // not authorized
                 r = NotAuthorized;
         } else {
-            const auto *cond = d->client.errCond
-                ? std::get_if<CoreProtocol::SASLCond>(&*d->client.errCond)
-                : nullptr;
+            const auto *cond = d->client.errCond ? std::get_if<CoreProtocol::SASLCond>(&*d->client.errCond) : nullptr;
             // Unknown SASL conditions are equivalent to not-authorized (RFC 6120 §6.5).
             const auto x = cond ? *cond : CoreProtocol::SASLCond::NotAuthorized;
             switch (x) {
@@ -1558,10 +1555,8 @@ void ClientStream::handleError()
         d->errCond = NoMech;
         emit error(ErrAuth);
     } else if (c == CoreProtocol::ErrBind) {
-        int r = -1;
-        const auto *cond = d->client.errCond
-            ? std::get_if<CoreProtocol::BindCond>(&*d->client.errCond)
-            : nullptr;
+        int         r    = -1;
+        const auto *cond = d->client.errCond ? std::get_if<CoreProtocol::BindCond>(&*d->client.errCond) : nullptr;
         if (cond) {
             if (*cond == CoreProtocol::BindCond::BindNotAllowed)
                 r = BindNotAllowed;

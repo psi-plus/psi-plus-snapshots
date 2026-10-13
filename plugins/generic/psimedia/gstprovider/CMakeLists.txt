@@ -213,6 +213,18 @@ if(PSIMEDIA_BUILD_TESTS)
     add_test(NAME psimedia_rtpbundlerouter COMMAND psimedia_rtpbundlerouter_test)
     set_tests_properties(psimedia_rtpbundlerouter PROPERTIES TIMEOUT 10)
 
+    if(PSIMEDIA_ENABLE_SRTP AND UNIX AND NOT APPLE)
+        add_executable(psimedia_cryptoprofileprobe_test ${ABS_GST_PARENT_DIR}/tests/cryptoprofileprobe.cpp)
+        target_link_libraries(psimedia_cryptoprofileprobe_test PRIVATE ${PROVIDERLIB}
+            Qt${QT_DEFAULT_MAJOR_VERSION}::Widgets)
+        set_property(TARGET psimedia_cryptoprofileprobe_test APPEND_STRING PROPERTY LINK_FLAGS
+            " -Wl,--wrap=srtp_create")
+        add_test(NAME psimedia_crypto_profile_probe COMMAND psimedia_cryptoprofileprobe_test)
+        add_test(NAME psimedia_crypto_profile_teardown COMMAND psimedia_cryptoprofileprobe_test --teardown)
+        set_tests_properties(psimedia_crypto_profile_probe psimedia_crypto_profile_teardown PROPERTIES
+            ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
+    endif()
+
     if(PSIMEDIA_ENABLE_SRTP)
         add_executable(psimedia_screenchannels_test ${ABS_GST_PARENT_DIR}/tests/screenchannels.cpp)
         target_link_libraries(psimedia_screenchannels_test PRIVATE ${PROVIDERLIB})

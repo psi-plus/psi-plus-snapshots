@@ -215,24 +215,29 @@ SrtpAssociation::~SrtpAssociation() { reset(); }
 
 QStringList SrtpAssociation::supportedProfiles()
 {
-    QStringList result;
+    // Crypto support is independent of capture devices and call state. Probe
+    // once (warmed by GstProvider's worker), retaining only the profile names.
+    static const QStringList profiles = [] {
+        QStringList result;
 #ifdef PSIMEDIA_HAVE_SRTP
-    if (!initializeLibrary())
-        return result;
+        if (!initializeLibrary())
+            return result;
 
-    for (const auto &profile : Profiles) {
-        QByteArray   zeroKey(profile.keySize, char(0));
-        QByteArray   zeroSalt(profile.saltSize, char(0));
-        SecureBuffer material;
-        material.assign(zeroKey, zeroSalt);
-        auto context = createContext(profile, material, true);
-        if (context) {
-            result.append(QLatin1String(profile.name));
-            srtp_dealloc(context);
+        for (const auto &profile : Profiles) {
+            QByteArray   zeroKey(profile.keySize, char(0));
+            QByteArray   zeroSalt(profile.saltSize, char(0));
+            SecureBuffer material;
+            material.assign(zeroKey, zeroSalt);
+            auto context = createContext(profile, material, true);
+            if (context) {
+                result.append(QLatin1String(profile.name));
+                srtp_dealloc(context);
+            }
         }
-    }
 #endif
-    return result;
+        return result;
+    }();
+    return profiles;
 }
 
 bool SrtpAssociation::configure(const QByteArray &associationId, quint64 epoch, const QString &profileName,

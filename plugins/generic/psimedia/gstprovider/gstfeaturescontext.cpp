@@ -15,7 +15,9 @@ GstFeaturesContext::GstFeaturesContext(GstMainLoop *_gstLoop, DeviceMonitor *dev
     // note deviceMonitor works in gstloop's thread
     connect(this->deviceMonitor, &DeviceMonitor::updated, this, &GstFeaturesContext::updateDevices);
     updateDevices();
-    gstLoop->execInContext([this](void *) { this->deviceMonitor->start(); }, nullptr);
+    // The context may be deleted while the loop is busy probing crypto. The
+    // monitor belongs to the loop and outlives its queued work.
+    gstLoop->execInContext([deviceMonitor](void *) { deviceMonitor->start(); }, nullptr);
 }
 
 QObject *GstFeaturesContext::qobject() { return this; }
@@ -31,9 +33,16 @@ void GstFeaturesContext::monitor(int types, QObject *receiver, std::function<voi
     watchers.emplace_back(types, false, QPointer<QObject>(receiver), std::move(callback));
 }
 
+void GstFeaturesContext::setBackendReady(bool ready)
+{
+    backendReady_ = ready;
+    if (ready)
+        watch();
+}
+
 void GstFeaturesContext::watch()
 {
-    if (!updated)
+    if (!updated || !backendReady_)
         return;
     auto it = watchers.cbegin();
     while (it != watchers.cend()) {

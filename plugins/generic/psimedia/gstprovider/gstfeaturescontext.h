@@ -43,10 +43,13 @@ public:
     void lookup(int types, QObject *receiver, std::function<void(const PFeatures &)> &&callback) override;
     void monitor(int types, QObject *receiver, std::function<void(const PFeatures &)> &&callback) override;
 
+    void setBackendReady(bool ready);
+
 private slots:
     void watch();
 
 private:
+    bool           backendReady_ = true;
     QList<PDevice> audioOutputDevices();
     QList<PDevice> audioInputDevices();
     QList<PDevice> videoInputDevices();

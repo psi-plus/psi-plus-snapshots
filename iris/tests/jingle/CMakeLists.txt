@@ -19,6 +19,10 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 endif()
 
 find_package(Qt${QT_DEFAULT_MAJOR_VERSION} REQUIRED COMPONENTS Core Network Xml)
+add_executable(clientstream_scramlifecycle_test scramlifecycle.cpp)
+target_link_libraries(clientstream_scramlifecycle_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core)
+add_test(NAME clientstream_scram_lifecycle COMMAND clientstream_scramlifecycle_test)
+set_tests_properties(clientstream_scram_lifecycle PROPERTIES TIMEOUT 10)
 add_executable(jingle_signaling_test signaling.cpp)
 target_link_libraries(jingle_signaling_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)

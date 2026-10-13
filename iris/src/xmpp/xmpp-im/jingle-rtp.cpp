@@ -33,10 +33,14 @@ namespace {
 
     QStringList commonSecureRtpProfiles(const MediaProvider *provider)
     {
-        if (!provider || !Dtls::isSupported())
+        if (!provider)
             return {};
 
-        auto       result       = provider->secureRtpProfiles();
+        auto result = provider->secureRtpProfiles();
+        // A pending/unavailable media provider cannot advertise secure RTP.
+        // Avoid starting a DTLS probe from disco while its async warmup runs.
+        if (result.isEmpty() || !Dtls::isSupported())
+            return {};
         const auto dtlsProfiles = Dtls::supportedSRTPProfiles();
         for (auto it = result.begin(); it != result.end();) {
             if (!dtlsProfiles.contains(*it))

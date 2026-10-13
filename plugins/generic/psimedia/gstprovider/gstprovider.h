@@ -51,6 +51,14 @@ public:
 
     QStringList              supportedSecureRtpProfiles() const override;
     SecureRtpSessionContext *createSecureRtpSession() override;
+
+signals:
+    void secureRtpProfilesChanged();
+
+private:
+    // Accessed only on the provider's QObject thread. Empty while probing.
+    QStringList secureRtpProfiles_;
+    bool        secureRtpProbeComplete_ = false;
 };
 
 }
