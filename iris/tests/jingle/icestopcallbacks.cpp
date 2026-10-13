@@ -72,6 +72,63 @@ public:
     void        changeThread(QThread *) override { }
 };
 
+static void discardedPairRetiresBinding()
+{
+    auto pair     = Ice176::Private::CandidatePair::Ptr::create();
+    pair->pool    = StunTransactionPool::Ptr::create(StunTransaction::Udp);
+    pair->binding = new StunBinding(pair->pool.data());
+    QPointer<StunBinding>         binding(pair->binding);
+    QPointer<StunTransactionPool> pool(pair->pool.data());
+    pair->binding->start(TransportAddress(QHostAddress::LocalHost, 9999));
+    pair.clear();
+    check(!binding && !pool, "discarded ICE pair left its STUN check running");
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+}
+
+static void replacementRetiresOldBinding()
+{
+    Ice176 ice;
+    auto   d                 = ice.d;
+    auto   transport         = QSharedPointer<FakeTransport>::create();
+    auto   pair              = Ice176::Private::CandidatePair::Ptr::create();
+    pair->local              = IceComponent::CandidateInfo::Ptr::create();
+    pair->remote             = IceComponent::CandidateInfo::Ptr::create();
+    pair->local->addr        = TransportAddress(QHostAddress::LocalHost, 9998);
+    pair->local->base        = pair->local->addr;
+    pair->remote->addr       = TransportAddress(QHostAddress::LocalHost, 9999);
+    pair->local->componentId = pair->remote->componentId = 1;
+    IceComponent::Candidate candidate;
+    candidate.info         = pair->local;
+    candidate.iceTransport = transport;
+    d->localCandidates.append(candidate);
+    d->checkList.pairs.append(pair);
+    d->components.emplace_back();
+    d->components.back().id = 1;
+    d->components.back().ic = new IceComponent(1);
+    d->state                = Ice176::Private::Started;
+    d->mode                 = Ice176::Initiator;
+    d->checkPair(pair);
+    QPointer<StunBinding>         oldBinding(pair->binding);
+    QPointer<StunTransactionPool> oldPool(pair->pool.data());
+    const auto                    oldRequest = transport->request;
+    d->checkPair(pair);
+    check(!oldBinding && !oldPool, "new ICE check left the old STUN transaction running");
+    check(pair->binding && pair->pool && pair->state == Ice176::Private::PInProgress,
+          "retiring old check damaged its replacement");
+    StunMessage staleResponse;
+    staleResponse.setClass(StunMessage::SuccessResponse);
+    staleResponse.setMethod(StunTypes::Binding);
+    staleResponse.setId(oldRequest.id());
+    staleResponse.setAttributes({ { StunTypes::MAPPED_ADDRESS, StunTypes::createMappedAddress(pair->local->addr) } });
+    check(!pair->pool->writeIncomingMessage(staleResponse, pair->remote->addr),
+          "old STUN response was accepted by the replacement pool");
+    check(pair->state == Ice176::Private::PInProgress, "old STUN response mutated the replacement pair");
+    delete d->components.back().ic;
+    d->components.clear();
+    ice.stop();
+    QCoreApplication::sendPostedEvents();
+}
+
 static void peerReflexiveResponse()
 {
     Ice176        ice;
@@ -178,6 +235,8 @@ int main(int argc, char **argv)
     QCoreApplication app(argc, argv);
     QCA::Initializer qca;
     stoppedCallbacks();
+    discardedPairRetiresBinding();
+    replacementRetiresOldBinding();
     peerReflexiveResponse();
     usableConnectivityCancelsPacTimeout();
     qInfo("ICE peer-reflexive response, PAC and stopped callback regressions passed");

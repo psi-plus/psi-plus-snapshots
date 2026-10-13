@@ -123,7 +123,9 @@ private slots:
 
     void trans_finished(const XMPP::StunMessage &response)
     {
-        trans.reset();
+        // The transaction can hold the last reference to our parent pool.
+        // Release it only after parsing and notifying the binding's caller.
+        const auto completedTransaction = std::move(trans);
 
         bool    error = false;
         int     code;
@@ -178,7 +180,9 @@ private slots:
 
     void trans_error(XMPP::StunTransaction::Error e)
     {
-        trans.reset();
+        // Keep the pool (and therefore this binding) alive through the signal.
+        // Moving also allows the caller to restart or delete the binding.
+        const auto completedTransaction = std::move(trans);
 
         if (e == StunTransaction::ErrorTimeout) {
             errorString = "Request timed out.";
@@ -196,7 +200,13 @@ StunBinding::StunBinding(StunTransactionPool *pool) : QObject(pool)
     d->pool = pool;
 }
 
-StunBinding::~StunBinding() { delete d; }
+StunBinding::~StunBinding()
+{
+    // Deleting an active transaction can release the last pool reference.
+    // The pool must not try to delete this binding again during that teardown.
+    setParent(nullptr);
+    delete d;
+}
 
 void StunBinding::setPriority(quint32 i)
 {

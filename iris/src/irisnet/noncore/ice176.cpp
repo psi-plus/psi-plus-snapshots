@@ -167,6 +167,13 @@ public:
         //   or such, to multiplex ids
         StunTransactionPool::Ptr pool;
 
+        ~CandidatePair()
+        {
+            // Retire the check while the pair still owns its pool. An active
+            // transaction must not keep a discarded pair's binding running.
+            delete binding.data();
+        }
+
         inline bool isNull() const { return local->addr.addr.isNull() || remote->addr.addr.isNull(); }
         inline      operator QString() const
         {
@@ -633,6 +640,12 @@ public:
         auto &lc = localCandidates[at];
 
         Component &c = *findComponent(lc.info->componentId);
+
+        // A triggered/nomination check replaces the previous transaction.
+        // Retire it before releasing the old pool or installing new callbacks.
+        delete pair->binding.data();
+        if (pair->pool)
+            pair->pool->disconnect(this);
 
         // read comment to the pool member how wrong it is
         pair->pool = StunTransactionPool::Ptr::create(StunTransaction::Udp);

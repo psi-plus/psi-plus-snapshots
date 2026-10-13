@@ -100,6 +100,14 @@ set_tests_properties(jingle_icevalidpair PROPERTIES TIMEOUT 12)
 add_executable(jingle_stunbindinglifetime_test stunbindinglifetime.cpp)
 target_link_libraries(jingle_stunbindinglifetime_test PRIVATE irisnet iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core)
 add_test(NAME jingle_stunbindinglifetime COMMAND jingle_stunbindinglifetime_test)
+add_executable(jingle_stunbindingcompletion_test stunbindingcompletion.cpp)
+get_target_property(stun_irisnet_binary_dir irisnet BINARY_DIR)
+target_include_directories(jingle_stunbindingcompletion_test PRIVATE
+    "${stun_irisnet_binary_dir}/irisnet_autogen/include"
+    "${stun_irisnet_binary_dir}/irisnet_autogen/include_$<CONFIG>")
+target_link_libraries(jingle_stunbindingcompletion_test PRIVATE irisnet iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core)
+add_test(NAME jingle_stunbindingcompletion COMMAND jingle_stunbindingcompletion_test)
+set_tests_properties(jingle_stunbindingcompletion PROPERTIES TIMEOUT 5)
 add_executable(jingle_icelocalsocketownership_test icelocalsocketownership.cpp)
 target_include_directories(jingle_icelocalsocketownership_test PRIVATE ../../src/irisnet/noncore)
 target_link_libraries(jingle_icelocalsocketownership_test PRIVATE irisnet iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
