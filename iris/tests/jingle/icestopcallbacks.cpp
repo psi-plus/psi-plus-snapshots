@@ -129,6 +129,29 @@ static void replacementRetiresOldBinding()
     QCoreApplication::sendPostedEvents();
 }
 
+// A link-local remote candidate paired with several local interfaces is reached through each pair's own
+// interface; the shared remote candidate keeps no zone of its own.
+static void linkLocalPairsKeepTheirScope()
+{
+    Ice176 ice;
+    auto   d            = ice.d;
+    auto   remote       = IceComponent::CandidateInfo::Ptr::create();
+    remote->addr        = TransportAddress(QHostAddress(QStringLiteral("fe80::2")), 9999);
+    remote->componentId = 1;
+    QList<QSharedPointer<Ice176::Private::CandidatePair>> pairs;
+    for (const auto &zone : { QStringLiteral("lan0"), QStringLiteral("vpn0") }) {
+        auto local         = IceComponent::CandidateInfo::Ptr::create();
+        local->addr        = TransportAddress(QHostAddress(QStringLiteral("fe80::1%") + zone), 9998);
+        local->componentId = 1;
+        pairs += d->makeCandidatesPair(local, remote);
+    }
+    check(pairs.size() == 2 && pairs[0] && pairs[1], "link-local candidates were not paired");
+    check(pairs[0]->remote->addr.addr.scopeId() == QLatin1String("lan0")
+              && pairs[1]->remote->addr.addr.scopeId() == QLatin1String("vpn0"),
+          "a link-local pair is not reached through its own interface");
+    check(remote->addr.addr.scopeId().isEmpty(), "pairing changed the shared remote candidate");
+}
+
 static void peerReflexiveResponse()
 {
     Ice176        ice;
@@ -237,6 +260,7 @@ int main(int argc, char **argv)
     stoppedCallbacks();
     discardedPairRetiresBinding();
     replacementRetiresOldBinding();
+    linkLocalPairsKeepTheirScope();
     peerReflexiveResponse();
     usableConnectivityCancelsPacTimeout();
     qInfo("ICE peer-reflexive response, PAC and stopped callback regressions passed");

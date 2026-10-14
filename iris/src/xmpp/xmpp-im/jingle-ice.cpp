@@ -54,6 +54,20 @@ namespace XMPP { namespace Jingle { namespace ICE {
     const QString NS(QStringLiteral("urn:xmpp:jingle:transports:ice:0"));
     const QString NS_DTLS(QStringLiteral("urn:xmpp:jingle:apps:dtls:0"));
 
+    // An IPv6 zone ID names an interface of the sending host; it means nothing to the peer (RFC 6874).
+    static QString wireAddress(QHostAddress address)
+    {
+        address.setScopeId(QString());
+        return address.toString();
+    }
+
+    static QHostAddress fromWireAddress(const QString &text)
+    {
+        QHostAddress address(text);
+        address.setScopeId(QString());
+        return address;
+    }
+
     static XMPP::Ice176::Candidate elementToCandidate(const QDomElement &e)
     {
         if (e.tagName() != "candidate")
@@ -64,12 +78,12 @@ namespace XMPP { namespace Jingle { namespace ICE {
         c.foundation = e.attribute("foundation");
         c.generation = e.attribute("generation").toInt();
         c.id         = e.attribute("id");
-        c.ip         = QHostAddress(e.attribute("ip"));
+        c.ip         = fromWireAddress(e.attribute("ip"));
         c.network    = e.attribute("network").toInt();
         c.port       = e.attribute("port").toInt();
         c.priority   = e.attribute("priority").toInt();
         c.protocol   = e.attribute("protocol");
-        c.rel_addr   = QHostAddress(e.attribute("rel-addr"));
+        c.rel_addr   = fromWireAddress(e.attribute("rel-addr"));
         c.rel_port   = e.attribute("rel-port").toInt();
         // TODO: remove this?
         // c.rem_addr = QHostAddress(e.attribute("rem-addr"));
@@ -89,7 +103,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         e.setAttribute("generation", QString::number(c.generation));
         if (!c.id.isEmpty())
             e.setAttribute("id", c.id);
-        e.setAttribute("ip", c.ip.toString());
+        e.setAttribute("ip", wireAddress(c.ip));
         // e.setAttribute("ip", "192.168.0.99");
         if (c.network != -1)
             e.setAttribute("network", QString::number(c.network));
@@ -99,7 +113,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         e.setAttribute("priority", QString::number(c.priority));
         e.setAttribute("protocol", c.protocol);
         if (!c.rel_addr.isNull())
-            e.setAttribute("rel-addr", c.rel_addr.toString());
+            e.setAttribute("rel-addr", wireAddress(c.rel_addr));
         if (c.rel_port != -1)
             e.setAttribute("rel-port", QString::number(c.rel_port));
         // TODO: remove this?
@@ -115,7 +129,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
     {
         auto e = doc->createElement("remote-candidate");
         e.setAttribute(QLatin1String("component"), c.componentId);
-        e.setAttribute(QLatin1String("ip"), c.ip.toString());
+        e.setAttribute(QLatin1String("ip"), wireAddress(c.ip));
         e.setAttribute(QLatin1String("port"), c.port);
         return e;
     }
@@ -129,7 +143,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         if (!*ok)
             return c;
         c.componentId = tmp;
-        c.ip          = QHostAddress(el.attribute(QLatin1String("ip")));
+        c.ip          = fromWireAddress(el.attribute(QLatin1String("ip")));
         c.port        = el.attribute(QLatin1String("port")).toUShort(ok);
         *ok           = *ok && !c.ip.isNull();
         return c;

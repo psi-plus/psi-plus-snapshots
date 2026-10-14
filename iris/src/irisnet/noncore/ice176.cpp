@@ -526,8 +526,13 @@ public:
         pair->local  = lc;
         pair->remote = rc;
         if (pair->local->addr.addr.protocol() == QAbstractSocket::IPv6Protocol
-            && isIPv6LinkLocalAddress(pair->local->addr.addr))
-            pair->remote->addr.addr.setScopeId(pair->local->addr.addr.scopeId());
+            && isIPv6LinkLocalAddress(pair->local->addr.addr) && rc->addr.addr.scopeId() != lc->addr.addr.scopeId()) {
+            // A link-local peer is reached through the local candidate's interface. The remote candidate is
+            // shared by the pairs of every local interface, so each pair gets its own scoped copy.
+            auto scoped = IceComponent::CandidateInfo::Ptr::create(*rc);
+            scoped->addr.addr.setScopeId(lc->addr.addr.scopeId());
+            pair->remote = scoped;
+        }
         if (mode == Ice176::Initiator)
             pair->priority = calc_pair_priority(lc->priority, rc->priority);
         else
