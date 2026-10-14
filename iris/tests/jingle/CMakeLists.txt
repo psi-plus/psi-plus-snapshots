@@ -350,6 +350,12 @@ target_link_libraries(jingle_sxeconnection_test PRIVATE iris Qt${QT_DEFAULT_MAJO
 add_test(NAME jingle_sxeconnection COMMAND jingle_sxeconnection_test)
 set_tests_properties(jingle_sxeconnection PROPERTIES TIMEOUT 60)
 
+add_executable(jingle_sxeonrtp_test sxeonrtp.cpp)
+target_link_libraries(jingle_sxeonrtp_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Network Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME jingle_sxeonrtp COMMAND jingle_sxeonrtp_test)
+set_tests_properties(jingle_sxeonrtp PROPERTIES TIMEOUT 60)
+
 add_executable(jingle_jetcipher_test jetcipher.cpp)
 target_include_directories(jingle_jetcipher_test PRIVATE ../../src/xmpp/xmpp-im)
 target_link_libraries(jingle_jetcipher_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core)

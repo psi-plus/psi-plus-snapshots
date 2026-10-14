@@ -95,6 +95,8 @@ public:
     void       writeIncomingDatagram(const QByteArray &data);
 
     bool isStarted() const;
+    /** True after the peer fingerprint has been verified and until closure/reset. */
+    bool isConnected() const;
 
     /** Configure before negotiation. A nonempty list requires SRTP negotiation;
      * failure to agree a profile fails the connection. Empty selects plain DTLS.

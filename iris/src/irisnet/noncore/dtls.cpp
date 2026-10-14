@@ -428,6 +428,8 @@ void Dtls::negotiate() { d->negotiate(); }
 
 bool Dtls::isStarted() const { return d->tls != nullptr; }
 
+bool Dtls::isConnected() const { return d->tls && d->authenticated; }
+
 bool Dtls::isSupported() { return QCA::isSupported("dtls"); }
 
 QStringList Dtls::supportedSRTPProfiles()

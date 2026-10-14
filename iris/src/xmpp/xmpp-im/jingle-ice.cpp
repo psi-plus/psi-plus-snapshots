@@ -506,6 +506,17 @@ namespace XMPP { namespace Jingle { namespace ICE {
     };
 
 #ifdef JINGLE_SCTP
+    static void startSctpOnConnectedDtls(Component &component)
+    {
+        if (!component.sctp || !component.dtls || !component.dtls->isConnected())
+            return;
+        // Stream parity follows the existing DTLS role, including when SCTP
+        // joins an association whose RTP contents already completed DTLS.
+        component.sctp->setIdSelector(component.dtls->localFingerprint().setup == Dtls::Active ? SCTP::IdSelector::Even
+                                                                                               : SCTP::IdSelector::Odd);
+        component.sctp->onTransportConnected();
+    }
+
     static void dispatchIncomingDataChannels(IceConnection *network)
     {
         if (!network || !network->runtime)
@@ -1218,12 +1229,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 qInfo("jingle-ice[%s] DTLS connected component=%d dtls=%p", id.constData(), componentIndex, dtls);
                 auto &c = net->components[componentIndex];
 #ifdef JINGLE_SCTP
-                if (c.sctp) {
-                    // see rfc8864 (6.1) and rfc8832 (6)
-                    c.sctp->setIdSelector(dtls->localFingerprint().setup == Dtls::Active ? SCTP::IdSelector::Even
-                                                                                         : SCTP::IdSelector::Odd);
-                    c.sctp->onTransportConnected();
-                }
+                startSctpOnConnectedDtls(c);
 #endif
                 if (c.rawConnection)
                     c.rawConnection->onConnected();
@@ -1534,6 +1540,10 @@ namespace XMPP { namespace Jingle { namespace ICE {
                                  net->runtime->pendingDataChannels.append(channel);
                                  dispatchIncomingDataChannels(net);
                              });
+            // A content-add may be the first data channel on a running RTP
+            // association. Its DTLS connected signal has already been emitted.
+            // Channel activation and incoming payload still wait for Jingle acceptance.
+            startSctpOnConnectedDtls(c);
         }
 
         Connection::Ptr addDataChannel(TransportFeatures channelFeatures, const QString &label, int &componentIndex)
