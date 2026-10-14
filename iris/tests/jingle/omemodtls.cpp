@@ -237,6 +237,45 @@ int main(int argc, char **argv)
     if (protocols.testFlag(OmemoProtocol::Omemo2))
         exercise(alice, bob, true);
 
+    // A peer whose OMEMO 2 bundle the server no longer holds (one item per node, as old ejabberd) is
+    // reached through its legacy OMEMO bundle, and the fingerprints are still verified.
+    if (protocols.testFlag(OmemoProtocol::Legacy) && protocols.testFlag(OmemoProtocol::Omemo2)) {
+        Endpoint carol(QStringLiteral("carol"));
+        carol.client.setTcpPortReserver(&reserver);
+        carol.client.jingleICEManager()->setSelfAddress(QHostAddress::LocalHost);
+        carol.client.jingleManager()->setMessageInitiationEnabled(true);
+        auto setUp = wait(carol.omemo->setUp(), alice, carol);
+        check(setUp->success(), "OMEMO was not set up");
+        J::OmemoDtlsVerification carolVerification(carol.client.jingleManager(), carol.omemo);
+        const QStringList        omemoFeatures { OmemoEncryption::legacyDevicesNode() + QStringLiteral("+notify"),
+                                          OmemoEncryption::namespaceUri() };
+        setPeerFeatures(alice.client, carol.jid, carol.client.jingleManager()->discoFeatures() + omemoFeatures);
+        setPeerFeatures(carol.client, alice.jid, alice.client.jingleManager()->discoFeatures() + omemoFeatures);
+        pep[carol.jid.bare()][OmemoEncryption::bundlesNode()].clear();
+
+        int legacy = 0, omemo2 = 0;
+        onStanza = [&](const Endpoint &, QDomElement &stanza) {
+            const auto fingerprints = stanza.elementsByTagNameNS(VerificationNs, QStringLiteral("fingerprint"));
+            for (int i = 0; i < fingerprints.size(); ++i) {
+                const auto encrypted = fingerprints.at(i).firstChildElement(QStringLiteral("encrypted"));
+                if (encrypted.namespaceURI() == OmemoEncryption::namespaceUri())
+                    ++omemo2;
+                else if (!encrypted.isNull())
+                    ++legacy;
+            }
+        };
+        auto run = startSession(alice, carol, true, false);
+        check(pumpUntil(alice, carol, [&run] { return synchronized(run.local, run.remote); }),
+              "the whiteboard with a peer without an OMEMO 2 bundle did not synchronize");
+        check(run.peerSession->peerAuthentication().deviceId == alice.omemo->ownDeviceId(),
+              "the fingerprint to a peer without an OMEMO 2 bundle was not verified");
+        check(legacy > 0, "the fingerprint did not fall back to legacy OMEMO");
+        run.session->terminate(J::Reason::Success);
+        pumpUntil(alice, carol, [] { return false; }, 200);
+        onStanza = nullptr;
+        qInfo("OMEMO DTLS verification falls back to legacy OMEMO without an OMEMO 2 bundle");
+    }
+
     // Without a filter nothing can protect the transports: a session requiring it sends nothing.
     alice.client.jingleManager()->removeSignalingFilter(&aliceVerification);
     Wire unfiltered;

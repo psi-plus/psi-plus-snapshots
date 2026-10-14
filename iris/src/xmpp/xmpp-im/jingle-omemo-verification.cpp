@@ -312,32 +312,47 @@ namespace XMPP { namespace Jingle {
         sequence(
             int(items.size()),
             [this, guard, to, items, protocol, device, failure](int index, std::function<void()> next) {
-                const auto &item   = items.at(index);
-                auto        job    = d->omemo->encryptElement(to, protocol, item.element, { *device });
-                auto        handle = [guard, job, item, failure, next]() {
-                    job->deleteLater();
-                    if (!guard)
-                        return;
-                    if (!*failure) {
-                        if (!job->success()) {
-                            *failure = job->errorString();
-                        } else {
-                            auto document = item.transport.ownerDocument();
-                            auto verified = document.createElementNS(VerificationNs, QStringLiteral("fingerprint"));
-                            for (const auto &name : { QStringLiteral("hash"), QStringLiteral("setup") })
-                                if (item.element.hasAttribute(name))
-                                    verified.setAttribute(name, item.element.attribute(name));
-                            verified.appendChild(document.importNode(job->stanza(), true));
-                            auto transport = item.transport;
-                            transport.replaceChild(verified, item.element);
+                const auto &item = items.at(index);
+                // An OMEMO 2 bundle can be missing although the device is there: a server that keeps one item
+                // per PEP node (as old ejabberd does) holds only the bundle published last by the peer's
+                // devices. Legacy OMEMO keeps a node per device, so the fingerprint goes that way then.
+                auto encrypt = std::make_shared<std::function<void(OmemoProtocol)>>();
+                *encrypt     = [this, guard, to, item, device, failure, next, encrypt](OmemoProtocol current) {
+                    auto job    = d->omemo->encryptElement(to, current, item.element, { *device });
+                    auto handle = [this, guard, job, item, failure, next, encrypt, current]() {
+                        job->deleteLater();
+                        if (!guard)
+                            return;
+                        if (!job->success() && current == OmemoProtocol::Omemo2
+                            && d->omemo->supportedProtocols().testFlag(OmemoProtocol::Legacy)) {
+                            qInfo("omemo-dtls: OMEMO 2 encryption failed (%s); trying legacy OMEMO",
+                                      qUtf8Printable(job->errorString()));
+                            (*encrypt)(OmemoProtocol::Legacy);
+                            return;
                         }
-                    }
-                    next();
+                        *encrypt = nullptr; // break the cycle
+                        if (!*failure) {
+                            if (!job->success()) {
+                                *failure = job->errorString();
+                            } else {
+                                auto document = item.transport.ownerDocument();
+                                auto verified = document.createElementNS(VerificationNs, QStringLiteral("fingerprint"));
+                                for (const auto &name : { QStringLiteral("hash"), QStringLiteral("setup") })
+                                    if (item.element.hasAttribute(name))
+                                        verified.setAttribute(name, item.element.attribute(name));
+                                verified.appendChild(document.importNode(job->stanza(), true));
+                                auto transport = item.transport;
+                                transport.replaceChild(verified, item.element);
+                            }
+                        }
+                        next();
+                    };
+                    if (job->isFinished())
+                        handle();
+                    else
+                        connect(job, &EncryptionJob::finished, this, handle);
                 };
-                if (job->isFinished())
-                    handle();
-                else
-                    connect(job, &EncryptionJob::finished, this, handle);
+                (*encrypt)(protocol);
             },
             [guard, copy, failure, required, done]() {
                 if (!guard)

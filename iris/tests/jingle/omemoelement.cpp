@@ -73,6 +73,8 @@ struct Endpoint {
 // PEP nodes of all accounts: owner bare JID → node → item id → payload.
 QMap<QString, QMap<QString, QMap<QString, QDomElement>>> pep;
 QDomDocument                                             pepDocument;
+// Like a server whose node keeps one item or that ignores the requested item ids.
+bool pepIgnoresItemIds = false;
 
 QDomElement reply(const QDomElement &iq, const QString &type)
 {
@@ -145,7 +147,7 @@ QDomElement serve(const QDomElement &iq, const Jid &sender)
         list.setAttribute(QStringLiteral("node"), node);
         const auto stored = pep.value(owner).value(node);
         for (auto it = stored.cbegin(); it != stored.cend(); ++it) {
-            if (!wanted.isEmpty() && !wanted.contains(it.key()))
+            if (!pepIgnoresItemIds && !wanted.isEmpty() && !wanted.contains(it.key()))
                 continue;
             auto item = pepDocument.createElementNS(PubSubNs, QStringLiteral("item"));
             item.setAttribute(QStringLiteral("id"), it.key());

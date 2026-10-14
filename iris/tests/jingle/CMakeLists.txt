@@ -361,6 +361,11 @@ if(IRIS_ENABLE_OMEMO)
         Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
     add_test(NAME omemo_element COMMAND omemo_element_test)
     set_tests_properties(omemo_element PROPERTIES TIMEOUT 30)
+    add_executable(omemo_bundle_item_test omemobundleitem.cpp)
+    target_link_libraries(omemo_bundle_item_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+        Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+    add_test(NAME omemo_bundle_item COMMAND omemo_bundle_item_test)
+    set_tests_properties(omemo_bundle_item PROPERTIES TIMEOUT 30)
     add_executable(omemo_dtls_test omemodtls.cpp)
     target_link_libraries(omemo_dtls_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
         Qt${QT_DEFAULT_MAJOR_VERSION}::Network Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)

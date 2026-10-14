@@ -411,6 +411,45 @@ public:
         }
         data = storage->allData();
         initSignal();
+        forgetMisattributedIdentities();
+    }
+
+    // Earlier builds could pin an OMEMO 2 bundle of one device for another device of the same account
+    // (see fetchBundle). Two devices never share an identity key, so such pins are wrong: they are
+    // forgotten with the sessions built from them and learnt again from the right bundle or message.
+    // Trust decisions are kept by identity key and stay as they are.
+    void forgetMisattributedIdentities()
+    {
+        const auto owners = data.devices.keys();
+        for (const auto &owner : owners) {
+            QHash<QByteArray, QList<uint32_t>> byKey;
+            const auto                         devices = data.devices.value(owner);
+            for (auto it = devices.cbegin(); it != devices.cend(); ++it) {
+                const auto state = it.value().protocols.value(OmemoProtocol::Omemo2);
+                if (!state.keyId.isEmpty())
+                    byKey[state.keyId].append(it.key());
+            }
+            for (const auto &ids : std::as_const(byKey)) {
+                if (ids.size() < 2)
+                    continue;
+                for (const auto id : ids) {
+                    auto device = data.devices.value(owner).value(id);
+                    auto state  = device.protocols.value(OmemoProtocol::Omemo2);
+                    state.keyId.clear();
+                    state.session.clear();
+                    state.lastReceivedRatchetKey.clear();
+                    state.unrespondedSentStanzasCount     = 0;
+                    state.unrespondedReceivedStanzasCount = 0;
+                    device.protocols.insert(OmemoProtocol::Omemo2, state);
+                    if (!storage->addDevice(owner, id, device))
+                        continue;
+                    data.devices[owner][id] = device;
+                    qWarning("OMEMO 2 identity of %s device %u was pinned from another device's bundle; "
+                             "forgotten to be learnt again",
+                             qUtf8Printable(owner), id);
+                }
+            }
+        }
     }
 
     ~Private()
@@ -2022,9 +2061,12 @@ public:
                              : task->statusString());
                 return;
             }
+            // OMEMO 2 keeps the bundles of all devices in one node: only the item of this device is its
+            // bundle. A server that ignores the requested item (or keeps one item per node) must not get
+            // another device's identity pinned for this one. A legacy node holds this device's bundle only.
             QDomElement payload;
             for (const auto &item : task->items()) {
-                if ((protocol == OmemoProtocol::Omemo2 && item.id() == QString::number(id)) || payload.isNull())
+                if (protocol == OmemoProtocol::Omemo2 ? item.id() == QString::number(id) : payload.isNull())
                     payload = item.payload();
             }
             if (payload.isNull()) {
