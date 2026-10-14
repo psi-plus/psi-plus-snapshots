@@ -46,6 +46,14 @@ template <typename T> void std::as_const(const T &&) = delete;
 #endif
 
 namespace XMPP { namespace Jingle {
+
+    static bool isContentAddTieBreak(const Stanza::Error &error)
+    {
+        const auto name = error.appSpec.localName().isEmpty() ? error.appSpec.tagName() : error.appSpec.localName();
+        return error.condition == Stanza::Error::ErrorCond::Conflict
+            && error.appSpec.namespaceURI() == QLatin1String("urn:xmpp:jingle:errors:1")
+            && name == QLatin1String("tie-break");
+    }
     //----------------------------------------------------------------------------
     // JT - Jingle Task
     //----------------------------------------------------------------------------
@@ -182,6 +190,17 @@ namespace XMPP { namespace Jingle {
             {
                 return d->role == Origin::Initiator ? TieBreaker::Solution::Break : TieBreaker::Solution::Postpone;
             }
+            void retry(const TieBreaker::RetryContext &context) override
+            {
+                if (!isContentAddTieBreak(context.localError))
+                    return;
+                for (const auto &key : std::as_const(d->withdrawnContentAdds)) {
+                    auto app = d->contentList.value(key);
+                    if (app && app->state() == State::Unacked && app->retriesContentAdd())
+                        d->retryContentAdds.insert(key);
+                }
+                d->planStep();
+            }
 
         private:
             Private *d;
@@ -189,7 +208,10 @@ namespace XMPP { namespace Jingle {
         ContentAddTieBreak       contentAddTieBreak { this };
         TieBreaker::Registration contentAddTieBreakRegistration;
         // Our contents whose content-add lost a tie-break: outside every group, waiting for the refusal.
-        QSet<ContentKey> withdrawnContentAdds;
+        QSet<ContentKey>       withdrawnContentAdds;
+        QSet<ContentKey>       retryContentAdds;
+        QSet<ContentKey>       contentAddsAwaitingWinner;
+        QHash<ContentKey, int> contentAddRetries;
 
         // not yet acccepted applications from initial incoming request
         QList<Application *> initialIncomingUnacceptedContent;
@@ -467,6 +489,26 @@ namespace XMPP { namespace Jingle {
                 return; // should wait for user approval of send/accept
             }
 
+            // The winner's BUNDLE extension must commit (or roll back) before
+            // deriving another offer from the current negotiated topology.
+            while (state == State::Active && !incomingGroupExtension && !outgoingGroupExtension
+                   && contentAddsAwaitingWinner.isEmpty() && !retryContentAdds.isEmpty()) {
+                const auto key = *retryContentAdds.cbegin();
+                retryContentAdds.remove(key);
+                QPointer<Application> app(contentList.value(key));
+                if (app && app->state() == State::Unacked && app->retriesContentAdd()) {
+                    QPointer<Session> session(q);
+                    if (++contentAddRetries[key] > 3 || !app->retryContentAdd()) {
+                        if (app && app->state() < State::Finishing)
+                            app->incomingRemove(Reason(Reason::Cancel, QStringLiteral("Content-add recovery failed")));
+                    }
+                    if (!session)
+                        return;
+                    planStep();
+                    return;
+                }
+            }
+
             if (outgoingUpdates.size()) {
                 auto it       = outgoingUpdates.begin();
                 auto action   = it.key();
@@ -603,7 +645,27 @@ namespace XMPP { namespace Jingle {
                             auto callback = std::get<1>(h);
                             if (app) {
                                 const ContentKey key { app->contentName(), app->creator() };
+                                if (outgoingAction == Action::ContentAdd && !jt->success()
+                                    && isContentAddTieBreak(jt->error())) {
+                                    // The error can arrive before the winning offer. In that
+                                    // order there is no postponed resolver left to call retry.
+                                    withdrawnContentAdds.insert(key);
+                                    if (app->retriesContentAdd() && app->state() == State::Unacked) {
+                                        if (!contentAddTieBreakRegistration.isPostponed()) {
+                                            retryContentAdds.insert(key);
+                                            contentAddsAwaitingWinner.insert(key);
+                                            planStep();
+                                        }
+                                        continue;
+                                    }
+                                }
                                 if (outgoingAction == Action::ContentAdd && withdrawnContentAdds.contains(key)) {
+                                    if (!jt->success()) {
+                                        app->setState(State::Finished);
+                                        if (!session)
+                                            return;
+                                        continue; // Never remove content the peer already refused.
+                                    }
                                     // Refused with tie-break as expected; a peer that accepted it anyway
                                     // gets it removed, since it is outside the negotiated groups.
                                     callback(jt);
@@ -905,7 +967,7 @@ namespace XMPP { namespace Jingle {
             }
             QPointer<Session> session(q);
             for (const auto &app : std::as_const(withdrawn)) {
-                if (app)
+                if (app && !app->retriesContentAdd())
                     app->setState(State::Finished);
                 if (!session)
                     return false;
@@ -1060,6 +1122,8 @@ namespace XMPP { namespace Jingle {
         {
             ownApplication(content);
             const ContentKey key { content->contentName(), creator };
+            if (contentList.value(key) == content)
+                return;
             contentList.insert(key, content);
             if (state != State::Created && content->evaluateOutgoingUpdate().action != Action::NoAction) {
                 signalingContent.insert(content);
@@ -1079,6 +1143,9 @@ namespace XMPP { namespace Jingle {
                 // still-provisional extension while the transport is still reachable.
                 retireContentGrouping(key);
                 withdrawnContentAdds.remove(key);
+                retryContentAdds.remove(key);
+                contentAddsAwaitingWinner.remove(key);
+                contentAddRetries.remove(key);
                 signalingContent.remove(content);
                 initialIncomingUnacceptedContent.removeOne(content);
                 if (contentList.value(key) == content)
@@ -1629,6 +1696,7 @@ namespace XMPP { namespace Jingle {
                 }
                 QTimer::singleShot(0, q, [this]() { emit q->newContentReceived(); });
             }
+            contentAddsAwaitingWinner.clear();
             planStep();
 
             return true;
@@ -2824,6 +2892,7 @@ namespace XMPP { namespace Jingle {
     void Session::addContent(Application *content)
     {
         Q_ASSERT(d->state < State::Finishing);
+        d->withdrawnContentAdds.remove(ContentKey { content->contentName(), d->role });
         d->addAndInitContent(d->role, content);
         if (d->state >= State::ApprovedToSend) {
             // Active content-add may extend an already-negotiated BUNDLE. Select

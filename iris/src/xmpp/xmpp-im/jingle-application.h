@@ -213,6 +213,10 @@ namespace XMPP { namespace Jingle {
         // transport association with other Jingle contents.
         virtual bool allowsSharedTransport() const { return false; }
 
+        // Application policy: retain this local offer when a crossed content-add
+        // loses arbitration. Cancellation still ends the application normally.
+        virtual bool retriesContentAdd() const { return false; }
+
         /**
          * @brief wantBetterTransport checks if the transport is a better match for the application
          * Used in content is provided twice with two different transports
@@ -375,6 +379,9 @@ namespace XMPP { namespace Jingle {
         QTimer *transportInitTimer = nullptr;
 
     private:
+        friend class Session;
+        // After the losing IQ and winning group update settle.
+        bool retryContentAdd();
         friend class ConnectionWaiter;
         // Attempt identity is independent of transport IQ serialization/ACKs.
         QPointer<ConnectionWaiter> _connectionWaiter;

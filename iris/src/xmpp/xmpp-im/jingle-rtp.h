@@ -284,6 +284,7 @@ public:
     bool                                incomingDescriptionInfo(const QDomElement &) override;
     bool                                isTransportReplaceEnabled() const override;
     bool                                allowsSharedTransport() const override { return true; }
+    bool                                retriesContentAdd() const override { return true; }
     void                                prepare() override;
     void                                start() override;
     void                       remove(Reason::Condition = Reason::Success, const QString & = QString()) override;

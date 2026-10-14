@@ -957,6 +957,38 @@ namespace XMPP { namespace Jingle {
 
     bool Application::isTransportReplaceEnabled() const { return true; }
 
+    bool Application::retryContentAdd()
+    {
+        if (_state != State::Unacked || _terminationReason.isValid() || !_transport || !isLocal())
+            return false;
+        const QPointer<Session> session(_pad->session());
+        if (!session || session->state() != State::Active)
+            return false;
+        const auto            ns = _transport->pad()->ns();
+        QPointer<Application> guard(this);
+        cancelConnectionWaiter();
+        auto previous = _transport;
+        previous->disconnect(this);
+        _transport.clear();
+        previous->disassociate(this);
+        if (!guard || !session || _state != State::Unacked || _terminationReason.isValid())
+            return false;
+        // This offer was never accepted: its successor is content-add, not
+        // transport-replace. Keep the prepared description and capture policy.
+        _pendingTransportReplace = PendingTransportReplace::None;
+        setState(State::ApprovedToSend);
+        if (!guard || !session || _state != State::ApprovedToSend)
+            return false;
+        if (!setTransport(session->newOutgoingTransport(ns)))
+            return false;
+        if (!guard)
+            return false;
+        session->addContent(this);
+        if (guard)
+            emit updated();
+        return bool(guard);
+    }
+
     bool Application::setTransport(Transport *transport, const Reason &reason)
     {
         // Guard both transports and check identity after selector callbacks,

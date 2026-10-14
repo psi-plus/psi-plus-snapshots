@@ -356,6 +356,12 @@ target_link_libraries(jingle_sxeonrtp_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VER
 add_test(NAME jingle_sxeonrtp COMMAND jingle_sxeonrtp_test)
 set_tests_properties(jingle_sxeonrtp PROPERTIES TIMEOUT 60)
 
+add_executable(jingle_rtpcontentaddrace_test rtpcontentaddrace.cpp)
+target_link_libraries(jingle_rtpcontentaddrace_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Network Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME jingle_rtpcontentaddrace COMMAND jingle_rtpcontentaddrace_test)
+set_tests_properties(jingle_rtpcontentaddrace PROPERTIES TIMEOUT 120)
+
 add_executable(jingle_jetcipher_test jetcipher.cpp)
 target_include_directories(jingle_jetcipher_test PRIVATE ../../src/xmpp/xmpp-im)
 target_link_libraries(jingle_jetcipher_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core)
