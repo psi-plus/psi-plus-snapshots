@@ -384,9 +384,12 @@ public:
         | EncryptionTrustLevel::ManuallyTrusted | EncryptionTrustLevel::Authenticated;
     EncryptionTrustLevel newIdentityTrust = EncryptionTrustLevel::AutomaticallyTrusted;
     QSet<QString>        fetchedDeviceLists;
-    int                  minimumEnvelopeSize = 256;
-    bool                 ready               = false;
-    OmemoProtocols       supportedProtocols;
+    // OMEMO 2 identities shared by two devices of one owner: pinned from another device's bundle by an earlier
+    // build, for all but one of them. Each is checked against the device's own bundle before it is trusted again.
+    QSet<QPair<QString, uint32_t>> ambiguousPins;
+    int                            minimumEnvelopeSize = 256;
+    bool                           ready               = false;
+    OmemoProtocols                 supportedProtocols;
 
     struct SignalStore {
         Private                       *owner    = nullptr;
@@ -411,20 +414,18 @@ public:
         }
         data = storage->allData();
         initSignal();
-        forgetMisattributedIdentities();
+        markAmbiguousIdentities();
     }
 
     // Earlier builds could pin an OMEMO 2 bundle of one device for another device of the same account
-    // (see fetchBundle). Two devices never share an identity key, so such pins are wrong: they are
-    // forgotten with the sessions built from them and learnt again from the right bundle or message.
-    // Trust decisions are kept by identity key and stay as they are.
-    void forgetMisattributedIdentities()
+    // (see fetchBundle). Two devices never share an identity key, so all but one such pin are wrong. They are not
+    // dropped blindly: the right one carries a working session. Each is checked against the device's own bundle
+    // first (fetchBundle, ensureSessions) or dropped when the device's messages prove it wrong (decrypt).
+    void markAmbiguousIdentities()
     {
-        const auto owners = data.devices.keys();
-        for (const auto &owner : owners) {
+        for (auto owner = data.devices.cbegin(); owner != data.devices.cend(); ++owner) {
             QHash<QByteArray, QList<uint32_t>> byKey;
-            const auto                         devices = data.devices.value(owner);
-            for (auto it = devices.cbegin(); it != devices.cend(); ++it) {
+            for (auto it = owner->cbegin(); it != owner->cend(); ++it) {
                 const auto state = it.value().protocols.value(OmemoProtocol::Omemo2);
                 if (!state.keyId.isEmpty())
                     byKey[state.keyId].append(it.key());
@@ -433,33 +434,30 @@ public:
                 if (ids.size() < 2)
                     continue;
                 for (const auto id : ids) {
-                    auto device = data.devices.value(owner).value(id);
-                    auto state  = device.protocols.value(OmemoProtocol::Omemo2);
-                    state.keyId.clear();
-                    state.session.clear();
-                    state.lastReceivedRatchetKey.clear();
-                    state.unrespondedSentStanzasCount     = 0;
-                    state.unrespondedReceivedStanzasCount = 0;
-                    device.protocols.insert(OmemoProtocol::Omemo2, state);
-                    if (!storage->addDevice(owner, id, device))
-                        continue;
-                    data.devices[owner][id] = device;
-                    qWarning("OMEMO 2 identity of %s device %u was pinned from another device's bundle; "
-                             "forgotten to be learnt again",
-                             qUtf8Printable(owner), id);
+                    ambiguousPins.insert(qMakePair(owner.key(), id));
+                    qWarning("OMEMO 2 identity of %s device %u is shared with another device; it is checked "
+                             "against the device's own bundle before use",
+                             qUtf8Printable(owner.key()), id);
                 }
             }
         }
     }
 
-    ~Private()
+    // Forgets a pin proved wrong, with the session built on it.
+    bool forgetPin(const QString &owner, uint32_t id, OmemoProtocol protocol)
     {
-        for (auto &store : signalStores) {
-            if (store.context)
-                signal_protocol_store_context_destroy(store.context);
-        }
-        if (signalContext)
-            signal_context_destroy(signalContext);
+        auto device = data.devices.value(owner).value(id);
+        auto state  = device.protocols.value(protocol);
+        state.keyId.clear();
+        state.session.clear();
+        state.lastReceivedRatchetKey.clear();
+        state.unrespondedSentStanzasCount     = 0;
+        state.unrespondedReceivedStanzasCount = 0;
+        device.protocols.insert(protocol, state);
+        ambiguousPins.remove(qMakePair(owner, id));
+        qWarning("OMEMO 2 identity of %s device %u was pinned from another device's bundle; forgotten",
+                 qUtf8Printable(owner), id);
+        return setDevice(owner, id, device);
     }
 
     static Private      *self(void *userData) { return static_cast<Private *>(userData); }
@@ -2046,6 +2044,16 @@ public:
         task->go(true);
     }
 
+    static QString missingBundle(OmemoProtocol protocol, uint32_t id)
+    {
+        return QStringLiteral("No %1 OMEMO bundle is published for device %2")
+            .arg(protocolName(protocol), QString::number(id));
+    }
+    static bool isMissingBundle(const QString &error)
+    {
+        return error.contains(QLatin1String(" OMEMO bundle is published for device "));
+    }
+
     void fetchBundle(const QString &owner, uint32_t id, OmemoProtocol protocol, bool build,
                      const std::function<void(bool, EncryptionJob::Error, QString)> &callback)
     {
@@ -2054,6 +2062,11 @@ public:
         const int maxItems = protocol == OmemoProtocol::Legacy ? 1 : 0;
         auto task = client->pubSubManager()->items(Jid(owner).bare(), protocolBundleNode(protocol, id), ids, maxItems);
         connect(task, &Task::finished, q, [this, task, owner, id, protocol, build, callback]() {
+            if (!task->success() && task->error().condition == Stanza::Error::ErrorCond::ItemNotFound) {
+                // A legacy bundle node that does not exist: the device published no bundle.
+                callback(false, EncryptionJob::Error::ProtocolError, missingBundle(protocol, id));
+                return;
+            }
             if (!task->success()) {
                 callback(false, EncryptionJob::Error::NetworkError,
                          task->statusString().isEmpty()
@@ -2070,9 +2083,7 @@ public:
                     payload = item.payload();
             }
             if (payload.isNull()) {
-                callback(false, EncryptionJob::Error::ProtocolError,
-                         QStringLiteral("No %1 OMEMO bundle is published for device %2")
-                             .arg(protocolName(protocol), QString::number(id)));
+                callback(false, EncryptionJob::Error::ProtocolError, missingBundle(protocol, id));
                 return;
             }
             QString    parseError;
@@ -2090,8 +2101,22 @@ public:
                          QStringLiteral("Remote OMEMO identity key could not be decoded"));
                 return;
             }
-            auto device = data.devices.value(bare).value(id);
-            auto state  = device.protocols.value(protocol);
+            const auto pin    = qMakePair(bare, id);
+            auto       device = data.devices.value(bare).value(id);
+            auto       state  = device.protocols.value(protocol);
+            if (protocol == OmemoProtocol::Omemo2 && ambiguousPins.contains(pin)) {
+                if (!state.keyId.isEmpty() && state.keyId != stored) {
+                    if (!forgetPin(bare, id, protocol)) {
+                        callback(false, EncryptionJob::Error::StorageError,
+                                 QStringLiteral("Could not forget a wrong OMEMO identity"));
+                        return;
+                    }
+                    device = data.devices.value(bare).value(id);
+                    state  = device.protocols.value(protocol);
+                } else {
+                    ambiguousPins.remove(pin); // the device's own bundle confirms it
+                }
+            }
             if (!state.keyId.isEmpty() && state.keyId != stored) {
                 callback(false, EncryptionJob::Error::AuthenticationFailed,
                          QStringLiteral("Remote %1 OMEMO identity key changed").arg(protocolName(protocol)));
@@ -2238,6 +2263,18 @@ public:
         const auto target = targets.at(index);
         if (data.ownDevice && target.first == client->jid().bare() && target.second == data.ownDevice->id) {
             ensureSessions(targets, protocol, index + 1, skipUnusableBundles, callback, readyTargets, skippedTargets);
+            return;
+        }
+        if (protocol == OmemoProtocol::Omemo2 && ambiguousPins.contains(target)
+            && hasSession(target.first, target.second, protocol)) {
+            // Check the pin against the device's own bundle; without one, keep the session as it was.
+            fetchBundle(target.first, target.second, protocol, false,
+                        [this, targets, protocol, index, skipUnusableBundles, callback, readyTargets, skippedTargets,
+                         target](bool, EncryptionJob::Error, const QString &) {
+                            ambiguousPins.remove(target);
+                            ensureSessions(targets, protocol, index, skipUnusableBundles, callback, readyTargets,
+                                           skippedTargets);
+                        });
             return;
         }
         if (hasSession(target.first, target.second, protocol)) {
@@ -2460,10 +2497,24 @@ public:
             job->fail(EncryptionJob::Error::Unsupported, protocolError);
             return job;
         }
-        const auto protocol = *protocolValue;
+        // A wire profile chosen explicitly (a reply, the caller's option) is kept.
+        const bool legacyFallback = *protocolValue == OmemoProtocol::Omemo2 && !context.replyTo
+            && !context.options.contains(QLatin1String(OmemoProtocolOption))
+            && d->supportedProtocols.testFlag(OmemoProtocol::Legacy) && localName(xml) == QLatin1String("message");
+        encryptWith(xml, *protocolValue, legacyFallback, job);
+        return job;
+    }
+
+    // With @a legacyFallback an OMEMO 2 message is encrypted with legacy OMEMO instead when that reaches more of
+    // the recipients' devices: a server keeping one item per PEP node holds only the OMEMO 2 bundle published
+    // last by an account's devices, while legacy OMEMO keeps a node per device.
+    void encryptWith(const QDomElement &xml, OmemoProtocol protocol, bool legacyFallback, EncryptionJob *job)
+    {
+        const auto &context = this->context();
+        auto        d       = method_->d.get();
         if (protocol == OmemoProtocol::Legacy && localName(xml) != QLatin1String("message")) {
             job->fail(EncryptionJob::Error::Unsupported, QStringLiteral("Legacy OMEMO supports message stanzas only"));
-            return job;
+            return;
         }
 
         QDomDocument inputDocument;
@@ -2485,7 +2536,7 @@ public:
             auto    prepared = StanzaContentEncryption::prepare(stanza, profile, &sceError);
             if (!prepared) {
                 job->fail(EncryptionJob::Error::InvalidInput, sceError);
-                return job;
+                return;
             }
             preparedOuter = prepared->outerDocument.documentElement();
             plaintext     = prepared->envelopeDocument.toByteArray(-1);
@@ -2503,14 +2554,14 @@ public:
         d->selectTargets(stanza, context, protocol, &owners, &targetError); // recomputed after PEP fetch.
         if (owners.isEmpty()) {
             job->fail(EncryptionJob::Error::NoRecipients, targetError);
-            return job;
+            return;
         }
 
         QPointer<EncryptionJob> guardedJob(job);
         d->ensureDeviceLists(
             owners, protocol, 0,
-            [this, guardedJob, preparedOuter, plaintext, legacyHasPayload, context, owners,
-             protocol](bool ok, const QString &error) {
+            [this, guardedJob, preparedOuter, plaintext, legacyHasPayload, context, owners, protocol, legacyFallback,
+             inputDocument, stanza](bool ok, const QString &error) {
                 if (!guardedJob)
                     return;
                 auto d = method_->d.get();
@@ -2529,9 +2580,10 @@ public:
                 }
                 d->ensureSessions(
                     targets, protocol, 0, true,
-                    [this, guardedJob, preparedOuter, plaintext, legacyHasPayload, owners,
-                     protocol](bool sessionsOk, EncryptionJob::Error sessionError, const QString &sessionErrorString,
-                               QList<QPair<QString, uint32_t>> readyTargets, const QStringList &skippedTargets) {
+                    [this, guardedJob, preparedOuter, plaintext, legacyHasPayload, owners, protocol, legacyFallback,
+                     targets, inputDocument,
+                     stanza](bool sessionsOk, EncryptionJob::Error sessionError, const QString &sessionErrorString,
+                             QList<QPair<QString, uint32_t>> readyTargets, const QStringList &skippedTargets) {
                         if (!guardedJob)
                             return;
                         auto d = method_->d.get();
@@ -2541,6 +2593,25 @@ public:
                             metadata.details.insert(QLatin1String(OmemoProtocolOption), protocolName(protocol));
                             guardedJob->fail(sessionError, sessionErrorString, metadata);
                             return;
+                        }
+
+                        if (legacyFallback && !skippedTargets.isEmpty()) {
+                            bool keepsReady = true, reachesSkipped = false;
+                            for (const auto &target : targets) {
+                                const bool legacy
+                                    = d->activeDevicesFor(target.first, OmemoProtocol::Legacy).contains(target);
+                                if (readyTargets.contains(target))
+                                    keepsReady = keepsReady && legacy;
+                                else
+                                    reachesSkipped = reachesSkipped || legacy;
+                            }
+                            if (keepsReady && reachesSkipped) {
+                                qInfo("OMEMO: device(s) without an OMEMO 2 bundle are reachable with legacy OMEMO; "
+                                      "encrypting with legacy OMEMO");
+                                Q_UNUSED(inputDocument) // keeps the stanza's document alive
+                                encryptWith(stanza, OmemoProtocol::Legacy, false, guardedJob);
+                                return;
+                            }
                         }
 
                         const auto ownBare = d->client->jid().bare();
@@ -2556,9 +2627,18 @@ public:
                                 return;
                             }
                         }
-                        if (!skippedTargets.isEmpty()) {
+                        // A device without a bundle cannot receive anything (a stale device id, or a bundle the
+                        // server no longer holds): it is left out quietly. A broken bundle is worth a warning.
+                        QStringList broken;
+                        for (const auto &skipped : skippedTargets) {
+                            if (OmemoEncryption::Private::isMissingBundle(skipped))
+                                qInfo("OMEMO skipped a recipient device: %s", qUtf8Printable(skipped));
+                            else
+                                broken.append(skipped);
+                        }
+                        if (!broken.isEmpty()) {
                             emit method_->warning(QStringLiteral("OMEMO skipped unusable recipient device(s): %1")
-                                                      .arg(skippedTargets.join(QStringLiteral("; "))));
+                                                      .arg(broken.join(QStringLiteral("; "))));
                         }
 
                         QByteArray keyMaterial;
@@ -2691,7 +2771,6 @@ public:
                         guardedJob->complete(outer, metadata);
                     });
             });
-        return job;
     }
 
     EncryptionJob *decrypt(const QDomElement &xml) override
@@ -2786,9 +2865,18 @@ public:
         uint32_t   messageCounter = 0;
         QByteArray ratchetKey;
         QString    cryptoError;
-        const int  code = d->decryptKey(sender.bare(), senderDevice, protocol, keyExchange, encryptedKey, &keyMaterial,
+        int        code = d->decryptKey(sender.bare(), senderDevice, protocol, keyExchange, encryptedKey, &keyMaterial,
                                         &messageCounter, &ratchetKey, &cryptoError);
+        if (code == SG_ERR_UNTRUSTED_IDENTITY && protocol == OmemoProtocol::Omemo2
+            && d->ambiguousPins.contains(qMakePair(sender.bare(), senderDevice))
+            && d->forgetPin(sender.bare(), senderDevice, protocol)) {
+            // The device's own key exchange proves the shared pin wrong for it.
+            code = d->decryptKey(sender.bare(), senderDevice, protocol, keyExchange, encryptedKey, &keyMaterial,
+                                 &messageCounter, &ratchetKey, &cryptoError);
+        }
         if (code != SG_SUCCESS) {
+            // The libomemo-c code tells a duplicate (to be ignored) and a broken session (to be repaired) apart.
+            metadata.details.insert(QStringLiteral("signalError"), code);
             job->fail(signalErrorToJob(code), cryptoError, metadata);
             return job;
         }
@@ -3499,37 +3587,77 @@ EncryptionJob *OmemoEncryption::sanitizeOwnPep()
                         return;
                     }
 
-                    // Device bundles are items in a shared OMEMO 2 node.  Retracting a broken
-                    // item prevents stale public key material from lingering; a missing item is
-                    // already in the desired state, so ItemNotFound is harmless.
-                    auto retract = d->client->pubSubManager()->retract(
-                        Jid(ownBare), protocolBundleNode(OmemoProtocol::Omemo2, target.second),
-                        QString::number(target.second));
-                    connect(retract, &Task::finished, this, [this, job, retract, target, index, next]() {
-                        if (!retract->success()
-                            && retract->error().condition != Stanza::Error::ErrorCond::ItemNotFound) {
-                            const auto error = retract->statusString();
-                            retract->deleteLater();
-                            job->fail(EncryptionJob::Error::NetworkError,
-                                      error.isEmpty() ? QStringLiteral("Could not retract broken OMEMO bundle")
-                                                      : error);
-                            return;
-                        }
-                        retract->deleteLater();
-                        auto retire = retireOwnDevice(target.second, OmemoProtocol::Omemo2);
-                        connect(retire, &EncryptionJob::finished, this, [job, retire, index, next]() {
-                            if (retire->success())
-                                (*next)(index + 1);
-                            else
-                                job->fail(retire->error(), retire->errorString());
-                            retire->deleteLater();
-                        });
-                    });
+                    // A server keeping one item per PEP node (old ejabberd) holds the OMEMO 2 bundle of one
+                    // device only; the others are alive if their legacy bundle (a node per device) is there.
+                    // A device with neither cannot receive anything: it is retired from both device lists.
+                    // If it is alive after all, it announces itself again (XEP-0384 5.3.1).
+                    d->fetchBundle(ownBare, target.second, OmemoProtocol::Legacy, false,
+                                   [this, job, ownBare, target, index,
+                                    next](bool alive, EncryptionJob::Error legacyError, const QString &legacyMessage) {
+                                       if (alive) {
+                                           (*next)(index + 1);
+                                           return;
+                                       }
+                                       if (legacyError != EncryptionJob::Error::ProtocolError) {
+                                           job->fail(legacyError, legacyMessage);
+                                           return;
+                                       }
+                                       retireDeadOwnDevice(job, ownBare, target.second,
+                                                           [index, next]() { (*next)(index + 1); });
+                                   });
                 });
         };
         (*next)(0);
     });
     return job;
+}
+
+void OmemoEncryption::retireDeadOwnDevice(EncryptionJob *job, const QString &ownBare, uint32_t deviceId,
+                                          const std::function<void()> &next)
+{
+    // Its OMEMO 2 item may linger in the shared bundles node; ItemNotFound is the desired state already.
+    auto retract = d->client->pubSubManager()->retract(
+        Jid(ownBare), protocolBundleNode(OmemoProtocol::Omemo2, deviceId), QString::number(deviceId));
+    connect(retract, &Task::finished, this, [this, job, retract, ownBare, deviceId, next]() {
+        if (!retract->success() && retract->error().condition != Stanza::Error::ErrorCond::ItemNotFound) {
+            const auto error = retract->statusString();
+            retract->deleteLater();
+            job->fail(EncryptionJob::Error::NetworkError,
+                      error.isEmpty() ? QStringLiteral("Could not retract broken OMEMO bundle") : error);
+            return;
+        }
+        retract->deleteLater();
+        qInfo("OMEMO: own device %u has no bundle; retiring it", deviceId);
+        auto       protocols = std::make_shared<QList<OmemoProtocol>>();
+        const auto device    = d->data.devices.value(ownBare).value(deviceId);
+        for (const auto protocol : { OmemoProtocol::Omemo2, OmemoProtocol::Legacy })
+            if (Private::protocolActive(device, protocol))
+                protocols->append(protocol);
+        // Each retirement's completion holds the step, so nothing outlives the last one.
+        auto step = std::make_shared<std::function<void()>>();
+        *step     = [this, job, deviceId, next, protocols, weakStep = std::weak_ptr<std::function<void()>>(step)]() {
+            if (protocols->isEmpty()) {
+                next();
+                return;
+            }
+            auto retire   = retireOwnDevice(deviceId, protocols->takeFirst());
+            auto finished = [job, retire, step = weakStep.lock()]() {
+                retire->deleteLater();
+                if (!retire->success()) {
+                    job->fail(retire->error(), retire->errorString());
+                    return;
+                }
+                if (step)
+                    (*step)();
+            };
+            if (retire->isFinished())
+                finished();
+            else
+                connect(retire, &EncryptionJob::finished, this, finished);
+        };
+        (*step)();
+    });
+    retract->go(true);
 }
 
 EncryptionJob *OmemoEncryption::retireOwnDevice(uint32_t deviceId, OmemoProtocol protocol)

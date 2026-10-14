@@ -84,6 +84,104 @@ int main(int argc, char **argv)
     auto readAgain = wait(bob.omemo->decryptElement(alice.jid, again->stanza()), alice, bob);
     check(readAgain->success(), "the element after relearning was not decrypted");
 
+    // Sanitizing the own PEP data retires an own device that has no bundle at all, and keeps one whose OMEMO 2
+    // bundle a one-item node lost but whose legacy bundle (a node per device) is there.
+    if (alice.omemo->supportedProtocols().testFlag(OmemoProtocol::Legacy)) {
+        const auto     aliceJid = alice.jid.bare();
+        const uint32_t dead = 111111, legacyOnly = 222222;
+        const auto     ownId = alice.omemo->ownDeviceId();
+        auto           list  = [](const QString &ns, const QString &root, std::initializer_list<uint32_t> ids) {
+            auto element = pepDocument.createElementNS(ns, root);
+            for (const auto id : ids) {
+                auto device = pepDocument.createElementNS(ns, QStringLiteral("device"));
+                device.setAttribute(QStringLiteral("id"), QString::number(id));
+                element.appendChild(device);
+            }
+            return element;
+        };
+        const auto legacyNs = QStringLiteral("eu.siacs.conversations.axolotl");
+        pep[aliceJid][OmemoEncryption::devicesNode()][QStringLiteral("current")]
+            = list(OmemoEncryption::namespaceUri(), QStringLiteral("devices"), { ownId, dead, legacyOnly });
+        pep[aliceJid][OmemoEncryption::legacyDevicesNode()][QStringLiteral("current")]
+            = list(legacyNs, QStringLiteral("list"), { ownId, dead, legacyOnly });
+        const auto bobLegacy = pep[bobJid][legacyNs + QStringLiteral(".bundles:") + QString::number(bobId)];
+        check(!bobLegacy.isEmpty(), "bob's legacy bundle was not published");
+        pep[aliceJid][legacyNs + QStringLiteral(".bundles:") + QString::number(legacyOnly)] = bobLegacy;
+        auto refresh = wait(alice.omemo->refreshDevices(alice.jid, OmemoProtocol::Legacy, false), alice, bob);
+        check(refresh->success(), "the own legacy device list was not read");
+
+        auto sanitize = wait(alice.omemo->sanitizeOwnPep(), alice, bob);
+        check(sanitize->success(), "sanitizing the own PEP data failed");
+        const auto listed = [&](const QString &node) {
+            QList<uint32_t> ids;
+            const auto      element = pep[aliceJid][node].value(QStringLiteral("current"));
+            for (auto device = element.firstChildElement(QStringLiteral("device")); !device.isNull();
+                 device      = device.nextSiblingElement(QStringLiteral("device")))
+                ids.append(device.attribute(QStringLiteral("id")).toUInt());
+            return ids;
+        };
+        for (const auto &node : { OmemoEncryption::devicesNode(), OmemoEncryption::legacyDevicesNode() }) {
+            const auto ids = listed(node);
+            check(ids.contains(ownId) && ids.contains(legacyOnly) && !ids.contains(dead),
+                  "sanitizing did not retire exactly the own device without any bundle");
+        }
+    }
+
+    // A chat message goes with legacy OMEMO when a device of the recipient has no OMEMO 2 bundle but a legacy one,
+    // and every device OMEMO 2 would reach is reachable with legacy OMEMO too. Otherwise it stays OMEMO 2.
+    if (alice.omemo->supportedProtocols().testFlag(OmemoProtocol::Legacy)) {
+        Endpoint dave(QStringLiteral("dave"));
+        Endpoint erin(QStringLiteral("erin"));
+        for (auto endpoint : { &dave, &erin }) {
+            auto setUp = wait(endpoint->omemo->setUp(), dave, erin);
+            check(setUp->success(), "OMEMO was not set up");
+        }
+        const auto     legacyNs = QStringLiteral("eu.siacs.conversations.axolotl");
+        const auto     erinJid  = erin.jid.bare();
+        const auto     erinId   = erin.omemo->ownDeviceId();
+        const uint32_t second   = 333333;
+        auto           list     = [](const QString &ns, const QString &root, std::initializer_list<uint32_t> ids) {
+            auto element = pepDocument.createElementNS(ns, root);
+            for (const auto id : ids) {
+                auto device = pepDocument.createElementNS(ns, QStringLiteral("device"));
+                device.setAttribute(QStringLiteral("id"), QString::number(id));
+                element.appendChild(device);
+            }
+            return element;
+        };
+        const auto send = [&](const QString &to) {
+            QDomDocument document;
+            auto         message = document.createElement(QStringLiteral("message"));
+            message.setAttribute(QStringLiteral("to"), to);
+            message.setAttribute(QStringLiteral("type"), QStringLiteral("chat"));
+            auto body = document.createElement(QStringLiteral("body"));
+            body.appendChild(document.createTextNode(QStringLiteral("hello")));
+            message.appendChild(body);
+            document.appendChild(message);
+            EncryptionContext context;
+            context.recipients = { Jid(to) };
+            std::unique_ptr<EncryptedSession> session(dave.omemo->startSession(EncryptionMethod::XmppStanza, context));
+            auto                              job = wait(session->encrypt(message), dave, erin);
+            check(job->success(), "the chat message was not encrypted");
+            return job->stanza().firstChildElement(QStringLiteral("encrypted")).namespaceURI();
+        };
+        check(send(erinJid) == OmemoEncryption::namespaceUri(),
+              "a message to devices with OMEMO 2 bundles left OMEMO 2");
+
+        pep[erinJid][OmemoEncryption::devicesNode()][QStringLiteral("current")]
+            = list(OmemoEncryption::namespaceUri(), QStringLiteral("devices"), { erinId, second });
+        pep[erinJid][OmemoEncryption::legacyDevicesNode()][QStringLiteral("current")]
+            = list(legacyNs, QStringLiteral("list"), { erinId, second });
+        pep[erinJid][legacyNs + QStringLiteral(".bundles:") + QString::number(second)]
+            = pep[carol.jid.bare()]
+                 [legacyNs + QStringLiteral(".bundles:") + QString::number(carol.omemo->ownDeviceId())];
+        auto refresh       = wait(dave.omemo->refreshDevices(erin.jid, OmemoProtocol::Omemo2, false), dave, erin);
+        auto refreshLegacy = wait(dave.omemo->refreshDevices(erin.jid, OmemoProtocol::Legacy, false), dave, erin);
+        check(refresh->success() && refreshLegacy->success(), "erin's device lists were not read");
+        check(send(erinJid) == legacyNs,
+              "a message did not fall back to legacy OMEMO for a device without an OMEMO 2 bundle");
+    }
+
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     qInfo("OMEMO bundle item tests passed");
     pep.clear();

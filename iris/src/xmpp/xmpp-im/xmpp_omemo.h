@@ -18,6 +18,7 @@
 
 #include <QList>
 
+#include <functional>
 #include <memory>
 #include <optional>
 
@@ -189,6 +190,8 @@ signals:
 private:
     EncryptionJob *sendProtocolMessage(const Jid &recipient, uint32_t deviceId, OmemoProtocol protocol,
                                        bool requireKeyExchange);
+    void           retireDeadOwnDevice(EncryptionJob *job, const QString &ownBare, uint32_t deviceId,
+                                       const std::function<void()> &next);
 
     friend class OmemoEncryptedSession;
     class Private;
