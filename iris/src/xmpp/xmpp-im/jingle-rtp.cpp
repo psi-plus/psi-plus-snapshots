@@ -588,6 +588,14 @@ QDomElement Application::makeLocalAnswer()
 {
     return negotiation_.state() == Negotiation::State::Accepted ? makeLocalOffer() : QDomElement();
 }
+bool Application::canShareTransport(const Transport *transport) const
+{
+    // A running data-only DTLS association has no negotiated SRTP context.
+    // Keep it intact and negotiate a separate RTP association instead.
+    auto packets = dynamic_cast<const PacketTransport *>(transport);
+    return packets && packets->rtpAssociation();
+}
+
 bool Application::isTransportReplaceEnabled() const
 {
     if (_state < State::Connecting)

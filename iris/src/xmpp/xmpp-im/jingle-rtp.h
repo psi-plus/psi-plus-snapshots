@@ -284,6 +284,7 @@ public:
     bool                                incomingDescriptionInfo(const QDomElement &) override;
     bool                                isTransportReplaceEnabled() const override;
     bool                                allowsSharedTransport() const override { return true; }
+    bool                                canShareTransport(const Transport *) const override;
     bool                                retriesContentAdd() const override { return true; }
     void                                prepare() override;
     void                                start() override;

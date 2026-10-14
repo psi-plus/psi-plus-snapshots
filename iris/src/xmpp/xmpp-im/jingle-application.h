@@ -212,6 +212,9 @@ namespace XMPP { namespace Jingle {
         // Application policy: true when this content may share one physical
         // transport association with other Jingle contents.
         virtual bool allowsSharedTransport() const { return false; }
+        // Compatibility with an already negotiated physical association.
+        // Initial grouping still uses allowsSharedTransport().
+        virtual bool canShareTransport(const Transport *) const { return allowsSharedTransport(); }
 
         // Application policy: retain this local offer when a crossed content-add
         // loses arbitration. Cancellation still ends the application normally.

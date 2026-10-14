@@ -362,6 +362,12 @@ target_link_libraries(jingle_rtpcontentaddrace_test PRIVATE iris Qt${QT_DEFAULT_
 add_test(NAME jingle_rtpcontentaddrace COMMAND jingle_rtpcontentaddrace_test)
 set_tests_properties(jingle_rtpcontentaddrace PROPERTIES TIMEOUT 120)
 
+add_executable(jingle_rtponwhiteboard_test rtponwhiteboard.cpp)
+target_link_libraries(jingle_rtponwhiteboard_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Network Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME jingle_rtponwhiteboard COMMAND jingle_rtponwhiteboard_test)
+set_tests_properties(jingle_rtponwhiteboard PROPERTIES TIMEOUT 120)
+
 add_executable(jingle_jetcipher_test jetcipher.cpp)
 target_include_directories(jingle_jetcipher_test PRIVATE ../../src/xmpp/xmpp-im)
 target_link_libraries(jingle_jetcipher_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core)

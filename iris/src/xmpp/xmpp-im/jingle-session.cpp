@@ -1637,7 +1637,8 @@ namespace XMPP { namespace Jingle {
                             }
                             const auto transport = member->transport();
                             if (!transport || !transport->pad() || !transport->supportsSharedTransport()
-                                || transport->pad()->ns() != transportNs) {
+                                || transport->pad()->ns() != transportNs
+                                || !extensionApp->canShareTransport(transport)) {
                                 share = false;
                                 break;
                             }
@@ -2935,7 +2936,7 @@ namespace XMPP { namespace Jingle {
                             }
                             const auto transport = member->transport();
                             if (!transport || !transport->pad() || !transport->supportsSharedTransport()
-                                || transport->pad()->ns() != transportNs) {
+                                || transport->pad()->ns() != transportNs || !content->canShareTransport(transport)) {
                                 compatible = false;
                                 break;
                             }
