@@ -39,10 +39,11 @@ $vcpkg = Join-Path $env:VCPKG_INSTALLATION_ROOT 'vcpkg.exe'
 # binary cache archives both OpenSSL and the libSRTP that links against it.
 # Keep the legacy Win7 profile independent: it uses the v142 overlay triplet.
 $packages = @("libsrtp[openssl]:$triplet", 'pkgconf:x64-windows')
+# Both profiles reuse vcpkg binaries between runs (the workflow keys the cache by triplet and toolset).
+$cache = Join-Path $env:RUNNER_TEMP 'vcpkg-binary-cache'
+New-Item -ItemType Directory -Force -Path $cache | Out-Null
+$env:VCPKG_BINARY_SOURCES = "clear;files,$cache,readwrite"
 if ($BuildProfile -eq 'modern') {
-    $cache = Join-Path $env:RUNNER_TEMP 'vcpkg-binary-cache'
-    New-Item -ItemType Directory -Force -Path $cache | Out-Null
-    $env:VCPKG_BINARY_SOURCES = "clear;files,$cache,readwrite"
     $packages = @("openssl:$triplet") + $packages
 }
 Invoke-Checked $vcpkg (@('install') + $packages + @("--overlay-triplets=$source/ci/windows"))
@@ -80,7 +81,8 @@ $configure = @('-S', '.', '-B', $build, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Relea
     "-DPKG_CONFIG_EXECUTABLE=$pkgconfCmake", '-DPKG_CONFIG_ARGN=--define-prefix',
     "-DSRTP_ROOT=$srtpCmake", '-DBUILD_DEMO=OFF', '-DBUILD_PSIPLUGIN=ON',
     '-DPSIMEDIA_BUILD_TESTS=ON', '-DPSIMEDIA_ENABLE_SRTP=ON',
-    '-DPSIMEDIA_WINDOWS_VIDEO_SOURCE=mfvideosrc', "-DPLUGINS_ROOT_DIR=$sourceCmake/_psi/plugins")
+    '-DPSIMEDIA_WINDOWS_VIDEO_SOURCE=mfvideosrc', "-DPLUGINS_ROOT_DIR=$sourceCmake/_psi/plugins",
+    '-DPSIMEDIA_INSTALL_GSTREAMER_RUNTIME=ON')
 if ($UseCcache) {
     $ccache = (Get-Command ccache -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
     Invoke-Checked $ccache @('--version')
@@ -101,3 +103,4 @@ if ($LASTEXITCODE -ne 0 -or ($deps -join "`n") -notmatch '(?i)srtp.*\.dll') {
     throw "Installed plugin does not import the shared SRTP runtime: $deps"
 }
 $deps | Set-Content "plugin-dependencies-$BuildProfile.txt"
+& "$PSScriptRoot/check-gstreamer-runtime.ps1" -Stage $stage -Sdk $gst

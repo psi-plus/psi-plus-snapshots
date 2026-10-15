@@ -148,6 +148,11 @@ if(BUILD_PSIPLUGIN)
 endif()
 add_subdirectory(gstprovider)
 
+if(WIN32 AND BUILD_PSIPLUGIN)
+    include(${CMAKE_CURRENT_LIST_DIR}/cmake/modules/PsimediaGStreamerRuntime.cmake)
+    psimedia_install_gstreamer_runtime(mediaplugin)
+endif()
+
 if(PSIMEDIA_BUILD_DEB_PACKAGE)
     if(NOT UNIX OR APPLE)
         message(FATAL_ERROR "PSIMEDIA_BUILD_DEB_PACKAGE is supported only on Debian-family Linux builds")
