@@ -278,10 +278,11 @@ void InteractiveText::markVisible(const InteractiveTextFormat::ElementId &id) { 
 QRect InteractiveText::elementRect(const QTextCursor &cursor) const
 {
     QRect       ret;
-    auto        block      = cursor.block();
     auto        controller = _controllers.value(cursor.charFormat().objectType());
     QTextCursor anchorCursor(cursor);
-    anchorCursor.movePosition(QTextCursor::Left);
+    // Left is a visual move and can select a neighbour in bidirectional text.
+    anchorCursor.setPosition(cursor.selectionStart());
+    auto block = anchorCursor.block();
     if (controller && block.isValid() && block.isVisible()) {
         // qDebug() << "block pos" << block.position() << "lines" << block.lineCount() << "layout lines" <<
         // block.layout()->lineCount();
@@ -289,10 +290,10 @@ QRect InteractiveText::elementRect(const QTextCursor &cursor) const
         QTextLine line       = block.layout()->lineForTextPosition(posInBlock);
         if (line.isValid()) {
             // qDebug() << "  line rect" << line.rect();
-            auto x = line.cursorToX(posInBlock);
+            auto x = qMin(line.cursorToX(posInBlock), line.cursorToX(posInBlock + 1));
             auto s = controller->intrinsicSize(_textEdit->document(), anchorCursor.position(), cursor.charFormat());
             ret    = QRect(QPoint(0, 0), s.toSize());
-            ret.moveBottomLeft(QPoint(int(x), int(line.rect().bottom())));
+            ret.moveTopLeft(QPoint(qRound(x), qRound(line.y() + line.ascent() - s.height())));
             ret.translate(_textEdit->document()->documentLayout()->blockBoundingRect(block).topLeft().toPoint());
         }
     }
@@ -312,7 +313,9 @@ void InteractiveText::trackVisibility()
 
         // FIXME this call is not optimal. but internally it uses qtextdocument, so it won't slowdoan that much
         auto cursor = findElement(id);
-        if (!cursor.isNull()) {
+        if (cursor.isNull()) {
+            it.remove();
+        } else {
             auto cr = elementRect(cursor);
             cr.translate(-viewportOffset);
 
@@ -326,4 +329,5 @@ void InteractiveText::trackVisibility()
             }
         }
     }
+    emit viewportChanged();
 }

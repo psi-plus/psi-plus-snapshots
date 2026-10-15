@@ -99,12 +99,18 @@ public:
     void                             markVisible(const InteractiveTextFormat::ElementId &id);
     InteractiveTextFormat::ElementId nextId();
 
+    // Document coordinates. The cursor must select the object character.
+    QRect elementRect(const QTextCursor &selected) const;
+
+signals:
+    // Geometry changes only; media frame/position updates must not go through the document.
+    void viewportChanged();
+
 protected:
     bool eventFilter(QObject *obj, QEvent *event);
 
 private:
-    void  checkAndGenerateLeaveEvent(QEvent *event);
-    QRect elementRect(const QTextCursor &selected) const;
+    void checkAndGenerateLeaveEvent(QEvent *event);
 private slots:
     void trackVisibility();
 

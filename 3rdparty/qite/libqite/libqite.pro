@@ -1,6 +1,6 @@
 TEMPLATE = lib
 QT     += core gui multimedia widgets
-CONFIG += c++14 static
+CONFIG += c++17 static
 TARGET = qite
 
 include($$PWD/libqite.pri)

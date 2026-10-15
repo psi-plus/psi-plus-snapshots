@@ -2,12 +2,16 @@
 
 SOURCES += \
     $$PWD/qite.cpp \
+    $$PWD/qitevideo.cpp \
+    $$PWD/qitevideoframe.cpp \
     $$PWD/qiteaudio.cpp \
     $$PWD/qiteprogress.cpp \
     $$PWD/qiteaudiorecorder.cpp
 
 HEADERS += \
     $$PWD/qite.h \
+    $$PWD/qitevideo.h \
+    $$PWD/qitevideoframe_p.h \
     $$PWD/qiteaudio.h \
     $$PWD/qiteprogress.h \
     $$PWD/qiteaudiorecorder.h

@@ -21,6 +21,7 @@ under the License.
 #include "qite.h"
 #include "qiteaudio.h"
 #include "qiteaudiorecorder.h"
+#include "qitevideo.h"
 #include "ui_mainwindow.h"
 
 #include <QAction>
@@ -28,6 +29,7 @@ under the License.
 #include <QDateTime>
 #include <QDir>
 #include <QDirIterator>
+#include <QFileDialog>
 #include <QIcon>
 #include <QStandardPaths>
 #include <QStyle>
@@ -53,6 +55,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     connect(ui->textEdit, &QTextEdit::destroyed, [](QObject *) { qDebug("QTextEdit destoryed"); });
     auto itc = new InteractiveText(ui->textEdit); // global thing to handle all kinds of ITEs
+
+    auto video     = new ITEVideoController(itc, ui->textEdit->viewport());
+    auto openVideo = ui->mainToolBar->addAction(tr("Open video"));
+    connect(openVideo, &QAction::triggered, this, [this, video] {
+        const auto file = QFileDialog::getOpenFileName(
+            this, tr("Open video"), QStandardPaths::writableLocation(QStandardPaths::MoviesLocation));
+        if (!file.isEmpty()) {
+            ui->textEdit->append(QFileInfo(file).fileName());
+            video->insert(QUrl::fromLocalFile(file));
+            ui->textEdit->append(QString());
+        }
+    });
 
     atc = new ITEAudioController(itc, this);
     atc->setAutoFetchMetadata(true);
