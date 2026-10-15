@@ -154,6 +154,7 @@ namespace XMPP { namespace Jingle {
         Origin                             role = Origin::Initiator; // my role in the session
         std::optional<XMPP::Stanza::Error> lastError;
         Reason                             terminateReason;
+        Reason                             lastContentReason;
         // Non-owning registries; pads are QObject children of the session and
         // remove themselves from these maps when destroyed.
         QMap<QString, ApplicationManagerPad *> applicationPads;
@@ -430,13 +431,23 @@ namespace XMPP { namespace Jingle {
 
         void planStep()
         {
-            if (waitingAck) {
+            if (waitingAck || state == State::Finished) {
                 return;
             }
             lastError = {};
             if (!stepTimer.isActive()) {
                 stepTimer.start();
             }
+        }
+
+        bool hasUnfinishedApplications() const
+        {
+            // Finished objects can remain registered for application/UI owners.
+            // Pending proposals and signaling tails still count as live content.
+            for (auto app : contentList)
+                if (app->state() != State::Finished)
+                    return true;
+            return false;
         }
 
         void doStep()
@@ -691,6 +702,11 @@ namespace XMPP { namespace Jingle {
                             return;
                         planStep();
                     });
+            } else if (state == State::Active && !hasUnfinishedApplications()) {
+                // All application signaling (including final receipts/removals)
+                // has drained. Retained terminal objects do not keep a session alive.
+                q->terminate(lastContentReason.isValid() ? lastContentReason.condition() : Reason::Success,
+                             lastContentReason.text());
             }
         }
 
@@ -1128,9 +1144,14 @@ namespace XMPP { namespace Jingle {
             if (state != State::Created && content->evaluateOutgoingUpdate().action != Action::NoAction) {
                 signalingContent.insert(content);
             }
-            QObject::connect(content, &Application::stateChanged, q, [this, key](State newState) {
+            QObject::connect(content, &Application::stateChanged, q, [this, key, content](State newState) {
+                QPointer<Session> guard(q);
+                if (newState == State::Finished)
+                    lastContentReason = content->lastReason();
                 if (newState >= State::Finishing)
                     retireContentGrouping(key);
+                if (guard && newState == State::Finished)
+                    planStep();
             });
             QObject::connect(content, &Application::updated, q, [this, content]() {
                 signalingContent.insert(content);
@@ -1156,6 +1177,7 @@ namespace XMPP { namespace Jingle {
                 // already pruned by Application::destroying.
                 signalingContent.remove(content);
                 initialIncomingUnacceptedContent.removeOne(content);
+                planStep();
             });
         }
 
@@ -1793,7 +1815,7 @@ namespace XMPP { namespace Jingle {
 
             if (!session)
                 return true;
-            if (contentList.isEmpty())
+            if (!hasUnfinishedApplications())
                 terminateReason = reason;
 
             planStep();

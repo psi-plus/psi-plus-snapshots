@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     QObject::connect(bob.client.jingleManager(), &J::Manager::incomingSession, &app,
                      [&](J::Session *session) { bobSession = session; });
 
-    // The session starts with another application: a small file transfer over IBB.
+    // Hold the file transfer open until the whiteboard is added, like an active call.
     FT::File file;
     file.setName(QStringLiteral("note.txt"));
     file.setSize(4);
@@ -44,14 +44,15 @@ int main(int argc, char **argv)
     source.setData("data");
     source.open(QIODevice::ReadOnly);
 
-    auto session  = alice.client.jingleManager()->newSession(bob.jid);
-    auto transfer = qobject_cast<FT::Application *>(session->newContent(FT::NS, J::Origin::Initiator));
+    QPointer<J::Session> session  = alice.client.jingleManager()->newSession(bob.jid);
+    auto                 transfer = qobject_cast<FT::Application *>(session->newContent(FT::NS, J::Origin::Initiator));
     check(transfer, "file transfer content was not created");
     transfer->setFile(file);
     // Peer capabilities are unknown in this fixture: select the transport explicitly.
     check(transfer->setTransport(session->newOutgoingTransport(J::IBB::NS)), "IBB transport was not set");
-    QObject::connect(transfer, &FT::Application::deviceRequested, &app,
-                     [&](quint64, std::optional<quint64>) { transfer->setDevice(&source, false); });
+    bool deviceRequested = false;
+    QObject::connect(transfer, &FT::Application::deviceRequested, transfer,
+                     [&](quint64, std::optional<quint64>) { deviceRequested = true; });
     session->addContent(transfer);
     session->initiate();
     pump(alice, bob);
@@ -68,7 +69,7 @@ int main(int argc, char **argv)
     }
     bobSession->accept();
     pump(alice, bob);
-    check(session->state() == J::State::Active && bobSession->state() == J::State::Active,
+    check(session && bobSession && session->state() == J::State::Active && bobSession->state() == J::State::Active,
           "the initial session was not established");
 
     // Add a whiteboard to the running session; the peer accepts it like a call accepts added media.
@@ -90,6 +91,12 @@ int main(int argc, char **argv)
           "added whiteboard did not synchronize");
     check(dump(remote->document()->document()) == dump(local->document()->document()),
           "added whiteboard has a different document");
+
+    check(deviceRequested, "initial file was not requested");
+    transfer->setDevice(&source, false);
+    pump(alice, bob);
+    check(session && bobSession && session->state() == J::State::Active && remote->state() == J::State::Active,
+          "finishing the file terminated the active whiteboard");
 
     QDomDocument temp;
     local->document()->insertNodeAfter(
