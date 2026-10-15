@@ -20,6 +20,7 @@
 
 #include "devices.h"
 
+#include "glibtimer_p.h"
 #include "gstthread.h"
 #include <QMap>
 #include <QMutex>
@@ -124,76 +125,6 @@ static gchar *get_launch_line(::GstDevice *device)
 
     return g_string_free(launch_line, FALSE);
 }
-
-class GlibTimer {
-    GMainContext         *ctx;
-    guint                 timer = 0;
-    guint                 interval;
-    std::function<bool()> callback; // return true to continue, false to stop
-    bool                  stopRequested    = false;
-    bool                  restartRequested = false;
-    bool                  inHandler        = false;
-
-public:
-    GlibTimer(GMainContext *ctx, guint interval, std::function<bool()> callback) :
-        ctx(ctx), interval(interval), callback(callback)
-    {
-    }
-
-    ~GlibTimer() { stop(); }
-
-    inline bool isActive() const { return !!timer; }
-
-    void start()
-    {
-        stopRequested = false;
-        if (timer) {
-            stop();
-            if (inHandler) {
-                restartRequested = true;
-                return;
-            }
-        }
-        // qDebug("starting timer");
-        struct TimerCallback {
-            static gboolean call(gpointer data)
-            {
-                auto priv       = reinterpret_cast<GlibTimer *>(data);
-                priv->inHandler = true;
-                auto ret        = priv->callback();
-                if (!ret) {
-                    priv->timer = 0;
-                }
-                priv->inHandler        = false;
-                auto restartRequested  = priv->restartRequested;
-                auto stopRequested     = priv->stopRequested;
-                priv->restartRequested = false;
-                priv->stopRequested    = false;
-                return restartRequested ? TRUE : stopRequested ? FALSE : ret;
-            }
-        };
-        timer = g_timeout_add(interval, &TimerCallback::call, this);
-    }
-
-    void stop()
-    {
-        // qDebug("stopping timer");
-        restartRequested = false;
-        if (!timer) {
-            return;
-        }
-        if (inHandler) {
-            stopRequested = true;
-            return;
-        }
-        auto source = g_main_context_find_source_by_id(ctx, timer);
-        if (source) {
-            g_source_destroy(source);
-            g_source_unref(source);
-        }
-        timer = 0;
-    }
-};
 
 class DeviceMonitor::Private {
 public:

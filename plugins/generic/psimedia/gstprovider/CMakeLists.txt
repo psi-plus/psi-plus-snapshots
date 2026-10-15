@@ -201,6 +201,12 @@ if(APPLE)
 endif()
 
 if(PSIMEDIA_BUILD_TESTS)
+    add_executable(psimedia_glibtimer_test ${ABS_GST_PARENT_DIR}/tests/glibtimer.cpp)
+    target_include_directories(psimedia_glibtimer_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_link_libraries(psimedia_glibtimer_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_glibtimer COMMAND psimedia_glibtimer_test)
+    set_tests_properties(psimedia_glibtimer PROPERTIES TIMEOUT 10 ENVIRONMENT "G_DEBUG=fatal-criticals")
+
     enable_testing()
 
     add_executable(psimedia_rtpgroupbridge_test ${ABS_GST_PARENT_DIR}/tests/rtpgroupbridge.cpp)
