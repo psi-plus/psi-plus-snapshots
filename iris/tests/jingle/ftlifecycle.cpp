@@ -222,13 +222,80 @@ int main(int argc, char **argv)
 {
     QCoreApplication eventLoop(argc, argv);
     QCA::Initializer qca;
-    Client           client;
+
+    // A hook can remove or replace itself during a final read. Its capture
+    // storage must remain alive until that invocation returns.
+    for (bool replace : { false, true }) {
+        TestConnection     connection;
+        auto               lifetime = std::make_shared<int>(42);
+        std::weak_ptr<int> weak     = lifetime;
+        int                calls = 0, replacements = 0;
+        connection.setReadHook([&, lifetime](char *, qint64) {
+            const auto activeLifetime = weak;
+            ++calls;
+            if (replace)
+                connection.setReadHook([&](char *, qint64) { ++replacements; });
+            else
+                connection.setReadHook({});
+            check(!activeLifetime.expired(), "read hook destroyed its active capture storage");
+        });
+        lifetime.reset();
+        connection.feed(QByteArrayLiteral("a"));
+        check(connection.read(1) == QByteArrayLiteral("a"), "self-changing hook lost read data");
+        check(weak.expired(), "completed read retained the removed hook");
+        connection.feed(QByteArrayLiteral("b"));
+        check(connection.read(1) == QByteArrayLiteral("b"), "replacement hook lost read data");
+        check(calls == 1 && replacements == int(replace), "hook change did not apply to the next read");
+    }
+
+    {
+        TestConnection connection;
+        int            observed = 0;
+        connection.setReadHook([&, count = 0](char *, qint64) mutable { observed = ++count; });
+        for (int expected : { 1, 2 }) {
+            connection.feed(QByteArrayLiteral("x"));
+            check(connection.read(1) == QByteArrayLiteral("x"), "stateful hook lost read data");
+            check(observed == expected, "read hook lost its mutable state between calls");
+        }
+    }
+
+    Client     client;
     J::Session session(client.jingleManager(), Jid(QStringLiteral("peer@example.test/device")), J::Origin::Initiator);
 
     auto *rawPad = client.jingleManager()->applicationPad(&session, FT::NS);
     auto *ftPad  = dynamic_cast<FT::Pad *>(rawPad);
     check(ftPad, "client did not provide registered FT pad");
     QPointer<FT::Pad> appPad(ftPad);
+
+    // Exercise the real streaming FT hook at the last payload byte. Entering
+    // Finishing clears that hook, and a direct observer can delete its owner.
+    for (bool deleteOnFinishing : { false, true }) {
+        auto  transportPad = new TestTransportPad(&session);
+        auto  transport    = new TestTransport(transportPad, J::Origin::Initiator);
+        auto *transfer
+            = new TestApplication(appPad, QStringLiteral("streaming-hook"), J::Origin::Initiator, J::Origin::Responder);
+        transfer->setFile(testFile(4));
+        transfer->setAcceptFile(testFile(4));
+        transfer->setStreamingMode(true);
+        transfer->installTransport(transport);
+        QPointer<TestApplication> guard(transfer);
+        QObject::connect(transfer, &J::Application::stateChanged, transfer,
+                         [transfer, deleteOnFinishing](J::State state) {
+                             if (deleteOnFinishing && state == J::State::Finishing)
+                                 delete transfer;
+                         });
+        transfer->prepare();
+        check(guard && transfer->state() == J::State::Active, "streaming FT receiver did not become active");
+        const auto connection = transport->connection();
+        connection->feed(QByteArrayLiteral("tail"));
+        check(connection->read(4) == QByteArrayLiteral("tail"), "streaming final read lost its payload");
+        if (deleteOnFinishing)
+            check(!guard, "streaming FT receiver was not deleted from Finishing callback");
+        else {
+            check(guard && transfer->state() == J::State::Finishing, "streaming final read did not enter Finishing");
+            delete transfer;
+        }
+    }
 
     // Fatal integrity errors remain actionable after payload completion entered
     // Finishing. They must schedule ContentRemove, never be overwritten by the

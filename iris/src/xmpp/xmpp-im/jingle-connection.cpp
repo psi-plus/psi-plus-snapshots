@@ -45,8 +45,12 @@ namespace XMPP { namespace Jingle {
     qint64 Connection::readData(char *buf, qint64 maxSize)
     {
         auto sz = readDataInternal(buf, maxSize);
-        if (sz != -1 && _readHook) {
-            _readHook(buf, sz);
+        if (sz != -1) {
+            // Final-payload handling can synchronously clear/replace the hook.
+            // Retain the callable itself, not a copy of its mutable state.
+            const auto hook = _readHook;
+            if (hook)
+                (*hook)(buf, sz);
         }
         return sz;
     }

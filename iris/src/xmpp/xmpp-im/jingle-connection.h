@@ -29,6 +29,8 @@
 #include <iris/xmpp-im/jingle.h>
 
 #include <QNetworkDatagram>
+#include <memory>
+#include <utility>
 
 namespace XMPP { namespace Jingle {
 
@@ -48,7 +50,12 @@ namespace XMPP { namespace Jingle {
         inline void setId(const QString &id) { _id = id; }
         inline bool isRemote() const { return _isRemote; }
         inline void setRemote(bool value) { _isRemote = value; }
-        inline void setReadHook(ReadHook hook) { _readHook = hook; }
+        // A replacement applies to subsequent reads. An active invocation
+        // retains its callable, including mutable capture state, until return.
+        inline void setReadHook(ReadHook hook)
+        {
+            _readHook = hook ? std::make_shared<ReadHook>(std::move(hook)) : nullptr;
+        }
 
     signals:
         void connected();
@@ -61,9 +68,9 @@ namespace XMPP { namespace Jingle {
         // same rules as for QIOdevice::readData. It was just necessary to wrap it.
         virtual qint64 readDataInternal(char *data, qint64 maxSize) = 0;
 
-        bool     _isRemote = false;
-        QString  _id;
-        ReadHook _readHook;
+        bool                      _isRemote = false;
+        QString                   _id;
+        std::shared_ptr<ReadHook> _readHook;
     };
 
     using ConnectionAcceptorCallback = std::function<bool(Connection::Ptr)>;
