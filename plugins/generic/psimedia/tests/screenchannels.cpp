@@ -7,6 +7,7 @@
 #include <QElapsedTimer>
 #include <QThread>
 #include <QtEndian>
+#include <gst/rtp/gstrtpbuffer.h>
 #include <memory>
 #include <optional>
 using namespace PsiMedia;
@@ -60,8 +61,9 @@ static void capture(GstRtpSessionContext *codec, const QString &source)
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
-    const bool       hd   = app.arguments().contains(QStringLiteral("--hd"));
-    const bool       loss = app.arguments().contains(QStringLiteral("--loss"));
+    const bool       hd           = app.arguments().contains(QStringLiteral("--hd"));
+    const bool       loss         = app.arguments().contains(QStringLiteral("--loss"));
+    const bool       switchDevice = app.arguments().contains(QStringLiteral("--switch"));
     GstProvider      provider;
     check(provider.isInitialized(), "GStreamer provider initialization failed");
     const auto create = [&] {
@@ -96,7 +98,6 @@ int main(int argc, char **argv)
           "peer crypto failed");
     int                    cameraPackets = 0, screenPackets = 0;
     int                    cameraFrames = 0, screenFrames = 0;
-    quint32                cameraSsrc = 0;
     std::optional<quint32> lostTimestamp;
     int                    framesAtLoss = 0;
     QElapsedTimer          recoveryTime;
@@ -106,12 +107,21 @@ int main(int argc, char **argv)
             check(peerOwner->receiveProtectedPacket(packet), "peer rejected sender RTCP");
             return;
         }
-        const auto ssrc = qFromBigEndian<quint32>(reinterpret_cast<const uchar *>(packet.rawValue.constData()) + 8);
-        if (!cameraSsrc)
-            cameraSsrc = ssrc;
-        if (ssrc == cameraSsrc)
+        // Sender replacement may change SSRC. Route by the stable MID,
+        // which is present in the clear RTP header even for protected packets.
+        GstBuffer   *buffer = gst_rtp_buffer_new_copy_data(packet.rawValue.constData(), packet.rawValue.size());
+        GstRTPBuffer rtp    = GST_RTP_BUFFER_INIT;
+        check(gst_rtp_buffer_map(buffer, GST_MAP_READ, &rtp), "invalid protected RTP header");
+        gpointer value = nullptr;
+        guint    size  = 0;
+        check(gst_rtp_buffer_get_extension_onebyte_header(&rtp, 1, 0, &value, &size), "missing MID");
+        const QByteArray mid(static_cast<const char *>(value), size);
+        gst_rtp_buffer_unmap(&rtp);
+        gst_buffer_unref(buffer);
+        if (mid == "camera")
             ++cameraPackets;
         else {
+            check(mid == "screen", "unexpected MID");
             ++screenPackets;
             const auto timestamp
                 = qFromBigEndian<quint32>(reinterpret_cast<const uchar *>(packet.rawValue.constData()) + 4);
@@ -172,6 +182,15 @@ int main(int argc, char **argv)
         qInfo("Screen loss recovery-ms=%lld", (long long)recoveryMs);
         check(lostTimestamp && recoveryMs >= 0 && recoveryMs < 3000,
               "screen loss did not recover through RTCP feedback before the periodic keyframe");
+    }
+    if (switchDevice) {
+        const int beforeCamera = cameraFrames, beforeScreen = screenFrames;
+        // Replace an active camera, without toggling transmit or rebuilding
+        // the shared RTP owner. The independent screen must keep decoding.
+        camera->setVideoInputDevice(QStringLiteral("videotestsrc is-live=true pattern=checkers-8"));
+        waitFor([&] { return cameraFrames >= beforeCamera + 15 && screenFrames >= beforeScreen + 15; },
+                "camera source switch interrupted camera or screen decoding");
+        check(owner->associationEpoch("bundle") == 1, "camera switch replaced the crypto epoch");
     }
     QObject::disconnect(cameraDecoded);
     QObject::disconnect(screenDecoded);

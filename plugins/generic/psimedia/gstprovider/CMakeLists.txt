@@ -317,6 +317,8 @@ if(PSIMEDIA_BUILD_TESTS)
         add_test(NAME psimedia_screenchannels_hd COMMAND psimedia_screenchannels_test --hd)
         set_tests_properties(psimedia_screenchannels_hd PROPERTIES TIMEOUT 40)
         add_test(NAME psimedia_screenchannels_loss COMMAND psimedia_screenchannels_test --hd --loss)
+        add_test(NAME psimedia_screenchannels_switch COMMAND psimedia_screenchannels_test --switch)
+        set_tests_properties(psimedia_screenchannels_switch PROPERTIES TIMEOUT 40)
         set_tests_properties(psimedia_screenchannels_loss PROPERTIES TIMEOUT 40)
         set_tests_properties(psimedia_screenchannels PROPERTIES TIMEOUT 40)
 
