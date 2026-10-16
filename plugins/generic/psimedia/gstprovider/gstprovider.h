@@ -19,6 +19,7 @@
  *
  */
 
+#include "psimedia/psimediascreencapture.h"
 #include "psimediaprovider.h"
 
 #include <QPointer>
@@ -30,9 +31,9 @@ namespace PsiMedia {
 class GstMainLoop;
 class DeviceMonitor;
 
-class GstProvider : public QObject, public Provider, public SecureRtpProvider {
+class GstProvider : public QObject, public Provider, public SecureRtpProvider, public ScreenCaptureProvider {
     Q_OBJECT
-    Q_INTERFACES(PsiMedia::Provider PsiMedia::SecureRtpProvider)
+    Q_INTERFACES(PsiMedia::Provider PsiMedia::SecureRtpProvider PsiMedia::ScreenCaptureProvider)
 
 public:
     QThread               gstEventLoopThread;
@@ -51,6 +52,9 @@ public:
 
     QStringList              supportedSecureRtpProfiles() const override;
     SecureRtpSessionContext *createSecureRtpSession() override;
+
+    bool                  screenCaptureAvailable() const override;
+    ScreenCaptureContext *createScreenCapture() override;
 
 signals:
     void secureRtpProfilesChanged();

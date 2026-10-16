@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include "gstprovider.h"
 #include "gstrtpsessioncontext.h"
+#include "screencapturedevice_p.h"
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QThread>
@@ -112,11 +113,14 @@ int main(int argc, char **argv)
           "peer screen route extension failed");
     prepare(peerScreen.get());
     prepare(screen.get());
-    capture(screen.get(), "videotestsrc is-live=true pattern=smpte");
+    auto screenDevice = registerScreenCaptureDevice(QStringLiteral("videotestsrc is-live=true pattern=smpte"));
+    capture(screen.get(), screenDevice->id);
     const int cameraBefore = cameraPackets;
     waitFor([&] { return screenPackets >= 6 && cameraPackets >= cameraBefore + 6; },
             "camera and screen did not transmit concurrently");
     check(owner->associationEpoch("bundle") == 1, "extension replaced the crypto epoch");
+    revokeScreenCaptureDevice(screenDevice->id);
+    screenDevice.reset();
     screen->pauseVideo();
     check(screen->configureEndpoints({}), "screen route removal failed");
     screen.reset();

@@ -26,6 +26,7 @@
 #include "gstfeaturescontext.h"
 #include "gstprovider.h"
 #include "gstrtpsessioncontext.h"
+#include "gstscreencapturecontext.h"
 #include "gstthread.h"
 #include "securertpcontext.h"
 
@@ -132,6 +133,9 @@ FeaturesContext *GstProvider::createFeatures()
 RtpSessionContext *GstProvider::createRtpSession() { return new GstRtpSessionContext(gstEventLoop, deviceMonitor); }
 
 AudioRecorderContext *GstProvider::createAudioRecorder() { return new GstAudioRecorderContext(gstEventLoop); }
+
+bool GstProvider::screenCaptureAvailable() const { return isInitialized() && GstScreenCaptureContext::available(); }
+ScreenCaptureContext *GstProvider::createScreenCapture() { return new GstScreenCaptureContext; }
 
 QStringList GstProvider::supportedSecureRtpProfiles() const { return secureRtpProfiles_; }
 

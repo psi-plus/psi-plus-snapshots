@@ -160,6 +160,49 @@ endif()
 set(PROVIDERLIB gstprovidersrc)
 add_library(${PROVIDERLIB} STATIC ${SOURCES})
 
+target_sources(${PROVIDERLIB} PRIVATE gstscreencapturecontext.cpp gstscreencapturecontext.h
+    screencapturedevice.cpp screencapturedevice_p.h screencapture_native_p.h)
+if(WIN32)
+    target_sources(${PROVIDERLIB} PRIVATE screencapture_native_win.cpp)
+    target_link_libraries(${PROVIDERLIB} PRIVATE user32 dwmapi)
+elseif(NOT APPLE)
+    target_sources(${PROVIDERLIB} PRIVATE screencapture_native_x11.cpp)
+    find_package(X11 QUIET)
+    if(X11_FOUND)
+        target_compile_definitions(${PROVIDERLIB} PRIVATE PSIMEDIA_SCREEN_X11)
+        target_include_directories(${PROVIDERLIB} PRIVATE ${X11_INCLUDE_DIR})
+        target_link_libraries(${PROVIDERLIB} PRIVATE ${X11_LIBRARIES})
+        if(X11_Xrandr_LIB AND X11_Xrandr_INCLUDE_PATH)
+            target_compile_definitions(${PROVIDERLIB} PRIVATE PSIMEDIA_SCREEN_XRANDR)
+            target_link_libraries(${PROVIDERLIB} PRIVATE ${X11_Xrandr_LIB})
+        endif()
+    endif()
+    find_package(Qt${QT_DEFAULT_MAJOR_VERSION} QUIET COMPONENTS DBus)
+    if(TARGET Qt${QT_DEFAULT_MAJOR_VERSION}::DBus)
+        target_sources(${PROVIDERLIB} PRIVATE screencapture_portal.cpp)
+        target_compile_definitions(${PROVIDERLIB} PRIVATE PSIMEDIA_SCREEN_PORTAL)
+        target_link_libraries(${PROVIDERLIB} PRIVATE Qt${QT_DEFAULT_MAJOR_VERSION}::DBus)
+    endif()
+endif()
+
+if(APPLE)
+    enable_language(OBJCXX)
+    set_property(TARGET ${PROVIDERLIB} PROPERTY OBJCXX_STANDARD ${CMAKE_CXX_STANDARD})
+    set_property(TARGET ${PROVIDERLIB} PROPERTY OBJCXX_STANDARD_REQUIRED ON)
+    if("${GSTMODULES_gstreamer-app-1.0_VERSION}" VERSION_LESS "1.20")
+        message(FATAL_ERROR "macOS screen capture requires GStreamer 1.20 or later (bounded appsrc queues)")
+    endif()
+    target_sources(${PROVIDERLIB} PRIVATE screencapturekit_source.cpp screencapturekit_source.h
+        screencapturekit_capture.mm screencapturekit_capture_p.h screencapture_native_mac.mm)
+    set_source_files_properties(screencapturekit_capture.mm screencapture_native_mac.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
+    target_link_libraries(${PROVIDERLIB} PUBLIC "-weak_framework ScreenCaptureKit" "-framework CoreMedia" "-framework CoreVideo" "-framework CoreGraphics")
+    if(PSIMEDIA_BUILD_SCREENCAPTUREKIT_TESTS)
+        add_executable(psimedia_screencapturekit_registration_test ../tests/screencapturekit_registration.cpp)
+        target_link_libraries(psimedia_screencapturekit_registration_test PRIVATE ${PROVIDERLIB})
+        add_test(NAME psimedia_screencapturekit_registration COMMAND psimedia_screencapturekit_registration_test)
+    endif()
+endif()
+
 if(WIN32)
     target_compile_definitions(${PROVIDERLIB} PRIVATE
         PSIMEDIA_WINDOWS_VIDEO_SOURCE="${PSIMEDIA_WINDOWS_VIDEO_SOURCE}")
@@ -172,6 +215,7 @@ endif()
 target_include_directories(${PROVIDERLIB}
                            PUBLIC
                            ${CMAKE_CURRENT_SOURCE_DIR}
+                           ${ABS_GST_PARENT_DIR}
                            ${CMAKE_CURRENT_SOURCE_DIR}/devices
                            ${PSIMEDIA_INCDIR}
                            ${GST_INCLUDES}
@@ -201,6 +245,36 @@ if(APPLE)
 endif()
 
 if(PSIMEDIA_BUILD_TESTS)
+    find_package(Qt${QT_DEFAULT_MAJOR_VERSION} REQUIRED COMPONENTS Test)
+    # Same provider context, fake native enumeration: no real desktop or permission required.
+    add_executable(psimedia_screencapture_test ../tests/screencapture.cpp gstscreencapturecontext.cpp
+        gstscreencapturecontext.h screencapturedevice.cpp)
+    target_include_directories(psimedia_screencapture_test PRIVATE ${ABS_GST_PARENT_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${PSIMEDIA_INCDIR} ${GST_INCLUDES})
+    target_link_libraries(psimedia_screencapture_test PRIVATE Qt${QT_DEFAULT_MAJOR_VERSION}::Test
+        Qt${QT_DEFAULT_MAJOR_VERSION}::Gui ${GSTMODULES_LINK_LIBRARIES})
+    add_test(NAME psimedia_screencapture COMMAND psimedia_screencapture_test)
+    set_tests_properties(psimedia_screencapture PROPERTIES TIMEOUT 15)
+    if(TARGET Qt${QT_DEFAULT_MAJOR_VERSION}::DBus AND NOT WIN32 AND NOT APPLE)
+        find_program(DBUS_RUN_SESSION dbus-run-session)
+        if(DBUS_RUN_SESSION)
+            add_executable(psimedia_screencapture_portal_test ../tests/screencapture_portal.cpp)
+            target_compile_definitions(psimedia_screencapture_portal_test PRIVATE PSIMEDIA_SCREEN_PORTAL)
+            target_link_libraries(psimedia_screencapture_portal_test PRIVATE ${PROVIDERLIB}
+                Qt${QT_DEFAULT_MAJOR_VERSION}::DBus Qt${QT_DEFAULT_MAJOR_VERSION}::Test)
+            add_test(NAME psimedia_screencapture_portal
+                COMMAND ${DBUS_RUN_SESSION} -- $<TARGET_FILE:psimedia_screencapture_portal_test>)
+            set_tests_properties(psimedia_screencapture_portal PROPERTIES
+                ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 20)
+        endif()
+    endif()
+    if("${GSTMODULES_gstreamer-app-1.0_VERSION}" VERSION_GREATER_EQUAL "1.20")
+        # Test the macOS appsrc wrapper with a fake native bridge; no OS capture or permission prompt.
+        add_executable(psimedia_screencapturekit_source_test ../tests/screencapturekit_source.cpp screencapturekit_source.cpp)
+        target_include_directories(psimedia_screencapturekit_source_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${GST_INCLUDES})
+        target_link_libraries(psimedia_screencapturekit_source_test PRIVATE ${GSTMODULES_LINK_LIBRARIES})
+        add_test(NAME psimedia_screencapturekit_source COMMAND psimedia_screencapturekit_source_test)
+        set_tests_properties(psimedia_screencapturekit_source PROPERTIES TIMEOUT 15)
+    endif()
     add_executable(psimedia_glibtimer_test ${ABS_GST_PARENT_DIR}/tests/glibtimer.cpp)
     target_include_directories(psimedia_glibtimer_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
     target_link_libraries(psimedia_glibtimer_test PRIVATE ${PROVIDERLIB})

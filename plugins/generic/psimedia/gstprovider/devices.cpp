@@ -19,6 +19,7 @@
  */
 
 #include "devices.h"
+#include "screencapturedevice_p.h"
 
 #include "glibtimer_p.h"
 #include "gstthread.h"
@@ -506,6 +507,8 @@ GstElement *devices_makeElement(const QString &id, PDevice::Type type, QSize *ca
 {
     Q_UNUSED(type);
     Q_UNUSED(captureSize);
+    if (id.startsWith(QLatin1String("psimedia-screen:")))
+        return type == PDevice::VideoIn ? makeScreenCaptureElement(id) : nullptr;
     return gst_parse_launch(id.toLatin1().data(), nullptr);
     // TODO check if it correponds to passed type.
     // TODO drop captureSize

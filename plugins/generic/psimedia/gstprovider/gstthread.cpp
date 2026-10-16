@@ -19,6 +19,9 @@
  */
 
 #include "gstthread.h"
+#ifdef Q_OS_MAC
+#include "screencapturekit_source.h"
+#endif
 
 #include <QCoreApplication>
 #include <QDir>
@@ -180,6 +183,14 @@ public:
             success = false;
             return;
         }
+
+#ifdef Q_OS_MAC
+        if (!registerScreenCaptureKitSource()) {
+            qWarning("Unable to register the ScreenCaptureKit source");
+            success = false;
+            return;
+        }
+#endif
 
         // manually load plugins?
         // if(!pluginPath.isEmpty())
