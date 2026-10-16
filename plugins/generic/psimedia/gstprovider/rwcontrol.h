@@ -194,7 +194,8 @@ public:
         Status,
         AudioIntensity,
         Frame,
-        DumpPileline
+        DumpPileline,
+        ForceVideoKeyframe
     };
 
     Type type;
@@ -222,6 +223,15 @@ public:
     RwControlDumpPipelineMessage() : RwControlMessage(RwControlMessage::DumpPileline) { }
 
     std::function<void(const QStringList &)> callback;
+};
+
+class RwControlForceVideoKeyframeMessage : public RwControlMessage {
+public:
+    bool allHeaders;
+    explicit RwControlForceVideoKeyframeMessage(bool headers) :
+        RwControlMessage(RwControlMessage::ForceVideoKeyframe), allHeaders(headers)
+    {
+    }
 };
 
 class RwControlUpdateDevicesMessage : public RwControlMessage {
@@ -286,6 +296,7 @@ public:
     void updateCodecs(const RwControlConfigCodecs &codecs);
     void setTransmit(const RwControlTransmit &transmit);
     void setRecord(const RwControlRecord &record);
+    void forceVideoKeyframe(bool allHeaders);
 
     // can be called from any thread
     void rtpAudioIn(const PRtpPacket &packet);

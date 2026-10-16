@@ -533,6 +533,10 @@ bool GstRtpSessionContext::configureRtpBridges()
             return false;
 
         bridge.setRuntimeErrorHandler([this]() { control_rtpBridgeError(); });
+        bridge.setKeyframeRequestHandler([this, audio](quint32, bool allHeaders) {
+            if (!audio && control)
+                control->forceVideoKeyframe(allHeaders);
+        });
         auto *channelPtr = &channel;
         bridge.setNetworkPacketHandler(
             [channelPtr](const PRtpPacket &packet) { channelPtr->push_packet_for_read(packet); });
@@ -686,6 +690,10 @@ bool GstRtpSessionContext::configureSecureGroup(const QByteArray &associationId)
     for (const auto &endpoint : groupEndpoints) {
         const bool audio = endpoint.media == QLatin1String("audio");
         QPointer<GstRtpSessionContext> target(secureEndpointOwner(endpoint.id));
+        state->group->setEndpointKeyframeRequestHandler(endpoint.id, [target, audio](bool allHeaders) {
+            if (target && !audio && target->control)
+                target->control->forceVideoKeyframe(allHeaders);
+        });
         state->group->setEndpointMediaPacketHandler(endpoint.id, [target, audio](GstBuffer *buffer) {
             if (!target)
                 return;
@@ -1189,12 +1197,17 @@ void GstRtpSessionContext::control_videoKeyframeRequested(quint32 ssrc, quint8 p
     SecureGroupState *fallback          = nullptr;
     bool              fallbackAmbiguous = false;
 
-    for (auto &[associationId, state] : secureGroups_) {
+    // Joined codecs own their decoder, while the shared owner owns the RTP
+    // sessions. Route only through associations containing this codec's endpoint.
+    auto *groupOwner = secureGroupOwner_ ? secureGroupOwner_.data() : this;
+    for (auto &[associationId, state] : groupOwner->secureGroups_) {
         Q_UNUSED(associationId)
         if (!state.started || !state.group || !state.group->isReady())
             continue;
 
         for (const auto &endpoint : state.endpoints) {
+            if (groupOwner->secureEndpointOwner(endpoint.endpointId) != this)
+                continue;
             if (endpoint.media != QLatin1String("video") || !endpoint.incomingPayloadTypes.contains(int(payloadType)))
                 continue;
 

@@ -219,6 +219,11 @@ void RwControlLocal::setRecord(const RwControlRecord &record)
     remote_->postMessage(msg);
 }
 
+void RwControlLocal::forceVideoKeyframe(bool allHeaders)
+{
+    remote_->postMessage(new RwControlForceVideoKeyframeMessage(allHeaders));
+}
+
 void RwControlLocal::rtpAudioIn(const PRtpPacket &packet) { remote_->rtpAudioIn(packet); }
 
 void RwControlLocal::rtpVideoIn(const PRtpPacket &packet) { remote_->rtpVideoIn(packet); }
@@ -558,6 +563,8 @@ bool RwControlRemote::processMessage(RwControlMessage *msg)
             worker->recordStart();
         else
             worker->recordStop();
+    } else if (msg->type == RwControlMessage::ForceVideoKeyframe) {
+        worker->forceVideoKeyframe(static_cast<RwControlForceVideoKeyframeMessage *>(msg)->allHeaders);
     } else if (msg->type == RwControlMessage::DumpPileline) {
         auto rmsg = static_cast<RwControlDumpPipelineMessage *>(msg);
         worker->dumpPipeline(rmsg->callback);

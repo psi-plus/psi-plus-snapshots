@@ -55,6 +55,8 @@ public:
 
     bool registerOutgoingSsrc(const QByteArray &endpointId, quint32 ssrc);
     bool unregisterOutgoingSsrc(const QByteArray &endpointId, quint32 ssrc);
+    // Resolve only explicitly configured or registered local senders.
+    QByteArray outgoingEndpoint(quint32 ssrc) const;
 
     std::optional<RoutedRtp> routeIncomingRtp(const QByteArray &packet);
     bool                     validateRtcp(const QByteArray &packet) const;

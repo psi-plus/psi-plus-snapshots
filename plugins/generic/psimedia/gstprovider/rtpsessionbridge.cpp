@@ -242,6 +242,13 @@ bool RtpSessionBridge::build()
     if (!linkPadToSink(sendRtcpSrcPad_, sendRtcpOutput))
         return fail();
 
+    auto *controlPad = gst_element_get_static_pad(sendRtpInput, "src");
+    outgoingControlProbe_
+        = gst_pad_add_probe(controlPad, GST_PAD_PROBE_TYPE_EVENT_UPSTREAM, outgoingControlEvent, this, nullptr);
+    gst_object_unref(controlPad);
+    if (!outgoingControlProbe_)
+        return fail();
+
     g_signal_connect(session_, "request-pt-map", G_CALLBACK(requestPtMap), this);
 
     GstAppSinkCallbacks sendRtpCallbacks {};
@@ -306,6 +313,13 @@ void RtpSessionBridge::cleanup()
         } else if (setResult == GST_STATE_CHANGE_FAILURE) {
             qWarning() << "RTP session bridge failed to enter NULL during teardown";
         }
+    }
+
+    if (outgoingControlProbe_ && sendRtpInput_) {
+        auto *pad = gst_element_get_static_pad(GST_ELEMENT(sendRtpInput_), "src");
+        gst_pad_remove_probe(pad, outgoingControlProbe_);
+        gst_object_unref(pad);
+        outgoingControlProbe_ = 0;
     }
 
     if (session_) {
@@ -942,4 +956,37 @@ GstFlowReturn RtpSessionBridge::pushRaw(GstAppSrc *source, const QByteArray &dat
     return RtpInput::push(source, buffer);
 }
 
+void RtpSessionBridge::setKeyframeRequestHandler(KeyframeRequestHandler handler)
+{
+    if (ownerThread("setKeyframeRequestHandler"))
+        keyframeRequestHandler_ = std::move(handler);
+}
+
+GstPadProbeReturn RtpSessionBridge::outgoingControlEvent(GstPad *, GstPadProbeInfo *info, gpointer data)
+{
+    auto *event = GST_PAD_PROBE_INFO_EVENT(info);
+    if (!event || GST_EVENT_TYPE(event) != GST_EVENT_CUSTOM_UPSTREAM)
+        return GST_PAD_PROBE_OK;
+    const auto *structure  = gst_event_get_structure(event);
+    guint       ssrc       = 0;
+    gboolean    allHeaders = FALSE;
+    if (!structure || !gst_structure_has_name(structure, "GstForceKeyUnit")
+        || !gst_structure_get_uint(structure, "ssrc", &ssrc) || !ssrc)
+        return GST_PAD_PROBE_OK;
+    gst_structure_get_boolean(structure, "all-headers", &allHeaders);
+    auto      *bridge     = static_cast<RtpSessionBridge *>(data);
+    const auto generation = bridge->deliveryGeneration();
+    if (generation) {
+        // RTCP runs on a streaming thread. Never invoke codec/control-plane
+        // callbacks there; stop/restart fences queued feedback like packets.
+        QTimer::singleShot(0, bridge, [bridge, generation, ssrc, allHeaders] {
+            if (bridge->deliveryGeneration() != generation)
+                return;
+            const auto handler = bridge->keyframeRequestHandler_;
+            if (handler)
+                handler(ssrc, allHeaders);
+        });
+    }
+    return GST_PAD_PROBE_DROP;
+}
 } // namespace PsiMedia

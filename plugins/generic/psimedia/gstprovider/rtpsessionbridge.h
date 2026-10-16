@@ -45,6 +45,7 @@ class RtpSessionBridge : public QObject {
 public:
     using NetworkPacketHandler = std::function<void(const PRtpPacket &)>;
     using RuntimeErrorHandler  = std::function<void()>;
+    using KeyframeRequestHandler = std::function<void(quint32 ssrc, bool allHeaders)>;
     // The buffer is borrowed for the duration of the callback. A consumer that
     // queues it or passes ownership to appsrc must take its own reference.
     using MediaPacketHandler = std::function<void(GstBuffer *)>;
@@ -148,6 +149,9 @@ public:
     void setNetworkPacketHandler(NetworkPacketHandler handler);
     void setMediaPacketHandler(MediaPacketHandler handler);
     void setRuntimeErrorHandler(RuntimeErrorHandler handler);
+    // Incoming PLI/FIR becomes a GstForceKeyUnit event on the send appsrc.
+    // Forward that request to the codec on this bridge's owner thread.
+    void setKeyframeRequestHandler(KeyframeRequestHandler handler);
 
     /** Request an early RTCP report/feedback packet within maxDelay ns. Owner thread only. */
     bool requestRtcp(guint64 maxDelay = 0);
@@ -302,6 +306,7 @@ private:
         quint64      expiredDrops_ = 0;
     };
 
+    static GstPadProbeReturn outgoingControlEvent(GstPad *, GstPadProbeInfo *, gpointer);
     static GstCaps      *requestPtMap(GstElement *session, guint pt, gpointer data);
     static GstFlowReturn sendRtpReady(GstAppSink *sink, gpointer data);
     static GstFlowReturn recvRtpReady(GstAppSink *sink, gpointer data);
@@ -366,6 +371,8 @@ private:
     NetworkPacketHandler networkPacketHandler_;
     MediaPacketHandler   mediaPacketHandler_;
     RuntimeErrorHandler  runtimeErrorHandler_;
+    KeyframeRequestHandler keyframeRequestHandler_;
+    gulong                 outgoingControlProbe_ = 0;
     quint64              busPollGeneration_ = 0;
     std::atomic<quint64> receivedRtcpPackets_ { 0 };
     std::atomic<bool>    running_ { false };

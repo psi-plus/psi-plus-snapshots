@@ -37,6 +37,7 @@ public:
     using NetworkPacketHandler = std::function<void(const PRtpPacket &)>;
     using MediaPacketHandler   = std::function<void(GstBuffer *)>;
     using RuntimeErrorHandler  = std::function<void()>;
+    using KeyframeRequestHandler = std::function<void(bool allHeaders)>;
 
     explicit RtpGroupBridge(QObject *parent = nullptr);
     ~RtpGroupBridge() override;
@@ -55,6 +56,7 @@ public:
     void setNetworkPacketHandler(NetworkPacketHandler handler);
     void setEndpointMediaPacketHandler(const QByteArray &endpointId, MediaPacketHandler handler);
     void setRuntimeErrorHandler(RuntimeErrorHandler handler);
+    void setEndpointKeyframeRequestHandler(const QByteArray &endpointId, KeyframeRequestHandler handler);
 
     bool start();
     void stop();
@@ -96,6 +98,7 @@ private:
     static QByteArray bytesFromBuffer(GstBuffer *buffer);
     static bool       rtpIdentity(const QByteArray &packet, quint8 *payloadType, quint32 *ssrc);
 
+    QHash<QByteArray, KeyframeRequestHandler> keyframeHandlers_;
     RtpSessionBridge                      session_;
     RtpBundleRouter                       router_;
     QHash<QByteArray, EndpointState>      endpoints_;

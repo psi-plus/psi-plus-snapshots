@@ -22,6 +22,7 @@
 
 #include <QSize>
 #include <QString>
+#include <QThread>
 #include <cstdio>
 #include <gst/gst.h>
 
@@ -351,6 +352,19 @@ GstElement *bins_audioenc_create(const QString &codec, int id)
     return bin;
 }
 
+GstElement *bins_videoqueue_create(const char *name, bool is_live)
+{
+    auto *queue = gst_element_factory_make("queue", name);
+    if (queue && is_live) {
+        // A slow encoder/preview must not make desktop capture accumulate old
+        // raw frames. Drop whole raw frames here, before RTP packetization.
+        g_object_set(queue, "max-size-buffers", guint(2), "max-size-bytes", guint(0), "max-size-time", guint64(0),
+                     nullptr);
+        gst_util_set_object_arg(G_OBJECT(queue), "leaky", "downstream");
+    }
+    return queue;
+}
+
 GstElement *bins_videoenc_create(const QString &codec, int id, int maxkbps)
 {
     GstElement *bin = gst_bin_new("videoencbin");
@@ -359,6 +373,14 @@ GstElement *bins_videoenc_create(const QString &codec, int id, int maxkbps)
     GstElement *videortppay = nullptr;
     if (!video_codec_get_send_elements(codec, &videoenc, &videortppay))
         return nullptr;
+
+    // These are interactive streams. libvpx's default good-quality deadline
+    // can spend far longer than one frame interval on a changing HD desktop.
+    // Keep lookahead disabled and bound CPU use when camera and screen coexist.
+    g_object_set(videoenc, "deadline", gint64(1), "cpu-used", 8, "threads", qBound(1, QThread::idealThreadCount(), 4),
+                 "lag-in-frames", 0, nullptr);
+    if (maxkbps > 0)
+        g_object_set(videoenc, "target-bitrate", int(qMin<qint64>(qint64(maxkbps) * 1000, G_MAXINT)), nullptr);
 
     if (id != -1)
         g_object_set(G_OBJECT(videortppay), "pt", id, NULL);

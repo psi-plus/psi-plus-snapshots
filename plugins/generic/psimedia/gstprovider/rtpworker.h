@@ -93,6 +93,7 @@ public:
     void transmitVideo();
     void pauseAudio();
     void pauseVideo();
+    void forceVideoKeyframe(bool allHeaders);
     void setInputDevices(const QString &audioInput, const QString &videoInput, const QString &fileName,
                          const QByteArray &fileData, bool loop);
     void stop(); // can be called at any time after calling start

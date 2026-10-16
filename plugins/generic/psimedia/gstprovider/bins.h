@@ -31,6 +31,7 @@ namespace PsiMedia {
 GstElement *bins_videoprep_create(const QSize &size, int fps, bool is_live);
 
 GstElement *bins_audioenc_create(const QString &codec, int id);
+GstElement *bins_videoqueue_create(const char *name, bool is_live);
 GstElement *bins_videoenc_create(const QString &codec, int id, int maxkbps);
 GstElement *bins_audiodec_create(const QString &codec);
 GstElement *bins_videodec_create(const QString &codec);

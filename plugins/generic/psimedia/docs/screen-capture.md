@@ -53,3 +53,17 @@ and the RTP pipeline. The camera/screen test uses an opaque screen device ID and
 checks concurrent protected RTP and independent screen teardown. Native Windows
 and macOS capture/permission behavior requires testing on those operating systems;
 mock selection and headless lifecycle tests do not exercise OS capture.
+
+Interactive encoding uses VP8 realtime mode with no lookahead and at most four
+encoder threads. The requested sending bitrate is applied to the encoder.
+Live raw-video queues keep at most two waiting frames and discard older raw
+frames if encoding or preview falls behind; file-input queues remain lossless.
+This bounds capture backlog before RTP packetization instead of dropping
+fragments of an already encoded frame.
+
+Decoder keyframe requests cross both appsrc boundaries: a joined codec uses its
+shared RTP owner to send negotiated RTCP feedback, and incoming PLI/FIR is
+translated by GStreamer into a sender keyframe request. The group routes that
+request by its registered local SSRC to the matching codec's worker command
+queue. Camera and screen can share a payload type without confusing their
+feedback. Stop/restart discards queued requests from an old RTP generation.

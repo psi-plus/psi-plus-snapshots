@@ -26,6 +26,7 @@
 #include <QStringList>
 #include <cstring>
 #include <gst/app/gstappsrc.h>
+#include <gst/video/video-event.h>
 
 #include "bins.h"
 // #include "devices.h"
@@ -2283,7 +2284,7 @@ bool RtpWorker::addVideoChain()
 
     GstElement *videotee = gst_element_factory_make("tee", nullptr);
 
-    GstElement *playqueue        = gst_element_factory_make("queue", "queue_play");
+    GstElement *playqueue        = bins_videoqueue_create("queue_play", !fileDemux);
     GstElement *videoconvertplay = gst_element_factory_make("videoconvert", nullptr);
     GstAppSink *appVideoSink     = makeVideoPlayAppSink("sourcevideoplay");
     if (!fileDemux)
@@ -2301,7 +2302,7 @@ bool RtpWorker::addVideoChain()
 #endif
     gst_app_sink_set_callbacks(appVideoSink, &sinkPreviewCb, this, nullptr);
 
-    GstElement *rtpqueue     = gst_element_factory_make("queue", "queue_rtp");
+    GstElement *rtpqueue     = bins_videoqueue_create("queue_rtp", !fileDemux);
     GstElement *videortpsink = gst_element_factory_make("appsink", nullptr); // was apprtpsink
     auto        appRtpSink   = GST_APP_SINK(videortpsink);
     if (!fileDemux)
@@ -2553,3 +2554,16 @@ RtpWorker::Frame RtpWorker::Frame::pullFromSink(GstAppSink *appsink)
 }
 
 }
+
+namespace PsiMedia {
+void RtpWorker::forceVideoKeyframe(bool allHeaders)
+{
+    if (!videortppay)
+        return;
+    auto *pad = gst_element_get_static_pad(videortppay, "src");
+    if (!pad)
+        return;
+    gst_pad_send_event(pad, gst_video_event_new_upstream_force_key_unit(GST_CLOCK_TIME_NONE, allHeaders, 0));
+    gst_object_unref(pad);
+}
+} // namespace PsiMedia

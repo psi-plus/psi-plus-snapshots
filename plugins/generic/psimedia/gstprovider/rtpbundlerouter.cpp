@@ -531,4 +531,12 @@ bool RtpBundleRouter::isCurrent(const RoutedRtp &packet) const
     return packet.revision == revision_ && endpointRoutes_.contains(packet.endpointId);
 }
 
+QByteArray RtpBundleRouter::outgoingEndpoint(quint32 ssrc) const
+{
+    const auto registered = registeredOutgoingSsrcs_.constFind(ssrc);
+    if (registered != registeredOutgoingSsrcs_.cend())
+        return registered.value();
+    const auto local = localSsrcRoutes_.constFind(ssrc);
+    return local == localSsrcRoutes_.cend() ? QByteArray() : routes_.at(local.value()).endpointId;
+}
 } // namespace PsiMedia

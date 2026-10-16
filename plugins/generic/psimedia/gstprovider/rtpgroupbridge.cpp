@@ -164,6 +164,11 @@ RtpGroupBridge::RtpGroupBridge(QObject *parent) : QObject(parent), session_(QStr
         if (!guard)
             return;
     });
+    session_.setKeyframeRequestHandler([this](quint32 ssrc, bool allHeaders) {
+        const auto handler = keyframeHandlers_.value(router_.outgoingEndpoint(ssrc));
+        if (handler)
+            handler(allHeaders);
+    });
     session_.setMediaPacketHandler([this](GstBuffer *buffer) { deliverIncomingRtp(buffer); });
     session_.setRuntimeErrorHandler([this]() { emitRuntimeError(); });
 }
@@ -173,6 +178,7 @@ RtpGroupBridge::~RtpGroupBridge()
     ownerThread("destruction");
     session_.stop();
     session_.setNetworkPacketHandler({});
+    session_.setKeyframeRequestHandler({});
     session_.setMediaPacketHandler({});
     session_.setRuntimeErrorHandler({});
 }
@@ -242,6 +248,12 @@ bool RtpGroupBridge::configure(const QList<Endpoint> &endpoints)
         else
             ++it;
     }
+    for (auto it = keyframeHandlers_.begin(); it != keyframeHandlers_.end();) {
+        if (!endpoints_.contains(it.key()))
+            it = keyframeHandlers_.erase(it);
+        else
+            ++it;
+    }
     return true;
 }
 
@@ -271,6 +283,7 @@ void RtpGroupBridge::clear()
     router_.reset();
     endpoints_.clear();
     mediaHandlers_.clear();
+    keyframeHandlers_.clear();
 }
 
 void RtpGroupBridge::setNetworkPacketHandler(NetworkPacketHandler handler)
@@ -446,4 +459,13 @@ void RtpGroupBridge::emitRuntimeError()
         return;
 }
 
+void RtpGroupBridge::setEndpointKeyframeRequestHandler(const QByteArray &endpointId, KeyframeRequestHandler handler)
+{
+    if (!ownerThread("setEndpointKeyframeRequestHandler"))
+        return;
+    if (handler)
+        keyframeHandlers_.insert(endpointId, std::move(handler));
+    else
+        keyframeHandlers_.remove(endpointId);
+}
 } // namespace PsiMedia

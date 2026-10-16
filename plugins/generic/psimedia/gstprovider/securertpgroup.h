@@ -71,6 +71,10 @@ public:
     // fatal crypto failures. lastError() distinguishes the reason.
     bool receiveProtectedPacket(const PSecureRtpPacket &packet);
 
+    void setEndpointKeyframeRequestHandler(const QByteArray &endpointId, RtpGroupBridge::KeyframeRequestHandler handler)
+    {
+        bridge_.setEndpointKeyframeRequestHandler(endpointId, std::move(handler));
+    }
     bool requestRtcp(guint64 maxDelay = 0) { return bridge_.requestRtcp(maxDelay); }
     bool requestRemoteKeyframe(quint32 ssrc, quint8 payloadType)
     {
