@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "qitevideo.h"
+#include "qitemedia_p.h"
 #include "qitevideoframe_p.h"
 
 #include <QAbstractTextDocumentLayout>
@@ -22,7 +23,7 @@
 #include <functional>
 
 namespace {
-enum Property { Source = InteractiveTextFormat::UserProperty, Opener, Size };
+enum Property { Source = InteractiveTextFormat::UserProperty, Opener, Size, Downloadable };
 
 class VideoControls : public QWidget {
 public:
@@ -160,7 +161,7 @@ private:
 
 class VideoPlayer : public QWidget {
 public:
-    VideoPlayer(const QTextFormat &format, QWidget *parent) :
+    VideoPlayer(const QTextFormat &format, QWidget *parent, std::function<void()> download) :
         QWidget(parent), source(format.property(Source).toUrl()),
         opener(static_cast<ITEMediaOpener *>(format.property(Opener).value<void *>()))
     {
@@ -190,7 +191,9 @@ public:
         button->setToolTip(ITEVideoController::tr("Play"));
         button->setAccessibleName(button->toolTip());
         row->addWidget(button);
-        slider = new QSlider(Qt::Horizontal, controls);
+        slider     = new ITEMediaSlider(controls);
+        mediaState = opener ? opener->mediaState(source) : nullptr;
+        slider->setMediaState(mediaState);
         slider->setRange(0, 10000);
         slider->setEnabled(false);
         slider->setAccessibleName(ITEVideoController::tr("Video position"));
@@ -200,6 +203,24 @@ public:
         // explicit foreground on our opaque black background as well.
         time->setStyleSheet(QStringLiteral("color: white; background: transparent;"));
         row->addWidget(time);
+        if (format.boolProperty(Downloadable)) {
+            downloadButton = new QToolButton(controls);
+            downloadButton->setObjectName(QStringLiteral("qite-video-download"));
+            downloadButton->setIcon(
+                QIcon::fromTheme(QStringLiteral("document-save"), style()->standardIcon(QStyle::SP_DialogSaveButton)));
+            row->addWidget(downloadButton);
+            connect(downloadButton, &QToolButton::clicked, this, [download] { download(); });
+            auto updateDownload = [this] {
+                downloadButton->setEnabled(!mediaState || !mediaState->downloading());
+                downloadButton->setToolTip(iteMediaDownloadText(mediaState));
+                downloadButton->setAccessibleName(downloadButton->toolTip());
+            };
+            if (mediaState) {
+                connect(mediaState, &ITEMediaState::changed, this, updateDownload);
+                connect(mediaState, &QObject::destroyed, this, updateDownload);
+            }
+            updateDownload();
+        }
         fullscreenButton = new QToolButton(controls);
         fullscreenButton->setObjectName(QStringLiteral("qite-video-fullscreen-button"));
         updateFullscreenButton();
@@ -371,7 +392,9 @@ private:
     QToolButton              *fullscreenButton;
     QPointer<FullscreenVideo> fullscreen;
     QToolButton              *button;
-    QSlider                  *slider;
+    ITEMediaSlider           *slider;
+    QToolButton              *downloadButton = nullptr;
+    QPointer<ITEMediaState>   mediaState;
     QLabel                   *time;
 };
 }
@@ -422,8 +445,12 @@ public:
             }
             const QRect rect    = q->itc->elementRect(entry.cursor).translated(-offset);
             const bool  visible = rect.isValid() && rect.intersects(edit->viewport()->rect());
-            if (visible && !entry.widget)
-                entry.widget = new VideoPlayer(entry.cursor.charFormat(), edit->viewport());
+            if (visible && !entry.widget) {
+                const auto source = entry.cursor.charFormat().property(Source).toUrl();
+                entry.widget = new VideoPlayer(entry.cursor.charFormat(), edit->viewport(), [controller = q, source] {
+                    emit controller->downloadRequested(source);
+                });
+            }
             if (entry.widget) {
                 entry.widget->setGeometry(rect);
                 entry.widget->setVisible(visible);
@@ -445,19 +472,21 @@ ITEVideoController::ITEVideoController(InteractiveText *itc, QObject *parent) :
 
 ITEVideoController::~ITEVideoController() = default;
 
-QTextCharFormat ITEVideoController::makeFormat(const QUrl &source, ITEMediaOpener *opener, const QSize &size) const
+QTextCharFormat ITEVideoController::makeFormat(const QUrl &source, ITEMediaOpener *opener, const QSize &size,
+                                               bool downloadable) const
 {
     InteractiveTextFormat format(objectType, itc->nextId());
     format.setProperty(Source, source);
     format.setProperty(Opener, QVariant::fromValue<void *>(opener));
     format.setProperty(Size, size.expandedTo(QSize(160, 120)));
+    format.setProperty(Downloadable, downloadable);
     format.setVerticalAlignment(QTextCharFormat::AlignNormal);
     return format;
 }
 
-void ITEVideoController::insert(const QUrl &source, ITEMediaOpener *opener, const QSize &size)
+void ITEVideoController::insert(const QUrl &source, ITEMediaOpener *opener, const QSize &size, bool downloadable)
 {
-    itc->insert(InteractiveTextFormat(makeFormat(source, opener, size)));
+    itc->insert(InteractiveTextFormat(makeFormat(source, opener, size, downloadable)));
 }
 
 QSizeF ITEVideoController::intrinsicSize(QTextDocument *, int, const QTextFormat &format)

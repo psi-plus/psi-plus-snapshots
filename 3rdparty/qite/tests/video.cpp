@@ -1,4 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
+#include "qiteaudio.h"
+#include "qitemedia_p.h"
 #include "qitevideo.h"
 #include "qitevideoframe_p.h"
 
@@ -9,6 +11,7 @@
 #include <QMainWindow>
 #include <QMediaPlayer>
 #include <QMouseEvent>
+#include <QPainter>
 #include <QScrollBar>
 #include <QSignalSpy>
 #include <QSlider>
@@ -18,6 +21,7 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QVideoFrame>
+#include <limits>
 #include <thread>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QVideoSink>
@@ -69,6 +73,26 @@ public:
     }
 };
 
+class StateOpener : public ITEMediaOpener {
+public:
+    ITEMediaState state;
+    int           opens = 0;
+    QIODevice    *open(QUrl &) override
+    {
+        ++opens;
+        return nullptr;
+    }
+    void           close(QIODevice *) override { }
+    QVariant       metadata(const QUrl &) override { return QVariantMap(); }
+    ITEMediaState *mediaState(const QUrl &) override { return &state; }
+};
+
+class AudioController : public ITEAudioController {
+public:
+    using ITEAudioController::ITEAudioController;
+    using ITEAudioController::mouseEvent;
+};
+
 class VideoTest : public QObject {
     Q_OBJECT
     static void moveMouse(QWidget *widget, const QPoint &position)
@@ -81,6 +105,130 @@ class VideoTest : public QObject {
     }
 private slots:
     void initTestCase() { qRegisterMetaType<QVideoFrame>(); }
+
+    void mediaStateAndLayers()
+    {
+        ITEMediaState state;
+        QSignalSpy    changed(&state, &ITEMediaState::changed);
+        state.setCachedRanges({ { .5, .7 },
+                                { .1, .3 },
+                                { .2, .5 },
+                                { -1, .1 },
+                                { .8, 2 },
+                                { .9, .8 },
+                                { std::numeric_limits<qreal>::quiet_NaN(), .5 } });
+        QCOMPARE(state.cachedRanges(), (ITEMediaState::Ranges { { 0, .7 }, { .8, 1 } }));
+        QCOMPARE(changed.count(), 1);
+        state.setCachedRanges({ { 0, .7 }, { .8, 1 } });
+        QCOMPARE(changed.count(), 1);
+        state.setCachedRanges({ { 0, .5 }, { .8, 1 } }); // Eviction must shrink, not union forever.
+        state.setDownload(true, 5);
+        QCOMPARE(state.downloadProgress(), qreal(1));
+        state.setDownload(false);
+        QImage image(100, 12, QImage::Format_RGB32);
+        image.fill(Qt::black);
+        {
+            QPainter painter(&image);
+            itePaintMediaProgress(&painter, image.rect(), &state, .25, Qt::white);
+        }
+        QCOMPARE(image.pixelColor(10, 6), QColor(Qt::white)); // Playback stays visible.
+        QVERIFY(image.pixelColor(10, 1).blue() > 80);         // Cache remains visible around it.
+        QCOMPARE(image.pixelColor(60, 6), QColor(Qt::black)); // Real gap in availability.
+        QVERIFY(image.pixelColor(90, 6).blue() > 80);
+        image.fill(Qt::black);
+        {
+            QPainter painter(&image);
+            itePaintMediaProgress(&painter, image.rect(), &state, .25, Qt::white, true);
+        }
+        QCOMPARE(image.pixelColor(90, 6), QColor(Qt::white));
+        state.setDownload(false, -1, "network error");
+        QVERIFY(iteMediaDownloadText(&state).contains("network error"));
+    }
+
+    void videoDownloadAndCache()
+    {
+        TextEdit        edit;
+        InteractiveText text(&edit);
+        VideoController video(&text);
+        StateOpener     opener;
+        const QUrl      url("test:video");
+        video.insert(url, &opener);
+        edit.show();
+        QTRY_VERIFY(edit.findChild<ITEVideoFrameWidget *>());
+        QVERIFY(!edit.findChild<QToolButton *>("qite-video-download"));
+        edit.clear();
+        video.insert(url, &opener, QSize(320, 220), true);
+        QTRY_VERIFY(edit.findChild<QToolButton *>("qite-video-download"));
+        QTest::qWait(30);
+        auto       download = edit.findChild<QToolButton *>("qite-video-download");
+        QSignalSpy requested(&video, &ITEVideoController::downloadRequested);
+        QSignalSpy changed(edit.document(), &QTextDocument::contentsChanged);
+        QSignalSpy resized(edit.document()->documentLayout(), &QAbstractTextDocumentLayout::documentSizeChanged);
+        edit.paints = video.draws = 0;
+        opener.state.setCachedRanges({ { 0, .1 }, { .8, 1 } });
+        opener.state.setDownload(true, .2);
+        QTest::qWait(30);
+        QVERIFY(!download->isEnabled());
+        QCOMPARE(changed.count(), 0);
+        QCOMPARE(resized.count(), 0);
+        QCOMPARE(edit.paints, 0);
+        QCOMPARE(video.draws, 0);
+        download->click();
+        QCOMPARE(requested.count(), 0);
+        opener.state.setDownload(false);
+        download->click();
+        QCOMPARE(requested.count(), 1);
+        QCOMPARE(requested.first().first().toUrl(), url);
+        QCOMPARE(opener.opens, 0); // Saving does not start playback.
+        edit.findChild<QToolButton *>("qite-video-fullscreen-button")->click();
+        QTRY_VERIFY(download->window()->isFullScreen());
+        download->click();
+        QCOMPARE(requested.count(), 2);
+        QCOMPARE(opener.opens, 0);
+        edit.clear();
+        QTest::qWait(20);
+        opener.state.setCachedRanges({}); // Deleted player must disconnect safely.
+    }
+
+    void audioDownloadAndCache()
+    {
+        TextEdit        edit;
+        InteractiveText text(&edit);
+        AudioController audio(&text, &edit);
+        StateOpener     opener;
+        const QUrl      url("test:audio");
+        const auto      normal  = audio.makeFormat(url, &opener);
+        const auto      enabled = audio.makeFormat(url, &opener, true);
+        const auto      small   = audio.intrinsicSize(edit.document(), 0, normal);
+        const auto      large   = audio.intrinsicSize(edit.document(), 0, enabled);
+        QVERIFY(large.width() > small.width());
+        QCOMPARE(large.height(), small.height());
+        text.insert(InteractiveTextFormat(enabled));
+        QSignalSpy metadata(edit.document(), &QTextDocument::contentsChanged);
+        edit.show();
+        QTRY_VERIFY(metadata.count() > 0); // Wait for the existing asynchronous metadata update.
+        QTest::qWait(20);
+        QSignalSpy changed(edit.document(), &QTextDocument::contentsChanged);
+        opener.state.setCachedRanges({ { .2, .5 } });
+        QTest::qWait(20);
+        QCOMPARE(changed.count(), 0);
+        QSignalSpy requested(&audio, &ITEAudioController::downloadRequested);
+        auto       selected = text.findElement(InteractiveTextFormat::id(enabled));
+        QVERIFY(!selected.isNull());
+        InteractiveTextElementController::Event click { nullptr, InteractiveTextElementController::EventType::Click,
+                                                        QPoint(int(large.width() - large.height() / 2),
+                                                               int(large.height() / 2)) };
+        audio.mouseEvent(click, {}, selected);
+        QCOMPARE(requested.count(), 1);
+        QCOMPARE(requested.first().first().toUrl(), url);
+        opener.state.setDownload(true, .4);
+        audio.mouseEvent(click, {}, selected);
+        QCOMPARE(requested.count(), 1);
+        QCOMPARE(opener.opens, 0);
+        QVERIFY(edit.findChildren<QMediaPlayer *>().isEmpty());
+        edit.clear();
+        opener.state.setCachedRanges({});
+    }
 
     void queuedFrames()
     {

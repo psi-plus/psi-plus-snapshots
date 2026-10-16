@@ -27,6 +27,29 @@ Qite does not copy frames into text document resources.
 Qt Widgets and Multimedia are required (Qt 5 / Qt 6).
 The demo's **Open video** action inserts a local clip.
 
+Audio and video can optionally show a download button. Opt in per element and
+connect the controller's `downloadRequested(const QUrl &)` signal to the host's
+save action; clicking does not open a decoder or start playback:
+
+```cpp
+audio.insert(source, opener, true);
+video.insert(source, opener, QSize(320, 220), true);
+```
+
+An opener can override `mediaState(source)` to return a host-owned `ITEMediaState`
+shared by players of that resource. The default implementation returns `nullptr`.
+Set `setCachedRanges({{0, .2}, {.8, 1}})` for disjoint availability ranges and
+`setDownload(true, .4)` for an active download. Finish with `setDownload(false)`
+or supply an error string to make the button available for retry. Keep the state
+and its updates on the GUI thread. Players tolerate its destruction.
+
+The translucent blue layer shows available **file bytes**, with the narrower
+playback stripe/handle visible over it. Byte fractions are not exact timestamps
+for VBR/container media. The host supplies current coverage, including evictions;
+Qite normalizes/merges overlapping ranges but does not accumulate them forever.
+Availability and download updates do not modify the document. The video slider
+updates only its local widget; audio invalidates only its object's viewport rect.
+
 To build and run the regression tests:
 
 ```

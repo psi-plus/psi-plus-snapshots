@@ -18,18 +18,23 @@ under the License.
 */
 
 #include "qiteaudio.h"
+#include "qitemedia_p.h"
 
 #include <QAudioOutput>
 #include <QEvent>
 #include <QFile>
+#include <QHelpEvent>
 #include <QHoverEvent>
 #include <QMediaMetaData>
 #include <QMediaPlayer>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QPainter>
+#include <QScrollBar>
+#include <QStyleOptionToolButton>
 #include <QTextEdit>
 #include <QTimer>
+#include <QToolTip>
 #include <QVector2D>
 #include <QtGlobal>
 
@@ -57,7 +62,8 @@ public:
         PlayPosition, /* in pixels */
         State,
         MetadataState,
-        Metadata
+        Metadata,
+        Downloadable
     };
 
     enum MDState { NotRequested, RequestInProgress, Finished };
@@ -150,7 +156,7 @@ QSizeF ITEAudioController::intrinsicSize(QTextDocument *doc, int posInDocument, 
         lastFontSize = psize;
         updateGeomtry();
     }
-    return elementSize;
+    return elementSize + QSize(format.boolProperty(AudioMessageFormat::Downloadable) ? elementSize.height() : 0, 0);
 }
 
 void ITEAudioController::updateGeomtry()
@@ -202,6 +208,20 @@ void ITEAudioController::updateGeomtry()
 void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posInDocument, const QTextFormat &format)
 {
     const AudioMessageFormat audioFormat = AudioMessageFormat::fromCharFormat(format.toCharFormat());
+    const auto               id          = audioFormat.id();
+    if (!mediaEntries.contains(id)) {
+        QTextCursor selected(itc->textEdit()->document());
+        selected.setPosition(posInDocument);
+        selected.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor);
+        auto       opener = audioFormat.mediaOpener();
+        MediaEntry entry { selected, opener ? opener->mediaState(audioFormat.url()) : nullptr, {}, {} };
+        if (entry.state) {
+            entry.changed   = connect(entry.state, &ITEMediaState::changed, this, [this, id] { updateMedia(id); });
+            entry.destroyed = connect(entry.state, &QObject::destroyed, this, [this, id] { updateMedia(id); });
+        }
+        mediaEntries.insert(id, entry);
+    }
+    const auto mediaState = mediaEntries.value(id).state;
     // qDebug() << audioFormat.id();
 
     painter->setRenderHints(QPainter::Antialiasing);
@@ -210,7 +230,10 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
     bgPen.setWidth(bgOutlineWidth);
     painter->setPen(bgPen);
     painter->setBrush(QColor(150, 250, 150));
-    painter->drawRoundedRect(bgRect.translated(int(rect.left()), int(rect.top())), bgRectRadius, bgRectRadius);
+    painter->drawRoundedRect(
+        bgRect.adjusted(0, 0, audioFormat.boolProperty(AudioMessageFormat::Downloadable) ? elementSize.height() : 0, 0)
+            .translated(int(rect.left()), int(rect.top())),
+        bgRectRadius, bgRectRadius);
 
     // draw button
     if (audioFormat.state() & AudioMessageFormat::MouseOnButton) {
@@ -247,14 +270,22 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
     QRectF xScaleRect(scaleRect.translated(rect.topLeft()));
     painter->drawRoundedRect(xScaleRect, scaleRect.height() / 2, scaleRect.height() / 2);
 
-    // draw played part
+    // Availability is file-byte coverage; playback is the narrower stripe.
     auto playPos = audioFormat.playPosition();
-    if (playPos) {
-        painter->setPen(Qt::NoPen);
-        painter->setBrush(QColor(170, 255, 170));
-        QRectF playedRect(scaleFillRect.translated(rect.topLeft())); // to the width of the scale border
-        playedRect.setWidth(playPos);
-        painter->drawRoundedRect(playedRect, playedRect.height() / 2, playedRect.height() / 2);
+    itePaintMediaProgress(painter, scaleFillRect.translated(rect.topLeft()), mediaState,
+                          scaleFillRect.width() > 0 ? playPos / scaleFillRect.width() : 0, QColor(225, 255, 225));
+    if (audioFormat.boolProperty(AudioMessageFormat::Downloadable)) {
+        auto                   edit = itc->textEdit();
+        QStyleOptionToolButton option;
+        option.initFrom(edit);
+        option.rect        = downloadRect().translated(rect.topLeft().toPoint());
+        option.icon        = QIcon::fromTheme(QStringLiteral("document-save"),
+                                              edit->style()->standardIcon(QStyle::SP_DialogSaveButton));
+        option.iconSize    = QSize(signSize * 2, signSize * 2);
+        option.subControls = QStyle::SC_ToolButton;
+        if (mediaState && mediaState->downloading())
+            option.state &= ~QStyle::State_Enabled;
+        edit->style()->drawComplexControl(QStyle::CC_ToolButton, &option, painter, edit);
     }
 
     // check metadata. maybe it's ready or we need to query it
@@ -366,16 +397,18 @@ void ITEAudioController::drawITE(QPainter *painter, const QRectF &rect, int posI
     // runnerRect.set
 }
 
-QTextCharFormat ITEAudioController::makeFormat(const QUrl &audioSrc, ITEMediaOpener *mediaOpener) const
+QTextCharFormat ITEAudioController::makeFormat(const QUrl &audioSrc, ITEMediaOpener *mediaOpener,
+                                               bool downloadable) const
 {
     AudioMessageFormat fmt(objectType, itc->nextId(), audioSrc, mediaOpener);
     fmt.setFontPointSize(itc->textEdit()->currentFont().pointSize());
+    fmt.setProperty(AudioMessageFormat::Downloadable, downloadable);
     return fmt;
 }
 
-void ITEAudioController::insert(const QUrl &audioSrc, ITEMediaOpener *mediaOpener)
+void ITEAudioController::insert(const QUrl &audioSrc, ITEMediaOpener *mediaOpener, bool downloadable)
 {
-    auto fmt = makeFormat(audioSrc, mediaOpener);
+    auto fmt = makeFormat(audioSrc, mediaOpener, downloadable);
     itc->insert(static_cast<InteractiveTextFormat>(fmt));
 }
 
@@ -396,7 +429,18 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
         _cursor = QCursor(Qt::ArrowCursor);
     }
 
-    AudioMessageFormat        format            = AudioMessageFormat::fromCharFormat(selected.charFormat());
+    AudioMessageFormat format = AudioMessageFormat::fromCharFormat(selected.charFormat());
+    const bool onDownload     = event.type != EventType::Leave && format.boolProperty(AudioMessageFormat::Downloadable)
+        && downloadRect().contains(event.pos);
+    if (onDownload) {
+        _cursor = QCursor(Qt::PointingHandCursor);
+        if (event.type == EventType::Click) {
+            const auto state = mediaEntries.value(format.id()).state;
+            if (!state || !state->downloading())
+                emit downloadRequested(format.url());
+            return true;
+        }
+    }
     AudioMessageFormat::Flags state             = format.state();
     bool                      onButtonChanged   = bool(state & AudioMessageFormat::MouseOnButton) != onButton;
     bool                      onTrackbarChanged = bool(state & AudioMessageFormat::MouseOnTrackbar) != onTrackbar;
@@ -662,6 +706,74 @@ void ITEAudioController::playerStateChanged(PlaybackState state)
 ITEAudioController::ITEAudioController(InteractiveText *itc, QObject *parent) :
     InteractiveTextElementController(itc, parent)
 {
+    itc->textEdit()->viewport()->installEventFilter(this);
+    connect(itc->textEdit()->document(), &QTextDocument::contentsChanged, this, [this] {
+        if (mediaCleanupPending)
+            return;
+        mediaCleanupPending = true;
+        // QTextDocument::clear emits contentsChanged before finishing its cursor
+        // registry update. Destroying a retained cursor in that signal leaves a
+        // dangling entry inside Qt. Like video geometry, clean up after the edit.
+        QTimer::singleShot(0, this, [this] {
+            mediaCleanupPending = false;
+            for (auto it = mediaEntries.begin(); it != mediaEntries.end();) {
+                if (!this->itc || !this->itc->textEdit() || it->cursor.document() != this->itc->textEdit()->document()
+                    || it->cursor.selectedText() != QString(QChar::ObjectReplacementCharacter)
+                    || it->cursor.charFormat().objectType() != objectType
+                    || InteractiveTextFormat::id(it->cursor.charFormat()) != it.key()) {
+                    QObject::disconnect(it->changed);
+                    QObject::disconnect(it->destroyed);
+                    it = mediaEntries.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        });
+    });
+}
+
+QRect ITEAudioController::downloadRect() const
+{
+    return QRect(elementSize.width(), 0, elementSize.height(), elementSize.height()).adjusted(3, 3, -3, -3);
+}
+
+void ITEAudioController::updateMedia(quint32 id)
+{
+    if (!itc || !itc->textEdit() || !mediaEntries.contains(id))
+        return;
+    const auto &cursor = mediaEntries.value(id).cursor;
+    if (cursor.selectedText() != QString(QChar::ObjectReplacementCharacter)
+        || cursor.charFormat().objectType() != objectType || InteractiveTextFormat::id(cursor.charFormat()) != id)
+        return;
+    auto       edit = itc->textEdit();
+    const auto rect = itc->elementRect(mediaEntries.value(id).cursor)
+                          .translated(-edit->horizontalScrollBar()->value(), -edit->verticalScrollBar()->value());
+    edit->viewport()->update(rect);
+}
+
+bool ITEAudioController::eventFilter(QObject *, QEvent *event)
+{
+    if (event->type() != QEvent::ToolTip || !itc || !itc->textEdit())
+        return false;
+    auto help = static_cast<QHelpEvent *>(event);
+    auto edit = itc->textEdit();
+    for (const auto &entry : mediaEntries) {
+        auto format = entry.cursor.charFormat();
+        if (!format.boolProperty(AudioMessageFormat::Downloadable))
+            continue;
+        const auto rect = itc->elementRect(entry.cursor)
+                              .translated(-edit->horizontalScrollBar()->value(), -edit->verticalScrollBar()->value());
+        if (downloadRect().translated(rect.topLeft()).contains(help->pos())) {
+            QToolTip::showText(help->globalPos(), iteMediaDownloadText(entry.state), edit->viewport());
+            return true;
+        }
+        if (scaleRect.translated(rect.topLeft()).contains(help->pos())) {
+            QToolTip::showText(help->globalPos(), tr("Blue: downloaded file data; stripe: playback position"),
+                               edit->viewport());
+            return true;
+        }
+    }
+    return false;
 }
 
 QCursor ITEAudioController::cursor() { return _cursor; }

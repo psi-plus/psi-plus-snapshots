@@ -2,6 +2,7 @@
 
 set(qite_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/qite.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/qitemedia.cpp
     ${CMAKE_CURRENT_LIST_DIR}/qitevideo.cpp
     ${CMAKE_CURRENT_LIST_DIR}/qitevideoframe.cpp
     ${CMAKE_CURRENT_LIST_DIR}/qiteaudio.cpp
@@ -11,6 +12,8 @@ set(qite_SOURCES
 
 set(qite_HEADERS
     ${CMAKE_CURRENT_LIST_DIR}/qite.h
+    ${CMAKE_CURRENT_LIST_DIR}/qitemedia.h
+    ${CMAKE_CURRENT_LIST_DIR}/qitemedia_p.h
     ${CMAKE_CURRENT_LIST_DIR}/qitevideo.h
     ${CMAKE_CURRENT_LIST_DIR}/qitevideoframe_p.h
     ${CMAKE_CURRENT_LIST_DIR}/qiteaudio.h

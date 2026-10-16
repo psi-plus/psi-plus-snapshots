@@ -14,10 +14,14 @@ public:
     ~ITEVideoController() override;
 
     QTextCharFormat makeFormat(const QUrl &source, ITEMediaOpener *opener = nullptr,
-                               const QSize &size = QSize(320, 220)) const;
-    void            insert(const QUrl &source, ITEMediaOpener *opener = nullptr, const QSize &size = QSize(320, 220));
+                               const QSize &size = QSize(320, 220), bool downloadable = false) const;
+    void            insert(const QUrl &source, ITEMediaOpener *opener = nullptr, const QSize &size = QSize(320, 220),
+                           bool downloadable = false);
     QSizeF          intrinsicSize(QTextDocument *, int, const QTextFormat &format) override;
     void            drawITE(QPainter *painter, const QRectF &rect, int position, const QTextFormat &format) override;
+
+signals:
+    void downloadRequested(const QUrl &source);
 
 protected:
     bool eventFilter(QObject *object, QEvent *event) override;

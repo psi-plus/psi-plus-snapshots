@@ -25,6 +25,7 @@ under the License.
 #include <QObject>
 
 #include "qite.h"
+#include "qitemedia.h"
 
 class QMediaPlayer;
 class QNetworkAccessManager;
@@ -51,6 +52,15 @@ class ITEAudioController : public InteractiveTextElementController {
     QRectF  scaleRect, scaleFillRect;
     int     lastFontSize      = 0;
     bool    autoFetchMetadata = false;
+    struct MediaEntry {
+        QTextCursor             cursor;
+        QPointer<ITEMediaState> state;
+        QMetaObject::Connection changed, destroyed;
+    };
+    QMap<quint32, MediaEntry> mediaEntries;
+    bool                      mediaCleanupPending = false;
+    void                      updateMedia(quint32 id);
+    QRect                     downloadRect() const;
 
     bool isOnButton(const QPoint &pos, const QRect &rect);
     void updateGeomtry();
@@ -70,16 +80,19 @@ public:
     QSizeF intrinsicSize(QTextDocument *doc, int posInDocument, const QTextFormat &format);
     void   drawITE(QPainter *painter, const QRectF &rect, int posInDocument, const QTextFormat &format);
 
-    QTextCharFormat makeFormat(const QUrl &audioSrc, ITEMediaOpener *mediaOpener) const;
-    void            insert(const QUrl     &audioSrc,
-                           ITEMediaOpener *mediaOpener = nullptr); // add new media to textedit. see QMediaPlayer::setMedia
-    QCursor         cursor();                                      // cursor form after last mose events
+    QTextCharFormat makeFormat(const QUrl &audioSrc, ITEMediaOpener *mediaOpener, bool downloadable = false) const;
+    void            insert(const QUrl &audioSrc, ITEMediaOpener *mediaOpener = nullptr, bool downloadable = false);
+    QCursor         cursor(); // cursor form after last mose events
 
     inline void setAutoFetchMetadata(bool fetch = true) { autoFetchMetadata = fetch; }
+
+signals:
+    void downloadRequested(const QUrl &source);
 
 protected:
     bool mouseEvent(const InteractiveTextElementController::Event &event, const QRect &rect, QTextCursor &selected);
     void hideEvent(QTextCursor &selected);
+    bool eventFilter(QObject *, QEvent *) override;
 private slots:
     void playerPositionChanged(qint64);
     void playerStateChanged(PlaybackState);

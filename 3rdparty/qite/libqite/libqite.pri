@@ -2,6 +2,7 @@
 
 SOURCES += \
     $$PWD/qite.cpp \
+    $$PWD/qitemedia.cpp \
     $$PWD/qitevideo.cpp \
     $$PWD/qitevideoframe.cpp \
     $$PWD/qiteaudio.cpp \
@@ -10,6 +11,8 @@ SOURCES += \
 
 HEADERS += \
     $$PWD/qite.h \
+    $$PWD/qitemedia.h \
+    $$PWD/qitemedia_p.h \
     $$PWD/qitevideo.h \
     $$PWD/qitevideoframe_p.h \
     $$PWD/qiteaudio.h \
