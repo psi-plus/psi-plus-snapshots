@@ -138,3 +138,41 @@ pwsh -NoProfile -File tests/dependency_lock/windows-installers.ps1
 These tests use small isolated fixtures and fake HTTP/installer calls; they do
 not download SDKs or execute Windows installers. Native Windows compilation and
 runtime loading remain covered by the Windows build jobs.
+
+
+## Automated tag releases
+
+Pushing a version tag such as v1.2 or v1.2.3 triggers
+[PsiMedia release](.github/workflows/release.yml). It validates the tag and
+source commit, invokes [PsiMedia packages](.github/workflows/packages.yml)
+for every supported release target, then creates a GitHub Release *only after
+all builds succeed and every expected artifact has been verified*. Re-running
+the tagged workflow replaces matching assets on an existing release.
+You can also open **Actions → PsiMedia release → Run workflow**, select
+`master`, and enter an **existing** version tag in the `tag` field. The
+manual run builds and publishes that exact tagged source revision, not the
+latest `master`. This is intended for tags made after the packaging pipeline
+was introduced; older tags may not have the necessary build infrastructure.
+The packages workflow can be run manually for testing without publishing a
+release. A push modifying the release workflows on `master` also triggers a
+one-off verification of the package matrix.
+
+Current release assets (ZIP archives of GitHub Actions artifacts):
+
+- Ubuntu 24.04: Qt5 and Qt6 .deb;
+- Ubuntu 26.04: Qt6 .deb;
+- Debian 13: Qt6 .deb;
+- Windows x64: modern MSVC/Qt6 and legacy Windows 7 MSVC/Qt5 profiles;
+- macOS: Qt6 arm64 and x86_64 plugin SDKs.
+
+The Debian packages use the exact tagged version. Windows assets use the
+existing pinned Psi/GStreamer/Qt dependency lock and stage their GStreamer
+runtime; macOS archives contain the plugin and linked-library report and
+require the corresponding Qt/GStreamer/libSRTP runtimes to be installed.
+A successful CI build does not imply compatibility with every deployment
+environment.
+
+Iris and QCA additionally publish Android SDKs. PsiMedia does not yet have
+an Android GStreamer/Qt cross-build pipeline, so **Android is not covered by
+these release workflows**. It requires real Android builds and tests before
+Android assets can be advertised; no placeholder artifact is published.

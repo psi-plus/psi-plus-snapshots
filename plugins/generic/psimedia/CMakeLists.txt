@@ -170,7 +170,7 @@ if(PSIMEDIA_BUILD_DEB_PACKAGE)
         ERROR_QUIET
         RESULT_VARIABLE _psimedia_tag_result
     )
-    if(_psimedia_tag_result EQUAL 0 AND _psimedia_exact_tag MATCHES "^v([0-9]+\\.[0-9]+\\.[0-9]+)$")
+    if(_psimedia_tag_result EQUAL 0 AND _psimedia_exact_tag MATCHES "^v([0-9]+\\.[0-9]+(\\.[0-9]+)?)$")
         set(PSIMEDIA_PACKAGE_VERSION "${CMAKE_MATCH_1}")
     else()
         execute_process(
