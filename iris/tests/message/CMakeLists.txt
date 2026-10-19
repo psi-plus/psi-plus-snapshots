@@ -1,5 +1,11 @@
 find_package(Qt${QT_DEFAULT_MAJOR_VERSION} REQUIRED COMPONENTS Core Xml)
 
+add_executable(message_displayedmarkers_test displayedmarkers.cpp)
+target_link_libraries(message_displayedmarkers_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME message_displayedmarkers COMMAND message_displayedmarkers_test)
+set_tests_properties(message_displayedmarkers PROPERTIES TIMEOUT 10)
+
 add_executable(message_occupantids_test occupantids.cpp)
 target_link_libraries(message_occupantids_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)

@@ -53,6 +53,11 @@ add_executable(jingle_batchedreason_test batchedreason.cpp)
 target_link_libraries(jingle_batchedreason_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
 add_test(NAME jingle_batchedreason COMMAND jingle_batchedreason_test)
+add_executable(xmpp_displayedmarkers_test displayedmarkers.cpp)
+target_link_libraries(xmpp_displayedmarkers_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME xmpp_displayedmarkers COMMAND xmpp_displayedmarkers_test)
+set_tests_properties(xmpp_displayedmarkers PROPERTIES TIMEOUT 10)
 set_tests_properties(jingle_batchedreason PROPERTIES TIMEOUT 10)
 add_executable(jingle_tiebreaker_test tiebreaker.cpp)
 target_link_libraries(jingle_tiebreaker_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core

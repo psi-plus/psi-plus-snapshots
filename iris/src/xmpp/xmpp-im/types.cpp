@@ -724,6 +724,8 @@ public:
     AddressList                addressList;
     RosterExchangeItems        rosterExchangeItems;
     QString                    messageReceiptId;
+    bool                       markable = false;
+    QString                    displayedMarkerId;
     QString                    nick;
     QString                    eventId;
     QString                    xsigned, xencrypted, invite;
@@ -1110,6 +1112,14 @@ void Message::setMessageReceipt(MessageReceipt messageReceipt) { MessageD()->mes
 QString Message::messageReceiptId() const { return d ? d->messageReceiptId : QString(); }
 
 void Message::setMessageReceiptId(const QString &s) { MessageD()->messageReceiptId = s; }
+
+bool Message::isMarkable() const { return d && d->markable; }
+
+void Message::setMarkable(bool markable) { MessageD()->markable = markable; }
+
+QString Message::displayedMarkerId() const { return d ? d->displayedMarkerId : QString(); }
+
+void Message::setDisplayedMarkerId(const QString &id) { MessageD()->displayedMarkerId = id; }
 
 QString Message::xsigned() const { return d ? d->xsigned : QString(); }
 
@@ -1529,6 +1539,16 @@ Stanza Message::toStanza(Stream *stream, Jingle::Manager *jingleManager) const
         default:
             break;
         }
+    }
+
+    // XEP-0333: displayed markers are independent of XEP-0184 receipts.
+    const QString displayedMarkerNS = QStringLiteral("urn:xmpp:chat-markers:0");
+    if (d->markable && !d->id.isEmpty())
+        s.appendChild(s.createElement(displayedMarkerNS, "markable"));
+    if (!d->displayedMarkerId.isEmpty()) {
+        QDomElement marker = s.createElement(displayedMarkerNS, "displayed");
+        marker.setAttribute("id", d->displayedMarkerId);
+        s.appendChild(marker);
     }
 
     // xsigned
@@ -2105,6 +2125,12 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
         if (d->messageReceiptId.isEmpty())
             d->messageReceiptId = id();
     }
+
+    // XEP-0333: ignore malformed markers without a referenced stanza id.
+    const QString displayedMarkerNS = QStringLiteral("urn:xmpp:chat-markers:0");
+    d->markable = !childElementsByTagNameNS(root, displayedMarkerNS, "markable").isEmpty();
+    t = childElementsByTagNameNS(root, displayedMarkerNS, "displayed").item(0).toElement();
+    d->displayedMarkerId = t.attribute("id");
 
     // xsigned
     t = childElementsByTagNameNS(root, "jabber:x:signed", "x").item(0).toElement();

@@ -191,6 +191,12 @@ public:
     QString        messageReceiptId() const;
     void           setMessageReceiptId(const QString &s);
 
+    // XEP-0333 Displayed Markers
+    bool    isMarkable() const;
+    void    setMarkable(bool);
+    QString displayedMarkerId() const;
+    void    setDisplayedMarkerId(const QString &);
+
     // XEP-0027
     QString xsigned() const;
     void    setXSigned(const QString &s);
