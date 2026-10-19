@@ -753,7 +753,8 @@ public:
     QString                                  originId;                // XEP-0359
     QString                                  encryptionProtocol;      // XEP-0380
     QList<Message::StanzaId>                 stanzaIds;               // XEP-0359
-    Message::Reply                            reply;                   // XEP-0461
+    Message::Reply                           reply;                   // XEP-0461
+    QList<Message::Fallback>                 fallbacks;               // XEP-0428
     QList<Reference>                         references;              // XEP-0385 and XEP-0372
     QList<StatelessFileSharing::FileSharing> fileSharings;            // XEP-0447
     QList<StatelessFileSharing::Sources>     attachedFileSources;     // XEP-0447 / XEP-0367
@@ -1181,6 +1182,47 @@ void Message::addStanzaId(const Message::StanzaId &id)
 Message::Reply Message::reply() const { return d ? d->reply : Reply(); }
 
 void Message::setReply(const Reply &reply) { MessageD()->reply = reply.isValid() ? reply : Reply(); }
+
+bool Message::FallbackRange::toUtf16(const QString &text, int &from, int &to) const
+{
+    if (isWhole()) {
+        from = 0;
+        to   = text.size();
+        return true;
+    }
+    if (start < 0 || end < start)
+        return false;
+    // XEP-0426 counts code points; QString indexes UTF-16 code units.
+    int codePoint = 0;
+    from = to = -1;
+    for (int i = 0; i <= text.size();) {
+        if (codePoint == start)
+            from = i;
+        if (codePoint == end) {
+            to = i;
+            break;
+        }
+        if (i == text.size())
+            break;
+        i += (text.at(i).isHighSurrogate() && i + 1 < text.size() && text.at(i + 1).isLowSurrogate()) ? 2 : 1;
+        ++codePoint;
+    }
+    return from >= 0 && to >= from;
+}
+
+QList<Message::Fallback> Message::fallbacks() const { return d ? d->fallbacks : QList<Fallback>(); }
+
+void Message::setFallbacks(const QList<Fallback> &fallbacks) { MessageD()->fallbacks = fallbacks; }
+
+QList<Message::FallbackRange> Message::bodyFallbacks(const QString &forNamespace) const
+{
+    QList<FallbackRange> ranges;
+    if (d)
+        for (const auto &fallback : std::as_const(d->fallbacks))
+            if (fallback.for_ == forNamespace)
+                ranges += fallback.body;
+    return ranges;
+}
 
 QString Message::originId() const { return d ? d->originId : QString(); }
 
@@ -1645,6 +1687,25 @@ Stanza Message::toStanza(Stream *stream, Jingle::Manager *jingleManager) const
             e.setAttribute(QStringLiteral("to"), d->reply.to.full());
         s.appendChild(e);
     }
+    for (const auto &fallback : std::as_const(d->fallbacks)) {
+        const QString ns = QStringLiteral("urn:xmpp:fallback:0");
+        auto          e  = s.createElement(ns, QStringLiteral("fallback"));
+        if (!fallback.for_.isEmpty())
+            e.setAttribute(QStringLiteral("for"), fallback.for_);
+        const auto appendRanges = [&s, &e, &ns](const QString &name, const QList<FallbackRange> &ranges) {
+            for (const auto &range : ranges) {
+                auto r = s.createElement(ns, name);
+                if (!range.isWhole()) {
+                    r.setAttribute(QStringLiteral("start"), range.start);
+                    r.setAttribute(QStringLiteral("end"), range.end);
+                }
+                e.appendChild(r);
+            }
+        };
+        appendRanges(QStringLiteral("body"), fallback.body);
+        appendRanges(QStringLiteral("subject"), fallback.subject);
+        s.appendChild(e);
+    }
 
     // XEP-0297: Stanza Forwarding
     if (d->forwarding.type() != Forwarding::ForwardedNone)
@@ -1763,9 +1824,9 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 
     XDomNodeList nl = root.childNodes();
     int          n;
-    bool         hasBodyOrThread = false;
-    bool         hasSubject      = false;
-    int          jmiElementCount = 0;
+    bool         hasBodyOrThread    = false;
+    bool         hasSubject         = false;
+    int          jmiElementCount    = 0;
     int          occupantIdElements = 0;
     for (QDomElement e = root.firstChildElement(); !e.isNull(); e = e.nextSiblingElement()) {
         if (e.namespaceURI() == s.baseNS()) {
@@ -1864,9 +1925,9 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
         } else if (e.namespaceURI() == QLatin1String("urn:xmpp:mam:2")
                    && (e.localName().isEmpty() ? e.tagName() : e.localName()) == QLatin1String("result")) {
             if (!d->mamResult.isValid()) {
-                d->mamResult.xml = e;
+                d->mamResult.xml     = e;
                 d->mamResult.queryId = e.attribute(QLatin1String("queryid"));
-                d->mamResult.id = e.attribute(QLatin1String("id"));
+                d->mamResult.id      = e.attribute(QLatin1String("id"));
             }
         } else if (e.tagName() == QLatin1String("origin-id") && e.namespaceURI() == QLatin1String("urn:xmpp:sid:0")) {
             d->originId = e.attribute(QStringLiteral("id"));
@@ -1874,6 +1935,38 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
             addStanzaId({ Jid(e.attribute(QStringLiteral("by"))), e.attribute(QStringLiteral("id")) });
         } else if (e.tagName() == QLatin1String("reply") && e.namespaceURI() == QLatin1String("urn:xmpp:reply:0")) {
             setReply({ Jid(e.attribute(QStringLiteral("to"))), e.attribute(QStringLiteral("id")) });
+        } else if (e.tagName() == QLatin1String("fallback")
+                   && e.namespaceURI() == QLatin1String("urn:xmpp:fallback:0")) {
+            Fallback fallback;
+            fallback.for_ = e.attribute(QStringLiteral("for"));
+            // A range needs both indices or neither; drop malformed ranges.
+            const auto parseRanges = [&e](const QString &name, QList<FallbackRange> &ranges) {
+                for (auto r = e.firstChildElement(name); !r.isNull(); r = r.nextSiblingElement(name)) {
+                    if (r.namespaceURI() != QLatin1String("urn:xmpp:fallback:0"))
+                        continue;
+                    const bool hasStart = r.hasAttribute(QStringLiteral("start"));
+                    const bool hasEnd   = r.hasAttribute(QStringLiteral("end"));
+                    if (!hasStart && !hasEnd) {
+                        ranges.append(FallbackRange());
+                        continue;
+                    }
+                    bool          startOk = false, endOk = false;
+                    FallbackRange range { r.attribute(QStringLiteral("start")).toInt(&startOk),
+                                          r.attribute(QStringLiteral("end")).toInt(&endOk) };
+                    if (hasStart && hasEnd && startOk && endOk && range.start >= 0 && range.end >= range.start)
+                        ranges.append(range);
+                }
+            };
+            const bool hasChildren = !e.firstChildElement().isNull();
+            parseRanges(QStringLiteral("body"), fallback.body);
+            parseRanges(QStringLiteral("subject"), fallback.subject);
+            if (!hasChildren) {
+                // No body/subject children: every body and subject is fallback.
+                fallback.body.append(FallbackRange());
+                fallback.subject.append(FallbackRange());
+            }
+            if (!fallback.body.isEmpty() || !fallback.subject.isEmpty())
+                d->fallbacks.append(fallback);
         }
 
         else {
@@ -2175,20 +2268,18 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
     }
 
     // XEP-0424 message retraction remains independent of XEP-0425 metadata.
-    static const QString retractNs = QStringLiteral("urn:xmpp:message-retract:1");
+    static const QString retractNs  = QStringLiteral("urn:xmpp:message-retract:1");
     static const QString moderateNs = QStringLiteral("urn:xmpp:message-moderate:1");
-    const auto action = childElementsByTagNameNS(root, retractNs, QStringLiteral("retract"))
-                            .item(0).toElement();
-    d->retraction = action.attribute(QStringLiteral("id"));
+    const auto action = childElementsByTagNameNS(root, retractNs, QStringLiteral("retract")).item(0).toElement();
+    d->retraction     = action.attribute(QStringLiteral("id"));
 
     // XEP-0425: an action must be from the bare MUC service; a MAM
     // tombstone can retain the original author's MUC occupant resource.
     // The consumer additionally verifies the room's disco feature and the
     // provenance of the MAM result. A tombstone is NOT a retract action.
-    const auto tombstone = childElementsByTagNameNS(root, retractNs, QStringLiteral("retracted"))
-                               .item(0).toElement();
-    const auto actionModerated = childElementsByTagNameNS(action, moderateNs, QStringLiteral("moderated"))
-                                     .item(0).toElement();
+    const auto tombstone = childElementsByTagNameNS(root, retractNs, QStringLiteral("retracted")).item(0).toElement();
+    const auto actionModerated
+        = childElementsByTagNameNS(action, moderateNs, QStringLiteral("moderated")).item(0).toElement();
     // A forged 'moderated' retraction from a MUC occupant must not fall
     // through into the ordinary XEP-0424 retraction consumer.
     if (d->type == Type::Groupchat && !actionModerated.isNull() && !d->from.isBare())
@@ -2197,25 +2288,26 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
         && QDateTime::fromString(tombstone.attribute(QStringLiteral("stamp")), Qt::ISODate).isValid();
     const bool isAction = !action.isNull() && !d->retraction.isEmpty() && d->from.isBare();
     if (d->type == Type::Groupchat && (isTombstone || isAction)) {
-        const auto envelope = isTombstone ? tombstone : action;
+        const auto envelope  = isTombstone ? tombstone : action;
         const auto moderated = isTombstone
             ? childElementsByTagNameNS(envelope, moderateNs, QStringLiteral("moderated")).item(0).toElement()
             : actionModerated;
         if (!moderated.isNull()) {
             const auto byText = moderated.attribute(QStringLiteral("by"));
-            const Jid by(byText);
+            const Jid  by(byText);
             if (byText.isEmpty() || by.isValid()) {
-                d->moderatedRetraction.kind = isTombstone
-                    ? ModeratedRetraction::Kind::Tombstone : ModeratedRetraction::Kind::Action;
+                d->moderatedRetraction.kind
+                    = isTombstone ? ModeratedRetraction::Kind::Tombstone : ModeratedRetraction::Kind::Action;
                 d->moderatedRetraction.by = by;
-                const auto occupant = childElementsByTagNameNS(
-                    moderated, QStringLiteral("urn:xmpp:occupant-id:0"), QStringLiteral("occupant-id"))
-                    .item(0).toElement();
+                const auto occupant = childElementsByTagNameNS(moderated, QStringLiteral("urn:xmpp:occupant-id:0"),
+                                                               QStringLiteral("occupant-id"))
+                                          .item(0)
+                                          .toElement();
                 const auto occupantId = occupant.attribute(QStringLiteral("id"));
                 if (!occupantId.isEmpty() && occupantId.toUcs4().size() <= 128)
                     d->moderatedRetraction.moderatorOccupantId = occupantId;
-                const auto reason = childElementsByTagNameNS(envelope, retractNs, QStringLiteral("reason"))
-                                        .item(0).toElement();
+                const auto reason
+                    = childElementsByTagNameNS(envelope, retractNs, QStringLiteral("reason")).item(0).toElement();
                 d->moderatedRetraction.reason = reason.text();
                 if (isTombstone)
                     d->moderatedRetraction.stamp = tombstone.attribute(QStringLiteral("stamp"));

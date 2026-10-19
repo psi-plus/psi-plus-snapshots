@@ -77,7 +77,22 @@ public:
     struct Reply {
         Jid     to;
         QString id;
-        bool isValid() const { return !id.isEmpty() && (to.isEmpty() || to.isValid()); }
+        bool    isValid() const { return !id.isEmpty() && (to.isEmpty() || to.isValid()); }
+    };
+
+    // XEP-0428. Ranges count Unicode code points (XEP-0426) and 'end' is
+    // exclusive. A range without start/end covers the whole element.
+    struct FallbackRange {
+        int  start = -1;
+        int  end   = -1;
+        bool isWhole() const { return start < 0 && end < 0; }
+        // UTF-16 [from, to) for this range in text; false when out of bounds.
+        bool toUtf16(const QString &text, int &from, int &to) const;
+    };
+    struct Fallback {
+        QString              for_; // namespace of the replaced specification; may be empty
+        QList<FallbackRange> body;
+        QList<FallbackRange> subject;
     };
 
     struct Reactions {
@@ -99,10 +114,10 @@ public:
     // XEP-0313 result envelope carried by an ordinary message stanza.
     // Keep its original XML for callers that consume the legacy MAMTask::archive().
     struct MamResult {
-        QString queryId;
-        QString id;
+        QString     queryId;
+        QString     id;
         QDomElement xml;
-        bool isValid() const { return !xml.isNull(); }
+        bool        isValid() const { return !xml.isNull(); }
     };
 
     Message();
@@ -262,9 +277,14 @@ public:
     void            setStanzaIds(const QList<StanzaId> &ids);
     void            addStanzaId(const StanzaId &id);
     Reply           reply() const;
-    void             setReply(const Reply &reply);
-    QString         originId() const;
-    void     setOriginId(const QString &id);
+    void            setReply(const Reply &reply);
+    // XEP-0428
+    QList<Fallback> fallbacks() const;
+    void            setFallbacks(const QList<Fallback> &fallbacks);
+    // Body ranges marked as fallback for the given specification namespace.
+    QList<FallbackRange> bodyFallbacks(const QString &forNamespace) const;
+    QString              originId() const;
+    void                 setOriginId(const QString &id);
 
     // XEP-0380
     QString encryptionProtocol() const;
@@ -296,8 +316,8 @@ public:
     void      setReactions(const Reactions &reactions);
     Reactions reactions() const;
 
-    void    setRetraction(const QString &retractedMessageId);
-    QString retraction() const;
+    void                setRetraction(const QString &retractedMessageId);
+    QString             retraction() const;
     ModeratedRetraction moderatedRetraction() const;
 
     // Obsolete invitation

@@ -84,7 +84,11 @@ bool Reference::fromXml(const QDomElement &e)
     QString end    = e.attribute(QString::fromLatin1("end"));
     QString anchor = e.attribute(QString::fromLatin1("anchor"));
 
-    if (type.isEmpty() || uri.isEmpty()) {
+    // XEP-0372 requires 'uri', but every XEP-0385 example omits it on the
+    // outer reference of a media share (the URIs live in <sources/>). Accept
+    // that form; a reference without media sharing still needs a URI.
+    const bool mediaSharing = e.firstChildElement(QStringLiteral("media-sharing")).namespaceURI() == MEDIASHARING_NS;
+    if (type.isEmpty() || (uri.isEmpty() && !mediaSharing)) {
         return false;
     }
 
@@ -152,7 +156,8 @@ QDomElement Reference::toXml(QDomDocument *doc) const
         return QDomElement();
     }
     auto root = doc->createElementNS(REFERENCE_NS, QString::fromLatin1("reference"));
-    root.setAttribute(QString::fromLatin1("uri"), d->uri);
+    if (!d->uri.isEmpty()) // XEP-0385 form: the URIs are in <sources/>
+        root.setAttribute(QString::fromLatin1("uri"), d->uri);
     root.setAttribute(QString::fromLatin1("type"), QString(d->type == Reference::Mention ? "mention" : "data"));
 
     if (d->mediaSharing.file.isValid() && d->mediaSharing.sources.count()) {
