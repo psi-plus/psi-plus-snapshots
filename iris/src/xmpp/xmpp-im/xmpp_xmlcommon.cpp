@@ -137,6 +137,11 @@ QString tagContent(const QDomElement &e)
     return "";
 }
 
+bool isElementNS(const QDomElement &e, const QString &nsURI, const QString &localName)
+{
+    return !e.isNull() && e.namespaceURI() == nsURI && e.localName() == localName;
+}
+
 /**
  * \brief obtain direct child elements of a certain kind.  unlike
  *        elementsByTagNameNS, this function does not descend beyond the first
@@ -153,10 +158,21 @@ XDomNodeList childElementsByTagNameNS(const QDomElement &e, const QString &nsURI
         if (!n.isElement())
             continue;
         QDomElement i = n.toElement();
-        if (i.namespaceURI() == nsURI && i.localName() == localName)
+        if (isElementNS(i, nsURI, localName))
             out.append(i);
     }
     return out;
+}
+
+QDomElement firstChildElementByLocalName(const QDomElement &parent, const QString &localName)
+{
+    for (auto child = parent.firstChildElement(); !child.isNull(); child = child.nextSiblingElement()) {
+        const auto name = child.localName().isEmpty() ? child.tagName().section(QLatin1Char(':'), -1)
+                                                       : child.localName();
+        if (name == localName)
+            return child;
+    }
+    return {};
 }
 
 /**
@@ -283,6 +299,11 @@ QDomElement emptyTag(QDomDocument *doc, const QString &name)
     QDomElement tag = doc->createElement(name);
 
     return tag;
+}
+
+QDomElement emptyTagNS(QDomDocument *doc, const QString &ns, const QString &name)
+{
+    return doc->createElementNS(ns, name);
 }
 
 bool hasSubTag(const QDomElement &e, const QString &name) { return !e.firstChildElement(name).isNull(); }

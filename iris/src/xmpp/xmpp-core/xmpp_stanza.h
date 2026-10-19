@@ -38,6 +38,8 @@ public:
     Stanza(const Stanza &from);
     Stanza &operator=(const Stanza &from);
     virtual ~Stanza();
+    // An owning, stream-independent stanza for archive/offline parsing.
+    static Stanza fromXml(const QDomElement &element);
 
     class Error {
     public:

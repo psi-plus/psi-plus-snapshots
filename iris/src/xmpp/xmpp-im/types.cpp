@@ -741,6 +741,7 @@ public:
     QList<MUCInvite> mucInvites;
     MUCDecline       mucDecline;
     QString          mucPassword;
+    QString          occupantId; // XEP-0421, untrusted until room disco
     bool             hasMUCUser = false;
 
     bool spooled = false, wasEncrypted = false;
@@ -751,7 +752,8 @@ public:
     QString                                  replaceId;
     QString                                  originId;                // XEP-0359
     QString                                  encryptionProtocol;      // XEP-0380
-    Message::StanzaId                        stanzaId;                // XEP-0359
+    QList<Message::StanzaId>                 stanzaIds;               // XEP-0359
+    Message::Reply                            reply;                   // XEP-0461
     QList<Reference>                         references;              // XEP-0385 and XEP-0372
     QList<StatelessFileSharing::FileSharing> fileSharings;            // XEP-0447
     QList<StatelessFileSharing::Sources>     attachedFileSources;     // XEP-0447 / XEP-0367
@@ -759,8 +761,10 @@ public:
     QList<Jingle::JinglePub>                 jinglePublications;      // XEP-0358
     Jingle::MessageInitiation                jingleMessageInitiation; // XEP-0353
     Forwarding                               forwarding;              // XEP-0297
+    Message::MamResult                       mamResult;               // XEP-0313
     Message::Reactions                       reactions;               // XEP-0444
     QString                                  retraction;              // XEP-0424
+    Message::ModeratedRetraction             moderatedRetraction;     // XEP-0425
 };
 
 #define MessageD() (d ? d : (d = new Private))
@@ -1130,11 +1134,53 @@ QString Message::mucPassword() const { return d ? d->mucPassword : QString(); }
 
 void Message::setMUCPassword(const QString &p) { MessageD()->mucPassword = p; }
 
+QString Message::occupantId() const { return d ? d->occupantId : QString(); }
+
+void Message::setOccupantId(const QString &id)
+{
+    // XEP-0421: at most 128 Unicode characters. Empty clears the identifier.
+    MessageD()->occupantId = id.toUcs4().size() <= 128 ? id : QString();
+}
+
 bool Message::hasMUCUser() const { return d && d->hasMUCUser; }
 
-Message::StanzaId Message::stanzaId() const { return d ? d->stanzaId : StanzaId(); }
+Message::StanzaId Message::stanzaId(const Jid &by) const
+{
+    if (d) {
+        for (const auto &id : d->stanzaIds) {
+            if (id.by.compare(by))
+                return id;
+        }
+    }
+    return {};
+}
 
-void Message::setStanzaId(const Message::StanzaId &id) { MessageD()->stanzaId = id; }
+QList<Message::StanzaId> Message::stanzaIds() const { return d ? d->stanzaIds : QList<StanzaId>(); }
+
+void Message::setStanzaIds(const QList<StanzaId> &ids)
+{
+    MessageD()->stanzaIds.clear();
+    for (const auto &id : ids)
+        addStanzaId(id);
+}
+
+void Message::addStanzaId(const Message::StanzaId &id)
+{
+    // XEP-0359 requires a non-empty ID and one direct-child stanza-id per
+    // assigning entity. Keep the first occurrence when parsing invalid input.
+    if (!id.isValid())
+        return;
+    auto &ids = MessageD()->stanzaIds;
+    for (const auto &existing : std::as_const(ids)) {
+        if (existing.by.compare(id.by))
+            return;
+    }
+    ids.append(id);
+}
+
+Message::Reply Message::reply() const { return d ? d->reply : Reply(); }
+
+void Message::setReply(const Reply &reply) { MessageD()->reply = reply.isValid() ? reply : Reply(); }
 
 QString Message::originId() const { return d ? d->originId : QString(); }
 
@@ -1199,6 +1245,13 @@ XMPP::Message::Reactions Message::reactions() const { return d ? d->reactions : 
 void Message::setRetraction(const QString &retractedMessageId) { MessageD()->retraction = retractedMessageId; }
 
 QString Message::retraction() const { return d ? d->retraction : QString {}; }
+
+Message::ModeratedRetraction Message::moderatedRetraction() const
+{
+    return d ? d->moderatedRetraction : ModeratedRetraction {};
+}
+
+Message::MamResult Message::mamResult() const { return d ? d->mamResult : MamResult {}; }
 
 QString Message::invite() const { return d ? d->invite : QString(); }
 
@@ -1343,7 +1396,7 @@ Stanza Message::toStanza(Stream *stream, Jingle::Manager *jingleManager) const
     // timestamp
     if (d->timeStampSend && !d->timeStamp.isNull()) {
         QDomElement e = s.createElement("urn:xmpp:delay", "delay");
-        e.setAttribute("stamp", d->timeStamp.toUTC().toString(Qt::ISODate) + "Z");
+        e.setAttribute("stamp", d->timeStamp.toUTC().toString(Qt::ISODateWithMs));
         s.appendChild(e);
 
         e = s.createElement("jabber:x:delay", "x");
@@ -1565,16 +1618,31 @@ Stanza Message::toStanza(Stream *stream, Jingle::Manager *jingleManager) const
         s.appendChild(element);
     }
 
+    // XEP-0421: preserve a received MUC occupant ID. Authentication of the
+    // assigning room depends on disco and belongs to the consuming client.
+    if (!d->occupantId.isEmpty()) {
+        auto e = s.createElement(QStringLiteral("urn:xmpp:occupant-id:0"), QStringLiteral("occupant-id"));
+        e.setAttribute(QStringLiteral("id"), d->occupantId);
+        s.appendChild(e);
+    }
+
     // XEP-0359: Unique and Stable Stanza IDs
     if (!d->originId.isEmpty()) {
         auto e = s.createElement(QStringLiteral("urn:xmpp:sid:0"), QStringLiteral("origin-id"));
         e.setAttribute(QStringLiteral("id"), d->originId);
         s.appendChild(e);
     }
-    if (!d->stanzaId.id.isEmpty() && d->stanzaId.by.isValid()) { // only for servers using iris
+    for (const auto &id : std::as_const(d->stanzaIds)) {
         auto e = s.createElement(QStringLiteral("urn:xmpp:sid:0"), QStringLiteral("stanza-id"));
-        e.setAttribute(QStringLiteral("id"), d->stanzaId.id);
-        e.setAttribute(QStringLiteral("by"), d->stanzaId.by.full());
+        e.setAttribute(QStringLiteral("id"), id.id);
+        e.setAttribute(QStringLiteral("by"), id.by.full());
+        s.appendChild(e);
+    }
+    if (d->reply.isValid()) {
+        auto e = s.createElement(QStringLiteral("urn:xmpp:reply:0"), QStringLiteral("reply"));
+        e.setAttribute(QStringLiteral("id"), d->reply.id);
+        if (d->reply.to.isValid())
+            e.setAttribute(QStringLiteral("to"), d->reply.to.full());
         s.appendChild(e);
     }
 
@@ -1667,7 +1735,10 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
     d = new Private;
     setTo(s.to());
     setFrom(s.from());
-    setId(s.id());
+    // A received stanza id is not an XEP-0359 origin-id. An explicit
+    // <origin-id/> element parsed below is the only source for originId.
+    // Keep setId() generating origin IDs for locally composed messages.
+    d->id = s.id();
     setLang(s.lang());
 
     auto typeStr = s.type();
@@ -1695,6 +1766,7 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
     bool         hasBodyOrThread = false;
     bool         hasSubject      = false;
     int          jmiElementCount = 0;
+    int          occupantIdElements = 0;
     for (QDomElement e = root.firstChildElement(); !e.isNull(); e = e.nextSiblingElement()) {
         if (e.namespaceURI() == s.baseNS()) {
             if (e.tagName() == QLatin1String("subject")) {
@@ -1784,17 +1856,34 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
             d->processingHints |= NoCopy;
         } else if (e.tagName() == QLatin1String("store") && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
             d->processingHints |= Store;
+        } else if (e.localName() == QLatin1String("occupant-id")
+                   && e.namespaceURI() == QLatin1String("urn:xmpp:occupant-id:0")) {
+            ++occupantIdElements;
+            if (occupantIdElements == 1)
+                setOccupantId(e.attribute(QStringLiteral("id")));
+        } else if (e.namespaceURI() == QLatin1String("urn:xmpp:mam:2")
+                   && (e.localName().isEmpty() ? e.tagName() : e.localName()) == QLatin1String("result")) {
+            if (!d->mamResult.isValid()) {
+                d->mamResult.xml = e;
+                d->mamResult.queryId = e.attribute(QLatin1String("queryid"));
+                d->mamResult.id = e.attribute(QLatin1String("id"));
+            }
         } else if (e.tagName() == QLatin1String("origin-id") && e.namespaceURI() == QLatin1String("urn:xmpp:sid:0")) {
             d->originId = e.attribute(QStringLiteral("id"));
         } else if (e.tagName() == QLatin1String("stanza-id") && e.namespaceURI() == QLatin1String("urn:xmpp:sid:0")) {
-            d->stanzaId.id = e.attribute(QStringLiteral("id"));
-            d->stanzaId.by = Jid(e.attribute(QStringLiteral("by")));
+            addStanzaId({ Jid(e.attribute(QStringLiteral("by"))), e.attribute(QStringLiteral("id")) });
+        } else if (e.tagName() == QLatin1String("reply") && e.namespaceURI() == QLatin1String("urn:xmpp:reply:0")) {
+            setReply({ Jid(e.attribute(QStringLiteral("to"))), e.attribute(QStringLiteral("id")) });
         }
 
         else {
             // printf("extension element: [%s]\n", e.tagName().latin1());
         }
     }
+
+    // Multiple occupant IDs in one stanza are ambiguous: never select one.
+    if (occupantIdElements != 1)
+        d->occupantId.clear();
 
     d->pureSubject = hasSubject && !hasBodyOrThread; // this is somewhat important for muc
 
@@ -1826,23 +1915,30 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
     // timestamp
     QDomElement t = childElementsByTagNameNS(root, "urn:xmpp:delay", "delay").item(0).toElement();
     QDateTime   stamp;
-    if (!t.isNull()) {
-        stamp = QDateTime::fromString(t.attribute("stamp").left(19), Qt::ISODate);
+    const bool  modernDelay = !t.isNull();
+    if (modernDelay) {
+        stamp = QDateTime::fromString(t.attribute("stamp"), Qt::ISODate);
     } else {
         t = childElementsByTagNameNS(root, "jabber:x:delay", "x").item(0).toElement();
         if (!t.isNull()) {
             stamp = stamp2TS(t.attribute("stamp"));
         }
     }
-    if (!stamp.isNull()) {
+    if (stamp.isValid()) {
         if (useTimeZoneOffset) {
-            d->timeStamp = stamp.addSecs(timeZoneOffset * 3600);
+            // The manual offset is applied to UTC, not to a supplied
+            // non-UTC wall clock time.
+            d->timeStamp = (modernDelay ? stamp.toUTC() : stamp).addSecs(timeZoneOffset * 3600);
         } else {
+            // Legacy XEP-0091 stamps lack a timezone and are defined as UTC.
+            // Modern XEP-0203 stamps already contain a UTC offset or 'Z'.
+            if (!modernDelay) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
-            stamp.setTimeSpec(Qt::UTC);
+                stamp.setTimeSpec(Qt::UTC);
 #else
-            stamp.setTimeZone(QTimeZone::UTC);
+                stamp.setTimeZone(QTimeZone::UTC);
 #endif
+            }
             d->timeStamp = stamp.toLocalTime();
         }
         d->timeStampSend = true;
@@ -2078,11 +2174,54 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
         }
     }
 
-    // XEP-0424 message retraction
-    d->retraction = childElementsByTagNameNS(root, "urn:xmpp:message-retract:1", QStringLiteral("retract"))
-                        .item(0)
-                        .toElement()
-                        .attribute(QLatin1String("id"));
+    // XEP-0424 message retraction remains independent of XEP-0425 metadata.
+    static const QString retractNs = QStringLiteral("urn:xmpp:message-retract:1");
+    static const QString moderateNs = QStringLiteral("urn:xmpp:message-moderate:1");
+    const auto action = childElementsByTagNameNS(root, retractNs, QStringLiteral("retract"))
+                            .item(0).toElement();
+    d->retraction = action.attribute(QStringLiteral("id"));
+
+    // XEP-0425: an action must be from the bare MUC service; a MAM
+    // tombstone can retain the original author's MUC occupant resource.
+    // The consumer additionally verifies the room's disco feature and the
+    // provenance of the MAM result. A tombstone is NOT a retract action.
+    const auto tombstone = childElementsByTagNameNS(root, retractNs, QStringLiteral("retracted"))
+                               .item(0).toElement();
+    const auto actionModerated = childElementsByTagNameNS(action, moderateNs, QStringLiteral("moderated"))
+                                     .item(0).toElement();
+    // A forged 'moderated' retraction from a MUC occupant must not fall
+    // through into the ordinary XEP-0424 retraction consumer.
+    if (d->type == Type::Groupchat && !actionModerated.isNull() && !d->from.isBare())
+        d->retraction.clear();
+    const bool isTombstone = !tombstone.isNull()
+        && QDateTime::fromString(tombstone.attribute(QStringLiteral("stamp")), Qt::ISODate).isValid();
+    const bool isAction = !action.isNull() && !d->retraction.isEmpty() && d->from.isBare();
+    if (d->type == Type::Groupchat && (isTombstone || isAction)) {
+        const auto envelope = isTombstone ? tombstone : action;
+        const auto moderated = isTombstone
+            ? childElementsByTagNameNS(envelope, moderateNs, QStringLiteral("moderated")).item(0).toElement()
+            : actionModerated;
+        if (!moderated.isNull()) {
+            const auto byText = moderated.attribute(QStringLiteral("by"));
+            const Jid by(byText);
+            if (byText.isEmpty() || by.isValid()) {
+                d->moderatedRetraction.kind = isTombstone
+                    ? ModeratedRetraction::Kind::Tombstone : ModeratedRetraction::Kind::Action;
+                d->moderatedRetraction.by = by;
+                const auto occupant = childElementsByTagNameNS(
+                    moderated, QStringLiteral("urn:xmpp:occupant-id:0"), QStringLiteral("occupant-id"))
+                    .item(0).toElement();
+                const auto occupantId = occupant.attribute(QStringLiteral("id"));
+                if (!occupantId.isEmpty() && occupantId.toUcs4().size() <= 128)
+                    d->moderatedRetraction.moderatorOccupantId = occupantId;
+                const auto reason = childElementsByTagNameNS(envelope, retractNs, QStringLiteral("reason"))
+                                        .item(0).toElement();
+                d->moderatedRetraction.reason = reason.text();
+                if (isTombstone)
+                    d->moderatedRetraction.stamp = tombstone.attribute(QStringLiteral("stamp"));
+            }
+        }
+    }
     return true;
 }
 
@@ -2384,6 +2523,7 @@ public:
     QList<BoBData> bobDataList;
 
     // MUC
+    QString    occupantId; // XEP-0421, untrusted until room disco
     bool       isMUC         = false;
     bool       hasMUCItem    = false;
     bool       hasMUCDestroy = false;
@@ -2512,6 +2652,8 @@ void Status::setCaps(const CapsSpec &caps) { d->caps = caps; }
 
 void Status::setMUC() { d->isMUC = true; }
 
+void Status::setOccupantId(const QString &id) { d->occupantId = id.toUcs4().size() <= 128 ? id : QString(); }
+
 void Status::setMUCItem(const MUCItem &i)
 {
     d->hasMUCItem = true;
@@ -2614,6 +2756,8 @@ const QString &Status::songTitle() const { return d->songTitle; }
 const CapsSpec &Status::caps() const { return d->caps; }
 
 bool Status::isMUC() const { return d->isMUC || !d->mucPassword.isEmpty() || hasMUCHistory(); }
+
+QString Status::occupantId() const { return d->occupantId; }
 
 bool Status::hasMUCItem() const { return d->hasMUCItem; }
 

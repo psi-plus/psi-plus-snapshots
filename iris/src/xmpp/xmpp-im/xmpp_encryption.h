@@ -110,6 +110,10 @@ public:
     QList<Jid>                        recipients;
     std::optional<EncryptionMetadata> replyTo;
     QVariantMap                       options;
+    // Historical replay may update cryptographic receive state, but must not
+    // acknowledge old key exchanges or send ratchet heartbeat messages.
+    bool isArchiveReplay() const { return options.value(QStringLiteral("archiveReplay")).toBool(); }
+    void setArchiveReplay(bool enabled = true) { options.insert(QStringLiteral("archiveReplay"), enabled); }
 };
 
 /** Asynchronous result of a single encryption/decryption operation. */

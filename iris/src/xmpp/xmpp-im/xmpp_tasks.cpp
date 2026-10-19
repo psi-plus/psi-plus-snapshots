@@ -716,19 +716,30 @@ bool JT_PushPresence::take(const QDomElement &e)
         p.setPriority(tagContent(tag).toInt());
 
     QDateTime stamp;
+    bool modernDelay = false;
+    int occupantIdElements = 0;
 
     for (QDomNode n = e.firstChild(); !n.isNull(); n = n.nextSibling()) {
         QDomElement i = n.toElement();
         if (i.isNull())
             continue;
 
-        if (i.tagName() == "x" && i.namespaceURI() == "jabber:x:delay") {
+        if (i.localName() == QLatin1String("occupant-id")
+            && i.namespaceURI() == QLatin1String("urn:xmpp:occupant-id:0")) {
+            ++occupantIdElements;
+            if (occupantIdElements == 1)
+                p.setOccupantId(i.attribute(QStringLiteral("id")));
+        } else if (i.tagName() == "x" && i.namespaceURI() == "jabber:x:delay") {
             if (i.hasAttribute("stamp") && !stamp.isValid()) {
                 stamp = stamp2TS(i.attribute("stamp"));
             }
         } else if (i.tagName() == "delay" && i.namespaceURI() == "urn:xmpp:delay") {
-            if (i.hasAttribute("stamp") && !stamp.isValid()) {
-                stamp = QDateTime::fromString(i.attribute("stamp").left(19), Qt::ISODate);
+            if (i.hasAttribute("stamp") && !modernDelay) {
+                const auto parsed = QDateTime::fromString(i.attribute("stamp"), Qt::ISODate);
+                if (parsed.isValid()) {
+                    stamp = parsed;
+                    modernDelay = true;
+                }
             }
         } else if (i.tagName() == "x" && i.namespaceURI() == "gabber:x:music:info") {
             QDomElement t;
@@ -775,15 +786,21 @@ bool JT_PushPresence::take(const QDomElement &e)
         }
     }
 
+    // Multiple occupant IDs in a presence are ambiguous.
+    if (occupantIdElements != 1)
+        p.setOccupantId(QString());
+
     if (stamp.isValid()) {
         if (client()->manualTimeZoneOffset()) {
-            stamp = stamp.addSecs(client()->timeZoneOffset() * 3600);
+            stamp = (modernDelay ? stamp.toUTC() : stamp).addSecs(client()->timeZoneOffset() * 3600);
         } else {
+            if (!modernDelay) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 9, 0)
-            stamp.setTimeSpec(Qt::UTC);
+                stamp.setTimeSpec(Qt::UTC);
 #else
-            stamp.setTimeZone(QTimeZone::UTC);
+                stamp.setTimeZone(QTimeZone::UTC);
 #endif
+            }
             stamp = stamp.toLocalTime();
         }
         p.setTimeStamp(stamp);
@@ -858,13 +875,17 @@ public:
         return false;
     }
 
-    bool processMessage(Message &msg, bool nested)
+    SubscriberResult processMessage(Message &msg, bool nested)
     {
+        auto outcome = SubscriberResult::NotHandled;
         foreach (const SubsData &sd, subsMData) {
-            if (sd.sbs->messageEvent(msg, sd.userData, nested))
-                return true;
+            const auto result = sd.sbs->messageEventResult(msg, sd.userData, nested);
+            if (result == SubscriberResult::HandledStop || result == SubscriberResult::Error)
+                return result;
+            if (result == SubscriberResult::HandledContinue)
+                outcome = result;
         }
-        return false;
+        return outcome;
     }
 };
 
@@ -886,6 +907,12 @@ bool JT_PushMessage::Subscriber::messageEvent(Message &msg, int userData, bool n
     Q_UNUSED(userData);
     Q_UNUSED(nested)
     return false;
+}
+
+JT_PushMessage::SubscriberResult JT_PushMessage::Subscriber::messageEventResult(
+    Message &msg, int userData, bool nested)
+{
+    return messageEvent(msg, userData, nested) ? SubscriberResult::HandledStop : SubscriberResult::NotHandled;
 }
 
 JT_PushMessage::JT_PushMessage(Task *parent) : Task(parent), d(new Private) { }
@@ -953,7 +980,11 @@ bool JT_PushMessage::processXmlSubscribers(QDomElement &el, Client *client, bool
     return (processed && el.childNodes().length() == 0);
 }
 
-bool JT_PushMessage::processMessageSubscribers(Message &msg, bool nested) { return d->processMessage(msg, nested); }
+bool JT_PushMessage::processMessageSubscribers(Message &msg, bool nested)
+{
+    const auto result = d->processMessage(msg, nested);
+    return result == SubscriberResult::HandledStop || result == SubscriberResult::Error;
+}
 
 bool JT_PushMessage::take(const QDomElement &e)
 {

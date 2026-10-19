@@ -3027,7 +3027,7 @@ public:
 
         if (protocol == OmemoProtocol::Omemo2) {
             const bool heartbeatRequired = firstForRatchet && messageCounter >= 53;
-            if (keyExchange || heartbeatRequired) {
+            if (!context().isArchiveReplay() && (keyExchange || heartbeatRequired)) {
                 QTimer::singleShot(0, method_, [method = method_, sender, senderDevice]() {
                     auto ack = method->sendEmptyMessage(sender.bare(), senderDevice);
                     if (!ack->success() && ack->isFinished())

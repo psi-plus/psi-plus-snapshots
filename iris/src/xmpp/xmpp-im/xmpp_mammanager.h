@@ -39,6 +39,9 @@ public:
                                  const bool allowMUCArchives = true);
     MAMTask *getArchiveByTimeRange(const Jid &j, const QDateTime &from, const QDateTime &to,
                                    const bool allowMUCArchives = true);
+    // Reverse pagination after a nonempty fromID requires MAM #extended.
+    // The returned task can be configured with setArchiveFeatures() (and
+    // setArchiveJid() for MUC archives) before the caller invokes go().
     MAMTask *getLatestMessagesFromArchive(const Jid &j, const QString &fromID, const bool allowMUCArchives = true,
                                           int amount = 100);
     MAMTask *getMessagesBeforeID(const Jid &j, const QString &toID, const bool allowMUCArchives = true,

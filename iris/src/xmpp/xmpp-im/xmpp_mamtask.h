@@ -28,6 +28,8 @@
 
 #include <QDateTime>
 
+#include <memory>
+
 #define XMPP_MAM_NAMESPACE QLatin1String("urn:xmpp:mam:2")
 
 class QDomElement;
@@ -35,16 +37,35 @@ class QString;
 
 namespace XMPP {
 class Jid;
+class Features;
 
 class MAMTask : public Task {
     Q_OBJECT
 public:
     explicit MAMTask(Task *);
-    MAMTask(const MAMTask &x);
+    MAMTask(const MAMTask &) = delete;
+    MAMTask &operator=(const MAMTask &) = delete;
     ~MAMTask();
 
     const QList<QDomElement> &archive() const;
 
+    // By default, every result is retained in archive(). Disable buffering
+    // for large catch-up queries and consume resultReceived() incrementally.
+    void setCollectResults(bool enabled);
+
+    // The archive being queried (e.g. a MUC room) is distinct from the
+    // optional 'with' filter passed to get(). Empty means the own archive.
+    void setArchiveJid(const Jid &archiveJid);
+    // Pass features advertised by disco#info for this exact archive JID.
+    // Without them, only baseline XEP-0313 operations are attempted.
+    void setArchiveFeatures(const Features &features);
+
+    // A bounded request can finish successfully without exhausting the archive.
+    bool isComplete() const;
+    // XEP-0313 'stable=false' means results need later confirmation.
+    bool isStable() const;
+
+    // Configuration is only valid before go(); Task is one-shot.
     // Time filter
     void get(const Jid &j, const QDateTime &from = QDateTime(), const QDateTime &to = QDateTime(),
              const bool allowMUCArchives = true, int mamPageSize = 10, int mamMaxMessages = 0, bool flipPages = true,
@@ -55,12 +76,19 @@ public:
              const bool allowMUCArchives = true, int mamPageSize = 10, int mamMaxMessages = 0, bool flipPages = true,
              bool backwards = true);
 
-    void onGo();
-    bool take(const QDomElement &);
+    void onGo() override;
+    bool take(const QDomElement &) override;
+
+signals:
+    // Emitted for each validated result, before the final fin IQ.
+    void resultReceived(const QDomElement &result);
 
 private:
+    // Creates the next child page Task; never examines stanza or IQ content.
+    void startPage();
+
     class Private;
-    Private *d;
+    std::unique_ptr<Private> d;
 };
 } // namespace XMPP
 

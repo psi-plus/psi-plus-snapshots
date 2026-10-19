@@ -29,7 +29,9 @@
 #include <iris/xmpp-im/xmpp_rosterx.h>
 #include <iris/xmpp-im/xmpp_url.h>
 
+#include <QDomElement>
 #include <QExplicitlySharedDataPointer>
+#include <QList>
 #include <QSet>
 
 class QDateTime;
@@ -67,11 +69,40 @@ public:
     struct StanzaId {
         Jid     by;
         QString id;
+
+        bool isValid() const { return by.isBare() && !id.isEmpty(); }
+    };
+
+    // XEP-0461. The 'to' JID is optional; the referenced message ID is not.
+    struct Reply {
+        Jid     to;
+        QString id;
+        bool isValid() const { return !id.isEmpty() && (to.isEmpty() || to.isValid()); }
     };
 
     struct Reactions {
         QString       targetId;
         QSet<QString> reactions;
+    };
+
+    // XEP-0425: received moderation metadata (not proof of room support).
+    // For Tombstone, the original message UID is supplied by the MAM result.
+    struct ModeratedRetraction {
+        enum class Kind { None, Action, Tombstone };
+        Kind    kind = Kind::None;
+        Jid     by;
+        QString moderatorOccupantId;
+        QString reason;
+        QString stamp; // XML datetime, only set for a validated tombstone stamp
+    };
+
+    // XEP-0313 result envelope carried by an ordinary message stanza.
+    // Keep its original XML for callers that consume the legacy MAMTask::archive().
+    struct MamResult {
+        QString queryId;
+        QString id;
+        QDomElement xml;
+        bool isValid() const { return !xml.isNull(); }
     };
 
     Message();
@@ -192,6 +223,10 @@ public:
     // note, the next method has to be called only on not-null message
     const Forwarding &forwarded() const;
 
+    // XEP-0313: returned metadata does not imply that this message is
+    // addressed to a chat; routing belongs to message subscribers.
+    MamResult mamResult() const;
+
     // XEP-0308
     QString replaceId() const;
     void    setReplaceId(const QString &id);
@@ -215,10 +250,20 @@ public:
     Jingle::MessageInitiation jingleMessageInitiation() const;
     void                      setJingleMessageInitiation(const Jingle::MessageInitiation &initiation);
 
-    // XEP-0359
-    StanzaId stanzaId() const;
-    void     setStanzaId(const StanzaId &id);
-    QString  originId() const;
+    // XEP-0421: raw/untrusted MUC identifier. Consumers MUST verify the
+    // room advertises urn:xmpp:occupant-id:0 before using it as an identity.
+    QString occupantId() const;
+    void    setOccupantId(const QString &id);
+
+    // XEP-0359. Consumers must verify the assigning entity via disco before
+    // trusting stanza IDs for deduplication or MAM catch-up.
+    StanzaId        stanzaId(const Jid &by) const;
+    QList<StanzaId> stanzaIds() const;
+    void            setStanzaIds(const QList<StanzaId> &ids);
+    void            addStanzaId(const StanzaId &id);
+    Reply           reply() const;
+    void             setReply(const Reply &reply);
+    QString         originId() const;
     void     setOriginId(const QString &id);
 
     // XEP-0380
@@ -253,6 +298,7 @@ public:
 
     void    setRetraction(const QString &retractedMessageId);
     QString retraction() const;
+    ModeratedRetraction moderatedRetraction() const;
 
     // Obsolete invitation
     QString invite() const;

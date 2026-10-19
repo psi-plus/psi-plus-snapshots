@@ -486,9 +486,26 @@ public:
     Stream                      *s;
     QDomElement                  e;
     QSharedPointer<QDomDocument> sharedDoc;
+    QDomDocument                 ownerDoc; // stream-independent stanzas only
 };
 
 Stanza::Stanza() { d = nullptr; }
+
+Stanza Stanza::fromXml(const QDomElement &element)
+{
+    Stanza        stanza;
+    const QString tag = element.localName().isEmpty() ? element.tagName() : element.localName();
+    if (element.namespaceURI() != QStringLiteral("jabber:client") || Private::stringToKind(tag) == Unknown)
+        return stanza;
+    // Wrap the element in place, as Stream::createStanza() does. Archive
+    // replay parses many stanzas; a private document and a deep import per
+    // stanza would only duplicate a tree the caller already owns.
+    stanza.d           = new Private;
+    stanza.d->s        = nullptr;
+    stanza.d->e        = element;
+    stanza.d->ownerDoc = element.ownerDocument();
+    return stanza;
+}
 
 Stanza::Stanza(Stream *s, Kind k, const Jid &to, const QString &type, const QString &id)
 {
@@ -551,25 +568,33 @@ QDomElement Stanza::element() const { return d ? d->e : QDomElement(); }
 
 QString Stanza::toString() const { return Stream::xmlToString(d->e); }
 
-QDomDocument &Stanza::doc() const { return d->s->doc(); }
+QDomDocument &Stanza::doc() const
+{
+    if (d->s)
+        return d->s->doc();
+    return d->sharedDoc ? *d->sharedDoc : d->ownerDoc;
+}
 
-QString Stanza::baseNS() const { return d->s->baseNS(); }
+QString Stanza::baseNS() const { return d->s ? d->s->baseNS() : d->e.namespaceURI(); }
 
 QDomElement Stanza::createElement(const QString &ns, const QString &tagName)
 {
-    return d->s->doc().createElementNS(ns, tagName);
+    return doc().createElementNS(ns, tagName);
 }
 
 QDomElement Stanza::createTextElement(const QString &ns, const QString &tagName, const QString &text)
 {
-    QDomElement e = d->s->doc().createElementNS(ns, tagName);
-    e.appendChild(d->s->doc().createTextNode(text));
+    QDomElement e = doc().createElementNS(ns, tagName);
+    e.appendChild(doc().createTextNode(text));
     return e;
 }
 
 void Stanza::appendChild(const QDomElement &e) { d->e.appendChild(e); }
 
-Stanza::Kind Stanza::kind() const { return d ? Private::stringToKind(d->e.tagName()) : Unknown; }
+Stanza::Kind Stanza::kind() const
+{
+    return d ? Private::stringToKind(d->e.localName().isEmpty() ? d->e.tagName() : d->e.localName()) : Unknown;
+}
 
 Stanza::Kind Stanza::kind(const QString &tagName) { return Private::stringToKind(tagName); }
 
@@ -598,9 +623,9 @@ void Stanza::setLang(const QString &lang) { d->e.setAttribute("xml:lang", lang);
 Stanza::Error Stanza::error() const
 {
     Error       err;
-    QDomElement e = d->e.elementsByTagNameNS(d->s->baseNS(), "error").item(0).toElement();
+    QDomElement e = d->e.elementsByTagNameNS(baseNS(), "error").item(0).toElement();
     if (!e.isNull())
-        err.fromXml(e, d->s->baseNS());
+        err.fromXml(e, baseNS());
 
     return err;
 }
@@ -608,9 +633,9 @@ Stanza::Error Stanza::error() const
 void Stanza::setError(const Error &err)
 {
     QDomDocument doc     = d->e.ownerDocument();
-    QDomElement  errElem = err.toXml(doc, d->s->baseNS());
+    QDomElement  errElem = err.toXml(doc, baseNS());
 
-    QDomElement oldElem = d->e.elementsByTagNameNS(d->s->baseNS(), "error").item(0).toElement();
+    QDomElement oldElem = d->e.elementsByTagNameNS(baseNS(), "error").item(0).toElement();
     if (oldElem.isNull()) {
         d->e.appendChild(errElem);
     } else {
@@ -620,7 +645,7 @@ void Stanza::setError(const Error &err)
 
 void Stanza::clearError()
 {
-    QDomElement errElem = d->e.elementsByTagNameNS(d->s->baseNS(), "error").item(0).toElement();
+    QDomElement errElem = d->e.elementsByTagNameNS(baseNS(), "error").item(0).toElement();
     if (!errElem.isNull())
         d->e.removeChild(errElem);
 }

@@ -59,7 +59,12 @@ QString      TS2stamp(const QDateTime &d);
 QDomElement  textTag(QDomDocument *doc, const QString &name, const QString &content);
 QDomElement  textTagNS(QDomDocument *doc, const QString &ns, const QString &name, const QString &content);
 QString      tagContent(const QDomElement &e);
+// Match the expanded XML name (namespace + local name), regardless of prefix.
+bool         isElementNS(const QDomElement &e, const QString &nsURI, const QString &localName);
 XDomNodeList childElementsByTagNameNS(const QDomElement &e, const QString &nsURI, const QString &localName);
+// Find the first direct child by local name, regardless of namespace.
+// For protocol recognition, check the returned element's namespaceURI().
+QDomElement  firstChildElementByLocalName(const QDomElement &e, const QString &localName);
 QDomElement  createIQ(QDomDocument *doc, const QString &type, const QString &to, const QString &id);
 QDomElement  queryTag(const QDomElement &e);
 QString      queryNS(const QDomElement &e);
@@ -72,6 +77,7 @@ namespace XMLHelper {
 bool hasSubTag(const QDomElement &e, const QString &name);
 
 QDomElement emptyTag(QDomDocument *doc, const QString &name);
+QDomElement emptyTagNS(QDomDocument *doc, const QString &ns, const QString &name);
 QString     subTagText(const QDomElement &e, const QString &name);
 
 QDomElement textTag(QDomDocument &doc, const QString &name, const QString &content);

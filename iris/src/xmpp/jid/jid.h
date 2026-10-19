@@ -73,6 +73,7 @@ public:
 
     bool        isValid() const;
     bool        isEmpty() const;
+    bool        isBare() const { return valid && r.isEmpty(); }
     bool        compare(const Jid &a, bool compareRes = true) const;
     inline bool operator==(const Jid &other) const { return compare(other, true); }
     inline bool operator!=(const Jid &other) const { return !(*this == other); }

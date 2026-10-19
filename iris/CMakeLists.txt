@@ -206,6 +206,8 @@ endif()
 if(IRIS_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests/jingle)
+    add_subdirectory(tests/mam)
+    add_subdirectory(tests/message)
 endif()
 
 if(NOT IS_SUBPROJECT)

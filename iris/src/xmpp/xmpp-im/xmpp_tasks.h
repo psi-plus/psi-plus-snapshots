@@ -199,11 +199,19 @@ private:
 class JT_PushMessage : public Task {
     Q_OBJECT
 public:
+    enum class SubscriberResult {
+        NotHandled,      // Continue searching for interested subscribers.
+        HandledContinue, // Enriched/observed the message; continue dispatch.
+        HandledStop,     // Fully consumed; suppress ordinary message delivery.
+        Error            // Failed to process; stop dispatch without delivery.
+    };
     class Subscriber {
     public:
         virtual ~Subscriber();
         virtual bool xmlEvent(const QDomElement &root, QDomElement &e, Client *c, int userData, bool nested);
+        // Legacy bool API: true means HandledStop; false means NotHandled.
         virtual bool messageEvent(Message &msg, int userData, bool nested);
+        virtual SubscriberResult messageEventResult(Message &msg, int userData, bool nested);
     };
     explicit JT_PushMessage(Task *parent);
     ~JT_PushMessage();
