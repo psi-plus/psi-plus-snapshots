@@ -392,6 +392,11 @@ if(PSIMEDIA_BUILD_TESTS)
     add_test(NAME psimedia_video_capture_caps COMMAND psimedia_video_capture_caps_test)
     set_tests_properties(psimedia_video_capture_caps PROPERTIES TIMEOUT 10)
 
+    add_executable(psimedia_aec_mono_caps_test ${ABS_GST_PARENT_DIR}/tests/aec_mono_caps.cpp)
+    target_link_libraries(psimedia_aec_mono_caps_test PRIVATE ${PROVIDERLIB})
+    add_test(NAME psimedia_aec_mono_caps COMMAND psimedia_aec_mono_caps_test)
+    set_tests_properties(psimedia_aec_mono_caps PROPERTIES TIMEOUT 10)
+
     add_executable(psimedia_rtpsessioncontext_sender_test ${ABS_GST_PARENT_DIR}/tests/rtpsessioncontext_sender.cpp)
     target_link_libraries(psimedia_rtpsessioncontext_sender_test PRIVATE ${PROVIDERLIB})
     add_test(NAME psimedia_rtpsessioncontext_sender COMMAND psimedia_rtpsessioncontext_sender_test)

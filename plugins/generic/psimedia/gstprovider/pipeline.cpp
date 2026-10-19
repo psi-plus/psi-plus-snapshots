@@ -302,10 +302,13 @@ static GstElement *make_webrtcdsp_filter()
 {
     GstStructure *cs;
     GstCaps      *caps = gst_caps_new_empty();
+    // GStreamer represents ordinary MONO (no speaker position) with no
+    // channel-mask. 0x1 means FRONT_LEFT, not "one channel", and causes
+    // audioresample to fail negotiation with one-channel WASAPI sources.
     cs = gst_structure_new("audio/x-raw", "rate", G_TYPE_INT, WEBRTCDSP_RATE, "format", G_TYPE_STRING, "S16LE",
-                           "channels", G_TYPE_INT, 1, "channel-mask", GST_TYPE_BITMASK, 1, nullptr);
+                           "channels", G_TYPE_INT, 1, nullptr);
     gst_caps_append_structure(caps, cs);
-    GstElement *capsfilter = gst_element_factory_make("capsfilter", nullptr);
+    GstElement *capsfilter = gst_element_factory_make("capsfilter", "webrtcdsp_mono_caps");
     g_object_set(G_OBJECT(capsfilter), "caps", caps, nullptr);
     gst_caps_unref(caps);
     return capsfilter;
