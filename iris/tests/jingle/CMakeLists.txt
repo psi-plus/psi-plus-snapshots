@@ -49,6 +49,11 @@ target_include_directories(jingle_transports5b_test PRIVATE
 add_test(NAME jingle_transports5b COMMAND jingle_transports5b_test)
 set_tests_properties(jingle_transports5b PROPERTIES TIMEOUT 15)
 add_test(NAME jingle_signaling COMMAND jingle_signaling_test)
+add_executable(jingle_batchedreason_test batchedreason.cpp)
+target_link_libraries(jingle_batchedreason_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME jingle_batchedreason COMMAND jingle_batchedreason_test)
+set_tests_properties(jingle_batchedreason PROPERTIES TIMEOUT 10)
 add_executable(jingle_tiebreaker_test tiebreaker.cpp)
 target_link_libraries(jingle_tiebreaker_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)

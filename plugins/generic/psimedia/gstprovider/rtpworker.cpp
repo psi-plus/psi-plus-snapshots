@@ -74,6 +74,42 @@ static const char *state_to_str(GstState state)
     }
 }
 
+// The sender cannot be recovered after a failed PLAYING transition. Inspect
+// its bus before cleanup() tears down the elements and discards the diagnostic.
+static void logSenderStartupBus(GstElement *pipeline, const void *worker)
+{
+    GstBus *bus = gst_element_get_bus(pipeline);
+    if (!bus)
+        return;
+
+    bool foundError = false;
+    while (GstMessage *message = gst_bus_pop(bus)) {
+        const auto type = GST_MESSAGE_TYPE(message);
+        if (type == GST_MESSAGE_ERROR || type == GST_MESSAGE_WARNING) {
+            GError *error = nullptr;
+            gchar  *debug = nullptr;
+            if (type == GST_MESSAGE_ERROR) {
+                gst_message_parse_error(message, &error, &debug);
+                foundError = true;
+            } else {
+                gst_message_parse_warning(message, &error, &debug);
+            }
+            qWarning("psimedia worker=%p sender startup %s element=%s domain=%s code=%d message=%s debug=%s",
+                     worker, type == GST_MESSAGE_ERROR ? "error" : "warning",
+                     GST_OBJECT_NAME(GST_MESSAGE_SRC(message)),
+                     error ? g_quark_to_string(error->domain) : "unknown", error ? error->code : -1,
+                     error && error->message ? error->message : "unknown", debug ? debug : "");
+            if (error)
+                g_error_free(error);
+            g_free(debug);
+        }
+        gst_message_unref(message);
+    }
+    if (!foundError)
+        qWarning("psimedia worker=%p sender startup failed without a GST_MESSAGE_ERROR on its bus", worker);
+    gst_object_unref(bus);
+}
+
 static bool syncPipelineChildrenWithParent(GstElement *pipeline)
 {
     if (!pipeline || !GST_IS_BIN(pipeline))
@@ -1445,13 +1481,18 @@ bool RtpWorker::startSend()
         dumpPipeline();
         send_pipelineContext->activate();
 
-        // 10 seconds ought to be enough time to init (video devices probing may take considerable time)
-        int ret = gst_element_get_state(spipeline, nullptr, nullptr, 10 * GST_SECOND);
-        // gst_element_get_state(sendbin, nullptr, nullptr, GST_CLOCK_TIME_NONE);
+        // 10 seconds ought to be enough time to init (video devices probing may take considerable time).
+        GstState current = GST_STATE_VOID_PENDING;
+        GstState pending = GST_STATE_VOID_PENDING;
+        const GstStateChangeReturn ret = gst_element_get_state(spipeline, &current, &pending, 10 * GST_SECOND);
         if (ret != GST_STATE_CHANGE_SUCCESS && ret != GST_STATE_CHANGE_NO_PREROLL) {
-#ifdef RTPWORKER_DEBUG
-            qDebug("error/timeout while setting send pipeline to PLAYING");
-#endif
+            const char *result = ret == GST_STATE_CHANGE_FAILURE ? "failure" : "timeout/async";
+            qWarning("psimedia worker=%p send pipeline PLAYING transition %s (return=%d current=%s pending=%s audio=%d video=%d)",
+                     static_cast<void *>(this), result, int(ret),
+                     state_to_str(current) ? state_to_str(current) : "unknown",
+                     state_to_str(pending) ? state_to_str(pending) : "unknown", int(bool(audiosrc)),
+                     int(bool(videosrc)));
+            logSenderStartupBus(spipeline, this);
             cleanup();
             error = RtpSessionContext::ErrorGeneric;
             return false;

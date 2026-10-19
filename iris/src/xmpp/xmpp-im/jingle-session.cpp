@@ -22,6 +22,7 @@
 #include "jingle-active-group-extension_p.h"
 #include "jingle-application.h"
 #include "jingle-group-negotiation_p.h"
+#include "jingle-update-xml_p.h"
 #include "xmpp/jid/jid.h"
 #include "xmpp_caps.h"
 #include "xmpp_client.h"
@@ -336,9 +337,10 @@ namespace XMPP { namespace Jingle {
             auto                xml = jingle.toXml(&doc);
             QList<ContentGroup> includedGroups;
 
-            for (const QDomElement &e : update) {
-                xml.appendChild(e);
-            }
+            const int extraReasons = appendJingleActionUpdates(xml, action, update);
+            if (extraReasons)
+                qWarning("jingle sid=%s action=%d: discarded %d extra reason elements in batched content update",
+                         qUtf8Printable(sid), int(action), extraReasons);
             QList<ContentGroup> groupUpdate;
             if (action == Action::ContentAdd && outgoingGroupExtension
                 && updateContainsContent(update, outgoingGroupExtension->content)) {
