@@ -66,6 +66,8 @@ set(XMPP_IM_HEADERS
     xmpp-im/xmpp_thumbs.h
     xmpp-im/xmpp_agentitem.h
     xmpp-im/xmpp_captcha.h
+    xmpp-im/xmpp_blocking.h
+    xmpp-im/xmpp_bookmarks.h
     xmpp-im/xmpp_carbons.h
     xmpp-im/xmpp_chatstate.h
     xmpp-im/xmpp_discoitem.h
@@ -179,6 +181,8 @@ target_sources(iris PRIVATE
     xmpp-im/xmpp_bitsofbinary.cpp
     xmpp-im/xmpp_bytestream.cpp
     xmpp-im/xmpp_caps.cpp
+    xmpp-im/xmpp_blocking.cpp
+    xmpp-im/xmpp_bookmarks.cpp
     xmpp-im/xmpp_carbons.cpp
     xmpp-im/xmpp_discoinfotask.cpp
     xmpp-im/xmpp_discoitem.cpp

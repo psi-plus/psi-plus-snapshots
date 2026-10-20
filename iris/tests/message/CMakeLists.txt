@@ -1,5 +1,17 @@
 find_package(Qt${QT_DEFAULT_MAJOR_VERSION} REQUIRED COMPONENTS Core Xml)
 
+add_executable(message_blocking_test blocking.cpp)
+target_link_libraries(message_blocking_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME message_blocking COMMAND message_blocking_test)
+set_tests_properties(message_blocking PROPERTIES TIMEOUT 10)
+
+add_executable(message_nativebookmarks_test nativebookmarks.cpp)
+target_link_libraries(message_nativebookmarks_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME message_nativebookmarks COMMAND message_nativebookmarks_test)
+set_tests_properties(message_nativebookmarks PROPERTIES TIMEOUT 10)
+
 add_executable(message_displayedmarkers_test displayedmarkers.cpp)
 target_link_libraries(message_displayedmarkers_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)

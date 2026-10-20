@@ -87,6 +87,7 @@ public:
     inline bool                              hasPEP() const { return _hasPEP; }
     inline bool                              hasPersistentStorage() const { return _hasPersistentStorage; }
     inline const Features                   &serverFeatures() const { return _serverFeatures; }
+    inline bool                              serverFeaturesReady() const { return _serverFeaturesReady; }
     inline const Features                   &accountFeatures() const { return _accountFeatures; }
     bool                                     canMessageCarbons() const;
     inline const QMap<QString, QStringList> &extraServerInfo() const { return _extraServerInfo; }
@@ -144,6 +145,7 @@ private:
     QMap<QString, ServiceInfo>
         _servicesInfo; // all the diso#info requests for services of this server jid=>(state,info)
 
+    bool _serverFeaturesReady = false;
     bool _featuresRequested    = false;
     bool _hasPEP               = false;
     bool _hasPersistentStorage = false;
