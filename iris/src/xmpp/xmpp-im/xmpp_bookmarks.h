@@ -21,6 +21,7 @@ public:
     QString nick() const;
     QString password() const;
     bool autoJoin() const;
+    bool hasSamePayload(const NativeBookmark &other) const;
     void setName(const QString &);
     void setNick(const QString &);
     void setPassword(const QString &);

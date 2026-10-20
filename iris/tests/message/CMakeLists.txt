@@ -1,5 +1,22 @@
 find_package(Qt${QT_DEFAULT_MAJOR_VERSION} REQUIRED COMPONENTS Core Xml)
 
+add_executable(message_bookmarkmanager_test bookmarkmanager.cpp)
+target_link_libraries(message_bookmarkmanager_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME message_bookmarkmanager COMMAND message_bookmarkmanager_test)
+set_tests_properties(message_bookmarkmanager PROPERTIES TIMEOUT 10)
+
+add_executable(message_bookmarkmanagerflow_test bookmarkmanagerflow.cpp)
+target_link_libraries(message_bookmarkmanagerflow_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME message_bookmarkmanagerflow COMMAND message_bookmarkmanagerflow_test)
+set_tests_properties(message_bookmarkmanagerflow PROPERTIES TIMEOUT 10)
+
+add_executable(message_pubsubreplica_test pubsubreplica.cpp)
+target_link_libraries(message_pubsubreplica_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core)
+add_test(NAME message_pubsubreplica COMMAND message_pubsubreplica_test)
+set_tests_properties(message_pubsubreplica PROPERTIES TIMEOUT 10)
+
 add_executable(message_blocking_test blocking.cpp)
 target_link_libraries(message_blocking_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)

@@ -2,6 +2,7 @@
 #include <iris/xmpp_bookmarks.h>
 #include <iris/xmpp_blocking.h>
 #include <iris/xmpp_pubsubitem.h>
+#include "../../src/xmpp/xmpp-im/xmpp_pubsubreplica.h"
 
 #include <QCoreApplication>
 #include <QDomDocument>
@@ -69,6 +70,37 @@ int main(int argc, char **argv)
     check(minimal.payload().firstChildElement().isNull(), "Unset fields produced empty XML children");
     check(minimal.payload().attribute(QStringLiteral("autojoin")) == QStringLiteral("false"),
           "Native bookmark autojoin false was not serialized");
+
+    // First real consumer: an owned NativeBookmark can be buffered while the
+    // PubSub IQ is in flight, modified by key and exported only for publish.
+    PubSubReplica<NativeBookmark> replica;
+    const auto fetchToken = replica.beginLoad();
+    replica.published(unchanged.room().bare(), unchanged);
+    check(replica.finishLoad(fetchToken, {}), "Could not merge bookmark event with empty snapshot");
+    auto renamed = replica.items().value(unchanged.room().bare());
+    check(renamed.isValid(), "PEP event lost during bookmark load");
+    renamed.setName(QStringLiteral("Renamed from replica"));
+    replica.put(renamed.room().bare(), renamed);
+    auto batch = replica.beginWrite();
+    check(batch.changes.size() == 1 && batch.changes.value(renamed.room().bare()).has_value(),
+          "Native bookmark intent not generated");
+    check(replica.finishWrite(batch, true), "Native bookmark write not acknowledged");
+    QDomDocument replicaDoc;
+    const auto replicaItem = replica.items().value(renamed.room().bare()).toItem(replicaDoc);
+    check(replicaItem.payload().attribute(QStringLiteral("name")) == QStringLiteral("Renamed from replica"),
+          "Native bookmark value was not updated");
+    check(replicaItem.payload().elementsByTagNameNS(QStringLiteral("urn:example:client-ext"),
+                                                    QStringLiteral("state")).size() == 1,
+          "PEP reconciliation stripped native bookmark extensions");
+
+    // An extension-only update must count as a changed item even when all
+    // standard fields are identical. This is important for PEP pushes.
+    NativeBookmark withoutExtension = NativeBookmark::create(
+        original.room(), original.name(), original.autoJoin(), original.nick(), original.password());
+    check(!original.hasSamePayload(withoutExtension),
+          "XEP-0402 extension-only change was invisible to comparison");
+    check(original.hasSamePayload(unchanged) == false,
+          "Edited bookmark unexpectedly matched its original value");
 
     const auto opts = NativeBookmark::privatePublishOptions();
     check(opts.value(QStringLiteral("pubsub#access_model")).contains(QStringLiteral("whitelist")),

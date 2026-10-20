@@ -69,6 +69,13 @@ QString NativeBookmark::name() const { return name_; }
 QString NativeBookmark::nick() const { return nick_; }
 QString NativeBookmark::password() const { return password_; }
 bool NativeBookmark::autoJoin() const { return autoJoin_; }
+bool NativeBookmark::hasSamePayload(const NativeBookmark &other) const
+{
+    return room_.bare() == other.room_.bare() && name_ == other.name_
+        && nick_ == other.nick_ && password_ == other.password_
+        && autoJoin_ == other.autoJoin_
+        && extensions_.toString(-1) == other.extensions_.toString(-1);
+}
 void NativeBookmark::setName(const QString &name) { name_ = name; }
 void NativeBookmark::setAutoJoin(bool enabled) { autoJoin_ = enabled; }
 void NativeBookmark::setNick(const QString &nick) { nick_ = nick; }
