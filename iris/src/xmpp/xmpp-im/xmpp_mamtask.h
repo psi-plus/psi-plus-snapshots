@@ -43,7 +43,7 @@ class MAMTask : public Task {
     Q_OBJECT
 public:
     explicit MAMTask(Task *);
-    MAMTask(const MAMTask &) = delete;
+    MAMTask(const MAMTask &)            = delete;
     MAMTask &operator=(const MAMTask &) = delete;
     ~MAMTask();
 
@@ -64,6 +64,12 @@ public:
     bool isComplete() const;
     // XEP-0313 'stable=false' means results need later confirmation.
     bool isStable() const;
+    // Optional RSM metadata; -1 means unknown. Count describes matching
+    // archive events (possibly approximate), not visible chat messages.
+    int resultCount() const;
+    // Index supplied for the first physical page. A later page cannot fill
+    // in missing metadata for the first page's results.
+    int firstResultIndex() const;
 
     // Configuration is only valid before go(); Task is one-shot.
     // Time filter
@@ -75,6 +81,10 @@ public:
     void get(const Jid &j, const QString &fromID = QString(), const QString &toID = QString(),
              const bool allowMUCArchives = true, int mamPageSize = 10, int mamMaxMessages = 0, bool flipPages = true,
              bool backwards = true);
+
+    // Indexed random-access page (XEP-0059); servers may reject it.
+    // Returns one bounded page without moving the ordinary cursor.
+    void getAtIndex(const Jid &with, int index, int pageSize, bool allowMUCArchives = true);
 
     void onGo() override;
     bool take(const QDomElement &) override;

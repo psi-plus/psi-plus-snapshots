@@ -35,6 +35,7 @@ public:
     ~MAMManager();
 
     MAMTask *getFullArchive(const Jid &j, const bool allowMUCArchives = true);
+    MAMTask *getArchiveAtIndex(const Jid &j, int index, int pageSize, bool allowMUCArchives = true);
     MAMTask *getArchiveByIDRange(const Jid &j, const QString &fromID, const QString &toID,
                                  const bool allowMUCArchives = true);
     MAMTask *getArchiveByTimeRange(const Jid &j, const QDateTime &from, const QDateTime &to,

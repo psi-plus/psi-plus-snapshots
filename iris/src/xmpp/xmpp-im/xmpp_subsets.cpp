@@ -165,6 +165,7 @@ bool SubsetsClientManager::isLast() const { return d->result.last; }
 int SubsetsClientManager::count() const { return d->result.count; }
 
 void SubsetsClientManager::setMax(int max) { d->query.max = max; }
+void SubsetsClientManager::setIndex(int index) { d->query.index = qMax(0, index); }
 void SubsetsClientManager::setFirstID(const QString &a) { d->result.firstId = a; }
 void SubsetsClientManager::setLastID(const QString &a) { d->result.lastId = a; }
 
@@ -251,6 +252,7 @@ QDomElement SubsetsClientManager::makeQueryElement(QDomDocument *doc) const
         break;
     case Private::Index:
         d->insertIndexElement(doc, &e, d->query.index);
+        break;
     case Private::First:
     default:
         break;

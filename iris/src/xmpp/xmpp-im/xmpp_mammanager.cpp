@@ -52,6 +52,13 @@ MAMTask *MAMManager::getFullArchive(const Jid &j, const bool allowMUCArchives)
     return task;
 }
 
+MAMTask *MAMManager::getArchiveAtIndex(const Jid &j, int index, int pageSize, bool allowMUCArchives)
+{
+    auto *task = new MAMTask(d->client->rootTask());
+    task->getAtIndex(j, index, pageSize, allowMUCArchives);
+    return task;
+}
+
 MAMTask *MAMManager::getArchiveByIDRange(const Jid &j, const QString &fromID, const QString &toID,
                                          const bool allowMUCArchives)
 {
