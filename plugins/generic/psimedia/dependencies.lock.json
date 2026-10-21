@@ -2,13 +2,13 @@
   "schema_version": 1,
   "psi": {
     "repository": "psi-im/psi",
-    "commit": "caa631fd2b56d38a435b816cc6e4098dfe63c823"
+    "commit": "4c5dc13246871f1a5f5c8cdfb21f5673e92ad474"
   },
   "windows": {
     "modern": {
       "qt": {
         "major": 6,
-        "version": "6.8.3",
+        "version": "6.12.0",
         "arch": "win64_msvc2022_64"
       },
       "msvc_toolset": "",
