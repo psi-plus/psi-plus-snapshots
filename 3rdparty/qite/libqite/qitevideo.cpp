@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "qitevideo.h"
 #include "qitemedia_p.h"
+#include "qitemediaplayer_p.h"
 #include "qitevideoframe_p.h"
 
 #include <QAbstractTextDocumentLayout>
@@ -162,7 +163,7 @@ private:
 class VideoPlayer : public QWidget {
 public:
     VideoPlayer(const QTextFormat &format, QWidget *parent, std::function<void()> download) :
-        QWidget(parent), source(format.property(Source).toUrl()),
+        QWidget(parent), source(format.property(Source).toUrl()), originalSource(source),
         opener(static_cast<ITEMediaOpener *>(format.property(Opener).value<void *>()))
     {
         setObjectName(QStringLiteral("qite-video-player"));
@@ -193,6 +194,13 @@ public:
         row->addWidget(button);
         slider     = new ITEMediaSlider(controls);
         mediaState = opener ? opener->mediaState(source) : nullptr;
+        if (mediaState)
+            connect(mediaState, &ITEMediaState::changed, this, [this] {
+                if (player && mediaState && !mediaState->sourceError().isEmpty()) {
+                    player->stop();
+                    showError(mediaState->sourceError());
+                }
+            });
         slider->setMediaState(mediaState);
         slider->setRange(0, 10000);
         slider->setEnabled(false);
@@ -329,6 +337,21 @@ private:
 
     void toggle()
     {
+        const bool retry = player
+            && (player->error() != QMediaPlayer::NoError || (mediaState && !mediaState->sourceError().isEmpty()));
+        if (player && (retry || (opener && player->mediaStatus() == QMediaPlayer::EndOfMedia))) {
+            delete player;
+            player = nullptr;
+            if (stream && opener)
+                opener->close(stream);
+            stream = nullptr;
+            source = originalSource;
+            if (opener && retry)
+                opener->retry(originalSource);
+            slider->setEnabled(false);
+            time->setText(QStringLiteral("0:00"));
+            time->setToolTip({ });
+        }
         if (!player) {
             player = new QMediaPlayer(this);
             video->attach(player);
@@ -354,6 +377,8 @@ private:
                     QStringLiteral("%1:%2").arg(position / 60000).arg(position / 1000 % 60, 2, 10, QLatin1Char('0')));
             });
             stream = opener ? opener->open(source) : nullptr;
+            if (opener)
+                iteConfigureMediaNetworkTimeout(player, source);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
             if (stream)
                 player->setSourceDevice(stream, source);
@@ -376,13 +401,15 @@ private:
 
     void showError(const QString &message)
     {
+        const auto detail = mediaState && !mediaState->sourceError().isEmpty() ? mediaState->sourceError() : message;
         // Error UI is local too; never rewrite the document on backend events.
         time->setText(ITEVideoController::tr("Cannot play video"));
-        time->setToolTip(message);
-        button->setToolTip(message);
+        time->setToolTip(detail);
+        button->setToolTip(detail);
     }
 
     QUrl                      source;
+    QUrl                      originalSource;
     ITEMediaOpener           *opener;
     QPointer<QIODevice>       stream;
     QMediaPlayer             *player = nullptr;

@@ -13,6 +13,7 @@ HEADERS += \
     $$PWD/qite.h \
     $$PWD/qitemedia.h \
     $$PWD/qitemedia_p.h \
+    $$PWD/qitemediaplayer_p.h \
     $$PWD/qitevideo.h \
     $$PWD/qitevideoframe_p.h \
     $$PWD/qiteaudio.h \

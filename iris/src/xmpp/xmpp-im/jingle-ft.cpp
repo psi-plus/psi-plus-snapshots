@@ -1153,8 +1153,16 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                             transfer->remove(Reason::MediaError, QStringLiteral("checksum describes another range"));
                             return true;
                         }
+                        const QPointer<Application> guard(transfer);
+                        emit transfer->remoteChecksumReceived(checksum.file);
+                        if (!guard || transfer->state() == State::Finished)
+                            return true;
                         transfer->d->onIncomingChecksum(range.hashes);
                     } else {
+                        const QPointer<Application> guard(transfer);
+                        emit transfer->remoteChecksumReceived(checksum.file);
+                        if (!guard || transfer->state() == State::Finished)
+                            return true;
                         transfer->d->onIncomingChecksum(checksum.file.hashes());
                     }
                 }

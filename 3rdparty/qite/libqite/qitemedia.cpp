@@ -44,6 +44,8 @@ void ITEMediaState::setDownload(bool active, qreal progress, const QString &erro
 
 QString iteMediaDownloadText(const ITEMediaState *state)
 {
+    if (state && !state->sourceError().isEmpty())
+        return ITEMediaState::tr("Source error: %1. Click to retry.").arg(state->sourceError());
     if (state && !state->errorString().isEmpty())
         return ITEMediaState::tr("Download failed: %1. Click to retry.").arg(state->errorString());
     if (state && state->downloading()) {

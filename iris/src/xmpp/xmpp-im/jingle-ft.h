@@ -136,6 +136,7 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
     signals:
         void connectionReady(); // streaming mode only
         void payloadVerified(); // receiver: bytes and negotiated checksum are valid
+        void remoteChecksumReceived(const XMPP::Jingle::FileTransfer::File &file);
 
         // if size is not set then it's reamaining part of the file (non-streaming mode only)
         void deviceRequested(quint64 offset, std::optional<quint64> size);

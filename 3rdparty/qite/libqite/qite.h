@@ -134,6 +134,8 @@ public:
     virtual QVariant   metadata(const QUrl &url) = 0;
     // Optional, host-owned and shared across players; nullptr means unavailable.
     virtual ITEMediaState *mediaState(const QUrl &) { return nullptr; }
+    // Called only for an explicit user retry, never for background metadata loads.
+    virtual void retry(const QUrl &) { }
 };
 
 #endif // QITE_H

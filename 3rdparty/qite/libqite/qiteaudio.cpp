@@ -19,6 +19,7 @@ under the License.
 
 #include "qiteaudio.h"
 #include "qitemedia_p.h"
+#include "qitemediaplayer_p.h"
 
 #include <QAudioOutput>
 #include <QEvent>
@@ -460,6 +461,13 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
             playStateChanged = true;
             state ^= AudioMessageFormat::Playing;
             auto player = activePlayers.value(playerId);
+            if (player && player->error() != QMediaPlayer::NoError) {
+                activePlayers.remove(playerId);
+                delete player;
+                player = nullptr;
+                if (auto opener = format.mediaOpener())
+                    opener->retry(format.url());
+            }
             if (state & AudioMessageFormat::Playing) {
                 if (!player) {
                     player = new QMediaPlayer(this);
@@ -471,7 +479,19 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                     activePlayers.insert(playerId, player);
                     ITEMediaOpener *opener = format.mediaOpener();
                     QUrl            url    = format.url();
+                    if (opener) {
+                        const auto state = opener->mediaState(url);
+                        if (state && !state->sourceError().isEmpty())
+                            opener->retry(url);
+                        if (state)
+                            connect(state, &ITEMediaState::changed, player, [player, state] {
+                                if (!state->sourceError().isEmpty())
+                                    player->stop();
+                            });
+                    }
                     QIODevice      *stream = opener ? opener->open(url) : nullptr;
+                    if (opener)
+                        iteConfigureMediaNetworkTimeout(player, url);
                     if (stream)
                         connect(player, &QMediaPlayer::destroyed, this, [opener, stream]() { opener->close(stream); });
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -699,7 +719,8 @@ void ITEAudioController::playerStateChanged(PlaybackState state)
             cursor.setCharFormat(audioFormat);
         }
         qDebug("deleting player");
-        activePlayers.take(playerId)->deleteLater();
+        if (auto stopped = activePlayers.take(playerId))
+            stopped->deleteLater();
     }
 }
 

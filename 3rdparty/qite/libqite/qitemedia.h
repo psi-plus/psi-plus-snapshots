@@ -21,6 +21,14 @@ public:
     bool          downloading() const { return downloading_; }
     qreal         downloadProgress() const { return progress_; } // -1 means unknown
     QString       errorString() const { return error_; }
+    QString       sourceError() const { return sourceError_; }
+    void          setSourceError(const QString &error)
+    {
+        if (sourceError_ != error) {
+            sourceError_ = error;
+            emit changed();
+        }
+    }
     void          setCachedRanges(Ranges ranges);
     void          setDownload(bool active, qreal progress = -1, const QString &error = {});
 
@@ -32,5 +40,6 @@ private:
     bool    downloading_ = false;
     qreal   progress_    = -1;
     QString error_;
+    QString sourceError_;
 };
 #endif

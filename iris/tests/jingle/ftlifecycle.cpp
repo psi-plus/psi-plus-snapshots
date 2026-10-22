@@ -6,9 +6,7 @@
 #include <iris/xmpp-im/jingle-tiebreaker.h>
 #include <iris/xmpp-im/xmpp_features.h>
 #include <memory>
-#define private public
 #include <iris/jingle-session.h>
-#undef private
 #include <iris/xmpp_client.h>
 
 #include <QBuffer>
@@ -22,6 +20,17 @@
 using namespace XMPP;
 namespace J  = XMPP::Jingle;
 namespace FT = XMPP::Jingle::FileTransfer;
+
+// Explicit template instantiation can name a private member without changing
+// the class declaration. Unlike redefining private, this preserves MSVC's ABI.
+struct SessionUpdate {
+    using Method = bool (J::Session::*)(J::Action, const QDomElement &, std::function<void()> *);
+    friend Method sessionUpdate(SessionUpdate);
+};
+template <SessionUpdate::Method method> struct SessionUpdateAccess {
+    friend SessionUpdate::Method sessionUpdate(SessionUpdate) { return method; }
+};
+template struct SessionUpdateAccess<&J::Session::updateFromXml>;
 
 static void check(bool ok, const char *message)
 {
@@ -203,7 +212,8 @@ static void exerciseSessionTermination(Client &client, bool partial, bool localF
     QDomDocument doc;
     auto         info = doc.createElementNS(J::NS, QStringLiteral("jingle"));
     info.appendChild(J::Reason(peerReason).toXml(&doc));
-    check(session->updateFromXml(J::Action::SessionTerminate, info), "session termination was not handled");
+    check((session->*sessionUpdate(SessionUpdate{}))(J::Action::SessionTerminate, info, nullptr),
+          "session termination was not handled");
     const auto expected = localFailure                ? J::Reason::MediaError
         : partial && peerReason == J::Reason::Success ? J::Reason::FailedApplication
                                                       : peerReason;
@@ -606,6 +616,12 @@ int main(int argc, char **argv)
         auto transport
             = QPointer<TestTransport>(new TestTransport(new TestTransportPad(&receiver), J::Origin::Responder));
         TestApplication transfer(pad, QStringLiteral("nested-range"), J::Origin::Responder, J::Origin::Initiator);
+        int announced = 0;
+        QObject::connect(&transfer, &FT::Application::remoteChecksumReceived, &transfer, [&](const FT::File &file) {
+            ++announced;
+            check(file.range().offset == 4 && file.range().length == 4 && file.range().hashes.size() == 1,
+                  "checksum notification lost its accepted span or digest");
+        });
         auto            file = testFile(8);
         file.addHash(Hash(Hash::Sha256));
         file.setRange(FT::Range(4, 4));
@@ -640,6 +656,7 @@ int main(int argc, char **argv)
         QDomDocument parsed;
         check(parsed.setContent(doc.toByteArray(), true), "cannot parse nested checksum stanza");
         check(pad->incomingSessionInfo(parsed.documentElement()), "nested request checksum was not handled");
+        check(announced == (wrongRange ? 0 : 1), "invalid checksum range reached the storage observer");
         if (wrongRange) {
             check(verified == 0 && transfer.lastReason().condition() == J::Reason::MediaError
                       && !transfer.acknowledgeReceived(),

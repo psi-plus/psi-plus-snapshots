@@ -16,8 +16,11 @@
 #include <QSignalSpy>
 #include <QSlider>
 #include <QSplitter>
+#include <QTcpServer>
+#include <QTcpSocket>
 #include <QTest>
 #include <QTextTable>
+#include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QVideoFrame>
@@ -519,6 +522,99 @@ private slots:
         QVERIFY(edit.findChildren<QMediaPlayer *>().isEmpty());
     }
 
+    void replayLooksUpCompletedLocalFile()
+    {
+        if (!qEnvironmentVariableIntValue("QITE_TEST_PLAYBACK"))
+            QSKIP("Enable QITE_TEST_PLAYBACK to test with a WebM/VP8 multimedia backend");
+        class Opener : public ITEMediaOpener {
+        public:
+            int        opened = 0, closed = 0;
+            QIODevice *open(QUrl &url) override
+            {
+                ++opened;
+                url = QUrl::fromLocalFile(QStringLiteral(QITE_TEST_VIDEO));
+                if (opened > 1)
+                    return nullptr;
+                QFile file(QStringLiteral(QITE_TEST_VIDEO));
+                if (!file.open(QIODevice::ReadOnly))
+                    return nullptr;
+                auto buffer = new QBuffer;
+                buffer->setData(file.readAll());
+                buffer->open(QIODevice::ReadOnly);
+                return buffer;
+            }
+            void close(QIODevice *device) override
+            {
+                ++closed;
+                delete device;
+            }
+            QVariant metadata(const QUrl &) override { return { }; }
+        } opener;
+        TextEdit        edit;
+        InteractiveText text(&edit);
+        VideoController video(&text);
+        video.insert(QUrl(QStringLiteral("share:resource")), &opener);
+        edit.show();
+        QTRY_VERIFY(edit.findChild<QToolButton *>(QStringLiteral("qite-video-play")));
+        auto button = edit.findChild<QToolButton *>(QStringLiteral("qite-video-play"));
+        button->click();
+        auto player = edit.findChild<QMediaPlayer *>();
+        QVERIFY(player);
+        QTRY_COMPARE_WITH_TIMEOUT(player->mediaStatus(), QMediaPlayer::EndOfMedia, 10000);
+        button->click();
+        QCOMPARE(opener.opened, 2);
+        QCOMPARE(opener.closed, 1);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        QVERIFY(edit.findChild<QMediaPlayer *>()->sourceDevice() == nullptr);
+        QVERIFY(edit.findChild<QMediaPlayer *>()->source().isLocalFile());
+#endif
+    }
+
+    void sourceFailureRequiresExplicitRetry()
+    {
+        if (!qEnvironmentVariableIntValue("QITE_TEST_PLAYBACK"))
+            QSKIP("Enable QITE_TEST_PLAYBACK to test with a WebM/VP8 multimedia backend");
+        class Opener : public StateOpener {
+        public:
+            int        retried = 0;
+            QIODevice *open(QUrl &url) override
+            {
+                ++opens;
+                url = QUrl::fromLocalFile(QStringLiteral(QITE_TEST_VIDEO));
+                return nullptr;
+            }
+            void retry(const QUrl &) override
+            {
+                ++retried;
+                state.setSourceError({ });
+            }
+        } opener;
+        TextEdit        edit;
+        InteractiveText text(&edit);
+        VideoController video(&text);
+        video.insert(QUrl(QStringLiteral("share:resource")), &opener);
+        edit.show();
+        QTRY_VERIFY(edit.findChild<QToolButton *>(QStringLiteral("qite-video-play")));
+        auto button = edit.findChild<QToolButton *>(QStringLiteral("qite-video-play"));
+        button->click();
+        auto player = edit.findChild<QMediaPlayer *>();
+        QVERIFY(player);
+        QTRY_VERIFY_WITH_TIMEOUT(player->position() > 0, 10000);
+        opener.state.setSourceError(QStringLiteral("Checksum mismatch"));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        QTRY_COMPARE(player->playbackState(), QMediaPlayer::StoppedState);
+#else
+        QTRY_COMPARE(player->state(), QMediaPlayer::StoppedState);
+#endif
+        QTest::qWait(30);
+        QCOMPARE(opener.opens, 1);
+        QCOMPARE(opener.retried, 0);
+        QVERIFY(button->toolTip().contains(QStringLiteral("Checksum mismatch")));
+        button->click();
+        QCOMPARE(opener.retried, 1);
+        QCOMPARE(opener.opens, 2);
+    }
+
     void frameIsolation()
     {
         TextEdit        edit;
@@ -618,6 +714,53 @@ private slots:
         cursor.removeSelectedText();
         QTRY_VERIFY(widget.isNull());
         QVERIFY(edit.findChildren<QMediaPlayer *>().isEmpty());
+    }
+
+    void delayedHttpPlayback()
+    {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+        if (!qEnvironmentVariableIntValue("QITE_TEST_PLAYBACK"))
+            QSKIP("Enable QITE_TEST_PLAYBACK to test with a WebM/VP8 multimedia backend");
+        QFile file(QStringLiteral(QITE_TEST_VIDEO));
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        const auto bytes = file.readAll();
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        connect(&server, &QTcpServer::newConnection, this, [&] {
+            auto socket = server.nextPendingConnection();
+            connect(socket, &QTcpSocket::disconnected, socket, &QObject::deleteLater);
+            connect(socket, &QTcpSocket::readyRead, socket, [socket, bytes] {
+                const auto request = socket->property("request").toByteArray() + socket->readAll();
+                socket->setProperty("request", request);
+                if (!request.contains("\r\n\r\n") || socket->property("responded").toBool())
+                    return;
+                socket->setProperty("responded", true);
+                // Longer than Qt/FFmpeg's default 20-second socket timeout.
+                // Model an opener proxy waiting for its first upstream chunk.
+                QTimer::singleShot(22000, socket, [socket, bytes] {
+                    socket->write("HTTP/1.1 200 OK\r\nContent-Type: video/webm\r\nContent-Length: "
+                                  + QByteArray::number(bytes.size()) + "\r\nConnection: close\r\n\r\n" + bytes);
+                    socket->disconnectFromHost();
+                });
+            });
+        });
+        StateOpener     opener;
+        TextEdit        edit;
+        InteractiveText text(&edit);
+        VideoController video(&text);
+        video.insert(QUrl(QStringLiteral("http://127.0.0.1:%1/video.webm").arg(server.serverPort())), &opener);
+        edit.show();
+        QTRY_VERIFY(edit.findChild<QToolButton *>(QStringLiteral("qite-video-play")));
+        edit.findChild<QToolButton *>(QStringLiteral("qite-video-play"))->click();
+        auto player = edit.findChild<QMediaPlayer *>();
+        QVERIFY(player);
+        QSignalSpy frames(player->videoSink(), &QVideoSink::videoFrameChanged);
+        QTRY_VERIFY_WITH_TIMEOUT(frames.count() > 0 || player->error() != QMediaPlayer::NoError, 30000);
+        QCOMPARE(player->error(), QMediaPlayer::NoError);
+        QVERIFY(frames.count() > 0);
+#else
+        QSKIP("Configurable FFmpeg network timeout requires Qt 6.10");
+#endif
     }
 
     void decoderPlayback()
