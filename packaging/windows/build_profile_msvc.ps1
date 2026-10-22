@@ -8,6 +8,8 @@ param(
     [ValidateSet('BASIC', 'WEBENGINE')]
     [string]$ChatType = 'BASIC',
 
+    [string]$ReleaseVersion = '',
+
     [switch]$RunTests
 )
 
@@ -119,6 +121,15 @@ $configureArgs = @(
     '-DINSTALL_EXTRA_FILES=ON'
 )
 
+# Do not infer a beta version from the last historical tag: it must be
+# explicitly selected by the release workflow and embedded in psi.exe.
+if ($ReleaseVersion) {
+    if ($ReleaseVersion -cnotmatch '^[0-9]+\.[0-9]+_b[0-9]+$') {
+        throw "Unsupported beta release version: $ReleaseVersion"
+    }
+    $configureArgs += "-DPSI_VERSION=$ReleaseVersion"
+}
+
 & cmake @configureArgs 2>&1 | Tee-Object -FilePath $configureLog
 if ($LASTEXITCODE -ne 0) {
     throw "CMake configure failed with exit code $LASTEXITCODE"
@@ -222,17 +233,32 @@ Invoke-Checked python packaging/windows/prepare_package_msvc.py `
     --qt-conf (Join-Path $sourceDir 'win32\qt.conf') `
     --report $report
 
-$baseTag = (git describe --tags --abbrev=0).Trim()
+# Exclude infrastructure tags: they are not application versions.
+$baseTag = (git describe --tags --abbrev=0 --exclude 'windows-sdk-*').Trim()
 if (-not $baseTag) {
     throw 'Could not determine the base Psi version tag'
 }
 $commitCountText = (git rev-list --count "$baseTag..HEAD").Trim()
 $commitCount = [int]$commitCountText
-$appVersion = if ($commitCount -gt 0) { "$baseTag.$commitCount" } else { $baseTag }
+$appVersion = if ($ReleaseVersion) {
+    $ReleaseVersion
+} elseif ($commitCount -gt 0) {
+    "$baseTag.$commitCount"
+} else {
+    $baseTag
+}
 
-$parts = @($appVersion.Split('.'))
-if ($parts.Count -eq 0 -or ($parts | Where-Object { $_ -notmatch '^\d+$' })) {
-    throw "NSIS requires a numeric application version, got: $appVersion"
+# NSIS has two version fields: arbitrary display text, plus strictly numeric
+# VIProductVersion. Preserve 1.6_b1 in the first while mapping it to 1.6.1.0
+# (or 1.6.1.N for post-beta development builds) for Windows file metadata.
+if ($appVersion -match '^([0-9]+)\.([0-9]+)_b([0-9]+)(?:\.([0-9]+))?$') {
+    $parts = @($Matches[1], $Matches[2], $Matches[3],
+        $(if ($Matches.ContainsKey('4') -and $Matches['4']) { $Matches['4'] } else { '0' }))
+} else {
+    $parts = @($appVersion.Split('.'))
+}
+if ($parts.Count -eq 0 -or ($parts | Where-Object { $_ -notmatch '^[0-9]+$' })) {
+    throw "NSIS requires a numeric Windows file version, got: $appVersion"
 }
 while ($parts.Count -lt 4) {
     $parts += '0'
