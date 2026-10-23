@@ -390,12 +390,16 @@ void AudioRecorder::record()
     cleanup();
     _isTmpFile = true;
 
-    QTemporaryFile *tmpFile = new QTemporaryFile(QDir::tempPath() + QLatin1String("/qite-record-XXXXXX.mp4"), this);
-    tmpFile->setAutoRemove(false);
-    tmpFile->open();
-    QString fn = tmpFile->fileName();
-    delete tmpFile;
-
+    QTemporaryFile tmpFile(QDir::tempPath() + QLatin1String("/qite-record-XXXXXX.mp4"));
+    tmpFile.setAutoRemove(false);
+    if (!tmpFile.open()) {
+        _errorString = tmpFile.errorString();
+        _state = StoppedState;
+        emit finished(false);
+        return;
+    }
+    const QString fn = tmpFile.fileName();
+    tmpFile.close();
     recordToFile(fn);
 }
 
@@ -517,7 +521,12 @@ void AudioRecorder::postProcess(quint8 maxVolume, const QByteArray &amplitudes)
     if (_isTmpFile) {
         QString fn = _recorder->outputLocation().toLocalFile();
         QFile   f(fn);
-        f.open(QIODevice::ReadOnly);
+        if (!f.open(QIODevice::ReadOnly)) {
+            _errorString = f.errorString();
+            _state = StoppedState;
+            emit finished(false);
+            return;
+        }
         _audioData = f.readAll();
         f.close();
         f.remove();

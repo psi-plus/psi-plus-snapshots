@@ -77,12 +77,12 @@ public:
 
     ITEAudioController(InteractiveText *itc, QObject *parent);
 
-    QSizeF intrinsicSize(QTextDocument *doc, int posInDocument, const QTextFormat &format);
-    void   drawITE(QPainter *painter, const QRectF &rect, int posInDocument, const QTextFormat &format);
+    QSizeF intrinsicSize(QTextDocument *doc, int posInDocument, const QTextFormat &format) override;
+    void   drawITE(QPainter *painter, const QRectF &rect, int posInDocument, const QTextFormat &format) override;
 
     QTextCharFormat makeFormat(const QUrl &audioSrc, ITEMediaOpener *mediaOpener, bool downloadable = false) const;
     void            insert(const QUrl &audioSrc, ITEMediaOpener *mediaOpener = nullptr, bool downloadable = false);
-    QCursor         cursor(); // cursor form after last mose events
+    QCursor         cursor() override; // cursor form after last mose events
 
     inline void setAutoFetchMetadata(bool fetch = true) { autoFetchMetadata = fetch; }
 
@@ -90,8 +90,8 @@ signals:
     void downloadRequested(const QUrl &source);
 
 protected:
-    bool mouseEvent(const InteractiveTextElementController::Event &event, const QRect &rect, QTextCursor &selected);
-    void hideEvent(QTextCursor &selected);
+    bool mouseEvent(const InteractiveTextElementController::Event &event, const QRect &rect, QTextCursor &selected) override;
+    void hideEvent(QTextCursor &selected) override;
     bool eventFilter(QObject *, QEvent *) override;
 private slots:
     void playerPositionChanged(qint64);

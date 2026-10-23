@@ -90,15 +90,15 @@ namespace XMPP { namespace Jingle { namespace S5B {
             emit connected();
         }
 
-        TransportFeatures features() const
+        TransportFeatures features() const override
         {
             return TransportFeature::Fast | TransportFeature::DataOriented | TransportFeature::StreamOriented
                 | TransportFeature::Ordered | TransportFeature::Reliable;
         }
 
-        bool hasPendingDatagrams() const { return datagrams.size() > 0; }
+        bool hasPendingDatagrams() const override { return datagrams.size() > 0; }
 
-        QNetworkDatagram readDatagram(qint64 maxSize = -1)
+        QNetworkDatagram readDatagram(qint64 maxSize = -1) override
         {
             Q_UNUSED(maxSize) // TODO or not?
             auto datagram = datagrams.size() ? datagrams.takeFirst() : QNetworkDatagram();
@@ -107,7 +107,7 @@ namespace XMPP { namespace Jingle { namespace S5B {
             return datagram;
         }
 
-        qint64 bytesAvailable() const
+        qint64 bytesAvailable() const override
         {
             if (client)
                 return client->bytesAvailable();
@@ -115,9 +115,9 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 return 0;
         }
 
-        qint64 bytesToWrite() const { return client ? client->bytesToWrite() : 0; }
+        qint64 bytesToWrite() const override { return client ? client->bytesToWrite() : 0; }
 
-        void close()
+        void close() override
         {
             if (closeSignalled)
                 return;
@@ -143,14 +143,14 @@ namespace XMPP { namespace Jingle { namespace S5B {
         }
 
     protected:
-        qint64 writeData(const char *data, qint64 maxSize)
+        qint64 writeData(const char *data, qint64 maxSize) override
         {
             if (mode == Transport::Tcp && client)
                 return client->write(data, maxSize);
             return -1;
         }
 
-        qint64 readDataInternal(char *data, qint64 maxSize)
+        qint64 readDataInternal(char *data, qint64 maxSize) override
         {
             if (!client)
                 return -1;

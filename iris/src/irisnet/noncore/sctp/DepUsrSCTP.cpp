@@ -9,6 +9,7 @@
 #include <QCoreApplication>
 #include <QTimer>
 
+#include <cstdio>
 #include <cstring>
 
 #define MS_TRACE()
@@ -46,14 +47,17 @@ inline static void sctpDebug(const char *format, ...)
     va_list ap;
 
     va_start(ap, format);
-    vsprintf(buffer, format, ap);
+    const int result = std::vsnprintf(buffer, sizeof(buffer), format, ap);
+    va_end(ap);
+    if (result < 0)
+        return;
 
-    // Remove the artificial carriage return set by usrsctp.
-    buffer[std::strlen(buffer) - 1] = '\0';
+    // usrsctp appends a line ending to its debug messages.
+    const size_t length = std::strlen(buffer);
+    if (length > 0 && (buffer[length - 1] == '\n' || buffer[length - 1] == '\r'))
+        buffer[length - 1] = '\0';
 
     MS_DEBUG_TAG(sctp, "%s", buffer);
-
-    va_end(ap);
 }
 
 /* Static variables. */

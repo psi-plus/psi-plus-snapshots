@@ -29,6 +29,9 @@ else()
 
     include(ExternalProject)
     #set CMake options and transfer the environment to an external project
+    # ExternalProject receives a CMake list of arguments. Encode the parent
+    # prefix list as one value so two prefixes don't become stray CLI paths.
+    string(REPLACE ";" "|" USRSCTP_CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH}")
     set(USRSCTP_BUILD_OPTIONS
         -DBUILD_SHARED_LIBS=OFF -Dsctp_build_programs=OFF -Dsctp_build_shared_lib=OFF -Dsctp_debug=OFF
         -Dsctp_inet=OFF -Dsctp_inet6=OFF -Dsctp_werror=OFF
@@ -36,7 +39,7 @@ else()
         "-DLIB_INSTALL_DIR=<INSTALL_DIR>/${CMAKE_INSTALL_LIBDIR}"
         "-DINCLUDE_INSTALL_DIR=<INSTALL_DIR>/${CMAKE_INSTALL_INCLUDEDIR}"
         "-DINSTALL_PKGCONFIG_DIR=<INSTALL_DIR>/${CMAKE_INSTALL_LIBDIR}/pkgconfig"
-        -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        "-DCMAKE_PREFIX_PATH=${USRSCTP_CMAKE_PREFIX_PATH}" -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         -DCMAKE_POSITION_INDEPENDENT_CODE=${CMAKE_POSITION_INDEPENDENT_CODE}
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
         -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER})
@@ -73,6 +76,7 @@ else()
             PATCH_APPLY_PATH "usrsctp.patch"
             CHECKOUT_FILES
                 "usrsctplib/netinet/sctp_output.c"
+                "CMakeLists.txt"
         )
     endif()
     if(CMAKE_CONFIGURATION_TYPES)
@@ -86,6 +90,7 @@ else()
         UPDATE_COMMAND ""
         PREFIX ${USRSCTP_PREFIX}
         INSTALL_DIR ${IRIS_USRSCTP_INSTALL_DIR}
+        LIST_SEPARATOR "|"
         CMAKE_ARGS ${USRSCTP_BUILD_OPTIONS}
         BUILD_BYPRODUCTS ${USRSCTP_LIBRARY}
         PATCH_COMMAND ${patch_command}

@@ -578,6 +578,9 @@ namespace StunTypes {
                 return QString::number(i);
             break;
         }
+        default:
+            // Unknown and not-yet-formatted STUN attributes are handled below.
+            break;
         }
 
         return QString();

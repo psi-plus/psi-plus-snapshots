@@ -154,8 +154,19 @@ if(IRIS_BUNDLED_QCA)
     endif()
     list(APPEND QCA_BUILD_OPTIONS -DQCA_SUFFIX=qt${QT_DEFAULT_MAJOR_VERSION})
     file(MAKE_DIRECTORY "${Qca_INCLUDE_DIR}")
+    # Keep the exact locked QCA revision; apply these two source-only macOS
+    # Qt6 compatibility fixes until they are included in a released QCA tag.
+    # Never rewrite a caller-supplied local QCA source tree.
+    set(_iris_qca_patch_args)
+    if(APPLE AND NOT EXISTS "${QCA_SOURCE_DIR}")
+        list(APPEND _iris_qca_patch_args
+            PATCH_COMMAND "${CMAKE_COMMAND}"
+            "-DQCA_SOURCE_DIR=<SOURCE_DIR>"
+            -P "${CMAKE_CURRENT_LIST_DIR}/patch-qca-macos-warnings.cmake")
+    endif()
     ExternalProject_Add(QcaProject
         ${_qca_source_args}
+        ${_iris_qca_patch_args}
         UPDATE_COMMAND ""
         PREFIX ${QCA_PREFIX}
         BINARY_DIR "${_qca_binary_dir}"
@@ -181,6 +192,12 @@ if(IRIS_BUNDLED_QCA)
     )
     if(WIN32 OR USE_MXE)
         set_property(TARGET Qca3::Qca APPEND PROPERTY INTERFACE_LINK_LIBRARIES crypt32 ws2_32)
+    elseif(APPLE)
+        # The static QCA system-store backend calls SecCertificateCopyData and
+        # SecTrustCopyAnchorCertificates. Export this dependency to Iris and
+        # applications consuming Qca3::Qca, not just Qca_LIBRARY's legacy list.
+        set_property(TARGET Qca3::Qca APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+            "-framework Security" "-framework CoreFoundation")
     endif()
     set_property(TARGET Qca3::Qca PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${Qca_INCLUDE_DIR}")
     set(IRIS_QCA_TARGET Qca3::Qca)
