@@ -142,20 +142,13 @@ runtime loading remain covered by the Windows build jobs.
 
 ## Automated tag releases
 
-Pushing a version tag such as v1.2 or v1.2.3 triggers
-[PsiMedia release](.github/workflows/release.yml). It validates the tag and
-source commit, invokes [PsiMedia packages](.github/workflows/packages.yml)
-for every supported release target, then creates a GitHub Release *only after
-all builds succeed and every expected artifact has been verified*. Re-running
-the tagged workflow replaces matching assets on an existing release.
-You can also open **Actions → PsiMedia release → Run workflow**, select
-`master`, and enter an **existing** version tag in the `tag` field. The
-manual run builds and publishes that exact tagged source revision, not the
-latest `master`. This is intended for tags made after the packaging pipeline
-was introduced; older tags may not have the necessary build infrastructure.
-The packages workflow can be run manually for testing without publishing a
-release. A push modifying the release workflows on `master` also triggers a
-one-off verification of the package matrix.
+For a new release open **Actions → [Prepare PsiMedia release](.github/workflows/prepare-release.yml) → Run workflow**, select `master` and enter a *new* version tag such as `v1.2` or `v1.2.3`. The workflow updates the `version` field in `psiplugin/psiplugin.json` (embedded in the plugin binary by `Q_PLUGIN_METADATA`), commits this change to `master`, creates an annotated tag on that exact commit and launches the existing [PsiMedia release](.github/workflows/release.yml) workflow. The branch update and tag push are atomic: a rejected branch push cannot leave a detached release tag. Both version preparation and the tag fail if the tag already exists.
+
+A tag pushed with the default GitHub Actions `GITHUB_TOKEN` does **not** trigger another workflow's `push` event, so preparation explicitly calls `workflow_dispatch` on `release.yml`. Direct manual git tagging is discouraged: for tags created after this change, the release workflow rejects a version that differs from the embedded plugin metadata. Legacy tags created before version verification remain eligible for retry.
+
+[PsiMedia release](.github/workflows/release.yml) validates the tag and tagged source, invokes [PsiMedia packages](.github/workflows/packages.yml) for every supported target, and publishes a GitHub Release *only after all builds succeed and every expected artifact is verified*. To retry a failed build or republish assets for an existing tag, open **Actions → PsiMedia release → Run workflow**, select `master`, and enter that **existing** tag. Do not rerun Prepare for an existing tag. The manual release always builds that tagged revision, not the latest `master`.
+
+The packages workflow can also be run manually without publishing a release. A push modifying release workflows on `master` triggers a one-off verification of the package matrix.
 
 Current release assets (ZIP archives of GitHub Actions artifacts):
 
