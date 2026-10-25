@@ -33,7 +33,7 @@ Package builds should check out their chosen Iris source SHA **before** calling 
 ## JDNS
 
 `jdns.commit` pins the bundled JDNS source; `jdns.minimum_version` is the QJDns
-API baseline (3.0.0). `jdns.tag` is null for an unreleased development commit.
+API baseline (3.1.0). `jdns.tag` is null for an unreleased development commit.
 After the JDNS release is merged and tagged, update the commit and tag together;
 do not use a moving branch or a tag that has not been published. Source builds
 always use the exact commit unless an explicit `IRIS_JDNS_GIT_TAG` override is

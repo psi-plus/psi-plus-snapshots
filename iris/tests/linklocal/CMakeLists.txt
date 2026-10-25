@@ -1,0 +1,5 @@
+find_package(Qt${QT_DEFAULT_MAJOR_VERSION} REQUIRED COMPONENTS Test)
+add_executable(linklocal_stream_test stream.cpp)
+target_link_libraries(linklocal_stream_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Test)
+add_test(NAME linklocal_stream COMMAND linklocal_stream_test)
+set_tests_properties(linklocal_stream PROPERTIES TIMEOUT 30)

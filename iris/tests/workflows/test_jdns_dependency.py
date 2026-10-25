@@ -7,6 +7,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
+MIN_VERSION = json.loads((ROOT / "dependencies.lock.json").read_text())["jdns"]["minimum_version"]
 
 
 class JDnsSelection(unittest.TestCase):
@@ -78,34 +79,34 @@ iris_configure_jdns()
     def test_system_required_is_not_silently_bundled(self):
         result = self.configure(mode="ON")
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("System QJDns >= 3.0.0", result.stdout)
+        self.assertIn("System QJDns >= " + MIN_VERSION, result.stdout)
 
     def test_system_same_qt(self):
-        result = self.configure(mode="ON", version="3.0.0")
+        result = self.configure(mode="ON", version=MIN_VERSION)
         self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn("using system QJDns 3.0.0 for Qt 6", result.stdout)
+        self.assertIn(f"using system QJDns {MIN_VERSION} for Qt 6", result.stdout)
 
     def test_off_ignores_system(self):
-        result = self.configure(mode="OFF", version="3.0.0")
+        result = self.configure(mode="OFF", version=MIN_VERSION)
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("using bundled", result.stdout)
 
     def test_old_and_wrong_major_packages_fall_back(self):
-        for version in ("2.0.6", "4.0.0"):
+        for version in ("2.0.6", "3.0.0", "4.0.0"):
             with self.subTest(version=version):
                 result = self.configure(version=version)
                 self.assertEqual(result.returncode, 0, result.stdout)
                 self.assertIn("using bundled", result.stdout)
 
     def test_wrong_qt_falls_back(self):
-        result = self.configure(version="3.0.0", qt=5)
+        result = self.configure(version=MIN_VERSION, qt=5)
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("using bundled", result.stdout)
 
     def test_existing_or_mispackaged_wrong_qt_target_is_rejected(self):
         for existing in (False, True):
             with self.subTest(existing=existing):
-                result = self.configure(version=None if existing else "3.0.0", qt=5,
+                result = self.configure(version=None if existing else MIN_VERSION, qt=5,
                                         reject_wrong_qt=False, existing=existing)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("QJDns must be built for Qt 6", result.stdout)

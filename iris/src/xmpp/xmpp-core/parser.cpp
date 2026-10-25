@@ -293,6 +293,13 @@ public:
                 handleEndElement();
             } else if (tt == QXmlStreamReader::Characters) {
                 handleText();
+            } else if (tt == QXmlStreamReader::DTD || tt == QXmlStreamReader::EntityReference) {
+                // RFC 6120 restricted XML. Never expand a DTD or terminate a
+                // debug build with an assertion on untrusted stream input.
+                Event e;
+                e.setError();
+                events.push(e);
+                return;
             } else {
                 Q_ASSERT_X(tt != QXmlStreamReader::EntityReference, "xml parser",
                            qPrintable(QString("unexpected xml entity: %1").arg(reader.text())));
