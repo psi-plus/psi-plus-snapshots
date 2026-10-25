@@ -25,6 +25,7 @@
  */
 
 #include "avatars.h"
+#include "avatarblobinflight.h"
 
 #include "applicationinfo.h"
 #include "filecache.h"
@@ -53,6 +54,12 @@
 #include <QPainterPath>
 #include <QPixmap>
 #include <QtCrypto>
+
+#ifdef PSI_AVATAR_CACHE_BENCHMARK
+#include <QElapsedTimer>
+#include <QVector>
+#include <algorithm>
+#endif
 
 // we have retine nowdays and various other huge resolutions.96px is not that big already.
 // it would be better to scale images according to monitor properties
@@ -171,26 +178,94 @@ public:
 
         if (n == PEP_AVATAR_DATA_NS) {
             if (item.payload().tagName() == PEP_AVATAR_DATA_TN) {
-                auto hash = QByteArray::fromHex(item.id().toLatin1());
-                if (hash.size() < 20)
-                    return; // doesn't look like sha1 hash. just ignore it
-                            // try append user first. since data may be unexpected and we want to save some cpu cycles.
+                const auto hash = QByteArray::fromHex(item.id().toLatin1());
+                if (hash.size() != 20) {
+                    qWarning() << "Discarding PEP avatar:data: invalid SHA-1 item ID"
+                               << "from" << jidFull << "item ID" << item.id();
+                    return;
+                }
+
+                // A returned IQ may belong to an obsolete metadata
+                // announcement. Bind bytes only to still-interested JIDs.
+                const bool pending = blobFlights_.hasFlight(hash);
+                const QStringList recipients = pending ? blobFlights_.waiters(hash) : QStringList { jidFull };
+                if (recipients.isEmpty()) {
 #ifdef AVATAR_EDBUG
-                qDebug() << "append user " << jidFull << AvatarCache::AvatarType;
+                    qDebug() << "Discard PEP avatar:data: no interested JIDs" << jidFull << hash.toHex();
 #endif
-                result = appendUser(hash, AvatarCache::AvatarType, jidFull);
-                if (result == AvatarCache::NoData) {
-                    QByteArray ba = QByteArray::fromBase64(item.payload().text().toLatin1());
-                    if (!ba.isEmpty()) {
-                        result = setIcon(AvatarCache::AvatarType, jidFull, ba, hash);
+                    return;
+                }
+
+                // setIcon() creates the shared FileCache entry *and* binds its
+                // first JID. Start with any current waiter, then bind the
+                // remaining recipients to those same bytes below. The QSet
+                // iteration order does not indicate which JID issued the IQ.
+                const QString &first = recipients.first();
+#ifdef AVATAR_EDBUG
+                qDebug() << "append user " << first << AvatarCache::AvatarType;
+#endif
+                result = appendUser(hash, AvatarType, first);
+                if (result == NoData) {
+                    const auto bytes = QByteArray::fromBase64(item.payload().text().toLatin1());
+                    if (bytes.isEmpty()) {
+                        qWarning() << "Discarding PEP avatar:data: empty or undecodable payload"
+                                   << "from" << jidFull << "item ID" << item.id();
+                        return;
+                    }
+
+                    // XEP-0084 item IDs identify the original bytes by SHA-1.
+                    // Do not attach corrupted data to the shared FileCache.
+                    const auto actualHash = QCryptographicHash::hash(bytes, QCryptographicHash::Sha1);
+                    if (actualHash != hash) {
+                        qWarning() << "Discarding PEP avatar:data: SHA-1 mismatch"
+                                   << "from" << jidFull << "expected" << hash.toHex()
+                                   << "actual" << actualHash.toHex() << "bytes" << bytes.size();
+                        return;
+                    }
+                    result = setIcon(AvatarType, first, bytes, hash);
+                }
+                if (result == NoData) {
+                    qWarning() << "Discarding PEP avatar:data: image could not be cached"
+                               << "from" << jidFull << "recipient" << first << "SHA-1" << hash.toHex();
+                    return;
+                }
+
+                if (result == UserUpdateRequired) {
+#ifdef AVATAR_EDBUG
+                    qDebug() << "remove from iconset and emit avatarChanged on PEP avatar:data" << first;
+#endif
+                    iconset_.removeIcon(QStringLiteral("avatars/%1").arg(first));
+                    emit avatarChanged(Jid(first));
+                }
+                // FileCache has the blob now. Rebind all waiting contacts
+                // from it, without starting another download. This must run
+                // even when the first recipient's avatar did not change.
+                if (pending) {
+#ifdef AVATAR_EDBUG
+                    qDebug() << "PEP avatar:data resolved shared flight" << hash.toHex()
+                             << "recipients" << recipients.size();
+#endif
+                    for (const QString &waitingJid : blobFlights_.complete(hash)) {
+                        if (waitingJid == first)
+                            continue;
+                        const auto waitingResult = appendUser(hash, AvatarType, waitingJid);
+                        if (waitingResult == UserUpdateRequired) {
+#ifdef AVATAR_EDBUG
+                            qDebug() << "remove from iconset and emit avatarChanged on shared PEP blob" << waitingJid;
+#endif
+                            iconset_.removeIcon(QStringLiteral("avatars/%1").arg(waitingJid));
+                            emit avatarChanged(Jid(waitingJid));
+                        }
                     }
                 }
+                return;
             } else {
                 qWarning("avatars.cpp: Unexpected item payload");
             }
         } else if (n == PEP_AVATAR_METADATA_NS && item.payload().tagName() == QLatin1String(PEP_AVATAR_METADATA_TN)) {
             auto info = item.payload().firstChildElement(QLatin1String("info"));
             if (info.isNull()) {
+                blobFlights_.supersede(jidFull, {});
 #ifdef AVATAR_EDBUG
                 qDebug() << "removeIcon AvatarType " << jidFull << AvatarCache::AvatarType;
 #endif
@@ -228,10 +303,21 @@ public:
 #ifdef AVATAR_EDBUG
                     qDebug() << "appendUser AvatarType " << jidFull;
 #endif
-                    // found in-band png (by xep84 hash is for png) avatar. So we can make request
+                    // Existing FileCache already deduplicates completed
+                    // image bytes by SHA-1; only coalesce unfinished IQs.
+                    blobFlights_.supersede(jidFull, hash);
                     result = appendUser(hash, AvatarCache::AvatarType, jidFull);
                     if (result == AvatarCache::NoData) {
-                        pa->pepManager()->get(jid, PEP_AVATAR_DATA_NS, item.id());
+                        const auto decision = blobFlights_.join(jidFull, hash, pa, item.id());
+                        if (decision.request) {
+                            fetchAvatarBlob(pa, jid, item.id(), hash, decision.token);
+                        } else {
+                            // This SHA-1 is already being fetched; the JID
+                            // will be bound when that IQ populates FileCache.
+#ifdef AVATAR_EDBUG
+                            qDebug() << "Joined in-flight PEP avatar:data" << jidFull << hash.toHex();
+#endif
+                        }
                         return;
                     }
                     break;
@@ -574,6 +660,36 @@ protected:
     }
 
 private:
+    void fetchAvatarBlob(PsiAccount *account, const Jid &jid, const QString &itemId,
+                         const QByteArray &hash, quint64 token)
+    {
+#ifdef AVATAR_EDBUG
+        qDebug() << "Requesting PEP avatar:data" << jid.full() << hash.toHex()
+                 << "flight token" << token;
+#endif
+        auto *task = account->pepManager()->get(jid, PEP_AVATAR_DATA_NS, itemId);
+        const auto onFinished = [this, hash, token]() {
+            // PEPManager emits itemPublished() before its task-finished
+            // observers. A valid blob has already completed the flight.
+            // If this source failed, try another interested contact's
+            // available account: PEP access policies may differ.
+            const auto retry = blobFlights_.fail(hash, token);
+            if (retry.request) {
+#ifdef AVATAR_EDBUG
+                qDebug() << "PEP avatar:data unavailable from previous source; trying waiting source"
+                         << retry.jid << hash.toHex() << "flight token" << retry.token;
+#endif
+                auto *next = static_cast<PsiAccount *>(retry.transport.data());
+                fetchAvatarBlob(next, Jid(retry.jid), retry.itemId, hash, retry.token);
+            }
+        };
+        // PEPManager reports successful items before Task::finished. The
+        // destroyed handler covers cancelled tasks that never emit finished;
+        // generation tokens make the second callback harmless.
+        connect(task, &Task::finished, this, onFinished);
+        connect(task, &QObject::destroyed, this, onFinished);
+    }
+
     AvatarCache() : FileCache(AvatarFactory::getCacheDir())
     {
         // Register iconset
@@ -858,12 +974,104 @@ private:
 
     QHash<QString, JidIcons> jidToIcons;
     QHash<Jid, QByteArray>   jid2hash;
+    AvatarBlobInFlight      blobFlights_;
     Iconset                  iconset_;
 
     static AvatarCache *_instance;
 };
 
 AvatarCache *AvatarCache::_instance = nullptr;
+
+#ifdef PSI_AVATAR_CACHE_BENCHMARK
+// Optional standalone runtime benchmark. This calls the *real* AvatarCache
+// getMucAvatar() path; only the current per-window memo is modeled as the
+// equivalent QHash<nick,QPixmap> hot lookup. No network requests are made.
+int runAvatarCacheLookupBenchmark()
+{
+    constexpr int samples = 1000;
+    constexpr int passes = 32;
+    constexpr int repetitions = 7;
+
+    auto *cache = AvatarCache::instance();
+    const Jid room(QStringLiteral("avatar-benchmark.invalid"));
+    QImage image(96, 96, QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::blue);
+    QByteArray png;
+    QBuffer buffer(&png);
+    buffer.open(QIODevice::WriteOnly);
+    if (!image.save(&buffer, "PNG")) {
+        qCritical("avatar benchmark: cannot encode fixture PNG");
+        return 1;
+    }
+
+    QHash<QString, QPixmap> local;
+    local.reserve(samples);
+    QStringList positive, negative;
+    for (int i = 0; i < samples; ++i) {
+        const QString nick = QStringLiteral("bench-%1").arg(i);
+        const Jid full = room.withResource(nick);
+        const bool photo = (i % 5) == 0;
+        if (photo && cache->setIcon(AvatarCache::AvatarType, full.full(), png) == AvatarCache::NoData) {
+            qCritical("avatar benchmark: cannot prepare fixture");
+            return 1;
+        }
+        const QPixmap result = cache->getMucAvatar(full); // warm iconset_ / real resolver
+        if (result.isNull() == photo) {
+            qCritical("avatar benchmark: fixture mismatch");
+            return 1;
+        }
+        local.insert(nick, result);
+        (photo ? positive : negative).append(nick);
+    }
+
+    quint64 checksum = 0;
+    const auto measure = [&](const QStringList &nicks, bool localMemo) {
+        QVector<qint64> timings;
+        timings.reserve(repetitions);
+        const auto read = [&](const QString &nick) {
+            if (localMemo) {
+                const auto it = local.constFind(nick);
+                // NativeChatAvatars::avatar() returns QPixmap by value.
+                const QPixmap avatar = it == local.constEnd() ? QPixmap() : it.value();
+                checksum += avatar.isNull() ? 0 : 1;
+            } else {
+                checksum += cache->getMucAvatar(room.withResource(nick)).isNull() ? 0 : 1;
+            }
+        };
+        for (int run = 0; run < repetitions; ++run) {
+            QElapsedTimer timer;
+            timer.start();
+            for (int pass = 0; pass < passes; ++pass)
+                for (const auto &nick : nicks)
+                    read(nick);
+            timings.append(timer.nsecsElapsed());
+        }
+        std::sort(timings.begin(), timings.end());
+        return double(timings.at(repetitions / 2)) / double(passes * nicks.size() * 1000);
+    };
+
+    // Alternate measurement order for each case to reduce thermal/cache bias.
+    for (const auto &group : { positive, negative }) {
+        const double central = measure(group, false);
+        const double memo = measure(group, true);
+        qInfo().noquote() << QStringLiteral(
+            "AVATAR REAL CACHE: Qt %1, %2, %3 JIDs, %4 passes, median of %5, "
+            "microseconds/lookup: AvatarCache::getMucAvatar=%6; "
+            "local QHash<nick,QPixmap>=%7; ratio=%8")
+            .arg(QLatin1String(QT_VERSION_STR))
+            .arg(group.size() == positive.size() ? QStringLiteral("positive (decoded iconset hit)")
+                                                   : QStringLiteral("negative (missing PHOTO)"))
+            .arg(group.size()).arg(passes).arg(repetitions)
+            .arg(central, 0, 'f', 4).arg(memo, 0, 'f', 4)
+            .arg(central / memo, 0, 'f', 2);
+    }
+    qInfo() << "Avatar benchmark checksum:" << checksum;
+    return 0;
+}
+#endif
+
+
+
 
 //------------------------------------------------------------------------------
 // Avatar factory
