@@ -16,11 +16,19 @@ else()
     target_compile_definitions(irisnet PRIVATE IRIS_STATIC IRISNET_STATIC)
 endif()
 
+# Qt cannot look up SRV records on Android, so JDNS is the system resolver there.
 set(IRISNET_USE_JDNS OFF)
 if(ANDROID AND QT_DEFAULT_MAJOR_VERSION GREATER_EQUAL 6)
+    set(IRISNET_USE_JDNS ON)
+endif()
+# RemoteNameProvider resolves through proxies with JDNS wherever it is built.
+set(IRISNET_HAVE_JDNS ${IRIS_ENABLE_JDNS})
+if(IRISNET_USE_JDNS)
+    set(IRISNET_HAVE_JDNS ON)
+endif()
+if(IRISNET_HAVE_JDNS)
     include(IrisJDns)
     iris_configure_jdns()
-    set(IRISNET_USE_JDNS ON)
 endif()
 
 set(IRISNET_CORELIB_HEADERS
@@ -41,6 +49,7 @@ set(IRISNET_NONCORE_HEADERS
     noncore/icecomponent.h
     noncore/icetransport.h
     noncore/processquit.h
+    noncore/remotenameprovider.h
     noncore/stunallocate.h
     noncore/stunbinding.h
     noncore/stunmessage.h
@@ -96,6 +105,7 @@ target_sources(irisnet PRIVATE
     noncore/icelocaltransport.cpp
     noncore/iceturntransport.cpp
     noncore/processquit.cpp
+    noncore/remotenameprovider.cpp
     noncore/stunallocate.cpp
     noncore/stunbinding.cpp
     noncore/stuntransaction.cpp
@@ -107,6 +117,10 @@ target_sources(irisnet PRIVATE
     noncore/cutestuff/bsocket.cpp
 )
 
+if(IRISNET_HAVE_JDNS)
+    target_sources(irisnet PRIVATE corelib/jdnsrecord.cpp corelib/jdnsrecord_p.h)
+    target_compile_definitions(irisnet PRIVATE IRISNET_HAVE_JDNS)
+endif()
 if(IRISNET_USE_JDNS)
     target_sources(irisnet PRIVATE corelib/netnames_jdns.cpp)
     target_compile_definitions(irisnet PRIVATE NEED_JDNS)
@@ -134,7 +148,7 @@ if(IRIS_BUNDLED_QCA)
 endif()
 list(APPEND IRISNET_DEPS ${IRIS_QCA_TARGET})
 
-if(IRISNET_USE_JDNS)
+if(IRISNET_HAVE_JDNS)
     list(APPEND IRISNET_DEPS QJDns::QJDns)
 endif()
 

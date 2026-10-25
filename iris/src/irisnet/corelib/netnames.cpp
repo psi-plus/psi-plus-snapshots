@@ -415,6 +415,11 @@ class NameResolver::Private {
 public:
     NameResolver *q;
 
+    QPointer<NameProvider> provider;                 //!< Set by setNameProvider(), null for the system resolver
+    bool                   customProvider = false;   //!< setNameProvider() was given a provider
+    NameProvider          *lookupProvider = nullptr; //!< Provider of the running lookup, null when idle
+    int                    generation     = 0;       //!< Incremented by every start() and stop()
+
     int  type;
     bool longLived;
     int  id;
@@ -444,11 +449,15 @@ public:
     int              dns_sd_resolve_id; //!< DNS-SD lookup id, set by NameManager
 
     /* configuration */
-    Protocol requestedProtocol; //!< IP protocol requested by user
+    Protocol               requestedProtocol;      //!< IP protocol requested by user
+    QPointer<NameProvider> provider;               //!< Set by setNameProvider(), null for the system resolver
+    bool                   customProvider = false; //!< setNameProvider() was given a provider
+    bool                   resolveTargets = true;  //!< see setResolveTargets()
 
     /* state trackers */
     QString                               domain;   //!< Domain we are currently looking up
     QString                               host;     //!< Hostname we are currently looking up
+    QString                               service;  //!< SRV service the host was found for, if any
     QHostAddress                          address;  //!< IP address we are currently looking up
     quint16                               port;     //!< Port we are currently looking up
     QAbstractSocket::NetworkLayerProtocol protocol; //!< IP protocol we are currently looking up
@@ -456,6 +465,25 @@ public:
     XMPP::WeightedNameRecordList srvList;      //!< List of resolved SRV names
     QList<ServiceBoundRecord>    hostList;     //!< List or resolved hostnames for current SRV name
     QList<XMPP::NameResolver *>  resolverList; //!< NameResolvers currently in use, needed for cleanup
+
+    /*!
+     * Creates a NameResolver bound to the configured provider, or returns
+     * nullptr (and reports ErrorGeneric) if that provider has been destroyed:
+     * lookups must not silently fall back to the system resolver.
+     */
+    XMPP::NameResolver *createResolver()
+    {
+        if (customProvider && !provider) {
+            QMetaObject::invokeMethod(
+                q, [q = q]() { emit q->error(ServiceResolver::ErrorGeneric); }, Qt::QueuedConnection);
+            return nullptr;
+        }
+        auto resolver = new XMPP::NameResolver;
+        if (customProvider)
+            resolver->setNameProvider(provider);
+        resolverList << resolver;
+        return resolver;
+    }
 };
 
 WeightedNameRecordList::WeightedNameRecordList() : currentPriorityGroup(priorityGroups.end()) /* void current state */
@@ -659,10 +687,15 @@ public:
 class NameManager : public QObject {
     Q_OBJECT
 public:
-    NameProvider                       *p_net, *p_local;
-    ServiceProvider                    *p_serv;
-    QHash<int, NameResolver::Private *> res_instances;
-    QHash<int, int>                     res_sub_instances;
+    // Request ids are only unique per provider: application providers set
+    // with NameResolver::setNameProvider() run next to the internet one.
+    using ResolveKey = QPair<NameProvider *, int>;
+
+    NameProvider                              *p_net, *p_local;
+    ServiceProvider                           *p_serv;
+    QHash<ResolveKey, NameResolver::Private *> res_instances;
+    QHash<int, int>                            res_sub_instances; //!< local request id -> internet request id
+    QSet<NameProvider *>                       res_providers;     //!< connected application providers
 
     QHash<int, ServiceBrowser::Private *>        br_instances;
     QHash<int, ServiceResolver::Private *>       sres_instances;
@@ -704,6 +737,58 @@ public:
 
         np->type      = qType;
         np->longLived = longLived;
+        if (np->customProvider && !np->provider) {
+            // The application chose where names may be resolved (e.g. through
+            // a proxy). Never fall back to the system resolver behind its back.
+            failLater(np);
+            return;
+        }
+
+        NameProvider *provider = np->provider;
+        if (provider)
+            watchProvider(provider);
+        else
+            provider = internetProvider();
+
+        np->lookupProvider = provider;
+        np->id             = provider->resolve_start(name, qType, longLived);
+        res_instances.insert(ResolveKey(provider, np->id), np);
+    }
+
+    void resolve_stop(NameResolver::Private *np)
+    {
+        // FIXME: stop sub instances?
+        np->lookupProvider->resolve_stop(np->id);
+        resolve_cleanup(np);
+    }
+
+    void resolve_cleanup(NameResolver::Private *np)
+    {
+        // clean up any sub instances (only the internet provider hands
+        // lookups over to the local one)
+        if (np->lookupProvider == p_net) {
+            QList<int>              sub_instances_to_remove;
+            QHashIterator<int, int> it(res_sub_instances);
+            while (it.hasNext()) {
+                it.next();
+                if (it.value() == np->id)
+                    sub_instances_to_remove += it.key();
+            }
+
+            for (int res_sub_id : std::as_const(sub_instances_to_remove)) {
+                res_sub_instances.remove(res_sub_id);
+                p_local->resolve_stop(res_sub_id);
+            }
+        }
+
+        // clean up primary instance
+
+        res_instances.remove(ResolveKey(np->lookupProvider, np->id));
+        np->lookupProvider = nullptr;
+    }
+
+    NameProvider *internetProvider()
+    {
         if (!p_net) {
             NameProvider            *c    = 0;
             QList<IrisNetProvider *> list = irisNetProviders();
@@ -716,58 +801,73 @@ public:
             Q_ASSERT(c); // we have built-in support, so this should never fail
             p_net = c;
 
-            // use queued connections
-            qRegisterMetaType<QList<XMPP::NameRecord>>("QList<XMPP::NameRecord>");
-            qRegisterMetaType<XMPP::NameResolver::Error>("XMPP::NameResolver::Error");
-            connect(p_net, &NameProvider::resolve_resultsReady, this,
-                    [this](int id, const QList<XMPP::NameRecord> &results) {
-                        NameResolver::Private *np = res_instances.value(id);
-                        NameResolver          *q  = np->q; // resolve_cleanup deletes np
-                        if (!np->longLived)
-                            resolve_cleanup(np);
-                        emit q->resultsReady(results);
-                    });
-            connect(p_net, SIGNAL(resolve_error(int, XMPP::NameResolver::Error)),
-                    SLOT(provider_resolve_error(int, XMPP::NameResolver::Error)));
+            connectProvider(p_net);
             connect(p_net, SIGNAL(resolve_useLocal(int, QByteArray)), SLOT(provider_resolve_useLocal(int, QByteArray)));
         }
-
-        np->id = p_net->resolve_start(name, qType, longLived);
-
-        // printf("assigning %d to %p\n", req_id, np);
-        res_instances.insert(np->id, np);
+        return p_net;
     }
 
-    void resolve_stop(NameResolver::Private *np)
+    void watchProvider(NameProvider *provider)
     {
-        // FIXME: stop sub instances?
-        p_net->resolve_stop(np->id);
-        resolve_cleanup(np);
+        if (res_providers.contains(provider))
+            return;
+        res_providers.insert(provider);
+        connectProvider(provider);
+        connect(provider, &QObject::destroyed, this, [this, provider]() { provider_destroyed(provider); });
     }
 
-    void resolve_cleanup(NameResolver::Private *np)
+    void connectProvider(NameProvider *provider)
     {
-        // clean up any sub instances
+        qRegisterMetaType<QList<XMPP::NameRecord>>("QList<XMPP::NameRecord>");
+        qRegisterMetaType<XMPP::NameResolver::Error>("XMPP::NameResolver::Error");
+        connect(provider, &NameProvider::resolve_resultsReady, this,
+                [this, provider](int id, const QList<XMPP::NameRecord> &results) {
+                    NameResolver::Private *np = res_instances.value(ResolveKey(provider, id));
+                    if (!np)
+                        return;
+                    NameResolver *q = np->q; // the receiver may delete the resolver
+                    if (!np->longLived)
+                        resolve_cleanup(np);
+                    emit q->resultsReady(results);
+                });
+        connect(provider, &NameProvider::resolve_error, this, [this, provider](int id, XMPP::NameResolver::Error e) {
+            NameResolver::Private *np = res_instances.value(ResolveKey(provider, id));
+            if (!np)
+                return;
+            NameResolver *q = np->q; // the receiver may delete the resolver
+            resolve_cleanup(np);
+            emit q->error(e);
+        });
+    }
 
-        QList<int>              sub_instances_to_remove;
-        QHashIterator<int, int> it(res_sub_instances);
-        while (it.hasNext()) {
-            it.next();
-            if (it.value() == np->id)
-                sub_instances_to_remove += it.key();
+    void provider_destroyed(NameProvider *provider)
+    {
+        res_providers.remove(provider);
+
+        // Lookups of a deleted provider can never finish.
+        QList<NameResolver::Private *> orphans;
+        for (auto it = res_instances.cbegin(); it != res_instances.cend(); ++it) {
+            if (it.key().first == provider)
+                orphans += it.value();
         }
-
-        for (int res_sub_id : std::as_const(sub_instances_to_remove)) {
-            res_sub_instances.remove(res_sub_id);
-            p_local->resolve_stop(res_sub_id);
+        for (NameResolver::Private *np : std::as_const(orphans)) {
+            resolve_cleanup(np);
+            failLater(np);
         }
+    }
 
-        // clean up primary instance
-
-        res_instances.remove(np->id);
-        NameResolver *q = np->q;
-        delete q->d;
-        q->d = nullptr;
+    // Reports ErrorGeneric unless the resolver is stopped or restarted first.
+    static void failLater(NameResolver::Private *np)
+    {
+        NameResolver *q          = np->q;
+        const int     generation = np->generation;
+        QMetaObject::invokeMethod(
+            q,
+            [q, generation]() {
+                if (q->d->generation == generation)
+                    emit q->error(NameResolver::ErrorGeneric);
+            },
+            Qt::QueuedConnection);
     }
 
     void browse_start(ServiceBrowser::Private *np, const QString &type, const QString &domain)
@@ -878,19 +978,11 @@ public:
 
 private slots:
 
-    void provider_resolve_error(int id, XMPP::NameResolver::Error e)
-    {
-        NameResolver::Private *np = res_instances.value(id);
-        NameResolver          *q  = np->q; // resolve_cleanup deletes np
-        resolve_cleanup(np);
-        emit q->error(e);
-    }
-
     void provider_local_resolve_resultsReady(int id, const QList<XMPP::NameRecord> &results)
     {
         int                    par_id = res_sub_instances.value(id);
-        NameResolver::Private *np     = res_instances.value(par_id);
-        if (!np->longLived)
+        NameResolver::Private *np     = res_instances.value(ResolveKey(p_net, par_id));
+        if (np && !np->longLived)
             res_sub_instances.remove(id);
         p_net->resolve_localResultsReady(par_id, results);
     }
@@ -927,7 +1019,9 @@ private slots:
                     SLOT(provider_local_resolve_error(int, XMPP::NameResolver::Error)), Qt::QueuedConnection);
         }
 
-        NameResolver::Private *np = res_instances.value(id);
+        NameResolver::Private *np = res_instances.value(ResolveKey(p_net, id));
+        if (!np)
+            return;
 
         /*// transfer to local only
         if(np->longLived)
@@ -1028,14 +1122,24 @@ static int recordType2Rtype(NameRecord::Type type)
     return -1;
 }
 
-NameResolver::NameResolver(QObject *parent) : QObject(parent) { d = nullptr; }
+NameResolver::NameResolver(QObject *parent) : QObject(parent) { d = new Private(this); }
 
-NameResolver::~NameResolver() { stop(); }
+NameResolver::~NameResolver()
+{
+    stop();
+    delete d;
+}
+
+void NameResolver::setNameProvider(NameProvider *provider)
+{
+    d->provider       = provider;
+    d->customProvider = provider != nullptr;
+}
 
 void NameResolver::start(const QByteArray &name, NameRecord::Type type, Mode mode)
 {
     stop();
-    d         = new Private(this);
+    ++d->generation;
     int qType = recordType2Rtype(type);
     if (qType == -1)
         qType = JDNS_RTYPE_A;
@@ -1044,11 +1148,9 @@ void NameResolver::start(const QByteArray &name, NameRecord::Type type, Mode mod
 
 void NameResolver::stop()
 {
-    if (d) {
+    ++d->generation;
+    if (d->lookupProvider)
         NameManager::instance()->resolve_stop(d);
-        delete d;
-        d = nullptr;
-    }
 }
 
 QDebug operator<<(QDebug dbg, XMPP::NameResolver::Error e)
@@ -1134,6 +1236,14 @@ ServiceResolver::Protocol ServiceResolver::protocol() const { return d->requeste
 
 void ServiceResolver::setProtocol(ServiceResolver::Protocol p) { d->requestedProtocol = p; }
 
+void ServiceResolver::setNameProvider(NameProvider *provider)
+{
+    d->provider       = provider;
+    d->customProvider = provider != nullptr;
+}
+
+void ServiceResolver::setResolveTargets(bool resolve) { d->resolveTargets = resolve; }
+
 /* DNS-SD lookup */
 void ServiceResolver::start(const QByteArray &name) { NameManager::instance()->resolve_instance_start(d, name); }
 
@@ -1149,19 +1259,21 @@ void ServiceResolver::start(const QString &host, quint16 port, const QString &se
                                                                                      : QAbstractSocket::IPv4Protocol);
     d->host     = host;
     d->port     = port;
+    d->service  = service;
 
     NNLOG(NNDEBUG << "d->p:" << d->protocol);
 
     /* initiate the host lookup */
     XMPP::NameRecord::Type querytype
         = (d->protocol == QAbstractSocket::IPv6Protocol ? XMPP::NameRecord::Aaaa : XMPP::NameRecord::A);
-    XMPP::NameResolver *resolver = new XMPP::NameResolver;
+    XMPP::NameResolver *resolver = d->createResolver();
+    if (!resolver)
+        return;
     connect(resolver, &XMPP::NameResolver::resultsReady, this,
             [this, service](const QList<XMPP::NameRecord> records) { handle_host_ready(service, records); });
     connect(resolver, SIGNAL(error(XMPP::NameResolver::Error)), this,
             SLOT(handle_host_error(XMPP::NameResolver::Error)));
     resolver->start(host.toLocal8Bit(), querytype);
-    d->resolverList << resolver;
 }
 
 /* SRV lookup */
@@ -1214,7 +1326,9 @@ void ServiceResolver::start(const QStringList &services, const QString &transpor
         QString srv_request("_" + service + "._" + transport + "." + domain + ".");
 
         /* initiate the SRV lookup */
-        auto resolver = new XMPP::NameResolver;
+        auto resolver = d->createResolver();
+        if (!resolver)
+            return;
         connect(resolver, &XMPP::NameResolver::resultsReady, this,
                 [this, resolver, stats, service](const QList<XMPP::NameRecord> &r) {
                     NNLOG(NNDEBUG << "sl:" << r);
@@ -1232,7 +1346,6 @@ void ServiceResolver::start(const QStringList &services, const QString &transpor
             cleanup_resolver(resolver);
         });
         resolver->start(srv_request.toLocal8Bit(), XMPP::NameRecord::Srv);
-        d->resolverList << resolver;
     }
 }
 
@@ -1303,13 +1416,15 @@ bool ServiceResolver::lookup_host_fallback()
     /* initiate the fallback host lookup */
     XMPP::NameRecord::Type querytype
         = (d->protocol == QAbstractSocket::IPv6Protocol ? XMPP::NameRecord::Aaaa : XMPP::NameRecord::A);
-    XMPP::NameResolver *resolver = new XMPP::NameResolver;
-    connect(resolver, SIGNAL(resultsReady(QList<XMPP::NameRecord>)), this,
-            SLOT(handle_host_ready(QList<XMPP::NameRecord>)));
+    XMPP::NameResolver *resolver = d->createResolver();
+    if (!resolver)
+        return true; // the failure is reported asynchronously
+    connect(
+        resolver, &XMPP::NameResolver::resultsReady, this,
+        [this, service = d->service](const QList<XMPP::NameRecord> &records) { handle_host_ready(service, records); });
     connect(resolver, SIGNAL(error(XMPP::NameResolver::Error)), this,
             SLOT(handle_host_fallback_error(XMPP::NameResolver::Error)));
     resolver->start(d->host.toLocal8Bit(), querytype);
-    d->resolverList << resolver;
 
     return true;
 }
@@ -1338,7 +1453,14 @@ void ServiceResolver::try_next_srv()
 
     /* if there are still hosts we did not try */
     auto record = d->srvList.takeNext();
-    if (!record.record.isNull()) {
+    if (!record.record.isNull() && !d->resolveTargets) {
+        /* the caller resolves the target, e.g. a proxy; "." means no service there (RFC 2782) */
+        if (record.record.name().isEmpty() || record.record.name() == ".")
+            try_next_srv();
+        else
+            emit resultReady(QHostAddress(), quint16(record.record.port()), QString::fromLatin1(record.record.name()),
+                             record.service);
+    } else if (!record.record.isNull()) {
         /* lookup host by name and specify port for later use */
         start(record.record.name(), quint16(record.record.port()), record.service);
     } else {
@@ -1350,6 +1472,12 @@ void ServiceResolver::try_next_srv()
 
 void ServiceResolver::tryNext()
 {
+    /* without address lookups every result is an SRV target */
+    if (!d->resolveTargets) {
+        try_next_srv();
+        return;
+    }
+
     /* if the host list cannot help, try the SRV list */
     if (!try_next_host()) {
         try_next_srv();
@@ -1366,18 +1494,22 @@ ServiceResolver::ProtoSplit ServiceResolver::happySplit()
     ProtoSplit s;
     s.ipv4 = new ServiceResolver(this);
     s.ipv4->setProtocol(IPv4);
-    s.ipv4->d->srvList  = d->srvList;
-    s.ipv4->d->hostList = d->hostList;
-    s.ipv4->d->domain   = d->domain;
-    s.ipv4->d->host     = d->host;
-    s.ipv4->d->port     = d->port;
-    s.ipv6              = new ServiceResolver(this);
+    s.ipv4->d->provider       = d->provider;
+    s.ipv4->d->customProvider = d->customProvider;
+    s.ipv4->d->srvList        = d->srvList;
+    s.ipv4->d->hostList       = d->hostList;
+    s.ipv4->d->domain         = d->domain;
+    s.ipv4->d->host           = d->host;
+    s.ipv4->d->port           = d->port;
+    s.ipv6                    = new ServiceResolver(this);
     s.ipv6->setProtocol(IPv6);
-    s.ipv6->d->srvList  = d->srvList;
-    s.ipv6->d->hostList = d->hostList;
-    s.ipv6->d->domain   = d->domain;
-    s.ipv4->d->host     = d->host;
-    s.ipv4->d->port     = d->port;
+    s.ipv6->d->provider       = d->provider;
+    s.ipv6->d->customProvider = d->customProvider;
+    s.ipv6->d->srvList        = d->srvList;
+    s.ipv6->d->hostList       = d->hostList;
+    s.ipv6->d->domain         = d->domain;
+    s.ipv6->d->host           = d->host;
+    s.ipv6->d->port           = d->port;
     return s;
 }
 

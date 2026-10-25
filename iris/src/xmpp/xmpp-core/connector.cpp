@@ -31,6 +31,8 @@
 #include "bsocket.h"
 #include "httpconnect.h"
 #include "httppoll.h"
+#include "netnames.h"
+#include "remotenameprovider.h"
 #include "socks.h"
 #include "xmpp.h"
 
@@ -161,6 +163,14 @@ public:
     bool    opt_directtls = false; //!< Whether to use direct TLS support
     bool    opt_srvtls    = true;  //!< Whether to lookup tls port from SRV
     Proxy   proxy;                 //!< Proxy configuration
+    QUrl    remoteDns;             //!< DNS server queried through the proxy, see setRemoteDns()
+
+    /* Server discovery through the proxy, see resolveThroughProxy() */
+    RemoteNameProvider *dnsProvider = nullptr;
+    ServiceResolver    *resolver    = nullptr;
+    QString             service;              //!< SRV service of the address being tried
+    QString             targetHost;           //!< SRV target (or the domain) of that address
+    int                 lastTargetError = -1; //!< Proxy error of the last address that failed
 
     /* State tracking values */
     Mode    mode;          //!< Idle, Connecting, Connected
@@ -180,6 +190,7 @@ AdvancedConnector::~AdvancedConnector() { cleanup(); }
 void AdvancedConnector::cleanup()
 {
     d->mode = Idle;
+    releaseResolver();
 
     // destroy the bytestream, if there is one
     delete d->bs;
@@ -194,6 +205,133 @@ void AdvancedConnector::setProxy(const Proxy &proxy)
     if (d->mode != Idle)
         return;
     d->proxy = proxy;
+}
+
+void AdvancedConnector::setRemoteDns(const QUrl &server)
+{
+    if (d->mode != Idle)
+        return;
+    d->remoteDns = server;
+}
+
+void AdvancedConnector::releaseResolver()
+{
+    // Called from resolver and stream signals: defer the deletion. Stopping
+    // the resolver first ensures no lookup outlives its name provider.
+    if (d->resolver) {
+        d->resolver->stop();
+        d->resolver->disconnect(this);
+        d->resolver->deleteLater();
+        d->resolver = nullptr;
+    }
+    if (d->dnsProvider) {
+        d->dnsProvider->deleteLater(); // closes the connection to the DNS server
+        d->dnsProvider = nullptr;
+    }
+    d->service.clear();
+    d->targetHost.clear();
+    d->lastTargetError = -1;
+}
+
+/*
+   Discover the server like a direct connection does - SRV records, their
+   targets, finally the domain itself - and connect through the proxy to every
+   candidate in turn. By default only the SRV records are looked up here, and
+   the proxy resolves the targets. With remote DNS a DNS server reached through
+   the proxy looks up the SRV records and the target addresses; should that
+   find nothing, the proxy is given the domain. Other proxy users of netnames
+   get the same behaviour from ServiceResolver::setNameProvider() and
+   ServiceResolver::setResolveTargets().
+*/
+void AdvancedConnector::resolveThroughProxy()
+{
+    QStringList services;
+    if (!d->opt_directtls && d->opt_srvtls)
+        services << XMPP_CLIENT_TLS_SRV;
+    services << XMPP_CLIENT_SRV;
+    if (d->opt_directtls)
+        d->port = XMPP_LEGACY_PORT;
+
+    d->resolver = new ServiceResolver(this);
+    if (!d->remoteDns.isEmpty() && RemoteNameProvider::isSupported()) {
+        d->dnsProvider = new RemoteNameProvider(d->remoteDns, d->proxy, this);
+        d->resolver->setNameProvider(d->dnsProvider);
+        // The proxy makes the connections, so the local network's IPv6 support is
+        // irrelevant. IPv4 is what proxies reach most reliably; IPv6 comes next.
+        d->resolver->setProtocol(ServiceResolver::IPv4_IPv6);
+    } else {
+        d->resolver->setResolveTargets(false);
+    }
+
+    connect(d->resolver, &ServiceResolver::resultReady, this,
+            [this](const QHostAddress &address, quint16 port, const QString &hostname, const QString &service) {
+                d->service    = service;
+                d->targetHost = hostname;
+                connectThroughProxy(address.isNull() ? hostname : address.toString(), port);
+            });
+    connect(d->resolver, &ServiceResolver::error, this, [this](ServiceResolver::Error) {
+        if (d->dnsProvider) {
+            const int dnsError = d->dnsProvider->connectionError();
+            if (dnsError != SocksClient::ErrProxyConnect && dnsError != SocksClient::ErrProxyAuth) {
+                // Nothing the DNS server found was reachable: as a last resort
+                // the proxy resolves the domain, as it does without SRV.
+                releaseResolver();
+                connectThroughProxy(d->host, quint16(d->port));
+                return;
+            }
+        }
+        // Report why the last address failed through the proxy. Without any,
+        // the DNS server was not reachable, possibly because of the proxy.
+        int err = ErrHostNotFound;
+        if (d->lastTargetError >= 0) {
+            err = d->lastTargetError;
+        } else {
+            switch (d->dnsProvider ? d->dnsProvider->connectionError() : ByteStream::ErrOk) {
+            case SocksClient::ErrProxyConnect:
+                err = ErrProxyConnect;
+                break;
+            case SocksClient::ErrProxyNeg:
+                err = ErrProxyNeg;
+                break;
+            case SocksClient::ErrProxyAuth:
+                err = ErrProxyAuth;
+                break;
+            default:
+                break;
+            }
+        }
+        cleanup();
+        d->errorCode = err;
+        emit error();
+    });
+    d->resolver->start(services, XMPP_CLIENT_TRANSPORT, d->host, quint16(d->port));
+}
+
+void AdvancedConnector::connectThroughProxy(const QString &host, quint16 port)
+{
+    if (d->proxy.type() == Proxy::HttpConnect) {
+        HttpConnect *s = new HttpConnect;
+        d->bs          = s;
+
+        connect(s, SIGNAL(connected()), SLOT(bs_connected()));
+        connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
+
+        if (!d->proxy.user().isEmpty())
+            s->setAuth(d->proxy.user(), d->proxy.pass());
+
+        s->connectToHost(d->proxy.host(), d->proxy.port(), host, port);
+    } else {
+        SocksClient *s = new SocksClient;
+        d->bs          = s;
+
+        connect(s, SIGNAL(connected()), SLOT(bs_connected()));
+        connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
+
+        if (!d->proxy.user().isEmpty())
+            s->setAuth(d->proxy.user(), d->proxy.pass());
+
+        s->connectToHost(d->proxy.host(), d->proxy.port(), host, port);
+    }
 }
 
 void AdvancedConnector::setOptHostPort(const QString &_host, quint16 _port)
@@ -274,38 +412,17 @@ void AdvancedConnector::connectToServer(const QString &server)
             s->connectToUrl(d->proxy.url());
         else
             s->connectToHost(d->proxy.host(), d->proxy.port(), d->proxy.url());
-    } else if (d->proxy.type() == Proxy::HttpConnect) {
-        HttpConnect *s = new HttpConnect;
-        d->bs          = s;
-
-        connect(s, SIGNAL(connected()), SLOT(bs_connected()));
-        connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
-
+    } else if (d->proxy.type() == Proxy::HttpConnect || d->proxy.type() == Proxy::Socks) {
         if (!d->opt_host.isEmpty()) {
+            // an explicit host is handed to the proxy, which resolves it
             d->host = d->opt_host;
             d->port = d->opt_port;
+        } else if (QHostAddress(d->host).isNull()) {
+            resolveThroughProxy();
+            return;
         }
-
-        if (!d->proxy.user().isEmpty())
-            s->setAuth(d->proxy.user(), d->proxy.pass());
-
-        s->connectToHost(d->proxy.host(), d->proxy.port(), d->host, d->port);
-    } else if (d->proxy.type() == Proxy::Socks) {
-        SocksClient *s = new SocksClient;
-        d->bs          = s;
-
-        connect(s, SIGNAL(connected()), SLOT(bs_connected()));
-        connect(s, SIGNAL(error(int)), SLOT(bs_error(int)));
-
-        if (!d->opt_host.isEmpty()) {
-            d->host = d->opt_host;
-            d->port = d->opt_port;
-        }
-
-        if (!d->proxy.user().isEmpty())
-            s->setAuth(d->proxy.user(), d->proxy.pass());
-
-        s->connectToHost(d->proxy.host(), d->proxy.port(), d->host, d->port);
+        // an explicit host or an address: no SRV lookup
+        connectThroughProxy(d->host, quint16(d->port));
     } else {
         BSocket *s = new BSocket;
         d->bs      = s;
@@ -380,6 +497,14 @@ void AdvancedConnector::bs_connected()
     if (auto bs = qobject_cast<BSocket *>(d->bs); bs && !bs->host().isEmpty()) {
         d->host = bs->host();
     }
+    if (d->resolver) {
+        // connected to an address found through the proxy
+        if (!useSSL())
+            setUseSSL(d->service == QLatin1String(XMPP_CLIENT_TLS_SRV));
+        if (!d->targetHost.isEmpty())
+            d->host = d->targetHost;
+        releaseResolver();
+    }
     d->mode = Connected;
     emit connected();
 }
@@ -399,6 +524,22 @@ void AdvancedConnector::bs_error(int x)
     bool proxyError = false;
     int  err        = ErrConnectionRefused;
     int  t          = d->proxy.type();
+
+    // An address found through the proxy's DNS failed: unless the proxy itself
+    // is unreachable or rejects us, try the next address.
+    if (d->resolver && x != SocksClient::ErrProxyConnect && x != SocksClient::ErrProxyAuth) {
+        if (x == SocksClient::ErrConnectionRefused)
+            d->lastTargetError = ErrConnectionRefused;
+        else if (x == SocksClient::ErrHostNotFound)
+            d->lastTargetError = ErrHostNotFound;
+        else
+            d->lastTargetError = ErrProxyNeg;
+        d->bs->disconnect(this);
+        d->bs->deleteLater(); // we are in its error signal
+        d->bs = nullptr;
+        d->resolver->tryNext();
+        return;
+    }
 
 #ifdef XMPP_DEBUG
     qDebug("bse1");

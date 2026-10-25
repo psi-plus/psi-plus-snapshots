@@ -137,6 +137,19 @@ public:
     };
 
     void setProxy(const Proxy &proxy);
+    /*!
+       Look up the server with a DNS server reached through a SOCKS5 or HTTP CONNECT proxy.
+
+       Behind such a proxy the connector tries the SRV targets of the domain through the proxy in turn, then the
+       domain itself. By default only the SRV records are looked up, with the system resolver, and the proxy
+       resolves the targets. With \a server, a DNS server reached through the proxy (see XMPP::RemoteNameProvider,
+       e.g. "https://cloudflare-dns.com/dns-query" or "tcp://1.1.1.1"), looks up the SRV records and the addresses
+       of their targets, so no DNS query leaves the local host and none is retried with the system resolver.
+       Should it find nothing reachable, the proxy is given the domain. An empty URL restores the default. Ignored
+       without such a proxy, with an explicit host (setOptHostPort()) or when Iris was built without JDNS (see
+       XMPP::RemoteNameProvider::isSupported()).
+    */
+    void setRemoteDns(const QUrl &server);
     void setOptSSL(bool);
     void setOptTlsSrv(bool);
 
@@ -169,6 +182,9 @@ private:
     std::unique_ptr<Private> d;
 
     void cleanup();
+    void releaseResolver();
+    void resolveThroughProxy();
+    void connectThroughProxy(const QString &host, quint16 port);
 };
 
 class IRIS_EXPORT TLSHandler : public QObject {

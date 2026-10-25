@@ -22,6 +22,7 @@
 #include "bsocket.h"
 
 #include <QByteArray>
+#include <QHostAddress>
 #include <QStringList>
 #include <QtCrypto>
 
@@ -193,9 +194,13 @@ void HttpConnect::sock_connected()
     d->inHeader = true;
     d->headerLines.clear();
 
-    // connected, now send the request
+    // connected, now send the request. The target is an authority, so an
+    // IPv6 literal needs brackets (RFC 9110 9.3.6, RFC 3986 3.2.2).
+    QString target = d->real_host;
+    if (QHostAddress(target).protocol() == QAbstractSocket::IPv6Protocol)
+        target = '[' + target + ']';
     QString s;
-    s += QString("CONNECT ") + d->real_host + ':' + QString::number(d->real_port) + " HTTP/1.0\r\n";
+    s += QString("CONNECT ") + target + ':' + QString::number(d->real_port) + " HTTP/1.0\r\n";
     if (!d->user.isEmpty()) {
         QString str = d->user + ':' + d->pass;
         s += QString("Proxy-Authorization: Basic ") + QCA::Base64().encodeString(str) + "\r\n";

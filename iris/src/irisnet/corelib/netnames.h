@@ -34,6 +34,7 @@
 
 namespace XMPP {
 class NameManager;
+class NameProvider;
 
 class IRISNET_EXPORT NetNames {
 public:
@@ -448,6 +449,17 @@ public:
     ~NameResolver();
 
     /**
+       \brief Resolves through \a provider instead of the system resolver
+
+       Lookups started afterwards are sent to \a provider, for example a RemoteNameProvider that asks a DNS server
+       reached through a proxy.  The resolver does not take ownership.  If \a provider is destroyed, lookups fail with
+       ErrorGeneric instead of falling back to the system resolver.  Pass nullptr to use the system resolver again.
+
+       \sa ServiceResolver::setNameProvider
+    */
+    void setNameProvider(NameProvider *provider);
+
+    /**
        \brief Starts a lookup
 
        A lookup for \a name of \a type is started.  For normal queries, \a mode should be NameResolver::Single (this is
@@ -619,6 +631,21 @@ public:
 
     Protocol protocol() const;      //!< IP protocol to use, defaults to IPv6_IPv4
     void     setProtocol(Protocol); //!< Set IP protocol to use, \sa protocol
+
+    /*!
+     * Resolve SRV, A and AAAA records through \a provider instead of the system resolver, for example a
+     * RemoteNameProvider that asks a DNS server reached through a proxy. The resolver does not take ownership.
+     * If \a provider is destroyed, lookups fail instead of falling back to the system resolver. Pass nullptr to
+     * use the system resolver again. \sa NameResolver::setNameProvider
+     */
+    void setNameProvider(NameProvider *provider);
+
+    /*!
+     * Whether the addresses of SRV targets are looked up, which is the default. Without it, an SRV lookup
+     * (start() with services) reports every target and finally the domain itself by name, with a null address,
+     * for a proxy that resolves names itself.
+     */
+    void setResolveTargets(bool resolve);
 
     /*!
      * Start a DNS-SD lookup
