@@ -1,4 +1,9 @@
 {
+  "jdns": {
+    "tag": "v3.0.0",
+    "commit": "52776273f9ee934c31a6fd10df896c6474d01b6f",
+    "minimum_version": "3.0.0"
+  },
   "qca": {
     "tag": "v3.0.12",
     "commit": "96c88f9ee127d206691ff688e68676c022f505f8",

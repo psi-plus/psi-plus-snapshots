@@ -30,4 +30,28 @@ When called from the Psi repository, after initializing its Iris submodule, use 
 
 Package builds should check out their chosen Iris source SHA **before** calling the action, so releases built from older source tags retain the dependency revision belonging to that tag.
 
+## JDNS
+
+`jdns.commit` pins the bundled JDNS source; `jdns.minimum_version` is the QJDns
+API baseline (3.0.0). `jdns.tag` is null for an unreleased development commit.
+After the JDNS release is merged and tagged, update the commit and tag together;
+do not use a moving branch or a tag that has not been published. Source builds
+always use the exact commit unless an explicit `IRIS_JDNS_GIT_TAG` override is
+provided. Old cached defaults advance with the lock; explicit overrides remain.
+
+When JDNS is enabled (`IRIS_ENABLE_JDNS`, or the Android platform resolver),
+`IRIS_SYSTEM_JDNS` selects its provider:
+
+- `AUTO` (default): use an installed QJDns >= 3.0.0 with the same Qt major, or
+  build the locked source if no compatible package is available.
+- `ON`: require a compatible installed package; report a configuration error
+  instead of silently building another provider.
+- `OFF`: build the bundled source, statically with PIC and without installation
+  rules leaking into the Iris SDK.
+
+The installed QJDns package exports its Qt major. A pre-existing incompatible
+target is an error, because replacing a target already used by another part of
+the build would be unsafe. For local development, CMake's standard
+`FETCHCONTENT_SOURCE_DIR_IRIS_JDNS` override can select a JDNS checkout.
+
 Do not duplicate `gh release download` or QCA pin constants in individual workflows. `tests/workflows/test_qca_dependency_lock.py` enforces this convention.

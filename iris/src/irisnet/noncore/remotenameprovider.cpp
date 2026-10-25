@@ -348,17 +348,8 @@ private:
         dnsTransport->setTimeout(RequestTimeout);
         connect(dnsTransport, &QJDnsExternalTransport::queryRequested, this, &Private::onQueryRequested);
         connect(dnsTransport, &QJDnsExternalTransport::requestCancelled, this, &Private::onRequestCancelled);
-        dns = new QJDns(this);
-        if (!dns->setQueryTransport(dnsTransport)) {
-            delete dnsTransport;
-            dnsTransport = nullptr;
-            delete dns;
-            dns = nullptr;
-            return;
-        }
-        if (!dns->init(QJDns::Unicast)) {
-            delete dns; // and the transport
-            dns          = nullptr;
+        dns = QJDns::create(dnsTransport, this); // owns the transport even on failure
+        if (!dns) {
             dnsTransport = nullptr;
             return;
         }
