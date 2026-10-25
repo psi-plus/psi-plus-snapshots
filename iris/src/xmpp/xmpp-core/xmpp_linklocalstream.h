@@ -43,6 +43,7 @@ public:
 
     Jid                     localJid() const;
     Jid                     peerJid() const;
+    bool                    isConnected() const;
     QDomDocument           &doc() const override;
     QString                 baseNS() const override;
     bool                    old() const override;

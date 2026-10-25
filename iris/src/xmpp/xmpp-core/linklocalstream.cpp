@@ -275,6 +275,7 @@ LinkLocalStream::LinkLocalStream(QIODevice *transport, const Jid &local, const J
 LinkLocalStream::~LinkLocalStream() { delete d; }
 Jid           LinkLocalStream::localJid() const { return d->local; }
 Jid           LinkLocalStream::peerJid() const { return d->peer; }
+bool          LinkLocalStream::isConnected() const { return d->ready && !d->closing && !d->closed; }
 QDomDocument &LinkLocalStream::doc() const { return d->document; }
 QString       LinkLocalStream::baseNS() const { return ClientNs; }
 bool          LinkLocalStream::old() const { return d->headerReceived && !d->versionOne; }

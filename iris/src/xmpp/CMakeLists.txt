@@ -114,6 +114,7 @@ set(XMPP_IM_HEADERS
     xmpp-im/xmpp_bitsofbinary.h
     xmpp-im/xmpp_bytestream.h
     xmpp-im/xmpp_client.h
+    xmpp-im/xmpp_linklocalservice.h
     xmpp-im/xmpp_discoinfotask.h
     xmpp-im/xmpp_ibb.h
     xmpp-im/xmpp_mamtask.h
@@ -343,6 +344,13 @@ if(WIN32)
 endif()
 
 target_compile_definitions(iris PUBLIC QSTRINGPREP_BUILDING)
+target_sources(iris PRIVATE xmpp-im/linklocalservice.cpp)
+if(IRIS_ENABLE_JDNS OR ANDROID OR IRIS_BUILD_LINKLOCAL_EXAMPLE)
+    include(IrisJDns)
+    iris_configure_jdns()
+    target_compile_definitions(iris PRIVATE IRIS_HAVE_LINKLOCAL)
+    target_link_libraries(iris PRIVATE "$<BUILD_INTERFACE:QJDns::QJDns>")
+endif()
 
 target_include_directories(iris
     PRIVATE

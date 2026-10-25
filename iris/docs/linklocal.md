@@ -80,3 +80,34 @@ prevents third-party stanza addressing but does not authenticate a peer. A peer
 requiring STARTTLS is rejected before messages are sent. Production integration
 needs an explicit security policy and TLS/authentication support; this example
 does not advertise unsupported features or downgrade a required TLS stream.
+
+## Reusable account transport
+
+`LinkLocalService` combines interface-scoped discovery, DNS-SD presence and peer
+TCP streams into a `Stream` for one local account. It reuses `QJDnsMulticast` and
+`LinkLocalStream`; the GUI need not implement DNS records, peer lookup or framing.
+Connect signals before calling `start()`, and explicitly opt into the current
+unauthenticated/plaintext transport at the application level.
+
+```cpp
+XMPP::Client client;
+auto *service = new XMPP::LinkLocalService(&client);
+client.connectToStream(service, XMPP::Jid("alice@laptop"));
+connect(service, &XMPP::LinkLocalService::online, &client, [&client] {
+    client.setPresence(XMPP::Status(XMPP::Status::Online));
+});
+service->start(XMPP::Jid("alice@laptop"), selectedLocalAddress, "Alice");
+```
+
+`Client::connectToStream()` attaches an externally owned non-server transport and
+retains the normal message/IQ tasks and encryption/plugin hooks. It does not log in,
+request a roster or bind a server resource. The service's `peerChanged()` signals
+update Client's local roster and presence; `setPresence()` updates TXT instead of
+sending XML presence. Peer failures use `peerError()` and do not disconnect the
+whole account. `close()` withdraws records and completes the XML close handshakes.
+The service bounds connections, pending stanzas, received stanzas and input bytes.
+
+JDNS is enabled by `IRIS_ENABLE_JDNS`, Android, or the link-local example option.
+Without it the API remains linkable, `isSupported()` is false, and `start()` reports
+a deferred error. One explicit local address is used per service; TLS/SASL and
+multi-link aggregation are outside this API's current implementation.

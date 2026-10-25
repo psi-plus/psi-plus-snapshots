@@ -3,3 +3,8 @@ add_executable(linklocal_stream_test stream.cpp)
 target_link_libraries(linklocal_stream_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Test)
 add_test(NAME linklocal_stream COMMAND linklocal_stream_test)
 set_tests_properties(linklocal_stream PROPERTIES TIMEOUT 30)
+
+add_executable(linklocal_service_test service.cpp)
+target_link_libraries(linklocal_service_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Test)
+add_test(NAME linklocal_service COMMAND linklocal_service_test)
+set_tests_properties(linklocal_service PROPERTIES TIMEOUT 80)

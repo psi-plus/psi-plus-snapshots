@@ -85,6 +85,7 @@
 #include "xmpp_externalservicediscovery.h"
 #include "xmpp_hash.h"
 #include "xmpp_ibb.h"
+#include "xmpp_linklocalservice.h"
 #include "xmpp_pubsub.h"
 #include "xmpp_serverinfomanager.h"
 #include "xmpp_tasks.h"
@@ -120,9 +121,10 @@ class Client::ClientPrivate {
 public:
     ClientPrivate() { }
 
-    QPointer<ClientStream>  stream;
+    QPointer<Stream>        stream;
     QDomDocument            doc;
     Task                   *root = nullptr;
+    QList<QPointer<Task>>   sessionTasks;
     QNetworkAccessManager  *qnam = nullptr;
     QString                 host, user, pass, resource;
     QString                 osName, osVersion, tzname, clientName, clientVersion;
@@ -236,11 +238,46 @@ void Client::connectToServer(ClientStream *s, const Jid &j, bool auth)
     connect(d->stream, SIGNAL(outgoingXml(QString)), SLOT(streamOutgoingXml(QString)));
     connect(d->stream, SIGNAL(haveUnhandledFeatures()), SLOT(parseUnhandledStreamFeatures()));
 
-    d->stream->connectToServer(j, auth);
+    s->connectToServer(j, auth);
+}
+
+void Client::connectToStream(Stream *stream, const Jid &identity)
+{
+    if (!stream || !identity.isValid())
+        return;
+    if (d->stream)
+        close(true);
+    d->roster.clear();
+    d->stream = stream;
+    connect(stream, &Stream::readyRead, this, &Client::streamReadyRead);
+    connect(stream, &Stream::error, this, &Client::streamError);
+    connect(stream, &Stream::connectionClosed, this, [this] { close(true); });
+    start(identity.domain(), identity.node(), QString(), identity.resource());
+    if (auto *local = qobject_cast<LinkLocalService *>(stream)) {
+        connect(local, &LinkLocalService::identityChanged, this, [this](const Jid &jid) {
+            d->host = jid.domain();
+            d->user = jid.node();
+        });
+        connect(local, &LinkLocalService::peerChanged, this,
+                [this](const Jid &jid, const QString &name, const Status &status) {
+                    RosterItem item;
+                    item.setJid(jid);
+                    item.setName(name);
+                    item.setSubscription(Subscription(Subscription::Both));
+                    importRosterItem(item);
+                    ppPresence(jid, status);
+                });
+    }
 }
 
 void Client::start(const QString &host, const QString &user, const QString &pass, const QString &_resource)
 {
+    // Only the handlers installed by start() belong to this session. Managers
+    // and plugin tasks attached to rootTask() retain their normal lifetime.
+    for (const auto &task : d->sessionTasks)
+        delete task.data();
+    d->sessionTasks.clear();
+    d->resourceList.clear();
     // TODO
     d->host     = host;
     d->user     = user;
@@ -252,19 +289,22 @@ void Client::start(const QString &host, const QString &user, const QString &pass
     d->resourceList += Resource(resource(), stat);
 
     JT_PushPresence *pp = new JT_PushPresence(rootTask());
+    d->sessionTasks.append(pp);
     connect(pp, SIGNAL(subscription(Jid, QString, QString)), SLOT(ppSubscription(Jid, QString, QString)));
     connect(pp, SIGNAL(presence(Jid, Status)), SLOT(ppPresence(Jid, Status)));
 
     d->pushMessage = new JT_PushMessage(rootTask());
+    d->sessionTasks.append(d->pushMessage);
     d->pubSubManager->setPushMessage(d->pushMessage);
     connect(d->pushMessage, SIGNAL(message(Message)), SLOT(pmMessage(Message)));
     d->carbonsman = new CarbonsManager(d->pushMessage);
 
     JT_PushRoster *pr = new JT_PushRoster(rootTask());
+    d->sessionTasks.append(pr);
     connect(pr, SIGNAL(roster(Roster)), SLOT(prRoster(Roster)));
 
-    new JT_ServInfo(rootTask());
-    new JT_PongServer(rootTask());
+    d->sessionTasks.append(new JT_ServInfo(rootTask()));
+    d->sessionTasks.append(new JT_PongServer(rootTask()));
 
     d->active = true;
 }
@@ -574,12 +614,15 @@ void Client::streamOutgoingXml(const QString &s)
 
 void Client::parseUnhandledStreamFeatures()
 {
-    QList<QDomElement> nl = d->stream->unhandledFeatures();
+    auto *stream = qobject_cast<ClientStream *>(d->stream.data());
+    if (!stream)
+        return;
+    QList<QDomElement> nl = stream->unhandledFeatures();
     for (const QDomElement &e : std::as_const(nl)) {
         if (e.localName() == "c" && e.namespaceURI() == NS_CAPS) {
             d->serverCaps = CapsSpec::fromXml(e);
             if (d->capsman->isEnabled()) {
-                d->capsman->updateCaps(Jid(d->stream->jid().domain()), d->serverCaps);
+                d->capsman->updateCaps(Jid(stream->jid().domain()), d->serverCaps);
             }
         }
     }
@@ -787,7 +830,13 @@ void Client::send(const QString &str)
 
     debug(QString("Client: outgoing: [\n%1]\n").arg(str));
     emit xmlOutgoing(str);
-    static_cast<ClientStream *>(d->stream)->writeDirect(str);
+    if (auto *stream = qobject_cast<ClientStream *>(d->stream.data()))
+        stream->writeDirect(str);
+    else {
+        QDomDocument document;
+        if (document.setContent(str, true))
+            send(document.documentElement());
+    }
 }
 
 EncryptionJob *Client::sendEncrypted(const QDomElement &stanza, const QString &methodId,
@@ -835,8 +884,10 @@ EncryptionJob *Client::replyEncrypted(const QDomElement &stanza, const Encryptio
 /* drops any pending outgoing xml elements */
 void Client::clearSendQueue()
 {
-    if (d->stream)
-        d->stream->clearSendQueue();
+    if (auto *stream = qobject_cast<ClientStream *>(d->stream.data()))
+        stream->clearSendQueue();
+    else if (auto *local = qobject_cast<LinkLocalService *>(d->stream.data()))
+        local->clearSendQueue();
 }
 
 bool Client::hasStream() const { return !!d->stream; }
@@ -855,7 +906,8 @@ const ResourceList &Client::resourceList() const { return d->resourceList; }
 
 bool Client::isSessionRequired() const
 {
-    return d->stream && !d->stream->old() && d->stream->streamFeatures().session_required;
+    const auto *stream = qobject_cast<ClientStream *>(d->stream.data());
+    return stream && !stream->old() && stream->streamFeatures().session_required;
 }
 
 QString Client::host() const { return d->host; }
@@ -1246,6 +1298,11 @@ void Client::sendSubscription(const Jid &jid, const QString &type, const QString
 
 void Client::setPresence(const Status &s)
 {
+    if (auto *local = qobject_cast<LinkLocalService *>(d->stream.data())) {
+        local->setStatus(s);
+        ppPresence(jid(), s);
+        return;
+    }
     if (d->capsman->isEnabled()) {
         if (d->caps.version().isEmpty() && !d->caps.node().isEmpty()) {
             d->caps = CapsSpec(makeDiscoResult(d->caps.node())); /* recompute caps hash */

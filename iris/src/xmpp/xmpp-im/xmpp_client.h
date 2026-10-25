@@ -88,6 +88,9 @@ public:
 
     bool isActive() const;
     void connectToServer(ClientStream *s, const Jid &j, bool auth = true);
+    // Attach an already established non-server stanza transport. The caller
+    // owns it; no authentication, server roster or resource binding is started.
+    void connectToStream(Stream *stream, const Jid &identity);
     void start(const QString &host, const QString &user, const QString &pass, const QString &resource);
     void close(bool fast = false);
 
