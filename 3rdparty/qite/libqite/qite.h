@@ -127,8 +127,13 @@ private:
     bool                                          _lastMouseHandled = false;
 };
 
-class ITEMediaOpener {
+// GUI-thread service. Keep returned devices as QObject children of the opener
+// (or otherwise alive until its destroyed signal). Video players stop before those
+// children are released, including when a detached window outlives the host.
+class ITEMediaOpener : public QObject {
 public:
+    using QObject::QObject;
+    ~ITEMediaOpener() override                   = default;
     virtual QIODevice *open(QUrl &url)           = 0;
     virtual void       close(QIODevice *dev)     = 0;
     virtual QVariant   metadata(const QUrl &url) = 0;

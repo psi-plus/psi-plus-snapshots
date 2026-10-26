@@ -20,6 +20,7 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *) override;
+    void mousePressEvent(QMouseEvent *) override;
 
 private:
     QPointer<ITEMediaState> state_;

@@ -4,19 +4,30 @@ Allows to manage interactive elements on QTextEdit.
 
 `ITEVideoController` embeds an inline video player with play/pause, seeking and
 elapsed time. It accepts a URL or the same `ITEMediaOpener` used by audio.
-The fullscreen button (or double click on the image) opens the same player in a
-fullscreen window, without reopening the media. Exit with the button, Escape,
-double click or the window close action. Controls appear on mouse movement and
-hide after two seconds of inactivity; they remain visible while being used.
+The **Open in separate window** button next to fullscreen transfers the existing
+player, decoder and stream into a standalone, resizable window without restarting
+playback. The fullscreen button (or double click on the image) switches the same
+player into fullscreen; its controls overlay the video and hide after two seconds
+of inactivity. Exiting fullscreen returns to the chat if fullscreen was opened
+there, or to the separate window if fullscreen was entered from that window.
+The pop-out button also switches a fullscreen player into a normal window.
+
+The top-level window owns the player. While in a separate window or fullscreen,
+scrolling the original message out of view, pruning its message from the chat
+log, or destroying the chat controller does not stop playback. When the message
+still exists, closing the window docks the player back into the chat. When the
+message is gone, leaving fullscreen keeps a normal standalone window and closing
+that window releases the player/decoder/stream. Only a player still embedded in
+the chat pauses when hidden or scrolled entirely out of view.
+
 Playback is lazy: merely displaying a message does not open the source.
-Scrolling the player completely out of view or hiding the editor pauses playback.
 
 The text document holds a fixed-size object, while an opaque viewport child
 contains a frame widget and the controls. Video frames and playback progress never
 modify the document or request updates on the text viewport. Geometry is updated
-on scrolling, resizing and document edits. Removing the object releases its
-player and stream, including its fullscreen window. The output is deliberately
-an ordinary QWidget, with no native child windows or window containers inside
+on scrolling, resizing and document edits. Removing an inline object releases
+its player and stream; a detached window retains its player until it closes.
+The output is deliberately an ordinary QWidget, with no native child windows or window containers inside
 QTextEdit. This avoids native Wayland exposes reentering painting during layout
 and resize. A bounded mailbox delivers the latest frame to the GUI thread.
 Qt 6 uses QVideoSink/QVideoFrame::paint; Qt 5 negotiates image-compatible RGB
@@ -35,6 +46,13 @@ save action; clicking does not open a decoder or start playback:
 audio.insert(source, opener, true);
 video.insert(source, opener, QSize(320, 220), true);
 ```
+
+`ITEMediaOpener` is a GUI-thread `QObject` service. Returned stream devices must
+be its QObject children, or otherwise stay alive until its `destroyed` signal.
+Closing an account/source stops its remaining video players before those devices are
+deleted, marks the source unavailable and disables retry. Merely deleting a chat
+or controller does not delete the opener or stop detached playback. Opener
+subclasses must use the inherited QObject base rather than a second QObject base.
 
 An opener can override `mediaState(source)` to return a host-owned `ITEMediaState`
 shared by players of that resource. The default implementation returns `nullptr`.
@@ -61,7 +79,7 @@ ctest --test-dir build --output-on-failure
 Tests run offscreen and check layout/removal. To also exercise decoding, seeking,
 pausing and opener stream cleanup with `tests/data/test.webm`, configure with
 `-DQITE_TEST_PLAYBACK=ON`. This requires a working WebM/VP8 multimedia backend;
-these two tests are explicitly skipped otherwise. This avoids making portable
+decoding tests are explicitly skipped otherwise. This avoids making portable
 geometry tests depend on codecs or an audio service.
 Tests also inject 120 frames and check that neither the text editor's
 paint event, the text object renderer, nor document changes/layout signals fire.

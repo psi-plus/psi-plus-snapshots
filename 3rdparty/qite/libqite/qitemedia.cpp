@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "qitemedia.h"
 #include "qitemedia_p.h"
+#include <QMouseEvent>
 #include <QPainter>
 #include <QStyleOptionSlider>
 #include <algorithm>
@@ -96,6 +97,31 @@ void ITEMediaSlider::setMediaState(ITEMediaState *state)
     }
     setToolTip(tr("Blue: downloaded file data; marker: playback position"));
     update();
+}
+
+void ITEMediaSlider::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton && isEnabled()) {
+        QStyleOptionSlider option;
+        initStyleOption(&option);
+        const QRect groove = style()->subControlRect(QStyle::CC_Slider, &option, QStyle::SC_SliderGroove, this);
+        const QRect handle = style()->subControlRect(QStyle::CC_Slider, &option, QStyle::SC_SliderHandle, this);
+
+        // QSlider's default groove click performs a page step, which is a
+        // particularly small seek for long media. Map the click to the
+        // handle's actual travel range instead, retaining normal handle drag.
+        if (groove.contains(event->pos()) && !handle.contains(event->pos())) {
+            const int start = orientation() == Qt::Horizontal ? groove.left() + handle.width() / 2
+                                                               : groove.top() + handle.height() / 2;
+            const int span = orientation() == Qt::Horizontal ? groove.width() - handle.width()
+                                                              : groove.height() - handle.height();
+            const int pixel = (orientation() == Qt::Horizontal ? event->pos().x() : event->pos().y()) - start;
+            setValue(QStyle::sliderValueFromPosition(minimum(), maximum(), pixel, span, option.upsideDown));
+            event->accept();
+            return;
+        }
+    }
+    QSlider::mousePressEvent(event);
 }
 
 void ITEMediaSlider::paintEvent(QPaintEvent *)
