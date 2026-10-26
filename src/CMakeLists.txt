@@ -259,11 +259,13 @@ list(APPEND SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/psiencryptioncontroller.cpp
 )
 list(APPEND HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/omemodevicedecision.h
     ${CMAKE_CURRENT_SOURCE_DIR}/psiencryptioncontroller.h
 )
 
 if(ENABLE_OMEMO)
     list(APPEND SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/omemodevicedecision.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/psiomemostorage.cpp
     )
     list(APPEND HEADERS
@@ -429,9 +431,6 @@ add_executable(${PROJECT_NAME}
     ${QRC_SOURCES}
     ${RC_FILE}
 )
-
-# qite's QTextFormat properties must not overlap Psi's rich-text properties.
-target_compile_definitions(${PROJECT_NAME} PRIVATE QITE_FIRST_USER_PROPERTY=0x1000)
 
 #Generate .rc file for windows with Qt6
 #[[if(WIN32 AND (${QT_DEFAULT_MAJOR_VERSION} GREATER_EQUAL 6))
