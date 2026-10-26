@@ -147,7 +147,6 @@ namespace {
         return data ? QByteArray(reinterpret_cast<const char *>(data), static_cast<int>(size)) : QByteArray();
     }
 
-    QString canonicalBare(const Jid &jid) { return jid.isValid() ? jid.bare() : QString(); }
     QString addressName(const signal_protocol_address *address)
     {
         return address ? QString::fromUtf8(address->name, static_cast<qsizetype>(address->name_len)) : QString();

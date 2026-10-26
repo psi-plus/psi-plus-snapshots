@@ -283,7 +283,8 @@ namespace XMPP { namespace Jingle {
             return {};
         if (state->resolutions.size() >= 64 || !boundedSnapshot(remoteData))
             return { Solution::Continue, 0,
-                     Stanza::Error(Stanza::Error::ErrorType::Wait, Stanza::Error::ErrorCond::ResourceConstraint) };
+                     Stanza::Error(Stanza::Error::ErrorType::Wait, Stanza::Error::ErrorCond::ResourceConstraint),
+                     {}, {} };
         // Never carry a container iterator (or a reference into it) across user code.
         const auto   transactionId = transaction->id;
         const auto   localData     = transaction->localData;
@@ -339,7 +340,7 @@ namespace XMPP { namespace Jingle {
             if (entry != state->resolvers.end())
                 ++entry->postponed;
         }
-        return { Solution::Postpone, id };
+        return { Solution::Postpone, id, {}, {}, {} };
     }
 
     void TieBreaker::incomingFinished(quint64 resolutionId, RemoteResult result)

@@ -43,7 +43,7 @@ static bool pumpUntil(Endpoint &a, Endpoint &b, const std::function<bool()> &don
     return done();
 }
 
-static int sxeMessages()
+[[maybe_unused]] static int sxeMessages()
 {
     int count = 0;
     for (const auto &message : std::as_const(sentMessages))
@@ -52,7 +52,7 @@ static int sxeMessages()
     return count;
 }
 
-static J::Connection::Ptr dataChannel(SXE::Application *application)
+[[maybe_unused]] static J::Connection::Ptr dataChannel(SXE::Application *application)
 {
     if (!application->transport())
         return {};
@@ -63,13 +63,13 @@ static J::Connection::Ptr dataChannel(SXE::Application *application)
     return {};
 }
 
-static bool synchronized(SXE::Application *a, SXE::Application *b)
+[[maybe_unused]] static bool synchronized(SXE::Application *a, SXE::Application *b)
 {
     return a && b && a->syncState() == SXE::Application::SyncState::Synchronized
         && b->syncState() == SXE::Application::SyncState::Synchronized;
 }
 
-static bool bundled(J::Session *session, const QString &a, const QString &b)
+[[maybe_unused]] static bool bundled(J::Session *session, const QString &a, const QString &b)
 {
     for (const auto &group : session->negotiatedGroupings())
         if (group.semantics == QLatin1String("BUNDLE") && group.contents.contains(a) && group.contents.contains(b))

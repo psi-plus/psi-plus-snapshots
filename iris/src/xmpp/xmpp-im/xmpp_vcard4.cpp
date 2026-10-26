@@ -126,7 +126,7 @@ namespace {
                 QDomElement element = document.createElement(tagName);
                 entry.parameters.addTo(element);
                 if constexpr (std::is_same_v<T, QString>) {
-                    addTextElement(document, element, QLatin1String("text"), QStringList { entry.data });
+                    addTextElement(document, element, innerTagName, QStringList { entry.data });
                 } else if constexpr (std::is_same_v<T, QUrl> || std::is_same_v<T, UriValue>) {
                     addTextElement(document, element, QLatin1String("uri"), QStringList { entry.data.toString() });
                 } else if constexpr (std::is_same_v<T, UriOrText>) {
@@ -142,8 +142,7 @@ namespace {
                         entry.data);
                 } else if constexpr (std::is_same_v<T, QStringList>) {
                     for (auto const &s : entry.data) {
-                        element.appendChild(document.createElement(QLatin1String("text")))
-                            .appendChild(document.createTextNode(s));
+                        element.appendChild(document.createElement(innerTagName)).appendChild(document.createTextNode(s));
                     }
                 } else if constexpr (std::is_same_v<T, TimeZone>) {
                     std::visit(

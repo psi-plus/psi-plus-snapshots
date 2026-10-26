@@ -73,7 +73,7 @@ public:
     bool hasPendingChanges() const { return !pending_.isEmpty(); }
     bool hasScheduledIntent(const QString &id) const { return pending_.contains(id) || inFlight_.contains(id); }
     bool hasInFlightIntent(const QString &id) const { return inFlight_.contains(id); }
-    bool cancelPending(const QString &id) { return pending_.remove(id) > 0; }
+    bool cancelPending(const QString &id) { return pending_.remove(id) != 0; }
     QStringList scheduledIds() const
     {
         QSet<QString> ids;

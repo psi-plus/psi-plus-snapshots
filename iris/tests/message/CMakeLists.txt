@@ -82,3 +82,9 @@ target_link_libraries(message_simsfallback_test PRIVATE iris Qt${QT_DEFAULT_MAJO
     Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
 add_test(NAME message_simsfallback COMMAND message_simsfallback_test)
 set_tests_properties(message_simsfallback PROPERTIES TIMEOUT 10)
+
+add_executable(message_vcard4_test vcard4.cpp)
+target_link_libraries(message_vcard4_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME message_vcard4 COMMAND message_vcard4_test)
+set_tests_properties(message_vcard4 PROPERTIES TIMEOUT 10)

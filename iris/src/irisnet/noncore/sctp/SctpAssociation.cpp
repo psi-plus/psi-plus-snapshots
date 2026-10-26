@@ -779,7 +779,7 @@ void SctpAssociation::OnUsrSctpReceiveSctpNotification(union sctp_notification *
         MS_WARN_TAG(
             sctp, "SCTP message sent failure [streamId:%" PRIu16 ", ppid:%" PRIu32 ", sent:%s, error:0x%08lx, info:%s]",
             notification->sn_send_failed_event.ssfe_info.snd_sid,
-            ntohl(notification->sn_send_failed_event.ssfe_info.snd_ppid),
+            static_cast<uint32_t>(ntohl(notification->sn_send_failed_event.ssfe_info.snd_ppid)),
             (notification->sn_send_failed_event.ssfe_flags & SCTP_DATA_SENT) ? "yes" : "no",
             static_cast<unsigned long>(notification->sn_send_failed_event.ssfe_error), buffer);
 
