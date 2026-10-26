@@ -122,6 +122,9 @@ private:
     bool paletteRefreshPending_ = false;
     using Row                     = MamHistorySource::Row;
     QString             reactionTarget(const MessageView &) const;
+    QString             reactionKey(const Row &) const;
+    int                 legacyReactionTarget(const QString &messageId, const QDateTime &before) const;
+    bool                canSendLegacyReaction(int index) const;
     QString             retractionTarget(const MessageView &) const;
     bool                applyProtocolEvent(const MessageView &);
     bool                isRetracted(const Row &) const;
@@ -186,6 +189,8 @@ private:
     MamHistorySource historySource_;
     QList<Row>      &items_ = historySource_.rows_;
     QWidget         *rowWidget(int knownIndex) const;
+    bool             updateDragSelection(const QPoint &viewportPos);
+    void             finishDragSelection();
     QVector<int>     materializedRows() const;
     Range            knownVisibleRange() const;
     void             replaceRow(int knownIndex);
