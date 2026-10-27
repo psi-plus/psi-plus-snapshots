@@ -1,4 +1,4 @@
-<skin author="VitoZz" name="Dark" path="/usr/share/psi-plus/skins" version="2.0">
+<skin author="VitoZz" name="Dark" path="/usr/share/psi-plus/skins" version="2.1">
     <options>
         <options.ui.look.colors.chat.link-color type="QColor">#0000ff</options.ui.look.colors.chat.link-color>
         <options.ui.look.colors.chat.mailto-color type="QColor">#2c9dff</options.ui.look.colors.chat.mailto-color>
@@ -51,22 +51,60 @@ QFrame {
     padding: 0px;
 }
 
-/* modern theme */
-/* modern theme row */
-/*QFrame#mamMessageRow {
-    border: 1px groove #5b5b5b;
-}*/
+/* bubble theme */
+#mamBubble[tone="incoming"], #mamBubble[tone="notice"]  {
+    qproperty-fillColor: #27272b;
+}
 
-/* modern theme icons */
-QFrame#mamEncryptionIndicator, #mamEditedIndicator, #mamDeliveryIndicator {
-    border: none;
+#mamBubble[tone="own"] {
+    qproperty-fillColor: #1C2E3B;
 }
-/* modern theme row additional text fields */
-QLabel#mamAuthor,QLabel#mamTimestamp, QLabel#mamAvatar {
-    border: none;
+
+#mamBubble[tone="own"] QTextEdit#mamBody,
+#mamBubble[tone="own"] QLabel#mamEncryptionIndicator,
+#mamBubble[tone="own"] QLabel#mamEditedIndicator,
+#mamBubble[tone="own"] QLabel #mamDeliveryIndicator,
+#mamBubble[tone="own"] QLabel#mamAuthor,
+#mamBubble[tone="own"] QLabel#mamTimestamp  {
+    background-color: #1C2E3B;
 }
-/* modern theme message text */
-ChatMessageText {
+
+#mamBubble[tone="notice"] QTextEdit#mamBody,
+#mamBubble[tone="notice"]  QLabel#mamEncryptionIndicator,
+#mamBubble[tone="notice"]  QLabel#mamEditedIndicator,
+#mamBubble[tone="notice"]  QLabel#mamDeliveryIndicator,
+#mamBubble[tone="notice"]  QLabel#mamAuthor,
+#mamBubble[tone="notice"]  QLabel#mamTimestamp {
+    background-color: #27272b;
+}
+
+#mamBubble[tone="incoming"]  QTextEdit#mamBody,
+#mamBubble[tone="incoming"]  QLabel#mamEncryptionIndicator,
+#mamBubble[tone="incoming"]  QLabel#mamEditedIndicator, #mamBubble[tone="incoming"]  QLabel#mamDeliveryIndicator,
+#mamBubble[tone="incoming"]  QLabel#mamAuthor,
+#mamBubble[tone="incoming"]  QLabel#mamTimestamp {
+    background-color: #27272b;
+}
+
+/* modern theme row */
+/* slightly visible border for all styles */
+QFrame#mamMessageRow {
+    border: 1px dashed   #1e2025;
+}
+
+/* modern theme avatar */
+QFrame#mamAvatar {
+    border: none;
+    background-color: #18191d;
+}
+
+/* modern theme message items */
+ChatMessageText,
+QLabel#mamEncryptionIndicator,
+QLabel#mamEditedIndicator,
+QLabel#mamDeliveryIndicator,
+QLabel#mamAuthor,
+QLabel#mamTimestamp {
     border: none;
 }
 

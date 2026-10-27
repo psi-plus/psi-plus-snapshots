@@ -1,4 +1,4 @@
-<skin author="VitoZz" name="Breath Dark" path="/usr/share/psi-plus/skins" version="1.8">
+<skin author="VitoZz" name="Breath Dark" path="/usr/share/psi-plus/skins" version="1.9">
     <options>
         <options.ui.look.colors.chat.link-color type="QColor">#0000ff</options.ui.look.colors.chat.link-color>
         <options.ui.look.colors.chat.mailto-color type="QColor">#2c9dff</options.ui.look.colors.chat.mailto-color>
@@ -51,22 +51,60 @@ QFrame {
     padding: 0px;
 }
 
-/* modern theme */
-/* modern theme row */
-/*QFrame#mamMessageRow {
-    border: 1px groove #5b5b5b;
-}*/
+/* bubble theme */
+#mamBubble[tone="incoming"], #mamBubble[tone="notice"]  {
+    qproperty-fillColor: #27272b;
+}
 
-/* modern theme icons */
-QFrame#mamEncryptionIndicator, #mamEditedIndicator, #mamDeliveryIndicator {
-    border: none;
+#mamBubble[tone="own"] {
+    qproperty-fillColor: #1C2E3B;
 }
-/* modern theme row additional text fields */
-QLabel#mamAuthor,QLabel#mamTimestamp, QLabel#mamAvatar {
-    border: none;
+
+#mamBubble[tone="own"] QTextEdit#mamBody,
+#mamBubble[tone="own"] QLabel#mamEncryptionIndicator,
+#mamBubble[tone="own"] QLabel#mamEditedIndicator,
+#mamBubble[tone="own"] QLabel #mamDeliveryIndicator,
+#mamBubble[tone="own"] QLabel#mamAuthor,
+#mamBubble[tone="own"] QLabel#mamTimestamp  {
+    background-color: #1C2E3B;
 }
-/* modern theme message text */
-ChatMessageText {
+
+#mamBubble[tone="notice"] QTextEdit#mamBody,
+#mamBubble[tone="notice"]  QLabel#mamEncryptionIndicator,
+#mamBubble[tone="notice"]  QLabel#mamEditedIndicator,
+#mamBubble[tone="notice"]  QLabel#mamDeliveryIndicator,
+#mamBubble[tone="notice"]  QLabel#mamAuthor,
+#mamBubble[tone="notice"]  QLabel#mamTimestamp {
+    background-color: #27272b;
+}
+
+#mamBubble[tone="incoming"]  QTextEdit#mamBody,
+#mamBubble[tone="incoming"]  QLabel#mamEncryptionIndicator,
+#mamBubble[tone="incoming"]  QLabel#mamEditedIndicator, #mamBubble[tone="incoming"]  QLabel#mamDeliveryIndicator,
+#mamBubble[tone="incoming"]  QLabel#mamAuthor,
+#mamBubble[tone="incoming"]  QLabel#mamTimestamp {
+    background-color: #27272b;
+}
+
+/* modern theme row */
+/* slightly visible border for all styles */
+QFrame#mamMessageRow {
+    border: 1px dashed   #1e2025;
+}
+
+/* modern theme avatar */
+QFrame#mamAvatar {
+    border: none;
+    background-color: #18191d;
+}
+
+/* modern theme message items */
+ChatMessageText,
+QLabel#mamEncryptionIndicator,
+QLabel#mamEditedIndicator,
+QLabel#mamDeliveryIndicator,
+QLabel#mamAuthor,
+QLabel#mamTimestamp {
     border: none;
 }
 
@@ -302,8 +340,8 @@ QToolButton::menu-indicator {
 /* vertical splitter */
 QSplitter::handle:vertical {
     background-color: #282e33;
-    border-left: 1px outset #53575b;
-    border-right: 1px outset #53575b;
+    border-left: 2px solid #53575b;
+    border-right: 2px solid #53575b;
 }
 
 QSplitter::handle:vertical:hover {
@@ -575,7 +613,7 @@ Q3ListView * {
 
 /* tooltips */
 QToolTip {
-    color: #c0c0c0;
+    color: #dedede;
     background-color: #282e33;
     border: 1px solid #53575b;
 }
@@ -1011,8 +1049,8 @@ PopupActionButton:hover:pressed {
 
 /* tooltips */
 QToolTip {
-    color: #c0c0c0;
-    background-color: #252b30;
+    color: #dedede;
+    background-color: #282e33;
     border: 1px solid #53575b;
 }
 
@@ -1189,9 +1227,8 @@ QSplitter::handle:horizontal:pressed {
 QFrame {
     color: #c0c0c0;
     background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #32383e, stop: 1 #282e33);
-    border: 1px solid #32383e;
-}
-        </options.ui.contactlist.tooltip.css>
+    border: 2px solid #32383e;
+}    </options.ui.contactlist.tooltip.css>
         <options.ui.contactlist.tooltip.geolocation type="bool">true</options.ui.contactlist.tooltip.geolocation>
         <options.ui.contactlist.tooltip.last-status type="bool">true</options.ui.contactlist.tooltip.last-status>
         <options.ui.contactlist.tooltip.pgp type="bool">true</options.ui.contactlist.tooltip.pgp>
