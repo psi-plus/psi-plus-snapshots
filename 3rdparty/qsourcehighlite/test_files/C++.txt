@@ -1,0 +1,10 @@
+#include <iostream>
+#include <string>
+
+using namespace std;
+int main(int argc, char *argv[]) {
+	std::cout << "C++ Code Highlighting Demo" << std::endl;
+	int x = 10;
+	std::cout << x;
+    return 0;
+}

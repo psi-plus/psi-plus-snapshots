@@ -256,6 +256,10 @@ public:
     void            setProcessingHints(const ProcessingHints &hints);
     ProcessingHints processingHints() const;
 
+    // XEP-0393: suppress interpretation of styling directives in body text.
+    bool stylingDisabled() const;
+    void setStylingDisabled(bool disabled);
+
     // MUC
     void             addMUCStatus(int);
     QList<int>       getMUCStatuses() const;

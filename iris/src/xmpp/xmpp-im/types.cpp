@@ -751,6 +751,7 @@ public:
     // XEP-0280 Message Carbons
     bool                                     carbonsPrivate = false;
     Message::ProcessingHints                 processingHints;
+    bool                                     stylingDisabled = false;
     QString                                  replaceId;
     QString                                  originId;                // XEP-0359
     QString                                  encryptionProtocol;      // XEP-0380
@@ -1382,6 +1383,9 @@ void Message::setProcessingHints(const ProcessingHints &hints) { MessageD()->pro
 
 Message::ProcessingHints Message::processingHints() const { return d ? d->processingHints : ProcessingHints(); }
 
+bool Message::stylingDisabled() const { return d && d->stylingDisabled; }
+void Message::setStylingDisabled(bool disabled) { MessageD()->stylingDisabled = disabled; }
+
 Jingle::MessageInitiation Message::jingleMessageInitiation() const
 {
     return d ? d->jingleMessageInitiation : Jingle::MessageInitiation();
@@ -1427,6 +1431,9 @@ Stanza Message::toStanza(Stream *stream, Jingle::Manager *jingleManager) const
             s.appendChild(e);
         }
     }
+
+    if (d->stylingDisabled)
+        s.appendChild(s.createElement(QStringLiteral("urn:xmpp:styling:0"), QStringLiteral("unstyled")));
 
     if (containsHTML()) {
         QDomElement html = s.createElement("http://jabber.org/protocol/xhtml-im", "html");
@@ -1928,6 +1935,9 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
                 // fail closed rather than inventing one.
                 d->jingleMessageInitiation = {};
             }
+        } else if ((e.localName().isEmpty() ? e.tagName() : e.localName()) == QLatin1String("unstyled")
+                   && e.namespaceURI() == QLatin1String("urn:xmpp:styling:0")) {
+            d->stylingDisabled = true;
         } else if (e.tagName() == QLatin1String("no-permanent-store")
                    && e.namespaceURI() == QLatin1String("urn:xmpp:hints")) {
             d->processingHints |= NoPermanentStore;
