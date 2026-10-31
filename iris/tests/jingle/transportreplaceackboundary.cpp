@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
+#include "sessiontestaccess.h"
+
 #define main iris_transportreplace_correctness_main
 #include "transportreplacecorrectness.cpp"
 #undef main
+
+using XMPP::Jingle::SessionTestAccess;
 
 class CallbackTransport : public TestTransport {
 public:
@@ -54,8 +58,9 @@ int main(int argc, char **argv)
             callback(&success); // duplicate delivery reentered before the owner callback has returned
             check(local->calls == 1, "reentrant duplicate completion reentered transport code");
             QDomDocument doc;
-            check(session.updateFromXml(J::Action::TransportReplace, makeReplace(doc, { "remote" })),
-                         "post-completion remote replacement received a stale tie-break");
+            check(
+                SessionTestAccess::updateFromXml(session, J::Action::TransportReplace, makeReplace(doc, { "remote" })),
+                "post-completion remote replacement received a stale tie-break");
         };
         callback(ok ? &success : &failure);
         check(app->transport() != local && app->replaceInProgress(), "old ACK displaced the nested remote proposal");

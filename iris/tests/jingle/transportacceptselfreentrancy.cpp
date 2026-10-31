@@ -2,11 +2,15 @@
 //
 // Reuse the transport-replace fixture so this regression exercises the same
 // Application replacement state machine as the protocol tests.
+#include "sessiontestaccess.h"
+
 #include <functional>
 
 #define main iris_transportreplace_legacy_main
 #include "transportreplace.cpp"
 #undef main
+
+using XMPP::Jingle::SessionTestAccess;
 
 class SelfReentrantUpdateTransport : public TestTransport {
 public:
@@ -45,11 +49,11 @@ static void testAcceptedTransportCannotCompleteNewerReplacement(Client &client)
     };
 
     QDomDocument doc;
-    const bool   ok = session.updateFromXml(
-        J::Action::TransportAccept,
+    const bool   ok = SessionTestAccess::updateFromXml(
+        session, J::Action::TransportAccept,
         makeReplace(doc,
-                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                          QStringLiteral("accepted-old") } }));
+                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                        QStringLiteral("accepted-old") } }));
 
     check(ok, "valid transport-accept became an error after a newer local replacement was selected");
     check(app->transport().data() == newTransport.data(),

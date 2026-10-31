@@ -53,11 +53,18 @@ struct Transfer {
     bool                      security = false;
     QString                   securityType;
     QString                   cipher;
+    // Session completion may delete the applications before send() returns.
+    bool                           offered            = false;
+    bool                           sendingEncrypted   = false;
+    bool                           receivingEncrypted = false;
+    J::State                       receivingState     = J::State::Created;
+    J::Reason                      receivingReason;
+    J::Session::PeerAuthentication receiverAuthentication;
 };
 
 // Alice offers @a data to bob over IBB with the given policy; bob accepts.
 std::unique_ptr<Transfer> send(Endpoint &alice, Endpoint &bob, const QByteArray &data, bool preferred, bool required,
-                               const std::function<void(QDomElement &)> &tamper = {})
+                               const std::function<void(QDomElement &)> &tamper = { })
 {
     auto t    = std::make_unique<Transfer>();
     t->source = std::make_unique<QBuffer>();
@@ -95,8 +102,11 @@ std::unique_ptr<Transfer> send(Endpoint &alice, Endpoint &bob, const QByteArray 
     t->sending = qobject_cast<FT::Application *>(t->session->newContent(FT::NS, J::Origin::Initiator));
     t->sending->setFile(file);
     check(t->sending->setTransport(t->session->newOutgoingTransport(J::IBB::NS)), "IBB transport was not set");
-    QObject::connect(t->sending, &FT::Application::deviceRequested, t->sending,
-                     [raw](quint64, std::optional<quint64>) { raw->sending->setDevice(raw->source.get(), false); });
+    QObject::connect(t->sending, &FT::Application::deviceRequested, t->source.get(),
+                     [raw](quint64, std::optional<quint64>) {
+                         raw->sendingEncrypted = raw->sending->isTransportEncrypted();
+                         raw->sending->setDevice(raw->source.get(), false);
+                     });
     t->session->addContent(t->sending);
     t->session->initiate();
     for (int i = 0; i < 20 && !t->peerSession && t->session && t->session->state() != J::State::Finished; ++i)
@@ -109,8 +119,15 @@ std::unique_ptr<Transfer> send(Endpoint &alice, Endpoint &bob, const QByteArray 
         if (auto received = qobject_cast<FT::Application *>(content))
             t->receiving = received;
     check(t->receiving, "the offered file is missing");
+    t->offered = true;
     t->receiving->setAcceptFile(file);
-    QObject::connect(t->receiving, &FT::Application::deviceRequested, t->receiving,
+    QObject::connect(t->receiving, &FT::Application::stateChanged, t->sink.get(), [raw](J::State state) {
+        raw->receivingState         = state;
+        raw->receivingReason        = raw->receiving->lastReason();
+        raw->receivingEncrypted     = raw->receiving->isTransportEncrypted();
+        raw->receiverAuthentication = raw->peerSession->peerAuthentication();
+    });
+    QObject::connect(t->receiving, &FT::Application::deviceRequested, t->sink.get(),
                      [raw](quint64, std::optional<quint64>) { raw->receiving->setDevice(raw->sink.get(), false); });
     t->peerSession->accept();
     for (int i = 0; i < 400 && t->receiving && t->receiving->state() < J::State::Finished; ++i)
@@ -150,16 +167,15 @@ int main(int argc, char **argv)
         // Encrypted: the plain file arrives, the wire carries ciphertext and the tag.
         const auto data = randomFile(100000);
         auto       t    = send(alice, bob, data, true, false);
-        check(t->peerSession && t->receiving, "the encrypted offer did not arrive");
-        check(t->security && t->sending->isTransportEncrypted() && t->receiving->isTransportEncrypted(),
-              "the file was not offered with JET");
+        check(t->offered, "the encrypted offer did not arrive");
+        check(t->security && t->sendingEncrypted && t->receivingEncrypted, "the file was not offered with JET");
         check(t->securityType == (omemo2 ? OmemoEncryption::namespaceUri() : OmemoEncryption::legacyNamespaceUri())
                   && t->cipher.contains(omemo2 ? QLatin1String("aes-256") : QLatin1String("aes-128")),
               "the JET envelope does not use the expected OMEMO profile and cipher");
         check(t->sink->data() == data, "the decrypted file differs");
         check(t->wire.size() == data.size() + 16 && !t->wire.contains(data.left(64)),
               "the wire did not carry ciphertext with the tag");
-        check(t->peerSession->peerAuthentication().deviceId == alice.omemo->ownDeviceId(),
+        check(t->receiverAuthentication.deviceId == alice.omemo->ownDeviceId(),
               "the receiver did not record the sender's device");
 
         // A tampered block fails authentication.
@@ -172,14 +188,14 @@ int main(int argc, char **argv)
             auto text  = ibb.firstChild().toText();
             text.setData(QString::fromLatin1(bytes.toBase64()));
         });
-        check(t->receiving && t->receiving->state() == J::State::Finished
-                  && t->receiving->lastReason().condition() == J::Reason::SecurityError,
+        check(t->offered && t->receivingState == J::State::Finished
+                  && t->receivingReason.condition() == J::Reason::SecurityError,
               "a tampered file was not refused");
 
         // Preferred, but the peer has no JET-OMEMO: the file goes unprotected.
         setPeerFeatures(alice.client, bob.jid, QStringList { QStringLiteral("urn:xmpp:jingle:1") } + legacy);
         t = send(alice, bob, data, true, false);
-        check(t->receiving && !t->security && !t->receiving->isTransportEncrypted() && t->sink->data() == data,
+        check(t->offered && !t->security && !t->receivingEncrypted && t->sink->data() == data,
               "a preferred encryption blocked a transfer to a peer without JET-OMEMO");
 
         // Required, but the peer has no JET-OMEMO: nothing is offered.

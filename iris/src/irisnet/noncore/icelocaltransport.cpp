@@ -227,7 +227,7 @@ public:
 
     void stop()
     {
-        Q_ASSERT(sock);
+        // start() defers socket setup; stop() may cancel it before postStart().
         if (stopping) {
             emit q->debugLine(QString("local transport %1 is already stopping. just wait...").arg(addr));
             return;

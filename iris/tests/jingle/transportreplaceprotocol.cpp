@@ -4,16 +4,16 @@
 #include <QDomDocument>
 #include <QtCrypto>
 
+#include "sessiontestaccess.h"
 #include <iris/jingle-application.h>
-#define private public
-#include <iris/jingle-session.h>
-#undef private
+
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_task.h>
 
 #include <memory>
 
 using namespace XMPP;
+using XMPP::Jingle::SessionTestAccess;
 namespace J = XMPP::Jingle;
 
 static void check(bool ok, const char *message)
@@ -292,7 +292,8 @@ static void testTransportRejectSelectsFallback(Client &client)
     app->markReplaceInProgress();
 
     QDomDocument doc;
-    const bool   ok = session.updateFromXml(J::Action::TransportReject, payload(doc, QStringLiteral("rejected")));
+    const bool   ok = SessionTestAccess::updateFromXml(session, J::Action::TransportReject,
+                                                       payload(doc, QStringLiteral("rejected")));
 
     check(ok, "valid transport-reject was not handled");
     check(app->transport().data() == fallback.data(), "transport-reject did not select the next local transport");
@@ -338,8 +339,8 @@ static void testIceLikeApprovedToSendTransportAccept(Client &client)
     app->markReplaceInProgress();
 
     QDomDocument doc;
-    const bool   ok
-        = session.updateFromXml(J::Action::TransportAccept, payload(doc, QStringLiteral("accepted-replacement")));
+    const bool   ok = SessionTestAccess::updateFromXml(session, J::Action::TransportAccept,
+                                                       payload(doc, QStringLiteral("accepted-replacement")));
 
     check(ok, "ICE-like ApprovedToSend transport-accept was rejected");
     check(!app->replaceInProgress(), "valid ICE-like transport-accept did not complete replacement state");
@@ -356,7 +357,8 @@ static void testMalformedTransportAcceptRejectedAtomically(Client &client)
     app->markReplaceInProgress();
 
     QDomDocument doc;
-    const bool ok = session.updateFromXml(J::Action::TransportAccept, payload(doc, QStringLiteral("malformed"), true));
+    const bool   ok = SessionTestAccess::updateFromXml(session, J::Action::TransportAccept,
+                                                       payload(doc, QStringLiteral("malformed"), true));
 
     check(!ok, "malformed transport-accept was acknowledged by Session");
     check(app->replaceInProgress(), "malformed transport-accept committed replacement state");
@@ -373,8 +375,8 @@ static void testDuplicateTransportAcceptRejectedBeforeMutation(Client &client)
     app->markReplaceInProgress();
 
     QDomDocument doc;
-    const bool   ok
-        = session.updateFromXml(J::Action::TransportAccept, duplicatePayload(doc, QStringLiteral("duplicate")));
+    const bool   ok = SessionTestAccess::updateFromXml(session, J::Action::TransportAccept,
+                                                       duplicatePayload(doc, QStringLiteral("duplicate")));
 
     check(!ok, "duplicate transport-accept contents were accepted");
     check(app->transport().data() == local.data() && app->replaceInProgress() && local->starts() == 0,
@@ -394,8 +396,8 @@ static void testDuplicateTransportRejectRejectedBeforeRecovery(Client &client)
     app->markReplaceInProgress();
 
     QDomDocument doc;
-    const bool   ok
-        = session.updateFromXml(J::Action::TransportReject, duplicatePayload(doc, QStringLiteral("duplicate")));
+    const bool   ok = SessionTestAccess::updateFromXml(session, J::Action::TransportReject,
+                                                       duplicatePayload(doc, QStringLiteral("duplicate")));
 
     check(!ok, "duplicate transport-reject contents were accepted");
     check(app->transport().data() == local.data() && app->replaceInProgress(),

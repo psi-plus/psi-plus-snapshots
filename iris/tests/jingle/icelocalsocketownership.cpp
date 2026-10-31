@@ -64,5 +64,35 @@ int main(int argc, char **argv)
         qFatal("IceLocalTransport destroyed a borrowed QUdpSocket");
     delete borrowed;
 
+    // Cancellation before deferred startup must complete without starting or leaking the socket.
+    for (bool takeOwnership : { false, true }) {
+        auto                *socket = new QUdpSocket;
+        QPointer<QUdpSocket> guard(socket);
+        bool                 started = false;
+        bool                 stopped = false;
+        {
+            IceLocalTransport transport;
+            QEventLoop        loop;
+            QObject::connect(&transport, &IceTransport::started, &loop, [&]() { started = true; });
+            QObject::connect(&transport, &IceTransport::stopped, &loop, [&]() {
+                stopped = true;
+                loop.quit();
+            });
+            QTimer::singleShot(1000, &loop, &QEventLoop::quit);
+            transport.start(socket, takeOwnership);
+            transport.stop();
+            loop.exec();
+            if (started || !stopped)
+                qFatal("cancellation before socket startup did not finish cleanly");
+        }
+        drainDeferredDeletes();
+        if (takeOwnership && guard)
+            qFatal("cancellation leaked an owned socket");
+        if (!takeOwnership && !guard)
+            qFatal("cancellation destroyed a borrowed socket");
+        if (guard)
+            delete socket;
+    }
+
     return 0;
 }

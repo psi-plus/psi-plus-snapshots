@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
+#include "sessiontestaccess.h"
+
 #include "../../src/xmpp/xmpp-im/jingle-ice-connection_p.h"
 #include <QChildEvent>
 #include <QCoreApplication>
@@ -11,7 +13,6 @@
 #define private public
 #include "../../src/xmpp/xmpp-im/jingle-ice-pad_p.h"
 #include <iris/jingle-ice.h>
-#include <iris/jingle-session.h>
 #undef private
 
 #include <iris/jingle-ft.h>
@@ -21,6 +22,7 @@
 #include <iris/xmpp_task.h>
 
 using namespace XMPP;
+using XMPP::Jingle::SessionTestAccess;
 namespace J = XMPP::Jingle;
 
 static void check(bool ok, const char *message)
@@ -413,7 +415,8 @@ static void exerciseScreenAnswer(const WireOffer &offer, TcpPortReserver *reserv
     setPeerFeatures(client, peer, rtpIcePeerFeatures(client, rtp));
 
     J::Session session(client.jingleManager(), peer, J::Origin::Responder);
-    check(session.incomingInitiate(J::Jingle(offer.root), offer.root), "screen fixture rejected initial offer");
+    check(SessionTestAccess::incomingInitiate(session, J::Jingle(offer.root), offer.root),
+          "screen fixture rejected initial offer");
     auto anchor = session.content(anchorName, J::Origin::Initiator);
     check(anchor, "screen fixture lost its initial content");
     auto anchorTransport = QPointer<J::ICE::Transport>(static_cast<J::ICE::Transport *>((anchor->transport()).data()));
@@ -478,7 +481,8 @@ static void exerciseScreenAnswer(const WireOffer &offer, TcpPortReserver *reserv
         group.appendChild(member);
     }
     add.appendChild(group);
-    check(session.updateFromXml(J::Action::ContentAdd, add), "screen BUNDLE extension was rejected");
+    check(SessionTestAccess::updateFromXml(session, J::Action::ContentAdd, add),
+          "screen BUNDLE extension was rejected");
     auto screen = session.content(screenName, J::Origin::Initiator);
     check(screen, "screen addition did not create an application");
     auto screenTransport = QPointer<J::ICE::Transport>(static_cast<J::ICE::Transport *>((screen->transport()).data()));
@@ -723,7 +727,7 @@ static void exerciseInitialSingletonAnswer(const WireOffer &transportSource, Tcp
     auto         answer = sessionAcceptPayload(answerDoc, session, transportSource, audio, nullptr, peer);
     if (!bundled)
         answer.removeChild(answer.firstChildElement(QStringLiteral("group")));
-    check(session.updateFromXml(J::Action::SessionAccept, answer), "singleton answer was rejected");
+    check(SessionTestAccess::updateFromXml(session, J::Action::SessionAccept, answer), "singleton answer was rejected");
     check(waitFor([&]() { return configured->contains(audio->contentName()); }),
           "singleton answer did not start audio");
     check(audio->state() == J::State::Connecting && audioTransport->state() == J::State::Connecting
@@ -765,7 +769,8 @@ static void exerciseResponder(const WireOffer &offer, TcpPortReserver *reserver,
     J::Session session(client.jingleManager(), peer, J::Origin::Responder);
     J::Jingle  parsed(offer.root);
     check(parsed.isValid() && parsed.action() == J::Action::SessionInitiate, "wire BUNDLE offer did not parse");
-    check(session.incomingInitiate(parsed, offer.root), "responder rejected BUNDLE session-initiate");
+    check(SessionTestAccess::incomingInitiate(session, parsed, offer.root),
+          "responder rejected BUNDLE session-initiate");
 
     check(session.remoteGroupings().size() == 1
               && session.remoteGroupings().first().semantics == QLatin1String("BUNDLE")
@@ -887,7 +892,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
 
     J::Session session(client.jingleManager(), peer, J::Origin::Responder);
     J::Jingle  parsed(offer.root);
-    check(parsed.isValid() && session.incomingInitiate(parsed, offer.root),
+    check(parsed.isValid() && SessionTestAccess::incomingInitiate(session, parsed, offer.root),
           "active extension responder rejected initial BUNDLE");
 
     auto audio = dynamic_cast<J::RTP::Application *>(session.content(offer.audioName, J::Origin::Initiator));
@@ -921,7 +926,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
     const QString fileName = QStringLiteral("active-file");
     QDomDocument  addDoc;
     auto add = activeFileAddPayload(addDoc, session, offer, fileName, { offer.audioName, offer.videoName, fileName });
-    check(session.updateFromXml(J::Action::ContentAdd, add),
+    check(SessionTestAccess::updateFromXml(session, J::Action::ContentAdd, add),
           "valid active BUNDLE file-transfer extension was rejected");
     QCoreApplication::processEvents(QEventLoop::AllEvents);
 
@@ -963,7 +968,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
         QDomDocument  nextDoc;
         auto          nextAdd
             = activeFileAddPayload(nextDoc, session, offer, nextName, { offer.audioName, offer.videoName, nextName });
-        check(session.updateFromXml(J::Action::ContentAdd, nextAdd),
+        check(SessionTestAccess::updateFromXml(session, J::Action::ContentAdd, nextAdd),
               "new extension could not be offered after the previous content was destroyed");
         auto next = session.content(nextName, J::Origin::Initiator);
         check(next, "new extension disappeared");
@@ -992,7 +997,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
             auto         remove = removeDoc.createElementNS(J::NS, QStringLiteral("jingle"));
             remove.appendChild(J::ContentBase(J::Origin::Initiator, offer.audioName)
                                    .toXml(&removeDoc, QStringLiteral("content"), J::NS));
-            check(session.updateFromXml(J::Action::ContentRemove, remove),
+            check(SessionTestAccess::updateFromXml(session, J::Action::ContentRemove, remove),
                   "established member removal failed during pending extension");
         }
         acknowledgeJingleTask(pendingContentAccept, peer);
@@ -1010,7 +1015,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
             const QString nextName = QStringLiteral("singleton-extension");
             QDomDocument  nextDoc;
             auto nextAdd = activeFileAddPayload(nextDoc, session, offer, nextName, { offer.videoName, nextName });
-            check(session.updateFromXml(J::Action::ContentAdd, nextAdd),
+            check(SessionTestAccess::updateFromXml(session, J::Action::ContentAdd, nextAdd),
                   "surviving BUNDLE member could not receive a new extension");
             auto           next = session.content(nextName, J::Origin::Initiator);
             RootTaskKeeper pendingNext(client.rootTask());
@@ -1028,7 +1033,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
             QDomDocument                    replaceDoc;
             auto replace = replacementPayload(replaceDoc, offer, { qMakePair(offer.videoName, offer.videoName) });
             RootTaskKeeper pendingReplaceAccept(client.rootTask());
-            check(session.updateFromXml(J::Action::TransportReplace, replace),
+            check(SessionTestAccess::updateFromXml(session, J::Action::TransportReplace, replace),
                   "replacement of the surviving BUNDLE member failed");
             check(waitFor([&]() { return pendingReplaceAccept.task() != nullptr; }),
                   "replacement of singleton BUNDLE did not send transport-accept");
@@ -1045,8 +1050,8 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
     auto         replace = replacementPayload(
         replaceDoc, offer,
         { qMakePair(offer.audioName, offer.audioName), qMakePair(offer.videoName, offer.videoName) });
-    check(!session.updateFromXml(J::Action::TransportReplace, replace) && audio->transport() == audioTransport
-              && video->transport() == videoTransport,
+    check(!SessionTestAccess::updateFromXml(session, J::Action::TransportReplace, replace)
+              && audio->transport() == audioTransport && video->transport() == videoTransport,
           "transport replacement raced a pending extension on the same BUNDLE");
 
     acknowledgeJingleTask(pendingContentAccept, peer);
@@ -1069,7 +1074,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
     auto           unbundledAdd = activeFileAddPayload(unbundledDoc, session, offer, unbundledName,
                                                        { offer.audioName, offer.videoName, fileName, unbundledName });
     RootTaskKeeper pendingPolicyReject(client.rootTask());
-    check(session.updateFromXml(J::Action::ContentAdd, unbundledAdd),
+    check(SessionTestAccess::updateFromXml(session, J::Action::ContentAdd, unbundledAdd),
           "BUNDLE extension that local policy cannot share was not handled");
     check(waitFor([&]() { return pendingPolicyReject.task() != nullptr; }),
           "local grouping policy did not serialize content-reject");
@@ -1085,7 +1090,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
     QDomDocument  rejectedDoc;
     auto          rejectedAdd = activeFileAddPayload(rejectedDoc, session, offer, rejectedName,
                                                      { offer.audioName, offer.videoName, fileName, rejectedName });
-    check(session.updateFromXml(J::Action::ContentAdd, rejectedAdd),
+    check(SessionTestAccess::updateFromXml(session, J::Action::ContentAdd, rejectedAdd),
           "second active BUNDLE extension was rejected before rollback test");
     QCoreApplication::processEvents(QEventLoop::AllEvents);
     auto rejectedFt = dynamic_cast<J::FileTransfer::Application *>(session.content(rejectedName, J::Origin::Initiator));
@@ -1131,7 +1136,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
     QDomDocument  malformedDoc;
     auto          malformed = activeFileAddPayload(malformedDoc, session, offer, malformedName,
                                                    { offer.videoName, offer.audioName, fileName, malformedName });
-    check(!session.updateFromXml(J::Action::ContentAdd, malformed),
+    check(!SessionTestAccess::updateFromXml(session, J::Action::ContentAdd, malformed),
           "active BUNDLE extension accepted established-member reordering");
     check(!session.content(malformedName, J::Origin::Initiator) && icePad->d->liveAssociationCount() == 1,
           "malformed active BUNDLE extension mutated runtime state");
@@ -1171,7 +1176,7 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
         localGroup.appendChild(member);
     }
     localAnswer.appendChild(localGroup);
-    check(session.updateFromXml(J::Action::ContentAccept, localAnswer)
+    check(SessionTestAccess::updateFromXml(session, J::Action::ContentAccept, localAnswer)
               && session.negotiatedGroupings().first().contents == localMembers
               && QPointer<J::ICE::Transport>(static_cast<J::ICE::Transport *>((local->transport()).data()))
                       ->rtpAssociation()
@@ -1219,7 +1224,8 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
 
     QDomDocument initialAcceptDoc;
     auto         initialAccept = sessionAcceptPayload(initialAcceptDoc, session, transportSource, audio, video, peer);
-    check(session.updateFromXml(J::Action::SessionAccept, initialAccept) && session.state() == J::State::Active,
+    check(SessionTestAccess::updateFromXml(session, J::Action::SessionAccept, initialAccept)
+              && session.state() == J::State::Active,
           "RFC 9143 answer fixture could not establish active RTP BUNDLE");
     check(session.negotiatedGroupings().size() == 1
               && session.negotiatedGroupings().first().contents
@@ -1268,12 +1274,13 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
         auto invalidMember = J::ContentBase(J::Origin::Initiator, audio->contentName())
                                  .toXml(&rejectDoc, QStringLiteral("content"), J::NS);
         reject.appendChild(invalidMember);
-        check(!session.updateFromXml(J::Action::ContentReject, reject) && ft->state() == J::State::Pending,
+        check(!SessionTestAccess::updateFromXml(session, J::Action::ContentReject, reject)
+                  && ft->state() == J::State::Pending,
               "malformed rejection batch partially rejected the proposed content");
         reject.removeChild(invalidMember);
         const auto name = ft->contentName();
-        check(session.updateFromXml(J::Action::ContentReject, reject) && !session.content(name, J::Origin::Initiator)
-                  && !ftTransport->rtpAssociation()
+        check(SessionTestAccess::updateFromXml(session, J::Action::ContentReject, reject)
+                  && !session.content(name, J::Origin::Initiator) && !ftTransport->rtpAssociation()
                   && session.negotiatedGroupings().first().contents
                       == QStringList({ audio->contentName(), video->contentName() })
                   && icePad->d->liveAssociationCount() == 1,
@@ -1311,7 +1318,7 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
     }
     invalid.appendChild(oldGroup);
 
-    check(!session.updateFromXml(J::Action::ContentAccept, invalid),
+    check(!SessionTestAccess::updateFromXml(session, J::Action::ContentAccept, invalid),
           "initiator accepted content-accept that removed the new member from BUNDLE");
     check(session.negotiatedGroupings().size() == 1
               && session.negotiatedGroupings().first().contents
@@ -1331,14 +1338,15 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
     oldGroup.appendChild(member);
     // A complete group without the corresponding content definition is not an answer.
     invalid.removeChild(answerContent);
-    check(!session.updateFromXml(J::Action::ContentAccept, invalid)
+    check(!SessionTestAccess::updateFromXml(session, J::Action::ContentAccept, invalid)
               && shared->generation.membershipRevision == revision,
           "empty content-accept committed a pending extension");
     invalid.insertBefore(answerContent, oldGroup);
 
     auto duplicate = answerContent.cloneNode(true);
     invalid.appendChild(duplicate);
-    check(!session.updateFromXml(J::Action::ContentAccept, invalid), "duplicate content-accept was accepted");
+    check(!SessionTestAccess::updateFromXml(session, J::Action::ContentAccept, invalid),
+          "duplicate content-accept was accepted");
     invalid.removeChild(duplicate);
     auto foreignContent = invalidDoc.createElementNS(QStringLiteral("urn:invalid:jingle"), QStringLiteral("content"));
     foreignContent.setAttribute(QStringLiteral("creator"), QStringLiteral("initiator"));
@@ -1346,12 +1354,12 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
     for (auto child = answerContent.firstChildElement(); !child.isNull(); child = child.nextSiblingElement())
         foreignContent.appendChild(child.cloneNode(true));
     invalid.replaceChild(foreignContent, answerContent);
-    check(!session.updateFromXml(J::Action::ContentAccept, invalid) && shared->generation.membershipRevision == revision
-              && ft->state() == J::State::Pending,
+    check(!SessionTestAccess::updateFromXml(session, J::Action::ContentAccept, invalid)
+              && shared->generation.membershipRevision == revision && ft->state() == J::State::Pending,
           "foreign-namespace content definition mutated the pending BUNDLE transaction");
     invalid.replaceChild(answerContent, foreignContent);
     answerTransport.setAttribute(QStringLiteral("ufrag"), QStringLiteral("conflicting-credentials"));
-    check(!session.updateFromXml(J::Action::ContentAccept, invalid),
+    check(!SessionTestAccess::updateFromXml(session, J::Action::ContentAccept, invalid),
           "extension answer changed the established ICE credentials");
     answerTransport.setAttribute(QStringLiteral("ufrag"), QStringLiteral("bundle-answer-ufrag"));
     check(shared->generation.membershipRevision == revision && ft->state() == J::State::Pending,
@@ -1378,12 +1386,12 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
     independentAnswer.appendChild(independentContent);
     auto unrelatedGroup = independentDoc.importNode(oldGroup, true);
     independentAnswer.appendChild(unrelatedGroup);
-    check(!session.updateFromXml(J::Action::ContentAccept, independentAnswer) && ft->state() == J::State::Pending
-              && independent->state() == J::State::Pending,
+    check(!SessionTestAccess::updateFromXml(session, J::Action::ContentAccept, independentAnswer)
+              && ft->state() == J::State::Pending && independent->state() == J::State::Pending,
           "answer for another content committed or cancelled the pending BUNDLE offer");
     independentAnswer.removeChild(unrelatedGroup);
-    check(session.updateFromXml(J::Action::ContentAccept, independentAnswer) && ft->state() == J::State::Pending
-              && shared->generation.membershipRevision == revision,
+    check(SessionTestAccess::updateFromXml(session, J::Action::ContentAccept, independentAnswer)
+              && ft->state() == J::State::Pending && shared->generation.membershipRevision == revision,
           "unrelated independent acceptance disturbed the BUNDLE transaction");
     QPointer<J::Transport> independentTransport = independent->transport();
     check(independentTransport && icePad->d->liveAssociationCount() == 2,
@@ -1398,7 +1406,7 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
               && icePad->d->liveAssociationCount() == 1,
           "independent teardown changed BUNDLE membership or retained its association");
 
-    check(session.updateFromXml(J::Action::ContentAccept, invalid),
+    check(SessionTestAccess::updateFromXml(session, J::Action::ContentAccept, invalid),
           "corrected, fully bundled content-accept was rejected");
     check(session.negotiatedGroupings().first().contents
                   == QStringList({ audio->contentName(), video->contentName(), ft->contentName() })
@@ -1411,7 +1419,8 @@ static void exerciseInitiatorActiveBundleExtension(const WireOffer &transportSou
     auto         removal = removalDoc.createElementNS(J::NS, QStringLiteral("jingle"));
     removal.appendChild(
         J::ContentBase(J::Origin::Initiator, fileName).toXml(&removalDoc, QStringLiteral("content"), J::NS));
-    check(session.updateFromXml(J::Action::ContentRemove, removal), "removal of a committed extension failed");
+    check(SessionTestAccess::updateFromXml(session, J::Action::ContentRemove, removal),
+          "removal of a committed extension failed");
     check(!session.content(fileName, J::Origin::Initiator)
               && session.negotiatedGroupings().first().contents
                   == QStringList({ audio->contentName(), video->contentName() })
@@ -1471,7 +1480,8 @@ static void exerciseInitiatorReplacement(const WireOffer &transportSource, TcpPo
     // and a production-generated ICE transport snapshot.
     QDomDocument acceptDoc;
     auto         accept = sessionAcceptPayload(acceptDoc, session, transportSource, audio, video, peer);
-    check(session.updateFromXml(J::Action::SessionAccept, accept), "production session-accept XML was rejected");
+    check(SessionTestAccess::updateFromXml(session, J::Action::SessionAccept, accept),
+          "production session-accept XML was rejected");
     check(session.state() == J::State::Active && audio->state() == J::State::Accepted
               && video->state() == J::State::Accepted,
           "session-accept XML did not establish the active negotiated session");
@@ -1487,7 +1497,7 @@ static void exerciseInitiatorReplacement(const WireOffer &transportSource, TcpPo
     QDomDocument partialDoc;
     auto         partial = replacementPayload(partialDoc, transportSource,
                                               { qMakePair(audio->contentName(), transportSource.audioName) });
-    check(!session.updateFromXml(J::Action::TransportReplace, partial),
+    check(!SessionTestAccess::updateFromXml(session, J::Action::TransportReplace, partial),
           "partial negotiated BUNDLE transport-replace was accepted");
     check(audio->transport() == audioTransport && video->transport() == videoTransport && oldNetwork
               && icePad->d->liveAssociationCount() == 1,
@@ -1497,7 +1507,7 @@ static void exerciseInitiatorReplacement(const WireOffer &transportSource, TcpPo
     auto         full = replacementPayload(fullDoc, transportSource,
                                            { qMakePair(audio->contentName(), transportSource.audioName),
                                              qMakePair(video->contentName(), transportSource.videoName) });
-    check(session.updateFromXml(J::Action::TransportReplace, full),
+    check(SessionTestAccess::updateFromXml(session, J::Action::TransportReplace, full),
           "full negotiated BUNDLE transport-replace was rejected");
 
     auto replacementAudio = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(audio->transport().data()));
@@ -1637,7 +1647,8 @@ static void exerciseTwoGroupReplacement(const WireOffer &transportSource, TcpPor
         accept.appendChild(group);
     }
 
-    check(session.updateFromXml(J::Action::SessionAccept, accept), "two-group session-accept was rejected");
+    check(SessionTestAccess::updateFromXml(session, J::Action::SessionAccept, accept),
+          "two-group session-accept was rejected");
     check(session.state() == J::State::Active, "two-group session did not become active");
 
     bool  a1Bound = false, a1Required = false, a2Bound = false, a2Required = false;
@@ -1658,7 +1669,8 @@ static void exerciseTwoGroupReplacement(const WireOffer &transportSource, TcpPor
     auto         replaceA = replacementPayload(replaceADoc, transportSource,
                                                { qMakePair(a1->contentName(), transportSource.audioName),
                                                  qMakePair(a2->contentName(), transportSource.videoName) });
-    check(session.updateFromXml(J::Action::TransportReplace, replaceA), "first BUNDLE group replacement was rejected");
+    check(SessionTestAccess::updateFromXml(session, J::Action::TransportReplace, replaceA),
+          "first BUNDLE group replacement was rejected");
 
     auto ra1 = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(a1->transport().data()));
     auto ra2 = QPointer<J::ICE::Transport>(qobject_cast<J::ICE::Transport *>(a2->transport().data()));

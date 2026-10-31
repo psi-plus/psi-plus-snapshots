@@ -1,4 +1,5 @@
 #include <QCoreApplication>
+#include <QtCrypto>
 #include <iris/jingle-ice.h>
 #include <iris/jingle-nstransportslist.h>
 #include <iris/jingle-session.h>
@@ -43,6 +44,7 @@ static bool isIceTransport(const QString &ns) { return ns == ICE::NS || ns == IC
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
+    QCA::Initializer qca;
 
     TcpPortReserver reserver;
     Client          client;

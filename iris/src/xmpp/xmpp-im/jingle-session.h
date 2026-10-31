@@ -167,6 +167,7 @@ namespace XMPP { namespace Jingle {
         void peerAuthenticationChanged();
 
     private:
+        friend struct SessionTestAccess;
         friend class Application;
         friend class Manager;
         friend class TransportManagerPad;

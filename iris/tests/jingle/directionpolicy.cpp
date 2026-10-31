@@ -2,9 +2,7 @@
 #define main iris_contentmodifyrace_legacy_main
 #include "contentmodifyrace.cpp"
 #undef main
-#define private public
-#include <iris/jingle-rtp.h>
-#undef private
+#include "rtptestaccess.h"
 #include <iris/xmpp.h>
 #include <iris/xmpp_clientstream.h>
 
@@ -118,7 +116,8 @@ int main(int argc, char **argv)
               "already satisfied local policy not observed");
         auto device     = controller->suspendLocalSending(&content);
         auto permission = controller->suspendLocalSending(&content);
-        check(!content.allowsRtp(true) && content.allowsRtp(false),
+        check(!R::ApplicationTestAccess::allowsRtp(content, true)
+                  && R::ApplicationTestAccess::allowsRtp(content, false),
               "constraint did not immediately close only send gate");
         flush();
         auto mute = consume(content);
@@ -128,13 +127,13 @@ int main(int argc, char **argv)
               "local constraint overwrote peer sending or falsely satisfied blocked desire");
         device.reset();
         flush();
-        check(!content.allowsRtp(true), "removing one constraint overrode another");
+        check(!R::ApplicationTestAccess::allowsRtp(content, true), "removing one constraint overrode another");
         permission.reset();
         flush();
         auto restore = consume(content);
         acknowledge(restore, &success);
         flush();
-        check(content.senders() == J::Origin::Both && content.allowsRtp(true),
+        check(content.senders() == J::Origin::Both && R::ApplicationTestAccess::allowsRtp(content, true),
               "device recovery did not restore allowed desire");
 
         // New preference must survive an old accepted mute already on the wire.
@@ -164,7 +163,8 @@ int main(int argc, char **argv)
         auto rejected = consume(content);
         acknowledge(rejected, &failure);
         flush();
-        check(controller->policy(&content)->status == PolicyStatus::Failed && !content.allowsRtp(true),
+        check(controller->policy(&content)->status == PolicyStatus::Failed
+                  && !R::ApplicationTestAccess::allowsRtp(content, true),
               "failed policy reopened sending or remained indefinitely pending");
         check(content.evaluateOutgoingUpdate().action == J::Action::NoAction,
               "generic failure entered an automatic retry loop");
@@ -173,7 +173,8 @@ int main(int argc, char **argv)
         auto hardware = controller->suspendLocalSending(&content);
         controller->setLocalSending(&content, false);
         hardware.reset();
-        check(!content.allowsRtp(true), "constraint removal resurrected revoked sending consent");
+        check(!R::ApplicationTestAccess::allowsRtp(content, true),
+              "constraint removal resurrected revoked sending consent");
     }
 
     // Tokens identify an Application incarnation, never merely (creator,name).
@@ -189,11 +190,13 @@ int main(int argc, char **argv)
         auto              current = controller->suspendLocalSending(&replacement);
         controller->setLocalSending(&replacement, true);
         stale.reset();
-        check(!replacement.allowsRtp(true), "stale token released replacement content's constraint");
+        check(!R::ApplicationTestAccess::allowsRtp(replacement, true),
+              "stale token released replacement content's constraint");
         controller->setLocalSending(&replacement, false);
         current.reset();
         flush();
-        check(!replacement.allowsRtp(true), "unblocked replacement inferred consent from negotiated senders");
+        check(!R::ApplicationTestAccess::allowsRtp(replacement, true),
+              "unblocked replacement inferred consent from negotiated senders");
     }
     crossedPolicies(false);
     crossedPolicies(true);
@@ -215,7 +218,8 @@ int main(int argc, char **argv)
         }
         content.incomingContentModify(J::Origin::Responder);
         flush();
-        check(controller->policy(&content)->status == PolicyStatus::Failed && !content.allowsRtp(true),
+        check(controller->policy(&content)->status == PolicyStatus::Failed
+                  && !R::ApplicationTestAccess::allowsRtp(content, true),
               "opposing peer policy caused unbounded reassertion");
         check(content.evaluateOutgoingUpdate().action == J::Action::NoAction,
               "reconciliation limit left a stale proposal");
@@ -238,7 +242,8 @@ int main(int argc, char **argv)
         });
         controller->setLocalSending(&content, false);
         flush();
-        check(changed && controller->policy(&content)->desiredSending && content.allowsRtp(true),
+        check(changed && controller->policy(&content)->desiredSending
+                  && R::ApplicationTestAccess::allowsRtp(content, true),
               "reentrant policy change was overwritten by old scheduling call");
         check(content.evaluateOutgoingUpdate().action == J::Action::NoAction, "superseded scheduling kept old mute");
     }

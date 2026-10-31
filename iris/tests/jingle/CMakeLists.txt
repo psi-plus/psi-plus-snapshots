@@ -127,6 +127,7 @@ target_include_directories(jingle_icelocalsocketownership_test PRIVATE ../../src
 target_link_libraries(jingle_icelocalsocketownership_test PRIVATE irisnet iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
     Qt${QT_DEFAULT_MAJOR_VERSION}::Network)
 add_test(NAME jingle_icelocalsocketownership COMMAND jingle_icelocalsocketownership_test)
+set_tests_properties(jingle_icelocalsocketownership PROPERTIES TIMEOUT 5)
 add_executable(jingle_iceudp_test iceudp.cpp)
 target_include_directories(jingle_iceudp_test PRIVATE ../../src/xmpp/xmpp-im)
 target_link_libraries(jingle_iceudp_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core

@@ -74,6 +74,7 @@ namespace Jingle { namespace ICE {
         bool                       sendProtectedRtpPacket(QByteArray, RTP::PacketKind, quint64 epoch) override;
 
     private:
+        friend struct TransportTestAccess;
         friend class Manager;
         friend class Pad;
         void releaseNetworkOwnership();
@@ -96,6 +97,7 @@ namespace Jingle { namespace ICE {
         TcpPortScope *discoScope() const;
 
     private:
+        friend struct TransportTestAccess;
         friend class Transport;
         bool commitGroupExtension(const ContentKey &) override;
         void rollbackGroupExtension(const ContentKey &) override;

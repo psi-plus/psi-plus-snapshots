@@ -2,9 +2,13 @@
 //
 // Reuse the transport-replace fixture to verify that an invalid member of a
 // transport-reject batch cannot partially commit an earlier valid member.
+#include "sessiontestaccess.h"
+
 #define main iris_transportreplace_legacy_main
 #include "transportreplace.cpp"
 #undef main
+
+using XMPP::Jingle::SessionTestAccess;
 
 static void testInvalidLaterRejectIsAtomic(Client &client)
 {
@@ -27,13 +31,13 @@ static void testInvalidLaterRejectIsAtomic(Client &client)
     video->markReplacePlanned();
 
     QDomDocument doc;
-    const bool   ok = session.updateFromXml(
-        J::Action::TransportReject,
+    const bool   ok = SessionTestAccess::updateFromXml(
+        session, J::Action::TransportReject,
         makeReplace(doc,
-                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                          QStringLiteral("audio-rejected") },
-                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                          QStringLiteral("video-out-of-order") } }));
+                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                        QStringLiteral("audio-rejected") },
+                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                        QStringLiteral("video-out-of-order") } }));
 
     check(!ok, "transport-reject batch with an out-of-order member was accepted");
     check(audio->transport().data() == audioOld.data(),

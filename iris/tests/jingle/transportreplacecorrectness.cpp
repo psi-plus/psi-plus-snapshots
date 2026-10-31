@@ -5,16 +5,16 @@
 #include <QPointer>
 #include <QtCrypto>
 
+#include "sessiontestaccess.h"
 #include <iris/jingle-application.h>
-#define private public
-#include <iris/jingle-session.h>
-#undef private
+
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_task.h>
 
 #include <memory>
 
 using namespace XMPP;
+using XMPP::Jingle::SessionTestAccess;
 namespace J = XMPP::Jingle;
 
 static void check(bool ok, const char *message)
@@ -327,8 +327,8 @@ static void testInFlightReplaceWinsWithoutTransportUnacked(Client &client)
           "ICE-like test transport unexpectedly encoded IQ lifetime in transport state");
 
     QDomDocument doc;
-    const bool   ok = session.updateFromXml(J::Action::TransportReplace,
-                                            makeReplace(doc, { QStringLiteral("remote-replacement") }));
+    const bool   ok = SessionTestAccess::updateFromXml(session, J::Action::TransportReplace,
+                                                       makeReplace(doc, { QStringLiteral("remote-replacement") }));
     check(!ok && isTieBreak(session),
           "initiator accepted a crossed transport-replace because Transport::State was not Unacked");
     check(app->transport().data() == local.data(), "crossed transport-replace replaced the initiator winner");
@@ -341,8 +341,8 @@ static void testUnackedTransportWithoutReplaceDoesNotTieBreak(Client &client)
     auto app   = addApplication(session, local, std::make_unique<TestSelector>());
 
     QDomDocument doc;
-    const bool   ok = session.updateFromXml(J::Action::TransportReplace,
-                                            makeReplace(doc, { QStringLiteral("remote-replacement") }));
+    const bool   ok = SessionTestAccess::updateFromXml(session, J::Action::TransportReplace,
+                                                       makeReplace(doc, { QStringLiteral("remote-replacement") }));
     check(ok && !isTieBreak(session),
           "Transport::State::Unacked was mistaken for an in-flight transport-replace transaction");
     check(app->transport().data() != local.data(), "valid peer transport-replace was not installed");
@@ -395,8 +395,8 @@ static void testDuplicateContentReplaceIsAtomic(Client &client)
     auto          app         = addApplication(session, local, std::move(selector), &selectorRaw, J::State::Active);
 
     QDomDocument doc;
-    const bool   ok = session.updateFromXml(J::Action::TransportReplace,
-                                            makeReplace(doc, { QStringLiteral("first"), QStringLiteral("second") }));
+    const bool   ok = SessionTestAccess::updateFromXml(
+        session, J::Action::TransportReplace, makeReplace(doc, { QStringLiteral("first"), QStringLiteral("second") }));
 
     check(!ok, "duplicate (creator,name) transport-replace entries were accepted");
     check(app->transport().data() == local.data(), "duplicate transport-replace partially mutated current transport");
@@ -412,7 +412,8 @@ static void testMissingTransportReplaceIsMalformed(Client &client)
     auto          app         = addApplication(session, local, std::move(selector), &selectorRaw, J::State::Active);
 
     QDomDocument doc;
-    const bool   ok = session.updateFromXml(J::Action::TransportReplace, makeReplaceWithoutTransport(doc));
+    const bool   ok
+        = SessionTestAccess::updateFromXml(session, J::Action::TransportReplace, makeReplaceWithoutTransport(doc));
 
     check(!ok, "transport-replace without a transport element was accepted as an unsupported transport");
     check(app->transport().data() == local.data(), "malformed transport-replace changed current transport");

@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
+#include "sessiontestaccess.h"
 #include <functional>
 #include <iris/jingle-application.h>
 #include <memory>
-#define private public
-#include <iris/jingle-session.h>
-#undef private
+
 #include <iris/jingle-ft.h>
 #include <iris/tcpportreserver.h>
 #include <iris/xmpp-im/jingle-ibb.h>
@@ -13,8 +12,10 @@
 
 #include <QCoreApplication>
 #include <QPointer>
+#include <QtCrypto>
 
 using namespace XMPP;
+using XMPP::Jingle::SessionTestAccess;
 namespace J  = XMPP::Jingle;
 namespace FT = J::FileTransfer;
 
@@ -233,10 +234,11 @@ static void testIncomingDeletion()
                 QDomDocument doc;
                 const auto   contents = incomingContents(doc);
                 if (initial)
-                    check(!session->incomingInitiate(J::Jingle(J::Action::SessionInitiate, "callback-test"), contents),
+                    check(!SessionTestAccess::incomingInitiate(
+                              *session, J::Jingle(J::Action::SessionInitiate, "callback-test"), contents),
                           "cancelled incoming initiation reported success");
                 else {
-                    const bool result = session->updateFromXml(J::Action::ContentAdd, contents);
+                    const bool result = SessionTestAccess::updateFromXml(*session, J::Action::ContentAdd, contents);
                     check(result == deleteSession, "cancelled content-add returned the wrong disposition");
                 }
                 check(*manager.destroyed == 2, "incoming parser retained or destroyed a candidate twice");
@@ -287,6 +289,7 @@ static void testIncomingManagerDeletion()
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
+    QCA::Initializer qca;
     TcpPortReserver  reserver;
     Client           client;
     client.setTcpPortReserver(&reserver);

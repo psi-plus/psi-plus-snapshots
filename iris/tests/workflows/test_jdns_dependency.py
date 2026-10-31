@@ -50,7 +50,7 @@ include(CMakePackageConfigHelpers)
 write_basic_package_version_file("%s/QJDnsConfigVersion.cmake"
     VERSION "%s" COMPATIBILITY SameMajorVersion)
 set(QJDns_DIR "%s")
-''' % (package, version, package)
+''' % (package.as_posix(), version, package.as_posix())
             else:
                 setup += "set(CMAKE_DISABLE_FIND_PACKAGE_QJDns TRUE)\n"
             if existing:
@@ -92,7 +92,7 @@ iris_configure_jdns()
         self.assertIn("using bundled", result.stdout)
 
     def test_old_and_wrong_major_packages_fall_back(self):
-        for version in ("2.0.6", "3.0.0", "4.0.0"):
+        for version in ("2.0.6", "3.0.0", "3.1.0", "4.0.0"):
             with self.subTest(version=version):
                 result = self.configure(version=version)
                 self.assertEqual(result.returncode, 0, result.stdout)

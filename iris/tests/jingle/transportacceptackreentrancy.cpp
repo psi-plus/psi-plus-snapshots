@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
+#include "sessiontestaccess.h"
+
 #define main iris_transportreplace_legacy_main
 #include "transportreplace.cpp"
 #undef main
+
+using XMPP::Jingle::SessionTestAccess;
 
 #include <functional>
 
@@ -152,7 +156,8 @@ static void testDeletedApplicationRejectsLateCompletion(Client &client)
     content.setAttribute(QStringLiteral("name"), QStringLiteral("audio"));
     jingle.appendChild(content);
 
-    check(f.session.updateFromXml(J::Action::ContentRemove, jingle), "could not remove application before late ACK");
+    check(SessionTestAccess::updateFromXml(f.session, J::Action::ContentRemove, jingle),
+          "could not remove application before late ACK");
     check(!f.session.content(QStringLiteral("audio"), J::Origin::Initiator),
           "content-remove did not delete the application");
 

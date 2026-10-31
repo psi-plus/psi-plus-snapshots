@@ -2,11 +2,15 @@
 //
 // Reuse the transport-replace fixture so this regression exercises the same
 // Application replacement state machine as the protocol tests.
+#include "sessiontestaccess.h"
+
 #include <functional>
 
 #define main iris_transportreplace_legacy_main
 #include "transportreplace.cpp"
 #undef main
+
+using XMPP::Jingle::SessionTestAccess;
 
 class ReentrantRejectSelector : public TestSelector {
 public:
@@ -49,13 +53,13 @@ static void testRejectSkipsReentrantStaleSibling(Client &client)
     };
 
     QDomDocument doc;
-    const bool   ok = session.updateFromXml(
-        J::Action::TransportReject,
+    const bool   ok = SessionTestAccess::updateFromXml(
+        session, J::Action::TransportReject,
         makeReplace(doc,
-                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                          QStringLiteral("audio-rejected") },
-                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                          QStringLiteral("video-stale-reject") } }));
+                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                        QStringLiteral("audio-rejected") },
+                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                        QStringLiteral("video-stale-reject") } }));
 
     check(ok, "reentrant stale sibling made transport-reject reject the whole batch");
     check(audio->transport().data() == audioFallback.data() && audio->replacePlanned(),

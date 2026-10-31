@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
+#include "sessiontestaccess.h"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QEventLoop>
@@ -7,11 +8,9 @@
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_task.h>
 #include <qca.h>
-#define private public
-#include <iris/jingle-session.h>
-#undef private
 
 using namespace XMPP;
+using XMPP::Jingle::SessionTestAccess;
 using namespace XMPP::Jingle;
 namespace R = XMPP::Jingle::RTP;
 static void check(bool ok, const char *message)
@@ -290,10 +289,10 @@ int main(int argc, char **argv)
         missing.setAttribute("creator", "initiator");
         missing.setAttribute("name", "missing");
         malformed.appendChild(missing);
-        check(!session.updateFromXml(Action::SessionAccept, malformed), "malformed batch accepted");
+        check(!SessionTestAccess::updateFromXml(session, Action::SessionAccept, malformed), "malformed batch accepted");
         check(audio->state() == State::Pending && !audio->remoteDescription(),
               "rejected batch retained committed RTP answer");
-        check(session.updateFromXml(Action::SessionAccept, accepted), "RTP session-accept failed");
+        check(SessionTestAccess::updateFromXml(session, Action::SessionAccept, accepted), "RTP session-accept failed");
         check(counters->configured == 0 && transport->starts == 0, "RTP started before acceptance returned");
         pump();
         check(counters->configured == 1 && transport->starts == 1, "accepted RTP not configured");
@@ -303,22 +302,25 @@ int main(int argc, char **argv)
         QObject::connect(rtpPad.data(), &R::Pad::informationReceived, rtpPad.data(),
                          [&](const R::SessionInfo &) { ++infos; });
         const auto ringing = infoXml("<ringing xmlns='urn:xmpp:jingle:apps:rtp:info:1'/>");
-        check(session.updateFromXml(Action::SessionInfo, ringing), "RTP auxiliary info namespace not routed");
+        check(SessionTestAccess::updateFromXml(session, Action::SessionInfo, ringing),
+              "RTP auxiliary info namespace not routed");
         check(infos == 1 && session.allApplicationTypes().size() == 1, "RTP info created a second application pad");
         auto badInfo = ringing.cloneNode(true).toElement();
         badInfo.appendChild(doc.createElementNS("urn:unknown", "unknown"));
-        check(!session.updateFromXml(Action::SessionInfo, badInfo) && infos == 1,
+        check(!SessionTestAccess::updateFromXml(session, Action::SessionInfo, badInfo) && infos == 1,
               "mixed unsupported info batch partially dispatched");
         const auto mute
             = infoXml(QStringLiteral("<mute xmlns='urn:xmpp:jingle:apps:rtp:info:1' creator='initiator' name='%1'/>")
                           .arg(audio->contentName()));
-        check(session.updateFromXml(Action::SessionInfo, mute) && infos == 2, "named mute not routed");
-        check(!session.updateFromXml(
-                  Action::SessionInfo,
+        check(SessionTestAccess::updateFromXml(session, Action::SessionInfo, mute) && infos == 2,
+              "named mute not routed");
+        check(!SessionTestAccess::updateFromXml(
+                  session, Action::SessionInfo,
                   infoXml("<mute xmlns='urn:xmpp:jingle:apps:rtp:info:1' creator='initiator' name='missing'/>")),
               "mute for unknown content accepted");
-        check(!session.updateFromXml(Action::SessionInfo,
-                                     infoXml("<mute xmlns='urn:xmpp:jingle:apps:rtp:info:1' name='missing'/>")),
+        check(!SessionTestAccess::updateFromXml(
+                  session, Action::SessionInfo,
+                  infoXml("<mute xmlns='urn:xmpp:jingle:apps:rtp:info:1' name='missing'/>")),
               "mute without creator accepted");
         check(audio->senders() == Origin::Both && counters->configured == 1,
               "informational event changed media negotiation");
@@ -328,7 +330,7 @@ int main(int argc, char **argv)
                                      "<payload-type id='111'><parameter name='minptime' value='20'/></payload-type>"
                                      "</description></content>")
                           .arg(audio->contentName()));
-        check(session.updateFromXml(Action::DescriptionInfo, hint) && counters->hints == 1,
+        check(SessionTestAccess::updateFromXml(session, Action::DescriptionInfo, hint) && counters->hints == 1,
               "advisory hint not delivered");
         check(audio->remoteDescription()->payloads.first().clockrate == 48000,
               "advisory hint replaced the negotiated description");
@@ -442,8 +444,8 @@ int main(int argc, char **argv)
         auto              pad   = QPointer<R::Pad>(qobject_cast<R::Pad *>(audio->pad()));
         QObject::connect(pad.data(), &R::Pad::informationReceived, pad.data(),
                          [=](const R::SessionInfo &) { delete disposable; });
-        check(disposable->updateFromXml(Action::SessionInfo,
-                                        infoXml("<ringing xmlns='urn:xmpp:jingle:apps:rtp:info:1'/>")),
+        check(SessionTestAccess::updateFromXml(*disposable, Action::SessionInfo,
+                                               infoXml("<ringing xmlns='urn:xmpp:jingle:apps:rtp:info:1'/>")),
               "info callback teardown failed");
         check(!guard && !pad, "session destruction from an info callback left its pad alive");
     }

@@ -83,9 +83,14 @@ if(IRIS_BUNDLED_QCA)
     string(SUBSTRING "${_qca_source_hash}" 0 12 _qca_source_hash_short)
     set(_qca_binary_dir "${QCA_PREFIX}/build-${_qca_source_hash_short}")
 
+    if(WIN32)
+        set(_iris_qca_crypto_plugin wincrypto)
+    else()
+        set(_iris_qca_crypto_plugin ossl)
+    endif()
     set(Qca_CORE_LIB "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}qca3-qt${QT_DEFAULT_MAJOR_VERSION}${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
-    set(Qca_OSSL_LIB "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/qca3-qt${QT_DEFAULT_MAJOR_VERSION}/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-ossl${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
-    set(Qca_LIBRARY ${Qca_OSSL_LIB} ${Qca_CORE_LIB})
+    set(Qca_CRYPTO_LIB "${IRIS_QCA_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/qca3-qt${QT_DEFAULT_MAJOR_VERSION}/crypto/${CMAKE_STATIC_LIBRARY_PREFIX}qca-${_iris_qca_crypto_plugin}${D}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+    set(Qca_LIBRARY ${Qca_CRYPTO_LIB} ${Qca_CORE_LIB})
     if(APPLE)
         set(Qca_LIBRARY ${Qca_LIBRARY} "-framework CoreFoundation" "-framework Security")
     endif()
@@ -94,7 +99,9 @@ if(IRIS_BUNDLED_QCA)
         set(Qca_INCLUDE_DIR_EXPORT ${Qca_INCLUDE_DIR} PARENT_SCOPE)
     endif()
 
-    if(ANDROID)
+    if(WIN32)
+        # Native CNG/Schannel needs no OpenSSL dependency for QCA.
+    elseif(ANDROID)
         include(IrisAndroidOpenSSL)
     else()
         if("${OPENSSL_ROOT_DIR}" STREQUAL "" AND APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
@@ -115,7 +122,7 @@ if(IRIS_BUNDLED_QCA)
     set(QCA_BUILD_OPTIONS
         -DBUILD_SHARED_LIBS=OFF
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-        -DBUILD_PLUGINS=ossl
+        -DBUILD_PLUGINS=${_iris_qca_crypto_plugin}
         -DLOAD_SHARED_PLUGINS=OFF
         -DBUILD_TESTS=OFF
         -DBUILD_TOOLS=OFF
@@ -147,6 +154,9 @@ if(IRIS_BUNDLED_QCA)
         -DQt6_DIR=${Qt6_DIR}
         -DQt6Core_DIR=${Qt6Core_DIR}
         -DOSX_FRAMEWORK=OFF)
+    if(WIN32)
+        list(APPEND QCA_BUILD_OPTIONS -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE)
+    endif()
     if(QT_DEFAULT_MAJOR_VERSION LESS 6)
         list(APPEND QCA_BUILD_OPTIONS -DBUILD_WITH_QT6=OFF)
     else()
@@ -173,7 +183,7 @@ if(IRIS_BUNDLED_QCA)
         INSTALL_DIR "${IRIS_QCA_INSTALL_DIR}"
         LIST_SEPARATOR "|"
         CMAKE_ARGS ${QCA_BUILD_OPTIONS}
-        BUILD_BYPRODUCTS ${Qca_CORE_LIB} ${Qca_OSSL_LIB}
+        BUILD_BYPRODUCTS ${Qca_CORE_LIB} ${Qca_CRYPTO_LIB}
         INSTALL_COMMAND "${CMAKE_COMMAND}" --install <BINARY_DIR> --config "${_qca_build_config}"
         )
     add_library(qca-core STATIC IMPORTED GLOBAL)
@@ -181,15 +191,19 @@ if(IRIS_BUNDLED_QCA)
         IMPORTED_LOCATION "${Qca_CORE_LIB}"
         INTERFACE_INCLUDE_DIRECTORIES "${Qca_INCLUDE_DIR}"
     )
-    add_library(qca-ossl STATIC IMPORTED GLOBAL)
-    set_target_properties(qca-ossl PROPERTIES
-        IMPORTED_LOCATION "${Qca_OSSL_LIB}"
+    add_library(qca-${_iris_qca_crypto_plugin} STATIC IMPORTED GLOBAL)
+    set_target_properties(qca-${_iris_qca_crypto_plugin} PROPERTIES
+        IMPORTED_LOCATION "${Qca_CRYPTO_LIB}"
         INTERFACE_INCLUDE_DIRECTORIES "${Qca_INCLUDE_DIR}"
     )
     add_library(Qca3::Qca INTERFACE IMPORTED GLOBAL)
     set_property(TARGET Qca3::Qca PROPERTY INTERFACE_LINK_LIBRARIES
-        "qca-core;qca-ossl;OpenSSL::Crypto;OpenSSL::SSL"
-    )
+        "qca-${_iris_qca_crypto_plugin};qca-core")
+    if(WIN32)
+        set_property(TARGET Qca3::Qca APPEND PROPERTY INTERFACE_LINK_LIBRARIES bcrypt ncrypt secur32)
+    else()
+        set_property(TARGET Qca3::Qca APPEND PROPERTY INTERFACE_LINK_LIBRARIES OpenSSL::Crypto OpenSSL::SSL)
+    endif()
     if(WIN32 OR USE_MXE)
         set_property(TARGET Qca3::Qca APPEND PROPERTY INTERFACE_LINK_LIBRARIES crypt32 ws2_32)
     elseif(APPLE)
@@ -202,7 +216,7 @@ if(IRIS_BUNDLED_QCA)
     set_property(TARGET Qca3::Qca PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${Qca_INCLUDE_DIR}")
     set(IRIS_QCA_TARGET Qca3::Qca)
     add_dependencies(qca-core QcaProject)
-    add_dependencies(qca-ossl QcaProject)
+    add_dependencies(qca-${_iris_qca_crypto_plugin} QcaProject)
 else()
     message(STATUS "QCA: using system QCA (${_iris_system_qca})")
     set(_iris_qca3_package "Qca3-qt${QT_DEFAULT_MAJOR_VERSION}")

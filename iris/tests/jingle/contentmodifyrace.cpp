@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
+#include "sessiontestaccess.h"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QtCrypto>
 #include <initializer_list>
 #include <iris/jingle-application.h>
-#define private public
-#include <iris/jingle-session.h>
-#undef private
+
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_task.h>
 
 using namespace XMPP;
+using XMPP::Jingle::SessionTestAccess;
 namespace J = XMPP::Jingle;
 
 static void check(bool ok, const char *message)
@@ -237,7 +237,7 @@ static void crossedContentModify(Client &client, Task *success, Task *failure, J
               == J::TieBreaker::Solution::Continue,
           "content-modify collision leaked into unrelated action");
 
-    check(responder.updateFromXml(J::Action::ContentModify, payload(initiatorUpdate)),
+    check(SessionTestAccess::updateFromXml(responder, J::Action::ContentModify, payload(initiatorUpdate)),
           "responder rejected initiator content-modify");
     responder.tieBreaker()->incomingFinished(responderResolution.id, J::TieBreaker::RemoteResult::Applied);
     check(responderApp->senders() == initiatorTarget, "responder did not apply initiator direction");

@@ -12,10 +12,12 @@
 #include <QDeadlineTimer>
 #include <QHash>
 #include <QHostAddress>
+#include <QPluginLoader>
 #include <QPointer>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QtCrypto>
+#include <QtPlugin>
 
 #include <functional>
 #include <memory>
@@ -351,9 +353,9 @@ private:
               const std::function<void(bool)> &reply)
     {
         targets += authority;
-        QHostAddress address(QString::fromLatin1(host));
+        QHostAddress address = hosts.value(host);
         if (address.isNull())
-            address = hosts.value(host);
+            address.setAddress(QString::fromLatin1(host));
         if (address.isNull()) {
             reply(false);
             client->disconnectFromHost();
@@ -409,6 +411,24 @@ public:
 private:
     int nextId = 0;
 };
+
+// Override the default Internet resolver through the existing plugin mechanism. These connector fixtures
+// need negative SRV answers, without depending on the machine's DNS servers or their timeout behaviour.
+class NegativeSystemDnsPlugin : public IrisNetProvider {
+    Q_OBJECT
+    Q_INTERFACES(XMPP::IrisNetProvider)
+    Q_PLUGIN_METADATA(IID "com.affinix.irisnet.IrisNetProvider/1.0")
+public:
+    QPointer<TableNameProvider> resolver;
+
+    NameProvider *createNameProviderInternet() override
+    {
+        resolver = new TableNameProvider;
+        return resolver;
+    }
+};
+
+NegativeSystemDnsPlugin *systemDnsFixture = nullptr;
 
 // Accepts connections like an XMPP server would; the connector needs no more.
 class FakeXmppServer : public QObject {
@@ -675,6 +695,8 @@ void testNoSystemFallback()
 {
     // A resolver bound to a provider must not fall back to the system
     // resolver once the provider is gone.
+    if (systemDnsFixture->resolver)
+        systemDnsFixture->resolver->queries.clear();
     auto   provider = std::make_unique<RemoteNameProvider>(QUrl(QStringLiteral("tcp://127.0.0.1:1")));
     Lookup pending(provider.get(), "localhost", NameRecord::A);
     provider.reset();
@@ -709,6 +731,8 @@ void testNoSystemFallback()
     QObject::connect(&service, &ServiceResolver::error, &service, [&]() { serviceFailed = true; });
     service.start(QStringLiteral("localhost"), 5222);
     check(waitFor([&]() { return serviceFailed; }), "service lookup after the provider was deleted did not fail");
+    check(!systemDnsFixture->resolver || systemDnsFixture->resolver->queries.isEmpty(),
+          "a deleted provider caused a lookup through the default resolver");
 }
 
 void testWithoutJdns()
@@ -719,8 +743,10 @@ void testWithoutJdns()
     check(waitFor([&]() { return lookup.done; }), "lookup without JDNS did not finish");
     check(lookup.error == NameResolver::ErrorGeneric && lookup.records.isEmpty(), "lookup without JDNS did not fail");
 
-    // The connector ignores remote DNS: the system resolver finds no SRV
-    // records for the .invalid domain (RFC 6761), so the proxy gets the domain.
+    // The connector ignores unsupported remote DNS. The default test resolver returns no SRV records,
+    // so the proxy gets the domain; no system DNS request is needed.
+    if (systemDnsFixture->resolver)
+        systemDnsFixture->resolver->queries.clear();
     FakeProxy                proxy(FakeProxy::Kind::Socks5);
     AdvancedConnector        connector;
     AdvancedConnector::Proxy settings;
@@ -730,8 +756,13 @@ void testWithoutJdns()
     bool failed = false;
     QObject::connect(&connector, &Connector::error, &connector, [&]() { failed = true; });
     connector.connectToServer(QStringLiteral("example.invalid"));
-    check(waitFor([&]() { return failed; }), "connector did not finish");
+    check(waitFor([&]() { return failed; }), "connector without JDNS did not finish");
     check(proxy.targets == QList<QByteArray> { "example.invalid:5222" }, "the proxy was not given the domain");
+    check(systemDnsFixture->resolver
+              && systemDnsFixture->resolver->queries
+                  == QList<QByteArray> { "_xmpps-client._tcp.example.invalid./33",
+                                         "_xmpp-client._tcp.example.invalid./33" },
+          "the connector did not limit default DNS lookups to SRV records");
 }
 
 void testServiceResolverTargetsByName()
@@ -771,9 +802,10 @@ void testServiceResolverTargetsByName()
 
 void testConnectorLocalSrvThroughProxy()
 {
-    // Without remote DNS only SRV records are looked up, with the system
-    // resolver; the proxy resolves what it is given. Here SRV finds nothing
-    // (.invalid, RFC 6761), so the proxy gets the domain and the default port.
+    // Without remote DNS only SRV records are looked up through the default name provider. Its empty
+    // table makes the connector hand the domain and default port to the proxy.
+    if (systemDnsFixture->resolver)
+        systemDnsFixture->resolver->queries.clear();
     FakeXmppServer xmpp;
     FakeProxy      proxy(FakeProxy::Kind::HttpConnect);
     proxy.hosts.insert("example.invalid", QHostAddress(QHostAddress::LocalHost));
@@ -791,6 +823,11 @@ void testConnectorLocalSrvThroughProxy()
     check(connected && proxy.targets == QList<QByteArray> { "example.invalid:5222" },
           "the proxy was not given the domain after SRV found nothing");
     check(connector.host() == QLatin1String("example.invalid"), "host is not the domain");
+    check(systemDnsFixture->resolver
+              && systemDnsFixture->resolver->queries
+                  == QList<QByteArray> { "_xmpps-client._tcp.example.invalid./33",
+                                         "_xmpp-client._tcp.example.invalid./33" },
+          "the connector resolved a proxy target instead of only looking up SRV records");
 }
 
 void testConnectorRemoteDnsLastResort()
@@ -846,21 +883,32 @@ void testHttpConnectIpv6Authority()
 {
     FakeXmppServer target;
     FakeProxy      proxy(FakeProxy::Kind::HttpConnect);
-    HttpConnect    connection;
-    bool           done = false;
-    QObject::connect(&connection, &HttpConnect::connected, &connection, [&]() { done = true; });
-    QObject::connect(&connection, &HttpConnect::error, &connection, [&](int) { done = true; });
+    // Route the literal to the IPv4 fixture: this tests CONNECT syntax without requiring an IPv6 listener.
+    proxy.hosts.insert("::1", QHostAddress(QHostAddress::LocalHost));
+    HttpConnect connection;
+    bool        connected = false, failed = false;
+    QObject::connect(&connection, &HttpConnect::connected, &connection, [&]() { connected = true; });
+    QObject::connect(&connection, &HttpConnect::error, &connection, [&](int) { failed = true; });
     connection.connectToHost(QStringLiteral("127.0.0.1"), proxy.port(), QStringLiteral("::1"), target.port());
-    check(waitFor([&]() { return done; }), "HTTP CONNECT did not finish");
+    check(waitFor([&]() { return connected || failed; }), "HTTP CONNECT did not finish");
+    check(connected && !failed, "HTTP CONNECT with an IPv6 authority did not establish a tunnel");
     check(proxy.targets == QList<QByteArray> { "[::1]:" + QByteArray::number(target.port()) },
           "IPv6 CONNECT target is not bracketed");
 }
 } // namespace
 
+Q_IMPORT_PLUGIN(NegativeSystemDnsPlugin)
+
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
     QCA::Initializer qca;
+    for (auto *plugin : QPluginLoader::staticInstances()) {
+        if (auto *fixture = qobject_cast<NegativeSystemDnsPlugin *>(plugin))
+            systemDnsFixture = fixture;
+    }
+    check(systemDnsFixture && qobject_cast<IrisNetProvider *>(systemDnsFixture),
+          "the default DNS fixture was not registered as an IrisNet provider");
     if (RemoteNameProvider::isSupported()) {
         testDnsOverTcp();
         testCancelledLookupDoesNotBlockFollowingQueries();
@@ -869,6 +917,8 @@ int main(int argc, char **argv)
         testConnectorResolvesThroughProxy();
         testConnectorReportsProxyErrors();
         testConnectorRemoteDnsLastResort();
+        check(!systemDnsFixture->resolver || systemDnsFixture->resolver->queries.isEmpty(),
+              "remote DNS fell back to the default resolver");
     } else {
         testWithoutJdns();
     }
@@ -880,3 +930,5 @@ int main(int argc, char **argv)
     testHttpConnectIpv6Authority();
     return 0;
 }
+
+#include "remotedns.moc"

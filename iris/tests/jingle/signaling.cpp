@@ -8,11 +8,10 @@
 #include <qca.h>
 
 // Exercise the same parser entry point that JTPush calls, without network I/O.
-#define private public
-#include <iris/jingle-session.h>
-#undef private
+#include "sessiontestaccess.h"
 
 using namespace XMPP;
+using XMPP::Jingle::SessionTestAccess;
 using namespace XMPP::Jingle;
 
 static void check(bool condition, const char *message)
@@ -130,15 +129,17 @@ int main(int argc, char **argv)
     const auto modify
         = payload(QStringLiteral("<content creator=\"initiator\" name=\"first\" senders=\"responder\"/>"));
     const auto beforeModify = session.state();
-    check(session.updateFromXml(Action::ContentModify, modify), "content-modify rejected");
+    check(SessionTestAccess::updateFromXml(session, Action::ContentModify, modify), "content-modify rejected");
     check(first->senders() == Origin::Responder && second->senders() == Origin::Both,
           "direction update routed incorrectly");
     check(first->state() == State::Pending && session.state() == beforeModify,
           "direction update changed negotiation state");
     check(directionNotifications == 1, "missing direction notification");
-    check(session.updateFromXml(Action::ContentModify, modify), "repeated direction update rejected");
+    check(SessionTestAccess::updateFromXml(session, Action::ContentModify, modify),
+          "repeated direction update rejected");
     check(directionNotifications == 1, "unchanged direction notified again");
-    check(session.updateFromXml(Action::ContentModify, defaultDirection), "default direction update rejected");
+    check(SessionTestAccess::updateFromXml(session, Action::ContentModify, defaultDirection),
+          "default direction update rejected");
     check(first->senders() == Origin::Both, "default direction update did not restore both");
     for (const auto &invalidContent :
          { QStringLiteral("<content creator=\"initiator\" name=\"missing\" senders=\"none\"/>"),
@@ -147,30 +148,33 @@ int main(int argc, char **argv)
            QStringLiteral("<content creator=\"responder\" name=\"second\" senders=\"none\"/>") }) {
         auto batch = payload(QStringLiteral("<content creator=\"initiator\" name=\"first\" senders=\"none\"/>")
                              + invalidContent);
-        check(!session.updateFromXml(Action::ContentModify, batch), "invalid direction batch accepted");
+        check(!SessionTestAccess::updateFromXml(session, Action::ContentModify, batch),
+              "invalid direction batch accepted");
         check(first->senders() == Origin::Both, "invalid direction batch partially applied");
     }
     second->understandsModify = false;
     auto unsupportedBatch
         = payload(QStringLiteral("<content creator=\"initiator\" name=\"first\" senders=\"none\"/>"
                                  "<content creator=\"initiator\" name=\"second\" senders=\"none\"/>"));
-    check(!session.updateFromXml(Action::ContentModify, unsupportedBatch), "unsupported application modified");
+    check(!SessionTestAccess::updateFromXml(session, Action::ContentModify, unsupportedBatch),
+          "unsupported application modified");
     check(first->senders() == Origin::Both && second->senders() == Origin::Both,
           "unsupported direction batch partially applied");
     check(session.lastError()->condition == Stanza::Error::ErrorCond::FeatureNotImplemented,
           "wrong unsupported direction error");
     second->understandsModify = true;
     first->setState(State::Finishing);
-    check(!session.updateFromXml(Action::ContentModify, modify), "finishing content modified");
+    check(!SessionTestAccess::updateFromXml(session, Action::ContentModify, modify), "finishing content modified");
     first->setState(State::Pending);
-    check(!session.updateFromXml(Action::ContentModify, payload({})), "empty direction update accepted");
-    check(!session.updateFromXml(
-              Action::ContentModify,
+    check(!SessionTestAccess::updateFromXml(session, Action::ContentModify, payload({ })),
+          "empty direction update accepted");
+    check(!SessionTestAccess::updateFromXml(
+              session, Action::ContentModify,
               payload(QStringLiteral(
                   "<content xmlns=\"urn:other\" creator=\"initiator\" name=\"first\" senders=\"none\"/>"))),
           "foreign content changed direction");
-    check(!session.updateFromXml(
-              Action::ContentModify,
+    check(!SessionTestAccess::updateFromXml(
+              session, Action::ContentModify,
               payload(QStringLiteral(
                   "<content creator=\"initiator\" name=\"first\" senders=\"none\"><transport/></content>"))),
           "transport replacement accepted as content-modify");
@@ -182,39 +186,42 @@ int main(int argc, char **argv)
                                                   "<content creator='initiator' name='video'/>"
                                                   "<content creator='initiator' name='audio'/>"
                                                   "<content creator='initiator' name='screen'/>"));
-    const auto groups    = Session::parseGroupings(groupsXml);
+    const auto groups    = SessionTestAccess::parseGroupings(groupsXml);
     check(groups && groups->size() == 2, "same-semantics groups were collapsed");
-    check(Session::validBundleAnswer(*groups, *groups), "identical BUNDLE answer rejected");
-    check(Session::validBundleAnswer(*groups, {}), "BUNDLE refusal rejected");
-    check(Session::validBundleAnswer(*groups, { { "BUNDLE", { "audio" } }, { "BUNDLE", { "screen" } } }),
+    check(SessionTestAccess::validBundleAnswer(*groups, *groups), "identical BUNDLE answer rejected");
+    check(SessionTestAccess::validBundleAnswer(*groups, { }), "BUNDLE refusal rejected");
+    check(SessionTestAccess::validBundleAnswer(*groups, { { "BUNDLE", { "audio" } }, { "BUNDLE", { "screen" } } }),
           "subset answer rejected");
-    check(!Session::validBundleAnswer(*groups, { { "BUNDLE", { "audio", "screen" } } }),
+    check(!SessionTestAccess::validBundleAnswer(*groups, { { "BUNDLE", { "audio", "screen" } } }),
           "answer merged offered groups");
-    check(!Session::validBundleAnswer(*groups, { { "BUNDLE", { "audio" } }, { "BUNDLE", { "video" } } }),
+    check(!SessionTestAccess::validBundleAnswer(*groups, { { "BUNDLE", { "audio" } }, { "BUNDLE", { "video" } } }),
           "answer split an offered group");
-    check(!Session::validBundleAnswer(*groups, { { "BUNDLE", { "unoffered" } } }), "answer added an unoffered member");
-    check(!Session::validBundleAnswer({}, *groups), "unsolicited BUNDLE answer accepted");
-    check(!Session::validBundleAnswer(*groups, { { "BUNDLE", { "audio", "audio" } } }), "answer repeated a member");
+    check(!SessionTestAccess::validBundleAnswer(*groups, { { "BUNDLE", { "unoffered" } } }),
+          "answer added an unoffered member");
+    check(!SessionTestAccess::validBundleAnswer({ }, *groups), "unsolicited BUNDLE answer accepted");
+    check(!SessionTestAccess::validBundleAnswer(*groups, { { "BUNDLE", { "audio", "audio" } } }),
+          "answer repeated a member");
     check(groups->first().contents == QStringList({ "video", "audio" }), "group member order lost");
     check(session.setGroupings(*groups), "valid local groups rejected");
     check(session.groupings().size() == 2, "local groups collapsed");
-    check(!session.validLocalGroupings(), "outgoing groups reference nonexistent local contents");
+    check(!SessionTestAccess::validLocalGroupings(session), "outgoing groups reference nonexistent local contents");
     check(!session.setGroupings({ { "BUNDLE", { "first" } }, { "BUNDLE", { "first", "second" } } }),
           "local content assigned to multiple BUNDLE transports");
     check(session.groupings().size() == 2, "invalid local membership changed proposal");
     check(session.remoteGroupings().isEmpty(), "local proposal became a peer agreement");
     // A configured proposal is not an offer until it is actually sent.
     const auto beforeUnsentAnswer = session.state();
-    check(!session.updateFromXml(Action::SessionAccept, groupsXml), "unsent proposal authorized a BUNDLE answer");
+    check(!SessionTestAccess::updateFromXml(session, Action::SessionAccept, groupsXml),
+          "unsent proposal authorized a BUNDLE answer");
     check(session.state() == beforeUnsentAnswer && session.remoteGroupings().isEmpty(),
           "invalid BUNDLE answer changed session state");
     check(!session.setGroupings({ ContentGroup { "BUNDLE", { "audio", "audio" } } }), "duplicate member accepted");
     check(session.groupings().size() == 2, "invalid setter changed local groups");
     session.setGrouping(QStringLiteral("BUNDLE"), { QStringLiteral("first") });
     check(session.groupings().size() == 1, "compatibility setter did not replace matching groups");
-    check(session.validLocalGroupings(), "valid local group rejected before send");
+    check(SessionTestAccess::validLocalGroupings(session), "valid local group rejected before send");
     first->setState(State::Finished);
-    check(!session.validLocalGroupings(), "outgoing group references a finished content");
+    check(!SessionTestAccess::validLocalGroupings(session), "outgoing group references a finished content");
     first->setState(State::Pending);
     session.setGrouping(QStringLiteral("BUNDLE"), {});
     check(session.groupings().isEmpty(), "clearing grouping retained an empty group");
@@ -225,36 +232,37 @@ int main(int argc, char **argv)
     const auto malformedGroups
         = payload(QStringLiteral("<group xmlns='urn:xmpp:jingle:apps:grouping:0' semantics='BUNDLE'>"
                                  "<content name='first'/><content name='first'/></group>"));
-    check(!Session::parseGroupings(malformedGroups), "malformed group parsed");
+    check(!SessionTestAccess::parseGroupings(malformedGroups), "malformed group parsed");
     const auto stateBeforeGroups = session.state();
-    check(!session.updateFromXml(Action::SessionAccept, malformedGroups), "malformed group answer accepted");
+    check(!SessionTestAccess::updateFromXml(session, Action::SessionAccept, malformedGroups),
+          "malformed group answer accepted");
     check(session.state() == stateBeforeGroups, "malformed group answer changed session state");
     check(first->state() == State::Pending, "malformed group answer changed application state");
     const auto foreignGroups
         = payload(QStringLiteral("<group xmlns='urn:other' semantics='BUNDLE'><content name='first'/></group>"));
-    check(Session::parseGroupings(foreignGroups)->isEmpty(), "foreign extension treated as grouping");
+    check(SessionTestAccess::parseGroupings(foreignGroups)->isEmpty(), "foreign extension treated as grouping");
     const auto prefixedGroups
         = payload(QStringLiteral("<g:group xmlns:g='urn:xmpp:jingle:apps:grouping:0' semantics='LS'>"
                                  "<g:content name='first'/></g:group><content creator='initiator' name='first'/>"));
-    const auto prefixed = Session::parseGroupings(prefixedGroups);
+    const auto prefixed = SessionTestAccess::parseGroupings(prefixedGroups);
     check(prefixed && !prefixed->isEmpty() && prefixed->first().semantics == QLatin1String("LS"),
           "prefixed grouping not parsed");
-    const auto unresolved = Session::parseGroupings(
+    const auto unresolved = SessionTestAccess::parseGroupings(
         payload(QStringLiteral("<group xmlns='urn:xmpp:jingle:apps:grouping:0' semantics='BUNDLE'>"
                                "<content name='first'/><content name='missing'/></group>"
                                "<group xmlns='urn:xmpp:jingle:apps:grouping:0' semantics='LS'>"
                                "<content name='first'/></group><content creator='initiator' name='first'/>")));
     check(unresolved && unresolved->size() == 1 && unresolved->first().semantics == QLatin1String("LS"),
           "unresolved group was partially retained or removed a valid sibling group");
-    const auto ambiguous = Session::parseGroupings(payload(QStringLiteral(
+    const auto ambiguous = SessionTestAccess::parseGroupings(payload(QStringLiteral(
         "<group xmlns='urn:xmpp:jingle:apps:grouping:0' semantics='BUNDLE'><content name='same'/></group>"
         "<content creator='initiator' name='same'/><content creator='responder' name='same'/>")));
     check(ambiguous && ambiguous->isEmpty(), "ambiguous group reference resolved by creator implicitly");
-    const auto foreignContent = Session::parseGroupings(payload(QStringLiteral(
+    const auto foreignContent = SessionTestAccess::parseGroupings(payload(QStringLiteral(
         "<group xmlns='urn:xmpp:jingle:apps:grouping:0' semantics='BUNDLE'><content name='first'/></group>"
         "<content xmlns='urn:other' name='first'/>")));
     check(foreignContent && foreignContent->isEmpty(), "foreign content satisfied a group reference");
-    const auto emptyGroup = Session::parseGroupings(
+    const auto emptyGroup = SessionTestAccess::parseGroupings(
         payload(QStringLiteral("<group xmlns='urn:xmpp:jingle:apps:grouping:0' semantics='LS'/>")));
     check(emptyGroup && emptyGroup->size() == 1 && emptyGroup->first().contents.isEmpty(),
           "empty framework group rejected");
@@ -263,30 +271,34 @@ int main(int argc, char **argv)
         "<content creator='initiator' name='first'>"
         "<description xmlns='urn:iris:test:application'><parameter name='width' value='640'/></description>"
         "</content>"));
-    check(session.updateFromXml(Action::DescriptionInfo, hint), "supported description-info rejected");
+    check(SessionTestAccess::updateFromXml(session, Action::DescriptionInfo, hint),
+          "supported description-info rejected");
     check(first->hints == 1 && second->hints == 0, "description-info routed to wrong content");
     check(first->state() == State::Pending, "description-info changed negotiation state");
     first->understandsHints = false;
-    check(!session.updateFromXml(Action::DescriptionInfo, hint), "unsupported hint acknowledged");
+    check(!SessionTestAccess::updateFromXml(session, Action::DescriptionInfo, hint), "unsupported hint acknowledged");
     check(session.lastError()->condition == Stanza::Error::ErrorCond::FeatureNotImplemented,
           "wrong unsupported-info error");
     const auto malformedBatch = payload(QStringLiteral(
         "<content creator='initiator' name='first'><description xmlns='urn:iris:test:application'/></content>"
         "<content creator='initiator' name='second'/>"));
     const int  previousHints  = first->hints;
-    check(!session.updateFromXml(Action::DescriptionInfo, malformedBatch), "malformed batch accepted");
+    check(!SessionTestAccess::updateFromXml(session, Action::DescriptionInfo, malformedBatch),
+          "malformed batch accepted");
     check(first->hints == previousHints, "malformed batch partially dispatched");
 
     first->setState(State::Active);
     const auto reject = payload(QStringLiteral("<content creator='initiator' name='first'/>"));
-    check(!session.updateFromXml(Action::ContentReject, reject), "active content rejected as pending offer");
+    check(!SessionTestAccess::updateFromXml(session, Action::ContentReject, reject),
+          "active content rejected as pending offer");
     check(session.contentList().size() == 2, "invalid rejection removed content");
     first->setState(State::Pending);
     first->markInitialApplication(true);
-    check(!session.updateFromXml(Action::ContentReject, reject), "initial offer treated as content-add");
+    check(!SessionTestAccess::updateFromXml(session, Action::ContentReject, reject),
+          "initial offer treated as content-add");
     first->markInitialApplication(false);
     QPointer<TestApplication> guard(first);
-    check(session.updateFromXml(Action::ContentReject, reject), "pending content rejection failed");
+    check(SessionTestAccess::updateFromXml(session, Action::ContentReject, reject), "pending content rejection failed");
     check(!guard && session.contentList().size() == 1, "rejected content retained");
     check(session.content(QStringLiteral("second"), Origin::Initiator) == second, "unrelated content removed");
 
@@ -311,7 +323,7 @@ int main(int argc, char **argv)
                 QObject::connect(a, &Application::sendersChangedByPeer, a, destroy);
             else
                 QObject::connect(a, &Application::sendersChanged, a, destroy);
-            check(disposable->updateFromXml(Action::ContentModify, unsupportedBatch),
+            check(SessionTestAccess::updateFromXml(*disposable, Action::ContentModify, unsupportedBatch),
                   "content removal during direction notification failed");
             check(!bGuard, "notification did not remove content");
             if (sessionGuard)

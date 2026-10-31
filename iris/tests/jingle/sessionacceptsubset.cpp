@@ -9,14 +9,13 @@
 #include <qca.h>
 
 // Exercise the same parser entry point that JTPush calls, without network I/O.
-#define private public
-#include <iris/jingle-session.h>
-#undef private
+#include "sessiontestaccess.h"
 
 #include <functional>
 #include <utility>
 
 using namespace XMPP;
+using XMPP::Jingle::SessionTestAccess;
 using namespace XMPP::Jingle;
 
 static const QString applicationNs = QStringLiteral("urn:iris:test:subset-application");
@@ -256,7 +255,7 @@ int main(int argc, char **argv)
         int                       activations  = 0;
         QObject::connect(&session, &Session::activated, &session, [&activations]() { ++activations; });
 
-        check(!session.updateFromXml(Action::SessionAccept, emptyAnswer()),
+        check(!SessionTestAccess::updateFromXml(session, Action::SessionAccept, emptyAnswer()),
               "empty session-accept that rejected every initial content was accepted");
         check(session.state() == initialState, "empty session-accept changed session state");
         check(audioGuard && videoGuard && audioGuard->state() == State::Pending
@@ -281,7 +280,7 @@ int main(int argc, char **argv)
         int                       activations = 0;
         QObject::connect(&session, &Session::activated, &session, [&activations]() { ++activations; });
 
-        check(!session.updateFromXml(Action::SessionAccept, answer(audio, true)),
+        check(!SessionTestAccess::updateFromXml(session, Action::SessionAccept, answer(audio, true)),
               "malformed subset session-accept was accepted");
         check(audio->state() == State::Pending, "malformed answer did not roll accepted content back");
         check(videoGuard && videoGuard->state() == State::Pending
@@ -289,7 +288,8 @@ int main(int argc, char **argv)
               "malformed subset answer removed omitted initial content");
         check(stats->removes == 0 && stats->stops == 0, "malformed answer performed content cleanup");
 
-        check(session.updateFromXml(Action::SessionAccept, answer(audio)), "valid subset session-accept was rejected");
+        check(SessionTestAccess::updateFromXml(session, Action::SessionAccept, answer(audio)),
+              "valid subset session-accept was rejected");
         check(session.content(QStringLiteral("audio"), Origin::Initiator) == audio,
               "subset session-accept removed accepted initial content");
         check(!videoGuard && !session.content(QStringLiteral("video"), Origin::Initiator),
@@ -311,7 +311,7 @@ int main(int argc, char **argv)
         QPointer<TestApplication> videoGuard(video);
         stats->onStop = [&session]() { session.terminate(Reason::Decline, QStringLiteral("test cancellation")); };
 
-        check(session.updateFromXml(Action::SessionAccept, answer(audio)),
+        check(SessionTestAccess::updateFromXml(session, Action::SessionAccept, answer(audio)),
               "session-accept was rejected after reentrant termination");
         check(session.state() == State::Finishing, "session-accept overwrote a reentrant termination");
         check(!videoGuard, "detached omitted content leaked after reentrant termination");
@@ -331,7 +331,7 @@ int main(int argc, char **argv)
         QPointer<TestApplication> videoGuard(video);
         stats->onStop = [session]() { delete session; };
 
-        check(session->updateFromXml(Action::SessionAccept, answer(audio)),
+        check(SessionTestAccess::updateFromXml(*session, Action::SessionAccept, answer(audio)),
               "session-accept did not survive Session deletion from stop callback");
         check(!sessionGuard, "Session survived its stop callback deletion");
         check(!videoGuard, "detached omitted content leaked when stop callback deleted Session");
@@ -349,7 +349,7 @@ int main(int argc, char **argv)
         QPointer<TestApplication> zvideoGuard(zvideo);
         stats->onStop = [zvideo]() { delete zvideo; };
 
-        check(session.updateFromXml(Action::SessionAccept, answer(audio)),
+        check(SessionTestAccess::updateFromXml(session, Action::SessionAccept, answer(audio)),
               "session-accept failed after neighboring omitted content was deleted");
         check(!videoGuard && !zvideoGuard, "neighboring omitted content cleanup left an object alive");
         pump();
@@ -369,7 +369,7 @@ int main(int argc, char **argv)
         QPointer<TestApplication> videoGuard(video);
         stats->onStop = [audio]() { delete audio; };
 
-        check(session.updateFromXml(Action::SessionAccept, answer(audio)),
+        check(SessionTestAccess::updateFromXml(session, Action::SessionAccept, answer(audio)),
               "session-accept failed after accepted content was invalidated reentrantly");
         check(!audioGuard && !videoGuard, "reentrant accepted-content deletion left stale content alive");
         check(session.state() == State::Finishing, "session activated after its accepted content disappeared");
@@ -388,7 +388,7 @@ int main(int argc, char **argv)
         QPointer<TestApplication> videoGuard(video);
         stats->onRemove = [session]() { delete session; };
 
-        check(session->updateFromXml(Action::SessionAccept, answer(audio)),
+        check(SessionTestAccess::updateFromXml(*session, Action::SessionAccept, answer(audio)),
               "session-accept did not survive Session deletion from incomingRemove callback");
         check(!sessionGuard, "Session survived its incomingRemove callback deletion");
         check(!videoGuard, "detached omitted content leaked when incomingRemove deleted Session");
@@ -432,7 +432,7 @@ int main(int argc, char **argv)
         session->addContent(application);
         stats->onRemove = [session]() { delete session; };
 
-        check(session->updateFromXml(Action::ContentRemove, contentRemove(application)),
+        check(SessionTestAccess::updateFromXml(*session, Action::ContentRemove, contentRemove(application)),
               "content-remove did not survive Session deletion from incomingRemove callback");
         check(!sessionGuard, "Session survived content-remove callback deletion");
         check(!applicationGuard, "detached content leaked after content-remove deleted Session");
@@ -449,7 +449,7 @@ int main(int argc, char **argv)
         addInitialPair(session, stats, &audio, &video);
         QPointer<TestApplication> audioGuard(audio), videoGuard(video);
 
-        check(session.updateFromXml(Action::ContentRemove, contentRemove(audio)),
+        check(SessionTestAccess::updateFromXml(session, Action::ContentRemove, contentRemove(audio)),
               "ordinary content-remove was rejected");
         check(!audioGuard, "content-remove retained the removed application");
         check(videoGuard && session.content(QStringLiteral("video"), Origin::Initiator) == videoGuard.data(),
@@ -468,7 +468,8 @@ int main(int argc, char **argv)
         addInitialPair(session, stats, &audio, &video);
         QPointer<TestApplication> videoGuard(video);
 
-        check(session.updateFromXml(Action::ContentAccept, answer(audio)), "ordinary content-accept was rejected");
+        check(SessionTestAccess::updateFromXml(session, Action::ContentAccept, answer(audio)),
+              "ordinary content-accept was rejected");
         check(videoGuard && videoGuard->state() == State::Pending
                   && session.content(QStringLiteral("video"), Origin::Initiator) == videoGuard.data(),
               "content-accept incorrectly removed an omitted sibling");
@@ -490,7 +491,7 @@ int main(int argc, char **argv)
         auto both   = answer(audio);
         auto second = answer(video);
         both.appendChild(both.ownerDocument().importNode(second.firstChildElement(), true));
-        check(session->updateFromXml(Action::SessionAccept, both), "full acceptance failed");
+        check(SessionTestAccess::updateFromXml(*session, Action::SessionAccept, both), "full acceptance failed");
         check(stats->starts == 0 && activations == 0, "start overtook acceptance ACK boundary");
         switch (scenario) {
         case 0:
@@ -544,7 +545,8 @@ int main(int argc, char **argv)
         session.addContent(audio);
         int activations = 0;
         QObject::connect(&session, &Session::activated, &session, [&]() { ++activations; });
-        check(session.updateFromXml(Action::SessionAccept, answer(audio)), "initial acceptance failed");
+        check(SessionTestAccess::updateFromXml(session, Action::SessionAccept, answer(audio)),
+              "initial acceptance failed");
         pump();
         auto video  = new TestApplication(&session, QStringLiteral("video"), stats);
         auto zvideo = new TestApplication(&session, QStringLiteral("zvideo"), stats);
@@ -553,7 +555,7 @@ int main(int argc, char **argv)
         auto both   = answer(video);
         auto second = answer(zvideo);
         both.appendChild(both.ownerDocument().importNode(second.firstChildElement(), true));
-        check(session.updateFromXml(Action::ContentAccept, both), "later acceptance failed");
+        check(SessionTestAccess::updateFromXml(session, Action::ContentAccept, both), "later acceptance failed");
         delete video;
         check(stats->starts == 1, "later application started inline");
         pump();

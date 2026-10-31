@@ -3,9 +3,7 @@
 #include "contentmodifyrace.cpp"
 #undef main
 
-#define private public
-#include <iris/jingle-rtp.h>
-#undef private
+#include "rtptestaccess.h"
 
 namespace R = XMPP::Jingle::RTP;
 
@@ -72,8 +70,10 @@ static void checkInitiatorPacketGates(Client &client, J::Session &session, J::Or
     auto pad = QPointer<R::Pad>(
         new R::Pad(client.jingleManager()->rtpManager(), &session, std::shared_ptr<R::MediaProvider>(), QStringList()));
     R::Application gate(pad, QStringLiteral("gate"), J::Origin::Responder, senders);
-    check(gate.allowsRtp(true) == sending, "negotiated senders did not reach the RTP sending gate");
-    check(gate.allowsRtp(false) == receiving, "negotiated senders did not reach the RTP receiving gate");
+    check(R::ApplicationTestAccess::allowsRtp(gate, true) == sending,
+          "negotiated senders did not reach the RTP sending gate");
+    check(R::ApplicationTestAccess::allowsRtp(gate, false) == receiving,
+          "negotiated senders did not reach the RTP receiving gate");
 }
 
 static void crossedThroughDispatcher(J::Origin initiatorTarget, J::Origin responderTarget, bool responderIqFirst,

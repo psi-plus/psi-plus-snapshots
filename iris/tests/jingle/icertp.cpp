@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include "../../src/xmpp/xmpp-im/jingle-ice-connection_p.h"
+#include "icetestaccess.h"
+#include <QCoreApplication>
+#include <QDebug>
+#include <QElapsedTimer>
+#include <QEventLoop>
+#include <QTimer>
 #include <iris/dtls.h>
 #include <iris/ice176.h>
 #include <iris/jingle-rtp-srtp.h>
@@ -7,15 +13,6 @@
 #include <iris/jingle-session.h>
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_task.h>
-#define private public
-#include "../../src/xmpp/xmpp-im/jingle-ice-pad_p.h"
-#include <iris/jingle-ice.h>
-#undef private
-#include <QCoreApplication>
-#include <QDebug>
-#include <QElapsedTimer>
-#include <QEventLoop>
-#include <QTimer>
 
 using namespace XMPP;
 namespace J = XMPP::Jingle;
@@ -233,7 +230,8 @@ int main(int argc, char **argv)
     // Transport construction itself must not allocate an ICE association.
     // Association selection is delayed until the Transport is already bound to
     // a Jingle content (or otherwise first used), which is required for BUNDLE.
-    check(firstPad->d->liveAssociationCount() == 0 && secondPad->d->liveAssociationCount() == 0,
+    check(J::ICE::TransportTestAccess::liveAssociationCount(*firstPad) == 0
+              && J::ICE::TransportTestAccess::liveAssociationCount(*secondPad) == 0,
           "ICE association was allocated before content binding");
 
     std::unique_ptr<J::RTP::Application> firstApp, secondApp;
@@ -330,7 +328,8 @@ int main(int argc, char **argv)
         auto a = first->rtpAssociation(), b = second->rtpAssociation();
         if (delayedAck && a && b) {
             check(!a->isReady() && !b->isReady(), "failed fingerprint IQ started DTLS-SRTP");
-            if (first->iceCanSendMedia() && second->iceCanSendMedia()) {
+            if (J::ICE::TransportTestAccess::iceCanSendMedia(*first)
+                && J::ICE::TransportTestAccess::iceCanSendMedia(*second)) {
                 if (!rejectionWindow.isValid())
                     rejectionWindow.start();
                 if (rejectionWindow.elapsed() >= 500) {

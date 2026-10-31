@@ -5,9 +5,7 @@
 #include <iris/jingle-session.h>
 #include <iris/xmpp_client.h>
 
-#define private public
-#include <iris/jingle-rtp.h>
-#undef private
+#include "rtptestaccess.h"
 
 using namespace XMPP;
 namespace J = XMPP::Jingle;
@@ -40,8 +38,10 @@ int main(int argc, char **argv)
             const bool     expectedSend    = senders == J::Origin::Both || senders == localRole;
             const bool     expectedReceive = senders == J::Origin::Both || senders == peerRole(localRole);
 
-            check(application.allowsRtp(true) == expectedSend, "RTP outgoing sender-direction matrix mismatch");
-            check(application.allowsRtp(false) == expectedReceive, "RTP incoming sender-direction matrix mismatch");
+            check(R::ApplicationTestAccess::allowsRtp(application, true) == expectedSend,
+                  "RTP outgoing sender-direction matrix mismatch");
+            check(R::ApplicationTestAccess::allowsRtp(application, false) == expectedReceive,
+                  "RTP incoming sender-direction matrix mismatch");
         }
     }
 

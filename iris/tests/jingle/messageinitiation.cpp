@@ -8,6 +8,7 @@
 
 #include <QCoreApplication>
 #include <QDomDocument>
+#include <QtCrypto>
 
 #include <any>
 #include <optional>
@@ -30,6 +31,7 @@ static QDomElement parseRoot(const QString &xml, QDomDocument *document)
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
+    QCA::Initializer qca;
     J::RTP::Manager  rtp;
 
     {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // OMEMO 2 keeps the bundles of all devices of an account in one PEP node. A bundle fetched for one device
 // must be that device's item: a server that answers with another item must not get another device's identity
-// pinned. Identities pinned that way by earlier builds are forgotten at start. Reuses the OMEMO fixture.
+// pinned. Ambiguous cached pins are checked against each device's own bundle before repair. Reuses the OMEMO fixture.
 #define main iris_omemoelement_main
 #include "omemoelement.cpp"
 #undef main
@@ -60,29 +60,45 @@ int main(int argc, char **argv)
     check(read->success(), "the element encrypted with the right bundle was not decrypted");
     pepIgnoresItemIds = false;
 
-    // An identity pinned for two devices of one account by an earlier build is forgotten at start, with its
-    // sessions, and learnt again.
+    // An identity pinned for two devices by an earlier build is ambiguous. Restart must preserve the working
+    // session until the device's own bundle confirms the pin or proves it wrong.
+    Endpoint bobOther(QStringLiteral("bob"));
+    auto     otherSetUp = wait(bobOther.omemo->setUp(), bobOther, bobOther);
+    check(otherSetUp->success(), "bob's second device was not set up");
     const auto key       = pinned(alice, bob.jid, bobId);
-    const auto otherId   = carol.omemo->ownDeviceId();
+    const auto otherId   = bobOther.omemo->ownDeviceId();
     auto       data      = alice.storage.allData();
     auto       duplicate = data.devices.value(bobJid).value(bobId);
     check(!key.isEmpty() && !duplicate.protocols.value(OmemoProtocol::Omemo2).session.isEmpty(),
           "bob's identity and session were not stored");
+    const auto originalSession = duplicate.protocols.value(OmemoProtocol::Omemo2).session;
+    const auto otherKey        = bobOther.storage.allData().ownDevice->publicIdentityKey;
+    check(otherKey != key, "the fixture needs distinct device identities");
     delete alice.omemo;
     alice.storage.addDevice(bobJid, otherId, duplicate);
     alice.omemo = new OmemoEncryption(&alice.client, &alice.storage, &alice.trust);
     check(alice.omemo->isReady(), "OMEMO did not restart");
-    check(pinned(alice, bob.jid, bobId).isEmpty() && pinned(alice, bob.jid, otherId).isEmpty()
-              && alice.storage.allData()
-                     .devices.value(bobJid)
-                     .value(bobId)
-                     .protocols.value(OmemoProtocol::Omemo2)
-                     .session.isEmpty(),
-          "an identity pinned for two devices was kept");
+    check(
+        pinned(alice, bob.jid, bobId) == key && pinned(alice, bob.jid, otherId) == key
+            && alice.storage.allData().devices.value(bobJid).value(bobId).protocols.value(OmemoProtocol::Omemo2).session
+                == originalSession,
+        "restart discarded a working session before checking its device's bundle");
     auto again = wait(alice.omemo->encryptElement(bob.jid, OmemoProtocol::Omemo2, content, { bobId }), alice, bob);
-    check(again->success() && pinned(alice, bob.jid, bobId) == key, "the forgotten identity was not learnt again");
+    check(again->success() && pinned(alice, bob.jid, bobId) == key,
+          "the device's own bundle did not preserve its correct identity");
     auto readAgain = wait(bob.omemo->decryptElement(alice.jid, again->stanza()), alice, bob);
-    check(readAgain->success(), "the element after relearning was not decrypted");
+    check(readAgain->success(), "the element using the preserved session was not decrypted");
+
+    // The other device's own bundle proves the copied pin wrong: replace both the pin and its old session.
+    auto repaired = wait(alice.omemo->encryptElement(bob.jid, OmemoProtocol::Omemo2, content, { otherId }), alice, bob);
+    check(repaired->success() && pinned(alice, bob.jid, otherId) == otherKey,
+          "the ambiguous identity was not repaired from the device's own bundle");
+    const auto repairedSession
+        = alice.storage.allData().devices.value(bobJid).value(otherId).protocols.value(OmemoProtocol::Omemo2).session;
+    check(!repairedSession.isEmpty() && repairedSession != originalSession,
+          "the session built for the wrong identity was retained");
+    auto readOther = wait(bobOther.omemo->decryptElement(alice.jid, repaired->stanza()), alice, bobOther);
+    check(readOther->success(), "the repaired session did not reach the intended device");
 
     // Sanitizing the own PEP data retires an own device that has no bundle at all, and keeps one whose OMEMO 2
     // bundle a one-item node lost but whose legacy bundle (a node per device) is there.

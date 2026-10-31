@@ -298,6 +298,7 @@ protected:
     void prepareTransport() override;
 
 private:
+    friend struct ApplicationTestAccess;
     friend class Pad;
     void stopMedia();
     void prepared(MediaOperation::Id, std::optional<Description>, MediaError);
