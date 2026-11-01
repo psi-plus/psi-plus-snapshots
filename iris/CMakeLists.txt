@@ -99,7 +99,7 @@ option(IRIS_BUNDLED_USRSCTP "Compile compatible UsrSCTP lib (required for datach
        ${IRIS_DEFAULT_BUNDLED_USRSCTP})
 option(IRIS_ENABLE_OMEMO "Enable XEP-0384 OMEMO support (requires GPLv3 libomemo-c)" ON)
 option(IRIS_BUNDLED_OMEMO_C "Build libomemo-c and protobuf-c when OMEMO is enabled" ON)
-option(IRIS_ENABLE_JDNS "Build JDNS into Iris for SRV lookups through proxies (always built on Android)" OFF)
+option(IRIS_ENABLE_JDNS "Enable JDNS 3 for remote DNS/SRV and XEP-0174 (required on Android)" ON)
 option(IRIS_BUILD_TOOLS "Build tools and examples" OFF)
 option(IRIS_BUILD_LINKLOCAL_EXAMPLE "Build the XEP-0174 mDNS/TCP example (QJDns 3.1+)" OFF)
 option(IRIS_BUILD_TESTS "Build Iris unit and regression tests" OFF)

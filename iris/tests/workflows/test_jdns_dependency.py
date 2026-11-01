@@ -71,6 +71,14 @@ iris_configure_jdns()
                                    "-DIRIS_SYSTEM_JDNS=" + mode, *extra],
                                   text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
+    def test_iris_enables_jdns_by_default(self):
+        # Keep release binaries and source builds from silently dropping remote DNS.
+        cmake = (ROOT / "CMakeLists.txt").read_text()
+        self.assertRegex(
+            cmake,
+            r'option\(IRIS_ENABLE_JDNS\s+"[^"]+"\s+ON\)',
+        )
+
     def test_auto_without_system_bundles(self):
         result = self.configure()
         self.assertEqual(result.returncode, 0, result.stdout)

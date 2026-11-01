@@ -35,16 +35,18 @@ Package builds should check out their chosen Iris source SHA **before** calling 
 ## JDNS
 
 `jdns.commit` pins the bundled JDNS source; `jdns.minimum_version` is the QJDns
-API baseline (3.1.0). `jdns.tag` is null for an unreleased development commit.
+API baseline (3.1.1). `jdns.tag` records the corresponding published release.
 After the JDNS release is merged and tagged, update the commit and tag together;
 do not use a moving branch or a tag that has not been published. Source builds
 always use the exact commit unless an explicit `IRIS_JDNS_GIT_TAG` override is
 provided. Old cached defaults advance with the lock; explicit overrides remain.
 
-When JDNS is enabled (`IRIS_ENABLE_JDNS`, or the Android platform resolver),
+JDNS is enabled by default on all platforms; Android needs it for its
+platform resolver. Non-Android builds may disable it with
+`-DIRIS_ENABLE_JDNS=OFF`. When enabled,
 `IRIS_SYSTEM_JDNS` selects its provider:
 
-- `AUTO` (default): use an installed QJDns >= 3.0.0 with the same Qt major, or
+- `AUTO` (default): use an installed QJDns >= 3.1.1 with the same Qt major, or
   build the locked source if no compatible package is available.
 - `ON`: require a compatible installed package; report a configuration error
   instead of silently building another provider.

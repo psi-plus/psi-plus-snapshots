@@ -31,6 +31,25 @@ available; system QCA selection is unchanged. Existing build trees with a cached
 Git ref keep that ref; use `cmake -U IRIS_BUNDLED_QCA_GIT_TAG ...` once to adopt
 the lock default.
 
+## JDNS 3 DNS support
+
+JDNS 3 is enabled by default on desktop and Linux, and required on Android.
+This enables remote DNS-over-TCP/HTTPS lookups through proxies and the
+XEP-0174 link-local discovery API. The dependency is pinned to our
+[psi-im/jdns](https://github.com/psi-im/jdns) release in
+`dependencies.lock.json`.
+
+By default (`IRIS_SYSTEM_JDNS=AUTO`), CMake uses an installed compatible
+`QJDns::QJDns` (JDNS >= the locked minimum, built for the matching Qt major
+version) or fetches and statically bundles the pinned source. Distributions
+without QJDns 3 packages need no additional system dependency. Use
+`-DIRIS_SYSTEM_JDNS=ON` to require a system package or
+`-DIRIS_SYSTEM_JDNS=OFF` to always bundle it. Non-Android builds can
+explicitly disable the functionality with `-DIRIS_ENABLE_JDNS=OFF`.
+Build directories previously configured with Iris 1.6.0 may have
+`IRIS_ENABLE_JDNS=OFF` cached; set `-DIRIS_ENABLE_JDNS=ON` or remove that cache
+entry when upgrading to restore the new default.
+
 ## DTLS packet diagnostics
 
 Per-datagram ICE/DTLS logging is disabled by default in all build types.
