@@ -94,23 +94,54 @@ file(WRITE "${CMAKE_BINARY_DIR}/selected-ref" "${IRIS_BUNDLED_QCA_GIT_TAG}")
 
 
 class DependencyEnvironment(unittest.TestCase):
-    def run_loader(self, tag, commit, minimum_version="3.0.10"):
+    def run_loader(self, tag, commit, minimum_version="3.0.10",
+                   minimum_version_windows="3.1.2", runner_os="Linux"):
         action = (ROOT / '.github/actions/load-dependencies/action.yml').read_text()
         script = textwrap.dedent(action.split('      run: |\n', 1)[1].split('\n    - name:', 1)[0])
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'dependencies.lock.json').write_text(json.dumps(
-                {'qca': {'tag': tag, 'commit': commit, 'minimum_version': minimum_version}}))
+                {'qca': {'tag': tag, 'commit': commit, 'minimum_version': minimum_version,
+                         'minimum_version_windows': minimum_version_windows}}))
             env = root / 'env'
             env.touch()
             result = subprocess.run(['bash', '-c', script], capture_output=True,
                                     env=dict(os.environ, GITHUB_WORKSPACE=directory,
-                                             GITHUB_ENV=str(env), QCA_LOCK_PATH="dependencies.lock.json"))
+                                             GITHUB_ENV=str(env), QCA_LOCK_PATH="dependencies.lock.json",
+                                             RUNNER_OS=runner_os))
             return result.returncode, env.read_text()
 
     def test_valid_lock_exported(self):
-        self.assertEqual(self.run_loader('v3.0.11', 'a' * 40),
-                         (0, 'QCA_TAG=v3.0.11\nQCA_COMMIT=' + 'a' * 40 + '\nQCA_MIN_VERSION=3.0.10\n'))
+        self.assertEqual(self.run_loader('v3.1.2', 'a' * 40),
+                         (0, 'QCA_TAG=v3.1.2\nQCA_COMMIT=' + 'a' * 40 + '\nQCA_MIN_VERSION=3.0.10\n'))
+
+    def test_windows_exports_stricter_minimum(self):
+        self.assertEqual(self.run_loader('v3.1.2', 'a' * 40, runner_os="Windows"),
+                         (0, 'QCA_TAG=v3.1.2\nQCA_COMMIT=' + 'a' * 40 + '\nQCA_MIN_VERSION=3.1.2\n'))
+
+    def test_macos_and_android_retain_generic_minimum(self):
+        for runner_os in ('macOS', 'Linux'):
+            with self.subTest(runner_os=runner_os):
+                self.assertEqual(self.run_loader('v3.1.2', 'a' * 40, runner_os=runner_os)[0], 0)
+
+    def test_windows_minimum_cannot_be_lower_than_generic(self):
+        code, env = self.run_loader('v3.1.2', 'a' * 40,
+                                    minimum_version_windows='3.0.9')
+        self.assertNotEqual(code, 0)
+        self.assertEqual(env, '')
+
+    def test_invalid_windows_minimum_not_partially_exported(self):
+        for value in (None, '', 'v3.1.2', '3.1', 312):
+            with self.subTest(value=value):
+                code, env = self.run_loader('v3.1.2', 'a' * 40,
+                                            minimum_version_windows=value)
+                self.assertNotEqual(code, 0)
+                self.assertEqual(env, '')
+
+    def test_locked_release_must_cover_windows_minimum(self):
+        code, env = self.run_loader('v3.1.1', 'a' * 40)
+        self.assertNotEqual(code, 0)
+        self.assertEqual(env, '')
 
     def test_build_revision_below_minimum_rejected(self):
         code, env = self.run_loader('v3.0.9', 'a' * 40)

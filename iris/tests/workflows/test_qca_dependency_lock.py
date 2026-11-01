@@ -13,9 +13,12 @@ class QcaLockTests(unittest.TestCase):
         self.assertRegex(qca["tag"], r"^v\d+\.\d+\.\d+$")
         self.assertRegex(qca["commit"], r"^[0-9a-f]{40}$")
         self.assertRegex(qca["minimum_version"], r"^\d+\.\d+\.\d+$")
+        self.assertRegex(qca["minimum_version_windows"], r"^\d+\.\d+\.\d+$")
         tag_version = tuple(map(int, qca["tag"][1:].split(".")))
         minimum_version = tuple(map(int, qca["minimum_version"].split(".")))
-        self.assertGreaterEqual(tag_version, minimum_version)
+        windows_minimum = tuple(map(int, qca["minimum_version_windows"].split(".")))
+        self.assertGreaterEqual(tag_version, windows_minimum)
+        self.assertGreaterEqual(windows_minimum, minimum_version)
 
     def test_no_other_action_downloads_its_own_qca_release(self):
         # All installation must pass through load-dependencies, even for

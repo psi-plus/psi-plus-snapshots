@@ -20,6 +20,22 @@ set(IRIS_QCA_MIN_VERSION "${CMAKE_MATCH_1}")
 if(NOT IRIS_QCA_MIN_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
     message(FATAL_ERROR "dependencies.lock.json: QCA minimum_version must be a numeric X.Y.Z string")
 endif()
+# Windows WinCrypto/Schannel needs the newer QCA release. Unix platforms
+# continue accepting compatible system OpenSSL-based QCA 3 installations.
+string(REGEX MATCH "\"minimum_version_windows\"[ \t\r\n]*:" _iris_qca_windows_key "${_iris_qca_entry}")
+if(_iris_qca_windows_key)
+    string(REGEX MATCH "\"minimum_version_windows\"[ \t\r\n]*:[ \t\r\n]*\"([^\"]*)\"" _iris_qca_windows_min_match "${_iris_qca_entry}")
+    set(_iris_qca_windows_min "${CMAKE_MATCH_1}")
+    if(NOT _iris_qca_windows_min MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
+        message(FATAL_ERROR "dependencies.lock.json: QCA minimum_version_windows must be a numeric X.Y.Z string")
+    endif()
+    if(_iris_qca_windows_min VERSION_LESS IRIS_QCA_MIN_VERSION)
+        message(FATAL_ERROR "dependencies.lock.json: QCA minimum_version_windows cannot be lower than minimum_version")
+    endif()
+    if(WIN32)
+        set(IRIS_QCA_MIN_VERSION "${_iris_qca_windows_min}")
+    endif()
+endif()
 file(WRITE "${CMAKE_BINARY_DIR}/iris-qca-min-version.txt" "${IRIS_QCA_MIN_VERSION}\n")
 
 # Advance the cached default when the lock changes, preserving explicit overrides.

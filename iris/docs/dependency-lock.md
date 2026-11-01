@@ -5,15 +5,17 @@ The root `dependencies.lock.json` is the **only source of truth** for Iris's sel
 ```json
 {
   "qca": {
-    "tag": "v3.0.11",
-    "commit": "0adfcc757974ca865f6d1de0955df68e7a304676",
-    "minimum_version": "3.0.10"
+    "tag": "v3.1.2",
+    "commit": "c9c56c2c131c897e807cb417f986c071a9c53ac7",
+    "minimum_version": "3.0.10",
+    "minimum_version_windows": "3.1.2"
   }
 }
 ```
 
 - `tag` and `commit` identify the **exact QCA release** used by CI builds and SDK packaging. They must refer to the same source revision. Prefer advancing them together.
-- `minimum_version` is the **minimum compatible QCA version** exported to installed CMake consumers and DEB dependencies. Updating the CI build to a newer release does not automatically raise this minimum.
+- `minimum_version` is the **minimum compatible QCA version** for Linux, macOS and Android, exported to installed CMake consumers and DEB dependencies. Updating the CI build to a newer release does not automatically raise this minimum.
+- `minimum_version_windows` raises the effective minimum on Windows to cover the native WinCrypto/Schannel provider. The build's CMake config and the shared dependency loader select the minimum by target platform. The Windows minimum must not be lower than the generic minimum. QCA 2 remains a separate supported provider choice where applicable.
 - The bundled-QCA CMake build already reads `qca.commit` from this file and checks out that exact SHA, independently of any CI environment overrides.
 
 ## GitHub Actions
