@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // XEP-0203: preserve the UTC instant and fractional seconds in MAM replay.
 #include "fixture.h"
+#include <iris/xmpp_xmlcommon.h>
 #include <iris/xmpp_forwarding.h>
 #include <iris/xmpp_message.h>
 #include <iris/xmpp_status.h>
@@ -15,7 +16,7 @@ using namespace MessageTest;
 
 static QDomElement parse(const QString &xml, QDomDocument &document)
 {
-    check(document.setContent(xml, true), "Invalid delay fixture");
+    check(XMLHelper::parseDocument(document, xml, true), "Invalid delay fixture");
     return document.documentElement();
 }
 

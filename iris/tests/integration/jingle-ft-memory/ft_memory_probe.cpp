@@ -1,4 +1,5 @@
 #include <iris/jingle-ft.h>
+#include <iris/xmpp_xmlcommon.h>
 #include <iris/jingle-ice.h>
 #include <iris/jingle-session.h>
 #include <iris/tcpportreserver.h>
@@ -412,7 +413,7 @@ private:
 
         connect(sender_.client(), &Client::xmlIncoming, transfer, [this, session, transfer](const QString &xml) {
             QDomDocument doc;
-            if (!doc.setContent(xml, true))
+            if (!XMLHelper::parseDocument(doc, xml, true))
                 return;
             const auto iq     = doc.documentElement();
             const auto jingle = iq.firstChildElement(QStringLiteral("jingle"));

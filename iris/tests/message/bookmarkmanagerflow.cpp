@@ -3,6 +3,7 @@
 // XEP-0402 PEP items, publish and retract. Covers lost-update and activation
 // races that the PubSubReplica unit test cannot see.
 #include <iris/xmpp.h>
+#include <iris/xmpp_xmlcommon.h>
 #include <iris/xmpp_bookmarkmanager.h>
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_clientstream.h>
@@ -80,7 +81,7 @@ struct Server {
     {
         check(!request.isNull(), "Expected request was never sent");
         QDomDocument doc;
-        check(doc.setContent(QStringLiteral("<iq xmlns='jabber:client' type='%1' id='%2'>%3</iq>")
+        check(XMLHelper::parseDocument(doc, QStringLiteral("<iq xmlns='jabber:client' type='%1' id='%2'>%3</iq>")
                                  .arg(type, request.attribute(QStringLiteral("id")), payload),
                              true),
               "Invalid reply fixture");

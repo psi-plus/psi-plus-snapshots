@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // XEP-0490: private PEP displayed-state codec and untrusted input validation.
 #include "fixture.h"
+#include <iris/xmpp_xmlcommon.h>
 #include <iris/xmpp_mds.h>
 
 #include <QCoreApplication>
@@ -14,7 +15,7 @@ namespace {
 PubSubItem itemFromXml(const QString &chat, const QString &xml)
 {
     QDomDocument doc;
-    check(doc.setContent(xml, true), "Malformed test XML");
+    check(XMLHelper::parseDocument(doc, xml, true), "Malformed test XML");
     return PubSubItem(chat, doc.documentElement());
 }
 }

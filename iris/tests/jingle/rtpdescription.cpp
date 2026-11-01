@@ -1,4 +1,5 @@
 #include <QCoreApplication>
+#include <iris/xmpp_xmlcommon.h>
 #include <QDebug>
 #include <iris/jingle-rtp-description.h>
 
@@ -14,7 +15,7 @@ static void check(bool value, const char *message)
 static std::optional<Description> parseXml(const QString &xml, bool advisory = false)
 {
     QDomDocument doc;
-    check(doc.setContent(xml, true), "invalid test XML");
+    check(XMLHelper::parseDocument(doc, xml, true), "invalid test XML");
     return Description::fromXml(doc.documentElement(), advisory);
 }
 
@@ -27,7 +28,7 @@ static std::optional<Description> parse(const QString &body, bool advisory = fal
 static QString opaqueNamespace(const QByteArray &xml)
 {
     QDomDocument doc;
-    check(doc.setContent(xml, true), "invalid opaque extension XML");
+    check(XMLHelper::parseDocument(doc, xml, true), "invalid opaque extension XML");
     return doc.documentElement().namespaceURI();
 }
 

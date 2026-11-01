@@ -20,7 +20,9 @@
 #ifndef XMPP_XMLCOMMON_H
 #define XMPP_XMLCOMMON_H
 
+#include <QDomDocument>
 #include <QDomNode>
+#include <QtGlobal>
 #include <QList>
 
 class QColor;
@@ -72,6 +74,22 @@ void         getErrorFromElement(const QDomElement &e, const QString &baseNS, in
 QDomElement  addCorrectNS(const QDomElement &e);
 
 namespace XMLHelper {
+
+// Parse XMPP XML with namespace processing under both Qt 5 and Qt 6.
+// Qt 6.5 replaced the bool overload with ParseOptions/ParseResult.
+// The explicit bool return also works with Qt 6.5's explicit conversion.
+template<typename Source>
+inline bool parseDocument(QDomDocument &document, const Source &xml, bool useNamespaces = true)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    const auto options = useNamespaces ? QDomDocument::ParseOption::UseNamespaceProcessing
+                                       : QDomDocument::ParseOption::Default;
+    return bool(document.setContent(xml, options));
+#else
+    return document.setContent(xml, useNamespaces);
+#endif
+}
+
 
 // QDomElement findSubTag(const QDomElement &e, const QString &name, bool *found);
 bool hasSubTag(const QDomElement &e, const QString &name);

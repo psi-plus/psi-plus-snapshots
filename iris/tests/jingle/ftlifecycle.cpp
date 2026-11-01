@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include <QSet>
+#include <iris/xmpp_xmlcommon.h>
 #include <algorithm>
 #include <functional>
 #include <iris/jingle-ft.h>
@@ -597,7 +598,7 @@ int main(int argc, char **argv)
         QDomDocument wire;
         wire.appendChild(wire.importNode(xml, true));
         QDomDocument parsed;
-        check(parsed.setContent(wire.toByteArray(), true), "cannot parse outgoing request checksum");
+        check(XMLHelper::parseDocument(parsed, wire.toByteArray(), true), "cannot parse outgoing request checksum");
         const FT::File checksum(parsed.documentElement().firstChildElement(QStringLiteral("file")));
         check(checksum.range().offset == 4 && checksum.range().length == 4 && checksum.range().hashes.size() == 1,
               "request checksum did not describe the accepted range");
@@ -654,7 +655,7 @@ int main(int argc, char **argv)
         info.appendChild(checksum);
         doc.appendChild(info);
         QDomDocument parsed;
-        check(parsed.setContent(doc.toByteArray(), true), "cannot parse nested checksum stanza");
+        check(XMLHelper::parseDocument(parsed, doc.toByteArray(), true), "cannot parse nested checksum stanza");
         check(pad->incomingSessionInfo(parsed.documentElement()), "nested request checksum was not handled");
         check(announced == (wrongRange ? 0 : 1), "invalid checksum range reached the storage observer");
         if (wrongRange) {

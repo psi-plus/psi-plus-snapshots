@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include "fixture.h"
+#include <iris/xmpp_xmlcommon.h>
 #include <iris/xmpp_blocking.h>
 
 #include <QCoreApplication>
@@ -12,7 +13,7 @@ using namespace MessageTest;
 static QDomDocument parse(const QString &xml)
 {
     QDomDocument doc;
-    check(doc.setContent(xml, true), "Invalid blocking XML test fixture");
+    check(XMLHelper::parseDocument(doc, xml, true), "Invalid blocking XML test fixture");
     return doc;
 }
 

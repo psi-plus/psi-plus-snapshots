@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // XEP-0461 reply metadata roundtrip.
 #include "fixture.h"
+#include <iris/xmpp_xmlcommon.h>
 #include <iris/xmpp_message.h>
 #include <QCoreApplication>
 #include <QDomDocument>
@@ -16,7 +17,7 @@ int main(int argc, char **argv)
     Endpoint endpoint;
     auto &stream = endpoint.stream;
     QDomDocument doc;
-    check(doc.setContent(QStringLiteral(
+    check(XMLHelper::parseDocument(doc, QStringLiteral(
         "<message xmlns='jabber:client' from='bob@example.test/phone' type='chat'>"
         "<body>Reply</body><reply xmlns='urn:xmpp:reply:0' id='previous-id' "
         "to='alice@example.test/desktop'/></message>"), true), "Invalid fixture");
@@ -34,7 +35,7 @@ int main(int argc, char **argv)
     check(roundtrip.reply().id == message.reply().id, "Reply roundtrip lost ID");
 
     QDomDocument optionalDoc;
-    check(optionalDoc.setContent(QStringLiteral(
+    check(XMLHelper::parseDocument(optionalDoc, QStringLiteral(
         "<message xmlns='jabber:client'><reply xmlns='urn:xmpp:reply:0' id='room-id'/>"
         "</message>"), true), "Invalid optional-to fixture");
     Message optional;

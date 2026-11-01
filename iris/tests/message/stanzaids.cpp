@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // XEP-0359: preserve multiple assigning entities and avoid ambiguous IDs.
 #include "fixture.h"
+#include <iris/xmpp_xmlcommon.h>
 #include <iris/xmpp_message.h>
 
 #include <QCoreApplication>
@@ -18,7 +19,7 @@ int main(int argc, char **argv)
     auto &stream = endpoint.stream;
 
     QDomDocument source;
-    check(source.setContent(QStringLiteral(
+    check(XMLHelper::parseDocument(source, QStringLiteral(
               "<message xmlns='jabber:client' from='room@conference.example.test/alice' "
               "to='alice@example.test/desktop' type='groupchat' id='m1'>"
               "<body>Hello</body>"
@@ -73,7 +74,7 @@ int main(int argc, char **argv)
 
     // Ordinary stanza IDs and XEP-0359 origin IDs are independent.
     QDomDocument noOriginDoc;
-    check(noOriginDoc.setContent(QStringLiteral(
+    check(XMLHelper::parseDocument(noOriginDoc, QStringLiteral(
               "<message xmlns='jabber:client' from='bob@example.test' id='legacy-id'>"
               "<body>Legacy message</body></message>"), true), "Invalid no-origin fixture");
     Message noOrigin;

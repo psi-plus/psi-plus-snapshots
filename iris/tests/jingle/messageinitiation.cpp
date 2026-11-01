@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include <iris/xmpp-im/jingle-rtp.h>
+#include <iris/xmpp_xmlcommon.h>
 #include <iris/xmpp-im/jingle-session.h>
 #include <iris/xmpp-im/jingle.h>
 #include <iris/xmpp-im/xmpp_client.h>
@@ -24,7 +25,7 @@ static void check(bool condition, const char *message)
 
 static QDomElement parseRoot(const QString &xml, QDomDocument *document)
 {
-    check(document->setContent(xml, true), "could not parse JMI fixture");
+    check(XMLHelper::parseDocument(*document, xml, true), "could not parse JMI fixture");
     return document->documentElement();
 }
 

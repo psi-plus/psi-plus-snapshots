@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: LGPL-2.1-or-later */
 #include "fixture.h"
+#include <iris/xmpp_xmlcommon.h>
 #include <iris/xmpp_message.h>
 
 #include <QCoreApplication>
@@ -16,7 +17,7 @@ int main(int argc, char **argv)
     Endpoint endpoint;
 
     QDomDocument source;
-    check(source.setContent(QStringLiteral(
+    check(XMLHelper::parseDocument(source, QStringLiteral(
         "<message xmlns='jabber:client' from='bob@example.test'>"
         "<body>&gt; _ &lt;</body>"
         "<unstyled xmlns='urn:xmpp:styling:0'/>"
@@ -44,7 +45,7 @@ int main(int argc, char **argv)
           "Resetting flag left unwanted marker");
 
     QDomDocument ordinary;
-    check(ordinary.setContent(QStringLiteral(
+    check(XMLHelper::parseDocument(ordinary, QStringLiteral(
         "<message xmlns='jabber:client'><body>*normal*</body></message>"), true),
           "Cannot create ordinary message");
     Message noMarker;

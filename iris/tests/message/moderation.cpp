@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // XEP-0425: moderation IQ requires the room's own stanza ID.
 #include <iris/xmpp.h>
+#include <iris/xmpp_xmlcommon.h>
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_clientstream.h>
 #include <iris/xmpp-im/xmpp_moderation.h>
@@ -29,7 +30,7 @@ public:
 static QDomElement xml(const QString &text)
 {
     QDomDocument doc;
-    check(doc.setContent(text, true), "Invalid moderation XML fixture");
+    check(XMLHelper::parseDocument(doc, text, true), "Invalid moderation XML fixture");
     return doc.documentElement();
 }
 int main(int argc, char **argv)

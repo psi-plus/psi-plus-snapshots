@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // XEP-0425: moderated actions and MAM tombstones are different semantics.
 #include "fixture.h"
+#include <iris/xmpp_xmlcommon.h>
 #include <iris/xmpp_message.h>
 
 #include <QCoreApplication>
@@ -17,7 +18,7 @@ int main(int argc, char **argv)
     Endpoint endpoint;
     const auto parse = [&](const QString &from, const QString &payload) {
         QDomDocument doc;
-        check(doc.setContent(QStringLiteral(
+        check(XMLHelper::parseDocument(doc, QStringLiteral(
             "<message xmlns='jabber:client' type='groupchat' from='%1'>%2</message>")
             .arg(from, payload), true), "Invalid moderation XML fixture");
         Message msg;

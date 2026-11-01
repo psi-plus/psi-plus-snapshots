@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include "../../src/xmpp/xmpp-im/jingle-application.h"
+#include <iris/xmpp_xmlcommon.h>
 #include "../../src/xmpp/xmpp-im/jingle-ibb.h"
 #include "../../src/xmpp/xmpp-im/jingle-s5b.cpp"
 
@@ -27,7 +28,7 @@ struct OwnedXml {
 static OwnedXml payload(const QString &children)
 {
     OwnedXml xml;
-    check(bool(xml.doc.setContent(QStringLiteral("<transport xmlns='urn:xmpp:jingle:transports:s5b:1' sid='test'>")
+    check(bool(XMLHelper::parseDocument(xml.doc, QStringLiteral("<transport xmlns='urn:xmpp:jingle:transports:s5b:1' sid='test'>")
                                       + children + QStringLiteral("</transport>"),
                                   true)),
           "Invalid test XML");

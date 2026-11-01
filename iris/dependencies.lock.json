@@ -6,7 +6,7 @@
   },
   "qca": {
     "tag": "v3.1.2",
-    "commit": "5f03332c31a910af130842792da30027c6943199",
+    "commit": "c9c56c2c131c897e807cb417f986c071a9c53ac7",
     "minimum_version": "3.0.10"
   }
 }

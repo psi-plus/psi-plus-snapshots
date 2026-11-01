@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 // XEP-0421: parse occupant IDs without conflating them with trusted identities.
 #include "fixture.h"
+#include <iris/xmpp_xmlcommon.h>
 #include <iris/xmpp_message.h>
 #include <iris/xmpp_status.h>
 #include <iris/xmpp_tasks.h>
@@ -14,7 +15,7 @@ using namespace MessageTest;
 
 static QDomElement parse(const QString &xml, QDomDocument &document)
 {
-    check(document.setContent(xml, true), "Invalid occupant-id fixture");
+    check(XMLHelper::parseDocument(document, xml, true), "Invalid occupant-id fixture");
     return document.documentElement();
 }
 

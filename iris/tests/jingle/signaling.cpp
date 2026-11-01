@@ -1,5 +1,6 @@
 // Focused signaling regressions. No XMPP server or media engine is required.
 #include <QCoreApplication>
+#include <iris/xmpp_xmlcommon.h>
 #include <QDebug>
 #include <QPointer>
 #include <iris/dtls.h>
@@ -85,7 +86,7 @@ struct OwnedXml {
 static OwnedXml payload(const QString &contents)
 {
     OwnedXml xml;
-    check(xml.doc.setContent(
+    check(XMLHelper::parseDocument(xml.doc, 
               QStringLiteral("<jingle xmlns='urn:xmpp:jingle:1'>") + contents + QStringLiteral("</jingle>"), true),
           "invalid test XML");
     xml.root = xml.doc.documentElement();

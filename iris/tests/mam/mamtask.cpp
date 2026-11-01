@@ -69,7 +69,7 @@ static QDomElement xml(const QString &text)
     // processing of its nodes. A local QDomDocument leaves dangling nodes.
     static QList<QSharedPointer<QDomDocument>> documents;
     auto                                       doc = QSharedPointer<QDomDocument>::create();
-    require(doc->setContent(text, true), "Malformed XML fixture");
+    require(XMLHelper::parseDocument(*doc, text, true), "Malformed XML fixture");
     documents.append(doc);
     return doc->documentElement();
 }

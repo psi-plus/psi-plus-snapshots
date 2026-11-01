@@ -1,4 +1,5 @@
 #include "jingle-ice-udp.h"
+#include <iris/xmpp_xmlcommon.h>
 #include <QCoreApplication>
 #include <QDebug>
 
@@ -16,7 +17,7 @@ static void check(bool value, const char *message)
 static std::optional<XMPP::Jingle::ICE::UdpTransportDescription> parseXml(const QString &xml)
 {
     QDomDocument doc;
-    check(doc.setContent(xml, true), "invalid test XML");
+    check(XMLHelper::parseDocument(doc, xml, true), "invalid test XML");
     return UdpTransportCodec::fromXml(doc.documentElement());
 }
 
@@ -29,7 +30,7 @@ static std::optional<XMPP::Jingle::ICE::UdpTransportDescription> parse(const QSt
 static QString opaqueNamespace(const QByteArray &xml)
 {
     QDomDocument doc;
-    check(doc.setContent(xml, true), "invalid opaque ICE-UDP extension");
+    check(XMLHelper::parseDocument(doc, xml, true), "invalid opaque ICE-UDP extension");
     return doc.documentElement().namespaceURI();
 }
 

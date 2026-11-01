@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: LGPL-2.1-or-later */
 #include <iris/xmpp_bookmarks.h>
+#include <iris/xmpp_xmlcommon.h>
 #include <iris/xmpp_blocking.h>
 #include <iris/xmpp_pubsubitem.h>
 #include "../../src/xmpp/xmpp-im/xmpp_pubsubreplica.h"
@@ -20,7 +21,7 @@ int main(int argc, char **argv)
     QCoreApplication app(argc, argv);
 
     QDomDocument source;
-    check(source.setContent(QStringLiteral(
+    check(XMLHelper::parseDocument(source, QStringLiteral(
         "<conference xmlns='urn:xmpp:bookmarks:1' name='Room' autojoin='true'>"
         "<nick>me</nick><password>secret</password><extensions>"
         "<state xmlns='urn:example:client-ext' favorite='yes'/></extensions></conference>"), true),
