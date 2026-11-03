@@ -156,7 +156,7 @@ public:
         emit q->connected();
     }
 
-    void event(const Parser::Event &event)
+    void handleParserEvent(const Parser::Event &event)
     {
         if (event.type() == Parser::Event::Error) {
             fail(ErrParse, InvalidXml, QStringLiteral("Malformed link-local XML stream"));
@@ -259,7 +259,7 @@ public:
             parser.appendData(input);
             for (auto next = parser.readNext(); !next.isNull(); next = parser.readNext()) {
                 pendingBytes = 0;
-                event(next);
+                handleParserEvent(next);
                 if (!guard || closed)
                     return;
             }

@@ -67,7 +67,7 @@
 
 using namespace XMPP;
 
-static Debug *debug_ptr = nullptr;
+[[maybe_unused]] static Debug *debug_ptr = nullptr;
 void          XMPP::setDebug(Debug *p) { debug_ptr = p; }
 
 Q_LOGGING_CATEGORY(saslChannelBindingLog, "iris.xmpp.saslcb", QtWarningMsg)

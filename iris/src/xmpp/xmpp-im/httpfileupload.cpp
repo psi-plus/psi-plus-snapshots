@@ -371,6 +371,7 @@ void HttpFileUpload::tryNextServer()
 #else
                         Q_UNUSED(total)
                         Q_UNUSED(reply)
+                        Q_UNUSED(this)
 #endif
                     });
             connect(reply, &QNetworkReply::metaDataChanged, this, [reply, watchdog]() {

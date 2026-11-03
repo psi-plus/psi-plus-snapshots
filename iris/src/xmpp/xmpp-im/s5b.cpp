@@ -177,7 +177,9 @@ public:
 };
 
 static int id_conn  = 0;
+#ifdef S5B_DEBUG
 static int num_conn = 0;
+#endif
 
 S5BConnection::S5BConnection(S5BManager *m, QObject *parent) : BSConnection(parent)
 {
@@ -186,9 +188,9 @@ S5BConnection::S5BConnection(S5BManager *m, QObject *parent) : BSConnection(pare
     d->sc = nullptr;
     d->su = nullptr;
 
-    ++num_conn;
     d->id = id_conn++;
 #ifdef S5B_DEBUG
+    ++num_conn;
     qDebug("S5BConnection[%d]: constructing, count=%d, %p\n", d->id, num_conn, this);
 #endif
 
@@ -199,8 +201,8 @@ S5BConnection::~S5BConnection()
 {
     resetConnection(true);
 
-    --num_conn;
 #ifdef S5B_DEBUG
+    --num_conn;
     qDebug("S5BConnection[%d]: destructing, count=%d\n", d->id, num_conn);
 #endif
 

@@ -834,7 +834,7 @@ void Client::send(const QString &str)
         stream->writeDirect(str);
     else {
         QDomDocument document;
-        if (document.setContent(str, true))
+        if (XMLHelper::parseDocument(document, str))
             send(document.documentElement());
     }
 }

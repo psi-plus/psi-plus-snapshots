@@ -30,7 +30,9 @@
 
 using namespace XMPP;
 
+#ifdef IBB_DEBUG
 static int         num_conn = 0;
+#endif
 static int         id_conn  = 0;
 static const char *IBB_NS   = "http://jabber.org/protocol/ibb";
 
@@ -65,9 +67,9 @@ IBBConnection::IBBConnection(IBBManager *m) : BSConnection(m)
     d->blockSize = PacketSize;
     resetConnection();
 
-    ++num_conn;
     d->id = id_conn++;
 #ifdef IBB_DEBUG
+    ++num_conn;
     qDebug("IBBConnection[%d]: constructing, count=%d", d->id, num_conn);
 #endif
 }
@@ -94,8 +96,8 @@ IBBConnection::~IBBConnection()
     clearWriteBuffer(); // drop buffer to make closing procedure fast
     close();
 
-    --num_conn;
 #ifdef IBB_DEBUG
+    --num_conn;
     qDebug("IBBConnection[%d]: destructing, count=%d", d->id, num_conn);
 #endif
 
