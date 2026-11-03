@@ -241,7 +241,7 @@ GstElement *bins_videoprep_create(const QSize &size, int fps, bool is_live)
                 gst_structure_new("video/x-raw", "framerate", GST_TYPE_FRACTION_RANGE, 1, G_MAXINT, fps, 1, nullptr));
         }
 
-        g_object_set(G_OBJECT(ratefilter), "caps", caps, NULL);
+        g_object_set(G_OBJECT(ratefilter), "caps", caps, nullptr);
         gst_caps_unref(caps);
     }
 
@@ -259,11 +259,11 @@ GstElement *bins_videoprep_create(const QSize &size, int fps, bool is_live)
 
         GstCaps      *caps = gst_caps_new_empty();
         GstStructure *cs   = gst_structure_new("video/x-raw", "width", G_TYPE_INT, size.width(), "height", G_TYPE_INT,
-                                               size.height(), "pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1, NULL);
+                                               size.height(), "pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1, nullptr);
 
         gst_caps_append_structure(caps, cs);
 
-        g_object_set(G_OBJECT(scalefilter), "caps", caps, NULL);
+        g_object_set(G_OBJECT(scalefilter), "caps", caps, nullptr);
         gst_caps_unref(caps);
     }
 
@@ -323,7 +323,7 @@ GstElement *bins_audioenc_create(const QString &codec, int id)
         return nullptr;
 
     if (id != -1)
-        g_object_set(G_OBJECT(audiortppay), "pt", id, NULL);
+        g_object_set(G_OBJECT(audiortppay), "pt", id, nullptr);
 
     // Raw PCM format belongs to the source/encoder pipeline, not to RTP
     // payload metadata. Let GStreamer negotiate channel count, sample format,
@@ -337,7 +337,7 @@ GstElement *bins_audioenc_create(const QString &codec, int id)
     gst_bin_add(GST_BIN(bin), audioenc);
     gst_bin_add(GST_BIN(bin), audiortppay);
 
-    gst_element_link_many(audioconvert, audioresample, audioenc, audiortppay, NULL);
+    gst_element_link_many(audioconvert, audioresample, audioenc, audiortppay, nullptr);
 
     GstPad *pad;
 
@@ -383,7 +383,7 @@ GstElement *bins_videoenc_create(const QString &codec, int id, int maxkbps)
         g_object_set(videoenc, "target-bitrate", int(qMin<qint64>(qint64(maxkbps) * 1000, G_MAXINT)), nullptr);
 
     if (id != -1)
-        g_object_set(G_OBJECT(videortppay), "pt", id, NULL);
+        g_object_set(G_OBJECT(videortppay), "pt", id, nullptr);
 
     GstElement *videoconvert = gst_element_factory_make("videoconvert", nullptr);
 
@@ -391,7 +391,7 @@ GstElement *bins_videoenc_create(const QString &codec, int id, int maxkbps)
     gst_bin_add(GST_BIN(bin), videoenc);
     gst_bin_add(GST_BIN(bin), videortppay);
 
-    gst_element_link_many(videoconvert, videoenc, videortppay, NULL);
+    gst_element_link_many(videoconvert, videoenc, videortppay, nullptr);
 
     GstPad *pad;
 
@@ -421,9 +421,9 @@ GstElement *bins_audiodec_create(const QString &codec)
     gst_bin_add(GST_BIN(bin), audiortpdepay);
     gst_bin_add(GST_BIN(bin), audiodec);
 
-    gst_element_link_many(audiortpjitterbuffer, audiortpdepay, audiodec, NULL);
+    gst_element_link_many(audiortpjitterbuffer, audiortpdepay, audiodec, nullptr);
 
-    g_object_set(G_OBJECT(audiortpjitterbuffer), "latency", (unsigned int)get_rtp_latency(), NULL);
+    g_object_set(G_OBJECT(audiortpjitterbuffer), "latency", (unsigned int)get_rtp_latency(), nullptr);
 
     GstPad *pad;
 
@@ -453,13 +453,13 @@ GstElement *bins_videodec_create(const QString &codec)
     gst_bin_add(GST_BIN(bin), videortpdepay);
     gst_bin_add(GST_BIN(bin), videodec);
 
-    gst_element_link_many(videortpjitterbuffer, videortpdepay, videodec, NULL);
+    gst_element_link_many(videortpjitterbuffer, videortpdepay, videodec, nullptr);
 
     // Lost-packet events allow RTP video depayloaders to decide when decoding
     // needs a fresh keyframe. The receive graph is separated from the shared
     // rtpsession by appsrc, so RtpWorker forwards the resulting
     // GstForceKeyUnit event back to the group session explicitly.
-    g_object_set(G_OBJECT(videortpjitterbuffer), "latency", (unsigned int)get_rtp_latency(), "do-lost", TRUE, NULL);
+    g_object_set(G_OBJECT(videortpjitterbuffer), "latency", (unsigned int)get_rtp_latency(), "do-lost", TRUE, nullptr);
     if (codec == QLatin1String("vp8")) {
         auto *klass = G_OBJECT_GET_CLASS(videortpdepay);
         if (g_object_class_find_property(klass, "request-keyframe"))

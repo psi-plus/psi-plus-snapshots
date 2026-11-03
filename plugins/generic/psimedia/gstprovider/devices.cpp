@@ -326,7 +326,7 @@ public:
         // DeviceMonitor creation and preserved it in qtThread
         qtThread->metaObject()->invokeMethod(
             qtThread,
-            [this, q = QPointer<DeviceMonitor>(q)]() {
+            [q = QPointer<DeviceMonitor>(q)]() {
                 if (q) // race condition is still possible though...
                     emit q->updated();
             },

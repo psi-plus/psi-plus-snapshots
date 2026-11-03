@@ -25,7 +25,7 @@ BOOL CALLBACK enumerateMonitor(HMONITOR monitor, HDC, LPRECT, LPARAM data)
                              .arg(rect.right - rect.left)
                              .arg(rect.bottom - rect.top),
                          QStringLiteral("d3d11screencapturesrc monitor-handle=%1 show-cursor=true")
-                             .arg(qulonglong(reinterpret_cast<quintptr>(monitor))) });
+                             .arg(qulonglong(reinterpret_cast<quintptr>(monitor))), {} });
     }
     return TRUE;
 }
@@ -58,7 +58,7 @@ void sources(QObject *receiver, Callback callback)
                     reinterpret_cast<QList<Source> *>(data)->append(
                         { PScreenCaptureSource::Window, QString::fromWCharArray(title.data(), copied),
                           QStringLiteral("d3d11screencapturesrc capture-api=wgc window-handle=%1 show-cursor=true")
-                              .arg(qulonglong(reinterpret_cast<quintptr>(window))) });
+                              .arg(qulonglong(reinterpret_cast<quintptr>(window))), {} });
                 return TRUE;
             },
             reinterpret_cast<LPARAM>(&result));

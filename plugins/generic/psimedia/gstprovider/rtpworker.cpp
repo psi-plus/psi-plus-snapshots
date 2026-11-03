@@ -2583,7 +2583,8 @@ RtpWorker::Frame RtpWorker::Frame::pullFromSink(GstAppSink *appsink)
 #endif
         frame.image = image;
     } else {
-        qDebug("wrong size of received buffer: %x != %lx", (width * height * 4), gst_buffer_get_size(buffer));
+        qDebug("wrong size of received buffer: %x != %llx", width * height * 4,
+               static_cast<unsigned long long>(gst_buffer_get_size(buffer)));
         gchar *capsstr;
         capsstr = gst_caps_to_string(caps);
         qDebug("recv video frame caps: %s", capsstr);

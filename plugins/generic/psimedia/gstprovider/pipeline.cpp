@@ -37,28 +37,12 @@
 
 #define PIPELINE_DEBUG
 
-// rates lower than 22050 (e.g. 16000) might not work with echo-cancel
-#define DEFAULT_FIXED_RATE 22050
-
 // in milliseconds
 #define DEFAULT_LATENCY 20
 
 #define WEBRTCDSP_RATE 48000
 
 namespace PsiMedia {
-
-static int get_fixed_rate()
-{
-    QString val = QString::fromLatin1(qgetenv("PSI_FIXED_RATE"));
-    if (!val.isEmpty()) {
-        int rate = val.toInt();
-        if (rate > 0)
-            return rate;
-        else
-            return 0;
-    } else
-        return DEFAULT_FIXED_RATE;
-}
 
 static int get_latency_time()
 {
