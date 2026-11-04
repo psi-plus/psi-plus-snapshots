@@ -49,6 +49,10 @@ public:
     void appendMessage(const MessageView &view);
     int  prependArchivePage(const QList<QPair<QString, MessageView>> &page);
     void clearMessages();
+    // Search loaded model rows, including rows whose QWidget has been evicted.
+    bool findText(const QString &text, bool backward = false, bool caseSensitive = false, bool restart = false);
+    void clearTextSearch();
+    int  currentSearchIndex() const;
     void setHistoryLoading(bool loading);
     void setHistoryExhausted(bool exhausted);
     // Continue an explicit pixel demand after a completed source page.
@@ -217,6 +221,7 @@ private:
     void                                          updateRowSelection(QFrame *row, bool selected);
     void                                          updateRowPalette(QFrame *row, bool selected);
     QString plainMessage(const Row &) const;
+    const QString &searchablePlainText(const Row &);
     QString copiedMessage(const Row &) const;
     QMenu *createMessageContextMenu(const QString &key, QWidget *target, const QPoint &globalPosition);
     int  replyTargetIndex(const ChatReply &) const;
@@ -287,6 +292,17 @@ private:
     // new rows or MAM/EDB prepends history. A real user scroll takes ownership.
     bool    followingInitialTail_ = true;
     quint64 generatedKey_         = 0;
+
+    // Cache by stable model identity, not QWidget: text is also searchable
+    // after its row is evicted. Invalidate on edits, retractions and clear.
+    QHash<QString, QString> searchPlainTextCache_;
+    QString searchText_;
+    QString searchKey_;
+    int     searchMatchStart_ = -1;
+    int     searchMatchEnd_   = -1;
+    int     searchOrdinal_    = 0;
+    bool    searchCaseSensitive_ = false;
+    void updateTextSearchHighlight(int index, QWidget *row);
 
     QSet<QString> selectedKeys_;
     QString       selectionAnchorKey_;
