@@ -58,4 +58,13 @@ target is an error, because replacing a target already used by another part of
 the build would be unsafe. For local development, CMake's standard
 `FETCHCONTENT_SOURCE_DIR_IRIS_JDNS` override can select a JDNS checkout.
 
+If `AUTO` unexpectedly uses the bundled copy, inspect the configuration
+diagnostic and check where the system package installed `QJDnsConfig.cmake`.
+The C-only `libjdns` is insufficient: the matching Qt wrapper is required.
+For example, a Gentoo installation under `/usr/lib6464/cmake/qjdns` instead of
+`/usr/lib64/cmake/qjdns` indicates a double library suffix from packaging.
+Fix the JDNS install path and reinstall the package rather than letting Iris
+link against a second copy. During diagnosis, `-DIRIS_SYSTEM_JDNS=ON` forces an
+error with the discovery reason instead of silently falling back.
+
 Do not duplicate `gh release download` or QCA pin constants in individual workflows. `tests/workflows/test_qca_dependency_lock.py` enforces this convention.

@@ -90,6 +90,37 @@ int checkClosure(Closure closure)
     return 0;
 }
 
+int checkQueuedDataDelivery()
+{
+    Association owner(nullptr);
+    auto        state = std::make_unique<AssociationPrivate>(&owner);
+    state->transportConnected = true;
+    auto first  = state->newChannel(Reliable, true, 0, 256, {}, {}).staticCast<WebRTCDataChannel>();
+    auto second = state->newChannel(Reliable, true, 0, 256, {}, {}).staticCast<WebRTCDataChannel>();
+    if (!first || !second || first->streamId == second->streamId)
+        return fail("failed to create independent SCTP data channels");
+
+    QByteArray firstReceived, secondReceived;
+    QObject::connect(first.data(), &ByteStream::readyRead, &owner, [&] {
+        firstReceived += first->readDatagram().data();
+    });
+    QObject::connect(second.data(), &ByteStream::readyRead, &owner, [&] {
+        secondReceived += second->readDatagram().data();
+    });
+    const QByteArray a("first-stream");
+    const QByteArray b("second-stream");
+    state->OnSctpAssociationMessageReceived(&state->assoc, quint16(first->streamId), PPID_BINARY,
+                                            reinterpret_cast<const uint8_t *>(a.constData()), a.size());
+    state->OnSctpAssociationMessageReceived(&state->assoc, quint16(second->streamId), PPID_BINARY,
+                                            reinterpret_cast<const uint8_t *>(b.constData()), b.size());
+    if (!firstReceived.isEmpty() || !secondReceived.isEmpty())
+        return fail("application callback ran synchronously within a usrsctp callback");
+    QCoreApplication::processEvents();
+    if (firstReceived != a || secondReceived != b)
+        return fail("queued SCTP delivery lost or mixed independent data channels");
+    return 0;
+}
+
 int checkReentrantDestruction()
 {
     Association owner(nullptr);
@@ -122,5 +153,7 @@ int main(int argc, char **argv)
         if (const auto result = checkClosure(closure))
             return result;
     }
+    if (const auto result = checkQueuedDataDelivery())
+        return result;
     return checkReentrantDestruction();
 }

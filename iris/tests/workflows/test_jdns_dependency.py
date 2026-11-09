@@ -12,7 +12,7 @@ MIN_VERSION = json.loads((ROOT / "dependencies.lock.json").read_text())["jdns"][
 
 class JDnsSelection(unittest.TestCase):
     def configure(self, mode="AUTO", version=None, qt=6, reject_wrong_qt=True,
-                  existing=False, commit=None, extra=()):
+                  existing=False, commit=None, extra=(), export_target=True):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             modules = root / "cmake/modules"
@@ -37,14 +37,17 @@ set_property(TARGET qjdns PROPERTY INTERFACE_QJDNS_QT_MAJOR_VERSION ${JDNS_QT_MA
                 rejection = """
 if(NOT QT_DEFAULT_MAJOR_VERSION EQUAL %d)
     set(QJDns_FOUND FALSE)
+    set(QJDns_NOT_FOUND_MESSAGE "QJDns wrapper is for Qt %d, not Qt 6")
     return()
 endif()
-""" % qt if reject_wrong_qt else ""
-                (package / "QJDnsConfig.cmake").write_text(rejection + '''
+""" % (qt, qt) if reject_wrong_qt else ""
+                target = '''
 add_library(QJDns::QJDns INTERFACE IMPORTED)
 set_property(TARGET QJDns::QJDns PROPERTY INTERFACE_QJDNS_QT_MAJOR_VERSION %d)
+''' % qt if export_target else ""
+                (package / "QJDnsConfig.cmake").write_text(rejection + target + '''
 set(QJDns_VERSION "%s")
-''' % (qt, version))
+''' % version)
                 setup += '''
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file("%s/QJDnsConfigVersion.cmake"
@@ -83,16 +86,23 @@ iris_configure_jdns()
         result = self.configure()
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("using bundled", result.stdout)
+        self.assertIn("QJDnsConfig.cmake was not found", result.stdout)
+        self.assertIn(f"JDNS {MIN_VERSION} (commit", result.stdout)
+        self.assertIn("QJDns linked to Qt 6", result.stdout)
 
     def test_system_required_is_not_silently_bundled(self):
         result = self.configure(mode="ON")
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("System QJDns >= " + MIN_VERSION, result.stdout)
+        # CMake formats fatal diagnostics at terminal width, inserting line breaks.
+        # Check the message rather than its incidental whitespace.
+        normalized = " ".join(result.stdout.split())
+        self.assertIn("System QJDns >= " + MIN_VERSION, normalized)
+        self.assertIn("QJDnsConfig.cmake was not found", normalized)
 
     def test_system_same_qt(self):
         result = self.configure(mode="ON", version=MIN_VERSION)
         self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn(f"using system QJDns {MIN_VERSION} for Qt 6", result.stdout)
+        self.assertIn(f"using system QJDns {MIN_VERSION} (Qt 6 wrapper)", result.stdout)
 
     def test_off_ignores_system(self):
         result = self.configure(mode="OFF", version=MIN_VERSION)
@@ -105,11 +115,22 @@ iris_configure_jdns()
                 result = self.configure(version=version)
                 self.assertEqual(result.returncode, 0, result.stdout)
                 self.assertIn("using bundled", result.stdout)
+                self.assertIn(f"version {version}", result.stdout)
 
     def test_wrong_qt_falls_back(self):
         result = self.configure(version=MIN_VERSION, qt=5)
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("using bundled", result.stdout)
+        self.assertIn("QJDns wrapper is for Qt 5, not Qt 6", result.stdout)
+
+    def test_system_config_without_qjdns_target_is_diagnosed(self):
+        result = self.configure(version=MIN_VERSION, export_target=False)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("does not export QJDns::QJDns", result.stdout)
+        self.assertIn("using bundled", result.stdout)
+        required = self.configure(mode="ON", version=MIN_VERSION, export_target=False)
+        self.assertNotEqual(required.returncode, 0)
+        self.assertIn("does not export QJDns::QJDns", required.stdout)
 
     def test_existing_or_mispackaged_wrong_qt_target_is_rejected(self):
         for existing in (False, True):
@@ -127,7 +148,7 @@ iris_configure_jdns()
     def test_explicit_source_override_is_preserved(self):
         result = self.configure(mode="OFF", extra=("-DIRIS_JDNS_GIT_TAG=custom-ref",))
         self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn("using bundled custom-ref", result.stdout)
+        self.assertIn("using bundled JDNS source custom-ref", result.stdout)
 
     def test_previous_cached_default_advances_to_lock(self):
         locked = json.loads((ROOT / "dependencies.lock.json").read_text())["jdns"]["commit"]
@@ -138,7 +159,7 @@ iris_configure_jdns()
             with self.subTest(extra=extra):
                 result = self.configure(mode="OFF", extra=extra)
                 self.assertEqual(result.returncode, 0, result.stdout)
-                self.assertIn("using bundled " + locked, result.stdout)
+                self.assertIn("using bundled JDNS " + MIN_VERSION + " (commit " + locked, result.stdout)
 
 
 if __name__ == "__main__":

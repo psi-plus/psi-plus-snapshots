@@ -63,13 +63,17 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     void AssociationPrivate::OnSctpAssociationConnected(RTC::SctpAssociation *)
     {
         qDebug("jignle-sctp: on connected");
-        if (associationClosed)
-            return;
-        for (auto &channel : channels) {
-            auto dc = channel.staticCast<WebRTCDataChannel>();
-            if (!dc->openingDeferred)
-                dc->connect();
-        }
+        // Opening channels invokes application callbacks and may start more SCTP I/O.
+        // Do not run it inside a usrsctp callback holding internal locks.
+        QMetaObject::invokeMethod(this, [this] {
+            if (associationClosed)
+                return;
+            for (auto &channel : channels) {
+                auto dc = channel.staticCast<WebRTCDataChannel>();
+                if (!dc->openingDeferred)
+                    dc->connect();
+            }
+        }, Qt::QueuedConnection);
     }
 
     void AssociationPrivate::OnSctpAssociationFailed(RTC::SctpAssociation *)
@@ -90,7 +94,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     {
         // qDebug("jignle-sctp: on outgoing data");
         QByteArray bytes((char *)data, int(len));
-        QMetaObject::invokeMethod(this, "onOutgoingData", Q_ARG(QByteArray, bytes));
+        QMetaObject::invokeMethod(this, "onOutgoingData", Qt::QueuedConnection, Q_ARG(QByteArray, bytes));
     }
 
     void AssociationPrivate::OnSctpAssociationMessageReceived(RTC::SctpAssociation *, uint16_t streamId, uint32_t ppid,
@@ -98,8 +102,10 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     {
         // qDebug("jignle-sctp: on incoming data");
         QByteArray bytes((char *)msg, int(len));
-        QMetaObject::invokeMethod(this, "onIncomingData", Q_ARG(QByteArray, bytes), Q_ARG(quint16, streamId),
-                                  Q_ARG(quint32, ppid));
+        // Preserve message order and per-stream multiplexing, but never let an
+        // application observer reenter usrsctp before conninput() has returned.
+        QMetaObject::invokeMethod(this, "onIncomingData", Qt::QueuedConnection, Q_ARG(QByteArray, bytes),
+                                  Q_ARG(quint16, streamId), Q_ARG(quint32, ppid));
     }
 
     /**
@@ -112,8 +118,16 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         // qDebug("jignle-sctp: on buffered data: %d", len);
         Q_UNUSED(sctpAssociation);
         Q_UNUSED(len);
-        if (!dumpingOutogingBuffer)
-            procesOutgoingMessageQueue();
+        // Processing the send queue can synchronously call usrsctp again. Do
+        // not do that from the buffered-amount callback. A burst of SCTP
+        // notifications needs just one queued wakeup, not one per packet.
+        if (!outgoingDrainScheduled.exchange(true)) {
+            QMetaObject::invokeMethod(this, [this] {
+                outgoingDrainScheduled = false;
+                if (!dumpingOutogingBuffer)
+                    procesOutgoingMessageQueue();
+            }, Qt::QueuedConnection);
+        }
         // TODO control buffering to reduce memory consumption
     }
 
@@ -121,7 +135,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
     {
         qDebug("jignle-sctp: on stream closed");
         Q_UNUSED(sctpAssociation);
-        QMetaObject::invokeMethod(this, "onStreamClosed", Q_ARG(quint16, streamId));
+        QMetaObject::invokeMethod(this, "onStreamClosed", Qt::QueuedConnection, Q_ARG(quint16, streamId));
     }
 
     void AssociationPrivate::handleIncomingDataChannelOpen(const QByteArray &data, quint16 streamId)

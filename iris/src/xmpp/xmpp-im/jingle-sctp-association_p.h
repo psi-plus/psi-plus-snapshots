@@ -29,6 +29,7 @@
 #include <QHash>
 #include <QQueue>
 
+#include <atomic>
 #include <mutex>
 
 namespace XMPP { namespace Jingle { namespace SCTP {
@@ -58,6 +59,7 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         QQueue<Connection::Ptr>          pendingLocalChannels;
         RTC::SctpAssociation             assoc;
 
+        std::atomic_bool outgoingDrainScheduled { false };
         bool    dumpingOutogingBuffer = false;
         bool    transportConnected    = false;
         bool    associationClosed     = false;
