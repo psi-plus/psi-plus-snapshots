@@ -1,4 +1,4 @@
-<skin author="VitoZz" name="Dark" path="/usr/share/psi-plus/skins" version="2.1">
+<skin author="VitoZz" name="Dark" path="/usr/share/psi-plus/skins" version="2.2">
     <options>
         <options.ui.look.colors.chat.link-color type="QColor">#0000ff</options.ui.look.colors.chat.link-color>
         <options.ui.look.colors.chat.mailto-color type="QColor">#2c9dff</options.ui.look.colors.chat.mailto-color>
@@ -18,7 +18,7 @@
         <options.ui.look.colors.messages.sent type="QColor">#999999</options.ui.look.colors.messages.sent>
         <options.ui.look.colors.messages.usertext type="QColor">#bcbcbc</options.ui.look.colors.messages.usertext>
         <options.ui.look.colors.muc.role-moderator type="QColor">#910000</options.ui.look.colors.muc.role-moderator>
-        <options.ui.look.colors.muc.role-norole type="QColor">#000000</options.ui.look.colors.muc.role-norole>
+        <options.ui.look.colors.muc.role-norole type="QColor">#bdbdbd</options.ui.look.colors.muc.role-norole>
         <options.ui.look.colors.muc.role-participant type="QColor">#00008a</options.ui.look.colors.muc.role-participant>
         <options.ui.look.colors.muc.role-visitor type="QColor">#336600</options.ui.look.colors.muc.role-visitor>
         <options.ui.look.colors.passive-popup.border type="QColor">#a9b5ff</options.ui.look.colors.passive-popup.border>
@@ -37,18 +37,6 @@
 /* Last message correction */
 QWidget#bottomFrame>QWidget>QTextEdit[correction="true"] {
     background-color: rgb(0,51,0);
-}
-
-TabDlg {
-    background-color: #212121;
-}
-
-/* common frame */
-QFrame {
-    color: #bcbcbc;
-    background-color: #212121;
-    border: 1px solid #5b5b5b;
-    padding: 0px;
 }
 
 /* bubble theme */
@@ -86,6 +74,16 @@ QFrame {
     background-color: #27272b;
 }
 
+#mamDateBubble {
+    qproperty-fillColor: #27272b;
+}
+#mamDateBubble QLabel {
+    background-color: #27272b;
+}
+QLabel#mamAuthor {
+    color: none;
+}
+
 /* modern theme row */
 /* slightly visible border for all styles */
 QFrame#mamMessageRow {
@@ -96,16 +94,6 @@ QFrame#mamMessageRow {
 QFrame#mamAvatar {
     border: none;
     background-color: #18191d;
-}
-
-/* modern theme message items */
-ChatMessageText,
-QLabel#mamEncryptionIndicator,
-QLabel#mamEditedIndicator,
-QLabel#mamDeliveryIndicator,
-QLabel#mamAuthor,
-QLabel#mamTimestamp {
-    border: none;
 }
 
 /* top frame */
@@ -234,17 +222,15 @@ QLabel#lb_ident {
 }
 
 /* chatlog */
-QFrame#log * {
-    color: #bcbcbc;
+MamChatWidget * {
     background-color: #2d2d2d;
-    border: 1px inset #5b5b5b;
+    border: 1px solid #5b5b5b;
     border-radius: 3px;
-    padding: 2px;
 }
 
 /* conference roster */
 QFrame#lv_users {
-    border: 1px upset #5b5b5b;
+    border: 1px outset #5b5b5b;
     border-radius: 3px;
     padding: 2px;
     background-color: #212121;

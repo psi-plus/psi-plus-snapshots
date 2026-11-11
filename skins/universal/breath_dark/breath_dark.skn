@@ -1,4 +1,4 @@
-<skin author="VitoZz" name="Breath Dark" path="/usr/share/psi-plus/skins" version="1.9">
+<skin author="VitoZz" name="Breath Dark" path="/usr/share/psi-plus/skins" version="2.0">
     <options>
         <options.ui.look.colors.chat.link-color type="QColor">#0000ff</options.ui.look.colors.chat.link-color>
         <options.ui.look.colors.chat.mailto-color type="QColor">#2c9dff</options.ui.look.colors.chat.mailto-color>
@@ -18,7 +18,7 @@
         <options.ui.look.colors.messages.sent type="QColor">#c0c0c0</options.ui.look.colors.messages.sent>
         <options.ui.look.colors.messages.usertext type="QColor">#c0c0c0</options.ui.look.colors.messages.usertext>
         <options.ui.look.colors.muc.role-moderator type="QColor">#34911b</options.ui.look.colors.muc.role-moderator>
-        <options.ui.look.colors.muc.role-norole type="QColor">#000000</options.ui.look.colors.muc.role-norole>
+        <options.ui.look.colors.muc.role-norole type="QColor">#bdbdbd</options.ui.look.colors.muc.role-norole>
         <options.ui.look.colors.muc.role-participant type="QColor">#8a842c</options.ui.look.colors.muc.role-participant>
         <options.ui.look.colors.muc.role-visitor type="QColor">#963e70</options.ui.look.colors.muc.role-visitor>
         <options.ui.look.colors.passive-popup.border type="QColor">#53575b</options.ui.look.colors.passive-popup.border>
@@ -39,27 +39,13 @@ QWidget#bottomFrame>QWidget>QTextEdit[correction="true"] {
     background-color: #1a4e4c;
 }
 
-TabDlg {
-    background-color: #282e33;
-}
-
-/* common frame */
-QFrame {
-    color: #c0c0c0;
-    background-color: #18191d;
-    border: 1px solid #53575b;
-    padding: 0px;
-}
-
 /* bubble theme */
 #mamBubble[tone="incoming"], #mamBubble[tone="notice"]  {
     qproperty-fillColor: #27272b;
 }
-
 #mamBubble[tone="own"] {
     qproperty-fillColor: #1C2E3B;
 }
-
 #mamBubble[tone="own"] QTextEdit#mamBody,
 #mamBubble[tone="own"] QLabel#mamEncryptionIndicator,
 #mamBubble[tone="own"] QLabel#mamEditedIndicator,
@@ -68,7 +54,6 @@ QFrame {
 #mamBubble[tone="own"] QLabel#mamTimestamp  {
     background-color: #1C2E3B;
 }
-
 #mamBubble[tone="notice"] QTextEdit#mamBody,
 #mamBubble[tone="notice"]  QLabel#mamEncryptionIndicator,
 #mamBubble[tone="notice"]  QLabel#mamEditedIndicator,
@@ -77,7 +62,6 @@ QFrame {
 #mamBubble[tone="notice"]  QLabel#mamTimestamp {
     background-color: #27272b;
 }
-
 #mamBubble[tone="incoming"]  QTextEdit#mamBody,
 #mamBubble[tone="incoming"]  QLabel#mamEncryptionIndicator,
 #mamBubble[tone="incoming"]  QLabel#mamEditedIndicator, #mamBubble[tone="incoming"]  QLabel#mamDeliveryIndicator,
@@ -85,27 +69,24 @@ QFrame {
 #mamBubble[tone="incoming"]  QLabel#mamTimestamp {
     background-color: #27272b;
 }
-
+#mamDateBubble {
+    qproperty-fillColor: #27272b;
+}
+#mamDateBubble QLabel {
+    background-color: #27272b;
+}
+QLabel#mamAuthor {
+    color: none;
+}
 /* modern theme row */
 /* slightly visible border for all styles */
 QFrame#mamMessageRow {
     border: 1px dashed   #1e2025;
 }
-
 /* modern theme avatar */
 QFrame#mamAvatar {
     border: none;
     background-color: #18191d;
-}
-
-/* modern theme message items */
-ChatMessageText,
-QLabel#mamEncryptionIndicator,
-QLabel#mamEditedIndicator,
-QLabel#mamDeliveryIndicator,
-QLabel#mamAuthor,
-QLabel#mamTimestamp {
-    border: none;
 }
 
 /* top frame */
@@ -236,17 +217,15 @@ QLabel#lb_ident {
 }
 
 /* chatlog */
-QFrame#log * {
-    color: #c0c0c0;
+MamChatWidget  {
     background-color: #18191d;
-    border: 1px inset #53575b;
+    border: 1px solid #53575b;
     border-radius: 3px;
-    padding: 2px;
 }
 
 /* conference roster */
 QFrame#lv_users {
-    border: 1px upset #53575b;
+    border: 1px outset #53575b;
     border-radius: 3px;
     padding: 2px;
     background-color: #18191d;
@@ -1279,7 +1258,7 @@ QToolButton:pressed {
         <options.iconsets.affiliations type="QString">futurama-robots-affiliations.jisp</options.iconsets.affiliations>
         <options.ui.chat.scaled-message-icons type="bool">false</options.ui.chat.scaled-message-icons>
         <options.ui.chat.theme type="QString">psi/bubble</options.ui.chat.theme>
-        <options.ui.message.show-character-count type="bool">true</options.ui.message.show-character-count>
+        <options.ui.message.show-character-count type="bool">false</options.ui.message.show-character-count>
         <options.ui.muc.show-affiliation-icons type="bool">true</options.ui.muc.show-affiliation-icons>
         <options.ui.muc.show-groups type="bool">true</options.ui.muc.show-groups>
         <options.ui.muc.use-hash-nick-coloring type="bool">true</options.ui.muc.use-hash-nick-coloring>
