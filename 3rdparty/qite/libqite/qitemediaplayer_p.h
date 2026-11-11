@@ -2,12 +2,58 @@
 #ifndef QITEMEDIAPLAYER_P_H
 #define QITEMEDIAPLAYER_P_H
 
+#include "qite.h"
+#include <QIODevice>
 #include <QMediaPlayer>
+#include <QPointer>
 #include <QUrl>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 #include <QPlaybackOptions>
 #include <chrono>
 #endif
+
+class ITEMediaPlayer : public QMediaPlayer {
+public:
+    using QMediaPlayer::QMediaPlayer;
+    ~ITEMediaPlayer() override { abortInput(); }
+    void abortInput()
+    {
+        if (opener_ && stream_)
+            opener_->abort(stream_);
+    }
+    void setInput(ITEMediaOpener *opener, QIODevice *stream)
+    {
+        opener_ = opener;
+        stream_ = stream;
+        if (stream)
+            new StreamCleanup(opener, stream, this);
+        if (opener)
+            connect(opener, &QObject::destroyed, this, [this] { delete this; });
+    }
+
+private:
+    // QObject children are destroyed after the QMediaPlayer base destructor.
+    // Qt 5 disconnects its signals during teardown, so destroyed() is too late
+    // to arrange cleanup through a connection on the player itself.
+    class StreamCleanup : public QObject {
+    public:
+        StreamCleanup(ITEMediaOpener *opener, QIODevice *stream, QObject *parent) :
+            QObject(parent), opener_(opener), stream_(stream)
+        {
+        }
+        ~StreamCleanup() override
+        {
+            if (opener_ && stream_)
+                opener_->close(stream_);
+        }
+
+    private:
+        QPointer<ITEMediaOpener> opener_;
+        QPointer<QIODevice>      stream_;
+    };
+    QPointer<ITEMediaOpener> opener_;
+    QPointer<QIODevice>      stream_;
+};
 
 inline void iteConfigureMediaNetworkTimeout(QMediaPlayer *player, const QUrl &url)
 {

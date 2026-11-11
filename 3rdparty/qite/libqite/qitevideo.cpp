@@ -23,8 +23,6 @@
 #include <QVBoxLayout>
 #include <functional>
 
-Q_DECLARE_METATYPE(QPointer<ITEMediaOpener>)
-
 namespace {
 enum Property { Source = InteractiveTextFormat::UserProperty, Opener, Size, Downloadable };
 
@@ -46,8 +44,8 @@ class VideoWindow : public QWidget {
 public:
     VideoWindow(QWidget *owner, QWidget *frame, QWidget *controls, std::function<void()> close,
                 std::function<void()> exitFullscreen) :
-        QWidget(nullptr, Qt::Window), owner(owner), frame(frame), controls(controls),
-        closeAction(std::move(close)), exitFullscreenAction(std::move(exitFullscreen))
+        QWidget(nullptr, Qt::Window), owner(owner), frame(frame), controls(controls), closeAction(std::move(close)),
+        exitFullscreenAction(std::move(exitFullscreen))
     {
         setObjectName(QStringLiteral("qite-video-window"));
         setWindowTitle(ITEVideoController::tr("Video"));
@@ -248,6 +246,7 @@ public:
         if (mediaState)
             connect(mediaState, &ITEMediaState::changed, this, [this] {
                 if (player && mediaState && !mediaState->sourceError().isEmpty()) {
+                    static_cast<ITEMediaPlayer *>(player)->abortInput();
                     player->stop();
                     showError(mediaState->sourceError());
                 }
@@ -285,8 +284,8 @@ public:
         }
         windowButton = new QToolButton(controls);
         windowButton->setObjectName(QStringLiteral("qite-video-window-button"));
-        windowButton->setIcon(QIcon::fromTheme(QStringLiteral("window-new"),
-                                               style()->standardIcon(QStyle::SP_TitleBarNormalButton)));
+        windowButton->setIcon(
+            QIcon::fromTheme(QStringLiteral("window-new"), style()->standardIcon(QStyle::SP_TitleBarNormalButton)));
         updateWindowButton();
         row->addWidget(windowButton);
         fullscreenButton = new QToolButton(controls);
@@ -339,8 +338,6 @@ public:
         // The floating VideoWindow, if present, owns this VideoPlayer.
         // Detach the device/output before closing an opener-owned stream.
         delete player;
-        if (stream && opener)
-            opener->close(stream);
     }
 
     void pause()
@@ -355,8 +352,8 @@ public:
     {
         // Called when the document loses its attachment or its controller is
         // destroyed. A detached window remains the player's sole owner.
-        inlineViewport = nullptr;
-        onDocked = {};
+        inlineViewport               = nullptr;
+        onDocked                     = {};
         returnInlineOnFullscreenExit = false;
         updateWindowButton();
     }
@@ -396,10 +393,10 @@ private:
     void updateWindowButton()
     {
         const bool fullscreen = floating && floating->isFullscreenMode();
-        windowButton->setToolTip(fullscreen ? ITEVideoController::tr("Open in separate window")
+        windowButton->setToolTip(fullscreen                       ? ITEVideoController::tr("Open in separate window")
                                      : floating && inlineViewport ? ITEVideoController::tr("Return to chat")
-                                     : floating ? ITEVideoController::tr("Video window")
-                                                : ITEVideoController::tr("Open in separate window"));
+                                     : floating                   ? ITEVideoController::tr("Video window")
+                                                                  : ITEVideoController::tr("Open in separate window"));
         // With no chat anchor a normal detached window is already the only
         // place the player can live; there is nowhere for this button to go.
         windowButton->setEnabled(!floating || inlineViewport || fullscreen);
@@ -412,8 +409,8 @@ private:
             movingToWindow = true;
             // The window becomes the QObject parent of the complete player.
             // Reparenting does not recreate QMediaPlayer or reopen the stream.
-            auto window = new VideoWindow(this, video, controls, [this] { closeWindow(); },
-                                          [this] { leaveFullscreen(); });
+            auto window
+                = new VideoWindow(this, video, controls, [this] { closeWindow(); }, [this] { leaveFullscreen(); });
             floating = window;
             window->resize(qMax(480, width()), qMax(320, height()));
             returnInlineOnFullscreenExit = fullscreenMode;
@@ -459,7 +456,7 @@ private:
             window->setFullscreenMode(false);
         // Transfer ownership back to the chat before deleting the empty host.
         setParent(inlineViewport);
-        floating = nullptr;
+        floating                     = nullptr;
         returnInlineOnFullscreenExit = false;
         show();
         window->hide();
@@ -519,18 +516,16 @@ private:
         if (player && (retry || (opener && player->mediaStatus() == QMediaPlayer::EndOfMedia))) {
             delete player;
             player = nullptr;
-            if (stream && opener)
-                opener->close(stream);
             stream = nullptr;
             source = originalSource;
             if (opener && retry)
                 opener->retry(originalSource);
             slider->setEnabled(false);
             time->setText(QStringLiteral("0:00"));
-            time->setToolTip({ });
+            time->setToolTip({});
         }
         if (!player) {
-            player = new QMediaPlayer(this);
+            player = new ITEMediaPlayer(this);
             video->attach(player);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
             player->setAudioOutput(new QAudioOutput(player));
@@ -554,6 +549,7 @@ private:
                     QStringLiteral("%1:%2").arg(position / 60000).arg(position / 1000 % 60, 2, 10, QLatin1Char('0')));
             });
             stream = opener ? opener->open(source) : nullptr;
+            static_cast<ITEMediaPlayer *>(player)->setInput(opener, stream);
             if (opener)
                 iteConfigureMediaNetworkTimeout(player, source);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)

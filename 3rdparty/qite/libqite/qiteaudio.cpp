@@ -102,7 +102,8 @@ AudioMessageFormat::AudioMessageFormat(int objectType, ElementId id, const QUrl 
                                        quint32 position, const Flags &state) : InteractiveTextFormat(objectType, id)
 {
     setProperty(Url, url);
-    setProperty(MediaOpener, QVariant::fromValue<void *>(mediaOpener));
+    if (mediaOpener)
+        setProperty(MediaOpener, QVariant::fromValue(QPointer<ITEMediaOpener>(mediaOpener)));
     setProperty(PlayPosition, position);
     setState(state);
 }
@@ -122,7 +123,7 @@ QUrl AudioMessageFormat::url() const { return property(AudioMessageFormat::Url).
 
 ITEMediaOpener *AudioMessageFormat::mediaOpener() const
 {
-    return static_cast<ITEMediaOpener *>(property(AudioMessageFormat::MediaOpener).value<void *>());
+    return property(AudioMessageFormat::MediaOpener).value<QPointer<ITEMediaOpener>>();
 }
 
 QVariant AudioMessageFormat::metaData() const { return property(AudioMessageFormat::Metadata); }
@@ -455,6 +456,9 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
         state ^= AudioMessageFormat::MouseOnTrackbar;
     }
 
+    if (format.hasProperty(AudioMessageFormat::MediaOpener) && !format.mediaOpener())
+        return false;
+
     auto playerId = format.id();
     if (event.type == EventType::Click) {
         if (onButton) {
@@ -470,13 +474,17 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
             }
             if (state & AudioMessageFormat::Playing) {
                 if (!player) {
-                    player = new QMediaPlayer(this);
+                    player = new ITEMediaPlayer(this);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
                     player->setAudioOutput(new QAudioOutput(player));
 #endif
                     player->setProperty("playerId", playerId);
                     player->setProperty("cursorPos", selected.anchor());
                     activePlayers.insert(playerId, player);
+                    connect(player, &QObject::destroyed, this, [this, playerId, player] {
+                        if (activePlayers.value(playerId) == player)
+                            activePlayers.remove(playerId);
+                    });
                     ITEMediaOpener *opener = format.mediaOpener();
                     QUrl            url    = format.url();
                     if (opener) {
@@ -485,15 +493,16 @@ bool ITEAudioController::mouseEvent(const Event &event, const QRect &rect, QText
                             opener->retry(url);
                         if (state)
                             connect(state, &ITEMediaState::changed, player, [player, state] {
-                                if (!state->sourceError().isEmpty())
+                                if (!state->sourceError().isEmpty()) {
+                                    static_cast<ITEMediaPlayer *>(player)->abortInput();
                                     player->stop();
+                                }
                             });
                     }
-                    QIODevice      *stream = opener ? opener->open(url) : nullptr;
+                    QIODevice *stream = opener ? opener->open(url) : nullptr;
                     if (opener)
                         iteConfigureMediaNetworkTimeout(player, url);
-                    if (stream)
-                        connect(player, &QMediaPlayer::destroyed, this, [opener, stream]() { opener->close(stream); });
+                    static_cast<ITEMediaPlayer *>(player)->setInput(opener, stream);
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
                     player->setMedia(url, stream);
 #else

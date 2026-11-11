@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 #include "qiteaudio.h"
 #include "qitemedia_p.h"
+#include "qitemediaplayer_p.h"
 #include "qitevideo.h"
 #include "qitevideoframe_p.h"
 
@@ -105,7 +106,13 @@ public:
 // A real opener-owned stream, unlike StateOpener's URL-only fixture.
 class BufferOpener : public ITEMediaOpener {
 public:
-    int                 opens = 0, closes = 0;
+    int  opens = 0, closes = 0, aborts = 0;
+    void abort(QIODevice *stream) override
+    {
+        QVERIFY(stream && stream->isOpen());
+        QCOMPARE(closes, 0);
+        ++aborts;
+    }
     QPointer<QIODevice> device;
     QIODevice          *open(QUrl &) override
     {
@@ -143,6 +150,22 @@ class VideoTest : public QObject {
         QApplication::sendEvent(widget, &event);
     }
 private slots:
+    void openerDeletionStopsDecoderBeforeItsDevice()
+    {
+        auto                   opener = new BufferOpener;
+        QObject                owner;
+        auto                   player = new ITEMediaPlayer(&owner);
+        QPointer<QMediaPlayer> decoder(player);
+        QUrl                   url    = QUrl::fromLocalFile(QStringLiteral(QITE_TEST_VIDEO));
+        auto                   stream = opener->open(url);
+        player->setInput(opener, stream);
+        bool decoderWasStopped = false;
+        connect(stream, &QObject::destroyed, &owner, [&] { decoderWasStopped = decoder.isNull(); });
+        delete opener;
+        QVERIFY(decoder.isNull());
+        QVERIFY(decoderWasStopped);
+    }
+
     void initTestCase() { qRegisterMetaType<QVideoFrame>(); }
 
     void mediaStateAndLayers()
@@ -197,8 +220,7 @@ private slots:
             // Stay clear of the handle and use the center of the groove.
             QTest::mouseClick(&slider, Qt::LeftButton, Qt::NoModifier, slider.positionForValue(percent * 100));
             QVERIFY2(qAbs(slider.value() - percent * 100) <= 100,
-                     qPrintable(QStringLiteral("clicked %1% but slider value is %2")
-                                    .arg(percent).arg(slider.value())));
+                     qPrintable(QStringLiteral("clicked %1% but slider value is %2").arg(percent).arg(slider.value())));
         };
         clickAt(80);
         clickAt(20);
@@ -211,8 +233,7 @@ private slots:
         // Normal handle clicks still enter Qt's drag mode.
         slider.setValue(5000); // Handle is centered across desktop styles.
         QSignalSpy pressed(&slider, &QSlider::sliderPressed);
-        QTest::mousePress(&slider, Qt::LeftButton, Qt::NoModifier,
-                          slider.rect().center());
+        QTest::mousePress(&slider, Qt::LeftButton, Qt::NoModifier, slider.rect().center());
         QCOMPARE(pressed.count(), 1);
         QVERIFY(slider.isSliderDown());
         QTest::mouseRelease(&slider, Qt::LeftButton);
@@ -437,7 +458,7 @@ private slots:
         button->click();
         QTRY_VERIFY(fullscreenWindow());
         full = fullscreenWindow();
-        edit.clear(); // Pruning the chat must NOT close an undocked player.
+        edit.clear();     // Pruning the chat must NOT close an undocked player.
         QTest::qWait(30); // Let the document's queued synchronization orphan the player.
         QTRY_VERIFY(!full.isNull());
         QVERIFY(full->isFullScreen());
@@ -461,9 +482,9 @@ private slots:
         edit.moveCursor(QTextCursor::Start);
         edit.show();
         QTRY_VERIFY(edit.findChild<ITEVideoFrameWidget *>());
-        auto frame = edit.findChild<ITEVideoFrameWidget *>();
+        auto frame        = edit.findChild<ITEVideoFrameWidget *>();
         auto inlinePlayer = frame->parentWidget();
-        auto detach = inlinePlayer->findChild<QToolButton *>(QStringLiteral("qite-video-window-button"));
+        auto detach       = inlinePlayer->findChild<QToolButton *>(QStringLiteral("qite-video-window-button"));
         QVERIFY(detach);
         QCOMPARE(detach->toolTip(), QStringLiteral("Open in separate window"));
 
@@ -475,7 +496,7 @@ private slots:
         QCOMPARE(opener.opens, 1);
 
         detach->click();
-        auto popup = frame->window();
+        auto              popup  = frame->window();
         QPointer<QWidget> window = popup;
         QVERIFY(popup != &edit);
         QCOMPARE(popup->objectName(), QStringLiteral("qite-video-window"));
@@ -502,7 +523,7 @@ private slots:
         edit.verticalScrollBar()->setValue(0);
         QTRY_VERIFY(inlinePlayer->isVisible());
         detach->click();
-        popup = frame->window();
+        popup  = frame->window();
         window = popup;
         QVERIFY(popup != &edit);
         edit.clear();
@@ -520,12 +541,12 @@ private slots:
 
     void detachedWindowSurvivesControllerDestruction()
     {
-        StateOpener opener;
-        QPointer<QWidget> detached;
+        StateOpener            opener;
+        QPointer<QWidget>      detached;
         QPointer<QMediaPlayer> media;
         QPointer<QToolButton>  download;
         {
-            TextEdit edit;
+            TextEdit        edit;
             InteractiveText text(&edit);
             {
                 VideoController video(&text);
@@ -533,10 +554,10 @@ private slots:
                 edit.show();
                 QTRY_VERIFY(edit.findChild<ITEVideoFrameWidget *>());
                 auto widget = edit.findChild<ITEVideoFrameWidget *>()->parentWidget();
-                auto play = widget->findChild<QToolButton *>(QStringLiteral("qite-video-play"));
+                auto play   = widget->findChild<QToolButton *>(QStringLiteral("qite-video-play"));
                 QVERIFY(play);
                 play->click();
-                media = widget->findChild<QMediaPlayer *>();
+                media    = widget->findChild<QMediaPlayer *>();
                 download = widget->findChild<QToolButton *>(QStringLiteral("qite-video-download"));
                 QVERIFY(download && download->isEnabled());
                 QVERIFY(media);
@@ -560,10 +581,10 @@ private slots:
 
     void separateWindowCanToggleFullscreenWithoutReopening()
     {
-        TextEdit edit;
+        TextEdit        edit;
         InteractiveText text(&edit);
         VideoController video(&text);
-        StateOpener opener;
+        StateOpener     opener;
         video.insert(QUrl(QStringLiteral("test:video")), &opener);
         edit.show();
         QTRY_VERIFY(edit.findChild<ITEVideoFrameWidget *>());
@@ -571,7 +592,7 @@ private slots:
         widget->findChild<QToolButton *>(QStringLiteral("qite-video-play"))->click();
         auto media = widget->findChild<QMediaPlayer *>();
         QVERIFY(media);
-        auto detach = widget->findChild<QToolButton *>(QStringLiteral("qite-video-window-button"));
+        auto detach     = widget->findChild<QToolButton *>(QStringLiteral("qite-video-window-button"));
         auto fullscreen = widget->findChild<QToolButton *>(QStringLiteral("qite-video-fullscreen-button"));
         QVERIFY(detach);
         QVERIFY(fullscreen);
@@ -597,14 +618,14 @@ private slots:
         if (!qEnvironmentVariableIntValue("QITE_TEST_PLAYBACK"))
             QSKIP("Enable QITE_TEST_PLAYBACK with a working WebM decoder");
 
-        TextEdit edit;
+        TextEdit        edit;
         InteractiveText text(&edit);
         VideoController video(&text);
         video.insert(QUrl::fromLocalFile(QStringLiteral(QITE_TEST_VIDEO)));
         edit.show();
         QTRY_VERIFY(edit.findChild<ITEVideoFrameWidget *>());
         auto widget = edit.findChild<ITEVideoFrameWidget *>()->parentWidget();
-        auto play = widget->findChild<QToolButton *>(QStringLiteral("qite-video-play"));
+        auto play   = widget->findChild<QToolButton *>(QStringLiteral("qite-video-play"));
         auto popout = widget->findChild<QToolButton *>(QStringLiteral("qite-video-window-button"));
         QVERIFY(play);
         QVERIFY(popout);
@@ -651,6 +672,7 @@ private slots:
         QVERIFY(media.isNull());
         QVERIFY(opener.device.isNull());
         QCOMPARE(opener.closes, 1);
+        QCOMPARE(opener.aborts, 1); // Interrupt while the device is still alive, then close after decoder teardown.
     }
 
     void openerCanDieBeforeDetachedWindow()
@@ -882,7 +904,7 @@ private slots:
                 ++closed;
                 delete device;
             }
-            QVariant metadata(const QUrl &) override { return { }; }
+            QVariant metadata(const QUrl &) override { return {}; }
         } opener;
         TextEdit        edit;
         InteractiveText text(&edit);
@@ -920,7 +942,7 @@ private slots:
             void retry(const QUrl &) override
             {
                 ++retried;
-                state.setSourceError({ });
+                state.setSourceError({});
             }
         } opener;
         TextEdit        edit;

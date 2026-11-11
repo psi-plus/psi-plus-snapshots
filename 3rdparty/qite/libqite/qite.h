@@ -128,19 +128,24 @@ private:
 };
 
 // GUI-thread service. Keep returned devices as QObject children of the opener
-// (or otherwise alive until its destroyed signal). Video players stop before those
+// (or otherwise alive until its destroyed signal). Players stop before those
 // children are released, including when a detached window outlives the host.
 class ITEMediaOpener : public QObject {
 public:
     using QObject::QObject;
-    ~ITEMediaOpener() override                   = default;
-    virtual QIODevice *open(QUrl &url)           = 0;
-    virtual void       close(QIODevice *dev)     = 0;
-    virtual QVariant   metadata(const QUrl &url) = 0;
+    ~ITEMediaOpener() override               = default;
+    virtual QIODevice *open(QUrl &url)       = 0;
+    virtual void       close(QIODevice *dev) = 0;
+    // Wake any blocking decoder read before QMediaPlayer tears its worker down.
+    // Keep the device alive; close() follows after the decoder has stopped.
+    virtual void     abort(QIODevice *) { }
+    virtual QVariant metadata(const QUrl &url) = 0;
     // Optional, host-owned and shared across players; nullptr means unavailable.
     virtual ITEMediaState *mediaState(const QUrl &) { return nullptr; }
     // Called only for an explicit user retry, never for background metadata loads.
     virtual void retry(const QUrl &) { }
 };
+
+Q_DECLARE_METATYPE(QPointer<ITEMediaOpener>)
 
 #endif // QITE_H

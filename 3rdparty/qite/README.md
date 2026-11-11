@@ -47,6 +47,12 @@ audio.insert(source, opener, true);
 video.insert(source, opener, QSize(320, 220), true);
 ```
 
+`ITEMediaOpener::abort(QIODevice *)` interrupts a pending read without destroying
+its device. qite calls it before decoder teardown; `close()` follows afterward.
+Openers with blocking devices must also wake them in their own destructor, before
+`QObject::destroyed` stops their players and then deletes their child devices.
+Audio formats hold a weak opener reference, like video formats.
+
 `ITEMediaOpener` is a GUI-thread `QObject` service. Returned stream devices must
 be its QObject children, or otherwise stay alive until its `destroyed` signal.
 Closing an account/source stops its remaining video players before those devices are
