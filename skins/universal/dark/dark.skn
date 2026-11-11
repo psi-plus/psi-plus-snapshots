@@ -1,4 +1,4 @@
-<skin author="VitoZz" name="Dark" path="/usr/share/psi-plus/skins" version="2.2">
+<skin author="Vitozz" name="Dark" path="/usr/share/psi-plus/skins" version="2.3">
     <options>
         <options.ui.look.colors.chat.link-color type="QColor">#0000ff</options.ui.look.colors.chat.link-color>
         <options.ui.look.colors.chat.mailto-color type="QColor">#2c9dff</options.ui.look.colors.chat.mailto-color>
@@ -41,7 +41,7 @@ QWidget#bottomFrame>QWidget>QTextEdit[correction="true"] {
 
 /* bubble theme */
 #mamBubble[tone="incoming"], #mamBubble[tone="notice"]  {
-    qproperty-fillColor: #27272b;
+    qproperty-fillColor: #2d2d2d;
 }
 
 #mamBubble[tone="own"] {
@@ -55,6 +55,7 @@ QWidget#bottomFrame>QWidget>QTextEdit[correction="true"] {
 #mamBubble[tone="own"] QLabel#mamAuthor,
 #mamBubble[tone="own"] QLabel#mamTimestamp  {
     background-color: #1C2E3B;
+    border: none;
 }
 
 #mamBubble[tone="notice"] QTextEdit#mamBody,
@@ -63,7 +64,8 @@ QWidget#bottomFrame>QWidget>QTextEdit[correction="true"] {
 #mamBubble[tone="notice"]  QLabel#mamDeliveryIndicator,
 #mamBubble[tone="notice"]  QLabel#mamAuthor,
 #mamBubble[tone="notice"]  QLabel#mamTimestamp {
-    background-color: #27272b;
+    background-color: #2d2d2d;
+    border: none;
 }
 
 #mamBubble[tone="incoming"]  QTextEdit#mamBody,
@@ -71,29 +73,41 @@ QWidget#bottomFrame>QWidget>QTextEdit[correction="true"] {
 #mamBubble[tone="incoming"]  QLabel#mamEditedIndicator, #mamBubble[tone="incoming"]  QLabel#mamDeliveryIndicator,
 #mamBubble[tone="incoming"]  QLabel#mamAuthor,
 #mamBubble[tone="incoming"]  QLabel#mamTimestamp {
-    background-color: #27272b;
+    background-color: #2d2d2d;
+    border: none;
 }
 
 #mamDateBubble {
-    qproperty-fillColor: #27272b;
+    qproperty-fillColor: #2d2d2d;
 }
+
 #mamDateBubble QLabel {
-    background-color: #27272b;
+    background-color: #2d2d2d;
+    border: none;
 }
+
 QLabel#mamAuthor {
     color: none;
 }
 
 /* modern theme row */
-/* slightly visible border for all styles */
-QFrame#mamMessageRow {
-    border: 1px dashed   #1e2025;
+QLabel#mamMessageRow {
+    border: none;
 }
 
 /* modern theme avatar */
-QFrame#mamAvatar {
+QLabel#mamAvatar {
     border: none;
-    background-color: #18191d;
+}
+
+/* modern theme message items */
+ChatMessageText,
+QLabel#mamEncryptionIndicator,
+QLabel#mamEditedIndicator,
+QLabel#mamDeliveryIndicator,
+QLabel#mamAuthor,
+QLabel#mamTimestamp {
+    border: none;
 }
 
 /* top frame */
@@ -179,18 +193,37 @@ QDialog {
 
 QDialog>QFrame {
     color: #bcbcbc;
-    background: #2d2d2d;
+    background-color: #212121;
 }
 
 QDialog>QLineEdit {
     color: #bcbcbc;
-    background: #2d2d2d;
+    background-color: #212121;
     border: 1px inset #5b5b5b;
     border-radius: 3px;
 }
 
 QDialog>QCheckBox {
-    background: #212121;
+    background-color: #212121;
+}
+
+QDialog>QLabel {
+    background-color: #212121;
+}
+
+/*  bookmark popup menu */
+GCMainDlg QMenu QWidget {
+    background-color: #2d2d2d;
+}
+
+/*  bookmark popup menu lime edit */
+GCMainDlg QMenu QWidget QLineEdit {
+    background-color: #212121;
+}
+
+/*  bookmark popup menu combo box */
+GCMainDlg QMenu QWidget QComboBox {
+    background-color: #212121;
 }
 
 /* client icon */
@@ -222,9 +255,9 @@ QLabel#lb_ident {
 }
 
 /* chatlog */
-MamChatWidget * {
-    background-color: #2d2d2d;
-    border: 1px solid #5b5b5b;
+MamChatWidget  {
+    background-color: #212121;
+    border: 1px outset #5b5b5b;
     border-radius: 3px;
 }
 
@@ -257,7 +290,7 @@ QWidget#mini_prompt {
 QWidget#bottomFrame>QWidget>QTextEdit {
     margin: 0px;
     color: #bcbcbc;
-    background-color: #2d2d2d;
+    background-color: #212121;
     border: 1px inset #5b5b5b;
     border-radius: 3px;
 }
@@ -285,21 +318,21 @@ QLabel#avatar {
 }
 
 /* central bar */
-QToolBar {
+QToolBar#toolbar {
     background-color: #212121;
-    border: 1px solid #5b5b5b;
+    /*border: 1px solid #5b5b5b;*/
     border-radius: 4px;
     padding: 2px;
 }
 
 /* central bar buttons and more */
 QToolButton {
-    margin-left: 0px;
-    margin-right: 0px;
+    margin-left: 1px;
+    margin-right: 1px;
     background-color: #2d2d2d;
     border: 1px outset #5b5b5b;
     border-radius: 3px;
-    padding: 0px;
+    padding: 1px;
 }
 
 QToolButton:hover {
@@ -359,8 +392,8 @@ PsiTabBar {
 }
 
 /* Try to place tabs at left side of tab bar */
-QStyleOptionTab {
-    position: begining;
+QTabWidget::tab-bar {
+    alignment: left;
 }
 
 /* tab bar - main font color */
@@ -825,7 +858,6 @@ IconSelectButton {
         <options.ui.contactlist.css type="QString">
 /* the whole window */
 QMainWindow {
-    background: #212121;
     background-color: #212121;
 }
 
@@ -933,12 +965,18 @@ QStackedWidget {
 
 /* frame with contacts - internal */
 ContactListView {
-    background-color: #232323;
+    background-color: #212121;
     border: 0px;
+    selection-color: #bcbcbc;
+    selection-background-color: #2d2d2d;
 }
 
 /* frame with contacts - filtered */
-PsiFilteredContactListView { }
+PsiFilteredContactListView {
+    background-color: #212121;
+    selection-color: #bcbcbc;
+    selection-background-color: #2d2d2d;
+}
 
 /* missed events */
 QFrame#EventNotifier {
@@ -1062,12 +1100,6 @@ QScrollBar::sub-page, QScrollBar::add-page {
     background: none;
 }
 
-/* selected roster element */
-QTreeView {
-    selection-color: #bcbcbc;
-    selection-background-color: #444444;
-}
-
 /* menu
 ContactListItemMenu { } */
 
@@ -1154,15 +1186,15 @@ QMenu::separator {
     height: 1px;
 }
 
-QSplitter::handle:horizontal {
+QSplitter::handle {
     background-color: #2d2d2d;
 }
 
-QSplitter::handle:horizontal:hover {
+QSplitter::handle:hover {
     background-color: #5b5b5b;
 }
 
-QSplitter::handle:horizontal:pressed {
+QSplitter::handle:pressed {
     background-color: #202020;
 }
         </options.ui.contactlist.css>
