@@ -12,6 +12,16 @@ class ITEVideoController : public InteractiveTextElementController {
 public:
     explicit ITEVideoController(InteractiveText *itc, QObject *parent = nullptr);
     ~ITEVideoController() override;
+    // Reuse the same decoder, frame widget and controls outside a text document.
+    static QWidget *createPlayer(const QUrl &, ITEMediaOpener *, QWidget *parent, std::function<void()> fullscreen = {},
+                                 qint64 position = 0, bool audioPresentation = false);
+    using WindowHandler = std::function<bool(const QUrl &, qint64, bool)>;
+    void setWindowHandler(WindowHandler handler) { windowHandler_ = std::move(handler); }
+    bool requestWindow(const QUrl &source, qint64 position, bool fullscreen)
+    {
+        const auto handler = windowHandler_;
+        return handler && handler(source, position, fullscreen);
+    }
 
     QTextCharFormat makeFormat(const QUrl &source, ITEMediaOpener *opener = nullptr,
                                const QSize &size = QSize(320, 220), bool downloadable = false) const;
@@ -29,5 +39,6 @@ protected:
 private:
     class Private;
     std::unique_ptr<Private> d;
+    WindowHandler            windowHandler_;
 };
 #endif

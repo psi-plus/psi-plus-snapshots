@@ -24,6 +24,9 @@ under the License.
 #include <QPointer>
 #include <QTextEdit>
 #include <QTextObjectInterface>
+#include <QTimer>
+#include <functional>
+#include <memory>
 
 class InteractiveText;
 class ITEMediaState;
@@ -135,6 +138,27 @@ public:
     using QObject::QObject;
     ~ITEMediaOpener() override               = default;
     virtual QIODevice *open(QUrl &url)       = 0;
+    using OpenDone                           = std::function<void(QIODevice *, QUrl, QString)>;
+    using CancelOpen                         = std::function<void()>;
+    // The host may prepare authenticated/unknown-length content asynchronously.
+    // Completion is queued; destroying the receiver cancels delivery.
+    virtual CancelOpen openAsync(QUrl url, QObject *receiver, OpenDone done)
+    {
+        const auto                     cancelled = std::make_shared<bool>(false);
+        const QPointer<ITEMediaOpener> guard(this);
+        QTimer::singleShot(0, receiver, [guard, url, done = std::move(done), cancelled]() mutable {
+            if (*cancelled)
+                return;
+            if (!guard) {
+                done(nullptr, url, QStringLiteral("Media source unavailable"));
+                return;
+            }
+            auto source = url;
+            auto device = guard->open(source);
+            done(device, source, {});
+        });
+        return [cancelled] { *cancelled = true; };
+    }
     virtual void       close(QIODevice *dev) = 0;
     // Wake any blocking decoder read before QMediaPlayer tears its worker down.
     // Keep the device alive; close() follows after the decoder has stopped.

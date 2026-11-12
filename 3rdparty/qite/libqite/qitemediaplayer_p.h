@@ -7,6 +7,7 @@
 #include <QMediaPlayer>
 #include <QPointer>
 #include <QUrl>
+#include <utility>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 #include <QPlaybackOptions>
 #include <chrono>
@@ -18,9 +19,14 @@ public:
     ~ITEMediaPlayer() override { abortInput(); }
     void abortInput()
     {
+        if (cancelOpen_) {
+            const auto cancel = std::exchange(cancelOpen_, {});
+            cancel();
+        }
         if (opener_ && stream_)
             opener_->abort(stream_);
     }
+    void setPendingOpen(ITEMediaOpener::CancelOpen cancel) { cancelOpen_ = std::move(cancel); }
     void setInput(ITEMediaOpener *opener, QIODevice *stream)
     {
         opener_ = opener;
@@ -53,6 +59,7 @@ private:
     };
     QPointer<ITEMediaOpener> opener_;
     QPointer<QIODevice>      stream_;
+    ITEMediaOpener::CancelOpen cancelOpen_;
 };
 
 inline void iteConfigureMediaNetworkTimeout(QMediaPlayer *player, const QUrl &url)

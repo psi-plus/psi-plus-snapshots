@@ -12,6 +12,8 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMediaPlayer>
+#include <QMediaMetaData>
+#include <QImage>
 #include <QPainter>
 #include <QScrollBar>
 #include <QShortcut>
@@ -36,6 +38,54 @@ protected:
         QPainter painter(this);
         painter.fillRect(rect(), Qt::black);
     }
+};
+
+// Cover art is supplied by QMediaPlayer metadata after its range-backed
+// source becomes available. Until then, draw a small music-note glyph without
+// attempting to read or download the complete audio file.
+class AudioArtworkWidget final : public QWidget {
+public:
+    explicit AudioArtworkWidget(QWidget *parent) : QWidget(parent)
+    {
+        setObjectName(QStringLiteral("qite-audio-artwork"));
+        setMinimumHeight(90);
+    }
+
+    void setCover(QImage cover)
+    {
+        cover_ = std::move(cover);
+        update();
+    }
+
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter painter(this);
+        painter.fillRect(rect(), Qt::black);
+        painter.setRenderHint(QPainter::Antialiasing);
+        if (!cover_.isNull()) {
+            painter.setRenderHint(QPainter::SmoothPixmapTransform);
+            const QSize size = cover_.size().scaled(rect().adjusted(20, 12, -20, -12).size(),
+                                                   Qt::KeepAspectRatio);
+            const QRect target(QPoint((width() - size.width()) / 2, (height() - size.height()) / 2), size);
+            painter.drawImage(target, cover_);
+            return;
+        }
+        painter.translate(width() / 2.0, height() / 2.0);
+        const qreal scale = qMin(width() / 90.0, height() / 90.0);
+        painter.scale(scale, scale);
+        const QColor ink(190, 198, 211);
+        painter.setPen(QPen(ink, 2.8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter.setBrush(ink);
+        painter.drawEllipse(QRectF(-22, 12, 14, 9));
+        painter.drawEllipse(QRectF(3, 6, 14, 9));
+        painter.drawLine(QPointF(-8, 17), QPointF(-8, -17));
+        painter.drawLine(QPointF(17, 11), QPointF(17, -22));
+        painter.drawLine(QPointF(-8, -17), QPointF(17, -22));
+    }
+
+private:
+    QImage cover_;
 };
 
 // This top-level window owns the VideoPlayer while it is undocked. The chat
@@ -210,7 +260,7 @@ private:
 class VideoPlayer : public QWidget {
 public:
     VideoPlayer(const QTextFormat &format, QWidget *parent, ITEVideoController *controller,
-                std::function<void()> docked) :
+                std::function<void()> docked, bool audioPresentation = false) :
         QWidget(parent), source(format.property(Source).toUrl()), originalSource(source),
         opener(format.property(Opener).value<QPointer<ITEMediaOpener>>()), requiresOpener(format.hasProperty(Opener)),
         inlineViewport(parent), downloadController(controller), onDocked(std::move(docked))
@@ -230,6 +280,11 @@ public:
         video = new ITEVideoFrameWidget(this);
         video->installEventFilter(this);
         layout->addWidget(video, 1);
+        if (audioPresentation) {
+            artwork = new AudioArtworkWidget(this);
+            layout->insertWidget(0, artwork, 1);
+            video->hide();
+        }
         controls = new VideoControls(this);
         controls->setObjectName(QStringLiteral("qite-video-controls"));
         controls->setPalette(palette);
@@ -261,6 +316,11 @@ public:
         // explicit foreground on our opaque black background as well.
         time->setStyleSheet(QStringLiteral("color: white; background: transparent;"));
         row->addWidget(time);
+        buffering = new QLabel(ITEVideoController::tr("Loading…"), controls);
+        buffering->setObjectName(QStringLiteral("qite-video-loading"));
+        buffering->setStyleSheet(QStringLiteral("color: white; background: transparent;"));
+        buffering->hide();
+        row->addWidget(buffering);
         if (format.boolProperty(Downloadable)) {
             downloadButton = new QToolButton(controls);
             downloadButton->setObjectName(QStringLiteral("qite-video-download"));
@@ -294,6 +354,13 @@ public:
         row->addWidget(fullscreenButton);
         layout->addWidget(controls);
         connect(windowButton, &QToolButton::clicked, this, [this] {
+            const QPointer<VideoPlayer> guard(this);
+            if (downloadController
+                && downloadController->requestWindow(originalSource, player ? player->position() : 0, false)) {
+                if (guard)
+                    pause();
+                return;
+            }
             if (!floating) {
                 openWindow(false);
             } else if (floating->isFullscreenMode()) {
@@ -311,6 +378,18 @@ public:
             }
         });
         connect(fullscreenButton, &QToolButton::clicked, this, [this] {
+            if (externalFullscreen) {
+                externalFullscreen();
+                updateFullscreenButton();
+                return;
+            }
+            const QPointer<VideoPlayer> guard(this);
+            if (downloadController
+                && downloadController->requestWindow(originalSource, player ? player->position() : 0, true)) {
+                if (guard)
+                    pause();
+                return;
+            }
             if (floating && floating->isFullscreenMode())
                 leaveFullscreen();
             else
@@ -347,6 +426,13 @@ public:
     }
 
     bool isFloating() const { return !floating.isNull(); }
+    void setHostFullscreen(std::function<void()> action)
+    {
+        externalFullscreen = std::move(action);
+        windowButton->hide();
+    }
+    void startPlayback() { toggle(); }
+    void setInitialPosition(qint64 position) { initialPosition = std::max<qint64>(0, position); }
 
     void orphan()
     {
@@ -366,7 +452,7 @@ protected:
     }
     void hideEvent(QHideEvent *event) override
     {
-        if (!floating && !movingToWindow)
+        if (!floating && !externalFullscreen && !movingToWindow)
             pause();
         QWidget::hideEvent(event);
     }
@@ -382,7 +468,8 @@ protected:
 private:
     void updateFullscreenButton()
     {
-        const bool fullscreen = floating && floating->isFullscreenMode();
+        const bool fullscreen
+            = externalFullscreen ? window()->isFullScreen() : (floating && floating->isFullscreenMode());
         fullscreenButton->setIcon(
             style()->standardIcon(fullscreen ? QStyle::SP_TitleBarNormalButton : QStyle::SP_TitleBarMaxButton));
         fullscreenButton->setToolTip(fullscreen ? ITEVideoController::tr("Exit full screen")
@@ -512,11 +599,14 @@ private:
         if (requiresOpener && !opener)
             return;
         const bool retry = player
-            && (player->error() != QMediaPlayer::NoError || (mediaState && !mediaState->sourceError().isEmpty()));
+            && (inputFailed || player->error() != QMediaPlayer::NoError
+                || (mediaState && !mediaState->sourceError().isEmpty()));
         if (player && (retry || (opener && player->mediaStatus() == QMediaPlayer::EndOfMedia))) {
             delete player;
             player = nullptr;
             stream = nullptr;
+            if (artwork)
+                artwork->setCover({});
             source = originalSource;
             if (opener && retry)
                 opener->retry(originalSource);
@@ -525,8 +615,12 @@ private:
             time->setToolTip({});
         }
         if (!player) {
+            inputFailed = false;
             player = new ITEMediaPlayer(this);
             video->attach(player);
+            if (artwork)
+                connect(player, QOverload<>::of(&QMediaPlayer::metaDataChanged), this,
+                        [this] { updateCoverArt(); });
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
             player->setAudioOutput(new QAudioOutput(player));
             connect(player, &QMediaPlayer::playbackStateChanged, this,
@@ -539,7 +633,22 @@ private:
             connect(player, QOverload<QMediaPlayer::Error>::of(&QMediaPlayer::error), this,
                     [this](QMediaPlayer::Error) { showError(player->errorString()); });
 #endif
-            connect(player, &QMediaPlayer::seekableChanged, slider, &QSlider::setEnabled);
+            connect(player, &QMediaPlayer::seekableChanged, this, [this](bool seekable) {
+                slider->setEnabled(seekable);
+                if (seekable && initialPosition) {
+                    player->setPosition(initialPosition);
+                    initialPosition = 0;
+                }
+            });
+            connect(player, &QMediaPlayer::mediaStatusChanged, this, [this](QMediaPlayer::MediaStatus status) {
+                buffering->setVisible(status == QMediaPlayer::LoadingMedia || status == QMediaPlayer::BufferingMedia
+                                      || status == QMediaPlayer::StalledMedia);
+                if (initialPosition && player->isSeekable()
+                    && (status == QMediaPlayer::LoadedMedia || status == QMediaPlayer::BufferedMedia)) {
+                    player->setPosition(initialPosition);
+                    initialPosition = 0;
+                }
+            });
             connect(player, &QMediaPlayer::positionChanged, this, [this](qint64 position) {
                 if (!slider->isSliderDown()) {
                     const QSignalBlocker blocker(slider);
@@ -548,18 +657,27 @@ private:
                 time->setText(
                     QStringLiteral("%1:%2").arg(position / 60000).arg(position / 1000 % 60, 2, 10, QLatin1Char('0')));
             });
-            stream = opener ? opener->open(source) : nullptr;
-            static_cast<ITEMediaPlayer *>(player)->setInput(opener, stream);
-            if (opener)
-                iteConfigureMediaNetworkTimeout(player, source);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-            if (stream)
-                player->setSourceDevice(stream, source);
-            else
-                player->setSource(source);
-#else
-            player->setMedia(source, stream);
-#endif
+            if (opener) {
+                buffering->show();
+                button->setEnabled(false);
+                const QPointer<VideoPlayer>  guard(this);
+                const QPointer<QMediaPlayer> expected(player);
+                auto                         cancel = opener->openAsync(source, player,
+                                                                        [guard, expected](QIODevice *input, QUrl resolved, QString error) {
+                                                    if (!guard || !expected || guard->player != expected)
+                                                        return;
+                                                    guard->button->setEnabled(true);
+                                                    if (!error.isEmpty()) {
+                                                        guard->showError(error);
+                                                        return;
+                                                    }
+                                                    guard->attachInput(input, resolved);
+                                                    guard->player->play();
+                                                });
+                static_cast<ITEMediaPlayer *>(player)->setPendingOpen(std::move(cancel));
+                return;
+            }
+            attachInput(nullptr, source);
         }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         const bool playing = player->playbackState() == QMediaPlayer::PlayingState;
@@ -572,8 +690,22 @@ private:
             player->play();
     }
 
+    void updateCoverArt()
+    {
+        if (!artwork || !player)
+            return;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        const QImage cover = player->metaData().value(QMediaMetaData::CoverArtImage).value<QImage>();
+#else
+        const QImage cover = qvariant_cast<QImage>(player->metaData(QMediaMetaData::CoverArtImage));
+#endif
+        artwork->setCover(cover);
+    }
+
     void showError(const QString &message)
     {
+        inputFailed = true;
+        buffering->hide();
         const auto detail = mediaState && !mediaState->sourceError().isEmpty() ? mediaState->sourceError() : message;
         // Error UI is local too; never rewrite the document on backend events.
         time->setText(ITEVideoController::tr("Cannot play video"));
@@ -588,6 +720,7 @@ private:
     QPointer<QIODevice>          stream;
     QMediaPlayer                *player = nullptr;
     ITEVideoFrameWidget         *video;
+    AudioArtworkWidget          *artwork = nullptr;
     QVBoxLayout                 *layout;
     QWidget                     *controls;
     QToolButton                 *windowButton;
@@ -603,7 +736,42 @@ private:
     QToolButton                 *downloadButton = nullptr;
     QPointer<ITEMediaState>      mediaState;
     QLabel                      *time;
+    QLabel                      *buffering;
+    std::function<void()>        externalFullscreen;
+    qint64                       initialPosition = 0;
+    bool                         inputFailed     = false;
+
+    void attachInput(QIODevice *input, const QUrl &resolved)
+    {
+        stream = input;
+        source = resolved;
+        static_cast<ITEMediaPlayer *>(player)->setInput(opener, input);
+        iteConfigureMediaNetworkTimeout(player, source);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        if (input)
+            player->setSourceDevice(input, source);
+        else
+            player->setSource(source);
+#else
+        player->setMedia(source, input);
+#endif
+    }
 };
+}
+
+QWidget *ITEVideoController::createPlayer(const QUrl &url, ITEMediaOpener *opener, QWidget *parent,
+                                          std::function<void()> fullscreen, qint64 position,
+                                          bool audioPresentation)
+{
+    QTextCharFormat format;
+    format.setProperty(Source, url);
+    if (opener)
+        format.setProperty(Opener, QVariant::fromValue(QPointer<ITEMediaOpener>(opener)));
+    auto widget = new VideoPlayer(format, parent, nullptr, {}, audioPresentation);
+    widget->setHostFullscreen(std::move(fullscreen));
+    widget->setInitialPosition(position);
+    QTimer::singleShot(0, widget, [widget] { widget->startPlayback(); });
+    return widget;
 }
 
 class ITEVideoController::Private {
