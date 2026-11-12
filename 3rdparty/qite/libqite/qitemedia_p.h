@@ -21,8 +21,10 @@ public:
 protected:
     void paintEvent(QPaintEvent *) override;
     void mousePressEvent(QMouseEvent *) override;
+    void mouseReleaseEvent(QMouseEvent *) override;
 
 private:
+    bool grooveSeekPressed_ = false;
     QPointer<ITEMediaState> state_;
     QMetaObject::Connection connection_, destroyed_;
 };

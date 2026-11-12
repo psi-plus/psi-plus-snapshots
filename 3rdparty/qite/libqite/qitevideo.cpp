@@ -15,6 +15,7 @@
 #include <QMediaMetaData>
 #include <QImage>
 #include <QPainter>
+#include <QPixmap>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSignalBlocker>
@@ -28,9 +29,30 @@
 namespace {
 enum Property { Source = InteractiveTextFormat::UserProperty, Opener, Size, Downloadable };
 
+QString mediaClock(qint64 millis)
+{
+    const qint64 seconds = qMax<qint64>(0, millis) / 1000;
+    if (seconds >= 3600)
+        return QStringLiteral("%1:%2:%3").arg(seconds / 3600).arg(seconds / 60 % 60, 2, 10, QLatin1Char('0'))
+            .arg(seconds % 60, 2, 10, QLatin1Char('0'));
+    return QStringLiteral("%1:%2").arg(seconds / 60).arg(seconds % 60, 2, 10, QLatin1Char('0'));
+}
+
+
 class VideoControls : public QWidget {
 public:
-    explicit VideoControls(QWidget *parent) : QWidget(parent) { setAttribute(Qt::WA_OpaquePaintEvent); }
+    explicit VideoControls(QWidget *parent) : QWidget(parent)
+    {
+        setAttribute(Qt::WA_OpaquePaintEvent);
+        // Keep icon buttons visually flat on every platform. Only hover,
+        // press, and keyboard focus get subtle feedback; never a native frame.
+        setStyleSheet(QStringLiteral(
+            "QToolButton { border: 0; padding: 3px; background: transparent; }"
+            "QToolButton:hover:enabled { background: rgba(255,255,255,30); border-radius: 4px; }"
+            "QToolButton:pressed:enabled { background: rgba(255,255,255,55); border-radius: 4px; }"
+            "QToolButton:focus { border: 1px solid rgba(255,255,255,105); padding: 2px;"
+            " border-radius: 4px; }"));
+    }
 
 protected:
     void paintEvent(QPaintEvent *) override
@@ -273,6 +295,7 @@ public:
         auto palette = this->palette();
         palette.setColor(QPalette::Window, Qt::black);
         palette.setColor(QPalette::WindowText, Qt::white);
+        palette.setColor(QPalette::ButtonText, Qt::white);
         setPalette(palette);
         layout = new QVBoxLayout(this);
         layout->setContentsMargins(0, 0, 0, 0);
@@ -291,6 +314,8 @@ public:
         auto row = new QHBoxLayout(controls);
         row->setContentsMargins(6, 4, 6, 4);
         button = new QToolButton(controls);
+        button->setAutoRaise(true);
+        button->setFocusPolicy(Qt::TabFocus);
         button->setObjectName(QStringLiteral("qite-video-play"));
         button->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
         button->setToolTip(ITEVideoController::tr("Play"));
@@ -311,7 +336,7 @@ public:
         slider->setEnabled(false);
         slider->setAccessibleName(ITEVideoController::tr("Video position"));
         row->addWidget(slider, 1);
-        time = new QLabel(QStringLiteral("0:00"), controls);
+        time = new QLabel(QStringLiteral("0:00 / –:––"), controls);
         // A QTextEdit stylesheet may override child palettes. Give the time an
         // explicit foreground on our opaque black background as well.
         time->setStyleSheet(QStringLiteral("color: white; background: transparent;"));
@@ -323,6 +348,8 @@ public:
         row->addWidget(buffering);
         if (format.boolProperty(Downloadable)) {
             downloadButton = new QToolButton(controls);
+            downloadButton->setAutoRaise(true);
+            downloadButton->setFocusPolicy(Qt::TabFocus);
             downloadButton->setObjectName(QStringLiteral("qite-video-download"));
             downloadButton->setIcon(
                 QIcon::fromTheme(QStringLiteral("document-save"), style()->standardIcon(QStyle::SP_DialogSaveButton)));
@@ -343,18 +370,24 @@ public:
             updateDownload();
         }
         windowButton = new QToolButton(controls);
+        windowButton->setAutoRaise(true);
+        windowButton->setFocusPolicy(Qt::TabFocus);
         windowButton->setObjectName(QStringLiteral("qite-video-window-button"));
         windowButton->setIcon(
             QIcon::fromTheme(QStringLiteral("window-new"), style()->standardIcon(QStyle::SP_TitleBarNormalButton)));
         updateWindowButton();
         row->addWidget(windowButton);
         fullscreenButton = new QToolButton(controls);
+        fullscreenButton->setAutoRaise(true);
+        fullscreenButton->setFocusPolicy(Qt::TabFocus);
         fullscreenButton->setObjectName(QStringLiteral("qite-video-fullscreen-button"));
         updateFullscreenButton();
         row->addWidget(fullscreenButton);
         layout->addWidget(controls);
         connect(windowButton, &QToolButton::clicked, this, [this] {
             const QPointer<VideoPlayer> guard(this);
+            if (transferToHost(false))
+                return;
             if (downloadController
                 && downloadController->requestWindow(originalSource, player ? player->position() : 0, false)) {
                 if (guard)
@@ -384,6 +417,8 @@ public:
                 return;
             }
             const QPointer<VideoPlayer> guard(this);
+            if (transferToHost(true))
+                return;
             if (downloadController
                 && downloadController->requestWindow(originalSource, player ? player->position() : 0, true)) {
                 if (guard)
@@ -425,11 +460,15 @@ public:
             player->pause();
     }
 
-    bool isFloating() const { return !floating.isNull(); }
+    bool isFloating() const { return !floating.isNull() || hostedExternally_; }
     void setHostFullscreen(std::function<void()> action)
     {
         externalFullscreen = std::move(action);
         windowButton->hide();
+        // A host such as Psi's MediaViewer already has a fullscreen action
+        // in its own toolbar; keep the bottom button only for standalone
+        // players that control their own window.
+        fullscreenButton->setVisible(!externalFullscreen);
     }
     void startPlayback() { toggle(); }
     void setInitialPosition(qint64 position) { initialPosition = std::max<qint64>(0, position); }
@@ -452,7 +491,7 @@ protected:
     }
     void hideEvent(QHideEvent *event) override
     {
-        if (!floating && !externalFullscreen && !movingToWindow)
+        if (!floating && !externalFullscreen && !movingToWindow && !hostedExternally_)
             pause();
         QWidget::hideEvent(event);
     }
@@ -466,12 +505,52 @@ protected:
     }
 
 private:
+    bool transferToHost(bool fullscreen)
+    {
+        if (!downloadController || hostedExternally_)
+            return false;
+        // Reparenting can emit hideEvent and the chat's layout can receive
+        // synchronous update signals. Keep the decoder running in both cases.
+        hostedExternally_ = true;
+        movingToWindow = true;
+        const QPointer<VideoPlayer> guard(this);
+        const bool transferred = downloadController->requestPlayerTransfer(
+            originalSource, this, [guard] { return guard && guard->restoreFromHost(); }, fullscreen);
+        if (!guard)
+            return transferred;
+        movingToWindow = false;
+        if (!transferred) {
+            hostedExternally_ = false;
+            return false;
+        }
+        windowButton->hide();
+        fullscreenButton->hide();
+        return true;
+    }
+
+    bool restoreFromHost()
+    {
+        if (!hostedExternally_ || !inlineViewport || !downloadController)
+            return false;
+        movingToWindow = true;
+        hostedExternally_ = false;
+        setParent(inlineViewport);
+        windowButton->show();
+        fullscreenButton->show();
+        updateFullscreenButton();
+        updateWindowButton();
+        show();
+        movingToWindow = false;
+        if (onDocked)
+            onDocked(); // Rebind to the original chat's current viewport row.
+        return true;
+    }
+
     void updateFullscreenButton()
     {
         const bool fullscreen
             = externalFullscreen ? window()->isFullScreen() : (floating && floating->isFullscreenMode());
-        fullscreenButton->setIcon(
-            style()->standardIcon(fullscreen ? QStyle::SP_TitleBarNormalButton : QStyle::SP_TitleBarMaxButton));
+        fullscreenButton->setIcon(ITEVideoController::fullscreenIcon(palette(), fullscreen));
         fullscreenButton->setToolTip(fullscreen ? ITEVideoController::tr("Exit full screen")
                                                 : ITEVideoController::tr("Full screen"));
         fullscreenButton->setAccessibleName(fullscreenButton->toolTip());
@@ -611,7 +690,7 @@ private:
             if (opener && retry)
                 opener->retry(originalSource);
             slider->setEnabled(false);
-            time->setText(QStringLiteral("0:00"));
+            updateTime();
             time->setToolTip({});
         }
         if (!player) {
@@ -654,9 +733,9 @@ private:
                     const QSignalBlocker blocker(slider);
                     slider->setValue(player->duration() > 0 ? int(position * 10000 / player->duration()) : 0);
                 }
-                time->setText(
-                    QStringLiteral("%1:%2").arg(position / 60000).arg(position / 1000 % 60, 2, 10, QLatin1Char('0')));
+                updateTime();
             });
+            connect(player, &QMediaPlayer::durationChanged, this, [this](qint64) { updateTime(); });
             if (opener) {
                 buffering->show();
                 button->setEnabled(false);
@@ -688,6 +767,14 @@ private:
             player->pause();
         else
             player->play();
+    }
+
+    void updateTime()
+    {
+        const qint64 duration = player ? player->duration() : 0;
+        const qint64 position = player ? player->position() : 0;
+        time->setText(mediaClock(position) + QStringLiteral(" / ")
+                      + (duration > 0 ? mediaClock(duration) : QStringLiteral("–:––")));
     }
 
     void updateCoverArt()
@@ -730,6 +817,7 @@ private:
     QPointer<ITEVideoController> downloadController;
     std::function<void()>        onDocked;
     bool                         movingToWindow               = false;
+    bool                         hostedExternally_             = false;
     bool                         returnInlineOnFullscreenExit = false;
     QToolButton                 *button;
     ITEMediaSlider              *slider;
@@ -757,6 +845,35 @@ private:
 #endif
     }
 };
+}
+
+QIcon ITEVideoController::fullscreenIcon(const QPalette &palette, bool inward)
+{
+    const QIcon themed = QIcon::fromTheme(inward ? QStringLiteral("view-restore")
+                                               : QStringLiteral("view-fullscreen"));
+    if (!themed.isNull())
+        return themed;
+    QPixmap pixmap(24, 24);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(QPen(palette.color(QPalette::ButtonText), 2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    if (inward) {
+        painter.drawLine(QPointF(4, 4), QPointF(10, 10));
+        painter.drawLine(QPointF(10, 10), QPointF(10, 5));
+        painter.drawLine(QPointF(10, 10), QPointF(5, 10));
+        painter.drawLine(QPointF(20, 20), QPointF(14, 14));
+        painter.drawLine(QPointF(14, 14), QPointF(14, 19));
+        painter.drawLine(QPointF(14, 14), QPointF(19, 14));
+    } else {
+        painter.drawLine(QPointF(10, 10), QPointF(4, 4));
+        painter.drawLine(QPointF(4, 4), QPointF(4, 9));
+        painter.drawLine(QPointF(4, 4), QPointF(9, 4));
+        painter.drawLine(QPointF(14, 14), QPointF(20, 20));
+        painter.drawLine(QPointF(20, 20), QPointF(15, 20));
+        painter.drawLine(QPointF(20, 20), QPointF(20, 15));
+    }
+    return QIcon(pixmap);
 }
 
 QWidget *ITEVideoController::createPlayer(const QUrl &url, ITEMediaOpener *opener, QWidget *parent,

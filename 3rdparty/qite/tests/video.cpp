@@ -80,12 +80,27 @@ public:
 
 class TestMediaSlider : public ITEMediaSlider {
 public:
+    bool lastReleaseAccepted = false;
     QPoint positionForValue(int value) const
     {
         QStyleOptionSlider option;
         initStyleOption(&option);
         option.sliderPosition = value;
+        option.sliderValue    = value;
         return style()->subControlRect(QStyle::CC_Slider, &option, QStyle::SC_SliderHandle, this).center();
+    }
+    QRect grooveRect() const
+    {
+        QStyleOptionSlider option;
+        initStyleOption(&option);
+        return style()->subControlRect(QStyle::CC_Slider, &option, QStyle::SC_SliderGroove, this);
+    }
+
+protected:
+    void mouseReleaseEvent(QMouseEvent *event) override
+    {
+        ITEMediaSlider::mouseReleaseEvent(event);
+        lastReleaseAccepted = event->isAccepted();
     }
 };
 
@@ -188,7 +203,13 @@ private slots:
         auto    player = ITEVideoController::createPlayer(QUrl("test:video"), &opener, &host, [&] { ++fullscreen; });
         QTRY_COMPARE(opener.pending, 1);
         QVERIFY(!player->findChild<QLabel *>("qite-video-loading")->isHidden());
-        player->findChild<QToolButton *>("qite-video-fullscreen-button")->click();
+        auto *fullscreenButton = player->findChild<QToolButton *>("qite-video-fullscreen-button");
+        auto *playButton = player->findChild<QToolButton *>("qite-video-play");
+        QVERIFY(fullscreenButton);
+        QVERIFY(playButton);
+        QVERIFY(fullscreenButton->isHidden()); // Host viewer already provides fullscreen.
+        QVERIFY(playButton->autoRaise());
+        fullscreenButton->click(); // Programmatic host callback remains functional.
         QCOMPARE(fullscreen, 1);
         QVERIFY(player->findChild<QToolButton *>("qite-video-window-button")->isHidden());
         delete player;
@@ -295,8 +316,123 @@ private slots:
             itePaintMediaProgress(&painter, image.rect(), &state, .25, Qt::white, true);
         }
         QCOMPARE(image.pixelColor(90, 6), QColor(Qt::white));
+        // Download/save progress alone is not proof of cached/verified bytes.
+        state.setCachedRanges({});
+        state.setDownload(true, .9);
+        image.fill(Qt::black);
+        {
+            QPainter painter(&image);
+            itePaintMediaProgress(&painter, image.rect(), &state, 0, Qt::white);
+        }
+        QCOMPARE(image.pixelColor(50, 6), QColor(Qt::black));
         state.setDownload(false, -1, "network error");
         QVERIFY(iteMediaDownloadText(&state).contains("network error"));
+    }
+
+    void mediaSliderPaintsOneAlignedTrackWithDistinctCachedColor()
+    {
+        TestMediaSlider slider;
+        slider.resize(420, 36);
+        slider.setRange(0, 10000);
+        slider.setValue(5000);
+        QPalette palette = slider.palette();
+        palette.setColor(QPalette::Highlight, QColor(20, 190, 240));
+        palette.setColor(QPalette::Mid, QColor(45, 45, 45));
+        slider.setPalette(palette);
+
+        ITEMediaState state;
+        slider.setMediaState(&state);
+        slider.show();
+        QTRY_VERIFY(slider.isVisible());
+        const QImage empty = slider.grab().toImage();
+
+        // A known contiguous cached prefix starts at the same logical zero as
+        // playback. No native groove should paint a second colored prefix.
+        state.setCachedRanges({ { 0, .95 } });
+        const QImage painted = slider.grab().toImage();
+        const QRect groove = slider.grooveRect();
+        const int origin = slider.positionForValue(0).x();
+        const int finish = slider.positionForValue(10000).x();
+        const int width = finish - origin;
+        QVERIFY(width > 20);
+        QVERIFY(groove.height() >= 2);
+        const int y = groove.center().y();
+
+        const QColor played = painted.pixelColor(origin + width / 4, y);
+        const QColor cached = painted.pixelColor(origin + width * 3 / 4, y);
+        QVERIFY2(played.green() > cached.green() + 15, "Playback and cache must have distinct colors");
+        QVERIFY(qAbs(cached.red() - cached.blue()) < 25); // Neutral cache, not another blue stripe.
+
+        const int leftOfTrack = origin - 2;
+        if (leftOfTrack >= 0)
+            QCOMPARE(painted.pixelColor(leftOfTrack, y), empty.pixelColor(leftOfTrack, y));
+        if (groove.top() > 0)
+            QCOMPARE(painted.pixelColor(origin + width / 4, groove.top() - 1),
+                     empty.pixelColor(origin + width / 4, groove.top() - 1));
+    }
+
+    void inlinePlayerTransfersWithoutRecreatingDecoder()
+    {
+        TextEdit edit;
+        InteractiveText text(&edit);
+        VideoController controller(&text);
+        controller.insert(QUrl::fromLocalFile(QStringLiteral(QITE_TEST_VIDEO)));
+        edit.show();
+        QTRY_VERIFY(edit.findChild<QWidget *>(QStringLiteral("qite-video-player")));
+        auto *widget = edit.findChild<QWidget *>(QStringLiteral("qite-video-player"));
+        auto *play = widget->findChild<QToolButton *>(QStringLiteral("qite-video-play"));
+        auto *popup = widget->findChild<QToolButton *>(QStringLiteral("qite-video-window-button"));
+        auto *full = widget->findChild<QToolButton *>(QStringLiteral("qite-video-fullscreen-button"));
+        QVERIFY(play && popup && full);
+        play->click();
+        auto *decoder = widget->findChild<QMediaPlayer *>();
+        QVERIFY(decoder);
+        QWidget host;
+        host.resize(720, 420);
+        host.show();
+        QCoreApplication::processEvents();
+        std::function<bool()> restore;
+        QPointer<QWidget> borrowed;
+        int transfers = 0;
+        controller.setPlayerTransferHandler(
+            [&](const QUrl &, QWidget *player, std::function<bool()> callback, bool fullscreen) {
+                if (fullscreen || player != widget)
+                    return false;
+                borrowed = player;
+                restore = std::move(callback);
+                ++transfers;
+                player->setParent(&host);
+                player->show();
+                return true;
+            });
+        popup->click();
+        QCOMPARE(transfers, 1);
+        QVERIFY(borrowed);
+        QCOMPARE(borrowed->parentWidget(), &host);
+        QCOMPARE(borrowed->findChild<QMediaPlayer *>(), decoder);
+        QVERIFY(full->isHidden());
+        QVERIFY(popup->isHidden());
+        QVERIFY(restore);
+        QVERIFY(restore());
+        QTRY_COMPARE(borrowed->parentWidget(), edit.viewport());
+        QCOMPARE(borrowed->findChild<QMediaPlayer *>(), decoder);
+        QVERIFY(!full->isHidden());
+        QVERIFY(!popup->isHidden());
+        bool hasTimeDisplay = false;
+        for (auto *label : widget->findChildren<QLabel *>())
+            if (label->text().contains(QStringLiteral(" / ")))
+                hasTimeDisplay = true;
+        QVERIFY(hasTimeDisplay);
+        // Without a host handler, qite's own fullscreen must still reparent
+        // the same decoder rather than recreate it.
+        controller.setPlayerTransferHandler({});
+        QPointer<QMediaPlayer> liveDecoder(decoder);
+        full->click();
+        QTRY_VERIFY(widget->window()->isFullScreen());
+        QCOMPARE(widget->findChild<QMediaPlayer *>(), liveDecoder.data());
+        QTest::keyClick(widget->window(), Qt::Key_Escape);
+        QTRY_VERIFY(!widget->window()->isFullScreen());
+        QCOMPARE(widget->findChild<QMediaPlayer *>(), liveDecoder.data());
     }
 
     void videoSliderClickSeeksToAbsolutePosition()
@@ -311,6 +447,8 @@ private slots:
         const auto clickAt = [&slider](int percent) {
             // Stay clear of the handle and use the center of the groove.
             QTest::mouseClick(&slider, Qt::LeftButton, Qt::NoModifier, slider.positionForValue(percent * 100));
+            QVERIFY2(slider.lastReleaseAccepted,
+                     "A direct seek must consume mouse release, not propagate click-to-pause to the video player");
             QVERIFY2(qAbs(slider.value() - percent * 100) <= 100,
                      qPrintable(QStringLiteral("clicked %1% but slider value is %2").arg(percent).arg(slider.value())));
         };
@@ -342,6 +480,13 @@ private slots:
         video.insert(url, &opener);
         edit.show();
         QTRY_VERIFY(edit.findChild<ITEVideoFrameWidget *>());
+        auto *controls = edit.findChild<QWidget *>("qite-video-controls");
+        QVERIFY(controls);
+        QVERIFY(controls->styleSheet().contains(QStringLiteral("background: transparent")));
+        auto *standaloneFullscreen = controls->findChild<QToolButton *>("qite-video-fullscreen-button");
+        auto *standalonePlay = controls->findChild<QToolButton *>("qite-video-play");
+        QVERIFY(standaloneFullscreen && !standaloneFullscreen->isHidden());
+        QVERIFY(standalonePlay && standalonePlay->autoRaise());
         QVERIFY(!edit.findChild<QToolButton *>("qite-video-download"));
         edit.clear();
         video.insert(url, &opener, QSize(320, 220), true);
