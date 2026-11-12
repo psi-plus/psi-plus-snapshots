@@ -3,18 +3,22 @@
 # Author:  Boris Pek <tehnick-8@yandex.ru>
 # License: GPLv2 or later
 # Created: 2012-02-13
-# Updated: 2024-05-05
+# Updated: 2026-11-14
 # Version: N/A
 
 set -e
 
-export SNAPSHOTS_DIR="$(dirname $(realpath -s ${0}))"
-export MAIN_DIR="$(realpath -s ${SNAPSHOTS_DIR}/..)"
+SNAPSHOTS_DIR="$(dirname $(realpath -s ${0}))"
+MAIN_DIR="$(realpath -s ${SNAPSHOTS_DIR}/..)"
+export SNAPSHOTS_DIR MAIN_DIR
 
 PSI_URL=https://github.com/psi-im/psi.git
 PLUGINS_URL=https://github.com/psi-im/plugins.git
 PSIMEDIA_URL=https://github.com/psi-im/psimedia.git
 RESOURCES_URL=https://github.com/psi-im/resources.git
+QCA_URL=https://github.com/psi-im/qca.git
+JDNS_URL=https://github.com/psi-im/jdns.git
+USRSCTP_URL=https://github.com/sctplab/usrsctp.git
 SNAPSHOTS_URL=https://github.com/psi-plus/psi-plus-snapshots.git
 SNAPSHOTS_RAW_URL=https://raw.github.com/psi-plus/psi-plus-snapshots
 
@@ -63,6 +67,19 @@ UpdateOrDownloadRepo()
     fi
 }
 
+UpdateRepoAtCommit()
+{
+    if [ -d "${MAIN_DIR}/${MOD}" ]; then
+        git -C "${MAIN_DIR}/${MOD}" checkout -q master
+    fi
+    UpdateOrDownloadRepo
+    if ! git -C "${MAIN_DIR}/${MOD}" cat-file -e "${1}^{commit}" 2>/dev/null; then
+        echo "Error! Commit ${1} not found in ${MAIN_DIR}/${MOD}"
+        exit 1
+    fi
+    git -C "${MAIN_DIR}/${MOD}" checkout --detach "${1}"
+}
+
 MOD=$(basename "${SNAPSHOTS_DIR}")
 URL="$(git remote -v | grep '(fetch)' | awk '{ print $2 }')"
 if [ "${URL}" = "${SNAPSHOTS_URL}" ]; then
@@ -89,6 +106,37 @@ MOD=resources
 URL="${RESOURCES_URL}"
 UpdateOrDownloadRepo
 
+IRIS_LOCK_FILE="${MAIN_DIR}/psi/iris/dependencies.lock.json"
+IRIS_SCTP_FILE="${MAIN_DIR}/psi/iris/cmake/modules/IrisSCTP.cmake"
+QCA_COMMIT=$(sed -n '/"qca"[[:space:]]*:/,/}/ s/.*"commit"[[:space:]]*:[[:space:]]*"\([0-9a-f]\{40\}\)".*/\1/p' "${IRIS_LOCK_FILE}" | head -n1)
+QCA_TAG=$(sed -n '/"qca"[[:space:]]*:/,/}/ s/.*"tag"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${IRIS_LOCK_FILE}" | head -n1)
+JDNS_COMMIT=$(sed -n '/"jdns"[[:space:]]*:/,/}/ s/.*"commit"[[:space:]]*:[[:space:]]*"\([0-9a-f]\{40\}\)".*/\1/p' "${IRIS_LOCK_FILE}" | head -n1)
+USRSCTP_COMMIT=$(sed -n 's/^set(IRIS_USRSCTP_GIT_TAG[[:space:]]*\([0-9a-f]\{40\}\))$/\1/p' "${IRIS_SCTP_FILE}" | head -n1)
+if [ -z "${QCA_COMMIT}" ]; then
+    echo "Error! QCA commit not found in ${IRIS_LOCK_FILE}"
+    exit 1
+fi
+if [ -z "${JDNS_COMMIT}" ]; then
+    echo "Error! JDNS commit not found in ${IRIS_LOCK_FILE}"
+    exit 1
+fi
+if [ -z "${USRSCTP_COMMIT}" ]; then
+    echo "Error! UsrSCTP commit not found in ${IRIS_SCTP_FILE}"
+    exit 1
+fi
+
+MOD=qca
+URL="${QCA_URL}"
+UpdateRepoAtCommit "${QCA_COMMIT}"
+
+MOD=jdns
+URL="${JDNS_URL}"
+UpdateRepoAtCommit "${JDNS_COMMIT}"
+
+MOD=usrsctp
+URL="${USRSCTP_URL}"
+UpdateRepoAtCommit "${USRSCTP_COMMIT}"
+
 cd "${SNAPSHOTS_DIR}"
 echo "Checking for updates..."
 
@@ -96,16 +144,29 @@ PSI_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -
 PLUGINS_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* plugins: \(.*\)$/\1/p')
 PSIMEDIA_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* psimedia: \(.*\)$/\1/p')
 RESOURCES_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* resources: \(.*\)$/\1/p')
+QCA_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* qca: \(.*\)$/\1/p')
+JDNS_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* jdns: \(.*\)$/\1/p')
+USRSCTP_OLD_HASH=$(cd "${SNAPSHOTS_DIR}" && git show -s --pretty='format:%B' | sed -ne 's/^\* usrsctp: \(.*\)$/\1/p')
 
 PSI_NEW_HASH=$(cd "${MAIN_DIR}/psi" && git show -s --pretty='format:%h')
 PLUGINS_NEW_HASH=$(cd "${MAIN_DIR}/plugins" && git show -s --pretty='format:%h')
 PSIMEDIA_NEW_HASH=$(cd "${MAIN_DIR}/psimedia" && git show -s --pretty='format:%h')
 RESOURCES_NEW_HASH=$(cd "${MAIN_DIR}/resources" && git show -s --pretty='format:%h')
+QCA_NEW_HASH=$(cd "${MAIN_DIR}/qca" && git show -s --pretty='format:%h')
+JDNS_NEW_HASH=$(cd "${MAIN_DIR}/jdns" && git show -s --pretty='format:%h')
+USRSCTP_NEW_HASH=$(cd "${MAIN_DIR}/usrsctp" && git show -s --pretty='format:%h')
 
 if [ "${PSI_OLD_HASH}"       = "${PSI_NEW_HASH}" ] && \
    [ "${PLUGINS_OLD_HASH}"   = "${PLUGINS_NEW_HASH}" ] && \
    [ "${PSIMEDIA_OLD_HASH}"  = "${PSIMEDIA_NEW_HASH}" ] && \
-   [ "${RESOURCES_OLD_HASH}" = "${RESOURCES_NEW_HASH}" ]; then
+   [ "${RESOURCES_OLD_HASH}" = "${RESOURCES_NEW_HASH}" ] && \
+   [ "${QCA_OLD_HASH}"       = "${QCA_NEW_HASH}" ] && \
+   [ "${JDNS_OLD_HASH}"      = "${JDNS_NEW_HASH}" ] && \
+   [ "${USRSCTP_OLD_HASH}"   = "${USRSCTP_NEW_HASH}" ] && \
+   [ -f "${SNAPSHOTS_DIR}/iris/3rdparty/qca/CMakeLists.txt" ] && \
+   [ -f "${SNAPSHOTS_DIR}/iris/3rdparty/qca/.version" ] && \
+   [ -f "${SNAPSHOTS_DIR}/iris/3rdparty/jdns/CMakeLists.txt" ] && \
+   [ -f "${SNAPSHOTS_DIR}/iris/3rdparty/usrsctp/CMakeLists.txt" ]; then
     echo "Updating is not required!"
     git checkout HEAD . 2> /dev/null
     echo
@@ -145,6 +206,30 @@ rsync -a --del "${MAIN_DIR}/psi/" "${SNAPSHOTS_DIR}/" \
 mv "${MAIN_DIR}/README" "${SNAPSHOTS_DIR}/README"
 mv "${MAIN_DIR}/.gitignore" "${SNAPSHOTS_DIR}/.gitignore"
 echo "* Files from Psi project are copied."
+
+mkdir -p "${SNAPSHOTS_DIR}/iris/3rdparty/qca"
+rsync -a --del "${MAIN_DIR}/qca/" "${SNAPSHOTS_DIR}/iris/3rdparty/qca/" \
+    --exclude=".git*" \
+    --exclude="/build*" \
+    --exclude="/compile_commands.json"
+if [ -n "${QCA_TAG}" ]; then
+    printf '%s\n' "${QCA_TAG}" > "${SNAPSHOTS_DIR}/iris/3rdparty/qca/.version"
+fi
+echo "* QCA sources are copied to iris/3rdparty/qca."
+
+mkdir -p "${SNAPSHOTS_DIR}/iris/3rdparty/jdns"
+rsync -a --del "${MAIN_DIR}/jdns/" "${SNAPSHOTS_DIR}/iris/3rdparty/jdns/" \
+    --exclude=".git*" \
+    --exclude="/build*" \
+    --exclude="/compile_commands.json"
+echo "* JDNS sources are copied to iris/3rdparty/jdns."
+
+mkdir -p "${SNAPSHOTS_DIR}/iris/3rdparty/usrsctp"
+rsync -a --del "${MAIN_DIR}/usrsctp/" "${SNAPSHOTS_DIR}/iris/3rdparty/usrsctp/" \
+    --exclude=".git*" \
+    --exclude="/build*" \
+    --exclude="/compile_commands.json"
+echo "* UsrSCTP sources are copied to iris/3rdparty/usrsctp."
 
 FROM_STR="option(PSI_PLUS .*\$"
 TO_STR="option(PSI_PLUS \"Build Psi+ client instead of Psi\" ON)"
@@ -220,6 +305,9 @@ It is based on:
 * plugins: ${PLUGINS_NEW_HASH}
 * psimedia: ${PSIMEDIA_NEW_HASH}
 * resources: ${RESOURCES_NEW_HASH}
+* qca: ${QCA_NEW_HASH}
+* jdns: ${JDNS_NEW_HASH}
+* usrsctp: ${USRSCTP_NEW_HASH}
 "
 echo "${COMMENT}"
 
