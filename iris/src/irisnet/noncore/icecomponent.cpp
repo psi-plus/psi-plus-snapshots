@@ -598,8 +598,8 @@ private slots:
 
         if (!lt->stun_started) {
             lt->stun_started = true;
-            if (useStunBind
-                && (lt->sock->stunBindServiceAddress().isValid() || lt->sock->stunRelayServiceAddress().isValid())) {
+            // Binding and relay services are configured independently; TURN also runs in relay-only mode.
+            if (lt->sock->stunBindServiceAddress().isValid() || lt->sock->stunRelayServiceAddress().isValid()) {
                 lt->sock->stunStart();
                 if (!watch.isValid())
                     return;

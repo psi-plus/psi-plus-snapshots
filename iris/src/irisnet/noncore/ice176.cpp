@@ -1141,7 +1141,7 @@ private:
             return -1;
     }
 
-    static void toOutCandidate(const IceComponent::Candidate &cc, Ice176::Candidate &out)
+    void toOutCandidate(const IceComponent::Candidate &cc, Ice176::Candidate &out) const
     {
         out.component  = cc.info->componentId;
         out.foundation = cc.info->foundation;
@@ -1153,7 +1153,8 @@ private:
         out.port     = cc.info->addr.port;
         out.priority = cc.info->priority;
         out.protocol = "udp";
-        if (cc.info->type != IceComponent::HostType) {
+        // RFC 8445 Section 5.3 permits omitting related addresses for privacy.
+        if (allowIpExposure && cc.info->type != IceComponent::HostType) {
             out.rel_addr = cc.info->related.addr;
             out.rel_addr.setScopeId(QString());
             out.rel_port = cc.info->related.port;

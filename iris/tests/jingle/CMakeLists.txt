@@ -111,6 +111,12 @@ target_link_libraries(jingle_icevalidpair_test PRIVATE irisnet iris Qt${QT_DEFAU
     Qt${QT_DEFAULT_MAJOR_VERSION}::Network)
 add_test(NAME jingle_icevalidpair COMMAND jingle_icevalidpair_test)
 set_tests_properties(jingle_icevalidpair PROPERTIES TIMEOUT 12)
+add_executable(jingle_icerelayprivacy_test icerelayprivacy.cpp)
+target_include_directories(jingle_icerelayprivacy_test PRIVATE ../../src/irisnet/noncore)
+target_link_libraries(jingle_icerelayprivacy_test PRIVATE irisnet iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Network)
+add_test(NAME jingle_icerelayprivacy COMMAND jingle_icerelayprivacy_test)
+set_tests_properties(jingle_icerelayprivacy PROPERTIES TIMEOUT 12)
 add_executable(jingle_stunbindinglifetime_test stunbindinglifetime.cpp)
 target_link_libraries(jingle_stunbindinglifetime_test PRIVATE irisnet iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core)
 add_test(NAME jingle_stunbindinglifetime COMMAND jingle_stunbindinglifetime_test)
