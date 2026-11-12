@@ -6,45 +6,56 @@ Current address:
 
 Description:
 * Psi is a cross-platform powerful XMPP client designed for experienced users.
-  User interface of program is very flexible in customization. For example,
-  there are "multi windows" and "all in one" modes, support of different
+  User interface of the program is very flexible in customization. For example,
+  there are "multi-window" and "all-in-one" modes, support for different
   iconsets and themes. Psi supports file sharing and audio/video calls. Security
   is also a major consideration, and Psi provides it for both client-to-server
   (TLS) and client-to-client (OpenPGP, OTR, OMEMO) via appropriate plugins.
-* Psi+ is a development branch of Psi with rolling release development model.
-  Users who wants to receive new features and bug fixes very quickly may use
+* Psi+ is a rolling-release snapshot of the Psi sources.
+  Users who want to receive new features and bug fixes very quickly may use
   Psi+ on daily basis. Users who do not care about new trends and prefer
   constancy may choose Psi as it uses classical development model and its
   releases are quite rare.
 * Psi plugins are developed separately. Plugins API is guaranteed to be
-  compatible only for git tags. In master branches of psi, plugins and psimedia
-  repos they may be not in sync during development. Psi+ solves this problem by
-  providing all-in-one tarballs in this special git repository.
+  compatible only for git tags. In the master branches of the psi, plugins and
+  psimedia repositories they may not be in sync during development. Psi+ solves
+  this problem by providing all-in-one tarballs in this special git repository.
 
 Main features of this repository:
 1) Source tree is aggregated from independent git repositories:
    - https://github.com/psi-im/psi (main repo of Psi)
    - https://github.com/psi-im/iris (XMPP library)
+   - https://github.com/psi-im/jdns (JDNS library)
+     Copied to iris/3rdparty/jdns at the revision from
+     iris/dependencies.lock.json
+   - https://github.com/psi-im/qca (QCA3 library)
+     Copied to iris/3rdparty/qca at the revision from
+     iris/dependencies.lock.json
+   - https://github.com/sctplab/usrsctp (UsrSCTP library)
+     Copied to iris/3rdparty/usrsctp at the revision from
+     iris/cmake/modules/IrisSCTP.cmake
    - https://github.com/nodejs/http-parser (3rdparty library)
    - https://github.com/psi-im/qhttp (3rdparty library)
      This is a fork of dead project
    - https://github.com/Ri0n/qite (3rdparty library)
-     This Qt widget is detauched from Psi project for wider usage
+     This Qt library is detached from Psi project for wider usage
+   - https://github.com/Waqar144/QSourceHighlite (3rdparty library)
+     Syntax highlighting for code blocks
    - https://github.com/psi-im/plugins (officially supported plugins)
    - https://github.com/psi-im/psimedia (multimedia plugin)
    - https://github.com/psi-im/resources (additional resources)
 2) Trash is removed. (MS Windows executables, non-free icons, etc.)
 
-More details see in file generate-single-repo.sh
+More details are available in generate-single-repo.sh
 
 Advantages of this repository:
 * Sources are updated regularly (two times per hour) from all git repositories
-  in according to their relationships (git submodules are bind to specific
+  according to their relationships (git submodules are bound to specific
   commits)
 * There is no non-free content in the source tree.
 * There is a transparent system of version numbering:
-  - you don't need to calculate current version using magic hacks, just look to
-    available git tags
+  - you don't need to calculate current version using magic hacks, just look at
+    the available git tags
   - you may download any previous version if you need and all parts of Psi+
     sources will be compatible with each other (main Psi sources, plugins,
     resources, etc.)
@@ -58,7 +69,7 @@ free content in this case:
   https://www.debian.org/social_contract#guidelines
   https://en.wikipedia.org/wiki/Debian_Free_Software_Guidelines
 
-If you find bugs or problems in Psi+ program you may report here:
+If you find bugs or problems in the Psi+ program you may report here:
   https://github.com/psi-im/psi/issues
 
 If you find bugs or problems in official Psi plugins you may report here:
