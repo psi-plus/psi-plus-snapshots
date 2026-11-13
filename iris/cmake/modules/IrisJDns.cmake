@@ -2,6 +2,8 @@ include_guard(GLOBAL)
 
 # The source revision and API baseline share the same authority as CI.
 set(_iris_jdns_lock_file "${CMAKE_CURRENT_LIST_DIR}/../../dependencies.lock.json")
+get_filename_component(_iris_jdns_source_root "${_iris_jdns_lock_file}" DIRECTORY)
+get_filename_component(_iris_jdns_local_source "${_iris_jdns_source_root}/3rdparty/jdns" ABSOLUTE)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_iris_jdns_lock_file}")
 file(READ "${_iris_jdns_lock_file}" _iris_jdns_lock)
 string(REGEX MATCH "\"jdns\"[ \t\r\n]*:[ \t\r\n]*\\{[^}]*\\}" _iris_jdns_entry "${_iris_jdns_lock}")
@@ -94,6 +96,11 @@ function(iris_configure_jdns)
     endif()
 
     include(FetchContent)
+    if(NOT DEFINED FETCHCONTENT_SOURCE_DIR_IRIS_JDNS
+       AND EXISTS "${_iris_jdns_local_source}/CMakeLists.txt")
+        set(FETCHCONTENT_SOURCE_DIR_IRIS_JDNS "${_iris_jdns_local_source}")
+        message(STATUS "JDNS: using local sources at ${FETCHCONTENT_SOURCE_DIR_IRIS_JDNS}")
+    endif()
     if(IRIS_JDNS_GIT_TAG STREQUAL _iris_jdns_commit)
         set(_jdns_source "JDNS ${IRIS_JDNS_MIN_VERSION} (commit ${IRIS_JDNS_GIT_TAG})")
     else()
