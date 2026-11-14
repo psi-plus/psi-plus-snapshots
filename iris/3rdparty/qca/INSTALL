@@ -1,0 +1,91 @@
+Installing QCA
+--------------
+
+For Unix/Linux/Mac/Windows:
+
+  cmake .
+  make
+  make install
+  /sbin/ldconfig, if necessary
+
+Notes
+-----
+
+  Use cmake cache entries
+
+  CMAKE_INSTALL_PREFIX - must be defined otherwise QCA will be installed
+                         in Qt prefix (by default: "")
+  BUILD_TESTS - build unittests (by default: ON, OFF on Android)
+  BUILD_TOOLS - build mozcerts and qcatool (by default: ON, OFF on Android)
+  QCA_SUFFIX - suffix used together with the QCA ABI major version for the
+               library, tools, headers, CMake package and pkg-config file
+               (by default: "qt6" for Qt 6 and "qt5" for Qt 5)
+  LIB_SUFFIX - library directory suffix (by default: "")
+  LIB_INSTALL_DIR - path to library directory
+                    (by default: ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX})
+  BUILD_PLUGINS - list plugins to build (botan;ossl;gnupg for example).
+                  Also possible values is none, auto or all
+                  (by default: "auto", "ossl" on Android)
+  WITH_${PLUGIN}_PLUGIN - to build particular plugin. Can be no, yes or
+                          auto (WITH_ossl_PLUGIN=auto for example)
+  DEVELOPER_MODE - mode to enable features for developers. If ON
+                   will be used hardcoded path to 'crypto'
+                   (by default: OFF)
+  OSX_FRAMEWORK - build an OS X framework (by default: ON)
+  USE_RELATIVE_PATHS - make relocatable package if possible (by default: OFF)
+
+  QCA 3 uses ABI-major-qualified install names so it can be installed next to
+  QCA 2. With Qt 6 and the default suffix this includes:
+
+    libqca3-qt6
+    qcatool3-qt6
+    mozcerts3-qt6
+    Qca3-qt6/QtCrypto
+    Qca3-qt6Config.cmake
+    qca3-qt6.pc
+    qca3-qt6/crypto
+
+  CMake consumers should select the ABI explicitly:
+
+    find_package(Qca3-qt6 CONFIG REQUIRED)
+    target_link_libraries(my_target PRIVATE Qca3::Qca)
+
+  pkg-config consumers can use:
+
+    pkg-config qca3-qt6
+
+  Finally install paths can be overridden with:
+
+  QCA_PREFIX_INSTALL_DIR - qca prefix, just a origin to make other paths
+  QCA_PLUGINS_INSTALL_DIR - qca plugin root; providers are in its crypto subdir
+  QCA_BINARY_INSTALL_DIR - qcatool and mozcerts will be installed to
+  QCA_LIBRARY_INSTALL_DIR - qca library will be installed to
+  QCA_FEATURE_INSTALL_DIR - path to qt mkspecs dir
+  QCA_DATA_INSTALL_DIR - qca data and fallback certificate bundle
+  QCA_INCLUDE_INSTALL_DIR - path for QtCrypto dir with includes
+  QCA_PRIVATE_INCLUDE_INSTALL_DIR - for future implementation
+  QCA_DOC_INSTALL_DIR - for html documentation
+  QCA_MAN_INSTALL_DIR - for qcatool manpage
+  PKGCONFIG_INSTALL_PREFIX - path to install pkg config file
+
+Android
+-------
+
+  Android builds use the platform TrustManagerFactory as the QCA system
+  certificate store. The accepted issuer certificates are imported into QCA
+  directly in DER form; no CA bundle is copied from the build host and no Qt
+  resource file is required.
+
+  The Android defaults keep cross-builds minimal:
+
+    BUILD_TESTS=OFF
+    BUILD_TOOLS=OFF
+    BUILD_PLUGINS=ossl
+
+  All of these cache entries can still be overridden explicitly with -D.
+
+Please report problems to:
+  https://github.com/psi-im/qca/issues
+
+Official fork repository:
+  https://github.com/psi-im/qca

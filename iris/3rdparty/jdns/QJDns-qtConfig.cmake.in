@@ -1,0 +1,26 @@
+@PACKAGE_INIT@
+
+set(QJDns_QT_MAJOR_VERSION @JDNS_QT_MAJOR_VERSION@)
+if((DEFINED QT_DEFAULT_MAJOR_VERSION AND NOT QT_DEFAULT_MAJOR_VERSION EQUAL QJDns_QT_MAJOR_VERSION)
+   OR (TARGET Qt5::Core AND NOT TARGET Qt6::Core AND NOT QJDns_QT_MAJOR_VERSION EQUAL 5)
+   OR (TARGET Qt6::Core AND NOT TARGET Qt5::Core AND NOT QJDns_QT_MAJOR_VERSION EQUAL 6))
+    set(QJDns_FOUND FALSE)
+    set(QJDns-qt@JDNS_QT_MAJOR_VERSION@_FOUND FALSE)
+    set(QJDns_NOT_FOUND_MESSAGE "QJDns was built for a different Qt major version")
+    return()
+endif()
+
+include(CMakeFindDependencyMacro)
+find_dependency(JDns "@JDNS_LIB_VERSION_STRING@")
+find_dependency(Qt@JDNS_QT_MAJOR_VERSION@ REQUIRED COMPONENTS Core Network)
+
+if(NOT TARGET qjdns)
+    include("${CMAKE_CURRENT_LIST_DIR}/QJDns@QT_MAJ@Targets.cmake")
+endif()
+
+if(TARGET qjdns AND NOT TARGET QJDns::QJDns)
+    add_library(QJDns::QJDns ALIAS qjdns)
+endif()
+
+set(QJDns_LIBRARY qjdns)
+set(QJDns_VERSION "@JDNS_LIB_VERSION_STRING@")

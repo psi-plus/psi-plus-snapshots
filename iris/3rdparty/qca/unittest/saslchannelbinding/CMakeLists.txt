@@ -1,0 +1,9 @@
+enable_testing()
+
+set(saslchannelbindingunittest_bin_SRCS saslchannelbindingunittest.cpp)
+
+add_executable(saslchannelbindingunittest ${saslchannelbindingunittest_bin_SRCS})
+
+target_link_qca_test_libraries(saslchannelbindingunittest)
+
+add_qca_test(saslchannelbindingunittest "SaslChannelBinding")

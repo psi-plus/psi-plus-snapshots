@@ -1,0 +1,46 @@
+if(DEFINED QT_DEFAULT_MAJOR_VERSION)
+    set(_qjdns_suffix qt${QT_DEFAULT_MAJOR_VERSION})
+elseif(TARGET Qt6::Core OR Qt6Core_FOUND)
+    set(_qjdns_suffix qt6)
+elseif(TARGET Qt5::Core OR Qt5Core_FOUND)
+    set(_qjdns_suffix qt5)
+else()
+    find_package(Qt6 QUIET COMPONENTS Core)
+    if(Qt6Core_FOUND)
+        set(_qjdns_suffix qt6)
+    else()
+        find_package(Qt5 QUIET COMPONENTS Core)
+        if(Qt5Core_FOUND)
+            set(_qjdns_suffix qt5)
+        else()
+            message(FATAL_ERROR "QJDns requires Qt 5 or Qt 6")
+        endif()
+    endif()
+endif()
+
+set(_qjdns_args)
+if(QJDns_FIND_VERSION)
+    list(APPEND _qjdns_args "${QJDns_FIND_VERSION}")
+    if(QJDns_FIND_VERSION_EXACT)
+        list(APPEND _qjdns_args EXACT)
+    endif()
+endif()
+list(APPEND _qjdns_args CONFIG)
+if(QJDns_FIND_REQUIRED)
+    list(APPEND _qjdns_args REQUIRED)
+endif()
+if(QJDns_FIND_QUIETLY)
+    list(APPEND _qjdns_args QUIET)
+endif()
+
+get_filename_component(
+    _qjdns_package_dir
+    "${CMAKE_CURRENT_LIST_DIR}/../qjdns-${_qjdns_suffix}"
+    ABSOLUTE
+)
+
+find_package(QJDns-${_qjdns_suffix} ${_qjdns_args}
+    HINTS "${_qjdns_package_dir}"
+    NO_DEFAULT_PATH
+)
+set(QJDns_FOUND ${QJDns-${_qjdns_suffix}_FOUND})

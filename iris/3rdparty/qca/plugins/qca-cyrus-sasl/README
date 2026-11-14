@@ -1,0 +1,60 @@
+QCA Cyrus SASL plugin version 2.0.0
+-----------------------------------
+Date: October 11th, 2007
+Website: http://delta.affinix.com/qca/
+Mailing List: Delta Project <delta@lists.affinix.com>
+
+Author: Justin Karneges <justin@affinix.com>
+
+This plugin provides features based on Cyrus SASL version 2.
+
+Requirements:
+  Cyrus SASL 2.x (libsasl2)
+
+Cryptographic callbacks
+-----------------------
+
+When Cyrus SASL exposes SASL_CB_CRYPTO, the plugin supplies hash, HMAC and
+PBKDF2 operations through the public QCA API. Algorithm availability follows
+the installed QCA providers. SCRAM requires all three operations for its hash;
+an algorithm name alone does not guarantee that the mechanism is usable.
+The selected backend is authoritative: failures do not fall back to OpenSSL.
+
+A Cyrus library built with --with-crypto=callbacks needs no built-in OpenSSL
+backend for SCRAM and the core legacy verifiers. Other Cyrus mechanisms keep
+their own dependencies. Older Cyrus versions continue to use their existing
+cryptographic implementation. Static OpenSSL-enabled libraries still require
+libcrypto, regardless of whether the callback API is present.
+
+Dependency bundles
+------------------
+
+The private static dependency bundles contain PLAIN and SCRAM. Their pinned
+Cyrus source no longer includes DIGEST-MD5. Mechanisms offered by a separately
+installed Cyrus library depend on that library's configuration.
+
+Windows bundles use the CNG backend and require Windows 10 or later. They do
+not depend on OpenSSL; cryptographic callbacks still route provider operations
+through QCA. Automatic plugin discovery is disabled in these Windows bundles:
+initialization uses the embedded mechanisms without consulting registry plugin
+paths or loading DLLs from a separately installed Cyrus library. This policy
+does not change ordinary shared or static Cyrus builds outside the bundle.
+macOS and Android bundles retain the built-in OpenSSL backend.
+CNG does not support SHA224, so availability of SCRAM-SHA-224 through callbacks
+requires a QCA provider offering the corresponding hash, HMAC and PBKDF2.
+
+Installing
+----------
+
+For Unix/Linux/Mac:
+
+  ./configure
+  make
+  make install
+
+For Windows:
+
+  configwin rd
+  qmake
+  nmake (or make)
+  copy lib\*.dll qtdir\plugins\crypto

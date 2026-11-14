@@ -1,0 +1,53 @@
+QCA Windows GSS plugin version 2.0.0
+------------------------------------
+Date: May 29th, 2008
+Website: http://delta.affinix.com/qca/
+Mailing List: Delta Project <delta@lists.affinix.com>
+
+Author: Justin Karneges <justin@affinix.com>
+
+This plugin provides SASL (GSSAPI mechanism only) using the native Windows
+Security Support Provider Interface (SSPI) for Kerberos.  Basically what this
+means is that if your Windows computer authenticates against a domain, then
+you can access capable SASL servers on that domain without a password.
+
+The provider is built on Windows with the Qt 5 or Qt 6 CMake build. It uses
+the system SSPI library and does not require OpenSSL or a separate GSSAPI
+library. A configured Kerberos environment and suitable logged-in credentials
+are required for an actual GSSAPI exchange.
+
+Capabilities and limits
+-----------------------
+
+Native SSPI implements client-side GSSAPI using the logged-in user's credentials.
+It supports authentication with no SASL security layer, integrity protection,
+or confidentiality, subject to the caller's constraints and the server's offer.
+Confidentiality is conservatively reported as SSF 56; larger requested minimum
+values are rejected. Incoming protected records are limited to 8192 bytes.
+The record decoder retains at most one partial record and processes streams
+without repeatedly copying the unconsumed remainder.
+
+Other client mechanisms and server operations are delegated to another installed
+SASL provider. SCRAM and SCRAM-PLUS therefore require such a provider; SSPI itself
+does not implement them. Channel binding is forwarded to the selected delegate.
+Native GSSAPI does not implement channel binding, so a critical binding request
+cannot select that native path or silently discard the binding.
+
+Automated tests cover provider loading, delegation, complete SCRAM-PLUS exchanges
+when a compatible delegate is available, SSPI buffer ownership and handle cleanup,
+fragmented records, size limits and large streams. SSPI session tests use a fake
+function table and require no domain credentials. A separate test loads the
+actual system library and enumerates its security packages. These checks do
+not replace testing Kerberos interoperability against a configured domain.
+
+Installing
+----------
+
+For Windows:
+
+  cmake -S . -B build -DBUILD_WITH_QT6=ON -DBUILD_PLUGINS=wingss
+  cmake --build build --config Release
+  cmake --install build --config Release
+
+Use BUILD_WITH_QT6=OFF for Qt 5. The Windows "auto" and "all" plugin selections
+also include qca-wingss. Shared and static provider builds are supported.

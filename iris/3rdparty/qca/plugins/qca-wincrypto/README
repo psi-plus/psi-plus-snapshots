@@ -1,0 +1,192 @@
+QCA Windows CNG plugin
+----------------------
+
+qca-wincrypto provides QCA algorithms through Windows Cryptography API:
+Next Generation (CNG, bcrypt.dll). It needs no third-party libraries and
+is built only on Windows. Windows 10 or later is the supported target;
+the symmetric primitives use CNG, and client TLS uses Schannel and Crypt32.
+
+Provider name: qca-wincrypto
+
+Features
+--------
+
+  random                          BCryptGenRandom, system-preferred RNG
+  md5 sha1 sha256 sha384 sha512   CNG hashes
+  sha3_256 sha3_384 sha3_512      only where CNG has SHA-3 (Windows 11
+                                  24H2 and later); detected at run time
+  hmac(md5) hmac(sha1) hmac(sha256) hmac(sha384) hmac(sha512)
+  pbkdf2(sha1) pbkdf2(sha256) pbkdf2(sha384) pbkdf2(sha512)
+                                  BCryptDeriveKeyPBKDF2
+  hkdf(sha256)                    RFC 5869 on top of CNG HMAC
+  aes128-* aes192-* aes256-*      modes ecb, cbc, cbc-pkcs7, cfb, ofb,
+                                  ctr, gcm
+  cert                            X.509 DER/PEM import, properties and
+                                  chain validation with explicit trust
+  tls                             client TLS 1.2 / OS-supported TLS 1.3,
+                                  SNI, authenticated records, shutdown,
+                                  tls-unique / tls-server-end-point and
+                                  TLS 1.3 tls-exporter channel binding
+  dtls                            DTLS 1.2, client and server, mutual
+                                  certificates, packet MTU, retransmission
+  dtls-srtp                       RFC 5764 profile negotiation and export
+                                  of directional SRTP master keys/salts
+  rsa pkey                        encryption, streaming signatures,
+                                  key construction and DER/PEM I/O
+
+AES-GCM with a 96-bit nonce and a 12..16-byte tag uses CNG's native GCM,
+including accelerated GHASH. Encryption streams complete blocks and
+retains at most a partial block. Decryption retains ciphertext and only
+publishes plaintext after authentication at final(). Other GCM parameters
+use the constant-time portable GHASH implementation in aesmodes.cpp.
+Empty tags are rejected. GCM messages are limited to 2^39 - 256 bits;
+the authenticated-decryption buffer must also fit QCA's signed-int API.
+
+CBC encryption uses native CNG chaining, CBC decryption batches AES-ECB,
+and CTR batches up to 64 counters per CNG call. Block modes retain only
+the final partial/padded block. CFB uses 128-bit feedback and CTR a
+128-bit big-endian counter, matching the existing QCA providers. OFB,
+CFB and the GCM fallback also use CNG's AES block function.
+
+HKDF keeps intermediate secrets in SecureArray. Cipher temporaries use
+a wiping allocator, including allocations discarded when buffers grow.
+CNG key and hash/HMAC object buffers are owned by the plugin and use the
+same protected QCA allocator as SecureArray, with unique aligned storage.
+Native handles are destroyed before these buffers are wiped/freed. Cipher
+keys and derived mode state are released at finalization or failure;
+completed HMACs retain no native keyed state until QCA calls setup again.
+Algorithm object/digest sizes are cached, and HKDF reuses its expansion
+buffer. On MSVC x86/x64 secure erasure uses the Windows store intrinsic
+instead of a byte loop. These changes add no payload copies or per-update
+allocations for key storage. Windows-owned Schannel internals and the
+caller's original keys are outside this storage contract.
+Provider errors latch the cipher into a failed state; failed operations
+do not publish partial output. PKCS#7 padding checks inspect all 16 bytes.
+
+TLS validates chains against the certificates passed to QCA; an empty
+trust collection does not inherit system trust. Applications that want
+Windows trust should pass QCA::systemStore(), which remains available
+without a CRL provider. Native SSL policy checks hostnames, and
+peerIdentityResult() must be accepted before exchanging
+application data, as with other QCA providers. Trust building is local:
+there are no synchronous AIA/root downloads. This provider does not parse
+CRLs; CRLs imported by another provider can be checked. Explicit revocation
+checks fail if the needed information is unavailable.
+Cipher-suite/SSF constraints are enforced before handshake success.
+As documented by QCA, startClient() also accepts an empty hostname for
+callers that apply their own protocol-specific name checks. In that
+mode the plugin still validates the certificate chain; the caller must
+check the intended peer before exchanging application data.
+
+TLS 1.3 post-handshake records (including session tickets) are processed
+without losing the record state. Stream TLS server mode, stream TLS client
+identities, renegotiation and TLS session import remain unsupported.
+
+DTLS negotiates version 1.2 only. It preserves datagram boundaries, fragments
+handshakes to the configured MTU (200..65535), retries lost flights with
+bounded exponential backoff and handles lost final handshake messages.
+Altered records, replayed packets and unencrypted forged alerts do not
+publish plaintext. DataChannel application packets must fit the MTU;
+the provider does not split one application datagram into multiple messages.
+
+DTLS-SRTP supports SRTP_AES128_CM_HMAC_SHA1_80,
+SRTP_AES128_CM_HMAC_SHA1_32, SRTP_AEAD_AES_128_GCM and
+SRTP_AEAD_AES_256_GCM. Keys and salts stay in SecureArray; the Windows
+export buffer is wiped before FreeContextBuffer. RTP/SRTP packet processing
+belongs to the media implementation (for example libSRTP), not this plugin.
+The caller must authenticate the peer certificate or fingerprint before
+using the material.
+
+RSA supports PKCS#1 v1.5, OAEP-SHA-1 and raw encryption/decryption; the
+legacy private-encrypt/public-decrypt operations support v1.5 and raw.
+Raw input must contain exactly one modulus-sized representative below N.
+SSL-specific v1.5 padding is unsupported. Signatures support PKCS#1 v1.5
+with MD5, SHA-1/256/384/512 or raw input, and PSS with SHA-1/256/384/512.
+PSS uses MGF1 with the same digest, trailer field 1 and an explicit salt
+length (default: digest length). Unsupported descriptors fail closed.
+Hashed signatures stream through CNG; raw signing buffers at most k-11
+bytes. RSA itself processes one block; bulk data belongs in symmetric
+encryption with separately protected keys.
+
+Generation supports 2048..8192 bits in 64-bit steps, exponent 65537.
+Component/DER imports accept 512..16384-bit two-prime RSA keys, subject to
+CNG validation; small imported keys are for legacy interoperability.
+Components and CRT consistency are checked before import. A public view
+owns a separate native public handle and never retains a private handle.
+RSA public keys can also be extracted from X.509 certificates.
+
+Public export uses SPKI; private export uses PKCS#8. Import additionally
+accepts PKCS#1. DER and PEM parsing is bounded (64 KiB DER / 128 KiB PEM),
+rejects trailing data and rejects restricted RSA-PSS and multi-prime keys.
+Encrypted PKCS#8 uses PBES2/PBKDF2 with AES-128/192/256-CBC or 3DES-CBC.
+Export uses HMAC-SHA-1 as specified by QCA's PBE enum, 1,300,000 iterations,
+a fresh 16-byte salt and a fresh IV. Import additionally supports SHA-256,
+SHA-384 and SHA-512 PRFs, with a 10,000,000-PRF-call work limit. Binary
+passphrases, including embedded NULs, are preserved. Select
+PBES2_AES256_SHA1 explicitly for AES: QCA's existing PBEDefault selects 3DES.
+Single DES, traditional encrypted PEM and PKCS#12 are unsupported.
+
+Private DER, components, plaintext and derived keys use SecureArray.
+Native private operations use unnamed CNG handles. The public QCA PEM API
+returns a caller-owned QString; callers must manage that plaintext copy's
+lifetime. DSA, DH, EC, Ed25519, CSR and CMS remain unsupported.
+
+Schannel identity storage
+-------------------------
+
+The original local RSA key is an unnamed, in-memory CNG key. Schannel has
+an OS limitation with such keys: its credential signer needs a named key.
+For each credential the plugin imports a separate copy into the Windows
+user CNG key store under a unique name, then deletes that copy immediately
+after AcquireCredentialsHandle has opened its own reference. Temporary
+PKCS#8 bytes use SecureArray. Deletion failure aborts credential setup;
+RAII also cleans up failures during setup. Certificates stay in memory and
+are never installed in Windows trusted stores.
+
+This is not a strictly memory-only identity backend: Windows may briefly
+write the temporary key to its protected key storage, and a process crash
+between import and deletion can leave an orphan. This requirement affects
+DTLS identities, not symmetric keys or ordinary password-based STARTTLS.
+
+Building
+--------
+
+Enable the plugin like any other:
+
+  cmake -DBUILD_WITH_QT6=ON -DBUILD_PLUGINS=wincrypto \
+        -DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE ...
+
+or -DWITH_wincrypto_PLUGIN=yes. With BUILD_PLUGINS=auto or all it is
+built on Windows and skipped elsewhere.
+
+Deploy the shared plugin in a discoverable crypto directory, or point
+QCA_PLUGIN_PATH at that directory's parent. Static consumers must import
+qca_wincrypto. Qt Network selects its own TLS backend independently of QCA;
+removing a QCA provider does not select the backend used by Qt HTTPS.
+See ../../docs/wincrypto-audit.md for validation notes and limitations.
+
+Regular algorithm tests exercise this provider. WinCrypto additionally
+tests streaming, copies, authentication failures, bad padding, KDF limits,
+concurrent hashes/MACs and large messages. WinCryptoTLS tests native TLS
+1.2/1.3 interoperability, fragmented records, explicit trust, expiration,
+hostname mismatch, channel binding, tampering and shutdown. They include
+caller-side hostname checking with trusted, untrusted and
+expired certificates using QCA's empty-host startup mode. Its local
+test server creates a unique temporary Windows user key container and
+deletes it on teardown; it never installs trusted certificates.
+WinCryptoDTLS covers four SRTP profiles, data-only DTLS, loss/reordering,
+small MTUs, forged alerts, bad MACs, replay, a 4 MiB datagram burst, shutdown,
+trust/cipher failures and immediate cleanup of temporary CNG keys.
+WinCryptoRSA covers key components, all supported paddings/signatures,
+16 MiB streaming signatures and clones, plaintext/password DER/PEM,
+binary passphrases, malformed input and hostile KDF metadata.
+
+Optional -DWINCRYPTO_TEST_OPENSSL_INTEROP=ON builds an independent OpenSSL
+test peer and checks both DTLS roles, datagram traffic and exact RFC 5764
+exported keys/salts for all four profiles. It also cross-checks RSA
+encryption/signatures and PKCS#8 in both directions, including all four
+supported PBKDF2 PRFs. OpenSSL is linked only into this test executable.
+The plugin itself still has no OpenSSL dependency.
+
+CI also builds/tests shared and static QCA with wincrypto as the sole
+provider and CMake OpenSSL discovery explicitly disabled.

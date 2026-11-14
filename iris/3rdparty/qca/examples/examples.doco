@@ -1,0 +1,179 @@
+/** \example aes-cmac.cpp
+
+This example shows how to implement a client side "provider".
+
+There are three important parts to this:
+ - the class derived from QCA::Provider (in this example called
+ "ClientSideProvider"), that generates the context class
+ - one or more context classes (in this example only one, implementing
+ AES-CMAC, called "AESCMACContext")
+ - a call to QCA::insertProvider, to add the QCA::Provider subclass
+ into QCA
+
+*/
+
+
+/** \example base64test.cpp
+
+The code below shows some simple operations on a QCA::Base64 object, converting
+between QCA::SecureArray and QString.
+
+*/
+
+
+/** \example certtest.cpp
+
+This example shows how QCA::Certificate and QCA::CertificateCollection
+can be used. Note that the argument, if you provide it, must be a
+PEM encoded file collection.
+
+*/
+
+
+/** \example ciphertest.cpp
+
+The code below shows the normal way to use the QCA::Cipher class.
+
+*/
+
+
+/* \example cmssigner/main.cpp
+
+The code below shows how to use Cryptographic Message Syntax (CMS)
+in a GUI application.
+
+\include certitem.h
+\include certitem.cpp
+\include certviewdlg.h
+\include certviewdlg.cpp
+\include keyselectdlg.h
+\include keyselectdlg.cpp
+\include prompter.h
+\include prompter.cpp
+
+*/
+
+
+/** \example eventhandlerdemo.cpp
+
+The code below shows to implement a client side handler for
+password / passphrase / PIN and token requests from QCA and any
+associated providers.
+
+*/
+
+
+/** \example hashtest.cpp
+
+The code below shows how to use the QCA::Hash class
+
+*/
+
+
+/** \example hextest.cpp
+
+The code below shows some simple operations on a QCA::Hex object, converting
+between QCA::SecureArray and QString.
+
+*/
+
+
+/** \example keyloader.cpp
+
+The code below shows how to load a private key from a PEM format file,
+including handling any requirement for a passphrase. This is done using
+the QCA::KeyLoader class.
+
+*/
+
+
+/** \example mactest.cpp
+
+The code below shows how to use the QCA::MessageAuthenticationCode class
+
+*/
+
+
+/** \example md5crypt.cpp
+
+The code below shows how to calculate an md5crypt based password. This
+code is compatible with the glibc code.
+
+*/
+
+
+/** \example providertest.cpp
+
+The code below shows some simple operations on a QCA::Provider object, including
+use of iterators and some member functions.
+
+*/
+
+
+/** \example publickeyexample.cpp
+
+The code below shows how to do public key encryption, decryption,
+signing and verification.
+*/
+
+
+/** \example randomtest.cpp
+
+The code below shows the normal way to use the QCA::Random class.
+
+*/
+
+
+/** \example rsatest.cpp
+
+The code below shows some of the capabilities for how to use
+RSA. This example also shows how to export and import a key
+to a file, using PEM encoding.
+
+*/
+
+
+/** \example saslserver.cpp
+
+The code below shows how to create a SASL server.
+
+*/
+
+
+/** \example saslclient.cpp
+
+The code below shows how to create a SASL client.
+
+*/
+
+
+/** \example sslservtest.cpp
+
+The code below shows how to create an SSL server.
+
+Note that this server returns a self-signed certificate
+for "example.com", and that the certificate is expired.
+
+The design used here only allows for one connection
+at a time. If you want to allow for more, you should
+probably create a "TlsConnection" object that agregates
+a QCA::TLS object and a QTcpSocket (plus a little bit of
+state information) that handles a single connection. Then
+just create a TlsConnection for each server connection.
+
+*/
+
+/** \example ssltest.cpp
+
+The code below shows how to create an SSL client
+
+*/
+
+/** \example tlssocket.cpp
+
+The code below shows how to create a socket that can operate
+over an Transport Layer Security (TLS, also known as SSL) connection.
+
+\include tlssocket/tlssocket.h
+\include tlssocket/main.cpp
+*/

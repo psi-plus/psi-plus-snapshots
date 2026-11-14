@@ -1,0 +1,31 @@
+QCA_INCDIR = @CRYPTO_PRF_RELATIVE_PATH@@QCA_INCLUDE_INSTALL_DIR@
+QCA_LIBDIR = @CRYPTO_PRF_RELATIVE_PATH@@QCA_LIBRARY_INSTALL_DIR@
+
+CONFIG *= qt
+
+IS_MINMAX_FUNCTION = @MINMAX_ARE_FUNCTIONS@
+isEmpty(IS_MINMAX_FUNCTION) {
+    DEFINES *= NOMINMAX
+}
+
+LINKAGE =
+
+exists($$QCA_LIBDIR/@QCA_LIB_NAME@.framework) {
+    QMAKE_CXXFLAGS += -F$$QCA_LIBDIR
+    LIBS *= -F$$QCA_LIBDIR
+    INCLUDEPATH += $$QCA_LIBDIR/@QCA_LIB_NAME@.framework/Headers
+    LINKAGE = -framework @QCA_LIB_NAME@
+}
+
+# else, link normally
+isEmpty(LINKAGE) {
+    INCLUDEPATH += $$QCA_INCDIR/QtCrypto
+    LIBS += -L$$QCA_LIBDIR
+    LINKAGE = -l@QCA_LIB_NAME@
+    CONFIG(debug, debug|release) {
+        windows:LINKAGE = -l@QCA_LIB_NAME@d
+        mac:LINKAGE = -l@QCA_LIB_NAME@_debug
+    }
+}
+
+LIBS += $$LINKAGE

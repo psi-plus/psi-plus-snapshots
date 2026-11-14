@@ -1,0 +1,11 @@
+add_executable(wingssunit gssapi.cpp)
+target_include_directories(wingssunit PRIVATE ../../plugins/qca-wingss)
+target_compile_definitions(wingssunit PRIVATE NOMINMAX UNICODE _UNICODE)
+target_link_libraries(wingssunit Qt${QT_MAJOR_VERSION}::Core Qt${QT_MAJOR_VERSION}::Test)
+add_qca_test(wingssunit "WinGss.Sessions")
+
+add_executable(wingssproviderunit provider.cpp)
+target_link_qca_test_libraries(wingssproviderunit)
+add_dependencies(wingssproviderunit qca-wingss)
+add_qca_test(wingssproviderunit "WinGss.Provider")
+set_tests_properties("WinGss.Sessions" "WinGss.Provider" PROPERTIES TIMEOUT 30)

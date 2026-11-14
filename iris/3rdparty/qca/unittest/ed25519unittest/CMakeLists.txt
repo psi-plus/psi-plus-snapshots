@@ -1,0 +1,3 @@
+add_executable(ed25519unittest ed25519unittest.cpp)
+target_link_qca_test_libraries(ed25519unittest)
+add_qca_test(ed25519unittest "Ed25519")

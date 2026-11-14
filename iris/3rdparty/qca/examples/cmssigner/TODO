@@ -1,0 +1,18 @@
+app icon (may need different sizes of this?)  (a pen?)
+store icons
+  system
+  user
+  application
+  smart card
+  pgp keyring
+unknown store/entry icon (can use the same icon for both i think)
+animation rather than text for keystore busy?
+animation for signing in progress (maybe just use an endless QProgressBar?)
+integrated logger window?  also allow setting the log level
+prompter should not call entrylist unless necessary.  right now it starts
+  async mode on all stores, even if there is no prompting or anything going
+  on.  qcatool has this problem also
+report all 3 kinds of diagnostic text somewhere
+  plugin: plugin dialog invoked from file menu ?  also show provider versions
+  keystore: invoked from keyselectdlg ?
+  secmessage: "details" button on error dialog?

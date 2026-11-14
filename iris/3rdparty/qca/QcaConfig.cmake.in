@@ -1,0 +1,21 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(Qt@QT_MAJOR_VERSION@Core)
+
+if(NOT TARGET Qca@QCA_LIB_MAJOR_VERSION@::Qca)
+  include("${CMAKE_CURRENT_LIST_DIR}/@QCA_CONFIG_NAME_BASE@Targets.cmake")
+endif()
+
+set(Qca@QCA_LIB_MAJOR_VERSION@_LIBRARY Qca@QCA_LIB_MAJOR_VERSION@::Qca)
+set(Qca@QCA_LIB_MAJOR_VERSION@_LIBRARIES Qca@QCA_LIB_MAJOR_VERSION@::Qca)
+get_target_property(Qca@QCA_LIB_MAJOR_VERSION@_INCLUDE_DIR
+  Qca@QCA_LIB_MAJOR_VERSION@::Qca INTERFACE_INCLUDE_DIRECTORIES)
+set(Qca@QCA_LIB_MAJOR_VERSION@_INCLUDE_DIRS "${Qca@QCA_LIB_MAJOR_VERSION@_INCLUDE_DIR}")
+
+# Keep the traditional variables for consumers that use them rather than the
+# imported target. The target itself is intentionally ABI-qualified.
+set(Qca_LIBRARY Qca@QCA_LIB_MAJOR_VERSION@::Qca)
+set(Qca_LIBRARIES Qca@QCA_LIB_MAJOR_VERSION@::Qca)
+set(Qca_INCLUDE_DIR "${Qca@QCA_LIB_MAJOR_VERSION@_INCLUDE_DIR}")
+set(Qca_INCLUDE_DIRS "${Qca@QCA_LIB_MAJOR_VERSION@_INCLUDE_DIRS}")

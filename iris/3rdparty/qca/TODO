@@ -1,0 +1,104 @@
+* 2.2.0
+- New plugin qca-gpgme to replace current qca-gnupg. qca-gnupg requires
+  to have gpg binary which can be any 1.4.x or 2.x. Them behaviour is
+  different. gpg2 requires gpg-agent to ask user for passphrase. No
+  correct way to check that key requires passphrase.
+
+- Add an interface for gnupg to handle keys (create and remove, maybe
+  something else).
+
+- Add ECDSA support to qca-ossl plugin
+
+-- Obsoletes
+* 2.0.4
+  handle mac universal builds for arches besides x86 and ppc (e.g. x86_64)
+  use rpath?
+  cms example: User.pem expired.  probably other certs need regen also?
+  fix publickeyexample.  it encrypts with cms, decrypts with raw rsa??
+  qcatool: instead of printing full usage at every wrong turn, we might try
+    to print something closer to the context
+  publickey: use_asker_fallback should use ErrorPassphrase
+  cmssigner: convert path separators in field when loading a pkcs11 module
+  cert: better makeFriendlyName diffing for key usage (consider OIDs) ?
+  cert unit tests need to test wildcards!!
+  consider a more readable implementation of qca_securelayer logic using the
+    object-sessions concept (write the blog first :))
+  vs2005: big_io.obj : warning LNK4221: no public symbols found; archive
+    member will be inaccessible
+
+* 2.1.0
+  CertificateAuthority constructor provider argument should have default value
+  CertificateAuthority::createCertificate declared but not implemented!
+  CertificateCollection: ability to remove certs/crls?
+  pull kwallet's SecureBuffer?
+
+* possibilities for the future:
+  abort if feature requested but not found, rather than crashing
+  examples: bigint, pgp, tls with smartcards (reuse ssltest?), more?
+  unittests: pgp enc/dec, cms, sasl, tls, filewatch/dirwatch
+  complete pkits unittests
+  don't expose windows.h in qpipe.h, find another way to get HANDLE
+  cert: ability to get a list of all validation errors, rather than just one
+  the securelayer system doesn't respond to the app if processed data yields
+    no events (an example of this would be a partially-received encrypted
+    payload).  since securelayer is async, an app could end up waiting for
+    a response that is never going to come.  the current workaround is to wait
+    some event cycles and then give up (see the saslclient example).  the fix
+    is probably to make the securelayer system always respond to the app once
+    data has been processed, whether or not the processing yields anything
+    interesting yet.
+  find a better way for a provider to automatically promote itself?  (see
+    qca-wingss)
+  can we ever get SASL::NoAuthzid?
+  make it possible to change GNUPGHOME and have qca-gnupg respect the change?
+    see pgpunittest.
+  why is Logger a QObject?
+  it seems strange that Logger friends QCA::Global...
+  operator==,!= for PGPKey?
+  gss/kerberos interface?
+  spnego?
+  make sure it is possible to add new public key types (e.g. ECC).  right now
+    it looks like qca_publickey is hard-coded sometimes (such as canVerify()
+    returning true only for RSA and DSA public keys, no way to override this
+    in a plugin...)
+  if you store a typical self-signed cert into the system store as a way to
+    trust it, does that make you vulnerable to the cert signing other certs?
+  make distinction between invalid ca and ca not found
+  make distinction between depth 0 self-signed and self-signed in chain
+  use Q_PROPERTY on some things (e.g. TLS::compressionEnabled) ?
+  signRequest should allow specifying the serial number
+  qca-ossl: give credit to tim and "openssl" itself, not just eric?
+  tls: should there be an explicit property for requesting a certificate in
+    server mode?  right now qca-ossl simply always asks for a cert
+  publickey: ability to compare keys without IO support
+  provider: separate public and private keys into two classes to enable
+    delegation easier.  the public part should not be implemented by most
+    providers.
+  provider: make it possible to support RSA and DSA keys without implementing
+    a separate class for each.
+  qcatool: streaming securemessage operations
+  access to list of known cached certs, similar to how cmssigner works?
+  securemessage: ability to know which key has performed a decrypt?
+  emsa3Encode: implement in provider instead of qca?
+  OCSP
+  securelayer: ability to specify how much to read, rather than just read all
+  tls ocsp stapling
+  tls: pgp, psk auth ?
+  internally managed intermediate object storage
+  securemessage: algorithm selection for cms/pgp (and use SecurityLevel?)
+  tls: renegotiation
+  Key wrapping - RFC3217 and RFC3394
+  quoted-printable TextFilter
+  keygen on smart cards
+  keystore: symmetric keys, arbitrary app data
+  cert: any other fields we don't support but might be used out there
+  cert: support for arbitrary extensions?
+  cms: fine-grained control over smime attribs
+  convertToPublic should return a publickey rather than change itself
+  providers for:
+    Mozilla NSS
+    Windows CryptoAPI
+    Linux kernel crypto support, if the userspace API ever gets sorted out
+    Intel Performance Primatives library
+    Botan: partly implemented
+    EGD / EGADS: implement for Random support
