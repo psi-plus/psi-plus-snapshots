@@ -60,6 +60,8 @@ ITEVideoFrameWidget::ITEVideoFrameWidget(QWidget *parent) : QWidget(parent), mai
               QMetaObject::invokeMethod(
                   target,
                   [box, target] {
+                      bool sizeChanged = false;
+                      QSize newSize;
                       {
                           QMutexLocker lock(&box->mutex);
                           if (box->target != target)
@@ -69,7 +71,15 @@ ITEVideoFrameWidget::ITEVideoFrameWidget(QWidget *parent) : QWidget(parent), mai
                           target->sourceRect  = box->sourceRect;
                           target->bottomUp    = box->bottomUp;
                           box->queued         = false;
+                          newSize = target->displaySize.isValid()
+                              ? target->displaySize : target->frame.size();
+                          if (newSize.isValid() && target->currentVideoSize != newSize) {
+                              target->currentVideoSize = newSize;
+                              sizeChanged = true;
+                          }
                       }
+                      if (sizeChanged)
+                          emit target->videoSizeChanged(newSize);
                       target->update(); // Only this opaque widget, never the text viewport.
                   },
                   Qt::QueuedConnection);

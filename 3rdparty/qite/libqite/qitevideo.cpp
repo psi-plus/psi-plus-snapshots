@@ -13,7 +13,9 @@
 #include <QLabel>
 #include <QMediaPlayer>
 #include <QMediaMetaData>
+#include <QMouseEvent>
 #include <QImage>
+#include <QIconEngine>
 #include <QPainter>
 #include <QPixmap>
 #include <QScrollBar>
@@ -25,6 +27,7 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <functional>
+#include <utility>
 
 namespace {
 enum Property { Source = InteractiveTextFormat::UserProperty, Opener, Size, Downloadable };
@@ -38,6 +41,100 @@ QString mediaClock(qint64 millis)
     return QStringLiteral("%1:%2").arg(seconds / 60).arg(seconds % 60, 2, 10, QLatin1Char('0'));
 }
 
+
+// Qite always paints the transport controls on black. Preserve each style
+// icon's native resolution and mode/state while using a legible foreground.
+// Recolor at the requested device scale, rather than capturing a 24px bitmap.
+class VideoControlIconEngine final : public QIconEngine {
+public:
+    explicit VideoControlIconEngine(QIcon source) : source_(std::move(source)) {}
+
+    QIconEngine *clone() const override { return new VideoControlIconEngine(source_); }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    bool isNull() override { return source_.isNull(); }
+#endif
+
+    void paint(QPainter *painter, const QRect &rect, QIcon::Mode mode, QIcon::State state) override
+    {
+        if (!painter || rect.isEmpty())
+            return;
+        const qreal dpr = painter->device() ? painter->device()->devicePixelRatioF() : 1.0;
+        const QPixmap rendered = renderPixmap(rect.size(), mode, state, dpr);
+        if (!rendered.isNull())
+            painter->drawPixmap(rect, rendered);
+    }
+
+    QPixmap pixmap(const QSize &size, QIcon::Mode mode, QIcon::State state) override
+    {
+        return renderPixmap(size, mode, state, 1.0);
+    }
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QPixmap scaledPixmap(const QSize &size, QIcon::Mode mode, QIcon::State state, qreal dpr) override
+    {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0) && QT_VERSION < QT_VERSION_CHECK(6, 8, 0)
+        // Before Qt 6.8, Qt incorrectly supplied physical pixels as size.
+        const QSize logical(qMax(1, qRound(size.width() / qMax<qreal>(1.0, dpr))),
+                            qMax(1, qRound(size.height() / qMax<qreal>(1.0, dpr))));
+        return renderPixmap(logical, mode, state, dpr);
+#else
+        return renderPixmap(size, mode, state, dpr);
+#endif
+    }
+#else
+    // In Qt 5 isNull() and scaledPixmap() are nonvirtual wrappers around
+    // virtual_hook(); overriding those methods has no effect (and does not
+    // compile when marked override).
+    void virtual_hook(int id, void *data) override
+    {
+        if (id == QIconEngine::IsNullHook) {
+            if (data)
+                *static_cast<bool *>(data) = source_.isNull();
+            return;
+        }
+        if (id == QIconEngine::ScaledPixmapHook) {
+            if (data) {
+                auto *args = static_cast<QIconEngine::ScaledPixmapArgument *>(data);
+                args->pixmap = renderPixmap(args->size, args->mode, args->state, args->scale);
+            }
+            return;
+        }
+        QIconEngine::virtual_hook(id, data);
+    }
+#endif
+
+private:
+    QPixmap renderPixmap(const QSize &size, QIcon::Mode mode, QIcon::State state, qreal dpr) const
+    {
+        if (size.isEmpty())
+            return {};
+        dpr = qMax<qreal>(1.0, dpr);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        QPixmap image = source_.pixmap(size, dpr, mode, state);
+#else
+        // Qt 5 has no QIcon::pixmap(QSize, qreal, Mode, State) overload.
+        // Request the physical pixels, retaining the logical icon dimensions.
+        const QSize pixels(qMax(1, qRound(size.width() * dpr)),
+                           qMax(1, qRound(size.height() * dpr)));
+        QPixmap image = source_.pixmap(pixels, mode, state);
+        if (!image.isNull())
+            image.setDevicePixelRatio(dpr);
+#endif
+        if (image.isNull())
+            return image;
+        QPainter tint(&image);
+        tint.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        tint.fillRect(QRect(QPoint(0, 0), image.size()), QColor(235, 240, 248));
+        return image;
+    }
+
+    QIcon source_;
+};
+
+QIcon videoControlIcon(const QIcon &original)
+{
+    return original.isNull() ? original : QIcon(new VideoControlIconEngine(original));
+}
 
 class VideoControls : public QWidget {
 public:
@@ -79,6 +176,8 @@ public:
         update();
     }
 
+    bool hasCover() const { return !cover_.isNull(); }
+
 protected:
     void paintEvent(QPaintEvent *) override
     {
@@ -115,12 +214,12 @@ private:
 class VideoWindow : public QWidget {
 public:
     VideoWindow(QWidget *owner, QWidget *frame, QWidget *controls, std::function<void()> close,
-                std::function<void()> exitFullscreen) :
+                std::function<void()> exitFullscreen, bool audioPresentation) :
         QWidget(nullptr, Qt::Window), owner(owner), frame(frame), controls(controls), closeAction(std::move(close)),
         exitFullscreenAction(std::move(exitFullscreen))
     {
         setObjectName(QStringLiteral("qite-video-window"));
-        setWindowTitle(ITEVideoController::tr("Video"));
+        setWindowTitle(audioPresentation ? ITEVideoController::tr("Audio") : ITEVideoController::tr("Video"));
         setAttribute(Qt::WA_OpaquePaintEvent);
         setMouseTracking(true);
         owner->setParent(this);
@@ -282,9 +381,10 @@ private:
 class VideoPlayer : public QWidget {
 public:
     VideoPlayer(const QTextFormat &format, QWidget *parent, ITEVideoController *controller,
-                std::function<void()> docked, bool audioPresentation = false) :
+                std::function<void()> docked, bool audioPresentation = false, bool compactInlineAudio = false) :
         QWidget(parent), source(format.property(Source).toUrl()), originalSource(source),
         opener(format.property(Opener).value<QPointer<ITEMediaOpener>>()), requiresOpener(format.hasProperty(Opener)),
+        compactInlineAudio_(audioPresentation && compactInlineAudio),
         inlineViewport(parent), downloadController(controller), onDocked(std::move(docked))
     {
         setObjectName(QStringLiteral("qite-video-player"));
@@ -301,12 +401,16 @@ public:
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(0);
         video = new ITEVideoFrameWidget(this);
+        video->setCursor(Qt::PointingHandCursor);
         video->installEventFilter(this);
         layout->addWidget(video, 1);
         if (audioPresentation) {
             artwork = new AudioArtworkWidget(this);
+            artwork->setCursor(Qt::PointingHandCursor);
+            artwork->installEventFilter(this);
             layout->insertWidget(0, artwork, 1);
             video->hide();
+            updateAudioArtworkVisibility();
         }
         controls = new VideoControls(this);
         controls->setObjectName(QStringLiteral("qite-video-controls"));
@@ -317,7 +421,7 @@ public:
         button->setAutoRaise(true);
         button->setFocusPolicy(Qt::TabFocus);
         button->setObjectName(QStringLiteral("qite-video-play"));
-        button->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+        button->setIcon(videoControlIcon(style()->standardIcon(QStyle::SP_MediaPlay)));
         button->setToolTip(ITEVideoController::tr("Play"));
         button->setAccessibleName(button->toolTip());
         row->addWidget(button);
@@ -373,8 +477,8 @@ public:
         windowButton->setAutoRaise(true);
         windowButton->setFocusPolicy(Qt::TabFocus);
         windowButton->setObjectName(QStringLiteral("qite-video-window-button"));
-        windowButton->setIcon(
-            QIcon::fromTheme(QStringLiteral("window-new"), style()->standardIcon(QStyle::SP_TitleBarNormalButton)));
+        windowButton->setIcon(videoControlIcon(
+            QIcon::fromTheme(QStringLiteral("window-new"), style()->standardIcon(QStyle::SP_TitleBarNormalButton))));
         updateWindowButton();
         row->addWidget(windowButton);
         fullscreenButton = new QToolButton(controls);
@@ -464,10 +568,10 @@ public:
     void setHostFullscreen(std::function<void()> action)
     {
         externalFullscreen = std::move(action);
-        windowButton->hide();
-        // A host such as Psi's MediaViewer already has a fullscreen action
-        // in its own toolbar; keep the bottom button only for standalone
-        // players that control their own window.
+        // Only a host-owned viewer (e.g. Psi's MediaViewer) replaces these
+        // controls. A standalone player created without a host handler still
+        // needs its own pop-out and fullscreen buttons.
+        windowButton->setVisible(!externalFullscreen);
         fullscreenButton->setVisible(!externalFullscreen);
     }
     void startPlayback() { toggle(); }
@@ -480,6 +584,7 @@ public:
         inlineViewport               = nullptr;
         onDocked                     = {};
         returnInlineOnFullscreenExit = false;
+        updateAudioArtworkVisibility();
         updateWindowButton();
     }
 
@@ -497,14 +602,39 @@ protected:
     }
     bool eventFilter(QObject *object, QEvent *event) override
     {
-        if (object == video && event->type() == QEvent::MouseButtonDblClick) {
-            fullscreenButton->click();
-            return true;
+        // Artwork is the visible audio frame and has the same playback hit
+        // target as video, including when a fallback note is displayed.
+        if (object == video || object == artwork) {
+            if (event->type() == QEvent::MouseButtonDblClick) {
+                fullscreenButton->click();
+                return true;
+            }
+            if (event->type() == QEvent::MouseButtonRelease
+                && static_cast<QMouseEvent *>(event)->button() == Qt::LeftButton) {
+                toggle();
+                return true;
+            }
         }
         return false;
     }
 
 private:
+    void updateAudioArtworkVisibility()
+    {
+        if (!artwork)
+            return;
+        const bool visible = !compactInlineAudio_ || artwork->hasCover()
+            || hostedExternally_ || floating || !inlineViewport;
+        if (artwork->isHidden() == visible)
+            artwork->setVisible(visible);
+        // Only a state transition notifies the host, after the new layout
+        // visibility is applied. No decoder restart or deferred resize.
+        if (property("qite-audio-artwork-visible").toBool() != visible) {
+            setProperty("qite-audio-artwork-visible", visible);
+            updateGeometry();
+        }
+    }
+
     bool transferToHost(bool fullscreen)
     {
         if (!downloadController || hostedExternally_)
@@ -525,6 +655,7 @@ private:
         }
         windowButton->hide();
         fullscreenButton->hide();
+        updateAudioArtworkVisibility();
         return true;
     }
 
@@ -535,6 +666,7 @@ private:
         movingToWindow = true;
         hostedExternally_ = false;
         setParent(inlineViewport);
+        updateAudioArtworkVisibility();
         windowButton->show();
         fullscreenButton->show();
         updateFullscreenButton();
@@ -550,7 +682,7 @@ private:
     {
         const bool fullscreen
             = externalFullscreen ? window()->isFullScreen() : (floating && floating->isFullscreenMode());
-        fullscreenButton->setIcon(ITEVideoController::fullscreenIcon(palette(), fullscreen));
+        fullscreenButton->setIcon(videoControlIcon(ITEVideoController::fullscreenIcon(palette(), fullscreen)));
         fullscreenButton->setToolTip(fullscreen ? ITEVideoController::tr("Exit full screen")
                                                 : ITEVideoController::tr("Full screen"));
         fullscreenButton->setAccessibleName(fullscreenButton->toolTip());
@@ -561,7 +693,8 @@ private:
         const bool fullscreen = floating && floating->isFullscreenMode();
         windowButton->setToolTip(fullscreen                       ? ITEVideoController::tr("Open in separate window")
                                      : floating && inlineViewport ? ITEVideoController::tr("Return to chat")
-                                     : floating                   ? ITEVideoController::tr("Video window")
+                                     : floating                   ? (artwork ? ITEVideoController::tr("Audio window")
+                                                                            : ITEVideoController::tr("Video window"))
                                                                   : ITEVideoController::tr("Open in separate window"));
         // With no chat anchor a normal detached window is already the only
         // place the player can live; there is nowhere for this button to go.
@@ -575,9 +708,15 @@ private:
             movingToWindow = true;
             // The window becomes the QObject parent of the complete player.
             // Reparenting does not recreate QMediaPlayer or reopen the stream.
+            // For audio, artwork is the actual visual content. Moving the
+            // hidden video frame into fullscreen would produce a black screen
+            // instead of the cover (or fallback note).
+            QWidget *visual = artwork ? static_cast<QWidget *>(artwork) : static_cast<QWidget *>(video);
             auto window
-                = new VideoWindow(this, video, controls, [this] { closeWindow(); }, [this] { leaveFullscreen(); });
+                = new VideoWindow(this, visual, controls, [this] { closeWindow(); },
+                                  [this] { leaveFullscreen(); }, artwork != nullptr);
             floating = window;
+            updateAudioArtworkVisibility();
             window->resize(qMax(480, width()), qMax(320, height()));
             returnInlineOnFullscreenExit = fullscreenMode;
             if (fullscreenMode)
@@ -624,6 +763,7 @@ private:
         setParent(inlineViewport);
         floating                     = nullptr;
         returnInlineOnFullscreenExit = false;
+        updateAudioArtworkVisibility();
         show();
         window->hide();
         window->deleteLater();
@@ -652,7 +792,7 @@ private:
 
     void updateState(bool playing)
     {
-        button->setIcon(style()->standardIcon(playing ? QStyle::SP_MediaPause : QStyle::SP_MediaPlay));
+        button->setIcon(videoControlIcon(style()->standardIcon(playing ? QStyle::SP_MediaPause : QStyle::SP_MediaPlay)));
         button->setToolTip(playing ? ITEVideoController::tr("Pause") : ITEVideoController::tr("Play"));
         button->setAccessibleName(button->toolTip());
     }
@@ -677,6 +817,23 @@ private:
     {
         if (requiresOpener && !opener)
             return;
+        // An already-playing stream must pause without entering error recovery.
+        // A video-decoder error may coexist with working audio playback.
+        if (player) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            const auto playbackState = player->playbackState();
+#else
+            const auto playbackState = player->state();
+#endif
+            if (playbackState == QMediaPlayer::PlayingState) {
+                player->pause();
+                return;
+            }
+            if (playbackState == QMediaPlayer::PausedState) {
+                player->play();
+                return;
+            }
+        }
         const bool retry = player
             && (inputFailed || player->error() != QMediaPlayer::NoError
                 || (mediaState && !mediaState->sourceError().isEmpty()));
@@ -684,8 +841,10 @@ private:
             delete player;
             player = nullptr;
             stream = nullptr;
-            if (artwork)
+            if (artwork) {
                 artwork->setCover({});
+                updateAudioArtworkVisibility();
+            }
             source = originalSource;
             if (opener && retry)
                 opener->retry(originalSource);
@@ -758,15 +917,7 @@ private:
             }
             attachInput(nullptr, source);
         }
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-        const bool playing = player->playbackState() == QMediaPlayer::PlayingState;
-#else
-        const bool playing = player->state() == QMediaPlayer::PlayingState;
-#endif
-        if (playing)
-            player->pause();
-        else
-            player->play();
+        player->play();
     }
 
     void updateTime()
@@ -781,12 +932,25 @@ private:
     {
         if (!artwork || !player)
             return;
+        const auto asImage = [](const QVariant &value) {
+            QImage image = value.value<QImage>();
+            if (image.isNull() && value.canConvert<QPixmap>())
+                image = value.value<QPixmap>().toImage();
+            return image;
+        };
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-        const QImage cover = player->metaData().value(QMediaMetaData::CoverArtImage).value<QImage>();
+        const auto meta = player->metaData();
+        QImage cover = asImage(meta.value(QMediaMetaData::CoverArtImage));
+#if QT_VERSION < QT_VERSION_CHECK(6, 12, 0)
+        // Qt 6.12 deprecates ThumbnailImage and no longer populates it.
+        if (cover.isNull())
+            cover = asImage(meta.value(QMediaMetaData::ThumbnailImage));
+#endif
 #else
-        const QImage cover = qvariant_cast<QImage>(player->metaData(QMediaMetaData::CoverArtImage));
+        const QImage cover = asImage(player->metaData(QMediaMetaData::CoverArtImage));
 #endif
         artwork->setCover(cover);
+        updateAudioArtworkVisibility();
     }
 
     void showError(const QString &message)
@@ -804,6 +968,7 @@ private:
     QUrl                         originalSource;
     QPointer<ITEMediaOpener>     opener;
     const bool                   requiresOpener;
+    const bool                   compactInlineAudio_;
     QPointer<QIODevice>          stream;
     QMediaPlayer                *player = nullptr;
     ITEVideoFrameWidget         *video;
@@ -878,13 +1043,13 @@ QIcon ITEVideoController::fullscreenIcon(const QPalette &palette, bool inward)
 
 QWidget *ITEVideoController::createPlayer(const QUrl &url, ITEMediaOpener *opener, QWidget *parent,
                                           std::function<void()> fullscreen, qint64 position,
-                                          bool audioPresentation)
+                                          bool audioPresentation, bool compactInlineAudio)
 {
     QTextCharFormat format;
     format.setProperty(Source, url);
     if (opener)
         format.setProperty(Opener, QVariant::fromValue(QPointer<ITEMediaOpener>(opener)));
-    auto widget = new VideoPlayer(format, parent, nullptr, {}, audioPresentation);
+    auto widget = new VideoPlayer(format, parent, nullptr, {}, audioPresentation, compactInlineAudio);
     widget->setHostFullscreen(std::move(fullscreen));
     widget->setInitialPosition(position);
     QTimer::singleShot(0, widget, [widget] { widget->startPlayback(); });

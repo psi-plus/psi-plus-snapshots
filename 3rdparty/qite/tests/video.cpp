@@ -26,6 +26,9 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QVideoFrame>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QVideoFrameFormat>
+#endif
 #include <limits>
 #include <thread>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -217,6 +220,95 @@ private slots:
         QVERIFY(opener.receiver.isNull());
     }
 
+    void standalonePlayerSupportsFrameClicksAndReadableTransportIcons()
+    {
+        StateOpener opener;
+        QWidget host;
+        auto* widget = ITEVideoController::createPlayer(
+            QUrl(QStringLiteral("test:movie")), &opener, &host);
+        host.resize(640, 400);
+        host.show();
+        widget->show();
+
+        auto* video = widget->findChild<ITEVideoFrameWidget*>();
+        auto* play = widget->findChild<QToolButton*>(
+            QStringLiteral("qite-video-play"));
+        auto* popout = widget->findChild<QToolButton*>(
+            QStringLiteral("qite-video-window-button"));
+        QVERIFY(video && play && popout);
+        QVERIFY(!popout->isHidden());
+
+        // The video frame itself toggles the same playback path as Play.
+        // No working media backend is needed to test event dispatch.
+        QTest::mouseClick(video, Qt::LeftButton);
+        QTRY_VERIFY(widget->findChild<QMediaPlayer*>());
+        // On hosts without a decoder for this dummy URL, a second click
+        // retries the source instead of pausing. Verify event dispatch without
+        // asserting backend-specific playback state.
+        QTest::mouseClick(video, Qt::LeftButton);
+        QVERIFY(widget->findChild<QToolButton*>(
+            QStringLiteral("qite-video-play")));
+
+        // Icons are always legible on the black strip, irrespective of the
+        // system icon theme. Rendering at 2x must use the physical device
+        // resolution, and Disabled must retain the source icon's alpha mask.
+        const auto renderIcon = [play](qreal dpr, QIcon::Mode mode) {
+            const QSize logical(24, 24);
+            QPixmap canvas(qRound(logical.width() * dpr), qRound(logical.height() * dpr));
+            canvas.setDevicePixelRatio(dpr);
+            canvas.fill(Qt::transparent);
+            QPainter painter(&canvas);
+            play->icon().paint(&painter, QRect(QPoint(0, 0), logical), Qt::AlignCenter, mode);
+            return canvas.toImage();
+        };
+        const auto hasLightPixel = [](const QImage &image) {
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    const QColor pixel = image.pixelColor(x, y);
+                    if (pixel.alpha() > 32 && pixel.red() >= 160
+                        && pixel.green() >= 160 && pixel.blue() >= 160)
+                        return true;
+                }
+            }
+            return false;
+        };
+        const QImage standard = renderIcon(1.0, QIcon::Normal);
+        const QImage retina = renderIcon(2.0, QIcon::Normal);
+        const QImage disabled = renderIcon(2.0, QIcon::Disabled);
+        QCOMPARE(retina.size(), standard.size() * 2);
+        QVERIFY(hasLightPixel(standard));
+        QVERIFY(hasLightPixel(retina));
+        QVERIFY(hasLightPixel(disabled));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        // QIcon::pixmap(size, dpr) used a different scaledPixmap size
+        // convention until Qt 6.8. Guard both paths against oversized icons.
+        const QPixmap requested2x = play->icon().pixmap(QSize(24, 24), 2.0,
+                                                        QIcon::Normal, QIcon::Off);
+        QVERIFY(!requested2x.isNull());
+        QVERIFY(requested2x.width() / requested2x.devicePixelRatio() <= 24.5);
+        QVERIFY(requested2x.height() / requested2x.devicePixelRatio() <= 24.5);
+#endif
+    }
+
+    void videoFrameReportsIntrinsicSize()
+    {
+        ITEVideoFrameWidget frame;
+        QSignalSpy changed(&frame, &ITEVideoFrameWidget::videoSizeChanged);
+        QVERIFY(!frame.videoSize().isValid());
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        QVideoFrameFormat format(QSize(320, 180), QVideoFrameFormat::Format_BGRA8888);
+        frame.videoSink()->setVideoFrame(QVideoFrame(format));
+#else
+        QVideoSurfaceFormat format(QSize(320, 180), QVideoFrame::Format_RGB32);
+        QVERIFY(frame.videoSurface()->start(format));
+        QVideoFrame decoded(320 * 180 * 4, QSize(320, 180), 320 * 4,
+                            QVideoFrame::Format_RGB32);
+        QVERIFY(frame.videoSurface()->present(decoded));
+#endif
+        QTRY_COMPARE(changed.size(), 1);
+        QCOMPARE(frame.videoSize(), QSize(320, 180));
+    }
+
     void audioPresentationHasFallbackArtWithoutDownloading()
     {
         class DeferredOpener : public StateOpener {
@@ -234,12 +326,64 @@ private slots:
         host.show();
         widget->show();
         QCoreApplication::processEvents();
+        // createPlayer() without a host fullscreen handler must retain both
+        // embedded player controls. The host-enabled case above hides them.
+        auto* popout = widget->findChild<QToolButton*>(QStringLiteral("qite-video-window-button"));
+        auto* fullscreen = widget->findChild<QToolButton*>(QStringLiteral("qite-video-fullscreen-button"));
+        QVERIFY(popout && !popout->isHidden());
+        QVERIFY(fullscreen && !fullscreen->isHidden());
         QVERIFY(artwork->isVisible());
         QPixmap fallback(96, 96);
         fallback.fill(Qt::transparent);
         artwork->render(&fallback);
         QVERIFY(!fallback.toImage().isNull());
         delete widget;
+    }
+
+    void compactAudioShowsFallbackOnlyWhenDetached()
+    {
+        class DeferredOpener : public StateOpener {
+        public:
+            CancelOpen openAsync(QUrl, QObject *, OpenDone) override { return {}; }
+        } opener;
+        QWidget host;
+        host.resize(480, 220);
+        auto* player = ITEVideoController::createPlayer(
+            QUrl(QStringLiteral("test:audio")), &opener, &host, {}, 0, true, true);
+        QVERIFY(player);
+        auto* art = player->findChild<QWidget*>(QStringLiteral("qite-audio-artwork"));
+        auto* controls = player->findChild<QWidget*>(QStringLiteral("qite-video-controls"));
+        auto* popout = player->findChild<QToolButton*>(QStringLiteral("qite-video-window-button"));
+        QVERIFY(art && controls && popout);
+        host.show();
+        player->show();
+        QCoreApplication::processEvents();
+        QVERIFY(art->isHidden());
+        QVERIFY(!player->property("qite-audio-artwork-visible").toBool());
+        QVERIFY(controls->isVisible());
+
+        popout->click();
+        QTRY_VERIFY(player->parentWidget() != &host);
+        QCOMPARE(player->window()->windowTitle(), ITEVideoController::tr("Audio"));
+        QTRY_VERIFY(art->isVisible());
+        QVERIFY(player->property("qite-audio-artwork-visible").toBool());
+        auto* fullscreen = player->findChild<QToolButton*>(
+            QStringLiteral("qite-video-fullscreen-button"));
+        QVERIFY(fullscreen);
+        fullscreen->click();
+        QTRY_VERIFY(player->window()->isFullScreen());
+        QCOMPARE(art->parentWidget(), player->window()); // Not the hidden video frame.
+        QVERIFY(art->isVisible());
+        fullscreen->click();
+        QTRY_VERIFY(!player->window()->isFullScreen());
+        QCOMPARE(art->parentWidget(), player);
+        // Returning to the message hides only fallback art, not the toolbar.
+        popout->click();
+        QTRY_COMPARE(player->parentWidget(), &host);
+        QVERIFY(art->isHidden());
+        QVERIFY(!player->property("qite-audio-artwork-visible").toBool());
+        QVERIFY(controls->isVisible());
+        delete player;
     }
 
     void failedPreparationCanBeRetried()
@@ -739,6 +883,7 @@ private slots:
         QCOMPARE(popup->objectName(), QStringLiteral("qite-video-window"));
         QVERIFY(popup->isVisible());
         QVERIFY(!popup->isFullScreen());
+        QCOMPARE(popup->windowTitle(), ITEVideoController::tr("Video"));
         QCOMPARE(popup->findChild<QMediaPlayer *>(), media.data());
         QTRY_COMPARE(opener.opens, 1);
 
@@ -1390,6 +1535,12 @@ private slots:
         QCOMPARE(edit.paints, 0);
         auto button = edit.findChild<QToolButton *>();
         button->click(); // Pause before seeking, so the target stays stable.
+        QCOMPARE(edit.findChild<QMediaPlayer *>(), player);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        QTRY_COMPARE(player->playbackState(), QMediaPlayer::PausedState);
+#else
+        QTRY_COMPARE(player->state(), QMediaPlayer::PausedState);
+#endif
         auto slider = edit.findChild<QSlider *>();
         QTRY_VERIFY(slider->isEnabled());
         slider->setValue(5000); // Also exercises keyboard/page-step seek handling.

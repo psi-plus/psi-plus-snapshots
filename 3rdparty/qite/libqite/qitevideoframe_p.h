@@ -36,6 +36,12 @@ public:
 #else
     ITEVideoSurface *videoSurface() const { return surface; }
 #endif
+    // Decoder frame size. Hosts can adapt their own layout without qite
+    // assuming anything about attachment presentation or available width.
+    QSize videoSize() const { return currentVideoSize; }
+
+signals:
+    void videoSizeChanged(const QSize &size);
 
 protected:
     void paintEvent(QPaintEvent *) override;
@@ -44,6 +50,7 @@ private:
     struct Mailbox;
     std::shared_ptr<Mailbox> mailbox;
     QVideoFrame              frame;
+    QSize                    currentVideoSize;
     QSize                    displaySize;
     QRect                    sourceRect;
     bool                     bottomUp = false;

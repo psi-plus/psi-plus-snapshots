@@ -38,25 +38,28 @@ Package builds should check out their chosen Iris source SHA **before** calling 
 API baseline (3.1.1). `jdns.tag` records the corresponding published release.
 After the JDNS release is merged and tagged, update the commit and tag together;
 do not use a moving branch or a tag that has not been published. Source builds
-always use the exact commit unless an explicit `IRIS_JDNS_GIT_TAG` override is
-provided. Old cached defaults advance with the lock; explicit overrides remain.
+always take the revision directly from the lock. Dependency revisions are not
+stored in the CMake cache; obsolete `IRIS_JDNS_GIT_TAG` and
+`IRIS_JDNS_LOCK_DEFAULT` entries are removed during configuration.
 
 JDNS is enabled by default on all platforms; Android needs it for its
 platform resolver. Non-Android builds may disable it with
 `-DIRIS_ENABLE_JDNS=OFF`. When enabled,
 `IRIS_SYSTEM_JDNS` selects its provider:
 
-- `AUTO` (default): use an installed QJDns >= 3.1.1 with the same Qt major, or
+- `AUTO` (default outside Android): use an installed QJDns >= 3.1.1 with the same Qt major, or
   build the locked source if no compatible package is available.
 - `ON`: require a compatible installed package; report a configuration error
   instead of silently building another provider.
-- `OFF`: build the bundled source, statically with PIC and without installation
+- `OFF` (default on Android): build the bundled source, statically with PIC and without installation
   rules leaking into the Iris SDK.
 
 The installed QJDns package exports its Qt major. A pre-existing incompatible
 target is an error, because replacing a target already used by another part of
 the build would be unsafe. For local development, CMake's standard
 `FETCHCONTENT_SOURCE_DIR_IRIS_JDNS` override can select a JDNS checkout.
+This selects a development source directory, without introducing a second
+revision setting alongside the lock.
 
 If `AUTO` unexpectedly uses the bundled copy, inspect the configuration
 diagnostic and check where the system package installed `QJDnsConfig.cmake`.

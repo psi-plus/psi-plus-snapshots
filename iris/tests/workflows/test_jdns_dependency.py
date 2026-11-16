@@ -12,7 +12,8 @@ MIN_VERSION = json.loads((ROOT / "dependencies.lock.json").read_text())["jdns"][
 
 class JDnsSelection(unittest.TestCase):
     def configure(self, mode="AUTO", version=None, qt=6, reject_wrong_qt=True,
-                  existing=False, commit=None, extra=(), export_target=True):
+                  existing=False, commit=None, extra=(), export_target=True,
+                  android=False, bundled_metadata=True, reconfigure_commit=None):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             modules = root / "cmake/modules"
@@ -24,12 +25,14 @@ class JDnsSelection(unittest.TestCase):
             (root / "dependencies.lock.json").write_text(json.dumps(lock))
             bundled = root / "bundled"
             bundled.mkdir()
-            (bundled / "CMakeLists.txt").write_text('''
+            bundled_config = '''
 cmake_minimum_required(VERSION 3.19)
 add_library(qjdns INTERFACE)
 add_library(QJDns::QJDns ALIAS qjdns)
-set_property(TARGET qjdns PROPERTY INTERFACE_QJDNS_QT_MAJOR_VERSION ${JDNS_QT_MAJOR_VERSION})
-''')
+'''
+            if bundled_metadata:
+                bundled_config += "set_property(TARGET qjdns PROPERTY INTERFACE_QJDNS_QT_MAJOR_VERSION ${JDNS_QT_MAJOR_VERSION})\n"
+            (bundled / "CMakeLists.txt").write_text(bundled_config)
             setup = ""
             if version:
                 package = root / "package"
@@ -66,13 +69,19 @@ cmake_minimum_required(VERSION 3.19)
 project(jdns_selection NONE)
 set(QT_DEFAULT_MAJOR_VERSION 6)
 set(FETCHCONTENT_SOURCE_DIR_IRIS_JDNS "${CMAKE_SOURCE_DIR}/bundled")
-''' + setup + '''
+''' + ('set(ANDROID TRUE)\n' if android else '') + setup + '''
 include("${CMAKE_SOURCE_DIR}/cmake/modules/IrisJDns.cmake")
 iris_configure_jdns()
 ''')
-            return subprocess.run(["cmake", "-S", str(root), "-B", str(root / "build"),
-                                   "-DIRIS_SYSTEM_JDNS=" + mode, *extra],
-                                  text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            command = ["cmake", "-S", str(root), "-B", str(root / "build")]
+            result = subprocess.run(command + (["-DIRIS_SYSTEM_JDNS=" + mode] if mode is not None else []) + list(extra),
+                                    text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            if reconfigure_commit is not None and result.returncode == 0:
+                lock["jdns"]["commit"] = reconfigure_commit
+                (root / "dependencies.lock.json").write_text(json.dumps(lock))
+                result = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            result.cache_text = (root / "build/CMakeCache.txt").read_text()
+            return result
 
     def test_iris_enables_jdns_by_default(self):
         # Keep release binaries and source builds from silently dropping remote DNS.
@@ -98,6 +107,25 @@ iris_configure_jdns()
         normalized = " ".join(result.stdout.split())
         self.assertIn("System QJDns >= " + MIN_VERSION, normalized)
         self.assertIn("QJDnsConfig.cmake was not found", normalized)
+
+    def test_android_defaults_to_bundled_even_with_system_package(self):
+        result = self.configure(mode=None, android=True, version=MIN_VERSION)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("using bundled", result.stdout)
+        self.assertNotIn("using system", result.stdout)
+
+    def test_android_allows_explicit_target_sdk_package(self):
+        result = self.configure(mode="ON", android=True, version=MIN_VERSION)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("using system", result.stdout)
+
+    def test_stale_bundled_source_reports_missing_metadata(self):
+        result = self.configure(mode="OFF", bundled_metadata=False)
+        self.assertNotEqual(result.returncode, 0)
+        normalized = " ".join(result.stdout.split())
+        self.assertIn("does not declare its Qt major version", normalized)
+        self.assertIn("FETCHCONTENT_SOURCE_DIR_IRIS_JDNS", normalized)
+        self.assertNotIn("_jdns_qt-NOTFOUND", normalized)
 
     def test_system_same_qt(self):
         result = self.configure(mode="ON", version=MIN_VERSION)
@@ -145,15 +173,25 @@ iris_configure_jdns()
             with self.subTest(args=args):
                 self.assertNotEqual(self.configure(**args).returncode, 0)
 
-    def test_explicit_source_override_is_preserved(self):
+    def test_legacy_revision_override_cannot_override_lock(self):
         result = self.configure(mode="OFF", extra=("-DIRIS_JDNS_GIT_TAG=custom-ref",))
         self.assertEqual(result.returncode, 0, result.stdout)
-        self.assertIn("using bundled JDNS source custom-ref", result.stdout)
+        self.assertIn("using bundled JDNS " + MIN_VERSION + " (commit ", result.stdout)
+        self.assertNotIn("custom-ref", result.stdout)
+        self.assertNotIn("IRIS_JDNS_GIT_TAG:", result.cache_text)
+
+    def test_lock_update_is_used_in_existing_build_directory(self):
+        result = self.configure(mode="OFF", commit="a" * 40, reconfigure_commit="b" * 40)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("commit " + "b" * 40, result.stdout)
+        self.assertNotIn("IRIS_JDNS_GIT_TAG:", result.cache_text)
+        self.assertNotIn("IRIS_JDNS_LOCK_DEFAULT:", result.cache_text)
 
     def test_previous_cached_default_advances_to_lock(self):
         locked = json.loads((ROOT / "dependencies.lock.json").read_text())["jdns"]["commit"]
         for extra in (
             ("-DIRIS_JDNS_GIT_TAG=0b7a9407b9401ed7680817ba3a368ce577ea87f2",),
+            ("-DIRIS_JDNS_GIT_TAG=0357d0eebce7f50521350269d8461580e415a6c3",),
             ("-DIRIS_JDNS_GIT_TAG=" + "a" * 40, "-DIRIS_JDNS_LOCK_DEFAULT=" + "a" * 40),
         ):
             with self.subTest(extra=extra):

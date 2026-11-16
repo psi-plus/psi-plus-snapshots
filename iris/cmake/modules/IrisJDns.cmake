@@ -20,16 +20,17 @@ if(NOT IRIS_JDNS_MIN_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
     message(FATAL_ERROR "dependencies.lock.json: JDNS minimum_version must be a numeric X.Y.Z string")
 endif()
 
-# Refresh cached defaults when the lock advances, retaining explicit overrides.
-if((DEFINED IRIS_JDNS_LOCK_DEFAULT AND IRIS_JDNS_GIT_TAG STREQUAL IRIS_JDNS_LOCK_DEFAULT)
-   OR (NOT DEFINED IRIS_JDNS_LOCK_DEFAULT AND
-       IRIS_JDNS_GIT_TAG STREQUAL "0b7a9407b9401ed7680817ba3a368ce577ea87f2"))
-    # The second clause migrates the sole pre-lock default from the old module.
-    set(IRIS_JDNS_GIT_TAG "${_iris_jdns_commit}" CACHE STRING "Bundled JDNS git ref override" FORCE)
+# Dependency revisions belong only to the lock. Retire legacy cache entries so
+# old build directories cannot retain a different revision after a lock update.
+unset(IRIS_JDNS_GIT_TAG CACHE)
+unset(IRIS_JDNS_LOCK_DEFAULT CACHE)
+if(ANDROID)
+    set(_iris_system_jdns_default OFF)
+else()
+    set(_iris_system_jdns_default AUTO)
 endif()
-set(IRIS_JDNS_GIT_TAG "${_iris_jdns_commit}" CACHE STRING "Bundled JDNS git ref override")
-set(IRIS_JDNS_LOCK_DEFAULT "${_iris_jdns_commit}" CACHE INTERNAL "Last locked JDNS default" FORCE)
-set(IRIS_SYSTEM_JDNS AUTO CACHE STRING "System QJDns: AUTO, ON or OFF")
+set(IRIS_SYSTEM_JDNS ${_iris_system_jdns_default} CACHE STRING "System QJDns: AUTO, ON or OFF")
+unset(_iris_system_jdns_default)
 set_property(CACHE IRIS_SYSTEM_JDNS PROPERTY STRINGS AUTO ON OFF)
 string(TOUPPER "${IRIS_SYSTEM_JDNS}" _iris_system_jdns)
 if(NOT _iris_system_jdns MATCHES "^(AUTO|ON|OFF)$")
@@ -38,6 +39,12 @@ endif()
 
 function(iris_check_jdns_qt)
     get_target_property(_jdns_qt QJDns::QJDns INTERFACE_QJDNS_QT_MAJOR_VERSION)
+    if(NOT _jdns_qt)
+        message(FATAL_ERROR
+            "QJDns::QJDns does not declare its Qt major version. Use the locked JDNS revision "
+            "or a compatible QJDns package. If FETCHCONTENT_SOURCE_DIR_IRIS_JDNS selects a local "
+            "checkout, ensure it provides the Qt metadata required by this Iris version.")
+    endif()
     if(NOT "${_jdns_qt}" STREQUAL "${QT_DEFAULT_MAJOR_VERSION}")
         message(FATAL_ERROR "QJDns must be built for Qt ${QT_DEFAULT_MAJOR_VERSION}; found Qt ${_jdns_qt}")
     endif()
@@ -101,11 +108,7 @@ function(iris_configure_jdns)
         set(FETCHCONTENT_SOURCE_DIR_IRIS_JDNS "${_iris_jdns_local_source}")
         message(STATUS "JDNS: using local sources at ${FETCHCONTENT_SOURCE_DIR_IRIS_JDNS}")
     endif()
-    if(IRIS_JDNS_GIT_TAG STREQUAL _iris_jdns_commit)
-        set(_jdns_source "JDNS ${IRIS_JDNS_MIN_VERSION} (commit ${IRIS_JDNS_GIT_TAG})")
-    else()
-        set(_jdns_source "JDNS source ${IRIS_JDNS_GIT_TAG}")
-    endif()
+    set(_jdns_source "JDNS ${IRIS_JDNS_MIN_VERSION} (commit ${_iris_jdns_commit})")
     message(STATUS "JDNS: using bundled ${_jdns_source}; QJDns linked to Qt ${QT_DEFAULT_MAJOR_VERSION}")
     # Keep the bundled dependency static/PIC and its install rules private.
     set(BUILD_SHARED_LIBS OFF)
@@ -119,7 +122,7 @@ function(iris_configure_jdns)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     FetchContent_Declare(iris_jdns
         GIT_REPOSITORY https://github.com/psi-im/jdns.git
-        GIT_TAG "${IRIS_JDNS_GIT_TAG}")
+        GIT_TAG "${_iris_jdns_commit}")
     FetchContent_MakeAvailable(iris_jdns)
     if(NOT TARGET QJDns::QJDns)
         message(FATAL_ERROR "Iris requires the QJDns::QJDns target")

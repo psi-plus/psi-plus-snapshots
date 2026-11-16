@@ -15,8 +15,13 @@ public:
     explicit ITEVideoController(InteractiveText *itc, QObject *parent = nullptr);
     ~ITEVideoController() override;
     // Reuse the same decoder, frame widget and controls outside a text document.
+    // compactInlineAudio hides the fallback music-note area while embedded;
+    // real cover art remains visible, and pop-out restores the full artwork.
+    // The returned widget publishes the current presentation using its
+    // "qite-audio-artwork-visible" dynamic property.
     static QWidget *createPlayer(const QUrl &, ITEMediaOpener *, QWidget *parent, std::function<void()> fullscreen = {},
-                                 qint64 position = 0, bool audioPresentation = false);
+                                 qint64 position = 0, bool audioPresentation = false,
+                                 bool compactInlineAudio = false);
     static QIcon fullscreenIcon(const QPalette &palette, bool inward);
     using WindowHandler = std::function<bool(const QUrl &, qint64, bool)>;
     void setWindowHandler(WindowHandler handler) { windowHandler_ = std::move(handler); }
