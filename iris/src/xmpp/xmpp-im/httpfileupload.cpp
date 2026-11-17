@@ -37,6 +37,7 @@
 #include <QSslError>
 #include <QTimer>
 #include <QVariant>
+#include <memory>
 
 using namespace XMPP;
 
@@ -277,6 +278,13 @@ void HttpFileUpload::tryNextServer()
             auto firstProgressWatchdog = new QTimer(reply);
             firstProgressWatchdog->setSingleShot(true);
             firstProgressWatchdog->setInterval(5000);
+            const auto progressObserved     = std::make_shared<bool>(false);
+            const auto waitForFirstProgress = [firstProgressWatchdog, progressObserved]() {
+                // DNS, socket and TLS callbacks can arrive after uploadProgress.
+                // Once bytes have been sent, only the activity watchdog applies.
+                if (!*progressObserved)
+                    firstProgressWatchdog->start();
+            };
             connect(firstProgressWatchdog, &QTimer::timeout, reply, [reply]() {
                 if (reply->isFinished())
                     return;
@@ -298,7 +306,7 @@ void HttpFileUpload::tryNextServer()
             });
             startupWatchdog->start();
             const auto uploadHost = req.url().host();
-            QHostInfo::lookupHost(uploadHost, this, [reply, uploadHost, firstProgressWatchdog](const QHostInfo &info) {
+            QHostInfo::lookupHost(uploadHost, reply, [reply, uploadHost, waitForFirstProgress](const QHostInfo &info) {
                 if (reply->isFinished())
                     return;
 #ifdef XMPP_DEBUG
@@ -307,7 +315,7 @@ void HttpFileUpload::tryNextServer()
 #else
                     Q_UNUSED(info)
 #endif
-                firstProgressWatchdog->start();
+                waitForFirstProgress();
             });
             auto watchdog = new QTimer(reply);
             watchdog->setSingleShot(true);
@@ -327,9 +335,9 @@ void HttpFileUpload::tryNextServer()
 #endif
 #if QT_VERSION >= QT_VERSION_CHECK(6, 3, 0)
             connect(reply, &QNetworkReply::socketStartedConnecting, this,
-                    [reply, firstProgressWatchdog, startupWatchdog, watchdog] {
+                    [reply, waitForFirstProgress, startupWatchdog, watchdog] {
                         startupWatchdog->stop();
-                        firstProgressWatchdog->start();
+                        waitForFirstProgress();
                         watchdog->start();
 #ifdef XMPP_DEBUG
                         qDebug() << "HTTP upload socket started connecting" << reply->url();
@@ -337,8 +345,8 @@ void HttpFileUpload::tryNextServer()
                         Q_UNUSED(reply)
 #endif
                     });
-            connect(reply, &QNetworkReply::requestSent, this, [reply, firstProgressWatchdog, watchdog] {
-                firstProgressWatchdog->start();
+            connect(reply, &QNetworkReply::requestSent, this, [reply, waitForFirstProgress, watchdog] {
+                waitForFirstProgress();
                 watchdog->start();
 #ifdef XMPP_DEBUG
                 qDebug() << "HTTP upload request sent" << reply->url();
@@ -347,8 +355,8 @@ void HttpFileUpload::tryNextServer()
 #endif
             });
 #endif
-            connect(reply, &QNetworkReply::encrypted, this, [reply, firstProgressWatchdog, watchdog] {
-                firstProgressWatchdog->start();
+            connect(reply, &QNetworkReply::encrypted, this, [reply, waitForFirstProgress, watchdog] {
+                waitForFirstProgress();
                 watchdog->start();
 #ifdef XMPP_DEBUG
                 qDebug() << "HTTP upload TLS encrypted" << reply->url();
@@ -358,8 +366,10 @@ void HttpFileUpload::tryNextServer()
             });
             connect(reply, &QNetworkReply::uploadProgress, this, &HttpFileUpload::progress);
             connect(reply, &QNetworkReply::uploadProgress, this,
-                    [this, reply, firstProgressWatchdog, startupWatchdog, watchdog](qint64 sent, qint64 total) {
+                    [this, reply, firstProgressWatchdog, startupWatchdog, watchdog, progressObserved](qint64 sent,
+                                                                                                      qint64 total) {
                         if (sent > 0) {
+                            *progressObserved = true;
                             firstProgressWatchdog->stop();
                             startupWatchdog->stop();
                         }
