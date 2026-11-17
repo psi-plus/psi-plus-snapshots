@@ -16,15 +16,13 @@ ModeratedRetractionTask::ModeratedRetractionTask(Task *parent) : Task(parent)
     connect(this, &Task::finished, this, [this] { awaitingResponse_ = false; });
 }
 
-void ModeratedRetractionTask::request(const Jid &room, const Message::StanzaId &target,
-                                     const QString &reason)
+void ModeratedRetractionTask::request(const Jid &room, const Message::StanzaId &target, const QString &reason)
 {
-    room_ = room;
+    room_     = room;
     targetId_ = target.id;
-    reason_ = reason;
-    valid_ = room.isValid() && !room.isEmpty() && room.resource().isEmpty()
-        && target.by.isValid() && !target.by.isEmpty() && target.by.resource().isEmpty()
-        && room == target.by && !targetId_.isEmpty();
+    reason_   = reason;
+    valid_    = room.isValid() && !room.isEmpty() && room.resource().isEmpty() && target.by.isValid()
+        && !target.by.isEmpty() && target.by.resource().isEmpty() && room == target.by && !targetId_.isEmpty();
 }
 
 void ModeratedRetractionTask::onGo()
@@ -36,11 +34,11 @@ void ModeratedRetractionTask::onGo()
 
     static const QString moderateNs = QStringLiteral("urn:xmpp:message-moderate:1");
 
-    auto iq = createIQ(doc(), QStringLiteral("set"), room_.bare(), id());
+    auto iq       = createIQ(doc(), QStringLiteral("set"), room_.bare(), id());
     auto moderate = doc()->createElementNS(moderateNs, QStringLiteral("moderate"));
     moderate.setAttribute(QStringLiteral("id"), targetId_);
-    moderate.appendChild(doc()->createElementNS(QStringLiteral("urn:xmpp:message-retract:1"),
-                                                QStringLiteral("retract")));
+    moderate.appendChild(
+        doc()->createElementNS(QStringLiteral("urn:xmpp:message-retract:1"), QStringLiteral("retract")));
     if (!reason_.isEmpty())
         moderate.appendChild(textTagNS(doc(), moderateNs, QStringLiteral("reason"), reason_));
     iq.appendChild(moderate);

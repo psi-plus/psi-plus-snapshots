@@ -60,12 +60,12 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         RTC::SctpAssociation             assoc;
 
         std::atomic_bool outgoingDrainScheduled { false };
-        bool    dumpingOutogingBuffer = false;
-        bool    transportConnected    = false;
-        bool    associationClosed     = false;
-        bool    useOddStreamId        = false;
-        quint16 nextStreamId          = 0;
-        quint16 channelsLeft          = 32768;
+        bool             dumpingOutogingBuffer = false;
+        bool             transportConnected    = false;
+        bool             associationClosed     = false;
+        bool             useOddStreamId        = false;
+        quint16          nextStreamId          = 0;
+        quint16          channelsLeft          = 32768;
 
         AssociationPrivate(Association *q);
 

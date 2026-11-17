@@ -2,9 +2,9 @@
 #ifndef XMPP_BLOCKING_H
 #define XMPP_BLOCKING_H
 
+#include <QStringList>
 #include <iris/xmpp-im/xmpp_task.h>
 #include <iris/xmpp_jid.h>
-#include <QStringList>
 
 namespace XMPP {
 
@@ -12,16 +12,16 @@ namespace XMPP {
 class IRIS_EXPORT BlockingTask : public Task {
 public:
     explicit BlockingTask(Task *parent);
-    void get();
-    void block(const QList<Jid> &jids);
-    void unblock(const QList<Jid> &jids); // Empty list unblocks everyone.
+    void              get();
+    void              block(const QList<Jid> &jids);
+    void              unblock(const QList<Jid> &jids); // Empty list unblocks everyone.
     const QList<Jid> &blockedJids() const { return blockedJids_; }
 
     void onGo() override;
     bool take(const QDomElement &stanza) override;
 
 private:
-    QString operation_;
+    QString    operation_;
     QList<Jid> requestedJids_;
     QList<Jid> blockedJids_;
 };

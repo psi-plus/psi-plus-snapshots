@@ -716,8 +716,8 @@ bool JT_PushPresence::take(const QDomElement &e)
         p.setPriority(tagContent(tag).toInt());
 
     QDateTime stamp;
-    bool modernDelay = false;
-    int occupantIdElements = 0;
+    bool      modernDelay        = false;
+    int       occupantIdElements = 0;
 
     for (QDomNode n = e.firstChild(); !n.isNull(); n = n.nextSibling()) {
         QDomElement i = n.toElement();
@@ -737,7 +737,7 @@ bool JT_PushPresence::take(const QDomElement &e)
             if (i.hasAttribute("stamp") && !modernDelay) {
                 const auto parsed = QDateTime::fromString(i.attribute("stamp"), Qt::ISODate);
                 if (parsed.isValid()) {
-                    stamp = parsed;
+                    stamp       = parsed;
                     modernDelay = true;
                 }
             }
@@ -909,8 +909,7 @@ bool JT_PushMessage::Subscriber::messageEvent(Message &msg, int userData, bool n
     return false;
 }
 
-JT_PushMessage::SubscriberResult JT_PushMessage::Subscriber::messageEventResult(
-    Message &msg, int userData, bool nested)
+JT_PushMessage::SubscriberResult JT_PushMessage::Subscriber::messageEventResult(Message &msg, int userData, bool nested)
 {
     return messageEvent(msg, userData, nested) ? SubscriberResult::HandledStop : SubscriberResult::NotHandled;
 }

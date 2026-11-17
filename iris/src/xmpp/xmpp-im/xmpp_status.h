@@ -96,7 +96,7 @@ public:
     const QString  &songTitle() const;
     const CapsSpec &caps() const;
 
-    bool              isMUC() const;
+    bool isMUC() const;
     // XEP-0421: untrusted until room disco#info advertises the feature.
     QString           occupantId() const;
     void              setOccupantId(const QString &id);

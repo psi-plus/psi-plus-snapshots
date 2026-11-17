@@ -31,10 +31,10 @@ static void testInvalidLaterAcceptIsAtomic(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportAccept,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("audio-accepted") },
-                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("video-out-of-order") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("audio-accepted") },
+                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("video-out-of-order") } }));
 
     check(!ok, "transport-accept batch with an out-of-order member was accepted");
     check(audioApp->transport().data() == audio.data(),
@@ -65,10 +65,10 @@ static void testMalformedLaterPayloadDoesNotPartiallyCommit(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportAccept,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("audio-accepted") },
-                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("video-malformed"), false } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("audio-accepted") },
+                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("video-malformed"), false } }));
 
     check(!ok, "transport-accept batch with a malformed later payload was accepted");
 
@@ -104,10 +104,10 @@ static void testMalformedLaterTransportInfoDoesNotPartiallyCommit(Client &client
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportInfo,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("audio-update") },
-                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("video-malformed"), false } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("audio-update") },
+                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("video-malformed"), false } }));
 
     check(!ok, "transport-info batch with a malformed later payload was accepted");
     check(audioApp->transport().data() == audio.data() && audio->id() == QLatin1String("audio-current")

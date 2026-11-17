@@ -6,9 +6,9 @@
 #define XMPP_PUBSUBREPLICA_H
 
 #include <QHash>
+#include <QSet>
 #include <QString>
 #include <QStringList>
-#include <QSet>
 
 #include <optional>
 #include <utility>
@@ -41,24 +41,24 @@ public:
     enum class State { Idle, Loading, Ready, Writing, ResyncRequired };
 
     struct WriteBatch {
-        quint64 epoch = 0;
-        quint64 serial = 0;
+        quint64 epoch       = 0;
+        quint64 serial      = 0;
         quint64 eventSerial = 0;
         Changes changes;
-        bool isValid() const { return serial != 0; }
+        bool    isValid() const { return serial != 0; }
     };
 
-    State state() const { return state_; }
-    bool isReady() const { return state_ == State::Ready || state_ == State::Writing; }
-    bool isWriting() const { return state_ == State::Writing; }
-    quint64 epoch() const { return epoch_; }
+    State        state() const { return state_; }
+    bool         isReady() const { return state_ == State::Ready || state_ == State::Writing; }
+    bool         isWriting() const { return state_ == State::Writing; }
+    quint64      epoch() const { return epoch_; }
     const Items &items() const { return items_; }
     // The user-visible model includes acknowledged data AND all local intents.
     // A newer queued edit supersedes an older in-flight IQ for the same ID.
     Items optimisticItems() const
     {
-        Items snapshot = items_;
-        const auto apply = [&snapshot](const Changes &changes) {
+        Items      snapshot = items_;
+        const auto apply    = [&snapshot](const Changes &changes) {
             for (auto it = changes.cbegin(); it != changes.cend(); ++it) {
                 if (it.value())
                     snapshot.insert(it.key(), *it.value());
@@ -70,10 +70,10 @@ public:
         apply(pending_);
         return snapshot;
     }
-    bool hasPendingChanges() const { return !pending_.isEmpty(); }
-    bool hasScheduledIntent(const QString &id) const { return pending_.contains(id) || inFlight_.contains(id); }
-    bool hasInFlightIntent(const QString &id) const { return inFlight_.contains(id); }
-    bool cancelPending(const QString &id) { return pending_.remove(id) != 0; }
+    bool        hasPendingChanges() const { return !pending_.isEmpty(); }
+    bool        hasScheduledIntent(const QString &id) const { return pending_.contains(id) || inFlight_.contains(id); }
+    bool        hasInFlightIntent(const QString &id) const { return inFlight_.contains(id); }
+    bool        cancelPending(const QString &id) { return pending_.remove(id) != 0; }
     QStringList scheduledIds() const
     {
         QSet<QString> ids;
@@ -101,7 +101,7 @@ public:
         eventRevisions_.clear();
         eventSerial_ = 0;
         activeBatch_ = 0;
-        activeLoad_ = 0;
+        activeLoad_  = 0;
         inFlight_.clear();
     }
 
@@ -152,23 +152,31 @@ public:
 
     // The caller provides semantic intents, not an entire stale node snapshot.
     // Repeated edits to one id are coalesced; the newest local intent wins.
-    void put(const QString &id, const T &value) { if (!id.isEmpty()) pending_.insert(id, value); }
-    void remove(const QString &id) { if (!id.isEmpty()) pending_.insert(id, std::nullopt); }
+    void put(const QString &id, const T &value)
+    {
+        if (!id.isEmpty())
+            pending_.insert(id, value);
+    }
+    void remove(const QString &id)
+    {
+        if (!id.isEmpty())
+            pending_.insert(id, std::nullopt);
+    }
 
     WriteBatch beginWrite()
     {
         if (state_ != State::Ready || pending_.isEmpty())
             return {};
         WriteBatch batch;
-        batch.epoch = epoch_;
-        batch.serial = ++nextBatch_;
+        batch.epoch       = epoch_;
+        batch.serial      = ++nextBatch_;
         batch.eventSerial = eventSerial_;
-        batch.changes = std::move(pending_);
+        batch.changes     = std::move(pending_);
         pending_.clear();
         inFlight_ = batch.changes;
         eventRevisions_.clear(); // Only revisions newer than this batch matter.
         activeBatch_ = batch.serial;
-        state_ = State::Writing;
+        state_       = State::Writing;
         return batch;
     }
 
@@ -177,8 +185,7 @@ public:
     // Partial success still requires an authoritative refresh before retrying.
     bool finishWrite(const WriteBatch &batch, const WriteResults &results)
     {
-        if (state_ != State::Writing || batch.epoch != epoch_ || !batch.isValid()
-            || batch.serial != activeBatch_)
+        if (state_ != State::Writing || batch.epoch != epoch_ || !batch.isValid() || batch.serial != activeBatch_)
             return false;
         activeBatch_ = 0;
         inFlight_.clear();
@@ -266,17 +273,17 @@ private:
             items_.remove(id);
     }
 
-    State state_ = State::Idle;
-    quint64 epoch_ = 1;
-    quint64 nextBatch_ = 0;
-    quint64 activeBatch_ = 0;
-    quint64 activeLoad_ = 0;
-    quint64 nextLoad_ = 0;
-    quint64 eventSerial_ = 0;
-    Items items_;
-    Changes pending_;
-    Changes inFlight_;
-    Changes duringLoad_;
+    State                   state_       = State::Idle;
+    quint64                 epoch_       = 1;
+    quint64                 nextBatch_   = 0;
+    quint64                 activeBatch_ = 0;
+    quint64                 activeLoad_  = 0;
+    quint64                 nextLoad_    = 0;
+    quint64                 eventSerial_ = 0;
+    Items                   items_;
+    Changes                 pending_;
+    Changes                 inFlight_;
+    Changes                 duringLoad_;
     QHash<QString, quint64> eventRevisions_;
 };
 

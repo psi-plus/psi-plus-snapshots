@@ -14,35 +14,32 @@ static void check(bool ok, const char *message)
 
 static void snapshotAndEvents()
 {
-    Replica replica;
+    Replica    replica;
     const auto epoch = replica.beginLoad();
     check(epoch != 0 && replica.state() == Replica::State::Loading, "Load did not start");
     replica.published(QStringLiteral("new"), QStringLiteral("push-new"));
     replica.retracted(QStringLiteral("deleted"));
     replica.published(QStringLiteral("same"), QStringLiteral("newer"));
-    check(replica.finishLoad(epoch, {
-        { QStringLiteral("deleted"), QStringLiteral("old") },
-        { QStringLiteral("same"), QStringLiteral("stale") },
-        { QStringLiteral("untouched"), QStringLiteral("keep") }
-    }), "Load failed");
+    check(replica.finishLoad(epoch,
+                             { { QStringLiteral("deleted"), QStringLiteral("old") },
+                               { QStringLiteral("same"), QStringLiteral("stale") },
+                               { QStringLiteral("untouched"), QStringLiteral("keep") } }),
+          "Load failed");
     check(replica.items().size() == 3, "Snapshot+push cardinality incorrect");
     check(replica.items().value(QStringLiteral("same")) == QStringLiteral("newer"),
           "Old IQ replaced a newer PEP event");
     check(!replica.items().contains(QStringLiteral("deleted")), "Buffered retraction was lost");
-    check(replica.items().value(QStringLiteral("new")) == QStringLiteral("push-new"),
-          "Buffered publication was lost");
+    check(replica.items().value(QStringLiteral("new")) == QStringLiteral("push-new"), "Buffered publication was lost");
 }
 
 static void queuedEditsAndStaleCallbacks()
 {
     Replica replica;
-    check(replica.finishLoad(replica.beginLoad(), {
-        { QStringLiteral("roomA"), QStringLiteral("old") }
-    }), "Initial load failed");
+    check(replica.finishLoad(replica.beginLoad(), { { QStringLiteral("roomA"), QStringLiteral("old") } }),
+          "Initial load failed");
     replica.put(QStringLiteral("roomA"), QStringLiteral("new-local"));
     auto write = replica.beginWrite();
-    check(write.isValid() && replica.isWriting() && write.changes.size() == 1,
-          "Local write was not scheduled");
+    check(write.isValid() && replica.isWriting() && write.changes.size() == 1, "Local write was not scheduled");
     check(!replica.beginWrite().isValid(), "Overlapping batch was allowed");
     replica.put(QStringLiteral("roomC"), QStringLiteral("queued"));
     replica.put(QStringLiteral("roomC"), QStringLiteral("latest"));
@@ -54,8 +51,8 @@ static void queuedEditsAndStaleCallbacks()
     check(replica.items().value(QStringLiteral("roomB")) == QStringLiteral("other-device"),
           "Unrelated remote publication was dropped");
     auto second = replica.beginWrite();
-    check(second.changes.size() == 1 && second.changes.value(QStringLiteral("roomC"))
-              == Replica::Value(QStringLiteral("latest")),
+    check(second.changes.size() == 1
+              && second.changes.value(QStringLiteral("roomC")) == Replica::Value(QStringLiteral("latest")),
           "Queued changes were not coalesced");
     check(!replica.finishWrite(write, true), "Duplicate callback confirmed a different batch");
     check(replica.finishWrite(second, true), "Queued second batch failed");
@@ -92,8 +89,8 @@ static void failedWritesAndReconnect()
 static void undoPendingChanges()
 {
     Replica replica;
-    check(replica.finishLoad(replica.beginLoad(),
-          {{QStringLiteral("existing"), QStringLiteral("old")}}), "Initial fetch failed");
+    check(replica.finishLoad(replica.beginLoad(), { { QStringLiteral("existing"), QStringLiteral("old") } }),
+          "Initial fetch failed");
 
     // A new item that was never sent should disappear from the pending queue
     // rather than generating a useless and possibly rejected retract IQ.
@@ -106,16 +103,14 @@ static void undoPendingChanges()
     // explicit second intent must be sent after its acknowledgement.
     replica.put(QStringLiteral("existing"), QStringLiteral("changed"));
     const auto first = replica.beginWrite();
-    check(first.isValid() && replica.hasInFlightIntent(QStringLiteral("existing")),
-          "First write did not start");
+    check(first.isValid() && replica.hasInFlightIntent(QStringLiteral("existing")), "First write did not start");
     replica.put(QStringLiteral("existing"), QStringLiteral("old"));
     check(replica.finishWrite(first, true), "First write completion rejected");
     const auto second = replica.beginWrite();
-    check(second.changes.value(QStringLiteral("existing"))
-              == Replica::Value(QStringLiteral("old")), "Undo did not override pending update");
+    check(second.changes.value(QStringLiteral("existing")) == Replica::Value(QStringLiteral("old")),
+          "Undo did not override pending update");
     check(replica.finishWrite(second, true), "Undo was not applied");
-    check(replica.items().value(QStringLiteral("existing")) == QStringLiteral("old"),
-          "Original value not restored");
+    check(replica.items().value(QStringLiteral("existing")) == QStringLiteral("old"), "Original value not restored");
 }
 
 static void optimisticSequentialEditsAndOutcomes()
@@ -125,8 +120,7 @@ static void optimisticSequentialEditsAndOutcomes()
 
     replica.put(QStringLiteral("roomA"), QStringLiteral("A"));
     const auto first = replica.beginWrite(); // IQ remains in flight.
-    check(replica.optimisticItems().contains(QStringLiteral("roomA")),
-          "First unacknowledged room not visible");
+    check(replica.optimisticItems().contains(QStringLiteral("roomA")), "First unacknowledged room not visible");
 
     // A second UI edit is built from optimistic state, not the stale server
     // snapshot. Both rooms must survive despite the delayed first IQ.
@@ -146,26 +140,23 @@ static void optimisticSequentialEditsAndOutcomes()
 
     replica.put(QStringLiteral("bad"), QStringLiteral("invalid"));
     replica.put(QStringLiteral("valid"), QStringLiteral("good"));
-    auto mixed = replica.beginWrite();
+    auto                  mixed = replica.beginWrite();
     Replica::WriteResults results;
     results.insert(QStringLiteral("bad"), Replica::WriteResult::Rejected);
     results.insert(QStringLiteral("valid"), Replica::WriteResult::Success);
     check(replica.finishWrite(mixed, results), "Mixed result not applied");
-    check(!replica.optimisticItems().contains(QStringLiteral("bad")),
-          "Permanent failure remained in optimistic state");
+    check(!replica.optimisticItems().contains(QStringLiteral("bad")), "Permanent failure remained in optimistic state");
     check(replica.items().value(QStringLiteral("valid")) == QStringLiteral("good"),
           "One rejected item blocked an unrelated successful item");
 
     replica.put(QStringLiteral("transient"), QStringLiteral("retry"));
-    auto retryBatch = replica.beginWrite();
+    auto                  retryBatch = replica.beginWrite();
     Replica::WriteResults retry;
     retry.insert(QStringLiteral("transient"), Replica::WriteResult::Retry);
     check(replica.finishWrite(retryBatch, retry), "Transient failure not consumed");
-    check(replica.state() == Replica::State::ResyncRequired,
-          "Transient failure didn't force authoritative refresh");
+    check(replica.state() == Replica::State::ResyncRequired, "Transient failure didn't force authoritative refresh");
     check(replica.finishLoad(replica.beginLoad(), replica.items()), "Reload before retry failed");
-    check(replica.beginWrite().changes.contains(QStringLiteral("transient")),
-          "Failed transient item was lost");
+    check(replica.beginWrite().changes.contains(QStringLiteral("transient")), "Failed transient item was lost");
 }
 
 static void reconnectPreservesUserIntent()
@@ -183,22 +174,22 @@ static void reconnectPreservesUserIntent()
     check(replica.finishLoad(replica.beginLoad(), {}), "Reconnect sync failed");
     auto retry = replica.beginWrite();
     check(retry.changes.size() == 2, "User intents disappeared on reconnect");
-    check(retry.changes.value(QStringLiteral("inflight"))
-              == Replica::Value(QStringLiteral("newer")), "Stale in-flight write erased newer edit");
-    check(retry.changes.value(QStringLiteral("queued"))
-              == Replica::Value(QStringLiteral("two")), "Unsent queued edit disappeared");
+    check(retry.changes.value(QStringLiteral("inflight")) == Replica::Value(QStringLiteral("newer")),
+          "Stale in-flight write erased newer edit");
+    check(retry.changes.value(QStringLiteral("queued")) == Replica::Value(QStringLiteral("two")),
+          "Unsent queued edit disappeared");
     replica.reset(); // New account; never leak another account's pending operations.
     check(!replica.hasPendingChanges(), "Account reset preserved old pending writes");
 }
 
 static void invalidationAndLoadTokens()
 {
-    Replica replica;
+    Replica    replica;
     const auto firstLoad = replica.beginLoad();
     replica.invalidate();
     const auto secondLoad = replica.beginLoad();
     check(secondLoad != firstLoad, "Separate fetches reused the same token");
-    check(!replica.finishLoad(firstLoad, {{QStringLiteral("old"), QStringLiteral("bad")}}),
+    check(!replica.finishLoad(firstLoad, { { QStringLiteral("old"), QStringLiteral("bad") } }),
           "Stale same-session fetch overwrote a newer fetch");
     check(replica.finishLoad(secondLoad, {}), "Fresh fetch result was not accepted");
 

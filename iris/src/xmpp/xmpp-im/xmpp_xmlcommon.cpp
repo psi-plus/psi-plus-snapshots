@@ -167,8 +167,8 @@ XDomNodeList childElementsByTagNameNS(const QDomElement &e, const QString &nsURI
 QDomElement firstChildElementByLocalName(const QDomElement &parent, const QString &localName)
 {
     for (auto child = parent.firstChildElement(); !child.isNull(); child = child.nextSiblingElement()) {
-        const auto name = child.localName().isEmpty() ? child.tagName().section(QLatin1Char(':'), -1)
-                                                       : child.localName();
+        const auto name
+            = child.localName().isEmpty() ? child.tagName().section(QLatin1Char(':'), -1) : child.localName();
         if (name == localName)
             return child;
     }

@@ -34,10 +34,10 @@ static void testInvalidLaterRejectIsAtomic(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReject,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("audio-rejected") },
-                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("video-out-of-order") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("audio-rejected") },
+                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("video-out-of-order") } }));
 
     check(!ok, "transport-reject batch with an out-of-order member was accepted");
     check(audio->transport().data() == audioOld.data(),

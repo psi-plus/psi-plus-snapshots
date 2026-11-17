@@ -2,12 +2,12 @@
 #ifndef JINGLE_ICE_UDP_H
 #define JINGLE_ICE_UDP_H
 
-#include <iris/iris_export.h>
 #include <QByteArray>
 #include <QDomElement>
 #include <QHostAddress>
 #include <QList>
 #include <QString>
+#include <iris/iris_export.h>
 #include <optional>
 
 namespace XMPP::Jingle::ICE {

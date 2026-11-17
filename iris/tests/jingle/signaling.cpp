@@ -1,11 +1,11 @@
 // Focused signaling regressions. No XMPP server or media engine is required.
 #include <QCoreApplication>
-#include <iris/xmpp_xmlcommon.h>
 #include <QDebug>
 #include <QPointer>
 #include <iris/dtls.h>
 #include <iris/jingle-application.h>
 #include <iris/xmpp_client.h>
+#include <iris/xmpp_xmlcommon.h>
 #include <qca.h>
 
 // Exercise the same parser entry point that JTPush calls, without network I/O.
@@ -86,8 +86,9 @@ struct OwnedXml {
 static OwnedXml payload(const QString &contents)
 {
     OwnedXml xml;
-    check(XMLHelper::parseDocument(xml.doc, 
-              QStringLiteral("<jingle xmlns='urn:xmpp:jingle:1'>") + contents + QStringLiteral("</jingle>"), true),
+    check(XMLHelper::parseDocument(
+              xml.doc, QStringLiteral("<jingle xmlns='urn:xmpp:jingle:1'>") + contents + QStringLiteral("</jingle>"),
+              true),
           "invalid test XML");
     xml.root = xml.doc.documentElement();
     return xml;
@@ -167,7 +168,7 @@ int main(int argc, char **argv)
     first->setState(State::Finishing);
     check(!SessionTestAccess::updateFromXml(session, Action::ContentModify, modify), "finishing content modified");
     first->setState(State::Pending);
-    check(!SessionTestAccess::updateFromXml(session, Action::ContentModify, payload({ })),
+    check(!SessionTestAccess::updateFromXml(session, Action::ContentModify, payload({})),
           "empty direction update accepted");
     check(!SessionTestAccess::updateFromXml(
               session, Action::ContentModify,
@@ -190,7 +191,7 @@ int main(int argc, char **argv)
     const auto groups    = SessionTestAccess::parseGroupings(groupsXml);
     check(groups && groups->size() == 2, "same-semantics groups were collapsed");
     check(SessionTestAccess::validBundleAnswer(*groups, *groups), "identical BUNDLE answer rejected");
-    check(SessionTestAccess::validBundleAnswer(*groups, { }), "BUNDLE refusal rejected");
+    check(SessionTestAccess::validBundleAnswer(*groups, {}), "BUNDLE refusal rejected");
     check(SessionTestAccess::validBundleAnswer(*groups, { { "BUNDLE", { "audio" } }, { "BUNDLE", { "screen" } } }),
           "subset answer rejected");
     check(!SessionTestAccess::validBundleAnswer(*groups, { { "BUNDLE", { "audio", "screen" } } }),
@@ -199,7 +200,7 @@ int main(int argc, char **argv)
           "answer split an offered group");
     check(!SessionTestAccess::validBundleAnswer(*groups, { { "BUNDLE", { "unoffered" } } }),
           "answer added an unoffered member");
-    check(!SessionTestAccess::validBundleAnswer({ }, *groups), "unsolicited BUNDLE answer accepted");
+    check(!SessionTestAccess::validBundleAnswer({}, *groups), "unsolicited BUNDLE answer accepted");
     check(!SessionTestAccess::validBundleAnswer(*groups, { { "BUNDLE", { "audio", "audio" } } }),
           "answer repeated a member");
     check(groups->first().contents == QStringList({ "video", "audio" }), "group member order lost");

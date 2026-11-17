@@ -31,10 +31,12 @@ static void churnDom()
 static J::RTP::Description rtpFromTemporaryDocument()
 {
     QDomDocument doc;
-    check(XMLHelper::parseDocument(doc, QStringLiteral("<description xmlns='urn:xmpp:jingle:apps:rtp:1' media='audio'>"
-                                        "<payload-type id='111' name='opus' clockrate='48000' channels='2'/>"
-                                        "<rtcp-mux/><future xmlns='urn:iris:future' value='kept'/></description>"),
-                         true),
+    check(XMLHelper::parseDocument(
+              doc,
+              QStringLiteral("<description xmlns='urn:xmpp:jingle:apps:rtp:1' media='audio'>"
+                             "<payload-type id='111' name='opus' clockrate='48000' channels='2'/>"
+                             "<rtcp-mux/><future xmlns='urn:iris:future' value='kept'/></description>"),
+              true),
           "invalid RTP lifetime fixture");
     auto parsed = J::RTP::Description::fromXml(doc.documentElement());
     check(parsed.has_value(), "failed to parse RTP lifetime fixture");
@@ -44,7 +46,8 @@ static J::RTP::Description rtpFromTemporaryDocument()
 static J::ICE::UdpTransportDescription iceUdpFromTemporaryDocument()
 {
     QDomDocument doc;
-    check(XMLHelper::parseDocument(doc, 
+    check(XMLHelper::parseDocument(
+              doc,
               QStringLiteral("<transport xmlns='urn:xmpp:jingle:transports:ice-udp:1' pwd='secret' ufrag='frag'>"
                              "<fingerprint xmlns='urn:xmpp:jingle:apps:dtls:0' hash='sha-256' "
                              "setup='actpass'>AA:BB</fingerprint></transport>"),
@@ -58,7 +61,8 @@ static J::ICE::UdpTransportDescription iceUdpFromTemporaryDocument()
 static J::JinglePub publicationFromTemporaryDocument()
 {
     QDomDocument doc;
-    check(XMLHelper::parseDocument(doc, 
+    check(XMLHelper::parseDocument(
+              doc,
               QStringLiteral("<jinglepub xmlns='urn:xmpp:jinglepub:1' from='publisher@example.test/device' id='pub'>"
                              "<description xmlns='urn:iris:published:media'/></jinglepub>"),
               true),

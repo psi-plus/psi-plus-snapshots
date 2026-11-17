@@ -145,7 +145,7 @@ private:
     QMap<QString, ServiceInfo>
         _servicesInfo; // all the diso#info requests for services of this server jid=>(state,info)
 
-    bool _serverFeaturesReady = false;
+    bool _serverFeaturesReady  = false;
     bool _featuresRequested    = false;
     bool _hasPEP               = false;
     bool _hasPersistentStorage = false;

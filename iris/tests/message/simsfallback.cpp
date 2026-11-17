@@ -2,12 +2,12 @@
 // XEP-0385 media sharing without an outer reference URI, and XEP-0428
 // fallback ranges counted in code points (XEP-0426).
 #include "fixture.h"
-#include <iris/xmpp_xmlcommon.h>
 #include <QCoreApplication>
 #include <QDomDocument>
 #include <QtCrypto>
 #include <iris/xmpp_message.h>
 #include <iris/xmpp_reference.h>
+#include <iris/xmpp_xmlcommon.h>
 
 using namespace XMPP;
 using namespace MessageTest;
@@ -54,8 +54,8 @@ int main(int argc, char **argv)
                     .arg(end)
                     .arg(body.toHtmlEscaped()));
     check(share.references().size() == 1, "Media share without an outer URI was dropped");
-    const auto references = share.references();
-    const auto &reference = references.first();
+    const auto  references = share.references();
+    const auto &reference  = references.first();
     check(reference.uri().isEmpty() && reference.begin() == -1, "Outer reference attributes changed");
     check(reference.mediaSharing().isValid() && reference.mediaSharing().sources == QStringList { url },
           "Media share sources lost");

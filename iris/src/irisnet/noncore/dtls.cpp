@@ -23,10 +23,10 @@
 #include <limits>
 #include <utility>
 
-#include <QtCrypto>
-#include <QRandomGenerator>
 #include <QAbstractSocket>
 #include <QList>
+#include <QRandomGenerator>
+#include <QtCrypto>
 
 #define DTLS_DEBUG(msg, ...) qDebug("dtls: " msg, ##__VA_ARGS__)
 

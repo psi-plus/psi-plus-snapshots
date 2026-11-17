@@ -31,10 +31,10 @@
 using namespace XMPP;
 
 #ifdef IBB_DEBUG
-static int         num_conn = 0;
+static int num_conn = 0;
 #endif
-static int         id_conn  = 0;
-static const char *IBB_NS   = "http://jabber.org/protocol/ibb";
+static int         id_conn = 0;
+static const char *IBB_NS  = "http://jabber.org/protocol/ibb";
 
 //----------------------------------------------------------------------------
 // IBBConnection

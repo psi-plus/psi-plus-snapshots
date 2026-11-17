@@ -314,6 +314,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         std::optional<bool>              remoteIce2;
         std::optional<Dtls::FingerPrint> remoteFingerprint;
         QList<Ice176::Candidate>         remoteCandidates;
+        qsizetype                        remoteCandidatesApplied = 0;
         QList<Ice176::SelectedCandidate> remoteSelectedCandidates;
         bool                             remoteGatheringComplete = false;
 
@@ -393,6 +394,27 @@ namespace XMPP { namespace Jingle { namespace ICE {
             if (!e.remoteCandidates.isEmpty())
                 remoteSelectedCandidates = e.remoteCandidates;
             return true;
+        }
+
+        void applyRemoteCandidates()
+        {
+            if (!connection.ice)
+                return;
+
+            // Trickle ICE can announce credentials before any candidates. Keep
+            // them for authenticated peer-reflexive checks during PAC (RFC 8863),
+            // and preserve them when a candidate-only update arrives later.
+            if (!remoteUfrag.isEmpty() && !remotePassword.isEmpty())
+                connection.ice->setRemoteCredentials(remoteUfrag, remotePassword);
+            if (remoteCandidatesApplied == remoteCandidates.size())
+                return;
+
+            // BUNDLE members can repeat the association's candidate history.
+            // RFC 8838 section 9 requires signaling to deliver each candidate
+            // to ICE exactly once, including candidates buffered before start.
+            const auto pending      = remoteCandidates.mid(remoteCandidatesApplied);
+            remoteCandidatesApplied = remoteCandidates.size();
+            connection.ice->addRemoteCandidates(pending);
         }
     };
 
@@ -854,10 +876,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         if (pad->ns() == NS)
             localFeatures |= Ice176::NotNominatedData;
         ice->setLocalFeatures(localFeatures);
-        if (!runtime->remoteCandidates.isEmpty()) {
-            ice->setRemoteCredentials(runtime->remoteUfrag, runtime->remotePassword);
-            ice->addRemoteCandidates(runtime->remoteCandidates);
-        }
+        runtime->applyRemoteCandidates();
         if (runtime->remoteGatheringComplete)
             ice->setRemoteGatheringComplete();
         if (!runtime->remoteSelectedCandidates.isEmpty())
@@ -1108,6 +1127,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 network->components.append(Component {});
                 network->components.last().componentIndex = 0;
             }
+            // Attaching a deferred content can merge candidates into an
+            // association whose ICE engine is already running.
+            network->runtime->applyRemoteCandidates();
             return true;
         }
 
@@ -1359,10 +1381,7 @@ namespace XMPP { namespace Jingle { namespace ICE {
         void setupRemoteICE(const Element &e)
         {
             Q_ASSERT(network->ice != nullptr);
-            if (!e.candidates.isEmpty()) {
-                network->ice->setRemoteCredentials(e.ufrag, e.pwd);
-                network->ice->addRemoteCandidates(e.candidates);
-            }
+            network->runtime->applyRemoteCandidates();
             if (e.gatheringComplete) {
                 network->ice->setRemoteGatheringComplete();
             }

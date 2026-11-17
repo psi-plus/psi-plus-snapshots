@@ -56,10 +56,10 @@ static void testRejectSkipsReentrantStaleSibling(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReject,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("audio-rejected") },
-                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("video-stale-reject") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("audio-rejected") },
+                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("video-stale-reject") } }));
 
     check(ok, "reentrant stale sibling made transport-reject reject the whole batch");
     check(audio->transport().data() == audioFallback.data() && audio->replacePlanned(),

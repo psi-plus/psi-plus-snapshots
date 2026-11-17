@@ -5,27 +5,27 @@
 
 namespace XMPP {
 namespace {
-constexpr auto BlockingNs = "urn:xmpp:blocking";
+    constexpr auto BlockingNs = "urn:xmpp:blocking";
 
-QList<Jid> parseItems(const QDomElement &parent, bool *valid)
-{
-    QList<Jid> jids;
-    *valid = true;
-    for (auto item = parent.firstChildElement(); !item.isNull(); item = item.nextSiblingElement()) {
-        if (item.namespaceURI() != QLatin1String(BlockingNs) || item.tagName() != QLatin1String("item")) {
-            *valid = false;
-            return {};
+    QList<Jid> parseItems(const QDomElement &parent, bool *valid)
+    {
+        QList<Jid> jids;
+        *valid = true;
+        for (auto item = parent.firstChildElement(); !item.isNull(); item = item.nextSiblingElement()) {
+            if (item.namespaceURI() != QLatin1String(BlockingNs) || item.tagName() != QLatin1String("item")) {
+                *valid = false;
+                return {};
+            }
+            const Jid jid(item.attribute(QStringLiteral("jid")));
+            if (!jid.isValid() || jid.isEmpty()) {
+                *valid = false;
+                return {};
+            }
+            if (!jids.contains(jid))
+                jids.append(jid);
         }
-        const Jid jid(item.attribute(QStringLiteral("jid")));
-        if (!jid.isValid() || jid.isEmpty()) {
-            *valid = false;
-            return {};
-        }
-        if (!jids.contains(jid))
-            jids.append(jid);
+        return jids;
     }
-    return jids;
-}
 } // namespace
 
 BlockingTask::BlockingTask(Task *parent) : Task(parent) { }
@@ -38,12 +38,12 @@ void BlockingTask::get()
 }
 void BlockingTask::block(const QList<Jid> &jids)
 {
-    operation_ = QStringLiteral("block");
+    operation_     = QStringLiteral("block");
     requestedJids_ = jids;
 }
 void BlockingTask::unblock(const QList<Jid> &jids)
 {
-    operation_ = QStringLiteral("unblock");
+    operation_     = QStringLiteral("unblock");
     requestedJids_ = jids;
 }
 
@@ -53,9 +53,9 @@ void BlockingTask::onGo()
         setError();
         return;
     }
-    const bool query = operation_ == QLatin1String("blocklist");
-    auto iq = createIQ(doc(), query ? QStringLiteral("get") : QStringLiteral("set"), QString(), id());
-    auto command = doc()->createElementNS(QLatin1String(BlockingNs), operation_);
+    const bool query   = operation_ == QLatin1String("blocklist");
+    auto       iq      = createIQ(doc(), query ? QStringLiteral("get") : QStringLiteral("set"), QString(), id());
+    auto       command = doc()->createElementNS(QLatin1String(BlockingNs), operation_);
     for (const auto &jid : requestedJids_) {
         if (!jid.isValid() || jid.isEmpty()) {
             setError();
@@ -83,7 +83,7 @@ bool BlockingTask::take(const QDomElement &stanza)
             setError();
             return true;
         }
-        bool valid = false;
+        bool valid   = false;
         blockedJids_ = parseItems(list, &valid);
         if (!valid) {
             setError();
@@ -98,8 +98,7 @@ BlockingPushTask::BlockingPushTask(Task *parent) : Task(parent) { }
 
 bool BlockingPushTask::take(const QDomElement &stanza)
 {
-    if (stanza.tagName() != QLatin1String("iq")
-        || stanza.attribute(QStringLiteral("type")) != QLatin1String("set"))
+    if (stanza.tagName() != QLatin1String("iq") || stanza.attribute(QStringLiteral("type")) != QLatin1String("set"))
         return false;
     const auto command = stanza.firstChildElement();
     if (command.isNull() || command.namespaceURI() != QLatin1String(BlockingNs))
@@ -114,8 +113,8 @@ bool BlockingPushTask::take(const QDomElement &stanza)
         && !(from.resource().isEmpty() && from.bare() == client()->jid().bare()))
         return false;
 
-    bool valid = false;
-    const auto jids = parseItems(command, &valid);
+    bool       valid    = false;
+    const auto jids     = parseItems(command, &valid);
     const bool blocking = operation == QLatin1String("block");
     if (!valid || (blocking && jids.isEmpty()))
         return false;

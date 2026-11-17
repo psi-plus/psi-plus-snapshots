@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include "fixture.h"
-#include <iris/xmpp_bookmarkmanager.h>
 #include <QCoreApplication>
 #include <QtCrypto>
+#include <iris/xmpp_bookmarkmanager.h>
 
 using namespace XMPP;
 using namespace MessageTest;
@@ -13,12 +13,11 @@ int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
     QCA::Initializer qca;
-    Endpoint ep;
+    Endpoint         ep;
     BookmarksManager bookmarks(&ep.client);
     check(!bookmarks.isAvailable(), "New bookmark manager should be offline");
     check(!bookmarks.usesNativeBookmarks(), "New bookmark manager unexpectedly using PEP");
-    check(bookmarks.conferences().isEmpty() && bookmarks.urls().isEmpty(),
-          "New bookmark manager was not empty");
+    check(bookmarks.conferences().isEmpty() && bookmarks.urls().isEmpty(), "New bookmark manager was not empty");
 
     bookmarks.setConferences({ NativeBookmark::create(Jid("room@conference.example.test"), "A", true) });
     bookmarks.setUrls({ { QStringLiteral("Link"), QStringLiteral("https://example.test") } });

@@ -282,9 +282,11 @@ namespace XMPP { namespace Jingle {
         if (transaction == state->transactions.cend() || transaction->action != action)
             return {};
         if (state->resolutions.size() >= 64 || !boundedSnapshot(remoteData))
-            return { Solution::Continue, 0,
+            return { Solution::Continue,
+                     0,
                      Stanza::Error(Stanza::Error::ErrorType::Wait, Stanza::Error::ErrorCond::ResourceConstraint),
-                     {}, {} };
+                     {},
+                     {} };
         // Never carry a container iterator (or a reference into it) across user code.
         const auto   transactionId = transaction->id;
         const auto   localData     = transaction->localData;

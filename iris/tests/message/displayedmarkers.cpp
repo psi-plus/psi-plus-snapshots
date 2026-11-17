@@ -20,7 +20,7 @@ int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
     QCA::Initializer qca;
-    Endpoint endpoint;
+    Endpoint         endpoint;
 
     Message outbound(Jid(QStringLiteral("bob@example.test")));
     outbound.setType(Message::Type::Chat);
@@ -32,8 +32,8 @@ int main(int argc, char **argv)
     check(!wire.isNull(), "Cannot serialize markable message");
     expectSingle(wire.element(), QStringLiteral("markable"), 1);
     expectSingle(wire.element(), QStringLiteral("displayed"), 0);
-    check(wire.element().elementsByTagNameNS(QStringLiteral("urn:xmpp:receipts"),
-                                            QStringLiteral("request")).count() == 1,
+    check(wire.element().elementsByTagNameNS(QStringLiteral("urn:xmpp:receipts"), QStringLiteral("request")).count()
+              == 1,
           "markable message lost XEP-0184 receipt request");
 
     Message parsed;
@@ -50,11 +50,12 @@ int main(int argc, char **argv)
     expectSingle(wire.element(), QStringLiteral("markable"), 0);
     expectSingle(wire.element(), QStringLiteral("displayed"), 1);
     const auto element
-        = wire.element().elementsByTagNameNS(QStringLiteral("urn:xmpp:chat-markers:0"),
-                                              QStringLiteral("displayed")).item(0).toElement();
+        = wire.element()
+              .elementsByTagNameNS(QStringLiteral("urn:xmpp:chat-markers:0"), QStringLiteral("displayed"))
+              .item(0)
+              .toElement();
     check(element.attribute(QStringLiteral("id")) == QStringLiteral("outbound"), "Displayed id was wrong");
-    check(wire.element().elementsByTagNameNS(QStringLiteral("urn:xmpp:receipts"),
-                                            QStringLiteral("received")).isEmpty(),
+    check(wire.element().elementsByTagNameNS(QStringLiteral("urn:xmpp:receipts"), QStringLiteral("received")).isEmpty(),
           "Displayed marker was incorrectly encoded as a delivery receipt");
     Message parsedMarker;
     check(parsedMarker.fromStanza(wire), "Could not parse encoded displayed marker");

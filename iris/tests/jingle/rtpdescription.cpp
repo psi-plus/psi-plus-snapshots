@@ -1,7 +1,7 @@
 #include <QCoreApplication>
-#include <iris/xmpp_xmlcommon.h>
 #include <QDebug>
 #include <iris/jingle-rtp-description.h>
+#include <iris/xmpp_xmlcommon.h>
 
 using XMPP::Jingle::Origin;
 using XMPP::Jingle::RTP::Description;

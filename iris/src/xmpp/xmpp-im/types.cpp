@@ -2138,8 +2138,8 @@ bool Message::fromStanza(const Stanza &s, bool useTimeZoneOffset, int timeZoneOf
 
     // XEP-0333: ignore malformed markers without a referenced stanza id.
     const QString displayedMarkerNS = QStringLiteral("urn:xmpp:chat-markers:0");
-    d->markable = !childElementsByTagNameNS(root, displayedMarkerNS, "markable").isEmpty();
-    t = childElementsByTagNameNS(root, displayedMarkerNS, "displayed").item(0).toElement();
+    d->markable                     = !childElementsByTagNameNS(root, displayedMarkerNS, "markable").isEmpty();
+    t                    = childElementsByTagNameNS(root, displayedMarkerNS, "displayed").item(0).toElement();
     d->displayedMarkerId = t.attribute("id");
 
     // xsigned

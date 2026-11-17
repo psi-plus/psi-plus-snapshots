@@ -16,7 +16,7 @@ static void check(bool ok, const char *message)
         qFatal("%s", message);
 }
 
-static void runPair(bool usingProtocolSignalsIce2)
+static void runPair(bool usingProtocolSignalsIce2, bool omitRemoteCandidatesOnInitiator = false)
 {
     Ice176 first;
     Ice176 second;
@@ -69,7 +69,10 @@ static void runPair(bool usingProtocolSignalsIce2)
 
     first.setRemoteCredentials(second.localUfrag(), second.localPassword());
     second.setRemoteCredentials(first.localUfrag(), first.localPassword());
-    first.addRemoteCandidates(secondCandidates);
+    // Exercise peer-reflexive discovery: only the responder learns candidates
+    // through trickle, while the initiator initially has credentials alone.
+    if (!omitRemoteCandidatesOnInitiator)
+        first.addRemoteCandidates(secondCandidates);
     second.addRemoteCandidates(firstCandidates);
 
     bool firstSelected              = false;
@@ -165,6 +168,7 @@ int main(int argc, char **argv)
 
     runPair(false);
     runPair(true);
+    runPair(true, true); // RFC 8863: credentials with no signaled remote candidates
 
     qInfo("ICE valid-pair compatibility regressions passed");
     return 0;

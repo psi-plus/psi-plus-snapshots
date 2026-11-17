@@ -11,25 +11,26 @@ namespace XMPP {
 // retain just the optional opaque <extensions/> element for roundtripping.
 class IRIS_EXPORT NativeBookmark {
 public:
-    static QString node();
+    static QString       node();
     static PubSubOptions privatePublishOptions();
 
     static NativeBookmark fromItem(const PubSubItem &item);
-    bool isValid() const;
-    Jid room() const;
-    QString name() const;
-    QString nick() const;
-    QString password() const;
-    bool autoJoin() const;
-    bool hasSamePayload(const NativeBookmark &other) const;
-    void setName(const QString &);
-    void setNick(const QString &);
-    void setPassword(const QString &);
-    void setAutoJoin(bool);
-    PubSubItem toItem(QDomDocument &document) const;
+    bool                  isValid() const;
+    Jid                   room() const;
+    QString               name() const;
+    QString               nick() const;
+    QString               password() const;
+    bool                  autoJoin() const;
+    bool                  hasSamePayload(const NativeBookmark &other) const;
+    void                  setName(const QString &);
+    void                  setNick(const QString &);
+    void                  setPassword(const QString &);
+    void                  setAutoJoin(bool);
+    PubSubItem            toItem(QDomDocument &document) const;
 
-    static NativeBookmark create(const Jid &room, const QString &name, bool autoJoin,
-                                 const QString &nick = {}, const QString &password = {});
+    static NativeBookmark create(const Jid &room, const QString &name, bool autoJoin, const QString &nick = {},
+                                 const QString &password = {});
+
 private:
     Jid          room_;
     QString      name_;

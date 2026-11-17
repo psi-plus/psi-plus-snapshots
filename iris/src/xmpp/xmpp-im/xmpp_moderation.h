@@ -36,8 +36,8 @@ private:
     Jid     room_;
     QString targetId_;
     QString reason_;
-    bool    valid_ = false;
-    bool    started_ = false;
+    bool    valid_            = false;
+    bool    started_          = false;
     bool    awaitingResponse_ = false;
 };
 

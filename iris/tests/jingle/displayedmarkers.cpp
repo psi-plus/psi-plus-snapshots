@@ -14,7 +14,7 @@ static void check(bool ok, const char *why)
 
 static Message parse(const QString &inner)
 {
-    QDomDocument doc;
+    QDomDocument  doc;
     const QString xml = QStringLiteral("<message xmlns='jabber:client' from='peer@example.test/phone' "
                                        "id='incoming-1' type='chat'>")
         + inner + QStringLiteral("</message>");
@@ -31,9 +31,9 @@ static Message parse(const QString &inner)
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
-    const auto markable = parse(QStringLiteral("<body>hello</body>"
-                                              "<markable xmlns='urn:xmpp:chat-markers:0'/>"
-                                              "<request xmlns='urn:xmpp:receipts'/>"));
+    const auto       markable = parse(QStringLiteral("<body>hello</body>"
+                                                           "<markable xmlns='urn:xmpp:chat-markers:0'/>"
+                                                           "<request xmlns='urn:xmpp:receipts'/>"));
     check(markable.isMarkable(), "XEP-0333 markable flag lost");
     check(markable.displayedMarkerId().isEmpty(), "unexpected displayed marker");
     check(markable.messageReceipt() == ReceiptRequest, "XEP-0184 receipt request lost");
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
     const auto missingId = parse(QStringLiteral("<displayed xmlns='urn:xmpp:chat-markers:0'/>"));
     check(missingId.displayedMarkerId().isEmpty(), "malformed displayed marker was accepted");
     const auto foreign = parse(QStringLiteral("<displayed xmlns='urn:other' id='bad'/>"
-                                             "<markable xmlns='urn:other'/>"));
+                                              "<markable xmlns='urn:other'/>"));
     check(!foreign.isMarkable() && foreign.displayedMarkerId().isEmpty(), "foreign marker namespace accepted");
 
     Message outbound(Jid(QStringLiteral("peer@example.test")));

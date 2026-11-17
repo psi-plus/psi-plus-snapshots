@@ -1488,12 +1488,12 @@ bool CoreProtocol::normalStep(const QDomElement &e)
                 // RFC 6120 §6.5: an unrecognized SASL failure condition
                 // must be treated as not-authorized. Also tolerate malformed
                 // failure elements lacking a usable condition.
-                errCond = SASLCond::NotAuthorized;
+                errCond             = SASLCond::NotAuthorized;
                 bool foundCondition = false;
                 for (QDomElement t = e.firstChildElement(); !t.isNull(); t = t.nextSiblingElement()) {
                     if (t.namespaceURI() != NS_SASL || t.localName() == QLatin1String("text"))
                         continue;
-                    foundCondition = true;
+                    foundCondition       = true;
                     const auto condition = stringToSASLCond(t.localName());
                     if (condition)
                         errCond = *condition;

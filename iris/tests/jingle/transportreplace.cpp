@@ -349,8 +349,8 @@ static void testInitiatorLocalUnackedTieBreak(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("incoming") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("incoming") } }));
     check(!ok && isTieBreak(session), "initiator did not tie-break crossed transport-replace");
     check(app->transport().data() == old.data(), "tie-break replaced the initiator transport");
     check(selectorRaw->canReplaceCalls == 0 && selectorRaw->replaceCalls == 0,
@@ -370,8 +370,8 @@ static void testResponderAcceptsInitiatorWinner(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Responder, TestTransportManager::namespaceUri(),
-                        QStringLiteral("winner") } }));
+                      { { QStringLiteral("audio"), J::Origin::Responder, TestTransportManager::namespaceUri(),
+                          QStringLiteral("winner") } }));
     check(ok && !isTieBreak(session), "responder rejected initiator transport-replace winner");
     check(app->transport().data() != old.data() && app->transport()->creator() == J::Origin::Initiator,
           "responder did not install initiator transport");
@@ -392,8 +392,8 @@ static void testInitiatorPendingTransportAcceptsRemoteReplace(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("remote") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("remote") } }));
     check(ok && !isTieBreak(session), "acknowledged local transport incorrectly caused tie-break");
     check(app->transport().data() != old.data() && app->replaceInProgress(),
           "remote replacement was not installed after local transport ACK");
@@ -409,8 +409,8 @@ static void testRemoteUnackedTransportDoesNotTieBreak(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("new-remote") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("new-remote") } }));
     check(ok && !isTieBreak(session), "remote Unacked transport incorrectly caused tie-break");
     check(app->transport().data() != old.data(), "remote replacement was not installed");
 }
@@ -434,10 +434,10 @@ static void testBatchTieBreakReevaluatesSiblingTransport(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("audio-remote") },
-                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("video-remote") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("audio-remote") },
+                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("video-remote") } }));
     check(!ok && isTieBreak(session), "batch collision did not return tie-break");
     check(audio->transport().data() == audioOld.data(), "colliding content changed its transport");
     check(video->transport().data() == videoRetry.data(),
@@ -466,10 +466,10 @@ static void testBatchTieBreakKeepsPreparedLocalSibling(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("audio-remote") },
-                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("video-remote") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("audio-remote") },
+                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("video-remote") } }));
     check(!ok && isTieBreak(session), "prepared-local batch collision did not tie-break");
     check(video->transport().data() == videoOld.data(), "tie-break replaced a not-yet-sent local sibling transport");
     check(videoSelectorRaw->getAlikeCalls == 0 && videoSelectorRaw->replaceCalls == 0,
@@ -491,10 +491,10 @@ static void testMalformedBatchAbortsBeforeTieBreakSideEffects(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("audio-remote") },
-                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("broken"), false } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("audio-remote") },
+                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("broken"), false } }));
     check(!ok && !isTieBreak(session), "malformed batch was incorrectly reported as tie-break");
     check(audio->transport().data() == audioOld.data() && video->transport().data() == videoOld.data(),
           "malformed batch mutated transports before validation completed");
@@ -510,8 +510,8 @@ static void testUnknownTransportIsRejectedWithoutMutation(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator,
-                        QStringLiteral("urn:iris:test:unknown-transport"), QStringLiteral("unknown") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator,
+                          QStringLiteral("urn:iris:test:unknown-transport"), QStringLiteral("unknown") } }));
     check(ok && app->transport().data() == old.data(), "unsupported transport mutated existing transport");
 }
 
@@ -530,8 +530,8 @@ static void testDisabledAndSelectorRejectedReplaceRemainUnchanged(Client &client
         const bool   ok = SessionTestAccess::updateFromXml(
             session, J::Action::TransportReplace,
             makeReplace(doc,
-                        { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                            QStringLiteral("incoming") } }));
+                          { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                              QStringLiteral("incoming") } }));
         check(ok && app->transport().data() == old.data(), "disabled transport-replace changed transport");
         check(selectorRaw->canReplaceCalls == 1 && selectorRaw->replaceCalls == 0,
               "disabled transport-replace unexpectedly called selector replace");
@@ -546,11 +546,11 @@ static void testDisabledAndSelectorRejectedReplaceRemainUnchanged(Client &client
         auto app = addApplication(session, QStringLiteral("audio"), J::Origin::Initiator, old, std::move(selector),
                                   &selectorRaw);
         QDomDocument doc;
-        const bool    ok = SessionTestAccess::updateFromXml(
+        const bool   ok = SessionTestAccess::updateFromXml(
             session, J::Action::TransportReplace,
             makeReplace(doc,
-                        { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                            QStringLiteral("incoming") } }));
+                          { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                              QStringLiteral("incoming") } }));
         check(ok && app->transport().data() == old.data(), "selector-rejected transport changed current transport");
         check(selectorRaw->canReplaceCalls == 1 && selectorRaw->replaceCalls == 0,
               "selector rejection still called replace");
@@ -571,20 +571,20 @@ static void testTieBreakDominatesUnsupportedSibling(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("audio-remote") },
-                      { QStringLiteral("video"), J::Origin::Initiator,
-                        QStringLiteral("urn:iris:test:unknown-transport"), QStringLiteral("unsupported") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("audio-remote") },
+                        { QStringLiteral("video"), J::Origin::Initiator,
+                          QStringLiteral("urn:iris:test:unknown-transport"), QStringLiteral("unsupported") } }));
     check(!ok && isTieBreak(session), "tie-break did not dominate unsupported sibling in same IQ");
     check(audio->transport().data() == audioOld.data() && video->transport().data() == videoOld.data(),
           "mixed tie-break/unsupported batch mutated current transports");
 }
 
 static void testLocalTransportSwitchEmitsReplace(Client &client, Task *success, J::State applicationState,
-                                                J::State previousTransportState)
+                                                 J::State previousTransportState)
 {
     J::Session session(client.jingleManager(), Jid(QStringLiteral("peer@example.test/device")), J::Origin::Initiator);
-    auto oldTransport
+    auto       oldTransport
         = makeTransport(session, J::Origin::Initiator, previousTransportState, QStringLiteral("established-ice"));
     auto nextTransport
         = makeTransport(session, J::Origin::Initiator, J::State::ApprovedToSend, QStringLiteral("fallback-s5b"));
@@ -681,8 +681,7 @@ int main(int argc, char **argv)
     // transport is still below Unacked. Every new local transport must be
     // introduced with transport-replace, not transport-info.
     for (const auto applicationState : { J::State::Connecting, J::State::Active }) {
-        for (const auto previousTransportState :
-             { J::State::ApprovedToSend, J::State::Pending, J::State::Active }) {
+        for (const auto previousTransportState : { J::State::ApprovedToSend, J::State::Pending, J::State::Active }) {
             testLocalTransportSwitchEmitsReplace(client, &success, applicationState, previousTransportState);
         }
     }

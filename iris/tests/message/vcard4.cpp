@@ -21,8 +21,8 @@ int main(int argc, char **argv)
     card.setLanguages(QStringLiteral("en-US"));
 
     QDomDocument document;
-    const auto element = card.toXmlElement(document);
-    const auto language = element.firstChildElement(QStringLiteral("lang"));
+    const auto   element  = card.toXmlElement(document);
+    const auto   language = element.firstChildElement(QStringLiteral("lang"));
     check(!language.isNull(), "Language entry was not serialized");
     check(language.firstChildElement(QStringLiteral("language-tag")).text() == QStringLiteral("en-US"),
           "RFC 6351 language-tag was not serialized");

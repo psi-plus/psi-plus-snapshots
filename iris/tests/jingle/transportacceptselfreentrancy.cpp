@@ -52,8 +52,8 @@ static void testAcceptedTransportCannotCompleteNewerReplacement(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportAccept,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("accepted-old") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("accepted-old") } }));
 
     check(ok, "valid transport-accept became an error after a newer local replacement was selected");
     check(app->transport().data() == newTransport.data(),

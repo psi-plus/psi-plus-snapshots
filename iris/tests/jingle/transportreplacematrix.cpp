@@ -91,8 +91,8 @@ static void testSelectorReplaceFailureKeepsCurrentTransport(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("remote") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("remote") } }));
 
     check(ok, "selector replace failure rejected the whole transport-replace action");
     check(app->transport().data() == old.data(), "selector replace failure changed current transport");
@@ -122,10 +122,10 @@ static void testMixedBatchAcceptsSupportedAndRejectsUnsupported(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("audio-remote") },
-                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("video-remote") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("audio-remote") },
+                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("video-remote") } }));
 
     check(ok && !isTieBreak(session), "mixed supported/unsupported transport-replace batch was rejected wholesale");
     check(audio->transport().data() != audioOld.data() && audio->replaceInProgress(),
@@ -154,8 +154,8 @@ static void testPlannedLocalReplaceDoesNotTieBreak(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("remote") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("remote") } }));
 
     check(ok && !isTieBreak(session), "unsent Planned replacement incorrectly won a tie-break");
     check(app->transport().data() != local.data() && app->replaceInProgress(),
@@ -175,8 +175,8 @@ static void testAcknowledgedLocalReplaceDoesNotTieBreak(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("remote") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("remote") } }));
 
     check(ok && !isTieBreak(session), "already-acknowledged local replacement incorrectly caused tie-break");
     check(app->transport().data() != local.data() && app->replaceInProgress(),
@@ -197,8 +197,8 @@ static void testResponderNeedAckStillYieldsToInitiator(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Responder, TestTransportManager::namespaceUri(),
-                        QStringLiteral("initiator-winner") } }));
+                      { { QStringLiteral("audio"), J::Origin::Responder, TestTransportManager::namespaceUri(),
+                          QStringLiteral("initiator-winner") } }));
 
     check(ok && !isTieBreak(session), "responder rejected initiator winner while its own replace IQ was in flight");
     check(app->transport().data() != local.data() && app->transport()->creator() == J::Origin::Initiator,
@@ -219,8 +219,8 @@ static void testTieBreakCarriesConflictCondition(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("crossed") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("crossed") } }));
 
     const auto error = session.lastError();
     check(!ok && error, "crossed transport-replace did not return an error");
@@ -253,10 +253,10 @@ static void testReentrantSiblingMutationInvalidatesValidatedCandidate(Client &cl
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportReplace,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("audio-remote-stale") },
-                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("video-remote") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("audio-remote-stale") },
+                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("video-remote") } }));
 
     check(ok && !isTieBreak(session), "reentrant transport-replace batch was rejected");
     check(audio->transport().data() == audioNewLocal.data(),
@@ -295,10 +295,10 @@ static void testTransportAcceptSkipsReentrantStaleSibling(Client &client)
     const bool   ok = SessionTestAccess::updateFromXml(
         session, J::Action::TransportAccept,
         makeReplace(doc,
-                    { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("audio-accepted") },
-                      { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
-                        QStringLiteral("video-stale-accept") } }));
+                      { { QStringLiteral("audio"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("audio-accepted") },
+                        { QStringLiteral("video"), J::Origin::Initiator, TestTransportManager::namespaceUri(),
+                          QStringLiteral("video-stale-accept") } }));
 
     check(ok, "reentrant stale sibling made transport-accept reject the whole batch");
     check(audio->replaceIdle() && audioTransport->starts() == 1,

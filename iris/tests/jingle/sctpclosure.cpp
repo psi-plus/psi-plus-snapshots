@@ -93,20 +93,18 @@ int checkClosure(Closure closure)
 int checkQueuedDataDelivery()
 {
     Association owner(nullptr);
-    auto        state = std::make_unique<AssociationPrivate>(&owner);
+    auto        state         = std::make_unique<AssociationPrivate>(&owner);
     state->transportConnected = true;
-    auto first  = state->newChannel(Reliable, true, 0, 256, {}, {}).staticCast<WebRTCDataChannel>();
-    auto second = state->newChannel(Reliable, true, 0, 256, {}, {}).staticCast<WebRTCDataChannel>();
+    auto first                = state->newChannel(Reliable, true, 0, 256, {}, {}).staticCast<WebRTCDataChannel>();
+    auto second               = state->newChannel(Reliable, true, 0, 256, {}, {}).staticCast<WebRTCDataChannel>();
     if (!first || !second || first->streamId == second->streamId)
         return fail("failed to create independent SCTP data channels");
 
     QByteArray firstReceived, secondReceived;
-    QObject::connect(first.data(), &ByteStream::readyRead, &owner, [&] {
-        firstReceived += first->readDatagram().data();
-    });
-    QObject::connect(second.data(), &ByteStream::readyRead, &owner, [&] {
-        secondReceived += second->readDatagram().data();
-    });
+    QObject::connect(first.data(), &ByteStream::readyRead, &owner,
+                     [&] { firstReceived += first->readDatagram().data(); });
+    QObject::connect(second.data(), &ByteStream::readyRead, &owner,
+                     [&] { secondReceived += second->readDatagram().data(); });
     const QByteArray a("first-stream");
     const QByteArray b("second-stream");
     state->OnSctpAssociationMessageReceived(&state->assoc, quint16(first->streamId), PPID_BINARY,

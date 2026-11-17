@@ -610,7 +610,7 @@ namespace XMPP { namespace Jingle {
             const auto attemptId   = ++_nextSendersAttempt;
             const auto revision    = _sendersRequestRevision;
             _sendersAttempt        = SendersAttemptResult { attemptId, revision, requested,
-                                                           SendersAttemptResult::Outcome::Cancelled, std::nullopt };
+                                                     SendersAttemptResult::Outcome::Cancelled, std::nullopt };
             return OutgoingUpdate { updates,
                                     [this, guard = QPointer<Application>(this), requested, attemptId,
                                      revision](Task *task) {

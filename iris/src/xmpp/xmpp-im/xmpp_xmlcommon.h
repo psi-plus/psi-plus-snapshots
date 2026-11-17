@@ -22,8 +22,8 @@
 
 #include <QDomDocument>
 #include <QDomNode>
-#include <QtGlobal>
 #include <QList>
+#include <QtGlobal>
 
 class QColor;
 class QDateTime;
@@ -55,41 +55,40 @@ private:
     QList<QDomNode> list;
 };
 
-QDateTime    stamp2TS(const QString &ts);
-bool         stamp2TS(const QString &ts, QDateTime *d);
-QString      TS2stamp(const QDateTime &d);
-QDomElement  textTag(QDomDocument *doc, const QString &name, const QString &content);
-QDomElement  textTagNS(QDomDocument *doc, const QString &ns, const QString &name, const QString &content);
-QString      tagContent(const QDomElement &e);
+QDateTime   stamp2TS(const QString &ts);
+bool        stamp2TS(const QString &ts, QDateTime *d);
+QString     TS2stamp(const QDateTime &d);
+QDomElement textTag(QDomDocument *doc, const QString &name, const QString &content);
+QDomElement textTagNS(QDomDocument *doc, const QString &ns, const QString &name, const QString &content);
+QString     tagContent(const QDomElement &e);
 // Match the expanded XML name (namespace + local name), regardless of prefix.
 bool         isElementNS(const QDomElement &e, const QString &nsURI, const QString &localName);
 XDomNodeList childElementsByTagNameNS(const QDomElement &e, const QString &nsURI, const QString &localName);
 // Find the first direct child by local name, regardless of namespace.
 // For protocol recognition, check the returned element's namespaceURI().
-QDomElement  firstChildElementByLocalName(const QDomElement &e, const QString &localName);
-QDomElement  createIQ(QDomDocument *doc, const QString &type, const QString &to, const QString &id);
-QDomElement  queryTag(const QDomElement &e);
-QString      queryNS(const QDomElement &e);
-void         getErrorFromElement(const QDomElement &e, const QString &baseNS, int *code, QString *str);
-QDomElement  addCorrectNS(const QDomElement &e);
+QDomElement firstChildElementByLocalName(const QDomElement &e, const QString &localName);
+QDomElement createIQ(QDomDocument *doc, const QString &type, const QString &to, const QString &id);
+QDomElement queryTag(const QDomElement &e);
+QString     queryNS(const QDomElement &e);
+void        getErrorFromElement(const QDomElement &e, const QString &baseNS, int *code, QString *str);
+QDomElement addCorrectNS(const QDomElement &e);
 
 namespace XMLHelper {
 
 // Parse XMPP XML with namespace processing under both Qt 5 and Qt 6.
 // Qt 6.5 replaced the bool overload with ParseOptions/ParseResult.
 // The explicit bool return also works with Qt 6.5's explicit conversion.
-template<typename Source>
+template <typename Source>
 inline bool parseDocument(QDomDocument &document, const Source &xml, bool useNamespaces = true)
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-    const auto options = useNamespaces ? QDomDocument::ParseOption::UseNamespaceProcessing
-                                       : QDomDocument::ParseOption::Default;
+    const auto options
+        = useNamespaces ? QDomDocument::ParseOption::UseNamespaceProcessing : QDomDocument::ParseOption::Default;
     return bool(document.setContent(xml, options));
 #else
     return document.setContent(xml, useNamespaces);
 #endif
 }
-
 
 // QDomElement findSubTag(const QDomElement &e, const QString &name, bool *found);
 bool hasSubTag(const QDomElement &e, const QString &name);

@@ -3,13 +3,13 @@
 
 namespace XMPP {
 namespace {
-const QString ns = QStringLiteral("urn:xmpp:bookmarks:1");
+    const QString ns = QStringLiteral("urn:xmpp:bookmarks:1");
 
-QString childText(const QDomElement &parent, const QString &name)
-{
-    const auto child = parent.firstChildElement(name);
-    return child.namespaceURI() == ns ? child.text() : QString();
-}
+    QString childText(const QDomElement &parent, const QString &name)
+    {
+        const auto child = parent.firstChildElement(name);
+        return child.namespaceURI() == ns ? child.text() : QString();
+    }
 } // namespace
 
 QString NativeBookmark::node() { return ns; }
@@ -25,18 +25,18 @@ PubSubOptions NativeBookmark::privatePublishOptions()
 NativeBookmark NativeBookmark::fromItem(const PubSubItem &item)
 {
     NativeBookmark result;
-    const Jid room(item.id());
-    const auto payload = item.payload();
-    if (!room.isValid() || room.isEmpty() || !room.resource().isEmpty()
-        || payload.namespaceURI() != ns || payload.tagName() != QLatin1String("conference"))
+    const Jid      room(item.id());
+    const auto     payload = item.payload();
+    if (!room.isValid() || room.isEmpty() || !room.resource().isEmpty() || payload.namespaceURI() != ns
+        || payload.tagName() != QLatin1String("conference"))
         return result;
 
-    result.room_ = room;
-    result.name_ = payload.attribute(QStringLiteral("name"));
-    const QString join = payload.attribute(QStringLiteral("autojoin")); 
-    result.autoJoin_ = join == QLatin1String("true") || join == QLatin1String("1");
-    result.nick_ = childText(payload, QStringLiteral("nick"));
-    result.password_ = childText(payload, QStringLiteral("password"));
+    result.room_       = room;
+    result.name_       = payload.attribute(QStringLiteral("name"));
+    const QString join = payload.attribute(QStringLiteral("autojoin"));
+    result.autoJoin_   = join == QLatin1String("true") || join == QLatin1String("1");
+    result.nick_       = childText(payload, QStringLiteral("nick"));
+    result.password_   = childText(payload, QStringLiteral("password"));
 
     // Unknown client data may live under <extensions/>. Preserve only that
     // subtree; known bookmark fields remain independent of the source DOM.
@@ -46,34 +46,30 @@ NativeBookmark NativeBookmark::fromItem(const PubSubItem &item)
     return result;
 }
 
-NativeBookmark NativeBookmark::create(const Jid &room, const QString &name, bool autoJoin,
-                                      const QString &nick, const QString &password)
+NativeBookmark NativeBookmark::create(const Jid &room, const QString &name, bool autoJoin, const QString &nick,
+                                      const QString &password)
 {
     NativeBookmark result;
     if (room.isValid() && !room.isEmpty() && room.resource().isEmpty()) {
-        result.room_ = room;
-        result.name_ = name;
+        result.room_     = room;
+        result.name_     = name;
         result.autoJoin_ = autoJoin;
-        result.nick_ = nick;
+        result.nick_     = nick;
         result.password_ = password;
     }
     return result;
 }
 
-bool NativeBookmark::isValid() const
-{
-    return room_.isValid() && !room_.isEmpty() && room_.resource().isEmpty();
-}
-Jid NativeBookmark::room() const { return room_; }
+bool    NativeBookmark::isValid() const { return room_.isValid() && !room_.isEmpty() && room_.resource().isEmpty(); }
+Jid     NativeBookmark::room() const { return room_; }
 QString NativeBookmark::name() const { return name_; }
 QString NativeBookmark::nick() const { return nick_; }
 QString NativeBookmark::password() const { return password_; }
-bool NativeBookmark::autoJoin() const { return autoJoin_; }
-bool NativeBookmark::hasSamePayload(const NativeBookmark &other) const
+bool    NativeBookmark::autoJoin() const { return autoJoin_; }
+bool    NativeBookmark::hasSamePayload(const NativeBookmark &other) const
 {
-    return room_.bare() == other.room_.bare() && name_ == other.name_
-        && nick_ == other.nick_ && password_ == other.password_
-        && autoJoin_ == other.autoJoin_
+    return room_.bare() == other.room_.bare() && name_ == other.name_ && nick_ == other.nick_
+        && password_ == other.password_ && autoJoin_ == other.autoJoin_
         && extensions_.toString(-1) == other.extensions_.toString(-1);
 }
 void NativeBookmark::setName(const QString &name) { name_ = name; }

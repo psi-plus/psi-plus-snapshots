@@ -65,15 +65,18 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         qDebug("jignle-sctp: on connected");
         // Opening channels invokes application callbacks and may start more SCTP I/O.
         // Do not run it inside a usrsctp callback holding internal locks.
-        QMetaObject::invokeMethod(this, [this] {
-            if (associationClosed)
-                return;
-            for (auto &channel : channels) {
-                auto dc = channel.staticCast<WebRTCDataChannel>();
-                if (!dc->openingDeferred)
-                    dc->connect();
-            }
-        }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(
+            this,
+            [this] {
+                if (associationClosed)
+                    return;
+                for (auto &channel : channels) {
+                    auto dc = channel.staticCast<WebRTCDataChannel>();
+                    if (!dc->openingDeferred)
+                        dc->connect();
+                }
+            },
+            Qt::QueuedConnection);
     }
 
     void AssociationPrivate::OnSctpAssociationFailed(RTC::SctpAssociation *)
@@ -122,11 +125,14 @@ namespace XMPP { namespace Jingle { namespace SCTP {
         // not do that from the buffered-amount callback. A burst of SCTP
         // notifications needs just one queued wakeup, not one per packet.
         if (!outgoingDrainScheduled.exchange(true)) {
-            QMetaObject::invokeMethod(this, [this] {
-                outgoingDrainScheduled = false;
-                if (!dumpingOutogingBuffer)
-                    procesOutgoingMessageQueue();
-            }, Qt::QueuedConnection);
+            QMetaObject::invokeMethod(
+                this,
+                [this] {
+                    outgoingDrainScheduled = false;
+                    if (!dumpingOutogingBuffer)
+                        procesOutgoingMessageQueue();
+                },
+                Qt::QueuedConnection);
         }
         // TODO control buffering to reduce memory consumption
     }

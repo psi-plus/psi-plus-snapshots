@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include "sessiontestaccess.h"
-#include <iris/xmpp_xmlcommon.h>
 #include <QCoreApplication>
 #include <QDebug>
 #include <QEventLoop>
@@ -8,6 +7,7 @@
 #include <iris/jingle-rtp.h>
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_task.h>
+#include <iris/xmpp_xmlcommon.h>
 #include <qca.h>
 
 using namespace XMPP;
@@ -218,7 +218,8 @@ struct OwnedXml {
 static OwnedXml infoXml(const QString &body)
 {
     OwnedXml xml;
-    check(XMLHelper::parseDocument(xml.doc, "<jingle xmlns='urn:xmpp:jingle:1'>" + body + "</jingle>", true), "invalid test XML");
+    check(XMLHelper::parseDocument(xml.doc, "<jingle xmlns='urn:xmpp:jingle:1'>" + body + "</jingle>", true),
+          "invalid test XML");
     xml.root = xml.doc.documentElement();
     return xml;
 }

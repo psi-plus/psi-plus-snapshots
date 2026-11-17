@@ -176,7 +176,7 @@ public:
     QList<S5BDatagram *> dglist;
 };
 
-static int id_conn  = 0;
+static int id_conn = 0;
 #ifdef S5B_DEBUG
 static int num_conn = 0;
 #endif

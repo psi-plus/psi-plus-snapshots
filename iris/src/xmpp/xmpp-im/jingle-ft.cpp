@@ -1154,13 +1154,13 @@ namespace XMPP { namespace Jingle { namespace FileTransfer {
                             return true;
                         }
                         const QPointer<Application> guard(transfer);
-                        emit transfer->remoteChecksumReceived(checksum.file);
+                        emit                        transfer->remoteChecksumReceived(checksum.file);
                         if (!guard || transfer->state() == State::Finished)
                             return true;
                         transfer->d->onIncomingChecksum(range.hashes);
                     } else {
                         const QPointer<Application> guard(transfer);
-                        emit transfer->remoteChecksumReceived(checksum.file);
+                        emit                        transfer->remoteChecksumReceived(checksum.file);
                         if (!guard || transfer->state() == State::Finished)
                             return true;
                         transfer->d->onIncomingChecksum(checksum.file.hashes());

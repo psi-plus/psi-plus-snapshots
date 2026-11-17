@@ -142,7 +142,8 @@ namespace {
                         entry.data);
                 } else if constexpr (std::is_same_v<T, QStringList>) {
                     for (auto const &s : entry.data) {
-                        element.appendChild(document.createElement(innerTagName)).appendChild(document.createTextNode(s));
+                        element.appendChild(document.createElement(innerTagName))
+                            .appendChild(document.createTextNode(s));
                     }
                 } else if constexpr (std::is_same_v<T, TimeZone>) {
                     std::visit(

@@ -34,12 +34,12 @@ ServerInfoManager::ServerInfoManager(Client *client) : QObject(client), _client(
 
 void ServerInfoManager::reset()
 {
-    _hasPEP = false;
-    _serverFeaturesReady = false;
-    _serverFeatures = Features();
-    _accountFeatures = Features();
+    _hasPEP               = false;
+    _serverFeaturesReady  = false;
+    _serverFeatures       = Features();
+    _accountFeatures      = Features();
     _hasPersistentStorage = false;
-    _canMessageCarbons = false;
+    _canMessageCarbons    = false;
     _multicastService.clear();
     _extraServerInfo.clear();
     disconnect(CapsRegistry::instance());
@@ -278,7 +278,7 @@ QVariant ServerInfoManager::serviceMeta(const Jid &service, const QString &key)
 
 void ServerInfoManager::server_disco_finished()
 {
-    JT_DiscoInfo *jt = static_cast<JT_DiscoInfo *>(sender());
+    JT_DiscoInfo *jt     = static_cast<JT_DiscoInfo *>(sender());
     _serverFeaturesReady = true;
     if (jt->success()) {
         _serverFeatures = jt->item().features();
@@ -297,7 +297,6 @@ void ServerInfoManager::server_disco_finished()
                 }
             }
         }
-
     }
     // Emit even when disco fails so the client may choose its legacy fallback
     // after a definitive response/timeout, not on an arbitrary wall clock.

@@ -10,24 +10,19 @@
 
 namespace XMPP {
 namespace {
-constexpr auto MdsNs = "urn:xmpp:mds:displayed:0";
-constexpr auto SidNs = "urn:xmpp:sid:0";
+    constexpr auto MdsNs = "urn:xmpp:mds:displayed:0";
+    constexpr auto SidNs = "urn:xmpp:sid:0";
 
 } // namespace
 
-QString MessageDisplayedSync::node()
-{
-    return QLatin1String(MdsNs);
-}
+QString MessageDisplayedSync::node() { return QLatin1String(MdsNs); }
 
 PubSubOptions MessageDisplayedSync::publishOptions()
 {
-    return {
-        { QStringLiteral("pubsub#persist_items"), { QStringLiteral("true") } },
-        { QStringLiteral("pubsub#max_items"), { QStringLiteral("max") } },
-        { QStringLiteral("pubsub#send_last_published_item"), { QStringLiteral("never") } },
-        { QStringLiteral("pubsub#access_model"), { QStringLiteral("whitelist") } }
-    };
+    return { { QStringLiteral("pubsub#persist_items"), { QStringLiteral("true") } },
+             { QStringLiteral("pubsub#max_items"), { QStringLiteral("max") } },
+             { QStringLiteral("pubsub#send_last_published_item"), { QStringLiteral("never") } },
+             { QStringLiteral("pubsub#access_model"), { QStringLiteral("whitelist") } } };
 }
 
 QDomElement MessageDisplayedSync::payload(QDomDocument &document, const Message::StanzaId &stanzaId)
@@ -36,7 +31,7 @@ QDomElement MessageDisplayedSync::payload(QDomDocument &document, const Message:
         return {};
 
     auto displayed = XMLHelper::emptyTagNS(&document, QLatin1String(MdsNs), QStringLiteral("displayed"));
-    auto sid = XMLHelper::emptyTagNS(&document, QLatin1String(SidNs), QStringLiteral("stanza-id"));
+    auto sid       = XMLHelper::emptyTagNS(&document, QLatin1String(SidNs), QStringLiteral("stanza-id"));
     sid.setAttribute(QStringLiteral("by"), stanzaId.by.bare());
     sid.setAttribute(QStringLiteral("id"), stanzaId.id);
     displayed.appendChild(sid);
@@ -58,27 +53,24 @@ bool MessageDisplayedSync::parseItem(const PubSubItem &item, const Jid &expected
         return false;
 
     const auto sid = displayed.firstChildElement();
-    if (!isElementNS(sid, QLatin1String(SidNs), QStringLiteral("stanza-id"))
-        || !sid.nextSiblingElement().isNull())
+    if (!isElementNS(sid, QLatin1String(SidNs), QStringLiteral("stanza-id")) || !sid.nextSiblingElement().isNull())
         return false;
 
-    const Message::StanzaId stanzaId { Jid(sid.attribute(QStringLiteral("by"))),
-                                       sid.attribute(QStringLiteral("id")) };
+    const Message::StanzaId stanzaId { Jid(sid.attribute(QStringLiteral("by"))), sid.attribute(QStringLiteral("id")) };
     if (!stanzaId.isValid() || stanzaId.by != expectedBy)
         return false;
 
     State parsed;
-    parsed.chat = chat;
+    parsed.chat     = chat;
     parsed.stanzaId = stanzaId;
-    *state = parsed;
+    *state          = parsed;
     return true;
 }
 
 bool MessageDisplayedSync::isOwnNotification(const Jid &sender, const Jid &account, const PubSubEvent &event)
 {
     return sender.isBare() && account.isValid() && sender.compare(account, false)
-        && event.type() == PubSubEvent::Type::Items
-        && event.node() == node();
+        && event.type() == PubSubEvent::Type::Items && event.node() == node();
 }
 
 } // namespace XMPP

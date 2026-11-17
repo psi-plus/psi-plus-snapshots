@@ -316,8 +316,15 @@ if(IRIS_SYSTEM_QCA STREQUAL "3")
     set_tests_properties(jingle_bundleice jingle_bundlemedia jingle_bundlesignaling PROPERTIES TIMEOUT 20)
 endif()
 
-add_executable(jingle_icestopcallbacks_test icestopcallbacks.cpp)
 get_target_property(irisnet_binary_dir irisnet BINARY_DIR)
+add_executable(jingle_icecandidatereplay_test icecandidatereplay.cpp)
+target_include_directories(jingle_icecandidatereplay_test PRIVATE
+    "${irisnet_binary_dir}/irisnet_autogen/include" "${irisnet_binary_dir}/irisnet_autogen/include_$<CONFIG>")
+target_link_libraries(jingle_icecandidatereplay_test PRIVATE irisnet iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Network)
+add_test(NAME jingle_icecandidatereplay COMMAND jingle_icecandidatereplay_test)
+set_tests_properties(jingle_icecandidatereplay PROPERTIES TIMEOUT 15)
+add_executable(jingle_icestopcallbacks_test icestopcallbacks.cpp)
 target_include_directories(jingle_icestopcallbacks_test PRIVATE
     "${irisnet_binary_dir}/irisnet_autogen/include" "${irisnet_binary_dir}/irisnet_autogen/include_$<CONFIG>")
 target_link_libraries(jingle_icestopcallbacks_test PRIVATE irisnet iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core

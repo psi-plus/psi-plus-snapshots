@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include <QSet>
-#include <iris/xmpp_xmlcommon.h>
 #include <algorithm>
 #include <functional>
 #include <iris/jingle-ft.h>
+#include <iris/jingle-session.h>
 #include <iris/xmpp-im/jingle-tiebreaker.h>
 #include <iris/xmpp-im/xmpp_features.h>
-#include <memory>
-#include <iris/jingle-session.h>
 #include <iris/xmpp_client.h>
+#include <iris/xmpp_xmlcommon.h>
+#include <memory>
 
 #include <QBuffer>
 #include <QCoreApplication>
@@ -213,7 +213,7 @@ static void exerciseSessionTermination(Client &client, bool partial, bool localF
     QDomDocument doc;
     auto         info = doc.createElementNS(J::NS, QStringLiteral("jingle"));
     info.appendChild(J::Reason(peerReason).toXml(&doc));
-    check((session->*sessionUpdate(SessionUpdate{}))(J::Action::SessionTerminate, info, nullptr),
+    check((session->*sessionUpdate(SessionUpdate {}))(J::Action::SessionTerminate, info, nullptr),
           "session termination was not handled");
     const auto expected = localFailure                ? J::Reason::MediaError
         : partial && peerReason == J::Reason::Success ? J::Reason::FailedApplication
@@ -617,13 +617,13 @@ int main(int argc, char **argv)
         auto transport
             = QPointer<TestTransport>(new TestTransport(new TestTransportPad(&receiver), J::Origin::Responder));
         TestApplication transfer(pad, QStringLiteral("nested-range"), J::Origin::Responder, J::Origin::Initiator);
-        int announced = 0;
+        int             announced = 0;
         QObject::connect(&transfer, &FT::Application::remoteChecksumReceived, &transfer, [&](const FT::File &file) {
             ++announced;
             check(file.range().offset == 4 && file.range().length == 4 && file.range().hashes.size() == 1,
                   "checksum notification lost its accepted span or digest");
         });
-        auto            file = testFile(8);
+        auto file = testFile(8);
         file.addHash(Hash(Hash::Sha256));
         file.setRange(FT::Range(4, 4));
         transfer.setFile(file);

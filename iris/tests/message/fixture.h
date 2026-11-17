@@ -17,10 +17,10 @@ inline void check(bool ok, const char *message)
 
 class OfflineConnector final : public XMPP::Connector {
 public:
-    void setOptHostPort(const QString &, quint16) override { }
-    void connectToServer(const QString &) override { }
+    void        setOptHostPort(const QString &, quint16) override { }
+    void        connectToServer(const QString &) override { }
     ByteStream *stream() const override { return nullptr; }
-    void done() override { }
+    void        done() override { }
 };
 
 class RecordingStream final : public XMPP::ClientStream {
@@ -30,13 +30,12 @@ public:
 
 struct Endpoint {
     OfflineConnector connector;
-    RecordingStream stream { &connector };
-    XMPP::Client client;
+    RecordingStream  stream { &connector };
+    XMPP::Client     client;
 
     Endpoint()
     {
-        client.start(QStringLiteral("example.test"), QStringLiteral("alice"), QString(),
-                     QStringLiteral("desktop"));
+        client.start(QStringLiteral("example.test"), QStringLiteral("alice"), QString(), QStringLiteral("desktop"));
         client.connectToServer(&stream, XMPP::Jid(QStringLiteral("alice@example.test/desktop")));
     }
 };

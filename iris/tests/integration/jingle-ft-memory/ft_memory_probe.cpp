@@ -1,5 +1,4 @@
 #include <iris/jingle-ft.h>
-#include <iris/xmpp_xmlcommon.h>
 #include <iris/jingle-ice.h>
 #include <iris/jingle-session.h>
 #include <iris/tcpportreserver.h>
@@ -8,6 +7,7 @@
 #include <iris/xmpp_client.h>
 #include <iris/xmpp_clientstream.h>
 #include <iris/xmpp_tasks.h>
+#include <iris/xmpp_xmlcommon.h>
 
 #include <QtCrypto>
 
