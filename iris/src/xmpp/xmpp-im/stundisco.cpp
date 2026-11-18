@@ -20,8 +20,11 @@
 #include "stundisco.h"
 
 #include "netnames.h"
+#include "stunserviceaddress_p.h"
 #include "xmpp_client.h"
 #include "xmpp_externalservicediscovery.h"
+
+#include <QPointer>
 
 #include <chrono>
 
@@ -56,6 +59,10 @@ private:
 
     void disco()
     {
+        // ICE takes ownership of the monitor, so it can outlive the Client
+        // and the manager that created it.
+        if (!manager_)
+            return;
         using namespace std::chrono_literals;
         manager_->client()->externalServiceDiscovery()->services(
             this, [this](auto const &list) { addNewServices(list); }, 5min, supportedServiceTypes());
@@ -85,8 +92,12 @@ private:
             QHostAddress addr(l->host);
             if (addr.isNull())
                 needResolve.append(s);
-            else
+            else if (isUsableStunServiceAddress(addr))
                 s->addresses.append(addr);
+            else {
+                qWarning("stundisco: ignoring unusable STUN/TURN address %s", qPrintable(l->host));
+                continue;
+            }
             if (l->needsNewCreds()) {
                 needCreds.append(s);
             } else if (!s->addresses.isEmpty()) {
@@ -134,8 +145,12 @@ private:
 
             connect(dns, &NameResolver::resultsReady, this, [this, name](const QList<XMPP::NameRecord> &records) {
                 QList<QHostAddress> addresses;
-                for (const auto &r : records)
-                    addresses.append(r.address());
+                for (const auto &r : records) {
+                    if (isUsableStunServiceAddress(r.address()))
+                        addresses.append(r.address());
+                }
+                if (addresses.isEmpty())
+                    qWarning("stundisco: no usable DNS addresses for STUN/TURN host %s", qPrintable(name));
                 setAddresses(name, addresses);
             });
             connect(dns, &NameResolver::error, this,
@@ -160,6 +175,8 @@ private:
 
     void getCreds(const StunList &services)
     {
+        if (!manager_)
+            return;
         QSet<ExternalServiceId> ids;
         for (auto const &s : services) {
             ExternalServiceId id;
@@ -218,7 +235,7 @@ private:
         }
     }
 
-    StunDiscoManager                      *manager_;
+    QPointer<StunDiscoManager>               manager_;
     bool                                   inProgress_ = false; // initial disco
     QList<AbstractStunDisco::Service::Ptr> pendingWork_;
 };

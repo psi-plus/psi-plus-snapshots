@@ -32,6 +32,7 @@
 
 #include <QDeadlineTimer>
 #include <QEvent>
+#include <QLoggingCategory>
 #include <QNetworkInterface>
 #include <QPointer>
 #include <QQueue>
@@ -40,12 +41,14 @@
 #include <QUdpSocket>
 #include <QtCrypto>
 
+// Routine ICE diagnostics and per-packet traces have separate Qt categories.
+// QT_LOGGING_RULES="iris.ice.debug=false" disables formatting of ordinary
+// ICE debug messages, while "iris.ice.packet.debug=true" opts into packet dumps.
+Q_LOGGING_CATEGORY(irisIce, "iris.ice")
+Q_LOGGING_CATEGORY(irisIcePacket, "iris.ice.packet", QtWarningMsg)
+
 #define ICE_DEBUG
-#ifdef ICE_DEBUG
-#define iceDebug qDebug
-#else
-#define iceDebug(...)
-#endif
+#define iceDebug(...) qCDebug(irisIce, __VA_ARGS__)
 
 namespace XMPP {
 enum { Direct, Relayed };
@@ -315,7 +318,7 @@ public:
     void stunFound(AbstractStunDisco::Service::Ptr service)
     {
         quint16 port = service->port ? service->port : ((service->flags & AbstractStunDisco::Tls) ? 5349 : 3478);
-        qDebug("found %s: %s:%hu %s %s", (service->flags & AbstractStunDisco::Relay) ? "TURN" : "STUN",
+        iceDebug("found %s: %s:%hu %s %s", (service->flags & AbstractStunDisco::Relay) ? "TURN" : "STUN",
                qPrintable(service->host), port, service->transport == AbstractStunDisco::Tcp ? "tcp" : "udp",
                (service->flags & AbstractStunDisco::Tls) ? "tls" : "insecure");
     }
@@ -346,7 +349,9 @@ public:
             Component &c = components.back();
             c.id         = n + 1;
             c.ic         = new IceComponent(c.id, this);
-            c.ic->setDebugLevel(IceComponent::DL_Packet);
+            c.ic->setDebugLevel(irisIcePacket().isDebugEnabled() ? IceComponent::DL_Packet
+                                 : irisIce().isDebugEnabled() ? IceComponent::DL_Info
+                                                               : IceComponent::DL_None);
             connect(c.ic, &IceComponent::candidateAdded, this, &Private::ic_candidateAdded);
             connect(c.ic, &IceComponent::candidateRemoved, this, &Private::ic_candidateRemoved);
             connect(c.ic, &IceComponent::localFinished, this, &Private::ic_localFinished);
@@ -520,7 +525,7 @@ public:
         //   trying to relay to localhost is pretty
         //   stupid anyway
         if (lc->type == IceComponent::RelayedType && getAddressScope(rc->addr.addr) == 0) {
-            qDebug("Skip building pair: %s - %s (relay to localhost)", qPrintable(lc->addr), qPrintable(rc->addr));
+            iceDebug("Skip building pair: %s - %s (relay to localhost)", qPrintable(lc->addr), qPrintable(rc->addr));
             return {};
         }
 
@@ -663,7 +668,7 @@ public:
                         return;
                     int at = findLocalCandidate(pair->local->addr);
                     if (at == -1) { // FIXME: assert?
-                        qDebug("Failed to find local candidate %s", qPrintable(pair->local->addr));
+                        iceDebug("Failed to find local candidate %s", qPrintable(pair->local->addr));
                         return;
                     }
 
@@ -1425,10 +1430,13 @@ private slots:
 
     void ic_candidateAdded(const XMPP::IceComponent::Candidate &_cc)
     {
-        // RFC 8838 section 13: no new candidates may be trickled after
-        // end-of-candidates or final nomination, even if a slow STUN/TURN
-        // transaction on an unused interface eventually completes.
-        if (localGatheringComplete || state == Active) {
+        // RFC 8838 section 13 prohibits signaling newly gathered candidates
+        // after end-of-candidates or final nomination. However RFC 8445
+        // section 7.2.5.3.1 still requires us to register an internally
+        // discovered peer-reflexive candidate to form the valid pair from a
+        // Binding success. It must not be trickled to the remote peer.
+        const bool gatheringClosed = localGatheringComplete || state == Active;
+        if (gatheringClosed && _cc.info->type != IceComponent::PeerReflexiveType) {
             iceDebug("C%d: ignoring candidate discovered after end-of-candidates", _cc.info->componentId);
             return;
         }
@@ -1452,7 +1460,7 @@ private slots:
         if (!localHostGatheringFinished)
             return; // all local IPs will be reported at once
 
-        if (localFeatures & Trickle) {
+        if ((localFeatures & Trickle) && !gatheringClosed) {
             QList<Ice176::Candidate> list;
 
             Ice176::Candidate c;
@@ -1582,7 +1590,10 @@ private slots:
         Q_ASSERT(it != components.end());
 
         // FIXME: components are always sorted?
-        iceDebug("C%d: %s", it->id, qPrintable(line));
+        if (irisIcePacket().isDebugEnabled())
+            qCDebug(irisIcePacket, "C%d: %s", it->id, qPrintable(line));
+        else
+            iceDebug("C%d: %s", it->id, qPrintable(line));
 #else
         Q_UNUSED(line)
 #endif

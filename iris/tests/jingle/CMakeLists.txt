@@ -113,6 +113,11 @@ target_link_libraries(jingle_icevalidpair_test PRIVATE irisnet iris Qt${QT_DEFAU
     Qt${QT_DEFAULT_MAJOR_VERSION}::Network)
 add_test(NAME jingle_icevalidpair COMMAND jingle_icevalidpair_test)
 set_tests_properties(jingle_icevalidpair PROPERTIES TIMEOUT 25)
+add_executable(jingle_iceprflxrelay_test iceprflxrelay.cpp)
+target_link_libraries(jingle_iceprflxrelay_test PRIVATE irisnet iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Network)
+add_test(NAME jingle_iceprflxrelay COMMAND jingle_iceprflxrelay_test)
+set_tests_properties(jingle_iceprflxrelay PROPERTIES TIMEOUT 12)
 add_executable(jingle_icerelayprivacy_test icerelayprivacy.cpp)
 target_include_directories(jingle_icerelayprivacy_test PRIVATE ../../src/irisnet/noncore)
 target_link_libraries(jingle_icerelayprivacy_test PRIVATE irisnet iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
@@ -430,3 +435,8 @@ if(IRIS_ENABLE_OMEMO)
     add_test(NAME omemo_sxe COMMAND omemo_sxe_test)
     set_tests_properties(omemo_sxe PROPERTIES TIMEOUT 60)
 endif()
+
+add_executable(jingle_extdiscoaddress_test extdiscoaddress.cpp)
+target_link_libraries(jingle_extdiscoaddress_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core
+    Qt${QT_DEFAULT_MAJOR_VERSION}::Network Qt${QT_DEFAULT_MAJOR_VERSION}::Xml)
+add_test(NAME jingle_extdiscoaddress COMMAND jingle_extdiscoaddress_test)

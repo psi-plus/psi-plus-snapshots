@@ -34,6 +34,7 @@
 #include "jingle-session.h"
 #include "netnames.h"
 #include "stundisco.h"
+#include "stunserviceaddress_p.h"
 #include "udpportreserver.h"
 #include "xmpp/jid/jid.h"
 #include "xmpp_client.h"
@@ -435,8 +436,9 @@ namespace XMPP { namespace Jingle { namespace ICE {
         void onOneFinished()
         {
             if (!--counter) {
-                callback();
+                auto done = std::move(callback);
                 deleteLater();
+                done();
             }
         }
 
@@ -445,21 +447,35 @@ namespace XMPP { namespace Jingle { namespace ICE {
 
         static void resolve(QObject *parent, ResolveList list, std::function<void()> &&callback)
         {
-            auto resolver      = new Resolver(parent); // will be deleted when all finished. see onOneFinished
+            if (list.empty()) {
+                callback();
+                return;
+            }
+            auto resolver      = new Resolver(parent); // deleted when all lookups finish
             resolver->counter  = int(list.size());
-            resolver->callback = callback;
+            resolver->callback = std::move(callback);
             for (auto &item : list) {
                 // FIXME hosts may dup in the list. needs optimization
-                auto *dns = new NameResolver(parent);
-
+                auto *dns = new NameResolver(resolver);
                 connect(dns, &NameResolver::resultsReady, resolver,
-                        [result = item.second, resolver](const QList<XMPP::NameRecord> &records) {
-                            result.get() = records.first().address();
+                        [host = item.first, result = item.second, resolver](const QList<XMPP::NameRecord> &records) {
+                            QHostAddress address;
+                            for (const auto &record : records) {
+                                if (isUsableStunServiceAddress(record.address())) {
+                                    address = record.address();
+                                    break;
+                                }
+                            }
+                            if (address.isNull())
+                                qWarning("jingle-ice: no usable DNS address for STUN/TURN host %s", qPrintable(host));
+                            result.get() = address;
                             resolver->onOneFinished();
                         });
                 connect(dns, &NameResolver::error, resolver,
-                        [resolver](XMPP::NameResolver::Error) { resolver->onOneFinished(); });
-
+                        [host = item.first, resolver](XMPP::NameResolver::Error) {
+                            qWarning("jingle-ice: failed to resolve STUN/TURN host %s", qPrintable(host));
+                            resolver->onOneFinished();
+                        });
                 dns->start(item.first.toLatin1());
             }
         }
@@ -1342,15 +1358,96 @@ namespace XMPP { namespace Jingle { namespace ICE {
                     startAssociationIce(guard.data());
             };
 
+            // Prefer usable XEP-0215 services; use the configured endpoint for each missing or broken service.
+            // Copy configured values before asynchronous discovery: the transport can outlive its manager settings.
+            auto finishWithManualFallback =
+                [guard = QPointer<IceConnection>(network), start, externalHost = manager->extHost,
+                 manualStunHost = manager->stunBindHost, manualStunPort = manager->stunBindPort,
+                 manualTurnUdpHost = manager->stunRelayUdpHost, manualTurnUdpPort = manager->stunRelayUdpPort,
+                 manualTurnUdpUser = manager->stunRelayUdpUser, manualTurnUdpPass = manager->stunRelayUdpPass,
+                 manualTurnTcpHost = manager->stunRelayTcpHost, manualTurnTcpPort = manager->stunRelayTcpPort,
+                 manualTurnTcpUser = manager->stunRelayTcpUser, manualTurnTcpPass = manager->stunRelayTcpPass]() {
+                    if (!guard || !guard->runtime)
+                        return;
+                    auto runtime = guard->runtime.get();
+                    auto usable = [](const QHostAddress &address, int port) {
+                        return port > 0 && isUsableStunServiceAddress(address);
+                    };
+                    auto dropInvalid = [](QHostAddress &address) {
+                        if (!address.isNull() && !isUsableStunServiceAddress(address)) {
+                            qWarning("jingle-ice: ignoring unusable STUN/TURN address %s",
+                                     qPrintable(address.toString()));
+                            address = QHostAddress();
+                        }
+                    };
+                    dropInvalid(runtime->stunBindAddr);
+                    dropInvalid(runtime->stunRelayUdpAddr);
+                    dropInvalid(runtime->stunRelayTcpAddr);
+                    const bool discoveredUsable
+                        = usable(runtime->stunBindAddr, runtime->stunBindPort)
+                        || (usable(runtime->stunRelayUdpAddr, runtime->stunRelayUdpPort)
+                            && !runtime->stunRelayUdpUser.isEmpty())
+                        || (usable(runtime->stunRelayTcpAddr, runtime->stunRelayTcpPort)
+                            && !runtime->stunRelayTcpUser.isEmpty());
+
+                    Resolver::ResolveList resolve;
+                    auto setManualHost = [&resolve](const QString &host, QHostAddress &address) {
+                        if (address.setAddress(host)) {
+                            if (!isUsableStunServiceAddress(address)) {
+                                qWarning("jingle-ice: ignoring configured unusable STUN/TURN address %s",
+                                         qPrintable(host));
+                                address = QHostAddress();
+                            }
+                        } else if (!host.isEmpty()) {
+                            resolve.emplace_back(host, std::ref(address));
+                        }
+                    };
+                    if (!usable(runtime->stunBindAddr, runtime->stunBindPort) && !manualStunHost.isEmpty()
+                        && manualStunPort > 0) {
+                        runtime->stunBindAddr = QHostAddress();
+                        runtime->stunBindPort = manualStunPort;
+                        setManualHost(manualStunHost, runtime->stunBindAddr);
+                    }
+                    if ((!usable(runtime->stunRelayUdpAddr, runtime->stunRelayUdpPort)
+                         || runtime->stunRelayUdpUser.isEmpty())
+                        && !manualTurnUdpHost.isEmpty() && manualTurnUdpPort > 0
+                        && !manualTurnUdpUser.isEmpty()) {
+                        runtime->stunRelayUdpAddr = QHostAddress();
+                        runtime->stunRelayUdpPort = manualTurnUdpPort;
+                        runtime->stunRelayUdpUser = manualTurnUdpUser;
+                        runtime->stunRelayUdpPass = manualTurnUdpPass;
+                        setManualHost(manualTurnUdpHost, runtime->stunRelayUdpAddr);
+                    }
+                    if ((!usable(runtime->stunRelayTcpAddr, runtime->stunRelayTcpPort)
+                         || runtime->stunRelayTcpUser.isEmpty())
+                        && !manualTurnTcpHost.isEmpty() && manualTurnTcpPort > 0
+                        && !manualTurnTcpUser.isEmpty()) {
+                        runtime->stunRelayTcpAddr = QHostAddress();
+                        runtime->stunRelayTcpPort = manualTurnTcpPort;
+                        runtime->stunRelayTcpUser = manualTurnTcpUser;
+                        runtime->stunRelayTcpPass = manualTurnTcpPass;
+                        setManualHost(manualTurnTcpHost, runtime->stunRelayTcpAddr);
+                    }
+                    // Preserve the legacy external-address override when discovery provides no usable service.
+                    if (!discoveredUsable && !externalHost.isEmpty())
+                        setManualHost(externalHost, runtime->extAddr);
+
+                    if (resolve.empty())
+                        start();
+                    else
+                        Resolver::resolve(guard.data(), std::move(resolve), std::move(start));
+                };
+
             auto extDisco = q->pad()->session()->manager()->client()->externalServiceDiscovery();
             using namespace std::chrono_literals;
             if (extDisco->isSupported()) {
                 extDisco->services(
                     network,
-                    [guard = QPointer<IceConnection>(network), start](const ExternalServiceList &services) {
+                    [guard = QPointer<IceConnection>(network), finishWithManualFallback](
+                        const ExternalServiceList &services) {
                         if (!guard || !guard->runtime)
                             return;
-                        auto                 runtime = guard->runtime.get();
+                        auto runtime = guard->runtime.get();
                         ExternalService::Ptr stun;
                         ExternalService::Ptr turnUdp;
                         ExternalService::Ptr turnTcp;
@@ -1389,23 +1486,15 @@ namespace XMPP { namespace Jingle { namespace ICE {
                                 resolve.emplace_back(turnUdp->host, std::ref(runtime->stunRelayUdpAddr));
                         }
                         if (resolve.empty())
-                            start();
+                            finishWithManualFallback();
                         else
-                            Resolver::resolve(guard.data(), std::move(resolve), start);
+                            Resolver::resolve(guard.data(), std::move(resolve),
+                                              std::move(finishWithManualFallback));
                     },
                     5min, { "stun", "turn" });
                 return;
             }
-
-            runtime->extAddr.setAddress(manager->extHost);
-            runtime->stunBindAddr.setAddress(manager->stunBindHost);
-            runtime->stunRelayUdpAddr.setAddress(manager->stunRelayUdpHost);
-            runtime->stunRelayTcpAddr.setAddress(manager->stunRelayTcpHost);
-            Resolver::ResolveList resolve { { manager->extHost, std::ref(runtime->extAddr) },
-                                            { manager->stunBindHost, std::ref(runtime->stunBindAddr) },
-                                            { manager->stunRelayUdpHost, std::ref(runtime->stunRelayUdpAddr) },
-                                            { manager->stunRelayTcpHost, std::ref(runtime->stunRelayTcpAddr) } };
-            Resolver::resolve(network, std::move(resolve), start);
+            finishWithManualFallback();
         }
 
         void setupRemoteICE(const Element &e)

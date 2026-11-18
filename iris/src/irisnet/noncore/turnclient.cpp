@@ -95,6 +95,8 @@ public:
     int                      retryCount = 0;
     QString                  errorString;
     int                      debugLevel = 0;
+    bool                     firstDataReceivedLogged = false;
+    bool                     firstDataSentLogged     = false;
 
     class WriteItem {
     public:
@@ -180,6 +182,8 @@ public:
         desiredPerms.clear();
         pendingChannels.clear();
         desiredChannels.clear();
+        firstDataReceivedLogged = false;
+        firstDataSentLogged     = false;
     }
 
     void do_connect()
@@ -382,6 +386,10 @@ public:
 
     void processDataPacket(const QByteArray &buf, const TransportAddress &addr)
     {
+        if (debugLevel >= TurnClient::DL_Info && !firstDataReceivedLogged) {
+            firstDataReceivedLogged = true;
+            emit q->debugLine("Received first TURN data packet");
+        }
         Packet p;
         p.addr = addr;
         p.data = buf;
@@ -461,6 +469,10 @@ public:
     void write(const QByteArray &buf, const TransportAddress &addr)
     {
         QByteArray packet = allocate->encode(buf, addr);
+        if (debugLevel >= TurnClient::DL_Info && !firstDataSentLogged) {
+            firstDataSentLogged = true;
+            emit q->debugLine("Sending first TURN data packet");
+        }
 
         if (debugLevel >= TurnClient::DL_Packet) {
             StunMessage msg = StunMessage::fromBinary(packet);

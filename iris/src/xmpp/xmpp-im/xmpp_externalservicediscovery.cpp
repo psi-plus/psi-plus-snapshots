@@ -23,6 +23,7 @@
 #include "xmpp_jid.h"
 #include "xmpp_serverinfomanager.h"
 #include "xmpp_xmlcommon.h"
+#include "stunserviceaddress_p.h"
 
 namespace XMPP {
 
@@ -138,6 +139,12 @@ bool ExternalService::parse(QDomElement &el, bool isCreds, bool isPush)
     bool ok;
     if (host.isEmpty() || portReq.isEmpty() || type.isEmpty())
         return false;
+
+    if (isUnusableStunServiceLiteral(host)) {
+        qWarning("extdisco: ignoring service with unusable address %s (type=%s)", qPrintable(host),
+                 qPrintable(type));
+        return false;
+    }
 
     port = portReq.toUShort(&ok);
     if (!ok && !portReq.isEmpty())

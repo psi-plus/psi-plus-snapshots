@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include "../../src/xmpp/xmpp-im/s5b.h"
+#include "../../src/xmpp/xmpp-im/stundisco.h"
 #include <iris/jingle-ft.h>
 #include <iris/jingle-s5b.h>
 #include <iris/jingle-session.h>
@@ -169,6 +170,20 @@ static void testProviderDestructionDiagnostics()
     manager.discoFeatures(); // No cleared QPointer may remain in either registry.
 }
 
+static void testStunMonitorOutlivesClient()
+{
+    QObject owner; // Ice176 reparents the STUN monitor to itself.
+    auto   *client = new Client;
+    auto   *monitor = client->stunDiscoManager()->createMonitor();
+    QPointer<AbstractStunDisco> monitorGuard(monitor);
+    monitor->setParent(&owner);
+    delete client; // The initial queued discovery has not yet run.
+    check(monitorGuard, "ICE-owned STUN monitor unexpectedly died with its creator");
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents(); // Must not use the destroyed StunDiscoManager.
+    check(monitorGuard, "ICE-owned STUN monitor has unexpected lifetime");
+}
+
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
@@ -179,5 +194,6 @@ int main(int argc, char **argv)
     testRetainedTransportIsStopped(true);
     testManagerDestructionAndReentrancy();
     testProviderDestructionDiagnostics();
+    testStunMonitorOutlivesClient();
     qInfo("Jingle shutdown ownership/order regressions passed");
 }

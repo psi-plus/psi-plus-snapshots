@@ -108,7 +108,7 @@ public:
     bool                               localFinished   = false;
     // bool                               stunFinished      = false;
     bool gatheringComplete = false;
-    int  debugLevel        = DL_Packet;
+    int  debugLevel        = DL_None; // The ICE owner opts in to diagnostics.
 
     Private(IceComponent *_q) : QObject(_q), q(_q), sess(this) { }
 
@@ -200,8 +200,9 @@ public:
 
                 int port = qsock->localPort();
                 lt->sock->start(qsock, !borrowedSocket);
-                emit q->debugLine(QString("starting transport ") + la.addr.toString() + ';' + QString::number(port)
-                                  + " for component " + QString::number(id));
+                if (debugLevel >= DL_Info)
+                    emit q->debugLine(QString("starting transport ") + la.addr.toString() + ';'
+                                      + QString::number(port) + " for component " + QString::number(id));
             }
         }
 
@@ -265,8 +266,9 @@ public:
             tcpTurn->setPassword(config.stunRelayTcpPass);
             tcpTurn->start(config.stunRelayTcpAddr);
 
-            emit q->debugLine(QLatin1String("starting TURN transport with server ") + config.stunRelayTcpAddr
-                              + " for component " + QString::number(id));
+            if (debugLevel >= DL_Info)
+                emit q->debugLine(QLatin1String("starting TURN transport with server ") + config.stunRelayTcpAddr
+                                  + " for component " + QString::number(id));
         }
 
         if (udpTransports.isEmpty() && !localFinished) {
@@ -506,7 +508,8 @@ private:
     {
         ObjectSessionWatcher watch(&sess);
 
-        emit q->debugLine(QLatin1String("Stopping local transport: ") + lt->sock->localAddress());
+        if (debugLevel >= DL_Info)
+            emit q->debugLine(QLatin1String("Stopping local transport: ") + lt->sock->localAddress());
         removeLocalCandidates(lt->sock);
         if (!watch.isValid())
             return false;
