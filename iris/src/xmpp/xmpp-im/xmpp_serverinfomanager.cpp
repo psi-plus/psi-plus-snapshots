@@ -245,7 +245,9 @@ void ServerInfoManager::appendQuery(ServiceInfoQuery *q)
     if (_servicesListState == ST_NotQueried || _servicesListState == ST_Failed) {
         queryServicesList();
     } else { // ready
-        checkPendingServiceQueries();
+        // A cached query can complete inside checkPendingServiceQueries(). Always
+        // give queryServiceInfo()'s caller a chance to connect to finished first.
+        QMetaObject::invokeMethod(this, [this]() { checkPendingServiceQueries(); }, Qt::QueuedConnection);
     }
 }
 

@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include <iris/ice176.h>
+#include "../../src/irisnet/noncore/stunmessage.h"
 
 #include <QCoreApplication>
 #include <QDebug>
 #include <QEventLoop>
+#include <QNetworkDatagram>
 #include <QTimer>
+#include <QUdpSocket>
 #include <QtCrypto>
 
 using namespace XMPP;
@@ -16,10 +19,18 @@ static void check(bool ok, const char *message)
         qFatal("%s", message);
 }
 
-static void runPair(bool usingProtocolSignalsIce2, bool omitRemoteCandidatesOnInitiator = false)
+static void runPair(bool usingProtocolSignalsIce2, bool omitRemoteCandidatesOnInitiator = false,
+                    bool unfinishedStunDiscovery = false)
 {
     Ice176 first;
     Ice176 second;
+    // Keep a STUN endpoint silent on purpose: final ICE nomination must end
+    // trickle gathering even while a discovery transaction is still pending.
+    QUdpSocket silentStun;
+    if (unfinishedStunDiscovery) {
+        check(silentStun.bind(QHostAddress::LocalHost), "Cannot bind silent STUN endpoint");
+        first.setStunBindService(QHostAddress::LocalHost, silentStun.localPort());
+    }
     int    firstActivity  = 0;
     int    secondActivity = 0;
     QObject::connect(&first, &Ice176::peerActivity, [&] { ++firstActivity; });
@@ -77,6 +88,12 @@ static void runPair(bool usingProtocolSignalsIce2, bool omitRemoteCandidatesOnIn
 
     bool firstSelected              = false;
     bool secondSelected             = false;
+    int  firstGatherCompletions      = 0;
+    bool firstGatherBeforeSelection = false;
+    QObject::connect(&first, &Ice176::localGatheringComplete, [&]() {
+        ++firstGatherCompletions;
+        firstGatherBeforeSelection = !firstSelected;
+    });
     bool firstReady                 = false;
     bool secondReady                = false;
     bool firstReadyBeforeSelection  = false;
@@ -150,6 +167,40 @@ static void runPair(bool usingProtocolSignalsIce2, bool omitRemoteCandidatesOnIn
     check(firstSelected && secondSelected, "ICE nomination did not eventually select a pair");
     check(selectedSent && selectedReceived, "data did not cross the selected pair");
 
+    if (unfinishedStunDiscovery) {
+        check(firstGatherCompletions == 1 && first.isLocalGatheringComplete(),
+              "Final nomination failed to complete local ICE gathering exactly once");
+        check(!firstGatherBeforeSelection,
+              "Unresponsive STUN discovery unexpectedly finished before ICE nomination");
+
+        // Reply only after final nomination. The STUN transaction was already
+        // pending, so a real srflx discovery may finish after end-of-candidates.
+        // RFC 8838 requires us not to trickle it to the remote agent.
+        int lateCandidateSignals = 0;
+        QObject::connect(&first, &Ice176::localCandidatesReady,
+                         [&](const QList<Ice176::Candidate> &) { ++lateCandidateSignals; });
+        check(silentStun.hasPendingDatagrams(), "The fake STUN server received no discovery request");
+        auto datagram = silentStun.receiveDatagram();
+        auto request  = StunMessage::fromBinary(datagram.data());
+        check(!request.isNull() && request.mclass() == StunMessage::Request && request.method() == 1,
+              "The fake STUN server received an invalid binding request");
+        StunMessage reply;
+        reply.setClass(StunMessage::SuccessResponse);
+        reply.setMethod(request.method());
+        reply.setMagic(request.magic());
+        reply.setId(request.id());
+        // MAPPED-ADDRESS = 127.0.0.42:60000, distinct from the host candidate.
+        reply.setAttributes({ StunMessage::Attribute { 0x0001, QByteArray::fromHex("0001ea607f00002a") } });
+        const auto packet = reply.toBinary(StunMessage::Fingerprint);
+        check(silentStun.writeDatagram(packet, datagram.senderAddress(), datagram.senderPort()) == packet.size(),
+              "Cannot return the delayed STUN response");
+        QEventLoop lateResponseLoop;
+        QTimer::singleShot(200, &lateResponseLoop, &QEventLoop::quit);
+        lateResponseLoop.exec();
+        check(lateCandidateSignals == 0, "ICE trickled a late candidate after end-of-candidates");
+        check(firstGatherCompletions == 1, "Late STUN completion duplicated end-of-candidates");
+    }
+
     if (usingProtocolSignalsIce2) {
         check(firstReadyBeforeSelection && secondReadyBeforeSelection,
               "ice2-signaled ICE did not expose the valid pair before nomination");
@@ -169,7 +220,8 @@ int main(int argc, char **argv)
     runPair(false);
     runPair(true);
     runPair(true, true); // RFC 8863: credentials with no signaled remote candidates
+    runPair(true, false, true); // Trickle end-of-candidates must survive an unanswered STUN discovery.
 
-    qInfo("ICE valid-pair compatibility regressions passed");
+    qInfo("ICE valid-pair and unfinished discovery regressions passed");
     return 0;
 }

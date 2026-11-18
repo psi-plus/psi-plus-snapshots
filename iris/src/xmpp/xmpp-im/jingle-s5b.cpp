@@ -38,6 +38,7 @@
 
 namespace XMPP { namespace Jingle { namespace S5B {
     const QString NS(QStringLiteral("urn:xmpp:jingle:transports:s5b:1"));
+    constexpr int S5B_CONNECT_TIMEOUT_MS = 8000; // TCP + SOCKS5 handshake per candidate
 
     static QString makeKey(const QString &sid, const Jid &j1, const Jid &j2)
     {
@@ -244,7 +245,13 @@ namespace XMPP { namespace Jingle { namespace S5B {
             for (auto it = clients.begin(); it != clients.end(); ++it) {
                 QString      name   = it.key();
                 SocksClient *client = it.value();
-                connect(client, &SocksClient::connected, this, [this, name, client]() {
+                // A link-local address may require probing many interfaces. Each
+                // attempt must be bounded independently of the OS TCP timeout.
+                auto timeout = new QTimer(client);
+                timeout->setSingleShot(true);
+                timeout->setInterval(S5B_CONNECT_TIMEOUT_MS);
+                connect(client, &SocksClient::connected, this, [this, name, client, timeout]() {
+                    timeout->stop();
                     this->client = client;
                     clients.remove(name);
                     qDeleteAll(clients);
@@ -252,15 +259,27 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 });
                 connect(
                     client, &SocksClient::error, this,
-                    [this, name, client](int error) {
+                    [this, name, client, timeout](int error) {
                         Q_UNUSED(error)
+                        timeout->stop();
                         clients.remove(name);
-                        delete client;
+                        client->deleteLater();
                         if (clients.isEmpty()) {
                             emit ready();
                         }
                     },
                     Qt::QueuedConnection);
+                connect(timeout, &QTimer::timeout, this, [this, name, client]() {
+                    if (clients.value(name) != client)
+                        return;
+                    qDebug() << "S5B IPv6 link-local connect timeout on interface" << name;
+                    clients.remove(name);
+                    client->disconnect(this);
+                    client->deleteLater();
+                    if (clients.isEmpty())
+                        emit ready();
+                });
+                timeout->start();
                 ph.setScopeId(name);
                 client->connectToHost(ph.toString(), proxyPort, host, 0, udpMode);
             }
@@ -349,9 +368,23 @@ namespace XMPP { namespace Jingle { namespace S5B {
                         });
                 v6llConnector->connectToHost(ha, port, key, isUdp);
             } else {
-                socksClient = new SocksClient;
+                auto client = socksClient = new SocksClient;
                 qDebug() << "connect to " << toString() << "with key=" << key << " and socks client" << socksClient;
-                connect(socksClient, &SocksClient::connected, callbackContext, [this, callback, successState]() {
+                auto timeout = new QTimer(client);
+                timeout->setSingleShot(true);
+                timeout->setInterval(S5B_CONNECT_TIMEOUT_MS);
+                connect(timeout, &QTimer::timeout, callbackContext, [this, client, callback]() {
+                    if (socksClient != client || state == Candidate::Discarded)
+                        return;
+                    qDebug() << "S5B connect timed out after" << S5B_CONNECT_TIMEOUT_MS << "ms:" << toString();
+                    state       = Candidate::Discarded;
+                    socksClient = nullptr;
+                    client->disconnect();
+                    client->deleteLater();
+                    callback(false);
+                });
+                connect(client, &SocksClient::connected, callbackContext, [this, timeout, callback, successState]() {
+                    timeout->stop();
                     if (state == Candidate::Discarded) {
                         return;
                     }
@@ -359,18 +392,18 @@ namespace XMPP { namespace Jingle { namespace S5B {
                     qDebug() << "connected: " << toString() << "socks client" << socksClient;
                     callback(true);
                 });
-                connect(socksClient, &SocksClient::error, callbackContext, [this, callback](int error) {
-                    Q_UNUSED(error)
+                connect(client, &SocksClient::error, callbackContext, [this, timeout, callback](int error) {
+                    timeout->stop();
                     if (state == Candidate::Discarded) {
                         return;
                     }
                     state = Candidate::Discarded;
-                    qDebug() << "failed to connect: " << toString() << "socks client" << socksClient;
+                    qDebug() << "failed to connect: " << toString() << "socks client" << socksClient
+                             << "error" << error;
                     callback(false);
                 });
-                // connect(&t, SIGNAL(timeout()), SLOT(trySendUDP()));
-
-                socksClient->connectToHost(host, port, key, 0, isUdp);
+                timeout->start();
+                client->connectToHost(host, port, key, 0, isUdp);
             }
         }
 
@@ -730,9 +763,10 @@ namespace XMPP { namespace Jingle { namespace S5B {
         // queries proxy's host/port and sends the candidate to remote
         void queryS5BProxy(const Jid &j, const QString &cid)
         {
+            qDebug() << "S5B proxy disco#info for" << j.full();
             proxiesInDiscoCount++;
             auto query = new JT_S5B(q->_pad->session()->manager()->client()->rootTask());
-            connect(query, &JT_S5B::finished, q, [this, query, cid]() {
+            connect(query, &JT_S5B::finished, q, [this, query, cid, j]() {
                 if (!proxyDiscoveryInProgress) {
                     return;
                 }
@@ -741,6 +775,8 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 if (it != localCandidates.end() && it->second.state() == Candidate::Probing) {
                     auto &c  = it->second;
                     auto  sh = query->proxyInfo();
+                    qDebug() << "S5B proxy streamhost result" << j.full() << "success" << query->success()
+                             << "host" << sh.host() << "port" << sh.port();
                     if (query->success() && !sh.host().isEmpty() && sh.port()) {
                         // it can be discarded by this moment (e.g. got success on a higher priority
                         // candidate). so we have to check.
@@ -772,6 +808,10 @@ namespace XMPP { namespace Jingle { namespace S5B {
         {
             auto m     = static_cast<Manager *>(q->_pad->manager());
             Jid  proxy = m->userProxy();
+            proxyDiscoveryInProgress = true;
+            qDebug() << "S5B proxy discovery started on account server"
+                     << q->_pad->session()->manager()->client()->jid().domain()
+                     << "(parallel to local TCP port discovery), configured proxy:" << proxy.full();
             if (proxy.isValid()) {
                 Candidate c(q, proxy, generateCid());
                 if (!isDup(c)) {
@@ -781,12 +821,12 @@ namespace XMPP { namespace Jingle { namespace S5B {
                 }
             }
 
-            proxyDiscoveryInProgress            = true;
             QList<QSet<QString>> featureOptions = { { "http://jabber.org/protocol/bytestreams" } };
             auto                 query = q->_pad->session()->manager()->client()->serverInfoManager()->queryServiceInfo(
                 QStringLiteral("proxy"), QStringLiteral("bytestreams"), featureOptions,
                 QRegularExpression("proxy.*|socks.*|stream.*|s5b.*"), ServiceInfoQuery::CheckAllOnNoMatch);
             q->connect(query, &ServiceInfoQuery::finished, q, [this](const QList<DiscoItem> &items) {
+                qDebug() << "S5B proxy service discovery finished; matching services:" << items.size();
                 if (!proxyDiscoveryInProgress) { // check if new results are ever/still expected
                     // seems like we have successful connection via higher priority channel. so nobody cares
                     // about proxy
@@ -948,8 +988,12 @@ namespace XMPP { namespace Jingle { namespace S5B {
         bool hasUnaknowledgedLocalCandidates() const
         {
             // now ensure all local were sent to remote and no hope left
-            if (proxyDiscoveryInProgress || (disco && !disco->isDepleted())) {
-                qDebug("still has: either s5b proxy or host candidates disco in progress");
+            if (proxyDiscoveryInProgress) {
+                qDebug("S5B negotiation waiting for proxy discovery (%d proxy info requests)", proxiesInDiscoCount);
+                return true;
+            }
+            if (disco && !disco->isDepleted()) {
+                qDebug("S5B negotiation waiting for local TCP port discovery");
                 return true;
             }
 

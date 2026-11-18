@@ -961,6 +961,20 @@ public:
 #endif
         pacTimer.reset();
         state = Active;
+        // RFC 8838 forbids trickling new candidates after final nomination.
+        // Completion can be signaled even when optional discovery on unused
+        // interfaces is still pending. ic_candidateAdded() suppresses any late
+        // discoveries so this is a real end-of-candidates boundary.
+        if (!localGatheringComplete) {
+            localGatheringComplete = true;
+            iceDebug("ICE selected final pairs: completing local gathering despite pending discovery");
+            if (localFeatures & Trickle) {
+                QPointer<Ice176> guard(q);
+                emit q->localGatheringComplete();
+                if (!guard)
+                    return;
+            }
+        }
         emit q->iceFinished();
     }
 
@@ -1411,6 +1425,13 @@ private slots:
 
     void ic_candidateAdded(const XMPP::IceComponent::Candidate &_cc)
     {
+        // RFC 8838 section 13: no new candidates may be trickled after
+        // end-of-candidates or final nomination, even if a slow STUN/TURN
+        // transaction on an unused interface eventually completes.
+        if (localGatheringComplete || state == Active) {
+            iceDebug("C%d: ignoring candidate discovered after end-of-candidates", _cc.info->componentId);
+            return;
+        }
         IceComponent::Candidate cc = _cc;
 
         cc.info->id = generateIdForCandidate();

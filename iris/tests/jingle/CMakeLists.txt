@@ -48,6 +48,8 @@ target_include_directories(jingle_transports5b_test PRIVATE
     "${iris_binary_dir}/iris_autogen/include" "${iris_binary_dir}/iris_autogen/include_$<CONFIG>")
 add_test(NAME jingle_transports5b COMMAND jingle_transports5b_test)
 set_tests_properties(jingle_transports5b PROPERTIES TIMEOUT 15)
+add_test(NAME jingle_transports5b_connect_timeout COMMAND jingle_transports5b_test connect-timeout)
+set_tests_properties(jingle_transports5b_connect_timeout PROPERTIES TIMEOUT 15)
 add_test(NAME jingle_signaling COMMAND jingle_signaling_test)
 add_executable(jingle_batchedreason_test batchedreason.cpp)
 target_link_libraries(jingle_batchedreason_test PRIVATE iris Qt${QT_DEFAULT_MAJOR_VERSION}::Core

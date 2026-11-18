@@ -116,6 +116,8 @@ public:
     QStringList srtpProfiles;
     bool        authenticated       = false;
     bool        negotiationDeferred = false;
+    bool        firstIncomingLogged = false;
+    bool        firstOutgoingLogged = false;
 
     QList<QByteArray> pendingIncomingDatagrams;
     int               pendingIncomingBytes = 0;
@@ -265,7 +267,9 @@ public:
         DTLS_DEBUG("[%p] negotiate local-setup=%d remote-setup=%d remote-fingerprint-valid=%d profiles=%d", q,
                    int(localFingerprint.setup), int(remoteFingerprint.setup), int(remoteFingerprint.isValid()),
                    int(srtpProfiles.size()));
-        authenticated = false;
+        authenticated       = false;
+        firstIncomingLogged = false;
+        firstOutgoingLogged = false;
         if (tls) {
             delete tls;
             tls = nullptr;
@@ -486,6 +490,11 @@ QByteArray Dtls::readOutgoingDatagram()
         return {};
     }
     auto ba = d->tls->readOutgoing();
+    if (!ba.isEmpty() && !d->firstOutgoingLogged) {
+        d->firstOutgoingLogged = true;
+        DTLS_DEBUG("[%p] first outgoing DTLS datagram bytes=%d authenticated=%d", this, int(ba.size()),
+                   int(d->authenticated));
+    }
     DTLS_PACKET_TRACE("[%p] outgoing datagram bytes=%d authenticated=%d", this, int(ba.size()), int(d->authenticated));
     return ba;
 }
@@ -502,6 +511,11 @@ void Dtls::writeDatagram(const QByteArray &data)
 
 void Dtls::writeIncomingDatagram(const QByteArray &data)
 {
+    if (!data.isEmpty() && !d->firstIncomingLogged) {
+        d->firstIncomingLogged = true;
+        DTLS_DEBUG("[%p] first incoming DTLS datagram bytes=%d started=%d authenticated=%d", this, int(data.size()),
+                   int(d->tls != nullptr), int(d->authenticated));
+    }
     DTLS_PACKET_TRACE("[%p] incoming datagram bytes=%d started=%d authenticated=%d", this, int(data.size()),
                       int(d->tls != nullptr), int(d->authenticated));
     if (!d->tls) {

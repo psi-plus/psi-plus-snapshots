@@ -70,6 +70,7 @@ signals:
 
 class ServerInfoManager : public QObject {
     Q_OBJECT
+    friend struct ServerInfoManagerTestAccess;
 public:
 private:
     enum ServicesState { ST_NotQueried, ST_InProgress, ST_Ready, ST_Failed };

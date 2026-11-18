@@ -2,14 +2,36 @@
 #include "../../src/xmpp/xmpp-im/jingle-application.h"
 #include "../../src/xmpp/xmpp-im/jingle-ibb.h"
 #include "../../src/xmpp/xmpp-im/jingle-s5b.cpp"
+#include "../../src/xmpp/xmpp-im/xmpp_serverinfomanager.h"
 #include <iris/xmpp_xmlcommon.h>
 
 #include <QCoreApplication>
+#include <QElapsedTimer>
+#include <QEventLoop>
+#include <QTcpServer>
+#include <QTimer>
 #include <QtCrypto>
 
 using namespace XMPP;
 namespace J = XMPP::Jingle;
 namespace S = XMPP::Jingle::S5B;
+
+namespace XMPP {
+struct ServerInfoManagerTestAccess {
+    static void seedCachedProxy(ServerInfoManager &manager)
+    {
+        DiscoItem proxy;
+        proxy.setJid(Jid(QStringLiteral("proxy.example.test")));
+        proxy.setIdentities(DiscoItem::Identity(QStringLiteral("proxy"), QStringLiteral("bytestreams")));
+        Features features;
+        features.addFeature(QStringLiteral("http://jabber.org/protocol/bytestreams"));
+        proxy.setFeatures(features);
+        manager._servicesListState = ServerInfoManager::ST_Ready;
+        manager._servicesInfo.clear();
+        manager._servicesInfo.insert(proxy.jid().full(), { ServerInfoManager::ST_Ready, proxy, {} });
+    }
+};
+}
 
 static void check(bool condition, const char *message)
 {
@@ -70,6 +92,15 @@ namespace XMPP { namespace Jingle { namespace S5B {
             t.d->pendingActions = Transport::Private::ProxyError;
         }
         static size_t remoteCount(const Transport &t) { return t.d->remoteCandidates.size(); }
+        static void startProxyDiscovery(Transport &t) { t.d->discoS5BProxy(); }
+        static bool hasLocalProxy(const Transport &t)
+        {
+            for (const auto &[_, candidate] : t.d->localCandidates) {
+                if (candidate.type() == Candidate::Proxy)
+                    return true;
+            }
+            return false;
+        }
     };
 }}}
 
@@ -372,6 +403,72 @@ static void testOutgoingError(Client &client, S::Candidate::State state, bool cr
           "Proxy-error ACK did not finish exact attempt once");
 }
 
+static void testCachedProxyDiscovery(Client &client)
+{
+    auto *manager = client.serverInfoManager();
+    check(manager != nullptr, "ServerInfoManager is unavailable");
+    ServerInfoManagerTestAccess::seedCachedProxy(*manager);
+    // Cached service info is already available. In the old implementation
+    // finished was emitted synchronously before a caller could subscribe.
+    for (int attempt = 0; attempt < 2; ++attempt) {
+        int  callbacks = 0;
+        auto query = manager->queryServiceInfo(
+            QStringLiteral("proxy"), QStringLiteral("bytestreams"),
+            { { QStringLiteral("http://jabber.org/protocol/bytestreams") } },
+            QRegularExpression(QStringLiteral("proxy.*")), ServiceInfoQuery::CheckAllOnNoMatch);
+        check(callbacks == 0, "ServiceInfoQuery finished synchronously");
+        QObject::connect(query, &ServiceInfoQuery::finished, manager, [&](const QList<DiscoItem> &items) {
+            ++callbacks;
+            check(items.size() == 1 && items.front().jid().full() == QLatin1String("proxy.example.test"),
+                  "Cached S5B proxy was not found");
+        });
+        QCoreApplication::processEvents();
+        check(callbacks == 1, "Cached discovery result was lost or delivered more than once");
+    }
+
+    Fixture f(client);
+    S::TransportTestAccess::startProxyDiscovery(*f.transport);
+    check(!S::TransportTestAccess::hasLocalProxy(*f.transport),
+          "Service discovery completed before the callback could be installed");
+    QCoreApplication::processEvents();
+    check(S::TransportTestAccess::hasLocalProxy(*f.transport),
+          "S5B transport missed cached proxy and failed to start proxy info lookup");
+}
+
+static void testS5BHandshakeTimeout()
+{
+    QTcpServer unresponsive;
+    check(unresponsive.listen(QHostAddress::LocalHost), "Could not listen for stalled SOCKS5 handshake");
+
+    auto xml = payload(QStringLiteral("<candidate cid='stall' host='127.0.0.1' port='%1' priority='100'/>")
+                           .arg(unresponsive.serverPort()));
+    S::Candidate candidate(nullptr, xml.firstChildElement());
+    check(candidate.isValid(), "Invalid regression S5B candidate");
+
+    QEventLoop    loop;
+    QElapsedTimer elapsed;
+    QTimer        watchdog;
+    watchdog.setSingleShot(true);
+    watchdog.setInterval(11000);
+    QObject::connect(&watchdog, &QTimer::timeout, &loop, &QEventLoop::quit);
+    int  callbacks = 0;
+    bool connected = true;
+    elapsed.start();
+    watchdog.start();
+    candidate.setState(S::Candidate::Probing);
+    candidate.connectToHost(QStringLiteral("test"), S::Candidate::Pending, &loop, [&](bool success) {
+        ++callbacks;
+        connected = success;
+        loop.quit();
+    });
+    loop.exec();
+
+    check(callbacks == 1 && !connected && candidate.state() == S::Candidate::Discarded,
+          "An unresponsive SOCKS5 handshake did not fail exactly once");
+    check(elapsed.elapsed() >= 6000 && elapsed.elapsed() < 11000,
+          "SOCKS5 handshake did not respect the bounded connect timeout");
+}
+
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
@@ -379,6 +476,10 @@ int main(int argc, char **argv)
     Client           client;
     TcpPortReserver  reserver;
     client.setTcpPortReserver(&reserver);
+    if (argc > 1 && QString::fromLatin1(argv[1]) == QLatin1String("connect-timeout")) {
+        testS5BHandshakeTimeout();
+        return 0;
+    }
     testServerOutlivesPortScope();
     testRetainedStoppedTransport(client);
     testMissingPortScope(client);
@@ -394,5 +495,6 @@ int main(int argc, char **argv)
     testOutgoingError(client, S::Candidate::Activating, false);
     testOutgoingError(client, S::Candidate::Discarded, false);
     testOutgoingError(client, S::Candidate::Activating, true);
-    qInfo("S5B staged payload and proxy failure regressions passed");
+    testCachedProxyDiscovery(client);
+    qInfo("S5B staged payload, cached proxy discovery and proxy failure regressions passed");
 }
