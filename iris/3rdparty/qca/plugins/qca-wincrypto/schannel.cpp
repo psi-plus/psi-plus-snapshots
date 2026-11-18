@@ -5,6 +5,7 @@
 #include "native_tls.h"
 #include <QElapsedTimer>
 #include <QQueue>
+#include <QTimeZone>
 #include <QTimer>
 #include <QUrl>
 #include <windows.h>
@@ -74,7 +75,12 @@ QDateTime dateTime(const FILETIME &time)
     ULARGE_INTEGER ticks;
     ticks.LowPart  = time.dwLowDateTime;
     ticks.HighPart = time.dwHighDateTime;
-    return QDateTime::fromMSecsSinceEpoch(qint64(ticks.QuadPart / 10000) - 11644473600000LL, Qt::UTC);
+    const qint64 milliseconds = qint64(ticks.QuadPart / 10000) - 11644473600000LL;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    return QDateTime::fromMSecsSinceEpoch(milliseconds, QTimeZone::utc());
+#else
+    return QDateTime::fromMSecsSinceEpoch(milliseconds, Qt::UTC);
+#endif
 }
 
 CertificateInfoOrdered distinguishedName(const CERT_NAME_BLOB &blob)

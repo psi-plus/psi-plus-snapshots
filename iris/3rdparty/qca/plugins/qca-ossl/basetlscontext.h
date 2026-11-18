@@ -68,8 +68,9 @@ public:
     bool                  clientHelloSeen;
     bool                  clientHelloRetryPending;
 
-    Result result_result;
-    int    result_encoded;
+    Result  result_result;
+    int     result_encoded;
+    quint64 resultsGeneration = 0;
 
     SSL              *ssl;
     const SSL_METHOD *method;

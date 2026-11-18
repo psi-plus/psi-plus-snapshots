@@ -274,7 +274,7 @@ QCA::SignatureAlgorithm signatureAlgorithmFromX509Alg(const X509_ALGOR *algorith
         if (parameterType == V_ASN1_SEQUENCE && parameterValue) {
             const auto          *sequence = static_cast<const ASN1_STRING *>(parameterValue);
             const unsigned char *data     = ASN1_STRING_get0_data(sequence);
-            RSA_PSS_PARAMS      *params   = d2i_RSA_PSS_PARAMS(nullptr, &data, ASN1_STRING_length(sequence));
+            RSA_PSS_PARAMS      *params   = d2i_RSA_PSS_PARAMS(nullptr, &data, qca_ASN1_STRING_length(sequence));
             if (!params)
                 return {QCA::SignatureScheme::RSA_PSS, QCA::SignatureDigest::Unknown};
 
@@ -292,7 +292,7 @@ QCA::SignatureAlgorithm signatureAlgorithmFromX509Alg(const X509_ALGOR *algorith
                 } else {
                     const auto          *mgfSequence = static_cast<const ASN1_STRING *>(mgfParameterValue);
                     const unsigned char *mgfData     = ASN1_STRING_get0_data(mgfSequence);
-                    X509_ALGOR *mgfHashAlgorithm = d2i_X509_ALGOR(nullptr, &mgfData, ASN1_STRING_length(mgfSequence));
+                    X509_ALGOR *mgfHashAlgorithm = d2i_X509_ALGOR(nullptr, &mgfData, qca_ASN1_STRING_length(mgfSequence));
                     if (mgfHashAlgorithm) {
                         mgfDigest = signatureDigestFromX509Alg(mgfHashAlgorithm);
                         X509_ALGOR_free(mgfHashAlgorithm);
@@ -443,7 +443,7 @@ static void try_get_name_item(const X509_NAME *name, int nid, const CertificateI
     while ((loc = our_X509_NAME_get_index_by_NID(name, nid, loc)) != -1) {
         const X509_NAME_ENTRY *ne   = X509_NAME_get_entry(name, loc);
         const ASN1_STRING     *data = X509_NAME_ENTRY_get_data(ne);
-        QByteArray             cs((const char *)ASN1_STRING_get0_data(data), ASN1_STRING_length(data));
+        QByteArray             cs((const char *)ASN1_STRING_get0_data(data), qca_ASN1_STRING_length(data));
         info->insert(t, QString::fromLatin1(cs));
     }
 }
@@ -462,7 +462,7 @@ static void try_get_name_item_by_oid(const X509_NAME           *name,
     while ((loc = our_X509_NAME_get_index_by_OBJ(name, oid, loc)) != -1) {
         const X509_NAME_ENTRY *ne   = X509_NAME_get_entry(name, loc);
         const ASN1_STRING     *data = X509_NAME_ENTRY_get_data(ne);
-        QByteArray             cs((const char *)ASN1_STRING_get0_data(data), ASN1_STRING_length(data));
+        QByteArray             cs((const char *)ASN1_STRING_get0_data(data), qca_ASN1_STRING_length(data));
         info->insert(t, QString::fromLatin1(cs));
         qDebug() << "oid: " << oidText << ",  result: " << cs;
     }
@@ -651,7 +651,7 @@ static GENERAL_NAME *new_general_name(const CertificateInfoType &t, const QStrin
         const QByteArray buf = val.toLatin1();
 
         ASN1_IA5STRING *str = ASN1_IA5STRING_new();
-        ASN1_STRING_set((ASN1_STRING *)str, (const unsigned char *)buf.data(), buf.size());
+        qca_ASN1_STRING_set(str, buf);
 
         name               = GENERAL_NAME_new();
         name->type         = GEN_EMAIL;
@@ -663,7 +663,7 @@ static GENERAL_NAME *new_general_name(const CertificateInfoType &t, const QStrin
         const QByteArray buf = val.toLatin1();
 
         ASN1_IA5STRING *str = ASN1_IA5STRING_new();
-        ASN1_STRING_set((ASN1_STRING *)str, (const unsigned char *)buf.data(), buf.size());
+        qca_ASN1_STRING_set(str, buf);
 
         name                              = GENERAL_NAME_new();
         name->type                        = GEN_URI;
@@ -675,7 +675,7 @@ static GENERAL_NAME *new_general_name(const CertificateInfoType &t, const QStrin
         const QByteArray buf = val.toLatin1();
 
         ASN1_IA5STRING *str = ASN1_IA5STRING_new();
-        ASN1_STRING_set((ASN1_STRING *)str, (const unsigned char *)buf.data(), buf.size());
+        qca_ASN1_STRING_set(str, buf);
 
         name            = GENERAL_NAME_new();
         name->type      = GEN_DNS;
@@ -687,7 +687,7 @@ static GENERAL_NAME *new_general_name(const CertificateInfoType &t, const QStrin
         const QByteArray buf = ipaddress_string_to_bytes(val);
 
         ASN1_OCTET_STRING *str = ASN1_OCTET_STRING_new();
-        ASN1_STRING_set((ASN1_STRING *)str, (const unsigned char *)buf.data(), buf.size());
+        qca_ASN1_STRING_set(str, buf);
 
         name              = GENERAL_NAME_new();
         name->type        = GEN_IPADD;
@@ -699,7 +699,7 @@ static GENERAL_NAME *new_general_name(const CertificateInfoType &t, const QStrin
         const QByteArray buf = val.toUtf8();
 
         ASN1_UTF8STRING *str = ASN1_UTF8STRING_new();
-        ASN1_STRING_set((ASN1_STRING *)str, (const unsigned char *)buf.data(), buf.size());
+        qca_ASN1_STRING_set(str, buf);
 
         ASN1_TYPE *at        = ASN1_TYPE_new();
         at->type             = V_ASN1_UTF8STRING;

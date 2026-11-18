@@ -336,11 +336,12 @@ void WinCryptoOpenSSLTest::streamClientCertificateRequest()
         QVERIFY(X509_gmtime_adj(X509_getm_notBefore(cert.get()), -60));
         QVERIFY(X509_gmtime_adj(X509_getm_notAfter(cert.get()), 3600));
         QVERIFY(X509_set_pubkey(cert.get(), key.get()) == 1);
-        auto *name = X509_get_subject_name(cert.get());
+        auto name = std::unique_ptr<X509_NAME, decltype(&X509_NAME_free)>(X509_NAME_new(), X509_NAME_free);
         QVERIFY(name);
-        QVERIFY(X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
+        QVERIFY(X509_NAME_add_entry_by_txt(name.get(), "CN", MBSTRING_ASC,
                                             reinterpret_cast<const unsigned char *>("qca.test"), -1, -1, 0) == 1);
-        QVERIFY(X509_set_issuer_name(cert.get(), name) == 1);
+        QVERIFY(X509_set_subject_name(cert.get(), name.get()) == 1);
+        QVERIFY(X509_set_issuer_name(cert.get(), name.get()) == 1);
         X509V3_CTX extensions {};
         X509V3_set_ctx(&extensions, cert.get(), cert.get(), nullptr, nullptr, 0);
         auto san = std::unique_ptr<X509_EXTENSION, decltype(&X509_EXTENSION_free)>(

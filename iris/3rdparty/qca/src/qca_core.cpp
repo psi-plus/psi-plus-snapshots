@@ -1766,16 +1766,8 @@ public:
         AskerItem &i = askers[asker_at];
 
         // look for the next usable handler
-        int pos = -1;
-        for (int n = i.handler_pos + 1; n < g_event->handlers.count(); ++n) {
-            // handler and asker can't be in the same thread
-            // Q_ASSERT(g_event->handlers[n].h->thread() != i.a->thread());
-            // if(g_event->handlers[n].h->thread() != i.a->thread())
-            //{
-            pos = n;
-            break;
-            //}
-        }
+        const int nextHandler = i.handler_pos + 1;
+        const int pos         = nextHandler < g_event->handlers.count() ? nextHandler : -1;
 
         // if there is one, try it
         if (pos != -1) {
@@ -1894,16 +1886,7 @@ bool asker_ask(AskerBase *a, const Event &e)
     if (!g_event)
         return false;
 
-    int pos = -1;
-    for (int n = 0; n < g_event->handlers.count(); ++n) {
-        // handler and asker can't be in the same thread
-        // Q_ASSERT(g_event->handlers[n].h->thread() != a->thread());
-        // if(g_event->handlers[n].h->thread() != a->thread())
-        //{
-        pos = n;
-        break;
-        //}
-    }
+    const int pos = g_event->handlers.isEmpty() ? -1 : 0;
     if (pos == -1)
         return false;
 

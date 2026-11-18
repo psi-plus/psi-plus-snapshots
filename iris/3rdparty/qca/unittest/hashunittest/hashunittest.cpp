@@ -38,6 +38,10 @@ class HashUnitTest : public QObject
 private Q_SLOTS:
     void initTestCase();
     void cleanupTestCase();
+    void rawDataUpdate();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    void byteArrayViewUpdate();
+#endif
     void md2test_data();
     void md2test();
     void md4test_data();
@@ -92,6 +96,65 @@ void HashUnitTest::cleanupTestCase()
     QCA::unloadAllPlugins();
     delete m_init;
 }
+
+void HashUnitTest::rawDataUpdate()
+{
+    const char data[]            = {'a', '\0', 'b'};
+    const char text[]            = {'a', 'b', 'c'};
+    bool       anyProviderTested = false;
+    for (const QString &provider : providersToTest) {
+        if (!QCA::isSupported("md5", provider))
+            continue;
+        anyProviderTested = true;
+
+        QCA::Hash hash(QStringLiteral("md5"), provider);
+        hash.update(static_cast<const char *>(nullptr));
+        QCOMPARE(QCA::arrayToHex(hash.final().toByteArray()), QStringLiteral("d41d8cd98f00b204e9800998ecf8427e"));
+
+        hash.clear();
+        hash.update(data);
+        QCOMPARE(QCA::arrayToHex(hash.final().toByteArray()), QStringLiteral("0cc175b9c0f1b6a831c399e269772661"));
+
+        hash.clear();
+        hash.update(data, sizeof(data));
+        QCOMPARE(QCA::arrayToHex(hash.final().toByteArray()), QStringLiteral("70350f6027bce3713f6b76473084309b"));
+
+        hash.clear();
+        hash.update(text, sizeof(text));
+        QCOMPARE(QCA::arrayToHex(hash.final().toByteArray()), QStringLiteral("900150983cd24fb0d6963f7d28e17f72"));
+    }
+    QVERIFY(anyProviderTested);
+}
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+void HashUnitTest::byteArrayViewUpdate()
+{
+    const QByteArray data("!a\0b!", 5);
+    const auto       view              = QByteArrayView(data).sliced(1, 3);
+    bool             anyProviderTested = false;
+    for (const QString &provider : providersToTest) {
+        if (!QCA::isSupported("md5", provider))
+            continue;
+        anyProviderTested = true;
+
+        QCA::Hash hash(QStringLiteral("md5"), provider);
+        hash.update(QByteArrayView());
+        hash.update(view.first(0));
+        QCOMPARE(QCA::arrayToHex(hash.final().toByteArray()), QStringLiteral("d41d8cd98f00b204e9800998ecf8427e"));
+
+        hash.clear();
+        hash.update(view);
+        QCOMPARE(QCA::arrayToHex(hash.final().toByteArray()), QStringLiteral("70350f6027bce3713f6b76473084309b"));
+
+        hash.clear();
+        hash.update(view.first(1));
+        hash.update(QByteArrayView());
+        hash.update(view.sliced(1));
+        QCOMPARE(QCA::arrayToHex(hash.final().toByteArray()), QStringLiteral("70350f6027bce3713f6b76473084309b"));
+    }
+    QVERIFY(anyProviderTested);
+}
+#endif
 
 void HashUnitTest::md2test_data()
 {

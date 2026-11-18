@@ -25,6 +25,7 @@
 
 #include <QMutexLocker>
 #include <QtGlobal>
+#include <climits>
 
 namespace QCA {
 
@@ -212,10 +213,26 @@ void Hash::update(const QByteArray &a)
     update(MemoryRegion(a));
 }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+void Hash::update(QByteArrayView a)
+{
+    while (a.size() > INT_MAX) {
+        update(a.data(), INT_MAX);
+        a = a.sliced(INT_MAX);
+    }
+    update(a.data(), static_cast<int>(a.size()));
+}
+#endif
+
 void Hash::update(const char *data, int len)
 {
-    if (len < 0)
-        len = qstrlen(data);
+    if (len < 0) {
+        const auto length = qstrlen(data);
+        Q_ASSERT_X(length <= static_cast<size_t>(INT_MAX),
+                   "QCA::Hash::update",
+                   "Null-terminated input must not exceed INT_MAX bytes");
+        len = static_cast<int>(length);
+    }
     if (len == 0)
         return;
 

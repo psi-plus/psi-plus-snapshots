@@ -94,25 +94,18 @@ static void ignore_sigpipe()
 #ifdef Q_OS_WIN
 static int pipe_dword_cap_to_int(DWORD dw)
 {
-    if (sizeof(int) <= sizeof(DWORD))
+    if constexpr (sizeof(int) <= sizeof(DWORD))
         return (int)((dw > INT_MAX) ? INT_MAX : dw);
     else
         return (int)dw;
 }
 
-static bool pipe_dword_overflows_int(DWORD dw)
-{
-    if (sizeof(int) <= sizeof(DWORD))
-        return (dw > INT_MAX) ? true : false;
-    else
-        return false;
-}
 #endif
 
 #ifdef Q_OS_UNIX
 static int pipe_size_t_cap_to_int(size_t size)
 {
-    if (sizeof(int) <= sizeof(size_t))
+    if constexpr (sizeof(int) <= sizeof(size_t))
         return (int)((size > INT_MAX) ? INT_MAX : size);
     else // maybe silly..  can int ever be larger than size_t?
         return (int)size;
@@ -1561,46 +1554,46 @@ public:
         }
     }
 
-    QByteArray read(QByteArray *buf, int bytes)
+    QByteArray read(QByteArray *buffer, int bytes)
     {
         QByteArray a;
-        if (bytes == -1 || bytes > buf->size()) {
-            a = *buf;
+        if (bytes == -1 || bytes > buffer->size()) {
+            a = *buffer;
         } else {
             a.resize(bytes);
-            memcpy(a.data(), buf->data(), a.size());
+            memcpy(a.data(), buffer->data(), a.size());
         }
 
-        takeArray(buf, a.size());
+        takeArray(buffer, a.size());
         setupNextRead();
         return a;
     }
 
-    void write(QByteArray *buf, const QByteArray &a)
+    void write(QByteArray *buffer, const QByteArray &a)
     {
-        appendArray(buf, a);
+        appendArray(buffer, a);
         setupNextWrite();
     }
 
 #ifdef QPIPE_SECURE
-    SecureArray readSecure(SecureArray *buf, int bytes)
+    SecureArray readSecure(SecureArray *buffer, int bytes)
     {
         SecureArray a;
-        if (bytes == -1 || bytes > buf->size()) {
-            a = *buf;
+        if (bytes == -1 || bytes > buffer->size()) {
+            a = *buffer;
         } else {
             a.resize(bytes);
-            memcpy(a.data(), buf->data(), a.size());
+            memcpy(a.data(), buffer->data(), a.size());
         }
 
-        takeArray(buf, a.size());
+        takeArray(buffer, a.size());
         setupNextRead();
         return a;
     }
 
-    void writeSecure(SecureArray *buf, const SecureArray &a)
+    void writeSecure(SecureArray *buffer, const SecureArray &a)
     {
-        appendArray(buf, a);
+        appendArray(buffer, a);
         setupNextWrite();
     }
 #endif

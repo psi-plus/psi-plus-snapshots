@@ -95,7 +95,8 @@ public:
     virtual QCA::Provider *createProvider() = 0;
 };
 
-Q_DECLARE_INTERFACE(QCAPlugin, "com.affinix.qca.Plugin/1.0")
+#define QCA_PLUGIN_IID "com.affinix.qca.Plugin/2.0"
+Q_DECLARE_INTERFACE(QCAPlugin, QCA_PLUGIN_IID)
 
 namespace QCA {
 

@@ -156,7 +156,7 @@ bool nativeParts(NCRYPT_KEY_HANDLE key, bool privateKey, RsaParts *parts)
         return false;
     BCRYPT_RSAKEY_BLOB header;
     std::memcpy(&header, blob.constData(), sizeof(header));
-    if (header.Magic != (privateKey ? BCRYPT_RSAFULLPRIVATE_MAGIC : BCRYPT_RSAPUBLIC_MAGIC))
+    if (header.Magic != static_cast<ULONG>(privateKey ? BCRYPT_RSAFULLPRIVATE_MAGIC : BCRYPT_RSAPUBLIC_MAGIC))
         return false;
     std::size_t offset = sizeof(header);
     const auto  take   = [&](ULONG size, SecureArray *out) {
@@ -710,7 +710,7 @@ private:
     }
     static SecureArray emptySignatureBlock(int size)
     {
-        SecureArray block(size, char(0xff));
+        SecureArray block(size, '\xff');
         block[0]        = 0;
         block[1]        = 1;
         block[size - 1] = 0;
@@ -1046,7 +1046,7 @@ QByteArray createSelfSignedCertificate(const CertificateOptions &opts, const PKe
         return {};
     auto       serialSecure = opts.serialNumber().toArray();
     QByteArray serial(serialSecure.constData(), serialSecure.size());
-    while (serial.size() > 1 && serial[0] == 0)
+    while (serial.size() > 1 && serial[0] == '\0')
         serial.remove(0, 1);
     if (serial.size() > 20)
         return {};

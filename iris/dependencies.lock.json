@@ -5,8 +5,8 @@
     "minimum_version": "3.1.1"
   },
   "qca": {
-    "tag": "v3.1.2",
-    "commit": "c9c56c2c131c897e807cb417f986c071a9c53ac7",
+    "tag": "v3.2.0",
+    "commit": "64a503a46301c940d6d8c782bf292ad5ca6191f5",
     "minimum_version": "3.0.10",
     "minimum_version_windows": "3.1.2"
   }

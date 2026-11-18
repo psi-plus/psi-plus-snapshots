@@ -1,4 +1,12 @@
-find_package(PkgConfig REQUIRED)
+if(WITH_botan_PLUGIN STREQUAL "yes")
+  find_package(PkgConfig REQUIRED)
+else()
+  find_package(PkgConfig QUIET)
+endif()
+if(NOT PKG_CONFIG_FOUND)
+  disable_plugin("botan")
+  return()
+endif()
 
 pkg_check_modules(BOTAN IMPORTED_TARGET botan-2)
 if(NOT BOTAN_FOUND)

@@ -1171,7 +1171,7 @@ Provider::Context *WinCryptoProvider::createContext(const QString &type)
 class qca_wincrypto : public QObject, public QCAPlugin
 {
     Q_OBJECT
-    Q_PLUGIN_METADATA(IID "com.affinix.qca.Plugin/1.0")
+    Q_PLUGIN_METADATA(IID QCA_PLUGIN_IID)
     Q_INTERFACES(QCAPlugin)
 public:
     Provider *createProvider() override

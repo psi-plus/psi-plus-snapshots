@@ -37,6 +37,9 @@
 #include "qca_core.h"
 
 #include <QIODevice>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QByteArrayView>
+#endif
 
 namespace QCA {
 
@@ -280,6 +283,21 @@ public:
     */
     void update(const QByteArray &a);
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    /**
+       \overload
+
+       Add all bytes in the view, including embedded null characters.
+       The view is only used for the duration of this call. Input larger
+       than INT_MAX bytes is processed in parts.
+
+       This overload is available with Qt 6.
+
+       \param a the byte view to add to the hash
+    */
+    void update(QByteArrayView a);
+#endif
+
     /**
        \overload
 
@@ -293,6 +311,9 @@ public:
        (or specified as a negative number), the length will be
        determined with strlen(), which may not be what you want
        if the array contains a null (0x00) character.
+
+       \pre When the length is determined automatically, it must not
+       exceed INT_MAX bytes. This is checked by a debug assertion.
     */
     void update(const char *data, int len = -1);
 

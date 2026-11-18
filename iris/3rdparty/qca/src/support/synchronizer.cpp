@@ -180,12 +180,12 @@ private Q_SLOTS:
             TimerInfo &info = timers[n];
 
             QThread                  *objectThread = target->thread();
-            QAbstractEventDispatcher *ed           = QAbstractEventDispatcher::instance(objectThread);
+            QAbstractEventDispatcher *dispatcher   = QAbstractEventDispatcher::instance(objectThread);
 
             const int timeLeft = qMax(info.interval - static_cast<int>(info.time.elapsed()), 0);
             info.fixInterval   = true;
-            ed->unregisterTimer(info.id);
-            info.id = ed->registerTimer(timeLeft, Qt::CoarseTimer, target);
+            dispatcher->unregisterTimer(info.id);
+            info.id = dispatcher->registerTimer(timeLeft, Qt::CoarseTimer, target);
 
 #ifdef TIMERFIXER_DEBUG
             printf("TimerFixer[%p] adjusting [%d] to %d\n", this, info.id, timeLeft);

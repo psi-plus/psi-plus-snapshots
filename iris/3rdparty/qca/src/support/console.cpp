@@ -258,7 +258,6 @@ public:
         if (!ok) {
             fprintf(stderr, "QCA: ConsoleWorker call [%s] failed.\n", method);
             abort();
-            return QVariant();
         }
         return ret;
     }
@@ -899,7 +898,7 @@ public:
         QTextCodec                *codec = QTextCodec::codecForMib(106);
         QTextCodec::ConverterState cstate(QTextCodec::IgnoreHeader);
 #else
-        QStringEncoder encoder(QStringConverter::Utf8);
+        QStringEncoder resultEncoder(QStringConverter::Utf8);
 #endif
         SecureArray   out;
         const ushort *ustr = reinterpret_cast<ushort *>(result.data());
@@ -909,7 +908,7 @@ public:
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             out += codec->fromUnicode(&c, 1, &cstate);
 #else
-            out += QByteArray(encoder(QStringView {&c, 1}));
+            out += QByteArray(resultEncoder(QStringView {&c, 1}));
 #endif
         }
         result = out;

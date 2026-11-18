@@ -288,7 +288,7 @@ static void md5_process(md5_state_t *pms, const md5_byte_t *data /*[64]*/)
     const md5_word_t *X;
 
     {
-        if (QSysInfo::ByteOrder == QSysInfo::BigEndian) {
+        if constexpr (QSysInfo::ByteOrder == QSysInfo::BigEndian) {
             /*
              * On big-endian machines, we must arrange the bytes in the
              * right order.
@@ -649,7 +649,7 @@ public:
 
     inline unsigned long blk0(quint32 i)
     {
-        if (QSysInfo::ByteOrder == QSysInfo::BigEndian)
+        if constexpr (QSysInfo::ByteOrder == QSysInfo::BigEndian)
 #ifdef Q_PROCESSOR_ARM
             return block.l[i];
 #else
@@ -904,7 +904,7 @@ class DefaultKeyStoreEntry : public KeyStoreEntryContext
     Q_OBJECT
 public:
     KeyStoreEntry::Type _type;
-    QString             _id, _name, _storeId, _storeName;
+    QString             _entryId, _name, _storeId, _storeName;
     Certificate         _cert;
     CRL                 _crl;
     mutable QString     _serialized;
@@ -939,7 +939,7 @@ public:
 
     QString id() const override
     {
-        return _id;
+        return _entryId;
     }
 
     QString name() const override
@@ -981,7 +981,7 @@ public:
                 datastr = Base64().arrayToString(_crl.toDER());
             }
 
-            _serialized = entry_serialize(_storeId, _storeName, _id, _name, typestr, datastr);
+            _serialized = entry_serialize(_storeId, _storeName, _entryId, _name, typestr, datastr);
         }
 
         return _serialized;
@@ -1008,7 +1008,7 @@ public:
             } else
                 return nullptr;
 
-            c->_id         = id;
+            c->_entryId    = id;
             c->_name       = name;
             c->_serialized = in;
             return c;
@@ -1145,7 +1145,7 @@ public:
 #endif
         for (int n = 0; n < certs.count(); ++n) {
             DefaultKeyStoreEntry *c = new DefaultKeyStoreEntry(certs[n], storeId(0), name(0), provider());
-            c->_id                  = c->simpleId();
+            c->_entryId             = c->simpleId();
 #ifdef FRIENDLY_NAMES
             c->_name = names[n];
 #else
@@ -1156,7 +1156,7 @@ public:
 
         for (int n = 0; n < crls.count(); ++n) {
             DefaultKeyStoreEntry *c = new DefaultKeyStoreEntry(crls[n], storeId(0), name(0), provider());
-            c->_id                  = c->simpleId();
+            c->_entryId             = c->simpleId();
             c->_name                = c->simpleName();
             out.append(c);
         }

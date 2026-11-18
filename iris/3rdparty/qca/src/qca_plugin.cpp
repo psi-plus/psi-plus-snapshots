@@ -107,6 +107,14 @@ public:
     static PluginInstance *fromFile(const QString &fname, QString *errstr = nullptr)
     {
         QPluginLoader *loader = new QPluginLoader(fname);
+        // Reject incompatible providers before their shared libraries are loaded.
+        const QString iid = loader->metaData().value(QStringLiteral("IID")).toString();
+        if (iid != QStringLiteral(QCA_PLUGIN_IID)) {
+            if (errstr)
+                *errstr = QStringLiteral("incompatible QCA plugin interface IID: %1").arg(iid);
+            delete loader;
+            return nullptr;
+        }
         if (!loader->load()) {
             if (errstr)
                 *errstr = QStringLiteral("failed to load: %1").arg(loader->errorString());

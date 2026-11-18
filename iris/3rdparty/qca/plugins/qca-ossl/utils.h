@@ -28,6 +28,8 @@
 #include <openssl/bn.h>
 #include <openssl/x509v3.h>
 
+#include <limits>
+
 using namespace QCA;
 namespace opensslQCAPlugin {
 
@@ -61,12 +63,34 @@ Validity   convert_verify_error(int err);
 X509_NAME *new_cert_name(const CertificateInfo &info);
 QByteArray bio2ba(BIO *b);
 
+inline int qca_ASN1_STRING_length(const ASN1_STRING *x)
+{
+#if OPENSSL_VERSION_NUMBER >= 0x40100000L && !defined(LIBRESSL_VERSION_NUMBER)
+    const size_t length = ASN1_STRING_get_length(x);
+    // Preserve the int-sized bounds used by Qt 5 buffers and existing callers.
+    return length <= size_t(std::numeric_limits<int>::max()) ? int(length) : 0;
+#else
+    return ASN1_STRING_length(x);
+#endif
+}
+
+inline int qca_ASN1_STRING_set(ASN1_STRING *str, const QByteArray &data)
+{
+#if OPENSSL_VERSION_NUMBER >= 0x40100000L && !defined(LIBRESSL_VERSION_NUMBER)
+    return ASN1_STRING_set1_data(str, reinterpret_cast<const unsigned char *>(data.constData()), size_t(data.size()));
+#else
+    if (data.size() > std::numeric_limits<int>::max())
+        return 0;
+    return ASN1_STRING_set(str, data.constData(), int(data.size()));
+#endif
+}
+
 inline QByteArray qca_ASN1_STRING_toByteArray(const ASN1_STRING *x)
 {
     if (!x)
         return {};
 
-    const int            length = ASN1_STRING_length(x);
+    const int            length = qca_ASN1_STRING_length(x);
     const unsigned char *data   = ASN1_STRING_get0_data(x);
 
     if (length <= 0 || !data)

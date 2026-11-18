@@ -17,6 +17,7 @@ This plugin provides features based on OpenSSL. It implements:
 * PBKDF2 using HMAC-SHA1, SHA224, SHA256, SHA384 and SHA512
 * PKCS#12
 * SSL/TLS
+* DTLS through version 1.2, including DTLS-SRTP
 * CMS (for S/MIME)
 
 Requirements:

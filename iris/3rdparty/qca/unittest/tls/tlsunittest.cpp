@@ -23,6 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <QSignalSpy>
 #include <QTest>
 #include <QtCrypto>
 
@@ -40,6 +41,12 @@ private Q_SLOTS:
     void initTestCase();
     void cleanupTestCase();
     void testCipherList();
+    void resetPendingStart_data();
+    void resetPendingStart();
+    void resetPendingUpdate_data();
+    void resetPendingUpdate();
+    void restartBeforePendingCompletion_data();
+    void restartBeforePendingCompletion();
 
 private:
     QCA::Initializer *m_init;
@@ -53,6 +60,82 @@ void TLSUnitTest::initTestCase()
 void TLSUnitTest::cleanupTestCase()
 {
     delete m_init;
+}
+
+void TLSUnitTest::resetPendingStart_data()
+{
+    QTest::addColumn<int>("mode");
+    QTest::newRow("tls") << int(QCA::TLS::Stream);
+    QTest::newRow("dtls") << int(QCA::TLS::Datagram);
+}
+
+void TLSUnitTest::resetPendingStart()
+{
+    QFETCH(int, mode);
+    const QString provider = QStringLiteral("qca-ossl");
+    if (!QCA::isSupported(mode == QCA::TLS::Stream ? "tls" : "dtls", provider))
+        QSKIP("The OpenSSL provider does not support this TLS mode");
+    QCA::TLS   tls(static_cast<QCA::TLS::Mode>(mode), nullptr, provider);
+    QSignalSpy outgoing(&tls, &QCA::TLS::readyReadOutgoing);
+    QSignalSpy errors(&tls, &QCA::TLS::error);
+    tls.startClient(QStringLiteral("localhost"));
+    tls.reset();
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::MetaCall);
+    QCoreApplication::processEvents();
+    QCOMPARE(outgoing.count(), 0);
+    QCOMPARE(errors.count(), 0);
+    QVERIFY(!tls.isHandshaken());
+}
+
+void TLSUnitTest::resetPendingUpdate_data()
+{
+    resetPendingStart_data();
+}
+
+void TLSUnitTest::resetPendingUpdate()
+{
+    QFETCH(int, mode);
+    const QString provider = QStringLiteral("qca-ossl");
+    if (!QCA::isSupported(mode == QCA::TLS::Stream ? "tls" : "dtls", provider))
+        QSKIP("The OpenSSL provider does not support this TLS mode");
+    QCA::TLS   tls(static_cast<QCA::TLS::Mode>(mode), nullptr, provider);
+    QSignalSpy outgoing(&tls, &QCA::TLS::readyReadOutgoing);
+    QSignalSpy errors(&tls, &QCA::TLS::error);
+    tls.startClient(QStringLiteral("localhost"));
+    // Deliver the start completion. The first update's completion remains queued.
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::MetaCall);
+    tls.reset();
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::MetaCall);
+    QCoreApplication::processEvents();
+    QCOMPARE(outgoing.count(), 0);
+    QCOMPARE(errors.count(), 0);
+    QVERIFY(!tls.isHandshaken());
+}
+
+void TLSUnitTest::restartBeforePendingCompletion_data()
+{
+    resetPendingStart_data();
+}
+
+void TLSUnitTest::restartBeforePendingCompletion()
+{
+    QFETCH(int, mode);
+    const QString provider = QStringLiteral("qca-ossl");
+    if (!QCA::isSupported(mode == QCA::TLS::Stream ? "tls" : "dtls", provider))
+        QSKIP("The OpenSSL provider does not support this TLS mode");
+    QCA::TLS   tls(static_cast<QCA::TLS::Mode>(mode), nullptr, provider);
+    QSignalSpy outgoing(&tls, &QCA::TLS::readyReadOutgoing);
+    QSignalSpy errors(&tls, &QCA::TLS::error);
+    tls.startClient(QStringLiteral("localhost"));
+    tls.reset();
+    tls.startClient(QStringLiteral("localhost"));
+    QTRY_COMPARE(outgoing.count(), 1);
+    QVERIFY(!tls.readOutgoing().isEmpty());
+    QCOMPARE(errors.count(), 0);
+    tls.reset();
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::MetaCall);
+    QCoreApplication::processEvents();
+    QCOMPARE(errors.count(), 0);
 }
 
 void TLSUnitTest::testCipherList()

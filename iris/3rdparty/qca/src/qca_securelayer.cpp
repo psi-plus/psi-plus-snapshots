@@ -365,7 +365,7 @@ public:
         c->setParent(nullptr);
     }
 
-    void reset(ResetMode mode)
+    void reset(ResetMode resetMode)
     {
         if (c)
             c->reset();
@@ -394,7 +394,7 @@ public:
         packet_out.clear();
         packet_out_pending = 0;
 
-        if (mode >= ResetSessionAndData) {
+        if (resetMode >= ResetSessionAndData) {
             peerCert     = CertificateChain();
             peerValidity = ErrorValidityUnknown;
             hostMismatch = false;
@@ -413,7 +413,7 @@ public:
             packet_to_net_encoded.clear();
         }
 
-        if (mode >= ResetAll) {
+        if (resetMode >= ResetAll) {
             localCert        = CertificateChain();
             localKey         = PrivateKey();
             trusted          = CertificateCollection();
@@ -1628,14 +1628,14 @@ public:
         }
     }
 
-    void putServerFirstStep(const QString &mech, const QByteArray *clientInit)
+    void putServerFirstStep(const QString &mechanism, const QByteArray *clientInit)
     {
         if (op != -1)
             return;
 
         QCA_logTextMessage(QStringLiteral("sasl[%1]: c->serverFirstStep()").arg(q->objectName()), Logger::Information);
         op = OpServerFirstStep;
-        c->serverFirstStep(mech, clientInit);
+        c->serverFirstStep(mechanism, clientInit);
     }
 
     void putStep(const QByteArray &stepData)

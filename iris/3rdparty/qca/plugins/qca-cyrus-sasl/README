@@ -40,8 +40,9 @@ initialization uses the embedded mechanisms without consulting registry plugin
 paths or loading DLLs from a separately installed Cyrus library. This policy
 does not change ordinary shared or static Cyrus builds outside the bundle.
 macOS and Android bundles retain the built-in OpenSSL backend.
-CNG does not support SHA224, so availability of SCRAM-SHA-224 through callbacks
-requires a QCA provider offering the corresponding hash, HMAC and PBKDF2.
+The pinned Cyrus library provides SCRAM-SHA-1/256/384/512 and their channel-
+binding variants. SCRAM-SHA-224 has been removed upstream and is not offered,
+regardless of the algorithms available from QCA providers.
 
 Installing
 ----------

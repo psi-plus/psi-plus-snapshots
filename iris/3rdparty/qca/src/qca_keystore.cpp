@@ -650,7 +650,6 @@ static QVariant trackercall(const char *method, const QVariantList &args = QVari
     if (!ok) {
         fprintf(stderr, "QCA: KeyStoreTracker call [%s] failed.\n", method);
         abort();
-        return QVariant();
     }
     return ret;
 }
@@ -831,8 +830,8 @@ public:
     void start()
     {
         const QStringList list = ksm.keyStores();
-        foreach (const QString &storeId, list)
-            ksm_available(storeId);
+        foreach (const QString &availableStoreId, list)
+            ksm_available(availableStoreId);
     }
 
 private Q_SLOTS:
@@ -1572,9 +1571,9 @@ KeyStoreTracker::Item *KeyStorePrivate::getItem(const QString &storeId)
     return ksm->d->getItem(storeId);
 }
 
-KeyStoreTracker::Item *KeyStorePrivate::getItem(int trackerId)
+KeyStoreTracker::Item *KeyStorePrivate::getItem(int requestedTrackerId)
 {
-    return ksm->d->getItem(trackerId);
+    return ksm->d->getItem(requestedTrackerId);
 }
 
 KeyStoreManager::KeyStoreManager(QObject *parent)

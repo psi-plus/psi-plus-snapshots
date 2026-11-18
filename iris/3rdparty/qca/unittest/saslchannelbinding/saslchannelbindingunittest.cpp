@@ -184,6 +184,9 @@ void SaslChannelBindingUnitTest::completeClient()
         offered.prepend(QStringLiteral("GSSAPI"));
     sasl.startClient(QStringLiteral("test"), QStringLiteral("example.test"), offered);
     QTRY_VERIFY_WITH_TIMEOUT(!started.isEmpty() || !errors.isEmpty(), 5000);
+    if (!errors.isEmpty() && sasl.authCondition() == QCA::SASL::NoMechanism
+        && mechanism == QStringLiteral("SCRAM-SHA-224-PLUS"))
+        QSKIP("The installed Cyrus SASL does not provide SCRAM-SHA-224");
     QVERIFY2(errors.isEmpty(), "Unable to start the SCRAM client");
     QCOMPARE(sasl.mechanism(), mechanism);
 

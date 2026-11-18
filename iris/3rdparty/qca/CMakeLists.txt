@@ -34,7 +34,7 @@ else()
   set(_qca_build_plugins_default "auto")
 endif()
 
-option(BUILD_WITH_QT6 "Build with Qt 6" OFF)
+option(BUILD_WITH_QT6 "Build with Qt 6" ON)
 option(BUILD_TESTS "Create test" ${_qca_build_tests_default})
 option(BUILD_TOOLS "Compile mozcerts and qcatool" ${_qca_build_tools_default})
 set(BUILD_PLUGINS "${_qca_build_plugins_default}" CACHE STRING
