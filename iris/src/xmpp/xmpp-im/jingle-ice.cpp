@@ -1164,7 +1164,16 @@ namespace XMPP { namespace Jingle { namespace ICE {
                 };
 #endif
                 network->runtime->participants.append(std::move(participant));
-                if (!network->runtime->localCandidateHistory.isEmpty())
+                // The active BUNDLE already advertised this ICE generation through
+                // its existing member(s). A late content-accept only needs the
+                // current ICE/DTLS parameters and end-of-candidates, not a replay
+                // of all host, srflx and relay candidates after gathering closed.
+                // Standalone and initial/unnegotiated transports still receive
+                // the snapshot so their first offer remains self-contained.
+                const bool establishedBundleFollower
+                    = groupManagedNetwork && pad->ns() == NS && pad->session()->state() == State::Active
+                    && network->runtime->gatheringComplete && network->runtime->participants.size() > 1;
+                if (!establishedBundleFollower && !network->runtime->localCandidateHistory.isEmpty())
                     network->runtime->participants.last().onLocalCandidates(network->runtime->localCandidateHistory);
                 if (network->runtime->gatheringComplete)
                     network->runtime->participants.last().onGatheringComplete();

@@ -188,10 +188,36 @@ static void exercise(const QString &ns, bool candidatesBeforeStart)
     delete second;
 }
 
+static void rejectUnsupportedIceCandidateType()
+{
+    Ice176 ice;
+    Ice176::Candidate invalid;
+    invalid.component = 1;
+    invalid.foundation = QStringLiteral("1");
+    invalid.id = QStringLiteral("invalid");
+    invalid.ip = QHostAddress::LocalHost;
+    invalid.port = 50101;
+    invalid.priority = 2130706431;
+    invalid.protocol = QStringLiteral("udp");
+    invalid.type = QStringLiteral("unknown");
+
+    auto valid = invalid;
+    valid.id = QStringLiteral("valid");
+    valid.port = 50102;
+    valid.type = QStringLiteral("host");
+
+    ice.addRemoteCandidates({invalid, valid});
+    check(ice.d->remoteCandidates.size() == 1, "unsupported ICE candidate type reached the checklist");
+    check(ice.d->remoteCandidates.front()->type == IceComponent::HostType
+              && ice.d->remoteCandidates.front()->id == valid.id,
+          "valid ICE candidate was lost while rejecting an unknown type");
+}
+
 int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
     QCA::Initializer qca;
+    rejectUnsupportedIceCandidateType();
     // Separate sessions may use the same candidate IDs, in either ICE profile.
     for (const auto &ns : { J::ICE::NS, J::ICE::NS_ICE_UDP }) {
         exercise(ns, true);

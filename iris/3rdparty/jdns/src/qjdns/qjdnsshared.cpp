@@ -155,8 +155,9 @@ static QByteArray makeReverseName(const QHostAddress &addr)
 // adapted from qHash<QPair>
 static inline uint qHash(const Handle &key)
 {
-    uint h1 = ::qHash(key.jdns);
-    uint h2 = ::qHash(key.id);
+    // Keep the historical 32-bit hash combination on both Qt 5 and Qt 6.
+    uint h1 = static_cast<uint>(::qHash(key.jdns));
+    uint h2 = static_cast<uint>(::qHash(key.id));
     return ((h1 << 16) | (h1 >> 16)) ^ h2;
 }
 

@@ -599,7 +599,7 @@ static void apply_hosts_var_filepath(jdns_dnsparams_t *a, const char *envvar, co
 {
     jdns_string_t *e;
     char *str;
-    int elen, plen;
+    size_t elen, plen;
 
     e = jdns_getenv(envvar);
     if(!e)

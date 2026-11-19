@@ -1,10 +1,18 @@
 cmake_minimum_required(VERSION 3.19)
 
 project(jdns
-    VERSION 3.1.1
+    VERSION 3.1.3
     LANGUAGES C CXX
 )
 
+# Release SDK publication requires the exact release commit subject.
+
+# Respect the install directory selected by GNUInstallDirs or the packager.
+# LIB_SUFFIX is a legacy fallback, never an addition to an explicit libdir.
+set(LIB_SUFFIX "" CACHE STRING "Legacy library directory suffix (used only without CMAKE_INSTALL_LIBDIR)")
+if(NOT DEFINED CMAKE_INSTALL_LIBDIR AND LIB_SUFFIX)
+    set(CMAKE_INSTALL_LIBDIR "lib${LIB_SUFFIX}" CACHE PATH "Library installation directory")
+endif()
 include(GNUInstallDirs)
 
 # On Windows debug libraries use the conventional 'd' postfix. Keep the
@@ -67,9 +75,8 @@ endif()
 set(CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE ON)
 set(JDNS_INCLUDEDIR "${CMAKE_CURRENT_SOURCE_DIR}/include/jdns")
 
-set(LIB_SUFFIX "" CACHE STRING "Suffix appended to the library directory name")
 set(BIN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}" CACHE PATH "Binary install directory")
-set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}${LIB_SUFFIX}" CACHE PATH "Library install directory")
+set(LIB_INSTALL_DIR "${CMAKE_INSTALL_FULL_LIBDIR}" CACHE PATH "Library install directory")
 set(INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}" CACHE PATH "Header install directory")
 set(DOC_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATAROOTDIR}/doc/jdns" CACHE PATH "Documentation install directory")
 

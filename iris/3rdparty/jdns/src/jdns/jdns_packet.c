@@ -370,10 +370,14 @@ static int presentation_to_label(const unsigned char *name, int size, unsigned c
     return -1; // missing the final, unescaped root separator
 }
 
-int jdns_packet_name_isvalid(const unsigned char *name, int size)
+int jdns_packet_name_isvalid(const unsigned char *name, size_t size)
 {
     unsigned char label[MAX_LABEL_LENGTH];
-    return presentation_to_label(name, size, label) > 0;
+    // Only protect the size_t-to-int conversion here. The parser below
+    // already enforces DNS presentation and wire-format length limits.
+    if(size > INT_MAX)
+        return 0;
+    return presentation_to_label(name, (int)size, label) > 0;
 }
 
 // label points to a MAX_LABEL_LENGTH-byte buffer.
@@ -442,7 +446,7 @@ static int writelabel(const jdns_string_t *name, int at, int left, unsigned char
         pl = jdns_packet_label_new();
         str = jdns_string_new();
         jdns_string_set(str, l + n, len - n);
-        pl->offset = l + n - ref;
+        pl->offset = (int)(l + n - ref);
         pl->value = str;
         jdns_list_insert(lookup, pl, -1);
     }
@@ -615,7 +619,7 @@ static int process_qsection(jdns_list_t *dest, int count, const unsigned char *d
     {
         jdns_packet_question_t *q;
 
-        offset = buf - data;
+        offset = (int)(buf - data);
         at = 0;
 
         if(!readlabel(data + offset, size - offset, data, size, &at, &name))
@@ -659,7 +663,7 @@ static int process_rrsection(jdns_list_t *dest, int count, const unsigned char *
     {
         jdns_packet_resource_t *r;
 
-        offset = buf - data;
+        offset = (int)(buf - data);
         at = 0;
 
         if(!readlabel(data + offset, size - offset, data, size, &at, &name))
@@ -688,7 +692,7 @@ static int process_rrsection(jdns_list_t *dest, int count, const unsigned char *
 
         r->rdlength = net2short(&buf);
 
-        offset = buf - data;
+        offset = (int)(buf - data);
 
         // make sure we have enough for the rdata
         if(size - offset < r->rdlength)
@@ -724,7 +728,7 @@ static int append_qsection(const jdns_list_t *src, int at, int left, unsigned ch
     {
         jdns_packet_question_t *q = (jdns_packet_question_t *)src->item[n];
 
-        if(!writelabel(q->qname, buf - start, last - buf, &buf, lookup))
+        if(!writelabel(q->qname, (int)(buf - start), (int)(last - buf), &buf, lookup))
             goto error;
 
         if(buf + 4 > last)
@@ -753,7 +757,7 @@ static int append_rrsection(const jdns_list_t *src, int at, int left, unsigned c
     {
         jdns_packet_resource_t *r = (jdns_packet_resource_t *)src->item[n];
 
-        if(!writelabel(r->qname, buf - start, last - buf, &buf, lookup))
+        if(!writelabel(r->qname, (int)(buf - start), (int)(last - buf), &buf, lookup))
             goto error;
 
         if(buf + 10 > last)
@@ -781,12 +785,14 @@ static int append_rrsection(const jdns_list_t *src, int at, int left, unsigned c
             }
             else // JDNS_PACKET_WRITE_NAME
             {
-                if(!writelabel(write->value, buf - start, last - buf, &buf, lookup))
+                if(!writelabel(write->value, (int)(buf - start), (int)(last - buf), &buf, lookup))
                     goto error;
             }
         }
 
-        i = buf - rdlengthp; // should be rdata size + 2
+        i = (int)(buf - rdlengthp); // should be rdata size + 2
+        if(i - 2 > 0xffff)
+            goto error; // the wire rdlength is 16-bit
         short2net((unsigned short int)(i - 2), &rdlengthp);
     }
 
@@ -1004,24 +1010,26 @@ int jdns_packet_export(jdns_packet_t *a, int maxsize)
     short2net((unsigned short int)a->authorityRecords->count, &buf);
     short2net((unsigned short int)a->additionalRecords->count, &buf);
 
+    // All offsets and remaining capacities below are bounded by maxsize
+    // (an int), so their pointer differences fit in int.
     // append sections
     lookup = jdns_list_new();
     lookup->autoDelete = 1;
 
-    if(!append_qsection(a->questions, buf - block, last - buf, &buf, lookup))
+    if(!append_qsection(a->questions, (int)(buf - block), (int)(last - buf), &buf, lookup))
         goto error;
-    if(!append_rrsection(a->answerRecords, buf - block, last - buf, &buf, lookup))
+    if(!append_rrsection(a->answerRecords, (int)(buf - block), (int)(last - buf), &buf, lookup))
         goto error;
-    if(!append_rrsection(a->authorityRecords, buf - block, last - buf, &buf, lookup))
+    if(!append_rrsection(a->authorityRecords, (int)(buf - block), (int)(last - buf), &buf, lookup))
         goto error;
-    if(!append_rrsection(a->additionalRecords, buf - block, last - buf, &buf, lookup))
+    if(!append_rrsection(a->additionalRecords, (int)(buf - block), (int)(last - buf), &buf, lookup))
         goto error;
 
     // done with all sections
     jdns_list_delete(lookup);
 
     // condense
-    size = buf - block;
+    size = (int)(buf - block);
     block = (unsigned char *)jdns_realloc(block, size);
 
     // finalize

@@ -110,12 +110,15 @@ static jdns_string_t *_make_printable_str(const jdns_string_t *str)
 }
 
 jdns_string_t *_make_printable_cstr(const char *str){
-    return _make_printable((const unsigned char *)str, strlen(str));
+    size_t len = strlen(str);
+    if(len > INT_MAX / 4)
+        return 0; // _make_printable expands bytes into up to four characters
+    return _make_printable((const unsigned char *)str, (int)len);
 }
 
 unsigned char *_fix_input(const unsigned char *in){
     unsigned char *out;
-    int len;
+    size_t len;
 
     // truncate
     len = _ustrlen(in);
@@ -123,7 +126,7 @@ unsigned char *_fix_input(const unsigned char *in){
         len = 254;
 
     // add a dot to the end if needed
-    if(in[len - 1] != '.' && len < 254)
+    if((len == 0 || in[len - 1] != '.') && len < 254)
     {
         out = (unsigned char *)malloc(len + 2); // a dot and a zero
         memcpy(out, in, len);

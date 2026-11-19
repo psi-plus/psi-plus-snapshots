@@ -15,6 +15,7 @@
 #include <iris/jingle-ice.h>
 #undef private
 
+#include <iris/ice176.h>
 #include <iris/jingle-ft.h>
 #include <iris/jingle-rtp.h>
 #include <iris/xmpp_caps.h>
@@ -923,6 +924,11 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
               && videoBound && videoRequired,
           "initial active RTP contents did not share one association");
 
+    if (scenario == QLatin1String("no-candidate-replay")) {
+        check(waitFor([&]() { return shared->ice && shared->ice->isLocalGatheringComplete(); }),
+              "active BUNDLE ICE gathering did not finish before the late extension");
+    }
+
     const QString fileName = QStringLiteral("active-file");
     QDomDocument  addDoc;
     auto add = activeFileAddPayload(addDoc, session, offer, fileName, { offer.audioName, offer.videoName, fileName });
@@ -936,6 +942,23 @@ static void exerciseActiveFileTransferBundleExtension(const WireOffer &offer, Tc
     check(bool(ftTransport), "active BUNDLE extension did not create ICE file-transfer transport");
     check(session.negotiatedGroupings().first().contents == QStringList({ offer.audioName, offer.videoName }),
           "incoming content-add published BUNDLE membership before content-accept");
+
+    if (scenario == QLatin1String("no-candidate-replay")) {
+        // Inspect the transport payload consumed by content-accept. Existing
+        // BUNDLE members have already advertised this ICE generation.
+        ft->prepare();
+        check(ftTransport->hasUpdates(), "late BUNDLE member has no initial ICE transport update");
+        auto [transportXml, onAck] = ftTransport->takeOutgoingUpdate(true);
+        Q_UNUSED(onAck);
+        check(!transportXml.isNull() && transportXml.firstChildElement(QStringLiteral("candidate")).isNull(),
+              "late BUNDLE member replayed already advertised ICE candidates");
+        check(transportXml.attribute(QStringLiteral("ufrag")) == shared->ice->localUfrag()
+                  && transportXml.attribute(QStringLiteral("pwd")) == shared->ice->localPassword()
+                  && !transportXml.firstChildElement(QStringLiteral("fingerprint")).isNull()
+                  && !transportXml.firstChildElement(QStringLiteral("gathering-complete")).isNull(),
+              "late BUNDLE member lost ICE/DTLS parameters or end-of-candidates");
+        return;
+    }
 
     RootTaskKeeper pendingContentAccept(client.rootTask());
     ft->prepare();
@@ -1723,6 +1746,7 @@ int main(int argc, char **argv)
     exerciseMixedRtpFileTransferBundle(&reserver);
     exerciseFinishingFileTransferRetainsBundle(&reserver);
     exerciseActiveFileTransferBundleExtension(offer, &reserver);
+    exerciseActiveFileTransferBundleExtension(offer, &reserver, QStringLiteral("no-candidate-replay"));
     exerciseInitiatorActiveBundleExtension(offer, &reserver);
     exerciseInitiatorActiveBundleExtension(offer, &reserver, QStringLiteral("add-error"));
     exerciseInitiatorActiveBundleExtension(offer, &reserver, QStringLiteral("peer-reject"));

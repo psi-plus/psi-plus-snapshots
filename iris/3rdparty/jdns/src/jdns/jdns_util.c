@@ -28,12 +28,12 @@
 //----------------------------------------------------------------------------
 // misc
 //----------------------------------------------------------------------------
-void *jdns_alloc(int size)
+void *jdns_alloc(size_t size)
 {
     return malloc(size);
 }
 
-void *jdns_realloc(void *p, int size)
+void *jdns_realloc(void *p, size_t size)
 {
     return realloc(p, size);
 }
@@ -46,7 +46,7 @@ void jdns_free(void *p)
 char *jdns_strdup(const char *s)
 {
     char *p;
-    int len;
+    size_t len;
 
     len = strlen(s) + 1; // the zero
     p = (char *)jdns_alloc(len);
@@ -66,12 +66,12 @@ unsigned char *jdns_copy_array(const unsigned char *src, int size)
 
 int jdns_domain_cmp(const unsigned char *a, const unsigned char *b)
 {
-    int n;
-    int len_a;
+    size_t n;
+    size_t len_a;
 
     // case-insensitive compare
     len_a = _ustrlen(a);
-    if(len_a != (int)_ustrlen(b))
+    if(len_a != _ustrlen(b))
         return 0;
 
     for(n = 0; n < len_a; ++n)
@@ -125,8 +125,10 @@ jdns_string_t *jdns_getenv(const char *name)
     ret = getenv_s(&size, 0, 0, name);
     if(ret != 0 || size == 0)
         return 0;
+    if(size > INT_MAX)
+        return 0;
     sizei = (int)size;
-    dest = (char *)jdns_alloc(sizei);
+    dest = (char *)jdns_alloc(size);
     ret = getenv_s(&size, dest, size, name);
     if(ret != 0)
     {
@@ -152,7 +154,7 @@ jdns_string_t *jdns_getenv(const char *name)
 char *jdns_strcpy(char *dst, const char *src)
 {
 #if defined(_MSC_VER) && _MSC_VER >= 1400
-    int len;
+    size_t len;
     // deliberately unsafe
     len = strlen(src);
     if(strcpy_s(dst, len + 1, src) != 0)
@@ -373,7 +375,10 @@ void jdns_string_set(jdns_string_t *s, const unsigned char *str, int str_len)
 
 void jdns_string_set_cstr(jdns_string_t *s, const char *str)
 {
-    jdns_string_set(s, (const unsigned char *)str, strlen(str));
+    size_t len = strlen(str);
+    if(len > INT_MAX)
+        return; // jdns_string_t stores the length as int
+    jdns_string_set(s, (const unsigned char *)str, (int)len);
 }
 
 int jdns_string_indexOf(const jdns_string_t *s, unsigned char c, int pos)
@@ -510,7 +515,7 @@ void jdns_address_set_ipv6(jdns_address_t *a, const unsigned char *ipv6)
 
 int jdns_address_set_cstr(jdns_address_t *a, const char *str)
 {
-    int slen = strlen(str);
+    size_t slen = strlen(str);
 
     // ipv6
     if(strchr(str, ':'))
@@ -623,7 +628,7 @@ error:
         {
             int x;
             char *part;
-            int len;
+            size_t len;
 
             p2 = strchr(p, '.');
             if(!p2)

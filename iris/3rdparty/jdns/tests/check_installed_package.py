@@ -47,13 +47,20 @@ with tempfile.TemporaryDirectory() as directory:
 cmake_minimum_required(VERSION 3.19)
 project(jdns_wrong_qt LANGUAGES CXX)
 set(QT_DEFAULT_MAJOR_VERSION {other})
-find_package(Qt{other} REQUIRED COMPONENTS Core Network)
-find_package(QJDns 3.0 CONFIG QUIET)
-if(QJDns_FOUND OR TARGET QJDns::QJDns)
+# The opposite Qt major is intentionally NOT installed in this CI job.
+# Check that the installed package rejects a mismatched consumer before
+# resolving any Qt dependencies, rather than requiring both Qt versions.
+set(_config "{(prefix / f'lib/cmake/qjdns-qt{qt}/QJDns-qt{qt}Config.cmake').as_posix()}")
+if(NOT EXISTS "${{_config}}")
+message(FATAL_ERROR "missing installed QJDns package configuration")
+endif()
+find_package(QJDns-qt{qt} 3.0 CONFIG QUIET
+    PATHS "{(prefix / f'lib/cmake/qjdns-qt{qt}').as_posix()}" NO_DEFAULT_PATH)
+if(QJDns-qt{qt}_FOUND OR TARGET QJDns::QJDns)
 message(FATAL_ERROR "accepted a package for the wrong Qt major")
 endif()
 ''')
-    result = subprocess.run(['cmake', '-S', str(root), '-B', str(root / 'build'),
-                             f'-DQJDns_DIR={prefix}/lib/cmake/qjdns-qt{qt}'], capture_output=True, text=True)
+    result = subprocess.run(['cmake', '-S', str(root), '-B', str(root / 'build')],
+                            capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
 print(f'Qt {qt}: installed version and Qt-major rejection checks passed', flush=True)

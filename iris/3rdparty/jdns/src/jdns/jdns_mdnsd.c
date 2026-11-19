@@ -163,14 +163,15 @@ int _namehash(const char *s)
 // case-insensitive hash
 int _namehash_nocase(const char *s)
 {
-    int n, len;
+    size_t n, len;
+    int hash;
     char *low = jdns_strdup(s);
     len = strlen(low);
     for(n = 0; n < len; ++n)
         low[n] = tolower(low[n]);
-    n = _namehash(low);
+    hash = _namehash(low);
     jdns_free(low);
-    return n;
+    return hash;
 }
 
 // basic linked list and hash primitives

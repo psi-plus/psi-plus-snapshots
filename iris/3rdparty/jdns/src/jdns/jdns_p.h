@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <limits.h>
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 # define JDNS_OS_WIN
@@ -49,6 +50,8 @@
 #endif
 
 #ifdef JDNS_OS_WIN
+// Winsock declarations must precede windows.h (which may include Winsock 1).
+# include <winsock2.h>
 # include <windows.h>
 #endif
 
@@ -70,8 +73,8 @@ static inline int jdns_inet_aton(const char *cp, struct in_addr *inp)
 #include "jdns_packet.h"
 
 // jdns_util.c
-void *jdns_alloc(int size);
-void *jdns_realloc(void *p, int size);
+void *jdns_alloc(size_t size);
+void *jdns_realloc(void *p, size_t size);
 void jdns_free(void *p);
 char *jdns_strdup(const char *s);
 unsigned char *jdns_copy_array(const unsigned char *src, int size);

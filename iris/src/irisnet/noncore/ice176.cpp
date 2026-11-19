@@ -23,7 +23,6 @@
 #include "iceagent.h"
 #include "icecomponent.h"
 #include "icelocaltransport.h"
-#include "iceturntransport.h"
 #include "stunbinding.h"
 #include "stunmessage.h"
 #include "stuntransaction.h"
@@ -454,11 +453,16 @@ public:
     {
         QList<IceComponent::CandidateInfo::Ptr> remoteCandidates;
         for (const Candidate &c : list) {
+            const int candidateType = string_to_candidateType(c.type);
+            if (candidateType < 0) {
+                iceDebug("Ignoring remote ICE candidate with unsupported type: %s", qPrintable(c.type));
+                continue;
+            }
             auto ci       = IceComponent::CandidateInfo::Ptr::create();
             ci->addr.addr = c.ip;
             ci->addr.addr.setScopeId(QString());
             ci->addr.port   = c.port;
-            ci->type        = (IceComponent::CandidateType)string_to_candidateType(c.type); // TODO: handle error
+            ci->type        = static_cast<IceComponent::CandidateType>(candidateType);
             ci->componentId = c.component;
             ci->priority    = c.priority;
             ci->foundation  = c.foundation;
@@ -1732,7 +1736,7 @@ private slots:
         }
     }
 
-    void it_datagramsWritten(int path, int count, const TransportAddress &addr)
+    void it_datagramsWritten(int path, int count, const XMPP::TransportAddress &addr)
     {
         // TODO
         Q_UNUSED(path);
