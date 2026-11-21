@@ -15,6 +15,9 @@ class ITEMediaState : public QObject {
 public:
     using Range  = QPair<qreal, qreal>; // [begin, end), normalized to [0, 1]
     using Ranges = QVector<Range>;
+    // Provider-neutral media availability, independent of QMediaPlayer state
+    // and of an explicit Save/Download action.
+    enum class TransferStatus { Waiting, Transferring, Paused, Failed, Complete };
     explicit ITEMediaState(QObject *parent = nullptr) : QObject(parent) { }
 
     const Ranges &cachedRanges() const { return ranges_; }
@@ -22,6 +25,11 @@ public:
     qreal         downloadProgress() const { return progress_; } // -1 means unknown
     QString       errorString() const { return error_; }
     QString       sourceError() const { return sourceError_; }
+    quint64       totalBytes() const { return totalBytes_; }
+    quint64       availableBytes() const { return availableBytes_; }
+    TransferStatus transferStatus() const { return transferStatus_; }
+    QString       transferError() const { return transferError_; }
+    void setTransfer(quint64 available, quint64 total, TransferStatus status, const QString &error = {});
     void          setSourceError(const QString &error)
     {
         if (sourceError_ != error) {
@@ -41,5 +49,8 @@ private:
     qreal   progress_    = -1;
     QString error_;
     QString sourceError_;
+    quint64 totalBytes_ = 0, availableBytes_ = 0;
+    TransferStatus transferStatus_ = TransferStatus::Waiting;
+    QString transferError_;
 };
 #endif

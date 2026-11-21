@@ -8,6 +8,7 @@
 #include <QAbstractTextDocumentLayout>
 #include <QBuffer>
 #include <QFile>
+#include <QHelpEvent>
 #include <QLabel>
 #include <QMainWindow>
 #include <QMediaPlayer>
@@ -424,6 +425,58 @@ private slots:
     }
 
     void initTestCase() { qRegisterMetaType<QVideoFrame>(); }
+
+    void mediaTransferIndicatorReportsLiveBytesAndState()
+    {
+        StateOpener opener;
+        QWidget host;
+        host.resize(520, 280);
+        auto *player = ITEVideoController::createPlayer(QUrl("test:media"), &opener, &host);
+        auto *indicator = player->findChild<QWidget *>(QStringLiteral("qite-video-transfer-indicator"));
+        QVERIFY(indicator);
+        host.show();
+        player->show();
+        QVERIFY(indicator->isHidden()); // No size was supplied by the host.
+
+        QSignalSpy changed(&opener.state, &ITEMediaState::changed);
+        using Status = ITEMediaState::TransferStatus;
+        opener.state.setTransfer(1024 * 1024, 4 * 1024 * 1024, Status::Transferring);
+        QCOMPARE(changed.size(), 1);
+        QCOMPARE(opener.state.totalBytes(), quint64(4 * 1024 * 1024));
+        QCOMPARE(opener.state.availableBytes(), quint64(1024 * 1024));
+        QVERIFY(!indicator->isHidden());
+        QVERIFY(indicator->toolTip().contains(QStringLiteral("25%")));
+        QVERIFY(indicator->toolTip().contains(QStringLiteral("Downloading")));
+        QVERIFY(indicator->accessibleName().contains(QStringLiteral("25%")));
+        const QImage active = indicator->grab().toImage();
+        QVERIFY(!active.isNull());
+
+        opener.state.setTransfer(1024 * 1024, 4 * 1024 * 1024, Status::Transferring);
+        QCOMPARE(changed.size(), 1); // No redundant paints or tooltip updates.
+        opener.state.setTransfer(2 * 1024 * 1024, 4 * 1024 * 1024, Status::Transferring);
+        QCOMPARE(changed.size(), 2);
+        QVERIFY(indicator->toolTip().contains(QStringLiteral("50%")));
+        QHelpEvent help(QEvent::ToolTip, indicator->rect().center(),
+                        indicator->mapToGlobal(indicator->rect().center()));
+        help.ignore();
+        QApplication::sendEvent(indicator, &help);
+        QVERIFY(help.isAccepted());
+
+        opener.state.setTransfer(2 * 1024 * 1024, 4 * 1024 * 1024, Status::Paused);
+        QVERIFY(indicator->toolTip().contains(QStringLiteral("paused")));
+        opener.state.setTransfer(2 * 1024 * 1024, 4 * 1024 * 1024, Status::Failed,
+                                 QStringLiteral("Connection lost"));
+        QVERIFY(indicator->toolTip().contains(QStringLiteral("Connection lost")));
+        opener.state.setTransfer(4 * 1024 * 1024, 4 * 1024 * 1024, Status::Complete);
+        QVERIFY(indicator->toolTip().contains(QStringLiteral("offline")));
+        QVERIFY(!indicator->toolTip().contains(QStringLiteral("100%")));
+        QVERIFY(!indicator->toolTip().contains(QLatin1Char('/')));
+        QCOMPARE(indicator->toolTip().count(QStringLiteral("MiB")), 1); // Total size is not repeated.
+        QCOMPARE(indicator->toolTip().count(QLatin1Char('\n')), 0);
+        opener.state.setTransfer(8 * 1024 * 1024, 4 * 1024 * 1024, Status::Complete);
+        QCOMPARE(opener.state.availableBytes(), opener.state.totalBytes()); // Clamp an invalid provider report.
+        delete player;
+    }
 
     void mediaStateAndLayers()
     {

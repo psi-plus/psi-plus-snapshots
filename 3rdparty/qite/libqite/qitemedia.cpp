@@ -2,11 +2,216 @@
 #include "qitemedia.h"
 #include "qitemedia_p.h"
 #include <QMouseEvent>
+#include <QHelpEvent>
+#include <QHideEvent>
+#include <QLocale>
+#include <QShowEvent>
+#include <QTimer>
+#include <QToolTip>
 #include <QPainter>
 #include <QPainterPath>
 #include <QStyleOptionSlider>
 #include <algorithm>
 #include <cmath>
+#include <limits>
+
+void ITEMediaState::setTransfer(quint64 available, quint64 total, TransferStatus status, const QString &error)
+{
+    available = total ? qMin(available, total) : 0;
+    if (availableBytes_ == available && totalBytes_ == total && transferStatus_ == status && transferError_ == error)
+        return;
+    availableBytes_ = available;
+    totalBytes_ = total;
+    transferStatus_ = status;
+    transferError_ = error;
+    emit changed();
+}
+
+namespace {
+QString mediaByteSize(quint64 bytes)
+{
+    // The state counters are unsigned; avoid narrowing above qint64's range.
+    return QLocale().formattedDataSize(qint64(qMin(bytes, quint64(std::numeric_limits<qint64>::max()))),
+                                       1, QLocale::DataSizeIecFormat);
+}
+
+class MediaTransferIndicator final : public QWidget {
+public:
+    MediaTransferIndicator(ITEMediaState *state, QWidget *parent) : QWidget(parent), state_(state)
+    {
+        setObjectName(QStringLiteral("qite-video-transfer-indicator"));
+        setFixedSize(24, 24);
+        setFocusPolicy(Qt::NoFocus);
+        setAttribute(Qt::WA_Hover);
+        if (state_) {
+            connect(state_, &ITEMediaState::changed, this, [this] { refresh(); });
+            connect(state_, &QObject::destroyed, this, [this] {
+                state_ = nullptr;
+                refresh();
+            });
+        }
+        animation_.setInterval(120);
+        connect(&animation_, &QTimer::timeout, this, [this] {
+            phase_ = (phase_ + 16) % 360;
+            update();
+        });
+        refresh();
+    }
+
+protected:
+    bool event(QEvent *event) override
+    {
+        if (event->type() == QEvent::ToolTip && state_) {
+            const auto *help = static_cast<QHelpEvent *>(event);
+            tooltipRequested_ = true;
+            tooltipPosition_ = help->globalPos();
+            QToolTip::showText(tooltipPosition_, toolTip(), this, rect());
+            event->accept();
+            return true;
+        }
+        if (event->type() == QEvent::Leave)
+            tooltipRequested_ = false;
+        return QWidget::event(event);
+    }
+
+    void showEvent(QShowEvent *event) override
+    {
+        QWidget::showEvent(event);
+        syncAnimation();
+    }
+
+    void hideEvent(QHideEvent *event) override
+    {
+        animation_.stop();
+        tooltipRequested_ = false;
+        QWidget::hideEvent(event);
+    }
+
+    void paintEvent(QPaintEvent *) override
+    {
+        if (!state_)
+            return;
+        const qreal fraction = state_->totalBytes()
+            ? qreal(state_->availableBytes()) / qreal(state_->totalBytes()) : 0.0;
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        const qreal scale = qMin(width(), height()) / 24.0;
+        painter.translate(width() / 2.0, height() / 2.0);
+        painter.scale(scale, scale);
+        QPen ring(QColor(125, 132, 144, 200), 2.4, Qt::SolidLine, Qt::RoundCap);
+        painter.setPen(ring);
+        painter.setBrush(Qt::NoBrush);
+        painter.drawEllipse(QRectF(-8, -8, 16, 16));
+        const auto status = state_->transferStatus();
+        QColor ink = status == ITEMediaState::TransferStatus::Failed ? QColor(243, 149, 149)
+            : status == ITEMediaState::TransferStatus::Waiting
+                || status == ITEMediaState::TransferStatus::Paused ? QColor(205, 211, 221)
+            : QColor(115, 184, 248);
+        painter.setPen(QPen(ink, 2.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        const qreal sweep = status == ITEMediaState::TransferStatus::Complete
+            ? 360.0 : qBound(qreal(0), fraction * 360, qreal(360));
+        if (sweep > 0)
+            painter.drawArc(QRectF(-8, -8, 16, 16), (90 - (status == ITEMediaState::TransferStatus::Transferring ? phase_ : 0)) * 16,
+                            -qRound(sweep * 16));
+        else if (status == ITEMediaState::TransferStatus::Transferring)
+            painter.drawArc(QRectF(-8, -8, 16, 16), (90 - phase_) * 16, -55 * 16);
+        painter.setPen(QPen(QColor(225, 232, 243), 2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        switch (status) {
+        case ITEMediaState::TransferStatus::Transferring:
+            painter.setBrush(QColor(225, 232, 243));
+            painter.drawEllipse(QPointF(0, 0), 1.5, 1.5);
+            break;
+        case ITEMediaState::TransferStatus::Failed:
+            painter.drawLine(QPointF(-2.5, -2.5), QPointF(2.5, 2.5));
+            painter.drawLine(QPointF(2.5, -2.5), QPointF(-2.5, 2.5));
+            break;
+        case ITEMediaState::TransferStatus::Complete:
+            painter.drawLine(QPointF(-3.5, 0), QPointF(-1, 2.5));
+            painter.drawLine(QPointF(-1, 2.5), QPointF(4, -3));
+            break;
+        case ITEMediaState::TransferStatus::Waiting:
+        case ITEMediaState::TransferStatus::Paused:
+            painter.drawLine(QPointF(-2.5, -3), QPointF(-2.5, 3));
+            painter.drawLine(QPointF(2.5, -3), QPointF(2.5, 3));
+            break;
+        }
+    }
+
+private:
+    void syncAnimation()
+    {
+        const bool animate = isVisible() && state_ && state_->totalBytes()
+            && state_->transferStatus() == ITEMediaState::TransferStatus::Transferring;
+        if (animate && !animation_.isActive())
+            animation_.start();
+        else if (!animate && animation_.isActive()) {
+            animation_.stop();
+            phase_ = 0;
+        }
+    }
+
+    void refresh()
+    {
+        const bool available = state_ && state_->totalBytes();
+        setVisible(available);
+        if (!available) {
+            animation_.stop();
+            setToolTip({});
+            return;
+        }
+        QString status;
+        switch (state_->transferStatus()) {
+        case ITEMediaState::TransferStatus::Waiting:
+            status = tr("Waiting for media");
+            break;
+        case ITEMediaState::TransferStatus::Transferring:
+            status = tr("Downloading media");
+            break;
+        case ITEMediaState::TransferStatus::Paused:
+            status = tr("Media download paused");
+            break;
+        case ITEMediaState::TransferStatus::Failed:
+            status = tr("Media download failed");
+            break;
+        case ITEMediaState::TransferStatus::Complete:
+            status = tr("Available offline");
+            break;
+        }
+        const auto total = state_->totalBytes();
+        const auto cached = state_->availableBytes();
+        QString tooltip;
+        if (state_->transferStatus() == ITEMediaState::TransferStatus::Complete) {
+            // Completed media needs one size, not a redundant 100% byte ratio.
+            tooltip = tr("Available offline (%1)").arg(mediaByteSize(total));
+        } else {
+            tooltip = status + QStringLiteral("\n") + tr("Cached: %1 / %2 (%3%)")
+                .arg(mediaByteSize(cached), mediaByteSize(total))
+                .arg(qRound(100.0 * qreal(cached) / qreal(total)));
+            if (state_->transferStatus() == ITEMediaState::TransferStatus::Failed && !state_->transferError().isEmpty())
+                tooltip += QStringLiteral("\n") + state_->transferError();
+        }
+        setToolTip(tooltip);
+        setAccessibleName(tooltip);
+        syncAnimation();
+        update();
+        // The native tooltip would otherwise retain the initial byte count
+        // until the pointer leaves and re-enters. Refresh only on changes.
+        if (tooltipRequested_ && underMouse() && QToolTip::isVisible())
+            QToolTip::showText(tooltipPosition_, tooltip, this, rect());
+    }
+
+    QPointer<ITEMediaState> state_;
+    QTimer                 animation_;
+    int                    phase_ = 0;
+    bool                   tooltipRequested_ = false;
+    QPoint                 tooltipPosition_;
+};
+} // namespace
+
+QWidget *iteCreateMediaTransferIndicator(ITEMediaState *state, QWidget *parent)
+{
+    return new MediaTransferIndicator(state, parent);
+}
 
 void ITEMediaState::setCachedRanges(Ranges ranges)
 {

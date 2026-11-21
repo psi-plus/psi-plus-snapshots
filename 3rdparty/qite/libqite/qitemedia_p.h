@@ -12,6 +12,8 @@ class QPainter;
 void    itePaintMediaProgress(QPainter *, const QRectF &, const ITEMediaState *, qreal played, const QColor &,
                               bool upsideDown = false);
 QString iteMediaDownloadText(const ITEMediaState *state);
+// Compact, host-neutral byte-progress indicator shared by audio and video.
+QWidget *iteCreateMediaTransferIndicator(ITEMediaState *state, QWidget *parent);
 
 class ITEMediaSlider : public QSlider {
 public:

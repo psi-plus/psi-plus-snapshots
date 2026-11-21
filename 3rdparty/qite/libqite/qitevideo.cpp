@@ -445,6 +445,10 @@ public:
         // explicit foreground on our opaque black background as well.
         time->setStyleSheet(QStringLiteral("color: white; background: transparent;"));
         row->addWidget(time);
+        // Downloaded file bytes are distinct from video playback position.
+        // The host provides this state without Qite knowing its transport.
+        transferIndicator = iteCreateMediaTransferIndicator(mediaState, controls);
+        row->addWidget(transferIndicator);
         buffering = new QLabel(ITEVideoController::tr("Loading…"), controls);
         buffering->setObjectName(QStringLiteral("qite-video-loading"));
         buffering->setStyleSheet(QStringLiteral("color: white; background: transparent;"));
@@ -989,6 +993,7 @@ private:
     QToolButton                 *downloadButton = nullptr;
     QPointer<ITEMediaState>      mediaState;
     QLabel                      *time;
+    QWidget                     *transferIndicator = nullptr;
     QLabel                      *buffering;
     std::function<void()>        externalFullscreen;
     qint64                       initialPosition = 0;
