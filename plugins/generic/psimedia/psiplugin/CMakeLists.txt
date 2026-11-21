@@ -51,10 +51,6 @@ if(NOT PLUGINS_INSTALL_PATH)
     endif()
 endif()
 
-if(USE_QT6)
-    set(QT_DEFAULT_MAJOR_VERSION 6)
-endif()
-
 set( _SRCS
     psiplugin.cpp
     opt_avcall.cpp
