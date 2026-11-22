@@ -5,6 +5,10 @@
 #include "qitevideoframe_p.h"
 
 #include <QAbstractTextDocumentLayout>
+#include <QAction>
+#include <QHBoxLayout>
+#include <QMenu>
+#include <QSizePolicy>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QAudioOutput>
 #endif
@@ -26,6 +30,7 @@
 #include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
+#include <QVector>
 #include <functional>
 #include <utility>
 
@@ -138,11 +143,18 @@ QIcon videoControlIcon(const QIcon &original)
 
 class VideoControls : public QWidget {
 public:
+    using Visibility = ITEVideoController::ControlVisibility;
+    struct Control {
+        QString id;
+        QPointer<QToolButton> button;
+        Visibility visibility;
+        bool available = true;
+    };
+
     explicit VideoControls(QWidget *parent) : QWidget(parent)
     {
         setAttribute(Qt::WA_OpaquePaintEvent);
-        // Keep icon buttons visually flat on every platform. Only hover,
-        // press, and keyboard focus get subtle feedback; never a native frame.
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         setStyleSheet(QStringLiteral(
             "QToolButton { border: 0; padding: 3px; background: transparent; }"
             "QToolButton:hover:enabled { background: rgba(255,255,255,30); border-radius: 4px; }"
@@ -151,12 +163,240 @@ public:
             " border-radius: 4px; }"));
     }
 
+    void registerButton(QToolButton *button, const QString &id, Visibility initial, const QString &afterId = {})
+    {
+        if (!button || id.isEmpty() || findControl(id))
+            return;
+        const Control entry { id, button, initial, true };
+        int insertAt = controls_.size();
+        for (int i = 0; i < controls_.size(); ++i) {
+            if (!afterId.isEmpty() && controls_.at(i).id == afterId) {
+                insertAt = i + 1;
+                break;
+            }
+        }
+        controls_.insert(insertAt, entry);
+        refresh();
+    }
+
+    void complete()
+    {
+        auto *row = qobject_cast<QHBoxLayout *>(layout());
+        if (!row)
+            return;
+        more_ = new QToolButton(this);
+        more_->setObjectName(QStringLiteral("qite-video-more-button"));
+        more_->setText(QStringLiteral("⋮"));
+        more_->setToolButtonStyle(Qt::ToolButtonTextOnly);
+        // InstantPopup adds a native menu arrow on some Qt styles. The
+        // vertical ellipsis already communicates that this opens a menu.
+        more_->setStyleSheet(QStringLiteral(
+            "QToolButton::menu-indicator { image: none; width: 0px; height: 0px; }"));
+        more_->setToolTip(tr("More controls"));
+        more_->setAccessibleName(more_->toolTip());
+        more_->setFocusPolicy(Qt::TabFocus);
+        more_->setAutoRaise(true);
+        more_->setPopupMode(QToolButton::InstantPopup);
+        auto *menu = new QMenu(more_);
+        more_->setMenu(menu);
+        connect(menu, &QMenu::aboutToShow, this, [this, menu] { populateMenu(menu); });
+        row->addWidget(more_);
+        more_->hide();
+        refresh();
+    }
+
+    QToolButton *addPlayerAction(const QString &id, QAction *action, const QString &afterId,
+                                 Visibility initial)
+    {
+        if (!action || id.isEmpty() || findControl(id))
+            return nullptr;
+        auto *row = qobject_cast<QHBoxLayout *>(layout());
+        if (!row)
+            return nullptr;
+        auto *button = new QToolButton(this);
+        button->setAutoRaise(true);
+        button->setFocusPolicy(Qt::TabFocus);
+        button->setObjectName(id);
+        button->setDefaultAction(action);
+        // Host icons may be designed for light toolbars. Apply the same
+        // high-contrast rendering as the built-in media controls.
+        button->setIcon(videoControlIcon(action->icon()));
+        connect(action, &QAction::changed, button, [button, action] {
+            button->setIcon(videoControlIcon(action->icon()));
+        });
+        int index = more_ ? row->indexOf(more_) : row->count();
+        if (const auto *after = findControl(afterId))
+            if (after->button)
+                index = row->indexOf(after->button) + 1;
+        row->insertWidget(index, button);
+        registerButton(button, id, initial, afterId);
+        connect(action, &QObject::destroyed, this, [this, button, id] {
+            for (int i = 0; i < controls_.size(); ++i) {
+                if (controls_.at(i).id == id && controls_.at(i).button == button) {
+                    controls_.removeAt(i);
+                    break;
+                }
+            }
+            button->deleteLater();
+            refresh();
+        });
+        return button;
+    }
+
+    bool setVisibility(const QString &id, Visibility visibility)
+    {
+        auto *control = findControl(id);
+        if (!control)
+            return false;
+        control->visibility = visibility;
+        refresh();
+        return true;
+    }
+
+    void setAvailable(const QString &id, bool available)
+    {
+        if (auto *control = findControl(id)) {
+            control->available = available;
+            refresh();
+        }
+    }
+
+    void refresh()
+    {
+        if (refreshing_ || !more_)
+            return;
+        refreshing_ = true;
+        // Calculate the target layout before changing any child visibility.
+        // Re-showing and re-hiding auto buttons on every layout request would
+        // create an endless resize/layout-request cycle.
+        QVector<char> direct(controls_.size(), false);
+        bool menuNeeded = false;
+        for (int i = 0; i < controls_.size(); ++i) {
+            const auto &control = controls_.at(i);
+            direct[i] = control.button && control.available
+                && control.visibility != Visibility::Overflow;
+            menuNeeded |= control.button && control.available && !direct.at(i);
+        }
+        if (!fits(direct, menuNeeded)) {
+            auto *row = qobject_cast<QHBoxLayout *>(layout());
+            // Evict only Automatic actions, rightmost first. Explicitly
+            // pinned actions are never forced into the overflow menu.
+            for (int i = row->count() - 1; i >= 0; --i) {
+                const auto *button = row->itemAt(i)->widget();
+                for (int n = 0; n < controls_.size(); ++n) {
+                    if (controls_.at(n).button == button && direct.at(n)
+                        && controls_.at(n).visibility == Visibility::Automatic) {
+                        direct[n] = false;
+                        menuNeeded = true;
+                        break;
+                    }
+                }
+                if (fits(direct, menuNeeded))
+                    break;
+            }
+        }
+        for (int i = 0; i < controls_.size(); ++i) {
+            auto *button = controls_.at(i).button.data();
+            if (button && button->isHidden() == bool(direct.at(i)))
+                button->setVisible(bool(direct.at(i)));
+        }
+        if (more_->isHidden() == menuNeeded)
+            more_->setVisible(menuNeeded);
+        refreshing_ = false;
+    }
+
 protected:
     void paintEvent(QPaintEvent *) override
     {
         QPainter painter(this);
         painter.fillRect(rect(), Qt::black);
     }
+    void resizeEvent(QResizeEvent *event) override
+    {
+        QWidget::resizeEvent(event);
+        refresh();
+    }
+    bool event(QEvent *event) override
+    {
+        const bool handled = QWidget::event(event);
+        if (event->type() == QEvent::LayoutRequest)
+            refresh(); // Also handles cache-indicator and buffering visibility.
+        return handled;
+    }
+private:
+    Control *findControl(const QString &id)
+    {
+        for (auto &entry : controls_)
+            if (entry.id == id)
+                return &entry;
+        return nullptr;
+    }
+    const Control *findControl(const QString &id) const
+    {
+        for (const auto &entry : controls_)
+            if (entry.id == id)
+                return &entry;
+        return nullptr;
+    }
+
+    bool fits(const QVector<char> &direct, bool menuVisible) const
+    {
+        // The Play button lives to the left of the seek slider and is not
+        // part of the right-hand action group. That group may display up to
+        // three buttons, or two buttons and the overflow trigger. Pinned
+        // actions are never evicted even if the host exceeds this limit.
+        int actionSlots = menuVisible ? 1 : 0;
+        for (int i = 0; i < controls_.size(); ++i) {
+            if (direct.at(i) && controls_.at(i).id != QLatin1String("qite-video-play"))
+                ++actionSlots;
+        }
+        if (actionSlots > 3)
+            return false;
+
+        auto *row = qobject_cast<QHBoxLayout *>(layout());
+        if (!row || width() <= 0)
+            return true;
+        const auto margins = row->contentsMargins();
+        int needed = margins.left() + margins.right(), count = 0;
+        for (int i = 0; i < row->count(); ++i) {
+            const auto *widget = row->itemAt(i)->widget();
+            if (!widget)
+                continue;
+            bool visible = widget == more_ ? menuVisible : !widget->isHidden();
+            for (int n = 0; n < controls_.size(); ++n) {
+                if (controls_.at(n).button == widget) {
+                    visible = direct.at(n);
+                    break;
+                }
+            }
+            if (!visible)
+                continue;
+            needed += qobject_cast<const QSlider *>(widget) ? qMax(64, widget->minimumWidth())
+                                                             : widget->sizeHint().width();
+            ++count;
+        }
+        return needed + qMax(0, count - 1) * row->spacing() <= width();
+    }
+
+    void populateMenu(QMenu *menu)
+    {
+        menu->clear();
+        for (const auto &control : controls_) {
+            if (!control.available || !control.button || !control.button->isHidden())
+                continue;
+            const QPointer<QToolButton> button(control.button);
+            const QString title = button->toolTip().isEmpty() ? control.id : button->toolTip();
+            auto *item = menu->addAction(button->icon(), title, this, [button] {
+                if (button)
+                    button->click();
+            });
+            item->setEnabled(button->isEnabled());
+        }
+    }
+
+    QList<Control> controls_;
+    QToolButton *more_ = nullptr;
+    bool refreshing_ = false;
 };
 
 // Cover art is supplied by QMediaPlayer metadata after its range-backed
@@ -425,6 +665,8 @@ public:
         button->setToolTip(ITEVideoController::tr("Play"));
         button->setAccessibleName(button->toolTip());
         row->addWidget(button);
+        controls->registerButton(button, QStringLiteral("qite-video-play"),
+                                 ITEVideoController::ControlVisibility::AlwaysVisible);
         slider     = new ITEMediaSlider(controls);
         mediaState = opener ? opener->mediaState(source) : nullptr;
         if (mediaState)
@@ -440,7 +682,8 @@ public:
         slider->setEnabled(false);
         slider->setAccessibleName(ITEVideoController::tr("Video position"));
         row->addWidget(slider, 1);
-        time = new QLabel(QStringLiteral("0:00 / –:––"), controls);
+        time = new QLabel(QStringLiteral("–:––"), controls);
+        time->setObjectName(QStringLiteral("qite-video-duration"));
         // A QTextEdit stylesheet may override child palettes. Give the time an
         // explicit foreground on our opaque black background as well.
         time->setStyleSheet(QStringLiteral("color: white; background: transparent;"));
@@ -462,6 +705,8 @@ public:
             downloadButton->setIcon(
                 QIcon::fromTheme(QStringLiteral("document-save"), style()->standardIcon(QStyle::SP_DialogSaveButton)));
             row->addWidget(downloadButton);
+            controls->registerButton(downloadButton, QStringLiteral("qite-video-download"),
+                                     ITEVideoController::ControlVisibility::Automatic);
             connect(downloadButton, &QToolButton::clicked, controller,
                     [controller, source = originalSource] { emit controller->downloadRequested(source); });
             auto updateDownload = [this] {
@@ -485,12 +730,19 @@ public:
             QIcon::fromTheme(QStringLiteral("window-new"), style()->standardIcon(QStyle::SP_TitleBarNormalButton))));
         updateWindowButton();
         row->addWidget(windowButton);
+        controls->registerButton(windowButton, QStringLiteral("qite-video-window-button"),
+                                 ITEVideoController::ControlVisibility::Automatic);
         fullscreenButton = new QToolButton(controls);
         fullscreenButton->setAutoRaise(true);
         fullscreenButton->setFocusPolicy(Qt::TabFocus);
         fullscreenButton->setObjectName(QStringLiteral("qite-video-fullscreen-button"));
         updateFullscreenButton();
         row->addWidget(fullscreenButton);
+        controls->registerButton(fullscreenButton, QStringLiteral("qite-video-fullscreen-button"),
+                                 ITEVideoController::ControlVisibility::AlwaysVisible);
+        controls->complete();
+        if (opener)
+            opener->populatePlayerActions(originalSource, this);
         layout->addWidget(controls);
         connect(windowButton, &QToolButton::clicked, this, [this] {
             const QPointer<VideoPlayer> guard(this);
@@ -575,8 +827,8 @@ public:
         // Only a host-owned viewer (e.g. Psi's MediaViewer) replaces these
         // controls. A standalone player created without a host handler still
         // needs its own pop-out and fullscreen buttons.
-        windowButton->setVisible(!externalFullscreen);
-        fullscreenButton->setVisible(!externalFullscreen);
+        controls->setAvailable(QStringLiteral("qite-video-window-button"), !externalFullscreen);
+        controls->setAvailable(QStringLiteral("qite-video-fullscreen-button"), !externalFullscreen);
     }
     void startPlayback() { toggle(); }
     void setInitialPosition(qint64 position) { initialPosition = std::max<qint64>(0, position); }
@@ -657,8 +909,8 @@ private:
             hostedExternally_ = false;
             return false;
         }
-        windowButton->hide();
-        fullscreenButton->hide();
+        controls->setAvailable(QStringLiteral("qite-video-window-button"), false);
+        controls->setAvailable(QStringLiteral("qite-video-fullscreen-button"), false);
         updateAudioArtworkVisibility();
         return true;
     }
@@ -671,8 +923,8 @@ private:
         hostedExternally_ = false;
         setParent(inlineViewport);
         updateAudioArtworkVisibility();
-        windowButton->show();
-        fullscreenButton->show();
+        controls->setAvailable(QStringLiteral("qite-video-window-button"), !externalFullscreen);
+        controls->setAvailable(QStringLiteral("qite-video-fullscreen-button"), !externalFullscreen);
         updateFullscreenButton();
         updateWindowButton();
         show();
@@ -928,8 +1180,8 @@ private:
     {
         const qint64 duration = player ? player->duration() : 0;
         const qint64 position = player ? player->position() : 0;
-        time->setText(mediaClock(position) + QStringLiteral(" / ")
-                      + (duration > 0 ? mediaClock(duration) : QStringLiteral("–:––")));
+        time->setText(duration > 0 ? mediaClock(duration) : QStringLiteral("–:––"));
+        slider->setMediaDuration(duration);
     }
 
     void updateCoverArt()
@@ -978,7 +1230,7 @@ private:
     ITEVideoFrameWidget         *video;
     AudioArtworkWidget          *artwork = nullptr;
     QVBoxLayout                 *layout;
-    QWidget                     *controls;
+    VideoControls               *controls;
     QToolButton                 *windowButton;
     QToolButton                 *fullscreenButton;
     QPointer<VideoWindow>        floating;
@@ -1015,6 +1267,23 @@ private:
 #endif
     }
 };
+}
+
+QToolButton *ITEVideoController::addPlayerAction(QWidget *player, const QString &id, QAction *action,
+                                                 const QString &afterId, ControlVisibility visibility)
+{
+    auto *controls = player ? player->findChild<QWidget *>(QStringLiteral("qite-video-controls"),
+                                                           Qt::FindDirectChildrenOnly) : nullptr;
+    return controls ? static_cast<VideoControls *>(controls)->addPlayerAction(id, action, afterId, visibility)
+                    : nullptr;
+}
+
+bool ITEVideoController::setPlayerActionVisibility(QWidget *player, const QString &id,
+                                                    ControlVisibility visibility)
+{
+    auto *controls = player ? player->findChild<QWidget *>(QStringLiteral("qite-video-controls"),
+                                                           Qt::FindDirectChildrenOnly) : nullptr;
+    return controls && static_cast<VideoControls *>(controls)->setVisibility(id, visibility);
 }
 
 QIcon ITEVideoController::fullscreenIcon(const QPalette &palette, bool inward)

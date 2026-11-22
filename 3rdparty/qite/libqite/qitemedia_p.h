@@ -19,14 +19,17 @@ class ITEMediaSlider : public QSlider {
 public:
     explicit ITEMediaSlider(QWidget *parent = nullptr) : QSlider(Qt::Horizontal, parent) { }
     void setMediaState(ITEMediaState *state);
+    void setMediaDuration(qint64 milliseconds) { durationMs_ = qMax<qint64>(0, milliseconds); }
 
 protected:
+    bool event(QEvent *) override;
     void paintEvent(QPaintEvent *) override;
     void mousePressEvent(QMouseEvent *) override;
     void mouseReleaseEvent(QMouseEvent *) override;
 
 private:
     bool grooveSeekPressed_ = false;
+    qint64 durationMs_ = 0;
     QPointer<ITEMediaState> state_;
     QMetaObject::Connection connection_, destroyed_;
 };

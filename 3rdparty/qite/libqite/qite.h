@@ -166,6 +166,9 @@ public:
     virtual QVariant metadata(const QUrl &url) = 0;
     // Optional, host-owned and shared across players; nullptr means unavailable.
     virtual ITEMediaState *mediaState(const QUrl &) { return nullptr; }
+    // Optional host-specific toolbar actions. The player exists, owns the
+    // actions' buttons, and is not yet exposed to the user at this point.
+    virtual void populatePlayerActions(const QUrl &, QWidget *) { }
     // Called only for an explicit user retry, never for background metadata loads.
     virtual void retry(const QUrl &) { }
 };

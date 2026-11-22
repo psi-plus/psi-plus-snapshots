@@ -8,6 +8,7 @@
 #include <QShowEvent>
 #include <QTimer>
 #include <QToolTip>
+#include <QHelpEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QStyleOptionSlider>
@@ -305,6 +306,25 @@ void ITEMediaSlider::setMediaState(ITEMediaState *state)
     }
     setToolTip(tr("Gray: cached file bytes (not playback time); highlighted line: playback position"));
     update();
+}
+
+bool ITEMediaSlider::event(QEvent *event)
+{
+    if (event->type() == QEvent::ToolTip) {
+        const auto *help = static_cast<QHelpEvent *>(event);
+        const qint64 duration = durationMs_;
+        const qint64 position = maximum() > minimum()
+            ? duration * (sliderPosition() - minimum()) / (maximum() - minimum()) : 0;
+        const qint64 seconds = qMax<qint64>(0, position) / 1000;
+        const QString current = seconds >= 3600
+            ? QStringLiteral("%1:%2:%3").arg(seconds / 3600).arg(seconds / 60 % 60, 2, 10, QLatin1Char('0'))
+                  .arg(seconds % 60, 2, 10, QLatin1Char('0'))
+            : QStringLiteral("%1:%2").arg(seconds / 60).arg(seconds % 60, 2, 10, QLatin1Char('0'));
+        QToolTip::showText(help->globalPos(), tr("Position: %1").arg(current), this);
+        event->accept();
+        return true;
+    }
+    return QSlider::event(event);
 }
 
 void ITEMediaSlider::mousePressEvent(QMouseEvent *event)

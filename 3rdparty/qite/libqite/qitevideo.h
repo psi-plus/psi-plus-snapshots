@@ -6,6 +6,8 @@
 #include <memory>
 #include <QIcon>
 #include <QPalette>
+class QAction;
+class QToolButton;
 
 // The document contains a fixed-size placeholder only. Playback, frames and
 // controls belong to opaque viewport children, never to the QTextCharFormat.
@@ -22,6 +24,15 @@ public:
     static QWidget *createPlayer(const QUrl &, ITEMediaOpener *, QWidget *parent, std::function<void()> fullscreen = {},
                                  qint64 position = 0, bool audioPresentation = false,
                                  bool compactInlineAudio = false);
+    // The host may attach context-specific actions to a player at any time.
+    // Stable ids support positioning after a built-in or another action.
+    // The host configures visibility through this API; no user settings are
+    // persisted or exposed in the media toolbar.
+    enum class ControlVisibility { AlwaysVisible, Automatic, Overflow };
+    static QToolButton *addPlayerAction(QWidget *player, const QString &id, QAction *action,
+                                        const QString &afterId = {},
+                                        ControlVisibility defaultVisibility = ControlVisibility::Automatic);
+    static bool setPlayerActionVisibility(QWidget *player, const QString &id, ControlVisibility visibility);
     static QIcon fullscreenIcon(const QPalette &palette, bool inward);
     using WindowHandler = std::function<bool(const QUrl &, qint64, bool)>;
     void setWindowHandler(WindowHandler handler) { windowHandler_ = std::move(handler); }
